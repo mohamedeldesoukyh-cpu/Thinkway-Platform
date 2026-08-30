@@ -15,7 +15,7 @@ export function CreatorHomeNextActionList({
     return (
       <Card>
         <CardContent className="p-5">
-          <p className="text-sm font-medium">You are all caught up</p>
+          <p className="text-sm font-medium">You're all caught up.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             When something needs your attention, it will show up here.
           </p>
@@ -42,10 +42,16 @@ export function CreatorHomeNextActionList({
             <Button asChild variant={action.kind === "vendor_io" ? "outline" : "default"} className="w-full sm:w-auto">
               <Link href={action.href}>
                 {action.kind === "vendor_io"
-                  ? "Open campaign"
+                  ? "Review agreement"
                   : action.kind === "payment"
-                    ? "View payments"
-                    : "Continue"}
+                    ? "View payment"
+                    : action.kind === "changes_requested"
+                      ? "Review changes"
+                      : action.kind === "publication"
+                        ? "Submit publication link"
+                        : action.kind === "deliverable"
+                          ? "Open deliverable"
+                          : "Continue"}
               </Link>
             </Button>
           </CardContent>

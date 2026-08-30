@@ -5,7 +5,7 @@ import {
   type CreatorDocumentationUnitCard,
 } from "@/features/creator-workspace/slots";
 import {
-  CREATOR_UNIT_STATUS_LABEL,
+  creatorFacingStatusLabel,
   creatorUploadPrompt,
   projectCreatorUnitStatus,
   unitExpectsPublicationUrl,
@@ -33,14 +33,32 @@ export type CreatorScriptView = {
   hasOriginalDocument: boolean;
 };
 
+export type CreatorUnitVersionView = {
+  id: string;
+  versionNumber: number;
+  fileName: string | null;
+  mimeType: string | null;
+  fileSize: number | null;
+  uploadedAt: string;
+  onBehalfLabel: string | null;
+  changeSummary: string | null;
+  decision: "approved" | "changes_requested" | null;
+  decisionComment: string | null;
+};
+
 export type CreatorUnitView = CreatorDocumentationUnitCard & {
   status: CreatorUnitStatus;
   statusLabel: string;
   received: boolean;
   hasScript: boolean;
   script: CreatorScriptView | null;
+  currentVersionId: string | null;
   currentFileName: string | null;
+  currentMimeType: string | null;
+  currentFileSize: number | null;
+  currentUploadedAt: string | null;
   currentVersionNumber: number | null;
+  versions: CreatorUnitVersionView[];
   onBehalfLabel: string | null;
   comments: Array<{ id: string; body: string; createdAt: string; authorDisplayName: string | null }>;
   clientFeedback: { decision: "approved" | "changes_requested"; comment: string | null } | null;
@@ -235,10 +253,58 @@ async function hydrateCreatorUnitView(
     publicationStatus: publication?.status ?? null,
   });
 
+  const versionMap = new Map<string, CreatorUnitVersionView>();
+  for (const asset of assets) {
+    for (const version of asset.versions) {
+      if (!versionCountsAsClientContent(version) && !version.onBehalfLabel) continue;
+      const decision = extra.decisions.find((row) => row.version_id === version.id);
+      versionMap.set(version.id, {
+        id: version.id,
+        versionNumber: version.versionNumber,
+        fileName: version.fileName,
+        mimeType: version.mimeType,
+        fileSize: version.fileSize,
+        uploadedAt: version.uploadedAt,
+        onBehalfLabel: version.onBehalfLabel,
+        changeSummary: version.changeSummary,
+        decision:
+          decision?.decision === "approved" || decision?.decision === "changes_requested"
+            ? decision.decision
+            : null,
+        decisionComment: decision?.comment ?? null,
+      });
+    }
+  }
+  const versions = [...versionMap.values()].sort((a, b) => b.versionNumber - a.versionNumber);
+
+  if (current && !versionMap.has(current.id)) {
+    const decision = extra.decisions.find((row) => row.version_id === current.id);
+    versions.unshift({
+      id: current.id,
+      versionNumber: current.versionNumber,
+      fileName: current.fileName,
+      mimeType: current.mimeType,
+      fileSize: current.fileSize,
+      uploadedAt: current.uploadedAt,
+      onBehalfLabel: current.onBehalfLabel,
+      changeSummary: current.changeSummary,
+      decision:
+        decision?.decision === "approved" || decision?.decision === "changes_requested"
+          ? decision.decision
+          : null,
+      decisionComment: decision?.comment ?? null,
+    });
+  }
+
   return {
     ...card,
     status,
-    statusLabel: CREATOR_UNIT_STATUS_LABEL[status],
+    statusLabel: creatorFacingStatusLabel({
+      status,
+      dueDate: card.dueDate,
+      expectsPublicationUrl: unitExpectsPublicationUrl(card.deliverableType),
+      publicationUrl: publication?.content_url ?? null,
+    }),
     received,
     hasScript: Boolean(script),
     script: script
@@ -250,8 +316,13 @@ async function hydrateCreatorUnitView(
           hasOriginalDocument: Boolean(script.originalStoragePath),
         }
       : null,
+    currentVersionId: current?.id ?? null,
     currentFileName: current?.fileName ?? null,
+    currentMimeType: current?.mimeType ?? null,
+    currentFileSize: current?.fileSize ?? null,
+    currentUploadedAt: current?.uploadedAt ?? null,
     currentVersionNumber: current?.versionNumber ?? null,
+    versions,
     onBehalfLabel: current?.onBehalfLabel ?? null,
     comments: (detail?.comments ?? [])
       .filter((row) => row.audience === "creator")

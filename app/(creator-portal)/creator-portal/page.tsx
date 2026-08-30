@@ -3,6 +3,7 @@ import { CreatorCampaignCards } from "@/features/creator-workspace/components/cr
 import { CreatorHomeInsights } from "@/features/creator-workspace/components/creator-home-insights";
 import { CreatorHomeNextActionList } from "@/features/creator-workspace/components/creator-home-next-action-list";
 import { CreatorHomePublications } from "@/features/creator-workspace/components/creator-home-publications";
+import { CreatorProfilePayments } from "@/features/creator-workspace/components/creator-profile-payments";
 import { CreatorSocialAvailableSoon } from "@/features/creator-workspace/components/creator-social-available-soon";
 import {
   campaignNeedsCreatorAction,
@@ -64,7 +65,7 @@ export default async function CreatorWorkspaceHomePage() {
 
   return (
     <PlatformErrorBoundary surface="generic">
-      <div className="space-y-6">
+      <div className="space-y-8">
         <div>
           <h2 className="font-heading text-2xl font-semibold tracking-tight">
             Hi {creatorFirstName(scope.influencerName)}
@@ -72,7 +73,7 @@ export default async function CreatorWorkspaceHomePage() {
           <p className="text-sm text-muted-foreground">
             {nextActions.length > 0
               ? "Here is what needs your attention."
-              : "Nothing is waiting on you right now."}
+              : "You're all caught up."}
             {unreadCount > 0
               ? ` You have ${unreadCount} update${unreadCount === 1 ? "" : "s"}.`
               : ""}
@@ -81,23 +82,28 @@ export default async function CreatorWorkspaceHomePage() {
 
         <section className="space-y-3" aria-labelledby="creator-home-next">
           <h3 id="creator-home-next" className="text-sm font-semibold">
-            Next actions
+            Needs your attention
           </h3>
           <CreatorHomeNextActionList actions={nextActions} />
         </section>
 
-        <CreatorHomeInsights pack={insightPack} />
-
         <section className="space-y-3" aria-labelledby="creator-home-campaigns">
           <h3 id="creator-home-campaigns" className="text-sm font-semibold">
-            {campaignsNeedingAction.length > 0 ? "Campaigns that need you" : "Your campaigns"}
+            {campaignsNeedingAction.length > 0 ? "Active campaigns" : "Your campaigns"}
           </h3>
           <CreatorCampaignCards rows={homeCampaigns} insightPack={insightPack} />
         </section>
 
+        <section className="space-y-3" aria-labelledby="creator-home-payments">
+          <h3 id="creator-home-payments" className="text-sm font-semibold">
+            Payment status
+          </h3>
+          <CreatorProfilePayments rows={payments.slice(0, 3)} />
+        </section>
+
         <section id="updates" className="space-y-3" aria-labelledby="creator-home-updates">
           <h3 id="creator-home-updates" className="text-sm font-semibold">
-            Updates
+            Recent activity
           </h3>
           <PortalNotificationList
             notifications={notifications.slice(0, 8)}
@@ -106,6 +112,20 @@ export default async function CreatorWorkspaceHomePage() {
         </section>
 
         <CreatorHomePublications rows={publications.slice(0, 6)} />
+
+        {insightPack.recommendations.length > 0 ? (
+          <CreatorHomeInsights pack={insightPack} />
+        ) : (
+          <section className="space-y-2" aria-labelledby="creator-home-insights">
+            <h3 id="creator-home-insights" className="text-sm font-semibold">
+              Performance
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Performance data will appear after your content is published and data is available.
+            </p>
+          </section>
+        )}
+
         <CreatorSocialAvailableSoon />
       </div>
     </PlatformErrorBoundary>

@@ -67,7 +67,7 @@ export async function getCreatorCampaigns(): Promise<CreatorCampaignRow[]> {
           id, campaign_header_id, status, agreed_fee, currency, vendor_payment_status,
           confirmed_at,
           campaign:campaign_headers!campaign_influencers_campaign_header_id_fkey(
-            id, document_number, name, start_date, end_date
+            id, document_number, name, status, start_date, end_date
           ),
           io:vendor_ios!vendor_ios_assignment_id_fkey(status),
           deliverables:deliverables!deliverables_campaign_influencer_id_fkey(id, status)
@@ -128,6 +128,7 @@ export async function getCreatorCampaigns(): Promise<CreatorCampaignRow[]> {
             id: string;
             document_number: string;
             name: string;
+            status: string;
             start_date: string | null;
             end_date: string | null;
           } | null;
@@ -146,6 +147,7 @@ export async function getCreatorCampaigns(): Promise<CreatorCampaignRow[]> {
           campaign_header_id: typed.campaign_header_id,
           campaign_document_number: typed.campaign?.document_number ?? "—",
           campaign_name: typed.campaign?.name ?? "—",
+          campaign_status: typed.campaign?.status ?? "—",
           assignment_id: typed.id,
           assignment_status: typed.status,
           agreed_amount: Number(typed.agreed_fee ?? 0),
@@ -157,6 +159,15 @@ export async function getCreatorCampaigns(): Promise<CreatorCampaignRow[]> {
           deliverable_total: deliverables.length,
           pending_deliverables: deliverables.filter((d) =>
             ["pending", "in_progress", "revision_requested"].includes(d.status)
+          ).length,
+          completed_deliverables: deliverables.filter((d) =>
+            ["approved", "published", "completed"].includes(d.status)
+          ).length,
+          approved_deliverables: deliverables.filter((d) =>
+            ["approved", "published", "completed"].includes(d.status)
+          ).length,
+          published_deliverables: deliverables.filter((d) =>
+            ["published", "completed"].includes(d.status)
           ).length,
           publication_total: publicationSummary.total,
           recent_publication_status: publicationSummary.latestStatus,
@@ -184,7 +195,9 @@ export async function getCreatorCampaignDetail(
           campaign:campaign_headers!campaign_influencers_campaign_header_id_fkey(
             id, document_number, name, status, brief, start_date, end_date
           ),
-          io:vendor_ios!vendor_ios_assignment_id_fkey(id, status),
+          io:vendor_ios!vendor_ios_assignment_id_fkey(
+            id, status, document_number, special_payment_terms, sent_at, approved_at, rejection_reason
+          ),
           deliverables:deliverables!deliverables_campaign_influencer_id_fkey(
             id, document_number, campaign_id, title, deliverable_type, platform, status,
             due_date, submitted_at, approved_at, published_at, content_url
@@ -212,7 +225,15 @@ export async function getCreatorCampaignDetail(
           start_date: string | null;
           end_date: string | null;
         } | null;
-        io: { id: string; status: string }[] | null;
+        io: {
+          id: string;
+          status: string;
+          document_number: string | null;
+          special_payment_terms: string | null;
+          sent_at: string | null;
+          approved_at: string | null;
+          rejection_reason: string | null;
+        }[] | null;
         deliverables: CreatorDeliverableRow[] | null;
       };
 
@@ -239,6 +260,11 @@ export async function getCreatorCampaignDetail(
         currency_code: typed.currency ?? "USD",
         vendor_io_status: typed.io?.[0]?.status ?? null,
         vendor_io_id: typed.io?.[0]?.id ?? null,
+        vendor_io_document_number: typed.io?.[0]?.document_number ?? null,
+        vendor_io_payment_terms: typed.io?.[0]?.special_payment_terms ?? null,
+        vendor_io_sent_at: typed.io?.[0]?.sent_at ?? null,
+        vendor_io_approved_at: typed.io?.[0]?.approved_at ?? null,
+        vendor_io_rejection_reason: typed.io?.[0]?.rejection_reason ?? null,
         deliverables,
       } satisfies CreatorCampaignDetail;
     },

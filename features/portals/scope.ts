@@ -1,3 +1,4 @@
+import { resolveCreatorWorkspaceName } from "@/features/creator-workspace/identity";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 
@@ -31,7 +32,7 @@ export async function requireCreatorScope(
 
   const { data: influencer, error } = await supabase
     .from("influencers")
-    .select("id, display_name")
+    .select("id, display_name, email")
     .eq("profile_id", userId)
     .maybeSingle();
 
@@ -39,12 +40,25 @@ export async function requireCreatorScope(
     throw new Error(error?.message ?? "Creator profile is not linked.");
   }
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, email")
+    .eq("id", userId)
+    .maybeSingle();
+
   return {
     supabase,
     scope: {
       userId,
       influencerId: influencer.id as string,
-      influencerName: (influencer.display_name as string) ?? "Creator",
+      influencerName: resolveCreatorWorkspaceName({
+        influencerDisplayName: influencer.display_name as string | null,
+        profileFullName: (profile?.full_name as string | null) ?? null,
+        email:
+          (influencer.email as string | null) ??
+          (profile?.email as string | null) ??
+          null,
+      }),
     },
   };
 }

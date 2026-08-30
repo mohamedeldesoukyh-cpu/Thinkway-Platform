@@ -14,7 +14,7 @@ export default async function CreatorPortalDeliverablesPage() {
         <div>
           <h2 className="font-heading text-xl font-semibold tracking-tight">Deliverables</h2>
           <p className="text-sm text-muted-foreground">
-            Each card is one piece of work. Upload here and Thinkway sees the same file.
+            Each card is one piece of work — status, preview, versions, and next action.
           </p>
         </div>
         <CreatorDocumentationUnitList units={units} insightPack={insightPack} />

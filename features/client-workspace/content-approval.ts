@@ -296,23 +296,6 @@ export function clientContentAssetUrl(input: {
 }
 
 /** Chrome cannot play `video/quicktime`. Instagram/iPhone stories named .MOV are often MP4. */
-export function clientContentPlaybackMime(
-  mimeType: string | null | undefined,
-  fileName: string | null | undefined
-): string {
-  const mime = mimeType?.trim().toLowerCase() ?? "";
-  const name = fileName?.trim().toLowerCase() ?? "";
-  if (mime.startsWith("image/")) return mime;
-  if (mime === "video/webm" || name.endsWith(".webm")) return "video/webm";
-  if (
-    mime.startsWith("video/") ||
-    name.endsWith(".mp4") ||
-    name.endsWith(".m4v") ||
-    name.endsWith(".mov")
-  ) {
-    return "video/mp4";
-  }
-  return mime || "application/octet-stream";
-}
+export { deliverablePlaybackMime as clientContentPlaybackMime } from "@/lib/services/deliverables/playback-mime";
 
 export const FULL_SIZE_LABEL = "Full size";

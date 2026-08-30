@@ -7,15 +7,17 @@ export function CreatorDocumentationUnitList({
   units,
   showCampaignLink = true,
   insightPack = null,
+  hideScript = false,
 }: {
   units: CreatorUnitView[];
   showCampaignLink?: boolean;
   insightPack?: CreatorInsightPack | null;
+  hideScript?: boolean;
 }) {
   if (units.length === 0) {
     return (
       <p className="rounded-2xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
-        Nothing to deliver yet.
+        No deliverables assigned yet.
       </p>
     );
   }
@@ -27,6 +29,7 @@ export function CreatorDocumentationUnitList({
           key={unit.unitKey}
           unit={unit}
           showCampaignLink={showCampaignLink}
+          hideScript={hideScript}
           compactInsight={insightPack ? compactInsightForUnit(insightPack, unit) : null}
         />
       ))}

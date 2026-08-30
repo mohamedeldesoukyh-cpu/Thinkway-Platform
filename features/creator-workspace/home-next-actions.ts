@@ -1,3 +1,4 @@
+import { isAgencyBrandCreatorLabel } from "@/features/creator-workspace/identity";
 import type { CreatorPaymentRow, CreatorVendorIoRow } from "@/features/portals/types";
 import type { CreatorUnitStatus } from "@/features/creator-workspace/unit-status";
 
@@ -63,7 +64,7 @@ export function buildCreatorHomeNextActions(
       priority: 10,
       title: "Review your agreement",
       description: io.campaign_name,
-      href: `/creator-portal/campaigns/${io.campaign_header_id}`,
+      href: `/creator-portal/campaigns/${io.campaign_header_id}?tab=agreement`,
       campaignHeaderId: io.campaign_header_id,
       vendorIoId: io.id,
     });
@@ -77,7 +78,7 @@ export function buildCreatorHomeNextActions(
       priority: 20,
       title: "1 submission needs changes",
       description: `${changes[0].label} · ${changes[0].campaignName}`,
-      href: `/creator-portal/campaigns/${changes[0].campaignHeaderId}`,
+      href: `/creator-portal/campaigns/${changes[0].campaignHeaderId}?tab=deliverables`,
       campaignHeaderId: changes[0].campaignHeaderId,
     });
   } else if (changes.length > 1) {
@@ -101,7 +102,7 @@ export function buildCreatorHomeNextActions(
       priority: 25,
       title: "1 deliverable due today",
       description: `${dueToday[0].label} · ${dueToday[0].campaignName}`,
-      href: `/creator-portal/campaigns/${dueToday[0].campaignHeaderId}`,
+      href: `/creator-portal/campaigns/${dueToday[0].campaignHeaderId}?tab=deliverables`,
       campaignHeaderId: dueToday[0].campaignHeaderId,
     });
   } else if (dueToday.length > 1) {
@@ -125,7 +126,7 @@ export function buildCreatorHomeNextActions(
       priority: 30,
       title: "Submit your deliverable",
       description: `${toDo[0].label} · ${toDo[0].campaignName}`,
-      href: `/creator-portal/campaigns/${toDo[0].campaignHeaderId}`,
+      href: `/creator-portal/campaigns/${toDo[0].campaignHeaderId}?tab=deliverables`,
       campaignHeaderId: toDo[0].campaignHeaderId,
     });
   } else if (toDo.length > 1) {
@@ -139,35 +140,11 @@ export function buildCreatorHomeNextActions(
     });
   }
 
-  const scriptReady = input.units.filter(
-    (unit) => unit.status === "to_do" && unit.hasScript
-  );
-  if (scriptReady.length === 1) {
-    actions.push({
-      id: `unit:script:${scriptReady[0].unitKey}`,
-      kind: "script",
-      priority: 32,
-      title: "1 script ready",
-      description: `${scriptReady[0].label} · ${scriptReady[0].campaignName}`,
-      href: `/creator-portal/campaigns/${scriptReady[0].campaignHeaderId}`,
-      campaignHeaderId: scriptReady[0].campaignHeaderId,
-    });
-  } else if (scriptReady.length > 1) {
-    actions.push({
-      id: "unit:script",
-      kind: "script",
-      priority: 32,
-      title: `${scriptReady.length} scripts ready`,
-      description: scriptReady[0].campaignName,
-      href: "/creator-portal/deliverables",
-    });
-  }
-
   const publicationNeeded = input.units.filter(
     (unit) =>
       unit.expectsPublicationUrl &&
       !unit.publicationUrl &&
-      (unit.status === "approved" || unit.status === "uploaded" || unit.status === "under_review")
+      (unit.status === "approved" || unit.status === "scheduled")
   );
   if (publicationNeeded.length === 1) {
     actions.push({
@@ -176,7 +153,7 @@ export function buildCreatorHomeNextActions(
       priority: 35,
       title: "1 publication link required",
       description: `${publicationNeeded[0].label} · ${publicationNeeded[0].campaignName}`,
-      href: `/creator-portal/campaigns/${publicationNeeded[0].campaignHeaderId}`,
+      href: `/creator-portal/campaigns/${publicationNeeded[0].campaignHeaderId}?tab=publications`,
       campaignHeaderId: publicationNeeded[0].campaignHeaderId,
     });
   } else if (publicationNeeded.length > 1) {
@@ -200,7 +177,7 @@ export function buildCreatorHomeNextActions(
       priority: 40,
       title: "Payment in progress",
       description: pendingPayments[0].campaign_name,
-      href: "/creator-portal/profile?section=payments",
+      href: "/creator-portal/payments",
     });
   } else if (pendingPayments.length > 1) {
     actions.push({
@@ -209,7 +186,7 @@ export function buildCreatorHomeNextActions(
       priority: 40,
       title: `${pendingPayments.length} payments in progress`,
       description: pendingPayments[0].campaign_name,
-      href: "/creator-portal/profile?section=payments",
+      href: "/creator-portal/payments",
     });
   }
 
@@ -218,6 +195,6 @@ export function buildCreatorHomeNextActions(
 
 export function creatorFirstName(displayName: string | null | undefined): string {
   const trimmed = displayName?.trim() ?? "";
-  if (!trimmed) return "there";
+  if (!trimmed || isAgencyBrandCreatorLabel(trimmed)) return "there";
   return trimmed.split(/\s+/)[0] ?? "there";
 }

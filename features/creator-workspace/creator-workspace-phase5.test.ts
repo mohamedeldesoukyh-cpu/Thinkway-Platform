@@ -38,10 +38,10 @@ const connections = readFileSync(
 );
 
 describe("Phase 5 Creator Workspace UX", () => {
-  it("keeps the existing 4-item Creator Workspace nav", () => {
+  it("keeps the existing 5-item Creator Workspace nav", () => {
     assert.deepEqual(
       CREATOR_WORKSPACE_NAV_ITEMS.map((item) => item.label),
-      ["Home", "Campaigns", "Deliverables", "Profile"]
+      ["Home", "Campaigns", "Deliverables", "Payments", "Profile"]
     );
     assert.doesNotMatch(nav, /Insights|Analytics|Recommendations/);
     assert.match(home, /CreatorHomeNextActionList/);

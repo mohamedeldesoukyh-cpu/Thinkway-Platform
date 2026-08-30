@@ -16,6 +16,11 @@ export type CreatorCampaignDetail = {
   currency_code: string;
   vendor_io_status: string | null;
   vendor_io_id: string | null;
+  vendor_io_document_number: string | null;
+  vendor_io_payment_terms: string | null;
+  vendor_io_sent_at: string | null;
+  vendor_io_approved_at: string | null;
+  vendor_io_rejection_reason: string | null;
   deliverables: CreatorDeliverableRow[];
 };
 
@@ -31,6 +36,7 @@ export type CreatorCampaignRow = {
   campaign_header_id: string;
   campaign_document_number: string;
   campaign_name: string;
+  campaign_status: string;
   assignment_id: string;
   assignment_status: string;
   agreed_amount: number;
@@ -41,6 +47,9 @@ export type CreatorCampaignRow = {
   vendor_io_status: string | null;
   deliverable_total: number;
   pending_deliverables: number;
+  completed_deliverables: number;
+  approved_deliverables: number;
+  published_deliverables: number;
   publication_total: number;
   recent_publication_status: string | null;
 };

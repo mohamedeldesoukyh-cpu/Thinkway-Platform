@@ -8,6 +8,8 @@ import {
   campaignPublicationLine,
   toCreatorCampaignCard,
 } from "@/features/creator-workspace/campaign-card-model";
+import { resolveCreatorWorkspaceName } from "@/features/creator-workspace/identity";
+import { creatorFacingStatusLabel } from "@/features/creator-workspace/unit-status";
 import {
   buildCreatorHomeNextActions,
   creatorFirstName,
@@ -30,6 +32,7 @@ function campaign(overrides: Partial<CreatorCampaignRow> = {}): CreatorCampaignR
     campaign_header_id: "camp-1",
     campaign_document_number: "TW-2026-0001",
     campaign_name: "Summer launch",
+    campaign_status: "active",
     assignment_id: "asg-1",
     assignment_status: "confirmed",
     agreed_amount: 1000,
@@ -40,6 +43,9 @@ function campaign(overrides: Partial<CreatorCampaignRow> = {}): CreatorCampaignR
     vendor_io_status: "approved",
     deliverable_total: 3,
     pending_deliverables: 0,
+    completed_deliverables: 0,
+    approved_deliverables: 0,
+    published_deliverables: 0,
     publication_total: 0,
     recent_publication_status: null,
     ...overrides,
@@ -79,25 +85,22 @@ function payment(overrides: Partial<CreatorPaymentRow> = {}): CreatorPaymentRow 
 }
 
 describe("Creator Workspace Phase 1 chrome", () => {
-  it("keeps a single /creator-portal home and a 4-item nav", () => {
+  it("keeps a single /creator-portal home and a 5-item nav", () => {
     assert.equal(portalHomePath("creator_portal"), "/creator-portal");
     assert.deepEqual(
       CREATOR_WORKSPACE_NAV_ITEMS.map((item) => item.label),
-      ["Home", "Campaigns", "Deliverables", "Profile"]
+      ["Home", "Campaigns", "Deliverables", "Payments", "Profile"]
     );
-    assert.equal(CREATOR_WORKSPACE_NAV_ITEMS.length, 4);
+    assert.equal(CREATOR_WORKSPACE_NAV_ITEMS.length, 5);
     const hrefs = CREATOR_WORKSPACE_NAV_ITEMS.map((item) => item.href);
+    assert.equal(hrefs.includes("/creator-portal/payments"), true);
     assert.equal(hrefs.includes("/creator-portal/publications"), false);
-    assert.equal(hrefs.includes("/creator-portal/payments"), false);
     assert.equal(hrefs.includes("/creator-portal/vendor-ios"), false);
     assert.equal(hrefs.includes("/creator-portal/notifications"), false);
   });
 
-  it("redirects former top-level routes into the 4-item workspace", () => {
-    assert.equal(
-      resolveCreatorWorkspaceLegacyRedirect("/creator-portal/payments"),
-      "/creator-portal/profile?section=payments"
-    );
+  it("redirects former top-level routes into the workspace", () => {
+    assert.equal(resolveCreatorWorkspaceLegacyRedirect("/creator-portal/payments"), null);
     assert.equal(
       resolveCreatorWorkspaceLegacyRedirect("/creator-portal/publications"),
       "/creator-portal/campaigns"
@@ -184,9 +187,9 @@ describe("Creator Workspace Home next actions", () => {
       ["vendor_io", "deliverable", "payment"]
     );
     assert.equal(actions[0]?.title, "Review your agreement");
-    assert.equal(actions[0]?.href, "/creator-portal/campaigns/camp-1");
+    assert.equal(actions[0]?.href, "/creator-portal/campaigns/camp-1?tab=agreement");
     assert.equal(actions[0]?.vendorIoId, "vio-1");
-    assert.equal(actions[2]?.href, "/creator-portal/profile?section=payments");
+    assert.equal(actions[2]?.href, "/creator-portal/payments");
   });
 
   it("groups multiple pending documentation units onto the Deliverables page", () => {
@@ -232,6 +235,51 @@ describe("Creator Workspace Home next actions", () => {
   it("uses the first name for greeting copy", () => {
     assert.equal(creatorFirstName("Amira Hassan"), "Amira");
     assert.equal(creatorFirstName(""), "there");
+    assert.equal(creatorFirstName("Thinkway"), "there");
+  });
+});
+
+describe("Creator Workspace identity", () => {
+  it("does not greet the creator as the agency brand name", () => {
+    assert.equal(
+      resolveCreatorWorkspaceName({
+        influencerDisplayName: "Thinkway",
+        profileFullName: "Aya Hassan",
+        email: "aya@example.com",
+      }),
+      "Aya Hassan"
+    );
+    assert.equal(
+      resolveCreatorWorkspaceName({
+        influencerDisplayName: "Thinkway Media",
+        profileFullName: null,
+        email: "creator.one@example.com",
+      }),
+      "creator.one"
+    );
+    assert.equal(
+      resolveCreatorWorkspaceName({
+        influencerDisplayName: "Nour Ali",
+        profileFullName: "Thinkway",
+        email: "nour@example.com",
+      }),
+      "Nour Ali"
+    );
+  });
+
+  it("labels approved content as ready to publish until a URL exists", () => {
+    assert.equal(
+      creatorFacingStatusLabel({
+        status: "approved",
+        expectsPublicationUrl: true,
+        publicationUrl: null,
+      }),
+      "Ready to publish"
+    );
+    assert.equal(
+      creatorFacingStatusLabel({ status: "to_do" }),
+      "Needs submission"
+    );
   });
 });
 

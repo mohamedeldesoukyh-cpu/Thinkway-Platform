@@ -7,11 +7,11 @@ export const CREATOR_WORKSPACE_NAV_ITEMS = [
   { href: CREATOR_WORKSPACE_HOME_HREF, label: "Home" },
   { href: "/creator-portal/campaigns", label: "Campaigns" },
   { href: "/creator-portal/deliverables", label: "Deliverables" },
+  { href: "/creator-portal/payments", label: "Payments" },
   { href: "/creator-portal/profile", label: "Profile" },
 ] as const satisfies ReadonlyArray<Omit<PortalNavItem, "badge">>;
 
 export const CREATOR_WORKSPACE_LEGACY_REDIRECTS = {
-  "/creator-portal/payments": "/creator-portal/profile?section=payments",
   "/creator-portal/publications": "/creator-portal/campaigns",
   "/creator-portal/vendor-ios": CREATOR_WORKSPACE_HOME_HREF,
   "/creator-portal/notifications": CREATOR_WORKSPACE_HOME_HREF,

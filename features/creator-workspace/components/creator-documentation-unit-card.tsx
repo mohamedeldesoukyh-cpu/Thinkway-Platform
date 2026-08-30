@@ -15,6 +15,7 @@ import {
   submitCreatorUnitPublicationAction,
   addCreatorUnitCommentAction,
 } from "@/features/creator-workspace/actions";
+import { CreatorUnitMediaPreview } from "@/features/creator-workspace/components/creator-unit-media-preview";
 import type { CreatorUnitView } from "@/features/creator-workspace/documentation-load";
 import { CREATOR_ON_BEHALF_ACTOR_LABEL } from "@/lib/services/deliverables/on-behalf";
 import {
@@ -30,10 +31,12 @@ export function CreatorDocumentationUnitCard({
   unit,
   showCampaignLink = true,
   compactInsight = null,
+  hideScript = false,
 }: {
   unit: CreatorUnitView;
   showCampaignLink?: boolean;
   compactInsight?: string | null;
+  hideScript?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [scriptOpen, setScriptOpen] = useState(false);
@@ -133,6 +136,17 @@ export function CreatorDocumentationUnitCard({
       ? Boolean(unit.script?.bodyAr?.trim())
       : Boolean(unit.script?.bodyEn?.trim());
 
+  const readyToPublish =
+    unit.expectsPublicationUrl &&
+    (unit.status === "approved" || unit.status === "scheduled") &&
+    !unit.publicationUrl;
+  const uploadLabel =
+    unit.status === "changes_requested"
+      ? "Upload revised version"
+      : unit.received
+        ? "Upload a new version"
+        : unit.uploadPrompt;
+
   return (
     <Card className={cn(unit.status === "changes_requested" && "border-primary/40")}>
       <CardContent className="space-y-3 p-4">
@@ -141,7 +155,7 @@ export function CreatorDocumentationUnitCard({
             <p className="text-base font-semibold">{unit.label}</p>
             {showCampaignLink ? (
               <Link
-                href={`/creator-portal/campaigns/${unit.campaignHeaderId}`}
+                href={`/creator-portal/campaigns/${unit.campaignHeaderId}?tab=deliverables`}
                 className="text-xs text-primary hover:underline"
               >
                 {unit.campaignName}
@@ -155,6 +169,11 @@ export function CreatorDocumentationUnitCard({
                 : "No due date"}
               {unit.platform ? ` · ${unit.platform}` : ""}
             </p>
+            {unit.currentVersionNumber ? (
+              <p className="text-xs text-muted-foreground">
+                Version {unit.currentVersionNumber}
+              </p>
+            ) : null}
           </div>
           <span className="w-fit rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
             {unit.statusLabel}
@@ -168,7 +187,51 @@ export function CreatorDocumentationUnitCard({
           </p>
         ) : null}
 
-        {unit.hasScript ? (
+        {unit.currentVersionId ? (
+          <CreatorUnitMediaPreview
+            campaignHeaderId={unit.campaignHeaderId}
+            assignmentDeliverableId={unit.assignmentDeliverableId}
+            assignmentPostScheduleId={unit.assignmentPostScheduleId}
+            versionId={unit.currentVersionId}
+            fileName={unit.currentFileName}
+            mimeType={unit.currentMimeType}
+            fileSize={unit.currentFileSize}
+            versionNumber={unit.currentVersionNumber}
+            uploadedAt={unit.currentUploadedAt}
+          />
+        ) : (
+          <p className="text-sm text-muted-foreground">Nothing submitted yet.</p>
+        )}
+
+        {unit.versions.length > 1 ? (
+          <div className="space-y-2 rounded-xl border border-border p-3">
+            <p className="text-sm font-medium">Version history</p>
+            <ul className="space-y-2">
+              {unit.versions.map((version) => (
+                <li key={version.id} className="text-sm">
+                  <p className="font-medium">
+                    Version {version.versionNumber}
+                    {version.id === unit.currentVersionId ? " · Current" : ""}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(version.uploadedAt).toLocaleDateString()}
+                    {version.decision === "approved"
+                      ? " · Approved"
+                      : version.decision === "changes_requested"
+                        ? " · Changes requested"
+                        : " · Submitted"}
+                    {version.fileName ? ` · ${version.fileName}` : ""}
+                  </p>
+                  {version.decisionComment ? (
+                    <p className="mt-1 text-muted-foreground">{version.decisionComment}</p>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
+        {!hideScript && unit.hasScript ? (
           <div className="space-y-2 rounded-xl border border-border p-3">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-medium">Script available</p>
@@ -183,108 +246,21 @@ export function CreatorDocumentationUnitCard({
               </Button>
             </div>
             {scriptOpen && unit.script ? (
-              <div className="space-y-2">
-                <div className="flex gap-2">
-                  {unit.script.bodyEn.trim() ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={scriptLang === "en" ? "default" : "outline"}
-                      onClick={() => setScriptLang("en")}
-                    >
-                      English
-                    </Button>
-                  ) : null}
-                  {unit.script.bodyAr.trim() ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant={scriptLang === "ar" ? "default" : "outline"}
-                      onClick={() => setScriptLang("ar")}
-                    >
-                      Arabic
-                    </Button>
-                  ) : null}
-                </div>
-                {hasLang ? (
-                  <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/50 p-3 text-sm">
-                    {scriptBody}
-                  </pre>
-                ) : (
-                  <p className="text-sm text-muted-foreground">No text in this language.</p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  {hasLang ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="min-h-11"
-                      onClick={() => {
-                        const downloaded = campaignScriptDownloadText({
-                          language: scriptLang,
-                          bodyEn: unit.script!.bodyEn,
-                          bodyAr: unit.script!.bodyAr,
-                        });
-                        if (!downloaded.ok) {
-                          toast.error(downloaded.message);
-                          return;
-                        }
-                        const blob = new Blob([downloaded.text], {
-                          type: "text/plain;charset=utf-8",
-                        });
-                        const url = URL.createObjectURL(blob);
-                        const a = document.createElement("a");
-                        a.href = url;
-                        a.download = campaignScriptDownloadFileName(unit.label, scriptLang);
-                        a.click();
-                        URL.revokeObjectURL(url);
-                      }}
-                    >
-                      Download text
-                    </Button>
-                  ) : null}
-                  {unit.script.hasOriginalDocument ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      className="min-h-11"
-                      disabled={pending}
-                      onClick={() => {
-                        startTransition(async () => {
-                          const result = await downloadCreatorUnitScriptOriginalAction({
-                            campaignHeaderId: unit.campaignHeaderId,
-                            assignmentDeliverableId: unit.assignmentDeliverableId,
-                            assignmentPostScheduleId: unit.assignmentPostScheduleId,
-                          });
-                          if (!result.ok) {
-                            toast.error(result.message);
-                            return;
-                          }
-                          window.open(result.data.url, "_blank", "noopener,noreferrer");
-                        });
-                      }}
-                    >
-                      Download original
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
+              <CreatorScriptBody
+                unit={unit}
+                scriptLang={scriptLang}
+                setScriptLang={setScriptLang}
+                scriptBody={scriptBody}
+                hasLang={hasLang}
+                pending={pending}
+                startTransition={startTransition}
+              />
             ) : null}
           </div>
         ) : null}
 
-        {unit.currentFileName || unit.onBehalfLabel || unit.currentVersionNumber ? (
-          <div className="text-sm text-muted-foreground">
-            {unit.currentVersionNumber ? (
-              <p>Version {unit.currentVersionNumber}</p>
-            ) : null}
-            {unit.onBehalfLabel ? <p>{unit.onBehalfLabel}</p> : null}
-            {unit.currentFileName && !unit.onBehalfLabel ? (
-              <p>Submitted: {unit.currentFileName}</p>
-            ) : null}
-          </div>
+        {unit.onBehalfLabel ? (
+          <p className="text-sm text-muted-foreground">{unit.onBehalfLabel}</p>
         ) : null}
 
         {unit.clientFeedback ? (
@@ -310,58 +286,90 @@ export function CreatorDocumentationUnitCard({
                     ? `${item.authorDisplayName}: `
                     : ""}
                 {item.body}
+                <span className="mt-0.5 block text-xs">
+                  {new Date(item.createdAt).toLocaleString()}
+                </span>
               </p>
             ))}
           </div>
         ) : null}
 
-        <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground">
-          <input
-            type="file"
-            className="sr-only"
-            disabled={pending}
-            onChange={(event) => {
-              const file = event.target.files?.[0];
-              event.target.value = "";
-              if (file) runUpload(file);
-            }}
-          />
-          {pending ? "Uploading…" : unit.uploadPrompt}
-        </label>
+        {unit.status !== "published" ? (
+          <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground">
+            <input
+              type="file"
+              className="sr-only"
+              disabled={pending}
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                event.target.value = "";
+                if (file) runUpload(file);
+              }}
+            />
+            {pending ? "Uploading…" : uploadLabel}
+          </label>
+        ) : null}
 
         {unit.expectsPublicationUrl ? (
-          <form
-            className="space-y-2"
-            onSubmit={(event) => {
-              event.preventDefault();
-              startTransition(async () => {
-                const result = await submitCreatorUnitPublicationAction({
-                  campaignHeaderId: unit.campaignHeaderId,
-                  campaignLineId: unit.campaignLineId,
-                  assignmentDeliverableId: unit.assignmentDeliverableId,
-                  assignmentPostScheduleId: unit.assignmentPostScheduleId,
-                  platform: unit.platform,
-                  deliverableType: unit.deliverableType,
-                  contentUrl: publicationUrl,
+          readyToPublish || unit.publicationUrl ? (
+            <form
+              className="space-y-2 rounded-xl border border-border p-3"
+              onSubmit={(event) => {
+                event.preventDefault();
+                startTransition(async () => {
+                  const result = await submitCreatorUnitPublicationAction({
+                    campaignHeaderId: unit.campaignHeaderId,
+                    campaignLineId: unit.campaignLineId,
+                    assignmentDeliverableId: unit.assignmentDeliverableId,
+                    assignmentPostScheduleId: unit.assignmentPostScheduleId,
+                    platform: unit.platform,
+                    deliverableType: unit.deliverableType,
+                    contentUrl: publicationUrl,
+                  });
+                  if (!result.ok) {
+                    toast.error(result.message);
+                    return;
+                  }
+                  toast.success("Publication saved.");
                 });
-                if (!result.ok) {
-                  toast.error(result.message);
-                  return;
-                }
-                toast.success("Publication saved.");
-              });
-            }}
-          >
-            <Input
-              value={publicationUrl}
-              onChange={(event) => setPublicationUrl(event.target.value)}
-              placeholder="Paste the live post URL"
-              className="min-h-11"
-            />
-            <Button type="submit" variant="outline" className="min-h-11 w-full" disabled={pending}>
-              Submit publication link
-            </Button>
-          </form>
+              }}
+            >
+              <p className="text-sm font-medium">
+                {unit.publicationUrl ? "Publication link" : "Ready to publish"}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {unit.platform ? `${unit.platform} · ` : ""}
+                Content upload and publication are separate. Paste the live post URL after you publish.
+              </p>
+              {unit.publicationUrl ? (
+                <a
+                  href={unit.publicationUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-sm text-primary underline-offset-4 hover:underline"
+                >
+                  {unit.publicationUrl}
+                </a>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  This deliverable has not been published yet.
+                </p>
+              )}
+              <Input
+                value={publicationUrl}
+                onChange={(event) => setPublicationUrl(event.target.value)}
+                placeholder="Paste the live post URL"
+                className="min-h-11"
+              />
+              <Button type="submit" variant="outline" className="min-h-11 w-full" disabled={pending}>
+                {unit.publicationUrl ? "Update publication link" : "Submit publication link"}
+              </Button>
+            </form>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Publication is next after this content is approved.
+            </p>
+          )
         ) : null}
 
         <form
@@ -398,5 +406,117 @@ export function CreatorDocumentationUnitCard({
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+function CreatorScriptBody({
+  unit,
+  scriptLang,
+  setScriptLang,
+  scriptBody,
+  hasLang,
+  pending,
+  startTransition,
+}: {
+  unit: CreatorUnitView;
+  scriptLang: "en" | "ar";
+  setScriptLang: (value: "en" | "ar") => void;
+  scriptBody: string;
+  hasLang: boolean;
+  pending: boolean;
+  startTransition: (fn: () => void) => void;
+}) {
+  if (!unit.script) return null;
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        {unit.script.bodyEn.trim() ? (
+          <Button
+            type="button"
+            size="sm"
+            variant={scriptLang === "en" ? "default" : "outline"}
+            onClick={() => setScriptLang("en")}
+          >
+            English
+          </Button>
+        ) : null}
+        {unit.script.bodyAr.trim() ? (
+          <Button
+            type="button"
+            size="sm"
+            variant={scriptLang === "ar" ? "default" : "outline"}
+            onClick={() => setScriptLang("ar")}
+          >
+            Arabic
+          </Button>
+        ) : null}
+      </div>
+      {hasLang ? (
+        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/50 p-3 text-sm">
+          {scriptBody}
+        </pre>
+      ) : (
+        <p className="text-sm text-muted-foreground">No text in this language.</p>
+      )}
+      <div className="flex flex-wrap gap-2">
+        {hasLang ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-11"
+            onClick={() => {
+              const downloaded = campaignScriptDownloadText({
+                language: scriptLang,
+                bodyEn: unit.script!.bodyEn,
+                bodyAr: unit.script!.bodyAr,
+              });
+              if (!downloaded.ok) {
+                toast.error(downloaded.message);
+                return;
+              }
+              const blob = new Blob([downloaded.text], {
+                type: "text/plain;charset=utf-8",
+              });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = campaignScriptDownloadFileName(unit.label, scriptLang);
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Download text
+          </Button>
+        ) : null}
+        {unit.script.hasOriginalDocument ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="min-h-11"
+            disabled={pending}
+            onClick={() => {
+              startTransition(() => {
+                void (async () => {
+                  const result = await downloadCreatorUnitScriptOriginalAction({
+                    campaignHeaderId: unit.campaignHeaderId,
+                    assignmentDeliverableId: unit.assignmentDeliverableId,
+                    assignmentPostScheduleId: unit.assignmentPostScheduleId,
+                  });
+                  if (!result.ok) {
+                    toast.error(result.message);
+                    return;
+                  }
+                  window.open(result.data.url, "_blank", "noopener,noreferrer");
+                })();
+              });
+            }}
+          >
+            Download original
+          </Button>
+        ) : null}
+      </div>
+    </div>
   );
 }

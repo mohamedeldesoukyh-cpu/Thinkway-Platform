@@ -61,7 +61,7 @@ export default async function CreatorPortalLayout({
   return (
     <PortalShell
       title="Creator Workspace"
-      description="See what to do next. Your work stays connected to Thinkway."
+      description="Your campaigns, deliverables, and payments — what to do next."
       userLabel={creatorName}
       navItems={withCreatorHomeBadge(unreadCount)}
       mobileNavPlacement="bottom"

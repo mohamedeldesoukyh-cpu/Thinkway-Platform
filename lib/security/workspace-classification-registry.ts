@@ -98,6 +98,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/review/quotation": "public",
   "/api/review/brand-logo": "public",
   "/api/review/request-access": "public",
+  "/api/creator-social/callback": "client_workspace",
   "/api/vendors/platform-accounts/enrich": "internal_workspace",
   "/api/vendors/crm-import-search": "internal_workspace",
 
