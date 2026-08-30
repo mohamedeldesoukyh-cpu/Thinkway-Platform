@@ -36,12 +36,52 @@ import {
   releasedToClientAtFromMetadata,
   versionReleaseMetadata,
 } from "./client-release";
+import {
+  DOCUMENTATION_VERSION_CONFLICT_MESSAGE,
+  creatorFacingOnBehalfLabel,
+  isDocumentationVersionConflict,
+  onBehalfAttributionFromMetadata,
+  onBehalfEventPayload,
+  onBehalfMetadata,
+  type OnBehalfAttribution,
+} from "./on-behalf";
 
 type Supabase = SupabaseClient<Database>;
 
 const BUCKET = "deliverable-assets";
 
 const CONTENT_MEDIA: DeliverableAssetMedium[] = ["file", "external_link"];
+
+export { DOCUMENTATION_VERSION_CONFLICT_MESSAGE };
+
+function versionInsertMetadata(input: {
+  releaseToClient?: boolean;
+  onBehalf?: OnBehalfAttribution | null;
+}): Record<string, unknown> {
+  const releaseToClient = input.onBehalf ? false : input.releaseToClient !== false;
+  return {
+    ...versionReleaseMetadata(releaseToClient),
+    ...onBehalfMetadata(input.onBehalf),
+  };
+}
+
+async function assertVersionNumberAvailable(
+  supabase: Supabase,
+  assetId: string,
+  versionNumber: number
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { data: latest } = await supabase
+    .from("deliverable_asset_versions")
+    .select("version_number")
+    .eq("asset_id", assetId)
+    .order("version_number", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (Number(latest?.version_number ?? 0) >= versionNumber) {
+    return { ok: false, message: DOCUMENTATION_VERSION_CONFLICT_MESSAGE };
+  }
+  return { ok: true };
+}
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -172,6 +212,8 @@ export async function addExternalLinkAsset(
     label?: string | null;
     externalUrl: string;
     changeSummary?: string | null;
+    releaseToClient?: boolean;
+    onBehalf?: OnBehalfAttribution | null;
   }
 ): Promise<{ ok: true; assetId: string } | { ok: false; message: string }> {
   const url = input.externalUrl.trim();
@@ -198,6 +240,8 @@ export async function addTextAsset(
     label?: string | null;
     textBody: string;
     changeSummary?: string | null;
+    releaseToClient?: boolean;
+    onBehalf?: OnBehalfAttribution | null;
   }
 ): Promise<{ ok: true; assetId: string } | { ok: false; message: string }> {
   if (!input.textBody.trim()) {
@@ -229,6 +273,7 @@ export async function addFileAssetVersion(
     changeSummary?: string | null;
     /** Default true — Internal uploads remain Client-visible. Creator uploads pass false. */
     releaseToClient?: boolean;
+    onBehalf?: OnBehalfAttribution | null;
   }
 ): Promise<{ ok: true; assetId: string; versionId: string } | { ok: false; message: string }> {
   if (input.fileSize > DELIVERABLE_ASSET_MAX_BYTES) {
@@ -279,6 +324,9 @@ export async function addFileAssetVersion(
     return { ok: false, message: upload.error.message };
   }
 
+  const conflict = await assertVersionNumberAvailable(supabase, assetId, versionNumber);
+  if (!conflict.ok) return conflict;
+
   const { error: versionError } = await supabase
     .from("deliverable_asset_versions")
     .insert({
@@ -292,9 +340,12 @@ export async function addFileAssetVersion(
       file_size: input.fileSize,
       change_summary: input.changeSummary ?? null,
       uploaded_by: input.actorId,
-      metadata: versionReleaseMetadata(input.releaseToClient !== false),
+      metadata: versionInsertMetadata(input),
     });
   if (versionError) {
+    if (isDocumentationVersionConflict(versionError)) {
+      return { ok: false, message: DOCUMENTATION_VERSION_CONFLICT_MESSAGE };
+    }
     return { ok: false, message: versionError.message };
   }
 
@@ -315,6 +366,7 @@ export async function addFileAssetVersion(
       file_name: input.fileName,
       version_number: versionNumber,
       asset_type: input.assetType,
+      ...onBehalfEventPayload(input.onBehalf),
     },
   });
 
@@ -433,6 +485,7 @@ export async function completeFileAssetUpload(
     versionNumber: number;
     storagePath: string;
     releaseToClient?: boolean;
+    onBehalf?: OnBehalfAttribution | null;
   }
 ): Promise<{ ok: true; assetId: string; versionId: string } | { ok: false; message: string }> {
   const owned = await loadOwnedAsset(supabase, {
@@ -462,6 +515,13 @@ export async function completeFileAssetUpload(
     await sleep(400 * (attempt + 1));
   }
 
+  const conflict = await assertVersionNumberAvailable(
+    supabase,
+    input.assetId,
+    input.versionNumber
+  );
+  if (!conflict.ok) return conflict;
+
   const { error: versionError } = await supabase.from("deliverable_asset_versions").insert({
     id: input.versionId,
     asset_id: input.assetId,
@@ -473,9 +533,12 @@ export async function completeFileAssetUpload(
     file_size: input.fileSize,
     change_summary: input.changeSummary ?? null,
     uploaded_by: input.actorId,
-    metadata: versionReleaseMetadata(input.releaseToClient !== false),
+    metadata: versionInsertMetadata(input),
   });
   if (versionError) {
+    if (isDocumentationVersionConflict(versionError)) {
+      return { ok: false, message: DOCUMENTATION_VERSION_CONFLICT_MESSAGE };
+    }
     return { ok: false, message: versionError.message };
   }
 
@@ -496,6 +559,7 @@ export async function completeFileAssetUpload(
       file_name: input.fileName,
       version_number: input.versionNumber,
       asset_type: input.assetType,
+      ...onBehalfEventPayload(input.onBehalf),
     },
   });
 
@@ -669,6 +733,7 @@ export async function linkDocumentationUnitToPublication(
     publicationId: string;
     publishedUrl: string;
     platform: string | null;
+    onBehalf?: OnBehalfAttribution | null;
   }
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const { error } = await supabase.from("deliverable_publication_links").upsert(
@@ -693,7 +758,10 @@ export async function linkDocumentationUnitToPublication(
     assignmentPostScheduleId: input.assignmentPostScheduleId,
     eventType: "publication_link",
     actorUserId: input.actorId,
-    payload: { publication_id: input.publicationId },
+    payload: {
+      publication_id: input.publicationId,
+      ...onBehalfEventPayload(input.onBehalf),
+    },
   });
   return { ok: true };
 }
@@ -734,6 +802,7 @@ export async function addInternalComment(
     assignmentPostScheduleId: string | null;
     body: string;
     audience?: DocumentationAudience;
+    onBehalf?: OnBehalfAttribution | null;
   }
 ): Promise<{ ok: true } | { ok: false; message: string }> {
   const body = input.body.trim();
@@ -764,7 +833,10 @@ export async function addInternalComment(
     commentId: data.id,
     eventType: "comment",
     actorUserId: input.actorId,
-    payload: { audience: input.audience ?? "internal" },
+    payload: {
+      audience: input.audience ?? "internal",
+      ...onBehalfEventPayload(input.onBehalf),
+    },
   });
 
   return { ok: true };
@@ -835,6 +907,7 @@ async function createAssetWithVersion(
     changeSummary?: string | null;
     eventType: "upload" | "link_add";
     releaseToClient?: boolean;
+    onBehalf?: OnBehalfAttribution | null;
   }
 ): Promise<{ ok: true; assetId: string } | { ok: false; message: string }> {
   const { data: asset, error: assetError } = await supabase
@@ -866,9 +939,12 @@ async function createAssetWithVersion(
       change_summary: input.changeSummary ?? null,
       uploaded_by: input.actorId,
       file_name: input.label ?? null,
-      metadata: versionReleaseMetadata(input.releaseToClient !== false),
+      metadata: versionInsertMetadata(input),
     });
   if (versionError) {
+    if (isDocumentationVersionConflict(versionError)) {
+      return { ok: false, message: DOCUMENTATION_VERSION_CONFLICT_MESSAGE };
+    }
     return { ok: false, message: versionError.message };
   }
 
@@ -889,6 +965,7 @@ async function createAssetWithVersion(
       asset_type: input.assetType,
       medium: input.medium,
       external_url: input.externalUrl ?? null,
+      ...onBehalfEventPayload(input.onBehalf),
     },
   });
 
@@ -1046,6 +1123,9 @@ async function loadAssetsForUnit(
       uploadedBy: version.uploaded_by,
       uploadedAt: version.uploaded_at,
       releasedToClientAt: releasedToClientAtFromMetadata(version.metadata),
+      onBehalfLabel: creatorFacingOnBehalfLabel(
+        onBehalfAttributionFromMetadata(version.metadata)?.kind
+      ),
     };
     const list = byAsset.get(version.asset_id) ?? [];
     list.push(view);

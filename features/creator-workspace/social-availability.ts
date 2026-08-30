@@ -1,14 +1,8 @@
-/** Display-only. Phase 1 must not start OAuth or treat connection as required. */
-export const CREATOR_WORKSPACE_SOCIAL_PLATFORMS = [
-  "Instagram",
-  "TikTok",
-  "YouTube",
-  "Snapchat",
-  "Facebook",
-  "X",
-  "Pinterest",
-  "LinkedIn",
-] as const;
+import { listSocialProviders } from "@/lib/creator-social/providers/registry";
 
-export type CreatorWorkspaceSocialPlatform =
-  (typeof CREATOR_WORKSPACE_SOCIAL_PLATFORMS)[number];
+/** Display labels for Creator Workspace social platforms. Connection readiness lives in the provider registry. */
+export const CREATOR_WORKSPACE_SOCIAL_PLATFORMS = listSocialProviders().map(
+  (provider) => provider.displayName
+) as readonly string[];
+
+export type CreatorWorkspaceSocialPlatform = (typeof CREATOR_WORKSPACE_SOCIAL_PLATFORMS)[number];

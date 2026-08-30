@@ -1,5 +1,6 @@
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { CreatorCampaignCards } from "@/features/creator-workspace/components/creator-campaign-cards";
+import { CreatorHomeInsights } from "@/features/creator-workspace/components/creator-home-insights";
 import { CreatorHomeNextActionList } from "@/features/creator-workspace/components/creator-home-next-action-list";
 import { CreatorHomePublications } from "@/features/creator-workspace/components/creator-home-publications";
 import { CreatorSocialAvailableSoon } from "@/features/creator-workspace/components/creator-social-available-soon";
@@ -22,6 +23,8 @@ import {
   getCreatorVendorIos,
 } from "@/features/portals/queries";
 import { requireCreatorScope } from "@/features/portals/scope";
+import { loadOwnCreatorInsightPack } from "@/lib/creator-insights/service";
+import { upcomingUnitsFromViews } from "@/lib/creator-insights/presentation";
 
 export default async function CreatorWorkspaceHomePage() {
   const [
@@ -45,6 +48,7 @@ export default async function CreatorWorkspaceHomePage() {
   ]);
 
   const overlayedCampaigns = overlayCreatorCampaignUnitCounts(campaigns, units);
+  const insightPack = await loadOwnCreatorInsightPack(upcomingUnitsFromViews(units));
   const nextActions = buildCreatorHomeNextActions({
     vendorIos,
     units,
@@ -82,11 +86,13 @@ export default async function CreatorWorkspaceHomePage() {
           <CreatorHomeNextActionList actions={nextActions} />
         </section>
 
+        <CreatorHomeInsights pack={insightPack} />
+
         <section className="space-y-3" aria-labelledby="creator-home-campaigns">
           <h3 id="creator-home-campaigns" className="text-sm font-semibold">
             {campaignsNeedingAction.length > 0 ? "Campaigns that need you" : "Your campaigns"}
           </h3>
-          <CreatorCampaignCards rows={homeCampaigns} />
+          <CreatorCampaignCards rows={homeCampaigns} insightPack={insightPack} />
         </section>
 
         <section id="updates" className="space-y-3" aria-labelledby="creator-home-updates">

@@ -1,14 +1,36 @@
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreatorProfilePayments } from "@/features/creator-workspace/components/creator-profile-payments";
-import { CreatorSocialAvailableSoon } from "@/features/creator-workspace/components/creator-social-available-soon";
+import { CreatorSocialAccountsCard } from "@/features/creator-workspace/components/creator-social-accounts-card";
+import { loadCreatorSocialProviderViews } from "@/features/creator-workspace/social-actions";
 import { getCreatorPayments } from "@/features/portals/queries";
 import { requireCreatorScope } from "@/features/portals/scope";
+import {
+  CREATOR_SOCIAL_CANCELLED,
+  CREATOR_SOCIAL_DENIED,
+  CREATOR_SOCIAL_INVALID_STATE,
+} from "@/lib/creator-social/copy";
 
-export default async function CreatorPortalProfilePage() {
+function socialNotice(value: string | undefined): string | null {
+  if (value === "connected") return "Connected. Thinkway is syncing insights in the background.";
+  if (value === "cancelled") return CREATOR_SOCIAL_CANCELLED;
+  if (value === "denied") return CREATOR_SOCIAL_DENIED;
+  if (value === "invalid" || value === "expired" || value === "replay" || value === "provider_mismatch") {
+    return CREATOR_SOCIAL_INVALID_STATE;
+  }
+  if (value === "error") return "The connection could not be completed. You can try again.";
+  return null;
+}
+
+export default async function CreatorPortalProfilePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ social?: string; section?: string }>;
+}) {
+  const { social } = await searchParams;
   const { supabase, scope } = await requireCreatorScope("creator_portal.read");
 
-  const [{ data: influencer }, { data: profile }, payments] = await Promise.all([
+  const [{ data: influencer }, { data: profile }, payments, socialProviders] = await Promise.all([
     supabase
       .from("influencers")
       .select("display_name, email, phone, country_code, city")
@@ -20,6 +42,7 @@ export default async function CreatorPortalProfilePage() {
       .eq("id", scope.userId)
       .maybeSingle(),
     getCreatorPayments(),
+    loadCreatorSocialProviderViews(),
   ]);
 
   const influencerRow = influencer as {
@@ -74,7 +97,10 @@ export default async function CreatorPortalProfilePage() {
           <CreatorProfilePayments rows={payments} />
         </section>
 
-        <CreatorSocialAvailableSoon />
+        <CreatorSocialAccountsCard
+          providers={socialProviders}
+          notice={socialNotice(social)}
+        />
       </div>
     </PlatformErrorBoundary>
   );

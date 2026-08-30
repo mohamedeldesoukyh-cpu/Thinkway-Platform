@@ -1,12 +1,16 @@
 import { CreatorDocumentationUnitCard } from "@/features/creator-workspace/components/creator-documentation-unit-card";
 import type { CreatorUnitView } from "@/features/creator-workspace/documentation-load";
+import { compactInsightForUnit } from "@/lib/creator-insights/presentation";
+import type { CreatorInsightPack } from "@/lib/creator-insights/types";
 
 export function CreatorDocumentationUnitList({
   units,
   showCampaignLink = true,
+  insightPack = null,
 }: {
   units: CreatorUnitView[];
   showCampaignLink?: boolean;
+  insightPack?: CreatorInsightPack | null;
 }) {
   if (units.length === 0) {
     return (
@@ -23,6 +27,7 @@ export function CreatorDocumentationUnitList({
           key={unit.unitKey}
           unit={unit}
           showCampaignLink={showCampaignLink}
+          compactInsight={insightPack ? compactInsightForUnit(insightPack, unit) : null}
         />
       ))}
     </div>

@@ -3,10 +3,13 @@ import { CreatorCampaignCards } from "@/features/creator-workspace/components/cr
 import { overlayCreatorCampaignUnitCounts } from "@/features/creator-workspace/campaign-card-model";
 import { loadCreatorUnitViews } from "@/features/creator-workspace/documentation-load";
 import { getCreatorCampaigns } from "@/features/portals/queries";
+import { upcomingUnitsFromViews } from "@/lib/creator-insights/presentation";
+import { loadOwnCreatorInsightPack } from "@/lib/creator-insights/service";
 
 export default async function CreatorPortalCampaignsPage() {
   const [rows, units] = await Promise.all([getCreatorCampaigns(), loadCreatorUnitViews()]);
   const overlay = overlayCreatorCampaignUnitCounts(rows, units);
+  const insightPack = await loadOwnCreatorInsightPack(upcomingUnitsFromViews(units));
 
   return (
     <PlatformErrorBoundary surface="generic">
@@ -17,7 +20,7 @@ export default async function CreatorPortalCampaignsPage() {
             Open a campaign to review your agreement, deliverables, and publications.
           </p>
         </div>
-        <CreatorCampaignCards rows={overlay} />
+        <CreatorCampaignCards rows={overlay} insightPack={insightPack} />
       </div>
     </PlatformErrorBoundary>
   );

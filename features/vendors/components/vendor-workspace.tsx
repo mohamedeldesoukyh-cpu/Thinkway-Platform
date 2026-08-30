@@ -51,6 +51,7 @@ type VendorWorkspaceViewProps = {
   workspace: VendorWorkspace;
   defaultTab?: string;
   portalAccessPanel?: React.ReactNode;
+  creatorSocialPanel?: React.ReactNode;
   currencyOptions?: { value: string; label: string }[];
 };
 
@@ -118,6 +119,7 @@ export function VendorWorkspaceView({
   workspace,
   defaultTab = "overview",
   portalAccessPanel,
+  creatorSocialPanel,
   currencyOptions = [],
 }: VendorWorkspaceViewProps) {
   const router = useRouter();
@@ -346,7 +348,11 @@ export function VendorWorkspaceView({
             </OperationalWorkspaceTabContent>
             <OperationalWorkspaceTabContent value="platforms" className={tabPanelClassName}>
               <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
-                <VendorPlatformsTab vendor={workspace} onCancel={handleCancel} />
+                <VendorPlatformsTab
+                  vendor={workspace}
+                  onCancel={handleCancel}
+                  creatorSocialPanel={creatorSocialPanel}
+                />
               </OperationalWorkspaceTabPanel>
             </OperationalWorkspaceTabContent>
             <OperationalWorkspaceTabContent value="assignments" className={tabPanelClassName}>

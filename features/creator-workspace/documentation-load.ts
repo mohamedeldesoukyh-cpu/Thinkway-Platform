@@ -40,6 +40,8 @@ export type CreatorUnitView = CreatorDocumentationUnitCard & {
   hasScript: boolean;
   script: CreatorScriptView | null;
   currentFileName: string | null;
+  currentVersionNumber: number | null;
+  onBehalfLabel: string | null;
   comments: Array<{ id: string; body: string; createdAt: string; authorDisplayName: string | null }>;
   clientFeedback: { decision: "approved" | "changes_requested"; comment: string | null } | null;
   publicationUrl: string | null;
@@ -188,9 +190,13 @@ async function hydrateCreatorUnitView(
     includeEvents: false,
   });
   const assets = detail?.assets ?? [];
-  const current = assets
-    .map((asset) => asset.currentVersion)
-    .find((version) => versionCountsAsClientContent(version));
+  const current =
+    assets
+      .map((asset) => asset.currentVersion)
+      .find((version) => versionCountsAsClientContent(version)) ??
+    assets.map((asset) => asset.currentVersion).find((version) => version?.onBehalfLabel) ??
+    assets[0]?.currentVersion ??
+    null;
   const releasedToClient = Boolean(current?.releasedToClientAt);
   const latestDecision = current
     ? extra.decisions.find((row) => row.version_id === current.id)
@@ -245,6 +251,8 @@ async function hydrateCreatorUnitView(
         }
       : null,
     currentFileName: current?.fileName ?? null,
+    currentVersionNumber: current?.versionNumber ?? null,
+    onBehalfLabel: current?.onBehalfLabel ?? null,
     comments: (detail?.comments ?? [])
       .filter((row) => row.audience === "creator")
       .map((row) => ({

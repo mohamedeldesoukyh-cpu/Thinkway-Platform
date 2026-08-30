@@ -11,6 +11,8 @@ import { getCreatorCampaignDetail } from "@/features/portals/queries";
 import { CreatorDocumentationUnitList } from "@/features/creator-workspace/components/creator-documentation-unit-list";
 import { loadCreatorUnitViews } from "@/features/creator-workspace/documentation-load";
 import { formatMoneyDetail } from "@/lib/finance/currency-format";
+import { upcomingUnitsFromViews } from "@/lib/creator-insights/presentation";
+import { loadOwnCreatorInsightPack } from "@/lib/creator-insights/service";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -22,6 +24,7 @@ export default async function CreatorCampaignDetailPage({ params }: Props) {
     getCreatorCampaignDetail(id),
     loadCreatorUnitViews(),
   ]);
+  const insightPack = await loadOwnCreatorInsightPack(upcomingUnitsFromViews(units));
 
   if (!detail) {
     notFound();
@@ -92,7 +95,11 @@ export default async function CreatorCampaignDetailPage({ params }: Props) {
 
         <section className="space-y-3">
           <h3 className="text-base font-semibold">What to deliver</h3>
-          <CreatorDocumentationUnitList units={campaignUnits} showCampaignLink={false} />
+          <CreatorDocumentationUnitList
+            units={campaignUnits}
+            showCampaignLink={false}
+            insightPack={insightPack}
+          />
         </section>
       </div>
     </PlatformErrorBoundary>

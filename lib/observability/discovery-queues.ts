@@ -17,6 +17,7 @@ export const DISCOVERY_WORKER_QUEUES = [
   "batch-profile-acquisition",
   "performance-report",
   "campaign-script-translate",
+  "creator-social-sync",
 ] as const;
 
 export type DiscoveryQueueName = (typeof DISCOVERY_WORKER_QUEUES)[number];

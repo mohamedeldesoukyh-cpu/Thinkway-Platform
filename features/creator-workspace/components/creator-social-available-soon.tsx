@@ -1,25 +1,32 @@
+import Link from "next/link";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CREATOR_WORKSPACE_SOCIAL_PLATFORMS } from "@/features/creator-workspace/social-availability";
+import { CREATOR_SOCIAL_OPTIONAL_INTRO } from "@/lib/creator-social/copy";
+import { listSocialProviders } from "@/lib/creator-social/providers/registry";
 
 export function CreatorSocialAvailableSoon() {
   return (
     <Card>
       <CardHeader className="pb-2">
-        <CardTitle className="text-base">Get more from Thinkway</CardTitle>
+        <CardTitle className="text-base">Social accounts</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
+        <p className="text-sm text-muted-foreground">{CREATOR_SOCIAL_OPTIONAL_INTRO}</p>
         <p className="text-sm text-muted-foreground">
-          Connecting social accounts is optional. You can use Creator Workspace without
-          connecting anything. When a platform is ready, it will appear here as Available
-          soon until it is active.
+          Manage connections on{" "}
+          <Link href="/creator-portal/profile" className="font-medium underline underline-offset-4">
+            Profile
+          </Link>
+          . Platforms that are not ready yet stay Available soon.
         </p>
         <div className="flex flex-wrap gap-2">
-          {CREATOR_WORKSPACE_SOCIAL_PLATFORMS.map((platform) => (
+          {listSocialProviders().map((provider) => (
             <span
-              key={platform}
+              key={provider.id}
               className="rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground"
             >
-              {platform} · Available soon
+              {provider.displayName}
+              {provider.isConfigured() ? "" : " · Available soon"}
             </span>
           ))}
         </div>

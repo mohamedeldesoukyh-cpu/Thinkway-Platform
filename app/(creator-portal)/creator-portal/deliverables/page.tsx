@@ -1,9 +1,12 @@
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { CreatorDocumentationUnitList } from "@/features/creator-workspace/components/creator-documentation-unit-list";
 import { loadCreatorUnitViews } from "@/features/creator-workspace/documentation-load";
+import { upcomingUnitsFromViews } from "@/lib/creator-insights/presentation";
+import { loadOwnCreatorInsightPack } from "@/lib/creator-insights/service";
 
 export default async function CreatorPortalDeliverablesPage() {
   const units = await loadCreatorUnitViews();
+  const insightPack = await loadOwnCreatorInsightPack(upcomingUnitsFromViews(units));
 
   return (
     <PlatformErrorBoundary surface="generic">
@@ -14,7 +17,7 @@ export default async function CreatorPortalDeliverablesPage() {
             Each card is one piece of work. Upload here and Thinkway sees the same file.
           </p>
         </div>
-        <CreatorDocumentationUnitList units={units} />
+        <CreatorDocumentationUnitList units={units} insightPack={insightPack} />
       </div>
     </PlatformErrorBoundary>
   );

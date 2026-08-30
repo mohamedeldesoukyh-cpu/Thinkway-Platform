@@ -17,6 +17,7 @@ export const QUEUES = {
   /** Batch profile acquisition — many URLs per Apify actor run. */
   batchProfileAcquisition: "batch-profile-acquisition",
   campaignScriptTranslate: "campaign-script-translate",
+  creatorSocialSync: "creator-social-sync",
 } as const;
 
 export type QueueName = (typeof QUEUES)[keyof typeof QUEUES];

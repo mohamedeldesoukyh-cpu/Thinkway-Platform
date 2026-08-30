@@ -10,6 +10,7 @@ export type CreatorCampaignCardModel = {
   needsAction: boolean;
   dateLine: string;
   publicationLine: string | null;
+  insightLine: string | null;
 };
 
 export function campaignNeedsCreatorAction(row: CreatorCampaignRow): boolean {
@@ -60,7 +61,10 @@ export function overlayCreatorCampaignUnitCounts(
   });
 }
 
-export function toCreatorCampaignCard(row: CreatorCampaignRow): CreatorCampaignCardModel {
+export function toCreatorCampaignCard(
+  row: CreatorCampaignRow,
+  insightLine: string | null = null
+): CreatorCampaignCardModel {
   return {
     assignmentId: row.assignment_id,
     href: `/creator-portal/campaigns/${row.campaign_header_id}`,
@@ -70,5 +74,6 @@ export function toCreatorCampaignCard(row: CreatorCampaignRow): CreatorCampaignC
     needsAction: campaignNeedsCreatorAction(row),
     dateLine: `${formatPortalDate(row.start_date)} → ${formatPortalDate(row.end_date)}`,
     publicationLine: campaignPublicationLine(row),
+    insightLine,
   };
 }

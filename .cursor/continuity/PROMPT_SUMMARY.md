@@ -1,18 +1,22 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Creator Workspace 24-hour generated activation link on `develop`. Do not start Phase 3, social OAuth, or Production.
+**Focus:** Creator Workspace Phases 1–5 are on `develop` for Development testing. Do not touch Production until the user reviews.
 
-## Creator Workspace onboarding
+## Phase 5 — Creator Insights & Smart Recommendations (in review)
 
-One `user_invites` credential. 24-hour TTL. Generate Creator Link returns the URL once for copy (WhatsApp/SMS/email). Thinkway email uses the same token. Email failure does not revoke the link. Regeneration rotates the hash. Expired tokens show a dedicated expired page. After activation, Copy Login Link is `/login?next=/creator-portal` (no token).
+Evidence-based “what should this creator do next?” — not a BI dashboard. Package: `lib/creator-insights/` (not ECI, not a second metrics SSOT). Reads `campaign_publications` + `creator_social_insights`. Deterministic facts/baselines; optional OpenAI wording only. Cache keyed by influencer + data fingerprint; invalidated after social sync. Creator Home compact Thinkway Insights (1–3). Internal Creator Profile performance snapshot. Social connection remains optional. No new nav, no Client Workspace exposure, no new tables.
 
-Settings/internal/client invites remain 7 days. No new table. No Production migration.
+Regression: `npm run test:creator-workspace-phase5` (includes Phase 1–4).
 
-## Phase 2 still true
+## Phase 4 still true
 
-Creator Workspace uses documentation-unit SSOT. Social remains Available soon. No OAuth. No Phase 3 on-behalf attribution.
+Optional creator-authorized connections. Instagram adapter-ready when env is set; others Available soon. Tokens in `creator_social_credentials`. Dev migration `20260830220000_creator_social_connections.sql` already applied to Development.
+
+## Phase 3 still true
+
+Internal on-behalf uses the same documentation-unit SSOT. No IO/legal/OAuth on behalf.
 
 ## Still true from earlier
 
-- Internal `/vendors/[id]` is **Creator Profile**. Creator product is `/creator-portal` (4-nav: Home, Campaigns, Deliverables, Profile).
+- Internal `/vendors/[id]` is **Creator Profile**. Creator product is `/creator-portal` (4-nav). Social lives on Profile, not a new nav item.

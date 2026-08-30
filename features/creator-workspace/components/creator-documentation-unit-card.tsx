@@ -16,6 +16,7 @@ import {
   addCreatorUnitCommentAction,
 } from "@/features/creator-workspace/actions";
 import type { CreatorUnitView } from "@/features/creator-workspace/documentation-load";
+import { CREATOR_ON_BEHALF_ACTOR_LABEL } from "@/lib/services/deliverables/on-behalf";
 import {
   alternateDeliverableVideoMime,
   isAllowedDeliverableUploadMime,
@@ -28,9 +29,11 @@ import { cn } from "@/lib/utils";
 export function CreatorDocumentationUnitCard({
   unit,
   showCampaignLink = true,
+  compactInsight = null,
 }: {
   unit: CreatorUnitView;
   showCampaignLink?: boolean;
+  compactInsight?: string | null;
 }) {
   const [pending, startTransition] = useTransition();
   const [scriptOpen, setScriptOpen] = useState(false);
@@ -158,6 +161,13 @@ export function CreatorDocumentationUnitCard({
           </span>
         </div>
 
+        {compactInsight ? (
+          <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm">
+            <span className="font-medium">Thinkway Insight: </span>
+            {compactInsight}
+          </p>
+        ) : null}
+
         {unit.hasScript ? (
           <div className="space-y-2 rounded-xl border border-border p-3">
             <div className="flex flex-wrap items-center gap-2">
@@ -265,8 +275,16 @@ export function CreatorDocumentationUnitCard({
           </div>
         ) : null}
 
-        {unit.currentFileName ? (
-          <p className="text-sm text-muted-foreground">Submitted: {unit.currentFileName}</p>
+        {unit.currentFileName || unit.onBehalfLabel || unit.currentVersionNumber ? (
+          <div className="text-sm text-muted-foreground">
+            {unit.currentVersionNumber ? (
+              <p>Version {unit.currentVersionNumber}</p>
+            ) : null}
+            {unit.onBehalfLabel ? <p>{unit.onBehalfLabel}</p> : null}
+            {unit.currentFileName && !unit.onBehalfLabel ? (
+              <p>Submitted: {unit.currentFileName}</p>
+            ) : null}
+          </div>
         ) : null}
 
         {unit.clientFeedback ? (
@@ -286,7 +304,11 @@ export function CreatorDocumentationUnitCard({
           <div className="space-y-2">
             {unit.comments.map((item) => (
               <p key={item.id} className="text-sm text-muted-foreground">
-                {item.authorDisplayName ? `${item.authorDisplayName}: ` : ""}
+                {item.authorDisplayName === CREATOR_ON_BEHALF_ACTOR_LABEL
+                  ? "Thinkway on your behalf: "
+                  : item.authorDisplayName
+                    ? `${item.authorDisplayName}: `
+                    : ""}
                 {item.body}
               </p>
             ))}

@@ -4,9 +4,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { toCreatorCampaignCard } from "@/features/creator-workspace/campaign-card-model";
 import type { CreatorCampaignRow } from "@/features/portals/types";
+import { campaignInsightLine } from "@/lib/creator-insights/presentation";
+import type { CreatorInsightPack } from "@/lib/creator-insights/types";
 import { cn } from "@/lib/utils";
 
-export function CreatorCampaignCards({ rows }: { rows: CreatorCampaignRow[] }) {
+export function CreatorCampaignCards({
+  rows,
+  insightPack = null,
+}: {
+  rows: CreatorCampaignRow[];
+  insightPack?: CreatorInsightPack | null;
+}) {
   if (rows.length === 0) {
     return (
       <p className="rounded-2xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
@@ -18,7 +26,10 @@ export function CreatorCampaignCards({ rows }: { rows: CreatorCampaignRow[] }) {
   return (
     <div className="grid gap-3">
       {rows.map((row) => {
-        const card = toCreatorCampaignCard(row);
+        const card = toCreatorCampaignCard(
+          row,
+          insightPack ? campaignInsightLine(insightPack, row.campaign_header_id) : null
+        );
         return (
           <Link key={card.assignmentId} href={card.href} className="block">
             <Card
@@ -49,6 +60,11 @@ export function CreatorCampaignCards({ rows }: { rows: CreatorCampaignRow[] }) {
                 <p className="text-xs text-muted-foreground">{card.dateLine}</p>
                 {card.publicationLine ? (
                   <p className="text-xs text-muted-foreground">{card.publicationLine}</p>
+                ) : null}
+                {card.insightLine ? (
+                  <p className="text-xs text-muted-foreground">
+                    Thinkway Insight: {card.insightLine}
+                  </p>
                 ) : null}
               </CardContent>
             </Card>
