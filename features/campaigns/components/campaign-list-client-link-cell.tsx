@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -30,9 +29,13 @@ type Props = {
   link?: CampaignClientWorkspaceLink;
 };
 
+function actionErrorMessage(error: unknown, fallback: string): string {
+  if (error instanceof Error && error.message.trim()) return error.message;
+  return fallback;
+}
+
 export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
-  const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const [pending, setPending] = useState(false);
   const [state, setState] = useState<CampaignClientWorkspaceLinkState>(link?.state ?? "none");
   const [reviewNumber, setReviewNumber] = useState<number | undefined>(link?.reviewNumber);
   const [shareOpen, setShareOpen] = useState(false);
@@ -60,8 +63,10 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
     }
   }
 
-  function activateLink() {
-    startTransition(async () => {
+  async function activateLink() {
+    if (pending) return;
+    setPending(true);
+    try {
       const result = await ensureCampaignClientReviewLinkAction({ campaignHeaderId });
       if (!result.ok) {
         toast.error(result.message, {
@@ -72,12 +77,17 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
       setState("active");
       openShare(result.url, result.reviewNumber);
       if (result.created) toast.success(result.message);
-      router.refresh();
-    });
+    } catch (error) {
+      toast.error(actionErrorMessage(error, "Could not activate the Client Workspace link."));
+    } finally {
+      setPending(false);
+    }
   }
 
-  function stopLink() {
-    startTransition(async () => {
+  async function stopLink() {
+    if (pending) return;
+    setPending(true);
+    try {
       const result = await stopCampaignClientReviewShareAction({ campaignHeaderId });
       if (!result.ok) {
         toast.error(result.message);
@@ -88,20 +98,25 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
       setShareUrl(null);
       setState("off");
       toast.success(result.message);
-      router.refresh();
-    });
+    } catch (error) {
+      toast.error(actionErrorMessage(error, "Could not stop the Client Workspace link."));
+    } finally {
+      setPending(false);
+    }
   }
 
   function onToggle(next: boolean) {
     if (next) {
-      if (!isActive) activateLink();
+      if (!isActive) void activateLink();
       return;
     }
-    if (isActive) stopLink();
+    if (isActive) void stopLink();
   }
 
-  function onView() {
-    startTransition(async () => {
+  async function onView() {
+    if (pending) return;
+    setPending(true);
+    try {
       const cached = readClientReviewShare(shareScope);
       if (cached) {
         openShare(cached.url, cached.reviewNumber);
@@ -113,7 +128,11 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
         return;
       }
       openShare(result.url, result.reviewNumber);
-    });
+    } catch (error) {
+      toast.error(actionErrorMessage(error, "Could not open the Client Workspace link."));
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -147,7 +166,7 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
             )}
             disabled={pending || !isActive}
             aria-label="Stop Client Workspace link"
-            onClick={stopLink}
+            onClick={() => void stopLink()}
           >
             Stop
           </button>
@@ -158,7 +177,7 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
             className="platform-v6-link w-fit text-left text-xs font-semibold"
             disabled={pending}
             aria-label="View Client Workspace link"
-            onClick={onView}
+            onClick={() => void onView()}
           >
             View
           </button>

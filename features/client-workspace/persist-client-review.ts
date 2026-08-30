@@ -807,80 +807,109 @@ export async function stopCampaignClientReviewShareLink(input: {
   campaignHeaderId: string;
   userId: string;
 }): Promise<{ ok: true; stopped: boolean } | { ok: false; message: string }> {
-  const db = shareLookupClient(input.supabase);
-  const now = new Date().toISOString();
-  const { data: reviewRows, error: reviewError } = await db
-    .from("campaign_client_reviews" as never)
-    .select("id, status, review_number, journey_id")
-    .eq("campaign_header_id", input.campaignHeaderId);
-
-  if (reviewError) {
-    return { ok: false, message: reviewError.message || "Could not stop the Client Workspace link." };
-  }
-
-  const reviews = (reviewRows ?? []) as Array<{
-    id: string;
-    status: string;
-    review_number: number;
-    journey_id?: string | null;
-  }>;
-  const revokeIds = campaignClientReviewIdsToStop(reviews);
-
-  if (revokeIds.length > 0) {
-    const { error: revokeError } = await db
+  try {
+    const db = shareLookupClient(input.supabase);
+    const now = new Date().toISOString();
+    const { data: reviewRows, error: reviewError } = await db
       .from("campaign_client_reviews" as never)
-      .update({
-        status: "revoked",
-        revoked_at: now,
-        updated_at: now,
-      } as never)
-      .in("id", revokeIds);
-    if (revokeError) {
-      return { ok: false, message: revokeError.message || "Could not stop the Client Workspace link." };
-    }
-
-    await db.from("campaign_client_review_events" as never).insert(
-      revokeIds.map((reviewId) => ({
-        review_id: reviewId,
-        event_type: "link_revoked",
-        actor_kind: "internal",
-        actor_label: "Thinkway",
-        payload: { campaign_header_id: input.campaignHeaderId },
-      })) as never
-    );
-
-    await logAuditEvent(db as never, {
-      userId: input.userId,
-      action: "update",
-      entityType: "campaign_client_review",
-      entityId: revokeIds[0],
-      metadata: {
-        audit_action: "client_review_link_stopped",
-        campaign_header_id: input.campaignHeaderId,
-        review_ids: revokeIds,
-      },
-    });
-  }
-
-  const { data: journeys } = await db
-    .from("campaign_client_journeys" as never)
-    .select("id, share_token")
-    .eq("campaign_header_id", input.campaignHeaderId);
-  const journeyRows = (journeys ?? []) as Array<{ id: string; share_token?: string | null }>;
-  const journeyHadToken = journeyRows.some((row) => Boolean(row.share_token?.trim()));
-
-  if (journeyRows.length > 0) {
-    const { error: journeyError } = await db
-      .from("campaign_client_journeys" as never)
-      .update({
-        share_token: null,
-        updated_at: now,
-      } as never)
+      .select("id, status, review_number, journey_id")
       .eq("campaign_header_id", input.campaignHeaderId);
-    if (journeyError) {
-      return { ok: false, message: journeyError.message || "Could not stop the Client Workspace link." };
-    }
-  }
 
-  return { ok: true, stopped: revokeIds.length > 0 || journeyHadToken };
+    if (reviewError) {
+      return { ok: false, message: reviewError.message || "Could not stop the Client Workspace link." };
+    }
+
+    const reviews = (reviewRows ?? []) as Array<{
+      id: string;
+      status: string;
+      review_number: number;
+      journey_id?: string | null;
+    }>;
+    const revokeIds = campaignClientReviewIdsToStop(reviews);
+
+    if (revokeIds.length > 0) {
+      const { error: revokeError } = await db
+        .from("campaign_client_reviews" as never)
+        .update({
+          status: "revoked",
+          revoked_at: now,
+          updated_at: now,
+        } as never)
+        .in("id", revokeIds);
+      if (revokeError) {
+        const missingRevokedAt = /revoked_at/i.test(revokeError.message);
+        const { error: fallbackError } = missingRevokedAt
+          ? await db
+              .from("campaign_client_reviews" as never)
+              .update({
+                status: "revoked",
+                updated_at: now,
+              } as never)
+              .in("id", revokeIds)
+          : { error: revokeError };
+        if (fallbackError) {
+          return {
+            ok: false,
+            message: fallbackError.message || "Could not stop the Client Workspace link.",
+          };
+        }
+      }
+
+      const { error: eventError } = await db.from("campaign_client_review_events" as never).insert(
+        revokeIds.map((reviewId) => ({
+          review_id: reviewId,
+          event_type: "link_revoked",
+          actor_kind: "internal",
+          actor_label: "Thinkway",
+          payload: { campaign_header_id: input.campaignHeaderId },
+        })) as never
+      );
+      if (eventError) {
+        console.warn("[client-workspace] link_revoked event insert failed", eventError.message);
+      }
+
+      await logAuditEvent(db as never, {
+        userId: input.userId,
+        action: "update",
+        entityType: "campaign_client_review",
+        entityId: revokeIds[0],
+        metadata: {
+          audit_action: "client_review_link_stopped",
+          campaign_header_id: input.campaignHeaderId,
+          review_ids: revokeIds,
+        },
+      });
+    }
+
+    const { data: journeys, error: journeyLookupError } = await db
+      .from("campaign_client_journeys" as never)
+      .select("id, share_token")
+      .eq("campaign_header_id", input.campaignHeaderId);
+    if (journeyLookupError) {
+      console.warn("[client-workspace] journey lookup failed", journeyLookupError.message);
+    }
+    const journeyRows = (journeys ?? []) as Array<{ id: string; share_token?: string | null }>;
+    const journeyHadToken = journeyRows.some((row) => Boolean(row.share_token?.trim()));
+
+    if (journeyRows.length > 0) {
+      const { error: journeyError } = await db
+        .from("campaign_client_journeys" as never)
+        .update({
+          share_token: null,
+          updated_at: now,
+        } as never)
+        .eq("campaign_header_id", input.campaignHeaderId);
+      if (journeyError) {
+        return { ok: false, message: journeyError.message || "Could not stop the Client Workspace link." };
+      }
+    }
+
+    return { ok: true, stopped: revokeIds.length > 0 || journeyHadToken };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : "Could not stop the Client Workspace link.",
+    };
+  }
 }

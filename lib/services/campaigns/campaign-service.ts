@@ -481,7 +481,12 @@ export async function getCampaignsList(
 
   const campaigns = (data ?? []) as unknown as CampaignListItem[];
   await syncListCampaignStatuses(supabase, campaigns);
-  const enriched = await enrichCampaignListLifecycleSignals(supabase, campaigns);
+  let enriched = campaigns;
+  try {
+    enriched = await enrichCampaignListLifecycleSignals(supabase, campaigns);
+  } catch (enrichError) {
+    console.warn("[campaigns-list] lifecycle enrich failed", enrichError);
+  }
 
   const total = count ?? 0;
   const totalPages = Math.max(1, Math.ceil(total / CAMPAIGNS_PAGE_SIZE));

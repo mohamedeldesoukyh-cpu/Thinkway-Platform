@@ -82,32 +82,40 @@ export async function revealCampaignClientReviewShareAction(input: {
 export async function stopCampaignClientReviewShareAction(input: {
   campaignHeaderId: string;
 }): Promise<{ ok: true; stopped: boolean; message: string } | { ok: false; message: string }> {
-  const supabase = await createSupabaseServerClient();
-  const auth = await requirePermission(supabase, "campaigns.write");
-  let userId: string;
-  if ("error" in auth) {
-    const admin = await requirePermission(supabase, "campaigns.admin");
-    if ("error" in admin) return { ok: false, message: auth.error };
-    userId = admin.userId;
-  } else {
-    userId = auth.userId;
-  }
+  try {
+    const supabase = await createSupabaseServerClient();
+    const auth = await requirePermission(supabase, "campaigns.write");
+    let userId: string;
+    if ("error" in auth) {
+      const admin = await requirePermission(supabase, "campaigns.admin");
+      if ("error" in admin) return { ok: false, message: auth.error };
+      userId = admin.userId;
+    } else {
+      userId = auth.userId;
+    }
 
-  const userClient = await createSupabaseServerClient();
-  const db = tryCreateServiceRoleClient().client ?? userClient;
-  const result = await stopCampaignClientReviewShareLink({
-    supabase: db,
-    campaignHeaderId: input.campaignHeaderId,
-    userId,
-  });
-  if (!result.ok) return result;
-  return {
-    ok: true,
-    stopped: result.stopped,
-    message: result.stopped
-      ? "Client Workspace link stopped."
-      : "Client Workspace link is already off.",
-  };
+    const userClient = await createSupabaseServerClient();
+    const db = tryCreateServiceRoleClient().client ?? userClient;
+    const result = await stopCampaignClientReviewShareLink({
+      supabase: db,
+      campaignHeaderId: input.campaignHeaderId,
+      userId,
+    });
+    if (!result.ok) return result;
+    return {
+      ok: true,
+      stopped: result.stopped,
+      message: result.stopped
+        ? "Client Workspace link stopped."
+        : "Client Workspace link is already off.",
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message:
+        error instanceof Error ? error.message : "Could not stop the Client Workspace link.",
+    };
+  }
 }
 
 async function run(campaignHeaderId: string, userId: string): Promise<Result> {
