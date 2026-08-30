@@ -55,6 +55,7 @@ type OperationalConfigurableTableProps<T> = {
   rows: readonly T[];
   rowKey: (row: T) => string;
   className?: string;
+  headerCellClassName?: string;
   rowClassName?: (row: T) => string | undefined;
   wrapRow?: (row: T, rowElement: ReactElement) => ReactNode;
 };
@@ -64,6 +65,7 @@ export function OperationalConfigurableTable<T>({
   rows,
   rowKey,
   className,
+  headerCellClassName,
   rowClassName,
   wrapRow,
 }: OperationalConfigurableTableProps<T>) {
@@ -81,6 +83,7 @@ export function OperationalConfigurableTable<T>({
     return (
       <OperationalConfigurableTableView
         className={className}
+        headerCellClassName={headerCellClassName}
         columns={defaultColumns}
         rows={displayRows}
         rowKey={rowKey}
@@ -93,6 +96,7 @@ export function OperationalConfigurableTable<T>({
   return (
     <OperationalConfigurableTableView
       className={className}
+      headerCellClassName={headerCellClassName}
       columns={visibleColumns}
       rows={displayRows}
       rowKey={rowKey}
@@ -118,6 +122,7 @@ function OperationalConfigurableTableView<T>({
   rows,
   rowKey,
   className,
+  headerCellClassName,
   rowClassName,
   wrapRow,
 }: {
@@ -125,6 +130,7 @@ function OperationalConfigurableTableView<T>({
   rows: readonly T[];
   rowKey: (row: T) => string;
   className?: string;
+  headerCellClassName?: string;
   rowClassName?: (row: T) => string | undefined;
   wrapRow?: (row: T, rowElement: ReactElement) => ReactNode;
 }) {
@@ -142,7 +148,11 @@ function OperationalConfigurableTableView<T>({
           {columns.map((column) => (
             <CampaignOperationalTableHead
               key={column.id}
-              className={cn(column.amountCell ? "text-right" : "text-left", column.headerClassName)}
+              className={cn(
+                column.amountCell ? "text-right" : "text-left",
+                headerCellClassName,
+                column.headerClassName
+              )}
             >
               {column.renderHeader ? column.renderHeader() : column.label}
             </CampaignOperationalTableHead>

@@ -16,6 +16,7 @@ import {
   clientReviewShareHasLink,
   clientReviewSharePeekExists,
   campaignClientWorkspaceLinkFromLatest,
+  campaignClientReviewIdsToStop,
   campaignHeaderIdsWithShareToken,
   latestCampaignClientReviewByHeader,
   clientSelectionsEqual,
@@ -613,6 +614,24 @@ test("Show link stays visible for superseded reviews, quotation versions, and ca
       { campaign_header_id: null, share_token: "xyz" },
     ])],
     ["h1"]
+  );
+  assert.deepEqual(
+    campaignClientReviewIdsToStop([
+      { id: "r1", status: "revoked", review_number: 1 },
+      { id: "r2", status: "awaiting_review", review_number: 2 },
+    ]).sort(),
+    ["r2"]
+  );
+  assert.deepEqual(
+    campaignClientReviewIdsToStop([
+      { id: "r1", status: "approved", review_number: 3 },
+      { id: "r2", status: "superseded", review_number: 2 },
+    ]),
+    ["r1"]
+  );
+  assert.deepEqual(
+    campaignClientReviewIdsToStop([{ id: "r1", status: "revoked", review_number: 1 }]),
+    []
   );
   assert.deepEqual(
     collectQuotationFamilyIds({

@@ -216,7 +216,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "next_action",
     label: "Next Action",
-    colWidth: "10%",
+    colWidth: "8%",
     cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
@@ -234,7 +234,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "group_client",
     label: "Group · Legal entity",
-    colWidth: "8%",
+    colWidth: "7%",
     renderCell: (campaign) => {
       const label = [
         formatGroupDisplayName(campaign.group?.name),
@@ -289,8 +289,8 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "client_link",
     label: "Client link",
-    colWidth: "8%",
-    cellClassName: "min-w-0 overflow-visible",
+    colWidth: "11%",
+    cellClassName: "min-w-0 overflow-visible whitespace-normal",
     renderCell: (campaign) => (
       <CampaignListClientLinkCell
         campaignHeaderId={campaign.id}
@@ -361,6 +361,7 @@ export function CampaignsTable({ campaigns }: CampaignsTableProps) {
       columns={CAMPAIGNS_TABLE_COLUMNS}
       rows={campaigns}
       rowKey={(campaign) => campaign.id}
+      headerCellClassName="whitespace-normal break-words leading-snug"
     />
   );
 }

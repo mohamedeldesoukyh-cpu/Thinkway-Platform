@@ -111,6 +111,26 @@ export function campaignHeaderIdsWithShareToken(
   return ids;
 }
 
+/** Reviews that must be revoked so the campaign list Client link becomes Off. */
+export function campaignClientReviewIdsToStop(
+  rows: ReadonlyArray<{
+    id: string;
+    status: string;
+    review_number: number;
+  }>
+): string[] {
+  const ids = new Set<string>();
+  let latest: { id: string; status: string; review_number: number } | undefined;
+  for (const row of rows) {
+    if (!latest || row.review_number > latest.review_number) latest = row;
+    if (row.status === "awaiting_review" || row.status === "changes_requested") {
+      ids.add(row.id);
+    }
+  }
+  if (latest && clientReviewSharePeekExists(latest.status)) ids.add(latest.id);
+  return [...ids];
+}
+
 /** Keep Show link if peek or this-record cache already knows a share exists. */
 export function clientReviewShareHasLink(peekExists: boolean, cachedShare: boolean): boolean {
   return peekExists || cachedShare;

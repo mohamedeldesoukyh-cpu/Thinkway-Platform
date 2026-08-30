@@ -212,6 +212,8 @@ function eventSummary(type: string, payload: Record<string, unknown> | null): st
       return "Updated quotation sent for approval";
     case "review_viewed":
       return "Client opened this review";
+    case "link_revoked":
+      return "Client Workspace link stopped";
     default:
       return type.replaceAll("_", " ");
   }

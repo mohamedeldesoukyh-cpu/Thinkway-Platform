@@ -1,16 +1,24 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
-import { revealCampaignClientReviewShareAction } from "@/features/client-workspace/actions/create-from-campaign-action";
+import { PlatformV6Toggle } from "@/components/platform/platform-v6-layout";
+import {
+  ensureCampaignClientReviewLinkAction,
+  revealCampaignClientReviewShareAction,
+  stopCampaignClientReviewShareAction,
+} from "@/features/client-workspace/actions/create-from-campaign-action";
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
 import {
   CAMPAIGN_CLIENT_WORKSPACE_LINK_LABEL,
   type CampaignClientWorkspaceLink,
+  type CampaignClientWorkspaceLinkState,
 } from "@/features/client-workspace/client-review-selection";
 import {
+  forgetClientReviewShare,
   readClientReviewShare,
   rememberClientReviewShare,
   reviewIdFromShareUrl,
@@ -23,32 +31,78 @@ type Props = {
 };
 
 export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
-  const state = link?.state ?? "none";
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [state, setState] = useState<CampaignClientWorkspaceLinkState>(link?.state ?? "none");
+  const [reviewNumber, setReviewNumber] = useState<number | undefined>(link?.reviewNumber);
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
-  const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(
-    link?.reviewNumber
-  );
+  const shareScope = { source: "campaign" as const, id: campaignHeaderId };
   const label = CAMPAIGN_CLIENT_WORKSPACE_LINK_LABEL[state];
   const isActive = state === "active";
 
-  function openShare(url: string, reviewNumber: number) {
+  useEffect(() => {
+    setState(link?.state ?? "none");
+    setReviewNumber(link?.reviewNumber);
+  }, [link?.state, link?.reviewNumber]);
+
+  function openShare(url: string, nextReviewNumber: number) {
     setShareUrl(url);
-    setShareReviewNumber(reviewNumber);
+    setReviewNumber(nextReviewNumber);
     setShareOpen(true);
     const reviewId = reviewIdFromShareUrl(url);
     if (reviewId) {
-      rememberClientReviewShare(
-        { source: "campaign", id: campaignHeaderId },
-        { url, reviewNumber, reviewId }
-      );
+      rememberClientReviewShare(shareScope, {
+        url,
+        reviewNumber: nextReviewNumber,
+        reviewId,
+      });
     }
+  }
+
+  function activateLink() {
+    startTransition(async () => {
+      const result = await ensureCampaignClientReviewLinkAction({ campaignHeaderId });
+      if (!result.ok) {
+        toast.error(result.message, {
+          description: result.blockers.slice(0, 4).join(" "),
+        });
+        return;
+      }
+      setState("active");
+      openShare(result.url, result.reviewNumber);
+      if (result.created) toast.success(result.message);
+      router.refresh();
+    });
+  }
+
+  function stopLink() {
+    startTransition(async () => {
+      const result = await stopCampaignClientReviewShareAction({ campaignHeaderId });
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      forgetClientReviewShare(shareScope);
+      setShareOpen(false);
+      setShareUrl(null);
+      setState("off");
+      toast.success(result.message);
+      router.refresh();
+    });
+  }
+
+  function onToggle(next: boolean) {
+    if (next) {
+      if (!isActive) activateLink();
+      return;
+    }
+    if (isActive) stopLink();
   }
 
   function onView() {
     startTransition(async () => {
-      const cached = readClientReviewShare({ source: "campaign", id: campaignHeaderId });
+      const cached = readClientReviewShare(shareScope);
       if (cached) {
         openShare(cached.url, cached.reviewNumber);
         return;
@@ -64,21 +118,40 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
 
   return (
     <>
-      <div className="flex min-w-0 flex-col gap-0.5 overflow-visible">
+      <div className="flex min-w-0 flex-col gap-1 overflow-visible whitespace-normal">
         <span
           className={cn(
             "inline-flex min-w-0 items-center gap-1.5 text-xs leading-snug",
             isActive ? "platform-v6-c-green font-semibold" : "text-muted-foreground"
           )}
-          title={
-            link?.reviewNumber != null ? `Client Workspace v${link.reviewNumber}` : undefined
-          }
+          title={reviewNumber != null ? `Client Workspace v${reviewNumber}` : undefined}
         >
           {isActive ? (
             <span className="platform-v6-hs-live-dot shrink-0" aria-hidden />
           ) : null}
-          <span className="min-w-0 truncate">{label}</span>
+          <span className="min-w-0 break-words">{label}</span>
+          {pending ? <Loader2Icon className="size-3 shrink-0 animate-spin" /> : null}
         </span>
+        <div className="flex min-w-0 items-center gap-1.5">
+          <PlatformV6Toggle
+            checked={isActive}
+            disabled={pending}
+            aria-label="Client Workspace link active"
+            onCheckedChange={onToggle}
+          />
+          <button
+            type="button"
+            className={cn(
+              "text-xs font-semibold leading-none",
+              isActive ? "platform-v6-c-red" : "text-muted-foreground"
+            )}
+            disabled={pending || !isActive}
+            aria-label="Stop Client Workspace link"
+            onClick={stopLink}
+          >
+            Stop
+          </button>
+        </div>
         {isActive ? (
           <button
             type="button"
@@ -87,14 +160,7 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
             aria-label="View Client Workspace link"
             onClick={onView}
           >
-            {pending ? (
-              <span className="inline-flex items-center gap-1">
-                <Loader2Icon className="size-3 animate-spin" />
-                Opening
-              </span>
-            ) : (
-              "View"
-            )}
+            View
           </button>
         ) : null}
       </div>
@@ -102,7 +168,7 @@ export function CampaignListClientLinkCell({ campaignHeaderId, link }: Props) {
         open={shareOpen}
         onOpenChange={setShareOpen}
         url={shareUrl}
-        reviewNumber={shareReviewNumber}
+        reviewNumber={reviewNumber}
       />
     </>
   );

@@ -28,6 +28,15 @@ export function rememberClientReviewShare(
   }
 }
 
+export function forgetClientReviewShare(scope: ClientReviewShareScope): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(storageKey(scope));
+  } catch {
+    /* private mode / quota */
+  }
+}
+
 export function readClientReviewShare(scope: ClientReviewShareScope): ClientReviewShareMemory | null {
   if (typeof window === "undefined") return null;
   try {
