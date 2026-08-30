@@ -36,7 +36,6 @@ import {
   insertCampaignHeader,
   listCampaignHeaderIdsForNav,
   listCampaignHeadersForNav,
-  type CampaignNavOption,
   listCampaignHeaders,
   syncListCampaignStatuses,
   enrichCampaignListLifecycleSignals,
@@ -45,8 +44,9 @@ import {
   fetchCampaignHeaderForUpdate,
   type SourceCampaignHeader,
 } from "./repositories/campaign-repository";
+import type { CampaignNavOption } from "./repositories/campaign-repository";
 
-export type { CampaignNavOption };
+export type { CampaignNavOption } from "./repositories/campaign-repository";
 
 export type CreateCampaignInput = {
   brand_id: string;
