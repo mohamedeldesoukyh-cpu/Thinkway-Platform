@@ -37,6 +37,27 @@ function hostFromUrl(url: string): string | null {
   }
 }
 
+/** Instagram/Facebook `stp=dst-jpg_e15` (and similar) is a posterized preview derivative. */
+const LOW_QUALITY_STP_E = /(?:^|[_\-])e([0-2]?\d)(?:[_\-]|$)/i;
+
+export function socialCdnPreviewQuality(url: string): number | null {
+  try {
+    const stp = new URL(url).searchParams.get("stp") ?? "";
+    const match = stp.match(LOW_QUALITY_STP_E);
+    if (!match) return null;
+    const quality = Number(match[1]);
+    return Number.isFinite(quality) ? quality : null;
+  } catch {
+    return null;
+  }
+}
+
+/** True when the CDN URL is an Instagram/Facebook extra-low-quality JPEG preview. */
+export function isLikelyLowQualitySocialJpeg(url: string): boolean {
+  const quality = socialCdnPreviewQuality(url);
+  return quality != null && quality > 0 && quality < 30;
+}
+
 /** Instagram/Facebook CDN thumbs at 150–480px look pixelated when stretched in Showcase. */
 const LOW_RES_CDN_SIZE =
   /\bs(?:[1-9]\d|[1-3]\d{2}|4[0-7]\d)x(?:[1-9]\d|[1-3]\d{2}|4[0-7]\d)\b/i;
@@ -57,13 +78,35 @@ export function isLikelyLowResolutionSocialThumb(url: string): boolean {
   }
 }
 
+export function isLikelyPoorSocialPreviewUrl(url: string): boolean {
+  return isLikelyLowResolutionSocialThumb(url) || isLikelyLowQualitySocialJpeg(url);
+}
+
+function rewriteSocialCdnQualityTokens(url: string, minQuality: number): string {
+  try {
+    const parsed = new URL(url);
+    const stp = parsed.searchParams.get("stp");
+    if (!stp) return url;
+    const next = stp.replace(/([_\-]e)(\d{1,3})/gi, (full, prefix, value) => {
+      const quality = Number(value);
+      if (!Number.isFinite(quality) || quality >= minQuality) return full;
+      return `${prefix}${minQuality}`;
+    });
+    if (next === stp) return url;
+    parsed.searchParams.set("stp", next);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 function rewriteSocialCdnSizeTokens(url: string, target: number): string {
   try {
     const parsed = new URL(url);
     const replaceSize = (value: string) =>
-      value.replace(/\bs(\d{2,4})x(\d{2,4})\b/gi, (_, width, height) => {
+      value.replace(/(^|[/_-])s(\d{2,4})x(\d{2,4})\b/gi, (full, prefix, width, height) => {
         const size = Math.max(Number(width), Number(height));
-        return size >= target ? `s${width}x${height}` : `s${target}x${target}`;
+        return size >= target ? full : `${prefix}s${target}x${target}`;
       });
     parsed.pathname = replaceSize(parsed.pathname);
     parsed.search = replaceSize(parsed.search);
@@ -73,18 +116,20 @@ function rewriteSocialCdnSizeTokens(url: string, target: number): string {
   }
 }
 
-/** Ask the CDN for a larger derivative when the stored thumb is a 150/320 crop. */
+/** Ask the CDN for a larger, higher-quality derivative when the stored thumb is a preview. */
 export function preferHigherResolutionSocialImageUrl(url: string): string {
-  return rewriteSocialCdnSizeTokens(url, 1080);
+  return rewriteSocialCdnSizeTokens(rewriteSocialCdnQualityTokens(url, 35), 1080);
 }
 
 /** Larger unsigned CDN sizes to try before the stored thumb (1080 often 403s; 640/320 may work). */
 export function higherResolutionSocialImageUrlCandidates(url: string): string[] {
   const out: string[] = [];
+  const upgraded = rewriteSocialCdnQualityTokens(url, 35);
   for (const target of [1080, 640, 320] as const) {
-    const next = rewriteSocialCdnSizeTokens(url, target);
+    const next = rewriteSocialCdnSizeTokens(upgraded, target);
     if (next !== url && !out.includes(next)) out.push(next);
   }
+  if (upgraded !== url && !out.includes(upgraded)) out.unshift(upgraded);
   return out;
 }
 
@@ -147,7 +192,7 @@ type PublicationImageFieldRank = {
 };
 
 function finalizePublicationImageUrl(url: string): string {
-  if (!socialCdnUrlLooksSigned(url) && isLikelyLowResolutionSocialThumb(url)) {
+  if (!socialCdnUrlLooksSigned(url) && isLikelyPoorSocialPreviewUrl(url)) {
     return preferHigherResolutionSocialImageUrl(url);
   }
   return url;
@@ -158,6 +203,7 @@ function scorePublicationImageCandidate(url: string, fieldRank: number): number 
   if (isLikelyCreatorProfileImageUrl(url)) return Number.NEGATIVE_INFINITY;
   let score = fieldRank;
   if (isLikelyLowResolutionSocialThumb(url)) score -= 25;
+  if (isLikelyLowQualitySocialJpeg(url)) score -= 50;
   return score;
 }
 

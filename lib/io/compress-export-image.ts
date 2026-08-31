@@ -42,7 +42,8 @@ async function compressWithSharp(
         fit: "inside",
         withoutEnlargement: true,
       })
-      .jpeg({ quality, mozjpeg: true })
+      .toColorspace("srgb")
+      .jpeg({ quality, chromaSubsampling: "4:4:4" })
       .toBuffer();
     return { buffer: out, contentType: "image/jpeg" };
   } catch {
@@ -135,6 +136,29 @@ export function isVisiblyLowResolutionImage(edge: number, minEdge: number): bool
   return edge > 0 && edge < minEdge;
 }
 
+/** True when a photo is large but extra-low JPEG quality (Instagram e15-style posterization). */
+export async function isVisiblyOvercompressedPhoto(
+  buffer: Buffer | ArrayBuffer
+): Promise<boolean> {
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  if (buf.byteLength < 128) return false;
+
+  let width = 0;
+  let height = 0;
+  try {
+    const sharp = (await import("sharp")).default;
+    const meta = await sharp(buf, { failOn: "truncated" }).metadata();
+    width = meta.width ?? 0;
+    height = meta.height ?? 0;
+  } catch {
+    return false;
+  }
+
+  const pixels = width * height;
+  if (pixels < 200 * 200) return false;
+  return buf.byteLength / pixels < 0.05;
+}
+
 /** True when a buffer is a real image large enough to display without looking pixelated. */
 export async function exportImageBufferMeetsMinEdge(
   buffer: Buffer | ArrayBuffer,
@@ -211,7 +235,7 @@ export const PITCH_AVATAR_COMPRESS: CompressExportImageOptions = {
 
 export const SHOWCASE_PUBLICATION_COMPRESS: CompressExportImageOptions = {
   maxEdge: 1080,
-  quality: 82,
+  quality: 90,
 };
 
 export type CropExportImageCoverOptions = {
@@ -243,7 +267,8 @@ async function cropWithSharp(
     const out = await sharp(buffer, { failOn: "truncated" })
       .rotate()
       .resize(width, height, { fit: "cover", position: "centre" })
-      .jpeg({ quality, mozjpeg: true })
+      .toColorspace("srgb")
+      .jpeg({ quality, chromaSubsampling: "4:4:4" })
       .toBuffer();
     return { buffer: out, contentType: "image/jpeg" };
   } catch {

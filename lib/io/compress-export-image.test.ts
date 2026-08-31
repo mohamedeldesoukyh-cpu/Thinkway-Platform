@@ -8,6 +8,7 @@ import {
   imageBufferLooksComplete,
   imageLongestEdge,
   isVisiblyLowResolutionImage,
+  isVisiblyOvercompressedPhoto,
   toCompressedExportDataUri,
 } from "./compress-export-image";
 
@@ -80,6 +81,38 @@ async function main() {
       await exportImageBufferMeetsMinEdge(truncated, 160),
       false,
       "truncated JPEG must not be embedded"
+    );
+  }
+
+  {
+    const sharp = (await import("sharp")).default;
+    const posterized = await sharp({
+      create: { width: 1080, height: 1080, channels: 3, background: { r: 90, g: 60, b: 40 } },
+    })
+      .jpeg({ quality: 8 })
+      .toBuffer();
+    assert.equal(
+      await isVisiblyOvercompressedPhoto(posterized),
+      true,
+      "Instagram e15-class JPEGs are rejected"
+    );
+
+    const circles = Array.from({ length: 120 }, (_, i) => {
+      const x = (i * 97) % 1080;
+      const y = (i * 53) % 1080;
+      return `<circle cx="${x}" cy="${y}" r="${10 + (i % 18)}" fill="rgb(${(i * 19) % 255},${(i * 47) % 255},${(i * 73) % 255})"/>`;
+    }).join("");
+    const detailed = await sharp(
+      Buffer.from(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080">${circles}</svg>`
+      )
+    )
+      .jpeg({ quality: 90 })
+      .toBuffer();
+    assert.equal(
+      await isVisiblyOvercompressedPhoto(detailed),
+      false,
+      "normal-quality photos are not rejected"
     );
   }
 

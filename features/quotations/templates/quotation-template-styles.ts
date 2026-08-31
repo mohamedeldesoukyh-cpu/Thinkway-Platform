@@ -365,15 +365,18 @@ export const QUOTATION_TEMPLATE_STYLES = `
   }
   .pub, .showcase-pub-card{
     border-radius:12px; background:var(--tint); border:1px solid var(--border);
-    overflow:hidden; position:relative; width:100%; height:100%; min-height:148px;
+    overflow:hidden; position:relative; width:100%; min-height:148px; aspect-ratio:4/5;
   }
   .showcase-creator-page .showcase-pubs-grid{
-    min-height:168px;
+    min-height:0;
   }
   .showcase-creator-page .showcase-pubs-grid .showcase-pub-card{
-    min-height:168px;
+    min-height:148px;
   }
-  .pub img, .showcase-pub-thumb{width:100%; height:100%; object-fit:cover; display:block;}
+  .pub img, .showcase-pub-thumb{
+    width:100%; height:100%; object-fit:cover; display:block;
+    image-rendering:auto;
+  }
   .pub-play{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none;}
   .pub-play-icon{width:32px; height:32px; border-radius:50%; background:rgba(15,23,42,.58); border:2px solid rgba(255,255,255,.92); display:flex; align-items:center; justify-content:center;}
   .pub-play-icon svg{width:12px; height:12px; fill:var(--white); margin-left:2px;}

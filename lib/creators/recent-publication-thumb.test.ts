@@ -4,6 +4,7 @@ import {
   creatorRecentPublicationDisplayUrl,
   higherResolutionSocialImageUrlCandidates,
   isCreatorRecentPublicationVideo,
+  isLikelyLowQualitySocialJpeg,
   isLikelyLowResolutionSocialThumb,
   isVideoPublicationUrl,
   normalizeCreatorRecentPublications,
@@ -376,6 +377,43 @@ assert.equal(
 assert.equal(
   socialCdnUrlLooksSigned("https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg"),
   false
+);
+
+assert.equal(
+  isLikelyLowQualitySocialJpeg(
+    "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e15_s640x640"
+  ),
+  true,
+  "Instagram e15 is a posterized preview JPEG"
+);
+assert.equal(
+  isLikelyLowQualitySocialJpeg(
+    "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e35_s1080x1080"
+  ),
+  false
+);
+assert.match(
+  preferHigherResolutionSocialImageUrl(
+    "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e15_s640x640"
+  ),
+  /e35/
+);
+assert.match(
+  preferHigherResolutionSocialImageUrl(
+    "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e15_s640x640"
+  ),
+  /s1080x1080/
+);
+
+assert.equal(
+  resolveCreatorRecentPublicationThumbnail({
+    screenshot_url:
+      "https://abc.supabase.co/storage/v1/object/sign/campaign-publication-media/screenshot.jpg",
+    displayUrl:
+      "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e15_s640x640",
+  }),
+  "https://abc.supabase.co/storage/v1/object/sign/campaign-publication-media/screenshot.jpg",
+  "prefer stored screenshot over Instagram e15 preview JPEGs"
 );
 
 console.log("recent-publication-thumb tests passed");

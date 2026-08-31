@@ -19,16 +19,13 @@ import { imageLongestEdge } from "@/lib/io/compress-export-image";
 
 async function jpegOfSize(width: number, height: number): Promise<Buffer> {
   const sharp = (await import("sharp")).default;
-  return sharp({
-    create: {
-      width,
-      height,
-      channels: 3,
-      background: { r: 80, g: 120, b: 160 },
-    },
-  })
-    .jpeg({ quality: 90 })
-    .toBuffer();
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
+    <rect width="100%" height="100%" fill="#5078a0"/>
+    <circle cx="${Math.round(width * 0.32)}" cy="${Math.round(height * 0.38)}" r="${Math.round(width * 0.22)}" fill="#c08050"/>
+    <circle cx="${Math.round(width * 0.7)}" cy="${Math.round(height * 0.62)}" r="${Math.round(width * 0.16)}" fill="#80c070"/>
+    <rect x="${Math.round(width * 0.1)}" y="${Math.round(height * 0.72)}" width="${Math.round(width * 0.8)}" height="${Math.round(height * 0.12)}" fill="#f2d27a"/>
+  </svg>`;
+  return sharp(Buffer.from(svg)).jpeg({ quality: 90 }).toBuffer();
 }
 
 async function main() {
