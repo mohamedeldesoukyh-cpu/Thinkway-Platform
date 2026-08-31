@@ -1,34 +1,27 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace share controls on Shortlist, Quotation, and Campaign lists.
+**Branch:** `develop` · Production `main` · both at `81683f01`  
+**Focus:** Creator Workspace is live on Production (app only).
 
-- `/campaigns`, Shortlists, and Client Quotations show the same Client link cell (Active / Off / None, toggle, Stop, View).
-- Stop / Activate / View on any of those lists hit the same Client Workspace journey, so the share URL stays shared across shortlist → quotation → campaign.
-- List mutations go through `POST /api/client-workspace/link` (not Server Actions).
-- Stop keeps the journey token; Activate restores the same `/review/{id}?sign=` address.
-- Stopped client links open a dimmed workspace with “This workspace link has expired” and **Request access**.
-- Client Workspace Publication plan (Creators and go-live): likes/views stay visible on mobile.
+## Production release (2026-08-31)
 
-## Creator Workspace mock application
+- Merge: `release: ship Creator Workspace to Production [deploy-production]` (`81683f01`)
+- Host: https://app.thinkwaymedia.com · deploy `dpl_4GxX8snnBqP1CFsF4BcELZoJa8tQ`
+- `/api/version`: `gitSha` `81683f01` · Supabase `ienowhwfyxoqtzbgltno` aligned
+- **Production DB migrations were not applied.** Creator Workspace SQL is still Development-only until explicitly approved:
+  - `20260830120000_creator_documentation_unit_access.sql`
+  - `20260830180000_creator_workspace_invites.sql`
+  - `20260830190000_creator_workspace_invite_service_role_grants.sql`
+  - `20260830200000_creator_workspace_self_select.sql`
+  - `20260830220000_creator_social_connections.sql` (file says no Production migration)
 
-Chrome is `CreatorWorkspaceShell` (white top bar + sticky Home · Campaigns · Deliverables · Calendar · Payments · Profile). Client Portal is unchanged. Campaign tabs are Overview · Brief · Deliverables · Agreement · Payment. Script lives on deliverable cards. Payment is an informational strip on Home, not a next action. Calendar events come only from deliverable due dates and campaign start/end.
+## Creator Workspace (shipped)
 
-**Browser QA:** not completed in this environment (no creator credentials). Automated: `npm run test:creator-workspace-phase5` · `npx tsc --noEmit`.
+Chrome is `CreatorWorkspaceShell` (white top bar + sticky Home · Campaigns · Deliverables · Calendar · Payments · Profile). Client Portal is unchanged. Campaign tabs are local state (instant). Calendar events come only from deliverable due dates and campaign start/end. Payment is an informational strip on Home, not a next action.
 
-## Creator Workspace QA (this pass)
+## Client Workspace share controls (already on Production)
 
-Next-action copy is shared: agreement → deliverables → publication URL → **Payment pending** → All on track. Home no longer says “Payment in progress”. Video preview streams the owned signed URL immediately (`<source type=video/mp4>`); blob retype is a fallback for small QuickTime files only. Loading/error routes added.
-
-**Browser QA:** not completed in this environment (no creator credentials, browser MCP unavailable). Automated: `npm run test:creator-workspace-phase5` · `npx tsc --noEmit`.
-
-## Creator Workspace visual family
-
-Creator uses `PortalShell` `navVariant="compact"` (`w-64`, muted active row, no blue pills, no bottom app bar). Client Portal is unchanged (`pills` default). Campaign tabs stay inside the campaign page.
-
-## Creator Workspace operational command center
-
-Identity still scopes every query by `influencers.profile_id = auth.uid()`. Nav is Home · Campaigns · Deliverables · Payments · Profile. Brief and script stay separate. Publication is a separate step from upload.
+`/campaigns`, Shortlists, and Client Quotations share the same Client link cell. Stop keeps the journey token.
 
 ## Phase 5 still true
 
