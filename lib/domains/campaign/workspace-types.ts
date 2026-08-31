@@ -387,6 +387,8 @@ export type CampaignWorkspace = {
   campaign_object_id?: string | null;
   /** Source quotation snapshot — optional for legacy campaigns. */
   quotation_id?: string | null;
+  /** Source shortlist — optional for campaigns not created from Discovery. */
+  shortlist_id?: string | null;
 };
 
 export function formatMarginPercent(revenue: number, gp: number): number {

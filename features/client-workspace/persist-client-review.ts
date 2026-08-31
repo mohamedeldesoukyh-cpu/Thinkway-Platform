@@ -1,4 +1,4 @@
-import { logAuditEvent } from "@/lib/audit/log-audit-event";
+﻿import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
@@ -170,7 +170,11 @@ type JourneyRow = {
   landing_review_id: string | null;
   shortlist_id: string | null;
   quotation_id: string | null;
+  campaign_header_id: string | null;
 };
+
+const JOURNEY_SELECT =
+  "id, share_token, landing_review_id, shortlist_id, quotation_id, campaign_header_id";
 
 function canonicalShareUrl(origin: string, reviewId: string, token: string): string {
   return `${origin.replace(/\/$/, "")}${buildClientReviewPath(reviewId, token)}`;
@@ -182,10 +186,29 @@ async function loadJourney(
 ): Promise<JourneyRow | null> {
   const { data } = await supabase
     .from("campaign_client_journeys" as never)
-    .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
+    .select(JOURNEY_SELECT)
     .eq("id", journeyId)
     .maybeSingle();
   return (data as JourneyRow | null) ?? null;
+}
+
+async function findJourneyByColumn(
+  supabase: SupabaseClient,
+  column: "shortlist_id" | "quotation_id" | "campaign_header_id",
+  value: string
+): Promise<JourneyRow | null> {
+  const { data } = await supabase
+    .from("campaign_client_journeys" as never)
+    .select(JOURNEY_SELECT)
+    .eq(column, value)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return (data as JourneyRow | null) ?? null;
+}
+
+function uniqueShareIds(values: Array<string | null | undefined>): string[] {
+  return [...new Set(values.map((value) => value?.trim()).filter(Boolean) as string[])];
 }
 
 async function findJourneyForScope(
@@ -193,37 +216,101 @@ async function findJourneyForScope(
   input: Pick<PersistClientReviewInput, "shortlistId" | "quotationId" | "campaignHeaderId" | "source">
 ): Promise<JourneyRow | null> {
   if (input.shortlistId) {
-    const { data } = await supabase
-      .from("campaign_client_journeys" as never)
-      .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
-      .eq("shortlist_id", input.shortlistId)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (data) return data as JourneyRow;
+    const journey = await findJourneyByColumn(supabase, "shortlist_id", input.shortlistId);
+    if (journey) return journey;
   }
-  const quotationIds = input.quotationId
+  const directQuotationIds = input.quotationId
     ? await quotationIdsForClientShare(supabase, input.quotationId)
     : [];
-  for (const quotationId of quotationIds) {
-    const { data } = await supabase
-      .from("campaign_client_journeys" as never)
-      .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
-      .eq("quotation_id", quotationId)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (data) return data as JourneyRow;
+  for (const quotationId of directQuotationIds) {
+    const journey = await findJourneyByColumn(supabase, "quotation_id", quotationId);
+    if (journey) return journey;
   }
   if (input.campaignHeaderId) {
-    const { data } = await supabase
-      .from("campaign_client_journeys" as never)
-      .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
-      .eq("campaign_header_id", input.campaignHeaderId)
-      .order("created_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-    if (data) return data as JourneyRow;
+    const journey = await findJourneyByColumn(
+      supabase,
+      "campaign_header_id",
+      input.campaignHeaderId
+    );
+    if (journey) return journey;
+  }
+
+  const shortlistIds = uniqueShareIds([input.shortlistId]);
+  const campaignHeaderIds = uniqueShareIds([input.campaignHeaderId]);
+  let quotationIds = [...directQuotationIds];
+
+  if (shortlistIds.length > 0) {
+    const { data: quotes } = await supabase
+      .from("quotations")
+      .select("id, campaign_header_id")
+      .in("shortlist_id", shortlistIds);
+    for (const row of (quotes ?? []) as Array<{ id?: string; campaign_header_id?: string | null }>) {
+      if (row.id?.trim()) quotationIds.push(row.id.trim());
+      if (row.campaign_header_id?.trim()) campaignHeaderIds.push(row.campaign_header_id.trim());
+    }
+    const { data: headers } = await supabase
+      .from("campaign_headers")
+      .select("id, quotation_id")
+      .in("shortlist_id", shortlistIds);
+    for (const row of (headers ?? []) as Array<{ id?: string; quotation_id?: string | null }>) {
+      if (row.id?.trim()) campaignHeaderIds.push(row.id.trim());
+      if (row.quotation_id?.trim()) quotationIds.push(row.quotation_id.trim());
+    }
+  }
+
+  quotationIds = uniqueShareIds(quotationIds);
+  if (quotationIds.length > 0) {
+    const { data: quotes } = await supabase
+      .from("quotations")
+      .select("shortlist_id, campaign_header_id, parent_quotation_id")
+      .in("id", quotationIds);
+    for (const row of (quotes ?? []) as Array<{
+      shortlist_id?: string | null;
+      campaign_header_id?: string | null;
+      parent_quotation_id?: string | null;
+    }>) {
+      if (row.shortlist_id?.trim()) shortlistIds.push(row.shortlist_id.trim());
+      if (row.campaign_header_id?.trim()) campaignHeaderIds.push(row.campaign_header_id.trim());
+      if (row.parent_quotation_id?.trim()) quotationIds.push(row.parent_quotation_id.trim());
+    }
+    const { data: headers } = await supabase
+      .from("campaign_headers")
+      .select("id, shortlist_id")
+      .in("quotation_id", uniqueShareIds(quotationIds));
+    for (const row of (headers ?? []) as Array<{ id?: string; shortlist_id?: string | null }>) {
+      if (row.id?.trim()) campaignHeaderIds.push(row.id.trim());
+      if (row.shortlist_id?.trim()) shortlistIds.push(row.shortlist_id.trim());
+    }
+  }
+
+  if (campaignHeaderIds.length > 0) {
+    const { data: headers } = await supabase
+      .from("campaign_headers")
+      .select("quotation_id, shortlist_id")
+      .in("id", uniqueShareIds(campaignHeaderIds));
+    for (const row of (headers ?? []) as Array<{
+      quotation_id?: string | null;
+      shortlist_id?: string | null;
+    }>) {
+      if (row.quotation_id?.trim()) quotationIds.push(row.quotation_id.trim());
+      if (row.shortlist_id?.trim()) shortlistIds.push(row.shortlist_id.trim());
+    }
+  }
+
+  for (const shortlistId of uniqueShareIds(shortlistIds)) {
+    if (shortlistId === input.shortlistId) continue;
+    const journey = await findJourneyByColumn(supabase, "shortlist_id", shortlistId);
+    if (journey) return journey;
+  }
+  for (const quotationId of uniqueShareIds(quotationIds)) {
+    if (directQuotationIds.includes(quotationId)) continue;
+    const journey = await findJourneyByColumn(supabase, "quotation_id", quotationId);
+    if (journey) return journey;
+  }
+  for (const campaignHeaderId of uniqueShareIds(campaignHeaderIds)) {
+    if (campaignHeaderId === input.campaignHeaderId) continue;
+    const journey = await findJourneyByColumn(supabase, "campaign_header_id", campaignHeaderId);
+    if (journey) return journey;
   }
   return null;
 }
@@ -246,7 +333,7 @@ async function createJourney(
       quotation_id: input.quotationId ?? null,
       campaign_header_id: input.campaignHeaderId ?? null,
     } as never)
-    .select("id, share_token, landing_review_id, shortlist_id, quotation_id")
+    .select(JOURNEY_SELECT)
     .single();
   if (error || !data) {
     console.error("[client-review-journey] insert failed", error?.message ?? "no row returned");
@@ -575,7 +662,7 @@ export async function persistClientReview(
         token_hash: hashClientReviewToken(token),
         shortlist_id: input.shortlistId ?? journey.shortlist_id,
         quotation_id: input.quotationId ?? journey.quotation_id,
-        campaign_header_id: input.campaignHeaderId ?? null,
+        campaign_header_id: input.campaignHeaderId ?? journey.campaign_header_id,
         updated_at: now,
       } as never)
       .eq("id", journey.id);
@@ -586,7 +673,7 @@ export async function persistClientReview(
       .update({
         shortlist_id: input.shortlistId ?? journey.shortlist_id,
         quotation_id: input.quotationId ?? journey.quotation_id,
-        campaign_header_id: input.campaignHeaderId ?? null,
+        campaign_header_id: input.campaignHeaderId ?? journey.campaign_header_id,
         updated_at: now,
       } as never)
       .eq("id", journey.id);
@@ -807,30 +894,87 @@ export async function peekClientReviewShareLink(input: {
   return { exists: false };
 }
 
-export async function stopCampaignClientReviewShareLink(input: {
+function persistKeysFromReviewScope(
+  scope: ReviewScope
+): Pick<PersistClientReviewInput, "shortlistId" | "quotationId" | "campaignHeaderId" | "source"> {
+  if (scope.source === "shortlist") {
+    return { source: "shortlist", shortlistId: scope.shortlistId };
+  }
+  if (scope.source === "quotation") {
+    return { source: "quotation", quotationId: scope.quotationId };
+  }
+  if (scope.source === "campaign") {
+    return { source: "studio", campaignHeaderId: scope.campaignHeaderId };
+  }
+  return { source: "studio" };
+}
+
+function reviewScopeAuditPayload(scope: ReviewScope): Record<string, string> {
+  if (scope.source === "shortlist") return { shortlist_id: scope.shortlistId };
+  if (scope.source === "quotation") return { quotation_id: scope.quotationId };
+  if (scope.source === "campaign") return { campaign_header_id: scope.campaignHeaderId };
+  return { campaign_object_id: scope.campaignObjectId };
+}
+
+async function loadReviewsForLinkScope(
+  db: SupabaseClient,
+  scope: ReviewScope
+): Promise<
+  | { ok: true; reviews: Array<{ id: string; status: string; review_number: number }>; journey: JourneyRow | null }
+  | { ok: false; message: string }
+> {
+  const journey = await findJourneyForScope(db, persistKeysFromReviewScope(scope));
+  const filters: string[] = [];
+  if (journey?.id) filters.push(`journey_id.eq.${journey.id}`);
+  const shortlistId =
+    journey?.shortlist_id?.trim() ||
+    (scope.source === "shortlist" ? scope.shortlistId : null);
+  const campaignHeaderId =
+    journey?.campaign_header_id?.trim() ||
+    (scope.source === "campaign" ? scope.campaignHeaderId : null);
+  const quotationId =
+    journey?.quotation_id?.trim() ||
+    (scope.source === "quotation" ? scope.quotationId : null);
+  if (shortlistId) filters.push(`shortlist_id.eq.${shortlistId}`);
+  if (campaignHeaderId) filters.push(`campaign_header_id.eq.${campaignHeaderId}`);
+  if (quotationId) {
+    const quotationIds = await quotationIdsForClientShare(db, quotationId);
+    for (const id of quotationIds) filters.push(`quotation_id.eq.${id}`);
+  }
+  if (filters.length === 0) {
+    return { ok: true, reviews: [], journey };
+  }
+
+  const { data, error } = await db
+    .from("campaign_client_reviews" as never)
+    .select("id, status, review_number")
+    .or(filters.join(","));
+  if (error) {
+    return { ok: false, message: error.message || "Could not load the Client Workspace link." };
+  }
+  const unique = new Map<string, { id: string; status: string; review_number: number }>();
+  for (const row of (data ?? []) as Array<{ id: string; status: string; review_number: number }>) {
+    unique.set(row.id, row);
+  }
+  return { ok: true, reviews: [...unique.values()], journey };
+}
+
+export async function stopClientReviewShareLink(input: {
   supabase: SupabaseClient;
-  campaignHeaderId: string;
   userId: string;
+  scope: ReviewScope;
 }): Promise<{ ok: true; stopped: boolean } | { ok: false; message: string }> {
   try {
     const db = shareLookupClient(input.supabase);
     const now = new Date().toISOString();
-    const { data: reviewRows, error: reviewError } = await db
-      .from("campaign_client_reviews" as never)
-      .select("id, status, review_number, journey_id")
-      .eq("campaign_header_id", input.campaignHeaderId);
-
-    if (reviewError) {
-      return { ok: false, message: reviewError.message || "Could not stop the Client Workspace link." };
+    const loaded = await loadReviewsForLinkScope(db, input.scope);
+    if (!loaded.ok) {
+      return { ok: false, message: loaded.message || "Could not stop the Client Workspace link." };
     }
 
-    const reviews = (reviewRows ?? []) as Array<{
-      id: string;
-      status: string;
-      review_number: number;
-      journey_id?: string | null;
-    }>;
+    const reviews = loaded.reviews;
     const revokeIds = campaignClientReviewIdsToStop(reviews);
+    const audit = reviewScopeAuditPayload(input.scope);
 
     if (revokeIds.length > 0) {
       const { error: revokeError } = await db
@@ -867,7 +1011,7 @@ export async function stopCampaignClientReviewShareLink(input: {
           actor_kind: "internal",
           actor_label: "Thinkway",
           payload: {
-            campaign_header_id: input.campaignHeaderId,
+            ...audit,
             previous_status: reviews.find((row) => row.id === reviewId)?.status ?? null,
           },
         })) as never
@@ -883,32 +1027,24 @@ export async function stopCampaignClientReviewShareLink(input: {
         entityId: revokeIds[0],
         metadata: {
           audit_action: "client_review_link_stopped",
-          campaign_header_id: input.campaignHeaderId,
+          ...audit,
           review_ids: revokeIds,
         },
       });
     }
 
-    const { data: journeys, error: journeyLookupError } = await db
-      .from("campaign_client_journeys" as never)
-      .select("id, share_token")
-      .eq("campaign_header_id", input.campaignHeaderId);
-    if (journeyLookupError) {
-      console.warn("[client-workspace] journey lookup failed", journeyLookupError.message);
-    }
-    const journeyRows = (journeys ?? []) as Array<{ id: string; share_token?: string | null }>;
-    const journeyHadToken = journeyRows.some((row) => Boolean(row.share_token?.trim()));
+    const journeyHadToken = Boolean(loaded.journey?.share_token?.trim());
 
     // Keep the journey token when reviews were revoked so Activate reuses the
     // same /review/{id}?sign= address. Only clear an orphan token with nothing to restore.
-    if (revokeIds.length === 0 && journeyRows.length > 0 && journeyHadToken) {
+    if (revokeIds.length === 0 && loaded.journey?.id && journeyHadToken) {
       const { error: journeyError } = await db
         .from("campaign_client_journeys" as never)
         .update({
           share_token: null,
           updated_at: now,
         } as never)
-        .eq("campaign_header_id", input.campaignHeaderId);
+        .eq("id", loaded.journey.id);
       if (journeyError) {
         return { ok: false, message: journeyError.message || "Could not stop the Client Workspace link." };
       }
@@ -924,26 +1060,31 @@ export async function stopCampaignClientReviewShareLink(input: {
   }
 }
 
-export async function restoreStoppedCampaignClientReviewShareLink(input: {
+export async function stopCampaignClientReviewShareLink(input: {
   supabase: SupabaseClient;
   campaignHeaderId: string;
   userId: string;
+}): Promise<{ ok: true; stopped: boolean } | { ok: false; message: string }> {
+  return stopClientReviewShareLink({
+    supabase: input.supabase,
+    userId: input.userId,
+    scope: { source: "campaign", campaignHeaderId: input.campaignHeaderId },
+  });
+}
+
+export async function restoreStoppedClientReviewShareLink(input: {
+  supabase: SupabaseClient;
+  userId: string;
+  scope: ReviewScope;
 }): Promise<{ ok: true; restored: boolean } | { ok: false; message: string }> {
   try {
     const db = shareLookupClient(input.supabase);
-    const { data: reviewRows, error: reviewError } = await db
-      .from("campaign_client_reviews" as never)
-      .select("id, status, review_number")
-      .eq("campaign_header_id", input.campaignHeaderId);
-    if (reviewError) {
-      return { ok: false, message: reviewError.message || "Could not restore the Client Workspace link." };
+    const loaded = await loadReviewsForLinkScope(db, input.scope);
+    if (!loaded.ok) {
+      return { ok: false, message: loaded.message || "Could not restore the Client Workspace link." };
     }
 
-    const reviews = (reviewRows ?? []) as Array<{
-      id: string;
-      status: string;
-      review_number: number;
-    }>;
+    const reviews = loaded.reviews;
     if (!shouldRestoreStoppedCampaignClientReviews(reviews)) {
       return { ok: true, restored: false };
     }
@@ -970,6 +1111,7 @@ export async function restoreStoppedCampaignClientReviewShareLink(input: {
     }
 
     const now = new Date().toISOString();
+    const audit = reviewScopeAuditPayload(input.scope);
     for (const reviewId of restoreIds) {
       const status = restoreStatusAfterClientLinkStop(previousByReviewId.get(reviewId));
       const { error: restoreError } = await db
@@ -1006,7 +1148,7 @@ export async function restoreStoppedCampaignClientReviewShareLink(input: {
         event_type: "link_restored",
         actor_kind: "internal",
         actor_label: "Thinkway",
-        payload: { campaign_header_id: input.campaignHeaderId },
+        payload: audit,
       })) as never
     );
     if (eventError) {
@@ -1020,7 +1162,7 @@ export async function restoreStoppedCampaignClientReviewShareLink(input: {
       entityId: restoreIds[0],
       metadata: {
         audit_action: "client_review_link_restored",
-        campaign_header_id: input.campaignHeaderId,
+        ...audit,
         review_ids: restoreIds,
       },
     });
@@ -1033,4 +1175,16 @@ export async function restoreStoppedCampaignClientReviewShareLink(input: {
         error instanceof Error ? error.message : "Could not restore the Client Workspace link.",
     };
   }
+}
+
+export async function restoreStoppedCampaignClientReviewShareLink(input: {
+  supabase: SupabaseClient;
+  campaignHeaderId: string;
+  userId: string;
+}): Promise<{ ok: true; restored: boolean } | { ok: false; message: string }> {
+  return restoreStoppedClientReviewShareLink({
+    supabase: input.supabase,
+    userId: input.userId,
+    scope: { source: "campaign", campaignHeaderId: input.campaignHeaderId },
+  });
 }

@@ -26,6 +26,8 @@ import {
 } from "@/lib/commercial/client-original-currency";
 import { readShortlistDisplayCurrency } from "@/lib/discovery/shortlist-currency";
 
+import { loadClientWorkspaceListLinks } from "@/features/client-workspace/list-client-workspace-links";
+import { clientWorkspaceListLinkForSubject } from "@/features/client-workspace/client-review-selection";
 import { SHORTLIST_PERMISSIONS } from "./constants";
 import type {
   ShortlistBrandOption,
@@ -99,13 +101,14 @@ export async function getDiscoveryShortlistsV2(options?: {
   if (rows.length === 0) return [];
 
   const shortlistIds = rows.map((r) => r.id);
-  const [ownerNames, clientNames, brandNames, counts, creatorPreviews] =
+  const [ownerNames, clientNames, brandNames, counts, creatorPreviews, linkIndex] =
     await Promise.all([
       nameMap(supabase, "profiles", rows.map((r) => r.owner_id), "full_name"),
       nameMap(supabase, "clients", rows.map((r) => r.client_id), "name"),
       nameMap(supabase, "brands", rows.map((r) => r.brand_id), "name"),
       countItemsByShortlist(supabase, shortlistIds),
       loadCreatorPreviewsByShortlist(supabase, shortlistIds),
+      loadClientWorkspaceListLinks(supabase, { shortlistIds }),
     ]);
 
   return rows.map((row) => ({
@@ -124,6 +127,9 @@ export async function getDiscoveryShortlistsV2(options?: {
     is_archived: row.is_archived,
     creator_count: counts.get(row.id) ?? 0,
     creator_previews: creatorPreviews.get(row.id) ?? [],
+    client_workspace_link: clientWorkspaceListLinkForSubject(linkIndex, {
+      shortlistId: row.id,
+    }) ?? { state: "none" },
     approved_at: row.approved_at,
     created_at: row.created_at,
     updated_at: row.updated_at,

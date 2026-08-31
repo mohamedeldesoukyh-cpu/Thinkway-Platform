@@ -57,6 +57,7 @@ export async function createClientReviewFromCampaign(
     campaignObjectId: workspace.campaign_object_id ?? null,
     campaignHeaderId: workspace.id,
     quotationId: workspace.quotation_id ?? null,
+    shortlistId: workspace.shortlist_id ?? null,
     clientLabel: snapshot.clientLabel,
     brandName: snapshot.brandName,
     campaignName: snapshot.campaignName,
