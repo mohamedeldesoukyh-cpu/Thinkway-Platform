@@ -262,7 +262,7 @@ export function projectCampaignProgressGraph(input: {
             ordered[0]?.deliverable,
             ordered[0]?.platform
           );
-          const valueScope =
+          const valueScope: "agreed" | "added_value" =
             ordered[0]?.valueScope === "added_value" ? "added_value" : "agreed";
           return {
             key,
