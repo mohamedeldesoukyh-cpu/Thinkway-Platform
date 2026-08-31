@@ -202,6 +202,7 @@ export function projectCampaignProgressGraph(input: {
     { creatorName: string; avatarUrl: string | null; tracks: Map<string, ClientCampaignPostRow[]> }
   >();
   for (const post of input.posts) {
+    if (post.valueScope === "added_value") continue;
     const name = creatorKey(post.creatorName);
     const format = normalizeClientDeliverableFormat(post.deliverable, post.platform);
     let creator = grouped.get(name);

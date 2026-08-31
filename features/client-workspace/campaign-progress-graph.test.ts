@@ -197,6 +197,58 @@ test("live stories without proof do not link out", () => {
   assert.equal(graph?.creators[0]?.tracks[0]?.checkpoints[0]?.contentUrl, null);
 });
 
+test("live reel checkpoints open the permalink instead of the screenshot", () => {
+  const graph = projectCampaignProgressGraph({
+    posts: [
+      post({
+        id: "r1",
+        creatorName: "@ph____alaa",
+        status: "live",
+        scheduledDate: "2026-08-31",
+        deliverable: "IG Reel",
+        contentUrl: "https://www.instagram.com/reel/PHALAA/",
+        proofImageUrl: "https://cdn.example/reel-shot.jpg",
+      }),
+    ],
+    startDate: "2026-08-01",
+    endDate: "2026-08-31",
+    today: "2026-08-31",
+  });
+  assert.equal(
+    graph?.creators[0]?.tracks[0]?.checkpoints[0]?.contentUrl,
+    "https://www.instagram.com/reel/PHALAA/"
+  );
+});
+
+test("added-value publications stay off the contracted delivery timeline", () => {
+  const graph = projectCampaignProgressGraph({
+    posts: [
+      post({
+        id: "r1",
+        creatorName: "@ph____alaa",
+        status: "live",
+        scheduledDate: "2026-08-31",
+        deliverable: "IG Reel",
+      }),
+      post({
+        id: "av1",
+        creatorName: "@ph____alaa",
+        status: "live",
+        scheduledDate: "2026-08-31",
+        platform: "tiktok",
+        platformLabel: "TikTok",
+        deliverable: "TT Video",
+        valueScope: "added_value",
+      }),
+    ],
+    startDate: "2026-08-01",
+    endDate: "2026-08-31",
+    today: "2026-08-31",
+  });
+  assert.equal(graph?.creators[0]?.tracks.length, 1);
+  assert.equal(graph?.creators[0]?.tracks[0]?.format.includes("TikTok") || false, false);
+});
+
 test("range copy names start and end dates", () => {
   assert.equal(
     campaignProgressRangeCopy("1 Aug 2026", "31 Aug 2026"),

@@ -187,6 +187,8 @@ import {
   projectClientCampaignExecution,
   projectClientCampaignPerformance,
   shouldHideClientCampaignPost,
+  clientCampaignOpenHref,
+  partitionClientCampaignPostsByValueScope,
   type CampaignExecutionSource,
 } from "./campaign-execution";
 import {
@@ -5259,6 +5261,7 @@ test("Stage 3: unlinked Performance publication still appears in Client Workspac
   assert.equal(leftover?.creatorName, "nadineladki14");
   assert.equal(leftover?.status, "live");
   assert.equal(leftover?.contentUrl, "https://www.tiktok.com/@nadineladki14/video/123");
+  assert.equal(leftover?.valueScope, "added_value");
 
   const notConsumedByCancelled = projectClientCampaignExecution(
     "hdr-1",
@@ -5291,6 +5294,119 @@ test("Stage 3: unlinked Performance publication still appears in Client Workspac
     notConsumedByCancelled.posts[0]?.contentUrl,
     "https://instagram.com/p/live-nadine"
   );
+});
+
+test("reel permalink opens instead of a screenshot; stories keep proof images", () => {
+  assert.equal(
+    clientCampaignOpenHref({
+      isStory: false,
+      contentUrl: "https://www.instagram.com/reel/ABC123/",
+      proofImageUrl: "https://cdn.example/reel-screenshot.jpg",
+    }),
+    "https://www.instagram.com/reel/ABC123/"
+  );
+  assert.equal(
+    clientCampaignOpenHref({
+      isStory: true,
+      contentUrl: "https://www.instagram.com/reel/ABC123/",
+      proofImageUrl: "https://cdn.example/story.png",
+    }),
+    "https://cdn.example/story.png"
+  );
+  assert.equal(
+    clientCampaignOpenHref({
+      isStory: true,
+      contentUrl: "https://www.instagram.com/reel/ABC123/",
+      proofImageUrl: null,
+    }),
+    null
+  );
+});
+
+test("unlinked reel publication does not fill an unposted story slot", () => {
+  const projected = projectClientCampaignExecution(
+    "hdr-1",
+    stage3Source({
+      deliverables: [
+        {
+          id: "del-reel",
+          campaignLineId: "line-1",
+          platform: "instagram",
+          deliverableType: "instagram_reel",
+          quantity: 1,
+          liveDate: "2026-08-31",
+        },
+        {
+          id: "del-story",
+          campaignLineId: "line-1",
+          platform: "instagram",
+          deliverableType: "instagram_story",
+          quantity: 1,
+          liveDate: null,
+        },
+      ],
+      posts: [
+        stage3Post({
+          id: "post-story",
+          deliverableId: "del-story",
+          sequence: 1,
+          liveDate: null,
+          status: "draft",
+        }),
+        stage3Post({
+          id: "post-reel",
+          deliverableId: "del-reel",
+          sequence: 2,
+          liveDate: "2026-08-31",
+          status: "posted",
+        }),
+      ],
+      publications: [
+        {
+          id: "pub-reel",
+          assignmentDeliverableId: null,
+          assignmentPostScheduleId: null,
+          campaignLineId: "line-1",
+          platform: "instagram",
+          publicationType: "instagram_reel",
+          contentUrl: "https://www.instagram.com/reel/PHALAA/",
+          screenshotUrl: "https://cdn.example/reel-shot.jpg",
+          publicationDate: "2026-08-31",
+          status: "published",
+        },
+        {
+          id: "pub-tt",
+          assignmentDeliverableId: null,
+          assignmentPostScheduleId: null,
+          campaignLineId: "line-1",
+          platform: "tiktok",
+          publicationType: "tiktok_video",
+          contentUrl: "https://www.tiktok.com/@ph____alaa/video/1",
+          publicationDate: "2026-08-31",
+          status: "published",
+        },
+      ],
+    }),
+    "2026-08-31"
+  );
+  const reel = projected.posts.find((row) => row.id === "post-reel");
+  const story = projected.posts.find((row) => row.id === "post-story");
+  const added = projected.posts.find((row) => row.id === "publication:pub-tt");
+  assert.equal(reel?.contentUrl, "https://www.instagram.com/reel/PHALAA/");
+  assert.equal(
+    clientCampaignOpenHref(reel!),
+    "https://www.instagram.com/reel/PHALAA/",
+    "reel dots open the permalink, not the screenshot"
+  );
+  assert.equal(story?.contentUrl, null);
+  assert.equal(story?.status, "scheduling");
+  assert.equal(clientCampaignOpenHref(story!), null);
+  assert.equal(added?.valueScope, "added_value");
+  assert.equal(added?.contentUrl, "https://www.tiktok.com/@ph____alaa/video/1");
+  const { agreed, addedValue } = partitionClientCampaignPostsByValueScope(projected.posts);
+  assert.equal(addedValue.length, 1);
+  assert.ok(agreed.some((row) => row.id === "post-reel"));
+  assert.ok(agreed.some((row) => row.id === "post-story"));
 });
 
 test("Stage 3: publication date appears when available", () => {

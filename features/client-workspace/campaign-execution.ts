@@ -1,10 +1,16 @@
 import {
+  canonicalPlatformKey,
   deliverableTypeShortLabel,
   getPlatformOptionLabel,
   isEphemeralStoryDeliverableType,
 } from "@/lib/campaigns/deliverable-taxonomy";
 import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
 import { classifyInstagramContentUrl } from "@/lib/performance/metrics-collector/instagram-content-url";
+import {
+  addAgreedPlatform,
+  classifyPublicationValueScope,
+  createEmptyAssignmentAgreedPlatformIndex,
+} from "@/lib/performance/publication-value-scope";
 
 import { deliverablesLabel } from "./deliverables";
 import {
@@ -78,23 +84,47 @@ export type ClientCampaignPostRow = {
   assignmentPostScheduleId?: string | null;
   quantity?: number;
   sequenceNumber?: number | null;
+  /** Extra-platform posts beyond the assignment mix. */
+  valueScope?: "agreed" | "added_value";
 };
 
-/** Proof image first. Story URLs are never opened — they expire. */
+/**
+ * Durable posts open the permalink. Stories expire, so they open the proof
+ * image only — never a story URL, and never a reel screenshot for a story slot.
+ */
 export function clientCampaignOpenHref(post: {
   proofImageUrl?: string | null;
   contentUrl?: string | null;
   isStory?: boolean;
 }): string | null {
-  const proof = post.proofImageUrl?.trim();
-  if (proof) return proof;
-  if (post.isStory) return null;
+  const proof = post.proofImageUrl?.trim() || null;
+  if (post.isStory) return proof;
   const url = post.contentUrl?.trim();
-  if (!url) return null;
-  const kind = classifyInstagramContentUrl(url);
-  if (kind === "story" || kind === "highlight") return null;
-  if (/\/stories\//i.test(url) || /\/story(\/|\.php)/i.test(url)) return null;
-  return url;
+  if (url) {
+    const kind = classifyInstagramContentUrl(url);
+    if (
+      kind !== "story" &&
+      kind !== "highlight" &&
+      !/\/stories\//i.test(url) &&
+      !/\/story(\/|\.php)/i.test(url)
+    ) {
+      return url;
+    }
+  }
+  return proof;
+}
+
+export function partitionClientCampaignPostsByValueScope(posts: ClientCampaignPostRow[]): {
+  agreed: ClientCampaignPostRow[];
+  addedValue: ClientCampaignPostRow[];
+} {
+  const agreed: ClientCampaignPostRow[] = [];
+  const addedValue: ClientCampaignPostRow[] = [];
+  for (const post of posts) {
+    if (post.valueScope === "added_value") addedValue.push(post);
+    else agreed.push(post);
+  }
+  return { agreed, addedValue };
 }
 
 export type ClientCampaignExecution = {
@@ -403,6 +433,7 @@ export type CampaignExecutionSource = {
     influencerId?: string | null;
     influencerName?: string | null;
     platform: string | null;
+    publicationType?: string | null;
     contentUrl: string | null;
     screenshotUrl?: string | null;
     publicationDate: string | null;
@@ -412,12 +443,37 @@ export type CampaignExecutionSource = {
 
 type CampaignPublication = CampaignExecutionSource["publications"][number];
 
+function publicationFitsDeliverableSlot(
+  publication: CampaignPublication,
+  slot: { deliverableType: string; platform: string }
+): boolean {
+  const slotPlatform = canonicalPlatformKey(slot.platform);
+  const pubPlatform = canonicalPlatformKey(publication.platform);
+  if (slotPlatform && pubPlatform && slotPlatform !== pubPlatform) return false;
+
+  const slotIsStory = isEphemeralStoryDeliverableType(slot.deliverableType);
+  const pubType = publication.publicationType?.trim() || "";
+  if (pubType) {
+    if (slotIsStory !== isEphemeralStoryDeliverableType(pubType)) return false;
+  }
+
+  const url = publication.contentUrl?.trim() || "";
+  if (url) {
+    const kind = classifyInstagramContentUrl(url);
+    if (slotIsStory && (kind === "reel" || kind === "post")) return false;
+    if (!slotIsStory && (kind === "story" || kind === "highlight")) return false;
+  }
+  return true;
+}
+
 function takePublication(
   used: Set<string>,
+  fits: ((publication: CampaignPublication) => boolean) | null,
   ...candidates: Array<CampaignPublication | undefined>
 ): CampaignPublication | undefined {
   for (const publication of candidates) {
     if (!publication || used.has(publication.id)) continue;
+    if (fits && !fits(publication)) continue;
     used.add(publication.id);
     return publication;
   }
@@ -427,20 +483,21 @@ function takePublication(
 function nextQueuedPublication(
   queue: Map<string, CampaignPublication[]>,
   used: Set<string>,
-  key: string | null | undefined
+  key: string | null | undefined,
+  fits?: (publication: CampaignPublication) => boolean
 ): CampaignPublication | undefined {
   const id = key?.trim();
   if (!id) return undefined;
   const list = queue.get(id);
   if (!list?.length) return undefined;
-  while (list.length > 0) {
-    const publication = list.shift();
-    if (publication && !used.has(publication.id)) {
-      used.add(publication.id);
-      return publication;
-    }
-  }
-  return undefined;
+  const index = list.findIndex(
+    (publication) => !used.has(publication.id) && (!fits || fits(publication))
+  );
+  if (index < 0) return undefined;
+  const [publication] = list.splice(index, 1);
+  if (!publication) return undefined;
+  used.add(publication.id);
+  return publication;
 }
 
 function enqueuePublication(
@@ -538,6 +595,14 @@ export function projectClientCampaignExecution(
   }
 
   const deliverableById = new Map(source.deliverables.map((row) => [row.id, row]));
+  const agreedIndex = createEmptyAssignmentAgreedPlatformIndex();
+  for (const deliverable of source.deliverables) {
+    addAgreedPlatform(agreedIndex, {
+      campaignLineId: deliverable.campaignLineId,
+      influencerId: influencerIdByLine.get(deliverable.campaignLineId) ?? null,
+      platform: deliverable.platform,
+    });
+  }
   const pubsByPost = new Map<string, CampaignPublication>();
   const pubsByDeliverable = new Map<string, CampaignPublication>();
   const pubsByLine = new Map<string, CampaignPublication[]>();
@@ -566,18 +631,26 @@ export function projectClientCampaignExecution(
   for (const post of sortedPosts) {
     postedDeliverableIds.add(post.assignmentDeliverableId);
     const deliverable = deliverableById.get(post.assignmentDeliverableId);
+    const slot = {
+      deliverableType: deliverable?.deliverableType || "other",
+      platform: deliverable?.platform || "",
+    };
+    const fits = (publication: CampaignPublication) =>
+      publicationFitsDeliverableSlot(publication, slot);
     const publication = shouldHideClientCampaignPost(post.status)
       ? undefined
       : takePublication(
           usedPublications,
+          fits,
           pubsByPost.get(post.id),
           pubsByDeliverable.get(post.assignmentDeliverableId)
         ) ??
-        nextQueuedPublication(pubsByLine, usedPublications, post.campaignLineId) ??
+        nextQueuedPublication(pubsByLine, usedPublications, post.campaignLineId, fits) ??
         nextQueuedPublication(
           pubsByInfluencer,
           usedPublications,
-          influencerIdByLine.get(post.campaignLineId)
+          influencerIdByLine.get(post.campaignLineId),
+          fits
         );
     const platform = deliverable?.platform || publication?.platform || "";
     const type = deliverable?.deliverableType || "other";
@@ -614,13 +687,19 @@ export function projectClientCampaignExecution(
 
   for (const deliverable of source.deliverables) {
     if (postedDeliverableIds.has(deliverable.id)) continue;
+    const fits = (candidate: CampaignPublication) =>
+      publicationFitsDeliverableSlot(candidate, {
+        deliverableType: deliverable.deliverableType,
+        platform: deliverable.platform,
+      });
     const publication =
-      takePublication(usedPublications, pubsByDeliverable.get(deliverable.id)) ??
-      nextQueuedPublication(pubsByLine, usedPublications, deliverable.campaignLineId) ??
+      takePublication(usedPublications, fits, pubsByDeliverable.get(deliverable.id)) ??
+      nextQueuedPublication(pubsByLine, usedPublications, deliverable.campaignLineId, fits) ??
       nextQueuedPublication(
         pubsByInfluencer,
         usedPublications,
-        influencerIdByLine.get(deliverable.campaignLineId)
+        influencerIdByLine.get(deliverable.campaignLineId),
+        fits
       );
     const qty = deliverable.quantity > 0 ? deliverable.quantity : 1;
     const quantityLabel = qty > 1 ? ` × ${qty}` : "";
@@ -660,6 +739,14 @@ export function projectClientCampaignExecution(
       creatorByLine,
       creatorByInfluencer
     );
+    const valueScope = classifyPublicationValueScope(
+      {
+        campaign_line_id: publication.campaignLineId,
+        influencer_id: publication.influencerId,
+        platform: publication.platform || "",
+      },
+      agreedIndex
+    );
     const row = buildPostRow({
       id: `publication:${publication.id}`,
       creatorName,
@@ -669,16 +756,20 @@ export function projectClientCampaignExecution(
         creatorName
       ),
       platform: publication.platform || "",
-      deliverable: "Publication",
+      deliverable: publication.publicationType
+        ? deliverableTypeShortLabel(publication.publicationType)
+        : "Publication",
       scheduledDate: publication.publicationDate,
       postStatus: publication.status,
       contentUrl,
       proofImageUrl: publication.screenshotUrl ?? null,
       isStory:
-        classifyInstagramContentUrl(contentUrl ?? "") === "story" ||
-        /\/stories\//i.test(contentUrl ?? ""),
+        valueScope !== "added_value" &&
+        (classifyInstagramContentUrl(contentUrl ?? "") === "story" ||
+          /\/stories\//i.test(contentUrl ?? "")),
       publicationDate: publication.publicationDate,
       performance: projectClientCampaignPerformance(publication),
+      valueScope,
       today,
     });
     if (row) posts.push(row);
@@ -768,6 +859,7 @@ function buildPostRow(input: {
   assignmentPostScheduleId?: string | null;
   quantity?: number;
   sequenceNumber?: number | null;
+  valueScope?: "agreed" | "added_value";
   today: string;
 }): ClientCampaignPostRow | null {
   const status = clientCampaignPostStatus({
@@ -797,5 +889,6 @@ function buildPostRow(input: {
     assignmentPostScheduleId: input.assignmentPostScheduleId?.trim() || null,
     quantity: input.quantity && input.quantity > 0 ? input.quantity : 1,
     sequenceNumber: input.sequenceNumber ?? null,
+    valueScope: input.valueScope ?? "agreed",
   };
 }

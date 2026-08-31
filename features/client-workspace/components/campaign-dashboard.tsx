@@ -5,9 +5,11 @@ import { useState } from "react";
 import {
   clientCampaignOpenHref,
   formatClientDashboardDate,
+  partitionClientCampaignPostsByValueScope,
   type ClientCampaignPostRow,
 } from "../campaign-execution";
 import {
+  ADDED_VALUE_PLAN_NOTE,
   CAMPAIGN_SETUP_IN_PROGRESS_COPY,
   CONTENT_REVIEW_NOTE,
   NEEDS_ATTENTION_COPY,
@@ -55,6 +57,8 @@ export function CampaignDashboard({
   campaignEndDate?: string | null;
 }) {
   const dashboard = projectClientCampaignDashboard(posts);
+  const { agreed: agreedPosts, addedValue: addedValuePosts } =
+    partitionClientCampaignPostsByValueScope(posts);
   const pendingReview = clientContentToReview(contentItems);
   const [overdueFocus, setOverdueFocus] = useState(0);
   const contentSection = (
@@ -218,18 +222,29 @@ export function CampaignDashboard({
       </section>
 
       <CampaignProgressGraph
-        posts={posts}
+        posts={agreedPosts}
         startDate={campaignStartDate}
         endDate={campaignEndDate}
         creators={creators}
         token={token}
       />
       <CampaignPublicationPlan
-        posts={posts}
+        posts={agreedPosts}
         creators={creators}
         token={token}
         focusOverdue={overdueFocus}
       />
+      {addedValuePosts.length > 0 ? (
+        <CampaignPublicationPlan
+          posts={addedValuePosts}
+          creators={creators}
+          token={token}
+          eyebrow="Added value"
+          title="Beyond the assignment"
+          note={ADDED_VALUE_PLAN_NOTE}
+          sectionId="added-value"
+        />
+      ) : null}
     </>
   );
 }

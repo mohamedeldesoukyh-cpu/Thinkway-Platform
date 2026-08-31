@@ -19,6 +19,8 @@ export const CAMPAIGN_PROGRESS_COMPLETED_EXPLANATION =
 export const NEEDS_ATTENTION_COPY = "Needs your attention";
 export const PUBLICATION_PLAN_NOTE =
   "Every deliverable in the campaign. Grouped by creator by default — switch to All rows for the full line-by-line list.";
+export const ADDED_VALUE_PLAN_NOTE =
+  "Posted on platforms that are not contracted on the assignment.";
 export const PUBLICATION_PLAN_FOOTNOTE =
   "Dates and performance appear here automatically once Thinkway confirms scheduling.";
 export const CONTENT_REVIEW_NOTE =

@@ -34,6 +34,7 @@ type PublicationRow = {
   campaign_line_id: string | null;
   influencer_id: string | null;
   platform: string | null;
+  publication_type: string | null;
   content_url: string | null;
   screenshot_url: string | null;
   publication_date: string | null;
@@ -104,7 +105,7 @@ export async function loadClientCampaignExecution(
       supabase
         .from("campaign_publications")
         .select(
-          "id, assignment_deliverable_id, assignment_post_schedule_id, campaign_line_id, influencer_id, platform, content_url, screenshot_url, publication_date, status, views, likes, comments, shares, reach, actual_reach, forecast_reach, reach_source, impressions, actual_impressions, forecast_impressions, impressions_source, engagement_rate, engagement_views, engagement_likes, engagement_comments, engagement_shares"
+          "id, assignment_deliverable_id, assignment_post_schedule_id, campaign_line_id, influencer_id, platform, publication_type, content_url, screenshot_url, publication_date, status, views, likes, comments, shares, reach, actual_reach, forecast_reach, reach_source, impressions, actual_impressions, forecast_impressions, impressions_source, engagement_rate, engagement_views, engagement_likes, engagement_comments, engagement_shares"
         )
         .eq("campaign_header_id", headerId),
       supabase
@@ -173,6 +174,7 @@ export async function loadClientCampaignExecution(
         campaignLineId: row.campaign_line_id,
         influencerId: row.influencer_id,
         platform: row.platform,
+        publicationType: row.publication_type,
         contentUrl: row.content_url,
         screenshotUrl: screenshotByPublicationId.get(row.id) ?? null,
         publicationDate: row.publication_date,

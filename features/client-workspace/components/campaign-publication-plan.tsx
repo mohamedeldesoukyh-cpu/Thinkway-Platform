@@ -212,11 +212,19 @@ export function CampaignPublicationPlan({
   creators,
   token,
   focusOverdue = 0,
+  eyebrow = "Publication plan",
+  title = "Creators and go-live",
+  note = PUBLICATION_PLAN_NOTE,
+  sectionId = "publication-plan",
 }: {
   posts: ClientCampaignPostRow[];
   creators: ClientCreatorCard[];
   token: string;
   focusOverdue?: number;
+  eyebrow?: string;
+  title?: string;
+  note?: string;
+  sectionId?: string;
 }) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<PublicationPlanFilter>("all");
@@ -271,7 +279,7 @@ export function CampaignPublicationPlan({
       for (const name of names) next.add(name);
       return next;
     });
-    document.getElementById("publication-plan")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth", block: "start" });
     // Only re-run when the client asks to view overdue — not on every posts refresh.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusOverdue]);
@@ -318,10 +326,10 @@ export function CampaignPublicationPlan({
   }
 
   return (
-    <section className="card" id="publication-plan">
-      <p className="ck">Publication plan</p>
-      <h2>Creators and go-live</h2>
-      <p className="note">{PUBLICATION_PLAN_NOTE}</p>
+    <section className="card" id={sectionId}>
+      <p className="ck">{eyebrow}</p>
+      <h2>{title}</h2>
+      <p className="note">{note}</p>
 
       <div className="cx-toolbar">
         <label className="cx-search">
