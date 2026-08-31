@@ -60,14 +60,15 @@ export function pickApifyPreviewImageUrl(payload: unknown): string | null {
   const imageObj = record(row.image);
 
   const directCandidates = [
-    row.thumbnailSrc,
     row.displayUrl,
     row.display_url,
+    row.fullPicture,
+    row.full_picture,
+    row.originalCoverUrl,
+    row.thumbnailSrc,
     row.thumbnailUrl,
     row.thumbnail_url,
     row.thumbnail,
-    row.fullPicture,
-    row.full_picture,
     row.cover,
     row.coverUrl,
     row.imageUrl,

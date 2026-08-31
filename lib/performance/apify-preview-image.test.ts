@@ -69,4 +69,13 @@ assert.equal(
   "Facebook full_picture"
 );
 
+assert.equal(
+  pickApifyPreviewImageUrl({
+    thumbnailSrc: "https://cdninstagram.com/thumb.jpg",
+    displayUrl: "https://cdninstagram.com/full.jpg",
+  }),
+  "https://cdninstagram.com/full.jpg",
+  "prefer displayUrl over thumbnailSrc"
+);
+
 console.log("apify-preview-image tests passed");

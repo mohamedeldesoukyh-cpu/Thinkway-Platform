@@ -15,6 +15,21 @@ import {
   resetMediaProxyMetricsForTests,
   setMediaProxyCachePositive,
 } from "@/lib/creators/media-proxy-cache";
+import { imageLongestEdge } from "@/lib/io/compress-export-image";
+
+async function jpegOfSize(width: number, height: number): Promise<Buffer> {
+  const sharp = (await import("sharp")).default;
+  return sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 80, g: 120, b: 160 },
+    },
+  })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+}
 
 async function main() {
   assert.equal(
@@ -139,6 +154,50 @@ async function main() {
   if (!miss.ok) {
     assert.equal(miss.source, "miss");
     assert.equal(miss.needsRefresh, true);
+  }
+
+  {
+    resetMediaProxyMetricsForTests();
+    const tinySrc =
+      "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?oe=ABCDEF12";
+    const postUrl = "https://www.instagram.com/p/DaIquJuMyax/";
+    const largeCdn = "https://scontent.cdninstagram.com/v/t51.82787-15/large.jpg";
+    const tiny = await jpegOfSize(150, 150);
+    const large = await jpegOfSize(1080, 1080);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url === tinySrc) {
+        return new Response(tiny, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      if (url.includes("/media/?size=l")) {
+        return new Response(null, {
+          status: 302,
+          headers: { location: largeCdn },
+        });
+      }
+      if (url === largeCdn) {
+        return new Response(large, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return new Response(null, { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const result = await fetchPublicationPreviewImage({ src: tinySrc, postUrl });
+      assert.equal(result.ok, true, "tiny stored thumb should upgrade via Instagram media redirect");
+      if (result.ok) {
+        const edge = await imageLongestEdge(result.buffer);
+        assert.ok(edge >= 1000, `expected ~1080px source, got ${edge}`);
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
   }
 
   if (process.env.RUN_LIVE_PUBLICATION_PREVIEW_TESTS === "1") {

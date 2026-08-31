@@ -45,26 +45,59 @@ export function isLikelyLowResolutionSocialThumb(url: string): boolean {
     if (LOW_RES_CDN_SIZE.test(haystack)) return true;
     if (/\/s\d{2,3}x\d{2,3}\//i.test(parsed.pathname)) return true;
     if (/_s\.(jpe?g|png|webp)$/i.test(parsed.pathname)) return true;
+    if (/_(?:150|240|320)x(?:150|240|320)\b/i.test(haystack)) return true;
+    const stp = parsed.searchParams.get("stp") ?? "";
+    if (LOW_RES_CDN_SIZE.test(stp) || /(?:^|[_\-])s(?:150|240|320)x/i.test(stp)) return true;
     return false;
   } catch {
     return false;
   }
 }
 
-/** Ask the CDN for a larger derivative when the stored thumb is a 150/320 crop. */
-export function preferHigherResolutionSocialImageUrl(url: string): string {
+function rewriteSocialCdnSizeTokens(url: string, target: number): string {
   try {
     const parsed = new URL(url);
     const replaceSize = (value: string) =>
       value.replace(/\bs(\d{2,4})x(\d{2,4})\b/gi, (_, width, height) => {
         const size = Math.max(Number(width), Number(height));
-        return size >= 1080 ? `s${width}x${height}` : "s1080x1080";
+        return size >= target ? `s${width}x${height}` : `s${target}x${target}`;
       });
     parsed.pathname = replaceSize(parsed.pathname);
     parsed.search = replaceSize(parsed.search);
     return parsed.toString();
   } catch {
     return url;
+  }
+}
+
+/** Ask the CDN for a larger derivative when the stored thumb is a 150/320 crop. */
+export function preferHigherResolutionSocialImageUrl(url: string): string {
+  return rewriteSocialCdnSizeTokens(url, 1080);
+}
+
+/** Larger unsigned CDN sizes to try before the stored thumb (1080 often 403s; 640/320 may work). */
+export function higherResolutionSocialImageUrlCandidates(url: string): string[] {
+  const out: string[] = [];
+  for (const target of [1080, 640, 320] as const) {
+    const next = rewriteSocialCdnSizeTokens(url, target);
+    if (next !== url && !out.includes(next)) out.push(next);
+  }
+  return out;
+}
+
+/** Signed Instagram/TikTok CDN URLs 403 when the size token is rewritten. */
+export function socialCdnUrlLooksSigned(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    return (
+      parsed.searchParams.has("oh") ||
+      parsed.searchParams.has("oe") ||
+      parsed.searchParams.has("_nc_ohc") ||
+      parsed.searchParams.has("x-signature") ||
+      parsed.searchParams.has("x-expires")
+    );
+  } catch {
+    return false;
   }
 }
 

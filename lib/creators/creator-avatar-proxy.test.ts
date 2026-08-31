@@ -14,6 +14,21 @@ import {
   setMediaProxyCachePositive,
   mediaProxyCacheKey,
 } from "@/lib/creators/media-proxy-cache";
+import { imageLongestEdge } from "@/lib/io/compress-export-image";
+
+async function jpegOfSize(width: number, height: number): Promise<Buffer> {
+  const sharp = (await import("sharp")).default;
+  return sharp({
+    create: {
+      width,
+      height,
+      channels: 3,
+      background: { r: 40, g: 80, b: 120 },
+    },
+  })
+    .jpeg({ quality: 90 })
+    .toBuffer();
+}
 
 test("isAllowedCreatorAvatarProfileUrl accepts instagram and tiktok profiles", () => {
   assert.equal(isAllowedCreatorAvatarProfileUrl("https://www.instagram.com/mohamed.farag/"), true);
@@ -180,6 +195,57 @@ test("fetchCreatorAvatarImage uses unavatar when TikTok profile scrape has no ph
     if (result.ok) {
       assert.equal(result.contentType, "image/jpeg");
       assert.equal(result.buffer.byteLength, 80);
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});
+
+test("fetchCreatorAvatarImage upgrades tiny CDN avatars via profile_pic_url_hd", async () => {
+  resetMediaProxyMetricsForTests();
+  const src =
+    "https://scontent.cdninstagram.com/v/t51.2885-19/s150x150/avatar.jpg?oe=ABCDEF12";
+  const profileUrl = "https://www.instagram.com/tasneemmohamedd00/";
+  const hdUrl = "https://scontent.cdninstagram.com/v/t51.2885-19/hd.jpg";
+  const tiny = await jpegOfSize(150, 150);
+  const hd = await jpegOfSize(640, 640);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url === src) {
+      return new Response(tiny, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      });
+    }
+    if (url.includes("unavatar.io")) {
+      return new Response(tiny, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      });
+    }
+    if (url.startsWith("https://www.instagram.com/tasneemmohamedd00")) {
+      const embedded = hdUrl.replace(/\//g, "\\/");
+      return new Response(`<html><script>"profile_pic_url_hd":"${embedded}"</script></html>`, {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      });
+    }
+    if (url === hdUrl) {
+      return new Response(hd, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      });
+    }
+    return new Response(null, { status: 404 });
+  }) as typeof fetch;
+
+  try {
+    const result = await fetchCreatorAvatarImage({ src, profileUrl });
+    assert.equal(result.ok, true);
+    if (result.ok) {
+      const edge = await imageLongestEdge(result.buffer);
+      assert.ok(edge >= 600, `expected HD avatar, got ${edge}px`);
     }
   } finally {
     globalThis.fetch = originalFetch;

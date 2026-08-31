@@ -29,6 +29,15 @@ import {
   fetchImageBuffer,
   isAllowedPublicationPreviewSrcUrl,
 } from "@/lib/creators/publication-preview-proxy";
+import {
+  higherResolutionSocialImageUrlCandidates,
+  socialCdnUrlLooksSigned,
+} from "@/lib/creators/recent-publication-thumb";
+import {
+  MIN_SHARP_AVATAR_EDGE,
+  imageLongestEdge,
+  isVisiblyLowResolutionImage,
+} from "@/lib/io/compress-export-image";
 import { parseProfileInput } from "@/lib/social/parse-profile-url";
 import {
   SOCIAL_MEDIA_SRC_ALLOWLIST,
@@ -116,15 +125,15 @@ async function resolveProfilePictureFromSocialPage(
   const html = await fetchProfilePageHtml(profileUrl);
   if (!html) return null;
 
-  const ogImage = extractMetaContent(html, "og:image");
-  if (ogImage && isAllowedPublicationPreviewSrcUrl(ogImage)) {
-    return ogImage;
-  }
-
   for (const candidate of extractEmbeddedProfilePictureUrls(html)) {
     if (isAllowedPublicationPreviewSrcUrl(candidate)) {
       return candidate;
     }
+  }
+
+  const ogImage = extractMetaContent(html, "og:image");
+  if (ogImage && isAllowedPublicationPreviewSrcUrl(ogImage)) {
+    return ogImage;
   }
 
   return null;
@@ -263,15 +272,47 @@ type AvatarHttpResult =
     }
   | { ok: false; status: number; source: "cache" | "miss"; needsRefresh: boolean };
 
+type FetchedAvatar = { ok: true; buffer: ArrayBuffer; contentType: string };
+
+async function fetchAllowedAvatarSrc(src: string): Promise<FetchedAvatar | { ok: false }> {
+  if (!isAllowedPublicationPreviewSrcUrl(src)) return { ok: false };
+  if (!socialCdnUrlLooksSigned(src)) {
+    for (const candidate of higherResolutionSocialImageUrlCandidates(src)) {
+      if (!isAllowedPublicationPreviewSrcUrl(candidate)) continue;
+      const larger = await fetchImageBuffer(candidate, {
+        timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
+      });
+      if (larger.ok) return larger;
+    }
+  }
+  return fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
+}
+
 async function resolveCreatorAvatarExternal(input: {
   src: string | null;
   profileUrl: string | null;
   supabase?: SupabaseClient<Database> | null;
-}): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
+}): Promise<FetchedAvatar | { ok: false }> {
   const { src, profileUrl, supabase } = input;
   const liveProfile = profileUrl && isAllowedCreatorAvatarProfileUrl(profileUrl) ? profileUrl : null;
+  const ranked: { current: (FetchedAvatar & { edge: number }) | null } = { current: null };
 
-  let stored: { ok: true; buffer: ArrayBuffer; contentType: string } | null = null;
+  const consider = async (result: FetchedAvatar | { ok: false }): Promise<boolean> => {
+    if (!result.ok) return false;
+    const edge = await imageLongestEdge(result.buffer);
+    if (!ranked.current || edge > ranked.current.edge) {
+      ranked.current = { ...result, edge };
+    }
+    return !isVisiblyLowResolutionImage(edge, MIN_SHARP_AVATAR_EDGE);
+  };
+
+  const chosen = (): FetchedAvatar | { ok: false } => {
+    const best = ranked.current;
+    if (!best) return { ok: false };
+    return { ok: true, buffer: best.buffer, contentType: best.contentType };
+  };
+
+  let stored: FetchedAvatar | null = null;
   if (src && supabase) {
     stored = await fetchThinkwayStoredAvatar(supabase, src, MEDIA_PROXY_REFRESH_TIMEOUT_MS);
   }
@@ -280,37 +321,45 @@ async function resolveCreatorAvatarExternal(input: {
   }
   const skipLowQualityImport =
     Boolean(liveProfile) && isLowQualityImportedAvatarUrl(src, stored?.buffer.byteLength);
-  if (stored && !skipLowQualityImport) return stored;
+  if (stored && !skipLowQualityImport) {
+    if (await consider(stored)) {
+      return stored;
+    }
+  }
 
   const freshCdnSrc =
     src && isAllowedPublicationPreviewSrcUrl(src) && !isInstagramCdnUrlExpired(src)
       ? src
       : null;
 
-  if (freshCdnSrc) {
-    const direct = await fetchImageBuffer(freshCdnSrc, {
-      timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
-    });
-    if (direct.ok) return direct;
+  if (freshCdnSrc && (await consider(await fetchAllowedAvatarSrc(freshCdnSrc)))) {
+    return chosen();
   }
 
   if (liveProfile) {
     const fromUnavatar = await fetchUnavatarAvatar(liveProfile);
-    if (fromUnavatar.ok) return fromUnavatar;
+    if (await consider(fromUnavatar)) {
+      return chosen();
+    }
 
     const resolvedPicture = await resolveProfilePictureFromSocialPage(liveProfile);
-    if (resolvedPicture) {
-      const fromProfilePage = await fetchImageBuffer(resolvedPicture);
-      if (fromProfilePage.ok) return fromProfilePage;
+    if (resolvedPicture && (await consider(await fetchImageBuffer(resolvedPicture)))) {
+      return chosen();
     }
 
     recordMediaProxyExternalRequest();
     const og = await tryOpenGraphThumbnail({ contentUrl: liveProfile });
-    if (og.imageUrl && isAllowedPublicationPreviewSrcUrl(og.imageUrl)) {
-      const fromOg = await fetchImageBuffer(og.imageUrl);
-      if (fromOg.ok) return fromOg;
+    if (
+      og.imageUrl &&
+      isAllowedPublicationPreviewSrcUrl(og.imageUrl) &&
+      (await consider(await fetchImageBuffer(og.imageUrl)))
+    ) {
+      return chosen();
     }
   }
+
+  const rankedBest = chosen();
+  if (rankedBest.ok) return rankedBest;
 
   if (stored && skipLowQualityImport) return stored;
 
@@ -435,14 +484,20 @@ export async function resolveCreatorAvatarForHttpRequest(input: {
       fetchImageBuffer(freshCdnSrc, { timeoutMs: MEDIA_PROXY_FAST_TIMEOUT_MS })
     );
     if (direct.ok) {
-      setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
-      recordMediaProxyCdnHit();
-      return {
-        ok: true,
-        buffer: direct.buffer,
-        contentType: direct.contentType,
-        source: "cdn",
-      };
+      const edge = await imageLongestEdge(direct.buffer);
+      const canUpgrade =
+        Boolean(profileUrl && isAllowedCreatorAvatarProfileUrl(profileUrl)) &&
+        isVisiblyLowResolutionImage(edge, MIN_SHARP_AVATAR_EDGE);
+      if (!canUpgrade) {
+        setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
+        recordMediaProxyCdnHit();
+        return {
+          ok: true,
+          buffer: direct.buffer,
+          contentType: direct.contentType,
+          source: "cdn",
+        };
+      }
     }
   }
 

@@ -4,6 +4,8 @@ import {
   compressExportDataUri,
   compressExportImageBuffer,
   cropExportImageBufferCover,
+  imageLongestEdge,
+  isVisiblyLowResolutionImage,
   toCompressedExportDataUri,
 } from "./compress-export-image";
 
@@ -53,6 +55,19 @@ async function main() {
     assert.ok(cropped, "center-crops to square aspect");
     assert.equal(cropped.contentType, "image/jpeg");
     assert.ok(cropped.buffer.length > 0);
+  }
+
+  {
+    const sharp = (await import("sharp")).default;
+    const large = await sharp({
+      create: { width: 800, height: 400, channels: 3, background: { r: 20, g: 40, b: 80 } },
+    })
+      .jpeg()
+      .toBuffer();
+    assert.equal(await imageLongestEdge(large), 800);
+    assert.equal(isVisiblyLowResolutionImage(150, 640), true);
+    assert.equal(isVisiblyLowResolutionImage(0, 640), false);
+    assert.equal(isVisiblyLowResolutionImage(1080, 640), false);
   }
 
   console.log("compress-export-image.test.ts: ok");

@@ -13,9 +13,14 @@ import {
   withMediaProxyInflight,
 } from "@/lib/creators/media-proxy-cache";
 import {
-  isLikelyLowResolutionSocialThumb,
-  preferHigherResolutionSocialImageUrl,
+  higherResolutionSocialImageUrlCandidates,
+  socialCdnUrlLooksSigned,
 } from "@/lib/creators/recent-publication-thumb";
+import {
+  MIN_SHARP_PUBLICATION_EDGE,
+  imageLongestEdge,
+  isVisiblyLowResolutionImage,
+} from "@/lib/io/compress-export-image";
 import { tryFacebookOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/facebook-oembed";
 import { tryInstagramMediaRedirectThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-media-redirect";
 import { tryInstagramOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-oembed";
@@ -199,14 +204,20 @@ export async function fetchPublicationPreviewImage(input: {
   });
 }
 
+type FetchedPreview = { ok: true; buffer: ArrayBuffer; contentType: string };
+
 async function fetchAllowedPreviewSrc(
   src: string | null
-): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
+): Promise<FetchedPreview | { ok: false }> {
   if (!src || !isAllowedPublicationPreviewSrcUrl(src)) return { ok: false };
-  const upgraded = preferHigherResolutionSocialImageUrl(src);
-  if (upgraded !== src) {
-    const larger = await fetchImageBuffer(upgraded, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
-    if (larger.ok) return larger;
+  if (!socialCdnUrlLooksSigned(src)) {
+    for (const candidate of higherResolutionSocialImageUrlCandidates(src)) {
+      if (!isAllowedPublicationPreviewSrcUrl(candidate)) continue;
+      const larger = await fetchImageBuffer(candidate, {
+        timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
+      });
+      if (larger.ok) return larger;
+    }
   }
   return fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
 }
@@ -214,74 +225,79 @@ async function fetchAllowedPreviewSrc(
 async function resolvePublicationPreviewExternal(input: {
   src: string | null;
   postUrl: string | null;
-}): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
+}): Promise<FetchedPreview | { ok: false }> {
   const { src, postUrl } = input;
-  const srcLooksTiny = Boolean(src && isLikelyLowResolutionSocialThumb(src));
-  const tryPostUrlFirst = srcLooksTiny && Boolean(postUrl);
+  const ranked: { current: (FetchedPreview & { edge: number }) | null } = { current: null };
 
-  if (!tryPostUrlFirst) {
-    const direct = await fetchAllowedPreviewSrc(src);
-    if (direct.ok) return direct;
+  const consider = async (result: FetchedPreview | { ok: false }): Promise<boolean> => {
+    if (!result.ok) return false;
+    const edge = await imageLongestEdge(result.buffer);
+    if (!ranked.current || edge > ranked.current.edge) {
+      ranked.current = { ...result, edge };
+    }
+    return !isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE);
+  };
+
+  const chosen = (): FetchedPreview | { ok: false } => {
+    const best = ranked.current;
+    if (!best) return { ok: false };
+    return { ok: true, buffer: best.buffer, contentType: best.contentType };
+  };
+
+  if (await consider(await fetchAllowedPreviewSrc(src))) {
+    return chosen();
   }
 
   if (postUrl && isAllowedPublicationPreviewPostUrl(postUrl)) {
     if (isTikTokPostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const oembed = await tryTikTokOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl) {
-        const fromOembed = await fetchImageBuffer(oembed.imageUrl);
-        if (fromOembed.ok) return fromOembed;
+      if (oembed.imageUrl && (await consider(await fetchImageBuffer(oembed.imageUrl)))) {
+        return chosen();
       }
     }
 
     if (isInstagramPostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const mediaRedirect = await tryInstagramMediaRedirectThumbnail({ contentUrl: postUrl });
-      if (mediaRedirect.imageUrl) {
-        const fromRedirect = await fetchImageBuffer(mediaRedirect.imageUrl);
-        if (fromRedirect.ok) return fromRedirect;
+      if (
+        mediaRedirect.imageUrl &&
+        (await consider(await fetchImageBuffer(mediaRedirect.imageUrl)))
+      ) {
+        return chosen();
       }
 
       recordMediaProxyExternalRequest();
       const oembed = await tryInstagramOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl) {
-        const fromOembed = await fetchImageBuffer(oembed.imageUrl);
-        if (fromOembed.ok) return fromOembed;
+      if (oembed.imageUrl && (await consider(await fetchImageBuffer(oembed.imageUrl)))) {
+        return chosen();
       }
     }
 
     if (isYouTubePostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const youtube = await tryYouTubeThumbnail({ contentUrl: postUrl });
-      if (youtube.imageUrl) {
-        const fromYoutube = await fetchImageBuffer(youtube.imageUrl);
-        if (fromYoutube.ok) return fromYoutube;
+      if (youtube.imageUrl && (await consider(await fetchImageBuffer(youtube.imageUrl)))) {
+        return chosen();
       }
     }
 
     if (isFacebookPostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const oembed = await tryFacebookOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl) {
-        const fromOembed = await fetchImageBuffer(oembed.imageUrl);
-        if (fromOembed.ok) return fromOembed;
+      if (oembed.imageUrl && (await consider(await fetchImageBuffer(oembed.imageUrl)))) {
+        return chosen();
       }
     }
 
     recordMediaProxyExternalRequest();
     const og = await tryOpenGraphThumbnail({ contentUrl: postUrl });
-    if (og.imageUrl) {
-      const fromOg = await fetchImageBuffer(og.imageUrl);
-      if (fromOg.ok) return fromOg;
+    if (og.imageUrl && (await consider(await fetchImageBuffer(og.imageUrl)))) {
+      return chosen();
     }
   }
 
-  if (tryPostUrlFirst) {
-    const fallback = await fetchAllowedPreviewSrc(src);
-    if (fallback.ok) return fallback;
-  }
-
-  return { ok: false };
+  return chosen();
 }
 
 /**
@@ -315,14 +331,20 @@ export async function resolvePublicationPreviewForHttpRequest(input: {
       fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_FAST_TIMEOUT_MS })
     );
     if (direct.ok) {
-      setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
-      recordMediaProxyCdnHit();
-      return {
-        ok: true,
-        buffer: direct.buffer,
-        contentType: direct.contentType,
-        source: "cdn",
-      };
+      const edge = await imageLongestEdge(direct.buffer);
+      const canUpgrade =
+        Boolean(postUrl && isAllowedPublicationPreviewPostUrl(postUrl)) &&
+        isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE);
+      if (!canUpgrade) {
+        setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
+        recordMediaProxyCdnHit();
+        return {
+          ok: true,
+          buffer: direct.buffer,
+          contentType: direct.contentType,
+          source: "cdn",
+        };
+      }
     }
   }
 

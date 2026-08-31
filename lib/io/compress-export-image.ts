@@ -74,6 +74,40 @@ async function compressWithCanvas(
   }
 }
 
+/** Longest pixel edge of an image buffer; 0 when metadata cannot be read. */
+export async function imageLongestEdge(buffer: Buffer | ArrayBuffer): Promise<number> {
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  // Truncated stubs (e.g. 4-byte SOI/EOI) abort sharp's native decoder — skip them.
+  if (buf.byteLength < 128) return 0;
+
+  try {
+    const sharp = (await import("sharp")).default;
+    const meta = await sharp(buf).metadata();
+    return Math.max(meta.width ?? 0, meta.height ?? 0);
+  } catch {
+    // fall through to canvas
+  }
+
+  try {
+    const { loadImage } = await import("@napi-rs/canvas");
+    const image = await loadImage(buf);
+    return Math.max(image.width, image.height);
+  } catch {
+    return 0;
+  }
+}
+
+/** True when we measured a real image that is too small to look sharp when stretched. */
+export function isVisiblyLowResolutionImage(edge: number, minEdge: number): boolean {
+  return edge > 0 && edge < minEdge;
+}
+
+/** Showcase publication tiles (~200–280 CSS px) look pixelated below this source size. */
+export const MIN_SHARP_PUBLICATION_EDGE = 640;
+
+/** Showcase avatars are 88 CSS px; below this source size they look soft on retina. */
+export const MIN_SHARP_AVATAR_EDGE = 280;
+
 /** Resize and re-encode a raw image buffer as JPEG for compact data-URI embeds. */
 export async function compressExportImageBuffer(
   buffer: Buffer,
@@ -113,8 +147,8 @@ export async function toCompressedExportDataUri(
 }
 
 export const SHOWCASE_AVATAR_COMPRESS: CompressExportImageOptions = {
-  maxEdge: 192,
-  quality: 70,
+  maxEdge: 512,
+  quality: 86,
 };
 
 /** Higher-res avatars for pitch presentation decks (large hero portraits). */

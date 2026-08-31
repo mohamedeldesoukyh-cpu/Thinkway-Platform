@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   creatorRecentPublicationDisplayUrl,
+  higherResolutionSocialImageUrlCandidates,
   isCreatorRecentPublicationVideo,
   isLikelyLowResolutionSocialThumb,
   isVideoPublicationUrl,
@@ -10,6 +11,7 @@ import {
   recentPublicationsLackThumbnails,
   resolveCreatorRecentPublicationThumbnail,
   shouldProxyPublicationMediaUrl,
+  socialCdnUrlLooksSigned,
 } from "@/lib/creators/recent-publication-thumb";
 
 const IG_CDN =
@@ -279,6 +281,20 @@ assert.equal(
   true
 );
 assert.equal(
+  isLikelyLowResolutionSocialThumb(
+    "https://scontent.cdninstagram.com/v/t51.2885-15/123_150x150.jpg"
+  ),
+  true,
+  "filename _150x150 without s-prefix is a thumb"
+);
+assert.equal(
+  isLikelyLowResolutionSocialThumb(
+    "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e35_s150x150&oh=abc"
+  ),
+  true,
+  "stp size token marks a thumb"
+);
+assert.equal(
   isLikelyLowResolutionSocialThumb("https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg"),
   false
 );
@@ -287,6 +303,26 @@ assert.match(
     "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg?stp=s150x150"
   ),
   /s1080x1080/
+);
+assert.deepEqual(
+  higherResolutionSocialImageUrlCandidates(
+    "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg"
+  ),
+  [
+    "https://scontent.cdninstagram.com/v/t51.2885-15/s1080x1080/thumb.jpg",
+    "https://scontent.cdninstagram.com/v/t51.2885-15/s640x640/thumb.jpg",
+    "https://scontent.cdninstagram.com/v/t51.2885-15/s320x320/thumb.jpg",
+  ]
+);
+assert.equal(
+  socialCdnUrlLooksSigned(
+    "https://scontent.cdninstagram.com/v/t51.jpg?oh=abc&oe=ABCDEF12"
+  ),
+  true
+);
+assert.equal(
+  socialCdnUrlLooksSigned("https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg"),
+  false
 );
 
 console.log("recent-publication-thumb tests passed");
