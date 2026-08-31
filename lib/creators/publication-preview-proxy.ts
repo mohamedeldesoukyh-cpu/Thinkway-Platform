@@ -14,6 +14,7 @@ import {
 } from "@/lib/creators/media-proxy-cache";
 import {
   higherResolutionSocialImageUrlCandidates,
+  isLikelyLowQualitySocialJpeg,
   socialCdnUrlLooksSigned,
 } from "@/lib/creators/recent-publication-thumb";
 import {
@@ -219,6 +220,8 @@ async function fetchAllowedPreviewSrc(
       });
       if (larger.ok) return larger;
     }
+  } else if (isLikelyLowQualitySocialJpeg(src)) {
+    return { ok: false };
   }
   return fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
 }
@@ -255,7 +258,7 @@ async function resolvePublicationPreviewExternal(input: {
     if (isTikTokPostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const oembed = await tryTikTokOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl && (await consider(await fetchImageBuffer(oembed.imageUrl)))) {
+      if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl)))) {
         return chosen();
       }
     }
@@ -265,14 +268,14 @@ async function resolvePublicationPreviewExternal(input: {
       const mediaRedirect = await tryInstagramMediaRedirectThumbnail({ contentUrl: postUrl });
       if (
         mediaRedirect.imageUrl &&
-        (await consider(await fetchImageBuffer(mediaRedirect.imageUrl)))
+        (await consider(await fetchAllowedPreviewSrc(mediaRedirect.imageUrl)))
       ) {
         return chosen();
       }
 
       recordMediaProxyExternalRequest();
       const oembed = await tryInstagramOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl && (await consider(await fetchImageBuffer(oembed.imageUrl)))) {
+      if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl)))) {
         return chosen();
       }
     }
@@ -280,7 +283,7 @@ async function resolvePublicationPreviewExternal(input: {
     if (isYouTubePostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const youtube = await tryYouTubeThumbnail({ contentUrl: postUrl });
-      if (youtube.imageUrl && (await consider(await fetchImageBuffer(youtube.imageUrl)))) {
+      if (youtube.imageUrl && (await consider(await fetchAllowedPreviewSrc(youtube.imageUrl)))) {
         return chosen();
       }
     }
@@ -288,14 +291,14 @@ async function resolvePublicationPreviewExternal(input: {
     if (isFacebookPostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const oembed = await tryFacebookOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl && (await consider(await fetchImageBuffer(oembed.imageUrl)))) {
+      if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl)))) {
         return chosen();
       }
     }
 
     recordMediaProxyExternalRequest();
     const og = await tryOpenGraphThumbnail({ contentUrl: postUrl });
-    if (og.imageUrl && (await consider(await fetchImageBuffer(og.imageUrl)))) {
+    if (og.imageUrl && (await consider(await fetchAllowedPreviewSrc(og.imageUrl)))) {
       return chosen();
     }
   }
