@@ -320,6 +320,15 @@ export async function createClientReviewFromShortlist(
       campaignName: header.name,
     })) ?? undefined;
 
+  const { data: linkedQuote } = await supabase
+    .from("quotations")
+    .select("id")
+    .eq("shortlist_id", header.id)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  const quotationId = (linkedQuote as { id?: string | null } | null)?.id?.trim() ?? null;
+
   return persistClientReview({
     supabase,
     userId: input.userId,
@@ -327,6 +336,8 @@ export async function createClientReviewFromShortlist(
     source: "shortlist",
     scope: { source: "shortlist", shortlistId: header.id },
     shortlistId: header.id,
+    quotationId,
+    campaignHeaderId: header.campaign_header_id,
     clientLabel: snapshot.clientLabel,
     brandName: snapshot.brandName,
     campaignName: snapshot.campaignName,

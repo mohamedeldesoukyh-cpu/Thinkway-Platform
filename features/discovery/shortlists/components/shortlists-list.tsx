@@ -67,6 +67,7 @@ import {
 } from "./shortlist-selection-flyout";
 import { ShortlistsListMergedHeader } from "./shortlists-list-header";
 import { shortlistDetailPath } from "../constants";
+import { ClientWorkspaceListLinkCell } from "@/features/client-workspace/components/client-workspace-list-link-cell";
 import {
   InitialsAvatar,
   ShortlistCreatorPreviewStack,
@@ -267,6 +268,9 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                 <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Serial</TableHead>
                 <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Shortlist</TableHead>
                 <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Status</TableHead>
+                <TableHead className={cn(SHORTLIST_LIST_HEAD_CLASS, "min-w-[7.5rem]")}>
+                  Client link
+                </TableHead>
                 <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Visibility</TableHead>
                 <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Owner</TableHead>
                 <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Creators</TableHead>
@@ -331,6 +335,18 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                     </TableCell>
                     <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
                       <ShortlistListStatusPill status={row.status} />
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        SHORTLIST_LIST_CELL_CLASS,
+                        "min-w-0 overflow-visible whitespace-normal align-top"
+                      )}
+                    >
+                      <ClientWorkspaceListLinkCell
+                        source="shortlist"
+                        id={row.id}
+                        link={row.client_workspace_link}
+                      />
                     </TableCell>
                     <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
                       <ShortlistListVisibilityPill visibility={row.visibility} />

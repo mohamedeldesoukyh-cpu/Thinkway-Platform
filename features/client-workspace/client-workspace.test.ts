@@ -23,6 +23,9 @@ import {
   clientReviewSharePeekExists,
   campaignClientWorkspaceLinkFromLatest,
   campaignClientReviewIdsToStop,
+  clientWorkspaceListLinkForSubject,
+  indexClientWorkspaceListLinks,
+  propagateClientWorkspaceListLinks,
   campaignHeaderIdsWithShareToken,
   latestCampaignClientReviewByHeader,
   restoreStatusAfterClientLinkStop,
@@ -682,6 +685,99 @@ test("Show link stays visible for superseded reviews, quotation versions, and ca
     }).sort(),
     ["v1", "v2", "v3"]
   );
+});
+
+test("shortlist, quotation, and campaign lists share one Client Workspace link", () => {
+  const index = indexClientWorkspaceListLinks({
+    journeys: [
+      {
+        id: "j1",
+        share_token: "same-token",
+        shortlist_id: "sl1",
+        quotation_id: "q1",
+        campaign_header_id: "c1",
+      },
+    ],
+    reviews: [
+      {
+        id: "r1",
+        status: "awaiting_review",
+        review_number: 2,
+        journey_id: "j1",
+        shortlist_id: "sl1",
+        quotation_id: "q1",
+        campaign_header_id: "c1",
+      },
+    ],
+  });
+  const link = { state: "active" as const, reviewNumber: 2 };
+  assert.deepEqual(index.byShortlistId.get("sl1"), link);
+  assert.deepEqual(index.byQuotationId.get("q1"), link);
+  assert.deepEqual(index.byCampaignHeaderId.get("c1"), link);
+  assert.deepEqual(
+    clientWorkspaceListLinkForSubject(index, { shortlistId: "sl1" }),
+    link
+  );
+  assert.deepEqual(
+    clientWorkspaceListLinkForSubject(index, { quotationId: "q1" }),
+    link
+  );
+  assert.deepEqual(
+    clientWorkspaceListLinkForSubject(index, { campaignHeaderId: "c1" }),
+    link
+  );
+
+  const stopped = indexClientWorkspaceListLinks({
+    journeys: [
+      {
+        id: "j1",
+        share_token: "same-token",
+        shortlist_id: "sl1",
+        quotation_id: "q1",
+        campaign_header_id: "c1",
+      },
+    ],
+    reviews: [
+      {
+        id: "r1",
+        status: "revoked",
+        review_number: 2,
+        journey_id: "j1",
+        quotation_id: "q1",
+      },
+    ],
+  });
+  assert.equal(stopped.byShortlistId.get("sl1")?.state, "off");
+  assert.equal(stopped.byQuotationId.get("q1")?.state, "off");
+  assert.equal(stopped.byCampaignHeaderId.get("c1")?.state, "off");
+});
+
+test("related shortlist, quotation, and campaign rows share a journey even if only one ID is stored", () => {
+  const index = indexClientWorkspaceListLinks({
+    journeys: [
+      {
+        id: "j1",
+        share_token: "same-token",
+        quotation_id: "q1",
+      },
+    ],
+    reviews: [
+      {
+        id: "r1",
+        status: "awaiting_review",
+        review_number: 1,
+        journey_id: "j1",
+        quotation_id: "q1",
+      },
+    ],
+  });
+  propagateClientWorkspaceListLinks(index, [
+    { shortlistId: "sl1", quotationId: "q1", campaignHeaderId: "c1" },
+  ]);
+  const link = { state: "active" as const, reviewNumber: 1 };
+  assert.deepEqual(clientWorkspaceListLinkForSubject(index, { shortlistId: "sl1" }), link);
+  assert.deepEqual(clientWorkspaceListLinkForSubject(index, { quotationId: "q1" }), link);
+  assert.deepEqual(clientWorkspaceListLinkForSubject(index, { campaignHeaderId: "c1" }), link);
 });
 
 test("campaign-linked quotation reviews replace previous in-review selection", () => {

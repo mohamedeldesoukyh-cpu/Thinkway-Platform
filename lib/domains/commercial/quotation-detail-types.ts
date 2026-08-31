@@ -1,5 +1,6 @@
 import type { CommercialInputMode, QuotationStatus } from "@/types/database";
 
+import type { ClientWorkspaceListLink } from "@/features/client-workspace/client-review-selection";
 import type { CreatorProfileSource } from "@/lib/creators/creator-profile-source";
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 
@@ -96,6 +97,7 @@ export type QuotationListRow = {
   total_gp_pct: number;
   item_count: number;
   creator_previews: QuotationCreatorPreview[];
+  client_workspace_link?: ClientWorkspaceListLink;
   is_archived: boolean;
   issue_date: string | null;
   validity_date: string | null;

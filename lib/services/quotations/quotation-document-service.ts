@@ -24,6 +24,8 @@ import {
   readShowOriginalCurrency,
 } from "@/lib/commercial/client-original-currency";
 import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
+import { clientWorkspaceListLinkForSubject } from "@/features/client-workspace/client-review-selection";
+import { loadClientWorkspaceListLinks } from "@/features/client-workspace/list-client-workspace-links";
 import type { CommercialInputMode, Database, QuotationStatus } from "@/types/database";
 
 import {
@@ -233,14 +235,24 @@ export async function getQuotationsList(
 
   if (rows.length === 0) return rows;
 
-  const creatorPreviews = await loadQuotationCreatorPreviews(
-    supabase,
-    rows.map((row) => row.id)
-  );
+  const [creatorPreviews, linkIndex] = await Promise.all([
+    loadQuotationCreatorPreviews(
+      supabase,
+      rows.map((row) => row.id)
+    ),
+    loadClientWorkspaceListLinks(supabase, {
+      quotationIds: rows.map((row) => row.id),
+      shortlistIds: rows.map((row) => row.shortlist_id),
+    }),
+  ]);
 
   return rows.map((row) => ({
     ...row,
     creator_previews: creatorPreviews.get(row.id) ?? [],
+    client_workspace_link: clientWorkspaceListLinkForSubject(linkIndex, {
+      quotationId: row.id,
+      shortlistId: row.shortlist_id,
+    }) ?? { state: "none" },
   }));
 }
 

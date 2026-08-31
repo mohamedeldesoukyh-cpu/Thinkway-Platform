@@ -8,6 +8,8 @@ import type {
 } from "@/types/database";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
+import type { ClientWorkspaceListLink } from "@/features/client-workspace/client-review-selection";
+
 export type ShortlistCreatorPreview = {
   display_name: string;
   profile_image_url: string | null;
@@ -29,6 +31,7 @@ export type ShortlistListRow = {
   is_archived: boolean;
   creator_count: number;
   creator_previews: ShortlistCreatorPreview[];
+  client_workspace_link?: ClientWorkspaceListLink;
   approved_at: string | null;
   created_at: string;
   updated_at: string;

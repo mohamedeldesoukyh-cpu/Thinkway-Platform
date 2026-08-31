@@ -11,11 +11,8 @@ import {
   getMasterDataOptions,
 } from "@/lib/master-data/queries";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
-import {
-  campaignClientWorkspaceLinkFromLatest,
-  campaignHeaderIdsWithShareToken,
-  latestCampaignClientReviewByHeader,
-} from "@/features/client-workspace/client-review-selection";
+import { clientWorkspaceListLinkForSubject } from "@/features/client-workspace/client-review-selection";
+import { loadClientWorkspaceListLinks } from "@/features/client-workspace/list-client-workspace-links";
 import type { AgencyOrDirect, CampaignListItem } from "@/types/database";
 
 import { escapeIlikePattern } from "../campaign-commercial";
@@ -269,7 +266,7 @@ export async function enrichCampaignListLifecycleSignals(
   if (campaigns.length === 0) return campaigns;
   const ids = campaigns.map((c) => c.id);
 
-  const [cioResult, vioResult, reviewResult, journeyResult] = await Promise.all([
+  const [cioResult, vioResult, linkIndex] = await Promise.all([
     supabase
       .from("client_ios")
       .select("campaign_header_id, status, created_at")
@@ -279,14 +276,11 @@ export async function enrichCampaignListLifecycleSignals(
       .from("vendor_ios")
       .select("campaign_header_id, status")
       .in("campaign_header_id", ids),
-    supabase
-      .from("campaign_client_reviews")
-      .select("campaign_header_id, status, review_number")
-      .in("campaign_header_id", ids),
-    supabase
-      .from("campaign_client_journeys")
-      .select("campaign_header_id, share_token")
-      .in("campaign_header_id", ids),
+    loadClientWorkspaceListLinks(supabase, {
+      campaignHeaderIds: ids,
+      quotationIds: campaigns.map((campaign) => campaign.quotation_id),
+      shortlistIds: campaigns.map((campaign) => campaign.shortlist_id),
+    }),
   ]);
 
   if (cioResult.error) {
@@ -294,12 +288,6 @@ export async function enrichCampaignListLifecycleSignals(
   }
   if (vioResult.error) {
     console.warn("[campaigns-list] vendor_ios enrich failed", vioResult.error.message);
-  }
-  if (reviewResult.error) {
-    console.warn("[campaigns-list] client reviews enrich failed", reviewResult.error.message);
-  }
-  if (journeyResult.error) {
-    console.warn("[campaigns-list] client journeys enrich failed", journeyResult.error.message);
   }
 
   const latestCio = new Map<string, string>();
@@ -331,24 +319,9 @@ export async function enrichCampaignListLifecycleSignals(
     vioStats.set(row.campaign_header_id, cur);
   }
 
-  const latestReviews = latestCampaignClientReviewByHeader(
-    (reviewResult.data ?? []) as Array<{
-      campaign_header_id: string;
-      status: string;
-      review_number: number;
-    }>
-  );
-  const journeyShareHeaders = campaignHeaderIdsWithShareToken(
-    (journeyResult.data ?? []) as Array<{
-      campaign_header_id?: string | null;
-      share_token?: string | null;
-    }>
-  );
-
   return campaigns.map((campaign) => {
     const status = latestCio.get(campaign.id) ?? null;
     const vio = vioStats.get(campaign.id);
-    const review = latestReviews.get(campaign.id);
     return {
       ...campaign,
       client_io_status: status,
@@ -356,11 +329,11 @@ export async function enrichCampaignListLifecycleSignals(
       vendor_io_count: vio?.total ?? 0,
       approved_vendor_io_count: vio?.approved ?? 0,
       sent_vendor_io_count: vio?.sent ?? 0,
-      client_workspace_link: campaignClientWorkspaceLinkFromLatest({
-        latestStatus: review?.status,
-        reviewNumber: review?.review_number,
-        journeyHasShareToken: journeyShareHeaders.has(campaign.id),
-      }),
+      client_workspace_link: clientWorkspaceListLinkForSubject(linkIndex, {
+        campaignHeaderId: campaign.id,
+        quotationId: campaign.quotation_id,
+        shortlistId: campaign.shortlist_id,
+      }) ?? { state: "none" },
     };
   });
 }

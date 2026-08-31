@@ -47,6 +47,7 @@ import {
 } from "../quotation-list-filters";
 import type { QuotationFormOptions, QuotationListRow } from "../types";
 import { QuotationListStatusPill } from "./quotation-list-status-pill";
+import { ClientWorkspaceListLinkCell } from "@/features/client-workspace/components/client-workspace-list-link-cell";
 import {
   QuotationSelectionFlyout,
   quotationListFloatingBarContentClass,
@@ -218,6 +219,9 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
                 <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Serial</TableHead>
                 <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Quotation</TableHead>
                 <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Status</TableHead>
+                <TableHead className={cn(QUOTATION_LIST_HEAD_CLASS, "min-w-[7.5rem]")}>
+                  Client link
+                </TableHead>
                 <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Owner</TableHead>
                 <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Creators</TableHead>
               </TableRow>
@@ -278,6 +282,18 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
                     </TableCell>
                     <TableCell className={QUOTATION_LIST_CELL_CLASS}>
                       <QuotationListStatusPill status={row.status} />
+                    </TableCell>
+                    <TableCell
+                      className={cn(
+                        QUOTATION_LIST_CELL_CLASS,
+                        "min-w-0 overflow-visible whitespace-normal align-top"
+                      )}
+                    >
+                      <ClientWorkspaceListLinkCell
+                        source="quotation"
+                        id={row.id}
+                        link={row.client_workspace_link}
+                      />
                     </TableCell>
                     <TableCell className={QUOTATION_LIST_CELL_CLASS}>
                       <div className="flex min-w-0 items-center gap-[9px]">
