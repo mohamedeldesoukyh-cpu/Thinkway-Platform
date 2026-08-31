@@ -13,6 +13,8 @@ import {
 import {
   creatorRecentPublicationDisplayUrl,
   isCreatorRecentPublicationVideo,
+  isLikelyCreatorProfileImageUrl,
+  isLikelyPublicationScreenshotUrl,
   normalizeCreatorRecentPublications,
   resolveCreatorRecentPublicationThumbnail,
   shouldProxyPublicationMediaUrl,
@@ -23,10 +25,13 @@ import {
   resolveUnifiedCreatorsByRefs,
 } from "@/lib/creators/unified-browse";
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
+import { normalizeAvatarUrlForComparison } from "@/lib/performance/avatar-sync-policy";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import {
+  MIN_DISPLAYABLE_PUBLICATION_EDGE,
   SHOWCASE_PUBLICATION_COMPRESS,
   compressExportDataUri,
+  exportImageBufferMeetsMinEdge,
   toCompressedExportDataUri,
 } from "@/lib/io/compress-export-image";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
@@ -84,13 +89,31 @@ function pickPlatformPublications(
   return fromCreator;
 }
 
+function publicationImageIsCreatorAvatar(
+  imageUrl: string,
+  creatorAvatarUrl?: string | null
+): boolean {
+  const avatar = creatorAvatarUrl?.trim();
+  if (!imageUrl || !avatar) return false;
+  return normalizeAvatarUrlForComparison(imageUrl) === normalizeAvatarUrlForComparison(avatar);
+}
+
+function publicationImageUsableAsShot(imageUrl: string, creatorAvatarUrl?: string | null): boolean {
+  if (!imageUrl.startsWith("http") && !imageUrl.startsWith("data:")) return false;
+  if (isLikelyCreatorProfileImageUrl(imageUrl)) return false;
+  if (publicationImageIsCreatorAvatar(imageUrl, creatorAvatarUrl)) return false;
+  return true;
+}
+
 /** Prefer posts with stored thumbs; also keep postUrl-only rows for OG/oEmbed embed fallback. */
 export function selectShowcasePublicationShots(
   publications: CreatorRecentPublication[],
-  limit = SHOWCASE_PUBLICATION_SHOT_LIMIT
+  limit = SHOWCASE_PUBLICATION_SHOT_LIMIT,
+  options?: { creatorAvatarUrl?: string | null }
 ): QuotationDocPublicationShot[] {
   const shots: QuotationDocPublicationShot[] = [];
   const seen = new Set<string>();
+  const creatorAvatarUrl = options?.creatorAvatarUrl ?? null;
 
   const pushShot = (shot: QuotationDocPublicationShot) => {
     if (shots.length >= limit) return;
@@ -110,11 +133,15 @@ export function selectShowcasePublicationShots(
     isVideo: isCreatorRecentPublicationVideo(pub),
   });
 
-  // Pass 1: stored thumbnails / screenshots (durable or CDN).
+  // Pass 1: stored media thumbs / covers (not profile pics, not screenshots when media exists).
   for (const pub of publications) {
     if (shots.length >= limit) break;
     const imageUrl = resolveCreatorRecentPublicationThumbnail(pub);
-    if (!imageUrl?.startsWith("http") && !imageUrl?.startsWith("data:")) continue;
+    if (!imageUrl) continue;
+    if (!publicationImageUsableAsShot(imageUrl, creatorAvatarUrl)) continue;
+    if (isLikelyPublicationScreenshotUrl(imageUrl) && pub.url?.trim()) {
+      continue;
+    }
     pushShot(shotFromPublication(pub, imageUrl));
   }
 
@@ -125,7 +152,9 @@ export function selectShowcasePublicationShots(
       const postUrl = pub.url?.trim() || null;
       if (!postUrl?.startsWith("http")) continue;
       const imageUrl = resolveCreatorRecentPublicationThumbnail(pub);
-      if (imageUrl?.startsWith("http") || imageUrl?.startsWith("data:")) continue;
+      if (imageUrl && publicationImageUsableAsShot(imageUrl, creatorAvatarUrl)) {
+        if (!isLikelyPublicationScreenshotUrl(imageUrl)) continue;
+      }
       pushShot(shotFromPublication(pub, ""));
     }
   }
@@ -201,7 +230,14 @@ export async function loadQuotationCreatorPublicationShots(
       continue;
     }
     const publications = pickPlatformPublications(headerItem, creator);
-    result.set(creatorKey, selectShowcasePublicationShots(publications, limit));
+    const creatorAvatarUrl =
+      headerItem.creator_profile_source?.avatarUrl?.trim() ||
+      headerItem.profile_image_url?.trim() ||
+      null;
+    result.set(
+      creatorKey,
+      selectShowcasePublicationShots(publications, limit, { creatorAvatarUrl })
+    );
   }
 
   return result;
@@ -238,20 +274,43 @@ async function embedPublicationShot(
   }
 
   const needsProxy = publicationShotNeedsProxy(shot);
+  const preferLivePost =
+    Boolean(postUrl) &&
+    (isLikelyPublicationScreenshotUrl(trimmed) || isLikelyCreatorProfileImageUrl(trimmed));
 
   if (needsProxy || postUrl || trimmed) {
     const preview = await fetchPublicationPreviewImage({
-      src: trimmed || null,
+      src: preferLivePost ? null : trimmed || null,
       postUrl,
     });
     if (preview.ok) {
       const buffer = Buffer.from(preview.buffer);
-      const contentType = preview.contentType || detectImageContentType(buffer);
-      return {
-        ...shot,
-        imageUrl: await toPublicationDataUri(buffer, contentType),
-        imageProxyUrl: null,
-      };
+      if (await exportImageBufferMeetsMinEdge(buffer, MIN_DISPLAYABLE_PUBLICATION_EDGE)) {
+        const contentType = preview.contentType || detectImageContentType(buffer);
+        return {
+          ...shot,
+          imageUrl: await toPublicationDataUri(buffer, contentType),
+          imageProxyUrl: null,
+        };
+      }
+    }
+  }
+
+  if (preferLivePost && trimmed) {
+    const fallback = await fetchPublicationPreviewImage({
+      src: trimmed,
+      postUrl: null,
+    });
+    if (fallback.ok) {
+      const buffer = Buffer.from(fallback.buffer);
+      if (await exportImageBufferMeetsMinEdge(buffer, MIN_DISPLAYABLE_PUBLICATION_EDGE)) {
+        const contentType = fallback.contentType || detectImageContentType(buffer);
+        return {
+          ...shot,
+          imageUrl: await toPublicationDataUri(buffer, contentType),
+          imageProxyUrl: null,
+        };
+      }
     }
   }
 

@@ -44,4 +44,6 @@ test("showcase metric card followers use compact K/M", () => {
   assert.equal(formatQuotationCardFollowers(10_000), "10K");
   assert.equal(formatQuotationCardFollowers(850), "850");
   assert.equal(formatQuotationCardFollowers("—"), "—");
+  assert.equal(formatQuotationCardFollowers("10K"), "10K");
+  assert.equal(formatQuotationCardFollowers("10.0K"), "10.0K");
 });

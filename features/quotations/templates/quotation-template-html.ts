@@ -9,6 +9,7 @@ import type {
 import type { ThinkwayReportLogoSrcs } from "@/lib/reports/document/thinkway-report-logo";
 import {
   renderQuotationTemplateAvatarHtml,
+  resolveQuotationTemplateAvatarSrc,
   resolveQuotationTemplatePublicationSrc,
 } from "./quotation-template-avatars";
 import { renderQuotationPlatformIconsHtml } from "./quotation-template-platform-icons";
@@ -200,7 +201,7 @@ function renderMixTableRows(
         const feeCell = options.showFees
           ? `<td class="r fee">${index === 0 ? esc(creator.fee ?? "—") : ""}</td>`
           : "";
-        return `<tr class="${leadClass}"><td class="h">${index === 0 ? esc(creator.handle) : ""}</td><td>${platformBadgeHtml(platform.platform)}</td><td class="r">${esc(platform.followers)}</td><td>${index === 0 ? esc(creator.category) : ""}</td><td class="r">${esc(platform.engagement)}</td>${feeCell}</tr>`;
+        return `<tr class="${leadClass}"><td class="h">${index === 0 ? esc(creator.handle) : ""}</td><td>${platformBadgeHtml(platform.platform)}</td><td class="r">${esc(formatQuotationCardFollowers(platform.followers))}</td><td>${index === 0 ? esc(creator.category) : ""}</td><td class="r">${esc(platform.engagement)}</td>${feeCell}</tr>`;
       })
     )
     .join("");
@@ -249,7 +250,7 @@ function renderPublicationShotsGrid(
       const play = shot.isVideo
         ? `<span class="pub-play showcase-pub-play" aria-hidden="true"><span class="pub-play-icon showcase-pub-play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></span>`
         : "";
-      const img = `<img class="showcase-pub-thumb" src="${esc(src)}" alt="" referrerpolicy="no-referrer" />${play}`;
+      const img = `<img class="showcase-pub-thumb" src="${esc(src)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()" />${play}`;
       const linked =
         shot.postUrl && /^https?:\/\//i.test(shot.postUrl)
           ? `<a href="${esc(shot.postUrl)}" target="_blank" rel="noopener noreferrer">${img}</a>`
@@ -676,6 +677,8 @@ function expandRosterRows(
   handle: string;
   initials: string;
   avatarUrl: string | null;
+  avatarProxyUrl: string | null;
+  profileUrl: string | null;
   followers: string;
   er: string;
   tier: string;
@@ -688,6 +691,8 @@ function expandRosterRows(
     handle: string;
     initials: string;
     avatarUrl: string | null;
+    avatarProxyUrl: string | null;
+    profileUrl: string | null;
     followers: string;
     er: string;
     tier: string;
@@ -700,12 +705,17 @@ function expandRosterRows(
   payload.roster.rows.forEach((row, index) => {
     const group = doc.creatorGroups[index];
     const metrics = group?.platformMetrics ?? [];
+    const avatarUrl = row.avatarUrl ?? group?.avatarUrl ?? null;
+    const avatarProxyUrl = group?.avatarProxyUrl ?? null;
+    const profileUrl = group?.profileUrl ?? null;
     if (metrics.length > 0) {
       metrics.forEach((metric, metricIndex) => {
         rows.push({
           handle: metricIndex === 0 ? row.handle : "",
           initials: row.initials,
-          avatarUrl: metricIndex === 0 ? row.avatarUrl ?? null : null,
+          avatarUrl: metricIndex === 0 ? avatarUrl : null,
+          avatarProxyUrl: metricIndex === 0 ? avatarProxyUrl : null,
+          profileUrl: metricIndex === 0 ? profileUrl : null,
           followers: metric.followers,
           er: metric.engagement,
           tier: metricIndex === 0 ? row.tier : "",
@@ -720,7 +730,9 @@ function expandRosterRows(
     rows.push({
       handle: row.handle,
       initials: row.initials,
-      avatarUrl: row.avatarUrl ?? null,
+      avatarUrl,
+      avatarProxyUrl,
+      profileUrl,
       followers: row.followers,
       er: row.er,
       tier: row.tier,
@@ -735,7 +747,8 @@ function expandRosterRows(
 
 function renderRosterPage(
   payload: QuotationTemplatePayload,
-  doc: QuotationDocument
+  doc: QuotationDocument,
+  siteOrigin?: string
 ): string {
   const allRows = expandRosterRows(payload, doc);
   const chunks = chunkArray(allRows, ROSTER_ROWS_PER_PAGE, ROSTER_ROWS_PER_PAGE);
@@ -748,14 +761,22 @@ function renderRosterPage(
           const platformCell = row.platformIcons.length
             ? `${renderQuotationPlatformIconsHtml(row.platformIcons)}<span class="platform-cell-label">${esc(row.platformLabel)}</span>`
             : esc(row.platformLabel);
+          const avatarSrc = resolveQuotationTemplateAvatarSrc(
+            {
+              avatarUrl: row.avatarUrl,
+              avatarProxyUrl: row.avatarProxyUrl,
+              profileUrl: row.profileUrl,
+            },
+            siteOrigin
+          );
           const avatar =
-            row.lead && row.avatarUrl
-              ? `<img class="roster-avatar" src="${esc(row.avatarUrl)}" alt="" width="22" height="22" />`
+            row.lead && avatarSrc
+              ? `<img class="roster-avatar" src="${esc(avatarSrc)}" alt="" width="22" height="22" referrerpolicy="no-referrer" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'roster-avatar roster-avatar--fallback',textContent:'${esc(row.initials)}'}))" />`
               : row.lead
                 ? `<span class="roster-avatar roster-avatar--fallback">${esc(row.initials)}</span>`
                 : `<span class="roster-avatar" style="visibility:hidden"></span>`;
           const leadClass = row.lead ? "lead" : "";
-          return `<tr class="${leadClass}"><td class="name roster-creator">${avatar}<span>${esc(row.handle)}</span></td><td class="r">${esc(row.followers)}</td><td class="r">${esc(row.er)}</td><td>${row.tier ? `<span class="pill">${esc(row.tier)}</span>` : ""}</td><td class="categories-cell">${esc(row.categories)}</td><td class="platform-cell">${platformCell}</td></tr>`;
+          return `<tr class="${leadClass}"><td class="name roster-creator">${avatar}<span>${esc(row.handle)}</span></td><td class="r">${esc(formatQuotationCardFollowers(row.followers))}</td><td class="r">${esc(row.er)}</td><td>${row.tier ? `<span class="pill">${esc(row.tier)}</span>` : ""}</td><td class="categories-cell">${esc(row.categories)}</td><td class="platform-cell">${platformCell}</td></tr>`;
         })
         .join("");
 
@@ -856,7 +877,7 @@ function renderCommercialPage(
     </div>`;
 
   const lumpSumNote = !payload.flags.itemizedPricing
-    ? `<div class="insight" style="border-left-color:var(--blue400);">
+    ? `<div class="insight" style="border-left-color:var(--blue);">
       <p><b>Lump-sum engagement.</b> ${esc(c.lumpSumNote)}</p>
     </div>`
     : "";
@@ -984,7 +1005,7 @@ function renderCollapseCreatorCard(
           </div>
           <div class="collap-creator-meta">
             <span class="collap-tier-pill">${esc(creator.tier)}</span>
-            <span>${esc(creator.followers)} followers</span>
+            <span>${esc(formatQuotationCardFollowers(creator.followers))} followers</span>
             <span>${esc(creator.engagementRate)} ER</span>
           </div>
         </div>`;
@@ -1154,9 +1175,9 @@ export function buildQuotationTemplateHtml(
     renderCategoryTierPages(payload, doc.creatorGroups),
     renderCollapseContentPages(doc, siteOrigin, forPdf),
     ...(payload.flags.showcaseCreators
-      ? [renderShowcaseCreatorPages(payload, doc, siteOrigin, forPdf), renderRosterPage(payload, doc)]
+      ? [renderShowcaseCreatorPages(payload, doc, siteOrigin, forPdf), renderRosterPage(payload, doc, siteOrigin)]
       : payload.flags.documentKind === "shortlist"
-        ? [renderRosterPage(payload, doc)]
+        ? [renderRosterPage(payload, doc, siteOrigin)]
         : []),
     ...(payload.flags.showCommercialSummary
       ? [renderCommercialPage(payload, doc, siteOrigin)]

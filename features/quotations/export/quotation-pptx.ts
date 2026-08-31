@@ -1011,7 +1011,7 @@ function drawMixTierTable(
           options: { fontSize: 10, color: TITLE_INK },
         },
         {
-          text: row.followers,
+          text: formatQuotationCardFollowers(row.followers),
           options: { fontSize: 10, color: TITLE_INK, align: "right" },
         },
         { text: row.category, options: { fontSize: 9, color: TITLE_INK } },
@@ -1644,7 +1644,7 @@ function addCreatorMetricsTable(
   const colW = [w * 0.18, w * 0.17, w * 0.14, w * 0.28, w * 0.23];
   const bodyRows = metricRows.map((row, index) => [
     {
-      text: row.followers,
+      text: formatQuotationCardFollowers(row.followers),
       options: { fontSize: 10, bold: index === 0, color: TITLE_INK },
     },
     {
@@ -2176,7 +2176,7 @@ function addCollabCreatorRow(
     valign: "middle",
   });
   slide.addText(
-    `${collabCreatorDisplayName(creator)}   ${creator.followers} followers · ${creator.engagementRate} ER`,
+    `${collabCreatorDisplayName(creator)}   ${formatQuotationCardFollowers(creator.followers)} followers · ${creator.engagementRate} ER`,
     {
       x: x + 0.34,
       y: y - 0.02,
@@ -2610,7 +2610,7 @@ async function addRosterSlides(
               ...(handleLink ? { hyperlink: handleLink } : {}),
             },
           },
-          { text: row.followers, options: { fontSize: 9, color: TITLE_INK } },
+          { text: formatQuotationCardFollowers(row.followers), options: { fontSize: 9, color: TITLE_INK } },
           { text: row.er, options: { fontSize: 9, color: TITLE_INK } },
           { text: row.tier, options: { fontSize: 9, color: TITLE_INK } },
           { text: row.categories, options: { fontSize: 9, color: TITLE_INK } },

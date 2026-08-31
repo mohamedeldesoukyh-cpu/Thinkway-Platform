@@ -53,7 +53,7 @@ export function formatShowcaseEngagementCardValue(input: {
   return input.engagement.trim() || "—";
 }
 
-/** Showcase metric-card followers — compact K/M (e.g. 226.8K, 1.5M). */
+/** Preview/export follower labels — compact K/M (e.g. 226.8K, 1.5M, 10K). */
 export function formatQuotationCardFollowers(
   value: number | string | null | undefined
 ): string {
@@ -61,6 +61,7 @@ export function formatQuotationCardFollowers(
   if (typeof value === "string") {
     const raw = value.trim();
     if (!raw || raw === "—") return "—";
+    if (/^\d+(\.\d+)?[KMB]$/i.test(raw)) return raw;
     const n = Number(raw.replace(/,/g, "").replace(/[^\d.-]/g, ""));
     if (!Number.isFinite(n) || n < 0) return "—";
     return formatQuotationCardFollowers(n);

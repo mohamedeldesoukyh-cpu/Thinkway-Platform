@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  pickQuotationExportAvatarUrl,
   quotationItemsAvatarEnriched,
   quotationItemsCategoriesEnriched,
   quotationItemsExportMetricsReady,
@@ -265,6 +266,31 @@ function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
     ]),
     false,
     "avatar-enriched lines without export metrics must re-enrich"
+  );
+}
+
+{
+  const stored =
+    "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/abc/instagram/face.jpg";
+  const tinyCdn =
+    "https://scontent.cdninstagram.com/v/t51.2885-19/s150x150/tiny.jpg?oe=FFFFFFFF";
+  const expired =
+    "https://scontent.cdninstagram.com/v/t51.2885-19/stale.jpg?oe=68500000";
+  assert.equal(
+    pickQuotationExportAvatarUrl(tinyCdn, stored, expired),
+    stored,
+    "durable enrichment avatar wins over tiny/expired CDN"
+  );
+  assert.equal(
+    pickQuotationExportAvatarUrl(null, "", expired),
+    expired,
+    "expired CDN is last-resort displayable when it is the only candidate"
+  );
+  assert.equal(pickQuotationExportAvatarUrl(null, "javascript:alert(1)"), null);
+  assert.equal(
+    pickQuotationExportAvatarUrl("data:image/jpeg;base64,abc", stored),
+    "data:image/jpeg;base64,abc",
+    "already-embedded preview/PDF data URIs are reused"
   );
 }
 
