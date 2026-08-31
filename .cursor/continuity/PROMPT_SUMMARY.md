@@ -12,8 +12,8 @@ Reel dots opened screenshots, unposted stories stole reel media (TBC still click
 - Durable posts open the **permalink**; stories open proof images only
 - Extra-platform posts render in an **Added value** section (same `classifyPublicationValueScope` as Performance)
 - Added-value posts also appear on the creator timeline as a **gold** track (after contracted types)
-- Development: https://dev.thinkwaymedia.com
-- Production: https://app.thinkwaymedia.com
+- Development: https://dev.thinkwaymedia.com · `2bb9ac77`
+- Production: https://app.thinkwaymedia.com — `dpl_3ikP57zJhEtiZt61cx6Tidr244QB`
 - No database migrations
 
 ### Earlier today — quotation publication image source
