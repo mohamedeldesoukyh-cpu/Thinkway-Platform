@@ -191,6 +191,8 @@ describe("Creator Workspace Phase 1 chrome", () => {
       [...tabs.matchAll(/label: "([^"]+)"/g)].map((match) => match[1])
     );
     assert.doesNotMatch(nav, /Agreement|Messages/);
+    assert.doesNotMatch(nav, /lucide-react/);
+    assert.doesNotMatch(nav, /\bicon:/);
   });
 
   it("plays signed media immediately instead of waiting on a full-file blob", () => {

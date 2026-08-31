@@ -3,8 +3,23 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentType } from "react";
+import {
+  ClapperboardIcon,
+  FolderKanbanIcon,
+  HomeIcon,
+  UserIcon,
+  WalletIcon,
+} from "lucide-react";
 
 import { cn } from "@/lib/utils";
+
+const COMPACT_NAV_ICONS: Record<string, ComponentType<{ className?: string }>> = {
+  "/creator-portal": HomeIcon,
+  "/creator-portal/campaigns": FolderKanbanIcon,
+  "/creator-portal/deliverables": ClapperboardIcon,
+  "/creator-portal/payments": WalletIcon,
+  "/creator-portal/profile": UserIcon,
+};
 
 export type PortalNavItem = {
   href: string;
@@ -36,7 +51,7 @@ export function PortalNav({
     <nav className={compact ? "space-y-0.5" : "space-y-1"} aria-label="Workspace">
       {items.map((item) => {
         const active = isPortalNavActive(pathname, item.href);
-        const Icon = item.icon;
+        const Icon = item.icon ?? COMPACT_NAV_ICONS[item.href];
 
         return (
           <Link
