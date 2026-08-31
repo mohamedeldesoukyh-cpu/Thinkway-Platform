@@ -1,19 +1,14 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` · Production `main` · both at `81683f01`  
-**Focus:** Creator Workspace is live on Production (app only).
+**Branch:** `develop` (`675201bd`) · Production `main` (`81683f01`)  
+**Focus:** Creator Workspace is live on Production (app + schema).
 
 ## Production release (2026-08-31)
 
 - Merge: `release: ship Creator Workspace to Production [deploy-production]` (`81683f01`)
 - Host: https://app.thinkwaymedia.com · deploy `dpl_4GxX8snnBqP1CFsF4BcELZoJa8tQ`
 - `/api/version`: `gitSha` `81683f01` · Supabase `ienowhwfyxoqtzbgltno` aligned
-- **Production DB migrations were not applied.** Creator Workspace SQL is still Development-only until explicitly approved:
-  - `20260830120000_creator_documentation_unit_access.sql`
-  - `20260830180000_creator_workspace_invites.sql`
-  - `20260830190000_creator_workspace_invite_service_role_grants.sql`
-  - `20260830200000_creator_workspace_self_select.sql`
-  - `20260830220000_creator_social_connections.sql` (file says no Production migration)
+- Production DB applied to `ienowhwfyxoqtzbgltno`: documentation-unit RPCs, `user_invites.influencer_id`, creator self-select on `influencers`, social connection tables. Backfilled `released_to_client_at` on 10 existing asset versions.
 
 ## Creator Workspace (shipped)
 
