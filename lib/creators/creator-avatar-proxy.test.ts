@@ -144,7 +144,7 @@ test("fetchCreatorAvatarImage loads Thinkway creator-avatars public URLs", async
   resetMediaProxyMetricsForTests();
   const src =
     "https://example.supabase.co/storage/v1/object/public/creator-avatars/enrichment/inf/instagram/creator.jpg";
-  const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]).buffer;
+  const jpeg = await jpegOfSize(320, 320);
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL) => {
     if (String(input) === src) {
@@ -161,7 +161,7 @@ test("fetchCreatorAvatarImage loads Thinkway creator-avatars public URLs", async
     assert.equal(result.ok, true);
     if (result.ok) {
       assert.equal(result.contentType, "image/jpeg");
-      assert.equal(result.buffer.byteLength, 4);
+      assert.equal(result.buffer.byteLength, jpeg.byteLength);
     }
   } finally {
     globalThis.fetch = originalFetch;
@@ -171,13 +171,16 @@ test("fetchCreatorAvatarImage loads Thinkway creator-avatars public URLs", async
 test("fetchCreatorAvatarImage uses unavatar when TikTok profile scrape has no photo", async () => {
   resetMediaProxyMetricsForTests();
   const profileUrl = "https://www.tiktok.com/@rewlifts";
-  const unavatarUrl = "https://unavatar.io/tiktok/rewlifts?fallback=false";
-  const jpeg = new Uint8Array(80).fill(0xff);
-  jpeg[0] = 0xff;
-  jpeg[1] = 0xd8;
+  const jpeg = await jpegOfSize(320, 320);
   const originalFetch = globalThis.fetch;
   globalThis.fetch = (async (input: RequestInfo | URL) => {
-    if (String(input) === unavatarUrl) {
+    const url =
+      typeof input === "string"
+        ? input
+        : input instanceof URL
+          ? input.href
+          : input.url;
+    if (url.includes("unavatar.io")) {
       return new Response(jpeg, {
         status: 200,
         headers: { "content-type": "image/jpeg" },
@@ -194,7 +197,7 @@ test("fetchCreatorAvatarImage uses unavatar when TikTok profile scrape has no ph
     assert.equal(result.ok, true);
     if (result.ok) {
       assert.equal(result.contentType, "image/jpeg");
-      assert.equal(result.buffer.byteLength, 80);
+      assert.equal(result.buffer.byteLength, jpeg.byteLength);
     }
   } finally {
     globalThis.fetch = originalFetch;

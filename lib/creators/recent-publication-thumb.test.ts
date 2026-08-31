@@ -311,6 +311,16 @@ assert.equal(
 
 assert.equal(
   resolveCreatorRecentPublicationThumbnail({
+    screenshot_url:
+      "https://abc.supabase.co/storage/v1/object/sign/campaign-publication-media/screenshot.jpg",
+    displayUrl: "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg",
+  }),
+  "https://abc.supabase.co/storage/v1/object/sign/campaign-publication-media/screenshot.jpg",
+  "prefer stored screenshot over a tiny CDN thumb"
+);
+
+assert.equal(
+  resolveCreatorRecentPublicationThumbnail({
     thumbnail: "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg",
   }),
   "https://scontent.cdninstagram.com/v/t51.2885-15/s1080x1080/thumb.jpg",

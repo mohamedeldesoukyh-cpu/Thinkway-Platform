@@ -18,6 +18,7 @@ import {
 } from "@/lib/creators/recent-publication-thumb";
 import {
   MIN_SHARP_PUBLICATION_EDGE,
+  imageBufferLooksComplete,
   imageLongestEdge,
   isVisiblyLowResolutionImage,
 } from "@/lib/io/compress-export-image";
@@ -231,7 +232,9 @@ async function resolvePublicationPreviewExternal(input: {
 
   const consider = async (result: FetchedPreview | { ok: false }): Promise<boolean> => {
     if (!result.ok) return false;
+    if (!imageBufferLooksComplete(result.buffer)) return false;
     const edge = await imageLongestEdge(result.buffer);
+    if (edge === 0) return false;
     if (!ranked.current || edge > ranked.current.edge) {
       ranked.current = { ...result, edge };
     }

@@ -157,8 +157,7 @@ function scorePublicationImageCandidate(url: string, fieldRank: number): number 
   if (!url.startsWith("http")) return Number.NEGATIVE_INFINITY;
   if (isLikelyCreatorProfileImageUrl(url)) return Number.NEGATIVE_INFINITY;
   let score = fieldRank;
-  if (isLikelyPublicationScreenshotUrl(url)) score -= 40;
-  if (isLikelyLowResolutionSocialThumb(url)) score -= 20;
+  if (isLikelyLowResolutionSocialThumb(url)) score -= 25;
   return score;
 }
 
@@ -187,7 +186,7 @@ export function resolveCreatorRecentPublicationThumbnail(
     { value: row.thumbnail, rank: 40 },
     { value: displayResource?.src, rank: 55 },
     { value: row.cover, rank: 38 },
-    { value: row.screenshot_url, rank: 8 },
+    { value: row.screenshot_url, rank: 75 },
   ];
 
   let bestUrl: string | null = null;

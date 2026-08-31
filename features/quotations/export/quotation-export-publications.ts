@@ -14,7 +14,6 @@ import {
   creatorRecentPublicationDisplayUrl,
   isCreatorRecentPublicationVideo,
   isLikelyCreatorProfileImageUrl,
-  isLikelyPublicationScreenshotUrl,
   normalizeCreatorRecentPublications,
   resolveCreatorRecentPublicationThumbnail,
   shouldProxyPublicationMediaUrl,
@@ -24,7 +23,10 @@ import {
   resolveCreatorFromRefLookup,
   resolveUnifiedCreatorsByRefs,
 } from "@/lib/creators/unified-browse";
-import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
+import {
+  detectImageContentType,
+  fetchImageBuffer as fetchDirectImageBuffer,
+} from "@/lib/performance/screenshot-capture/storage";
 import { normalizeAvatarUrlForComparison } from "@/lib/performance/avatar-sync-policy";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import {
@@ -133,15 +135,12 @@ export function selectShowcasePublicationShots(
     isVideo: isCreatorRecentPublicationVideo(pub),
   });
 
-  // Pass 1: stored media thumbs / covers (not profile pics, not screenshots when media exists).
+  // Pass 1: stored media thumbs / covers / screenshots (never profile pics).
   for (const pub of publications) {
     if (shots.length >= limit) break;
     const imageUrl = resolveCreatorRecentPublicationThumbnail(pub);
     if (!imageUrl) continue;
     if (!publicationImageUsableAsShot(imageUrl, creatorAvatarUrl)) continue;
-    if (isLikelyPublicationScreenshotUrl(imageUrl) && pub.url?.trim()) {
-      continue;
-    }
     pushShot(shotFromPublication(pub, imageUrl));
   }
 
@@ -152,9 +151,7 @@ export function selectShowcasePublicationShots(
       const postUrl = pub.url?.trim() || null;
       if (!postUrl?.startsWith("http")) continue;
       const imageUrl = resolveCreatorRecentPublicationThumbnail(pub);
-      if (imageUrl && publicationImageUsableAsShot(imageUrl, creatorAvatarUrl)) {
-        if (!isLikelyPublicationScreenshotUrl(imageUrl)) continue;
-      }
+      if (imageUrl && publicationImageUsableAsShot(imageUrl, creatorAvatarUrl)) continue;
       pushShot(shotFromPublication(pub, ""));
     }
   }
@@ -260,6 +257,21 @@ async function toPublicationDataUri(
   );
 }
 
+async function embedFromRawBuffer(
+  shot: QuotationDocPublicationShot,
+  buffer: Buffer,
+  contentType: string
+): Promise<QuotationDocPublicationShot | null> {
+  if (!(await exportImageBufferMeetsMinEdge(buffer, MIN_DISPLAYABLE_PUBLICATION_EDGE))) {
+    return null;
+  }
+  return {
+    ...shot,
+    imageUrl: await toPublicationDataUri(buffer, contentType),
+    imageProxyUrl: null,
+  };
+}
+
 async function embedPublicationShot(
   shot: QuotationDocPublicationShot
 ): Promise<QuotationDocPublicationShot | null> {
@@ -274,47 +286,41 @@ async function embedPublicationShot(
   }
 
   const needsProxy = publicationShotNeedsProxy(shot);
-  const preferLivePost =
-    Boolean(postUrl) &&
-    (isLikelyPublicationScreenshotUrl(trimmed) || isLikelyCreatorProfileImageUrl(trimmed));
+  const skipStoredSrc = isLikelyCreatorProfileImageUrl(trimmed);
+  const storedDirect = Boolean(trimmed) && !needsProxy && !skipStoredSrc;
 
-  if (needsProxy || postUrl || trimmed) {
+  // Thinkway-stored screenshots/media are complete photos. Prefer them over live
+  // OG/oEmbed thumbs, which are often tiny or truncated and look posterized.
+  if (storedDirect) {
+    const buffer = await fetchDirectImageBuffer(trimmed);
+    if (buffer) {
+      const embedded = await embedFromRawBuffer(
+        shot,
+        buffer,
+        detectImageContentType(buffer)
+      );
+      if (embedded) return embedded;
+    }
+  }
+
+  const previewSrc = skipStoredSrc ? null : trimmed || null;
+  if (needsProxy || postUrl || previewSrc) {
     const preview = await fetchPublicationPreviewImage({
-      src: preferLivePost ? null : trimmed || null,
+      src: previewSrc,
       postUrl,
     });
     if (preview.ok) {
       const buffer = Buffer.from(preview.buffer);
-      if (await exportImageBufferMeetsMinEdge(buffer, MIN_DISPLAYABLE_PUBLICATION_EDGE)) {
-        const contentType = preview.contentType || detectImageContentType(buffer);
-        return {
-          ...shot,
-          imageUrl: await toPublicationDataUri(buffer, contentType),
-          imageProxyUrl: null,
-        };
-      }
+      const embedded = await embedFromRawBuffer(
+        shot,
+        buffer,
+        preview.contentType || detectImageContentType(buffer)
+      );
+      if (embedded) return embedded;
     }
   }
 
-  if (preferLivePost && trimmed) {
-    const fallback = await fetchPublicationPreviewImage({
-      src: trimmed,
-      postUrl: null,
-    });
-    if (fallback.ok) {
-      const buffer = Buffer.from(fallback.buffer);
-      if (await exportImageBufferMeetsMinEdge(buffer, MIN_DISPLAYABLE_PUBLICATION_EDGE)) {
-        const contentType = fallback.contentType || detectImageContentType(buffer);
-        return {
-          ...shot,
-          imageUrl: await toPublicationDataUri(buffer, contentType),
-          imageProxyUrl: null,
-        };
-      }
-    }
-  }
-
-  if (trimmed && !needsProxy) {
+  if (trimmed && !needsProxy && !storedDirect) {
     const embedded = await embedReportImageDataUri(trimmed);
     if (embedded?.startsWith("data:")) {
       return {

@@ -214,7 +214,11 @@ import {
     },
   ];
   const shots = selectShowcasePublicationShots(pubs, 6);
-  assert.equal(shots[0]?.imageUrl, "", "screenshots defer to postUrl OG when a permalink exists");
+  assert.equal(
+    shots[0]?.imageUrl,
+    "https://abc.supabase.co/storage/v1/object/public/campaign-publication-media/screenshot.jpg",
+    "stored screenshots are used when they are the publication image"
+  );
   assert.equal(shots[0]?.postUrl, "https://www.instagram.com/p/A/");
 }
 
