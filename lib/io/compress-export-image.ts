@@ -136,27 +136,72 @@ export function isVisiblyLowResolutionImage(edge: number, minEdge: number): bool
   return edge > 0 && edge < minEdge;
 }
 
-/** True when a photo is large but extra-low JPEG quality (Instagram e15-style posterization). */
-export async function isVisiblyOvercompressedPhoto(
-  buffer: Buffer | ArrayBuffer
-): Promise<boolean> {
+/** IJG Annex K luminance quantization table (quality 50). */
+const JPEG_STD_LUMINANCE_QUANT = [
+  16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24, 40, 57, 69,
+  56, 14, 17, 22, 29, 51, 87, 80, 62, 18, 22, 37, 56, 68, 109, 103, 77, 24, 35, 55, 64, 81,
+  104, 113, 92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95, 98, 112, 100, 103, 99,
+];
+
+/**
+ * Estimate JPEG quality (1–100) from the luminance DQT. Independent of pixel
+ * content, so a solid q90 JPEG is not confused with an Instagram e15 preview.
+ */
+export function jpegQualityEstimate(buffer: Buffer | ArrayBuffer): number | null {
   const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
-  if (buf.byteLength < 128) return false;
+  if (buf.byteLength < 128 || buf[0] !== 0xff || buf[1] !== 0xd8) return null;
 
-  let width = 0;
-  let height = 0;
-  try {
-    const sharp = (await import("sharp")).default;
-    const meta = await sharp(buf, { failOn: "truncated" }).metadata();
-    width = meta.width ?? 0;
-    height = meta.height ?? 0;
-  } catch {
-    return false;
+  let i = 2;
+  while (i + 3 < buf.length) {
+    if (buf[i] !== 0xff) {
+      i += 1;
+      continue;
+    }
+    const marker = buf[i + 1];
+    if (marker === 0xd9 || marker === 0xda) break;
+    if (marker === 0x00 || marker === 0xff || (marker >= 0xd0 && marker <= 0xd8)) {
+      i += 1;
+      continue;
+    }
+    if (i + 3 >= buf.length) break;
+    const length = buf.readUInt16BE(i + 2);
+    if (length < 2 || i + 2 + length > buf.length) break;
+    if (marker === 0xdb) {
+      let offset = i + 4;
+      const end = i + 2 + length;
+      while (offset + 65 <= end) {
+        const info = buf[offset];
+        const precision = info >> 4;
+        const tableId = info & 0x0f;
+        offset += 1;
+        const tableSize = precision === 1 ? 128 : 64;
+        if (offset + tableSize > end) break;
+        if (precision === 0 && tableId === 0) {
+          let scaleSum = 0;
+          for (let q = 0; q < 64; q++) {
+            const std = JPEG_STD_LUMINANCE_QUANT[q] ?? 16;
+            scaleSum += buf[offset + q] / std;
+          }
+          const scale = (scaleSum / 64) * 100;
+          const quality =
+            scale <= 0 ? 100 : scale > 100 ? 5000 / scale : (200 - scale) / 2;
+          return Math.max(1, Math.min(100, Math.round(quality)));
+        }
+        offset += tableSize;
+      }
+    }
+    i += 2 + length;
   }
+  return null;
+}
 
-  const pixels = width * height;
-  if (pixels < 200 * 200) return false;
-  return buf.byteLength / pixels < 0.05;
+/** Instagram `e15` / JPEG quality below this looks posterized in Showcase tiles. */
+export const MIN_PHOTOGRAPHIC_JPEG_QUALITY = 32;
+
+/** True when JPEG quantization matches Instagram e15-class posterization. */
+export function isVisiblyOvercompressedPhoto(buffer: Buffer | ArrayBuffer): boolean {
+  const quality = jpegQualityEstimate(buffer);
+  return quality != null && quality < MIN_PHOTOGRAPHIC_JPEG_QUALITY;
 }
 
 /** True when a buffer is a real image large enough to display without looking pixelated. */

@@ -9,6 +9,7 @@ import {
   imageLongestEdge,
   isVisiblyLowResolutionImage,
   isVisiblyOvercompressedPhoto,
+  jpegQualityEstimate,
   toCompressedExportDataUri,
 } from "./compress-export-image";
 
@@ -91,10 +92,26 @@ async function main() {
     })
       .jpeg({ quality: 8 })
       .toBuffer();
+    const posterizedQuality = jpegQualityEstimate(posterized);
+    assert.ok(
+      posterizedQuality != null && posterizedQuality < 32,
+      `e15-class JPEG quality should be <32, got ${posterizedQuality}`
+    );
     assert.equal(
-      await isVisiblyOvercompressedPhoto(posterized),
+      isVisiblyOvercompressedPhoto(posterized),
       true,
       "Instagram e15-class JPEGs are rejected"
+    );
+
+    const solidPhotographic = await sharp({
+      create: { width: 1080, height: 1080, channels: 3, background: { r: 20, g: 40, b: 80 } },
+    })
+      .jpeg({ quality: 90 })
+      .toBuffer();
+    assert.equal(
+      isVisiblyOvercompressedPhoto(solidPhotographic),
+      false,
+      "high-quality JPEGs are not rejected even when they compress to few bytes/pixel"
     );
 
     const circles = Array.from({ length: 120 }, (_, i) => {
@@ -109,8 +126,13 @@ async function main() {
     )
       .jpeg({ quality: 90 })
       .toBuffer();
+    const detailedQuality = jpegQualityEstimate(detailed);
+    assert.ok(
+      detailedQuality != null && detailedQuality >= 80,
+      `normal JPEG quality should be high, got ${detailedQuality}`
+    );
     assert.equal(
-      await isVisiblyOvercompressedPhoto(detailed),
+      isVisiblyOvercompressedPhoto(detailed),
       false,
       "normal-quality photos are not rejected"
     );

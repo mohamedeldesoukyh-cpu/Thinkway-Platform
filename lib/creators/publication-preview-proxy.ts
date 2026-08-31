@@ -22,6 +22,7 @@ import {
   imageBufferLooksComplete,
   imageLongestEdge,
   isVisiblyLowResolutionImage,
+  isVisiblyOvercompressedPhoto,
 } from "@/lib/io/compress-export-image";
 import { tryFacebookOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/facebook-oembed";
 import { tryInstagramMediaRedirectThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-media-redirect";
@@ -212,18 +213,22 @@ async function fetchAllowedPreviewSrc(
   src: string | null
 ): Promise<FetchedPreview | { ok: false }> {
   if (!src || !isAllowedPublicationPreviewSrcUrl(src)) return { ok: false };
+  const lowQuality = isLikelyLowQualitySocialJpeg(src);
   if (!socialCdnUrlLooksSigned(src)) {
     for (const candidate of higherResolutionSocialImageUrlCandidates(src)) {
       if (!isAllowedPublicationPreviewSrcUrl(candidate)) continue;
       const larger = await fetchImageBuffer(candidate, {
         timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
       });
-      if (larger.ok) return larger;
+      if (larger.ok && !isVisiblyOvercompressedPhoto(larger.buffer)) return larger;
     }
-  } else if (isLikelyLowQualitySocialJpeg(src)) {
-    return { ok: false };
   }
-  return fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
+  // Never fetch the original e15/e0–e29 preview — rewrite miss must fall through
+  // to media redirect / oEmbed / OG, not embed the posterized JPEG.
+  if (lowQuality) return { ok: false };
+  const original = await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
+  if (original.ok && isVisiblyOvercompressedPhoto(original.buffer)) return { ok: false };
+  return original;
 }
 
 async function resolvePublicationPreviewExternal(input: {
@@ -236,6 +241,7 @@ async function resolvePublicationPreviewExternal(input: {
   const consider = async (result: FetchedPreview | { ok: false }): Promise<boolean> => {
     if (!result.ok) return false;
     if (!imageBufferLooksComplete(result.buffer)) return false;
+    if (isVisiblyOvercompressedPhoto(result.buffer)) return false;
     const edge = await imageLongestEdge(result.buffer);
     if (edge === 0) return false;
     if (!ranked.current || edge > ranked.current.edge) {
@@ -332,11 +338,15 @@ export async function resolvePublicationPreviewForHttpRequest(input: {
     return { ok: false, status: cached.status, source: "cache", needsRefresh: false };
   }
 
-  if (src && isAllowedPublicationPreviewSrcUrl(src)) {
+  if (
+    src &&
+    isAllowedPublicationPreviewSrcUrl(src) &&
+    !isLikelyLowQualitySocialJpeg(src)
+  ) {
     const direct = await withMediaProxyInflight(`cdn:${key}`, () =>
       fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_FAST_TIMEOUT_MS })
     );
-    if (direct.ok) {
+    if (direct.ok && !isVisiblyOvercompressedPhoto(direct.buffer)) {
       const edge = await imageLongestEdge(direct.buffer);
       const canUpgrade =
         Boolean(postUrl && isAllowedPublicationPreviewPostUrl(postUrl)) &&

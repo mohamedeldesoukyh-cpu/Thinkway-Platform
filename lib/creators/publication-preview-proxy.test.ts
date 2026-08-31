@@ -17,15 +17,26 @@ import {
 } from "@/lib/creators/media-proxy-cache";
 import { imageLongestEdge } from "@/lib/io/compress-export-image";
 
-async function jpegOfSize(width: number, height: number): Promise<Buffer> {
+async function jpegOfSize(
+  width: number,
+  height: number,
+  quality = 90
+): Promise<Buffer> {
   const sharp = (await import("sharp")).default;
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
-    <rect width="100%" height="100%" fill="#5078a0"/>
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#f4c7b0"/>
+        <stop offset="0.55" stop-color="#8ec5e8"/>
+        <stop offset="1" stop-color="#f7e7c6"/>
+      </linearGradient>
+    </defs>
+    <rect width="100%" height="100%" fill="url(#g)"/>
     <circle cx="${Math.round(width * 0.32)}" cy="${Math.round(height * 0.38)}" r="${Math.round(width * 0.22)}" fill="#c08050"/>
     <circle cx="${Math.round(width * 0.7)}" cy="${Math.round(height * 0.62)}" r="${Math.round(width * 0.16)}" fill="#80c070"/>
     <rect x="${Math.round(width * 0.1)}" y="${Math.round(height * 0.72)}" width="${Math.round(width * 0.8)}" height="${Math.round(height * 0.12)}" fill="#f2d27a"/>
   </svg>`;
-  return sharp(Buffer.from(svg)).jpeg({ quality: 90 }).toBuffer();
+  return sharp(Buffer.from(svg)).jpeg({ quality, chromaSubsampling: "4:4:4" }).toBuffer();
 }
 
 async function main() {
@@ -192,6 +203,88 @@ async function main() {
         const edge = await imageLongestEdge(result.buffer);
         assert.ok(edge >= 1000, `expected ~1080px source, got ${edge}`);
       }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    resetMediaProxyMetricsForTests();
+    const posterizedSrc =
+      "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?oh=abc&oe=ABCDEF12";
+    const postUrl = "https://www.instagram.com/p/PosterizedShot/";
+    const largeCdn = "https://scontent.cdninstagram.com/v/t51.82787-15/photographic.jpg";
+    const posterized = await jpegOfSize(1080, 1080, 8);
+    const photographic = await jpegOfSize(1080, 1080, 90);
+    const fetchedUrls: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      fetchedUrls.push(url);
+      if (url === posterizedSrc) {
+        return new Response(posterized, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      if (url.includes("/media/?size=l")) {
+        return new Response(null, {
+          status: 302,
+          headers: { location: largeCdn },
+        });
+      }
+      if (url === largeCdn) {
+        return new Response(photographic, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return new Response(null, { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const result = await fetchPublicationPreviewImage({ src: posterizedSrc, postUrl });
+      assert.equal(
+        result.ok,
+        true,
+        "1080px e15-class JPEG must not win; media redirect photographic JPEG should be used"
+      );
+      if (result.ok) {
+        assert.equal(
+          result.buffer.byteLength,
+          photographic.byteLength,
+          "embedded bytes must be the photographic JPEG, not the posterized src"
+        );
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    resetMediaProxyMetricsForTests();
+    const e15Src =
+      "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e15_s640x640";
+    const fetchedUrls: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      fetchedUrls.push(url);
+      return new Response(null, { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const result = await fetchPublicationPreviewImage({ src: e15Src, postUrl: null });
+      assert.equal(result.ok, false, "unsigned e15 must not be embedded when rewrite fails");
+      assert.equal(
+        fetchedUrls.includes(e15Src),
+        false,
+        "original e15 URL must never be fetched as a fallback"
+      );
+      assert.ok(
+        fetchedUrls.some((url) => url.includes("e35")),
+        "unsigned e15 should attempt an e35 rewrite before giving up"
+      );
     } finally {
       globalThis.fetch = originalFetch;
     }
