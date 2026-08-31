@@ -62,14 +62,17 @@ export function resolveQuotationTemplatePublicationSrc(
     return proxyPath.startsWith("/") ? proxyPath : null;
   };
 
-  const proxyUrl =
-    absoluteProxyUrl(shot.imageProxyUrl) ??
-    absoluteProxyUrl(resolveExportPublicationShotProxyUrl(shot));
-
+  const explicitProxy = absoluteProxyUrl(shot.imageProxyUrl);
   const rawImage = shot.imageUrl.trim();
-  if (rawImage && isLikelyCreatorProfileImageUrl(rawImage)) {
+  // After embed, a blank imageUrl means no usable source — do not reconstruct a
+  // live publication-preview <img>. That path can serve undersized OG thumbs.
+  if (!rawImage) return explicitProxy;
+
+  const proxyUrl = explicitProxy ?? absoluteProxyUrl(resolveExportPublicationShotProxyUrl(shot));
+
+  if (isLikelyCreatorProfileImageUrl(rawImage)) {
     return (
-      absoluteProxyUrl(shot.imageProxyUrl) ??
+      explicitProxy ??
       absoluteProxyUrl(
         resolveExportPublicationShotProxyUrl({
           ...shot,
@@ -78,16 +81,11 @@ export function resolveQuotationTemplatePublicationSrc(
       )
     );
   }
-  if (rawImage) {
-    const mustProxy =
-      shouldProxyPublicationMediaUrl(rawImage) || isAllowedPublicationPreviewSrcUrl(rawImage);
-    if (mustProxy) {
-      return proxyUrl;
-    }
-    return rawImage;
-  }
 
-  return proxyUrl;
+  const mustProxy =
+    shouldProxyPublicationMediaUrl(rawImage) || isAllowedPublicationPreviewSrcUrl(rawImage);
+  if (mustProxy) return proxyUrl;
+  return rawImage;
 }
 
 export function quotationTemplateAvatarInitials(

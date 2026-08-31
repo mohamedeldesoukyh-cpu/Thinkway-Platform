@@ -111,6 +111,14 @@ test("social allowlists accept real CDNs and reject lookalikes", () => {
     true
   );
   assert.equal(
+    isUrlAllowedByHostlist(
+      "https://p16-common-sign.tiktokcdn-eu.com/tos-maliva-p-0068/cover~tplv-tiktokx-origin.image",
+      SOCIAL_MEDIA_SRC_ALLOWLIST
+    ),
+    true,
+    "regional TikTok CDNs are allowlisted"
+  );
+  assert.equal(
     isUrlAllowedByHostlist("https://not-sc-cdn.net/avatar", SOCIAL_MEDIA_SRC_ALLOWLIST),
     false
   );

@@ -211,6 +211,7 @@ export const SOCIAL_MEDIA_SRC_ALLOWLIST: HostAllowlist = {
     "facebook.com",
     "tiktokcdn.com",
     "tiktokcdn-us.com",
+    "tiktokcdn-eu.com",
     "tiktokv.com",
     "ibyteimg.com",
     "ibytedtos.com",

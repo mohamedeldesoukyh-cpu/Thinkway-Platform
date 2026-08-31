@@ -246,10 +246,12 @@ function renderPublicationShotsGrid(
   const cards = shots
     .map((shot) => {
       const src = resolveQuotationTemplatePublicationSrc(shot, siteOrigin);
-      if (!src) return "";
       const play = shot.isVideo
         ? `<span class="pub-play showcase-pub-play" aria-hidden="true"><span class="pub-play-icon showcase-pub-play-icon"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg></span></span>`
         : "";
+      if (!src) {
+        return `<div class="pub showcase-pub-card" aria-hidden="true"></div>`;
+      }
       const img = `<img class="showcase-pub-thumb" src="${esc(src)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()" />${play}`;
       const linked =
         shot.postUrl && /^https?:\/\//i.test(shot.postUrl)
