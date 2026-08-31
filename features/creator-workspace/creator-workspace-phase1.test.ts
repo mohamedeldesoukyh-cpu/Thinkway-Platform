@@ -172,6 +172,7 @@ describe("Creator Workspace Phase 1 chrome", () => {
     const nav = readFileSync(resolve("features/creator-workspace/nav.ts"), "utf8");
 
     assert.match(layout, /CreatorWorkspaceShell/);
+    assert.doesNotMatch(layout, /loadCreatorUnitViews/);
     assert.doesNotMatch(layout, /PortalShell/);
     assert.doesNotMatch(layout, /navVariant/);
     assert.doesNotMatch(layout, /mobileNavPlacement/);
@@ -183,6 +184,8 @@ describe("Creator Workspace Phase 1 chrome", () => {
     assert.match(portalNav, /variant = "pills"/);
 
     assert.doesNotMatch(tabs, /EnterpriseTabsList/);
+    assert.match(tabs, /replaceState/);
+    assert.doesNotMatch(tabs, /router\.replace/);
     assert.deepEqual(
       [
         "Overview",

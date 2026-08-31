@@ -2,9 +2,7 @@ import { redirect } from "next/navigation";
 
 import { signOutAction } from "@/features/auth/actions";
 import { CreatorWorkspaceShell } from "@/features/creator-workspace/components/creator-workspace-shell";
-import { withCreatorDeliverablesBadge } from "@/features/creator-workspace/nav";
-import { countUnitsNeedingCreator } from "@/features/creator-workspace/home-next-actions";
-import { loadCreatorUnitViews } from "@/features/creator-workspace/documentation-load";
+import { CREATOR_WORKSPACE_NAV_ITEMS } from "@/features/creator-workspace/nav";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requireCreatorScope } from "@/features/portals/scope";
 import { resolveCreatorAvatarUrl } from "@/lib/performance/creator-avatar";
@@ -33,16 +31,9 @@ export default async function CreatorPortalLayout({
 
   let creatorName = user.email ?? "Creator";
   let avatarUrl: string | null = null;
-  let pendingCount = 0;
   try {
     const { supabase: scoped, scope } = await requireCreatorScope("creator_portal.read");
     creatorName = scope.influencerName;
-    try {
-      const units = await loadCreatorUnitViews();
-      pendingCount = countUnitsNeedingCreator(units);
-    } catch {
-      pendingCount = 0;
-    }
     try {
       const [{ data: influencer }, { data: accounts }] = await Promise.all([
         scoped
@@ -93,7 +84,7 @@ export default async function CreatorPortalLayout({
     <CreatorWorkspaceShell
       userLabel={creatorName}
       avatarUrl={avatarUrl}
-      navItems={withCreatorDeliverablesBadge(pendingCount)}
+      navItems={[...CREATOR_WORKSPACE_NAV_ITEMS]}
     >
       {children}
     </CreatorWorkspaceShell>

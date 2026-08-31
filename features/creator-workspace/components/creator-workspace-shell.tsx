@@ -89,6 +89,7 @@ export function CreatorWorkspaceShell({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch
                 className="tab"
                 aria-current={active ? true : undefined}
               >

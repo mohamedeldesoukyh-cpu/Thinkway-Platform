@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
 export const CREATOR_CAMPAIGN_TABS = [
@@ -27,22 +28,35 @@ function resolveCampaignTab(value: string | null): CreatorCampaignTabValue {
     : "overview";
 }
 
+function tabFromLocation(): CreatorCampaignTabValue {
+  if (typeof window === "undefined") return "overview";
+  return resolveCampaignTab(new URLSearchParams(window.location.search).get("tab"));
+}
+
 export function CreatorCampaignTabs({
   sections,
 }: {
   sections: Record<CreatorCampaignTabValue, ReactNode>;
 }) {
-  const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
-  const value = resolveCampaignTab(searchParams.get("tab"));
+  const [value, setValue] = useState<CreatorCampaignTabValue>(() =>
+    resolveCampaignTab(searchParams.get("tab"))
+  );
+
+  useEffect(() => {
+    function onPopState() {
+      setValue(tabFromLocation());
+    }
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
 
   function setTab(next: CreatorCampaignTabValue) {
-    const params = new URLSearchParams(searchParams.toString());
-    if (next === "overview") params.delete("tab");
-    else params.set("tab", next);
-    const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    setValue(next);
+    const url = new URL(window.location.href);
+    if (next === "overview") url.searchParams.delete("tab");
+    else url.searchParams.set("tab", next);
+    window.history.replaceState(window.history.state, "", `${url.pathname}${url.search}${url.hash}`);
   }
 
   return (

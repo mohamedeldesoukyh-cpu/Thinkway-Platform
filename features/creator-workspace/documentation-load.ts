@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { requireCreatorScope } from "@/features/portals/scope";
 import {
   buildCreatorDocumentationUnitsFromSlots,
@@ -132,7 +133,7 @@ export async function listCreatorDocumentationUnits(): Promise<CreatorDocumentat
   return buildCreatorDocumentationUnitsFromSlots(slots);
 }
 
-export async function loadCreatorUnitViews(
+export const loadCreatorUnitViews = cache(async function loadCreatorUnitViews(
   units?: CreatorDocumentationUnitCard[]
 ): Promise<CreatorUnitView[]> {
   const cards = units ?? (await listCreatorDocumentationUnits());
@@ -184,7 +185,7 @@ export async function loadCreatorUnitViews(
     }
   }
   return views;
-}
+});
 
 async function hydrateCreatorUnitView(
   db: SupabaseClient,
