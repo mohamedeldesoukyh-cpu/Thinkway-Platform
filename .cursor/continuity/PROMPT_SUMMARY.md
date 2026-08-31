@@ -1,22 +1,19 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Shortlist Duplicate (list menu + selection bar) plus quotation preview/export fixes.
+**Focus:** Quotation Showcase image sharpness (avatars + recent publications).
 
-## In progress / shipping
+## Shipped 2026-08-31
 
-### Shortlist Duplicate
-Row ⋮ menu and selection-bar overflow: **Duplicate** copies the shortlist (creators, commercial, collapse groups, client/brand/campaign, currency, hide-cost flags) into a new **draft** with a new serial. Does not copy quotations, client links, or approval state.
+### Showcase photos (`6b391daa`)
+Preview/export now measures fetched images and upgrades tiny Instagram thumbs via media redirect / `profile_pic_url_hd`. Showcase avatars compress at 512px / q86 (was 192 / 70).
 
-### Quotation preview/export (develop)
-- Higher-res publication images (prefer `displayUrl`, upgrade tiny CDN thumbs, compress 1080).
-- Hide cost and fees = **Total Investment** only in preview/HTML/Word/PDF/PPTX (Excel stays internal).
-- HTML download added next to Word / PDF / Excel / PPTX.
+- Development: https://dev.thinkwaymedia.com (auto from `develop`)
+- Production: https://app.thinkwaymedia.com — `dpl_JALWbANvb2DCY5Yd6jiCpRHLbvHD`
 
-## Production release (2026-08-31)
-
-- Host: https://app.thinkwaymedia.com
-- Creator Workspace previously shipped on Production.
+### Earlier today
+- Shortlist Duplicate (row ⋮ + selection bar); Production has no `discovery_shortlists.currency`
+- Hide-cost quotations show Total Investment only; HTML download on preview toolbar
 
 ## Phase 5 still true
 
