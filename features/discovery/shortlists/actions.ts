@@ -40,6 +40,7 @@ import { isAddableCreator } from "./add-to-shortlist-policy";
 import { describeShortlistPasteAddOutcome } from "./paste-links-policy";
 import { defaultPlatformAccountIds } from "./platform-account-selection";
 import {
+  buildDuplicatedShortlistInsert,
   duplicateShortlistName,
   mapDuplicatedShortlistItems,
   type ShortlistItemDuplicateSource,
@@ -277,34 +278,30 @@ export async function duplicateShortlist(shortlistId: string): Promise<Duplicate
 
   const { data: source, error: sourceError } = await actor.supabase
     .from("discovery_shortlists")
-    .select(
-      "id, name, description, visibility, client_id, brand_id, campaign_header_id, currency, metadata"
-    )
+    .select("id, name, description, visibility, client_id, brand_id, metadata")
     .eq("id", shortlistId)
     .maybeSingle();
 
   if (sourceError) return { ok: false, message: sourceError.message };
   if (!source) return { ok: false, message: "Shortlist not found." };
 
-  const visibility: ShortlistVisibilityV2 =
-    source.visibility === "client_shared" ? "team" : (source.visibility ?? "private");
   const copyName = duplicateShortlistName(source.name);
 
   const { data: created, error: createError } = await actor.supabase
     .from("discovery_shortlists")
-    .insert({
-      name: copyName,
-      description: source.description,
-      owner_id: actor.userId,
-      created_by: actor.userId,
-      visibility,
-      status: "draft",
-      client_id: source.client_id,
-      brand_id: source.brand_id,
-      campaign_header_id: source.campaign_header_id,
-      currency: source.currency,
-      metadata: source.metadata ?? {},
-    })
+    .insert(
+      buildDuplicatedShortlistInsert(
+        {
+          name: source.name,
+          description: source.description,
+          visibility: source.visibility,
+          client_id: source.client_id,
+          brand_id: source.brand_id,
+          metadata: (source.metadata as Record<string, unknown> | null) ?? {},
+        },
+        actor.userId
+      )
+    )
     .select("id, serial_number, name, owner_id, created_by, approved_by")
     .single();
 

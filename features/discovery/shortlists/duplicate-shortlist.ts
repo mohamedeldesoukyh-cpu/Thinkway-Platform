@@ -1,4 +1,4 @@
-import type { Database, Json } from "@/types/database";
+import type { Database, Json, ShortlistVisibilityV2 } from "@/types/database";
 
 type ShortlistItemInsert = Database["public"]["Tables"]["discovery_shortlist_items"]["Insert"];
 
@@ -27,6 +27,35 @@ export type ShortlistItemDuplicateSource = {
   collapse_group_id: string | null;
   collapse_label: string | null;
 };
+
+export type ShortlistDuplicateHeaderSource = {
+  name: string;
+  description: string | null;
+  visibility: ShortlistVisibilityV2 | null;
+  client_id: string | null;
+  brand_id: string | null;
+  metadata: Record<string, unknown> | null;
+};
+
+/** Header insert for a duplicated shortlist. Never copies serial, quotation, campaign, or the optional currency column (Production stores currency in metadata). */
+export function buildDuplicatedShortlistInsert(
+  source: ShortlistDuplicateHeaderSource,
+  ownerId: string
+): Database["public"]["Tables"]["discovery_shortlists"]["Insert"] {
+  const visibility: ShortlistVisibilityV2 =
+    source.visibility === "client_shared" ? "team" : (source.visibility ?? "private");
+  return {
+    name: duplicateShortlistName(source.name),
+    description: source.description,
+    owner_id: ownerId,
+    created_by: ownerId,
+    visibility,
+    status: "draft",
+    client_id: source.client_id,
+    brand_id: source.brand_id,
+    metadata: source.metadata ?? {},
+  };
+}
 
 const COPY_SUFFIX = /\s\(copy(?: (\d+))?\)$/i;
 

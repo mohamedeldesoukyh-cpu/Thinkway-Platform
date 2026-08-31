@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  buildDuplicatedShortlistInsert,
   duplicateShortlistName,
   mapDuplicatedShortlistItems,
   type ShortlistItemDuplicateSource,
@@ -80,5 +81,25 @@ assert.equal(mapped[0]?.collapse_group_id, "cg-new-1");
 assert.equal(mapped[1]?.collapse_group_id, "cg-new-1", "collapse members share the remapped group");
 assert.notEqual(mapped[0]?.collapse_group_id, "cg-old");
 assert.deepEqual(mapped[0]?.deliverables, source[0]?.deliverables);
+
+const header = buildDuplicatedShortlistInsert(
+  {
+    name: "Cofftea Egypt",
+    description: "Roster",
+    visibility: "team",
+    client_id: "c1",
+    brand_id: "b1",
+    metadata: { currency: "EGP", hideCostAndFees: true },
+  },
+  "user-1"
+);
+assert.equal(header.name, "Cofftea Egypt (copy)");
+assert.equal(header.status, "draft");
+assert.equal(header.client_id, "c1");
+assert.equal(header.brand_id, "b1");
+assert.equal((header.metadata as { currency?: string }).currency, "EGP");
+assert.equal("currency" in header, false, "Production has no discovery_shortlists.currency column");
+assert.equal("quotation_id" in header, false, "Duplicate must not copy quotations");
+assert.equal("campaign_header_id" in header, false);
 
 console.log("duplicate-shortlist.test.ts: all assertions passed");
