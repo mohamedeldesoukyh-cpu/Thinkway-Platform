@@ -130,4 +130,21 @@ const POST =
   assert.equal(src, null, "publication without image has no src");
 }
 
+{
+  const src = resolveQuotationTemplatePublicationSrc(
+    {
+      imageUrl: "",
+      postUrl: "https://www.tiktok.com/@ouda.5/video/7307222111527931141",
+      caption: null,
+      isVideo: true,
+    },
+    SITE
+  );
+  assert.equal(
+    src,
+    null,
+    "failed embed must not reconstruct a live proxy URL from postUrl"
+  );
+}
+
 console.log("quotation-template-avatars.test.ts passed");

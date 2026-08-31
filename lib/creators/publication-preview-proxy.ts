@@ -24,6 +24,7 @@ import {
   isVisiblyLowResolutionImage,
   isVisiblyOvercompressedPhoto,
 } from "@/lib/io/compress-export-image";
+import { stabilizeTikTokAvatarUrl } from "@/lib/performance/creator-avatar";
 import { tryFacebookOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/facebook-oembed";
 import { tryInstagramMediaRedirectThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-media-redirect";
 import { tryInstagramOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-oembed";
@@ -62,6 +63,7 @@ export function refererForPublicationImageUrl(url: string): string | undefined {
       suffixes: [
         "tiktokcdn.com",
         "tiktokcdn-us.com",
+        "tiktokcdn-eu.com",
         "tiktokv.com",
         "ibyteimg.com",
         "ibytedtos.com",
@@ -209,26 +211,66 @@ export async function fetchPublicationPreviewImage(input: {
 
 type FetchedPreview = { ok: true; buffer: ArrayBuffer; contentType: string };
 
+async function fetchedPreviewMeetsShowcaseFloor(
+  result: FetchedPreview | { ok: false }
+): Promise<FetchedPreview | { ok: false }> {
+  if (!result.ok) return { ok: false };
+  if (!imageBufferLooksComplete(result.buffer)) return { ok: false };
+  if (isVisiblyOvercompressedPhoto(result.buffer)) return { ok: false };
+  const edge = await imageLongestEdge(result.buffer);
+  if (edge === 0 || isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE)) {
+    return { ok: false };
+  }
+  return result;
+}
+
 async function fetchAllowedPreviewSrc(
   src: string | null
 ): Promise<FetchedPreview | { ok: false }> {
   if (!src || !isAllowedPublicationPreviewSrcUrl(src)) return { ok: false };
   const lowQuality = isLikelyLowQualitySocialJpeg(src);
-  if (!socialCdnUrlLooksSigned(src)) {
+  const signed = socialCdnUrlLooksSigned(src);
+
+  // Signed origin covers (TikTok oEmbed / stored ~tplv-tiktokx-origin) 403 when
+  // the signature is stripped. Fetch the signed URL first; unsigned is fallback.
+  if (signed && !lowQuality) {
+    const original = await fetchedPreviewMeetsShowcaseFloor(
+      await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS })
+    );
+    if (original.ok) return original;
+  }
+
+  const stabilized = stabilizeTikTokAvatarUrl(src);
+  if (
+    stabilized !== src &&
+    isAllowedPublicationPreviewSrcUrl(stabilized) &&
+    !socialCdnUrlLooksSigned(stabilized)
+  ) {
+    const unsigned = await fetchedPreviewMeetsShowcaseFloor(
+      await fetchImageBuffer(stabilized, {
+        timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
+      })
+    );
+    if (unsigned.ok) return unsigned;
+  }
+  if (!signed) {
     for (const candidate of higherResolutionSocialImageUrlCandidates(src)) {
       if (!isAllowedPublicationPreviewSrcUrl(candidate)) continue;
-      const larger = await fetchImageBuffer(candidate, {
-        timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
-      });
-      if (larger.ok && !isVisiblyOvercompressedPhoto(larger.buffer)) return larger;
+      const larger = await fetchedPreviewMeetsShowcaseFloor(
+        await fetchImageBuffer(candidate, {
+          timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
+        })
+      );
+      if (larger.ok) return larger;
     }
   }
   // Never fetch the original e15/e0–e29 preview — rewrite miss must fall through
   // to media redirect / oEmbed / OG, not embed the posterized JPEG.
   if (lowQuality) return { ok: false };
-  const original = await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
-  if (original.ok && isVisiblyOvercompressedPhoto(original.buffer)) return { ok: false };
-  return original;
+  if (signed) return { ok: false };
+  return fetchedPreviewMeetsShowcaseFloor(
+    await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS })
+  );
 }
 
 async function resolvePublicationPreviewExternal(input: {
@@ -244,10 +286,11 @@ async function resolvePublicationPreviewExternal(input: {
     if (isVisiblyOvercompressedPhoto(result.buffer)) return false;
     const edge = await imageLongestEdge(result.buffer);
     if (edge === 0) return false;
+    if (isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE)) return false;
     if (!ranked.current || edge > ranked.current.edge) {
       ranked.current = { ...result, edge };
     }
-    return !isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE);
+    return true;
   };
 
   const chosen = (): FetchedPreview | { ok: false } => {

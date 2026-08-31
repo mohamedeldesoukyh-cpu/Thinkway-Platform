@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
+import { quotationCreatorDuplicateKey } from "@/features/quotations/export/quotation-export-utils";
 import { buildQuotationTemplatePayload } from "@/features/quotations/templates/quotation-template-payload";
 import { buildQuotationTemplateHtml } from "@/features/quotations/templates/quotation-template-html";
 import type { QuotationDetail, QuotationItemRow } from "@/features/quotations/types";
@@ -461,6 +462,42 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.equal(sampleFixture.quotation.number, "QT-2026-0012");
   assert.equal(sampleFixture.flags.itemizedPricing, true);
   assert.equal(sampleFixture.commercial.sectionNo, "02");
+}
+
+{
+  const item = mockItem();
+  const creatorKey = quotationCreatorDuplicateKey(item);
+  const html = buildQuotationTemplateHtml(
+    buildQuotationDocument(mockDetail({ items: [item] }), {
+      template: "showcase",
+      publicationShotsByCreatorKey: new Map([
+        [
+          creatorKey,
+          [
+            {
+              imageUrl: "data:image/jpeg;base64,abc",
+              postUrl: "https://www.tiktok.com/@ouda.5/video/1",
+              caption: null,
+            },
+            {
+              imageUrl: "",
+              postUrl: "https://www.tiktok.com/@ouda.5/video/2",
+              caption: null,
+            },
+          ],
+        ],
+      ]),
+    })
+  );
+  assert.ok(html.includes("data:image/jpeg;base64,abc"));
+  assert.ok(
+    html.includes('class="pub showcase-pub-card" aria-hidden="true"'),
+    "missing/unusable publication image uses a clean placeholder card"
+  );
+  assert.ok(
+    !html.includes("/api/creators/publication-preview"),
+    "placeholder must not load a live proxy thumbnail"
+  );
 }
 
 console.log("quotation-template.test.ts passed");

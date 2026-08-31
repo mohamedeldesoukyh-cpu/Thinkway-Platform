@@ -404,6 +404,72 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 {
   const item = mockItem({ influencer_id: "inf-1", unified_id: "inf:inf-1" });
   const creatorKey = quotationCreatorDuplicateKey(item);
+  const previewHtml = buildQuotationHtml(
+    buildQuotationDocument(mockDetail({ items: [item] }), {
+      template: "showcase",
+      publicationShotsByCreatorKey: new Map([
+        [
+          creatorKey,
+          [
+            {
+              imageUrl: "data:image/jpeg;base64,abc",
+              postUrl: "https://www.instagram.com/p/GOOD/",
+              caption: null,
+            },
+            {
+              imageUrl: "",
+              postUrl: "https://www.instagram.com/p/MISSING/",
+              caption: null,
+            },
+          ],
+        ],
+      ]),
+    })
+  );
+  const pdfHtml = buildQuotationHtml(
+    buildQuotationDocument(mockDetail({ items: [item] }), {
+      template: "showcase",
+      publicationShotsByCreatorKey: new Map([
+        [
+          creatorKey,
+          [
+            {
+              imageUrl: "data:image/jpeg;base64,abc",
+              postUrl: "https://www.instagram.com/p/GOOD/",
+              caption: null,
+            },
+            {
+              imageUrl: "",
+              postUrl: "https://www.instagram.com/p/MISSING/",
+              caption: null,
+            },
+          ],
+        ],
+      ]),
+    }),
+    { forPdf: true }
+  );
+  assert.ok(previewHtml.includes("data:image/jpeg;base64,abc"));
+  assert.ok(pdfHtml.includes("data:image/jpeg;base64,abc"));
+  assert.equal(
+    previewHtml.includes("data:image/jpeg;base64,abc"),
+    pdfHtml.includes("data:image/jpeg;base64,abc"),
+    "preview and PDF resolve the same publication data URI"
+  );
+  assert.ok(
+    previewHtml.includes('class="pub showcase-pub-card" aria-hidden="true"'),
+    "unusable publication image becomes a clean placeholder, not a pixelated thumb"
+  );
+  assert.ok(
+    pdfHtml.includes('class="pub showcase-pub-card" aria-hidden="true"'),
+    "PDF uses the same placeholder for an unusable publication image"
+  );
+  assert.ok(!previewHtml.includes('src=""'));
+}
+
+{
+  const item = mockItem({ influencer_id: "inf-1", unified_id: "inf:inf-1" });
+  const creatorKey = quotationCreatorDuplicateKey(item);
   const showcaseHtml = buildQuotationHtml(
     buildQuotationDocument(mockDetail({ items: [item] }), {
       template: "showcase",

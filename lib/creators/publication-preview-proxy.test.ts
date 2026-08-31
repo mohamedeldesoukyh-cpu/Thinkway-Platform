@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   fetchPublicationPreviewImage,
@@ -59,6 +62,13 @@ async function main() {
   assert.equal(
     isAllowedPublicationPreviewSrcUrl("https://p16-sign-va.tiktokcdn.com/tos/cover.jpeg"),
     true
+  );
+  assert.equal(
+    isAllowedPublicationPreviewSrcUrl(
+      "https://p16-common-sign.tiktokcdn-eu.com/tos-maliva-p-0068/cover~tplv-tiktokx-origin.image"
+    ),
+    true,
+    "regional TikTok CDNs must be fetchable for stored origin covers"
   );
   assert.equal(
     isAllowedPublicationPreviewSrcUrl("https://scontent.xx.fbcdn.net/v/t15/fb.jpg"),
@@ -144,6 +154,16 @@ async function main() {
   assert.equal(youtubeVideoIdFromUrl("https://www.youtube.com/watch?v=dQw4w9wgGcQ"), "dQw4w9wgGcQ");
   assert.equal(youtubeVideoIdFromUrl("https://youtu.be/dQw4w9wgGcQ"), "dQw4w9wgGcQ");
   assert.equal(youtubeVideoIdFromUrl("https://www.youtube.com/shorts/abc123xyz"), "abc123xyz");
+
+  {
+    const source = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "publication-preview-proxy.ts"),
+      "utf8"
+    );
+    assert.match(source, /stabilizeTikTokAvatarUrl/, "reuse existing TikTok URL stabilizer");
+    assert.match(source, /MIN_SHARP_PUBLICATION_EDGE/, "reject undersized publication bytes");
+    assert.doesNotMatch(source, /createPublicationImageSso|publication-image-ssot/);
+  }
 
   resetMediaProxyMetricsForTests();
   const src = "https://scontent.cdninstagram.com/v/cached-preview.jpg";
@@ -285,6 +305,73 @@ async function main() {
         fetchedUrls.some((url) => url.includes("e35")),
         "unsigned e15 should attempt an e35 rewrite before giving up"
       );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    resetMediaProxyMetricsForTests();
+    const tinySrc = "https://scontent.cdninstagram.com/v/t51.2885-15/s320x320/tiny.jpg";
+    const tiny = await jpegOfSize(300, 300);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("scontent.cdninstagram.com")) {
+        return new Response(tiny, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return new Response(null, { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const result = await fetchPublicationPreviewImage({ src: tinySrc, postUrl: null });
+      assert.equal(
+        result.ok,
+        false,
+        "a ~300px thumbnail must not be treated as a Showcase publication source"
+      );
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    resetMediaProxyMetricsForTests();
+    const signedSrc =
+      "https://p16-common-sign.tiktokcdn-eu.com/tos-maliva-p-0068/cover~tplv-tiktokx-origin.image?x-expires=1&x-signature=expired";
+    const postUrl = "https://www.tiktok.com/@ouda.5/video/7307222111527931141";
+    const oembedCover =
+      "https://p16-common.tiktokcdn.com/tos-maliva-p-0068/cover~tplv-tiktokx-origin.image?x-signature=fresh";
+    const origin = await jpegOfSize(960, 1708);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("https://www.tiktok.com/oembed")) {
+        return Response.json({ thumbnail_url: oembedCover });
+      }
+      if (url === oembedCover || url.startsWith("https://p16-common.tiktokcdn.com/")) {
+        return new Response(origin, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return new Response(null, { status: 403 });
+    }) as typeof fetch;
+
+    try {
+      const result = await fetchPublicationPreviewImage({ src: signedSrc, postUrl });
+      assert.equal(
+        result.ok,
+        true,
+        "expired signed TikTok origin must upgrade via oEmbed, not a tiny OG thumb"
+      );
+      if (result.ok) {
+        const edge = await imageLongestEdge(result.buffer);
+        assert.ok(edge >= 960, `expected oEmbed origin cover, got ${edge}`);
+      }
     } finally {
       globalThis.fetch = originalFetch;
     }

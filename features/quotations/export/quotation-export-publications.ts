@@ -30,7 +30,7 @@ import {
 import { normalizeAvatarUrlForComparison } from "@/lib/performance/avatar-sync-policy";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import {
-  MIN_DISPLAYABLE_PUBLICATION_EDGE,
+  MIN_SHARP_PUBLICATION_EDGE,
   SHOWCASE_PUBLICATION_COMPRESS,
   compressExportDataUri,
   exportImageBufferMeetsMinEdge,
@@ -108,7 +108,15 @@ function publicationImageUsableAsShot(imageUrl: string, creatorAvatarUrl?: strin
   return true;
 }
 
-/** Prefer posts with stored thumbs; also keep postUrl-only rows for OG/oEmbed embed fallback. */
+/**
+ * Publication image source priority (existing Thinkway fields only — no new SSOT):
+ * 1. resolveCreatorRecentPublicationThumbnail (displayUrl / originalCover / cover /
+ *    stored screenshot when it beats a tiny CDN thumb — never a creator avatar)
+ * 2. postUrl-only row so embed can recover via TikTok oEmbed / IG media redirect / OG
+ * 3. fetchAllowedPreviewSrc: unsigned TikTok host, then higher-res CDN rewrite, then src
+ * 4. live oEmbed / media redirect / OpenGraph
+ * Reject bytes below MIN_SHARP_PUBLICATION_EDGE (640) or e15-class JPEG. Never upscale.
+ */
 export function selectShowcasePublicationShots(
   publications: CreatorRecentPublication[],
   limit = SHOWCASE_PUBLICATION_SHOT_LIMIT,
@@ -263,7 +271,7 @@ async function embedFromRawBuffer(
   buffer: Buffer,
   contentType: string
 ): Promise<QuotationDocPublicationShot | null> {
-  if (!(await exportImageBufferMeetsMinEdge(buffer, MIN_DISPLAYABLE_PUBLICATION_EDGE))) {
+  if (!(await exportImageBufferMeetsMinEdge(buffer, MIN_SHARP_PUBLICATION_EDGE))) {
     return null;
   }
   if (isVisiblyOvercompressedPhoto(buffer)) {
@@ -352,10 +360,16 @@ export async function embedQuotationDocumentPublicationShots(
 
       const publicationShots = (
         await Promise.all(group.publicationShots.map((shot) => embedPublicationShot(shot)))
-      ).filter(
-        (shot): shot is QuotationDocPublicationShot =>
-          shot != null && publicationShotIsDisplayable(shot)
-      );
+      ).map((embedded, index) => {
+        if (embedded != null && publicationShotIsDisplayable(embedded)) return embedded;
+        const original = group.publicationShots[index];
+        if (!original) return null;
+        return {
+          ...original,
+          imageUrl: "",
+          imageProxyUrl: null,
+        };
+      }).filter((shot): shot is QuotationDocPublicationShot => shot != null);
 
       return {
         ...group,

@@ -425,6 +425,13 @@ assert.match(
   ),
   /s1080x1080/
 );
+assert.equal(
+  preferHigherResolutionSocialImageUrl(
+    "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e35_s1080x1080"
+  ),
+  "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e35_s1080x1080",
+  "already-high-resolution CDN URLs must not be rewritten smaller"
+);
 
 assert.equal(
   resolveCreatorRecentPublicationThumbnail({

@@ -94,6 +94,28 @@ import {
 }
 
 {
+  const pubs = [
+    {
+      url: "https://www.tiktok.com/@ouda.5/video/1",
+      thumbnail: "https://p16-sign.tiktokcdn.com/tos/s150x150/tiny.jpeg",
+      originalCoverUrl:
+        "https://p16-common-sign.tiktokcdn-eu.com/tos-maliva-p-0068/cover~tplv-tiktokx-origin.image",
+      likes: 10,
+      comments: 1,
+      views: 1000,
+      posted_at: null,
+      caption: "Origin cover",
+    },
+  ] as CreatorRecentPublication[];
+  const shots = selectShowcasePublicationShots(pubs, 6);
+  assert.equal(
+    shots[0]?.imageUrl,
+    "https://p16-common-sign.tiktokcdn-eu.com/tos-maliva-p-0068/cover~tplv-tiktokx-origin.image",
+    "quotation chooses the canonical high-resolution publication cover over a tiny thumb"
+  );
+}
+
+{
   const pubs: CreatorRecentPublication[] = [
     {
       url: "https://www.instagram.com/p/A/",
@@ -182,6 +204,42 @@ import {
     source,
     /isVisiblyOvercompressedPhoto/,
     "Showcase embed must reject Instagram e15-class JPEG bytes"
+  );
+  assert.match(
+    source,
+    /MIN_SHARP_PUBLICATION_EDGE/,
+    "Showcase embed must reject publication bytes smaller than the tile"
+  );
+  assert.match(
+    source,
+    /fetchPublicationPreviewImage/,
+    "Showcase reuses the existing publication preview resolver — no second image SSOT"
+  );
+
+  const here = dirname(fileURLToPath(import.meta.url));
+  const previewSource = readFileSync(join(here, "render-quotation-preview-html.ts"), "utf8");
+  const exportRouteSource = readFileSync(
+    join(here, "../../../app/api/quotations/[id]/export/route.ts"),
+    "utf8"
+  );
+  const htmlSource = readFileSync(
+    join(here, "../templates/quotation-template-html.ts"),
+    "utf8"
+  );
+  assert.match(
+    previewSource,
+    /embedQuotationDocumentPublicationShots/,
+    "browser preview embeds publications through the same function as PDF"
+  );
+  assert.match(
+    exportRouteSource,
+    /embedQuotationDocumentPublicationShots/,
+    "PDF export embeds publications through the same function as preview"
+  );
+  assert.doesNotMatch(
+    htmlSource,
+    /next\/image/,
+    "quotation HTML uses plain <img>, not Next image optimization"
   );
 }
 
