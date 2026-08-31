@@ -3,8 +3,6 @@
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +16,7 @@ import {
   startCreatorSocialConnectAction,
   syncCreatorSocialConnectionAction,
 } from "@/features/creator-workspace/social-actions";
+import { CreatorPlatformMark } from "@/features/creator-workspace/components/creator-platform-mark";
 import {
   CREATOR_SOCIAL_CONSENT,
   CREATOR_SOCIAL_OPTIONAL_INTRO,
@@ -34,6 +33,7 @@ export function CreatorSocialAccountsCard({
 }) {
   const [pending, startTransition] = useTransition();
   const [consentProvider, setConsentProvider] = useState<SocialProviderId | null>(null);
+  const connectedCount = providers.filter((provider) => provider.connection).length;
 
   function connect(providerId: SocialProviderId) {
     startTransition(async () => {
@@ -48,100 +48,70 @@ export function CreatorSocialAccountsCard({
   }
 
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-base">Social Accounts</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm text-muted-foreground">{CREATOR_SOCIAL_OPTIONAL_INTRO}</p>
-        {notice ? (
-          <p className="rounded-xl border border-border px-3 py-2 text-sm">{notice}</p>
-        ) : null}
-        <ul className="space-y-2">
-          {providers.map((provider) => {
-            const connected = provider.connection;
-            return (
-              <li
-                key={provider.providerId}
-                className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border px-3 py-2"
-              >
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{provider.displayName}</p>
-                  {connected ? (
-                    <>
-                      {connected.handle ? (
-                        <p className="text-xs text-muted-foreground">{connected.handle}</p>
-                      ) : null}
-                      <p className="text-xs text-muted-foreground">{connected.statusLabel}</p>
-                      {connected.syncLine ? (
-                        <p className="text-xs text-muted-foreground">{connected.syncLine}</p>
-                      ) : null}
-                    </>
-                  ) : (
-                    <p className="text-xs text-muted-foreground">Not connected</p>
-                  )}
-                </div>
-                <div className="flex shrink-0 flex-wrap justify-end gap-2">
-                  {connected ? (
-                    <>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-9"
-                        disabled={pending}
-                        onClick={() =>
-                          startTransition(async () => {
-                            const result = await syncCreatorSocialConnectionAction({
-                              connectionId: connected.id,
-                            });
-                            if (!result.ok) toast.error(result.message);
-                            else toast.success("Sync started");
-                          })
-                        }
-                      >
-                        Sync now
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-9"
-                        disabled={pending}
-                        onClick={() =>
-                          startTransition(async () => {
-                            const result = await disconnectCreatorSocialConnectionAction({
-                              connectionId: connected.id,
-                            });
-                            if (!result.ok) toast.error(result.message);
-                            else toast.success("Disconnected");
-                          })
-                        }
-                      >
-                        Disconnect
-                      </Button>
-                    </>
-                  ) : provider.configured ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-9"
-                      disabled={pending}
-                      onClick={() => setConsentProvider(provider.providerId)}
-                    >
-                      Connect
-                    </Button>
-                  ) : (
-                    <span className="text-xs font-medium text-muted-foreground">
-                      Available soon
+    <section className="card">
+      <p className="ck">Social accounts</p>
+      <h2 className="sec">Connected platforms</h2>
+      <p className="note">
+        {CREATOR_SOCIAL_OPTIONAL_INTRO} Available soon platforms cannot be connected yet.
+      </p>
+      {notice ? <p className="note">{notice}</p> : null}
+      <p className="note" style={{ marginTop: 8 }}>
+        {connectedCount
+          ? `${connectedCount} account${connectedCount === 1 ? "" : "s"} connected`
+          : "No accounts connected"}
+      </p>
+      <div className="soc">
+        {providers.map((provider) => {
+          const connected = provider.connection;
+          const on = Boolean(connected);
+          const label = connected
+            ? "Connected"
+            : provider.configured
+              ? "Connect"
+              : "Soon";
+          return (
+            <button
+              key={provider.providerId}
+              type="button"
+              className="soc__i"
+              data-on={on}
+              disabled={pending}
+              onClick={() => {
+                if (connected) {
+                  startTransition(async () => {
+                    const result = await syncCreatorSocialConnectionAction({
+                      connectionId: connected.id,
+                    });
+                    if (!result.ok) toast.error(result.message);
+                    else toast.success("Sync started");
+                  });
+                  return;
+                }
+                if (provider.configured) setConsentProvider(provider.providerId);
+              }}
+            >
+              <CreatorPlatformMark platform={provider.providerId} size={26} />
+              <span className="soc__n">
+                {provider.displayName}
+                {connected?.handle ? (
+                  <>
+                    <br />
+                    <span style={{ fontSize: 10.5, fontWeight: 500, color: "var(--cw-green-text)" }}>
+                      {connected.handle}
                     </span>
-                  )}
-                </div>
-              </li>
-            );
-          })}
-        </ul>
-      </CardContent>
+                  </>
+                ) : null}
+              </span>
+              <span className="soc__s">{label}</span>
+            </button>
+          );
+        })}
+      </div>
+      {providers.some((provider) => provider.connection) ? (
+        <p className="note" style={{ marginTop: 12 }}>
+          Connected accounts sync on tap. Disconnect from the confirmation if you need to remove access.
+        </p>
+      ) : null}
 
       <Dialog
         open={Boolean(consentProvider)}
@@ -149,27 +119,50 @@ export function CreatorSocialAccountsCard({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Connect {providers.find((item) => item.providerId === consentProvider)?.displayName}</DialogTitle>
+            <DialogTitle>
+              Connect {providers.find((item) => item.providerId === consentProvider)?.displayName}
+            </DialogTitle>
             <DialogDescription>{CREATOR_SOCIAL_CONSENT}</DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setConsentProvider(null)}
-            >
+            {consentProvider &&
+            providers.find((item) => item.providerId === consentProvider)?.connection ? null : null}
+            <button type="button" className="btn" onClick={() => setConsentProvider(null)}>
               Not now
-            </Button>
-            <Button
+            </button>
+            <button
               type="button"
+              className="btn btn-primary"
               disabled={pending || !consentProvider}
               onClick={() => consentProvider && connect(consentProvider)}
             >
               Continue
-            </Button>
+            </button>
+            {consentProvider &&
+            providers.find((p) => p.providerId === consentProvider)?.connection ? (
+              <button
+                type="button"
+                className="btn"
+                disabled={pending}
+                onClick={() => {
+                  const connection = providers.find((p) => p.providerId === consentProvider)?.connection;
+                  if (!connection) return;
+                  startTransition(async () => {
+                    const result = await disconnectCreatorSocialConnectionAction({
+                      connectionId: connection.id,
+                    });
+                    if (!result.ok) toast.error(result.message);
+                    else toast.success("Disconnected");
+                    setConsentProvider(null);
+                  });
+                }}
+              >
+                Disconnect
+              </button>
+            ) : null}
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </section>
   );
 }

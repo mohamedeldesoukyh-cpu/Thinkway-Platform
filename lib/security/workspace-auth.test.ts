@@ -59,7 +59,7 @@ test("portal actors allowed on their workspace pages", () => {
     true,
   );
   assert.equal(
-    authorizeWorkspacePath("/creator-portal/profile", "creator_portal").allowed,
+    authorizeWorkspacePath("/creator-portal/calendar", "creator_portal").allowed,
     true,
   );
 });

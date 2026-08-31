@@ -57,6 +57,7 @@ export function CreatorUnitMediaPreview({
   fileSize,
   versionNumber,
   uploadedAt,
+  variant = "default",
 }: {
   campaignHeaderId: string;
   assignmentDeliverableId: string;
@@ -67,6 +68,7 @@ export function CreatorUnitMediaPreview({
   fileSize: number | null;
   versionNumber: number | null;
   uploadedAt: string | null;
+  variant?: "default" | "workspace";
 }) {
   const kind = deliverableAssetPreviewKind(mimeType, fileName);
   const playbackType = deliverablePlaybackMime(mimeType, fileName);
@@ -144,6 +146,84 @@ export function CreatorUnitMediaPreview({
   ]
     .filter(Boolean)
     .join(" · ");
+
+  const workspace = variant === "workspace";
+  const player =
+    error && !src ? (
+      <div className="wk__ph">
+        <span>{error}</span>
+      </div>
+    ) : !src ? (
+      <div className="wk__ph">
+        <span>Loading preview…</span>
+      </div>
+    ) : kind === "video" ? (
+      <video
+        key={src}
+        ref={videoRef}
+        controls
+        playsInline
+        preload="metadata"
+        onError={() => {
+          if (videoRef.current?.error?.code === 1) return;
+          if (blobTriedRef.current) {
+            setError(PLAYBACK_FAILED);
+            return;
+          }
+          void retryAsTypedBlob();
+        }}
+      >
+        <source src={src} type={playbackType} />
+      </video>
+    ) : kind === "image" ? (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img src={src} alt={fileName ?? "Submitted image"} />
+    ) : (
+      <div className="wk__ph">
+        <span>{fileName ?? "Submitted file"}</span>
+      </div>
+    );
+
+  if (workspace) {
+    return (
+      <>
+        <div className="wk__media">{player}</div>
+        {src ? (
+          <div className="wk__mact">
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => window.open(src, "_blank", "noopener,noreferrer")}
+            >
+              Download
+            </button>
+            {kind === "video" || kind === "image" ? (
+              <button type="button" className="btn btn-sm" onClick={() => setFullOpen(true)}>
+                Full size
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        <Dialog open={fullOpen} onOpenChange={setFullOpen}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>{fileName ?? "Submitted file"}</DialogTitle>
+              <DialogDescription>{meta}</DialogDescription>
+            </DialogHeader>
+            {src && kind === "video" ? (
+              <video key={src} src={src} controls playsInline className="max-h-[80vh] w-full rounded-md bg-black">
+                <source src={src} type={playbackType} />
+              </video>
+            ) : null}
+            {src && kind === "image" ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={src} alt={fileName ?? "Submitted image"} className="max-h-[80vh] w-full object-contain" />
+            ) : null}
+          </DialogContent>
+        </Dialog>
+      </>
+    );
+  }
 
   return (
     <div className="space-y-2">

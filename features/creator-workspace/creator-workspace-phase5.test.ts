@@ -38,16 +38,16 @@ const connections = readFileSync(
 );
 
 describe("Phase 5 Creator Workspace UX", () => {
-  it("keeps the existing 5-item Creator Workspace nav", () => {
+  it("keeps Home · Campaigns · Deliverables · Calendar · Payments · Profile", () => {
     assert.deepEqual(
       CREATOR_WORKSPACE_NAV_ITEMS.map((item) => item.label),
-      ["Home", "Campaigns", "Deliverables", "Payments", "Profile"]
+      ["Home", "Campaigns", "Deliverables", "Calendar", "Payments", "Profile"]
     );
     assert.doesNotMatch(nav, /Insights|Analytics|Recommendations/);
     assert.doesNotMatch(home, /Payment in progress/);
     assert.match(home, /CreatorHomeNextActionList/);
-    assert.match(home, /CreatorHomeInsights/);
-    assert.match(homeInsights, /Thinkway Insights/);
+    assert.match(home, /Open calendar/);
+    assert.match(home, /Thinkway processes this/);
   });
 
   it("does not turn Home into a BI dashboard or chatbot", () => {
@@ -55,7 +55,8 @@ describe("Phase 5 Creator Workspace UX", () => {
     assert.doesNotMatch(home, /Level 0|Level 1|Level 2/);
     assert.match(homeInsights, /Profile → Social Accounts|Social Accounts/);
     const layout = readFileSync(resolve("app/(creator-portal)/layout.tsx"), "utf8");
-    assert.match(layout, /navVariant="compact"/);
+    assert.match(layout, /CreatorWorkspaceShell/);
+    assert.doesNotMatch(layout, /navVariant="compact"/);
     assert.doesNotMatch(layout, /client-review-ref/);
   });
 });

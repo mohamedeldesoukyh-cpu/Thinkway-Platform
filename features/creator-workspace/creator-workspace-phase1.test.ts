@@ -10,6 +10,7 @@ import {
   campaignPublicationLine,
   toCreatorCampaignCard,
 } from "@/features/creator-workspace/campaign-card-model";
+import { buildCreatorCalendarItems, upcomingCreatorCalendarItems } from "@/features/creator-workspace/calendar";
 import { resolveCreatorWorkspaceName } from "@/features/creator-workspace/identity";
 import { creatorFacingStatusLabel } from "@/features/creator-workspace/unit-status";
 import {
@@ -19,7 +20,7 @@ import {
 import {
   CREATOR_WORKSPACE_NAV_ITEMS,
   resolveCreatorWorkspaceLegacyRedirect,
-  withCreatorHomeBadge,
+  withCreatorDeliverablesBadge,
 } from "@/features/creator-workspace/nav";
 import { CREATOR_WORKSPACE_SOCIAL_PLATFORMS } from "@/features/creator-workspace/social-availability";
 import type {
@@ -87,15 +88,16 @@ function payment(overrides: Partial<CreatorPaymentRow> = {}): CreatorPaymentRow 
 }
 
 describe("Creator Workspace Phase 1 chrome", () => {
-  it("keeps a single /creator-portal home and a 5-item nav", () => {
+  it("keeps a single /creator-portal home and a 6-item nav including Calendar", () => {
     assert.equal(portalHomePath("creator_portal"), "/creator-portal");
     assert.deepEqual(
       CREATOR_WORKSPACE_NAV_ITEMS.map((item) => item.label),
-      ["Home", "Campaigns", "Deliverables", "Payments", "Profile"]
+      ["Home", "Campaigns", "Deliverables", "Calendar", "Payments", "Profile"]
     );
-    assert.equal(CREATOR_WORKSPACE_NAV_ITEMS.length, 5);
+    assert.equal(CREATOR_WORKSPACE_NAV_ITEMS.length, 6);
     const hrefs = CREATOR_WORKSPACE_NAV_ITEMS.map((item) => item.href);
     assert.equal(hrefs.includes("/creator-portal/payments"), true);
+    assert.equal(hrefs.includes("/creator-portal/calendar"), true);
     assert.equal(hrefs.includes("/creator-portal/publications"), false);
     assert.equal(hrefs.includes("/creator-portal/vendor-ios"), false);
     assert.equal(hrefs.includes("/creator-portal/notifications"), false);
@@ -125,6 +127,7 @@ describe("Creator Workspace Phase 1 chrome", () => {
       "/creator-portal/deliverables",
       "/creator-portal/profile",
       "/creator-portal/payments",
+      "/creator-portal/calendar",
       "/creator-portal/publications",
       "/creator-portal/vendor-ios",
       "/creator-portal/notifications",
@@ -137,10 +140,12 @@ describe("Creator Workspace Phase 1 chrome", () => {
     }
   });
 
-  it("badges Home — not a Notifications nav item — when unread > 0", () => {
-    const items = withCreatorHomeBadge(3);
+  it("badges Deliverables — not Home — when work is waiting on the creator", () => {
+    const items = withCreatorDeliverablesBadge(3);
     assert.equal(items[0]?.label, "Home");
-    assert.equal(items[0]?.badge, 3);
+    assert.equal(items[0]?.badge, undefined);
+    assert.equal(items[2]?.label, "Deliverables");
+    assert.equal(items[2]?.badge, 3);
     assert.equal(
       items.some((item) => item.label === "Notifications"),
       false
@@ -156,7 +161,7 @@ describe("Creator Workspace Phase 1 chrome", () => {
     );
   });
 
-  it("uses compact workspace chrome without Client Portal pills or a bottom app bar", () => {
+  it("uses top-bar Creator Workspace chrome without Client Portal pills or a bottom app bar", () => {
     const layout = readFileSync(resolve("app/(creator-portal)/layout.tsx"), "utf8");
     const clientLayout = readFileSync(resolve("app/(client-portal)/layout.tsx"), "utf8");
     const tabs = readFileSync(
@@ -166,8 +171,9 @@ describe("Creator Workspace Phase 1 chrome", () => {
     const portalNav = readFileSync(resolve("components/layout/portal-nav.tsx"), "utf8");
     const nav = readFileSync(resolve("features/creator-workspace/nav.ts"), "utf8");
 
-    assert.match(layout, /navVariant="compact"/);
-    assert.match(layout, /workspaceLabel="Creator Workspace"/);
+    assert.match(layout, /CreatorWorkspaceShell/);
+    assert.doesNotMatch(layout, /PortalShell/);
+    assert.doesNotMatch(layout, /navVariant/);
     assert.doesNotMatch(layout, /mobileNavPlacement/);
     assert.doesNotMatch(layout, /client-review-ref/);
     assert.doesNotMatch(clientLayout, /navVariant/);
@@ -176,17 +182,14 @@ describe("Creator Workspace Phase 1 chrome", () => {
     assert.match(portalNav, /PortalNavVariant = "pills" \| "compact"/);
     assert.match(portalNav, /variant = "pills"/);
 
-    assert.match(tabs, /EnterpriseTabsList/);
+    assert.doesNotMatch(tabs, /EnterpriseTabsList/);
     assert.deepEqual(
       [
         "Overview",
         "Brief",
-        "Script",
         "Deliverables",
         "Agreement",
-        "Publications",
         "Payment",
-        "Messages",
       ],
       [...tabs.matchAll(/label: "([^"]+)"/g)].map((match) => match[1])
     );
@@ -229,7 +232,7 @@ describe("Creator Workspace Home next actions", () => {
     ...overrides,
   });
 
-  it("prioritizes vendor IO review before deliverables and payments", () => {
+  it("prioritizes vendor IO review before deliverable work and never treats payment as an action", () => {
     const actions = buildCreatorHomeNextActions({
       vendorIos: [vendorIo()],
       units: [unit()],
@@ -237,13 +240,15 @@ describe("Creator Workspace Home next actions", () => {
     });
     assert.deepEqual(
       actions.map((action) => action.kind),
-      ["vendor_io", "deliverable", "payment"]
+      ["vendor_io", "deliverable"]
     );
     assert.equal(actions[0]?.title, "Review your agreement");
     assert.equal(actions[0]?.href, "/creator-portal/campaigns/camp-1?tab=agreement");
     assert.equal(actions[0]?.vendorIoId, "vio-1");
-    assert.equal(actions[2]?.href, "/creator-portal/payments");
-    assert.equal(actions[2]?.title, "Payment pending");
+    assert.equal(
+      actions.some((action) => action.kind === "payment"),
+      false
+    );
   });
 
   it("groups multiple pending documentation units onto the Deliverables page", () => {
@@ -256,7 +261,7 @@ describe("Creator Workspace Home next actions", () => {
       payments: [],
     });
     assert.equal(actions.length, 1);
-    assert.equal(actions[0]?.title, "Complete 2 deliverables");
+    assert.equal(actions[0]?.title, "2 deliverables to upload");
     assert.equal(actions[0]?.href, "/creator-portal/deliverables");
   });
 
@@ -273,7 +278,7 @@ describe("Creator Workspace Home next actions", () => {
       ],
       payments: [],
     });
-    assert.equal(actions[0]?.title, "1 submission needs changes");
+    assert.equal(actions[0]?.title, "1 needs changes before re-upload");
     assert.equal(actions[0]?.priority < actions[1]!.priority, true);
   });
 
@@ -382,5 +387,34 @@ describe("Creator Workspace campaign cards", () => {
     });
     assert.equal(campaignNeedsCreatorAction(row), true);
     assert.equal(campaignCreatorActionLine(row), "1 publication link required");
+  });
+});
+
+describe("Creator Workspace calendar", () => {
+  it("builds due dates and campaign start/end from real records only", () => {
+    const items = buildCreatorCalendarItems({
+      campaigns: [
+        campaign({
+          start_date: "2026-09-01",
+          end_date: "2026-09-30",
+        }),
+      ],
+      units: [
+        {
+          label: "Reel",
+          campaignName: "Summer launch",
+          campaignHeaderId: "camp-1",
+          platform: "instagram",
+          status: "to_do",
+          statusLabel: "To do",
+          dueDate: "2026-09-18",
+        },
+      ],
+    });
+    assert.equal(items.some((item) => item.kind === "due" && item.date === "2026-09-18"), true);
+    assert.equal(items.some((item) => item.kind === "start" && item.date === "2026-09-01"), true);
+    assert.equal(items.some((item) => item.kind === "end" && item.date === "2026-09-30"), true);
+    const upcoming = upcomingCreatorCalendarItems(items, 8, "2026-09-09");
+    assert.equal(upcoming[0]?.date >= "2026-09-09", true);
   });
 });

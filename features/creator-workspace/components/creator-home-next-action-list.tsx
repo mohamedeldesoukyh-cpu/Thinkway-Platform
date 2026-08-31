@@ -1,10 +1,43 @@
 import Link from "next/link";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { CreatorHomeNextAction } from "@/features/creator-workspace/home-next-actions";
 import { CreatorApproveVendorIoForm } from "@/features/portals/components/creator-approve-vendor-io-form";
 import { CreatorRejectVendorIoForm } from "@/features/portals/components/creator-reject-vendor-io-form";
+
+function ActionIcon({ tone }: { tone: CreatorHomeNextAction["tone"] }) {
+  if (tone === "red") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M12 9v4" />
+        <path d="M12 17h.01" />
+        <path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" />
+      </svg>
+    );
+  }
+  if (tone === "amber") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+        <path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4z" />
+      </svg>
+    );
+  }
+  if (tone === "green") {
+    return (
+      <svg viewBox="0 0 24 24">
+        <path d="M22 2 11 13" />
+        <path d="M22 2l-7 20-4-9-9-4z" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 24 24">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <path d="M17 8l-5-5-5 5" />
+      <path d="M12 3v12" />
+    </svg>
+  );
+}
 
 export function CreatorHomeNextActionList({
   actions,
@@ -13,50 +46,50 @@ export function CreatorHomeNextActionList({
 }) {
   if (actions.length === 0) {
     return (
-      <Card>
-        <CardContent className="p-3">
-          <p className="text-sm font-medium">You're all caught up.</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            When something needs your attention, it will show up here.
-          </p>
-        </CardContent>
-      </Card>
+      <section className="act act--calm">
+        <div className="act__row" style={{ border: "none", padding: "2px 0" }}>
+          <span className="act__ic act__ic--green">
+            <svg viewBox="0 0 24 24">
+              <path d="M20 6 9 17l-5-5" />
+            </svg>
+          </span>
+          <span className="act__b">
+            <span className="act__h">You are all caught up</span>
+            <span className="act__s">Nothing to upload, fix or publish right now.</span>
+          </span>
+        </div>
+      </section>
     );
   }
 
   return (
-    <div className="grid gap-2">
+    <section className="act">
+      <div className="act__t">
+        <span className="act__n num">{actions.length}</span>
+        <span className="act__l">Needs your attention</span>
+      </div>
       {actions.map((action) => (
-        <Card key={action.id}>
-          <CardHeader className="space-y-1 px-3 pb-2 pt-3">
-            <CardTitle className="text-sm">{action.title}</CardTitle>
-            <p className="text-sm text-muted-foreground">{action.description}</p>
-          </CardHeader>
-          <CardContent className="space-y-2 px-3 pb-3">
-            {action.kind === "vendor_io" && action.vendorIoId ? (
-              <div className="space-y-2">
-                <CreatorApproveVendorIoForm vendorIoId={action.vendorIoId} />
-                <CreatorRejectVendorIoForm vendorIoId={action.vendorIoId} />
-              </div>
-            ) : null}
-            <Button asChild variant={action.kind === "vendor_io" ? "outline" : "default"} className="w-full sm:w-auto">
-              <Link href={action.href}>
-                {action.kind === "vendor_io"
-                  ? "Review agreement"
-                  : action.kind === "payment"
-                    ? "View payment"
-                    : action.kind === "changes_requested"
-                      ? "Review changes"
-                      : action.kind === "publication"
-                        ? "Submit publication link"
-                        : action.kind === "deliverable"
-                          ? "Open deliverable"
-                          : "Continue"}
-              </Link>
-            </Button>
-          </CardContent>
-        </Card>
+        <div key={action.id}>
+          <div className="act__row">
+            <span className={`act__ic act__ic--${action.tone}`}>
+              <ActionIcon tone={action.tone} />
+            </span>
+            <span className="act__b">
+              <span className="act__h">{action.title}</span>
+              <span className="act__s">{action.description}</span>
+            </span>
+            <Link href={action.href} className="btn btn-primary btn-sm">
+              {action.cta}
+            </Link>
+          </div>
+          {action.kind === "vendor_io" && action.vendorIoId ? (
+            <div className="actions" style={{ marginTop: 8, paddingLeft: 45 }}>
+              <CreatorApproveVendorIoForm vendorIoId={action.vendorIoId} />
+              <CreatorRejectVendorIoForm vendorIoId={action.vendorIoId} />
+            </div>
+          ) : null}
+        </div>
       ))}
-    </div>
+    </section>
   );
 }

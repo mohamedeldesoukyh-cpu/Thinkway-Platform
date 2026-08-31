@@ -1,11 +1,15 @@
 import { redirect } from "next/navigation";
 
 import { signOutAction } from "@/features/auth/actions";
-import { PortalShell } from "@/components/layout/portal-shell";
-import { withCreatorHomeBadge } from "@/features/creator-workspace/nav";
+import { CreatorWorkspaceShell } from "@/features/creator-workspace/components/creator-workspace-shell";
+import { withCreatorDeliverablesBadge } from "@/features/creator-workspace/nav";
+import { countUnitsNeedingCreator } from "@/features/creator-workspace/home-next-actions";
+import { loadCreatorUnitViews } from "@/features/creator-workspace/documentation-load";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCreatorUnreadNotificationCount } from "@/features/portals/queries";
 import { requireCreatorScope } from "@/features/portals/scope";
+import { resolveCreatorAvatarUrl } from "@/lib/performance/creator-avatar";
+
+import "@/features/creator-workspace/styles/creator-workspace.css";
 
 function isNextControlFlowError(error: unknown): boolean {
   if (typeof error !== "object" || error === null || !("digest" in error)) {
@@ -28,9 +32,38 @@ export default async function CreatorPortalLayout({
   }
 
   let creatorName = user.email ?? "Creator";
+  let avatarUrl: string | null = null;
+  let pendingCount = 0;
   try {
-    const { scope } = await requireCreatorScope("creator_portal.read");
+    const { supabase: scoped, scope } = await requireCreatorScope("creator_portal.read");
     creatorName = scope.influencerName;
+    try {
+      const units = await loadCreatorUnitViews();
+      pendingCount = countUnitsNeedingCreator(units);
+    } catch {
+      pendingCount = 0;
+    }
+    try {
+      const [{ data: influencer }, { data: accounts }] = await Promise.all([
+        scoped
+          .from("influencers")
+          .select("metadata")
+          .eq("id", scope.influencerId)
+          .maybeSingle(),
+        scoped
+          .from("influencer_platform_accounts")
+          .select("profile_picture_url")
+          .eq("influencer_id", scope.influencerId),
+      ]);
+      const meta = influencer as { metadata?: { avatar_url?: string | null } | null } | null;
+      const pictures = (accounts ?? []) as Array<{ profile_picture_url: string | null }>;
+      avatarUrl = resolveCreatorAvatarUrl({
+        social_profile_picture_url: pictures.find((row) => row.profile_picture_url)?.profile_picture_url,
+        influencer_avatar_url: meta?.metadata?.avatar_url,
+      });
+    } catch {
+      avatarUrl = null;
+    }
   } catch (error) {
     if (isNextControlFlowError(error)) throw error;
     return (
@@ -56,17 +89,13 @@ export default async function CreatorPortalLayout({
     );
   }
 
-  const unreadCount = await getCreatorUnreadNotificationCount();
-
   return (
-    <PortalShell
-      title="Creator Workspace"
-      workspaceLabel="Creator Workspace"
-      navVariant="compact"
+    <CreatorWorkspaceShell
       userLabel={creatorName}
-      navItems={withCreatorHomeBadge(unreadCount)}
+      avatarUrl={avatarUrl}
+      navItems={withCreatorDeliverablesBadge(pendingCount)}
     >
       {children}
-    </PortalShell>
+    </CreatorWorkspaceShell>
   );
 }

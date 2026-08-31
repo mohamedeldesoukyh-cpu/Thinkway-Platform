@@ -1,20 +1,30 @@
-import { PageBackButton } from "@/components/navigation/page-back-button";
+import Link from "next/link";
+
 import { DocumentNumber } from "@/components/ui/document-number";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CreatorApproveVendorIoForm } from "@/features/portals/components/creator-approve-vendor-io-form";
 import { CreatorRejectVendorIoForm } from "@/features/portals/components/creator-reject-vendor-io-form";
-import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
-import { CreatorCampaignMessages } from "@/features/creator-workspace/components/creator-campaign-messages";
 import { CreatorCampaignProgress } from "@/features/creator-workspace/components/creator-campaign-progress";
-import { CreatorCampaignScripts } from "@/features/creator-workspace/components/creator-campaign-scripts";
 import { CreatorCampaignTabs } from "@/features/creator-workspace/components/creator-campaign-tabs";
 import { CreatorDocumentationUnitList } from "@/features/creator-workspace/components/creator-documentation-unit-list";
-import { CreatorProfilePayments } from "@/features/creator-workspace/components/creator-profile-payments";
+import { CreatorDeliverableNavRow } from "@/features/creator-workspace/components/creator-campaign-cards";
+import {
+  CreatorEmpty,
+  CreatorKpis,
+  CreatorMoneyStrip,
+  CreatorPageHeader,
+} from "@/features/creator-workspace/components/creator-workspace-ui";
 import {
   creatorCampaignUnitCounts,
+  creatorCampaignStageIndex,
   projectCreatorCampaignStage,
+  CREATOR_CAMPAIGN_STAGES,
 } from "@/features/creator-workspace/campaign-progress";
 import { campaignCreatorActionLine } from "@/features/creator-workspace/campaign-card-model";
+import {
+  campaignStatusPill,
+  paymentPendingPill,
+  unitStatusPill,
+} from "@/features/creator-workspace/chrome";
 import type { CreatorUnitView } from "@/features/creator-workspace/documentation-load";
 import { creatorPaymentExplanationForRow } from "@/features/creator-workspace/payment-copy";
 import { unitNeedsPublicationLink } from "@/features/creator-workspace/unit-status";
@@ -24,21 +34,19 @@ import type {
   CreatorPaymentRow,
   CreatorPublicationRow,
 } from "@/features/portals/types";
+import { formatPortalDate } from "@/features/portals/components/portal-table-utils";
 import { formatMoneyDetail } from "@/lib/finance/currency-format";
 import type { CreatorInsightPack } from "@/lib/creator-insights/types";
 
 function formatDate(value: string | null): string {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleDateString();
+  return formatPortalDate(value);
 }
 
 export function CreatorCampaignWorkspace({
   detail,
   units,
   payment,
-  publications,
+  publications: _publications,
   insightPack,
   campaignRow,
 }: {
@@ -56,7 +64,8 @@ export function CreatorCampaignWorkspace({
     paymentStatus: payment?.payment_status ?? null,
     units,
   });
-  const nextAction = campaignCreatorActionLine(
+  const stageLabel = CREATOR_CAMPAIGN_STAGES[creatorCampaignStageIndex(stage)]?.label ?? "Campaign";
+  const nextActionRaw = campaignCreatorActionLine(
     campaignRow ?? {
       campaign_header_id: detail.campaign_header_id,
       campaign_document_number: detail.campaign_document_number,
@@ -75,206 +84,226 @@ export function CreatorCampaignWorkspace({
       completed_deliverables: counts.completed,
       approved_deliverables: counts.approved,
       published_deliverables: counts.published,
-      publication_total: publications.length,
+      publication_total: _publications.length,
       recent_publication_status: null,
       publication_needed: units.filter((unit) => unitNeedsPublicationLink(unit)).length,
     }
   );
+  const nextAction = nextActionRaw === "All on track" ? "Nothing due" : nextActionRaw;
+  const status = campaignStatusPill(detail.campaign_status);
+  const paymentPill = paymentPendingPill(
+    payment?.vendor_payment_status ?? payment?.payment_status ?? campaignRow?.vendor_payment_status
+  );
+  const progressPct = counts.total ? Math.round((counts.published / counts.total) * 100) : 0;
+  const money = (amount: number) => formatMoneyDetail(amount, detail.currency_code);
 
   return (
-    <div className="space-y-4">
-      <PageBackButton
-        fallbackHref="/creator-portal/campaigns"
-        label="Back to campaigns"
-        variant="text"
-      />
-
-      <div className="space-y-3">
-        <div className="space-y-1">
-          <h2 className="font-heading text-xl font-semibold tracking-tight">
-            {detail.campaign_name}
-          </h2>
-          <p className="text-sm text-muted-foreground">
-            <DocumentNumber value={detail.campaign_document_number} />
-          </p>
-          <div className="flex flex-wrap items-center gap-2 pt-1">
-            <PortalStatusBadge value={detail.campaign_status} />
-            <PortalStatusBadge value={detail.assignment_status} />
-          </div>
-        </div>
-        <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-border px-3 py-2">
-            <dt className="text-xs text-muted-foreground">Dates</dt>
-            <dd className="text-sm font-medium">
-              {formatDate(detail.start_date)} → {formatDate(detail.end_date)}
-            </dd>
-          </div>
-          <div className="rounded-lg border border-border px-3 py-2">
-            <dt className="text-xs text-muted-foreground">Agreed fee</dt>
-            <dd className="text-sm font-medium">
-              {formatMoneyDetail(detail.agreed_amount, detail.currency_code)}
-            </dd>
-          </div>
-          <div className="rounded-lg border border-border px-3 py-2">
-            <dt className="text-xs text-muted-foreground">Progress</dt>
-            <dd className="text-sm font-medium">
-              {counts.total === 0
-                ? "No deliverables yet"
-                : `${counts.completed} of ${counts.total} complete`}
-            </dd>
-          </div>
-          <div className="rounded-lg border border-border px-3 py-2">
-            <dt className="text-xs text-muted-foreground">Next action</dt>
-            <dd className="text-sm font-medium">{nextAction}</dd>
-          </div>
-        </dl>
+    <div>
+      <div className="backrow">
+        <Link href="/creator-portal/campaigns" className="btn btn-sm back">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 12H5" />
+            <path d="m12 19-7-7 7-7" />
+          </svg>
+          Campaigns
+        </Link>
       </div>
+
+      <CreatorPageHeader
+        title={detail.campaign_name}
+        description={
+          <>
+            <DocumentNumber value={detail.campaign_document_number} /> · {formatDate(detail.start_date)} →{" "}
+            {formatDate(detail.end_date)}
+          </>
+        }
+      />
+      <div style={{ display: "flex", gap: 6, marginTop: -9, marginBottom: 16 }}>
+        <span className={status.className}>{status.label}</span>
+        <span className={paymentPill.className}>{paymentPill.label}</span>
+      </div>
+
+      <CreatorKpis
+        items={[
+          {
+            label: "Agreed fee",
+            value: money(detail.agreed_amount),
+            hint: "For this campaign",
+            valueSize: "md",
+          },
+          {
+            label: "Deliverables",
+            value: counts.total,
+            hint: `${counts.published} delivered`,
+          },
+          {
+            label: "Progress",
+            value: `${progressPct}%`,
+            hint: stageLabel,
+            tone: "ok",
+          },
+          {
+            label: "Next",
+            value: nextAction,
+            hint: "Your next step",
+            tone: "pend",
+            valueSize: "sm",
+          },
+        ]}
+      />
 
       <CreatorCampaignTabs
         sections={{
           overview: (
-            <div className="space-y-4">
-              <CreatorCampaignProgress stage={stage} />
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-                <OverviewStat label="Deliverables" value={String(counts.total)} />
-                <OverviewStat label="Completed" value={String(counts.completed)} />
-                <OverviewStat label="Pending" value={String(counts.pending)} />
-                <OverviewStat label="Approved" value={String(counts.approved)} />
-                <OverviewStat label="Published" value={String(counts.published)} />
-                <OverviewStat
-                  label="Payment"
-                  value={payment?.payment_status ?? "Pending"}
-                />
+            <>
+              <div className="grp__h">
+                <span className="grp__t">Progress</span>
               </div>
+              <CreatorCampaignProgress stage={stage} />
+              <div className="grp" style={{ marginTop: 24 }}>
+                <div className="grp__h">
+                  <span className="grp__t">What to deliver</span>
+                </div>
+                {units.length === 0 ? (
+                  <CreatorEmpty
+                    title="No deliverables yet"
+                    description="Thinkway will add them here."
+                  />
+                ) : (
+                  units.map((unit) => {
+                    const pill = unitStatusPill(unit.statusLabel, unit.status);
+                    return (
+                      <CreatorDeliverableNavRow
+                        key={unit.unitKey}
+                        href={`/creator-portal/campaigns/${detail.campaign_header_id}?tab=deliverables`}
+                        title={unit.label}
+                        meta={`${unit.campaignName}${
+                          unit.dueDate ? ` · due ${formatDate(unit.dueDate)}` : " · no due date"
+                        }`}
+                        platform={unit.platform}
+                        statusClassName={pill.className}
+                        statusLabel={pill.label}
+                      />
+                    );
+                  })
+                )}
+              </div>
+            </>
+          ),
+          brief: detail.brief?.trim() ? (
+            <div className="card">
+              <p className="ck">Brief</p>
+              <h2 className="sec">What Thinkway needs</h2>
+              <p className="note" style={{ fontSize: 13.5, color: "var(--cw-text-2)", marginTop: 10 }}>
+                {detail.brief}
+              </p>
             </div>
-          ),
-          brief: (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Campaign brief</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <p className="whitespace-pre-wrap text-muted-foreground">
-                  {detail.brief?.trim() || "No brief provided."}
-                </p>
-                <p className="text-muted-foreground">
-                  {formatDate(detail.start_date)} → {formatDate(detail.end_date)}
-                </p>
-              </CardContent>
-            </Card>
-          ),
-          script: <CreatorCampaignScripts units={units} />,
-          deliverables: (
-            <CreatorDocumentationUnitList
-              units={units}
-              showCampaignLink={false}
-              hideScript
-              insightPack={insightPack}
+          ) : (
+            <CreatorEmpty
+              title="No brief provided yet"
+              description="Thinkway will share the brief here before you start."
             />
           ),
+          deliverables:
+            units.length === 0 ? (
+              <CreatorEmpty
+                title="No deliverables yet"
+                description="Thinkway will add them here."
+              />
+            ) : (
+              <CreatorDocumentationUnitList
+                units={units}
+                showCampaignLink={false}
+                insightPack={insightPack}
+              />
+            ),
           agreement: (
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Agreement / Vendor IO</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 text-sm">
-                {detail.vendor_io_id ? (
-                  <>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <PortalStatusBadge value={detail.vendor_io_status ?? "draft"} />
-                      {detail.vendor_io_document_number ? (
-                        <DocumentNumber value={detail.vendor_io_document_number} />
-                      ) : null}
-                    </div>
-                    <p>
-                      Agreed amount:{" "}
-                      {formatMoneyDetail(detail.agreed_amount, detail.currency_code)}
-                    </p>
-                    <p>
-                      Campaign dates: {formatDate(detail.start_date)} →{" "}
-                      {formatDate(detail.end_date)}
-                    </p>
-                    <p>
-                      Deliverables covered: {counts.total}
-                    </p>
-                    {detail.vendor_io_payment_terms?.trim() ? (
-                      <p>Payment terms: {detail.vendor_io_payment_terms}</p>
-                    ) : (
-                      <p className="text-muted-foreground">No special payment terms on this agreement.</p>
-                    )}
-                    {detail.vendor_io_sent_at ? (
-                      <p className="text-muted-foreground">
-                        Sent {formatDate(detail.vendor_io_sent_at)}
-                      </p>
-                    ) : null}
-                    {detail.vendor_io_approved_at ? (
-                      <p className="text-muted-foreground">
-                        Accepted {formatDate(detail.vendor_io_approved_at)}
-                      </p>
-                    ) : null}
-                    {detail.vendor_io_rejection_reason ? (
-                      <p className="text-muted-foreground">
-                        {detail.vendor_io_rejection_reason}
-                      </p>
-                    ) : null}
-                    {detail.vendor_io_status === "sent" && detail.vendor_io_id ? (
-                      <div className="flex flex-col gap-2 pt-2">
-                        <CreatorApproveVendorIoForm vendorIoId={detail.vendor_io_id} />
-                        <CreatorRejectVendorIoForm vendorIoId={detail.vendor_io_id} />
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <p className="text-muted-foreground">
-                    No agreement has been issued for this campaign yet.
+            <div className="card">
+              <p className="ck">Vendor IO</p>
+              <h2 className="sec">Your agreement</h2>
+              {detail.vendor_io_id ? (
+                <>
+                  <p className="note">
+                    Terms for this campaign, including scope and payment.
                   </p>
-                )}
-              </CardContent>
-            </Card>
-          ),
-          publications: (
-            <div className="space-y-3">
-              {publications.length === 0 &&
-              units.every((unit) => !unit.publicationUrl) ? (
-                <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
-                  This campaign has not been published yet.
-                </p>
+                  <div className="money" style={{ marginTop: 14 }}>
+                    <div>
+                      <p className="l">Agreed fee</p>
+                      <p className="v num">{money(detail.agreed_amount)}</p>
+                    </div>
+                    <div>
+                      <p className="l">Status</p>
+                      <p className="v">{detail.vendor_io_status?.replaceAll("_", " ") ?? "Draft"}</p>
+                    </div>
+                    <div>
+                      <p className="l">Deliverables</p>
+                      <p className="v num">{counts.total}</p>
+                    </div>
+                  </div>
+                  {detail.vendor_io_document_number ? (
+                    <p className="note" style={{ marginTop: 12 }}>
+                      <DocumentNumber value={detail.vendor_io_document_number} />
+                    </p>
+                  ) : null}
+                  {detail.vendor_io_payment_terms?.trim() ? (
+                    <p className="note" style={{ marginTop: 8 }}>
+                      Payment terms: {detail.vendor_io_payment_terms}
+                    </p>
+                  ) : null}
+                  {detail.vendor_io_sent_at ? (
+                    <p className="note">Sent {formatDate(detail.vendor_io_sent_at)}</p>
+                  ) : null}
+                  {detail.vendor_io_approved_at ? (
+                    <p className="note">Accepted {formatDate(detail.vendor_io_approved_at)}</p>
+                  ) : null}
+                  {detail.vendor_io_rejection_reason ? (
+                    <p className="note">{detail.vendor_io_rejection_reason}</p>
+                  ) : null}
+                  {detail.vendor_io_status === "sent" ? (
+                    <div className="actions" style={{ marginTop: 14, display: "flex", gap: 8 }}>
+                      <CreatorApproveVendorIoForm vendorIoId={detail.vendor_io_id} />
+                      <CreatorRejectVendorIoForm vendorIoId={detail.vendor_io_id} />
+                    </div>
+                  ) : null}
+                </>
               ) : (
-                <CreatorDocumentationUnitList
-                  units={units.filter((unit) => unit.expectsPublicationUrl)}
-                  showCampaignLink={false}
-                  hideScript
-                />
+                <p className="note">No agreement has been issued for this campaign yet.</p>
               )}
             </div>
           ),
           payment: payment ? (
-            <div className="space-y-3">
-              <p className="text-sm text-muted-foreground">
+            <div className="card">
+              <p className="ck">Payment</p>
+              <h2 className="sec">{detail.campaign_name}</h2>
+              <p className="note">
                 {creatorPaymentExplanationForRow(payment, {
                   vendorIoStatus: detail.vendor_io_status,
                   pendingDeliverables: counts.pending,
-                })}
+                })}{" "}
+                Full history lives on{" "}
+                <Link href="/creator-portal/payments" className="cw-link">
+                  Payments
+                </Link>
+                .
               </p>
-              <CreatorProfilePayments rows={[payment]} />
+              <div style={{ marginTop: 14 }}>
+                <CreatorMoneyStrip
+                  agreed={money(payment.agreed_amount)}
+                  invoiced={money(payment.invoiced_amount)}
+                  paid={money(payment.paid_amount)}
+                  pending={money(payment.pending_amount)}
+                  pendingOutstanding={payment.pending_amount > 0}
+                />
+              </div>
             </div>
           ) : (
-            <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
-              No payment record for this campaign yet.
-            </p>
+            <CreatorEmpty
+              title="No payment record yet"
+              description="Amounts appear here once this campaign assignment is in place."
+            />
           ),
-          messages: <CreatorCampaignMessages units={units} />,
         }}
       />
-    </div>
-  );
-}
-
-function OverviewStat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-lg border border-border px-3 py-2">
-      <p className="text-xs text-muted-foreground">{label}</p>
-      <p className="text-sm font-medium">{value}</p>
     </div>
   );
 }

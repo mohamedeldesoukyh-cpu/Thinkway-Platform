@@ -4,10 +4,6 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   beginCreatorDocumentationUploadAction,
   completeCreatorDocumentationUploadAction,
@@ -15,6 +11,8 @@ import {
   submitCreatorUnitPublicationAction,
   addCreatorUnitCommentAction,
 } from "@/features/creator-workspace/actions";
+import { unitNeedsCreatorAction, unitStatusPill } from "@/features/creator-workspace/chrome";
+import { CreatorPlatformMark, creatorPlatformMeta } from "@/features/creator-workspace/components/creator-platform-mark";
 import { CreatorUnitMediaPreview } from "@/features/creator-workspace/components/creator-unit-media-preview";
 import type { CreatorUnitView } from "@/features/creator-workspace/documentation-load";
 import { CREATOR_ON_BEHALF_ACTOR_LABEL } from "@/lib/services/deliverables/on-behalf";
@@ -25,7 +23,13 @@ import {
 } from "@/lib/services/deliverables/documentation-types";
 import { putDeliverableAssetToSignedUrl } from "@/features/campaigns/deliverable-asset-upload";
 import { campaignScriptDownloadFileName, campaignScriptDownloadText } from "@/lib/campaign-script";
-import { cn } from "@/lib/utils";
+
+function formatBytes(size: number | null | undefined): string | null {
+  if (size == null || !Number.isFinite(size) || size <= 0) return null;
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${Math.round(size / 1024)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+}
 
 export function CreatorDocumentationUnitCard({
   unit,
@@ -39,6 +43,7 @@ export function CreatorDocumentationUnitCard({
   hideScript?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
+  const [hot, setHot] = useState(false);
   const [scriptOpen, setScriptOpen] = useState(false);
   const [scriptLang, setScriptLang] = useState<"en" | "ar">(
     unit.script?.sourceLanguage === "ar" ? "ar" : "en"
@@ -136,296 +141,311 @@ export function CreatorDocumentationUnitCard({
       ? Boolean(unit.script?.bodyAr?.trim())
       : Boolean(unit.script?.bodyEn?.trim());
 
+  const needs = unitNeedsCreatorAction(unit);
+  const pill = unitStatusPill(unit.statusLabel, unit.status);
+  const platformName = creatorPlatformMeta(unit.platform).name;
+  const dueLine = unit.dueDate
+    ? `due ${new Date(unit.dueDate).toLocaleDateString()}`
+    : "no due date";
+  const changeNote =
+    unit.status === "changes_requested"
+      ? unit.clientFeedback?.comment ??
+        [...unit.versions].reverse().find((version) => version.decisionComment)?.decisionComment
+      : null;
+  const canUpload = unit.status !== "published";
   const readyToPublish =
     unit.expectsPublicationUrl &&
     (unit.status === "approved" || unit.status === "scheduled") &&
     !unit.publicationUrl;
-  const uploadLabel =
-    unit.status === "changes_requested"
-      ? "Upload revised version"
-      : unit.received
-        ? "Upload a new version"
-        : unit.uploadPrompt;
 
   return (
-    <Card className={cn(unit.status === "changes_requested" && "border-primary/40")}>
-      <CardContent className="space-y-3 p-3.5">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0 space-y-1">
-            <p className="text-sm font-semibold">{unit.label}</p>
-            <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
-              <div>
-                <dt className="text-muted-foreground">Campaign</dt>
-                <dd>
-                  {showCampaignLink ? (
-                    <Link
-                      href={`/creator-portal/campaigns/${unit.campaignHeaderId}?tab=deliverables`}
-                      className="text-primary hover:underline"
-                    >
-                      {unit.campaignName}
-                    </Link>
-                  ) : (
-                    unit.campaignName
-                  )}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Platform</dt>
-                <dd>{unit.platform ?? "—"}</dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Due date</dt>
-                <dd>
-                  {unit.dueDate
-                    ? new Date(unit.dueDate).toLocaleDateString()
-                    : "No due date"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Publication</dt>
-                <dd>
-                  {unit.publicationUrl
-                    ? "Published"
-                    : unit.expectsPublicationUrl
-                      ? unit.status === "approved" || unit.status === "scheduled"
-                        ? "URL required"
-                        : "After approval"
-                      : "Not required"}
-                </dd>
-              </div>
-            </dl>
+    <article className="wk" data-needs={needs}>
+      <div className="wk__hd">
+        <CreatorPlatformMark platform={unit.platform} size={32} />
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div className="wk__t">{unit.label}</div>
+          <div className="wk__m">
+            {showCampaignLink ? (
+              <Link href={`/creator-portal/campaigns/${unit.campaignHeaderId}?tab=deliverables`} className="cw-link">
+                {unit.campaignName}
+              </Link>
+            ) : (
+              unit.campaignName
+            )}{" "}
+            · {platformName} · {dueLine}
           </div>
-          <span className="w-fit rounded-md bg-muted px-2 py-0.5 text-xs font-medium">
-            {unit.statusLabel}
-          </span>
+        </div>
+        <span className={pill.className}>{pill.label}</span>
+      </div>
+
+      {changeNote ? (
+        <div className="wk__alert">
+          <b>Changes requested</b>
+          <span>{changeNote}</span>
+        </div>
+      ) : null}
+
+      <div className="wk__body">
+        <div>
+          {unit.currentVersionId ? (
+            <CreatorUnitMediaPreview
+              campaignHeaderId={unit.campaignHeaderId}
+              assignmentDeliverableId={unit.assignmentDeliverableId}
+              assignmentPostScheduleId={unit.assignmentPostScheduleId}
+              versionId={unit.currentVersionId}
+              fileName={unit.currentFileName}
+              mimeType={unit.currentMimeType}
+              fileSize={unit.currentFileSize}
+              versionNumber={unit.currentVersionNumber}
+              uploadedAt={unit.currentUploadedAt}
+              variant="workspace"
+            />
+          ) : (
+            <div className="wk__media">
+              <div className="wk__ph">
+                <svg viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <path d="M17 8l-5-5-5 5" />
+                  <path d="M12 3v12" />
+                </svg>
+                <span>Nothing uploaded yet</span>
+              </div>
+            </div>
+          )}
         </div>
 
-        {compactInsight ? (
-          <p className="rounded-xl bg-muted/60 px-3 py-2 text-sm">
-            <span className="font-medium">Thinkway Insight: </span>
-            {compactInsight}
-          </p>
-        ) : null}
-
-        {unit.currentVersionId ? (
-          <CreatorUnitMediaPreview
-            campaignHeaderId={unit.campaignHeaderId}
-            assignmentDeliverableId={unit.assignmentDeliverableId}
-            assignmentPostScheduleId={unit.assignmentPostScheduleId}
-            versionId={unit.currentVersionId}
-            fileName={unit.currentFileName}
-            mimeType={unit.currentMimeType}
-            fileSize={unit.currentFileSize}
-            versionNumber={unit.currentVersionNumber}
-            uploadedAt={unit.currentUploadedAt}
-          />
-        ) : (
-          <p className="text-sm text-muted-foreground">Nothing submitted yet.</p>
-        )}
-
-        {unit.versions.length > 1 ? (
-          <div className="space-y-2 rounded-xl border border-border p-3">
-            <p className="text-sm font-medium">Version history</p>
-            <ul className="space-y-2">
-              {unit.versions.map((version) => (
-                <li key={version.id} className="text-sm">
-                  <p className="font-medium">
-                    Version {version.versionNumber}
-                    {version.id === unit.currentVersionId ? " · Current" : ""}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {new Date(version.uploadedAt).toLocaleDateString()}
-                    {version.decision === "approved"
-                      ? " · Approved"
-                      : version.decision === "changes_requested"
-                        ? " · Changes requested"
-                        : " · Submitted"}
-                    {version.fileName ? ` · ${version.fileName}` : ""}
-                  </p>
-                  {version.decisionComment ? (
-                    <p className="mt-1 text-muted-foreground">{version.decisionComment}</p>
-                  ) : null}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {!hideScript && unit.hasScript ? (
-          <div className="space-y-2 rounded-xl border border-border p-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-sm font-medium">Script available</p>
-              <Button
-                type="button"
-                size="sm"
-                className="min-h-11"
-                variant="outline"
-                onClick={() => setScriptOpen((open) => !open)}
-              >
-                {scriptOpen ? "Hide" : "Preview"}
-              </Button>
-            </div>
-            {scriptOpen && unit.script ? (
-              <CreatorScriptBody
-                unit={unit}
-                scriptLang={scriptLang}
-                setScriptLang={setScriptLang}
-                scriptBody={scriptBody}
-                hasLang={hasLang}
-                pending={pending}
-                startTransition={startTransition}
-              />
-            ) : null}
-          </div>
-        ) : null}
-
-        {unit.onBehalfLabel ? (
-          <p className="text-sm text-muted-foreground">{unit.onBehalfLabel}</p>
-        ) : null}
-
-        {unit.clientFeedback ? (
-          <div className="rounded-xl border border-border p-3 text-sm">
-            <p className="font-medium">
-              {unit.clientFeedback.decision === "changes_requested"
-                ? "Changes requested"
-                : "Approved"}
-            </p>
-            {unit.clientFeedback.comment ? (
-              <p className="mt-1 text-muted-foreground">{unit.clientFeedback.comment}</p>
-            ) : null}
-          </div>
-        ) : null}
-
-        {unit.comments.length > 0 ? (
-          <div className="space-y-2">
-            {unit.comments.map((item) => (
-              <p key={item.id} className="text-sm text-muted-foreground">
-                {item.authorDisplayName === CREATOR_ON_BEHALF_ACTOR_LABEL
-                  ? "Thinkway on your behalf: "
-                  : item.authorDisplayName
-                    ? `${item.authorDisplayName}: `
-                    : ""}
-                {item.body}
-                <span className="mt-0.5 block text-xs">
-                  {new Date(item.createdAt).toLocaleString()}
-                </span>
-              </p>
-            ))}
-          </div>
-        ) : null}
-
-        {unit.status !== "published" ? (
-          <label className="inline-flex min-h-12 w-full cursor-pointer items-center justify-center rounded-2xl bg-primary px-4 text-sm font-semibold text-primary-foreground">
-            <input
-              type="file"
-              className="sr-only"
-              disabled={pending}
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-                event.target.value = "";
-                if (file) runUpload(file);
+        <div className="wk__side">
+          {canUpload ? (
+            <label
+              className="drop"
+              data-hot={hot || unit.status === "to_do" || unit.status === "changes_requested"}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setHot(true);
               }}
-            />
-            {pending ? "Uploading…" : uploadLabel}
-          </label>
-        ) : null}
+              onDragLeave={() => setHot(false)}
+              onDrop={(event) => {
+                event.preventDefault();
+                setHot(false);
+                const file = event.dataTransfer.files[0];
+                if (file && !pending) runUpload(file);
+              }}
+            >
+              <input
+                type="file"
+                className="sr-only"
+                disabled={pending}
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  event.target.value = "";
+                  if (file) runUpload(file);
+                }}
+              />
+              <span className="drop__ic">
+                <svg viewBox="0 0 24 24">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <path d="M17 8l-5-5-5 5" />
+                  <path d="M12 3v12" />
+                </svg>
+              </span>
+              <span className="drop__t">{pending ? "Uploading…" : unit.currentVersionId ? "Upload a new version" : unit.uploadPrompt}</span>
+              <span className="drop__s">Drag a file here, or click to browse</span>
+            </label>
+          ) : null}
 
-        {unit.expectsPublicationUrl ? (
-          readyToPublish || unit.publicationUrl ? (
+          {unit.versions.length > 0 ? (
+            <div className="blk">
+              <span className="blk__l">
+                Versions <b className="num">{unit.versions.length}</b>
+              </span>
+              <div className="vers">
+                {[...unit.versions]
+                  .sort((a, b) => b.versionNumber - a.versionNumber)
+                  .map((version) => (
+                    <div
+                      key={version.id}
+                      className="ver"
+                      data-cur={version.id === unit.currentVersionId}
+                    >
+                      <span className="ver__v num">v{version.versionNumber}</span>
+                      <span className="ver__b">
+                        <span className="ver__f">{version.fileName ?? `Version ${version.versionNumber}`}</span>
+                        <span className="ver__m">
+                          {[
+                            formatBytes(version.fileSize),
+                            new Date(version.uploadedAt).toLocaleString(),
+                            version.decision === "approved"
+                              ? "Approved"
+                              : version.decision === "changes_requested"
+                                ? "Changes requested"
+                                : "Submitted",
+                          ]
+                            .filter(Boolean)
+                            .join(" · ")}
+                        </span>
+                      </span>
+                      {version.id === unit.currentVersionId ? (
+                        <span className="pill pill--blue">Current</span>
+                      ) : null}
+                    </div>
+                  ))}
+              </div>
+            </div>
+          ) : null}
+
+          {!hideScript && unit.hasScript ? (
+            <div className="blk">
+              <span className="blk__l">Script</span>
+              <button type="button" className="btn btn-sm" onClick={() => setScriptOpen((open) => !open)}>
+                {scriptOpen ? "Hide script" : "Preview script"}
+              </button>
+              {scriptOpen && unit.script ? (
+                <div style={{ marginTop: 10 }}>
+                  <CreatorScriptBody
+                    unit={unit}
+                    scriptLang={scriptLang}
+                    setScriptLang={setScriptLang}
+                    scriptBody={scriptBody}
+                    hasLang={hasLang}
+                    pending={pending}
+                    startTransition={startTransition}
+                  />
+                </div>
+              ) : null}
+            </div>
+          ) : null}
+
+          {compactInsight ? (
+            <div className="blk">
+              <span className="blk__l">Thinkway Insight</span>
+              <p className="blk__none">{compactInsight}</p>
+            </div>
+          ) : null}
+
+          {unit.onBehalfLabel ? <p className="blk__none">{unit.onBehalfLabel}</p> : null}
+
+          <div className="blk">
+            <span className="blk__l">
+              Client feedback
+              {unit.comments.length ? (
+                <>
+                  {" "}
+                  <b className="num">{unit.comments.length}</b>
+                </>
+              ) : null}
+            </span>
+            {unit.comments.length > 0 ? (
+              <div className="thread">
+                {unit.comments.map((item) => {
+                  const agency =
+                    item.authorDisplayName === CREATOR_ON_BEHALF_ACTOR_LABEL ||
+                    (item.authorDisplayName ?? "").toLowerCase().includes("thinkway");
+                  return (
+                    <div key={item.id} className="msg" data-me={!agency}>
+                      <span className="msg__a">{agency ? "TW" : "You"}</span>
+                      <span className="msg__b">
+                        <span className="msg__h">
+                          {agency ? "Thinkway" : item.authorDisplayName ?? "You"}
+                          <i>{new Date(item.createdAt).toLocaleString()}</i>
+                        </span>
+                        <span className="msg__x">{item.body}</span>
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="blk__none">
+                No comments yet. Thinkway will leave feedback here after reviewing.
+              </p>
+            )}
             <form
-              className="space-y-2 rounded-xl border border-border p-3"
+              className="reply"
               onSubmit={(event) => {
                 event.preventDefault();
+                const body = comment.trim();
+                if (!body) return;
                 startTransition(async () => {
-                  const result = await submitCreatorUnitPublicationAction({
+                  const result = await addCreatorUnitCommentAction({
                     campaignHeaderId: unit.campaignHeaderId,
-                    campaignLineId: unit.campaignLineId,
                     assignmentDeliverableId: unit.assignmentDeliverableId,
                     assignmentPostScheduleId: unit.assignmentPostScheduleId,
-                    platform: unit.platform,
-                    deliverableType: unit.deliverableType,
-                    contentUrl: publicationUrl,
+                    body,
                   });
                   if (!result.ok) {
                     toast.error(result.message);
                     return;
                   }
-                  toast.success("Publication saved.");
+                  setComment("");
+                  toast.success("Message sent.");
                 });
               }}
             >
-              <p className="text-sm font-medium">
-                {unit.publicationUrl ? "Publication link" : "Ready to publish"}
-              </p>
-              <p className="text-xs text-muted-foreground">
-                {unit.platform ? `${unit.platform} · ` : ""}
-                Content upload and publication are separate. Paste the live post URL after you publish.
-              </p>
-              {unit.publicationUrl ? (
-                <a
-                  href={unit.publicationUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block truncate text-sm text-primary underline-offset-4 hover:underline"
-                >
-                  {unit.publicationUrl}
-                </a>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  This deliverable has not been published yet.
-                </p>
-              )}
-              <Input
-                value={publicationUrl}
-                onChange={(event) => setPublicationUrl(event.target.value)}
-                placeholder="Paste the live post URL"
-                className="min-h-11"
+              <input
+                className="inp"
+                value={comment}
+                onChange={(event) => setComment(event.target.value)}
+                placeholder="Reply to Thinkway…"
+                disabled={pending}
               />
-              <Button type="submit" variant="outline" className="min-h-11 w-full" disabled={pending}>
-                {unit.publicationUrl ? "Update publication link" : "Submit publication link"}
-              </Button>
+              <button type="submit" className="btn btn-sm" disabled={pending}>
+                Send
+              </button>
             </form>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Publication is next after this content is approved.
-            </p>
-          )
-        ) : null}
+          </div>
 
-        <form
-          className="space-y-2"
-          onSubmit={(event) => {
-            event.preventDefault();
-            const body = comment.trim();
-            if (!body) return;
-            startTransition(async () => {
-              const result = await addCreatorUnitCommentAction({
-                campaignHeaderId: unit.campaignHeaderId,
-                assignmentDeliverableId: unit.assignmentDeliverableId,
-                assignmentPostScheduleId: unit.assignmentPostScheduleId,
-                body,
-              });
-              if (!result.ok) {
-                toast.error(result.message);
-                return;
-              }
-              setComment("");
-              toast.success("Message sent.");
-            });
-          }}
-        >
-          <Textarea
-            value={comment}
-            onChange={(event) => setComment(event.target.value)}
-            placeholder="Message Thinkway about this deliverable"
-            className="min-h-20"
-          />
-          <Button type="submit" variant="ghost" className="min-h-11 w-full" disabled={pending}>
-            Send message
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+          {unit.expectsPublicationUrl ? (
+            <div className="blk">
+              <span className="blk__l">Publication link</span>
+              <form
+                className="reply"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  startTransition(async () => {
+                    const result = await submitCreatorUnitPublicationAction({
+                      campaignHeaderId: unit.campaignHeaderId,
+                      campaignLineId: unit.campaignLineId,
+                      assignmentDeliverableId: unit.assignmentDeliverableId,
+                      assignmentPostScheduleId: unit.assignmentPostScheduleId,
+                      platform: unit.platform,
+                      deliverableType: unit.deliverableType,
+                      contentUrl: publicationUrl,
+                    });
+                    if (!result.ok) {
+                      toast.error(result.message);
+                      return;
+                    }
+                    toast.success("Publication saved.");
+                  });
+                }}
+              >
+                <input
+                  className="inp"
+                  value={publicationUrl}
+                  onChange={(event) => setPublicationUrl(event.target.value)}
+                  placeholder="Paste the live post URL once published"
+                  disabled={pending || (!readyToPublish && !unit.publicationUrl)}
+                />
+                <button
+                  type="submit"
+                  className="btn btn-sm"
+                  disabled={pending || !publicationUrl.trim() || (!readyToPublish && !unit.publicationUrl)}
+                >
+                  Save
+                </button>
+              </form>
+              {unit.publicationUrl ? (
+                <a className="blk__link" href={unit.publicationUrl} target="_blank" rel="noopener noreferrer">
+                  Open the live post →
+                </a>
+              ) : readyToPublish ? null : (
+                <p className="blk__none">Publication is next after this content is approved.</p>
+              )}
+            </div>
+          ) : null}
+        </div>
+      </div>
+    </article>
   );
 }
 
@@ -448,43 +468,39 @@ function CreatorScriptBody({
 }) {
   if (!unit.script) return null;
   return (
-    <div className="space-y-2">
-      <div className="flex gap-2">
+    <div>
+      <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
         {unit.script.bodyEn.trim() ? (
-          <Button
+          <button
             type="button"
-            size="sm"
-            variant={scriptLang === "en" ? "default" : "outline"}
+            className={`btn btn-sm${scriptLang === "en" ? " btn-primary" : ""}`}
             onClick={() => setScriptLang("en")}
           >
             English
-          </Button>
+          </button>
         ) : null}
         {unit.script.bodyAr.trim() ? (
-          <Button
+          <button
             type="button"
-            size="sm"
-            variant={scriptLang === "ar" ? "default" : "outline"}
+            className={`btn btn-sm${scriptLang === "ar" ? " btn-primary" : ""}`}
             onClick={() => setScriptLang("ar")}
           >
             Arabic
-          </Button>
+          </button>
         ) : null}
       </div>
       {hasLang ? (
-        <pre className="max-h-56 overflow-auto whitespace-pre-wrap rounded-lg bg-muted/50 p-3 text-sm">
+        <pre className="note" style={{ whiteSpace: "pre-wrap", maxHeight: 220, overflow: "auto" }}>
           {scriptBody}
         </pre>
       ) : (
-        <p className="text-sm text-muted-foreground">No text in this language.</p>
+        <p className="blk__none">No text in this language.</p>
       )}
-      <div className="flex flex-wrap gap-2">
+      <div style={{ display: "flex", gap: 8, marginTop: 8, flexWrap: "wrap" }}>
         {hasLang ? (
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            className="min-h-11"
+            className="btn btn-sm"
             onClick={() => {
               const downloaded = campaignScriptDownloadText({
                 language: scriptLang,
@@ -507,14 +523,12 @@ function CreatorScriptBody({
             }}
           >
             Download text
-          </Button>
+          </button>
         ) : null}
         {unit.script.hasOriginalDocument ? (
-          <Button
+          <button
             type="button"
-            variant="outline"
-            size="sm"
-            className="min-h-11"
+            className="btn btn-sm"
             disabled={pending}
             onClick={() => {
               startTransition(() => {
@@ -534,7 +548,7 @@ function CreatorScriptBody({
             }}
           >
             Download original
-          </Button>
+          </button>
         ) : null}
       </div>
     </div>

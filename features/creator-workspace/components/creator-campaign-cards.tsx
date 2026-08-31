@@ -1,81 +1,95 @@
 import Link from "next/link";
 
-import { Card, CardContent } from "@/components/ui/card";
-import { DocumentNumber } from "@/components/ui/document-number";
-import { PortalStatusBadge } from "@/features/portals/components/portal-status-badge";
-import { toCreatorCampaignCard } from "@/features/creator-workspace/campaign-card-model";
+import {
+  campaignDeliveredPercent,
+  campaignStatusPill,
+  paymentPendingPill,
+} from "@/features/creator-workspace/chrome";
+import { CreatorPlatformMark } from "@/features/creator-workspace/components/creator-platform-mark";
+import {
+  CreatorEmpty,
+  CreatorMeter,
+  CreatorRowChevron,
+} from "@/features/creator-workspace/components/creator-workspace-ui";
+import { formatPortalDate } from "@/features/portals/components/portal-table-utils";
 import type { CreatorCampaignRow } from "@/features/portals/types";
-import { campaignInsightLine } from "@/lib/creator-insights/presentation";
-import type { CreatorInsightPack } from "@/lib/creator-insights/types";
-import { cn } from "@/lib/utils";
 
 export function CreatorCampaignCards({
   rows,
-  insightPack = null,
+  emptyTitle = "No assigned campaigns yet",
+  emptyDescription = "When Thinkway assigns you to a campaign it appears here with the brief, deliverables and fee.",
 }: {
   rows: CreatorCampaignRow[];
-  insightPack?: CreatorInsightPack | null;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }) {
   if (rows.length === 0) {
-    return (
-      <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
-        No active campaigns right now.
-      </p>
-    );
+    return <CreatorEmpty title={emptyTitle} description={emptyDescription} />;
   }
+  return (
+    <>
+      {rows.map((row) => (
+        <CreatorCampaignRow key={row.assignment_id} row={row} />
+      ))}
+    </>
+  );
+}
+
+export function CreatorCampaignRow({ row }: { row: CreatorCampaignRow }) {
+  const status = campaignStatusPill(row.campaign_status);
+  const payment = paymentPendingPill(row.vendor_payment_status);
+  const percent = campaignDeliveredPercent(row.published_deliverables, row.deliverable_total);
+  const delivered =
+    row.deliverable_total > 0
+      ? ` · ${row.published_deliverables} of ${row.deliverable_total} delivered`
+      : "";
 
   return (
-    <div className="grid gap-2">
-      {rows.map((row) => {
-        const card = toCreatorCampaignCard(
-          row,
-          insightPack ? campaignInsightLine(insightPack, row.campaign_header_id) : null
-        );
-        return (
-          <Link key={card.assignmentId} href={card.href} className="block">
-            <Card
-              className={cn(
-                "transition-colors hover:border-primary/40",
-                card.needsAction && "border-primary/30"
-              )}
-            >
-              <CardContent className="space-y-1.5 p-3">
-                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold">{card.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      <DocumentNumber value={card.documentNumber} />
-                      <span> · {card.dateLine}</span>
-                    </p>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <PortalStatusBadge value={card.campaignStatus} />
-                    <span
-                      className={cn(
-                        "w-fit shrink-0 rounded-md px-2 py-0.5 text-xs font-medium",
-                        card.needsAction
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      )}
-                    >
-                      {card.actionLine}
-                    </span>
-                  </div>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {card.deliverableLine}
-                  {` · ${card.approvalLine}`}
-                  {card.publicationLine ? ` · ${card.publicationLine}` : ""}
-                  {` · ${card.paymentLine}`}
-                </p>
-                {card.insightLine ? (
-                  <p className="text-xs text-muted-foreground">{card.insightLine}</p>
-                ) : null}
-              </CardContent>
-            </Card>
-          </Link>
-        );
-      })}
-    </div>
+    <Link href={`/creator-portal/campaigns/${row.campaign_header_id}`} className="row">
+      <span className="row__b">
+        <span className="row__t">{row.campaign_name}</span>
+        <span className="row__m">
+          {row.campaign_document_number} · {formatPortalDate(row.start_date)} →{" "}
+          {formatPortalDate(row.end_date)}
+          {delivered}
+        </span>
+      </span>
+      <CreatorMeter percent={percent} />
+      <span className="row__x">
+        <span className={status.className}>{status.label}</span>
+        <span className={payment.className}>{payment.label}</span>
+      </span>
+      <CreatorRowChevron />
+    </Link>
+  );
+}
+
+export function CreatorDeliverableNavRow({
+  href,
+  title,
+  meta,
+  platform,
+  statusClassName,
+  statusLabel,
+}: {
+  href: string;
+  title: string;
+  meta: string;
+  platform: string | null;
+  statusClassName: string;
+  statusLabel: string;
+}) {
+  return (
+    <Link href={href} className="row">
+      <CreatorPlatformMark platform={platform} size={30} />
+      <span className="row__b">
+        <span className="row__t">{title}</span>
+        <span className="row__m">{meta}</span>
+      </span>
+      <span className="row__x">
+        <span className={statusClassName}>{statusLabel}</span>
+      </span>
+      <CreatorRowChevron />
+    </Link>
   );
 }

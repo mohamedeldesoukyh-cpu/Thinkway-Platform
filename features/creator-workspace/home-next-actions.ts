@@ -1,18 +1,20 @@
 import { isAgencyBrandCreatorLabel } from "@/features/creator-workspace/identity";
-import { creatorPaymentNextActionLabel } from "@/features/creator-workspace/payment-copy";
-import type { CreatorPaymentRow, CreatorVendorIoRow } from "@/features/portals/types";
 import {
-  unitNeedsPublicationLink,
-  type CreatorUnitStatus,
-} from "@/features/creator-workspace/unit-status";
+  todayIso,
+  unitIsOverdueForCreator,
+  unitNeedsCreatorAction,
+} from "@/features/creator-workspace/chrome";
+import { unitNeedsPublicationLink, type CreatorUnitStatus } from "@/features/creator-workspace/unit-status";
+import type { CreatorPaymentRow, CreatorVendorIoRow } from "@/features/portals/types";
 
 export type CreatorHomeNextActionKind =
   | "vendor_io"
+  | "overdue"
   | "changes_requested"
-  | "deliverable"
-  | "script"
   | "publication"
-  | "payment";
+  | "deliverable";
+
+export type CreatorHomeNextActionTone = "red" | "amber" | "green" | "blue";
 
 export type CreatorHomeNextAction = {
   id: string;
@@ -21,6 +23,8 @@ export type CreatorHomeNextAction = {
   title: string;
   description: string;
   href: string;
+  cta: string;
+  tone: CreatorHomeNextActionTone;
   campaignHeaderId?: string;
   vendorIoId?: string;
 };
@@ -40,25 +44,25 @@ export type CreatorHomeUnitSignal = {
 export type CreatorHomeNextActionInput = {
   vendorIos: CreatorVendorIoRow[];
   units: CreatorHomeUnitSignal[];
-  payments: CreatorPaymentRow[];
+  /** Ignored — payment is informational, never a creator action. */
+  payments?: CreatorPaymentRow[];
 };
 
-function isDueToday(dueDate: string | null): boolean {
-  if (!dueDate) return false;
-  const due = new Date(dueDate);
-  if (Number.isNaN(due.getTime())) return false;
-  const now = new Date();
-  return (
-    due.getFullYear() === now.getFullYear() &&
-    due.getMonth() === now.getMonth() &&
-    due.getDate() === now.getDate()
-  );
+function summarize(units: CreatorHomeUnitSignal[]): string {
+  const shown = units.slice(0, 2).map((unit) => `${unit.label} · ${unit.campaignName}`);
+  if (units.length > 2) shown.push(`+${units.length - 2} more`);
+  return shown.join("  ·  ");
+}
+
+function plural(count: number, one: string, many: string): string {
+  return count === 1 ? one : many;
 }
 
 export function buildCreatorHomeNextActions(
   input: CreatorHomeNextActionInput
 ): CreatorHomeNextAction[] {
   const actions: CreatorHomeNextAction[] = [];
+  const today = todayIso();
 
   for (const io of input.vendorIos) {
     if (io.status !== "sent") continue;
@@ -69,133 +73,110 @@ export function buildCreatorHomeNextActions(
       title: "Review your agreement",
       description: io.campaign_name,
       href: `/creator-portal/campaigns/${io.campaign_header_id}?tab=agreement`,
+      cta: "Review agreement",
+      tone: "blue",
       campaignHeaderId: io.campaign_header_id,
       vendorIoId: io.id,
     });
   }
 
-  const changes = input.units.filter((unit) => unit.status === "changes_requested");
-  if (changes.length === 1) {
+  const overdue = input.units.filter((unit) => unitIsOverdueForCreator(unit, today));
+  if (overdue.length > 0) {
     actions.push({
-      id: `unit:changes:${changes[0].unitKey}`,
-      kind: "changes_requested",
-      priority: 20,
-      title: "1 submission needs changes",
-      description: `${changes[0].label} · ${changes[0].campaignName}`,
-      href: `/creator-portal/campaigns/${changes[0].campaignHeaderId}?tab=deliverables`,
-      campaignHeaderId: changes[0].campaignHeaderId,
+      id: "unit:overdue",
+      kind: "overdue",
+      priority: 15,
+      title: plural(
+        overdue.length,
+        "1 deliverable overdue",
+        `${overdue.length} deliverables overdue`
+      ),
+      description: summarize(overdue),
+      href: overdue.length === 1
+        ? `/creator-portal/campaigns/${overdue[0].campaignHeaderId}?tab=deliverables`
+        : "/creator-portal/deliverables",
+      cta: "Open",
+      tone: "red",
+      campaignHeaderId: overdue.length === 1 ? overdue[0].campaignHeaderId : undefined,
     });
-  } else if (changes.length > 1) {
+  }
+
+  const changes = input.units.filter(
+    (unit) => unit.status === "changes_requested" && !unitIsOverdueForCreator(unit, today)
+  );
+  if (changes.length > 0) {
     actions.push({
       id: "unit:changes",
       kind: "changes_requested",
       priority: 20,
-      title: `${changes.length} submissions need changes`,
-      description: changes[0].campaignName,
-      href: "/creator-portal/deliverables",
+      title: plural(
+        changes.length,
+        "1 needs changes before re-upload",
+        `${changes.length} need changes before re-upload`
+      ),
+      description: summarize(changes),
+      href: changes.length === 1
+        ? `/creator-portal/campaigns/${changes[0].campaignHeaderId}?tab=deliverables`
+        : "/creator-portal/deliverables",
+      cta: "Fix and re-upload",
+      tone: "amber",
+      campaignHeaderId: changes.length === 1 ? changes[0].campaignHeaderId : undefined,
     });
   }
 
-  const dueToday = input.units.filter(
-    (unit) => unit.status === "to_do" && isDueToday(unit.dueDate)
+  const publicationNeeded = input.units.filter(
+    (unit) =>
+      unitNeedsPublicationLink(unit) && !unitIsOverdueForCreator(unit, today)
   );
-  if (dueToday.length === 1) {
-    actions.push({
-      id: `unit:due:${dueToday[0].unitKey}`,
-      kind: "deliverable",
-      priority: 25,
-      title: "1 deliverable due today",
-      description: `${dueToday[0].label} · ${dueToday[0].campaignName}`,
-      href: `/creator-portal/campaigns/${dueToday[0].campaignHeaderId}?tab=deliverables`,
-      campaignHeaderId: dueToday[0].campaignHeaderId,
-    });
-  } else if (dueToday.length > 1) {
-    actions.push({
-      id: "unit:due",
-      kind: "deliverable",
-      priority: 25,
-      title: `${dueToday.length} deliverables due today`,
-      description: dueToday[0].campaignName,
-      href: "/creator-portal/deliverables",
-    });
-  }
-
-  const toDo = input.units.filter(
-    (unit) => unit.status === "to_do" && !isDueToday(unit.dueDate)
-  );
-  if (toDo.length === 1) {
-    actions.push({
-      id: `unit:todo:${toDo[0].unitKey}`,
-      kind: "deliverable",
-      priority: 30,
-      title: "Submit your deliverable",
-      description: `${toDo[0].label} · ${toDo[0].campaignName}`,
-      href: `/creator-portal/campaigns/${toDo[0].campaignHeaderId}?tab=deliverables`,
-      campaignHeaderId: toDo[0].campaignHeaderId,
-    });
-  } else if (toDo.length > 1) {
-    actions.push({
-      id: "unit:todo",
-      kind: "deliverable",
-      priority: 30,
-      title: `Complete ${toDo.length} deliverables`,
-      description: toDo[0].campaignName,
-      href: "/creator-portal/deliverables",
-    });
-  }
-
-  const publicationNeeded = input.units.filter((unit) =>
-    unitNeedsPublicationLink({
-      status: unit.status,
-      expectsPublicationUrl: unit.expectsPublicationUrl,
-      publicationUrl: unit.publicationUrl,
-    })
-  );
-  if (publicationNeeded.length === 1) {
-    actions.push({
-      id: `unit:pub:${publicationNeeded[0].unitKey}`,
-      kind: "publication",
-      priority: 35,
-      title: "1 publication link required",
-      description: `${publicationNeeded[0].label} · ${publicationNeeded[0].campaignName}`,
-      href: `/creator-portal/campaigns/${publicationNeeded[0].campaignHeaderId}?tab=publications`,
-      campaignHeaderId: publicationNeeded[0].campaignHeaderId,
-    });
-  } else if (publicationNeeded.length > 1) {
+  if (publicationNeeded.length > 0) {
     actions.push({
       id: "unit:pub",
       kind: "publication",
       priority: 35,
-      title: `${publicationNeeded.length} publication links required`,
-      description: publicationNeeded[0].campaignName,
-      href: "/creator-portal/deliverables",
+      title: plural(
+        publicationNeeded.length,
+        "1 approved — ready to publish",
+        `${publicationNeeded.length} approved — ready to publish`
+      ),
+      description: summarize(publicationNeeded),
+      href: publicationNeeded.length === 1
+        ? `/creator-portal/campaigns/${publicationNeeded[0].campaignHeaderId}?tab=deliverables`
+        : "/creator-portal/deliverables",
+      cta: "Add live link",
+      tone: "green",
+      campaignHeaderId:
+        publicationNeeded.length === 1 ? publicationNeeded[0].campaignHeaderId : undefined,
     });
   }
 
-  const pendingPayments = input.payments.filter(
-    (row) => creatorPaymentNextActionLabel(row.payment_status) != null
+  const toUpload = input.units.filter(
+    (unit) => unit.status === "to_do" && !unitIsOverdueForCreator(unit, today)
   );
-  if (pendingPayments.length === 1) {
+  if (toUpload.length > 0) {
     actions.push({
-      id: `payment:${pendingPayments[0].assignment_id}`,
-      kind: "payment",
-      priority: 40,
-      title: "Payment pending",
-      description: pendingPayments[0].campaign_name,
-      href: "/creator-portal/payments",
-    });
-  } else if (pendingPayments.length > 1) {
-    actions.push({
-      id: "payment:pending",
-      kind: "payment",
-      priority: 40,
-      title: `${pendingPayments.length} payments pending`,
-      description: pendingPayments[0].campaign_name,
-      href: "/creator-portal/payments",
+      id: "unit:todo",
+      kind: "deliverable",
+      priority: 30,
+      title: plural(
+        toUpload.length,
+        "1 deliverable to upload",
+        `${toUpload.length} deliverables to upload`
+      ),
+      description: summarize(toUpload),
+      href: toUpload.length === 1
+        ? `/creator-portal/campaigns/${toUpload[0].campaignHeaderId}?tab=deliverables`
+        : "/creator-portal/deliverables",
+      cta: "Upload",
+      tone: "blue",
+      campaignHeaderId: toUpload.length === 1 ? toUpload[0].campaignHeaderId : undefined,
     });
   }
 
   return actions.sort((a, b) => a.priority - b.priority || a.id.localeCompare(b.id));
+}
+
+export function countUnitsNeedingCreator(units: CreatorHomeUnitSignal[]): number {
+  return units.filter(unitNeedsCreatorAction).length;
 }
 
 export function creatorFirstName(displayName: string | null | undefined): string {

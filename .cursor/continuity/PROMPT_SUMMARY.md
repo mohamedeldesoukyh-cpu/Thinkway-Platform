@@ -1,7 +1,13 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Creator Workspace QA fixes (next-action copy + signed-URL video playback). Do not touch Production. Do not commit until the user asks.
+**Focus:** Creator Workspace visual system matching the Creator Workspace mock (top bar + sticky tabs, Calendar from real due/start/end dates). Do not touch Production. Do not commit until the user asks.
+
+## Creator Workspace mock application
+
+Chrome is `CreatorWorkspaceShell` (white top bar + sticky Home · Campaigns · Deliverables · Calendar · Payments · Profile). Client Portal is unchanged. Campaign tabs are Overview · Brief · Deliverables · Agreement · Payment. Script lives on deliverable cards. Payment is an informational strip on Home, not a next action. Calendar events come only from deliverable due dates and campaign start/end.
+
+**Browser QA:** not completed in this environment (no creator credentials). Automated: `npm run test:creator-workspace-phase5` · `npx tsc --noEmit`.
 
 ## Creator Workspace QA (this pass)
 
