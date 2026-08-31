@@ -11,6 +11,7 @@ export const ENRICHABLE_PLATFORMS: SocialPlatform[] = [
   "instagram",
   "tiktok",
   "youtube",
+  "facebook",
   "snapchat",
   "twitter",
 ];

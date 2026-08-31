@@ -12,6 +12,12 @@ import type { PublicationMetricsFailureStage } from "@/lib/performance/metrics-c
 export const DEFAULT_FACEBOOK_CONTENT_APIFY_ACTOR_ID =
   "clappi/facebook-posts-reels-scraper";
 
+/** Recent posts from a Facebook page URL — pages scraper does not return publications. */
+export const DEFAULT_FACEBOOK_PAGE_POSTS_APIFY_ACTOR_ID =
+  "apify/facebook-posts-scraper";
+
+export const FACEBOOK_PROFILE_PUBLICATION_LIMIT = 6;
+
 export function apifyActorIdForPlatform(
   platform: MetricsPlatform | string,
   env: Pick<
@@ -47,6 +53,7 @@ export function apifyProfileActorIdForPlatform(
     | "apifyTikTokActorId"
     | "apifyFacebookActorId"
     | "apifyFacebookProfileActorId"
+    | "apifyFacebookPagePostsActorId"
     | "apifyYouTubeActorId"
     | "apifySnapchatActorId"
   >
@@ -55,6 +62,25 @@ export function apifyProfileActorIdForPlatform(
     return env.apifyFacebookProfileActorId ?? env.apifyFacebookActorId;
   }
   return apifyActorIdForPlatform(platform, env);
+}
+
+export function apifyFacebookPagePostsActorId(
+  env: Pick<MetricsCollectorEnv, "apifyFacebookPagePostsActorId">
+): string | null {
+  return env.apifyFacebookPagePostsActorId;
+}
+
+export function buildApifyFacebookPagePostsInput(
+  profileUrls: string[]
+): Record<string, unknown> {
+  const urls = profileUrls.map((url) => url.trim()).filter(Boolean);
+  return {
+    startUrls: urls.map((url) => ({ url })),
+    resultsLimit: Math.max(
+      FACEBOOK_PROFILE_PUBLICATION_LIMIT,
+      urls.length * FACEBOOK_PROFILE_PUBLICATION_LIMIT
+    ),
+  };
 }
 
 export function buildApifyProfileDetailsInput(
@@ -71,7 +97,11 @@ export function buildApifyProfileDetailsInput(
         ? { profiles: [handle], resultsPerPage: 6, shouldDownloadVideos: false }
         : { postURLs: [profileUrl], resultsPerPage: 6 };
     case "youtube":
-      return { startUrls: [{ url: profileUrl }], maxResults: 6 };
+      return {
+        startUrls: [{ url: profileUrl }],
+        maxResults: 6,
+        maxResultsShorts: 6,
+      };
     case "facebook":
       return { startUrls: [{ url: profileUrl }] };
     case "snapchat": {

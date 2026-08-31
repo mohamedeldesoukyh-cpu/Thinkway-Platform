@@ -6,7 +6,11 @@ import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { shouldIncludeApifyProfilePosts } from "@/lib/creator-enrichment/apify-fetch-policy";
 import type { EnrichmentScope } from "@/lib/creator-enrichment/enabled";
 import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
-import { apifyProfileActorIdForPlatform } from "@/lib/performance/metrics-collector/providers/apify-input";
+import {
+  apifyFacebookPagePostsActorId,
+  apifyProfileActorIdForPlatform,
+  buildApifyFacebookPagePostsInput,
+} from "@/lib/performance/metrics-collector/providers/apify-input";
 import { assertApifyAcquisitionBudgetForLaunch } from "@/lib/discovery/control-center/apify-budget";
 import {
   apifyRunGateKey,
@@ -47,6 +51,7 @@ function buildBatchProfileDetailsInput(
       return {
         startUrls: profileUrls.map((url) => ({ url })),
         maxResults: 6,
+        maxResultsShorts: 6,
       };
     case "facebook":
       return {
@@ -100,6 +105,8 @@ export async function runBatchApifyActor(input: {
   label: string;
   timeoutMs: number;
   actorBody: Record<string, unknown>;
+  /** Override the default profile actor (e.g. Facebook page posts). */
+  actorId?: string | null;
   /** Preferred Supabase client for budget usage reads (worker / orchestrator). */
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase?: any | null;
@@ -107,7 +114,8 @@ export async function runBatchApifyActor(input: {
   const env = getMetricsCollectorEnv();
   const token = env.apifyToken;
   const platformKey = canonicalPlatformKey(input.platform) ?? input.platform;
-  const actorId = apifyProfileActorIdForPlatform(platformKey, env);
+  const actorId =
+    input.actorId?.trim() || apifyProfileActorIdForPlatform(platformKey, env);
 
   if (!token) {
     return {
@@ -278,6 +286,27 @@ export async function fetchBatchProfileRowsFromApify(input: {
     if (postsRun.ok) {
       postRows = postsRun.rows;
       if (postsRun.apifyRunId) apifyRunIds.push(postsRun.apifyRunId);
+    }
+  }
+
+  if (input.platform === "facebook" && postRows.length === 0) {
+    const env = getMetricsCollectorEnv();
+    const facebookPostsActorId = apifyFacebookPagePostsActorId(env);
+    if (facebookPostsActorId) {
+      const facebookPostsRun = await runBatchApifyActor({
+        platform: input.platform,
+        profileUrls: input.profileUrls,
+        usernames: input.usernames,
+        label: "batch-facebook-page-posts",
+        timeoutMs: input.timeoutMs,
+        actorBody: buildApifyFacebookPagePostsInput(input.profileUrls),
+        actorId: facebookPostsActorId,
+        supabase: input.supabase ?? null,
+      });
+      if (facebookPostsRun.ok) {
+        postRows = facebookPostsRun.rows;
+        if (facebookPostsRun.apifyRunId) apifyRunIds.push(facebookPostsRun.apifyRunId);
+      }
     }
   }
 

@@ -54,6 +54,7 @@ export function pickApifyAuthorFollowerCount(
   if (platformKey === "youtube") {
     const channel = nestedRecord(row.channel);
     return (
+      sanitizeMetricValue(row.numberOfSubscribers) ??
       sanitizeMetricValue(row.subscriberCount) ??
       sanitizeMetricValue(channel?.subscriberCount) ??
       sanitizeMetricValue(channel?.numberOfSubscribers)
@@ -64,7 +65,8 @@ export function pickApifyAuthorFollowerCount(
     return (
       sanitizeMetricValue(row.followers) ??
       sanitizeMetricValue(row.followerCount) ??
-      sanitizeMetricValue(row.followersCount)
+      sanitizeMetricValue(row.followersCount) ??
+      sanitizeMetricValue(row.pageFollowers)
     );
   }
 

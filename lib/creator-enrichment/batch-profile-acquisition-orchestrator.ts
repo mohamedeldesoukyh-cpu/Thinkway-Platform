@@ -22,9 +22,10 @@ import {
 } from "@/lib/creator-enrichment/batch-profile-target-resolver";
 import { priorityForTrigger } from "@/lib/creator-enrichment/policy";
 import { assertApifyAcquisitionBudgetForLaunch } from "@/lib/discovery/control-center/apify-budget";
-import { groupApifyRowsIntoCreators } from "@/lib/discovery/apify-dataset-grouping";
+import { groupApifyRowsIntoCreators, normalizeApifyHandle } from "@/lib/discovery/apify-dataset-grouping";
 import { importApifyStoredPayloadWithDnaPipeline } from "@/lib/discovery/apify-import-pipeline";
-import type { SocialPlatform } from "@/lib/social/platforms";
+import { parseProfileInput } from "@/lib/social/parse-profile-url";
+import { normalizeProfileUrl, type SocialPlatform } from "@/lib/social/platforms";
 
 type AnySupabase = SupabaseClient;
 
@@ -119,18 +120,34 @@ async function markCreatorOutcome(
 function findBundleForTarget(
   bundles: ReturnType<typeof groupApifyRowsIntoCreators>,
   username: string,
-  fallbackRows?: Record<string, unknown>[]
+  fallbackRows?: Record<string, unknown>[],
+  profileUrl?: string | null
 ) {
-  const normalized = username.replace(/^@+/, "").trim().toLowerCase();
+  const normalized = normalizeApifyHandle(username);
   const exact = bundles.find((b) => b.username === normalized) ?? null;
   if (exact) return exact;
+
+  if (profileUrl?.trim()) {
+    const fromUrl = parseProfileInput(profileUrl);
+    const urlHandle = fromUrl?.username ? normalizeApifyHandle(fromUrl.username) : "";
+    if (urlHandle) {
+      const byParsedHandle = bundles.find((b) => b.username === urlHandle) ?? null;
+      if (byParsedHandle) return byParsedHandle;
+    }
+
+    const needle = normalizeProfileUrl(profileUrl);
+    if (needle) {
+      const byUrl = bundles.find((b) => normalizeProfileUrl(b.profileUrl) === needle) ?? null;
+      if (byUrl) return byUrl;
+    }
+  }
 
   // Single-target / single-row fallback (Snapchat private / odd payload shapes).
   if (bundles.length === 1) return bundles[0] ?? null;
   if (fallbackRows && fallbackRows.length === 1) {
     return {
       username: normalized,
-      profileUrl: "",
+      profileUrl: profileUrl?.trim() || "",
       profileRows: fallbackRows,
       postRows: [] as Record<string, unknown>[],
     };
@@ -317,7 +334,12 @@ export async function runBatchProfileAcquisition(
       const primaryRunId = fetchResult.apifyRunIds[0] ?? null;
 
       for (const target of chunk) {
-        const bundle = findBundleForTarget(bundles, target.username, allRows);
+        const bundle = findBundleForTarget(
+          bundles,
+          target.username,
+          allRows,
+          target.profileUrl
+        );
         if (!bundle) {
           creatorsFailed += 1;
           progress.errors.push(

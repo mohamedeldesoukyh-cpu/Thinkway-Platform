@@ -153,6 +153,14 @@ assert.deepEqual(providerChainForPlatform("snapchat"), [
     )
   );
   assert.deepEqual(
+    buildApifyProfileDetailsInput("youtube", "https://www.youtube.com/@LofiGirl"),
+    {
+      startUrls: [{ url: "https://www.youtube.com/@LofiGirl" }],
+      maxResults: 6,
+      maxResultsShorts: 6,
+    }
+  );
+  assert.deepEqual(
     buildApifyProfileDetailsInput(
       "snapchat",
       "https://www.snapchat.com/add/creator",

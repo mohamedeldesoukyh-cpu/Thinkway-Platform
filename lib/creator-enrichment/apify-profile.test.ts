@@ -139,5 +139,79 @@ assert.equal(facebookProfile?.displayName, "NASA Earth");
 assert.equal(facebookProfile?.followers, 10_921_894);
 assert.equal(facebookProfile?.bio, "Explore our home planet.");
 assert.equal(facebookProfile?.profilePictureUrl, FB_AVATAR);
+assert.equal(facebookProfile?.avgViews, null, "page-only payload has no publications");
+
+const youtubeProfile = normalizeApifyProfileData({
+  platformKey: "youtube",
+  username: "lofigirl",
+  profileUrl: "https://www.youtube.com/@LofiGirl",
+  profileRows: [],
+  postRows: [
+    {
+      title: "Raimu - The Spirit Within",
+      url: "https://www.youtube.com/watch?v=HV6OlMPn5sI",
+      viewCount: 410_458,
+      likes: 12_400,
+      commentsCount: 88,
+      channelName: "Lofi Girl",
+      channelUrl: "https://www.youtube.com/@LofiGirl",
+      numberOfSubscribers: 13_100_000,
+    },
+    {
+      title: "Short loop",
+      url: "https://www.youtube.com/shorts/abc123xyz",
+      viewCount: 89_542,
+      likes: 3_100,
+      commentsCount: 40,
+      channelName: "Lofi Girl",
+      channelUrl: "https://www.youtube.com/@LofiGirl",
+      numberOfSubscribers: 13_100_000,
+    },
+  ],
+  apifyRunId: "run-yt-1",
+});
+assert.ok(youtubeProfile);
+assert.equal(youtubeProfile?.displayName, "Lofi Girl");
+assert.equal(youtubeProfile?.followers, 13_100_000);
+assert.equal(youtubeProfile?.avgViews, Math.round((410_458 + 89_542) / 2));
+assert.ok((youtubeProfile?.engagementRate ?? 0) > 0);
+
+const facebookWithPosts = normalizeApifyProfileData({
+  platformKey: "facebook",
+  username: "nasaearth",
+  profileUrl: "https://www.facebook.com/nasaearth",
+  profileRows: [
+    {
+      title: "NASA Earth",
+      pageName: "nasaearth",
+      followers: 10_921_894,
+      likes: 9_000_000,
+      intro: "Explore our home planet.",
+    },
+  ],
+  postRows: [
+    {
+      pageName: "nasaearth",
+      url: "https://www.facebook.com/nasaearth/videos/123",
+      text: "Earth from orbit",
+      likes: 420,
+      comments: 18,
+      viewCount: 58_900,
+    },
+    {
+      pageName: "nasaearth",
+      postUrl: "https://www.facebook.com/reel/1849794332663999",
+      likesCount: 310,
+      commentsCount: 12,
+      videoViewCount: 41_200,
+    },
+  ],
+  apifyRunId: "run-fb-2",
+});
+assert.ok(facebookWithPosts);
+assert.equal(facebookWithPosts?.followers, 10_921_894);
+assert.equal(facebookWithPosts?.postsCount, null, "page likes must not become posts_count");
+assert.equal(facebookWithPosts?.avgViews, Math.round((58_900 + 41_200) / 2));
+assert.ok((facebookWithPosts?.engagementRate ?? 0) > 0);
 
 console.log("apify-profile tests passed");

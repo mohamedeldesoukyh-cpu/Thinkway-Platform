@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {
   detectSocialPlatformFromContentUrl,
+  ENRICHABLE_PLATFORMS,
   normalizeProfileUrl,
 } from "@/lib/social/platforms";
 
@@ -50,5 +51,8 @@ assert.equal(
   "facebook"
 );
 assert.equal(detectSocialPlatformFromContentUrl("not-a-url"), null);
+
+assert.equal(ENRICHABLE_PLATFORMS.includes("facebook"), true);
+assert.equal(ENRICHABLE_PLATFORMS.includes("youtube"), true);
 
 console.log("lib/social/platforms.test.ts — all tests passed");

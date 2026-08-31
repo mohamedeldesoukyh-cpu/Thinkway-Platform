@@ -8,6 +8,8 @@ export type MetricsCollectorEnv = {
   apifyFacebookActorId: string | null;
   /** Profile/page enrichment — distinct from post metrics scraper. */
   apifyFacebookProfileActorId: string | null;
+  /** Recent posts/reels from a Facebook page URL (followers come from the pages scraper). */
+  apifyFacebookPagePostsActorId: string | null;
   apifyYouTubeActorId: string | null;
   apifySnapchatActorId: string | null;
   tiktokClientKey: string | null;
@@ -36,6 +38,9 @@ export function getMetricsCollectorEnv(): MetricsCollectorEnv {
     apifyFacebookProfileActorId:
       process.env.APIFY_FACEBOOK_PROFILE_ACTOR_ID?.trim() ||
       "apify/facebook-pages-scraper",
+    apifyFacebookPagePostsActorId:
+      process.env.APIFY_FACEBOOK_PAGE_POSTS_ACTOR_ID?.trim() ||
+      "apify/facebook-posts-scraper",
     apifyYouTubeActorId:
       process.env.APIFY_YOUTUBE_ACTOR_ID?.trim() || "streamers/youtube-scraper",
     apifySnapchatActorId:

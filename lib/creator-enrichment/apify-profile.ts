@@ -11,9 +11,12 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
 import {
+  apifyFacebookPagePostsActorId,
   apifyProfileActorIdForPlatform,
+  buildApifyFacebookPagePostsInput,
   buildApifyProfileDetailsInput,
 } from "@/lib/performance/metrics-collector/providers/apify-input";
+import { mapApifyPayloadToMetrics } from "@/lib/performance/metrics-collector/providers/apify-mapper";
 import { pickApifyAuthorAvatarUrl } from "@/lib/performance/apify-author-avatar";
 import { pickApifyAuthorFollowerCount } from "@/lib/performance/apify-author-followers";
 import { isAvatarUrlAllowedForPlatform } from "@/lib/performance/creator-avatar";
@@ -170,7 +173,7 @@ function extractMentions(rows: Record<string, unknown>[]): string[] {
 
 function extractLatestPostRows(head: Record<string, unknown>): Record<string, unknown>[] {
   const rows: Record<string, unknown>[] = [];
-  for (const key of ["latestPosts", "latestIgtvVideos"] as const) {
+  for (const key of ["latestPosts", "latestIgtvVideos", "posts", "pagePosts", "reels"] as const) {
     const value = head[key];
     if (!Array.isArray(value)) continue;
     for (const item of value) {
@@ -182,19 +185,102 @@ function extractLatestPostRows(head: Record<string, unknown>): Record<string, un
   return rows;
 }
 
-function toRecentPublications(rows: Record<string, unknown>[]): RecentPublication[] {
+function publicationUrlFromRow(row: Record<string, unknown>): string | null {
+  return (
+    str(row.url) ??
+    str(row.postPage) ??
+    str(row.webVideoUrl) ??
+    str(row.postUrl) ??
+    str(row.facebookUrl) ??
+    null
+  );
+}
+
+function isLikelyContentPublication(
+  platformKey: string,
+  row: Record<string, unknown>
+): boolean {
+  const url = publicationUrlFromRow(row) ?? "";
+  if (platformKey === "youtube") {
+    return /watch\?v=|\/shorts\/|youtu\.be\/|\/live\//i.test(url) || num(row.viewCount) != null;
+  }
+  if (platformKey === "facebook") {
+    if (/\/(reel|reels|posts|videos|watch|permalink\.php|story\.php|share\/)/i.test(url)) {
+      return true;
+    }
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      if (host.includes("fb.watch")) return true;
+    } catch {
+      // ignore
+    }
+    return false;
+  }
+  return true;
+}
+
+function resolvePublicationRows(input: {
+  platformKey: string;
+  profileRows: Record<string, unknown>[];
+  postRows: Record<string, unknown>[];
+  metricRows: Record<string, unknown>[];
+  head: Record<string, unknown>;
+}): Record<string, unknown>[] {
+  const fromPosts = input.postRows.filter((row) =>
+    isLikelyContentPublication(input.platformKey, row)
+  );
+  if (fromPosts.length > 0) return fromPosts;
+  if (input.postRows.length > 0 && input.platformKey !== "facebook") {
+    return input.postRows;
+  }
+
+  const nested = extractLatestPostRows(input.head);
+  if (nested.length > 0) return nested;
+
+  return input.metricRows.filter((row) => isLikelyContentPublication(input.platformKey, row));
+}
+
+function toRecentPublications(
+  platformKey: string,
+  rows: Record<string, unknown>[]
+): RecentPublication[] {
   return rows
     .slice(0, CREATOR_METRIC_SAMPLE_LIMIT)
-    .map((row) => ({
-      url: str(row.url) ?? str(row.postPage) ?? str(row.webVideoUrl) ?? null,
-      thumbnail: resolveCreatorRecentPublicationThumbnail(row),
-      likes: num(row.likesCount) ?? num(row.diggCount) ?? num(row.likes),
-      comments: num(row.commentsCount) ?? num(row.comments),
-      views: num(row.videoViewCount) ?? num(row.playCount) ?? num(row.views),
-      posted_at: str(row.timestamp) ?? str(row.createTimeISO) ?? null,
-      caption: str(row.caption) ?? str(row.text) ?? null,
-      isVideo: isCreatorRecentPublicationVideo(row),
-    }))
+    .map((row) => {
+      const mapped = mapApifyPayloadToMetrics(platformKey, row);
+      return {
+        url: publicationUrlFromRow(row),
+        thumbnail: resolveCreatorRecentPublicationThumbnail(row),
+        likes:
+          mapped?.likes ??
+          num(row.likesCount) ??
+          num(row.likeCount) ??
+          num(row.diggCount) ??
+          num(row.likes),
+        comments:
+          mapped?.comments ??
+          num(row.commentsCount) ??
+          num(row.commentCount) ??
+          num(row.numberOfComments) ??
+          num(row.comments),
+        views:
+          mapped?.views ??
+          num(row.videoViewCount) ??
+          num(row.viewCount) ??
+          num(row.playCount) ??
+          num(row.viewsCount) ??
+          num(row.views),
+        posted_at:
+          str(row.timestamp) ??
+          str(row.createTimeISO) ??
+          str(row.date) ??
+          str(row.time) ??
+          str(row.publishedAt) ??
+          null,
+        caption: str(row.caption) ?? str(row.text) ?? str(row.title) ?? null,
+        isVideo: isCreatorRecentPublicationVideo(row),
+      };
+    })
     .filter((pub) => pub.url || pub.caption || pub.likes != null || pub.comments != null);
 }
 
@@ -459,24 +545,27 @@ export function normalizeApifyProfileData(input: {
   if (metricRows.length === 0) return null;
 
   const head = input.profileRows[0] ?? metricRows[0];
-  const owner = record(head.owner) ?? record(head.author) ?? record(head.authorMeta) ?? head;
-  const publicationRows =
-    input.postRows.length > 0
-      ? input.postRows
-      : input.platformKey === "instagram"
-        ? extractLatestPostRows(head)
-        : metricRows;
+  const owner = record(head.owner) ?? record(head.author) ?? record(head.authorMeta) ?? record(head.channel) ?? head;
+  const publicationRows = resolvePublicationRows({
+    platformKey: input.platformKey,
+    profileRows: input.profileRows,
+    postRows: input.postRows,
+    metricRows,
+    head,
+  });
 
   const followers =
     num(head.followers) ??
     num(head.followersCount) ??
     num(head.followerCount) ??
+    num(head.numberOfSubscribers) ??
     num(head.subscriberCount) ??
     num(head.subscribers) ??
     num(owner.followers) ??
     num(owner.followersCount) ??
     num(owner.followerCount) ??
     num(owner.subscriberCount) ??
+    num(owner.numberOfSubscribers) ??
     num(owner.fans) ??
     pickApifyAuthorFollowerCount(input.platformKey, head);
   const following =
@@ -487,12 +576,13 @@ export function normalizeApifyProfileData(input: {
     null;
   const postsCount =
     num(head.postsCount) ??
-    num(head.likes) ??
+    num(head.channelTotalVideos) ??
     num(owner.postsCount) ??
     num(owner.videoCount) ??
+    (input.platformKey === "facebook" ? null : num(head.likes)) ??
     null;
 
-  const recent = toRecentPublications(publicationRows);
+  const recent = toRecentPublications(input.platformKey, publicationRows);
   const hashtags = extractHashtags(publicationRows);
   const avgLikes = resolveAvgLikes({ publications: recent });
   const avgCommentsValues = recent
@@ -549,9 +639,11 @@ export function normalizeApifyProfileData(input: {
     displayName:
       formatCreatorDisplayName(str(head.displayName)) ||
       formatCreatorDisplayName(str(head.fullName)) ||
+      formatCreatorDisplayName(str(head.channelName)) ||
+      formatCreatorDisplayName(str(head.title)) ||
       formatCreatorDisplayName(str(owner.nickName)) ||
       formatCreatorDisplayName(str(owner.fullName)) ||
-      formatCreatorDisplayName(str(head.title)) ||
+      formatCreatorDisplayName(str(owner.channelName)) ||
       null,
     bio,
     profilePictureUrl: pickApifyProfilePictureFromRows(input.platformKey, allAvatarRows),
@@ -763,6 +855,31 @@ export async function fetchApifyProfileRaw(input: {
         postRows = postsRun.rows;
         apifyRunId = postsRun.runId ?? apifyRunId;
         postsRunId = postsRun.runId;
+      }
+    }
+
+    if (platformKey === "facebook" && postRows.length === 0) {
+      const facebookPostsActorId = apifyFacebookPagePostsActorId(env);
+      if (facebookPostsActorId) {
+        const facebookPostsRun = await launchApifyActor({
+          actorId: facebookPostsActorId,
+          token: env.apifyToken,
+          body: buildApifyFacebookPagePostsInput([input.profileUrl]),
+          platformKey,
+          timeoutMs,
+          label: "facebook-page-posts",
+        });
+        if (facebookPostsRun.error && facebookPostsRun.rows.length === 0) {
+          logApifyEnrichment("Facebook page posts fetch failed", {
+            platform: platformKey,
+            fallbackReason: facebookPostsRun.error,
+            apifyRunId: facebookPostsRun.runId,
+          });
+        } else {
+          postRows = facebookPostsRun.rows;
+          apifyRunId = facebookPostsRun.runId ?? apifyRunId;
+          postsRunId = facebookPostsRun.runId;
+        }
       }
     }
 

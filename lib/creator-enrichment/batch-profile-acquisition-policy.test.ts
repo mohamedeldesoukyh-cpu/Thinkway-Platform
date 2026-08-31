@@ -6,7 +6,7 @@ import {
   getBatchProfileAcquisitionConfig,
 } from "./batch-profile-acquisition-policy";
 
-test("chunks profiles into batches and estimates instagram as two runs when posts included", () => {
+test("instagram no longer launches a separate posts actor", () => {
   const config = { ...getBatchProfileAcquisitionConfig(), batchSize: 75 };
   const usage = estimateBatchProfileAcquisitionUsage({
     profileCount: 100,
@@ -15,7 +15,7 @@ test("chunks profiles into batches and estimates instagram as two runs when post
     config,
   });
   assert.equal(usage.batchCount, 2);
-  assert.equal(usage.estimatedApifyRuns, 4);
+  assert.equal(usage.estimatedApifyRuns, 2);
   assert.ok(usage.estimatedCredits > 0);
 });
 
@@ -40,6 +40,26 @@ test("estimates tiktok as one run per batch", () => {
   });
   assert.equal(usage.batchCount, 1);
   assert.equal(usage.estimatedApifyRuns, 1);
+});
+
+test("estimates youtube as one run per batch", () => {
+  const usage = estimateBatchProfileAcquisitionUsage({
+    profileCount: 10,
+    platform: "youtube",
+    scope: "metrics",
+  });
+  assert.equal(usage.batchCount, 1);
+  assert.equal(usage.estimatedApifyRuns, 1);
+});
+
+test("estimates facebook as two runs per batch (page details + posts)", () => {
+  const usage = estimateBatchProfileAcquisitionUsage({
+    profileCount: 10,
+    platform: "facebook",
+    scope: "metrics",
+  });
+  assert.equal(usage.batchCount, 1);
+  assert.equal(usage.estimatedApifyRuns, 2);
 });
 
 test("estimates snapchat as one run per batch", () => {

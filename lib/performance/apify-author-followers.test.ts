@@ -32,4 +32,16 @@ assert.equal(
   "instagram post payload without owner stats"
 );
 
+assert.equal(
+  pickApifyAuthorFollowerCount("youtube", { numberOfSubscribers: 13_100_000 }),
+  13_100_000,
+  "streamers/youtube-scraper numberOfSubscribers"
+);
+
+assert.equal(
+  pickApifyAuthorFollowerCount("facebook", { followers: 514_363, likes: 1_148_094 }),
+  514_363,
+  "facebook pages scraper followers field"
+);
+
 console.log("apify-author-followers tests passed");

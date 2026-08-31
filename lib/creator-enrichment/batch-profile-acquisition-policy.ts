@@ -83,7 +83,8 @@ export function estimateBatchProfileAcquisitionUsage(input: {
   const count = Math.max(0, input.profileCount);
   const batchCount = count === 0 ? 0 : Math.ceil(count / config.batchSize);
   const includesPostsBatch =
-    input.platform === "instagram" && shouldIncludeApifyProfilePosts(input.scope);
+    (input.platform === "instagram" && shouldIncludeApifyProfilePosts(input.scope)) ||
+    input.platform === "facebook";
   const runsPerBatch = includesPostsBatch ? 2 : 1;
   const estimatedApifyRuns = batchCount * runsPerBatch;
   const creditsPerProfile =

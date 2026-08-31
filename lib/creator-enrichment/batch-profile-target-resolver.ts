@@ -6,6 +6,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
 import { normalizeSocialPlatform } from "@/lib/social/normalize-platform";
+import { parseProfileInput } from "@/lib/social/parse-profile-url";
 import {
   ENRICHABLE_PLATFORMS,
   buildCanonicalProfileUrl,
@@ -34,11 +35,17 @@ function accountToBatchTarget(input: {
   const platformKey = normalizeSocialPlatform(input.platform);
   if (!platformKey || !ENRICHABLE_PLATFORM_SET.has(platformKey)) return null;
 
-  const username = normalizeUsername(input.handle ?? "");
-  if (!username) return null;
-
+  let username = normalizeUsername(input.handle ?? "");
   const profileUrl =
-    input.profileUrl?.trim() || buildCanonicalProfileUrl(platformKey, username);
+    input.profileUrl?.trim() ||
+    (username ? buildCanonicalProfileUrl(platformKey, username) : "");
+  if (!profileUrl) return null;
+
+  if (!username) {
+    const parsed = parseProfileInput(profileUrl);
+    username = normalizeUsername(parsed?.username ?? "");
+  }
+  if (!username) return null;
 
   return {
     unifiedId: input.unifiedId,
