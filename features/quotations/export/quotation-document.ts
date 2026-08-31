@@ -26,7 +26,10 @@ import type { QuotationDetail, QuotationItemRow } from "../types";
 import type { CreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
-import { formatQuotationEngagementRate } from "@/features/quotations/templates/quotation-template-format";
+import {
+  formatQuotationCardFollowers,
+  formatQuotationEngagementRate,
+} from "@/features/quotations/templates/quotation-template-format";
 import { deliverableTypeLines } from "@/lib/quotations/quotation-deliverable-types";
 import { optimizeQuotationCampaign } from "@/lib/quotations/quotation-optimization";
 import { evaluateQuotationDecision } from "@/lib/quotations/quotation-decision";
@@ -72,7 +75,7 @@ import {
 } from "@/lib/quotations/quotation-collapse-package";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
-import { resolveExportAvatarProxyUrl } from "./quotation-export-avatars";
+import { pickQuotationExportAvatarUrl, resolveExportAvatarProxyUrl } from "./quotation-export-avatars";
 import {
   isLumpSumPricingTemplate,
   isCreatorDeckTemplate,
@@ -651,7 +654,7 @@ function buildDocRow(
     platform: exportPlatformDisplayLabel(item, platformFields),
     platformIcons: platformFields.platformIcons,
     allPlatforms: platformFields.allPlatforms,
-    followers: item.followers != null ? num(item.followers) : "—",
+    followers: formatQuotationCardFollowers(item.followers),
     engagementRate: exportEngagementRateLabel(item.engagement_rate),
     country: item.country_code ?? "—",
     deliverables: deliverablesLabel(item),
@@ -723,7 +726,14 @@ function buildCreatorGroup(
       .map((account) => account.avatar_url?.trim())
       .find((url) => Boolean(url)) ||
     null;
-  const avatarUrl = profile.avatarUrl || platformAvatar || null;
+  // Prefer the enriched shortlist/primary face; platform CDN is ranked fallback only.
+  const avatarUrl = pickQuotationExportAvatarUrl(
+    profile.avatarUrl,
+    headerItem.creator_profile_source?.avatarUrl,
+    headerItem.profile_image_url,
+    ...platformMetrics.map((row) => row.avatarUrl),
+    platformAvatar
+  );
   const profileUrl =
     profile.profileUrl ||
     platformMetrics.find((row) => row.profileUrl?.trim())?.profileUrl?.trim() ||
@@ -745,7 +755,7 @@ function buildCreatorGroup(
       platformIcons.length > 0 ? platformIcons : profile.linkedPlatforms,
     platformIcons,
     platformMetrics,
-    followers: groupFollowers != null ? num(groupFollowers) : "—",
+    followers: formatQuotationCardFollowers(groupFollowers),
     engagementRate: exportEngagementRateLabel(groupEr),
     views: groupViews != null ? num(groupViews) : "—",
     country: headerItem.country_code ?? "—",
@@ -760,15 +770,20 @@ function buildCreatorGroup(
 function buildCollapsePackageCreator(item: QuotationExportItem): QuotationDocCollapsePackageCreator {
   const profile = resolveExportCreatorProfile(item);
   const platformFields = exportItemPlatformIcons(item);
+  const avatarUrl = pickQuotationExportAvatarUrl(
+    profile.avatarUrl,
+    item.creator_profile_source?.avatarUrl,
+    item.profile_image_url
+  );
   return {
     creator: profile.creator,
     handle: formatCreatorHandle(item.handle),
     platform: profile.platform ?? item.platform ?? "—",
     platformIcons: platformFields.platformIcons,
-    avatarUrl: profile.avatarUrl,
-    avatarProxyUrl: resolveExportAvatarProxyUrl(item, profile.profileUrl, profile.avatarUrl),
+    avatarUrl,
+    avatarProxyUrl: resolveExportAvatarProxyUrl(item, profile.profileUrl, avatarUrl),
     profileUrl: profile.profileUrl,
-    followers: item.followers != null ? num(item.followers) : "—",
+    followers: formatQuotationCardFollowers(item.followers),
     engagementRate: exportEngagementRateLabel(item.engagement_rate),
     tier: exportItemTierLabel(item),
   };

@@ -330,6 +330,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     "Showcase KPIs must not include pricing"
   );
   assert.equal(showcaseDoc.creatorGroups[0]?.engagementRate, "3.00%");
+  assert.equal(showcaseDoc.creatorGroups[0]?.followers, "10K");
+  assert.equal(showcaseDoc.creatorGroups[0]?.platformMetrics[0]?.followers, "10K");
   assert.deepEqual(showcaseDoc.creatorGroups[0]?.publicationShots, []);
 }
 

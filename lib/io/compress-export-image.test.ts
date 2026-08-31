@@ -4,6 +4,7 @@ import {
   compressExportDataUri,
   compressExportImageBuffer,
   cropExportImageBufferCover,
+  exportImageBufferMeetsMinEdge,
   imageLongestEdge,
   isVisiblyLowResolutionImage,
   toCompressedExportDataUri,
@@ -68,6 +69,9 @@ async function main() {
     assert.equal(isVisiblyLowResolutionImage(150, 640), true);
     assert.equal(isVisiblyLowResolutionImage(0, 640), false);
     assert.equal(isVisiblyLowResolutionImage(1080, 640), false);
+    assert.equal(await exportImageBufferMeetsMinEdge(Buffer.alloc(8), 160), false);
+    assert.equal(await exportImageBufferMeetsMinEdge(large, 160), true);
+    assert.equal(await exportImageBufferMeetsMinEdge(large, 1200), false);
   }
 
   console.log("compress-export-image.test.ts: ok");

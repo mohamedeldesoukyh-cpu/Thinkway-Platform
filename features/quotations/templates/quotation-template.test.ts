@@ -134,6 +134,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   const html = buildQuotationTemplateHtml(buildQuotationDocument(mockDetail()));
   assert.ok(html.includes("Client Quotation"));
   assert.ok(html.includes("Creator mix"));
+  assert.ok(html.includes(">10K<"), "Mix/roster followers use compact K/M");
+  assert.ok(!html.includes(">10,000<"), "Followers must not render as full thousands");
   assert.ok(html.includes("Creators by category"));
   assert.ok(html.includes("Commercial summary"));
   assert.ok(html.includes("Investment &amp; deliverables"));
@@ -146,6 +148,13 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   assert.ok(html.includes("summary-overview-page"));
   assert.ok(html.includes("@page{ size:297mm 210mm"));
   assert.ok(html.includes("--blue:#0057ff"));
+  assert.ok(html.includes("--navy:#0d1836"));
+  assert.ok(html.includes("--ink:#0d1836"));
+  assert.ok(html.includes("--surface:#f4f7fd"));
+  assert.ok(html.includes("--border:#e2e9f4"));
+  assert.ok(html.includes("--closing:var(--grad)"));
+  assert.ok(!html.includes("--blue2:"));
+  assert.ok(!html.includes("var(--blue400)"));
   assert.ok(html.includes('class="cpage') || html.includes("cpage page"));
   assert.ok(html.includes("cover cpage page"));
   assert.ok(html.includes("grid-template-columns:repeat(2,minmax(0,1fr))"));
@@ -157,6 +166,8 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   );
   assert.ok(showcaseHtml.includes("Showcase Quotation — Test Quotation"));
   assert.ok(showcaseHtml.includes("sc-avatar"));
+  assert.ok(showcaseHtml.includes("object-fit:cover"));
+  assert.ok(showcaseHtml.includes("onerror="));
   assert.ok(showcaseHtml.includes("showcase-creator-page"));
   assert.ok(showcaseHtml.includes("Recent publications"));
   assert.ok(showcaseHtml.includes("Proposed deliverable"));

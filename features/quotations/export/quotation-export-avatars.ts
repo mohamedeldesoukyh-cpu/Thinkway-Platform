@@ -2,15 +2,24 @@
  * Enrich quotation items with creator avatars for preview/PDF export only.
  */
 import { enrichQuotationItemsWithCreatorAvatars } from "@/lib/services/quotations/enrich-quotation-item-avatars";
+import { avatarStorageQualityRank } from "@/lib/creators/creator-centric";
+import { isDurableStoredAvatarUrl } from "@/lib/creators/dna-avatar";
 import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar";
 import { fetchCreatorAvatarImage } from "@/lib/creators/creator-avatar-proxy";
-import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+import {
+  isDisplayableAvatarUrl,
+  isInstagramCdnUrlExpired,
+  isUsableAvatarUrl,
+} from "@/lib/performance/avatar-sync-policy";
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
+import { isLikelyLowResolutionSocialThumb } from "@/lib/creators/recent-publication-thumb";
 import {
+  MIN_DISPLAYABLE_AVATAR_EDGE,
   PITCH_AVATAR_COMPRESS,
   SHOWCASE_AVATAR_COMPRESS,
   compressExportDataUri,
+  exportImageBufferMeetsMinEdge,
   toCompressedExportDataUri,
 } from "@/lib/io/compress-export-image";
 import { quotationCreatorCategoriesMapToMain } from "@/lib/quotations/quotation-creator-categories";
@@ -24,6 +33,38 @@ import {
   resolveExportGroupPlatform,
 } from "./quotation-export-utils";
 import { isCreatorDeckTemplate, isPitchTemplate } from "./quotation-template";
+
+/**
+ * Best quotation-preview avatar from already-stored platform sources.
+ * Prefers durable Thinkway storage, then a usable HD CDN, then initials (null).
+ */
+export function pickQuotationExportAvatarUrl(
+  ...candidates: Array<string | null | undefined>
+): string | null {
+  let best: { url: string; score: number } | null = null;
+
+  for (const candidate of candidates) {
+    const url = candidate?.trim();
+    if (!url) continue;
+    if (url.startsWith("data:image/")) {
+      return url;
+    }
+    if (!isDisplayableAvatarUrl(url)) continue;
+
+    let score = 10;
+    if (isUsableAvatarUrl(url)) score += 30;
+    score += avatarStorageQualityRank(url) * 10;
+    if (isDurableStoredAvatarUrl(url)) score += 8;
+    if (isLikelyLowResolutionSocialThumb(url)) score -= 25;
+    if (isInstagramCdnUrlExpired(url)) score -= 40;
+
+    if (!best || score > best.score) {
+      best = { url, score };
+    }
+  }
+
+  return best?.url ?? null;
+}
 
 function quotationItemHasUsableAvatar(item: QuotationItemRow): boolean {
   const avatar =
@@ -165,6 +206,9 @@ async function embedAvatarDataUri(
 
   if (result.ok) {
     const buffer = Buffer.from(result.buffer);
+    if (!(await exportImageBufferMeetsMinEdge(buffer, MIN_DISPLAYABLE_AVATAR_EDGE))) {
+      return null;
+    }
     const contentType = result.contentType || detectImageContentType(buffer);
     if (compress) {
       return toCompressedExportDataUri(buffer, contentType, compressOptions);

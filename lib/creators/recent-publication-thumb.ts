@@ -1,5 +1,8 @@
 import type { CreatorRecentPublication } from "@/lib/creators/types";
-import { pickApifyPreviewImageUrl } from "@/lib/performance/apify-preview-image";
+import {
+  pickApifyPreviewImageUrl,
+  pickApifyTikTokCoverUrls,
+} from "@/lib/performance/apify-preview-image";
 import {
   SOCIAL_MEDIA_SRC_ALLOWLIST,
   isUrlAllowedByHostlist,
@@ -110,6 +113,55 @@ export function shouldProxyPublicationMediaUrl(url: string): boolean {
   return isUrlAllowedByHostlist(url, SOCIAL_MEDIA_SRC_ALLOWLIST);
 }
 
+/** Instagram profile-pic folder, TikTok avatar objects, or explicit profile_pic paths. */
+export function isLikelyCreatorProfileImageUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const haystack = `${parsed.pathname}${parsed.search}`.toLowerCase();
+    if (haystack.includes("t51.2885-19")) return true;
+    if (haystack.includes("profile_pic") || haystack.includes("profile-pic")) return true;
+    if (haystack.includes("profile_picture") || haystack.includes("profile-picture")) return true;
+    if (/[-_/]avt[-_/]/.test(haystack)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Playwright / stored screenshot object — not the publication's own media. */
+export function isLikelyPublicationScreenshotUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.toLowerCase();
+    if (path.includes("/screenshot.") || path.includes("/screenshots/")) return true;
+    if (/\/screenshot\.(jpe?g|png|webp)$/i.test(path)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+type PublicationImageFieldRank = {
+  value: unknown;
+  rank: number;
+};
+
+function finalizePublicationImageUrl(url: string): string {
+  if (!socialCdnUrlLooksSigned(url) && isLikelyLowResolutionSocialThumb(url)) {
+    return preferHigherResolutionSocialImageUrl(url);
+  }
+  return url;
+}
+
+function scorePublicationImageCandidate(url: string, fieldRank: number): number {
+  if (!url.startsWith("http")) return Number.NEGATIVE_INFINITY;
+  if (isLikelyCreatorProfileImageUrl(url)) return Number.NEGATIVE_INFINITY;
+  let score = fieldRank;
+  if (isLikelyPublicationScreenshotUrl(url)) score -= 40;
+  if (isLikelyLowResolutionSocialThumb(url)) score -= 20;
+  return score;
+}
+
 /** Resolve a displayable thumbnail from normalized or raw Apify publication rows. */
 export function resolveCreatorRecentPublicationThumbnail(
   publication: CreatorRecentPublication | Record<string, unknown> | null | undefined
@@ -118,28 +170,58 @@ export function resolveCreatorRecentPublicationThumbnail(
   const row = publication as Record<string, unknown>;
   const displayResource = record(row.displayResource);
 
-  const direct =
-    str(row.displayUrl) ??
-    str(row.display_url) ??
-    str(row.fullPicture) ??
-    str(row.full_picture) ??
-    str(row.originalCoverUrl) ??
-    str(row.coverUrl) ??
-    str(row.imageUrl) ??
-    str(row.image_url) ??
-    str(row.previewUrl) ??
-    str(row.preview_url) ??
-    str(row.thumbnailUrl) ??
-    str(row.thumbnail_url) ??
-    str(row.thumbnailSrc) ??
-    str(row.thumbnail) ??
-    str(displayResource?.src) ??
-    str(row.cover) ??
-    str(row.screenshot_url) ??
-    null;
+  const fields: PublicationImageFieldRank[] = [
+    { value: row.displayUrl, rank: 80 },
+    { value: row.display_url, rank: 80 },
+    { value: row.fullPicture, rank: 78 },
+    { value: row.full_picture, rank: 78 },
+    { value: row.originalCoverUrl, rank: 76 },
+    { value: row.coverUrl, rank: 70 },
+    { value: row.imageUrl, rank: 68 },
+    { value: row.image_url, rank: 68 },
+    { value: row.previewUrl, rank: 60 },
+    { value: row.preview_url, rank: 60 },
+    { value: row.thumbnailUrl, rank: 45 },
+    { value: row.thumbnail_url, rank: 45 },
+    { value: row.thumbnailSrc, rank: 42 },
+    { value: row.thumbnail, rank: 40 },
+    { value: displayResource?.src, rank: 55 },
+    { value: row.cover, rank: 38 },
+    { value: row.screenshot_url, rank: 8 },
+  ];
 
-  if (direct?.startsWith("http")) return direct;
-  return pickApifyPreviewImageUrl(row);
+  let bestUrl: string | null = null;
+  let bestScore = Number.NEGATIVE_INFINITY;
+
+  const consider = (raw: unknown, fieldRank: number) => {
+    const url = str(raw);
+    if (!url?.startsWith("http")) return;
+    const score = scorePublicationImageCandidate(url, fieldRank);
+    if (score > bestScore) {
+      bestScore = score;
+      bestUrl = url;
+    }
+  };
+
+  for (const field of fields) {
+    consider(field.value, field.rank);
+  }
+
+  for (const cover of pickApifyTikTokCoverUrls(row)) {
+    consider(cover, 74);
+  }
+
+  if (bestUrl && Number.isFinite(bestScore)) {
+    return finalizePublicationImageUrl(bestUrl);
+  }
+
+  const nested = pickApifyPreviewImageUrl(row);
+  if (nested?.startsWith("http")) {
+    const score = scorePublicationImageCandidate(nested, 50);
+    if (Number.isFinite(score)) return finalizePublicationImageUrl(nested);
+  }
+
+  return null;
 }
 
 export function recentPublicationsLackThumbnails(publications: unknown): boolean {

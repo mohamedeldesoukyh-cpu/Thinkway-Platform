@@ -1,5 +1,8 @@
-import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
 import { isAllowedPublicationPreviewSrcUrl } from "@/lib/creators/publication-preview-proxy";
+import {
+  isLikelyCreatorProfileImageUrl,
+  shouldProxyPublicationMediaUrl,
+} from "@/lib/creators/recent-publication-thumb";
 import {
   creatorAvatarBrowserDisplayUrl,
   initialsFromCreatorName,
@@ -34,6 +37,8 @@ export function resolveQuotationTemplateAvatarSrc(
 
   const rawAvatar = group.avatarUrl?.trim() || null;
   if (rawAvatar) {
+    if (rawAvatar.startsWith("data:image/")) return rawAvatar;
+    if (rawAvatar.startsWith("javascript:")) return proxyUrl;
     if (shouldProxyPublicationMediaUrl(rawAvatar)) {
       return proxyUrl ?? rawAvatar;
     }
@@ -62,6 +67,17 @@ export function resolveQuotationTemplatePublicationSrc(
     absoluteProxyUrl(resolveExportPublicationShotProxyUrl(shot));
 
   const rawImage = shot.imageUrl.trim();
+  if (rawImage && isLikelyCreatorProfileImageUrl(rawImage)) {
+    return (
+      absoluteProxyUrl(shot.imageProxyUrl) ??
+      absoluteProxyUrl(
+        resolveExportPublicationShotProxyUrl({
+          ...shot,
+          imageUrl: "",
+        })
+      )
+    );
+  }
   if (rawImage) {
     const mustProxy =
       shouldProxyPublicationMediaUrl(rawImage) || isAllowedPublicationPreviewSrcUrl(rawImage);

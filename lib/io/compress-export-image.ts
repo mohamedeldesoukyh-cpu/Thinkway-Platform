@@ -102,11 +102,29 @@ export function isVisiblyLowResolutionImage(edge: number, minEdge: number): bool
   return edge > 0 && edge < minEdge;
 }
 
+/** True when a buffer is a real image large enough to display without looking pixelated. */
+export async function exportImageBufferMeetsMinEdge(
+  buffer: Buffer | ArrayBuffer,
+  minEdge: number
+): Promise<boolean> {
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  if (buf.byteLength < 128) return false;
+  const edge = await imageLongestEdge(buf);
+  if (edge === 0) return true;
+  return !isVisiblyLowResolutionImage(edge, minEdge);
+}
+
 /** Showcase publication tiles (~200–280 CSS px) look pixelated below this source size. */
 export const MIN_SHARP_PUBLICATION_EDGE = 640;
 
 /** Showcase avatars are 88 CSS px; below this source size they look soft on retina. */
 export const MIN_SHARP_AVATAR_EDGE = 280;
+
+/** Hard floor — smaller than this is visibly pixelated at quotation avatar size. */
+export const MIN_DISPLAYABLE_AVATAR_EDGE = 160;
+
+/** Hard floor — smaller than this is visibly pixelated in Showcase publication tiles. */
+export const MIN_DISPLAYABLE_PUBLICATION_EDGE = 240;
 
 /** Resize and re-encode a raw image buffer as JPEG for compact data-URI embeds. */
 export async function compressExportImageBuffer(

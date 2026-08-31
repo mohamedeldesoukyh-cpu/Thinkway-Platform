@@ -180,4 +180,58 @@ import {
   );
 }
 
+{
+  const pubs: CreatorRecentPublication[] = [
+    {
+      url: "https://www.instagram.com/p/A/",
+      thumbnail: "https://scontent.cdninstagram.com/v/t51.2885-19/s150x150/avatar.jpg",
+      likes: 10,
+      comments: 1,
+      views: null,
+      posted_at: null,
+      caption: "Post A",
+    },
+  ];
+  const shots = selectShowcasePublicationShots(pubs, 6, {
+    creatorAvatarUrl: "https://scontent.cdninstagram.com/v/t51.2885-19/s150x150/avatar.jpg",
+  });
+  assert.equal(shots.length, 1);
+  assert.equal(shots[0]?.imageUrl, "", "profile pics are not used as publication images");
+  assert.equal(shots[0]?.postUrl, "https://www.instagram.com/p/A/");
+}
+
+{
+  const pubs: CreatorRecentPublication[] = [
+    {
+      url: "https://www.instagram.com/p/A/",
+      thumbnail:
+        "https://abc.supabase.co/storage/v1/object/public/campaign-publication-media/screenshot.jpg",
+      likes: 10,
+      comments: 1,
+      views: null,
+      posted_at: null,
+      caption: "Post A",
+    },
+  ];
+  const shots = selectShowcasePublicationShots(pubs, 6);
+  assert.equal(shots[0]?.imageUrl, "", "screenshots defer to postUrl OG when a permalink exists");
+  assert.equal(shots[0]?.postUrl, "https://www.instagram.com/p/A/");
+}
+
+{
+  const pubs: CreatorRecentPublication[] = [
+    {
+      url: null,
+      thumbnail: null,
+      likes: null,
+      comments: null,
+      views: null,
+      posted_at: null,
+      caption: "No media",
+    },
+  ];
+  const shots = selectShowcasePublicationShots(pubs, 6);
+  assert.equal(shots.length, 0, "publications without image or permalink are omitted");
+}
+
 console.log("quotation-export-publications tests passed");

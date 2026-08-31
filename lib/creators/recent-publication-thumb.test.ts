@@ -275,6 +275,49 @@ assert.equal(
 );
 
 assert.equal(
+  resolveCreatorRecentPublicationThumbnail({
+    thumbnailSrc: "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/tiny.jpg",
+    originalCoverUrl: "https://scontent.cdninstagram.com/v/t51.82787-15/cover.jpg",
+  }),
+  "https://scontent.cdninstagram.com/v/t51.82787-15/cover.jpg",
+  "prefer original cover over a tiny thumbnailSrc"
+);
+
+assert.equal(
+  resolveCreatorRecentPublicationThumbnail({
+    thumbnail: "https://scontent.cdninstagram.com/v/t51.2885-19/s150x150/avatar.jpg",
+    displayUrl: "https://scontent.cdninstagram.com/v/t51.82787-15/post.jpg",
+  }),
+  "https://scontent.cdninstagram.com/v/t51.82787-15/post.jpg",
+  "never use an Instagram profile pic as a publication image when post media exists"
+);
+
+assert.equal(
+  resolveCreatorRecentPublicationThumbnail({
+    thumbnail: "https://scontent.cdninstagram.com/v/t51.2885-19/s150x150/avatar.jpg",
+  }),
+  null,
+  "profile-pic-only rows have no publication image"
+);
+
+assert.equal(
+  resolveCreatorRecentPublicationThumbnail({
+    screenshot_url: "https://abc.supabase.co/storage/v1/object/sign/campaign-publication-media/screenshot.jpg",
+    displayUrl: "https://scontent.cdninstagram.com/v/t51.82787-15/post.jpg",
+  }),
+  "https://scontent.cdninstagram.com/v/t51.82787-15/post.jpg",
+  "prefer actual post media over a stored screenshot"
+);
+
+assert.equal(
+  resolveCreatorRecentPublicationThumbnail({
+    thumbnail: "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg",
+  }),
+  "https://scontent.cdninstagram.com/v/t51.2885-15/s1080x1080/thumb.jpg",
+  "rewrite unsigned low-res thumbs to a larger CDN size"
+);
+
+assert.equal(
   isLikelyLowResolutionSocialThumb(
     "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg?stp=s150x150"
   ),
