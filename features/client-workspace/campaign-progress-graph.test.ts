@@ -220,7 +220,7 @@ test("live reel checkpoints open the permalink instead of the screenshot", () =>
   );
 });
 
-test("added-value publications stay off the contracted delivery timeline", () => {
+test("added-value publications sit on a separate gold track after contracted types", () => {
   const graph = projectCampaignProgressGraph({
     posts: [
       post({
@@ -245,8 +245,13 @@ test("added-value publications stay off the contracted delivery timeline", () =>
     endDate: "2026-08-31",
     today: "2026-08-31",
   });
-  assert.equal(graph?.creators[0]?.tracks.length, 1);
-  assert.equal(graph?.creators[0]?.tracks[0]?.format.includes("TikTok") || false, false);
+  const tracks = graph?.creators[0]?.tracks ?? [];
+  assert.equal(tracks.length, 2);
+  assert.equal(tracks[0]?.format, "IG Reel");
+  assert.equal(tracks[0]?.valueScope, "agreed");
+  assert.equal(tracks[1]?.format, "TT Video");
+  assert.equal(tracks[1]?.valueScope, "added_value");
+  assert.match(tracks[1]?.checkpoints[0]?.title ?? "", /Added value/);
 });
 
 test("range copy names start and end dates", () => {

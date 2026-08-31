@@ -9,7 +9,7 @@ import {
 import { normalizeClientDeliverableFormat } from "./campaign-tab-aggregates";
 
 export const CAMPAIGN_PROGRESS_COPY =
-  "Each creator has a line per content type. Circles are live-ad dates. The line fills as each post goes live.";
+  "Each creator has a line per content type. Circles are live-ad dates. The line fills as each post goes live. Added-value posts use a gold line.";
 
 export function campaignProgressRangeCopy(startLabel: string, endLabel: string): string {
   return `Start ${startLabel} · End ${endLabel}`;
@@ -34,6 +34,7 @@ export type CampaignProgressTrack = {
   key: string;
   format: string;
   platform: string;
+  valueScope: "agreed" | "added_value";
   checkpoints: CampaignProgressCheckpoint[];
   filledPercent: number;
   reachedCount: number;
@@ -202,9 +203,9 @@ export function projectCampaignProgressGraph(input: {
     { creatorName: string; avatarUrl: string | null; tracks: Map<string, ClientCampaignPostRow[]> }
   >();
   for (const post of input.posts) {
-    if (post.valueScope === "added_value") continue;
     const name = creatorKey(post.creatorName);
     const format = normalizeClientDeliverableFormat(post.deliverable, post.platform);
+    const valueScope = post.valueScope === "added_value" ? "added_value" : "agreed";
     let creator = grouped.get(name);
     if (!creator) {
       creator = { creatorName: name, avatarUrl: post.avatarUrl?.trim() || null, tracks: new Map() };
@@ -212,7 +213,7 @@ export function projectCampaignProgressGraph(input: {
     } else if (!creator.avatarUrl && post.avatarUrl?.trim()) {
       creator.avatarUrl = post.avatarUrl.trim();
     }
-    const trackKey = `${post.platform || "any"}:${format}`;
+    const trackKey = `${valueScope}:${post.platform || "any"}:${format}`;
     const rows = creator.tracks.get(trackKey) ?? [];
     rows.push(post);
     creator.tracks.set(trackKey, rows);
@@ -249,7 +250,9 @@ export function projectCampaignProgressGraph(input: {
               tone: checkpointTone(post),
               label,
               showLabel: date !== previousDate,
-              title: `${normalizeClientDeliverableFormat(post.deliverable, post.platform)} · ${label}${
+              title: `${normalizeClientDeliverableFormat(post.deliverable, post.platform)}${
+                post.valueScope === "added_value" ? " · Added value" : ""
+              } · ${label}${
                 reached ? " · live" : post.status === "overdue" ? " · overdue" : ""
               }`,
               contentUrl: clientCampaignOpenHref(post),
@@ -259,17 +262,25 @@ export function projectCampaignProgressGraph(input: {
             ordered[0]?.deliverable,
             ordered[0]?.platform
           );
+          const valueScope =
+            ordered[0]?.valueScope === "added_value" ? "added_value" : "agreed";
           return {
             key,
             format,
             platform: ordered[0]?.platform ?? "",
+            valueScope,
             checkpoints,
             filledPercent: trackFilledPercent(checkpoints),
             reachedCount: checkpoints.filter((checkpoint) => checkpoint.reached).length,
             totalCount: checkpoints.length,
           };
         })
-        .sort((left, right) => left.format.localeCompare(right.format));
+        .sort((left, right) => {
+          const scope =
+            Number(left.valueScope === "added_value") - Number(right.valueScope === "added_value");
+          if (scope !== 0) return scope;
+          return left.format.localeCompare(right.format);
+        });
       const reachedCount = tracks.reduce((sum, track) => sum + track.reachedCount, 0);
       const totalCount = tracks.reduce((sum, track) => sum + track.totalCount, 0);
       return {

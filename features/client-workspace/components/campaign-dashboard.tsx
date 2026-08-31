@@ -222,7 +222,7 @@ export function CampaignDashboard({
       </section>
 
       <CampaignProgressGraph
-        posts={agreedPosts}
+        posts={posts}
         startDate={campaignStartDate}
         endDate={campaignEndDate}
         creators={creators}

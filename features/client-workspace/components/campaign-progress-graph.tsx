@@ -72,6 +72,10 @@ export function CampaignProgressGraph({
           Overdue
         </span>
         <span>
+          <i className="cx-tl__dot cx-tl__dot--added" />
+          Added value
+        </span>
+        <span>
           <i className="cx-tl__cap cx-tl__cap--end" />
           End · {graph.endLabel}
         </span>
@@ -138,7 +142,7 @@ function CreatorBlock({
         </div>
       </header>
       {creator.tracks.map((track) => (
-        <TrackRow key={track.key} track={track} graph={graph} />
+        <TrackRow key={track.key} track={track} graph={graph} added={track.valueScope === "added_value"} />
       ))}
     </article>
   );
@@ -147,13 +151,18 @@ function CreatorBlock({
 function TrackRow({
   track,
   graph,
+  added,
 }: {
   track: CampaignProgressTrack;
   graph: CampaignProgressGraphModel;
+  added: boolean;
 }) {
   return (
-    <div className="cx-tl__row">
-      <span className="cx-tl__fmt">{track.format}</span>
+    <div className={added ? "cx-tl__row cx-tl__row--added" : "cx-tl__row"}>
+      <span className="cx-tl__fmt">
+        {track.format}
+        {added ? <span className="cx-tl__fmt-av">Added value</span> : null}
+      </span>
       <span className="cx-tl__rail">
         <span className="cx-tl__line" />
         <span className="cx-tl__fill" style={{ width: `${track.filledPercent}%` }} />
