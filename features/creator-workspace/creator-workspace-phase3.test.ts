@@ -199,7 +199,7 @@ describe("On-behalf attribution and Creator Workspace display", () => {
 
   it("shows creator-facing Thinkway copy without Internal staff details", () => {
     assert.match(creatorCard, /unit\.onBehalfLabel/);
-    assert.match(creatorCard, /Version \{unit\.currentVersionNumber\}/);
+    assert.match(creatorCard, /versionNumber=\{unit\.currentVersionNumber\}/);
     assert.match(documentationLoad, /onBehalfLabel: current\?\.onBehalfLabel/);
     assert.match(onBehalfModule, /Submitted by Thinkway on your behalf/);
     assert.equal(CREATOR_ON_BEHALF_SUBMITTED_LABEL.includes("Thinkway"), true);

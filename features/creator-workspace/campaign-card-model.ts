@@ -1,7 +1,11 @@
 import { formatPortalDate } from "@/features/portals/components/portal-table-utils";
 import type { CreatorCampaignRow } from "@/features/portals/types";
 import { creatorCampaignUnitCounts } from "@/features/creator-workspace/campaign-progress";
-import type { CreatorUnitStatus } from "@/features/creator-workspace/unit-status";
+import { creatorPaymentNextActionLabel } from "@/features/creator-workspace/payment-copy";
+import {
+  unitNeedsPublicationLink,
+  type CreatorUnitStatus,
+} from "@/features/creator-workspace/unit-status";
 
 export type CreatorCampaignCardModel = {
   assignmentId: string;
@@ -20,7 +24,11 @@ export type CreatorCampaignCardModel = {
 };
 
 export function campaignNeedsCreatorAction(row: CreatorCampaignRow): boolean {
-  return row.vendor_io_status === "sent" || row.pending_deliverables > 0;
+  return (
+    row.vendor_io_status === "sent" ||
+    row.pending_deliverables > 0 ||
+    (row.publication_needed ?? 0) > 0
+  );
 }
 
 export function campaignCreatorActionLine(row: CreatorCampaignRow): string {
@@ -33,7 +41,14 @@ export function campaignCreatorActionLine(row: CreatorCampaignRow): string {
   if (row.pending_deliverables > 1) {
     return `${row.pending_deliverables} of ${row.deliverable_total} deliverables need action`;
   }
-  return "All on track";
+  const publicationNeeded = row.publication_needed ?? 0;
+  if (publicationNeeded === 1) {
+    return "1 publication link required";
+  }
+  if (publicationNeeded > 1) {
+    return `${publicationNeeded} publication links required`;
+  }
+  return creatorPaymentNextActionLabel(row.vendor_payment_status) ?? "All on track";
 }
 
 export function campaignPublicationLine(row: CreatorCampaignRow): string | null {
@@ -51,15 +66,22 @@ export function campaignPublicationLine(row: CreatorCampaignRow): string | null 
     : `${row.publication_total} publications`;
 }
 
+export type CreatorCampaignUnitOverlayInput = {
+  campaignHeaderId: string;
+  status: string;
+  expectsPublicationUrl?: boolean;
+  publicationUrl?: string | null;
+};
+
 export function overlayCreatorCampaignUnitCounts(
   rows: CreatorCampaignRow[],
-  units: Array<{ campaignHeaderId: string; status: string }>
+  units: CreatorCampaignUnitOverlayInput[]
 ): CreatorCampaignRow[] {
   return rows.map((row) => {
     const campaignUnits = units.filter(
       (unit) => unit.campaignHeaderId === row.campaign_header_id
     );
-    if (campaignUnits.length === 0) return row;
+    if (campaignUnits.length === 0) return { ...row, publication_needed: row.publication_needed ?? 0 };
     const counts = creatorCampaignUnitCounts(
       campaignUnits.map((unit) => ({ status: unit.status as CreatorUnitStatus }))
     );
@@ -70,6 +92,13 @@ export function overlayCreatorCampaignUnitCounts(
       completed_deliverables: counts.completed,
       approved_deliverables: counts.approved,
       published_deliverables: counts.published,
+      publication_needed: campaignUnits.filter((unit) =>
+        unitNeedsPublicationLink({
+          status: unit.status,
+          expectsPublicationUrl: unit.expectsPublicationUrl,
+          publicationUrl: unit.publicationUrl,
+        })
+      ).length,
     };
   });
 }

@@ -17,6 +17,7 @@ import {
 import { campaignCreatorActionLine } from "@/features/creator-workspace/campaign-card-model";
 import type { CreatorUnitView } from "@/features/creator-workspace/documentation-load";
 import { creatorPaymentExplanationForRow } from "@/features/creator-workspace/payment-copy";
+import { unitNeedsPublicationLink } from "@/features/creator-workspace/unit-status";
 import type {
   CreatorCampaignDetail,
   CreatorCampaignRow,
@@ -55,14 +56,33 @@ export function CreatorCampaignWorkspace({
     paymentStatus: payment?.payment_status ?? null,
     units,
   });
-  const nextAction = campaignRow
-    ? campaignCreatorActionLine(campaignRow)
-    : counts.pending > 0
-      ? "Complete your deliverables"
-      : "You're all caught up";
+  const nextAction = campaignCreatorActionLine(
+    campaignRow ?? {
+      campaign_header_id: detail.campaign_header_id,
+      campaign_document_number: detail.campaign_document_number,
+      campaign_name: detail.campaign_name,
+      campaign_status: detail.campaign_status,
+      assignment_id: detail.assignment_id,
+      assignment_status: detail.assignment_status,
+      agreed_amount: detail.agreed_amount,
+      currency_code: detail.currency_code,
+      vendor_payment_status: payment?.vendor_payment_status ?? "pending",
+      start_date: detail.start_date,
+      end_date: detail.end_date,
+      vendor_io_status: detail.vendor_io_status,
+      deliverable_total: counts.total,
+      pending_deliverables: counts.pending,
+      completed_deliverables: counts.completed,
+      approved_deliverables: counts.approved,
+      published_deliverables: counts.published,
+      publication_total: publications.length,
+      recent_publication_status: null,
+      publication_needed: units.filter((unit) => unitNeedsPublicationLink(unit)).length,
+    }
+  );
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <PageBackButton
         fallbackHref="/creator-portal/campaigns"
         label="Back to campaigns"
@@ -71,7 +91,7 @@ export function CreatorCampaignWorkspace({
 
       <div className="space-y-3">
         <div className="space-y-1">
-          <h2 className="font-heading text-2xl font-semibold tracking-tight">
+          <h2 className="font-heading text-xl font-semibold tracking-tight">
             {detail.campaign_name}
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -82,20 +102,20 @@ export function CreatorCampaignWorkspace({
             <PortalStatusBadge value={detail.assignment_status} />
           </div>
         </div>
-        <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-xl border border-border p-3">
+        <dl className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-lg border border-border px-3 py-2">
             <dt className="text-xs text-muted-foreground">Dates</dt>
             <dd className="text-sm font-medium">
               {formatDate(detail.start_date)} → {formatDate(detail.end_date)}
             </dd>
           </div>
-          <div className="rounded-xl border border-border p-3">
+          <div className="rounded-lg border border-border px-3 py-2">
             <dt className="text-xs text-muted-foreground">Agreed fee</dt>
             <dd className="text-sm font-medium">
               {formatMoneyDetail(detail.agreed_amount, detail.currency_code)}
             </dd>
           </div>
-          <div className="rounded-xl border border-border p-3">
+          <div className="rounded-lg border border-border px-3 py-2">
             <dt className="text-xs text-muted-foreground">Progress</dt>
             <dd className="text-sm font-medium">
               {counts.total === 0
@@ -103,7 +123,7 @@ export function CreatorCampaignWorkspace({
                 : `${counts.completed} of ${counts.total} complete`}
             </dd>
           </div>
-          <div className="rounded-xl border border-border p-3">
+          <div className="rounded-lg border border-border px-3 py-2">
             <dt className="text-xs text-muted-foreground">Next action</dt>
             <dd className="text-sm font-medium">{nextAction}</dd>
           </div>
@@ -115,7 +135,7 @@ export function CreatorCampaignWorkspace({
           overview: (
             <div className="space-y-4">
               <CreatorCampaignProgress stage={stage} />
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                 <OverviewStat label="Deliverables" value={String(counts.total)} />
                 <OverviewStat label="Completed" value={String(counts.completed)} />
                 <OverviewStat label="Pending" value={String(counts.pending)} />
@@ -216,7 +236,7 @@ export function CreatorCampaignWorkspace({
             <div className="space-y-3">
               {publications.length === 0 &&
               units.every((unit) => !unit.publicationUrl) ? (
-                <p className="rounded-2xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
+                <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
                   This campaign has not been published yet.
                 </p>
               ) : (
@@ -239,7 +259,7 @@ export function CreatorCampaignWorkspace({
               <CreatorProfilePayments rows={[payment]} />
             </div>
           ) : (
-            <p className="rounded-2xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
+            <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
               No payment record for this campaign yet.
             </p>
           ),
@@ -252,7 +272,7 @@ export function CreatorCampaignWorkspace({
 
 function OverviewStat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border p-3">
+    <div className="rounded-lg border border-border px-3 py-2">
       <p className="text-xs text-muted-foreground">{label}</p>
       <p className="text-sm font-medium">{value}</p>
     </div>

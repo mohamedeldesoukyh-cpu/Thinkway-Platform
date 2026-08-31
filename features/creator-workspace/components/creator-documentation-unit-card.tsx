@@ -149,33 +149,53 @@ export function CreatorDocumentationUnitCard({
 
   return (
     <Card className={cn(unit.status === "changes_requested" && "border-primary/40")}>
-      <CardContent className="space-y-3 p-4">
+      <CardContent className="space-y-3 p-3.5">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-          <div className="min-w-0">
-            <p className="text-base font-semibold">{unit.label}</p>
-            {showCampaignLink ? (
-              <Link
-                href={`/creator-portal/campaigns/${unit.campaignHeaderId}?tab=deliverables`}
-                className="text-xs text-primary hover:underline"
-              >
-                {unit.campaignName}
-              </Link>
-            ) : (
-              <p className="text-xs text-muted-foreground">{unit.campaignName}</p>
-            )}
-            <p className="text-xs text-muted-foreground">
-              {unit.dueDate
-                ? `Due ${new Date(unit.dueDate).toLocaleDateString()}`
-                : "No due date"}
-              {unit.platform ? ` · ${unit.platform}` : ""}
-            </p>
-            {unit.currentVersionNumber ? (
-              <p className="text-xs text-muted-foreground">
-                Version {unit.currentVersionNumber}
-              </p>
-            ) : null}
+          <div className="min-w-0 space-y-1">
+            <p className="text-sm font-semibold">{unit.label}</p>
+            <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">Campaign</dt>
+                <dd>
+                  {showCampaignLink ? (
+                    <Link
+                      href={`/creator-portal/campaigns/${unit.campaignHeaderId}?tab=deliverables`}
+                      className="text-primary hover:underline"
+                    >
+                      {unit.campaignName}
+                    </Link>
+                  ) : (
+                    unit.campaignName
+                  )}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Platform</dt>
+                <dd>{unit.platform ?? "—"}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Due date</dt>
+                <dd>
+                  {unit.dueDate
+                    ? new Date(unit.dueDate).toLocaleDateString()
+                    : "No due date"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Publication</dt>
+                <dd>
+                  {unit.publicationUrl
+                    ? "Published"
+                    : unit.expectsPublicationUrl
+                      ? unit.status === "approved" || unit.status === "scheduled"
+                        ? "URL required"
+                        : "After approval"
+                      : "Not required"}
+                </dd>
+              </div>
+            </dl>
           </div>
-          <span className="w-fit rounded-full bg-muted px-2.5 py-1 text-xs font-medium">
+          <span className="w-fit rounded-md bg-muted px-2 py-0.5 text-xs font-medium">
             {unit.statusLabel}
           </span>
         </div>

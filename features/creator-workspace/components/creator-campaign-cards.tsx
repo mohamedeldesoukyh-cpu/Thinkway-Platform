@@ -18,14 +18,14 @@ export function CreatorCampaignCards({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="rounded-2xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
         No active campaigns right now.
       </p>
     );
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2">
       {rows.map((row) => {
         const card = toCreatorCampaignCard(
           row,
@@ -39,19 +39,20 @@ export function CreatorCampaignCards({
                 card.needsAction && "border-primary/30"
               )}
             >
-              <CardContent className="space-y-3 p-4">
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+              <CardContent className="space-y-1.5 p-3">
+                <div className="flex flex-col gap-1.5 sm:flex-row sm:items-start sm:justify-between">
                   <div className="min-w-0">
-                    <p className="truncate text-base font-semibold">{card.title}</p>
+                    <p className="truncate text-sm font-semibold">{card.title}</p>
                     <p className="text-xs text-muted-foreground">
                       <DocumentNumber value={card.documentNumber} />
+                      <span> · {card.dateLine}</span>
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-1.5">
                     <PortalStatusBadge value={card.campaignStatus} />
                     <span
                       className={cn(
-                        "w-fit shrink-0 rounded-full px-2.5 py-1 text-xs font-medium",
+                        "w-fit shrink-0 rounded-md px-2 py-0.5 text-xs font-medium",
                         card.needsAction
                           ? "bg-primary/10 text-primary"
                           : "bg-muted text-muted-foreground"
@@ -61,13 +62,15 @@ export function CreatorCampaignCards({
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground">{card.dateLine}</p>
-                <p className="text-sm">{card.deliverableLine}</p>
-                <p className="text-xs text-muted-foreground">{card.approvalLine}</p>
-                {card.publicationLine ? (
-                  <p className="text-xs text-muted-foreground">{card.publicationLine}</p>
+                <p className="text-xs text-muted-foreground">
+                  {card.deliverableLine}
+                  {` · ${card.approvalLine}`}
+                  {card.publicationLine ? ` · ${card.publicationLine}` : ""}
+                  {` · ${card.paymentLine}`}
+                </p>
+                {card.insightLine ? (
+                  <p className="text-xs text-muted-foreground">{card.insightLine}</p>
                 ) : null}
-                <p className="text-xs text-muted-foreground">{card.paymentLine}</p>
               </CardContent>
             </Card>
           </Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,10 +11,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { downloadCreatorUnitAssetAction } from "@/features/creator-workspace/actions";
-import {
-  deliverableAssetPreviewKind,
-} from "@/lib/services/deliverables/documentation-types";
+import { deliverableAssetPreviewKind } from "@/lib/services/deliverables/documentation-types";
 import { deliverablePlaybackMime } from "@/lib/services/deliverables/playback-mime";
+
+const LARGE_BLOB_FALLBACK_BYTES = 40 * 1024 * 1024;
+const PLAYBACK_FAILED =
+  "This video could not play in the browser. Download the original to review it.";
 
 function formatBytes(size: number | null | undefined): string | null {
   if (size == null || !Number.isFinite(size) || size <= 0) return null;
@@ -28,6 +30,21 @@ function formatSubmittedAt(value: string | null | undefined): string | null {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return null;
   return date.toLocaleString();
+}
+
+async function playableBlobUrl(
+  signedUrl: string,
+  playbackType: string
+): Promise<string | null> {
+  try {
+    const response = await fetch(signedUrl);
+    if (!response.ok) return null;
+    const raw = await response.blob();
+    const typed = raw.type === playbackType ? raw : new Blob([raw], { type: playbackType });
+    return URL.createObjectURL(typed);
+  } catch {
+    return null;
+  }
 }
 
 export function CreatorUnitMediaPreview({
@@ -52,15 +69,23 @@ export function CreatorUnitMediaPreview({
   uploadedAt: string | null;
 }) {
   const kind = deliverableAssetPreviewKind(mimeType, fileName);
+  const playbackType = deliverablePlaybackMime(mimeType, fileName);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const blobUrlRef = useRef<string | null>(null);
+  const blobTriedRef = useRef(false);
   const [src, setSrc] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fullOpen, setFullOpen] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
-    let objectUrl: string | null = null;
     setSrc(null);
     setError(null);
+    blobTriedRef.current = false;
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
 
     void (async () => {
       const result = await downloadCreatorUnitAssetAction({
@@ -74,28 +99,15 @@ export function CreatorUnitMediaPreview({
         setError(result.message);
         return;
       }
-      const signedUrl = result.data.url;
-      if (kind === "video") {
-        const playbackType = deliverablePlaybackMime(mimeType, fileName);
-        try {
-          const response = await fetch(signedUrl);
-          if (response.ok) {
-            const raw = await response.blob();
-            const typed = raw.type === playbackType ? raw : new Blob([raw], { type: playbackType });
-            objectUrl = URL.createObjectURL(typed);
-            setSrc(objectUrl);
-            return;
-          }
-        } catch {
-          /* signed URL in the player is enough when CORS blocks the blob fetch */
-        }
-      }
-      setSrc(signedUrl);
+      setSrc(result.data.url);
     })();
 
     return () => {
       cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      if (blobUrlRef.current) {
+        URL.revokeObjectURL(blobUrlRef.current);
+        blobUrlRef.current = null;
+      }
     };
   }, [
     campaignHeaderId,
@@ -106,6 +118,23 @@ export function CreatorUnitMediaPreview({
     mimeType,
     kind,
   ]);
+
+  async function retryAsTypedBlob() {
+    if (!src || blobTriedRef.current) return;
+    blobTriedRef.current = true;
+    if (fileSize != null && fileSize > LARGE_BLOB_FALLBACK_BYTES) {
+      setError(PLAYBACK_FAILED);
+      return;
+    }
+    const typed = await playableBlobUrl(src, playbackType);
+    if (!typed) {
+      setError(PLAYBACK_FAILED);
+      return;
+    }
+    blobUrlRef.current = typed;
+    setError(null);
+    setSrc(typed);
+  }
 
   const meta = [
     versionNumber ? `Version ${versionNumber}` : null,
@@ -118,29 +147,45 @@ export function CreatorUnitMediaPreview({
 
   return (
     <div className="space-y-2">
-      {error ? (
+      {error && !src ? (
         <p className="text-sm text-muted-foreground">{error}</p>
       ) : !src ? (
-        <div className="aspect-video w-full animate-pulse rounded-xl bg-muted" />
+        <div className="flex aspect-video w-full items-center justify-center rounded-lg border border-border bg-muted/40">
+          <p className="text-sm text-muted-foreground">Loading preview…</p>
+        </div>
       ) : kind === "video" ? (
-        <video
-          src={src}
-          controls
-          playsInline
-          preload="metadata"
-          className="aspect-video w-full rounded-xl bg-black"
-        />
+        <div className="space-y-1">
+          <video
+            key={src}
+            ref={videoRef}
+            controls
+            playsInline
+            preload="metadata"
+            className="aspect-video w-full rounded-lg bg-black"
+            onError={() => {
+              if (videoRef.current?.error?.code === 1) return;
+              if (blobTriedRef.current) {
+                setError(PLAYBACK_FAILED);
+                return;
+              }
+              void retryAsTypedBlob();
+            }}
+          >
+            <source src={src} type={playbackType} />
+          </video>
+          {error ? <p className="text-sm text-muted-foreground">{error}</p> : null}
+        </div>
       ) : kind === "image" ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img
           src={src}
           alt={fileName ?? "Submitted image"}
-          className="max-h-[28rem] w-full rounded-xl object-contain bg-muted"
+          className="max-h-[28rem] w-full rounded-lg bg-muted object-contain"
         />
       ) : kind === "pdf" ? (
-        <iframe title={fileName ?? "PDF"} src={src} className="h-72 w-full rounded-xl border" />
+        <iframe title={fileName ?? "PDF"} src={src} className="h-72 w-full rounded-lg border" />
       ) : (
-        <div className="rounded-xl border border-border p-3 text-sm">
+        <div className="rounded-lg border border-border p-3 text-sm">
           <p className="font-medium">{fileName ?? "Submitted file"}</p>
           <a
             href={src}
@@ -152,7 +197,24 @@ export function CreatorUnitMediaPreview({
           </a>
         </div>
       )}
-      {meta ? <p className="text-xs text-muted-foreground">{meta}</p> : null}
+      <dl className="grid gap-x-4 gap-y-1 text-xs sm:grid-cols-2">
+        <div>
+          <dt className="text-muted-foreground">Current version</dt>
+          <dd className="font-medium">{versionNumber ? `Version ${versionNumber}` : "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">File name</dt>
+          <dd className="truncate font-medium">{fileName ?? "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">File size</dt>
+          <dd className="font-medium">{formatBytes(fileSize) ?? "—"}</dd>
+        </div>
+        <div>
+          <dt className="text-muted-foreground">Submitted</dt>
+          <dd className="font-medium">{formatSubmittedAt(uploadedAt) ?? "—"}</dd>
+        </div>
+      </dl>
       {src && (kind === "video" || kind === "image") ? (
         <Button type="button" variant="outline" size="sm" className="min-h-11" onClick={() => setFullOpen(true)}>
           Full size
@@ -165,7 +227,9 @@ export function CreatorUnitMediaPreview({
             <DialogDescription>{meta}</DialogDescription>
           </DialogHeader>
           {src && kind === "video" ? (
-            <video src={src} controls playsInline className="max-h-[80vh] w-full rounded-md bg-black" />
+            <video key={src} src={src} controls playsInline className="max-h-[80vh] w-full rounded-md bg-black">
+              <source src={src} type={playbackType} />
+            </video>
           ) : null}
           {src && kind === "image" ? (
             // eslint-disable-next-line @next/next/no-img-element
@@ -173,7 +237,7 @@ export function CreatorUnitMediaPreview({
           ) : null}
         </DialogContent>
       </Dialog>
-      {src && kind !== "video" && kind !== "image" ? null : src ? (
+      {src ? (
         <Button
           type="button"
           variant="ghost"

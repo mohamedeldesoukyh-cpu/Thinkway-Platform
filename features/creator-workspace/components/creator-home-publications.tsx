@@ -22,7 +22,7 @@ export function CreatorHomePublications({
             <Link
               key={item.id}
               href={`/creator-portal/campaigns/${item.campaign_header_id}`}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-border p-3 transition-colors hover:border-primary/40"
+              className="flex items-center justify-between gap-3 rounded-lg border border-border px-3 py-2 transition-colors hover:border-primary/40"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-medium">{item.campaign_name}</p>

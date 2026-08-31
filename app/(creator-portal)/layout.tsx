@@ -61,10 +61,10 @@ export default async function CreatorPortalLayout({
   return (
     <PortalShell
       title="Creator Workspace"
-      description="Your campaigns, deliverables, and payments — what to do next."
+      workspaceLabel="Creator Workspace"
+      navVariant="compact"
       userLabel={creatorName}
       navItems={withCreatorHomeBadge(unreadCount)}
-      mobileNavPlacement="bottom"
     >
       {children}
     </PortalShell>

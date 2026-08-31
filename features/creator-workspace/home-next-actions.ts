@@ -1,6 +1,10 @@
 import { isAgencyBrandCreatorLabel } from "@/features/creator-workspace/identity";
+import { creatorPaymentNextActionLabel } from "@/features/creator-workspace/payment-copy";
 import type { CreatorPaymentRow, CreatorVendorIoRow } from "@/features/portals/types";
-import type { CreatorUnitStatus } from "@/features/creator-workspace/unit-status";
+import {
+  unitNeedsPublicationLink,
+  type CreatorUnitStatus,
+} from "@/features/creator-workspace/unit-status";
 
 export type CreatorHomeNextActionKind =
   | "vendor_io"
@@ -140,11 +144,12 @@ export function buildCreatorHomeNextActions(
     });
   }
 
-  const publicationNeeded = input.units.filter(
-    (unit) =>
-      unit.expectsPublicationUrl &&
-      !unit.publicationUrl &&
-      (unit.status === "approved" || unit.status === "scheduled")
+  const publicationNeeded = input.units.filter((unit) =>
+    unitNeedsPublicationLink({
+      status: unit.status,
+      expectsPublicationUrl: unit.expectsPublicationUrl,
+      publicationUrl: unit.publicationUrl,
+    })
   );
   if (publicationNeeded.length === 1) {
     actions.push({
@@ -168,14 +173,14 @@ export function buildCreatorHomeNextActions(
   }
 
   const pendingPayments = input.payments.filter(
-    (row) => row.payment_status !== "Paid"
+    (row) => creatorPaymentNextActionLabel(row.payment_status) != null
   );
   if (pendingPayments.length === 1) {
     actions.push({
       id: `payment:${pendingPayments[0].assignment_id}`,
       kind: "payment",
       priority: 40,
-      title: "Payment in progress",
+      title: "Payment pending",
       description: pendingPayments[0].campaign_name,
       href: "/creator-portal/payments",
     });
@@ -184,7 +189,7 @@ export function buildCreatorHomeNextActions(
       id: "payment:pending",
       kind: "payment",
       priority: 40,
-      title: `${pendingPayments.length} payments in progress`,
+      title: `${pendingPayments.length} payments pending`,
       description: pendingPayments[0].campaign_name,
       href: "/creator-portal/payments",
     });

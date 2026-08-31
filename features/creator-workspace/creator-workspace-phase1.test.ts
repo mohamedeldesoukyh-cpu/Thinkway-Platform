@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { describe, it } from "node:test";
+import { resolve } from "node:path";
 
 import { isPortalNavActive } from "@/components/layout/portal-nav";
 import {
@@ -154,6 +156,55 @@ describe("Creator Workspace Phase 1 chrome", () => {
     );
   });
 
+  it("uses compact workspace chrome without Client Portal pills or a bottom app bar", () => {
+    const layout = readFileSync(resolve("app/(creator-portal)/layout.tsx"), "utf8");
+    const clientLayout = readFileSync(resolve("app/(client-portal)/layout.tsx"), "utf8");
+    const tabs = readFileSync(
+      resolve("features/creator-workspace/components/creator-campaign-tabs.tsx"),
+      "utf8"
+    );
+    const portalNav = readFileSync(resolve("components/layout/portal-nav.tsx"), "utf8");
+    const nav = readFileSync(resolve("features/creator-workspace/nav.ts"), "utf8");
+
+    assert.match(layout, /navVariant="compact"/);
+    assert.match(layout, /workspaceLabel="Creator Workspace"/);
+    assert.doesNotMatch(layout, /mobileNavPlacement/);
+    assert.doesNotMatch(layout, /client-review-ref/);
+    assert.doesNotMatch(clientLayout, /navVariant/);
+    assert.match(clientLayout, /title="Client Portal"/);
+
+    assert.match(portalNav, /PortalNavVariant = "pills" \| "compact"/);
+    assert.match(portalNav, /variant = "pills"/);
+
+    assert.match(tabs, /EnterpriseTabsList/);
+    assert.deepEqual(
+      [
+        "Overview",
+        "Brief",
+        "Script",
+        "Deliverables",
+        "Agreement",
+        "Publications",
+        "Payment",
+        "Messages",
+      ],
+      [...tabs.matchAll(/label: "([^"]+)"/g)].map((match) => match[1])
+    );
+    assert.doesNotMatch(nav, /Agreement|Messages/);
+  });
+
+  it("plays signed media immediately instead of waiting on a full-file blob", () => {
+    const media = readFileSync(
+      resolve("features/creator-workspace/components/creator-unit-media-preview.tsx"),
+      "utf8"
+    );
+    assert.match(media, /downloadCreatorUnitAssetAction/);
+    assert.match(media, /Loading preview/);
+    assert.match(media, /<source src=\{src\} type=\{playbackType\} \/>/);
+    assert.doesNotMatch(media, /animate-pulse/);
+    assert.match(media, /playableBlobUrl/);
+  });
+
   it("lists social platforms as available soon without requiring connection", () => {
     assert.ok(CREATOR_WORKSPACE_SOCIAL_PLATFORMS.includes("Instagram"));
     assert.ok(CREATOR_WORKSPACE_SOCIAL_PLATFORMS.includes("TikTok"));
@@ -190,6 +241,7 @@ describe("Creator Workspace Home next actions", () => {
     assert.equal(actions[0]?.href, "/creator-portal/campaigns/camp-1?tab=agreement");
     assert.equal(actions[0]?.vendorIoId, "vio-1");
     assert.equal(actions[2]?.href, "/creator-portal/payments");
+    assert.equal(actions[2]?.title, "Payment pending");
   });
 
   it("groups multiple pending documentation units onto the Deliverables page", () => {
@@ -302,9 +354,31 @@ describe("Creator Workspace campaign cards", () => {
     const row = campaign({
       publication_total: 2,
       recent_publication_status: "live",
+      vendor_payment_status: "paid",
     });
     assert.equal(campaignNeedsCreatorAction(row), false);
     assert.equal(campaignCreatorActionLine(row), "All on track");
     assert.equal(campaignPublicationLine(row), "2 publications · live");
+  });
+
+  it("says Payment pending when work is done but the fee is unpaid", () => {
+    const row = campaign({
+      pending_deliverables: 0,
+      vendor_io_status: "approved",
+      vendor_payment_status: "pending",
+    });
+    assert.equal(campaignNeedsCreatorAction(row), false);
+    assert.equal(campaignCreatorActionLine(row), "Payment pending");
+  });
+
+  it("asks for a publication URL before calling the campaign all on track", () => {
+    const row = campaign({
+      pending_deliverables: 0,
+      vendor_io_status: "approved",
+      vendor_payment_status: "pending",
+      publication_needed: 1,
+    });
+    assert.equal(campaignNeedsCreatorAction(row), true);
+    assert.equal(campaignCreatorActionLine(row), "1 publication link required");
   });
 });

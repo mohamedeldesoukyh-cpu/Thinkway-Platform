@@ -19,14 +19,14 @@ export function CreatorProfilePayments({
 }) {
   if (rows.length === 0) {
     return (
-      <p className="rounded-2xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
         No payment records yet.
       </p>
     );
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2">
       {rows.map((row) => {
         const io = vendorIos.find((item) => item.assignment_id === row.assignment_id);
         const campaign = campaigns.find(
@@ -34,7 +34,7 @@ export function CreatorProfilePayments({
         );
         return (
           <Card key={row.assignment_id}>
-            <CardContent className="space-y-2 p-4">
+            <CardContent className="space-y-2 p-3.5">
               <div className="flex items-start justify-between gap-3">
                 <p className="min-w-0 truncate font-medium">{row.campaign_name}</p>
                 <PortalStatusBadge value={row.payment_status} />

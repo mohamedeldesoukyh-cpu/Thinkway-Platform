@@ -16,14 +16,14 @@ export function CreatorDocumentationUnitList({
 }) {
   if (units.length === 0) {
     return (
-      <p className="rounded-2xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
         No deliverables assigned yet.
       </p>
     );
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2">
       {units.map((unit) => (
         <CreatorDocumentationUnitCard
           key={unit.unitKey}

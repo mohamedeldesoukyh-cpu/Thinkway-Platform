@@ -13,17 +13,17 @@ export function CreatorCampaignMessages({ units }: { units: CreatorUnitView[] })
 
   if (messages.length === 0) {
     return (
-      <p className="rounded-2xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
         No messages on this campaign yet. Use a deliverable to message Thinkway.
       </p>
     );
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2">
       {messages.map((item) => (
         <Card key={item.id}>
-          <CardContent className="space-y-1 p-4">
+          <CardContent className="space-y-1 p-3">
             <p className="text-sm font-medium">
               {item.authorDisplayName === CREATOR_ON_BEHALF_ACTOR_LABEL
                 ? "Thinkway"

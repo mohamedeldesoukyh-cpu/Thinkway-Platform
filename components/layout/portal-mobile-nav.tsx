@@ -4,16 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import { cn } from "@/lib/utils";
-import { isPortalNavActive, type PortalNavItem } from "@/components/layout/portal-nav";
+import {
+  isPortalNavActive,
+  type PortalNavItem,
+  type PortalNavVariant,
+} from "@/components/layout/portal-nav";
 
 export function PortalMobileNav({
   items,
   placement = "chips",
+  variant = "pills",
 }: {
   items: PortalNavItem[];
   placement?: "chips" | "bottom";
+  variant?: PortalNavVariant;
 }) {
   const pathname = usePathname();
+  const compact = variant === "compact";
 
   if (placement === "bottom") {
     return (
@@ -45,6 +52,41 @@ export function PortalMobileNav({
             );
           })}
         </div>
+      </nav>
+    );
+  }
+
+  if (compact) {
+    return (
+      <nav
+        aria-label="Workspace"
+        className="flex gap-1 overflow-x-auto border-b border-border px-4 md:hidden"
+      >
+        {items.map((item) => {
+          const active = isPortalNavActive(pathname, item.href);
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={cn(
+                "relative shrink-0 px-2.5 py-2.5 text-[13px] font-medium transition-colors",
+                active
+                  ? "text-foreground"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {item.label}
+              {item.badge && item.badge > 0 ? (
+                <span className="ml-1 text-[10px] tabular-nums text-muted-foreground">
+                  {item.badge > 9 ? "9+" : item.badge}
+                </span>
+              ) : null}
+              {active ? (
+                <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" />
+              ) : null}
+            </Link>
+          );
+        })}
       </nav>
     );
   }

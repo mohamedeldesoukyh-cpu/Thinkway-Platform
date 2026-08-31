@@ -74,7 +74,7 @@ export default async function CreatorPortalProfilePage({
 
   return (
     <PlatformErrorBoundary surface="generic">
-      <div className="space-y-6">
+      <div className="space-y-4">
         <Card>
           <CardHeader>
             <CardTitle>Profile</CardTitle>
@@ -103,14 +103,14 @@ export default async function CreatorPortalProfilePage({
           </CardContent>
         </Card>
 
-        <section className="space-y-3" aria-labelledby="creator-profile-campaigns">
+        <section className="space-y-2" aria-labelledby="creator-profile-campaigns">
           <h2 id="creator-profile-campaigns" className="text-base font-semibold">
             Campaigns
           </h2>
           <CreatorCampaignCards rows={overlayed.slice(0, 6)} />
         </section>
 
-        <section id="payments" className="space-y-3" aria-labelledby="creator-profile-payments">
+        <section id="payments" className="space-y-2" aria-labelledby="creator-profile-payments">
           <div>
             <h2 id="creator-profile-payments" className="text-base font-semibold">
               Payment overview

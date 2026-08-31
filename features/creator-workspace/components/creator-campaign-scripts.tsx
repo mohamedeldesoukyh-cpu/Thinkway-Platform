@@ -13,14 +13,14 @@ export function CreatorCampaignScripts({ units }: { units: CreatorUnitView[] }) 
   const withScripts = units.filter((unit) => unit.hasScript && unit.script);
   if (withScripts.length === 0) {
     return (
-      <p className="rounded-2xl border border-border px-4 py-8 text-center text-sm text-muted-foreground">
+      <p className="rounded-lg border border-border px-4 py-5 text-center text-sm text-muted-foreground">
         No script has been provided for this campaign yet.
       </p>
     );
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2">
       {withScripts.map((unit) => (
         <CreatorScriptCard key={unit.unitKey} unit={unit} />
       ))}

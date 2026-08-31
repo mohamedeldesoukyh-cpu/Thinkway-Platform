@@ -91,6 +91,16 @@ export function isCreatorUnitOverdue(
   return due < today;
 }
 
+export function unitNeedsPublicationLink(input: {
+  status: string;
+  expectsPublicationUrl?: boolean;
+  publicationUrl?: string | null;
+}): boolean {
+  if (!input.expectsPublicationUrl) return false;
+  if (input.publicationUrl?.trim()) return false;
+  return input.status === "approved" || input.status === "scheduled";
+}
+
 export function creatorFacingStatusLabel(input: {
   status: CreatorUnitStatus;
   dueDate?: string | null;

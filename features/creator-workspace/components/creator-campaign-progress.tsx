@@ -21,7 +21,7 @@ export function CreatorCampaignProgress({
           <li
             key={item.id}
             className={cn(
-              "rounded-xl border px-3 py-2 text-sm",
+              "rounded-lg border px-3 py-1.5 text-sm",
               state === "current" && "border-primary bg-primary/5 font-medium",
               state === "done" && "border-border text-muted-foreground",
               state === "upcoming" && "border-dashed border-border text-muted-foreground"

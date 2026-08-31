@@ -3,7 +3,11 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import {
+  EnterpriseTabTrigger,
+  EnterpriseTabsList,
+} from "@/components/workspace/enterprise-tabs";
 
 export const CREATOR_CAMPAIGN_TABS = [
   { value: "overview", label: "Overview" },
@@ -43,18 +47,20 @@ export function CreatorCampaignTabs({
         const query = params.toString();
         router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
       }}
+      className="gap-0"
     >
-      <div className="-mx-1 overflow-x-auto pb-1">
-        <TabsList variant="line" className="h-auto min-w-full justify-start gap-1">
-          {CREATOR_CAMPAIGN_TABS.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="min-h-11 shrink-0 px-3">
-              {tab.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </div>
+      <EnterpriseTabsList
+        variant="underline"
+        overflow="scroll"
+        aria-label="Campaign"
+        className="border-b border-border"
+      >
+        {CREATOR_CAMPAIGN_TABS.map((tab) => (
+          <EnterpriseTabTrigger key={tab.value} value={tab.value} label={tab.label} />
+        ))}
+      </EnterpriseTabsList>
       {CREATOR_CAMPAIGN_TABS.map((tab) => (
-        <TabsContent key={tab.value} value={tab.value} className="pt-4">
+        <TabsContent key={tab.value} value={tab.value} className="pt-3">
           {sections[tab.value]}
         </TabsContent>
       ))}

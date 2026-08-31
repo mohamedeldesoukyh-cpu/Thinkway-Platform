@@ -1,5 +1,21 @@
 import type { CreatorPaymentRow } from "@/features/portals/types";
 
+export function creatorPaymentIsOutstanding(
+  status: string | null | undefined
+): boolean {
+  const normalized = (status ?? "").trim().toLowerCase().replaceAll("_", " ");
+  if (!normalized) return true;
+  return normalized !== "paid";
+}
+
+/** Short next-action label shared by Home, campaign header, and campaign cards. */
+export function creatorPaymentNextActionLabel(
+  status: string | null | undefined
+): string | null {
+  if (!creatorPaymentIsOutstanding(status)) return null;
+  return "Payment pending";
+}
+
 export function creatorPaymentExplanation(input: {
   paymentStatus: string;
   vendorPaymentStatus?: string | null;

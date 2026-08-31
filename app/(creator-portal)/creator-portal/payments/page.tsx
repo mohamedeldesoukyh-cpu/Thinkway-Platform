@@ -15,7 +15,7 @@ export default async function CreatorPortalPaymentsPage() {
 
   return (
     <PlatformErrorBoundary surface="generic">
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div>
           <h2 className="font-heading text-xl font-semibold tracking-tight">Payments</h2>
           <p className="text-sm text-muted-foreground">

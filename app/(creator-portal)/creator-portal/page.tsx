@@ -65,9 +65,9 @@ export default async function CreatorWorkspaceHomePage() {
 
   return (
     <PlatformErrorBoundary surface="generic">
-      <div className="space-y-8">
+      <div className="space-y-5">
         <div>
-          <h2 className="font-heading text-2xl font-semibold tracking-tight">
+          <h2 className="font-heading text-xl font-semibold tracking-tight">
             Hi {creatorFirstName(scope.influencerName)}
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -80,28 +80,28 @@ export default async function CreatorWorkspaceHomePage() {
           </p>
         </div>
 
-        <section className="space-y-3" aria-labelledby="creator-home-next">
+        <section className="space-y-2" aria-labelledby="creator-home-next">
           <h3 id="creator-home-next" className="text-sm font-semibold">
             Needs your attention
           </h3>
           <CreatorHomeNextActionList actions={nextActions} />
         </section>
 
-        <section className="space-y-3" aria-labelledby="creator-home-campaigns">
+        <section className="space-y-2" aria-labelledby="creator-home-campaigns">
           <h3 id="creator-home-campaigns" className="text-sm font-semibold">
             {campaignsNeedingAction.length > 0 ? "Active campaigns" : "Your campaigns"}
           </h3>
           <CreatorCampaignCards rows={homeCampaigns} insightPack={insightPack} />
         </section>
 
-        <section className="space-y-3" aria-labelledby="creator-home-payments">
+        <section className="space-y-2" aria-labelledby="creator-home-payments">
           <h3 id="creator-home-payments" className="text-sm font-semibold">
             Payment status
           </h3>
           <CreatorProfilePayments rows={payments.slice(0, 3)} />
         </section>
 
-        <section id="updates" className="space-y-3" aria-labelledby="creator-home-updates">
+        <section id="updates" className="space-y-2" aria-labelledby="creator-home-updates">
           <h3 id="creator-home-updates" className="text-sm font-semibold">
             Recent activity
           </h3>
@@ -118,10 +118,10 @@ export default async function CreatorWorkspaceHomePage() {
         ) : (
           <section className="space-y-2" aria-labelledby="creator-home-insights">
             <h3 id="creator-home-insights" className="text-sm font-semibold">
-              Performance
+              Thinkway Insights
             </h3>
             <p className="text-sm text-muted-foreground">
-              Performance data will appear after your content is published and data is available.
+              Insights appear after your content is published.
             </p>
           </section>
         )}

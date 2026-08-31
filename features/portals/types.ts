@@ -52,6 +52,8 @@ export type CreatorCampaignRow = {
   published_deliverables: number;
   publication_total: number;
   recent_publication_status: string | null;
+  /** Overlay-only: approved/scheduled units that still need a live URL. */
+  publication_needed?: number;
 };
 
 export type CreatorDeliverableRow = {

@@ -14,7 +14,7 @@ export function CreatorHomeInsights({ pack }: { pack: CreatorInsightPack }) {
   const recs = pack.recommendations;
 
   return (
-    <section className="space-y-3" aria-labelledby="creator-home-insights">
+    <section className="space-y-2" aria-labelledby="creator-home-insights">
       <h3 id="creator-home-insights" className="text-sm font-semibold">
         Thinkway Insights
       </h3>

@@ -14,7 +14,7 @@ export function CreatorHomeNextActionList({
   if (actions.length === 0) {
     return (
       <Card>
-        <CardContent className="p-5">
+        <CardContent className="p-3">
           <p className="text-sm font-medium">You're all caught up.</p>
           <p className="mt-1 text-sm text-muted-foreground">
             When something needs your attention, it will show up here.
@@ -25,14 +25,14 @@ export function CreatorHomeNextActionList({
   }
 
   return (
-    <div className="grid gap-3">
+    <div className="grid gap-2">
       {actions.map((action) => (
         <Card key={action.id}>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">{action.title}</CardTitle>
+          <CardHeader className="space-y-1 px-3 pb-2 pt-3">
+            <CardTitle className="text-sm">{action.title}</CardTitle>
             <p className="text-sm text-muted-foreground">{action.description}</p>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-2 px-3 pb-3">
             {action.kind === "vendor_io" && action.vendorIoId ? (
               <div className="space-y-2">
                 <CreatorApproveVendorIoForm vendorIoId={action.vendorIoId} />
