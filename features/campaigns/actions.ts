@@ -76,24 +76,31 @@ export async function createCampaignAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
-  const result = await createCampaign(supabase, user.id, parsed.data);
+  try {
+    const result = await createCampaign(supabase, user.id, parsed.data);
 
-  if (!result.ok) {
+    if (!result.ok) {
+      return {
+        ok: false,
+        message: result.message,
+        creditLimit: result.creditLimit,
+        fieldErrors: result.fieldErrors,
+      };
+    }
+
+    revalidateCampaign(result.campaignId, result.clientId);
+
+    return {
+      ok: true,
+      message: result.message,
+      campaignId: result.campaignId,
+    };
+  } catch (error) {
     return {
       ok: false,
-      message: result.message,
-      creditLimit: result.creditLimit,
-      fieldErrors: result.fieldErrors,
+      message: error instanceof Error ? error.message : "Failed to create campaign.",
     };
   }
-
-  revalidateCampaign(result.campaignId, result.clientId);
-
-  return {
-    ok: true,
-    message: result.message,
-    campaignId: result.campaignId,
-  };
 }
 
 export async function updateCampaignHeaderAction(

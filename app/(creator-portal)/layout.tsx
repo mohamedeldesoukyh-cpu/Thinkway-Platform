@@ -1,21 +1,21 @@
 import { redirect } from "next/navigation";
 
-import { PortalShell } from "@/components/layout/portal-shell";
+import { signOutAction } from "@/features/auth/actions";
+import { CreatorWorkspaceShell } from "@/features/creator-workspace/components/creator-workspace-shell";
+import { CREATOR_WORKSPACE_NAV_ITEMS } from "@/features/creator-workspace/nav";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCreatorUnreadNotificationCount } from "@/features/portals/queries";
 import { requireCreatorScope } from "@/features/portals/scope";
-import type { PortalNavItem } from "@/components/layout/portal-nav";
+import { resolveCreatorAvatarUrl } from "@/lib/performance/creator-avatar";
 
-const creatorNavItems = [
-  { href: "/creator-portal", label: "Dashboard" },
-  { href: "/creator-portal/campaigns", label: "Campaigns" },
-  { href: "/creator-portal/deliverables", label: "Deliverables" },
-  { href: "/creator-portal/publications", label: "Publications" },
-  { href: "/creator-portal/payments", label: "Payments" },
-  { href: "/creator-portal/vendor-ios", label: "Vendor IOs" },
-  { href: "/creator-portal/notifications", label: "Notifications" },
-  { href: "/creator-portal/profile", label: "Profile" },
-] as const;
+import "@/features/creator-workspace/styles/creator-workspace.css";
+
+function isNextControlFlowError(error: unknown): boolean {
+  if (typeof error !== "object" || error === null || !("digest" in error)) {
+    return false;
+  }
+  const digest = (error as { digest?: unknown }).digest;
+  return typeof digest === "string" && digest.startsWith("NEXT_");
+}
 
 export default async function CreatorPortalLayout({
   children,
@@ -30,28 +30,63 @@ export default async function CreatorPortalLayout({
   }
 
   let creatorName = user.email ?? "Creator";
+  let avatarUrl: string | null = null;
   try {
-    const { scope } = await requireCreatorScope("creator_portal.read");
+    const { supabase: scoped, scope } = await requireCreatorScope("creator_portal.read");
     creatorName = scope.influencerName;
-  } catch {
-    redirect("/");
+    try {
+      const [{ data: influencer }, { data: accounts }] = await Promise.all([
+        scoped
+          .from("influencers")
+          .select("metadata")
+          .eq("id", scope.influencerId)
+          .maybeSingle(),
+        scoped
+          .from("influencer_platform_accounts")
+          .select("profile_picture_url")
+          .eq("influencer_id", scope.influencerId),
+      ]);
+      const meta = influencer as { metadata?: { avatar_url?: string | null } | null } | null;
+      const pictures = (accounts ?? []) as Array<{ profile_picture_url: string | null }>;
+      avatarUrl = resolveCreatorAvatarUrl({
+        social_profile_picture_url: pictures.find((row) => row.profile_picture_url)?.profile_picture_url,
+        influencer_avatar_url: meta?.metadata?.avatar_url,
+      });
+    } catch {
+      avatarUrl = null;
+    }
+  } catch (error) {
+    if (isNextControlFlowError(error)) throw error;
+    return (
+      <div className="flex min-h-svh items-center justify-center bg-background px-6">
+        <div className="max-w-md space-y-4 text-center">
+          <h1 className="font-heading text-xl font-semibold tracking-tight">
+            Creator Workspace is not available
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            This login is not linked to a creator profile. Sign out, then open
+            the invitation from Thinkway, or sign in with the creator email.
+          </p>
+          <form action={signOutAction}>
+            <button
+              type="submit"
+              className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+            >
+              Sign out
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
-  const unreadCount = await getCreatorUnreadNotificationCount();
-  const navItems: PortalNavItem[] = creatorNavItems.map((item) =>
-    item.href === "/creator-portal/notifications"
-      ? { ...item, badge: unreadCount }
-      : { ...item }
-  );
-
   return (
-    <PortalShell
-      title="Creator Portal"
-      description="Campaign-focused execution for creator assignments, IOs, deliverables, and payment visibility."
+    <CreatorWorkspaceShell
       userLabel={creatorName}
-      navItems={navItems}
+      avatarUrl={avatarUrl}
+      navItems={[...CREATOR_WORKSPACE_NAV_ITEMS]}
     >
       {children}
-    </PortalShell>
+    </CreatorWorkspaceShell>
   );
 }

@@ -43,6 +43,13 @@ import {
   reassignDeliverableAssetAction,
 } from "@/features/campaigns/actions/deliverable-documentation-actions";
 import {
+  addDeliverableOnBehalfCreatorNoteAction,
+  addDeliverableOnBehalfExternalLinkAction,
+  addDeliverableOnBehalfTextAction,
+  completeDeliverableOnBehalfUploadAction,
+  submitDeliverableOnBehalfPublicationAction,
+} from "@/features/campaigns/actions/deliverable-on-behalf-actions";
+import {
   deliverableUploadMeterValue,
   deliverableUploadPercent,
   deliverableUploadProgressLabel,
@@ -51,6 +58,7 @@ import {
 } from "@/features/campaigns/deliverable-asset-upload";
 import { DeliverableAssetPreview } from "@/features/campaigns/components/deliverables/deliverable-asset-preview";
 import { DocumentationAssetActions } from "@/features/campaigns/components/deliverables/documentation-asset-actions";
+import { ReleaseVersionToClientButton } from "@/features/campaigns/components/deliverables/release-version-to-client-button";
 import {
   DocumentationRepositoryList,
   documentationStatusBadge,
@@ -96,6 +104,7 @@ import {
   applyDocumentationAggregates,
   buildDocumentationUnitsFromHierarchy,
 } from "@/lib/services/deliverables/build-documentation-units";
+import { unitExpectsPublicationUrl } from "@/features/creator-workspace/unit-status";
 import {
   documentationUnitCanHoldScript,
   type CampaignScriptUnitPresence,
@@ -117,6 +126,8 @@ type EditorDrafts = {
   linkUrl: string;
   textBody: string;
   commentBody: string;
+  creatorNote: string;
+  publicationUrl: string;
 };
 
 function emptyDrafts(assetType = defaultDeliverableAssetType(null)): EditorDrafts {
@@ -125,6 +136,8 @@ function emptyDrafts(assetType = defaultDeliverableAssetType(null)): EditorDraft
     linkUrl: "",
     textBody: "",
     commentBody: "",
+    creatorNote: "",
+    publicationUrl: "",
   };
 }
 
@@ -160,7 +173,11 @@ function slotStatusCopy(
 
 function draftsAreDirty(drafts: EditorDrafts): boolean {
   return Boolean(
-    drafts.linkUrl.trim() || drafts.textBody.trim() || drafts.commentBody.trim()
+    drafts.linkUrl.trim() ||
+      drafts.textBody.trim() ||
+      drafts.commentBody.trim() ||
+      drafts.creatorNote.trim() ||
+      drafts.publicationUrl.trim()
   );
 }
 
@@ -908,6 +925,23 @@ export function CampaignDeliverablesDocumentationTab({
                                     {asset.medium}
                                   </span>
                                 </div>
+                                {asset.currentVersion?.onBehalfLabel ? (
+                                  <p className="mt-1 text-[11px] text-muted-foreground">
+                                    {asset.currentVersion.onBehalfLabel}
+                                  </p>
+                                ) : null}
+                                {asset.versions.length > 1 ? (
+                                  <p className="mt-1 text-[11px] text-muted-foreground">
+                                    History:{" "}
+                                    {[...asset.versions]
+                                      .sort(
+                                        (a, b) =>
+                                          a.versionNumber - b.versionNumber
+                                      )
+                                      .map((version) => `v${version.versionNumber}`)
+                                      .join(" → ")}
+                                  </p>
+                                ) : null}
                                 {asset.currentVersion?.externalUrl ? (
                                   <a
                                     href={asset.currentVersion.externalUrl}
@@ -934,6 +968,19 @@ export function CampaignDeliverablesDocumentationTab({
                                   asset={asset}
                                   disabled={pending}
                                 />
+                                {asset.currentVersion ? (
+                                  <ReleaseVersionToClientButton
+                                    campaignHeaderId={campaignId}
+                                    versionId={asset.currentVersion.id}
+                                    releasedToClientAt={
+                                      asset.currentVersion.releasedToClientAt
+                                    }
+                                    onReleased={() => {
+                                      refreshList();
+                                      loadDetailForKey(selected.unitKey, units);
+                                    }}
+                                  />
+                                ) : null}
                                 {asset.medium === "text" ? null : (
                                   <DocumentationAssetActions
                                     currentUnitKey={selected.unitKey}
@@ -981,10 +1028,15 @@ export function CampaignDeliverablesDocumentationTab({
                             <Label className="text-[11px]">Upload file</Label>
                             <Input
                               type="file"
+                              data-documentation-file-input={selected.unitKey}
                               accept=".mp4,.m4v,.mov,.webm,.jpg,.jpeg,.png,.webp,.pdf,video/mp4,video/quicktime,video/webm,image/jpeg,image/png,image/webp,application/pdf"
                               className="h-8 text-xs"
                               disabled={pending || selectionLocked}
                               onChange={(event) => {
+                                const onBehalfAtUpload =
+                                  event.currentTarget.getAttribute("data-on-behalf") ===
+                                  "true";
+                                event.currentTarget.removeAttribute("data-on-behalf");
                                 const file = event.target.files?.[0];
                                 event.target.value = "";
                                 if (!file || !selected || !boundDetail) return;
@@ -1158,10 +1210,13 @@ export function CampaignDeliverablesDocumentationTab({
                                       versionNumber: begun.data.versionNumber,
                                       storagePath: begun.data.storagePath,
                                     };
-                                    let completed =
-                                      await completeDeliverableFileUploadAction(
-                                        completeInput
-                                      );
+                                    let completed = onBehalfAtUpload
+                                      ? await completeDeliverableOnBehalfUploadAction(
+                                          completeInput
+                                        )
+                                      : await completeDeliverableFileUploadAction(
+                                          completeInput
+                                        );
                                     for (
                                       let attempt = 0;
                                       !completed.ok && attempt < 2;
@@ -1170,16 +1225,23 @@ export function CampaignDeliverablesDocumentationTab({
                                       await new Promise((resolve) =>
                                         setTimeout(resolve, 600 * (attempt + 1))
                                       );
-                                      completed =
-                                        await completeDeliverableFileUploadAction(
-                                          completeInput
-                                        );
+                                      completed = onBehalfAtUpload
+                                        ? await completeDeliverableOnBehalfUploadAction(
+                                            completeInput
+                                          )
+                                        : await completeDeliverableFileUploadAction(
+                                            completeInput
+                                          );
                                     }
                                     if (!completed.ok) {
                                       toast.error(completed.message);
                                       return;
                                     }
-                                    toast.success("File uploaded");
+                                    toast.success(
+                                      onBehalfAtUpload
+                                        ? "Uploaded on behalf of the creator"
+                                        : "File uploaded"
+                                    );
                                     refreshList();
                                     loadDetailForKey(
                                       unitAtUpload.unitKey,
@@ -1225,6 +1287,34 @@ export function CampaignDeliverablesDocumentationTab({
                                 for a reel, Instagram story for a story.
                               </p>
                             )}
+                            {selected.creatorId ? (
+                              <div className="space-y-1 rounded-md border border-dashed px-2 py-2">
+                                <p className="text-[11px] font-medium">
+                                  On behalf of {selected.creatorName ?? "creator"}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground">
+                                  Creator sees this. Client does not until you
+                                  release.
+                                </p>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8"
+                                  disabled={pending || selectionLocked}
+                                  onClick={() => {
+                                    const input = document.querySelector(
+                                      `[data-documentation-file-input="${selected.unitKey}"]`
+                                    ) as HTMLInputElement | null;
+                                    if (!input) return;
+                                    input.setAttribute("data-on-behalf", "true");
+                                    input.click();
+                                  }}
+                                >
+                                  Upload on behalf of creator
+                                </Button>
+                              </div>
+                            ) : null}
                           </div>
 
                           <div className="space-y-1">
@@ -1271,6 +1361,43 @@ export function CampaignDeliverablesDocumentationTab({
                               >
                                 Add
                               </Button>
+                              {selected.creatorId ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8"
+                                  disabled={pending || !drafts.linkUrl.trim()}
+                                  onClick={() =>
+                                    withSelected(async (unit) => {
+                                      const res =
+                                        await addDeliverableOnBehalfExternalLinkAction(
+                                          {
+                                            campaignHeaderId: campaignId,
+                                            assignmentDeliverableId:
+                                              unit.assignmentDeliverableId,
+                                            assignmentPostScheduleId:
+                                              unit.assignmentPostScheduleId,
+                                            assetType: drafts.assetType,
+                                            externalUrl: drafts.linkUrl,
+                                          }
+                                        );
+                                      if (!res.ok) toast.error(res.message);
+                                      else {
+                                        toast.success(
+                                          "Link added on behalf of the creator"
+                                        );
+                                        setDrafts((prev) => ({
+                                          ...prev,
+                                          linkUrl: "",
+                                        }));
+                                      }
+                                    })
+                                  }
+                                >
+                                  Add on behalf
+                                </Button>
+                              ) : null}
                             </div>
                           </div>
 
@@ -1289,6 +1416,7 @@ export function CampaignDeliverablesDocumentationTab({
                               rows={2}
                               className="text-xs"
                             />
+                            <div className="flex flex-wrap gap-2">
                             <Button
                               type="button"
                               size="sm"
@@ -1322,9 +1450,157 @@ export function CampaignDeliverablesDocumentationTab({
                             >
                               Save text
                             </Button>
+                              {selected.creatorId ? (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-8"
+                                  disabled={pending || !drafts.textBody.trim()}
+                                  onClick={() =>
+                                    withSelected(async (unit) => {
+                                      const res =
+                                        await addDeliverableOnBehalfTextAction({
+                                          campaignHeaderId: campaignId,
+                                          assignmentDeliverableId:
+                                            unit.assignmentDeliverableId,
+                                          assignmentPostScheduleId:
+                                            unit.assignmentPostScheduleId,
+                                          assetType:
+                                            drafts.assetType === "caption"
+                                              ? "caption"
+                                              : "other",
+                                          textBody: drafts.textBody,
+                                        });
+                                      if (!res.ok) toast.error(res.message);
+                                      else {
+                                        toast.success(
+                                          "Text saved on behalf of the creator"
+                                        );
+                                        setDrafts((prev) => ({
+                                          ...prev,
+                                          textBody: "",
+                                        }));
+                                      }
+                                    })
+                                  }
+                                >
+                                  Save on behalf
+                                </Button>
+                              ) : null}
+                            </div>
                           </div>
                         </div>
                       </section>
+
+                      {selected.creatorId ? (
+                        <section className="space-y-2 rounded-md border border-dashed p-3">
+                          <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Complete on behalf of creator
+                          </h4>
+                          {unitExpectsPublicationUrl(selected.deliverableType) ? (
+                            <div className="space-y-1">
+                              <Label className="text-[11px]">Publication URL</Label>
+                              <div className="flex gap-2">
+                                <Input
+                                  value={drafts.publicationUrl}
+                                  onChange={(e) =>
+                                    setDrafts((prev) => ({
+                                      ...prev,
+                                      publicationUrl: e.target.value,
+                                    }))
+                                  }
+                                  placeholder="https://…"
+                                  className="h-8 text-xs"
+                                />
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-8"
+                                  disabled={pending || !drafts.publicationUrl.trim()}
+                                  onClick={() =>
+                                    withSelected(async (unit) => {
+                                      const res =
+                                        await submitDeliverableOnBehalfPublicationAction(
+                                          {
+                                            campaignHeaderId: campaignId,
+                                            assignmentDeliverableId:
+                                              unit.assignmentDeliverableId,
+                                            assignmentPostScheduleId:
+                                              unit.assignmentPostScheduleId,
+                                            platform: unit.platform,
+                                            deliverableType:
+                                              unit.deliverableType ?? "",
+                                            contentUrl: drafts.publicationUrl,
+                                          }
+                                        );
+                                      if (!res.ok) toast.error(res.message);
+                                      else {
+                                        toast.success(
+                                          "Publication saved on behalf of the creator"
+                                        );
+                                        setDrafts((prev) => ({
+                                          ...prev,
+                                          publicationUrl: "",
+                                        }));
+                                      }
+                                    })
+                                  }
+                                >
+                                  Save URL
+                                </Button>
+                              </div>
+                            </div>
+                          ) : null}
+                          <div className="space-y-1">
+                            <Label className="text-[11px]">Note to creator</Label>
+                            <Textarea
+                              value={drafts.creatorNote}
+                              onChange={(e) =>
+                                setDrafts((prev) => ({
+                                  ...prev,
+                                  creatorNote: e.target.value,
+                                }))
+                              }
+                              rows={2}
+                              className="text-xs"
+                              placeholder="Visible in Creator Workspace…"
+                            />
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-8"
+                              disabled={pending || !drafts.creatorNote.trim()}
+                              onClick={() =>
+                                withSelected(async (unit) => {
+                                  const res =
+                                    await addDeliverableOnBehalfCreatorNoteAction(
+                                      {
+                                        campaignHeaderId: campaignId,
+                                        assignmentDeliverableId:
+                                          unit.assignmentDeliverableId,
+                                        assignmentPostScheduleId:
+                                          unit.assignmentPostScheduleId,
+                                        body: drafts.creatorNote,
+                                      }
+                                    );
+                                  if (!res.ok) toast.error(res.message);
+                                  else {
+                                    toast.success("Note sent to the creator");
+                                    setDrafts((prev) => ({
+                                      ...prev,
+                                      creatorNote: "",
+                                    }));
+                                  }
+                                })
+                              }
+                            >
+                              Send to creator
+                            </Button>
+                          </div>
+                        </section>
+                      ) : null}
 
                       <section className="space-y-2">
                         <h4 className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
@@ -1377,7 +1653,10 @@ export function CampaignDeliverablesDocumentationTab({
                               className="rounded-md border px-2 py-1.5 text-xs"
                             >
                               <p className="text-muted-foreground">
-                                {comment.authorDisplayName ?? "User"} ·{" "}
+                                {comment.audience === "creator"
+                                  ? "Visible to creator"
+                                  : "Internal"}{" "}
+                                · {comment.authorDisplayName ?? "User"} ·{" "}
                                 {new Date(comment.createdAt).toLocaleString()}
                               </p>
                               <p className="mt-0.5 whitespace-pre-wrap">

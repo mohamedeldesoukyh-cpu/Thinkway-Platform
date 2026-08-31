@@ -44,8 +44,8 @@ export function VendorPortalAccessForm({
 
   return (
     <CampaignFlatSection
-      title="Creator portal login"
-      description="Links this vendor to a user with the influencer role so they can sign in to the creator portal."
+      title="Linked user"
+      description="Recovery and cutover only. The normal path is Invite Creator above. Use this if an existing Thinkway creator login must be attached or detached without sending an invitation."
     >
         <form action={action} className="flex flex-wrap items-end gap-3">
           <input type="hidden" name="influencer_id" value={influencerId} />

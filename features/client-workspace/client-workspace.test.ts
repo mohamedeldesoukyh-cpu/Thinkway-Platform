@@ -6029,6 +6029,7 @@ function contentVersion(
     mimeType: "video/mp4",
     fileName: `${overrides.id}.mp4`,
     uploadedAt: `2026-08-2${overrides.versionNumber}T10:00:00.000Z`,
+    releasedToClientAt: `2026-08-2${overrides.versionNumber}T10:00:00.000Z`,
     ...overrides,
   };
 }
@@ -6070,6 +6071,7 @@ test("Content to Review uses only the current asset version as the active item",
     mimeType: "video/mp4",
     fileName: "x.mp4",
     uploadedAt: row.uploadedAt,
+    releasedToClientAt: row.uploadedAt,
   })), "v2")?.id, "v2");
   assert.deepEqual(
     item.history.map((row) => row.versionId),
@@ -6359,5 +6361,39 @@ test("published Performance links still skip Client review after changes request
   });
   assert.equal(projected.items[0]?.status, "approved");
   assert.equal(clientContentToReview(projected.items).length, 0);
+});
+
+test("Client Workspace hides unreleased documentation versions", () => {
+  const projected = projectContent({
+    versions: [
+      contentVersion({ id: "v1", versionNumber: 1 }),
+      contentVersion({
+        id: "v2",
+        versionNumber: 2,
+        releasedToClientAt: null,
+      }),
+    ],
+  });
+  assert.equal(projected.items.length, 1);
+  assert.equal(projected.items[0]?.versionId, "v1");
+});
+
+test("Client Workspace shows a version only after Internal release", () => {
+  const hidden = projectContent({
+    versions: [contentVersion({ id: "v2", versionNumber: 2, releasedToClientAt: null })],
+  });
+  assert.equal(hidden.items.length, 0);
+
+  const released = projectContent({
+    versions: [
+      contentVersion({
+        id: "v2",
+        versionNumber: 2,
+        releasedToClientAt: "2026-08-30T12:00:00.000Z",
+      }),
+    ],
+  });
+  assert.equal(released.items.length, 1);
+  assert.equal(released.items[0]?.versionId, "v2");
 });
 

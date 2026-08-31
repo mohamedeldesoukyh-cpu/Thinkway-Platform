@@ -29,7 +29,7 @@ export {
 
 export const VENDOR_PROFILE_BREADCRUMBS = [
   { label: "Vendors", href: "/vendors" },
-  { label: "Creator workspace" },
+  { label: "Creator Profile" },
 ] as const;
 
 /** Form shell for vendor profile tabs — matches client profile tab layout. */

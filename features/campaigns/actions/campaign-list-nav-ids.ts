@@ -4,11 +4,9 @@ import { requirePermission } from "@/lib/auth/permissions-server";
 import {
   getCampaignListNavIds,
   getCampaignListNavOptions,
-  type CampaignNavOption,
 } from "@/lib/services/campaigns/campaign-service";
+import type { CampaignNavOption } from "@/lib/services/campaigns/campaign-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-
-export type { CampaignNavOption };
 
 export async function loadCampaignListNavIdsAction(input?: {
   search?: string;

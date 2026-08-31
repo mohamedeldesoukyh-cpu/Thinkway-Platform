@@ -62,6 +62,7 @@ test("page prefix classification covers isolation zones", () => {
   assert.equal(classifyPagePath("/client-portal/campaigns"), "client_workspace");
   assert.equal(classifyPagePath("/creator-portal/payments"), "client_workspace");
   assert.equal(classifyPagePath("/login"), "public");
+  assert.equal(classifyPagePath("/creator-invite"), "public");
   assert.equal(classifyPagePath("/discovery"), "internal_workspace");
 });
 

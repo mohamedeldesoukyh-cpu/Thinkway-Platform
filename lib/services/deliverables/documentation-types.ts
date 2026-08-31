@@ -317,6 +317,9 @@ export type DeliverableAssetVersionView = {
   changeSummary: string | null;
   uploadedBy: string | null;
   uploadedAt: string;
+  releasedToClientAt: string | null;
+  /** Creator-facing Thinkway on-behalf copy. Null when the creator uploaded it. */
+  onBehalfLabel: string | null;
 };
 
 export type DeliverableAssetView = {

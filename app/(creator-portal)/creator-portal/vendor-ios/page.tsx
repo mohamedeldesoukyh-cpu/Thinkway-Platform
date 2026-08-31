@@ -1,13 +1,7 @@
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { CreatorVendorIosTable } from "@/features/portals/components/tables/creator-vendor-ios-table";
-import { getCreatorVendorIos } from "@/features/portals/queries";
+import { redirect } from "next/navigation";
 
-export default async function CreatorPortalVendorIosPage() {
-  const rows = await getCreatorVendorIos();
+import { CREATOR_WORKSPACE_LEGACY_REDIRECTS } from "@/features/creator-workspace/nav";
 
-  return (
-    <PlatformErrorBoundary surface="generic">
-      <CreatorVendorIosTable rows={rows} />
-    </PlatformErrorBoundary>
-  );
+export default function CreatorPortalVendorIosRedirectPage() {
+  redirect(CREATOR_WORKSPACE_LEGACY_REDIRECTS["/creator-portal/vendor-ios"]);
 }

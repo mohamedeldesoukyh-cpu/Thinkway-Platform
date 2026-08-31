@@ -29,7 +29,7 @@ export const SETTINGS_MODULES: AccessControlModule[] = [
   { key: "analytics", label: "Analytics", permissions: ["analytics.read"] },
   { key: "client_portal", label: "Client Portal", permissions: ["client_portal.read", "client_portal.write", "client_portal.approve"] },
   { key: "client_access", label: "Client Access", permissions: ["client_access.read", "client_access.write"] },
-  { key: "creator_portal", label: "Creator Portal", permissions: ["creator_portal.read", "creator_portal.write"] },
+  { key: "creator_portal", label: "Creator Workspace", permissions: ["creator_portal.read", "creator_portal.write"] },
   { key: "settings", label: "Settings", permissions: ["settings.read", "settings.write", "roles.read", "roles.write"] },
 ];
 

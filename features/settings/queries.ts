@@ -87,7 +87,7 @@ export async function getSettingsUsers(params: {
               ? "Internal"
               : portalType === "client"
                 ? "Client Portal"
-                : "Creator Portal",
+                : "Creator Workspace",
           is_active: typed.is_active,
         } satisfies SettingsUserRow;
       });

@@ -111,6 +111,7 @@ export type ClientContentVersionSource = {
   mimeType: string | null;
   fileName: string | null;
   uploadedAt: string;
+  releasedToClientAt?: string | null;
 };
 
 export function emptyClientCampaignContent(): ClientCampaignContent {
@@ -165,7 +166,8 @@ export function currentContentVersion(
   versions: ClientContentVersionSource[],
   currentVersionId: string | null
 ): ClientContentVersionSource | null {
-  const sorted = [...versions].sort((left, right) => left.versionNumber - right.versionNumber);
+  const visible = versions.filter((version) => Boolean(version.releasedToClientAt?.trim()));
+  const sorted = [...visible].sort((left, right) => left.versionNumber - right.versionNumber);
   if (sorted.length === 0) return null;
   return sorted.find((version) => version.id === currentVersionId) ?? sorted[sorted.length - 1] ?? null;
 }
@@ -209,9 +211,9 @@ export function projectClientCampaignContent(input: {
     if (asset.archivedAt || asset.campaignHeaderId !== input.campaignHeaderId) continue;
     if (!isClientReviewableMedium(asset.medium)) continue;
     if (!isClientApprovalContentAssetType(asset.assetType)) continue;
-    const versions = [...(versionsByAsset.get(asset.id) ?? [])].sort(
-      (left, right) => left.versionNumber - right.versionNumber
-    );
+    const versions = [...(versionsByAsset.get(asset.id) ?? [])]
+      .filter((version) => Boolean(version.releasedToClientAt?.trim()))
+      .sort((left, right) => left.versionNumber - right.versionNumber);
     const current = currentContentVersion(versions, asset.currentVersionId);
     if (!current) continue;
     const hasFile = Boolean(current.storageBucket && current.storagePath);
@@ -294,23 +296,6 @@ export function clientContentAssetUrl(input: {
 }
 
 /** Chrome cannot play `video/quicktime`. Instagram/iPhone stories named .MOV are often MP4. */
-export function clientContentPlaybackMime(
-  mimeType: string | null | undefined,
-  fileName: string | null | undefined
-): string {
-  const mime = mimeType?.trim().toLowerCase() ?? "";
-  const name = fileName?.trim().toLowerCase() ?? "";
-  if (mime.startsWith("image/")) return mime;
-  if (mime === "video/webm" || name.endsWith(".webm")) return "video/webm";
-  if (
-    mime.startsWith("video/") ||
-    name.endsWith(".mp4") ||
-    name.endsWith(".m4v") ||
-    name.endsWith(".mov")
-  ) {
-    return "video/mp4";
-  }
-  return mime || "application/octet-stream";
-}
+export { deliverablePlaybackMime as clientContentPlaybackMime } from "@/lib/services/deliverables/playback-mime";
 
 export const FULL_SIZE_LABEL = "Full size";

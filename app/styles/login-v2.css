@@ -165,6 +165,130 @@
     animation: login-v2-card-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
+  .login-v2-card-invite {
+    min-height: min(560px, calc(100dvh - 24px));
+    max-height: calc(100dvh - 24px);
+  }
+
+  .login-v2-invite .login-v2-wrapper {
+    min-height: 100dvh;
+    padding: 12px;
+  }
+
+  .login-v2-card-invite .login-v2-form-panel {
+    justify-content: flex-start;
+    overflow-y: auto;
+    padding: 28px 36px 24px;
+  }
+
+  .login-v2-card-invite .login-v2-logo {
+    margin-bottom: 14px;
+  }
+
+  .login-v2-card-invite .login-v2-form-title {
+    font-size: 22px;
+  }
+
+  .login-v2-card-invite .login-v2-form-sub {
+    margin-bottom: 10px;
+  }
+
+  .login-v2-card-invite .login-v2-field {
+    margin-bottom: 8px;
+  }
+
+  .login-v2-card-invite .login-v2-error {
+    margin-bottom: 8px;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .login-v2-card-invite .login-v2-btn-sign {
+    margin-top: 4px;
+    padding: 11px;
+    font-size: 13px;
+  }
+
+  .login-v2-invite-meta {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 16px;
+    margin: 0 0 10px;
+  }
+
+  .login-v2-invite-meta dt {
+    margin: 0 0 2px;
+    font-size: 10px;
+    font-weight: 600;
+    color: #8899bb;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+  }
+
+  .login-v2-invite-meta dd {
+    margin: 0;
+    overflow: hidden;
+    font-size: 13px;
+    font-weight: 650;
+    color: var(--login-navy);
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .login-v2-invite-note {
+    margin: 0 0 10px;
+    font-size: 12px;
+    line-height: 1.4;
+    color: #8899bb;
+  }
+
+  .login-v2-card-invite .login-v2-password-guide {
+    gap: 6px;
+    margin: 0 0 8px;
+  }
+
+  .login-v2-card-invite .login-v2-password-rules {
+    grid-template-columns: 1fr 1fr;
+    gap: 4px 10px;
+  }
+
+  .login-v2-card-invite .login-v2-password-match {
+    grid-column: 1 / -1;
+  }
+
+  .login-v2-card-invite .login-v2-password-rule {
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .login-v2-card-invite .login-v2-brand-content {
+    justify-content: center;
+    padding: 28px 20px 28px 52px;
+  }
+
+  .login-v2-card-invite .login-v2-illus {
+    margin-bottom: 16px;
+  }
+
+  .login-v2-card-invite .login-v2-brand-tagline {
+    max-width: 260px;
+    margin-bottom: 16px;
+  }
+
+  .login-v2-card-invite .login-v2-tags {
+    flex-wrap: nowrap;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .login-v2-card-invite .login-v2-tag {
+    flex: 0 0 auto;
+    gap: 5px;
+    padding: 5px 10px;
+    font-size: 10.5px;
+    white-space: nowrap;
+  }
+
   .login-v2-form-panel {
     position: relative;
     z-index: 2;
@@ -843,10 +967,105 @@
     opacity: 0.7;
   }
 
+  .login-v2-password-guide {
+    display: grid;
+    gap: 10px;
+    margin: -2px 0 12px;
+  }
+
+  .login-v2-password-strength {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .login-v2-password-strength-bars {
+    display: flex;
+    flex: 1;
+    gap: 4px;
+  }
+
+  .login-v2-password-strength-bar {
+    height: 4px;
+    flex: 1;
+    border-radius: 99px;
+    background: #e8eef8;
+  }
+
+  .login-v2-password-strength-bar[data-on="true"][data-tone="weak"] {
+    background: #ff4d4f;
+  }
+
+  .login-v2-password-strength-bar[data-on="true"][data-tone="medium"] {
+    background: #fa8c16;
+  }
+
+  .login-v2-password-strength-bar[data-on="true"][data-tone="strong"],
+  .login-v2-password-strength-bar[data-on="true"][data-tone="very_strong"] {
+    background: #1d9e75;
+  }
+
+  .login-v2-password-strength-label {
+    min-width: 86px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: #8899bb;
+  }
+
+  .login-v2-password-strength-label[data-tone="weak"] {
+    color: #cf1322;
+  }
+
+  .login-v2-password-strength-label[data-tone="medium"] {
+    color: #d46b08;
+  }
+
+  .login-v2-password-strength-label[data-tone="strong"],
+  .login-v2-password-strength-label[data-tone="very_strong"] {
+    color: #1d9e75;
+  }
+
+  .login-v2-password-rules {
+    display: grid;
+    gap: 6px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .login-v2-password-rule {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    line-height: 1.35;
+    color: #8899bb;
+  }
+
+  .login-v2-password-rule[data-met="true"] {
+    color: #1d9e75;
+  }
+
+  .login-v2-password-match[data-met="false"] {
+    color: #cf1322;
+  }
+
   @media (max-width: 680px) {
     .login-v2-form-panel {
       flex: 1;
       padding: 40px 28px;
+    }
+
+    .login-v2-card-invite .login-v2-form-panel {
+      padding: 24px 22px 20px;
+    }
+
+    .login-v2-card-invite .login-v2-password-rules {
+      grid-template-columns: 1fr;
+    }
+
+    .login-v2-invite-meta {
+      grid-template-columns: 1fr;
     }
   }
 }

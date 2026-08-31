@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { VendorPortalAccessCard } from "@/features/vendors/components/vendor-portal-access-card";
+import { CreatorSocialConnectionsInternalPanel } from "@/features/vendors/components/creator-social-connections-internal";
 import { VendorWorkspaceView } from "@/features/vendors/components/vendor-workspace";
 import { getVendorWorkspace } from "@/features/vendors/queries";
 import { buildCurrencyOptions } from "@/lib/master-data/currency-options";
@@ -89,7 +90,7 @@ export default async function VendorProfilePage({
 
   return (
     <DashboardShell
-      title="Creator workspace"
+      title="Creator Profile"
       hidePageHeader
       platformV6
       containedMain
@@ -110,6 +111,9 @@ export default async function VendorProfilePage({
                 influencerId={workspace.id}
                 profileId={workspace.profile_id}
               />
+            }
+            creatorSocialPanel={
+              <CreatorSocialConnectionsInternalPanel influencerId={workspace.id} />
             }
           />
         </div>

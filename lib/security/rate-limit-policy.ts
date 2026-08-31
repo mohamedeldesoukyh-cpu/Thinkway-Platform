@@ -19,6 +19,8 @@ export function resolveRateLimitCategory(input: {
   const authSurface =
     pathname === "/login" ||
     pathname.startsWith("/login/") ||
+    pathname === "/creator-invite" ||
+    pathname.startsWith("/creator-invite/") ||
     pathname.startsWith("/auth/") ||
     pathname.startsWith("/api/auth/") ||
     pathname.startsWith("/io-approval/") ||

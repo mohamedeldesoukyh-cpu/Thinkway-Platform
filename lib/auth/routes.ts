@@ -5,6 +5,7 @@ import type { WorkspaceActorKind } from "@/lib/security/workspace-actor";
 export const PUBLIC_ROUTE_PREFIXES = [
   "/login",
   "/auth",
+  "/creator-invite",
   "/io-approval",
   "/review",
   "/api/review",
@@ -72,6 +73,7 @@ export function sanitizeNextPath(path: string | null | undefined): string {
 
   const pathOnly = value.split(/[?#]/, 1)[0] ?? "/";
   if (!pathOnly.startsWith("/") || pathOnly.startsWith("//")) return "/";
+  if (pathOnly === "/creator-invite") return value;
   if (isPublicPath(pathOnly)) return "/";
 
   return value;
