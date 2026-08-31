@@ -1,23 +1,22 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Quotation preview follower labels and image polish.
+**Focus:** Quotation preview publication photo quality.
 
 ## Shipped 2026-08-31
 
-### Quotation preview (`a7810f70` / Production `bdadaa7d`)
-Preview and download show followers as K/M (10K, 1.5M), pick usable avatars and publication photos, and use one quotation color palette.
+### Publication photos (`7c3fb621` / Production `1d79e428`)
+Recent publication tiles were posterized because truncated JPEG upgrades were re-encoded. Preview now rejects incomplete buffers and prefers complete stored screenshots.
 
 - Development: https://dev.thinkwaymedia.com
-- Production: https://app.thinkwaymedia.com — `dpl_DjeKTNmSHBdauEXuEaNpeuPJwXTh`
+- Production: https://app.thinkwaymedia.com — `dpl_AB6WoY1tvSKpGgJm7MesaThbbQ8B`
 - No database migrations
+
+### Quotation preview (`a7810f70`)
+Followers as K/M; sharper avatars; unified quotation palette.
 
 ### Refresh Metrics (`f3c01635`)
 First Refresh Metrics click no longer toasts "Creator refresh failed" while Apify is still running.
-
-### Earlier today
-- Showcase photos (`6b391daa`)
-- Shortlist Duplicate; hide-cost quotations Total Investment; HTML download
 
 ## Phase 5 still true
 
