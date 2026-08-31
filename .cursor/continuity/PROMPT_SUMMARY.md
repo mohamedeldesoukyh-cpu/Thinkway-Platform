@@ -5,10 +5,11 @@
 
 ## Shipped 2026-08-31
 
-### Publication image source (pending Production merge)
+### Publication image source (`554dd812` / Production `21f527e7`)
 Pixelation was the **source**, not CSS: stored TikTok EU origin covers 403, then a ~240px OG thumb was embedded and stretched. Quotation now fetches signed TikTok oEmbed origin covers (768–960px+), rejects bytes under 640px, and uses a clean placeholder instead of upscaling. Preview and PDF share the same embed path. Avatars still use Thinkway 1080×1080 storage.
 
 - Development: https://dev.thinkwaymedia.com
+- Production: https://app.thinkwaymedia.com — Git deploy `[deploy-production]` on `21f527e7`
 - No database migrations
 
 ### Earlier today
