@@ -34,7 +34,7 @@ async function compressWithSharp(
   try {
     const sharp = (await import("sharp")).default;
     const quality = options.quality ?? 72;
-    const out = await sharp(buffer)
+    const out = await sharp(buffer, { failOn: "truncated" })
       .rotate()
       .resize({
         width: options.maxEdge,
@@ -74,6 +74,39 @@ async function compressWithCanvas(
   }
 }
 
+/**
+ * False for truncated JPEG/PNG/WebP payloads. Incomplete files still report a
+ * full width in metadata, then decode as posterized/blocky tiles in preview.
+ */
+export function imageBufferLooksComplete(buffer: Buffer | ArrayBuffer): boolean {
+  const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
+  if (buf.byteLength < 24) return false;
+
+  if (buf[0] === 0xff && buf[1] === 0xd8) {
+    for (let i = buf.length - 2; i >= Math.max(0, buf.length - 16); i--) {
+      if (buf[i] === 0xff && buf[i + 1] === 0xd9) return true;
+    }
+    return false;
+  }
+
+  if (buf[0] === 0x89 && buf[1] === 0x50) {
+    return buf.includes(Buffer.from("IEND"));
+  }
+
+  if (
+    buf[0] === 0x52 &&
+    buf[1] === 0x49 &&
+    buf[2] === 0x46 &&
+    buf[3] === 0x46 &&
+    buf.byteLength >= 8
+  ) {
+    const declared = buf.readUInt32LE(4);
+    return Number.isFinite(declared) && buf.byteLength >= declared + 8;
+  }
+
+  return true;
+}
+
 /** Longest pixel edge of an image buffer; 0 when metadata cannot be read. */
 export async function imageLongestEdge(buffer: Buffer | ArrayBuffer): Promise<number> {
   const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
@@ -82,7 +115,7 @@ export async function imageLongestEdge(buffer: Buffer | ArrayBuffer): Promise<nu
 
   try {
     const sharp = (await import("sharp")).default;
-    const meta = await sharp(buf).metadata();
+    const meta = await sharp(buf, { failOn: "truncated" }).metadata();
     return Math.max(meta.width ?? 0, meta.height ?? 0);
   } catch {
     // fall through to canvas
@@ -108,9 +141,9 @@ export async function exportImageBufferMeetsMinEdge(
   minEdge: number
 ): Promise<boolean> {
   const buf = Buffer.isBuffer(buffer) ? buffer : Buffer.from(buffer);
-  if (buf.byteLength < 128) return false;
+  if (!imageBufferLooksComplete(buf)) return false;
   const edge = await imageLongestEdge(buf);
-  if (edge === 0) return true;
+  if (edge === 0) return false;
   return !isVisiblyLowResolutionImage(edge, minEdge);
 }
 
@@ -131,6 +164,7 @@ export async function compressExportImageBuffer(
   buffer: Buffer,
   options: CompressExportImageOptions
 ): Promise<{ buffer: Buffer; contentType: string } | null> {
+  if (!imageBufferLooksComplete(buffer)) return null;
   const compressed =
     (await compressWithSharp(buffer, options)) ??
     (await compressWithCanvas(buffer, options));
@@ -206,7 +240,7 @@ async function cropWithSharp(
       width = Math.max(1, Math.round(maxEdge * ratio));
     }
 
-    const out = await sharp(buffer)
+    const out = await sharp(buffer, { failOn: "truncated" })
       .rotate()
       .resize(width, height, { fit: "cover", position: "centre" })
       .jpeg({ quality, mozjpeg: true })

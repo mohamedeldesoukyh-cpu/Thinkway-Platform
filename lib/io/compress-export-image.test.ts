@@ -5,6 +5,7 @@ import {
   compressExportImageBuffer,
   cropExportImageBufferCover,
   exportImageBufferMeetsMinEdge,
+  imageBufferLooksComplete,
   imageLongestEdge,
   isVisiblyLowResolutionImage,
   toCompressedExportDataUri,
@@ -72,6 +73,14 @@ async function main() {
     assert.equal(await exportImageBufferMeetsMinEdge(Buffer.alloc(8), 160), false);
     assert.equal(await exportImageBufferMeetsMinEdge(large, 160), true);
     assert.equal(await exportImageBufferMeetsMinEdge(large, 1200), false);
+    assert.equal(imageBufferLooksComplete(large), true);
+    const truncated = large.subarray(0, Math.max(128, large.length - 40));
+    assert.equal(imageBufferLooksComplete(truncated), false, "chopped JPEG is not complete");
+    assert.equal(
+      await exportImageBufferMeetsMinEdge(truncated, 160),
+      false,
+      "truncated JPEG must not be embedded"
+    );
   }
 
   console.log("compress-export-image.test.ts: ok");
