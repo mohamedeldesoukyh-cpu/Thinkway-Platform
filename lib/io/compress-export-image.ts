@@ -124,8 +124,8 @@ export const PITCH_AVATAR_COMPRESS: CompressExportImageOptions = {
 };
 
 export const SHOWCASE_PUBLICATION_COMPRESS: CompressExportImageOptions = {
-  maxEdge: 640,
-  quality: 68,
+  maxEdge: 1080,
+  quality: 82,
 };
 
 export type CropExportImageCoverOptions = {

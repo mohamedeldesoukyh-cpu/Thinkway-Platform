@@ -3,8 +3,10 @@ import assert from "node:assert/strict";
 import {
   creatorRecentPublicationDisplayUrl,
   isCreatorRecentPublicationVideo,
+  isLikelyLowResolutionSocialThumb,
   isVideoPublicationUrl,
   normalizeCreatorRecentPublications,
+  preferHigherResolutionSocialImageUrl,
   recentPublicationsLackThumbnails,
   resolveCreatorRecentPublicationThumbnail,
   shouldProxyPublicationMediaUrl,
@@ -260,5 +262,31 @@ const tiktokShortNormalized = normalizeCreatorRecentPublications([
   },
 ]);
 assert.equal(tiktokShortNormalized[0]?.isVideo, true, "normalize detects vm.tiktok short links");
+
+assert.equal(
+  resolveCreatorRecentPublicationThumbnail({
+    displayUrl: "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg",
+    thumbnail: "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg",
+  }),
+  "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg",
+  "prefer displayUrl over stored thumbnail"
+);
+
+assert.equal(
+  isLikelyLowResolutionSocialThumb(
+    "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg?stp=s150x150"
+  ),
+  true
+);
+assert.equal(
+  isLikelyLowResolutionSocialThumb("https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg"),
+  false
+);
+assert.match(
+  preferHigherResolutionSocialImageUrl(
+    "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/thumb.jpg?stp=s150x150"
+  ),
+  /s1080x1080/
+);
 
 console.log("recent-publication-thumb tests passed");

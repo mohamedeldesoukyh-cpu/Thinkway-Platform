@@ -245,6 +245,8 @@ export type QuotationDocument = {
   /** Discovery shortlists reuse quotation templates without commercial pricing. */
   source?: "quotation" | "shortlist";
   template: QuotationTemplateVariant;
+  /** Client-facing decks hide Cost / Agency Fees and keep Total Investment only. */
+  hideCostAndFees?: boolean;
   serial: string;
   name: string;
   /** Header display currency (amounts in summary are formatted in this currency). */
@@ -882,6 +884,7 @@ export function buildQuotationDocument(
 ): QuotationDocument {
   const audience = options?.audience ?? "client";
   const template = options?.template ?? "detailed";
+  const hideCostAndFees = Boolean(detail.hideCostAndFees);
   const displayCurrency = (detail.currency || REPORTING_CURRENCY).toUpperCase();
   const displayFxRateToEgp = options?.displayFxRateToEgp ?? 1;
   const formatDisplayMoney = (amountEgp: number) => {
@@ -1023,7 +1026,9 @@ export function buildQuotationDocument(
     { label: "Est. Engagement", value: avgEr },
     ...(isCreatorDeckTemplate(template) && !isLumpSumPricingTemplate(template)
       ? []
-      : isLumpSumPricingTemplate(template)
+      : hideCostAndFees
+        ? [{ label: "Total Investment", value: grandTotal }]
+        : isLumpSumPricingTemplate(template)
         ? [
             { label: QUOTATION_CLIENT_LABELS.lumpSumCost, value: totalClientCost },
             { label: QUOTATION_CLIENT_LABELS.totalAgencyFee, value: totalAf },
@@ -1061,6 +1066,7 @@ export function buildQuotationDocument(
     audience,
     source: "quotation",
     template,
+    hideCostAndFees,
     serial: detail.serial_number ?? "QT-PENDING",
     name: detail.name,
     currency: displayCurrency,

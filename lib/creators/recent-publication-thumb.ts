@@ -34,6 +34,40 @@ function hostFromUrl(url: string): string | null {
   }
 }
 
+/** Instagram/Facebook CDN thumbs at 150–480px look pixelated when stretched in Showcase. */
+const LOW_RES_CDN_SIZE =
+  /\bs(?:[1-9]\d|[1-3]\d{2}|4[0-7]\d)x(?:[1-9]\d|[1-3]\d{2}|4[0-7]\d)\b/i;
+
+export function isLikelyLowResolutionSocialThumb(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const haystack = `${parsed.pathname}${parsed.search}`;
+    if (LOW_RES_CDN_SIZE.test(haystack)) return true;
+    if (/\/s\d{2,3}x\d{2,3}\//i.test(parsed.pathname)) return true;
+    if (/_s\.(jpe?g|png|webp)$/i.test(parsed.pathname)) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
+/** Ask the CDN for a larger derivative when the stored thumb is a 150/320 crop. */
+export function preferHigherResolutionSocialImageUrl(url: string): string {
+  try {
+    const parsed = new URL(url);
+    const replaceSize = (value: string) =>
+      value.replace(/\bs(\d{2,4})x(\d{2,4})\b/gi, (_, width, height) => {
+        const size = Math.max(Number(width), Number(height));
+        return size >= 1080 ? `s${width}x${height}` : "s1080x1080";
+      });
+    parsed.pathname = replaceSize(parsed.pathname);
+    parsed.search = replaceSize(parsed.search);
+    return parsed.toString();
+  } catch {
+    return url;
+  }
+}
+
 /** True when a publication preview should be loaded via the server proxy (social CDNs). */
 export function shouldProxyPublicationMediaUrl(url: string): boolean {
   const host = hostFromUrl(url);
@@ -52,18 +86,21 @@ export function resolveCreatorRecentPublicationThumbnail(
   const displayResource = record(row.displayResource);
 
   const direct =
-    str(row.thumbnail) ??
-    str(row.thumbnailSrc) ??
     str(row.displayUrl) ??
     str(row.display_url) ??
+    str(row.fullPicture) ??
+    str(row.full_picture) ??
+    str(row.originalCoverUrl) ??
+    str(row.coverUrl) ??
     str(row.imageUrl) ??
     str(row.image_url) ??
     str(row.previewUrl) ??
     str(row.preview_url) ??
     str(row.thumbnailUrl) ??
     str(row.thumbnail_url) ??
+    str(row.thumbnailSrc) ??
+    str(row.thumbnail) ??
     str(displayResource?.src) ??
-    str(row.coverUrl) ??
     str(row.cover) ??
     str(row.screenshot_url) ??
     null;

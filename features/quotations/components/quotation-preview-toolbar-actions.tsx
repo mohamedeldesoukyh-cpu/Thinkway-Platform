@@ -6,6 +6,7 @@ import {
   ChevronDownIcon,
   DownloadIcon,
   EyeIcon,
+  FileCodeIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
   PresentationIcon,
@@ -56,6 +57,7 @@ type Props = {
 };
 
 const EXPORT_FORMATS = [
+  { format: "html" as const, label: "HTML", icon: FileCodeIcon },
   { format: "excel" as const, label: "Excel", icon: FileSpreadsheetIcon },
   { format: "word" as const, label: "Word", icon: FileTextIcon },
   { format: "pdf" as const, label: "PDF", icon: DownloadIcon },

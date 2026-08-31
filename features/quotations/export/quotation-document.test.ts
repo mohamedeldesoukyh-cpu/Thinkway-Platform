@@ -517,6 +517,50 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 }
 
 {
+  const hiddenShowcase = buildQuotationDocument(mockDetail({ hideCostAndFees: true }), {
+    template: "showcase",
+  });
+  assert.equal(hiddenShowcase.hideCostAndFees, true);
+  const hiddenHtml = buildQuotationHtml(hiddenShowcase);
+  assert.ok(hiddenHtml.includes("TOTAL INVESTMENT"), "Hide cost keeps Total Investment");
+  assert.ok(hiddenHtml.includes("Total Investment"));
+  assert.ok(!hiddenHtml.includes("Client investment"));
+  assert.ok(!hiddenHtml.includes("Client Investment"));
+  assert.ok(!hiddenHtml.includes("Total after Fees"));
+  assert.ok(!hiddenHtml.includes('class="totals showcase-invest-totals'));
+  assert.ok(!hiddenHtml.includes('class="sc-fee-pill"'));
+}
+
+{
+  const hiddenLumpDoc = buildQuotationDocument(mockDetail({ hideCostAndFees: true }), {
+    template: "showcase-lump-sum",
+  });
+  assert.ok(
+    hiddenLumpDoc.commercialKpis.some((kpi) => kpi.label === "Total Investment"),
+    "Hidden cost KPIs keep Total Investment only"
+  );
+  assert.ok(
+    !hiddenLumpDoc.commercialKpis.some((kpi) => kpi.label === QUOTATION_CLIENT_LABELS.lumpSumCost)
+  );
+  assert.ok(
+    !hiddenLumpDoc.commercialKpis.some((kpi) => kpi.label === QUOTATION_CLIENT_LABELS.totalAgencyFee)
+  );
+  const hiddenLumpHtml = buildQuotationHtml(hiddenLumpDoc);
+  assert.ok(hiddenLumpHtml.includes("TOTAL INVESTMENT"));
+  assert.ok(!hiddenLumpHtml.includes("Total after Fees"));
+  assert.ok(!hiddenLumpHtml.includes("Client investment"));
+}
+
+{
+  const hiddenDetailed = buildQuotationHtml(
+    buildQuotationDocument(mockDetail({ hideCostAndFees: true }))
+  );
+  assert.ok(hiddenDetailed.includes("Total Investment"));
+  assert.ok(!hiddenDetailed.includes("Total agency fee"));
+  assert.ok(!hiddenDetailed.includes("Total cost incl. AF"));
+}
+
+{
   const showcaseNamed = buildQuotationHtml(
     buildQuotationDocument(
       mockDetail({ name: "Quotation — TUNA DOLPHIN – DELTA CAMPAIGN" }),

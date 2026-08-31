@@ -10,6 +10,8 @@ export type QuotationTemplateFlags = {
   pricing: QuotationTemplatePricingMode;
   itemizedPricing: boolean;
   showFees: boolean;
+  /** When false, client-facing decks show Total Investment only (Hide cost and fees). */
+  showCostAndFees: boolean;
   includeTerms: boolean;
   includeAcceptance: boolean;
 };

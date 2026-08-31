@@ -405,6 +405,48 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 }
 
 {
+  const hiddenDoc = buildQuotationDocument(mockDetail({ hideCostAndFees: true }), {
+    template: "showcase",
+  });
+  const hiddenPayload = buildQuotationTemplatePayload(hiddenDoc);
+  assert.equal(hiddenPayload.flags.showCostAndFees, false);
+  assert.equal(hiddenPayload.flags.showFees, false);
+  assert.equal(hiddenPayload.cover.stat3.label, "Total Investment");
+  assert.equal(hiddenPayload.cover.feeStat ?? null, null);
+  assert.equal(hiddenPayload.cover.totalAfterFeesStat ?? null, null);
+  const hiddenHtml = buildQuotationTemplateHtml(hiddenDoc);
+  assert.ok(hiddenHtml.includes("TOTAL INVESTMENT"));
+  assert.ok(hiddenHtml.includes("Total Investment"));
+  assert.ok(!hiddenHtml.includes("Client investment"));
+  assert.ok(!hiddenHtml.includes("Client Investment"));
+  assert.ok(!hiddenHtml.includes("Total after Fees"));
+  assert.ok(!hiddenHtml.includes('class="totals showcase-invest-totals'));
+  assert.ok(!hiddenHtml.includes('class="sc-fee-pill"'));
+}
+
+{
+  const hiddenLumpHtml = buildQuotationTemplateHtml(
+    buildQuotationDocument(mockDetail({ hideCostAndFees: true }), {
+      template: "showcase-lump-sum",
+    })
+  );
+  assert.ok(hiddenLumpHtml.includes("TOTAL INVESTMENT"));
+  assert.ok(hiddenLumpHtml.includes("Total Investment"));
+  assert.ok(!hiddenLumpHtml.includes("Total after Fees"));
+  assert.ok(!hiddenLumpHtml.includes("Client investment"));
+  assert.ok(!hiddenLumpHtml.includes("Total agency fee"));
+}
+
+{
+  const hiddenDetailed = buildQuotationTemplateHtml(
+    buildQuotationDocument(mockDetail({ hideCostAndFees: true }))
+  );
+  assert.ok(hiddenDetailed.includes("Total Investment"));
+  assert.ok(!hiddenDetailed.includes("Total agency fee"));
+  assert.ok(!hiddenDetailed.includes("Total cost incl. AF"));
+}
+
+{
   assert.equal(sampleFixture.quotation.number, "QT-2026-0012");
   assert.equal(sampleFixture.flags.itemizedPricing, true);
   assert.equal(sampleFixture.commercial.sectionNo, "02");

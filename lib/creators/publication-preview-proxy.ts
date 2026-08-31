@@ -12,6 +12,10 @@ import {
   setMediaProxyCachePositive,
   withMediaProxyInflight,
 } from "@/lib/creators/media-proxy-cache";
+import {
+  isLikelyLowResolutionSocialThumb,
+  preferHigherResolutionSocialImageUrl,
+} from "@/lib/creators/recent-publication-thumb";
 import { tryFacebookOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/facebook-oembed";
 import { tryInstagramMediaRedirectThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-media-redirect";
 import { tryInstagramOembedThumbnail } from "@/lib/performance/screenshot-capture/providers/instagram-oembed";
@@ -195,14 +199,28 @@ export async function fetchPublicationPreviewImage(input: {
   });
 }
 
+async function fetchAllowedPreviewSrc(
+  src: string | null
+): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
+  if (!src || !isAllowedPublicationPreviewSrcUrl(src)) return { ok: false };
+  const upgraded = preferHigherResolutionSocialImageUrl(src);
+  if (upgraded !== src) {
+    const larger = await fetchImageBuffer(upgraded, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
+    if (larger.ok) return larger;
+  }
+  return fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
+}
+
 async function resolvePublicationPreviewExternal(input: {
   src: string | null;
   postUrl: string | null;
 }): Promise<{ ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false }> {
   const { src, postUrl } = input;
+  const srcLooksTiny = Boolean(src && isLikelyLowResolutionSocialThumb(src));
+  const tryPostUrlFirst = srcLooksTiny && Boolean(postUrl);
 
-  if (src && isAllowedPublicationPreviewSrcUrl(src)) {
-    const direct = await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS });
+  if (!tryPostUrlFirst) {
+    const direct = await fetchAllowedPreviewSrc(src);
     if (direct.ok) return direct;
   }
 
@@ -256,6 +274,11 @@ async function resolvePublicationPreviewExternal(input: {
       const fromOg = await fetchImageBuffer(og.imageUrl);
       if (fromOg.ok) return fromOg;
     }
+  }
+
+  if (tryPostUrlFirst) {
+    const fallback = await fetchAllowedPreviewSrc(src);
+    if (fallback.ok) return fallback;
   }
 
   return { ok: false };

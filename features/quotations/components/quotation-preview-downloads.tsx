@@ -1,5 +1,6 @@
 import {
   DownloadIcon,
+  FileCodeIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
   PresentationIcon,
@@ -56,6 +57,15 @@ export function QuotationPreviewDownloads({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <Button size="sm" variant="outline" asChild>
+        <a
+          href={buildExportHref(quotationId, "html", template, exportOptions)}
+          download
+        >
+          <FileCodeIcon data-icon="inline-start" className="size-3.5" />
+          HTML
+        </a>
+      </Button>
       <Button size="sm" variant="outline" asChild>
         <a
           href={buildExportHref(quotationId, "word", template, exportOptions)}

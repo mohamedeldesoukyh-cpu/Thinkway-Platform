@@ -32,9 +32,10 @@ const COMPANY = {
 
 function resolveTemplateFlags(
   template: QuotationTemplateVariant,
-  documentKind: QuotationTemplateFlags["documentKind"] = "quotation"
+  documentKind: QuotationTemplateFlags["documentKind"] = "quotation",
+  hideCostAndFees = false
 ): QuotationTemplateFlags {
-  const base: Omit<QuotationTemplateFlags, "documentKind"> = (() => {
+  const base: Omit<QuotationTemplateFlags, "documentKind" | "showCostAndFees"> = (() => {
     switch (template) {
       case "lump-sum":
         return {
@@ -113,12 +114,19 @@ function resolveTemplateFlags(
       pricing: "none",
       itemizedPricing: false,
       showFees: false,
+      showCostAndFees: false,
       includeTerms: false,
       includeAcceptance: false,
     };
   }
 
-  return { ...base, documentKind: "quotation" };
+  const showCostAndFees = hideCostAndFees !== true;
+  return {
+    ...base,
+    documentKind: "quotation",
+    showFees: showCostAndFees ? base.showFees : false,
+    showCostAndFees,
+  };
 }
 
 function formatShowcaseQuotationTitle(
@@ -164,6 +172,14 @@ function coverStat3(doc: QuotationDocument): QuotationTemplatePayload["cover"]["
       label: "Avg Engagement",
       value: doc.summary.estimatedEngagement,
       valueShort: doc.summary.estimatedEngagement,
+    };
+  }
+  if (doc.hideCostAndFees) {
+    const formatted = formatQuotationMoneyDisplay(doc.summary.grandTotal);
+    return {
+      label: "Total Investment",
+      value: formatted.full,
+      valueShort: formatted.short,
     };
   }
   // Showcase covers pair Client Investment with Fees + Total after Fees.
@@ -221,6 +237,10 @@ function coverFeeAndTotalStats(
       },
     };
   }
+  const total = formatQuotationMoneyDisplay(doc.summary.grandTotal);
+  if (doc.hideCostAndFees) {
+    return { feeStat: null, totalAfterFeesStat: null };
+  }
   // Pitch decks keep a compact cover. Detailed + Showcase (+ Showcase Lump Sum)
   // show Fees and Total Client Investment after Fees.
   if (isPitchTemplate(doc.template)) {
@@ -230,7 +250,6 @@ function coverFeeAndTotalStats(
     return { feeStat: null, totalAfterFeesStat: null };
   }
   const fee = formatQuotationMoneyDisplay(doc.summary.totalAf);
-  const total = formatQuotationMoneyDisplay(doc.summary.grandTotal);
   return {
     feeStat: {
       label: "Fees",
@@ -412,7 +431,11 @@ function shortlistCoverSubtitle(doc: QuotationDocument): string {
 
 export function buildQuotationTemplatePayload(doc: QuotationDocument): QuotationTemplatePayload {
   const documentKind = doc.source === "shortlist" ? "shortlist" : "quotation";
-  const flags = resolveTemplateFlags(doc.template, documentKind);
+  const flags = resolveTemplateFlags(
+    doc.template,
+    documentKind,
+    Boolean(doc.hideCostAndFees)
+  );
   const title = isPitchTemplate(doc.template)
     ? formatPitchQuotationTitle(doc.name)
     : isShowcaseTemplate(doc.template)
@@ -424,9 +447,11 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
     flags,
   });
 
-  const commercialHeadline = flags.itemizedPricing
-    ? "Client investment"
-    : QUOTATION_CLIENT_LABELS.lumpSumCost.toLowerCase();
+  const commercialHeadline = doc.hideCostAndFees
+    ? "Total Investment"
+    : flags.itemizedPricing
+      ? "Client investment"
+      : QUOTATION_CLIENT_LABELS.lumpSumCost.toLowerCase();
   const commercialSubtotal = flags.itemizedPricing
     ? QUOTATION_CLIENT_LABELS.totalClientCost
     : QUOTATION_CLIENT_LABELS.lumpSumCost;
@@ -434,6 +459,7 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
   const totalClient = formatQuotationMoneyDisplay(doc.summary.totalClientCost);
   const totalAf = formatQuotationMoneyDisplay(doc.summary.totalAf);
   const grandTotal = formatQuotationMoneyDisplay(doc.summary.grandTotal);
+  const headlineValue = doc.hideCostAndFees ? grandTotal.full : totalClient.full;
 
   const feeLines = doc.creatorGroups.flatMap((group) =>
     group.rows
@@ -614,7 +640,7 @@ export function buildQuotationTemplatePayload(doc: QuotationDocument): Quotation
     commercial: {
       sectionNo: sectionNos.commercial,
       headlineLabel: commercialHeadline,
-      headlineValue: totalClient.full,
+      headlineValue,
       subtotalLabel: commercialSubtotal,
       subtotalValue: totalClient.full,
       agencyFee: totalAf.full,

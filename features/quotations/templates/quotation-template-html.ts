@@ -416,10 +416,14 @@ function renderCategoryTierPages(
         ? page.continued
           ? isShortlist
             ? "Creator mix (continued)"
-            : "Creators & fees (continued)"
+            : payload.flags.showCostAndFees
+              ? "Creators & fees (continued)"
+              : "Creators (continued)"
           : isShortlist
             ? "Creator mix"
-            : "Creators & fees"
+            : payload.flags.showCostAndFees
+              ? "Creators & fees"
+              : "Creators"
         : page.continued
           ? "Creator mix (continued)"
           : "Creator mix";
@@ -433,13 +437,13 @@ function renderCategoryTierPages(
       const banner = page.showBanner
         ? isShortlist
           ? `<div class="banner tier-breakdown-grand-total"><div class="gl">TOTAL AUDIENCE · ${esc(payload.totals.creatorCount)} CREATORS</div><div class="gv">${esc(payload.totals.followers)}</div></div>`
-        : showcase
+        : showcase && payload.flags.showCostAndFees
           ? `<div class="totals showcase-invest-totals summary-box">
       <div class="tot"><p class="tl">Client investment</p><p class="tv">${esc(money.currency)} ${esc(money.amount)}</p></div>
       <div class="tot"><p class="tl">Fees</p><p class="tv">${esc(feeMoney.currency)} ${esc(feeMoney.amount)}</p></div>
       <div class="tot final"><p class="tl">Total after Fees</p><p class="tv">${esc(totalAfterMoney.currency)} ${esc(totalAfterMoney.amount)}</p></div>
     </div>`
-          : `<div class="banner tier-breakdown-grand-total"><div class="gl">TOTAL INVESTMENT · ${esc(payload.totals.creatorCount)} CREATORS · ${esc(money.currency)}</div><div class="gv">${esc(money.amount)}</div></div>`
+          : `<div class="banner tier-breakdown-grand-total"><div class="gl">TOTAL INVESTMENT · ${esc(payload.totals.creatorCount)} CREATORS · ${esc(totalAfterMoney.currency)}</div><div class="gv">${esc(totalAfterMoney.amount)}</div></div>`
         : "";
 
       return `<section class="cpage page summary-overview-page">
@@ -841,10 +845,14 @@ function renderCommercialPage(
       <div class="kpi invest"><p class="kl">${esc(c.headlineLabel)}</p><p class="kv">${esc(c.headlineValue)}</p></div>
     </div>`;
 
-  const totalsBlock = `<div class="totals summary-box">
+  const totalsBlock = payload.flags.showCostAndFees
+    ? `<div class="totals summary-box">
       <div class="tot"><p class="tl">${esc(c.subtotalLabel)}</p><p class="tv">${esc(c.subtotalValue)}</p></div>
       <div class="tot"><p class="tl">Total agency fee</p><p class="tv">${esc(c.agencyFee)}</p></div>
       <div class="tot final"><p class="tl">Total cost incl. AF</p><p class="tv">${esc(c.totalInclAF)}</p></div>
+    </div>`
+    : `<div class="totals summary-box">
+      <div class="tot final"><p class="tl">Total Investment</p><p class="tv">${esc(c.totalInclAF)}</p></div>
     </div>`;
 
   const lumpSumNote = !payload.flags.itemizedPricing
@@ -1020,10 +1028,14 @@ function renderCollapsePackageCard(
             <p class="collap-package-kicker">${esc(bundle.previewLabel)}</p>
             <h3 class="collap-package-title">${esc(pkg.optionLabel)}</h3>
           </div>
-          <div class="collap-package-cost">
+          ${
+            doc.hideCostAndFees
+              ? ""
+              : `<div class="collap-package-cost">
             <span class="collap-package-cost-label">${isCreatorDeckTemplate(doc.template) && !isLumpSumPricingTemplate(doc.template) ? "Influencer price" : "Client cost"}</span>
             <span class="collap-package-cost-value">${esc(pkg.clientCost)}</span>
-          </div>
+          </div>`
+          }
         </div>
         <div class="collap-package-meta">
           <div class="collap-package-field">

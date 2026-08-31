@@ -91,4 +91,11 @@ import {
   assert.ok(href.includes("2026-08-11"));
 }
 
+{
+  const href = buildExportHref("q-1", "html", "showcase", { download: true });
+  assert.ok(href.includes("format=html"));
+  assert.ok(href.includes("download=1"));
+  assert.ok(href.includes("template=showcase"));
+}
+
 console.log("quotation-preview-downloads.test.ts: ok");

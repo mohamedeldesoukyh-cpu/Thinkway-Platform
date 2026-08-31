@@ -1082,10 +1082,14 @@ function drawTotalInvestmentBanner(
   y: number
 ): number {
   const payload = buildQuotationTemplatePayload(doc);
-  if (isShowcaseTemplate(doc.template)) {
+  if (isShowcaseTemplate(doc.template) && payload.flags.showCostAndFees) {
     return drawShowcaseInvestmentTotals(slide, payload, y);
   }
-  const money = splitCommercialMoneyParts(payload.commercial.headlineValue || "EGP —");
+  const money = splitCommercialMoneyParts(
+    payload.flags.showCostAndFees
+      ? payload.commercial.headlineValue || "EGP —"
+      : payload.commercial.totalInclAF || payload.commercial.headlineValue || "EGP —"
+  );
   slide.addShape("roundRect", {
     x: MARGIN_X,
     y,
@@ -1192,7 +1196,11 @@ function addCreatorMixSummarySlide(
     const slide = pptx.addSlide();
     applyContentBackground(slide);
     const pageNo = nextSlideNo(counter);
-    let cursorY = addSectionHeader(slide, "01 · INVESTMENT SUMMARY", "Creators & fees");
+    let cursorY = addSectionHeader(
+      slide,
+      "01 · INVESTMENT SUMMARY",
+      doc.hideCostAndFees ? "Creators" : "Creators & fees"
+    );
     cursorY = drawTotalInvestmentBanner(slide, doc, cursorY + 0.2);
     addSlideFooter(slide, `${doc.serial} · Summary`, pageNo);
     return;
@@ -2198,7 +2206,8 @@ function addCollabPackageCard(
   y: number,
   w: number,
   h: number,
-  costLabel: string
+  costLabel: string,
+  showCost = true
 ): void {
   const pad = 0.26;
   const innerW = w - pad * 2;
@@ -2235,30 +2244,32 @@ function addCollabPackageCard(
     color: TITLE_INK,
   });
 
-  const costX = x + w - pad - 2.05;
-  slide.addText(costLabel.toUpperCase(), {
-    x: costX,
-    y: y + 0.22,
-    w: 2.05,
-    h: 0.18,
-    fontFace: FONT_UI,
-    fontSize: 9,
-    bold: true,
-    color: MUTED_SOFT,
-    align: "right",
-    charSpacing: 1,
-  });
-  slide.addText(pkg.clientCost || "—", {
-    x: costX,
-    y: y + 0.4,
-    w: 2.05,
-    h: 0.32,
-    fontFace: FONT_UI,
-    fontSize: 14,
-    bold: true,
-    color: BLUE,
-    align: "right",
-  });
+  if (showCost) {
+    const costX = x + w - pad - 2.05;
+    slide.addText(costLabel.toUpperCase(), {
+      x: costX,
+      y: y + 0.22,
+      w: 2.05,
+      h: 0.18,
+      fontFace: FONT_UI,
+      fontSize: 9,
+      bold: true,
+      color: MUTED_SOFT,
+      align: "right",
+      charSpacing: 1,
+    });
+    slide.addText(pkg.clientCost || "—", {
+      x: costX,
+      y: y + 0.4,
+      w: 2.05,
+      h: 0.32,
+      fontFace: FONT_UI,
+      fontSize: 14,
+      bold: true,
+      color: BLUE,
+      align: "right",
+    });
+  }
 
   const fields = [
     ["SERVICE", pkg.serviceDescription],
@@ -2380,7 +2391,16 @@ async function addCollabBundleSlide(
 
     chunk.forEach((pkg, index) => {
       const x = MARGIN_X + index * (cardW + gap);
-      addCollabPackageCard(slide, pkg, x, cardY, cardW, cardH, costLabel);
+      addCollabPackageCard(
+        slide,
+        pkg,
+        x,
+        cardY,
+        cardW,
+        cardH,
+        costLabel,
+        !doc.hideCostAndFees
+      );
     });
 
     // Showcase: optional mix-feed strip under single-option cards when space allows.
@@ -2668,13 +2688,16 @@ function addCommercialTotalsBlock(
   y: number,
   currency = "EGP"
 ): void {
-  const totals = [
-    ["Client cost", payload.commercial.subtotalValue, false],
-    ["Total agency fee", payload.commercial.agencyFee, false],
-    ["Total cost incl. AF", payload.commercial.totalInclAF, true],
-  ] as const;
+  const totals = payload.flags.showCostAndFees
+    ? ([
+        ["Client cost", payload.commercial.subtotalValue, false],
+        ["Total agency fee", payload.commercial.agencyFee, false],
+        ["Total cost incl. AF", payload.commercial.totalInclAF, true],
+      ] as const)
+    : ([["Total Investment", payload.commercial.totalInclAF, true]] as const);
   const gap = 0.14;
-  const cardW = (12.13 - gap * 2) / 3;
+  const cardW =
+    totals.length === 1 ? 12.13 : (12.13 - gap * (totals.length - 1)) / totals.length;
 
   totals.forEach(([label, value, isFinal], index) => {
     const x = MARGIN_X + index * (cardW + gap);
