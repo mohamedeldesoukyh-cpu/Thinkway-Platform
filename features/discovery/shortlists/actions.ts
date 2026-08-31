@@ -40,6 +40,11 @@ import { isAddableCreator } from "./add-to-shortlist-policy";
 import { describeShortlistPasteAddOutcome } from "./paste-links-policy";
 import { defaultPlatformAccountIds } from "./platform-account-selection";
 import {
+  duplicateShortlistName,
+  mapDuplicatedShortlistItems,
+  type ShortlistItemDuplicateSource,
+} from "./duplicate-shortlist";
+import {
   assertTransition,
   canEditCreators,
   isMovementLocked,
@@ -251,6 +256,112 @@ export async function createShortlistV2(
     id: data.id as string,
     serial_number: (data.serial_number as string) ?? null,
     name: data.name as string,
+  };
+}
+
+export type DuplicateShortlistResult =
+  | {
+      ok: true;
+      message: string;
+      id: string;
+      serial_number: string | null;
+      name: string;
+    }
+  | { ok: false; message: string };
+
+const DUPLICATE_ITEM_CHUNK = 40;
+
+export async function duplicateShortlist(shortlistId: string): Promise<DuplicateShortlistResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+
+  const { data: source, error: sourceError } = await actor.supabase
+    .from("discovery_shortlists")
+    .select(
+      "id, name, description, visibility, client_id, brand_id, campaign_header_id, currency, metadata"
+    )
+    .eq("id", shortlistId)
+    .maybeSingle();
+
+  if (sourceError) return { ok: false, message: sourceError.message };
+  if (!source) return { ok: false, message: "Shortlist not found." };
+
+  const visibility: ShortlistVisibilityV2 =
+    source.visibility === "client_shared" ? "team" : (source.visibility ?? "private");
+  const copyName = duplicateShortlistName(source.name);
+
+  const { data: created, error: createError } = await actor.supabase
+    .from("discovery_shortlists")
+    .insert({
+      name: copyName,
+      description: source.description,
+      owner_id: actor.userId,
+      created_by: actor.userId,
+      visibility,
+      status: "draft",
+      client_id: source.client_id,
+      brand_id: source.brand_id,
+      campaign_header_id: source.campaign_header_id,
+      currency: source.currency,
+      metadata: source.metadata ?? {},
+    })
+    .select("id, serial_number, name, owner_id, created_by, approved_by")
+    .single();
+
+  if (createError || !created) {
+    return { ok: false, message: createError?.message ?? "Could not duplicate shortlist." };
+  }
+
+  const newId = created.id as string;
+
+  const { data: sourceItems, error: itemsError } = await actor.supabase
+    .from("discovery_shortlist_items")
+    .select(
+      "profile_id, influencer_id, unified_id, notes, match_score, sort_order, platform_account_ids, commercial_input_mode, cost, cost_currency, gp_pct, gp_value, revenue, fx_rate_to_egp, cost_egp, revenue_egp, gp_value_egp, deliverables, commercial_updated_at, option_number, service_description, collapse_group_id, collapse_label"
+    )
+    .eq("shortlist_id", shortlistId)
+    .order("sort_order", { ascending: true });
+
+  if (itemsError) {
+    await actor.supabase.from("discovery_shortlists").delete().eq("id", newId);
+    return { ok: false, message: itemsError.message };
+  }
+
+  const inserts = mapDuplicatedShortlistItems(
+    (sourceItems ?? []) as ShortlistItemDuplicateSource[],
+    newId,
+    actor.userId
+  );
+
+  for (let i = 0; i < inserts.length; i += DUPLICATE_ITEM_CHUNK) {
+    const chunk = inserts.slice(i, i + DUPLICATE_ITEM_CHUNK);
+    const { error: insertError } = await actor.supabase
+      .from("discovery_shortlist_items")
+      .insert(chunk);
+    if (insertError) {
+      await actor.supabase.from("discovery_shortlists").delete().eq("id", newId);
+      return { ok: false, message: insertError.message };
+    }
+  }
+
+  await notifyShortlistEvent(actor.supabase, {
+    shortlistId: newId,
+    event: "created",
+    actorId: actor.userId,
+    recipientIds: recipientsFor(created as never),
+    body: `${copyName} duplicated from ${source.name}.`,
+  });
+
+  revalidateShortlist(newId);
+  const serial = (created.serial_number as string) ?? null;
+  return {
+    ok: true,
+    id: newId,
+    serial_number: serial,
+    name: created.name as string,
+    message: serial
+      ? `Shortlist duplicated as ${serial}.`
+      : "Shortlist duplicated as a new draft.",
   };
 }
 

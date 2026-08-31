@@ -6,7 +6,8 @@ export type ShortlistListActionKey =
   | "return_to_draft"
   | "reopen"
   | "cancel"
-  | "archive";
+  | "archive"
+  | "duplicate";
 
 export type ShortlistListActionDef = {
   key: ShortlistListActionKey;
@@ -48,6 +49,11 @@ export const SHORTLIST_LIST_ACTIONS: ShortlistListActionDef[] = [
     label: "Archive",
     show: (status) => status !== "archived",
     destructive: true,
+  },
+  {
+    key: "duplicate",
+    label: "Duplicate",
+    show: () => true,
   },
 ];
 

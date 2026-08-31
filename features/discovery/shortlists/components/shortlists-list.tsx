@@ -33,6 +33,7 @@ import {
   approveShortlist,
   archiveShortlist,
   cancelShortlist,
+  duplicateShortlist,
   rejectShortlist,
   reopenShortlist,
   submitShortlistForReview,
@@ -79,7 +80,12 @@ import {
 
 const LIST_ACTION_RUNNERS: Record<
   ShortlistListActionKey,
-  (id: string) => Promise<{ ok: boolean; message?: string }>
+  (id: string) => Promise<{
+    ok: boolean;
+    message?: string;
+    id?: string;
+    serial_number?: string | null;
+  }>
 > = {
   submit_for_review: submitShortlistForReview,
   approve: approveShortlist,
@@ -87,6 +93,7 @@ const LIST_ACTION_RUNNERS: Record<
   reopen: reopenShortlist,
   cancel: cancelShortlist,
   archive: archiveShortlist,
+  duplicate: duplicateShortlist,
 };
 
 const TABLE_GUTTER_START = "pl-8";
@@ -146,30 +153,29 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
     [selectedRows]
   );
 
-  const runAction = useCallback(
-    (action: () => Promise<{ ok: boolean; message?: string }>) => {
+  const runRowAction = useCallback(
+    (row: ShortlistListRow, def: ShortlistListActionDef) => {
       startTransition(async () => {
         try {
-          const result = await action();
-          if (result.ok) {
-            toast.success(result.message ?? "Done");
-            router.refresh();
-          } else {
+          const result = await LIST_ACTION_RUNNERS[def.key](row.id);
+          if (!result.ok) {
             toast.error(result.message ?? "Action failed");
+            return;
           }
+          toast.success(result.message ?? "Done");
+          if (def.key === "duplicate" && result.id) {
+            router.push(
+              shortlistDetailPath({ id: result.id, serial_number: result.serial_number })
+            );
+            return;
+          }
+          router.refresh();
         } catch (error) {
           toast.error(error instanceof Error ? error.message : "Action failed");
         }
       });
     },
     [router]
-  );
-
-  const runRowAction = useCallback(
-    (row: ShortlistListRow, def: ShortlistListActionDef) => {
-      runAction(() => LIST_ACTION_RUNNERS[def.key](row.id));
-    },
-    [runAction]
   );
 
   const runBulkAction = useCallback(
@@ -201,8 +207,11 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
 
         if (updated > 0) {
           toast.success(
-            `${updated} shortlist${updated === 1 ? "" : "s"} ${def.label.toLowerCase()}.` +
-              (skipped > 0 ? ` ${skipped} skipped.` : "")
+            def.key === "duplicate"
+              ? `${updated} shortlist${updated === 1 ? "" : "s"} duplicated.` +
+                (skipped > 0 ? ` ${skipped} skipped.` : "")
+              : `${updated} shortlist${updated === 1 ? "" : "s"} ${def.label.toLowerCase()}.` +
+                (skipped > 0 ? ` ${skipped} skipped.` : "")
           );
           setSelectedIds(new Set());
           router.refresh();
@@ -392,8 +401,24 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                           <DropdownMenuItem asChild>
                             <Link href={shortlistDetailPath(row)}>Open</Link>
                           </DropdownMenuItem>
-                          {actions.length > 0 ? <DropdownMenuSeparator /> : null}
-                          {actions.map((action) => (
+                          <DropdownMenuItem
+                            onSelect={(event) => {
+                              event.preventDefault();
+                              runRowAction(row, {
+                                key: "duplicate",
+                                label: "Duplicate",
+                                show: () => true,
+                              });
+                            }}
+                          >
+                            Duplicate
+                          </DropdownMenuItem>
+                          {actions.filter((action) => action.key !== "duplicate").length > 0 ? (
+                            <DropdownMenuSeparator />
+                          ) : null}
+                          {actions
+                            .filter((action) => action.key !== "duplicate")
+                            .map((action) => (
                             <DropdownMenuItem
                               key={action.key}
                               variant={action.destructive ? "destructive" : "default"}

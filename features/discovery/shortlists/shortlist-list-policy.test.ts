@@ -54,23 +54,29 @@ const rows: ShortlistListRow[] = [
   },
 ];
 
-assert.equal(actionsForShortlistStatus("draft").map((a) => a.key).join(","), "submit_for_review,cancel,archive");
-assert.equal(actionsForShortlistStatus("under_review").map((a) => a.key).join(","), "approve,return_to_draft,cancel,archive");
+assert.equal(actionsForShortlistStatus("draft").map((a) => a.key).join(","), "submit_for_review,cancel,archive,duplicate");
+assert.equal(actionsForShortlistStatus("under_review").map((a) => a.key).join(","), "approve,return_to_draft,cancel,archive,duplicate");
 
 assert.deepEqual(
   resolveBulkShortlistActions(["draft", "draft"]).map((a) => a.key),
-  ["submit_for_review", "cancel", "archive"]
+  ["submit_for_review", "cancel", "archive", "duplicate"]
 );
 assert.deepEqual(resolveBulkShortlistActions(["draft", "under_review"]).map((a) => a.key), [
   "cancel",
   "archive",
+  "duplicate",
 ]);
 assert.deepEqual(resolveBulkShortlistActions(["under_review", "under_review"]).map((a) => a.key), [
   "approve",
   "return_to_draft",
   "cancel",
   "archive",
+  "duplicate",
 ]);
+assert.ok(
+  actionsForShortlistStatus("archived").some((action) => action.key === "duplicate"),
+  "Archived shortlists can still be duplicated into a new draft"
+);
 
 assert.equal(hasActiveShortlistListFilters(DEFAULT_SHORTLIST_LIST_FILTERS), false);
 assert.equal(
