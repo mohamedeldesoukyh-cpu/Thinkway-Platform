@@ -39,14 +39,22 @@ function hostFromUrl(url: string): string | null {
 
 /** Instagram/Facebook `stp=dst-jpg_e15` (and similar) is a posterized preview derivative. */
 const LOW_QUALITY_STP_E = /(?:^|[_\-])e([0-2]?\d)(?:[_\-]|$)/i;
+/** Legacy path folder `/e15/` or `/e15.0/` — not `t51.2885-15`. */
+const PATH_QUALITY_E = /\/e(\d{1,2})(?:\.0)?(?:\/|$)/i;
+
+function qualityNumber(value: string | undefined): number | null {
+  if (!value) return null;
+  const quality = Number(value);
+  return Number.isFinite(quality) ? quality : null;
+}
 
 export function socialCdnPreviewQuality(url: string): number | null {
   try {
-    const stp = new URL(url).searchParams.get("stp") ?? "";
-    const match = stp.match(LOW_QUALITY_STP_E);
-    if (!match) return null;
-    const quality = Number(match[1]);
-    return Number.isFinite(quality) ? quality : null;
+    const parsed = new URL(url);
+    const stp = parsed.searchParams.get("stp") ?? "";
+    const stpQuality = qualityNumber(stp.match(LOW_QUALITY_STP_E)?.[1]);
+    if (stpQuality != null) return stpQuality;
+    return qualityNumber(parsed.pathname.match(PATH_QUALITY_E)?.[1]);
   } catch {
     return null;
   }
@@ -85,16 +93,28 @@ export function isLikelyPoorSocialPreviewUrl(url: string): boolean {
 function rewriteSocialCdnQualityTokens(url: string, minQuality: number): string {
   try {
     const parsed = new URL(url);
+    let changed = false;
     const stp = parsed.searchParams.get("stp");
-    if (!stp) return url;
-    const next = stp.replace(/([_\-]e)(\d{1,3})/gi, (full, prefix, value) => {
-      const quality = Number(value);
-      if (!Number.isFinite(quality) || quality >= minQuality) return full;
-      return `${prefix}${minQuality}`;
-    });
-    if (next === stp) return url;
-    parsed.searchParams.set("stp", next);
-    return parsed.toString();
+    if (stp) {
+      const next = stp.replace(/([_\-]e)(\d{1,3})/gi, (full, prefix, value) => {
+        const quality = Number(value);
+        if (!Number.isFinite(quality) || quality >= minQuality) return full;
+        changed = true;
+        return `${prefix}${minQuality}`;
+      });
+      if (next !== stp) parsed.searchParams.set("stp", next);
+    }
+    const nextPath = parsed.pathname.replace(
+      /\/e(\d{1,2})(\.0)?(\/|$)/gi,
+      (full, value, dot, suffix) => {
+        const quality = Number(value);
+        if (!Number.isFinite(quality) || quality >= minQuality) return full;
+        changed = true;
+        return `/e${minQuality}${dot ?? ""}${suffix}`;
+      }
+    );
+    if (nextPath !== parsed.pathname) parsed.pathname = nextPath;
+    return changed ? parsed.toString() : url;
   } catch {
     return url;
   }

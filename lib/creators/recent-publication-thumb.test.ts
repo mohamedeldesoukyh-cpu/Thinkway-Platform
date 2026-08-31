@@ -388,6 +388,27 @@ assert.equal(
 );
 assert.equal(
   isLikelyLowQualitySocialJpeg(
+    "https://scontent.cdninstagram.com/v/t51.2885-15/e15/123456789_n.jpg"
+  ),
+  true,
+  "legacy Instagram /e15/ path is a posterized preview JPEG"
+);
+assert.equal(
+  isLikelyLowQualitySocialJpeg(
+    "https://scontent.cdninstagram.com/v/t51.2885-15/e35/123456789_n.jpg"
+  ),
+  false,
+  "Instagram /e35/ path is not treated as a preview JPEG"
+);
+assert.match(
+  preferHigherResolutionSocialImageUrl(
+    "https://scontent.cdninstagram.com/v/t51.2885-15/e15/123456789_n.jpg"
+  ),
+  /\/e35\//,
+  "unsigned /e15/ path is rewritten to /e35/"
+);
+assert.equal(
+  isLikelyLowQualitySocialJpeg(
     "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?stp=dst-jpg_e35_s1080x1080"
   ),
   false

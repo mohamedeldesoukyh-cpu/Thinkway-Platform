@@ -34,6 +34,7 @@ import {
   SHOWCASE_PUBLICATION_COMPRESS,
   compressExportDataUri,
   exportImageBufferMeetsMinEdge,
+  isVisiblyOvercompressedPhoto,
   toCompressedExportDataUri,
 } from "@/lib/io/compress-export-image";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
@@ -263,6 +264,9 @@ async function embedFromRawBuffer(
   contentType: string
 ): Promise<QuotationDocPublicationShot | null> {
   if (!(await exportImageBufferMeetsMinEdge(buffer, MIN_DISPLAYABLE_PUBLICATION_EDGE))) {
+    return null;
+  }
+  if (isVisiblyOvercompressedPhoto(buffer)) {
     return null;
   }
   return {

@@ -178,6 +178,11 @@ import {
     /toCompressedExportDataUri|compressExportDataUri/,
     "Showcase publication shots must be compressed before data-URI embed"
   );
+  assert.match(
+    source,
+    /isVisiblyOvercompressedPhoto/,
+    "Showcase embed must reject Instagram e15-class JPEG bytes"
+  );
 }
 
 {
