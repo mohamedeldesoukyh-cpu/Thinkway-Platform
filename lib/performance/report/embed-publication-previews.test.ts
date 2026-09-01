@@ -28,3 +28,12 @@ test("content-type parameters are stripped from the data URI", () => {
   assert.ok(uri.startsWith("data:image/png;base64,"));
   assert.ok(!uri.includes("charset"));
 });
+
+test("embedReportCreatorAvatar returns existing data URIs untouched", async () => {
+  const { embedReportCreatorAvatar } = await import(
+    "@/lib/performance/report/embed-publication-previews"
+  );
+  const stored = "data:image/jpeg;base64,/9j/4AAQ";
+  const out = await embedReportCreatorAvatar({ src: stored });
+  assert.equal(out, stored);
+});

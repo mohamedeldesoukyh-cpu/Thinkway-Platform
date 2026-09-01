@@ -2,9 +2,12 @@ import {
   fetchImageBuffer,
   fetchPublicationPreviewImage,
 } from "@/lib/creators/publication-preview-proxy";
+import { fetchCreatorAvatarImage } from "@/lib/creators/creator-avatar-proxy";
 import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Database } from "@/types/database";
 
 export type PublicationPreviewEmbedInput = {
   screenshot_url?: string | null;
@@ -75,10 +78,52 @@ export async function embedCampaignPublicationPreview(
         preview.contentType
       );
     }
+    const display = await fetchPublicationPreviewImage({
+      src: socialSrc,
+      postUrl,
+      quality: "display",
+    });
+    if (display.ok) {
+      return toUnprocessedImageDataUri(
+        Buffer.from(display.buffer),
+        display.contentType
+      );
+    }
   }
 
   if (stored) {
     return embedStoredUrlAsOriginal(stored);
+  }
+
+  return null;
+}
+
+/** Embed original avatar bytes for Combined/Influencer HTML + PDF (srcDoc cannot load social CDNs). */
+export async function embedReportCreatorAvatar(input: {
+  src?: string | null;
+  profileUrl?: string | null;
+  supabase?: SupabaseClient<Database> | null;
+}): Promise<string | null> {
+  const src = input.src?.trim() || null;
+  const profileUrl = input.profileUrl?.trim() || null;
+  if (src?.startsWith("data:")) return src;
+  if (!src && !profileUrl) return null;
+
+  const fetched = await fetchCreatorAvatarImage({
+    src,
+    profileUrl,
+    supabase: input.supabase,
+  });
+  if (fetched.ok) {
+    return toUnprocessedImageDataUri(
+      Buffer.from(fetched.buffer),
+      fetched.contentType
+    );
+  }
+
+  if (src) {
+    const embedded = await embedReportImageDataUri(src);
+    return embedded?.startsWith("data:") ? embedded : null;
   }
 
   return null;

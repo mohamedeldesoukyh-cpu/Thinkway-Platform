@@ -340,6 +340,41 @@ async function main() {
 
   {
     resetMediaProxyMetricsForTests();
+    const tinySrc = "https://scontent.cdninstagram.com/v/t51.2885-15/s320x320/tiny-display.jpg";
+    const tiny = await jpegOfSize(300, 300);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("scontent.cdninstagram.com")) {
+        return new Response(tiny, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return new Response(null, { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const result = await fetchPublicationPreviewImage({
+        src: tinySrc,
+        postUrl: null,
+        quality: "display",
+      });
+      assert.equal(
+        result.ok,
+        true,
+        "report display quality may embed a complete still below the Showcase 640px floor"
+      );
+      if (result.ok) {
+        assert.equal(result.buffer.byteLength, tiny.byteLength);
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    resetMediaProxyMetricsForTests();
     const signedSrc =
       "https://p16-common-sign.tiktokcdn-eu.com/tos-maliva-p-0068/cover~tplv-tiktokx-origin.image?x-expires=1&x-signature=expired";
     const postUrl = "https://www.tiktok.com/@ouda.5/video/7307222111527931141";

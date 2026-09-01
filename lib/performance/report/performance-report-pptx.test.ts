@@ -33,8 +33,8 @@ test("performance report avatars embed original bytes", () => {
     join(dirname(fileURLToPath(import.meta.url)), "performance-report-document-data.ts"),
     "utf8"
   );
-  assert.match(source, /embedReportImageDataUri\(resolvedAvatar\)/);
-  assert.match(source, /avatarUrl: avatarUrl \? await embedReportImageDataUri\(avatarUrl\)/);
+  assert.match(source, /embedReportCreatorAvatar\(/);
+  assert.match(source, /avatarUrl: await embedReportCreatorAvatar\(/);
   assert.doesNotMatch(
     source,
     /toCompressedExportDataUri|compressExportDataUri|SHOWCASE_AVATAR_COMPRESS|cropExportImageBufferCover/
