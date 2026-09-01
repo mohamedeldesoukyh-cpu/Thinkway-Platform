@@ -92,12 +92,10 @@ export function countLineDeliverables(platforms: LinePlatformSelection[]): numbe
 
 export function suggestCostFromRateCard(
   rateCard: Record<string, unknown>,
-  platforms: LinePlatformSelection[]
+  _platforms: LinePlatformSelection[]
 ): number {
   const base = Number(rateCard?.default_fee ?? rateCard?.base_rate ?? 0);
-  if (base > 0) return base;
-  const deliverableCount = Math.max(1, countLineDeliverables(platforms));
-  return deliverableCount * 500;
+  return Number.isFinite(base) && base > 0 ? base : 0;
 }
 
 export function suggestCurrencyFromPaymentDetails(

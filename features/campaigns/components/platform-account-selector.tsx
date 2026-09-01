@@ -185,7 +185,6 @@ export function buildInitialSelections(
 ): PlatformSelectionState[] {
   return profile.platforms.map((p) => {
     const prev = existing?.find((e) => e.account_id === p.id);
-    const defaultDeliverables = PLATFORM_DELIVERABLES[p.platform]?.slice(0, 1) ?? ["other"];
     return {
       account_id: p.id,
       platform: p.platform,
@@ -194,8 +193,8 @@ export function buildInitialSelections(
       follower_count: p.follower_count,
       engagement_rate: p.engagement_rate,
       audience_country: p.audience_country,
-      deliverables: prev?.deliverables ?? defaultDeliverables,
-      selected: prev?.selected ?? p.platform === profile.platforms[0]?.platform,
+      deliverables: prev?.deliverables ?? [],
+      selected: prev?.selected ?? false,
     };
   });
 }

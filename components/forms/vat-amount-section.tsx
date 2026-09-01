@@ -65,8 +65,8 @@ export function VatAmountSection({
             type="number"
             min={0}
             step="0.01"
-            value={beforeVat}
-            onChange={(e) => onBeforeVatChange(Number(e.target.value))}
+            value={beforeVat === 0 ? "" : beforeVat}
+            onChange={(e) => onBeforeVatChange(Number(e.target.value) || 0)}
             disabled={disabled || amountDisabled}
           />
         </div>

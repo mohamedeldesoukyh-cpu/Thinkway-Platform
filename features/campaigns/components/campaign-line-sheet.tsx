@@ -57,7 +57,6 @@ import {
 import {
   buildLineTitle,
   countLineDeliverables,
-  suggestCostFromRateCard,
   type AssignmentPricingMode,
   type LineInfluencerAssignment,
 } from "@/features/campaigns/line-assignment";
@@ -206,8 +205,7 @@ export function CampaignLineSheet({
   );
 
   const activeSelections = useMemo(
-    () =>
-      selections.filter((s) => s.selected && s.deliverables.length > 0),
+    () => selections.filter((s) => s.selected),
     [selections]
   );
 
@@ -356,7 +354,7 @@ export function CampaignLineSheet({
   ]);
 
   const autoTitle = useMemo(() => {
-    if (!influencerLabel || activeSelections.length === 0) return "";
+    if (!influencerLabel) return "";
     return buildLineTitle(
       influencerLabel,
       activeSelections.map(({ selected: _s, ...rest }) => rest)
@@ -609,7 +607,6 @@ export function CampaignLineSheet({
       setProfile(data.profile);
       setSelections(buildInitialSelections(data.profile, existing));
       setCurrency(data.profile.suggested_currency || currencyCode);
-      setCost((c) => (c > 0 ? c : data.profile!.suggested_cost));
       if (data.profile.vat_registered) {
         setCostVatPercent(data.profile.suggested_cost_vat_percent);
         setCostVatExempt(false);
@@ -681,14 +678,6 @@ export function CampaignLineSheet({
     void loadProfile(item.id);
   }
 
-  useEffect(() => {
-    if (!profile || activeSelections.length === 0) return;
-    const suggested = suggestCostFromRateCard(profile.rate_card, activeSelections);
-    if (cost === 0 && suggested > 0) {
-      setCost(suggested);
-    }
-  }, [profile, activeSelections, cost]);
-
   const poSnapshot = useMemo(
     () =>
       calculatePoConsumption({
@@ -741,15 +730,8 @@ export function CampaignLineSheet({
     return line.assignment?.commercial_rows?.reduce((sum, row) => sum + row.quantity, 0) ?? 0;
   }, [isEdit, line]);
 
-  const hasDeliverableScope = isEdit
-    ? Boolean(line?.id)
-    : pricingMode === "per_deliverable"
-      ? commercialRows.length > 0
-      : activeSelections.length > 0;
-
   const canSubmit =
     Boolean(influencerId) &&
-    hasDeliverableScope &&
     (!loadingProfile || isEdit) &&
     lineTitle.trim().length > 0;
 
@@ -851,9 +833,9 @@ export function CampaignLineSheet({
           subtitle={
             influencerLabel
               ? selectedIdentity.handle
-                ? `@${selectedIdentity.handle} · choose platforms and commercial terms`
-                : "Choose platforms and commercial terms"
-              : "Select a creator, platforms, deliverables, and commercial terms."
+                ? `@${selectedIdentity.handle} · platforms and commercial terms can be added later`
+                : "Platforms and commercial terms can be added later"
+              : "Select a creator. Platforms and commercial terms can be added later."
           }
         />
 

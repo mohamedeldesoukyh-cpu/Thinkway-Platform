@@ -113,7 +113,7 @@ export function AssignmentMultiCurrencyCostFields({
             type="number"
             min={0}
             step="0.01"
-            value={Number.isFinite(costReceived) ? costReceived : 0}
+            value={costReceived === 0 ? "" : costReceived}
             onChange={(e) => onCostReceivedChange(Number(e.target.value) || 0)}
             disabled={disabled}
           />
@@ -144,7 +144,9 @@ export function AssignmentMultiCurrencyCostFields({
         <div className="flex justify-between gap-3">
           <span className="shrink-0 text-muted-foreground">Cost in LC</span>
           <span className="truncate text-right font-medium tabular-nums">
-            {formatBillingMoney(costInLc, campaignCurrency)}
+            {costInLc === 0
+              ? "—"
+              : formatBillingMoney(costInLc, campaignCurrency)}
           </span>
         </div>
       </div>

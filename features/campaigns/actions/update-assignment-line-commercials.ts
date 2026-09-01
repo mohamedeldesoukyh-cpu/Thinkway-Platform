@@ -118,10 +118,7 @@ function normalizePlatformsForMutation(
     )
     .map((platform) => ({
       ...platform,
-      deliverables:
-        Array.isArray(platform.deliverables) && platform.deliverables.length > 0
-          ? platform.deliverables
-          : ["other"],
+      deliverables: Array.isArray(platform.deliverables) ? platform.deliverables : [],
     }));
 }
 
