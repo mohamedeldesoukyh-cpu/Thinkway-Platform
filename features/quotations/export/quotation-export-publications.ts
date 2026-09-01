@@ -28,14 +28,12 @@ import {
   fetchImageBuffer as fetchDirectImageBuffer,
 } from "@/lib/performance/screenshot-capture/storage";
 import { normalizeAvatarUrlForComparison } from "@/lib/performance/avatar-sync-policy";
+import { toUnprocessedImageDataUri } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import {
   MIN_SHARP_PUBLICATION_EDGE,
-  SHOWCASE_PUBLICATION_COMPRESS,
-  compressExportDataUri,
   exportImageBufferMeetsMinEdge,
   isVisiblyOvercompressedPhoto,
-  toCompressedExportDataUri,
 } from "@/lib/io/compress-export-image";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import type { Database } from "@/types/database";
@@ -255,17 +253,6 @@ export async function loadQuotationCreatorPublicationShots(
  * can fall back to OpenGraph / oEmbed / Instagram media redirect. Omit shots that
  * cannot be embedded (never emit auth-gated proxy <img> tags in preview/PDF).
  */
-async function toPublicationDataUri(
-  buffer: Buffer,
-  contentType: string
-): Promise<string> {
-  return toCompressedExportDataUri(
-    buffer,
-    contentType,
-    SHOWCASE_PUBLICATION_COMPRESS
-  );
-}
-
 async function embedFromRawBuffer(
   shot: QuotationDocPublicationShot,
   buffer: Buffer,
@@ -279,7 +266,7 @@ async function embedFromRawBuffer(
   }
   return {
     ...shot,
-    imageUrl: await toPublicationDataUri(buffer, contentType),
+    imageUrl: toUnprocessedImageDataUri(buffer, contentType),
     imageProxyUrl: null,
   };
 }
@@ -292,7 +279,7 @@ async function embedPublicationShot(
   if (trimmed.startsWith("data:")) {
     return {
       ...shot,
-      imageUrl: await compressExportDataUri(trimmed, SHOWCASE_PUBLICATION_COMPRESS),
+      imageUrl: trimmed,
       imageProxyUrl: null,
     };
   }
@@ -337,7 +324,7 @@ async function embedPublicationShot(
     if (embedded?.startsWith("data:")) {
       return {
         ...shot,
-        imageUrl: await compressExportDataUri(embedded, SHOWCASE_PUBLICATION_COMPRESS),
+        imageUrl: embedded,
         imageProxyUrl: null,
       };
     }

@@ -5,20 +5,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fetchCreatorAvatarImage } from "@/lib/creators/creator-avatar-proxy";
-import {
-  compressExportDataUri,
-  toCompressedExportDataUri,
-} from "@/lib/io/compress-export-image";
+import { toUnprocessedImageDataUri } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
 import type { Database } from "@/types/database";
 
 const IMG_SRC_RE = /<img\b[^>]*?\bsrc=(["'])(https?:\/\/[^"']+)\1/gi;
-
-const PDF_IMAGE_COMPRESS = {
-  maxEdge: 256,
-  quality: 78,
-};
 
 async function resolveAdminSupabase(): Promise<SupabaseClient<Database> | null> {
   try {
@@ -44,14 +36,11 @@ async function embedRemoteImageDataUri(
   if (result.ok) {
     const buffer = Buffer.from(result.buffer);
     const contentType = result.contentType || detectImageContentType(buffer);
-    return toCompressedExportDataUri(buffer, contentType, PDF_IMAGE_COMPRESS);
+    return toUnprocessedImageDataUri(buffer, contentType);
   }
 
   const fetched = await embedReportImageDataUri(trimmed);
-  if (fetched?.startsWith("data:")) {
-    return compressExportDataUri(fetched, PDF_IMAGE_COMPRESS);
-  }
-  return null;
+  return fetched?.startsWith("data:") ? fetched : null;
 }
 
 /** Collect unique http(s) image URLs from HTML img tags. */

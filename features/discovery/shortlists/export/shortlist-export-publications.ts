@@ -21,12 +21,8 @@ import {
   resolveUnifiedCreatorsByRefs,
 } from "@/lib/creators/unified-browse";
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
+import { toUnprocessedImageDataUri } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
-import {
-  SHOWCASE_PUBLICATION_COMPRESS,
-  compressExportDataUri,
-  toCompressedExportDataUri,
-} from "@/lib/io/compress-export-image";
 import type { Database } from "@/types/database";
 
 import type { ShortlistCreatorItem } from "../types";
@@ -146,10 +142,6 @@ function publicationShotNeedsProxy(shot: ShortlistDocPublicationShot): boolean {
   return !imageUrl && Boolean(shot.postUrl?.trim());
 }
 
-async function toPublicationDataUri(buffer: Buffer, contentType: string): Promise<string> {
-  return toCompressedExportDataUri(buffer, contentType, SHOWCASE_PUBLICATION_COMPRESS);
-}
-
 async function embedPublicationShot(
   shot: ShortlistDocPublicationShot
 ): Promise<ShortlistDocPublicationShot | null> {
@@ -159,7 +151,7 @@ async function embedPublicationShot(
     if (trimmed.startsWith("data:")) {
       return {
         ...shot,
-        imageUrl: await compressExportDataUri(trimmed, SHOWCASE_PUBLICATION_COMPRESS),
+        imageUrl: trimmed,
         imageProxyUrl: null,
       };
     }
@@ -176,7 +168,7 @@ async function embedPublicationShot(
         const contentType = preview.contentType || detectImageContentType(buffer);
         return {
           ...shot,
-          imageUrl: await toPublicationDataUri(buffer, contentType),
+          imageUrl: toUnprocessedImageDataUri(buffer, contentType),
           imageProxyUrl: null,
         };
       }
@@ -187,7 +179,7 @@ async function embedPublicationShot(
       if (embedded?.startsWith("data:")) {
         return {
           ...shot,
-          imageUrl: await compressExportDataUri(embedded, SHOWCASE_PUBLICATION_COMPRESS),
+          imageUrl: embedded,
           imageProxyUrl: null,
         };
       }

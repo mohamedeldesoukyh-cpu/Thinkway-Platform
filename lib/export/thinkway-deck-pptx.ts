@@ -286,6 +286,19 @@ export async function thinkwayImageDataForPptxCoverCrop(
   return `${contentType};base64,${finalBuffer.toString("base64")}`;
 }
 
+/** Original publication bytes for PPTX. Avatars still use cover-crop above. */
+async function thinkwayImageDataForPptxOriginal(
+  src: string | null | undefined
+): Promise<string | null> {
+  const buffer = await thinkwayImageBufferForPptx(src);
+  if (!buffer?.length) return null;
+  const head = buffer.slice(0, 5).toString("utf8").trimStart().toLowerCase();
+  if (head.startsWith("<svg") || head.startsWith("<?xml")) return null;
+  const contentType = detectImageContentType(buffer);
+  if (contentType.includes("svg")) return null;
+  return `${contentType};base64,${buffer.toString("base64")}`;
+}
+
 function addPublicationThumbFrame(
   slide: ThinkwaySlide,
   x: number,
@@ -368,7 +381,7 @@ export async function addThinkwayPublicationThumbs(
     const x = TW_MARGIN_X + index * (thumbSize + TW_PUB_GAP);
     addPublicationThumbFrame(slide, x, thumbY, thumbSize);
 
-    const imageData = await thinkwayImageDataForPptxCoverCrop(shot.imageUrl, 1, 1, 640);
+    const imageData = await thinkwayImageDataForPptxOriginal(shot.imageUrl);
     if (imageData) {
       slide.addImage({
         data: imageData,
@@ -376,6 +389,7 @@ export async function addThinkwayPublicationThumbs(
         y: thumbY,
         w: thumbSize,
         h: thumbSize,
+        sizing: { type: "cover", w: thumbSize, h: thumbSize },
       });
       if (shot.isVideo) {
         addPublicationVideoBadge(slide, x, thumbY, thumbSize);

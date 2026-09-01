@@ -13,7 +13,6 @@ import {
   showcaseInitialsFromHandle,
 } from "@/features/quotations/templates/quotation-template-format";
 import { buildQuotationTemplatePayload } from "@/features/quotations/templates/quotation-template-payload";
-import { cropExportImageBufferCover } from "@/lib/io/compress-export-image";
 import {
   addThinkwayCreatorAvatar,
   configureThinkwayPptxLayout,
@@ -485,32 +484,23 @@ async function imageBufferForPptx(src: string | null | undefined): Promise<Buffe
 }
 
 /**
- * PptxGenJS `sizing: cover` uses the placement box as image dimensions in Node, so portrait
- * publication shots get stretched. Pre-crop to the target aspect before embedding instead.
+ * Embed original publication bytes for PPTX. Do not resize, recompress, or recolor.
+ * Square cover crop is CSS/object-fit in HTML and pptxgenjs `sizing: cover` here.
  */
-async function imageDataForPptxCoverCrop(
-  src: string | null | undefined,
-  aspectW: number,
-  aspectH: number,
-  maxEdge = 720
+async function imageDataForPptxOriginal(
+  src: string | null | undefined
 ): Promise<string | null> {
   const buffer = await imageBufferForPptx(src);
   if (!buffer?.length) return null;
 
-  const cropped = await cropExportImageBufferCover(buffer, {
-    aspectW,
-    aspectH,
-    maxEdge,
-  });
-  const finalBuffer = cropped?.buffer ?? buffer;
-  const head = finalBuffer.slice(0, 5).toString("utf8").trimStart().toLowerCase();
+  const head = buffer.slice(0, 5).toString("utf8").trimStart().toLowerCase();
   if (head.startsWith("<svg") || head.startsWith("<?xml")) {
     // SVG bytes break PowerPoint when pptxgenjs stores them as .png.
     return null;
   }
-  const contentType = cropped?.contentType ?? detectImageContentType(finalBuffer);
+  const contentType = detectImageContentType(buffer);
   if (contentType.includes("svg")) return null;
-  return `${contentType};base64,${finalBuffer.toString("base64")}`;
+  return `${contentType};base64,${buffer.toString("base64")}`;
 }
 
 function addPublicationThumbFrame(
@@ -1523,7 +1513,7 @@ async function addPublicationThumbs(
       }
     }
 
-    const imageData = await imageDataForPptxCoverCrop(shot.imageUrl, 1, 1, 640);
+    const imageData = await imageDataForPptxOriginal(shot.imageUrl);
     if (imageData) {
       slide.addImage({
         data: imageData,
@@ -1531,6 +1521,7 @@ async function addPublicationThumbs(
         y: imgY,
         w: thumbSize,
         h: thumbSize,
+        sizing: { type: "cover", w: thumbSize, h: thumbSize },
         ...(rounded ? { rounding: true } : {}),
         ...(shot.postUrl && /^https?:\/\//i.test(shot.postUrl)
           ? { hyperlink: { url: shot.postUrl } }
