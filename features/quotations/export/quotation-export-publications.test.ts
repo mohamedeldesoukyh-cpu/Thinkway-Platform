@@ -197,8 +197,13 @@ import {
   );
   assert.match(
     source,
-    /toCompressedExportDataUri|compressExportDataUri/,
-    "Showcase publication shots must be compressed before data-URI embed"
+    /toUnprocessedImageDataUri/,
+    "Showcase publication shots must embed original bytes without recompressing"
+  );
+  assert.doesNotMatch(
+    source,
+    /toCompressedExportDataUri|compressExportDataUri|SHOWCASE_PUBLICATION_COMPRESS/,
+    "Showcase publication embed must not resize or recompress fetched media"
   );
   assert.match(
     source,
@@ -301,4 +306,30 @@ import {
   assert.equal(shots.length, 0, "publications without image or permalink are omitted");
 }
 
-console.log("quotation-export-publications tests passed");
+async function assertOriginalByteEmbedPreservesDimensions() {
+  const sharp = (await import("sharp")).default;
+  const source = await sharp({
+    create: { width: 1080, height: 1919, channels: 3, background: { r: 40, g: 40, b: 40 } },
+  })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+  const { toUnprocessedImageDataUri } = await import(
+    "@/lib/performance/report/embed-publication-previews"
+  );
+  const uri = toUnprocessedImageDataUri(source, "image/jpeg");
+  assert.ok(uri.startsWith("data:image/jpeg;base64,"));
+  const decoded = Buffer.from(uri.slice("data:image/jpeg;base64,".length), "base64");
+  assert.deepEqual(decoded, source, "embedded data URI bytes must match the fetched JPEG");
+  const meta = await sharp(decoded).metadata();
+  assert.equal(meta.width, 1080);
+  assert.equal(meta.height, 1919);
+}
+
+assertOriginalByteEmbedPreservesDimensions()
+  .then(() => {
+    console.log("quotation-export-publications tests passed");
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });

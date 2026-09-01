@@ -20,6 +20,20 @@ const NAVY = "0A0F1E";
 const BLUE = "0057FF";
 const GREEN = "1D9E75";
 
+/** Embed original publication bytes. Do not resize or recompress. */
+export function pptxPublicationImageSpec(
+  src: string | null | undefined
+): { data: string } | { path: string } | null {
+  const trimmed = src?.trim() || "";
+  if (!trimmed) return null;
+  if (trimmed.startsWith("data:")) {
+    const payload = trimmed.slice("data:".length);
+    return payload.includes(";base64,") ? { data: payload } : null;
+  }
+  if (/^https?:\/\//i.test(trimmed)) return { path: trimmed };
+  return null;
+}
+
 export async function buildPerformanceReportPptxBuffer(
   data: PerformanceReportDocumentData
 ): Promise<Buffer> {
@@ -239,9 +253,9 @@ export async function buildPerformanceReportPptxBuffer(
       `${publicationValueScopeLabel(pub.value_scope)} · ${pub.platform_label} · ${pub.publication_type_label} · ${pub.publication_date ?? "—"}`,
       { x: 0.5, y: 0.75, w: 9, h: 0.3, fontSize: 10, color: "6B7280" }
     );
-    const imageUrl = resolvePublicationContentPreviewUrl(pub);
-    if (imageUrl) {
-      slide.addImage({ path: imageUrl, x: 0.5, y: 1.2, w: 4.5, h: 2.5 });
+    const imageSpec = pptxPublicationImageSpec(resolvePublicationContentPreviewUrl(pub));
+    if (imageSpec) {
+      slide.addImage({ ...imageSpec, x: 0.5, y: 1.2, w: 4.5, h: 2.5 });
     }
     slide.addTable(
       [

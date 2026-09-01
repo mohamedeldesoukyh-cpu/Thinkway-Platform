@@ -289,6 +289,40 @@ async function main() {
     await assertA4LandscapeHtmlParityLayout(buffer);
   }
 
+  {
+    const { readFileSync } = await import("node:fs");
+    const { dirname, join } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const source = readFileSync(join(dirname(fileURLToPath(import.meta.url)), "quotation-pptx.ts"), "utf8");
+    assert.match(source, /imageDataForPptxOriginal/, "Showcase PPTX embeds original publication bytes");
+    assert.doesNotMatch(
+      source,
+      /cropExportImageBufferCover/,
+      "Showcase PPTX must not Sharp-crop publication images"
+    );
+    assert.doesNotMatch(
+      source,
+      /1,\s*1,\s*640/,
+      "Showcase PPTX must not downscale publications to 640px"
+    );
+  }
+
+  {
+    const { readFileSync } = await import("node:fs");
+    const { dirname, join } = await import("node:path");
+    const { fileURLToPath } = await import("node:url");
+    const shared = readFileSync(
+      join(dirname(fileURLToPath(import.meta.url)), "../../../lib/export/thinkway-deck-pptx.ts"),
+      "utf8"
+    );
+    assert.match(shared, /thinkwayImageDataForPptxOriginal/);
+    assert.doesNotMatch(
+      shared,
+      /addThinkwayPublicationThumbs[\s\S]*1,\s*1,\s*640/,
+      "shared PPTX publication thumbs must not Sharp-crop to 640px"
+    );
+  }
+
   console.log("quotation-pptx.test.ts passed");
 }
 

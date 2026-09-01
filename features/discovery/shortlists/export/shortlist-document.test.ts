@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { buildShortlistDocument } from "@/features/discovery/shortlists/export/shortlist-document";
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
@@ -74,6 +77,38 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
   assert.ok(html.includes("Creator mix"));
   assert.ok(html.includes("At a glance"));
   assert.ok(!/body class="[^"]*\bquotation-showcase\b/.test(html));
+}
+
+{
+  const source = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "shortlist-export-publications.ts"),
+    "utf8"
+  );
+  assert.match(
+    source,
+    /toUnprocessedImageDataUri/,
+    "Discovery Showcase publications must embed original bytes"
+  );
+  assert.doesNotMatch(
+    source,
+    /toCompressedExportDataUri|compressExportDataUri|SHOWCASE_PUBLICATION_COMPRESS/,
+    "Discovery Showcase publication embed must not resize or recompress"
+  );
+  assert.match(
+    source,
+    /embedShortlistDocumentPublicationShots/,
+    "preview and export share the same publication embed function"
+  );
+
+  const previewSource = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "render-shortlist-preview-html.ts"),
+    "utf8"
+  );
+  assert.match(
+    previewSource,
+    /embedShortlistDocumentPublicationShots/,
+    "Discovery Showcase preview embeds original publication bytes through the same function"
+  );
 }
 
 console.log("shortlist-document.test.ts: ok");
