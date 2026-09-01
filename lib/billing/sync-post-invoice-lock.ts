@@ -1,3 +1,5 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { applyCoverageToLedger } from "@/lib/billing/partial-assignment-invoice";
 import { roundMoney } from "@/lib/vat/calculations";
 import { devLog } from "@/lib/dev-log";
@@ -48,7 +50,7 @@ export async function syncPostScheduleOnDeliverableInvoiceLock(
     if (fallback.error) {
       return { error: fallback.error.message };
     }
-    posts = (fallback.data ?? []).map((row) => {
+    posts = (fallback.data ?? []).map((row: { id: string; revenue_before_vat: number }) => {
       const typed = row as { id: string; revenue_before_vat: number };
       return {
         id: typed.id,

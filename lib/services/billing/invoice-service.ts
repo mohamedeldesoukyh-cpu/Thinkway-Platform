@@ -37,6 +37,7 @@ import {
 import {
   parseInvoiceSliceAllocations,
 } from "@/lib/billing/partial-assignment-invoice";
+import { commitInvoiceLifecycleMutation } from "@/lib/billing/invoice-lifecycle-commit";
 import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import type { z } from "zod";

@@ -69,6 +69,9 @@ import {
   type OperationalSelectionPayload,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
+import { cn } from "@/lib/utils";
+
+export type InvoiceGenerationTargetMode = "new" | "append";
 
 function sliceGrain(kind: OperationalBillingRow["kind"]): InvoiceSliceGrain {
   if (kind === "deliverable_group") return "deliverable";
