@@ -11,8 +11,8 @@ export const lineAssignmentPayloadSchema = z.object({
         follower_count: z.coerce.number().min(0).default(0),
         engagement_rate: z.coerce.number().nullable().optional(),
         audience_country: z.string().nullable().optional(),
-        deliverables: z.array(z.string()).min(1),
+        deliverables: z.array(z.string()).default([]),
       })
     )
-    .min(1, "Select at least one platform with deliverables"),
+    .default([]),
 });

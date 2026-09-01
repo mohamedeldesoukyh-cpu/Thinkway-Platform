@@ -59,7 +59,7 @@ function parseAssignmentJson(raw: string):
     if (!parsed.success) {
       return {
         ok: false,
-        message: "Select at least one platform account and deliverable.",
+        message: "Invalid platform selection.",
       };
     }
     return {

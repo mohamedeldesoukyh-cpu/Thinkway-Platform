@@ -88,22 +88,7 @@ export const updateCampaignHeaderSchema = z
     { message: "End date must be on or after start date", path: ["end_date"] }
   );
 
-export const lineAssignmentPayloadSchema = z.object({
-  platforms: z
-    .array(
-      z.object({
-        account_id: z.string().uuid(),
-        platform: z.string().min(1),
-        handle: z.string().min(1),
-        profile_url: z.string().nullable().optional(),
-        follower_count: z.coerce.number().min(0).default(0),
-        engagement_rate: z.coerce.number().nullable().optional(),
-        audience_country: z.string().nullable().optional(),
-        deliverables: z.array(z.string()).min(1),
-      })
-    )
-    .min(1, "Select at least one platform with deliverables"),
-});
+export { lineAssignmentPayloadSchema } from "@/lib/campaigns/schemas";
 
 const assignmentStatusSchema = z.enum([
   "draft",
@@ -127,7 +112,7 @@ export const createCampaignLineSchema = z.object({
     .enum(["0", "1", "true", "false"])
     .optional()
     .transform((v) => v === "1" || v === "true"),
-  assignment_json: z.string().min(2, "Select at least one platform"),
+  assignment_json: z.string().min(2, "Invalid assignment payload"),
   assignment_status: assignmentStatusSchema.default("assigned"),
   platform: z.string().trim().max(64).optional().or(z.literal("")),
   po_amount: z.coerce.number().min(0),
