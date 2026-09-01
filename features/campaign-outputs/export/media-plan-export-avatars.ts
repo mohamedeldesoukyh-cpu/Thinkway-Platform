@@ -6,12 +6,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { fetchCreatorAvatarImage } from "@/lib/creators/creator-avatar-proxy";
 import { parseCreatorAvatarStoragePathFromUrl } from "@/lib/discovery-import/import-avatar-storage";
-import {
-  compressExportDataUri,
-  toCompressedExportDataUri,
-  type CompressExportImageOptions,
-} from "@/lib/io/compress-export-image";
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
+import { toUnprocessedImageDataUri } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import type { Database } from "@/types/database";
 
@@ -23,11 +19,6 @@ import type {
 } from "../generators/media-plan";
 import type { CampaignOutputContent } from "../output-types";
 import { isMediaPlanContent } from "./media-plan-content";
-
-const MEDIA_PLAN_AVATAR_COMPRESS: CompressExportImageOptions = {
-  maxEdge: 64,
-  quality: 75,
-};
 
 const embedCache = new Map<string, string | null>();
 
@@ -130,7 +121,7 @@ async function embedMediaPlanAvatarDataUri(
   let embedded: string | null = null;
 
   if (trimmedSrc?.startsWith("data:")) {
-    embedded = await compressExportDataUri(trimmedSrc, MEDIA_PLAN_AVATAR_COMPRESS);
+    embedded = trimmedSrc;
   } else {
     const result = await fetchCreatorAvatarImage({
       src: trimmedSrc,
@@ -141,15 +132,11 @@ async function embedMediaPlanAvatarDataUri(
     if (result.ok) {
       const buffer = Buffer.from(result.buffer);
       const contentType = result.contentType || detectImageContentType(buffer);
-      embedded = await toCompressedExportDataUri(
-        buffer,
-        contentType,
-        MEDIA_PLAN_AVATAR_COMPRESS
-      );
+      embedded = toUnprocessedImageDataUri(buffer, contentType);
     } else if (trimmedSrc) {
       const fetched = await embedReportImageDataUri(trimmedSrc);
       if (fetched?.startsWith("data:")) {
-        embedded = await compressExportDataUri(fetched, MEDIA_PLAN_AVATAR_COMPRESS);
+        embedded = fetched;
       } else if (parseCreatorAvatarStoragePathFromUrl(trimmedSrc)) {
         embedded = trimmedSrc;
       }

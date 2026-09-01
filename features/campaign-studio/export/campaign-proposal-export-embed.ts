@@ -5,18 +5,13 @@
 import { fetchCreatorAvatarImage } from "@/lib/creators/creator-avatar-proxy";
 import {
   compressExportDataUri,
-  toCompressedExportDataUri,
   type CompressExportImageOptions,
 } from "@/lib/io/compress-export-image";
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
+import { toUnprocessedImageDataUri } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 
 import type { ProposalVendor } from "./campaign-proposal-document";
-
-const PROPOSAL_AVATAR_COMPRESS: CompressExportImageOptions = {
-  maxEdge: 64,
-  quality: 75,
-};
 
 const CLIENT_LOGO_COMPRESS: CompressExportImageOptions = {
   maxEdge: 240,
@@ -51,21 +46,17 @@ async function embedProposalAvatarDataUri(
   let embedded: string | null = null;
 
   if (trimmedSrc.startsWith("data:")) {
-    embedded = await compressExportDataUri(trimmedSrc, PROPOSAL_AVATAR_COMPRESS);
+    embedded = trimmedSrc;
   } else {
     const result = await fetchCreatorAvatarImage({ src: trimmedSrc, supabase });
     if (result.ok) {
       const buffer = Buffer.from(result.buffer);
       const contentType = result.contentType || detectImageContentType(buffer);
-      embedded = await toCompressedExportDataUri(
-        buffer,
-        contentType,
-        PROPOSAL_AVATAR_COMPRESS
-      );
+      embedded = toUnprocessedImageDataUri(buffer, contentType);
     } else {
       const fetched = await embedReportImageDataUri(trimmedSrc);
       if (fetched?.startsWith("data:")) {
-        embedded = await compressExportDataUri(fetched, PROPOSAL_AVATAR_COMPRESS);
+        embedded = fetched;
       }
     }
   }

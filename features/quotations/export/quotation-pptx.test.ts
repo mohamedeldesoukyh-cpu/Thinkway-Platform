@@ -318,8 +318,18 @@ async function main() {
     assert.match(shared, /thinkwayImageDataForPptxOriginal/);
     assert.doesNotMatch(
       shared,
+      /thinkwayImageDataForPptxCoverCrop|cropExportImageBufferCover/,
+      "shared PPTX must not Sharp-crop avatars or publications"
+    );
+    assert.doesNotMatch(
+      shared,
       /addThinkwayPublicationThumbs[\s\S]*1,\s*1,\s*640/,
       "shared PPTX publication thumbs must not Sharp-crop to 640px"
+    );
+    assert.match(
+      shared,
+      /addThinkwayCreatorAvatar[\s\S]*thinkwayImageDataForPptxOriginal/,
+      "shared PPTX avatars embed original bytes"
     );
   }
 

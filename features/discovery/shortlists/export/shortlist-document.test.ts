@@ -111,4 +111,21 @@ function mockDetail(overrides: Partial<ShortlistDetail> = {}): ShortlistDetail {
   );
 }
 
+{
+  const avatarSource = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "shortlist-export-avatars.ts"),
+    "utf8"
+  );
+  assert.match(
+    avatarSource,
+    /toUnprocessedImageDataUri/,
+    "Discovery Showcase avatars must embed original bytes"
+  );
+  assert.doesNotMatch(
+    avatarSource,
+    /toCompressedExportDataUri|compressExportDataUri|SHOWCASE_AVATAR_COMPRESS|PITCH_AVATAR_COMPRESS/,
+    "Discovery Showcase avatar embed must not resize or recompress"
+  );
+}
+
 console.log("shortlist-document.test.ts: ok");

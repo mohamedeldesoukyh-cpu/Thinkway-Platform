@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 import {
   pickQuotationExportAvatarUrl,
@@ -294,4 +297,52 @@ function item(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
   );
 }
 
-console.log("quotation-export-avatars.test.ts passed");
+{
+  const source = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "quotation-export-avatars.ts"),
+    "utf8"
+  );
+  assert.match(
+    source,
+    /toUnprocessedImageDataUri/,
+    "Quotation Showcase avatars must embed original bytes"
+  );
+  assert.doesNotMatch(
+    source,
+    /toCompressedExportDataUri|compressExportDataUri|SHOWCASE_AVATAR_COMPRESS|PITCH_AVATAR_COMPRESS/,
+    "Quotation Showcase avatar embed must not resize or recompress"
+  );
+  assert.match(
+    source,
+    /MIN_DISPLAYABLE_AVATAR_EDGE/,
+    "Quotation avatar embed keeps the existing min-edge source guard"
+  );
+}
+
+async function assertOriginalByteAvatarEmbedPreservesDimensions() {
+  const sharp = (await import("sharp")).default;
+  const source = await sharp({
+    create: { width: 320, height: 320, channels: 3, background: { r: 40, g: 40, b: 40 } },
+  })
+    .jpeg({ quality: 80 })
+    .toBuffer();
+  const { toUnprocessedImageDataUri } = await import(
+    "@/lib/performance/report/embed-publication-previews"
+  );
+  const uri = toUnprocessedImageDataUri(source, "image/jpeg");
+  const decoded = Buffer.from(uri.slice("data:image/jpeg;base64,".length), "base64");
+  assert.deepEqual(decoded, source, "embedded avatar data URI bytes must match the fetched JPEG");
+  const meta = await sharp(decoded).metadata();
+  assert.equal(meta.width, 320);
+  assert.equal(meta.height, 320);
+}
+
+assertOriginalByteAvatarEmbedPreservesDimensions()
+  .then(() => {
+    console.log("quotation-export-avatars.test.ts passed");
+  })
+  .catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+

@@ -230,3 +230,16 @@ test("proposal PPTX embeds creator avatars from data URI and initial fallback", 
   assert.equal(buffer[0], 0x50);
   assert.equal(buffer[1], 0x4b);
 });
+
+test("proposal creator avatars embed original bytes; client logos still compress", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { dirname, join } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const source = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "campaign-proposal-export-embed.ts"),
+    "utf8"
+  );
+  assert.match(source, /toUnprocessedImageDataUri/);
+  assert.match(source, /CLIENT_LOGO_COMPRESS/);
+  assert.doesNotMatch(source, /PROPOSAL_AVATAR_COMPRESS|toCompressedExportDataUri/);
+});

@@ -14,13 +14,10 @@ import {
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import { isLikelyLowResolutionSocialThumb } from "@/lib/creators/recent-publication-thumb";
+import { toUnprocessedImageDataUri } from "@/lib/performance/report/embed-publication-previews";
 import {
   MIN_DISPLAYABLE_AVATAR_EDGE,
-  PITCH_AVATAR_COMPRESS,
-  SHOWCASE_AVATAR_COMPRESS,
-  compressExportDataUri,
   exportImageBufferMeetsMinEdge,
-  toCompressedExportDataUri,
 } from "@/lib/io/compress-export-image";
 import { quotationCreatorCategoriesMapToMain } from "@/lib/quotations/quotation-creator-categories";
 import type { QuotationDetail } from "@/features/quotations/types";
@@ -32,7 +29,7 @@ import {
   resolveExportGroupFollowers,
   resolveExportGroupPlatform,
 } from "./quotation-export-utils";
-import { isCreatorDeckTemplate, isPitchTemplate } from "./quotation-template";
+import { isCreatorDeckTemplate } from "./quotation-template";
 
 /**
  * Best quotation-preview avatar from already-stored platform sources.
@@ -185,17 +182,13 @@ async function resolveExportAvatarSupabase() {
 async function embedAvatarDataUri(
   src: string | null,
   profileUrl: string | null,
-  compress: boolean,
-  compressOptions = SHOWCASE_AVATAR_COMPRESS,
   supabase: Awaited<ReturnType<typeof resolveExportAvatarSupabase>> = null
 ): Promise<string | null> {
   const trimmedSrc = src?.trim() || null;
   const trimmedProfile = profileUrl?.trim() || null;
   if (!trimmedSrc && !trimmedProfile) return null;
   if (trimmedSrc?.startsWith("data:")) {
-    return compress
-      ? compressExportDataUri(trimmedSrc, compressOptions)
-      : trimmedSrc;
+    return trimmedSrc;
   }
 
   const result = await fetchCreatorAvatarImage({
@@ -210,18 +203,12 @@ async function embedAvatarDataUri(
       return null;
     }
     const contentType = result.contentType || detectImageContentType(buffer);
-    if (compress) {
-      return toCompressedExportDataUri(buffer, contentType, compressOptions);
-    }
-    return `data:${contentType};base64,${buffer.toString("base64")}`;
+    return toUnprocessedImageDataUri(buffer, contentType);
   }
 
   if (trimmedSrc) {
     const embedded = await embedReportImageDataUri(trimmedSrc);
-    if (!embedded?.startsWith("data:")) return null;
-    return compress
-      ? compressExportDataUri(embedded, compressOptions)
-      : embedded;
+    return embedded?.startsWith("data:") ? embedded : null;
   }
 
   return null;
@@ -235,18 +222,13 @@ async function embedAvatarDataUri(
 export async function embedQuotationDocumentAvatars(
   doc: QuotationDocument
 ): Promise<QuotationDocument> {
-  const compress = isCreatorDeckTemplate(doc.template);
-  const compressOptions = isPitchTemplate(doc.template)
-    ? PITCH_AVATAR_COMPRESS
-    : SHOWCASE_AVATAR_COMPRESS;
+  const requireEmbeddedAvatar = isCreatorDeckTemplate(doc.template);
   const supabase = await resolveExportAvatarSupabase();
   const creatorGroups = await Promise.all(
     doc.creatorGroups.map(async (group) => {
       const embedded = await embedAvatarDataUri(
         group.avatarUrl,
         group.profileUrl,
-        compress,
-        compressOptions,
         supabase
       );
       if (embedded?.startsWith("data:")) {
@@ -257,7 +239,7 @@ export async function embedQuotationDocumentAvatars(
         };
       }
       // Showcase PDF/preview must not emit hanging CDN <img> tags.
-      if (compress) {
+      if (requireEmbeddedAvatar) {
         return {
           ...group,
           avatarUrl: null,
@@ -283,8 +265,6 @@ export async function embedQuotationDocumentAvatars(
               const embedded = await embedAvatarDataUri(
                 creator.avatarUrl,
                 creator.profileUrl,
-                compress,
-                compressOptions,
                 supabase
               );
               if (embedded?.startsWith("data:")) {
@@ -294,7 +274,7 @@ export async function embedQuotationDocumentAvatars(
                   avatarProxyUrl: null,
                 };
               }
-              if (compress) {
+              if (requireEmbeddedAvatar) {
                 return {
                   ...creator,
                   avatarUrl: null,
