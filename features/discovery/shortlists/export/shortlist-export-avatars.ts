@@ -1,15 +1,9 @@
 import { fetchCreatorAvatarImage } from "@/lib/creators/creator-avatar-proxy";
 import { detectImageContentType } from "@/lib/performance/screenshot-capture/storage";
+import { toUnprocessedImageDataUri } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
-import {
-  PITCH_AVATAR_COMPRESS,
-  SHOWCASE_AVATAR_COMPRESS,
-  compressExportDataUri,
-  toCompressedExportDataUri,
-} from "@/lib/io/compress-export-image";
 
 import type { ShortlistDocument } from "./shortlist-document";
-import { isCreatorDeckTemplate, isPitchTemplate } from "./shortlist-template";
 
 async function resolveExportAvatarSupabase() {
   try {
@@ -23,17 +17,13 @@ async function resolveExportAvatarSupabase() {
 async function embedShortlistAvatarDataUri(
   src: string | null,
   profileUrl: string | null,
-  compress: boolean,
-  compressOptions = SHOWCASE_AVATAR_COMPRESS,
   supabase: Awaited<ReturnType<typeof resolveExportAvatarSupabase>> = null
 ): Promise<string | null> {
   const trimmedSrc = src?.trim() || null;
   const trimmedProfile = profileUrl?.trim() || null;
   if (!trimmedSrc && !trimmedProfile) return null;
   if (trimmedSrc?.startsWith("data:")) {
-    if (!compress) return trimmedSrc;
-    const compressed = await compressExportDataUri(trimmedSrc, compressOptions);
-    return compressed ?? trimmedSrc;
+    return trimmedSrc;
   }
 
   const result = await fetchCreatorAvatarImage({
@@ -44,19 +34,13 @@ async function embedShortlistAvatarDataUri(
 
   if (result.ok) {
     const buffer = Buffer.from(result.buffer);
-    const contentType =
-      result.contentType || detectImageContentType(buffer);
-    if (!compress) {
-      return `data:${contentType};base64,${buffer.toString("base64")}`;
-    }
-    return toCompressedExportDataUri(buffer, contentType, compressOptions);
+    const contentType = result.contentType || detectImageContentType(buffer);
+    return toUnprocessedImageDataUri(buffer, contentType);
   }
 
   if (trimmedSrc) {
     const embedded = await embedReportImageDataUri(trimmedSrc);
-    if (!embedded?.startsWith("data:")) return null;
-    if (!compress) return embedded;
-    return compressExportDataUri(embedded, compressOptions);
+    return embedded?.startsWith("data:") ? embedded : null;
   }
 
   return null;
@@ -66,10 +50,6 @@ async function embedShortlistAvatarDataUri(
 export async function embedShortlistDocumentAvatars(
   doc: ShortlistDocument
 ): Promise<ShortlistDocument> {
-  const compress = isCreatorDeckTemplate(doc.template);
-  const compressOptions = isPitchTemplate(doc.template)
-    ? PITCH_AVATAR_COMPRESS
-    : SHOWCASE_AVATAR_COMPRESS;
   const supabase = await resolveExportAvatarSupabase();
 
   const rows = await Promise.all(
@@ -78,8 +58,6 @@ export async function embedShortlistDocumentAvatars(
       avatarUrl: await embedShortlistAvatarDataUri(
         row.avatarUrl,
         row.avatarProfileUrl,
-        compress,
-        compressOptions,
         supabase
       ),
     }))
@@ -92,8 +70,6 @@ export async function embedShortlistDocumentAvatars(
           avatarUrl: await embedShortlistAvatarDataUri(
             group.avatarUrl,
             group.avatarProfileUrl,
-            compress,
-            compressOptions,
             supabase
           ),
           avatarProxyUrl: null,

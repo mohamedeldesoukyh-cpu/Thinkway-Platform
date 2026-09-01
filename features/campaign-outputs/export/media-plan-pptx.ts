@@ -305,6 +305,7 @@ function addAvatarCircle(
       w: size,
       h: size,
       rounding: true,
+      sizing: { type: "cover", w: size, h: size },
       hyperlink,
     });
     return;

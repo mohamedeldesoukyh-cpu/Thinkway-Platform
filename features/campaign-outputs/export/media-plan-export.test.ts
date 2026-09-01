@@ -562,3 +562,18 @@ test("buildMediaPlanPreviewHtmlDocument includes toggles only when requested", (
   assert.ok(withToggles.includes('data-mp-section="'));
   assert.ok(!withoutToggles.includes('class="mp-sec-toggle"'));
 });
+
+test("media plan avatar embed uses original bytes", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { dirname, join } = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const source = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "media-plan-export-avatars.ts"),
+    "utf8"
+  );
+  assert.match(source, /toUnprocessedImageDataUri/);
+  assert.doesNotMatch(
+    source,
+    /toCompressedExportDataUri|compressExportDataUri|MEDIA_PLAN_AVATAR_COMPRESS/
+  );
+});

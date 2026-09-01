@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
-import { cropExportImageBufferCover } from "@/lib/io/compress-export-image";
 import {
   detectImageContentType,
   fetchImageBuffer,
@@ -266,31 +265,11 @@ export async function thinkwayImageBufferForPptx(
   return fetchImageBuffer(trimmed);
 }
 
-export async function thinkwayImageDataForPptxCoverCrop(
+export async function thinkwayImageDataForPptxOriginal(
   src: string | null | undefined,
-  aspectW: number,
-  aspectH: number,
-  maxEdge = 720,
   profileUrl?: string | null
 ): Promise<string | null> {
   const buffer = await thinkwayImageBufferForPptx(src, profileUrl);
-  if (!buffer?.length) return null;
-
-  const cropped = await cropExportImageBufferCover(buffer, {
-    aspectW,
-    aspectH,
-    maxEdge,
-  });
-  const finalBuffer = cropped?.buffer ?? buffer;
-  const contentType = cropped?.contentType ?? detectImageContentType(finalBuffer);
-  return `${contentType};base64,${finalBuffer.toString("base64")}`;
-}
-
-/** Original publication bytes for PPTX. Avatars still use cover-crop above. */
-async function thinkwayImageDataForPptxOriginal(
-  src: string | null | undefined
-): Promise<string | null> {
-  const buffer = await thinkwayImageBufferForPptx(src);
   if (!buffer?.length) return null;
   const head = buffer.slice(0, 5).toString("utf8").trimStart().toLowerCase();
   if (head.startsWith("<svg") || head.startsWith("<?xml")) return null;
@@ -414,8 +393,6 @@ export async function addThinkwayCreatorAvatar(
   }
 ): Promise<void> {
   const { avatarUrl, initials, x, y, size, pitch = true, profileHref } = input;
-  // Higher resolution for pitch hero portraits — platform CDN photos look sharp.
-  const cropMax = pitch ? 720 : 320;
   const href = profileHref?.trim() && /^https?:\/\//i.test(profileHref.trim())
     ? profileHref.trim()
     : null;
@@ -425,13 +402,7 @@ export async function addThinkwayCreatorAvatar(
 
   // RFQ pitch: frameless circular avatar (no lavender/white ring).
 
-  const avatarData = await thinkwayImageDataForPptxCoverCrop(
-    avatarUrl,
-    1,
-    1,
-    cropMax,
-    profileHref
-  );
+  const avatarData = await thinkwayImageDataForPptxOriginal(avatarUrl, profileHref);
   if (avatarData) {
     slide.addImage({
       data: avatarData,
@@ -440,6 +411,7 @@ export async function addThinkwayCreatorAvatar(
       w: size,
       h: size,
       rounding: true,
+      sizing: { type: "cover", w: size, h: size },
       hyperlink,
     });
   } else {

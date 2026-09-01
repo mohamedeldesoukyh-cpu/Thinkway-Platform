@@ -27,3 +27,16 @@ test("performance report PPTX does not Sharp-crop publication images", () => {
   assert.match(source, /pptxPublicationImageSpec/);
   assert.doesNotMatch(source, /cropExportImageBufferCover|toCompressedExportDataUri|SHOWCASE_PUBLICATION_COMPRESS/);
 });
+
+test("performance report avatars embed original bytes", () => {
+  const source = readFileSync(
+    join(dirname(fileURLToPath(import.meta.url)), "performance-report-document-data.ts"),
+    "utf8"
+  );
+  assert.match(source, /embedReportImageDataUri\(resolvedAvatar\)/);
+  assert.match(source, /avatarUrl: avatarUrl \? await embedReportImageDataUri\(avatarUrl\)/);
+  assert.doesNotMatch(
+    source,
+    /toCompressedExportDataUri|compressExportDataUri|SHOWCASE_AVATAR_COMPRESS|cropExportImageBufferCover/
+  );
+});
