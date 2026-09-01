@@ -1,5 +1,10 @@
 import { maybeAiWording } from "./ai-wording";
 import { detectAllInsights, detectUnitCompactInsights } from "./detect";
+import { type CreatorAssignmentFeeShare } from "./fees";
+import {
+  compactLinesFromPostAnalyses,
+  detectPostPerformanceAnalyses,
+} from "./post-performance";
 import {
   dataAvailabilityLabel,
   isConnectionStale,
@@ -77,6 +82,7 @@ export async function assembleCreatorInsightPack(input: {
   units?: readonly UpcomingCreatorUnit[];
   connections: readonly CreatorConnectionSnapshot[];
   hasOperationalHistory: boolean;
+  feeShares?: readonly CreatorAssignmentFeeShare[];
   now?: Date;
   wording?: typeof maybeAiWording;
 }): Promise<CreatorInsightPack> {
@@ -133,6 +139,14 @@ export async function assembleCreatorInsightPack(input: {
         ? "Thinkway is collecting more performance data. Connect your social account to unlock richer insights."
         : null;
 
+  const postAnalyses = detectPostPerformanceAnalyses(
+    observations,
+    input.feeShares ?? []
+  );
+  const fromPosts = compactLinesFromPostAnalyses(postAnalyses);
+  const unitInsights =
+    fromPosts.length > 0 ? fromPosts : detectUnitCompactInsights(observations);
+
   return {
     influencerId: input.influencerId,
     generatedAt: now.toISOString(),
@@ -148,7 +162,8 @@ export async function assembleCreatorInsightPack(input: {
       lastSyncedAt: row.lastSyncedAt,
     })),
     recommendations,
-    unitInsights: detectUnitCompactInsights(observations),
+    unitInsights,
+    postAnalyses,
     collectingMessage: collecting,
   };
 }

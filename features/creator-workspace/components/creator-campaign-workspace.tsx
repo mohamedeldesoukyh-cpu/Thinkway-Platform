@@ -4,6 +4,7 @@ import { DocumentNumber } from "@/components/ui/document-number";
 import { CreatorApproveVendorIoForm } from "@/features/portals/components/creator-approve-vendor-io-form";
 import { CreatorRejectVendorIoForm } from "@/features/portals/components/creator-reject-vendor-io-form";
 import { CreatorCampaignProgress } from "@/features/creator-workspace/components/creator-campaign-progress";
+import { CreatorPostPerformancePanel } from "@/features/creator-workspace/components/creator-post-performance";
 import { CreatorCampaignTabs } from "@/features/creator-workspace/components/creator-campaign-tabs";
 import { CreatorDocumentationUnitList } from "@/features/creator-workspace/components/creator-documentation-unit-list";
 import { CreatorDeliverableNavRow } from "@/features/creator-workspace/components/creator-campaign-cards";
@@ -96,6 +97,9 @@ export function CreatorCampaignWorkspace({
   );
   const progressPct = counts.total ? Math.round((counts.published / counts.total) * 100) : 0;
   const money = (amount: number) => formatMoneyDetail(amount, detail.currency_code);
+  const postAnalyses = (insightPack?.postAnalyses ?? []).filter(
+    (row) => !row.campaignHeaderId || row.campaignHeaderId === detail.campaign_header_id
+  );
 
   return (
     <div>
@@ -188,6 +192,24 @@ export function CreatorCampaignWorkspace({
                   })
                 )}
               </div>
+              {postAnalyses.length > 0 ? (
+                <div className="grp" style={{ marginTop: 24 }}>
+                  <div className="grp__h">
+                    <span className="grp__t">Performance analysis</span>
+                    <span className="grp__m">{postAnalyses.length} live posts</span>
+                  </div>
+                  <p className="note" style={{ marginBottom: 12 }}>
+                    How each live post, reel, or video is doing versus your recent average and the
+                    agreed fee on that post.
+                  </p>
+                  {postAnalyses.map((analysis) => (
+                    <div key={analysis.publicationId} className="card" style={{ marginBottom: 12 }}>
+                      <p className="ck">{analysis.formatLabel}</p>
+                      <CreatorPostPerformancePanel analysis={analysis} />
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </>
           ),
           brief: detail.brief?.trim() ? (

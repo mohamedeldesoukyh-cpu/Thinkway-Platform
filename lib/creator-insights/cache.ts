@@ -51,6 +51,7 @@ export function fingerprintCreatorInsightInputs(parts: {
   insightStamp: string | null;
   syncStamp: string | null;
   unitStamp: string | null;
+  feeStamp?: string | null;
 }): string {
   return [
     parts.influencerId,
@@ -58,5 +59,6 @@ export function fingerprintCreatorInsightInputs(parts: {
     parts.insightStamp ?? "",
     parts.syncStamp ?? "",
     parts.unitStamp ?? "",
+    parts.feeStamp ?? "",
   ].join("|");
 }

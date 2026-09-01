@@ -13,8 +13,10 @@ import {
 } from "@/features/creator-workspace/actions";
 import { unitNeedsCreatorAction, unitStatusPill } from "@/features/creator-workspace/chrome";
 import { CreatorPlatformMark, creatorPlatformMeta } from "@/features/creator-workspace/components/creator-platform-mark";
+import { CreatorPostPerformancePanel } from "@/features/creator-workspace/components/creator-post-performance";
 import { CreatorUnitMediaPreview } from "@/features/creator-workspace/components/creator-unit-media-preview";
 import type { CreatorUnitView } from "@/features/creator-workspace/documentation-load";
+import type { PostPerformanceAnalysis } from "@/lib/creator-insights/post-performance";
 import { CREATOR_ON_BEHALF_ACTOR_LABEL } from "@/lib/services/deliverables/on-behalf";
 import {
   alternateDeliverableVideoMime,
@@ -35,11 +37,13 @@ export function CreatorDocumentationUnitCard({
   unit,
   showCampaignLink = true,
   compactInsight = null,
+  analysis = null,
   hideScript = false,
 }: {
   unit: CreatorUnitView;
   showCampaignLink?: boolean;
   compactInsight?: string | null;
+  analysis?: PostPerformanceAnalysis | null;
   hideScript?: boolean;
 }) {
   const [pending, startTransition] = useTransition();
@@ -315,7 +319,9 @@ export function CreatorDocumentationUnitCard({
             </div>
           ) : null}
 
-          {compactInsight ? (
+          {analysis ? (
+            <CreatorPostPerformancePanel analysis={analysis} />
+          ) : compactInsight ? (
             <div className="blk">
               <span className="blk__l">Thinkway Insight</span>
               <p className="blk__none">{compactInsight}</p>

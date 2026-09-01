@@ -31,6 +31,11 @@ const homeInsights = readFileSync(
   resolve("features/creator-workspace/components/creator-home-insights.tsx"),
   "utf8"
 );
+const fees = readFileSync(resolve("lib/creator-insights/fees.ts"), "utf8");
+const postPerf = readFileSync(
+  resolve("features/creator-workspace/components/creator-post-performance.tsx"),
+  "utf8"
+);
 const processSync = readFileSync(resolve("lib/creator-social/sync/process.ts"), "utf8");
 const connections = readFileSync(
   resolve("lib/creator-social/connections/service.ts"),
@@ -102,5 +107,9 @@ describe("Phase 5 compatibility", () => {
 
   it("does not select commercial fields for creator-facing intelligence", () => {
     assert.doesNotMatch(load, /cost|cpm|gp|client_budget|agreed_amount/);
+    assert.match(fees, /agreed_fee/);
+    assert.doesNotMatch(fees, /\bgp\b|client_budget|unit_cost|revenue_before_vat/);
+    assert.match(postPerf, /Performance analysis/);
+    assert.match(unitCard, /CreatorPostPerformancePanel/);
   });
 });

@@ -12,6 +12,7 @@ import {
   readCreatorInsightCache,
   writeCreatorInsightCache,
 } from "./cache";
+import { loadCreatorAssignmentFeeFacts } from "./fees";
 import { loadCreatorInsightFacts, unitStampFromUpcoming } from "./load";
 import type { CreatorInsightPack, UpcomingCreatorUnit } from "./types";
 
@@ -27,13 +28,17 @@ export async function computeCreatorInsightPack(input: {
   influencerId: string;
   units?: readonly UpcomingCreatorUnit[];
 }): Promise<CreatorInsightPack> {
-  const facts = await loadCreatorInsightFacts(serviceDb(), input.influencerId);
+  const [facts, fees] = await Promise.all([
+    loadCreatorInsightFacts(serviceDb(), input.influencerId),
+    loadCreatorAssignmentFeeFacts(serviceDb(), input.influencerId),
+  ]);
   const fingerprint = fingerprintCreatorInsightInputs({
     influencerId: input.influencerId,
     publicationStamp: facts.publicationStamp,
     insightStamp: facts.insightStamp,
     syncStamp: facts.syncStamp,
     unitStamp: unitStampFromUpcoming(input.units ?? []),
+    feeStamp: fees.stamp,
   });
   const cached = readCreatorInsightCache(input.influencerId, fingerprint);
   if (cached) return cached;
@@ -43,6 +48,7 @@ export async function computeCreatorInsightPack(input: {
     units: input.units,
     connections: facts.connections,
     hasOperationalHistory: facts.hasOperationalHistory,
+    feeShares: fees.shares,
   });
   writeCreatorInsightCache(input.influencerId, fingerprint, pack);
   return pack;

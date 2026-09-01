@@ -1,3 +1,5 @@
+import type { PostPerformanceAnalysis } from "./post-performance";
+
 export const CREATOR_INSIGHT_RECOMMENDATION_TYPES = [
   "performance_trend",
   "strong_content_type",
@@ -114,6 +116,7 @@ export type CreatorInsightPack = {
   }>;
   recommendations: CreatorFacingRecommendation[];
   unitInsights: UnitCompactInsight[];
+  postAnalyses: PostPerformanceAnalysis[];
   collectingMessage: string | null;
 };
 

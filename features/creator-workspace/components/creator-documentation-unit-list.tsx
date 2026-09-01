@@ -2,7 +2,7 @@ import { CreatorDocumentationUnitCard } from "@/features/creator-workspace/compo
 import { CreatorEmpty } from "@/features/creator-workspace/components/creator-workspace-ui";
 import { unitNeedsCreatorAction } from "@/features/creator-workspace/chrome";
 import type { CreatorUnitView } from "@/features/creator-workspace/documentation-load";
-import { compactInsightForUnit } from "@/lib/creator-insights/presentation";
+import { analysisForUnit, compactInsightForUnit } from "@/lib/creator-insights/presentation";
 import type { CreatorInsightPack } from "@/lib/creator-insights/types";
 
 export function CreatorDocumentationUnitList({
@@ -54,6 +54,7 @@ export function CreatorDocumentationUnitList({
                 showCampaignLink={showCampaignLink}
                 hideScript={hideScript}
                 compactInsight={insightPack ? compactInsightForUnit(insightPack, unit) : null}
+                analysis={insightPack ? analysisForUnit(insightPack, unit) : null}
               />
             ))}
           </section>

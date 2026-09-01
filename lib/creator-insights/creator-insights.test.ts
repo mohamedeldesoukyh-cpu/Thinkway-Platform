@@ -433,6 +433,7 @@ describe("Cache fingerprint", () => {
       connectedPlatforms: [],
       recommendations: [],
       unitInsights: [],
+      postAnalyses: [],
       collectingMessage: null,
     });
     assert.ok(readCreatorInsightCache(influencerId, first));

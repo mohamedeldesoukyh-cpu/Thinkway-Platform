@@ -1,5 +1,6 @@
 import type { CreatorUnitView } from "@/features/creator-workspace/documentation-load";
 
+import type { PostPerformanceAnalysis } from "./post-performance";
 import type { CreatorFacingRecommendation, CreatorInsightPack, UpcomingCreatorUnit } from "./types";
 
 export function upcomingUnitsFromViews(units: readonly CreatorUnitView[]): UpcomingCreatorUnit[] {
@@ -15,6 +16,34 @@ export function upcomingUnitsFromViews(units: readonly CreatorUnitView[]): Upcom
 }
 
 export function compactInsightForUnit(
+  pack: CreatorInsightPack,
+  unit: Pick<
+    CreatorUnitView,
+    "assignmentDeliverableId" | "assignmentPostScheduleId" | "campaignHeaderId"
+  >
+): string | null {
+  return analysisForUnit(pack, unit)?.title ?? matchUnitInsightLine(pack, unit);
+}
+
+export function analysisForUnit(
+  pack: CreatorInsightPack,
+  unit: Pick<
+    CreatorUnitView,
+    "assignmentDeliverableId" | "assignmentPostScheduleId" | "campaignHeaderId"
+  >
+): PostPerformanceAnalysis | null {
+  const match = pack.postAnalyses.find((row) => {
+    if (row.assignmentDeliverableId !== unit.assignmentDeliverableId) return false;
+    if (row.campaignHeaderId && row.campaignHeaderId !== unit.campaignHeaderId) return false;
+    if (unit.assignmentPostScheduleId) {
+      return row.assignmentPostScheduleId === unit.assignmentPostScheduleId;
+    }
+    return true;
+  });
+  return match ?? null;
+}
+
+function matchUnitInsightLine(
   pack: CreatorInsightPack,
   unit: Pick<
     CreatorUnitView,
