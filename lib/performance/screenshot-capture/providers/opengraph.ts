@@ -14,8 +14,9 @@ type Ctx = {
 /** Decode HTML entities in og:image (Facebook emits `&amp;` in query strings). */
 export function extractOgImage(html: string): string | null {
   const patterns = [
-    /<meta[^>]+property=["']og:image(?::url)?["'][^>]+content=["']([^"']+)["']/i,
-    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::url)?["']/i,
+    /<meta[^>]+property=["']og:image(?::secure_url|:url)?["'][^>]+content=["']([^"']+)["']/i,
+    /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image(?::secure_url|:url)?["']/i,
+    /<meta[^>]+property=["']og:video:poster["'][^>]+content=["']([^"']+)["']/i,
     /<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i,
   ];
   for (const pattern of patterns) {

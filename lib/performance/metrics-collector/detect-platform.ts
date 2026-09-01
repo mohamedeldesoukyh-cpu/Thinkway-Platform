@@ -72,7 +72,9 @@ function extractMediaId(platform: MetricsPlatform, url: URL): string | null {
     }
     case "facebook": {
       if (url.hostname.includes("fb.watch") && segments[0]) return segments[0];
-      if (segments[0] === "reel" && segments[1]) return segments[1];
+      if ((segments[0] === "reel" || segments[0] === "reels") && segments[1]) {
+        return segments[1];
+      }
       if (segments[0] === "watch") return url.searchParams.get("v");
       const storyIdx = segments.indexOf("posts");
       if (storyIdx >= 0 && segments[storyIdx + 1]) return segments[storyIdx + 1];

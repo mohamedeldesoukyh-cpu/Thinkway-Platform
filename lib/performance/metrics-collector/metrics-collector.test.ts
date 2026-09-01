@@ -79,6 +79,14 @@ function detect(url: string, platform: string) {
 
 {
   const detection = detect(
+    "https://www.facebook.com/reels/1234567890123456/",
+    "facebook"
+  );
+  assert.equal(detection.mediaId, "1234567890123456");
+}
+
+{
+  const detection = detect(
     "https://www.snapchat.com/spotlight/abc123def45",
     "snapchat"
   );

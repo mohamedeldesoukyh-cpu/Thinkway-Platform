@@ -137,6 +137,53 @@ function isFacebookPostUrl(url: string): boolean {
     : false;
 }
 
+const CHROME_IMAGE_UA =
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+const FACEBOOK_CRAWLER_UA =
+  "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
+
+function contentTypeFromImageResponse(
+  headerValue: string | null,
+  buffer: ArrayBuffer
+): string | null {
+  const header = headerValue?.split(";")[0]?.trim() ?? "";
+  if (header.startsWith("image/")) return header;
+  if (!imageBufferLooksComplete(buffer)) return null;
+  const bytes = Buffer.from(buffer);
+  if (bytes[0] === 0xff && bytes[1] === 0xd8) return "image/jpeg";
+  if (bytes[0] === 0x89 && bytes[1] === 0x50) return "image/png";
+  return "image/webp";
+}
+
+function facebookCdnHost(host: string | null): boolean {
+  if (!host) return false;
+  return isExactHostOrSuffix(host, {
+    exact: ["fb.watch"],
+    suffixes: ["fbcdn.net", "fbsbx.com", "facebook.com", "fb.com"],
+  });
+}
+
+function imageFetchAttempts(url: string, preferredReferer?: string): Array<{
+  referer?: string;
+  userAgent: string;
+}> {
+  const host = hostFromUrl(url);
+  const attempts: Array<{ referer?: string; userAgent: string }> = [];
+  const push = (referer: string | undefined, userAgent: string) => {
+    if (attempts.some((a) => a.referer === referer && a.userAgent === userAgent)) return;
+    attempts.push({ referer, userAgent });
+  };
+
+  push(preferredReferer ?? refererForPublicationImageUrl(url), CHROME_IMAGE_UA);
+  if (facebookCdnHost(host)) {
+    push("https://www.facebook.com/", CHROME_IMAGE_UA);
+    push("https://www.instagram.com/", CHROME_IMAGE_UA);
+    push("https://www.facebook.com/", FACEBOOK_CRAWLER_UA);
+    push(undefined, FACEBOOK_CRAWLER_UA);
+  }
+  return attempts;
+}
+
 export async function fetchImageBuffer(
   url: string,
   options?: { referer?: string | null; timeoutMs?: number; countExternal?: boolean }
@@ -147,34 +194,44 @@ export async function fetchImageBuffer(
     return { ok: false };
   }
 
-  const referer = options?.referer ?? refererForPublicationImageUrl(normalizedUrl);
   const timeoutMs = options?.timeoutMs ?? MEDIA_PROXY_REFRESH_TIMEOUT_MS;
   if (options?.countExternal !== false) {
     recordMediaProxyExternalRequest();
   }
-  try {
-    const response = await fetchWithStrictRedirects(normalizedUrl, {
-      allowlist: SOCIAL_MEDIA_SRC_ALLOWLIST,
-      maxRedirects: 3,
-      timeoutMs,
-      headers: {
-        Accept: "image/*,*/*;q=0.8",
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        ...(referer ? { Referer: referer } : {}),
-      },
-    });
-    if (!response.ok) return { ok: false };
 
-    const contentType = response.headers.get("content-type") ?? "image/jpeg";
-    if (!contentType.startsWith("image/")) return { ok: false };
+  const attempts = imageFetchAttempts(
+    normalizedUrl,
+    options?.referer === null ? undefined : options?.referer ?? undefined
+  );
 
-    const buffer = await response.arrayBuffer();
-    if (buffer.byteLength === 0) return { ok: false };
-    return { ok: true, buffer, contentType };
-  } catch {
-    return { ok: false };
+  for (const attempt of attempts) {
+    try {
+      const response = await fetchWithStrictRedirects(normalizedUrl, {
+        allowlist: SOCIAL_MEDIA_SRC_ALLOWLIST,
+        maxRedirects: 5,
+        timeoutMs,
+        headers: {
+          Accept: "image/*,*/*;q=0.8",
+          "User-Agent": attempt.userAgent,
+          ...(attempt.referer ? { Referer: attempt.referer } : {}),
+        },
+      });
+      if (!response.ok) continue;
+
+      const buffer = await response.arrayBuffer();
+      if (buffer.byteLength === 0) continue;
+      const contentType = contentTypeFromImageResponse(
+        response.headers.get("content-type"),
+        buffer
+      );
+      if (!contentType) continue;
+      return { ok: true, buffer, contentType };
+    } catch {
+      continue;
+    }
   }
+
+  return { ok: false };
 }
 
 type PreviewResult =
@@ -379,16 +436,22 @@ async function resolvePublicationPreviewExternal(input: {
 
     if (isFacebookPostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
+      const og = await tryOpenGraphThumbnail({ contentUrl: postUrl });
+      if (og.imageUrl && (await consider(await fetchAllowedPreviewSrc(og.imageUrl, quality)))) {
+        return chosen();
+      }
+
+      recordMediaProxyExternalRequest();
       const oembed = await tryFacebookOembedThumbnail({ contentUrl: postUrl });
       if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl, quality)))) {
         return chosen();
       }
-    }
-
-    recordMediaProxyExternalRequest();
-    const og = await tryOpenGraphThumbnail({ contentUrl: postUrl });
-    if (og.imageUrl && (await consider(await fetchAllowedPreviewSrc(og.imageUrl, quality)))) {
-      return chosen();
+    } else {
+      recordMediaProxyExternalRequest();
+      const og = await tryOpenGraphThumbnail({ contentUrl: postUrl });
+      if (og.imageUrl && (await consider(await fetchAllowedPreviewSrc(og.imageUrl, quality)))) {
+        return chosen();
+      }
     }
   }
 
