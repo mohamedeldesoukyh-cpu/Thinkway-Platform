@@ -3,26 +3,26 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Creator Workspace per-post performance analysis vs agreed fee.
 
-## In progress 2026-09-01 — Combined report avatars, page breaks, missing previews
+## Shipped 2026-09-01 — Combined report avatars, page breaks, missing previews
 
 Combined HTML is `srcDoc`, so Instagram/TikTok CDN avatars never load. Reports now embed avatars via `fetchCreatorAvatarImage`. Publication stills keep a display-quality fallback when the 640px Showcase floor has no still. Cards flex inside the A4 sheet so metrics cannot paint over the footer. No migrations.
+
+- Develop: `1a8d63d9`
+- Production `main` cherry-pick: `d62b48ac`
+- Production: https://app.thinkwaymedia.com — `dpl_EviVzHLYpuzzukGPFcMtghbtEYcA` · READY · Supabase `ienowhwfyxoqtzbgltno` aligned
 
 ## Shipped 2026-09-01 — Publication media + creator avatar original bytes
 
 Showcase / PDF / PPTX publication stills and creator avatars embed original fetched bytes (no resize/recompress). Layout cover crop stays. Stored publication/avatar rows not rewritten. No migrations.
 
 - Develop original commits: `e8fb2a9e` · `1e142fde` · `3b243eec`
-- Production `main` cherry-picks: `71938f02` · `0af430c7` · **`015cc7e7`** (tip)
-- Production: https://app.thinkwaymedia.com — `dpl_GYYBWJojDJ5mNPtCYg51oXWgxUAj` · READY · Supabase `ienowhwfyxoqtzbgltno` aligned
+- Production `main` cherry-picks: `71938f02` · `0af430c7` · `015cc7e7`
 - Cherry-pick only; shortlist button layer and Creator Workspace post analysis stay off Production
-- `origin/main` merged back into `develop` (`e8fdecab`) so `main` is not ahead
 
 ## Shipped 2026-09-01 — Add Assignment creator-only lines
 
 Add Assignment no longer invents EGP 500, and a creator can be saved without platforms or agreed content (add-value lines). Platforms/content can be added later.
 
-- Development: https://dev.thinkwaymedia.com · `4718ffb4`
-- Production: https://app.thinkwaymedia.com — previously `dpl_HiFqrMjULfSzmFbrQJBzDq36KtZV` · `e0fa891d` (superseded by avatar/publication deploy above)
 - No database migrations. Cherry-pick only; other develop work stays off Production.
 
 ## Shortlist button layer (develop)
@@ -40,12 +40,10 @@ Reel dots opened screenshots, unposted stories stole reel media (TBC still click
 - Durable posts open the **permalink**; stories open proof images only
 - Extra-platform posts render in an **Added value** section (same `classifyPublicationValueScope` as Performance)
 - Added-value posts also appear on the creator timeline as a **gold** track (after contracted types)
-- Development: https://dev.thinkwaymedia.com · `2bb9ac77`
-- Production: https://app.thinkwaymedia.com — `dpl_3ikP57zJhEtiZt61cx6Tidr244QB`
 - No database migrations
 
 ### Earlier today — quotation publication image source
-Pixelation was the **source**, not CSS: stored TikTok EU origin covers 403, then a ~240px OG thumb was embedded and stretched. Quotation now fetches signed TikTok oEmbed origin covers, rejects bytes under 640px. Production `dpl_4D9DFVt7mqHxRPnE2eohK1dDhGVC`.
+Pixelation was the **source**, not CSS: stored TikTok EU origin covers 403, then a ~240px OG thumb was embedded and stretched. Quotation now fetches signed TikTok oEmbed origin covers, rejects bytes under 640px.
 
 ## Phase 5 still true
 
