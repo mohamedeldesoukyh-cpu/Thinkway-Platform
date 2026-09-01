@@ -5,11 +5,9 @@ import { useRouter } from "next/navigation";
 import { format } from "date-fns";
 import {
   ArchiveIcon,
-  Link2Icon,
   MoreHorizontalIcon,
   PencilIcon,
   SendIcon,
-  UserPlusIcon,
   XCircleIcon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -23,8 +21,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher-lazy";
-import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher";
 import type { CampaignSeed } from "@/features/campaign-outputs/hydration/hydration-types";
 
 import { createClientReviewFromShortlistAction } from "@/features/client-workspace/actions/create-from-shortlist-action";
@@ -97,8 +93,6 @@ import {
   toggleItemSelection,
   toggleSelectAll,
 } from "../bulk-selection-policy";
-import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
-import { ClientWorkspaceDisplayToggles } from "@/features/commercial/components/show-original-currency-toggle";
 import {
   approveShortlist,
   archiveShortlist,
@@ -124,7 +118,7 @@ import {
   ShortlistQuotationPanel,
 } from "./shortlist-quotation-panel";
 import { ShortlistBulkToolbar } from "./shortlist-bulk-toolbar";
-import { ShortlistCreatorToolbarActions } from "./shortlist-creator-toolbar-actions";
+import { ShortlistHeaderActions } from "./shortlist-header-actions";
 import {
   ShortlistCreatorEmptyState,
   ShortlistCreatorList,
@@ -136,7 +130,7 @@ import {
   AssignmentStatusBadge,
   ShortlistWorkspaceStatusPill,
 } from "./shortlist-badges";
-import { ShortlistToolbarButton } from "./shortlist-detail-primitives";
+
 
 
 const MOVEMENT_LABELS: Record<CreatorMovementAction, string> = {
@@ -828,21 +822,76 @@ export function ShortlistWorkspace({
           ) : null}
         </div>
 
-        <div className="flex shrink-0 items-center gap-2">
-          <OpenCampaignStudioLauncher
-            seed={seed}
-            tab="studio"
-            workspace={{ type: "shortlist", id: detail.id }}
-            variant="ghost"
-            size="md"
-            showIcon
-          />
-          <GenerateOutputsLauncher
-            seed={seed}
-            tab="outputs"
-            workspace={{ type: "shortlist", id: detail.id }}
-          />
-        </div>
+        <ShortlistHeaderActions
+          seed={seed}
+          shortlistId={detail.id}
+          creators={detail.creators}
+          exportTemplate={exportTemplate}
+          onExportTemplateChange={setExportTemplate}
+          selectedItemIds={selectedItemIdList}
+          onSelectedItemIdsChange={(itemIds) => setSelectedIds(new Set(itemIds))}
+          exportRevision={detail.updated_at}
+          displayCurrency={displayCurrency}
+          onCurrencyChange={handleCurrencyChange}
+          showOriginalCurrency={showOriginalCurrency}
+          hideCostAndFees={hideCostAndFees}
+          onShowOriginalCurrencyChange={(value) => {
+            startTransition(async () => {
+              setOptimisticShowOriginalCurrency(value);
+              const result = await setShortlistShowOriginalCurrency({
+                shortlistId: detail.id,
+                value,
+              });
+              if (!result.ok) {
+                toast.error(result.message);
+                return;
+              }
+              router.refresh();
+            });
+          }}
+          onHideCostAndFeesChange={(value) => {
+            startTransition(async () => {
+              setOptimisticHideCostAndFees(value);
+              const result = await setShortlistHideCostAndFees({
+                shortlistId: detail.id,
+                value,
+              });
+              if (!result.ok) {
+                toast.error(result.message);
+                return;
+              }
+              router.refresh();
+            });
+          }}
+          canManageView={detail.canManage}
+          canChangeCurrency={canEditDetails}
+          hasLink={hasLink}
+          canSendToClient={detail.creators.some((item) => item.item_status !== "cancelled")}
+          canAddCreators={editable}
+          busy={isPending}
+          onShowLink={handleShowLink}
+          onSendToClient={handleSendToClient}
+          onAddCreators={() => {
+            setAddMode("search");
+            setAddOpen(true);
+          }}
+          overflow={
+            <ShortlistWorkspaceOverflowMenu
+              detail={detail}
+              selectedCount={selectedCount}
+              isPending={isPending}
+              onApprove={() => runAction(() => approveShortlist(detail.id))}
+              onReturnToDraft={() => runAction(() => rejectShortlist(detail.id))}
+              onBulkMove={handleBulkMove}
+              onReopen={() => runAction(() => reopenShortlist(detail.id))}
+              onCancel={() => runAction(() => cancelShortlist(detail.id))}
+              onArchive={() => runAction(() => archiveShortlist(detail.id))}
+              onEdit={() => setEditOpen(true)}
+              onSubmitForReview={() => setSubmitAllOpen(true)}
+              canEditDetails={canEditDetails}
+            />
+          }
+        />
       </div>
 
       <section className={cn(discoverySelectionFlyoutContentClass(selectedCount > 0))}>
@@ -890,113 +939,6 @@ export function ShortlistWorkspace({
                 ) : null}
               </div>
             ) : null}
-
-            <div className="flex shrink-0 items-center border-l border-border/60 pl-5">
-              <CommercialCurrencySelect
-                label="CCY"
-                value={displayCurrency}
-                onChange={handleCurrencyChange}
-                disabled={!canEditDetails || isPending}
-              />
-            </div>
-          </div>
-
-          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
-            {detail.creators.length > 0 ? (
-              <ShortlistCreatorToolbarActions
-                shortlistId={detail.id}
-                creators={detail.creators}
-                exportTemplate={exportTemplate}
-                onExportTemplateChange={setExportTemplate}
-                selectedItemIds={selectedItemIdList}
-                onSelectedItemIdsChange={(itemIds) => setSelectedIds(new Set(itemIds))}
-                exportRevision={detail.updated_at}
-                busy={isPending}
-              />
-            ) : null}
-            {detail.creators.some((item) => item.item_status !== "cancelled") ? (
-              <ShortlistToolbarButton
-                variant="outline"
-                size="sm"
-                onClick={handleSendToClient}
-                disabled={isPending}
-              >
-                <SendIcon className="size-3.5" />
-                Send to Client
-              </ShortlistToolbarButton>
-            ) : null}
-            {detail.canManage ? (
-              <ClientWorkspaceDisplayToggles
-                showOriginalCurrency={showOriginalCurrency}
-                hideCostAndFees={hideCostAndFees}
-                disabled={isPending}
-                onShowOriginalCurrencyChange={(value) => {
-                  startTransition(async () => {
-                    setOptimisticShowOriginalCurrency(value);
-                    const result = await setShortlistShowOriginalCurrency({
-                      shortlistId: detail.id,
-                      value,
-                    });
-                    if (!result.ok) {
-                      toast.error(result.message);
-                      return;
-                    }
-                    router.refresh();
-                  });
-                }}
-                onHideCostAndFeesChange={(value) => {
-                  startTransition(async () => {
-                    setOptimisticHideCostAndFees(value);
-                    const result = await setShortlistHideCostAndFees({
-                      shortlistId: detail.id,
-                      value,
-                    });
-                    if (!result.ok) {
-                      toast.error(result.message);
-                      return;
-                    }
-                    router.refresh();
-                  });
-                }}
-              />
-            ) : null}
-            <ShortlistToolbarButton
-              variant="outline"
-              size="sm"
-              onClick={handleShowLink}
-              disabled={isPending}
-            >
-              <Link2Icon className="size-3.5" />
-              {hasLink ? "Show link" : "Generate link"}
-            </ShortlistToolbarButton>
-            {editable ? (
-              <ShortlistToolbarButton
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setAddMode("search");
-                  setAddOpen(true);
-                }}
-                disabled={isPending}
-              >
-                <UserPlusIcon className="size-3.5" />
-                Add creators
-              </ShortlistToolbarButton>
-            ) : null}
-            <ShortlistWorkspaceOverflowMenu
-              detail={detail}
-              selectedCount={selectedCount}
-              isPending={isPending}
-              onApprove={() => runAction(() => approveShortlist(detail.id))}
-              onReturnToDraft={() => runAction(() => rejectShortlist(detail.id))}
-              onBulkMove={handleBulkMove}
-              onReopen={() => runAction(() => reopenShortlist(detail.id))}
-              onCancel={() => runAction(() => cancelShortlist(detail.id))}
-              onArchive={() => runAction(() => archiveShortlist(detail.id))}
-              onEdit={() => setEditOpen(true)}
-              onSubmitForReview={() => setSubmitAllOpen(true)}
-              canEditDetails={canEditDetails}
-            />
           </div>
         </div>
 
@@ -1323,7 +1265,7 @@ function ShortlistWorkspaceOverflowMenu({
           type="button"
           disabled={isPending}
           aria-label="More shortlist actions"
-          className="inline-flex size-8 items-center justify-center rounded-[9px] border border-border bg-background text-muted-foreground transition-colors hover:bg-muted/30 hover:text-foreground disabled:opacity-50"
+          className="inline-flex size-[34px] items-center justify-center rounded-[10px] border-[0.8px] border-[#E3E8F2] bg-white text-[#41495A] transition-[border-color,color] hover:border-[rgba(0,87,255,0.35)] hover:text-[#0B52E0] disabled:opacity-45 dark:border-border dark:bg-background dark:text-[var(--text-2)]"
         >
           <MoreHorizontalIcon className="size-4" />
         </button>

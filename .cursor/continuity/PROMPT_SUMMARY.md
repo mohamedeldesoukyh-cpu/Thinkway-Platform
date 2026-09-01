@@ -1,7 +1,13 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace Campaign tab publication matching and Added value.
+**Focus:** Shortlist header button grouping (View / Share / one primary).
+
+## Shortlist button layer (develop)
+Title-row actions only: **Generate outputs** (quiet, with missing-input hover), **View** (CCY + cost toggles), **Share** (preview templates, all export formats, client link, send), **Open Studio**, **Complete brief** when inputs are missing, **+ Add creators** as the only primary. Creators row is count + client/brand. Bulk bar: Compare, Refresh metrics, Export CSV, Generate quotation, Submit N selected. No functions removed. Not on Production.
+
+## In progress — Creator Workspace post analysis
+Each live post/reel/video gets a dedicated **Performance analysis** on the campaign Overview and on the deliverable card: verdict vs the creator’s own recent average, agreed fee split across contracted posts, CPV, and specific advice. Uses `lib/creator-insights` (not ECI). Creator fee only — no GP / client budget. No new nav tab.
 
 ## Shipped 2026-08-31 (evening)
 

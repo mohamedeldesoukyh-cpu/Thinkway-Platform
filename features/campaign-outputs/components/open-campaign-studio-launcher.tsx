@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { type ReactNode, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { LayoutDashboardIcon, LayersIcon, Loader2Icon, SparklesIcon } from "lucide-react";
 
@@ -22,6 +22,7 @@ export type OpenCampaignStudioLauncherProps = {
   className?: string;
   buttonClassName?: string;
   showIcon?: boolean;
+  badge?: ReactNode;
 };
 
 const TAB_LABELS: Record<StudioTab, string> = {
@@ -52,6 +53,7 @@ export function OpenCampaignStudioLauncher({
   className,
   buttonClassName,
   showIcon = true,
+  badge,
 }: OpenCampaignStudioLauncherProps) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -115,6 +117,7 @@ export function OpenCampaignStudioLauncher({
           <Icon className="size-3.5" aria-hidden />
         ) : null}
         {displayLabel}
+        {badge}
       </button>
       {error ? <p className="text-[10px] text-red-500">{error}</p> : null}
     </div>

@@ -75,21 +75,83 @@ export function ShortlistBulkToolbar({
     if (showSubmit) {
       list.push({
         id: "submit",
-        label: "Submit selected",
+        label: `Submit ${selectedCount} selected`,
         icon: SendIcon,
         variant: "primary",
         disabled: busy,
         onClick: onSubmitSelected,
       });
+    } else if (showStatusActions) {
+      list.push({
+        id: "approve",
+        label: "Approve",
+        icon: CheckIcon,
+        variant: "primary",
+        disabled: busy,
+        onClick: onApproveSelected,
+      });
     }
 
-    if (showStatusActions) {
+    list.push(
+      {
+        id: "compare",
+        label: "Compare",
+        icon: GitCompareArrowsIcon,
+        variant: "outline",
+        disabled: busy,
+        onClick: onCompareSelected,
+      },
+      {
+        id: "refresh-metrics",
+        label: "Refresh metrics",
+        icon: RefreshCwIcon,
+        variant: "outline",
+        disabled: busy || !onRefreshMetrics,
+        onClick: () => onRefreshMetrics?.(),
+      },
+      {
+        id: "export",
+        label: "Export CSV",
+        icon: DownloadIcon,
+        variant: "outline",
+        disabled: busy,
+        onClick: onExportSelected,
+      },
+      {
+        id: "quotation",
+        label: "Generate quotation",
+        icon: FileTextIcon,
+        variant: showSubmit || showStatusActions ? "outline" : "primary",
+        disabled: busy,
+        onClick: onGenerateNewQuotation,
+        items: [
+          {
+            id: "quotation-new",
+            label: "Generate new",
+            description: "Create a new quotation with the selected creators",
+            onClick: onGenerateNewQuotation,
+            disabled: busy,
+          },
+          {
+            id: "quotation-add",
+            label: "Add to quotation",
+            description: existingQuotationLabel
+              ? `Add selected creators to ${existingQuotationLabel}`
+              : "Add to the linked quotation, or create one if none exists",
+            onClick: onAddToQuotation,
+            disabled: busy,
+          },
+        ],
+      }
+    );
+
+    if (showStatusActions && showSubmit) {
       list.push(
         {
           id: "approve",
           label: "Approve",
           icon: CheckIcon,
-          variant: "primary",
+          variant: "outline",
           disabled: busy,
           onClick: onApproveSelected,
         },
@@ -101,6 +163,14 @@ export function ShortlistBulkToolbar({
           onClick: onRejectSelected,
         }
       );
+    } else if (showStatusActions) {
+      list.push({
+        id: "reject",
+        label: "Reject",
+        variant: "outline",
+        disabled: busy,
+        onClick: onRejectSelected,
+      });
     }
 
     if (showCollapse) {
@@ -130,51 +200,9 @@ export function ShortlistBulkToolbar({
         id: "send-client",
         label: "Send to Client",
         icon: SendIcon,
-        variant: "primary",
+        variant: "outline",
         disabled: busy || !onSendToClient,
         onClick: () => onSendToClient?.(),
-      },
-      {
-        id: "quotation",
-        label: "Generate quotation",
-        icon: FileTextIcon,
-        variant: "outline",
-        disabled: busy,
-        onClick: onGenerateNewQuotation,
-        items: [
-          {
-            id: "quotation-new",
-            label: "Generate new",
-            description: "Create a new quotation with the selected creators",
-            onClick: onGenerateNewQuotation,
-            disabled: busy,
-          },
-          {
-            id: "quotation-add",
-            label: "Add to quotation",
-            description: existingQuotationLabel
-              ? `Add selected creators to ${existingQuotationLabel}`
-              : "Add to the linked quotation, or create one if none exists",
-            onClick: onAddToQuotation,
-            disabled: busy,
-          },
-        ],
-      },
-      {
-        id: "compare",
-        label: "Compare",
-        icon: GitCompareArrowsIcon,
-        variant: "outline",
-        disabled: busy,
-        onClick: onCompareSelected,
-      },
-      {
-        id: "refresh-metrics",
-        label: "Refresh metrics",
-        icon: RefreshCwIcon,
-        variant: "outline",
-        disabled: busy || !onRefreshMetrics,
-        onClick: () => onRefreshMetrics?.(),
       },
       {
         id: "remove",
@@ -184,14 +212,6 @@ export function ShortlistBulkToolbar({
         destructive: true,
         disabled: busy,
         onClick: onRemoveSelected,
-      },
-      {
-        id: "export",
-        label: "Export CSV",
-        icon: DownloadIcon,
-        variant: "outline",
-        disabled: busy,
-        onClick: onExportSelected,
       }
     );
 
@@ -215,6 +235,7 @@ export function ShortlistBulkToolbar({
 
     return list;
   }, [
+    selectedCount,
     showSubmit,
     showStatusActions,
     showMove,

@@ -1,0 +1,307 @@
+"use client";
+
+import { useMemo, type ReactNode } from "react";
+import { CheckIcon } from "lucide-react";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher-lazy";
+import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher";
+import { planGenerateFromSource } from "@/features/campaign-outputs/hydration/generate-plan";
+import type { CampaignSeed } from "@/features/campaign-outputs/hydration/hydration-types";
+import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
+import {
+  HIDE_COST_AND_FEES_LABEL,
+  SHOW_ORIGINAL_CURRENCY_LABEL,
+} from "@/lib/commercial/client-original-currency";
+import { cn } from "@/lib/utils";
+import {
+  SHORTLIST_TEMPLATE_OPTIONS,
+  type ShortlistTemplateVariant,
+} from "@/features/discovery/shortlists/export/shortlist-template";
+import type { ShortlistCreatorItem } from "@/features/discovery/shortlists/types";
+
+import {
+  SHORTLIST_EXPORT_FORMATS,
+  useShortlistDocumentActions,
+} from "./shortlist-creator-toolbar-actions";
+import {
+  SHORTLIST_TOOLBAR_BUTTON_CLASS,
+  SHORTLIST_TOOLBAR_BUTTON_WARN_CLASS,
+  ShortlistToolbarButton,
+  ShortlistToolbarCount,
+} from "./shortlist-detail-primitives";
+
+const MENU_CONTENT_CLASS =
+  "min-w-[236px] rounded-xl border-[rgba(0,87,255,0.06)] p-1.5 shadow-[0_0_0_1px_rgba(0,87,255,0.06),0_18px_44px_rgba(11,15,26,0.16)]";
+const MENU_LABEL_CLASS =
+  "px-2.5 py-1 text-[9.5px] font-bold uppercase tracking-[0.06em] text-[#9ca3af]";
+const MENU_ITEM_CLASS =
+  "justify-between gap-3 rounded-lg px-2.5 py-2 text-[12.5px] text-[#41495A]";
+
+function ViewSwitch({ on }: { on: boolean }) {
+  return (
+    <span
+      className={cn(
+        "relative h-[19px] w-8 shrink-0 rounded-full",
+        on ? "bg-[#0057ff]" : "bg-[#E3E8F2]"
+      )}
+      aria-hidden
+    >
+      <span
+        className={cn(
+          "absolute top-0.5 left-0.5 size-[15px] rounded-full bg-white transition-transform duration-200",
+          on && "translate-x-[13px]"
+        )}
+      />
+    </span>
+  );
+}
+
+export function ShortlistHeaderActions({
+  seed,
+  shortlistId,
+  creators,
+  exportTemplate,
+  onExportTemplateChange,
+  selectedItemIds,
+  onSelectedItemIdsChange,
+  exportRevision,
+  displayCurrency,
+  onCurrencyChange,
+  showOriginalCurrency,
+  hideCostAndFees,
+  onShowOriginalCurrencyChange,
+  onHideCostAndFeesChange,
+  canManageView,
+  canChangeCurrency,
+  hasLink,
+  canSendToClient,
+  canAddCreators,
+  busy,
+  onShowLink,
+  onSendToClient,
+  onAddCreators,
+  overflow,
+}: {
+  seed: CampaignSeed;
+  shortlistId: string;
+  creators: ShortlistCreatorItem[];
+  exportTemplate: ShortlistTemplateVariant;
+  onExportTemplateChange: (template: ShortlistTemplateVariant) => void;
+  selectedItemIds: string[];
+  onSelectedItemIdsChange: (itemIds: string[]) => void;
+  exportRevision?: string | null;
+  displayCurrency: string;
+  onCurrencyChange: (currency: string) => void;
+  showOriginalCurrency: boolean;
+  hideCostAndFees: boolean;
+  onShowOriginalCurrencyChange: (value: boolean) => void;
+  onHideCostAndFeesChange: (value: boolean) => void;
+  canManageView: boolean;
+  canChangeCurrency: boolean;
+  hasLink: boolean;
+  canSendToClient: boolean;
+  canAddCreators: boolean;
+  busy?: boolean;
+  onShowLink: () => void;
+  onSendToClient: () => void;
+  onAddCreators: () => void;
+  overflow?: ReactNode;
+}) {
+  const plan = useMemo(() => planGenerateFromSource(seed), [seed]);
+  const missingLabels = plan.result.missing.missingLabels;
+  const documents = useShortlistDocumentActions({
+    shortlistId,
+    creators,
+    exportTemplate,
+    onExportTemplateChange,
+    selectedItemIds,
+    onSelectedItemIdsChange,
+    exportRevision,
+    busy,
+  });
+  const hasCreators = creators.length > 0;
+  const viewCount = `${displayCurrency}${hideCostAndFees ? " · hidden" : ""}`;
+
+  return (
+    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+      <GenerateOutputsLauncher
+        seed={seed}
+        tab="outputs"
+        workspace={{ type: "shortlist", id: shortlistId }}
+        tone="toolbar"
+      />
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <ShortlistToolbarButton disabled={busy} aria-label="View settings">
+            View
+            <ShortlistToolbarCount>{viewCount}</ShortlistToolbarCount>
+          </ShortlistToolbarButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className={MENU_CONTENT_CLASS}>
+          <DropdownMenuLabel className={MENU_LABEL_CLASS}>Currency</DropdownMenuLabel>
+          {COMMERCIAL_CURRENCIES.map((code) => (
+            <DropdownMenuItem
+              key={code}
+              disabled={!canChangeCurrency || busy}
+              onSelect={(event) => {
+                event.preventDefault();
+                onCurrencyChange(code);
+              }}
+              className={MENU_ITEM_CLASS}
+            >
+              {code}
+              <span className="text-[10.5px] text-[#9ca3af]">
+                {displayCurrency === code ? "current" : ""}
+              </span>
+            </DropdownMenuItem>
+          ))}
+          {canManageView ? (
+            <>
+              <DropdownMenuLabel className={MENU_LABEL_CLASS}>Costs</DropdownMenuLabel>
+              <DropdownMenuItem
+                disabled={busy}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onShowOriginalCurrencyChange(!showOriginalCurrency);
+                }}
+                className={MENU_ITEM_CLASS}
+                aria-pressed={showOriginalCurrency}
+              >
+                {SHOW_ORIGINAL_CURRENCY_LABEL}
+                <ViewSwitch on={showOriginalCurrency} />
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={busy}
+                onSelect={(event) => {
+                  event.preventDefault();
+                  onHideCostAndFeesChange(!hideCostAndFees);
+                }}
+                className={MENU_ITEM_CLASS}
+                aria-pressed={hideCostAndFees}
+              >
+                {HIDE_COST_AND_FEES_LABEL}
+                <ViewSwitch on={hideCostAndFees} />
+              </DropdownMenuItem>
+            </>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <ShortlistToolbarButton disabled={busy} aria-label="Share">
+            Share
+          </ShortlistToolbarButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className={MENU_CONTENT_CLASS}>
+          <DropdownMenuLabel className={MENU_LABEL_CLASS}>Preview</DropdownMenuLabel>
+          {SHORTLIST_TEMPLATE_OPTIONS.map((option) => (
+            <DropdownMenuItem
+              key={option.id}
+              disabled={!hasCreators || busy}
+              onSelect={(event) => {
+                event.preventDefault();
+                documents.openPreview(option.id);
+              }}
+              className={MENU_ITEM_CLASS}
+            >
+              <span className="min-w-0">
+                <span className="block">{option.label}</span>
+                <span className="block text-[10.5px] font-normal text-[#9ca3af]">
+                  {option.hint}
+                </span>
+              </span>
+              {exportTemplate === option.id ? (
+                <CheckIcon className="size-3.5 shrink-0 text-[#0057ff]" />
+              ) : null}
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className={MENU_LABEL_CLASS}>Export</DropdownMenuLabel>
+          {SHORTLIST_EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
+            <DropdownMenuItem
+              key={format}
+              disabled={!hasCreators || busy}
+              onSelect={(event) => {
+                event.preventDefault();
+                documents.openExport(format);
+              }}
+              className={cn(MENU_ITEM_CLASS, "justify-start")}
+            >
+              <span className="inline-flex items-center gap-2">
+                <Icon className="size-3.5 text-[#9ca3af]" />
+                {label}
+              </span>
+            </DropdownMenuItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuLabel className={MENU_LABEL_CLASS}>Client</DropdownMenuLabel>
+          <DropdownMenuItem
+            disabled={busy}
+            onSelect={(event) => {
+              event.preventDefault();
+              onShowLink();
+            }}
+            className={MENU_ITEM_CLASS}
+          >
+            {hasLink ? "Copy client link" : "Generate client link"}
+          </DropdownMenuItem>
+          <DropdownMenuItem
+            disabled={!canSendToClient || busy}
+            onSelect={(event) => {
+              event.preventDefault();
+              onSendToClient();
+            }}
+            className={MENU_ITEM_CLASS}
+          >
+            Send to client
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <OpenCampaignStudioLauncher
+        seed={seed}
+        tab="studio"
+        workspace={{ type: "shortlist", id: shortlistId }}
+        showIcon={false}
+        buttonClassName={SHORTLIST_TOOLBAR_BUTTON_CLASS}
+      />
+
+      {missingLabels.length > 0 ? (
+        <OpenCampaignStudioLauncher
+          seed={seed}
+          tab="studio"
+          workspace={{ type: "shortlist", id: shortlistId }}
+          label="Complete brief"
+          showIcon={false}
+          buttonClassName={cn(
+            SHORTLIST_TOOLBAR_BUTTON_CLASS,
+            SHORTLIST_TOOLBAR_BUTTON_WARN_CLASS
+          )}
+          badge={
+            <ShortlistToolbarCount warn>{missingLabels.length}</ShortlistToolbarCount>
+          }
+        />
+      ) : null}
+
+      {canAddCreators ? (
+        <ShortlistToolbarButton variant="primary" onClick={onAddCreators} disabled={busy}>
+          + Add creators
+        </ShortlistToolbarButton>
+      ) : null}
+
+      {overflow}
+
+      {documents.dialog}
+    </div>
+  );
+}

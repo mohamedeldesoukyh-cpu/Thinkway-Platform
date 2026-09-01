@@ -48,6 +48,8 @@ export type GenerateOutputsLauncherProps = {
   workspace?: { type?: string; id?: string };
   className?: string;
   triggerClassName?: string;
+  /** `toolbar` is the quiet shortlist chrome; default stays the filled primary. */
+  tone?: "primary" | "toolbar";
 };
 
 /**
@@ -61,7 +63,9 @@ export function GenerateOutputsLauncher({
   workspace,
   className,
   triggerClassName,
+  tone = "primary",
 }: GenerateOutputsLauncherProps) {
+  const toolbar = tone === "toolbar";
   const genTrigger = triggerClassName?.includes("gen-trigger");
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -105,37 +109,49 @@ export function GenerateOutputsLauncher({
           <button
             type="button"
             disabled={pending}
+            title={
+              toolbar && missingLabels.length > 0
+                ? `${missingLabels.length} inputs still needed: ${missingLabels.join(", ")}`
+                : undefined
+            }
             className={cn(
               !triggerClassName &&
+                !toolbar &&
                 "inline-flex h-9 items-center gap-2 rounded-[10px] border border-primary bg-primary px-3.5 text-[13px] font-semibold text-primary-foreground shadow-[0_1px_2px_rgba(0,87,255,0.35),0_6px_16px_-6px_rgba(0,87,255,0.5)] transition-transform hover:bg-[var(--blue-hover,#0048dd)] active:scale-[0.975] disabled:opacity-50",
+              !triggerClassName &&
+                toolbar &&
+                "inline-flex h-[34px] items-center gap-[7px] whitespace-nowrap rounded-[10px] border-[0.8px] border-[#E3E8F2] bg-white px-3.5 text-[13px] font-semibold tracking-[-0.08px] text-[#41495A] transition-[border-color,color,box-shadow] hover:border-[rgba(0,87,255,0.35)] hover:text-[#0B52E0] active:translate-y-px disabled:opacity-45 dark:border-border dark:bg-background dark:text-[var(--text-2)]",
               triggerClassName
             )}
           >
-            <SparklesIcon className="size-3.5" aria-hidden />
+            {toolbar ? null : <SparklesIcon className="size-3.5" aria-hidden />}
             Generate outputs
             <span
               className={cn(
                 genTrigger
                   ? "rdy"
-                  : "inline-flex h-6 items-center gap-1.5 rounded-[7px] bg-white/18 px-2 text-[11px] font-bold tabular-nums"
+                  : toolbar
+                    ? "inline-flex items-center rounded-full border border-[#eef0f3] bg-[#f6f8fb] px-1.5 py-px font-mono text-[10.5px] font-semibold tabular-nums text-[#64748b]"
+                    : "inline-flex h-6 items-center gap-1.5 rounded-[7px] bg-white/18 px-2 text-[11px] font-bold tabular-nums"
               )}
             >
-              <span
-                className={cn(
-                  genTrigger
-                    ? "dot"
-                    : "size-1.5 rounded-full bg-[#ffd66e] shadow-[0_0_0_3px_rgba(255,214,110,0.25)]"
-                )}
-              />
+              {toolbar || genTrigger ? null : (
+                <span className="size-1.5 rounded-full bg-[#ffd66e] shadow-[0_0_0_3px_rgba(255,214,110,0.25)]" />
+              )}
+              {genTrigger ? <span className="dot" /> : null}
               {readyCount}/{totalCount}
             </span>
-            <ChevronDownIcon
-              className={cn(
-                genTrigger ? "car size-3.5 opacity-85 transition-transform" : "size-3.5 opacity-85 transition-transform",
-                open && "rotate-180"
-              )}
-              aria-hidden
-            />
+            {toolbar ? null : (
+              <ChevronDownIcon
+                className={cn(
+                  genTrigger
+                    ? "car size-3.5 opacity-85 transition-transform"
+                    : "size-3.5 opacity-85 transition-transform",
+                  open && "rotate-180"
+                )}
+                aria-hidden
+              />
+            )}
           </button>
         </PopoverTrigger>
         <PopoverContent align="end" className="w-[360px] rounded-2xl p-4">
