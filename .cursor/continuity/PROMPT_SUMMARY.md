@@ -7,6 +7,10 @@
 
 Facebook Combined-report stills failed because lookaside images were fetched with an Instagram referer, plugin oEmbed is empty for reels, and some FB CDNs return `octet-stream`. OpenGraph runs first; Graph picture is used when `META_GRAPH_ACCESS_TOKEN` is set; lookaside retries a Facebook referer. No migrations.
 
+## Shipped 2026-09-01 — Facebook publication previews
+
+Facebook Combined-report stills failed because lookaside images were fetched with an Instagram referer, plugin oEmbed is empty for reels, and some FB CDNs return `octet-stream`. OpenGraph runs first; Graph picture is used when `META_GRAPH_ACCESS_TOKEN` is set; lookaside retries a Facebook referer. No migrations.
+
 ## Shipped 2026-09-01 — Combined report avatars, page breaks, missing previews
 
 Combined HTML is `srcDoc`, so Instagram/TikTok CDN avatars never load. Reports now embed avatars via `fetchCreatorAvatarImage`. Publication stills keep a display-quality fallback when the 640px Showcase floor has no still. Cards flex inside the A4 sheet so metrics cannot paint over the footer. No migrations.
