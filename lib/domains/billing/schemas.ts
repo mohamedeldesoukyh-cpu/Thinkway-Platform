@@ -57,6 +57,7 @@ export const createInvoiceFromLinesSchema = z
       .or(z.literal(""))
       .transform((v) => (v ? v : null)),
     notes: z.string().trim().max(2000).optional().or(z.literal("")),
+    allocations: z.string().optional().or(z.literal("")),
   })
   .refine(
     (data) => {

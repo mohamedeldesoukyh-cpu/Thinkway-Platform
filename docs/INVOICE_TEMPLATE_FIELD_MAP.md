@@ -40,6 +40,7 @@ Maps dynamic regions in the invoice HTML template to platform data.
 |----------------|-----------|---------------|----------|
 | Invoice number | `invoices` | `document_number` | — |
 | Account number | `clients` | `document_number` | — |
+| Campaign No. | `campaign_headers` | `document_number` | — |
 | Campaign / project | `campaign_headers` | `name` | — |
 | Client | `clients` | `legal_name` or `name` | — |
 | Campaign period | `campaign_headers` | `start_date`, `end_date` | — |

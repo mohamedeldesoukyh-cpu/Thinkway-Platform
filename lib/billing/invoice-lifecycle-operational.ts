@@ -3,6 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { assignmentStatusFromBilling } from "@/lib/campaigns/line-assignment";
 import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import { resolveClientBillableAmount } from "@/lib/billing/client-billable-amount";
+import { loadInvoiceCoverageSums, type InvoiceCoverageSums } from "@/lib/billing/invoice-coverage-ledger";
+import {
+  applyCoverageToLedger,
+  buildOperationalCoveragePatch,
+} from "@/lib/billing/partial-assignment-invoice";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
 import { syncLineOperationalStatusBatch } from "@/lib/billing/sync-line-operational-status";
 import { shouldApplyLiveAdDateLockOnInvoice } from "@/lib/campaigns/live-ad-date";
@@ -108,6 +113,122 @@ async function resolveInvoiceScopeIds(
   };
 }
 
+async function applyCoverageToOperationalScope(
+  supabase: SupabaseClient,
+  scope: {
+    postIds: string[];
+    deliverableIds: string[];
+    lineIds: string[];
+    lineItemIds: string[];
+  },
+  options: {
+    excludeInvoiceId?: string;
+    now: string;
+    lineItemIdByPost?: Map<string, string>;
+    lineItemIdByDeliverable?: Map<string, string>;
+  }
+): Promise<{ error?: string; sums: InvoiceCoverageSums }> {
+  const { sums, error } = await loadInvoiceCoverageSums(
+    supabase,
+    {
+      postIds: scope.postIds,
+      deliverableIds: scope.deliverableIds,
+      lineIds: scope.lineIds,
+    },
+    { excludeInvoiceId: options.excludeInvoiceId }
+  );
+  if (error) return { error, sums };
+
+  if (scope.postIds.length > 0) {
+    const { data: postRows, error: loadError } = await supabase
+      .from("assignment_post_schedule")
+      .select("id, live_date, billable_amount, revenue_before_vat, invoice_line_item_id")
+      .in("id", scope.postIds);
+    if (loadError) return { error: loadError.message, sums };
+
+    for (const post of postRows ?? []) {
+      const row = post as {
+        id: string;
+        live_date: string | null;
+        billable_amount: number | null;
+        revenue_before_vat: number | null;
+        invoice_line_item_id: string | null;
+      };
+      const billable = resolveClientBillableAmount({
+        revenue_before_vat: row.revenue_before_vat,
+        billable_amount: row.billable_amount,
+      });
+      const invoicedCoverage = sums.posts.get(row.id) ?? 0;
+      const lineItemId =
+        options.lineItemIdByPost?.get(row.id) ??
+        (invoicedCoverage > 0 ? row.invoice_line_item_id : null);
+      const patch = buildOperationalCoveragePatch({
+        billable,
+        invoicedCoverage,
+        lineItemId,
+        now: options.now,
+        lockLiveDate:
+          applyCoverageToLedger({ billable, invoicedCoverage }).shouldLock &&
+          shouldApplyLiveAdDateLockOnInvoice(row.live_date),
+      });
+      const { error: updateError } = await supabase
+        .from("assignment_post_schedule")
+        .update(patch)
+        .eq("id", row.id);
+      if (updateError) return { error: updateError.message, sums };
+    }
+  }
+
+  if (scope.deliverableIds.length > 0) {
+    const { data: deliverableRows, error: loadError } = await supabase
+      .from("assignment_deliverables")
+      .select(
+        "id, live_date, billable_amount, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, invoice_line_item_id"
+      )
+      .in("id", scope.deliverableIds);
+    if (loadError) return { error: loadError.message, sums };
+
+    for (const deliverable of deliverableRows ?? []) {
+      const row = deliverable as {
+        id: string;
+        live_date: string | null;
+        billable_amount: number | null;
+        revenue_before_vat: number | null;
+        usage_rights_amount?: number | null;
+        agency_fee_amount?: number | null;
+        agency_fee_percent?: number | null;
+        invoice_line_item_id: string | null;
+      };
+      const billable = resolveClientBillableAmount({
+        revenue_before_vat: row.revenue_before_vat,
+        usage_rights_amount: row.usage_rights_amount,
+        agency_fee_amount: row.agency_fee_amount,
+        agency_fee_percent: row.agency_fee_percent,
+        billable_amount: row.billable_amount,
+      });
+      const invoicedCoverage = sums.deliverables.get(row.id) ?? 0;
+      const lineItemId =
+        options.lineItemIdByDeliverable?.get(row.id) ??
+        (invoicedCoverage > 0 ? row.invoice_line_item_id : null);
+      const coverage = applyCoverageToLedger({ billable, invoicedCoverage });
+      const patch = buildOperationalCoveragePatch({
+        billable,
+        invoicedCoverage,
+        lineItemId,
+        now: options.now,
+        lockLiveDate: coverage.shouldLock && shouldApplyLiveAdDateLockOnInvoice(row.live_date),
+      });
+      const { error: updateError } = await supabase
+        .from("assignment_deliverables")
+        .update(patch)
+        .eq("id", row.id);
+      if (updateError) return { error: updateError.message, sums };
+    }
+  }
+
+  return { sums };
+}
+
 /**
  * PR2: Single unlock path — posts, deliverables, assignments transition together.
  * Invoice line items are preserved for regeneration (commercial correction on same invoice).
@@ -133,149 +254,12 @@ export async function unlockInvoiceOperationalScope(
   const overrideUntil = new Date(Date.now() + overrideHours * 3600000).toISOString();
   const scope = await resolveInvoiceScopeIds(supabase, invoiceId);
 
-  if (scope.postIds.length > 0) {
-    const { data: postRows, error: loadError } = await supabase
-      .from("assignment_post_schedule")
-      .select(
-        "id, assignment_deliverable_id, billable_amount, revenue_before_vat, invoiced_amount"
-      )
-      .in("id", scope.postIds);
-
-    if (loadError) {
-      return { ...scope, error: loadError.message };
-    }
-
-    const deliverableIds = [
-      ...new Set(
-        (postRows ?? [])
-          .map((row) => (row as { assignment_deliverable_id: string | null }).assignment_deliverable_id)
-          .filter(Boolean) as string[]
-      ),
-    ];
-
-    const deliverableBillableById = new Map<string, number>();
-    if (deliverableIds.length > 0) {
-      const { data: deliverableRows } = await supabase
-        .from("assignment_deliverables")
-        .select(
-          "id, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, billable_amount"
-        )
-        .in("id", deliverableIds);
-
-      for (const deliverable of deliverableRows ?? []) {
-        const row = deliverable as {
-          id: string;
-          revenue_before_vat: number | null;
-          usage_rights_amount?: number | null;
-          agency_fee_amount?: number | null;
-          agency_fee_percent?: number | null;
-          billable_amount: number | null;
-        };
-        deliverableBillableById.set(
-          row.id,
-          resolveClientBillableAmount({
-            revenue_before_vat: row.revenue_before_vat,
-            usage_rights_amount: row.usage_rights_amount,
-            agency_fee_amount: row.agency_fee_amount,
-            agency_fee_percent: row.agency_fee_percent,
-            billable_amount: row.billable_amount,
-          })
-        );
-      }
-    }
-
-    for (const post of postRows ?? []) {
-      const row = post as {
-        id: string;
-        assignment_deliverable_id: string;
-        billable_amount: number | null;
-        revenue_before_vat: number | null;
-        invoiced_amount: number | null;
-      };
-      const deliverableBillable =
-        deliverableBillableById.get(row.assignment_deliverable_id) ?? 0;
-      const billable = Math.max(
-        deliverableBillable,
-        resolveClientBillableAmount({
-          revenue_before_vat: row.revenue_before_vat,
-          billable_amount: row.billable_amount,
-          invoiced_amount: row.invoiced_amount,
-        })
-      );
-      const postPatch: Record<string, unknown> = {
-        locked_at: null,
-        billing_status: "ready_to_invoice",
-        invoiced_amount: 0,
-        remaining_amount: billable,
-        billable_amount: billable,
-      };
-
-      if (!preserveLineItems) {
-        postPatch.invoice_line_item_id = null;
-        postPatch.invoiced_at = null;
-      }
-
-      const { error } = await supabase
-        .from("assignment_post_schedule")
-        .update(postPatch)
-        .eq("id", row.id);
-
-      if (error) {
-        return { ...scope, error: error.message };
-      }
-    }
-  }
-
-  if (scope.deliverableIds.length > 0) {
-    const { data: deliverableRows, error: loadError } = await supabase
-      .from("assignment_deliverables")
-      .select(
-        "id, billable_amount, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
-      )
-      .in("id", scope.deliverableIds);
-
-    if (loadError) {
-      return { ...scope, error: loadError.message };
-    }
-
-    for (const deliverable of deliverableRows ?? []) {
-      const row = deliverable as {
-        id: string;
-        billable_amount: number | null;
-        revenue_before_vat: number | null;
-        usage_rights_amount?: number | null;
-        agency_fee_amount?: number | null;
-        agency_fee_percent?: number | null;
-      };
-      const billable = resolveClientBillableAmount({
-        revenue_before_vat: row.revenue_before_vat,
-        usage_rights_amount: row.usage_rights_amount,
-        agency_fee_amount: row.agency_fee_amount,
-        agency_fee_percent: row.agency_fee_percent,
-        billable_amount: row.billable_amount,
-      });
-      const deliverablePatch: Record<string, unknown> = {
-        locked_at: null,
-        billing_status: "ready_to_invoice",
-        invoiced_amount: 0,
-        invoiced_at: null,
-        remaining_amount: billable,
-        billable_amount: billable,
-      };
-
-      if (!preserveLineItems) {
-        deliverablePatch.invoice_line_item_id = null;
-      }
-
-      const { error } = await supabase
-        .from("assignment_deliverables")
-        .update(deliverablePatch)
-        .eq("id", row.id);
-
-      if (error) {
-        return { ...scope, error: error.message };
-      }
-    }
+  const coverage = await applyCoverageToOperationalScope(supabase, scope, {
+    excludeInvoiceId: invoiceId,
+    now: new Date().toISOString(),
+  });
+  if (coverage.error) {
+    return { ...scope, error: coverage.error };
   }
 
   for (const lineId of scope.lineIds) {
@@ -283,26 +267,39 @@ export async function unlockInvoiceOperationalScope(
 
     const { data: lineDeliverables } = await supabase
       .from("assignment_deliverables")
-      .select("locked_at")
+      .select("locked_at, remaining_amount, invoiced_amount")
       .eq("campaign_line_id", lineId);
 
+    const remaining = (lineDeliverables ?? []).reduce(
+      (sum, row) => sum + Number((row as { remaining_amount?: number | null }).remaining_amount ?? 0),
+      0
+    );
+    const invoiced = (lineDeliverables ?? []).reduce(
+      (sum, row) => sum + Number((row as { invoiced_amount?: number | null }).invoiced_amount ?? 0),
+      0
+    );
     const anyLocked = (lineDeliverables ?? []).some((d) => d.locked_at);
     const allLocked =
       (lineDeliverables ?? []).length > 0 &&
       (lineDeliverables ?? []).every((d) => d.locked_at);
+    const stillPartial = invoiced > 0.01 && remaining > 0.01;
 
-    await supabase
-      .from("campaign_lines")
-      .update({
+    const linePatch: Record<string, unknown> = {
         revenue_locked: mode === "unpost" ? false : allLocked,
         cost_locked: mode === "unpost" ? false : allLocked,
         vendor_assignment_locked: mode === "unpost" ? false : allLocked,
         vat_locked: mode === "unpost" ? false : anyLocked,
         finance_override_until: overrideUntil,
-        invoice_id: null,
-        operational_status: "io_generated",
-        billing_status: "moved_to_billing",
-      } as never)
+        operational_status: stillPartial ? "partially_invoiced" : "io_generated",
+        billing_status: stillPartial ? "partially_invoiced" : "moved_to_billing",
+      };
+    if (!stillPartial) {
+      linePatch.invoice_id = null;
+    }
+
+    await supabase
+      .from("campaign_lines")
+      .update(linePatch as never)
       .eq("id", lineId);
   }
 
@@ -343,110 +340,96 @@ export async function relockInvoiceOperationalScope(
   const billingStatus = options?.billingStatus ?? "invoiced";
   const now = new Date().toISOString();
 
-  if (scope.lineItemIds.length > 0) {
-    const { data: lineItems } = await supabase
-      .from("invoice_line_items")
-      .select(
-        "id, assignment_post_schedule_id, assignment_deliverable_id, revenue_before_vat, unit_price"
-      )
-      .in("id", scope.lineItemIds);
+  const { data: lineItems } = scope.lineItemIds.length
+    ? await supabase
+        .from("invoice_line_items")
+        .select("id, assignment_post_schedule_id, assignment_deliverable_id")
+        .in("id", scope.lineItemIds)
+    : { data: [] as Array<{ id: string }> };
 
-    const postIds = (lineItems ?? [])
-      .map((item) => (item as { assignment_post_schedule_id: string | null }).assignment_post_schedule_id)
-      .filter(Boolean) as string[];
-    const deliverableIds = (lineItems ?? [])
-      .map((item) => (item as { assignment_deliverable_id: string | null }).assignment_deliverable_id)
-      .filter(Boolean) as string[];
-
-    const liveDateByPostId = new Map<string, string | null>();
-    if (postIds.length > 0) {
-      const { data: postRows } = await supabase
-        .from("assignment_post_schedule")
-        .select("id, live_date")
-        .in("id", postIds);
-      for (const post of postRows ?? []) {
-        liveDateByPostId.set(post.id, post.live_date ?? null);
-      }
+  const lineItemIdByPost = new Map<string, string>();
+  const lineItemIdByDeliverable = new Map<string, string>();
+  for (const item of lineItems ?? []) {
+    const row = item as {
+      id: string;
+      assignment_post_schedule_id: string | null;
+      assignment_deliverable_id: string | null;
+    };
+    if (row.assignment_post_schedule_id) {
+      lineItemIdByPost.set(row.assignment_post_schedule_id, row.id);
     }
-
-    const liveDateByDeliverableId = new Map<string, string | null>();
-    if (deliverableIds.length > 0) {
-      const { data: deliverableRows } = await supabase
-        .from("assignment_deliverables")
-        .select("id, live_date")
-        .in("id", deliverableIds);
-      for (const deliverable of deliverableRows ?? []) {
-        liveDateByDeliverableId.set(deliverable.id, deliverable.live_date ?? null);
-      }
-    }
-
-    for (const item of lineItems ?? []) {
-      const row = item as {
-        id: string;
-        assignment_post_schedule_id: string | null;
-        assignment_deliverable_id: string | null;
-        revenue_before_vat: number | null;
-        unit_price: number | null;
-      };
-      const amount = Number(row.revenue_before_vat ?? row.unit_price ?? 0);
-
-      if (row.assignment_post_schedule_id) {
-        const postLiveDate = liveDateByPostId.get(row.assignment_post_schedule_id) ?? null;
-        const postPatch: Record<string, unknown> = {
-          invoice_line_item_id: row.id,
-          invoiced_at: now,
-          invoiced_amount: amount,
-          remaining_amount: 0,
-          billing_status: "invoiced",
-        };
-        if (shouldApplyLiveAdDateLockOnInvoice(postLiveDate)) {
-          postPatch.locked_at = now;
-        }
-        await supabase
-          .from("assignment_post_schedule")
-          .update(postPatch)
-          .eq("id", row.assignment_post_schedule_id);
-      }
-
-      if (row.assignment_deliverable_id) {
-        const deliverableLiveDate =
-          liveDateByDeliverableId.get(row.assignment_deliverable_id) ?? null;
-        const deliverablePatch: Record<string, unknown> = {
-          invoice_line_item_id: row.id,
-          invoiced_at: now,
-          invoiced_amount: amount,
-          remaining_amount: 0,
-          billing_status: "invoiced",
-        };
-        if (shouldApplyLiveAdDateLockOnInvoice(deliverableLiveDate)) {
-          deliverablePatch.locked_at = now;
-        }
-        await supabase
-          .from("assignment_deliverables")
-          .update(deliverablePatch)
-          .eq("id", row.assignment_deliverable_id);
-      }
+    if (row.assignment_deliverable_id && !row.assignment_post_schedule_id) {
+      lineItemIdByDeliverable.set(row.assignment_deliverable_id, row.id);
     }
   }
 
+  const coverage = await applyCoverageToOperationalScope(supabase, scope, {
+    now,
+    lineItemIdByPost,
+    lineItemIdByDeliverable,
+  });
+  if (coverage.error) {
+    return { lineIds: scope.lineIds, error: coverage.error };
+  }
+
   if (scope.lineIds.length > 0) {
-    const { error: lineError } = await supabase
+    for (const lineId of scope.lineIds) {
+      await syncLineBillingFromDeliverables(supabase, lineId, "moved_to_billing");
+    }
+
+    const { data: lines } = await supabase
       .from("campaign_lines")
-      .update({
-        ...lineBillingPatch(billingStatus),
-        operational_status: operationalStatusForDb("locked"),
-        revenue_locked: true,
-        cost_locked: true,
-        vendor_assignment_locked: true,
-        vat_locked: true,
-        invoice_id: invoiceId,
-        billing_invoiced_at: now,
-        finance_override_until: null,
-      } as never)
+      .select(
+        "id, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
+      )
       .in("id", scope.lineIds);
 
-    if (lineError) {
-      return { lineIds: scope.lineIds, error: lineError.message };
+    for (const line of lines ?? []) {
+      const lineId = (line as { id: string }).id;
+      const { data: deliverables } = await supabase
+        .from("assignment_deliverables")
+        .select("remaining_amount, invoiced_amount, locked_at")
+        .eq("campaign_line_id", lineId);
+
+      let remaining = (deliverables ?? []).reduce(
+        (sum, row) => sum + Number((row as { remaining_amount?: number | null }).remaining_amount ?? 0),
+        0
+      );
+      let invoiced = (deliverables ?? []).reduce(
+        (sum, row) => sum + Number((row as { invoiced_amount?: number | null }).invoiced_amount ?? 0),
+        0
+      );
+      if ((deliverables ?? []).length === 0) {
+        invoiced = coverage.sums.lines.get(lineId) ?? 0;
+        const billable = resolveClientBillableAmount(line as never);
+        remaining = Math.max(0, billable - invoiced);
+      }
+      const fullyInvoiced = remaining <= 0.01 && invoiced > 0.01;
+      const nextBilling = fullyInvoiced
+        ? billingStatus
+        : invoiced > 0.01
+          ? "partially_invoiced"
+          : "moved_to_billing";
+      const { error: lineError } = await supabase
+        .from("campaign_lines")
+        .update({
+          ...lineBillingPatch(nextBilling),
+          operational_status: operationalStatusForDb(
+            fullyInvoiced ? "locked" : invoiced > 0.01 ? "partially_invoiced" : "io_generated"
+          ),
+          revenue_locked: fullyInvoiced,
+          cost_locked: fullyInvoiced,
+          vendor_assignment_locked: fullyInvoiced,
+          vat_locked: fullyInvoiced,
+          invoice_id: invoiceId,
+          billing_invoiced_at: now,
+          finance_override_until: null,
+        } as never)
+        .eq("id", lineId);
+
+      if (lineError) {
+        return { lineIds: scope.lineIds, error: lineError.message };
+      }
     }
 
     await syncLineOperationalStatusBatch(supabase, scope.lineIds);

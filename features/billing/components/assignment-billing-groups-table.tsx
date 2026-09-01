@@ -202,6 +202,11 @@ function AssignmentBillingGroupRow({
         {showInvoiced ? (
           <CampaignOperationalTableCellAmount>
             {formatOperationalAmount(group.invoiced_value)}
+            {group.total_value > 0 ? (
+              <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                {Math.round((group.invoiced_value / group.total_value) * 100)}%
+              </span>
+            ) : null}
           </CampaignOperationalTableCellAmount>
         ) : null}
         {showRemaining ? (

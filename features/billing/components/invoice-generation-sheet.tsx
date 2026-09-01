@@ -45,7 +45,13 @@ import { OperationalSelectionCheckbox } from "@/features/billing/components/oper
 import type { AppendableInvoiceOption } from "@/features/billing/types";
 import { formatBillingMoney, formatBillingMoneyCompact } from "@/features/billing/utils";
 import { computeInvoiceBatchFinancialPreview } from "@/lib/billing/invoice-batch-preview";
-import { cn } from "@/lib/utils";
+import {
+  invoiceSliceKey,
+  percentFromAmount,
+  resolveInvoiceSlice,
+  serializeInvoiceSliceAllocations,
+  type InvoiceSliceGrain,
+} from "@/lib/billing/partial-assignment-invoice";
 import { isAppendableInvoiceStatus } from "@/lib/billing/invoice-status";
 import {
   flattenOperationalLeaves,
@@ -64,7 +70,14 @@ import {
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
 
-export type InvoiceGenerationTargetMode = "new" | "append";
+function sliceGrain(kind: OperationalBillingRow["kind"]): InvoiceSliceGrain {
+  if (kind === "deliverable_group") return "deliverable";
+  return kind;
+}
+
+function sliceKeyForRow(row: Pick<OperationalBillingRow, "kind" | "id">) {
+  return invoiceSliceKey(sliceGrain(row.kind), row.id);
+}
 
 type InvoiceGenerationSheetProps = {
   campaignId: string;
@@ -119,6 +132,10 @@ export function InvoiceGenerationSheet({
   const isAppend = targetMode === "append";
   const [selected, setSelected] = useState<OperationalSelectionState>(createEmptySelection());
   const [existingInvoiceId, setExistingInvoiceId] = useState("");
+  const [sliceByKey, setSliceByKey] = useState<Record<string, { percent: number; amount: number }>>(
+    {}
+  );
+  const [bulkPercent, setBulkPercent] = useState("50");
 
   const appendableOptions = useMemo(
     () =>
@@ -136,6 +153,8 @@ export function InvoiceGenerationSheet({
       sheetInitializedRef.current = false;
       setSelected(createEmptySelection());
       setExistingInvoiceId("");
+      setSliceByKey({});
+      setBulkPercent("50");
       return;
     }
 
@@ -174,6 +193,14 @@ export function InvoiceGenerationSheet({
     [selected, operationalRows, invoiceSheetLeaves]
   );
 
+  const billedByKey = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const [key, slice] of Object.entries(sliceByKey)) {
+      map.set(key, slice.amount);
+    }
+    return map;
+  }, [sliceByKey]);
+
   const financialPreview = useMemo(
     () =>
       computeInvoiceBatchFinancialPreview({
@@ -186,6 +213,7 @@ export function InvoiceGenerationSheet({
         },
         appendInvoice:
           isAppend && selectedAppendInvoice ? { total: selectedAppendInvoice.total } : null,
+        billedByKey,
       }),
     [
       operationalRows,
@@ -195,6 +223,7 @@ export function InvoiceGenerationSheet({
       safeRollup.remaining_to_invoice,
       isAppend,
       selectedAppendInvoice,
+      billedByKey,
     ]
   );
 
@@ -243,12 +272,70 @@ export function InvoiceGenerationSheet({
 
   function toggleLeafRow(row: OperationalBillingRow) {
     setSelected((prev) => toggleOperationalRowSelection(row, prev, operationalRows));
+    const key = sliceKeyForRow(row);
+    setSliceByKey((prev) => {
+      if (prev[key]) return prev;
+      const remaining = Math.max(0, row.remaining_amount);
+      return {
+        ...prev,
+        [key]: { percent: 100, amount: remaining },
+      };
+    });
+  }
+
+  function setRowPercent(row: OperationalBillingRow, percent: number) {
+    const remaining = Math.max(0, row.remaining_amount);
+    const slice = resolveInvoiceSlice({ remaining, requestedPercent: percent });
+    setSliceByKey((prev) => ({
+      ...prev,
+      [sliceKeyForRow(row)]: {
+        percent: slice.percentOfRemaining || percent,
+        amount: slice.billedAmount,
+      },
+    }));
+  }
+
+  function setRowAmount(row: OperationalBillingRow, amount: number) {
+    const remaining = Math.max(0, row.remaining_amount);
+    const slice = resolveInvoiceSlice({ remaining, requestedAmount: amount });
+    setSliceByKey((prev) => ({
+      ...prev,
+      [sliceKeyForRow(row)]: {
+        percent: slice.error ? percentFromAmount(remaining, amount) : slice.percentOfRemaining,
+        amount: slice.error ? amount : slice.billedAmount,
+      },
+    }));
+  }
+
+  function applyBulkPercentToSelected() {
+    const percent = Number(bulkPercent);
+    if (!Number.isFinite(percent)) return;
+    const next = { ...sliceByKey };
+    for (const row of invoiceSheetLeaves) {
+      if (!isRowInInvoiceSubmitPayload(row, payload)) continue;
+      const remaining = Math.max(0, row.remaining_amount);
+      const slice = resolveInvoiceSlice({ remaining, requestedPercent: percent });
+      next[sliceKeyForRow(row)] = {
+        percent: slice.percentOfRemaining || percent,
+        amount: slice.billedAmount,
+      };
+    }
+    setSliceByKey(next);
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const payload = buildInvoiceFormPayload(selected, operationalRows, invoiceSheetLeaves);
     if (countSubmitPayload(payload) === 0) return;
+
+    const allocations: Record<string, number> = {};
+    for (const row of invoiceSheetLeaves) {
+      if (!isRowInInvoiceSubmitPayload(row, payload)) continue;
+      const key = sliceKeyForRow(row);
+      const remaining = Math.max(0, row.remaining_amount);
+      const amount = sliceByKey[key]?.amount ?? remaining;
+      allocations[key] = amount;
+    }
 
     const formData = new FormData();
     formData.set("campaign_id", campaignId);
@@ -257,6 +344,7 @@ export function InvoiceGenerationSheet({
     formData.set("post_ids", payload.post_ids.join(","));
     formData.set("invoice_mode", targetMode);
     formData.set("existing_invoice_id", isAppend ? existingInvoiceId : "");
+    formData.set("allocations", serializeInvoiceSliceAllocations(allocations));
 
     const notes = event.currentTarget.elements.namedItem("notes");
     if (notes instanceof HTMLTextAreaElement && notes.value.trim()) {
@@ -328,23 +416,52 @@ export function InvoiceGenerationSheet({
                     deliverables with remaining revenue.
                   </p>
                 ) : (
-                  invoiceSheetLeaves.map((row) => {
+                  <>
+                    <div className="flex flex-wrap items-end gap-2 rounded-2xl border p-3">
+                      <div className="space-y-1">
+                        <Label htmlFor="bulk_percent" className="text-xs">
+                          Apply % to selected
+                        </Label>
+                        <Input
+                          id="bulk_percent"
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={0.01}
+                          className="h-8 w-24"
+                          value={bulkPercent}
+                          onChange={(event) => setBulkPercent(event.target.value)}
+                        />
+                      </div>
+                      <Button type="button" variant="outline" size="sm" onClick={applyBulkPercentToSelected}>
+                        Apply
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        Percent and amount stay linked. 100% bills remaining on that row.
+                      </p>
+                    </div>
+                  {invoiceSheetLeaves.map((row) => {
                     const selectable = isOperationalRowUiSelectable(row);
                     const locked = !selectable;
                     const status = getRowSelectionStatus(row, selected);
                     const inSubmitPayload = isRowInInvoiceSubmitPayload(row, payload);
                     const checked = selectable && inSubmitPayload;
+                    const key = sliceKeyForRow(row);
+                    const remaining = Math.max(0, row.remaining_amount);
+                    const slice = sliceByKey[key] ?? { percent: 100, amount: remaining };
+                    const remainingAfter = Math.max(0, remaining - (checked ? slice.amount : 0));
 
                     return (
-                      <label
+                      <div
                         key={`${row.kind}-${row.id}`}
                         className={cn(
                           "flex items-start gap-3 rounded-2xl border p-2",
                           locked
-                            ? "cursor-not-allowed bg-muted/30 opacity-70"
-                            : "cursor-pointer hover:bg-muted/40"
+                            ? "bg-muted/30 opacity-70"
+                            : "hover:bg-muted/40"
                         )}
                       >
+                        <label className={cn("flex items-start gap-3 min-w-0 flex-1", locked ? "cursor-not-allowed" : "cursor-pointer")}>
                         <OperationalSelectionCheckbox
                           status={checked ? "checked" : status}
                           disabled={locked}
@@ -362,12 +479,49 @@ export function InvoiceGenerationSheet({
                           ) : (
                             <p className="text-xs text-muted-foreground">
                               {formatBillingMoney(row.remaining_amount, currency)} uninvoiced
+                              {checked
+                                ? ` · ${formatBillingMoney(remainingAfter, currency)} after this invoice`
+                                : ""}
                             </p>
                           )}
                         </div>
-                      </label>
+                        </label>
+                        {checked && !locked ? (
+                          <div
+                            className="flex shrink-0 items-center gap-2"
+                            onClick={(event) => event.stopPropagation()}
+                            onKeyDown={(event) => event.stopPropagation()}
+                          >
+                            <Input
+                              type="number"
+                              min={0}
+                              max={100}
+                              step={0.01}
+                              className="h-8 w-16"
+                              aria-label="Percent to invoice"
+                              value={slice.percent}
+                              onChange={(event) =>
+                                setRowPercent(row, Number(event.target.value) || 0)
+                              }
+                            />
+                            <span className="text-xs text-muted-foreground">%</span>
+                            <Input
+                              type="number"
+                              min={0}
+                              step={0.01}
+                              className="h-8 w-28"
+                              aria-label="Amount to invoice"
+                              value={slice.amount}
+                              onChange={(event) =>
+                                setRowAmount(row, Number(event.target.value) || 0)
+                              }
+                            />
+                          </div>
+                        ) : null}
+                      </div>
                     );
-                  })
+                  })}
+                  </>
                 )}
               </div>
 

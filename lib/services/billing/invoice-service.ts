@@ -34,7 +34,9 @@ import {
   isInvoicedOperationalRow,
   parseInvoiceBillingMode,
 } from "@/lib/billing/invoice-validation-context";
-import { commitInvoiceLifecycleMutation } from "@/lib/billing/invoice-lifecycle-commit";
+import {
+  parseInvoiceSliceAllocations,
+} from "@/lib/billing/partial-assignment-invoice";
 import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import type { z } from "zod";
@@ -373,6 +375,21 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
 
   const mergedLineItemOps: InvoiceLineItemOpSummary = { updated: [], created: [] };
 
+  const allocationParse = parseInvoiceSliceAllocations(
+    typeof input.allocations === "string" ? input.allocations : ""
+  );
+  if (allocationParse.error) {
+    return { ok: false, message: allocationParse.error };
+  }
+  const billedByPostId = new Map<string, number>();
+  const billedByDeliverableId = new Map<string, number>();
+  const billedByLineId = new Map<string, number>();
+  for (const [key, amount] of allocationParse.allocations) {
+    if (key.startsWith("post:")) billedByPostId.set(key.slice(5), amount);
+    else if (key.startsWith("deliverable:")) billedByDeliverableId.set(key.slice(12), amount);
+    else if (key.startsWith("assignment:")) billedByLineId.set(key.slice(11), amount);
+  }
+
   if (usePostInvoicePath && postsForInvoice.length > 0) {
     const postLockResult = await lockPostsOnInvoice(
       supabase,
@@ -383,6 +400,7 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
         defaultVatRate: vatRate,
         updateExistingOnTargetInvoice: invoiceMode === "append",
         forRegeneration: deliverableRegenerateScope || postRegenerateScope,
+        billedByPostId,
       }
     );
     if (postLockResult.lineItemOps) {
@@ -406,6 +424,7 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
       {
         defaultVatRate: vatRate,
         updateExistingOnTargetInvoice: invoiceMode === "append",
+        billedByDeliverableId,
       }
     );
 
@@ -446,6 +465,7 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
       {
         defaultVatRate: vatRate,
         forRegeneration: deliverableRegenerateScope || postRegenerateScope,
+        billedByLineId,
       }
     );
     if (packageLines.error) {

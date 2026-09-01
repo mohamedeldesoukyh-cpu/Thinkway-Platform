@@ -494,6 +494,29 @@ function testPerDeliverableLineSelectionExpandsDeliverables() {
   );
 }
 
+function testPartialSliceAllowsSecondInvoice() {
+  const row = {
+    invoice_line_item_id: "ili-1",
+    remaining_amount: 20_000,
+    invoiced_amount: 20_000,
+    billable_amount: 40_000,
+    locked_at: null,
+  };
+  assert(
+    !blocksNewInvoiceOperationalRow(row, new Set(["ili-1"])),
+    "remaining revenue on a previously invoiced row can go on a new invoice"
+  );
+  const full = {
+    ...row,
+    remaining_amount: 0,
+    invoiced_amount: 40_000,
+  };
+  assert(
+    blocksNewInvoiceOperationalRow(full, new Set(["ili-1"])),
+    "fully invoiced remaining blocks a new invoice"
+  );
+}
+
 const tests = [
   testFirstGenerationEligibility,
   testAppendAllowsSameInvoiceRows,
@@ -514,6 +537,7 @@ const tests = [
   testValidatePostsBlocksLiveInvoicePointer,
   testValidatePostsAllowsLiveDraftPointerWithRemaining,
   testValidatePostsBlocksLiveDraftPointerFullyInvoiced,
+  testPartialSliceAllowsSecondInvoice,
   testStalePointerWithZeroBillableBlocked,
   testOperationalTreeShapeBoundary,
   testPerDeliverableLineSelectionExpandsDeliverables,
