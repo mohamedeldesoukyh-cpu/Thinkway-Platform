@@ -15,7 +15,7 @@ import { loadAddedValueCreatorsWithoutDeliverables } from "@/lib/performance/loa
 import { averageEngagementRateAgainstAgreed } from "@/lib/performance/engagement-rate-engine";
 import { resolvePublicationRowCreatorAvatar } from "@/lib/performance/creator-avatar";
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
-import { embedCampaignPublicationPreview } from "@/lib/performance/report/embed-publication-previews";
+import { embedCampaignPublicationPreview, embedReportCreatorAvatar } from "@/lib/performance/report/embed-publication-previews";
 import { embedReportImageDataUri } from "@/lib/performance/report/report-embed-images";
 import { buildQrCodeDataUri, buildQrCodeImageUrl } from "@/lib/performance/report/qr-code";
 import type {
@@ -225,14 +225,16 @@ async function signPublicationMedia(
           apify_author_avatar_url: row.apify_author_avatar_url,
         }) ?? creator_avatar_url;
 
-      const embeddedAvatar = resolvedAvatar
-        ? await embedReportImageDataUri(resolvedAvatar)
-        : null;
+      const embeddedAvatar = await embedReportCreatorAvatar({
+        src: resolvedAvatar,
+        profileUrl: row.influencer_profile_url ?? row.content_url,
+        supabase,
+      });
 
       return {
         ...row,
-        thumbnail_url: preview,
-        screenshot_url: preview,
+        thumbnail_url: preview ?? row.thumbnail_url,
+        screenshot_url: preview ?? row.screenshot_url,
         creator_avatar_url: embeddedAvatar ?? resolvedAvatar ?? row.creator_avatar_url,
       };
     })
@@ -343,7 +345,13 @@ async function buildInfluencerSections(
       return {
         influencerId,
         name,
-        avatarUrl: avatarUrl ? await embedReportImageDataUri(avatarUrl) : null,
+        avatarUrl: await embedReportCreatorAvatar({
+          src: firstPub?.creator_avatar_url?.startsWith("data:")
+            ? firstPub.creator_avatar_url
+            : avatarUrl ?? firstPub?.creator_avatar_url,
+          profileUrl: firstPub?.influencer_profile_url,
+          supabase,
+        }),
         platformHandles: profile?.handles ?? [],
         followerCount: profile?.followerCount ?? null,
         role: "Campaign Creator",

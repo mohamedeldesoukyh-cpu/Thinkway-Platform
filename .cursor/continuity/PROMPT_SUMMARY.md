@@ -1,7 +1,18 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Client Workspace Campaign tab publication matching and Added value.
+**Focus:** Combined performance report avatars, page breaks, and missing previews.
+
+## Shipped 2026-09-01 — Combined report avatars, page breaks, missing previews
+
+Combined HTML is `srcDoc`, so Instagram/TikTok CDN avatars never load. Reports now embed avatars via `fetchCreatorAvatarImage`. Publication stills keep a display-quality fallback when the 640px Showcase floor has no still. Cards flex inside the A4 sheet so metrics cannot paint over the footer. No migrations.
+
+## Shipped 2026-09-01 — Publication media + creator avatar original bytes
+
+Showcase / PDF / PPTX publication stills and creator avatars embed original fetched bytes (no resize/recompress). Layout cover crop stays. Stored publication/avatar rows not rewritten. No migrations.
+
+- Production: https://app.thinkwaymedia.com — `dpl_GYYBWJojDJ5mNPtCYg51oXWgxUAj` · `015cc7e7` (superseded by Combined report deploy above)
+- Cherry-pick only; other develop work stays off Production
 
 ## Shipped 2026-08-31 (evening)
 

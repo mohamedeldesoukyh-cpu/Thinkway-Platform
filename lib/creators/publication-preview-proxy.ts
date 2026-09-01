@@ -181,23 +181,33 @@ type PreviewResult =
   | { ok: true; buffer: ArrayBuffer; contentType: string; source: "cache" | "cdn" | "refresh" }
   | { ok: false; status: number; source: "cache" | "miss"; needsRefresh: boolean };
 
-function previewKey(src: string | null, postUrl: string | null): string {
-  return mediaProxyCacheKey({ kind: "preview", src, postUrl });
+export type PublicationPreviewQuality = "sharp" | "display";
+
+function previewKey(
+  src: string | null,
+  postUrl: string | null,
+  quality: PublicationPreviewQuality = "sharp"
+): string {
+  const base = mediaProxyCacheKey({ kind: "preview", src, postUrl });
+  return quality === "display" ? `${base}::display` : base;
 }
 
 /** Full resolution path (exports / background refresh) — may call oEmbed/OpenGraph. */
 export async function fetchPublicationPreviewImage(input: {
   src?: string | null;
   postUrl?: string | null;
+  /** `sharp` (default) rejects undersized/overcompressed stills. `display` keeps any complete still. */
+  quality?: PublicationPreviewQuality;
 }): Promise<
   { ok: true; buffer: ArrayBuffer; contentType: string } | { ok: false; status: number }
 > {
   const src = input.src?.trim() || null;
   const postUrl = input.postUrl?.trim() || null;
-  const key = previewKey(src, postUrl);
+  const quality = input.quality ?? "sharp";
+  const key = previewKey(src, postUrl, quality);
 
   return withMediaProxyInflight(`refresh:${key}`, async () => {
-    const resolved = await resolvePublicationPreviewExternal({ src, postUrl });
+    const resolved = await resolvePublicationPreviewExternal({ src, postUrl, quality });
     if (resolved.ok) {
       setMediaProxyCachePositive(key, resolved.buffer, resolved.contentType);
       recordMediaProxyRefreshSuccess();
@@ -211,21 +221,25 @@ export async function fetchPublicationPreviewImage(input: {
 
 type FetchedPreview = { ok: true; buffer: ArrayBuffer; contentType: string };
 
-async function fetchedPreviewMeetsShowcaseFloor(
-  result: FetchedPreview | { ok: false }
+async function fetchedPreviewMeetsFloor(
+  result: FetchedPreview | { ok: false },
+  quality: PublicationPreviewQuality
 ): Promise<FetchedPreview | { ok: false }> {
   if (!result.ok) return { ok: false };
   if (!imageBufferLooksComplete(result.buffer)) return { ok: false };
-  if (isVisiblyOvercompressedPhoto(result.buffer)) return { ok: false };
   const edge = await imageLongestEdge(result.buffer);
-  if (edge === 0 || isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE)) {
+  if (edge === 0) return { ok: false };
+  if (quality === "display") return result;
+  if (isVisiblyOvercompressedPhoto(result.buffer)) return { ok: false };
+  if (isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE)) {
     return { ok: false };
   }
   return result;
 }
 
 async function fetchAllowedPreviewSrc(
-  src: string | null
+  src: string | null,
+  quality: PublicationPreviewQuality = "sharp"
 ): Promise<FetchedPreview | { ok: false }> {
   if (!src || !isAllowedPublicationPreviewSrcUrl(src)) return { ok: false };
   const lowQuality = isLikelyLowQualitySocialJpeg(src);
@@ -234,8 +248,9 @@ async function fetchAllowedPreviewSrc(
   // Signed origin covers (TikTok oEmbed / stored ~tplv-tiktokx-origin) 403 when
   // the signature is stripped. Fetch the signed URL first; unsigned is fallback.
   if (signed && !lowQuality) {
-    const original = await fetchedPreviewMeetsShowcaseFloor(
-      await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS })
+    const original = await fetchedPreviewMeetsFloor(
+      await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS }),
+      quality
     );
     if (original.ok) return original;
   }
@@ -246,49 +261,74 @@ async function fetchAllowedPreviewSrc(
     isAllowedPublicationPreviewSrcUrl(stabilized) &&
     !socialCdnUrlLooksSigned(stabilized)
   ) {
-    const unsigned = await fetchedPreviewMeetsShowcaseFloor(
+    const unsigned = await fetchedPreviewMeetsFloor(
       await fetchImageBuffer(stabilized, {
         timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
-      })
+      }),
+      quality
     );
     if (unsigned.ok) return unsigned;
   }
   if (!signed) {
     for (const candidate of higherResolutionSocialImageUrlCandidates(src)) {
       if (!isAllowedPublicationPreviewSrcUrl(candidate)) continue;
-      const larger = await fetchedPreviewMeetsShowcaseFloor(
+      const larger = await fetchedPreviewMeetsFloor(
         await fetchImageBuffer(candidate, {
           timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS,
-        })
+        }),
+        quality
       );
       if (larger.ok) return larger;
     }
   }
   // Never fetch the original e15/e0–e29 preview — rewrite miss must fall through
   // to media redirect / oEmbed / OG, not embed the posterized JPEG.
-  if (lowQuality) return { ok: false };
-  if (signed) return { ok: false };
-  return fetchedPreviewMeetsShowcaseFloor(
-    await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS })
+  if (lowQuality) {
+    if (quality !== "display") return { ok: false };
+    return fetchedPreviewMeetsFloor(
+      await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS }),
+      quality
+    );
+  }
+  if (signed) {
+    if (quality !== "display") return { ok: false };
+    return fetchedPreviewMeetsFloor(
+      await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS }),
+      quality
+    );
+  }
+  return fetchedPreviewMeetsFloor(
+    await fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_REFRESH_TIMEOUT_MS }),
+    quality
   );
 }
 
 async function resolvePublicationPreviewExternal(input: {
   src: string | null;
   postUrl: string | null;
+  quality?: PublicationPreviewQuality;
 }): Promise<FetchedPreview | { ok: false }> {
   const { src, postUrl } = input;
+  const quality = input.quality ?? "sharp";
   const ranked: { current: (FetchedPreview & { edge: number }) | null } = { current: null };
 
   const consider = async (result: FetchedPreview | { ok: false }): Promise<boolean> => {
     if (!result.ok) return false;
     if (!imageBufferLooksComplete(result.buffer)) return false;
-    if (isVisiblyOvercompressedPhoto(result.buffer)) return false;
     const edge = await imageLongestEdge(result.buffer);
     if (edge === 0) return false;
-    if (isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE)) return false;
+    if (quality === "sharp") {
+      if (isVisiblyOvercompressedPhoto(result.buffer)) return false;
+      if (isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE)) return false;
+    }
     if (!ranked.current || edge > ranked.current.edge) {
       ranked.current = { ...result, edge };
+    }
+    if (quality === "display") {
+      return (
+        !isVisiblyOvercompressedPhoto(result.buffer) &&
+        !isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE)
+      );
     }
     return true;
   };
@@ -299,7 +339,7 @@ async function resolvePublicationPreviewExternal(input: {
     return { ok: true, buffer: best.buffer, contentType: best.contentType };
   };
 
-  if (await consider(await fetchAllowedPreviewSrc(src))) {
+  if (await consider(await fetchAllowedPreviewSrc(src, quality))) {
     return chosen();
   }
 
@@ -307,7 +347,7 @@ async function resolvePublicationPreviewExternal(input: {
     if (isTikTokPostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const oembed = await tryTikTokOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl)))) {
+      if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl, quality)))) {
         return chosen();
       }
     }
@@ -317,14 +357,14 @@ async function resolvePublicationPreviewExternal(input: {
       const mediaRedirect = await tryInstagramMediaRedirectThumbnail({ contentUrl: postUrl });
       if (
         mediaRedirect.imageUrl &&
-        (await consider(await fetchAllowedPreviewSrc(mediaRedirect.imageUrl)))
+        (await consider(await fetchAllowedPreviewSrc(mediaRedirect.imageUrl, quality)))
       ) {
         return chosen();
       }
 
       recordMediaProxyExternalRequest();
       const oembed = await tryInstagramOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl)))) {
+      if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl, quality)))) {
         return chosen();
       }
     }
@@ -332,7 +372,7 @@ async function resolvePublicationPreviewExternal(input: {
     if (isYouTubePostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const youtube = await tryYouTubeThumbnail({ contentUrl: postUrl });
-      if (youtube.imageUrl && (await consider(await fetchAllowedPreviewSrc(youtube.imageUrl)))) {
+      if (youtube.imageUrl && (await consider(await fetchAllowedPreviewSrc(youtube.imageUrl, quality)))) {
         return chosen();
       }
     }
@@ -340,14 +380,14 @@ async function resolvePublicationPreviewExternal(input: {
     if (isFacebookPostUrl(postUrl)) {
       recordMediaProxyExternalRequest();
       const oembed = await tryFacebookOembedThumbnail({ contentUrl: postUrl });
-      if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl)))) {
+      if (oembed.imageUrl && (await consider(await fetchAllowedPreviewSrc(oembed.imageUrl, quality)))) {
         return chosen();
       }
     }
 
     recordMediaProxyExternalRequest();
     const og = await tryOpenGraphThumbnail({ contentUrl: postUrl });
-    if (og.imageUrl && (await consider(await fetchAllowedPreviewSrc(og.imageUrl)))) {
+    if (og.imageUrl && (await consider(await fetchAllowedPreviewSrc(og.imageUrl, quality)))) {
       return chosen();
     }
   }

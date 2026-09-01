@@ -159,6 +159,13 @@ function captionExcerpt(caption: string | null, max = 160): string {
 }
 
 function renderCreatorAvatar(pub: CampaignPublicationRow): string {
+  const name = pub.influencer_name ?? "Creator";
+  const embedded = pub.creator_avatar_url?.trim() || "";
+  const init = esc(initialsFromCreatorName(name));
+  if (embedded.startsWith("data:")) {
+    return `<span class="pcard__ava">${init}<img src="${esc(embedded)}" alt="" onerror="this.remove()"/></span>`;
+  }
+
   const display = resolveCreatorAvatarDisplay({
     platform: pub.platform,
     publication_type: pub.publication_type,
@@ -169,14 +176,13 @@ function renderCreatorAvatar(pub: CampaignPublicationRow): string {
     apify_author_avatar_url: pub.apify_author_avatar_url,
     influencer_name: pub.influencer_name,
   });
-  const name = pub.influencer_name ?? "Creator";
-  const init = esc(
+  const displayInit = esc(
     initialsFromCreatorName(display.kind === "initials" ? display.name : name)
   );
   if (display.kind === "image") {
-    return `<span class="pcard__ava">${init}<img src="${esc(display.url)}" alt=""/></span>`;
+    return `<span class="pcard__ava">${displayInit}<img src="${esc(display.url)}" alt="" onerror="this.remove()"/></span>`;
   }
-  return `<span class="pcard__ava">${init}</span>`;
+  return `<span class="pcard__ava">${displayInit}</span>`;
 }
 
 export function renderPcard(pub: CampaignPublicationRow): string {
