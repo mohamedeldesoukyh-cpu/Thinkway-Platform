@@ -3,6 +3,14 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Creator Workspace per-post performance analysis vs agreed fee.
 
+## Shipped 2026-09-01 — Add Assignment creator-only lines
+
+Add Assignment no longer invents EGP 500, and a creator can be saved without platforms or agreed content (add-value lines). Platforms/content can be added later.
+
+- Development: https://dev.thinkwaymedia.com · `4718ffb4`
+- Production: https://app.thinkwaymedia.com — `dpl_HiFqrMjULfSzmFbrQJBzDq36KtZV` · `e0fa891d`
+- No database migrations. Cherry-pick only; other develop work stays off Production.
+
 ## Shortlist button layer (develop)
 Title-row actions only: **Generate outputs** (quiet, with missing-input hover), **View** (CCY + cost toggles), **Share** (preview templates, all export formats, client link, send), **Open Studio**, **Complete brief** when inputs are missing, **+ Add creators** as the only primary. Creators row is count + client/brand. Bulk bar: Compare, Refresh metrics, Export CSV, Generate quotation, Submit N selected. No functions removed. Not on Production.
 
