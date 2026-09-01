@@ -17,4 +17,11 @@ assert.equal(
 );
 assert.equal(url.includes("&amp;"), false);
 
+{
+  const secure = extractOgImage(
+    `<meta property="og:image:secure_url" content="https://scontent.xx.fbcdn.net/v/t15/secure.jpg" />`
+  );
+  assert.equal(secure, "https://scontent.xx.fbcdn.net/v/t15/secure.jpg");
+}
+
 console.log("opengraph extractOgImage tests passed");

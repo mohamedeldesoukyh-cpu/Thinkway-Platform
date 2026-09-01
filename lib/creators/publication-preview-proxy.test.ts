@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  fetchImageBuffer,
   fetchPublicationPreviewImage,
   isAllowedPublicationPreviewPostUrl,
   isAllowedPublicationPreviewSrcUrl,
@@ -406,6 +407,86 @@ async function main() {
       if (result.ok) {
         const edge = await imageLongestEdge(result.buffer);
         assert.ok(edge >= 960, `expected oEmbed origin cover, got ${edge}`);
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    resetMediaProxyMetricsForTests();
+    const lookaside =
+      "https://lookaside.fbsbx.com/lookaside/crawler/media/?media_id=987";
+    const jpeg = await jpegOfSize(960, 960);
+    const referers: string[] = [];
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const headers = new Headers(init?.headers);
+      referers.push(headers.get("referer") ?? "");
+      if (headers.get("referer") === "https://www.instagram.com/") {
+        return new Response(null, { status: 403 });
+      }
+      if (headers.get("referer") === "https://www.facebook.com/") {
+        return new Response(jpeg, {
+          status: 200,
+          headers: { "content-type": "application/octet-stream" },
+        });
+      }
+      return new Response(null, { status: 403 });
+    }) as typeof fetch;
+
+    try {
+      const result = await fetchImageBuffer(lookaside);
+      assert.equal(result.ok, true, "Facebook lookaside must retry with a Facebook referer");
+      assert.ok(referers.includes("https://www.instagram.com/"));
+      assert.ok(referers.includes("https://www.facebook.com/"));
+      if (result.ok) {
+        assert.equal(result.contentType, "image/jpeg");
+        assert.equal(result.buffer.byteLength, jpeg.byteLength);
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    resetMediaProxyMetricsForTests();
+    const postUrl = "https://www.facebook.com/reel/1849794332663999";
+    const ogImage = "https://scontent.xx.fbcdn.net/v/t15.5256-10/fb-cover.jpg?oh=abc&oe=def";
+    const jpeg = await jpegOfSize(1080, 1080);
+    let hitVideoOembed = false;
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.startsWith("https://www.facebook.com/plugins/")) {
+        hitVideoOembed = true;
+        return new Response(null, { status: 404 });
+      }
+      if (url.startsWith("https://www.facebook.com/reel/")) {
+        return new Response(
+          `<html><head><meta property="og:image" content="${ogImage}" /></head></html>`,
+          { status: 200, headers: { "content-type": "text/html" } }
+        );
+      }
+      if (url.startsWith("https://scontent.xx.fbcdn.net/")) {
+        return new Response(jpeg, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return new Response(null, { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const result = await fetchPublicationPreviewImage({ src: null, postUrl });
+      assert.equal(
+        result.ok,
+        true,
+        "Facebook reels must resolve via OpenGraph when plugin oEmbed is empty"
+      );
+      assert.equal(hitVideoOembed, false, "OpenGraph should win before plugin oEmbed");
+      if (result.ok) {
+        assert.equal(result.buffer.byteLength, jpeg.byteLength);
       }
     } finally {
       globalThis.fetch = originalFetch;
