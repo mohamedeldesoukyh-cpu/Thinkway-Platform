@@ -112,7 +112,8 @@ assert.equal(vat.taxAmount, 72_100);
 assert.equal(vat.vatLabel, "VAT (14%)");
 
 const html = buildInvoiceTemplateHtml(sample);
-assert.ok(html.includes("TAX INVOICE"));
+assert.ok(html.includes("Campaign No."));
+assert.ok(html.includes("TW-2026-0001"));
 assert.ok(html.includes("Subtotal (excl. VAT)"));
 assert.ok(html.includes("VAT (14%)"));
 assert.ok(html.includes("EGP 72,100.00") || html.includes("72,100"));

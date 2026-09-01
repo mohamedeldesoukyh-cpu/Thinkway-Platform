@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `develop` · Production `main`  
-**Focus:** Creator Workspace per-post performance analysis vs agreed fee.
+**Branch:** `feature/partial-assignment-invoice` (from `develop`) · Production `main`  
+**Focus:** Partial assignment invoicing — percent + amount, unlimited invoices per assignment, VAT on the slice, campaign number on invoice header.
+
+## In progress — Partial assignment invoice (approved 2026-09-02)
+
+Spec: `docs/capabilities/PARTIAL_ASSIGNMENT_INVOICE_SPEC.md`. One assignment can be billed across unlimited invoices up to remaining. Invoice sheet has linked % and amount. Remaining is recomputed from invoice line items. Invoice HTML shows Campaign No. (`TW-YYYY-NNNN`) plus name. No migrations. Not on Production.
 
 ## Shipped 2026-09-01 — Facebook publication previews
 

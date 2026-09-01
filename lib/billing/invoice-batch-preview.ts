@@ -120,7 +120,8 @@ function assignmentLineVatContext(assignment: OperationalBillingRow | undefined)
 function buildPreviewVatLines(
   operationalRows: OperationalBillingRow[],
   selection: OperationalSelectionState,
-  defaultVatPercent: number
+  defaultVatPercent: number,
+  billedByKey?: Map<string, number>
 ): VatLineResult[] {
   const assignmentByLineId = new Map(
     operationalRows.filter((r) => r.kind === "assignment").map((r) => [r.id, r])
@@ -134,6 +135,9 @@ function buildPreviewVatLines(
     const lineVat = assignmentLineVatContext(assignment);
     const vatPercent = resolveInvoiceLineVatPercent(deliverable, lineVat, defaultVatPercent);
     const exempt = deliverable.revenue_vat_exempt || Boolean(lineVat.revenue_vat_exempt);
+    const billed =
+      billedByKey?.get(`deliverable:${row.id}`) ??
+      billedByKey?.get(`assignment:${row.campaign_line_id}`);
     lines.push(
       computeClientInvoiceVatPreview({
         revenue_before_vat: deliverable.revenue_before_vat,
@@ -142,7 +146,7 @@ function buildPreviewVatLines(
         agency_fee_percent: deliverable.agency_fee_percent,
         billable_amount: deliverable.billable_amount,
         invoiced_amount: deliverable.invoiced_amount,
-        remaining_amount: deliverable.remaining_amount,
+        remaining_amount: billed != null ? billed : deliverable.remaining_amount,
         locked_at: deliverable.locked_at,
         revenue_vat_percent: vatPercent,
         revenue_vat_exempt: exempt,
@@ -158,12 +162,13 @@ function buildPreviewVatLines(
       const lineVat = assignmentLineVatContext(assignment);
       const vatPercent = resolveInvoiceLineVatPercent(deliverable, lineVat, defaultVatPercent);
       const exempt = deliverable.revenue_vat_exempt || Boolean(lineVat.revenue_vat_exempt);
+      const billed = billedByKey?.get(`assignment:${assignment.id}`);
       lines.push(
         computeClientInvoiceVatPreview({
           revenue_before_vat: deliverable.revenue_before_vat,
           billable_amount: deliverable.billable_amount,
           invoiced_amount: deliverable.invoiced_amount,
-          remaining_amount: deliverable.remaining_amount,
+          remaining_amount: billed != null ? billed : deliverable.remaining_amount,
           locked_at: deliverable.locked_at,
           revenue_vat_percent: vatPercent,
           revenue_vat_exempt: exempt,
@@ -184,11 +189,13 @@ export function computeInvoiceBatchFinancialPreview(input: {
     remaining_to_invoice: number;
   };
   appendInvoice?: { total: number } | null;
+  billedByKey?: Map<string, number>;
 }): InvoiceBatchFinancialPreview {
   const vatLines = buildPreviewVatLines(
     input.operationalRows,
     input.selection,
-    input.defaultVatPercent
+    input.defaultVatPercent,
+    input.billedByKey
   );
   const totals = aggregateInvoiceTotals(vatLines);
   const rateKeys = new Set(

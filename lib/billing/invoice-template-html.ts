@@ -312,7 +312,8 @@ export function buildInvoiceTemplateHtml(data: InvoiceDocumentData): string {
       <div class="fcell"><div class="flabel">IO / PO Reference</div><div class="fval">${poRef}</div></div>
       <div class="fcell"><div class="flabel">Account Number</div><div class="fval">${accountNumber}</div></div>
     </div>
-    <div class="frow c3">
+    <div class="frow c4">
+      <div class="fcell sh"><div class="flabel">Campaign No.</div><div class="fval blue">${display(data.campaign?.documentNumber)}</div></div>
       <div class="fcell sh"><div class="flabel">Campaign / Project</div><div class="fval">${display(data.campaign?.name)}</div></div>
       <div class="fcell"><div class="flabel">Client</div><div class="fval">${clientLegalName}</div></div>
       <div class="fcell"><div class="flabel">Campaign Period</div><div class="fval">${formatCampaignPeriod(data.campaign?.startDate ?? null, data.campaign?.endDate ?? null)}</div></div>

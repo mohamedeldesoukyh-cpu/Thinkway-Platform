@@ -18,12 +18,17 @@ import { resolveActiveVendorIoId } from "@/lib/io/vendor-io-active-link";
 import { syncPostScheduleOnDeliverableInvoiceLock } from "@/lib/billing/sync-post-invoice-lock";
 import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import {
+  blocksNewInvoiceOperationalRow,
   invoicedRowAllowed,
   invoicedRowBlockMessage,
   isInvoicedOperationalRow,
   resolveLinkedInvoiceIds,
   type InvoiceValidationContext,
 } from "@/lib/billing/invoice-validation-context";
+import {
+  buildOperationalCoveragePatch,
+  resolveInvoiceSlice,
+} from "@/lib/billing/partial-assignment-invoice";
 import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
 import { resolveClientTaxableBase } from "@/lib/assignments/client-billing-commercial";
 import {
@@ -159,12 +164,15 @@ function deliverableInvoiceLinePayload(
   deliverable: DeliverableBillingRow,
   sortOrder: number,
   defaultVatRate: number,
-  options?: { forRegeneration?: boolean }
+  options?: { forRegeneration?: boolean; billedAmount?: number }
 ) {
-  const beforeVat = resolveInvoiceLineBeforeVat(deliverable, {
-    updatingExisting: Boolean(deliverable.invoice_line_item_id),
-    forRegeneration: options?.forRegeneration,
-  });
+  const beforeVat =
+    options?.billedAmount != null
+      ? options.billedAmount
+      : resolveInvoiceLineBeforeVat(deliverable, {
+          updatingExisting: Boolean(deliverable.invoice_line_item_id),
+          forRegeneration: options?.forRegeneration,
+        });
   const vatExempt =
     deliverable.revenue_vat_exempt || Boolean(line.revenue_vat_exempt);
   const vatPercent = resolveInvoiceLineVatPercent(deliverable, line, defaultVatRate);
@@ -202,7 +210,7 @@ export function packageAssignmentLineItemPayload(
   },
   sortOrder: number,
   defaultVatRate: number,
-  options?: { forRegeneration?: boolean }
+  options?: { forRegeneration?: boolean; billedAmount?: number }
 ) {
   const revenueOnly = Number(line.revenue_before_vat ?? line.revenue ?? 0);
   const taxableBase = resolveClientTaxableBase({
@@ -213,11 +221,14 @@ export function packageAssignmentLineItemPayload(
     agencyFeePercent: Number(line.agency_fee_percent ?? 0),
   });
   const remaining = Number(line.remaining_amount ?? 0);
-  const beforeVat = options?.forRegeneration
-    ? Math.max(taxableBase, remaining, revenueOnly)
-    : remaining > 0
-      ? remaining
-      : taxableBase;
+  const beforeVat =
+    options?.billedAmount != null
+      ? options.billedAmount
+      : options?.forRegeneration
+        ? Math.max(taxableBase, remaining, revenueOnly)
+        : remaining > 0
+          ? remaining
+          : taxableBase;
   const vatExempt = Boolean(line.revenue_vat_exempt);
   const vatPercent = vatExempt
     ? 0
@@ -319,7 +330,11 @@ export async function insertPackageAssignmentLineItems(
   invoiceId: string,
   headerId: string,
   lineIds: string[],
-  options?: { defaultVatRate?: number; forRegeneration?: boolean }
+  options?: {
+    defaultVatRate?: number;
+    forRegeneration?: boolean;
+    billedByLineId?: Map<string, number>;
+  }
 ): Promise<{ error?: string; inserted: number }> {
   if (lineIds.length === 0) return { inserted: 0 };
 
@@ -342,6 +357,7 @@ export async function insertPackageAssignmentLineItems(
 
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const forRegeneration = options?.forRegeneration ?? false;
+  const billedByLineId = options?.billedByLineId;
   let sortOrder = (existingItems ?? []).length;
   let inserted = 0;
 
@@ -377,22 +393,37 @@ export async function insertPackageAssignmentLineItems(
       line.id
     );
 
+    const remaining = Number(
+      (line as { remaining_amount?: number | null }).remaining_amount ??
+        Math.max(0, expectedBillable - invoicedOnTarget)
+    );
     if (
       !forRegeneration &&
       ["invoiced", "paid", "closed"].includes(line.billing_status) &&
-      invoicedOnTarget >= expectedBillable - 0.01
+      remaining <= 0.01
     ) {
       continue;
     }
 
-    if (invoicedOnTarget >= expectedBillable - 0.01 && expectedBillable > 0) {
+    if (remaining <= 0.01 && expectedBillable > 0) {
       continue;
+    }
+
+    const slice = resolveInvoiceSlice({
+      remaining,
+      billable: expectedBillable,
+      invoiced: Math.max(0, expectedBillable - remaining),
+      requestedAmount: billedByLineId?.get(line.id) ?? remaining,
+    });
+    if (slice.error) {
+      return { error: slice.error, inserted };
     }
 
     sortOrder += 1;
     const { error: insertError } = await supabase.from("invoice_line_items").insert(
       packageAssignmentLineItemPayload(invoiceId, headerId, line, sortOrder, defaultVatRate, {
         forRegeneration,
+        billedAmount: slice.billedAmount,
       })
     );
     if (insertError) {
@@ -667,7 +698,8 @@ export async function prepareLinesForDeliverableInvoicing(
 
 export function validateDeliverablesForInvoice(
   deliverables: DeliverableRecord[],
-  validationCtx: InvoiceValidationContext = { mode: "new" }
+  validationCtx: InvoiceValidationContext = { mode: "new" },
+  activeLineItemIds: Set<string> = new Set()
 ): string | null {
   if (deliverables.length === 0) {
     return "No billable deliverables selected.";
@@ -677,14 +709,18 @@ export function validateDeliverablesForInvoice(
     const line = row.campaign_line;
     if (!line) return "Deliverable assignment not found.";
 
-    if (!invoicedRowAllowed(row, validationCtx)) {
+    if (validationCtx.mode === "append") {
+      if (!invoicedRowAllowed(row, validationCtx)) {
+        return invoicedRowBlockMessage("deliverable", validationCtx);
+      }
+    } else if (blocksNewInvoiceOperationalRow(row, activeLineItemIds)) {
       return invoicedRowBlockMessage("deliverable", validationCtx);
     }
 
     if (
       validationCtx.mode === "new" &&
-      !isInvoicedOperationalRow(row) &&
-      Number(row.remaining_amount) <= 0
+      Number(row.remaining_amount) <= 0.01 &&
+      !isInvoicedOperationalRow(row)
     ) {
       return "Selected deliverables include already invoiced items.";
     }
@@ -693,7 +729,8 @@ export function validateDeliverablesForInvoice(
     }
     if (
       validationCtx.mode === "new" &&
-      ["invoiced", "paid", "closed"].includes(line.billing_status)
+      ["invoiced", "paid", "closed"].includes(line.billing_status) &&
+      Number(row.remaining_amount) <= 0.01
     ) {
       return "Selected assignments are already fully invoiced or closed.";
     }
@@ -701,6 +738,7 @@ export function validateDeliverablesForInvoice(
       validationCtx.mode === "append" &&
       validationCtx.targetInvoiceId &&
       ["invoiced", "paid", "closed"].includes(line.billing_status) &&
+      Number(row.remaining_amount) <= 0.01 &&
       line.invoice_id &&
       line.invoice_id !== validationCtx.targetInvoiceId
     ) {
@@ -720,11 +758,13 @@ export async function lockDeliverablesOnInvoice(
     defaultVatRate?: number;
     updateExistingOnTargetInvoice?: boolean;
     forRegeneration?: boolean;
+    billedByDeliverableId?: Map<string, number>;
   }
 ): Promise<{ error?: string; lineItemOps?: InvoiceLineItemOpSummary }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
   const forRegeneration = options?.forRegeneration ?? false;
+  const billedByDeliverableId = options?.billedByDeliverableId;
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();
@@ -736,30 +776,29 @@ export async function lockDeliverablesOnInvoice(
     sortOrder += 1;
 
     const mapped = mapDeliverableRecord(row);
-    const payload = deliverableInvoiceLinePayload(
-      invoiceId,
-      headerId,
-      line,
-      mapped,
-      sortOrder,
-      defaultVatRate,
-      { forRegeneration }
-    );
+    const remaining = Number(mapped.remaining_amount ?? 0);
+    const requested = billedByDeliverableId?.get(row.id);
+    const slice = resolveInvoiceSlice({
+      remaining,
+      invoiced: Number(mapped.invoiced_amount ?? 0),
+      billable: Number(mapped.billable_amount ?? remaining),
+      requestedAmount: requested == null ? remaining : requested,
+    });
+    if (slice.error) {
+      return { error: slice.error, lineItemOps };
+    }
+
     let reuseLineItem =
       updateExisting &&
       Boolean(row.invoice_line_item_id) &&
       row.linked_invoice_id === invoiceId;
-    const billable = resolveInvoiceLineBeforeVat(mapped, {
-      updatingExisting: Boolean(reuseLineItem),
-      forRegeneration,
-    });
-
+    let existingOnInvoice = 0;
     let lineItemId = row.invoice_line_item_id;
 
     if (reuseLineItem && lineItemId) {
       const { data: existingItem, error: loadError } = await supabase
         .from("invoice_line_items")
-        .select("id, assignment_deliverable_id")
+        .select("id, assignment_deliverable_id, revenue_before_vat")
         .eq("id", lineItemId)
         .eq("invoice_id", invoiceId)
         .maybeSingle();
@@ -771,13 +810,30 @@ export async function lockDeliverablesOnInvoice(
       const typedItem = existingItem as {
         id: string;
         assignment_deliverable_id: string | null;
+        revenue_before_vat: number | null;
       } | null;
 
       if (!typedItem || typedItem.assignment_deliverable_id !== row.id) {
         reuseLineItem = false;
         lineItemId = null;
+      } else {
+        existingOnInvoice = Number(typedItem.revenue_before_vat ?? 0);
       }
     }
+
+    const billedAmount = reuseLineItem
+      ? slice.billedAmount + existingOnInvoice
+      : slice.billedAmount;
+
+    const payload = deliverableInvoiceLinePayload(
+      invoiceId,
+      headerId,
+      line,
+      mapped,
+      sortOrder,
+      defaultVatRate,
+      { forRegeneration, billedAmount }
+    );
 
     if (reuseLineItem && lineItemId) {
       const { error: updateError } = await supabase
@@ -805,16 +861,13 @@ export async function lockDeliverablesOnInvoice(
     }
 
     const lockLiveAdDate = Boolean(row.live_date?.trim());
-    const deliverableLockPatch: Record<string, unknown> = {
-      invoiced_amount: billable,
-      remaining_amount: 0,
-      billing_status: "invoiced",
-      invoice_line_item_id: lineItemId,
-      invoiced_at: now,
-    };
-    if (lockLiveAdDate) {
-      deliverableLockPatch.locked_at = now;
-    }
+    const deliverableLockPatch = buildOperationalCoveragePatch({
+      billable: Number(mapped.billable_amount ?? remaining),
+      invoicedCoverage: slice.invoicedAfter,
+      lineItemId: lineItemId ?? null,
+      now,
+      lockLiveDate: lockLiveAdDate && slice.shouldLock,
+    });
 
     const { error: lockError } = await supabase
       .from("assignment_deliverables")
@@ -829,8 +882,9 @@ export async function lockDeliverablesOnInvoice(
       deliverableId: row.id,
       invoiceLineItemId: lineItemId!,
       lockedAt: now,
-      deliverableBillable: billable,
-      lockSchedule: lockLiveAdDate,
+      deliverableBillable: Number(mapped.billable_amount ?? remaining),
+      deliverableInvoiced: slice.invoicedAfter,
+      lockSchedule: lockLiveAdDate && slice.shouldLock,
     });
 
     if (postSyncError.error) {
@@ -841,7 +895,8 @@ export async function lockDeliverablesOnInvoice(
       devLog("[billing-sync] deliverable locked on invoice", {
         deliverableId: row.id,
         invoiceId,
-        billable,
+        billedAmount: slice.billedAmount,
+        remainingAfter: slice.remainingAfter,
         lineItemMode: reuseLineItem ? "updated" : "created",
         lineItemId,
       });

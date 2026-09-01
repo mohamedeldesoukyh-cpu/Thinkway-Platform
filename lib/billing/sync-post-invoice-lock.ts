@@ -1,5 +1,5 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-
+import { applyCoverageToLedger } from "@/lib/billing/partial-assignment-invoice";
+import { roundMoney } from "@/lib/vat/calculations";
 import { devLog } from "@/lib/dev-log";
 
 const POST_INVOICE_SELECT =
@@ -18,6 +18,8 @@ export async function syncPostScheduleOnDeliverableInvoiceLock(
     invoiceLineItemId: string;
     lockedAt: string;
     deliverableBillable: number;
+    /** Total invoiced on the deliverable after this invoice (not only this slice). */
+    deliverableInvoiced?: number;
     /** When false, posts stay open for live ad date entry after invoice. */
     lockSchedule?: boolean;
   }
@@ -76,25 +78,34 @@ export async function syncPostScheduleOnDeliverableInvoiceLock(
   const deliverableBillable = roundMoney(
     input.deliverableBillable > 0 ? input.deliverableBillable : totalPostBillable
   );
+  const invoicedCoverage = roundMoney(
+    input.deliverableInvoiced != null ? input.deliverableInvoiced : deliverableBillable
+  );
 
   for (const post of typedPosts) {
     const postBillable = roundMoney(
       Number(post.billable_amount ?? post.revenue_before_vat ?? 0)
     );
     const share =
-      totalPostBillable > 0 && deliverableBillable > 0
-        ? roundMoney((postBillable / totalPostBillable) * deliverableBillable)
-        : postBillable;
+      totalPostBillable > 0 && invoicedCoverage > 0
+        ? roundMoney((postBillable / totalPostBillable) * invoicedCoverage)
+        : 0;
+    const coverage = applyCoverageToLedger({
+      billable: postBillable,
+      invoicedCoverage: share,
+    });
 
     const postPatch: Record<string, unknown> = {
-      invoiced_amount: share,
-      remaining_amount: 0,
-      billing_status: "invoiced",
-      invoice_line_item_id: input.invoiceLineItemId,
-      invoiced_at: input.lockedAt,
+      invoiced_amount: coverage.invoiced,
+      remaining_amount: coverage.remaining,
+      billing_status: coverage.billingStatus,
+      invoice_line_item_id: coverage.invoiced > 0 ? input.invoiceLineItemId : null,
+      invoiced_at: coverage.invoiced > 0 ? input.lockedAt : null,
     };
-    if (lockSchedule) {
+    if (coverage.shouldLock && lockSchedule) {
       postPatch.locked_at = input.lockedAt;
+    } else if (!coverage.shouldLock) {
+      postPatch.locked_at = null;
     }
 
     const { error } = await supabase
@@ -116,8 +127,4 @@ export async function syncPostScheduleOnDeliverableInvoiceLock(
   }
 
   return {};
-}
-
-function roundMoney(value: number): number {
-  return Math.round(value * 100) / 100;
 }

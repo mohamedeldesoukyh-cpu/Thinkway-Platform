@@ -20,6 +20,10 @@ import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-
 import { syncLineOperationalStatus } from "@/lib/billing/sync-line-operational-status";
 import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils";
 import {
+  buildOperationalCoveragePatch,
+  resolveInvoiceSlice,
+} from "@/lib/billing/partial-assignment-invoice";
+import {
   blocksNewInvoiceOperationalRow,
   invoicedRowAllowed,
   invoicedRowBlockMessage,
@@ -148,7 +152,7 @@ export function buildPostInvoiceLinePayload(
   post: PostInvoiceLine,
   sortOrder: number,
   defaultVatRate: number,
-  options?: { forRegeneration?: boolean }
+  options?: { forRegeneration?: boolean; billedAmount?: number }
 ) {
   const deliverable = post.assignment_deliverable;
   const line = deliverable?.campaign_line;
@@ -156,10 +160,13 @@ export function buildPostInvoiceLinePayload(
     throw new Error("Post billing context missing.");
   }
 
-  const beforeVat = postInvoiceBeforeVat(post, {
-    updatingExisting: Boolean(post.invoice_line_item_id),
-    forRegeneration: options?.forRegeneration,
-  });
+  const beforeVat =
+    options?.billedAmount != null
+      ? options.billedAmount
+      : postInvoiceBeforeVat(post, {
+          updatingExisting: Boolean(post.invoice_line_item_id),
+          forRegeneration: options?.forRegeneration,
+        });
   const vatExempt = Boolean(deliverable.revenue_vat_exempt || line.revenue_vat_exempt);
   const vatPercent = resolveInvoiceLineVatPercent(
     {
@@ -568,11 +575,13 @@ export async function lockPostsOnInvoice(
     defaultVatRate?: number;
     updateExistingOnTargetInvoice?: boolean;
     forRegeneration?: boolean;
+    billedByPostId?: Map<string, number>;
   }
 ): Promise<{ error?: string; lineItemOps?: InvoiceLineItemOpSummary }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
   const forRegeneration = options?.forRegeneration ?? false;
+  const billedByPostId = options?.billedByPostId;
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();
@@ -581,22 +590,49 @@ export async function lockPostsOnInvoice(
 
   for (const post of posts) {
     sortOrder += 1;
+    const remaining = Number(post.remaining_amount ?? 0);
+    const requested = billedByPostId?.get(post.id);
+    const slice = resolveInvoiceSlice({
+      remaining,
+      invoiced: Number(post.invoiced_amount ?? 0),
+      billable: Number(post.billable_amount ?? remaining),
+      requestedAmount: requested == null ? remaining : requested,
+    });
+    if (slice.error) {
+      return { error: slice.error, lineItemOps };
+    }
+
     const updatingExisting =
       updateExisting &&
       Boolean(post.invoice_line_item_id) &&
       post.linked_invoice_id === invoiceId;
-    const billable = postInvoiceBeforeVat(post, { updatingExisting, forRegeneration });
+    let existingOnInvoice = 0;
+    let lineItemId = post.invoice_line_item_id;
+    let reuseLineItem = updatingExisting;
+
+    if (reuseLineItem && lineItemId) {
+      const { data: existingItem } = await supabase
+        .from("invoice_line_items")
+        .select("id, revenue_before_vat")
+        .eq("id", lineItemId)
+        .eq("invoice_id", invoiceId)
+        .maybeSingle();
+      existingOnInvoice = Number(
+        (existingItem as { revenue_before_vat?: number | null } | null)?.revenue_before_vat ?? 0
+      );
+    }
+
+    const billedAmount = reuseLineItem
+      ? slice.billedAmount + existingOnInvoice
+      : slice.billedAmount;
     const payload = buildPostInvoiceLinePayload(
       invoiceId,
       headerId,
       post,
       sortOrder,
       defaultVatRate,
-      { forRegeneration }
+      { forRegeneration, billedAmount }
     );
-    const reuseLineItem = updatingExisting;
-
-    let lineItemId = post.invoice_line_item_id;
 
     if (reuseLineItem && lineItemId) {
       const { error: updateError } = await supabase
@@ -624,16 +660,13 @@ export async function lockPostsOnInvoice(
     }
 
     const lockLiveAdDate = Boolean(post.live_date?.trim());
-    const postLockPatch: Record<string, unknown> = {
-      invoiced_amount: billable,
-      remaining_amount: 0,
-      billing_status: "invoiced",
-      invoice_line_item_id: lineItemId,
-      invoiced_at: now,
-    };
-    if (lockLiveAdDate) {
-      postLockPatch.locked_at = now;
-    }
+    const postLockPatch = buildOperationalCoveragePatch({
+      billable: Number(post.billable_amount ?? remaining),
+      invoicedCoverage: slice.invoicedAfter,
+      lineItemId: lineItemId ?? null,
+      now,
+      lockLiveDate: lockLiveAdDate && slice.shouldLock,
+    });
 
     const { error: lockError } = await supabase
       .from("assignment_post_schedule")
@@ -651,7 +684,8 @@ export async function lockPostsOnInvoice(
       devLog("[billing-sync] post locked on invoice", {
         postId: post.id,
         invoiceId,
-        billable,
+        billedAmount: slice.billedAmount,
+        remainingAfter: slice.remainingAfter,
         lineItemMode: reuseLineItem ? "updated" : "created",
         lineItemId,
       });
