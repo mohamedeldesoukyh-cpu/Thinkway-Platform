@@ -11,7 +11,7 @@
   --bq-mut: #64748b;
   --bq-line: #e2e8f0;
   --bq-hair: #edf0f5;
-  --bq-bg: transparent;
+  --bq-bg: #fafbfc;
   --bq-soft: #f6f8fb;
   --bq-lav: #e9f7f1;
   --bq-ok: #0a7a55;
@@ -104,6 +104,7 @@
 
 .tw-billing-v3 .bq-m b {
   margin-left: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 14px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -152,6 +153,39 @@
   opacity: 0.4;
 }
 
+.tw-billing-v3 main,
+.tw-billing-v3 .bq-main {
+  min-width: 0;
+  padding: 18px 22px 40px !important;
+  background: var(--bq-bg) !important;
+}
+
+.tw-billing-v3 .bq-hd {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.tw-billing-v3 .bq-hd h1 {
+  margin: 0;
+  font-family: inherit;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.35px;
+  line-height: 1.25;
+  color: var(--bq-ink);
+}
+
+.tw-billing-v3 .bq-hd p {
+  margin: 2px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--bq-mut);
+  max-width: min(640px, 100%);
+}
+
 .tw-billing-v3 .thinkway-campaign-section-card,
 .tw-billing-v3 .bq-card {
   background: #fff;
@@ -159,12 +193,14 @@
   box-shadow: var(--bq-ring);
   overflow: hidden;
   border-color: transparent;
+  margin-bottom: 16px;
 }
 
 .tw-billing-v3 .bq-card__h,
 .tw-billing-v3 .thinkway-campaign-section-head {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 11px;
   flex-wrap: wrap;
   padding: 12px 16px;
@@ -172,13 +208,14 @@
 }
 
 .tw-billing-v3 .bq-card__t {
-  font-size: 13.5px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.15px;
+  color: var(--bq-ink);
 }
 
 .tw-billing-v3 .bq-card__s {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--bq-mut);
 }
 
@@ -310,6 +347,7 @@
 }
 
 .tw-billing-v3 .bq-st b {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-size: 21px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
@@ -568,7 +606,12 @@
   border-radius: 8px;
 }
 
-.tw-billing-v3 .thinkway-campaign-section-head .group\/table-tool {
+.tw-billing-v3 .bq-card__h .inline-flex,
+.tw-billing-v3 .thinkway-campaign-section-head .inline-flex {
+  gap: 8px;
+}
+
+.tw-billing-v3 button.group\/table-tool {
   height: 27px;
   padding: 0 10px;
   border: 0.8px solid #e3e8f2;
@@ -580,7 +623,13 @@
   letter-spacing: -0.08px;
 }
 
-.tw-billing-v3 .thinkway-campaign-section-head .group\/table-tool svg {
+.tw-billing-v3 button.group\/table-tool:hover {
+  border-color: rgba(29, 158, 117, 0.35);
+  color: var(--bq-bi);
+  background: #fff;
+}
+
+.tw-billing-v3 button.group\/table-tool svg {
   display: none;
 }
 
@@ -765,6 +814,7 @@
 
 .tw-billing-v3 .bq-vgrp em {
   font-style: normal;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 500;
   font-size: 10.5px;
   color: var(--bq-mut);
@@ -773,13 +823,37 @@
 }
 
 .tw-billing-v3 .bq-ck {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   accent-color: var(--bq-blue);
+  cursor: pointer;
+}
+
+.tw-billing-v3 [data-sticky="operational-workspace-tabs"] {
+  border-bottom: 1px solid var(--bq-line);
+  margin-bottom: 11px;
 }
 
 .tw-billing-v3 [data-sticky="operational-workspace-tabs"] .enterprise-tabs-list {
   gap: 22px;
+}
+
+.tw-billing-v3 .enterprise-tabs[data-variant="underline"] {
+  --etab-height: 42px;
+  --etab-pad-x: 0;
+  --etab-label-size: 12.5px;
+  --etab-fg: var(--bq-mut);
+  --etab-fg-hover: var(--bq-ink2);
+  --etab-fg-active: var(--bq-navy);
+  --etab-indicator: var(--bq-blue);
+  --etab-badge-bg: var(--bq-soft);
+  --etab-badge-fg: var(--bq-mut);
+  --etab-badge-active-bg: var(--bq-lav);
+  --etab-badge-active-fg: var(--bq-bi);
+}
+
+.tw-billing-v3 .bq-panel {
+  margin-top: 0;
 }
 
 @media (max-width: 1250px) {

@@ -10,7 +10,6 @@ import { OperationalTableControlsSlot } from "@/components/tables/operational-da
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
-  OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
   OperationalWorkspaceSortableTabsBar,
   OperationalWorkspaceTabPanel,
   type OperationalWorkspaceTabDef,
@@ -58,6 +57,10 @@ import {
   CollectionTracker,
 } from "@/features/billing/components/collection-tracker";
 import type { BillingDashboard } from "@/features/billing/types";
+
+const BILLING_TAB_PANEL_CLASS =
+  "bq-panel flex-none outline-none focus-visible:outline-none data-[state=inactive]:hidden";
+const BILLING_TAB_BODY_CLASS = "bg-transparent";
 
 type BillingWorkspaceViewProps = {
   dashboard: BillingDashboard;
@@ -195,7 +198,16 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
   );
 
   return (
-    <div className="tw-billing-v3 space-y-4">
+    <div className="tw-billing-v3">
+      <div className="bq-hd">
+        <div>
+          <h1>Billing & finance</h1>
+          <p>
+            Enterprise finance operations — invoicing, collections, PO tracking, vendor payments and
+            approvals
+          </p>
+        </div>
+      </div>
       <BillingKpiStrip
         kpis={dashboard.kpis}
         currency={kpiCurrency}
@@ -213,8 +225,8 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
           variant="underline"
         />
 
-        <TabsContent value="queue" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel>
+        <TabsContent value="queue" className={BILLING_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className={BILLING_TAB_BODY_CLASS}>
             <OperationalTableSuiteProvider
               tableId={OPERATIONAL_TABLE_IDS.billingCampaignQueue}
               columns={campaignQueueColumns}
@@ -231,14 +243,14 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
           </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="overview" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel className="p-0 md:p-0">
+        <TabsContent value="overview" className={BILLING_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className={`${BILLING_TAB_BODY_CLASS} p-0 md:p-0`}>
             <BillingOverviewPanel campaigns={dashboard.campaign_queue} />
           </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="invoices" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel>
+        <TabsContent value="invoices" className={BILLING_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className={BILLING_TAB_BODY_CLASS}>
             <OperationalTableSuiteProvider
               tableId={OPERATIONAL_TABLE_IDS.billingInvoicesList}
               columns={BILLING_INVOICES_TABLE_COLUMNS}
@@ -256,8 +268,8 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
           </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="collections" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel>
+        <TabsContent value="collections" className={BILLING_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className={BILLING_TAB_BODY_CLASS}>
             <OperationalTableSuiteProvider
               tableId={OPERATIONAL_TABLE_IDS.billingCollectionTracker}
               columns={collectionTrackerColumns}
@@ -274,8 +286,8 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
           </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="aging" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel>
+        <TabsContent value="aging" className={BILLING_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className={BILLING_TAB_BODY_CLASS}>
             <AgingReport
               aging={dashboard.aging}
               invoices={dashboard.invoices}
@@ -285,8 +297,8 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
           </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="approvals" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel>
+        <TabsContent value="approvals" className={BILLING_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className={BILLING_TAB_BODY_CLASS}>
             <OperationalTableSuiteProvider
               tableId={OPERATIONAL_TABLE_IDS.billingFinancialApprovals}
               columns={financialApprovalsColumns}
@@ -303,8 +315,8 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
           </OperationalWorkspaceTabPanel>
         </TabsContent>
 
-        <TabsContent value="vendors" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel>
+        <TabsContent value="vendors" className={BILLING_TAB_PANEL_CLASS}>
+          <OperationalWorkspaceTabPanel className={BILLING_TAB_BODY_CLASS}>
             <OperationalTableSuiteProvider
               tableId={OPERATIONAL_TABLE_IDS.billingVendorAssignments}
               columns={vendorAssignmentColumns}

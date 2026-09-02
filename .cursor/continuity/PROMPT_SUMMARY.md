@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Finance suite wrap + remaining mock match.
+**Focus:** Billing & finance billing-v3 chrome match.
+
+## Shipped 2026-09-02 — Billing v3 page chrome match
+
+`/billing` page header, padding, vendor payments card, and Filter/Sort/Settings now follow `billing-v3.html`. Generic shell title bar hidden. Thinkway green (not mock blue). No currency switcher, Create payment batch, or mock footnotes. No migrations. Not on Production.
 
 ## Shipped 2026-09-02 — Finance suite text wrap
 

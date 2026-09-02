@@ -91,7 +91,7 @@ export function BillingKpiStrip({
   ] as const;
 
   return (
-    <div className="space-y-2">
+    <div>
       <div className="bq-kwrap">
         {hero.map((item) => (
           <div key={item.id} className={cn("bq-k", item.bad && "bad")}>

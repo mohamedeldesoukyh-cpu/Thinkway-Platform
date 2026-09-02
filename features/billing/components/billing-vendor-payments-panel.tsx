@@ -3,7 +3,6 @@
 import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 
 import { DocumentNumber } from "@/components/ui/document-number";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
 import { BillingCardHeader } from "@/features/billing/components/billing-card-header";
@@ -161,18 +160,14 @@ export function BillingVendorPaymentsPanel({
   };
 
   return (
-    <OperationalTableSection
-      wide
-      tableOnly
-      cardSurface
-      leading={
+    <div className="bq-card">
+      <div className="bq-card__h">
         <BillingCardHeader
           title="Vendor payments"
           subtitle="one row per assignment — a creator on a campaign"
           actions={settingsSlot}
         />
-      }
-    >
+      </div>
       <div className="bq-pad" style={{ paddingBottom: 6 }}>
         <div className="bq-st">
           <span>
@@ -299,6 +294,7 @@ export function BillingVendorPaymentsPanel({
           </div>
         </div>
       )}
-    </OperationalTableSection>
+    </div>
   );
 }
+

@@ -485,7 +485,7 @@ export function BillingCampaignQueueTable({
   }, [selectedCampaignId, reviewOpen, reviewDetail]);
 
   return (
-    <div className="space-y-4">
+    <div>
       <BillingFinanceFilterBar
         value={filter}
         counts={filterCounts}

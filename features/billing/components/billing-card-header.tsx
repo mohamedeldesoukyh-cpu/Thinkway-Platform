@@ -6,7 +6,7 @@ type BillingCardHeaderProps = {
   actions?: ReactNode;
 };
 
-/** HTML `.bq-card__h` contents — sits inside `thinkway-campaign-section-head`. */
+/** HTML `.bq-card__h` contents — title, subtitle, spacer, then Filter/Sort/Settings. */
 export function BillingCardHeader({ title, subtitle, actions }: BillingCardHeaderProps) {
   return (
     <>

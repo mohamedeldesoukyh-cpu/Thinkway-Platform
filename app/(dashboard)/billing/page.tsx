@@ -15,19 +15,24 @@ export default async function BillingPage() {
   }
 
   return (
-    <DashboardShell
-      title="Billing & finance"
-      description="Enterprise finance operations — invoicing, collections, PO tracking, vendor payments, and approvals."
-    >
-      {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : dashboard ? (
-        <PlatformErrorBoundary surface="billing">
-          <BillingWorkspaceView dashboard={dashboard} />
-        </PlatformErrorBoundary>
-      ) : null}
-    </DashboardShell>
+    <div className="tw-billing-v3 flex min-h-0 min-w-0 flex-1 flex-col">
+      <DashboardShell
+        title="Billing & finance"
+        description="Enterprise finance operations — invoicing, collections, PO tracking, vendor payments and approvals."
+        hidePageHeader
+        hideDesktopHeader
+        mainClassName="bq-main"
+      >
+        {errorMessage ? (
+          <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {errorMessage}
+          </div>
+        ) : dashboard ? (
+          <PlatformErrorBoundary surface="billing">
+            <BillingWorkspaceView dashboard={dashboard} />
+          </PlatformErrorBoundary>
+        ) : null}
+      </DashboardShell>
+    </div>
   );
 }
