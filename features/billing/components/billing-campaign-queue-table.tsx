@@ -33,7 +33,11 @@ import {
   BillingCampaignReviewPanel,
 } from "@/features/billing/components/billing-campaign-review-panel";
 import { BillingFinanceFilterBar } from "@/features/billing/components/billing-finance-filter-bar";
-import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
+import { InvoiceTargetChoiceDialog } from "@/features/billing/components/invoice-target-choice-dialog";
+import {
+  eligibleAppendableInvoices,
+  useOperationalInvoiceCreate,
+} from "@/features/billing/hooks/use-operational-invoice-create";
 import {
   loadCampaignBillingDetailAction,
   refreshBillingAfterInvoiceAction,
@@ -46,7 +50,9 @@ import {
   buildInvoiceSelectionBatch,
   clearOperationalSelection,
   countSelection,
+  countSubmitPayload,
   createEmptySelection,
+  payloadToSelection,
   selectAllOperationalRows,
   selectionToSubmitPayload,
   type OperationalSelectionPayload,
@@ -62,6 +68,9 @@ import {
   filterCampaignQueueRows,
   type CampaignBillingQueueFilter,
 } from "@/lib/billing/campaign-billing-queue";
+import { buildConsolidatedQueueInvoiceSelection } from "@/lib/billing/consolidated-invoice-queue";
+import type { InvoiceDraftPercents } from "@/lib/billing/operational-invoice-draft";
+import { showErrorToastOnce } from "@/lib/ui/toast-once";
 import { devLog } from "@/lib/dev-log";
 import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
@@ -160,15 +169,20 @@ export function BillingCampaignQueueTable({
   const [queueSelections, setQueueSelections] = useState<
     Record<string, OperationalSelectionState>
   >({});
-  const [invoiceCampaignId, setInvoiceCampaignId] = useState<string | null>(null);
+  const [invoiceDraftPercentsByCampaign, setInvoiceDraftPercentsByCampaign] = useState<
+    Record<string, InvoiceDraftPercents>
+  >({});
+  const [invoiceChoiceOpen, setInvoiceChoiceOpen] = useState(false);
+  const [invoiceChoiceCampaignId, setInvoiceChoiceCampaignId] = useState<string | null>(null);
   const [invoiceSelection, setInvoiceSelection] = useState<OperationalSelectionPayload | undefined>();
-  const [invoiceTargetMode, setInvoiceTargetMode] = useState<"new" | "append">("new");
   const [pending, startTransition] = useTransition();
   const reviewPanelRef = useRef<HTMLDivElement>(null);
   const detailCacheRef = useRef(detailCache);
   detailCacheRef.current = detailCache;
   const queueSelectionsRef = useRef(queueSelections);
   queueSelectionsRef.current = queueSelections;
+  const invoiceDraftPercentsRef = useRef(invoiceDraftPercentsByCampaign);
+  invoiceDraftPercentsRef.current = invoiceDraftPercentsByCampaign;
 
   const operationalFilter = mapCampaignQueueFilterToOperational(filter);
 
@@ -251,20 +265,6 @@ export function BillingCampaignQueueTable({
     [ensureDetailLoaded]
   );
 
-  const openInvoiceWorkflow = useCallback(
-    async (
-      campaignId: string,
-      selection?: OperationalSelectionPayload,
-      mode: "new" | "append" = "new"
-    ) => {
-      setInvoiceSelection(selection);
-      setInvoiceTargetMode(mode);
-      const detail = await ensureDetailLoaded(campaignId);
-      if (detail) setInvoiceCampaignId(campaignId);
-    },
-    [ensureDetailLoaded]
-  );
-
   const setQueueSelection = useCallback(
     (campaignId: string, selection: OperationalSelectionState) => {
       setQueueSelections((prev) => {
@@ -294,6 +294,11 @@ export function BillingCampaignQueueTable({
       devLog("[queue-refresh] reloading billing data after invoice", {
         campaignId: completedCampaignId,
       });
+      setInvoiceDraftPercentsByCampaign((prev) => {
+        const next = { ...prev };
+        delete next[completedCampaignId];
+        return next;
+      });
       setDetailCache((prev) => {
         const next = { ...prev };
         delete next[completedCampaignId];
@@ -320,6 +325,87 @@ export function BillingCampaignQueueTable({
       router.refresh();
     },
     [router, selectedCampaignId]
+  );
+
+  const { submit: submitInvoiceDraft, pending: invoicePending } = useOperationalInvoiceCreate({
+    onComplete: handleInvoiceComplete,
+  });
+
+  const resolveInvoiceSelection = useCallback(
+    (campaignId: string, selection?: OperationalSelectionPayload): OperationalSelectionPayload => {
+      const rows = detailCacheRef.current[campaignId]?.operational_rows ?? [];
+      if (selection && countSubmitPayload(selection) > 0) {
+        return selectionToSubmitPayload(payloadToSelection(selection), rows);
+      }
+      const queued = queueSelectionsRef.current[campaignId];
+      if (queued && countSelection(queued) > 0) {
+        return selectionToSubmitPayload(queued, rows);
+      }
+      return buildConsolidatedQueueInvoiceSelection(rows);
+    },
+    []
+  );
+
+  const submitForCampaign = useCallback(
+    async (
+      campaignId: string,
+      selection: OperationalSelectionPayload | undefined,
+      mode: "new" | "append",
+      existingInvoiceId?: string
+    ) => {
+      const detail = await ensureDetailLoaded(campaignId);
+      if (!detail) return;
+      submitInvoiceDraft({
+        campaignId,
+        rows: detail.operational_rows,
+        percents: invoiceDraftPercentsRef.current[campaignId] ?? {},
+        selection: resolveInvoiceSelection(campaignId, selection),
+        mode,
+        existingInvoiceId,
+      });
+    },
+    [ensureDetailLoaded, resolveInvoiceSelection, submitInvoiceDraft]
+  );
+
+  const beginInvoiceFlow = useCallback(
+    async (
+      campaignId: string,
+      selection?: OperationalSelectionPayload,
+      mode: "new" | "append" | "ask" = "ask"
+    ) => {
+      const detail = await ensureDetailLoaded(campaignId);
+      if (!detail) return;
+      const payload = resolveInvoiceSelection(campaignId, selection);
+      const eligible = eligibleAppendableInvoices(detail.appendable_invoices);
+
+      if (mode === "new") {
+        await submitForCampaign(campaignId, payload, "new");
+        return;
+      }
+
+      if (mode === "append") {
+        if (eligible.length === 0) {
+          showErrorToastOnce("No open invoice to append to. Create a new invoice instead.", {
+            id: "invoice-generation",
+          });
+          return;
+        }
+        setInvoiceSelection(payload);
+        setInvoiceChoiceCampaignId(campaignId);
+        setInvoiceChoiceOpen(true);
+        return;
+      }
+
+      if (eligible.length > 0) {
+        setInvoiceSelection(payload);
+        setInvoiceChoiceCampaignId(campaignId);
+        setInvoiceChoiceOpen(true);
+        return;
+      }
+
+      await submitForCampaign(campaignId, payload, "new");
+    },
+    [ensureDetailLoaded, resolveInvoiceSelection, submitForCampaign]
   );
 
   const onMasterSelect = useCallback(
@@ -358,11 +444,9 @@ export function BillingCampaignQueueTable({
 
   const onOpenInvoice = useCallback(
     (campaignId: string) => {
-      const selection = queueSelectionsRef.current[campaignId] ?? createEmptySelection();
-      const rows = detailCacheRef.current[campaignId]?.operational_rows ?? [];
-      openInvoiceWorkflow(campaignId, selectionToSubmitPayload(selection, rows));
+      void beginInvoiceFlow(campaignId);
     },
-    [openInvoiceWorkflow]
+    [beginInvoiceFlow]
   );
 
   const handleQueueInvoiceSelected = useCallback(
@@ -375,19 +459,28 @@ export function BillingCampaignQueueTable({
         campaignId: invoiceContext.campaignId,
         mode,
       });
-      openInvoiceWorkflow(invoiceContext.campaignId, invoiceContext.payload, mode);
+      void beginInvoiceFlow(invoiceContext.campaignId, invoiceContext.payload, mode);
     },
-    [invoiceContext, openInvoiceWorkflow]
+    [invoiceContext, beginInvoiceFlow]
+  );
+
+  const setCampaignInvoicePercents = useCallback(
+    (campaignId: string, next: InvoiceDraftPercents) => {
+      setInvoiceDraftPercentsByCampaign((prev) => ({ ...prev, [campaignId]: next }));
+    },
+    []
   );
 
   const handleClearQueueSelection = useCallback(() => {
     setQueueSelections({});
   }, []);
 
-  const invoiceDetail = invoiceCampaignId ? detailCache[invoiceCampaignId] : null;
   const reviewDetail = selectedCampaignId ? detailCache[selectedCampaignId] : null;
   const reviewLoading =
     pending && selectedCampaignId !== null && !detailCache[selectedCampaignId ?? ""];
+  const invoiceChoiceDetail = invoiceChoiceCampaignId
+    ? detailCache[invoiceChoiceCampaignId]
+    : null;
 
   useEffect(() => {
     if (!selectedCampaignId || !reviewOpen) return;
@@ -472,6 +565,11 @@ export function BillingCampaignQueueTable({
                     detail={detail}
                     detailLoading={pending}
                     selection={selection}
+                    invoicePercents={invoiceDraftPercentsByCampaign[campaignId] ?? {}}
+                    onInvoicePercentsChange={(next) =>
+                      setCampaignInvoicePercents(campaignId, next)
+                    }
+                    invoicePending={invoicePending}
                     onToggleExpand={onToggleExpand}
                     onMasterSelect={onMasterSelect}
                     onSelectForReview={onSelectForReview}
@@ -504,6 +602,26 @@ export function BillingCampaignQueueTable({
               filter={filter}
               open={reviewOpen}
               onOpenChange={setReviewOpen}
+              selection={
+                selectedCampaignId
+                  ? (queueSelections[selectedCampaignId] ?? createEmptySelection())
+                  : createEmptySelection()
+              }
+              onSelectionChange={(next) => {
+                if (selectedCampaignId) setQueueSelection(selectedCampaignId, next);
+              }}
+              invoicePercents={
+                selectedCampaignId
+                  ? (invoiceDraftPercentsByCampaign[selectedCampaignId] ?? {})
+                  : {}
+              }
+              onInvoicePercentsChange={(next) => {
+                if (selectedCampaignId) setCampaignInvoicePercents(selectedCampaignId, next);
+              }}
+              invoicePending={invoicePending}
+              onInvoice={(payload) => {
+                if (selectedCampaignId) void beginInvoiceFlow(selectedCampaignId, payload);
+              }}
             />
           </OperationalTableSuiteProvider>
         </div>
@@ -531,43 +649,42 @@ export function BillingCampaignQueueTable({
           <PlatformFloatingBarPrimaryButton
             action={{
               id: "new-invoice",
-              label: "Create new invoice",
-              disabled: !invoiceContext,
+              label: invoicePending ? "Generating…" : "Create new invoice",
+              disabled: !invoiceContext || invoicePending,
               onClick: () => handleQueueInvoiceSelected("new"),
             }}
           />
           <PlatformFloatingBarSecondaryLink
             action={{
               id: "append-invoice",
-              label: "Append to open invoice",
-              disabled: !invoiceContext,
+              label: invoicePending ? "Generating…" : "Append to open invoice",
+              disabled: !invoiceContext || invoicePending,
               onClick: () => handleQueueInvoiceSelected("append"),
             }}
           />
         </div>
       </OperationalFloatingActionBar>
 
-      {invoiceCampaignId && invoiceDetail ? (
-        <InvoiceGenerationSheet
-          campaignId={invoiceCampaignId}
-          currency={invoiceDetail.currency_code}
-          rollup={invoiceDetail.rollup}
-          operationalRows={invoiceDetail.operational_rows}
-          appendableInvoices={invoiceDetail.appendable_invoices}
-          defaultVatPercent={invoiceDetail.default_vat_percent}
-          initialSelection={invoiceSelection}
-          targetMode={invoiceTargetMode}
-          open
-          onInvoiceComplete={handleInvoiceComplete}
-          onOpenChange={(open) => {
-            if (!open) {
-              setInvoiceCampaignId(null);
-              setInvoiceSelection(undefined);
-              setInvoiceTargetMode("new");
-            }
-          }}
-        />
-      ) : null}
+      <InvoiceTargetChoiceDialog
+        open={invoiceChoiceOpen && Boolean(invoiceChoiceDetail)}
+        onOpenChange={(open) => {
+          setInvoiceChoiceOpen(open);
+          if (!open) {
+            setInvoiceChoiceCampaignId(null);
+            setInvoiceSelection(undefined);
+          }
+        }}
+        appendableInvoices={invoiceChoiceDetail?.appendable_invoices ?? []}
+        onConfirm={(mode, existingInvoiceId) => {
+          if (!invoiceChoiceCampaignId) return;
+          void submitForCampaign(
+            invoiceChoiceCampaignId,
+            invoiceSelection,
+            mode,
+            existingInvoiceId
+          );
+        }}
+      />
     </div>
   );
 }

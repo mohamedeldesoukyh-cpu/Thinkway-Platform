@@ -56,7 +56,6 @@ import {
   getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { CreateInvoiceSheet } from "@/features/billing/components/create-invoice-sheet";
-import { InvoiceGenerationSheet } from "@/features/billing/components/invoice-generation-sheet";
 import { RegenerateInvoiceDialog } from "@/features/billing/components/regenerate-invoice-dialog";
 import {
   enrichRegenerationEligibilityInput,
@@ -66,6 +65,10 @@ import {
   InvoiceTargetChoiceDialog,
   type InvoiceTargetMode,
 } from "@/features/billing/components/invoice-target-choice-dialog";
+import {
+  eligibleAppendableInvoices,
+  useOperationalInvoiceCreate,
+} from "@/features/billing/hooks/use-operational-invoice-create";
 import type {
   AssignmentBillingGroup,
   BillingLineRow,
@@ -73,10 +76,14 @@ import type {
 } from "@/features/billing/types";
 import { buildConsolidatedQueueInvoiceSelection } from "@/lib/billing/consolidated-invoice-queue";
 import {
+  countSubmitPayload,
   createEmptySelection,
+  payloadToSelection,
+  selectionToSubmitPayload,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
+import type { InvoiceDraftPercents } from "@/lib/billing/operational-invoice-draft";
 import {
   OPERATIONAL_BILLING_FILTER_OPTIONS,
   type OperationalBillingFilter,
@@ -191,13 +198,17 @@ export function CampaignBillingTab({
   const { financials } = workspace;
   const currency = workspace.currency_code;
   const [legacyInvoiceOpen, setLegacyInvoiceOpen] = useState(false);
-  const [operationalInvoiceOpen, setOperationalInvoiceOpen] = useState(false);
   const [invoiceChoiceOpen, setInvoiceChoiceOpen] = useState(false);
-  const [invoiceTargetMode, setInvoiceTargetMode] = useState<InvoiceTargetMode>("new");
-  const [appendInvoiceId, setAppendInvoiceId] = useState<string | undefined>();
   const [invoiceSelection, setInvoiceSelection] = useState<
     OperationalSelectionPayload | undefined
   >();
+  const [invoiceDraftPercents, setInvoiceDraftPercents] = useState<InvoiceDraftPercents>({});
+  const { submit: submitInvoiceDraft, pending: invoicePending } = useOperationalInvoiceCreate({
+    onComplete: () => {
+      setInvoiceDraftPercents({});
+      refreshAfterOperationalMutation();
+    },
+  });
   const [billingFilter, setBillingFilter] = useState<OperationalBillingFilter>("all");
   const [selectedQueueBatchKeys, setSelectedQueueBatchKeys] = useState<Set<string>>(
     () => new Set()
@@ -229,6 +240,10 @@ export function CampaignBillingTab({
       setDetailPaymentId(initialDetailPaymentId);
     }
   }, [initialDetailPaymentId, workspace.payments]);
+
+  useEffect(() => {
+    setInvoiceDraftPercents({});
+  }, [operationalBilling?.campaign_header_id, operationalBilling?.rollup.remaining_to_invoice]);
 
   const campaignInvoiceColumnMetas = useMemo(
     () => getFinanceInvoiceRegisterColumnMetas(true, "campaign"),
@@ -340,6 +355,33 @@ export function CampaignBillingTab({
     );
   }
 
+  function submitOperationalInvoice(
+    selection: OperationalSelectionPayload | undefined,
+    mode: InvoiceTargetMode,
+    existingInvoiceId?: string
+  ) {
+    if (!operationalBilling) return;
+    const rows = operationalBilling.operational_rows;
+    const rawSelection =
+      selection ??
+      selectionToSubmitPayload(
+        drilldownSelection,
+        rows
+      );
+    const resolvedSelection =
+      countSubmitPayload(rawSelection) > 0
+        ? selectionToSubmitPayload(payloadToSelection(rawSelection), rows)
+        : buildConsolidatedQueueInvoiceSelection(rows);
+    submitInvoiceDraft({
+      campaignId: workspace.id,
+      rows,
+      percents: invoiceDraftPercents,
+      selection: resolvedSelection,
+      mode,
+      existingInvoiceId,
+    });
+  }
+
   function beginInvoiceFlow(selection?: OperationalSelectionPayload) {
     if (!operationalBilling) return;
 
@@ -363,22 +405,13 @@ export function CampaignBillingTab({
       };
     }
 
-    const eligible = appendableInvoices.filter(
-      (inv) =>
-        !inv.is_locked &&
-        inv.status !== "void" &&
-        inv.status !== "paid" &&
-        inv.regeneration_status !== "pending_regeneration"
-    );
+    const eligible = eligibleAppendableInvoices(appendableInvoices);
     if (eligible.length > 0) {
       setInvoiceSelection(flowSelection);
       setInvoiceChoiceOpen(true);
       return;
     }
-    setInvoiceTargetMode("new");
-    setAppendInvoiceId(undefined);
-    setInvoiceSelection(flowSelection);
-    setOperationalInvoiceOpen(true);
+    submitOperationalInvoice(flowSelection, "new");
   }
 
   function handleQueueGenerateInvoice() {
@@ -677,6 +710,9 @@ export function CampaignBillingTab({
                 selection={drilldownSelection}
                 onSelectionChange={setDrilldownSelection}
                 appearance="campaign"
+                invoicePercents={invoiceDraftPercents}
+                onInvoicePercentsChange={setInvoiceDraftPercents}
+                invoicePending={invoicePending}
                 onInvoice={(selection) => {
                   beginInvoiceFlow(selection);
                 }}
@@ -769,26 +805,7 @@ export function CampaignBillingTab({
             onOpenChange={setInvoiceChoiceOpen}
             appendableInvoices={appendableInvoices}
             onConfirm={(mode, existingInvoiceId) => {
-              setInvoiceTargetMode(mode);
-              setAppendInvoiceId(existingInvoiceId);
-              setOperationalInvoiceOpen(true);
-            }}
-          />
-          <InvoiceGenerationSheet
-            campaignId={workspace.id}
-            currency={operationalBilling.currency_code}
-            rollup={operationalBilling.rollup}
-            operationalRows={operationalBilling.operational_rows}
-            appendableInvoices={operationalBilling.appendable_invoices}
-            defaultVatPercent={operationalBilling.default_vat_percent}
-            targetMode={invoiceTargetMode}
-            initialExistingInvoiceId={appendInvoiceId}
-            initialSelection={invoiceSelection}
-            open={operationalInvoiceOpen}
-            onInvoiceComplete={refreshAfterOperationalMutation}
-            onOpenChange={(open) => {
-              setOperationalInvoiceOpen(open);
-              if (!open) setInvoiceSelection(undefined);
+              submitOperationalInvoice(invoiceSelection, mode, existingInvoiceId);
             }}
           />
           {pendingRegenerationInvoice ? (

@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useMemo, useRef, useState } from "react";
+import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   OperationalFloatingActionBar,
@@ -9,11 +10,30 @@ import {
   PlatformFloatingBarSelection,
   operationalFloatingBarContentClass,
 } from "@/components/workspace/operational-floating-action-bar";
-import { OperationalRowTree } from "@/features/billing/components/operational-row-tree";
+import {
+  OperationalInvoiceDraftCells,
+  OperationalRowTree,
+} from "@/features/billing/components/operational-row-tree";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
+import {
+  CampaignOperationalTable,
+  CampaignOperationalTableBody,
+  CampaignOperationalTableCell,
+  CampaignOperationalTableHead,
+  CampaignOperationalTableHeader,
+  CampaignOperationalTableHeaderRow,
+  CampaignOperationalTableRow,
+} from "@/features/campaigns/components/campaign-operational-table";
 import type { CampaignOperationalBillingDetail } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
 import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
+import {
+  CAMPAIGN_INVOICE_DRAFT_ID,
+  cascadeInvoiceDraftPercent,
+  cascadeInvoiceDraftToBeInvoiced,
+  computeCampaignInvoiceDraft,
+  type InvoiceDraftPercents,
+} from "@/lib/billing/operational-invoice-draft";
 import {
   filterOperationalBillingTree,
   type OperationalBillingFilter,
@@ -42,6 +62,9 @@ type BillingCampaignDrilldownProps = {
   showBulkSelectionControls?: boolean;
   /** Match campaign workspace assignment table typography */
   appearance?: "default" | "campaign";
+  invoicePercents?: InvoiceDraftPercents;
+  onInvoicePercentsChange?: (next: InvoiceDraftPercents) => void;
+  invoicePending?: boolean;
 };
 
 function BillingCampaignDrilldownInner({
@@ -52,13 +75,20 @@ function BillingCampaignDrilldownInner({
   onSelectionChange,
   showBulkSelectionControls = true,
   appearance = "default",
+  invoicePercents: controlledPercents,
+  onInvoicePercentsChange,
+  invoicePending = false,
 }: BillingCampaignDrilldownProps) {
   const campaign = appearance === "campaign";
-  const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set([CAMPAIGN_INVOICE_DRAFT_ID])
+  );
   const [internalSelection, setInternalSelection] =
     useState<OperationalSelectionState>(createEmptySelection);
+  const [internalPercents, setInternalPercents] = useState<InvoiceDraftPercents>({});
 
   const selection = controlledSelection ?? internalSelection;
+  const percents = controlledPercents ?? internalPercents;
   const rootRows = detail.operational_rows;
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
@@ -77,6 +107,14 @@ function BillingCampaignDrilldownInner({
     [onSelectionChange]
   );
 
+  const setPercents = useCallback(
+    (next: InvoiceDraftPercents) => {
+      if (onInvoicePercentsChange) onInvoicePercentsChange(next);
+      else setInternalPercents(next);
+    },
+    [onInvoicePercentsChange]
+  );
+
   const filteredRows = useMemo(
     () => filterOperationalBillingTree(rootRows, filter),
     [rootRows, filter]
@@ -88,6 +126,12 @@ function BillingCampaignDrilldownInner({
     () => getGlobalSelectionStatus(filteredRows, selection),
     [filteredRows, selection]
   );
+  const campaignDraft = useMemo(
+    () => computeCampaignInvoiceDraft(filteredRows, percents),
+    [filteredRows, percents]
+  );
+  const campaignExpanded = expanded.has(CAMPAIGN_INVOICE_DRAFT_ID);
+  const campaignEditable = campaignDraft.amount > 0.01;
 
   const toggleExpanded = useCallback((id: string) => {
     setExpanded((prev) => {
@@ -112,6 +156,20 @@ function BillingCampaignDrilldownInner({
   const handleClearSelection = useCallback(() => {
     updateSelection(() => clearOperationalSelection());
   }, [updateSelection]);
+
+  const handlePercentChange = useCallback(
+    (rowId: string, percent: number) => {
+      setPercents(cascadeInvoiceDraftPercent(filteredRows, rowId, percent, percents));
+    },
+    [filteredRows, percents, setPercents]
+  );
+
+  const handleToBeInvoicedChange = useCallback(
+    (rowId: string, amount: number) => {
+      setPercents(cascadeInvoiceDraftToBeInvoiced(filteredRows, rowId, amount, percents));
+    },
+    [filteredRows, percents, setPercents]
+  );
 
   const handleInvoiceSelected = useCallback(() => {
     if (!onInvoice || selectedCount === 0) return;
@@ -181,23 +239,95 @@ function BillingCampaignDrilldownInner({
           No operational rows match this filter.
         </p>
       ) : (
-        <div className="space-y-1">
-          {filteredRows.map((assignment) => (
-            <OperationalRowTree
-              key={assignment.id}
-              row={assignment}
-              depth={0}
-              currency={detail.currency_code}
-              rootRows={rootRows}
-              selection={selection}
-              isOpen={expanded.has(assignment.id)}
-              expandedIds={expanded}
-              onToggleExpand={toggleExpanded}
-              onToggleSelect={toggleRow}
-              appearance={appearance}
-            />
-          ))}
-        </div>
+        <CampaignOperationalTable>
+          <CampaignOperationalTableHeader>
+            <CampaignOperationalTableHeaderRow>
+              <CampaignOperationalTableHead className="w-8" />
+              <CampaignOperationalTableHead className="w-10" />
+              <CampaignOperationalTableHead>Line</CampaignOperationalTableHead>
+              <CampaignOperationalTableHead className="text-right">
+                Invoice amount
+              </CampaignOperationalTableHead>
+              <CampaignOperationalTableHead className="text-right">
+                Invoice %
+              </CampaignOperationalTableHead>
+              <CampaignOperationalTableHead className="text-right">
+                To be invoiced
+              </CampaignOperationalTableHead>
+              <CampaignOperationalTableHead className="text-right">VAT</CampaignOperationalTableHead>
+              <CampaignOperationalTableHead className="text-right">
+                Total invoice
+              </CampaignOperationalTableHead>
+              <CampaignOperationalTableHead className="text-right">
+                Remaining
+              </CampaignOperationalTableHead>
+            </CampaignOperationalTableHeaderRow>
+          </CampaignOperationalTableHeader>
+          <CampaignOperationalTableBody>
+            <CampaignOperationalTableRow className="bg-muted/20 font-medium">
+              <CampaignOperationalTableCell className="w-8 pr-0">
+                <button
+                  type="button"
+                  className="rounded p-0.5 hover:bg-muted"
+                  onClick={() => toggleExpanded(CAMPAIGN_INVOICE_DRAFT_ID)}
+                  aria-expanded={campaignExpanded}
+                  aria-label={
+                    campaignExpanded ? "Collapse campaign assignments" : "Expand campaign assignments"
+                  }
+                >
+                  {campaignExpanded ? (
+                    <ChevronDownIcon className="size-3.5" />
+                  ) : (
+                    <ChevronRightIcon className="size-3.5" />
+                  )}
+                </button>
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell className="w-10 pr-0">
+                <OperationalSelectionCheckbox
+                  status={globalSelectionStatus}
+                  onToggle={handleSelectAllToggle}
+                  ariaLabel="Select all eligible operational rows"
+                />
+              </CampaignOperationalTableCell>
+              <CampaignOperationalTableCell>
+                <p className={campaign ? "text-[11px]" : "text-sm"}>Campaign</p>
+              </CampaignOperationalTableCell>
+              <OperationalInvoiceDraftCells
+                draft={campaignDraft}
+                currency={detail.currency_code}
+                editable={campaignEditable}
+                percentAriaLabel="Invoice percent for campaign"
+                amountAriaLabel="To be invoiced for campaign"
+                onPercentChange={(percent) =>
+                  handlePercentChange(CAMPAIGN_INVOICE_DRAFT_ID, percent)
+                }
+                onToBeInvoicedChange={(amount) =>
+                  handleToBeInvoicedChange(CAMPAIGN_INVOICE_DRAFT_ID, amount)
+                }
+              />
+            </CampaignOperationalTableRow>
+            {campaignExpanded
+              ? filteredRows.map((assignment) => (
+                  <OperationalRowTree
+                    key={assignment.id}
+                    row={assignment}
+                    depth={0}
+                    currency={detail.currency_code}
+                    rootRows={rootRows}
+                    selection={selection}
+                    isOpen={expanded.has(assignment.id)}
+                    expandedIds={expanded}
+                    percents={percents}
+                    onPercentChange={handlePercentChange}
+                    onToBeInvoicedChange={handleToBeInvoicedChange}
+                    onToggleExpand={toggleExpanded}
+                    onToggleSelect={toggleRow}
+                    appearance={appearance}
+                  />
+                ))
+              : null}
+          </CampaignOperationalTableBody>
+        </CampaignOperationalTable>
       )}
 
       {showBulkSelectionControls ? (
@@ -234,8 +364,9 @@ function BillingCampaignDrilldownInner({
                 <PlatformFloatingBarPrimaryButton
                   action={{
                     id: "invoice",
-                    label: "Generate invoice",
+                    label: invoicePending ? "Generating…" : "Generate invoice",
                     onClick: handleInvoiceSelected,
+                    disabled: invoicePending,
                   }}
                 />
               </div>

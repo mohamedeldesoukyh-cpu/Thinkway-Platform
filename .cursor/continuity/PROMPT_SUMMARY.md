@@ -1,11 +1,15 @@
 # Prompt Summary — Current Sprint
 
-**Branch:** `feature/partial-assignment-invoice` (from `develop`) · Production `main`  
-**Focus:** Partial assignment invoicing — percent + amount, unlimited invoices per assignment, VAT on the slice, campaign number on invoice header.
+**Branch:** `develop` · Production `main`  
+**Focus:** Inline invoice generation on Campaign Finance operational billing — Invoice %, To Be Invoiced, Remaining on the table; no sidebar.
 
-## In progress — Partial assignment invoice (approved 2026-09-02)
+## In progress — Inline operational invoice draft (2026-09-02)
 
-Spec: `docs/capabilities/PARTIAL_ASSIGNMENT_INVOICE_SPEC.md`. One assignment can be billed across unlimited invoices up to remaining. Invoice sheet has linked % and amount. Remaining is recomputed from invoice line items. Invoice HTML shows Campaign No. (`TW-YYYY-NNNN`) plus name. No migrations. Not on Production.
+Generate invoice from the operational billing table on Campaign Finance and Billing & finance (`/billing`). Invoice % defaults to 100%. Campaign (main) line % cascades to assignments; mixed assignment % rolls up. Spec: `docs/capabilities/PARTIAL_ASSIGNMENT_INVOICE_SPEC.md`. No migrations. Not on Production.
+
+## Shipped 2026-09-02 — Partial assignment invoice engine
+
+One assignment can be billed across unlimited invoices up to remaining. Remaining is recomputed from invoice line items. Invoice HTML shows Campaign No. (`TW-YYYY-NNNN`) plus name. No migrations. Not on Production.
 
 ## Shipped 2026-09-01 — Facebook publication previews
 

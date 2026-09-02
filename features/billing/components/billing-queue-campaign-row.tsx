@@ -25,6 +25,7 @@ import {
   filterOperationalBillingTree,
   type OperationalBillingFilter,
 } from "@/lib/billing/operational-row-filters";
+import type { InvoiceDraftPercents } from "@/lib/billing/operational-invoice-draft";
 import {
   getGlobalSelectionStatus,
   type OperationalSelectionState,
@@ -49,6 +50,9 @@ export type BillingQueueCampaignRowProps = {
   onSelectForReview: (campaignId: string) => void;
   onSelectionChange: (campaignId: string, selection: OperationalSelectionState) => void;
   onOpenInvoice: (campaignId: string) => void;
+  invoicePercents?: InvoiceDraftPercents;
+  onInvoicePercentsChange?: (next: InvoiceDraftPercents) => void;
+  invoicePending?: boolean;
 };
 
 export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
@@ -64,6 +68,9 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
   onSelectForReview,
   onSelectionChange,
   onOpenInvoice,
+  invoicePercents,
+  onInvoicePercentsChange,
+  invoicePending = false,
 }: BillingQueueCampaignRowProps) {
   const campaignId = row.campaign_header_id;
   const cur = row.currency_code;
@@ -206,9 +213,10 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
                 type="button"
                 size="sm"
                 variant="outline"
+                disabled={invoicePending}
                 onClick={() => onOpenInvoice(campaignId)}
               >
-                Invoice
+                {invoicePending ? "Generating…" : "Invoice"}
               </Button>
               <Button size="sm" variant="ghost" asChild>
                 <Link href={`/campaigns/${campaignId}?tab=billing`}>
@@ -233,6 +241,9 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
                 selection={selection}
                 onSelectionChange={handleSelectionChange}
                 showBulkSelectionControls={false}
+                invoicePercents={invoicePercents}
+                onInvoicePercentsChange={onInvoicePercentsChange}
+                invoicePending={invoicePending}
               />
             ) : (
               <p className="px-4 py-8 text-[11px] text-muted-foreground">
