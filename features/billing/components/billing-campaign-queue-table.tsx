@@ -35,9 +35,12 @@ import {
   BillingQueueTotalsRow,
   useBillingQueueGridTemplate,
 } from "@/features/billing/components/billing-queue-assignment-row";
-import { InvoiceTargetChoiceDialog } from "@/features/billing/components/invoice-target-choice-dialog";
 import {
-  eligibleAppendableInvoices,
+  InvoiceConfirmDialog,
+  type InvoiceConfirmCampaignPreview,
+} from "@/features/billing/components/invoice-confirm-dialog";
+import type { InvoiceTargetMode } from "@/features/billing/components/invoice-target-choice-dialog";
+import {
   useOperationalInvoiceCreate,
 } from "@/features/billing/hooks/use-operational-invoice-create";
 import {
@@ -71,7 +74,10 @@ import {
   type CampaignBillingQueueFilter,
 } from "@/lib/billing/campaign-billing-queue";
 import { buildConsolidatedQueueInvoiceSelection } from "@/lib/billing/consolidated-invoice-queue";
-import type { InvoiceDraftPercents } from "@/lib/billing/operational-invoice-draft";
+import {
+  buildInvoiceConfirmPreview,
+  type InvoiceDraftPercents,
+} from "@/lib/billing/operational-invoice-draft";
 import { showErrorToastOnce } from "@/lib/ui/toast-once";
 import { devLog } from "@/lib/dev-log";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
@@ -147,8 +153,10 @@ export function BillingCampaignQueueTable({
     Record<string, InvoiceDraftPercents>
   >({});
   const [invoiceChoiceOpen, setInvoiceChoiceOpen] = useState(false);
-  const [invoiceChoiceCampaignId, setInvoiceChoiceCampaignId] = useState<string | null>(null);
-  const [invoiceSelection, setInvoiceSelection] = useState<OperationalSelectionPayload | undefined>();
+  const [confirmCampaigns, setConfirmCampaigns] = useState<InvoiceConfirmCampaignPreview[]>([]);
+  const [confirmJobs, setConfirmJobs] = useState<
+    Array<{ campaignId: string; selection: OperationalSelectionPayload }>
+  >([]);
   const [pending, startTransition] = useTransition();
   const reviewPanelRef = useRef<HTMLDivElement>(null);
   const detailCacheRef = useRef(detailCache);
@@ -157,6 +165,22 @@ export function BillingCampaignQueueTable({
   queueSelectionsRef.current = queueSelections;
   const invoiceDraftPercentsRef = useRef(invoiceDraftPercentsByCampaign);
   invoiceDraftPercentsRef.current = invoiceDraftPercentsByCampaign;
+  const confirmJobsRef = useRef(confirmJobs);
+  confirmJobsRef.current = confirmJobs;
+  const bulkRemainingRef = useRef<
+    Array<{ campaignId: string; selection: OperationalSelectionPayload }>
+  >([]);
+  const submitInvoiceDraftRef = useRef<
+    | ((input: {
+        campaignId: string;
+        rows: CampaignOperationalBillingDetail["operational_rows"];
+        percents: InvoiceDraftPercents;
+        selection: OperationalSelectionPayload;
+        mode: InvoiceTargetMode;
+        existingInvoiceId?: string;
+      }) => boolean)
+    | null
+  >(null);
 
   const operationalFilter = mapCampaignQueueFilterToOperational(filter);
 
@@ -221,20 +245,11 @@ export function BillingCampaignQueueTable({
     );
   }, [queueSelections]);
 
-  const invoiceContext = useMemo(() => {
-    const active = Object.entries(queueSelections).filter(
-      ([, selection]) => countSelection(selection) > 0
-    );
-    if (active.length !== 1) return null;
-    const [campaignId, selection] = active[0]!;
-    return {
-      campaignId,
-      payload: buildInvoiceSelectionBatch(
-        selection,
-        detailCache[campaignId]?.operational_rows ?? []
-      ),
-    };
-  }, [queueSelections, detailCache]);
+  const selectedInvoiceJobs = useMemo(() => {
+    return Object.entries(queueSelections)
+      .filter(([, selection]) => countSelection(selection) > 0)
+      .map(([campaignId, selection]) => ({ campaignId, selection }));
+  }, [queueSelections]);
 
   const ensureDetailLoaded = useCallback(
     async (campaignId: string): Promise<CampaignOperationalBillingDetail | null> => {
@@ -319,14 +334,32 @@ export function BillingCampaignQueueTable({
           });
         }
       }
+      const next = bulkRemainingRef.current.shift();
+      if (next) {
+        const detail = detailCacheRef.current[next.campaignId];
+        if (!detail) return;
+        submitInvoiceDraftRef.current?.({
+          campaignId: next.campaignId,
+          rows: detail.operational_rows,
+          percents: invoiceDraftPercentsRef.current[next.campaignId] ?? {},
+          selection: next.selection,
+          mode: "new",
+        });
+        return;
+      }
       router.refresh();
     },
     [router, selectedCampaignId]
   );
 
-  const { submit: submitInvoiceDraft, pending: invoicePending } = useOperationalInvoiceCreate({
-    onComplete: handleInvoiceComplete,
-  });
+  const { submit: submitInvoiceDraft, pending: invoicePending, pendingCampaignId } =
+    useOperationalInvoiceCreate({
+      onComplete: handleInvoiceComplete,
+      onError: () => {
+        bulkRemainingRef.current = [];
+      },
+    });
+  submitInvoiceDraftRef.current = submitInvoiceDraft;
 
   const resolveInvoiceSelection = useCallback(
     (campaignId: string, selection?: OperationalSelectionPayload): OperationalSelectionPayload => {
@@ -347,7 +380,7 @@ export function BillingCampaignQueueTable({
     async (
       campaignId: string,
       selection: OperationalSelectionPayload | undefined,
-      mode: "new" | "append",
+      mode: InvoiceTargetMode,
       existingInvoiceId?: string
     ) => {
       const detail = await ensureDetailLoaded(campaignId);
@@ -364,45 +397,66 @@ export function BillingCampaignQueueTable({
     [ensureDetailLoaded, resolveInvoiceSelection, submitInvoiceDraft]
   );
 
+  const buildCampaignConfirmPreview = useCallback(
+    async (
+      campaignId: string,
+      selection?: OperationalSelectionPayload
+    ): Promise<{
+      preview: InvoiceConfirmCampaignPreview;
+      payload: OperationalSelectionPayload;
+    } | null> => {
+      const detail = await ensureDetailLoaded(campaignId);
+      const campaign = campaigns.find((row) => row.campaign_header_id === campaignId);
+      if (!detail || !campaign) return null;
+      const payload = resolveInvoiceSelection(campaignId, selection);
+      const totals = buildInvoiceConfirmPreview({
+        rows: detail.operational_rows,
+        percents: invoiceDraftPercentsRef.current[campaignId] ?? {},
+        selection: payload,
+        campaignTotal: campaign.total_campaign_amount,
+        alreadyInvoiced: campaign.already_invoiced,
+        remainingToInvoice: campaign.remaining_to_invoice,
+      });
+      if (totals.lines.length === 0) {
+        showErrorToastOnce("Set Invoice % above 0 on at least one selected row.", {
+          id: "invoice-generation",
+        });
+        return null;
+      }
+      return {
+        payload,
+        preview: {
+          campaignId,
+          campaignName: campaign.campaign_name,
+          campaignNo: campaign.campaign_document_number,
+          currency: campaign.currency_code,
+          ...totals,
+        },
+      };
+    },
+    [campaigns, ensureDetailLoaded, resolveInvoiceSelection]
+  );
+
+  const openInvoiceConfirm = useCallback(
+    (previews: InvoiceConfirmCampaignPreview[], jobs: typeof confirmJobs) => {
+      setConfirmCampaigns(previews);
+      setConfirmJobs(jobs);
+      setInvoiceChoiceOpen(true);
+    },
+    []
+  );
+
   const beginInvoiceFlow = useCallback(
     async (
       campaignId: string,
       selection?: OperationalSelectionPayload,
-      mode: "new" | "append" | "ask" = "ask"
+      _mode: InvoiceTargetMode | "ask" = "ask"
     ) => {
-      const detail = await ensureDetailLoaded(campaignId);
-      if (!detail) return;
-      const payload = resolveInvoiceSelection(campaignId, selection);
-      const eligible = eligibleAppendableInvoices(detail.appendable_invoices);
-
-      if (mode === "new") {
-        await submitForCampaign(campaignId, payload, "new");
-        return;
-      }
-
-      if (mode === "append") {
-        if (eligible.length === 0) {
-          showErrorToastOnce("No open invoice to append to. Create a new invoice instead.", {
-            id: "invoice-generation",
-          });
-          return;
-        }
-        setInvoiceSelection(payload);
-        setInvoiceChoiceCampaignId(campaignId);
-        setInvoiceChoiceOpen(true);
-        return;
-      }
-
-      if (eligible.length > 0) {
-        setInvoiceSelection(payload);
-        setInvoiceChoiceCampaignId(campaignId);
-        setInvoiceChoiceOpen(true);
-        return;
-      }
-
-      await submitForCampaign(campaignId, payload, "new");
+      const built = await buildCampaignConfirmPreview(campaignId, selection);
+      if (!built) return;
+      openInvoiceConfirm([built.preview], [{ campaignId, selection: built.payload }]);
     },
-    [ensureDetailLoaded, resolveInvoiceSelection, submitForCampaign]
+    [buildCampaignConfirmPreview, openInvoiceConfirm]
   );
 
   const onMasterSelect = useCallback(
@@ -447,18 +501,30 @@ export function BillingCampaignQueueTable({
   );
 
   const handleQueueInvoiceSelected = useCallback(
-    (mode: "new" | "append") => {
-      if (!invoiceContext) {
-        toast.error("Select operational rows within one campaign to invoice.");
+    async (mode: InvoiceTargetMode) => {
+      if (selectedInvoiceJobs.length === 0) {
+        toast.error("Select operational rows to invoice.");
         return;
       }
-      devLog("[queue-drilldown] invoice selected from billing queue", {
-        campaignId: invoiceContext.campaignId,
-        mode,
-      });
-      void beginInvoiceFlow(invoiceContext.campaignId, invoiceContext.payload, mode);
+      if (mode === "append" && selectedInvoiceJobs.length !== 1) {
+        toast.error("Append to an open invoice works on one campaign at a time.");
+        return;
+      }
+      const previews: InvoiceConfirmCampaignPreview[] = [];
+      const jobs: Array<{ campaignId: string; selection: OperationalSelectionPayload }> = [];
+      for (const job of selectedInvoiceJobs) {
+        const payload = buildInvoiceSelectionBatch(
+          job.selection,
+          detailCacheRef.current[job.campaignId]?.operational_rows ?? []
+        );
+        const built = await buildCampaignConfirmPreview(job.campaignId, payload);
+        if (!built) return;
+        previews.push(built.preview);
+        jobs.push({ campaignId: job.campaignId, selection: built.payload });
+      }
+      openInvoiceConfirm(previews, jobs);
     },
-    [invoiceContext, beginInvoiceFlow]
+    [buildCampaignConfirmPreview, openInvoiceConfirm, selectedInvoiceJobs]
   );
 
   const setCampaignInvoicePercents = useCallback(
@@ -475,9 +541,10 @@ export function BillingCampaignQueueTable({
   const reviewDetail = selectedCampaignId ? detailCache[selectedCampaignId] : null;
   const reviewLoading =
     pending && selectedCampaignId !== null && !detailCache[selectedCampaignId ?? ""];
-  const invoiceChoiceDetail = invoiceChoiceCampaignId
-    ? detailCache[invoiceChoiceCampaignId]
-    : null;
+  const confirmAppendableInvoices =
+    confirmJobs.length === 1
+      ? (detailCache[confirmJobs[0]!.campaignId]?.appendable_invoices ?? [])
+      : [];
 
   useEffect(() => {
     if (!selectedCampaignId || !reviewOpen) return;
@@ -559,7 +626,8 @@ export function BillingCampaignQueueTable({
                     onInvoicePercentsChange={(next) =>
                       setCampaignInvoicePercents(campaignId, next)
                     }
-                    invoicePending={invoicePending}
+                    invoicePending={pendingCampaignId === campaignId}
+                    invoiceDisabled={Boolean(pendingCampaignId)}
                     onToggleExpand={onToggleExpand}
                     onMasterSelect={onMasterSelect}
                     onSelectForReview={onSelectForReview}
@@ -614,7 +682,7 @@ export function BillingCampaignQueueTable({
               onInvoicePercentsChange={(next) => {
                 if (selectedCampaignId) setCampaignInvoicePercents(selectedCampaignId, next);
               }}
-              invoicePending={invoicePending}
+              invoicePending={pendingCampaignId === selectedCampaignId}
               onInvoice={(payload) => {
                 if (selectedCampaignId) void beginInvoiceFlow(selectedCampaignId, payload);
               }}
@@ -633,10 +701,12 @@ export function BillingCampaignQueueTable({
         <PlatformFloatingBarDivider />
 
         <span className="shrink-0 px-2 text-xs text-muted-foreground">
-          {invoiceContext
-            ? (campaigns.find((c) => c.campaign_header_id === invoiceContext.campaignId)
-                ?.campaign_name ?? "Campaign")
-            : "Select rows in one campaign only"}
+          {selectedInvoiceJobs.length === 0
+            ? "Select rows to invoice"
+            : selectedInvoiceJobs.length === 1
+              ? (campaigns.find((c) => c.campaign_header_id === selectedInvoiceJobs[0]!.campaignId)
+                  ?.campaign_name ?? "Campaign")
+              : `${selectedInvoiceJobs.length} campaigns selected`}
         </span>
         {selectedRemainingByCurrency.length > 0 ? (
           <span className="flex gap-4 border-l border-border/60 pl-3">
@@ -664,39 +734,49 @@ export function BillingCampaignQueueTable({
           <PlatformFloatingBarPrimaryButton
             action={{
               id: "new-invoice",
-              label: invoicePending ? "Generating…" : "Create new invoice",
-              disabled: !invoiceContext || invoicePending,
-              onClick: () => handleQueueInvoiceSelected("new"),
+              label: invoicePending
+                ? "Generating…"
+                : selectedInvoiceJobs.length > 1
+                  ? `Invoice ${selectedInvoiceJobs.length} campaigns`
+                  : "Create new invoice",
+              disabled: selectedInvoiceJobs.length === 0 || invoicePending,
+              onClick: () => void handleQueueInvoiceSelected("new"),
             }}
           />
           <PlatformFloatingBarSecondaryLink
             action={{
               id: "append-invoice",
               label: invoicePending ? "Generating…" : "Append to open invoice",
-              disabled: !invoiceContext || invoicePending,
-              onClick: () => handleQueueInvoiceSelected("append"),
+              disabled: selectedInvoiceJobs.length !== 1 || invoicePending,
+              onClick: () => void handleQueueInvoiceSelected("append"),
             }}
           />
         </div>
       </OperationalFloatingActionBar>
 
-      <InvoiceTargetChoiceDialog
-        open={invoiceChoiceOpen && Boolean(invoiceChoiceDetail)}
+      <InvoiceConfirmDialog
+        open={invoiceChoiceOpen && confirmCampaigns.length > 0}
         onOpenChange={(open) => {
           setInvoiceChoiceOpen(open);
           if (!open) {
-            setInvoiceChoiceCampaignId(null);
-            setInvoiceSelection(undefined);
+            setConfirmCampaigns([]);
+            setConfirmJobs([]);
           }
         }}
-        appendableInvoices={invoiceChoiceDetail?.appendable_invoices ?? []}
+        campaigns={confirmCampaigns}
+        appendableInvoices={confirmAppendableInvoices}
+        pending={invoicePending}
         onConfirm={(mode, existingInvoiceId) => {
-          if (!invoiceChoiceCampaignId) return;
+          const jobs = confirmJobsRef.current;
+          if (jobs.length === 0) return;
+          setInvoiceChoiceOpen(false);
+          const [first, ...rest] = jobs;
+          bulkRemainingRef.current = rest;
           void submitForCampaign(
-            invoiceChoiceCampaignId,
-            invoiceSelection,
-            mode,
-            existingInvoiceId
+            first!.campaignId,
+            first!.selection,
+            rest.length > 0 ? "new" : mode,
+            rest.length > 0 ? undefined : existingInvoiceId
           );
         }}
       />

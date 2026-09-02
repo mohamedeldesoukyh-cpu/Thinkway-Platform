@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Billing & finance billing-v3 chrome match.
+**Focus:** Billing invoice confirm + scoped generating state.
+
+## Shipped 2026-09-02 — Invoice confirm before generate
+
+Clicking Invoice on `/billing` no longer puts every row into Generating. Confirm dialog shows total, already invoiced, this invoice, remaining, Proceed/Cancel. Bulk selection shows a line table. Invoice button is Thinkway green. No migrations. Not on Production.
 
 ## Shipped 2026-09-02 — Billing v3 page chrome match
 

@@ -261,6 +261,70 @@ export function buildInvoiceDraftSubmit(
   return { payload, allocations };
 }
 
+export type InvoiceConfirmLinePreview = {
+  id: string;
+  label: string;
+  documentNumber: string | null;
+  influencerName: string | null;
+  percent: number;
+  toBeInvoiced: number;
+  remaining: number;
+};
+
+export type InvoiceConfirmTotals = {
+  thisInvoice: number;
+  thisInvoiceVat: number;
+  thisInvoiceTotal: number;
+  remainingAfter: number;
+  campaignTotal: number;
+  alreadyInvoiced: number;
+  lines: InvoiceConfirmLinePreview[];
+};
+
+/** Totals and line list for the invoice confirmation dialog. */
+export function buildInvoiceConfirmPreview(input: {
+  rows: OperationalBillingRow[];
+  percents: InvoiceDraftPercents;
+  selection: OperationalSelectionPayload;
+  campaignTotal: number;
+  alreadyInvoiced: number;
+  remainingToInvoice: number;
+}): InvoiceConfirmTotals {
+  const bundle = buildInvoiceDraftSubmit(input.rows, input.percents, input.selection);
+  const lines: InvoiceConfirmLinePreview[] = [];
+  let thisInvoice = 0;
+  let thisInvoiceVat = 0;
+
+  for (const leaf of collectBillingLeaves(input.rows)) {
+    if (!isRowInInvoiceSubmitPayload(leaf, bundle.payload)) continue;
+    const draft = computeInvoiceDraftLine(leaf, input.percents);
+    if (draft.toBeInvoiced <= 0.01) continue;
+    thisInvoice += draft.toBeInvoiced;
+    thisInvoiceVat += draft.vatAmount;
+    lines.push({
+      id: leaf.id,
+      label: leaf.label,
+      documentNumber: leaf.document_number,
+      influencerName: leaf.influencer_name,
+      percent: draft.percent,
+      toBeInvoiced: draft.toBeInvoiced,
+      remaining: draft.remaining,
+    });
+  }
+
+  const billed = roundMoney(thisInvoice);
+  const vat = roundMoney(thisInvoiceVat);
+  return {
+    campaignTotal: input.campaignTotal,
+    alreadyInvoiced: input.alreadyInvoiced,
+    thisInvoice: billed,
+    thisInvoiceVat: vat,
+    thisInvoiceTotal: roundMoney(billed + vat),
+    remainingAfter: roundMoney(input.remainingToInvoice - billed),
+    lines,
+  };
+}
+
 export function buildCreateInvoiceFormData(input: {
   campaignId: string;
   payload: OperationalSelectionPayload;

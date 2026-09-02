@@ -62,13 +62,11 @@ import {
   resolveInvoiceActionForSelection,
 } from "@/lib/billing/regeneration-eligibility";
 import {
-  InvoiceTargetChoiceDialog,
-  type InvoiceTargetMode,
-} from "@/features/billing/components/invoice-target-choice-dialog";
-import {
-  eligibleAppendableInvoices,
-  useOperationalInvoiceCreate,
-} from "@/features/billing/hooks/use-operational-invoice-create";
+  InvoiceConfirmDialog,
+  type InvoiceConfirmCampaignPreview,
+} from "@/features/billing/components/invoice-confirm-dialog";
+import { type InvoiceTargetMode } from "@/features/billing/components/invoice-target-choice-dialog";
+import { useOperationalInvoiceCreate } from "@/features/billing/hooks/use-operational-invoice-create";
 import type {
   AssignmentBillingGroup,
   BillingLineRow,
@@ -83,7 +81,10 @@ import {
   type OperationalSelectionPayload,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
-import type { InvoiceDraftPercents } from "@/lib/billing/operational-invoice-draft";
+import {
+  buildInvoiceConfirmPreview,
+  type InvoiceDraftPercents,
+} from "@/lib/billing/operational-invoice-draft";
 import {
   OPERATIONAL_BILLING_FILTER_OPTIONS,
   type OperationalBillingFilter,
@@ -202,6 +203,8 @@ export function CampaignBillingTab({
   const [invoiceSelection, setInvoiceSelection] = useState<
     OperationalSelectionPayload | undefined
   >();
+  const [invoiceConfirmPreview, setInvoiceConfirmPreview] =
+    useState<InvoiceConfirmCampaignPreview | null>(null);
   const [invoiceDraftPercents, setInvoiceDraftPercents] = useState<InvoiceDraftPercents>({});
   const { submit: submitInvoiceDraft, pending: invoicePending } = useOperationalInvoiceCreate({
     onComplete: () => {
@@ -405,13 +408,35 @@ export function CampaignBillingTab({
       };
     }
 
-    const eligible = eligibleAppendableInvoices(appendableInvoices);
-    if (eligible.length > 0) {
-      setInvoiceSelection(flowSelection);
-      setInvoiceChoiceOpen(true);
+    const rows = operationalBilling.operational_rows;
+    const rawSelection =
+      flowSelection ??
+      selectionToSubmitPayload(drilldownSelection, rows);
+    const resolvedSelection =
+      countSubmitPayload(rawSelection) > 0
+        ? selectionToSubmitPayload(payloadToSelection(rawSelection), rows)
+        : buildConsolidatedQueueInvoiceSelection(rows);
+    const totals = buildInvoiceConfirmPreview({
+      rows,
+      percents: invoiceDraftPercents,
+      selection: resolvedSelection,
+      campaignTotal: operationalBilling.rollup.total_campaign_amount,
+      alreadyInvoiced: operationalBilling.rollup.already_invoiced,
+      remainingToInvoice: operationalBilling.rollup.remaining_to_invoice,
+    });
+    if (totals.lines.length === 0) {
+      submitOperationalInvoice(resolvedSelection, "new");
       return;
     }
-    submitOperationalInvoice(flowSelection, "new");
+    setInvoiceSelection(resolvedSelection);
+    setInvoiceConfirmPreview({
+      campaignId: workspace.id,
+      campaignName: workspace.name,
+      campaignNo: workspace.document_number,
+      currency,
+      ...totals,
+    });
+    setInvoiceChoiceOpen(true);
   }
 
   function handleQueueGenerateInvoice() {
@@ -800,11 +825,17 @@ export function CampaignBillingTab({
 
       {operationalBilling ? (
         <>
-          <InvoiceTargetChoiceDialog
-            open={invoiceChoiceOpen}
-            onOpenChange={setInvoiceChoiceOpen}
+          <InvoiceConfirmDialog
+            open={invoiceChoiceOpen && invoiceConfirmPreview != null}
+            onOpenChange={(open) => {
+              setInvoiceChoiceOpen(open);
+              if (!open) setInvoiceConfirmPreview(null);
+            }}
+            campaigns={invoiceConfirmPreview ? [invoiceConfirmPreview] : []}
             appendableInvoices={appendableInvoices}
+            pending={invoicePending}
             onConfirm={(mode, existingInvoiceId) => {
+              setInvoiceChoiceOpen(false);
               submitOperationalInvoice(invoiceSelection, mode, existingInvoiceId);
             }}
           />

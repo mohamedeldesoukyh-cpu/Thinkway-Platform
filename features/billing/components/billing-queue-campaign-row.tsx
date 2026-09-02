@@ -49,6 +49,7 @@ export type BillingQueueCampaignRowProps = {
   invoicePercents?: InvoiceDraftPercents;
   onInvoicePercentsChange?: (next: InvoiceDraftPercents) => void;
   invoicePending?: boolean;
+  invoiceDisabled?: boolean;
 };
 
 export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
@@ -67,6 +68,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
   invoicePercents,
   onInvoicePercentsChange,
   invoicePending = false,
+  invoiceDisabled = false,
 }: BillingQueueCampaignRowProps) {
   const campaignId = row.campaign_header_id;
   const { cols, template } = useBillingQueueGridTemplate();
@@ -195,8 +197,8 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
           <span className="bq-act" onClick={(event) => event.stopPropagation()}>
             <button
               type="button"
-              className="bq-b sm"
-              disabled={invoicePending}
+              className="bq-b sm pri"
+              disabled={invoiceDisabled || invoicePending}
               onClick={() => onOpenInvoice(campaignId)}
             >
               {invoicePending ? "Generating…" : "Invoice"}

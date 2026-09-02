@@ -606,6 +606,20 @@
   border-radius: 8px;
 }
 
+.tw-billing-v3 .bq-b.pri {
+  border-color: rgba(29, 158, 117, 0.55);
+  background: var(--bq-blue);
+  color: #fff;
+  font-weight: 700;
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.08), 0 2px 14px -3px rgba(29, 158, 117, 0.35);
+}
+
+.tw-billing-v3 .bq-b.pri:hover {
+  background: var(--bq-bi);
+  border-color: var(--bq-bi);
+  color: #fff;
+}
+
 .tw-billing-v3 .bq-card__h .inline-flex,
 .tw-billing-v3 .thinkway-campaign-section-head .inline-flex {
   gap: 8px;

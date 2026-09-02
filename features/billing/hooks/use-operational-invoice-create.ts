@@ -1,6 +1,6 @@
 "use client";
 
-import { startTransition, useActionState, useEffect, useRef } from "react";
+import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import {
   createInvoiceFromLinesAction,
@@ -42,6 +42,7 @@ export function eligibleAppendableInvoices(
 
 export function useOperationalInvoiceCreate(options?: {
   onComplete?: (campaignId: string) => void | Promise<void>;
+  onError?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(
     createInvoiceFromLinesAction,
@@ -50,6 +51,9 @@ export function useOperationalInvoiceCreate(options?: {
   const handledRef = useRef<string | null>(null);
   const onCompleteRef = useRef(options?.onComplete);
   onCompleteRef.current = options?.onComplete;
+  const onErrorRef = useRef(options?.onError);
+  onErrorRef.current = options?.onError;
+  const [pendingCampaignId, setPendingCampaignId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!state.message) return;
@@ -57,12 +61,15 @@ export function useOperationalInvoiceCreate(options?: {
     if (handledRef.current === actionKey) return;
     handledRef.current = actionKey;
 
+    setPendingCampaignId(null);
+
     if (state.ok) {
       showSuccessToastOnce(state.message, { id: "invoice-generation", duration: 6000 });
       const campaignId = state.campaignId;
       if (campaignId) void onCompleteRef.current?.(campaignId);
       return;
     }
+    onErrorRef.current?.();
     showErrorToastOnce(state.message, { id: "invoice-generation" });
   }, [state.message, state.ok, state.invoiceId, state.campaignId]);
 
@@ -88,6 +95,7 @@ export function useOperationalInvoiceCreate(options?: {
 
     resetToastOnce("invoice-generation");
     handledRef.current = null;
+    setPendingCampaignId(input.campaignId);
     const formData = buildCreateInvoiceFormData({
       campaignId: input.campaignId,
       payload: bundle.payload,
@@ -101,5 +109,5 @@ export function useOperationalInvoiceCreate(options?: {
     return true;
   }
 
-  return { submit, pending };
+  return { submit, pending, pendingCampaignId };
 }

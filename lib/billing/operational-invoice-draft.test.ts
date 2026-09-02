@@ -5,6 +5,7 @@ import assert from "node:assert/strict";
 
 import {
   CAMPAIGN_INVOICE_DRAFT_ID,
+  buildInvoiceConfirmPreview,
   buildInvoiceDraftSubmit,
   cascadeInvoiceDraftPercent,
   cascadeInvoiceDraftToBeInvoiced,
@@ -142,6 +143,27 @@ function testSubmitOmitsZeroPercentLeaves() {
   assert.equal(submit.allocations[invoiceDraftKey(rows[1]!)], undefined);
 }
 
+function testConfirmPreviewTotalsAndLines() {
+  const rows = [
+    assignment(A1, 10_000, { label: "Creator A", document_number: "TW-2026-0001-A" }),
+    assignment(A2, 10_000, { label: "Creator B", document_number: "TW-2026-0001-B" }),
+  ];
+  const percents = cascadeInvoiceDraftPercent(rows, A2, 50, {});
+  const preview = buildInvoiceConfirmPreview({
+    rows,
+    percents,
+    selection: allLines(rows),
+    campaignTotal: 20_000,
+    alreadyInvoiced: 0,
+    remainingToInvoice: 20_000,
+  });
+  assert.equal(preview.thisInvoice, 15_000);
+  assert.equal(preview.remainingAfter, 5_000);
+  assert.equal(preview.lines.length, 2);
+  assert.equal(preview.lines[0]?.label, "Creator A");
+  assert.equal(preview.lines[1]?.toBeInvoiced, 5_000);
+}
+
 function run() {
   testDefaultIsOneHundredPercent();
   testMainLinePercentCascadesToAssignments();
@@ -150,6 +172,7 @@ function run() {
   testAssignmentPercentCascadesToChildren();
   testVatOnToBeInvoicedSlice();
   testSubmitOmitsZeroPercentLeaves();
+  testConfirmPreviewTotalsAndLines();
   console.log("operational-invoice-draft.test.ts: ok");
 }
 
