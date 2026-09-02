@@ -57,6 +57,8 @@ type BillingCampaignDrilldownProps = {
   invoicePercents?: InvoiceDraftPercents;
   onInvoicePercentsChange?: (next: InvoiceDraftPercents) => void;
   invoicePending?: boolean;
+  /** Nested under a campaign queue row — no second header, tinted surface. */
+  embedded?: boolean;
 };
 
 function BillingCampaignDrilldownInner({
@@ -70,6 +72,7 @@ function BillingCampaignDrilldownInner({
   invoicePercents: controlledPercents,
   onInvoicePercentsChange,
   invoicePending = false,
+  embedded = false,
 }: BillingCampaignDrilldownProps) {
   const campaign = appearance === "campaign";
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -108,6 +111,11 @@ function BillingCampaignDrilldownInner({
   const filteredRows = useMemo(
     () => filterOperationalBillingTree(rootRows, filter),
     [rootRows, filter]
+  );
+
+  const assignmentRows = useMemo(
+    () => filteredRows.filter((row) => row.kind === "assignment"),
+    [filteredRows]
   );
 
   const selectedCount = countSelection(selection);
@@ -165,8 +173,12 @@ function BillingCampaignDrilldownInner({
     <div
       className={cn(
         OPERATIONAL_TABLE_FONT,
-        "space-y-3 border-t",
-        showBulkSelectionControls ? "p-4" : "px-4 py-3",
+        embedded
+          ? "bg-muted/50 px-3 py-2"
+          : cn(
+              "space-y-3 border-t",
+              showBulkSelectionControls ? "p-4" : "px-4 py-3"
+            ),
         operationalFloatingBarContentClass(showFloatingBar)
       )}
     >
@@ -212,7 +224,7 @@ function BillingCampaignDrilldownInner({
         ) : null}
       </div>
 
-      {filteredRows.length === 0 ? (
+      {assignmentRows.length === 0 ? (
         <p
           className={cn(
             "text-muted-foreground",
@@ -222,32 +234,36 @@ function BillingCampaignDrilldownInner({
           No operational rows match this filter.
         </p>
       ) : (
-        <CampaignOperationalTable>
-          <CampaignOperationalTableHeader>
-            <CampaignOperationalTableHeaderRow>
-              <CampaignOperationalTableHead className="w-8" />
-              <CampaignOperationalTableHead className="w-10" />
-              <CampaignOperationalTableHead>Line</CampaignOperationalTableHead>
-              <CampaignOperationalTableHead className="text-right">
-                Invoice amount
-              </CampaignOperationalTableHead>
-              <CampaignOperationalTableHead className="text-right">
-                Invoice %
-              </CampaignOperationalTableHead>
-              <CampaignOperationalTableHead className="text-right">
-                To be invoiced
-              </CampaignOperationalTableHead>
-              <CampaignOperationalTableHead className="text-right">VAT</CampaignOperationalTableHead>
-              <CampaignOperationalTableHead className="text-right">
-                Total invoice
-              </CampaignOperationalTableHead>
-              <CampaignOperationalTableHead className="text-right">
-                Remaining
-              </CampaignOperationalTableHead>
-            </CampaignOperationalTableHeaderRow>
-          </CampaignOperationalTableHeader>
+        <CampaignOperationalTable
+          aria-label="Assignment invoice lines"
+          className={embedded ? "bg-transparent" : undefined}
+        >
+          {embedded ? null : (
+            <CampaignOperationalTableHeader>
+              <CampaignOperationalTableHeaderRow>
+                <CampaignOperationalTableHead className="w-10" />
+                <CampaignOperationalTableHead>Line</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right">
+                  Invoice amount
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right">
+                  Invoice %
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right">
+                  To be invoiced
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right">VAT</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right">
+                  Total invoice
+                </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead className="text-right">
+                  Remaining
+                </CampaignOperationalTableHead>
+              </CampaignOperationalTableHeaderRow>
+            </CampaignOperationalTableHeader>
+          )}
           <CampaignOperationalTableBody>
-            {filteredRows.map((assignment) => (
+            {assignmentRows.map((assignment) => (
               <OperationalRowTree
                 key={assignment.id}
                 row={assignment}
@@ -255,7 +271,7 @@ function BillingCampaignDrilldownInner({
                 currency={detail.currency_code}
                 rootRows={rootRows}
                 selection={selection}
-                isOpen={expanded.has(assignment.id)}
+                isOpen={false}
                 expandedIds={expanded}
                 percents={percents}
                 onPercentChange={handlePercentChange}
@@ -263,6 +279,7 @@ function BillingCampaignDrilldownInner({
                 onToggleExpand={toggleExpanded}
                 onToggleSelect={toggleRow}
                 appearance={appearance}
+                showNestedRows={false}
               />
             ))}
           </CampaignOperationalTableBody>

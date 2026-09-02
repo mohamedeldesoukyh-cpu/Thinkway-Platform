@@ -229,7 +229,10 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
       </CampaignOperationalTableRow>
       {expanded ? (
         <CampaignOperationalTableRow>
-          <CampaignOperationalTableCell colSpan={visibleColumnCount} className="bg-background p-0">
+          <CampaignOperationalTableCell
+            colSpan={visibleColumnCount}
+            className="border-t-0 border-l-[3px] border-l-primary/40 bg-muted/50 p-0"
+          >
             {detailLoading && !detail ? (
               <p className="px-4 py-8 text-[11px] text-muted-foreground">
                 Loading operational billing…
@@ -244,6 +247,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
                 invoicePercents={invoicePercents}
                 onInvoicePercentsChange={onInvoicePercentsChange}
                 invoicePending={invoicePending}
+                embedded
               />
             ) : (
               <p className="px-4 py-8 text-[11px] text-muted-foreground">

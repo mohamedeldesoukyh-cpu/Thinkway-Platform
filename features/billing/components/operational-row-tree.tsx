@@ -48,6 +48,11 @@ export type OperationalRowTreeProps = {
   onToBeInvoicedChange: (rowId: string, amount: number) => void;
   /** Match campaign workspace assignment table typography */
   appearance?: "default" | "campaign";
+  /**
+   * Invoice table shows assignment lines only.
+   * Deliverable/post children stay in the draft engine for cascade + create.
+   */
+  showNestedRows?: boolean;
 };
 
 function isRowMuted(row: OperationalBillingRow): boolean {
@@ -211,10 +216,11 @@ export const OperationalRowTree = memo(function OperationalRowTree({
   onPercentChange,
   onToBeInvoicedChange,
   appearance = "default",
+  showNestedRows = false,
 }: OperationalRowTreeProps) {
   const campaign = appearance === "campaign";
   traceChildrenAccess("OperationalRowTree:hasChildren", row, "length");
-  const hasChildren = row.children.length > 0;
+  const hasChildren = showNestedRows && row.children.length > 0;
   const selectionStatus = useMemo(
     () => getRowSelectionStatus(row, selection),
     [row, selection]
@@ -241,23 +247,25 @@ export const OperationalRowTree = memo(function OperationalRowTree({
         className={cn(muted && "opacity-50")}
         data-depth={depth}
       >
-        <CampaignOperationalTableCell className="w-8 pr-0">
-          {hasChildren ? (
-            <button
-              type="button"
-              className="rounded p-0.5 hover:bg-muted"
-              onClick={handleExpand}
-              aria-expanded={isOpen}
-              aria-label={isOpen ? `Collapse ${row.label}` : `Expand ${row.label}`}
-            >
-              {isOpen ? (
-                <ChevronDownIcon className="size-3.5" />
-              ) : (
-                <ChevronRightIcon className="size-3.5" />
-              )}
-            </button>
-          ) : null}
-        </CampaignOperationalTableCell>
+        {showNestedRows ? (
+          <CampaignOperationalTableCell className="w-8 pr-0">
+            {hasChildren ? (
+              <button
+                type="button"
+                className="rounded p-0.5 hover:bg-muted"
+                onClick={handleExpand}
+                aria-expanded={isOpen}
+                aria-label={isOpen ? `Collapse ${row.label}` : `Expand ${row.label}`}
+              >
+                {isOpen ? (
+                  <ChevronDownIcon className="size-3.5" />
+                ) : (
+                  <ChevronRightIcon className="size-3.5" />
+                )}
+              </button>
+            ) : null}
+          </CampaignOperationalTableCell>
+        ) : null}
         <CampaignOperationalTableCell className="w-10 pr-0">
           <OperationalSelectionCheckbox
             status={selectionStatus}
@@ -316,7 +324,7 @@ export const OperationalRowTree = memo(function OperationalRowTree({
           onToBeInvoicedChange={(amount) => onToBeInvoicedChange(row.id, amount)}
         />
       </CampaignOperationalTableRow>
-      {isOpen
+      {showNestedRows && isOpen
         ? row.children.map((child) => (
             <OperationalRowTree
               key={child.id}
@@ -333,6 +341,7 @@ export const OperationalRowTree = memo(function OperationalRowTree({
               onToggleExpand={onToggleExpand}
               onToggleSelect={onToggleSelect}
               appearance={appearance}
+              showNestedRows={showNestedRows}
             />
           ))
         : null}
