@@ -162,9 +162,9 @@ const navGroups: NavGroup[] = [
     iconTone: "teal",
     items: [
       { kind: "link", href: "/ios/client", label: "Client IOs", icon: FileSignatureIcon },
-      { kind: "link", href: "/ios/vendor", label: "Vendor IOs", icon: FileSignatureIcon },
+      { kind: "link", href: "/ios/vendor", label: "Vendor IO register", icon: FileSignatureIcon },
       { kind: "link", href: "/billing", label: "Billing", icon: ReceiptIcon },
-      { kind: "link", href: "/finance/po-tracker", label: "PO Tracker", icon: ReceiptIcon },
+      { kind: "link", href: "/finance/po-tracker", label: "PO tracker", icon: ReceiptIcon },
     ],
   },
   {
@@ -203,16 +203,16 @@ const navGroups: NavGroup[] = [
       { kind: "link", href: "/treasury", label: "Treasury", icon: WalletIcon },
       { kind: "link", href: "/finance/posting-center", label: "Posting center", icon: SendIcon },
       { kind: "subheader", label: "Compliance & planning" },
-      { kind: "link", href: "/finance/vat", label: "VAT & Tax", icon: PercentIcon },
+      { kind: "link", href: "/finance/vat", label: "VAT", icon: PercentIcon },
       { kind: "link", href: "/finance/exchange-rates", label: "Exchange rates", icon: RefreshCwIcon },
       { kind: "link", href: "/finance/periods", label: "Periods", icon: CalendarRangeIcon },
       { kind: "link", href: "/planning", label: "Planning", icon: CalendarClockIcon },
       { kind: "subheader", label: "Move from Acc to another" },
-      { kind: "link", href: "/operations/move", label: "Move", icon: ArrowRightLeftIcon },
+      { kind: "link", href: "/operations/move", label: "Move between accounts", icon: ArrowRightLeftIcon },
       {
         kind: "link",
         href: "/operations/reassignment",
-        label: "Reassignment",
+        label: "Reassignment center",
         icon: ArrowRightLeftIcon,
       },
     ],
@@ -227,7 +227,7 @@ const navGroups: NavGroup[] = [
       ...(isIntelligenceEnabled()
         ? [{ kind: "link" as const, href: "/intelligence", label: "Intelligence", icon: BrainIcon }]
         : []),
-      { kind: "link", href: "/links", label: "Link Generator", icon: Link2Icon },
+      { kind: "link", href: "/links", label: "Link generator", icon: Link2Icon },
     ],
   },
   {
@@ -686,7 +686,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                       <span className={GROUP_ICON_TONE_CLASS[group.iconTone]}>
                         <GroupIcon className="size-4 stroke-[1.75] text-sidebar-muted-foreground" />
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-[11px] font-semibold tracking-[0.08em] text-sidebar-muted-foreground uppercase">
+                      <span className="min-w-0 flex-1 whitespace-normal break-words text-[11px] font-semibold tracking-[0.08em] text-sidebar-muted-foreground uppercase leading-snug">
                         {group.label}
                       </span>
                       <ChevronRightIcon
@@ -737,7 +737,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                             />
                             <span
                               className={cn(
-                                "truncate",
+                                "min-w-0 whitespace-normal break-words leading-snug",
                                 active && "font-semibold text-primary dark:text-blue-400"
                               )}
                             >

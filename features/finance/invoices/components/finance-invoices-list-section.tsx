@@ -2,13 +2,11 @@
 
 import { useMemo } from "react";
 
-import { FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
+import { FinanceSuiteCard, FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
 import { formatKpiCurrency } from "@/components/shared/kpi/kpi-utils";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { formatBillingMoneyCompact } from "@/features/billing/utils";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import {
   FINANCE_INVOICE_REGISTER_COLUMN_METAS_WITH_ACTIONS,
   FinanceInvoiceRegisterTable,
@@ -64,7 +62,7 @@ export function FinanceInvoicesListSection({ rows }: FinanceInvoicesListSectionP
             id: "vat",
             label: "Output VAT",
             value: formatKpi(vat),
-            hint: "VAT is not operational revenue",
+            hint: "14% on every line",
           },
           {
             id: "locked",
@@ -87,17 +85,10 @@ export function FinanceInvoicesListSection({ rows }: FinanceInvoicesListSectionP
         rows={rows}
         filterAccessors={FINANCE_INVOICE_REGISTER_FILTER_ACCESSORS}
       >
-        <OperationalTableSection
-          wide
-          tableOnly
-          cardSurface
-          leading={
-            <CampaignOperationalSectionHeader
-              title="Invoice register"
-              description={`${rows.length} invoice${rows.length === 1 ? "" : "s"} · revenue before and after VAT`}
-              actions={<OperationalTableControlsSlot contextLabel="Invoice register" />}
-            />
-          }
+        <FinanceSuiteCard
+          title="Invoice register"
+          subtitle="revenue before and after VAT · VAT is never part of operational revenue or GP"
+          actions={<OperationalTableControlsSlot contextLabel="Invoice register" />}
         >
           {rows.length === 0 ? (
             <FinanceSuiteEmpty
@@ -107,7 +98,7 @@ export function FinanceInvoicesListSection({ rows }: FinanceInvoicesListSectionP
           ) : (
             <FinanceInvoiceRegisterTable rows={rows} showUngenerate />
           )}
-        </OperationalTableSection>
+        </FinanceSuiteCard>
       </OperationalTableSuiteProvider>
     </div>
   );

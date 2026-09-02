@@ -129,7 +129,7 @@ export function PaymentAllocationSection({
         <div className="max-h-48 space-y-2 overflow-y-auto">
           {open.slice(0, 15).map((inv) => (
             <div key={inv.id} className="flex items-center gap-2 text-xs">
-              <span className="min-w-0 flex-1 truncate">
+              <span className="min-w-0 flex-1 whitespace-normal break-words">
                 {formatDocumentNumberForDisplay(inv.document_number)}
               </span>
               <Input

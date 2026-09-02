@@ -29,7 +29,7 @@ function buildVendorPayablesColumns(
     {
       id: "campaign",
       label: "Campaign",
-      cellClassName: "max-w-[160px] truncate",
+      cellClassName: "max-w-[160px] whitespace-normal break-words",
       renderCell: (row) => row.campaign_name,
     },
     {

@@ -195,7 +195,7 @@ function buildPeriodColumns(
 
       label: "Notes",
 
-      cellClassName: "max-w-[200px] truncate",
+      cellClassName: "max-w-[200px] whitespace-normal break-words",
 
       renderCell: (period) => period.notes ?? "—",
 

@@ -103,7 +103,7 @@ const REASSIGNMENT_BATCH_COLUMNS: OperationalConfigurableColumnDef<MovementBatch
   {
     id: "reason",
     label: "Reason",
-    cellClassName: "max-w-[200px] truncate",
+    cellClassName: "max-w-[200px] whitespace-normal break-words",
     renderCell: (batch) => batch.reason,
   },
 ];

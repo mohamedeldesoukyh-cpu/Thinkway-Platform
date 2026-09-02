@@ -50,7 +50,7 @@ function buildInvoicesArColumns(
     {
       id: "client",
       label: "Client",
-      cellClassName: "max-w-[140px] truncate",
+      cellClassName: "max-w-[140px] whitespace-normal break-words",
       renderCell: (inv) => inv.client_name,
     },
     {

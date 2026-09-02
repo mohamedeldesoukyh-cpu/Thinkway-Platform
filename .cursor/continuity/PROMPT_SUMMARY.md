@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Finance suite header match + billing vendor payments by assignment.
+**Focus:** Finance suite wrap + remaining mock match.
+
+## Shipped 2026-09-02 — Finance suite text wrap
+
+Overflowing copy on finance-suite pages wraps instead of clipping: headers, KPI labels/values, card titles, table heads/cells, tiles, notes, sidebar nav labels. Buttons and status pills stay single-line. No migrations. Not on Production.
 
 ## Shipped 2026-09-02 — Vendor payments by assignment
 

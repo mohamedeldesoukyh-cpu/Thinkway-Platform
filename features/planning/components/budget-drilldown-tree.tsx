@@ -77,7 +77,7 @@ function DrilldownNode({ row, depth }: { row: DrillRow; depth: number }) {
         ) : (
           <span className="size-4 shrink-0" />
         )}
-        <span className="min-w-0 flex-1 truncate font-medium">{row.label}</span>
+        <span className="min-w-0 flex-1 whitespace-normal break-words font-medium">{row.label}</span>
         <span className="hidden font-mono text-xs sm:inline">{format(row.budget)}</span>
         <span className="hidden font-mono text-xs text-muted-foreground sm:inline">
           {format(row.actual)}

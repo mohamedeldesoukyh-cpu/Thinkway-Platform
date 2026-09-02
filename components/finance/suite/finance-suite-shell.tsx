@@ -36,7 +36,7 @@ export function FinanceSuiteShell({
             variant="icon"
           />
         ) : null}
-        <div>
+        <div className="min-w-0">
           <h1>{title}</h1>
           {description ? <p>{description}</p> : null}
         </div>

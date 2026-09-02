@@ -62,8 +62,9 @@
 
 .finance-suite .tw-main{min-width:0;padding:18px 22px 40px}
 .finance-suite .tw-hd{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-bottom:14px}
-.finance-suite .tw-hd h1{font-size:19px;font-weight:600;letter-spacing:-.35px}
-.finance-suite .tw-hd p{font-size:12px;color:var(--tw-mut);margin-top:2px;max-width:640px}
+.finance-suite .tw-hd > div{min-width:0;flex:1 1 16rem}
+.finance-suite .tw-hd h1{font-size:19px;font-weight:600;letter-spacing:-.35px;overflow-wrap:anywhere;word-break:break-word}
+.finance-suite .tw-hd p{font-size:12px;color:var(--tw-mut);margin-top:2px;max-width:min(640px,100%);overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-sp{flex:1 1 auto}
 .finance-suite .tw-b{height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;border:.8px solid #E3E8F2;border-radius:9px;background:#fff;color:var(--tw-ink2);font:600 12.5px 'Geist',sans-serif;cursor:pointer;white-space:nowrap;transition:border-color .15s var(--tw-ez),color .15s}
 .finance-suite .tw-b:hover{border-color:rgba(0,87,255,.35);color:var(--tw-bi)}
@@ -76,23 +77,23 @@
 .finance-suite .tw-seg button[aria-pressed="true"]{background:#fff;color:var(--tw-bi);box-shadow:0 1px 2px rgba(11,15,26,.08)}
 .finance-suite .tw-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:10px;margin-bottom:13px}
 .finance-suite .tw-k{padding:13px 15px;background:#fff;border-radius:11px;box-shadow:var(--tw-ring)}
-.finance-suite .tw-k i{display:block;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.62px;text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.finance-suite .tw-k b{display:block;margin:6px 0 2px;font:600 22px 'Geist',sans-serif;letter-spacing:-.7px;line-height:1.05;white-space:nowrap}
-.finance-suite .tw-k u{display:block;text-decoration:none;font-size:10.5px;color:var(--tw-mut)}
+.finance-suite .tw-k i{display:block;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.62px;text-transform:uppercase;color:var(--tw-mut);overflow-wrap:anywhere;word-break:break-word}
+.finance-suite .tw-k b{display:block;margin:6px 0 2px;font:600 22px 'Geist',sans-serif;letter-spacing:-.7px;line-height:1.15;overflow-wrap:anywhere;word-break:break-word}
+.finance-suite .tw-k u{display:block;text-decoration:none;font-size:10.5px;color:var(--tw-mut);overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-k.bad{box-shadow:0 0 0 1px #EFB6B6,0 8px 24px rgba(200,33,33,.07)}
 .finance-suite .tw-k.bad b,
 .finance-suite .tw-k.bad u{color:var(--tw-bad)}
 .finance-suite .tw-k.ok b{color:var(--tw-ok)}
 .finance-suite .tw-k.warn{box-shadow:0 0 0 1px #F0D6A4,0 8px 24px rgba(138,93,18,.07)}
 .finance-suite .tw-c{background:#fff;border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:14px}
-.finance-suite .tw-ch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--tw-line)}
-.finance-suite .tw-ct{font-size:13px;font-weight:600}
-.finance-suite .tw-cs{font-size:11px;color:var(--tw-mut)}
+.finance-suite .tw-ch{display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--tw-line)}
+.finance-suite .tw-ct{font-size:13px;font-weight:600;min-width:0;overflow-wrap:anywhere;word-break:break-word}
+.finance-suite .tw-cs{font-size:11px;color:var(--tw-mut);min-width:0;flex:1 1 12rem;overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-sc{overflow-x:auto}
 .finance-suite .tw-g{display:grid;grid-template-columns:var(--cols);align-items:center}
 .finance-suite .tw-g > *{padding:0 8px;min-width:0}
 .finance-suite .tw-hr{position:sticky;top:0;z-index:3;background:var(--tw-soft);border-bottom:1px solid var(--tw-line);padding:9px 8px}
-.finance-suite .tw-hr > *{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.finance-suite .tw-hr > *{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--tw-mut);overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-r{padding:11px 8px;border-bottom:1px solid var(--tw-hair)}
 .finance-suite .tw-r:hover{background:#FBFCFF}
 .finance-suite .tw-r.bad{background:#FFF8F8;box-shadow:inset 3px 0 0 var(--tw-bad)}
@@ -103,12 +104,12 @@
 .finance-suite .tw-gp{padding:8px 14px;background:#EDF1F7;border-bottom:1px solid var(--tw-hair);font:600 12px 'Geist',sans-serif}
 .finance-suite .tw-gp em{font-style:normal;font-family:'Geist Mono',monospace;font-weight:500;font-size:10.5px;color:var(--tw-mut);margin-left:8px}
 .finance-suite .tw-rr{text-align:right}
-.finance-suite .tw-id{font:600 12px 'Geist Mono',monospace;letter-spacing:-.3px;color:var(--tw-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.finance-suite .tw-nm{font-size:13px;font-weight:600;letter-spacing:-.1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.finance-suite .tw-t{font-size:12px;color:var(--tw-ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.finance-suite .tw-br{font-size:12px;font-weight:500;color:var(--tw-vio);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.finance-suite .tw-s{display:block;font-size:10.5px;color:var(--tw-mut);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.finance-suite .tw-v{font:600 12.5px 'Geist Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.3px;text-align:right;white-space:nowrap}
+.finance-suite .tw-id{font:600 12px 'Geist Mono',monospace;letter-spacing:-.3px;color:var(--tw-ink2);overflow-wrap:anywhere;word-break:break-word}
+.finance-suite .tw-nm{font-size:13px;font-weight:600;letter-spacing:-.1px;overflow-wrap:anywhere;word-break:break-word}
+.finance-suite .tw-t{font-size:12px;color:var(--tw-ink2);overflow-wrap:anywhere;word-break:break-word}
+.finance-suite .tw-br{font-size:12px;font-weight:500;color:var(--tw-vio);overflow-wrap:anywhere;word-break:break-word}
+.finance-suite .tw-s{display:block;font-size:10.5px;color:var(--tw-mut);margin-top:2px;overflow-wrap:anywhere;word-break:break-word}
+.finance-suite .tw-v{font:600 12.5px 'Geist Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.3px;text-align:right;overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-v.z{color:#B6BECD;font-weight:500}
 .finance-suite .tw-v.neg{color:var(--tw-bad)}
 .finance-suite .tw-v.pos{color:var(--tw-ok)}
@@ -139,8 +140,8 @@
 .finance-suite .tw-note.wrn{background:var(--tw-wrnb);color:var(--tw-wrn)}
 .finance-suite .tw-empty{padding:44px 20px;text-align:center}
 .finance-suite .tw-empty svg{width:34px;height:34px;stroke:#C3CBD8;fill:none;stroke-width:1.4;margin:0 auto 10px}
-.finance-suite .tw-empty b{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
-.finance-suite .tw-empty p{font-size:12px;color:var(--tw-mut);max-width:400px;margin:0 auto 12px}
+.finance-suite .tw-empty b{display:block;font-size:13px;font-weight:600;margin-bottom:4px;overflow-wrap:anywhere}
+.finance-suite .tw-empty p{font-size:12px;color:var(--tw-mut);max-width:400px;margin:0 auto 12px;overflow-wrap:anywhere;word-break:break-word}
 .finance-suite .tw-two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
 .finance-suite .tw-st{display:flex;gap:26px;flex-wrap:wrap}
 .finance-suite .tw-st span{display:flex;flex-direction:column;gap:2px}
@@ -224,8 +225,8 @@
 /* ---------- aliases (fs-* = tw-*) ---------- */
 .finance-suite .fs-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 10px; margin-bottom: 13px; }
 .finance-suite .fs-k { padding: 13px 15px; background: #fff; border-radius: 11px; box-shadow: var(--tw-ring); }
-.finance-suite .fs-k__l { display: block; font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: 0.62px; text-transform: uppercase; color: var(--tw-mut); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.finance-suite .fs-k__v { display: block; margin: 6px 0 2px; font-size: 22px; font-weight: 600; letter-spacing: -0.7px; line-height: 1.05; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.finance-suite .fs-k__l { display: block; font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: 0.62px; text-transform: uppercase; color: var(--tw-mut); overflow-wrap: anywhere; word-break: break-word; }
+.finance-suite .fs-k__v { display: block; margin: 6px 0 2px; font-size: 22px; font-weight: 600; letter-spacing: -0.7px; line-height: 1.15; overflow-wrap: anywhere; word-break: break-word; font-variant-numeric: tabular-nums; }
 .finance-suite .fs-k__s { display: block; text-decoration: none; font-size: 10.5px; color: var(--tw-mut); }
 .finance-suite .fs-k.bad { box-shadow: 0 0 0 1px #efb6b6, 0 8px 24px rgba(200, 33, 33, 0.07); }
 .finance-suite .fs-k.bad .fs-k__v,
@@ -318,7 +319,9 @@
   letter-spacing: 0.6px;
   text-transform: uppercase;
   color: var(--tw-mut) !important;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   background: var(--tw-soft);
   border-bottom: 1px solid var(--tw-line);
   padding: 9px 8px !important;
@@ -341,6 +344,10 @@
   font-size: 12.5px;
   color: var(--tw-ink2);
   vertical-align: middle;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
 }
 
 .finance-suite tfoot td,
@@ -477,6 +484,93 @@
 
 .finance-suite a.tw-b {
   text-decoration: none;
+}
+
+.finance-suite .fs-id { font: 600 12px "Geist Mono", monospace; letter-spacing: -0.3px; color: var(--tw-ink2); }
+.finance-suite .fs-nm,
+.finance-suite .tw-nm { font-size: 13px; font-weight: 600; letter-spacing: -0.1px; }
+.finance-suite .fs-t { font-size: 12px; color: var(--tw-ink2); }
+.finance-suite .fs-br { font-size: 12px; font-weight: 500; color: var(--tw-vio); }
+.finance-suite .fs-s { display: block; font-size: 10.5px; color: var(--tw-mut); margin-top: 2px; }
+.finance-suite .fs-v { font: 600 12.5px "Geist Mono", monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
+.finance-suite .fs-v.z,
+.finance-suite .tw-v.z { color: #b6becd; font-weight: 500; }
+.finance-suite .fs-v.neg,
+.finance-suite .tw-v.neg { color: var(--tw-bad); }
+.finance-suite .fs-v.pos,
+.finance-suite .tw-v.pos { color: var(--tw-ok); }
+.finance-suite .fs-miss { color: #a9b2c3; font-style: italic; font-size: 11.5px; }
+.finance-suite .fs-cc { display: inline-block; padding: 1px 6px; border-radius: 5px; background: var(--tw-soft); border: 1px solid var(--tw-hair); font: 700 9.5px "Geist Mono", monospace; letter-spacing: 0.3px; color: var(--tw-mut); }
+.finance-suite .fs-bar { display: block; height: 4px; border-radius: 999px; background: var(--tw-hair); overflow: hidden; margin-top: 5px; }
+.finance-suite .fs-bar i { display: block; height: 100%; background: var(--tw-blue); }
+.finance-suite .fs-bar i.r { background: var(--tw-bad); }
+.finance-suite .fs-bar i.y { background: #e0a93c; }
+.finance-suite .tw-bar { margin-top: 5px; }
+.finance-suite .thinkway-campaign-op-table-row.fs-row-bad,
+.finance-suite [data-slot="table-row"].fs-row-bad {
+  background: #fff8f8;
+  box-shadow: inset 3px 0 0 var(--tw-bad);
+}
+.finance-suite .thinkway-campaign-op-table-row.fs-row-warn,
+.finance-suite [data-slot="table-row"].fs-row-warn {
+  background: #fffcf5;
+  box-shadow: inset 3px 0 0 #e0a93c;
+}
+
+/* Shown copy wraps instead of clipping */
+.finance-suite .truncate,
+.finance-suite .text-ellipsis {
+  overflow: visible !important;
+  text-overflow: clip !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.finance-suite .thinkway-campaign-op-table-head,
+.finance-suite thead th,
+.finance-suite [data-slot="table-head"],
+.finance-suite .thinkway-campaign-op-table-cell,
+.finance-suite tbody td,
+.finance-suite [data-slot="table-cell"],
+.finance-suite tfoot td,
+.finance-suite tfoot [data-slot="table-cell"] {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  min-width: 0;
+}
+
+.finance-suite .tw-tl i,
+.finance-suite .tw-tl b,
+.finance-suite .tw-tl p,
+.finance-suite .tw-tl .tw-big,
+.finance-suite .tw-go,
+.finance-suite .tw-note,
+.finance-suite .tw-st i,
+.finance-suite .tw-st b,
+.finance-suite .tw-lbl,
+.finance-suite .tw-gp,
+.finance-suite .tw-grp,
+.finance-suite .fs-grp,
+.finance-suite .fs-ct,
+.finance-suite .fs-cs,
+.finance-suite .fs-empty b,
+.finance-suite .fs-empty p,
+.finance-suite .fs-id,
+.finance-suite .fs-nm,
+.finance-suite .fs-t,
+.finance-suite .fs-br,
+.finance-suite .fs-s,
+.finance-suite .fs-v,
+.finance-suite .thinkway-campaign-section-head h2,
+.finance-suite .thinkway-campaign-section-head h3,
+.finance-suite .thinkway-campaign-section-head p,
+.finance-suite label,
+.finance-suite [data-slot="label"] {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .dark .finance-suite {

@@ -141,7 +141,7 @@ function AnalysisGroup({
             <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" />
           )}
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-foreground">{title}</p>
+            <p className="whitespace-normal break-words text-sm font-semibold text-foreground">{title}</p>
             <p className="text-[11px] text-muted-foreground">
               {group.clients.length} client{group.clients.length === 1 ? "" : "s"}
             </p>
@@ -172,7 +172,7 @@ function AnalysisGroup({
                     <Link
                       href={`/clients/${client.client_id}`}
                       onClick={(event) => event.stopPropagation()}
-                      className="truncate text-sm font-medium text-foreground underline-offset-2 hover:text-brand-blue hover:underline"
+                      className="whitespace-normal break-words text-sm font-medium text-foreground underline-offset-2 hover:text-brand-blue hover:underline"
                     >
                       {client.client_name}
                     </Link>

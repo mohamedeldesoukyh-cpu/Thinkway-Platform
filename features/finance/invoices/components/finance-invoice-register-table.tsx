@@ -94,7 +94,7 @@ function buildFinanceInvoiceRegisterBaseColumns(
             ) : null}
             <p
               className={cn(
-                "max-w-[160px] truncate",
+                "max-w-[160px] whitespace-normal break-words",
                 appearance === "campaign"
                   ? "text-[10px] text-[var(--camp-text-3)]"
                   : "fs-nm"

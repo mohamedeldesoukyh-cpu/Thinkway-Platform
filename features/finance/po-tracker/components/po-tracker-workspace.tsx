@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { AlertTriangleIcon } from "lucide-react";
 
 import {
   OperationalConfigurableTable,
@@ -12,12 +11,10 @@ import {
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Badge } from "@/components/ui/badge";
-import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
-import { FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
+import { FinanceSuiteCard, FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
 import { cn } from "@/lib/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { Label } from "@/components/ui/label";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import {
   Select,
   SelectContent,
@@ -25,7 +22,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import {
   PO_STATUS_LABELS,
   PO_STATUS_VARIANT,
@@ -44,25 +40,20 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
     label: "PO #",
     monoCell: true,
     renderCell: (row) => (
-      <div className="flex items-center gap-2">
-        {row.is_over_consumed ? (
-          <AlertTriangleIcon className="size-4 text-destructive" />
-        ) : null}
-        <span className={row.po_number ? "fs-id" : "fs-miss"}>
-          {row.po_number ?? "not set"}
-        </span>
-      </div>
+      <span className={row.po_number ? "tw-id" : "tw-miss"}>
+        {row.po_number ?? "not set"}
+      </span>
     ),
   },
-  { id: "client", label: "Client", renderCell: (row) => <span className="fs-t">{row.client_name}</span> },
-  { id: "brand", label: "Brand", renderCell: (row) => <span className="fs-br">{row.brand_name}</span> },
+  { id: "client", label: "Client", renderCell: (row) => <span className="tw-t">{row.client_name}</span> },
+  { id: "brand", label: "Brand", renderCell: (row) => <span className="tw-br">{row.brand_name}</span> },
   {
     id: "campaign",
     label: "Campaign",
     renderCell: (row) => (
       <Link
         href={`/campaigns/${row.campaign_id}`}
-        className="font-medium hover:underline"
+        className="tw-nm hover:underline"
       >
         {row.campaign_name}
       </Link>
@@ -70,9 +61,9 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
   },
   {
     id: "currency",
-    label: "Currency",
+    label: "Ccy",
     renderCell: (row) => (
-      <span className="fs-cc">{row.po_currency ?? row.campaign_currency}</span>
+      <span className="tw-cc">{row.po_currency ?? row.campaign_currency}</span>
     ),
   },
   {
@@ -119,10 +110,10 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
         converted > 0;
       return (
         <div>
-          <span className={cn("fs-v", remaining < 0 && "neg", remaining > 1 && "pos")}>
+          <span className={cn("tw-v", remaining < 0 && "neg", remaining > 1 && "pos")}>
             {formatMoney(remaining, row.campaign_currency)}
           </span>
-          <span className="fs-bar">
+          <span className="tw-bar">
             <i
               className={remaining < 0 ? "r" : tight ? "y" : undefined}
               style={{ width: `${consumedPct}%` }}
@@ -192,23 +183,6 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
             hint: `across ${currencies.size} currenc${currencies.size === 1 ? "y" : "ies"}`,
           },
           {
-            id: "total",
-            label: "Total PO (converted)",
-            value: formatMoney(data.summary.total_po_amount, "USD"),
-            hint: "Campaign-currency converted",
-          },
-          {
-            id: "consumed",
-            label: "Consumed",
-            value: formatMoney(data.summary.total_consumed, "USD"),
-          },
-          {
-            id: "remaining",
-            label: "Remaining",
-            value: formatMoney(data.summary.total_remaining, "USD"),
-            hint: `${data.summary.near_limit_count} near limit`,
-          },
-          {
             id: "missing",
             label: "Without a PO number",
             value: String(missingPoCount),
@@ -222,11 +196,42 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
             hint: "consumed exceeds PO value",
             tone: data.summary.over_consumed_count > 0 ? "bad" : undefined,
           },
+          {
+            id: "limit",
+            label: "At limit",
+            value: String(data.summary.near_limit_count),
+            hint: "remaining under 1 unit",
+          },
         ]}
       />
 
-      <CampaignFlatSection title="Filters">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <OperationalTableSuiteProvider
+        tableId={OPERATIONAL_TABLE_IDS.financePoTracker}
+        columns={PO_TRACKER_COLUMNS}
+        rows={data.rows}
+        filterAccessors={{
+          po_number: (row) => row.po_number,
+          client: (row) => row.client_name,
+          brand: (row) => row.brand_name,
+          campaign: (row) => row.campaign_name,
+          currency: (row) => row.po_currency ?? row.campaign_currency,
+          original_po: (row) => row.po_amount_original,
+          converted_po: (row) => row.po_amount_campaign_currency,
+          consumed: (row) => row.po_consumed_amount,
+          remaining: (row) => row.po_remaining_amount,
+          remaining_percent: (row) => row.po_remaining_percent,
+          status: (row) => row.po_status,
+          expiry: (row) => row.po_expiry_date,
+          fx: (row) => row.po_exchange_rate,
+        }}
+      >
+        <FinanceSuiteCard
+          title="Purchase orders"
+          subtitle="one row per campaign PO · remaining bar shows consumption"
+          actions={<OperationalTableControlsSlot contextLabel="Purchase orders" />}
+        >
+          <div className="tw-pad" style={{ borderBottom: "1px solid var(--tw-line)", background: "var(--tw-soft)" }}>
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <FilterSelect
             label="Group"
             value={searchParams.get("group_id") ?? NONE}
@@ -309,41 +314,9 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
               </SelectContent>
             </Select>
           </div>
-        </div>
-      </CampaignFlatSection>
-
-      <OperationalTableSuiteProvider
-        tableId={OPERATIONAL_TABLE_IDS.financePoTracker}
-        columns={PO_TRACKER_COLUMNS}
-        rows={data.rows}
-        filterAccessors={{
-          po_number: (row) => row.po_number,
-          client: (row) => row.client_name,
-          brand: (row) => row.brand_name,
-          campaign: (row) => row.campaign_name,
-          currency: (row) => row.po_currency ?? row.campaign_currency,
-          original_po: (row) => row.po_amount_original,
-          converted_po: (row) => row.po_amount_campaign_currency,
-          consumed: (row) => row.po_consumed_amount,
-          remaining: (row) => row.po_remaining_amount,
-          remaining_percent: (row) => row.po_remaining_percent,
-          status: (row) => row.po_status,
-          expiry: (row) => row.po_expiry_date,
-          fx: (row) => row.po_exchange_rate,
-        }}
-      >
-        <OperationalTableSection
-          wide
-          tableOnly
-          cardSurface
-          leading={
-            <CampaignOperationalSectionHeader
-              title="PO tracker"
-              actions={<OperationalTableControlsSlot contextLabel="PO tracker" />}
-            />
-          }
-        >
-          {data.rows.length === 0 ? (
+            </div>
+          </div>
+        {data.rows.length === 0 ? (
             <FinanceSuiteEmpty
               title="No PO records match these filters"
               body="Adjust group, client, brand, or status filters to see purchase-order consumption."
@@ -362,7 +335,7 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
               }
             />
           )}
-        </OperationalTableSection>
+        </FinanceSuiteCard>
       </OperationalTableSuiteProvider>
     </div>
   );
