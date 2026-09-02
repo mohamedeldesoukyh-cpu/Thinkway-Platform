@@ -433,6 +433,18 @@
   color: var(--bq-wrn);
 }
 
+.tw-billing-v3 .bq-inw {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.tw-billing-v3 .bq-inw span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--bq-mut);
+}
+
 .tw-billing-v3 .bq-inw input {
   height: 28px;
   padding: 0 7px;
@@ -457,12 +469,12 @@
 }
 
 .tw-billing-v3 .bq-grid {
-  min-width: 1215px;
+  min-width: 1287px;
 }
 
 .tw-billing-v3 .bq-r {
   display: grid;
-  grid-template-columns: 32px 28px 90px 128px 94px minmax(120px, 1fr) 50px 100px 100px 100px 100px 90px 112px 82px;
+  grid-template-columns: 32px 28px 90px 128px 94px minmax(120px, 1fr) 50px 100px 100px 100px 100px 72px 90px 112px 82px;
   align-items: start;
 }
 

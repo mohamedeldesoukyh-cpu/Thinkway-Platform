@@ -168,6 +168,8 @@ function AssignmentBillingGroupRow({
                 className="rounded p-1 hover:bg-muted"
                 onClick={() => setExpanded((v) => !v)}
                 aria-expanded={expanded}
+                aria-label={expanded ? `Hide deliverables for ${title}` : `Show deliverables for ${title}`}
+                title={expanded ? "Hide deliverables" : "Show deliverables"}
               >
                 {expanded ? (
                   <ChevronDownIcon className="size-4" />

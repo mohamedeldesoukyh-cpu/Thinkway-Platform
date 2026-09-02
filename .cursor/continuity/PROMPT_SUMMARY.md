@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Billing & finance table typography.
+**Focus:** Billing queue campaign Bill % and hover hints.
+
+## In progress 2026-09-03 — Campaign-row Bill % + hover titles
+
+Billing queue campaign (main) row has editable Bill %. It cascades to every line. Hover titles on expand, select, Invoice, open-campaign, and Bill %. No migrations. Not on Production.
 
 ## Shipped 2026-09-03 — Billing table campaign number + unified type
 

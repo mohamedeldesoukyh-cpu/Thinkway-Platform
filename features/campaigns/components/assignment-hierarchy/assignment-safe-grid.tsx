@@ -462,6 +462,7 @@ export function AssignmentSafeGrid({
                         else selectAllLines();
                       }}
                       aria-label="Select all assignments"
+                      title="Select all assignments"
                     />
                   ) : null}
                 </th>
@@ -600,6 +601,7 @@ export function AssignmentSafeGrid({
                                 checked={selectedLineIds.has(row.lineId)}
                                 onChange={() => toggleLine(row.lineId, selectable)}
                                 aria-label={`Select ${row.displayName}`}
+                                title={`Select ${row.displayName}`}
                               />
                             ) : null}
                           </td>

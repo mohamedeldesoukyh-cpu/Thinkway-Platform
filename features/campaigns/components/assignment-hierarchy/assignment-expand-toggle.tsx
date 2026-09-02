@@ -28,6 +28,7 @@ export function AssignmentExpandToggle({
       }}
       aria-expanded={expanded}
       aria-label={ariaLabel}
+      title={ariaLabel}
     >
       <ChevronRightIcon className="size-2.5" aria-hidden />
     </button>

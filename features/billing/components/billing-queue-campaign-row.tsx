@@ -13,8 +13,10 @@ import {
   useBillingQueueGridTemplate,
 } from "@/features/billing/components/billing-queue-assignment-row";
 import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
+import { DraftNumericInput } from "@/features/billing/components/operational-row-tree";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import { formatQueueNumber } from "@/features/billing/components/use-billing-queue-column-visibility";
+import { labelForBillingStatus } from "@/features/billing/constants";
 import type {
   CampaignBillingQueueRow,
   CampaignOperationalBillingDetail,
@@ -34,6 +36,11 @@ import {
 } from "@/lib/billing/operational-selection";
 import { cn } from "@/lib/utils";
 
+function formatDraftPercent(percent: number): string {
+  if (!Number.isFinite(percent)) return "0";
+  return Number.isInteger(percent) ? String(percent) : percent.toFixed(2);
+}
+
 export type BillingQueueCampaignRowProps = {
   row: CampaignBillingQueueRow;
   operationalFilter: OperationalBillingFilter;
@@ -49,6 +56,7 @@ export type BillingQueueCampaignRowProps = {
   onOpenInvoice: (campaignId: string) => void;
   invoicePercents?: InvoiceDraftPercents;
   onInvoicePercentsChange?: (next: InvoiceDraftPercents) => void;
+  onCampaignPercentChange?: (percent: number) => void;
   invoicePending?: boolean;
   invoiceDisabled?: boolean;
 };
@@ -68,6 +76,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
   onOpenInvoice,
   invoicePercents,
   onInvoicePercentsChange,
+  onCampaignPercentChange,
   invoicePending = false,
   invoiceDisabled = false,
 }: BillingQueueCampaignRowProps) {
@@ -80,20 +89,22 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
   );
 
   const draft = useMemo(() => {
-    if (!expanded || !detail) return null;
+    if (!detail) return null;
     const assignments = filterOperationalBillingTree(
       detail.operational_rows,
       operationalFilter
     ).filter((item) => item.kind === "assignment");
     return computeCampaignInvoiceDraft(assignments, invoicePercents ?? {});
-  }, [detail, expanded, invoicePercents, operationalFilter]);
+  }, [detail, invoicePercents, operationalFilter]);
 
-  const invoicedDisplay = draft
-    ? row.already_invoiced + draft.toBeInvoiced
-    : row.already_invoiced;
-  const remainingDisplay = draft
-    ? row.remaining_to_invoice - draft.toBeInvoiced
-    : row.remaining_to_invoice;
+  const invoicedDisplay =
+    (expanded || Object.keys(invoicePercents ?? {}).length > 0) && draft
+      ? row.already_invoiced + draft.toBeInvoiced
+      : row.already_invoiced;
+  const remainingDisplay =
+    (expanded || Object.keys(invoicePercents ?? {}).length > 0) && draft
+      ? row.remaining_to_invoice - draft.toBeInvoiced
+      : row.remaining_to_invoice;
 
   const handleExpandClick = useCallback(
     (event: React.MouseEvent) => {
@@ -123,7 +134,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
             <OperationalSelectionCheckbox
               status={masterStatus}
               onToggle={() => onMasterSelect(campaignId)}
-              ariaLabel={`Select all billable rows for ${row.campaign_name}`}
+              ariaLabel={`Select all billable lines for ${row.campaign_name}`}
             />
           </span>
         ) : null}
@@ -133,7 +144,8 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
               type="button"
               className="bq-x"
               aria-expanded={expanded}
-              aria-label={`Expand ${row.campaign_name}`}
+              aria-label={expanded ? `Hide lines for ${row.campaign_name}` : `Show lines for ${row.campaign_name}`}
+              title={expanded ? "Hide campaign lines" : "Show campaign lines"}
             >
               {expanded ? "▾" : "▸"}
             </button>
@@ -167,7 +179,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
         ) : null}
         {cols.showCurrency ? (
           <span>
-            <span className="bq-cc">{row.currency_code}</span>
+            <span className="bq-cc" title="Currency">{row.currency_code}</span>
           </span>
         ) : null}
         {cols.showTotal ? (
@@ -184,7 +196,32 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
           </span>
         ) : null}
         {cols.showRemaining ? (
-          <span className="bq-v">{formatQueueNumber(remainingDisplay)}</span>
+          <span className="bq-v" title="Amount still to invoice">
+            {formatQueueNumber(remainingDisplay)}
+          </span>
+        ) : null}
+        {cols.showBillPercent ? (
+          <span onClick={(event) => event.stopPropagation()}>
+            <div
+              className="bq-inw"
+              title="Bill percent of remaining. Changing this updates every line."
+            >
+              <DraftNumericInput
+                value={Number(
+                  formatDraftPercent(
+                    draft?.percent ?? (row.remaining_to_invoice > 0.01 ? 100 : 0)
+                  )
+                )}
+                ariaLabel={`Bill percent for ${row.campaign_name}`}
+                disabled={invoiceDisabled || invoicePending || row.remaining_to_invoice <= 0.01}
+                min={0}
+                max={100}
+                widthClass="bq-in"
+                onCommit={(percent) => onCampaignPercentChange?.(percent)}
+              />
+              <span>%</span>
+            </div>
+          </span>
         ) : null}
         {cols.showUnachieved ? (
           <span className={row.unachieved_revenue > 0 ? "bq-v" : "bq-v z"}>
@@ -192,7 +229,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
           </span>
         ) : null}
         {cols.showStatus ? (
-          <span>
+          <span title={labelForBillingStatus(row.billing_status)}>
             <BillingStatusBadge status={row.billing_status} />
           </span>
         ) : null}
@@ -202,6 +239,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
               type="button"
               className="bq-b sm pri"
               disabled={invoiceDisabled || invoicePending}
+              title="Create invoice for this campaign"
               onClick={() => onOpenInvoice(campaignId)}
             >
               {invoicePending ? "Generating…" : "Invoice"}
@@ -209,7 +247,8 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
             <Link
               href={`/campaigns/${campaignId}?tab=billing`}
               className="bq-ic"
-              aria-label="Open campaign"
+              aria-label="Open campaign billing"
+              title="Open campaign billing"
             >
               <ExternalLinkIcon />
             </Link>

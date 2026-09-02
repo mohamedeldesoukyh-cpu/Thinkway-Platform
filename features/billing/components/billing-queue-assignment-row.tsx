@@ -101,14 +101,21 @@ export function BillingQueueAssignmentHeaderRow() {
     <BillingQueueGridRow className="bq-khd" template={template}>
       {cols.showSelect ? <span /> : null}
       {cols.showExpand ? <span /> : null}
-      {cols.showCampaignNo ? <span>Line ref</span> : null}
+      {cols.showCampaignNo ? <span title="Assignment number">Line ref</span> : null}
       {lineSpan > 0 ? <span style={{ gridColumn: `span ${lineSpan}` }}>Line</span> : null}
       {cols.showCurrency ? <span /> : null}
-      {cols.showTotal ? <span className="bq-rr">Achieved</span> : null}
-      {cols.showAchieved ? <span className="bq-rr">Bill %</span> : null}
-      {cols.showInvoiced ? <span className="bq-rr">Bill amount</span> : null}
-      {cols.showRemaining ? <span className="bq-rr">VAT</span> : null}
-      {cols.showUnachieved ? <span className="bq-rr">Line total</span> : null}
+      {cols.showTotal ? <span className="bq-rr" title="Line invoice amount">Achieved</span> : null}
+      {cols.showAchieved ? (
+        <span className="bq-rr" title="Share of remaining to bill now">Bill %</span>
+      ) : null}
+      {cols.showInvoiced ? (
+        <span className="bq-rr" title="Amount to include on this invoice">Bill amount</span>
+      ) : null}
+      {cols.showRemaining ? <span className="bq-rr" title="VAT on this invoice">VAT</span> : null}
+      {cols.showBillPercent ? <span /> : null}
+      {cols.showUnachieved ? (
+        <span className="bq-rr" title="Line total including VAT">Line total</span>
+      ) : null}
       {cols.showStatus ? <span>State</span> : null}
       {cols.showActions ? <span className="bq-rr">Invoice</span> : null}
     </BillingQueueGridRow>
@@ -178,7 +185,10 @@ export const BillingQueueAssignmentRow = memo(function BillingQueueAssignmentRow
       ) : null}
       {cols.showAchieved ? (
         <span>
-          <div className="bq-inw">
+          <div
+            className="bq-inw"
+            title="Bill percent of remaining. Changing this updates nested grains on this line."
+          >
             <DraftNumericInput
               value={Number(formatDraftPercent(draft.percent))}
               ariaLabel={`Invoice percent for ${row.label}`}
@@ -212,6 +222,7 @@ export const BillingQueueAssignmentRow = memo(function BillingQueueAssignmentRow
       {cols.showRemaining ? (
         <span className={amountClass(draft.vatAmount)}>{formatQueueNumber(draft.vatAmount)}</span>
       ) : null}
+      {cols.showBillPercent ? <span /> : null}
       {cols.showUnachieved ? (
         <span className="bq-v">{formatQueueNumber(draft.totalInvoice)}</span>
       ) : null}
@@ -266,6 +277,7 @@ export function BillingQueueAssignmentFooterRow({
       {cols.showAchieved ? <span /> : null}
       {cols.showInvoiced ? <span className="bq-v">{formatQueueNumber(billed)}</span> : null}
       {cols.showRemaining ? <span className="bq-v">{formatQueueNumber(vat)}</span> : null}
+      {cols.showBillPercent ? <span /> : null}
       {cols.showUnachieved ? <span className="bq-v">{formatQueueNumber(total)}</span> : null}
       {cols.showStatus ? <span /> : null}
       {cols.showActions ? (
@@ -321,6 +333,7 @@ export function BillingQueueTotalsRow({
       {cols.showAchieved ? <span /> : null}
       {cols.showInvoiced ? <span className="bq-v">{formatQueueNumber(invoiced)}</span> : null}
       {cols.showRemaining ? <span className="bq-v">{formatQueueNumber(remaining)}</span> : null}
+      {cols.showBillPercent ? <span /> : null}
       {cols.showUnachieved ? <span /> : null}
       {cols.showStatus ? <span /> : null}
       {cols.showActions ? <span /> : null}

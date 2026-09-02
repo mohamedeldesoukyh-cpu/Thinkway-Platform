@@ -265,6 +265,7 @@ export const BILLING_CAMPAIGN_QUEUE_FILTER_ACCESSORS: Partial<
   achieved: (row) => row.achieved_revenue,
   invoiced: (row) => row.already_invoiced,
   remaining: (row) => row.remaining_to_invoice,
+  bill_percent: (row) => row.remaining_to_invoice,
   unachieved: (row) => row.unachieved_revenue,
   status: (row) => row.billing_status,
 };

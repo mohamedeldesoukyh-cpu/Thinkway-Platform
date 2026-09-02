@@ -34,6 +34,7 @@ export const OperationalSelectionCheckbox = memo(function OperationalSelectionCh
       disabled={disabled}
       onChange={onToggle}
       aria-label={ariaLabel}
+      title={ariaLabel}
     />
   );
 });

@@ -129,6 +129,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
               checked={parentSelected}
               onChange={onToggleParentSelect}
               aria-label={`Select assignment ${line.influencer_name ?? line.name}`}
+              title={`Select assignment ${line.influencer_name ?? line.name}`}
             />
           ) : null}
         </TableCell>
@@ -266,6 +267,8 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
           size="icon"
           className="size-7"
           onClick={() => onEdit(line)}
+          aria-label="Edit assignment"
+          title="Edit assignment"
         >
           <PencilIcon className="size-3.5" />
           <span className="sr-only">Edit assignment</span>

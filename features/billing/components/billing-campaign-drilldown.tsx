@@ -15,21 +15,25 @@ import {
   BillingQueueAssignmentRow,
   BillingQueueMessageRow,
 } from "@/features/billing/components/billing-queue-assignment-row";
-import { OperationalRowTree } from "@/features/billing/components/operational-row-tree";
+import { OperationalRowTree, OperationalInvoiceDraftCells } from "@/features/billing/components/operational-row-tree";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import {
   CampaignOperationalTable,
   CampaignOperationalTableBody,
+  CampaignOperationalTableCell,
   CampaignOperationalTableHead,
   CampaignOperationalTableHeader,
   CampaignOperationalTableHeaderRow,
+  CampaignOperationalTableRow,
 } from "@/features/campaigns/components/campaign-operational-table";
 import type { CampaignOperationalBillingDetail } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
 import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
 import {
+  CAMPAIGN_INVOICE_DRAFT_ID,
   cascadeInvoiceDraftPercent,
   cascadeInvoiceDraftToBeInvoiced,
+  computeCampaignInvoiceDraft,
   computeInvoiceDraftLine,
   type InvoiceDraftPercents,
 } from "@/lib/billing/operational-invoice-draft";
@@ -189,6 +193,10 @@ function BillingCampaignDrilldownInner({
     () => assignmentRows.map((row) => computeInvoiceDraftLine(row, percents)),
     [assignmentRows, percents]
   );
+  const campaignDraft = useMemo(
+    () => computeCampaignInvoiceDraft(assignmentRows, percents),
+    [assignmentRows, percents]
+  );
   const invoicedAssignmentCount = assignmentRows.filter(
     (row) => Boolean(row.invoice_document_number) || row.line_billing_status === "invoiced"
   ).length;
@@ -314,26 +322,47 @@ function BillingCampaignDrilldownInner({
               <CampaignOperationalTableHeaderRow>
                 <CampaignOperationalTableHead className="w-10" />
                 <CampaignOperationalTableHead>Line</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">
+                <CampaignOperationalTableHead title="Invoice amount remaining on this line">
                   Invoice amount
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">
+                <CampaignOperationalTableHead title="Share of remaining to bill now. Campaign percent updates every line.">
                   Invoice %
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">
+                <CampaignOperationalTableHead title="Amount to include on this invoice">
                   To be invoiced
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">VAT</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">
+                <CampaignOperationalTableHead title="VAT on this invoice">VAT</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead title="Line total including VAT">
                   Total invoice
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">
+                <CampaignOperationalTableHead title="Amount still to invoice after this draft">
                   Remaining
                 </CampaignOperationalTableHead>
               </CampaignOperationalTableHeaderRow>
             </CampaignOperationalTableHeader>
           )}
           <CampaignOperationalTableBody>
+            <CampaignOperationalTableRow>
+              <CampaignOperationalTableCell className="w-10 pr-0" />
+              <CampaignOperationalTableCell>
+                <p className={campaign ? "text-[11px] font-medium" : "text-sm font-medium"}>
+                  Campaign
+                </p>
+              </CampaignOperationalTableCell>
+              <OperationalInvoiceDraftCells
+                draft={campaignDraft}
+                currency={detail.currency_code}
+                editable={campaignDraft.amount > 0.01 && !invoicePending}
+                percentAriaLabel="Bill percent for this campaign"
+                amountAriaLabel="To be invoiced for this campaign"
+                onPercentChange={(percent) =>
+                  handlePercentChange(CAMPAIGN_INVOICE_DRAFT_ID, percent)
+                }
+                onToBeInvoicedChange={(amount) =>
+                  handleToBeInvoicedChange(CAMPAIGN_INVOICE_DRAFT_ID, amount)
+                }
+              />
+            </CampaignOperationalTableRow>
             {assignmentRows.map((assignment) => (
               <OperationalRowTree
                 key={assignment.id}

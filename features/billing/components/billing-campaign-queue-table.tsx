@@ -76,6 +76,8 @@ import {
 import { buildConsolidatedQueueInvoiceSelection } from "@/lib/billing/consolidated-invoice-queue";
 import {
   buildInvoiceConfirmPreview,
+  CAMPAIGN_INVOICE_DRAFT_ID,
+  cascadeInvoiceDraftPercent,
   type InvoiceDraftPercents,
 } from "@/lib/billing/operational-invoice-draft";
 import { showErrorToastOnce } from "@/lib/ui/toast-once";
@@ -101,6 +103,7 @@ export const BILLING_CAMPAIGN_QUEUE_COLUMN_METAS: OperationalTableColumnMeta[] =
   { id: "achieved", label: "Achieved" },
   { id: "invoiced", label: "Invoiced" },
   { id: "remaining", label: "Remaining" },
+  { id: "bill_percent", label: "Bill %" },
   { id: "unachieved", label: "Unachieved" },
   { id: "status", label: "Status" },
   { id: "actions", label: "Actions", locked: true },
@@ -116,18 +119,23 @@ function BillingCampaignQueueTableHeader() {
 
   return (
     <BillingQueueGridRow className="bq-hrow" template={template}>
-      {cols.showSelect ? <span /> : null}
+      {cols.showSelect ? <span title="Select all billable lines" /> : null}
       {cols.showExpand ? <span /> : null}
-      {cols.showCampaignNo ? <span>Campaign no</span> : null}
+      {cols.showCampaignNo ? <span title="Campaign number">Campaign no</span> : null}
       {cols.showClient ? <span>Client</span> : null}
       {cols.showBrand ? <span>Brand</span> : null}
       {cols.showCampaign ? <span>Campaign</span> : null}
-      {cols.showCurrency ? <span>Ccy</span> : null}
-      {cols.showTotal ? <span>Total</span> : null}
-      {cols.showAchieved ? <span>Achieved</span> : null}
-      {cols.showInvoiced ? <span>Invoiced</span> : null}
-      {cols.showRemaining ? <span>Remaining</span> : null}
-      {cols.showUnachieved ? <span>Unachieved</span> : null}
+      {cols.showCurrency ? <span title="Currency">Ccy</span> : null}
+      {cols.showTotal ? <span title="Campaign total">Total</span> : null}
+      {cols.showAchieved ? <span title="Achieved / billable">Achieved</span> : null}
+      {cols.showInvoiced ? <span title="Already invoiced plus this draft">Invoiced</span> : null}
+      {cols.showRemaining ? <span title="Amount still to invoice">Remaining</span> : null}
+      {cols.showBillPercent ? (
+        <span title="Share of remaining to bill now. Changing this updates every line.">Bill %</span>
+      ) : null}
+      {cols.showUnachieved ? (
+        <span title="Achieved value not yet eligible to invoice">Unachieved</span>
+      ) : null}
       {cols.showStatus ? <span>Status</span> : null}
       {cols.showActions ? <span>Actions</span> : null}
     </BillingQueueGridRow>
@@ -141,7 +149,7 @@ export function BillingCampaignQueueTable({
   const router = useRouter();
   const [filter, setFilter] = useState<CampaignBillingQueueFilter>("all");
   const [selectedCampaignId, setSelectedCampaignId] = useState<string | null>(null);
-  const [reviewOpen, setReviewOpen] = useState(true);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [expandedCampaignIds, setExpandedCampaignIds] = useState<Set<string>>(new Set());
   const [detailCache, setDetailCache] = useState<
     Record<string, CampaignOperationalBillingDetail>
@@ -482,15 +490,11 @@ export function BillingCampaignQueueTable({
 
   const onSelectForReview = useCallback(
     (campaignId: string) => {
-      if (selectedCampaignId === campaignId) {
-        setReviewOpen((prev) => !prev);
-        return;
-      }
       setSelectedCampaignId(campaignId);
-      setReviewOpen(true);
+      setReviewOpen(false);
       loadDetailIfNeeded(campaignId);
     },
-    [selectedCampaignId, loadDetailIfNeeded]
+    [loadDetailIfNeeded]
   );
 
   const onOpenInvoice = useCallback(
@@ -532,6 +536,26 @@ export function BillingCampaignQueueTable({
       setInvoiceDraftPercentsByCampaign((prev) => ({ ...prev, [campaignId]: next }));
     },
     []
+  );
+
+  const handleCampaignPercentChange = useCallback(
+    (campaignId: string, percent: number) => {
+      startTransition(async () => {
+        const detail = await ensureDetailLoaded(campaignId);
+        if (!detail) return;
+        const rows = filterOperationalBillingTree(detail.operational_rows, operationalFilter);
+        setCampaignInvoicePercents(
+          campaignId,
+          cascadeInvoiceDraftPercent(
+            rows,
+            CAMPAIGN_INVOICE_DRAFT_ID,
+            percent,
+            invoiceDraftPercentsRef.current[campaignId] ?? {}
+          )
+        );
+      });
+    },
+    [ensureDetailLoaded, operationalFilter, setCampaignInvoicePercents]
   );
 
   const handleClearQueueSelection = useCallback(() => {
@@ -625,6 +649,9 @@ export function BillingCampaignQueueTable({
                     invoicePercents={invoiceDraftPercentsByCampaign[campaignId] ?? {}}
                     onInvoicePercentsChange={(next) =>
                       setCampaignInvoicePercents(campaignId, next)
+                    }
+                    onCampaignPercentChange={(percent) =>
+                      handleCampaignPercentChange(campaignId, percent)
                     }
                     invoicePending={pendingCampaignId === campaignId}
                     invoiceDisabled={Boolean(pendingCampaignId)}

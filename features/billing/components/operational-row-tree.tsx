@@ -130,6 +130,7 @@ export function DraftNumericInput({
       step={0.01}
       disabled={disabled}
       aria-label={ariaLabel}
+      title={ariaLabel}
       className={cn(
         widthClass.includes("bq-in")
           ? "bq-in shadow-none"
@@ -266,6 +267,7 @@ export const OperationalRowTree = memo(function OperationalRowTree({
                 onClick={handleExpand}
                 aria-expanded={isOpen}
                 aria-label={isOpen ? `Collapse ${row.label}` : `Expand ${row.label}`}
+                title={isOpen ? `Hide lines for ${row.label}` : `Show lines for ${row.label}`}
               >
                 {isOpen ? (
                   <ChevronDownIcon className="size-3.5" />
