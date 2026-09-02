@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { DailyReportView } from "@/features/reports/components/daily-report-view";
 import {
@@ -16,7 +16,7 @@ export default async function DailyReportPage({ searchParams }: Props) {
   const report = await getDailyReport(query);
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Daily report"
       description="Day-by-day revenue and gross profit with monthly summaries."
       backFallbackHref="/reports"
@@ -25,6 +25,6 @@ export default async function DailyReportPage({ searchParams }: Props) {
       <PlatformErrorBoundary surface="analytics">
         <DailyReportView report={report} />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PoTrackerWorkspace } from "@/features/finance/po-tracker/components/po-tracker-workspace";
 import { getPoTrackerWorkspace } from "@/features/finance/po-tracker/queries";
 
@@ -19,9 +19,9 @@ export default async function FinancePoTrackerPage({ searchParams }: PageProps) 
   }
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="PO tracker"
-      description="Enterprise PO utilization, consumption, and over-budget governance across groups, clients, brands, and campaigns."
+      description="Purchase-order consumption and remaining budget by campaign"
     >
       {errorMessage ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -30,6 +30,6 @@ export default async function FinancePoTrackerPage({ searchParams }: PageProps) 
       ) : data ? (
         <PoTrackerWorkspace data={data} />
       ) : null}
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

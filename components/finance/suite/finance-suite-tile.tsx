@@ -41,7 +41,7 @@ export function FinanceSuiteTile({
   className,
 }: FinanceSuiteTileProps) {
   const classNames = cn(
-    "fs-tile",
+    "tw-tile",
     variant === "alt" && "alt",
     variant === "soft" && "soft",
     className
@@ -49,13 +49,13 @@ export function FinanceSuiteTile({
 
   const body = (
     <>
-      <span className="fs-tl">
-        <span className="fs-tl__k">{kicker}</span>
-        {big ? <span className="fs-big">{big}</span> : null}
+      <span className="tw-tl">
+        <i>{kicker}</i>
+        {big ? <span className="tw-big">{big}</span> : null}
         {title ? <b>{title}</b> : null}
         {description ? <p>{description}</p> : null}
         {spark && spark.length > 0 ? (
-          <span className="fs-spark" aria-hidden>
+          <span className="tw-spark" aria-hidden>
             {spark.map((value, index) => (
               <span
                 key={`${index}-${value}`}
@@ -65,7 +65,7 @@ export function FinanceSuiteTile({
             ))}
           </span>
         ) : null}
-        <span className="fs-go">
+        <span className="tw-go">
           {go}
           {ARROW}
         </span>
@@ -95,5 +95,5 @@ type FinanceSuiteDeckProps = {
 };
 
 export function FinanceSuiteDeck({ children, className }: FinanceSuiteDeckProps) {
-  return <div className={cn("fs-deck", className)}>{children}</div>;
+  return <div className={cn("tw-deck", className)}>{children}</div>;
 }

@@ -1,16 +1,16 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { AdjustmentModuleShell } from "@/features/finance/adjustments/components/adjustment-module-shell";
 
 export default function VendorDebitNotesPage() {
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Vendor debit notes"
-      description="Increase supplier payable for creator compensation or operational adjustments."
+      description="Debits raised against vendors"
     >
       <PlatformErrorBoundary surface="finance">
         <AdjustmentModuleShell moduleKey="vendor_debit" />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { IoSearchFilters } from "@/features/io/components/io-search-filters";
 import { VendorIosWorkspace } from "@/features/io/components/vendor-ios-workspace";
@@ -19,16 +19,13 @@ export default async function VendorIosPage({ searchParams }: Props) {
   const selected = params.io ? rows.find((row) => row.id === params.io) ?? null : rows[0] ?? null;
 
   const campaignId = params.campaign ?? selected?.campaign_header_id ?? null;
-  const backFallbackHref = campaignId
-    ? `/campaigns/${campaignId}`
-    : "/ios/vendor";
 
   return (
-    <DashboardShell
-      title="Vendor IOs"
-      description="Assignment-level IO tracking for vendors/influencers. Lightweight operational workflow only."
-      backFallbackHref={backFallbackHref}
-      backLabel={campaignId ? "Back to campaign" : "Back to vendor IOs"}
+    <FinanceSuiteShell
+      title="Vendor IO register"
+      description="Insertion orders — one per creator assignment"
+      backFallbackHref={campaignId ? `/campaigns/${campaignId}` : undefined}
+      backLabel="Back to campaign"
     >
       <PlatformErrorBoundary surface="ios">
         <VendorIosWorkspace
@@ -53,7 +50,7 @@ export default async function VendorIosPage({ searchParams }: Props) {
           }
         />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }
 

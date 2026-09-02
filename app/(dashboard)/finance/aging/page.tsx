@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { AgingWorkspace } from "@/features/finance/aging/components/aging-workspace";
 import {
   getAgingWorkspace,
@@ -24,7 +24,7 @@ export default async function FinanceAgingPage({ searchParams }: Props) {
   }
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Aging reports"
       description="Client receivables aging by invoice date and overdue aging by due date. Outstanding balances only."
     >
@@ -35,6 +35,6 @@ export default async function FinanceAgingPage({ searchParams }: Props) {
       ) : data ? (
         <AgingWorkspace data={data} />
       ) : null}
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

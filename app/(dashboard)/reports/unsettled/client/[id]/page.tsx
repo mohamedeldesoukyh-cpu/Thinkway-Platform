@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { UnsettledDetailView } from "@/features/reports/components/unsettled-detail-view";
 import {
@@ -31,7 +31,7 @@ export default async function ClientUnsettledPage({ params, searchParams }: Prop
     formatGroupClientLabel(report.group_name, report.entity_name) ?? report.entity_name;
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Statement of unsettled"
       description={`Open AR invoices for ${entityLabel}.`}
       backFallbackHref="/reports/unsettled"
@@ -40,6 +40,6 @@ export default async function ClientUnsettledPage({ params, searchParams }: Prop
       <PlatformErrorBoundary surface="analytics">
         <UnsettledDetailView report={report} />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

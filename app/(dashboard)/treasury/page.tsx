@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { TreasuryDashboardView } from "@/features/treasury/components/treasury-dashboard-view";
 import { loadTreasuryDashboard } from "@/lib/treasury/load-treasury-dashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -44,9 +44,9 @@ export default async function TreasuryPage() {
   }, EMPTY_TREASURY);
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Treasury"
-      description="Cashflow visibility, liquidity forecast, and AR/AP exposure — analytics and planning rollups only."
+      description="Cashflow position and liquidity forecasting"
     >
       <Suspense
         fallback={
@@ -57,6 +57,6 @@ export default async function TreasuryPage() {
           <TreasuryDashboardView data={result.data} />
         </PlatformErrorBoundary>
       </Suspense>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

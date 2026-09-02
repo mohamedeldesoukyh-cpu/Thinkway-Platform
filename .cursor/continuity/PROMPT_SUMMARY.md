@@ -1,7 +1,15 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Finance suite visual redesign from `finance-suite.html` — KPI cards, identity tiles, empty states; all existing tabs and actions kept.
+**Focus:** Finance suite header match + billing vendor payments by assignment.
+
+## Shipped 2026-09-02 — Vendor payments by assignment
+
+Billing & finance Vendor payments lists one creator assignment per row, grouped by campaign. Card headers match billing-v3 (title, subtitle, Filter/Sort/Settings). Vendor cost from `agreed_fee` (or “not exposed”). No fake Create payment batch. No migrations. Not on Production.
+
+## Shipped 2026-09-02 — Finance suite exact header match
+
+Finance / collections / treasury / planning / reports / vendor IO / move / reassignment / links now use the mock page header (`.tw-hd`): 19px title, 12px subtitle, Export + Actions. Titles and descriptions match `finance-suite.html`. Generic shell title bar hidden. `tw-*` primitives. Existing tabs and table Filter/Sort/Settings kept. No migrations. Not on Production.
 
 ## Shipped 2026-09-02 — Finance suite restyle
 

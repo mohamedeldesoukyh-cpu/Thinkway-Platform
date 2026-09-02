@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { PostingCenterWorkspace } from "@/features/finance/posting-center/components/posting-center-workspace";
 import { getPostingBatches, getPostingPreview } from "@/features/finance/posting-center/queries";
@@ -19,9 +19,9 @@ export default async function PostingCenterPage() {
   ]);
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Posting center"
-      description="Operational finance subledger bridge — batch-controlled posting to ERP."
+      description="Operational subledger to batch-controlled ERP bridge"
     >
       <PlatformErrorBoundary surface="finance">
         <PostingCenterWorkspace
@@ -32,6 +32,6 @@ export default async function PostingCenterPage() {
           defaultPeriodTo={period_to}
         />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

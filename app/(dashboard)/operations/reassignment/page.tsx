@@ -1,9 +1,6 @@
 import Link from "next/link";
-import { ArrowRightLeftIcon } from "lucide-react";
 
-import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { FinanceSuiteRoot } from "@/components/finance/suite";
-import { Button } from "@/components/ui/button";
+import { FinanceSuiteRoot, FinanceSuiteShell } from "@/components/finance/suite";
 import { ReassignmentCenter } from "@/features/operations/components/reassignment-center";
 import { getMovementBatches } from "@/features/operations/queries";
 
@@ -20,16 +17,13 @@ export default async function ReassignmentCenterPage() {
 
   return (
     <FinanceSuiteRoot>
-      <DashboardShell
+      <FinanceSuiteShell
         title="Reassignment center"
-        description="Audit trail and batch history for enterprise entity and campaign movements."
+        description="Audit trail for campaign movements"
         actions={
-          <Button size="sm" asChild>
-            <Link href="/operations/move">
-              <ArrowRightLeftIcon data-icon="inline-start" />
-              Move between accounts
-            </Link>
-          </Button>
+          <Link href="/operations/move" className="tw-b">
+            Move between accounts
+          </Link>
         }
       >
         {errorMessage ? (
@@ -39,7 +33,7 @@ export default async function ReassignmentCenterPage() {
         ) : batches ? (
           <ReassignmentCenter batches={batches} />
         ) : null}
-      </DashboardShell>
+      </FinanceSuiteShell>
     </FinanceSuiteRoot>
   );
 }

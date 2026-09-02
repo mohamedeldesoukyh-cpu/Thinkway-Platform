@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { StatementsDetailView } from "@/features/reports/components/statements-detail-view";
 import {
@@ -28,7 +28,7 @@ export default async function VendorStatementPage({ params, searchParams }: Prop
   }
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Vendor statement"
       description={`AP ledger for ${report.entity_name}.`}
       backFallbackHref="/reports/statements?type=vendor"
@@ -37,6 +37,6 @@ export default async function VendorStatementPage({ params, searchParams }: Prop
       <PlatformErrorBoundary surface="analytics">
         <StatementsDetailView report={report} />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

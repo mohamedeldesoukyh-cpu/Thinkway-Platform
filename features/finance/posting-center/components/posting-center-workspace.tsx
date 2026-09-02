@@ -251,7 +251,7 @@ export function PostingCenterWorkspace({
             <p>Thinkway operational subledger → batch-controlled ERP bridge. Reverse instead of delete.</p>
           </div>
         </div>
-        <div className="fs-pad">
+        <div className="tw-pad">
           <div className="grid gap-4 md:grid-cols-4">
           <div className="grid gap-2">
             <Label>Transaction type</Label>

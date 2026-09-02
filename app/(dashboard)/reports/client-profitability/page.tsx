@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { ClientProfitabilityView } from "@/features/reports/components/client-profitability-view";
 import {
@@ -16,7 +16,7 @@ export default async function ClientProfitabilityReportPage({ searchParams }: Pr
   const report = await getClientProfitabilityReport(query);
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Profitability by client"
       description="Gross profit and margin by legal entity. Compare up to three clients."
       backFallbackHref="/reports"
@@ -25,6 +25,6 @@ export default async function ClientProfitabilityReportPage({ searchParams }: Pr
       <PlatformErrorBoundary surface="analytics">
         <ClientProfitabilityView report={report} />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

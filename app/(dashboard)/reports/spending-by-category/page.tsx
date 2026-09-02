@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { SpendingByCategoryView } from "@/features/reports/components/spending-by-category-view";
 import {
@@ -16,7 +16,7 @@ export default async function SpendingByCategoryReportPage({ searchParams }: Pro
   const report = await getSpendingByCategoryReport(query);
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Spending by category"
       description="Client intelligence spending rolled up by category with full drill-down."
       backFallbackHref="/reports"
@@ -25,6 +25,6 @@ export default async function SpendingByCategoryReportPage({ searchParams }: Pro
       <PlatformErrorBoundary surface="analytics">
         <SpendingByCategoryView report={report} />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

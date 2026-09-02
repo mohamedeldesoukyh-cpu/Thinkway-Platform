@@ -58,6 +58,8 @@ type DashboardShellProps = {
   /** When set, shows a back control that navigates to this path. */
   backFallbackHref?: string;
   backLabel?: string;
+  /** Skip the desktop chrome header. Pages that render their own header (finance suite) use this. */
+  hideDesktopHeader?: boolean;
 };
 
 export function DashboardShell({
@@ -75,6 +77,7 @@ export function DashboardShell({
   discoveryNavActiveHref,
   backFallbackHref,
   backLabel = "Go back",
+  hideDesktopHeader = false,
 }: DashboardShellProps) {
   const showDiscoveryNav = Boolean(discoveryNavActiveHref);
 
@@ -126,7 +129,7 @@ export function DashboardShell({
             <HomeWorkspaceNavTabs active={workspaceNavActive} />
           </div>
         ) : null}
-        {!immersiveLayout && hidePageHeader ? (
+        {!immersiveLayout && !hideDesktopHeader && hidePageHeader ? (
           <header
             className={cn(
               "hidden items-center justify-between gap-3 md:flex",
@@ -173,7 +176,7 @@ export function DashboardShell({
               <DashboardShellUserSlot compact inSidebar={false} />
             </div>
           </header>
-        ) : !immersiveLayout && platformV6 ? (
+        ) : !immersiveLayout && !hideDesktopHeader && platformV6 ? (
           <header
             className={cn(
               "thinkway-platform-v6-topbar hidden w-full md:flex",
@@ -199,7 +202,7 @@ export function DashboardShell({
               <DashboardShellUserSlot compact inSidebar={false} />
             </div>
           </header>
-        ) : !immersiveLayout ? (
+        ) : !immersiveLayout && !hideDesktopHeader ? (
           <header className="thinkway-shell-header flex flex-col gap-3 px-4 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8">
             <div className="flex min-w-0 items-start gap-3">
               <Link

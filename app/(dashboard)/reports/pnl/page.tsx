@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { PnlReportView } from "@/features/reports/components/pnl-report-view";
 import {
@@ -16,7 +16,7 @@ export default async function PnlReportPage({ searchParams }: Props) {
   const report = await getPnLReport(query);
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="P&L report"
       description="Year-over-year revenue, COGS, and gross profit with client drill-down."
       backFallbackHref="/reports"
@@ -25,6 +25,6 @@ export default async function PnlReportPage({ searchParams }: Props) {
       <PlatformErrorBoundary surface="analytics">
         <PnlReportView report={report} />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

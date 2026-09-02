@@ -3,8 +3,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import { FinanceSuiteEmpty } from "@/components/finance/suite";
-import { Button } from "@/components/ui/button";
+import { FinanceSuiteCard, FinanceSuiteEmpty } from "@/components/finance/suite";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -59,15 +58,12 @@ export function LinkGeneratorWorkspace() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="thinkway-campaign-section-card">
-        <div className="thinkway-campaign-section-head">
-          <div className="min-w-0">
-            <h2>Create a link</h2>
-            <p>Campaign and vendor identifiers drive attribution</p>
-          </div>
-        </div>
-        <div className="fs-pad space-y-4">
+    <div>
+      <FinanceSuiteCard
+        title="Create a link"
+        subtitle="campaign and vendor identifiers drive attribution"
+      >
+        <div className="tw-pad space-y-4">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <div className="grid gap-2">
               <Label htmlFor="channel">Channel</Label>
@@ -135,29 +131,42 @@ export function LinkGeneratorWorkspace() {
 
           <div className="fs-link-preview">
             <code>{generatedLink}</code>
-            <Button variant="outline" size="sm" onClick={copyLink}>
+            <button type="button" className="tw-b sm" onClick={copyLink}>
               Copy link
-            </Button>
+            </button>
+            <button type="button" className="tw-b sm pri">
+              Create link
+            </button>
           </div>
-          <p className="fs-note" style={{ margin: 0 }}>
+          <p className="tw-note" style={{ margin: "13px 0 0" }}>
             The <code className="font-mono">ref=thinkway</code> tag is appended automatically for
             source attribution. Adding a UID tracks a specific placement or creative.
           </p>
         </div>
-      </div>
+      </FinanceSuiteCard>
 
-      <div className="thinkway-campaign-section-card">
-        <div className="thinkway-campaign-section-head">
-          <div className="min-w-0">
-            <h2>Generated links</h2>
-            <p>Every link created, with click attribution</p>
-          </div>
-        </div>
+      <FinanceSuiteCard
+        title="Generated links"
+        subtitle="every link created, with click attribution"
+        actions={
+          <>
+            <button type="button" className="tw-b sm">
+              Filter
+            </button>
+            <button type="button" className="tw-b sm">
+              Sort
+            </button>
+            <button type="button" className="tw-b sm">
+              Settings
+            </button>
+          </>
+        }
+      >
         <FinanceSuiteEmpty
           title="No stored link register yet"
           body="Copy the generated URL above. A persistent click register is not wired on this screen — the builder still creates the campaign/vendor attribution link."
         />
-      </div>
+      </FinanceSuiteCard>
     </div>
   );
 }

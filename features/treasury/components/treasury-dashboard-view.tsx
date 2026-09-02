@@ -4,10 +4,10 @@ import Link from "next/link";
 
 import { TreasuryTrendChart } from "@/components/collections/charts/treasury-trend-chart";
 import {
+  FinanceSuiteCard,
   FinanceSuiteDeck,
   FinanceSuiteTile,
 } from "@/components/finance/suite";
-import { Button } from "@/components/ui/button";
 import type { TreasuryDashboardPayload } from "@/lib/treasury/load-treasury-dashboard";
 import { devLog } from "@/lib/platform/logger";
 
@@ -47,17 +47,16 @@ export function TreasuryDashboardView({ data }: TreasuryDashboardViewProps) {
 
   return (
     <div className="space-y-4">
-      <div className="thinkway-campaign-section-card">
-        <div className="thinkway-campaign-section-head">
-          <div className="min-w-0">
-            <h2>Treasury position</h2>
-            <p>Visibility from A/R, A/P, invoices and planning rollups</p>
-          </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link href="/collections">Open collections</Link>
-          </Button>
-        </div>
-        <div className="fs-pad">
+      <FinanceSuiteCard
+        title="Treasury position"
+        subtitle="visibility from A/R, A/P, invoices and planning rollups"
+        actions={
+          <Link href="/collections" className="tw-b sm">
+            Open collections
+          </Link>
+        }
+      >
+        <div className="tw-pad">
           <FinanceSuiteDeck>
             <FinanceSuiteTile
               kicker="Receivable"
@@ -150,7 +149,7 @@ export function TreasuryDashboardView({ data }: TreasuryDashboardViewProps) {
             />
           </FinanceSuiteDeck>
         </div>
-      </div>
+      </FinanceSuiteCard>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <TreasuryTrendChart

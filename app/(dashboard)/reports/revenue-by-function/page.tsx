@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { RevenueByFunctionView } from "@/features/reports/components/revenue-by-function-view";
 import {
@@ -16,7 +16,7 @@ export default async function RevenueByFunctionReportPage({ searchParams }: Prop
   const report = await getRevenueByFunctionReport(query);
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Revenue by function"
       description="Revenue and GP attributed to OPS and Sales teams by account manager."
       backFallbackHref="/reports"
@@ -25,6 +25,6 @@ export default async function RevenueByFunctionReportPage({ searchParams }: Prop
       <PlatformErrorBoundary surface="analytics">
         <RevenueByFunctionView report={report} />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

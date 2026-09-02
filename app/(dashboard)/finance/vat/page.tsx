@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { VatWorkspace } from "@/features/finance/vat/components/vat-workspace";
 import { getVatWorkspace } from "@/features/finance/vat/queries";
 
@@ -14,9 +14,9 @@ export default async function FinanceVatPage() {
   }
 
   return (
-    <DashboardShell
-      title="VAT & tax"
-      description="Output VAT, input VAT, settlement, and audit exports. Operational dashboards remain ex-VAT."
+    <FinanceSuiteShell
+      title="VAT"
+      description="Output and input VAT settlement"
     >
       {errorMessage ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -25,6 +25,6 @@ export default async function FinanceVatPage() {
       ) : data ? (
         <VatWorkspace data={data} />
       ) : null}
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

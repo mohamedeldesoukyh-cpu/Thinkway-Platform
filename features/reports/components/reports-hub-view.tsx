@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 
 import {
+  FinanceSuiteCard,
   FinanceSuiteDeck,
   FinanceSuiteEmpty,
   FinanceSuiteTile,
@@ -90,7 +91,7 @@ export function ReportsHubView() {
         key={reportId}
         className={cn(
           "relative",
-          dragOverIndex === index && dragIndex !== index && "ring-2 ring-[var(--fs-blue)]/40 rounded-2xl",
+          dragOverIndex === index && dragIndex !== index && "ring-2 ring-[var(--tw-blue)]/40 rounded-2xl",
           dragIndex === index && "opacity-50"
         )}
         onDragOver={(event) => {
@@ -114,14 +115,14 @@ export function ReportsHubView() {
           onDragEnd={clearDragState}
           className={cn(
             "absolute left-3 top-3 z-[2] inline-flex cursor-grab touch-none items-center rounded-md p-1 hover:bg-white/10 active:cursor-grabbing",
-            variant === "soft" ? "text-[var(--fs-bi)]" : "text-white/70"
+            variant === "soft" ? "text-[var(--tw-bi)]" : "text-white/70"
           )}
         >
           <GripVerticalIcon className="size-3.5" aria-hidden />
         </span>
         <button
           type="button"
-          className={cn("fs-star", variant === "soft" && "!bg-[rgba(0,87,255,.1)] !text-[var(--fs-bi)]")}
+          className={cn("tw-star", variant === "soft" && "!bg-[rgba(0,87,255,.1)] !text-[var(--tw-bi)]")}
           aria-label={
             isFavorite
               ? `Remove ${report.title} from favorites`
@@ -145,32 +146,35 @@ export function ReportsHubView() {
   }
 
   return (
-    <div className="thinkway-campaign-section-card">
-      <div className="thinkway-campaign-section-head">
-        <div className="min-w-0">
-          <h2>Performance reports</h2>
-          <p>Drag to reorder · star to favourite · {visibleOrder.length} reports</p>
-        </div>
-        <div className="fs-seg" role="group" aria-label="Report view">
-          {(
-            [
-              { value: "all", label: "All reports" },
-              { value: "favorites", label: "Favourites" },
-            ] as const
-          ).map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              aria-pressed={viewMode === option.value}
-              onClick={() => setViewMode(option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className={cn("fs-pad", !hydrated && "opacity-0")}>
+    <FinanceSuiteCard
+      title="Performance reports"
+      subtitle={`Drag to reorder · star to favourite · ${visibleOrder.length} reports`}
+      actions={
+        <>
+          <div className="tw-seg" role="group" aria-label="Report view">
+            {(
+              [
+                { value: "all", label: "All reports" },
+                { value: "favorites", label: "Favourites" },
+              ] as const
+            ).map((option) => (
+              <button
+                key={option.value}
+                type="button"
+                aria-pressed={viewMode === option.value}
+                onClick={() => setViewMode(option.value)}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="tw-b sm">
+            Export all
+          </button>
+        </>
+      }
+    >
+      <div className={cn("tw-pad", !hydrated && "opacity-0")}>
         {hydrated && viewMode === "favorites" && visibleOrder.length === 0 ? (
           <FinanceSuiteEmpty
             title="No favourites yet"
@@ -186,7 +190,7 @@ export function ReportsHubView() {
             if (ids.length === 0) return null;
             return (
               <div key={group}>
-                <div className="fs-grp">
+                <div className="tw-lbl" style={{ margin: "6px 0 9px" }}>
                   {group} · {ids.length}
                 </div>
                 <FinanceSuiteDeck className="mb-[18px]">
@@ -199,6 +203,6 @@ export function ReportsHubView() {
           })
         )}
       </div>
-    </div>
+    </FinanceSuiteCard>
   );
 }

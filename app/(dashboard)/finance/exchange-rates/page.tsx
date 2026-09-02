@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { ExchangeRatesWorkspace } from "@/features/finance/exchange-rates/components/exchange-rates-workspace";
 import { getExchangeRatesWorkspace } from "@/features/finance/exchange-rates/queries";
 
@@ -14,9 +14,9 @@ export default async function FinanceExchangeRatesPage() {
   }
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Exchange rates"
-      description="Centralized currency master data, effective-dated FX governance, and audit history."
+      description="Currency master and conversion rates"
     >
       {errorMessage ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -25,6 +25,6 @@ export default async function FinanceExchangeRatesPage() {
       ) : data ? (
         <ExchangeRatesWorkspace data={data} />
       ) : null}
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

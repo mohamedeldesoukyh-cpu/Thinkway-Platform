@@ -1,16 +1,16 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { AdjustmentModuleShell } from "@/features/finance/adjustments/components/adjustment-module-shell";
 
 export default function ClientCreditNotesPage() {
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Client credit notes"
-      description="Reduce client receivable against issued invoices. Documents are never deleted — cancel, void, or reverse only."
+      description="Credits raised against client invoices"
     >
       <PlatformErrorBoundary surface="finance">
         <AdjustmentModuleShell moduleKey="client_credit" />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

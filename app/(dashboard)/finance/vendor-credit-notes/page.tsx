@@ -1,16 +1,16 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { AdjustmentModuleShell } from "@/features/finance/adjustments/components/adjustment-module-shell";
 
 export default function VendorCreditNotesPage() {
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Vendor credit notes"
-      description="Reduce supplier payable against vendor IO or vendor invoices."
+      description="Credits received from vendors"
     >
       <PlatformErrorBoundary surface="finance">
         <AdjustmentModuleShell moduleKey="vendor_credit" />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

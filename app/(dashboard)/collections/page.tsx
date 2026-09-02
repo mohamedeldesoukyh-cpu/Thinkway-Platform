@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { CollectionsWorkspaceView } from "@/features/collections/components/collections-workspace-view";
 import { loadCollectionsWorkspace } from "@/features/collections/load-workspace";
 import { parseCollectionsSearchParams } from "@/lib/collections/dashboard-filters";
@@ -29,9 +29,9 @@ export default async function CollectionsPage({ searchParams }: PageProps) {
     : result.error ?? "Collections workspace could not be loaded.";
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Collections"
-      description="AR aging, payment allocation, client statements, and collections forecasting — powered by centralized analytics."
+      description="Aging, receivables and collection performance"
     >
       {errorMessage && !payload ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -55,6 +55,6 @@ export default async function CollectionsPage({ searchParams }: PageProps) {
           Sign in with collections permissions to access this workspace.
         </p>
       )}
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

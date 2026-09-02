@@ -1,5 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { FinanceSuiteRoot } from "@/components/finance/suite";
+import { FinanceSuiteRoot, FinanceSuiteShell } from "@/components/finance/suite";
 import { MoveOperationsTabs } from "@/features/operations/components/move-operations-tabs";
 import {
   getCampaignsForMovement,
@@ -40,9 +39,9 @@ export default async function MoveBetweenAccountsPage({
 
   return (
     <FinanceSuiteRoot>
-      <DashboardShell
+      <FinanceSuiteShell
         title="Move between accounts"
-        description="Enterprise reassignment — hierarchy ownership and creator assignment transfers with full audit preservation."
+        description="Reassign campaigns across group, client and brand"
       >
         {errorMessage ? (
           <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -57,7 +56,7 @@ export default async function MoveBetweenAccountsPage({
             vendorParam={vendorParam}
           />
         ) : null}
-      </DashboardShell>
+      </FinanceSuiteShell>
     </FinanceSuiteRoot>
   );
 }

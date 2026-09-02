@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { VrReportView } from "@/features/reports/components/vr-report-view";
 import {
@@ -16,7 +16,7 @@ export default async function VrReportPage({ searchParams }: Props) {
   const report = await getVrReport(query);
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="VR report"
       description="Vendor rebate amounts by legal entity with monthly breakdown."
       backFallbackHref="/reports"
@@ -25,6 +25,6 @@ export default async function VrReportPage({ searchParams }: Props) {
       <PlatformErrorBoundary surface="analytics">
         <VrReportView report={report} />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

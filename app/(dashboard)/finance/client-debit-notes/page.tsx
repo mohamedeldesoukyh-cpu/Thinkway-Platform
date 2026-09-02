@@ -1,16 +1,16 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { AdjustmentModuleShell } from "@/features/finance/adjustments/components/adjustment-module-shell";
 
 export default function ClientDebitNotesPage() {
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Client debit notes"
       description="Increase client receivable for fees, penalties, or late additions."
     >
       <PlatformErrorBoundary surface="finance">
         <AdjustmentModuleShell moduleKey="client_debit" />
       </PlatformErrorBoundary>
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }

@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteShell } from "@/components/finance/suite";
 import { CreditLimitWorkspace } from "@/features/finance/credit-limit/components/credit-limit-workspace";
 import { getCreditLimitWorkspace } from "@/features/finance/credit-limit/queries";
 
@@ -14,7 +14,7 @@ export default async function FinanceCreditLimitPage() {
   }
 
   return (
-    <DashboardShell
+    <FinanceSuiteShell
       title="Credit limit"
       description="Manage client credit limits, enforcement toggles, and risk acceptance across all legal entities."
     >
@@ -25,6 +25,6 @@ export default async function FinanceCreditLimitPage() {
       ) : data ? (
         <CreditLimitWorkspace data={data} />
       ) : null}
-    </DashboardShell>
+    </FinanceSuiteShell>
   );
 }
