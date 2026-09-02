@@ -34,7 +34,7 @@ export async function fetchDashboardInvoices(supabase: SupabaseClient) {
         id, document_number, client_id, campaign_header_id, status,
         collection_status, issue_date, due_date, total, amount_paid, currency,
         client:clients(name),
-        campaign:${REL.invoices.campaignHeader}(name)
+        campaign:${REL.invoices.campaignHeader}(name, document_number)
       `
     )
     .not("status", "eq", "void")

@@ -120,6 +120,7 @@ export type BillingInvoiceRow = {
   client_name: string;
   campaign_header_id: string | null;
   campaign_name: string | null;
+  campaign_document_number: string | null;
   status: string;
   collection_status: CollectionStatus;
   issue_date: string;

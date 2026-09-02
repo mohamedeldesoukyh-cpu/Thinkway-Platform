@@ -57,7 +57,15 @@ export function normalizeTableColumnState(
   for (const column of columns) {
     if (!seen.has(column.id)) {
       seen.add(column.id);
-      order.push(column.id);
+      const defaultIdx = defaults.order.indexOf(column.id);
+      let insertAt = order.length;
+      for (let i = 0; i < order.length; i++) {
+        if (defaults.order.indexOf(order[i]) > defaultIdx) {
+          insertAt = i;
+          break;
+        }
+      }
+      order.splice(insertAt, 0, column.id);
     }
   }
 

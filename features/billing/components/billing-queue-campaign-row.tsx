@@ -5,6 +5,7 @@ import Link from "next/link";
 
 import { ExternalLinkIcon } from "lucide-react";
 
+import { DocumentNumber } from "@/components/ui/document-number";
 import { BillingCampaignDrilldown } from "@/features/billing/components/billing-campaign-drilldown";
 import {
   BillingQueueGridRow,
@@ -139,7 +140,9 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
           </span>
         ) : null}
         {cols.showCampaignNo ? (
-          <span className="bq-no">{row.campaign_document_number}</span>
+          <span className="bq-no">
+            <DocumentNumber value={row.campaign_document_number} showCanonicalTitle={false} />
+          </span>
         ) : null}
         {cols.showClient ? (
           <span className="bq-cl" title={row.client_name}>

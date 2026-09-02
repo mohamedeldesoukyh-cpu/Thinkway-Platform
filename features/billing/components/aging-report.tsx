@@ -215,13 +215,13 @@ export function AgingReport({
                 <CampaignOperationalTableHead className="w-8" />
                 <CampaignOperationalTableHead>Client / invoice</CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>Due date</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead className="text-right">Days</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Days</CampaignOperationalTableHead>
                 {DISPLAY_BUCKETS.map((bucket) => (
-                  <CampaignOperationalTableHead key={bucket.id} className="text-right">
+                  <CampaignOperationalTableHead key={bucket.id}>
                     {bucket.label}
                   </CampaignOperationalTableHead>
                 ))}
-                <CampaignOperationalTableHead className="text-right">Total</CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>Total</CampaignOperationalTableHead>
               </CampaignOperationalTableHeaderRow>
             </CampaignOperationalTableHeader>
             <CampaignOperationalTableBody>
@@ -246,7 +246,7 @@ export function AgingReport({
                           {open ? "▾" : "▸"}
                         </button>
                       </CampaignOperationalTableCell>
-                      <CampaignOperationalTableCell className="font-semibold">
+                      <CampaignOperationalTableCell className="whitespace-normal break-words">
                         {client.name}
                       </CampaignOperationalTableCell>
                       <CampaignOperationalTableCell className="text-muted-foreground">
@@ -279,14 +279,23 @@ export function AgingReport({
                           return (
                             <CampaignOperationalTableRow key={invoice.id} className="bq-krow">
                               <CampaignOperationalTableCell />
-                              <CampaignOperationalTableCell>
-                                <p className="tabular-nums">
+                              <CampaignOperationalTableCell className="whitespace-normal break-words">
+                                <p>
                                   <DocumentNumber
                                     value={invoice.document_number}
                                     showCanonicalTitle={false}
                                   />
                                 </p>
-                                <p className="text-[10.5px] text-muted-foreground">
+                                <p className="text-muted-foreground">
+                                  {invoice.campaign_document_number ? (
+                                    <>
+                                      <DocumentNumber
+                                        value={invoice.campaign_document_number}
+                                        showCanonicalTitle={false}
+                                      />
+                                      {invoice.campaign_name ? " · " : null}
+                                    </>
+                                  ) : null}
                                   {invoice.campaign_name ?? "—"}
                                 </p>
                               </CampaignOperationalTableCell>
@@ -347,7 +356,7 @@ export function AgingReport({
                   const pct = grand > 0 ? (bucketTotals[bucket.id] / grand) * 100 : 0;
                   return (
                     <CampaignOperationalTableCellAmount key={bucket.id}>
-                      <div className="flex flex-col items-end gap-1">
+                      <div className="flex flex-col items-start gap-1">
                         <span
                           className={
                             bucketTotals[bucket.id] > 0 && bucket.id !== "current"

@@ -202,9 +202,9 @@ export function BillingVendorPaymentsPanel({
               {cols.campaign ? <span>Campaign</span> : null}
               {cols.assignment ? <span>Assignment</span> : null}
               {cols.currency ? <span>Ccy</span> : null}
-              {cols.sell_value ? <span className="bq-rr">Sell value</span> : null}
-              {cols.vendor_cost ? <span className="bq-rr">Vendor cost</span> : null}
-              {cols.paid ? <span className="bq-rr">Paid</span> : null}
+              {cols.sell_value ? <span>Sell value</span> : null}
+              {cols.vendor_cost ? <span>Vendor cost</span> : null}
+              {cols.paid ? <span>Paid</span> : null}
               {cols.payment_state ? <span>Payment state</span> : null}
               {cols.client_invoice ? <span>Client invoice</span> : null}
             </div>
@@ -243,7 +243,15 @@ export function BillingVendorPaymentsPanel({
                         </span>
                       ) : null}
                       {cols.campaign ? (
-                        <span className="bq-cl" title={row.campaign_name}>
+                        <span className="bq-cm" title={row.campaign_name}>
+                          {row.campaign_document_number ? (
+                            <>
+                              <DocumentNumber
+                                value={row.campaign_document_number}
+                                showCanonicalTitle={false}
+                              />{" "}
+                            </>
+                          ) : null}
                           {row.campaign_name}
                         </span>
                       ) : null}
@@ -264,7 +272,7 @@ export function BillingVendorPaymentsPanel({
                       ) : null}
                       {cols.vendor_cost ? (
                         row.vendor_cost == null ? (
-                          <span className="bq-miss bq-rr">not exposed</span>
+                          <span className="bq-miss">not exposed</span>
                         ) : (
                           <span className="bq-v">{formatQueueNumber(row.vendor_cost)}</span>
                         )

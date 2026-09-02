@@ -123,13 +123,13 @@ function BillingCampaignQueueTableHeader() {
       {cols.showBrand ? <span>Brand</span> : null}
       {cols.showCampaign ? <span>Campaign</span> : null}
       {cols.showCurrency ? <span>Ccy</span> : null}
-      {cols.showTotal ? <span className="bq-rr">Total</span> : null}
-      {cols.showAchieved ? <span className="bq-rr">Achieved</span> : null}
-      {cols.showInvoiced ? <span className="bq-rr">Invoiced</span> : null}
-      {cols.showRemaining ? <span className="bq-rr">Remaining</span> : null}
-      {cols.showUnachieved ? <span className="bq-rr">Unachieved</span> : null}
+      {cols.showTotal ? <span>Total</span> : null}
+      {cols.showAchieved ? <span>Achieved</span> : null}
+      {cols.showInvoiced ? <span>Invoiced</span> : null}
+      {cols.showRemaining ? <span>Remaining</span> : null}
+      {cols.showUnachieved ? <span>Unachieved</span> : null}
       {cols.showStatus ? <span>Status</span> : null}
-      {cols.showActions ? <span className="bq-rr">Actions</span> : null}
+      {cols.showActions ? <span>Actions</span> : null}
     </BillingQueueGridRow>
   );
 }

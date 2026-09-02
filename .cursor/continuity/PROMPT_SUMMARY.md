@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Billing queue fully/partial invoice rules.
+**Focus:** Billing & finance table typography.
+
+## Shipped 2026-09-03 — Billing table campaign number + unified type
+
+Invoices and Collections show Campaign No. Campaign names wrap. All `/billing` table body cells match the Invoice column (11px, medium, tabular-nums, left). Headers are centered. Queue, Overview, Aging, Approvals, and Vendor payments use the same type. No migrations. Not on Production.
 
 ## Shipped 2026-09-02 — Restrict billing queue “fully” rules
 

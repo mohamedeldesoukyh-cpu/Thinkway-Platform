@@ -268,7 +268,7 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
         id, document_number, client_id, campaign_header_id, status,
         collection_status, issue_date, due_date, total, amount_paid, currency,
         client:clients(name),
-        campaign:${REL.invoices.campaignHeader}(name)
+        campaign:${REL.invoices.campaignHeader}(name, document_number)
       `
       )
       .not("status", "eq", "void")
@@ -378,7 +378,7 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
         amount_paid: number;
         currency: string;
         client: { name: string } | null;
-        campaign: { name: string } | null;
+        campaign: { name: string; document_number?: string | null } | null;
       };
       const total = Number(row.total);
       const amountPaid = Number(row.amount_paid);
@@ -390,6 +390,7 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
         client_name: row.client?.name ?? "",
         campaign_header_id: row.campaign_header_id,
         campaign_name: row.campaign?.name ?? null,
+        campaign_document_number: row.campaign?.document_number ?? null,
         status: row.status,
         collection_status: row.collection_status,
         issue_date: row.issue_date,

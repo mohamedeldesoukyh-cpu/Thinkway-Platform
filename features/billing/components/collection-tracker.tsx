@@ -33,10 +33,7 @@ function buildCollectionTrackerColumns(
       id: "invoice",
       label: "Invoice",
       renderCell: (inv) => (
-        <Link
-          href={`/billing/invoices/${inv.id}`}
-          className="text-[11px] font-medium tabular-nums hover:underline"
-        >
+        <Link href={`/billing/invoices/${inv.id}`} className="hover:underline">
           <DocumentNumber value={inv.document_number} showCanonicalTitle={false} />
         </Link>
       ),
@@ -44,13 +41,20 @@ function buildCollectionTrackerColumns(
     {
       id: "client",
       label: "Client",
-      cellClassName: "max-w-[140px] truncate",
+      cellClassName: "whitespace-normal break-words",
       renderCell: (inv) => inv.client_name,
+    },
+    {
+      id: "campaign_no",
+      label: "Campaign No",
+      renderCell: (inv) => (
+        <DocumentNumber value={inv.campaign_document_number} showCanonicalTitle={false} />
+      ),
     },
     {
       id: "campaign",
       label: "Campaign",
-      cellClassName: "max-w-[140px] truncate text-muted-foreground",
+      cellClassName: "whitespace-normal break-words",
       renderCell: (inv) => inv.campaign_name ?? "—",
     },
     {
@@ -71,8 +75,6 @@ function buildCollectionTrackerColumns(
     {
       id: "days_past_due",
       label: "Days past due",
-      headerClassName: "text-right",
-      amountCell: true,
       renderCell: (inv) => {
         if (!inv.due_date) return "—";
         const days = daysPastDue(inv.due_date);
@@ -87,9 +89,7 @@ function buildCollectionTrackerColumns(
     {
       id: "outstanding",
       label: "Outstanding",
-      headerClassName: "text-right",
-      amountCell: true,
-      cellClassName: "font-medium bq-v-neg",
+      cellClassName: "bq-v-neg",
       renderCell: (inv) => formatBillingMoney(inv.outstanding, inv.currency || currency),
     },
     {
@@ -150,7 +150,7 @@ export function CollectionTracker({
           />
           <div className="bq-foot flex flex-wrap items-center gap-3 px-4 py-2.5 text-[11px]">
             <span>Open balance</span>
-            <span className="bq-n bq-v-neg font-semibold">
+            <span className="bq-n bq-v-neg">
               {openByCurrency.map(([code, amount]) => formatBillingMoney(amount, code)).join(" + ")}
             </span>
           </div>

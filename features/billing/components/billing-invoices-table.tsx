@@ -24,10 +24,7 @@ export const BILLING_INVOICES_TABLE_COLUMNS: OperationalConfigurableColumnDef<Bi
     id: "invoice",
     label: "Invoice",
     renderCell: (inv) => (
-      <Link
-        href={`/billing/invoices/${inv.id}`}
-        className="text-[11px] font-medium tabular-nums hover:underline"
-      >
+      <Link href={`/billing/invoices/${inv.id}`} className="hover:underline">
         <DocumentNumber value={inv.document_number} showCanonicalTitle={false} />
       </Link>
     ),
@@ -35,13 +32,20 @@ export const BILLING_INVOICES_TABLE_COLUMNS: OperationalConfigurableColumnDef<Bi
   {
     id: "client",
     label: "Client",
-    cellClassName: "max-w-[140px] truncate",
+    cellClassName: "whitespace-normal break-words",
     renderCell: (inv) => inv.client_name,
+  },
+  {
+    id: "campaign_no",
+    label: "Campaign No",
+    renderCell: (inv) => (
+      <DocumentNumber value={inv.campaign_document_number} showCanonicalTitle={false} />
+    ),
   },
   {
     id: "campaign",
     label: "Campaign",
-    cellClassName: "max-w-[140px] truncate text-muted-foreground",
+    cellClassName: "whitespace-normal break-words",
     renderCell: (inv) => inv.campaign_name ?? "—",
   },
   {
@@ -67,25 +71,21 @@ export const BILLING_INVOICES_TABLE_COLUMNS: OperationalConfigurableColumnDef<Bi
   {
     id: "total",
     label: "Total",
-    headerClassName: "text-right",
-    amountCell: true,
-    amountVariant: "revenue",
     renderCell: (inv) => formatBillingMoney(inv.total, inv.currency),
   },
   {
     id: "paid",
     label: "Paid",
-    headerClassName: "text-right",
-    amountCell: true,
     renderCell: (inv) => formatBillingMoney(inv.amount_paid, inv.currency),
   },
   {
     id: "outstanding",
     label: "Outstanding",
-    headerClassName: "text-right",
-    amountCell: true,
-    amountVariant: "revenue",
-    renderCell: (inv) => formatBillingMoney(inv.outstanding, inv.currency),
+    renderCell: (inv) => (
+      <span className={inv.outstanding > 0 ? "bq-v-neg" : undefined}>
+        {formatBillingMoney(inv.outstanding, inv.currency)}
+      </span>
+    ),
   },
   {
     id: "collection",
@@ -134,15 +134,15 @@ export function BillingInvoicesTable({ invoices }: BillingInvoicesTableProps) {
       {byCurrency.map(([code, totals]) => (
         <div
           key={code}
-          className="bq-foot grid grid-cols-[repeat(5,minmax(0,1fr))_auto] items-center gap-3 px-4 py-2.5 text-[11px]"
+          className="bq-foot grid grid-cols-[repeat(5,minmax(0,1fr))_auto] items-center gap-3 px-4 py-2.5"
         >
           <span>
             Subtotal {code} · {totals.n} invoice{totals.n === 1 ? "" : "s"}
           </span>
           <span className="bq-cc w-fit">{code}</span>
-          <span className="bq-n text-right">{formatBillingMoney(totals.t, code)}</span>
-          <span className="bq-n text-right">{formatBillingMoney(totals.p, code)}</span>
-          <span className={`bq-n text-right ${totals.o > 0 ? "bq-v-neg" : ""}`}>
+          <span className="bq-n">{formatBillingMoney(totals.t, code)}</span>
+          <span className="bq-n">{formatBillingMoney(totals.p, code)}</span>
+          <span className={`bq-n ${totals.o > 0 ? "bq-v-neg" : ""}`}>
             {formatBillingMoney(totals.o, code)}
           </span>
         </div>

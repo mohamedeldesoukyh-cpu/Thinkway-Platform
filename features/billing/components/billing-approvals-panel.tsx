@@ -111,7 +111,7 @@ function BillingApprovalsTableHeader() {
         {showStage ? <CampaignOperationalTableHead>Stage</CampaignOperationalTableHead> : null}
         {showAssignee ? <CampaignOperationalTableHead>Assignee</CampaignOperationalTableHead> : null}
         {showActions ? (
-          <CampaignOperationalTableHead className="text-right">Actions</CampaignOperationalTableHead>
+          <CampaignOperationalTableHead>Actions</CampaignOperationalTableHead>
         ) : null}
       </CampaignOperationalTableHeaderRow>
     </CampaignOperationalTableHeader>
@@ -159,11 +159,11 @@ function ApprovalRow({ approval }: { approval: FinancialApprovalRow }) {
     <CampaignOperationalTableRow>
       {showRequest ? (
         <CampaignOperationalTableCell>
-          <p className="font-medium">{approval.title}</p>
-          <p className="text-[10px] tabular-nums text-muted-foreground">
+          <p>{approval.title}</p>
+          <p className="text-muted-foreground">
             <DocumentNumber value={approval.document_number} />
           </p>
-        </CampaignOperationalTableCell>
+        </CampaignOperationalTableCell
       ) : null}
       {showStage ? (
         <CampaignOperationalTableCell>
@@ -176,8 +176,8 @@ function ApprovalRow({ approval }: { approval: FinancialApprovalRow }) {
         </CampaignOperationalTableCell>
       ) : null}
       {showActions ? (
-        <CampaignOperationalTableCell className="text-right">
-          <div className="flex justify-end gap-2">
+        <CampaignOperationalTableCell>
+          <div className="flex gap-2">
             <form action={formAction}>
               <input type="hidden" name="approval_id" value={approval.id} />
               <input type="hidden" name="decision" value="approved" />

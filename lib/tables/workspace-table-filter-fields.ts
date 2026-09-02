@@ -195,6 +195,7 @@ export const BILLING_INVOICES_FILTER_ACCESSORS: Partial<
 > = {
   invoice: (row) => formatDocumentNumberForDisplay(row.document_number),
   client: (row) => row.client_name,
+  campaign_no: (row) => formatDocumentNumberForDisplay(row.campaign_document_number),
   campaign: (row) => row.campaign_name,
   issue_date: (row) => row.issue_date,
   due_date: (row) => row.due_date,
@@ -210,6 +211,7 @@ export const BILLING_COLLECTION_TRACKER_FILTER_ACCESSORS: Partial<
 > = {
   invoice: (row) => formatDocumentNumberForDisplay(row.document_number),
   client: (row) => row.client_name,
+  campaign_no: (row) => formatDocumentNumberForDisplay(row.campaign_document_number),
   campaign: (row) => row.campaign_name,
   issue_date: (row) => row.issue_date,
   due_date: (row) => row.due_date,

@@ -25,8 +25,10 @@
 }
 
 .tw-billing-v3 .bq-n {
+  font-size: 11px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.25px;
+  letter-spacing: 0;
 }
 
 .tw-billing-v3 .bq-kwrap {
@@ -230,16 +232,19 @@
   border-radius: 5px;
   background: var(--bq-soft);
   border: 1px solid var(--bq-hair);
-  font-size: 9.5px;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: var(--bq-mut);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--bq-ink2);
   font-variant-numeric: tabular-nums;
 }
 
 .tw-billing-v3 .bq-brand {
-  color: var(--bq-vio);
+  font-size: 11px;
   font-weight: 500;
+  color: var(--bq-ink2);
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .tw-billing-v3 .bq-v-z {
@@ -264,11 +269,12 @@
 }
 
 .tw-billing-v3 .bq-khd td {
-  font-size: 8.5px !important;
-  font-weight: 700;
-  letter-spacing: 0.55px;
-  text-transform: uppercase;
-  color: #8892a4;
+  font-size: 11px !important;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--bq-ink2);
+  text-align: center;
   white-space: nowrap;
   padding-top: 7px !important;
   padding-bottom: 7px !important;
@@ -457,7 +463,7 @@
 .tw-billing-v3 .bq-r {
   display: grid;
   grid-template-columns: 32px 28px 90px 128px 94px minmax(120px, 1fr) 50px 100px 100px 100px 100px 90px 112px 82px;
-  align-items: center;
+  align-items: start;
 }
 
 .tw-billing-v3 .bq-r > * {
@@ -475,18 +481,19 @@
 }
 
 .tw-billing-v3 .bq-hrow > * {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--bq-mut);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--bq-ink2);
+  text-align: center;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .tw-billing-v3 .bq-rr {
-  text-align: right;
+  text-align: center;
 }
 
 .tw-billing-v3 .bq-prow {
@@ -515,37 +522,40 @@
 }
 
 .tw-billing-v3 .bq-no {
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
   color: var(--bq-ink2);
-  letter-spacing: -0.3px;
+  letter-spacing: 0;
   white-space: nowrap;
 }
 
 .tw-billing-v3 .bq-cl {
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 500;
   color: var(--bq-ink2);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .tw-billing-v3 .bq-cm {
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: -0.1px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .tw-billing-v3 .bq-v {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -0.3px;
-  text-align: right;
+  letter-spacing: 0;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -562,7 +572,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 }
 
 .tw-billing-v3 .bq-ic {
@@ -663,11 +673,12 @@
 }
 
 .tw-billing-v3 .bq-khd > * {
-  font-size: 8.5px;
-  font-weight: 700;
-  letter-spacing: 0.55px;
-  text-transform: uppercase;
-  color: #8892a4;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--bq-ink2);
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -682,21 +693,20 @@
 }
 
 .tw-billing-v3 .bq-kn {
-  font-size: 12px;
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 500;
+  overflow: visible;
+  text-overflow: unset;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .tw-billing-v3 .bq-kid {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   font-variant-numeric: tabular-nums;
-  color: var(--bq-mut);
+  color: var(--bq-ink2);
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .tw-billing-v3 .bq-in {
@@ -747,8 +757,8 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: 999px;
-  font-size: 10px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
   white-space: nowrap;
 }
 
@@ -770,7 +780,8 @@
 .tw-billing-v3 .bq-miss {
   color: #a9b2c3;
   font-style: italic;
-  font-size: 11.5px;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .tw-billing-v3 .bq-vgrid {
@@ -781,7 +792,14 @@
 .tw-billing-v3 .bq-vrow {
   display: grid;
   grid-template-columns: 32px minmax(150px, 1.2fr) minmax(120px, 1fr) 118px 48px 124px 108px 88px 110px 112px;
+}
+
+.tw-billing-v3 .bq-vhd {
   align-items: center;
+}
+
+.tw-billing-v3 .bq-vrow {
+  align-items: start;
 }
 
 .tw-billing-v3 .bq-vhd > *,
@@ -797,11 +815,12 @@
 }
 
 .tw-billing-v3 .bq-vhd > * {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--bq-mut);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--bq-ink2);
+  text-align: center;
   white-space: nowrap;
 }
 
@@ -822,16 +841,16 @@
   padding: 8px 14px;
   background: #edf1f7;
   border-bottom: 1px solid var(--bq-hair);
-  font-size: 12px;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .tw-billing-v3 .bq-vgrp em {
   font-style: normal;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: inherit;
   font-weight: 500;
-  font-size: 10.5px;
-  color: var(--bq-mut);
+  font-size: 11px;
+  color: var(--bq-ink2);
   margin-left: 8px;
   font-variant-numeric: tabular-nums;
 }
@@ -897,4 +916,84 @@
 .dark .tw-billing-v3 .bq-vhd,
 .dark .tw-billing-v3 .bq-vgrp {
   background: hsl(var(--muted) / 0.5);
+}
+
+/* Table body matches Invoice column: 11px / 500 / tabular-nums. Headers centered. */
+.tw-billing-v3 table thead th,
+.tw-billing-v3 [data-slot="table-head"],
+.tw-billing-v3 .thinkway-campaign-op-table-head,
+.tw-billing-v3 .bq-tbl-hd > span {
+  text-align: center !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  font-family: inherit !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  color: var(--bq-ink2) !important;
+}
+
+.tw-billing-v3 table tbody td,
+.tw-billing-v3 [data-slot="table-cell"],
+.tw-billing-v3 .thinkway-campaign-op-table-cell {
+  text-align: left !important;
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  font-family: inherit !important;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+
+.tw-billing-v3 table tbody td > a,
+.tw-billing-v3 table tbody td > p,
+.tw-billing-v3 table tbody td em {
+  font-size: inherit;
+  font-weight: inherit;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.tw-billing-v3 .bq-tbl-hd > span {
+  text-align: center !important;
+}
+
+.tw-billing-v3 .bq-tbl-row,
+.tw-billing-v3 .bq-tbl-row > * {
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: left;
+}
+
+.tw-billing-v3 table tbody td.whitespace-normal,
+.tw-billing-v3 table tbody td.whitespace-normal * {
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+
+.tw-billing-v3 .bq-r:not(.bq-hrow):not(.bq-khd) > *,
+.tw-billing-v3 .bq-vrow > * {
+  text-align: left;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.tw-billing-v3 table tbody td [data-slot="badge"],
+.tw-billing-v3 .bq-r [data-slot="badge"],
+.tw-billing-v3 .bq-vrow [data-slot="badge"] {
+  font-size: 11px !important;
+  font-weight: 500 !important;
+  font-family: inherit !important;
+  letter-spacing: 0;
+}
+
+.tw-billing-v3 table tbody td button,
+.tw-billing-v3 .bq-r button,
+.tw-billing-v3 .bq-vrow button,
+.tw-billing-v3 .bq-b,
+.tw-billing-v3 .bq-x {
+  font-family: inherit;
 }

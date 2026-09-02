@@ -80,39 +80,29 @@ export function BillingOverviewPanel({ campaigns }: BillingOverviewPanelProps) {
           <span className="bq-card__t">By client</span>
           <span className="bq-card__s">native amounts — mixed currencies are not converted</span>
         </div>
-        <div className="grid grid-cols-[minmax(0,1fr)_74px_128px_128px_112px] gap-3 border-b border-border/60 bg-muted/40 px-4 py-2">
-          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-            Client
-          </span>
-          <span className="text-right text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-            Campaigns
-          </span>
-          <span className="text-right text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-            Value
-          </span>
-          <span className="text-right text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-            Invoiced
-          </span>
-          <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground">
-            Share
-          </span>
+        <div className="bq-tbl-hd grid grid-cols-[minmax(0,1fr)_74px_128px_128px_112px] gap-3 border-b border-border/60 bg-muted/40 px-4 py-2">
+          <span>Client</span>
+          <span>Campaigns</span>
+          <span>Value</span>
+          <span>Invoiced</span>
+          <span>Share</span>
         </div>
         {byClient.map((row) => {
           const share = totalValue > 0 ? Math.round((row.value / totalValue) * 100) : 0;
           return (
             <div
               key={row.name}
-              className="grid grid-cols-[minmax(0,1fr)_74px_128px_128px_112px] items-center gap-3 border-b border-border/40 px-4 py-2.5 last:border-b-0"
+              className="bq-tbl-row grid grid-cols-[minmax(0,1fr)_74px_128px_128px_112px] items-center gap-3 border-b border-border/40 px-4 py-2.5 last:border-b-0"
             >
-              <span className="truncate text-[13px] font-medium">{row.name}</span>
-              <span className="bq-n text-right text-xs">{row.campaigns}</span>
-              <span className="bq-n text-right text-xs">
+              <span className="whitespace-normal break-words">{row.name}</span>
+              <span className="bq-n">{row.campaigns}</span>
+              <span className="bq-n">
                 {row.currency === "mixed"
                   ? row.value.toLocaleString("en-US", { maximumFractionDigits: 0 })
                   : formatBillingMoney(row.value, row.currency)}
               </span>
               <span
-                className={`bq-n text-right text-xs ${row.invoiced > 0 ? "bq-v-pos" : "bq-v-z"}`}
+                className={`bq-n ${row.invoiced > 0 ? "bq-v-pos" : "bq-v-z"}`}
               >
                 {row.currency === "mixed"
                   ? row.invoiced.toLocaleString("en-US", { maximumFractionDigits: 0 })
@@ -136,8 +126,7 @@ export function BillingOverviewPanel({ campaigns }: BillingOverviewPanelProps) {
             {byCurrency.map(([code, amount]) => (
               <div key={code} className="flex items-center gap-2 py-1.5">
                 <span className="bq-cc">{code}</span>
-                <span className="flex-1" />
-                <span className="bq-n text-xs font-semibold">{formatBillingMoney(amount, code)}</span>
+                <span className="bq-n">{formatBillingMoney(amount, code)}</span>
               </div>
             ))}
           </div>
@@ -152,8 +141,7 @@ export function BillingOverviewPanel({ campaigns }: BillingOverviewPanelProps) {
               <div key={status} className="flex items-center gap-2 py-1.5">
                 <BillingStatusBadge status={status} />
                 <span className="sr-only">{labelForBillingStatus(status)}</span>
-                <span className="flex-1" />
-                <span className="bq-n text-xs font-semibold">{count}</span>
+                <span className="bq-n">{count}</span>
               </div>
             ))}
           </div>
