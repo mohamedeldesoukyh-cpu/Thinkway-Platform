@@ -6,7 +6,6 @@ import {
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import { computeCampaignFinancialRollup } from "@/lib/billing/operational-financial-sync";
-import { isCampaignBillingEligible } from "@/lib/billing/campaign-billing-eligibility";
 
 export type CampaignBillingQueueFilter =
   | "all"
@@ -173,21 +172,40 @@ export function buildCampaignQueueFromBillingLines(
   return rows;
 }
 
+const QUEUE_MONEY_EPSILON = 0.01;
+
+export function campaignHasRemainingToInvoice(row: CampaignBillingQueueRow): boolean {
+  return row.remaining_to_invoice > QUEUE_MONEY_EPSILON;
+}
+
+/** Fully billed — remaining is gone. Partial slices never qualify. */
+export function campaignIsFullyInvoiced(row: CampaignBillingQueueRow): boolean {
+  return row.already_invoiced > QUEUE_MONEY_EPSILON && !campaignHasRemainingToInvoice(row);
+}
+
+/** Some billed, some remaining. */
+export function campaignIsPartiallyInvoiced(row: CampaignBillingQueueRow): boolean {
+  return row.already_invoiced > QUEUE_MONEY_EPSILON && campaignHasRemainingToInvoice(row);
+}
+
+/**
+ * Fully achieved in the billing queue means the campaign is fully delivered
+ * and fully billed. A 10% or 60% invoice is not “fully” anything.
+ */
+export function campaignIsFullyAchieved(row: CampaignBillingQueueRow): boolean {
+  return (
+    row.total_campaign_amount > QUEUE_MONEY_EPSILON &&
+    row.unachieved_revenue <= QUEUE_MONEY_EPSILON &&
+    campaignIsFullyInvoiced(row)
+  );
+}
+
 /** Campaigns with zero remaining invoiceable revenue are fully invoiced — hide from default queue. */
 export function filterCampaignsWithRemainingInvoiceable(
   rows: CampaignBillingQueueRow[],
-  operationalRowsByCampaign?: Map<string, import("@/lib/billing/operational-billing-rows").OperationalBillingRow[]>
+  _operationalRowsByCampaign?: Map<string, import("@/lib/billing/operational-billing-rows").OperationalBillingRow[]>
 ): CampaignBillingQueueRow[] {
-  return rows.filter((row) => {
-    if (row.remaining_to_invoice <= 0.01 && row.already_invoiced > 0) {
-      return false;
-    }
-    const ops = operationalRowsByCampaign?.get(row.campaign_header_id);
-    if (ops && ops.length > 0) {
-      return isCampaignBillingEligible(ops);
-    }
-    return row.remaining_to_invoice > 0 || row.billing_status === "partially_invoiced";
-  });
+  return rows.filter((row) => campaignHasRemainingToInvoice(row));
 }
 
 export function filterCampaignQueueRows(
@@ -199,18 +217,15 @@ export function filterCampaignQueueRows(
   const filtered = rows.filter((row) => {
     switch (filter) {
       case "invoiced":
-        return row.already_invoiced >= row.achieved_revenue && row.achieved_revenue > 0;
+        return campaignIsFullyInvoiced(row);
       case "partially_invoiced":
-        return (
-          row.billing_status === "partially_invoiced" ||
-          (row.already_invoiced > 0 && row.remaining_to_invoice > 0)
-        );
+        return campaignIsPartiallyInvoiced(row);
       case "not_invoiced":
-        return row.already_invoiced <= 0 && row.achieved_revenue > 0;
+        return row.already_invoiced <= QUEUE_MONEY_EPSILON && campaignHasRemainingToInvoice(row);
       case "fully_achieved":
-        return row.unachieved_revenue <= 0 && row.total_campaign_amount > 0;
+        return campaignIsFullyAchieved(row);
       case "partially_achieved":
-        return row.unachieved_revenue > 0 && row.achieved_revenue > 0;
+        return row.unachieved_revenue > QUEUE_MONEY_EPSILON && row.achieved_revenue > QUEUE_MONEY_EPSILON;
       case "draft":
         return row.billing_status === "draft";
       case "approved":

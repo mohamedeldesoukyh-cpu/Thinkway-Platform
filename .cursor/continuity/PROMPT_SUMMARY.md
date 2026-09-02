@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Shared invoice confirm on Assignments + Campaign Billing.
+**Focus:** Billing queue fully/partial invoice rules.
+
+## Shipped 2026-09-02 — Restrict billing queue “fully” rules
+
+Fully achieved / Invoiced now require remaining ≈ 0. A 10% or 60% invoice stays Partially invoiced and stays in the queue. Queue membership is remaining to invoice, not assignment eligibility. No migrations. Not on Production.
 
 ## Shipped 2026-09-02 — Assignments invoice confirm sync
 

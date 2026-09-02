@@ -52,11 +52,11 @@ function rowMatchesOperationalFilter(
 
   switch (filter) {
     case "invoiced":
-      return billable > 0 && invoiced >= billable;
+      return billable > 0 && invoiced > 0 && remaining <= 0.01;
     case "not_invoiced":
-      return billable > 0 && invoiced <= 0;
+      return billable > 0 && invoiced <= 0.01 && remaining > 0.01;
     case "partially_invoiced":
-      return invoiced > 0 && remaining > 0;
+      return invoiced > 0.01 && remaining > 0.01;
     case "approved":
       return lineStatus === "approved" || status === "ready_to_invoice";
     case "moved_to_billing":
@@ -65,7 +65,12 @@ function rowMatchesOperationalFilter(
         ["ready_to_invoice", "partially_invoiced"].includes(status)
       );
     case "fully_achieved":
-      return row.billable_amount > 0 && isOperationalRowAchieved(row);
+      return (
+        row.billable_amount > 0 &&
+        isOperationalRowAchieved(row) &&
+        invoiced > 0.01 &&
+        remaining <= 0.01
+      );
     case "partially_achieved":
       return row.billable_amount > 0 && !isOperationalRowAchieved(row);
     case "draft":
