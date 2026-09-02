@@ -46,7 +46,7 @@
 
 1. **Cap** — `sum(invoice slices for an assignment) ≤ assignment billable`. Next invoice cannot exceed remaining.
 2. **Unlimited invoices** — Same assignment may appear on INV-1 … INV-n until remaining is 0.
-3. **Percent and amount together** — Linked fields on the operational billing table. Blank / 100% = all remaining (today’s behaviour). Campaign (main) line % cascades to assignments; mixed assignment % rolls up to the campaign line (`toBeInvoiced / amount`).
+3. **Percent and amount together** — Linked fields on the operational billing table. Blank / 100% = all remaining (today’s behaviour). The assignment (main) line % cascades to nested rows; mixed child % rolls up to that assignment (`toBeInvoiced / amount`). There is no second campaign wrapper row under an already-open campaign.
 4. **Percent is of remaining**, not of original billable (first invoice on a fresh row behaves as % of total).
 5. **To Be Invoiced** = Invoice amount × Invoice %. **Remaining** = Invoice amount − To Be Invoiced. Campaign remaining is the sum of assignment remaining.
 6. **VAT on the slice** — `VAT = this invoice before-VAT × assignment VAT %`. Exempt stays 0. Header tax = sum of line VAT.
