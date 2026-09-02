@@ -216,7 +216,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
                 disabled={invoiceDisabled || invoicePending || row.remaining_to_invoice <= 0.01}
                 min={0}
                 max={100}
-                widthClass="bq-in"
+                widthClass="bq-in bq-in-pct min-w-14 w-14"
                 onCommit={(percent) => onCampaignPercentChange?.(percent)}
               />
               <span>%</span>

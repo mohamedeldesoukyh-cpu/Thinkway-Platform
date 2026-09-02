@@ -436,10 +436,12 @@
 .tw-billing-v3 .bq-inw {
   display: flex;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
+  min-width: max-content;
 }
 
 .tw-billing-v3 .bq-inw span {
+  flex: 0 0 auto;
   font-size: 11px;
   font-weight: 500;
   color: var(--bq-mut);
@@ -457,6 +459,22 @@
   text-align: right;
 }
 
+.tw-billing-v3 .bq-in-pct,
+.tw-billing-v3 .bq-inw input.bq-in-pct {
+  width: 56px;
+  min-width: 56px;
+  max-width: 56px;
+  flex: 0 0 56px;
+  padding-inline: 6px;
+  appearance: textfield;
+}
+
+.tw-billing-v3 .bq-in-pct::-webkit-inner-spin-button,
+.tw-billing-v3 .bq-in-pct::-webkit-outer-spin-button {
+  appearance: none;
+  margin: 0;
+}
+
 .tw-billing-v3 .bq-inw input:focus,
 .tw-billing-v3 .bq-in:focus {
   outline: none;
@@ -469,12 +487,12 @@
 }
 
 .tw-billing-v3 .bq-grid {
-  min-width: 1287px;
+  min-width: 1319px;
 }
 
 .tw-billing-v3 .bq-r {
   display: grid;
-  grid-template-columns: 32px 28px 90px 128px 94px minmax(120px, 1fr) 50px 100px 100px 100px 100px 72px 90px 112px 82px;
+  grid-template-columns: 32px 28px 90px 128px 94px minmax(120px, 1fr) 50px 100px 100px 100px 100px 104px 90px 112px 82px;
   align-items: start;
 }
 
@@ -734,6 +752,15 @@
   text-align: right;
   color: var(--bq-ink);
   box-shadow: none;
+}
+
+.tw-billing-v3 .bq-in.bq-in-pct {
+  width: 56px;
+  min-width: 56px;
+  max-width: 56px;
+  flex: 0 0 56px;
+  padding-inline: 6px;
+  appearance: textfield;
 }
 
 .tw-billing-v3 .bq-ktot {

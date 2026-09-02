@@ -15,7 +15,7 @@ export const BILLING_QUEUE_GRID_TRACKS = [
   { id: "achieved", width: "100px", key: "showAchieved" },
   { id: "invoiced", width: "100px", key: "showInvoiced" },
   { id: "remaining", width: "100px", key: "showRemaining" },
-  { id: "bill_percent", width: "72px", key: "showBillPercent" },
+  { id: "bill_percent", width: "104px", key: "showBillPercent" },
   { id: "unachieved", width: "90px", key: "showUnachieved" },
   { id: "status", width: "112px", key: "showStatus" },
   { id: "actions", width: "82px", key: "showActions" },

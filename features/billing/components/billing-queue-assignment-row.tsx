@@ -195,7 +195,7 @@ export const BillingQueueAssignmentRow = memo(function BillingQueueAssignmentRow
               disabled={!editable}
               min={0}
               max={100}
-              widthClass="bq-in"
+              widthClass="bq-in bq-in-pct min-w-14 w-14"
               onCommit={(percent) => onPercentChange(row.id, percent)}
             />
             <span>%</span>
