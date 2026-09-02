@@ -3,6 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Inline invoice generation on Campaign Finance operational billing — Invoice %, To Be Invoiced, Remaining on the table; no sidebar.
 
+## Shipped 2026-09-02 — Billing workspace v3 restyle
+
+Billing & finance (`/billing`) visual redesign from `billing-v3.html` without dropping functions: 4 hero + 5 secondary KPIs, underline tabs, queue assignment rows sharing parent columns, Overview by client/currency/status, invoice currency subtotals, collection days past due, A/R aging client matrix, approvals grouped by invoice, vendor cost strip. Thinkway green (not mock blue). No currency conversion. No migrations. Not on Production.
+
 ## In progress — Inline operational invoice draft (2026-09-02)
 
 Generate invoice from the operational billing table on Campaign Finance and Billing & finance (`/billing`). Invoice % defaults to 100%. Campaign (main) line % cascades to assignments; mixed assignment % rolls up. Spec: `docs/capabilities/PARTIAL_ASSIGNMENT_INVOICE_SPEC.md`. No migrations. Not on Production.

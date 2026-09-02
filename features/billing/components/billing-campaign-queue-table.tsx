@@ -32,7 +32,11 @@ import {
   BILLING_CAMPAIGN_REVIEW_LINES_COLUMN_METAS,
   BillingCampaignReviewPanel,
 } from "@/features/billing/components/billing-campaign-review-panel";
-import { BillingFinanceFilterBar } from "@/features/billing/components/billing-finance-filter-bar";
+import {
+  BILLING_FINANCE_FILTER_OPTIONS,
+  BillingFinanceFilterBar,
+} from "@/features/billing/components/billing-finance-filter-bar";
+import { BillingQueueTotalsRow } from "@/features/billing/components/billing-queue-assignment-row";
 import { InvoiceTargetChoiceDialog } from "@/features/billing/components/invoice-target-choice-dialog";
 import {
   eligibleAppendableInvoices,
@@ -211,6 +215,29 @@ export function BillingCampaignQueueTable({
     const codes = [...new Set(filtered.map((row) => row.currency_code))];
     return codes.length === 1 ? codes[0] : null;
   }, [filtered]);
+
+  const filterCounts = useMemo(() => {
+    return Object.fromEntries(
+      BILLING_FINANCE_FILTER_OPTIONS.map((opt) => [
+        opt.value,
+        filterCampaignQueueRows(suiteRows, opt.value).length,
+      ])
+    ) as Record<CampaignBillingQueueFilter, number>;
+  }, [suiteRows]);
+
+  const selectedRemainingByCurrency = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const [campaignId, selection] of Object.entries(queueSelections)) {
+      if (countSelection(selection) === 0) continue;
+      const campaign = campaigns.find((row) => row.campaign_header_id === campaignId);
+      if (!campaign) continue;
+      map.set(
+        campaign.currency_code,
+        (map.get(campaign.currency_code) ?? 0) + campaign.remaining_to_invoice
+      );
+    }
+    return [...map.entries()];
+  }, [campaigns, queueSelections]);
 
   const selectedCampaign = useMemo(
     () => campaigns.find((row) => row.campaign_header_id === selectedCampaignId) ?? null,
@@ -491,6 +518,7 @@ export function BillingCampaignQueueTable({
     <div className="space-y-4">
       <BillingFinanceFilterBar
         value={filter}
+        counts={filterCounts}
         onChange={(value) => {
           setFilter(value);
           devLog("[queue-filter] billing queue filter changed", { filter: value });
@@ -576,9 +604,16 @@ export function BillingCampaignQueueTable({
                     onSelectionChange={setQueueSelection}
                     onOpenInvoice={onOpenInvoice}
                   />
-                );
-              })}
-            </CampaignOperationalTableBody>
+                  );
+                })}
+                <BillingQueueTotalsRow
+                  campaignCount={filtered.length}
+                  currency={filteredRollupCurrency}
+                  total={filteredRollup.total}
+                  invoiced={filteredRollup.invoiced}
+                  remaining={filteredRollup.remaining}
+                />
+              </CampaignOperationalTableBody>
           </CampaignOperationalTable>
         )}
       </OperationalTableSection>
@@ -642,6 +677,25 @@ export function BillingCampaignQueueTable({
                 ?.campaign_name ?? "Campaign")
             : "Select rows in one campaign only"}
         </span>
+        {selectedRemainingByCurrency.length > 0 ? (
+          <span className="flex gap-4 border-l border-border/60 pl-3">
+            {selectedRemainingByCurrency.map(([code, amount]) => (
+              <span key={code} className="flex flex-col">
+                <span className="text-[9px] font-bold uppercase tracking-wide text-muted-foreground">
+                  {code} remaining
+                </span>
+                <span className="text-xs font-semibold tabular-nums">
+                  {formatBillingMoneyCompact(amount, code)}
+                </span>
+              </span>
+            ))}
+          </span>
+        ) : null}
+        {selectedRemainingByCurrency.length > 1 ? (
+          <span className="bq-mix">
+            {selectedRemainingByCurrency.length} currencies — one invoice per currency
+          </span>
+        ) : null}
 
         <PlatformFloatingBarDivider className="ml-auto" />
 

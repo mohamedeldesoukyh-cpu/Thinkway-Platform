@@ -17,6 +17,7 @@ import { CampaignOperationalSectionHeader } from "@/features/campaigns/component
 import { AGING_BUCKET_LABELS } from "@/features/billing/constants";
 import type { BillingInvoiceRow } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
+import { daysPastDue } from "@/lib/collections/aging";
 
 type CollectionTrackerProps = {
   invoices: BillingInvoiceRow[];
@@ -53,10 +54,30 @@ function buildCollectionTrackerColumns(
       renderCell: (inv) => inv.campaign_name ?? "—",
     },
     {
+      id: "issue_date",
+      label: "Issue date",
+      renderCell: (inv) => format(new Date(`${inv.issue_date}T00:00:00`), "MMM d, yyyy"),
+    },
+    {
       id: "due_date",
       label: "Due date",
       renderCell: (inv) =>
-        inv.due_date ? format(new Date(`${inv.due_date}T00:00:00`), "MMM d, yyyy") : "—",
+        inv.due_date ? (
+          format(new Date(`${inv.due_date}T00:00:00`), "MMM d, yyyy")
+        ) : (
+          <span className="italic text-muted-foreground">not set</span>
+        ),
+    },
+    {
+      id: "days_past_due",
+      label: "Days past due",
+      headerClassName: "text-right",
+      amountCell: true,
+      renderCell: (inv) => {
+        if (!inv.due_date) return "—";
+        const days = daysPastDue(inv.due_date);
+        return <span className={days > 0 ? "bq-v-neg" : undefined}>{days}</span>;
+      },
     },
     {
       id: "aging",
@@ -68,7 +89,7 @@ function buildCollectionTrackerColumns(
       label: "Outstanding",
       headerClassName: "text-right",
       amountCell: true,
-      cellClassName: "font-medium",
+      cellClassName: "font-medium bq-v-neg",
       renderCell: (inv) => formatBillingMoney(inv.outstanding, inv.currency || currency),
     },
     {
@@ -92,6 +113,13 @@ export function CollectionTracker({
 }: CollectionTrackerProps) {
   const open = useMemo(() => invoices.filter((i) => i.outstanding > 0), [invoices]);
   const columns = useMemo(() => buildCollectionTrackerColumns(currency), [currency]);
+  const openByCurrency = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const inv of open) {
+      map.set(inv.currency, (map.get(inv.currency) ?? 0) + inv.outstanding);
+    }
+    return [...map.entries()];
+  }, [open]);
 
   return (
     <OperationalTableSection
@@ -101,7 +129,7 @@ export function CollectionTracker({
       leading={
         <CampaignOperationalSectionHeader
           title="Collection tracker"
-          description={`${open.length} open invoice${open.length === 1 ? "" : "s"} requiring collection follow-up`}
+          description={`${open.length} open invoice${open.length === 1 ? "" : "s"} requiring follow-up · driven by the client invoice register`}
           actions={settingsSlot}
         />
       }
@@ -109,11 +137,28 @@ export function CollectionTracker({
       {open.length === 0 ? (
         <p className="px-4 py-8 text-[11px] text-muted-foreground">All invoices collected.</p>
       ) : (
-        <OperationalConfigurableTable
-          columns={columns}
-          rows={open}
-          rowKey={(inv) => inv.id}
-        />
+        <>
+          <OperationalConfigurableTable
+            columns={columns}
+            rows={open}
+            rowKey={(inv) => inv.id}
+            rowClassName={(inv) =>
+              inv.due_date && daysPastDue(inv.due_date) > 0
+                ? "shadow-[inset_3px_0_0_#c82121]"
+                : undefined
+            }
+          />
+          <div className="bq-foot flex flex-wrap items-center gap-3 px-4 py-2.5 text-[11px]">
+            <span>Open balance</span>
+            <span className="bq-n bq-v-neg font-semibold">
+              {openByCurrency.map(([code, amount]) => formatBillingMoney(amount, code)).join(" + ")}
+            </span>
+          </div>
+          <p className="bq-tn">
+            Aging runs from the invoice <strong>due date</strong>, not the issue date.{" "}
+            <strong>Current</strong> means issued and not yet due.
+          </p>
+        </>
       )}
     </OperationalTableSection>
   );

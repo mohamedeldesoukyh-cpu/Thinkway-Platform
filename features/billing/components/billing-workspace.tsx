@@ -3,6 +3,8 @@
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 
+import "@/app/styles/billing-workspace-v3.css";
+
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
@@ -47,6 +49,7 @@ import {
   VendorBatchesCard,
 } from "@/features/billing/components/billing-invoices-table";
 import { BillingKpiStrip } from "@/features/billing/components/billing-kpi-strip";
+import { BillingOverviewPanel } from "@/features/billing/components/billing-overview-panel";
 import {
   BILLING_COLLECTION_TRACKER_COLUMN_METAS,
   BILLING_COLLECTION_TRACKER_TABLE_COLUMNS,
@@ -111,6 +114,18 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
 
   const kpiCurrency = queueCurrencies.length === 1 ? queueCurrencies[0] : undefined;
   const mixedCurrency = queueCurrencies.length > 1;
+  const remainingToInvoice = useMemo(
+    () => dashboard.campaign_queue.reduce((sum, row) => sum + row.remaining_to_invoice, 0),
+    [dashboard.campaign_queue]
+  );
+  const billedCampaignCount = useMemo(
+    () => dashboard.campaign_queue.filter((row) => row.already_invoiced > 0).length,
+    [dashboard.campaign_queue]
+  );
+  const collectedCount = useMemo(
+    () => dashboard.invoices.filter((invoice) => invoice.collection_status === "collected").length,
+    [dashboard.invoices]
+  );
   const openInvoices = useMemo(
     () => dashboard.invoices.filter((invoice) => invoice.outstanding > 0),
     [dashboard.invoices]
@@ -159,7 +174,11 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
         label: "Invoices",
         count: dashboard.invoices.length,
       },
-      collections: { value: "collections", label: "Collections" },
+      collections: {
+        value: "collections",
+        label: "Collections",
+        count: openInvoices.length,
+      },
       aging: { value: "aging", label: "Aging" },
       approvals: {
         value: "approvals",
@@ -172,23 +191,27 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
       dashboard.campaign_queue.length,
       dashboard.invoices.length,
       dashboard.pending_approvals.length,
+      openInvoices.length,
     ]
   );
 
   return (
-    <div className="space-y-4">
+    <div className="tw-billing-v3 space-y-4">
       <BillingKpiStrip
         kpis={dashboard.kpis}
         currency={kpiCurrency}
         mixedCurrency={mixedCurrency}
+        campaignCount={dashboard.campaign_queue.length}
+        billedCampaignCount={billedCampaignCount}
+        remainingToInvoice={remainingToInvoice}
       />
 
       <Tabs defaultValue="queue" className="flex flex-col gap-0">
         <OperationalWorkspaceSortableTabsBar
-          sectionLabel="Billing workspace"
           tabOrder={tabOrder}
           tabsById={tabsById}
           onReorder={moveTab}
+          variant="underline"
         />
 
         <TabsContent value="queue" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
@@ -210,33 +233,8 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
         </TabsContent>
 
         <TabsContent value="overview" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel className="space-y-4 p-4 md:p-5">
-            <OperationalTableSuiteProvider
-              tableId={OPERATIONAL_TABLE_IDS.billingCollectionTracker}
-              columns={collectionTrackerColumns}
-              rows={openInvoices}
-              filterAccessors={BILLING_COLLECTION_TRACKER_FILTER_ACCESSORS}
-            >
-              <CollectionTracker
-                invoices={dashboard.invoices}
-                settingsSlot={
-                  <OperationalTableControlsSlot contextLabel="Collection tracker" />
-                }
-              />
-            </OperationalTableSuiteProvider>
-            <OperationalTableSuiteProvider
-              tableId={OPERATIONAL_TABLE_IDS.billingFinancialApprovals}
-              columns={financialApprovalsColumns}
-              rows={dashboard.pending_approvals}
-              filterAccessors={BILLING_FINANCIAL_APPROVALS_FILTER_ACCESSORS}
-            >
-              <BillingApprovalsPanel
-                approvals={dashboard.pending_approvals}
-                settingsSlot={
-                  <OperationalTableControlsSlot contextLabel="Financial approvals" />
-                }
-              />
-            </OperationalTableSuiteProvider>
+          <OperationalWorkspaceTabPanel className="p-0 md:p-0">
+            <BillingOverviewPanel campaigns={dashboard.campaign_queue} />
           </OperationalWorkspaceTabPanel>
         </TabsContent>
 
@@ -250,7 +248,7 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
             >
               <BillingTabTableShell
                 title="Invoices"
-                description={`${dashboard.invoices.length} issued invoice${dashboard.invoices.length === 1 ? "" : "s"}`}
+                description={`${dashboard.invoices.length} issued · ${collectedCount} collected, ${dashboard.invoices.length - collectedCount} open`}
                 settingsLabel="Invoices"
               >
                 <BillingInvoicesTable invoices={dashboard.invoices} />
@@ -278,8 +276,13 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
         </TabsContent>
 
         <TabsContent value="aging" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
-            <AgingReport aging={dashboard.aging} mixedCurrency={mixedCurrency} />
+          <OperationalWorkspaceTabPanel>
+            <AgingReport
+              aging={dashboard.aging}
+              invoices={dashboard.invoices}
+              currency={kpiCurrency}
+              mixedCurrency={mixedCurrency}
+            />
           </OperationalWorkspaceTabPanel>
         </TabsContent>
 
@@ -311,6 +314,10 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
             >
               <VendorBatchesCard
                 batches={dashboard.vendor_batches}
+                unpaidVendorCost={dashboard.kpis.unpaid_vendor_cost}
+                vendorCost={dashboard.kpis.cost}
+                currency={kpiCurrency}
+                mixedCurrency={mixedCurrency}
                 settingsSlot={
                   <OperationalTableControlsSlot contextLabel="Vendor payment batches" />
                 }

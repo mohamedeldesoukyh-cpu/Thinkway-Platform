@@ -21,25 +21,22 @@ export const BILLING_FINANCE_FILTER_OPTIONS: {
 type BillingFinanceFilterBarProps = {
   value: CampaignBillingQueueFilter;
   onChange: (value: CampaignBillingQueueFilter) => void;
+  counts?: Partial<Record<CampaignBillingQueueFilter, number>>;
   className?: string;
 };
 
 export function BillingFinanceFilterBar({
   value,
   onChange,
+  counts,
   className,
 }: BillingFinanceFilterBarProps) {
   return (
-    <div
-      className={cn(
-        "flex flex-wrap gap-1.5 rounded-2xl border border-border/60 bg-muted/30 p-1.5",
-        className
-      )}
-      role="group"
-      aria-label="Finance filters"
-    >
+    <div className={cn("bq-chips", className)} role="group" aria-label="Finance filters">
       {BILLING_FINANCE_FILTER_OPTIONS.map((opt) => {
         const active = value === opt.value;
+        const count = counts?.[opt.value];
+        const empty = typeof count === "number" && count === 0 && opt.value !== "all";
         return (
           <button
             key={opt.value}
@@ -52,15 +49,11 @@ export function BillingFinanceFilterBar({
                 });
               }
             }}
-            className={cn(
-              "rounded-full border px-3 py-1.5 text-xs font-medium transition-colors",
-              active
-                ? "border-border bg-background text-foreground shadow-sm"
-                : "border-transparent bg-transparent text-muted-foreground hover:bg-background/60 hover:text-foreground"
-            )}
+            className={cn(empty && "z")}
             aria-pressed={active}
           >
             {opt.label}
+            {typeof count === "number" ? <b>{count}</b> : null}
           </button>
         );
       })}

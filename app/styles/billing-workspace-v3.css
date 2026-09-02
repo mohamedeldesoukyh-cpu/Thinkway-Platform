@@ -1,0 +1,433 @@
+/* Billing & finance workspace v3 — scoped visual language.
+   Brand uses Thinkway green (#1D9E75), not the mock blue.
+   Do not copy the mock nav rail. */
+
+.tw-billing-v3 {
+  --bq-blue: #1d9e75;
+  --bq-bi: #168a66;
+  --bq-navy: #0b0f1a;
+  --bq-ink: #0b0f1a;
+  --bq-ink2: #41495a;
+  --bq-mut: #64748b;
+  --bq-line: #e2e8f0;
+  --bq-hair: #edf0f5;
+  --bq-bg: transparent;
+  --bq-soft: #f6f8fb;
+  --bq-lav: #e9f7f1;
+  --bq-ok: #0a7a55;
+  --bq-okb: #e9f7f1;
+  --bq-wrn: #8a5d12;
+  --bq-wrnb: #fff6e8;
+  --bq-bad: #c82121;
+  --bq-badb: #fef2f2;
+  --bq-vio: #5b3fd1;
+  --bq-ring: 0 0 0 1px rgba(29, 158, 117, 0.06), 0 8px 24px rgba(15, 23, 42, 0.04);
+}
+
+.tw-billing-v3 .bq-n {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.25px;
+}
+
+.tw-billing-v3 .bq-kwrap {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 9px;
+}
+
+.tw-billing-v3 .bq-k {
+  padding: 13px 15px;
+  background: #fff;
+  border-radius: 11px;
+  box-shadow: var(--bq-ring);
+}
+
+.tw-billing-v3 .bq-k__l {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.62px;
+  text-transform: uppercase;
+  color: var(--bq-mut);
+  white-space: nowrap;
+}
+
+.tw-billing-v3 .bq-k__v {
+  margin: 6px 0 2px;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.8px;
+  line-height: 1.05;
+  white-space: nowrap;
+}
+
+.tw-billing-v3 .bq-k__s {
+  font-size: 11px;
+  color: var(--bq-mut);
+}
+
+.tw-billing-v3 .bq-k.bad {
+  box-shadow: 0 0 0 1px #efb6b6, 0 8px 24px rgba(200, 33, 33, 0.07);
+}
+
+.tw-billing-v3 .bq-k.bad .bq-k__v,
+.tw-billing-v3 .bq-k.bad .bq-k__s {
+  color: var(--bq-bad);
+}
+
+.tw-billing-v3 .bq-k2 {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.tw-billing-v3 .bq-m {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 9px 14px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: var(--bq-ring);
+}
+
+.tw-billing-v3 .bq-m i {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--bq-mut);
+  white-space: nowrap;
+}
+
+.tw-billing-v3 .bq-m b {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tw-billing-v3 .bq-m b.bad {
+  color: var(--bq-bad);
+}
+
+.tw-billing-v3 .bq-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 11px;
+}
+
+.tw-billing-v3 .bq-chips button {
+  padding: 5px 11px;
+  border: 1px solid var(--bq-hair);
+  border-radius: 999px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--bq-ink2);
+}
+
+.tw-billing-v3 .bq-chips button[aria-pressed="true"] {
+  background: var(--bq-lav);
+  border-color: #b7e4d4;
+  color: var(--bq-bi);
+  font-weight: 600;
+}
+
+.tw-billing-v3 .bq-chips b {
+  margin-left: 5px;
+  font-size: 10.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.65;
+}
+
+.tw-billing-v3 .bq-chips button.z {
+  opacity: 0.4;
+}
+
+.tw-billing-v3 .thinkway-campaign-section-card,
+.tw-billing-v3 .bq-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--bq-ring);
+  overflow: hidden;
+  border-color: transparent;
+}
+
+.tw-billing-v3 .bq-card__h,
+.tw-billing-v3 .thinkway-campaign-section-head {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex-wrap: wrap;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--bq-line);
+}
+
+.tw-billing-v3 .bq-card__t {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tw-billing-v3 .bq-card__s {
+  font-size: 11px;
+  color: var(--bq-mut);
+}
+
+.tw-billing-v3 .bq-cc {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--bq-soft);
+  border: 1px solid var(--bq-hair);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--bq-mut);
+  font-variant-numeric: tabular-nums;
+}
+
+.tw-billing-v3 .bq-brand {
+  color: var(--bq-vio);
+  font-weight: 500;
+}
+
+.tw-billing-v3 .bq-v-z {
+  color: #b6becd;
+  font-weight: 500;
+}
+
+.tw-billing-v3 .bq-v-pos {
+  color: var(--bq-ok);
+}
+
+.tw-billing-v3 .bq-v-neg {
+  color: var(--bq-bad);
+}
+
+.tw-billing-v3 .bq-kw {
+  background: var(--bq-soft);
+}
+
+.tw-billing-v3 .bq-khd {
+  background: #edf1f7;
+}
+
+.tw-billing-v3 .bq-khd td {
+  font-size: 8.5px !important;
+  font-weight: 700;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: #8892a4;
+  white-space: nowrap;
+  padding-top: 7px !important;
+  padding-bottom: 7px !important;
+}
+
+.tw-billing-v3 .bq-krow {
+  background: var(--bq-soft);
+}
+
+.tw-billing-v3 .bq-krow:hover {
+  background: #fff;
+}
+
+.tw-billing-v3 .bq-ktot {
+  background: #e7edf6;
+}
+
+.tw-billing-v3 .bq-ktot td {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tw-billing-v3 .bq-foot {
+  background: #f2f5fa;
+  border-top: 2px solid var(--bq-line);
+}
+
+.tw-billing-v3 .bq-foot td {
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tw-billing-v3 .bq-warn {
+  display: flex;
+  gap: 8px;
+  margin: 7px 8px;
+  padding: 9px 12px;
+  border-radius: 8px;
+  background: var(--bq-wrnb);
+  border: 1px solid #f0d6a4;
+  font-size: 11px;
+  color: var(--bq-wrn);
+  line-height: 1.5;
+}
+
+.tw-billing-v3 .bq-tn {
+  margin: 14px 16px;
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: var(--bq-soft);
+  font-size: 11.5px;
+  color: var(--bq-ink2);
+  line-height: 1.55;
+}
+
+.tw-billing-v3 .bq-st {
+  display: flex;
+  gap: 28px;
+  flex-wrap: wrap;
+  margin-bottom: 4px;
+}
+
+.tw-billing-v3 .bq-st span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tw-billing-v3 .bq-st i {
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--bq-mut);
+}
+
+.tw-billing-v3 .bq-st b {
+  font-size: 21px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.6px;
+}
+
+.tw-billing-v3 .bq-st b.bad {
+  color: var(--bq-bad);
+}
+
+.tw-billing-v3 .bq-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+.tw-billing-v3 .bq-bar {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--bq-hair);
+  overflow: hidden;
+}
+
+.tw-billing-v3 .bq-bar i {
+  display: block;
+  height: 100%;
+  background: var(--bq-blue);
+}
+
+.tw-billing-v3 .bq-bar i.r {
+  background: var(--bq-bad);
+}
+
+.tw-billing-v3 .bq-seg {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--bq-soft);
+  border: 1px solid var(--bq-hair);
+  border-radius: 9px;
+}
+
+.tw-billing-v3 .bq-seg button {
+  padding: 5px 12px;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: none;
+  color: var(--bq-mut);
+}
+
+.tw-billing-v3 .bq-seg button[aria-pressed="true"] {
+  background: #fff;
+  color: var(--bq-bi);
+  box-shadow: 0 1px 2px rgba(11, 15, 26, 0.08);
+}
+
+.tw-billing-v3 .bq-agrp td,
+.tw-billing-v3 .bq-agrp {
+  background: #edf1f7;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.tw-billing-v3 .bq-mix {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: var(--bq-wrnb);
+  border: 1px solid #f0d6a4;
+  font-size: 10px;
+  color: var(--bq-wrn);
+}
+
+.tw-billing-v3 .bq-inw input {
+  height: 28px;
+  padding: 0 7px;
+  border: 1px solid var(--bq-line);
+  border-radius: 7px;
+  background: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.tw-billing-v3 .bq-inw input:focus {
+  outline: none;
+  border-color: var(--bq-blue);
+  box-shadow: 0 0 0 3px rgba(29, 158, 117, 0.12);
+}
+
+.tw-billing-v3 [data-sticky="operational-workspace-tabs"] .enterprise-tabs-list {
+  gap: 22px;
+}
+
+@media (max-width: 1250px) {
+  .tw-billing-v3 .bq-kwrap,
+  .tw-billing-v3 .bq-k2 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tw-billing-v3 .bq-two {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dark .tw-billing-v3 .bq-k,
+.dark .tw-billing-v3 .bq-m,
+.dark .tw-billing-v3 .thinkway-campaign-section-card,
+.dark .tw-billing-v3 .bq-card {
+  background: hsl(var(--card));
+}
+
+.dark .tw-billing-v3 .bq-khd,
+.dark .tw-billing-v3 .bq-agrp td,
+.dark .tw-billing-v3 .bq-kw,
+.dark .tw-billing-v3 .bq-krow,
+.dark .tw-billing-v3 .bq-ktot,
+.dark .tw-billing-v3 .bq-foot {
+  background: hsl(var(--muted) / 0.5);
+}

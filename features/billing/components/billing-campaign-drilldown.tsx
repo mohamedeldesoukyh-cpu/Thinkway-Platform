@@ -9,6 +9,12 @@ import {
   PlatformFloatingBarSelection,
   operationalFloatingBarContentClass,
 } from "@/components/workspace/operational-floating-action-bar";
+import {
+  BillingQueueAssignmentFooterRow,
+  BillingQueueAssignmentHeaderRow,
+  BillingQueueAssignmentRow,
+  BillingQueueMessageRow,
+} from "@/features/billing/components/billing-queue-assignment-row";
 import { OperationalRowTree } from "@/features/billing/components/operational-row-tree";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import {
@@ -24,6 +30,7 @@ import type { OperationalBillingRow } from "@/lib/billing/operational-billing-ro
 import {
   cascadeInvoiceDraftPercent,
   cascadeInvoiceDraftToBeInvoiced,
+  computeInvoiceDraftLine,
   type InvoiceDraftPercents,
 } from "@/lib/billing/operational-invoice-draft";
 import {
@@ -59,6 +66,13 @@ type BillingCampaignDrilldownProps = {
   invoicePending?: boolean;
   /** Nested under a campaign queue row — no second header, tinted surface. */
   embedded?: boolean;
+  /**
+   * Render assignment lines as sibling rows of the parent queue table so
+   * Invoice % / bill amount sit under the parent columns.
+   */
+  queueAligned?: boolean;
+  /** Campaign-level already invoiced — used for the orphan-line warning. */
+  campaignAlreadyInvoiced?: number;
 };
 
 function BillingCampaignDrilldownInner({
@@ -73,6 +87,8 @@ function BillingCampaignDrilldownInner({
   onInvoicePercentsChange,
   invoicePending = false,
   embedded = false,
+  queueAligned = false,
+  campaignAlreadyInvoiced = 0,
 }: BillingCampaignDrilldownProps) {
   const campaign = appearance === "campaign";
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
@@ -168,6 +184,61 @@ function BillingCampaignDrilldownInner({
   }, [onInvoice, selectedCount, selection, rootRows]);
 
   const showFloatingBar = showBulkSelectionControls && selectedCount > 0;
+
+  const assignmentDrafts = useMemo(
+    () => assignmentRows.map((row) => computeInvoiceDraftLine(row, percents)),
+    [assignmentRows, percents]
+  );
+  const invoicedAssignmentCount = assignmentRows.filter(
+    (row) => Boolean(row.invoice_document_number) || row.line_billing_status === "invoiced"
+  ).length;
+  const showOrphanWarning =
+    queueAligned && invoicedAssignmentCount > 0 && campaignAlreadyInvoiced <= 0.01;
+
+  if (queueAligned) {
+    if (assignmentRows.length === 0) {
+      return (
+        <BillingQueueMessageRow>No operational rows match this filter.</BillingQueueMessageRow>
+      );
+    }
+
+    return (
+      <>
+        {showOrphanWarning ? (
+          <BillingQueueMessageRow>
+            <div className="bq-warn">
+              <span>
+                <strong>
+                  {invoicedAssignmentCount} line
+                  {invoicedAssignmentCount === 1 ? " is" : "s are"} already invoiced
+                </strong>{" "}
+                while the campaign row still reads invoiced{" "}
+                {formatBillingMoney(campaignAlreadyInvoiced, detail.currency_code)}.
+              </span>
+            </div>
+          </BillingQueueMessageRow>
+        ) : null}
+        <BillingQueueAssignmentHeaderRow />
+        {assignmentRows.map((assignment) => (
+          <BillingQueueAssignmentRow
+            key={assignment.id}
+            row={assignment}
+            currency={detail.currency_code}
+            selection={selection}
+            percents={percents}
+            onPercentChange={handlePercentChange}
+            onToBeInvoicedChange={handleToBeInvoicedChange}
+            onToggleSelect={toggleRow}
+          />
+        ))}
+        <BillingQueueAssignmentFooterRow
+          assignmentCount={assignmentRows.length}
+          currency={detail.currency_code}
+          drafts={assignmentDrafts}
+        />
+      </>
+    );
+  }
 
   return (
     <div

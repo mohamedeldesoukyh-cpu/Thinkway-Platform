@@ -1,13 +1,16 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState, useEffect, useMemo } from "react";
 import type { ReactNode } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
+import {
+  useIsOperationalColumnVisible,
+  useOperationalVisibleColumnCount,
+} from "@/components/tables/operational-table-column-context";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
 import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
 import {
@@ -44,6 +47,17 @@ export function BillingApprovalsPanel({ approvals, settingsSlot }: BillingApprov
     useOperationalTableDataContextOptional<FinancialApprovalRow>()?.processedRows ??
     approvals;
 
+  const grouped = useMemo(() => {
+    const map = new Map<string, FinancialApprovalRow[]>();
+    for (const approval of displayApprovals) {
+      const key = approval.entity_id || approval.id;
+      const list = map.get(key) ?? [];
+      list.push(approval);
+      map.set(key, list);
+    }
+    return [...map.entries()];
+  }, [displayApprovals]);
+
   if (displayApprovals.length === 0) {
     return (
       <OperationalTableSection
@@ -70,7 +84,7 @@ export function BillingApprovalsPanel({ approvals, settingsSlot }: BillingApprov
       leading={
         <CampaignOperationalSectionHeader
           title="Financial approvals"
-          description="Campaign Manager → Finance → CFO/Admin"
+          description={`Campaign Manager → Finance → CFO/Admin · ${displayApprovals.length} open request${displayApprovals.length === 1 ? "" : "s"} across ${grouped.length} invoice${grouped.length === 1 ? "" : "s"}`}
           actions={settingsSlot}
         />
       }
@@ -78,8 +92,8 @@ export function BillingApprovalsPanel({ approvals, settingsSlot }: BillingApprov
       <CampaignOperationalTable>
         <BillingApprovalsTableHeader />
         <CampaignOperationalTableBody>
-          {displayApprovals.map((approval) => (
-            <ApprovalRow key={approval.id} approval={approval} />
+          {grouped.map(([entityId, rows]) => (
+            <ApprovalGroup key={entityId} approvals={rows} />
           ))}
         </CampaignOperationalTableBody>
       </CampaignOperationalTable>
@@ -104,6 +118,26 @@ function BillingApprovalsTableHeader() {
         ) : null}
       </CampaignOperationalTableHeaderRow>
     </CampaignOperationalTableHeader>
+  );
+}
+
+function ApprovalGroup({ approvals }: { approvals: FinancialApprovalRow[] }) {
+  const visibleCount = useOperationalVisibleColumnCount();
+  const label = approvals[0]?.title ?? "Invoice";
+  return (
+    <>
+      <CampaignOperationalTableRow className="bq-agrp">
+        <CampaignOperationalTableCell colSpan={visibleCount}>
+          {label}{" "}
+          <em className="ml-2 font-medium not-italic text-muted-foreground">
+            {approvals.length} pending stage{approvals.length === 1 ? "" : "s"}
+          </em>
+        </CampaignOperationalTableCell>
+      </CampaignOperationalTableRow>
+      {approvals.map((approval) => (
+        <ApprovalRow key={approval.id} approval={approval} />
+      ))}
+    </>
   );
 }
 

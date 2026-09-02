@@ -18,6 +18,7 @@ import type { CollectionInvoiceRow } from "@/lib/collections/queries/load-collec
 import type { VendorPayablesPayload } from "@/lib/vendor-payables/load-payables";
 import { AGING_BUCKET_LABELS } from "@/lib/domains/billing/constants";
 import { FINANCIAL_APPROVAL_STAGE_LABELS } from "@/lib/domains/billing/constants";
+import { daysPastDue } from "@/lib/collections/aging";
 import { LINE_BILLING_STATUS_LABELS, VENDOR_PAYMENT_STATUS_LABELS } from "@/lib/campaigns/constants";
 import { labelForOption } from "@/features/clients/constants";
 import { CLIENT_DOCUMENT_TYPE_OPTIONS } from "@/features/clients/constants";
@@ -191,6 +192,7 @@ export const BILLING_INVOICES_FILTER_ACCESSORS: Partial<
   campaign: (row) => row.campaign_name,
   issue_date: (row) => row.issue_date,
   due_date: (row) => row.due_date,
+  currency: (row) => row.currency,
   total: (row) => row.total,
   paid: (row) => row.amount_paid,
   outstanding: (row) => row.outstanding,
@@ -203,7 +205,9 @@ export const BILLING_COLLECTION_TRACKER_FILTER_ACCESSORS: Partial<
   invoice: (row) => formatDocumentNumberForDisplay(row.document_number),
   client: (row) => row.client_name,
   campaign: (row) => row.campaign_name,
+  issue_date: (row) => row.issue_date,
   due_date: (row) => row.due_date,
+  days_past_due: (row) => (row.due_date ? daysPastDue(row.due_date) : null),
   aging: (row) => AGING_BUCKET_LABELS[row.aging_bucket],
   outstanding: (row) => row.outstanding,
   status: (row) => row.collection_status,

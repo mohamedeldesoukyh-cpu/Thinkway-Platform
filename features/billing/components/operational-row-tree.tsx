@@ -66,7 +66,7 @@ function isRowMuted(row: OperationalBillingRow): boolean {
   return false;
 }
 
-function resolveAssignmentBillingStatus(
+export function resolveAssignmentBillingStatus(
   row: OperationalBillingRow
 ): import("@/features/billing/types").CampaignLineBillingStatus {
   if (
@@ -84,7 +84,7 @@ function formatDraftPercent(percent: number): string {
   return Number.isInteger(percent) ? String(percent) : percent.toFixed(2);
 }
 
-function DraftNumericInput({
+export function DraftNumericInput({
   value,
   ariaLabel,
   disabled,

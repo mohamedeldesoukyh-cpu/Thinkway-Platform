@@ -15,6 +15,7 @@ import {
   EnterpriseTabTrigger,
   EnterpriseTabsList,
   type EnterpriseTabItem,
+  type EnterpriseTabVariant,
 } from "@/components/workspace/enterprise-tabs";
 import { cn } from "@/lib/utils";
 
@@ -67,24 +68,35 @@ type OperationalWorkspaceSortableTabsBarProps<T extends string> = {
   tabOrder: readonly T[];
   tabsById: Record<T, OperationalWorkspaceTabDef>;
   onReorder: (fromIndex: number, toIndex: number) => void;
+  variant?: EnterpriseTabVariant;
+  className?: string;
 };
 
-/** Drag-to-reorder tab rail — Enterprise Tabs (pill variant). */
+/** Drag-to-reorder tab rail — Enterprise Tabs. */
 export function OperationalWorkspaceSortableTabsBar<T extends string>({
   sectionLabel,
   tabOrder,
   tabsById,
   onReorder,
+  variant = "pill",
+  className,
 }: OperationalWorkspaceSortableTabsBarProps<T>) {
   return (
-    <div className="rounded-t-xl bg-muted/40 px-2 pt-2" data-sticky="operational-workspace-tabs">
+    <div
+      className={cn(
+        "rounded-t-xl bg-muted/40 px-2 pt-2",
+        variant === "underline" && "rounded-none bg-transparent px-0 pt-0",
+        className
+      )}
+      data-sticky="operational-workspace-tabs"
+    >
       {sectionLabel ? (
         <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-widest text-foreground">
           {sectionLabel}
         </p>
       ) : null}
       <EnterpriseSortableTabsBar
-        variant="pill"
+        variant={variant}
         overflow="scroll"
         tabOrder={tabOrder}
         tabsById={tabsById}

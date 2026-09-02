@@ -5,9 +5,9 @@ import Link from "next/link";
 
 import { ChevronDownIcon, ChevronRightIcon, ExternalLinkIcon } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BillingCampaignDrilldown } from "@/features/billing/components/billing-campaign-drilldown";
+import { BillingQueueMessageRow } from "@/features/billing/components/billing-queue-assignment-row";
 import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import {
@@ -31,10 +31,7 @@ import {
   type OperationalSelectionState,
   type RowSelectionStatus,
 } from "@/lib/billing/operational-selection";
-import {
-  useIsOperationalColumnVisible,
-  useOperationalVisibleColumnCount,
-} from "@/components/tables/operational-table-column-context";
+import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
 import { cn } from "@/lib/utils";
 
 export type BillingQueueCampaignRowProps = {
@@ -74,7 +71,6 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
 }: BillingQueueCampaignRowProps) {
   const campaignId = row.campaign_header_id;
   const cur = row.currency_code;
-  const visibleColumnCount = useOperationalVisibleColumnCount();
 
   const showExpand = useIsOperationalColumnVisible("expand");
   const showSelect = useIsOperationalColumnVisible("select");
@@ -115,8 +111,9 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
     <Fragment>
       <CampaignOperationalTableRow
         className={cn(
-          "cursor-pointer bg-muted/10 hover:bg-muted/20",
-          selectedForReview && "bg-primary/5 ring-1 ring-primary/20"
+          "cursor-pointer hover:bg-muted/20",
+          selectedForReview && "bg-primary/5",
+          expanded && "bg-muted/10"
         )}
         onClick={() => onSelectForReview(campaignId)}
         aria-selected={selectedForReview}
@@ -153,7 +150,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
           <CampaignOperationalTableCell>{row.client_name}</CampaignOperationalTableCell>
         ) : null}
         {showBrand ? (
-          <CampaignOperationalTableCell className="text-muted-foreground">
+          <CampaignOperationalTableCell className="bq-brand">
             {row.brand_name ?? "—"}
           </CampaignOperationalTableCell>
         ) : null}
@@ -170,7 +167,7 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
         ) : null}
         {showCurrency ? (
           <CampaignOperationalTableCell>
-            <Badge variant="outline">{row.currency_code}</Badge>
+            <span className="bq-cc">{row.currency_code}</span>
           </CampaignOperationalTableCell>
         ) : null}
         {showTotal ? (
@@ -179,12 +176,14 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
           </CampaignOperationalTableCellAmount>
         ) : null}
         {showAchieved ? (
-          <CampaignOperationalTableCellAmount>
+          <CampaignOperationalTableCellAmount className={row.achieved_revenue > 0 ? undefined : "bq-v-z"}>
             {formatBillingMoneyCompact(row.achieved_revenue, cur)}
           </CampaignOperationalTableCellAmount>
         ) : null}
         {showInvoiced ? (
-          <CampaignOperationalTableCellAmount>
+          <CampaignOperationalTableCellAmount
+            className={row.already_invoiced > 0 ? "bq-v-pos" : "bq-v-z"}
+          >
             {formatBillingMoneyCompact(row.already_invoiced, cur)}
           </CampaignOperationalTableCellAmount>
         ) : null}
@@ -194,7 +193,9 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
           </CampaignOperationalTableCellAmount>
         ) : null}
         {showUnachieved ? (
-          <CampaignOperationalTableCellAmount className="text-muted-foreground">
+          <CampaignOperationalTableCellAmount
+            className={row.unachieved_revenue > 0 ? "text-muted-foreground" : "bq-v-z"}
+          >
             {formatBillingMoneyCompact(row.unachieved_revenue, cur)}
           </CampaignOperationalTableCellAmount>
         ) : null}
@@ -228,34 +229,25 @@ export const BillingQueueCampaignRow = memo(function BillingQueueCampaignRow({
         ) : null}
       </CampaignOperationalTableRow>
       {expanded ? (
-        <CampaignOperationalTableRow>
-          <CampaignOperationalTableCell
-            colSpan={visibleColumnCount}
-            className="border-t-0 border-l-[3px] border-l-primary/40 bg-muted/50 p-0"
-          >
-            {detailLoading && !detail ? (
-              <p className="px-4 py-8 text-[11px] text-muted-foreground">
-                Loading operational billing…
-              </p>
-            ) : detail ? (
-              <BillingCampaignDrilldown
-                detail={detail}
-                filter={operationalFilter}
-                selection={selection}
-                onSelectionChange={handleSelectionChange}
-                showBulkSelectionControls={false}
-                invoicePercents={invoicePercents}
-                onInvoicePercentsChange={onInvoicePercentsChange}
-                invoicePending={invoicePending}
-                embedded
-              />
-            ) : (
-              <p className="px-4 py-8 text-[11px] text-muted-foreground">
-                Unable to load operational rows.
-              </p>
-            )}
-          </CampaignOperationalTableCell>
-        </CampaignOperationalTableRow>
+        detailLoading && !detail ? (
+          <BillingQueueMessageRow>Loading operational billing…</BillingQueueMessageRow>
+        ) : detail ? (
+          <BillingCampaignDrilldown
+            detail={detail}
+            filter={operationalFilter}
+            selection={selection}
+            onSelectionChange={handleSelectionChange}
+            showBulkSelectionControls={false}
+            invoicePercents={invoicePercents}
+            onInvoicePercentsChange={onInvoicePercentsChange}
+            invoicePending={invoicePending}
+            embedded
+            queueAligned
+            campaignAlreadyInvoiced={row.already_invoiced}
+          />
+        ) : (
+          <BillingQueueMessageRow>Unable to load operational rows.</BillingQueueMessageRow>
+        )
       ) : null}
     </Fragment>
   );
