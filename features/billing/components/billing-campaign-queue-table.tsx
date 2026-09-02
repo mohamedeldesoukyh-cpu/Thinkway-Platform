@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import {
   OperationalFloatingActionBar,
   PlatformFloatingBarDivider,
@@ -15,15 +14,9 @@ import {
   PlatformFloatingBarSelection,
   operationalFloatingBarContentClass,
 } from "@/components/workspace/operational-floating-action-bar";
+import { BillingCardHeader } from "@/features/billing/components/billing-card-header";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
-import {
-  CampaignOperationalTable,
-  CampaignOperationalTableBody,
-  CampaignOperationalTableHead,
-  CampaignOperationalTableHeader,
-  CampaignOperationalTableHeaderRow,
-} from "@/features/campaigns/components/campaign-operational-table";
 import {
   BillingQueueCampaignRow,
   computeCampaignMasterStatus,
@@ -36,7 +29,12 @@ import {
   BILLING_FINANCE_FILTER_OPTIONS,
   BillingFinanceFilterBar,
 } from "@/features/billing/components/billing-finance-filter-bar";
-import { BillingQueueTotalsRow } from "@/features/billing/components/billing-queue-assignment-row";
+import {
+  BillingQueueGrid,
+  BillingQueueGridRow,
+  BillingQueueTotalsRow,
+  useBillingQueueGridTemplate,
+} from "@/features/billing/components/billing-queue-assignment-row";
 import { InvoiceTargetChoiceDialog } from "@/features/billing/components/invoice-target-choice-dialog";
 import {
   eligibleAppendableInvoices,
@@ -76,7 +74,6 @@ import { buildConsolidatedQueueInvoiceSelection } from "@/lib/billing/consolidat
 import type { InvoiceDraftPercents } from "@/lib/billing/operational-invoice-draft";
 import { showErrorToastOnce } from "@/lib/ui/toast-once";
 import { devLog } from "@/lib/dev-log";
-import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
 import { operationalColumnsFromMetas } from "@/lib/tables/operational-filter-columns";
 import {
@@ -109,52 +106,25 @@ type BillingCampaignQueueTableProps = {
 };
 
 function BillingCampaignQueueTableHeader() {
-  const showExpand = useIsOperationalColumnVisible("expand");
-  const showSelect = useIsOperationalColumnVisible("select");
-  const showCampaignNo = useIsOperationalColumnVisible("campaign_no");
-  const showClient = useIsOperationalColumnVisible("client");
-  const showBrand = useIsOperationalColumnVisible("brand");
-  const showCampaign = useIsOperationalColumnVisible("campaign");
-  const showCurrency = useIsOperationalColumnVisible("currency");
-  const showTotal = useIsOperationalColumnVisible("total");
-  const showAchieved = useIsOperationalColumnVisible("achieved");
-  const showInvoiced = useIsOperationalColumnVisible("invoiced");
-  const showRemaining = useIsOperationalColumnVisible("remaining");
-  const showUnachieved = useIsOperationalColumnVisible("unachieved");
-  const showStatus = useIsOperationalColumnVisible("status");
-  const showActions = useIsOperationalColumnVisible("actions");
+  const { cols, template } = useBillingQueueGridTemplate();
 
   return (
-    <CampaignOperationalTableHeader>
-      <CampaignOperationalTableHeaderRow>
-        {showExpand ? <CampaignOperationalTableHead className="w-8" /> : null}
-        {showSelect ? <CampaignOperationalTableHead className="w-8" /> : null}
-        {showCampaignNo ? <CampaignOperationalTableHead>Campaign No</CampaignOperationalTableHead> : null}
-        {showClient ? <CampaignOperationalTableHead>Client</CampaignOperationalTableHead> : null}
-        {showBrand ? <CampaignOperationalTableHead>Brand</CampaignOperationalTableHead> : null}
-        {showCampaign ? <CampaignOperationalTableHead>Campaign</CampaignOperationalTableHead> : null}
-        {showCurrency ? <CampaignOperationalTableHead>Currency</CampaignOperationalTableHead> : null}
-        {showTotal ? (
-          <CampaignOperationalTableHead className="text-right">Total</CampaignOperationalTableHead>
-        ) : null}
-        {showAchieved ? (
-          <CampaignOperationalTableHead className="text-right">Achieved</CampaignOperationalTableHead>
-        ) : null}
-        {showInvoiced ? (
-          <CampaignOperationalTableHead className="text-right">Invoiced</CampaignOperationalTableHead>
-        ) : null}
-        {showRemaining ? (
-          <CampaignOperationalTableHead className="text-right">Remaining</CampaignOperationalTableHead>
-        ) : null}
-        {showUnachieved ? (
-          <CampaignOperationalTableHead className="text-right">Unachieved</CampaignOperationalTableHead>
-        ) : null}
-        {showStatus ? <CampaignOperationalTableHead>Status</CampaignOperationalTableHead> : null}
-        {showActions ? (
-          <CampaignOperationalTableHead className="text-right">Actions</CampaignOperationalTableHead>
-        ) : null}
-      </CampaignOperationalTableHeaderRow>
-    </CampaignOperationalTableHeader>
+    <BillingQueueGridRow className="bq-hrow" template={template}>
+      {cols.showSelect ? <span /> : null}
+      {cols.showExpand ? <span /> : null}
+      {cols.showCampaignNo ? <span>Campaign no</span> : null}
+      {cols.showClient ? <span>Client</span> : null}
+      {cols.showBrand ? <span>Brand</span> : null}
+      {cols.showCampaign ? <span>Campaign</span> : null}
+      {cols.showCurrency ? <span>Ccy</span> : null}
+      {cols.showTotal ? <span className="bq-rr">Total</span> : null}
+      {cols.showAchieved ? <span className="bq-rr">Achieved</span> : null}
+      {cols.showInvoiced ? <span className="bq-rr">Invoiced</span> : null}
+      {cols.showRemaining ? <span className="bq-rr">Remaining</span> : null}
+      {cols.showUnachieved ? <span className="bq-rr">Unachieved</span> : null}
+      {cols.showStatus ? <span>Status</span> : null}
+      {cols.showActions ? <span className="bq-rr">Actions</span> : null}
+    </BillingQueueGridRow>
   );
 }
 
@@ -531,38 +501,31 @@ export function BillingCampaignQueueTable({
         cardSurface
         className={operationalFloatingBarContentClass(totalQueueSelected > 0)}
         leading={
-          <div className="flex flex-col gap-3">
-            <div className="flex flex-row flex-wrap items-center justify-between gap-3">
-              <div className="min-w-0 space-y-0.5">
-                <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                  Billing queue
-                </h2>
-                <p className="text-[11px] leading-snug text-muted-foreground">
-                  One row per campaign — check a campaign to select all billable rows, or expand to
-                  adjust individual lines.
-                </p>
-                {filter !== "all" && filtered.length > 0 ? (
-                  <p className="mt-2 text-xs text-muted-foreground">
-                    Filtered rollup ({filtered.length} campaign{filtered.length === 1 ? "" : "s"}):{" "}
-                    achieved{" "}
-                    {filteredRollupCurrency
-                      ? formatBillingMoneyCompact(filteredRollup.achieved, filteredRollupCurrency)
-                      : filteredRollup.achieved.toLocaleString()}{" "}
-                    · invoiced{" "}
-                    {filteredRollupCurrency
-                      ? formatBillingMoneyCompact(filteredRollup.invoiced, filteredRollupCurrency)
-                      : filteredRollup.invoiced.toLocaleString()}{" "}
-                    · remaining{" "}
-                    {filteredRollupCurrency
-                      ? formatBillingMoneyCompact(filteredRollup.remaining, filteredRollupCurrency)
-                      : filteredRollup.remaining.toLocaleString()}
-                    {!filteredRollupCurrency ? " (mixed currencies)" : null}
-                  </p>
-                ) : null}
-              </div>
-              {settingsSlot}
-            </div>
-          </div>
+          <>
+            <BillingCardHeader
+              title="Billing queue"
+              subtitle="One row per campaign — check a campaign to select all billable lines, or expand to adjust individual lines"
+              actions={settingsSlot}
+            />
+            {filter !== "all" && filtered.length > 0 ? (
+              <span className="bq-card__s" style={{ flexBasis: "100%" }}>
+                Filtered rollup ({filtered.length} campaign{filtered.length === 1 ? "" : "s"}):{" "}
+                achieved{" "}
+                {filteredRollupCurrency
+                  ? formatBillingMoneyCompact(filteredRollup.achieved, filteredRollupCurrency)
+                  : filteredRollup.achieved.toLocaleString()}{" "}
+                · invoiced{" "}
+                {filteredRollupCurrency
+                  ? formatBillingMoneyCompact(filteredRollup.invoiced, filteredRollupCurrency)
+                  : filteredRollup.invoiced.toLocaleString()}{" "}
+                · remaining{" "}
+                {filteredRollupCurrency
+                  ? formatBillingMoneyCompact(filteredRollup.remaining, filteredRollupCurrency)
+                  : filteredRollup.remaining.toLocaleString()}
+                {!filteredRollupCurrency ? " (mixed currencies)" : null}
+              </span>
+            ) : null}
+          </>
         }
       >
         {campaigns.length === 0 ? (
@@ -575,10 +538,9 @@ export function BillingCampaignQueueTable({
             No campaigns match this finance filter.
           </p>
         ) : (
-          <CampaignOperationalTable>
+          <BillingQueueGrid>
             <BillingCampaignQueueTableHeader />
-            <CampaignOperationalTableBody>
-              {filtered.map((row) => {
+            {filtered.map((row) => {
                 const campaignId = row.campaign_header_id;
                 const detail = detailCache[campaignId];
                 const selection = queueSelections[campaignId] ?? createEmptySelection();
@@ -604,17 +566,16 @@ export function BillingCampaignQueueTable({
                     onSelectionChange={setQueueSelection}
                     onOpenInvoice={onOpenInvoice}
                   />
-                  );
-                })}
-                <BillingQueueTotalsRow
-                  campaignCount={filtered.length}
-                  currency={filteredRollupCurrency}
-                  total={filteredRollup.total}
-                  invoiced={filteredRollup.invoiced}
-                  remaining={filteredRollup.remaining}
-                />
-              </CampaignOperationalTableBody>
-          </CampaignOperationalTable>
+                );
+              })}
+              <BillingQueueTotalsRow
+                campaignCount={filtered.length}
+                currency={filteredRollupCurrency}
+                total={filteredRollup.total}
+                invoiced={filteredRollup.invoiced}
+                remaining={filteredRollup.remaining}
+              />
+          </BillingQueueGrid>
         )}
       </OperationalTableSection>
 

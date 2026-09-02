@@ -18,6 +18,7 @@ export type {
   CampaignOperationalBillingDetail,
   FinancialApprovalRow,
   InvoiceWorkspace,
+  VendorAssignmentPaymentRow,
   VendorPaymentBatchRow,
 } from "./types";
 

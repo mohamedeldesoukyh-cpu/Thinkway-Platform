@@ -29,7 +29,7 @@ import {
   BILLING_COLLECTION_TRACKER_FILTER_ACCESSORS,
   BILLING_FINANCIAL_APPROVALS_FILTER_ACCESSORS,
   BILLING_INVOICES_FILTER_ACCESSORS,
-  BILLING_VENDOR_BATCHES_FILTER_ACCESSORS,
+  BILLING_VENDOR_ASSIGNMENTS_FILTER_ACCESSORS,
 } from "@/lib/tables/workspace-table-filter-fields";
 import { AgingReport } from "@/features/billing/components/aging-report";
 import {
@@ -43,13 +43,15 @@ import {
 import {
   BILLING_INVOICES_COLUMN_METAS,
   BILLING_INVOICES_TABLE_COLUMNS,
-  BILLING_VENDOR_BATCHES_COLUMN_METAS,
-  BILLING_VENDOR_BATCHES_TABLE_COLUMNS,
   BillingInvoicesTable,
-  VendorBatchesCard,
 } from "@/features/billing/components/billing-invoices-table";
+import { BillingCardHeader } from "@/features/billing/components/billing-card-header";
 import { BillingKpiStrip } from "@/features/billing/components/billing-kpi-strip";
 import { BillingOverviewPanel } from "@/features/billing/components/billing-overview-panel";
+import {
+  BILLING_VENDOR_ASSIGNMENTS_COLUMN_METAS,
+  BillingVendorPaymentsPanel,
+} from "@/features/billing/components/billing-vendor-payments-panel";
 import {
   BILLING_COLLECTION_TRACKER_COLUMN_METAS,
   BILLING_COLLECTION_TRACKER_TABLE_COLUMNS,
@@ -60,28 +62,6 @@ import type { BillingDashboard } from "@/features/billing/types";
 type BillingWorkspaceViewProps = {
   dashboard: BillingDashboard;
 };
-
-function BillingTabSectionHeader({
-  title,
-  description,
-  settingsLabel,
-}: {
-  title: string;
-  description?: string;
-  settingsLabel: string;
-}) {
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border/40 px-4 py-2.5 md:px-5">
-      <div className="min-w-0 space-y-0.5">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">{title}</h2>
-        {description ? (
-          <p className="text-[11px] leading-snug text-muted-foreground">{description}</p>
-        ) : null}
-      </div>
-      <OperationalTableControlsSlot contextLabel={settingsLabel} />
-    </div>
-  );
-}
 
 function BillingTabTableShell({
   title,
@@ -95,12 +75,18 @@ function BillingTabTableShell({
   children: ReactNode;
 }) {
   return (
-    <OperationalTableSection wide tableOnly cardSurface>
-      <BillingTabSectionHeader
-        title={title}
-        description={description}
-        settingsLabel={settingsLabel}
-      />
+    <OperationalTableSection
+      wide
+      tableOnly
+      cardSurface
+      leading={
+        <BillingCardHeader
+          title={title}
+          subtitle={description}
+          actions={<OperationalTableControlsSlot contextLabel={settingsLabel} />}
+        />
+      }
+    >
       {children}
     </OperationalTableSection>
   );
@@ -154,6 +140,14 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
       ),
     []
   );
+  const vendorAssignmentColumns = useMemo(
+    () =>
+      operationalColumnsFromMetas(
+        BILLING_VENDOR_ASSIGNMENTS_COLUMN_METAS,
+        BILLING_VENDOR_ASSIGNMENTS_FILTER_ACCESSORS
+      ),
+    []
+  );
 
   const { tabOrder, moveTab } = useWorkspaceTabOrder({
     storageKey: BILLING_WORKSPACE_TAB_STORAGE_KEY,
@@ -185,12 +179,17 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
         label: "Approvals",
         count: dashboard.pending_approvals.length,
       },
-      vendors: { value: "vendors", label: "Vendor payments" },
+      vendors: {
+        value: "vendors",
+        label: "Vendor payments",
+        count: dashboard.vendor_assignments.length,
+      },
     }),
     [
       dashboard.campaign_queue.length,
       dashboard.invoices.length,
       dashboard.pending_approvals.length,
+      dashboard.vendor_assignments.length,
       openInvoices.length,
     ]
   );
@@ -307,19 +306,15 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
         <TabsContent value="vendors" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
           <OperationalWorkspaceTabPanel>
             <OperationalTableSuiteProvider
-              tableId={OPERATIONAL_TABLE_IDS.billingVendorPaymentBatches}
-              columns={BILLING_VENDOR_BATCHES_TABLE_COLUMNS}
-              rows={dashboard.vendor_batches}
-              filterAccessors={BILLING_VENDOR_BATCHES_FILTER_ACCESSORS}
+              tableId={OPERATIONAL_TABLE_IDS.billingVendorAssignments}
+              columns={vendorAssignmentColumns}
+              rows={dashboard.vendor_assignments}
+              filterAccessors={BILLING_VENDOR_ASSIGNMENTS_FILTER_ACCESSORS}
             >
-              <VendorBatchesCard
-                batches={dashboard.vendor_batches}
-                unpaidVendorCost={dashboard.kpis.unpaid_vendor_cost}
-                vendorCost={dashboard.kpis.cost}
-                currency={kpiCurrency}
-                mixedCurrency={mixedCurrency}
+              <BillingVendorPaymentsPanel
+                assignments={dashboard.vendor_assignments}
                 settingsSlot={
-                  <OperationalTableControlsSlot contextLabel="Vendor payment batches" />
+                  <OperationalTableControlsSlot contextLabel="Vendor payments" />
                 }
               />
             </OperationalTableSuiteProvider>

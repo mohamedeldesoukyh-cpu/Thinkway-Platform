@@ -1,5 +1,11 @@
 import type { CampaignListItem } from "@/types/database";
-import type { BillingInvoiceRow, CampaignBillingQueueRow, FinancialApprovalRow, VendorPaymentBatchRow } from "@/lib/domains/billing/types";
+import type {
+  BillingInvoiceRow,
+  CampaignBillingQueueRow,
+  FinancialApprovalRow,
+  VendorAssignmentPaymentRow,
+  VendorPaymentBatchRow,
+} from "@/lib/domains/billing/types";
 import type { FinanceAdjustmentRegisterRow } from "@/features/finance/adjustments/types";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
 import type { ClientIoRow, VendorIoRow } from "@/lib/domains/io/types";
@@ -229,6 +235,20 @@ export const BILLING_VENDOR_BATCHES_FILTER_ACCESSORS: Partial<
   date: (row) => row.batch_date,
   amount: (row) => row.total_amount,
   status: (row) => row.status,
+};
+
+export const BILLING_VENDOR_ASSIGNMENTS_FILTER_ACCESSORS: Partial<
+  Record<string, (row: VendorAssignmentPaymentRow) => FilterableValue>
+> = {
+  creator: (row) => row.creator_name,
+  campaign: (row) => row.campaign_name,
+  assignment: (row) => formatDocumentNumberForDisplay(row.assignment_document_number),
+  currency: (row) => row.currency,
+  sell_value: (row) => row.sell_value,
+  vendor_cost: (row) => row.vendor_cost,
+  paid: (row) => row.paid_amount,
+  payment_state: (row) => row.payment_status,
+  client_invoice: (row) => formatDocumentNumberForDisplay(row.invoice_document_number),
 };
 
 export const BILLING_CAMPAIGN_QUEUE_FILTER_ACCESSORS: Partial<

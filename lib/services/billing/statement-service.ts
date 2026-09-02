@@ -43,7 +43,9 @@ import {
   type CampaignOperationalBillingDetail,
   type FinancialApprovalRow,
   type InvoiceWorkspace,
+  type VendorAssignmentPaymentRow,
   type VendorPaymentBatchRow,
+  type VendorPaymentStatus,
 } from "@/lib/domains/billing/types";
 
 type LineQueryRow = {
@@ -159,14 +161,84 @@ function aggregateOperationalPoKpis(
   return { po_total, po_consumed, po_remaining, po_over_consumed_count };
 }
 
+function embedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (value == null) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+function coerceVendorPaymentStatus(raw: string): VendorPaymentStatus {
+  if (raw === "paid" || raw === "pending" || raw === "cancelled") return raw;
+  return "unpaid";
+}
+
+type AssignmentPaymentQueryRow = {
+  id: string;
+  agreed_fee: number;
+  currency: string;
+  vendor_payment_status: string;
+  campaign_header_id: string | null;
+  influencer:
+    | { display_name: string | null; full_name: string | null }
+    | { display_name: string | null; full_name: string | null }[]
+    | null;
+  campaign:
+    | { id: string; name: string; document_number: string }
+    | { id: string; name: string; document_number: string }[]
+    | null;
+  line:
+    | {
+        document_number: string | null;
+        revenue: number | null;
+        revenue_before_vat: number | null;
+        currency_code: string | null;
+        invoice_id: string | null;
+        invoice: { document_number: string } | { document_number: string }[] | null;
+      }
+    | {
+        document_number: string | null;
+        revenue: number | null;
+        revenue_before_vat: number | null;
+        currency_code: string | null;
+        invoice_id: string | null;
+        invoice: { document_number: string } | { document_number: string }[] | null;
+      }[]
+    | null;
+};
+
+function mapVendorAssignmentPaymentRow(
+  row: AssignmentPaymentQueryRow
+): VendorAssignmentPaymentRow {
+  const influencer = embedOne(row.influencer);
+  const campaign = embedOne(row.campaign);
+  const line = embedOne(row.line);
+  const invoice = embedOne(line?.invoice);
+  const agreedFee = Number(row.agreed_fee);
+  const paymentStatus = coerceVendorPaymentStatus(row.vendor_payment_status);
+  const sellValue = Number(line?.revenue_before_vat ?? line?.revenue ?? 0);
+
+  return {
+    id: row.id,
+    creator_name: influencer?.display_name ?? influencer?.full_name ?? "Creator",
+    campaign_header_id: campaign?.id ?? row.campaign_header_id,
+    campaign_name: campaign?.name ?? "Campaign",
+    campaign_document_number: campaign?.document_number ?? null,
+    assignment_document_number: line?.document_number ?? null,
+    currency: row.currency || line?.currency_code || "",
+    sell_value: Number.isFinite(sellValue) ? sellValue : 0,
+    vendor_cost: agreedFee > 0 ? agreedFee : null,
+    paid_amount: paymentStatus === "paid" && agreedFee > 0 ? agreedFee : 0,
+    payment_status: paymentStatus,
+    invoice_id: line?.invoice_id ?? null,
+    invoice_document_number: invoice?.document_number ?? null,
+  };
+}
 
 export async function getBillingDashboard(supabase: SupabaseClient): Promise<BillingDashboard> {
     const [
     linesResult,
     invoicesResult,
-    batchesResult,
     approvalsResult,
-    vendorCostResult,
+    assignmentsResult,
   ] = await Promise.all([
     supabase
       .from("campaign_lines")
@@ -203,11 +275,6 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
       .order("issue_date", { ascending: false })
       .limit(100),
     supabase
-      .from("vendor_payment_batches")
-      .select("id, document_number, name, status, batch_date, total_amount, currency")
-      .order("batch_date", { ascending: false })
-      .limit(20),
-    supabase
       .from("financial_approval_requests")
       .select(
         `
@@ -221,12 +288,47 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
       .limit(30),
     supabase
       .from("campaign_influencers")
-      .select("agreed_fee, vendor_payment_status")
-      .neq("vendor_payment_status", "paid"),
+      .select(
+        `
+        id, agreed_fee, currency, vendor_payment_status, campaign_header_id,
+        influencer:influencers(display_name, full_name),
+        campaign:${REL.campaignInfluencers.campaignHeader}(id, name, document_number),
+        line:${REL.campaignInfluencers.campaignLine}(
+          document_number, revenue, revenue_before_vat, currency_code, invoice_id,
+          invoice:invoices(document_number)
+        )
+      `
+      )
+      .in("vendor_payment_status", ["unpaid", "pending", "paid"])
+      .limit(500),
   ]);
 
   if (linesResult.error) throw new Error(linesResult.error.message);
   if (invoicesResult.error) throw new Error(invoicesResult.error.message);
+  if (assignmentsResult.error) throw new Error(assignmentsResult.error.message);
+
+  const vendor_assignments: VendorAssignmentPaymentRow[] = (
+    (assignmentsResult.data ?? []) as unknown as AssignmentPaymentQueryRow[]
+  ).map(mapVendorAssignmentPaymentRow);
+
+  vendor_assignments.sort((a, b) => {
+    const campaignCmp = (a.campaign_document_number ?? "").localeCompare(
+      b.campaign_document_number ?? ""
+    );
+    if (campaignCmp !== 0) return campaignCmp;
+    return (a.assignment_document_number ?? a.creator_name).localeCompare(
+      b.assignment_document_number ?? b.creator_name
+    );
+  });
+
+  const unpaidVendorCost = vendor_assignments.reduce(
+    (sum, row) =>
+      sum +
+      (row.payment_status === "unpaid" || row.payment_status === "pending"
+        ? row.vendor_cost ?? 0
+        : 0),
+    0
+  );
 
   const lines = ((linesResult.data ?? []) as unknown as LineQueryRow[]).map((row) => {
     const revenue = Number(row.revenue);
@@ -357,16 +459,7 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
       amount_paid: i.amount_paid,
       outstanding: i.outstanding,
     })),
-    unpaid_vendor_cost: (vendorCostResult.data ?? []).reduce(
-      (s, v) =>
-        s +
-        (["unpaid", "pending"].includes(
-          (v as { vendor_payment_status: string }).vendor_payment_status
-        )
-          ? Number((v as { agreed_fee: number }).agreed_fee)
-          : 0),
-      0
-    ),
+    unpaid_vendor_cost: unpaidVendorCost,
     extras: kpiExtras,
   });
 
@@ -399,18 +492,7 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
     };
   });
 
-  const vendor_batches: VendorPaymentBatchRow[] = (
-    batchesResult.data ?? []
-  ).map((b) => ({
-    id: b.id,
-    document_number: b.document_number,
-    name: b.name,
-    status: b.status,
-    batch_date: b.batch_date,
-    total_amount: Number(b.total_amount),
-    currency: b.currency,
-    assignment_count: 0,
-  }));
+  const vendor_batches: VendorPaymentBatchRow[] = [];
 
   let campaign_queue: BillingDashboard["campaign_queue"] = [];
   try {
@@ -444,6 +526,7 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
       })
     ),
     vendor_batches,
+    vendor_assignments,
     pending_approvals,
     campaign_queue,
   };

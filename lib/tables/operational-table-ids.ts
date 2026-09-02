@@ -9,6 +9,7 @@ export const OPERATIONAL_TABLE_IDS = {
   billingCampaignReviewLines: "billing-campaign-review-lines",
   billingInvoicesList: "billing-invoices-list",
   billingVendorPaymentBatches: "billing-vendor-payment-batches",
+  billingVendorAssignments: "billing-vendor-assignments",
   billingFinancialApprovals: "billing-financial-approvals",
   billingCollectionTracker: "billing-collection-tracker",
   campaignAssignmentBillingGroups: "campaign-assignment-billing-groups",

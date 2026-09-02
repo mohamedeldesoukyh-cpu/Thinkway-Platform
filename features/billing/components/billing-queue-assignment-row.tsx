@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useCallback, useMemo, type ReactNode } from "react";
+import { memo, useCallback, useMemo, type CSSProperties, type HTMLAttributes, type MouseEventHandler, type ReactNode } from "react";
 
 import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
@@ -8,40 +8,67 @@ import {
   DraftNumericInput,
   resolveAssignmentBillingStatus,
 } from "@/features/billing/components/operational-row-tree";
-import { useBillingQueueColumnVisibility } from "@/features/billing/components/use-billing-queue-column-visibility";
-import { useOperationalVisibleColumnCount } from "@/components/tables/operational-table-column-context";
 import {
-  CampaignOperationalTableCell,
-  CampaignOperationalTableCellAmount,
-  CampaignOperationalTableCellMono,
-  CampaignOperationalTableRow,
-} from "@/features/campaigns/components/campaign-operational-table";
-import { formatBillingMoney } from "@/features/billing/utils";
-import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+  billingQueueGridTemplate,
+  formatQueueNumber,
+  useBillingQueueColumnVisibility,
+} from "@/features/billing/components/use-billing-queue-column-visibility";
 import {
   isOperationalRowUiSelectable,
   type OperationalBillingRow,
 } from "@/lib/billing/operational-billing-rows";
 import {
-  computeInvoiceDraftLine,
   type InvoiceDraftLine,
   type InvoiceDraftPercents,
+  computeInvoiceDraftLine,
 } from "@/lib/billing/operational-invoice-draft";
 import {
   getRowSelectionStatus,
   getSelectableDescendantRows,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { cn } from "@/lib/utils";
 
-export function BillingQueueMessageRow({ children }: { children: ReactNode }) {
-  const count = useOperationalVisibleColumnCount();
+export function useBillingQueueGridTemplate() {
+  const cols = useBillingQueueColumnVisibility();
+  return { cols, template: billingQueueGridTemplate(cols) };
+}
+
+export function BillingQueueGrid({ children }: { children: ReactNode }) {
   return (
-    <CampaignOperationalTableRow className="bq-krow">
-      <CampaignOperationalTableCell colSpan={count} className="text-[11px] text-muted-foreground">
-        {children}
-      </CampaignOperationalTableCell>
-    </CampaignOperationalTableRow>
+    <div className="bq-scroll">
+      <div className="bq-grid">{children}</div>
+    </div>
+  );
+}
+
+export function BillingQueueGridRow({
+  className,
+  template,
+  children,
+  onClick,
+  ...rest
+}: {
+  className?: string;
+  template: string;
+  children: ReactNode;
+  onClick?: MouseEventHandler<HTMLDivElement>;
+} & HTMLAttributes<HTMLDivElement>) {
+  const style: CSSProperties = { gridTemplateColumns: template };
+  return (
+    <div className={cn("bq-r", className)} style={style} onClick={onClick} {...rest}>
+      {children}
+    </div>
+  );
+}
+
+export function BillingQueueMessageRow({ children }: { children: ReactNode }) {
+  const { template } = useBillingQueueGridTemplate();
+  return (
+    <BillingQueueGridRow className="bq-krow" template={template}>
+      <div className="bq-span text-[11px] text-muted-foreground">{children}</div>
+    </BillingQueueGridRow>
   );
 }
 
@@ -61,48 +88,30 @@ function formatDraftPercent(percent: number): string {
 }
 
 function amountClass(amount: number, positive = false) {
-  if (!(amount > 0.01)) return "bq-v-z";
-  return positive ? "bq-v-pos" : undefined;
+  if (!(amount > 0.01)) return "bq-v z";
+  return positive ? "bq-v pos" : "bq-v";
 }
 
 export function BillingQueueAssignmentHeaderRow() {
-  const cols = useBillingQueueColumnVisibility();
+  const { cols, template } = useBillingQueueGridTemplate();
   const lineSpan =
     Number(cols.showClient) + Number(cols.showBrand) + Number(cols.showCampaign);
 
   return (
-    <CampaignOperationalTableRow className="bq-khd">
-      {cols.showExpand ? <CampaignOperationalTableCell /> : null}
-      {cols.showSelect ? <CampaignOperationalTableCell /> : null}
-      {cols.showCampaignNo ? (
-        <CampaignOperationalTableCell>Line ref</CampaignOperationalTableCell>
-      ) : null}
-      {lineSpan > 0 ? (
-        <CampaignOperationalTableCell colSpan={lineSpan}>Line</CampaignOperationalTableCell>
-      ) : null}
-      {cols.showCurrency ? <CampaignOperationalTableCell /> : null}
-      {cols.showTotal ? (
-        <CampaignOperationalTableCell className="text-right">Achieved</CampaignOperationalTableCell>
-      ) : null}
-      {cols.showAchieved ? (
-        <CampaignOperationalTableCell className="text-right">Invoice %</CampaignOperationalTableCell>
-      ) : null}
-      {cols.showInvoiced ? (
-        <CampaignOperationalTableCell className="text-right">
-          Bill amount
-        </CampaignOperationalTableCell>
-      ) : null}
-      {cols.showRemaining ? (
-        <CampaignOperationalTableCell className="text-right">VAT</CampaignOperationalTableCell>
-      ) : null}
-      {cols.showUnachieved ? (
-        <CampaignOperationalTableCell className="text-right">Line total</CampaignOperationalTableCell>
-      ) : null}
-      {cols.showStatus ? <CampaignOperationalTableCell>State</CampaignOperationalTableCell> : null}
-      {cols.showActions ? (
-        <CampaignOperationalTableCell className="text-right">Invoice</CampaignOperationalTableCell>
-      ) : null}
-    </CampaignOperationalTableRow>
+    <BillingQueueGridRow className="bq-khd" template={template}>
+      {cols.showSelect ? <span /> : null}
+      {cols.showExpand ? <span /> : null}
+      {cols.showCampaignNo ? <span>Line ref</span> : null}
+      {lineSpan > 0 ? <span style={{ gridColumn: `span ${lineSpan}` }}>Line</span> : null}
+      {cols.showCurrency ? <span /> : null}
+      {cols.showTotal ? <span className="bq-rr">Achieved</span> : null}
+      {cols.showAchieved ? <span className="bq-rr">Bill %</span> : null}
+      {cols.showInvoiced ? <span className="bq-rr">Bill amount</span> : null}
+      {cols.showRemaining ? <span className="bq-rr">VAT</span> : null}
+      {cols.showUnachieved ? <span className="bq-rr">Line total</span> : null}
+      {cols.showStatus ? <span>State</span> : null}
+      {cols.showActions ? <span className="bq-rr">Invoice</span> : null}
+    </BillingQueueGridRow>
   );
 }
 
@@ -125,7 +134,7 @@ export const BillingQueueAssignmentRow = memo(function BillingQueueAssignmentRow
   onToBeInvoicedChange,
   onToggleSelect,
 }: BillingQueueAssignmentRowProps) {
-  const cols = useBillingQueueColumnVisibility();
+  const { cols, template } = useBillingQueueGridTemplate();
   const lineSpan =
     Number(cols.showClient) + Number(cols.showBrand) + Number(cols.showCampaign);
   const draft = useMemo(() => computeInvoiceDraftLine(row, percents), [row, percents]);
@@ -143,95 +152,82 @@ export const BillingQueueAssignmentRow = memo(function BillingQueueAssignmentRow
   }, [onToggleSelect, row]);
 
   return (
-    <CampaignOperationalTableRow className={cn("bq-krow", muted && "opacity-50")}>
-      {cols.showExpand ? <CampaignOperationalTableCell /> : null}
+    <BillingQueueGridRow className={cn("bq-krow", muted && "opacity-50")} template={template}>
       {cols.showSelect ? (
-        <CampaignOperationalTableCell>
+        <span>
           <OperationalSelectionCheckbox
             status={selectionStatus}
             disabled={!selectable}
             onToggle={handleSelect}
             ariaLabel={`Select ${row.label}`}
           />
-        </CampaignOperationalTableCell>
+        </span>
       ) : null}
+      {cols.showExpand ? <span /> : null}
       {cols.showCampaignNo ? (
-        <CampaignOperationalTableCellMono className="text-[10px] text-muted-foreground">
-          {row.document_number ?? "—"}
-        </CampaignOperationalTableCellMono>
+        <span className="bq-kid">{row.document_number ?? "—"}</span>
       ) : null}
       {lineSpan > 0 ? (
-        <CampaignOperationalTableCell colSpan={lineSpan} className="font-semibold">
+        <span className="bq-kn" style={{ gridColumn: `span ${lineSpan}` }} title={row.label}>
           {row.label}
-        </CampaignOperationalTableCell>
+        </span>
       ) : null}
-      {cols.showCurrency ? <CampaignOperationalTableCell /> : null}
+      {cols.showCurrency ? <span /> : null}
       {cols.showTotal ? (
-        <CampaignOperationalTableCellAmount className={amountClass(draft.amount)}>
-          {formatBillingMoney(draft.amount, currency)}
-        </CampaignOperationalTableCellAmount>
+        <span className={amountClass(draft.amount)}>{formatQueueNumber(draft.amount)}</span>
       ) : null}
       {cols.showAchieved ? (
-        <CampaignOperationalTableCell className="text-right">
-          <div className="bq-inw ml-auto flex items-center justify-end gap-0.5">
+        <span>
+          <div className="bq-inw">
             <DraftNumericInput
               value={Number(formatDraftPercent(draft.percent))}
               ariaLabel={`Invoice percent for ${row.label}`}
               disabled={!editable}
               min={0}
               max={100}
-              widthClass="w-14"
+              widthClass="bq-in"
               onCommit={(percent) => onPercentChange(row.id, percent)}
             />
-            <span className="text-[10px] text-muted-foreground">%</span>
+            <span>%</span>
           </div>
-        </CampaignOperationalTableCell>
+        </span>
       ) : null}
       {cols.showInvoiced ? (
-        <CampaignOperationalTableCellAmount>
+        <span>
           {editable ? (
-            <div className="bq-inw">
-              <DraftNumericInput
-                value={draft.toBeInvoiced}
-                ariaLabel={`To be invoiced for ${row.label}`}
-                min={0}
-                widthClass="w-[6.5rem]"
-                onCommit={(amount) => onToBeInvoicedChange(row.id, amount)}
-              />
-            </div>
+            <DraftNumericInput
+              value={draft.toBeInvoiced}
+              ariaLabel={`To be invoiced for ${row.label}`}
+              min={0}
+              widthClass="bq-in"
+              onCommit={(amount) => onToBeInvoicedChange(row.id, amount)}
+            />
           ) : (
-            formatBillingMoney(draft.toBeInvoiced, currency)
+            <span className={amountClass(draft.toBeInvoiced)}>
+              {formatQueueNumber(draft.toBeInvoiced)}
+            </span>
           )}
-        </CampaignOperationalTableCellAmount>
+        </span>
       ) : null}
       {cols.showRemaining ? (
-        <CampaignOperationalTableCellAmount className={amountClass(draft.vatAmount)}>
-          {formatBillingMoney(draft.vatAmount, currency)}
-        </CampaignOperationalTableCellAmount>
+        <span className={amountClass(draft.vatAmount)}>{formatQueueNumber(draft.vatAmount)}</span>
       ) : null}
       {cols.showUnachieved ? (
-        <CampaignOperationalTableCellAmount>
-          {formatBillingMoney(draft.totalInvoice, currency)}
-        </CampaignOperationalTableCellAmount>
+        <span className="bq-v">{formatQueueNumber(draft.totalInvoice)}</span>
       ) : null}
       {cols.showStatus ? (
-        <CampaignOperationalTableCell>
+        <span>
           <BillingStatusBadge status={resolveAssignmentBillingStatus(row)} />
-        </CampaignOperationalTableCell>
+        </span>
       ) : null}
       {cols.showActions ? (
-        <CampaignOperationalTableCellAmount
-          className={cn(
-            "text-[10px]",
-            row.invoice_document_number ? undefined : "bq-v-z"
-          )}
-        >
+        <span className={cn("bq-v", row.invoice_document_number ? undefined : "z")} style={{ fontSize: 10 }}>
           {row.invoice_document_number
             ? formatDocumentNumberForDisplay(row.invoice_document_number)
             : "—"}
-        </CampaignOperationalTableCellAmount>
+        </span>
       ) : null}
-    </CampaignOperationalTableRow>
+    </BillingQueueGridRow>
   );
 });
 
@@ -246,7 +242,7 @@ export function BillingQueueAssignmentFooterRow({
   currency,
   drafts,
 }: BillingQueueAssignmentFooterRowProps) {
-  const cols = useBillingQueueColumnVisibility();
+  const { cols, template } = useBillingQueueGridTemplate();
   const lineSpan =
     Number(cols.showClient) + Number(cols.showBrand) + Number(cols.showCampaign);
   const achieved = drafts.reduce((sum, d) => sum + d.amount, 0);
@@ -256,44 +252,28 @@ export function BillingQueueAssignmentFooterRow({
   const remaining = drafts.reduce((sum, d) => sum + d.remaining, 0);
 
   return (
-    <CampaignOperationalTableRow className="bq-ktot">
-      {cols.showExpand ? <CampaignOperationalTableCell /> : null}
-      {cols.showSelect ? <CampaignOperationalTableCell /> : null}
-      {cols.showCampaignNo ? <CampaignOperationalTableCell /> : null}
+    <BillingQueueGridRow className="bq-ktot" template={template}>
+      {cols.showSelect ? <span /> : null}
+      {cols.showExpand ? <span /> : null}
+      {cols.showCampaignNo ? <span /> : null}
       {lineSpan > 0 ? (
-        <CampaignOperationalTableCell colSpan={lineSpan}>
+        <span style={{ gridColumn: `span ${lineSpan}` }}>
           {assignmentCount} line{assignmentCount === 1 ? "" : "s"} in {currency}
-        </CampaignOperationalTableCell>
+        </span>
       ) : null}
-      {cols.showCurrency ? <CampaignOperationalTableCell /> : null}
-      {cols.showTotal ? (
-        <CampaignOperationalTableCellAmount>
-          {formatBillingMoney(achieved, currency)}
-        </CampaignOperationalTableCellAmount>
-      ) : null}
-      {cols.showAchieved ? <CampaignOperationalTableCell /> : null}
-      {cols.showInvoiced ? (
-        <CampaignOperationalTableCellAmount>
-          {formatBillingMoney(billed, currency)}
-        </CampaignOperationalTableCellAmount>
-      ) : null}
-      {cols.showRemaining ? (
-        <CampaignOperationalTableCellAmount>
-          {formatBillingMoney(vat, currency)}
-        </CampaignOperationalTableCellAmount>
-      ) : null}
-      {cols.showUnachieved ? (
-        <CampaignOperationalTableCellAmount>
-          {formatBillingMoney(total, currency)}
-        </CampaignOperationalTableCellAmount>
-      ) : null}
-      {cols.showStatus ? <CampaignOperationalTableCell /> : null}
+      {cols.showCurrency ? <span /> : null}
+      {cols.showTotal ? <span className="bq-v">{formatQueueNumber(achieved)}</span> : null}
+      {cols.showAchieved ? <span /> : null}
+      {cols.showInvoiced ? <span className="bq-v">{formatQueueNumber(billed)}</span> : null}
+      {cols.showRemaining ? <span className="bq-v">{formatQueueNumber(vat)}</span> : null}
+      {cols.showUnachieved ? <span className="bq-v">{formatQueueNumber(total)}</span> : null}
+      {cols.showStatus ? <span /> : null}
       {cols.showActions ? (
-        <CampaignOperationalTableCellAmount className="text-[10px]">
-          rem {formatBillingMoney(remaining, currency)}
-        </CampaignOperationalTableCellAmount>
+        <span className="bq-v" style={{ fontSize: 10 }}>
+          rem {formatQueueNumber(remaining)}
+        </span>
       ) : null}
-    </CampaignOperationalTableRow>
+    </BillingQueueGridRow>
   );
 }
 
@@ -310,28 +290,24 @@ export function BillingQueueTotalsRow({
   invoiced: number;
   remaining: number;
 }) {
-  const cols = useBillingQueueColumnVisibility();
+  const { cols, template } = useBillingQueueGridTemplate();
   const nameSpan =
     Number(cols.showCampaignNo) +
     Number(cols.showClient) +
     Number(cols.showBrand) +
     Number(cols.showCampaign);
-  const formatAmount = (amount: number) =>
-    currency
-      ? formatBillingMoney(amount, currency)
-      : amount.toLocaleString("en-US", { maximumFractionDigits: 0 });
 
   return (
-    <CampaignOperationalTableRow className="bq-foot">
-      {cols.showExpand ? <CampaignOperationalTableCell /> : null}
-      {cols.showSelect ? <CampaignOperationalTableCell /> : null}
+    <BillingQueueGridRow className="bq-foot" template={template}>
+      {cols.showSelect ? <span /> : null}
+      {cols.showExpand ? <span /> : null}
       {nameSpan > 0 ? (
-        <CampaignOperationalTableCell colSpan={nameSpan}>
+        <span style={{ gridColumn: `span ${nameSpan}` }}>
           {campaignCount} campaign{campaignCount === 1 ? "" : "s"}
-        </CampaignOperationalTableCell>
+        </span>
       ) : null}
       {cols.showCurrency ? (
-        <CampaignOperationalTableCell>
+        <span>
           {currency ? (
             <span className="bq-cc">{currency}</span>
           ) : (
@@ -339,21 +315,15 @@ export function BillingQueueTotalsRow({
               Sum mixed
             </span>
           )}
-        </CampaignOperationalTableCell>
+        </span>
       ) : null}
-      {cols.showTotal ? (
-        <CampaignOperationalTableCellAmount>{formatAmount(total)}</CampaignOperationalTableCellAmount>
-      ) : null}
-      {cols.showAchieved ? <CampaignOperationalTableCell /> : null}
-      {cols.showInvoiced ? (
-        <CampaignOperationalTableCellAmount>{formatAmount(invoiced)}</CampaignOperationalTableCellAmount>
-      ) : null}
-      {cols.showRemaining ? (
-        <CampaignOperationalTableCellAmount>{formatAmount(remaining)}</CampaignOperationalTableCellAmount>
-      ) : null}
-      {cols.showUnachieved ? <CampaignOperationalTableCell /> : null}
-      {cols.showStatus ? <CampaignOperationalTableCell /> : null}
-      {cols.showActions ? <CampaignOperationalTableCell /> : null}
-    </CampaignOperationalTableRow>
+      {cols.showTotal ? <span className="bq-v">{formatQueueNumber(total)}</span> : null}
+      {cols.showAchieved ? <span /> : null}
+      {cols.showInvoiced ? <span className="bq-v">{formatQueueNumber(invoiced)}</span> : null}
+      {cols.showRemaining ? <span className="bq-v">{formatQueueNumber(remaining)}</span> : null}
+      {cols.showUnachieved ? <span /> : null}
+      {cols.showStatus ? <span /> : null}
+      {cols.showActions ? <span /> : null}
+    </BillingQueueGridRow>
   );
 }

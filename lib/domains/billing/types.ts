@@ -218,12 +218,31 @@ export type VendorPaymentBatchRow = {
   assignment_count: number;
 };
 
+/** One creator assignment on a campaign — the unit money is owed against. */
+export type VendorAssignmentPaymentRow = {
+  id: string;
+  creator_name: string;
+  campaign_header_id: string | null;
+  campaign_name: string;
+  campaign_document_number: string | null;
+  assignment_document_number: string | null;
+  currency: string;
+  sell_value: number;
+  /** `null` when agreed fee is missing or zero — UI shows "not exposed". */
+  vendor_cost: number | null;
+  paid_amount: number;
+  payment_status: VendorPaymentStatus;
+  invoice_id: string | null;
+  invoice_document_number: string | null;
+};
+
 export type BillingDashboard = {
   kpis: BillingKpiSummary;
   lines: BillingLineRow[];
   invoices: BillingInvoiceRow[];
   aging: { bucket: AgingBucket; label: string; count: number; amount: number }[];
   vendor_batches: VendorPaymentBatchRow[];
+  vendor_assignments: VendorAssignmentPaymentRow[];
   pending_approvals: FinancialApprovalRow[];
   campaign_queue: CampaignBillingQueueRow[];
 };

@@ -203,7 +203,7 @@ function BillingCampaignDrilldownInner({
     }
 
     return (
-      <>
+      <div className="bq-kw">
         {showOrphanWarning ? (
           <BillingQueueMessageRow>
             <div className="bq-warn">
@@ -236,7 +236,7 @@ function BillingCampaignDrilldownInner({
           currency={detail.currency_code}
           drafts={assignmentDrafts}
         />
-      </>
+      </div>
     );
   }
 

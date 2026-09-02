@@ -104,8 +104,16 @@ export function DraftNumericInput({
   const [text, setText] = useState<string | null>(null);
   const display = text ?? (Number.isFinite(value) ? String(value) : "0");
 
+  function commit(raw: string) {
+    const next = Number(raw);
+    onCommit(Number.isFinite(next) ? next : 0);
+  }
+
   function handleChange(event: ChangeEvent<HTMLInputElement>) {
     setText(event.target.value);
+    if (widthClass.includes("bq-in") && event.target.value !== "") {
+      commit(event.target.value);
+    }
   }
 
   function handleBlur(event: FocusEvent<HTMLInputElement>) {
@@ -123,7 +131,9 @@ export function DraftNumericInput({
       disabled={disabled}
       aria-label={ariaLabel}
       className={cn(
-        "h-7 rounded-md px-1.5 text-right text-[11px] tabular-nums",
+        widthClass.includes("bq-in")
+          ? "bq-in shadow-none"
+          : "h-7 rounded-md px-1.5 text-right text-[11px] tabular-nums",
         widthClass
       )}
       value={display}

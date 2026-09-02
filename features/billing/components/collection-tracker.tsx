@@ -13,7 +13,7 @@ import {
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CollectionStatusBadge } from "@/features/billing/components/billing-status-badge";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import { BillingCardHeader } from "@/features/billing/components/billing-card-header";
 import { AGING_BUCKET_LABELS } from "@/features/billing/constants";
 import type { BillingInvoiceRow } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
@@ -127,9 +127,9 @@ export function CollectionTracker({
       tableOnly
       cardSurface
       leading={
-        <CampaignOperationalSectionHeader
+        <BillingCardHeader
           title="Collection tracker"
-          description={`${open.length} open invoice${open.length === 1 ? "" : "s"} requiring follow-up · driven by the client invoice register`}
+          subtitle={`${open.length} open invoice${open.length === 1 ? "" : "s"} requiring follow-up · driven by the client invoice register`}
           actions={settingsSlot}
         />
       }

@@ -10,11 +10,9 @@ import {
   type OperationalConfigurableColumnDef,
   getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
-import { CollectionStatusBadge } from "@/features/billing/components/billing-status-badge";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
-import type { BillingInvoiceRow, VendorPaymentBatchRow } from "@/features/billing/types";
+import { CollectionStatusBadge } from "@/features/billing/components/billing-status-badge";
+import type { BillingInvoiceRow } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
 
 type BillingInvoicesTableProps = {
@@ -159,123 +157,3 @@ export function BillingInvoicesTable({ invoices }: BillingInvoicesTableProps) {
   );
 }
 
-export const BILLING_VENDOR_BATCHES_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorPaymentBatchRow>[] = [
-  {
-    id: "batch",
-    label: "Batch",
-    cellClassName: "tabular-nums",
-    renderCell: (batch) => <DocumentNumber value={batch.document_number} />,
-  },
-  {
-    id: "name",
-    label: "Name",
-    renderCell: (batch) => batch.name,
-  },
-  {
-    id: "date",
-    label: "Date",
-    renderCell: (batch) => format(new Date(`${batch.batch_date}T00:00:00`), "MMM d, yyyy"),
-  },
-  {
-    id: "amount",
-    label: "Amount",
-    headerClassName: "text-right",
-    amountCell: true,
-    amountVariant: "revenue",
-    renderCell: (batch) => formatBillingMoney(batch.total_amount, batch.currency),
-  },
-  {
-    id: "status",
-    label: "Status",
-    cellClassName: "capitalize",
-    renderCell: (batch) => batch.status,
-  },
-];
-
-const VENDOR_BATCHES_COLUMNS = BILLING_VENDOR_BATCHES_TABLE_COLUMNS;
-
-export const BILLING_VENDOR_BATCHES_COLUMN_METAS =
-  getOperationalTableColumnMetas(BILLING_VENDOR_BATCHES_TABLE_COLUMNS);
-
-type VendorBatchesCardProps = {
-  batches: VendorPaymentBatchRow[];
-  settingsSlot?: React.ReactNode;
-  unpaidVendorCost?: number;
-  vendorCost?: number;
-  currency?: string;
-  mixedCurrency?: boolean;
-};
-
-export function VendorBatchesCard({
-  batches,
-  settingsSlot,
-  unpaidVendorCost,
-  vendorCost,
-  currency,
-  mixedCurrency = false,
-}: VendorBatchesCardProps) {
-  const formatAmount = (amount: number) =>
-    mixedCurrency || !currency
-      ? new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(amount)
-      : formatBillingMoney(amount, currency);
-  const paid =
-    vendorCost != null && unpaidVendorCost != null
-      ? Math.max(0, vendorCost - unpaidVendorCost)
-      : null;
-
-  return (
-    <OperationalTableSection
-      wide
-      tableOnly
-      cardSurface
-      leading={
-        <CampaignOperationalSectionHeader
-          title="Vendor payments"
-          description="Payment batches group assignments paid together. Amounts still live on the assignment."
-          actions={settingsSlot}
-        />
-      }
-    >
-      {vendorCost != null || unpaidVendorCost != null ? (
-        <div className="bq-st px-4 py-3">
-          {vendorCost != null ? (
-            <span>
-              <i>Total vendor cost</i>
-              <b>{formatAmount(vendorCost)}</b>
-            </span>
-          ) : null}
-          {unpaidVendorCost != null ? (
-            <span>
-              <i>Unpaid</i>
-              <b className={unpaidVendorCost > 0 ? "bad" : undefined}>
-                {formatAmount(unpaidVendorCost)}
-              </b>
-            </span>
-          ) : null}
-          {paid != null ? (
-            <span>
-              <i>Paid</i>
-              <b>{formatAmount(paid)}</b>
-            </span>
-          ) : null}
-          <span>
-            <i>Batches</i>
-            <b>{batches.length}</b>
-          </span>
-        </div>
-      ) : null}
-      {batches.length === 0 ? (
-        <p className="px-4 py-8 text-[11px] text-muted-foreground">
-          No vendor batches recorded. Unpaid vendor cost is still shown above from campaign
-          economics — a batch is only created when assignments are paid together.
-        </p>
-      ) : (
-        <OperationalConfigurableTable
-          columns={VENDOR_BATCHES_COLUMNS}
-          rows={batches}
-          rowKey={(batch) => batch.id}
-        />
-      )}
-    </OperationalTableSection>
-  );
-}

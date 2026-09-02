@@ -19,7 +19,7 @@ import {
 } from "@/features/billing/actions";
 import { FINANCIAL_APPROVAL_STAGE_LABELS } from "@/features/billing/constants";
 import type { FinancialApprovalRow } from "@/features/billing/types";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import { BillingCardHeader } from "@/features/billing/components/billing-card-header";
 import {
   CampaignOperationalTable,
   CampaignOperationalTableBody,
@@ -65,10 +65,7 @@ export function BillingApprovalsPanel({ approvals, settingsSlot }: BillingApprov
         tableOnly
         cardSurface
         leading={
-          <CampaignOperationalSectionHeader
-            title="Financial approvals"
-            actions={settingsSlot}
-          />
+          <BillingCardHeader title="Financial approvals" actions={settingsSlot} />
         }
       >
         <p className="px-4 py-8 text-[11px] text-muted-foreground">No pending approvals.</p>
@@ -82,9 +79,9 @@ export function BillingApprovalsPanel({ approvals, settingsSlot }: BillingApprov
       tableOnly
       cardSurface
       leading={
-        <CampaignOperationalSectionHeader
+        <BillingCardHeader
           title="Financial approvals"
-          description={`Campaign Manager → Finance → CFO/Admin · ${displayApprovals.length} open request${displayApprovals.length === 1 ? "" : "s"} across ${grouped.length} invoice${grouped.length === 1 ? "" : "s"}`}
+          subtitle={`Campaign Manager → Finance → CFO/Admin · ${displayApprovals.length} open request${displayApprovals.length === 1 ? "" : "s"} across ${grouped.length} invoice${grouped.length === 1 ? "" : "s"}`}
           actions={settingsSlot}
         />
       }
