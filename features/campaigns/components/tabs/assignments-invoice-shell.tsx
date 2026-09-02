@@ -1,9 +1,10 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
+import { useInvoiceConfirmFlow } from "@/features/billing/hooks/use-invoice-confirm-flow";
 
 import type {
   AssignmentBillingGroup,
@@ -19,16 +20,10 @@ const CreateInvoiceSheet = dynamic(
   { ssr: false }
 );
 
-const InvoiceGenerationSheet = dynamic(
-  () =>
-    import("@/features/billing/components/invoice-generation-sheet").then(
-      (m) => m.InvoiceGenerationSheet
-    ),
-  { ssr: false }
-);
-
 type AssignmentsInvoiceShellProps = {
   campaignId: string;
+  campaignName: string;
+  campaignNo: string;
   currencyCode: string;
   billingGroups: AssignmentBillingGroup[];
   operationalBilling: CampaignOperationalBillingDetail | null;
@@ -37,8 +32,11 @@ type AssignmentsInvoiceShellProps = {
   invoiceSelection: OperationalSelectionPayload | undefined;
 };
 
+/** Same confirm-then-create path as Campaign Billing / Assignments tab. */
 export function AssignmentsInvoiceShell({
   campaignId,
+  campaignName,
+  campaignNo,
   currencyCode,
   billingGroups,
   operationalBilling,
@@ -47,59 +45,70 @@ export function AssignmentsInvoiceShell({
   invoiceSelection,
 }: AssignmentsInvoiceShellProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
+  const { requestConfirm, confirmDialog } = useInvoiceConfirmFlow({
+    campaignId,
+    campaignName,
+    campaignNo,
+    currency: currencyCode,
+    operationalBilling,
+    onComplete: refreshAfterOperationalMutation,
+  });
+  const wasOpenRef = useRef(false);
 
-  if (operationalBilling) {
+  useEffect(() => {
+    if (invoiceOpen && !wasOpenRef.current && operationalBilling) {
+      const opened = requestConfirm(invoiceSelection);
+      if (!opened) onInvoiceOpenChange(false);
+    }
+    wasOpenRef.current = invoiceOpen;
+  }, [
+    invoiceOpen,
+    invoiceSelection,
+    operationalBilling,
+    onInvoiceOpenChange,
+    requestConfirm,
+  ]);
+
+  if (!operationalBilling) {
+    if (!invoiceOpen) return null;
     return (
-      <InvoiceGenerationSheet
+      <CreateInvoiceSheet
         campaignId={campaignId}
-        currency={operationalBilling.currency_code}
-        rollup={operationalBilling.rollup}
-        operationalRows={operationalBilling.operational_rows ?? []}
-        appendableInvoices={operationalBilling.appendable_invoices ?? []}
-        defaultVatPercent={operationalBilling.default_vat_percent}
-        targetMode="new"
-        initialSelection={invoiceSelection}
+        groups={billingGroups}
+        currency={currencyCode}
         open={invoiceOpen}
-        onInvoiceComplete={refreshAfterOperationalMutation}
-        onOpenChange={(open) => {
-          onInvoiceOpenChange(open);
-        }}
+        onOpenChange={onInvoiceOpenChange}
       />
     );
   }
 
-  if (!invoiceOpen) return null;
-
-  return (
-    <CreateInvoiceSheet
-      campaignId={campaignId}
-      groups={billingGroups}
-      currency={currencyCode}
-      open={invoiceOpen}
-      onOpenChange={onInvoiceOpenChange}
-    />
-  );
+  return confirmDialog;
 }
 
-export function useAssignmentsInvoiceDialog() {
-  const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const [invoiceSelection, setInvoiceSelection] = useState<
-    OperationalSelectionPayload | undefined
-  >();
+export function useAssignmentsInvoiceDialog(options: {
+  campaignId: string;
+  campaignName: string;
+  campaignNo: string;
+  currency: string;
+  operationalBilling: CampaignOperationalBillingDetail | null;
+  onComplete?: () => void | Promise<void>;
+}) {
+  const invoiceConfirm = useInvoiceConfirmFlow(options);
+  const [legacyOpen, setLegacyOpen] = useState(false);
 
-  function openInvoiceWithLines(lineIds: string[]) {
-    setInvoiceSelection({
-      line_ids: lineIds,
-      deliverable_ids: [],
-      post_ids: [],
-    });
-    setInvoiceOpen(true);
+  function openInvoiceWithLines(selection: OperationalSelectionPayload) {
+    if (!options.operationalBilling) {
+      setLegacyOpen(true);
+      return;
+    }
+    invoiceConfirm.requestConfirm(selection);
   }
 
   return {
-    invoiceOpen,
-    setInvoiceOpen,
-    invoiceSelection,
     openInvoiceWithLines,
+    pending: invoiceConfirm.pending,
+    confirmDialog: invoiceConfirm.confirmDialog,
+    legacyOpen,
+    setLegacyOpen,
   };
 }

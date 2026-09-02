@@ -227,12 +227,14 @@ export function CampaignBillingQueueFloatingBar({
   onSelectAll,
   onClear,
   onGenerateInvoice,
+  invoicePending = false,
 }: {
   rows: ConsolidatedInvoiceQueueRow[];
   selectedBatchKeys: Set<string>;
   onSelectAll: () => void;
   onClear: () => void;
   onGenerateInvoice: () => void;
+  invoicePending?: boolean;
 }) {
   const globalStatus = queueGlobalStatus(rows, selectedBatchKeys);
   const selectedCount = selectedBatchKeys.size;
@@ -273,8 +275,9 @@ export function CampaignBillingQueueFloatingBar({
         <PlatformFloatingBarPrimaryButton
           action={{
             id: "invoice",
-            label: "Generate invoice",
+            label: invoicePending ? "Generating…" : "Generate invoice",
             icon: FileTextIcon,
+            disabled: invoicePending,
             onClick: onGenerateInvoice,
           }}
         />

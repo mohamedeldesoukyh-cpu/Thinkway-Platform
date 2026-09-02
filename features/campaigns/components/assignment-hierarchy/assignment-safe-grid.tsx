@@ -110,6 +110,7 @@ type AssignmentSafeGridProps = {
     row: AssignmentRowViewModel
   ) => void;
   onInvoiceLines?: (selection: OperationalSelectionPayload) => void;
+  invoicePending?: boolean;
   onCreateAssignment?: () => void;
 };
 
@@ -142,6 +143,7 @@ export function AssignmentSafeGrid({
   onEditLine,
   onOpenInfluencerDetail,
   onInvoiceLines,
+  invoicePending = false,
   onCreateAssignment,
 }: AssignmentSafeGridProps) {
   const audienceView = useAssignmentAudienceView();
@@ -864,6 +866,7 @@ export function AssignmentSafeGrid({
           onGenerateInvoice={emitInvoiceSelection}
           hasInvoiceSelection={hasInvoiceSelection}
           invoiceActionLabel={invoiceActionLabel}
+          invoicePending={invoicePending}
           ioCoverage={ioCoverage}
           onAfterOperationalMutation={() => {
             resetOperationalUiState();

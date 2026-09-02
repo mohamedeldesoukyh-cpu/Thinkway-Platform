@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Billing invoice confirm + scoped generating state.
+**Focus:** Shared invoice confirm on Assignments + Campaign Billing.
+
+## Shipped 2026-09-02 — Assignments invoice confirm sync
+
+Assignments Generate invoice uses the same confirm dialog and `useOperationalInvoiceCreate` path as Campaign Billing and `/billing`. Amounts stay remaining-100% unless Campaign Billing Invoice % is set. Regenerated invoices still open the regenerate dialog first. No migrations. Not on Production.
 
 ## Shipped 2026-09-02 — Invoice confirm before generate
 

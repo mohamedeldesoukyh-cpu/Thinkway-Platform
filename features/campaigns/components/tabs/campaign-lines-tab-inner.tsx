@@ -61,27 +61,12 @@ import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
 import { tryBuildAssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience-view";
+import { useInvoiceConfirmFlow } from "@/features/billing/hooks/use-invoice-confirm-flow";
 
 const CreateInvoiceSheet = dynamic(
   () =>
     import("@/features/billing/components/create-invoice-sheet").then(
       (m) => m.CreateInvoiceSheet
-    ),
-  { ssr: false }
-);
-
-const InvoiceGenerationSheet = dynamic(
-  () =>
-    import("@/features/billing/components/invoice-generation-sheet").then(
-      (m) => m.InvoiceGenerationSheet
-    ),
-  { ssr: false }
-);
-
-const InvoiceTargetChoiceDialog = dynamic(
-  () =>
-    import("@/features/billing/components/invoice-target-choice-dialog").then(
-      (m) => m.InvoiceTargetChoiceDialog
     ),
   { ssr: false }
 );
@@ -119,15 +104,17 @@ export function CampaignLinesTabInner({
   const enableLineSheet = assignmentsLayerAtLeast(uiLayer, "operational_actions");
   const hasAssignments = workspace.lines.length > 0;
   const enableInvoiceDialogs = assignmentsLayerAtLeast(uiLayer, "invoice_dialogs");
+  const invoiceConfirm = useInvoiceConfirmFlow({
+    campaignId: workspace.id,
+    campaignName: workspace.name,
+    campaignNo: workspace.document_number,
+    currency: workspace.currency_code,
+    operationalBilling,
+    onComplete: refreshAfterOperationalMutation,
+  });
 
   const [sheetOpen, setSheetOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
-  const [invoiceChoiceOpen, setInvoiceChoiceOpen] = useState(false);
-  const [invoiceTargetMode, setInvoiceTargetMode] = useState<"new" | "append">("new");
-  const [appendInvoiceId, setAppendInvoiceId] = useState<string | undefined>();
-  const [invoiceSelection, setInvoiceSelection] = useState<
-    OperationalSelectionPayload | undefined
-  >();
   const [regenerateInvoiceOpen, setRegenerateInvoiceOpen] = useState(false);
   const [regenerateSelection, setRegenerateSelection] = useState<
     OperationalSelectionPayload | undefined
@@ -217,7 +204,11 @@ export function CampaignLinesTabInner({
   }
 
   function openInvoiceWithLines(selection: OperationalSelectionPayload) {
-    if (!enableInvoiceDialogs || !operationalBilling) return;
+    if (!enableInvoiceDialogs || invoiceConfirm.pending) return;
+    if (!operationalBilling) {
+      setInvoiceOpen(true);
+      return;
+    }
 
     const selectedLineIds = selection.line_ids ?? [];
     const invoiceAction = resolveInvoiceActionForSelection({
@@ -246,22 +237,7 @@ export function CampaignLinesTabInner({
       line_ids: invoiceAction.generateLineIds,
     };
 
-    const eligible = (operationalBilling.appendable_invoices ?? []).filter(
-      (inv) =>
-        !inv.is_locked &&
-        inv.status !== "void" &&
-        inv.status !== "paid" &&
-        inv.regeneration_status !== "pending_regeneration"
-    );
-    if (eligible.length > 0) {
-      setInvoiceSelection(generateSelection);
-      setInvoiceChoiceOpen(true);
-      return;
-    }
-    setInvoiceTargetMode("new");
-    setAppendInvoiceId(undefined);
-    setInvoiceSelection(generateSelection);
-    setInvoiceOpen(true);
+    invoiceConfirm.requestConfirm(generateSelection);
   }
 
   useRegisterShortcut({
@@ -451,6 +427,7 @@ export function CampaignLinesTabInner({
                     onEditLine={openEdit}
                     onOpenInfluencerDetail={(group) => setDetailLineId(group.line.id)}
                     onInvoiceLines={openInvoiceWithLines}
+                    invoicePending={invoiceConfirm.pending}
                     onCreateAssignment={enableLineSheet ? openCreate : undefined}
                   />
                 </AssignmentAudienceViewProvider>
@@ -504,37 +481,7 @@ export function CampaignLinesTabInner({
         />
       ) : null}
 
-      {enableInvoiceDialogs && operationalBilling ? (
-        <>
-          <InvoiceTargetChoiceDialog
-            open={invoiceChoiceOpen}
-            onOpenChange={setInvoiceChoiceOpen}
-            appendableInvoices={operationalBilling.appendable_invoices ?? []}
-            onConfirm={(mode, existingInvoiceId) => {
-              setInvoiceTargetMode(mode);
-              setAppendInvoiceId(existingInvoiceId);
-              setInvoiceOpen(true);
-            }}
-          />
-          <InvoiceGenerationSheet
-            campaignId={workspace.id}
-            currency={operationalBilling.currency_code}
-            rollup={operationalBilling.rollup}
-            operationalRows={operationalBilling.operational_rows ?? []}
-            appendableInvoices={operationalBilling.appendable_invoices ?? []}
-            defaultVatPercent={operationalBilling.default_vat_percent}
-            targetMode={invoiceTargetMode}
-            initialExistingInvoiceId={appendInvoiceId}
-            initialSelection={invoiceSelection}
-            open={invoiceOpen}
-            onInvoiceComplete={refreshAfterOperationalMutation}
-            onOpenChange={(open) => {
-              setInvoiceOpen(open);
-              if (!open) setInvoiceSelection(undefined);
-            }}
-          />
-        </>
-      ) : null}
+      {enableInvoiceDialogs ? invoiceConfirm.confirmDialog : null}
 
       {enableInvoiceDialogs && invoiceOpen && !operationalBilling ? (
         <CreateInvoiceSheet

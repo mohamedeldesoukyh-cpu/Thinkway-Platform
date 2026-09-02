@@ -66,6 +66,7 @@ type FloatingSelectionBarProps = {
   invoiceLineIds: string[];
   hasInvoiceSelection?: boolean;
   invoiceActionLabel?: "generate" | "regenerate" | null;
+  invoicePending?: boolean;
   ioCoverage?: IoCoverageAnalysis | null;
   onGenerateInvoice: () => void;
   onAfterOperationalMutation?: () => void;
@@ -113,6 +114,7 @@ export function FloatingSelectionBar({
   invoiceLineIds,
   hasInvoiceSelection = invoiceLineIds.length > 0,
   invoiceActionLabel = "generate",
+  invoicePending = false,
   ioCoverage = null,
   onGenerateInvoice,
   onAfterOperationalMutation,
@@ -294,12 +296,13 @@ export function FloatingSelectionBar({
               <PlatformFloatingBarPrimaryButton
                 action={{
                   id: "invoice",
-                  label:
-                    invoiceActionLabel === "regenerate"
+                  label: invoicePending
+                    ? "Generating…"
+                    : invoiceActionLabel === "regenerate"
                       ? "Regenerate invoice"
                       : "Generate invoice",
                   icon: FileTextIcon,
-                  disabled: ioCoverage?.case === "blocked",
+                  disabled: invoicePending || ioCoverage?.case === "blocked",
                   onClick: onGenerateInvoice,
                 }}
               />
@@ -307,12 +310,13 @@ export function FloatingSelectionBar({
               <PlatformFloatingBarSecondaryLink
                 action={{
                   id: "invoice",
-                  label:
-                    invoiceActionLabel === "regenerate"
+                  label: invoicePending
+                    ? "Generating…"
+                    : invoiceActionLabel === "regenerate"
                       ? "Regenerate invoice"
                       : "Generate invoice",
                   icon: FileTextIcon,
-                  disabled: ioCoverage?.case === "blocked",
+                  disabled: invoicePending || ioCoverage?.case === "blocked",
                   onClick: onGenerateInvoice,
                 }}
               />
