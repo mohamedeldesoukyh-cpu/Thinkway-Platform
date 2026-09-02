@@ -163,7 +163,7 @@ function ApprovalRow({ approval }: { approval: FinancialApprovalRow }) {
           <p className="text-muted-foreground">
             <DocumentNumber value={approval.document_number} />
           </p>
-        </CampaignOperationalTableCell
+        </CampaignOperationalTableCell>
       ) : null}
       {showStage ? (
         <CampaignOperationalTableCell>
