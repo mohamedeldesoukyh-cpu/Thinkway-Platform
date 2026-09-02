@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PeriodManagementWorkspace } from "@/features/finance/components/period-management-workspace";
 import { getFinancialPeriods } from "@/features/operations/queries";
 

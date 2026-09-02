@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { RevenueByFunctionView } from "@/features/reports/components/revenue-by-function-view";
 import {

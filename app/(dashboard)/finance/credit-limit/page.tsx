@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { CreditLimitWorkspace } from "@/features/finance/credit-limit/components/credit-limit-workspace";
 import { getCreditLimitWorkspace } from "@/features/finance/credit-limit/queries";
 

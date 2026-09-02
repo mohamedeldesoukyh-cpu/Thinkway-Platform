@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlanningWorkspaceView } from "@/features/planning/components/planning-workspace-view-lazy";
 import { loadPlanningWorkspace } from "@/features/planning/load-planning-workspace";
 import { parsePlanningSearchParams } from "@/lib/planning/dashboard-filters";

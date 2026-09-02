@@ -1,4 +1,5 @@
-import { FinanceSuiteRoot, FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteRoot } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { MoveOperationsTabs } from "@/features/operations/components/move-operations-tabs";
 import {
   getCampaignsForMovement,

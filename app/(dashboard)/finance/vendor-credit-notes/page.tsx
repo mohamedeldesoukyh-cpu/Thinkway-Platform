@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { AdjustmentModuleShell } from "@/features/finance/adjustments/components/adjustment-module-shell";
 

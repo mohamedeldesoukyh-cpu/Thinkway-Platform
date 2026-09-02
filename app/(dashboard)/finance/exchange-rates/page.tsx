@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { ExchangeRatesWorkspace } from "@/features/finance/exchange-rates/components/exchange-rates-workspace";
 import { getExchangeRatesWorkspace } from "@/features/finance/exchange-rates/queries";
 

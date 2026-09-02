@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { FinanceInvoicesListSection } from "@/features/finance/invoices/components/finance-invoices-list-section";
 import { getFinanceInvoiceRegister } from "@/features/finance/invoices/queries";

@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { IoSearchFilters } from "@/features/io/components/io-search-filters";
 import { VendorIosWorkspace } from "@/features/io/components/vendor-ios-workspace";

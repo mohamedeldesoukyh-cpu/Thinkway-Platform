@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { TreasuryDashboardView } from "@/features/treasury/components/treasury-dashboard-view";
 import { loadTreasuryDashboard } from "@/lib/treasury/load-treasury-dashboard";
 import { createSupabaseServerClient } from "@/lib/supabase/server";

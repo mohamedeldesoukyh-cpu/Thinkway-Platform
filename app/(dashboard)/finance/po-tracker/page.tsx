@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PoTrackerWorkspace } from "@/features/finance/po-tracker/components/po-tracker-workspace";
 import { getPoTrackerWorkspace } from "@/features/finance/po-tracker/queries";
 

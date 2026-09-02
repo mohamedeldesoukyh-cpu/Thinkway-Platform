@@ -9,7 +9,7 @@ Billing & finance Vendor payments lists one creator assignment per row, grouped 
 
 ## Shipped 2026-09-02 — Finance suite exact header match
 
-Finance / collections / treasury / planning / reports / vendor IO / move / reassignment / links now use the mock page header (`.tw-hd`): 19px title, 12px subtitle, Export + Actions. Titles and descriptions match `finance-suite.html`. Generic shell title bar hidden. `tw-*` primitives. Existing tabs and table Filter/Sort/Settings kept. No migrations. Not on Production.
+Finance / collections / treasury / planning / reports / vendor IO / move / reassignment / links now use the mock page header (`.tw-hd`): 19px title, 12px subtitle, Export + Actions. Titles and descriptions match `finance-suite.html`. Generic shell title bar hidden. `tw-*` primitives. Existing tabs and table Filter/Sort/Settings kept. `FinanceSuiteShell` is imported from `finance-suite-shell` (not the client barrel) so `next/headers` stays server-only. No migrations. Not on Production.
 
 ## Shipped 2026-09-02 — Finance suite restyle
 

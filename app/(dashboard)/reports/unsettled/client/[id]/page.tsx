@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { UnsettledDetailView } from "@/features/reports/components/unsettled-detail-view";
 import {

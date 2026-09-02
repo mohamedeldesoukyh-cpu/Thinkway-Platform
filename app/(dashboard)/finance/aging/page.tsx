@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { AgingWorkspace } from "@/features/finance/aging/components/aging-workspace";
 import {
   getAgingWorkspace,

@@ -3,7 +3,7 @@ export const dynamic = "force-dynamic";
 import { Suspense } from "react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { CollectionsWorkspaceView } from "@/features/collections/components/collections-workspace-view";
 import { loadCollectionsWorkspace } from "@/features/collections/load-workspace";
 import { parseCollectionsSearchParams } from "@/lib/collections/dashboard-filters";

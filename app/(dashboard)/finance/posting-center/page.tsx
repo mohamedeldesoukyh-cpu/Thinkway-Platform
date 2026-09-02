@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { PostingCenterWorkspace } from "@/features/finance/posting-center/components/posting-center-workspace";
 import { getPostingBatches, getPostingPreview } from "@/features/finance/posting-center/queries";

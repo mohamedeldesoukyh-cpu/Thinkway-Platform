@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { VatWorkspace } from "@/features/finance/vat/components/vat-workspace";
 import { getVatWorkspace } from "@/features/finance/vat/queries";
 

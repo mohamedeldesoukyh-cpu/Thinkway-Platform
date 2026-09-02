@@ -1,6 +1,7 @@
 import Link from "next/link";
 
-import { FinanceSuiteRoot, FinanceSuiteShell } from "@/components/finance/suite";
+import { FinanceSuiteRoot } from "@/components/finance/suite";
+import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { ReassignmentCenter } from "@/features/operations/components/reassignment-center";
 import { getMovementBatches } from "@/features/operations/queries";
 
