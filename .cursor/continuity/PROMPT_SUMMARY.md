@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Inline invoice generation on Campaign Finance operational billing — Invoice %, To Be Invoiced, Remaining on the table; no sidebar.
+**Focus:** Finance suite visual redesign from `finance-suite.html` — KPI cards, identity tiles, empty states; all existing tabs and actions kept.
+
+## Shipped 2026-09-02 — Finance suite restyle
+
+PO tracker, invoices, VAT, FX, periods, posting, credit/debit notes, aging, credit limit, collections, treasury, planning, reports hub, vendor IO, move, reassignment, and link generator restyled to match `finance-suite.html`. Functions and workspace tabs preserved. Route-scoped `finance-suite.css`. No migrations. Not on Production.
 
 ## Shipped 2026-09-02 — Billing workspace v3 restyle
 

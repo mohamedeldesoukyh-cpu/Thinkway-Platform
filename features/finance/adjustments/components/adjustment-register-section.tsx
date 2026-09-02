@@ -3,6 +3,7 @@
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { FinanceSuiteEmpty } from "@/components/finance/suite";
 import {
   ADJUSTMENT_REGISTER_COLUMN_METAS,
   AdjustmentRegisterTable,
@@ -39,7 +40,14 @@ export function AdjustmentRegisterSection({
         description={description}
         actions={<OperationalTableControlsSlot contextLabel="Adjustment register" />}
       >
-        <AdjustmentRegisterTable rows={rows} kind={kind} />
+        {rows.length === 0 ? (
+          <FinanceSuiteEmpty
+            title="No documents in this register yet"
+            body="The schema is live and serial numbers are reserved. Nothing has been raised, so there is nothing to reconcile."
+          />
+        ) : (
+          <AdjustmentRegisterTable rows={rows} kind={kind} />
+        )}
       </OperationalTableSection>
     </OperationalTableSuiteProvider>
   );

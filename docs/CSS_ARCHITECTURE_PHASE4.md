@@ -24,6 +24,7 @@ Login and portals paid for dashboard/campaign chrome they never use.
 | `campaign-workspace.css` | `(dashboard)/layout.tsx` (+ nested campaigns/discovery/ios for clarity) |
 | `login-v2.css` | `login/layout.tsx` only |
 | `quotation-redesign.css` | Discovery quotations layout (unchanged) |
+| `finance-suite.css` | Finance / collections / treasury / planning / reports / vendor IO / links (route layouts) |
 | Studio / AI / Outputs / Copilot CSS | Feature component imports (unchanged) |
 
 Shared logo + page loader + navigation overlay remain global via `app/styles/chrome-logo.css`.
@@ -49,7 +50,8 @@ Shared logo + page loader + navigation overlay remain global via `app/styles/chr
 | Campaigns / IO / Discovery / Quotations | ✓ | ✓ | ✓ | | quotation-redesign on quotations |
 | AI / Studio | ✓ | ✓ | ✓ | | studio-chat, campaign-studio-ref, ai-workspace, copilot |
 | Outputs (via AI) | ✓ | ✓ | ✓ | | outputs-center-ref |
-| Planning / Reports | ✓ | ✓ | ✓ | | |
+| Planning / Reports | ✓ | ✓ | ✓ | | finance-suite.css |
+| Finance / Collections / Treasury / Links / Vendor IO | ✓ | ✓ | ✓ | | finance-suite.css |
 
 Campaign Studio / AI / Outputs feature CSS were already component-scoped; Phase 4 did not relocate them.
 

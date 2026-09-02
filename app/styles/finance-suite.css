@@ -1,0 +1,813 @@
+/* Finance suite visual language — scoped to .finance-suite.
+   Source: finance-suite.html. Does not replace the app nav rail. */
+
+.finance-suite {
+  --fs-blue: #0057ff;
+  --fs-b2: #1a6fff;
+  --fs-bi: #0b52e0;
+  --fs-bdk: #0040cc;
+  --fs-navy: #060810;
+  --fs-ink: #0b0f1a;
+  --fs-ink2: #41495a;
+  --fs-mut: #64748b;
+  --fs-line: #e2e8f0;
+  --fs-hair: #edf0f5;
+  --fs-bg: #fafbfc;
+  --fs-soft: #f6f8fb;
+  --fs-lav: #eff4ff;
+  --fs-ok: #0a7a55;
+  --fs-okb: #e9f7f1;
+  --fs-wrn: #8a5d12;
+  --fs-wrnb: #fff6e8;
+  --fs-bad: #c82121;
+  --fs-badb: #fef2f2;
+  --fs-vio: #5b3fd1;
+  --fs-viob: #f1edfe;
+  --fs-grad: linear-gradient(145deg, #0040cc 0%, #0057ff 40%, #1a6fff 70%, #0048dd 100%);
+  --fs-ring: 0 0 0 1px rgba(0, 87, 255, 0.05), 0 8px 24px rgba(0, 87, 255, 0.06);
+  --fs-ez: cubic-bezier(0.23, 1, 0.32, 1);
+
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  flex: 1 1 auto;
+}
+
+.finance-suite .thinkway-shell-header {
+  background: var(--fs-bg);
+  border-bottom: 1px solid var(--fs-line);
+  padding: 18px 22px 14px;
+}
+
+.finance-suite .thinkway-shell-header h1 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.35px;
+}
+
+.finance-suite .thinkway-shell-header p {
+  font-size: 12px;
+  color: var(--fs-mut);
+  max-width: 640px;
+}
+
+.finance-suite main {
+  background: var(--fs-bg);
+  padding: 18px 22px 40px;
+}
+
+/* ---------- KPI ---------- */
+.finance-suite .fs-kpi {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(178px, 1fr));
+  gap: 10px;
+  margin-bottom: 13px;
+}
+
+.finance-suite .fs-k {
+  padding: 13px 15px;
+  background: #fff;
+  border-radius: 11px;
+  box-shadow: var(--fs-ring);
+}
+
+.finance-suite .fs-k i,
+.finance-suite .fs-k .fs-k__l {
+  display: block;
+  font-style: normal;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.62px;
+  text-transform: uppercase;
+  color: var(--fs-mut);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.finance-suite .fs-k b,
+.finance-suite .fs-k .fs-k__v {
+  display: block;
+  margin: 6px 0 2px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.7px;
+  line-height: 1.05;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.finance-suite .fs-k u,
+.finance-suite .fs-k .fs-k__s {
+  display: block;
+  text-decoration: none;
+  font-size: 10.5px;
+  color: var(--fs-mut);
+}
+
+.finance-suite .fs-k.bad {
+  box-shadow: 0 0 0 1px #efb6b6, 0 8px 24px rgba(200, 33, 33, 0.07);
+}
+
+.finance-suite .fs-k.bad b,
+.finance-suite .fs-k.bad .fs-k__v,
+.finance-suite .fs-k.bad u,
+.finance-suite .fs-k.bad .fs-k__s {
+  color: var(--fs-bad);
+}
+
+.finance-suite .fs-k.ok b,
+.finance-suite .fs-k.ok .fs-k__v {
+  color: var(--fs-ok);
+}
+
+.finance-suite .fs-k.warn {
+  box-shadow: 0 0 0 1px #f0d6a4, 0 8px 24px rgba(138, 93, 18, 0.07);
+}
+
+/* ---------- cards / sections ---------- */
+.finance-suite .thinkway-campaign-section-card,
+.finance-suite .fs-c,
+.finance-suite [data-slot="card"]:not([class*="fs-tile"]) {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--fs-ring);
+  overflow: hidden;
+  border-color: transparent;
+}
+
+.finance-suite .thinkway-campaign-section-head,
+.finance-suite .fs-ch {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 12px 15px;
+  border-bottom: 1px solid var(--fs-line);
+}
+
+.finance-suite .thinkway-campaign-section-head h2,
+.finance-suite .thinkway-campaign-section-head h3,
+.finance-suite .fs-ct {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.finance-suite .thinkway-campaign-section-head p,
+.finance-suite .fs-cs {
+  font-size: 11px;
+  color: var(--fs-mut);
+  margin-top: 0;
+}
+
+/* ---------- tables ---------- */
+.finance-suite .thinkway-campaign-op-table-header,
+.finance-suite thead[data-slot="table-header"] {
+  background: var(--fs-soft);
+}
+
+.finance-suite .thinkway-campaign-op-table-head,
+.finance-suite thead th,
+.finance-suite [data-slot="table-head"] {
+  font-size: 9px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--fs-mut) !important;
+  white-space: nowrap;
+  background: var(--fs-soft);
+  border-bottom: 1px solid var(--fs-line);
+  padding: 9px 8px !important;
+}
+
+.finance-suite .thinkway-campaign-op-table-row,
+.finance-suite tbody [data-slot="table-row"] {
+  border-bottom: 1px solid var(--fs-hair);
+}
+
+.finance-suite .thinkway-campaign-op-table-row:hover,
+.finance-suite tbody [data-slot="table-row"]:hover {
+  background: #fbfcff;
+}
+
+.finance-suite .thinkway-campaign-op-table-cell,
+.finance-suite tbody td,
+.finance-suite [data-slot="table-cell"] {
+  padding: 11px 8px !important;
+  font-size: 12.5px;
+  color: var(--fs-ink2);
+  vertical-align: middle;
+}
+
+.finance-suite .thinkway-campaign-op-table-row.fs-row-bad,
+.finance-suite tbody [data-slot="table-row"].fs-row-bad {
+  background: #fff8f8;
+  box-shadow: inset 3px 0 0 var(--fs-bad);
+}
+
+.finance-suite .thinkway-campaign-op-table-row.fs-row-warn,
+.finance-suite tbody [data-slot="table-row"].fs-row-warn {
+  background: #fffcf5;
+  box-shadow: inset 3px 0 0 #e0a93c;
+}
+
+.finance-suite .fs-id {
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: -0.3px;
+  color: var(--fs-ink2);
+}
+
+.finance-suite .fs-nm {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+}
+
+.finance-suite .fs-br {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--fs-vio);
+}
+
+.finance-suite .fs-s {
+  display: block;
+  font-size: 10.5px;
+  color: var(--fs-mut);
+  margin-top: 2px;
+}
+
+.finance-suite .fs-v,
+.finance-suite .thinkway-campaign-op-table-cell[data-amount="true"],
+.finance-suite td.tabular-nums {
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+}
+
+.finance-suite .fs-v.z {
+  color: #b6becd;
+  font-weight: 500;
+}
+
+.finance-suite .fs-v.neg {
+  color: var(--fs-bad);
+}
+
+.finance-suite .fs-v.pos {
+  color: var(--fs-ok);
+}
+
+.finance-suite .fs-miss {
+  color: #a9b2c3;
+  font-style: italic;
+  font-size: 11.5px;
+}
+
+.finance-suite .fs-cc {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--fs-soft);
+  border: 1px solid var(--fs-hair);
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--fs-mut);
+}
+
+.finance-suite .fs-bar {
+  display: block;
+  height: 4px;
+  border-radius: 999px;
+  background: var(--fs-hair);
+  overflow: hidden;
+  margin-top: 5px;
+}
+
+.finance-suite .fs-bar i {
+  display: block;
+  height: 100%;
+  background: var(--fs-blue);
+}
+
+.finance-suite .fs-bar i.r {
+  background: var(--fs-bad);
+}
+
+.finance-suite .fs-bar i.y {
+  background: #e0a93c;
+}
+
+/* ---------- badges as pills ---------- */
+.finance-suite [data-slot="badge"] {
+  height: auto;
+  border-radius: 999px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  border-width: 0;
+}
+
+.finance-suite [data-slot="badge"][data-variant="outline"] {
+  background: var(--fs-soft);
+  color: var(--fs-mut);
+}
+
+.finance-suite [data-slot="badge"][data-variant="default"] {
+  background: var(--fs-okb);
+  color: var(--fs-ok);
+}
+
+.finance-suite [data-slot="badge"][data-variant="secondary"] {
+  background: var(--fs-lav);
+  color: var(--fs-bi);
+}
+
+.finance-suite [data-slot="badge"][data-variant="destructive"] {
+  background: var(--fs-badb);
+  color: var(--fs-bad);
+}
+
+/* ---------- buttons ---------- */
+.finance-suite main [data-slot="button"] {
+  border-radius: 9px;
+  font-weight: 600;
+  font-size: 12.5px;
+  height: 32px;
+  transition: border-color 0.15s var(--fs-ez), color 0.15s var(--fs-ez),
+    box-shadow 0.15s var(--fs-ez);
+}
+
+.finance-suite main [data-slot="button"][data-size="sm"] {
+  height: 27px;
+  border-radius: 8px;
+  font-size: 11.5px;
+}
+
+.finance-suite main [data-slot="button"][data-variant="outline"] {
+  border: 0.8px solid #e3e8f2;
+  background: #fff;
+  color: var(--fs-ink2);
+  box-shadow: none;
+}
+
+.finance-suite main [data-slot="button"][data-variant="outline"]:hover {
+  border-color: rgba(0, 87, 255, 0.35);
+  color: var(--fs-bi);
+  background: #fff;
+}
+
+.finance-suite main [data-slot="button"][data-variant="default"] {
+  border-color: rgba(0, 87, 255, 0.55);
+  color: var(--fs-bi);
+  background: #fff;
+  font-weight: 700;
+  font-size: 12px;
+  box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.08), 0 2px 14px -3px rgba(0, 87, 255, 0.4);
+}
+
+.finance-suite main [data-slot="button"][data-variant="default"]:hover {
+  background: var(--fs-lav);
+  color: var(--fs-bi);
+}
+
+.finance-suite main [data-slot="button"]:disabled {
+  opacity: 0.42;
+  box-shadow: none;
+}
+
+/* ---------- labels / inputs ---------- */
+.finance-suite label,
+.finance-suite [data-slot="label"] {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--fs-mut);
+}
+
+.finance-suite input[data-slot="input"],
+.finance-suite [data-slot="select-trigger"],
+.finance-suite textarea {
+  height: 30px;
+  border: 1px solid var(--fs-line);
+  border-radius: 8px;
+  background: #fff;
+  font-size: 12.5px;
+  font-weight: 500;
+  box-shadow: none;
+}
+
+.finance-suite textarea {
+  height: auto;
+  min-height: 4.5rem;
+}
+
+.finance-suite input[data-slot="input"]:focus,
+.finance-suite [data-slot="select-trigger"]:focus,
+.finance-suite textarea:focus {
+  border-color: var(--fs-blue);
+  box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.12);
+  outline: none;
+}
+
+/* ---------- segment / tabs ---------- */
+.finance-suite .fs-seg {
+  display: inline-flex;
+  padding: 2px;
+  background: var(--fs-soft);
+  border: 1px solid var(--fs-hair);
+  border-radius: 9px;
+}
+
+.finance-suite .fs-seg button {
+  padding: 5px 11px;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: none;
+  color: var(--fs-mut);
+}
+
+.finance-suite .fs-seg button[aria-pressed="true"] {
+  background: #fff;
+  color: var(--fs-bi);
+  box-shadow: 0 1px 2px rgba(11, 15, 26, 0.08);
+}
+
+.finance-suite [data-sticky="operational-workspace-tabs"] {
+  background: transparent;
+  padding: 0 0 12px;
+  border-radius: 0;
+}
+
+.finance-suite [data-sticky="operational-workspace-tabs"] .enterprise-tabs-list {
+  gap: 4px;
+  padding: 2px;
+  background: var(--fs-soft);
+  border: 1px solid var(--fs-hair);
+  border-radius: 9px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.finance-suite .thinkway-campaign-section-body,
+.finance-suite .fs-pad {
+  padding: 14px 15px;
+}
+
+/* ---------- notes / empty ---------- */
+.finance-suite .fs-note {
+  margin: 13px 15px;
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: var(--fs-soft);
+  font-size: 11.5px;
+  color: var(--fs-ink2);
+  line-height: 1.55;
+}
+
+.finance-suite .fs-note.bad {
+  background: var(--fs-badb);
+  color: var(--fs-bad);
+}
+
+.finance-suite .fs-note.warn {
+  background: var(--fs-wrnb);
+  color: var(--fs-wrn);
+}
+
+.finance-suite .fs-empty {
+  padding: 44px 20px;
+  text-align: center;
+}
+
+.finance-suite .fs-empty svg {
+  width: 34px;
+  height: 34px;
+  stroke: #c3cbd8;
+  fill: none;
+  stroke-width: 1.4;
+  margin: 0 auto 10px;
+}
+
+.finance-suite .fs-empty b {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.finance-suite .fs-empty p {
+  font-size: 12px;
+  color: var(--fs-mut);
+  max-width: 400px;
+  margin: 0 auto 12px;
+}
+
+.finance-suite .fs-two {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: 14px;
+}
+
+/* ---------- identity tiles ---------- */
+.finance-suite .fs-deck {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 12px;
+}
+
+.finance-suite .fs-tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 15px 16px 14px;
+  border-radius: 16px;
+  background: var(--fs-grad);
+  color: #fff;
+  cursor: pointer;
+  min-height: 132px;
+  display: flex;
+  flex-direction: column;
+  text-align: left;
+  border: 0;
+  width: 100%;
+  box-shadow: 0 1px 2px rgba(0, 64, 204, 0.3), 0 10px 26px -8px rgba(0, 87, 255, 0.42);
+  transition: transform 0.32s var(--fs-ez), box-shadow 0.32s var(--fs-ez);
+}
+
+.finance-suite .fs-tile:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 1px 2px rgba(0, 64, 204, 0.34), 0 20px 40px -10px rgba(0, 87, 255, 0.5);
+}
+
+.finance-suite .fs-tile:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.finance-suite .fs-tile::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -52px;
+  top: -58px;
+  width: 186px;
+  height: 186px;
+  border-radius: 50%;
+  border: 30px solid rgba(255, 255, 255, 0.1);
+}
+
+.finance-suite .fs-tile::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: 12px;
+  bottom: -74px;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  border: 22px solid rgba(255, 255, 255, 0.07);
+}
+
+.finance-suite .fs-tile.alt {
+  background: linear-gradient(150deg, #0b0f1a 0%, #0e1730 45%, #0040cc 130%);
+}
+
+.finance-suite .fs-tile.soft {
+  background: linear-gradient(150deg, #eff4ff 0%, #dfe9ff 100%);
+  color: var(--fs-navy);
+  box-shadow: 0 0 0 1px rgba(0, 87, 255, 0.12), 0 10px 26px -12px rgba(0, 87, 255, 0.3);
+}
+
+.finance-suite .fs-tile.soft::before {
+  border-color: rgba(0, 87, 255, 0.1);
+}
+
+.finance-suite .fs-tile.soft::after {
+  border-color: rgba(0, 87, 255, 0.07);
+}
+
+.finance-suite .fs-tl {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.finance-suite .fs-tl i,
+.finance-suite .fs-tl .fs-tl__k {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.finance-suite .fs-tile.soft .fs-tl i,
+.finance-suite .fs-tile.soft .fs-tl__k,
+.finance-suite .fs-tile.soft .fs-tl p,
+.finance-suite .fs-tile.soft .fs-go {
+  color: var(--fs-bi);
+}
+
+.finance-suite .fs-tile.soft .fs-tl b {
+  color: var(--fs-navy);
+}
+
+.finance-suite .fs-tl b {
+  display: block;
+  margin: 7px 0 5px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.25px;
+  line-height: 1.2;
+}
+
+.finance-suite .fs-tl p {
+  font-size: 11.5px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.finance-suite .fs-tl .fs-big {
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  margin: 6px 0 2px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.finance-suite .fs-go {
+  margin-top: auto;
+  padding-top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.finance-suite .fs-go svg {
+  width: 12px;
+  height: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.3s var(--fs-ez);
+}
+
+.finance-suite .fs-tile:hover .fs-go svg {
+  transform: translateX(3px);
+}
+
+.finance-suite .fs-star {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 7px;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.finance-suite .fs-tile.soft .fs-star {
+  background: rgba(0, 87, 255, 0.1);
+  color: var(--fs-bi);
+}
+
+.finance-suite .fs-spark {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 26px;
+  margin-top: 8px;
+}
+
+.finance-suite .fs-spark span {
+  flex: 1;
+  border-radius: 2px 2px 0 0;
+  background: rgba(255, 255, 255, 0.34);
+  min-height: 3px;
+}
+
+.finance-suite .fs-tile.soft .fs-spark span {
+  background: rgba(0, 87, 255, 0.24);
+}
+
+.finance-suite .fs-spark span.hi {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.finance-suite .fs-tile.soft .fs-spark span.hi {
+  background: var(--fs-blue);
+}
+
+.finance-suite .overflow-hidden.rounded-xl.border.bg-card {
+  box-shadow: var(--fs-ring);
+  border-radius: 12px;
+  border-color: transparent;
+}
+
+.finance-suite .fs-link-preview {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--fs-navy);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.finance-suite .fs-link-preview code {
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #9fc0ff;
+  word-break: break-all;
+  flex: 1 1 300px;
+}
+
+.finance-suite .fs-link-preview code b {
+  color: #fff;
+  font-weight: 600;
+}
+
+.finance-suite .fs-grp {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--fs-mut);
+  margin: 6px 0 9px;
+}
+
+@media (max-width: 1100px) {
+  .finance-suite .fs-two {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .finance-suite .fs-tile,
+  .finance-suite .fs-go svg,
+  .finance-suite main [data-slot="button"] {
+    transition: none;
+  }
+}
+
+.dark .finance-suite {
+  --fs-bg: hsl(var(--background));
+  --fs-soft: hsl(var(--muted) / 0.45);
+  --fs-line: hsl(var(--border));
+  --fs-hair: hsl(var(--border) / 0.6);
+  --fs-ink: hsl(var(--foreground));
+  --fs-ink2: hsl(var(--muted-foreground));
+}
+
+.dark .finance-suite .fs-k,
+.dark .finance-suite .thinkway-campaign-section-card,
+.dark .finance-suite .fs-c,
+.dark .finance-suite [data-slot="card"]:not(.fs-tile) {
+  background: hsl(var(--card));
+}
+
+.dark .finance-suite .thinkway-campaign-op-table-head,
+.dark .finance-suite thead th,
+.dark .finance-suite [data-slot="table-head"],
+.dark .finance-suite .thinkway-campaign-op-table-header {
+  background: hsl(var(--muted) / 0.5);
+}
+
+.dark .finance-suite main [data-slot="button"][data-variant="outline"],
+.dark .finance-suite main [data-slot="button"][data-variant="default"],
+.dark .finance-suite input[data-slot="input"],
+.dark .finance-suite [data-slot="select-trigger"],
+.dark .finance-suite textarea {
+  background: hsl(var(--card));
+  color: hsl(var(--foreground));
+}

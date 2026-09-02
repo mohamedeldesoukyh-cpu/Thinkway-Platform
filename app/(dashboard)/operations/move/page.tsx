@@ -1,4 +1,5 @@
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { FinanceSuiteRoot } from "@/components/finance/suite";
 import { MoveOperationsTabs } from "@/features/operations/components/move-operations-tabs";
 import {
   getCampaignsForMovement,
@@ -38,23 +39,25 @@ export default async function MoveBetweenAccountsPage({
   }
 
   return (
-    <DashboardShell
-      title="Move between accounts"
-      description="Enterprise reassignment — hierarchy ownership and creator assignment transfers with full audit preservation."
-    >
-      {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : hierarchy && campaignsResult && vendors ? (
-        <MoveOperationsTabs
-          hierarchy={hierarchy}
-          campaignsResult={campaignsResult}
-          vendors={vendors}
-          initialAssignments={initialAssignments}
-          vendorParam={vendorParam}
-        />
-      ) : null}
-    </DashboardShell>
+    <FinanceSuiteRoot>
+      <DashboardShell
+        title="Move between accounts"
+        description="Enterprise reassignment — hierarchy ownership and creator assignment transfers with full audit preservation."
+      >
+        {errorMessage ? (
+          <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            {errorMessage}
+          </div>
+        ) : hierarchy && campaignsResult && vendors ? (
+          <MoveOperationsTabs
+            hierarchy={hierarchy}
+            campaignsResult={campaignsResult}
+            vendors={vendors}
+            initialAssignments={initialAssignments}
+            vendorParam={vendorParam}
+          />
+        ) : null}
+      </DashboardShell>
+    </FinanceSuiteRoot>
   );
 }

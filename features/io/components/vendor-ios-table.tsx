@@ -18,6 +18,7 @@ import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor
 import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
+import { FinanceSuiteEmpty } from "@/components/finance/suite";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -171,9 +172,10 @@ export function VendorIosTable({
 
   if (rows.length === 0) {
     return (
-      <p className="px-4 py-8 text-[11px] text-muted-foreground">
-        No vendor IO records found.
-      </p>
+      <FinanceSuiteEmpty
+        title="No vendor IO records found"
+        body="Insertion orders appear here one per creator assignment. Generate an IO from a campaign assignment to populate this register."
+      />
     );
   }
 

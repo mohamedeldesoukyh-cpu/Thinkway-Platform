@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import { FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
 import {
   createAndPostBatchAction,
   previewPostingBatchAction,
@@ -212,14 +213,46 @@ export function PostingCenterWorkspace({
   const statusMessage = postState.message ?? previewState.message ?? reverseState.message;
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-3xl border p-4">
-        <h3 className="text-sm font-semibold">Posting workflow</h3>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Thinkway operational subledger → batch-controlled ERP bridge. Reverse instead of delete.
-        </p>
+    <div className="space-y-4">
+      <FinanceSuiteKpiStrip
+        items={[
+          {
+            id: "preview",
+            label: "In preview range",
+            value: String(preview.length),
+            hint: preview.length === 0 ? "no documents match" : "ready to post",
+          },
+          {
+            id: "total",
+            label: "Batch total",
+            value: formatMoney(totals.after, preview[0]?.currency ?? "USD"),
+            hint: `${preview.length} docs`,
+            tone: preview.length === 0 ? "bad" : undefined,
+          },
+          {
+            id: "batches",
+            label: "Posted batches",
+            value: String(batches.length),
+            hint: batches.length === 0 ? "none yet" : undefined,
+          },
+          {
+            id: "reversals",
+            label: "Reversals",
+            value: String(batches.filter((b) => b.status === "reversed").length),
+            hint: "reverse, never delete",
+          },
+        ]}
+      />
 
-        <div className="mt-4 grid gap-4 md:grid-cols-4">
+      <section className="thinkway-campaign-section-card">
+        <div className="thinkway-campaign-section-head">
+          <div className="min-w-0">
+            <h2>Posting workflow</h2>
+            <p>Thinkway operational subledger → batch-controlled ERP bridge. Reverse instead of delete.</p>
+          </div>
+        </div>
+        <div className="fs-pad">
+          <div className="grid gap-4 md:grid-cols-4">
           <div className="grid gap-2">
             <Label>Transaction type</Label>
             <Select
@@ -268,6 +301,7 @@ export function PostingCenterWorkspace({
               </Button>
             </form>
           </div>
+          </div>
         </div>
 
         <OperationalTableSuiteProvider
@@ -288,9 +322,10 @@ export function PostingCenterWorkspace({
               <OperationalTableControlsSlot contextLabel="Posting preview" />
             </div>
             {preview.length === 0 ? (
-              <p className="px-4 py-8 text-[11px] text-muted-foreground">
-                No documents in preview range.
-              </p>
+              <FinanceSuiteEmpty
+                title="No documents in preview range"
+                body="Nothing matches this transaction type and date range. Widen the range or change the type."
+              />
             ) : (
               <OperationalConfigurableTable
                 columns={POSTING_PREVIEW_COLUMNS}
@@ -336,16 +371,18 @@ export function PostingCenterWorkspace({
           status: (row) => row.status,
         }}
       >
-        <section className="rounded-3xl border p-4">
+        <section className="thinkway-campaign-section-card">
           <CampaignOperationalSectionHeader
             title="Recent posting batches"
+            description="Batch number, total, period and execution state"
             actions={<OperationalTableControlsSlot contextLabel="Posting batches" />}
           />
-          <div className="mt-3 overflow-x-auto">
+          <div className="mt-0 overflow-x-auto">
             {batches.length === 0 ? (
-              <p className="px-4 py-8 text-[11px] text-muted-foreground">
-                No posting batches yet.
-              </p>
+              <FinanceSuiteEmpty
+                title="No posting batches yet"
+                body="Once a batch is posted it appears here permanently. Batches are reversed, never deleted."
+              />
             ) : (
               <OperationalConfigurableTable
                 columns={batchColumns}

@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useMemo, useTransition } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
+import { FinanceSuiteKpiStrip } from "@/components/finance/suite";
 import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
 import { ListNavSync } from "@/components/navigation/list-nav-sync";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
@@ -45,6 +46,12 @@ export function VendorIosWorkspace({ rows, initialSelectedId, leading }: Props) 
     });
   }
 
+  const pendingSend = rows.filter(
+    (row) => row.status === "draft" || row.status === "generated"
+  ).length;
+  const noInfluencer = rows.filter((row) => !row.influencer_name.trim()).length;
+  const campaigns = new Set(rows.map((row) => row.campaign_header_id)).size;
+
   return (
     <OperationalTableSuiteProvider
       tableId={OPERATIONAL_TABLE_IDS.ioVendorRegister}
@@ -54,6 +61,36 @@ export function VendorIosWorkspace({ rows, initialSelectedId, leading }: Props) 
     >
       <ListNavSync entity="vio" rows={rows} rowId={(row) => row.id} />
       <div className="space-y-4">
+        <FinanceSuiteKpiStrip
+          items={[
+            {
+              id: "ios",
+              label: "Vendor IOs",
+              value: String(rows.length),
+              hint: `across ${campaigns} campaign${campaigns === 1 ? "" : "s"}`,
+            },
+            {
+              id: "pending",
+              label: "Pending send",
+              value: String(pendingSend),
+              hint: "never reached the creator",
+              tone: pendingSend > 0 ? "bad" : undefined,
+            },
+            {
+              id: "nolink",
+              label: "No influencer linked",
+              value: String(noInfluencer),
+              hint: "IO exists, creator does not",
+              tone: noInfluencer > 0 ? "bad" : undefined,
+            },
+            {
+              id: "sent",
+              label: "Sent / approved",
+              value: String(rows.filter((row) => Boolean(row.sent_at || row.approved_at)).length),
+              hint: "workflow, not payment",
+            },
+          ]}
+        />
         <OperationalTableSection
           wide
           tableOnly

@@ -65,7 +65,14 @@ function buildFinanceInvoiceRegisterBaseColumns(
     {
       id: "brand",
       label: "Brand",
-      renderCell: (row) => row.brand_name ?? "—",
+      renderCell: (row) =>
+        row.brand_name ? (
+          <span className={appearance === "campaign" ? undefined : "fs-br"}>
+            {row.brand_name}
+          </span>
+        ) : (
+          "—"
+        ),
     },
     {
       id: "campaign",
@@ -90,7 +97,7 @@ function buildFinanceInvoiceRegisterBaseColumns(
                 "max-w-[160px] truncate",
                 appearance === "campaign"
                   ? "text-[10px] text-[var(--camp-text-3)]"
-                  : "font-medium"
+                  : "fs-nm"
               )}
             >
               {row.campaign_name}
@@ -285,7 +292,12 @@ export function FinanceInvoiceRegisterTable({
       rows={rows}
       rowKey={(row) => row.id}
       rowClassName={(row) =>
-        cn(row.regeneration_status === "pending_regeneration" && "opacity-50")
+        cn(
+          row.regeneration_status === "pending_regeneration" && "opacity-50",
+          appearance !== "campaign" &&
+            row.status.toLowerCase() !== "paid" &&
+            "fs-row-warn"
+        )
       }
     />
   );

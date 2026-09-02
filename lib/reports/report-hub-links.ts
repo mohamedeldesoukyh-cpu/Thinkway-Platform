@@ -192,3 +192,43 @@ export const REPORT_HUB_LINKS_BY_ID = Object.fromEntries(
 export function isReportHubLinkId(id: string): id is ReportHubLinkId {
   return (REPORT_HUB_LINK_IDS as readonly string[]).includes(id);
 }
+
+export const REPORT_HUB_SUITE_GROUPS = [
+  "Finance",
+  "Commercial",
+  "Talent",
+  "Cash",
+  "Planning",
+] as const;
+
+export type ReportHubSuiteGroup = (typeof REPORT_HUB_SUITE_GROUPS)[number];
+
+export const REPORT_HUB_SUITE_GROUP: Record<ReportHubLinkId, ReportHubSuiteGroup> = {
+  pnl: "Finance",
+  vr: "Finance",
+  "client-profitability": "Finance",
+  "po-tracker": "Finance",
+  billing: "Finance",
+  statements: "Finance",
+  unsettled: "Finance",
+  daily: "Finance",
+  "executive-dashboard": "Finance",
+  "revenue-by-function": "Commercial",
+  "spending-by-category": "Commercial",
+  "top-clients": "Commercial",
+  "top-influencers": "Talent",
+  collections: "Cash",
+  treasury: "Cash",
+  planning: "Planning",
+};
+
+export const REPORT_HUB_SUITE_TILE_VARIANT: Record<
+  ReportHubSuiteGroup,
+  "default" | "alt" | "soft"
+> = {
+  Finance: "default",
+  Commercial: "alt",
+  Talent: "alt",
+  Cash: "default",
+  Planning: "soft",
+};

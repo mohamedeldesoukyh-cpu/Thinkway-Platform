@@ -14,8 +14,8 @@ import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-
 import { DownloadIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  OperationalConfigurableTable,
+import { FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
+import { OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
   getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
@@ -31,7 +31,6 @@ import {
   type OperationalWorkspaceTabDef,
 } from "@/components/workspace/operational-workspace-ui";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
-import { MetricCard } from "@/components/shared/kpi/metric-card";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { buildVatAuditCsv } from "@/features/finance/vat/export";
@@ -198,7 +197,10 @@ function ConfigurableVatTable<T>({
         }
       >
         {rows.length === 0 ? (
-          <p className="px-4 py-8 text-[11px] text-muted-foreground">No VAT data yet.</p>
+          <FinanceSuiteEmpty
+            title="No VAT data yet"
+            body="VAT lines appear here once client invoices exist for the selected view."
+          />
         ) : (
           <OperationalConfigurableTable columns={columns} rows={rows} rowKey={rowKey} />
         )}
@@ -243,7 +245,41 @@ export function VatWorkspace({ data }: VatWorkspaceProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <FinanceSuiteKpiStrip
+        items={[
+          {
+            id: "revenue",
+            label: "Revenue (ex-VAT)",
+            value: formatBillingMoney(data.kpis.revenue_before_vat, "USD"),
+          },
+          {
+            id: "output",
+            label: "Output VAT",
+            value: formatBillingMoney(data.kpis.output_vat, "USD"),
+            hint: "client invoices",
+          },
+          {
+            id: "input",
+            label: "Input VAT",
+            value: formatBillingMoney(data.kpis.input_vat, "USD"),
+            hint: data.kpis.input_vat === 0 ? "no vendor VAT captured" : undefined,
+            tone: data.kpis.input_vat === 0 ? "bad" : undefined,
+          },
+          {
+            id: "payable",
+            label: "Net VAT payable",
+            value: formatBillingMoney(data.kpis.net_vat_payable, "USD"),
+            hint: "output − input",
+          },
+          {
+            id: "reclaim",
+            label: "VAT reclaimable",
+            value: formatBillingMoney(data.kpis.vat_reclaimable, "USD"),
+          },
+        ]}
+      />
+
       <div className="flex flex-wrap items-center justify-end gap-2">
         <label className="flex items-center gap-2 text-sm">
           <input
@@ -258,34 +294,6 @@ export function VatWorkspace({ data }: VatWorkspaceProps) {
           <DownloadIcon data-icon="inline-start" />
           VAT audit export
         </Button>
-      </div>
-
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        <MetricCard
-          layout="section"
-          title="Revenue (ex-VAT)"
-          value={formatBillingMoney(data.kpis.revenue_before_vat, "USD")}
-        />
-        <MetricCard
-          layout="section"
-          title="Output VAT"
-          value={formatBillingMoney(data.kpis.output_vat, "USD")}
-        />
-        <MetricCard
-          layout="section"
-          title="Input VAT"
-          value={formatBillingMoney(data.kpis.input_vat, "USD")}
-        />
-        <MetricCard
-          layout="section"
-          title="Net VAT payable"
-          value={formatBillingMoney(data.kpis.net_vat_payable, "USD")}
-        />
-        <MetricCard
-          layout="section"
-          title="VAT reclaimable"
-          value={formatBillingMoney(data.kpis.vat_reclaimable, "USD")}
-        />
       </div>
 
       <Tabs defaultValue="settlement" className="flex flex-col gap-0">

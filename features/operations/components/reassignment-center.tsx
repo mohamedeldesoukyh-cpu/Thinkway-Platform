@@ -13,6 +13,7 @@ import { OperationalTableSuiteProvider } from "@/components/tables/operational-t
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import { FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
 import { formatBillingMoney } from "@/features/billing/utils";
 import type { MovementBatchRow } from "@/features/operations/types";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
@@ -114,7 +115,38 @@ type ReassignmentCenterProps = {
 };
 
 export function ReassignmentCenter({ batches }: ReassignmentCenterProps) {
+  const campaignsMoved = batches.reduce((sum, batch) => sum + batch.campaign_count, 0);
+
   return (
+    <div className="space-y-4">
+      <FinanceSuiteKpiStrip
+        items={[
+          {
+            id: "batches",
+            label: "Movement batches",
+            value: String(batches.length),
+            hint: batches.length === 0 ? "nothing moved yet" : undefined,
+          },
+          {
+            id: "campaigns",
+            label: "Campaigns moved",
+            value: String(campaignsMoved),
+          },
+          {
+            id: "reversals",
+            label: "Reversals",
+            value: String(batches.filter((b) => b.status === "cancelled" || b.status === "failed").length),
+            hint: "movements are reversed, not deleted",
+          },
+          {
+            id: "audit",
+            label: "Audit coverage",
+            value: "Full",
+            hint: "every move is recorded",
+            tone: "ok",
+          },
+        ]}
+      />
     <OperationalTableSuiteProvider
       tableId={OPERATIONAL_TABLE_IDS.operationsReassignmentBatches}
       columns={REASSIGNMENT_BATCH_COLUMNS}
@@ -134,7 +166,10 @@ export function ReassignmentCenter({ batches }: ReassignmentCenterProps) {
         }
       >
         {batches.length === 0 ? (
-          <p className="px-4 py-8 text-[11px] text-muted-foreground">No movement batches yet.</p>
+          <FinanceSuiteEmpty
+            title="No movement batches yet"
+            body="Campaigns have not been reassigned between groups, clients or brands. When they are, each batch lands here with its scope, totals and who executed it — permanently."
+          />
         ) : (
           <OperationalConfigurableTable
             columns={REASSIGNMENT_BATCH_COLUMNS}
@@ -144,5 +179,6 @@ export function ReassignmentCenter({ batches }: ReassignmentCenterProps) {
         )}
       </OperationalTableSection>
     </OperationalTableSuiteProvider>
+    </div>
   );
 }

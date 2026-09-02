@@ -37,6 +37,7 @@ import { DETAIL_FORM_SELECT_TRIGGER_CLASS } from "@/features/campaigns/component
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import { FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
 
 import {
 
@@ -340,9 +341,42 @@ export function PeriodManagementWorkspace({ periods }: PeriodManagementWorkspace
 
 
 
-  return (
+  const openCount = periods.filter((period) => period.status === "open").length;
+  const lockedCount = periods.filter((period) => period.status !== "open").length;
+  const currentLabel = `${currentYear}-${String(currentMonth).padStart(2, "0")}`;
 
-    <div className="space-y-6">
+  return (
+    <div className="space-y-4">
+      <FinanceSuiteKpiStrip
+        items={[
+          {
+            id: "configured",
+            label: "Periods configured",
+            value: String(periods.length),
+            hint: lockedCount === 0 ? "none locked" : `${lockedCount} locked`,
+            tone: lockedCount === 0 ? "bad" : undefined,
+          },
+          {
+            id: "open",
+            label: "Open periods",
+            value: String(openCount),
+            hint: openCount > 0 ? "edits unrestricted" : undefined,
+            tone: openCount > 0 ? "bad" : undefined,
+          },
+          {
+            id: "current",
+            label: "Current period",
+            value: currentLabel,
+          },
+          {
+            id: "gov",
+            label: "Governance",
+            value: lockedCount > 0 ? "On" : "Off",
+            hint: lockedCount > 0 ? "soft or full locks applied" : "edits unrestricted",
+            tone: lockedCount === 0 ? "bad" : "ok",
+          },
+        ]}
+      />
 
       <OperationalTableSuiteProvider
 
@@ -394,11 +428,10 @@ export function PeriodManagementWorkspace({ periods }: PeriodManagementWorkspace
 
           {periods.length === 0 ? (
 
-            <p className="px-4 py-8 text-[11px] text-muted-foreground">
-
-              No periods configured. Lock a month to begin governance.
-
-            </p>
+            <FinanceSuiteEmpty
+              title="No periods configured"
+              body="Lock a month to begin governance. Soft lock blocks operational edits; finance can still edit. Full lock needs override."
+            />
 
           ) : (
 

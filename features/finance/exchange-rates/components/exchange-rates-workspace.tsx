@@ -31,6 +31,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
+import { FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
@@ -126,7 +127,39 @@ export function ExchangeRatesWorkspace({ data }: ExchangeRatesWorkspaceProps) {
     []
   );
 
+  const activeCount = data.currencies.filter((c) => c.is_active).length;
+
   return (
+    <div className="space-y-4">
+      <FinanceSuiteKpiStrip
+        items={[
+          {
+            id: "currencies",
+            label: "Currencies",
+            value: String(data.currencies.length),
+            hint: "loaded dynamically",
+          },
+          {
+            id: "active",
+            label: "Active",
+            value: String(activeCount),
+            hint: activeCount === data.currencies.length ? "none disabled" : undefined,
+          },
+          {
+            id: "base",
+            label: "Base currency",
+            value: "EGP",
+            hint: "all rates quoted against it",
+          },
+          {
+            id: "rates",
+            label: "Effective rates",
+            value: String(data.rates.length),
+            hint: "feeds campaigns, billing, PO tracker and VAT",
+          },
+        ]}
+      />
+
     <Tabs value={tab} onValueChange={setTab} className="flex flex-col gap-0">
       <OperationalWorkspaceSortableTabsBar
         sectionLabel="Exchange rates"
@@ -214,7 +247,10 @@ export function ExchangeRatesWorkspace({ data }: ExchangeRatesWorkspaceProps) {
         <CampaignFlatSection title="FX audit & override history">
           <div className="space-y-3">
             {data.fx_history.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No FX changes logged yet.</p>
+              <FinanceSuiteEmpty
+                title="No FX changes logged yet"
+                body="Rate edits and historical overrides appear here with who changed them and when."
+              />
             ) : (
               data.fx_history.map((entry) => (
                 <div key={entry.id} className="rounded-2xl border p-3 text-sm">
@@ -243,6 +279,7 @@ export function ExchangeRatesWorkspace({ data }: ExchangeRatesWorkspaceProps) {
         </OperationalWorkspaceTabPanel>
       </TabsContent>
     </Tabs>
+    </div>
   );
 }
 

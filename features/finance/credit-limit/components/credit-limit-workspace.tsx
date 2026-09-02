@@ -12,6 +12,7 @@ import { OperationalTableSection } from "@/components/ui/operational-table-secti
 import { formatCurrencyAmount } from "@/lib/finance/currency-format";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
+import { FinanceSuiteEmpty } from "@/components/finance/suite";
 
 import {
   AcceptCreditRiskSwitch,
@@ -154,9 +155,10 @@ export function CreditLimitWorkspace({ data }: CreditLimitWorkspaceProps) {
         }
       >
         {data.clients.length === 0 ? (
-          <div className="px-4 py-10 text-center text-sm text-muted-foreground md:px-5">
-            No clients found.
-          </div>
+          <FinanceSuiteEmpty
+            title="No clients found"
+            body="Credit limits appear here once legal entities exist. Edits sync with each client’s Finance tab."
+          />
         ) : (
           <OperationalConfigurableTable
             columns={CREDIT_LIMIT_COLUMNS}

@@ -1,4 +1,5 @@
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
+import { FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
 import { AdjustmentRegisterSection } from "@/features/finance/adjustments/components/adjustment-register-section";
 import { ClientCreditNoteWorkspace } from "@/features/finance/adjustments/components/client-credit-note-workspace";
 import { getAdjustmentRegister, searchInvoicesForAdjustment } from "@/features/finance/adjustments/queries";
@@ -17,7 +18,42 @@ export async function AdjustmentModuleShell({ moduleKey }: AdjustmentModuleShell
   ]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
+      <FinanceSuiteKpiStrip
+        items={[
+          {
+            id: "docs",
+            label: "Documents",
+            value: String(rows.length),
+            hint: rows.length === 0 ? "register is live, empty" : "historical serials retained",
+          },
+          {
+            id: "serials",
+            label: "Serials issued",
+            value: String(rows.length),
+            hint: "no deletes, reverse instead",
+          },
+          {
+            id: "party",
+            label: config.party === "client" ? "Client" : "Vendor",
+            value: config.direction === "credit" ? "Credit" : "Debit",
+            hint: config.sourceLabel,
+          },
+          {
+            id: "effect",
+            label: "Effect",
+            value:
+              config.party === "client"
+                ? config.direction === "credit"
+                  ? "Reduces A/R"
+                  : "Increases A/R"
+                : config.direction === "credit"
+                  ? "Reduces A/P"
+                  : "Increases A/P",
+          },
+        ]}
+      />
+
       {moduleKey === "client_credit" ? (
         <OperationalTableSection
           title="New client credit note"
@@ -26,13 +62,17 @@ export async function AdjustmentModuleShell({ moduleKey }: AdjustmentModuleShell
           <ClientCreditNoteWorkspace invoices={invoices} />
         </OperationalTableSection>
       ) : (
-        <div className="rounded-3xl border border-dashed p-6 text-sm text-muted-foreground">
-          <p className="font-medium text-foreground">{config.title} workspace</p>
-          <p className="mt-1">
-            Register and schema are live. Source search workflow for {config.sourceLabel} follows
-            the same pattern as client credit notes — connect {config.party} documents in the
-            next sprint.
-          </p>
+        <div className="thinkway-campaign-section-card">
+          <div className="thinkway-campaign-section-head">
+            <div className="min-w-0">
+              <h2>{config.title} workspace</h2>
+              <p>Register and schema are live · no deletes, reverse instead</p>
+            </div>
+          </div>
+          <FinanceSuiteEmpty
+            title="No documents in this register yet"
+            body={`The schema is live and serial numbers are reserved. Source search for ${config.sourceLabel} follows the same pattern as client credit notes.`}
+          />
         </div>
       )}
 
