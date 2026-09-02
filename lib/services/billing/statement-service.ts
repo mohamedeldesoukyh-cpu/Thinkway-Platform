@@ -178,8 +178,8 @@ type AssignmentPaymentQueryRow = {
   vendor_payment_status: string;
   campaign_header_id: string | null;
   influencer:
-    | { display_name: string | null; full_name: string | null }
-    | { display_name: string | null; full_name: string | null }[]
+    | { display_name: string | null; legal_name: string | null }
+    | { display_name: string | null; legal_name: string | null }[]
     | null;
   campaign:
     | { id: string; name: string; document_number: string }
@@ -218,7 +218,7 @@ function mapVendorAssignmentPaymentRow(
 
   return {
     id: row.id,
-    creator_name: influencer?.display_name ?? influencer?.full_name ?? "Creator",
+    creator_name: influencer?.display_name ?? influencer?.legal_name ?? "Creator",
     campaign_header_id: campaign?.id ?? row.campaign_header_id,
     campaign_name: campaign?.name ?? "Campaign",
     campaign_document_number: campaign?.document_number ?? null,
@@ -291,7 +291,7 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
       .select(
         `
         id, agreed_fee, currency, vendor_payment_status, campaign_header_id,
-        influencer:influencers(display_name, full_name),
+        influencer:influencers(display_name, legal_name),
         campaign:${REL.campaignInfluencers.campaignHeader}(id, name, document_number),
         line:${REL.campaignInfluencers.campaignLine}(
           document_number, revenue, revenue_before_vat, currency_code, invoice_id,

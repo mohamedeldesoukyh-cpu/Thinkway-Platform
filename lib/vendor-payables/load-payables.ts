@@ -49,7 +49,7 @@ export async function loadVendorPayables(
     .select(
       `
       id, agreed_fee, currency, vendor_payment_status, vendor_paid_at,
-      influencer:influencers(id, display_name, full_name),
+      influencer:influencers(id, display_name, legal_name),
       campaign:campaign_headers(id, name)
     `
     )
@@ -65,8 +65,8 @@ export async function loadVendorPayables(
       currency: string;
       vendor_payment_status: string;
       influencer:
-        | { display_name: string | null; full_name: string | null }
-        | { display_name: string | null; full_name: string | null }[]
+        | { display_name: string | null; legal_name: string | null }
+        | { display_name: string | null; legal_name: string | null }[]
         | null;
       campaign: { name: string } | { name: string }[] | null;
     };
@@ -77,7 +77,7 @@ export async function loadVendorPayables(
       id: r.id,
       assignment_id: r.id,
       influencer_name:
-        influencer?.display_name ?? influencer?.full_name ?? "Vendor",
+        influencer?.display_name ?? influencer?.legal_name ?? "Vendor",
       campaign_name: campaign?.name ?? "Campaign",
       agreed_fee: Number(r.agreed_fee),
       currency: r.currency,
