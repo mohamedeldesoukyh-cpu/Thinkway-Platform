@@ -28,7 +28,6 @@ import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
 import { resolveAssignmentCreatorIdentity } from "@/lib/campaigns/resolve-assignment-creator-label";
-import { COMMERCIAL_WORKSPACE_TRIGGER_CLASS } from "@/lib/commercial/commercial-workspace-trigger";
 import { commercialWorkspaceCreatorCardClass } from "@/lib/quotations/commercial-workspace/creator-card-class";
 import {
   profitabilityBandLabel,
@@ -368,7 +367,7 @@ export function AssignmentCommercialWorkspaceDialog({
           type="button"
           size="sm"
           variant="outline"
-          className={cn(COMMERCIAL_WORKSPACE_TRIGGER_CLASS, className)}
+          className={cn("thinkway-campaign-btn h-[27px] gap-1.5 px-2.5 text-[11.5px]", className)}
           disabled={lines.length === 0}
         >
           <Table2Icon className="size-3.5" />

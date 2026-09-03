@@ -8,10 +8,6 @@ import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns
 import { Button } from "@/components/ui/button";
 import {
   OperationalFloatingActionBar,
-  PlatformFloatingBarDivider,
-  PlatformFloatingBarPrimaryButton,
-  PlatformFloatingBarSecondaryLink,
-  PlatformFloatingBarSelection,
 } from "@/components/workspace/operational-floating-action-bar";
 import {
   Dialog,
@@ -35,7 +31,7 @@ import {
   ungenerateVendorIosFromLinesAction,
   type UngenerateVendorIoState,
 } from "@/features/io/ungenerate-vendor-io-action";
-import { formatMoney } from "@/features/campaigns/utils";
+import { formatMoneyKpi } from "@/lib/campaigns/utils";
 import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
 import { cn } from "@/lib/utils";
 
@@ -85,19 +81,22 @@ function buildFormData(
   return fd;
 }
 
+/** Stacked metric cell — matches campaign-detail.html `.tw-selbar .sum > span`. */
 function SelectionMetric({
   label,
   value,
+  tone,
   className,
 }: {
   label: string;
   value: string;
+  tone?: "ok";
   className?: string;
 }) {
   return (
-    <span className={cn("shrink-0 tabular-nums text-foreground", className)}>
-      <span className="text-muted-foreground">{label}:</span>{" "}
-      <span className="font-semibold">{value}</span>
+    <span className={cn("tw-selbar-metric", className)}>
+      <i>{label}</i>
+      <b className={tone === "ok" ? "g" : undefined}>{value}</b>
     </span>
   );
 }
@@ -105,7 +104,7 @@ function SelectionMetric({
 export function FloatingSelectionBar({
   campaignId,
   totals,
-  selectedLineIds,
+  selectedLineIds: _selectedLineIds,
   selectableLineCount,
   onSelectAll,
   onClearSelection,
@@ -130,8 +129,9 @@ export function FloatingSelectionBar({
   const busy = pending;
   const visible = totals.count > 0;
   const displayCurrency = totals.currencyMixed ? "USD" : (totals.currency ?? "USD");
-  const currencyLabel = totals.currencyMixed ? "Mixed" : (totals.currency ?? "USD");
   const primaryAction = vioLineIds.length > 0 ? "vio" : hasInvoiceSelection ? "invoice" : null;
+  const showSelectAll =
+    selectableLineCount > 0 && totals.count < selectableLineCount;
 
   function runVioGenerate() {
     startTransition(async () => {
@@ -208,127 +208,112 @@ export function FloatingSelectionBar({
       <p className="text-xs text-destructive">{ioCoverage.block_message}</p>
     ) : null;
 
+  const invoiceLabel = invoicePending
+    ? "Generating…"
+    : invoiceActionLabel === "regenerate"
+      ? "Regenerate invoice"
+      : "Generate invoice";
+
   return (
     <>
-      <OperationalFloatingActionBar visible={visible} messages={coverageMessages}>
-        <PlatformFloatingBarSelection
-          selectedCount={totals.count}
-          selectionLabel="line"
-          onClearSelection={onClearSelection}
-          onSelectAll={onSelectAll}
-          selectableCount={selectableLineCount}
-          busy={busy}
-        />
+      <OperationalFloatingActionBar
+        visible={visible}
+        messages={coverageMessages}
+        className="tw-selbar"
+      >
+        <span className="tw-selbar-n">
+          <b>{totals.count}</b>
+          of {selectableLineCount > 0 ? selectableLineCount : totals.count} lines selected
+          <button
+            type="button"
+            className="tw-selbar-x"
+            onClick={onClearSelection}
+            aria-label="Clear selection"
+            disabled={busy}
+          >
+            ✕
+          </button>
+          {showSelectAll ? (
+            <button
+              type="button"
+              className="tw-selbar-all"
+              onClick={onSelectAll}
+              disabled={busy}
+            >
+              Select all
+            </button>
+          ) : null}
+        </span>
 
-        <PlatformFloatingBarDivider />
-
-        <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto px-2 text-xs [-ms-overflow-style:none] [scrollbar-width:none] sm:gap-3 [&::-webkit-scrollbar]:hidden">
-          <SelectionMetric label="Revenue" value={formatMoney(totals.revenue, displayCurrency)} />
+        <span className="tw-selbar-sum">
+          <SelectionMetric label="Revenue" value={formatMoneyKpi(totals.revenue, displayCurrency)} />
           <SelectionMetric
             label="Cost"
-            value={formatMoney(totals.cost, displayCurrency)}
-            className="hidden sm:inline"
+            value={formatMoneyKpi(totals.cost, displayCurrency)}
+            className="hidden sm:flex"
           />
           <SelectionMetric
             label="GP"
-            value={formatMoney(totals.gp, displayCurrency)}
-            className="hidden md:inline [&_span:last-child]:text-primary"
+            value={formatMoneyKpi(totals.gp, displayCurrency)}
+            tone="ok"
+            className="hidden md:flex"
           />
           <SelectionMetric
             label="Total billing"
-            value={formatMoney(totals.totalBilling, displayCurrency)}
-            className="hidden lg:inline"
+            value={formatMoneyKpi(totals.totalBilling, displayCurrency)}
+            className="hidden lg:flex"
           />
           <SelectionMetric
             label="Deliverables"
             value={String(totals.deliverables)}
-            className="hidden md:inline"
+            className="hidden md:flex"
           />
-          <span className="shrink-0 rounded-md border border-border/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-            {currencyLabel}
-          </span>
-        </div>
+        </span>
 
-        <PlatformFloatingBarDivider className="ml-auto" />
-
-        <div className="flex shrink-0 items-center gap-1 pl-2">
+        <span className="tw-selbar-acts">
           {vioLineIds.length > 0 ? (
-            primaryAction === "vio" ? (
-              <PlatformFloatingBarPrimaryButton
-                busy={pending}
-                action={{
-                  id: "vio",
-                  label: pending ? "Generating…" : "Generate Vendor IO",
-                  icon: FileStackIcon,
-                  disabled: pending,
-                  onClick: runVioGenerate,
-                }}
-              />
-            ) : (
-              <PlatformFloatingBarSecondaryLink
-                busy={pending}
-                action={{
-                  id: "vio",
-                  label: "Generate Vendor IO",
-                  icon: FileStackIcon,
-                  disabled: pending,
-                  onClick: runVioGenerate,
-                }}
-              />
-            )
+            <button
+              type="button"
+              className={cn("tw-selbar-btn", primaryAction === "vio" && "pri")}
+              disabled={pending}
+              onClick={runVioGenerate}
+            >
+              <FileStackIcon className="size-3.5" aria-hidden />
+              {pending ? "Generating…" : "Generate Vendor IO"}
+            </button>
           ) : null}
           {reviseVioLineIds.length > 0 ? (
-            <PlatformFloatingBarSecondaryLink
-              action={{
-                id: "revise",
-                label: "Revise Vendor IO",
-                icon: GitBranchIcon,
-                onClick: () => setReviseOpen(true),
-              }}
-            />
+            <button
+              type="button"
+              className="tw-selbar-btn"
+              onClick={() => setReviseOpen(true)}
+            >
+              <GitBranchIcon className="size-3.5" aria-hidden />
+              Revise Vendor IO
+            </button>
           ) : null}
           {ungenerateIoLineIds.length > 0 ? (
-            <PlatformFloatingBarSecondaryLink
-              action={{
-                id: "ungenerate",
-                label: "Ungenerate IO",
-                icon: Undo2Icon,
-                onClick: () => setUngenerateOpen(true),
-              }}
-            />
+            <button
+              type="button"
+              className="tw-selbar-btn"
+              onClick={() => setUngenerateOpen(true)}
+            >
+              <Undo2Icon className="size-3.5" aria-hidden />
+              Ungenerate IO
+            </button>
           ) : null}
           {hasInvoiceSelection ? (
-            primaryAction === "invoice" ? (
-              <PlatformFloatingBarPrimaryButton
-                action={{
-                  id: "invoice",
-                  label: invoicePending
-                    ? "Generating…"
-                    : invoiceActionLabel === "regenerate"
-                      ? "Regenerate invoice"
-                      : "Generate invoice",
-                  icon: FileTextIcon,
-                  disabled: invoicePending || ioCoverage?.case === "blocked",
-                  onClick: onGenerateInvoice,
-                }}
-              />
-            ) : (
-              <PlatformFloatingBarSecondaryLink
-                action={{
-                  id: "invoice",
-                  label: invoicePending
-                    ? "Generating…"
-                    : invoiceActionLabel === "regenerate"
-                      ? "Regenerate invoice"
-                      : "Generate invoice",
-                  icon: FileTextIcon,
-                  disabled: invoicePending || ioCoverage?.case === "blocked",
-                  onClick: onGenerateInvoice,
-                }}
-              />
-            )
+            <button
+              type="button"
+              className={cn("tw-selbar-btn", primaryAction === "invoice" && "pri")}
+              disabled={invoicePending || ioCoverage?.case === "blocked"}
+              onClick={onGenerateInvoice}
+            >
+              <FileTextIcon className="size-3.5" aria-hidden />
+              {invoiceLabel}
+            </button>
           ) : null}
-        </div>
+        </span>
       </OperationalFloatingActionBar>
 
       <Dialog open={reviseOpen} onOpenChange={setReviseOpen}>

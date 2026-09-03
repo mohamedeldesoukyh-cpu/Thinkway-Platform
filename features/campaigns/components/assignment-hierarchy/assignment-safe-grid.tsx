@@ -637,7 +637,7 @@ export function AssignmentSafeGrid({
                               />
                             ) : null}
                             <div className="min-w-0 flex-1 text-left">
-                              <p className="text-[10.5px] text-[var(--camp-text-2)]">
+                              <p className="tw-id">
                                 <DocumentNumber value={line.document_number} />
                               </p>
                               {gates.showInternalFinancials &&

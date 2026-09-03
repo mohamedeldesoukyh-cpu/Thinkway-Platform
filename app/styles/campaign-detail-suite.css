@@ -994,15 +994,20 @@
   text-align: left;
 }
 
-.campaign-detail-suite .thinkway-aurora-tbar,
-.campaign-detail-suite .thinkway-campaign-operational-section-header {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  flex-wrap: wrap;
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--tw-hair);
-  background: var(--tw-soft);
+.campaign-detail-suite .tw-id {
+  font: 600 12px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  letter-spacing: -0.3px;
+  color: var(--tw-ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.campaign-detail-suite .thinkway-aurora-tbar .thinkway-campaign-btn,
+.campaign-detail-suite .thinkway-campaign-operational-section-header .thinkway-campaign-btn {
+  height: 27px;
+  padding: 0 10px;
+  font-size: 11.5px;
 }
 
 .campaign-detail-suite .thinkway-campaign-btn-edit {
@@ -1118,11 +1123,16 @@
   background: #fff !important;
 }
 
-.campaign-detail-suite .thinkway-campaign-asgn-parent td[data-assignment-col="creator"] button,
-.campaign-detail-suite .thinkway-campaign-asgn-parent td[data-assignment-col="creator"] a {
-  font-weight: 600;
-  color: var(--tw-ink);
+.campaign-detail-suite .thinkway-campaign-asgn-parent td[data-assignment-col="creator"] .text-muted-foreground {
+  color: var(--tw-mut);
+  font-size: 10px;
   text-decoration: none;
+}
+
+.campaign-detail-suite .thinkway-campaign-asgn-table .tw-id {
+  font: 600 12px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  letter-spacing: -0.3px;
+  color: var(--tw-ink2);
 }
 
 .campaign-detail-suite .thinkway-campaign-asgn-parent td[data-assignment-col="creator"] button:hover,
@@ -1194,17 +1204,178 @@
   box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.08);
 }
 
+/* Flying selection bar — campaign-detail.html `.tw-selbar` */
+.campaign-detail-suite .tw-selbar > div {
+  max-width: calc(100vw - 32px) !important;
+  width: max-content !important;
+}
+
+.campaign-detail-suite .platform-floating-bar.tw-selbar,
 .campaign-detail-suite .platform-floating-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  max-width: calc(100vw - 32px) !important;
   background: rgba(11, 15, 26, 0.96) !important;
   color: #fff !important;
   border-radius: 14px !important;
   border: 0 !important;
   box-shadow: 0 1px 2px rgba(11, 15, 26, 0.4), 0 18px 44px -12px rgba(11, 15, 26, 0.55) !important;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
-.campaign-detail-suite .platform-floating-bar,
-.campaign-detail-suite .platform-floating-bar * {
+.campaign-detail-suite .tw-selbar-n {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 15px;
+  font: 600 12.5px var(--font-geist-sans), Geist, sans-serif;
   color: #fff;
+  white-space: nowrap;
+}
+
+.campaign-detail-suite .tw-selbar-n > b {
+  display: grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 7px;
+  background: var(--tw-blue);
+  color: #fff;
+  font: 700 12px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+}
+
+.campaign-detail-suite .tw-selbar-x {
+  width: 20px;
+  height: 20px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.campaign-detail-suite .tw-selbar-x:hover:not(:disabled) {
+  background: var(--tw-bad);
+  color: #fff;
+}
+
+.campaign-detail-suite .tw-selbar-all {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.65);
+  font: 600 11px var(--font-geist-sans), Geist, sans-serif;
+  cursor: pointer;
+}
+
+.campaign-detail-suite .tw-selbar-all:hover:not(:disabled) {
+  color: #fff;
+}
+
+.campaign-detail-suite .tw-selbar-sum {
+  display: flex;
+  gap: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.campaign-detail-suite .tw-selbar-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 9px 15px;
+  white-space: nowrap;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.campaign-detail-suite .tw-selbar-metric i {
+  font-style: normal;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.campaign-detail-suite .tw-selbar-metric b {
+  font: 600 12.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  color: #fff;
+}
+
+.campaign-detail-suite .tw-selbar-metric b.g {
+  color: #5fe0ae;
+}
+
+.campaign-detail-suite .tw-selbar-acts {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 12px 9px 14px;
+  border-left: 1px solid rgba(255, 255, 255, 0.14);
+  margin-left: auto;
+}
+
+.campaign-detail-suite .tw-selbar-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.11);
+  color: #fff;
+  font: 600 11.5px var(--font-geist-sans), Geist, sans-serif;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.campaign-detail-suite .tw-selbar-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.36);
+  color: #fff;
+}
+
+.campaign-detail-suite .tw-selbar-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.campaign-detail-suite .tw-selbar-btn.pri {
+  background: #fff !important;
+  border-color: #fff !important;
+  color: var(--tw-bi) !important;
+  box-shadow: none !important;
+}
+
+.campaign-detail-suite .tw-selbar-btn.pri:hover:not(:disabled) {
+  background: #f3f6ff !important;
+  border-color: #f3f6ff !important;
+  color: var(--tw-bdk) !important;
+}
+
+.campaign-detail-suite .platform-floating-bar-primary {
+  background: #fff !important;
+  border-color: #fff !important;
+  color: var(--tw-bi) !important;
+  box-shadow: none !important;
+}
+
+@media (max-width: 1080px) {
+  .campaign-detail-suite .platform-floating-bar.tw-selbar {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .campaign-detail-suite .tw-selbar-sum,
+  .campaign-detail-suite .tw-selbar-acts {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.14);
+  }
 }
 
 /* Numbers — KPI strip left; money grid cells right, matching HTML .tw-v / .tw-rr. */
