@@ -34,8 +34,8 @@
 .campaign-detail-suite .thinkway-aurora-wrap {
   max-width: none;
   margin: 0;
-  /* campaign-detail.html `.tw-main` — tight edge gutters */
-  padding: 0 10px 40px;
+  /* Design spec §6 — full width, padding 0 14px, no max-width */
+  padding: 0 14px 40px;
   background: var(--tw-bg);
 }
 
@@ -61,11 +61,11 @@
 .campaign-detail-suite .tw-frozen {
   position: sticky;
   top: 0;
-  /* Below app sidebar (z-60+) so the main nav is never covered or clipped */
+  /* Spec §6 is z-index:60; keep below app sidebar (z-70) so the rail is not covered */
   z-index: 40;
   background: var(--tw-bg);
-  margin: 0 -10px;
-  padding: 0 10px 6px;
+  margin: 0 -14px;
+  padding: 0 14px 6px;
   box-shadow: 0 6px 16px -12px rgba(11, 15, 26, 0.28);
 }
 
