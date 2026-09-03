@@ -1056,24 +1056,27 @@
   font-size: 11.5px;
 }
 
-.campaign-detail-suite .thinkway-aurora-tbar-right button[data-active],
-.campaign-detail-suite .thinkway-aurora-tbar-right .group\/table-tool {
-  height: 27px;
-  min-height: 27px;
-  padding: 0 10px;
-  border: 0.8px solid #e3e8f2;
-  border-radius: 8px;
-  background: #fff;
-  color: var(--tw-ink2);
-  font: 600 11.5px var(--font-geist-sans), Geist, sans-serif;
-  box-shadow: none;
+.campaign-detail-suite .thinkway-aurora-tbar-right > * button,
+.campaign-detail-suite .thinkway-aurora-tbar-right button {
+  height: 27px !important;
+  min-height: 27px !important;
+  padding: 0 10px !important;
+  border: 0.8px solid #e3e8f2 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: var(--tw-ink2) !important;
+  font: 600 11.5px var(--font-geist-sans), Geist, sans-serif !important;
+  box-shadow: none !important;
 }
 
-.campaign-detail-suite .thinkway-aurora-tbar-right button[data-active]:hover,
-.campaign-detail-suite .thinkway-aurora-tbar-right .group\/table-tool:hover {
-  background: #fff;
-  border-color: rgba(0, 87, 255, 0.34);
-  color: var(--tw-bi);
+.campaign-detail-suite .thinkway-aurora-tbar-right button:hover {
+  border-color: rgba(0, 87, 255, 0.34) !important;
+  color: var(--tw-bi) !important;
+}
+
+.campaign-detail-suite .thinkway-campaign-btn-save:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .campaign-detail-suite .thinkway-campaign-btn-edit {
