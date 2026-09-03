@@ -143,6 +143,30 @@ function testSubmitOmitsZeroPercentLeaves() {
   assert.equal(submit.allocations[invoiceDraftKey(rows[1]!)], undefined);
 }
 
+function testCampaignPercentInheritedBeforeCascade() {
+  const rows = [assignment(A1, 10_000)];
+  const draft = computeInvoiceDraftLine(rows[0]!, { [CAMPAIGN_INVOICE_DRAFT_ID]: 60 });
+  assert.equal(draft.percent, 60);
+  assert.equal(draft.toBeInvoiced, 6_000);
+}
+
+function testAssignmentSelectionBillsDescendantsAtPercent() {
+  const post = assignment("55555555-5555-5555-5555-555555555555", 10_000, {
+    kind: "post",
+    parent_id: A1,
+    campaign_line_id: A1,
+  });
+  const line = assignment(A1, 10_000, { children: [post] });
+  const percents = cascadeInvoiceDraftPercent([line], A1, 60, {});
+  const submit = buildInvoiceDraftSubmit([line], percents, {
+    line_ids: [A1],
+    deliverable_ids: [],
+    post_ids: [],
+  });
+  assert.equal(submit.payload.post_ids[0], post.id);
+  assert.equal(submit.allocations[invoiceDraftKey(post)], 6_000);
+}
+
 function testConfirmPreviewTotalsAndLines() {
   const rows = [
     assignment(A1, 10_000, { label: "Creator A", document_number: "TW-2026-0001-A" }),
@@ -172,6 +196,8 @@ function run() {
   testAssignmentPercentCascadesToChildren();
   testVatOnToBeInvoicedSlice();
   testSubmitOmitsZeroPercentLeaves();
+  testCampaignPercentInheritedBeforeCascade();
+  testAssignmentSelectionBillsDescendantsAtPercent();
   testConfirmPreviewTotalsAndLines();
   console.log("operational-invoice-draft.test.ts: ok");
 }

@@ -22,6 +22,7 @@ import { operationalStatusForDb } from "@/lib/campaigns/operational-status-utils
 import {
   buildOperationalCoveragePatch,
   resolveInvoiceSlice,
+  spreadLineAllocationsToChildren,
 } from "@/lib/billing/partial-assignment-invoice";
 import {
   blocksNewInvoiceOperationalRow,
@@ -576,12 +577,21 @@ export async function lockPostsOnInvoice(
     updateExistingOnTargetInvoice?: boolean;
     forRegeneration?: boolean;
     billedByPostId?: Map<string, number>;
+    billedByLineId?: Map<string, number>;
   }
 ): Promise<{ error?: string; lineItemOps?: InvoiceLineItemOpSummary }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
   const forRegeneration = options?.forRegeneration ?? false;
-  const billedByPostId = options?.billedByPostId;
+  const billedByPostId = spreadLineAllocationsToChildren(
+    options?.billedByLineId,
+    posts.map((post) => ({
+      id: post.id,
+      lineId: post.campaign_line_id,
+      remaining: Number(post.remaining_amount ?? 0),
+    })),
+    options?.billedByPostId ?? new Map()
+  );
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();

@@ -386,23 +386,34 @@ export async function relockInvoiceOperationalScope(
 
     for (const line of lines ?? []) {
       const lineId = (line as { id: string }).id;
+      const billable = resolveClientBillableAmount(line as never);
       const { data: deliverables } = await supabase
         .from("assignment_deliverables")
-        .select("remaining_amount, invoiced_amount, locked_at")
+        .select("id, remaining_amount, invoiced_amount, locked_at")
         .eq("campaign_line_id", lineId);
 
-      let remaining = (deliverables ?? []).reduce(
-        (sum, row) => sum + Number((row as { remaining_amount?: number | null }).remaining_amount ?? 0),
-        0
-      );
-      let invoiced = (deliverables ?? []).reduce(
-        (sum, row) => sum + Number((row as { invoiced_amount?: number | null }).invoiced_amount ?? 0),
-        0
-      );
-      if ((deliverables ?? []).length === 0) {
-        invoiced = coverage.sums.lines.get(lineId) ?? 0;
-        const billable = resolveClientBillableAmount(line as never);
-        remaining = Math.max(0, billable - invoiced);
+      let invoiced = coverage.sums.lines.get(lineId) ?? 0;
+      for (const row of deliverables ?? []) {
+        const deliverableId = (row as { id?: string }).id;
+        if (deliverableId) {
+          invoiced += coverage.sums.deliverables.get(deliverableId) ?? 0;
+        }
+      }
+      invoiced = Math.round(invoiced * 100) / 100;
+      if (invoiced <= 0.01) {
+        invoiced = (deliverables ?? []).reduce(
+          (sum, row) =>
+            sum + Number((row as { invoiced_amount?: number | null }).invoiced_amount ?? 0),
+          0
+        );
+      }
+      let remaining = Math.max(0, billable - invoiced);
+      if ((deliverables ?? []).length > 0 && invoiced <= 0.01) {
+        remaining = (deliverables ?? []).reduce(
+          (sum, row) =>
+            sum + Number((row as { remaining_amount?: number | null }).remaining_amount ?? 0),
+          0
+        );
       }
       const fullyInvoiced = remaining <= 0.01 && invoiced > 0.01;
       const nextBilling = fullyInvoiced
@@ -422,7 +433,7 @@ export async function relockInvoiceOperationalScope(
           vendor_assignment_locked: fullyInvoiced,
           vat_locked: fullyInvoiced,
           invoice_id: invoiceId,
-          billing_invoiced_at: now,
+          billing_invoiced_at: fullyInvoiced ? now : null,
           finance_override_until: null,
         } as never)
         .eq("id", lineId);

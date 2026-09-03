@@ -103,6 +103,112 @@ function testActiveInvoiceLineItemsApplyWhenDeliverablesUnlocked() {
   );
 }
 
+function testPartialInvoiceLineKeepsRemaining() {
+  const assignment: OperationalBillingRow = {
+    id: "line-1",
+    kind: "assignment",
+    campaign_header_id: "camp-1",
+    campaign_line_id: "line-1",
+    assignment_deliverable_id: null,
+    parent_id: null,
+    label: "Assignment",
+    document_number: "TW-1-A",
+    influencer_name: "Creator",
+    platform: null,
+    deliverable_type: null,
+    billable_amount: 2000,
+    invoiced_amount: 0,
+    collected_amount: 0,
+    remaining_amount: 2000,
+    billing_status: "moved_to_billing",
+    line_billing_status: "moved_to_billing",
+    invoice_id: "inv-1",
+    invoice_document_number: "INV-2026-19",
+    invoice_line_item_id: null,
+    locked_at: null,
+    is_locked: false,
+    is_invoice_eligible: true,
+    is_achieved: true,
+    is_legacy_synthetic: false,
+    revenue_before_vat: 2000,
+    revenue_vat_percent: 0,
+    revenue_vat_exempt: false,
+    operational_status: "io_generated",
+    vendor_io_id: "vio-1",
+    vendor_io_document_number: "VIO-1",
+    pricing_mode: "package",
+    children: [
+      {
+        id: "del-1",
+        kind: "deliverable_group",
+        campaign_header_id: "camp-1",
+        campaign_line_id: "line-1",
+        assignment_deliverable_id: "del-1",
+        parent_id: "line-1",
+        label: "IG Reel",
+        document_number: null,
+        influencer_name: "Creator",
+        platform: "instagram",
+        deliverable_type: "reel",
+        billable_amount: 2000,
+        invoiced_amount: 0,
+        collected_amount: 0,
+        remaining_amount: 2000,
+        billing_status: "ready_to_invoice",
+        line_billing_status: "moved_to_billing",
+        invoice_id: "inv-1",
+        invoice_document_number: "INV-2026-19",
+        invoice_line_item_id: "ili-1",
+        locked_at: null,
+        is_locked: false,
+        is_invoice_eligible: true,
+        is_achieved: true,
+        is_legacy_synthetic: false,
+        revenue_before_vat: 2000,
+        revenue_vat_percent: 0,
+        revenue_vat_exempt: false,
+        line_pricing_mode: "package",
+        children: [],
+      },
+    ],
+  };
+
+  const linked = applyOperationalInvoiceLinkage(
+    [assignment],
+    [
+      {
+        invoice_id: "inv-1",
+        deliverable_id: "del-1",
+        post_id: null,
+        line_id: "line-1",
+        revenue_before_vat: 1200,
+        document_number: "INV-2026-19",
+        invoice_status: "draft",
+        regeneration_status: "active",
+      },
+    ]
+  );
+
+  assert(linked[0]?.invoiced_amount === 1200, "60% invoice sets invoiced to the slice");
+  assert(linked[0]?.remaining_amount === 800, "60% invoice leaves 40% remaining");
+  assert(
+    linked[0]?.children[0]?.remaining_amount === 800,
+    "child remaining follows the 60% slice"
+  );
+  assert(linked[0]?.is_locked === false, "partial slice does not lock the assignment");
+
+  const queue = buildConsolidatedInvoiceQueueRows({
+    campaign_header_id: "camp-1",
+    campaign_document_number: "TW-1",
+    campaign_name: "Campaign",
+    client_name: "Client",
+    brand_name: null,
+    currency_code: "USD",
+    operational_rows: linked,
+  });
+  assert(queue.length === 1, "billing queue keeps the campaign after a 60% invoice");
+}
+
 function testPendingRegenerationKeepsRemainingWhenUnlocked() {
   const assignment: OperationalBillingRow = {
     id: "line-1",
@@ -635,6 +741,7 @@ function testSettledParentPreservesPostLeavesWithRemaining() {
 
 const tests = [
   testActiveInvoiceLineItemsApplyWhenDeliverablesUnlocked,
+  testPartialInvoiceLineKeepsRemaining,
   testPendingRegenerationKeepsRemainingWhenUnlocked,
   testDeliverableLineItemsApplyWhenPostChildrenExist,
   testInvoicedAssignmentStaleRemainingStaysInQueueUntilCovered,

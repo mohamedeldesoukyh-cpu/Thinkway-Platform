@@ -32,7 +32,7 @@ import {
 } from "@/lib/billing/operational-billing-rows";
 import {
   loadCampaignInvoiceLineRollups,
-  reconcileCampaignRollupWithInvoiceLines,
+  mergeQueueRollupWithInvoiceLines,
 } from "@/lib/billing/invoice-operational-aggregation";
 import {
   applyOperationalInvoiceLinkage,
@@ -718,25 +718,19 @@ export async function loadBillingCampaignQueue(
     let billing_status = synced.billing_status;
 
     if (lineRollup && lineRollup.invoiced_subtotal > 0) {
-      const reconciled = reconcileCampaignRollupWithInvoiceLines({
+      const merged = mergeQueueRollupWithInvoiceLines({
         total_campaign_amount: row.total_campaign_amount,
         achieved_revenue: row.achieved_revenue,
         already_invoiced: row.already_invoiced,
         remaining_to_invoice: row.remaining_to_invoice,
         unachieved_revenue: row.unachieved_revenue,
+        billing_status: synced.billing_status,
         invoice_line_invoiced: lineRollup.invoiced_subtotal,
       });
 
-      already_invoiced = Math.max(reconciled.already_invoiced, synced.already_invoiced);
-      remaining_to_invoice =
-        Math.round(Math.max(0, row.total_campaign_amount - already_invoiced) * 100) /
-        100;
-      billing_status =
-        reconciled.already_invoiced >= row.achieved_revenue && row.achieved_revenue > 0
-          ? ("invoiced" as CampaignLineBillingStatus)
-          : reconciled.already_invoiced > 0 || synced.progress.state === "partial"
-            ? ("partially_invoiced" as CampaignLineBillingStatus)
-            : synced.billing_status;
+      already_invoiced = merged.already_invoiced;
+      remaining_to_invoice = merged.remaining_to_invoice;
+      billing_status = merged.billing_status;
     }
 
     return {

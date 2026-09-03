@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isActiveInvoiceForFinancialTotals } from "@/lib/billing/invoice-status";
+import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 import { devLog } from "@/lib/dev-log";
 
 export type CampaignInvoiceLineRollup = {
@@ -106,4 +107,34 @@ export function reconcileCampaignRollupWithInvoiceLines(input: {
   }
 
   return { already_invoiced, remaining_to_invoice };
+}
+
+/**
+ * Invoice line items are the billed SSOT. Do not take max(operational, lines):
+ * a 60% slice can leave deliverable remaining at 0 while line items are only 60%.
+ */
+export function mergeQueueRollupWithInvoiceLines(input: {
+  total_campaign_amount: number;
+  achieved_revenue: number;
+  already_invoiced: number;
+  remaining_to_invoice: number;
+  unachieved_revenue: number;
+  billing_status: CampaignLineBillingStatus;
+  invoice_line_invoiced: number;
+}): {
+  already_invoiced: number;
+  remaining_to_invoice: number;
+  billing_status: CampaignLineBillingStatus;
+} {
+  const reconciled = reconcileCampaignRollupWithInvoiceLines(input);
+  const already_invoiced = reconciled.already_invoiced;
+  const remaining_to_invoice = reconciled.remaining_to_invoice;
+  const billing_status: CampaignLineBillingStatus =
+    remaining_to_invoice <= 0.01 && already_invoiced > 0.01
+      ? "invoiced"
+      : already_invoiced > 0.01
+        ? "partially_invoiced"
+        : input.billing_status;
+
+  return { already_invoiced, remaining_to_invoice, billing_status };
 }

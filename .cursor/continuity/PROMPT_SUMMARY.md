@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Billing queue campaign Bill % and hover hints.
+**Focus:** 60% invoice treated as fully invoiced and dropped from the billing queue.
+
+## In progress 2026-09-03 — Partial invoice remaining SSOT
+
+INV-2026-19 (60%) was marked fully invoiced and left `/billing`. Queue remaining now uses invoice line items, not max(operational, lines). Assignment 60% slices split onto deliverables/posts instead of billing 100% remaining. Status is partially invoiced while remaining > 0. No migrations. Not on Production.
 
 ## In progress 2026-09-03 — Campaign-row Bill % + hover titles
 

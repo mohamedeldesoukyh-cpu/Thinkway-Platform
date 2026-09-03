@@ -140,8 +140,14 @@ export function isRowInInvoiceSubmitPayload(
   payload: OperationalSelectionPayload
 ): boolean {
   if (row.kind === "assignment") return payload.line_ids.includes(row.id);
-  if (row.kind === "deliverable_group") return payload.deliverable_ids.includes(row.id);
-  return payload.post_ids.includes(row.id);
+  if (row.kind === "deliverable_group" && payload.deliverable_ids.includes(row.id)) {
+    return true;
+  }
+  if (row.kind === "post" && payload.post_ids.includes(row.id)) return true;
+  // Package / campaign Invoice: assignment line id selected, leaves are children.
+  return Boolean(
+    row.campaign_line_id && payload.line_ids.includes(row.campaign_line_id)
+  );
 }
 
 function isLeafSelectedForInvoice(

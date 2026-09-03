@@ -9,6 +9,7 @@ import {
   filterCampaignsWithRemainingInvoiceable,
   type CampaignBillingQueueRow,
 } from "@/lib/billing/campaign-billing-queue";
+import { mergeQueueRollupWithInvoiceLines } from "@/lib/billing/invoice-operational-aggregation";
 
 function row(
   extras: Partial<CampaignBillingQueueRow> & {
@@ -76,6 +77,29 @@ function testFullyInvoicedOnlyWhenRemainingIsGone() {
   assert.equal(filterCampaignQueueRows([full], "partially_invoiced").length, 0);
 }
 
+function testSixtyPercentInvoiceLinesKeepQueueRemaining() {
+  const merged = mergeQueueRollupWithInvoiceLines({
+    total_campaign_amount: 1_000_000,
+    achieved_revenue: 1_000_000,
+    already_invoiced: 1_000_000,
+    remaining_to_invoice: 0,
+    unachieved_revenue: 0,
+    billing_status: "invoiced",
+    invoice_line_invoiced: 600_000,
+  });
+  assert.equal(merged.already_invoiced, 600_000);
+  assert.equal(merged.remaining_to_invoice, 400_000);
+  assert.equal(merged.billing_status, "partially_invoiced");
+  const kept = filterCampaignsWithRemainingInvoiceable([
+    row({
+      remaining_to_invoice: merged.remaining_to_invoice,
+      already_invoiced: merged.already_invoiced,
+      billing_status: merged.billing_status,
+    }),
+  ]);
+  assert.equal(kept.length, 1);
+}
+
 function testQueueKeepsRemainingCampaigns() {
   const sixtyPercent = row({
     campaign_document_number: "TW-2026-0017",
@@ -98,6 +122,7 @@ function run() {
   testPartialInvoiceIsNotFullyAchieved();
   testFullyInvoicedOnlyWhenRemainingIsGone();
   testQueueKeepsRemainingCampaigns();
+  testSixtyPercentInvoiceLinesKeepQueueRemaining();
   console.log("campaign-billing-queue.test.ts: ok");
 }
 

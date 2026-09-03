@@ -11,6 +11,7 @@ import {
   parseInvoiceSliceAllocations,
   percentFromAmount,
   resolveInvoiceSlice,
+  spreadLineAllocationsToChildren,
 } from "@/lib/billing/partial-assignment-invoice";
 
 function testPercentAndAmountStayLinked() {
@@ -181,6 +182,21 @@ function testAllocationJsonRoundTrip() {
   assert.equal(allocations.get(key), 12500.5);
 }
 
+function testSpreadLineAllocationsToChildren() {
+  const lineId = "11111111-1111-1111-1111-111111111111";
+  const billedByLineId = new Map([[lineId, 6_000]]);
+  const spread = spreadLineAllocationsToChildren(
+    billedByLineId,
+    [
+      { id: "d1", lineId, remaining: 5_000 },
+      { id: "d2", lineId, remaining: 5_000 },
+    ],
+    new Map()
+  );
+  assert.equal(spread.get("d1"), 3_000);
+  assert.equal(spread.get("d2"), 3_000);
+}
+
 function roundVat(value: number): number {
   return Math.round(value * 100) / 100;
 }
@@ -199,6 +215,7 @@ const tests = [
   testProRataAcrossChildren,
   testFourAssignmentMix,
   testAllocationJsonRoundTrip,
+  testSpreadLineAllocationsToChildren,
 ];
 
 for (const run of tests) {

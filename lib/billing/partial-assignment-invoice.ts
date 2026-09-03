@@ -265,6 +265,38 @@ export function allocateSliceAcrossRemaining(
   return shares;
 }
 
+/**
+ * When create sends assignment:lineId amounts but the server expanded to
+ * deliverable/post rows, split the assignment slice across remaining children.
+ * Existing child keys win so mixed percents are not overwritten.
+ */
+export function spreadLineAllocationsToChildren(
+  billedByLineId: Map<string, number> | undefined,
+  children: Array<{ id: string; lineId: string; remaining: number }>,
+  existing: Map<string, number>
+): Map<string, number> {
+  const next = new Map(existing);
+  if (!billedByLineId || billedByLineId.size === 0) return next;
+
+  const byLine = new Map<string, Array<{ id: string; remaining: number }>>();
+  for (const child of children) {
+    const list = byLine.get(child.lineId) ?? [];
+    list.push({ id: child.id, remaining: child.remaining });
+    byLine.set(child.lineId, list);
+  }
+
+  for (const [lineId, slice] of billedByLineId) {
+    const rows = byLine.get(lineId);
+    if (!rows || rows.length === 0) continue;
+    const shares = allocateSliceAcrossRemaining(slice, rows);
+    for (const [id, amount] of shares) {
+      if (!next.has(id)) next.set(id, amount);
+    }
+  }
+
+  return next;
+}
+
 export function resolveBilledAmountForRow(input: {
   id: string;
   kind: InvoiceSliceGrain;

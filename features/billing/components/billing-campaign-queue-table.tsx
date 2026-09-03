@@ -540,6 +540,11 @@ export function BillingCampaignQueueTable({
 
   const handleCampaignPercentChange = useCallback(
     (campaignId: string, percent: number) => {
+      const current = invoiceDraftPercentsRef.current[campaignId] ?? {};
+      setCampaignInvoicePercents(campaignId, {
+        ...current,
+        [CAMPAIGN_INVOICE_DRAFT_ID]: percent,
+      });
       startTransition(async () => {
         const detail = await ensureDetailLoaded(campaignId);
         if (!detail) return;

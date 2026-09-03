@@ -105,6 +105,7 @@ export function cascadeInvoiceDraftPercent(
   const next = { ...current };
 
   if (rowId === CAMPAIGN_INVOICE_DRAFT_ID) {
+    next[CAMPAIGN_INVOICE_DRAFT_ID] = capped;
     for (const root of rows) {
       for (const id of collectSubtreeIds(root)) {
         next[id] = capped;
@@ -154,8 +155,10 @@ function leafVatContext(row: OperationalBillingRow) {
 
 function storedPercent(row: OperationalBillingRow, percents: InvoiceDraftPercents): number {
   const value = percents[row.id];
-  if (value == null || !Number.isFinite(value)) return defaultInvoiceDraftPercent(row);
-  return capPercent(value);
+  if (value != null && Number.isFinite(value)) return capPercent(value);
+  const campaign = percents[CAMPAIGN_INVOICE_DRAFT_ID];
+  if (campaign != null && Number.isFinite(campaign)) return capPercent(campaign);
+  return defaultInvoiceDraftPercent(row);
 }
 
 function computeLeafDraft(

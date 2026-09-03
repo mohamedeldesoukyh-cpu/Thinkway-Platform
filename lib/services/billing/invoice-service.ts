@@ -402,6 +402,7 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
         updateExistingOnTargetInvoice: invoiceMode === "append",
         forRegeneration: deliverableRegenerateScope || postRegenerateScope,
         billedByPostId,
+        billedByLineId,
       }
     );
     if (postLockResult.lineItemOps) {
@@ -426,6 +427,7 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
         defaultVatRate: vatRate,
         updateExistingOnTargetInvoice: invoiceMode === "append",
         billedByDeliverableId,
+        billedByLineId,
       }
     );
 

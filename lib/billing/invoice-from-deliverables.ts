@@ -28,6 +28,7 @@ import {
 import {
   buildOperationalCoveragePatch,
   resolveInvoiceSlice,
+  spreadLineAllocationsToChildren,
 } from "@/lib/billing/partial-assignment-invoice";
 import type { InvoiceLineItemOpSummary } from "@/lib/billing/invoice-lifecycle-debug";
 import { resolveClientTaxableBase } from "@/lib/assignments/client-billing-commercial";
@@ -759,12 +760,21 @@ export async function lockDeliverablesOnInvoice(
     updateExistingOnTargetInvoice?: boolean;
     forRegeneration?: boolean;
     billedByDeliverableId?: Map<string, number>;
+    billedByLineId?: Map<string, number>;
   }
 ): Promise<{ error?: string; lineItemOps?: InvoiceLineItemOpSummary }> {
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const updateExisting = options?.updateExistingOnTargetInvoice ?? false;
   const forRegeneration = options?.forRegeneration ?? false;
-  const billedByDeliverableId = options?.billedByDeliverableId;
+  const billedByDeliverableId = spreadLineAllocationsToChildren(
+    options?.billedByLineId,
+    deliverables.map((row) => ({
+      id: row.id,
+      lineId: row.campaign_line_id,
+      remaining: Number(mapDeliverableRecord(row).remaining_amount ?? 0),
+    })),
+    options?.billedByDeliverableId ?? new Map()
+  );
   const now = new Date().toISOString();
   let sortOrder = 0;
   const lineIds = new Set<string>();

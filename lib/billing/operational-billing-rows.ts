@@ -26,7 +26,8 @@ function hasRemainingInvoiceableRevenue(
   if (remaining <= 0) return false;
   if (
     row.kind === "assignment" &&
-    isFullyInvoicedBillingStatus(row.line_billing_status)
+    isFullyInvoicedBillingStatus(row.line_billing_status) &&
+    remaining <= 0.01
   ) {
     return false;
   }
