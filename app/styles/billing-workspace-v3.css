@@ -436,6 +436,7 @@
 .tw-billing-v3 .bq-inw {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 4px;
   min-width: max-content;
 }
@@ -456,7 +457,7 @@
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: left;
 }
 
 .tw-billing-v3 .bq-in-pct,
@@ -749,7 +750,7 @@
   font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: left;
   color: var(--bq-ink);
   box-shadow: none;
 }
