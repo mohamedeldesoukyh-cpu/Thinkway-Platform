@@ -376,6 +376,7 @@ export function AssignmentSafeGrid({
       cost,
       gp,
       totalBilling,
+      deliverables: selectedDeliverableIds.size,
       currency: currencies.size === 1 ? [...currencies][0]! : null,
       currencyMixed: currencies.size > 1,
     };

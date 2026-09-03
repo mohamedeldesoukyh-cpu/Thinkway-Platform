@@ -49,6 +49,7 @@ export type AssignmentSelectionTotals = {
   cost: number;
   gp: number;
   totalBilling: number;
+  deliverables: number;
   currency: string | null;
   currencyMixed: boolean;
 };
@@ -237,6 +238,11 @@ export function FloatingSelectionBar({
             label="Total billing"
             value={formatMoney(totals.totalBilling, displayCurrency)}
             className="hidden lg:inline"
+          />
+          <SelectionMetric
+            label="Deliverables"
+            value={String(totals.deliverables)}
+            className="hidden md:inline"
           />
           <span className="shrink-0 rounded-md border border-border/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
             {currencyLabel}
