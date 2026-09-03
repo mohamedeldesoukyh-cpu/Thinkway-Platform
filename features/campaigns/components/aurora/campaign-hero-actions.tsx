@@ -77,8 +77,10 @@ export function CampaignHeroActions({
         seed={studioSeed}
         workspace={studioWorkspace}
         tab="studio"
-        variant="primary"
-        buttonClassName="thinkway-campaign-btn thinkway-campaign-btn-primary h-[38px] px-[15px] text-[13px] font-semibold"
+        variant="outline"
+        showIcon={false}
+        className="contents"
+        buttonClassName="tw-b sm pri"
       />
       <Button asChild variant="outline" size="sm" className="thinkway-campaign-btn">
         <a

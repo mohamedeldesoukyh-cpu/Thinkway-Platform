@@ -166,7 +166,6 @@ export function CampaignCommandCenter({
   );
 
   const recentActivity = (workspace.activity ?? []).slice(0, 5);
-  const recentAssignments = workspace.lines.slice(0, 5);
 
   return (
     <div className="thinkway-aurora-command">
@@ -211,7 +210,7 @@ export function CampaignCommandCenter({
           onAction={() => onNavigateToTab("workflow")}
         >
           <CampaignOpsStat
-            label="Status"
+            label="Workflow"
             value={readiness.status === "operational_ready" ? "Ready" : "Attention"}
             tone={readiness.status === "operational_ready" ? "pos" : "amber"}
           />
@@ -347,6 +346,11 @@ export function CampaignCommandCenter({
               ? `${performanceSummary?.total_publications ?? 0} publications`
               : "Loading metrics…"
           }
+          className={
+            performanceLoaded && (performanceSummary?.total_publications ?? 0) === 0
+              ? "is-neutral"
+              : undefined
+          }
           status={
             performanceLoaded
               ? pill(
@@ -414,6 +418,7 @@ export function CampaignCommandCenter({
         <CampaignOpsCard
           title="Timeline"
           subtitle="Recent activity"
+          className="is-neutral"
           status={pill("mut", `${workspace.activity.length} events`)}
           actionLabel="Timeline"
           onAction={() => onNavigateToTab("timeline")}
@@ -456,66 +461,6 @@ export function CampaignCommandCenter({
           onOpenResolver={onOpenResolver}
           onSelectStage={onNavigateToTab}
         />
-      ) : null}
-
-      {/* Recent assignments preview */}
-      {recentAssignments.length > 0 ? (
-        <>
-          <CampaignSectionHead
-            title="Recent assignments"
-            subtitle={`${assignmentStats.total} total`}
-            tools={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="thinkway-campaign-btn h-[33px] px-3 text-[12.5px]"
-                onClick={() => onNavigateToTab("lines")}
-              >
-                View all
-              </Button>
-            }
-          />
-          <div className="thinkway-aurora-tblwrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Vendor</th>
-                  <th>Line</th>
-                  <th>Status</th>
-                  <th className="r">Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {recentAssignments.map((line) => (
-                  <tr key={line.id}>
-                    <td className="strong">
-                      {line.influencer_name?.trim() || line.name || "—"}
-                    </td>
-                    <td>
-                      <button
-                        type="button"
-                        className="lnk text-[var(--camp-blue-text)] font-semibold"
-                        onClick={() => onNavigateToTab("lines")}
-                      >
-                        {line.document_number}
-                      </button>
-                    </td>
-                    <td>
-                      {pill(
-                        line.assignment_status === "draft" ? "mut" : "green",
-                        line.assignment_status.replaceAll("_", " ")
-                      )}
-                    </td>
-                    <td className="r tabular strong">
-                      {formatMoneyCompact(line.revenue_before_vat ?? 0, currency)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </>
       ) : null}
 
       {/* Progressive disclosure: details / PO / edit */}

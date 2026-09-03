@@ -45,8 +45,12 @@ export function ClientIoSendControls({
     io.status === "sent" ||
     io.status === "under_client_review" ||
     io.status === "approved"
-      ? "Resend Client IO"
-      : "Send Client IO";
+      ? compact
+        ? "Resend"
+        : "Resend Client IO"
+      : compact
+        ? "Send"
+        : "Send Client IO";
 
   if (io.status === "approved") {
     return null;

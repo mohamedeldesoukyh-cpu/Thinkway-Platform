@@ -111,15 +111,20 @@ export function ClientIoHeaderControls({
           }
           className={cn(OPERATIONAL_CHROME_LABEL, "thinkway-campaign-btn h-[38px] px-[15px] text-[13px]")}
         >
-          {generating
-            ? "Generating…"
-            : hasDocument
-              ? "Regenerate document"
-              : "Generate document"}
+          {generating ? "Generating…" : hasDocument ? "Regenerate" : "Generate"}
         </Button>
       </form>
 
-      {hasDocument ? <ClientIoViewMenu clientIoId={io.id} size="sm" /> : null}
+      {hasDocument ? (
+        <ClientIoViewMenu
+          clientIoId={io.id}
+          size="sm"
+          variant="outline"
+          label="View"
+          showChevron={false}
+          buttonClassName="tw-b sm thinkway-campaign-btn"
+        />
+      ) : null}
 
       <ClientIoSendControls
         io={io}
@@ -128,6 +133,7 @@ export function ClientIoHeaderControls({
         recipientCount={recipientCount}
         hasDocument={hasDocument}
         compact
+        buttonVariant="outline"
         recipientsNeedSave={recipientsNeedSave}
       />
     </div>

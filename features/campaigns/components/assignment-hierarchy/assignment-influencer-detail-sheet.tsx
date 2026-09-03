@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import {
-  BadgeCheckIcon,
   BriefcaseIcon,
   CircleDollarSignIcon,
   MoreHorizontalIcon,
@@ -10,7 +9,6 @@ import {
 } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -43,10 +41,10 @@ import {
 } from "@/lib/campaigns/assignment-detail-presenters";
 import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience-view";
 import { resolveAssignmentsGridGates } from "@/lib/campaigns/assignments-grid-gates";
-import { formatMoney, formatPercent } from "@/features/campaigns/utils";
+import { formatMoney, formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
-import { APP_MAIN_HALF_PANEL_WIDTH } from "@/lib/layout/app-sidebar-width";
 import { cn } from "@/lib/utils";
+import "@/app/styles/campaign-detail-suite.css";
 
 type AssignmentInfluencerDetailSheetProps = {
   open: boolean;
@@ -72,15 +70,18 @@ function DetailField({
   valueClassName?: string;
 }) {
   return (
-    <div className="flex items-start justify-between gap-6 border-b border-border/40 py-3.5 last:border-b-0">
-      <span className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-        {label}
-      </span>
-      <div className={cn("min-w-0 text-right text-sm text-foreground", valueClassName)}>
-        {children}
-      </div>
+    <div className="tw-dl">
+      <span>{label}</span>
+      <b className={cn("min-w-0", valueClassName)}>{children}</b>
     </div>
   );
+}
+
+function formatFollowerShort(count: number | null | undefined): string | null {
+  if (count == null || !Number.isFinite(count)) return null;
+  if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1).replace(/\.0$/, "")}M followers`;
+  if (count >= 1_000) return `${(count / 1_000).toFixed(1).replace(/\.0$/, "")}K followers`;
+  return `${count.toLocaleString()} followers`;
 }
 
 function DetailPill({ children, className }: { children: ReactNode; className?: string }) {
@@ -533,159 +534,201 @@ export function AssignmentInfluencerDetailSheet({
   const platformAccounts = group?.line.creator_platform_accounts ?? [];
   const line = group?.line;
   const hasDetail = Boolean(group && row && line);
+  const currency = line ? resolveAssignmentLineCurrency(line) : "EGP";
+  const vendorIoId = line?.active_vendor_io_id ?? line?.vendor_io_id ?? null;
+  const primaryAccount = platformAccounts[0];
+  const followerLabel = formatFollowerShort(primaryAccount?.follower_count);
+  const erLabel =
+    primaryAccount?.engagement_rate != null
+      ? `${formatPercent(primaryAccount.engagement_rate)} ER`
+      : null;
+  const creatorName = line?.influencer_name ?? row?.displayName ?? "Creator";
+  const revenue = line
+    ? Number(line.revenue_after_vat ?? line.revenue_before_vat ?? row?.rollups.revenue ?? 0)
+    : 0;
+  const cost = line ? Number(line.cost_before_vat ?? line.cost ?? 0) : 0;
+  const gp = row?.rollups.gp ?? revenue - cost;
+  const margin = row?.rollups.margin_percent ?? (revenue > 0 ? (gp / revenue) * 100 : 0);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
-        showCloseButton
-        showOverlay={false}
-        style={{ width: APP_MAIN_HALF_PANEL_WIDTH, maxWidth: APP_MAIN_HALF_PANEL_WIDTH }}
-        className={cn(
-          "flex flex-col gap-0 overflow-hidden border-y border-l border-border/60 bg-card p-0",
-          "transition-[width,max-width] duration-200 ease-out",
-          "!inset-y-0 !right-0 !left-auto !h-full !max-h-none",
-          "rounded-none rounded-l-[1.75rem] rounded-r-none shadow-[-12px_0_40px_-8px_rgba(0,0,0,0.12)]"
-        )}
+        showCloseButton={false}
+        showOverlay
+        className="campaign-detail-creator-modal campaign-detail-suite"
       >
         {!hasDetail || !line || !row || !group ? (
-          <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
-            Loading assignment details…
+          <div className="tw-cm__w">
+            <div className="flex flex-1 items-center justify-center p-8 text-sm text-muted-foreground">
+              Loading assignment details…
+            </div>
           </div>
         ) : (
-          <>
-        <SheetTitle className="sr-only">
-          {line.influencer_name ?? row.displayName} assignment details
-        </SheetTitle>
-        <SheetDescription className="sr-only">
-          Assignment participation and activity details for {handle}
-        </SheetDescription>
+          <div className="tw-cm__w" role="dialog" aria-label={`${creatorName} assignment details`}>
+            <SheetTitle className="sr-only">{creatorName} assignment details</SheetTitle>
+            <SheetDescription className="sr-only">
+              Assignment participation and activity details for {handle}
+            </SheetDescription>
 
-        <div className="shrink-0 border-b border-border/60 px-6 pb-4 pt-5">
-          <div className="flex items-start justify-between gap-3 pr-10">
-            <p className="text-xs text-muted-foreground">
-              {campaignName}
-              <span className="text-muted-foreground/60"> / </span>
-              <span className="text-foreground/80">{handle}</span>
-            </p>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon-sm" className="shrink-0">
-                  <MoreHorizontalIcon className="size-4" />
-                  <span className="sr-only">Assignment actions</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {onEdit ? (
-                  <DropdownMenuItem onClick={onEdit}>
-                    <PencilIcon className="size-4" />
-                    Edit assignment
-                  </DropdownMenuItem>
-                ) : null}
-                {line.influencer_id ? (
-                  <DropdownMenuItem asChild>
-                    <Link href={`/vendors/${line.influencer_id}`}>View vendor profile</Link>
-                  </DropdownMenuItem>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-
-          <div className="mt-4 flex items-center gap-3">
-            <span className="inline-flex size-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-muted to-muted/40 text-base font-semibold text-foreground">
-              {initialsFromName(line.influencer_name ?? handle)}
-            </span>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <h2 className="truncate text-lg font-semibold tracking-tight">{handle}</h2>
-                <BadgeCheckIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+            <div className="tw-cm__l">
+              <div className="cr">
+                {campaignName} / {handle || line.document_number}
               </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              <div className="tw-cm__av">{initialsFromName(creatorName)}</div>
+              <h2>
+                {creatorName}
+                <span className="vf" aria-hidden>
+                  ✓
+                </span>
+              </h2>
+              {handle ? <div className="hd">@{handle.replace(/^@/, "")}</div> : null}
+              <div className="tw-cm__pf">
                 {platformAccounts.map((account) => (
-                  <PlatformBadge key={`${account.platform}-${account.handle}`} platform={account.platform} />
+                  <span key={`${account.platform}-${account.handle}`}>{account.platform}</span>
                 ))}
-                {onEdit ? (
+                {followerLabel ? <span>{followerLabel}</span> : null}
+                {erLabel ? <span>{erLabel}</span> : null}
+              </div>
+              <div className="tw-cm__st">
+                <div>
+                  <i>Revenue</i>
+                  <b>{formatMoneyCompact(revenue, currency)}</b>
+                </div>
+                {gates.showInternalFinancials ? (
+                  <div>
+                    <i>Cost</i>
+                    <b>{formatMoneyCompact(cost, currency)}</b>
+                  </div>
+                ) : null}
+                {gates.showInternalFinancials ? (
+                  <div>
+                    <i>Gross profit</i>
+                    <b className={gp >= 0 ? "g" : undefined}>{formatMoneyCompact(gp, currency)}</b>
+                  </div>
+                ) : null}
+                {gates.showInternalFinancials ? (
+                  <div>
+                    <i>Margin</i>
+                    <b className={margin >= 20 ? "g" : undefined}>{formatPercent(margin)}</b>
+                  </div>
+                ) : null}
+                <div>
+                  <i>Deliverables</i>
+                  <b>{String(row.rollups.deliverable_count)}</b>
+                </div>
+                <div>
+                  <i>Vendor IO</i>
+                  <b>{line.vendor_io_document_number || "—"}</b>
+                </div>
+              </div>
+            </div>
+
+            <div className="tw-cm__r">
+              <Tabs defaultValue="participation" className="flex min-h-0 flex-1 flex-col">
+                <div className="tw-cm__h">
+                  <TabsList className="tw-cdt h-auto flex-1 justify-start gap-0.5 rounded-none bg-transparent p-0">
+                    <TabsTrigger value="participation">Participation</TabsTrigger>
+                    <TabsTrigger value="general">General</TabsTrigger>
+                    <TabsTrigger value="social">Social</TabsTrigger>
+                    <TabsTrigger value="activity">Activity</TabsTrigger>
+                    <TabsTrigger value="performance">Performance</TabsTrigger>
+                  </TabsList>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button type="button" variant="outline" size="sm" className="tw-b sm">
+                        <MoreHorizontalIcon className="size-3.5" aria-hidden />
+                        <span className="sr-only">Assignment actions</span>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      {onEdit ? (
+                        <DropdownMenuItem onClick={onEdit}>
+                          <PencilIcon className="size-4" />
+                          Edit assignment
+                        </DropdownMenuItem>
+                      ) : null}
+                      {line.influencer_id ? (
+                        <DropdownMenuItem asChild>
+                          <Link href={`/vendors/${line.influencer_id}`}>Creator profile</Link>
+                        </DropdownMenuItem>
+                      ) : null}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    className="size-7 text-muted-foreground"
-                    onClick={onEdit}
-                    title="Edit assignment"
+                    variant="outline"
+                    size="sm"
+                    className="tw-b sm"
+                    aria-label="Close"
+                    onClick={() => onOpenChange(false)}
                   >
-                    <PencilIcon className="size-3.5" />
+                    ×
+                  </Button>
+                </div>
+
+                <div className="tw-cm__b">
+                  <TabsContent value="participation" className="mt-0 outline-none">
+                    <ParticipationDetailsTab
+                      group={group}
+                      row={row}
+                      accountManager={accountManager}
+                      clientIoStatus={clientIoStatus}
+                      showInternalFinancials={gates.showInternalFinancials}
+                    />
+                  </TabsContent>
+                  <TabsContent value="general" className="mt-0 outline-none">
+                    <GeneralTab
+                      group={group}
+                      row={row}
+                      showInternalFinancials={gates.showInternalFinancials}
+                    />
+                  </TabsContent>
+                  <TabsContent value="social" className="mt-0 outline-none">
+                    <SocialDataTab group={group} />
+                  </TabsContent>
+                  <TabsContent value="activity" className="mt-0 outline-none">
+                    <ActivityTab group={group} />
+                  </TabsContent>
+                  <TabsContent value="performance" className="mt-0 outline-none">
+                    <PerformanceTab group={group} row={row} />
+                  </TabsContent>
+                </div>
+              </Tabs>
+
+              <div className="tw-cm__f">
+                {vendorIoId ? (
+                  <Button asChild variant="outline" size="sm" className="tw-b sm">
+                    <Link href={`/ios/vendor/${vendorIoId}/preview`}>Open vendor IO</Link>
+                  </Button>
+                ) : (
+                  <Button type="button" variant="outline" size="sm" className="tw-b sm" disabled>
+                    Open vendor IO
+                  </Button>
+                )}
+                {line.influencer_id ? (
+                  <Button asChild variant="outline" size="sm" className="tw-b sm">
+                    <Link href={`/vendors/${line.influencer_id}`}>Creator profile</Link>
+                  </Button>
+                ) : null}
+                <span className="tw-sp" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="tw-b sm"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Close
+                </Button>
+                {onEdit ? (
+                  <Button type="button" size="sm" className="tw-b sm pri" onClick={onEdit}>
+                    Edit assignment
                   </Button>
                 ) : null}
               </div>
             </div>
           </div>
-        </div>
-
-        <Tabs defaultValue="participation" className="flex min-h-0 flex-1 flex-col">
-          <div className="shrink-0 border-b border-border/60 px-6">
-            <TabsList variant="line" className="h-auto w-full justify-start gap-4 rounded-none bg-transparent p-0">
-              <TabsTrigger
-                value="participation"
-                className="rounded-none px-0 pb-3 pt-4 text-xs data-[state=active]:font-semibold"
-              >
-                Participation details
-              </TabsTrigger>
-              <TabsTrigger
-                value="general"
-                className="rounded-none px-0 pb-3 pt-4 text-xs data-[state=active]:font-semibold"
-              >
-                General
-              </TabsTrigger>
-              <TabsTrigger
-                value="social"
-                className="rounded-none px-0 pb-3 pt-4 text-xs data-[state=active]:font-semibold"
-              >
-                Social data
-              </TabsTrigger>
-              <TabsTrigger
-                value="activity"
-                className="rounded-none px-0 pb-3 pt-4 text-xs data-[state=active]:font-semibold"
-              >
-                Activity
-              </TabsTrigger>
-              <TabsTrigger
-                value="performance"
-                className="rounded-none px-0 pb-3 pt-4 text-xs data-[state=active]:font-semibold"
-              >
-                Performance
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
-            <TabsContent value="participation" className="mt-0 outline-none">
-              <ParticipationDetailsTab
-                group={group}
-                row={row}
-                accountManager={accountManager}
-                clientIoStatus={clientIoStatus}
-                showInternalFinancials={gates.showInternalFinancials}
-              />
-            </TabsContent>
-            <TabsContent value="general" className="mt-0 outline-none">
-              <GeneralTab
-                group={group}
-                row={row}
-                showInternalFinancials={gates.showInternalFinancials}
-              />
-            </TabsContent>
-            <TabsContent value="social" className="mt-0 outline-none">
-              <SocialDataTab group={group} />
-            </TabsContent>
-            <TabsContent value="activity" className="mt-0 outline-none">
-              <ActivityTab group={group} />
-            </TabsContent>
-            <TabsContent value="performance" className="mt-0 outline-none">
-              <PerformanceTab group={group} row={row} />
-            </TabsContent>
-          </div>
-        </Tabs>
-          </>
         )}
       </SheetContent>
     </Sheet>
