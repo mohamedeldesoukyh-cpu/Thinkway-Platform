@@ -766,6 +766,19 @@
   margin: 0;
 }
 
+.campaign-detail-suite .thinkway-campaign-content,
+.campaign-detail-suite .thinkway-campaign-tab-panel {
+  background: transparent;
+  /* Kill the old 26px side padding — gutters come only from `.thinkway-aurora-wrap` */
+  padding: 4px 0 24px !important;
+  margin-top: 0 !important;
+}
+
+.campaign-detail-suite [data-slot="tabs-content"].mt-4,
+.campaign-detail-suite .thinkway-campaign-tab-panel.mt-4 {
+  margin-top: 6px !important;
+}
+
 .campaign-detail-suite .thinkway-campaign-section-card,
 .campaign-detail-suite .thinkway-campaign-flat-section {
   background: #fff;
