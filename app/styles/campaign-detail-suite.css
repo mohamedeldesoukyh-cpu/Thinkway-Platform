@@ -64,8 +64,8 @@
   /* Below app sidebar (z-60+) so the main nav is never covered or clipped */
   z-index: 40;
   background: var(--tw-bg);
-  margin: 0 -14px;
-  padding: 0 14px 6px;
+  margin: 0 -10px;
+  padding: 0 10px 6px;
   box-shadow: 0 6px 16px -12px rgba(11, 15, 26, 0.28);
 }
 
@@ -758,17 +758,12 @@
   text-align: left;
 }
 
-.campaign-detail-suite .thinkway-campaign-content,
-.campaign-detail-suite .thinkway-campaign-tab-panel {
-  background: transparent;
-  /* Kill the old 26px side padding — gutters come only from `.thinkway-aurora-wrap` */
-  padding: 4px 0 24px !important;
-  margin-top: 0 !important;
+.campaign-detail-suite .thinkway-aurora-ws-head {
+  padding: 0 0 8px;
 }
 
-.campaign-detail-suite [data-slot="tabs-content"].mt-4,
-.campaign-detail-suite .thinkway-campaign-tab-panel.mt-4 {
-  margin-top: 6px !important;
+.campaign-detail-suite .thinkway-aurora-ws {
+  margin: 0;
 }
 
 .campaign-detail-suite .thinkway-campaign-section-card,
