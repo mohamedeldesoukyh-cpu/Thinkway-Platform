@@ -1,12 +1,6 @@
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
+"use client";
+
+import Link from "next/link";
 
 type CampaignsPaginationProps = {
   page: number;
@@ -76,39 +70,43 @@ export function CampaignsPagination({
     <>
       <span className="tw-cs">{rangeLabel}</span>
       <span className="tw-sp" />
-      <Pagination className="m-0 w-auto justify-end p-0 text-[11px]">
-        <PaginationContent className="gap-1.5">
-          <PaginationItem>
-            <PaginationPrevious
-              href={buildHref(Math.max(1, page - 1), search)}
-              aria-disabled={page <= 1}
-              className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
-            />
-          </PaginationItem>
-          {pages.map((item, index) =>
-            item === "ellipsis" ? (
-              <PaginationItem key={`ellipsis-${index}`}>
-                <PaginationEllipsis />
-              </PaginationItem>
-            ) : (
-              <PaginationItem key={item}>
-                <PaginationLink href={buildHref(item, search)} isActive={item === page}>
-                  {item}
-                </PaginationLink>
-              </PaginationItem>
-            )
-          )}
-          <PaginationItem>
-            <PaginationNext
-              href={buildHref(Math.min(totalPages, page + 1), search)}
-              aria-disabled={page >= totalPages}
-              className={
-                page >= totalPages ? "pointer-events-none opacity-50" : undefined
-              }
-            />
-          </PaginationItem>
-        </PaginationContent>
-      </Pagination>
+      <Link
+        href={buildHref(Math.max(1, page - 1), search)}
+        aria-disabled={page <= 1}
+        className={page <= 1 ? "is-disabled" : undefined}
+        tabIndex={page <= 1 ? -1 : undefined}
+        onClick={(event) => {
+          if (page <= 1) event.preventDefault();
+        }}
+      >
+        Previous
+      </Link>
+      {pages.map((item, index) =>
+        item === "ellipsis" ? (
+          <span key={`ellipsis-${index}`} className="tw-cs" aria-hidden>
+            …
+          </span>
+        ) : (
+          <Link
+            key={item}
+            href={buildHref(item, search)}
+            aria-current={item === page ? "true" : undefined}
+          >
+            {item}
+          </Link>
+        )
+      )}
+      <Link
+        href={buildHref(Math.min(totalPages, page + 1), search)}
+        aria-disabled={page >= totalPages}
+        className={page >= totalPages ? "is-disabled" : undefined}
+        tabIndex={page >= totalPages ? -1 : undefined}
+        onClick={(event) => {
+          if (page >= totalPages) event.preventDefault();
+        }}
+      >
+        Next
+      </Link>
     </>
   );
 }

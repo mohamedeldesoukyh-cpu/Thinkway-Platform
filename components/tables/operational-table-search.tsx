@@ -8,11 +8,17 @@ import { OperationalTableSearchField } from "@/components/tables/operational-tab
 type OperationalTableSearchProps = {
   placeholder: string;
   paramKey?: string;
+  variant?: "ghost" | "boxed";
+  className?: string;
+  inputClassName?: string;
 };
 
 export function OperationalTableSearch({
   placeholder,
   paramKey = "q",
+  variant = "ghost",
+  className,
+  inputClassName,
 }: OperationalTableSearchProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -66,6 +72,9 @@ export function OperationalTableSearch({
       }}
       placeholder={placeholder}
       isPending={isPending}
+      variant={variant}
+      className={className}
+      inputClassName={inputClassName}
     />
   );
 }

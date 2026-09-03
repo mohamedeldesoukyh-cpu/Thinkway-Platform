@@ -1,7 +1,6 @@
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PlatformV6Page } from "@/components/platform/platform-v6-layout";
 import { CampaignsListMasthead } from "@/features/campaigns/components/campaigns-list-masthead";
 import { CampaignsListSection } from "@/features/campaigns/components/campaigns-list-section";
 import { NewCampaignDialog } from "@/features/campaigns/components/new-campaign-dialog";
@@ -69,7 +68,7 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
 
   return (
     <DashboardShell title="Campaigns" platformV6 workspaceNavActive="campaigns">
-      <PlatformV6Page className="campaigns-module-page campaigns-list-suite">
+      <div className="campaigns-list-suite">
         {kpis ? (
           <CampaignsListMasthead
             kpis={kpis}
@@ -100,13 +99,11 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
           search={search}
           errorSlot={
             errorMessage ? (
-              <div className="border-b px-4 py-3">
-                <PageAlert>{errorMessage}</PageAlert>
-              </div>
+              <div className="tw-note bad">{errorMessage}</div>
             ) : null
           }
         />
-      </PlatformV6Page>
+      </div>
     </DashboardShell>
   );
 }

@@ -5,7 +5,7 @@
 
 ## In progress 2026-09-04 — Campaigns list suite design
 
-`/campaigns` restyled to `campaigns-list.html` / `THINKWAY_CAMPAIGNS_LIST_DESIGN_SPEC.md`: masthead + metric strip (real KPIs only), card + toolbar, 15-track CSS Grid register (select + 14 data cols), `DD Mon YY` dates / `not set`, brand `same as campaign`, PO `no PO`, pagination “Showing X–Y of N”. Suite CSS: `app/styles/campaigns-list-suite.css`. Filter/sort/settings suite preserved. Visual only — no list query changes. No migrations. Not on Production.
+`/campaigns` fully uses the design suite (no Platform V6 page chrome): masthead + metrics, card toolbar with suite search + All/Needs action/In finance/No PO views, Filter/Sort/Settings as suite buttons, 15-track CSS Grid, suite status/PO pills, suite pagination. Spec: `campaigns-list.html` / `THINKWAY_CAMPAIGNS_LIST_DESIGN_SPEC.md`. Visual only. No migrations. Not on Production.
 
 ## In progress 2026-09-04 — Campaign display prefix Camp#
 

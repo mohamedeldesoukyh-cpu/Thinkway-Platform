@@ -3,7 +3,6 @@
 import { useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
 
-import { Badge } from "@/components/ui/badge";
 import { useOperationalTableColumnsContext } from "@/components/tables/operational-table-column-context";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
 import {
@@ -11,22 +10,18 @@ import {
   type OperationalConfigurableColumnDef,
 } from "@/components/tables/operational-configurable-table";
 import { CampaignListClientLinkCell } from "@/features/campaigns/components/campaign-list-client-link-cell";
-import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
-import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import { platformV6BadgeClass } from "@/components/platform/platform-v6-layout";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { resolveCampaignListPoBudget } from "@/lib/finance/po/operational-budget";
 import {
-  PO_ALERT_FRAME,
   PO_STATUS_LABELS,
-  PO_STATUS_VARIANT,
   resolvePoAlertStatus,
 } from "@/lib/finance/po/status";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
+import { CAMPAIGN_STATUS_OPTIONS } from "@/features/campaigns/constants";
 import { campaignPortfolioIntel } from "@/features/campaigns/lifecycle/campaign-portfolio-intelligence";
 import { campaignProcessCueFromListItem } from "@/features/campaigns/lifecycle/campaign-process-presentation";
-import type { CampaignListItem } from "@/types/database";
+import type { CampaignListItem, CampaignStatus } from "@/types/database";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import { campaignDetailPathWithTab } from "@/lib/routing/entity-paths";
 import { formatDesignDateRange } from "@/lib/design/format-design-date";
@@ -85,6 +80,37 @@ function riskBadgeClass(risk: ReturnType<typeof campaignPortfolioIntel>["risk"])
     default:
       return "p-g";
   }
+}
+
+function statusPillClass(status: CampaignStatus) {
+  switch (status) {
+    case "completed":
+      return "p-g";
+    case "active":
+      return "p-b";
+    case "paused":
+    case "cancelled":
+      return "p-y";
+    default:
+      return "p-n";
+  }
+}
+
+function statusLabel(status: CampaignStatus) {
+  return (
+    CAMPAIGN_STATUS_OPTIONS.find((option) => option.value === status)?.label ??
+    status
+  );
+}
+
+function poPillClass(
+  alert: ReturnType<typeof listPoAlertStatus>,
+  poStatus: string | null | undefined
+) {
+  if (alert === "exceeded") return "p-r";
+  if (alert === "near_limit" || poStatus === "near_limit") return "p-y";
+  if (!poStatus || poStatus === "draft") return "p-n";
+  return "p-g";
 }
 
 function brandCell(campaign: CampaignListItem) {
@@ -280,10 +306,9 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     id: "status",
     label: "Status",
     renderCell: (campaign) => (
-      <CampaignStatusBadge
-        status={campaign.status}
-        className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "max-w-full")}
-      />
+      <span className={cn("tw-p", statusPillClass(campaign.status))} title={campaign.status}>
+        {statusLabel(campaign.status)}
+      </span>
     ),
   },
   {
@@ -318,6 +343,12 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
         maximumFractionDigits: 2,
       }).format(budget);
       const title = `${currency} ${amount}`;
+      const poLabel =
+        poAlertStatus === "near_limit"
+          ? "Near limit"
+          : campaign.po_status && campaign.po_status !== "draft"
+            ? PO_STATUS_LABELS[campaign.po_status]
+            : null;
       return (
         <div className="tw-money">
           <span className="tw-money-row">
@@ -333,22 +364,10 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
             </span>
             <span className="tw-cc">{currency}</span>
           </span>
-          {poAlertStatus === "near_limit" ? (
-            <span className={cn(platformV6BadgeClass("outline-amber"), "tw-p p-y")}>
-              Near limit
+          {poLabel ? (
+            <span className={cn("tw-p", poPillClass(poAlertStatus, campaign.po_status))}>
+              {poLabel}
             </span>
-          ) : campaign.po_status && campaign.po_status !== "draft" ? (
-            <Badge
-              variant={PO_STATUS_VARIANT[campaign.po_status]}
-              className={cn(
-                OPERATIONAL_CHROME_STATUS_BADGE,
-                "font-normal",
-                poAlertStatus && "border-2",
-                poAlertStatus && PO_ALERT_FRAME[poAlertStatus]
-              )}
-            >
-              {PO_STATUS_LABELS[campaign.po_status]}
-            </Badge>
           ) : null}
         </div>
       );
