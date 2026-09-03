@@ -19,12 +19,13 @@ function gradientForName(name: string): (typeof THUMB_GRADIENTS)[number] {
   return THUMB_GRADIENTS[sum % THUMB_GRADIENTS.length];
 }
 
-export type CreatorThumbSize = 18 | 20 | 22 | 28 | 38;
+export type CreatorThumbSize = 18 | 20 | 22 | 26 | 28 | 38;
 
 const SIZE_CLASS: Record<CreatorThumbSize, string> = {
   18: "size-[18px] text-[8px]",
   20: "size-5 text-[8px]",
   22: "size-[22px] text-[8px]",
+  26: "size-[26px] text-[9px]",
   28: "thinkway-campaign-cr-thumb thinkway-campaign-cr-thumb--vio",
   38: "thinkway-campaign-cr-thumb thinkway-campaign-cr-thumb--perf",
 };
