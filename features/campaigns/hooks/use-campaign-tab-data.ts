@@ -64,14 +64,16 @@ const INITIAL_BUNDLE_STATUSES: BundleStatuses = {
   financeAudit: "idle",
 };
 
-/** Prefetched in parallel after mount — never blocks first paint. */
+/** Prefetched after mount — never blocks first paint. Billing starts immediately. */
 const PREFETCH_BUNDLES: CampaignDeferredBundle[] = [
   "formOptions",
   "assignmentsBilling",
-  "billing",
   "publications",
   "financeAudit",
 ];
+
+/** Finance tab is cold-path expensive — start on mount, do not wait for idle. */
+const EAGER_PREFETCH_BUNDLES: CampaignDeferredBundle[] = ["billing"];
 
 function scheduleBackgroundPrefetch(run: () => void): () => void {
   if (typeof requestIdleCallback !== "undefined") {
@@ -300,6 +302,9 @@ export function useCampaignTabData(
   }, [initialAssignmentHierarchy, reloadOperationalBilling]);
 
   useEffect(() => {
+    for (const bundle of EAGER_PREFETCH_BUNDLES) {
+      void loadBundle(bundle);
+    }
     return scheduleBackgroundPrefetch(() => {
       for (const bundle of PREFETCH_BUNDLES) {
         void loadBundle(bundle);

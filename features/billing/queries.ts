@@ -42,7 +42,10 @@ export async function getCampaignBillingGroups(campaignId: string) {
   return loadCampaignBillingGroups(supabase, campaignId);
 }
 
-export async function getCampaignOperationalBillingDetail(campaignId: string) {
+export async function getCampaignOperationalBillingDetail(
+  campaignId: string,
+  options?: { syncCommercial?: boolean }
+) {
   const { supabase } = await requireRequestUser();
-  return loadCampaignOperationalBillingDetail(supabase, campaignId);
+  return loadCampaignOperationalBillingDetail(supabase, campaignId, options);
 }

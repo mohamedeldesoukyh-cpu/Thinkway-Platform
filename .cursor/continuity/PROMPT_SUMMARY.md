@@ -3,6 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Campaign / finance design spec (`THINKWAY_CAMPAIGN_FINANCE_DESIGN_SPEC.md`).
 
+## In progress 2026-09-03 — Finance speed + Assignments colors + Overview cards
+
+Finance tab: eager billing prefetch on mount; workspace loads skip commercial repair sync (`syncCommercial: false`); 6s soft-timeout on operational billing so lines/register are not blocked. Assignments: remove Rev/Cost/Total Billing tint chips; suite CSS Grid row colors beat workspace `td`/`!important` rules. Overview ops cards: suite gradient header + full-bleed padding win over workspace border/padding. Vendor IO: removed nested `fillHeight` viewport clip so the workspace scroller can reach all rows. No migrations. Not on Production.
+
 ## In progress 2026-09-03 — Design spec remainder
 
 Date SSOT `DD Mon YY` via `lib/design/format-design-date.ts`. Missing dates render `not set`. Zero money uses `#B6BECD`. Edit-mode revenue/cost tints. Selection calculator (4 modes, Apply via existing commercials action, mixed CCY blocked). Flying bar no longer sums mixed currencies. Finance suite 14px gutters + a11y. **Assignments register now uses shared CSS Grid `--cols`** for header, parent rows, child header, and child rows (sibling tracks; commercial save / selection / Edit→Save unchanged). No migrations. Not on Production.

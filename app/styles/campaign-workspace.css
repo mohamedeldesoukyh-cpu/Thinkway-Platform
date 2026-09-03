@@ -3970,14 +3970,16 @@
     overflow-y: auto;
   }
 
+  /* Grow with rows — vertical scroll belongs to [data-campaign-workspace-scroll],
+     not a nested viewport fill (that clipped Vendor IO under overflow:hidden). */
   .thinkway-campaign-vendor-io-fill {
     display: flex;
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    min-height: calc(100dvh - 11.5rem);
+    min-height: 0;
     flex-direction: column;
-    overflow-x: hidden;
+    overflow: visible;
   }
 
   .thinkway-campaign-vendor-io-fill .thinkway-campaign-section-card {
@@ -3985,12 +3987,13 @@
     width: 100%;
     max-width: 100%;
     min-width: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .thinkway-campaign-vendor-io-fill .thinkway-campaign-table-scroll,
   .thinkway-campaign-vendor-io-fill .thinkway-campaign-table-scroll--fill {
-    overflow-x: hidden !important;
+    overflow-x: auto !important;
+    overflow-y: visible !important;
   }
 
   .thinkway-campaign-vendor-io-fill table.thinkway-campaign-data-table,

@@ -96,6 +96,59 @@ export async function loadCampaignFormOptionsBundle(
   }
 }
 
+/** Soft timeout so a slow operational tree cannot leave Finance / Assignments pending forever. */
+const OPERATIONAL_BILLING_BUNDLE_TIMEOUT_MS = 6_000;
+
+function withSoftTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  fallback: T,
+  onTimeout: () => void
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => {
+      onTimeout();
+      resolve(fallback);
+    }, ms);
+    promise.then(
+      (value) => {
+        clearTimeout(timer);
+        resolve(value);
+      },
+      (error) => {
+        clearTimeout(timer);
+        reject(error);
+      }
+    );
+  });
+}
+
+async function loadOperationalBillingForWorkspaceTab(
+  campaignId: string
+): Promise<CampaignOperationalBillingDetail | null> {
+  try {
+    return await withSoftTimeout(
+      getCampaignOperationalBillingDetail(campaignId, { syncCommercial: false }),
+      OPERATIONAL_BILLING_BUNDLE_TIMEOUT_MS,
+      null,
+      () => {
+        devLog("[campaign-tab-data] operational billing timed out", {
+          campaignId,
+          timeoutMs: OPERATIONAL_BILLING_BUNDLE_TIMEOUT_MS,
+        });
+      }
+    );
+  } catch (reason) {
+    const { logCampaignWorkspaceLoadError } = await import(
+      "@/lib/billing/operational-billing-trace"
+    );
+    logCampaignWorkspaceLoadError("getCampaignOperationalBillingDetail", reason, {
+      campaignId,
+    });
+    return null;
+  }
+}
+
 export async function loadCampaignAssignmentsBillingBundle(
   campaignId: string
 ): Promise<BundleResult<CampaignAssignmentsBillingPayload>> {
@@ -104,25 +157,14 @@ export async function loadCampaignAssignmentsBillingBundle(
   try {
     const settled = await Promise.allSettled([
       getCampaignBillingGroups(campaignId),
-      getCampaignOperationalBillingDetail(campaignId),
+      loadOperationalBillingForWorkspaceTab(campaignId),
     ]);
 
     const billingGroups =
       settled[0].status === "fulfilled" ? settled[0].value : [];
 
-    let operationalBilling: CampaignOperationalBillingDetail | null = null;
-    if (settled[1].status === "fulfilled") {
-      operationalBilling = settled[1].value;
-    } else {
-      const { logCampaignWorkspaceLoadError } = await import(
-        "@/lib/billing/operational-billing-trace"
-      );
-      logCampaignWorkspaceLoadError(
-        "getCampaignOperationalBillingDetail",
-        settled[1].reason,
-        { campaignId }
-      );
-    }
+    const operationalBilling =
+      settled[1].status === "fulfilled" ? settled[1].value : null;
 
     return {
       ok: true,
@@ -170,7 +212,7 @@ export async function loadCampaignBillingBundle(
     const settled = await Promise.allSettled([
       getCampaignBillingLines(campaignId),
       getCampaignBillingGroups(campaignId),
-      getCampaignOperationalBillingDetail(campaignId),
+      loadOperationalBillingForWorkspaceTab(campaignId),
       getFinanceInvoiceRegister({ campaignHeaderId: campaignId }),
     ]);
 
@@ -178,21 +220,8 @@ export async function loadCampaignBillingBundle(
       settled[0].status === "fulfilled" ? settled[0].value : [];
     const billingGroups =
       settled[1].status === "fulfilled" ? settled[1].value : [];
-
-    let operationalBilling: CampaignOperationalBillingDetail | null = null;
-    if (settled[2].status === "fulfilled") {
-      operationalBilling = settled[2].value;
-    } else {
-      const { logCampaignWorkspaceLoadError } = await import(
-        "@/lib/billing/operational-billing-trace"
-      );
-      logCampaignWorkspaceLoadError(
-        "getCampaignOperationalBillingDetail",
-        settled[2].reason,
-        { campaignId }
-      );
-    }
-
+    const operationalBilling =
+      settled[2].status === "fulfilled" ? settled[2].value : null;
     const campaignInvoiceRegister =
       settled[3].status === "fulfilled" ? settled[3].value : [];
 
@@ -223,30 +252,6 @@ export async function loadCampaignPublicationsBundle(
 
 /** Soft timeout so a slow audit_logs scan cannot leave finance audit pending forever. */
 const FINANCE_AUDIT_BUNDLE_TIMEOUT_MS = 8_000;
-
-function withSoftTimeout<T>(
-  promise: Promise<T>,
-  ms: number,
-  fallback: T,
-  onTimeout: () => void
-): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const timer = setTimeout(() => {
-      onTimeout();
-      resolve(fallback);
-    }, ms);
-    promise.then(
-      (value) => {
-        clearTimeout(timer);
-        resolve(value);
-      },
-      (error) => {
-        clearTimeout(timer);
-        reject(error);
-      }
-    );
-  });
-}
 
 export async function loadCampaignFinanceAuditBundle(
   campaignId: string

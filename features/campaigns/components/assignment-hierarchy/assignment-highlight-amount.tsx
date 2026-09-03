@@ -9,19 +9,22 @@ type AssignmentHighlightAmountProps = {
 };
 
 const VARIANT_CLASS = {
-  rev: "thinkway-campaign-cell-highlight-rev thinkway-campaign-cell-rev",
-  cost: "thinkway-campaign-cell-highlight-cost thinkway-campaign-cell-cost",
-  billing: "thinkway-campaign-cell-highlight-billing thinkway-campaign-cell-billing-total",
+  rev: "thinkway-campaign-cell-rev",
+  cost: "thinkway-campaign-cell-cost",
+  billing: "thinkway-campaign-cell-billing-total",
 } as const;
 
-/** Parent row financial emphasis — matches HTML cell-rev / cell-cost / cell-billing-total pills. */
+/**
+ * Parent-row money emphasis — plain mono values (design mock `.tw-v`).
+ * Tint chips are edit-mode only; resting rows stay ink on white.
+ */
 export function AssignmentHighlightAmount({
   variant,
   children,
   className,
 }: AssignmentHighlightAmountProps) {
   return (
-    <span className={cn("inline-block rounded px-1.5 py-0.5 tabular-nums", VARIANT_CLASS[variant], className)}>
+    <span className={cn("tabular-nums", VARIANT_CLASS[variant], className)}>
       {children}
     </span>
   );

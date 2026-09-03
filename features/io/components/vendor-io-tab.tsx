@@ -535,7 +535,6 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
             wide
             tableOnly
             cardSurface
-            fillHeight
             leading={
               <CampaignOperationalSectionHeader
                 title="Orders"

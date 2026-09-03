@@ -634,8 +634,23 @@ export async function getCampaignBillingGroups(supabase: SupabaseClient, campaig
   });
 }
 
-export async function getCampaignOperationalBillingDetail(supabase: SupabaseClient, campaignId: string): Promise<CampaignOperationalBillingDetail | null> {
-    const { data: header, error: headerError } = await supabase
+export type CampaignOperationalBillingDetailOptions = {
+  /**
+   * When true (default), runs commercial repair before the read — required for
+   * invoice create / mutate paths. Workspace Finance tab loads should pass false
+   * so the register is not blocked by a write-heavy sync on every open.
+   */
+  syncCommercial?: boolean;
+};
+
+export async function getCampaignOperationalBillingDetail(
+  supabase: SupabaseClient,
+  campaignId: string,
+  options?: CampaignOperationalBillingDetailOptions
+): Promise<CampaignOperationalBillingDetail | null> {
+  const syncCommercial = options?.syncCommercial !== false;
+
+  const { data: header, error: headerError } = await supabase
     .from("campaign_headers")
     .select("id, currency_code, client_id")
     .eq("id", campaignId)
@@ -653,13 +668,15 @@ export async function getCampaignOperationalBillingDetail(supabase: SupabaseClie
   let error: string | undefined;
 
   try {
-    try {
-      const { prepareCampaignCommercialForInvoice } = await import(
-        "@/lib/billing/repair-invoice-create-pipeline"
-      );
-      await prepareCampaignCommercialForInvoice(supabase, campaignId);
-    } catch {
-      // Commercial sync is best-effort before operational billing read.
+    if (syncCommercial) {
+      try {
+        const { prepareCampaignCommercialForInvoice } = await import(
+          "@/lib/billing/repair-invoice-create-pipeline"
+        );
+        await prepareCampaignCommercialForInvoice(supabase, campaignId);
+      } catch {
+        // Commercial sync is best-effort before operational billing read.
+      }
     }
 
     const loaded = await loadCampaignOperationalBilling(supabase, campaignId);
