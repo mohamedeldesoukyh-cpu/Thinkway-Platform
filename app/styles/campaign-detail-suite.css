@@ -1257,6 +1257,12 @@
 }
 
 /* Creator assignment modal — portaled outside the workspace scroller. */
+[data-slot="sheet-overlay"].campaign-detail-creator-scrim {
+  background: rgba(11, 15, 26, 0.34) !important;
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+}
+
 .campaign-detail-creator-modal[data-slot="sheet-content"] {
   inset: 0 !important;
   left: 0 !important;
@@ -1292,7 +1298,7 @@
 .campaign-detail-creator-modal .tw-cm__l {
   position: relative;
   isolation: isolate;
-  overflow: auto;
+  overflow: hidden;
   padding: 22px 20px;
   color: #fff;
   background: linear-gradient(160deg, #0b3dbf 0%, #0f55e8 38%, #3d82ff 78%, #8fb6ff 130%);
@@ -1494,6 +1500,129 @@
   font-weight: 600;
   text-align: right;
   color: var(--tw-ink, #0b0f1a);
+}
+
+.campaign-detail-creator-modal .tw-dl b.m {
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.campaign-detail-creator-modal .tw-dl b.g {
+  color: var(--tw-ok, #0a7a55);
+}
+
+.campaign-detail-creator-modal .tw-dl b.r {
+  color: var(--tw-bad, #b42318);
+}
+
+.campaign-detail-creator-modal .tw-miss {
+  color: #a9b2c3;
+  font-style: italic;
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.campaign-detail-creator-modal .tw-id {
+  font: 600 12px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  letter-spacing: -0.3px;
+  color: var(--tw-ink2, #41495a);
+}
+
+.campaign-detail-creator-modal .tw-soc {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 11px;
+  padding: 16px 18px;
+}
+
+.campaign-detail-creator-modal .tw-soc > div {
+  padding: 13px 15px;
+  border-radius: 11px;
+  background: var(--tw-soft, #f6f8fb);
+}
+
+.campaign-detail-creator-modal .tw-soc i {
+  display: block;
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.65px;
+  text-transform: uppercase;
+  color: var(--tw-mut, #64748b);
+}
+
+.campaign-detail-creator-modal .tw-soc b {
+  display: block;
+  margin-top: 5px;
+  font: 600 20px Geist, sans-serif;
+  letter-spacing: -0.5px;
+  color: var(--tw-ink, #0b0f1a);
+}
+
+.campaign-detail-creator-modal .tw-note {
+  margin: 13px 15px;
+  padding: 11px 13px;
+  border-radius: 9px;
+  background: var(--tw-soft, #f6f8fb);
+  font-size: 11.5px;
+  color: var(--tw-ink2, #41495a);
+  line-height: 1.55;
+}
+
+.campaign-detail-creator-modal .tw-note.wrn {
+  background: var(--tw-wrnb, #fff6e5);
+  color: var(--tw-wrn, #8a5d12);
+}
+
+.campaign-detail-creator-modal .tw-empty {
+  padding: 44px 20px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--tw-mut, #64748b);
+}
+
+.campaign-detail-creator-modal .tw-dr__x {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--tw-soft, #f6f8fb);
+  color: var(--tw-mut, #64748b);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.campaign-detail-creator-modal .tw-dr__x:hover {
+  background: var(--tw-badb, #fde8e8);
+  color: var(--tw-bad, #b42318);
+}
+
+.campaign-detail-creator-modal .tw-act-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.campaign-detail-creator-modal .tw-act-table th,
+.campaign-detail-creator-modal .tw-act-table td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tw-hair, #edf0f5);
+  text-align: left;
+}
+
+.campaign-detail-creator-modal .tw-act-table th {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--tw-mut, #64748b);
+}
+
+.campaign-detail-creator-modal .tw-act-table .tw-rr,
+.campaign-detail-creator-modal .tw-act-table .tw-v {
+  text-align: right;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
 }
 
 .campaign-detail-creator-modal .tw-b {

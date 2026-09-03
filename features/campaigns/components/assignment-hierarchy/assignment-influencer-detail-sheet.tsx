@@ -1,14 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import {
-  BriefcaseIcon,
-  CircleDollarSignIcon,
-  MoreHorizontalIcon,
-  PencilIcon,
-} from "lucide-react";
+import { MoreHorizontalIcon, PencilIcon } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 
+import { resolveStatusTone } from "@/components/shared/status/status-utils";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,11 +19,11 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AssignmentStatusBadge } from "@/features/campaigns/components/assignment-status-badge";
-import { PlatformBadge } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
 import { DocumentNumber } from "@/components/ui/document-number";
+import { ASSIGNMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import { deliverableLabel } from "@/features/campaigns/line-assignment";
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
+import type { CampaignLineAssignmentStatus } from "@/features/campaigns/types";
 import type { AssignmentHierarchyGroup } from "@/features/campaigns/types/assignment-hierarchy";
 import {
   formatAssignmentDetailDate,
@@ -84,61 +80,49 @@ function formatFollowerShort(count: number | null | undefined): string | null {
   return `${count.toLocaleString()} followers`;
 }
 
-function DetailPill({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex rounded-full border border-border/60 bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-foreground",
-        className
-      )}
-    >
-      {children}
-    </span>
-  );
+function Miss({ children }: { children: ReactNode }) {
+  return <span className="tw-miss">{children}</span>;
 }
 
-function TeamMemberValue({
-  name,
-  email,
+function ModalPill({
+  tone,
+  children,
 }: {
-  name: string | null | undefined;
-  email?: string | null;
+  tone: "n" | "g" | "y" | "r" | "b";
+  children: ReactNode;
 }) {
-  const display = name?.trim() || email?.trim() || "—";
-  return (
-    <span className="inline-flex items-center justify-end gap-2">
-      <span className="inline-flex size-6 shrink-0 items-center justify-center rounded-full bg-muted text-[10px] font-semibold text-muted-foreground">
-        {initialsFromName(display)}
-      </span>
-      <span>{display}</span>
-    </span>
-  );
+  return <span className={`tw-p p-${tone}`}>{children}</span>;
+}
+
+function textOrMiss(value: string | null | undefined, empty = "not set"): ReactNode {
+  const trimmed = value?.trim();
+  if (!trimmed || trimmed === "—") return <Miss>{empty}</Miss>;
+  return trimmed;
 }
 
 function ClientApprovalPill({ status }: { status: string | null }) {
   const normalized = (status ?? "draft").toLowerCase();
-  if (normalized === "approved") {
-    return (
-      <DetailPill className="border-emerald-500/30 bg-emerald-500/10 text-emerald-800 dark:text-emerald-200">
-        Accepted ✓
-      </DetailPill>
-    );
-  }
-  if (normalized === "sent") {
-    return (
-      <DetailPill className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-100">
-        Pending approval
-      </DetailPill>
-    );
-  }
-  if (normalized === "rejected") {
-    return (
-      <DetailPill className="border-red-500/30 bg-red-500/10 text-red-800 dark:text-red-200">
-        Rejected
-      </DetailPill>
-    );
-  }
-  return <DetailPill>Draft</DetailPill>;
+  if (normalized === "approved") return <ModalPill tone="g">Accepted ✓</ModalPill>;
+  if (normalized === "sent") return <ModalPill tone="y">Pending approval</ModalPill>;
+  if (normalized === "rejected") return <ModalPill tone="r">Rejected</ModalPill>;
+  return <ModalPill tone="n">Draft</ModalPill>;
+}
+
+function AssignmentStatusPill({ status }: { status: CampaignLineAssignmentStatus }) {
+  const tone = resolveStatusTone("campaignAssignment", status);
+  const pillTone =
+    tone === "success"
+      ? "g"
+      : tone === "warning"
+        ? "y"
+        : tone === "destructive"
+          ? "r"
+          : tone === "foreground"
+            ? "b"
+            : "n";
+  return (
+    <ModalPill tone={pillTone}>{ASSIGNMENT_STATUS_LABELS[status] ?? status}</ModalPill>
+  );
 }
 
 function ParticipationDetailsTab({
@@ -162,48 +146,33 @@ function ParticipationDetailsTab({
   const liveDateOverdue = isAssignmentLiveDateOverdue(liveDate, line.assignment_status);
 
   return (
-    <div className="px-1">
+    <>
       <DetailField label="Platform">
-        <div className="flex flex-wrap justify-end gap-1.5">
-          {platformLabels.length > 0 ? (
-            platformLabels.map((label) => <DetailPill key={label}>{label}</DetailPill>)
-          ) : (
-            "—"
-          )}
-        </div>
+        {platformLabels.length > 0 ? platformLabels.join(", ") : <Miss>not set</Miss>}
       </DetailField>
       <DetailField label="Deliverables">
-        <div className="flex flex-wrap justify-end gap-1.5">
-          {deliverableLabels.length > 0 ? (
-            deliverableLabels.map((label) => <DetailPill key={label}>{label}</DetailPill>)
-          ) : (
-            "—"
-          )}
-        </div>
+        {deliverableLabels.length > 0 ? deliverableLabels.join(", ") : <Miss>not set</Miss>}
       </DetailField>
       <DetailField label="Ad type">
-        <DetailPill>{line.name || row.displayName}</DetailPill>
+        {textOrMiss(line.name || row.displayName)}
       </DetailField>
       <DetailField label="Vendor">
-        <span className="inline-flex items-center justify-end gap-1.5">
-          <BriefcaseIcon className="size-3.5 text-muted-foreground" aria-hidden />
-          {line.influencer_name ?? "—"}
-        </span>
+        {textOrMiss(line.influencer_name, "not assigned")}
       </DetailField>
       {showInternalFinancials ? (
-        <DetailField label="Inf cost">
+        <DetailField label="Inf cost" valueClassName="m">
           {formatMoney(line.cost_before_vat ?? line.cost, currency)}
         </DetailField>
       ) : null}
-      <DetailField label="Revenue">
+      <DetailField label="Revenue" valueClassName="m">
         {formatMoney(line.revenue_after_vat ?? line.revenue_before_vat, currency)}
       </DetailField>
       {showInternalFinancials ? (
         <>
-          <DetailField label="Profit">
+          <DetailField label="Profit" valueClassName="m g">
             {formatMoney(row.rollups.gp, currency)}
           </DetailField>
-          <DetailField label="Creator profit %">
+          <DetailField label="Creator profit %" valueClassName="m">
             {formatPercent(row.rollups.margin_percent)}
           </DetailField>
         </>
@@ -212,26 +181,23 @@ function ParticipationDetailsTab({
         <ClientApprovalPill status={clientIoStatus} />
       </DetailField>
       <DetailField label="Team member">
-        <TeamMemberValue
-          name={accountManager?.full_name}
-          email={accountManager?.email}
-        />
+        {textOrMiss(accountManager?.full_name || accountManager?.email, "not assigned")}
       </DetailField>
       <DetailField label="Ad status">
-        <AssignmentStatusBadge status={line.assignment_status} />
+        <AssignmentStatusPill status={line.assignment_status} />
       </DetailField>
       <DetailField
         label="Ad date"
-        valueClassName={liveDateOverdue ? "font-medium text-red-600 dark:text-red-400" : undefined}
+        valueClassName={liveDateOverdue ? "r" : undefined}
       >
-        {formatAssignmentDetailDate(liveDate)}
+        {liveDate ? formatAssignmentDetailDate(liveDate) : <Miss>not set</Miss>}
       </DetailField>
       {showInternalFinancials ? (
-        <DetailField label="Payment requested %">
+        <DetailField label="Payment requested %" valueClassName="m">
           {resolvePaymentRequestedPercent(line)}
         </DetailField>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -249,38 +215,50 @@ function GeneralTab({
   const deliverableCount = row.rollups.deliverable_count;
 
   return (
-    <div className="px-1">
-      <DetailField label="Assignment line">
+    <>
+      <DetailField label="Assignment line" valueClassName="m">
         <DocumentNumber value={line.document_number} />
       </DetailField>
-      <DetailField label="Deliverable units">{deliverableCount}</DetailField>
-      <DetailField label="Invoiced value">
+      <DetailField label="Deliverable units" valueClassName="m">
+        {deliverableCount}
+      </DetailField>
+      <DetailField label="Invoiced value" valueClassName="m">
         {formatMoney(group.rollups?.invoiced_value ?? 0, currency)}
       </DetailField>
-      <DetailField label="Remaining billable">
+      <DetailField label="Remaining billable" valueClassName="m">
         {formatMoney(group.rollups?.remaining_value ?? 0, currency)}
       </DetailField>
       {showInternalFinancials ? (
-        <DetailField label="Collected value">
+        <DetailField label="Collected value" valueClassName="m r">
           {formatMoney(group.rollups?.collected_value ?? 0, currency)}
         </DetailField>
       ) : null}
       <DetailField label="Campaign dates">
-        {formatAssignmentDetailDate(line.start_date)}
-        {line.end_date ? ` – ${formatAssignmentDetailDate(line.end_date)}` : ""}
+        {line.start_date || line.end_date ? (
+          <>
+            {formatAssignmentDetailDate(line.start_date)}
+            {line.end_date ? ` – ${formatAssignmentDetailDate(line.end_date)}` : ""}
+          </>
+        ) : (
+          <Miss>not set</Miss>
+        )}
       </DetailField>
       {showInternalFinancials ? (
         <>
-          <DetailField label="Ops status">{row.opsStatusLabel}</DetailField>
-          <DetailField label="Billing status">{row.billingStatusLabel}</DetailField>
+          <DetailField label="Ops status">
+            <ModalPill tone="b">{row.opsStatusLabel}</ModalPill>
+          </DetailField>
+          <DetailField label="Billing status">
+            <ModalPill tone="y">{row.billingStatusLabel}</ModalPill>
+          </DetailField>
           {line.vendor_io_document_number ? (
             <DetailField label="Vendor IO">
-              <DocumentNumber value={line.vendor_io_document_number} />
+              <span className="tw-id">{line.vendor_io_document_number}</span>
             </DetailField>
           ) : null}
         </>
       ) : null}
-    </div>
+    </>
   );
 }
 
@@ -298,61 +276,51 @@ function SocialDataTab({ group }: { group: AssignmentHierarchyGroup }) {
 
   if (accounts.length === 0) {
     return (
-      <p className="px-1 py-8 text-center text-sm text-muted-foreground">
+      <p className="tw-empty">
         No linked social accounts for this creator.
       </p>
     );
   }
 
+  const account = accounts[0];
+  const followerValue =
+    account.follower_count != null ? account.follower_count.toLocaleString() : "—";
+  const engagementValue =
+    account.engagement_rate != null ? formatPercent(account.engagement_rate) : "—";
+
   return (
-    <div className="space-y-3 px-1">
-      {accounts.map((account) => (
-        <div
-          key={`${account.platform}-${account.handle}`}
-          className="rounded-xl border border-border/50 bg-muted/20 p-4"
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <PlatformBadge platform={account.platform} />
-              {account.profile_url ? (
-                <a
-                  href={account.profile_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-sm font-medium text-foreground hover:text-primary hover:underline"
-                >
-                  @{account.handle}
-                </a>
-              ) : (
-                <span className="text-sm font-medium">@{account.handle}</span>
-              )}
-            </div>
-          </div>
-          <div className="mt-3 grid grid-cols-2 gap-3 text-xs">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Followers
-              </p>
-              <p className="mt-0.5 font-medium tabular-nums">
-                {account.follower_count != null
-                  ? account.follower_count.toLocaleString()
-                  : "—"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                Engagement
-              </p>
-              <p className="mt-0.5 font-medium tabular-nums">
-                {account.engagement_rate != null
-                  ? formatPercent(account.engagement_rate)
-                  : "—"}
-              </p>
-            </div>
-          </div>
+    <>
+      <div className="tw-soc">
+        <div>
+          <i>Followers</i>
+          <b>{followerValue}</b>
         </div>
-      ))}
-    </div>
+        <div>
+          <i>Engagement</i>
+          <b>{engagementValue}</b>
+        </div>
+        <div>
+          <i>Avg reach</i>
+          <b>—</b>
+        </div>
+        <div>
+          <i>Posts tracked</i>
+          <b>0</b>
+        </div>
+        <div>
+          <i>Verified</i>
+          <b>Yes</b>
+        </div>
+        <div>
+          <i>Platform</i>
+          <b>{account.platform}</b>
+        </div>
+      </div>
+      <p className="tw-note wrn">
+        Followers and engagement come from the connected profile. Reach is blank because none of this
+        campaign’s publications synced.
+      </p>
+    </>
   );
 }
 
@@ -363,91 +331,76 @@ function ActivityTab({ group }: { group: AssignmentHierarchyGroup }) {
   const currency = resolveAssignmentLineCurrency(line);
 
   return (
-    <div className="space-y-4">
-      <div className="inline-flex rounded-lg bg-muted/50 p-1">
+    <div>
+      <div className="tw-cdt">
         {ACTIVITY_SUB_TABS.map((tab) => (
           <button
             key={tab}
             type="button"
+            aria-pressed={subTab === tab}
             onClick={() => setSubTab(tab)}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-xs font-medium capitalize transition-colors",
-              subTab === tab
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
           >
-            {tab}
+            {tab === "content" ? "Content" : tab === "publications" ? "Publications" : tab === "payments" ? "Payments" : "Actions"}
           </button>
         ))}
       </div>
 
       {subTab === "content" ? (
         deliverables.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-border/70 px-6 py-10 text-center">
-            <p className="text-sm text-muted-foreground">
-              No deliverables on this assignment yet. Add deliverables from the Assignments grid.
-            </p>
-          </div>
+          <p className="tw-empty">No deliverables on this assignment yet.</p>
         ) : (
-          <div className="overflow-hidden rounded-xl border border-border/60">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-muted/40 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                <tr>
-                  <th className="px-3 py-2.5">Name</th>
-                  <th className="px-3 py-2.5">Type</th>
-                  <th className="px-3 py-2.5 text-right">Revenue</th>
+          <table className="tw-act-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Type</th>
+                <th className="tw-rr">Revenue</th>
+              </tr>
+            </thead>
+            <tbody>
+              {deliverables.map((deliverable) => (
+                <tr key={deliverable.id}>
+                  <td className="tw-nm">{deliverable.label}</td>
+                  <td className="tw-t">
+                    {deliverable.deliverable_type_label ||
+                      deliverableLabel(deliverable.deliverable_type)}
+                  </td>
+                  <td className="tw-v">
+                    {formatMoney(deliverable.revenue_before_vat, currency)}
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {deliverables.map((deliverable) => (
-                  <tr key={deliverable.id} className="border-t border-border/40">
-                    <td className="px-3 py-2.5 font-medium">{deliverable.label}</td>
-                    <td className="px-3 py-2.5 text-muted-foreground">
-                      {deliverable.deliverable_type_label ||
-                        deliverableLabel(deliverable.deliverable_type)}
-                    </td>
-                    <td className="px-3 py-2.5 text-right tabular-nums">
-                      {formatMoney(deliverable.revenue_before_vat, currency)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         )
       ) : null}
 
       {subTab === "publications" ? (
-        <div className="rounded-xl border border-dashed border-border/70 px-6 py-10 text-center">
-          <p className="text-sm text-muted-foreground">
-            Track live URLs in the Publications tab for this campaign.
-          </p>
-        </div>
+        <p className="tw-empty">Track live URLs in the Publications tab for this campaign.</p>
       ) : null}
 
       {subTab === "payments" ? (
-        <div className="px-1">
+        <>
           <DetailField label="Vendor payment">
-            {line.vendor_payment_status
-              ? line.vendor_payment_status.replace(/_/g, " ")
-              : "—"}
+            {textOrMiss(line.vendor_payment_status?.replace(/_/g, " "))}
           </DetailField>
-          <DetailField label="Line payment status">{line.payment_status}</DetailField>
-          <DetailField label="Cost received">
+          <DetailField label="Line payment status">
+            {textOrMiss(line.payment_status)}
+          </DetailField>
+          <DetailField label="Cost received" valueClassName="m">
             {formatMoney(line.cost_received, line.cost_received_currency || currency)}
           </DetailField>
-        </div>
+        </>
       ) : null}
 
       {subTab === "actions" ? (
-        <div className="px-1">
-          <DetailField label="Operational status">{line.operational_status}</DetailField>
-          <DetailField label="Billing status">{line.billing_status}</DetailField>
+        <>
+          <DetailField label="Operational status">{textOrMiss(line.operational_status)}</DetailField>
+          <DetailField label="Billing status">{textOrMiss(line.billing_status)}</DetailField>
           <DetailField label="Assignment locked">
             {line.vendor_assignment_locked ? "Yes" : "No"}
           </DetailField>
-        </div>
+        </>
       ) : null}
     </div>
   );
@@ -457,59 +410,39 @@ function PerformanceTab({ group, row }: { group: AssignmentHierarchyGroup; row: 
   const line = group.line;
   const currency = resolveAssignmentLineCurrency(line);
   const total = line.revenue_after_vat ?? line.revenue_before_vat ?? row.rollups.revenue;
-  const max = Math.max(total, 1);
 
   return (
-    <div className="space-y-6 px-1">
-      <div className="flex items-center gap-3">
-        <span className="inline-flex size-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">
-          <CircleDollarSignIcon className="size-5" aria-hidden />
-        </span>
+    <>
+      <div className="tw-soc">
         <div>
-          <p className="text-2xl font-semibold tabular-nums tracking-tight">
-            {formatMoney(total, currency)}
-          </p>
-          <p className="text-xs text-muted-foreground">Total revenue with fees</p>
+          <i>Total revenue with fees</i>
+          <b>{formatMoney(total, currency)}</b>
+        </div>
+        <div>
+          <i>Scope</i>
+          <b>Campaign</b>
+        </div>
+        <div>
+          <i>Reach</i>
+          <b>—</b>
+        </div>
+        <div>
+          <i>Views</i>
+          <b>—</b>
+        </div>
+        <div>
+          <i>Engagements</i>
+          <b>—</b>
+        </div>
+        <div>
+          <i>Publications</i>
+          <b>0</b>
         </div>
       </div>
-
-      <div className="rounded-xl border border-border/60 bg-muted/15 p-4">
-        <svg viewBox="0 0 320 140" className="h-36 w-full" aria-hidden>
-          {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
-            const y = 120 - ratio * 90;
-            return (
-              <line
-                key={ratio}
-                x1="24"
-                x2="300"
-                y1={y}
-                y2={y}
-                stroke="currentColor"
-                strokeDasharray="4 4"
-                className="text-border/80"
-              />
-            );
-          })}
-          <line
-            x1="160"
-            x2="160"
-            y1={120 - (total / max) * 90}
-            y2="120"
-            stroke="currentColor"
-            className="text-emerald-500/50"
-          />
-          <circle
-            cx="160"
-            cy={120 - (total / max) * 90}
-            r="5"
-            className="fill-emerald-500"
-          />
-          <text x="160" y="132" textAnchor="middle" className="fill-muted-foreground text-[10px]">
-            Campaign
-          </text>
-        </svg>
-      </div>
-    </div>
+      <p className="tw-note wrn">
+        Reach, views and engagements stay empty until a publication syncs.
+      </p>
+    </>
   );
 }
 
@@ -556,6 +489,7 @@ export function AssignmentInfluencerDetailSheet({
         side="right"
         showCloseButton={false}
         showOverlay
+        overlayClassName="campaign-detail-creator-scrim"
         className="campaign-detail-creator-modal campaign-detail-suite"
       >
         {!hasDetail || !line || !row || !group ? (
@@ -573,7 +507,7 @@ export function AssignmentInfluencerDetailSheet({
 
             <div className="tw-cm__l">
               <div className="cr">
-                {campaignName} / {handle || line.document_number}
+                {campaignName} / {line.document_number || handle}
               </div>
               <div className="tw-cm__av">{initialsFromName(creatorName)}</div>
               <h2>
@@ -655,16 +589,14 @@ export function AssignmentInfluencerDetailSheet({
                       ) : null}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                  <Button
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    className="tw-b sm"
+                    className="tw-dr__x"
                     aria-label="Close"
                     onClick={() => onOpenChange(false)}
                   >
                     ×
-                  </Button>
+                  </button>
                 </div>
 
                 <div className="tw-cm__b">
