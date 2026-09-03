@@ -8,9 +8,16 @@ import {
 } from "@/lib/documents/format-document-number";
 
 test("formatDocumentNumberForDisplay strips padded serial segments", () => {
-  assert.equal(formatDocumentNumberForDisplay("TW-2026-0001"), "TW-2026-1");
-  assert.equal(formatDocumentNumberForDisplay("TW-2026-0001-A"), "TW-2026-1-A");
+  assert.equal(formatDocumentNumberForDisplay("TW-2026-0001"), "Camp#2026-1");
+  assert.equal(formatDocumentNumberForDisplay("TW-2026-0001-A"), "Camp#2026-1-A");
   assert.equal(formatDocumentNumberForDisplay("INF-000002"), "INF-2");
+});
+
+test("documentNumberLookupCandidates includes Camp# display → TW storage pads", () => {
+  const candidates = documentNumberLookupCandidates("Camp#2026-1");
+  assert.ok(candidates.includes("Camp#2026-1"));
+  assert.ok(candidates.includes("TW-2026-1"));
+  assert.ok(candidates.includes("TW-2026-0001"));
 });
 
 test("documentNumberLookupCandidates includes common zero-padded storage forms", () => {
@@ -32,4 +39,5 @@ test("formatDocumentNumberForDisplay strips padded vendor IO revision numbers", 
 test("documentNumberDisplayTitle returns canonical when display differs", () => {
   assert.equal(documentNumberDisplayTitle("VIO-2026-0006/2"), "VIO-2026-0006/2");
   assert.equal(documentNumberDisplayTitle("VIO-2026-6/2"), undefined);
+  assert.equal(documentNumberDisplayTitle("TW-2026-0001"), "TW-2026-0001");
 });

@@ -313,7 +313,8 @@
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  /* Wider than the 104px mock — ISO money like "EGP 1,235,561" must not clip */
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 0;
   background: #fff;
   border-top: 1px solid var(--tw-hair);
@@ -350,8 +351,9 @@
   letter-spacing: -0.35px;
   text-align: left;
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* Match HTML .tw-ms2 b — never ellipsis-truncate money or stage values */
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .campaign-detail-suite .tw-ms2 b.g {

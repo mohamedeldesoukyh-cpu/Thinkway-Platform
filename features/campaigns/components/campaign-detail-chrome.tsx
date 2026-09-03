@@ -99,8 +99,33 @@ export function CampaignDetailChrome({
       "[data-campaign-workspace-scroll]"
     );
     if (!scroller) return;
-    const onScroll = () => setMini(scroller.scrollTop > 72);
-    onScroll();
+
+    let lastMini = scroller.scrollTop > 72;
+    setMini(lastMini);
+
+    const onScroll = () => {
+      const nextMini = scroller.scrollTop > 72;
+      if (nextMini === lastMini) return;
+
+      const chrome = document.querySelector<HTMLElement>(
+        "[data-campaign-shell='chrome']"
+      );
+      const before = chrome?.getBoundingClientRect().height ?? 0;
+      lastMini = nextMini;
+      setMini(nextMini);
+
+      // Wait for mini chrome paint, then keep the same content under the cursor.
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const after = chrome?.getBoundingClientRect().height ?? 0;
+          const delta = before - after;
+          if (Math.abs(delta) > 1) {
+            scroller.scrollTop = Math.max(0, scroller.scrollTop + delta);
+          }
+        });
+      });
+    };
+
     scroller.addEventListener("scroll", onScroll, { passive: true });
     return () => scroller.removeEventListener("scroll", onScroll);
   }, []);

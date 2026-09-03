@@ -5,9 +5,11 @@
 | Layer | Example |
 |-------|---------|
 | **DB (canonical)** | `TW-2026-0002` |
-| **UI (display)** | `TW-2026-2` via `formatDocumentNumberForDisplay` |
+| **UI (display)** | `Camp#2026-2` via `formatDocumentNumberForDisplay` |
 
-Line suffixes: `TW-2026-0002-A` → display `TW-2026-2-A`.
+Line suffixes: `TW-2026-0002-A` → display `Camp#2026-2-A`.
+
+Storage keeps the `TW-` prefix for sequences, migrations, and intelligence keys. The UI uses **Camp#** so campaign numbers are not confused with Thinkway product branding.
 
 ## Sequence source (not MAX at insert)
 
@@ -34,7 +36,7 @@ Or use `supabase/scripts/delete_bootstrap_campaigns_and_reseed.sql` (`v_execute 
 
 Sets `document_sequences.last_value` = MAX surviving `TW-2026-NNNN` serial. Next create → MAX+1.
 
-Example: only `TW-2026-0001` remains → `last_value = 1` → next campaign `TW-2026-0002` (display `TW-2026-2`).
+Example: only `TW-2026-0001` remains → `last_value = 1` → next campaign `TW-2026-0002` (display `Camp#2026-2`).
 
 ## Production rule (post go-live)
 

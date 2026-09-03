@@ -231,11 +231,8 @@ export function ClientIoTab({
         </div>
       }
       registerLabel="Document workspace"
-      collapseRegister
       registerCount={1}
       registerStorageKey={`client-io-${campaignId}`}
-      defaultRegisterOpen={false}
-      persistRegisterOpen={false}
       forceRegisterOpen={Boolean(forceOpenRegister)}
     >
       <ClientIoForm

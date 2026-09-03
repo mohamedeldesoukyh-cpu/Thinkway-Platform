@@ -1,15 +1,14 @@
 "use client";
 
-import { PencilIcon } from "lucide-react";
 import { useState } from "react";
 
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import {
+  CampaignOpsCard,
+  CampaignOpsStat,
+} from "@/features/campaigns/components/aurora/campaign-ops-card";
 import { CampaignPoEditSheet } from "@/features/campaigns/components/campaign-po-edit-sheet";
 import {
   PO_STATUS_LABELS,
-  PO_STATUS_VARIANT,
   getPoHealthColor,
 } from "@/lib/finance/po/status";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
@@ -23,6 +22,32 @@ type CampaignPoSectionProps = {
   po: CampaignPoSummary;
   currencyOptions: { value: string; label: string }[];
 };
+
+function pill(tone: "green" | "blue" | "amber" | "rose" | "mut", label: string) {
+  return (
+    <span
+      className={cn(
+        "thinkway-aurora-pill h-5 text-[10.5px]",
+        tone === "green" && "thinkway-aurora-pill-green",
+        tone === "blue" && "thinkway-aurora-pill-blue",
+        tone === "amber" && "thinkway-aurora-pill-amber",
+        tone === "rose" && "thinkway-aurora-pill-rose",
+        tone === "mut" && "thinkway-aurora-pill-mut"
+      )}
+    >
+      {label}
+    </span>
+  );
+}
+
+function poTone(
+  status: CampaignPoSummary["po_status"]
+): "green" | "blue" | "amber" | "rose" | "mut" {
+  if (status === "active" || status === "closed") return "green";
+  if (status === "near_limit" || status === "draft") return "amber";
+  if (status === "exceeded" || status === "expired") return "rose";
+  return "mut";
+}
 
 export function CampaignPoSection({
   campaignId,
@@ -42,89 +67,81 @@ export function CampaignPoSection({
 
   return (
     <>
-      <CampaignFlatSection
+      <CampaignOpsCard
         title="Client PO governance"
-        description="Consumption uses billable base (Revenue + UR Rev + AF). VAT never affects PO utilization."
-        actions={
-          <Button
-            variant="outline"
-            size="sm"
-            className="thinkway-campaign-btn h-[30px] text-[11px] shadow-none"
-            onClick={() => setEditOpen(true)}
-          >
-            <PencilIcon data-icon="inline-start" className="size-3.5" />
-            Edit PO
-          </Button>
+        subtitle="Consumption uses billable base (Revenue + UR Rev + AF)"
+        className={
+          po.po_status === "exceeded" || po.po_status === "expired"
+            ? "is-alert"
+            : undefined
         }
+        status={pill(poTone(po.po_status), PO_STATUS_LABELS[po.po_status])}
+        actionLabel="Edit PO"
+        onAction={() => setEditOpen(true)}
       >
-        <div className="space-y-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Badge variant={PO_STATUS_VARIANT[po.po_status]}>
-              {PO_STATUS_LABELS[po.po_status]}
-            </Badge>
-            {po.po_override_approved ? (
-              <Badge variant="destructive">Override approved</Badge>
-            ) : null}
-            {po.fx_snapshot_at ? (
-              <Badge variant="outline">FX snapshot preserved</Badge>
-            ) : null}
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <Metric label="PO number" value={po.po_number ?? "—"} />
-            <Metric
-              label="PO amount"
-              value={formatMoney(po.po_amount_original, po.po_currency ?? campaignCurrency)}
-              valueClassName="thinkway-campaign-c-amber"
-            />
-            <Metric label="PO currency" value={po.po_currency ?? campaignCurrency} />
-            <Metric
-              label="FX rate"
-              value={
-                po.po_exchange_rate != null
-                  ? `1 ${po.po_currency ?? campaignCurrency} = ${po.po_exchange_rate.toFixed(4)} ${campaignCurrency}`
-                  : "—"
-              }
-            />
-            <Metric
-              label="Converted PO"
-              value={formatMoney(po.po_amount_campaign_currency, campaignCurrency)}
-            />
-            <Metric
-              label="Consumed"
-              value={formatMoney(po.po_consumed_amount, campaignCurrency)}
-              valueClassName="thinkway-campaign-c-amber"
-            />
-            <Metric
-              label="Remaining"
-              value={formatMoney(po.po_remaining_amount, campaignCurrency)}
-            />
-            <Metric
-              label="Remaining %"
-              value={
-                po.po_remaining_percent != null
-                  ? formatPercent(po.po_remaining_percent)
-                  : "—"
-              }
-            />
-            <Metric label="Expiry" value={po.po_expiry_date ?? "—"} />
-          </div>
-
-          {po.po_amount_campaign_currency > 0 ? (
-            <div className="space-y-1.5">
-              <div className="thinkway-campaign-field-label mb-1">
-                PO consumption · {consumedPct.toFixed(1)}% utilized
-              </div>
-              <div className="thinkway-campaign-po-progress-bar">
-                <div
-                  className={cn("thinkway-campaign-po-progress-fill transition-all", getPoHealthColor(po.health))}
-                  style={{ width: `${consumedPct}%` }}
-                />
-              </div>
+        <CampaignOpsStat label="PO number" value={po.po_number ?? "—"} />
+        <CampaignOpsStat
+          label="PO amount"
+          value={formatMoney(po.po_amount_original, po.po_currency ?? campaignCurrency)}
+          tone="amber"
+        />
+        <CampaignOpsStat
+          label="PO currency"
+          value={po.po_currency ?? campaignCurrency}
+        />
+        <CampaignOpsStat
+          label="FX rate"
+          value={
+            po.po_exchange_rate != null
+              ? `1 ${po.po_currency ?? campaignCurrency} = ${po.po_exchange_rate.toFixed(4)} ${campaignCurrency}`
+              : "—"
+          }
+        />
+        <CampaignOpsStat
+          label="Converted PO"
+          value={formatMoney(po.po_amount_campaign_currency, campaignCurrency)}
+        />
+        <CampaignOpsStat
+          label="Consumed"
+          value={formatMoney(po.po_consumed_amount, campaignCurrency)}
+          tone="amber"
+        />
+        <CampaignOpsStat
+          label="Remaining"
+          value={formatMoney(po.po_remaining_amount, campaignCurrency)}
+        />
+        <CampaignOpsStat
+          label="Remaining %"
+          value={
+            po.po_remaining_percent != null
+              ? formatPercent(po.po_remaining_percent)
+              : "—"
+          }
+        />
+        <CampaignOpsStat label="Expiry" value={po.po_expiry_date ?? "—"} />
+        {po.po_override_approved ? (
+          <CampaignOpsStat label="Override" value="Approved" tone="amber" />
+        ) : null}
+        {po.fx_snapshot_at ? (
+          <CampaignOpsStat label="FX snapshot" value="Preserved" tone="mut" />
+        ) : null}
+        {po.po_amount_campaign_currency > 0 ? (
+          <div className="space-y-1.5 border-t border-[var(--tw-hair)] px-[15px] py-2.5">
+            <div className="text-[11px] text-[var(--tw-mut)]">
+              PO consumption · {consumedPct.toFixed(1)}% utilized
             </div>
-          ) : null}
-        </div>
-      </CampaignFlatSection>
+            <div className="thinkway-campaign-po-progress-bar">
+              <div
+                className={cn(
+                  "thinkway-campaign-po-progress-fill transition-all",
+                  getPoHealthColor(po.health)
+                )}
+                style={{ width: `${consumedPct}%` }}
+              />
+            </div>
+          </div>
+        ) : null}
+      </CampaignOpsCard>
 
       <CampaignPoEditSheet
         campaignId={campaignId}
@@ -136,22 +153,5 @@ export function CampaignPoSection({
         onOpenChange={setEditOpen}
       />
     </>
-  );
-}
-
-function Metric({
-  label,
-  value,
-  valueClassName,
-}: {
-  label: string;
-  value: string;
-  valueClassName?: string;
-}) {
-  return (
-    <div>
-      <div className="thinkway-campaign-field-label">{label}</div>
-      <div className={cn("thinkway-campaign-field-val tabular-nums", valueClassName)}>{value}</div>
-    </div>
   );
 }

@@ -506,7 +506,6 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
           },
         ]}
         registerLabel="Orders"
-        collapseRegister
         registerCount={sorted.length}
         registerStorageKey={`vendor-io-${campaignId}`}
         forceRegisterOpen={Boolean(initialSelectedId)}

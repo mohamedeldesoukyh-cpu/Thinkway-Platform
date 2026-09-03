@@ -13,7 +13,7 @@ Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
 ```
 
 - Brand-first campaign create; commercial fields live on **brands**.
-- Header codes `TW-YYYY-NNNN`; lines `{header}-A/-B/-C` (yearly reset).
+- Header codes stored `TW-YYYY-NNNN`; **UI display** `Camp#YYYY-N`; lines `{header}-A/-B/-C` (yearly reset).
 - Finance (revenue, cost, GP, PO, billing) at **line** level; aggregate upward.
 - UI: Legal entity · Brand · Vendor/Influencer · Campaign · Campaign line · Vendor assignment.
 

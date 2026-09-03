@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import {
   buildEntityRouteKey,
   entityPageTitle,
@@ -69,12 +70,13 @@ export function metadataTitleForEntity(
   entity: EntityPageContext["entity"],
   meta?: string | null
 ): string {
+  const rawNumber =
+    entity.document_number?.trim() || entity.serial_number?.trim() || null;
   const displayName =
     entity.displayName?.trim() ||
     entity.name?.trim() ||
     entity.display_name?.trim() ||
-    entity.document_number?.trim() ||
-    entity.serial_number?.trim() ||
+    (rawNumber ? formatDocumentNumberForDisplay(rawNumber) : null) ||
     "Workspace";
   return entityPageTitle(displayName, meta);
 }

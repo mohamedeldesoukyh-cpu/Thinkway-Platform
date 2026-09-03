@@ -7,7 +7,10 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
+import {
+  CampaignOpsCard,
+  CampaignOpsStat,
+} from "@/features/campaigns/components/aurora/campaign-ops-card";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
 import { CommercialVersionHistoryDialog } from "@/features/campaigns/components/commercial-version-history-dialog";
 import { formatMoney, formatPercent } from "@/features/campaigns/utils";
@@ -30,30 +33,30 @@ type CampaignOverviewDetailsProps = {
   layout?: "stack" | "grid";
   /** @deprecated Typography now uses shared operational detail rows. */
   compactTypography?: boolean;
+  /** Optional header actions (Details panel / Edit header). */
+  headerActions?: ReactNode;
 };
 
-function InfoRow({
-  label,
-  value,
-  valueClassName,
-}: {
-  label: string;
-  value: ReactNode;
-  valueClassName?: string;
-}) {
+function pill(tone: "green" | "blue" | "amber" | "rose" | "mut", label: string) {
   return (
-    <div className="thinkway-campaign-info-row">
-      <span className="thinkway-campaign-info-lbl">{label}</span>
-      <span className={cn("thinkway-campaign-info-val tabular-nums", valueClassName)}>
-        {value}
-      </span>
-    </div>
+    <span
+      className={cn(
+        "thinkway-aurora-pill h-5 text-[10.5px]",
+        tone === "green" && "thinkway-aurora-pill-green",
+        tone === "blue" && "thinkway-aurora-pill-blue",
+        tone === "amber" && "thinkway-aurora-pill-amber",
+        tone === "rose" && "thinkway-aurora-pill-rose",
+        tone === "mut" && "thinkway-aurora-pill-mut"
+      )}
+    >
+      {label}
+    </span>
   );
 }
 
 export function CampaignOverviewDetails({
   workspace,
-  layout = "grid",
+  headerActions,
 }: CampaignOverviewDetailsProps) {
   const currency = workspace.currency_code;
   const displayGroup = resolveCampaignDisplayGroup(workspace);
@@ -61,13 +64,19 @@ export function CampaignOverviewDetails({
   const displayDates = resolveCampaignDisplayDates(workspace);
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  const gridClass =
-    layout === "grid" ? "thinkway-campaign-overview-grid" : "flex flex-col gap-3.5";
-
   return (
-    <div className={gridClass}>
-      <CampaignFlatSection title="Campaign header" variant="info-card">
-        <InfoRow
+    <>
+      <CampaignOpsCard
+        title="Campaign header"
+        subtitle="Identity · status · currency"
+        status={pill("blue", workspace.document_number)}
+      >
+        {headerActions ? (
+          <div className="flex flex-wrap gap-2 border-b border-[var(--tw-hair)] px-[15px] py-2">
+            {headerActions}
+          </div>
+        ) : null}
+        <CampaignOpsStat
           label="Campaign #"
           value={
             <DocumentNumber
@@ -76,17 +85,21 @@ export function CampaignOverviewDetails({
             />
           }
         />
-        <InfoRow label="Name" value={workspace.name} />
-        <InfoRow
+        <CampaignOpsStat label="Name" value={workspace.name} />
+        <CampaignOpsStat
           label="Status"
           value={<CampaignStatusBadge status={workspace.status} />}
         />
-        <InfoRow label="Platform" value={displayPlatform} />
-        <InfoRow label="Currency" value={workspace.currency_code} />
-      </CampaignFlatSection>
+        <CampaignOpsStat label="Platform" value={displayPlatform} />
+        <CampaignOpsStat label="Currency" value={workspace.currency_code} />
+      </CampaignOpsCard>
 
-      <CampaignFlatSection title="Hierarchy" variant="info-card">
-        <InfoRow
+      <CampaignOpsCard
+        title="Hierarchy"
+        subtitle="Group · legal entity · brand"
+        status={pill("mut", displayGroup?.name ?? "—")}
+      >
+        <CampaignOpsStat
           label="Group"
           value={
             displayGroup ? (
@@ -98,7 +111,7 @@ export function CampaignOverviewDetails({
             )
           }
         />
-        <InfoRow
+        <CampaignOpsStat
           label="Legal entity"
           value={
             workspace.client ? (
@@ -113,44 +126,48 @@ export function CampaignOverviewDetails({
             )
           }
         />
-        <InfoRow label="Brand" value={workspace.brand?.name ?? "—"} />
-        <InfoRow label="Team" value={workspace.team?.name ?? "—"} />
-        <InfoRow
+        <CampaignOpsStat label="Brand" value={workspace.brand?.name ?? "—"} />
+        <CampaignOpsStat label="Team" value={workspace.team?.name ?? "—"} />
+        <CampaignOpsStat
           label="Account manager"
           value={
             workspace.account_manager?.full_name ??
             workspace.account_manager?.email ??
             "—"
           }
-          valueClassName={
-            !workspace.account_manager ? "thinkway-campaign-c-gray" : undefined
-          }
+          tone={!workspace.account_manager ? "mut" : "default"}
         />
-      </CampaignFlatSection>
+      </CampaignOpsCard>
 
-      <CampaignFlatSection title="Commercial" variant="info-card">
-        <InfoRow
+      <CampaignOpsCard
+        title="Commercial"
+        subtitle="Dates · budget · P&L"
+        status={pill(
+          workspace.financials.po_exceeded ? "rose" : "green",
+          workspace.financials.po_exceeded ? "PO exceeded" : "On track"
+        )}
+        actionLabel="History"
+        onAction={() => setHistoryOpen(true)}
+      >
+        <CampaignOpsStat
           label="Dates"
           value={`${formatDate(displayDates.start)} – ${formatDate(displayDates.end)}`}
         />
-        <InfoRow
+        <CampaignOpsStat
           label="Target market"
           value={
             formatCampaignTargetMarketLabel(workspace.target_market) ??
             "Legal entity country (default)"
           }
         />
-        <InfoRow
+        <CampaignOpsStat
           label="Budget (PO)"
           value={formatMoney(workspace.financials.budget, currency)}
-          valueClassName={cn(
-            "thinkway-campaign-c-amber",
-            workspace.financials.po_exceeded && "thinkway-campaign-c-red"
-          )}
+          tone={workspace.financials.po_exceeded ? "amber" : "default"}
         />
         {workspace.financials.po_exceeded ||
         workspace.po.po_status === "near_limit" ? (
-          <InfoRow
+          <CampaignOpsStat
             label="PO utilization"
             value={
               <Badge variant={PO_STATUS_VARIANT[workspace.po.po_status]}>
@@ -161,48 +178,39 @@ export function CampaignOverviewDetails({
             }
           />
         ) : null}
-        <InfoRow
+        <CampaignOpsStat
           label="Revenue"
           value={formatMoney(workspace.financials.revenue, currency)}
-          valueClassName="thinkway-campaign-c-blue"
+          tone="blue"
         />
-        <InfoRow
+        <CampaignOpsStat
           label="Cost"
           value={formatMoney(workspace.financials.cost, currency)}
         />
-        <InfoRow
+        <CampaignOpsStat
           label="GP"
           value={formatMoney(workspace.financials.gp, currency)}
-          valueClassName={cn(
+          tone={
             workspace.financials.gp < 0
-              ? "thinkway-campaign-c-red"
+              ? "amber"
               : workspace.financials.gp > 0
-                ? "thinkway-campaign-c-green"
-                : undefined
-          )}
+                ? "pos"
+                : "mut"
+          }
         />
-        <InfoRow
+        <CampaignOpsStat
           label="Margin"
           value={formatPercent(workspace.financials.margin_percent)}
+          tone={workspace.financials.margin_percent >= 20 ? "pos" : "default"}
         />
-        <div className="pt-1">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => setHistoryOpen(true)}
-          >
-            Commercial history
-          </Button>
-        </div>
-      </CampaignFlatSection>
+      </CampaignOpsCard>
 
       <CommercialVersionHistoryDialog
         open={historyOpen}
         onOpenChange={setHistoryOpen}
         campaignHeaderId={workspace.id}
       />
-    </div>
+    </>
   );
 }
 

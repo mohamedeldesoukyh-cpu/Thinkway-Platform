@@ -3,9 +3,11 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Campaign / finance design spec (`THINKWAY_CAMPAIGN_FINANCE_DESIGN_SPEC.md`).
 
-## In progress 2026-09-03 — Finance speed + Assignments colors + Overview cards
+## In progress 2026-09-04 — Campaign display prefix Camp#
 
-Finance tab: eager billing prefetch on mount; workspace loads skip commercial repair sync (`syncCommercial: false`); 6s soft-timeout on operational billing so lines/register are not blocked. Assignments: remove Rev/Cost/Total Billing tint chips; suite CSS Grid row colors beat workspace `td`/`!important` rules. Overview ops cards: suite gradient header + full-bleed padding win over workspace border/padding. Vendor IO: removed nested `fillHeight` viewport clip so the workspace scroller can reach all rows. No migrations. Not on Production.
+UI campaign numbers show `Camp#YYYY-N` / `Camp#YYYY-N-A` via `formatDocumentNumberForDisplay`. DB still stores `TW-YYYY-NNNN`. Lookup accepts Camp# → TW. Invoice Campaign No. uses the same display helper. No migrations. Not on Production.
+
+Campaign details & PO governance now sits above Lifecycle Details as ops cards (same chrome as Health/Assignments). Removed collapse-table on Assignments, Workflow, Finance, Vendor IO, and Client IO Document workspace (kept Document & delivery details). Mini chrome scroll compensation so Vendor IO no longer jumps up while scrolling. KPI Revenue no longer ellipsis-clips. No migrations. Not on Production.
 
 ## In progress 2026-09-03 — Design spec remainder
 

@@ -181,7 +181,6 @@ export function CampaignWorkflowTab({
           </div>
         }
         registerLabel="Approvals"
-        collapseRegister
         registerCount={workspace.approvals.length}
         registerStorageKey={`workflow-${workspace.id}`}
         forceRegisterOpen={Boolean(initialDetailApprovalId)}

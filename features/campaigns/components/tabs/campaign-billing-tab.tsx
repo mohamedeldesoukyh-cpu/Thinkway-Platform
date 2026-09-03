@@ -350,7 +350,6 @@ export function CampaignBillingTab({
       <CampaignWorkspaceFrame
         title="Finance"
         subtitle="Commercial snapshot and billing registers"
-        collapseRegister
         registerCount={
           campaignInvoiceRegister.length + (workspace.payments?.length ?? 0)
         }

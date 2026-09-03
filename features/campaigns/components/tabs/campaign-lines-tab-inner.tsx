@@ -260,7 +260,6 @@ export function CampaignLinesTabInner({
           },
         ]}
         registerLabel="Creators"
-        collapseRegister
         defaultRegisterOpen
         registerCount={workspace.lines.length}
         registerStorageKey={`assignments-${workspace.id}`}

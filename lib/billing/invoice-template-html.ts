@@ -1,5 +1,6 @@
 import type { InvoiceDocumentData, InvoiceLineItemRow } from "@/lib/billing/invoice-document-types";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { formatMoneyDetail } from "@/lib/finance/currency-format";
 import { applyThinkwayLogoToDocumentHtml } from "@/lib/reports/document/thinkway-report-logo";
 import { roundMoney } from "@/lib/vat/calculations";
@@ -15,6 +16,11 @@ function esc(value: string): string {
 function display(value: string | null | undefined, fallback = "—"): string {
   const trimmed = value?.trim();
   return trimmed ? esc(trimmed) : fallback;
+}
+
+function displayDoc(value: string | null | undefined, fallback = "—"): string {
+  const formatted = formatDocumentNumberForDisplay(value);
+  return formatted ? esc(formatted) : fallback;
 }
 
 function formatMoneyAmount(amount: number): string {
@@ -235,7 +241,7 @@ export function buildInvoiceTemplateHtml(data: InvoiceDocumentData): string {
   const dueDateLong = formatLongDueDate(data.dueDate);
   const ioRef = display(data.campaign?.clientIoReferenceDisplay);
   const poRef = display(data.campaign?.poReferenceDisplay);
-  const internalRef = display(data.campaign?.internalReference);
+  const internalRef = displayDoc(data.campaign?.internalReference);
   const clientName = display(data.client.billingName);
   const clientLegalName = display(data.client.legalName ?? data.client.name);
   const trn = display(data.client.vatNumber ?? data.client.taxId);
@@ -313,7 +319,7 @@ export function buildInvoiceTemplateHtml(data: InvoiceDocumentData): string {
       <div class="fcell"><div class="flabel">Account Number</div><div class="fval">${accountNumber}</div></div>
     </div>
     <div class="frow c4">
-      <div class="fcell sh"><div class="flabel">Campaign No.</div><div class="fval blue">${display(data.campaign?.documentNumber)}</div></div>
+      <div class="fcell sh"><div class="flabel">Campaign No.</div><div class="fval blue">${displayDoc(data.campaign?.documentNumber)}</div></div>
       <div class="fcell sh"><div class="flabel">Campaign / Project</div><div class="fval">${display(data.campaign?.name)}</div></div>
       <div class="fcell"><div class="flabel">Client</div><div class="fval">${clientLegalName}</div></div>
       <div class="fcell"><div class="flabel">Campaign Period</div><div class="fval">${formatCampaignPeriod(data.campaign?.startDate ?? null, data.campaign?.endDate ?? null)}</div></div>

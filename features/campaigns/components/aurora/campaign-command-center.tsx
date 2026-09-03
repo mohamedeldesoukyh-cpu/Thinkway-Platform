@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from "react";
 import { formatDistanceToNowStrict } from "date-fns";
-import { ChevronDownIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CampaignSectionHead } from "@/features/campaigns/components/aurora/campaign-tab-layout";
@@ -98,7 +97,6 @@ export function CampaignCommandCenter({
   lifecycle,
 }: CampaignCommandCenterProps) {
   const [inlineEditing, setInlineEditing] = useState(false);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const currency = workspace.currency_code;
   const { financials } = workspace;
 
@@ -449,6 +447,67 @@ export function CampaignCommandCenter({
         </CampaignOpsCard>
       </div>
 
+      {/* Campaign details & PO — before Lifecycle Details; ops-card chrome */}
+      <div className="mt-3 space-y-3">
+        <div className="thinkway-aurora-sechead">
+          <div className="thinkway-aurora-sechead-tt">Campaign details & PO governance</div>
+        </div>
+
+        <CampaignHeaderInlineEditor
+          workspace={workspace}
+          accountManagers={accountManagers}
+          editing={inlineEditing}
+          onEditingChange={setInlineEditing}
+        />
+
+        {!inlineEditing ? (
+          <div className="thinkway-aurora-ops-grid">
+            <CampaignOverviewDetails
+              workspace={workspace}
+              headerActions={
+                <>
+                  {onOpenDetails ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="thinkway-campaign-btn h-[33px] px-3 text-[12.5px]"
+                      onClick={onOpenDetails}
+                    >
+                      Details panel
+                    </Button>
+                  ) : null}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="thinkway-campaign-btn h-[33px] px-3 text-[12.5px]"
+                    onClick={() => setInlineEditing(true)}
+                  >
+                    Edit header
+                  </Button>
+                </>
+              }
+            />
+            <CampaignPoSection
+              campaignId={workspace.id}
+              campaignName={workspace.name}
+              campaignCurrency={currency}
+              po={workspace.po}
+              currencyOptions={currencyOptions}
+            />
+          </div>
+        ) : null}
+
+        <CampaignIntelligenceReference workspace={workspace} />
+
+        {workspace.brief && !workspace.campaign_intelligence ? (
+          <CampaignFlatSection title="Brief">
+            <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-[var(--camp-text-2)]">
+              {workspace.brief}
+            </p>
+          </CampaignFlatSection>
+        ) : null}
+      </div>
+
       {lifecycle ? (
         <CampaignLifecycleChrome
           lifecycle={lifecycle}
@@ -462,83 +521,6 @@ export function CampaignCommandCenter({
           onSelectStage={onNavigateToTab}
         />
       ) : null}
-
-      {/* Progressive disclosure: details / PO / edit */}
-      <div className="mt-2 border-t border-[var(--camp-hair)] pt-2">
-        <button
-          type="button"
-          className="thinkway-aurora-disclose"
-          aria-expanded={detailsOpen}
-          onClick={() => setDetailsOpen((open) => !open)}
-        >
-          <span>Campaign details & PO governance</span>
-          <ChevronDownIcon
-            className={cn(
-              "size-4 transition-transform",
-              detailsOpen && "rotate-180"
-            )}
-            aria-hidden
-          />
-        </button>
-
-        {detailsOpen ? (
-          <div className="mt-2 space-y-0">
-            <div className="thinkway-aurora-sechead">
-              <div className="thinkway-aurora-sechead-tt">Details</div>
-              <div className="thinkway-aurora-sechead-tools">
-                {onOpenDetails ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="thinkway-campaign-btn h-[33px] px-3 text-[12.5px]"
-                    onClick={onOpenDetails}
-                  >
-                    Details panel
-                  </Button>
-                ) : null}
-                {!inlineEditing ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="thinkway-campaign-btn h-[33px] px-3 text-[12.5px]"
-                    onClick={() => setInlineEditing(true)}
-                  >
-                    Edit header
-                  </Button>
-                ) : null}
-              </div>
-            </div>
-
-            <CampaignHeaderInlineEditor
-              workspace={workspace}
-              accountManagers={accountManagers}
-              editing={inlineEditing}
-              onEditingChange={setInlineEditing}
-            />
-            {!inlineEditing ? (
-              <CampaignOverviewDetails workspace={workspace} layout="grid" />
-            ) : null}
-
-            <CampaignPoSection
-              campaignId={workspace.id}
-              campaignName={workspace.name}
-              campaignCurrency={currency}
-              po={workspace.po}
-              currencyOptions={currencyOptions}
-            />
-
-            <CampaignIntelligenceReference workspace={workspace} />
-
-            {workspace.brief && !workspace.campaign_intelligence ? (
-              <CampaignFlatSection title="Brief">
-                <p className="whitespace-pre-wrap text-[12px] leading-relaxed text-[var(--camp-text-2)]">
-                  {workspace.brief}
-                </p>
-              </CampaignFlatSection>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
     </div>
   );
 }

@@ -29,7 +29,7 @@ Group → Legal Entity (clients) → Brand → Campaign Header → Campaign Line
 ```
 
 - **Brand-first** campaign creation: selecting a brand auto-fills group, legal entity, category, VR%, currency, direct/agency.
-- **Campaign numbering**: header `TW-YYYY-NNNN`; lines `{header}-A`, `-B`, `-C` (sequential, never manual, resets yearly).
+- **Campaign numbering**: header stored `TW-YYYY-NNNN`; **UI display** `Camp#YYYY-N` via `formatDocumentNumberForDisplay`; lines `{header}-A`, `-B`, `-C` (sequential, never manual, resets yearly).
 - Commercial fields (category, subcategory, VR%, direct/agency, currency) live on **brands**, not duplicated on clients or campaign headers (headers sync from brand via DB trigger).
 
 ## Terminology (UI labels)
