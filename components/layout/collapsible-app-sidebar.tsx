@@ -30,8 +30,6 @@ import {
 } from "@/lib/layout/app-sidebar-width";
 import { cn } from "@/lib/utils";
 
-import "@/app/styles/sidebar-suite.css";
-
 type NavLinkDef = {
   href: string;
   label: string;

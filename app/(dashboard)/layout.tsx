@@ -14,6 +14,7 @@ import { NavigationLoadingProvider } from "@/components/layout/navigation-loadin
 import "@/app/thinkway-platform-v6.css";
 import "@/app/styles/enterprise-tabs.css";
 import "@/app/styles/campaign-workspace.css";
+import "@/app/styles/sidebar-suite.css";
 
 /** Manual live Apify refresh runs inline in the server action (not the worker). */
 export const maxDuration = 300;

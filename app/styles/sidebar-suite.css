@@ -1,20 +1,38 @@
-/* Exact port of docs/architecture/sidebar.html left sidebar (.tw-sb2). */
+/*
+ * Exact port of docs/architecture/sidebar.html (.tw-sb2).
+ * Fonts use Next.js variables (--font-sans / --font-geist-mono) so Geist
+ * actually loads; HTML shorthand `font:` locks line-height to normal
+ * (defeats Tailwind body 1.5 which made the rail look oversized).
+ */
 
 .tw-sb2 {
   --tw-blue: #0057ff;
+  --tw-b2: #1a6fff;
   --tw-bi: #0b52e0;
+  --tw-bdk: #0040cc;
   --tw-navy: #060810;
   --tw-ink: #0b0f1a;
   --tw-ink2: #41495a;
   --tw-mut: #64748b;
-  --tw-soft: #f6f8fb;
-  --tw-lav: #eff4ff;
   --tw-line: #e2e8f0;
   --tw-hair: #edf0f5;
+  --tw-bg: #fafbfc;
+  --tw-soft: #f6f8fb;
+  --tw-lav: #eff4ff;
   --tw-bad: #c82121;
   --tw-badb: #fef2f2;
-  --tw-grad: linear-gradient(107deg, #0b3dbf 0%, #0f55e8 34%, #3d82ff 62%, #8fb6ff 100%);
+  --tw-grad: linear-gradient(
+    145deg,
+    #0040cc 0%,
+    #0057ff 40%,
+    #1a6fff 70%,
+    #0048dd 100%
+  );
   --tw-ez: cubic-bezier(0.23, 1, 0.32, 1);
+  --tw-sb-sans: var(--font-sans), "Geist", "Inter", "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
+  --tw-sb-mono: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+
   position: sticky;
   top: 0;
   height: 100%;
@@ -26,10 +44,12 @@
   background: #fff;
   border-right: 1px solid var(--tw-line);
   color: var(--tw-ink);
-  font-family: var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text",
-    "Segoe UI", system-ui, sans-serif;
+  font-family: var(--tw-sb-sans);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
   transition: width 0.22s var(--tw-ez);
-  overflow: hidden;
   box-sizing: border-box;
 }
 
@@ -39,7 +59,6 @@
   box-sizing: border-box;
 }
 
-/* Defeat Next Link / Tailwind defaults so suite tokens win. */
 .tw-sb2 a {
   color: inherit;
   text-decoration: none;
@@ -47,11 +66,6 @@
 
 .tw-sb2 a:hover {
   text-decoration: none;
-}
-
-.tw-sb2 svg {
-  display: block;
-  flex-shrink: 0;
 }
 
 .tw-sb2.open {
@@ -113,10 +127,11 @@
 }
 
 .tw-sb2 .tw-logo__tx {
-  font-family: var(--font-geist-sans), Geist, sans-serif;
+  font-family: var(--tw-sb-sans);
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.4px;
+  line-height: normal;
   color: #060810;
   white-space: nowrap;
   text-decoration: none;
@@ -170,6 +185,7 @@
 .tw-sb2 .tw-ic2 svg {
   width: 14px;
   height: 14px;
+  display: block;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.8;
@@ -191,11 +207,11 @@
 .tw-sb2__s input {
   width: 100%;
   height: 30px;
-  padding: 0 36px 0 29px;
+  padding: 0 34px 0 29px;
   border: 1px solid var(--tw-line);
   border-radius: 9px;
   background: var(--tw-soft);
-  font: 500 12px var(--font-geist-sans), Geist, sans-serif;
+  font: 500 12px / normal var(--tw-sb-sans);
   color: var(--tw-ink);
   outline: none;
   box-shadow: none;
@@ -215,6 +231,7 @@
   transform: translateY(-50%);
   width: 13px;
   height: 13px;
+  display: block;
   fill: none;
   stroke: var(--tw-mut);
   stroke-width: 1.8;
@@ -226,7 +243,7 @@
   right: 7px;
   top: 50%;
   transform: translateY(-50%);
-  font: 600 9px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font: 600 9px / normal var(--tw-sb-mono);
   padding: 2px 5px;
   border-radius: 5px;
   background: #fff;
@@ -283,7 +300,7 @@
   background: none;
   cursor: pointer;
   text-align: left;
-  font: 700 8.5px var(--font-geist-sans), Geist, sans-serif;
+  font: 700 8.5px / normal var(--tw-sb-sans);
   letter-spacing: 0.75px;
   text-transform: uppercase;
   color: #98a2b3;
@@ -298,6 +315,7 @@
 .tw-sb2 .tw-grp .ch {
   margin-left: auto;
   font-size: 8px;
+  line-height: 1;
   transition: transform 0.18s var(--tw-ez);
 }
 
@@ -327,13 +345,15 @@
   align-items: center;
   gap: 10px;
   width: 100%;
+  min-height: 0;
   padding: 7px 13px;
   border: 0;
+  border-radius: 0;
   background: none;
   cursor: pointer;
   text-align: left;
-  font: 500 12.5px var(--font-geist-sans), Geist, sans-serif;
-  color: var(--tw-ink2);
+  font: 500 12.5px / normal var(--tw-sb-sans) !important;
+  color: var(--tw-ink2) !important;
   white-space: nowrap;
   text-decoration: none;
   box-shadow: none;
@@ -342,14 +362,14 @@
 .tw-sb2 a.tw-li:hover,
 .tw-sb2 .tw-li:hover {
   background: var(--tw-soft);
-  color: var(--tw-ink2);
+  color: var(--tw-ink2) !important;
 }
 
 .tw-sb2 a.tw-li.on,
 .tw-sb2 .tw-li.on {
   background: var(--tw-lav);
-  color: var(--tw-bi);
-  font-weight: 600;
+  color: var(--tw-bi) !important;
+  font-weight: 600 !important;
 }
 
 .tw-sb2 a.tw-li.on::before,
@@ -368,6 +388,7 @@
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
+  display: block;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.7;
@@ -381,6 +402,8 @@
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+  font: inherit;
+  line-height: normal;
 }
 
 .tw-sb2.open .tw-li .lb {
@@ -395,7 +418,7 @@
 .tw-sb2 .tw-li em {
   margin-left: auto;
   font-style: normal;
-  font: 600 10px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font: 600 10px / normal var(--tw-sb-mono);
   padding: 1px 6px;
   border-radius: 999px;
   background: var(--tw-soft);
@@ -406,6 +429,11 @@
 
 .tw-sb2.open .tw-li em {
   opacity: 1;
+}
+
+.tw-sb2 .tw-li em.alert {
+  background: var(--tw-badb);
+  color: var(--tw-bad);
 }
 
 .tw-sb2 .tw-li.on em {
@@ -434,7 +462,7 @@
   border-radius: 8px;
   background: var(--tw-navy);
   color: #fff;
-  font: 600 11.5px var(--font-geist-sans), Geist, sans-serif;
+  font: 600 11.5px / normal var(--tw-sb-sans);
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -457,13 +485,11 @@
   align-items: center;
   gap: 9px;
   padding: 10px 11px;
+  border: 0;
   border-top: 1px solid var(--tw-hair);
+  background: #fff;
   cursor: pointer;
   overflow: hidden;
-  background: #fff;
-  border-left: 0;
-  border-right: 0;
-  border-bottom: 0;
   width: 100%;
   text-align: left;
   font: inherit;
@@ -483,7 +509,7 @@
   place-items: center;
   background: var(--tw-grad);
   color: #fff;
-  font: 700 11px var(--font-geist-sans), Geist, sans-serif;
+  font: 700 11px / normal var(--tw-sb-sans);
 }
 
 .tw-sb2__a .m {
@@ -500,6 +526,7 @@
   display: block;
   font-size: 11.5px;
   font-weight: 600;
+  line-height: normal;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -511,6 +538,7 @@
   display: block;
   text-decoration: none;
   font-size: 10px;
+  line-height: normal;
   color: var(--tw-mut);
 }
 

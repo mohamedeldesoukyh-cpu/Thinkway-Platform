@@ -3,9 +3,9 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Campaign / finance design spec (`THINKWAY_CAMPAIGN_FINANCE_DESIGN_SPEC.md`).
 
-## In progress 2026-09-04 — Sidebar HTML 1:1 match
+## In progress 2026-09-04 — Sidebar type scale match
 
-User flagged Lucide rebuild ≠ `sidebar.html`. Fix: suite stroked SVGs (`sidebar-suite-icons.tsx`), CSS port of mock, same NAV order (Home→…→Admin + Finance subs). No invented badge counts. Assignments scroll + list polish remain. No migrations. Not on Production.
+Fonts looked wrong vs `sidebar.html`: CSS used missing `--font-geist-sans` (app uses `--font-sans`) and inherited Tailwind line-height 1.5 instead of HTML `font:` normal. Suite CSS now locks 8.5 / 12.5px tokens + Geist via `--font-sans`. No migrations. Not on Production.
 
 ## In progress 2026-09-04 — Campaign display prefix Camp#
 
