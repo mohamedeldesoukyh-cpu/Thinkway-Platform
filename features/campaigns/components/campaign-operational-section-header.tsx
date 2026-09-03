@@ -30,8 +30,8 @@ export function CampaignOperationalSectionHeader({
   if (actionsOnly) {
     if (!actions) return null;
     return (
-      <div className="flex w-full flex-wrap items-center justify-end gap-2">
-        <div className="thinkway-campaign-section-actions thinkway-aurora-ws-tools">
+      <div className="thinkway-campaign-operational-section-header thinkway-aurora-tbar">
+        <div className="thinkway-campaign-section-actions thinkway-aurora-ws-tools thinkway-aurora-tbar-tools">
           {actions}
         </div>
       </div>

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { OperationalTableDualColumnsProvider } from "@/components/tables/operational-table-column-context";
-import { OperationalTableSettingsSlot } from "@/components/tables/operational-data-table";
+import { OperationalTableControlsSlot } from "@/components/tables/operational-table-controls";
 import {
   ASSIGNMENT_CHILD_GRID_COLUMN_METAS,
   ASSIGNMENT_GRID_COLUMN_METAS,
@@ -305,21 +305,28 @@ export function CampaignLinesTabInner({
                 actionsOnly
                 actions={
                   <>
-                    <AssignmentGridEditSessionToolbar />
-                    <AssignmentAudienceViewToggle
-                      value={audienceView}
-                      onChange={setAudienceView}
-                    />
-                    <AssignmentCommercialWorkspaceDialog
-                      campaignId={workspace.id}
-                      currencyCode={workspace.currency_code}
-                      hierarchy={assignmentHierarchy}
-                      canManage={enableLineSheet}
-                    />
-                    <OperationalTableSettingsSlot
-                      contextLabel="Assignments"
-                      columnSettings="assignment-grid"
-                    />
+                    <div className="thinkway-aurora-tbar-left">
+                      <AssignmentGridEditSessionToolbar />
+                      <AssignmentAudienceViewToggle
+                        value={audienceView}
+                        onChange={setAudienceView}
+                      />
+                    </div>
+                    <span className="tw-sp" aria-hidden />
+                    <div className="thinkway-aurora-tbar-right">
+                      <AssignmentCommercialWorkspaceDialog
+                        campaignId={workspace.id}
+                        currencyCode={workspace.currency_code}
+                        hierarchy={assignmentHierarchy}
+                        canManage={enableLineSheet}
+                      />
+                      <OperationalTableControlsSlot
+                        contextLabel="Assignments"
+                        columnSettings="assignment-grid"
+                        showFilter={false}
+                        showSort={false}
+                      />
+                    </div>
                   </>
                 }
               />
