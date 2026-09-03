@@ -628,9 +628,9 @@ export function AssignmentInfluencerDetailSheet({
               <Tabs defaultValue="participation" className="flex min-h-0 flex-1 flex-col">
                 <div className="tw-cm__h">
                   <TabsList className="tw-cdt h-auto flex-1 justify-start gap-0.5 rounded-none bg-transparent p-0">
-                    <TabsTrigger value="participation">Participation</TabsTrigger>
+                    <TabsTrigger value="participation">Participation details</TabsTrigger>
                     <TabsTrigger value="general">General</TabsTrigger>
-                    <TabsTrigger value="social">Social</TabsTrigger>
+                    <TabsTrigger value="social">Social data</TabsTrigger>
                     <TabsTrigger value="activity">Activity</TabsTrigger>
                     <TabsTrigger value="performance">Performance</TabsTrigger>
                   </TabsList>

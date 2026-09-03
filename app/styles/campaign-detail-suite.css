@@ -1144,29 +1144,98 @@
   margin: 0;
 }
 
-/* Numbers — HTML scale + left align. KPI = ISO whole units; grid = en-US 2dp. */
+.campaign-detail-suite .thinkway-campaign-asgn-parent[data-selected="true"] td {
+  background: var(--tw-lav) !important;
+}
+
+.campaign-detail-suite .thinkway-campaign-asgn-child-hdr td:first-child,
+.campaign-detail-suite .thinkway-campaign-asgn-child td:first-child {
+  box-shadow: inset 3px 0 0 var(--tw-blue);
+}
+
+.campaign-detail-suite .thinkway-campaign-asgn-parent td[data-assignment-col="creator"] {
+  min-width: 150px;
+}
+
+.campaign-detail-suite .thinkway-campaign-asgn-parent td[data-assignment-col="costCurrency"] span,
+.campaign-detail-suite .thinkway-campaign-asgn-parent td[data-assignment-col="costCurrency"] {
+  font: 700 9.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+}
+
+.campaign-detail-suite td[data-assignment-col="platforms"] .size-4 {
+  width: 19px !important;
+  height: 19px !important;
+  border-radius: 6px !important;
+}
+
+.campaign-detail-suite .thinkway-aurora-ws-register-toggle {
+  display: flex;
+  align-items: center;
+  padding: 11px 14px;
+  border-top: 1px solid var(--tw-line);
+  background: #fff;
+}
+
+.campaign-detail-suite .thinkway-aurora-register-disclose {
+  width: 100%;
+  justify-content: space-between;
+}
+
+.campaign-detail-suite .thinkway-aurora-ws-tools .thinkway-campaign-btn-primary {
+  background: #fff !important;
+  border-color: rgba(0, 87, 255, 0.55) !important;
+  color: var(--tw-bi) !important;
+  box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.08);
+}
+
+.campaign-detail-suite .platform-floating-bar {
+  background: rgba(11, 15, 26, 0.96) !important;
+  color: #fff !important;
+  border-radius: 14px !important;
+  border: 0 !important;
+  box-shadow: 0 1px 2px rgba(11, 15, 26, 0.4), 0 18px 44px -12px rgba(11, 15, 26, 0.55) !important;
+}
+
+.campaign-detail-suite .platform-floating-bar,
+.campaign-detail-suite .platform-floating-bar * {
+  color: #fff;
+}
+
+/* Numbers — KPI strip left; money grid cells right, matching HTML .tw-v / .tw-rr. */
 .campaign-detail-suite .tw-ms2,
 .campaign-detail-suite .tw-ms2 > div,
-.campaign-detail-suite .thinkway-aurora-scard,
-.campaign-detail-suite .thinkway-aurora-ops-stat {
+.campaign-detail-suite .thinkway-aurora-scard {
   text-align: left;
 }
 
-.campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-content thead th.text-right,
-.campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-content tbody td.text-right,
-.campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-head.text-right,
-.campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-op-table-cell.text-right,
-.campaign-detail-suite .text-right,
-.campaign-detail-suite [class~="text-right"],
-.campaign-detail-suite .tabular-nums,
-.campaign-detail-suite .thinkway-campaign-num,
-.campaign-detail-suite .thinkway-aurora-tblwrap th,
-.campaign-detail-suite .thinkway-aurora-tblwrap td,
-.campaign-detail-suite .thinkway-campaign-asgn-table th,
-.campaign-detail-suite .thinkway-campaign-asgn-table td,
-.campaign-detail-suite .thinkway-campaign-perf-grid-header > *,
-.campaign-detail-suite .thinkway-campaign-perf-grid-row > * {
-  text-align: left !important;
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="revenue"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="revenue"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="usageRights"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="usageRights"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="agencyFeePercent"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="agencyFeePercent"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="agencyFee"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="agencyFee"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="cost"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="cost"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="usageRightsCost"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="usageRightsCost"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="vat"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="vat"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="totalBilling"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="totalBilling"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="gp"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="gp"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="margin"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="margin"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="deliverables"],
+.campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="deliverables"],
+.campaign-detail-suite .thinkway-campaign-asgn-table td.tabular-nums,
+.campaign-detail-suite .thinkway-campaign-asgn-table input.tabular-nums {
+  text-align: right !important;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 12.5px;
 }
 
 .campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent td[data-assignment-col="select"],
@@ -1177,14 +1246,6 @@
 
 .campaign-detail-suite .thinkway-campaign-asgn-table td[data-assignment-col="costCurrency"],
 .campaign-detail-suite .thinkway-campaign-asgn-table th[data-assignment-col="costCurrency"] {
-  text-align: left !important;
-}
-
-.campaign-detail-suite .thinkway-campaign-asgn-table td.tabular-nums,
-.campaign-detail-suite input.tabular-nums {
-  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
-  font-variant-numeric: tabular-nums;
-  font-size: 12.5px;
   text-align: left !important;
 }
 

@@ -5,7 +5,7 @@
 
 ## In progress 2026-09-03 — Campaign workspace HTML restyle (match pass)
 
-Chrome through the tab rail stays frozen; only the body below tabs scrolls. Open Studio and View are white outline buttons. Stepper uses dots above labels (no icons/underline). Overview cards match pale HTML dash cards. Assignments toolbar/grid restyled. Creator name opens a centered split modal (not a right sheet). Lifecycle OS, tabs, and actions preserved. No migrations. Not on Production.
+Chrome through the tab rail stays frozen; only the body below tabs scrolls. Open Studio and View are white outline buttons. Stepper uses dots above labels (no icons/underline). Overview cards match pale HTML dash cards. Assignments creator cells show avatar + handle, money columns right-align, selected rows tint, nested ad lines have a blue rail. Creator name opens a centered split modal with Participation details tabs. Lifecycle OS, tabs, and actions preserved. No migrations. Not on Production.
 
 ## Shipped 2026-09-03 — Ungenerate then new invoice cancels pending
 

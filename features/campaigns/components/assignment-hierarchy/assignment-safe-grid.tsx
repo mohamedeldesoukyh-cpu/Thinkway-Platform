@@ -87,6 +87,7 @@ import {
   resolveAssignmentLineCurrencyDisplay,
 } from "@/lib/campaigns/assignment-line-currency";
 import { formatPercent } from "@/features/campaigns/utils";
+import { resolveAssignmentPrimaryHandle } from "@/lib/campaigns/assignment-detail-presenters";
 import { cn } from "@/lib/utils";
 import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
@@ -591,6 +592,7 @@ export function AssignmentSafeGrid({
                           expanded && SAFE_GRID_PARENT_ROW_EXPANDED
                         )}
                         data-line-id={row.lineId}
+                        data-selected={selectedLineIds.has(row.lineId) ? "true" : undefined}
                       >
                         {col("select") ? (
                           <td {...assignmentParentColDataAttr("select")} className={SAFE_GRID_CONTROL_CELL}>
@@ -671,6 +673,7 @@ export function AssignmentSafeGrid({
                             <AssignmentCreatorCell
                               name={line.influencer_name ?? row.displayName}
                               avatarUrl={line.creator_avatar_url}
+                              handle={resolveAssignmentPrimaryHandle(line)}
                               onClick={
                                 onOpenInfluencerDetail
                                   ? () => onOpenInfluencerDetail(row.group, row)

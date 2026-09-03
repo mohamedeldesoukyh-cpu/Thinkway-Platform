@@ -7,24 +7,32 @@ import { cn } from "@/lib/utils";
 type AssignmentCreatorCellProps = {
   name: string;
   avatarUrl?: string | null;
+  handle?: string | null;
   onClick?: () => void;
   className?: string;
 };
 
-/** Creator column — profile photo + wrapping name (thinkway-campaign_2.html asgn-table). */
+/** Creator column — avatar + name + handle, matching campaign-detail.html `.tw-cr`. */
 export function AssignmentCreatorCell({
   name,
   avatarUrl,
+  handle,
   onClick,
   className,
 }: AssignmentCreatorCellProps) {
   const displayName = sanitizeAssignmentCreatorName(name, name);
+  const handleLabel = handle?.replace(/^@/, "").trim();
 
   const inner = (
     <>
-      <CreatorThumbAvatar name={displayName} avatarUrl={avatarUrl} size={18} />
-      <span className="min-w-0 whitespace-normal break-words text-[11px] font-medium leading-tight text-[var(--camp-text)]">
-        {displayName}
+      <CreatorThumbAvatar name={displayName} avatarUrl={avatarUrl} size={26} />
+      <span className="min-w-0">
+        <b className="block truncate text-[12.5px] font-semibold leading-tight">{displayName}</b>
+        {handleLabel ? (
+          <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+            @{handleLabel}
+          </span>
+        ) : null}
       </span>
     </>
   );
@@ -35,7 +43,7 @@ export function AssignmentCreatorCell({
         type="button"
         onClick={onClick}
         className={cn(
-          "flex min-w-0 items-start gap-1.5 text-left transition-colors hover:text-primary",
+          "flex min-w-0 items-center gap-2 text-left transition-colors hover:text-primary",
           className
         )}
         title={`View ${displayName} details`}
@@ -46,6 +54,6 @@ export function AssignmentCreatorCell({
   }
 
   return (
-    <div className={cn("flex min-w-0 items-start gap-1.5", className)}>{inner}</div>
+    <div className={cn("flex min-w-0 items-center gap-2", className)}>{inner}</div>
   );
 }
