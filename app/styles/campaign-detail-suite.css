@@ -488,8 +488,8 @@
   position: absolute !important;
   top: 11px !important;
   height: 2px !important;
-  width: 50% !important;
-  background: var(--tw-line) !important;
+  width: calc(50% + 1px) !important;
+  background: var(--tw-blue) !important;
   z-index: 0 !important;
   border: 0 !important;
   border-radius: 0 !important;
