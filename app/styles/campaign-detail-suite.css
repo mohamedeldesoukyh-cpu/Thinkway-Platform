@@ -34,7 +34,8 @@
 .campaign-detail-suite .thinkway-aurora-wrap {
   max-width: none;
   margin: 0;
-  padding: 0 14px;
+  /* campaign-detail.html `.tw-main` — tight edge gutters */
+  padding: 0 10px 40px;
   background: var(--tw-bg);
 }
 
@@ -371,7 +372,9 @@
   padding: 0 6px;
 }
 
-/* Process stepper — existing Enterprise Tabs, HTML chrome */
+/* Process stepper — one continuous blue track + dots (HTML `.tw-step2`).
+   enterprise-tabs.css uses short grey ::before connectors and ::after as dots;
+   those are fully replaced here so the line never looks “cut”. */
 .campaign-detail-suite .tw-step2.thinkway-process-nav-tabs,
 .campaign-detail-suite .tw-step2.enterprise-tabs {
   padding: 3px !important;
@@ -384,6 +387,7 @@
 }
 
 .campaign-detail-suite .tw-step2 .enterprise-tabs-list {
+  position: relative;
   display: flex;
   align-items: stretch;
   gap: 0 !important;
@@ -392,6 +396,19 @@
   border: 0;
   padding: 0;
   overflow-x: auto;
+}
+
+/* Single continuous blue line through all step dots */
+.campaign-detail-suite .tw-step2 .enterprise-tabs-list::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 11px;
+  left: 46px; /* ~ half of min tab width — starts at first dot center */
+  right: 46px; /* ends at last dot center */
+  height: 2px;
+  background: var(--tw-blue);
+  pointer-events: none;
 }
 
 .campaign-detail-suite .tw-step2 .enterprise-tab {
@@ -453,6 +470,7 @@
   white-space: nowrap;
 }
 
+/* Step dots on the continuous track */
 .campaign-detail-suite .tw-step2 .enterprise-tab-label::before {
   content: "";
   position: absolute;
@@ -462,9 +480,10 @@
   height: 9px;
   margin-left: -4.5px;
   border-radius: 50%;
-  border: 2px solid var(--tw-line);
+  border: 2px solid var(--tw-blue);
   background: #fff;
-  z-index: 1;
+  z-index: 2;
+  box-sizing: border-box;
 }
 
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"] .enterprise-tab-label::before,
@@ -480,62 +499,37 @@
   box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.18);
 }
 
+/* Kill enterprise-tabs short grey connectors + circular ::after dots */
 .campaign-detail-suite .tw-step2.thinkway-process-nav-tabs .enterprise-tab::before,
 .campaign-detail-suite .tw-step2.thinkway-process-nav-tabs .enterprise-tab::after,
 .campaign-detail-suite .tw-step2 .enterprise-tab::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab::after {
-  content: "" !important;
-  position: absolute !important;
-  top: 11px !important;
-  height: 2px !important;
-  width: calc(50% + 1px) !important;
-  background: var(--tw-blue) !important;
-  z-index: 0 !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  transform: none !important;
-  box-shadow: none !important;
-  left: auto !important;
-}
-
-.campaign-detail-suite .tw-step2 .enterprise-tab::before {
-  left: 0 !important;
-}
-
-.campaign-detail-suite .tw-step2 .enterprise-tab::after {
-  right: 0 !important;
-}
-
-.campaign-detail-suite .tw-step2 .enterprise-tab:first-child::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab:last-child::after {
-  display: none !important;
-}
-
-/* Complete continuous track — campaign-detail.html connectors stay joined
-   across every step (no grey gaps / “cuts” between nodes). */
-.campaign-detail-suite .tw-step2 .enterprise-tab::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab::after {
-  background: var(--tw-blue) !important;
-  width: calc(50% + 1px) !important;
-}
-
+.campaign-detail-suite .tw-step2 .enterprise-tab::after,
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"]::before,
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"]::after,
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="current"]::before,
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="current"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-state="active"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-state="active"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[aria-selected="true"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[aria-selected="true"]::after {
-  background: var(--tw-blue) !important;
-}
-
-/* HTML: `.done + :not(.done)::before` — keep the join into the next node blue */
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"] + .enterprise-tab::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="current"] + .enterprise-tab::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-state="active"] + .enterprise-tab::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[aria-selected="true"] + .enterprise-tab::before {
-  background: var(--tw-blue) !important;
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting"]::after,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_internal"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_internal"]::after,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_client"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_client"]::after,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_vendor"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_vendor"]::after,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="attention_required"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="attention_required"]::after,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="blocked"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="blocked"]::after,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="upcoming"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="upcoming"]::after {
+  content: none !important;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  transform: none !important;
 }
 
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting"],
@@ -767,6 +761,14 @@
 .campaign-detail-suite .thinkway-campaign-content,
 .campaign-detail-suite .thinkway-campaign-tab-panel {
   background: transparent;
+  /* Kill the old 26px side padding — gutters come only from `.thinkway-aurora-wrap` */
+  padding: 4px 0 24px !important;
+  margin-top: 0 !important;
+}
+
+.campaign-detail-suite [data-slot="tabs-content"].mt-4,
+.campaign-detail-suite .thinkway-campaign-tab-panel.mt-4 {
+  margin-top: 6px !important;
 }
 
 .campaign-detail-suite .thinkway-campaign-section-card,
