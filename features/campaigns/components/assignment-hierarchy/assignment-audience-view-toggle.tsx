@@ -24,6 +24,7 @@ export function AssignmentAudienceViewToggle({
       role="group"
       aria-label="Assignment audience view"
     >
+      <span className="thinkway-campaign-view-label">View</span>
       {(["internal", "client"] as const).map((option) => {
         const active = value === option;
         return (

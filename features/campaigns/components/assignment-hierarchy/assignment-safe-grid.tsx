@@ -636,32 +636,20 @@ export function AssignmentSafeGrid({
                                 onClick={() => addChildDeliverable(line)}
                               />
                             ) : null}
-                            <button
-                              type="button"
-                              onClick={() => onOpenInfluencerDetail?.(row.group, row)}
-                              className="min-w-0 flex-1 text-left transition-colors hover:text-primary"
-                              title={`View ${row.displayName} details`}
-                            >
-                              <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                                <span className="min-w-0 whitespace-normal break-words text-[11px] font-semibold leading-tight text-[var(--camp-text)]">
-                                  {row.displayName}
-                                </span>
-                                {gates.showInternalFinancials &&
-                                (campaignPoExceeded || line.po_over_consumed) ? (
-                                  <Badge
-                                    variant="outline"
-                                    className="border-amber-500/60 text-[10px] text-amber-800 dark:text-amber-200"
-                                  >
-                                    PO exceeded
-                                  </Badge>
-                                ) : null}
-                              </div>
-                              {gates.showLineDocumentNumber ? (
-                                <p className="text-[10px] text-[var(--camp-text-3)]">
-                                  <DocumentNumber value={line.document_number} />
-                                </p>
+                            <div className="min-w-0 flex-1 text-left">
+                              <p className="text-[10.5px] text-[var(--camp-text-2)]">
+                                <DocumentNumber value={line.document_number} />
+                              </p>
+                              {gates.showInternalFinancials &&
+                              (campaignPoExceeded || line.po_over_consumed) ? (
+                                <Badge
+                                  variant="outline"
+                                  className="mt-1 border-amber-500/60 text-[10px] text-amber-800 dark:text-amber-200"
+                                >
+                                  PO exceeded
+                                </Badge>
                               ) : null}
-                            </button>
+                            </div>
                           </div>
                         </td>
                         ) : null}

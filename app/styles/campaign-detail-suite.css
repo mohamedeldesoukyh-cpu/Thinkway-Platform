@@ -1039,6 +1039,12 @@
   gap: 6px;
 }
 
+.campaign-detail-suite .thinkway-campaign-view-label {
+  font-size: 11px;
+  color: var(--tw-mut);
+  font-weight: 500;
+}
+
 .campaign-detail-suite .thinkway-campaign-view-btn {
   height: 27px;
   padding: 0 10px;
