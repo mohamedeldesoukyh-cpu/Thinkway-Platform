@@ -3,9 +3,9 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Campaign / finance design spec (`THINKWAY_CAMPAIGN_FINANCE_DESIGN_SPEC.md`).
 
-## In progress 2026-09-04 — Sidebar suite + list/assignment polish
+## In progress 2026-09-04 — Sidebar HTML 1:1 match
 
-Main left nav rebuilt to `sidebar.html` (§11). Table type densified (list + Assignments 11.5px). Assignments scroll uses ResizeObserver + hysteresis so mini chrome no longer forces the page up. No migrations. Not on Production.
+User flagged Lucide rebuild ≠ `sidebar.html`. Fix: suite stroked SVGs (`sidebar-suite-icons.tsx`), CSS port of mock, same NAV order (Home→…→Admin + Finance subs). No invented badge counts. Assignments scroll + list polish remain. No migrations. Not on Production.
 
 ## In progress 2026-09-04 — Campaign display prefix Camp#
 

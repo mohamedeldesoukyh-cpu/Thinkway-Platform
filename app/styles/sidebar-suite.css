@@ -1,5 +1,4 @@
-/* Thinkway left sidebar — scoped to .tw-sb2.
-   Reference: docs/architecture/sidebar.html + THINKWAY_SIDEBAR_DESIGN_SPEC.md §11 */
+/* Exact port of docs/architecture/sidebar.html left sidebar (.tw-sb2). */
 
 .tw-sb2 {
   --tw-blue: #0057ff;
@@ -31,6 +30,28 @@
     "Segoe UI", system-ui, sans-serif;
   transition: width 0.22s var(--tw-ez);
   overflow: hidden;
+  box-sizing: border-box;
+}
+
+.tw-sb2 *,
+.tw-sb2 *::before,
+.tw-sb2 *::after {
+  box-sizing: border-box;
+}
+
+/* Defeat Next Link / Tailwind defaults so suite tokens win. */
+.tw-sb2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.tw-sb2 a:hover {
+  text-decoration: none;
+}
+
+.tw-sb2 svg {
+  display: block;
+  flex-shrink: 0;
 }
 
 .tw-sb2.open {
@@ -54,8 +75,6 @@
   align-items: center;
   gap: 10px;
   min-width: 0;
-  text-decoration: none;
-  color: inherit;
 }
 
 .tw-sb2 .tw-logo__mk {
@@ -66,9 +85,9 @@
   border-radius: 7px;
   background: #060810;
   overflow: visible;
+  cursor: pointer;
   border: 0;
   padding: 0;
-  cursor: pointer;
 }
 
 .tw-sb2 .tw-logo__mk::before {
@@ -94,12 +113,13 @@
 }
 
 .tw-sb2 .tw-logo__tx {
-  font-family: var(--font-geist-sans), Geist, Inter, system-ui, sans-serif;
+  font-family: var(--font-geist-sans), Geist, sans-serif;
   font-size: 16px;
   font-weight: 800;
   letter-spacing: -0.4px;
   color: #060810;
   white-space: nowrap;
+  text-decoration: none;
   opacity: 0;
   transition: opacity 0.16s var(--tw-ez);
 }
@@ -114,6 +134,7 @@
 
 .tw-sb2 .tw-sp {
   flex: 1 1 auto;
+  min-width: 0;
 }
 
 .tw-sb2 .tw-ic2 {
@@ -128,7 +149,8 @@
   place-items: center;
   flex: 0 0 auto;
   opacity: 0;
-  transition: opacity 0.16s var(--tw-ez), background 0.12s, color 0.12s;
+  transition: opacity 0.16s var(--tw-ez);
+  padding: 0;
 }
 
 .tw-sb2.open .tw-ic2 {
@@ -148,6 +170,11 @@
 .tw-sb2 .tw-ic2 svg {
   width: 14px;
   height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .tw-sb2__s {
@@ -158,17 +185,20 @@
 
 .tw-sb2__s .w {
   position: relative;
+  display: block;
 }
 
 .tw-sb2__s input {
   width: 100%;
   height: 30px;
-  padding: 0 9px 0 29px;
+  padding: 0 36px 0 29px;
   border: 1px solid var(--tw-line);
   border-radius: 9px;
   background: var(--tw-soft);
-  font: 500 12px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font: 500 12px var(--font-geist-sans), Geist, sans-serif;
   color: var(--tw-ink);
+  outline: none;
+  box-shadow: none;
 }
 
 .tw-sb2__s input:focus {
@@ -178,14 +208,16 @@
   box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.12);
 }
 
-.tw-sb2__s .search-ico {
+.tw-sb2__s .w > svg {
   position: absolute;
   left: 9px;
   top: 50%;
   transform: translateY(-50%);
   width: 13px;
   height: 13px;
-  color: var(--tw-mut);
+  fill: none;
+  stroke: var(--tw-mut);
+  stroke-width: 1.8;
   pointer-events: none;
 }
 
@@ -251,7 +283,7 @@
   background: none;
   cursor: pointer;
   text-align: left;
-  font: 700 8.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font: 700 8.5px var(--font-geist-sans), Geist, sans-serif;
   letter-spacing: 0.75px;
   text-transform: uppercase;
   color: #98a2b3;
@@ -288,6 +320,7 @@
   display: block;
 }
 
+.tw-sb2 a.tw-li,
 .tw-sb2 .tw-li {
   position: relative;
   display: flex;
@@ -299,23 +332,27 @@
   background: none;
   cursor: pointer;
   text-align: left;
-  font: 500 12.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font: 500 12.5px var(--font-geist-sans), Geist, sans-serif;
   color: var(--tw-ink2);
   white-space: nowrap;
   text-decoration: none;
+  box-shadow: none;
 }
 
+.tw-sb2 a.tw-li:hover,
 .tw-sb2 .tw-li:hover {
   background: var(--tw-soft);
   color: var(--tw-ink2);
 }
 
+.tw-sb2 a.tw-li.on,
 .tw-sb2 .tw-li.on {
   background: var(--tw-lav);
   color: var(--tw-bi);
   font-weight: 600;
 }
 
+.tw-sb2 a.tw-li.on::before,
 .tw-sb2 .tw-li.on::before {
   content: "";
   position: absolute;
@@ -331,7 +368,11 @@
   width: 16px;
   height: 16px;
   flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
   stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .tw-sb2 .tw-li .lb {
@@ -367,11 +408,6 @@
   opacity: 1;
 }
 
-.tw-sb2 .tw-li em.alert {
-  background: var(--tw-badb);
-  color: var(--tw-bad);
-}
-
 .tw-sb2 .tw-li.on em {
   background: #fff;
   color: var(--tw-bi);
@@ -398,7 +434,7 @@
   border-radius: 8px;
   background: var(--tw-navy);
   color: #fff;
-  font: 600 11.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font: 600 11.5px var(--font-geist-sans), Geist, sans-serif;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -422,8 +458,16 @@
   gap: 9px;
   padding: 10px 11px;
   border-top: 1px solid var(--tw-hair);
+  cursor: pointer;
   overflow: hidden;
   background: #fff;
+  border-left: 0;
+  border-right: 0;
+  border-bottom: 0;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
 }
 
 .tw-sb2__a:hover {
@@ -439,7 +483,7 @@
   place-items: center;
   background: var(--tw-grad);
   color: #fff;
-  font: 700 11px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font: 700 11px var(--font-geist-sans), Geist, sans-serif;
 }
 
 .tw-sb2__a .m {

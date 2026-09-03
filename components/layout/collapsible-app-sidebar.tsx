@@ -1,54 +1,15 @@
 ﻿"use client";
 
-import type { ComponentType } from "react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
-import {
-  ActivityIcon,
-  ArrowDownUpIcon,
-  ArrowRightLeftIcon,
-  BarChart3Icon,
-  BrainIcon,
-  BriefcaseIcon,
-  Building2Icon,
-  CalendarClockIcon,
-  CalendarRangeIcon,
-  ChevronUpIcon,
-  CircleMinusIcon,
-  CirclePlusIcon,
-  CoinsIcon,
-  FileSignatureIcon,
-  FileTextIcon,
-  GaugeIcon,
-  HomeIcon,
-  InfoIcon,
-  LayoutDashboardIcon,
-  LayersIcon,
-  LineChartIcon,
-  Link2Icon,
-  ListIcon,
-  LogOutIcon,
-  MailIcon,
-  MegaphoneIcon,
-  PanelLeftCloseIcon,
-  PercentIcon,
-  PinIcon,
-  ReceiptIcon,
-  RefreshCwIcon,
-  SearchIcon,
-  SendIcon,
-  ShieldIcon,
-  SparklesIcon,
-  TagsIcon,
-  TargetIcon,
-  UploadIcon,
-  UserCogIcon,
-  UsersIcon,
-  WalletIcon,
-} from "lucide-react";
 import { useFormStatus } from "react-dom";
+import { LogOutIcon } from "lucide-react";
 
 import { AppNavLink } from "@/components/navigation/app-nav-link";
+import {
+  SidebarSuiteIcon,
+  type SidebarIconKey,
+} from "@/components/layout/sidebar-suite-icons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,125 +35,112 @@ import "@/app/styles/sidebar-suite.css";
 type NavLinkDef = {
   href: string;
   label: string;
-  icon: ComponentType<{ className?: string }>;
-  /** Optional badge; never render 0. */
+  icon: SidebarIconKey;
+  /** Optional badge; never render 0 (spec). */
   count?: number;
 };
 
 type NavSection = {
-  /** Primary group label (collapsed separators use this). */
   group?: string;
-  /** Indented Finance sub-group. */
   subgroup?: string;
   items: NavLinkDef[];
 };
 
+/** Exact destination order from docs/architecture/sidebar.html NAV. */
 const NAV_SECTIONS: NavSection[] = [
   {
     group: "Home",
     items: [
-      { href: "/", label: "Home", icon: HomeIcon },
-      { href: "/dashboard", label: "Executive", icon: LineChartIcon },
+      { href: "/", label: "Home", icon: "home" },
+      { href: "/dashboard", label: "Executive", icon: "exec" },
     ],
   },
   {
     group: "Campaign workspace",
     items: [
-      { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
-      { href: "/studio", label: "Studio", icon: LayoutDashboardIcon },
-      { href: "/ai", label: "Campaign AI", icon: SparklesIcon },
+      { href: "/campaigns", label: "Campaigns", icon: "camp" },
+      { href: "/studio", label: "Studio", icon: "studio" },
+      { href: "/ai", label: "Campaign AI", icon: "ai" },
     ],
   },
   {
     group: "Client workspace",
     items: [
-      { href: "/groups", label: "Holding Groups", icon: LayersIcon },
-      { href: "/clients", label: "Clients", icon: Building2Icon },
-      { href: "/brands", label: "Brands", icon: BriefcaseIcon },
-      { href: "/ios/client", label: "Client IOs", icon: FileSignatureIcon },
+      { href: "/groups", label: "Holding Groups", icon: "grp" },
+      { href: "/clients", label: "Clients", icon: "client" },
+      { href: "/brands", label: "Brands", icon: "brand" },
+      { href: "/ios/client", label: "Client IOs", icon: "doc" },
       {
         href: "/discovery/quotations",
         label: "Client Quotations",
-        icon: FileTextIcon,
+        icon: "quote",
       },
     ],
   },
   {
     group: "Vendor workspace",
     items: [
-      { href: "/vendors", label: "Vendors", icon: UsersIcon },
-      {
-        href: "/ios/vendor",
-        label: "Vendor IO register",
-        icon: FileSignatureIcon,
-      },
+      { href: "/vendors", label: "Vendors", icon: "vendor" },
+      { href: "/ios/vendor", label: "Vendor IO register", icon: "doc" },
     ],
   },
   {
     group: "Discovery",
     items: [
-      { href: "/discovery/search", label: "Search", icon: SearchIcon },
-      { href: "/discovery/shortlists", label: "Shortlists", icon: ListIcon },
+      { href: "/discovery/search", label: "Search", icon: "search" },
+      { href: "/discovery/shortlists", label: "Shortlists", icon: "list" },
       {
         href: "/discovery/campaign-match",
         label: "Campaign Match",
-        icon: TargetIcon,
+        icon: "match",
       },
-      { href: "/discovery/import", label: "Import Center", icon: UploadIcon },
+      { href: "/discovery/import", label: "Import Center", icon: "imp" },
     ],
   },
   {
     group: "Finance workspace",
     subgroup: "Billing & documents",
     items: [
-      { href: "/billing", label: "Billing", icon: ReceiptIcon },
-      { href: "/finance/po-tracker", label: "PO tracker", icon: FileTextIcon },
-      { href: "/finance/invoices", label: "Invoices", icon: FileTextIcon },
+      { href: "/billing", label: "Billing", icon: "bill" },
+      { href: "/finance/po-tracker", label: "PO tracker", icon: "po" },
+      { href: "/finance/invoices", label: "Invoices", icon: "doc" },
       {
         href: "/finance/client-credit-notes",
         label: "Client credit notes",
-        icon: CircleMinusIcon,
+        icon: "cn",
       },
       {
         href: "/finance/client-debit-notes",
         label: "Client debit notes",
-        icon: CirclePlusIcon,
+        icon: "dn",
       },
       {
         href: "/finance/vendor-credit-notes",
         label: "Vendor credit notes",
-        icon: CircleMinusIcon,
+        icon: "cn",
       },
       {
         href: "/finance/vendor-debit-notes",
         label: "Vendor debit notes",
-        icon: CirclePlusIcon,
+        icon: "dn",
       },
     ],
   },
   {
     subgroup: "Treasury & cash",
     items: [
-      { href: "/collections", label: "Collections", icon: CoinsIcon },
-      { href: "/treasury", label: "Treasury", icon: WalletIcon },
-      {
-        href: "/finance/posting-center",
-        label: "Posting center",
-        icon: SendIcon,
-      },
+      { href: "/collections", label: "Collections", icon: "coll" },
+      { href: "/treasury", label: "Treasury", icon: "trez" },
+      { href: "/finance/posting-center", label: "Posting center", icon: "post" },
     ],
   },
   {
     subgroup: "Compliance & planning",
     items: [
-      { href: "/finance/vat", label: "VAT", icon: PercentIcon },
-      {
-        href: "/finance/exchange-rates",
-        label: "Exchange rates",
-        icon: RefreshCwIcon,
-      },
-      { href: "/finance/periods", label: "Periods", icon: CalendarRangeIcon },
-      { href: "/planning", label: "Planning", icon: CalendarClockIcon },
+      { href: "/finance/vat", label: "VAT", icon: "vat" },
+      { href: "/finance/exchange-rates", label: "Exchange rates", icon: "fx" },
+      { href: "/finance/periods", label: "Periods", icon: "per" },
+      { href: "/planning", label: "Planning", icon: "plan" },
     ],
   },
   {
@@ -201,48 +149,50 @@ const NAV_SECTIONS: NavSection[] = [
       {
         href: "/operations/move",
         label: "Move between accounts",
-        icon: ArrowRightLeftIcon,
+        icon: "move",
       },
       {
         href: "/operations/reassignment",
         label: "Reassignment center",
-        icon: ArrowDownUpIcon,
+        icon: "reas",
       },
     ],
   },
   {
     group: "Insights",
     items: [
-      { href: "/reports", label: "Reports", icon: BarChart3Icon },
+      { href: "/reports", label: "Reports", icon: "rep" },
       ...(isIntelligenceEnabled()
-        ? [{ href: "/intelligence", label: "Intelligence", icon: BrainIcon }]
+        ? [
+            {
+              href: "/intelligence",
+              label: "Intelligence",
+              icon: "ai" as const,
+            },
+          ]
         : []),
-      { href: "/links", label: "Link generator", icon: Link2Icon },
+      { href: "/links", label: "Link generator", icon: "link" },
     ],
   },
   {
     group: "Administration",
     items: [
-      { href: "/operations", label: "Operations Center", icon: ActivityIcon },
-      { href: "/settings/users", label: "Users", icon: UsersIcon },
-      { href: "/settings/security", label: "Security", icon: ShieldIcon },
-      { href: "/settings/roles", label: "Roles", icon: UserCogIcon },
-      { href: "/settings/permissions", label: "Permissions", icon: ShieldIcon },
-      {
-        href: "/settings/access-control",
-        label: "Access Control",
-        icon: ShieldIcon,
-      },
-      { href: "/settings/client-access", label: "Client Access", icon: UsersIcon },
+      { href: "/operations", label: "Operations Center", icon: "ops" },
+      { href: "/settings/users", label: "Users", icon: "users" },
+      { href: "/settings/security", label: "Security", icon: "sec" },
+      { href: "/settings/roles", label: "Roles", icon: "role" },
+      { href: "/settings/permissions", label: "Permissions", icon: "perm" },
+      { href: "/settings/access-control", label: "Access Control", icon: "acc" },
+      { href: "/settings/client-access", label: "Client Access", icon: "acc" },
       {
         href: "/settings/client-classification-review",
         label: "Classification Review",
-        icon: TagsIcon,
+        icon: "list",
       },
-      { href: "/settings/email", label: "Email", icon: MailIcon },
-      { href: "/settings/about", label: "About", icon: InfoIcon },
-      { href: "/system/health", label: "System Health", icon: ActivityIcon },
-      { href: "/system/performance", label: "Performance", icon: GaugeIcon },
+      { href: "/settings/email", label: "Email", icon: "mail" },
+      { href: "/settings/about", label: "About", icon: "info" },
+      { href: "/system/health", label: "System Health", icon: "heart" },
+      { href: "/system/performance", label: "Performance", icon: "gauge" },
     ],
   },
 ];
@@ -308,7 +258,9 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
   const pathname = usePathname();
   const [pinned, setPinned] = useState(true);
   const [peekOpen, setPeekOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set(DEFAULT_COLLAPSED));
+  const [collapsedGroups, setCollapsedGroups] = useState(
+    () => new Set(DEFAULT_COLLAPSED)
+  );
   const [query, setQuery] = useState("");
   const [hydrated, setHydrated] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
@@ -361,9 +313,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
     function onKey(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
         event.preventDefault();
-        if (!pinned) {
-          setPeekOpen(true);
-        }
+        if (!pinned) setPeekOpen(true);
         window.setTimeout(() => searchRef.current?.focus(), 0);
       }
     }
@@ -455,7 +405,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
             aria-pressed={pinned}
             onClick={() => persistPinned(!pinned)}
           >
-            <PinIcon />
+            <SidebarSuiteIcon name="pin" />
           </button>
           <button
             type="button"
@@ -469,13 +419,13 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
               }
             }}
           >
-            <PanelLeftCloseIcon />
+            <SidebarSuiteIcon name="collapse" />
           </button>
         </div>
 
         <div className="tw-sb2__s">
           <span className="w">
-            <SearchIcon className="search-ico" aria-hidden />
+            <SidebarSuiteIcon name="search" />
             <input
               ref={searchRef}
               value={query}
@@ -530,7 +480,6 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                   ? null
                   : section.items.map((item) => {
                       const active = isItemActive(pathname, item.href);
-                      const Icon = item.icon;
                       const count =
                         typeof item.count === "number" && item.count > 0
                           ? item.count
@@ -547,7 +496,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                           aria-current={active ? "page" : undefined}
                           title={item.label}
                         >
-                          <Icon aria-hidden />
+                          <SidebarSuiteIcon name={item.icon} />
                           <span className="lb">{item.label}</span>
                           {count != null ? <em>{count}</em> : null}
                           <span className="tip">
@@ -578,7 +527,7 @@ function SidebarAccount({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="tw-sb2__a w-full text-left">
+        <button type="button" className="tw-sb2__a">
           <span className="av" aria-hidden>
             {initials}
           </span>
@@ -588,7 +537,7 @@ function SidebarAccount({
           </span>
           <span className="tw-sp" />
           <span className="tw-ic2" aria-hidden>
-            <ChevronUpIcon />
+            <SidebarSuiteIcon name="chevron" />
           </span>
         </button>
       </DropdownMenuTrigger>
@@ -604,7 +553,7 @@ function SidebarAccount({
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <AppNavLink href="/settings/about">
-            <InfoIcon />
+            <SidebarSuiteIcon name="info" />
             About
           </AppNavLink>
         </DropdownMenuItem>
