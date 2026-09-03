@@ -587,3 +587,79 @@
 .dark .finance-suite .thinkway-campaign-section-card {
   background: hsl(var(--card));
 }
+
+/* Invoice detail (pgINVD) */
+.finance-suite .tw-inv-identity {
+  gap: 12px;
+  align-items: center;
+}
+.finance-suite .tw-inv-no {
+  font: 600 18px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  letter-spacing: -0.6px;
+}
+.finance-suite .tw-inv-ws-lbl {
+  margin: 0;
+}
+.finance-suite .tw-seg button em {
+  font-style: normal;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  opacity: 0.6;
+}
+.finance-suite .tw-gov {
+  background: var(--tw-soft);
+  border-bottom: 1px solid var(--tw-line);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.finance-suite .tw-gov-copy {
+  flex: 1 1 340px;
+}
+.finance-suite .tw-gov-hint {
+  font-size: 11.5px;
+  color: var(--tw-mut);
+}
+.finance-suite .tw-gov-reason {
+  width: 100%;
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--tw-mut);
+}
+.finance-suite .tw-coll-form {
+  background: var(--tw-soft);
+  border-bottom: 1px solid var(--tw-line);
+}
+.finance-suite .tw-coll-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 11px;
+  align-items: flex-end;
+}
+.finance-suite .tw-coll-submit {
+  height: 30px;
+}
+.finance-suite .tw-appr-chain {
+  border-bottom: 1px solid var(--tw-line);
+}
+.finance-suite .tw-appr-pills {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.finance-suite .tw-appr-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.finance-suite .tw-appr-arrow {
+  color: #c3cbd8;
+}
+.finance-suite .tw-appr-pill {
+  padding: 5px 12px;
+  font-size: 11px;
+}
+.finance-suite .tw-audit-act {
+  padding: 2px 6px;
+}

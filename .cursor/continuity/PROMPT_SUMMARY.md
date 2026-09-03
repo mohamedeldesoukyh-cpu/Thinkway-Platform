@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** 60% invoice treated as fully invoiced and dropped from the billing queue.
+**Focus:** Invoice detail restyle to match finance-suite.html `invd`.
+
+## Shipped 2026-09-03 — Invoice detail finance-suite restyle
+
+`/billing/invoices/[id]` now matches `finance-suite.html` Invoice detail: page title `Invoice {number}`, identity card, finance governance bar, 6 KPI cards, segmented Line items / Collections / Approvals / Audit. Un-generate, record collection, and approve/reject stay wired. No left nav copy. No migrations. Not on Production.
 
 ## In progress 2026-09-03 — Partial invoice remaining SSOT
 

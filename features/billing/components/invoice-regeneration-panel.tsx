@@ -1,16 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useRef, useState } from "react";
-import { RefreshCwIcon, Undo2Icon } from "lucide-react";
 import {
   showErrorToastOnce,
   showSuccessToastOnce,
 } from "@/lib/ui/toast-once";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
-import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import {
   Dialog,
   DialogContent,
@@ -84,42 +81,43 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
       : invoice.regeneration_status === "regenerated"
         ? `Regenerated (v${invoice.version_number})`
         : "Active";
+  const statusPill =
+    invoice.regeneration_status === "pending_regeneration"
+      ? "p-y"
+      : invoice.regeneration_status === "regenerated"
+        ? "p-b"
+        : "p-g";
 
   const coverage = invoice.regeneration_coverage ?? null;
   const regenerateBlocked = coverage?.case === "blocked";
 
   return (
     <>
-      <CampaignFlatSection
-        title="Finance governance"
-        description="Un-generate to unlock invoiced lines for corrections. Same invoice number is always preserved."
-        className="border-amber-500/20"
-      >
-        <div className="flex flex-wrap items-center gap-3">
-          <Badge variant="outline">{statusLabel}</Badge>
-          {invoice.regeneration_status === "active" ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setMode("ungenerate")}
-            >
-              <Undo2Icon className="size-4" />
-              Un-generate invoice
-            </Button>
-          ) : null}
-          {invoice.regeneration_status === "pending_regeneration" ? (
-            <Button size="sm" onClick={() => setMode("regenerate")}>
-              <RefreshCwIcon className="size-4" />
-              Regenerate invoice
-            </Button>
-          ) : null}
-          {invoice.ungenerate_reason ? (
-            <p className="w-full text-xs text-muted-foreground">
-              Last un-generate reason: {invoice.ungenerate_reason}
-            </p>
-          ) : null}
+      <div className="tw-pad tw-gov">
+        <div className="tw-gov-copy">
+          <div className="tw-lbl" style={{ marginBottom: 3 }}>
+            Finance governance
+          </div>
+          <div className="tw-gov-hint">
+            Un-generate to unlock invoiced lines for corrections. The same invoice
+            number is always preserved.
+          </div>
         </div>
-      </CampaignFlatSection>
+        <span className={`tw-p ${statusPill}`}>{statusLabel}</span>
+        {invoice.regeneration_status === "active" ? (
+          <button type="button" className="tw-b sm" onClick={() => setMode("ungenerate")}>
+            ↺ Un-generate invoice
+          </button>
+        ) : null}
+        {invoice.regeneration_status === "pending_regeneration" ? (
+          <button type="button" className="tw-b sm pri" onClick={() => setMode("regenerate")}>
+            ↺ Regenerate invoice
+          </button>
+        ) : null}
+        {invoice.ungenerate_reason ? (
+          <p className="tw-gov-reason">Last un-generate reason: {invoice.ungenerate_reason}</p>
+        ) : null}
+      </div>
 
       <Dialog open={mode !== null} onOpenChange={() => setMode(null)}>
         <DialogContent>

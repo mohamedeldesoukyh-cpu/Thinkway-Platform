@@ -18,6 +18,8 @@ type InvoiceViewMenuProps = {
   label?: string;
   size?: "sm" | "default";
   variant?: "outline" | "default" | "ghost";
+  /** Finance-suite chrome (`tw-b sm`) instead of the default shadcn trigger. */
+  suite?: boolean;
 };
 
 export function InvoiceViewMenu({
@@ -25,16 +27,23 @@ export function InvoiceViewMenu({
   label = "View invoice",
   size = "sm",
   variant = "outline",
+  suite = false,
 }: InvoiceViewMenuProps) {
   const base = `/billing/invoices/${invoiceId}/preview`;
 
   return (
     <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
-        <Button variant={variant} size={size} className="gap-1.5">
-          {label}
-          <ChevronDown className="size-3.5 opacity-70" aria-hidden />
-        </Button>
+        {suite ? (
+          <button type="button" className="tw-b sm">
+            {label}
+          </button>
+        ) : (
+          <Button variant={variant} size={size} className="gap-1.5">
+            {label}
+            <ChevronDown className="size-3.5 opacity-70" aria-hidden />
+          </Button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-64">
         <DropdownMenuLabel>Invoice layout</DropdownMenuLabel>
