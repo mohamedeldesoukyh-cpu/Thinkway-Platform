@@ -398,21 +398,10 @@
   overflow-x: auto;
 }
 
-/* Single continuous blue line through all step dots */
-.campaign-detail-suite .tw-step2 .enterprise-tabs-list::before {
-  content: "";
-  position: absolute;
-  z-index: 0;
-  top: 11px;
-  left: 46px; /* ~ half of min tab width — starts at first dot center */
-  right: 46px; /* ends at last dot center */
-  height: 2px;
-  background: var(--tw-blue);
-  pointer-events: none;
-}
-
 .campaign-detail-suite .tw-step2 .enterprise-tab {
   position: relative;
+  isolation: isolate;
+  overflow: visible !important;
   flex: 1 1 0;
   min-width: 92px !important;
   min-height: 0 !important;
@@ -499,37 +488,51 @@
   box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.18);
 }
 
-/* Kill enterprise-tabs short grey connectors + circular ::after dots */
+/*
+  HTML `.tw-sb::before / ::after` — each tab owns half the connector.
+  First tab has no left half; last tab (Timeline) has no right half, so the
+  line ends on Timeline. Pseudos sit on the tab, so the active lavender
+  background cannot cover the line.
+*/
 .campaign-detail-suite .tw-step2.thinkway-process-nav-tabs .enterprise-tab::before,
 .campaign-detail-suite .tw-step2.thinkway-process-nav-tabs .enterprise-tab::after,
 .campaign-detail-suite .tw-step2 .enterprise-tab::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="current"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="current"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_internal"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_internal"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_client"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_client"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_vendor"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting_vendor"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="attention_required"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="attention_required"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="blocked"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="blocked"]::after,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="upcoming"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="upcoming"]::after {
-  content: none !important;
-  display: none !important;
-  width: 0 !important;
-  height: 0 !important;
+.campaign-detail-suite .tw-step2 .enterprise-tab::after {
+  content: "" !important;
+  display: block !important;
+  position: absolute !important;
+  top: 11px !important;
+  height: 2px !important;
+  width: calc(50% + 1px) !important;
+  background: var(--tw-blue) !important;
+  z-index: 1 !important;
   border: 0 !important;
-  background: transparent !important;
+  border-radius: 0 !important;
   box-shadow: none !important;
   transform: none !important;
+  pointer-events: none !important;
+}
+
+.campaign-detail-suite .tw-step2 .enterprise-tab::before {
+  left: 0 !important;
+  right: auto !important;
+}
+
+.campaign-detail-suite .tw-step2 .enterprise-tab::after {
+  right: 0 !important;
+  left: auto !important;
+}
+
+.campaign-detail-suite .tw-step2 .enterprise-tab:first-child::before,
+.campaign-detail-suite .tw-step2 .enterprise-tabs-list > .enterprise-tab:first-child::before {
+  display: none !important;
+  content: none !important;
+}
+
+.campaign-detail-suite .tw-step2 .enterprise-tab:last-child::after,
+.campaign-detail-suite .tw-step2 .enterprise-tabs-list > .enterprise-tab:last-child::after {
+  display: none !important;
+  content: none !important;
 }
 
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="waiting"],
