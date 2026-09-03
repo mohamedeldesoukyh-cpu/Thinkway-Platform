@@ -1,0 +1,571 @@
+/* Campaigns index — scoped to .campaigns-list-suite.
+   Reference: docs/architecture/campaigns-list.html + THINKWAY_CAMPAIGNS_LIST_DESIGN_SPEC.md */
+
+.campaigns-list-suite {
+  --tw-blue: #0057ff;
+  --tw-bi: #0b52e0;
+  --tw-navy: #060810;
+  --tw-ink: #0b0f1a;
+  --tw-ink2: #41495a;
+  --tw-mut: #64748b;
+  --tw-bg: #fafbfc;
+  --tw-soft: #f6f8fb;
+  --tw-lav: #eff4ff;
+  --tw-line: #e2e8f0;
+  --tw-hair: #edf0f5;
+  --tw-ok: #0a7a55;
+  --tw-okb: #e9f7f1;
+  --tw-wrn: #8a5d12;
+  --tw-wrnb: #fff6e8;
+  --tw-bad: #c82121;
+  --tw-badb: #fef2f2;
+  --tw-vio: #5b3fd1;
+  --tw-grad: linear-gradient(107deg, #0b3dbf 0%, #0f55e8 34%, #3d82ff 62%, #8fb6ff 100%);
+  --tw-ring: 0 0 0 1px rgba(0, 87, 255, 0.05), 0 8px 24px rgba(0, 87, 255, 0.06);
+  --tw-ez: cubic-bezier(0.23, 1, 0.32, 1);
+  --cols: 30px 96px minmax(150px, 1.3fr) 112px 104px 92px 58px 62px 128px minmax(140px, 1fr) 52px 128px 96px 150px 116px;
+  color: var(--tw-ink);
+  min-width: 0;
+}
+
+.campaigns-list-suite .tw-mast {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: var(--tw-ring);
+  margin-bottom: 10px;
+}
+
+.campaigns-list-suite .tw-mast::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: var(--tw-grad);
+}
+
+.campaigns-list-suite .tw-mast::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  right: 34%;
+  top: -96px;
+  width: 196px;
+  height: 196px;
+  border-radius: 50%;
+  border: 30px solid rgba(255, 255, 255, 0.13);
+  pointer-events: none;
+}
+
+.campaigns-list-suite .tw-mh {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 14px 16px 12px;
+  color: #fff;
+}
+
+.campaigns-list-suite .tw-mh h1 {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+
+.campaigns-list-suite .tw-mh .sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.78);
+  max-width: 520px;
+  line-height: 1.4;
+}
+
+.campaigns-list-suite .tw-mh .tw-sp {
+  flex: 1 1 auto;
+}
+
+.campaigns-list-suite .tw-mh .st {
+  font: 600 11px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  letter-spacing: 0.2px;
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.campaigns-list-suite .tw-mh .tw-b {
+  height: 32px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0.8px solid rgba(255, 255, 255, 0.45);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: 600 12.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.campaigns-list-suite .tw-mh .tw-b:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.campaigns-list-suite .tw-ms2 {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 0;
+  background: #fff;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.campaigns-list-suite .tw-ms2 > div {
+  padding: 9px 14px;
+  border-right: 1px solid var(--tw-hair);
+  min-width: 0;
+}
+
+.campaigns-list-suite .tw-ms2 > div:last-child {
+  border-right: 0;
+}
+
+.campaigns-list-suite .tw-ms2 i {
+  display: block;
+  font-style: normal;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--tw-mut);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.campaigns-list-suite .tw-ms2 b {
+  display: block;
+  margin-top: 3px;
+  font: 600 14px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.35px;
+  color: var(--tw-ink);
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.campaigns-list-suite .tw-ms2 b.g {
+  color: var(--tw-ok);
+}
+
+.campaigns-list-suite .tw-ms2 b.r {
+  color: var(--tw-bad);
+}
+
+.campaigns-list-suite .tw-c {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--tw-ring);
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 0;
+}
+
+.campaigns-list-suite .tw-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--tw-line);
+  background: #fff;
+}
+
+.campaigns-list-suite .tw-toolbar .tw-cs {
+  font-size: 11px;
+  color: var(--tw-mut);
+}
+
+.campaigns-list-suite .tw-toolbar .tw-sp {
+  flex: 1 1 auto;
+}
+
+.campaigns-list-suite .tw-toolbar .platform-v6-toolbar-inner {
+  display: contents;
+}
+
+.campaigns-list-suite .tw-toolbar .platform-v6-btn,
+.campaigns-list-suite .tw-toolbar button:not([role="checkbox"]),
+.campaigns-list-suite .tw-toolbar [data-slot="button"] {
+  height: 27px;
+  padding: 0 10px;
+  border: 0.8px solid #e3e8f2;
+  border-radius: 8px;
+  background: #fff;
+  color: var(--tw-ink2);
+  font: 600 11.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  box-shadow: none;
+}
+
+.campaigns-list-suite .tw-toolbar .platform-v6-btn:hover,
+.campaigns-list-suite .tw-toolbar button:hover:not(:disabled),
+.campaigns-list-suite .tw-toolbar [data-slot="button"]:hover {
+  border-color: rgba(0, 87, 255, 0.35);
+  color: var(--tw-bi);
+}
+
+.campaigns-list-suite .tw-mh .platform-v6-btn,
+.campaigns-list-suite .tw-mh .platform-v6-btn-primary {
+  height: 32px;
+  padding: 0 12px;
+  border: 0.8px solid rgba(255, 255, 255, 0.45);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: 600 12.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  box-shadow: none;
+}
+
+.campaigns-list-suite .tw-mh .platform-v6-btn:hover,
+.campaigns-list-suite .tw-mh .platform-v6-btn-primary:hover {
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+}
+
+.campaigns-list-suite .tw-lnk {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.campaigns-list-suite .tw-rr {
+  text-align: right;
+}
+
+.campaigns-list-suite .tw-sc {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.campaigns-list-suite .tw-g {
+  display: grid;
+  grid-template-columns: var(--cols);
+  align-items: center;
+  min-width: 1720px;
+}
+
+.campaigns-list-suite .tw-g > * {
+  padding: 0 8px;
+  min-width: 0;
+}
+
+.campaigns-list-suite .tw-hr {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  background: var(--tw-soft);
+  border-bottom: 1px solid var(--tw-line);
+  padding: 9px 0;
+}
+
+.campaigns-list-suite .tw-hr > * {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--tw-mut);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.campaigns-list-suite .tw-r {
+  padding: 11px 0;
+  border-bottom: 1px solid var(--tw-hair);
+  transition: background 0.12s var(--tw-ez);
+}
+
+.campaigns-list-suite .tw-r:hover {
+  background: #fbfcff;
+}
+
+.campaigns-list-suite .tw-r.sel {
+  background: var(--tw-lav);
+}
+
+.campaigns-list-suite .tw-r.bad {
+  background: #fff8f8;
+  box-shadow: inset 3px 0 0 var(--tw-bad);
+}
+
+.campaigns-list-suite .tw-r.wrn {
+  background: #fffcf5;
+  box-shadow: inset 3px 0 0 #e0a93c;
+}
+
+.campaigns-list-suite .tw-id {
+  font: 600 12px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  letter-spacing: -0.3px;
+  color: var(--tw-ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.campaigns-list-suite .tw-nm {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tw-ink);
+  text-decoration: none;
+}
+
+.campaigns-list-suite .tw-nm:hover {
+  color: var(--tw-bi);
+}
+
+.campaigns-list-suite .tw-br {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--tw-vio);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaigns-list-suite .tw-t {
+  font-size: 12px;
+  color: var(--tw-ink2);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaigns-list-suite .tw-v {
+  font: 600 12.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.3px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.campaigns-list-suite .tw-v.z {
+  color: #b6becd;
+  font-weight: 500;
+}
+
+.campaigns-list-suite .tw-v.neg {
+  color: var(--tw-bad);
+}
+
+.campaigns-list-suite .tw-d {
+  font: 500 11.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  color: var(--tw-ink2);
+  white-space: nowrap;
+}
+
+.campaigns-list-suite .tw-miss {
+  color: #a9b2c3;
+  font-style: italic;
+  font-size: 11.5px;
+}
+
+.campaigns-list-suite .tw-cc {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: var(--tw-soft);
+  border: 1px solid var(--tw-hair);
+  font: 700 9.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  letter-spacing: 0.3px;
+  color: var(--tw-mut);
+}
+
+.campaigns-list-suite .tw-p,
+.campaigns-list-suite .thinkway-campaign-status-chip,
+.campaigns-list-suite [data-slot="badge"] {
+  display: inline-block;
+  max-width: 100%;
+  padding: 2px 8px !important;
+  border-radius: 999px !important;
+  font: 600 10px var(--font-geist-sans), Geist, system-ui, sans-serif !important;
+  letter-spacing: 0 !important;
+  text-transform: none !important;
+  white-space: nowrap !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border: 0 !important;
+}
+
+.campaigns-list-suite .p-n {
+  background: var(--tw-soft);
+  color: var(--tw-mut);
+}
+.campaigns-list-suite .p-g {
+  background: var(--tw-okb);
+  color: var(--tw-ok);
+}
+.campaigns-list-suite .p-y {
+  background: var(--tw-wrnb);
+  color: var(--tw-wrn);
+}
+.campaigns-list-suite .p-r {
+  background: var(--tw-badb);
+  color: var(--tw-bad);
+}
+.campaigns-list-suite .p-b {
+  background: var(--tw-lav);
+  color: var(--tw-bi);
+}
+
+.campaigns-list-suite .tw-ck {
+  width: 15px;
+  height: 15px;
+  accent-color: var(--tw-blue);
+  cursor: pointer;
+}
+
+.campaigns-list-suite .tw-hier {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.campaigns-list-suite .tw-hier b {
+  font-size: 12px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaigns-list-suite .tw-hier u {
+  text-decoration: none;
+  font-size: 10.5px;
+  color: var(--tw-mut);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaigns-list-suite .tw-na2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 12px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  color: var(--tw-bi);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaigns-list-suite .tw-na2:hover {
+  text-decoration: underline;
+}
+
+.campaigns-list-suite .tw-pag {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 11px 14px;
+  border-top: 1px solid var(--tw-line);
+}
+
+.campaigns-list-suite .tw-pag .tw-cs {
+  font-size: 11px;
+  color: var(--tw-mut);
+}
+
+.campaigns-list-suite .tw-pag .tw-sp {
+  flex: 1 1 auto;
+}
+
+.campaigns-list-suite .tw-pag a,
+.campaigns-list-suite .tw-pag button,
+.campaigns-list-suite .tw-pag [data-slot="button"] {
+  min-width: 29px;
+  height: 29px;
+  padding: 0 9px;
+  border: 0.8px solid #e3e8f2;
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+  font: 600 12px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  color: var(--tw-ink2);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+.campaigns-list-suite .tw-pag a:hover,
+.campaigns-list-suite .tw-pag button:hover:not(:disabled) {
+  border-color: rgba(0, 87, 255, 0.35);
+  color: var(--tw-bi);
+}
+
+.campaigns-list-suite .tw-pag a[aria-current="true"],
+.campaigns-list-suite .tw-pag button[aria-current="true"] {
+  background: var(--tw-lav);
+  border-color: #cddcff;
+  color: var(--tw-bi);
+}
+
+.campaigns-list-suite .tw-pag a[aria-disabled="true"],
+.campaigns-list-suite .tw-pag button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.campaigns-list-suite .tw-money {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  min-width: 0;
+}
+
+.campaigns-list-suite .tw-money-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* Hide legacy Platform V6 chrome when suite is active */
+.campaigns-list-suite .platform-v6-page-header-row,
+.campaigns-list-suite .platform-v6-section-meta,
+.campaigns-list-suite .platform-v6-kpi-strip {
+  display: none;
+}
+
+.campaigns-list-suite .platform-v6-toolbar {
+  display: none;
+}
+
+.campaigns-list-suite .platform-v6-section-wrap {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+}

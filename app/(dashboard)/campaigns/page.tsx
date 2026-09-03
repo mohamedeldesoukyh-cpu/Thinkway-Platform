@@ -1,8 +1,8 @@
 import { EMPTY_CAMPAIGN_FORM_OPTIONS } from "@/features/campaigns/campaign-page-fallbacks";
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PlatformV6Page, PlatformV6PageHeader } from "@/components/platform/platform-v6-layout";
-import { CampaignsKpiStrip } from "@/features/campaigns/components/campaigns-kpi-strip";
+import { PlatformV6Page } from "@/components/platform/platform-v6-layout";
+import { CampaignsListMasthead } from "@/features/campaigns/components/campaigns-list-masthead";
 import { CampaignsListSection } from "@/features/campaigns/components/campaigns-list-section";
 import { NewCampaignDialog } from "@/features/campaigns/components/new-campaign-dialog";
 import {
@@ -60,28 +60,42 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
     formOptions = EMPTY_CAMPAIGN_FORM_OPTIONS;
   }
 
-  const { campaigns, total, totalPages } = list;
+  const { campaigns, total, totalPages, pageSize } = list;
   const hasSearch = Boolean(search);
   const meta =
-    total === 1 ? "1 campaign" : `${total} campaigns` + (hasSearch ? ` matching "${search}"` : "");
+    total === 1
+      ? "1 campaign"
+      : `${total} campaigns` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
     <DashboardShell title="Campaigns" platformV6 workspaceNavActive="campaigns">
-      <PlatformV6Page className="campaigns-module-page">
-        <PlatformV6PageHeader
-          inline
-          title="Campaigns"
-          description="Campaign command center — open a campaign to continue operational work in its workspace."
-          actions={<NewCampaignDialog {...formOptions} />}
-        />
-
-        {kpis ? <CampaignsKpiStrip kpis={kpis} /> : null}
+      <PlatformV6Page className="campaigns-module-page campaigns-list-suite">
+        {kpis ? (
+          <CampaignsListMasthead
+            kpis={kpis}
+            actions={<NewCampaignDialog {...formOptions} />}
+          />
+        ) : (
+          <div className="tw-mast">
+            <div className="tw-mh">
+              <h1>Campaigns</h1>
+              <span className="sub">
+                Campaign command center — open a campaign to continue operational
+                work in its workspace
+              </span>
+              <span className="tw-sp" />
+              <NewCampaignDialog {...formOptions} />
+            </div>
+          </div>
+        )}
 
         <CampaignsListSection
           campaigns={campaigns}
           meta={meta}
           hasSearch={hasSearch}
           page={list.page}
+          pageSize={pageSize}
+          total={total}
           totalPages={totalPages}
           search={search}
           errorSlot={

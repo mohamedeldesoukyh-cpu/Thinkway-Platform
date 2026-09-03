@@ -2,11 +2,6 @@
 
 import { Suspense, type ReactNode } from "react";
 
-import {
-  PlatformV6SectionMeta,
-  PlatformV6SectionWrap,
-  PlatformV6Toolbar,
-} from "@/components/platform/platform-v6-layout";
 import { OperationalTableToolbar } from "@/components/tables/operational-table-toolbar";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { CampaignsEmptyState } from "@/features/campaigns/components/campaigns-empty-state";
@@ -29,6 +24,8 @@ type CampaignsListSectionProps = {
   meta: string;
   hasSearch: boolean;
   page: number;
+  pageSize: number;
+  total: number;
   totalPages: number;
   search: string;
   errorSlot?: ReactNode;
@@ -39,6 +36,8 @@ export function CampaignsListSection({
   meta,
   hasSearch,
   page,
+  pageSize,
+  total,
   totalPages,
   search,
   errorSlot,
@@ -52,19 +51,18 @@ export function CampaignsListSection({
       additionalFilterFields={CAMPAIGNS_ADDITIONAL_FILTER_FIELDS}
     >
       <CampaignsListNavSync search={search} />
-      <PlatformV6SectionMeta
-        title="Campaign portfolio"
-        meta={`${meta} · open a row to enter the campaign workspace`}
-      />
-      <PlatformV6Toolbar>
-        <Suspense fallback={null}>
-          <OperationalTableToolbar contextLabel="Campaigns">
-            <CampaignsSearch />
-          </OperationalTableToolbar>
-        </Suspense>
-      </PlatformV6Toolbar>
 
-      <PlatformV6SectionWrap className="campaigns-module-register">
+      <div className="tw-c campaigns-module-register">
+        <div className="tw-toolbar">
+          <Suspense fallback={null}>
+            <OperationalTableToolbar contextLabel="Campaigns">
+              <CampaignsSearch />
+            </OperationalTableToolbar>
+          </Suspense>
+          <span className="tw-sp" />
+          <span className="tw-cs">{meta} · open a row to enter the workspace</span>
+        </div>
+
         {errorSlot}
 
         {campaigns.length === 0 ? (
@@ -72,12 +70,18 @@ export function CampaignsListSection({
         ) : (
           <>
             <CampaignsTable campaigns={campaigns} />
-            <div className="border-t px-4 py-3 md:px-[14px]">
-              <CampaignsPagination page={page} totalPages={totalPages} search={search} />
+            <div className="tw-pag">
+              <CampaignsPagination
+                page={page}
+                pageSize={pageSize}
+                total={total}
+                totalPages={totalPages}
+                search={search}
+              />
             </div>
           </>
         )}
-      </PlatformV6SectionWrap>
+      </div>
     </OperationalTableSuiteProvider>
   );
 }

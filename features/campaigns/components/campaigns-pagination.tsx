@@ -10,6 +10,8 @@ import {
 
 type CampaignsPaginationProps = {
   page: number;
+  pageSize: number;
+  total: number;
   totalPages: number;
   search?: string;
 };
@@ -54,48 +56,59 @@ function getPageNumbers(current: number, total: number): (number | "ellipsis")[]
 
 export function CampaignsPagination({
   page,
+  pageSize,
+  total,
   totalPages,
   search,
 }: CampaignsPaginationProps) {
+  const from = total === 0 ? 0 : (page - 1) * pageSize + 1;
+  const to = Math.min(page * pageSize, total);
+  const rangeLabel =
+    total === 0 ? "Showing 0 of 0" : `Showing ${from}–${to} of ${total}`;
+
   if (totalPages <= 1) {
-    return null;
+    return <span className="tw-cs">{rangeLabel}</span>;
   }
 
   const pages = getPageNumbers(page, totalPages);
 
   return (
-    <Pagination className="justify-end text-[11px]">
-      <PaginationContent>
-        <PaginationItem>
-          <PaginationPrevious
-            href={buildHref(Math.max(1, page - 1), search)}
-            aria-disabled={page <= 1}
-            className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
-          />
-        </PaginationItem>
-        {pages.map((item, index) =>
-          item === "ellipsis" ? (
-            <PaginationItem key={`ellipsis-${index}`}>
-              <PaginationEllipsis />
-            </PaginationItem>
-          ) : (
-            <PaginationItem key={item}>
-              <PaginationLink href={buildHref(item, search)} isActive={item === page}>
-                {item}
-              </PaginationLink>
-            </PaginationItem>
-          )
-        )}
-        <PaginationItem>
-          <PaginationNext
-            href={buildHref(Math.min(totalPages, page + 1), search)}
-            aria-disabled={page >= totalPages}
-            className={
-              page >= totalPages ? "pointer-events-none opacity-50" : undefined
-            }
-          />
-        </PaginationItem>
-      </PaginationContent>
-    </Pagination>
+    <>
+      <span className="tw-cs">{rangeLabel}</span>
+      <span className="tw-sp" />
+      <Pagination className="m-0 w-auto justify-end p-0 text-[11px]">
+        <PaginationContent className="gap-1.5">
+          <PaginationItem>
+            <PaginationPrevious
+              href={buildHref(Math.max(1, page - 1), search)}
+              aria-disabled={page <= 1}
+              className={page <= 1 ? "pointer-events-none opacity-50" : undefined}
+            />
+          </PaginationItem>
+          {pages.map((item, index) =>
+            item === "ellipsis" ? (
+              <PaginationItem key={`ellipsis-${index}`}>
+                <PaginationEllipsis />
+              </PaginationItem>
+            ) : (
+              <PaginationItem key={item}>
+                <PaginationLink href={buildHref(item, search)} isActive={item === page}>
+                  {item}
+                </PaginationLink>
+              </PaginationItem>
+            )
+          )}
+          <PaginationItem>
+            <PaginationNext
+              href={buildHref(Math.min(totalPages, page + 1), search)}
+              aria-disabled={page >= totalPages}
+              className={
+                page >= totalPages ? "pointer-events-none opacity-50" : undefined
+              }
+            />
+          </PaginationItem>
+        </PaginationContent>
+      </Pagination>
+    </>
   );
 }

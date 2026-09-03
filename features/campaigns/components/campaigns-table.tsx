@@ -1,13 +1,14 @@
 "use client";
 
+import { useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
+import { useOperationalTableColumnsContext } from "@/components/tables/operational-table-column-context";
+import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
 import {
-  OperationalConfigurableTable,
-  type OperationalConfigurableColumnDef,
   getOperationalTableColumnMetas,
+  type OperationalConfigurableColumnDef,
 } from "@/components/tables/operational-configurable-table";
 import { CampaignListClientLinkCell } from "@/features/campaigns/components/campaign-list-client-link-cell";
 import { CampaignStatusBadge } from "@/features/campaigns/components/campaign-status-badge";
@@ -15,7 +16,6 @@ import { OPERATIONAL_CHROME_STATUS_BADGE } from "@/features/campaigns/components
 import { platformV6BadgeClass } from "@/components/platform/platform-v6-layout";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
-import { formatMoney } from "@/features/campaigns/utils";
 import { resolveCampaignListPoBudget } from "@/lib/finance/po/operational-budget";
 import {
   PO_ALERT_FRAME,
@@ -23,12 +23,34 @@ import {
   PO_STATUS_VARIANT,
   resolvePoAlertStatus,
 } from "@/lib/finance/po/status";
+import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import { campaignPortfolioIntel } from "@/features/campaigns/lifecycle/campaign-portfolio-intelligence";
 import { campaignProcessCueFromListItem } from "@/features/campaigns/lifecycle/campaign-process-presentation";
 import type { CampaignListItem } from "@/types/database";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import { campaignDetailPathWithTab } from "@/lib/routing/entity-paths";
+import { formatDesignDateRange } from "@/lib/design/format-design-date";
 import { cn } from "@/lib/utils";
+
+/** Spec §5.1 — CSS Grid tracks excluding the leading select column. */
+const CAMPAIGNS_LIST_TRACKS: Record<string, string> = {
+  document_number: "96px",
+  name: "minmax(150px, 1.3fr)",
+  brand: "112px",
+  stage: "104px",
+  waiting_for: "92px",
+  days_waiting: "58px",
+  risk: "62px",
+  next_action: "128px",
+  group_client: "minmax(140px, 1fr)",
+  lines: "52px",
+  status: "128px",
+  client_link: "96px",
+  po_total: "150px",
+  dates: "116px",
+};
+
+const SELECT_TRACK = "30px";
 
 function campaignOpenHref(campaign: CampaignListItem) {
   const cue = campaignProcessCueFromListItem(campaign);
@@ -38,31 +60,6 @@ function campaignOpenHref(campaign: CampaignListItem) {
 type CampaignsTableProps = {
   campaigns: CampaignListItem[];
 };
-
-function formatDate(value: string | null) {
-  if (!value) {
-    return "—";
-  }
-  return format(new Date(`${value}T00:00:00`), "MMM d, yyyy");
-}
-
-function formatDateRange(start: string | null, end: string | null) {
-  if (!start && !end) {
-    return "—";
-  }
-  if (!start) {
-    return formatDate(end);
-  }
-  if (!end || start === end) {
-    return formatDate(start);
-  }
-  return (
-    <span className="flex min-w-0 flex-col gap-0.5 leading-tight" title={`${formatDate(start)} – ${formatDate(end)}`}>
-      <span className="truncate">{formatDate(start)}</span>
-      <span className="truncate">– {formatDate(end)}</span>
-    </span>
-  );
-}
 
 function campaignPoBudget(campaign: CampaignListItem) {
   return resolveCampaignListPoBudget(campaign);
@@ -80,39 +77,67 @@ function listPoAlertStatus(campaign: CampaignListItem) {
 function riskBadgeClass(risk: ReturnType<typeof campaignPortfolioIntel>["risk"]) {
   switch (risk) {
     case "critical":
-      return "border-red-300 text-red-700";
+      return "p-r";
     case "elevated":
-      return "border-amber-300 text-amber-800";
+      return "p-y";
     case "watch":
-      return "border-blue-300 text-blue-700";
+      return "p-b";
     default:
-      return "border-emerald-300 text-emerald-800";
+      return "p-g";
   }
+}
+
+function brandCell(campaign: CampaignListItem) {
+  const brandName = campaign.brand?.name?.trim() ?? "";
+  if (!brandName) {
+    return <span className="tw-miss">not set</span>;
+  }
+  if (brandName.toLowerCase() === campaign.name.trim().toLowerCase()) {
+    return (
+      <span className="tw-miss" title={brandName}>
+        same as campaign
+      </span>
+    );
+  }
+  return (
+    <span className="tw-br" title={brandName}>
+      {brandName}
+    </span>
+  );
+}
+
+function datesCell(campaign: CampaignListItem) {
+  const label = formatDesignDateRange(campaign.start_date, campaign.end_date);
+  if (label === "not set") {
+    return <span className="tw-miss">not set</span>;
+  }
+  return (
+    <span className="tw-d" title={label}>
+      {label}
+    </span>
+  );
 }
 
 export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignListItem>[] = [
   {
     id: "document_number",
     label: "Campaign #",
-    colWidth: "7%",
+    renderHeader: () => <>Campaign&nbsp;#</>,
     renderCell: (campaign) => (
-      <Link href={campaignOpenHref(campaign)} className="platform-v6-link">
+      <Link href={campaignOpenHref(campaign)} className="tw-id" title={campaign.document_number}>
         <DocumentNumber value={campaign.document_number} />
       </Link>
     ),
-    cellClassName: "min-w-0 text-muted-foreground",
   },
   {
     id: "name",
     label: "Campaign",
-    colWidth: "10%",
-    cellClassName: "min-w-0 whitespace-normal",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
         <Link
           href={campaignDetailPathWithTab(campaign, intel.nextActionTab)}
-          className="block min-w-0 break-words text-xs font-semibold leading-snug text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)]"
+          className="tw-nm"
           title={`${intel.businessStageLabel} · ${intel.businessStateLabel}`}
         >
           {campaign.name}
@@ -123,25 +148,17 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "brand",
     label: "Brand",
-    colWidth: "7%",
-    renderCell: (campaign) => (
-      <span className="block min-w-0 truncate" title={campaign.brand?.name ?? undefined}>
-        {campaign.brand?.name ?? "—"}
-      </span>
-    ),
-    cellClassName: "min-w-0 text-muted-foreground",
+    renderCell: brandCell,
   },
   {
     id: "stage",
-    label: "Business Stage",
-    colWidth: "8%",
-    cellClassName: "min-w-0 whitespace-normal",
+    label: "Stage",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
         <Link
           href={campaignDetailPathWithTab(campaign, intel.nextActionTab)}
-          className="block min-w-0 break-words text-xs font-medium leading-snug text-[var(--tw-text)] no-underline hover:text-[var(--tw-blue)] hover:underline"
+          className="tw-t"
           title={`${intel.businessStateLabel} · Owner: ${intel.owner}`}
         >
           {intel.businessStageLabel}
@@ -151,32 +168,29 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   },
   {
     id: "waiting_for",
-    label: "Waiting For",
-    colWidth: "6%",
+    label: "Waiting for",
+    renderHeader: () => <>Waiting&nbsp;for</>,
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
-        <span
-          className="block min-w-0 break-words text-xs leading-snug text-[var(--tw-text)]"
-          title={intel.reason}
-        >
+        <span className="tw-t" title={intel.reason}>
           {intel.waitingFor}
         </span>
       );
     },
-    cellClassName: "min-w-0 whitespace-normal text-muted-foreground",
   },
   {
     id: "days_waiting",
-    label: "Days Waiting",
-    colWidth: "4%",
+    label: "Days",
+    renderHeader: () => <span className="tw-rr">Days</span>,
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
         <span
           className={cn(
-            "text-xs tabular-nums",
-            intel.daysWaiting != null && intel.daysWaiting >= 7 && "font-semibold text-amber-800",
+            "tw-v tw-rr",
+            intel.daysWaiting == null && "z",
+            intel.daysWaiting != null && intel.daysWaiting >= 7 && "text-amber-800",
             intel.daysWaiting != null && intel.daysWaiting >= 14 && "text-red-700"
           )}
           title={
@@ -189,41 +203,32 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
         </span>
       );
     },
-    cellClassName: "min-w-0",
   },
   {
     id: "risk",
     label: "Risk",
-    colWidth: "6%",
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
-        <Badge
-          variant="outline"
-          className={cn(
-            OPERATIONAL_CHROME_STATUS_BADGE,
-            "max-w-full truncate font-normal",
-            riskBadgeClass(intel.risk)
-          )}
+        <span
+          className={cn("tw-p", riskBadgeClass(intel.risk))}
           title={`${intel.businessStateLabel} · ${intel.reason}`}
         >
           {intel.riskLabel}
-        </Badge>
+        </span>
       );
     },
-    cellClassName: "min-w-0",
   },
   {
     id: "next_action",
-    label: "Next Action",
-    colWidth: "8%",
-    cellClassName: "min-w-0 whitespace-normal",
+    label: "Next action",
+    renderHeader: () => <>Next&nbsp;action</>,
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
         <Link
           href={campaignDetailPathWithTab(campaign, intel.nextActionTab)}
-          className="block min-w-0 break-words text-xs font-semibold leading-snug text-[var(--tw-blue)] no-underline hover:underline"
+          className="tw-na2"
           title={`${intel.nextAction} · Owner: ${intel.owner} · ${intel.reason}`}
         >
           {intel.nextAction}
@@ -233,94 +238,103 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   },
   {
     id: "group_client",
-    label: "Group · Legal entity",
-    colWidth: "7%",
+    label: "Group · entity",
+    renderHeader: () => <>Group&nbsp;·&nbsp;entity</>,
     renderCell: (campaign) => {
-      const label = [
-        formatGroupDisplayName(campaign.group?.name),
+      const group = formatGroupDisplayName(campaign.group?.name);
+      const entity =
         campaign.client?.legal_name || campaign.client?.name
-          ? campaign.client.legal_name ?? campaign.client.name
-          : null,
-      ]
-        .filter(Boolean)
-        .join(" · ");
+          ? (campaign.client.legal_name ?? campaign.client.name)
+          : null;
+      const label = [group, entity].filter(Boolean).join(" · ");
+      if (!label) {
+        return <span className="tw-miss">not set</span>;
+      }
       return (
-        <span className="block min-w-0 break-words leading-snug" title={label || undefined}>
-          {label || "—"}
+        <span className="tw-hier" title={label}>
+          {group ? <b>{group}</b> : null}
+          {entity ? <u>{entity}</u> : null}
         </span>
       );
     },
-    cellClassName: "min-w-0 whitespace-normal text-muted-foreground",
   },
   {
     id: "lines",
     label: "Lines",
-    colWidth: "4%",
+    renderHeader: () => <span className="tw-rr">Lines</span>,
     renderCell: (campaign) =>
       campaign.lines.length > 0 ? (
-        <Badge
-          variant="outline"
-          className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "font-normal")}
+        <span
+          className="tw-v tw-rr"
           title={campaign.lines
             .map((line) => formatDocumentNumberForDisplay(line.document_number))
             .join(", ")}
         >
           {campaign.lines.length}
-        </Badge>
+        </span>
       ) : (
-        "—"
+        <span className="tw-v tw-rr z">0</span>
       ),
-    cellClassName: "min-w-0",
   },
   {
     id: "status",
     label: "Status",
-    colWidth: "6%",
     renderCell: (campaign) => (
-      <div className="min-w-0 max-w-full overflow-hidden">
-        <CampaignStatusBadge
-          status={campaign.status}
-          className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "max-w-full truncate")}
-        />
-      </div>
+      <CampaignStatusBadge
+        status={campaign.status}
+        className={cn(OPERATIONAL_CHROME_STATUS_BADGE, "max-w-full")}
+      />
     ),
-    cellClassName: "min-w-0",
   },
   {
     id: "client_link",
     label: "Client link",
-    colWidth: "11%",
-    cellClassName: "min-w-0 overflow-visible whitespace-normal",
+    renderHeader: () => <>Client&nbsp;link</>,
     renderCell: (campaign) => (
-      <CampaignListClientLinkCell
-        campaignHeaderId={campaign.id}
-        link={campaign.client_workspace_link}
-      />
+      <span className="tw-lnk">
+        <CampaignListClientLinkCell
+          campaignHeaderId={campaign.id}
+          link={campaign.client_workspace_link}
+        />
+      </span>
     ),
   },
   {
     id: "po_total",
     label: "PO total",
-    headerClassName: "text-right",
-    colWidth: "8%",
+    renderHeader: () => <span className="tw-rr">PO&nbsp;total</span>,
     amountCell: true,
     renderCell: (campaign) => {
+      const budget = campaignPoBudget(campaign);
+      if (!(budget > 0)) {
+        return <span className="tw-miss">no PO</span>;
+      }
       const poAlertStatus = listPoAlertStatus(campaign);
-      const amount = formatMoney(campaignPoBudget(campaign), campaign.currency_code);
+      const currency = (campaign.currency_code || DEFAULT_PLATFORM_CURRENCY)
+        .trim()
+        .toUpperCase();
+      const amount = new Intl.NumberFormat("en-US", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(budget);
+      const title = `${currency} ${amount}`;
       return (
-        <div className="flex w-full min-w-0 flex-col items-end gap-1 overflow-hidden">
-          <span
-            className={cn(
-              "platform-v6-num max-w-full truncate font-semibold",
-              poAlertStatus === "exceeded" && "platform-v6-c-red",
-              poAlertStatus === "near_limit" && "platform-v6-c-amber"
-            )}
-            title={amount}
-          >
-            {amount}
+        <div className="tw-money">
+          <span className="tw-money-row">
+            <span
+              className={cn(
+                "tw-v",
+                poAlertStatus === "exceeded" && "neg",
+                poAlertStatus === "near_limit" && "text-amber-800"
+              )}
+              title={title}
+            >
+              {amount}
+            </span>
+            <span className="tw-cc">{currency}</span>
           </span>
           {poAlertStatus === "near_limit" ? (
-            <span className={cn(platformV6BadgeClass("outline-amber"), "max-w-full truncate")}>
+            <span className={cn(platformV6BadgeClass("outline-amber"), "tw-p p-y")}>
               Near limit
             </span>
           ) : campaign.po_status && campaign.po_status !== "draft" ? (
@@ -328,7 +342,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
               variant={PO_STATUS_VARIANT[campaign.po_status]}
               className={cn(
                 OPERATIONAL_CHROME_STATUS_BADGE,
-                "max-w-full truncate font-normal",
+                "font-normal",
                 poAlertStatus && "border-2",
                 poAlertStatus && PO_ALERT_FRAME[poAlertStatus]
               )}
@@ -339,15 +353,11 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
         </div>
       );
     },
-    cellClassName: "min-w-0",
   },
   {
     id: "dates",
     label: "Dates",
-    colWidth: "8%",
-    renderCell: (campaign) =>
-      formatDateRange(campaign.start_date, campaign.end_date),
-    cellClassName: "min-w-0 pr-4 text-muted-foreground",
+    renderCell: datesCell,
   },
 ];
 
@@ -355,13 +365,125 @@ export const CAMPAIGNS_TABLE_COLUMN_METAS = getOperationalTableColumnMetas(
   CAMPAIGNS_TABLE_COLUMNS
 );
 
+function buildCols(visibleIds: readonly string[]): string {
+  const tracks = visibleIds
+    .map((id) => CAMPAIGNS_LIST_TRACKS[id])
+    .filter(Boolean);
+  return [SELECT_TRACK, ...tracks].join(" ");
+}
+
 export function CampaignsTable({ campaigns }: CampaignsTableProps) {
+  const { visibleOrderedColumnIds, hydrated } = useOperationalTableColumnsContext();
+  const dataContext = useOperationalTableDataContextOptional<CampaignListItem>();
+  const displayRows = dataContext?.processedRows ?? campaigns;
+  const [selected, setSelected] = useState<Set<string>>(() => new Set());
+
+  const columnById = useMemo(
+    () => new Map(CAMPAIGNS_TABLE_COLUMNS.map((column) => [column.id, column])),
+    []
+  );
+
+  const visibleColumns = useMemo(() => {
+    const ids = hydrated
+      ? visibleOrderedColumnIds
+      : CAMPAIGNS_TABLE_COLUMNS.filter((c) => c.defaultVisible !== false).map((c) => c.id);
+    return ids
+      .map((id) => columnById.get(id))
+      .filter((column): column is OperationalConfigurableColumnDef<CampaignListItem> =>
+        Boolean(column)
+      );
+  }, [columnById, hydrated, visibleOrderedColumnIds]);
+
+  const cols = useMemo(
+    () => buildCols(visibleColumns.map((column) => column.id)),
+    [visibleColumns]
+  );
+
+  const pageIds = displayRows.map((row) => row.id);
+  const allSelected =
+    pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+
+  function toggleAll(checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) {
+        pageIds.forEach((id) => next.add(id));
+      } else {
+        pageIds.forEach((id) => next.delete(id));
+      }
+      return next;
+    });
+  }
+
+  function toggleOne(id: string, checked: boolean) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }
+
   return (
-    <OperationalConfigurableTable
-      columns={CAMPAIGNS_TABLE_COLUMNS}
-      rows={campaigns}
-      rowKey={(campaign) => campaign.id}
-      headerCellClassName="whitespace-normal break-words leading-snug"
-    />
+    <div className="tw-sc">
+      <div style={{ minWidth: 1720 }}>
+        <div
+          className="tw-g tw-hr"
+          style={{ "--cols": cols } as CSSProperties}
+        >
+          <span>
+            <input
+              type="checkbox"
+              className="tw-ck"
+              aria-label="Select all campaigns on this page"
+              checked={allSelected}
+              onChange={(event) => toggleAll(event.target.checked)}
+            />
+          </span>
+          {visibleColumns.map((column) => (
+            <span key={column.id} title={column.label}>
+              {column.renderHeader ? column.renderHeader() : column.label}
+            </span>
+          ))}
+        </div>
+
+        {displayRows.map((campaign) => {
+          const intel = campaignPortfolioIntel(campaign);
+          const isSelected = selected.has(campaign.id);
+          const rowTone =
+            intel.risk === "critical"
+              ? "bad"
+              : intel.risk === "elevated" ||
+                  (intel.daysWaiting != null && intel.daysWaiting >= 7)
+                ? "wrn"
+                : isSelected
+                  ? "sel"
+                  : undefined;
+
+          return (
+            <div
+              key={campaign.id}
+              className={cn("tw-g tw-r", rowTone)}
+              style={{ "--cols": cols } as CSSProperties}
+            >
+              <span>
+                <input
+                  type="checkbox"
+                  className="tw-ck"
+                  aria-label={`Select ${formatDocumentNumberForDisplay(campaign.document_number)}`}
+                  checked={isSelected}
+                  onChange={(event) => toggleOne(campaign.id, event.target.checked)}
+                />
+              </span>
+              {visibleColumns.map((column) => (
+                <span key={column.id} className={column.amountCell ? "tw-rr" : undefined}>
+                  {column.renderCell(campaign)}
+                </span>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
