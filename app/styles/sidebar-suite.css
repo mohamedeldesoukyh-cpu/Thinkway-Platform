@@ -1,0 +1,483 @@
+/* Thinkway left sidebar — scoped to .tw-sb2.
+   Reference: docs/architecture/sidebar.html + THINKWAY_SIDEBAR_DESIGN_SPEC.md §11 */
+
+.tw-sb2 {
+  --tw-blue: #0057ff;
+  --tw-bi: #0b52e0;
+  --tw-navy: #060810;
+  --tw-ink: #0b0f1a;
+  --tw-ink2: #41495a;
+  --tw-mut: #64748b;
+  --tw-soft: #f6f8fb;
+  --tw-lav: #eff4ff;
+  --tw-line: #e2e8f0;
+  --tw-hair: #edf0f5;
+  --tw-bad: #c82121;
+  --tw-badb: #fef2f2;
+  --tw-grad: linear-gradient(107deg, #0b3dbf 0%, #0f55e8 34%, #3d82ff 62%, #8fb6ff 100%);
+  --tw-ez: cubic-bezier(0.23, 1, 0.32, 1);
+  position: sticky;
+  top: 0;
+  height: 100%;
+  max-height: 100%;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  width: 62px;
+  background: #fff;
+  border-right: 1px solid var(--tw-line);
+  color: var(--tw-ink);
+  font-family: var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
+  transition: width 0.22s var(--tw-ez);
+  overflow: hidden;
+}
+
+.tw-sb2.open {
+  width: 252px;
+  box-shadow: 14px 0 34px -18px rgba(11, 15, 26, 0.26);
+}
+
+.tw-sb2__b {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 52px;
+  padding: 0 13px;
+  border-bottom: 1px solid var(--tw-hair);
+  overflow: hidden;
+}
+
+.tw-sb2 .tw-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  text-decoration: none;
+  color: inherit;
+}
+
+.tw-sb2 .tw-logo__mk {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 auto;
+  border-radius: 7px;
+  background: #060810;
+  overflow: visible;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tw-sb2 .tw-logo__mk::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fff;
+}
+
+.tw-sb2 .tw-logo__mk::after {
+  content: "";
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  width: 11px;
+  height: 11px;
+  border-radius: 4px;
+  background: #0057ff;
+}
+
+.tw-sb2 .tw-logo__tx {
+  font-family: var(--font-geist-sans), Geist, Inter, system-ui, sans-serif;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: -0.4px;
+  color: #060810;
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.16s var(--tw-ez);
+}
+
+.tw-sb2.open .tw-logo__tx {
+  opacity: 1;
+}
+
+.tw-sb2 .tw-logo__tx span {
+  color: #0057ff;
+}
+
+.tw-sb2 .tw-sp {
+  flex: 1 1 auto;
+}
+
+.tw-sb2 .tw-ic2 {
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--tw-mut);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  opacity: 0;
+  transition: opacity 0.16s var(--tw-ez), background 0.12s, color 0.12s;
+}
+
+.tw-sb2.open .tw-ic2 {
+  opacity: 1;
+}
+
+.tw-sb2 .tw-ic2:hover {
+  background: var(--tw-soft);
+  color: var(--tw-ink2);
+}
+
+.tw-sb2 .tw-ic2.on {
+  background: var(--tw-lav);
+  color: var(--tw-bi);
+}
+
+.tw-sb2 .tw-ic2 svg {
+  width: 14px;
+  height: 14px;
+}
+
+.tw-sb2__s {
+  flex: 0 0 auto;
+  padding: 9px 11px;
+  border-bottom: 1px solid var(--tw-hair);
+}
+
+.tw-sb2__s .w {
+  position: relative;
+}
+
+.tw-sb2__s input {
+  width: 100%;
+  height: 30px;
+  padding: 0 9px 0 29px;
+  border: 1px solid var(--tw-line);
+  border-radius: 9px;
+  background: var(--tw-soft);
+  font: 500 12px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  color: var(--tw-ink);
+}
+
+.tw-sb2__s input:focus {
+  outline: none;
+  background: #fff;
+  border-color: var(--tw-blue);
+  box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.12);
+}
+
+.tw-sb2__s .search-ico {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 13px;
+  height: 13px;
+  color: var(--tw-mut);
+  pointer-events: none;
+}
+
+.tw-sb2__s .kbd {
+  position: absolute;
+  right: 7px;
+  top: 50%;
+  transform: translateY(-50%);
+  font: 600 9px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  padding: 2px 5px;
+  border-radius: 5px;
+  background: #fff;
+  border: 1px solid var(--tw-line);
+  color: var(--tw-mut);
+}
+
+.tw-sb2:not(.open) .tw-sb2__s {
+  padding: 9px 0;
+  display: grid;
+  place-items: center;
+}
+
+.tw-sb2:not(.open) .tw-sb2__s .w {
+  width: 34px;
+}
+
+.tw-sb2:not(.open) .tw-sb2__s input {
+  padding: 0;
+  width: 34px;
+  color: transparent;
+  caret-color: transparent;
+}
+
+.tw-sb2:not(.open) .tw-sb2__s .kbd {
+  display: none;
+}
+
+.tw-sb2__n {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 6px 0 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #d6deea transparent;
+}
+
+.tw-sb2__n::-webkit-scrollbar {
+  width: 6px;
+}
+
+.tw-sb2__n::-webkit-scrollbar-thumb {
+  background: #d6deea;
+  border-radius: 99px;
+}
+
+.tw-sb2 .tw-grp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 10px 13px 5px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font: 700 8.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  letter-spacing: 0.75px;
+  text-transform: uppercase;
+  color: #98a2b3;
+  white-space: nowrap;
+}
+
+.tw-sb2 .tw-grp.sub {
+  padding-left: 22px;
+  color: #aeb6c4;
+}
+
+.tw-sb2 .tw-grp .ch {
+  margin-left: auto;
+  font-size: 8px;
+  transition: transform 0.18s var(--tw-ez);
+}
+
+.tw-sb2 .tw-grp[aria-expanded="false"] .ch {
+  transform: rotate(-90deg);
+}
+
+.tw-sb2:not(.open) .tw-grp {
+  display: none;
+}
+
+.tw-sb2 .tw-gsep {
+  display: none;
+  height: 1px;
+  margin: 7px 14px;
+  background: var(--tw-hair);
+}
+
+.tw-sb2:not(.open) .tw-gsep {
+  display: block;
+}
+
+.tw-sb2 .tw-li {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 7px 13px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  font: 500 12.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  color: var(--tw-ink2);
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.tw-sb2 .tw-li:hover {
+  background: var(--tw-soft);
+  color: var(--tw-ink2);
+}
+
+.tw-sb2 .tw-li.on {
+  background: var(--tw-lav);
+  color: var(--tw-bi);
+  font-weight: 600;
+}
+
+.tw-sb2 .tw-li.on::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 5px;
+  bottom: 5px;
+  width: 3px;
+  border-radius: 0 3px 3px 0;
+  background: var(--tw-blue);
+}
+
+.tw-sb2 .tw-li svg {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  stroke-width: 1.7;
+}
+
+.tw-sb2 .tw-li .lb {
+  opacity: 0;
+  transition: opacity 0.16s var(--tw-ez);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+.tw-sb2.open .tw-li .lb {
+  opacity: 1;
+}
+
+.tw-sb2:not(.open) .tw-li {
+  justify-content: center;
+  padding: 8px 0;
+}
+
+.tw-sb2 .tw-li em {
+  margin-left: auto;
+  font-style: normal;
+  font: 600 10px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--tw-soft);
+  color: var(--tw-mut);
+  opacity: 0;
+  transition: opacity 0.16s var(--tw-ez);
+}
+
+.tw-sb2.open .tw-li em {
+  opacity: 1;
+}
+
+.tw-sb2 .tw-li em.alert {
+  background: var(--tw-badb);
+  color: var(--tw-bad);
+}
+
+.tw-sb2 .tw-li.on em {
+  background: #fff;
+  color: var(--tw-bi);
+}
+
+.tw-sb2:not(.open) .tw-li.dot::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 14px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tw-bad);
+}
+
+.tw-sb2 .tip {
+  position: absolute;
+  left: 56px;
+  top: 50%;
+  transform: translateY(-50%) translateX(-4px);
+  z-index: 95;
+  padding: 5px 9px;
+  border-radius: 8px;
+  background: var(--tw-navy);
+  color: #fff;
+  font: 600 11.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: 0 8px 20px -8px rgba(11, 15, 26, 0.5);
+  transition: opacity 0.14s var(--tw-ez), transform 0.14s var(--tw-ez);
+}
+
+.tw-sb2:not(.open) .tw-li:hover .tip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+.tw-sb2.open .tip {
+  display: none;
+}
+
+.tw-sb2__a {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 10px 11px;
+  border-top: 1px solid var(--tw-hair);
+  overflow: hidden;
+  background: #fff;
+}
+
+.tw-sb2__a:hover {
+  background: var(--tw-soft);
+}
+
+.tw-sb2__a .av {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  background: var(--tw-grad);
+  color: #fff;
+  font: 700 11px var(--font-geist-sans), Geist, system-ui, sans-serif;
+}
+
+.tw-sb2__a .m {
+  min-width: 0;
+  opacity: 0;
+  transition: opacity 0.16s var(--tw-ez);
+}
+
+.tw-sb2.open .tw-sb2__a .m {
+  opacity: 1;
+}
+
+.tw-sb2__a b {
+  display: block;
+  font-size: 11.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 148px;
+  color: var(--tw-ink);
+}
+
+.tw-sb2__a u {
+  display: block;
+  text-decoration: none;
+  font-size: 10px;
+  color: var(--tw-mut);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tw-sb2,
+  .tw-sb2 .tw-li .lb,
+  .tw-sb2 .tip,
+  .tw-sb2 .tw-grp .ch,
+  .tw-sb2 .tw-logo__tx,
+  .tw-sb2 .tw-ic2,
+  .tw-sb2__a .m {
+    transition: none;
+  }
+}

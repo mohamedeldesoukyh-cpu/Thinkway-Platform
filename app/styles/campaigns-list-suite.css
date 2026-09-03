@@ -29,8 +29,8 @@
   min-width: 0;
   font-family: var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text",
     "Segoe UI", system-ui, sans-serif;
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 13px;
+  line-height: 1.45;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -544,7 +544,7 @@
 }
 
 .campaigns-list-suite .tw-id {
-  font: 600 12px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font: 600 11.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   letter-spacing: -0.3px;
   color: var(--tw-ink2);
   white-space: nowrap;
@@ -553,7 +553,7 @@
 }
 
 .campaigns-list-suite .tw-nm {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 600;
   letter-spacing: -0.1px;
   overflow: hidden;
@@ -568,7 +568,7 @@
 }
 
 .campaigns-list-suite .tw-br {
-  font-size: 12px;
+  font-size: 11.5px;
   font-weight: 500;
   color: var(--tw-vio);
   overflow: hidden;
@@ -577,7 +577,7 @@
 }
 
 .campaigns-list-suite .tw-t {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--tw-ink2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -585,7 +585,7 @@
 }
 
 .campaigns-list-suite .tw-v {
-  font: 600 12.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font: 600 11.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
   text-align: right;

@@ -843,9 +843,9 @@
 }
 
 .campaign-detail-suite .thinkway-aurora-tblwrap td {
-  padding: 11px 8px;
+  padding: 9px 8px;
   border-bottom: 1px solid var(--tw-hair);
-  font-size: 12.5px;
+  font-size: 11.5px;
 }
 
 .campaign-detail-suite .thinkway-aurora-tblwrap tr:hover td {
@@ -1223,8 +1223,8 @@
 .campaign-detail-suite .thinkway-campaign-asgn-td,
 .campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r > *,
 .campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent .thinkway-campaign-asgn-td {
-  padding: 8px !important;
-  font-size: 12.5px !important;
+  padding: 7px 8px !important;
+  font-size: 11.5px !important;
   font-weight: 400 !important;
   color: var(--tw-ink) !important;
   background: #fff !important;
@@ -1253,8 +1253,8 @@
 .campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-ad > * {
   background: #f4f7fc !important;
   border-bottom: 1px solid #dee5f0;
-  padding: 9px 8px !important;
-  font-size: 12.5px;
+  padding: 8px !important;
+  font-size: 11.5px !important;
 }
 
 .campaign-detail-suite .thinkway-campaign-asgn-child.tw-r:hover > *,

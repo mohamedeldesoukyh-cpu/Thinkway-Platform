@@ -1,12 +1,12 @@
-/** Matches `--rail: 266px` in Thinkway_Client_Form final.html. */
-export const APP_SIDEBAR_WIDTH_EXPANDED = "16.625rem";
-export const APP_SIDEBAR_WIDTH_COLLAPSED = "12px";
+/** Design suite sidebar — 62px rail / 252px expanded (sidebar.html §11). */
+export const APP_SIDEBAR_WIDTH_EXPANDED = "252px";
+export const APP_SIDEBAR_WIDTH_COLLAPSED = "62px";
 export const APP_SIDEBAR_WIDTH_HIDDEN = "0px";
 export const APP_SIDEBAR_MARGIN = "0px";
 export const APP_SIDEBAR_WIDTH_CSS_VAR = "--app-sidebar-width";
 
-/** Hover leave delay before an unpinned peek collapses (SaaS flyout). */
-export const APP_SIDEBAR_PEEK_CLOSE_DELAY_MS = 1000;
+/** Hover leave delay before an unpinned peek collapses. */
+export const APP_SIDEBAR_PEEK_CLOSE_DELAY_MS = 220;
 
 /** Full sidebar panel vs icon rail — driven by pin (layout) or peek (overlay). */
 export function resolveAppSidebarExpanded(pinnedOrPeek: boolean): boolean {

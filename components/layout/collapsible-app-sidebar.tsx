@@ -1,42 +1,44 @@
 ﻿"use client";
 
-import type { ComponentType, ReactNode } from "react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { ComponentType } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import {
   ActivityIcon,
+  ArrowDownUpIcon,
   ArrowRightLeftIcon,
   BarChart3Icon,
-  GaugeIcon,
   BrainIcon,
+  BriefcaseIcon,
   Building2Icon,
   CalendarClockIcon,
   CalendarRangeIcon,
-  ChevronRightIcon,
+  ChevronUpIcon,
   CircleMinusIcon,
   CirclePlusIcon,
   CoinsIcon,
   FileSignatureIcon,
   FileTextIcon,
+  GaugeIcon,
   HomeIcon,
   InfoIcon,
   LayoutDashboardIcon,
-  LineChartIcon,
   LayersIcon,
+  LineChartIcon,
   Link2Icon,
   ListIcon,
+  LogOutIcon,
+  MailIcon,
   MegaphoneIcon,
   PanelLeftCloseIcon,
   PercentIcon,
   PinIcon,
-  PinOffIcon,
   ReceiptIcon,
   RefreshCwIcon,
   SearchIcon,
-  Settings2Icon,
+  SendIcon,
   ShieldIcon,
   SparklesIcon,
-  SendIcon,
   TagsIcon,
   TargetIcon,
   UploadIcon,
@@ -44,16 +46,19 @@ import {
   UsersIcon,
   WalletIcon,
 } from "lucide-react";
+import { useFormStatus } from "react-dom";
 
-import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { AppNavLink } from "@/components/navigation/app-nav-link";
-import { UserAccount } from "@/components/layout/user-account";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { AppVersion } from "@/components/version/app-version";
+import { signOutAction } from "@/features/auth/actions";
 import { isIntelligenceEnabled } from "@/lib/intelligence/feature-flag";
 import {
   APP_SIDEBAR_PEEK_CLOSE_DELAY_MS,
@@ -64,76 +69,48 @@ import {
 } from "@/lib/layout/app-sidebar-width";
 import { cn } from "@/lib/utils";
 
-type NavLinkItem = {
-  kind: "link";
+import "@/app/styles/sidebar-suite.css";
+
+type NavLinkDef = {
   href: string;
   label: string;
   icon: ComponentType<{ className?: string }>;
+  /** Optional badge; never render 0. */
+  count?: number;
 };
 
-type NavSubheaderItem = {
-  kind: "subheader";
-  label: string;
+type NavSection = {
+  /** Primary group label (collapsed separators use this). */
+  group?: string;
+  /** Indented Finance sub-group. */
+  subgroup?: string;
+  items: NavLinkDef[];
 };
 
-type NavEntry = NavLinkItem | NavSubheaderItem;
-
-type NavGroupIconTone = "blue" | "violet" | "teal" | "amber" | "navy";
-
-type NavGroup = {
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-  iconTone: NavGroupIconTone;
-  items: NavEntry[];
-};
-
-type NavRailItem = {
-  groupLabel: string;
-  href: string;
-  label: string;
-  icon: ComponentType<{ className?: string }>;
-};
-
-const GROUP_ICON_TONE_CLASS: Record<NavGroupIconTone, string> = {
-  blue: "thinkway-sidebar-grp-icon",
-  violet: "thinkway-sidebar-grp-icon",
-  teal: "thinkway-sidebar-grp-icon",
-  amber: "thinkway-sidebar-grp-icon",
-  navy: "thinkway-sidebar-grp-icon",
-};
-
-/** Global nav order â€” overview, workspace, commercial, finance, insights, admin. */
-const navGroups: NavGroup[] = [
+const NAV_SECTIONS: NavSection[] = [
   {
-    label: "Home",
-    icon: LayoutDashboardIcon,
-    iconTone: "blue",
+    group: "Home",
     items: [
-      { kind: "link", href: "/", label: "Home", icon: LayoutDashboardIcon },
-      { kind: "link", href: "/dashboard", label: "Executive", icon: LineChartIcon },
+      { href: "/", label: "Home", icon: HomeIcon },
+      { href: "/dashboard", label: "Executive", icon: LineChartIcon },
     ],
   },
   {
-    label: "Campaign Workspace",
-    icon: MegaphoneIcon,
-    iconTone: "violet",
+    group: "Campaign workspace",
     items: [
-      { kind: "link", href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
-      { kind: "link", href: "/studio", label: "Studio", icon: LayoutDashboardIcon },
-      { kind: "link", href: "/ai", label: "Campaign AI", icon: SparklesIcon },
+      { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
+      { href: "/studio", label: "Studio", icon: LayoutDashboardIcon },
+      { href: "/ai", label: "Campaign AI", icon: SparklesIcon },
     ],
   },
   {
-    label: "Client Workspace",
-    icon: Building2Icon,
-    iconTone: "blue",
+    group: "Client workspace",
     items: [
-      { kind: "link", href: "/groups", label: "Holding Groups", icon: LayersIcon },
-      { kind: "link", href: "/clients", label: "Clients", icon: Building2Icon },
-      { kind: "link", href: "/brands", label: "Brands", icon: SparklesIcon },
-      { kind: "link", href: "/ios/client", label: "Client IOs", icon: FileSignatureIcon },
+      { href: "/groups", label: "Holding Groups", icon: LayersIcon },
+      { href: "/clients", label: "Clients", icon: Building2Icon },
+      { href: "/brands", label: "Brands", icon: BriefcaseIcon },
+      { href: "/ios/client", label: "Client IOs", icon: FileSignatureIcon },
       {
-        kind: "link",
         href: "/discovery/quotations",
         label: "Client Quotations",
         icon: FileTextIcon,
@@ -141,295 +118,200 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Vendor Workspace",
-    icon: UsersIcon,
-    iconTone: "teal",
+    group: "Vendor workspace",
     items: [
-      { kind: "link", href: "/vendors", label: "Vendors", icon: UsersIcon },
-      { kind: "link", href: "/ios/vendor", label: "Vendor IO register", icon: FileSignatureIcon },
-      { kind: "subheader", label: "Discovery" },
-      { kind: "link", href: "/discovery/search", label: "Search", icon: SearchIcon },
-      { kind: "link", href: "/discovery/shortlists", label: "Shortlists", icon: ListIcon },
+      { href: "/vendors", label: "Vendors", icon: UsersIcon },
       {
-        kind: "link",
+        href: "/ios/vendor",
+        label: "Vendor IO register",
+        icon: FileSignatureIcon,
+      },
+    ],
+  },
+  {
+    group: "Discovery",
+    items: [
+      { href: "/discovery/search", label: "Search", icon: SearchIcon },
+      { href: "/discovery/shortlists", label: "Shortlists", icon: ListIcon },
+      {
         href: "/discovery/campaign-match",
         label: "Campaign Match",
         icon: TargetIcon,
       },
-      { kind: "link", href: "/discovery/import", label: "Import Center", icon: UploadIcon },
+      { href: "/discovery/import", label: "Import Center", icon: UploadIcon },
     ],
   },
   {
-    label: "Finance Workspace",
-    icon: WalletIcon,
-    iconTone: "amber",
+    group: "Finance workspace",
+    subgroup: "Billing & documents",
     items: [
-      { kind: "subheader", label: "Billing & documents" },
-      { kind: "link", href: "/billing", label: "Billing", icon: ReceiptIcon },
-      { kind: "link", href: "/finance/po-tracker", label: "PO tracker", icon: ReceiptIcon },
-      { kind: "link", href: "/finance/invoices", label: "Invoices", icon: FileTextIcon },
+      { href: "/billing", label: "Billing", icon: ReceiptIcon },
+      { href: "/finance/po-tracker", label: "PO tracker", icon: FileTextIcon },
+      { href: "/finance/invoices", label: "Invoices", icon: FileTextIcon },
       {
-        kind: "link",
         href: "/finance/client-credit-notes",
         label: "Client credit notes",
         icon: CircleMinusIcon,
       },
       {
-        kind: "link",
         href: "/finance/client-debit-notes",
         label: "Client debit notes",
         icon: CirclePlusIcon,
       },
       {
-        kind: "link",
         href: "/finance/vendor-credit-notes",
         label: "Vendor credit notes",
         icon: CircleMinusIcon,
       },
       {
-        kind: "link",
         href: "/finance/vendor-debit-notes",
         label: "Vendor debit notes",
         icon: CirclePlusIcon,
       },
-      { kind: "subheader", label: "Treasury & cash" },
-      { kind: "link", href: "/collections", label: "Collections", icon: CoinsIcon },
-      { kind: "link", href: "/treasury", label: "Treasury", icon: WalletIcon },
-      { kind: "link", href: "/finance/posting-center", label: "Posting center", icon: SendIcon },
-      { kind: "subheader", label: "Compliance & planning" },
-      { kind: "link", href: "/finance/vat", label: "VAT", icon: PercentIcon },
-      { kind: "link", href: "/finance/exchange-rates", label: "Exchange rates", icon: RefreshCwIcon },
-      { kind: "link", href: "/finance/periods", label: "Periods", icon: CalendarRangeIcon },
-      { kind: "link", href: "/planning", label: "Planning", icon: CalendarClockIcon },
-      { kind: "subheader", label: "Move from Acc to another" },
-      { kind: "link", href: "/operations/move", label: "Move between accounts", icon: ArrowRightLeftIcon },
+    ],
+  },
+  {
+    subgroup: "Treasury & cash",
+    items: [
+      { href: "/collections", label: "Collections", icon: CoinsIcon },
+      { href: "/treasury", label: "Treasury", icon: WalletIcon },
       {
-        kind: "link",
-        href: "/operations/reassignment",
-        label: "Reassignment center",
+        href: "/finance/posting-center",
+        label: "Posting center",
+        icon: SendIcon,
+      },
+    ],
+  },
+  {
+    subgroup: "Compliance & planning",
+    items: [
+      { href: "/finance/vat", label: "VAT", icon: PercentIcon },
+      {
+        href: "/finance/exchange-rates",
+        label: "Exchange rates",
+        icon: RefreshCwIcon,
+      },
+      { href: "/finance/periods", label: "Periods", icon: CalendarRangeIcon },
+      { href: "/planning", label: "Planning", icon: CalendarClockIcon },
+    ],
+  },
+  {
+    group: "Move from acc to another",
+    items: [
+      {
+        href: "/operations/move",
+        label: "Move between accounts",
         icon: ArrowRightLeftIcon,
       },
-    ],
-  },
-  {
-    label: "Insights",
-    icon: BarChart3Icon,
-    iconTone: "violet",
-    items: [
-      { kind: "link", href: "/reports", label: "Reports", icon: BarChart3Icon },
-      ...(isIntelligenceEnabled()
-        ? [{ kind: "link" as const, href: "/intelligence", label: "Intelligence", icon: BrainIcon }]
-        : []),
-      { kind: "link", href: "/links", label: "Link generator", icon: Link2Icon },
-    ],
-  },
-  {
-    label: "Administration",
-    icon: Settings2Icon,
-    iconTone: "navy",
-    items: [
       {
-        kind: "link",
-        href: "/operations",
-        label: "Operations Center",
-        icon: ActivityIcon,
+        href: "/operations/reassignment",
+        label: "Reassignment center",
+        icon: ArrowDownUpIcon,
       },
-      { kind: "link", href: "/settings/users", label: "Users", icon: Settings2Icon },
-      { kind: "link", href: "/settings/security", label: "Security", icon: ShieldIcon },
-      { kind: "link", href: "/settings/roles", label: "Roles", icon: UserCogIcon },
-      { kind: "link", href: "/settings/permissions", label: "Permissions", icon: ShieldIcon },
+    ],
+  },
+  {
+    group: "Insights",
+    items: [
+      { href: "/reports", label: "Reports", icon: BarChart3Icon },
+      ...(isIntelligenceEnabled()
+        ? [{ href: "/intelligence", label: "Intelligence", icon: BrainIcon }]
+        : []),
+      { href: "/links", label: "Link generator", icon: Link2Icon },
+    ],
+  },
+  {
+    group: "Administration",
+    items: [
+      { href: "/operations", label: "Operations Center", icon: ActivityIcon },
+      { href: "/settings/users", label: "Users", icon: UsersIcon },
+      { href: "/settings/security", label: "Security", icon: ShieldIcon },
+      { href: "/settings/roles", label: "Roles", icon: UserCogIcon },
+      { href: "/settings/permissions", label: "Permissions", icon: ShieldIcon },
       {
-        kind: "link",
         href: "/settings/access-control",
         label: "Access Control",
         icon: ShieldIcon,
       },
-      { kind: "link", href: "/settings/client-access", label: "Client Access", icon: UsersIcon },
+      { href: "/settings/client-access", label: "Client Access", icon: UsersIcon },
       {
-        kind: "link",
         href: "/settings/client-classification-review",
         label: "Classification Review",
         icon: TagsIcon,
       },
-      { kind: "link", href: "/settings/email", label: "Email", icon: Settings2Icon },
-      { kind: "link", href: "/settings/about", label: "About", icon: InfoIcon },
-      { kind: "link", href: "/system/health", label: "System Health", icon: ActivityIcon },
-      {
-        kind: "link",
-        href: "/system/performance",
-        label: "Performance",
-        icon: GaugeIcon,
-      },
+      { href: "/settings/email", label: "Email", icon: MailIcon },
+      { href: "/settings/about", label: "About", icon: InfoIcon },
+      { href: "/system/health", label: "System Health", icon: ActivityIcon },
+      { href: "/system/performance", label: "Performance", icon: GaugeIcon },
     ],
   },
 ];
 
-const ALL_GROUP_LABELS = navGroups.map((g) => g.label);
-const STORAGE_EXPANDED = "thinkway-sidebar-expanded";
 const STORAGE_PINNED = "thinkway-sidebar-pinned";
-const STORAGE_COLLAPSED_GROUPS = "thinkway-sidebar-collapsed-groups";
+const STORAGE_COLLAPSED_GROUPS = "thinkway-sidebar-collapsed-groups-v2";
+const DEFAULT_COLLAPSED = new Set(["Administration"]);
 
-const RAIL_PRIMARY_HREF: Record<string, string> = {
-  Home: "/",
-  "Campaign Workspace": "/campaigns",
-  "Client Workspace": "/clients",
-  "Vendor Workspace": "/vendors",
-  "Finance Workspace": "/billing",
-  Insights: "/reports",
-  Administration: "/settings/users",
-};
-
-const RAIL_LABEL: Record<string, string> = {
-  "Campaign Workspace": "Campaigns",
-  "Client Workspace": "Clients",
-  "Vendor Workspace": "Vendors",
-  "Finance Workspace": "Finance",
-};
-
-/** Clearer rail glyphs — aligned to section meaning. */
-const RAIL_ICON_OVERRIDE: Partial<
-  Record<string, ComponentType<{ className?: string }>>
-> = {
-  Home: HomeIcon,
-};
-
-/** Legacy section labels from pre-reorg sidebar — map into current groups. */
-const LEGACY_COLLAPSED_LABEL_MAP: Record<string, string[]> = {
-  Overview: ["Home"],
-  Workspace: ["Campaign Workspace"],
-  Discovery: ["Vendor Workspace"],
-  "Clients and vendors CRM": ["Client Workspace", "Vendor Workspace"],
-  Commercial: ["Client Workspace", "Vendor Workspace", "Finance Workspace"],
-  Finance: ["Finance Workspace"],
-  Organization: ["Campaign Workspace", "Client Workspace", "Administration"],
-  Clients: ["Client Workspace"],
-  Operations: ["Finance Workspace"],
-  System: ["Administration"],
-};
-
-function getNavLinks(group: NavGroup): NavLinkItem[] {
-  return group.items.filter((item): item is NavLinkItem => item.kind === "link");
+function sectionKey(section: NavSection): string {
+  return section.group ?? section.subgroup ?? "section";
 }
-
-function buildNavRailItems(): NavRailItem[] {
-  return navGroups.map((group) => ({
-    groupLabel: group.label,
-    href: RAIL_PRIMARY_HREF[group.label] ?? getNavLinks(group)[0]?.href ?? "/",
-    label: RAIL_LABEL[group.label] ?? group.label,
-    icon: RAIL_ICON_OVERRIDE[group.label] ?? group.icon,
-  }));
-}
-
-const navRailItems = buildNavRailItems();
-
-function migrateCollapsedGroups(stored: Set<string>): Set<string> {
-  const migrated = new Set<string>();
-  let hadLegacy = false;
-
-  for (const label of stored) {
-    const mapped = LEGACY_COLLAPSED_LABEL_MAP[label];
-    if (mapped) {
-      hadLegacy = true;
-      for (const next of mapped) migrated.add(next);
-    } else if (ALL_GROUP_LABELS.includes(label)) {
-      migrated.add(label);
-    }
-  }
-
-  if (hadLegacy && typeof window !== "undefined") {
-    localStorage.setItem(STORAGE_COLLAPSED_GROUPS, JSON.stringify([...migrated]));
-  }
-
-  return migrated;
-}
-
-type CollapsibleAppSidebarProps = {
-  userEmail?: string | null;
-};
 
 function isItemActive(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function isRailItemActive(pathname: string, groupLabel: string): boolean {
-  const group = navGroups.find((entry) => entry.label === groupLabel);
-  if (!group) return false;
-  return getNavLinks(group).some((item) => isItemActive(pathname, item.href));
-}
-
-function SidebarRailTooltip({
-  label,
-  children,
-}: {
-  label: string;
-  children: ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger asChild>{children}</TooltipTrigger>
-      <TooltipContent
-        side="right"
-        sideOffset={10}
-        className="border-[#e2e8f0] bg-[#111827] px-2.5 py-1.5 text-[12px] font-medium text-white"
-      >
-        {label}
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function findActiveGroupLabel(pathname: string): string | null {
-  for (const group of navGroups) {
-    if (getNavLinks(group).some((item) => isItemActive(pathname, item.href))) {
-      return group.label;
-    }
-  }
-  return null;
-}
-
-function readCollapsedGroups(): Set<string> {
-  if (typeof window === "undefined") return new Set(ALL_GROUP_LABELS);
-  try {
-    const raw = localStorage.getItem(STORAGE_COLLAPSED_GROUPS);
-    if (!raw) return new Set(ALL_GROUP_LABELS);
-    const parsed = JSON.parse(raw) as string[];
-    return migrateCollapsedGroups(new Set(parsed));
-  } catch {
-    return new Set(ALL_GROUP_LABELS);
-  }
-}
-
-/** Pinned = stays open. Unpinned = rail + edge peek with delayed close. */
-function readSidebarPinned(): boolean {
-  if (typeof window === "undefined") return false;
+function readPinned(): boolean {
+  if (typeof window === "undefined") return true;
   try {
     const pinned = localStorage.getItem(STORAGE_PINNED);
     if (pinned !== null) return pinned === "true";
-    // Migrate legacy expand toggle: expanded â†’ pinned, collapsed â†’ auto.
-    const legacy = localStorage.getItem(STORAGE_EXPANDED);
-    if (legacy === null) return false;
-    return legacy === "true";
+    return true;
   } catch {
-    return false;
+    return true;
   }
 }
 
-function initialCollapsedGroups(pathname: string): Set<string> {
-  const next = new Set(ALL_GROUP_LABELS);
-  const active = findActiveGroupLabel(pathname);
-  if (active) next.delete(active);
-  return next;
+function readCollapsedGroups(): Set<string> {
+  if (typeof window === "undefined") return new Set(DEFAULT_COLLAPSED);
+  try {
+    const raw = localStorage.getItem(STORAGE_COLLAPSED_GROUPS);
+    if (!raw) return new Set(DEFAULT_COLLAPSED);
+    return new Set(JSON.parse(raw) as string[]);
+  } catch {
+    return new Set(DEFAULT_COLLAPSED);
+  }
 }
+
+function initialsFromEmail(email: string | null | undefined): string {
+  if (!email) return "?";
+  const local = email.split("@")[0] ?? email;
+  return local.slice(0, 2).toUpperCase();
+}
+
+function SignOutMenuItem() {
+  const { pending } = useFormStatus();
+  return (
+    <DropdownMenuItem asChild disabled={pending}>
+      <button type="submit" className="w-full cursor-pointer">
+        <LogOutIcon />
+        <span>{pending ? "Signing out..." : "Sign out"}</span>
+      </button>
+    </DropdownMenuItem>
+  );
+}
+
+type CollapsibleAppSidebarProps = {
+  userEmail?: string | null;
+};
 
 export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps) {
   const pathname = usePathname();
-  const [pinned, setPinned] = useState(false);
+  const [pinned, setPinned] = useState(true);
   const [peekOpen, setPeekOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState(() =>
-    initialCollapsedGroups(pathname)
-  );
+  const [collapsedGroups, setCollapsedGroups] = useState(() => new Set(DEFAULT_COLLAPSED));
+  const [query, setQuery] = useState("");
   const [hydrated, setHydrated] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
   const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clearCloseTimer = useCallback(() => {
@@ -452,16 +334,15 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
     }, APP_SIDEBAR_PEEK_CLOSE_DELAY_MS);
   }, [clearCloseTimer]);
 
+  const persistPinned = useCallback((next: boolean) => {
+    setPinned(next);
+    if (next) setPeekOpen(false);
+    localStorage.setItem(STORAGE_PINNED, String(next));
+  }, []);
+
   useEffect(() => {
-    setPinned(readSidebarPinned());
-    const hasStored = localStorage.getItem(STORAGE_COLLAPSED_GROUPS) !== null;
-    if (hasStored) {
-      const stored = readCollapsedGroups();
-      const next = new Set(stored);
-      const active = findActiveGroupLabel(pathname);
-      if (active) next.delete(active);
-      setCollapsedGroups(next);
-    }
+    setPinned(readPinned());
+    setCollapsedGroups(readCollapsedGroups());
     setHydrated(true);
     return () => {
       if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
@@ -470,254 +351,272 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
 
   useEffect(() => {
     if (!hydrated) return;
-    const activeGroup = findActiveGroupLabel(pathname);
-    if (!activeGroup) return;
-    setCollapsedGroups((prev) => {
-      if (!prev.has(activeGroup)) return prev;
-      const next = new Set(prev);
-      next.delete(activeGroup);
-      localStorage.setItem(
-        STORAGE_COLLAPSED_GROUPS,
-        JSON.stringify([...next])
-      );
-      return next;
-    });
-  }, [pathname, hydrated]);
-
-  const persistPinned = useCallback(
-    (value: boolean) => {
-      setPinned(value);
-      localStorage.setItem(STORAGE_PINNED, String(value));
-      localStorage.setItem(STORAGE_EXPANDED, String(value));
-      clearCloseTimer();
-      if (value) setPeekOpen(false);
-    },
-    [clearCloseTimer]
-  );
-
-  const displayExpanded = pinned || peekOpen;
-  const layoutPinned = pinned;
-
-  useEffect(() => {
-    if (!hydrated) return;
     document.documentElement.style.setProperty(
       APP_SIDEBAR_WIDTH_CSS_VAR,
-      getAppSidebarLayoutWidth(layoutPinned)
+      getAppSidebarLayoutWidth(pinned)
     );
-  }, [layoutPinned, hydrated]);
+  }, [pinned, hydrated]);
 
-  const layoutWidth = layoutPinned
-    ? APP_SIDEBAR_WIDTH_EXPANDED
-    : APP_SIDEBAR_WIDTH_COLLAPSED;
-  const panelWidth = displayExpanded
-    ? APP_SIDEBAR_WIDTH_EXPANDED
-    : APP_SIDEBAR_WIDTH_COLLAPSED;
+  useEffect(() => {
+    function onKey(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        if (!pinned) {
+          setPeekOpen(true);
+        }
+        window.setTimeout(() => searchRef.current?.focus(), 0);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [pinned]);
 
-  const toggleGroup = useCallback((label: string) => {
+  const displayOpen = pinned || peekOpen;
+  const layoutPinned = pinned;
+
+  const filteredSections = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return NAV_SECTIONS.map((section) => {
+      const items = q
+        ? section.items.filter((item) => item.label.toLowerCase().includes(q))
+        : section.items;
+      return { ...section, items };
+    }).filter((section) => section.items.length > 0);
+  }, [query]);
+
+  const toggleGroup = useCallback((key: string) => {
     setCollapsedGroups((prev) => {
       const next = new Set(prev);
-      if (next.has(label)) next.delete(label);
-      else next.add(label);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
       localStorage.setItem(STORAGE_COLLAPSED_GROUPS, JSON.stringify([...next]));
       return next;
     });
   }, []);
 
-  const sidebarControlButtonClass =
-    "flex size-8 items-center justify-center rounded-lg border-none bg-transparent text-sidebar-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-primary active:scale-95";
+  const layoutWidth = layoutPinned
+    ? APP_SIDEBAR_WIDTH_EXPANDED
+    : APP_SIDEBAR_WIDTH_COLLAPSED;
+  const panelWidth = displayOpen
+    ? APP_SIDEBAR_WIDTH_EXPANDED
+    : APP_SIDEBAR_WIDTH_COLLAPSED;
+
+  const email = userEmail ?? null;
+  const initials = initialsFromEmail(email);
 
   return (
-    <TooltipProvider delayDuration={300}>
-      {/*
-        Sticky spacer creates a stacking context. Elevate above campaign frozen
-        chrome (z-40) so peek/pinned flyout is never covered. Keep below
-        copilot dock (~200) and dialogs (~110).
-      */}
-      <div
-        data-app-sidebar-root
-        className={cn(
-          "relative hidden shrink-0 self-stretch transition-all duration-300 ease-in-out md:sticky md:top-0 md:block md:h-full md:max-h-full",
-          displayExpanded ? "z-[70]" : "z-30"
-        )}
-        style={{ width: layoutWidth }}
-      >
-        {/* Screen-edge hit target when unpinned (escapes shell overflow clipping). */}
-        {!pinned ? (
-          <div
-            className="pointer-events-auto fixed inset-y-0 left-0 z-[65] w-6"
-            aria-hidden
-            onPointerEnter={openPeek}
-          />
-        ) : null}
+    <div
+      data-app-sidebar-root
+      className={cn(
+        "relative hidden shrink-0 self-stretch transition-[width] duration-200 ease-out md:sticky md:top-0 md:block md:h-full md:max-h-full",
+        displayOpen ? "z-[70]" : "z-30"
+      )}
+      style={{ width: layoutWidth }}
+    >
+      {!pinned ? (
+        <div
+          className="pointer-events-auto fixed inset-y-0 left-0 z-[65] w-3"
+          aria-hidden
+          onPointerEnter={openPeek}
+        />
+      ) : null}
 
-        <aside
-          className={cn(
-            "thinkway-app-sidebar flex flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
-            !pinned && peekOpen
-              ? "fixed inset-y-0 left-0 z-[70] shadow-[4px_0_24px_rgba(15,23,42,0.12)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.45)]"
-              : "absolute inset-y-0 left-0 z-[70]",
-            !displayExpanded && "thinkway-app-sidebar--tip"
-          )}
-          style={{ width: panelWidth }}
-          onPointerEnter={pinned ? undefined : openPeek}
-          onPointerLeave={pinned ? undefined : scheduleClosePeek}
-        >
-          {displayExpanded ? (
-          <div className="flex items-center gap-3 border-b border-sidebar-border px-5 pb-4 pt-5">
-            <AppNavLink href="/" className="min-w-0 shrink-0" title="Thinkway">
-              <ThinkwayLogo showText compact className="mb-0" />
+      <nav
+        className={cn(
+          "tw-sb2",
+          displayOpen && "open",
+          pinned && "pin",
+          !pinned && displayOpen
+            ? "fixed inset-y-0 left-0 z-[70]"
+            : "absolute inset-y-0 left-0 z-[70]"
+        )}
+        style={{ width: panelWidth }}
+        aria-label="Main navigation"
+        onPointerEnter={pinned ? undefined : openPeek}
+        onPointerLeave={pinned ? undefined : scheduleClosePeek}
+      >
+        <div className="tw-sb2__b">
+          <span className="tw-logo">
+            <button
+              type="button"
+              className="tw-logo__mk"
+              aria-label={pinned ? "Unpin navigation" : "Pin navigation"}
+              onClick={() => persistPinned(!pinned)}
+            />
+            <AppNavLink href="/" className="tw-logo__tx" title="Thinkway home">
+              THINK<span>WAY</span>
             </AppNavLink>
-            <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
-                <span aria-hidden className="h-6 w-px shrink-0 bg-[#e2e8f0] dark:bg-border" />
-                {pinned ? (
-                  <SidebarRailTooltip label="Unpin — auto-hide sidebar">
-                    <button
-                      type="button"
-                      onClick={() => persistPinned(false)}
-                      className={sidebarControlButtonClass}
-                      aria-label="Unpin sidebar"
-                      aria-pressed={true}
-                    >
-                      <PinOffIcon className="size-4" />
-                    </button>
-                  </SidebarRailTooltip>
-                ) : (
-                  <SidebarRailTooltip label="Pin sidebar open">
-                    <button
-                      type="button"
-                      onClick={() => persistPinned(true)}
-                      className={sidebarControlButtonClass}
-                      aria-label="Pin sidebar open"
-                      aria-pressed={false}
-                    >
-                      <PinIcon className="size-4" />
-                    </button>
-                  </SidebarRailTooltip>
-                )}
-                <SidebarRailTooltip
-                  label={pinned ? "Collapse to edge tip" : "Close sidebar"}
-                >
+          </span>
+          <span className="tw-sp" />
+          <button
+            type="button"
+            className={cn("tw-ic2", pinned && "on")}
+            aria-label="Pin navigation"
+            aria-pressed={pinned}
+            onClick={() => persistPinned(!pinned)}
+          >
+            <PinIcon />
+          </button>
+          <button
+            type="button"
+            className="tw-ic2"
+            aria-label="Collapse navigation"
+            onClick={() => {
+              if (pinned) persistPinned(false);
+              else {
+                clearCloseTimer();
+                setPeekOpen(false);
+              }
+            }}
+          >
+            <PanelLeftCloseIcon />
+          </button>
+        </div>
+
+        <div className="tw-sb2__s">
+          <span className="w">
+            <SearchIcon className="search-ico" aria-hidden />
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Search navigation…"
+              aria-label="Search navigation"
+              onFocus={() => {
+                if (!pinned) openPeek();
+              }}
+            />
+            <span className="kbd">⌘K</span>
+          </span>
+        </div>
+
+        <div className="tw-sb2__n">
+          {filteredSections.map((section, index) => {
+            const key = sectionKey(section);
+            const closed = collapsedGroups.has(key) && !query.trim();
+            const showPrimary = Boolean(section.group);
+            const showSub = Boolean(section.subgroup);
+
+            return (
+              <div key={`${key}-${index}`}>
+                {showPrimary ? <div className="tw-gsep" /> : null}
+                {showPrimary ? (
                   <button
                     type="button"
-                    onClick={() => {
-                      if (pinned) persistPinned(false);
-                      else {
-                        clearCloseTimer();
-                        setPeekOpen(false);
-                      }
-                    }}
-                    className={sidebarControlButtonClass}
-                    aria-label={pinned ? "Collapse to edge tip" : "Close sidebar"}
+                    className="tw-grp"
+                    aria-expanded={!closed}
+                    onClick={() => toggleGroup(key)}
                   >
-                    <PanelLeftCloseIcon className="size-4" />
+                    {section.group}
+                    <span className="ch" aria-hidden>
+                      ▾
+                    </span>
                   </button>
-                </SidebarRailTooltip>
-            </div>
-          </div>
-          ) : (
-            <div
-              className="thinkway-app-sidebar-tip"
-              title="Move here to open the main bar"
-              aria-label="Main navigation. Hover or focus to open."
-            >
-              <span className="thinkway-app-sidebar-tip-bar" aria-hidden />
-              <span className="thinkway-app-sidebar-tip-nub" aria-hidden>
-                ›
-              </span>
-            </div>
-          )}
-          {displayExpanded ? (
-            <nav className="thinkway-app-sidebar-nav flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 py-3">
-              {navGroups.map((group, groupIndex) => {
-                const groupCollapsed = collapsedGroups.has(group.label);
-
-                return (
-                  <div
-                    key={group.label}
-                    className={cn(
-                      "thinkway-app-sidebar-section flex flex-col",
-                      groupIndex > 0 && "mt-3 border-t border-sidebar-border pt-3"
-                    )}
+                ) : null}
+                {showSub ? (
+                  <button
+                    type="button"
+                    className="tw-grp sub"
+                    aria-expanded={!closed}
+                    onClick={() => toggleGroup(key)}
                   >
-                    <button
-                      type="button"
-                      onClick={() => toggleGroup(group.label)}
-                      className="thinkway-app-sidebar-section-head flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left transition-colors hover:bg-sidebar-accent"
-                      aria-expanded={!groupCollapsed}
-                      aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
-                    >
-                      <span className="min-w-0 flex-1 whitespace-normal break-words text-[11px] font-semibold tracking-[0.08em] text-sidebar-muted-foreground uppercase leading-snug">
-                        {group.label}
-                      </span>
-                      <ChevronRightIcon
-                        className={cn(
-                          "size-3.5 shrink-0 text-sidebar-muted-foreground/70 transition-transform duration-200",
-                          !groupCollapsed && "rotate-90"
-                        )}
-                      />
-                    </button>
+                    {section.subgroup}
+                    <span className="ch" aria-hidden>
+                      ▾
+                    </span>
+                  </button>
+                ) : null}
+                {closed
+                  ? null
+                  : section.items.map((item) => {
+                      const active = isItemActive(pathname, item.href);
+                      const Icon = item.icon;
+                      const count =
+                        typeof item.count === "number" && item.count > 0
+                          ? item.count
+                          : null;
+                      return (
+                        <AppNavLink
+                          key={item.href}
+                          href={item.href}
+                          className={cn(
+                            "tw-li",
+                            active && "on",
+                            count != null && "dot"
+                          )}
+                          aria-current={active ? "page" : undefined}
+                          title={item.label}
+                        >
+                          <Icon aria-hidden />
+                          <span className="lb">{item.label}</span>
+                          {count != null ? <em>{count}</em> : null}
+                          <span className="tip">
+                            {item.label}
+                            {count != null ? ` · ${count}` : ""}
+                          </span>
+                        </AppNavLink>
+                      );
+                    })}
+              </div>
+            );
+          })}
+        </div>
 
-                    <div
-                      className={cn(
-                        "thinkway-app-sidebar-section-items mt-1 ml-1 flex flex-col border-l border-sidebar-border pl-2",
-                        groupCollapsed && "hidden"
-                      )}
-                    >
-                      {group.items.map((item) => {
-                        if (item.kind === "subheader") {
-                          return (
-                            <div
-                              key={`subheader-${item.label}`}
-                              className="px-2 pt-2.5 pb-1 text-[10px] font-semibold tracking-[0.07em] text-sidebar-muted-foreground uppercase"
-                            >
-                              {item.label}
-                            </div>
-                          );
-                        }
+        <SidebarAccount email={email} initials={initials} />
+      </nav>
+    </div>
+  );
+}
 
-                        const active = isItemActive(pathname, item.href);
-                        return (
-                          <AppNavLink
-                            key={item.href}
-                            href={item.href}
-                            title={item.label}
-                            className={cn(
-                              "thinkway-app-sidebar-link flex items-center gap-2.5 rounded-md px-2 py-2 text-[13px] font-medium transition-colors duration-150",
-                              active
-                                ? "thinkway-app-sidebar-link--active bg-[var(--sidebar-active-bg)] text-primary dark:text-blue-400"
-                                : "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                            )}
-                          >
-                            <span
-                              className={cn(
-                                "min-w-0 whitespace-normal break-words leading-snug",
-                                active && "font-semibold text-primary dark:text-blue-400"
-                              )}
-                            >
-                              {item.label}
-                            </span>
-                          </AppNavLink>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </nav>
-          ) : null}
-
-          {displayExpanded ? (
-          <div
-            className={cn(
-              "bg-sidebar",
-              "border-t border-sidebar-border px-4 py-3"
-            )}
-          >
-            <UserAccount email={userEmail} />
+function SidebarAccount({
+  email,
+  initials,
+}: {
+  email: string | null;
+  initials: string;
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button type="button" className="tw-sb2__a w-full text-left">
+          <span className="av" aria-hidden>
+            {initials}
+          </span>
+          <span className="m">
+            <b>{email ?? "Signed in"}</b>
+            <u>Account</u>
+          </span>
+          <span className="tw-sp" />
+          <span className="tw-ic2" aria-hidden>
+            <ChevronUpIcon />
+          </span>
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="w-56">
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">Account</span>
+            <span className="truncate text-xs text-muted-foreground">
+              {email ?? "Signed in"}
+            </span>
           </div>
-          ) : null}
-        </aside>
-      </div>
-    </TooltipProvider>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <AppNavLink href="/settings/about">
+            <InfoIcon />
+            About
+          </AppNavLink>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <form action={signOutAction}>
+          <SignOutMenuItem />
+        </form>
+        <DropdownMenuSeparator />
+        <div className="px-2 py-1.5">
+          <AppVersion />
+        </div>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

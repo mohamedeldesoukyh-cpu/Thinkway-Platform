@@ -98,36 +98,41 @@ export function CampaignDetailChrome({
     const scroller = document.querySelector<HTMLElement>(
       "[data-campaign-workspace-scroll]"
     );
-    if (!scroller) return;
+    const chrome = document.querySelector<HTMLElement>(
+      "[data-campaign-shell='chrome']"
+    );
+    if (!scroller || !chrome) return;
 
-    let lastMini = scroller.scrollTop > 72;
-    setMini(lastMini);
+    let lastHeight = chrome.getBoundingClientRect().height;
+    let miniState = scroller.scrollTop > 96;
+    setMini(miniState);
+
+    const ro = new ResizeObserver(() => {
+      const next = chrome.getBoundingClientRect().height;
+      const delta = lastHeight - next;
+      lastHeight = next;
+      // Chrome sits above the scroller — when it shrinks/grows, keep the same
+      // content under the cursor so Assignments/Vendor IO don't jump upward.
+      if (Math.abs(delta) > 1) {
+        scroller.scrollTop = Math.max(0, scroller.scrollTop + delta);
+      }
+    });
+    ro.observe(chrome);
 
     const onScroll = () => {
-      const nextMini = scroller.scrollTop > 72;
-      if (nextMini === lastMini) return;
-
-      const chrome = document.querySelector<HTMLElement>(
-        "[data-campaign-shell='chrome']"
-      );
-      const before = chrome?.getBoundingClientRect().height ?? 0;
-      lastMini = nextMini;
+      const y = scroller.scrollTop;
+      // Hysteresis avoids mini on/off chatter near the threshold.
+      const nextMini = miniState ? y > 40 : y > 96;
+      if (nextMini === miniState) return;
+      miniState = nextMini;
       setMini(nextMini);
-
-      // Wait for mini chrome paint, then keep the same content under the cursor.
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          const after = chrome?.getBoundingClientRect().height ?? 0;
-          const delta = before - after;
-          if (Math.abs(delta) > 1) {
-            scroller.scrollTop = Math.max(0, scroller.scrollTop + delta);
-          }
-        });
-      });
     };
 
     scroller.addEventListener("scroll", onScroll, { passive: true });
-    return () => scroller.removeEventListener("scroll", onScroll);
+    return () => {
+      ro.disconnect();
+      scroller.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   const revenue = fromEgp(
