@@ -3,9 +3,9 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Campaign / finance design spec (`THINKWAY_CAMPAIGN_FINANCE_DESIGN_SPEC.md`).
 
-## In progress 2026-09-04 — Campaigns list suite design
+## In progress 2026-09-04 — Sidebar workspace pillars + campaigns list polish
 
-`/campaigns` fully uses the design suite (no Platform V6 page chrome): masthead + metrics, card toolbar with suite search + All/Needs action/In finance/No PO views, Filter/Sort/Settings as suite buttons, 15-track CSS Grid, suite status/PO pills, suite pagination. Spec: `campaigns-list.html` / `THINKWAY_CAMPAIGNS_LIST_DESIGN_SPEC.md`. Visual only. No migrations. Not on Production.
+Sidebar reordered: Home · Campaign Workspace · Client Workspace · Vendor Workspace · Finance Workspace · Insights · Administration. Campaigns list drops Overview/Finance/Campaigns/Clients top switcher; list fonts match campaign-detail-suite Geist stack. No migrations. Not on Production.
 
 ## In progress 2026-09-04 — Campaign display prefix Camp#
 

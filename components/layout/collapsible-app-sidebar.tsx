@@ -105,7 +105,7 @@ const GROUP_ICON_TONE_CLASS: Record<NavGroupIconTone, string> = {
 /** Global nav order â€” overview, workspace, commercial, finance, insights, admin. */
 const navGroups: NavGroup[] = [
   {
-    label: "Overview",
+    label: "Home",
     icon: LayoutDashboardIcon,
     iconTone: "blue",
     items: [
@@ -114,7 +114,7 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Workspace",
+    label: "Campaign Workspace",
     icon: MegaphoneIcon,
     iconTone: "violet",
     items: [
@@ -124,18 +124,32 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Discovery",
-    icon: SearchIcon,
-    iconTone: "teal",
+    label: "Client Workspace",
+    icon: Building2Icon,
+    iconTone: "blue",
     items: [
-      { kind: "link", href: "/discovery/search", label: "Search", icon: SearchIcon },
-      { kind: "link", href: "/discovery/shortlists", label: "Shortlists", icon: ListIcon },
+      { kind: "link", href: "/groups", label: "Holding Groups", icon: LayersIcon },
+      { kind: "link", href: "/clients", label: "Clients", icon: Building2Icon },
+      { kind: "link", href: "/brands", label: "Brands", icon: SparklesIcon },
+      { kind: "link", href: "/ios/client", label: "Client IOs", icon: FileSignatureIcon },
       {
         kind: "link",
         href: "/discovery/quotations",
         label: "Client Quotations",
         icon: FileTextIcon,
       },
+    ],
+  },
+  {
+    label: "Vendor Workspace",
+    icon: UsersIcon,
+    iconTone: "teal",
+    items: [
+      { kind: "link", href: "/vendors", label: "Vendors", icon: UsersIcon },
+      { kind: "link", href: "/ios/vendor", label: "Vendor IO register", icon: FileSignatureIcon },
+      { kind: "subheader", label: "Discovery" },
+      { kind: "link", href: "/discovery/search", label: "Search", icon: SearchIcon },
+      { kind: "link", href: "/discovery/shortlists", label: "Shortlists", icon: ListIcon },
       {
         kind: "link",
         href: "/discovery/campaign-match",
@@ -146,33 +160,13 @@ const navGroups: NavGroup[] = [
     ],
   },
   {
-    label: "Clients and vendors CRM",
-    icon: UsersIcon,
-    iconTone: "blue",
-    items: [
-      { kind: "link", href: "/groups", label: "Holding Groups", icon: LayersIcon },
-      { kind: "link", href: "/clients", label: "Clients", icon: Building2Icon },
-      { kind: "link", href: "/brands", label: "Brands", icon: SparklesIcon },
-      { kind: "link", href: "/vendors", label: "Vendors", icon: UsersIcon },
-    ],
-  },
-  {
-    label: "Commercial",
-    icon: FileSignatureIcon,
-    iconTone: "teal",
-    items: [
-      { kind: "link", href: "/ios/client", label: "Client IOs", icon: FileSignatureIcon },
-      { kind: "link", href: "/ios/vendor", label: "Vendor IO register", icon: FileSignatureIcon },
-      { kind: "link", href: "/billing", label: "Billing", icon: ReceiptIcon },
-      { kind: "link", href: "/finance/po-tracker", label: "PO tracker", icon: ReceiptIcon },
-    ],
-  },
-  {
-    label: "Finance",
+    label: "Finance Workspace",
     icon: WalletIcon,
     iconTone: "amber",
     items: [
       { kind: "subheader", label: "Billing & documents" },
+      { kind: "link", href: "/billing", label: "Billing", icon: ReceiptIcon },
+      { kind: "link", href: "/finance/po-tracker", label: "PO tracker", icon: ReceiptIcon },
       { kind: "link", href: "/finance/invoices", label: "Invoices", icon: FileTextIcon },
       {
         kind: "link",
@@ -223,7 +217,6 @@ const navGroups: NavGroup[] = [
     iconTone: "violet",
     items: [
       { kind: "link", href: "/reports", label: "Reports", icon: BarChart3Icon },
-      // Intelligence â€” gated by INTELLIGENCE_ARCHIVED (see docs/INTELLIGENCE_ARCHIVE.md)
       ...(isIntelligenceEnabled()
         ? [{ kind: "link" as const, href: "/intelligence", label: "Intelligence", icon: BrainIcon }]
         : []),
@@ -277,32 +270,40 @@ const STORAGE_PINNED = "thinkway-sidebar-pinned";
 const STORAGE_COLLAPSED_GROUPS = "thinkway-sidebar-collapsed-groups";
 
 const RAIL_PRIMARY_HREF: Record<string, string> = {
-  Overview: "/",
-  Workspace: "/campaigns",
-  Discovery: "/discovery/search",
-  "Clients and vendors CRM": "/clients",
-  Commercial: "/ios/client",
-  Finance: "/finance/invoices",
+  Home: "/",
+  "Campaign Workspace": "/campaigns",
+  "Client Workspace": "/clients",
+  "Vendor Workspace": "/vendors",
+  "Finance Workspace": "/billing",
   Insights: "/reports",
   Administration: "/settings/users",
 };
 
 const RAIL_LABEL: Record<string, string> = {
-  "Clients and vendors CRM": "Clients & vendors",
+  "Campaign Workspace": "Campaigns",
+  "Client Workspace": "Clients",
+  "Vendor Workspace": "Vendors",
+  "Finance Workspace": "Finance",
 };
 
-/** Clearer rail glyphs â€” aligned to section meaning. */
+/** Clearer rail glyphs — aligned to section meaning. */
 const RAIL_ICON_OVERRIDE: Partial<
   Record<string, ComponentType<{ className?: string }>>
 > = {
-  Overview: HomeIcon,
+  Home: HomeIcon,
 };
 
-/** Legacy section labels from pre-reorg sidebar â€” map into current groups. */
+/** Legacy section labels from pre-reorg sidebar — map into current groups. */
 const LEGACY_COLLAPSED_LABEL_MAP: Record<string, string[]> = {
-  Organization: ["Workspace", "Clients and vendors CRM", "Administration"],
-  Clients: ["Clients and vendors CRM"],
-  Operations: ["Finance"],
+  Overview: ["Home"],
+  Workspace: ["Campaign Workspace"],
+  Discovery: ["Vendor Workspace"],
+  "Clients and vendors CRM": ["Client Workspace", "Vendor Workspace"],
+  Commercial: ["Client Workspace", "Vendor Workspace", "Finance Workspace"],
+  Finance: ["Finance Workspace"],
+  Organization: ["Campaign Workspace", "Client Workspace", "Administration"],
+  Clients: ["Client Workspace"],
+  Operations: ["Finance Workspace"],
   System: ["Administration"],
 };
 

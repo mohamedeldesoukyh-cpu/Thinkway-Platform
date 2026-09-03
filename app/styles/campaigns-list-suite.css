@@ -27,7 +27,20 @@
   color: var(--tw-ink);
   background: var(--tw-bg);
   min-width: 0;
-  font-family: var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font-family: var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+.campaigns-list-suite .tw-id,
+.campaigns-list-suite .tw-v,
+.campaigns-list-suite .tw-d,
+.campaigns-list-suite .tw-cc,
+.campaigns-list-suite .tw-ms2 b,
+.campaigns-list-suite .tw-mh .st {
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace !important;
 }
 
 .campaigns-list-suite .tw-mast {
@@ -74,14 +87,14 @@
 
 .campaigns-list-suite .tw-mh h1 {
   margin: 0;
-  font-size: 19px;
-  font-weight: 600;
+  font: 600 19px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text",
+    "Segoe UI", system-ui, sans-serif;
   letter-spacing: -0.5px;
   color: #fff;
 }
 
 .campaigns-list-suite .tw-mh .sub {
-  font-size: 12px;
+  font-size: 11.5px;
   color: rgba(255, 255, 255, 0.78);
   max-width: 520px;
   line-height: 1.4;
@@ -110,7 +123,7 @@
   border-radius: 9px;
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
-  font: 600 12.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font: 600 12.5px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -161,6 +174,7 @@
   color: var(--tw-ink);
   white-space: nowrap;
   overflow: visible;
+  text-overflow: clip;
 }
 
 .campaigns-list-suite .tw-ms2 b.g {
@@ -218,7 +232,7 @@
   border: 0 !important;
   border-radius: 7px !important;
   cursor: pointer;
-  font: 600 11.5px var(--font-geist-sans), Geist, system-ui, sans-serif !important;
+  font: 600 11.5px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
   background: none !important;
   color: var(--tw-mut) !important;
   box-shadow: none !important;
@@ -257,7 +271,7 @@
   border: 1px solid var(--tw-line) !important;
   border-radius: 8px !important;
   background: #fff !important;
-  font: 500 12.5px var(--font-geist-sans), Geist, system-ui, sans-serif !important;
+  font: 500 12.5px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
   color: var(--tw-ink) !important;
   box-shadow: none !important;
 }
@@ -280,7 +294,7 @@
   border-radius: 8px !important;
   background: #fff !important;
   color: var(--tw-ink2) !important;
-  font: 600 11.5px var(--font-geist-sans), Geist, system-ui, sans-serif !important;
+  font: 600 11.5px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
   box-shadow: none !important;
   gap: 6px;
 }
@@ -307,7 +321,7 @@
   border-radius: 9px !important;
   background: rgba(255, 255, 255, 0.14) !important;
   color: #fff !important;
-  font: 600 12.5px var(--font-geist-sans), Geist, system-ui, sans-serif !important;
+  font: 600 12.5px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
   box-shadow: none !important;
 }
 
@@ -450,7 +464,7 @@
   padding: 2px 8px !important;
   border-radius: 999px !important;
   border: 0 !important;
-  font: 600 10px var(--font-geist-sans), Geist, system-ui, sans-serif !important;
+  font: 600 10px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
   white-space: nowrap !important;
@@ -588,7 +602,7 @@
 }
 
 .campaigns-list-suite .tw-d {
-  font: 500 11.5px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font: 500 11.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   color: var(--tw-ink2);
   white-space: nowrap;
 }
@@ -617,7 +631,7 @@
   max-width: 100%;
   padding: 2px 8px !important;
   border-radius: 999px !important;
-  font: 600 10px var(--font-geist-sans), Geist, system-ui, sans-serif !important;
+  font: 600 10px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
   white-space: nowrap !important;
@@ -682,7 +696,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font: 600 12px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font: 600 12px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   color: var(--tw-bi);
   background: none;
   border: 0;
@@ -726,7 +740,7 @@
   border-radius: 8px;
   background: #fff;
   cursor: pointer;
-  font: 600 12px var(--font-geist-sans), Geist, system-ui, sans-serif;
+  font: 600 12px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   color: var(--tw-ink2);
   display: inline-flex;
   align-items: center;

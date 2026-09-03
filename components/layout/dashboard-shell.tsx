@@ -146,18 +146,9 @@ export function DashboardShell({
             )}
           >
             {platformV6 ? (
-              workspaceNavActive ? (
-                <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
-                  <ThinkwayLogo compact showText className="mb-0" />
-                </Link>
-              ) : (
-                <div>
-                  <span className="platform-v6-tb-title">{title}</span>
-                  {description ? (
-                    <p className="platform-v6-tb-sub">{description}</p>
-                  ) : null}
-                </div>
-              )
+              <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
+                <ThinkwayLogo compact showText className="mb-0" />
+              </Link>
             ) : (
               <div className="flex min-w-0 flex-1 items-center gap-8">
                 <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
@@ -184,16 +175,9 @@ export function DashboardShell({
               workspaceNavActive && "thinkway-platform-v6-topbar--workspace-nav"
             )}
           >
-            {workspaceNavActive ? (
-              <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
-                <ThinkwayLogo compact showText className="mb-0" />
-              </Link>
-            ) : (
-              <div>
-                <span className="platform-v6-tb-title">{title}</span>
-                {description ? <p className="platform-v6-tb-sub">{description}</p> : null}
-              </div>
-            )}
+            <Link href="/" className="flex shrink-0 items-center" title="Thinkway home">
+              <ThinkwayLogo compact showText className="mb-0" />
+            </Link>
             {workspaceNavActive ? <HomeWorkspaceNavTabs active={workspaceNavActive} /> : null}
             <div className="flex items-center gap-2">
               <EnvironmentBadgeSlot />
