@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { AppendableInvoiceOption } from "@/features/billing/types";
+import { existingInvoiceTargetMode } from "@/lib/billing/invoice-existing-target";
 import { isAppendableInvoiceStatus } from "@/lib/billing/invoice-status";
 import { formatBillingMoney } from "@/features/billing/utils";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
@@ -39,12 +40,11 @@ export function InvoiceTargetChoiceDialog({
   appendableInvoices,
   onConfirm,
 }: InvoiceTargetChoiceDialogProps) {
-  const eligible = appendableInvoices.filter(
-    (inv) =>
-      !inv.is_locked &&
-      isAppendableInvoiceStatus(inv.status) &&
-      inv.status !== "paid"
-  );
+  const eligible = appendableInvoices.filter((inv) => {
+    if (inv.status === "void" || inv.status === "paid") return false;
+    if (existingInvoiceTargetMode(inv) === "regenerate") return true;
+    return !inv.is_locked && isAppendableInvoiceStatus(inv.status);
+  });
 
   const [existingInvoiceId, setExistingInvoiceId] = useState("");
 
@@ -73,8 +73,8 @@ export function InvoiceTargetChoiceDialog({
         <DialogHeader>
           <DialogTitle>Invoice target</DialogTitle>
           <DialogDescription>
-            This campaign already has open invoice(s). Add deliverables to an existing invoice or
-            create a new one.
+            This campaign already has an open or pending invoice. Add to / regenerate that
+            invoice, or create a new one (the pending invoice is then cancelled).
           </DialogDescription>
         </DialogHeader>
 
@@ -88,8 +88,11 @@ export function InvoiceTargetChoiceDialog({
               <SelectContent>
                 {eligible.map((inv) => (
                   <SelectItem key={inv.id} value={inv.id}>
-                    {formatDocumentNumberForDisplay(inv.document_number)} ·{" "}
-                    {formatBillingMoney(inv.total, inv.currency)} · {inv.status}
+                    {existingInvoiceTargetMode(inv) === "regenerate"
+                      ? `Regenerate ${formatDocumentNumberForDisplay(inv.document_number)} (pending)`
+                      : formatDocumentNumberForDisplay(inv.document_number)}
+                    {" · "}
+                    {formatBillingMoney(inv.total, inv.currency)}
                   </SelectItem>
                 ))}
               </SelectContent>

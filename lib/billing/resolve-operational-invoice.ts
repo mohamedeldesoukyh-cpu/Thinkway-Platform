@@ -143,6 +143,7 @@ export async function validateAppendableInvoice(
       invoice: {
         id: string;
         document_number: string;
+        status: string;
         regeneration_status: string | null;
       };
     }
@@ -171,10 +172,10 @@ export async function validateAppendableInvoice(
     campaign_header_id: string | null;
   };
 
-  const { isInvoiceAppendable } = await import("@/lib/billing/campaign-billing-queue");
+  const { isInvoiceExistingTarget } = await import("@/lib/billing/invoice-existing-target");
 
   if (
-    !isInvoiceAppendable({
+    !isInvoiceExistingTarget({
       status: row.status,
       regeneration_status: row.regeneration_status,
       is_operational_locked: row.is_operational_locked,
@@ -204,6 +205,7 @@ export async function validateAppendableInvoice(
     invoice: {
       id: row.id,
       document_number: row.document_number,
+      status: row.status,
       regeneration_status: row.regeneration_status,
     },
   };

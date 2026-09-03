@@ -193,6 +193,10 @@ export async function voidInvoice(
         .update({
           status: "void",
           is_operational_locked: false,
+          regeneration_status:
+            inv.regeneration_status === "pending_regeneration"
+              ? "regenerated"
+              : (inv.regeneration_status as string | null),
         } as never)
         .eq("id", input.invoice_id);
 

@@ -37,10 +37,21 @@ function testPendingRegenerationWhenUnlocked() {
   );
 }
 
+function testVoidDoesNotStayPending() {
+  const state = getInvoiceOperationalState({
+    status: "void",
+    regeneration_status: "pending_regeneration",
+    is_operational_locked: false,
+  });
+  assert(state.locked_status !== "Pending regeneration", "void is not pending regeneration");
+  assert(state.is_void, "void flag set");
+}
+
 const tests = [
   testDraftInvoicedShowsOpenUntilFinanceLock,
   testSentInvoiceShowsLocked,
   testPendingRegenerationWhenUnlocked,
+  testVoidDoesNotStayPending,
 ];
 
 for (const run of tests) {

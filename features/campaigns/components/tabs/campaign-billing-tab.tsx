@@ -56,11 +56,6 @@ import {
   getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { CreateInvoiceSheet } from "@/features/billing/components/create-invoice-sheet";
-import { RegenerateInvoiceDialog } from "@/features/billing/components/regenerate-invoice-dialog";
-import {
-  enrichRegenerationEligibilityInput,
-  resolveInvoiceActionForSelection,
-} from "@/lib/billing/regeneration-eligibility";
 import { useInvoiceConfirmFlow } from "@/features/billing/hooks/use-invoice-confirm-flow";
 import type {
   AssignmentBillingGroup,
@@ -212,7 +207,6 @@ export function CampaignBillingTab({
   const [drilldownSelection, setDrilldownSelection] =
     useState<OperationalSelectionState>(createEmptySelection);
   const [drilldownPending, startDrilldownTransition] = useTransition();
-  const [regenerateInvoiceOpen, setRegenerateInvoiceOpen] = useState(false);
   const [detailInvoiceId, setDetailInvoiceId] = useState<string | null>(
     () => initialDetailInvoiceId
   );
@@ -248,22 +242,6 @@ export function CampaignBillingTab({
     () => buildCampaignPaymentsColumns(setDetailPaymentId),
     []
   );
-
-  const pendingRegenerationInvoice = useMemo(() => {
-    const fromRegister = campaignInvoiceRegister.find(
-      (row) => row.regeneration_status === "pending_regeneration"
-    );
-    if (fromRegister) {
-      return { id: fromRegister.id, document_number: fromRegister.document_number };
-    }
-    const fromWorkspace = workspace.invoices.find(
-      (row) => row.regeneration_status === "pending_regeneration"
-    );
-    if (fromWorkspace) {
-      return { id: fromWorkspace.id, document_number: fromWorkspace.document_number };
-    }
-    return null;
-  }, [campaignInvoiceRegister, workspace.invoices]);
 
   const detailInvoice = useMemo(
     () =>
@@ -320,59 +298,11 @@ export function CampaignBillingTab({
     setSelectedQueueBatchKeys(new Set(billingQueueRows.map((r) => r.batch_key)));
   }
 
-  function operationalLineEligibility(lineId: string) {
-    const row = operationalBilling?.operational_rows.find(
-      (entry) => entry.kind === "assignment" && entry.campaign_line_id === lineId
-    );
-    if (!row) return null;
-
-    return enrichRegenerationEligibilityInput(
-      {
-        billing_status: row.line_billing_status,
-        operational_status: row.operational_status,
-        vendor_io_id: row.vendor_io_id,
-        vendor_io_document_number: row.vendor_io_document_number,
-        invoice_id: row.invoice_id ?? row.linked_invoice_id,
-        invoiced_amount: row.invoiced_amount,
-        billable_amount: row.billable_amount,
-        remaining_amount: row.remaining_amount,
-      },
-      pendingRegenerationInvoice
-        ? {
-            pending_regeneration_invoice_id: pendingRegenerationInvoice.id,
-            regeneration_status: "pending_regeneration",
-            invoice_status: "draft",
-          }
-        : undefined
-    );
-  }
-
   function beginInvoiceFlow(selection?: OperationalSelectionPayload) {
     if (!operationalBilling || invoicePending) return;
-
-    let flowSelection = selection;
-
-    if (pendingRegenerationInvoice && (selection?.line_ids?.length ?? 0) > 0) {
-      const invoiceAction = resolveInvoiceActionForSelection({
-        lineIds: selection?.line_ids ?? [],
-        getRow: operationalLineEligibility,
-      });
-
-      if (invoiceAction.action === "regenerate") {
-        setRegenerateInvoiceOpen(true);
-        return;
-      }
-
-      flowSelection = {
-        line_ids: invoiceAction.generateLineIds,
-        deliverable_ids: selection?.deliverable_ids ?? [],
-        post_ids: selection?.post_ids ?? [],
-      };
-    }
-
     const rows = operationalBilling.operational_rows;
     invoiceConfirm.requestConfirm(
-      flowSelection ?? selectionToSubmitPayload(drilldownSelection, rows)
+      selection ?? selectionToSubmitPayload(drilldownSelection, rows)
     );
   }
 
@@ -764,15 +694,6 @@ export function CampaignBillingTab({
       {operationalBilling ? (
         <>
           {invoiceConfirm.confirmDialog}
-          {pendingRegenerationInvoice ? (
-            <RegenerateInvoiceDialog
-              invoiceId={pendingRegenerationInvoice.id}
-              documentNumber={pendingRegenerationInvoice.document_number}
-              open={regenerateInvoiceOpen}
-              onOpenChange={setRegenerateInvoiceOpen}
-              onComplete={refreshAfterOperationalMutation}
-            />
-          ) : null}
         </>
       ) : null}
 

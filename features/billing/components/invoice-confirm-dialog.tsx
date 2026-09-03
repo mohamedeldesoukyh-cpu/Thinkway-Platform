@@ -22,6 +22,7 @@ import {
 import type { InvoiceTargetMode } from "@/features/billing/components/invoice-target-choice-dialog";
 import type { AppendableInvoiceOption } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
+import { existingInvoiceTargetMode } from "@/lib/billing/invoice-existing-target";
 import { isAppendableInvoiceStatus } from "@/lib/billing/invoice-status";
 import type { InvoiceConfirmLinePreview } from "@/lib/billing/operational-invoice-draft";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
@@ -65,12 +66,11 @@ export function InvoiceConfirmDialog({
   const single = campaigns[0] ?? null;
   const eligible = bulk
     ? []
-    : appendableInvoices.filter(
-        (inv) =>
-          !inv.is_locked &&
-          isAppendableInvoiceStatus(inv.status) &&
-          inv.status !== "paid"
-      );
+    : appendableInvoices.filter((inv) => {
+        if (inv.status === "void" || inv.status === "paid") return false;
+        if (existingInvoiceTargetMode(inv) === "regenerate") return true;
+        return !inv.is_locked && isAppendableInvoiceStatus(inv.status);
+      });
   const eligibleKey = eligible.map((inv) => inv.id).join(",");
 
   const [mode, setMode] = useState<InvoiceTargetMode>("new");
@@ -188,7 +188,11 @@ export function InvoiceConfirmDialog({
 
         {eligible.length > 0 ? (
           <div className="space-y-2 rounded-lg border border-border p-3">
-            <Label htmlFor="invoice-confirm-target">Invoice target</Label>
+            <Label htmlFor="invoice-confirm-target">New invoice or existing</Label>
+            <p className="text-[11px] text-muted-foreground">
+              Create a new invoice number, or rebuild / add to an existing invoice.
+              Choosing new cancels any pending ungenerated invoice for these lines.
+            </p>
             <Select
               value={mode === "append" ? existingInvoiceId : "new"}
               onValueChange={(value) => {
@@ -207,7 +211,10 @@ export function InvoiceConfirmDialog({
                 <SelectItem value="new">Create new invoice</SelectItem>
                 {eligible.map((inv) => (
                   <SelectItem key={inv.id} value={inv.id}>
-                    Add to {formatDocumentNumberForDisplay(inv.document_number)} ·{" "}
+                    {existingInvoiceTargetMode(inv) === "regenerate"
+                      ? `Regenerate ${formatDocumentNumberForDisplay(inv.document_number)} (pending)`
+                      : `Add to ${formatDocumentNumberForDisplay(inv.document_number)}`}
+                    {" · "}
                     {formatBillingMoney(inv.total, inv.currency)}
                   </SelectItem>
                 ))}

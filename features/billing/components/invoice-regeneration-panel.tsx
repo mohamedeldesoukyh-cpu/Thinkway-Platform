@@ -76,17 +76,21 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
   }, [regenerateState.message, regenerateState.ok]);
 
   const statusLabel =
-    invoice.regeneration_status === "pending_regeneration"
-      ? "Pending regeneration"
-      : invoice.regeneration_status === "regenerated"
-        ? `Regenerated (v${invoice.version_number})`
-        : "Active";
+    invoice.status === "void"
+      ? "Cancelled"
+      : invoice.regeneration_status === "pending_regeneration"
+        ? "Pending regeneration"
+        : invoice.regeneration_status === "regenerated"
+          ? `Regenerated (v${invoice.version_number})`
+          : "Active";
   const statusPill =
-    invoice.regeneration_status === "pending_regeneration"
-      ? "p-y"
-      : invoice.regeneration_status === "regenerated"
-        ? "p-b"
-        : "p-g";
+    invoice.status === "void"
+      ? "p-r"
+      : invoice.regeneration_status === "pending_regeneration"
+        ? "p-y"
+        : invoice.regeneration_status === "regenerated"
+          ? "p-b"
+          : "p-g";
 
   const coverage = invoice.regeneration_coverage ?? null;
   const regenerateBlocked = coverage?.case === "blocked";
@@ -104,12 +108,12 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
           </div>
         </div>
         <span className={`tw-p ${statusPill}`}>{statusLabel}</span>
-        {invoice.regeneration_status === "active" ? (
+        {invoice.status !== "void" && invoice.regeneration_status === "active" ? (
           <button type="button" className="tw-b sm" onClick={() => setMode("ungenerate")}>
             ↺ Un-generate invoice
           </button>
         ) : null}
-        {invoice.regeneration_status === "pending_regeneration" ? (
+        {invoice.status !== "void" && invoice.regeneration_status === "pending_regeneration" ? (
           <button type="button" className="tw-b sm pri" onClick={() => setMode("regenerate")}>
             ↺ Regenerate invoice
           </button>

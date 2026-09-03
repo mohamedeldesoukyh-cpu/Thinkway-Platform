@@ -22,6 +22,7 @@ import {
   buildOperationalBillingContext,
   normalizeOperationalBillingTree,
 } from "@/lib/billing/operational-financial-sync";
+import { findLivePendingRegenerationInvoice } from "@/lib/billing/invoice-existing-target";
 import {
   enrichRegenerationEligibilityInput,
   hasInvoiceLinkage,
@@ -236,6 +237,25 @@ function testPendingRegenerationPostEligibleWithRemainingRevenue() {
   assert(
     isOperationalRowUiSelectable(row),
     "pending regeneration post with remaining revenue stays UI selectable after ungenerate"
+  );
+}
+
+function testNewInvoiceClearsPendingAssignmentContext() {
+  const afterReplacement = findLivePendingRegenerationInvoice([
+    {
+      id: "inv-old",
+      status: "void",
+      regeneration_status: "regenerated",
+    },
+    {
+      id: "inv-new",
+      status: "draft",
+      regeneration_status: "active",
+    },
+  ]);
+  assert(
+    afterReplacement == null,
+    "assignment context must not stay pending after a replacement invoice"
   );
 }
 
@@ -531,6 +551,7 @@ const tests = [
   testRegenerateActionLabel,
   testRegenerateLabelAfterUngenerateUnlock,
   testPendingRegenerationPostEligibleWithRemainingRevenue,
+  testNewInvoiceClearsPendingAssignmentContext,
   testDuplicatePreventionValidationContext,
   testQueueLinkageTruth,
   testValidatePostsAllowsStaleInvoicePointerWithRemaining,

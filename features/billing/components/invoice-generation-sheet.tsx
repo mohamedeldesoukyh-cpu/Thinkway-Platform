@@ -52,6 +52,7 @@ import {
   serializeInvoiceSliceAllocations,
   type InvoiceSliceGrain,
 } from "@/lib/billing/partial-assignment-invoice";
+import { existingInvoiceTargetMode } from "@/lib/billing/invoice-existing-target";
 import { isAppendableInvoiceStatus } from "@/lib/billing/invoice-status";
 import {
   flattenOperationalLeaves,
@@ -142,12 +143,11 @@ export function InvoiceGenerationSheet({
 
   const appendableOptions = useMemo(
     () =>
-      appendableInvoices.filter(
-        (invoice) =>
-          !invoice.is_locked &&
-          isAppendableInvoiceStatus(invoice.status) &&
-          invoice.status !== "paid"
-      ),
+      appendableInvoices.filter((invoice) => {
+        if (invoice.status === "void" || invoice.status === "paid") return false;
+        if (existingInvoiceTargetMode(invoice) === "regenerate") return true;
+        return !invoice.is_locked && isAppendableInvoiceStatus(invoice.status);
+      }),
     [appendableInvoices]
   );
 
@@ -544,9 +544,11 @@ export function InvoiceGenerationSheet({
                       <SelectContent>
                         {appendableOptions.map((inv) => (
                           <SelectItem key={inv.id} value={inv.id}>
-                            {formatDocumentNumberForDisplay(inv.document_number)} ·{" "}
-                            {formatBillingMoney(inv.total, inv.currency)}{" "}
-                            · {inv.status}
+                            {existingInvoiceTargetMode(inv) === "regenerate"
+                              ? `Regenerate ${formatDocumentNumberForDisplay(inv.document_number)} (pending)`
+                              : formatDocumentNumberForDisplay(inv.document_number)}
+                            {" · "}
+                            {formatBillingMoney(inv.total, inv.currency)}
                           </SelectItem>
                         ))}
                       </SelectContent>

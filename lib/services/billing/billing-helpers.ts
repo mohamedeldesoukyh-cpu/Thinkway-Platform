@@ -24,9 +24,14 @@ export function buildInvoiceCreateSuccessMessage(input: {
   invoicedRowCount: number;
   requestedLineIds: string[];
   touchedLineIds: string[];
+  regenerated?: boolean;
 }): string {
   const displayNumber = formatDocumentNumberForDisplay(input.documentNumber);
-  const actionLabel = input.invoiceMode === "append" ? "Appended to" : "Created";
+  const actionLabel = input.regenerated
+    ? "Regenerated"
+    : input.invoiceMode === "append"
+      ? "Appended to"
+      : "Created";
   const rowLabel = input.invoicedRowCount === 1 ? "row" : "rows";
   let message = `${actionLabel} invoice ${displayNumber} (${input.invoicedRowCount} ${rowLabel}).`;
 

@@ -47,6 +47,8 @@ import type {
   ungenerateInvoiceSchema,
 } from "@/lib/domains/billing/schemas";
 import type { FinancialApprovalRow, InvoiceWorkspace } from "@/lib/domains/billing/types";
+import { cancelPendingInvoicesReplacedByNew } from "@/lib/billing/cancel-superseded-pending-invoices";
+import { isLivePendingRegenerationInvoice } from "@/lib/billing/invoice-existing-target";
 import {
   buildInvoiceCreateSuccessMessage,
   emptyToNull,
@@ -294,6 +296,7 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
 
   let invoiceId: string;
   let invoiceDocumentNumber: string;
+  let regeneratingPending = false;
 
   const { countryCode, vatRate } = await resolveClientBillingVatRate(
     supabase,
@@ -316,16 +319,22 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
       return { ok: false, message: appendCheck.error };
     }
 
-    if (appendCheck.invoice.regeneration_status === "pending_regeneration") {
-      return {
-        ok: false,
-        message:
-          "This invoice is pending regeneration. Use Regenerate invoice (not append) after commercial corrections.",
-      };
-    }
-
     invoiceId = appendCheck.invoice.id;
     invoiceDocumentNumber = appendCheck.invoice.document_number;
+    regeneratingPending = isLivePendingRegenerationInvoice({
+      status: appendCheck.invoice.status,
+      regeneration_status: appendCheck.invoice.regeneration_status,
+    });
+
+    if (regeneratingPending) {
+      const { error: clearError } = await supabase
+        .from("invoice_line_items")
+        .delete()
+        .eq("invoice_id", invoiceId);
+      if (clearError) {
+        return { ok: false, message: clearError.message };
+      }
+    }
 
     if (process.env.NODE_ENV === "development") {
       console.debug("[billing-invoice] append action", { invoiceId, postIds, deliverableIds });
@@ -547,8 +556,26 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
     }
   }
 
+  if (invoiceMode === "new") {
+    const cancelResult = await cancelPendingInvoicesReplacedByNew(supabase, {
+      campaignId: input.campaign_id,
+      replacementInvoiceId: invoiceId,
+      replacementDocumentNumber: invoiceDocumentNumber,
+      actorId: userId,
+      touchedLineIds,
+    });
+    if (cancelResult.error) {
+      await rollbackNewInvoiceDraft(supabase, invoiceId);
+      return { ok: false, message: cancelResult.error };
+    }
+  }
+
   const commitResult = await commitInvoiceLifecycleMutation(supabase, {
-    mutation: invoiceMode === "append" ? "append" : "create",
+    mutation: regeneratingPending
+      ? "regenerate"
+      : invoiceMode === "append"
+        ? "append"
+        : "create",
     invoiceId,
     campaignId: input.campaign_id,
     invoiceDocumentNumber,
@@ -576,14 +603,17 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
     ? postsForInvoice.length + deliverablesToLock.length
     : deliverablesToLock.length;
 
+  const committedLineIds = commitResult.lineIds ?? touchedLineIds;
+
   return {
     ok: true,
     message: buildInvoiceCreateSuccessMessage({
-      invoiceMode,
+      invoiceMode: regeneratingPending ? "append" : invoiceMode,
       documentNumber: invoiceDocumentNumber,
       invoicedRowCount,
       requestedLineIds: lineIds,
-      touchedLineIds: commitResult.lineIds ?? touchedLineIds,
+      touchedLineIds: committedLineIds,
+      regenerated: regeneratingPending,
     }),
     invoiceId,
     campaignId: input.campaign_id,

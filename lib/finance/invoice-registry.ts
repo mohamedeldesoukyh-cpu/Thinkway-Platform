@@ -90,11 +90,13 @@ export function getInvoiceOperationalState(
     invoice.status === "partial" ||
     invoice.status === "paid";
 
-  const locked_status: InvoiceOperationalState["locked_status"] = financeFinalized
-    ? "Locked"
-    : invoice.regeneration_status === "pending_regeneration"
-      ? "Pending regeneration"
-      : "Open";
+  const locked_status: InvoiceOperationalState["locked_status"] = is_void
+    ? "Open"
+    : financeFinalized
+      ? "Locked"
+      : invoice.regeneration_status === "pending_regeneration"
+        ? "Pending regeneration"
+        : "Open";
 
   return {
     locked_status,

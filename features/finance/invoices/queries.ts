@@ -151,10 +151,7 @@ function isCampaignCancelledInvoice(
   inv: InvoiceRegisterQueryRow,
   options?: { includeCampaignCancelled?: boolean; campaignIsCancelled?: boolean }
 ): boolean {
-  return (
-    Boolean(options?.includeCampaignCancelled && options?.campaignIsCancelled) &&
-    inv.status === "void"
-  );
+  return inv.status === "void" && Boolean(options?.includeCampaignCancelled);
 }
 
 function mapInvoiceRegisterRow(
@@ -212,7 +209,12 @@ function mapInvoiceRegisterRow(
     currency: inv.currency,
     regeneration_status: inv.regeneration_status,
     is_operational_locked: inv.is_operational_locked ?? false,
-    metadata: campaignCancelled ? { campaign_cancelled: true } : null,
+    metadata:
+      inv.status === "void"
+        ? options?.campaignIsCancelled
+          ? { campaign_cancelled: true }
+          : { replaced_by_new_invoice: true }
+        : null,
   } satisfies FinanceInvoiceRegisterRow;
 }
 
@@ -233,7 +235,7 @@ export async function getFinanceInvoiceRegister(options?: {
 
     campaignIsCancelled = (header as { status?: string } | null)?.status === "cancelled";
     invoiceIds = await resolveCampaignInvoiceIds(supabase, options.campaignHeaderId, {
-      includeVoid: campaignIsCancelled,
+      includeVoid: true,
     });
 
     const directOnly = await supabase

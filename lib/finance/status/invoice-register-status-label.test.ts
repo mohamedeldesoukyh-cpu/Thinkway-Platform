@@ -35,10 +35,18 @@ function testFinanceStatusesUnchanged() {
   assert(getInvoiceRegisterStatusLabel({ status: "paid" }) === "Paid", "paid unchanged");
 }
 
+function testVoidShowsCancelled() {
+  assert(
+    getInvoiceRegisterStatusLabel({ status: "void" }) === "Cancelled",
+    "void invoices display as Cancelled"
+  );
+}
+
 const tests = [
   testIssuedAfterGenerateOrRegenerate,
   testPendingAfterUngenerate,
   testFinanceStatusesUnchanged,
+  testVoidShowsCancelled,
 ];
 
 for (const run of tests) {

@@ -9,7 +9,7 @@ import {
 import type { InvoiceTargetMode } from "@/features/billing/components/invoice-target-choice-dialog";
 import type { AppendableInvoiceOption } from "@/features/billing/types";
 import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
-import { isAppendableInvoiceStatus } from "@/lib/billing/invoice-status";
+import { isInvoiceExistingTarget } from "@/lib/billing/invoice-existing-target";
 import {
   buildCreateInvoiceFormData,
   buildInvoiceDraftSubmit,
@@ -30,13 +30,18 @@ import {
 export function eligibleAppendableInvoices(
   invoices: AppendableInvoiceOption[]
 ): AppendableInvoiceOption[] {
-  return invoices.filter(
-    (invoice) =>
-      !invoice.is_locked &&
-      invoice.status !== "void" &&
-      invoice.status !== "paid" &&
-      invoice.regeneration_status !== "pending_regeneration" &&
-      isAppendableInvoiceStatus(invoice.status)
+  return invoices.filter((invoice) =>
+    isInvoiceExistingTarget({
+      status: invoice.status,
+      regeneration_status: invoice.regeneration_status,
+      is_operational_locked: invoice.is_locked,
+      currency: invoice.currency,
+      client_id: invoice.client_id,
+      campaign_header_id: invoice.campaign_header_id,
+      target_currency: invoice.currency,
+      target_client_id: invoice.client_id,
+      target_campaign_id: invoice.campaign_header_id ?? "",
+    })
   );
 }
 

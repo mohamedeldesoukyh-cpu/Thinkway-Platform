@@ -681,7 +681,7 @@ export async function getCampaignOperationalBillingDetail(supabase: SupabaseClie
     throw new Error(error);
   }
 
-  const { isInvoiceAppendable } = await import("@/lib/billing/campaign-billing-queue");
+  const { isInvoiceExistingTarget } = await import("@/lib/billing/invoice-existing-target");
   const { computeCampaignFinancialRollup } = await import(
     "@/lib/billing/operational-financial-sync"
   );
@@ -730,7 +730,7 @@ export async function getCampaignOperationalBillingDetail(supabase: SupabaseClie
         client_id: string;
         campaign_header_id: string | null;
       };
-      const appendable = isInvoiceAppendable({
+      const appendable = isInvoiceExistingTarget({
         status: row.status,
         regeneration_status: row.regeneration_status,
         is_operational_locked: row.is_operational_locked,

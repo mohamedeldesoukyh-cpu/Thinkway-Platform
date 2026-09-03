@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Invoice detail restyle to match finance-suite.html `invd`.
+**Focus:** Ungenerate → new invoice must cancel the old pending invoice.
+
+## Shipped 2026-09-03 — Ungenerate then new invoice cancels pending
+
+After un-generate, `/billing` and assignment Finance both offer **new vs existing**. Existing pending rebuilds that invoice number (with the draft %). A new invoice automatically cancels the old ungenerated one (`void`, shown as **Cancelled**). Assignments no longer stay stuck on Pending regeneration. Remaining stays in the billing queue. No migrations. Not on Production.
 
 ## Shipped 2026-09-03 — Invoice detail finance-suite restyle
 

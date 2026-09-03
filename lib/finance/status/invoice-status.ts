@@ -79,7 +79,7 @@ export function getInvoiceRegisterStatusLabel(input: {
   regeneration_status?: string | null;
   metadata?: Record<string, unknown> | null;
 }): string {
-  if (input.status === "void" && input.metadata?.campaign_cancelled === true) {
+  if (input.status === "void") {
     return "Cancelled";
   }
 

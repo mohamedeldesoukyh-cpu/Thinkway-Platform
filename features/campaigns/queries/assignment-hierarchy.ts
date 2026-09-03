@@ -25,6 +25,7 @@ import {
   isDeliverableCommercialLocked,
   isLiveAdDateLocked,
 } from "@/lib/campaigns/live-ad-date";
+import { findLivePendingRegenerationInvoice } from "@/lib/billing/invoice-existing-target";
 import { isLineInvoiceEligible } from "@/lib/billing/line-invoice-eligibility";
 import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { logRevisionHierarchyKeys } from "@/lib/campaigns/assignment-row-debug";
@@ -229,9 +230,7 @@ async function loadCampaignAssignmentHierarchy(
     return { groups: [], currency_code: workspace.currency_code };
   }
 
-  const pendingInvoice = (workspace.invoices ?? []).find(
-    (invoice) => invoice.regeneration_status === "pending_regeneration"
-  );
+  const pendingInvoice = findLivePendingRegenerationInvoice(workspace.invoices ?? []);
   const billingContext: AssignmentHierarchyBillingContext | undefined = pendingInvoice
     ? {
         pending_regeneration_invoice_id: pendingInvoice.id,
