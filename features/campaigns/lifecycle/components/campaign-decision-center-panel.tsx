@@ -37,6 +37,8 @@ type Props = {
     focus?: DecisionFocusQuery | null
   ) => void;
   className?: string;
+  /** When true, skip the collapsed strip and show the briefing. */
+  forceExpanded?: boolean;
 };
 
 /**
@@ -74,6 +76,7 @@ export function CampaignDecisionCenterPanel({
   onOpenResolver,
   onNavigateToTab,
   className,
+  forceExpanded = false,
 }: Props) {
   const dc = lifecycle.decisionCenter;
   const narrative = dc.narrative;
@@ -133,6 +136,7 @@ export function CampaignDecisionCenterPanel({
       aria-label="Decision center"
       data-severity={dc.severityMode}
     >
+      {!forceExpanded ? (
       <button
         type="button"
         className="thinkway-lc-decision-collapse-trigger"
@@ -178,8 +182,9 @@ export function CampaignDecisionCenterPanel({
           </span>
         </div>
       </button>
+      ) : null}
 
-      {open ? (
+      {open || forceExpanded ? (
         <div className="thinkway-lc-decision-expanded">
           <div className="thinkway-lc-decision-top">
             <div className="min-w-0">

@@ -167,6 +167,7 @@ export default async function CampaignWorkspacePage({
     <DashboardShell
       title="Campaign workspace"
       hidePageHeader
+      hideDesktopHeader
       containedMain
       mainClassName="min-h-0 flex-1 flex-col overflow-hidden p-0 md:p-0"
     >

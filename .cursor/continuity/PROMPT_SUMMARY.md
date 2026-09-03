@@ -1,7 +1,11 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Ungenerate → new invoice must cancel the old pending invoice.
+**Focus:** Campaign workspace restyle to match campaign-detail.html.
+
+## In progress 2026-09-03 — Campaign workspace HTML restyle
+
+`/campaigns/[id]` chrome matches `campaign-detail.html`: sticky blue mast (identity, Decision Center, actions, metric strip), dot stepper, jump pills, pale overview cards. Numbers are left-aligned and keep HTML normalization (KPI whole units, grid 2dp, ISO, tabular mono). Tab interiors reuse existing registers restyled as HTML cards/KPI strips. Platform sidebar collapses to a 12px edge tip (no icons) and peeks open on hover. Lifecycle OS, tabs, and actions preserved. No migrations. Not on Production.
 
 ## Shipped 2026-09-03 — Ungenerate then new invoice cancels pending
 

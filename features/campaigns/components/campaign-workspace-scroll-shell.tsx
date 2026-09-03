@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 
 type CampaignWorkspaceScrollShellProps = {
   chrome: ReactNode;
-  tabs: ReactNode;
+  tabs?: ReactNode;
   children: ReactNode;
 };
 
@@ -111,24 +111,28 @@ export function CampaignWorkspaceScrollShell({
           {chrome}
         </div>
         <div ref={panelRef} className="thinkway-aurora-panel" data-campaign-shell="panel">
-          <div ref={sentinelRef} className="h-px w-full shrink-0" aria-hidden />
-          {tabsPinned && tabsHeight > 0 ? (
-            <div style={{ height: tabsHeight }} className="shrink-0" aria-hidden />
+          {tabs ? (
+            <>
+              <div ref={sentinelRef} className="h-px w-full shrink-0" aria-hidden />
+              {tabsPinned && tabsHeight > 0 ? (
+                <div style={{ height: tabsHeight }} className="shrink-0" aria-hidden />
+              ) : null}
+              <div
+                ref={tabsRef}
+                style={tabsPinned ? pinStyle : undefined}
+                className={cn(
+                  "thinkway-aurora-panel-tabs thinkway-campaign-workspace-tabs-pinned z-40",
+                  tabsPinned && "border-b border-[var(--camp-hair)] bg-[var(--camp-white)] shadow-sm",
+                  !tabsPinned && "relative"
+                )}
+                data-sticky="campaign-workspace-tabs"
+                data-pinned={tabsPinned ? "true" : "false"}
+                data-campaign-shell="tabs"
+              >
+                {tabs}
+              </div>
+            </>
           ) : null}
-          <div
-            ref={tabsRef}
-            style={tabsPinned ? pinStyle : undefined}
-            className={cn(
-              "thinkway-aurora-panel-tabs thinkway-campaign-workspace-tabs-pinned z-40",
-              tabsPinned && "border-b border-[var(--camp-hair)] bg-[var(--camp-white)] shadow-sm",
-              !tabsPinned && "relative"
-            )}
-            data-sticky="campaign-workspace-tabs"
-            data-pinned={tabsPinned ? "true" : "false"}
-            data-campaign-shell="tabs"
-          >
-            {tabs}
-          </div>
           {/* Only this region swaps when Enterprise Tabs change */}
           <div
             className="thinkway-aurora-panel-body"

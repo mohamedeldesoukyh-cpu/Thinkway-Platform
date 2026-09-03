@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import type { ComponentType, ReactNode } from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -102,7 +102,7 @@ const GROUP_ICON_TONE_CLASS: Record<NavGroupIconTone, string> = {
   navy: "thinkway-sidebar-grp-icon",
 };
 
-/** Global nav order — overview, workspace, commercial, finance, insights, admin. */
+/** Global nav order â€” overview, workspace, commercial, finance, insights, admin. */
 const navGroups: NavGroup[] = [
   {
     label: "Overview",
@@ -223,7 +223,7 @@ const navGroups: NavGroup[] = [
     iconTone: "violet",
     items: [
       { kind: "link", href: "/reports", label: "Reports", icon: BarChart3Icon },
-      // Intelligence — gated by INTELLIGENCE_ARCHIVED (see docs/INTELLIGENCE_ARCHIVE.md)
+      // Intelligence â€” gated by INTELLIGENCE_ARCHIVED (see docs/INTELLIGENCE_ARCHIVE.md)
       ...(isIntelligenceEnabled()
         ? [{ kind: "link" as const, href: "/intelligence", label: "Intelligence", icon: BrainIcon }]
         : []),
@@ -291,14 +291,14 @@ const RAIL_LABEL: Record<string, string> = {
   "Clients and vendors CRM": "Clients & vendors",
 };
 
-/** Clearer rail glyphs — aligned to section meaning. */
+/** Clearer rail glyphs â€” aligned to section meaning. */
 const RAIL_ICON_OVERRIDE: Partial<
   Record<string, ComponentType<{ className?: string }>>
 > = {
   Overview: HomeIcon,
 };
 
-/** Legacy section labels from pre-reorg sidebar — map into current groups. */
+/** Legacy section labels from pre-reorg sidebar â€” map into current groups. */
 const LEGACY_COLLAPSED_LABEL_MAP: Record<string, string[]> = {
   Organization: ["Workspace", "Clients and vendors CRM", "Administration"],
   Clients: ["Clients and vendors CRM"],
@@ -405,7 +405,7 @@ function readSidebarPinned(): boolean {
   try {
     const pinned = localStorage.getItem(STORAGE_PINNED);
     if (pinned !== null) return pinned === "true";
-    // Migrate legacy expand toggle: expanded → pinned, collapsed → auto.
+    // Migrate legacy expand toggle: expanded â†’ pinned, collapsed â†’ auto.
     const legacy = localStorage.getItem(STORAGE_EXPANDED);
     if (legacy === null) return false;
     return legacy === "true";
@@ -543,7 +543,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
         {/* Screen-edge hit target when unpinned (escapes shell overflow clipping). */}
         {!pinned ? (
           <div
-            className="pointer-events-auto fixed inset-y-0 left-0 z-[55] w-3"
+            className="pointer-events-auto fixed inset-y-0 left-0 z-[55] w-6"
             aria-hidden
             onPointerEnter={openPeek}
           />
@@ -555,25 +555,18 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
             !pinned && peekOpen
               ? "fixed inset-y-0 left-0 z-[60] shadow-[4px_0_24px_rgba(15,23,42,0.12)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.45)]"
               : "absolute inset-y-0 left-0 z-[60]",
-            !displayExpanded && "thinkway-app-sidebar--rail"
+            !displayExpanded && "thinkway-app-sidebar--tip"
           )}
           style={{ width: panelWidth }}
           onPointerEnter={pinned ? undefined : openPeek}
           onPointerLeave={pinned ? undefined : scheduleClosePeek}
         >
-          <div
-            className={cn(
-              "flex items-center",
-              displayExpanded
-                ? "gap-3 border-b border-sidebar-border px-5 pb-4 pt-5"
-                : "justify-center border-b border-sidebar-border px-2 pb-3 pt-5"
-            )}
-          >
+          {displayExpanded ? (
+          <div className="flex items-center gap-3 border-b border-sidebar-border px-5 pb-4 pt-5">
             <AppNavLink href="/" className="min-w-0 shrink-0" title="Thinkway">
-              <ThinkwayLogo showText={displayExpanded} compact className="mb-0" />
+              <ThinkwayLogo showText compact className="mb-0" />
             </AppNavLink>
-            {displayExpanded ? (
-              <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-1.5">
                 <span aria-hidden className="h-6 w-px shrink-0 bg-[#e2e8f0] dark:bg-border" />
                 {pinned ? (
                   <SidebarRailTooltip label="Unpin — auto-hide sidebar">
@@ -601,7 +594,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                   </SidebarRailTooltip>
                 )}
                 <SidebarRailTooltip
-                  label={pinned ? "Collapse to icons" : "Close sidebar"}
+                  label={pinned ? "Collapse to edge tip" : "Close sidebar"}
                 >
                   <button
                     type="button"
@@ -613,60 +606,29 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                       }
                     }}
                     className={sidebarControlButtonClass}
-                    aria-label={pinned ? "Collapse to icons" : "Close sidebar"}
+                    aria-label={pinned ? "Collapse to edge tip" : "Close sidebar"}
                   >
                     <PanelLeftCloseIcon className="size-4" />
                   </button>
                 </SidebarRailTooltip>
-              </div>
-            ) : null}
+            </div>
           </div>
-
-          {!displayExpanded ? (
-            <nav
-              aria-label="Primary"
-              className="thinkway-app-sidebar-rail flex flex-1 flex-col items-center gap-2 overflow-y-auto px-2 py-4"
-            >
-              {navRailItems.map((item) => {
-                const active = isRailItemActive(pathname, item.groupLabel);
-                const Icon = item.icon;
-                return (
-                  <SidebarRailTooltip key={item.groupLabel} label={item.label}>
-                    <AppNavLink
-                      href={item.href}
-                      aria-label={item.label}
-                      aria-current={active ? "page" : undefined}
-                      className={cn(
-                        "thinkway-app-sidebar-rail-link flex size-10 items-center justify-center rounded-lg transition-colors duration-150",
-                        active
-                          ? "thinkway-app-sidebar-rail-link--active bg-[var(--sidebar-active-bg)] text-primary dark:text-blue-400"
-                          : "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-primary dark:hover:text-blue-400"
-                      )}
-                    >
-                      <Icon className="size-[18px] shrink-0 stroke-[1.85]" />
-                    </AppNavLink>
-                  </SidebarRailTooltip>
-                );
-              })}
-
-              <div className="min-h-3 flex-1" aria-hidden />
-
-              <SidebarRailTooltip label="Pin sidebar open">
-                <button
-                  type="button"
-                  onClick={() => persistPinned(true)}
-                  className={sidebarControlButtonClass}
-                  aria-label="Pin sidebar open"
-                >
-                  <PinIcon className="size-4" />
-                </button>
-              </SidebarRailTooltip>
-            </nav>
           ) : (
+            <div
+              className="thinkway-app-sidebar-tip"
+              title="Move here to open the main bar"
+              aria-label="Main navigation. Hover or focus to open."
+            >
+              <span className="thinkway-app-sidebar-tip-bar" aria-hidden />
+              <span className="thinkway-app-sidebar-tip-nub" aria-hidden>
+                ›
+              </span>
+            </div>
+          )}
+          {displayExpanded ? (
             <nav className="thinkway-app-sidebar-nav flex flex-1 flex-col overflow-y-auto overflow-x-hidden px-3 py-3">
               {navGroups.map((group, groupIndex) => {
                 const groupCollapsed = collapsedGroups.has(group.label);
-                const GroupIcon = group.icon;
 
                 return (
                   <div
@@ -683,9 +645,6 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                       aria-expanded={!groupCollapsed}
                       aria-label={`${groupCollapsed ? "Expand" : "Collapse"} ${group.label}`}
                     >
-                      <span className={GROUP_ICON_TONE_CLASS[group.iconTone]}>
-                        <GroupIcon className="size-4 stroke-[1.75] text-sidebar-muted-foreground" />
-                      </span>
                       <span className="min-w-0 flex-1 whitespace-normal break-words text-[11px] font-semibold tracking-[0.08em] text-sidebar-muted-foreground uppercase leading-snug">
                         {group.label}
                       </span>
@@ -699,7 +658,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
 
                     <div
                       className={cn(
-                        "thinkway-app-sidebar-section-items mt-1 ml-3 flex flex-col border-l border-sidebar-border pl-2",
+                        "thinkway-app-sidebar-section-items mt-1 ml-1 flex flex-col border-l border-sidebar-border pl-2",
                         groupCollapsed && "hidden"
                       )}
                     >
@@ -716,7 +675,6 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                         }
 
                         const active = isItemActive(pathname, item.href);
-                        const Icon = item.icon;
                         return (
                           <AppNavLink
                             key={item.href}
@@ -729,12 +687,6 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                                 : "text-sidebar-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
                             )}
                           >
-                            <Icon
-                              className={cn(
-                                "size-4 shrink-0 stroke-[1.75]",
-                                active ? "text-primary dark:text-blue-400" : "text-sidebar-muted-foreground"
-                              )}
-                            />
                             <span
                               className={cn(
                                 "min-w-0 whitespace-normal break-words leading-snug",
@@ -751,22 +703,18 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
                 );
               })}
             </nav>
-          )}
+          ) : null}
 
+          {displayExpanded ? (
           <div
             className={cn(
               "bg-sidebar",
-              displayExpanded
-                ? "border-t border-sidebar-border px-4 py-3"
-                : "flex justify-center border-t border-sidebar-border px-2 pb-4 pt-1"
+              "border-t border-sidebar-border px-4 py-3"
             )}
           >
-            {displayExpanded ? (
-              <UserAccount email={userEmail} />
-            ) : (
-              <UserAccount email={userEmail} compact />
-            )}
+            <UserAccount email={userEmail} />
           </div>
+          ) : null}
         </aside>
       </div>
     </TooltipProvider>

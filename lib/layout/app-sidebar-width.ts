@@ -1,6 +1,6 @@
 /** Matches `--rail: 266px` in Thinkway_Client_Form final.html. */
 export const APP_SIDEBAR_WIDTH_EXPANDED = "16.625rem";
-export const APP_SIDEBAR_WIDTH_COLLAPSED = "4rem";
+export const APP_SIDEBAR_WIDTH_COLLAPSED = "12px";
 export const APP_SIDEBAR_WIDTH_HIDDEN = "0px";
 export const APP_SIDEBAR_MARGIN = "0px";
 export const APP_SIDEBAR_WIDTH_CSS_VAR = "--app-sidebar-width";

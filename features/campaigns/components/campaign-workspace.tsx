@@ -1,10 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
-import { PageBackButton } from "@/components/navigation/page-back-button";
 import { Tabs } from "@/components/ui/tabs";
 import { CampaignWorkspaceScrollShell } from "@/features/campaigns/components/campaign-workspace-scroll-shell";
 import {
@@ -20,7 +17,6 @@ import {
 import {
   buildWorkspaceGuidance,
   campaignLifecycleFromWorkspace,
-  workspaceLabelForTab,
 } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import {
   buildCampaignWorkspaceTabUrl,
@@ -30,7 +26,6 @@ import {
   type DecisionFocusQuery,
 } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import { CampaignBlockerResolverDrawer } from "@/features/campaigns/lifecycle/components/campaign-blocker-resolver-drawer";
-import { CampaignStateStrip } from "@/features/campaigns/lifecycle/components/campaign-state-strip";
 import { CampaignVendorIoLifecycleBanner } from "@/features/campaigns/lifecycle/components/campaign-vendor-io-lifecycle-banner";
 import { CampaignWorkspaceGuidance } from "@/features/campaigns/lifecycle/components/campaign-workspace-guidance";
 import {
@@ -42,15 +37,14 @@ import { useCampaignWorkspaceTabOrder } from "@/features/campaigns/hooks/use-cam
 import { useCampaignTabData } from "@/features/campaigns/hooks/use-campaign-tab-data";
 import { CampaignOperationalRefreshProvider } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { useMetricsSyncCompletionToasts } from "@/features/campaigns/hooks/use-metrics-sync-toasts";
-import { CampaignWorkspaceJumpSelect } from "@/features/campaigns/components/campaign-workspace-jump-select";
 import { loadCampaignVendorIosAction } from "@/features/campaigns/actions/load-campaign-vendor-ios";
 import type { VendorIoRow } from "@/features/io/types";
 import { OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS } from "@/components/workspace/operational-workspace-ui";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
-import { CampaignHero } from "@/features/campaigns/components/aurora/campaign-hero";
+import { CampaignDetailChrome } from "@/features/campaigns/components/campaign-detail-chrome";
 import { CampaignHeroActions } from "@/features/campaigns/components/aurora/campaign-hero-actions";
-import { CampaignKpiCards } from "@/features/campaigns/components/aurora/campaign-kpi-cards";
+import "@/app/styles/campaign-detail-suite.css";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
 import { CampaignDeliverablesTab } from "@/features/campaigns/components/tabs/campaign-deliverables-tab";
@@ -68,9 +62,6 @@ import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
 import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
 import { seedFromCampaign } from "@/features/campaign-outputs/hydration/seed-adapters";
-import { campaignDetailPath } from "@/lib/routing/entity-paths";
-import { DocumentNumber } from "@/components/ui/document-number";
-import { EnvironmentBadgeSlot } from "@/components/environment/environment-badge-slot";
 
 type CampaignWorkspaceViewProps = {
   workspace: CampaignWorkspace;
@@ -466,7 +457,7 @@ export function CampaignWorkspaceView({
       reloadAssignmentHierarchy={reloadAssignmentHierarchy}
       reloadVendorIos={reloadVendorIos}
     >
-    <div className="thinkway-campaign-workspace flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="campaign-detail-suite thinkway-campaign-workspace flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}
@@ -474,84 +465,33 @@ export function CampaignWorkspaceView({
       >
         <CampaignWorkspaceScrollShell
           chrome={
-            <div className="thinkway-aurora-chrome">
-              <div className="thinkway-aurora-topbar">
-                <div className="thinkway-aurora-crumb">
-                  <PageBackButton
-                    fallbackHref="/campaigns"
-                    label="Back to campaigns"
-                    className="thinkway-campaign-back-btn size-[26px] rounded-[var(--camp-radius)] p-0 hover:bg-[var(--camp-surface)]"
-                  />
-                  <EntityPrevNext
-                    entity="campaigns"
-                    currentId={workspace.id}
-                    hrefForId={(id) => campaignDetailPath(id)}
-                    className="shrink-0"
-                  />
-                  <CampaignWorkspaceJumpSelect
-                    currentId={workspace.id}
-                    currentDocumentNumber={workspace.document_number}
-                    currentName={workspace.name}
-                  />
-                  <span className="thinkway-aurora-crumb-path min-w-0">
-                    <Link href="/campaigns" className="hover:text-[var(--camp-blue-text)]">
-                      Campaigns
-                    </Link>
-                    <span className="thinkway-aurora-sep">/</span>
-                    <b>
-                      <DocumentNumber value={workspace.document_number} />
-                    </b>
-                    <span className="thinkway-aurora-sep">·</span>
-                    <span className="thinkway-lc-crumb-state" title={lifecycle.reason}>
-                      {lifecycle.businessStageLabel}
-                      <span className="thinkway-lc-pill ml-1.5">
-                        {lifecycle.businessStateLabel}
-                      </span>
-                    </span>
-                  </span>
-                </div>
-                <div className="thinkway-aurora-topbar-right">
-                  <EnvironmentBadgeSlot />
-                </div>
-              </div>
-              <CampaignHero
-                workspace={workspace}
-                processCue={processCue}
-                lifecycle={lifecycle}
-                activeWorkspaceTab={activeTab}
-                onNavigateToCurrentStage={continueToNextAction}
-                onOpenResolver={() => setResolverOpen(true)}
-                onSelectStage={handleTabChange}
-                actions={
-                  <CampaignHeroActions
-                    workspace={workspace}
-                    studioSeed={campaignStudioSeed}
-                    studioWorkspace={campaignStudioWorkspace}
-                    onNavigateToTab={handleTabChange}
-                    onDuplicate={() => setDuplicateOpen(true)}
-                    onOpenDetails={() => setDetailsOpen(true)}
-                  />
-                }
-              />
-              <CampaignKpiCards workspace={workspace} />
-            </div>
-          }
-          tabs={
-            <>
-              <CampaignStateStrip
-                lifecycle={lifecycle}
-                documentNumber={workspace.document_number}
-                campaignName={workspace.name}
-                workspaceLabel={workspaceLabelForTab(activeTab)}
-                updatedAt={workspace.activity[0]?.created_at ?? workspace.start_date}
-                endDate={workspace.end_date}
-              />
-              <CampaignWorkspaceSortableTabsBar
-                tabOrder={tabOrder}
-                tabsById={tabsById}
-                onReorder={moveTab}
-              />
-            </>
+            <CampaignDetailChrome
+              workspace={workspace}
+              lifecycle={lifecycle}
+              activeTab={activeTab}
+              onContinue={continueToNextAction}
+              onOpenResolver={() => setResolverOpen(true)}
+              onSelectStage={handleTabChange}
+              onOpenDetails={() => setDetailsOpen(true)}
+              actions={
+                <CampaignHeroActions
+                  workspace={workspace}
+                  studioSeed={campaignStudioSeed}
+                  studioWorkspace={campaignStudioWorkspace}
+                  onNavigateToTab={handleTabChange}
+                  onDuplicate={() => setDuplicateOpen(true)}
+                  onOpenDetails={() => setDetailsOpen(true)}
+                />
+              }
+              stepper={
+                <CampaignWorkspaceSortableTabsBar
+                  className="tw-step2 px-0 pt-0"
+                  tabOrder={tabOrder}
+                  tabsById={tabsById}
+                  onReorder={moveTab}
+                />
+              }
+            />
           }
         >
         <CampaignWorkspaceTabContent value="overview" className={tabPanelClass}>

@@ -170,19 +170,7 @@ export function CampaignCommandCenter({
 
   return (
     <div className="thinkway-aurora-command">
-      {lifecycle ? (
-        <CampaignLifecycleChrome
-          lifecycle={lifecycle}
-          activeWorkspaceTab="overview"
-          variant="dashboard"
-          onContinue={
-            onContinueLifecycle ??
-            (() => onNavigateToTab(lifecycle.decisionCenter.primaryActionTab))
-          }
-          onOpenResolver={onOpenResolver}
-          onSelectStage={onNavigateToTab}
-        />
-      ) : (
+      {lifecycle ? null : (
         <>
           <CampaignOperationalReadinessChecklist readiness={readiness} />
           <CampaignSectionHead title="Campaign health" />
@@ -210,13 +198,11 @@ export function CampaignCommandCenter({
         </>
       )}
 
-      {/* Operational cards grid */}
-      <CampaignSectionHead title="Operating dashboard" />
-
       <div className="thinkway-aurora-ops-grid">
         <CampaignOpsCard
           title="Health"
           subtitle="Operational readiness"
+          className={readiness.status === "operational_ready" ? undefined : "is-alert"}
           status={pill(
             readiness.status === "operational_ready" ? "green" : "amber",
             readiness.statusLabel
@@ -402,6 +388,7 @@ export function CampaignCommandCenter({
         <CampaignOpsCard
           title="Finance"
           subtitle="Collected · outstanding · PO"
+          className={financials.billing_outstanding > 0 ? "is-alert" : undefined}
           status={pill(
             financials.billing_outstanding > 0 ? "amber" : "green",
             financials.billing_outstanding > 0 ? "Outstanding" : "Clear"
@@ -456,6 +443,20 @@ export function CampaignCommandCenter({
           )}
         </CampaignOpsCard>
       </div>
+
+      {lifecycle ? (
+        <CampaignLifecycleChrome
+          lifecycle={lifecycle}
+          activeWorkspaceTab="overview"
+          variant="dashboard"
+          onContinue={
+            onContinueLifecycle ??
+            (() => onNavigateToTab(lifecycle.decisionCenter.primaryActionTab))
+          }
+          onOpenResolver={onOpenResolver}
+          onSelectStage={onNavigateToTab}
+        />
+      ) : null}
 
       {/* Recent assignments preview */}
       {recentAssignments.length > 0 ? (

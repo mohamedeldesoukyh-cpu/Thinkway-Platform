@@ -393,6 +393,60 @@
     @apply flex size-[18px] shrink-0 items-center justify-center text-sidebar-muted-foreground;
   }
 
+  .thinkway-app-sidebar--tip {
+    background: transparent;
+    border-right: 0;
+    overflow: visible;
+  }
+
+  .thinkway-app-sidebar-tip {
+    position: relative;
+    display: flex;
+    height: 100%;
+    width: 12px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+
+  .thinkway-app-sidebar-tip-bar {
+    position: absolute;
+    inset: 0;
+    width: 5px;
+    margin: 12% 0 12% 0;
+    border-radius: 0 8px 8px 0;
+    background: linear-gradient(180deg, #0b3dbf 0%, #0057ff 55%, #1d9e75 100%);
+    opacity: 0.95;
+    box-shadow: 1px 0 8px rgba(0, 87, 255, 0.18);
+  }
+
+  .thinkway-app-sidebar-tip-nub {
+    position: absolute;
+    left: 3px;
+    top: 50%;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    width: 16px;
+    height: 36px;
+    transform: translateY(-50%);
+    border-radius: 0 8px 8px 0;
+    background: #fff;
+    color: #0b52e0;
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 1px 6px rgba(15, 23, 42, 0.12);
+    border: 1px solid #e2e8f0;
+    border-left: 0;
+  }
+
+  .dark .thinkway-app-sidebar-tip-nub {
+    background: var(--sidebar);
+    color: #8fb6ff;
+    border-color: var(--sidebar-border);
+  }
+
   .dark .thinkway-sidebar-grp-icon {
     @apply text-sidebar-muted-foreground;
   }

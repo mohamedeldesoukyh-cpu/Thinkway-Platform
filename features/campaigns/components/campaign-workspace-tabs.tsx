@@ -17,6 +17,7 @@ type CampaignWorkspaceSortableTabsBarProps = {
   tabOrder: readonly CampaignWorkspaceTabId[];
   tabsById: Record<CampaignWorkspaceTabId, CampaignWorkspaceTabDef>;
   onReorder: (fromIndex: number, toIndex: number) => void;
+  className?: string;
 };
 
 /** Campaign workspace tab rail — Aurora skin via Enterprise Tabs underline variant. */
@@ -24,6 +25,7 @@ export function CampaignWorkspaceSortableTabsBar({
   tabOrder,
   tabsById,
   onReorder,
+  className,
 }: CampaignWorkspaceSortableTabsBarProps) {
   return (
     <EnterpriseSortableTabsBar
@@ -32,7 +34,10 @@ export function CampaignWorkspaceSortableTabsBar({
       tabOrder={tabOrder}
       tabsById={tabsById}
       onReorder={onReorder}
-      className="thinkway-aurora-panel-tabs thinkway-process-nav-tabs px-3 pt-1.5"
+      className={cn(
+        "thinkway-aurora-panel-tabs thinkway-process-nav-tabs px-3 pt-1.5",
+        className
+      )}
       aria-label="Campaign process navigation"
     />
   );
