@@ -528,22 +528,22 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
   return (
     <TooltipProvider delayDuration={300}>
       {/*
-        Sticky spacer creates a stacking context. Without an elevated z-index when
-        expanded, later siblings (Studio main) paint over the peek/pinned flyout.
-        Keep below copilot dock (~200) and dialogs (~110).
+        Sticky spacer creates a stacking context. Elevate above campaign frozen
+        chrome (z-40) so peek/pinned flyout is never covered. Keep below
+        copilot dock (~200) and dialogs (~110).
       */}
       <div
         data-app-sidebar-root
         className={cn(
           "relative hidden shrink-0 self-stretch transition-all duration-300 ease-in-out md:sticky md:top-0 md:block md:h-full md:max-h-full",
-          displayExpanded ? "z-[60]" : "z-20"
+          displayExpanded ? "z-[70]" : "z-30"
         )}
         style={{ width: layoutWidth }}
       >
         {/* Screen-edge hit target when unpinned (escapes shell overflow clipping). */}
         {!pinned ? (
           <div
-            className="pointer-events-auto fixed inset-y-0 left-0 z-[55] w-6"
+            className="pointer-events-auto fixed inset-y-0 left-0 z-[65] w-6"
             aria-hidden
             onPointerEnter={openPeek}
           />
@@ -553,8 +553,8 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
           className={cn(
             "thinkway-app-sidebar flex flex-col overflow-hidden border-r border-sidebar-border bg-sidebar text-sidebar-foreground transition-all duration-300 ease-in-out",
             !pinned && peekOpen
-              ? "fixed inset-y-0 left-0 z-[60] shadow-[4px_0_24px_rgba(15,23,42,0.12)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.45)]"
-              : "absolute inset-y-0 left-0 z-[60]",
+              ? "fixed inset-y-0 left-0 z-[70] shadow-[4px_0_24px_rgba(15,23,42,0.12)] dark:shadow-[4px_0_24px_rgba(0,0,0,0.45)]"
+              : "absolute inset-y-0 left-0 z-[70]",
             !displayExpanded && "thinkway-app-sidebar--tip"
           )}
           style={{ width: panelWidth }}

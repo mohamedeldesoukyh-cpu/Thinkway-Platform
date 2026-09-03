@@ -27,13 +27,17 @@ export default function DashboardLayout({
     <InternalWorkspaceGate>
       <DashboardProviders>
         <div className="relative flex h-full min-h-0 bg-background text-foreground">
-          <div className="thinkway-platform-shell flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
+          {/*
+            Overflow lives on the main column only — not the shell — so the
+            rounded shell does not clip the left sidebar tip / expanded panel.
+          */}
+          <div className="thinkway-platform-shell flex h-full min-h-0 min-w-0 flex-1">
             <Suspense
               fallback={<CollapsibleAppSidebar userEmail={null} />}
             >
               <DashboardSidebarAuth />
             </Suspense>
-            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col transition-all duration-300 ease-in-out">
+            <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-all duration-300 ease-in-out">
               <Suspense fallback={null}>
                 <NavigationLoadingProvider>{children}</NavigationLoadingProvider>
               </Suspense>

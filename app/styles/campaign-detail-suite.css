@@ -60,7 +60,8 @@
 .campaign-detail-suite .tw-frozen {
   position: sticky;
   top: 0;
-  z-index: 60;
+  /* Below app sidebar (z-60+) so the main nav is never covered or clipped */
+  z-index: 40;
   background: var(--tw-bg);
   margin: 0 -14px;
   padding: 0 14px 6px;
@@ -510,8 +511,30 @@
   display: none !important;
 }
 
+/* Complete continuous track — campaign-detail.html connectors stay joined
+   across every step (no grey gaps / “cuts” between nodes). */
+.campaign-detail-suite .tw-step2 .enterprise-tab::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab::after {
+  background: var(--tw-blue) !important;
+  width: calc(50% + 1px) !important;
+}
+
 .campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"]::before,
-.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"]::after {
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"]::after,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="current"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="current"]::after,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-state="active"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-state="active"]::after,
+.campaign-detail-suite .tw-step2 .enterprise-tab[aria-selected="true"]::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[aria-selected="true"]::after {
+  background: var(--tw-blue) !important;
+}
+
+/* HTML: `.done + :not(.done)::before` — keep the join into the next node blue */
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="completed"] + .enterprise-tab::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-process-state="current"] + .enterprise-tab::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[data-state="active"] + .enterprise-tab::before,
+.campaign-detail-suite .tw-step2 .enterprise-tab[aria-selected="true"] + .enterprise-tab::before {
   background: var(--tw-blue) !important;
 }
 
