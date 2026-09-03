@@ -13,7 +13,7 @@ function assert(condition: boolean, message: string) {
 }
 
 assert(formatLiveAdMonth("2026-03-15") === "Mar 26", "formats month and year");
-assert(formatLiveAdMonth(null) === "—", "empty date shows dash");
+assert(formatLiveAdMonth(null) === "not set", "empty date shows not set");
 assert(!isLiveAdDateLocked(null, "2026-01-01"), "no date means not locked");
 assert(isLiveAdDateLocked("2026-03-01", "2026-01-01"), "date + locked_at is locked");
 assert(canEditLiveAdDate(null, "2026-01-01"), "invoiced without date stays editable");

@@ -3,15 +3,10 @@ import { platformLabel } from "@/lib/campaigns/line-assignment";
 import type { AssignmentHierarchyGroup } from "@/lib/domains/campaign/assignment-hierarchy-types";
 import type { CampaignLineWorkspace } from "@/lib/domains/campaign/workspace-types";
 import { formatPercent } from "@/lib/campaigns/utils";
+import { formatDesignDate } from "@/lib/design/format-design-date";
 
 export function formatAssignmentDetailDate(value: string | null | undefined): string {
-  if (!value?.trim()) return "—";
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return value;
-  const day = String(parsed.getDate()).padStart(2, "0");
-  const month = String(parsed.getMonth() + 1).padStart(2, "0");
-  const year = parsed.getFullYear();
-  return `${day}.${month}.${year}`;
+  return formatDesignDate(value);
 }
 
 export function resolveAssignmentPrimaryHandle(line: CampaignLineWorkspace): string {

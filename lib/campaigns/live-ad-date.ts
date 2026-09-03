@@ -1,12 +1,13 @@
 /** Live ad date display and lock rules for assignment child rows. */
 
+import { formatDesignDateRaw } from "@/lib/design/format-design-date";
+
 export function formatLiveAdMonth(liveDate: string | null | undefined): string {
-  if (!liveDate?.trim()) return "—";
-  const parsed = new Date(`${liveDate.trim()}T12:00:00`);
-  if (Number.isNaN(parsed.getTime())) return "—";
-  const month = parsed.toLocaleDateString("en-US", { month: "short" });
-  const year = String(parsed.getFullYear()).slice(-2);
-  return `${month} ${year}`;
+  const formatted = formatDesignDateRaw(liveDate);
+  if (!formatted) return "not set";
+  const withDay = formatted.match(/^\d{2} ([A-Z][a-z]{2}) (\d{2})/);
+  if (withDay) return `${withDay[1]} ${withDay[2]}`;
+  return formatted;
 }
 
 export function isLiveAdDateLocked(

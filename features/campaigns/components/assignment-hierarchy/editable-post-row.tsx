@@ -52,6 +52,11 @@ import {
   DeliverableTypeSelect,
 } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";
 import {
+  AssignmentGridCell,
+  AssignmentGridRow,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-cell";
+import { PARENT_TRACK_TO_CHILD_FIELD } from "@/features/campaigns/components/assignment-hierarchy/assignment-css-grid";
+import {
   assignmentChildColDataAttr,
   assignmentChildLeadingParentColumnIds,
   assignmentChildRowColSpan,
@@ -115,6 +120,8 @@ type EditablePostRowProps = {
   isLastChildRow?: boolean;
   showExpandColumn?: boolean;
   leadingParentColumnIds?: readonly string[];
+  gridCols?: string;
+  parentTrackIds?: readonly string[];
 };
 
 type MetaDraft = {
@@ -184,6 +191,8 @@ export function EditablePostRow({
   isLastChildRow = false,
   showExpandColumn = false,
   leadingParentColumnIds: leadingParentColumnIdsProp,
+  gridCols,
+  parentTrackIds,
 }: EditablePostRowProps) {
   const col = useOperationalChildColumnVisibleChecker();
   const leadingParentColumnIds =
@@ -675,8 +684,8 @@ export function EditablePostRow({
     const childColumnId = assignmentParentToChildLeadingColumnId(parentColumnId);
     if (!childColumnId) {
       return (
-        <td
-          key={parentColumnId}
+        <AssignmentGridCell
+          key={parentColumnId} columnId={parentColumnId}
           className={GRID_CELL.leadingRev}
           aria-hidden
         />
@@ -711,8 +720,8 @@ export function EditablePostRow({
       childColumnId === "select"
     ) {
       return (
-        <td
-          key={parentColumnId}
+        <AssignmentGridCell
+          key={parentColumnId} columnId={parentColumnId}
           {...(childColumnId === "fullDescriptionSpacer"
             ? {}
             : assignmentChildColDataAttr(childColumnId))}
@@ -725,8 +734,8 @@ export function EditablePostRow({
     switch (childColumnId) {
       case "type":
         return (
-          <td
-            key={parentColumnId}
+          <AssignmentGridCell
+            key={parentColumnId} columnId={parentColumnId}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cellClass}
           >
@@ -789,13 +798,13 @@ export function EditablePostRow({
                 </>
               )}
             </div>
-          </td>
+          </AssignmentGridCell>
         );
       case "platform":
         // Alignment slot under parent Creator — platform avatar lives beside Type.
         return (
-          <td
-            key={parentColumnId}
+          <AssignmentGridCell
+            key={parentColumnId} columnId={parentColumnId}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cellClass}
             aria-hidden
@@ -803,7 +812,7 @@ export function EditablePostRow({
         );
       case "qty":
         return (
-          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalQtyField
                 value={commercial.draft.qty}
@@ -815,11 +824,11 @@ export function EditablePostRow({
             ) : (
               <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
             )}
-          </td>
+          </AssignmentGridCell>
         );
       case "revPerAd":
         return (
-          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalAmountField
                 value={commercial.draft.revPerAd}
@@ -827,16 +836,17 @@ export function EditablePostRow({
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
                 alwaysEditing={amountAlwaysEditing}
+                editTint="rev"
                 perUnit
               />
             ) : (
               <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
             )}
-          </td>
+          </AssignmentGridCell>
         );
       case "costPerAd":
         return (
-          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalAmountField
                 value={commercial.draft.costPerAd}
@@ -844,22 +854,23 @@ export function EditablePostRow({
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
                 alwaysEditing={amountAlwaysEditing}
+                editTint="cost"
                 perUnit
               />
             ) : (
               <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
             )}
-          </td>
+          </AssignmentGridCell>
         );
       case "ccy":
         return (
-          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {currency}
-          </td>
+          </AssignmentGridCell>
         );
       case "rev":
         return (
-          <td key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalAmountField
                 value={commercial.draft.rev}
@@ -867,16 +878,17 @@ export function EditablePostRow({
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
                 alwaysEditing={amountAlwaysEditing}
+                editTint="rev"
               />
             ) : (
               <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
             )}
-          </td>
+          </AssignmentGridCell>
         );
       default:
         return (
-          <td
-            key={parentColumnId}
+          <AssignmentGridCell
+            key={parentColumnId} columnId={parentColumnId}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cellClass}
             aria-hidden
@@ -885,355 +897,352 @@ export function EditablePostRow({
     }
   }
 
-  return (
-    <>
-      <tr
-        className={cn(
-          "thinkway-campaign-asgn-child text-[11px] font-normal text-[var(--camp-text-2)]",
-          !isLastChildRow && "border-b border-[var(--camp-border)]",
-          "hover:bg-[var(--camp-row-open-hover)]",
-          fieldsActive && "bg-[var(--camp-row-open)]"
-        )}
-      >
-        {leadingParentColumnIds.map(renderLeadingBodyCell)}
-        {col("usageRights") ? (
-        <td className={cn(GRID_CELL.usageRights, OPERATIONAL_AMOUNT_CLASS)}>
-          {showDeliverableCommercial
-            ? formatOperationalAmount(
-                typeCommercial?.usageRightsAmount ?? deliverable.usage_rights_amount
-              )
-            : "—"}
-        </td>
-        ) : null}
-        {col("agencyFeePercent") ? (
-        <td
-          className={cn(
-            GRID_CELL.agencyFeePercent,
-            OPERATIONAL_AMOUNT_CLASS,
-            "text-muted-foreground"
-          )}
-        >
-          {showDeliverableCommercial
-            ? formatPercent(typeCommercial?.agencyFeePercent ?? deliverable.agency_fee_percent)
-            : "—"}
-        </td>
-        ) : null}
-        {col("agencyFee") ? (
-        <td className={cn(GRID_CELL.agencyFee, OPERATIONAL_AMOUNT_CLASS)}>
-          {showDeliverableCommercial
-            ? formatOperationalAmount(liveAgencyFeeAmount)
-            : "—"}
-        </td>
-        ) : null}
-        {col("cost") ? (
-        <td className={cn(GRID_HIGHLIGHT_COST, GRID_CELL.money)}>
-          {showDeliverableCommercial ? (
-            <OperationalAmountField
-              value={commercial.draft.cost}
-              onChange={(n) => commercial.setCost(n)}
-              onBlur={gridEdit.hasSession ? undefined : persistCommercial}
-              disabled={commercialLocked}
-              alwaysEditing={amountAlwaysEditing}
-            />
-          ) : (
-            <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
-          )}
-        </td>
-        ) : null}
-        {col("usageRightsCost") ? (
-        <td className={cn(GRID_CELL.usageRightsCost, OPERATIONAL_AMOUNT_CLASS)}>
-          {showDeliverableCommercial
-            ? formatOperationalAmount(
-                typeCommercial?.usageRightsCost ?? deliverable.usage_rights_cost
-              )
-            : "—"}
-        </td>
-        ) : null}
-        {col("vat") ? (
-        <td className={GRID_CELL.vat}>
-          {!showDeliverableCommercial ? (
-            <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
-          ) : fieldsActive && !revenueVatExempt ? (
-            <Input
-              type="number"
-              min={0}
-              max={100}
-              step="0.1"
-              value={meta.revenue_vat_percent}
-              onChange={(e) =>
-                setMeta((m) => ({
-                  ...m,
-                  revenue_vat_percent: Number(e.target.value) || 0,
-                }))
-              }
-              disabled={gridEdit.saving}
-              className={cn(
-                "h-auto min-h-0 w-full border-0 bg-transparent py-0 text-center text-[11px] font-normal shadow-none focus-visible:ring-1"
-              )}
-            />
-          ) : revenueVatExempt ? (
-            <span className={OPERATIONAL_AMOUNT_CLASS}>Ex</span>
-          ) : (
-            <span className={OPERATIONAL_AMOUNT_CLASS}>
-              {formatOperationalAmount(computedVat)}
-            </span>
-          )}
-        </td>
-        ) : null}
-        {col("totalBilling") ? (
-        <td className={cn(GRID_HIGHLIGHT_TOTAL_BILLING)}>
-          {showDeliverableCommercial
-            ? formatOperationalAmount(computedTotalBilling)
-            : "—"}
-        </td>
-        ) : null}
-        {col("postDate") ? (
-        <td className={GRID_CELL.postDate}>
-          {canEditLiveDateField && (!gridEdit.hasSession || gridEdit.isEditing) ? (
-            <div className="flex min-w-0 items-center justify-center gap-0.5 px-0.5">
-              <Input
-                type="date"
-                value={meta.live_date}
-                onChange={(e) => setMeta((m) => ({ ...m, live_date: e.target.value }))}
-                onBlur={
-                  gridEdit.hasSession
-                    ? undefined
-                    : (e) => persistLiveDate(e.target.value)
-                }
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !gridEdit.hasSession) {
-                    e.preventDefault();
-                    persistLiveDate(meta.live_date);
-                  }
-                }}
-                disabled={pending || gridEdit.saving}
-                className="h-7 min-w-[8.75rem] flex-1 basis-[8.75rem] px-1 text-[11px] leading-none"
-                aria-label="Live ad date"
-                title={
-                  post.live_date_source === "publication"
-                    ? "From publication (you can overwrite)"
-                    : post.publication_live_date
-                      ? `Manual overwrite · publication default ${post.publication_live_date}`
-                      : "Live ad date"
-                }
+  function emptyTrack(parentColumnId: string) {
+    return (
+      <AssignmentGridCell key={parentColumnId} columnId={parentColumnId}>
+        <span />
+      </AssignmentGridCell>
+    );
+  }
+
+  function renderChildTrackCell(parentColumnId: string) {
+    switch (parentColumnId) {
+      case "usageRights":
+        return (
+          <AssignmentGridCell
+            key={parentColumnId}
+            columnId={parentColumnId}
+            className={cn(GRID_CELL.usageRights, OPERATIONAL_AMOUNT_CLASS)}
+          >
+            {col("usageRights") && showDeliverableCommercial
+              ? formatOperationalAmount(
+                  typeCommercial?.usageRightsAmount ?? deliverable.usage_rights_amount
+                )
+              : col("usageRights")
+                ? "—"
+                : <span />}
+          </AssignmentGridCell>
+        );
+      case "agencyFeePercent":
+        return (
+          <AssignmentGridCell
+            key={parentColumnId}
+            columnId={parentColumnId}
+            className={cn(GRID_CELL.agencyFeePercent, OPERATIONAL_AMOUNT_CLASS, "text-muted-foreground")}
+          >
+            {col("agencyFeePercent") && showDeliverableCommercial
+              ? formatPercent(typeCommercial?.agencyFeePercent ?? deliverable.agency_fee_percent)
+              : col("agencyFeePercent")
+                ? "—"
+                : <span />}
+          </AssignmentGridCell>
+        );
+      case "agencyFee":
+        return (
+          <AssignmentGridCell
+            key={parentColumnId}
+            columnId={parentColumnId}
+            className={cn(GRID_CELL.agencyFee, OPERATIONAL_AMOUNT_CLASS)}
+          >
+            {col("agencyFee") && showDeliverableCommercial
+              ? formatOperationalAmount(liveAgencyFeeAmount)
+              : col("agencyFee")
+                ? "—"
+                : <span />}
+          </AssignmentGridCell>
+        );
+      case "cost":
+        return (
+          <AssignmentGridCell
+            key={parentColumnId}
+            columnId={parentColumnId}
+            className={cn(GRID_HIGHLIGHT_COST, GRID_CELL.money)}
+          >
+            {col("cost") && showDeliverableCommercial ? (
+              <OperationalAmountField
+                value={commercial.draft.cost}
+                onChange={(n) => commercial.setCost(n)}
+                onBlur={gridEdit.hasSession ? undefined : persistCommercial}
+                disabled={commercialLocked}
+                alwaysEditing={amountAlwaysEditing}
+                editTint="cost"
               />
-              {gridEdit.hasSession ? null : (
+            ) : col("cost") ? (
+              <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
+            ) : (
+              <span />
+            )}
+          </AssignmentGridCell>
+        );
+      case "usageRightsCost":
+        return (
+          <AssignmentGridCell
+            key={parentColumnId}
+            columnId={parentColumnId}
+            className={cn(GRID_CELL.usageRightsCost, OPERATIONAL_AMOUNT_CLASS)}
+          >
+            {col("usageRightsCost") && showDeliverableCommercial
+              ? formatOperationalAmount(
+                  typeCommercial?.usageRightsCost ?? deliverable.usage_rights_cost
+                )
+              : col("usageRightsCost")
+                ? "—"
+                : <span />}
+          </AssignmentGridCell>
+        );
+      case "vat":
+        return (
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.vat}>
+            {!col("vat") ? (
+              <span />
+            ) : !showDeliverableCommercial ? (
+              <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
+            ) : fieldsActive && !revenueVatExempt ? (
+              <Input
+                type="number"
+                min={0}
+                max={100}
+                step="0.1"
+                value={meta.revenue_vat_percent}
+                onChange={(e) =>
+                  setMeta((m) => ({
+                    ...m,
+                    revenue_vat_percent: Number(e.target.value) || 0,
+                  }))
+                }
+                disabled={gridEdit.saving}
+                className="h-auto min-h-0 w-full border-0 bg-transparent py-0 text-center text-[11px] font-normal shadow-none focus-visible:ring-1"
+              />
+            ) : revenueVatExempt ? (
+              <span className={OPERATIONAL_AMOUNT_CLASS}>Ex</span>
+            ) : (
+              <span className={OPERATIONAL_AMOUNT_CLASS}>
+                {formatOperationalAmount(computedVat)}
+              </span>
+            )}
+          </AssignmentGridCell>
+        );
+      case "totalBilling":
+        return (
+          <AssignmentGridCell
+            key={parentColumnId}
+            columnId={parentColumnId}
+            className={cn(GRID_HIGHLIGHT_TOTAL_BILLING)}
+          >
+            {col("totalBilling") && showDeliverableCommercial
+              ? formatOperationalAmount(computedTotalBilling)
+              : col("totalBilling")
+                ? "—"
+                : <span />}
+          </AssignmentGridCell>
+        );
+      case "gp":
+        if (!col("postDate")) return emptyTrack(parentColumnId);
+        return (
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.postDate}>
+            {canEditLiveDateField && (!gridEdit.hasSession || gridEdit.isEditing) ? (
+              <div className="flex min-w-0 items-center justify-center gap-0.5 px-0.5">
+                <Input
+                  type="date"
+                  value={meta.live_date}
+                  onChange={(e) => setMeta((m) => ({ ...m, live_date: e.target.value }))}
+                  onBlur={
+                    gridEdit.hasSession
+                      ? undefined
+                      : (e) => persistLiveDate(e.target.value)
+                  }
+                  disabled={pending || gridEdit.saving}
+                  className="h-7 min-w-0 flex-1 px-1 text-[11px] leading-none"
+                  aria-label="Live ad date"
+                />
                 <Button
                   type="button"
                   variant="ghost"
                   size="icon"
                   className="size-7 shrink-0"
-                  disabled={pending}
-                  title="Save live ad date"
-                  onClick={() => persistLiveDate(meta.live_date)}
+                  disabled={pending || gridEdit.saving}
+                  title="Reset to publication date"
+                  onClick={() => {
+                    if (gridEdit.hasSession) {
+                      setMeta((m) => ({
+                        ...m,
+                        live_date: post.publication_live_date ?? "",
+                      }));
+                      return;
+                    }
+                    resetLiveDateToPublication();
+                  }}
                 >
-                  <CheckIcon className="size-3.5" />
+                  <RotateCcwIcon className="size-3.5" />
                 </Button>
-              )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-7 shrink-0"
-                disabled={pending || gridEdit.saving}
-                title={
-                  post.publication_live_date
-                    ? `Reset to publication (${post.publication_live_date})`
-                    : "Reset to publication date"
-                }
-                onClick={() => {
-                  if (gridEdit.hasSession) {
-                    setMeta((m) => ({
-                      ...m,
-                      live_date: post.publication_live_date ?? "",
-                    }));
-                    return;
-                  }
-                  resetLiveDateToPublication();
-                }}
-              >
-                <RotateCcwIcon className="size-3.5" />
-              </Button>
-            </div>
-          ) : (
-            <span className="whitespace-nowrap text-[11px] text-muted-foreground">
-              {post.live_date ?? "—"}
-            </span>
-          )}
-        </td>
-        ) : null}
-        {col("liveAdMonth") ? (
-        <td className={cn(GRID_CELL.month, "text-[10px] text-muted-foreground")}>
-          {formatLiveAdMonth(meta.live_date || post.live_date)}
-        </td>
-        ) : null}
-        {col("invoice") ? (
-        <td className={GRID_CELL.invoice}>
-          {post.invoice_document_number ? (
-            <Link
-              href={`/billing/invoices/${post.invoice_id}`}
-              className="text-[9px] hover:underline"
-            >
-              <DocumentNumber
-                value={post.invoice_document_number}
-                showCanonicalTitle={false}
-              />
-            </Link>
-          ) : (
-            "—"
-          )}
-        </td>
-        ) : null}
-        {col("billing") ? (
-        <td className={GRID_CELL.status}>
-          <AssignmentDeliverableBillingBadge billingStatus={post.billing_status} />
-        </td>
-        ) : null}
-        {col("collection") ? (
-        <td className={GRID_CELL.collection}>{collectionLabel}</td>
-        ) : null}
-        {col("payout") ? (
-        <td className={GRID_CELL.payout}>
-          {post.payout_status ? (
-            <Badge variant="secondary" className="text-[9px] font-normal">
-              {post.payout_status.replace(/_/g, " ")}
-            </Badge>
-          ) : (
-            "—"
-          )}
-        </td>
-        ) : null}
-        {col("workflow") ? (
-        <td className={GRID_CELL.workflow}>
-          {canEdit && fieldsActive ? (
-            <Select
-              value={meta.workflow_status}
-              onValueChange={(v) => setMeta((m) => ({ ...m, workflow_status: v }))}
-              disabled={gridEdit.saving}
-            >
-              <SelectTrigger className="h-6 text-[10px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {SCHEDULE_STATUS_OPTIONS.map((opt) => (
-                  <SelectItem key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : (
-            <DeliverableWorkflowBadge status={post.workflow_status} />
-          )}
-        </td>
-        ) : null}
-        {col("actions") ? (
-        <td className={GRID_CELL.actions}>
-          {!canEdit ? (
-            <span className="text-muted-foreground">—</span>
-          ) : gridEdit.hasSession ? (
-            <div className="flex justify-end gap-0.5">
-              {gridEdit.isEditing ? (
-                <span className="text-muted-foreground">—</span>
-              ) : isFirstPost && !deliverable.is_synthetic ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-6"
-                    onClick={addPost}
-                    disabled={pending || gridEdit.saving}
-                    title="Add post"
-                  >
-                    <PlusIcon className="size-3" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 text-destructive"
-                    onClick={deleteDeliverable}
-                    disabled={pending || gridEdit.saving}
-                    title="Remove deliverable"
-                  >
-                    <Trash2Icon className="size-3" />
-                  </Button>
-                </>
-              ) : (
-                <span className="text-muted-foreground">—</span>
-              )}
-            </div>
-          ) : editing ? (
-            <div className="flex justify-end gap-0.5">
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-6"
-                onClick={saveMeta}
-                disabled={pending}
-              >
-                <CheckIcon className="size-3" />
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-6"
-                onClick={() => setEditing(false)}
-              >
-                <XIcon className="size-3" />
-              </Button>
-            </div>
-          ) : (
-            <div className="flex justify-end gap-0.5">
-              {isFirstPost && !deliverable.is_synthetic ? (
-                <>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-6"
-                    onClick={addPost}
-                    disabled={pending}
-                    title="Add post"
-                  >
-                    <PlusIcon className="size-3" />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-6 text-destructive"
-                    onClick={deleteDeliverable}
-                    disabled={pending}
-                    title="Remove deliverable"
-                  >
-                    <Trash2Icon className="size-3" />
-                  </Button>
-                </>
+              </div>
+            ) : (
+              <span className="whitespace-nowrap text-[11px] text-muted-foreground">
+                {post.live_date ?? "not set"}
+              </span>
+            )}
+          </AssignmentGridCell>
+        );
+      case "margin":
+        if (!col("liveAdMonth")) return emptyTrack(parentColumnId);
+        return (
+          <AssignmentGridCell
+            key={parentColumnId}
+            columnId={parentColumnId}
+            className={cn(GRID_CELL.month, "text-[10px] text-muted-foreground")}
+          >
+            {formatLiveAdMonth(meta.live_date || post.live_date)}
+          </AssignmentGridCell>
+        );
+      case "opsStatus":
+        if (!col("invoice")) return emptyTrack(parentColumnId);
+        return (
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.invoice}>
+            {post.invoice_document_number ? (
+              <Link href={`/billing/invoices/${post.invoice_id}`} className="text-[9px] hover:underline">
+                <DocumentNumber value={post.invoice_document_number} showCanonicalTitle={false} />
+              </Link>
+            ) : (
+              "—"
+            )}
+          </AssignmentGridCell>
+        );
+      case "billing":
+        return (
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.status}>
+            <div className="flex min-w-0 flex-col items-start gap-0.5">
+              {col("billing") ? (
+                <AssignmentDeliverableBillingBadge billingStatus={post.billing_status} />
               ) : null}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="size-6"
-                onClick={() => setEditing(true)}
-              >
-                <PencilIcon className="size-3" />
-              </Button>
+              {col("collection") ? (
+                <span className="text-[10px] text-muted-foreground">{collectionLabel}</span>
+              ) : null}
+              {!col("billing") && !col("collection") ? <span /> : null}
             </div>
-          )}
-        </td>
-        ) : null}
-      </tr>
+          </AssignmentGridCell>
+        );
+      case "payout":
+        if (!col("payout")) return emptyTrack(parentColumnId);
+        return (
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.payout}>
+            {post.payout_status ? (
+              <Badge variant="secondary" className="text-[9px] font-normal">
+                {post.payout_status.replace(/_/g, " ")}
+              </Badge>
+            ) : (
+              "—"
+            )}
+          </AssignmentGridCell>
+        );
+      case "actions":
+        return (
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.actions}>
+            <div className="flex min-w-0 flex-col items-end gap-1">
+              {col("workflow") ? (
+                canEdit && fieldsActive ? (
+                  <Select
+                    value={meta.workflow_status}
+                    onValueChange={(v) => setMeta((m) => ({ ...m, workflow_status: v }))}
+                    disabled={gridEdit.saving}
+                  >
+                    <SelectTrigger className="h-6 text-[10px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SCHEDULE_STATUS_OPTIONS.map((opt) => (
+                        <SelectItem key={opt.value} value={opt.value}>
+                          {opt.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <DeliverableWorkflowBadge status={post.workflow_status} />
+                )
+              ) : null}
+              {!canEdit ? (
+                <span className="text-muted-foreground">—</span>
+              ) : gridEdit.hasSession ? (
+                gridEdit.isEditing ? (
+                  <span className="text-muted-foreground">—</span>
+                ) : isFirstPost && !deliverable.is_synthetic ? (
+                  <div className="flex justify-end gap-0.5">
+                    <Button type="button" variant="ghost" size="icon" className="size-6" onClick={addPost} disabled={pending || gridEdit.saving} title="Add post">
+                      <PlusIcon className="size-3" />
+                    </Button>
+                    <Button type="button" variant="ghost" size="icon" className="size-6 text-destructive" onClick={deleteDeliverable} disabled={pending || gridEdit.saving} title="Remove deliverable">
+                      <Trash2Icon className="size-3" />
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground">—</span>
+                )
+              ) : editing ? (
+                <div className="flex justify-end gap-0.5">
+                  <Button type="button" variant="ghost" size="icon" className="size-6" onClick={saveMeta} disabled={pending}>
+                    <CheckIcon className="size-3" />
+                  </Button>
+                  <Button type="button" variant="ghost" size="icon" className="size-6" onClick={() => setEditing(false)}>
+                    <XIcon className="size-3" />
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex justify-end gap-0.5">
+                  {isFirstPost && !deliverable.is_synthetic ? (
+                    <>
+                      <Button type="button" variant="ghost" size="icon" className="size-6" onClick={addPost} disabled={pending} title="Add post">
+                        <PlusIcon className="size-3" />
+                      </Button>
+                      <Button type="button" variant="ghost" size="icon" className="size-6 text-destructive" onClick={deleteDeliverable} disabled={pending} title="Remove deliverable">
+                        <Trash2Icon className="size-3" />
+                      </Button>
+                    </>
+                  ) : null}
+                  <Button type="button" variant="ghost" size="icon" className="size-6" onClick={() => setEditing(true)}>
+                    <PencilIcon className="size-3" />
+                  </Button>
+                </div>
+              )}
+            </div>
+          </AssignmentGridCell>
+        );
+      default:
+        return emptyTrack(parentColumnId);
+    }
+  }
+
+  return (
+    <>
+      <AssignmentGridRow
+        cols={gridCols ?? ""}
+        className={cn(
+          "tw-r tw-ad thinkway-campaign-asgn-child text-[11px] font-normal text-[var(--camp-text-2)]",
+          !isLastChildRow && "border-b border-[var(--camp-border)]",
+          "hover:bg-[var(--camp-row-open-hover)]",
+          fieldsActive && "bg-[var(--camp-row-open)]"
+        )}
+      >
+        {(parentTrackIds ?? leadingParentColumnIds).map((parentColumnId) => {
+          if (
+            assignmentParentToChildLeadingColumnId(parentColumnId) != null ||
+            parentColumnId === "select"
+          ) {
+            return renderLeadingBodyCell(parentColumnId);
+          }
+          return renderChildTrackCell(parentColumnId);
+        })}
+      </AssignmentGridRow>
       {error ? (
-        <tr>
-          <td colSpan={childColSpan} className="px-4 pb-1 text-[10px] text-destructive">
+        <AssignmentGridRow cols={gridCols ?? ""} className="tw-r tw-ad">
+          <div
+            className="px-4 pb-1 text-[10px] text-destructive"
+            style={{
+              gridColumn: `1 / span ${parentTrackIds?.length || childColSpan}`,
+            }}
+          >
             {error}
-          </td>
-        </tr>
+          </div>
+        </AssignmentGridRow>
       ) : null}
     </>
   );
@@ -1243,6 +1252,8 @@ type OperationalGridHeaderProps = {
   actions?: ReactNode;
   showExpandColumn?: boolean;
   leadingParentColumnIds?: readonly string[];
+  gridCols?: string;
+  parentTrackIds?: readonly string[];
 };
 
 function childLeadingHeaderClass(childColumnId: string): string {
@@ -1274,6 +1285,8 @@ export function OperationalGridHeader({
   actions,
   showExpandColumn = false,
   leadingParentColumnIds: leadingParentColumnIdsProp,
+  gridCols,
+  parentTrackIds,
 }: OperationalGridHeaderProps) {
   const col = useOperationalChildColumnVisibleChecker();
   const leadingParentColumnIds =
@@ -1283,8 +1296,8 @@ export function OperationalGridHeader({
     const childColumnId = assignmentParentToChildLeadingColumnId(parentColumnId);
     if (!childColumnId) {
       return (
-        <th
-          key={parentColumnId}
+        <AssignmentGridCell header
+          key={parentColumnId} columnId={parentColumnId}
           className={cn(GRID_CELL.leadingRev, OPERATIONAL_TABLE_HEADER_CELL)}
           aria-hidden
         />
@@ -1300,8 +1313,8 @@ export function OperationalGridHeader({
       childColumnId === "select"
     ) {
       return (
-        <th
-          key={parentColumnId}
+        <AssignmentGridCell header
+          key={parentColumnId} columnId={parentColumnId}
           {...(childColumnId === "fullDescriptionSpacer"
             ? {}
             : assignmentChildColDataAttr(childColumnId))}
@@ -1314,14 +1327,14 @@ export function OperationalGridHeader({
     switch (childColumnId) {
       case "type":
         return (
-          <th key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell header key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {OPERATIONAL_GRID_LABELS.type}
-          </th>
+          </AssignmentGridCell>
         );
       case "platform":
         return (
-          <th
-            key={parentColumnId}
+          <AssignmentGridCell header
+            key={parentColumnId} columnId={parentColumnId}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cellClass}
             aria-hidden
@@ -1329,40 +1342,40 @@ export function OperationalGridHeader({
         );
       case "qty":
         return (
-          <th key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell header key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {OPERATIONAL_GRID_LABELS.qty}
-          </th>
+          </AssignmentGridCell>
         );
       case "revPerAd":
         return (
-          <th
-            key={parentColumnId}
+          <AssignmentGridCell header
+            key={parentColumnId} columnId={parentColumnId}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cn(cellClass, "whitespace-nowrap px-1.5")}
           >
             {OPERATIONAL_GRID_LABELS.revPerAd}
-          </th>
+          </AssignmentGridCell>
         );
       case "costPerAd":
         return (
-          <th
-            key={parentColumnId}
+          <AssignmentGridCell header
+            key={parentColumnId} columnId={parentColumnId}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cn(cellClass, "whitespace-nowrap px-1.5")}
           >
             {OPERATIONAL_GRID_LABELS.costPerAd}
-          </th>
+          </AssignmentGridCell>
         );
       case "ccy":
         return (
-          <th key={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell header key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {OPERATIONAL_GRID_LABELS.ccy}
-          </th>
+          </AssignmentGridCell>
         );
       case "rev":
         return (
-          <th
-            key={parentColumnId}
+          <AssignmentGridCell header
+            key={parentColumnId} columnId={parentColumnId}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cn(
               cellClass,
@@ -1371,12 +1384,12 @@ export function OperationalGridHeader({
             )}
           >
             {OPERATIONAL_GRID_LABELS.rev}
-          </th>
+          </AssignmentGridCell>
         );
       default:
         return (
-          <th
-            key={parentColumnId}
+          <AssignmentGridCell header
+            key={parentColumnId} columnId={parentColumnId}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cellClass}
             aria-hidden
@@ -1385,126 +1398,62 @@ export function OperationalGridHeader({
     }
   }
 
+  function renderHeaderTrack(parentColumnId: string) {
+    if (
+      assignmentParentToChildLeadingColumnId(parentColumnId) != null ||
+      parentColumnId === "select"
+    ) {
+      return renderLeadingHeaderCell(parentColumnId);
+    }
+    const labels: Record<string, string> = {
+      usageRights: OPERATIONAL_GRID_LABELS.usageRights,
+      agencyFeePercent: OPERATIONAL_GRID_LABELS.agencyFeePercent,
+      agencyFee: OPERATIONAL_GRID_LABELS.agencyFee,
+      cost: OPERATIONAL_GRID_LABELS.cost,
+      usageRightsCost: OPERATIONAL_GRID_LABELS.usageRightsCost,
+      vat: OPERATIONAL_GRID_LABELS.vat,
+      totalBilling: OPERATIONAL_GRID_LABELS.totalBilling,
+      gp: OPERATIONAL_GRID_LABELS.postDate,
+      margin: OPERATIONAL_GRID_LABELS.liveAdMonth,
+      opsStatus: OPERATIONAL_GRID_LABELS.invoice,
+      billing: OPERATIONAL_GRID_LABELS.billing,
+      payout: OPERATIONAL_GRID_LABELS.payout,
+      actions: "",
+    };
+    const childField = PARENT_TRACK_TO_CHILD_FIELD[parentColumnId];
+    const show =
+      parentColumnId === "actions" ||
+      parentColumnId === "billing" ||
+      (childField ? col(childField) : false) ||
+      (parentColumnId === "gp" && col("postDate")) ||
+      (parentColumnId === "margin" && col("liveAdMonth")) ||
+      (parentColumnId === "opsStatus" && col("invoice"));
+    return (
+      <AssignmentGridCell
+        header
+        key={parentColumnId}
+        columnId={parentColumnId}
+        className={cn(OPERATIONAL_TABLE_HEADER_CELL, OPERATIONAL_TABLE_HEADER_SURFACE, "py-1.5")}
+      >
+        {parentColumnId === "actions"
+          ? actions
+          : show
+            ? labels[parentColumnId] ?? ""
+            : <span />}
+      </AssignmentGridCell>
+    );
+  }
+
   return (
-    <tr className={cn(OPERATIONAL_TABLE_HEADER_ROW, "thinkway-campaign-asgn-child-hdr")}>
-      {leadingParentColumnIds.map(renderLeadingHeaderCell)}
-      {col("usageRights") ? (
-      <th
-        className={cn(
-          GRID_CELL.usageRights,
-          OPERATIONAL_TABLE_HEADER_CELL,
-          OPERATIONAL_TABLE_HEADER_SURFACE,
-          "py-1.5"
-        )}
-      >
-        {OPERATIONAL_GRID_LABELS.usageRights}
-      </th>
-      ) : null}
-      {col("agencyFeePercent") ? (
-      <th
-        className={cn(
-          GRID_CELL.agencyFeePercent,
-          OPERATIONAL_TABLE_HEADER_CELL,
-          OPERATIONAL_TABLE_HEADER_SURFACE,
-          "py-1.5 text-muted-foreground"
-        )}
-      >
-        {OPERATIONAL_GRID_LABELS.agencyFeePercent}
-      </th>
-      ) : null}
-      {col("agencyFee") ? (
-      <th
-        className={cn(
-          GRID_CELL.agencyFee,
-          OPERATIONAL_TABLE_HEADER_CELL,
-          OPERATIONAL_TABLE_HEADER_SURFACE,
-          "py-1.5"
-        )}
-      >
-        {OPERATIONAL_GRID_LABELS.agencyFee}
-      </th>
-      ) : null}
-      {col("cost") ? (
-      <th
-        className={cn(
-          GRID_CELL.money,
-          OPERATIONAL_TABLE_HEADER_CELL,
-          OPERATIONAL_TABLE_HEADER_SURFACE,
-          "px-1.5 py-1.5"
-        )}
-      >
-        {OPERATIONAL_GRID_LABELS.cost}
-      </th>
-      ) : null}
-      {col("usageRightsCost") ? (
-      <th
-        className={cn(
-          GRID_CELL.usageRightsCost,
-          OPERATIONAL_TABLE_HEADER_CELL,
-          OPERATIONAL_TABLE_HEADER_SURFACE,
-          "py-1.5"
-        )}
-      >
-        {OPERATIONAL_GRID_LABELS.usageRightsCost}
-      </th>
-      ) : null}
-      {col("vat") ? (
-      <th className={cn(GRID_CELL.vat, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.vat}
-      </th>
-      ) : null}
-      {col("totalBilling") ? (
-      <th
-        className={cn(
-          GRID_CELL.totalBilling,
-          OPERATIONAL_TABLE_HEADER_CELL,
-          OPERATIONAL_TABLE_HEADER_SURFACE,
-          "py-1.5"
-        )}
-      >
-        {OPERATIONAL_GRID_LABELS.totalBilling}
-      </th>
-      ) : null}
-      {col("postDate") ? (
-      <th className={cn(GRID_CELL.postDate, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.postDate}
-      </th>
-      ) : null}
-      {col("liveAdMonth") ? (
-      <th className={cn(GRID_CELL.month, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.liveAdMonth}
-      </th>
-      ) : null}
-      {col("invoice") ? (
-      <th className={cn(GRID_CELL.invoice, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.invoice}
-      </th>
-      ) : null}
-      {col("billing") ? (
-      <th className={cn(GRID_CELL.status, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.billing}
-      </th>
-      ) : null}
-      {col("collection") ? (
-      <th className={cn(GRID_CELL.collection, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.collection}
-      </th>
-      ) : null}
-      {col("payout") ? (
-      <th className={cn(GRID_CELL.payout, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.payout}
-      </th>
-      ) : null}
-      {col("workflow") ? (
-      <th className={cn(GRID_CELL.workflow, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {OPERATIONAL_GRID_LABELS.workflow}
-      </th>
-      ) : null}
-      {col("actions") ? (
-      <th className={cn(GRID_CELL.actions, OPERATIONAL_TABLE_HEADER_CELL)}>
-        {actions}
-      </th>
-      ) : null}
-    </tr>
+    <AssignmentGridRow
+      cols={gridCols ?? ""}
+      className={cn(
+        "tw-adh",
+        OPERATIONAL_TABLE_HEADER_ROW,
+        "thinkway-campaign-asgn-child-hdr"
+      )}
+    >
+      {(parentTrackIds ?? leadingParentColumnIds).map(renderHeaderTrack)}
+    </AssignmentGridRow>
   );
 }

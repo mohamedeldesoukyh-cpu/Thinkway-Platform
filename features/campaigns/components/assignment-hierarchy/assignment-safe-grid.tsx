@@ -27,6 +27,10 @@ import {
   FloatingSelectionBar,
   type AssignmentSelectionTotals,
 } from "@/features/campaigns/components/assignment-hierarchy/floating-selection-bar";
+import {
+  AssignmentPricingCalculator,
+  type AssignmentCalculatorLine,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-pricing-calculator";
 import { operationalFloatingBarContentClass } from "@/components/workspace/operational-floating-action-bar";
 import { resolveSelectionActions } from "@/lib/billing/selection-action-engine";
 import { AssignmentSafeDeliverableRows } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-deliverable-rows";
@@ -50,15 +54,20 @@ import {
   AssignmentOpsStatusBadge,
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-status-badges";
 import { ASSIGNMENT_GRID_MONEY_COL, ASSIGNMENT_GRID_VAT_COL } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
-import { AssignmentParentTableColGroup } from "@/features/campaigns/components/assignment-hierarchy/assignment-parent-table-colgroup";
+import {
+  AssignmentGridCell,
+  AssignmentGridRow,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-cell";
+import { buildAssignmentCssGridCols } from "@/features/campaigns/components/assignment-hierarchy/assignment-css-grid";
 import {
   fallbackChildTableWidthPx,
   getChildLeadingParentColumnIds,
   getFallbackLeadingWidths,
+  getVisibleAssignmentGridColumns,
   sumVisibleParentColumnWidths,
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-layout";
-import { HIERARCHY_COLUMN_LABELS, assignmentParentColDataAttr } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
-import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
+import { HIERARCHY_COLUMN_LABELS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
+import { formatOperationalAmount, operationalZeroClass } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { OPERATIONAL_TABLE_FONT, operationalMarginAmountClass } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { LINE_OPERATIONAL_ROW_CLASS } from "@/features/campaigns/constants/operational-status";
 import type {
@@ -128,11 +137,9 @@ function tryRenderRowCells(
   } catch (error) {
     console.error("[Assignments] ROW CRASH", lineId, error);
     return (
-      <tr key={`fail-${lineId}`} className="bg-destructive/10">
-        <td colSpan={colSpan} className="px-2 py-2 text-xs text-destructive">
-          ROW FAILED {lineId}
-        </td>
-      </tr>
+      <div key={`fail-${lineId}`} className="bg-destructive/10 px-2 py-2 text-xs text-destructive">
+        ROW FAILED {lineId}
+      </div>
     );
   }
 }
@@ -155,6 +162,15 @@ export function AssignmentSafeGrid({
   const col = useOperationalColumnVisibleChecker();
   const childCol = useOperationalChildColumnVisibleChecker();
   const parentColSpan = useOperationalVisibleColumnCount();
+
+  const visibleParentColumns = useMemo(
+    () => getVisibleAssignmentGridColumns(col, gates),
+    [col, gates]
+  );
+  const gridCols = useMemo(
+    () => buildAssignmentCssGridCols(visibleParentColumns),
+    [visibleParentColumns]
+  );
 
   const childGridAlignment = useMemo(
     () => ({
@@ -193,6 +209,7 @@ export function AssignmentSafeGrid({
     new Set()
   );
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
 
   const hierarchySignature = useMemo(
     () => assignmentHierarchyBoundaryKey(hierarchy),
@@ -382,6 +399,27 @@ export function AssignmentSafeGrid({
     };
   }, [selectedLineIds, selectedDeliverableIds, preparedRows]);
 
+  const calculatorLines = useMemo((): AssignmentCalculatorLine[] => {
+    const rows: AssignmentCalculatorLine[] = [];
+    for (const id of selectedLineIds) {
+      const row = preparedRows.find((item) => item.lineId === id);
+      if (!row) continue;
+      const line = row.group.line;
+      rows.push({
+        lineId: line.id,
+        name: row.displayName,
+        cost: Number(line.cost_before_vat ?? line.cost) || 0,
+        revenue: Number(line.revenue_before_vat ?? line.revenue) || 0,
+        vatPercent: Number(line.revenue_vat_percent ?? 0) || 0,
+        usage_rights_amount: Number(line.usage_rights_amount ?? 0) || 0,
+        usage_rights_cost: Number(line.usage_rights_cost ?? 0) || 0,
+        agency_fee_percent: Number(line.agency_fee_percent ?? 0) || 0,
+        locked: Boolean(line.vendor_assignment_locked),
+      });
+    }
+    return rows;
+  }, [selectedLineIds, preparedRows]);
+
   const selectableLineIds = useMemo(
     () => preparedRows.filter((r) => r.meta.rowSelectable).map((r) => r.lineId),
     [preparedRows]
@@ -406,6 +444,7 @@ export function AssignmentSafeGrid({
 
   const clearSelection = useCallback(() => {
     setSelectedLineIds(new Set());
+    setCalculatorOpen(false);
   }, []);
 
   const hasSelection = selectionTotals.count > 0;
@@ -441,17 +480,18 @@ export function AssignmentSafeGrid({
           cost, margin, vendor IO, billing controls, and deliverable editing are hidden.
         </div>
       ) : null}
-      <div className={SAFE_GRID_SHELL}>
-        <table
+      <div className={cn(SAFE_GRID_SHELL, "overflow-x-auto")}>
+        <div
           className={SAFE_GRID_TABLE}
           data-assignment-parent-grid
-          style={{ minWidth: Math.max(parentTableMinWidthPx, 1300) }}
+          style={{
+            minWidth: Math.max(parentTableMinWidthPx, 1300),
+            ["--cols" as string]: gridCols,
+          }}
         >
-          <AssignmentParentTableColGroup col={col} gates={gates} />
-          <thead className={SAFE_GRID_HEAD}>
-            <tr>
+          <AssignmentGridRow cols={gridCols} className={cn("tw-hr", SAFE_GRID_HEAD)}>
               {col("select") ? (
-                <th {...assignmentParentColDataAttr("select")} className={cn(SAFE_GRID_TH, SAFE_GRID_CONTROL_CELL)}>
+                <AssignmentGridCell header columnId="select" className={cn(SAFE_GRID_TH, SAFE_GRID_CONTROL_CELL)}>
                   {gates.enableCheckboxes ? (
                     <input
                       ref={headerSelectRef}
@@ -467,105 +507,103 @@ export function AssignmentSafeGrid({
                       title="Select all assignments"
                     />
                   ) : null}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("assignment") ? (
-                <th {...assignmentParentColDataAttr("assignment")} className={cn(SAFE_GRID_TH, "min-w-[160px]")}>
+                <AssignmentGridCell header columnId="assignment" className={cn(SAFE_GRID_TH, "min-w-[160px]")}>
                   {HIERARCHY_COLUMN_LABELS.assignment}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("creator") ? (
-                <th {...assignmentParentColDataAttr("creator")} className={cn(SAFE_GRID_TH, "w-[108px] max-w-[120px]")}>
+                <AssignmentGridCell header columnId="creator" className={cn(SAFE_GRID_TH, "w-[108px] max-w-[120px]")}>
                   {HIERARCHY_COLUMN_LABELS.creator}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("platforms") ? (
-                <th {...assignmentParentColDataAttr("platforms")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.platforms}</th>
+                <AssignmentGridCell header columnId="platforms" className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.platforms}</AssignmentGridCell>
               ) : null}
               {col("deliverables") ? (
-                <th {...assignmentParentColDataAttr("deliverables")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.deliverables}</th>
+                <AssignmentGridCell header columnId="deliverables" className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.deliverables}</AssignmentGridCell>
               ) : null}
               {col("fullDescription") ? (
-                <th
-                  {...assignmentParentColDataAttr("fullDescription")}
+                <AssignmentGridCell header
+                  columnId="fullDescription"
                   className={cn(SAFE_GRID_TH, "min-w-[160px] max-w-[220px]")}
                 >
                   {HIERARCHY_COLUMN_LABELS.fullDescription}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("postingDates") ? (
-                <th {...assignmentParentColDataAttr("postingDates")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.postingDates}</th>
+                <AssignmentGridCell header columnId="postingDates" className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.postingDates}</AssignmentGridCell>
               ) : null}
               {col("costCurrency") ? (
-                <th {...assignmentParentColDataAttr("costCurrency")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.costCurrency}</th>
+                <AssignmentGridCell header columnId="costCurrency" className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.costCurrency}</AssignmentGridCell>
               ) : null}
               {col("revenue") ? (
-                <th {...assignmentParentColDataAttr("revenue")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                <AssignmentGridCell header columnId="revenue" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.revenue}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("usageRights") ? (
-                <th {...assignmentParentColDataAttr("usageRights")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                <AssignmentGridCell header columnId="usageRights" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.usageRights}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("agencyFeePercent") ? (
-                <th {...assignmentParentColDataAttr("agencyFeePercent")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_VAT_COL)}>
+                <AssignmentGridCell header columnId="agencyFeePercent" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_VAT_COL)}>
                   {HIERARCHY_COLUMN_LABELS.agencyFeePercent}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("agencyFee") ? (
-                <th {...assignmentParentColDataAttr("agencyFee")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                <AssignmentGridCell header columnId="agencyFee" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.agencyFee}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {gates.showInternalFinancials && col("cost") ? (
-                <th {...assignmentParentColDataAttr("cost")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                <AssignmentGridCell header columnId="cost" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.cost}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {gates.showInternalFinancials && col("usageRightsCost") ? (
-                <th {...assignmentParentColDataAttr("usageRightsCost")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                <AssignmentGridCell header columnId="usageRightsCost" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.usageRightsCost}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("vat") ? (
-                <th {...assignmentParentColDataAttr("vat")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_VAT_COL)}>
+                <AssignmentGridCell header columnId="vat" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_VAT_COL)}>
                   {HIERARCHY_COLUMN_LABELS.vat}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("totalBilling") ? (
-                <th {...assignmentParentColDataAttr("totalBilling")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                <AssignmentGridCell header columnId="totalBilling" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.totalBilling}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {gates.showInternalFinancials && col("gp") ? (
-                <th {...assignmentParentColDataAttr("gp")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                <AssignmentGridCell header columnId="gp" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.gp}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {gates.showInternalFinancials && col("margin") ? (
-                <th {...assignmentParentColDataAttr("margin")} className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
+                <AssignmentGridCell header columnId="margin" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.margin}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {col("opsStatus") ? (
-                <th {...assignmentParentColDataAttr("opsStatus")} className={SAFE_GRID_TH}>
+                <AssignmentGridCell header columnId="opsStatus" className={SAFE_GRID_TH}>
                   {audienceView === "client" ? "Status" : HIERARCHY_COLUMN_LABELS.opsStatus}
-                </th>
+                </AssignmentGridCell>
               ) : null}
               {gates.showInternalBilling && col("billing") ? (
-                <th {...assignmentParentColDataAttr("billing")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.billing}</th>
+                <AssignmentGridCell header columnId="billing" className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.billing}</AssignmentGridCell>
               ) : null}
               {gates.showInternalFinancials && col("payout") ? (
-                <th {...assignmentParentColDataAttr("payout")} className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.payout}</th>
+                <AssignmentGridCell header columnId="payout" className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.payout}</AssignmentGridCell>
               ) : null}
               {gates.enableEditActions && col("actions") ? (
-                <th {...assignmentParentColDataAttr("actions")} className={cn(SAFE_GRID_TH, "w-10")} />
+                <AssignmentGridCell header columnId="actions" className={cn(SAFE_GRID_TH, "w-10")} />
               ) : null}
-            </tr>
-          </thead>
-        <tbody>
+          </AssignmentGridRow>
           {preparedRows.map((row) => {
             const line = row.group.line;
             const expanded = gates.enableExpansion && expandedIds.has(row.lineId);
@@ -586,9 +624,12 @@ export function AssignmentSafeGrid({
             return (
               <Fragment key={row.lineId}>
                     {tryRenderRowCells(row.lineId, parentColSpan, () => (
-                      <tr
+                      <AssignmentGridRow
+                        cols={gridCols}
                         className={cn(
+                          "tw-r",
                           SAFE_GRID_PARENT_ROW,
+                          selectedLineIds.has(row.lineId) && "sel",
                           rowClass,
                           expanded && SAFE_GRID_PARENT_ROW_EXPANDED
                         )}
@@ -596,7 +637,7 @@ export function AssignmentSafeGrid({
                         data-selected={selectedLineIds.has(row.lineId) ? "true" : undefined}
                       >
                         {col("select") ? (
-                          <td {...assignmentParentColDataAttr("select")} className={SAFE_GRID_CONTROL_CELL}>
+                          <AssignmentGridCell columnId="select" className={SAFE_GRID_CONTROL_CELL}>
                             {selectable ? (
                               <input
                                 type="checkbox"
@@ -607,10 +648,10 @@ export function AssignmentSafeGrid({
                                 title={`Select ${row.displayName}`}
                               />
                             ) : null}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("assignment") ? (
-                        <td {...assignmentParentColDataAttr("assignment")} className={cn(SAFE_GRID_TD, "thinkway-campaign-asgn-assignment-cell")}>
+                        <AssignmentGridCell columnId="assignment" className={cn(SAFE_GRID_TD, "thinkway-campaign-asgn-assignment-cell")}>
                           <div className="flex min-w-0 items-center gap-1.5">
                             {gates.enableExpansion && col("expand") ? (
                               <AssignmentExpandToggle
@@ -651,11 +692,11 @@ export function AssignmentSafeGrid({
                               ) : null}
                             </div>
                           </div>
-                        </td>
+                        </AssignmentGridCell>
                         ) : null}
                         {col("creator") ? (
-                        <td
-                          {...assignmentParentColDataAttr("creator")}
+                        <AssignmentGridCell
+                          columnId="creator"
                           className={cn(SAFE_GRID_TD, "w-[108px] max-w-[120px]")}
                         >
                           {line.influencer_name || row.displayName ? (
@@ -672,21 +713,21 @@ export function AssignmentSafeGrid({
                           ) : (
                             "—"
                           )}
-                        </td>
+                        </AssignmentGridCell>
                         ) : null}
                         {col("platforms") ? (
-                          <td {...assignmentParentColDataAttr("platforms")} className={SAFE_GRID_TD}>
+                          <AssignmentGridCell columnId="platforms" className={SAFE_GRID_TD}>
                             <AssignmentPlatformPills platforms={row.platforms} />
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("deliverables") ? (
-                          <td {...assignmentParentColDataAttr("deliverables")} className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>
+                          <AssignmentGridCell columnId="deliverables" className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>
                             {row.rollups.deliverable_count}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("fullDescription") ? (
-                          <td
-                            {...assignmentParentColDataAttr("fullDescription")}
+                          <AssignmentGridCell
+                            columnId="fullDescription"
                             className={cn(SAFE_GRID_TD, "min-w-[160px] max-w-[220px] align-top")}
                           >
                             <AssignmentFullDescriptionCell
@@ -695,79 +736,98 @@ export function AssignmentSafeGrid({
                               value={line.description}
                               readOnly={!gates.enableEditActions}
                             />
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("postingDates") ? (
-                          <td
-                            {...assignmentParentColDataAttr("postingDates")}
-                            className={cn(SAFE_GRID_TD, "text-center text-muted-foreground")}
+                          <AssignmentGridCell
+                            columnId="postingDates"
+                            className={cn(
+                              SAFE_GRID_TD,
+                              "text-center",
+                              row.postingSummary === "not set"
+                                ? "tw-miss"
+                                : "tw-dt text-muted-foreground"
+                            )}
                             suppressHydrationWarning
                           >
                             {row.postingSummary}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("costCurrency") ? (
-                          <td {...assignmentParentColDataAttr("costCurrency")} className={cn(SAFE_GRID_TD, "text-center text-[10px] font-medium text-foreground/80")}>
+                          <AssignmentGridCell columnId="costCurrency" className={cn(SAFE_GRID_TD, "text-center text-[10px] font-medium text-foreground/80")}>
                             {resolveAssignmentLineCurrencyDisplay(line)}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("revenue") ? (
-                          <td {...assignmentParentColDataAttr("revenue")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL)}>
-                            <AssignmentHighlightAmount variant="rev">
+                          <AssignmentGridCell columnId="revenue" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL)}>
+                            <AssignmentHighlightAmount
+                              variant="rev"
+                              className={operationalZeroClass(row.rollups.revenue)}
+                            >
                               {formatOperationalAmount(row.rollups.revenue)}
                             </AssignmentHighlightAmount>
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("usageRights") ? (
-                          <td {...assignmentParentColDataAttr("usageRights")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT)}>
+                          <AssignmentGridCell columnId="usageRights" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.usage_rights_amount))}>
                             {formatOperationalAmount(line.usage_rights_amount)}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("agencyFeePercent") ? (
-                          <td {...assignmentParentColDataAttr("agencyFeePercent")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_VAT_COL, SAFE_GRID_AMOUNT, "text-muted-foreground")}>
+                          <AssignmentGridCell columnId="agencyFeePercent" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_VAT_COL, SAFE_GRID_AMOUNT, "text-muted-foreground")}>
                             {formatPercent(line.agency_fee_percent)}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("agencyFee") ? (
-                          <td {...assignmentParentColDataAttr("agencyFee")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT)}>
+                          <AssignmentGridCell columnId="agencyFee" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.agency_fee_amount))}>
                             {formatOperationalAmount(line.agency_fee_amount)}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {gates.showInternalFinancials && col("cost") ? (
-                          <td {...assignmentParentColDataAttr("cost")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL)}>
-                            <AssignmentHighlightAmount variant="cost">
+                          <AssignmentGridCell columnId="cost" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL)}>
+                            <AssignmentHighlightAmount
+                              variant="cost"
+                              className={operationalZeroClass(line.cost_before_vat)}
+                            >
                               {formatOperationalAmount(line.cost_before_vat)}
                             </AssignmentHighlightAmount>
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {gates.showInternalFinancials && col("usageRightsCost") ? (
-                          <td {...assignmentParentColDataAttr("usageRightsCost")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT)}>
+                          <AssignmentGridCell columnId="usageRightsCost" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.usage_rights_cost))}>
                             {formatOperationalAmount(line.usage_rights_cost)}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("vat") ? (
-                          <td {...assignmentParentColDataAttr("vat")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_VAT_COL, SAFE_GRID_AMOUNT)}>
+                          <AssignmentGridCell columnId="vat" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_VAT_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.revenue_vat_amount))}>
                             {formatOperationalAmount(line.revenue_vat_amount)}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("totalBilling") ? (
-                          <td {...assignmentParentColDataAttr("totalBilling")} className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL)}>
-                            <AssignmentHighlightAmount variant="billing">
+                          <AssignmentGridCell columnId="totalBilling" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL)}>
+                            <AssignmentHighlightAmount
+                              variant="billing"
+                              className={operationalZeroClass(line.revenue_after_vat)}
+                            >
                               {formatOperationalAmount(line.revenue_after_vat)}
                             </AssignmentHighlightAmount>
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {gates.showInternalFinancials && col("gp") ? (
-                          <td
-                            {...assignmentParentColDataAttr("gp")}
-                            className={cn(SAFE_GRID_HIGHLIGHT_GP, ASSIGNMENT_GRID_MONEY_COL)}
+                          <AssignmentGridCell
+                            columnId="gp"
+                            className={cn(
+                              SAFE_GRID_HIGHLIGHT_GP,
+                              ASSIGNMENT_GRID_MONEY_COL,
+                              operationalZeroClass(row.rollups.gp)
+                            )}
                           >
                             {formatOperationalAmount(row.rollups.gp)}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {gates.showInternalFinancials && col("margin") ? (
-                          <td
-                            {...assignmentParentColDataAttr("margin")}
+                          <AssignmentGridCell
+                            columnId="margin"
                             className={cn(
                               SAFE_GRID_TD,
                               ASSIGNMENT_GRID_MONEY_COL,
@@ -775,24 +835,24 @@ export function AssignmentSafeGrid({
                             )}
                           >
                             {formatPercent(row.rollups.margin_percent)}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {col("opsStatus") ? (
-                        <td {...assignmentParentColDataAttr("opsStatus")} className={SAFE_GRID_TD}>
+                        <AssignmentGridCell columnId="opsStatus" className={SAFE_GRID_TD}>
                           {gates.enablePills ? (
                             <AssignmentOpsStatusBadge status={row.operationalStatus} />
                           ) : (
                             row.opsStatusLabel
                           )}
-                        </td>
+                        </AssignmentGridCell>
                         ) : null}
                         {gates.showInternalBilling && col("billing") ? (
-                          <td {...assignmentParentColDataAttr("billing")} className={SAFE_GRID_TD}>
+                          <AssignmentGridCell columnId="billing" className={SAFE_GRID_TD}>
                             <AssignmentLineBillingBadge lineBillingStatus={row.lineBillingStatus} />
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {gates.showInternalFinancials && col("payout") ? (
-                          <td {...assignmentParentColDataAttr("payout")} className={SAFE_GRID_TD}>
+                          <AssignmentGridCell columnId="payout" className={SAFE_GRID_TD}>
                             {line.vendor_io_document_number ? (
                               <DocumentNumber
                                 value={line.vendor_io_document_number}
@@ -801,10 +861,10 @@ export function AssignmentSafeGrid({
                             ) : (
                               "—"
                             )}
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
                         {gates.enableEditActions && col("actions") ? (
-                          <td {...assignmentParentColDataAttr("actions")} className={cn(SAFE_GRID_TD, "text-center")}>
+                          <AssignmentGridCell columnId="actions" className={cn(SAFE_GRID_TD, "text-center")}>
                             <Button
                               type="button"
                               variant="ghost"
@@ -814,9 +874,9 @@ export function AssignmentSafeGrid({
                             >
                               <PencilIcon className="size-3.5" />
                             </Button>
-                          </td>
+                          </AssignmentGridCell>
                         ) : null}
-                      </tr>
+                      </AssignmentGridRow>
                     ))}
                     {expanded && gates.enableDeliverableChildren ? (
                       <AssignmentSafeDeliverableRows
@@ -825,6 +885,8 @@ export function AssignmentSafeGrid({
                         deliverables={deliverables}
                         currency={lineCurrency}
                         parentColSpan={parentColSpan}
+                        gridCols={gridCols}
+                        parentTrackIds={visibleParentColumns}
                         selectedIds={selectedDeliverableIds}
                         onToggleDeliverable={(deliverableId) =>
                           toggleDeliverable(deliverableId, row.lineId)
@@ -841,8 +903,7 @@ export function AssignmentSafeGrid({
               </Fragment>
             );
           })}
-          </tbody>
-        </table>
+        </div>
       </div>
 
       {gates.enableFooter ? (
@@ -865,8 +926,21 @@ export function AssignmentSafeGrid({
           onAfterOperationalMutation={() => {
             resetOperationalUiState();
           }}
+          onOpenCalculator={() => setCalculatorOpen(true)}
         />
       ) : null}
+      <AssignmentPricingCalculator
+        campaignId={campaignId}
+        currency={(selectionTotals.currency ?? hierarchy.currency_code ?? "EGP").toUpperCase()}
+        currencyMixed={selectionTotals.currencyMixed}
+        lines={calculatorLines}
+        open={calculatorOpen && calculatorLines.length > 0}
+        onClose={() => setCalculatorOpen(false)}
+        onApplied={() => {
+          resetOperationalUiState();
+          setCalculatorOpen(false);
+        }}
+      />
     </div>
   );
 }

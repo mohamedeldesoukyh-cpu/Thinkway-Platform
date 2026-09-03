@@ -28,6 +28,8 @@ type DeliverableGroupRowProps = {
   showExpandColumn?: boolean;
   leadingParentColumnIds?: readonly string[];
   isLastDeliverable?: boolean;
+  gridCols?: string;
+  parentTrackIds?: readonly string[];
 };
 
 /** Renders operational post rows only — no intermediate deliverable totals row. */
@@ -47,6 +49,8 @@ export function DeliverableGroupRow({
   showExpandColumn = false,
   leadingParentColumnIds,
   isLastDeliverable = false,
+  gridCols,
+  parentTrackIds,
 }: DeliverableGroupRowProps) {
   const readOnly = deliverable.is_synthetic || deliverable.is_locked;
   const posts = Array.isArray(deliverable.posts) ? deliverable.posts : [];
@@ -109,6 +113,8 @@ export function DeliverableGroupRow({
           isLastChildRow={isLastDeliverable && index === posts.length - 1}
           showExpandColumn={showExpandColumn}
           leadingParentColumnIds={leadingParentColumnIds}
+          gridCols={gridCols}
+          parentTrackIds={parentTrackIds}
         />
       ))}
     </>

@@ -149,11 +149,15 @@
 .finance-suite .tw-st b{font:600 20px 'Geist Mono',monospace;letter-spacing:-.6px}
 .finance-suite .tw-st b.bad{color:var(--tw-bad)}
 @media (prefers-reduced-motion: reduce) {
-  .finance-suite .tw-b,
-  .finance-suite .tw-r,
-  .finance-suite .tw-tile,
-  .finance-suite .tw-go svg {
-    transition: none;
+  .finance-suite * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+@media (pointer: coarse) {
+  .finance-suite .tw-b {
+    min-height: 44px;
   }
 }
 
@@ -210,7 +214,7 @@
 .finance-suite main.tw-main,
 .finance-suite main {
   min-width: 0;
-  padding: 18px 22px 40px !important;
+  padding: 0 14px 40px !important;
   background: var(--tw-bg) !important;
 }
 
@@ -493,12 +497,9 @@
 .finance-suite .fs-br { font-size: 12px; font-weight: 500; color: var(--tw-vio); }
 .finance-suite .fs-s { display: block; font-size: 10.5px; color: var(--tw-mut); margin-top: 2px; }
 .finance-suite .fs-v { font: 600 12.5px "Geist Mono", monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
-.finance-suite .fs-v.z,
-.finance-suite .tw-v.z { color: #b6becd; font-weight: 500; }
-.finance-suite .fs-v.neg,
-.finance-suite .tw-v.neg { color: var(--tw-bad); }
-.finance-suite .fs-v.pos,
-.finance-suite .tw-v.pos { color: var(--tw-ok); }
+.finance-suite .fs-v.z { color: #b6becd; font-weight: 500; }
+.finance-suite .fs-v.neg { color: var(--tw-bad); }
+.finance-suite .fs-v.pos { color: var(--tw-ok); }
 .finance-suite .fs-miss { color: #a9b2c3; font-style: italic; font-size: 11.5px; }
 .finance-suite .fs-cc { display: inline-block; padding: 1px 6px; border-radius: 5px; background: var(--tw-soft); border: 1px solid var(--tw-hair); font: 700 9.5px "Geist Mono", monospace; letter-spacing: 0.3px; color: var(--tw-mut); }
 .finance-suite .fs-bar { display: block; height: 4px; border-radius: 999px; background: var(--tw-hair); overflow: hidden; margin-top: 5px; }

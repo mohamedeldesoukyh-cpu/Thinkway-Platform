@@ -1,5 +1,14 @@
 const OPERATIONAL_AMOUNT_LOCALE = "en-US";
 
+export function isOperationalZero(amount: number): boolean {
+  const value = Number(amount);
+  return !Number.isFinite(value) || value === 0;
+}
+
+export function operationalZeroClass(amount: number): string {
+  return isOperationalZero(amount) ? "tw-v z" : "tw-v";
+}
+
 /** Numeric display for assignment operational grid — no currency symbols (CCY column holds code). */
 export function formatOperationalAmount(amount: number): string {
   const value = Number(amount);

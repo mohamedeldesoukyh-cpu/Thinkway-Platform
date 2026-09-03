@@ -1,6 +1,6 @@
 "use client";
 
-import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon } from "lucide-react";
+import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon, CalculatorIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { showErrorToastOnce, showSuccessToastOnce } from "@/lib/ui/toast-once";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
@@ -67,6 +67,7 @@ type FloatingSelectionBarProps = {
   ioCoverage?: IoCoverageAnalysis | null;
   onGenerateInvoice: () => void;
   onAfterOperationalMutation?: () => void;
+  onOpenCalculator?: () => void;
 };
 
 function buildFormData(
@@ -118,6 +119,7 @@ export function FloatingSelectionBar({
   ioCoverage = null,
   onGenerateInvoice,
   onAfterOperationalMutation,
+  onOpenCalculator,
 }: FloatingSelectionBarProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const [pending, startTransition] = useTransition();
@@ -128,7 +130,10 @@ export function FloatingSelectionBar({
 
   const busy = pending;
   const visible = totals.count > 0;
-  const displayCurrency = totals.currencyMixed ? "USD" : (totals.currency ?? "USD");
+  const mixed = totals.currencyMixed;
+  const displayCurrency = totals.currency ?? "EGP";
+  const money = (amount: number) =>
+    mixed ? "mixed CCY" : formatMoneyKpi(amount, displayCurrency);
   const primaryAction = vioLineIds.length > 0 ? "vio" : hasInvoiceSelection ? "invoice" : null;
   const showSelectAll =
     selectableLineCount > 0 && totals.count < selectableLineCount;
@@ -246,21 +251,21 @@ export function FloatingSelectionBar({
         </span>
 
         <span className="tw-selbar-sum">
-          <SelectionMetric label="Revenue" value={formatMoneyKpi(totals.revenue, displayCurrency)} />
+          <SelectionMetric label="Revenue" value={money(totals.revenue)} />
           <SelectionMetric
             label="Cost"
-            value={formatMoneyKpi(totals.cost, displayCurrency)}
+            value={money(totals.cost)}
             className="hidden sm:flex"
           />
           <SelectionMetric
             label="GP"
-            value={formatMoneyKpi(totals.gp, displayCurrency)}
-            tone="ok"
+            value={money(totals.gp)}
+            tone={mixed ? undefined : "ok"}
             className="hidden md:flex"
           />
           <SelectionMetric
             label="Total billing"
-            value={formatMoneyKpi(totals.totalBilling, displayCurrency)}
+            value={money(totals.totalBilling)}
             className="hidden lg:flex"
           />
           <SelectionMetric
@@ -271,6 +276,17 @@ export function FloatingSelectionBar({
         </span>
 
         <span className="tw-selbar-acts">
+          {onOpenCalculator ? (
+            <button
+              type="button"
+              className="tw-selbar-btn"
+              disabled={busy || mixed}
+              onClick={onOpenCalculator}
+            >
+              <CalculatorIcon className="size-3.5" aria-hidden />
+              Calculator
+            </button>
+          ) : null}
           {vioLineIds.length > 0 ? (
             <button
               type="button"

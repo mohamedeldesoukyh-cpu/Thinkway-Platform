@@ -1,4 +1,9 @@
-import { format, isValid, parseISO } from "date-fns";
+import { isValid, parseISO } from "date-fns";
+
+import {
+  formatDesignDate,
+  formatDesignDateRange,
+} from "@/lib/design/format-design-date";
 
 /** Parse YYYY-MM-DD (or ISO) without throwing. */
 export function parseAssignmentDate(value: string | null | undefined): Date | null {
@@ -13,17 +18,19 @@ export function parseAssignmentDate(value: string | null | undefined): Date | nu
   return isValid(fallback) ? fallback : null;
 }
 
+function toLocalYmd(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export function safeFormatAssignmentDate(
   value: string | null | undefined,
-  pattern = "d MMM"
+  _pattern = "d MMM"
 ): string {
-  const date = parseAssignmentDate(value);
-  if (!date) return "—";
-  try {
-    return format(date, pattern);
-  } catch {
-    return "—";
-  }
+  void _pattern;
+  return formatDesignDate(value);
 }
 
 export function safeSummarizePostingDates(
@@ -34,9 +41,7 @@ export function safeSummarizePostingDates(
     .filter((d): d is Date => d != null)
     .sort((a, b) => a.getTime() - b.getTime());
 
-  if (dates.length === 0) return "—";
-  if (dates.length === 1) return safeFormatAssignmentDate(dates[0].toISOString().slice(0, 10));
-  const first = safeFormatAssignmentDate(dates[0].toISOString().slice(0, 10));
-  const last = safeFormatAssignmentDate(dates[dates.length - 1].toISOString().slice(0, 10));
-  return `${first}–${last}`;
+  if (dates.length === 0) return formatDesignDate(null);
+  if (dates.length === 1) return formatDesignDate(toLocalYmd(dates[0]!));
+  return formatDesignDateRange(toLocalYmd(dates[0]!), toLocalYmd(dates[dates.length - 1]!));
 }

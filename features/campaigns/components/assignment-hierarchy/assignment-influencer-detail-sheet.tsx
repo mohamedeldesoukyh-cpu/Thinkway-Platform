@@ -35,6 +35,7 @@ import {
   resolveAssignmentPrimaryHandle,
   resolvePaymentRequestedPercent,
 } from "@/lib/campaigns/assignment-detail-presenters";
+import { formatDesignDateRange } from "@/lib/design/format-design-date";
 import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience-view";
 import { resolveAssignmentsGridGates } from "@/lib/campaigns/assignments-grid-gates";
 import { formatMoney, formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
@@ -235,10 +236,7 @@ function GeneralTab({
       ) : null}
       <DetailField label="Campaign dates">
         {line.start_date || line.end_date ? (
-          <>
-            {formatAssignmentDetailDate(line.start_date)}
-            {line.end_date ? ` – ${formatAssignmentDetailDate(line.end_date)}` : ""}
-          </>
+          formatDesignDateRange(line.start_date, line.end_date)
         ) : (
           <Miss>not set</Miss>
         )}

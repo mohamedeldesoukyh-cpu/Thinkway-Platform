@@ -2,36 +2,20 @@
 
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { memo, useEffect, useMemo, useRef, useTransition } from "react";
+import { memo, useEffect, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { createAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
-import {
-  SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
-  SAFE_GRID_CHILD_GROUP_CELL,
-} from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
+import type { AssignmentGridColumnId } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-layout";
+import { buildAssignmentCssGridCols } from "@/features/campaigns/components/assignment-hierarchy/assignment-css-grid";
 import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-hierarchy/deliverable-group-row";
-import { AssignmentChildTableColGroup } from "@/features/campaigns/components/assignment-hierarchy/assignment-child-table-colgroup";
-import {
-  CHILD_GRID_FALLBACK_LEADING_WIDTHS,
-  CHILD_GRID_FALLBACK_TABLE_WIDTH_PX,
-  sumChildGridColumnWidths,
-} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-widths";
-import { getVisibleChildTrailingWidths } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-layout";
 import { assignmentChildLeadingParentColumnIds } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
-import { useParentLeadingColumnWidths } from "@/features/campaigns/components/assignment-hierarchy/use-parent-leading-column-widths";
-import { useOperationalChildColumnVisibleChecker } from "@/components/tables/operational-table-column-context";
 import { useAssignmentGridEditSession } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-edit-session";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { getCreatorConnectedPlatformOptions, getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
 import { effectiveLineOperationalStatusForUi } from "@/lib/campaigns/effective-operational-status";
-import {
-  OPERATIONAL_TABLE_HEADER_SURFACE,
-  OPERATIONAL_TABLE_SURFACE,
-} from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import { cn } from "@/lib/utils";
 
 type AssignmentDeliverableRowsProps = {
   campaignId: string;
@@ -47,6 +31,8 @@ type AssignmentDeliverableRowsProps = {
   leadingParentColumnIds?: readonly string[];
   fallbackLeadingWidths?: readonly number[];
   fallbackChildTableWidthPx?: number;
+  gridCols?: string;
+  parentTrackIds?: readonly AssignmentGridColumnId[];
 };
 
 export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows({
@@ -57,22 +43,17 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   selectedIds,
   onToggleDeliverable,
   showSelection,
-  parentColSpan,
-  nestedGroupClassName,
   showExpandColumn = false,
   leadingParentColumnIds: leadingParentColumnIdsProp,
-  fallbackLeadingWidths: fallbackLeadingWidthsProp,
-  fallbackChildTableWidthPx: fallbackChildTableWidthPxProp,
+  gridCols: gridColsProp,
+  parentTrackIds: parentTrackIdsProp,
 }: AssignmentDeliverableRowsProps) {
   const leadingParentColumnIds =
     leadingParentColumnIdsProp ?? assignmentChildLeadingParentColumnIds(showExpandColumn);
-  const fallbackLeadingWidths =
-    fallbackLeadingWidthsProp ??
-    (showExpandColumn
-      ? CHILD_GRID_FALLBACK_LEADING_WIDTHS
-      : CHILD_GRID_FALLBACK_LEADING_WIDTHS.filter((_, index) => index !== 0));
-  const fallbackChildTableWidthPx =
-    fallbackChildTableWidthPxProp ?? CHILD_GRID_FALLBACK_TABLE_WIDTH_PX;
+  const parentTrackIds =
+    parentTrackIdsProp ?? (leadingParentColumnIds as AssignmentGridColumnId[]);
+  const gridCols =
+    gridColsProp ?? buildAssignmentCssGridCols(parentTrackIds);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const locked = line.vendor_assignment_locked ?? false;
@@ -88,25 +69,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
     creatorPlatformAccounts: line.creator_platform_accounts,
     assignment: line.assignment,
   });
-  const childCol = useOperationalChildColumnVisibleChecker();
   const gridEdit = useAssignmentGridEditSession();
-  const childTableRef = useRef<HTMLTableElement>(null);
-  const measuredWidths = useParentLeadingColumnWidths(
-    childTableRef,
-    line.id,
-    leadingParentColumnIds
-  );
-  const childTableWidthPx = useMemo(() => {
-    if (measuredWidths) {
-      return (
-        sumChildGridColumnWidths(measuredWidths.leading) +
-        sumChildGridColumnWidths(
-          getVisibleChildTrailingWidths(childCol, measuredWidths.trailing)
-        )
-      );
-    }
-    return fallbackChildTableWidthPx;
-  }, [measuredWidths, fallbackChildTableWidthPx, childCol]);
 
   function addDeliverable() {
     const defaultPlatform = platformOptions[0]?.value ?? "instagram";
@@ -149,84 +112,51 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   }, [locked, campaignId, line.id]);
 
   return (
-    <tr className="border-0 hover:bg-transparent">
-      <td
-        colSpan={parentColSpan}
-        className={cn(
-          SAFE_GRID_CHILD_GROUP_CELL,
-          SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
-          "p-0",
-          nestedGroupClassName
-        )}
-      >
-        <div className={cn(OPERATIONAL_TABLE_SURFACE)}>
-          <div className="max-w-full overflow-x-auto pb-0.5">
-            <table
-              ref={childTableRef}
-              className={cn(
-                "table-fixed border-collapse text-[11px] font-normal",
-                OPERATIONAL_TABLE_SURFACE
-              )}
-              style={{ width: childTableWidthPx }}
+    <>
+      <OperationalGridHeader
+        showExpandColumn={showExpandColumn}
+        leadingParentColumnIds={leadingParentColumnIds}
+        gridCols={gridCols}
+        parentTrackIds={parentTrackIds}
+        actions={
+          !locked && !gridEdit.isEditing ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-6 px-1.5 text-[10px] font-normal"
+              onClick={addDeliverable}
+              disabled={pending}
+              title="Add deliverable (Alt+N)"
             >
-              <AssignmentChildTableColGroup
-                leadingWidths={measuredWidths?.leading ?? null}
-                trailingWidths={measuredWidths?.trailing ?? null}
-                fallbackLeadingWidths={fallbackLeadingWidths}
-              />
-              <thead
-                className={cn(
-                  "sticky top-0 z-[4] border-b border-border/50",
-                  OPERATIONAL_TABLE_HEADER_SURFACE
-                )}
-              >
-                <OperationalGridHeader
-                  showExpandColumn={showExpandColumn}
-                  leadingParentColumnIds={leadingParentColumnIds}
-                  actions={
-                    !locked && !gridEdit.isEditing ? (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        className="h-6 px-1.5 text-[10px] font-normal"
-                        onClick={addDeliverable}
-                        disabled={pending}
-                        title="Add deliverable (Alt+N)"
-                      >
-                        <PlusIcon className="size-3" />
-                        Add
-                      </Button>
-                    ) : null
-                  }
-                />
-              </thead>
-              <tbody>
-                {deliverables.map((deliverable, deliverableIndex) => (
-                  <DeliverableGroupRow
-                    key={deliverable.id}
-                    campaignId={campaignId}
-                    campaignLineId={line.id}
-                    line={line}
-                    deliverable={deliverable}
-                    currency={currency}
-                    parentOperationalStatus={parentOperationalStatus}
-                    selected={selectedIds.has(deliverable.id)}
-                    onToggleSelect={() => onToggleDeliverable(deliverable.id)}
-                    showSelection={showSelection}
-                    revenueVatExempt={line.revenue_vat_exempt}
-                    defaultRevenueVatPercent={line.revenue_vat_percent}
-                    platformOptions={platformOptions}
-                    showExpandColumn={showExpandColumn}
-                    leadingParentColumnIds={leadingParentColumnIds}
-                    isLastDeliverable={deliverableIndex === deliverables.length - 1}
-                  />
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </td>
-    </tr>
+              <PlusIcon className="size-3" />
+              Add
+            </Button>
+          ) : null
+        }
+      />
+      {deliverables.map((deliverable, deliverableIndex) => (
+        <DeliverableGroupRow
+          key={deliverable.id}
+          campaignId={campaignId}
+          campaignLineId={line.id}
+          line={line}
+          deliverable={deliverable}
+          currency={currency}
+          parentOperationalStatus={parentOperationalStatus}
+          selected={selectedIds.has(deliverable.id)}
+          onToggleSelect={() => onToggleDeliverable(deliverable.id)}
+          showSelection={showSelection}
+          revenueVatExempt={line.revenue_vat_exempt}
+          defaultRevenueVatPercent={line.revenue_vat_percent}
+          platformOptions={platformOptions}
+          showExpandColumn={showExpandColumn}
+          leadingParentColumnIds={leadingParentColumnIds}
+          isLastDeliverable={deliverableIndex === deliverables.length - 1}
+          gridCols={gridCols}
+          parentTrackIds={parentTrackIds}
+        />
+      ))}
+    </>
   );
 });

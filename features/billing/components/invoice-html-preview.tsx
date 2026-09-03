@@ -2,6 +2,7 @@ import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import type { InvoiceWorkspace } from "@/features/billing/types";
 import { formatBillingMoney } from "@/features/billing/utils";
+import { formatDesignDate } from "@/lib/design/format-design-date";
 
 type InvoiceHtmlPreviewProps = {
   invoice: InvoiceWorkspace;
@@ -9,18 +10,8 @@ type InvoiceHtmlPreviewProps = {
 };
 
 export function InvoiceHtmlPreview({ invoice, backHref }: InvoiceHtmlPreviewProps) {
-  const issueDate = new Date(`${invoice.issue_date}T00:00:00`).toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
-  const dueDate = invoice.due_date
-    ? new Date(`${invoice.due_date}T00:00:00`).toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : "—";
+  const issueDate = formatDesignDate(invoice.issue_date);
+  const dueDate = formatDesignDate(invoice.due_date);
 
   return (
     <article className="mx-auto max-w-3xl rounded-2xl border border-border bg-card p-8 text-foreground shadow-sm print:border-0 print:shadow-none print:bg-white">

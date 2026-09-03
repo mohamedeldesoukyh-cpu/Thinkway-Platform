@@ -25,6 +25,8 @@ type OperationalAmountFieldProps = {
   perUnit?: boolean;
   /** Always show an input (grid Edit mode) instead of click-to-edit text. */
   alwaysEditing?: boolean;
+  /** Spec §7 — revenue/total blue, cost amber while Edit is on. */
+  editTint?: "rev" | "cost";
 };
 
 export function OperationalAmountField({
@@ -35,6 +37,7 @@ export function OperationalAmountField({
   className,
   perUnit = false,
   alwaysEditing = false,
+  editTint,
 }: OperationalAmountFieldProps) {
   const inputId = useId();
   const [focused, setFocused] = useState(false);
@@ -111,6 +114,8 @@ export function OperationalAmountField({
         INPUT_CLASS,
         alwaysEditing &&
           "min-h-6 rounded-sm border border-border/70 bg-background px-1 focus-visible:ring-1",
+        alwaysEditing && editTint === "rev" && "tw-ed rev",
+        alwaysEditing && editTint === "cost" && "tw-ed cost",
         className
       )}
       autoFocus={!alwaysEditing}

@@ -13,7 +13,7 @@ export const SAFE_GRID_SHELL = cn(
 );
 
 export const SAFE_GRID_TABLE =
-  "thinkway-campaign-asgn-table min-w-[1300px] w-max border-collapse";
+  "thinkway-campaign-asgn-table min-w-[1300px] w-max";
 
 export const SAFE_GRID_HEAD = cn(
   "thinkway-campaign-asgn-col-hdrs sticky top-0 z-10 border-b border-[var(--camp-border)] bg-[var(--camp-surface)]"

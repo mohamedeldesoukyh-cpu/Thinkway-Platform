@@ -1006,7 +1006,7 @@ export function PublicationWorkspace({
               />
               <MetricCard
                 label="Last sync"
-                value={lastSync ? formatAssignmentDetailDate(lastSync) : "—"}
+                value={lastSync ? formatAssignmentDetailDate(lastSync) : "not set"}
               />
               <MetricCard label="Screenshot source" value={row.screenshot_source ?? "—"} />
               <MetricCard label="Sync status" value={row.metrics_refresh_status ?? row.sync_status ?? "—"} />

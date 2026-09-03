@@ -4,14 +4,13 @@ import dynamic from "next/dynamic";
 import { Component, type ErrorInfo, type ReactNode } from "react";
 
 import {
-  ASSIGNMENT_SAFE_GRID_COL_SPAN,
-  SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
-  SAFE_GRID_CHILD_GROUP_CELL,
-} from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid-styles";
+  AssignmentGridCell,
+  AssignmentGridRow,
+} from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-cell";
+import type { AssignmentGridColumnId } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-layout";
 import type { AssignmentDeliverableHierarchyRow } from "@/features/campaigns/types/assignment-hierarchy";
 import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
-import { cn } from "@/lib/utils";
 
 const AssignmentDeliverableRows = dynamic(
   () =>
@@ -21,21 +20,15 @@ const AssignmentDeliverableRows = dynamic(
   {
     ssr: false,
     loading: () => (
-      <tr className="bg-muted/20">
-        <td
-          colSpan={ASSIGNMENT_SAFE_GRID_COL_SPAN}
-          className="border-b border-border/50 bg-muted/20 px-6 py-3 text-xs text-muted-foreground"
-        >
-          Loading deliverables…
-        </td>
-      </tr>
+      <div className="tw-ad px-6 py-3 text-xs text-muted-foreground">Loading deliverables…</div>
     ),
   }
 );
 
 type SafeDeliverableBoundaryProps = {
   lineId: string;
-  parentColSpan: number;
+  gridCols: string;
+  trackCount: number;
   children: ReactNode;
 };
 
@@ -62,11 +55,14 @@ class SafeDeliverableBoundary extends Component<
   render() {
     if (this.state.error) {
       return (
-        <tr className="bg-destructive/5">
-          <td colSpan={this.props.parentColSpan} className="px-4 py-2 text-xs text-destructive">
+        <AssignmentGridRow cols={this.props.gridCols} className="tw-r tw-ad">
+          <div
+            className="px-4 py-2 text-xs text-destructive"
+            style={{ gridColumn: `1 / span ${this.props.trackCount}` }}
+          >
             Deliverables for this assignment could not render ({this.state.error.message}).
-          </td>
-        </tr>
+          </div>
+        </AssignmentGridRow>
       );
     }
     return this.props.children;
@@ -79,6 +75,8 @@ type AssignmentSafeDeliverableRowsProps = {
   deliverables: AssignmentDeliverableHierarchyRow[];
   currency: string;
   parentColSpan: number;
+  gridCols: string;
+  parentTrackIds: readonly AssignmentGridColumnId[];
   selectedIds: Set<string>;
   onToggleDeliverable: (id: string) => void;
   showSelection: boolean;
@@ -93,35 +91,39 @@ export function AssignmentSafeDeliverableRows({
   line,
   deliverables,
   currency: currencyProp,
-  parentColSpan,
+  gridCols,
+  parentTrackIds,
   selectedIds,
   onToggleDeliverable,
   showSelection,
   showExpandColumn,
   leadingParentColumnIds,
-  fallbackLeadingWidths,
-  fallbackChildTableWidthPx,
 }: AssignmentSafeDeliverableRowsProps) {
   const currency = resolveAssignmentLineCurrency(line) || currencyProp;
   if (deliverables.length === 0) {
     return (
-      <tr className="bg-muted/20">
-        <td
-          colSpan={parentColSpan}
-          className={cn(
-            SAFE_GRID_CHILD_GROUP_CELL,
-            SAFE_GRID_CHILD_GROUP_BOTTOM_RULE,
-            "px-4 py-2 text-xs text-muted-foreground"
-          )}
-        >
-          No deliverable breakdown for this assignment.
-        </td>
-      </tr>
+      <AssignmentGridRow cols={gridCols} className="tw-r tw-ad tw-adf">
+        {parentTrackIds.map((id, index) => (
+          <AssignmentGridCell key={id} columnId={id}>
+            {index === 0 ? (
+              <span className="text-xs text-muted-foreground">
+                No deliverable breakdown for this assignment.
+              </span>
+            ) : (
+              <span />
+            )}
+          </AssignmentGridCell>
+        ))}
+      </AssignmentGridRow>
     );
   }
 
   return (
-    <SafeDeliverableBoundary lineId={line.id} parentColSpan={parentColSpan}>
+    <SafeDeliverableBoundary
+      lineId={line.id}
+      gridCols={gridCols}
+      trackCount={parentTrackIds.length}
+    >
       <AssignmentDeliverableRows
         campaignId={campaignId}
         line={line}
@@ -130,12 +132,11 @@ export function AssignmentSafeDeliverableRows({
         selectedIds={selectedIds}
         onToggleDeliverable={onToggleDeliverable}
         showSelection={showSelection}
-        parentColSpan={parentColSpan}
-        nestedGroupClassName={SAFE_GRID_CHILD_GROUP_CELL}
+        parentColSpan={parentTrackIds.length}
         showExpandColumn={showExpandColumn}
         leadingParentColumnIds={leadingParentColumnIds}
-        fallbackLeadingWidths={fallbackLeadingWidths}
-        fallbackChildTableWidthPx={fallbackChildTableWidthPx}
+        gridCols={gridCols}
+        parentTrackIds={parentTrackIds}
       />
     </SafeDeliverableBoundary>
   );
