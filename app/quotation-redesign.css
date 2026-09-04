@@ -294,18 +294,19 @@
   font-size: 18px;
 }
 
-/* Content under the masthead — document flow (page wrapper scrolls).
-   Class renamed from `.scroll` so stale cached CSS with flex:1/min-height:0
-   cannot collapse this band to 0px (header-only blank body). */
+/* Quotation body bands — document flow only. The editor root scrolls
+   (shortlist single-scrollport). Never flex:1 / min-height:0 here. */
 .quotation-editor-rd4 .quotation-body,
 .quotation-editor-rd4 .scroll {
-  flex: 0 0 auto !important;
-  flex-shrink: 0 !important;
-  min-height: min-content !important;
+  flex: none;
+  flex-grow: 0;
+  flex-shrink: 0;
+  flex-basis: auto;
+  min-height: auto;
   min-width: 0;
   width: 100%;
   max-width: none;
-  overflow: visible !important;
+  overflow: visible;
   background: var(--white);
 }
 
