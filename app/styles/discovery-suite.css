@@ -1,13 +1,9 @@
-/* Discovery suite — ported from docs/architecture/discovery.html. All rules scoped under .discovery-suite. */
+/* LEGACY until page sessions 1–8 cut over to frozen app/styles/discovery.css.
+ * Do NOT grow page overrides here. Missing .tw-* → reopen Session 0 / foundation only.
+ * Spec: docs/architecture/discovery-specs/
+ */
 
-
-
-
-
-/* Thinkway finance suite. Every selector scoped to .tw-*. One grid engine:
-  .discovery-suite .tw-g sets its own track list per page via --cols, so a header, its rows and
-   its footer can never disagree about column count. */
- .discovery-suite{
+.discovery-suite{
  --tw-blue:#0057FF;--tw-b2:#1A6FFF;--tw-bi:#0B52E0;--tw-bdk:#0040CC;--tw-navy:#060810;
  --tw-ink:#0B0F1A;--tw-ink2:#41495A;--tw-mut:#64748B;--tw-line:#E2E8F0;--tw-hair:#EDF0F5;
  --tw-bg:#FAFBFC;--tw-soft:#F6F8FB;--tw-lav:#EFF4FF;

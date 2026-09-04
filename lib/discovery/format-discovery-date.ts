@@ -27,14 +27,42 @@ function fromDate(d: Date): string {
   return `${pad2(d.getDate())} ${MON[d.getMonth()]} ${String(d.getFullYear()).slice(-2)}`;
 }
 
+const MON_IX: Record<string, number> = Object.fromEntries(
+  MON.map((m, i) => [m, i])
+);
+
 function parseLoose(v: string): Date | null {
-  const iso = Date.parse(v);
-  if (!Number.isNaN(iso)) return new Date(iso);
-  const m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  // Pack shapes — prefer explicit before Date.parse (locale-sensitive).
+  let m = v.match(/^([A-Z][a-z]{2})\s+(\d{1,2}),\s*(\d{4})$/);
+  if (m) {
+    const mi = MON_IX[m[1]!];
+    if (mi != null) {
+      const d = new Date(Number(m[3]), mi, Number(m[2]));
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+  }
+  m = v.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (m) {
+    const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+  m = v.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
   if (m) {
     const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
     return Number.isNaN(d.getTime()) ? null : d;
   }
+  m = v.match(/^(\d{1,2})\s+([A-Z][a-z]{2})\s+(\d{2}|\d{4})$/);
+  if (m) {
+    const mi = MON_IX[m[2]!];
+    if (mi != null) {
+      let y = Number(m[3]);
+      if (y < 100) y += 2000;
+      const d = new Date(y, mi, Number(m[1]));
+      return Number.isNaN(d.getTime()) ? null : d;
+    }
+  }
+  const iso = Date.parse(v);
+  if (!Number.isNaN(iso)) return new Date(iso);
   return null;
 }
 

@@ -1,0 +1,38 @@
+---
+description: Discovery foundation CSS is frozen (Session 0). Never add page-level overrides; missing .tw-* classes reopen foundation only.
+globs:
+  - app/styles/discovery.css
+  - app/styles/discovery-suite.css
+  - features/discovery/**
+  - features/quotations/**
+  - features/discovery-import/**
+  - features/campaign-intelligence-profile/**
+  - docs/architecture/discovery-specs/**
+  - docs/architecture/discovery.html
+alwaysApply: false
+---
+
+# Discovery CSS — FROZEN foundation (Session 0)
+
+**Spec:** `docs/architecture/discovery-specs/00-FOUNDATION.md`  
+**SSOT sheet:** `app/styles/discovery.css` (extracted from `docs/architecture/discovery.html`)  
+**Build order:** `docs/architecture/discovery-specs/README.md`
+
+## Read-only after Session 0
+
+- **Do not edit** `app/styles/discovery.css` while building pages 1–8.
+- **Do not add** page-level CSS overrides that restyle `.tw-*` foundation classes (including growing `discovery-suite.css` overrides).
+- If a class the page needs is **missing** from the foundation sheet → **stop and tell the user**. Fix only by reopening Session 0 / Architecture reopen — never a one-off override.
+
+## Page sessions
+
+One page per session, order `1→5` sequential; page **4** (quotation detail) alone; page **2** before **5** (creator modal). Pages `6–8` anytime after foundation.
+
+Prompt pattern: read `00-FOUNDATION.md`, then the page file; build only that page; do not modify `discovery.css`.
+
+## Traps
+
+- No handlers named `open` / `close` / `print` / `focus` / `name` / `stop` (shadows `document.open`).
+- Every inline SVG needs CSS width/height/`fill:none`.
+- Class-coverage must include every overlay state, not only the default view.
+- `—` ≠ `0`; empty brand → `not set` / `.tw-miss`.

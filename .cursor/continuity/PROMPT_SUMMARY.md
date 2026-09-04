@@ -3,11 +3,13 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Campaign / finance design spec (`THINKWAY_CAMPAIGN_FINANCE_DESIGN_SPEC.md`).
 
-## In progress 2026-09-04 — Discovery suite redesign
+## Shipped 2026-09-04 — Discovery Session 0 foundation (FROZEN)
 
-Full suite scaffolded from `docs/architecture/discovery.html` + `THINKWAY_DISCOVERY_DESIGN_SPEC.md`: `discovery-suite.css`, date `D()`, track lists, masthead/grid primitives. Lists (Shortlists/Quotations), detail polish (296/166 stats, Preview/Export labels, GP conflict), tools (Search filters Show-N-more, Match empty honesty, Import/Intel grids), overlays (share/live-dot/flyout/creator sheet). Extends Discovery UI Contract — no parallel rows. Real metrics only. No migrations. Not on Production.
+Pack imported: `docs/architecture/discovery-specs/`. Frozen CSS: `app/styles/discovery.css` (scoped `.discovery-suite`, read-only). Helpers: `lib/discovery/suite/` (`D`/`F`/`AB`/`E`/`ini`/`pf`, `bindScroll`, class-coverage). Gate: `npm run test:discovery-foundation`. Cursor rule: `thinkway-discovery-css-readonly.mdc`. Layout imports foundation; legacy `discovery-suite.css` kept until page cutover — do not grow overrides. **Next session = page 1 only** (`01-shortlists.md`). Pages 2→5 sequential (4 alone; 2 before 5). Pages 6–8 anytime after foundation. No page UI redesign in Session 0. No Production.
 
-**Match pass (local, not pushed):** Live Dev screenshots vs `discovery.html` — empty masthead numbers were wrong DOM (`.tw-ms2` must wrap all metric cells; `b` ink color). Client link → `.tw-sw` + `.tw-live` only. Double chrome removed; quotations masthead above filters; Search col-count label hidden; Match uses suite masthead. Commit/push needed for Dev.
+## In progress 2026-09-04 — Discovery suite redesign (superseded by pack)
+
+Prior hybrid suite CSS + page overrides paused. Rebuild constitution is discovery-specs pack (Session 0 above). Leave billing dirt uncommitted.
 
 ## In progress 2026-09-04 — Sidebar auto-hide tip
 

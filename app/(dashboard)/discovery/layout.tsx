@@ -1,9 +1,13 @@
 /**
  * Discovery + quotations + campaign brief/requirements surfaces share the
  * campaign workspace design tokens/classes (thinkway-campaign_*).
- * Discovery suite redesign: docs/architecture/discovery.html + THINKWAY_DISCOVERY_DESIGN_SPEC.md
+ *
+ * Foundation (FROZEN Session 0): docs/architecture/discovery-specs/00-FOUNDATION.md
+ * → app/styles/discovery.css (read-only). Pack: docs/architecture/discovery-specs/
+ * Legacy suite sheet kept until page sessions 1–8 cut over; do not grow overrides.
  */
 import "@/app/styles/campaign-workspace.css";
+import "@/app/styles/discovery.css";
 import "@/app/styles/discovery-suite.css";
 
 /** Live Refresh Metrics waits on Apify in the server action. */

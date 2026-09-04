@@ -187,6 +187,7 @@
     "cleanup:creators": "node scripts/run-ops-script.mjs scripts/cleanup-creators.ts",
     "test:cleanup-classification": "npx tsx lib/creators/cleanup-classification.test.ts",
     "test:discovery-ui-contract": "npx tsx features/discovery/components/discovery-ui-contract.test.ts",
+    "test:discovery-foundation": "npx tsx scripts/check-discovery-foundation.ts",
     "validate:discovery-ui-contract": "node scripts/validate-discovery-ui-contract.mjs",
     "soak:creator-crm-phase2a": "npx tsx scripts/soak-creator-crm-phase2a.ts",
     "soak:creator-crm-phase2b": "npx tsx scripts/soak-creator-crm-phase2b.ts"
