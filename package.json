@@ -193,6 +193,8 @@
     "test:discovery-shortlist-overlays": "npx tsx scripts/check-discovery-shortlist-overlays.ts",
     "test:discovery-quotations-page": "npx tsx scripts/check-discovery-quotations-page.ts",
     "test:discovery-quotation-detail-4a": "npx tsx scripts/check-discovery-quotation-detail-4a.ts",
+    "test:discovery-quotation-detail-4b": "npx tsx scripts/check-discovery-quotation-detail-4b.ts",
+    "test:quotation-pricing-calculator": "npx tsx lib/quotations/quotation-pricing-calculator.test.ts",
     "validate:discovery-ui-contract": "node scripts/validate-discovery-ui-contract.mjs",
     "soak:creator-crm-phase2a": "npx tsx scripts/soak-creator-crm-phase2a.ts",
     "soak:creator-crm-phase2b": "npx tsx scripts/soak-creator-crm-phase2b.ts"

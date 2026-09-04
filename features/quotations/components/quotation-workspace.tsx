@@ -12,24 +12,15 @@ import {
 } from "react";
 import { useRouter } from "next/navigation";
 import {
-  CopyIcon,
-  DownloadIcon,
-  PercentIcon,
   SearchIcon,
-  Trash2Icon,
   UserPlusIcon,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
-import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import {
-  DiscoverySelectionFlyout,
   discoverySelectionFlyoutContentClass,
-  type DiscoverySelectionFlyoutAction,
 } from "@/features/discovery/components/design-system/discovery-selection-flyout";
-import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -38,13 +29,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
 import { platformLabel } from "@/features/campaigns/line-assignment";
-import { csvEscapeRow } from "@/lib/security/csv-formula";
 import { cn } from "@/lib/utils";
 import {
   CALCULATION_MODE_LABELS,
-  QUOTATION_CLIENT_LABELS,
   quotationPreviewPath,
 } from "@/features/quotations/constants";
 import { DocumentCreatorSelectionDialog } from "@/features/discovery/document-preview/document-creator-selection-dialog";
@@ -77,7 +65,10 @@ import { QuotationClientBrandPanel } from "@/features/quotations/components/quot
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
 import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
 import { QuotationLinesGrid } from "@/features/quotations/components/quotation-lines-grid";
+import { QuotationSelectionBar } from "@/features/quotations/components/quotation-selection-bar";
+import { QuotationPricingCalculatorPanel } from "@/features/quotations/components/quotation-pricing-calculator-panel";
 import { useQuotationCreatorDetailSheet } from "@/features/quotations/hooks/use-quotation-creator-detail-sheet";
+import type { QuotationCalcLineInput } from "@/lib/quotations/quotation-pricing-calculator";
 import {
   QuotationManualSaveProvider,
   useQuotationManualSave,
@@ -87,11 +78,9 @@ import {
   removeQuotationItem,
   resolveCommercialRateToEgp,
   updateQuotationHeader,
-  updateQuotationItemCommercials,
 } from "@/features/quotations/actions";
 import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-pending";
 import {
-  calcModeToCommercialMode,
   computeLiveQuotationTotals,
   computeQuotationRowComputed,
   draftFromQuotationItem,
@@ -102,7 +91,6 @@ import {
   type CalculationModePreference,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
-import { applyCommercialWorkspaceBulkOp } from "@/lib/quotations/commercial-workspace/bulk-transforms";
 import { resolveLiveTotalsDraft } from "@/features/quotations/quotation-pending-live-totals";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { countUniqueQuotationCreators } from "@/lib/quotations/quotation-creator-options";
@@ -128,84 +116,6 @@ import type {
   QuotationFormOptions,
   QuotationItemRow,
 } from "@/features/quotations/types";
-
-function egp(n: number, decimals = 0): string {
-  return `${new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: decimals,
-    maximumFractionDigits: decimals,
-  }).format(Number.isFinite(n) ? n : 0)} EGP`;
-}
-
-function parseNum(value: string): number {
-  const n = Number(value);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function exportSelectedCsv(
-  items: QuotationItemRow[],
-  drafts: Record<string, QuotationRowDraft>,
-  selectedIds: Set<string>,
-  quotationName: string
-) {
-  const headers = [
-    "Creator",
-    "Option",
-    "Handle",
-    "Tier",
-    "Platform",
-    "Type",
-    "Service",
-    "Followers",
-    "Country",
-    "Cost",
-    "Currency",
-    "Cost EGP",
-    QUOTATION_CLIENT_LABELS.clientCostEgp,
-    "GP EGP",
-    "GP%",
-    "AF%",
-    "AF EGP",
-    "Agency Margin EGP",
-  ];
-  const rows = items
-    .filter((item) => selectedIds.has(item.id))
-    .map((item) => {
-      const draft = drafts[item.id];
-      const computed = draft ? computeQuotationRowComputed(draft) : null;
-      return [
-        item.creator_name ?? "",
-        optionNumberLabel(item.option_number) ?? "",
-        item.handle ?? "",
-        resolveCreatorTierLabel({ followers: item.followers }),
-        item.platform ?? "",
-        item.deliverables.length
-          ? item.deliverables
-              .map((d) => formatTypeLinesSummary(deliverableTypeLines(d)))
-              .join(", ")
-          : "",
-        item.service_description ?? "",
-        item.followers ?? "",
-        item.country_code ?? "",
-        draft?.cost ?? item.cost,
-        draft?.costCurrency ?? item.cost_currency,
-        computed?.costEgp ?? item.cost_egp,
-        computed?.revenueEgp ?? item.revenue_egp,
-        computed?.gpValueEgp ?? item.gp_value_egp,
-        computed?.gpPct ?? item.gp_pct,
-        computed?.afPct ?? item.af_pct,
-        computed?.afValueEgp ?? item.af_value_egp,
-        computed?.agencyMarginEgp ?? item.gp_value_egp + item.af_value_egp,
-      ];
-    });
-  const csv = [headers, ...rows].map((row) => csvEscapeRow(row)).join("\n");
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `${quotationName.replace(/\s+/g, "-").toLowerCase()}-selected.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-}
 
 export function QuotationWorkspace({
   detail,
@@ -264,6 +174,7 @@ function QuotationWorkspaceContent({
   const [focusNewItemId, setFocusNewItemId] = useState<string | null>(null);
   const [tableSort, setTableSort] = useState<QuotationWorkspaceSortState | null>(null);
   const [bulkPending, startBulkTransition] = useTransition();
+  const [calculatorOpen, setCalculatorOpen] = useState(false);
   const confirmDelete = useConfirmDelete();
   const creatorSearchRef = useRef<HTMLInputElement>(null);
 
@@ -573,6 +484,66 @@ function QuotationWorkspaceContent({
     });
   }, []);
 
+  useEffect(() => {
+    if (selectedIds.size === 0) setCalculatorOpen(false);
+  }, [selectedIds]);
+
+  const clearSelection = useCallback(() => {
+    setSelectedIds(new Set());
+    setCalculatorOpen(false);
+  }, []);
+
+  const selectedLinesForCalc = useMemo((): QuotationCalcLineInput[] => {
+    return sortedFilteredItems
+      .filter((item) => selectedIds.has(item.id))
+      .map((item) => {
+        const draft = resolveQuotationRowDraft(item, drafts[item.id]);
+        const computed = computeQuotationRowComputed(draft);
+        return {
+          id: item.id,
+          name: item.creator_name?.trim() || "Unknown",
+          handle: item.handle,
+          optionNumber: item.option_number ?? 1,
+          baseCost: computed.costEgp,
+          clientNow: computed.revenueEgp,
+        };
+      });
+  }, [sortedFilteredItems, selectedIds, drafts]);
+
+  const selectionMoney = useMemo(() => {
+    return selectedLinesForCalc.reduce(
+      (acc, line) => {
+        acc.baseCost += line.baseCost;
+        acc.clientCost += line.clientNow;
+        return acc;
+      },
+      { baseCost: 0, clientCost: 0 }
+    );
+  }, [selectedLinesForCalc]);
+
+  const applyCalculator = useCallback(
+    (updates: Array<{ id: string; newClient: number }>) => {
+      startBulkTransition(() => {
+        for (const update of updates) {
+          const item = detail.items.find((row) => row.id === update.id);
+          if (!item) continue;
+          const draft = resolveQuotationRowDraft(item, drafts[update.id]);
+          const fx = draft.fxRateToEgp > 0 ? draft.fxRateToEgp : 1;
+          const revenueInEntry = update.newClient / fx;
+          updateDraft(update.id, {
+            mode: "cost_revenue",
+            revenue: revenueInEntry,
+          });
+        }
+        setCalculatorOpen(false);
+        toast.success(
+          `Applied pricing to ${updates.length} line${updates.length === 1 ? "" : "s"}. Save to persist.`
+        );
+      });
+    },
+    [detail.items, drafts, updateDraft]
+  );
+
   const toggleSelectAllVisible = useCallback(() => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
@@ -595,87 +566,6 @@ function QuotationWorkspaceContent({
       });
     },
     [sortedFilteredItems]
-  );
-
-  const applyBulkGpPct = useCallback(
-    (pct: number) => {
-      const mode = calcModeToCommercialMode(globalCalcMode);
-      startBulkTransition(async () => {
-        for (const id of selectedIds) {
-          const draft = drafts[id];
-          if (!draft) continue;
-          const next = applyCommercialWorkspaceBulkOp(
-            draft,
-            mode === "cost_markup_pct"
-              ? { kind: "apply_markup_pct", pct }
-              : { kind: "set_gp_pct", pct }
-          );
-          updateDraft(id, next);
-          const res = await updateQuotationItemCommercials({
-            item_id: id,
-            quotation_id: detail.id,
-            mode: next.mode,
-            cost: next.cost,
-            cost_currency: next.costCurrency,
-            gp_pct: next.gpPct,
-            revenue: next.revenue,
-            gp_value: next.gpValue,
-            af_pct: next.afPct,
-          });
-          if (!res.ok) {
-            toast.error(res.message);
-            return;
-          }
-        }
-        toast.success(`Applied ${pct}% to ${selectedIds.size} creator(s).`);
-        router.refresh();
-      });
-    },
-    [globalCalcMode, selectedIds, drafts, detail.id, updateDraft, router]
-  );
-
-  const applyBulkCurrency = useCallback(
-    (currency: string) => {
-      startBulkTransition(async () => {
-        const rateRes = await resolveCommercialRateToEgp(currency, detail.issue_date);
-        if (!rateRes.ok || !rateRes.data) {
-          toast.error(rateRes.ok ? "Could not resolve FX rate." : rateRes.message);
-          return;
-        }
-        const fxRateToEgp = rateRes.data.rate;
-        for (const id of selectedIds) {
-          const draft = drafts[id];
-          if (!draft) continue;
-          const next = applyCommercialWorkspaceBulkOp(draft, {
-            kind: "set_currency",
-            currency,
-            fxRateToEgp,
-          });
-          updateDraft(id, next);
-          const res = await updateQuotationItemCommercials({
-            item_id: id,
-            quotation_id: detail.id,
-            mode: next.mode,
-            cost: next.cost,
-            cost_currency: next.costCurrency,
-            gp_pct: next.gpPct,
-            revenue: next.revenue,
-            gp_value: next.gpValue,
-            af_pct: next.afPct,
-          });
-          if (!res.ok) {
-            toast.error(res.message);
-            return;
-          }
-          if (res.ok && res.data?.fx_rate_to_egp != null) {
-            updateDraft(id, { fxRateToEgp: res.data.fx_rate_to_egp });
-          }
-        }
-        toast.success(`Currency updated for ${selectedIds.size} creator(s).`);
-        router.refresh();
-      });
-    },
-    [selectedIds, drafts, detail.id, detail.issue_date, updateDraft, router]
   );
 
   const handleDuplicateSelected = useCallback(() => {
@@ -972,22 +862,6 @@ function QuotationWorkspaceContent({
               onGlobalCalcMode={setGlobalCalcMode}
             />
 
-            <BulkToolbar
-              open={selectedIds.size > 0}
-              selectedCount={selectedIds.size}
-              globalCalcMode={globalCalcMode}
-              pending={bulkPending}
-              onClear={() => setSelectedIds(new Set())}
-              onApplyGpPct={applyBulkGpPct}
-              onApplyMarkupPct={applyBulkGpPct}
-              onChangeCurrency={applyBulkCurrency}
-              onRemove={handleRemoveSelected}
-              onDuplicate={handleDuplicateSelected}
-              onExport={() =>
-                exportSelectedCsv(detail.items, drafts, selectedIds, detail.name)
-              }
-            />
-
             <div className="creators-list discovery-suite">
               <QuotationLinesGrid
                 quotationId={detail.id}
@@ -1050,6 +924,25 @@ function QuotationWorkspaceContent({
         </section>
         </section>
       </div>
+      <QuotationSelectionBar
+        selectedCount={selectedIds.size}
+        totalCount={sortedFilteredItems.length}
+        baseCost={selectionMoney.baseCost}
+        clientCost={selectionMoney.clientCost}
+        calculatorOpen={calculatorOpen}
+        busy={bulkPending}
+        onClear={clearSelection}
+        onToggleCalculator={() => setCalculatorOpen((open) => !open)}
+        onDuplicate={handleDuplicateSelected}
+        onDelete={() => void handleRemoveSelected()}
+      />
+      <QuotationPricingCalculatorPanel
+        open={calculatorOpen && selectedIds.size > 0}
+        lines={selectedLinesForCalc}
+        busy={bulkPending}
+        onClose={() => setCalculatorOpen(false)}
+        onApply={applyCalculator}
+      />
       {detailSheet}
       <DocumentCreatorSelectionDialog
         open={previewSelectionOpen}
@@ -1174,124 +1067,6 @@ function Toolbar({
         </SelectContent>
       </Select>
     </div>
-  );
-}
-
-function BulkToolbar({
-  open,
-  selectedCount,
-  globalCalcMode,
-  pending,
-  onClear,
-  onApplyGpPct,
-  onApplyMarkupPct,
-  onChangeCurrency,
-  onRemove,
-  onDuplicate,
-  onExport,
-}: {
-  open: boolean;
-  selectedCount: number;
-  globalCalcMode: CalculationModePreference;
-  pending: boolean;
-  onClear: () => void;
-  onApplyGpPct: (pct: number) => void;
-  onApplyMarkupPct: (pct: number) => void;
-  onChangeCurrency: (currency: string) => void;
-  onRemove: () => void;
-  onDuplicate: () => void;
-  onExport: () => void;
-}) {
-  const [bulkPct, setBulkPct] = useState("25");
-
-  const actions: DiscoverySelectionFlyoutAction[] = [
-    {
-      id: "duplicate",
-      label: "Duplicate",
-      icon: CopyIcon,
-      variant: "outline",
-      disabled: pending,
-      onClick: onDuplicate,
-    },
-    {
-      id: "export",
-      label: "Export",
-      icon: DownloadIcon,
-      variant: "outline",
-      onClick: onExport,
-    },
-    {
-      id: "remove",
-      label: "Remove",
-      icon: Trash2Icon,
-      variant: "outline",
-      destructive: true,
-      disabled: pending,
-      onClick: onRemove,
-    },
-  ];
-
-  return (
-    <DiscoverySelectionFlyout
-      open={open}
-      selectedCount={selectedCount}
-      entityLabel="creator"
-      actions={actions}
-      onClearSelection={onClear}
-      busy={pending}
-      maxVisibleActions={2}
-    >
-      <div className="flex shrink-0 items-center gap-1">
-        <Input
-          className="h-7 w-14 text-xs"
-          inputMode="decimal"
-          value={bulkPct}
-          onChange={(e) => setBulkPct(e.target.value)}
-        />
-        <Button
-          type="button"
-          size="xs"
-          variant="default"
-          className={cn(
-            "creator-detail-sheet-action-btn creator-detail-sheet-action-btn--primary h-7 shrink-0 rounded-full text-xs"
-          )}
-          disabled={pending}
-          onClick={() => {
-            const pct = parseNum(bulkPct);
-            if (globalCalcMode === "margin" && pct >= 100) {
-              toast.error("Margin must be below 100%.");
-              return;
-            }
-            if (pct < 0) {
-              toast.error(`${globalCalcMode === "markup" ? "Markup" : "Margin"} cannot be negative.`);
-              return;
-            }
-            if (globalCalcMode === "markup") onApplyMarkupPct(pct);
-            else onApplyGpPct(pct);
-          }}
-        >
-          <PercentIcon className="size-3" />
-          Apply {globalCalcMode === "markup" ? "Markup" : "GP"}%
-        </Button>
-      </div>
-      <Select onValueChange={onChangeCurrency}>
-        <SelectTrigger className="h-7 w-[100px] text-xs">
-          <SelectValue placeholder="Currency" />
-        </SelectTrigger>
-        <SelectContent>
-          {COMMERCIAL_CURRENCIES.map((c) => (
-            <SelectItem key={c} value={c}>
-              {c}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <span className="hidden whitespace-nowrap text-[10px] text-muted-foreground lg:inline">
-        {globalCalcMode === "markup"
-          ? "Price = cost × (1 + markup%)"
-          : "Price = cost ÷ (1 − margin%); margin must be below 100%"}
-      </span>
-    </DiscoverySelectionFlyout>
   );
 }
 

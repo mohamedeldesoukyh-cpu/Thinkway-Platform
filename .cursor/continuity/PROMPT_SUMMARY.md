@@ -3,9 +3,13 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-04 — Session 4b selbar + calculator
+
+Overlay B `.tw-selbar` (fixed, bottom 20px) + Overlay C pricing calculator (formula per mode, Client pays, three guards). Apply blocked when any line below cost. Deselect-all closes calculator. Live crawl: `npm run test:discovery-quotation-detail-4b`. Pure logic: `lib/quotations/quotation-pricing-calculator.ts`. Deferred: CW · add-creators · Overlay F.
+
 ## Shipped 2026-09-04 — Session 4a quotation detail (partial)
 
-Page 4a: `DiscoverySuiteGrid` `cols="quotation"` minW 1400 · lifecycle `tw-p` strip · client-review + approved block (GP 0 red) · filter chips `.z` · `+ Cost detail` · GP conflict note (masthead AF vs approved commercial). Creator open reuses `openCreatorByHandle` / dual-pool cache. Gate: `npm run test:discovery-quotation-detail-4a`. Deferred to 4b: selection bar · calculator · CW · add-creators · Preview/Export. Plan 4b shared Overlay F + quotation adapter; 4c migrate page 2. Lump-sum: all 6 templates live in export API.
+Page 4a: `DiscoverySuiteGrid` `cols="quotation"` minW 1400 · lifecycle `tw-p` strip · client-review + approved block (GP 0 red) · filter chips `.z` · `+ Cost detail` · GP conflict note. Gate: `npm run test:discovery-quotation-detail-4a`. Commit `a94bafb6`.
 
 ## Shipped 2026-09-04 — Session 3 quotations list
 
