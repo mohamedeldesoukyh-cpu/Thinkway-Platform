@@ -38,6 +38,17 @@ acceptance test.
 1. **Client-link none vs off** — `.tw-live.none` (grey / not set up) distinct from Off; busy = switch opacity. Required so list page 1 honesty held.
 2. **Overlay D shared-draft model** — Commercial Workspace staging shares drafts with the Creators grid; Close is a no-op (not “discard”). Pack Overlay D table amended; violet reserved for machine-derived only.
 
+### Accepted deviations (do not “fix” later)
+
+These are intentional product decisions from the rebuild. Treating them as bugs reopens settled honesty calls.
+
+| # | Surface | Accepted as | Why |
+|---|---|---|---|
+| 1 | Shortlist similar creators | **Two bands** (Strong / Good), not eight ordinal ranks | The similarity API only distinguishes two tiers. Fake ranks would invent precision. |
+| 2 | Document export CSV | **Quotation omits CSV; shortlist includes it** | Adapter capability list on Overlay F — quotation has no CSV API. Not a missing button bug. |
+| 3 | Campaign match @ 860px | **Five fields wrap to 4+1** | Pack “readable at 860” + `minmax(170px,1fr)` auto-fit. Intended wrap, not a relaxed breakpoint. |
+| 4 | Campaign Assignments CW | **Dialog-local drafts; left alone** | Twin of quotation Commercial Workspace with a different staging model. Quotation CW uses shared drafts with the Creators grid. Assignments CW was out of scope for the Discovery pack. |
+
 ## Order — do not reorder for first-time builds
 
 | # | File | Build | Why here |
