@@ -3,13 +3,12 @@
 import { CheckIcon, XIcon } from "lucide-react";
 import { memo, useCallback, type CSSProperties } from "react";
 
-import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
-import { CountryFlagsStack } from "@/components/creator/country-flags-stack";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   DiscoverySuiteCell,
   DiscoverySuiteRow,
 } from "@/features/discovery/components/design-system/discovery-suite-grid";
+import { DiscoverySuiteCreatorCell } from "@/features/discovery/components/design-system/discovery-suite-creator-cell";
 import {
   DISCOVERY_COLS,
   DISCOVERY_GRID_MIN_W,
@@ -20,7 +19,6 @@ import {
 } from "@/features/discovery/components/discovery-creator-platform-stats";
 import { InterestChips } from "@/features/discovery/components/discovery-interest-chips";
 import { buildDiscoveryCreatorViewModel } from "@/features/discovery/view-models/discovery-creator-view-model";
-import { ini } from "@/lib/discovery/suite/helpers";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { cn } from "@/lib/utils";
 
@@ -34,6 +32,7 @@ export const searchColsStyle = {
 type Props = {
   creator: UnifiedCreatorResult;
   selected: boolean;
+  index?: number;
   addedToShortlist?: boolean;
   platformFilter?: string[];
   isApifyAcquired?: boolean;
@@ -52,6 +51,7 @@ type Props = {
 export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
   creator,
   selected,
+  index = 0,
   addedToShortlist = false,
   platformFilter,
   isApifyAcquired,
@@ -88,46 +88,17 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
-        <span className="tw-cw2">
-          <span className="tw-avx relative overflow-hidden">
-            {vm.avatarUrl ? (
-              <CreatorAvatarImage
-                avatarUrl={vm.avatarUrl}
-                profileUrl={vm.profileUrl}
-                alt={vm.displayName}
-                sizeClassName="size-full"
-                className="border-0"
-              />
-            ) : (
-              <span aria-hidden>{ini(vm.displayName).slice(0, 2)}</span>
-            )}
-            {vm.countryFlagCodes.length > 0 ? (
-              <span className="fl">
-                <CountryFlagsStack
-                  countryCodes={vm.countryFlagCodes}
-                  size="sm"
-                  overlay
-                  className="size-full"
-                />
-              </span>
-            ) : null}
-          </span>
-          <span style={{ minWidth: 0 }}>
-            <button
-              type="button"
-              className="nm max-w-full min-w-0 cursor-pointer truncate border-0 bg-transparent p-0 text-left font-[inherit]"
-              title={vm.displayName}
-              onClick={(event) => {
-                stopBubble(event);
-                onOpenCreator();
-              }}
-            >
-              {vm.displayName}
-            </button>
-            {vm.handleLabel ? <span className="hd">{vm.handleLabel}</span> : null}
-            {vm.countryLabel !== "—" ? <span className="lo">{vm.countryLabel}</span> : null}
-          </span>
-        </span>
+        <DiscoverySuiteCreatorCell
+          name={vm.displayName}
+          handleLabel={vm.handleLabel}
+          index={index}
+          avatarUrl={vm.avatarUrl}
+          profileUrl={vm.profileUrl}
+          countryCodes={vm.countryFlagCodes}
+          locationLabel={vm.countryLabel !== "—" ? vm.countryLabel : null}
+          onOpen={onOpenCreator}
+          stopPropagation
+        />
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>

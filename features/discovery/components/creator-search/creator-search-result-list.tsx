@@ -92,6 +92,7 @@ type Props = {
 type VirtualRowProps = {
   creator: UnifiedCreatorResult;
   selected: boolean;
+  index: number;
   addedToShortlist: boolean;
   platformFilter?: string[];
   isApifyAcquired?: boolean;
@@ -105,6 +106,7 @@ type VirtualRowProps = {
 const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
   creator,
   selected,
+  index,
   addedToShortlist,
   platformFilter,
   isApifyAcquired,
@@ -135,6 +137,7 @@ const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
     <CreatorSearchSuiteRow
       creator={creator}
       selected={selected}
+      index={index}
       addedToShortlist={addedToShortlist}
       platformFilter={platformFilter}
       isApifyAcquired={isApifyAcquired}
@@ -425,6 +428,7 @@ export function CreatorSearchResultList({
                     <CreatorSearchVirtualRow
                       creator={item.creator}
                       selected={selectedIds.has(item.creator.unified_id)}
+                      index={virtualRow.index}
                       addedToShortlist={shortlistedIds.has(item.creator.unified_id)}
                       platformFilter={platformFilter}
                       isApifyAcquired={apifySourceUnifiedIds?.has(item.creator.unified_id)}

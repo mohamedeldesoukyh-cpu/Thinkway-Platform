@@ -19,6 +19,7 @@ export * from "./discovery-search-skeleton";
 export * from "./discovery-suite-cols";
 export * from "./discovery-suite-grid";
 export * from "./discovery-suite-masthead";
+export * from "./discovery-suite-creator-cell";
 export {
   DiscoveryCreatorExactHeader,
   DiscoveryCreatorExactRow,

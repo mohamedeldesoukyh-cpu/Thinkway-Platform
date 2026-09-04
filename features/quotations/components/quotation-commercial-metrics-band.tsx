@@ -98,6 +98,8 @@ type Props = {
   /** Last-saved SSOT client cost (EGP) — shown beside staged when they disagree. */
   savedClientCostEgp?: number | null;
   onOpenCommercialWorkspace?: () => void;
+  /** When true, omit the outer discovery-suite wrapper (metrics live inside tw-mast). */
+  embedded?: boolean;
 };
 
 export function QuotationCommercialMetricsBand({
@@ -120,6 +122,7 @@ export function QuotationCommercialMetricsBand({
   hasDraftEdits = false,
   savedClientCostEgp = null,
   onOpenCommercialWorkspace,
+  embedded = false,
 }: Props) {
   const gpTone: MetricDef["tone"] =
     totalGpValueEgp < 0 ? "red" : totalGpPct < gpTargetPct ? "amber" : "green";
@@ -159,7 +162,7 @@ export function QuotationCommercialMetricsBand({
     Math.abs(totalRevenueEgp - savedClientCostEgp) >= 0.01;
 
   return (
-    <div className="discovery-suite px-4 pt-1">
+    <div className={embedded ? undefined : "discovery-suite px-4 pt-1"}>
     {hasDraftEdits ? (
       <p className="tw-note wrn mx-3.5 mb-2" role="status">
         <span className="tw-live" style={{ display: "inline-block", marginRight: 8, verticalAlign: "middle" }} />

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useMemo, useOptimistic, useState, useTransition, type ReactNode } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
@@ -43,9 +44,11 @@ import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher";
 import { seedFromQuotation } from "@/features/campaign-outputs/hydration/seed-adapters";
 import { QuotationLifecycleSheet } from "@/features/quotations/components/quotation-lifecycle-sheet";
+import { QuotationLifecyclePills } from "@/features/quotations/components/quotation-lifecycle-pills";
 import { QuotationDocumentOutputToolbar } from "@/features/quotations/components/quotation-document-output-toolbar";
 import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
 import { QuotationWorkspaceStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
+import { QuotationValidityBar } from "@/features/quotations/components/quotation-validity-bar";
 import { DiscoverySuiteMasthead } from "@/features/discovery/components/design-system";
 import {
   archiveQuotation,
@@ -53,7 +56,7 @@ import {
   setQuotationShowOriginalCurrency,
   updateQuotationHeader,
 } from "@/features/quotations/actions";
-import { quotationDetailPath } from "@/features/quotations/constants";
+import { quotationDetailPath, QUOTATIONS_LIST_PATH } from "@/features/quotations/constants";
 import type { QuotationTemplateVariant } from "@/features/quotations/export/quotation-template";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
 import type { QuotationClientReviewView } from "@/features/quotations/quotation-client-review";
@@ -69,6 +72,11 @@ type Props = {
   selectedItemIds?: string[];
   onSelectedItemIdsChange?: (itemIds: string[]) => void;
   clientReview?: QuotationClientReviewView | null;
+  /** Masthead metrics strip (HTML `.tw-ms2`) — rendered inside tw-mast. */
+  metricsSlot?: ReactNode;
+  lineCount?: number;
+  creatorCount?: number;
+  showGpConflict?: boolean;
 };
 
 export function QuotationWorkspaceHeader({
@@ -82,6 +90,10 @@ export function QuotationWorkspaceHeader({
   selectedItemIds,
   onSelectedItemIdsChange,
   clientReview,
+  metricsSlot,
+  lineCount,
+  creatorCount,
+  showGpConflict = false,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -206,31 +218,70 @@ export function QuotationWorkspaceHeader({
 
   return (
     <>
-      <div className="discovery-suite shrink-0 px-4 pt-3">
+      <div className="discovery-suite shrink-0 px-[14px] pt-2">
         <DiscoverySuiteMasthead
           title={detail.name}
           id={detail.serial_number}
           badge={
-            <QuotationWorkspaceStatusPill
-              status={detail.status}
-              isExpired={detail.is_expired}
-              className="spill"
-            />
+            <>
+              <QuotationWorkspaceStatusPill
+                status={detail.status}
+                isExpired={detail.is_expired}
+                className="spill"
+              />
+              {showGpConflict ? <span className="st r">GP conflict</span> : null}
+            </>
           }
           subtitle={[
+            lineCount != null ? `${lineCount} line${lineCount === 1 ? "" : "s"}` : null,
+            creatorCount != null
+              ? `${creatorCount} creator${creatorCount === 1 ? "" : "s"}`
+              : null,
             detail.shortlist_serial ? `linked to ${detail.shortlist_serial}` : null,
-            detail.brand_name,
-            detail.client_name,
           ]
             .filter(Boolean)
             .join(" · ")}
-          actions={
-            <div className="flex flex-wrap items-center gap-1.5">
+          top={
+            <div className="tw-top">
+              <Link href={QUOTATIONS_LIST_PATH} className="tw-b sm">
+                ← Back
+              </Link>
               <EntityPrevNext
                 entity="quotations"
                 currentId={detail.id}
                 hrefForId={(id) => quotationDetailPath(id)}
               />
+              <span className="tw-crumb">
+                Discovery / <b>Client quotations</b>
+                {detail.serial_number ? ` / ${detail.serial_number}` : null}
+              </span>
+              <span className="tw-sp" />
+              <QuotationWorkspaceStatusPill
+                status={detail.status}
+                isExpired={detail.is_expired}
+                className="spill spill-compact"
+              />
+            </div>
+          }
+          band={
+            <QuotationLifecyclePills
+              detail={detail}
+              variant="masthead"
+              trailing={
+                quotationIsMovedToCampaign(detail) ? null : (
+                  <QuotationValidityBar
+                    inline
+                    validityDate={detail.validity_date}
+                    validDaysRemaining={detail.valid_days_remaining}
+                    isExpired={detail.is_expired}
+                  />
+                )
+              }
+            />
+          }
+          metricsSlot={metricsSlot}
+          actions={
+            <div className="flex flex-wrap items-center gap-1.5">
               {detail.canManage ? (
                 <QuotationToolbarButton
                   variant="glow"

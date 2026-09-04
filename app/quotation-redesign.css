@@ -303,6 +303,26 @@
   background: transparent;
 }
 
+/* freezeOnScroll={false}: keep masthead in document flow (design sticky is
+   opt-in). Do not edit frozen discovery.css — quotation-scoped override. */
+.quotation-editor-rd4 .tw-frozen.tw-frozen--static {
+  position: relative;
+  top: auto;
+  z-index: auto;
+  margin: 0;
+  padding: 0 0 8px;
+  box-shadow: none;
+  background: transparent;
+}
+
+.quotation-editor-rd4 .tw-frozen .tw-top {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  padding: 0 0 8px;
+}
+
 /* Quotation body bands — document flow only. The editor root scrolls
    (shortlist single-scrollport). Never flex:1 / min-height:0 here. */
 .quotation-editor-rd4 .quotation-body,
@@ -581,22 +601,22 @@
 
 /* —— Sections —— */
 .quotation-editor-rd4 .sec {
-  padding: 22px var(--gut);
+  padding: 14px var(--gut);
   border-bottom: 1px solid var(--line);
   background: var(--white);
 }
 
 .quotation-editor-rd4 .sec.flush {
-  padding: 22px 0;
+  padding: 10px 0;
 }
 
 .quotation-editor-rd4 .sec.compact {
-  padding: 15px var(--gut);
+  padding: 12px var(--gut);
 }
 
 .quotation-editor-rd4 .sec:last-child {
   border-bottom: none;
-  padding-bottom: 52px;
+  padding-bottom: 28px;
 }
 
 .quotation-editor-rd4 .sec-head {
@@ -604,7 +624,7 @@
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 14px;
+  margin-bottom: 10px;
 }
 
 .quotation-editor-rd4 .sec.flush > .sec-head,
@@ -749,8 +769,8 @@
   width: 100%;
   max-width: none;
   min-width: 0;
-  padding-bottom: 8px;
-  background: linear-gradient(180deg, var(--white) 0%, var(--surface, #f3f6fc) 140px);
+  padding-bottom: 0;
+  background: var(--white);
 }
 
 .quotation-editor-rd4 .creators-list .clist-head {

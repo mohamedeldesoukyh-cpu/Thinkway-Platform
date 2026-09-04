@@ -21,12 +21,19 @@ type DiscoverySuiteMastheadProps = {
   subtitle?: string | null;
   badge?: ReactNode;
   metrics?: DiscoverySuiteMetric[];
+  /**
+   * Custom metrics strip (HTML `.tw-ms2` or richer). When set, replaces the
+   * auto-built metrics grid from `metrics`.
+   */
+  metricsSlot?: ReactNode;
+  /** Optional row above the mast (HTML `.tw-top` — back / crumbs / prev-next). */
+  top?: ReactNode;
   /** White action strip (HTML `.tw-mr`) — sibling of `.tw-mh`, not inside it. */
   actions?: ReactNode;
   /** Optional lifecycle / quotation strip (HTML `.tw-mb`). */
   band?: ReactNode;
   className?: string;
-  /** Enable scroll → .mini past 64px (spec §4). */
+  /** Enable scroll → .mini past 64px (spec §4). When false, sticky freeze is off. */
   freezeOnScroll?: boolean;
 };
 
@@ -39,7 +46,7 @@ const TONE_CLASS: Record<Exclude<DiscoverySuiteMetricTone, undefined>, string> =
 
 /**
  * Spec §4 / discovery.html `bar()`:
- * `.tw-frozen > .tw-mast > .tw-mh` (+ optional `.tw-mb`) `+ .tw-mr` `+ .tw-ms2`
+ * `.tw-frozen > .tw-top? > .tw-mast > .tw-mh` (+ optional `.tw-mb`) `+ .tw-mr` `+ .tw-ms2`
  * Metric strip is ONE `.tw-ms2` grid; each cell is `<div><i>label</i><b>value</b></div>`.
  */
 export function DiscoverySuiteMasthead({
@@ -48,6 +55,8 @@ export function DiscoverySuiteMasthead({
   subtitle,
   badge,
   metrics = [],
+  metricsSlot,
+  top,
   actions,
   band,
   className,
@@ -80,9 +89,10 @@ export function DiscoverySuiteMasthead({
   return (
     <div
       id="discovery-suite-frozen"
-      className={cn("tw-frozen", className)}
+      className={cn("tw-frozen", !freezeOnScroll && "tw-frozen--static", className)}
       data-discovery-frozen
     >
+      {top}
       <div className="tw-mast">
         <div className="tw-mh">
           <div
@@ -104,7 +114,9 @@ export function DiscoverySuiteMasthead({
         </div>
         {band ? <div className="tw-mb">{band}</div> : null}
         {actions ? <div className="tw-mr">{actions}</div> : null}
-        {shown.length > 0 ? (
+        {metricsSlot != null ? (
+          metricsSlot
+        ) : shown.length > 0 ? (
           <div className="tw-ms2" role="group" aria-label="Page metrics">
             {shown.map((m) => (
               <div key={m.label}>

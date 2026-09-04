@@ -2,13 +2,12 @@
 
 import { useMemo, useState } from "react";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
-import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
-import { CountryFlagsStack } from "@/components/creator/country-flags-stack";
 import {
   DiscoverySuiteCell,
   DiscoverySuiteGrid,
   DiscoverySuiteRow,
 } from "@/features/discovery/components/design-system/discovery-suite-grid";
+import { DiscoverySuiteCreatorCell } from "@/features/discovery/components/design-system/discovery-suite-creator-cell";
 import {
   DiscoveryCreatorFeedThumbs,
   DiscoveryCreatorPlatformStatsBox,
@@ -20,7 +19,6 @@ import {
 } from "@/features/discovery/enrichment/status";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon, ArrowUpIcon, Link2Icon, UsersIcon } from "lucide-react";
-import { ini } from "@/lib/discovery/suite/helpers";
 
 import { SHORTLIST_ITEM_STATUS_LABELS, SHORTLIST_QUOTED_COLUMN_LABEL } from "../constants";
 import {
@@ -116,12 +114,14 @@ function statusPillClass(itemStatus: ShortlistRowItem["item_status"]): string {
 
 function ShortlistCreatorGridRow({
   item,
+  index,
   selected,
   selectable,
   onToggleSelect,
   onOpenCreator,
 }: {
   item: ShortlistRowItem;
+  index: number;
   selected: boolean;
   selectable: boolean;
   onToggleSelect: () => void;
@@ -146,15 +146,11 @@ function ShortlistCreatorGridRow({
           ) : null}
         </DiscoverySuiteCell>
         <DiscoverySuiteCell>
-          <span className="tw-cw2">
-            <span className="tw-avx" aria-hidden>
-              ?
-            </span>
-            <span style={{ minWidth: 0 }}>
-              <span className="nm">Unknown creator</span>
-              <span className="hd">Profile not resolved</span>
-            </span>
-          </span>
+          <DiscoverySuiteCreatorCell
+            name="Unknown creator"
+            handleLabel="Profile not resolved"
+            index={index}
+          />
         </DiscoverySuiteCell>
         <DiscoverySuiteCell>
           <span className="tw-miss">—</span>
@@ -209,58 +205,23 @@ function ShortlistCreatorGridRow({
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
-        <span className="tw-cw2">
-          <span className="tw-avx relative overflow-hidden">
-            {vm.avatarUrl ? (
-              <CreatorAvatarImage
-                avatarUrl={vm.avatarUrl}
-                profileUrl={vm.profileUrl}
-                alt={vm.displayName}
-                sizeClassName="size-full"
-                className="border-0"
-              />
-            ) : (
-              <span aria-hidden>{ini(vm.displayName).slice(0, 2)}</span>
-            )}
-            {vm.countryFlagCodes.length > 0 ? (
-              <span className="fl">
-                <CountryFlagsStack
-                  countryCodes={vm.countryFlagCodes}
-                  size="sm"
-                  overlay
-                  className="size-full"
-                />
-              </span>
-            ) : null}
-          </span>
-          <span style={{ minWidth: 0 }}>
-            <button
-              type="button"
-              className="nm max-w-full min-w-0 cursor-pointer truncate border-0 bg-transparent p-0 text-left font-[inherit]"
-              title={vm.displayName}
-              onClick={(event) => {
-                stopBubble(event);
-                openCreatorDetail();
-              }}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  stopBubble(event);
-                  openCreatorDetail();
-                }
-              }}
-            >
-              {vm.displayName}
-            </button>
-            {vm.handleLabel ? <span className="hd">{vm.handleLabel}</span> : null}
-            {vm.countryLabel !== "—" ? <span className="lo">{vm.countryLabel}</span> : null}
-            {isShortlistCreatorQuoted(item.quotation_refs) ? (
-              <span className="mt-1 block" onClick={stopBubble}>
-                <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
-              </span>
-            ) : null}
-          </span>
-        </span>
+        <DiscoverySuiteCreatorCell
+          name={vm.displayName}
+          handleLabel={vm.handleLabel}
+          index={index}
+          avatarUrl={vm.avatarUrl}
+          profileUrl={vm.profileUrl}
+          countryCodes={vm.countryFlagCodes}
+          locationLabel={vm.countryLabel !== "—" ? vm.countryLabel : null}
+          onOpen={openCreatorDetail}
+          stopPropagation
+        >
+          {isShortlistCreatorQuoted(item.quotation_refs) ? (
+            <span className="mt-1 block" onClick={stopBubble}>
+              <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
+            </span>
+          ) : null}
+        </DiscoverySuiteCreatorCell>
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
@@ -309,6 +270,7 @@ function ShortlistCreatorGridRow({
 
 function ShortlistDisplayBlockRows({
   block,
+  indexById,
   selectedIds,
   selectable,
   onToggleSelect,
@@ -316,6 +278,7 @@ function ShortlistDisplayBlockRows({
   onOpenCreator,
 }: {
   block: ShortlistDisplayBlock;
+  indexById: Map<string, number>;
   selectedIds: Set<string>;
   selectable: boolean;
   onToggleSelect: (itemId: string) => void;
@@ -352,6 +315,7 @@ function ShortlistDisplayBlockRows({
           <ShortlistCreatorGridRow
             key={item.item_id}
             item={item}
+            index={indexById.get(item.item_id) ?? 0}
             selected={selectedIds.has(item.item_id)}
             selectable={false}
             onToggleSelect={() => onToggleSelect(item.item_id)}
@@ -366,6 +330,7 @@ function ShortlistDisplayBlockRows({
   return (
     <ShortlistCreatorGridRow
       item={item}
+      index={indexById.get(item.item_id) ?? 0}
       selected={selectedIds.has(item.item_id)}
       selectable={selectable}
       onToggleSelect={() => onToggleSelect(item.item_id)}
@@ -391,6 +356,11 @@ export function ShortlistCreatorList({
     () => buildShortlistDisplayBlocks(sortedItems),
     [sortedItems]
   );
+  const indexById = useMemo(() => {
+    const map = new Map<string, number>();
+    sortedItems.forEach((item, index) => map.set(item.item_id, index));
+    return map;
+  }, [sortedItems]);
 
   const header = (
     <>
@@ -445,6 +415,7 @@ export function ShortlistCreatorList({
                 : block.items[0]!.item_id
             }
             block={block}
+            indexById={indexById}
             selectedIds={selectedIds}
             selectable={selectable}
             onToggleSelect={onToggleSelect}

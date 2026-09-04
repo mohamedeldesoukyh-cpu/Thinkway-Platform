@@ -19,8 +19,10 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   DiscoverySuiteCell,
+  DiscoverySuiteCreatorCell,
   DiscoverySuiteGrid,
   DiscoverySuiteRow,
+  discoverySuiteHandleLabel,
 } from "@/features/discovery/components/design-system";
 import { DISCOVERY_GRID_MIN_W } from "@/features/discovery/components/design-system/discovery-suite-cols";
 import { QuotationDeliverableCostDetails } from "@/features/quotations/components/quotation-deliverable-cost-details";
@@ -38,10 +40,9 @@ import {
 } from "@/features/quotations/quotation-row-math";
 import type { QuotationDeliverable, QuotationItemRow } from "@/features/quotations/types";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
-import { F, ini, PFC } from "@/lib/discovery/suite/helpers";
+import { F, PFC } from "@/lib/discovery/suite/helpers";
 import { optionNumberLabel } from "@/lib/quotations/quotation-deliverable-types";
 import { formatDeliverableGpPct } from "@/lib/quotations/quotation-deliverable-commercial";
-import { cn } from "@/lib/utils";
 
 const QUOTATION_MIN_W = DISCOVERY_GRID_MIN_W.quotation ?? 1400;
 
@@ -71,11 +72,14 @@ function PlatformMarks({ platforms }: { platforms: string | null | undefined }) 
   );
 }
 
-function avTone(index: number): "k2" | "k3" | undefined {
-  const n = (index % 4) + 1;
-  if (n === 2) return "k2";
-  if (n === 3) return "k3";
-  return undefined;
+function quotationCreatorCountryCodes(item: QuotationItemRow): string[] | null {
+  const fromSource = item.creator_profile_source?.countryCodes?.filter(Boolean);
+  if (fromSource && fromSource.length > 0) return fromSource;
+  const single =
+    item.creator_profile_source?.countryCode?.trim() ||
+    item.country_code?.trim() ||
+    null;
+  return single ? [single] : null;
 }
 
 type LineRowProps = {
@@ -113,8 +117,14 @@ function QuotationPackLineRow({
   const zeroCost = !(Number(resolved.cost) > 0) && !(Number(computed.costEgp) > 0);
   const linePending = manualSave.isLinePending(item.id);
   const tier = resolveCreatorTierLabel({ followers: item.followers });
-  const name = item.creator_name?.trim() || "Unknown";
-  const handle = (item.handle ?? "").replace(/^@+/, "");
+  const name =
+    item.creator_profile_source?.displayName?.trim() ||
+    item.creator_name?.trim() ||
+    "Unknown";
+  const handleLabel =
+    discoverySuiteHandleLabel(
+      item.creator_profile_source?.handle ?? item.handle
+    ) ?? null;
   const optionLabel =
     optionNumberLabel(item.option_number) ?? `Option ${item.option_number}`;
 
@@ -232,34 +242,19 @@ function QuotationPackLineRow({
         <span className="tw-p p-b">{optionLabel}</span>
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>
-        <span className="tw-cw2">
-          <span className={cn("tw-avx", avTone(index))} aria-hidden>
-            {ini(name).slice(0, 1)}
-          </span>
-          <span style={{ minWidth: 0 }}>
-            <button
-              type="button"
-              className="nm"
-              onClick={() => onOpenCreator?.(item)}
-              style={{
-                border: 0,
-                background: "none",
-                padding: 0,
-                font: "inherit",
-                cursor: "pointer",
-                textAlign: "left",
-                maxWidth: "100%",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-                whiteSpace: "nowrap",
-                display: "block",
-              }}
-            >
-              {name}
-            </button>
-            <span className="hd">@{handle || "—"}</span>
-          </span>
-        </span>
+        <DiscoverySuiteCreatorCell
+          name={name}
+          handleLabel={handleLabel}
+          index={index}
+          avatarUrl={
+            item.creator_profile_source?.avatarUrl ?? item.profile_image_url
+          }
+          profileUrl={
+            item.creator_profile_source?.profile_url ?? item.profile_url
+          }
+          countryCodes={quotationCreatorCountryCodes(item)}
+          onOpen={onOpenCreator ? () => onOpenCreator(item) : undefined}
+        />
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>
         <span className="tw-p p-v">{tier}</span>

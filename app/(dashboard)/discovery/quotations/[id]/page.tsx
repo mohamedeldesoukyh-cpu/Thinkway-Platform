@@ -118,6 +118,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
       activeHref={canonicalPath}
       variant="flush"
       showHeader={false}
+      hideShellChrome
     >
       {/* Match shortlist: outer overflow-hidden; QuotationWorkspace owns the scrollport. */}
       <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[var(--background)]">

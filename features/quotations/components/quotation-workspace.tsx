@@ -47,8 +47,6 @@ import type { QuotationCreatorsAddedResult } from "@/features/quotations/compone
 import { useQuotationWorkspaceShortcuts } from "@/features/quotations/components/use-quotation-workspace-shortcuts";
 import { QuotationTermsAccordion } from "@/features/quotations/components/quotation-terms-accordion";
 import { QuotationCommercialMetricsBand } from "@/features/quotations/components/quotation-commercial-metrics-band";
-import { QuotationLifecyclePills } from "@/features/quotations/components/quotation-lifecycle-pills";
-import { QuotationValidityBar } from "@/features/quotations/components/quotation-validity-bar";
 import { QuotationWorkspaceHeader } from "@/features/quotations/components/quotation-workspace-header";
 import { ConvertQuotationDialog } from "@/features/quotations/components/convert-quotation-dialog";
 import { QuotationClientReviewPanel } from "@/features/quotations/components/quotation-client-review-panel";
@@ -60,7 +58,6 @@ import {
   type QuotationClientSelectionFilter,
 } from "@/features/quotations/quotation-client-review";
 import { quotationItemClientCreatorId } from "@/features/client-workspace/quotation-item-creator-id";
-import { quotationIsMovedToCampaign } from "@/features/client-workspace/client-review-selection";
 import { setQuotationReviewCreatorsOnBehalfAction } from "@/features/client-workspace/actions/internal-quotation-review-selection-action";
 import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
@@ -723,7 +720,7 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    <div className="quotation-editor-rd4 flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain pb-24">
+    <div className="quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain pb-16">
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <QuotationWorkspaceHeader
         detail={detail}
@@ -740,45 +737,39 @@ function QuotationWorkspaceContent({
         selectedItemIds={[...selectedIds]}
         onSelectedItemIdsChange={(itemIds) => setSelectedIds(new Set(itemIds))}
         clientReview={clientReview}
-      />
-
-      <QuotationCommercialMetricsBand
-        totalCostEgp={totals.totalCostEgp}
-        totalRevenueEgp={totals.totalClientCostEgp}
-        totalCommercialGpEgp={totals.totalGpValueEgp}
-        totalAgencyFeeEgp={totals.totalAfValueEgp}
-        totalGpValueEgp={totals.headerGpValueEgp}
-        totalGpPct={totals.headerGpPct}
-        totalPmPct={totals.headerPmPct}
-        gpTargetPct={detail.gp_target_pct}
+        lineCount={visibleItems.length}
         creatorCount={uniqueCreatorCount}
-        version={detail.version}
-        validDaysRemaining={detail.valid_days_remaining}
-        displayCurrency={displayCurrency}
-        displayFxRateToEgp={displayFxRateToEgp}
-        originalTotals={originalTotals}
-        onDisplayCurrencyChange={
-          detail.canManage ? handleDisplayCurrencyChange : undefined
+        showGpConflict={
+          Math.abs(totals.headerGpValueEgp - totals.totalGpValueEgp) >= 0.01 ||
+          totals.totalAfValueEgp > 0.01
         }
-        currencyDisabled={currencyPending || !detail.canManage}
-        hasDraftEdits={pendingItemIds.size > 0}
-        savedClientCostEgp={savedTotals.totalClientCostEgp}
-        onOpenCommercialWorkspace={
-          detail.canManage ? () => setCommercialWorkspaceOpen(true) : undefined
-        }
-      />
-
-      <QuotationLifecyclePills
-        detail={detail}
-        trailing={
-          quotationIsMovedToCampaign(detail) ? null : (
-            <QuotationValidityBar
-              inline
-              validityDate={detail.validity_date}
-              validDaysRemaining={detail.valid_days_remaining}
-              isExpired={detail.is_expired}
-            />
-          )
+        metricsSlot={
+          <QuotationCommercialMetricsBand
+            embedded
+            totalCostEgp={totals.totalCostEgp}
+            totalRevenueEgp={totals.totalClientCostEgp}
+            totalCommercialGpEgp={totals.totalGpValueEgp}
+            totalAgencyFeeEgp={totals.totalAfValueEgp}
+            totalGpValueEgp={totals.headerGpValueEgp}
+            totalGpPct={totals.headerGpPct}
+            totalPmPct={totals.headerPmPct}
+            gpTargetPct={detail.gp_target_pct}
+            creatorCount={uniqueCreatorCount}
+            version={detail.version}
+            validDaysRemaining={detail.valid_days_remaining}
+            displayCurrency={displayCurrency}
+            displayFxRateToEgp={displayFxRateToEgp}
+            originalTotals={originalTotals}
+            onDisplayCurrencyChange={
+              detail.canManage ? handleDisplayCurrencyChange : undefined
+            }
+            currencyDisabled={currencyPending || !detail.canManage}
+            hasDraftEdits={pendingItemIds.size > 0}
+            savedClientCostEgp={savedTotals.totalClientCostEgp}
+            onOpenCommercialWorkspace={
+              detail.canManage ? () => setCommercialWorkspaceOpen(true) : undefined
+            }
+          />
         }
       />
 
@@ -879,7 +870,7 @@ function QuotationWorkspaceContent({
             onGlobalCalcMode={setGlobalCalcMode}
           />
 
-          <div className="creators-list discovery-suite">
+          <div className="creators-list">
             <PlatformErrorBoundary
               surface="generic"
               title="Creators grid failed to render"
