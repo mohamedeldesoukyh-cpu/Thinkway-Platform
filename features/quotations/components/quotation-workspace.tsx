@@ -722,7 +722,13 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    <div className="quotation-editor-rd4 flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+    // Single scrollport (shortlist pattern). Nested `.scroll` + outer
+    // `overflow-hidden` collapsed to 0 height when the shell height chain
+    // was indefinite — masthead stayed visible, metrics/creators vanished.
+    <div
+      className="quotation-editor-rd4 flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain"
+      data-discovery-scroll
+    >
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <QuotationWorkspaceHeader
         detail={detail}
@@ -741,7 +747,7 @@ function QuotationWorkspaceContent({
         clientReview={clientReview}
       />
 
-      <div className="scroll flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
+      <div className="scroll flex flex-col">
         <QuotationCommercialMetricsBand
           totalCostEgp={totals.totalCostEgp}
           totalRevenueEgp={totals.totalClientCostEgp}

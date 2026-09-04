@@ -294,13 +294,13 @@
   font-size: 18px;
 }
 
+/* Content band under the masthead — parent `.quotation-editor-rd4` scrolls.
+   Do not use flex:1 + min-height:0 + overflow-y here: that nested scroller
+   collapses to 0px when the shell height chain is indefinite (header-only bug). */
 .quotation-editor-rd4 .scroll {
-  flex: 1;
-  min-height: 0;
   min-width: 0;
   width: 100%;
   max-width: none;
-  overflow-y: auto;
   background: var(--white);
 }
 

@@ -3,9 +3,15 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## Shipped 2026-09-04 — Sessions 5–8
+## In progress 2026-09-04 — Quotation detail blank body
 
-- Search + pool test. **6+7** `9fecadcf`. **860:** field grid wraps 4+1 — holds (no quiet 960 floor). **Dev duplicates:** 64 records, count **52**, NBK×2 @3h — wrn note fires. **Page 8 Import** (adapt, uncommitted): deletion warning, summed footer 3169/2630/204/113, conflict note, `.z` zeros, `cols="import"` minW 1340. Gate: `npm run test:discovery-import-page`.
+**Symptom:** Dev quotation detail showed masthead/toolbar only; metrics + creators white.  
+**Cause:** Nested `.scroll` (`flex:1; min-height:0; overflow-y`) inside `overflow-hidden` collapsed to 0px when shell height was indefinite.  
+**Fix (local, not pushed):** single scrollport on `.quotation-editor-rd4` + `data-discovery-scroll` (shortlist pattern); `.scroll` is content-only. Console `/api/creators/public…` 404s + `sw.js` noise are separate from the blank body.
+
+## Shipped 2026-09-04 — Discovery pack CLOSED
+
+Pushed through `38523a9a` on `develop` (auto-deploys Dev). Module close: `npm run test:discovery-pack` green. Accepted deviations recorded in pack README. Manual Dev behavioural pass still needs a signed-in session (login gate).
 
 ## Shipped 2026-09-04 — Session 4b2 adapt D/E + Overlay F
 
