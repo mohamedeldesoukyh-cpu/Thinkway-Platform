@@ -85,7 +85,7 @@ assert.ok(
 );
 
 assert.ok(
-  /\{items\.length\} of \{portfolio\.length\} shown/.test(LIB),
+  /\{visibleItems\.length\} of \{portfolio\.length\} shown/.test(LIB),
   "footer X of Y shown"
 );
 
@@ -103,7 +103,15 @@ assert.ok(
 
 assert.ok(LIB.includes('aria-label="Select all"'), "checkbox column");
 assert.ok(LIB.includes("Duplicates"), "masthead Duplicates");
-
+assert.ok(
+  LIB.includes("duplicatesOnly") && LIB.includes("Show duplicate groups"),
+  "duplicates filter action path"
+);
+assert.ok(
+  DUP.includes("look like duplicates") &&
+    DUP.includes("Review before running Discovery"),
+  "scale-first duplicate note"
+);
 const sampleHtml = `
 <div class="discovery-suite">
   <div class="tw-c">

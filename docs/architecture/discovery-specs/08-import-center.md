@@ -2,6 +2,12 @@
 
 **Route:** `/discovery/import` · **`PG='imp'`** · function `pgImport()`
 **Prerequisite:** `00-FOUNDATION.md`. **Owns no overlays.** Standalone — build any time after step 0.
+**Delivery:** **Adapted** from live `ImportCenterWorkspace`.
+
+> **Naming:** HTML pack page key is `imp` / `PG='imp'`. The frozen track in
+> `DISCOVERY_COLS` is keyed **`import`**. Use `DiscoverySuiteGrid cols="import"` — that is not a typo
+> relative to `PG='imp'`; one is the mock page id, the other is the TypeScript cols key (same pattern
+> as `intel` vs page label “Intelligence”).
 
 ---
 

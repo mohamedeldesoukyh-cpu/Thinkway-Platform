@@ -53,6 +53,7 @@ import { CampaignIntelligenceDetailSheet } from "./campaign-intelligence-detail-
 import {
   buildIntelligenceLibraryNote,
   countDuplicateRecords,
+  duplicateRecordIdSet,
   findIntelligenceDuplicateGroups,
 } from "../lib/intelligence-library-duplicates";
 
@@ -97,6 +98,7 @@ export function CampaignIntelligenceLibrary({
     useState<CampaignIntelligenceProfile | null>(null);
   const [briefOpen, setBriefOpen] = useState(false);
   const [openingId, setOpeningId] = useState<string | null>(null);
+  const [duplicatesOnly, setDuplicatesOnly] = useState(false);
 
   const loadPortfolio = useCallback(async () => {
     try {
@@ -158,10 +160,19 @@ export function CampaignIntelligenceLibrary({
     () => countDuplicateRecords(portfolio),
     [portfolio]
   );
-  const libraryNote = useMemo(
-    () => buildIntelligenceLibraryNote(duplicateGroups),
+  const duplicateIds = useMemo(
+    () => duplicateRecordIdSet(duplicateGroups),
     [duplicateGroups]
   );
+  const libraryNote = useMemo(
+    () => buildIntelligenceLibraryNote(duplicateGroups, portfolio.length),
+    [duplicateGroups, portfolio.length]
+  );
+
+  const visibleItems = useMemo(() => {
+    if (!duplicatesOnly) return items;
+    return items.filter((item) => duplicateIds.has(item.id));
+  }, [duplicatesOnly, duplicateIds, items]);
 
   const newestLabel = useMemo(() => {
     if (portfolio.length === 0) return "—";
@@ -234,7 +245,8 @@ export function CampaignIntelligenceLibrary({
   }
 
   const allSelected =
-    items.length > 0 && items.every((item) => selectedIds.has(item.id));
+    visibleItems.length > 0 &&
+    visibleItems.every((item) => selectedIds.has(item.id));
   const someSelected = selectedIds.size > 0 && !allSelected;
 
   function toggleSelectAll() {
@@ -242,7 +254,7 @@ export function CampaignIntelligenceLibrary({
       setSelectedIds(new Set());
       return;
     }
-    setSelectedIds(new Set(items.map((item) => item.id)));
+    setSelectedIds(new Set(visibleItems.map((item) => item.id)));
   }
 
   function toggleSelect(id: string) {
@@ -256,7 +268,7 @@ export function CampaignIntelligenceLibrary({
 
   const countLabel = loading
     ? "…"
-    : `${items.length} of ${portfolio.length} shown`;
+    : `${visibleItems.length} of ${portfolio.length} shown`;
 
   const mastheadMetrics = useMemo(
     () => [
@@ -280,7 +292,10 @@ export function CampaignIntelligenceLibrary({
       { label: "Newest", value: newestLabel, tone: "s" as const },
       {
         label: "Duplicates",
-        value: duplicateCount,
+        value:
+          portfolio.length > 0
+            ? `${duplicateCount} of ${portfolio.length}`
+            : 0,
         tone: duplicateCount > 0 ? ("r" as const) : undefined,
       },
     ],
@@ -391,6 +406,19 @@ export function CampaignIntelligenceLibrary({
         </SelectContent>
       </Select>
       {creatorSearchControl}
+      {duplicateCount > 0 ? (
+        <Button
+          type="button"
+          variant={duplicatesOnly ? "default" : "outline"}
+          size="sm"
+          className="h-8 px-3 text-[12px] font-semibold"
+          onClick={() => setDuplicatesOnly((open) => !open)}
+        >
+          {duplicatesOnly
+            ? "Show all"
+            : `Duplicates only · ${duplicateCount}`}
+        </Button>
+      ) : null}
     </DiscoveryFilterBar>
   );
 
@@ -422,7 +450,7 @@ export function CampaignIntelligenceLibrary({
     <>
       <DiscoverySuiteCell />
       <DiscoverySuiteCell>
-        {items.length} of {portfolio.length} shown
+        {visibleItems.length} of {portfolio.length} shown
       </DiscoverySuiteCell>
       <DiscoverySuiteCell />
       <DiscoverySuiteCell />
@@ -449,7 +477,7 @@ export function CampaignIntelligenceLibrary({
       ) : null}
 
       <DiscoveryListCard
-        className={cn(items.length > 0 && !loading && "mb-0 rounded-b-none")}
+        className={cn(visibleItems.length > 0 && !loading && "mb-0 rounded-b-none")}
       >
         {compact ? (
           <DiscoverySectionHeader
@@ -464,14 +492,33 @@ export function CampaignIntelligenceLibrary({
         <DiscoveryListCard className="rounded-t-none">
           <DiscoveryLoadingState message="Loading library…" className="py-12" />
         </DiscoveryListCard>
-      ) : items.length === 0 ? (
+      ) : visibleItems.length === 0 ? (
         <DiscoveryListCard className="rounded-t-none">
           <DiscoveryEmptyState
-            title="No intelligence records"
-            description="Upload a campaign brief in Creator Search or link intelligence from a campaign workspace."
+            title={
+              duplicatesOnly
+                ? "No duplicate groups in this filter"
+                : "No intelligence records"
+            }
+            description={
+              duplicatesOnly
+                ? "Clear Duplicates only to see the full library again."
+                : "Upload a campaign brief in Creator Search or link intelligence from a campaign workspace."
+            }
             icon={FileTextIcon}
             className="py-12"
-          />
+          >
+            {duplicatesOnly ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9 text-[12.5px] font-bold"
+                onClick={() => setDuplicatesOnly(false)}
+              >
+                Show all
+              </Button>
+            ) : null}
+          </DiscoveryEmptyState>
         </DiscoveryListCard>
       ) : (
         <>
@@ -486,7 +533,7 @@ export function CampaignIntelligenceLibrary({
             header={header}
             footer={footer}
           >
-            {items.map((item) => {
+            {visibleItems.map((item) => {
               const isActive = item.id === activeProfileId;
               const isSelected = selectedIds.has(item.id);
               const isDuplicate = duplicateGroups.some(
@@ -582,9 +629,18 @@ export function CampaignIntelligenceLibrary({
               );
             })}
           </DiscoverySuiteGrid>
-          <p className={cn("tw-note", duplicateCount > 0 && "wrn")}>
-            {libraryNote}
-          </p>
+          <div className={cn("tw-note", duplicateCount > 0 && "wrn")}>
+            <p>{libraryNote}</p>
+            {duplicateCount > 0 ? (
+              <button
+                type="button"
+                className="tw-b sm mt-2"
+                onClick={() => setDuplicatesOnly(true)}
+              >
+                Show duplicate groups
+              </button>
+            ) : null}
+          </div>
         </>
       )}
 

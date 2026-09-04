@@ -3,10 +3,9 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## Shipped 2026-09-04 — Sessions 5–7 Search + Intelligence + Match
+## Shipped 2026-09-04 — Sessions 5–8
 
-- Search (`899717df` + pool test `6a67a0fb`): virtualizer + inherited `--cols`.
-- **6+7 adapt (pending commit):** Intelligence library + Campaign match already lived — closed pack gaps. Library: `--cols` intel/1080, Open+Search + note, duplicates actionable, footer X of Y, unknown slug `notFound`. Match: honest form + empty (cause + two actions), Load from library → `/discovery/intelligence/library`, alias `/discovery/match`. Gates: `test:discovery-intelligence-page`, `test:discovery-campaign-match-page`. Next: page 8 alone.
+- Search + pool test. **6+7** `9fecadcf`. **860:** field grid wraps 4+1 — holds (no quiet 960 floor). **Dev duplicates:** 64 records, count **52**, NBK×2 @3h — wrn note fires. **Page 8 Import** (adapt, uncommitted): deletion warning, summed footer 3169/2630/204/113, conflict note, `.z` zeros, `cols="import"` minW 1340. Gate: `npm run test:discovery-import-page`.
 
 ## Shipped 2026-09-04 — Session 4b2 adapt D/E + Overlay F
 

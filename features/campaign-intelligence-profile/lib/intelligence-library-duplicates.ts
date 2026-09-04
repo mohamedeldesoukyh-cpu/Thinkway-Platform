@@ -6,6 +6,8 @@ export type IntelligenceDuplicateGroup = {
   clientName: string | null;
   hoursApart: number;
   recordCount: number;
+  /** Item ids in this same-day same-title/brand/entity group. */
+  itemIds: string[];
 };
 
 function dayKey(iso: string): string {
@@ -24,7 +26,7 @@ function groupKey(item: CampaignIntelligenceLibraryItem): string {
 
 /**
  * Same brief + brand + legal entity on the same calendar day, ≥2 rows.
- * Pack example: two NBK Bank records three hours apart → masthead Duplicates 2.
+ * Live Dev often has dozens of such records — lead with scale, not one example.
  */
 export function findIntelligenceDuplicateGroups(
   items: CampaignIntelligenceLibraryItem[]
@@ -56,9 +58,10 @@ export function findIntelligenceDuplicateGroups(
       clientName: sample.clientName,
       hoursApart,
       recordCount: list.length,
+      itemIds: list.map((item) => item.id),
     });
   }
-  return groups;
+  return groups.sort((a, b) => b.recordCount - a.recordCount);
 }
 
 export function countDuplicateRecords(
@@ -70,14 +73,51 @@ export function countDuplicateRecords(
   );
 }
 
-export function buildIntelligenceLibraryNote(
+export function duplicateRecordIdSet(
   groups: IntelligenceDuplicateGroup[]
+): Set<string> {
+  const ids = new Set<string>();
+  for (const group of groups) {
+    for (const id of group.itemIds) ids.add(id);
+  }
+  return ids;
+}
+
+function pickExampleGroup(
+  groups: IntelligenceDuplicateGroup[]
+): IntelligenceDuplicateGroup | null {
+  if (groups.length === 0) return null;
+  return (
+    groups.find((group) => /nbk/i.test(group.title)) ??
+    groups.find((group) => group.recordCount === 2) ??
+    groups[0]!
+  );
+}
+
+/**
+ * Scale-first note. Open/Search verbs stay in a separate always-on line in the UI
+ * when needed; this note owns the duplicate honesty problem.
+ */
+export function buildIntelligenceLibraryNote(
+  groups: IntelligenceDuplicateGroup[],
+  totalRecords: number
 ): string {
   const action =
     "Each row is a saved brief. Search runs Discovery against it; Open shows the brief itself.";
-  if (groups.length === 0) return action;
-  const first = groups[0]!;
+  if (groups.length === 0 || totalRecords <= 0) return action;
+
+  const dupCount = groups.reduce((sum, group) => sum + group.recordCount, 0);
+  const example = pickExampleGroup(groups);
   const hours =
-    first.hoursApart === 1 ? "1 hour" : `${first.hoursApart} hours`;
-  return `${action} Two ${first.title} records were created ${hours} apart on the same day — worth checking one is not a duplicate.`;
+    example == null
+      ? ""
+      : example.hoursApart === 1
+        ? "1 hour"
+        : `${example.hoursApart} hours`;
+  const exampleSentence =
+    example == null
+      ? ""
+      : ` Two ${example.title} records were created ${hours} apart.`;
+
+  return `${dupCount} of ${totalRecords} records look like duplicates — same brief title, brand and legal entity, created the same day.${exampleSentence} Review before running Discovery against these briefs. ${action}`;
 }

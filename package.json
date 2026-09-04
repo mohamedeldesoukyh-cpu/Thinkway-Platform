@@ -195,6 +195,7 @@
     "test:discovery-intelligence-page": "npx tsx scripts/check-discovery-intelligence-page.ts",
     "test:discovery-campaign-match-page": "npx tsx scripts/check-discovery-campaign-match-page.ts",
     "test:discovery-import-page": "npx tsx scripts/check-discovery-import-page.ts",
+    "test:discovery-pack": "npx tsx scripts/check-discovery-pack-all.ts",
     "test:discovery-quotations-page": "npx tsx scripts/check-discovery-quotations-page.ts",
     "test:discovery-quotation-detail-4a": "npx tsx scripts/check-discovery-quotation-detail-4a.ts",
     "test:discovery-quotation-detail-4b": "npx tsx scripts/check-discovery-quotation-detail-4b.ts",
