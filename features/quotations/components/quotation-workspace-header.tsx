@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useEffect, useMemo, useOptimistic, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
@@ -69,6 +69,8 @@ type Props = {
   selectedItemIds?: string[];
   onSelectedItemIdsChange?: (itemIds: string[]) => void;
   clientReview?: QuotationClientReviewView | null;
+  /** Rendered under the masthead inside the same visible chrome stack. */
+  children?: React.ReactNode;
 };
 
 export function QuotationWorkspaceHeader({
@@ -82,6 +84,7 @@ export function QuotationWorkspaceHeader({
   selectedItemIds,
   onSelectedItemIdsChange,
   clientReview,
+  children,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -206,7 +209,7 @@ export function QuotationWorkspaceHeader({
 
   return (
     <>
-      <div className="discovery-suite shrink-0 px-4 pt-3">
+      <div className="discovery-suite shrink-0 px-4 pt-3 pb-10">
         <DiscoverySuiteMasthead
           title={detail.name}
           id={detail.serial_number}
@@ -390,6 +393,7 @@ export function QuotationWorkspaceHeader({
           }
           freezeOnScroll={false}
         />
+        {children}
       </div>
 
       <QuotationLifecycleSheet

@@ -3,9 +3,9 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## Shipped 2026-09-05 — Quotation blank body (pass 4)
+## Shipped 2026-09-05 — Quotation blank body (pass 5)
 
-Metrics painted; lifecycle + creators still blank. Nested Discovery `overflow-hidden` was clipping the document below the metrics band. Flush shell now uses caller overflow (`overflow-y-auto` on quotation). Metrics/lifecycle/body are one document-flow column; creators grid has its own error boundary; temporary workspace sentinel line for verification.
+Root cause: body siblings after the masthead wrapper were clipped by nested DashboardShell/Discovery `overflow-hidden`. Fix matches shortlist: page outer `overflow-hidden` + workspace owns `overflow-y-auto`; metrics/lifecycle/creators render as **children inside** the same `discovery-suite` wrapper as the masthead (content that already painted). Sentinel line kept for Dev verify.
 
 ## Shipped 2026-09-04 — Discovery pack CLOSED
 

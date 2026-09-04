@@ -118,10 +118,9 @@ export default async function QuotationDetailPage({ params }: PageProps) {
       activeHref={canonicalPath}
       variant="flush"
       showHeader={false}
-      className="overflow-y-auto overscroll-y-contain"
-      contentClassName="overflow-y-auto overscroll-y-contain"
     >
-      <div className="flex min-h-0 w-full min-w-0 flex-col bg-white dark:bg-[var(--background)]">
+      {/* Match shortlist: outer overflow-hidden; QuotationWorkspace owns the scrollport. */}
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[var(--background)]">
         <QuotationWorkspace
           detail={detail}
           formOptions={formOptions}

@@ -723,7 +723,7 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    <div className="quotation-editor-rd4 flex w-full min-w-0 flex-col pb-24">
+    <div className="quotation-editor-rd4 flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain pb-24">
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <QuotationWorkspaceHeader
         detail={detail}
@@ -740,219 +740,219 @@ function QuotationWorkspaceContent({
         selectedItemIds={[...selectedIds]}
         onSelectedItemIdsChange={(itemIds) => setSelectedIds(new Set(itemIds))}
         clientReview={clientReview}
-      />
-
-      <QuotationCommercialMetricsBand
-        totalCostEgp={totals.totalCostEgp}
-        totalRevenueEgp={totals.totalClientCostEgp}
-        totalCommercialGpEgp={totals.totalGpValueEgp}
-        totalAgencyFeeEgp={totals.totalAfValueEgp}
-        totalGpValueEgp={totals.headerGpValueEgp}
-        totalGpPct={totals.headerGpPct}
-        totalPmPct={totals.headerPmPct}
-        gpTargetPct={detail.gp_target_pct}
-        creatorCount={uniqueCreatorCount}
-        version={detail.version}
-        validDaysRemaining={detail.valid_days_remaining}
-        displayCurrency={displayCurrency}
-        displayFxRateToEgp={displayFxRateToEgp}
-        originalTotals={originalTotals}
-        onDisplayCurrencyChange={
-          detail.canManage ? handleDisplayCurrencyChange : undefined
-        }
-        currencyDisabled={currencyPending || !detail.canManage}
-        hasDraftEdits={pendingItemIds.size > 0}
-        savedClientCostEgp={savedTotals.totalClientCostEgp}
-        onOpenCommercialWorkspace={
-          detail.canManage ? () => setCommercialWorkspaceOpen(true) : undefined
-        }
-      />
-
-      <QuotationLifecyclePills
-        detail={detail}
-        trailing={
-          quotationIsMovedToCampaign(detail) ? null : (
-            <QuotationValidityBar
-              inline
-              validityDate={detail.validity_date}
-              validDaysRemaining={detail.valid_days_remaining}
-              isExpired={detail.is_expired}
-            />
-          )
-        }
-      />
-
-      <p
-        className="px-8 py-2 text-[12px] font-semibold text-foreground"
-        data-quotation-body-sentinel
       >
-        Workspace · {uniqueCreatorCount} creators · {visibleItems.length} lines
-      </p>
+        <QuotationCommercialMetricsBand
+          totalCostEgp={totals.totalCostEgp}
+          totalRevenueEgp={totals.totalClientCostEgp}
+          totalCommercialGpEgp={totals.totalGpValueEgp}
+          totalAgencyFeeEgp={totals.totalAfValueEgp}
+          totalGpValueEgp={totals.headerGpValueEgp}
+          totalGpPct={totals.headerGpPct}
+          totalPmPct={totals.headerPmPct}
+          gpTargetPct={detail.gp_target_pct}
+          creatorCount={uniqueCreatorCount}
+          version={detail.version}
+          validDaysRemaining={detail.valid_days_remaining}
+          displayCurrency={displayCurrency}
+          displayFxRateToEgp={displayFxRateToEgp}
+          originalTotals={originalTotals}
+          onDisplayCurrencyChange={
+            detail.canManage ? handleDisplayCurrencyChange : undefined
+          }
+          currencyDisabled={currencyPending || !detail.canManage}
+          hasDraftEdits={pendingItemIds.size > 0}
+          savedClientCostEgp={savedTotals.totalClientCostEgp}
+          onOpenCommercialWorkspace={
+            detail.canManage ? () => setCommercialWorkspaceOpen(true) : undefined
+          }
+        />
 
-        {clientReview ? (
-          <QuotationClientReviewPanel
-            review={clientReview}
-            items={visibleItems}
-            filter={clientSelectionFilter}
-            onFilter={setClientSelectionFilter}
-            canManage={detail.canManage}
-            quotationApproved={detail.status === "approved"}
-            onSelectApproved={() => selectByClientState("accepted")}
-            onSelectUnderReview={() => selectByClientState("in_review")}
-            onAcceptOnBehalf={acceptUnderReviewOnBehalf}
-            onMoveApprovedToCampaign={() => {
-              if (approvedItemIds.length === 0) {
-                toast.error("No approved creators to move.");
-                return;
-              }
-              if (detail.status !== "approved") {
-                toast.error("Approve this quotation first, then move the approved creators to the campaign.");
-                return;
-              }
-              setConvertApprovedOpen(true);
-            }}
-            pending={bulkPending}
-          />
-        ) : null}
+        <QuotationLifecyclePills
+          detail={detail}
+          trailing={
+            quotationIsMovedToCampaign(detail) ? null : (
+              <QuotationValidityBar
+                inline
+                validityDate={detail.validity_date}
+                validDaysRemaining={detail.valid_days_remaining}
+                isExpired={detail.is_expired}
+              />
+            )
+          }
+        />
 
-        <section
-          className={cn(discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
+        <p
+          className="px-8 py-2 text-[12px] font-semibold text-foreground"
+          data-quotation-body-sentinel
         >
-        <div className="sec compact">
-          <QuotationClientBrandPanel
-            detail={detail}
-            options={formOptions}
-            disabled={!detail.canManage}
-          />
-        </div>
-        {visibleItems.length === 0 ? (
-          <EmptyState
-            quotationId={detail.id}
-            canManage={detail.canManage}
-            onAdded={handleCreatorsAdded}
-            addCreatorsOpen={addCreatorsOpen}
-            onAddCreatorsOpenChange={setAddCreatorsOpen}
-          />
-        ) : (
-          <>
-            <div className="sec flush">
-            <div className="sec-head">
-              <div className="min-w-0">
-                <h2>
-                  Creators{" "}
-                  <span>
-                    · {uniqueCreatorCount} · {visibleItems.length} lines
-                  </span>
-                </h2>
-                <p>
-                  Grouped by influencer — duplicated creators are labeled Option 1, 2, 3… on each line.
-                </p>
+          Workspace · {uniqueCreatorCount} creators · {visibleItems.length} lines
+        </p>
+
+          {clientReview ? (
+            <QuotationClientReviewPanel
+              review={clientReview}
+              items={visibleItems}
+              filter={clientSelectionFilter}
+              onFilter={setClientSelectionFilter}
+              canManage={detail.canManage}
+              quotationApproved={detail.status === "approved"}
+              onSelectApproved={() => selectByClientState("accepted")}
+              onSelectUnderReview={() => selectByClientState("in_review")}
+              onAcceptOnBehalf={acceptUnderReviewOnBehalf}
+              onMoveApprovedToCampaign={() => {
+                if (approvedItemIds.length === 0) {
+                  toast.error("No approved creators to move.");
+                  return;
+                }
+                if (detail.status !== "approved") {
+                  toast.error("Approve this quotation first, then move the approved creators to the campaign.");
+                  return;
+                }
+                setConvertApprovedOpen(true);
+              }}
+              pending={bulkPending}
+            />
+          ) : null}
+
+          <section
+            className={cn(discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
+          >
+          <div className="sec compact">
+            <QuotationClientBrandPanel
+              detail={detail}
+              options={formOptions}
+              disabled={!detail.canManage}
+            />
+          </div>
+          {visibleItems.length === 0 ? (
+            <EmptyState
+              quotationId={detail.id}
+              canManage={detail.canManage}
+              onAdded={handleCreatorsAdded}
+              addCreatorsOpen={addCreatorsOpen}
+              onAddCreatorsOpenChange={setAddCreatorsOpen}
+            />
+          ) : (
+            <>
+              <div className="sec flush">
+              <div className="sec-head">
+                <div className="min-w-0">
+                  <h2>
+                    Creators{" "}
+                    <span>
+                      · {uniqueCreatorCount} · {visibleItems.length} lines
+                    </span>
+                  </h2>
+                  <p>
+                    Grouped by influencer — duplicated creators are labeled Option 1, 2, 3… on each line.
+                  </p>
+                </div>
+                <div className="sec-tools">
+                  <QuotationCommercialEntry
+                    quotationId={detail.id}
+                    items={detail.items}
+                    drafts={drafts}
+                    onDraftChange={updateDraft}
+                    onDraftsMerge={mergeDrafts}
+                    canManage={detail.canManage}
+                    triggerClassName="btn sm"
+                    displayCurrency={displayCurrency}
+                    displayFxRateToEgp={displayFxRateToEgp}
+                    issueDate={detail.issue_date}
+                    open={commercialWorkspaceOpen}
+                    onOpenChange={setCommercialWorkspaceOpen}
+                  />
+                  {detail.canManage ? (
+                    <AddCreatorsToQuotationButton
+                      quotationId={detail.id}
+                      onAdded={handleCreatorsAdded}
+                      label="Add creator"
+                      open={addCreatorsOpen}
+                      onOpenChange={setAddCreatorsOpen}
+                      triggerClassName="btn btn-primary sm"
+                    />
+                  ) : null}
+                </div>
               </div>
-              <div className="sec-tools">
-                <QuotationCommercialEntry
+              <Toolbar
+                creatorSearch={creatorSearch}
+                onCreatorSearch={setCreatorSearch}
+                creatorSearchRef={creatorSearchRef}
+                platformFilter={platformFilter}
+                onPlatformFilter={setPlatformFilter}
+                platformOptions={platformOptions}
+                globalCalcMode={globalCalcMode}
+                onGlobalCalcMode={setGlobalCalcMode}
+              />
+
+              <div className="creators-list discovery-suite">
+                <PlatformErrorBoundary
+                  surface="generic"
+                  title="Creators grid failed to render"
+                  description="Metrics above are still valid. Retry or reload."
+                >
+                <QuotationLinesGrid
                   quotationId={detail.id}
-                  items={detail.items}
+                  items={sortedFilteredItems}
                   drafts={drafts}
+                  selectedIds={selectedIds}
+                  allSelected={allVisibleSelected}
+                  indeterminate={selectionIndeterminate}
+                  onToggleSelect={toggleSelect}
+                  onToggleSelectAll={setSelectAllVisible}
                   onDraftChange={updateDraft}
-                  onDraftsMerge={mergeDrafts}
+                  onRemoved={() => router.refresh()}
+                  onLineChanged={refreshQuotationLines}
+                  onOpenCreator={openCreatorFromItem}
+                  uniqueCreatorCount={uniqueCreatorCount}
+                  totalClientCostEgp={totals.totalClientCostEgp}
                   canManage={detail.canManage}
-                  triggerClassName="btn sm"
-                  displayCurrency={displayCurrency}
-                  displayFxRateToEgp={displayFxRateToEgp}
-                  issueDate={detail.issue_date}
-                  open={commercialWorkspaceOpen}
-                  onOpenChange={setCommercialWorkspaceOpen}
                 />
-                {detail.canManage ? (
+                </PlatformErrorBoundary>
+              </div>
+              {detail.canManage ? (
+                <div className="px-[var(--gut,32px)] py-3">
                   <AddCreatorsToQuotationButton
                     quotationId={detail.id}
                     onAdded={handleCreatorsAdded}
                     label="Add creator"
                     open={addCreatorsOpen}
                     onOpenChange={setAddCreatorsOpen}
-                    triggerClassName="btn btn-primary sm"
+                    triggerClassName="btn sm"
                   />
-                ) : null}
+                </div>
+              ) : null}
+              </div>
+            </>
+          )}
+
+          <section className="sec">
+            <div className="cols2">
+              <div>
+                <div className="subh">Document details</div>
+                <div className="subp">Version, ownership, and validity.</div>
+                <QuotationDocumentMetaPanel detail={detail} layout="flush" />
+              </div>
+              <div className="vdiv" aria-hidden />
+              <div>
+                <div className="subh">Quotation notes</div>
+                <div className="subp">Internal &amp; client-facing.</div>
+                <HeaderNotes detail={detail} />
               </div>
             </div>
-            <Toolbar
-              creatorSearch={creatorSearch}
-              onCreatorSearch={setCreatorSearch}
-              creatorSearchRef={creatorSearchRef}
-              platformFilter={platformFilter}
-              onPlatformFilter={setPlatformFilter}
-              platformOptions={platformOptions}
-              globalCalcMode={globalCalcMode}
-              onGlobalCalcMode={setGlobalCalcMode}
-            />
+          </section>
 
-            <div className="creators-list discovery-suite">
-              <PlatformErrorBoundary
-                surface="generic"
-                title="Creators grid failed to render"
-                description="Metrics above are still valid. Retry or reload."
-              >
-              <QuotationLinesGrid
-                quotationId={detail.id}
-                items={sortedFilteredItems}
-                drafts={drafts}
-                selectedIds={selectedIds}
-                allSelected={allVisibleSelected}
-                indeterminate={selectionIndeterminate}
-                onToggleSelect={toggleSelect}
-                onToggleSelectAll={setSelectAllVisible}
-                onDraftChange={updateDraft}
-                onRemoved={() => router.refresh()}
-                onLineChanged={refreshQuotationLines}
-                onOpenCreator={openCreatorFromItem}
-                uniqueCreatorCount={uniqueCreatorCount}
-                totalClientCostEgp={totals.totalClientCostEgp}
-                canManage={detail.canManage}
-              />
-              </PlatformErrorBoundary>
-            </div>
-            {detail.canManage ? (
-              <div className="px-[var(--gut,32px)] py-3">
-                <AddCreatorsToQuotationButton
-                  quotationId={detail.id}
-                  onAdded={handleCreatorsAdded}
-                  label="Add creator"
-                  open={addCreatorsOpen}
-                  onOpenChange={setAddCreatorsOpen}
-                  triggerClassName="btn sm"
-                />
+          <section className="sec">
+            <div className="sec-head">
+              <div>
+                <h2>Terms &amp; conditions</h2>
+                <p>Applies to this quotation unless amended in writing.</p>
               </div>
-            ) : null}
             </div>
-          </>
-        )}
-
-        <section className="sec">
-          <div className="cols2">
-            <div>
-              <div className="subh">Document details</div>
-              <div className="subp">Version, ownership, and validity.</div>
-              <QuotationDocumentMetaPanel detail={detail} layout="flush" />
-            </div>
-            <div className="vdiv" aria-hidden />
-            <div>
-              <div className="subh">Quotation notes</div>
-              <div className="subp">Internal &amp; client-facing.</div>
-              <HeaderNotes detail={detail} />
-            </div>
-          </div>
-        </section>
-
-        <section className="sec">
-          <div className="sec-head">
-            <div>
-              <h2>Terms &amp; conditions</h2>
-              <p>Applies to this quotation unless amended in writing.</p>
-            </div>
-          </div>
-          <QuotationTermsAccordion termsText={detail.terms} />
-        </section>
-        </section>
+            <QuotationTermsAccordion termsText={detail.terms} />
+          </section>
+          </section>
+      </QuotationWorkspaceHeader>
 
       <QuotationSelectionBar
         selectedCount={selectedIds.size}
