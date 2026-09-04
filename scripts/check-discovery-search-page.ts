@@ -60,8 +60,25 @@ assert.ok(
 
 assert.ok(WORKSPACE.includes("openCreatorByHandle"), "2: multi-pool openCreatorByHandle");
 assert.ok(
-  WORKSPACE.includes("displayCreators") && WORKSPACE.includes("recommendationPool"),
-  "2: both pools passed to openCreatorByHandle"
+  WORKSPACE.includes("openCreatorByHandle(handle, displayCreators, recommendationPool)"),
+  "2: both pools passed — not CR-only (vacuous ouda.5 check)"
+);
+const POOLS = fs.readFileSync(
+  path.join(ROOT, "features/discovery/resolve-creator-across-pools.test.ts"),
+  "utf8"
+);
+for (const handle of [
+  "ahmed_elbadawy",
+  "nourhanneeisa",
+  "itsfarahhosny",
+  "islamfawzy_",
+  "ouda.5",
+]) {
+  assert.ok(POOLS.includes(handle), `2: pack handle ${handle} covered in pool test`);
+}
+assert.ok(
+  POOLS.includes("must be invisible when only CR is searched"),
+  "2: asserts four POOL-only handles fail against CR alone"
 );
 
 assert.ok(FIELDS.includes("168") || true, "3: engagement unclamped (live data / stats component)");
