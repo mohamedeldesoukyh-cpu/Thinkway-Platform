@@ -30,19 +30,31 @@ import {
   DiscoverySuiteMasthead,
   DiscoverySuiteRow,
 } from "@/features/discovery/components/design-system";
-import { formatDiscoveryDate } from "@/lib/discovery/format-discovery-date";
+import {
+  DISCOVERY_COLS,
+  DISCOVERY_GRID_MIN_W,
+} from "@/features/discovery/components/design-system/discovery-suite-cols";
+import { formatDiscoveryDateTime } from "@/lib/discovery/format-discovery-date";
 import { cn } from "@/lib/utils";
 import type {
   CampaignIntelligenceLibraryFilters,
   CampaignIntelligenceLibraryItem,
 } from "@/lib/domains/intelligence/types";
+import type { CampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/types/profile";
 
 import {
   archiveCampaignIntelligenceAction,
   getCampaignIntelligenceLibraryFilterOptionsAction,
   listCampaignIntelligenceLibraryAction,
+  openCampaignIntelligenceFromLibraryAction,
   type CampaignIntelligenceLibraryFilterOptions,
 } from "../actions/library-actions";
+import { CampaignIntelligenceDetailSheet } from "./campaign-intelligence-detail-sheet";
+import {
+  buildIntelligenceLibraryNote,
+  countDuplicateRecords,
+  findIntelligenceDuplicateGroups,
+} from "../lib/intelligence-library-duplicates";
 
 type Props = {
   onOpenInSearch?: (profileId: string) => void;
@@ -59,6 +71,9 @@ const STATUS_OPTIONS = [
   { value: "archived", label: "Archived" },
 ] as const;
 
+const INTEL_COLS = DISCOVERY_COLS.intel;
+const INTEL_MIN_W = DISCOVERY_GRID_MIN_W.intel ?? 1080;
+
 export function CampaignIntelligenceLibrary({
   onOpenInSearch,
   activeProfileId,
@@ -66,6 +81,9 @@ export function CampaignIntelligenceLibrary({
   className,
   headerAction,
 }: Props) {
+  const [portfolio, setPortfolio] = useState<CampaignIntelligenceLibraryItem[]>(
+    []
+  );
   const [items, setItems] = useState<CampaignIntelligenceLibraryItem[]>([]);
   const [filterOptions, setFilterOptions] =
     useState<CampaignIntelligenceLibraryFilterOptions | null>(null);
@@ -74,6 +92,20 @@ export function CampaignIntelligenceLibrary({
   });
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [briefProfile, setBriefProfile] =
+    useState<CampaignIntelligenceProfile | null>(null);
+  const [briefOpen, setBriefOpen] = useState(false);
+  const [openingId, setOpeningId] = useState<string | null>(null);
+
+  const loadPortfolio = useCallback(async () => {
+    try {
+      const list = await listCampaignIntelligenceLibraryAction({ status: "all" });
+      setPortfolio(list);
+    } catch {
+      setPortfolio([]);
+    }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -87,7 +119,7 @@ export function CampaignIntelligenceLibrary({
       toast.error(
         error instanceof Error
           ? error.message
-          : "Could not load intelligence library.",
+          : "Could not load intelligence library."
       );
     } finally {
       setLoading(false);
@@ -98,9 +130,10 @@ export function CampaignIntelligenceLibrary({
     void getCampaignIntelligenceLibraryFilterOptionsAction()
       .then(setFilterOptions)
       .catch(() =>
-        setFilterOptions({ brands: [], clients: [], campaigns: [] }),
+        setFilterOptions({ brands: [], clients: [], campaigns: [] })
       );
-  }, []);
+    void loadPortfolio();
+  }, [loadPortfolio]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -113,13 +146,36 @@ export function CampaignIntelligenceLibrary({
     if (!filters.brandId || !filterOptions)
       return filterOptions?.campaigns ?? [];
     return filterOptions.campaigns.filter(
-      (campaign) => campaign.brandId === filters.brandId,
+      (campaign) => campaign.brandId === filters.brandId
     );
   }, [filterOptions, filters.brandId]);
 
+  const duplicateGroups = useMemo(
+    () => findIntelligenceDuplicateGroups(portfolio),
+    [portfolio]
+  );
+  const duplicateCount = useMemo(
+    () => countDuplicateRecords(portfolio),
+    [portfolio]
+  );
+  const libraryNote = useMemo(
+    () => buildIntelligenceLibraryNote(duplicateGroups),
+    [duplicateGroups]
+  );
+
+  const newestLabel = useMemo(() => {
+    if (portfolio.length === 0) return "—";
+    const newest = portfolio.reduce((best, item) =>
+      new Date(item.createdAt).getTime() > new Date(best.createdAt).getTime()
+        ? item
+        : best
+    );
+    return formatDiscoveryDateTime(newest.createdAt).split(" · ")[0] ?? "—";
+  }, [portfolio]);
+
   function updateFilter<K extends keyof CampaignIntelligenceLibraryFilters>(
     key: K,
-    value: CampaignIntelligenceLibraryFilters[K],
+    value: CampaignIntelligenceLibraryFilters[K]
   ) {
     setFilters((current) => {
       const next = { ...current, [key]: value };
@@ -143,24 +199,105 @@ export function CampaignIntelligenceLibrary({
     }
     toast.success("Intelligence record archived.");
     void load();
+    void loadPortfolio();
+  }
+
+  async function handleOpenBrief(item: CampaignIntelligenceLibraryItem) {
+    setOpeningId(item.id);
+    try {
+      const state = await openCampaignIntelligenceFromLibraryAction(item.id);
+      if (!state?.profile) {
+        toast.error("Could not open this brief.");
+        return;
+      }
+      setBriefProfile(state.profile);
+      setBriefOpen(true);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Could not open this brief."
+      );
+    } finally {
+      setOpeningId(null);
+    }
+  }
+
+  function searchHref(item: CampaignIntelligenceLibraryItem) {
+    return `/discovery/search?profileId=${encodeURIComponent(item.id)}`;
+  }
+
+  function handleSearch(item: CampaignIntelligenceLibraryItem) {
+    if (onOpenInSearch) {
+      onOpenInSearch(item.id);
+      return;
+    }
+    window.location.assign(searchHref(item));
+  }
+
+  const allSelected =
+    items.length > 0 && items.every((item) => selectedIds.has(item.id));
+  const someSelected = selectedIds.size > 0 && !allSelected;
+
+  function toggleSelectAll() {
+    if (allSelected) {
+      setSelectedIds(new Set());
+      return;
+    }
+    setSelectedIds(new Set(items.map((item) => item.id)));
+  }
+
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   const countLabel = loading
     ? "…"
-    : `${items.length} record${items.length === 1 ? "" : "s"}`;
+    : `${items.length} of ${portfolio.length} shown`;
+
   const mastheadMetrics = useMemo(
     () => [
-      { label: "Records", value: items.length },
+      { label: "Records", value: portfolio.length },
       {
         label: "Brands",
-        value: new Set(items.map((item) => item.brandId).filter(Boolean)).size,
+        value: new Set(portfolio.map((item) => item.brandId).filter(Boolean))
+          .size,
       },
       {
         label: "Legal entities",
-        value: new Set(items.map((item) => item.clientId).filter(Boolean)).size,
+        value: new Set(portfolio.map((item) => item.clientId).filter(Boolean))
+          .size,
+      },
+      {
+        label: "Campaigns",
+        value: new Set(
+          portfolio.map((item) => item.campaignHeaderId).filter(Boolean)
+        ).size,
+      },
+      { label: "Newest", value: newestLabel, tone: "s" as const },
+      {
+        label: "Duplicates",
+        value: duplicateCount,
+        tone: duplicateCount > 0 ? ("r" as const) : undefined,
       },
     ],
-    [items],
+    [portfolio, newestLabel, duplicateCount]
+  );
+
+  const creatorSearchControl = headerAction ?? (
+    <Button
+      size="sm"
+      className="h-8 gap-1.5 rounded-[8px] px-3 text-[12px] font-semibold"
+      asChild
+    >
+      <Link href="/discovery/search">
+        <SearchIcon className="size-3.5" />
+        Creator search
+      </Link>
+    </Button>
   );
 
   const filterBar = (
@@ -206,7 +343,7 @@ export function CampaignIntelligenceLibrary({
           {(filterOptions?.brands ?? [])
             .filter(
               (brand) =>
-                !filters.clientId || brand.clientId === filters.clientId,
+                !filters.clientId || brand.clientId === filters.clientId
             )
             .map((brand) => (
               <SelectItem key={brand.id} value={brand.id}>
@@ -238,7 +375,7 @@ export function CampaignIntelligenceLibrary({
         onValueChange={(value) =>
           updateFilter(
             "status",
-            value as CampaignIntelligenceLibraryFilters["status"],
+            value as CampaignIntelligenceLibraryFilters["status"]
           )
         }
       >
@@ -253,7 +390,45 @@ export function CampaignIntelligenceLibrary({
           ))}
         </SelectContent>
       </Select>
+      {creatorSearchControl}
     </DiscoveryFilterBar>
+  );
+
+  const header = (
+    <>
+      <DiscoverySuiteCell>
+        <input
+          type="checkbox"
+          className="tw-ck"
+          checked={allSelected}
+          ref={(el) => {
+            if (el) el.indeterminate = someSelected;
+          }}
+          onChange={toggleSelectAll}
+          aria-label="Select all"
+        />
+      </DiscoverySuiteCell>
+      <DiscoverySuiteCell>Brief</DiscoverySuiteCell>
+      <DiscoverySuiteCell>Brand</DiscoverySuiteCell>
+      <DiscoverySuiteCell>Legal entity</DiscoverySuiteCell>
+      <DiscoverySuiteCell>Created</DiscoverySuiteCell>
+      <DiscoverySuiteCell className="tw-rr" align="end">
+        Action
+      </DiscoverySuiteCell>
+    </>
+  );
+
+  const footer = (
+    <>
+      <DiscoverySuiteCell />
+      <DiscoverySuiteCell>
+        {items.length} of {portfolio.length} shown
+      </DiscoverySuiteCell>
+      <DiscoverySuiteCell />
+      <DiscoverySuiteCell />
+      <DiscoverySuiteCell />
+      <DiscoverySuiteCell />
+    </>
   );
 
   return (
@@ -261,15 +436,14 @@ export function CampaignIntelligenceLibrary({
       className={cn(
         "discovery-suite min-w-0 bg-[var(--tw-bg)]",
         compact && "rounded-[var(--radius-md)]",
-        className,
+        className
       )}
     >
       {!compact ? (
         <DiscoverySuiteMasthead
-          title="Campaign Intelligence Library"
-          subtitle="Shared brief intelligence for Discovery, campaigns, Studio, and AI workflows."
+          title="Campaign intelligence library"
+          subtitle="Shared brief intelligence for Discovery, campaigns, Studio and AI"
           metrics={mastheadMetrics}
-          actions={headerAction}
           freezeOnScroll={false}
         />
       ) : null}
@@ -279,8 +453,8 @@ export function CampaignIntelligenceLibrary({
       >
         {compact ? (
           <DiscoverySectionHeader
-            title="Campaign Intelligence Library"
-            description="Shared brief intelligence across Discovery, campaigns, and AI workflows."
+            title="Campaign intelligence library"
+            description={`${portfolio.length} records · shared brief intelligence for Discovery, campaigns, Studio and AI`}
           />
         ) : null}
         {filterBar}
@@ -300,100 +474,134 @@ export function CampaignIntelligenceLibrary({
           />
         </DiscoveryListCard>
       ) : (
-        <DiscoverySuiteGrid
-          cols="minmax(200px,1.4fr) 150px minmax(170px,1fr) 150px 132px"
-          minWidth={860}
-          className="rounded-t-none"
-          scrollerClassName={cn(
-            "overflow-y-auto [scrollbar-color:rgb(226_232_240)_transparent] [scrollbar-width:thin]",
-            compact ? "max-h-[280px]" : "max-h-[min(60vh,640px)]",
-          )}
-          header={
-            <>
-              <DiscoverySuiteCell>Brief</DiscoverySuiteCell>
-              <DiscoverySuiteCell>Brand</DiscoverySuiteCell>
-              <DiscoverySuiteCell>Legal entity</DiscoverySuiteCell>
-              <DiscoverySuiteCell>Created</DiscoverySuiteCell>
-              <DiscoverySuiteCell>Action</DiscoverySuiteCell>
-            </>
-          }
-        >
-          {items.map((item) => {
-            const isActive = item.id === activeProfileId;
-            return (
-              <DiscoverySuiteRow
-                key={item.id}
-                selected={isActive}
-                className="group"
-              >
-                <DiscoverySuiteCell>
-                  <div className="flex min-w-0 items-center gap-2">
-                    <FileTextIcon className="mt-0.5 size-4 shrink-0 text-[var(--text-3)]" />
-                    <div className="min-w-0 flex-1">
-                      <p className="tw-nm">{item.title}</p>
-                      <p className="tw-s">
-                        {[item.campaignDocumentNumber, item.campaignName]
-                          .filter(Boolean)
-                          .join(" · ") || item.status}
-                      </p>
-                    </div>
-                  </div>
-                </DiscoverySuiteCell>
-                <DiscoverySuiteCell className="tw-br">
-                  {item.brandName ?? <span className="tw-miss">not set</span>}
-                </DiscoverySuiteCell>
-                <DiscoverySuiteCell className="tw-t">
-                  {item.clientName ?? <span className="tw-miss">not set</span>}
-                </DiscoverySuiteCell>
-                <DiscoverySuiteCell className="tw-d">
-                  {formatDiscoveryDate(item.createdAt) || (
-                    <span className="tw-miss">not set</span>
-                  )}
-                </DiscoverySuiteCell>
-                <DiscoverySuiteCell>
-                  <div className="tw-act">
-                    {onOpenInSearch ? (
+        <>
+          <DiscoverySuiteGrid
+            cols="intel"
+            minWidth={INTEL_MIN_W}
+            className="rounded-t-none"
+            scrollerClassName={cn(
+              "overflow-y-auto [scrollbar-color:rgb(226_232_240)_transparent] [scrollbar-width:thin]",
+              compact ? "max-h-[280px]" : "max-h-[min(60vh,640px)]"
+            )}
+            header={header}
+            footer={footer}
+          >
+            {items.map((item) => {
+              const isActive = item.id === activeProfileId;
+              const isSelected = selectedIds.has(item.id);
+              const isDuplicate = duplicateGroups.some(
+                (group) =>
+                  group.title === item.title &&
+                  group.brandName === item.brandName &&
+                  group.clientName === item.clientName
+              );
+              const clientLabel = item.clientName ?? "";
+              return (
+                <DiscoverySuiteRow
+                  key={item.id}
+                  selected={isActive || isSelected}
+                  warn={isDuplicate}
+                  className="group"
+                >
+                  <DiscoverySuiteCell>
+                    <input
+                      type="checkbox"
+                      className="tw-ck"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(item.id)}
+                      aria-label={`Select ${item.title}`}
+                    />
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell>
+                    <p className="tw-nm">{item.title}</p>
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell className="tw-br">
+                    {item.brandName ?? (
+                      <span className="tw-miss">not set</span>
+                    )}
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell>
+                    {clientLabel ? (
+                      <span className="tw-t" title={clientLabel}>
+                        {clientLabel}
+                      </span>
+                    ) : (
+                      <span className="tw-miss">not set</span>
+                    )}
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell className="tw-d">
+                    {formatDiscoveryDateTime(item.createdAt) || (
+                      <span className="tw-miss">not set</span>
+                    )}
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell align="end">
+                    <div className="tw-act">
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-7 px-2 text-[11px] font-bold"
-                        onClick={() => onOpenInSearch(item.id)}
+                        disabled={openingId === item.id}
+                        onClick={() => void handleOpenBrief(item)}
                       >
                         Open
                       </Button>
-                    ) : (
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 px-2 text-[11px] font-bold"
-                        asChild
-                      >
-                        <Link
-                          href={`/discovery/search?profileId=${encodeURIComponent(item.id)}`}
+                      {onOpenInSearch ? (
+                        <Button
+                          size="sm"
+                          className="h-7 px-2 text-[11px] font-bold"
+                          onClick={() => handleSearch(item)}
                         >
-                          <ExternalLinkIcon className="size-3" />
                           Search
-                        </Link>
-                      </Button>
-                    )}
-                    {item.status !== "archived" ? (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="size-7 text-[var(--text-3)]"
-                        onClick={() => void handleArchive(item)}
-                        aria-label={`Archive ${item.title}`}
-                      >
-                        <ArchiveIcon className="size-3.5" />
-                      </Button>
-                    ) : null}
-                  </div>
-                </DiscoverySuiteCell>
-              </DiscoverySuiteRow>
-            );
-          })}
-        </DiscoverySuiteGrid>
+                        </Button>
+                      ) : (
+                        <Button
+                          size="sm"
+                          className="h-7 gap-1 px-2 text-[11px] font-bold"
+                          asChild
+                        >
+                          <Link href={searchHref(item)}>
+                            <ExternalLinkIcon className="size-3" />
+                            Search
+                          </Link>
+                        </Button>
+                      )}
+                      {item.status !== "archived" ? (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-7 text-[var(--text-3)]"
+                          onClick={() => void handleArchive(item)}
+                          aria-label={`Archive ${item.title}`}
+                        >
+                          <ArchiveIcon className="size-3.5" />
+                        </Button>
+                      ) : null}
+                    </div>
+                  </DiscoverySuiteCell>
+                </DiscoverySuiteRow>
+              );
+            })}
+          </DiscoverySuiteGrid>
+          <p className={cn("tw-note", duplicateCount > 0 && "wrn")}>
+            {libraryNote}
+          </p>
+        </>
       )}
+
+      {briefProfile ? (
+        <CampaignIntelligenceDetailSheet
+          open={briefOpen}
+          onOpenChange={(open) => {
+            setBriefOpen(open);
+            if (!open) setBriefProfile(null);
+          }}
+          profile={briefProfile}
+        />
+      ) : null}
+
+      <span className="sr-only" aria-hidden>
+        {INTEL_COLS}
+      </span>
     </div>
   );
 }

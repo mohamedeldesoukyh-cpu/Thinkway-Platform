@@ -3,9 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## In progress 2026-09-04 — Session 4b2 + page-2 Overlay F migrate
+## Shipped 2026-09-04 — Sessions 5–7 Search + Intelligence + Match
 
-Staged = wrn (dot + Draft chip; no violet/italic). CSV is adapter capability list; quotation omits. Page 2 uses `ShortlistDocumentOutputToolbar`; deleted `shortlist-creator-toolbar-actions`.
+- Search (`899717df` + pool test `6a67a0fb`): virtualizer + inherited `--cols`.
+- **6+7 adapt (pending commit):** Intelligence library + Campaign match already lived — closed pack gaps. Library: `--cols` intel/1080, Open+Search + note, duplicates actionable, footer X of Y, unknown slug `notFound`. Match: honest form + empty (cause + two actions), Load from library → `/discovery/intelligence/library`, alias `/discovery/match`. Gates: `test:discovery-intelligence-page`, `test:discovery-campaign-match-page`. Next: page 8 alone.
 
 ## Shipped 2026-09-04 — Session 4b2 adapt D/E + Overlay F
 

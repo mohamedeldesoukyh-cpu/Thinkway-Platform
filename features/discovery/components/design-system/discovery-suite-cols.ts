@@ -31,6 +31,6 @@ export const DISCOVERY_GRID_MIN_W: Partial<Record<DiscoveryColsKey, number>> = {
   quotations: 1300,
   quotation: 1400,
   search: 1180,
-  intel: 980,
-  import: 1200,
+  intel: 1080,
+  import: 1340,
 };
