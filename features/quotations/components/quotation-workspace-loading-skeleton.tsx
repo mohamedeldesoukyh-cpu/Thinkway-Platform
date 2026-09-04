@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 /** Matches quotation-editor-rd4 layout while server data loads. */
 export function QuotationWorkspaceLoadingSkeleton() {
   return (
-    <div className="quotation-editor-rd4 flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden">
+    <div className="quotation-editor-rd4 flex w-full min-w-0 flex-col">
       <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--line)] px-8 py-3">
         <div className="flex min-w-0 items-center gap-3">
           <Skeleton className="h-8 w-8 rounded-lg" />
@@ -19,7 +19,7 @@ export function QuotationWorkspaceLoadingSkeleton() {
         </div>
       </div>
 
-      <div className="scroll flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <div className="quotation-body flex flex-col">
         <div className="border-b border-[var(--line)] px-8 py-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {Array.from({ length: 5 }).map((_, i) => (

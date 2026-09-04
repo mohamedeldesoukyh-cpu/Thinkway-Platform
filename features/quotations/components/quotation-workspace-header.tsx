@@ -93,7 +93,8 @@ export function QuotationWorkspaceHeader({
   const [shareReviewNumber, setShareReviewNumber] = useState<number | undefined>(undefined);
   const shareScope = { source: "quotation" as const, id: detail.id };
   const movedToCampaign = quotationIsMovedToCampaign(detail);
-  const [hasLink, setHasLink] = useState(() => Boolean(readClientReviewShare(shareScope)));
+  // localStorage is client-only — do not read in useState init (hydration #418).
+  const [hasLink, setHasLink] = useState(false);
   const [sendOpen, setSendOpen] = useState(false);
   const [showOriginalCurrency, setOptimisticShowOriginalCurrency] = useOptimistic(
     Boolean(detail.showOriginalCurrency)
@@ -387,7 +388,7 @@ export function QuotationWorkspaceHeader({
               </DropdownMenu>
             </div>
           }
-          freezeOnScroll
+          freezeOnScroll={false}
         />
       </div>
 

@@ -119,7 +119,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
       variant="flush"
       showHeader={false}
     >
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[var(--background)]">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-white dark:bg-[var(--background)]">
         <QuotationWorkspace
           detail={detail}
           formOptions={formOptions}

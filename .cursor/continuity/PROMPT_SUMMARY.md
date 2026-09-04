@@ -3,11 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## In progress 2026-09-04 — Quotation detail blank body
+## Shipped 2026-09-05 — Quotation detail blank body (pass 2)
 
-**Symptom:** Dev quotation detail showed masthead/toolbar only; metrics + creators white.  
-**Cause:** Nested `.scroll` (`flex:1; min-height:0; overflow-y`) inside `overflow-hidden` collapsed to 0px when shell height was indefinite.  
-**Fix (local, not pushed):** single scrollport on `.quotation-editor-rd4` + `data-discovery-scroll` (shortlist pattern); `.scroll` is content-only. Console `/api/creators/public…` 404s + `sw.js` noise are separate from the blank body.
+**Root causes:** (1) React #418 — `EntityPrevNext` read `sessionStorage` in `useState` init (SSR null vs client `1/29`); `hasLink` same with `localStorage`. (2) Nested flex scroller / stale `.scroll` CSS could still collapse body to 0px.  
+**Fix:** defer storage reads to `useEffect`; page wrapper scrolls; body class `quotation-body` with `flex:none !important`; `freezeOnScroll={false}` on quotation masthead.
 
 ## Shipped 2026-09-04 — Discovery pack CLOSED
 

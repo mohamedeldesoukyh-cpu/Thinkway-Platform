@@ -23,6 +23,14 @@ type EntityPrevNextProps = {
 /**
  * Previous / Next across the full filtered list context (not page-local).
  */
+const EMPTY_NEIGHBORS = {
+  prevId: null as string | null,
+  nextId: null as string | null,
+  index: -1,
+  total: 0,
+  filterKey: null as string | null,
+};
+
 export function EntityPrevNext({
   entity,
   currentId,
@@ -30,9 +38,9 @@ export function EntityPrevNext({
   expectedFilterKey,
   className,
 }: EntityPrevNextProps) {
-  const [neighbors, setNeighbors] = useState(() =>
-    resolveListNavNeighbors(entity, currentId, expectedFilterKey)
-  );
+  // sessionStorage is client-only — reading it in useState init causes React #418
+  // (SSR null vs client "1/29") and can blank the rest of the quotation body.
+  const [neighbors, setNeighbors] = useState(EMPTY_NEIGHBORS);
 
   useEffect(() => {
     setNeighbors(resolveListNavNeighbors(entity, currentId, expectedFilterKey));
