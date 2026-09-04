@@ -118,8 +118,9 @@ export default async function QuotationDetailPage({ params }: PageProps) {
       activeHref={canonicalPath}
       variant="flush"
       showHeader={false}
+      contentClassName="!overflow-y-auto overscroll-y-contain"
     >
-      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-white dark:bg-[var(--background)]">
+      <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col bg-white dark:bg-[var(--background)]">
         <QuotationWorkspace
           detail={detail}
           formOptions={formOptions}

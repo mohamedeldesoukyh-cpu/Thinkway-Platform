@@ -7,7 +7,12 @@ import { PwaSplash } from "@/components/pwa/pwa-splash";
 import { PwaUpdatePrompt } from "@/components/pwa/pwa-update-prompt";
 import { getReleaseInfo } from "@/lib/release/release-info";
 
-function registerServiceWorker(): void {
+/**
+ * Replace any controlling worker. Legacy workers used `respondWith(fetch())`,
+ * which fails under Vercel Deployment Protection (SSO) and surfaces as
+ * FetchEvent network errors / blank client trees on Dig.
+ */
+async function registerServiceWorker(): Promise<void> {
   if (typeof window === "undefined") return;
   if (!("serviceWorker" in navigator)) return;
 
@@ -17,35 +22,40 @@ function registerServiceWorker(): void {
   if (protocol !== "https:" && !isLocal) return;
 
   const release = getReleaseInfo();
-  // Query param must change every deploy (git SHA, deployment id, or build time)
-  // so CLI Production deploys still trigger the Update Now / Later prompt.
   const swUrl = `/sw.js?v=${encodeURIComponent(`${release.version}.${release.build}`)}`;
 
-  void navigator.serviceWorker
-    .register(swUrl, { scope: "/", updateViaCache: "none" })
-    .then((registration) => {
-      // First visit: activate waiting worker without a user prompt.
-      if (!navigator.serviceWorker.controller && registration.waiting) {
-        registration.waiting.postMessage({ type: "SKIP_WAITING" });
-      }
-      const installing = registration.installing;
-      if (!navigator.serviceWorker.controller && installing) {
-        installing.addEventListener("statechange", () => {
-          if (installing.state === "installed" && registration.waiting) {
-            registration.waiting.postMessage({ type: "SKIP_WAITING" });
-          }
-        });
-      }
-      void registration.update().catch(() => {});
-    })
-    .catch(() => {
-      // Non-fatal
+  try {
+    const existing = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(existing.map((registration) => registration.unregister()));
+  } catch {
+    /* ignore */
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.register(swUrl, {
+      scope: "/",
+      updateViaCache: "none",
     });
+    if (!navigator.serviceWorker.controller && registration.waiting) {
+      registration.waiting.postMessage({ type: "SKIP_WAITING" });
+    }
+    const installing = registration.installing;
+    if (!navigator.serviceWorker.controller && installing) {
+      installing.addEventListener("statechange", () => {
+        if (installing.state === "installed" && registration.waiting) {
+          registration.waiting.postMessage({ type: "SKIP_WAITING" });
+        }
+      });
+    }
+    void registration.update().catch(() => {});
+  } catch {
+    // Non-fatal — app works without a service worker.
+  }
 }
 
 export function PwaProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
-    registerServiceWorker();
+    void registerServiceWorker();
   }, []);
 
   return (

@@ -3,10 +3,9 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## Shipped 2026-09-05 — Quotation detail blank body (pass 2)
+## Shipped 2026-09-05 — Quotation blank body (pass 3)
 
-**Root causes:** (1) React #418 — `EntityPrevNext` read `sessionStorage` in `useState` init (SSR null vs client `1/29`); `hasLink` same with `localStorage`. (2) Nested flex scroller / stale `.scroll` CSS could still collapse body to 0px.  
-**Fix:** defer storage reads to `useEffect`; page wrapper scrolls; body class `quotation-body` with `flex:none !important`; `freezeOnScroll={false}` on quotation masthead.
+**Findings:** Console `sw.js?v=1.0.0.local` + FetchEvent failures. Legacy SW used `respondWith(fetch())`; Dig Vercel SSO rejects worker fetches → network errors. Metrics moved under masthead (visible chrome). Body wrapped in error boundary + `flex-shrink:0`. SW no longer intercepts fetch; PWA provider unregisters old workers then re-registers.
 
 ## Shipped 2026-09-04 — Discovery pack CLOSED
 

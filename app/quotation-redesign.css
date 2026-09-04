@@ -299,8 +299,9 @@
    cannot collapse this band to 0px (header-only blank body). */
 .quotation-editor-rd4 .quotation-body,
 .quotation-editor-rd4 .scroll {
-  flex: none !important;
-  min-height: auto !important;
+  flex: 0 0 auto !important;
+  flex-shrink: 0 !important;
+  min-height: min-content !important;
   min-width: 0;
   width: 100%;
   max-width: none;

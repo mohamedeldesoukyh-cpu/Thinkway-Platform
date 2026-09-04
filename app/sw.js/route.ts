@@ -6,18 +6,20 @@ export const runtime = "nodejs";
 /**
  * Service worker served dynamically so each deploy changes the script bytes
  * (build id comment) and triggers the browser update lifecycle.
+ *
+ * Intentionally does NOT intercept fetch. A prior `respondWith(fetch())`
+ * broke Dig pages when Vercel Deployment Protection / SSO rejected the
+ * worker's credential-less subresource fetches (FetchEvent network error).
  */
 export function GET() {
   const release = getReleaseInfo();
   const buildId = `${release.version}+${release.build}`;
 
   const body = `/* Thinkway Platform SW ${buildId} */
-/* Network-only — no stale asset cache. */
+/* Update beacon only — do not intercept network. */
 const BUILD_ID = ${JSON.stringify(buildId)};
 
-self.addEventListener("install", (event) => {
-  // Do not auto skipWaiting on update; client prompts the user first.
-  // First install still reaches "waiting" until SKIP_WAITING or activate.
+self.addEventListener("install", () => {
   void BUILD_ID;
 });
 
@@ -28,15 +30,7 @@ self.addEventListener("message", (event) => {
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(
-    (async () => {
-      await self.clients.claim();
-    })()
-  );
-});
-
-self.addEventListener("fetch", (event) => {
-  event.respondWith(fetch(event.request));
+  event.waitUntil(self.clients.claim());
 });
 `;
 
