@@ -171,6 +171,7 @@ function QuotationWorkspaceContent({
   const [convertApprovedOpen, setConvertApprovedOpen] = useState(false);
   const [exportTemplate, setExportTemplate] = useState<QuotationTemplateVariant>("detailed");
   const [addCreatorsOpen, setAddCreatorsOpen] = useState(false);
+  const [commercialWorkspaceOpen, setCommercialWorkspaceOpen] = useState(false);
   const [focusNewItemId, setFocusNewItemId] = useState<string | null>(null);
   const [tableSort, setTableSort] = useState<QuotationWorkspaceSortState | null>(null);
   const [bulkPending, startBulkTransition] = useTransition();
@@ -283,6 +284,13 @@ function QuotationWorkspaceContent({
     () => resolveQuotationHeaderCommercialTotals(computeLiveQuotationTotals(totalsDraftList)),
     [totalsDraftList]
   );
+
+  const savedTotals = useMemo(() => {
+    const savedDraftList = visibleItems
+      .filter((item) => shouldIncludeItemInLiveTotals(item, visibleItems))
+      .map((item) => draftFromQuotationItem(item));
+    return resolveQuotationHeaderCommercialTotals(computeLiveQuotationTotals(savedDraftList));
+  }, [visibleItems]);
 
   const originalTotals = useMemo(
     () => originalCurrencyTotalsForDisplay(totalsDraftList, displayCurrency),
@@ -753,6 +761,11 @@ function QuotationWorkspaceContent({
             detail.canManage ? handleDisplayCurrencyChange : undefined
           }
           currencyDisabled={currencyPending || !detail.canManage}
+          hasDraftEdits={pendingItemIds.size > 0}
+          savedClientCostEgp={savedTotals.totalClientCostEgp}
+          onOpenCommercialWorkspace={
+            detail.canManage ? () => setCommercialWorkspaceOpen(true) : undefined
+          }
         />
         <QuotationLifecyclePills
           detail={detail}
@@ -838,6 +851,8 @@ function QuotationWorkspaceContent({
                   displayCurrency={displayCurrency}
                   displayFxRateToEgp={displayFxRateToEgp}
                   issueDate={detail.issue_date}
+                  open={commercialWorkspaceOpen}
+                  onOpenChange={setCommercialWorkspaceOpen}
                 />
                 {detail.canManage ? (
                   <AddCreatorsToQuotationButton

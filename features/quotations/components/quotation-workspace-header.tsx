@@ -4,7 +4,6 @@ import { useEffect, useMemo, useOptimistic, useState, useTransition } from "reac
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
-  Link2Icon,
   Loader2Icon,
   MoreHorizontalIcon,
   SaveIcon,
@@ -44,7 +43,7 @@ import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher";
 import { seedFromQuotation } from "@/features/campaign-outputs/hydration/seed-adapters";
 import { QuotationLifecycleSheet } from "@/features/quotations/components/quotation-lifecycle-sheet";
-import { QuotationPreviewToolbarActions } from "@/features/quotations/components/quotation-preview-toolbar-actions";
+import { QuotationDocumentOutputToolbar } from "@/features/quotations/components/quotation-document-output-toolbar";
 import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
 import { QuotationWorkspaceStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
 import { DiscoverySuiteMasthead } from "@/features/discovery/components/design-system";
@@ -282,35 +281,7 @@ export function QuotationWorkspaceHeader({
                   }}
                 />
               ) : null}
-              {detail.canManage ? (
-                <QuotationToolbarButton
-                  variant="outline"
-                  size="sm"
-                  disabled={linkPending}
-                  onClick={runLinkButton}
-                >
-                  {linkPending ? (
-                    <Loader2Icon className="size-3.5 animate-spin" />
-                  ) : (
-                    <Link2Icon className="size-3.5" />
-                  )}
-                  {hasLink ? "Show link" : "Generate link"}
-                </QuotationToolbarButton>
-              ) : null}
-              {detail.canManage &&
-              detail.status !== "cancelled" &&
-              detail.status !== "archived" &&
-              !detail.is_archived ? (
-                <QuotationToolbarButton
-                  variant="outline"
-                  size="sm"
-                  onClick={runSendToClient}
-                >
-                  <SendIcon className="size-3.5" />
-                  Send to Client
-                </QuotationToolbarButton>
-              ) : null}
-              <QuotationPreviewToolbarActions
+              <QuotationDocumentOutputToolbar
                 quotationId={detail.id}
                 serialNumber={detail.serial_number}
                 items={detail.items}
@@ -321,6 +292,17 @@ export function QuotationWorkspaceHeader({
                 onSelectedItemIdsChange={onSelectedItemIdsChange}
                 exportRevision={detail.updated_at}
                 busy={pending}
+                onClientLink={detail.canManage ? runLinkButton : () => undefined}
+                onSend={detail.canManage ? runSendToClient : () => undefined}
+                clientLinkLabel="Client link"
+                linkDisabled={!detail.canManage || linkPending}
+                linkPending={linkPending}
+                sendDisabled={
+                  !detail.canManage ||
+                  detail.status === "cancelled" ||
+                  detail.status === "archived" ||
+                  Boolean(detail.is_archived)
+                }
               />
               <OpenCampaignStudioLauncher
                 seed={campaignSeed}

@@ -206,6 +206,11 @@ export type QuotationCommercialWorkspaceDialogProps = {
   displayFxRateToEgp?: number;
   /** Quotation issue date — used as FX as-of when resolving master rates. */
   issueDate?: string | null;
+  /** Optional controlled open (masthead “Draft edits pending” → CW). */
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** When false, hide the built-in toolbar trigger (controlled open only). */
+  showTrigger?: boolean;
 };
 
 export function QuotationCommercialWorkspaceDialog({
@@ -219,9 +224,14 @@ export function QuotationCommercialWorkspaceDialog({
   displayCurrency = "EGP",
   displayFxRateToEgp = 1,
   issueDate = null,
+  open: openProp,
+  onOpenChange,
+  showTrigger = true,
 }: QuotationCommercialWorkspaceDialogProps) {
   const manualSave = useQuotationManualSave();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = openProp ?? internalOpen;
+  const setOpen = onOpenChange ?? setInternalOpen;
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [tableSort, setTableSort] = useState<QuotationCommercialSummarySortState | null>(null);
   const [search, setSearch] = useState("");
@@ -466,17 +476,19 @@ export function QuotationCommercialWorkspaceDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          className={cn(triggerClassName, COMMERCIAL_WORKSPACE_TRIGGER_CLASS)}
-        >
-          <Table2Icon className="size-3.5" />
-          Commercial Workspace
-        </Button>
-      </DialogTrigger>
+      {showTrigger ? (
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className={cn(triggerClassName, COMMERCIAL_WORKSPACE_TRIGGER_CLASS)}
+          >
+            <Table2Icon className="size-3.5" />
+            Commercial Workspace
+          </Button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent
         showCloseButton
         className="commercial-workspace-dialog flex h-[min(92vh,820px)] max-h-[min(92vh,820px)] min-h-0 w-[min(98vw,1280px)] max-w-[min(98vw,1280px)] flex-col gap-0 overflow-hidden rounded-xl border-[0.5px] p-0 sm:max-w-[min(98vw,1280px)]"
@@ -842,7 +854,12 @@ export function QuotationCommercialWorkspaceDialog({
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                     <Loader2Icon className="size-3 animate-spin" /> Saving via Commercial SSOT…
                   </span>
-                ) : null
+                ) : (
+                  <span className="max-w-[42rem] text-xs leading-snug text-muted-foreground">
+                    Unsaved edits are held as drafts and shown in the Creators grid. Save to commit,
+                    or Discard to reset.
+                  </span>
+                )
               }
             />
           </div>

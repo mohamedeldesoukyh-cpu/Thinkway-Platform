@@ -5,6 +5,7 @@ import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import type { OriginalCurrencyTotals } from "@/features/quotations/quotation-row-math";
 import { fromEgp } from "@/lib/commercial/fx-aggregation";
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
+import { cn } from "@/lib/utils";
 
 type MetricDef = {
   label: string;
@@ -13,6 +14,8 @@ type MetricDef = {
   tone?: "amber" | "blue" | "green" | "red";
   compact?: boolean;
   original?: string[];
+  /** Uncommitted scratchpad figure — violet italic, visible without hover. */
+  staged?: boolean;
 };
 
 function moneyParts(
@@ -39,13 +42,28 @@ function originalLabels(
     .map((row) => formatMoneyKpi(row[field], row.currency));
 }
 
-function MetricItem({ label, value, unit, tone, compact, original }: MetricDef) {
+function MetricItem({ label, value, unit, tone, compact, original, staged }: MetricDef) {
   const toneClass =
     tone === "green" ? "g" : tone === "red" ? "r" : tone === "amber" ? "y" : compact ? "s" : undefined;
   return (
     <div>
-      <i>{label}</i>
-      <b className={toneClass}>
+      <i>
+        {staged ? (
+          <span className="inline-flex items-center gap-1.5">
+            <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
+            {label}
+            <span className="tw-p p-v" style={{ fontSize: 9, padding: "1px 5px" }}>
+              Draft
+            </span>
+          </span>
+        ) : (
+          label
+        )}
+      </i>
+      <b
+        className={cn(toneClass, staged && "italic")}
+        style={staged ? { color: "var(--tw-vio)" } : undefined}
+      >
         {value}
         {unit ? ` ${unit}` : ""}
       </b>
@@ -79,6 +97,11 @@ type Props = {
   originalTotals?: OriginalCurrencyTotals[];
   onDisplayCurrencyChange?: (currency: string) => void;
   currencyDisabled?: boolean;
+  /** True when workspace drafts / line-pending differ from last-saved SSOT. */
+  hasDraftEdits?: boolean;
+  /** Last-saved SSOT client cost (EGP) — shown beside staged when they disagree. */
+  savedClientCostEgp?: number | null;
+  onOpenCommercialWorkspace?: () => void;
 };
 
 export function QuotationCommercialMetricsBand({
@@ -98,6 +121,9 @@ export function QuotationCommercialMetricsBand({
   originalTotals = [],
   onDisplayCurrencyChange,
   currencyDisabled,
+  hasDraftEdits = false,
+  savedClientCostEgp = null,
+  onOpenCommercialWorkspace,
 }: Props) {
   const gpTone: MetricDef["tone"] =
     totalGpValueEgp < 0 ? "red" : totalGpPct < gpTargetPct ? "amber" : "green";
@@ -127,8 +153,40 @@ export function QuotationCommercialMetricsBand({
   const gpValuesDisagree = Math.abs(totalGpValueEgp - totalCommercialGpEgp) >= 0.01;
   const showAgencyFeeConflict = gpValuesDisagree || totalAgencyFeeEgp > 0.01;
 
+  const savedClient =
+    savedClientCostEgp != null
+      ? moneyParts(savedClientCostEgp, displayCurrency, displayFxRateToEgp)
+      : null;
+  const stagedVsSavedDisagree =
+    hasDraftEdits &&
+    savedClientCostEgp != null &&
+    Math.abs(totalRevenueEgp - savedClientCostEgp) >= 0.01;
+
   return (
     <div className="discovery-suite px-4 pt-1">
+    {hasDraftEdits ? (
+      <p className="tw-note wrn mx-3.5 mb-2" role="status">
+        <span className="tw-live" style={{ display: "inline-block", marginRight: 8, verticalAlign: "middle" }} />
+        <b>Draft edits pending</b> — masthead and Creators grid show uncommitted scratchpad values.
+        Last-saved Client cost stays{" "}
+        {savedClient ? (
+          <b>
+            {savedClient.value} {savedClient.unit}
+          </b>
+        ) : (
+          "unchanged"
+        )}{" "}
+        until Save.
+        {onOpenCommercialWorkspace ? (
+          <>
+            {" "}
+            <button type="button" className="tw-b sm" onClick={onOpenCommercialWorkspace}>
+              Open Commercial Workspace
+            </button>
+          </>
+        ) : null}
+      </p>
+    ) : null}
     <div className="tw-ms2" aria-label="Quotation commercial metrics">
       <div className="metric metric--currency flex flex-col justify-center gap-1 py-[9px]">
         <CommercialCurrencySelect
@@ -143,17 +201,27 @@ export function QuotationCommercialMetricsBand({
         label="Base cost"
         value={base.value}
         original={originalLabels(originalTotals, "totalCost")}
+        staged={hasDraftEdits}
       />
       <MetricItem
         label={QUOTATION_CLIENT_LABELS.totalClientCost}
         value={client.value}
         original={originalLabels(originalTotals, "totalClientCost")}
+        staged={hasDraftEdits}
       />
+      {stagedVsSavedDisagree && savedClient ? (
+        <MetricItem
+          label="Saved client cost"
+          value={savedClient.value}
+          tone="amber"
+        />
+      ) : null}
       <MetricItem
         label="GP margin"
         value={gp.value}
         tone={showAgencyFeeConflict ? agencyFeeGpTone : gpTone}
         original={originalLabels(originalTotals, "totalGpMargin")}
+        staged={hasDraftEdits}
       />
       {showAgencyFeeConflict ? (
         <MetricItem
@@ -166,6 +234,7 @@ export function QuotationCommercialMetricsBand({
         label="GP %"
         value={`${totalGpPct.toFixed(1)}%`}
         tone={showAgencyFeeConflict ? agencyFeePctTone : gpTone}
+        staged={hasDraftEdits}
       />
       <MetricItem label="FM %" value={`${totalPmPct.toFixed(1)}%`} />
       <MetricItem label="Version" value={version} compact />
@@ -182,6 +251,13 @@ export function QuotationCommercialMetricsBand({
         tone={daysTone}
       />
     </div>
+    {stagedVsSavedDisagree && savedClient ? (
+      <p className="tw-note wrn mx-3.5 mb-2">
+        Staged Client cost {client.value} {client.unit} vs saved{" "}
+        {savedClient.value} {savedClient.unit}. Both figures are shown — Save commits the staged
+        scratchpad; Discard restores saved line masters.
+      </p>
+    ) : null}
     {showAgencyFeeConflict ? (
       <p className="tw-note wrn mx-3.5 mb-2">
         Masthead GP margin {gp.value} / {totalGpPct.toFixed(1)}% includes{" "}

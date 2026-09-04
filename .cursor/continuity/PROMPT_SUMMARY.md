@@ -3,9 +3,17 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## In progress 2026-09-04 — Session 4b2 adapt D/E + Overlay F
+
+**Overlay D:** Spec amended — CW is shared scratchpad with Creators grid; Save=SSOT; Discard=reset; Close=no-op. Footer dirty copy. Staged masthead/grid marking (violet italic + amber dot) + Draft edits pending → CW. Critical unchanged. Assignments twin untouched.
+
+**Overlay E:** Discovery empty CTA; Manual Platform+Tier + profile/scoring warning.
+
+**Overlay F:** Shared `features/discovery/document-output/` + quotation adapter on page 4 (Preview · layout · Export · Client link · Send). Page 2 migrate later. CSV not on quotation API yet.
+
 ## Shipped 2026-09-04 — Session 4b selbar + calculator
 
-Overlay B `.tw-selbar` (fixed, bottom 20px) + Overlay C pricing calculator (formula per mode, Client pays, three guards). Apply blocked when any line below cost. Deselect-all closes calculator. Live crawl: `npm run test:discovery-quotation-detail-4b`. Pure logic: `lib/quotations/quotation-pricing-calculator.ts`. Deferred: CW · add-creators · Overlay F.
+Overlay B `.tw-selbar` (fixed, bottom 20px) + Overlay C pricing calculator (formula per mode, Client pays, three guards). Apply blocked when any line below cost. Deselect-all closes calculator. Live crawl: `npm run test:discovery-quotation-detail-4b`. Pure logic: `lib/quotations/quotation-pricing-calculator.ts`. Commit `3934f7b5`.
 
 ## Shipped 2026-09-04 — Session 4a quotation detail (partial)
 

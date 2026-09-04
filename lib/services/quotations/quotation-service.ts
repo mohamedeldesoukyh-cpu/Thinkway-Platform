@@ -797,11 +797,13 @@ export async function listCampaignImportCreators(
 export async function addManualQuotationItem(
   supabase: SupabaseClient<Database>,
   quotationId: string,
-  input?: { creator_name?: string }
+  input?: { creator_name?: string; platform?: string | null; followers?: number | null }
 ): Promise<QuotationMutationResult<{ added: number; itemIds: string[] }>> {
   return addItemsToQuotation(supabase, quotationId, [
     {
       creator_name: input?.creator_name?.trim() || "New creator",
+      platform: input?.platform?.trim() || null,
+      followers: input?.followers ?? null,
       cost_currency: "EGP",
     },
   ]);

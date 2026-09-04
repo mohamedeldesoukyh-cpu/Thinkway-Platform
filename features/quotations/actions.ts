@@ -528,7 +528,7 @@ export async function listCampaignImportCreators(
 
 export async function addManualQuotationItem(
   quotationId: string,
-  input?: { creator_name?: string }
+  input?: { creator_name?: string; platform?: string | null; followers?: number | null }
 ): Promise<ActionResult<{ added: number; itemIds: string[] }>> {
   const actor = await getActor();
   if (!actor.ok) return actor;

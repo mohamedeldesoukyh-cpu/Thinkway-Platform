@@ -111,6 +111,7 @@ function QuotationPackLineRow({
   const resolved = resolveQuotationRowDraft(item, draft);
   const computed = computeQuotationRowComputed(resolved);
   const zeroCost = !(Number(resolved.cost) > 0) && !(Number(computed.costEgp) > 0);
+  const linePending = manualSave.isLinePending(item.id);
   const tier = resolveCreatorTierLabel({ followers: item.followers });
   const name = item.creator_name?.trim() || "Unknown";
   const handle = (item.handle ?? "").replace(/^@+/, "");
@@ -295,22 +296,37 @@ function QuotationPackLineRow({
       </DiscoverySuiteCell>
       <DiscoverySuiteCell align="end">
         {primary ? (
-          <QuotationDeliverableCostDetails
-            deliverable={primary}
-            item={item}
-            draft={draft}
-            priceLabel={`${F(clientPrice)} EGP`}
-            priceSecondaryLabel={null}
-            gpPctLabel={formatDeliverableGpPct(
-              primary,
-              draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1
-            )}
-            onApply={(next) => applyDeliverable(primary.key, next)}
-            onLiveChange={(next) => applyDeliverable(primary.key, next)}
-            priceLayout="stacked"
-          />
+          <span
+            className={cn("inline-flex items-center gap-1.5", linePending && "italic")}
+            style={linePending ? { color: "var(--tw-vio)" } : undefined}
+            title={linePending ? "Uncommitted draft — Save to write SSOT" : undefined}
+          >
+            {linePending ? (
+              <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
+            ) : null}
+            <QuotationDeliverableCostDetails
+              deliverable={primary}
+              item={item}
+              draft={draft}
+              priceLabel={`${F(clientPrice)} EGP`}
+              priceSecondaryLabel={null}
+              gpPctLabel={formatDeliverableGpPct(
+                primary,
+                draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1
+              )}
+              onApply={(next) => applyDeliverable(primary.key, next)}
+              onLiveChange={(next) => applyDeliverable(primary.key, next)}
+              priceLayout="stacked"
+            />
+          </span>
         ) : (
-          <span className="tw-v">
+          <span
+            className={cn("tw-v inline-flex items-center gap-1.5", linePending && "italic")}
+            style={linePending ? { color: "var(--tw-vio)" } : undefined}
+          >
+            {linePending ? (
+              <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
+            ) : null}
             {F(clientPrice)} EGP
           </span>
         )}

@@ -197,8 +197,15 @@ One editable row per line. Plus Selection summary, Quotation summary, Commercial
 (Healthy / Warning / Critical — currently **Critical on all 4 lines**), and a toolbar with filter,
 mode, apply, undo, redo, columns.
 
-**Explicit save.** It is deliberately not wired to the Creators grid; that separation is the point of
-the modal and removing it would let a mis-click repricie the quotation.
+**Scratchpad model (product truth — not isolated from the Creators grid).** Commercial Workspace
+shares the quotation’s in-memory drafts with the Creators grid and line-pending registry. Editing a
+row stages immediately into that shared scratchpad so masthead and grid stay live. **Save** writes
+line masters (SSOT). **Discard** resets drafts to last-saved line masters. **Close is a no-op** by
+design — it does not discard and does not write SSOT; unsaved edits remain held as drafts. Closing
+must never open a confirm dialog (a scratchpad that interrogates on exit stops being one). While
+dirty, the dialog footer states that unsaved edits are held as drafts and shown in the Creators
+grid. Staged figures must be visually distinct from saved ones (masthead + grid), and the masthead
+names the conflict when staged totals disagree with saved SSOT, with a path back into CW.
 
 ## Overlay E — Add creators modal
 
@@ -262,6 +269,7 @@ Send to client · Done.
 - [ ] Calculator: `price` mode warns when one figure lands on every line.
 - [ ] Calculator: any line below base cost flags red before Apply is possible.
 - [ ] Export menu names the layout it will use.
-- [ ] Manual add-creator tab warns about the missing profile.
-- [ ] Commercial Workspace requires explicit save; closing without saving changes nothing.
+- [ ] Manual add-creator tab warns about the missing profile; Platform and Tier are required on add.
+- [ ] Commercial Workspace: Save writes SSOT; Discard resets to last-saved; Close leaves drafts held
+      (footer copy while dirty). Staged masthead/grid values are marked; Draft edits pending links to CW.
 - [ ] Class-coverage script passes across **all six overlay states**.

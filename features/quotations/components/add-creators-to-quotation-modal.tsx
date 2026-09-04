@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
 import { Loader2Icon, UserPlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -38,6 +39,17 @@ import {
 import type { ImportCreatorOption } from "@/lib/domains/commercial/quotation-types";
 import { buildQuotationSeedFromCreator } from "@/features/quotations/shortlist-seeds";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { getTierFollowerRange } from "@/lib/creators/influencer-tier";
+
+const MANUAL_PLATFORMS = ["Instagram", "TikTok", "YouTube", "Snapchat"] as const;
+const MANUAL_TIERS = ["Nano", "Micro", "Mid", "Macro", "Mega"] as const;
+
+function followersForManualTier(tier: string): number {
+  const range = getTierFollowerRange(tier);
+  if (range.minFollowers == null) return 100_000;
+  if (range.maxFollowers == null) return range.minFollowers;
+  return Math.round((range.minFollowers + range.maxFollowers) / 2);
+}
 
 export type QuotationCreatorsAddedResult = {
   itemIds?: string[];
@@ -74,12 +86,17 @@ export function AddCreatorsToQuotationModal({
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<string>>(new Set());
   const [selectedDiscoveryIds, setSelectedDiscoveryIds] = useState<Set<string>>(new Set());
   const [manualName, setManualName] = useState("");
+  const [manualPlatform, setManualPlatform] = useState("Instagram");
+  const [manualTier, setManualTier] = useState("Mid");
 
   const discoverySelection = useMemo((): UnifiedCreatorResult[] => readDiscoverySelection(), [open]);
 
   useEffect(() => {
     if (!open) return;
     setSelectedDiscoveryIds(new Set(discoverySelection.map((c) => c.unified_id)));
+    setManualName("");
+    setManualPlatform("Instagram");
+    setManualTier("Mid");
   }, [open, discoverySelection]);
 
   useEffect(() => {
@@ -160,7 +177,7 @@ export function AddCreatorsToQuotationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent className="discovery-suite max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Add creators</DialogTitle>
           <DialogDescription>
@@ -178,9 +195,21 @@ export function AddCreatorsToQuotationModal({
 
           <TabsContent value="discovery" className="space-y-3 pt-2">
             {discoverySelection.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No creators in your Discovery selection. Select creators in Discovery Search first.
-              </p>
+              <div className="tw-empty" style={{ padding: "28px 16px" }}>
+                <b>No creators in your Discovery selection</b>
+                <p>
+                  Pick creators in Discovery Search first — they stay in the selection until you
+                  import or clear them.
+                </p>
+                <Link href="/discovery/search" className="tw-b pri">
+                  Open Discovery Search
+                </Link>
+                <div className="mt-3">
+                  <button type="button" className="tw-b" disabled>
+                    Import creators
+                  </button>
+                </div>
+              </div>
             ) : (
               <>
                 <QuotationCreatorPicker
@@ -318,11 +347,58 @@ export function AddCreatorsToQuotationModal({
                 placeholder="e.g. Creator name or handle"
               />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label>Platform</Label>
+                <Select value={manualPlatform} onValueChange={setManualPlatform}>
+                  <SelectTrigger aria-label="Platform">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MANUAL_PLATFORMS.map((platform) => (
+                      <SelectItem key={platform} value={platform}>
+                        {platform}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Tier</Label>
+                <Select value={manualTier} onValueChange={setManualTier}>
+                  <SelectTrigger aria-label="Tier">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MANUAL_TIERS.map((tier) => (
+                      <SelectItem key={tier} value={tier}>
+                        {tier}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="tw-hint" style={{ marginTop: 9 }}>
+              A manual row has no profile behind it — no followers, engagement or publications, and
+              nothing to enrich. Platform and Tier are the only classification this row will carry
+              until a profile is linked. Use it for a creator not yet in Discovery, then link the
+              profile later.
+            </div>
+            <p className="tw-note wrn" style={{ margin: "9px 0 0" }}>
+              Manual rows are excluded from the investment score and from similar-creator matching
+              until a profile is attached.
+            </p>
             <Button
               disabled={pending || !manualName.trim()}
               onClick={() =>
                 runImport(
-                  () => addManualQuotationItem(quotationId, { creator_name: manualName }),
+                  () =>
+                    addManualQuotationItem(quotationId, {
+                      creator_name: manualName,
+                      platform: manualPlatform.toLowerCase(),
+                      followers: followersForManualTier(manualTier),
+                    }),
                   { passItemIds: true }
                 )
               }

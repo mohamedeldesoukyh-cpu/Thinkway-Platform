@@ -19,6 +19,9 @@ type Props = {
   displayCurrency?: string;
   displayFxRateToEgp?: number;
   issueDate?: string | null;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  showTrigger?: boolean;
 };
 
 /**
@@ -38,6 +41,9 @@ export function QuotationCommercialEntry(props: Props) {
         displayCurrency={props.displayCurrency}
         displayFxRateToEgp={props.displayFxRateToEgp}
         issueDate={props.issueDate}
+        open={props.open}
+        onOpenChange={props.onOpenChange}
+        showTrigger={props.showTrigger}
       />
     );
   }
