@@ -9,7 +9,10 @@ import {
   DiscoverySuiteMasthead,
 } from "@/features/discovery/components/design-system";
 import { ImportDropzone } from "@/features/discovery-import/components/import-dropzone";
-import { ImportHistoryTable } from "@/features/discovery-import/components/import-history-table";
+import {
+  ImportHistoryTable,
+  sumImportHistoryTotals,
+} from "@/features/discovery-import/components/import-history-table";
 import { ResetDemoCreatorsButton } from "@/features/discovery-import/components/reset-demo-creators-button";
 import { notifyCreatorImportCompleted } from "@/lib/discovery-import/constants";
 import {
@@ -22,6 +25,9 @@ type ImportCenterWorkspaceProps = {
   initialFiles: CreatorImportFileRow[];
   demoResetEnabled: boolean;
 };
+
+const FILE_DELETION_WARNING =
+  "Uploads process automatically and source files are removed after import — only the filename and row counts stay in history. Download the original before uploading if you need it.";
 
 export function ImportCenterWorkspace({
   initialFiles,
@@ -45,31 +51,25 @@ export function ImportCenterWorkspace({
 
   const needsPolling = useMemo(
     () => creatorImportFilesNeedPolling(files),
-    [files],
+    [files]
   );
+
+  const totals = useMemo(() => sumImportHistoryTotals(files), [files]);
+
   const metrics = useMemo(
     () => [
       { label: "Uploads", value: files.length },
+      { label: "Creators", value: totals.creators },
+      { label: "Imported", value: totals.imported, tone: "g" as const },
+      { label: "Updated", value: totals.updated },
+      { label: "Failed", value: totals.failed, tone: "r" as const },
       {
-        label: "Creators",
-        value: files.reduce((sum, file) => sum + file.total_creators, 0),
-      },
-      {
-        label: "Imported",
-        value: files.reduce((sum, file) => sum + file.imported_creators, 0),
-        tone: "g" as const,
-      },
-      {
-        label: "Updated",
-        value: files.reduce((sum, file) => sum + file.updated_creators, 0),
-      },
-      {
-        label: "Failed",
-        value: files.reduce((sum, file) => sum + file.failed_creators, 0),
-        tone: "r" as const,
+        label: "Processing",
+        value: totals.processing,
+        tone: totals.processing > 0 ? ("y" as const) : undefined,
       },
     ],
-    [files],
+    [files.length, totals]
   );
 
   useEffect(() => {
@@ -100,12 +100,16 @@ export function ImportCenterWorkspace({
         metrics={metrics}
         freezeOnScroll={false}
       />
+
+      {/* Destructive + irreversible — above grid, before the user drops anything. */}
+      <p className="tw-note wrn">{FILE_DELETION_WARNING}</p>
+
       <DiscoveryListCard>
         <DiscoverySectionHeader
           title="Upload datasets"
-          description="Uploads are processed automatically; source files are removed after import completes. Filename and row counts stay in upload history."
+          description="from agencies, platforms or clients"
         />
-        <div className="p-4 md:p-5">
+        <div className="tw-pad">
           <ImportDropzone onUploadComplete={handleUploadComplete} />
         </div>
       </DiscoveryListCard>

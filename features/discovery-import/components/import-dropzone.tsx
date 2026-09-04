@@ -2,13 +2,11 @@
 
 import { useCallback, useState } from "react";
 import { useDropzone } from "react-dropzone";
-import { FileIcon, Loader2Icon, UploadIcon } from "lucide-react";
+import { FileIcon, Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
-import { Input } from "@/components/ui/input";
 import { uploadCreatorImportFileAction } from "@/features/discovery-import/actions";
 import { CREATOR_IMPORT_UPLOAD_CONCURRENCY } from "@/lib/discovery-import/constants";
-import { CREATOR_IMPORT_FILE_EXTENSIONS } from "@/features/discovery-import/types";
 import type { CreatorImportUploadProgressItem } from "@/features/discovery-import/types";
 import { cn } from "@/lib/utils";
 
@@ -139,100 +137,105 @@ export function ImportDropzone({ onUploadComplete }: ImportDropzoneProps) {
 
   return (
     <div>
-      <label
-        htmlFor="source_name"
-        className="mb-1.5 block text-[11px] font-semibold tracking-wide text-muted-foreground"
-      >
-        Source name (optional)
-      </label>
-      <Input
-        id="source_name"
-        value={sourceName}
-        onChange={(event) => setSourceName(event.target.value)}
-        placeholder="Agency, platform, or client name"
-        disabled={isUploading}
-        className="h-9 max-w-[340px] text-xs"
-      />
-      <p className="mt-1.5 mb-4 text-[11px] text-muted-foreground">
-        Tag uploads with the dataset provider for easier filtering in history.
-      </p>
-
       <div
-        {...getRootProps()}
-        className={cn(
-          "group relative mb-5 cursor-pointer rounded-xl border-[1.5px] border-dashed bg-background px-8 py-12 text-center transition-colors",
-          isDragActive
-            ? "border-solid border-blue-600 bg-blue-50 dark:border-blue-500 dark:bg-blue-950/30"
-            : "border-border hover:border-blue-600 hover:bg-blue-50/80 dark:hover:border-blue-500 dark:hover:bg-blue-950/20",
-          isUploading && "pointer-events-none opacity-70"
-        )}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "minmax(0,1fr) 220px",
+          gap: 12,
+          alignItems: "start",
+        }}
       >
-        <input {...getInputProps()} />
         <div
+          {...getRootProps()}
           className={cn(
-            "mx-auto mb-4 flex size-[52px] items-center justify-center rounded-[14px] border border-blue-200 bg-blue-50 transition-transform duration-200 dark:border-blue-800 dark:bg-blue-950/50",
-            !isUploading && "group-hover:-translate-y-0.5"
+            "tw-drop",
+            isDragActive && "ring-2 ring-[var(--tw-blue)]",
+            isUploading && "pointer-events-none opacity-70"
           )}
         >
-          {isUploading ? (
-            <Loader2Icon className="size-6 animate-spin text-blue-600 dark:text-blue-400" />
-          ) : (
-            <UploadIcon className="size-6 text-blue-600 dark:text-blue-400" />
-          )}
+          <input {...getInputProps()} />
+          <span className="ic" aria-hidden>
+            {isUploading ? (
+              <Loader2Icon className="size-4 animate-spin" />
+            ) : (
+              "↑"
+            )}
+          </span>
+          <b>
+            {isDragActive
+              ? "Drop files to upload"
+              : "Drag and drop creator datasets"}
+          </b>
+          <p>
+            .PDF · .XLSX · .CSV · .ZIP — ZIP bundles may contain CSV or XLSX plus
+            optional avatar images. Multiple files, up to 50 MB each.
+          </p>
+          <button
+            type="button"
+            className="tw-b pri"
+            onClick={(event) => {
+              event.stopPropagation();
+              open();
+            }}
+            disabled={isUploading}
+          >
+            <FileIcon className="mr-1 inline size-3.5" />
+            Browse files
+          </button>
         </div>
-        <p className="mb-1.5 text-sm font-semibold text-foreground">
-          {isDragActive ? "Drop files to upload" : "Drag and drop creator datasets"}
-        </p>
-        <p className="mx-auto mb-4 max-w-lg text-[11px] leading-relaxed text-muted-foreground">
-          {CREATOR_IMPORT_FILE_EXTENSIONS.join(", ").toUpperCase()} — ZIP bundles may contain CSV
-          or XLSX plus optional avatar images · multiple files · up to 50 MB each
-        </p>
-        <button
-          type="button"
-          onClick={(event) => {
-            event.stopPropagation();
-            open();
-          }}
-          disabled={isUploading}
-          className="inline-flex h-[34px] items-center gap-1.5 rounded-md border border-border bg-background px-4 text-xs font-medium text-muted-foreground transition-colors hover:border-slate-300 hover:bg-muted disabled:pointer-events-none disabled:opacity-50"
-        >
-          <FileIcon className="size-3.5" />
-          Browse files
-        </button>
+
+        <div>
+          <label className="tw-lbl" htmlFor="source_name">
+            Source name (optional)
+          </label>
+          <input
+            id="source_name"
+            className="tw-in"
+            value={sourceName}
+            onChange={(event) => setSourceName(event.target.value)}
+            placeholder="e.g. Ogilvy, TikTok"
+            aria-label="Source name"
+            disabled={isUploading}
+          />
+          <div className="tw-hint">
+            Tag uploads with the dataset provider so history can be filtered
+            later. One of the five below is untagged.
+          </div>
+        </div>
       </div>
 
       {progress.length > 0 ? (
-        <div className="mb-5 overflow-hidden rounded-[10px] border border-border bg-background">
+        <div className="mt-4 overflow-hidden rounded-[10px] border border-[var(--tw-line)] bg-background">
           <div className="flex items-center justify-between px-4 pt-3 pb-2">
-            <span className="text-xs font-semibold text-foreground">Upload progress</span>
-            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+            <span className="text-xs font-semibold text-foreground">
+              Upload progress
+            </span>
+            <span className="text-xs font-bold text-[var(--tw-blue)]">
               {overallPercent}%
             </span>
           </div>
-          <div className="h-1 bg-slate-200 dark:bg-slate-800">
+          <div className="h-1 bg-[var(--tw-hair)]">
             <div
-              className="relative h-full overflow-hidden bg-gradient-to-r from-blue-600 to-indigo-500 transition-[width] duration-500 ease-out"
+              className="relative h-full overflow-hidden bg-[var(--tw-blue)] transition-[width] duration-500 ease-out"
               style={{ width: `${overallPercent}%` }}
-            >
-              <div className="absolute inset-0 animate-[import-shimmer_1.5s_ease-in-out_infinite] bg-gradient-to-r from-transparent via-white/30 to-transparent" />
-            </div>
+            />
           </div>
-          <ul className="divide-y divide-border">
+          <ul className="divide-y divide-[var(--tw-line)]">
             {progress.map((item) => (
               <li
                 key={item.filename}
                 className="flex items-center justify-between gap-3 px-4 py-2.5"
               >
-                <span className="truncate text-xs font-medium text-muted-foreground">
+                <span className="truncate text-xs font-medium text-[var(--tw-mut)]">
                   {item.filename}
                 </span>
                 <span
                   className={cn(
                     "shrink-0 text-[11px] font-semibold",
-                    item.status === "success" && "text-emerald-600 dark:text-emerald-400",
-                    item.status === "error" && "text-destructive",
-                    item.status === "uploading" && "text-blue-600 dark:text-blue-400",
-                    item.status === "pending" && "text-muted-foreground"
+                    item.status === "success" && "text-[var(--tw-ok)]",
+                    item.status === "error" && "text-[var(--tw-bad)]",
+                    item.status === "uploading" && "text-[var(--tw-blue)]",
+                    item.status === "pending" && "text-[var(--tw-mut)]"
                   )}
                 >
                   {resolveProgressStatusText(item)}
