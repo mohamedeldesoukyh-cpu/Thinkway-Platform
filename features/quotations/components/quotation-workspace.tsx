@@ -723,9 +723,7 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    // Natural document flow under Discovery flush `!overflow-y-auto`.
-    // Avoid nested flex:1 / min-height:0 scrollers — they crush the body to 0px.
-    <div className="quotation-editor-rd4 flex w-full min-w-0 flex-col">
+    <div className="quotation-editor-rd4 flex w-full min-w-0 flex-col pb-24">
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <QuotationWorkspaceHeader
         detail={detail}
@@ -742,60 +740,55 @@ function QuotationWorkspaceContent({
         selectedItemIds={[...selectedIds]}
         onSelectedItemIdsChange={(itemIds) => setSelectedIds(new Set(itemIds))}
         clientReview={clientReview}
-        metrics={
-          <QuotationCommercialMetricsBand
-            totalCostEgp={totals.totalCostEgp}
-            totalRevenueEgp={totals.totalClientCostEgp}
-            totalCommercialGpEgp={totals.totalGpValueEgp}
-            totalAgencyFeeEgp={totals.totalAfValueEgp}
-            totalGpValueEgp={totals.headerGpValueEgp}
-            totalGpPct={totals.headerGpPct}
-            totalPmPct={totals.headerPmPct}
-            gpTargetPct={detail.gp_target_pct}
-            creatorCount={uniqueCreatorCount}
-            version={detail.version}
-            validDaysRemaining={detail.valid_days_remaining}
-            displayCurrency={displayCurrency}
-            displayFxRateToEgp={displayFxRateToEgp}
-            originalTotals={originalTotals}
-            onDisplayCurrencyChange={
-              detail.canManage ? handleDisplayCurrencyChange : undefined
-            }
-            currencyDisabled={currencyPending || !detail.canManage}
-            hasDraftEdits={pendingItemIds.size > 0}
-            savedClientCostEgp={savedTotals.totalClientCostEgp}
-            onOpenCommercialWorkspace={
-              detail.canManage ? () => setCommercialWorkspaceOpen(true) : undefined
-            }
-          />
+      />
+
+      <QuotationCommercialMetricsBand
+        totalCostEgp={totals.totalCostEgp}
+        totalRevenueEgp={totals.totalClientCostEgp}
+        totalCommercialGpEgp={totals.totalGpValueEgp}
+        totalAgencyFeeEgp={totals.totalAfValueEgp}
+        totalGpValueEgp={totals.headerGpValueEgp}
+        totalGpPct={totals.headerGpPct}
+        totalPmPct={totals.headerPmPct}
+        gpTargetPct={detail.gp_target_pct}
+        creatorCount={uniqueCreatorCount}
+        version={detail.version}
+        validDaysRemaining={detail.valid_days_remaining}
+        displayCurrency={displayCurrency}
+        displayFxRateToEgp={displayFxRateToEgp}
+        originalTotals={originalTotals}
+        onDisplayCurrencyChange={
+          detail.canManage ? handleDisplayCurrencyChange : undefined
         }
-        lifecycle={
-          <QuotationLifecyclePills
-            detail={detail}
-            trailing={
-              quotationIsMovedToCampaign(detail) ? null : (
-                <QuotationValidityBar
-                  inline
-                  validityDate={detail.validity_date}
-                  validDaysRemaining={detail.valid_days_remaining}
-                  isExpired={detail.is_expired}
-                />
-              )
-            }
-          />
+        currencyDisabled={currencyPending || !detail.canManage}
+        hasDraftEdits={pendingItemIds.size > 0}
+        savedClientCostEgp={savedTotals.totalClientCostEgp}
+        onOpenCommercialWorkspace={
+          detail.canManage ? () => setCommercialWorkspaceOpen(true) : undefined
         }
       />
 
-      <PlatformErrorBoundary
-        surface="generic"
-        title="Quotation body failed to render"
-        description="The masthead is still usable. Retry, or hard-refresh after clearing the site service worker."
+      <QuotationLifecyclePills
+        detail={detail}
+        trailing={
+          quotationIsMovedToCampaign(detail) ? null : (
+            <QuotationValidityBar
+              inline
+              validityDate={detail.validity_date}
+              validDaysRemaining={detail.valid_days_remaining}
+              isExpired={detail.is_expired}
+            />
+          )
+        }
+      />
+
+      <p
+        className="px-8 py-2 text-[12px] font-semibold text-foreground"
+        data-quotation-body-sentinel
       >
-      <div
-        className="quotation-body flex w-full shrink-0 flex-col"
-        style={{ flexShrink: 0, minHeight: "min-content" }}
-        data-quotation-body
-      >
+        Workspace · {uniqueCreatorCount} creators · {visibleItems.length} lines
+      </p>
+
         {clientReview ? (
           <QuotationClientReviewPanel
             review={clientReview}
@@ -894,6 +887,11 @@ function QuotationWorkspaceContent({
             />
 
             <div className="creators-list discovery-suite">
+              <PlatformErrorBoundary
+                surface="generic"
+                title="Creators grid failed to render"
+                description="Metrics above are still valid. Retry or reload."
+              >
               <QuotationLinesGrid
                 quotationId={detail.id}
                 items={sortedFilteredItems}
@@ -911,6 +909,7 @@ function QuotationWorkspaceContent({
                 totalClientCostEgp={totals.totalClientCostEgp}
                 canManage={detail.canManage}
               />
+              </PlatformErrorBoundary>
             </div>
             {detail.canManage ? (
               <div className="px-[var(--gut,32px)] py-3">
@@ -954,8 +953,7 @@ function QuotationWorkspaceContent({
           <QuotationTermsAccordion termsText={detail.terms} />
         </section>
         </section>
-      </div>
-      </PlatformErrorBoundary>
+
       <QuotationSelectionBar
         selectedCount={selectedIds.size}
         totalCount={sortedFilteredItems.length}

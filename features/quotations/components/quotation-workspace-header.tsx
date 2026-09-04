@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useOptimistic, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
@@ -69,10 +69,6 @@ type Props = {
   selectedItemIds?: string[];
   onSelectedItemIdsChange?: (itemIds: string[]) => void;
   clientReview?: QuotationClientReviewView | null;
-  /** Commercial metrics — rendered under the masthead (always in the visible chrome). */
-  metrics?: React.ReactNode;
-  /** Lifecycle pills under metrics. */
-  lifecycle?: React.ReactNode;
 };
 
 export function QuotationWorkspaceHeader({
@@ -86,8 +82,6 @@ export function QuotationWorkspaceHeader({
   selectedItemIds,
   onSelectedItemIdsChange,
   clientReview,
-  metrics,
-  lifecycle,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -396,8 +390,6 @@ export function QuotationWorkspaceHeader({
           }
           freezeOnScroll={false}
         />
-        {metrics}
-        {lifecycle}
       </div>
 
       <QuotationLifecycleSheet

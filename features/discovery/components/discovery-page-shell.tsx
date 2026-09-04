@@ -59,16 +59,18 @@ export function DiscoveryPageShell({
       <PlatformErrorBoundary surface="generic" recoverActionTimeouts>
         <div
           className={cn(
-            "flex h-full min-h-0 flex-col overflow-hidden",
-            className
+            "flex h-full min-h-0 flex-col",
+            className ?? "overflow-hidden"
           )}
         >
           {toolbar}
           {variant === "flush" ? (
             <div
               className={cn(
-                "flex min-h-0 flex-1 flex-col overflow-hidden",
-                contentClassName
+                "flex min-h-0 flex-1 flex-col",
+                /* Callers that need page scroll (quotation detail) pass overflow-y-auto.
+                   Default stays overflow-hidden for nested scrollers (Search). */
+                contentClassName ?? "overflow-hidden"
               )}
             >
               {children}

@@ -3,9 +3,9 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## Shipped 2026-09-05 — Quotation blank body (pass 3)
+## Shipped 2026-09-05 — Quotation blank body (pass 4)
 
-**Findings:** Console `sw.js?v=1.0.0.local` + FetchEvent failures. Legacy SW used `respondWith(fetch())`; Dig Vercel SSO rejects worker fetches → network errors. Metrics moved under masthead (visible chrome). Body wrapped in error boundary + `flex-shrink:0`. SW no longer intercepts fetch; PWA provider unregisters old workers then re-registers.
+Metrics painted; lifecycle + creators still blank. Nested Discovery `overflow-hidden` was clipping the document below the metrics band. Flush shell now uses caller overflow (`overflow-y-auto` on quotation). Metrics/lifecycle/body are one document-flow column; creators grid has its own error boundary; temporary workspace sentinel line for verification.
 
 ## Shipped 2026-09-04 — Discovery pack CLOSED
 
