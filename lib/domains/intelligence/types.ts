@@ -4,7 +4,8 @@ import type {
 } from "@/features/campaign-intelligence-profile/types/profile";
 
 /** Platform-wide Campaign Intelligence Object status workflow. */
-export type CampaignIntelligenceObjectStatus = CampaignIntelligenceStatus | "archived";
+export type CampaignIntelligenceObjectStatus =
+  CampaignIntelligenceStatus | "archived";
 
 export type CampaignIntelligenceLibraryFilters = {
   brandId?: string | null;
@@ -26,6 +27,7 @@ export type CampaignIntelligenceLibraryItem = {
   campaignName: string | null;
   campaignDocumentNumber: string | null;
   fileName: string | null;
+  createdAt: string;
   updatedAt: string;
   createdBy: string;
 };

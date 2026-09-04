@@ -97,9 +97,10 @@ export function DiscoveryPageShell({
             /* HTML `.content`: page-head sits on lavender canvas; only children are card-bounded. */
             <div
               className={cn(
-                "min-h-0 flex-1 space-y-4 overflow-y-auto bg-[var(--lavender)] px-4 pt-5 pb-[60px] dark:bg-background",
+                "discovery-suite min-h-0 flex-1 space-y-4 overflow-y-auto bg-[var(--tw-bg,#fafbfc)] px-4 pt-5 pb-[60px]",
                 contentClassName
               )}
+              data-discovery-scroll
             >
               {showHeader ? (
                 <DiscoveryPageHeader

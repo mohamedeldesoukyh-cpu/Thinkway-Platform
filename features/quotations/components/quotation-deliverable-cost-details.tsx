@@ -680,6 +680,38 @@ export function QuotationDeliverableCostDetails({
             </div>
           </Field>
         ) : null}
+        {!freeForClient ? (
+          <div className="col-span-3 rounded-[10px] border border-[#d7e3ff] bg-[#f8faff] px-3 py-2">
+            <div className="flex items-center justify-between gap-3">
+              <span className="text-[11px] font-semibold text-[#64748b]">Client pays</span>
+              <span className="text-xs font-bold tabular-nums text-[#1e3a8a]">
+                {formatDualCurrency({
+                  amount: computedTotalClientCost,
+                  currency: costCurrency,
+                  egpAmount:
+                    costCurrency === "EGP"
+                      ? computedTotalClientCost
+                      : computedTotalClientCost * fxRate,
+                })}
+              </span>
+            </div>
+            <p className="mt-0.5 text-[10px] text-[#64748b]">
+              {mode === "cost_markup_pct"
+                ? "Price = cost × (1 + markup%)."
+                : mode === "cost_gp_pct"
+                  ? "Price = cost ÷ (1 − margin%); margin must stay below 100%."
+                  : mode === "cost_revenue"
+                    ? "Flat price is entered directly; a price below cost produces negative GP."
+                    : "Price = cost + GP value."}
+              {afPct > 0 ? " Agency fee is added to the client payment." : ""}
+            </p>
+            {computedGp.warning ? (
+              <p className="mt-1 text-[10px] font-semibold text-amber-700">
+                {computedGp.warning}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
       <div className="mt-3 flex justify-end">
         <Button

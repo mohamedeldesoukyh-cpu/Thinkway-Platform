@@ -5,7 +5,11 @@ import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { addCreatorsToShortlistByProfileUrls } from "@/features/discovery/shortlists/actions";
+import {
+  addCreatorsToShortlistByProfileUrls,
+  previewShortlistProfileUrls,
+  type ShortlistPasteDiscoveryPreview,
+} from "@/features/discovery/shortlists/actions";
 import { ShortlistPasteLinksPanel } from "@/features/discovery/shortlists/components/shortlist-paste-links-panel";
 import {
   describeShortlistPasteAddOutcome,
@@ -50,6 +54,8 @@ export function ShortlistCreatorPicker({
   const [mode, setMode] = useState<AddCreatorsMode>(initialMode);
   const [pasteRaw, setPasteRaw] = useState("");
   const [pasteError, setPasteError] = useState<string | null>(null);
+  const [pasteDiscoveryPreview, setPasteDiscoveryPreview] =
+    useState<ShortlistPasteDiscoveryPreview | null>(null);
   const existingKeys = existingKeysFromShortlistItems(existingItems);
 
   const pastePreview = useMemo(
@@ -63,10 +69,27 @@ export function ShortlistCreatorPicker({
       setMode("search");
       setPasteRaw("");
       setPasteError(null);
+      setPasteDiscoveryPreview(null);
       return;
     }
     setMode(initialMode);
   }, [open, initialMode]);
+
+  useEffect(() => {
+    if (!open || mode !== "paste" || pastePreview.parsed.length === 0) {
+      return;
+    }
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      void previewShortlistProfileUrls({ shortlistId, raw: pasteRaw }).then((preview) => {
+        if (!cancelled) setPasteDiscoveryPreview(preview);
+      });
+    }, 350);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [open, mode, pastePreview.parsed.length, pasteRaw, shortlistId]);
 
   function handleConfirm(
     creators: Parameters<typeof addUnifiedCreatorsToShortlist>[1]
@@ -186,6 +209,7 @@ export function ShortlistCreatorPicker({
             }}
             error={pasteError}
             pending={isPasting}
+            discoveryPreview={pasteDiscoveryPreview}
           />
         ) : undefined
       }

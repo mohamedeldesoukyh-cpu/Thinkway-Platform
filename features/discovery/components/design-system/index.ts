@@ -16,6 +16,9 @@ export * from "./discovery-sheet-chrome";
 export * from "./discovery-workspace-chrome";
 export * from "./discovery-dialog-chrome";
 export * from "./discovery-search-skeleton";
+export * from "./discovery-suite-cols";
+export * from "./discovery-suite-grid";
+export * from "./discovery-suite-masthead";
 export {
   DiscoveryCreatorExactHeader,
   DiscoveryCreatorExactRow,

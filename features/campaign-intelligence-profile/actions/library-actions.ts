@@ -87,7 +87,9 @@ export async function listExistingIntelligenceForBrandAction(
 
   const { data, error } = await supabase
     .from("campaign_intelligence_profiles")
-    .select("id, title, status, brand_id, campaign_header_id, profile, updated_at, created_by")
+    .select(
+      "id, title, status, brand_id, campaign_header_id, profile, created_at, updated_at, created_by"
+    )
     .eq("brand_id", trimmedBrandId)
     .neq("status", "archived")
     .order("updated_at", { ascending: false })
@@ -102,6 +104,7 @@ export async function listExistingIntelligenceForBrandAction(
     brand_id: string | null;
     campaign_header_id: string | null;
     profile: { campaignName?: string; brandName?: string };
+    created_at: string;
     updated_at: string;
     created_by: string;
   };
@@ -124,6 +127,7 @@ export async function listExistingIntelligenceForBrandAction(
       campaignName: null,
       campaignDocumentNumber: null,
       fileName: null,
+      createdAt: row.created_at,
       updatedAt: row.updated_at,
       createdBy: row.created_by,
     };

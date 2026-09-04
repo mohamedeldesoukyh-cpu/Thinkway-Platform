@@ -8,7 +8,6 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/generate-outputs-launcher-lazy";
@@ -198,12 +197,12 @@ export function ShortlistHeaderActions({
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <ShortlistToolbarButton disabled={busy} aria-label="Share">
-            Share
+          <ShortlistToolbarButton disabled={busy} aria-label="Preview shortlist">
+            Preview
           </ShortlistToolbarButton>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className={MENU_CONTENT_CLASS}>
-          <DropdownMenuLabel className={MENU_LABEL_CLASS}>Preview</DropdownMenuLabel>
+          <DropdownMenuLabel className={MENU_LABEL_CLASS}>Layout</DropdownMenuLabel>
           {SHORTLIST_TEMPLATE_OPTIONS.map((option) => (
             <DropdownMenuItem
               key={option.id}
@@ -225,8 +224,22 @@ export function ShortlistHeaderActions({
               ) : null}
             </DropdownMenuItem>
           ))}
-          <DropdownMenuSeparator />
-          <DropdownMenuLabel className={MENU_LABEL_CLASS}>Export</DropdownMenuLabel>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <ShortlistToolbarButton disabled={busy} aria-label="Export shortlist">
+            Export
+          </ShortlistToolbarButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className={MENU_CONTENT_CLASS}>
+          <DropdownMenuLabel className={MENU_LABEL_CLASS}>
+            Download as —{" "}
+            {(SHORTLIST_TEMPLATE_OPTIONS.find((option) => option.id === exportTemplate)
+              ?.label ?? exportTemplate).toLowerCase()}{" "}
+            layout
+          </DropdownMenuLabel>
           {SHORTLIST_EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
             <DropdownMenuItem
               key={format}
@@ -243,7 +256,16 @@ export function ShortlistHeaderActions({
               </span>
             </DropdownMenuItem>
           ))}
-          <DropdownMenuSeparator />
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <ShortlistToolbarButton disabled={busy} aria-label="Share shortlist">
+            Share
+          </ShortlistToolbarButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className={MENU_CONTENT_CLASS}>
           <DropdownMenuLabel className={MENU_LABEL_CLASS}>Client</DropdownMenuLabel>
           <DropdownMenuItem
             disabled={busy}

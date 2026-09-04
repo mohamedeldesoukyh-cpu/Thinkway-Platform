@@ -476,6 +476,10 @@ export function QuotationWorkspaceHeader({
         onOpenChange={setShareOpen}
         url={shareUrl}
         reviewNumber={shareReviewNumber}
+        status={clientReview?.status ?? detail.status}
+        version={detail.version}
+        documentLabel={detail.serial_number ?? detail.name}
+        linkEnabled={hasLink}
       />
       <ClientReviewSendDialog
         open={sendOpen}

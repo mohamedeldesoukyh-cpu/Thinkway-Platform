@@ -71,6 +71,8 @@ function MetricItem({ label, value, unit, tone, compact, original }: MetricDef) 
 type Props = {
   totalCostEgp: number;
   totalRevenueEgp: number;
+  totalCommercialGpEgp: number;
+  totalAgencyFeeEgp: number;
   totalGpValueEgp: number;
   totalGpPct: number;
   totalPmPct: number;
@@ -88,6 +90,8 @@ type Props = {
 export function QuotationCommercialMetricsBand({
   totalCostEgp,
   totalRevenueEgp,
+  totalCommercialGpEgp,
+  totalAgencyFeeEgp,
   totalGpValueEgp,
   totalGpPct,
   totalPmPct,
@@ -116,8 +120,16 @@ export function QuotationCommercialMetricsBand({
   const base = moneyParts(totalCostEgp, displayCurrency, displayFxRateToEgp);
   const client = moneyParts(totalRevenueEgp, displayCurrency, displayFxRateToEgp);
   const gp = moneyParts(totalGpValueEgp, displayCurrency, displayFxRateToEgp);
+  const commercialGp = moneyParts(
+    totalCommercialGpEgp,
+    displayCurrency,
+    displayFxRateToEgp
+  );
+  const agencyFee = moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp);
+  const gpValuesDisagree = Math.abs(totalGpValueEgp - totalCommercialGpEgp) >= 0.01;
 
   return (
+    <div>
     <div className="metricsband" aria-label="Quotation commercial metrics">
       <div className="metric metric--currency">
         <CommercialCurrencySelect
@@ -142,12 +154,20 @@ export function QuotationCommercialMetricsBand({
         original={originalLabels(originalTotals, "totalClientCost")}
       />
       <MetricItem
-        label="GP margin"
+        label={gpValuesDisagree ? "Agency-fee GP" : "GP margin"}
         value={gp.value}
         unit={gp.unit}
         tone={gpTone}
         original={originalLabels(originalTotals, "totalGpMargin")}
       />
+      {gpValuesDisagree ? (
+        <MetricItem
+          label="Commercial GP"
+          value={commercialGp.value}
+          unit={commercialGp.unit}
+          tone={totalCommercialGpEgp < 0 ? "red" : "green"}
+        />
+      ) : null}
       <MetricItem label="GP %" value={`${totalGpPct.toFixed(1)}%`} tone={gpTone} />
       <MetricItem label="PM %" value={`${totalPmPct.toFixed(1)}%`} tone={gpTone} />
       <MetricItem label="Version" value={version} compact />
@@ -163,6 +183,13 @@ export function QuotationCommercialMetricsBand({
         }
         tone={daysTone}
       />
+    </div>
+    {gpValuesDisagree ? (
+      <p className="px-[var(--gut,32px)] pb-2 text-[10.5px] text-muted-foreground">
+        Agency-fee GP includes {agencyFee.value} {agencyFee.unit} in agency
+        fees. The fee is added to what the client pays and is not counted as revenue.
+      </p>
+    ) : null}
     </div>
   );
 }

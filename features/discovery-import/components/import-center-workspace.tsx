@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   DiscoveryListCard,
   DiscoverySectionHeader,
+  DiscoverySuiteMasthead,
 } from "@/features/discovery/components/design-system";
 import { ImportDropzone } from "@/features/discovery-import/components/import-dropzone";
 import { ImportHistoryTable } from "@/features/discovery-import/components/import-history-table";
@@ -42,7 +43,34 @@ export function ImportCenterWorkspace({
     router.refresh();
   }, [refreshFiles, router]);
 
-  const needsPolling = useMemo(() => creatorImportFilesNeedPolling(files), [files]);
+  const needsPolling = useMemo(
+    () => creatorImportFilesNeedPolling(files),
+    [files],
+  );
+  const metrics = useMemo(
+    () => [
+      { label: "Uploads", value: files.length },
+      {
+        label: "Creators",
+        value: files.reduce((sum, file) => sum + file.total_creators, 0),
+      },
+      {
+        label: "Imported",
+        value: files.reduce((sum, file) => sum + file.imported_creators, 0),
+        tone: "g" as const,
+      },
+      {
+        label: "Updated",
+        value: files.reduce((sum, file) => sum + file.updated_creators, 0),
+      },
+      {
+        label: "Failed",
+        value: files.reduce((sum, file) => sum + file.failed_creators, 0),
+        tone: "r" as const,
+      },
+    ],
+    [files],
+  );
 
   useEffect(() => {
     if (!needsPolling) return;
@@ -65,7 +93,12 @@ export function ImportCenterWorkspace({
   }, [files]);
 
   return (
-    <div className="space-y-4">
+    <div className="discovery-suite space-y-4 bg-[var(--tw-bg)] p-4">
+      <DiscoverySuiteMasthead
+        title="Import center"
+        metrics={metrics}
+        freezeOnScroll={false}
+      />
       <DiscoveryListCard>
         <DiscoverySectionHeader
           title="Upload datasets"

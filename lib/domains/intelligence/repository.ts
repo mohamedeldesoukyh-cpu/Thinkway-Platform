@@ -18,6 +18,7 @@ const LIBRARY_SELECT = `
   brand_id,
   campaign_header_id,
   created_by,
+  created_at,
   updated_at,
   profile,
   source_document_id,
@@ -40,6 +41,7 @@ type LibraryRow = {
   brand_id: string | null;
   campaign_header_id: string | null;
   created_by: string;
+  created_at: string;
   updated_at: string;
   profile: { campaignName?: string; brandName?: string };
   source_document_id: string | null;
@@ -54,7 +56,7 @@ type LibraryRow = {
 export async function listCampaignIntelligenceLibrary(
   supabase: SupabaseClient,
   filters: CampaignIntelligenceLibraryFilters = {},
-  limit = 50
+  limit = 50,
 ): Promise<CampaignIntelligenceLibraryItem[]> {
   let query = supabase
     .from("campaign_intelligence_profiles")
@@ -78,11 +80,16 @@ export async function listCampaignIntelligenceLibrary(
   let rows = (data ?? []) as unknown as LibraryRow[];
 
   const clientIds = [
-    ...new Set(rows.map((row) => row.brand?.client_id).filter(Boolean) as string[]),
+    ...new Set(
+      rows.map((row) => row.brand?.client_id).filter(Boolean) as string[],
+    ),
   ];
   const clientNameById = new Map<string, string>();
   if (clientIds.length > 0) {
-    const { data: clients } = await supabase.from("clients").select("id, name").in("id", clientIds);
+    const { data: clients } = await supabase
+      .from("clients")
+      .select("id, name")
+      .in("id", clientIds);
     for (const client of clients ?? []) {
       clientNameById.set(client.id as string, client.name as string);
     }
@@ -102,11 +109,12 @@ export async function listCampaignIntelligenceLibrary(
       brandId: row.brand_id ?? row.brand?.id ?? null,
       brandName: row.brand?.name ?? profile.brandName ?? null,
       clientId,
-      clientName: clientId ? clientNameById.get(clientId) ?? null : null,
+      clientName: clientId ? (clientNameById.get(clientId) ?? null) : null,
       campaignHeaderId: row.campaign_header_id ?? row.campaign?.id ?? null,
       campaignName: row.campaign?.name ?? null,
       campaignDocumentNumber: row.campaign?.document_number ?? null,
       fileName: null,
+      createdAt: row.created_at,
       updatedAt: row.updated_at,
       createdBy: row.created_by,
     };
@@ -140,14 +148,18 @@ export async function listCampaignIntelligenceLibrary(
 export async function listCampaignIntelligenceForBrand(
   supabase: SupabaseClient,
   brandId: string,
-  limit = 20
+  limit = 20,
 ): Promise<CampaignIntelligenceLibraryItem[]> {
-  return listCampaignIntelligenceLibrary(supabase, { brandId, status: "all" }, limit);
+  return listCampaignIntelligenceLibrary(
+    supabase,
+    { brandId, status: "all" },
+    limit,
+  );
 }
 
 export async function getCampaignIntelligenceObjectById(
   supabase: SupabaseClient,
-  profileId: string
+  profileId: string,
 ): Promise<CampaignIntelligenceObjectRow | null> {
   const { data, error } = await supabase
     .from("campaign_intelligence_profiles")
@@ -166,7 +178,7 @@ export async function linkCampaignIntelligenceToCampaign(
     profileId: string;
     campaignHeaderId: string;
     userId: string;
-  }
+  },
 ): Promise<void> {
   const { error: profileError } = await supabase
     .from("campaign_intelligence_profiles")
@@ -188,7 +200,7 @@ export async function linkCampaignIntelligenceToCampaign(
 
 export async function getCampaignIntelligenceForHeader(
   supabase: SupabaseClient,
-  campaignHeaderId: string
+  campaignHeaderId: string,
 ): Promise<CampaignIntelligenceObjectRow | null> {
   const { data: header, error: headerError } = await supabase
     .from("campaign_headers")
@@ -197,8 +209,9 @@ export async function getCampaignIntelligenceForHeader(
     .maybeSingle();
 
   if (headerError) throw new Error(headerError.message);
-  const profileId = (header as { campaign_intelligence_profile_id?: string | null } | null)
-    ?.campaign_intelligence_profile_id;
+  const profileId = (
+    header as { campaign_intelligence_profile_id?: string | null } | null
+  )?.campaign_intelligence_profile_id;
   if (!profileId) return null;
 
   return getCampaignIntelligenceObjectById(supabase, profileId);

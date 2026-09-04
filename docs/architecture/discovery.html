@@ -1,0 +1,2663 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Discovery · Thinkway</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=Geist+Mono:wght@500;600&display=swap">
+<style>
+
+
+
+/* Thinkway finance suite. Every selector scoped to .tw-*. One grid engine:
+   .tw-g sets its own track list per page via --cols, so a header, its rows and
+   its footer can never disagree about column count. */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+ --tw-blue:#0057FF;--tw-b2:#1A6FFF;--tw-bi:#0B52E0;--tw-bdk:#0040CC;--tw-navy:#060810;
+ --tw-ink:#0B0F1A;--tw-ink2:#41495A;--tw-mut:#64748B;--tw-line:#E2E8F0;--tw-hair:#EDF0F5;
+ --tw-bg:#FAFBFC;--tw-soft:#F6F8FB;--tw-lav:#EFF4FF;
+ --tw-ok:#0A7A55;--tw-okb:#E9F7F1;--tw-wrn:#8A5D12;--tw-wrnb:#FFF6E8;
+ --tw-bad:#C82121;--tw-badb:#FEF2F2;--tw-vio:#5B3FD1;--tw-viob:#F1EDFE;
+ --tw-grad:linear-gradient(145deg,#0040CC 0%,#0057FF 40%,#1A6FFF 70%,#0048DD 100%);
+ --tw-ring:0 0 0 1px rgba(0,87,255,.05),0 8px 24px rgba(0,87,255,.06);
+ --tw-ez:cubic-bezier(.23,1,.32,1)}
+body{background:var(--tw-bg);color:var(--tw-ink);font:400 15px/1.5 'Geist','Inter','Segoe UI Variable Text','Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.tw-app{display:grid;grid-template-columns:228px minmax(0,1fr);min-height:100vh}
+/* ---------- nav ---------- */
+.tw-nav{position:sticky;top:0;height:100vh;overflow-y:auto;background:#fff;border-right:1px solid var(--tw-line);padding:14px 10px}
+.tw-brand{display:flex;align-items:center;gap:9px;padding:4px 8px 14px}
+.tw-brand span{width:26px;height:26px;border-radius:8px;background:var(--tw-grad)}
+.tw-brand b{font-size:14px;font-weight:700;letter-spacing:-.3px}
+.tw-brand b i{font-style:normal;color:var(--tw-blue)}
+.tw-navg{margin:10px 0 4px;padding:0 9px;font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:#98A2B3}
+.tw-nav a{display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:9px;text-decoration:none;color:var(--tw-ink2);font-size:12.5px;font-weight:500;cursor:pointer}
+.tw-nav a:hover{background:var(--tw-soft)}
+.tw-nav a.on{background:var(--tw-lav);color:var(--tw-bi);font-weight:600}
+.tw-nav a[data-sub]{padding-left:20px}
+.tw-nav a em{margin-left:auto;font-style:normal;font:600 10px 'Geist Mono',monospace;color:var(--tw-mut)}
+.tw-nav a.on em{color:var(--tw-bi)}
+.tw-main{min-width:0;padding:18px 22px 40px}
+/* ---------- head ---------- */
+.tw-hd{display:flex;align-items:center;gap:13px;flex-wrap:wrap;margin-bottom:14px}
+.tw-hd h1{font-size:19px;font-weight:600;letter-spacing:-.35px}
+.tw-hd p{font-size:12px;color:var(--tw-mut);margin-top:2px;max-width:640px}
+.tw-sp{flex:1 1 auto}
+.tw-b{height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;border:.8px solid #E3E8F2;border-radius:9px;background:#fff;color:var(--tw-ink2);font:600 12.5px 'Geist',sans-serif;cursor:pointer;white-space:nowrap;transition:border-color .15s var(--tw-ez),color .15s}
+.tw-b:hover{border-color:rgba(0,87,255,.35);color:var(--tw-bi)}
+.tw-b:focus-visible{outline:2px solid var(--tw-blue);outline-offset:2px}
+.tw-b.pri{border-color:rgba(0,87,255,.55);color:var(--tw-bi);font-weight:700;font-size:12px;box-shadow:0 0 0 3px rgba(0,87,255,.08),0 2px 14px -3px rgba(0,87,255,.4)}
+.tw-b.sm{height:27px;padding:0 10px;font-size:11.5px;border-radius:8px}
+.tw-b[disabled]{opacity:.42;cursor:not-allowed;box-shadow:none}
+.tw-seg{display:inline-flex;padding:2px;background:var(--tw-soft);border:1px solid var(--tw-hair);border-radius:9px}
+.tw-seg button{padding:5px 11px;border:0;border-radius:7px;cursor:pointer;font:600 11.5px 'Geist',sans-serif;background:none;color:var(--tw-mut)}
+.tw-seg button[aria-pressed="true"]{background:#fff;color:var(--tw-bi);box-shadow:0 1px 2px rgba(11,15,26,.08)}
+/* ---------- kpi ---------- */
+.tw-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(178px,1fr));gap:10px;margin-bottom:13px}
+.tw-k{padding:13px 15px;background:#fff;border-radius:11px;box-shadow:var(--tw-ring)}
+.tw-k i{display:block;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.62px;text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-k b{display:block;margin:6px 0 2px;font:600 22px 'Geist',sans-serif;letter-spacing:-.7px;line-height:1.05;white-space:nowrap}
+.tw-k u{display:block;text-decoration:none;font-size:10.5px;color:var(--tw-mut)}
+.tw-k.bad{box-shadow:0 0 0 1px #EFB6B6,0 8px 24px rgba(200,33,33,.07)}
+.tw-k.bad b,.tw-k.bad u{color:var(--tw-bad)}
+.tw-k.ok b{color:var(--tw-ok)}
+/* ---------- card + universal grid ---------- */
+.tw-c{background:#fff;border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:14px}
+.tw-ch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--tw-line)}
+.tw-ct{font-size:13px;font-weight:600}
+.tw-cs{font-size:11px;color:var(--tw-mut)}
+.tw-sc{overflow-x:auto}
+.tw-g{display:grid;grid-template-columns:var(--cols);align-items:center}
+.tw-g > *{padding:0 8px;min-width:0}
+.tw-hr{position:sticky;top:0;z-index:3;background:var(--tw-soft);border-bottom:1px solid var(--tw-line);padding:9px 8px}
+.tw-hr > *{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-r{padding:11px 8px;border-bottom:1px solid var(--tw-hair)}
+.tw-r:hover{background:#FBFCFF}
+.tw-r.bad{background:#FFF8F8;box-shadow:inset 3px 0 0 var(--tw-bad)}
+.tw-r.wrn{background:#FFFCF5;box-shadow:inset 3px 0 0 #E0A93C}
+.tw-r.sel{background:var(--tw-lav)}
+.tw-r.sub{background:var(--tw-soft);padding:9px 8px;border-bottom:1px solid #E6EAF1}
+.tw-ft{padding:11px 8px;background:#F2F5FA;border-top:2px solid var(--tw-line)}
+.tw-ft > *{font-size:11px;font-weight:600}
+.tw-gp{padding:8px 14px;background:#EDF1F7;border-bottom:1px solid var(--tw-hair);font:600 12px 'Geist',sans-serif}
+.tw-gp em{font-style:normal;font-family:'Geist Mono',monospace;font-weight:500;font-size:10.5px;color:var(--tw-mut);margin-left:8px}
+.tw-rr{text-align:right}
+/* ---------- cell types ---------- */
+.tw-id{font:600 12px 'Geist Mono',monospace;letter-spacing:-.3px;color:var(--tw-ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-nm{font-size:13px;font-weight:600;letter-spacing:-.1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw-t{font-size:12px;color:var(--tw-ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw-br{font-size:12px;font-weight:500;color:var(--tw-vio);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw-s{display:block;font-size:10.5px;color:var(--tw-mut);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw-v{font:600 12.5px 'Geist Mono',monospace;font-variant-numeric:tabular-nums;letter-spacing:-.3px;text-align:right;white-space:nowrap}
+.tw-v.z{color:#B6BECD;font-weight:500}
+.tw-v.neg{color:var(--tw-bad)}
+.tw-v.pos{color:var(--tw-ok)}
+.tw-d{font:500 11.5px 'Geist Mono',monospace;color:var(--tw-ink2);white-space:nowrap}
+.tw-miss{color:#A9B2C3;font-style:italic;font-size:11.5px}
+.tw-cc{display:inline-block;padding:1px 6px;border-radius:5px;background:var(--tw-soft);border:1px solid var(--tw-hair);font:700 9.5px 'Geist Mono',monospace;letter-spacing:.3px;color:var(--tw-mut)}
+.tw-p{display:inline-block;padding:2px 8px;border-radius:999px;font:600 10px 'Geist',sans-serif;white-space:nowrap}
+.p-n{background:var(--tw-soft);color:var(--tw-mut)}
+.p-g{background:var(--tw-okb);color:var(--tw-ok)}
+.p-y{background:var(--tw-wrnb);color:var(--tw-wrn)}
+.p-r{background:var(--tw-badb);color:var(--tw-bad)}
+.p-b{background:var(--tw-lav);color:var(--tw-bi)}
+.p-v{background:var(--tw-viob);color:var(--tw-vio)}
+.tw-act{display:flex;align-items:center;gap:4px;justify-content:flex-end}
+.tw-bar{display:block;height:4px;border-radius:999px;background:var(--tw-hair);overflow:hidden}
+.tw-bar i{display:block;height:100%;background:var(--tw-blue)}
+.tw-bar i.r{background:var(--tw-bad)}
+.tw-bar i.y{background:#E0A93C}
+.tw-ck{width:15px;height:15px;accent-color:var(--tw-blue);cursor:pointer}
+.tw-x{width:21px;height:21px;border:1px solid var(--tw-hair);border-radius:6px;background:#fff;color:var(--tw-mut);font-size:9px;line-height:1;cursor:pointer}
+.tw-x:hover{border-color:var(--tw-blue);color:var(--tw-bi);background:var(--tw-lav)}
+.tw-in{width:100%;height:30px;padding:0 9px;border:1px solid var(--tw-line);border-radius:8px;background:#fff;font:500 12.5px 'Geist',sans-serif;color:var(--tw-ink)}
+.tw-in:focus{outline:none;border-color:var(--tw-blue);box-shadow:0 0 0 3px rgba(0,87,255,.12)}
+.tw-lbl{display:block;font-size:10px;font-weight:700;letter-spacing:.55px;text-transform:uppercase;color:var(--tw-mut);margin-bottom:5px}
+.tw-pad{padding:14px 15px}
+.tw-note{margin:13px 15px;padding:11px 13px;border-radius:9px;background:var(--tw-soft);font-size:11.5px;color:var(--tw-ink2);line-height:1.55}
+.tw-note.bad{background:var(--tw-badb);color:var(--tw-bad)}
+.tw-note.wrn{background:var(--tw-wrnb);color:var(--tw-wrn)}
+.tw-empty{padding:44px 20px;text-align:center}
+.tw-empty svg{width:34px;height:34px;stroke:#C3CBD8;fill:none;stroke-width:1.4;margin-bottom:10px}
+.tw-empty b{display:block;font-size:13px;font-weight:600;margin-bottom:4px}
+.tw-empty p{font-size:12px;color:var(--tw-mut);max-width:400px;margin:0 auto 12px}
+.tw-two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
+.tw-st{display:flex;gap:26px;flex-wrap:wrap}
+.tw-st span{display:flex;flex-direction:column;gap:2px}
+.tw-st i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--tw-mut)}
+.tw-st b{font:600 20px 'Geist Mono',monospace;letter-spacing:-.6px}
+.tw-st b.bad{color:var(--tw-bad)}
+@media(prefers-reduced-motion:reduce){.tw-b,.tw-r{transition:none}}
+@media(max-width:1100px){.tw-two{grid-template-columns:1fr}.tw-app{grid-template-columns:64px minmax(0,1fr)}}
+/* ============ Thinkway identity cards — treasury + reports ============ */
+.tw-deck{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px}
+.tw-tile{position:relative;isolation:isolate;overflow:hidden;padding:15px 16px 14px;border-radius:16px;
+ background:var(--tw-grad);color:#fff;cursor:pointer;min-height:132px;display:flex;flex-direction:column;
+ box-shadow:0 1px 2px rgba(0,64,204,.3),0 10px 26px -8px rgba(0,87,255,.42);
+ transition:transform .32s var(--tw-ez),box-shadow .32s var(--tw-ez)}
+.tw-tile:hover{transform:translateY(-3px);box-shadow:0 1px 2px rgba(0,64,204,.34),0 20px 40px -10px rgba(0,87,255,.5)}
+.tw-tile:focus-visible{outline:2px solid #fff;outline-offset:2px}
+/* the mark: two overlapping rings, the Thinkway "way" cut, drawn in CSS only */
+.tw-tile::before{content:"";position:absolute;z-index:-1;right:-52px;top:-58px;width:186px;height:186px;
+ border-radius:50%;border:30px solid rgba(255,255,255,.10)}
+.tw-tile::after{content:"";position:absolute;z-index:-1;right:12px;bottom:-74px;width:150px;height:150px;
+ border-radius:50%;border:22px solid rgba(255,255,255,.07)}
+.tw-tile.alt{background:linear-gradient(150deg,#0B0F1A 0%,#0E1730 45%,#0040CC 130%)}
+.tw-tile.soft{background:linear-gradient(150deg,#EFF4FF 0%,#DFE9FF 100%);color:var(--tw-navy);
+ box-shadow:0 0 0 1px rgba(0,87,255,.12),0 10px 26px -12px rgba(0,87,255,.3)}
+.tw-tile.soft .tw-tl b{color:var(--tw-navy)}
+.tw-tile.soft::before{border-color:rgba(0,87,255,.10)}
+.tw-tile.soft::after{border-color:rgba(0,87,255,.07)}
+.tw-tile.soft .tw-tl i,.tw-tile.soft .tw-tl p,.tw-tile.soft .tw-go{color:var(--tw-bi)}
+.tw-tl{display:flex;flex-direction:column;height:100%}
+.tw-tl i{font-style:normal;font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;
+ color:rgba(255,255,255,.72)}
+.tw-tl b{display:block;margin:7px 0 5px;font-size:15px;font-weight:600;letter-spacing:-.25px;line-height:1.2}
+.tw-tl p{font-size:11.5px;line-height:1.45;color:rgba(255,255,255,.8)}
+.tw-tl .tw-big{font:600 26px 'Geist',sans-serif;letter-spacing:-1px;margin:6px 0 2px;line-height:1}
+.tw-go{margin-top:auto;padding-top:10px;display:flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
+ color:rgba(255,255,255,.9)}
+.tw-go svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;
+ transition:transform .3s var(--tw-ez)}
+.tw-tile:hover .tw-go svg{transform:translateX(3px)}
+.tw-star{position:absolute;top:12px;right:12px;width:22px;height:22px;border:0;border-radius:7px;cursor:pointer;
+ background:rgba(255,255,255,.14);color:#fff;font-size:11px;line-height:1}
+.tw-tile.soft .tw-star{background:rgba(0,87,255,.1);color:var(--tw-bi)}
+.tw-spark{display:flex;align-items:flex-end;gap:2px;height:26px;margin-top:8px}
+.tw-spark span{flex:1;border-radius:2px 2px 0 0;background:rgba(255,255,255,.34);min-height:3px}
+.tw-tile.soft .tw-spark span{background:rgba(0,87,255,.24)}
+.tw-spark span.hi{background:rgba(255,255,255,.92)}
+.tw-tile.soft .tw-spark span.hi{background:var(--tw-blue)}
+/* ===== campaign detail additions ===== */
+.tw-app{grid-template-columns:minmax(0,1fr)}
+.tw-main{padding:0 22px 40px}
+.tw-top{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:14px 0 12px}
+.tw-crumb{font-size:11.5px;color:var(--tw-mut)}
+.tw-crumb b{color:var(--tw-ink2);font-weight:600}
+.tw-title{font:600 20px 'Geist',sans-serif;letter-spacing:-.5px}
+.tw-code{font:600 12px 'Geist Mono',monospace;color:var(--tw-mut);letter-spacing:-.2px}
+/* decision center */
+.tw-dc{border-radius:14px;overflow:hidden;margin-bottom:12px;background:#fff;
+ box-shadow:0 0 0 1px #F0C9A0,0 10px 28px -12px rgba(200,120,20,.28)}
+.tw-dc__h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;
+ background:linear-gradient(140deg,#FFF6E8 0%,#FFEFD6 100%);border-bottom:1px solid #F3DDBA}
+.tw-dc__t{font-size:9.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:#8A5D12}
+.tw-dc__m{font-size:13.5px;font-weight:600;color:#6B4708}
+.tw-dc__g{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:0}
+.tw-dc__c{padding:13px 15px;border-right:1px solid var(--tw-hair)}
+.tw-dc__c:last-child{border-right:0}
+.tw-dc__c i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.7px;
+ text-transform:uppercase;color:var(--tw-mut);margin-bottom:5px}
+.tw-dc__c b{display:block;font-size:12.5px;font-weight:600;line-height:1.4}
+.tw-dc__c p{font-size:11.5px;color:var(--tw-ink2);line-height:1.5;margin-top:3px}
+.tw-dc__a{display:flex;gap:7px;flex-wrap:wrap;padding:11px 15px;background:var(--tw-soft);
+ border-top:1px solid var(--tw-hair)}
+/* commercial band */
+.tw-band{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0;background:#fff;
+ border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:12px}
+.tw-band > div{padding:12px 15px;border-right:1px solid var(--tw-hair)}
+.tw-band > div:last-child{border-right:0}
+.tw-band i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.7px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-band b{display:block;margin:5px 0 2px;font:600 17px 'Geist',sans-serif;letter-spacing:-.5px;white-space:nowrap}
+.tw-band u{display:block;text-decoration:none;font-size:10.5px;color:var(--tw-mut)}
+.tw-band .g{color:var(--tw-ok)}
+/* workspace tabs */
+.tw-ws{display:flex;gap:3px;flex-wrap:wrap;padding:5px;background:#fff;border-radius:12px;
+ box-shadow:var(--tw-ring);margin-bottom:12px}
+.tw-ws button{display:inline-flex;align-items:center;gap:6px;padding:8px 13px;border:0;border-radius:9px;
+ background:none;cursor:pointer;font:600 12.5px 'Geist',sans-serif;color:var(--tw-mut)}
+.tw-ws button:hover{background:var(--tw-soft);color:var(--tw-ink2)}
+.tw-ws button[aria-pressed="true"]{background:var(--tw-lav);color:var(--tw-bi)}
+.tw-ws em{font-style:normal;font:600 10px 'Geist Mono',monospace;padding:1px 5px;border-radius:999px;
+ background:var(--tw-soft);color:var(--tw-mut)}
+.tw-ws button[aria-pressed="true"] em{background:#fff;color:var(--tw-bi)}
+.tw-ws .sp{flex:1 1 auto}
+/* locked banner */
+.tw-lock{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;border-radius:11px;
+ background:var(--tw-wrnb);border:1px solid #F0D6A4;margin-bottom:12px;font-size:11.5px;color:var(--tw-wrn)}
+.tw-lock b{font-weight:700;font-size:9.5px;letter-spacing:.7px;text-transform:uppercase}
+/* journey */
+.tw-jr{display:grid;grid-template-columns:repeat(auto-fit,minmax(122px,1fr));gap:7px}
+.tw-jn{padding:11px 12px;border-radius:10px;background:var(--tw-soft);border:1px solid var(--tw-hair)}
+.tw-jn.ok{background:var(--tw-okb);border-color:#BFE6D5}
+.tw-jn.cur{background:var(--tw-lav);border-color:#CDDCFF}
+.tw-jn.miss{background:var(--tw-badb);border-color:#F3C4C4}
+.tw-jn i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-jn b{display:block;margin-top:4px;font-size:12px;font-weight:600}
+.tw-jn u{display:block;text-decoration:none;font-size:10px;color:var(--tw-mut);margin-top:2px}
+/* milestone rail */
+.tw-ms{display:flex;flex-direction:column;gap:0}
+.tw-mi{display:grid;grid-template-columns:20px minmax(160px,1fr) 130px 116px;gap:12px;align-items:center;
+ padding:9px 15px;border-bottom:1px solid var(--tw-hair)}
+.tw-mi:last-child{border-bottom:0}
+.tw-dot{width:11px;height:11px;border-radius:50%;border:2px solid var(--tw-line);background:#fff;margin:0 auto}
+.tw-dot.on{background:var(--tw-ok);border-color:var(--tw-ok)}
+.tw-dot.now{background:var(--tw-blue);border-color:var(--tw-blue);box-shadow:0 0 0 3px rgba(0,87,255,.16)}
+.tw-dot.warn{background:#E0A93C;border-color:#E0A93C}
+.tw-mi.dim b,.tw-mi.dim span{color:#A9B2C3}
+/* mini dashboard cards */
+.tw-od{display:grid;grid-template-columns:repeat(auto-fit,minmax(212px,1fr));gap:11px}
+.tw-oc{padding:13px 15px;border-radius:12px;background:#fff;box-shadow:var(--tw-ring)}
+.tw-oc__h{display:flex;align-items:center;gap:7px;margin-bottom:9px}
+.tw-oc__h b{font-size:12.5px;font-weight:600}
+.tw-oc__r{display:flex;justify-content:space-between;padding:4px 0;font-size:11.5px}
+.tw-oc__r span{color:var(--tw-mut)}
+.tw-oc__r b{font:600 12px 'Geist Mono',monospace}
+.tw-oc__r b.bad{color:var(--tw-bad)}
+.tw-oc__r b.ok{color:var(--tw-ok)}
+/* key-value blocks */
+.tw-kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(184px,1fr));gap:0}
+.tw-kv > div{padding:11px 15px;border-right:1px solid var(--tw-hair);border-bottom:1px solid var(--tw-hair)}
+.tw-kv i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.65px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-kv b{display:block;margin-top:4px;font-size:12.5px;font-weight:600}
+.tw-kv b.m{font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums}
+/* conflict callout */
+.tw-cf{display:flex;gap:10px;margin:13px 15px;padding:12px 14px;border-radius:11px;
+ background:var(--tw-badb);border:1px solid #F3C4C4}
+.tw-cf__i{flex:0 0 auto;display:grid;place-items:center;width:20px;height:20px;border-radius:6px;
+ background:var(--tw-bad);color:#fff;font:700 11px 'Geist',sans-serif}
+.tw-cf b{color:var(--tw-bad)}
+.tw-cf p{font-size:11.5px;color:#8A2020;line-height:1.55}
+.tw-cf code{font-family:'Geist Mono',monospace;font-size:11px;background:#fff;padding:1px 5px;
+ border-radius:4px;border:1px solid #F3C4C4}
+.tw-mono{font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums}
+/* ===== work-friendly shell ===== */
+.tw-sticky{position:sticky;top:0;z-index:40;background:rgba(250,251,252,.93);
+ backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);margin:0 -22px;padding:0 22px;
+ border-bottom:1px solid var(--tw-line)}
+.tw-sticky .tw-ws{margin:0;box-shadow:none;background:transparent;padding:6px 0}
+.tw-bar2{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 0 0}
+.tw-bar2 .n{font:600 15px 'Geist',sans-serif;letter-spacing:-.35px}
+.tw-bar2 .c{font:600 11px 'Geist Mono',monospace;color:var(--tw-mut)}
+/* two-column working layout */
+.tw-work{display:grid;grid-template-columns:minmax(0,1fr) 306px;gap:14px;align-items:start}
+.tw-rail{position:sticky;top:104px;display:flex;flex-direction:column;gap:12px}
+@media(max-width:1180px){.tw-work{grid-template-columns:minmax(0,1fr)}.tw-rail{position:static}}
+/* next-action panel */
+.tw-na{border-radius:13px;overflow:hidden;background:#fff;box-shadow:0 0 0 1px #F0C9A0,0 10px 26px -14px rgba(200,120,20,.3)}
+.tw-na__h{padding:11px 14px;background:linear-gradient(140deg,#FFF6E8,#FFEFD6);border-bottom:1px solid #F3DDBA}
+.tw-na__h i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.8px;
+ text-transform:uppercase;color:#8A5D12}
+.tw-na__h b{display:block;margin-top:4px;font-size:13px;font-weight:600;color:#6B4708;line-height:1.35}
+.tw-step{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--tw-hair)}
+.tw-step:last-of-type{border-bottom:0}
+.tw-step__n{flex:0 0 auto;display:grid;place-items:center;width:20px;height:20px;border-radius:50%;
+ font:700 10px 'Geist Mono',monospace;background:var(--tw-soft);color:var(--tw-mut)}
+.tw-step.now .tw-step__n{background:var(--tw-blue);color:#fff}
+.tw-step.done .tw-step__n{background:var(--tw-okb);color:var(--tw-ok)}
+.tw-step b{display:block;font-size:12px;font-weight:600}
+.tw-step p{font-size:11px;color:var(--tw-mut);line-height:1.45;margin-top:2px}
+.tw-step.dim b,.tw-step.dim p{color:#A9B2C3}
+/* compact stat strip */
+.tw-mini{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--tw-hair);
+ border-radius:11px;overflow:hidden;box-shadow:var(--tw-ring)}
+.tw-mini > div{background:#fff;padding:10px 11px}
+.tw-mini i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-mini b{display:block;margin-top:3px;font:600 15px 'Geist Mono',monospace;letter-spacing:-.4px}
+.tw-mini b.bad{color:var(--tw-bad)}
+.tw-mini b.ok{color:var(--tw-ok)}
+.tw-mini b.z{color:#B6BECD}
+/* activity feed */
+.tw-feed{max-height:260px;overflow-y:auto}
+.tw-fe{display:grid;grid-template-columns:16px minmax(0,1fr) 76px;gap:9px;align-items:center;
+ padding:8px 14px;border-bottom:1px solid var(--tw-hair)}
+.tw-fe:last-child{border-bottom:0}
+.tw-fe__d{width:7px;height:7px;border-radius:50%;background:var(--tw-line);margin:0 auto}
+.tw-fe__d.on{background:var(--tw-blue)}
+.tw-fe b{font-size:11.5px;font-weight:600}
+.tw-fe span{font-size:10.5px;color:var(--tw-mut)}
+.tw-fe u{text-decoration:none;font:500 10px 'Geist Mono',monospace;color:var(--tw-mut);text-align:right}
+/* jump links */
+.tw-jump{display:flex;gap:6px;flex-wrap:wrap;padding:9px 0 3px}
+.tw-jump a{padding:4px 10px;border-radius:999px;background:#fff;border:1px solid var(--tw-hair);
+ font-size:11px;font-weight:500;color:var(--tw-ink2);text-decoration:none;cursor:pointer}
+.tw-jump a:hover{border-color:rgba(0,87,255,.35);color:var(--tw-bi)}
+.tw-jump a b{font-weight:700;color:var(--tw-bad)}
+.tw-sec{scroll-margin-top:112px}
+/* ===== calmer shell: more air, fewer things at once ===== */
+.tw-main{max-width:1240px;margin:0 auto;padding:0 24px 56px}
+.tw-c{margin-bottom:16px;border-radius:14px}
+.tw-ch{padding:14px 18px;gap:11px}
+.tw-ct{font-size:13.5px}
+.tw-pad{padding:18px}
+.tw-kv > div{padding:13px 18px}
+.tw-note{margin:0 18px 16px;padding:13px 15px;font-size:12px;line-height:1.6}
+.tw-cf{margin:0 18px 16px;padding:14px 16px}
+/* hero */
+.tw-hero{background:#fff;border-radius:14px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:14px;
+ border-left:3px solid var(--tw-bad)}
+.tw-hero__t{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 18px 4px}
+.tw-hero__t .id{font:600 11px 'Geist Mono',monospace;color:var(--tw-mut);padding:3px 8px;border-radius:6px;
+ background:var(--tw-soft)}
+.tw-hero__t h1{font:600 24px 'Geist',sans-serif;letter-spacing:-.7px}
+.tw-hero__s{padding:0 18px 14px;font-size:12.5px;color:var(--tw-mut)}
+.tw-blk{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 18px 14px;padding:13px 15px;
+ border-radius:11px;background:var(--tw-badb);border:1px solid #F3C4C4}
+.tw-blk .lb{font-size:9px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--tw-bad)}
+.tw-blk .msg{font-size:13px;font-weight:600;color:#8A2020}
+.tw-blk .sub{font-size:11.5px;color:#A44}
+.tw-acts{display:flex;gap:8px;flex-wrap:wrap;padding:13px 18px;border-top:1px solid var(--tw-hair);
+ background:var(--tw-soft)}
+/* metrics: roomier */
+.tw-mx{display:grid;grid-template-columns:repeat(auto-fit,minmax(184px,1fr));gap:12px;margin-bottom:14px}
+.tw-mx > div{padding:15px 17px;background:#fff;border-radius:13px;box-shadow:var(--tw-ring)}
+.tw-mx i{display:block;font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.7px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-mx b{display:block;margin:8px 0 3px;font:600 21px 'Geist',sans-serif;letter-spacing:-.6px;white-space:nowrap}
+.tw-mx u{display:block;text-decoration:none;font-size:11px;color:var(--tw-mut)}
+.tw-mx b.g{color:var(--tw-ok)}
+.tw-mx b.r{color:var(--tw-bad)}
+/* status strip */
+.tw-str{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:0;background:#fff;
+ border-radius:13px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:14px}
+.tw-str > div{padding:13px 17px;border-right:1px solid var(--tw-hair)}
+.tw-str > div:last-child{border-right:0}
+.tw-str i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.7px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-str b{display:block;margin-top:5px;font-size:13px;font-weight:600}
+/* stepper tab bar */
+.tw-step2{display:flex;align-items:stretch;background:#fff;border-radius:13px;box-shadow:var(--tw-ring);
+ padding:4px;margin-bottom:16px;overflow-x:auto}
+.tw-sb{flex:1 1 0;min-width:104px;display:flex;flex-direction:column;align-items:center;gap:7px;
+ padding:11px 6px 9px;border:0;border-radius:10px;background:none;cursor:pointer;position:relative}
+.tw-sb:hover{background:var(--tw-soft)}
+.tw-sb[aria-pressed="true"]{background:var(--tw-lav)}
+.tw-sb__d{width:11px;height:11px;border-radius:50%;border:2px solid var(--tw-line);background:#fff;z-index:1}
+.tw-sb.done .tw-sb__d{background:var(--tw-blue);border-color:var(--tw-blue)}
+.tw-sb[aria-pressed="true"] .tw-sb__d{box-shadow:0 0 0 3px rgba(0,87,255,.18)}
+.tw-sb::before{content:"";position:absolute;top:16px;left:0;width:50%;height:2px;background:var(--tw-line)}
+.tw-sb::after{content:"";position:absolute;top:16px;right:0;width:50%;height:2px;background:var(--tw-line)}
+.tw-sb:first-child::before,.tw-sb:last-child::after{display:none}
+.tw-sb.done::before,.tw-sb.done::after{background:var(--tw-blue)}
+.tw-sb.done + .tw-sb:not(.done)::before{background:var(--tw-blue)}
+.tw-sb__l{display:flex;align-items:center;gap:5px;font:600 12px 'Geist',sans-serif;color:var(--tw-mut);
+ white-space:nowrap}
+.tw-sb[aria-pressed="true"] .tw-sb__l{color:var(--tw-bi)}
+.tw-sb__l em{font-style:normal;font:600 10px 'Geist Mono',monospace;padding:1px 5px;border-radius:999px;
+ background:var(--tw-soft);color:var(--tw-mut)}
+/* dashboard: 2 columns, roomy */
+.tw-dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.tw-dc2{background:#fff;border-radius:13px;box-shadow:var(--tw-ring);overflow:hidden}
+.tw-dc2__h{display:flex;align-items:center;gap:10px;padding:14px 17px 12px}
+.tw-dc2__h b{font-size:14px;font-weight:600}
+.tw-dc2__h u{display:block;text-decoration:none;font-size:11px;color:var(--tw-mut);margin-top:2px}
+.tw-dc2__r{display:flex;justify-content:space-between;align-items:center;padding:9px 17px;
+ border-top:1px solid var(--tw-hair);font-size:12.5px}
+.tw-dc2__r span{color:var(--tw-ink2)}
+.tw-dc2__r b{font:600 13px 'Geist Mono',monospace}
+.tw-dc2__r b.bad{color:var(--tw-bad)}
+.tw-dc2__r b.ok{color:var(--tw-ok)}
+.tw-dc2__r b.z{color:#B6BECD}
+/* collapsible */
+.tw-col{background:#fff;border-radius:13px;box-shadow:var(--tw-ring);margin-bottom:14px;overflow:hidden}
+.tw-col__h{display:flex;align-items:center;gap:11px;width:100%;padding:14px 18px;border:0;background:none;
+ cursor:pointer;text-align:left}
+.tw-col__h:hover{background:var(--tw-soft)}
+.tw-col__h .ar{font-size:10px;color:var(--tw-mut)}
+.tw-col__h b{font-size:13.5px;font-weight:600}
+.tw-col__h span{font-size:11.5px;color:var(--tw-mut)}
+.tw-col__b{border-top:1px solid var(--tw-hair)}
+/* issue list, one place */
+.tw-iss{display:flex;gap:11px;padding:13px 18px;border-bottom:1px solid var(--tw-hair)}
+.tw-iss:last-child{border-bottom:0}
+.tw-iss__n{flex:0 0 auto;display:grid;place-items:center;width:19px;height:19px;border-radius:6px;
+ background:var(--tw-badb);color:var(--tw-bad);font:700 10px 'Geist Mono',monospace}
+.tw-iss b{display:block;font-size:12.5px;font-weight:600;margin-bottom:3px}
+.tw-iss p{font-size:11.5px;color:var(--tw-ink2);line-height:1.6}
+.tw-iss code{font-family:'Geist Mono',monospace;font-size:11px;background:var(--tw-soft);padding:1px 5px;
+ border-radius:4px}
+/* full width — no wasted gutters */
+.tw-main{max-width:none;margin:0;padding:0 16px 56px}
+.tw-sticky{margin:0 -16px;padding:0 16px}
+/* avatars + platform marks */
+.tw-av{width:26px;height:26px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+ background:var(--tw-grad);color:#fff;font:700 10px 'Geist',sans-serif;overflow:hidden}
+.tw-av.k2{background:linear-gradient(150deg,#5B3FD1,#8B6BF0)}
+.tw-av.k3{background:linear-gradient(150deg,#0A7A55,#1FBF88)}
+.tw-av.k4{background:linear-gradient(150deg,#C82121,#F06060)}
+.tw-cr{display:flex;align-items:center;gap:8px;min-width:0}
+.tw-cr b{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw-cr u{display:block;text-decoration:none;font-size:10px;color:var(--tw-mut);overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+.tw-pf{display:flex;gap:3px}
+.tw-pf span{width:19px;height:19px;border-radius:6px;display:grid;place-items:center;
+ font:700 8.5px 'Geist',sans-serif;color:#fff}
+.tw-pf .ig{background:linear-gradient(135deg,#F58529,#DD2A7B,#8134AF)}
+.tw-pf .tt{background:#0B0F1A}
+.tw-pf .yt{background:#E5322D}
+.tw-pf .sc{background:#F5D90A;color:#0B0F1A}
+/* child ad-line band */
+.tw-ad{background:#F4F7FC;border-left:3px solid var(--tw-blue)}
+.tw-adh{background:#E7EDF7;padding:7px 8px}
+.tw-adh > *{font-size:8.5px;font-weight:700;letter-spacing:.55px;text-transform:uppercase;color:#7C879A;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-adr{padding:9px 8px;border-bottom:1px solid #DEE5F0}
+.tw-adr:hover{background:#fff}
+.tw-adf{padding:9px 8px;background:#DFE7F3;font-weight:600}
+.tw-adf > *{font-size:11px}
+/* expandable detail panels */
+.tw-xp{border-bottom:1px solid var(--tw-hair)}
+.tw-xp:last-child{border-bottom:0}
+.tw-xp__h{display:flex;align-items:center;gap:11px;width:100%;padding:12px 18px;border:0;background:none;
+ cursor:pointer;text-align:left}
+.tw-xp__h:hover{background:var(--tw-soft)}
+.tw-xp__h b{font-size:12.5px;font-weight:600}
+.tw-xp__h span{font-size:11px;color:var(--tw-mut)}
+.tw-xp__h .ex{font:600 9px 'Geist',sans-serif;letter-spacing:.6px;text-transform:uppercase;color:var(--tw-bi);
+ padding:3px 8px;border-radius:6px;background:var(--tw-lav)}
+.tw-xp__b{padding:0 18px 16px;border-top:1px solid var(--tw-hair)}
+.tw-trio{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:0;
+ border-top:1px solid var(--tw-hair)}
+.tw-trio > div{padding:14px 18px;border-right:1px solid var(--tw-hair)}
+.tw-trio > div:last-child{border-right:0}
+.tw-trio .lb{font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--tw-mut);
+ margin-bottom:9px}
+.tw-trio .rw{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}
+.tw-trio .rw span{color:var(--tw-mut)}
+.tw-trio .rw b{font-weight:600}
+/* ============ compact header + one visual language ============ */
+.tw-main{padding:0 14px 44px}
+.tw-sticky{margin:0 -14px;padding:0 14px}
+.tw-top{padding:9px 0 8px;gap:9px}
+/* ---- masthead: hero + metrics + status in ONE band ---- */
+.tw-mast{position:relative;isolation:isolate;overflow:hidden;border-radius:14px;background:#fff;
+ box-shadow:var(--tw-ring);margin-bottom:10px}
+.tw-mast::before{content:"";position:absolute;z-index:-1;inset:0;
+ background:linear-gradient(107deg,#0040CC 0%,#0057FF 30%,#1A6FFF 52%,rgba(26,111,255,0) 72%)}
+.tw-mast::after{content:"";position:absolute;z-index:-1;left:308px;top:-88px;width:210px;height:210px;
+ border-radius:50%;border:34px solid rgba(255,255,255,.11)}
+.tw-mh{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:11px 15px 10px;color:#fff}
+.tw-mh .id{font:600 10px 'Geist Mono',monospace;letter-spacing:.2px;padding:2px 7px;border-radius:6px;
+ background:rgba(255,255,255,.16);color:#fff}
+.tw-mh h1{font:600 19px 'Geist',sans-serif;letter-spacing:-.5px;color:#fff}
+.tw-mh .sub{font-size:11.5px;color:rgba(255,255,255,.74)}
+.tw-mh .st{padding:3px 9px;border-radius:999px;font:600 10px 'Geist',sans-serif;
+ background:rgba(255,255,255,.18);color:#fff}
+.tw-mh .st.r{background:#fff;color:var(--tw-bad)}
+/* blocker line inside masthead */
+.tw-mb{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:9px 15px;
+ background:rgba(255,255,255,.13);border-top:1px solid rgba(255,255,255,.16);color:#fff}
+.tw-mb .lb{font:700 8.5px 'Geist',sans-serif;letter-spacing:.8px;text-transform:uppercase;
+ color:rgba(255,255,255,.72)}
+.tw-mb .msg{font-size:12.5px;font-weight:600}
+.tw-mb .sub{font-size:11px;color:rgba(255,255,255,.75)}
+.tw-mb .go{height:26px;padding:0 11px;border:0;border-radius:8px;background:#fff;color:var(--tw-bi);
+ font:700 11px 'Geist',sans-serif;cursor:pointer}
+/* action row on white */
+.tw-mr{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:9px 15px;background:#fff}
+/* metric + status: one dense strip */
+.tw-ms2{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:0;background:#fff;
+ border-top:1px solid var(--tw-hair)}
+.tw-ms2 > div{padding:9px 14px;border-right:1px solid var(--tw-hair)}
+.tw-ms2 > div:last-child{border-right:0}
+.tw-ms2 i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tw-ms2 b{display:block;margin-top:3px;font:600 14px 'Geist',sans-serif;letter-spacing:-.35px;white-space:nowrap}
+.tw-ms2 b.g{color:var(--tw-ok)}
+.tw-ms2 b.r{color:var(--tw-bad)}
+.tw-ms2 b.s{font-size:12.5px;font-weight:600}
+/* ---- stepper: shorter ---- */
+.tw-step2{padding:3px;margin-bottom:10px;border-radius:12px}
+.tw-sb{min-width:92px;gap:5px;padding:8px 5px 7px}
+.tw-sb::before,.tw-sb::after{top:13px}
+.tw-sb__d{width:9px;height:9px}
+.tw-sb__l{font-size:11.5px}
+.tw-sb__l em{font-size:9.5px;padding:0 4px}
+/* ---- overview cards: smaller, same identity as masthead ---- */
+.tw-dash{grid-template-columns:repeat(auto-fit,minmax(268px,1fr));gap:10px}
+.tw-dc2{position:relative;isolation:isolate;overflow:hidden;border-radius:12px}
+.tw-dc2::before{content:"";position:absolute;z-index:-1;left:0;right:0;top:0;height:44px;
+ background:linear-gradient(107deg,#0040CC 0%,#0057FF 42%,#1A6FFF 100%)}
+.tw-dc2::after{content:"";position:absolute;z-index:-1;right:-30px;top:-46px;width:104px;height:104px;
+ border-radius:50%;border:17px solid rgba(255,255,255,.13)}
+.tw-dc2__h{padding:11px 13px 12px;color:#fff;gap:8px}
+.tw-dc2__h b{font-size:12.5px;font-weight:600;color:#fff}
+.tw-dc2__h u{font-size:10px;color:rgba(255,255,255,.72);margin-top:1px}
+.tw-dc2__h .tw-b{height:23px;padding:0 9px;font-size:10.5px;border-radius:7px;
+ background:rgba(255,255,255,.16);border-color:rgba(255,255,255,.24);color:#fff}
+.tw-dc2__h .tw-b:hover{background:rgba(255,255,255,.26);border-color:rgba(255,255,255,.4);color:#fff}
+.tw-dc2__h .tw-p{background:rgba(255,255,255,.2);color:#fff}
+.tw-dc2__r{padding:7px 13px;font-size:11.5px;background:#fff}
+.tw-dc2__r:first-of-type{border-top:0}
+.tw-dc2__r b{font-size:12px}
+/* generic cards a touch tighter */
+.tw-c{margin-bottom:11px;border-radius:12px}
+.tw-ch{padding:11px 14px;gap:9px}
+.tw-ct{font-size:12.5px}
+.tw-pad{padding:14px}
+.tw-kv > div{padding:10px 14px}
+.tw-kv i{font-size:8.5px}
+.tw-kv b{font-size:12px;margin-top:3px}
+.tw-note{margin:0 14px 12px;padding:11px 13px;font-size:11.5px}
+.tw-cf{margin:0 14px 12px;padding:12px 14px}
+.tw-jn{padding:9px 10px}
+.tw-jr{gap:6px;grid-template-columns:repeat(auto-fit,minmax(112px,1fr))}
+.tw-col{margin-bottom:11px;border-radius:12px}
+.tw-col__h{padding:11px 14px}
+.tw-mi{padding:7px 14px}
+/* ---- card headers: gradient on the element itself, so it can never clip ---- */
+.tw-dc2::before,.tw-dc2::after{display:none}
+.tw-dc2__h{position:relative;isolation:isolate;overflow:hidden;display:flex;align-items:flex-start;
+ flex-wrap:wrap;padding:11px 13px}
+.tw-dc2__h::after{content:"";position:absolute;z-index:-1;right:-28px;top:-40px;width:96px;height:96px;
+ border-radius:50%;border:16px solid rgba(255,255,255,.12)}
+.tw-dc2__h > span:first-child{min-width:0;flex:1 1 auto}
+.tw-dc2__h b{display:block;font-size:12.5px;font-weight:600;color:#fff;line-height:1.25;
+ overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw-dc2__h u{display:block;text-decoration:none;font-size:10px;color:rgba(255,255,255,.74);
+ margin-top:2px;line-height:1.3;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tw-dc2__h .tw-sp{flex:0 0 auto;width:8px}
+.tw-dc2__h .tw-p,.tw-dc2__h .tw-b,.tw-dc2__h .tw-cs{flex:0 0 auto;align-self:center}
+.tw-dc2__h .tw-cs{color:rgba(255,255,255,.74);font-size:10px}
+/* two tones only: brand blue by default, navy for neutral/secondary */
+/* alert state is a thin rail, not a different hue */
+.tw-dc2.alert{box-shadow:0 0 0 1px #EFB6B6,0 8px 24px rgba(200,33,33,.07)}
+/* masthead ring sits behind text, never over it */
+.tw-mast::after{left:auto;right:34%;top:-96px;width:196px;height:196px;border-width:30px}
+.tw-mh h1,.tw-mh .id,.tw-mh .sub,.tw-mh .st{position:relative;z-index:1}
+/* ============ lighter cards, wider, frozen header ============ */
+/* wider: 3 across instead of 5 */
+.tw-dash{grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:12px}
+/* light headers — tint + ink text, brand blue only as accent */
+.tw-dc2__h{background:linear-gradient(107deg,#E9F0FF 0%,#F2F7FF 58%,#F7FAFF 100%);
+ color:var(--tw-ink);border-bottom:1px solid #DDE7FA}
+.tw-dc2__h::after{border-color:rgba(0,87,255,.09)}
+.tw-dc2__h b{color:var(--tw-navy)}
+.tw-dc2__h u{color:var(--tw-mut)}
+.tw-dc2__h .tw-cs{color:var(--tw-mut)}
+.tw-dc2__h .tw-b{background:#fff;border-color:#CFDDF7;color:var(--tw-bi)}
+.tw-dc2__h .tw-b:hover{background:#fff;border-color:rgba(0,87,255,.45);color:var(--tw-bi)}
+.tw-dc2__h .tw-p{background:#fff;color:var(--tw-bi);box-shadow:0 0 0 1px #CFDDF7}
+.tw-dc2.v2 .tw-dc2__h,.tw-dc2.v3 .tw-dc2__h,.tw-dc2.v4 .tw-dc2__h,
+.tw-dc2.v5 .tw-dc2__h,.tw-dc2.v6 .tw-dc2__h{
+ background:linear-gradient(107deg,#E9F0FF 0%,#F2F7FF 58%,#F7FAFF 100%)}
+.tw-dc2.n .tw-dc2__h{background:linear-gradient(107deg,#EEF1F6 0%,#F5F7FA 60%,#F9FAFC 100%);
+ border-bottom-color:#E2E8F0}
+.tw-dc2.n .tw-dc2__h::after{border-color:rgba(11,15,26,.05)}
+.tw-dc2.n .tw-dc2__h .tw-b,.tw-dc2.n .tw-dc2__h .tw-p{color:var(--tw-ink2);box-shadow:0 0 0 1px var(--tw-line)}
+.tw-dc2.alert .tw-dc2__h{background:linear-gradient(107deg,#FDECEC 0%,#FEF4F4 60%,#FEF8F8 100%);
+ border-bottom-color:#F5D2D2}
+.tw-dc2.alert .tw-dc2__h::after{border-color:rgba(200,33,33,.08)}
+.tw-dc2.alert .tw-dc2__h b{color:#8A1D1D}
+.tw-dc2.alert .tw-dc2__h .tw-b,.tw-dc2.alert .tw-dc2__h .tw-p{color:var(--tw-bad);box-shadow:0 0 0 1px #F0C4C4}
+.tw-dc2.alert{box-shadow:0 0 0 1px #F2C9C9,0 8px 24px rgba(200,33,33,.06)}
+/* roomier rows now the cards are wider */
+.tw-dc2__r{padding:9px 15px;font-size:12px}
+.tw-dc2__h{padding:12px 15px}
+/* masthead: lighter too, keeps brand but stops shouting */
+.tw-mast::before{background:linear-gradient(107deg,#0B3DBF 0%,#0F55E8 34%,#3D82FF 62%,#8FB6FF 100%)}
+.tw-mast::after{border-color:rgba(255,255,255,.13)}
+/* ---- freeze everything above the tabs ---- */
+.tw-frozen{position:sticky;top:0;z-index:60;background:var(--tw-bg);
+ margin:0 -14px;padding:0 14px 6px;box-shadow:0 6px 16px -12px rgba(11,15,26,.28)}
+.tw-frozen .tw-mast,.tw-frozen .tw-step2{margin-bottom:8px}
+.tw-frozen .tw-jump{padding:0 0 2px}
+/* compact once scrolled: drop the action row and the blocker detail line */
+.tw-frozen.mini .tw-mr{display:none}
+.tw-frozen.mini .tw-mb .sub{display:none}
+.tw-frozen.mini .tw-mb{padding:7px 15px}
+.tw-frozen.mini .tw-mh{padding:8px 15px 7px}
+.tw-frozen.mini .tw-mh h1{font-size:16px}
+.tw-frozen.mini .tw-ms2 > div{padding:6px 14px}
+.tw-frozen.mini .tw-ms2 b{font-size:12.5px}
+.tw-frozen.mini .tw-sb{padding:6px 5px 5px}
+.tw-frozen.mini .tw-top{display:none}
+.tw-frozen.mini .tw-jump{display:none}
+.tw-frozen .tw-mast,.tw-frozen .tw-step2,.tw-frozen .tw-mh,.tw-frozen .tw-mb,
+.tw-frozen .tw-ms2 > div,.tw-frozen .tw-sb{transition:padding .2s var(--tw-ez),font-size .2s var(--tw-ez)}
+@media(prefers-reduced-motion:reduce){.tw-frozen *{transition:none}}
+@media(max-height:720px){.tw-frozen .tw-mr{display:none}}
+/* ---- assignments toolbar + selection bar ---- */
+.tw-tbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;
+ border-bottom:1px solid var(--tw-hair);background:var(--tw-soft)}
+.tw-b.edit{border-color:#F0C4C4;color:var(--tw-bad);background:#fff}
+.tw-b.edit:hover{border-color:var(--tw-bad);background:#FFF7F7}
+.tw-b.save{border-color:#BFE6D5;color:var(--tw-ok);background:#fff}
+.tw-b.save:hover{border-color:var(--tw-ok);background:#F4FBF8}
+.tw-b.on{background:var(--tw-blue);border-color:var(--tw-blue);color:#fff;box-shadow:none}
+.tw-b.on:hover{background:var(--tw-bdk);border-color:var(--tw-bdk);color:#fff}
+/* editable cells, shown while in edit mode */
+.tw-ed{display:inline-block;min-width:88px;padding:3px 7px;border-radius:7px;text-align:right;
+ font:600 12.5px 'Geist Mono',monospace;font-variant-numeric:tabular-nums}
+.tw-ed.rev{background:#E7F0FF;color:var(--tw-bi);box-shadow:inset 0 0 0 1px #C9DCFF}
+.tw-ed.cost{background:#FFF4E0;color:#8A5D12;box-shadow:inset 0 0 0 1px #F2DDB4}
+.tw-ed.tot{background:#E7F0FF;color:var(--tw-bi);box-shadow:inset 0 0 0 1px #C9DCFF}
+/* ---- right drawer: new assignment ---- */
+.tw-scrim{position:fixed;inset:0;z-index:80;background:rgba(11,15,26,.34);
+ backdrop-filter:blur(1.5px);-webkit-backdrop-filter:blur(1.5px)}
+.tw-dr{position:fixed;top:0;right:0;bottom:0;z-index:81;width:min(680px,96vw);display:flex;
+ flex-direction:column;background:#fff;box-shadow:-18px 0 48px -18px rgba(11,15,26,.4)}
+.tw-dr__h{flex:0 0 auto;padding:12px 18px;border-bottom:1px solid var(--tw-hair);
+ display:flex;align-items:center;gap:9px}
+.tw-dr__h .k{font:600 10px 'Geist Mono',monospace;color:var(--tw-mut)}
+.tw-dr__x{width:26px;height:26px;border:0;border-radius:8px;background:var(--tw-soft);color:var(--tw-mut);
+ font-size:13px;line-height:1;cursor:pointer}
+.tw-dr__x:hover{background:var(--tw-badb);color:var(--tw-bad)}
+.tw-dr__i{flex:0 0 auto;padding:14px 18px;background:linear-gradient(107deg,#E9F0FF,#F5F9FF);
+ border-bottom:1px solid #DDE7FA}
+.tw-dr__i b{display:block;font-size:15px;font-weight:600;color:var(--tw-navy)}
+.tw-dr__i p{font-size:11.5px;color:var(--tw-mut);margin-top:3px}
+.tw-dr__b{flex:1 1 auto;overflow-y:auto;padding:2px 0 8px}
+.tw-fs{padding:14px 18px;border-bottom:1px solid var(--tw-hair)}
+.tw-fs > .lb{display:flex;align-items:center;gap:8px;font-size:9px;font-weight:700;letter-spacing:.7px;
+ text-transform:uppercase;color:var(--tw-mut);margin-bottom:10px}
+.tw-fs > .lb .tw-p{text-transform:none;letter-spacing:0}
+.tw-2c{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.tw-3c{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}
+.tw-f label{display:block;font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+ color:var(--tw-mut);margin-bottom:5px}
+.tw-hint{font-size:10.5px;color:var(--tw-mut);margin-top:6px;line-height:1.5}
+.tw-hint code{font-family:'Geist Mono',monospace;font-size:10px;background:var(--tw-soft);padding:1px 4px;
+ border-radius:4px}
+.tw-calc{display:flex;justify-content:space-between;padding:5px 0;font-size:11.5px;
+ border-top:1px dashed var(--tw-hair)}
+.tw-calc span{color:var(--tw-mut)}
+.tw-calc b{font:600 12px 'Geist Mono',monospace}
+.tw-cbx{display:flex;align-items:center;gap:7px;margin-top:9px;font-size:11.5px;color:var(--tw-ink2)}
+.tw-dr__f{flex:0 0 auto;border-top:1px solid var(--tw-line);background:var(--tw-soft)}
+.tw-dr__s{display:grid;grid-template-columns:repeat(5,1fr);gap:0}
+.tw-dr__s > div{padding:9px 14px;border-right:1px solid var(--tw-hair)}
+.tw-dr__s > div:last-child{border-right:0}
+.tw-dr__s i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut);white-space:nowrap}
+.tw-dr__s b{display:block;margin-top:3px;font:600 13px 'Geist Mono',monospace}
+.tw-dr__s b.g{color:var(--tw-ok)}
+.tw-dr__a{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;
+ border-top:1px solid var(--tw-hair)}
+.tw-kbd{font:600 10px 'Geist Mono',monospace;padding:2px 6px;border-radius:5px;background:#fff;
+ border:1px solid var(--tw-line);color:var(--tw-ink2)}
+.tw-po{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:0;border-radius:9px;
+ overflow:hidden;background:var(--tw-soft)}
+.tw-po > div{padding:9px 12px;border-right:1px solid #E4E9F2}
+.tw-po > div:last-child{border-right:0}
+.tw-po i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-po b{display:block;margin-top:3px;font:600 12px 'Geist Mono',monospace}
+/* ---- creator drawer ---- */
+.tw-cdh{position:relative;isolation:isolate;overflow:hidden;padding:16px 18px;
+ background:linear-gradient(107deg,#0B3DBF 0%,#0F55E8 34%,#3D82FF 66%,#8FB6FF 100%);color:#fff}
+.tw-cdh::after{content:"";position:absolute;z-index:-1;right:-34px;top:-58px;width:170px;height:170px;
+ border-radius:50%;border:27px solid rgba(255,255,255,.13)}
+.tw-cdh__r{display:flex;align-items:center;gap:12px}
+.tw-cdh .av{width:52px;height:52px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+ background:rgba(255,255,255,.2);border:2px solid rgba(255,255,255,.45);
+ font:700 18px 'Geist',sans-serif;color:#fff}
+.tw-cdh h2{font:600 19px 'Geist',sans-serif;letter-spacing:-.45px;display:flex;align-items:center;gap:7px}
+.tw-cdh .vf{width:15px;height:15px;border-radius:50%;background:#fff;color:var(--tw-bi);
+ display:grid;place-items:center;font-size:9px;font-weight:700}
+.tw-cdh .hd{font:500 11.5px 'Geist Mono',monospace;color:rgba(255,255,255,.8);margin-top:3px}
+.tw-cdh .crumb{font-size:10.5px;color:rgba(255,255,255,.72);margin-bottom:9px}
+.tw-cdh__m{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:14px;
+ border-radius:10px;overflow:hidden;background:rgba(255,255,255,.13)}
+.tw-cdh__m > div{padding:9px 12px;border-right:1px solid rgba(255,255,255,.16)}
+.tw-cdh__m > div:last-child{border-right:0}
+.tw-cdh__m i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:rgba(255,255,255,.74)}
+.tw-cdh__m b{display:block;margin-top:3px;font:600 14px 'Geist Mono',monospace}
+.tw-cdt{display:flex;gap:2px;padding:6px 12px;border-bottom:1px solid var(--tw-hair);
+ background:var(--tw-soft);overflow-x:auto}
+.tw-cdt button{padding:7px 12px;border:0;border-radius:8px;background:none;cursor:pointer;
+ font:600 12px 'Geist',sans-serif;color:var(--tw-mut);white-space:nowrap}
+.tw-cdt button:hover{background:#fff;color:var(--tw-ink2)}
+.tw-cdt button[aria-pressed="true"]{background:#fff;color:var(--tw-bi);
+ box-shadow:0 1px 2px rgba(11,15,26,.08)}
+.tw-dl{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 18px;
+ border-bottom:1px solid var(--tw-hair);font-size:12.5px}
+.tw-dl:last-child{border-bottom:0}
+.tw-dl span{color:var(--tw-mut);font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase}
+.tw-dl b{font-weight:600;text-align:right}
+.tw-dl b.m{font-family:'Geist Mono',monospace;font-variant-numeric:tabular-nums}
+.tw-dl b.g{color:var(--tw-ok)}
+.tw-dl b.r{color:var(--tw-bad)}
+.tw-soc{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px;padding:16px 18px}
+.tw-soc > div{padding:13px 15px;border-radius:11px;background:var(--tw-soft)}
+.tw-soc i{display:block;font-style:normal;font-size:9px;font-weight:700;letter-spacing:.65px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-soc b{display:block;margin-top:5px;font:600 20px 'Geist',sans-serif;letter-spacing:-.5px}
+/* ============ flying selection bar ============ */
+.tw-selbar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:70;
+ display:flex;align-items:center;gap:0;margin:0;padding:0;max-width:calc(100vw - 32px);
+ border-radius:14px;background:rgba(11,15,26,.96);
+ backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ box-shadow:0 1px 2px rgba(11,15,26,.4),0 18px 44px -12px rgba(11,15,26,.55);
+ animation:tw-rise .26s var(--tw-ez)}
+@keyframes tw-rise{from{opacity:0;transform:translateX(-50%) translateY(14px)}
+ to{opacity:1;transform:translateX(-50%) translateY(0)}}
+@media(prefers-reduced-motion:reduce){.tw-selbar{animation:none}}
+.tw-selbar .n{display:inline-flex;align-items:center;gap:8px;padding:11px 15px;
+ font:600 12.5px 'Geist',sans-serif;color:#fff;white-space:nowrap}
+.tw-selbar .n b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:7px;
+ background:var(--tw-blue);color:#fff;font:700 12px 'Geist Mono',monospace}
+.tw-selbar .x{width:20px;height:20px;border:0;border-radius:6px;background:rgba(255,255,255,.14);
+ color:rgba(255,255,255,.8);font-size:11px;line-height:1;cursor:pointer}
+.tw-selbar .x:hover{background:var(--tw-bad);color:#fff}
+.tw-selbar .sum{display:flex;gap:0;border-left:1px solid rgba(255,255,255,.14)}
+.tw-selbar .sum > span{display:flex;flex-direction:column;gap:2px;padding:9px 15px;white-space:nowrap;
+ border-right:1px solid rgba(255,255,255,.08)}
+.tw-selbar .sum i{font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:rgba(255,255,255,.6)}
+.tw-selbar .sum b{font:600 12.5px 'Geist Mono',monospace;color:#fff}
+.tw-selbar .sum b.g{color:#5FE0AE}
+.tw-selbar .acts{display:flex;align-items:center;gap:6px;padding:9px 12px 9px 14px;
+ border-left:1px solid rgba(255,255,255,.14)}
+.tw-selbar .acts .tw-b{height:28px;background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.2);
+ color:#fff;font-size:11.5px}
+.tw-selbar .acts .tw-b:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.36);color:#fff}
+.tw-selbar .acts .tw-b.pri{background:#fff;border-color:#fff;color:var(--tw-bi);box-shadow:none}
+.tw-selbar .acts .tw-b.edit{background:rgba(232,85,85,.18);border-color:rgba(232,85,85,.45);color:#FFB4B4}
+.tw-selbar .acts .tw-b.edit:hover{background:var(--tw-bad);border-color:var(--tw-bad);color:#fff}
+@media(max-width:1080px){.tw-selbar{flex-wrap:wrap;justify-content:center}
+ .tw-selbar .sum,.tw-selbar .acts{border-left:0;border-top:1px solid rgba(255,255,255,.14)}}
+/* ============ creator modal (replaces side drawer) ============ */
+.tw-cm{position:fixed;inset:0;z-index:81;display:grid;place-items:center;padding:22px}
+.tw-cm__w{width:min(1000px,100%);max-height:calc(100vh - 44px);display:grid;
+ grid-template-columns:298px minmax(0,1fr);background:#fff;border-radius:18px;overflow:hidden;
+ box-shadow:0 24px 64px -18px rgba(11,15,26,.5);animation:tw-pop .24s var(--tw-ez)}
+@keyframes tw-pop{from{opacity:0;transform:scale(.97)}to{opacity:1;transform:scale(1)}}
+@media(prefers-reduced-motion:reduce){.tw-cm__w{animation:none}}
+.tw-cm__l{position:relative;isolation:isolate;overflow:hidden;padding:22px 20px;color:#fff;
+ background:linear-gradient(160deg,#0B3DBF 0%,#0F55E8 38%,#3D82FF 78%,#8FB6FF 130%)}
+.tw-cm__l::after{content:"";position:absolute;z-index:-1;left:-64px;bottom:-86px;width:230px;height:230px;
+ border-radius:50%;border:36px solid rgba(255,255,255,.12)}
+.tw-cm__av{width:76px;height:76px;border-radius:50%;display:grid;place-items:center;
+ background:rgba(255,255,255,.2);border:2.5px solid rgba(255,255,255,.5);
+ font:700 26px 'Geist',sans-serif;margin-bottom:13px}
+.tw-cm__l h2{font:600 20px 'Geist',sans-serif;letter-spacing:-.5px;display:flex;align-items:center;gap:7px}
+.tw-cm__l .vf{width:16px;height:16px;border-radius:50%;background:#fff;color:var(--tw-bi);
+ display:grid;place-items:center;font-size:9px;font-weight:700;flex:0 0 auto}
+.tw-cm__l .hd{font:500 12px 'Geist Mono',monospace;color:rgba(255,255,255,.82);margin-top:4px}
+.tw-cm__l .cr{font-size:10.5px;color:rgba(255,255,255,.66);margin-bottom:14px}
+.tw-cm__st{margin-top:18px;display:flex;flex-direction:column;gap:1px;border-radius:11px;overflow:hidden;
+ background:rgba(255,255,255,.14)}
+.tw-cm__st > div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;
+ padding:10px 13px;background:rgba(11,61,191,.24)}
+.tw-cm__st i{font-style:normal;font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+ color:rgba(255,255,255,.72)}
+.tw-cm__st b{font:600 14px 'Geist Mono',monospace}
+.tw-cm__st b.g{color:#8FF0CB}
+.tw-cm__pf{display:flex;gap:6px;margin-top:14px;flex-wrap:wrap}
+.tw-cm__pf span{padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.16);
+ font:600 10px 'Geist',sans-serif}
+.tw-cm__r{display:flex;flex-direction:column;min-width:0}
+.tw-cm__h{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--tw-hair)}
+.tw-cm__b{flex:1 1 auto;overflow-y:auto}
+.tw-cm__f{display:flex;align-items:center;gap:7px;padding:11px 16px;border-top:1px solid var(--tw-line);
+ background:var(--tw-soft)}
+@media(max-width:860px){.tw-cm__w{grid-template-columns:minmax(0,1fr)}}
+/* ============ selection calculator ============ */
+.tw-calcp{position:fixed;left:50%;bottom:78px;transform:translateX(-50%);z-index:71;
+ width:min(940px,calc(100vw - 32px));max-height:min(62vh,560px);display:flex;flex-direction:column;
+ background:#fff;border-radius:16px;overflow:hidden;
+ box-shadow:0 1px 2px rgba(11,15,26,.3),0 22px 56px -14px rgba(11,15,26,.42);
+ animation:tw-rise .24s var(--tw-ez)}
+.tw-calcp__h{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 16px;color:#fff;
+ background:linear-gradient(107deg,#0B3DBF 0%,#0F55E8 44%,#3D82FF 100%)}
+.tw-calcp__h b{font-size:13.5px;font-weight:600}
+.tw-calcp__h span{font-size:11px;color:rgba(255,255,255,.76)}
+.tw-calcp__h .tw-dr__x{background:rgba(255,255,255,.16);color:#fff}
+.tw-calcp__c{padding:14px 16px;border-bottom:1px solid var(--tw-hair);background:var(--tw-soft)}
+.tw-modes{display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));gap:8px;margin-bottom:12px}
+.tw-mode{padding:9px 12px;border:1px solid var(--tw-hair);border-radius:10px;background:#fff;cursor:pointer;
+ text-align:left}
+.tw-mode:hover{border-color:rgba(0,87,255,.34)}
+.tw-mode[aria-pressed="true"]{border-color:var(--tw-blue);background:var(--tw-lav);
+ box-shadow:0 0 0 2px rgba(0,87,255,.1)}
+.tw-mode b{display:block;font-size:12px;font-weight:600;color:var(--tw-ink)}
+.tw-mode[aria-pressed="true"] b{color:var(--tw-bi)}
+.tw-mode u{display:block;text-decoration:none;font:500 10px 'Geist Mono',monospace;color:var(--tw-mut);margin-top:3px}
+.tw-cin{display:flex;align-items:flex-end;gap:10px;flex-wrap:wrap}
+.tw-cin .tw-f{flex:0 0 210px}
+.tw-cin .tw-in{height:36px;font:600 15px 'Geist Mono',monospace;text-align:right}
+.tw-chip{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:999px;
+ background:#fff;border:1px solid var(--tw-hair);font-size:11px;color:var(--tw-ink2);cursor:pointer}
+.tw-chip:hover{border-color:rgba(0,87,255,.34);color:var(--tw-bi)}
+.tw-calcp__b{flex:1 1 auto;overflow:auto}
+.tw-calcp__f{flex:0 0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0;
+ border-top:1px solid var(--tw-line);background:var(--tw-soft)}
+.tw-calcp__f > div{padding:10px 14px;border-right:1px solid var(--tw-hair)}
+.tw-calcp__f > div:last-child{border-right:0}
+.tw-calcp__f i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut);white-space:nowrap}
+.tw-calcp__f b{display:block;margin-top:3px;font:600 13.5px 'Geist Mono',monospace}
+.tw-calcp__f b.g{color:var(--tw-ok)}
+.tw-calcp__f b.r{color:var(--tw-bad)}
+.tw-calcp__f .d{font-size:10px;color:var(--tw-mut);margin-top:2px}
+.tw-calcp__a{display:flex;align-items:center;gap:8px;padding:11px 16px;border-top:1px solid var(--tw-line)}
+.tw-delta{font:600 11px 'Geist Mono',monospace}
+.tw-delta.up{color:var(--tw-ok)}
+.tw-delta.dn{color:var(--tw-bad)}
+.tw-warnrow{padding:9px 16px;background:var(--tw-wrnb);border-top:1px solid #F0D6A4;
+ font-size:11.5px;color:var(--tw-wrn)}
+/* ---- commercial workspace modal ---- */
+.tw-cw{position:fixed;inset:0;z-index:81;display:grid;place-items:center;padding:22px}
+.tw-cw__w{width:min(1220px,100%);max-height:calc(100vh - 44px);display:flex;flex-direction:column;
+ background:#fff;border-radius:18px;overflow:hidden;
+ box-shadow:0 24px 64px -18px rgba(11,15,26,.5);animation:tw-pop .24s var(--tw-ez)}
+.tw-cw__h{display:flex;align-items:center;gap:11px;flex-wrap:wrap;padding:14px 18px;
+ border-bottom:1px solid var(--tw-hair)}
+.tw-cw__h b{font-size:15px;font-weight:600;letter-spacing:-.3px}
+.tw-cw__h p{font-size:11.5px;color:var(--tw-mut)}
+.tw-cw__s{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:11px;padding:14px 18px;
+ border-bottom:1px solid var(--tw-hair);background:var(--tw-soft)}
+.tw-cw__g{border:1px solid var(--tw-hair);border-radius:12px;background:#fff;overflow:hidden}
+.tw-cw__g > .t{padding:8px 13px;font-size:9px;font-weight:700;letter-spacing:.65px;text-transform:uppercase;
+ color:var(--tw-mut);border-bottom:1px solid var(--tw-hair);background:#FBFCFE}
+.tw-cw__g > .r{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.tw-cw__g > .r > div{padding:10px 12px;border-right:1px solid var(--tw-hair)}
+.tw-cw__g > .r > div:last-child{border-right:0}
+.tw-cw__g i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut);white-space:nowrap}
+.tw-cw__g b{display:block;margin-top:3px;font:600 13.5px 'Geist Mono',monospace;white-space:nowrap}
+.tw-cw__g b.g{color:var(--tw-ok)}
+.tw-cw__hl{display:flex;flex-direction:column;gap:0}
+.tw-cw__hl > div{display:flex;justify-content:space-between;align-items:center;padding:9px 13px;
+ border-bottom:1px solid var(--tw-hair);font-size:12px}
+.tw-cw__hl > div:last-child{border-bottom:0}
+.tw-cw__hl b{font:600 13px 'Geist Mono',monospace}
+.tw-cw__t{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:11px 18px;
+ border-bottom:1px solid var(--tw-hair)}
+.tw-cw__b{flex:1 1 auto;overflow:auto}
+.tw-cw__f{flex:0 0 auto;display:flex;align-items:center;gap:8px;padding:11px 18px;
+ border-top:1px solid var(--tw-line);background:var(--tw-soft)}
+.tw-cwin{width:100%;height:30px;padding:0 9px;border:1px solid var(--tw-line);border-radius:8px;
+ background:#fff;font:600 12.5px 'Geist Mono',monospace;text-align:right;color:var(--tw-ink)}
+.tw-cwin:focus{outline:none;border-color:var(--tw-blue);box-shadow:0 0 0 3px rgba(0,87,255,.12)}
+.tw-cwin.dirty{border-color:#E0A93C;background:#FFFBF3}
+/* ============================================================
+   TYPE SCALE — single source of truth for numeric values.
+   Four steps only. Anything numeric must use one of these.
+     20px  headline figure  (KPI cards, big stats)
+     14px  panel stat       (summary strips, modal stat cells)
+     12.5px row value       (grid cells, key-value rows)
+     11.5px micro           (dates, deltas, chips, footnotes)
+   ============================================================ */
+/* step 1 — headline */
+.tw-k b,.tw-mx b,.tw-st b,.tw-soc b{font-size:20px;letter-spacing:-.6px}
+/* step 2 — panel stat */
+.tw-band b,.tw-mini b,.tw-ms2 b,.tw-cdh__m b,.tw-cm__st b,.tw-cw__g b,.tw-calcp__f b,
+.tw-dr__s b,.tw-cin .tw-in{font-size:14px;letter-spacing:-.35px}
+/* step 3 — row value */
+.tw-v,.tw-kv b,.tw-dc2__r b,.tw-oc__r b,.tw-po b,.tw-str b,.tw-cw__hl b,.tw-dl b,
+.tw-calc b,.tw-selbar .sum b,.tw-cwin,.tw-in,.tw-ed,.tw-adf > *,.tw-ft > *,.tw-agtot b{font-size:12.5px}
+.tw-ms2 b.s{font-size:12.5px}
+/* step 4 — micro */
+.tw-d,.tw-delta,.tw-id,.tw-fe b,.tw-kid,.tw-cc,.tw-sub2,.tw-s{font-size:11.5px}
+.tw-cc{font-size:9.5px}
+/* mono everywhere a number lives, so digits align column to column */
+.tw-v,.tw-kv b.m,.tw-dl b.m,.tw-ms2 b,.tw-mini b,.tw-cdh__m b,.tw-cm__st b,.tw-cw__g b,
+.tw-calcp__f b,.tw-dr__s b,.tw-selbar .sum b,.tw-cwin,.tw-ed,.tw-po b,.tw-cw__hl b,
+.tw-oc__r b,.tw-dc2__r b,.tw-st b,.tw-soc b,.tw-k b,.tw-mx b,.tw-band b,.tw-agtot b{
+ font-family:'Geist Mono',ui-monospace,monospace;font-variant-numeric:tabular-nums}
+/* dates are never mono-bold — they are metadata, not figures */
+.tw-d{font-family:'Geist Mono',ui-monospace,monospace;font-weight:500;color:var(--tw-ink2);
+ white-space:nowrap;font-variant-numeric:tabular-nums}
+.tw-frozen.mini .tw-ms2 b{font-size:12.5px}
+/* ============ left sidebar ============ */
+.tw-shell{display:grid;grid-template-columns:auto minmax(0,1fr);min-height:100vh}
+.tw-sb2{position:sticky;top:0;height:100vh;z-index:90;display:flex;flex-direction:column;
+ width:62px;background:#fff;border-right:1px solid var(--tw-line);
+ transition:width .22s var(--tw-ez)}
+.tw-sb2.open{width:252px;box-shadow:14px 0 34px -18px rgba(11,15,26,.26)}
+.tw-sb2__b{flex:0 0 auto;display:flex;align-items:center;gap:9px;height:52px;padding:0 13px;
+ border-bottom:1px solid var(--tw-hair);overflow:hidden}
+.tw-sb2 .tw-logo__tx{opacity:0;transition:opacity .16s var(--tw-ez)}
+.tw-sb2.open .tw-logo__tx{opacity:1}
+.tw-ic2{width:26px;height:26px;border:0;border-radius:8px;background:none;color:var(--tw-mut);
+ cursor:pointer;display:grid;place-items:center;flex:0 0 auto;opacity:0;transition:opacity .16s}
+.tw-sb2.open .tw-ic2{opacity:1}
+.tw-ic2:hover{background:var(--tw-soft);color:var(--tw-ink2)}
+.tw-ic2.on{background:var(--tw-lav);color:var(--tw-bi)}
+.tw-ic2 svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;
+ stroke-linecap:round;stroke-linejoin:round}
+.tw-sb2__s{flex:0 0 auto;padding:9px 11px;border-bottom:1px solid var(--tw-hair)}
+.tw-sb2__s .w{position:relative}
+.tw-sb2__s input{width:100%;height:30px;padding:0 9px 0 29px;border:1px solid var(--tw-line);
+ border-radius:9px;background:var(--tw-soft);font:500 12px 'Geist',sans-serif;color:var(--tw-ink)}
+.tw-sb2__s input:focus{outline:none;background:#fff;border-color:var(--tw-blue);
+ box-shadow:0 0 0 3px rgba(0,87,255,.12)}
+.tw-sb2__s svg{position:absolute;left:9px;top:50%;transform:translateY(-50%);width:13px;height:13px;
+ fill:none;stroke:var(--tw-mut);stroke-width:1.8;pointer-events:none}
+.tw-sb2__s .kbd{position:absolute;right:7px;top:50%;transform:translateY(-50%);font:600 9px 'Geist Mono',monospace;
+ padding:2px 5px;border-radius:5px;background:#fff;border:1px solid var(--tw-line);color:var(--tw-mut)}
+.tw-sb2:not(.open) .tw-sb2__s{padding:9px 0;display:grid;place-items:center}
+.tw-sb2:not(.open) .tw-sb2__s .w{width:34px}
+.tw-sb2:not(.open) .tw-sb2__s input{padding:0;width:34px}
+.tw-sb2:not(.open) .tw-sb2__s .kbd{display:none}
+.tw-sb2__n{flex:1 1 auto;overflow-y:auto;overflow-x:hidden;padding:6px 0 8px;
+ scrollbar-width:thin;scrollbar-color:#D6DEEA transparent}
+.tw-sb2__n::-webkit-scrollbar{width:6px}
+.tw-sb2__n::-webkit-scrollbar-thumb{background:#D6DEEA;border-radius:99px}
+.tw-grp{display:flex;align-items:center;gap:6px;width:100%;padding:10px 13px 5px;border:0;background:none;
+ cursor:pointer;text-align:left;font:700 8.5px 'Geist',sans-serif;letter-spacing:.75px;
+ text-transform:uppercase;color:#98A2B3;white-space:nowrap}
+.tw-grp.sub{padding-left:22px;color:#AEB6C4}
+.tw-grp .ch{margin-left:auto;font-size:8px;transition:transform .18s var(--tw-ez)}
+.tw-grp[aria-expanded="false"] .ch{transform:rotate(-90deg)}
+.tw-sb2:not(.open) .tw-grp{display:none}
+.tw-gsep{display:none;height:1px;margin:7px 14px;background:var(--tw-hair)}
+.tw-sb2:not(.open) .tw-gsep{display:block}
+.tw-li{position:relative;display:flex;align-items:center;gap:10px;width:100%;padding:7px 13px;
+ border:0;background:none;cursor:pointer;text-align:left;font:500 12.5px 'Geist',sans-serif;
+ color:var(--tw-ink2);white-space:nowrap}
+.tw-li:hover{background:var(--tw-soft)}
+.tw-li.on{background:var(--tw-lav);color:var(--tw-bi);font-weight:600}
+.tw-li.on::before{content:"";position:absolute;left:0;top:5px;bottom:5px;width:3px;
+ border-radius:0 3px 3px 0;background:var(--tw-blue)}
+.tw-li svg{width:16px;height:16px;flex:0 0 auto;fill:none;stroke:currentColor;stroke-width:1.7;
+ stroke-linecap:round;stroke-linejoin:round}
+.tw-li .lb{opacity:0;transition:opacity .16s var(--tw-ez);overflow:hidden;text-overflow:ellipsis}
+.tw-sb2.open .tw-li .lb{opacity:1}
+.tw-sb2:not(.open) .tw-li{justify-content:center;padding:8px 0}
+.tw-li em{margin-left:auto;font-style:normal;font:600 10px 'Geist Mono',monospace;padding:1px 6px;
+ border-radius:999px;background:var(--tw-soft);color:var(--tw-mut);opacity:0;transition:opacity .16s}
+.tw-sb2.open .tw-li em{opacity:1}
+.tw-li em.alert{background:var(--tw-badb);color:var(--tw-bad)}
+.tw-li.on em{background:#fff;color:var(--tw-bi)}
+.tw-sb2:not(.open) .tw-li.dot::after{content:"";position:absolute;top:7px;right:14px;width:6px;height:6px;
+ border-radius:50%;background:var(--tw-bad)}
+.tw-sb2:not(.open) .tw-li:hover .tip{opacity:1;transform:translateY(-50%) translateX(0)}
+.tip{position:absolute;left:56px;top:50%;transform:translateY(-50%) translateX(-4px);z-index:95;
+ padding:5px 9px;border-radius:8px;background:var(--tw-navy);color:#fff;
+ font:600 11.5px 'Geist',sans-serif;white-space:nowrap;opacity:0;pointer-events:none;
+ box-shadow:0 8px 20px -8px rgba(11,15,26,.5);transition:opacity .14s var(--tw-ez),transform .14s var(--tw-ez)}
+.tw-sb2.open .tip{display:none}
+.tw-sb2__a{flex:0 0 auto;display:flex;align-items:center;gap:9px;padding:10px 11px;
+ border-top:1px solid var(--tw-hair);cursor:pointer;overflow:hidden}
+.tw-sb2__a:hover{background:var(--tw-soft)}
+.tw-sb2__a .av{width:30px;height:30px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+ background:var(--tw-grad);color:#fff;font:700 11px 'Geist',sans-serif}
+.tw-sb2__a .m{min-width:0;opacity:0;transition:opacity .16s var(--tw-ez)}
+.tw-sb2.open .tw-sb2__a .m{opacity:1}
+.tw-sb2__a b{display:block;font-size:11.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap;max-width:148px}
+.tw-sb2__a u{display:block;text-decoration:none;font-size:10px;color:var(--tw-mut)}
+.tw-demo{padding:26px 24px}
+.tw-demo h2{font:600 17px 'Geist',sans-serif;letter-spacing:-.4px;margin-bottom:6px}
+.tw-demo p{font-size:12.5px;color:var(--tw-mut);max-width:640px;line-height:1.6}
+@media(prefers-reduced-motion:reduce){.tw-sb2,.tw-li .lb,.tip,.tw-grp .ch{transition:none}}
+
+/* ---- Thinkway logo — exact values from the live platform ---- */
+.tw-logo{display:flex;align-items:center;gap:10px}
+.tw-logo__mk{position:relative;width:28px;height:28px;flex:0 0 auto;border-radius:7px;
+ background:#060810;overflow:visible;cursor:pointer}
+.tw-logo__mk::before{content:"";position:absolute;left:6px;top:6px;width:8px;height:8px;
+ border-radius:50%;background:#fff}
+.tw-logo__mk::after{content:"";position:absolute;right:4px;bottom:4px;width:11px;height:11px;
+ border-radius:4px;background:#0057FF}
+.tw-logo__tx{font-family:'Geist',sans-serif;font-size:16px;font-weight:800;letter-spacing:-.4px;
+ color:#060810;white-space:nowrap}
+.tw-logo__tx span{color:#0057FF}
+/* ===== discovery: compact header ===== */
+.tw-shell{grid-template-columns:minmax(0,1fr)}
+.tw-main{padding:0 14px 40px}
+/* creator row */
+.tw-cw2{display:flex;align-items:center;gap:11px;min-width:0}
+.tw-avx{position:relative;width:46px;height:46px;border-radius:50%;flex:0 0 auto;display:grid;
+ place-items:center;background:var(--tw-grad);color:#fff;font:700 15px 'Geist',sans-serif;
+ box-shadow:0 0 0 2px #fff,0 0 0 3.5px rgba(0,87,255,.22)}
+.tw-avx.k2{background:linear-gradient(150deg,#5B3FD1,#8B6BF0)}
+.tw-avx.k3{background:linear-gradient(150deg,#0A7A55,#1FBF88)}
+.tw-avx .fl{position:absolute;right:-2px;bottom:-2px;width:17px;height:17px;border-radius:50%;
+ background:#fff;display:grid;place-items:center;font-size:9px;box-shadow:0 1px 3px rgba(11,15,26,.2)}
+.tw-cw2 .nm{font-size:13px;font-weight:600;letter-spacing:-.1px;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.tw-cw2 .hd{display:block;font:500 11px 'Geist Mono',monospace;color:var(--tw-mut);margin-top:1px}
+.tw-cw2 .lo{display:block;font-size:10.5px;color:var(--tw-mut);margin-top:2px}
+/* stat trio inside a row */
+.tw-st3{display:grid;grid-template-columns:repeat(3,minmax(56px,1fr));gap:0;border-radius:9px;
+ overflow:hidden;background:var(--tw-soft);border:1px solid var(--tw-hair)}
+.tw-st3 > div{padding:6px 9px;border-right:1px solid var(--tw-hair)}
+.tw-st3 > div:last-child{border-right:0}
+.tw-st3 i{display:block;font-style:normal;font-size:8px;font-weight:700;letter-spacing:.5px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-st3 b{display:block;margin-top:2px;font:600 11.5px 'Geist Mono',monospace}
+.tw-pl{display:inline-flex;align-items:center;gap:4px;font:600 10px 'Geist Mono',monospace;
+ color:var(--tw-mut)}
+.tw-thumb{width:44px;height:44px;border-radius:8px;background:var(--tw-soft);border:1px solid var(--tw-hair);
+ display:grid;place-items:center;color:#C3CBD8;font-size:13px;flex:0 0 auto}
+.tw-thumbs{display:flex;gap:5px}
+/* ===== creator profile modal ===== */
+.tw-cp{position:fixed;inset:0;z-index:81;display:grid;place-items:center;padding:20px}
+.tw-cp__w{width:min(1120px,100%);max-height:calc(100vh - 40px);display:grid;
+ grid-template-columns:320px minmax(0,1fr) 232px;background:#fff;border-radius:18px;overflow:hidden;
+ box-shadow:0 24px 64px -18px rgba(11,15,26,.5);animation:tw-pop .24s var(--tw-ez)}
+.tw-cp__l{position:relative;isolation:isolate;overflow-y:auto;padding:20px 18px;color:#fff;
+ background:linear-gradient(158deg,#0B3DBF 0%,#0F55E8 36%,#3D82FF 76%,#8FB6FF 130%)}
+.tw-cp__l::after{content:"";position:absolute;z-index:-1;left:-58px;bottom:-92px;width:236px;height:236px;
+ border-radius:50%;border:37px solid rgba(255,255,255,.12)}
+.tw-cp__av{position:relative;width:84px;height:84px;border-radius:50%;display:grid;place-items:center;
+ background:rgba(255,255,255,.2);border:2.5px solid rgba(255,255,255,.5);
+ font:700 28px 'Geist',sans-serif;margin-bottom:13px}
+.tw-cp__av .fl{position:absolute;right:0;bottom:2px;width:22px;height:22px;border-radius:50%;background:#fff;
+ display:grid;place-items:center;font-size:11px}
+.tw-cp__l h2{font:600 21px 'Geist',sans-serif;letter-spacing:-.5px;display:flex;align-items:center;gap:7px}
+.tw-cp__l .hd{font:500 12px 'Geist Mono',monospace;color:rgba(255,255,255,.84);margin-top:4px}
+.tw-cp__l .mt{font-size:11px;color:rgba(255,255,255,.66);margin-top:3px}
+.tw-score{display:flex;align-items:center;gap:12px;margin:16px 0 4px;padding:13px 14px;border-radius:13px;
+ background:rgba(255,255,255,.14)}
+.tw-score .n{font:700 30px 'Geist',sans-serif;letter-spacing:-1.2px;line-height:1}
+.tw-score i{font-style:normal;display:block;font-size:8.5px;font-weight:700;letter-spacing:.7px;
+ text-transform:uppercase;color:rgba(255,255,255,.74)}
+.tw-score b{display:block;font-size:12px;font-weight:600;margin-top:2px}
+.tw-ring2{position:relative;width:52px;height:52px;flex:0 0 auto;border-radius:50%;
+ background:conic-gradient(#fff 0 49%,rgba(255,255,255,.22) 49% 100%);display:grid;place-items:center}
+.tw-ring2::after{content:"";position:absolute;inset:6px;border-radius:50%;background:rgba(11,61,191,.72)}
+.tw-ring2 span{position:relative;z-index:1;font:700 14px 'Geist Mono',monospace}
+.tw-chips2{display:flex;gap:5px;flex-wrap:wrap;margin-top:13px}
+.tw-chips2 span{padding:3px 9px;border-radius:999px;background:rgba(255,255,255,.16);
+ font:600 10px 'Geist',sans-serif}
+.tw-cp__kv{margin-top:16px;display:flex;flex-direction:column;gap:1px;border-radius:11px;overflow:hidden;
+ background:rgba(255,255,255,.14)}
+.tw-cp__kv > div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 13px;
+ background:rgba(11,61,191,.26)}
+.tw-cp__kv i{font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+ color:rgba(255,255,255,.74)}
+.tw-cp__kv b{font:600 12.5px 'Geist Mono',monospace;text-align:right}
+.tw-cp__m{display:flex;flex-direction:column;min-width:0;border-left:1px solid var(--tw-hair);
+ border-right:1px solid var(--tw-hair)}
+.tw-cp__h{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:11px 15px;
+ border-bottom:1px solid var(--tw-hair)}
+.tw-cp__t{display:flex;gap:2px;padding:6px 12px;border-bottom:1px solid var(--tw-hair);background:var(--tw-soft)}
+.tw-cp__t button{padding:7px 13px;border:0;border-radius:8px;background:none;cursor:pointer;
+ font:600 12px 'Geist',sans-serif;color:var(--tw-mut)}
+.tw-cp__t button[aria-pressed="true"]{background:#fff;color:var(--tw-bi);box-shadow:0 1px 2px rgba(11,15,26,.08)}
+.tw-cp__b{flex:1 1 auto;overflow-y:auto;padding:14px 15px}
+.tw-sec2{margin-bottom:16px}
+.tw-sec2 > .h{display:flex;align-items:center;gap:7px;font-size:9px;font-weight:700;letter-spacing:.7px;
+ text-transform:uppercase;color:var(--tw-mut);margin-bottom:9px}
+.tw-mgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:8px}
+.tw-mgrid > div{padding:10px 12px;border-radius:10px;background:var(--tw-soft)}
+.tw-mgrid i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-mgrid b{display:block;margin-top:4px;font:600 16px 'Geist Mono',monospace;letter-spacing:-.4px}
+.tw-pubs{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+.tw-pub{border:1px solid var(--tw-hair);border-radius:11px;overflow:hidden;background:#fff}
+.tw-pub .im{height:82px;background:var(--tw-soft);display:grid;place-items:center;color:#C3CBD8;font-size:16px}
+.tw-pub .tx{padding:8px 10px}
+.tw-pub p{font-size:11px;line-height:1.4;color:var(--tw-ink2);display:-webkit-box;-webkit-line-clamp:2;
+ -webkit-box-orient:vertical;overflow:hidden}
+.tw-pub .mm{display:flex;gap:9px;margin-top:6px;font:600 10px 'Geist Mono',monospace;color:var(--tw-mut)}
+.tw-bar3{height:5px;border-radius:999px;background:var(--tw-hair);overflow:hidden}
+.tw-bar3 i{display:block;height:100%;background:var(--tw-blue)}
+.tw-cp__r{overflow-y:auto;padding:12px}
+.tw-sim{display:flex;align-items:center;gap:9px;padding:9px;border-radius:10px;border:1px solid var(--tw-hair);
+ margin-bottom:7px;cursor:pointer;background:#fff}
+.tw-sim:hover{border-color:rgba(0,87,255,.34);background:#FBFCFF}
+.tw-sim .a{width:30px;height:30px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+ background:var(--tw-soft);font:700 10px 'Geist',sans-serif;color:var(--tw-mut)}
+.tw-sim b{display:block;font-size:11.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap;max-width:118px}
+.tw-sim u{display:block;text-decoration:none;font:500 10px 'Geist Mono',monospace;color:var(--tw-mut)}
+.tw-sim .sc{margin-left:auto;font:700 10px 'Geist Mono',monospace;color:var(--tw-bi);
+ padding:2px 6px;border-radius:6px;background:var(--tw-lav)}
+.tw-tags{display:flex;flex-wrap:wrap;gap:5px}
+.tw-tags span{padding:3px 8px;border-radius:7px;background:var(--tw-lav);color:var(--tw-bi);
+ font:600 10.5px 'Geist',sans-serif}
+.tw-tags span.m{background:var(--tw-soft);color:var(--tw-mut);font-family:'Geist Mono',monospace}
+@media(max-width:1080px){.tw-cp__w{grid-template-columns:minmax(0,1fr)}.tw-cp__r{display:none}}
+/* cost detail modal */
+.tw-cd2{position:fixed;inset:0;z-index:82;display:grid;place-items:center;padding:20px}
+.tw-cd2__w{width:min(680px,100%);background:#fff;border-radius:16px;overflow:hidden;
+ box-shadow:0 24px 64px -18px rgba(11,15,26,.5);animation:tw-pop .22s var(--tw-ez)}
+.tw-cd2__h{padding:14px 18px;border-bottom:1px solid var(--tw-hair)}
+.tw-cd2__h b{font-size:15px;font-weight:600}
+.tw-cd2__h p{font-size:11.5px;color:var(--tw-mut);margin-top:3px}
+.tw-free{display:flex;gap:10px;padding:12px 14px;margin:14px 18px;border-radius:11px;
+ background:var(--tw-soft);border:1px solid var(--tw-hair)}
+.tw-free b{display:block;font-size:12.5px;font-weight:600}
+.tw-free p{font-size:11px;color:var(--tw-mut);margin-top:2px;line-height:1.5}
+.tw-out{margin:0 18px 14px;padding:13px 15px;border-radius:12px;background:var(--tw-lav);
+ border:1px solid #CFDDF7}
+.tw-out .r{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}
+.tw-out .r span{color:var(--tw-ink2)}
+.tw-out .r b{font:600 12.5px 'Geist Mono',monospace}
+.tw-out .r.tot{border-top:1px solid #CFDDF7;margin-top:5px;padding-top:8px}
+.tw-out .r.tot b{font-size:14px;color:var(--tw-bi)}
+
+/* frozen masthead — identical behaviour to the campaign workspace */
+.tw-frozen .tw-top{padding:9px 0 8px}
+.tw-frozen .tw-mast{margin-bottom:8px}
+.tw-frozen.mini .tw-top{display:none}
+.tw-frozen.mini .tw-mr{display:none}
+.tw-frozen.mini .tw-mb .sub{display:none}
+.tw-frozen.mini .tw-mb{padding:7px 15px}
+.tw-frozen.mini .tw-mh{padding:8px 15px 7px}
+.tw-frozen.mini .tw-mh h1{font-size:16px!important}
+.tw-frozen.mini .tw-mh .sub{display:none}
+.tw-frozen.mini .tw-ms2 > div{padding:6px 14px}
+.tw-frozen.mini .tw-jump{display:none}
+.tw-mh h1,.tw-mh .id,.tw-mh .sub,.tw-mh .st{position:relative;z-index:1}
+
+/* search field — the icon must be sized and stroked, never left to default */
+.tw-search{position:relative;display:inline-block}
+.tw-search input{width:100%;padding-left:31px}
+.tw-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);
+ width:14px;height:14px;fill:none;stroke:var(--tw-mut);stroke-width:1.8;
+ stroke-linecap:round;pointer-events:none}
+
+/* client-link switch — was used in markup without its rules, so it rendered invisible */
+.tw-lnk{display:inline-flex;align-items:center;gap:7px}
+.tw-sw{width:32px;height:18px;border-radius:999px;background:var(--tw-line);position:relative;
+ flex:0 0 auto;cursor:pointer;border:0;padding:0;transition:background .18s var(--tw-ez)}
+.tw-sw::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
+ background:#fff;transition:transform .18s var(--tw-ez);box-shadow:0 1px 3px rgba(11,15,26,.28)}
+.tw-sw:hover{background:#CBD5E3}
+.tw-sw.on{background:var(--tw-blue)}
+.tw-sw.on:hover{background:var(--tw-bdk)}
+.tw-sw.on::after{transform:translateX(14px)}
+.tw-sw:focus-visible{outline:2px solid var(--tw-blue);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.tw-sw,.tw-sw::after{transition:none}}
+
+/* live indicator beside the client-link switch */
+.tw-live{position:relative;width:8px;height:8px;border-radius:50%;flex:0 0 auto;background:var(--tw-bad)}
+.tw-live.on{background:var(--tw-ok)}
+.tw-live.on::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--tw-ok);
+ animation:tw-ping 1.8s var(--tw-ez) infinite}
+@keyframes tw-ping{0%{transform:scale(1);opacity:.55}70%{transform:scale(2.6);opacity:0}100%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.tw-live.on::after{animation:none;opacity:.28;transform:scale(1.9)}}
+
+/* share-link card */
+.tw-sl2{position:fixed;inset:0;z-index:83;display:grid;place-items:center;padding:20px}
+.tw-sl2__w{width:min(560px,100%);background:#fff;border-radius:16px;overflow:hidden;
+ box-shadow:0 24px 64px -18px rgba(11,15,26,.5);animation:tw-pop .22s var(--tw-ez)}
+.tw-sl2__h{position:relative;isolation:isolate;overflow:hidden;padding:16px 18px;color:#fff;
+ background:linear-gradient(107deg,#0B3DBF 0%,#0F55E8 44%,#3D82FF 100%)}
+.tw-sl2__h::after{content:"";position:absolute;z-index:-1;right:-30px;top:-46px;width:132px;height:132px;
+ border-radius:50%;border:21px solid rgba(255,255,255,.13)}
+.tw-sl2__h b{display:block;font-size:15px;font-weight:600}
+.tw-sl2__h p{font-size:11.5px;color:rgba(255,255,255,.8);margin-top:4px;line-height:1.55;max-width:430px}
+.tw-sl2__x{position:absolute;top:13px;right:13px;width:26px;height:26px;border:0;border-radius:8px;
+ background:rgba(255,255,255,.18);color:#fff;font-size:13px;line-height:1;cursor:pointer;z-index:1}
+.tw-sl2__x:hover{background:rgba(255,255,255,.3)}
+.tw-urlrow{display:flex;gap:8px;padding:16px 18px 12px}
+.tw-url{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;height:38px;padding:0 11px;
+ border:1px solid var(--tw-line);border-radius:10px;background:var(--tw-soft)}
+.tw-url input{flex:1 1 auto;min-width:0;border:0;background:none;font:500 12px 'Geist Mono',monospace;
+ color:var(--tw-ink2);text-overflow:ellipsis}
+.tw-url input:focus{outline:none}
+.tw-url .lock{font-size:11px;color:var(--tw-ok);flex:0 0 auto}
+.tw-slmeta{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:0 18px 14px;border-radius:11px;
+ overflow:hidden;background:var(--tw-soft);border:1px solid var(--tw-hair)}
+.tw-slmeta > div{padding:10px 12px;border-right:1px solid var(--tw-hair)}
+.tw-slmeta > div:last-child{border-right:0}
+.tw-slmeta i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.tw-slmeta b{display:block;margin-top:3px;font:600 12.5px 'Geist',sans-serif}
+.tw-sl2__f{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--tw-line);
+ background:var(--tw-soft)}
+
+/* platform chips + the two dialogs behind Edit URL / Combine */
+.tw-pchip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:999px;
+ border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.12);color:#fff;cursor:pointer;
+ font:600 10.5px 'Geist',sans-serif}
+.tw-pchip:hover{background:rgba(255,255,255,.22)}
+.tw-pchip.on{background:#fff;color:var(--tw-bi);border-color:#fff}
+.tw-pchip em{font-style:normal;font-family:'Geist Mono',monospace;font-size:9.5px;opacity:.7}
+.tw-pchip.add{border-style:dashed;background:none}
+.tw-dlg{position:fixed;inset:0;z-index:84;display:grid;place-items:center;padding:20px}
+.tw-dlg__w{width:min(520px,100%);background:#fff;border-radius:15px;overflow:hidden;
+ box-shadow:0 24px 64px -18px rgba(11,15,26,.5);animation:tw-pop .2s var(--tw-ez)}
+.tw-dlg__h{padding:15px 18px;background:linear-gradient(107deg,#EAF1FF,#F5F9FF);
+ border-bottom:1px solid #DDE7FA;position:relative}
+.tw-dlg__h i{font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.75px;text-transform:uppercase;
+ color:var(--tw-bi)}
+.tw-dlg__h b{display:block;margin-top:4px;font-size:15px;font-weight:600;color:var(--tw-navy)}
+.tw-dlg__h p{font-size:11.5px;color:var(--tw-mut);margin-top:4px;line-height:1.55;max-width:400px}
+.tw-dlg__x{position:absolute;top:12px;right:12px;width:24px;height:24px;border:0;border-radius:7px;
+ background:rgba(11,15,26,.06);color:var(--tw-mut);font-size:12px;line-height:1;cursor:pointer}
+.tw-dlg__x:hover{background:var(--tw-badb);color:var(--tw-bad)}
+.tw-dlg__b{padding:16px 18px}
+.tw-dlg__f{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--tw-line);
+ background:var(--tw-soft)}
+.tw-ok2{display:flex;align-items:center;gap:6px;font:600 11px 'Geist',sans-serif;color:var(--tw-ok);
+ margin-top:7px}
+.tw-keep{display:flex;align-items:center;gap:11px;padding:12px 14px;border-radius:11px;
+ background:var(--tw-soft);border:1px solid var(--tw-hair)}
+.tw-keep .av{width:34px;height:34px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+ background:var(--tw-grad);color:#fff;font:700 12px 'Geist',sans-serif}
+.tw-keep b{display:block;font-size:13px;font-weight:600}
+.tw-keep u{display:block;text-decoration:none;font-size:11px;color:var(--tw-mut);margin-top:2px}
+.tw-arrow2{display:grid;place-items:center;padding:7px 0;color:var(--tw-mut);font-size:15px}
+
+/* add-creators drawer: candidate cards */
+.tw-slbar{display:flex;gap:8px;padding:14px 0 10px}
+.tw-slcount{display:flex;align-items:center;gap:8px;padding:0 0 9px;border-bottom:1px solid var(--tw-hair)}
+.tw-slscroll{padding:9px 0}
+.tw-pcard{display:flex;align-items:flex-start;gap:11px;padding:11px;border:1px solid var(--tw-hair);
+ border-radius:12px;margin-bottom:8px;cursor:pointer;background:#fff;transition:border-color .14s var(--tw-ez)}
+.tw-pcard:hover{border-color:rgba(0,87,255,.34)}
+.tw-pcard.on{border-color:var(--tw-blue);background:var(--tw-lav);box-shadow:0 0 0 2px rgba(0,87,255,.1)}
+.tw-pcard.dim{opacity:.55;cursor:not-allowed;background:var(--tw-soft)}
+.tw-pcard.dim:hover{border-color:var(--tw-hair)}
+.tw-pcard .pk{flex:0 0 auto;padding-top:2px}
+.tw-pcard .nm2{display:block;font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.tw-pcard .hd2{display:block;text-decoration:none;font:500 11px 'Geist Mono',monospace;color:var(--tw-mut);
+ margin-top:2px}
+.tw-pcard .lo2{display:block;text-decoration:none;font-size:10.5px;color:var(--tw-mut);margin-top:2px}
+.tw-pstat{flex:0 0 auto;display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:9px;
+ background:var(--tw-soft);border:1px solid var(--tw-hair)}
+.tw-pcard.on .tw-pstat{background:#fff}
+.tw-pstat .hh,.tw-pstat .rr{display:grid;grid-template-columns:26px 62px 72px 62px;gap:4px;align-items:center}
+.tw-pstat i{font-style:normal;font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+ color:var(--tw-mut);text-align:right}
+.tw-pstat b{font:600 11px 'Geist Mono',monospace;text-align:right}
+.tw-paste{width:100%;height:150px;padding:11px;resize:vertical;font:500 12px 'Geist Mono',monospace;
+ line-height:1.7;color:var(--tw-bi)}
+
+/* dropdown menu used by Preview and Export */
+.tw-menu{position:absolute;top:calc(100% + 6px);right:0;z-index:70;width:296px;background:#fff;
+ border-radius:13px;overflow:hidden;box-shadow:0 0 0 1px rgba(11,15,26,.07),0 18px 40px -12px rgba(11,15,26,.32);
+ animation:tw-pop .16s var(--tw-ez);text-align:left}
+.tw-menu .mh{display:block;padding:10px 14px 7px;font:700 8.5px 'Geist',sans-serif;letter-spacing:.75px;
+ text-transform:uppercase;color:var(--tw-mut);border-bottom:1px solid var(--tw-hair)}
+.tw-menu .mi{display:flex;align-items:center;gap:10px;width:100%;padding:9px 14px;border:0;background:none;
+ cursor:pointer;text-align:left;border-bottom:1px solid var(--tw-hair)}
+.tw-menu .mi:hover{background:var(--tw-soft)}
+.tw-menu .mi.on{background:var(--tw-lav)}
+.tw-menu .mi b{display:block;font:600 12.5px 'Geist',sans-serif;color:var(--tw-ink)}
+.tw-menu .mi.on b{color:var(--tw-bi)}
+.tw-menu .mi u{display:block;text-decoration:none;font-size:10.5px;color:var(--tw-mut);margin-top:2px;
+ line-height:1.4}
+.tw-menu .ck{margin-left:auto;color:var(--tw-bi);font-weight:700}
+.tw-menu .fm{flex:0 0 auto;width:34px;height:34px;border-radius:9px;display:grid;place-items:center;
+ font:700 9px 'Geist',sans-serif;letter-spacing:.3px}
+.tw-menu .fm.doc{background:var(--tw-badb);color:var(--tw-bad)}
+.tw-menu .fm.sheet{background:var(--tw-okb);color:var(--tw-ok)}
+.tw-menu .fm.web{background:var(--tw-lav);color:var(--tw-bi)}
+.tw-menu .mf{display:block;padding:10px 14px}
+.tw-menu .mn{display:block;padding:10px 14px;font-size:10.5px;color:var(--tw-mut);line-height:1.5;
+ background:var(--tw-soft)}
+
+/* statistics: one row per connected platform */
+.tw-stx{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border-radius:10px;
+ background:var(--tw-soft);border:1px solid var(--tw-hair);min-width:0}
+.tw-stx .hh,.tw-stx .rr{display:grid;grid-template-columns:28px 1fr 1fr 1fr;gap:6px;align-items:center}
+.tw-stx i{font-style:normal;font-size:8px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+ color:var(--tw-mut);text-align:right}
+.tw-stx b{font:600 11.5px 'Geist Mono',monospace;font-variant-numeric:tabular-nums;text-align:right}
+.tw-stx b.z{color:#B6BECD;font-weight:500}
+.tw-stx .rr:not(:last-child){border-bottom:1px solid #E7ECF4;padding-bottom:2px}
+.tw-pf .fb{background:#1877F2}
+.tw-pf .sc{background:#F5D90A;color:#0B0F1A}
+
+/* feed thumbs must not spill into the next column */
+.tw-thumbs{display:flex;gap:5px;min-width:0;overflow:hidden}
+.tw-thumb{width:44px;height:44px;flex:0 0 44px}
+
+/* quotation filter chips */
+.tw-fbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:11px}
+.tw-fchip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;
+ border:1px solid var(--tw-hair);background:#fff;cursor:pointer;font:500 12px 'Geist',sans-serif;
+ color:var(--tw-ink2)}
+.tw-fchip:hover{border-color:rgba(0,87,255,.34);color:var(--tw-bi)}
+.tw-fchip.on{background:var(--tw-lav);border-color:#CDDCFF;color:var(--tw-bi);font-weight:600}
+.tw-fchip.z{opacity:.45}
+.tw-fchip em{font-style:normal;font:600 10.5px 'Geist Mono',monospace;padding:1px 6px;border-radius:999px;
+ background:var(--tw-soft);color:var(--tw-mut)}
+.tw-fchip.on em{background:#fff;color:var(--tw-bi)}
+
+/* import drop zone */
+.tw-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+ padding:26px 20px;border:2px dashed #CFDDF7;border-radius:13px;background:var(--tw-lav);text-align:center}
+.tw-drop .ic{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#fff;
+ color:var(--tw-bi);font-size:16px;font-weight:700}
+.tw-drop b{font-size:13.5px;font-weight:600}
+.tw-drop p{font-size:11px;color:var(--tw-mut);line-height:1.55;max-width:420px}
+
+/* intelligence loading state on the profile score */
+.tw-spin{width:52px;height:52px;flex:0 0 auto;border-radius:50%;
+ border:5px solid rgba(255,255,255,.25);border-top-color:#fff;animation:tw-spin 1s linear infinite}
+@keyframes tw-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.tw-spin{animation-duration:2.4s}}
+
+/* filter panel */
+.tw-fsec{border-bottom:1px solid var(--tw-hair)}
+.tw-fsec__h{display:flex;align-items:center;gap:9px;width:100%;padding:12px 16px;border:0;background:none;
+ cursor:pointer;text-align:left}
+.tw-fsec__h:hover{background:var(--tw-soft)}
+.tw-fsec__h b{font-size:9px;font-weight:700;letter-spacing:.75px;text-transform:uppercase;color:var(--tw-bi)}
+.tw-fsec__h .ar{margin-left:auto;font-size:9px;color:var(--tw-mut)}
+.tw-fsec__b{padding:0 16px 14px}
+.tw-frow{margin-bottom:14px}
+.tw-frow:last-child{margin-bottom:0}
+.tw-fchips{display:flex;flex-wrap:wrap;gap:6px}
+.tw-fc{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;
+ border:1px solid var(--tw-hair);background:#fff;cursor:pointer;font:500 11.5px 'Geist',sans-serif;
+ color:var(--tw-ink2)}
+.tw-fc:hover{border-color:rgba(0,87,255,.34)}
+.tw-fc.on{background:var(--tw-lav);border-color:#CDDCFF;color:var(--tw-bi);font-weight:600}
+.tw-fc em{font-style:normal;font-size:10px;color:var(--tw-mut)}
+.tw-fc.on em{color:var(--tw-bi)}
+.tw-more{margin-top:7px;border:0;background:none;padding:0;cursor:pointer;
+ font:600 11px 'Geist',sans-serif;color:var(--tw-bi)}
+.tw-more:hover{text-decoration:underline}
+</style></head>
+<body><div class="tw-shell"><main class="tw-main" id="app"></main></div>
+<script>
+const MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function D(v){if(v==null)return '';let x=String(v).trim();if(!x||x==='—')return '';
+ const pad=n=>String(n).padStart(2,'0');const out=(d,m,y)=>pad(d)+' '+m+' '+String(y).slice(-2);let m;
+ if((m=x.match(/^([A-Z][a-z]{2})\s+(\d{1,2}),\s*(\d{4})$/)))return out(+m[2],m[1],m[3]);
+ if((m=x.match(/^(\d{4})-(\d{2})-(\d{2})$/)))return out(+m[3],MON[+m[2]-1],m[1]);
+ if((m=x.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)))return out(+m[1],MON[+m[2]-1],m[3]);
+ if((m=x.match(/^(\d{1,2})\s+([A-Z][a-z]{2})\s+(\d{4})$/)))return out(+m[1],m[2],m[3]);
+ return x}
+const F=n=>Math.round(n).toLocaleString('en-US');
+const F2=n=>n.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});
+const AB=n=>{const a=Math.abs(n);return a>=1e6?(n/1e6).toFixed(1)+'M':a>=1e3?(n/1e3).toFixed(1)+'K':String(n)};
+const E=s=>String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+/* ---- captured live ---- */
+const SL=[
+ ['SL-2026-0026','Test 5','Alshaya','Draft','Active','Team','mohamedeldesouky',3,'Aug 22, 2026'],
+ ['SL-2026-0025','Test 4','Arab Bank','Draft','Active','Team','mohamedeldesouky',3,'Aug 22, 2026'],
+ ['SL-2026-0024','Test 3','','Draft','Active','Team','mohamedeldesouky',3,'Aug 21, 2026'],
+ ['SL-2026-0023','Test 2','E&','Draft','Active','Team','mohamedeldesouky',3,'Aug 21, 2026'],
+ ['SL-2026-0022','Test 1','E&','Draft','None','Team','mohamedeldesouky',3,'Aug 20, 2026'],
+ ['SL-2026-0021','Dar Global','Dar Global','Approved','Active','Team','mohamedeldesouky',3,'Aug 18, 2026'],
+ ['SL-2026-0020','FirstCry','FirstCry','Approved','None','Private','mohamedeldesouky',8,'Aug 14, 2026'],
+ ['SL-2026-0019','Alshaya','Alshaya','Draft','Off','Team','mohamedeldesouky',3,'Aug 12, 2026']];
+const QT=[
+ ['QT-2026-0025','Quotation — Test 5','Alshaya','Bundle Plus Communication','Draft','Active','mohamedeldesouky',4,1045000,950000,9.1],
+ ['QT-2026-0024','Quotation — Test 4','Arab Bank','Mind Share Egypt LTD','Draft','Active','mohamedeldesouky',3,880000,800000,9.1],
+ ['QT-2026-0023','Quotation — Test 3','E&','Essencemediacom','Draft','Active','mohamedeldesouky',3,733333,666667,9.1],
+ ['QT-2026-0022','Quotation — Test 2','E&','Essencemediacom','Draft','None','mohamedeldesouky',3,586667,533333,9.1],
+ ['QT-2026-0021','Quotation — Dar Global','Dar Global','Bundle Plus Communication','Approved','Active','mohamedeldesouky',3,1173334,1066667,9.1],
+ ['QT-2026-0020','Quotation — FirstCry','FirstCry','Bundle Plus Communication','Approved','None','mohamedeldesouky',8,660000,600000,9.1]];
+/* creators on the shortlist / quotation */
+const CR=[
+ ['ouda.5','oudou le king','Egypt','🇪🇬','Mid',['Fitness','Music'],1,183900,8.92,136200,221500,0.02,290,49,'Consider',77,'Unverified',
+  ['Fitness','Music','Sports','Travel','Clothes'],200000,4.9,'13 days ago'],
+ ['reem_elkhashab','Reem . ريم ✨','Egypt','🇪🇬','Mid',['Fitness','Music'],1,397600,3.06,null,454300,12.83,1200000,52,'Consider',71,'Unverified',
+  ['Fitness','Music','Lifestyle'],300000,4.6,'1 month ago'],
+ ['karimkabbany','Karim Kabbany | كريم قباني','Egypt · France','🇪🇬','Macro',['Fitness','Music'],1,604400,13.93,571900,1400000,23.22,4300000,64,'Strong',82,'Verified',
+  ['Fitness','Music','Sports'],450000,4.8,'2 weeks ago']];
+/* per-creator platform rows: [key, followers, engagement, avgViews] */
+const CRP={
+ 'ahmed_elbadawy':[['ig',909700,22.53,4400000],['tt',1200000,9.18,7900000]],
+ 'nourhanneeisa':[['ig',767600,0.77,null],['tt',106500,8.87,322500]],
+ 'itsfarahhosny':[['ig',189800,15.89,639300],['tt',19500,168.40,390100]],
+ 'islamfawzy_':[['ig',6200000,1.22,null],['tt',10000000,0.47,719700]],
+ 'ouda.5':[['ig',183900,8.92,136200],['tt',221500,0.02,290]],
+ 'reem_elkhashab':[['ig',397600,3.06,null],['tt',454300,12.83,1200000],['fb',null,null,null]],
+ 'karimkabbany':[['ig',604400,13.93,571900],['tt',1400000,23.22,4300000]]};
+const SIM=[['nouraneowais',100,'about 1 month ago'],['itsmalakosama',85,'about 1 month ago'],
+ ['palactapus',85,'about 1 month ago'],['hebaelsopkey',85,'about 1 month ago'],
+ ['esraafahmy',85,'about 1 month ago'],['ahmed_elbadawy',75,'14 days ago'],
+ ['reem_elkhashab',75,'13 days ago'],['nnadatarekk',75,'about 1 month ago']];
+const PUBS2=[
+ ['Sending money home shouldn’t be a challenge. If you’re living in the US, UK, CA…',153,7,null,'18 Jul 2026'],
+ ['Watching the big game with @oreoegypt our favorite ice cream!!',146,5,null,'18 Jul 2026'],
+ ['Sending money home shouldn’t be a challenge — remittances made simple.',153,7,null,'13 Jul 2026'],
+ ['We didn’t win but next time we’ll win bigger! Nothing allows me to travel more freely…',253,7,28,'9 Jul 2026'],
+ ['كل سنة وإنتي طيبة يا مراتي — يا رب دايمًا نسافر، ونضحك سوا، ونكبر وإيدينا في إيد بعض',35900,286,274300,'11 Jan 2026'],
+ ['Love at first sight, again and again and again. #inloveAF — Dress by @nazazy',32300,241,50100,'24 May 2025'],
+ ['Behind the scenes from our first ever international shoot! Barcelona, Spain',28900,252,220200,'25 Jul 2023']];
+const LINES=[
+ ['ouda.5',1,'1× IG Set of stories + 1× IG Reel','ig,tt','Option 1',200000,200000,10,'Draft'],
+ ['ouda.5',2,'1× IG Reel only','ig','Option 2',0,0,0,'Draft'],
+ ['karimkabbany',1,'1× IG Set of stories + 1× IG Reel + 1× TT Video 2 weeks','ig,tt','Option 1',450000,450000,10,'Draft'],
+ ['reem_elkhashab',1,'1× IG Set of stories + 1× IG Reel + 1× TT Video 2 weeks','ig,tt','Option 1',300000,330000,10,'Draft']];
+let PG='shortlists', DRW=null, DTAB='ov', COST=null, CWO=false, CMODE2='Cost + Client cost';
+let SHOW=null, PLAT='ig', EDIT=false, COMB=false, ADDCR=false, ATAB='disc';
+let LAY='detailed', OUT=null;
+const addCr=v=>{ADDCR=v;if(v)ATAB='disc';draw()};
+const atab=t=>{ATAB=t;draw()};
+const plat=p=>{PLAT=p;draw()};
+const editUrl=v=>{EDIT=v;draw()};
+const combine=v=>{COMB=v;draw()};
+/* platform-level metrics — these change with the chip, creator-level fields do not */
+const PLATS={
+ ig:{n:'Instagram',cls:'ig',handle:'ouda.5',url:'https://www.instagram.com/ouda.5/',
+     f:183900,e:8.92,ae:16400,al:16300,ap:136200,pw:null,
+     pubs:[['Sending money home shouldn’t be a challenge — remittances made simple.',153,7,null,'13 Jul 2026'],
+           ['We didn’t win but next time we’ll win bigger!',253,7,28,'9 Jul 2026'],
+           ['Behind the scenes from our first international shoot — Barcelona.',28900,252,220200,'25 Jul 2023']],
+     tags:['#inloveAF'],
+     ments:['@taptapsendeg','@visa_eg','@nazazy','@maisongamil','@iramjewelry_','@ayaabdelhamid','@oreoegypt']},
+ tt:{n:'TikTok',cls:'tt',handle:'ouda.5',url:'https://www.tiktok.com/@ouda.5',
+     f:221500,e:0.02,ae:36,al:36,ap:290,pw:null,
+     pubs:[['No caption',49,null,329,'30 Nov 2023'],['No caption',33,null,260,'30 Nov 2023'],
+           ['No caption',26,null,181,'28 Nov 2023']],
+     tags:[],ments:[]}};
+const show=v=>{SHOW=v;draw()};
+/* client-link state: 'Active' | 'None' | 'Off' — a real toggle, not a label */
+const LINK={};
+SL.forEach(function(x){LINK[x[0]]=x[4]});
+QT.forEach(function(x){LINK[x[0]]=x[5]});
+LINK['SHORTLIST']='Active';
+function linkTog(k){LINK[k]=LINK[k]==='Active'?'Off':'Active';draw()}
+function linkCell(k){
+ const on=LINK[k]==='Active';
+ return '<span class="tw-lnk"><button class="tw-sw'+(on?' on':'')+'" onclick="linkTog(\''+k+'\')" '+
+  'role="switch" aria-checked="'+on+'" aria-label="Client link"></button>'+
+  '<span class="tw-live'+(on?' on':'')+'" role="status" '+
+  'aria-label="Client link '+(on?'live':'off')+'" title="'+(on?'Live':'Off')+'"></span></span>';
+}
+const go=p=>{PG=p;draw()};
+const openCr=h=>{DRW=h;DTAB='ov';LOADING=(PG==='search');draw();};
+let LOADING=false;
+const loaded=()=>{LOADING=false;draw()};
+const dtab=t=>{DTAB=t;draw()};
+const cost=i=>{COST=i;draw()};
+const cwo=v=>{CWO=v;draw()};
+function cr(h){
+ var x=CR.filter(function(c){return c[0]===h})[0];
+ if(x) return x;
+ var p=POOL.filter(function(c){return c[0]===h})[0];
+ if(!p) return null;
+ /* adapt a Search result to the profile shape: handle,name,location,flag,tier,cats,extra,
+    followers,engagement,avgViews,tt*3, score,label, confidence,verification, cats, quoteRef, rating, updated */
+ var score=Math.min(99,Math.round(20+p[7]*1.4));
+ return [p[0],p[1],p[2],p[3],p[6]>=1000000?'Macro':p[6]>=100000?'Mid':'Micro',p[4],p[5],
+  p[6],p[7],p[8],p[9],p[10],p[11],score,score>=60?'Strong':score>=40?'Consider':'Weak',
+  77,'Unverified',p[4].concat(['Travel']),200000,4.6,'14 days ago'];
+}
+const card=(t,s,a,b,n)=>'<div class="tw-c"><div class="tw-ch"><span class="tw-ct">'+t+'</span>'+
+ (s?'<span class="tw-cs">'+s+'</span>':'')+'<span class="tw-sp"></span>'+(a||'')+'</div>'+b+(n||'')+'</div>';
+const grid=(c,m,h,r,f)=>'<div class="tw-sc"><div style="min-width:'+m+'px">'+
+ '<div class="tw-g tw-hr" style="--cols:'+c+'">'+h+'</div>'+r+
+ (f?'<div class="tw-g tw-ft" style="--cols:'+c+'">'+f+'</div>':'')+'</div></div>';
+const row=(c,cl,x)=>'<div class="tw-g tw-r'+(cl?' '+cl:'')+'" style="--cols:'+c+'">'+x+'</div>';
+const note=(t,c)=>'<div class="tw-note'+(c?' '+c:'')+'">'+t+'</div>';
+const conflict=(t,b)=>'<div class="tw-cf"><span class="tw-cf__i">!</span><span><b>'+t+'</b><p>'+b+'</p></span></div>';
+function empty(t,b,c){return '<div class="tw-empty"><svg viewBox="0 0 24 24">'+
+ '<path d="M5 20V5a1 1 0 0 1 1-1h9l4 4v12a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1z"/><path d="M14 4v5h5"/></svg>'+
+ '<b>'+t+'</b><p>'+b+'</p>'+(c||'')+'</div>'}
+const TOOLS='<button class="tw-b sm">Filter</button><button class="tw-b sm">Sort</button>';
+const ini=n=>(n||'?').replace(/[^\p{L}\p{N} ]/gu,'').trim().slice(0,2).toUpperCase()||'?';
+const avx=(c,i)=>'<span class="tw-avx k'+((i%3)+1)+'">'+ini(c[1])+'<span class="fl">'+c[3]+'</span></span>';
+const PFC={ig:['ig','IG'],tt:['tt','TT'],yt:['yt','YT'],fb:['fb','FB'],sc:['sc','SC']};
+const pf=s=>'<span class="tw-pf">'+(s||'').split(',').filter(Boolean).map(function(p){
+ const d=PFC[p]||['ig','?'];return '<span class="'+d[0]+'">'+d[1]+'</span>'}).join('')+'</span>';
+const META={
+ search:{t:'Creator search',s:'Browse, filter and shortlist creators across every connected platform',
+  m:[['Creators','25'],['Selected','0'],['Platforms','4'],['Countries','6'],['Avg engagement','9.4%'],
+     ['Verified','0','r'],['Lists','26'],['Imported','3.1K']],badge:['25 creators','']},
+ intel:{t:'Campaign intelligence',s:'Shared brief intelligence for Discovery, campaigns, Studio and AI',
+  m:[['Records','64'],['Brands','12'],['Legal entities','6'],['Campaigns','18'],
+     ['Newest','04 Aug 26','s'],['Duplicates','2','r']],badge:['64 records','']},
+ match:{t:'Campaign match',s:'Score creators against your brief using unified browse and fit ranking',
+  m:[['Matches','0','r'],['Brief','not set','s'],['Creators scanned','0'],['Shortlisted','0']],
+  badge:['No matches','']},
+ imp:{t:'Import center',s:'Upload creator datasets from agencies, platforms or clients',
+  m:[['Uploads','50'],['Creators','3,169'],['Imported','2,630','g'],['Updated','204'],
+     ['Failed','113','r'],['Processing','1','y']],badge:['50 uploads','']},
+ shortlists:{t:'Shortlists',s:'Build, review, approve and move creators into campaigns',
+  m:[['Shortlists','26'],['Draft','21'],['Approved','5','g'],['Creators','98'],
+     ['Linked to quotation','12'],['Client link on','19','g'],['Private','4'],['Updated today','3']],
+  badge:['26 total','']},
+ shortlist:{t:'Test 5',id:'SL-2026-0026',s:'Alshaya · Bundle Plus Communication',
+  m:[['Creators','3'],['Quoted','3','g'],['Under review','3','y'],['Approved','0','r'],
+     ['Quotation','QT-2026-0025','s'],['Version','v1','s'],['Brief','5 open','y'],['Outputs','6 / 11','s']],
+  badge:['Draft','']},
+ quotations:{t:'Client quotations',s:'Build, price and export influencer proposals for clients',
+  m:[['Quotations','29'],['Draft','24'],['Approved','5','g'],['Lines','118'],
+     ['Client cost','5.08M','s'],['Base cost','4.62M','s'],['Avg GP %','9.1%','r'],['Creators','96']],
+  badge:['29 total','']},
+ quotation:{t:'Quotation — Test 5',id:'QT-2026-0025',s:'4 lines · 3 creators · linked to SL-2026-0026',
+  m:[['Ccy','EGP','s'],['Base cost','950,000'],['Client cost','1,045,000'],['GP margin','95,000','y'],
+     ['GP %','9.1%','r'],['FM %','10.0%'],['Version','v1.0','s'],['Creators','3'],['Lines','4'],
+     ['Days left','4','y']],
+  badge:['Draft','']}};
+function acts(){return {
+ search:'<button class="tw-b sm" onclick="flt(true)">&#9776; Filters</button><button class="tw-b sm">Refresh metrics</button>'+
+  '<button class="tw-b sm" onclick="smiss(true)">+ Add missing creator</button>'+
+  '<button class="tw-b sm">Create list</button>'+
+  '<button class="tw-b sm pri">Add to list</button>',
+ intel:'<button class="tw-b sm">Filters</button><button class="tw-b sm pri">Creator search</button>',
+ match:'<button class="tw-b sm">Load from library</button>'+
+  '<button class="tw-b sm pri">Match creators</button>',
+ imp:'<button class="tw-b sm">All statuses</button><button class="tw-b sm">Export CSV</button>'+
+  '<button class="tw-b sm pri">Browse files</button>',
+ shortlists:'<button class="tw-b sm">All statuses</button><button class="tw-b sm">All visibility</button>'+
+  '<button class="tw-b sm">All brands</button><button class="tw-b sm pri">+ New shortlist</button>',
+ shortlist:'<button class="tw-b sm">View · EGP</button>'+previewBtn()+exportBtn()+sendBtn()+
+  '<button class="tw-b sm">Open Studio</button>'+
+  '<button class="tw-b sm" style="border-color:#F0D6A4;color:var(--tw-wrn)">Complete brief · 5</button>'+
+  '<button class="tw-b sm pri" onclick="slAdd(true)">+ Add creators</button>'+
+  '<button class="tw-b sm">⋯</button>',
+ quotations:'<button class="tw-b sm">All statuses</button><button class="tw-b sm">All brands</button>'+
+  '<button class="tw-b sm pri">+ New quotation</button>',
+ quotation:'<button class="tw-b sm">Save</button>'+previewBtn()+exportBtn()+sendBtn()+
+  '<button class="tw-b sm">Open Studio</button>'+
+  '<button class="tw-b sm">⋯</button>'}};
+function bar(){
+ const M=META[PG], detail=(PG==='shortlist'||PG==='quotation');
+ let h='<div class="tw-frozen" id="frozen">';
+ h+='<div class="tw-top">';
+ if(detail) h+='<button class="tw-b sm">&larr; Back</button>'+
+  '<span class="tw-crumb">1 / '+(PG==='shortlist'?26:29)+'</span>'+
+  '<button class="tw-b sm">Next &rsaquo;</button>';
+ h+='<span class="tw-crumb">Discovery / <b>'+(PG.indexOf('short')===0?'Shortlists':'Client quotations')+
+  '</b>'+(detail?' / '+M.id:'')+'</span><span class="tw-sp"></span>'+
+  '<span class="tw-p p-n">'+M.badge[0]+'</span></div>';
+ h+='<div class="tw-mast"><div class="tw-mh">'+
+  (M.id?'<span class="id">'+M.id+'</span>':'')+
+  '<h1 style="font:600 19px \'Geist\',sans-serif;letter-spacing:-.5px;color:#fff">'+M.t+'</h1>'+
+  '<span class="st">'+M.badge[0]+'</span>'+
+  '<span class="sub">'+M.s+'</span><span class="tw-sp"></span>'+
+  (PG==='quotation'?'<span class="st r">GP conflict</span>':'')+
+  (PG==='shortlist'?'<span class="st">6 / 11 outputs</span>':'')+'</div>';
+ if(PG==='quotation') h+='<div class="tw-mb"><span class="lb">Lifecycle</span>'+
+  '<span><span class="msg">Shortlist SL-2026-0026 linked · campaign not linked</span> '+
+  '<span class="sub">Live sync enabled · validity 06 Sep 26, 4 days remaining</span></span>'+
+  '<span class="tw-sp"></span><button class="go">Open shortlist</button></div>';
+ if(PG==='shortlist') h+='<div class="tw-mb"><span class="lb">Quotation</span>'+
+  '<span><span class="msg">QT-2026-0025 linked</span> '+
+  '<span class="sub">1 quotation · latest version v1 · Draft</span></span>'+
+  '<span class="tw-sp"></span><button class="go">Open quotation</button></div>';
+ h+='<div class="tw-mr">'+acts()[PG]+'</div>';
+ h+='<div class="tw-ms2">'+M.m.map(function(k){
+  return '<div><i>'+k[0]+'</i><b class="'+(k[2]||'')+'">'+k[1]+'</b></div>'}).join('')+'</div></div>';
+ h+='<div class="tw-jump">'+[['search','Search'],['intel','Intelligence'],
+  ['shortlists','Shortlists'],['shortlist','Shortlist detail'],
+  ['quotations','Quotations'],['quotation','Quotation detail'],
+  ['match','Campaign Match'],['imp','Import Center']].map(function(p){
+  return '<a onclick="go(\''+p[0]+'\')"'+(PG===p[0]?' style="background:var(--tw-lav);'+
+   'border-color:#CDDCFF;color:var(--tw-bi);font-weight:600"':'')+'>'+p[1]+'</a>'}).join('')+'</div>';
+ return h+'</div>';
+}
+
+/* ---------- 1. shortlists list ---------- */
+function pgShortlists(){
+ const C='30px 116px minmax(180px,1.4fr) 130px 96px 92px 100px 150px 70px 110px 74px';
+ const H='<span><input type="checkbox" class="tw-ck" aria-label="Select all"></span>'+
+  '<span>Serial</span><span>Shortlist</span><span>Brand</span><span>Status</span>'+
+  '<span>Client link</span><span>Visibility</span><span>Owner</span>'+
+  '<span class="tw-rr">Creators</span><span>Updated</span><span class="tw-rr">Act</span>';
+ const rows=SL.map(function(s,i){return row(C,'',
+  '<span><input type="checkbox" class="tw-ck" aria-label="Select '+s[0]+'"></span>'+
+  '<span class="tw-id">'+s[0]+'</span>'+
+  '<span class="tw-nm">'+E(s[1])+'</span>'+
+  '<span class="'+(s[2]?'tw-br':'tw-miss')+'">'+(E(s[2])||'not set')+'</span>'+
+  '<span><span class="tw-p '+(s[3]==='Approved'?'p-g':'p-n')+'">'+s[3]+'</span></span>'+
+  linkCell(s[0])+
+  '<span><span class="tw-p p-b">'+s[5]+'</span></span>'+
+  '<span class="tw-cw2" style="gap:7px"><span class="tw-av k'+((i%4)+1)+'" style="width:22px;height:22px;'+
+   'font-size:9px">M</span><span class="tw-t">'+E(s[6])+'</span></span>'+
+  '<span class="tw-v">'+s[7]+'</span>'+
+  '<span class="tw-d">'+D(s[8])+'</span>'+
+  '<span class="tw-act"><button class="tw-b sm">Open</button></span>')}).join('');
+ return card('Shortlists','26 total · newest first',
+   '<span class="tw-search" style="flex:0 0 220px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/>'+
+   '<path d="m20 20-4.3-4.3"/></svg><input class="tw-in" placeholder="Search shortlists…"></span>'+TOOLS,
+   grid(C,1250,H,rows,
+    '<span></span><span></span><span>'+SL.length+' of 26 shown</span><span></span><span></span>'+
+    '<span></span><span></span><span></span><span class="tw-v">'+SL.reduce(function(a,s){return a+s[7]},0)+
+    '</span><span></span><span></span>'));
+}
+/* ---------- 2. shortlist detail ---------- */
+function pgShortlist(){
+ const C='30px minmax(200px,1.4fr) 68px 140px 296px 166px 126px 96px';
+ const H='<span><input type="checkbox" class="tw-ck" aria-label="Select all"></span>'+
+  '<span>Creator</span><span>Tier</span><span>Category</span><span>Statistics</span>'+
+  '<span>Content from feed</span><span>Status</span><span>Quoted</span>';
+ const rows=CR.map(function(c,i){return row(C,'',
+  '<span><input type="checkbox" class="tw-ck" aria-label="Select '+E(c[1])+'"></span>'+
+  '<span class="tw-cw2">'+avx(c,i)+'<span style="min-width:0">'+
+   '<button class="nm" onclick="openCr(\''+c[0]+'\')" style="border:0;background:none;padding:0;'+
+   'font:inherit;cursor:pointer;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;'+
+   'white-space:nowrap;display:block">'+E(c[1])+'</button>'+
+   '<span class="hd">@'+E(c[0])+'</span><span class="lo">'+E(c[2])+'</span></span></span>'+
+  '<span><span class="tw-p p-v">'+c[4]+'</span></span>'+
+  '<span class="tw-tags">'+c[5].map(function(t){return '<span>'+t+'</span>'}).join('')+
+   (c[6]?'<span class="m">+'+c[6]+'</span>':'')+'</span>'+
+  '<span class="tw-stx">'+
+   '<span class="hh"><i></i><i>Followers</i><i>Engagement</i><i>Avg views</i></span>'+
+   (CRP[c[0]]||[]).map(function(r){
+    return '<span class="rr">'+pf(r[0])+
+     '<b class="'+(r[1]===null?'z':'')+'">'+(r[1]===null?'—':AB(r[1]))+'</b>'+
+     '<b class="'+(r[2]===null?'z':'')+'">'+(r[2]===null?'—':r[2].toFixed(2)+'%')+'</b>'+
+     '<b class="'+(r[3]===null?'z':'')+'">'+(r[3]===null?'—':AB(r[3]))+'</b></span>'}).join('')+
+   '</span>'+
+  '<span class="tw-thumbs"><span class="tw-thumb">▣</span><span class="tw-thumb">▣</span>'+
+   '<span class="tw-thumb">▣</span></span>'+
+  '<span><span class="tw-p p-y">Under review</span></span>'+
+  '<span><span class="tw-p p-g">Quoted</span></span>')}).join('');
+ let h='<div class="tw-c"><div class="tw-ch"><span class="tw-ct">Quotation linked</span>'+
+  '<span class="tw-id" style="font:600 11px \'Geist Mono\',monospace;color:var(--tw-bi)">QT-2026-0025</span>'+
+  '<span class="tw-cs">1 quotation linked · latest version v1</span>'+
+  '<span class="tw-p p-n">Draft</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm pri">Open quotation</button>'+
+  '<button class="tw-b sm">Generate new version</button></div></div>';
+ h+=card('Creators · 3','Bundle Plus Communication · Alshaya',
+  '<button class="tw-b sm">Submit 0 selected</button><button class="tw-b sm">Compare</button>'+
+  '<button class="tw-b sm">Refresh metrics</button><button class="tw-b sm">Export CSV</button>'+
+  '<button class="tw-b sm pri">Generate quotation</button>',
+  grid(C,1360,H,rows,null),
+  note('Click a creator name to open the full profile — investment score, audience, publications, '+
+   'confidence and similar creators.'));
+ h+=card('Movement history','audit trail of every creator movement',null,
+  '<div class="tw-ms">'+[['Added from discovery','mohamedeldesouky','Aug 22, 2026 12:06'],
+   ['Added from discovery','mohamedeldesouky','Aug 22, 2026 12:06'],
+   ['Added from discovery','mohamedeldesouky','Aug 22, 2026 12:06']].map(function(m){
+   return '<div class="tw-mi"><span><span class="tw-dot on"></span></span>'+
+    '<span><b style="font-size:12.5px;font-weight:600">'+m[0]+'</b></span>'+
+    '<span class="tw-t">'+m[1]+'</span><span class="tw-d">'+D('Aug 22, 2026')+' · 12:06</span></div>'}).join('')+
+  '</div>');
+ return h;
+}
+/* ---------- 3. quotations list ---------- */
+function pgQuotations(){
+ const C='30px 116px minmax(190px,1.4fr) 120px minmax(150px,1fr) 92px 92px 150px 66px 116px 74px';
+ const H='<span><input type="checkbox" class="tw-ck" aria-label="Select all"></span>'+
+  '<span>Serial</span><span>Quotation</span><span>Brand</span><span>Client</span><span>Status</span>'+
+  '<span>Client link</span><span>Owner</span><span class="tw-rr">Lines</span>'+
+  '<span class="tw-rr">Client cost</span><span class="tw-rr">Act</span>';
+ const rows=QT.map(function(q,i){return row(C,'',
+  '<span><input type="checkbox" class="tw-ck" aria-label="Select '+q[0]+'"></span>'+
+  '<span class="tw-id">'+q[0]+'</span>'+
+  '<span class="tw-nm">'+E(q[1])+'</span>'+
+  '<span class="tw-br">'+E(q[2])+'</span>'+
+  '<span class="tw-t" title="'+E(q[3])+'">'+E(q[3])+'</span>'+
+  '<span><span class="tw-p '+(q[4]==='Approved'?'p-g':'p-n')+'">'+q[4]+'</span></span>'+
+  linkCell(q[0])+
+  '<span class="tw-cw2" style="gap:7px"><span class="tw-av k'+((i%4)+1)+'" style="width:22px;height:22px;'+
+   'font-size:9px">M</span><span class="tw-t">'+E(q[6])+'</span></span>'+
+  '<span class="tw-v">'+q[7]+'</span>'+
+  '<span class="tw-v">'+F(q[8])+'</span>'+
+  '<span class="tw-act"><button class="tw-b sm">Open</button></span>')}).join('');
+ return card('Client quotations','29 total · newest first',
+   '<span class="tw-search" style="flex:0 0 220px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/>'+
+   '<path d="m20 20-4.3-4.3"/></svg><input class="tw-in" placeholder="Search quotations…"></span>'+TOOLS,
+   grid(C,1370,H,rows,
+    '<span></span><span></span><span>'+QT.length+' of 29 shown</span><span></span><span></span>'+
+    '<span></span><span></span><span></span><span class="tw-v">'+QT.reduce(function(a,q){return a+q[7]},0)+
+    '</span><span class="tw-v">'+F(QT.reduce(function(a,q){return a+q[8]},0))+'</span><span></span>'),
+  conflict('Every quotation reports the same 9.1% GP.',
+   'Base cost <code>950,000</code> against client cost <code>1,045,000</code> gives 9.1% — but that 95,000 '+
+   'is the <b>agency fee</b>, not margin. The Commercial Workspace on the same quotation reports '+
+   '<code>GP 0 EGP · 0.0%</code> and marks all four lines <b>Critical</b>, because cost and revenue are equal. '+
+   'AF is added to what the client pays but never counted as revenue.'));
+}
+/* ---------- 4. quotation detail ---------- */
+function pgQuotation(){
+ const C='30px 74px minmax(190px,1.2fr) 66px minmax(230px,1.4fr) 74px 150px 128px 84px 92px';
+ const H='<span><input type="checkbox" class="tw-ck"'+(QSEL.size===LINES.length?' checked':'')+
+   ' onchange="qall(this.checked)" aria-label="Select all lines"></span>'+
+  '<span>Option</span><span>Creator</span><span>Tier</span><span>Service description</span>'+
+  '<span>Platform</span><span>Type</span><span class="tw-rr">Price</span><span>Status</span>'+
+  '<span class="tw-rr">Act</span>';
+ const rows=LINES.map(function(l,i){const c=cr(l[0]);
+  return row(C,QSEL.has(i)?'sel':l[5]===0?'wrn':'',
+  '<span><input type="checkbox" class="tw-ck"'+(QSEL.has(i)?' checked':'')+
+   ' onchange="qsel('+i+')" aria-label="Select line"></span>'+
+  '<span><span class="tw-p p-b">Option '+l[1]+'</span></span>'+
+  '<span class="tw-cw2">'+avx(c,i)+'<span style="min-width:0">'+
+   '<button class="nm" onclick="openCr(\''+c[0]+'\')" style="border:0;background:none;padding:0;font:inherit;'+
+   'cursor:pointer;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'+
+   'display:block">'+E(c[1])+'</button><span class="hd">@'+E(c[0])+'</span></span></span>'+
+  '<span><span class="tw-p p-v">'+c[4]+'</span></span>'+
+  '<span><input class="tw-in" value="'+E(l[2])+'" aria-label="Service description"></span>'+
+  '<span>'+pf(l[3])+'</span>'+
+  '<span><select class="tw-in" aria-label="Type"><option>1× IG Set of stories</option>'+
+   '<option>1× IG Reel</option><option>1× TT Video</option></select></span>'+
+  '<span style="text-align:right"><span class="tw-v">'+F(l[6])+' EGP</span>'+
+   '<button onclick="cost('+i+')" style="display:block;margin-left:auto;margin-top:3px;border:0;'+
+   'background:none;padding:0;cursor:pointer;font:600 10.5px \'Geist\',sans-serif;color:var(--tw-bi)">'+
+   '+ Cost detail</button></span>'+
+  '<span><span class="tw-p p-n">'+l[8]+'</span></span>'+
+  '<span class="tw-act"><button class="tw-x">+</button><button class="tw-x">⋯</button>'+
+   '<button class="tw-x">🗑</button></span>')}).join('');
+ const tot=LINES.reduce(function(a,l){return a+l[6]},0);
+ let h='<div class="tw-c"><div class="tw-ch"><span class="tw-p p-b">Shortlist SL-2026-0026 · linked</span>'+
+  '<span class="tw-p p-n">Campaign · not linked</span>'+
+  '<span class="tw-p p-g">Live sync enabled</span><span class="tw-sp"></span>'+
+  '<span class="tw-cs" style="color:var(--tw-wrn)">⚠ Validity 06 Sep 26 · 4 days remaining</span></div>'+
+  '<div class="tw-ch" style="border-top:1px solid var(--tw-hair)">'+
+  '<span class="tw-ct">Client review · proposal v1 · in review</span>'+
+  '<span class="tw-cs">3 approved · 0 under review · 0 rejected</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm">Select approved</button><button class="tw-b sm">Select under review</button>'+
+  '<button class="tw-b sm">Mark approved by Thinkway</button>'+
+  '<button class="tw-b sm pri">Move approved to campaign</button></div>'+
+  '<div class="tw-ms2" style="border-top:1px solid var(--tw-hair)">'+
+  [['Approved creators','3',''],['Approved base cost',F(950000),''],['Client cost',F(950000),''],
+   ['Approved GP','0','r'],['Approved GP %','0.0%','r']].map(function(k){
+   return '<div><i>'+k[0]+'</i><b class="'+k[2]+'">'+k[1]+'</b></div>'}).join('')+'</div></div>';
+ h+='<div class="tw-fbar">'+
+  [['All',4,1],['Approved',3,0],['Under review',0,0],['Rejected',0,0]].map(function(f){
+   return '<button class="tw-fchip'+(f[2]?' on':'')+(f[1]?'':' z')+'" aria-pressed="'+!!f[2]+'">'+
+    f[0]+'<em>'+f[1]+'</em></button>'}).join('')+
+  '<span class="tw-sp"></span>'+
+  '<span class="tw-cs">Selecting rows drives the calculator and the bulk actions below</span></div>';
+ h+=card('Creators · 3 · 4 lines','grouped by influencer — duplicated creators are labelled Option 1, 2, 3…',
+  '<button class="tw-b sm" onclick="cwo(true)">Commercial Workspace</button>'+
+  '<button class="tw-b sm pri" onclick="addCr(true)">+ Add creator</button>',
+  grid(C,1400,H,rows,
+   '<span></span><span></span><span>Totals · 3 creators · 4 option lines</span><span></span>'+
+   '<span></span><span></span><span></span><span class="tw-v" style="font-size:14px">'+F(1045000)+
+   ' EGP</span><span></span><span></span>'),
+  conflict('Approved GP reads 0 while the header reports 95,000.',
+   'The header computes GP as client cost minus base cost — 1,045,000 − 950,000 — which is the '+
+   '<b>agency fee</b>. The approved block and the Commercial Workspace both compute revenue minus cost with '+
+   'AF excluded, giving <code>0</code>. Two definitions of GP on one screen.'));
+ h+='<div class="tw-two"><div class="tw-c"><div class="tw-ch"><span class="tw-ct">Document details</span>'+
+  '<span class="tw-cs">version, ownership and validity</span></div><div class="tw-pad">'+
+  '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:11px">'+
+  [['Issue date','2026-08-22','date'],['Validity date','2026-09-06','date'],['Status','Draft','sel'],
+   ['Version','v1.0','sel'],['Department','Influencer Marketing','sel']].map(function(f){
+   return '<div><label class="tw-lbl">'+f[0]+'</label>'+
+    (f[2]==='sel'?'<select class="tw-in"><option>'+f[1]+'</option></select>':
+     '<input class="tw-in" type="date" value="'+f[1]+'">')+'</div>'}).join('')+'</div></div></div>'+
+  '<div class="tw-c"><div class="tw-ch"><span class="tw-ct">Quotation notes</span>'+
+  '<span class="tw-cs">internal &amp; client-facing</span></div><div class="tw-pad">'+
+  '<textarea class="tw-in" style="height:110px;padding:9px;resize:vertical" '+
+  'placeholder="Internal or client-facing notes for this quotation…"></textarea></div></div></div>';
+ return h;
+}
+/* ---------- creator profile modal ---------- */
+const DT=[['ov','Overview'],['ct','Contact'],['pb','Publications'],['cf','Confidence']];
+function creatorModal(){
+ if(!DRW) return '';
+ const c=cr(DRW); if(!c) return '';
+ const P=PLATS[PLAT];
+ let b='';
+ if(DTAB==='ov') b=
+  '<div class="tw-sec2"><div class="h">Audience &amp; engagement'+
+  '<span class="tw-p '+(P.cls==='ig'?'p-v':'p-n')+'">'+P.n+'</span></div><div class="tw-mgrid">'+
+  [['Followers',AB(P.f)],['Engagement',P.e.toFixed(2)+'%'],['Avg engagements',AB(P.ae)],
+   ['Avg likes',AB(P.al)],['Avg plays',AB(P.ap)],['Posts / week',P.pw?P.pw:'—']]
+   .map(function(k){return '<div><i>'+k[0]+'</i><b>'+k[1]+'</b></div>'}).join('')+'</div>'+
+  note('These six figures are <b>'+P.n+' only</b> and change with the chip above. Investment score, '+
+   'category, location and pricing sit on the creator and stay the same on both platforms.')+'</div>'+
+  '<div class="tw-sec2"><div class="h">Pricing</div>'+
+  '<div class="tw-out" style="margin:0"><div class="r"><span>Average price per content</span>'+
+  '<b class="tw-miss">not set</b></div>'+
+  '<div class="r"><span>Quotation reference · Instagram</span><b>EGP '+F(c[19])+' avg</b></div>'+
+  '<div class="r"><span>Quotes behind it</span><b>1</b></div>'+
+  '<div class="r tot"><span>Studio reference</span><b>EGP '+F(c[19])+'</b></div></div>'+
+  '<div class="tw-hint" style="margin-top:7px">Vendor rate card is used only when quotation averages are '+
+  'unavailable. This creator has one quote, so the average rests on a single data point.</div></div>'+
+  '<div class="tw-sec2"><div class="h">Recent publications<span class="tw-sp"></span>'+
+  '<button class="tw-b sm" onclick="dtab(\'pb\')">View all &rarr;</button></div><div class="tw-pubs">'+
+  P.pubs.map(function(p){return '<div class="tw-pub"><div class="im">▣</div><div class="tx">'+
+   '<p>'+E(p[0])+'</p><div class="mm"><span>♡ '+AB(p[1])+'</span><span>💬 '+p[2]+'</span>'+
+   (p[3]?'<span>▷ '+AB(p[3])+'</span>':'')+'</div>'+
+   '<div class="tw-d" style="margin-top:4px">'+D(p[4])+'</div></div></div>'}).join('')+'</div></div>';
+ if(DTAB==='ct') b='<div class="tw-sec2"><div class="h">Contact information'+
+  '<span class="tw-sp"></span><button class="tw-b sm">+ Add contact</button></div>'+
+  '<div class="tw-empty" style="padding:30px 16px"><b>No contact information yet</b>'+
+  '<p>Add email, phone or links manually — or run enrichment to pull them from the profile.</p>'+
+  '<span style="display:flex;gap:8px;justify-content:center">'+
+  '<button class="tw-b">Run enrichment</button>'+
+  '<button class="tw-b pri">Add contact details</button></span></div></div>'+
+  note('Outreach has to go through the platform until a contact exists — there is no email or phone on '+
+   'this creator, and nothing records who owns the relationship.','wrn');
+ if(DTAB==='pb') b='<div class="tw-sec2"><div class="h">All publications · '+PUBS2.length+'<span class="tw-sp"></span><button class="tw-b sm">View all &rarr;</button></div>'+'<div class="tw-pubs">'+
+  PUBS2.map(function(p){return '<div class="tw-pub"><div class="im">▣</div><div class="tx">'+
+   '<p>'+E(p[0])+'</p><div class="mm"><span>♡ '+AB(p[1])+'</span><span>💬 '+p[2]+'</span>'+
+   (p[3]?'<span>▷ '+AB(p[3])+'</span>':'')+'</div>'+
+   '<div class="tw-d" style="margin-top:4px">'+D(p[4])+'</div></div></div>'}).join('')+'</div>'+
+  note('Publication dates run from <b>Jul 2023 to Jul 2026</b>. The strongest numbers — 274.3K and '+
+   '220.2K plays — come from Jan 2026 and Jul 2023, so any average across this set is carrying a '+
+   'three-year-old result alongside current ones.','wrn')+'</div>';
+ if(DTAB==='cf') b='<div class="tw-sec2"><div class="h">Confidence &amp; authenticity</div>'+
+  '<div class="tw-out" style="margin:0;background:#fff;border-color:var(--tw-hair)">'+
+  '<div class="r"><span>Authenticity</span><b class="tw-miss">not scored</b></div>'+
+  '<div class="r"><span>Source confidence</span><b>'+c[15]+'%</b></div>'+
+  '<div class="r"><span>Verification</span><b class="'+(c[16]==='Verified'?'':'tw-miss')+'">'+c[16]+'</b></div>'+
+  '</div><div style="margin-top:10px"><div class="tw-lbl">Source confidence</div>'+
+  '<span class="tw-bar3"><i style="width:'+c[15]+'%"></i></span></div></div>'+
+  '<div class="tw-sec2"><div class="h">Categories</div><div class="tw-tags">'+
+  c[17].map(function(t){return '<span>'+t+'</span>'}).join('')+'</div></div>'+
+  '<div class="tw-sec2"><div class="h">Historical metrics</div>'+
+  '<div class="tw-empty" style="padding:26px 16px"><b>No historical snapshots yet</b>'+
+  '<p>The enrichment worker will populate trends once it has run more than once. '+
+  'Until then there is no way to see whether this audience is growing or shrinking.</p></div></div>'+
+  note('<b>Authenticity is unscored and the account is unverified</b>, yet source confidence reads '+c[15]+
+   '%. Confidence in the data is not the same as confidence in the audience.','wrn');
+ return '<div class="tw-scrim" onclick="openCr(null)"></div><div class="tw-cp">'+
+  '<div class="tw-cp__w" role="dialog" aria-label="'+E(c[1])+' profile">'+
+  '<div class="tw-cp__l"><div class="tw-cp__av">'+ini(c[1])+'<span class="fl">'+c[3]+'</span></div>'+
+  '<h2>'+E(c[1])+'</h2><div class="hd">@'+E(c[0])+'</div>'+
+  '<div class="mt">'+E(c[2])+' · 0 collaborations · 0 with you · updated '+c[20]+'</div>'+
+  (LOADING
+   ? '<div class="tw-score"><span class="tw-spin"></span>'+
+     '<span><i>Investment score</i><b>Loading…</b>'+
+     '<span style="font-size:10.5px;color:rgba(255,255,255,.7);display:block;margin-top:2px">'+
+     'Enterprise Creator Intelligence</span></span>'+
+     '<button class="tw-b sm" style="margin-left:auto;background:rgba(255,255,255,.16);'+
+     'border-color:rgba(255,255,255,.3);color:#fff" onclick="loaded()">Skip</button></div>'
+   : '<div class="tw-score"><span class="tw-ring2"><span>'+c[13]+'</span></span>'+
+     '<span><i>Investment score</i><b>'+c[14]+'</b>'+
+     '<span style="font-size:10.5px;color:rgba(255,255,255,.7);display:block;margin-top:2px">'+
+     'rating '+c[18]+' / 5</span></span></div>')+
+  '<div class="tw-chips2">'+
+  ['ig','tt'].map(function(k){const on=PLAT===k;
+   return '<button class="tw-pchip'+(on?' on':'')+'" onclick="plat(\''+k+'\')" '+
+    'aria-pressed="'+on+'">'+PLATS[k].n+'<em>'+AB(PLATS[k].f)+'</em></button>'}).join('')+
+  '<button class="tw-pchip add">+ Add</button>'+
+  '<span>'+c[4]+'</span></div>'+
+  '<div class="tw-cp__kv">'+
+  [['Engagement',P.e.toFixed(2)+'%'],['Avg plays',AB(P.ap)],
+   ['Quote reference','EGP '+F(c[19])],['Source confidence',c[15]+'%'],['Verification',c[16]]]
+   .map(function(k){return '<div><i>'+k[0]+'</i><b>'+k[1]+'</b></div>'}).join('')+'</div></div>'+
+  '<div class="tw-cp__m"><div class="tw-cp__h">'+
+  '<span class="tw-cs">'+P.n+' · @'+E(P.handle)+'</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm">Refresh</button><button class="tw-b sm">View on '+P.n+'</button>'+
+  '<button class="tw-b sm" onclick="editUrl(true)">Edit URL</button>'+
+  '<button class="tw-b sm" onclick="combine(true)">Combine</button>'+
+  '<button class="tw-dr__x" onclick="openCr(null)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-cp__t">'+DT.map(function(t){return '<button aria-pressed="'+(DTAB===t[0])+
+   '" onclick="dtab(\''+t[0]+'\')">'+t[1]+'</button>'}).join('')+'</div>'+
+  '<div class="tw-cp__b">'+b+'</div></div>'+
+  '<div class="tw-cp__r"><div class="tw-lbl" style="margin-bottom:8px">Similar creators</div>'+
+  SIM.map(function(x){return '<div class="tw-sim"><span class="a">'+ini(x[0])+'</span>'+
+   '<span style="min-width:0"><b>'+x[0]+'</b><u>@'+x[0]+'</u>'+
+   '<u style="font-family:Geist;font-size:9.5px">updated '+x[2]+'</u></span>'+
+   '<span class="sc">'+x[1]+'</span></div>'}).join('')+
+  '<div class="tw-hint">Similarity is audience overlap plus category. Scores range 75–100 here, and each '+
+  'row carries its own refresh date — two are 13–14 days old, the rest about a month.</div></div></div></div>';
+}
+/* ---------- cost detail modal ---------- */
+const CMODES=['Cost + Markup%','Cost + GP Margin%','Cost + Client cost','Cost + GP Value'];
+function costModal(){
+ if(COST===null) return '';
+ const l=LINES[COST]; if(!l) return '';
+ const c=cr(l[0]), unit=l[5], client=l[6], af=l[7];
+ const gp=client-unit, gpp=client?gp/client*100:0, afAmt=client*af/100;
+ return '<div class="tw-scrim" onclick="cost(null)"></div><div class="tw-cd2">'+
+  '<div class="tw-cd2__w" role="dialog" aria-label="Cost details">'+
+  '<div class="tw-cd2__h"><b>Cost details</b>'+
+  '<p>'+E(c[1])+' · Option '+l[1]+' — values stay when you close this panel. '+
+  'Click <b>Save</b> on the quotation to persist.</p></div>'+
+  '<label class="tw-free"><input type="checkbox" class="tw-ck" style="margin-top:2px">'+
+  '<span><b>Free for the client</b><p>Sets client cost to zero. Unit cost can still be entered so '+
+  'internal margin stays visible.</p></span></label>'+
+  '<div class="tw-pad" style="padding-top:0">'+
+  '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:11px">'+
+  '<div><label class="tw-lbl">Calculation</label><select class="tw-in" aria-label="Calculation">'+
+  CMODES.map(function(m){return '<option'+(m===CMODE2?' selected':'')+'>'+m+'</option>'}).join('')+
+  '</select></div>'+
+  '<div><label class="tw-lbl">Currency</label><select class="tw-in" aria-label="Currency">'+
+  ['EGP','AED','USD','EUR','GBP','SAR'].map(function(x){return '<option>'+x+'</option>'}).join('')+
+  '</select></div>'+
+  '<div><label class="tw-lbl">Pricing units</label>'+
+  '<input class="tw-in" style="text-align:right" value="1" aria-label="Pricing units"></div>'+
+  '</div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-top:11px">'+
+  '<div><label class="tw-lbl">Unit cost</label>'+
+  '<input class="tw-in" style="text-align:right" value="'+F(unit)+'" aria-label="Unit cost"></div>'+
+  '<div><label class="tw-lbl">Client cost</label>'+
+  '<input class="tw-in" style="text-align:right" value="'+F(client)+'" aria-label="Client cost"></div>'+
+  '<div><label class="tw-lbl">AF %</label>'+
+  '<input class="tw-in" style="text-align:right" value="'+af+'" aria-label="Agency fee percent"></div>'+
+  '</div></div>'+
+  '<div class="tw-out"><div class="r"><span>Unit cost</span><b>EGP '+F(unit)+'</b></div>'+
+  '<div class="r"><span>Client cost</span><b>EGP '+F(client)+'</b></div>'+
+  '<div class="r"><span>Gross profit</span><b class="'+(gp>0?'':'tw-v neg')+'">EGP '+F(gp)+'</b></div>'+
+  '<div class="r"><span>GP %</span><b class="'+(gpp>0?'':'tw-v neg')+'">'+gpp.toFixed(1)+'%</b></div>'+
+  '<div class="r"><span>Agency fee '+af+'%</span><b>EGP '+F(afAmt)+'</b></div>'+
+  '<div class="r tot"><span>Client pays</span><b>EGP '+F(client+afAmt)+'</b></div></div>'+
+  (gp<=0?conflict('GP is '+gpp.toFixed(1)+'% because unit cost equals client cost.',
+   'The AF of '+af+'% adds <code>EGP '+F(afAmt)+'</code> to what the client pays but is never counted as '+
+   'revenue, so this line reads <b>Critical</b> in the Commercial Workspace while the quotation header '+
+   'shows 9.1% margin. Either AF is revenue or the header is wrong — the two cannot both hold.'):'')+
+  '<div class="tw-cd2__h" style="border-top:1px solid var(--tw-hair);border-bottom:0;display:flex;'+
+  'align-items:center;gap:8px"><span class="tw-cs">Nothing is written until you save the quotation.</span>'+
+  '<span class="tw-sp"></span><button class="tw-b sm" onclick="cost(null)">Cancel</button>'+
+  '<button class="tw-b sm pri" onclick="cost(null)">Done</button></div></div></div>';
+}
+/* ---------- commercial workspace ---------- */
+function cwModal(){
+ if(!CWO) return '';
+ const C='30px minmax(180px,1.2fr) 150px 118px 118px 92px 84px 74px 92px';
+ const H='<span><input type="checkbox" class="tw-ck" checked aria-label="Select all"></span>'+
+  '<span>Influencer</span><span>Mode</span><span class="tw-rr">Cost</span><span class="tw-rr">Revenue</span>'+
+  '<span class="tw-rr">GP % in</span><span class="tw-rr">GP</span><span class="tw-rr">GP %</span>'+
+  '<span>Currency</span>';
+ const rows=LINES.map(function(l,i){const c=cr(l[0]);const gp=l[6]-l[5];
+  const h=gp<=0?['Critical','p-r']:gp/l[6]*100>=30?['Healthy','p-g']:['Warning','p-y'];
+  return row(C,'',
+  '<span><input type="checkbox" class="tw-ck" checked aria-label="Include"></span>'+
+  '<span class="tw-cw2" style="gap:9px"><span class="tw-av k'+((i%3)+1)+'" style="width:30px;height:30px">'+
+   ini(c[1])+'</span><span style="min-width:0"><b style="font-size:12px;font-weight:600;display:block;'+
+   'overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+E(c[1])+'</b>'+
+   '<span class="hd" style="font-size:10px">@'+E(c[0])+' · Option '+l[1]+'</span>'+
+   '<span class="tw-p '+h[1]+'" style="margin-top:3px;display:inline-block">'+h[0]+'</span></span></span>'+
+  '<span><select class="tw-in" aria-label="Mode">'+CMODES.map(function(m){
+   return '<option'+(m==='Cost + Client cost'?' selected':'')+'>'+m+'</option>'}).join('')+'</select></span>'+
+  '<span><input class="tw-cwin" value="'+F(l[5])+'" aria-label="Cost"></span>'+
+  '<span><input class="tw-cwin" value="'+F(l[6])+'" aria-label="Revenue"></span>'+
+  '<span><input class="tw-cwin" value="0" aria-label="GP percent in"></span>'+
+  '<span class="tw-v'+(gp<=0?' z':' pos')+'">'+F(gp)+'</span>'+
+  '<span class="tw-v'+(gp<=0?' neg':'')+'">'+(l[6]?(gp/l[6]*100).toFixed(1):'0.0')+'%</span>'+
+  '<span><select class="tw-in" aria-label="Currency"><option>EGP</option><option>USD</option>'+
+   '<option>AED</option></select></span>')}).join('');
+ const rev=LINES.reduce(function(a,l){return a+l[6]},0), cst=LINES.reduce(function(a,l){return a+l[5]},0);
+ const crit=LINES.filter(function(l){return l[6]-l[5]<=0}).length;
+ return '<div class="tw-scrim" onclick="cwo(false)"></div><div class="tw-cw">'+
+  '<div class="tw-cw__w" role="dialog" aria-label="Commercial workspace">'+
+  '<div class="tw-cw__h"><span><b>Commercial Workspace</b>'+
+  '<p>'+LINES.length+' lines · shared draft with the Creators grid · explicit save</p></span>'+
+  '<span class="tw-sp"></span><span class="tw-p p-n">0 unsaved</span>'+
+  '<button class="tw-dr__x" onclick="cwo(false)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-cw__s">'+
+  ['Selection','Quotation'].map(function(t){return '<div class="tw-cw__g"><div class="t">'+t+' · '+
+   LINES.length+'</div><div class="r">'+
+   [['Revenue',F(rev),''],['Cost',F(cst),''],['GP',F(rev-cst),rev-cst>0?'g':''],
+    ['GP %',(rev?((rev-cst)/rev*100).toFixed(1):'0.0')+'%','']].map(function(k){
+    return '<div><i>'+k[0]+'</i><b class="'+k[2]+'">'+k[1]+'</b></div>'}).join('')+'</div></div>'}).join('')+
+  '<div class="tw-cw__g"><div class="t">Commercial health</div><div class="tw-cw__hl">'+
+  [['Healthy',LINES.length-crit,'p-g'],['Warning',0,'p-y'],['Critical',crit,'p-r']].map(function(k){
+   return '<div><span class="tw-p '+k[2]+'">'+k[0]+'</span><b>'+k[1]+'</b></div>'}).join('')+
+  '</div></div></div>'+
+  '<div class="tw-cw__t"><input class="tw-in" style="width:190px" placeholder="Filter influencers…">'+
+  '<select class="tw-in" style="width:120px"><option>All lines</option><option>Approved</option></select>'+
+  '<select class="tw-in" style="width:130px"><option>Set GP %</option><option>Set markup %</option>'+
+  '<option>Set client cost</option></select>'+
+  '<input class="tw-in" style="width:70px;text-align:right" value="25">'+
+  '<button class="tw-b sm pri">Apply to selected</button><span class="tw-sp"></span>'+
+  '<button class="tw-b sm">↶</button><button class="tw-b sm">↷</button>'+
+  '<button class="tw-b sm">Columns</button></div>'+
+  '<div class="tw-cw__b">'+grid(C,1080,H,rows,
+   '<span></span><span>'+LINES.length+' lines</span><span></span><span class="tw-v">'+F(cst)+'</span>'+
+   '<span class="tw-v">'+F(rev)+'</span><span></span>'+
+   '<span class="tw-v'+(rev-cst<=0?' z':' pos')+'">'+F(rev-cst)+'</span>'+
+   '<span class="tw-v'+(rev-cst<=0?' neg':'')+'">'+(rev?((rev-cst)/rev*100).toFixed(1):'0.0')+'%</span>'+
+   '<span></span>')+
+  conflict('All '+crit+' lines are Critical because revenue equals cost.',
+   'Every line was priced with <b>Cost + Client cost</b> at the same number, so GP is <code>0</code> and '+
+   'health is Critical across the board. The quotation header still reports <code>9.1%</code> — that figure '+
+   'is the agency fee, which this panel deliberately excludes from GP.')+'</div>'+
+  '<div class="tw-cw__f"><span class="tw-cs">Health is derived from GP % — healthy at 30%+, warning 15–30%, '+
+  'critical below 15%.</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm" onclick="cwo(false)">Discard</button>'+
+  '<button class="tw-b sm pri">Save changes</button></div></div></div>';
+}
+
+/* ---------- quotation: selection + calculator ---------- */
+let QSEL=new Set(), QCALC=false, QMODE='af', QVAL=25, QVAT=14;
+const qsel=i=>{QSEL.has(i)?QSEL.delete(i):QSEL.add(i);if(!QSEL.size)QCALC=false;draw()};
+const qall=on=>{QSEL=on?new Set(LINES.map(function(_,i){return i})):new Set();if(!QSEL.size)QCALC=false;draw()};
+const qcalc=v=>{QCALC=v;draw()};
+const qmode=m=>{QMODE=m;QVAL=QM[m].d;draw()};
+const qval=v=>{QVAL=Math.max(0,+String(v).replace(/[^\d.]/g,'')||0);draw()};
+const QM={af:{l:'Cost + AF %',f:'client = cost × (1 + af%)',d:25},
+ gpm:{l:'Cost + GP margin %',f:'client = cost ÷ (1 − margin%)',d:30},
+ price:{l:'Cost + client price',f:'client = price you enter',d:300000},
+ gpv:{l:'Cost + GP value',f:'client = cost + GP',d:100000}};
+function qNew(cost){
+ if(QMODE==='af') return cost*(1+QVAL/100);
+ if(QMODE==='gpm') return QVAL>=100?cost:cost/(1-QVAL/100);
+ if(QMODE==='price') return QVAL;
+ return cost+QVAL;
+}
+function qRows(){
+ return LINES.map(function(l,i){return {i:i,l:l}}).filter(function(r){return QSEL.has(r.i)})
+  .map(function(r){const cost=r.l[5],oldC=r.l[6];
+   const c=Math.round(qNew(cost)*100)/100, gp=c-cost, mgn=c?gp/c*100:0;
+   return {i:r.i,l:r.l,cost:cost,oldC:oldC,c:c,gp:gp,mgn:mgn,vat:c*QVAT/100,d:c-oldC}});
+}
+function qBar(){
+ if(!QSEL.size) return '';
+ const R=LINES.filter(function(_,i){return QSEL.has(i)});
+ const cost=R.reduce(function(a,l){return a+l[5]},0);
+ const cli=R.reduce(function(a,l){return a+l[6]},0);
+ const gp=cli-cost;
+ return '<div class="tw-selbar"><span class="n"><b>'+QSEL.size+'</b> of '+LINES.length+' lines'+
+  '<button class="x" onclick="qall(false)" aria-label="Clear selection">&#10005;</button></span>'+
+  '<span class="sum">'+
+  [['Base cost',F(cost),''],['Client cost',F(cli),''],['GP',F(gp),gp>0?'g':''],
+   ['GP %',(cli?gp/cli*100:0).toFixed(1)+'%',gp>0?'g':'']].map(function(k){
+   return '<span><i>'+k[0]+'</i><b class="'+k[2]+'">'+k[1]+'</b></span>'}).join('')+'</span>'+
+  '<span class="acts"><button class="tw-b sm'+(QCALC?' pri':'')+'" onclick="qcalc('+(!QCALC)+')">'+
+  '&#9636; Calculator</button>'+
+  '<button class="tw-b sm">Mark approved</button>'+
+  '<button class="tw-b sm edit">Remove '+QSEL.size+'</button>'+
+  '<button class="tw-b sm pri">Move to campaign</button></span></div>';
+}
+function qCalcPanel(){
+ if(!QCALC||!QSEL.size) return '';
+ const R=qRows(), M=QM[QMODE];
+ const T=function(k){return R.reduce(function(a,r){return a+r[k]},0)};
+ const C='minmax(150px,1.2fr) 104px 112px 112px 100px 74px 108px 92px';
+ const rows=R.map(function(r,i){const up=r.d>=0, c=cr(r.l[0]);
+  return row(C,'','<span class="tw-cw2" style="gap:8px">'+
+   '<span class="tw-av k'+((i%3)+1)+'" style="width:26px;height:26px;font-size:10px">'+ini(c[1])+'</span>'+
+   '<span style="min-width:0"><b style="font-size:12px;font-weight:600;display:block;overflow:hidden;'+
+   'text-overflow:ellipsis;white-space:nowrap">'+E(c[1])+'</b>'+
+   '<span class="hd" style="font-size:10px">Option '+r.l[1]+'</span></span></span>'+
+   '<span class="tw-v">'+F2(r.cost)+'</span>'+
+   '<span class="tw-v z">'+F2(r.oldC)+'</span>'+
+   '<span class="tw-v"><b>'+F2(r.c)+'</b></span>'+
+   '<span class="tw-v'+(r.gp>0?' pos':' neg')+'">'+F2(r.gp)+'</span>'+
+   '<span class="tw-v'+(r.gp>0?'':' neg')+'">'+r.mgn.toFixed(1)+'%</span>'+
+   '<span class="tw-v neg">'+F2(r.vat)+'</span>'+
+   '<span class="tw-rr"><span class="tw-delta '+(up?'up':'dn')+'">'+(up?'+':'')+F(r.d)+'</span></span>')}).join('');
+ const tc=T('c'), tcost=T('cost'), tgp=T('gp'), told=T('oldC'), tvat=T('vat');
+ const loss=R.filter(function(r){return r.gp<=0}).length;
+ return '<div class="tw-calcp" role="dialog" aria-label="Pricing calculator">'+
+  '<div class="tw-calcp__h"><b>Pricing calculator</b>'+
+  '<span>'+QSEL.size+' line'+(QSEL.size===1?'':'s')+' selected · EGP</span><span class="tw-sp"></span>'+
+  '<span style="font:500 11px \'Geist Mono\',monospace;color:rgba(255,255,255,.86)">'+M.f+'</span>'+
+  '<button class="tw-dr__x" onclick="qcalc(false)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-calcp__c"><div class="tw-modes">'+
+  Object.keys(QM).map(function(k){return '<button class="tw-mode" aria-pressed="'+(QMODE===k)+
+   '" onclick="qmode(\''+k+'\')"><b>'+QM[k].l+'</b><u>'+QM[k].f+'</u></button>'}).join('')+'</div>'+
+  '<div class="tw-cin"><div class="tw-f"><label>'+M.l.replace('Cost + ','')+'</label>'+
+  '<input class="tw-in" value="'+QVAL+'" inputmode="decimal" aria-label="Value" onchange="qval(this.value)">'+
+  '</div><div class="tw-f" style="flex:0 0 120px"><label>VAT %</label>'+
+  '<input class="tw-in" value="'+QVAT+'" inputmode="decimal" aria-label="VAT" '+
+  'onchange="QVAT=Math.max(0,+this.value||0);draw()"></div>'+
+  (QMODE==='af'||QMODE==='gpm'?'<span style="display:flex;gap:6px;flex-wrap:wrap;padding-bottom:3px">'+
+   [10,15,20,25,30,35].map(function(v){return '<button class="tw-chip" onclick="qval('+v+')">'+v+'%</button>'})
+   .join('')+'</span>':'')+
+  '<span class="tw-sp"></span><span class="tw-cs">Applies to the selected lines only</span></div></div>'+
+  '<div class="tw-calcp__b">'+
+  grid(C,860,'<span>Creator</span><span class="tw-rr">Base cost</span><span class="tw-rr">Client now</span>'+
+   '<span class="tw-rr">New client</span><span class="tw-rr">GP</span><span class="tw-rr">Margin</span>'+
+   '<span class="tw-rr">VAT '+QVAT+'%</span><span class="tw-rr">Change</span>',rows,
+   '<span>'+R.length+' lines</span><span class="tw-v">'+F2(tcost)+'</span>'+
+   '<span class="tw-v z">'+F2(told)+'</span><span class="tw-v">'+F2(tc)+'</span>'+
+   '<span class="tw-v'+(tgp>0?' pos':' neg')+'">'+F2(tgp)+'</span>'+
+   '<span class="tw-v">'+(tc?(tgp/tc*100):0).toFixed(1)+'%</span>'+
+   '<span class="tw-v neg">'+F2(tvat)+'</span>'+
+   '<span class="tw-rr"><span class="tw-delta '+(tc-told>=0?'up':'dn')+'">'+
+   (tc-told>=0?'+':'')+F(tc-told)+'</span></span>')+'</div>'+
+  (loss?'<div class="tw-warnrow">&#9888; '+loss+' line'+(loss===1?'':'s')+' would sit at or below cost — '+
+   'GP is zero or negative. This is how the quotation reached <b>GP 0</b> today.</div>':'')+
+  (QMODE==='gpm'&&QVAL>=100?'<div class="tw-warnrow">&#9888; A margin of 100% or more cannot be solved; '+
+   'client cost is held at base cost.</div>':'')+
+  (QMODE==='price'?'<div class="tw-warnrow">&#9888; Client price sets the <b>same</b> figure on every '+
+   'selected line, ignoring each creator&rsquo;s cost.</div>':'')+
+  '<div class="tw-calcp__f">'+
+  [['Base cost',F(tcost),''],['New client cost',F(tc),''],['Gross profit',F(tgp),tgp>0?'g':'r'],
+   ['Margin',(tc?(tgp/tc*100):0).toFixed(1)+'%',tgp>0?'g':'r'],['VAT '+QVAT+'%',F(tvat),''],
+   ['Client pays',F(tc+tvat),''],['Change',(tc-told>=0?'+':'')+F(tc-told),tc-told>=0?'g':'r']]
+   .map(function(k){return '<div><i>'+k[0]+'</i><b class="'+k[2]+'">'+k[1]+'</b></div>'}).join('')+'</div>'+
+  '<div class="tw-calcp__a"><span class="tw-cs">Nothing is written until you apply. AF is added to what '+
+  'the client pays and is <b>not</b> counted as GP.</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm" onclick="qcalc(false)">Cancel</button>'+
+  '<button class="tw-b sm pri" onclick="qApply()">Apply to '+QSEL.size+' line'+
+  (QSEL.size===1?'':'s')+'</button></div></div>';
+}
+function qApply(){qRows().forEach(function(r){r.l[6]=Math.round(r.c*100)/100});QCALC=false;draw()}
+
+/* ---------- preview / export ---------- */
+const LAYOUTS=[
+ ['detailed','Detailed','Line items','Every creator, every option line, with prices'],
+ ['lump','Lump sum','Summary','One total, no line-level breakdown'],
+ ['pitch','Pitch presentation','Large avatars · deck','Slide per creator, built to present'],
+ ['pitchlump','Pitch lump sum','Pitch deck · total','Presentation layout, single total'],
+ ['show','Showcase','Creator deck','Creator-led, content samples to the front'],
+ ['showlump','Showcase lump sum','Deck + total','Showcase layout, single total']];
+const FORMATS=[
+ ['pdf','PDF','Send to a client — fixed layout','doc'],
+ ['pptx','PowerPoint','Present or edit the deck','doc'],
+ ['word','Word','Edit the wording before sending','doc'],
+ ['excel','Excel','Work with the numbers','sheet'],
+ ['csv','CSV','Feed another system','sheet'],
+ ['html','HTML','Open in a browser, no download','web']];
+const layout=k=>{LAY=k;draw()};
+const outMenu=v=>{OUT=OUT===v?null:v;draw()};
+const layName=()=>LAYOUTS.filter(function(l){return l[0]===LAY})[0][1];
+function previewBtn(){
+ const on=OUT==='prev';
+ return '<span style="position:relative;display:inline-block">'+
+  '<button class="tw-b sm'+(on?' on':'')+'" onclick="outMenu(\'prev\')" aria-expanded="'+on+'">'+
+  '&#128065; Preview · '+layName()+' &#9662;</button>'+
+  (on?'<span class="tw-menu"><span class="mh">Layout</span>'+
+   LAYOUTS.map(function(l){const sel=LAY===l[0];
+    return '<button class="mi'+(sel?' on':'')+'" onclick="layout(\''+l[0]+'\')">'+
+     '<span><b>'+l[1]+'</b><u>'+l[3]+'</u></span>'+(sel?'<span class="ck">&#10003;</span>':'')+
+     '</button>'}).join('')+
+   '<span class="mf"><button class="tw-b sm pri" style="width:100%">Open preview</button></span></span>':'')+
+  '</span>';
+}
+function exportBtn(){
+ const on=OUT==='exp';
+ return '<span style="position:relative;display:inline-block">'+
+  '<button class="tw-b sm'+(on?' on':'')+'" onclick="outMenu(\'exp\')" aria-expanded="'+on+'">'+
+  '&#11015; Export &#9662;</button>'+
+  (on?'<span class="tw-menu"><span class="mh">Download as &mdash; '+layName()+' layout</span>'+
+   FORMATS.map(function(f){
+    return '<button class="mi" onclick="outMenu(null)">'+
+     '<span class="fm '+f[3]+'">'+f[1].slice(0,3).toUpperCase()+'</span>'+
+     '<span><b>'+f[1]+'</b><u>'+f[2]+'</u></span></button>'}).join('')+
+   '<span class="mn">Exports use the layout above. Change it in <b>Preview</b> first if this '+
+   'is going to a client.</span></span>':'')+
+  '</span>';
+}
+function sendBtn(){
+ return '<button class="tw-b sm" onclick="show(\''+(PG==='shortlist'?'shortlist':'quotation')+
+  '\')">&#128279; Client link</button>'+
+  '<button class="tw-b sm pri">&#9993; Send to client</button>';
+}
+
+/* ---------- add creators to shortlist ---------- */
+const POOL=[
+ ['ahmed_elbadawy','Ahmed El Badawy','Egypt','🇪🇬',['Fitness','Music'],1,909700,22.53,4400000,1200000,9.18,7900000],
+ ['nourhanneeisa','Nourhanne Eissa نورهان عيسي','Egypt · United Arab Emirates','🇪🇬',['Lifestyle'],0,767600,0.77,null,106500,8.87,322500],
+ ['itsfarahhosny','Farah Hosny','Egypt','🇪🇬',['Parenting','Fashion'],1,189800,15.89,639300,19500,168.40,390100],
+ ['islamfawzy_','ISLAM FAWZY ● اسلام فوزي','Egypt','🇪🇬',['Parenting'],0,6200000,1.22,null,10000000,0.47,719700],
+ ['ouda.5','oudou le king','Egypt','🇪🇬',['Fitness','Music'],1,183900,8.92,136200,221500,0.02,290]];
+let SLADD=false, SLTAB='search', SLSEL=new Set(), SLQ='';
+const slAdd=v=>{SLADD=v;if(v){SLTAB='search';SLSEL=new Set()}draw()};
+const slTab=t=>{SLTAB=t;draw()};
+const slPick=h=>{SLSEL.has(h)?SLSEL.delete(h):SLSEL.add(h);draw()};
+const slAll=on=>{SLSEL=on?new Set(POOL.map(function(x){return x[0]})):new Set();draw()};
+function poolRow(c,i){
+ const on=SLSEL.has(c[0]), here=CR.some(function(x){return x[0]===c[0]});
+ return '<div class="tw-pcard'+(on?' on':'')+(here?' dim':'')+'" onclick="'+(here?'':'slPick(\''+c[0]+'\')')+'">'+
+  '<span class="pk"><input type="checkbox" class="tw-ck"'+(on?' checked':'')+(here?' disabled':'')+
+   ' aria-label="Select '+E(c[1])+'"></span>'+
+  '<span class="tw-avx k'+((i%3)+1)+'" style="width:38px;height:38px;font-size:13px">'+ini(c[1])+
+   '<span class="fl">'+c[3]+'</span></span>'+
+  '<span style="min-width:0;flex:1 1 auto">'+
+   '<b class="nm2">'+E(c[1])+(here?' <span class="tw-p p-n">already on list</span>':'')+'</b>'+
+   '<u class="hd2">@'+E(c[0])+'</u>'+
+   '<u class="lo2">'+E(c[2])+'</u>'+
+   '<span class="tw-tags" style="margin-top:5px">'+c[4].map(function(t){return '<span>'+t+'</span>'}).join('')+
+   (c[5]?'<span class="m">+'+c[5]+'</span>':'')+'</span></span>'+
+  '<span class="tw-pstat">'+
+   '<span class="hh"><i></i><i>Followers</i><i>Engagement</i><i>Avg views</i></span>'+
+   '<span class="rr"><span class="tw-pf"><span class="ig">IG</span></span>'+
+    '<b>'+AB(c[6])+'</b><b>'+c[7].toFixed(2)+'%</b><b>'+(c[8]?AB(c[8]):'—')+'</b></span>'+
+   '<span class="rr"><span class="tw-pf"><span class="tt">TT</span></span>'+
+    '<b>'+AB(c[9])+'</b><b>'+c[10].toFixed(2)+'%</b><b>'+(c[11]?AB(c[11]):'—')+'</b></span>'+
+  '</span></div>';
+}
+function slAddDrawer(){
+ if(!SLADD) return '';
+ const rows=POOL.filter(function(c){return !SLQ||(c[1]+' '+c[0]).toLowerCase().indexOf(SLQ.toLowerCase())>=0});
+ const dup=POOL.filter(function(c){return CR.some(function(x){return x[0]===c[0]})}).length;
+ let b='';
+ if(SLTAB==='search') b=
+  '<div class="tw-slbar"><span class="tw-search" style="flex:1 1 auto"><svg viewBox="0 0 24 24">'+
+  '<circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3"/></svg>'+
+  '<input class="tw-in" placeholder="Search creators…" value="'+E(SLQ)+'" aria-label="Search creators" '+
+  'oninput="SLQ=this.value;draw()"></span>'+
+  '<select class="tw-in" style="width:132px" aria-label="Platform filter">'+
+  ['All platforms','Instagram','TikTok','YouTube'].map(function(x){return '<option>'+x+'</option>'}).join('')+
+  '</select></div>'+
+  '<div class="tw-slcount"><span class="tw-p p-b">'+rows.length+'</span>'+
+  '<span class="tw-cs">'+rows.length+' results</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm" onclick="slAll('+(SLSEL.size!==POOL.length)+')">'+
+  (SLSEL.size===POOL.length?'Clear all':'Select all')+'</button></div>'+
+  '<div class="tw-slscroll">'+rows.map(poolRow).join('')+'</div>'+
+  (dup?note('<b>'+dup+' of these are already on this shortlist</b> and cannot be selected — the live '+
+   'drawer lets you re-add them, which creates a duplicate row.','wrn'):'');
+ if(SLTAB==='paste') b=
+  '<div class="tw-pad" style="padding:14px 0 0">'+
+  '<textarea class="tw-in tw-paste" spellcheck="false" aria-label="Profile links" '+
+  'placeholder="https://www.instagram.com/username&#10;https://www.tiktok.com/@username&#10;'+
+  'https://www.youtube.com/@username"></textarea>'+
+  '<div class="tw-hint">Paste a full list of profile links. Creators already in Discovery are added; '+
+  'missing ones are created, then added. <b>Up to 50 per batch.</b></div>'+
+  '<div class="tw-slmeta" style="margin:12px 0 0">'+
+  [['Detected','0'],['Already in Discovery','0'],['Will be created','0']].map(function(k){
+   return '<div><i>'+k[0]+'</i><b>'+k[1]+'</b></div>'}).join('')+'</div>'+
+  note('Links are parsed as you paste, so you can see how many are new before committing. '+
+   'Instagram, TikTok and YouTube are recognised; anything else is rejected with the line number.')+
+  '</div>';
+ return '<div class="tw-scrim" onclick="slAdd(false)"></div>'+
+  '<div class="tw-dr" role="dialog" aria-label="Add creators to shortlist">'+
+  '<div class="tw-dr__h"><span class="k">&#9707; Shortlist SL-2026-0026</span><span class="tw-sp"></span>'+
+  '<button class="tw-dr__x" onclick="slAdd(false)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-dr__i"><b>Add creators</b>'+
+  '<p>Search internal, imported and discovered creators — or paste a list of profile links.</p></div>'+
+  '<div class="tw-cp__t" style="padding:6px 14px">'+
+  [['search','Search'],['paste','Paste links']].map(function(t){
+   return '<button aria-pressed="'+(SLTAB===t[0])+'" onclick="slTab(\''+t[0]+'\')">'+t[1]+'</button>'}).join('')+
+  '</div><div class="tw-dr__b" style="padding:0 16px">'+b+'</div>'+
+  '<div class="tw-dr__a"><span class="tw-p '+(SLSEL.size?'p-b':'p-n')+'">'+SLSEL.size+' selected</span>'+
+  '<span class="tw-cs">'+rows.length+' visible</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm" onclick="slAdd(false)">Cancel</button>'+
+  '<button class="tw-b sm pri"'+(SLSEL.size||SLTAB==='paste'?'':' disabled')+'>'+
+  (SLTAB==='paste'?'Import links':'Add '+SLSEL.size+' to shortlist')+'</button></div></div>';
+}
+
+/* ---------- add creators ---------- */
+const ACT=[['disc','Discovery'],['sl','Shortlist'],['camp','Campaign'],['man','Manual']];
+function addCrDlg(){
+ if(!ADDCR) return '';
+ let b='';
+ if(ATAB==='disc') b=
+  '<div class="tw-empty" style="padding:28px 16px"><b>No creators in your Discovery selection</b>'+
+  '<p>Pick creators in Discovery Search first — they stay in the selection until you import or clear them.</p>'+
+  '<button class="tw-b pri">Open Discovery Search</button></div>';
+ if(ATAB==='sl') b=
+  '<div class="tw-f"><label>Shortlist</label>'+
+  '<select class="tw-in" aria-label="Choose a shortlist"><option>Choose a shortlist…</option>'+
+  SL.map(function(x){return '<option>'+x[0]+' · '+E(x[1])+' · '+x[7]+' creators</option>'}).join('')+
+  '</select><div class="tw-hint">Importing brings every creator on that shortlist in as a new option line. '+
+  'Creators already on this quotation are skipped rather than duplicated.</div></div>'+
+  '<div class="tw-keep" style="margin-top:12px"><span class="av">SL</span>'+
+  '<span><b>SL-2026-0026 · Test 5</b><u>3 creators · already linked to this quotation</u></span>'+
+  '<span class="tw-sp"></span><span class="tw-p p-b">Linked</span></div>';
+ if(ATAB==='camp') b=
+  '<div class="tw-f"><label>Campaign</label>'+
+  '<select class="tw-in" aria-label="Choose a campaign"><option>Choose a campaign…</option>'+
+  ['TW-2026-18 · Test 6','TW-2026-17 · Test 5','TW-2026-16 · Dar Global','TW-2026-5 · Tuna Dolphin']
+   .map(function(x){return '<option>'+x+'</option>'}).join('')+'</select>'+
+  '<div class="tw-hint">Pulls the creators already assigned to a campaign, with their agreed cost, so a '+
+  'follow-up quotation starts from what was actually paid.</div></div>';
+ if(ATAB==='man') b=
+  '<div class="tw-f"><label>Creator name</label>'+
+  '<input class="tw-in" placeholder="e.g. Creator name or handle" aria-label="Creator name"></div>'+
+  '<div class="tw-2c" style="margin-top:11px">'+
+  '<div class="tw-f"><label>Platform</label><select class="tw-in" aria-label="Platform">'+
+  ['Instagram','TikTok','YouTube','Snapchat'].map(function(x){return '<option>'+x+'</option>'}).join('')+
+  '</select></div>'+
+  '<div class="tw-f"><label>Tier</label><select class="tw-in" aria-label="Tier">'+
+  ['Nano','Micro','Mid','Macro','Mega'].map(function(x){return '<option'+(x==='Mid'?' selected':'')+'>'+
+   x+'</option>'}).join('')+'</select></div></div>'+
+  '<div class="tw-hint" style="margin-top:9px">A manual row has no profile behind it — no followers, '+
+  'engagement or publications, and nothing to enrich. Use it for a creator not yet in Discovery, then '+
+  'link the profile later.</div>'+
+  note('Manual rows are excluded from the investment score and from similar-creator matching until a '+
+   'profile is attached.','wrn');
+ return '<div class="tw-scrim" onclick="addCr(false)"></div><div class="tw-dlg">'+
+  '<div class="tw-dlg__w" role="dialog" aria-label="Add creators">'+
+  '<div class="tw-dlg__h"><i>Quotation QT-2026-0025</i><b>Add creators</b>'+
+  '<p>Import creators from a Discovery selection, a shortlist or a campaign — or add a manual row.</p>'+
+  '<button class="tw-dlg__x" onclick="addCr(false)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-cp__t" style="padding:6px 14px">'+ACT.map(function(t){
+   return '<button aria-pressed="'+(ATAB===t[0])+'" onclick="atab(\''+t[0]+'\')">'+t[1]+'</button>'}).join('')+
+  '</div><div class="tw-dlg__b">'+b+'</div>'+
+  '<div class="tw-dlg__f"><span class="tw-cs">Imported creators land as new option lines at the bottom '+
+  'of the grid.</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm" onclick="addCr(false)">Close</button>'+
+  '<button class="tw-b sm pri"'+(ATAB==='disc'?' disabled':'')+'>'+
+  (ATAB==='man'?'Add manual row':'Import creators')+'</button></div></div></div>';
+}
+
+/* ---------- edit URL ---------- */
+function editUrlDlg(){
+ if(!EDIT||!DRW) return '';
+ const c=cr(DRW), P=PLATS[PLAT];
+ return '<div class="tw-scrim" onclick="editUrl(false)"></div><div class="tw-dlg">'+
+  '<div class="tw-dlg__w" role="dialog" aria-label="Edit profile URL">'+
+  '<div class="tw-dlg__h"><i>Discovery</i><b>Edit profile URL</b>'+
+  '<p>Replace the '+P.n+' profile link for '+E(c[1])+'. The new URL must stay on '+P.n+'.</p>'+
+  '<button class="tw-dlg__x" onclick="editUrl(false)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-dlg__b">'+
+  '<div class="tw-lbl">Current</div>'+
+  '<div class="tw-keep" style="margin-bottom:12px"><span class="av">'+ini(c[1])+'</span>'+
+  '<span><b>@'+E(P.handle)+'</b><u>'+P.n+' · '+AB(P.f)+' followers</u></span></div>'+
+  '<label class="tw-lbl">New profile URL</label>'+
+  '<input class="tw-in" value="'+P.url+'" aria-label="New profile URL">'+
+  '<div class="tw-ok2">&#10003; '+P.n+' profile detected (@'+E(P.handle)+')</div>'+
+  '<div class="tw-hint">Changing the URL re-points enrichment at a different account. Followers, '+
+  'engagement and publications for <b>'+P.n+'</b> will be refetched; the other platform is untouched.</div>'+
+  '</div><div class="tw-dlg__f"><span class="tw-cs">Metrics refresh on the next enrichment run.</span>'+
+  '<span class="tw-sp"></span><button class="tw-b sm" onclick="editUrl(false)">Cancel</button>'+
+  '<button class="tw-b sm pri" onclick="editUrl(false)">Save URL</button></div></div></div>';
+}
+/* ---------- combine creators ---------- */
+function combineDlg(){
+ if(!COMB||!DRW) return '';
+ const c=cr(DRW);
+ return '<div class="tw-scrim" onclick="combine(false)"></div><div class="tw-dlg">'+
+  '<div class="tw-dlg__w" role="dialog" aria-label="Combine creators">'+
+  '<div class="tw-dlg__h"><i>Discovery</i><b>Combine creators</b>'+
+  '<p>Merge a duplicate creator profile into '+E(c[1])+'. Platform accounts from the other profile move '+
+  'here, then the duplicate is removed.</p>'+
+  '<button class="tw-dlg__x" onclick="combine(false)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-dlg__b">'+
+  '<div class="tw-lbl">Keep</div>'+
+  '<div class="tw-keep"><span class="av">'+ini(c[1])+'</span>'+
+  '<span><b>'+E(c[1])+'</b><u>@'+E(c[0])+' · Instagram, TikTok</u></span>'+
+  '<span class="tw-sp"></span><span class="tw-p p-g">Primary</span></div>'+
+  '<div class="tw-arrow2">&#8593;</div>'+
+  '<div class="tw-lbl">Combine in</div>'+
+  '<div class="tw-keep" style="border-style:dashed">'+
+  '<span class="av" style="background:var(--tw-line);color:var(--tw-mut)">?</span>'+
+  '<span><b class="tw-miss">No creator selected</b>'+
+  '<u>Choose the duplicate profile to merge</u></span>'+
+  '<span class="tw-sp"></span><button class="tw-b sm">Select creator</button></div>'+
+  note('<b>This cannot be undone.</b> The duplicate profile is removed, and any shortlist or quotation '+
+   'line pointing at it will be re-pointed here. Check the platform accounts match the same person '+
+   'before merging.','wrn')+
+  '</div><div class="tw-dlg__f"><span class="tw-cs">Nothing moves until you confirm.</span>'+
+  '<span class="tw-sp"></span><button class="tw-b sm" onclick="combine(false)">Cancel</button>'+
+  '<button class="tw-b sm pri" disabled>Combine creators</button></div></div></div>';
+}
+
+/* ---------- share link card ---------- */
+function shareCard(){
+ if(!SHOW) return '';
+ const q=PG==='shortlist'||SHOW==='shortlist';
+ const kind=q?'Shortlist':'Client review';
+ const id=q?'SL-2026-0026':'QT-2026-0025';
+ const url='https://dev.thinkwaymedia.com/review/a1781f3c-9b2e-4d55-8a10-6f2c7e94bb03';
+ const live=LINK[q?'SL-2026-0026':'QT-2026-0025']==='Active';
+ return '<div class="tw-scrim" onclick="show(null)"></div><div class="tw-sl2">'+
+  '<div class="tw-sl2__w" role="dialog" aria-label="'+kind+' link">'+
+  '<div class="tw-sl2__h"><b>'+kind+' v1</b>'+
+  '<p>Share this signed link with the client, or open it to check the proposal. '+
+  'The URL stays the same when the '+(q?'shortlist':'quotation')+' changes &mdash; '+
+  'use <b>Send to client</b> to email it.</p>'+
+  '<button class="tw-sl2__x" onclick="show(null)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-urlrow"><span class="tw-url"><span class="lock">&#128274;</span>'+
+  '<input value="'+url+'" readonly aria-label="Share link"></span>'+
+  '<button class="tw-b pri" style="height:38px">Copy</button></div>'+
+  '<div class="tw-slmeta">'+
+  [['Status',live?'Live':'Off',live],['Version','v1',null],['Document',id,null]].map(function(k){
+   return '<div><i>'+k[0]+'</i><b'+(k[2]===true?' style="color:var(--tw-ok)"':k[2]===false?
+    ' style="color:var(--tw-bad)"':'')+'>'+
+    (k[2]!==null?'<span class="tw-live'+(k[2]?' on':'')+'" style="display:inline-block;'+
+     'margin-right:6px;vertical-align:middle"></span>':'')+k[1]+'</b></div>'}).join('')+'</div>'+
+  (live?'':note('<b>The client link is switched off.</b> Anyone opening this URL will see nothing until '+
+   'the toggle is turned back on. The link itself never changes.','wrn'))+
+  note('The URL is signed and permanent &mdash; it survives edits and new versions, so a client who '+
+   'bookmarked it always sees the current proposal. Revoking access means switching the client link off, '+
+   'not issuing a new URL.')+
+  '<div class="tw-sl2__f"><span class="tw-cs">Opened 0 times &middot; never viewed by the client</span>'+
+  '<span class="tw-sp"></span>'+
+  '<button class="tw-b sm">Open review</button>'+
+  '<button class="tw-b sm">Send to client</button>'+
+  '<button class="tw-b sm pri" onclick="show(null)">Done</button></div></div></div>';
+}
+/* ---------- search: filters, add-missing, selection ---------- */
+const FILTERS=[
+ ['Creator','person',[
+  ['Search by handle or name','input','@username'],
+  ['Social platform','chips',['Instagram','TikTok','YouTube','X (Twitter)','Facebook','Snapchat','LinkedIn'],4],
+  ['Category','chips',['Beauty','Fashion','Fitness','Food','Travel','Lifestyle','Tech','Gaming'],4],
+  ['Creator country','chips',['Egypt','United Arab Emirates','Saudi Arabia','Qatar','Kuwait','Jordan',
+   'Lebanon','United States','United Kingdom','France','Germany','India'],6],
+  ['Language','chips',['English','Arabic','French','Spanish','German','Hindi','Turkish','Portuguese'],6],
+  ['Verification','seg',['Any','Verified','Unverified']]]],
+ ['Search','search',[
+  ['Keyword / hashtag','chips',['#reels','#viral','#fyp','#travel','#beauty'],3],
+  ['Content language','chips',['English','Arabic','French','Spanish','German','Hindi','Turkish',
+   'Portuguese'],6]]],
+ ['Audience','people',[
+  ['Audience country','chips',['Egypt','United Arab Emirates','Saudi Arabia','Qatar','Kuwait','Jordan',
+   'Lebanon','United States','United Kingdom','France','Germany','India'],6],
+  ['Gender','seg',['Any','Male','Female'],0,'Applied when audience demographic data is available on the creator.'],
+  ['Age range','range',['Any','13','18','25','35','45','55'],0,
+   'Requires enriched audience age distribution (future backend filter).'],
+  ['Audience interests','chips',['Beauty & Cosmetics','Fashion','Health & Wellness','Food & Drink',
+   'Travel','Photography'],4]]],
+ ['Performance','chart',[
+  ['Follower range','chips',['Nano · 1k–10k','Micro · 10k–100k','Mid · 100k–500k','Macro · 500k–1M',
+   'Mega · 1M–5M','Celebrity · 5M+'],0,'Or set a custom range below.'],
+  ['Custom follower range','pair',['Min','Max']],
+  ['Minimum engagement rate','seg',['1%+','2%+','3%+','5%+']],
+  ['Minimum average views','input','e.g. 50,000']]],
+ ['AI intelligence','spark',[
+  ['Minimum Thinkway score','seg',['40+','50+','60+','70+','80+']],
+  ['Brand fit category','input','e.g. Beauty'],
+  ['Source confidence','pair',['Min %','Max %']],
+  ['Min. brand safety score','input','0–100']]],
+ ['Advanced','sliders',[
+  ['Last post within','seg',['Any time','Last 7 days','Last 30 days','Last 90 days','Last 6 months',
+   'Last 12 months'],0,'Filters creators with synced recent publication dates when available.'],
+  ['Pricing range (USD)','pair',['Min','Max']],
+  ['Exclusivity','chips',['None','Full','Partial']],
+  ['Contract status','chips',['Active','Expired','None']]]]];
+let FLT=false, FSEC={}, FSEL=new Set(['Egypt']), SSEL=new Set(), SMISS=false, SPOP=null, FMORE={};
+const fmore=k=>{FMORE[k]=!FMORE[k];draw()};
+const flt=v=>{FLT=v;draw()};
+const fsec=k=>{FSEC[k]=!FSEC[k];draw()};
+const fpick=k=>{FSEL.has(k)?FSEL.delete(k):FSEL.add(k);draw()};
+const ssel=h=>{SSEL.has(h)?SSEL.delete(h):SSEL.add(h);draw()};
+const sall=on=>{SSEL=on?new Set(POOL.map(function(c){return c[0]})):new Set();draw()};
+const smiss=v=>{SMISS=v;draw()};
+const spop=v=>{SPOP=SPOP===v?null:v;draw()};
+function fRow(f){
+ const [label,kind,opts,more,hint]=f;
+ let body='';
+ if(kind==='input') body='<input class="tw-in" placeholder="'+opts+'" aria-label="'+label+'">';
+ if(kind==='chips'){
+  const open=!!FMORE[label], list=(more&&!open)?opts.slice(0,more):opts;
+  body='<div class="tw-fchips">'+list.map(function(o){
+   const on=FSEL.has(o);
+   return '<button class="tw-fc'+(on?' on':'')+'" onclick="fpick(\''+o.replace(/'/g,'')+'\')" '+
+    'aria-pressed="'+on+'">'+o+'<em>'+(on?'&#10003;':'+')+'</em></button>'}).join('')+'</div>'+
+   (more&&opts.length>more?'<button class="tw-more" onclick="fmore(\''+label+'\')" aria-expanded="'+open+
+    '">'+(open?'Show less':'Show '+(opts.length-more)+' more')+'</button>':'');
+ }
+ if(kind==='seg') body='<div class="tw-seg" style="flex-wrap:wrap">'+opts.map(function(o,i){
+   return '<button aria-pressed="'+(i===0)+'">'+o+'</button>'}).join('')+'</div>';
+ if(kind==='range') body='<div style="display:flex;align-items:center;gap:8px">'+
+   '<select class="tw-in" aria-label="Age from">'+opts.map(function(o){return '<option>'+o+'</option>'}).join('')+
+   '</select><span class="tw-cs">to</span>'+
+   '<select class="tw-in" aria-label="Age to">'+['Any','17','24','34','44','54','65+']
+    .map(function(o){return '<option>'+o+'</option>'}).join('')+'</select></div>';
+ if(kind==='pair') body='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">'+
+   opts.map(function(o){return '<input class="tw-in" placeholder="'+o+'" aria-label="'+o+'">'}).join('')+'</div>';
+ return '<div class="tw-frow"><label class="tw-lbl">'+label+'</label>'+body+
+  (hint?'<div class="tw-hint">'+hint+'</div>':'')+'</div>';
+}
+function filterPanel(){
+ if(!FLT) return '';
+ const n=FILTERS.reduce(function(a,s){return a+s[2].length},0);
+ return '<div class="tw-scrim" onclick="flt(false)"></div>'+
+  '<div class="tw-dr" style="width:min(520px,96vw)" role="dialog" aria-label="Search filters">'+
+  '<div class="tw-dr__h"><span class="k">&#9707; Discovery</span><span class="tw-sp"></span>'+
+  '<button class="tw-dr__x" onclick="flt(false)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-dr__i"><b>Search filters</b>'+
+  '<p>'+n+' filters across '+FILTERS.length+' groups · '+FSEL.size+' active</p></div>'+
+  '<div class="tw-dr__b">'+FILTERS.map(function(s){
+   const open=!FSEC[s[0]];
+   return '<div class="tw-fsec"><button class="tw-fsec__h" onclick="fsec(\''+s[0]+'\')" '+
+    'aria-expanded="'+open+'"><b>'+s[0]+'</b>'+
+    '<span class="tw-cs">'+s[2].length+'</span><span class="ar">'+(open?'&#9662;':'&#9656;')+'</span></button>'+
+    (open?'<div class="tw-fsec__b">'+s[2].map(fRow).join('')+'</div>':'')+'</div>'}).join('')+'</div>'+
+  '<div class="tw-dr__a"><button class="tw-b sm" onclick="FSEL=new Set();draw()">Clear everything</button>'+
+  '<span class="tw-cs">'+FSEL.size+' active</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm pri" onclick="flt(false)">Show results</button></div></div>';
+}
+function missingDlg(){
+ if(!SMISS) return '';
+ return '<div class="tw-scrim" onclick="smiss(false)"></div><div class="tw-dlg">'+
+  '<div class="tw-dlg__w" role="dialog" aria-label="Add missing creator">'+
+  '<div class="tw-dlg__h"><i>Discovery</i><b>Add missing creator</b>'+
+  '<p>Paste one or more profile links. Usernames are taken from the URL, and creators already in '+
+  'Discovery are skipped rather than duplicated.</p>'+
+  '<button class="tw-dlg__x" onclick="smiss(false)" aria-label="Close">&#10005;</button></div>'+
+  '<div class="tw-dlg__b">'+
+  '<textarea class="tw-in tw-paste" spellcheck="false" aria-label="Profile links" '+
+  'placeholder="https://www.instagram.com/username&#10;https://www.tiktok.com/@username"></textarea>'+
+  '<div class="tw-slmeta" style="margin:12px 0 0">'+
+  [['Detected','0'],['New','0'],['Already in Discovery','0']].map(function(k){
+   return '<div><i>'+k[0]+'</i><b>'+k[1]+'</b></div>'}).join('')+'</div>'+
+  '<div class="tw-hint">Up to <b>25 links per batch</b>. Instagram, TikTok, YouTube and X are recognised; '+
+  'anything else is rejected with its line number.</div></div>'+
+  '<div class="tw-dlg__f"><span class="tw-cs">New creators enter Discovery unenriched — metrics follow '+
+  'on the next sync.</span><span class="tw-sp"></span>'+
+  '<button class="tw-b sm" onclick="smiss(false)">Cancel</button>'+
+  '<button class="tw-b sm pri" disabled>Confirm</button></div></div></div>';
+}
+function searchBar2(){
+ if(!SSEL.size) return '';
+ const s=POOL.filter(function(c){return SSEL.has(c[0])});
+ const f=s.reduce(function(a,c){return a+c[6]+c[9]},0);
+ return '<div class="tw-selbar"><span class="n"><b>'+SSEL.size+'</b> creator'+(SSEL.size===1?'':'s')+
+  ' selected<button class="x" onclick="sall(false)" aria-label="Clear selection">&#10005;</button></span>'+
+  '<span class="sum">'+
+  [['Reach',AB(f),''],['Platforms',String(s.length*2),''],
+   ['Avg engagement',(s.reduce(function(a,c){return a+c[7]},0)/s.length).toFixed(1)+'%','']]
+   .map(function(k){return '<span><i>'+k[0]+'</i><b>'+k[1]+'</b></span>'}).join('')+'</span>'+
+  '<span class="acts"><button class="tw-b sm">Refresh metrics</button>'+
+  '<button class="tw-b sm">Create list</button>'+
+  '<span style="position:relative;display:inline-block">'+
+  '<button class="tw-b sm'+(SPOP?' pri':'')+'" onclick="spop(\'more\')" aria-expanded="'+!!SPOP+
+  '" aria-label="More actions">&#8943;</button>'+
+  (SPOP?'<span class="tw-menu" style="bottom:calc(100% + 8px);top:auto"><span class="mh">More actions</span>'+
+   [['Stop refresh','Halt the metric refresh running on these creators'],
+    ['Compare','Put the selection side by side'],
+    ['Export','Download the selection as CSV or Excel'],
+    ['Share','Send the selection to a colleague'],
+    ['Generate quotation','Price the selection as a new quotation'],
+    ['AI Match','Score the selection against a campaign brief']].map(function(m){
+    return '<button class="mi" onclick="spop(null)"><span><b>'+m[0]+'</b><u>'+m[1]+'</u></span></button>'})
+   .join('')+'</span>':'')+'</span>'+
+  '<button class="tw-b sm pri">Add to list</button></span></div>';
+}
+
+/* ---------- search ---------- */
+function pgSearch(){
+ const C='34px minmax(210px,1.5fr) 150px 296px 166px 128px';
+ const H='<span><input type="checkbox" class="tw-ck"'+(SSEL.size===POOL.length?' checked':'')+
+   ' onchange="sall(this.checked)" aria-label="Select all creators"></span>'+
+  '<span>Creator name</span><span>Category</span><span>Statistics</span>'+
+  '<span>Content from feed</span><span class="tw-rr">Action</span>';
+ const rows=POOL.map(function(c,i){
+  const rs=CRP[c[0]]||[['ig',c[6],c[7],c[8]],['tt',c[9],c[10],c[11]]];
+  return row(C,SSEL.has(c[0])?'sel':'',
+  '<span><input type="checkbox" class="tw-ck"'+(SSEL.has(c[0])?' checked':'')+
+   ' onchange="ssel(\''+c[0]+'\')" aria-label="Select '+E(c[1])+'"></span>'+
+  '<span class="tw-cw2">'+
+   '<span class="tw-avx k'+((i%3)+1)+'">'+ini(c[1])+'<span class="fl">'+c[3]+'</span></span>'+
+   '<span style="min-width:0">'+
+   '<button class="nm" onclick="openCr(\''+c[0]+'\')" style="border:0;background:none;padding:0;'+
+   'font:inherit;cursor:pointer;text-align:left;max-width:100%;overflow:hidden;text-overflow:ellipsis;'+
+   'white-space:nowrap;display:block">'+E(c[1])+'</button>'+
+   '<span class="hd">@'+E(c[0])+'</span><span class="lo">'+E(c[2])+'</span></span></span>'+
+  '<span class="tw-tags">'+c[4].map(function(t){return '<span>'+t+'</span>'}).join('')+
+   (c[5]?'<span class="m">+'+c[5]+'</span>':'')+'</span>'+
+  '<span class="tw-stx"><span class="hh"><i></i><i>Followers</i><i>Engagement</i><i>Avg views</i></span>'+
+   rs.map(function(r){return '<span class="rr">'+pf(r[0])+
+    '<b class="'+(r[1]===null?'z':'')+'">'+(r[1]===null?'—':AB(r[1]))+'</b>'+
+    '<b class="'+(r[2]===null?'z':'')+'">'+(r[2]===null?'—':r[2].toFixed(2)+'%')+'</b>'+
+    '<b class="'+(r[3]===null?'z':'')+'">'+(r[3]===null?'—':AB(r[3]))+'</b></span>'}).join('')+'</span>'+
+  '<span class="tw-thumbs"><span class="tw-thumb">▣</span><span class="tw-thumb">▣</span>'+
+   '<span class="tw-thumb">▣</span></span>'+
+  '<span class="tw-act"><button class="tw-b sm pri">&#10003; Add to shortlist</button>'+
+   '<button class="tw-x" aria-label="Dismiss '+E(c[1])+'">&#10005;</button></span>')}).join('');
+ return card('Creators · 25','click a name for the full profile — same panel as the shortlist',
+  '<span class="tw-search" style="flex:0 0 230px"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/>'+
+  '<path d="m20 20-4.3-4.3"/></svg><input class="tw-in" placeholder="Search creators…"></span>'+
+  '<button class="tw-b sm" onclick="flt(true)">&#9776; Filters'+(FSEL.size?' · '+FSEL.size:'')+'</button>'+
+  '<button class="tw-b sm">Refresh metrics</button>'+
+  '<button class="tw-b sm" onclick="smiss(true)">+ Add missing creator</button>'+
+  '<button class="tw-b sm">Create list</button><button class="tw-b sm pri">Add to list</button>',
+  grid(C,1180,H,rows,null));
+}
+/* ---------- intelligence library ---------- */
+const INTEL=[
+ ['Dar Global','Dar Global','Bundle Plus Communication','Aug 4, 2026','04:30'],
+ ['FirstCry','FirstCry','Bundle Plus Communication','Aug 4, 2026','04:27'],
+ ['Alshaya','Alshaya','Bundle Plus Communication','Aug 4, 2026','04:25'],
+ ['NBK Bank','NBK Bank','Wavemaker','Aug 4, 2026','03:26'],
+ ['e& Enterprise Soak Aug 2026','E&','Essencemediacom','Aug 4, 2026','03:02'],
+ ['Noon','Noon','Bundle Plus Communication','Aug 4, 2026','01:16'],
+ ['NBK Bank','NBK Bank','Wavemaker','Aug 4, 2026','00:37'],
+ ['Arab Bank','Arab Bank','Mind Share Egypt LTD','Aug 3, 2026','23:38']];
+function pgIntel(){
+ const C='34px minmax(200px,1.4fr) 150px minmax(170px,1fr) 150px 132px';
+ const H='<span><input type="checkbox" class="tw-ck" aria-label="Select all"></span>'+
+  '<span>Brief</span><span>Brand</span><span>Legal entity</span><span>Created</span>'+
+  '<span class="tw-rr">Action</span>';
+ const rows=INTEL.map(function(r){return row(C,'',
+  '<span><input type="checkbox" class="tw-ck" aria-label="Select"></span>'+
+  '<span class="tw-nm">'+E(r[0])+'</span>'+
+  '<span class="tw-br">'+E(r[1])+'</span>'+
+  '<span class="tw-t" title="'+E(r[2])+'">'+E(r[2])+'</span>'+
+  '<span class="tw-d">'+D(r[3])+' · '+r[4]+'</span>'+
+  '<span class="tw-act"><button class="tw-b sm">Open</button>'+
+   '<button class="tw-b sm pri">Search</button></span>')}).join('');
+ return card('Campaign intelligence library','64 records · shared brief intelligence for Discovery, campaigns, Studio and AI',
+  '<button class="tw-b sm">All legal entities</button><button class="tw-b sm">All brands</button>'+
+  '<button class="tw-b sm">All campaigns</button><button class="tw-b sm">All statuses</button>'+
+  '<button class="tw-b sm pri">Creator search</button>',
+  grid(C,1080,H,rows,
+   '<span></span><span>'+INTEL.length+' of 64 shown</span><span></span><span></span><span></span><span></span>'),
+  note('Each row is a saved brief. <b>Search</b> runs Discovery against it; <b>Open</b> shows the brief '+
+   'itself. Two NBK Bank records were created 3 hours apart on the same day — worth checking one is not '+
+   'a duplicate.','wrn'));
+}
+/* ---------- campaign match ---------- */
+function pgMatch(){
+ return '<div class="tw-c"><div class="tw-ch"><span class="tw-ct">Match workspace</span>'+
+  '<span class="tw-cs">score creators against your brief using unified browse and fit ranking</span></div>'+
+  '<div class="tw-pad"><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:11px">'+
+  [['Campaign','sel',['Choose a campaign…','TW-2026-18 · Test 6','TW-2026-16 · Dar Global']],
+   ['Brand','sel',['All brands','Alshaya','NBK Bank','Dar Global']],
+   ['Market','sel',['Egypt','United Arab Emirates','Saudi Arabia']],
+   ['Budget','txt','e.g. 500,000'],
+   ['Creators needed','txt','e.g. 8']].map(function(f){
+   return '<div><label class="tw-lbl">'+f[0]+'</label>'+
+    (f[1]==='sel'?'<select class="tw-in" aria-label="'+f[0]+'">'+
+      f[2].map(function(o){return '<option>'+o+'</option>'}).join('')+'</select>'
+     :'<input class="tw-in" placeholder="'+f[2]+'" aria-label="'+f[0]+'">')+'</div>'}).join('')+'</div>'+
+  '<div style="margin-top:12px"><label class="tw-lbl">Campaign brief</label>'+
+  '<textarea class="tw-in" style="height:96px;padding:10px;resize:vertical" '+
+  'placeholder="Describe the campaign — audience, tone, deliverables, must-haves…"></textarea></div></div>'+
+  '<div class="tw-ch" style="border-top:1px solid var(--tw-hair);border-bottom:0">'+
+  '<span class="tw-cs">Matching scores every creator in Discovery against the brief and ranks by fit.</span>'+
+  '<span class="tw-sp"></span><button class="tw-b sm">Load from library</button>'+
+  '<button class="tw-b sm pri">Match creators</button></div></div>'+
+  card('Ranked creators','no matches yet',null,
+   empty('No matches yet','Enter a campaign brief and run match to see ranked creators. '+
+    'You can also load a saved brief from the Intelligence library instead of writing one.',
+    '<button class="tw-b pri">Load from library</button>'));
+}
+/* ---------- import centre ---------- */
+const IMP=[
+ ['creator 34 Travel.pdf','','Completed','PDF',577,438,139,0,'Jul 2, 2026','16:07'],
+ ['agency_batch_q3.xlsx','Ogilvy','Completed','XLSX',1204,1180,24,0,'Jul 2, 2026','15:41'],
+ ['tiktok_export.csv','TikTok','Completed','CSV',860,802,41,17,'Jul 1, 2026','11:20'],
+ ['bundle_avatars.zip','Bundle Plus','Processing','ZIP',432,210,0,0,'Jul 1, 2026','09:58'],
+ ['fashion_list.csv','','Failed','CSV',96,0,0,96,'Jun 30, 2026','18:12']];
+function pgImport(){
+ const C='34px minmax(190px,1.4fr) 130px 116px 84px 96px 92px 92px 88px 138px 92px';
+ const H='<span><input type="checkbox" class="tw-ck" aria-label="Select all"></span>'+
+  '<span>Filename</span><span>Source</span><span>Status</span><span>Type</span>'+
+  '<span class="tw-rr">Creators</span><span class="tw-rr">Imported</span>'+
+  '<span class="tw-rr">Updated</span><span class="tw-rr">Failed</span><span>Created</span>'+
+  '<span class="tw-rr">Act</span>';
+ const rows=IMP.map(function(r){const bad=r[7]>0||r[2]==='Failed';
+  return row(C,bad?'bad':r[2]==='Processing'?'wrn':'',
+  '<span><input type="checkbox" class="tw-ck" aria-label="Select"></span>'+
+  '<span class="tw-nm" title="'+E(r[0])+'">'+E(r[0])+'</span>'+
+  '<span class="'+(r[1]?'tw-t':'tw-miss')+'">'+(E(r[1])||'not tagged')+'</span>'+
+  '<span><span class="tw-p '+(r[2]==='Completed'?'p-g':r[2]==='Processing'?'p-y':'p-r')+'">'+r[2]+'</span></span>'+
+  '<span><span class="tw-cc">'+r[3]+'</span></span>'+
+  '<span class="tw-v">'+F(r[4])+'</span>'+
+  '<span class="tw-v pos">'+F(r[5])+'</span>'+
+  '<span class="tw-v'+(r[6]?'':' z')+'">'+F(r[6])+'</span>'+
+  '<span class="tw-v'+(r[7]?' neg':' z')+'">'+F(r[7])+'</span>'+
+  '<span class="tw-d">'+D(r[8])+' · '+r[9]+'</span>'+
+  '<span class="tw-act"><button class="tw-b sm">'+(bad?'Retry':'View')+'</button></span>')}).join('');
+ const T=function(i){return IMP.reduce(function(a,r){return a+r[i]},0)};
+ let h='<div class="tw-c"><div class="tw-ch"><span class="tw-ct">Upload datasets</span>'+
+  '<span class="tw-cs">from agencies, platforms or clients</span></div>'+
+  '<div class="tw-pad"><div style="display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:12px;'+
+  'align-items:start">'+
+  '<div class="tw-drop"><span class="ic">&#8593;</span>'+
+  '<b>Drag and drop creator datasets</b>'+
+  '<p>.PDF · .XLSX · .CSV · .ZIP — ZIP bundles may contain CSV or XLSX plus optional avatar images. '+
+  'Multiple files, up to 50 MB each.</p>'+
+  '<button class="tw-b pri">Browse files</button></div>'+
+  '<div><label class="tw-lbl">Source name (optional)</label>'+
+  '<input class="tw-in" placeholder="e.g. Ogilvy, TikTok" aria-label="Source name">'+
+  '<div class="tw-hint">Tag uploads with the dataset provider so history can be filtered later. '+
+  'One of the five below is untagged.</div></div></div></div>'+
+  note('Uploads process automatically and <b>source files are removed after import</b> — only the '+
+   'filename and row counts stay in history. Download the original before uploading if you need it.','wrn')+
+  '</div>';
+ h+=card('Upload history',IMP.length+' of 50 uploads',
+  '<button class="tw-b sm">All statuses</button><button class="tw-b sm">All types</button>'+
+  '<button class="tw-b sm">Export CSV</button>',
+  grid(C,1340,H,rows,
+   '<span></span><span>'+IMP.length+' uploads</span><span></span><span></span><span></span>'+
+   '<span class="tw-v">'+F(T(4))+'</span><span class="tw-v pos">'+F(T(5))+'</span>'+
+   '<span class="tw-v">'+F(T(6))+'</span><span class="tw-v neg">'+F(T(7))+'</span>'+
+   '<span></span><span></span>'),
+  conflict(T(7)+' creators failed to import and 1 file failed outright.',
+   'fashion_list.csv imported <code>0 of 96</code>. tiktok_export.csv dropped <code>17</code>. Nothing on '+
+   'the live page says why a row failed or lets you download the rejects — <b>Retry</b> re-runs the same '+
+   'file and produces the same result.'));
+ return h;
+}
+
+const PGS={search:pgSearch,intel:pgIntel,match:pgMatch,imp:pgImport,shortlists:pgShortlists,shortlist:pgShortlist,quotations:pgQuotations,quotation:pgQuotation};
+function draw(){document.getElementById('app').innerHTML=
+ bar()+PGS[PG]()+creatorModal()+costModal()+cwModal()+shareCard()+editUrlDlg()+combineDlg()+addCrDlg()+slAddDrawer()+qBar()+qCalcPanel()+filterPanel()+missingDlg()+searchBar2();bindScroll()}
+let SB=false;
+function bindScroll(){if(SB)return;SB=true;
+ const on=function(){const f=document.getElementById('frozen');if(!f)return;
+  if(window.scrollY>64)f.classList.add('mini');else f.classList.remove('mini')};
+ window.addEventListener('scroll',on,{passive:true});on()}
+draw();
+</script></body></html>

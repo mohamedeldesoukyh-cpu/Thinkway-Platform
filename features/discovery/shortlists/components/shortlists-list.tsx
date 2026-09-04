@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
-import { format } from "date-fns";
 import { MoreHorizontalIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,15 +18,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { formatDiscoveryDate } from "@/lib/discovery/format-discovery-date";
 
 import {
   approveShortlist,
@@ -76,6 +68,10 @@ import {
 
 import {
   DiscoveryFilteredEmptyState,
+  DiscoverySuiteCell,
+  DiscoverySuiteGrid,
+  DiscoverySuiteMasthead,
+  DiscoverySuiteRow,
 } from "@/features/discovery/components/design-system";
 
 const LIST_ACTION_RUNNERS: Record<
@@ -96,14 +92,6 @@ const LIST_ACTION_RUNNERS: Record<
   duplicate: duplicateShortlist,
 };
 
-const TABLE_GUTTER_START = "pl-8";
-const TABLE_GUTTER_END = "pr-8";
-const SHORTLIST_LIST_HEAD_CLASS =
-  "h-auto bg-transparent px-4 py-[13px] text-[10px] font-bold uppercase tracking-[0.07em] text-muted-foreground";
-const SHORTLIST_LIST_CELL_CLASS =
-  "border-t border-border px-4 py-3.5 align-middle text-[13px] text-[var(--text-2)]";
-const SHORTLIST_LIST_ROW_CLASS = "group transition-colors hover:bg-muted/20";
-
 type Props = {
   shortlists: ShortlistListRow[];
   brands?: ShortlistBrandOption[];
@@ -120,6 +108,35 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
   const filteredShortlists = useMemo(
     () => filterShortlistRows(shortlists, filters),
     [shortlists, filters]
+  );
+
+  const mastheadMetrics = useMemo(() => {
+    const draftCount = shortlists.filter((row) => row.status === "draft").length;
+    const approvedCount = shortlists.filter((row) => row.status === "approved").length;
+    const creatorCount = shortlists.reduce((sum, row) => sum + row.creator_count, 0);
+    const clientLinkOnCount = shortlists.filter(
+      (row) => row.client_workspace_link?.state === "active"
+    ).length;
+
+    return [
+      shortlists.length > 0
+        ? { label: "Shortlists", value: shortlists.length }
+        : null,
+      draftCount > 0 ? { label: "Draft", value: draftCount } : null,
+      approvedCount > 0
+        ? { label: "Approved", value: approvedCount, tone: "g" as const }
+        : null,
+      creatorCount > 0 ? { label: "Creators", value: creatorCount } : null,
+      clientLinkOnCount > 0
+        ? { label: "Client link on", value: clientLinkOnCount }
+        : null,
+    ].filter((metric): metric is NonNullable<typeof metric> => metric !== null);
+  }, [shortlists]);
+
+  const filteredCreatorCount = useMemo(
+    () =>
+      filteredShortlists.reduce((sum, row) => sum + row.creator_count, 0),
+    [filteredShortlists]
   );
 
   const visibleIds = useMemo(
@@ -237,7 +254,15 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
   const showFloatingBar = selectedCount > 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="discovery-suite flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--tw-bg)]">
+      <div className="shrink-0 px-4 pt-4">
+        <DiscoverySuiteMasthead
+          title="Shortlists"
+          metrics={mastheadMetrics}
+          freezeOnScroll={false}
+        />
+      </div>
+
       <ShortlistsListMergedHeader
         filters={filters}
         onChange={setFilters}
@@ -259,10 +284,12 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
             className="mx-8"
           />
         ) : (
-          <Table variant="flush">
-            <TableHeader>
-              <TableRow className="border-0 hover:bg-transparent">
-                <TableHead className={cn(SHORTLIST_LIST_HEAD_CLASS, TABLE_GUTTER_START, "w-[34px]")}>
+          <DiscoverySuiteGrid
+            cols="shortlists"
+            className="mx-4 mt-4"
+            header={
+              <>
+                <DiscoverySuiteCell>
                   <Checkbox
                     checked={allSelected ? true : indeterminate ? "indeterminate" : false}
                     onCheckedChange={(value) =>
@@ -273,33 +300,43 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                     aria-label="Select all shortlists"
                     disabled={isPending}
                   />
-                </TableHead>
-                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Serial</TableHead>
-                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Shortlist</TableHead>
-                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Status</TableHead>
-                <TableHead className={cn(SHORTLIST_LIST_HEAD_CLASS, "min-w-[7.5rem]")}>
-                  Client link
-                </TableHead>
-                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Visibility</TableHead>
-                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Owner</TableHead>
-                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Creators</TableHead>
-                <TableHead className={SHORTLIST_LIST_HEAD_CLASS}>Updated</TableHead>
-                <TableHead className={cn(SHORTLIST_LIST_HEAD_CLASS, TABLE_GUTTER_END, "w-12")} />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+                </DiscoverySuiteCell>
+                <DiscoverySuiteCell>Serial</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Shortlist</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Brand</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Status</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Client link</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Visibility</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Owner</DiscoverySuiteCell>
+                <DiscoverySuiteCell align="end">Creators</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Updated</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Act</DiscoverySuiteCell>
+              </>
+            }
+            footer={
+              <>
+                <div className="col-span-8" role="gridcell">
+                  {filteredShortlists.length} of {shortlists.length} shown
+                </div>
+                <DiscoverySuiteCell className="tw-v" align="end">
+                  {filteredCreatorCount} creators
+                </DiscoverySuiteCell>
+                <div className="col-span-2" role="gridcell" />
+              </>
+            }
+          >
               {filteredShortlists.map((row) => {
                 const actions = actionsFor(row);
                 const ownerLabel = row.owner_name ?? "Unknown";
                 const isSelected = effectiveSelectedIds.has(row.id);
 
                 return (
-                  <TableRow
+                  <DiscoverySuiteRow
                     key={row.id}
-                    data-state={isSelected ? "selected" : undefined}
-                    className={SHORTLIST_LIST_ROW_CLASS}
+                    selected={isSelected}
+                    className="group"
                   >
-                    <TableCell className={cn(SHORTLIST_LIST_CELL_CLASS, TABLE_GUTTER_START, "w-[34px]")}>
+                    <DiscoverySuiteCell>
                       <Checkbox
                         checked={isSelected}
                         onCheckedChange={(value) =>
@@ -307,19 +344,14 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                             toggleItemSelection(prev, row.id, Boolean(value))
                           )
                         }
-                        aria-label={`Select ${row.name}`}
+                        aria-label={`Select ${row.serial_number ?? row.name}`}
                         disabled={isPending}
                       />
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        SHORTLIST_LIST_CELL_CLASS,
-                        "tabular-nums text-[12px] font-bold text-[var(--text)]"
-                      )}
-                    >
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell className="tw-id">
                       {row.serial_number ?? "—"}
-                    </TableCell>
-                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell>
                       <div className="flex min-w-0 items-center gap-[11px]">
                         <InitialsAvatar
                           name={row.name}
@@ -329,38 +361,35 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                         <div className="min-w-0">
                           <Link
                             href={shortlistDetailPath(row)}
-                            className="block truncate text-[13px] font-semibold tracking-[-0.01em] text-[var(--text)] transition-colors group-hover:text-[var(--blue-text)]"
+                            className="tw-nm block transition-colors group-hover:text-[var(--tw-blue)]"
                           >
                             {row.name}
                           </Link>
-                          {row.brand_name ? (
-                            <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
-                              {row.brand_name}
-                              {row.client_name ? ` · ${row.client_name}` : ""}
+                          {row.client_name ? (
+                            <span className="tw-s">
+                              {row.client_name}
                             </span>
                           ) : null}
                         </div>
                       </div>
-                    </TableCell>
-                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell className="tw-br">
+                      {row.brand_name ?? <span className="tw-miss">not set</span>}
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell>
                       <ShortlistListStatusPill status={row.status} />
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        SHORTLIST_LIST_CELL_CLASS,
-                        "min-w-0 overflow-visible whitespace-normal align-top"
-                      )}
-                    >
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell className="overflow-visible whitespace-normal">
                       <ClientWorkspaceListLinkCell
                         source="shortlist"
                         id={row.id}
                         link={row.client_workspace_link}
                       />
-                    </TableCell>
-                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell>
                       <ShortlistListVisibilityPill visibility={row.visibility} />
-                    </TableCell>
-                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell>
                       <div className="flex min-w-0 items-center gap-[9px]">
                         <InitialsAvatar
                           name={ownerLabel}
@@ -371,21 +400,21 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                           {row.owner_name ?? "—"}
                         </span>
                       </div>
-                    </TableCell>
-                    <TableCell className={SHORTLIST_LIST_CELL_CLASS}>
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell align="end">
                       <ShortlistCreatorPreviewStack
                         previews={row.creator_previews}
                         totalCount={row.creator_count}
-                        align="start"
+                        align="end"
                         overflowVariant="solid"
                       />
-                    </TableCell>
-                    <TableCell className={cn(SHORTLIST_LIST_CELL_CLASS, "text-[12.5px] tabular-nums text-muted-foreground")}>
-                      {row.updated_at
-                        ? format(new Date(row.updated_at), "MMM d, yyyy")
-                        : "—"}
-                    </TableCell>
-                    <TableCell className={cn(SHORTLIST_LIST_CELL_CLASS, TABLE_GUTTER_END, "w-12")}>
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell className="tw-d">
+                      {formatDiscoveryDate(row.updated_at) || (
+                        <span className="tw-miss">not set</span>
+                      )}
+                    </DiscoverySuiteCell>
+                    <DiscoverySuiteCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
@@ -432,12 +461,11 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                           ))}
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
+                    </DiscoverySuiteCell>
+                  </DiscoverySuiteRow>
                 );
               })}
-            </TableBody>
-          </Table>
+          </DiscoverySuiteGrid>
         )}
         <div className="h-10 shrink-0" aria-hidden />
       </div>

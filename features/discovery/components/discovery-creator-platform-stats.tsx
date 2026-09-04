@@ -138,13 +138,25 @@ export function DiscoveryCreatorPlatformStatsBox({
                 </span>
               ) : (
                 <>
-                  <b className="discovery-search-exact-stat-value mono">
+                  <b
+                    className={`discovery-search-exact-stat-value mono ${
+                      row.followers == null ? "text-muted-foreground" : ""
+                    }`}
+                  >
                     {formatCreatorCount(row.followers)}
                   </b>
-                  <b className="discovery-search-exact-stat-value mono">
+                  <b
+                    className={`discovery-search-exact-stat-value mono ${
+                      row.engagement == null ? "text-muted-foreground" : ""
+                    }`}
+                  >
                     {formatEngagementRate(row.engagement)}
                   </b>
-                  <b className="discovery-search-exact-stat-value mono">
+                  <b
+                    className={`discovery-search-exact-stat-value mono ${
+                      row.avgViews == null ? "text-muted-foreground" : ""
+                    }`}
+                  >
                     {formatCreatorCount(row.avgViews)}
                   </b>
                 </>

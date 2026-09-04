@@ -15,7 +15,8 @@ import { useCallback, useEffect, useState } from "react";
 
 import { cn } from "@/lib/utils";
 
-export const DISCOVERY_FILTER_SECTIONS_STORAGE_KEY = "discovery-search-filter-sections";
+export const DISCOVERY_FILTER_SECTIONS_STORAGE_KEY =
+  "discovery-search-filter-sections";
 
 export const DISCOVERY_FILTER_DRAWER_BODY_CLASS =
   "discovery-filter-drawer-body flex min-h-0 flex-1 flex-col bg-[#eef2f8] px-4 pb-4 pt-3.5 dark:bg-muted";
@@ -34,7 +35,7 @@ export function DiscoveryFilterSectionCountBadge({ count }: { count: number }) {
 
 export function useDiscoveryFilterSectionState(
   sectionId: string,
-  defaultOpen = false
+  defaultOpen = false,
 ): [boolean, (open: boolean) => void] {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -56,12 +57,15 @@ export function useDiscoveryFilterSectionState(
         const raw = localStorage.getItem(DISCOVERY_FILTER_SECTIONS_STORAGE_KEY);
         const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
         parsed[sectionId] = next;
-        localStorage.setItem(DISCOVERY_FILTER_SECTIONS_STORAGE_KEY, JSON.stringify(parsed));
+        localStorage.setItem(
+          DISCOVERY_FILTER_SECTIONS_STORAGE_KEY,
+          JSON.stringify(parsed),
+        );
       } catch {
         /* ignore storage failures */
       }
     },
-    [sectionId]
+    [sectionId],
   );
 
   return [open, setSectionOpen];
@@ -86,7 +90,10 @@ export function DiscoveryFilterDrawerSection({
   onClearSection,
   children,
 }: DiscoveryFilterDrawerSectionProps) {
-  const [open, setOpen] = useDiscoveryFilterSectionState(sectionId, defaultOpen);
+  const [open, setOpen] = useDiscoveryFilterSectionState(
+    sectionId,
+    defaultOpen,
+  );
   const modified = count > 0;
 
   return (
@@ -94,7 +101,7 @@ export function DiscoveryFilterDrawerSection({
       className={cn(
         "discovery-filter-drawer-section mb-3 last:mb-0",
         modified && "discovery-filter-drawer-section--modified",
-        !open && "discovery-filter-drawer-section--collapsed"
+        !open && "discovery-filter-drawer-section--collapsed",
       )}
     >
       <div className="discovery-filter-drawer-section__header mb-2 flex items-stretch gap-1">
@@ -106,17 +113,22 @@ export function DiscoveryFilterDrawerSection({
         >
           <span className="creator-detail-sheet-section-title mb-0 min-w-0 flex-1">
             {icon ? (
-              <span className="creator-detail-sheet-section-title__icon" aria-hidden>
+              <span
+                className="creator-detail-sheet-section-title__icon"
+                aria-hidden
+              >
                 {icon}
               </span>
             ) : null}
-            <span className="creator-detail-sheet-section-title__text">{title}</span>
+            <span className="creator-detail-sheet-section-title__text">
+              {title}
+            </span>
             <DiscoveryFilterSectionCountBadge count={count} />
           </span>
           <span
             className={cn(
               "ml-2 shrink-0 text-[#0057FF] opacity-50 transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
-              !open && "-rotate-90"
+              !open && "-rotate-90",
             )}
           >
             <svg
@@ -144,11 +156,13 @@ export function DiscoveryFilterDrawerSection({
       <div
         className={cn(
           "discovery-filter-drawer-section__panel grid transition-[grid-template-rows] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         )}
       >
         <div className="overflow-hidden">
-          <div className="discovery-filter-drawer-section__card">{children}</div>
+          <div className="discovery-filter-drawer-section__card">
+            {children}
+          </div>
         </div>
       </div>
     </section>
@@ -195,7 +209,7 @@ export function DiscoveryFilterActiveSummary({
               onClick={chip.onRemove}
               className={cn(
                 "group inline-flex max-w-full items-center gap-1 rounded-full border border-[rgba(0,87,255,0.18)] dark:border-[rgba(0,87,255,0.28)] bg-white dark:bg-card py-1 pr-1.5 pl-2.5",
-                "text-[11px] font-medium text-[#0057FF] dark:text-blue-300 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10"
+                "text-[11px] font-medium text-[#0057FF] dark:text-blue-300 shadow-[0_1px_2px_rgba(15,23,42,0.04)] transition-colors hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10",
               )}
             >
               <span className="truncate">{chip.label}</span>
@@ -230,7 +244,7 @@ export function DiscoveryFilterDrawer({
     <div
       className={cn(
         "discovery-filter-drawer flex h-full min-h-0 flex-col overflow-hidden bg-[#f8fafc] dark:bg-background",
-        className
+        className,
       )}
     >
       <div className="discovery-filter-drawer__header-wrap creator-detail-sheet-command-bar-wrap shrink-0 border-b border-[rgba(0,87,255,0.08)] pb-3.5 dark:border-border">
@@ -284,6 +298,7 @@ type DiscoveryFilterDrawerFooterProps = {
   onApply?: () => void;
   applyLabel: string;
   clearLabel?: string;
+  activeCount?: number;
   loading?: boolean;
   disabled?: boolean;
 };
@@ -293,14 +308,27 @@ export function DiscoveryFilterDrawerFooter({
   onApply,
   applyLabel,
   clearLabel = "Clear Filters",
+  activeCount,
   loading,
   disabled,
 }: DiscoveryFilterDrawerFooterProps) {
   return (
     <div className="creator-detail-sheet-footer__actions w-full justify-between">
-      <button type="button" onClick={onClear} className="creator-detail-sheet-action-btn">
+      <button
+        type="button"
+        onClick={onClear}
+        className="creator-detail-sheet-action-btn"
+      >
         {clearLabel}
       </button>
+      {activeCount != null ? (
+        <span
+          className="shrink-0 text-[11px] font-semibold text-[var(--text-2)]"
+          aria-live="polite"
+        >
+          {activeCount} active
+        </span>
+      ) : null}
       <button
         type="button"
         onClick={onApply}

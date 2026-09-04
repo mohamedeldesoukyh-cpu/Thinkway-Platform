@@ -2,8 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
-import { ArchiveIcon, ExternalLinkIcon, FileTextIcon, SearchIcon } from "lucide-react";
+import {
+  ArchiveIcon,
+  ExternalLinkIcon,
+  FileTextIcon,
+  SearchIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -21,7 +25,12 @@ import {
   DiscoveryListCard,
   DiscoveryLoadingState,
   DiscoverySectionHeader,
+  DiscoverySuiteCell,
+  DiscoverySuiteGrid,
+  DiscoverySuiteMasthead,
+  DiscoverySuiteRow,
 } from "@/features/discovery/components/design-system";
+import { formatDiscoveryDate } from "@/lib/discovery/format-discovery-date";
 import { cn } from "@/lib/utils";
 import type {
   CampaignIntelligenceLibraryFilters,
@@ -56,9 +65,8 @@ export function CampaignIntelligenceLibrary({
   className,
 }: Props) {
   const [items, setItems] = useState<CampaignIntelligenceLibraryItem[]>([]);
-  const [filterOptions, setFilterOptions] = useState<CampaignIntelligenceLibraryFilterOptions | null>(
-    null
-  );
+  const [filterOptions, setFilterOptions] =
+    useState<CampaignIntelligenceLibraryFilterOptions | null>(null);
   const [filters, setFilters] = useState<CampaignIntelligenceLibraryFilters>({
     status: "all",
   });
@@ -74,7 +82,11 @@ export function CampaignIntelligenceLibrary({
       });
       setItems(list);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Could not load intelligence library.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not load intelligence library.",
+      );
     } finally {
       setLoading(false);
     }
@@ -83,7 +95,9 @@ export function CampaignIntelligenceLibrary({
   useEffect(() => {
     void getCampaignIntelligenceLibraryFilterOptionsAction()
       .then(setFilterOptions)
-      .catch(() => setFilterOptions({ brands: [], clients: [], campaigns: [] }));
+      .catch(() =>
+        setFilterOptions({ brands: [], clients: [], campaigns: [] }),
+      );
   }, []);
 
   useEffect(() => {
@@ -94,13 +108,16 @@ export function CampaignIntelligenceLibrary({
   }, [load]);
 
   const campaignsForBrand = useMemo(() => {
-    if (!filters.brandId || !filterOptions) return filterOptions?.campaigns ?? [];
-    return filterOptions.campaigns.filter((campaign) => campaign.brandId === filters.brandId);
+    if (!filters.brandId || !filterOptions)
+      return filterOptions?.campaigns ?? [];
+    return filterOptions.campaigns.filter(
+      (campaign) => campaign.brandId === filters.brandId,
+    );
   }, [filterOptions, filters.brandId]);
 
   function updateFilter<K extends keyof CampaignIntelligenceLibraryFilters>(
     key: K,
-    value: CampaignIntelligenceLibraryFilters[K]
+    value: CampaignIntelligenceLibraryFilters[K],
   ) {
     setFilters((current) => {
       const next = { ...current, [key]: value };
@@ -129,6 +146,20 @@ export function CampaignIntelligenceLibrary({
   const countLabel = loading
     ? "…"
     : `${items.length} record${items.length === 1 ? "" : "s"}`;
+  const mastheadMetrics = useMemo(
+    () => [
+      { label: "Records", value: items.length },
+      {
+        label: "Brands",
+        value: new Set(items.map((item) => item.brandId).filter(Boolean)).size,
+      },
+      {
+        label: "Legal entities",
+        value: new Set(items.map((item) => item.clientId).filter(Boolean)).size,
+      },
+    ],
+    [items],
+  );
 
   const filterBar = (
     <DiscoveryFilterBar embedded countLabel={countLabel}>
@@ -161,7 +192,9 @@ export function CampaignIntelligenceLibrary({
       </Select>
       <Select
         value={filters.brandId ?? "all"}
-        onValueChange={(value) => updateFilter("brandId", value === "all" ? null : value)}
+        onValueChange={(value) =>
+          updateFilter("brandId", value === "all" ? null : value)
+        }
       >
         <SelectTrigger className="h-9 min-w-[130px] text-[12.5px] font-semibold">
           <SelectValue placeholder="Brand" />
@@ -169,7 +202,10 @@ export function CampaignIntelligenceLibrary({
         <SelectContent>
           <SelectItem value="all">All brands</SelectItem>
           {(filterOptions?.brands ?? [])
-            .filter((brand) => !filters.clientId || brand.clientId === filters.clientId)
+            .filter(
+              (brand) =>
+                !filters.clientId || brand.clientId === filters.clientId,
+            )
             .map((brand) => (
               <SelectItem key={brand.id} value={brand.id}>
                 {brand.name}
@@ -200,7 +236,7 @@ export function CampaignIntelligenceLibrary({
         onValueChange={(value) =>
           updateFilter(
             "status",
-            value as CampaignIntelligenceLibraryFilters["status"]
+            value as CampaignIntelligenceLibraryFilters["status"],
           )
         }
       >
@@ -219,66 +255,99 @@ export function CampaignIntelligenceLibrary({
   );
 
   return (
-    <DiscoveryListCard
+    <div
       className={cn(
+        "discovery-suite min-w-0 bg-[var(--tw-bg)]",
         compact && "rounded-[var(--radius-md)]",
-        className
+        className,
       )}
     >
-      {compact ? (
-        <DiscoverySectionHeader
+      {!compact ? (
+        <DiscoverySuiteMasthead
           title="Campaign Intelligence Library"
-          description="Shared brief intelligence across Discovery, campaigns, and AI workflows."
+          metrics={mastheadMetrics}
+          freezeOnScroll={false}
         />
       ) : null}
 
-      {filterBar}
+      <DiscoveryListCard
+        className={cn(items.length > 0 && !loading && "mb-0 rounded-b-none")}
+      >
+        {compact ? (
+          <DiscoverySectionHeader
+            title="Campaign Intelligence Library"
+            description="Shared brief intelligence across Discovery, campaigns, and AI workflows."
+          />
+        ) : null}
+        {filterBar}
+      </DiscoveryListCard>
 
       {loading ? (
-        <DiscoveryLoadingState message="Loading library…" className="py-12" />
+        <DiscoveryListCard className="rounded-t-none">
+          <DiscoveryLoadingState message="Loading library…" className="py-12" />
+        </DiscoveryListCard>
       ) : items.length === 0 ? (
-        <DiscoveryEmptyState
-          title="No intelligence records"
-          description="Upload a campaign brief in Creator Search or link intelligence from a campaign workspace."
-          icon={FileTextIcon}
-          className="py-12"
-        />
+        <DiscoveryListCard className="rounded-t-none">
+          <DiscoveryEmptyState
+            title="No intelligence records"
+            description="Upload a campaign brief in Creator Search or link intelligence from a campaign workspace."
+            icon={FileTextIcon}
+            className="py-12"
+          />
+        </DiscoveryListCard>
       ) : (
-        <ul
-          className={cn(
+        <DiscoverySuiteGrid
+          cols="minmax(200px,1.4fr) 150px minmax(170px,1fr) 150px 132px"
+          minWidth={860}
+          className="rounded-t-none"
+          scrollerClassName={cn(
             "overflow-y-auto [scrollbar-color:rgb(226_232_240)_transparent] [scrollbar-width:thin]",
-            compact ? "max-h-[280px]" : "max-h-[min(60vh,640px)]"
+            compact ? "max-h-[280px]" : "max-h-[min(60vh,640px)]",
           )}
+          header={
+            <>
+              <DiscoverySuiteCell>Brief</DiscoverySuiteCell>
+              <DiscoverySuiteCell>Brand</DiscoverySuiteCell>
+              <DiscoverySuiteCell>Legal entity</DiscoverySuiteCell>
+              <DiscoverySuiteCell>Created</DiscoverySuiteCell>
+              <DiscoverySuiteCell>Action</DiscoverySuiteCell>
+            </>
+          }
         >
           {items.map((item) => {
             const isActive = item.id === activeProfileId;
             return (
-              <li
+              <DiscoverySuiteRow
                 key={item.id}
-                className="border-b border-[var(--tw-border)] last:border-b-0"
+                selected={isActive}
+                className="group"
               >
-                <div
-                  className={cn(
-                    "flex items-start gap-3 px-4 py-3 transition-colors hover:bg-[#fafbfe]",
-                    isActive && "bg-[var(--blue-light)]"
-                  )}
-                >
-                  <FileTextIcon className="mt-0.5 size-4 shrink-0 text-[var(--text-3)]" />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[12.5px] font-semibold text-foreground">
-                      {item.title}
-                    </p>
-                    <p className="mt-0.5 text-[11px] text-[var(--text-2)]">
-                      {[item.brandName, item.clientName, item.campaignName]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
-                    <p className="mt-0.5 font-mono text-[11px] text-[var(--text-3)]">
-                      {format(new Date(item.updatedAt), "MMM d, yyyy · h:mm a")}
-                      {item.status !== "saved" ? ` · ${item.status}` : ""}
-                    </p>
+                <DiscoverySuiteCell>
+                  <div className="flex min-w-0 items-center gap-2">
+                    <FileTextIcon className="mt-0.5 size-4 shrink-0 text-[var(--text-3)]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="tw-nm">{item.title}</p>
+                      <p className="tw-s">
+                        {[item.campaignDocumentNumber, item.campaignName]
+                          .filter(Boolean)
+                          .join(" · ") || item.status}
+                      </p>
+                    </div>
                   </div>
-                  <div className="flex shrink-0 items-center gap-1">
+                </DiscoverySuiteCell>
+                <DiscoverySuiteCell className="tw-br">
+                  {item.brandName ?? <span className="tw-miss">not set</span>}
+                </DiscoverySuiteCell>
+                <DiscoverySuiteCell className="tw-t">
+                  {item.clientName ?? <span className="tw-miss">not set</span>}
+                </DiscoverySuiteCell>
+                <DiscoverySuiteCell className="tw-d">
+                  {formatDiscoveryDate(item.createdAt) || (
+                    <span className="tw-miss">not set</span>
+                  )}
+                </DiscoverySuiteCell>
+                <DiscoverySuiteCell>
+                  <div className="tw-act">
                     {onOpenInSearch ? (
                       <Button
                         variant="ghost"
@@ -315,12 +384,12 @@ export function CampaignIntelligenceLibrary({
                       </Button>
                     ) : null}
                   </div>
-                </div>
-              </li>
+                </DiscoverySuiteCell>
+              </DiscoverySuiteRow>
             );
           })}
-        </ul>
+        </DiscoverySuiteGrid>
       )}
-    </DiscoveryListCard>
+    </div>
   );
 }

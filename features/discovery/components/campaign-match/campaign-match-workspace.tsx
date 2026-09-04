@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { SparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -15,7 +15,10 @@ import {
   DiscoveryEmptyState,
   DiscoveryLoadingState,
 } from "@/features/discovery/components/design-system";
-import { InterestChips, RelevanceScore } from "@/features/discovery/components/discovery-interest-chips";
+import {
+  InterestChips,
+  RelevanceScore,
+} from "@/features/discovery/components/discovery-interest-chips";
 import { matchDiscoveryCreatorsBriefAction } from "@/features/discovery/actions";
 import type { CampaignCreatorMatch } from "@/lib/creators/types";
 
@@ -23,12 +26,17 @@ export function CampaignMatchWorkspace() {
   const [brief, setBrief] = useState("");
   const [matches, setMatches] = useState<CampaignCreatorMatch[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [detailCreator, setDetailCreator] = useState<CampaignCreatorMatch["creator"] | null>(null);
+  const [detailCreator, setDetailCreator] = useState<
+    CampaignCreatorMatch["creator"] | null
+  >(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [hasRun, setHasRun] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const briefRef = useRef<HTMLTextAreaElement>(null);
 
   const allSelected =
-    matches.length > 0 && matches.every((m) => selectedIds.has(m.creator.unified_id));
+    matches.length > 0 &&
+    matches.every((m) => selectedIds.has(m.creator.unified_id));
   const indeterminate = selectedIds.size > 0 && !allSelected;
 
   function toggleSelect(unifiedId: string) {
@@ -57,8 +65,12 @@ export function CampaignMatchWorkspace() {
 
     startTransition(async () => {
       try {
-        const rows = await matchDiscoveryCreatorsBriefAction({ brief: trimmed, limit: 20 });
+        const rows = await matchDiscoveryCreatorsBriefAction({
+          brief: trimmed,
+          limit: 20,
+        });
         setMatches(rows);
+        setHasRun(true);
         setSelectedIds(new Set());
         if (rows.length === 0) {
           toast.message("No creators matched this brief.");
@@ -69,14 +81,12 @@ export function CampaignMatchWorkspace() {
     });
   }
 
-  useEffect(() => {
-    if (!detailOpen) setDetailCreator(null);
-  }, [detailOpen]);
-
   return (
     <div className="discovery-search-exact-root overflow-hidden rounded-[var(--radius-lg)] border border-[var(--tw-border)] bg-background">
       <div className="border-b border-[var(--tw-border)] bg-[var(--surface)] px-4 py-3.5">
-        <p className="text-[12.5px] font-bold text-foreground">Match workspace</p>
+        <p className="text-[12.5px] font-bold text-foreground">
+          Match workspace
+        </p>
         <p className="mt-0.5 text-xs text-[var(--text-3)]">
           Score creators against your brief using unified browse + fit ranking.
         </p>
@@ -84,31 +94,60 @@ export function CampaignMatchWorkspace() {
 
       <div className="space-y-3 border-b border-[var(--tw-border)] px-4 py-4">
         <Textarea
+          ref={briefRef}
           value={brief}
           onChange={(event) => setBrief(event.target.value)}
           placeholder="Describe your campaign: audience, niche, platforms, goals…"
           rows={4}
           className="min-h-[96px] resize-y text-sm"
         />
-        <Button
-          type="button"
-          disabled={isPending || !brief.trim()}
-          onClick={runMatch}
-          className="h-9 gap-1.5 text-[12.5px] font-bold"
-        >
-          <SparklesIcon className="size-3.5" />
-          {isPending ? "Matching…" : "Match creators"}
-        </Button>
+        {brief.trim() ? (
+          <Button
+            type="button"
+            disabled={isPending}
+            onClick={runMatch}
+            className="h-9 gap-1.5 text-[12.5px] font-bold"
+          >
+            <SparklesIcon className="size-3.5" />
+            {isPending ? "Matching…" : "Match creators"}
+          </Button>
+        ) : null}
       </div>
 
       {isPending && matches.length === 0 ? (
-        <DiscoveryLoadingState message="Ranking creators for your brief…" className="py-12" />
-      ) : matches.length === 0 ? (
-        <DiscoveryEmptyState
-          title="No matches yet"
-          description="Enter a campaign brief and run match to see ranked creators."
+        <DiscoveryLoadingState
+          message="Ranking creators for your brief…"
           className="py-12"
         />
+      ) : matches.length === 0 ? (
+        <DiscoveryEmptyState
+          title={
+            hasRun
+              ? "No creators matched this brief"
+              : brief.trim()
+                ? "Brief ready to match"
+                : "Campaign brief not set"
+          }
+          description={
+            hasRun
+              ? "The current brief returned no matches. Refine its audience, niche, platform, or goal, then run the match again."
+              : brief.trim()
+                ? "Run the match to rank creators against the campaign requirements."
+                : "Creator matches need a campaign brief. Add the audience, niche, platforms, and goals to begin."
+          }
+          className="py-12"
+        >
+          {!brief.trim() ? (
+            <Button
+              type="button"
+              onClick={() => briefRef.current?.focus()}
+              className="h-9 gap-1.5 text-[12.5px] font-bold"
+            >
+              <SparklesIcon className="size-3.5" />
+              Add campaign brief
+            </Button>
+          ) : null}
+        </DiscoveryEmptyState>
       ) : (
         <>
           <DiscoveryCreatorExactHeader

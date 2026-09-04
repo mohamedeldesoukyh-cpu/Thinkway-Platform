@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { format } from "date-fns";
 import {
   ArchiveIcon,
   MoreHorizontalIcon,
@@ -36,6 +35,7 @@ import {
 } from "@/features/client-workspace/client-review-share-memory";
 import { CLIENT_REVIEW_LINK_MISSING_MESSAGE } from "@/features/client-workspace/constants";
 import { clientReviewShareHasLink } from "@/features/client-workspace/client-review-selection";
+import { DiscoverySuiteMasthead } from "@/features/discovery/components/design-system/discovery-suite-masthead";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
 import { cn } from "@/lib/utils";
@@ -66,6 +66,7 @@ import { generateQuotationVersion } from "@/features/quotations/lifecycle-action
 import { canGenerateQuotationVersion } from "@/lib/commercial-sync/rules";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { formatDiscoveryDate } from "@/lib/discovery/format-discovery-date";
 import type { CreatorMovementAction } from "@/types/database";
 
 import {
@@ -790,39 +791,55 @@ export function ShortlistWorkspace({
     detail.brand_name,
     detail.client_name
   );
+  const quotedCount = detail.creators.filter(
+    (item) => item.quotation_refs.length > 0
+  ).length;
+  const underReviewCount = detail.creators.filter(
+    (item) => item.item_status === "under_review"
+  ).length;
+  const approvedCount = detail.creators.filter(
+    (item) => item.item_status === "approved" || item.item_status === "moved_to_campaign"
+  ).length;
+  const mastheadMetrics = [
+    { label: "Creators", value: detail.creators.length || "" },
+    { label: "Quoted", value: quotedCount || "" },
+    { label: "Under review", value: underReviewCount || "", tone: "y" as const },
+    { label: "Approved", value: approvedCount || "", tone: "g" as const },
+    { label: "Quotation", value: latestQuotation?.serial_number ?? "" },
+    {
+      label: "Version",
+      value: latestQuotation?.version_number
+        ? `v${latestQuotation.version_number}`
+        : "",
+    },
+  ];
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-background">
-      <div className="sticky top-0 z-20 flex shrink-0 items-center justify-between gap-3 border-b border-border bg-background px-8 py-2">
-        <div className="flex min-w-0 flex-1 items-center gap-2.5">
-          <EntityPrevNext
-            entity="shortlists"
-            currentId={detail.id}
-            hrefForId={(id) => shortlistDetailPath(id)}
-          />
-          <h1 className="min-w-0 truncate text-[19px] font-bold tracking-[-0.022em] text-[var(--text)]">
-            {detail.name}
-            {detail.serial_number ? (
-              <span className="ml-2 font-bold uppercase tracking-[0.1em] text-[#9aa3b5] tabular-nums text-[10.5px]">
-                {detail.serial_number}
-              </span>
+      <DiscoverySuiteMasthead
+        title={detail.name}
+        id={detail.serial_number}
+        badge={<ShortlistWorkspaceStatusPill status={detail.status} />}
+        metrics={mastheadMetrics}
+        actions={
+          <div className="flex items-center gap-2">
+            <EntityPrevNext
+              entity="shortlists"
+              currentId={detail.id}
+              hrefForId={(id) => shortlistDetailPath(id)}
+            />
+            {canEditDetails ? (
+              <button
+                type="button"
+                onClick={() => setEditOpen(true)}
+                disabled={isPending}
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted/30 hover:text-[var(--text-2)] disabled:opacity-50"
+                aria-label="Edit shortlist"
+              >
+                <PencilIcon className="size-3.5" />
+              </button>
             ) : null}
-          </h1>
-          <ShortlistWorkspaceStatusPill status={detail.status} />
-          {canEditDetails ? (
-            <button
-              type="button"
-              onClick={() => setEditOpen(true)}
-              disabled={isPending}
-              className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted/30 hover:text-[var(--text-2)] disabled:opacity-50"
-              aria-label="Edit shortlist"
-            >
-              <PencilIcon className="size-3.5" />
-            </button>
-          ) : null}
-        </div>
-
-        <ShortlistHeaderActions
+            <ShortlistHeaderActions
           seed={seed}
           shortlistId={detail.id}
           creators={detail.creators}
@@ -891,8 +908,10 @@ export function ShortlistWorkspace({
               canEditDetails={canEditDetails}
             />
           }
-        />
-      </div>
+            />
+          </div>
+        }
+      />
 
       <section className={cn(discoverySelectionFlyoutContentClass(selectedCount > 0))}>
         {hasLinkedQuotation ? (
@@ -1062,7 +1081,7 @@ export function ShortlistWorkspace({
                       "System"
                     )}
                     {" · "}
-                    {format(new Date(movement.performed_at), "MMM d, yyyy HH:mm")}
+                    {formatDiscoveryDate(movement.performed_at)}
                     {movement.notes ? ` · ${movement.notes}` : ""}
                   </p>
                 </div>
@@ -1166,6 +1185,10 @@ export function ShortlistWorkspace({
         onOpenChange={setShareOpen}
         url={shareUrl}
         reviewNumber={shareReviewNumber}
+        status={detail.status}
+        version={shareReviewNumber != null ? `v${shareReviewNumber}` : null}
+        documentLabel={detail.serial_number ?? detail.name}
+        linkEnabled={hasLink}
       />
     </div>
   );

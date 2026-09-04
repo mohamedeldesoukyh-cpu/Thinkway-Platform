@@ -11,6 +11,7 @@ import {
   describeShortlistPastePreview,
   shortlistPastePreview,
 } from "../paste-links-policy";
+import type { ShortlistPasteDiscoveryPreview } from "../actions";
 
 type Props = {
   value: string;
@@ -18,6 +19,7 @@ type Props = {
   error?: string | null;
   pending?: boolean;
   disabled?: boolean;
+  discoveryPreview?: ShortlistPasteDiscoveryPreview | null;
 };
 
 export function ShortlistPasteLinksPanel({
@@ -26,6 +28,7 @@ export function ShortlistPasteLinksPanel({
   error,
   pending,
   disabled,
+  discoveryPreview,
 }: Props) {
   const parsed = parseProfileInputList(value);
   const preview = shortlistPastePreview(parsed.parsed.length, parsed.invalid.length);
@@ -54,9 +57,29 @@ export function ShortlistPasteLinksPanel({
           Resolving links and adding to this shortlist…
         </p>
       ) : preview.parsedCount > 0 ? (
-        <p className="text-xs text-emerald-600 dark:text-emerald-400">
-          {describeShortlistPastePreview(preview)}
-        </p>
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs dark:border-emerald-900/60 dark:bg-emerald-950/30">
+          <p className="font-semibold text-emerald-700 dark:text-emerald-300">
+            Detected · {preview.parsedCount}
+          </p>
+          {discoveryPreview ? (
+            <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-[11px] text-muted-foreground">
+              <span>Already in Discovery · {discoveryPreview.alreadyInDiscovery}</span>
+              <span>Will be created · {discoveryPreview.willBeCreated}</span>
+              {discoveryPreview.alreadyOnShortlist > 0 ? (
+                <span>Already on shortlist · {discoveryPreview.alreadyOnShortlist}</span>
+              ) : null}
+            </div>
+          ) : (
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Checking Discovery before commit…
+            </p>
+          )}
+          {preview.invalidCount > 0 || preview.overflowCount > 0 ? (
+            <p className="mt-1 text-[11px] text-amber-700 dark:text-amber-400">
+              {describeShortlistPastePreview(preview)}
+            </p>
+          ) : null}
+        </div>
       ) : unrecognized.length > 0 ? (
         <p className="text-xs text-amber-700 dark:text-amber-400">
           {unrecognized.length} unrecognized link

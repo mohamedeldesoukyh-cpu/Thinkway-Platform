@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreHorizontalIcon, XIcon, type LucideIcon } from "lucide-react";
+import type { ReactNode } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -23,6 +24,7 @@ export type DiscoverySelectionFlyoutMenuItem = {
 export type DiscoverySelectionFlyoutAction = {
   id: string;
   label: string;
+  description?: string;
   icon?: LucideIcon;
   onClick: () => void;
   disabled?: boolean;
@@ -44,6 +46,7 @@ type DiscoverySelectionFlyoutProps = {
   busy?: boolean;
   emptyActionsMessage?: string;
   maxVisibleActions?: number;
+  children?: ReactNode;
 };
 
 export const DISCOVERY_SELECTION_FLYOUT_CONTENT_CLASS =
@@ -96,7 +99,7 @@ function partitionActions(
 function DiscoveryFlyoutDivider() {
   return (
     <div
-      className="discovery-selection-flyout__divider mx-0.5 hidden h-6 w-px shrink-0 bg-[rgba(0,87,255,0.14)] sm:block"
+      className="discovery-selection-flyout__divider mx-0.5 hidden h-6 w-px shrink-0 bg-white/15 sm:block"
       aria-hidden
     />
   );
@@ -114,6 +117,7 @@ export function DiscoverySelectionFlyout({
   busy,
   emptyActionsMessage,
   maxVisibleActions = 2,
+  children,
 }: DiscoverySelectionFlyoutProps) {
   const visible = open && selectedCount > 0;
   const { primary, secondary, overflow } = partitionActions(
@@ -147,15 +151,15 @@ export function DiscoverySelectionFlyout({
       >
         <div className="discovery-selection-flyout__bar flex min-w-0 items-center gap-2 overflow-x-auto px-3 py-2.5 sm:gap-2.5 sm:px-4 sm:py-3">
           <div className="flex shrink-0 items-center gap-1.5 pr-0.5">
-            <p className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.04em] text-[#64748b] dark:text-muted-foreground">
-              <span className="tabular-nums text-[#0057FF]">{selectedCount}</span>{" "}
+            <p className="whitespace-nowrap text-[11px] font-semibold uppercase tracking-[0.04em] text-white/75">
+              <span className="tabular-nums text-white">{selectedCount}</span>{" "}
               {pluralize(selectedCount, entityLabel)} selected
             </p>
             <button
               type="button"
               onClick={onClearSelection}
               disabled={busy}
-              className="discovery-selection-flyout__clear flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)] bg-white dark:bg-card text-[#64748b] dark:text-muted-foreground transition-colors hover:border-[rgba(0,87,255,0.24)] hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10 hover:text-[#0057FF] dark:hover:text-blue-300 disabled:opacity-50"
+              className="discovery-selection-flyout__clear flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-white/20 bg-white/10 text-white/80 transition-colors hover:border-white/35 hover:bg-white/20 hover:text-white disabled:opacity-50"
               aria-label="Clear selection"
             >
               <XIcon className="size-3.5" />
@@ -165,7 +169,7 @@ export function DiscoverySelectionFlyout({
                 type="button"
                 onClick={onSelectAll}
                 disabled={busy}
-                className="hidden shrink-0 text-[11px] font-medium text-[#0057FF] hover:text-[#0046cc] sm:inline-flex"
+                className="hidden shrink-0 text-[11px] font-medium text-white/80 hover:text-white sm:inline-flex"
               >
                 Select all
               </button>
@@ -192,6 +196,12 @@ export function DiscoverySelectionFlyout({
                   <span className="shrink-0 text-[11px] text-[#64748b] dark:text-muted-foreground">{emptyActionsMessage}</span>
                 ) : null}
               </div>
+            </>
+          ) : null}
+          {children ? (
+            <>
+              <DiscoveryFlyoutDivider />
+              <div className="flex shrink-0 items-center gap-1.5">{children}</div>
             </>
           ) : null}
         </div>
@@ -337,10 +347,17 @@ function DiscoveryFlyoutOverflowMenu({
                 disabled={action.disabled || busy}
                 variant={action.destructive ? "destructive" : "default"}
                 onClick={action.onClick}
-                className="discovery-selection-flyout-menu__item gap-2 rounded-[10px] px-2.5 py-2 text-xs font-medium text-[#334155] focus:bg-[rgba(0,87,255,0.08)] focus:text-[#0057FF] data-[variant=destructive]:focus:bg-red-50 data-[variant=destructive]:focus:text-red-600 [&_svg]:size-3.5 [&_svg]:text-[#64748b] focus:[&_svg]:text-[#0057FF]"
+                className="discovery-selection-flyout-menu__item flex-col items-start gap-0.5 rounded-[10px] px-2.5 py-2 text-xs font-medium text-[#334155] focus:bg-[rgba(0,87,255,0.08)] focus:text-[#0057FF] data-[variant=destructive]:focus:bg-red-50 data-[variant=destructive]:focus:text-red-600"
               >
-                {Icon ? <Icon aria-hidden /> : null}
-                <span className="whitespace-nowrap">{action.label}</span>
+                <span className="flex items-center gap-2 whitespace-nowrap">
+                  {Icon ? <Icon className="size-3.5 text-[#64748b]" aria-hidden /> : null}
+                  {action.label}
+                </span>
+                {action.description ? (
+                  <span className="pl-[1.375rem] text-[10px] font-normal text-[#64748b]">
+                    {action.description}
+                  </span>
+                ) : null}
               </DropdownMenuItem>
             );
           })}

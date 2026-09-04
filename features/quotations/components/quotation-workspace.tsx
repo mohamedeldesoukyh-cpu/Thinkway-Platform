@@ -25,11 +25,10 @@ import { Button } from "@/components/ui/button";
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import { TooltipIconButton } from "@/components/shared/tooltip-icon-button";
 import {
-  GlassSelectionFlyout,
-  GLASS_FLYOUT_PRIMARY_ACTION_CLASS,
-  type GlassFlyoutAction,
-} from "@/components/shared/navigation/glass-selection-flyout";
-import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
+  DiscoverySelectionFlyout,
+  discoverySelectionFlyoutContentClass,
+  type DiscoverySelectionFlyoutAction,
+} from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
@@ -884,6 +883,8 @@ function QuotationWorkspaceContent({
         <QuotationCommercialMetricsBand
           totalCostEgp={totals.totalCostEgp}
           totalRevenueEgp={totals.totalClientCostEgp}
+          totalCommercialGpEgp={totals.totalGpValueEgp}
+          totalAgencyFeeEgp={totals.totalAfValueEgp}
           totalGpValueEgp={totals.headerGpValueEgp}
           totalGpPct={totals.headerGpPct}
           totalPmPct={totals.headerPmPct}
@@ -1382,7 +1383,7 @@ function BulkToolbar({
 }) {
   const [bulkPct, setBulkPct] = useState("25");
 
-  const actions: GlassFlyoutAction[] = [
+  const actions: DiscoverySelectionFlyoutAction[] = [
     {
       id: "duplicate",
       label: "Duplicate",
@@ -1410,7 +1411,7 @@ function BulkToolbar({
   ];
 
   return (
-    <GlassSelectionFlyout
+    <DiscoverySelectionFlyout
       open={open}
       selectedCount={selectedCount}
       entityLabel="creator"
@@ -1431,12 +1432,19 @@ function BulkToolbar({
           size="xs"
           variant="default"
           className={cn(
-            "h-7 shrink-0 rounded-full text-xs",
-            GLASS_FLYOUT_PRIMARY_ACTION_CLASS
+            "creator-detail-sheet-action-btn creator-detail-sheet-action-btn--primary h-7 shrink-0 rounded-full text-xs"
           )}
           disabled={pending}
           onClick={() => {
             const pct = parseNum(bulkPct);
+            if (globalCalcMode === "margin" && pct >= 100) {
+              toast.error("Margin must be below 100%.");
+              return;
+            }
+            if (pct < 0) {
+              toast.error(`${globalCalcMode === "markup" ? "Markup" : "Margin"} cannot be negative.`);
+              return;
+            }
             if (globalCalcMode === "markup") onApplyMarkupPct(pct);
             else onApplyGpPct(pct);
           }}
@@ -1457,7 +1465,12 @@ function BulkToolbar({
           ))}
         </SelectContent>
       </Select>
-    </GlassSelectionFlyout>
+      <span className="hidden whitespace-nowrap text-[10px] text-muted-foreground lg:inline">
+        {globalCalcMode === "markup"
+          ? "Price = cost × (1 + markup%)"
+          : "Price = cost ÷ (1 − margin%); margin must be below 100%"}
+      </span>
+    </DiscoverySelectionFlyout>
   );
 }
 

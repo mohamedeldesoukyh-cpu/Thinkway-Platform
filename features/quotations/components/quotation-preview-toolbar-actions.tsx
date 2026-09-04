@@ -213,8 +213,30 @@ export function QuotationPreviewToolbarActions({
             </DropdownMenuItem>
           ))}
           <DropdownMenuSeparator />
-          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+          <DropdownMenuItem
+            onSelect={(event) => {
+              event.preventDefault();
+              openSelection({ type: "preview", template: exportTemplate });
+            }}
+            className="flex items-center justify-between gap-2"
+          >
+            <span>Choose creators &amp; platforms</span>
+            <EyeIcon className="size-3.5 text-muted-foreground" />
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <QuotationToolbarButton variant="outline" size="sm" disabled={busy} className="btn">
+            <DownloadIcon className="size-3.5" />
             Export
+            <ChevronDownIcon className="size-3 text-[var(--text-4)]" />
+          </QuotationToolbarButton>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-[220px]">
+          <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+            Download as — {activeTemplate.label.toLowerCase()} layout
           </DropdownMenuLabel>
           {EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
             <DropdownMenuItem
@@ -229,17 +251,6 @@ export function QuotationPreviewToolbarActions({
               {label}
             </DropdownMenuItem>
           ))}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              openSelection({ type: "preview", template: exportTemplate });
-            }}
-            className="flex items-center justify-between gap-2"
-          >
-            <span>Choose creators &amp; platforms</span>
-            <EyeIcon className="size-3.5 text-muted-foreground" />
-          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 

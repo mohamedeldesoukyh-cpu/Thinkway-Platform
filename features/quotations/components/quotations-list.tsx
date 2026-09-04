@@ -12,14 +12,6 @@ import {
 
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   countSelected,
   isAllVisibleSelected,
   isIndeterminateSelection,
@@ -27,11 +19,10 @@ import {
   toggleItemSelection,
   toggleSelectAll,
 } from "@/features/discovery/shortlists/bulk-selection-policy";
-import {
-  InitialsAvatar,
-  ShortlistCreatorPreviewStack,
-} from "@/features/discovery/shortlists/components/shortlist-row-visuals";
+import { InitialsAvatar } from "@/features/discovery/shortlists/components/shortlist-row-visuals";
 import { cn } from "@/lib/utils";
+import { formatMoneyKpi } from "@/lib/finance/currency-format";
+import { formatDiscoveryDate } from "@/lib/discovery/format-discovery-date";
 
 import { archiveQuotation } from "../actions";
 import { quotationDetailPath } from "../constants";
@@ -54,7 +45,13 @@ import {
 } from "./quotation-selection-flyout";
 import { QuotationsListMergedHeader } from "./quotations-list-header";
 
-import { DiscoveryFilteredEmptyState } from "@/features/discovery/components/design-system";
+import {
+  DiscoveryFilteredEmptyState,
+  DiscoverySuiteCell,
+  DiscoverySuiteGrid,
+  DiscoverySuiteMasthead,
+  DiscoverySuiteRow,
+} from "@/features/discovery/components/design-system";
 
 const LIST_ACTION_RUNNERS: Record<
   QuotationListActionKey,
@@ -62,14 +59,6 @@ const LIST_ACTION_RUNNERS: Record<
 > = {
   archive: archiveQuotation,
 };
-
-const TABLE_GUTTER_START = "pl-8";
-const TABLE_GUTTER_END = "pr-8";
-const QUOTATION_LIST_HEAD_CLASS =
-  "h-auto bg-transparent px-4 py-[13px] text-[10px] font-bold uppercase tracking-[0.07em] text-muted-foreground";
-const QUOTATION_LIST_CELL_CLASS =
-  "border-t border-border px-4 py-3.5 align-middle text-[13px] text-[var(--text-2)]";
-const QUOTATION_LIST_ROW_CLASS = "group transition-colors hover:bg-muted/20";
 
 type Props = {
   quotations: QuotationListRow[];
@@ -93,6 +82,30 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
     () => filterQuotationRows(quotations, filters),
     [quotations, filters]
   );
+
+  const mastheadMetrics = useMemo(() => {
+    const draftCount = filteredQuotations.filter(
+      (row) => row.status === "draft"
+    ).length;
+    const approvedCount = filteredQuotations.filter(
+      (row) => row.status === "approved"
+    ).length;
+    const lineCount = filteredQuotations.reduce(
+      (sum, row) => sum + row.item_count,
+      0
+    );
+
+    return [
+      { label: "Quotations", value: filteredQuotations.length },
+      ...(draftCount > 0
+        ? [{ label: "Draft", value: draftCount, tone: "y" as const }]
+        : []),
+      ...(approvedCount > 0
+        ? [{ label: "Approved", value: approvedCount, tone: "g" as const }]
+        : []),
+      ...(lineCount > 0 ? [{ label: "Lines", value: lineCount }] : []),
+    ];
+  }, [filteredQuotations]);
 
   const visibleIds = useMemo(
     () => filteredQuotations.map((row) => row.id),
@@ -188,6 +201,14 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
         totalCount={quotations.length}
       />
 
+      <div className="shrink-0 px-8 pt-4">
+        <DiscoverySuiteMasthead
+          title="Client quotations"
+          metrics={mastheadMetrics}
+          freezeOnScroll={false}
+        />
+      </div>
+
       <div
         className={cn(
           "min-h-0 flex-1 overflow-y-auto overscroll-y-contain",
@@ -201,10 +222,12 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
             className="mx-8"
           />
         ) : (
-          <Table variant="flush">
-            <TableHeader>
-              <TableRow className="border-0 hover:bg-transparent">
-                <TableHead className={cn(QUOTATION_LIST_HEAD_CLASS, TABLE_GUTTER_START, "w-[34px]")}>
+          <DiscoverySuiteGrid
+            cols="quotations"
+            className="mx-8"
+            header={
+              <>
+                <DiscoverySuiteCell>
                   <Checkbox
                     checked={allSelected ? true : indeterminate ? "indeterminate" : false}
                     onCheckedChange={(value) =>
@@ -215,111 +238,107 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
                     aria-label="Select all quotations"
                     disabled={isPending}
                   />
-                </TableHead>
-                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Serial</TableHead>
-                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Quotation</TableHead>
-                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Status</TableHead>
-                <TableHead className={cn(QUOTATION_LIST_HEAD_CLASS, "min-w-[7.5rem]")}>
-                  Client link
-                </TableHead>
-                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Owner</TableHead>
-                <TableHead className={QUOTATION_LIST_HEAD_CLASS}>Creators</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredQuotations.map((row) => {
-                const ownerLabel = row.owner_name ?? "Unknown";
-                const isSelected = effectiveSelectedIds.has(row.id);
+                </DiscoverySuiteCell>
+                <DiscoverySuiteCell>Serial</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Quotation</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Brand</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Client</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Status</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Client link</DiscoverySuiteCell>
+                <DiscoverySuiteCell>Owner</DiscoverySuiteCell>
+                <DiscoverySuiteCell align="end">Lines</DiscoverySuiteCell>
+                <DiscoverySuiteCell align="end">Client cost</DiscoverySuiteCell>
+                <DiscoverySuiteCell align="end">Act</DiscoverySuiteCell>
+              </>
+            }
+          >
+            {filteredQuotations.map((row) => {
+              const ownerLabel = row.owner_name ?? "Unknown";
+              const isSelected = effectiveSelectedIds.has(row.id);
+              const issuedAt = formatDiscoveryDate(row.issue_date);
 
-                return (
-                  <TableRow
-                    key={row.id}
-                    data-state={isSelected ? "selected" : undefined}
-                    className={QUOTATION_LIST_ROW_CLASS}
-                  >
-                    <TableCell className={cn(QUOTATION_LIST_CELL_CLASS, TABLE_GUTTER_START, "w-[34px]")}>
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={(value) =>
-                          setSelectedIds((prev) =>
-                            toggleItemSelection(prev, row.id, Boolean(value))
-                          )
-                        }
-                        aria-label={`Select ${row.name}`}
-                        disabled={isPending}
+              return (
+                <DiscoverySuiteRow
+                  key={row.id}
+                  selected={isSelected}
+                  className="group"
+                >
+                  <DiscoverySuiteCell>
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={(value) =>
+                        setSelectedIds((prev) =>
+                          toggleItemSelection(prev, row.id, Boolean(value))
+                        )
+                      }
+                      aria-label={`Select ${row.name}`}
+                      disabled={isPending}
+                    />
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell className="tw-id">
+                    {row.serial_number ?? "—"}
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell>
+                    <div className="min-w-0">
+                      <Link
+                        href={quotationDetailPath(row)}
+                        className="tw-nm block transition-colors group-hover:text-[var(--tw-bi)]"
+                      >
+                        {row.name}
+                      </Link>
+                      {issuedAt ? (
+                        <span className="tw-s">Issued {issuedAt}</span>
+                      ) : null}
+                    </div>
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell>
+                    {row.brand_name ? (
+                      <span className="tw-br">{row.brand_name}</span>
+                    ) : (
+                      <span className="tw-miss">not set</span>
+                    )}
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell className="tw-t">
+                    {row.client_name ?? "—"}
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell>
+                    <QuotationListStatusPill status={row.status} />
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell className="min-w-0 overflow-visible whitespace-normal">
+                    <ClientWorkspaceListLinkCell
+                      source="quotation"
+                      id={row.id}
+                      link={row.client_workspace_link}
+                    />
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell>
+                    <div className="flex min-w-0 items-center gap-[9px]">
+                      <InitialsAvatar
+                        name={ownerLabel}
+                        seed={row.owner_id ?? row.id}
+                        sizeClass="size-6 text-[9.5px]"
                       />
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        QUOTATION_LIST_CELL_CLASS,
-                        "tabular-nums text-[12px] font-bold text-[var(--text)]"
-                      )}
+                      <span className="tw-t">{row.owner_name ?? "—"}</span>
+                    </div>
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell align="end" className="tw-v">
+                    {row.item_count}
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell align="end" className="tw-v">
+                    {formatMoneyKpi(row.total_revenue_egp, "EGP")}
+                  </DiscoverySuiteCell>
+                  <DiscoverySuiteCell align="end">
+                    <Link
+                      href={quotationDetailPath(row)}
+                      className="tw-b sm"
                     >
-                      {row.serial_number ?? "—"}
-                    </TableCell>
-                    <TableCell className={QUOTATION_LIST_CELL_CLASS}>
-                      <div className="flex min-w-0 items-center gap-[11px]">
-                        <InitialsAvatar
-                          name={row.name}
-                          seed={row.id}
-                          sizeClass="size-8 text-[11px]"
-                        />
-                        <div className="min-w-0">
-                          <Link
-                            href={quotationDetailPath(row)}
-                            className="block truncate text-[13px] font-semibold tracking-[-0.01em] text-[var(--text)] transition-colors group-hover:text-[var(--blue-text)]"
-                          >
-                            {row.name}
-                          </Link>
-                          {(row.brand_name || row.client_name) && (
-                            <span className="mt-0.5 block truncate text-[11.5px] text-muted-foreground">
-                              {row.brand_name}
-                              {row.client_name ? ` · ${row.client_name}` : ""}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell className={QUOTATION_LIST_CELL_CLASS}>
-                      <QuotationListStatusPill status={row.status} />
-                    </TableCell>
-                    <TableCell
-                      className={cn(
-                        QUOTATION_LIST_CELL_CLASS,
-                        "min-w-0 overflow-visible whitespace-normal align-top"
-                      )}
-                    >
-                      <ClientWorkspaceListLinkCell
-                        source="quotation"
-                        id={row.id}
-                        link={row.client_workspace_link}
-                      />
-                    </TableCell>
-                    <TableCell className={QUOTATION_LIST_CELL_CLASS}>
-                      <div className="flex min-w-0 items-center gap-[9px]">
-                        <InitialsAvatar
-                          name={ownerLabel}
-                          seed={row.owner_id ?? row.id}
-                          sizeClass="size-6 text-[9.5px]"
-                        />
-                        <span className="truncate text-[12.5px] text-[var(--text-2)]">
-                          {row.owner_name ?? "—"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell className={cn(QUOTATION_LIST_CELL_CLASS, TABLE_GUTTER_END)}>
-                      <ShortlistCreatorPreviewStack
-                        previews={row.creator_previews}
-                        totalCount={row.item_count}
-                        align="start"
-                        overflowVariant="solid"
-                      />
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      Open
+                    </Link>
+                  </DiscoverySuiteCell>
+                </DiscoverySuiteRow>
+              );
+            })}
+          </DiscoverySuiteGrid>
         )}
         <div className="h-10 shrink-0" aria-hidden />
       </div>

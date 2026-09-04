@@ -121,8 +121,8 @@ type Props = {
 type DetailTab = "overview" | "contact" | "publications" | "confidence" | "similar";
 
 const CREATOR_DETAIL_SHEET_STYLE = {
-  width: `min(${CREATOR_DETAIL_SHEET_MAX_WIDTH_PX}px, 100vw)`,
-  maxWidth: `${CREATOR_DETAIL_SHEET_MAX_WIDTH_PX}px`,
+  width: `min(${Math.max(CREATOR_DETAIL_SHEET_MAX_WIDTH_PX, 920)}px, 100vw)`,
+  maxWidth: `${Math.max(CREATOR_DETAIL_SHEET_MAX_WIDTH_PX, 920)}px`,
 } as const;
 
 const CREATOR_DETAIL_SHEET_CLASS = cn(
@@ -746,6 +746,7 @@ export function CreatorDetailSheet({
   const [maximizedSimilarLoading, setMaximizedSimilarLoading] = useState(false);
   /** True while ECI overlay is in flight — identity shell stays instant. */
   const [eciLoading, setEciLoading] = useState(false);
+  const [eciLoadingSkipped, setEciLoadingSkipped] = useState(false);
 
   useEffect(() => {
     if (!open || !creator) return;
@@ -784,6 +785,7 @@ export function CreatorDetailSheet({
     setSimilar([]);
     setSimilarLoading(false);
     setEciLoading(true);
+    setEciLoadingSkipped(false);
 
     const sessionTimer = startLoadTimer("creator-detail.sheet.session");
     let raf1 = 0;
@@ -1118,53 +1120,58 @@ export function CreatorDetailSheet({
               />
 
               {platforms.length > 0 ? (
-                <div className="creator-detail-sheet-platform-row">
-                  {platforms.map((platform) => {
-                    const active = platform.id === selectedPlatformAccountId;
-                    const canRemovePlatform =
-                      Boolean(identityCreator.influencer_id) && platforms.length >= 2;
-                    return (
-                      <div
-                        key={platform.id}
-                        className={cn(
-                          "creator-detail-sheet-platform-pill",
-                          active && "creator-detail-sheet-platform-pill--active"
-                        )}
-                      >
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPlatformAccountId(platform.id)}
-                          className="creator-detail-sheet-platform-pill__select"
+                <div className="creator-detail-sheet-platform-scope">
+                  <div className="creator-detail-sheet-platform-row">
+                    {platforms.map((platform) => {
+                      const active = platform.id === selectedPlatformAccountId;
+                      const canRemovePlatform =
+                        Boolean(identityCreator.influencer_id) && platforms.length >= 2;
+                      return (
+                        <div
+                          key={platform.id}
+                          className={cn(
+                            "creator-detail-sheet-platform-pill",
+                            active && "creator-detail-sheet-platform-pill--active"
+                          )}
                         >
-                          <PlatformIcon platform={platform.platform} size="xs" className="size-3 rounded-full border-0" />
-                          {platformLabel(platform.platform)}
-                        </button>
-                        {canRemovePlatform ? (
                           <button
                             type="button"
-                            className="creator-detail-sheet-platform-pill__remove"
-                            aria-label={`Remove ${platformLabel(platform.platform)} profile`}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setPlatformToDelete(platform);
-                              setDeletePlatformOpen(true);
-                            }}
+                            onClick={() => setSelectedPlatformAccountId(platform.id)}
+                            className="creator-detail-sheet-platform-pill__select"
                           >
-                            <XIcon className="size-3" aria-hidden />
+                            <PlatformIcon platform={platform.platform} size="xs" className="size-3 rounded-full border-0" />
+                            {platformLabel(platform.platform)}
                           </button>
-                        ) : null}
-                      </div>
-                    );
-                  })}
-                  <button
-                    type="button"
-                    onClick={() => setAddPlatformOpen(true)}
-                    className="creator-detail-sheet-platform-pill creator-detail-sheet-platform-pill--add"
-                    aria-label="Add platform profile"
-                  >
-                    <PlusIcon className="size-3" aria-hidden />
-                    Add
-                  </button>
+                          {canRemovePlatform ? (
+                            <button
+                              type="button"
+                              className="creator-detail-sheet-platform-pill__remove"
+                              aria-label={`Remove ${platformLabel(platform.platform)} profile`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setPlatformToDelete(platform);
+                                setDeletePlatformOpen(true);
+                              }}
+                            >
+                              <XIcon className="size-3" aria-hidden />
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setAddPlatformOpen(true)}
+                      className="creator-detail-sheet-platform-pill creator-detail-sheet-platform-pill--add"
+                      aria-label="Add platform profile"
+                    >
+                      <PlusIcon className="size-3" aria-hidden />
+                      Add
+                    </button>
+                  </div>
+                  <p className="creator-detail-sheet-platform-scope__note">
+                    Switching platform rewrites platform-scoped figures below.
+                  </p>
                 </div>
               ) : (
                 <div className="creator-detail-sheet-platform-row">
@@ -1203,7 +1210,7 @@ export function CreatorDetailSheet({
             </div>
           </div>
 
-          <div className="creator-detail-sheet-main flex min-h-0 flex-1">
+          <div className="creator-detail-sheet-main min-h-0 flex-1">
             <div className="creator-detail-sheet-scroll min-h-0 min-w-0 flex-1 overflow-y-auto">
             <TabsContent value="overview" className="mt-0 outline-none">
               <div className="min-w-0">
@@ -1214,7 +1221,7 @@ export function CreatorDetailSheet({
                         <p className="creator-detail-sheet-highlight-card__value">
                           {investmentScore != null ? (
                             investmentScore
-                          ) : eciLoading ? (
+                          ) : eciLoading && !eciLoadingSkipped ? (
                             <Loader2Icon className="size-5 animate-spin text-muted-foreground" />
                           ) : (
                             "—"
@@ -1222,10 +1229,27 @@ export function CreatorDetailSheet({
                         </p>
                         <p className="creator-detail-sheet-highlight-card__meta">
                           {investmentRecommendation ??
-                            (eciLoading
+                            (eciLoading && !eciLoadingSkipped
                               ? "Loading Enterprise Creator Intelligence…"
                               : `Source confidence ${Math.round(displayCreator.source_confidence)}%`)}
                         </p>
+                        {eciLoading && !eciLoadingSkipped ? (
+                          <div
+                            className="creator-detail-sheet-eci-loading"
+                            role="status"
+                            aria-live="polite"
+                          >
+                            <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
+                            <span>Loading Enterprise Creator Intelligence</span>
+                            <button
+                              type="button"
+                              className="creator-detail-sheet-eci-loading__skip"
+                              onClick={() => setEciLoadingSkipped(true)}
+                            >
+                              Skip
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                       <div className="creator-detail-sheet-highlight-card">
                         <p className="creator-detail-sheet-highlight-card__label">Category</p>

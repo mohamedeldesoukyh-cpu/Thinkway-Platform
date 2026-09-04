@@ -97,6 +97,8 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
   const shareScope = { source, id };
   const label = CLIENT_WORKSPACE_LIST_LINK_LABEL[state];
   const isActive = state === "active";
+  const documentLabel =
+    source === "quotation" ? "Quotation" : source === "shortlist" ? "Shortlist" : "Campaign";
 
   useEffect(() => {
     setState(link?.state ?? "none");
@@ -220,33 +222,25 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
             "inline-flex min-w-0 items-center gap-1.5 text-xs leading-snug",
             isActive ? "platform-v6-c-green font-semibold" : "text-muted-foreground"
           )}
+          role="status"
+          aria-live="polite"
           title={reviewNumber != null ? `Client Workspace v${reviewNumber}` : undefined}
         >
           {isActive ? (
-            <span className="platform-v6-hs-live-dot shrink-0" aria-hidden />
-          ) : null}
+            <span className="platform-v6-hs-live-dot !size-2 shrink-0" aria-hidden />
+          ) : (
+            <span className="size-2 shrink-0 rounded-full bg-slate-400" aria-hidden />
+          )}
           <span className="min-w-0 break-words">{label}</span>
           {pending ? <Loader2Icon className="size-3 shrink-0 animate-spin" /> : null}
         </span>
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex min-w-0 items-center">
           <PlatformV6Toggle
             checked={isActive}
             disabled={pending}
             aria-label="Client Workspace link active"
             onCheckedChange={onToggle}
           />
-          <button
-            type="button"
-            className={cn(
-              "text-xs font-semibold leading-none",
-              isActive ? "platform-v6-c-red" : "text-muted-foreground"
-            )}
-            disabled={pending || !isActive}
-            aria-label="Stop Client Workspace link"
-            onClick={() => void stopLink()}
-          >
-            Stop
-          </button>
         </div>
         {isActive ? (
           <button
@@ -265,6 +259,10 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
         onOpenChange={setShareOpen}
         url={shareUrl}
         reviewNumber={reviewNumber}
+        status={state}
+        version={reviewNumber != null ? `v${reviewNumber}` : null}
+        documentLabel={documentLabel}
+        linkEnabled={isActive}
       />
     </>
   );

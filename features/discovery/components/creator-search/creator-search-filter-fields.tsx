@@ -65,12 +65,18 @@ const GENDER_OPTIONS = [
   { value: "female", label: "Female" },
 ] as const;
 
-export function FieldLabel({ children, className }: { children: ReactNode; className?: string }) {
+export function FieldLabel({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
   return (
     <p
       className={cn(
         "discovery-filter-field-label mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground",
-        className
+        className,
       )}
     >
       {children}
@@ -80,7 +86,9 @@ export function FieldLabel({ children, className }: { children: ReactNode; class
 
 export function FieldHint({ children }: { children: ReactNode }) {
   return (
-    <p className="discovery-filter-field-hint mt-[5px] text-[10px] text-[#94a3b8] dark:text-muted-foreground">{children}</p>
+    <p className="discovery-filter-field-hint mt-[5px] text-[10px] text-[#94a3b8] dark:text-muted-foreground">
+      {children}
+    </p>
   );
 }
 
@@ -99,25 +107,18 @@ function ExpandableChipGrid<T>({
   items,
   previewCount = FILTER_CHIP_PREVIEW_COUNT,
   getKey,
-  isHighlighted,
   renderChip,
 }: {
   items: readonly T[];
   previewCount?: number;
   getKey: (item: T) => string;
+  /** Retained at call sites for filter semantics; truncation stays positional per spec §7. */
   isHighlighted?: (item: T) => boolean;
   renderChip: (item: T) => ReactNode;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const isActive = isHighlighted ?? (() => false);
-
-  const visibleItems = expanded
-    ? items
-    : items.filter((item, index) => index < previewCount || isActive(item));
-
-  const hiddenCount = items.filter(
-    (item, index) => index >= previewCount && !isActive(item)
-  ).length;
+  const visibleItems = expanded ? items : items.slice(0, previewCount);
+  const hiddenCount = Math.max(0, items.length - previewCount);
 
   if (items.length <= previewCount) {
     return (
@@ -160,7 +161,10 @@ export function FilterSelect({
   ...props
 }: React.ComponentProps<"select">) {
   return (
-    <select className={cn(filterInputClass, "cursor-pointer", className)} {...props}>
+    <select
+      className={cn(filterInputClass, "cursor-pointer", className)}
+      {...props}
+    >
       {children}
     </select>
   );
@@ -184,7 +188,7 @@ export function FilterChip({
         "discovery-filter-chip inline-flex h-[26px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[20px] border px-2.5 text-[11px] font-medium transition-all duration-[140ms]",
         active
           ? "border-[rgba(0,87,255,0.32)] bg-[rgba(0,87,255,0.1)] font-semibold text-[#0057FF] dark:text-blue-300"
-          : "border-[rgba(0,87,255,0.14)] dark:border-border bg-white dark:bg-card text-[#475569] dark:text-muted-foreground hover:border-[rgba(0,87,255,0.24)] hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10 hover:text-[#0057FF] dark:hover:text-blue-300"
+          : "border-[rgba(0,87,255,0.14)] dark:border-border bg-white dark:bg-card text-[#475569] dark:text-muted-foreground hover:border-[rgba(0,87,255,0.24)] hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10 hover:text-[#0057FF] dark:hover:text-blue-300",
       )}
     >
       <span>{label}</span>
@@ -208,7 +212,8 @@ export function PlatformFilterChip({
   active: boolean;
   onToggle: () => void;
 }) {
-  const label = PLATFORM_LABELS[platform as keyof typeof PLATFORM_LABELS] ?? platform;
+  const label =
+    PLATFORM_LABELS[platform as keyof typeof PLATFORM_LABELS] ?? platform;
   return (
     <button
       type="button"
@@ -218,15 +223,23 @@ export function PlatformFilterChip({
         "discovery-filter-platform-chip inline-flex h-9 shrink-0 items-center gap-2 rounded-[10px] border px-2.5 text-[11px] font-semibold transition-all duration-[140ms]",
         active
           ? "border-[rgba(0,87,255,0.38)] bg-[rgba(0,87,255,0.1)] text-[#0057FF] shadow-[0_1px_3px_rgba(0,87,255,0.12)]"
-          : filterChipInactiveClass
+          : filterChipInactiveClass,
       )}
     >
-      <PlatformIcon platform={platform} size="xs" variant="logo" className="size-5 shrink-0" />
+      <PlatformIcon
+        platform={platform}
+        size="xs"
+        variant="logo"
+        className="size-5 shrink-0"
+      />
       <span>{label}</span>
       {active ? (
         <XIcon className="size-3 shrink-0 opacity-70" aria-hidden />
       ) : (
-        <PlusIcon className="size-3 shrink-0 text-[#0057FF] opacity-50" aria-hidden />
+        <PlusIcon
+          className="size-3 shrink-0 text-[#0057FF] opacity-50"
+          aria-hidden
+        />
       )}
     </button>
   );
@@ -250,7 +263,7 @@ export function RatePill({
         "discovery-filter-rate-pill inline-flex h-7 shrink-0 items-center rounded-[10px] border px-3 text-[11px] font-semibold transition-all duration-[140ms]",
         active
           ? "border-[#0057FF] bg-[#0057FF] text-white"
-          : filterChipInactiveClass
+          : filterChipInactiveClass,
       )}
     >
       {label}
@@ -273,7 +286,7 @@ export function SegmentedControl<T extends string>({
     <div
       className={cn(
         "flex overflow-hidden rounded-[10px] border border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)]",
-        className
+        className,
       )}
       role="group"
     >
@@ -289,7 +302,7 @@ export function SegmentedControl<T extends string>({
               "flex-1 border-r border-[rgba(0,87,255,0.12)] dark:border-[rgba(0,87,255,0.2)] px-2 py-[7px] text-center text-[11px] font-medium transition-colors last:border-r-0",
               selected
                 ? "bg-[rgba(0,87,255,0.1)] font-semibold text-[#0057FF] dark:text-blue-300"
-                : "text-[#94a3b8] dark:text-muted-foreground hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10 hover:text-[#475569] dark:hover:text-foreground"
+                : "text-[#94a3b8] dark:text-muted-foreground hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10 hover:text-[#475569] dark:hover:text-foreground",
             )}
           >
             {option.label}
@@ -367,7 +380,7 @@ function FieldGroup({
     <div
       className={cn(
         "discovery-filter-field-group border-t border-[rgba(0,87,255,0.1)] pt-5 first:border-t-0 first:pt-0",
-        className
+        className,
       )}
     >
       <div className="mb-[7px] flex items-center justify-between gap-2">
@@ -379,11 +392,19 @@ function FieldGroup({
   );
 }
 
-function toggleInList(list: string[], value: string, normalize?: (value: string) => string) {
+function toggleInList(
+  list: string[],
+  value: string,
+  normalize?: (value: string) => string,
+) {
   const key = normalize ? normalize(value) : value;
-  const has = list.some((entry) => (normalize ? normalize(entry) : entry) === key);
+  const has = list.some(
+    (entry) => (normalize ? normalize(entry) : entry) === key,
+  );
   if (has) {
-    return list.filter((entry) => (normalize ? normalize(entry) : entry) !== key);
+    return list.filter(
+      (entry) => (normalize ? normalize(entry) : entry) !== key,
+    );
   }
   return [...list, key];
 }
@@ -442,9 +463,14 @@ function CountryPillGrid({
           {selected.map((code) => (
             <FilterChip
               key={code}
-              label={DISCOVERY_FILTER_COUNTRIES.find((entry) => entry.code === code)?.label ?? code}
+              label={
+                DISCOVERY_FILTER_COUNTRIES.find((entry) => entry.code === code)
+                  ?.label ?? code
+              }
               active
-              onToggle={() => onChange(selected.filter((value) => value !== code))}
+              onToggle={() =>
+                onChange(selected.filter((value) => value !== code))
+              }
             />
           ))}
         </div>
@@ -524,10 +550,13 @@ function LanguagePillGrid({
             <FilterChip
               key={code}
               label={
-                DISCOVERY_FILTER_LANGUAGES.find((entry) => entry.code === code)?.label ?? code
+                DISCOVERY_FILTER_LANGUAGES.find((entry) => entry.code === code)
+                  ?.label ?? code
               }
               active
-              onToggle={() => onChange(selected.filter((value) => value !== code))}
+              onToggle={() =>
+                onChange(selected.filter((value) => value !== code))
+              }
             />
           ))}
         </div>
@@ -541,7 +570,11 @@ function LanguagePillGrid({
           <FilterChip
             label={langLabel}
             active={selected.includes(code)}
-            onToggle={() => onChange(toggleInList(selected, code, (value) => value.toLowerCase()))}
+            onToggle={() =>
+              onChange(
+                toggleInList(selected, code, (value) => value.toLowerCase()),
+              )
+            }
           />
         )}
       />
@@ -556,7 +589,11 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
   function addDraftTag() {
     const value = draftTag.trim().replace(/^#+/, "");
     if (!value) return;
-    if (filters.contentTags.some((tag) => tag.toLowerCase() === value.toLowerCase())) {
+    if (
+      filters.contentTags.some(
+        (tag) => tag.toLowerCase() === value.toLowerCase(),
+      )
+    ) {
       setDraftTag("");
       return;
     }
@@ -572,18 +609,20 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
           type="button"
           role="switch"
           aria-checked={filters.advancedSearch}
-          onClick={() => onChange({ ...filters, advancedSearch: !filters.advancedSearch })}
+          onClick={() =>
+            onChange({ ...filters, advancedSearch: !filters.advancedSearch })
+          }
           className={cn(
             "relative inline-flex h-5 w-9 shrink-0 rounded-full border transition-colors",
             filters.advancedSearch
               ? "border-[#0057FF] bg-[#0057FF]"
-              : "border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)] bg-[#f1f5f9] dark:bg-muted"
+              : "border-[rgba(0,87,255,0.14)] dark:border-[rgba(0,87,255,0.24)] bg-[#f1f5f9] dark:bg-muted",
           )}
         >
           <span
             className={cn(
               "absolute top-0.5 size-4 rounded-full bg-white shadow transition-transform",
-              filters.advancedSearch ? "translate-x-4" : "translate-x-0.5"
+              filters.advancedSearch ? "translate-x-4" : "translate-x-0.5",
             )}
           />
         </button>
@@ -592,7 +631,9 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
       <FieldGroup label="Keyword / hashtag" className="mt-3">
         <FilterInput
           value={filters.contentKeyword}
-          onChange={(e) => onChange({ ...filters, contentKeyword: e.target.value })}
+          onChange={(e) =>
+            onChange({ ...filters, contentKeyword: e.target.value })
+          }
           placeholder="e.g. travel, #beauty"
         />
         <div className="mt-2">
@@ -601,19 +642,23 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
             previewCount={3}
             getKey={(tag) => tag}
             isHighlighted={(tag) =>
-              filters.contentTags.some((selected) => selected.toLowerCase() === tag.toLowerCase())
+              filters.contentTags.some(
+                (selected) => selected.toLowerCase() === tag.toLowerCase(),
+              )
             }
             renderChip={(tag) => (
               <FilterChip
                 label={tag.startsWith("#") ? tag : `#${tag}`}
                 active={filters.contentTags.some(
-                  (selected) => selected.toLowerCase() === tag.toLowerCase()
+                  (selected) => selected.toLowerCase() === tag.toLowerCase(),
                 )}
                 onToggle={() =>
                   onChange({
                     ...filters,
-                    contentTags: toggleInList(filters.contentTags, tag, (value) =>
-                      value.toLowerCase()
+                    contentTags: toggleInList(
+                      filters.contentTags,
+                      tag,
+                      (value) => value.toLowerCase(),
                     ),
                   })
                 }
@@ -658,14 +703,15 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
       >
         <LanguagePillGrid
           selected={filters.contentLanguages}
-          onChange={(contentLanguages) => onChange({ ...filters, contentLanguages })}
+          onChange={(contentLanguages) =>
+            onChange({ ...filters, contentLanguages })
+          }
           draft={draftContentLanguage}
           onDraftChange={setDraftContentLanguage}
           placeholder="ISO code e.g. en"
           label="Content language code"
         />
       </FieldGroup>
-
     </>
   );
 }
@@ -675,7 +721,9 @@ export function LastPostField({ filters, onChange }: FieldProps) {
     <FieldGroup label="Last post within" className="mt-0">
       <FilterSelect
         value={filters.lastPostWithin}
-        onChange={(e) => onChange({ ...filters, lastPostWithin: e.target.value })}
+        onChange={(e) =>
+          onChange({ ...filters, lastPostWithin: e.target.value })
+        }
         aria-label="Last post within"
       >
         {LAST_POST_WITHIN_OPTIONS.map((option) => (
@@ -684,7 +732,9 @@ export function LastPostField({ filters, onChange }: FieldProps) {
           </option>
         ))}
       </FilterSelect>
-      <FieldHint>Filters creators with synced recent publication dates when available.</FieldHint>
+      <FieldHint>
+        Filters creators with synced recent publication dates when available.
+      </FieldHint>
     </FieldGroup>
   );
 }
@@ -694,7 +744,9 @@ export function BrandSafetyField({ filters, onChange }: FieldProps) {
     <FieldGroup label="Min. brand safety score" className="mt-0">
       <FilterInput
         value={filters.minBrandSafety}
-        onChange={(e) => onChange({ ...filters, minBrandSafety: e.target.value })}
+        onChange={(e) =>
+          onChange({ ...filters, minBrandSafety: e.target.value })
+        }
         type="number"
         placeholder="60"
       />
@@ -709,8 +761,12 @@ export function CommercialPricingField({ filters, onChange }: FieldProps) {
         <RangeRow
           min={filters.minEstimatedCost}
           max={filters.maxEstimatedCost}
-          onMinChange={(value) => onChange({ ...filters, minEstimatedCost: value })}
-          onMaxChange={(value) => onChange({ ...filters, maxEstimatedCost: value })}
+          onMinChange={(value) =>
+            onChange({ ...filters, minEstimatedCost: value })
+          }
+          onMaxChange={(value) =>
+            onChange({ ...filters, maxEstimatedCost: value })
+          }
           type="number"
         />
       </FieldGroup>
@@ -764,20 +820,26 @@ export function PlatformField({ filters, onChange }: FieldProps) {
 
 export function FollowerRangeField({ filters, onChange }: FieldProps) {
   const activePreset = FOLLOWER_PRESETS.find(
-    (p) => p.min === filters.minFollowers && p.max === filters.maxFollowers
+    (p) => p.min === filters.minFollowers && p.max === filters.maxFollowers,
   );
   function applyPreset(preset: (typeof FOLLOWER_PRESETS)[number]) {
     if (activePreset?.id === preset.id) {
       onChange({ ...filters, minFollowers: "", maxFollowers: "" });
     } else {
-      onChange({ ...filters, minFollowers: preset.min, maxFollowers: preset.max });
+      onChange({
+        ...filters,
+        minFollowers: preset.min,
+        maxFollowers: preset.max,
+      });
     }
   }
   return (
     <FieldGroup
       label="Follower range"
       showClear={Boolean(filters.minFollowers || filters.maxFollowers)}
-      onClear={() => onChange({ ...filters, minFollowers: "", maxFollowers: "" })}
+      onClear={() =>
+        onChange({ ...filters, minFollowers: "", maxFollowers: "" })
+      }
     >
       <div className="mb-2 flex flex-wrap gap-1.5">
         {FOLLOWER_PRESETS.map((preset) => (
@@ -822,7 +884,9 @@ export function EngagementField({ filters, onChange }: FieldProps) {
         </div>
         <FilterInput
           value={filters.minEngagement}
-          onChange={(e) => onChange({ ...filters, minEngagement: e.target.value })}
+          onChange={(e) =>
+            onChange({ ...filters, minEngagement: e.target.value })
+          }
           type="number"
           placeholder="Custom %"
         />
@@ -869,7 +933,11 @@ export function LocationField({ filters, onChange }: FieldProps) {
         />
       </FieldGroup>
       <FieldGroup label="Verification">
-        <FilterSelect disabled aria-label="Verification (coming soon)" className="cursor-not-allowed opacity-60">
+        <FilterSelect
+          disabled
+          aria-label="Verification (coming soon)"
+          className="cursor-not-allowed opacity-60"
+        >
           <option>Any</option>
           <option>Verified</option>
           <option>Unverified</option>
@@ -895,7 +963,9 @@ export function CategoryField({ filters, onChange }: FieldProps) {
 
   const customCategories = filters.categories.filter(
     (category) =>
-      !QUICK_CATEGORIES.some((quick) => quick.toLowerCase() === category.toLowerCase())
+      !QUICK_CATEGORIES.some(
+        (quick) => quick.toLowerCase() === category.toLowerCase(),
+      ),
   );
 
   return (
@@ -937,7 +1007,9 @@ export function CategoryField({ filters, onChange }: FieldProps) {
                   onClick={() =>
                     onChange({
                       ...filters,
-                      categories: filters.categories.filter((value) => value !== category),
+                      categories: filters.categories.filter(
+                        (value) => value !== category,
+                      ),
                     })
                   }
                   className="flex size-3.5 items-center justify-center rounded-full bg-[rgba(0,87,255,0.12)] text-[10px] text-[#0057FF] transition-colors hover:bg-[rgba(0,87,255,0.22)]"
@@ -955,19 +1027,22 @@ export function CategoryField({ filters, onChange }: FieldProps) {
           getKey={(category) => category}
           isHighlighted={(category) =>
             filters.categories.some(
-              (selected) => selected.toLowerCase() === category.toLowerCase()
+              (selected) => selected.toLowerCase() === category.toLowerCase(),
             )
           }
           renderChip={(category) => (
             <FilterChip
               label={category}
               active={filters.categories.some(
-                (selected) => selected.toLowerCase() === category.toLowerCase()
+                (selected) => selected.toLowerCase() === category.toLowerCase(),
               )}
               onToggle={() =>
                 onChange({
                   ...filters,
-                  categories: toggleCategoryInList(filters.categories, category),
+                  categories: toggleCategoryInList(
+                    filters.categories,
+                    category,
+                  ),
                 })
               }
             />
@@ -1003,13 +1078,16 @@ export function AudienceField({ filters, onChange }: FieldProps) {
     if (!value) return;
     if (
       filters.audienceInterestTags.some(
-        (tag) => tag.toLowerCase() === value.toLowerCase()
+        (tag) => tag.toLowerCase() === value.toLowerCase(),
       )
     ) {
       setDraftInterest("");
       return;
     }
-    onChange({ ...filters, audienceInterestTags: [...filters.audienceInterestTags, value] });
+    onChange({
+      ...filters,
+      audienceInterestTags: [...filters.audienceInterestTags, value],
+    });
     setDraftInterest("");
   }
 
@@ -1018,7 +1096,9 @@ export function AudienceField({ filters, onChange }: FieldProps) {
       <FieldGroup label="Audience country" className="mt-0">
         <CountryPillGrid
           selected={filters.audienceCountries}
-          onChange={(audienceCountries) => onChange({ ...filters, audienceCountries })}
+          onChange={(audienceCountries) =>
+            onChange({ ...filters, audienceCountries })
+          }
           draft={draftAudienceCountry}
           onDraftChange={setDraftAudienceCountry}
           placeholder="ISO code e.g. AE"
@@ -1037,7 +1117,9 @@ export function AudienceField({ filters, onChange }: FieldProps) {
             </option>
           ))}
         </FilterSelect>
-        <FieldHint>Applied when audience demographic data is available on the creator.</FieldHint>
+        <FieldHint>
+          Applied when audience demographic data is available on the creator.
+        </FieldHint>
       </FieldGroup>
 
       <FieldGroup label="Age range">
@@ -1068,7 +1150,9 @@ export function AudienceField({ filters, onChange }: FieldProps) {
             ))}
           </FilterSelect>
         </div>
-        <FieldHint>Requires enriched audience age distribution (future backend filter).</FieldHint>
+        <FieldHint>
+          Requires enriched audience age distribution (future backend filter).
+        </FieldHint>
       </FieldGroup>
 
       <FieldGroup label="Audience interests">
@@ -1106,7 +1190,7 @@ export function AudienceField({ filters, onChange }: FieldProps) {
                   onChange({
                     ...filters,
                     audienceInterestTags: filters.audienceInterestTags.filter(
-                      (value) => value !== interest
+                      (value) => value !== interest,
                     ),
                   })
                 }
@@ -1120,14 +1204,14 @@ export function AudienceField({ filters, onChange }: FieldProps) {
           getKey={(interest) => interest}
           isHighlighted={(interest) =>
             filters.audienceInterestTags.some(
-              (selected) => selected.toLowerCase() === interest.toLowerCase()
+              (selected) => selected.toLowerCase() === interest.toLowerCase(),
             )
           }
           renderChip={(interest) => (
             <FilterChip
               label={interest}
               active={filters.audienceInterestTags.some(
-                (selected) => selected.toLowerCase() === interest.toLowerCase()
+                (selected) => selected.toLowerCase() === interest.toLowerCase(),
               )}
               onToggle={() =>
                 onChange({
@@ -1135,7 +1219,7 @@ export function AudienceField({ filters, onChange }: FieldProps) {
                   audienceInterestTags: toggleInList(
                     filters.audienceInterestTags,
                     interest,
-                    (value) => value.toLowerCase()
+                    (value) => value.toLowerCase(),
                   ),
                 })
               }
@@ -1169,7 +1253,8 @@ export function AiField({ filters, onChange }: FieldProps) {
               onToggle={() =>
                 onChange({
                   ...filters,
-                  minThinkwayScore: filters.minThinkwayScore === value ? "" : value,
+                  minThinkwayScore:
+                    filters.minThinkwayScore === value ? "" : value,
                 })
               }
             />

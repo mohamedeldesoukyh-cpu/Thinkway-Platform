@@ -33,6 +33,8 @@ import { getDiscoveryControlSettings } from "@/lib/discovery/control-center/disc
 import { shouldAutoEnrichForTrigger } from "@/lib/discovery/control-center/discovery-control-policy";
 import { resolveCreatorsByProfileUrls } from "@/lib/discovery/add-creator-by-profile-url";
 import { MAX_SHORTLIST_PASTE_CREATORS } from "@/lib/discovery/add-creator-constants";
+import { findDuplicatePlatformAccounts } from "@/lib/social/duplicate-check";
+import { parseProfileInputList } from "@/lib/social/parse-profile-url";
 import { promoteDiscoveredProfileToInfluencer } from "./promote";
 import { ensureDiscoveredProfileBrowsable, ensureDiscoveryCreatorBrowsable } from "@/lib/creators/discovery-browse-eligibility";
 import { canMoveItemToCampaign } from "./item-transitions";
@@ -1158,6 +1160,67 @@ export async function addCreatorsToShortlistByProfileUrls(input: {
     ok: true,
     message: describeShortlistPasteAddOutcome(outcome),
     ...outcome,
+  };
+}
+
+export type ShortlistPasteDiscoveryPreview = {
+  detected: number;
+  alreadyInDiscovery: number;
+  alreadyOnShortlist: number;
+  willBeCreated: number;
+};
+
+/** Read-only classification for paste-link copy before the user commits. */
+export async function previewShortlistProfileUrls(input: {
+  shortlistId: string;
+  raw: string;
+}): Promise<ShortlistPasteDiscoveryPreview> {
+  const parsed = parseProfileInputList(input.raw).parsed.slice(
+    0,
+    MAX_SHORTLIST_PASTE_CREATORS
+  );
+  const empty = {
+    detected: parsed.length,
+    alreadyInDiscovery: 0,
+    alreadyOnShortlist: 0,
+    willBeCreated: parsed.length,
+  };
+  if (parsed.length === 0) return empty;
+
+  const actor = await getActor();
+  if (!actor.ok) return empty;
+
+  const influencerIds = new Set<string>();
+  let existingProfileCount = 0;
+  for (const profile of parsed) {
+    const matches = await findDuplicatePlatformAccounts(actor.supabase, {
+      platform: profile.platform,
+      normalized_username: profile.normalized_username,
+      normalized_profile_url: profile.normalized_profile_url,
+    });
+    if (matches[0]?.influencer_id) {
+      existingProfileCount += 1;
+      influencerIds.add(matches[0].influencer_id);
+    }
+  }
+
+  let alreadyOnShortlist = 0;
+  if (influencerIds.size > 0) {
+    const { data } = await actor.supabase
+      .from("discovery_shortlist_items")
+      .select("influencer_id")
+      .eq("shortlist_id", input.shortlistId)
+      .in("influencer_id", [...influencerIds]);
+    alreadyOnShortlist = new Set(
+      (data ?? []).map((row) => row.influencer_id).filter(Boolean)
+    ).size;
+  }
+
+  return {
+    detected: parsed.length,
+    alreadyInDiscovery: existingProfileCount,
+    alreadyOnShortlist,
+    willBeCreated: Math.max(0, parsed.length - existingProfileCount),
   };
 }
 

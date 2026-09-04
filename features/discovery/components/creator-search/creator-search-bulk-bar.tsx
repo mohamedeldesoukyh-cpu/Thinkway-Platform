@@ -105,6 +105,7 @@ export function CreatorSearchBulkBar({
     {
       id: "quotation",
       label: "Generate quotation",
+      description: "Create a quotation from the selected creators.",
       icon: FileTextIcon,
       variant: "outline",
       disabled: busy,
@@ -113,6 +114,7 @@ export function CreatorSearchBulkBar({
     {
       id: "ai-match",
       label: "AI Match",
+      description: "Compare the selected creators with the active brief.",
       icon: SparklesIcon,
       variant: "outline",
       onClick: onAiMatch,

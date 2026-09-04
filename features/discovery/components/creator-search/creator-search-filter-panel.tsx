@@ -58,7 +58,9 @@ export function CreatorSearchFilterPanel({
   onClose,
   loading,
 }: Props) {
-  const [draftFilters, setDraftFilters] = useState(() => cloneCreatorSearchFilters(filters));
+  const [draftFilters, setDraftFilters] = useState(() =>
+    cloneCreatorSearchFilters(filters),
+  );
 
   useEffect(() => {
     if (open) {
@@ -76,7 +78,7 @@ export function CreatorSearchFilterPanel({
         label: chip.label,
         onRemove: () => setDraftFilters((prev) => ({ ...prev, ...chip.clear })),
       })),
-    [draftFilters]
+    [draftFilters],
   );
 
   function clearSection(section: CreatorSearchFilterSectionId) {
@@ -109,14 +111,9 @@ export function CreatorSearchFilterPanel({
         <DiscoveryFilterDrawerFooter
           onClear={handleClearEverything}
           onApply={handleApply}
-          applyLabel={
-            loading
-              ? "Searching…"
-              : hasDraftChanges
-                ? "Apply filters"
-                : "Show results"
-          }
+          applyLabel={loading ? "Searching…" : "Show results"}
           clearLabel="Clear everything"
+          activeCount={activeSummaryChips.length}
           loading={loading}
           disabled={!onClose}
         />
@@ -186,7 +183,10 @@ export function CreatorSearchFilterPanel({
         onClearSection={() => clearSection("advanced")}
       >
         <LastPostField filters={draftFilters} onChange={setDraftFilters} />
-        <CommercialPricingField filters={draftFilters} onChange={setDraftFilters} />
+        <CommercialPricingField
+          filters={draftFilters}
+          onChange={setDraftFilters}
+        />
       </DiscoveryFilterDrawerSection>
     </DiscoveryFilterDrawer>
   );
