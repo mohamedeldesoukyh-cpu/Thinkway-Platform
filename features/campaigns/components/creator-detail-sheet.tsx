@@ -736,7 +736,6 @@ function SimilarCreatorsMaximizeDialog({
               No similar creators found.
             </p>
           ) : (
-          ) : (
             <div className="space-y-5">
               {groupSimilarByBand(similar).map((group) => (
                 <div key={group.key} className="space-y-2">

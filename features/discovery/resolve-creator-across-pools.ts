@@ -15,7 +15,8 @@ export function creatorMatchesHandle(
   const needle = normalizeHandle(handleOrId);
   if (!needle) return false;
   if (creator.unified_id.toLowerCase() === needle) return true;
-  if (creator.profile_id?.toLowerCase() === needle) return true;
+  if (creator.discovered_profile_id?.toLowerCase() === needle) return true;
+  if (creator.influencer_id?.toLowerCase() === needle) return true;
   for (const platform of creator.platforms) {
     const h = platform.handle?.replace(/^@+/, "").toLowerCase();
     if (h && h === needle) return true;

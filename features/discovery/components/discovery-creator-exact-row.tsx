@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckIcon, XIcon } from "lucide-react";
-import { memo, type MouseEvent, type ReactNode } from "react";
+import { memo, type ReactNode } from "react";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { CountryFlagsStack } from "@/components/creator/country-flags-stack";
@@ -86,7 +86,7 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
     showCampaignRelevance,
   });
 
-  const stop = (event: MouseEvent) => {
+  const stopBubble = (event: { stopPropagation: () => void }) => {
     event.stopPropagation();
   };
 
@@ -102,7 +102,7 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
               addedToShortlist && "is-added"
             )}
             onClick={(event) => {
-              stop(event);
+              stopBubble(event);
               onToggleShortlist();
             }}
           >
@@ -116,7 +116,7 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
             className="discovery-search-exact-reject"
             aria-label={`Delete ${vm.displayName}`}
             onClick={(event) => {
-              stop(event);
+              stopBubble(event);
               onReject();
             }}
           >
@@ -157,7 +157,7 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
     >
       <div className="discovery-search-exact-photo-cell">
         {selectable ? (
-          <span className="discovery-search-exact-select" onClick={stop}>
+          <span className="discovery-search-exact-select" onClick={stopBubble}>
             <Checkbox
               checked={selected}
               onCheckedChange={onToggleSelect}
@@ -182,7 +182,7 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
               rel="noopener noreferrer"
               aria-label={`Open ${vm.displayName} profile`}
               className="block rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0057FF]/40"
-              onClick={stop}
+              onClick={stopBubble}
             >
               <CreatorAvatarImage
                 avatarUrl={vm.avatarUrl}
@@ -222,13 +222,13 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
             className="discovery-search-exact-name nm max-w-full min-w-0 cursor-pointer truncate border-0 bg-transparent p-0 text-left font-[inherit]"
             title={vm.displayName}
             onClick={(event) => {
-              stop(event);
+              stopBubble(event);
               onOpenCreator();
             }}
             onKeyDown={(event) => {
               if (event.key === "Enter") {
                 event.preventDefault();
-                stop(event);
+                stopBubble(event);
                 onOpenCreator();
               }
             }}
@@ -241,7 +241,7 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
             </div>
           ) : null}
           {infoBadge ? (
-            <div className="discovery-search-exact-info-badges" onClick={stop}>
+            <div className="discovery-search-exact-info-badges" onClick={stopBubble}>
               {infoBadge}
             </div>
           ) : null}
@@ -254,7 +254,7 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
       </div>
 
       {metaColumns ? (
-        <div className="discovery-search-exact-tier-cell" onClick={stop}>
+        <div className="discovery-search-exact-tier-cell" onClick={stopBubble}>
           {metaColumns.tier}
         </div>
       ) : null}
@@ -279,21 +279,21 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
 
       {metaColumns ? (
         <>
-          <div className="discovery-search-exact-status-cell" onClick={stop}>
+          <div className="discovery-search-exact-status-cell" onClick={stopBubble}>
             {metaColumns.status}
           </div>
-          <div className="discovery-search-exact-quoted-cell" onClick={stop}>
+          <div className="discovery-search-exact-quoted-cell" onClick={stopBubble}>
             {metaColumns.quoted}
           </div>
         </>
       ) : meta ? (
-        <div className="discovery-search-exact-meta-cell" onClick={stop}>
+        <div className="discovery-search-exact-meta-cell" onClick={stopBubble}>
           {meta}
         </div>
       ) : null}
 
       {searchActions ? (
-        <div className="discovery-search-exact-actions" onClick={stop}>
+        <div className="discovery-search-exact-actions" onClick={stopBubble}>
           {searchActions}
         </div>
       ) : null}

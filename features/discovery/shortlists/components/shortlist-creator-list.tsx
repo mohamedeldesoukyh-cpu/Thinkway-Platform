@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type MouseEvent } from "react";
+import { useMemo, useState } from "react";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { CountryFlagsStack } from "@/components/creator/country-flags-stack";
@@ -128,7 +128,8 @@ function ShortlistCreatorGridRow({
   onOpenCreator?: (creator: UnifiedCreatorResult) => void;
 }) {
   const creator = item.creator;
-  const stop = (event: MouseEvent) => event.stopPropagation();
+  const stopBubble = (event: { stopPropagation: () => void }) =>
+    event.stopPropagation();
 
   if (!creator) {
     return (
@@ -187,7 +188,7 @@ function ShortlistCreatorGridRow({
   const enriching = isEnrichmentInProgress(enrichmentStatus);
   const vm = buildDiscoveryCreatorViewModel(creator);
   const tier = resolveCreatorTierFromUnified(creator);
-  const open = () => onOpenCreator?.(creator);
+  const openCreatorDetail = () => onOpenCreator?.(creator);
 
   return (
     <DiscoverySuiteRow
@@ -201,7 +202,7 @@ function ShortlistCreatorGridRow({
             className="tw-ck"
             checked={selected}
             onChange={onToggleSelect}
-            onClick={stop}
+            onClick={stopBubble}
             aria-label={`${selected ? "Deselect" : "Select"} ${vm.displayName}`}
           />
         ) : null}
@@ -238,14 +239,14 @@ function ShortlistCreatorGridRow({
               className="nm max-w-full min-w-0 cursor-pointer truncate border-0 bg-transparent p-0 text-left font-[inherit]"
               title={vm.displayName}
               onClick={(event) => {
-                stop(event);
-                open();
+                stopBubble(event);
+                openCreatorDetail();
               }}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
                   event.preventDefault();
-                  stop(event);
-                  open();
+                  stopBubble(event);
+                  openCreatorDetail();
                 }
               }}
             >
@@ -254,7 +255,7 @@ function ShortlistCreatorGridRow({
             {vm.handleLabel ? <span className="hd">{vm.handleLabel}</span> : null}
             {vm.countryLabel !== "—" ? <span className="lo">{vm.countryLabel}</span> : null}
             {isShortlistCreatorQuoted(item.quotation_refs) ? (
-              <span className="mt-1 block" onClick={stop}>
+              <span className="mt-1 block" onClick={stopBubble}>
                 <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
               </span>
             ) : null}
