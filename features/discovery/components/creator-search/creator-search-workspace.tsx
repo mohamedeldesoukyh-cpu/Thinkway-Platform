@@ -2147,6 +2147,7 @@ export function CreatorSearchWorkspace({
 
       <CreatorSearchBulkBar
         selectedCount={selectedCreators.length}
+        selectedCreators={selectedCreators}
         onClearSelection={clearCreatorSelection}
         onAddToList={handleBulkAddToList}
         onCreateList={() => setCreateListOpen(true)}
@@ -2157,6 +2158,8 @@ export function CreatorSearchWorkspace({
         onRefreshMetrics={handleBulkRefreshMetrics}
         onStopRefresh={handleBulkStopRefresh}
         stopRefreshDisabled={selectedInFlightCreators.length === 0}
+        onSelectAllShown={handleToggleSelectAll}
+        selectableCount={displayCreators.length}
         onAiMatch={() => {
           if (selectedCreators.length === 0) {
             toast.info("Select creators, then run AI Match from AI Analyst");

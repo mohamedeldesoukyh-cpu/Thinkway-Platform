@@ -171,7 +171,7 @@ export function AddMissingCreatorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={DISCOVERY_DIALOG_CONTENT_CLASS}>
+      <DialogContent className={cn("discovery-suite", DISCOVERY_DIALOG_CONTENT_CLASS)}>
         <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
           <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
             <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
@@ -231,6 +231,9 @@ export function AddMissingCreatorDialog({
         </div>
 
         <DialogFooter className={DISCOVERY_DIALOG_FOOTER_CLASS}>
+          <span className="tw-cs mr-auto max-w-[18rem] text-left text-[11px] leading-snug text-muted-foreground">
+            New creators enter Discovery unenriched — metrics follow on the next sync.
+          </span>
           <Button
             type="button"
             variant="outline"

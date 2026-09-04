@@ -858,7 +858,7 @@ export function FollowerRangeField({ filters, onChange }: FieldProps) {
         onMaxChange={(value) => onChange({ ...filters, maxFollowers: value })}
         type="number"
       />
-      <FieldHint>Custom follower range</FieldHint>
+      <FieldHint>Or set a custom range below.</FieldHint>
     </FieldGroup>
   );
 }

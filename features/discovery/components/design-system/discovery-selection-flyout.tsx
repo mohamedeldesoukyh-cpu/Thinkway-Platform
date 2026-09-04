@@ -171,7 +171,7 @@ export function DiscoverySelectionFlyout({
                 disabled={busy}
                 className="hidden shrink-0 text-[11px] font-medium text-white/80 hover:text-white sm:inline-flex"
               >
-                Select all
+                Select all {selectableCount} shown
               </button>
             ) : null}
           </div>

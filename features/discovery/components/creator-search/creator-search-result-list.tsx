@@ -20,9 +20,11 @@ import {
   type CreatorSearchRecommendation,
 } from "./creator-search-recommended-section";
 import {
-  CreatorSearchExactHeader,
-  CreatorSearchExactRow,
-} from "./creator-search-exact-row";
+  CreatorSearchSuiteHeader,
+  CreatorSearchSuiteRow,
+  SEARCH_MIN_W,
+  searchColsStyle,
+} from "./creator-search-suite-row";
 import {
   CreatorSearchHybridSectionHeader,
   type CreatorSearchHybridListItem,
@@ -34,7 +36,7 @@ import {
 } from "./creator-search-top-bar";
 import type { CreatorSearchSortState } from "./creator-search-types";
 
-const ROW_ESTIMATE = 148;
+const ROW_ESTIMATE = 92;
 const SECTION_ESTIMATE = 52;
 
 type Props = {
@@ -130,7 +132,7 @@ const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
   );
 
   return (
-    <CreatorSearchExactRow
+    <CreatorSearchSuiteRow
       creator={creator}
       selected={selected}
       addedToShortlist={addedToShortlist}
@@ -265,16 +267,20 @@ export function CreatorSearchResultList({
     : undefined;
 
   return (
-    <div className="discovery-search-exact-root">
-      <div className="discovery-search-exact-header-bar">
-        <CreatorSearchExactHeader
-          total={total}
-          allSelected={allSelected}
-          hasCreators={hasCreators}
-          onToggleSelectAll={onToggleSelectAll}
-          toolbar={headerToolbar}
-          countLabel={exactMatchesCountLabel}
-        />
+    <div className="discovery-suite discovery-search-exact-root flex min-h-0 flex-1 flex-col">
+      <div className="discovery-search-exact-header-bar shrink-0">
+        <div className="mb-2 flex flex-wrap items-center justify-end gap-2 px-1">
+          {headerToolbar}
+        </div>
+        <div style={{ minWidth: SEARCH_MIN_W, ...searchColsStyle }}>
+          <CreatorSearchSuiteHeader
+            total={total}
+            allSelected={allSelected}
+            hasCreators={hasCreators}
+            onToggleSelectAll={onToggleSelectAll}
+            countLabel={exactMatchesCountLabel}
+          />
+        </div>
         {inFlightCount > 0 && onStopAllRefresh ? (
           <div className="flex justify-end pb-2">
             <Button
@@ -290,7 +296,7 @@ export function CreatorSearchResultList({
         ) : null}
       </div>
 
-      <div ref={scrollRef} className="discovery-search-exact-scroll">
+      <div ref={scrollRef} className="discovery-search-exact-scroll min-h-0 flex-1 overflow-auto">
         {error ? (
           <DiscoveryEmptyState
             title="Search failed"
@@ -375,7 +381,18 @@ export function CreatorSearchResultList({
             {searchMode === "hybrid" && hasCreators ? (
               <p className="pb-2 text-[11px] text-muted-foreground">Hybrid match</p>
             ) : null}
-            <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
+            {/*
+              Virtualizer fallback: absolute rows cannot share one CSS Grid parent.
+              Wrapper sets --cols once; every .tw-g row reads the same custom property.
+            */}
+            <div
+              className="relative w-full"
+              style={{
+                height: virtualizer.getTotalSize(),
+                minWidth: SEARCH_MIN_W,
+                ...searchColsStyle,
+              }}
+            >
               {virtualizer.getVirtualItems().map((virtualRow) => {
                 const item = listItems[virtualRow.index];
                 if (!item) return null;
