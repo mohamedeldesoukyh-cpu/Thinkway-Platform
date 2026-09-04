@@ -3,14 +3,15 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-04 — Session 2 grid engine + overlay gates
+
+Shortlist detail paints `DiscoverySuiteGrid` `cols="shortlist"` (pack track + min-width 1360). Page 1 uses `cols="shortlists"`. Combine “cannot be undone”; Contact empty has **Run enrichment** button; platform switch locks `estimated_country`. Overlay class-coverage crawl: `npm run test:discovery-shortlist-overlays`.
+
 ## Shipped 2026-09-04 — Session 1 + client-link foundation reopen
 
 - Shortlists list `f8a76e4c`: pack track, Open-only Act, switch+dot. Acceptance **1100px** scroll; footer `N of M` + Creators `X of Y`.
-- None vs Off: `.tw-live.none` grey; busy = switch opacity (no third sibling). `9b1ad84e` `fix(discovery): distinguish client-link none from off`. CSS re-frozen.
-
-## In progress 2026-09-04 — Session 2 shortlist detail (uncommitted)
-
-Per-platform `.tw-stx` (dead FB `— — —`); name `<button>`; `openCreatorByHandle` across shortlist+search pools; min-width **1360**. Gate: `npm run test:discovery-shortlist-detail`.
+- None vs Off: `.tw-live.none` grey; busy = switch opacity. `9b1ad84e`.
+- Session 2 first pass: `042fc231` stats + modal (flex → grid conversion followed).
 
 ## Shipped 2026-09-04 — Vercel Turbopack `node:fs` on Shortlists
 
