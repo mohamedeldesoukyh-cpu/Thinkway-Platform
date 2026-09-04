@@ -13,12 +13,7 @@ export {
   formatDiscoveryDateRange,
 } from "./helpers";
 
-export {
-  assertClassCoverage,
-  foundationTwClasses,
-  twClassesInHtml,
-  loadDiscoveryFoundationCss,
-  type ClassCoverageResult,
-} from "./class-coverage";
-
 export { bindScroll, createBindScrollGuard } from "./bind-scroll";
+
+// Class-coverage uses node:fs — import from ./class-coverage in Node/scripts/tests only.
+// Do not re-export it here: Turbopack client chunks cannot load node:fs.

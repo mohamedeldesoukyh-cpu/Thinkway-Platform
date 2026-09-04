@@ -10,7 +10,7 @@ import {
   writeListNavContext,
 } from "@/lib/navigation/list-nav-context";
 import { cn } from "@/lib/utils";
-import { D, ini } from "@/lib/discovery/suite";
+import { D, ini } from "@/lib/discovery/suite/helpers";
 
 import {
   approveShortlist,
