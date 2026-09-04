@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useOptimistic, useState, useTransition, type ReactNode } from "react";
-import Link from "next/link";
+import { useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
@@ -48,6 +47,7 @@ import { QuotationLifecycleSheet } from "@/features/quotations/components/quotat
 import { QuotationPreviewToolbarActions } from "@/features/quotations/components/quotation-preview-toolbar-actions";
 import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
 import { QuotationWorkspaceStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
+import { DiscoverySuiteMasthead } from "@/features/discovery/components/design-system";
 import {
   archiveQuotation,
   setQuotationHideCostAndFees,
@@ -58,7 +58,6 @@ import { quotationDetailPath } from "@/features/quotations/constants";
 import type { QuotationTemplateVariant } from "@/features/quotations/export/quotation-template";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
 import type { QuotationClientReviewView } from "@/features/quotations/quotation-client-review";
-import { countQuotationClientSelections, totalsForClientSelection } from "@/features/quotations/quotation-client-review";
 
 type Props = {
   detail: QuotationDetail;
@@ -205,263 +204,209 @@ export function QuotationWorkspaceHeader({
     });
   }
 
-  const metaNodes: ReactNode[] = [];
-  if (detail.shortlist_id) {
-    metaNodes.push(
-      <span key="shortlist">
-        <span className="k">Linked shortlist </span>
-        <Link href={`/discovery/shortlists/${detail.shortlist_id}`}>
-          {detail.shortlist_serial ?? detail.shortlist_id}
-        </Link>
-      </span>
-    );
-  }
-  if (detail.client_name) {
-    metaNodes.push(
-      <span key="client">
-        <span className="k">Legal entity </span>
-        <span className="v">{detail.client_name}</span>
-      </span>
-    );
-  }
-  if (detail.brand_name) {
-    metaNodes.push(
-      <span key="brand">
-        <span className="k">Brand </span>
-        <span className="v">{detail.brand_name}</span>
-      </span>
-    );
-  }
-  if (detail.owner_name) {
-    metaNodes.push(
-      <span key="owner">
-        <span className="k">Owner </span>
-        <span className="v">{detail.owner_name}</span>
-      </span>
-    );
-  }
-  if (clientReview) {
-    const counts = countQuotationClientSelections(detail.items, clientReview.selectionState);
-    const approved = totalsForClientSelection(detail.items, clientReview.selectionState, "accepted");
-    metaNodes.push(
-      <span key="client-review">
-        <span className="k">Client approved </span>
-        <span className="v">
-          {counts.accepted}/{counts.total} · {approved.revenueEgp.toLocaleString("en-US")} EGP revenue ·{" "}
-          {approved.costEgp.toLocaleString("en-US")} EGP cost · {approved.gpPct.toFixed(1)}% GP
-        </span>
-      </span>
-    );
-  }
-
   return (
     <>
-      <div className="wtop">
-        <div className="wtop-left">
-          <div className="mb-1">
-            <EntityPrevNext
-              entity="quotations"
-              currentId={detail.id}
-              hrefForId={(id) => quotationDetailPath(id)}
+      <div className="discovery-suite shrink-0 px-4 pt-3">
+        <DiscoverySuiteMasthead
+          title={detail.name}
+          id={detail.serial_number}
+          badge={
+            <QuotationWorkspaceStatusPill
+              status={detail.status}
+              isExpired={detail.is_expired}
+              className="spill"
             />
-          </div>
-          <div className="qtitle">
-            {detail.serial_number ? (
-              <span className="serial">{detail.serial_number}</span>
-            ) : null}
-            <h1 title={detail.name}>{detail.name}</h1>
-          </div>
-          {metaNodes.length > 0 ? (
-            <div className="qmeta">
-              {metaNodes.map((node, index) => (
-                <span key={index} className="inline-flex items-center gap-3">
-                  {index > 0 ? <span className="mdot" aria-hidden /> : null}
-                  {node}
-                </span>
-              ))}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="wtop-acts">
-          <QuotationWorkspaceStatusPill
-            status={detail.status}
-            isExpired={detail.is_expired}
-            className="spill"
-          />
-          {detail.canManage ? (
-            <QuotationToolbarButton
-              variant="glow"
-              size="sm"
-              disabled={savePending || !hasUnsavedChanges}
-              onClick={onSave}
-              className="btn-glow"
-            >
-              {savePending ? (
-                <Loader2Icon className="size-3.5 animate-spin" />
-              ) : (
-                <SaveIcon className="size-3.5" />
-              )}
-              Save
-            </QuotationToolbarButton>
-          ) : null}
-          {detail.canManage ? (
-            <ClientWorkspaceDisplayToggles
-              showOriginalCurrency={showOriginalCurrency}
-              hideCostAndFees={hideCostAndFees}
-              disabled={pending}
-              onShowOriginalCurrencyChange={(value) => {
-                startTransition(async () => {
-                  setOptimisticShowOriginalCurrency(value);
-                  const result = await setQuotationShowOriginalCurrency({
-                    quotationId: detail.id,
-                    value,
-                  });
-                  if (!result.ok) {
-                    toast.error(result.message);
-                    return;
-                  }
-                  router.refresh();
-                });
-              }}
-              onHideCostAndFeesChange={(value) => {
-                startTransition(async () => {
-                  setOptimisticHideCostAndFees(value);
-                  const result = await setQuotationHideCostAndFees({
-                    quotationId: detail.id,
-                    value,
-                  });
-                  if (!result.ok) {
-                    toast.error(result.message);
-                    return;
-                  }
-                  router.refresh();
-                });
-              }}
-            />
-          ) : null}
-          {detail.canManage ? (
-            <QuotationToolbarButton
-              variant="outline"
-              size="sm"
-              disabled={linkPending}
-              onClick={runLinkButton}
-            >
-              {linkPending ? (
-                <Loader2Icon className="size-3.5 animate-spin" />
-              ) : (
-                <Link2Icon className="size-3.5" />
-              )}
-              {hasLink ? "Show link" : "Generate link"}
-            </QuotationToolbarButton>
-          ) : null}
-          {detail.canManage &&
-          detail.status !== "cancelled" &&
-          detail.status !== "archived" &&
-          !detail.is_archived ? (
-            <QuotationToolbarButton
-              variant="outline"
-              size="sm"
-              onClick={runSendToClient}
-            >
-              <SendIcon className="size-3.5" />
-              Send to Client
-            </QuotationToolbarButton>
-          ) : null}
-          <QuotationPreviewToolbarActions
-            quotationId={detail.id}
-            serialNumber={detail.serial_number}
-            items={detail.items}
-            currency={detail.currency}
-            exportTemplate={exportTemplate}
-            onExportTemplateChange={onExportTemplateChange}
-            selectedItemIds={selectedItemIds}
-            onSelectedItemIdsChange={onSelectedItemIdsChange}
-            exportRevision={detail.updated_at}
-            busy={pending}
-          />
-          <OpenCampaignStudioLauncher
-            seed={campaignSeed}
-            tab="studio"
-            workspace={{ type: "quotation", id: detail.id }}
-            variant="ghost"
-            size="md"
-            showIcon
-            buttonClassName="btn btn-ghost"
-          />
-          <GenerateOutputsLauncher
-            seed={campaignSeed}
-            tab="outputs"
-            workspace={{ type: "quotation", id: detail.id }}
-            triggerClassName="gen-trigger"
-          />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                disabled={pending}
-                aria-label="Quotation actions"
-                className="ibtn disabled:opacity-50"
-              >
-                <MoreHorizontalIcon className="size-4" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuItem
-                onSelect={() => {
-                  setLifecycleTab("links");
-                  setLifecycleOpen(true);
-                }}
-              >
-                Links &amp; actions
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onSelect={() => {
-                  setLifecycleTab("activity");
-                  setLifecycleOpen(true);
-                }}
-              >
-                Activity
-              </DropdownMenuItem>
-              {detail.canManage && detail.status === "draft" ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onSelect={() => runStatus("under_review")}
-                    disabled={pending}
-                  >
-                    <SendIcon className="size-3.5" />
-                    Submit for review
-                  </DropdownMenuItem>
-                </>
+          }
+          subtitle={[
+            detail.shortlist_serial ? `linked to ${detail.shortlist_serial}` : null,
+            detail.brand_name,
+            detail.client_name,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          actions={
+            <div className="flex flex-wrap items-center gap-1.5">
+              <EntityPrevNext
+                entity="quotations"
+                currentId={detail.id}
+                hrefForId={(id) => quotationDetailPath(id)}
+              />
+              {detail.canManage ? (
+                <QuotationToolbarButton
+                  variant="glow"
+                  size="sm"
+                  disabled={savePending || !hasUnsavedChanges}
+                  onClick={onSave}
+                  className="btn-glow"
+                >
+                  {savePending ? (
+                    <Loader2Icon className="size-3.5 animate-spin" />
+                  ) : (
+                    <SaveIcon className="size-3.5" />
+                  )}
+                  Save
+                </QuotationToolbarButton>
+              ) : null}
+              {detail.canManage ? (
+                <ClientWorkspaceDisplayToggles
+                  showOriginalCurrency={showOriginalCurrency}
+                  hideCostAndFees={hideCostAndFees}
+                  disabled={pending}
+                  onShowOriginalCurrencyChange={(value) => {
+                    startTransition(async () => {
+                      setOptimisticShowOriginalCurrency(value);
+                      const result = await setQuotationShowOriginalCurrency({
+                        quotationId: detail.id,
+                        value,
+                      });
+                      if (!result.ok) {
+                        toast.error(result.message);
+                        return;
+                      }
+                      router.refresh();
+                    });
+                  }}
+                  onHideCostAndFeesChange={(value) => {
+                    startTransition(async () => {
+                      setOptimisticHideCostAndFees(value);
+                      const result = await setQuotationHideCostAndFees({
+                        quotationId: detail.id,
+                        value,
+                      });
+                      if (!result.ok) {
+                        toast.error(result.message);
+                        return;
+                      }
+                      router.refresh();
+                    });
+                  }}
+                />
+              ) : null}
+              {detail.canManage ? (
+                <QuotationToolbarButton
+                  variant="outline"
+                  size="sm"
+                  disabled={linkPending}
+                  onClick={runLinkButton}
+                >
+                  {linkPending ? (
+                    <Loader2Icon className="size-3.5 animate-spin" />
+                  ) : (
+                    <Link2Icon className="size-3.5" />
+                  )}
+                  {hasLink ? "Show link" : "Generate link"}
+                </QuotationToolbarButton>
               ) : null}
               {detail.canManage &&
               detail.status !== "cancelled" &&
-              detail.status !== "archived" ? (
-                <DropdownMenuItem
-                  onSelect={() => runStatus("cancelled")}
-                  disabled={pending}
+              detail.status !== "archived" &&
+              !detail.is_archived ? (
+                <QuotationToolbarButton
+                  variant="outline"
+                  size="sm"
+                  onClick={runSendToClient}
                 >
-                  <XCircleIcon className="size-3.5" />
-                  Cancel quotation
-                </DropdownMenuItem>
+                  <SendIcon className="size-3.5" />
+                  Send to Client
+                </QuotationToolbarButton>
               ) : null}
-              {detail.canManage && !detail.is_archived ? (
-                <>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    variant="destructive"
-                    onSelect={runArchive}
+              <QuotationPreviewToolbarActions
+                quotationId={detail.id}
+                serialNumber={detail.serial_number}
+                items={detail.items}
+                currency={detail.currency}
+                exportTemplate={exportTemplate}
+                onExportTemplateChange={onExportTemplateChange}
+                selectedItemIds={selectedItemIds}
+                onSelectedItemIdsChange={onSelectedItemIdsChange}
+                exportRevision={detail.updated_at}
+                busy={pending}
+              />
+              <OpenCampaignStudioLauncher
+                seed={campaignSeed}
+                tab="studio"
+                workspace={{ type: "quotation", id: detail.id }}
+                variant="ghost"
+                size="md"
+                showIcon
+                buttonClassName="btn btn-ghost"
+              />
+              <GenerateOutputsLauncher
+                seed={campaignSeed}
+                tab="outputs"
+                workspace={{ type: "quotation", id: detail.id }}
+                triggerClassName="gen-trigger"
+              />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
                     disabled={pending}
+                    aria-label="Quotation actions"
+                    className="ibtn disabled:opacity-50"
                   >
-                    <ArchiveIcon className="size-3.5" />
-                    Archive
+                    <MoreHorizontalIcon className="size-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setLifecycleTab("links");
+                      setLifecycleOpen(true);
+                    }}
+                  >
+                    Links &amp; actions
                   </DropdownMenuItem>
-                </>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+                  <DropdownMenuItem
+                    onSelect={() => {
+                      setLifecycleTab("activity");
+                      setLifecycleOpen(true);
+                    }}
+                  >
+                    Activity
+                  </DropdownMenuItem>
+                  {detail.canManage && detail.status === "draft" ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={() => runStatus("under_review")}
+                        disabled={pending}
+                      >
+                        <SendIcon className="size-3.5" />
+                        Submit for review
+                      </DropdownMenuItem>
+                    </>
+                  ) : null}
+                  {detail.canManage &&
+                  detail.status !== "cancelled" &&
+                  detail.status !== "archived" ? (
+                    <DropdownMenuItem
+                      onSelect={() => runStatus("cancelled")}
+                      disabled={pending}
+                    >
+                      <XCircleIcon className="size-3.5" />
+                      Cancel quotation
+                    </DropdownMenuItem>
+                  ) : null}
+                  {detail.canManage && !detail.is_archived ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onSelect={runArchive}
+                        disabled={pending}
+                      >
+                        <ArchiveIcon className="size-3.5" />
+                        Archive
+                      </DropdownMenuItem>
+                    </>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          }
+          freezeOnScroll
+        />
       </div>
 
       <QuotationLifecycleSheet

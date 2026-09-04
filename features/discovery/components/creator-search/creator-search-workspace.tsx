@@ -9,8 +9,12 @@ import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 import { CREATOR_IMPORT_COMPLETED_EVENT } from "@/lib/discovery-import/constants";
 
 import { AddMissingCreatorDialog } from "@/features/discovery/components/add-missing-creator-dialog";
-import { DiscoveryFilterSheet } from "@/features/discovery/components/design-system";
+import {
+  DiscoveryFilterSheet,
+  DiscoverySuiteMasthead,
+} from "@/features/discovery/components/design-system";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
@@ -1997,8 +2001,81 @@ export function CreatorSearchWorkspace({
     setStrategySheetOpen(false);
   }, [activeProfile, aiCriteria, applyAiProfileFilters]);
 
+  const searchMastheadMetrics = useMemo(() => {
+    const platformCount = new Set(
+      displayCreators.flatMap((c) => c.platforms.map((p) => p.platform))
+    ).size;
+    const countryCount = new Set(
+      displayCreators
+        .map((c) => c.country_code ?? c.estimated_country)
+        .filter((value): value is string => Boolean(value?.trim()))
+    ).size;
+    const metrics: Array<{ label: string; value: string | number; tone?: "g" | "r" | "y" | "s" }> = [
+      { label: "Creators", value: headerTotal },
+      { label: "Selected", value: selectedCreators.length },
+    ];
+    if (platformCount > 0) metrics.push({ label: "Platforms", value: platformCount });
+    if (countryCount > 0) metrics.push({ label: "Countries", value: countryCount });
+    if (shortlists.length > 0) metrics.push({ label: "Lists", value: shortlists.length });
+    return metrics;
+  }, [displayCreators, headerTotal, selectedCreators.length, shortlists.length]);
+
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="discovery-suite flex h-full min-h-0 flex-col overflow-hidden bg-[var(--tw-bg)]">
+      <div className="shrink-0 px-4 pt-3">
+        <DiscoverySuiteMasthead
+          title="Creator search"
+          subtitle="Browse, filter and shortlist creators across every connected platform"
+          badge={
+            <span className="st">
+              {headerTotal.toLocaleString()} creator{headerTotal === 1 ? "" : "s"}
+            </span>
+          }
+          metrics={searchMastheadMetrics}
+          actions={
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="tw-b sm h-7 rounded-[8px] px-2.5 text-[11.5px] font-semibold"
+                onClick={() => setFiltersDrawerOpen(true)}
+              >
+                Filters
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="tw-b sm h-7 rounded-[8px] px-2.5 text-[11.5px] font-semibold"
+                onClick={() => setAddMissingOpen(true)}
+              >
+                + Add missing creator
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="tw-b sm h-7 rounded-[8px] px-2.5 text-[11.5px] font-semibold"
+                onClick={() => setCreateListOpen(true)}
+              >
+                Create list
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="tw-b sm pri h-7 rounded-[8px] px-2.5 text-[11.5px] font-semibold"
+                disabled={selectedCreators.length === 0}
+                onClick={handleBulkAddToList}
+              >
+                Add to list
+              </Button>
+            </>
+          }
+          freezeOnScroll={false}
+        />
+      </div>
+
       {briefSidebarOpen ? (
         <CampaignBriefSidebar
           open={briefSidebarOpen}

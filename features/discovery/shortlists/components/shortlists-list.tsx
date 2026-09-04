@@ -117,6 +117,12 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
     const clientLinkOnCount = shortlists.filter(
       (row) => row.client_workspace_link?.state === "active"
     ).length;
+    const privateCount = shortlists.filter((row) => row.visibility === "private").length;
+    const startOfDay = new Date();
+    startOfDay.setHours(0, 0, 0, 0);
+    const updatedToday = shortlists.filter(
+      (row) => new Date(row.updated_at).getTime() >= startOfDay.getTime()
+    ).length;
 
     return [
       shortlists.length > 0
@@ -128,8 +134,10 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
         : null,
       creatorCount > 0 ? { label: "Creators", value: creatorCount } : null,
       clientLinkOnCount > 0
-        ? { label: "Client link on", value: clientLinkOnCount }
+        ? { label: "Client link on", value: clientLinkOnCount, tone: "g" as const }
         : null,
+      privateCount > 0 ? { label: "Private", value: privateCount } : null,
+      updatedToday > 0 ? { label: "Updated today", value: updatedToday } : null,
     ].filter((metric): metric is NonNullable<typeof metric> => metric !== null);
   }, [shortlists]);
 
@@ -415,22 +423,25 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                         <span className="tw-miss">not set</span>
                       )}
                     </DiscoverySuiteCell>
-                    <DiscoverySuiteCell>
+                    <DiscoverySuiteCell align="end" className="tw-act">
+                      <Link
+                        href={shortlistDetailPath(row)}
+                        className="tw-b sm inline-flex h-[27px] items-center rounded-[8px] border border-[#E3E8F2] bg-white px-2.5 text-[11.5px] font-semibold text-[var(--tw-ink2)] hover:border-[rgba(0,87,255,.35)] hover:text-[var(--tw-bi)]"
+                      >
+                        Open
+                      </Link>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <button
                             type="button"
                             disabled={isPending}
-                            aria-label="Shortlist actions"
-                            className="inline-flex size-[30px] items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground active:scale-[0.94] disabled:opacity-50"
+                            aria-label="More shortlist actions"
+                            className="tw-x ml-1 inline-flex size-[27px] items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:opacity-50"
                           >
-                            <MoreHorizontalIcon className="size-[18px]" />
+                            <MoreHorizontalIcon className="size-4" />
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem asChild>
-                            <Link href={shortlistDetailPath(row)}>Open</Link>
-                          </DropdownMenuItem>
                           <DropdownMenuItem
                             onSelect={(event) => {
                               event.preventDefault();

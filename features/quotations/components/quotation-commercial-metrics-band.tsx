@@ -5,7 +5,6 @@ import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import type { OriginalCurrencyTotals } from "@/features/quotations/quotation-row-math";
 import { fromEgp } from "@/lib/commercial/fx-aggregation";
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
-import { cn } from "@/lib/utils";
 
 type MetricDef = {
   label: string;
@@ -41,28 +40,23 @@ function originalLabels(
 }
 
 function MetricItem({ label, value, unit, tone, compact, original }: MetricDef) {
+  const toneClass =
+    tone === "green" ? "g" : tone === "red" ? "r" : tone === "amber" ? "y" : compact ? "s" : undefined;
   return (
-    <div className="metric">
-      <div className="l">{label}</div>
-      <div
-        className={cn(
-          "v",
-          compact && "sm",
-          tone === "blue" && "blue",
-          tone === "amber" && "amber",
-          tone === "green" && "green",
-          tone === "red" && "red"
-        )}
-      >
+    <div>
+      <i>{label}</i>
+      <b className={toneClass}>
         {value}
-        {unit ? <span className="u"> {unit}</span> : null}
-      </div>
+        {unit ? ` ${unit}` : ""}
+      </b>
       {original?.length ? (
-        <div className="orig" aria-label={`${label} original currency`}>
+        <span className="orig block text-[10px] text-[var(--tw-mut)]" aria-label={`${label} original currency`}>
           {original.map((line) => (
-            <div key={line}>{line}</div>
+            <span key={line} className="block">
+              {line}
+            </span>
           ))}
-        </div>
+        </span>
       ) : null}
     </div>
   );
@@ -129,9 +123,9 @@ export function QuotationCommercialMetricsBand({
   const gpValuesDisagree = Math.abs(totalGpValueEgp - totalCommercialGpEgp) >= 0.01;
 
   return (
-    <div>
-    <div className="metricsband" aria-label="Quotation commercial metrics">
-      <div className="metric metric--currency">
+    <div className="discovery-suite px-4 pt-1">
+    <div className="tw-ms2" aria-label="Quotation commercial metrics">
+      <div className="metric metric--currency flex flex-col justify-center gap-1 py-[9px]">
         <CommercialCurrencySelect
           label="CCY"
           layout="metric"
@@ -185,7 +179,7 @@ export function QuotationCommercialMetricsBand({
       />
     </div>
     {gpValuesDisagree ? (
-      <p className="px-[var(--gut,32px)] pb-2 text-[10.5px] text-muted-foreground">
+      <p className="px-3.5 pb-2 text-[10.5px] text-[var(--tw-mut)]">
         Agency-fee GP includes {agencyFee.value} {agencyFee.unit} in agency
         fees. The fee is added to what the client pays and is not counted as revenue.
       </p>

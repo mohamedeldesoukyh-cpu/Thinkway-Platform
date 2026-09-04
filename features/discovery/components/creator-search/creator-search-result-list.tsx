@@ -1,7 +1,7 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Loader2Icon, PlusIcon, RotateCwIcon, SearchXIcon } from "lucide-react";
+import { Loader2Icon, RotateCwIcon, SearchXIcon } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -267,19 +267,6 @@ export function CreatorSearchResultList({
   return (
     <div className="discovery-search-exact-root">
       <div className="discovery-search-exact-header-bar">
-        {onOpenAddMissingCreator ? (
-          <div className="discovery-search-add-missing-bar">
-            <Button
-              type="button"
-              size="sm"
-              className="h-8 shrink-0 gap-1.5 rounded-full px-3 text-xs font-semibold"
-              onClick={onOpenAddMissingCreator}
-            >
-              <PlusIcon className="size-3.5" strokeWidth={2.5} />
-              Add missing creator
-            </Button>
-          </div>
-        ) : null}
         <CreatorSearchExactHeader
           total={total}
           allSelected={allSelected}
