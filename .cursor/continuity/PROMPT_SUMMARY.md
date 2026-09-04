@@ -3,13 +3,13 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## In progress 2026-09-04 — Session 4b2 adapt D/E + Overlay F
+## In progress 2026-09-04 — Session 4b2 + page-2 Overlay F migrate
 
-**Overlay D:** Spec amended — CW is shared scratchpad with Creators grid; Save=SSOT; Discard=reset; Close=no-op. Footer dirty copy. Staged masthead/grid marking (violet italic + amber dot) + Draft edits pending → CW. Critical unchanged. Assignments twin untouched.
+Staged = wrn (dot + Draft chip; no violet/italic). CSV is adapter capability list; quotation omits. Page 2 uses `ShortlistDocumentOutputToolbar`; deleted `shortlist-creator-toolbar-actions`.
 
-**Overlay E:** Discovery empty CTA; Manual Platform+Tier + profile/scoring warning.
+## Shipped 2026-09-04 — Session 4b2 adapt D/E + Overlay F
 
-**Overlay F:** Shared `features/discovery/document-output/` + quotation adapter on page 4 (Preview · layout · Export · Client link · Send). Page 2 migrate later. CSV not on quotation API yet.
+Commit `26db1e38`. Spec Overlay D scratchpad model. Staged marking · Manual Platform/Tier · shared document-output + quotation adapter.
 
 ## Shipped 2026-09-04 — Session 4b selbar + calculator
 

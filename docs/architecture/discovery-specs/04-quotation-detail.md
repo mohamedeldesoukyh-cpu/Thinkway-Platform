@@ -236,14 +236,17 @@ The live **Share** menu is three unrelated jobs in one control. Split into four,
 
 **`⬇ Export ▾`** — label by purpose, not extension. `doc` red · `sheet` green · `web` blue.
 
-| Format | Label |
-|---|---|
-| PDF | Send to a client — fixed layout |
-| PowerPoint | Present or edit the deck |
-| Word | Edit the wording before sending |
-| Excel | Work with the numbers |
-| CSV | Feed another system |
-| HTML | Open in a browser, no download |
+| Format | Label | Quotation | Shortlist |
+|---|---|---|---|
+| PDF | Send to a client — fixed layout | yes | yes |
+| PowerPoint | Present or edit the deck | yes | yes |
+| Word | Edit the wording before sending | yes | yes |
+| Excel | Work with the numbers | yes | yes |
+| CSV | Feed another system | **unsupported** (no export API branch) | yes |
+| HTML | Open in a browser, no download | yes | yes |
+
+Formats are a **capability list from the page adapter** into the shared `DocumentOutputToolbar` —
+never a product-type branch inside the shared component. Quotation ships five; shortlist ships six.
 
 > **Export silently uses whichever layout is currently previewed.** 6 × 6 is the same document 36 ways
 > with nothing on screen saying which one you'll get. Head the export menu

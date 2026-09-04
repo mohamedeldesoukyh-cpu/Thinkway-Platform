@@ -5,7 +5,6 @@ import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import type { OriginalCurrencyTotals } from "@/features/quotations/quotation-row-math";
 import { fromEgp } from "@/lib/commercial/fx-aggregation";
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
-import { cn } from "@/lib/utils";
 
 type MetricDef = {
   label: string;
@@ -14,7 +13,7 @@ type MetricDef = {
   tone?: "amber" | "blue" | "green" | "red";
   compact?: boolean;
   original?: string[];
-  /** Uncommitted scratchpad figure — violet italic, visible without hover. */
+  /** Uncommitted scratchpad figure — wrn attention (dot + Draft chip). */
   staged?: boolean;
 };
 
@@ -52,7 +51,7 @@ function MetricItem({ label, value, unit, tone, compact, original, staged }: Met
           <span className="inline-flex items-center gap-1.5">
             <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
             {label}
-            <span className="tw-p p-v" style={{ fontSize: 9, padding: "1px 5px" }}>
+            <span className="tw-p p-y" style={{ fontSize: 9, padding: "1px 5px" }}>
               Draft
             </span>
           </span>
@@ -60,10 +59,7 @@ function MetricItem({ label, value, unit, tone, compact, original, staged }: Met
           label
         )}
       </i>
-      <b
-        className={cn(toneClass, staged && "italic")}
-        style={staged ? { color: "var(--tw-vio)" } : undefined}
-      >
+      <b className={toneClass}>
         {value}
         {unit ? ` ${unit}` : ""}
       </b>

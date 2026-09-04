@@ -29,6 +29,7 @@ import {
 import type { QuotationItemRow } from "@/features/quotations/types";
 
 const QUOTATION_EXPORT_FORMATS: DocumentOutputFormatOption[] = [
+  // Capability list for quotation — CSV omitted (no export API). Shortlist adapter adds it.
   { id: "pdf", label: "PDF", purpose: "Send to a client — fixed layout", kind: "doc" },
   { id: "pptx", label: "PowerPoint", purpose: "Present or edit the deck", kind: "doc" },
   { id: "word", label: "Word", purpose: "Edit the wording before sending", kind: "doc" },

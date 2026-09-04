@@ -1,7 +1,6 @@
 "use client";
 
 import { useMemo, type ReactNode } from "react";
-import { CheckIcon } from "lucide-react";
 
 import {
   DropdownMenu,
@@ -20,16 +19,10 @@ import {
   SHOW_ORIGINAL_CURRENCY_LABEL,
 } from "@/lib/commercial/client-original-currency";
 import { cn } from "@/lib/utils";
-import {
-  SHORTLIST_TEMPLATE_OPTIONS,
-  type ShortlistTemplateVariant,
-} from "@/features/discovery/shortlists/export/shortlist-template";
+import type { ShortlistTemplateVariant } from "@/features/discovery/shortlists/export/shortlist-template";
 import type { ShortlistCreatorItem } from "@/features/discovery/shortlists/types";
 
-import {
-  SHORTLIST_EXPORT_FORMATS,
-  useShortlistDocumentActions,
-} from "./shortlist-creator-toolbar-actions";
+import { ShortlistDocumentOutputToolbar } from "./shortlist-document-output-toolbar";
 import {
   SHORTLIST_TOOLBAR_BUTTON_CLASS,
   SHORTLIST_TOOLBAR_BUTTON_WARN_CLASS,
@@ -80,7 +73,6 @@ export function ShortlistHeaderActions({
   onHideCostAndFeesChange,
   canManageView,
   canChangeCurrency,
-  hasLink,
   canSendToClient,
   canAddCreators,
   busy,
@@ -116,17 +108,6 @@ export function ShortlistHeaderActions({
 }) {
   const plan = useMemo(() => planGenerateFromSource(seed), [seed]);
   const missingLabels = plan.result.missing.missingLabels;
-  const documents = useShortlistDocumentActions({
-    shortlistId,
-    creators,
-    exportTemplate,
-    onExportTemplateChange,
-    selectedItemIds,
-    onSelectedItemIdsChange,
-    exportRevision,
-    busy,
-  });
-  const hasCreators = creators.length > 0;
   const viewCount = `${displayCurrency}${hideCostAndFees ? " · hidden" : ""}`;
 
   return (
@@ -195,100 +176,20 @@ export function ShortlistHeaderActions({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <ShortlistToolbarButton disabled={busy} aria-label="Preview shortlist">
-            Preview
-          </ShortlistToolbarButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className={MENU_CONTENT_CLASS}>
-          <DropdownMenuLabel className={MENU_LABEL_CLASS}>Layout</DropdownMenuLabel>
-          {SHORTLIST_TEMPLATE_OPTIONS.map((option) => (
-            <DropdownMenuItem
-              key={option.id}
-              disabled={!hasCreators || busy}
-              onSelect={(event) => {
-                event.preventDefault();
-                documents.openPreview(option.id);
-              }}
-              className={MENU_ITEM_CLASS}
-            >
-              <span className="min-w-0">
-                <span className="block">{option.label}</span>
-                <span className="block text-[10.5px] font-normal text-[#9ca3af]">
-                  {option.hint}
-                </span>
-              </span>
-              {exportTemplate === option.id ? (
-                <CheckIcon className="size-3.5 shrink-0 text-[#0057ff]" />
-              ) : null}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <ShortlistToolbarButton disabled={busy} aria-label="Export shortlist">
-            Export
-          </ShortlistToolbarButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className={MENU_CONTENT_CLASS}>
-          <DropdownMenuLabel className={MENU_LABEL_CLASS}>
-            Download as —{" "}
-            {(SHORTLIST_TEMPLATE_OPTIONS.find((option) => option.id === exportTemplate)
-              ?.label ?? exportTemplate).toLowerCase()}{" "}
-            layout
-          </DropdownMenuLabel>
-          {SHORTLIST_EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
-            <DropdownMenuItem
-              key={format}
-              disabled={!hasCreators || busy}
-              onSelect={(event) => {
-                event.preventDefault();
-                documents.openExport(format);
-              }}
-              className={cn(MENU_ITEM_CLASS, "justify-start")}
-            >
-              <span className="inline-flex items-center gap-2">
-                <Icon className="size-3.5 text-[#9ca3af]" />
-                {label}
-              </span>
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <ShortlistToolbarButton disabled={busy} aria-label="Share shortlist">
-            Share
-          </ShortlistToolbarButton>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className={MENU_CONTENT_CLASS}>
-          <DropdownMenuLabel className={MENU_LABEL_CLASS}>Client</DropdownMenuLabel>
-          <DropdownMenuItem
-            disabled={busy}
-            onSelect={(event) => {
-              event.preventDefault();
-              onShowLink();
-            }}
-            className={MENU_ITEM_CLASS}
-          >
-            {hasLink ? "Copy client link" : "Generate client link"}
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={!canSendToClient || busy}
-            onSelect={(event) => {
-              event.preventDefault();
-              onSendToClient();
-            }}
-            className={MENU_ITEM_CLASS}
-          >
-            Send to client
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+      <ShortlistDocumentOutputToolbar
+        shortlistId={shortlistId}
+        creators={creators}
+        exportTemplate={exportTemplate}
+        onExportTemplateChange={onExportTemplateChange}
+        selectedItemIds={selectedItemIds}
+        onSelectedItemIdsChange={onSelectedItemIdsChange}
+        exportRevision={exportRevision}
+        busy={busy}
+        onClientLink={onShowLink}
+        onSend={onSendToClient}
+        clientLinkLabel="Client link"
+        sendDisabled={!canSendToClient || busy}
+      />
 
       <OpenCampaignStudioLauncher
         seed={seed}
@@ -322,8 +223,6 @@ export function ShortlistHeaderActions({
       ) : null}
 
       {overflow}
-
-      {documents.dialog}
     </div>
   );
 }

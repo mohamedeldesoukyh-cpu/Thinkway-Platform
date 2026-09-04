@@ -47,7 +47,11 @@ export type DocumentOutputToolbarProps = {
   busy?: boolean;
   linkDisabled?: boolean;
   sendDisabled?: boolean;
-  /** Render prop so quotation / shortlist keep their trigger styles. */
+  /**
+   * Render prop so page adapters keep their trigger styles.
+   * Export formats are supplied by the adapter (`formats`) — this chrome never
+   * branches on product type (CSV etc. are capability lists, not product ifs).
+   */
   renderTrigger: (props: TriggerRenderProps) => React.ReactElement;
   className?: string;
 };

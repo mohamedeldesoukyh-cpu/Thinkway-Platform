@@ -11,16 +11,23 @@ const header = readFileSync(
   resolve("features/discovery/shortlists/components/shortlist-header-actions.tsx"),
   "utf8"
 );
+const adapter = readFileSync(
+  resolve("features/discovery/shortlists/components/shortlist-document-output-toolbar.tsx"),
+  "utf8"
+);
+const shared = readFileSync(
+  resolve("features/discovery/document-output/document-output-toolbar.tsx"),
+  "utf8"
+);
 const bulk = readFileSync(
   resolve("features/discovery/shortlists/components/shortlist-bulk-toolbar.tsx"),
   "utf8"
 );
 
 describe("shortlist header button layer", () => {
-  it("groups View and Share on the title row and keeps one primary", () => {
+  it("groups View on the title row and keeps one primary", () => {
     assert.match(workspace, /ShortlistHeaderActions/);
     assert.match(header, /aria-label="View settings"/);
-    assert.match(header, /aria-label="Share"/);
     assert.match(header, /\+ Add creators/);
     assert.match(header, /Complete brief/);
     assert.match(header, /OpenCampaignStudioLauncher/);
@@ -28,13 +35,16 @@ describe("shortlist header button layer", () => {
     assert.match(header, /tone="toolbar"/);
   });
 
-  it("keeps preview, export, client link, and send behind Share", () => {
-    assert.match(header, /openPreview/);
-    assert.match(header, /openExport/);
-    assert.match(header, /Copy client link/);
-    assert.match(header, /Send to client/);
-    assert.match(header, /SHORTLIST_EXPORT_FORMATS/);
-    assert.match(header, /SHORTLIST_TEMPLATE_OPTIONS/);
+  it("uses shared Overlay F via shortlist adapter (Preview · Export · Client link · Send)", () => {
+    assert.match(header, /ShortlistDocumentOutputToolbar/);
+    assert.match(adapter, /DocumentOutputToolbar/);
+    assert.match(adapter, /SHORTLIST_DOCUMENT_OUTPUT_FORMATS/);
+    assert.match(adapter, /id: "csv"/);
+    assert.match(shared, /formats: DocumentOutputFormatOption/);
+    assert.doesNotMatch(shared, /quotation/i);
+    assert.doesNotMatch(shared, /shortlist/i);
+    assert.match(adapter, /Client link/);
+    assert.match(adapter, /Send to client|onSend/);
   });
 
   it("does not leave CCY or Send to Client as peer controls on the creators row", () => {

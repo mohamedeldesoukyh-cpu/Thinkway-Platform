@@ -296,13 +296,14 @@ function QuotationPackLineRow({
       </DiscoverySuiteCell>
       <DiscoverySuiteCell align="end">
         {primary ? (
-          <span
-            className={cn("inline-flex items-center gap-1.5", linePending && "italic")}
-            style={linePending ? { color: "var(--tw-vio)" } : undefined}
-            title={linePending ? "Uncommitted draft — Save to write SSOT" : undefined}
-          >
+          <span className="inline-flex items-center gap-1.5">
             {linePending ? (
-              <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
+              <>
+                <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
+                <span className="tw-p p-y" style={{ fontSize: 9, padding: "1px 5px" }}>
+                  Draft
+                </span>
+              </>
             ) : null}
             <QuotationDeliverableCostDetails
               deliverable={primary}
@@ -320,12 +321,14 @@ function QuotationPackLineRow({
             />
           </span>
         ) : (
-          <span
-            className={cn("tw-v inline-flex items-center gap-1.5", linePending && "italic")}
-            style={linePending ? { color: "var(--tw-vio)" } : undefined}
-          >
+          <span className="tw-v inline-flex items-center gap-1.5">
             {linePending ? (
-              <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
+              <>
+                <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
+                <span className="tw-p p-y" style={{ fontSize: 9, padding: "1px 5px" }}>
+                  Draft
+                </span>
+              </>
             ) : null}
             {F(clientPrice)} EGP
           </span>
