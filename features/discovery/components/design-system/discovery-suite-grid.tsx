@@ -16,6 +16,8 @@ type DiscoverySuiteGridProps = {
   footer?: ReactNode;
   className?: string;
   scrollerClassName?: string;
+  /** When false, skip outer `.tw-c` (parent already provides the card). */
+  framed?: boolean;
 };
 
 /**
@@ -29,6 +31,7 @@ export function DiscoverySuiteGrid({
   footer,
   className,
   scrollerClassName,
+  framed = true,
 }: DiscoverySuiteGridProps) {
   const track =
     typeof cols === "string" && cols in DISCOVERY_COLS
@@ -42,32 +45,32 @@ export function DiscoverySuiteGrid({
       ? DISCOVERY_GRID_MIN_W[cols as DiscoveryColsKey]
       : undefined);
 
-  return (
-    <div className={cn("tw-c", className)}>
-      <div className={cn("tw-sc", scrollerClassName)}>
-        <div
-          className="tw-g-wrap"
-          style={
-            {
-              "--cols": track,
-              minWidth: floor ? `${floor}px` : undefined,
-            } as CSSProperties
-          }
-          role="grid"
-        >
-          <div className="tw-g tw-hr" role="row">
-            {header}
-          </div>
-          {children}
-          {footer ? (
-            <div className="tw-g tw-ft" role="row">
-              {footer}
-            </div>
-          ) : null}
+  const colStyle = {
+    "--cols": track,
+  } as CSSProperties;
+
+  const body = (
+    <div className={cn("tw-sc", scrollerClassName)}>
+      <div style={{ minWidth: floor ? `${floor}px` : undefined }}>
+        <div className="tw-g tw-hr" style={colStyle} role="row">
+          {header}
         </div>
+        {/* Rows inherit --cols via React clone — set on each DiscoverySuiteRow below via context, or wrap children */}
+        <div style={colStyle}>{children}</div>
+        {footer ? (
+          <div className="tw-g tw-ft" style={colStyle} role="row">
+            {footer}
+          </div>
+        ) : null}
       </div>
     </div>
   );
+
+  if (!framed) {
+    return <div className={className}>{body}</div>;
+  }
+
+  return <div className={cn("tw-c", className)}>{body}</div>;
 }
 
 type DiscoverySuiteRowProps = {
@@ -109,7 +112,7 @@ export function DiscoverySuiteCell({
   className,
   align = "start",
 }: {
-  children: ReactNode;
+  children?: ReactNode;
   className?: string;
   align?: "start" | "end";
 }) {

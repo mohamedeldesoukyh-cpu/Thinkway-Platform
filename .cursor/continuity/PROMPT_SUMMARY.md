@@ -5,7 +5,11 @@
 
 ## Shipped 2026-09-04 — Discovery Session 0 foundation (FROZEN)
 
-Pack imported: `docs/architecture/discovery-specs/`. Frozen CSS: `app/styles/discovery.css` (scoped `.discovery-suite`, read-only). Helpers: `lib/discovery/suite/` (`D`/`F`/`AB`/`E`/`ini`/`pf`, `bindScroll`, class-coverage). Gate: `npm run test:discovery-foundation`. Cursor rule: `thinkway-discovery-css-readonly.mdc`. Layout imports foundation; legacy `discovery-suite.css` kept until page cutover — do not grow overrides. **Next session = page 1 only** (`01-shortlists.md`). Pages 2→5 sequential (4 alone; 2 before 5). Pages 6–8 anytime after foundation. No page UI redesign in Session 0. No Production.
+Pack imported: `docs/architecture/discovery-specs/`. Frozen CSS: `app/styles/discovery.css` (scoped `.discovery-suite`, read-only). Helpers: `lib/discovery/suite/` (`D`/`F`/`AB`/`E`/`ini`/`pf`, `bindScroll`, class-coverage). Gate: `npm run test:discovery-foundation`. Cursor rule: `thinkway-discovery-css-readonly.mdc` (CSS **and** `lib/discovery/suite/`). Layout imports foundation; legacy `discovery-suite.css` kept until page cutover — do not grow overrides. Commits: `cce992b3`, rule `8e41390e`.
+
+**Pre–page-1 checks (report-only, 2026-09-04):** (1) With foundation CSS loaded, `.tw-in`/`.tw-b` borders+bg win over Tailwind preflight; without Discovery layout CSS, preflight wins (0px / transparent) — do not change load order yet. (2) App already uses `next/font` Geist + Geist Mono — do not add a second loader; `.tw-v` computes Geist Mono when foundation CSS is present. (3) Prod build: `var(--cols)` survives in 5 `.next/static/chunks/*.css` files. (4) `bindScroll` singleton guard → 1 scroll listener across StrictMode×5.
+
+**Session 1 in progress:** Shortlists list (`01-shortlists.md`) — pack markup on real data; Open-only Act; client-link = switch+dot only.
 
 ## In progress 2026-09-04 — Discovery suite redesign (superseded by pack)
 

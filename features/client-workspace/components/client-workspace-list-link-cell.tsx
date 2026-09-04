@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
@@ -187,6 +186,7 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
           type="button"
           role="switch"
           aria-checked={isActive}
+          aria-busy={pending || undefined}
           aria-label="Client link"
           disabled={pending}
           className={cn("tw-sw", isActive && "on")}
@@ -198,7 +198,6 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
           aria-label={isActive ? "Client link live" : "Client link off"}
           title={isActive ? "Live" : "Off"}
         />
-        {pending ? <Loader2Icon className="size-3 shrink-0 animate-spin text-muted-foreground" /> : null}
       </span>
       <ClientReviewShareDialog
         open={shareOpen}
