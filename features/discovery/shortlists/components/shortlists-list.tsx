@@ -146,6 +146,11 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
     [filteredShortlists]
   );
 
+  const portfolioCreatorCount = useMemo(
+    () => shortlists.reduce((sum, row) => sum + row.creator_count, 0),
+    [shortlists]
+  );
+
   const visibleIds = useMemo(
     () => filteredShortlists.map((row) => row.id),
     [filteredShortlists]
@@ -280,7 +285,7 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
       <DiscoverySuiteCell />
       <DiscoverySuiteCell />
       <DiscoverySuiteCell className="tw-v" align="end">
-        {filteredCreatorCount}
+        {filteredCreatorCount} of {portfolioCreatorCount}
       </DiscoverySuiteCell>
       <DiscoverySuiteCell />
       <DiscoverySuiteCell />

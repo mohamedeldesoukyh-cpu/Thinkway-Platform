@@ -64,21 +64,24 @@ Three of these are deliberate edge cases — do not clean them up:
 
 The cell contains **the switch and a live dot. Nothing else.** No text label, no "Show link" button.
 
-- 32 × 18 pill, grey off, `--tw-blue` on, 14px knob, 160ms `--tw-ez`
-- 8px dot beside it: **green with a 1.8s `tw-ping` pulse when live, solid red when off**
+Three **distinct** states (do not collapse None into Off):
 
-Red does not animate. Off is a resting state, not an alarm — an animated red dot on a list of eight
-rows reads as eight errors.
+| State | Switch | Dot | `role="status"` label |
+|---|---|---|---|
+| **Active** | blue `.on` | green `.on` + `tw-ping` pulse | Client link active |
+| **Off** (revoked) | grey | solid red (default `.tw-live`) | Client link revoked |
+| **None** (never set up) | grey | solid grey `.none` (`--tw-mut`) | Client link not set up |
+
+Pending round-trip: `aria-busy="true"` on the switch → foundation `.tw-sw[aria-busy="true"]{opacity:.55;pointer-events:none}` — no third DOM node, no pulse on the switch.
 
 ```css
-.tw-live{position:relative;width:8px;height:8px;border-radius:50%;background:var(--tw-bad)}
-.tw-live.on{background:var(--tw-ok)}
-.tw-live.on::after{content:"";position:absolute;inset:0;border-radius:50%;background:var(--tw-ok);
- animation:tw-ping 1.8s var(--tw-ez) infinite}
+.tw-live{background:var(--tw-bad)} /* Off */
+.tw-live.none{background:var(--tw-mut)}
+.tw-live.on{background:var(--tw-ok)} /* Active + pulse */
+.tw-sw[aria-busy="true"]{opacity:.55;pointer-events:none}
 ```
 
-`role="switch"` + `aria-checked` on the toggle; `role="status"` + a text label on the dot. Green vs
-red is the only thing separating two otherwise identical rows — colour alone fails.
+`role="switch"` + `aria-checked` on the toggle; colour alone still fails accessibility — the status label is mandatory.
 
 ## Card and toolbar
 
@@ -103,8 +106,8 @@ Showing 8 of 26 without saying so is the kind of quiet lie the honesty rules exi
 - [ ] `SL-2026-0024` shows `not set`, not blank.
 - [ ] `E&` renders as `E&`, not `E&amp;` and not `E`.
 - [ ] Client link cell contains exactly two elements — switch and dot. No text, no button.
-- [ ] Green dot pulses; red does not.
+- [ ] Active = green pulsing dot; Off = solid red; None = solid grey (`.none`). Status labels match.
 - [ ] Every date reads `DD Mon YY`.
-- [ ] Footer creator total = 29.
+- [ ] Footer shows `N of M shown` and Creators `X of Y` (filtered of portfolio).
 - [ ] Class-coverage script passes (§0.12).
-- [ ] At 1249px the grid scrolls horizontally; no column is crushed.
+- [ ] At 1100px the grid scrolls horizontally and no column is crushed.

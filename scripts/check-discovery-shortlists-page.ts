@@ -49,13 +49,25 @@ assert.equal(D("Aug 22, 2026"), "22 Aug 26");
 assert.ok(LINK_SRC.includes('className="tw-lnk"') || LINK_SRC.includes("tw-lnk"));
 assert.ok(LINK_SRC.includes("tw-sw"));
 assert.ok(LINK_SRC.includes("tw-live"));
+assert.ok(LINK_SRC.includes('"none"') || LINK_SRC.includes("isNone"), "none state class wiring");
+assert.ok(LINK_SRC.includes("Client link revoked"), "revoked status label");
+assert.ok(LINK_SRC.includes("Client link not set up"), "none status label");
+assert.ok(LINK_SRC.includes("aria-busy"), "busy on switch for pending");
 assert.ok(!LINK_SRC.includes("Loader2Icon"), "client link cell: no third spinner element");
 assert.ok(!LINK_SRC.includes("Show link"), "no Show link text");
 
-assert.ok(LIST_SRC.includes("tw-live") || LINK_SRC.includes("tw-live.on") || LINK_SRC.includes('isActive && "on"'));
+const css = fs.readFileSync(path.join(ROOT, "app/styles/discovery.css"), "utf8");
+assert.ok(css.includes('.tw-live.none'), "foundation .tw-live.none");
+assert.ok(css.includes('tw-sw[aria-busy="true"]') || css.includes(".tw-sw[aria-busy=\"true\"]"), "busy opacity rule");
+
 assert.ok(LIST_SRC.includes("tw-d") && LIST_SRC.includes("D("));
 
 assert.ok(LIST_SRC.includes("filteredCreatorCount"), "footer creator total");
+assert.ok(LIST_SRC.includes("portfolioCreatorCount"), "footer portfolio denominator");
+assert.ok(
+  /\{filteredCreatorCount\} of \{portfolioCreatorCount\}/.test(LIST_SRC),
+  "Creators X of Y in footer"
+);
 
 const sampleHtml = `
 <div class="discovery-suite">
@@ -76,26 +88,20 @@ const sampleHtml = `
         <span class="tw-rr">Creators</span><span>Updated</span><span class="tw-rr">Act</span>
       </div>
       <div class="tw-g tw-r">
-        <span><input type="checkbox" class="tw-ck" aria-label="Select SL-2026-0026"></span>
-        <span class="tw-id">SL-2026-0026</span>
-        <span class="tw-nm">Test 5</span>
-        <span class="tw-br">Alshaya</span>
-        <span><span class="tw-p p-n">Draft</span></span>
-        <span class="tw-lnk"><button class="tw-sw on" role="switch"></button><span class="tw-live on" role="status"></span></span>
-        <span><span class="tw-p p-b">Team</span></span>
-        <span class="tw-cw2"><span class="tw-av k1"></span><span class="tw-t">mohamedeldesouky</span></span>
-        <span class="tw-v">3</span>
-        <span class="tw-d">22 Aug 26</span>
-        <span class="tw-act"><button class="tw-b sm">Open</button></span>
+        <span class="tw-lnk"><button class="tw-sw on" role="switch" aria-checked="true"></button><span class="tw-live on" role="status" aria-label="Client link active"></span></span>
+      </div>
+      <div class="tw-g tw-r">
+        <span class="tw-lnk"><button class="tw-sw" role="switch"></button><span class="tw-live" role="status" aria-label="Client link revoked"></span></span>
       </div>
       <div class="tw-g tw-r">
         <span class="tw-miss">not set</span>
         <span class="tw-br">E&amp;</span>
+        <span class="tw-lnk"><button class="tw-sw" role="switch" aria-busy="true"></button><span class="tw-live none" role="status" aria-label="Client link not set up"></span></span>
       </div>
       <div class="tw-g tw-ft">
         <span></span><span></span><span>8 of 26 shown</span>
         <span></span><span></span><span></span><span></span><span></span>
-        <span class="tw-v">29</span><span></span><span></span>
+        <span class="tw-v">49 of 201</span><span></span><span></span>
       </div>
     </div></div>
   </div>
@@ -105,17 +111,14 @@ const packEdge = `
 <div class="tw-g tw-r">
   <span class="tw-miss">not set</span>
   <span class="tw-br">E&</span>
-  <span class="tw-lnk"><button class="tw-sw"></button><span class="tw-live"></span></span>
+  <span class="tw-lnk"><button class="tw-sw"></button><span class="tw-live none"></span></span>
 </div>`;
 
 assert.ok(packEdge.includes("E&") && !packEdge.includes("E&amp;"), "E& not double-encoded in React path sample");
 assert.ok(sampleHtml.includes("not set"));
-assert.equal(
-  [...sampleHtml.matchAll(/class="tw-v"/g)].length >= 1 &&
-    sampleHtml.includes(">29<"),
-  true,
-  "footer creator total 29 in pack fixture"
-);
+assert.ok(sampleHtml.includes("8 of 26 shown"));
+assert.ok(sampleHtml.includes("49 of 201"), "creators filtered of portfolio");
+assert.ok(sampleHtml.includes("tw-live none"));
 
 const coverage = assertClassCoverage(sampleHtml);
 assert.ok(
@@ -137,8 +140,8 @@ console.log(
       classCoverageUsed: coverage.used.length,
       dates: D("Aug 22, 2026"),
       notes: [
-        "Horizontal scroll at 1249px: CSS min-width:1250 on grid wrap (manual browser verify)",
-        "Green pulse / red solid: foundation .tw-live.on animation (CSS frozen)",
+        "Horizontal scroll: at 1100px scrolls; tracks held (see probe-shortlists-viewport)",
+        "Client link: active / off / none distinct dots",
       ],
     },
     null,

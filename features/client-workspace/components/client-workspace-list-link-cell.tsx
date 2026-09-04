@@ -93,6 +93,13 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const shareScope = { source, id };
   const isActive = state === "active";
+  const isNone = state === "none";
+  const statusLabel =
+    state === "active"
+      ? "Client link active"
+      : state === "off"
+        ? "Client link revoked"
+        : "Client link not set up";
   const documentLabel =
     source === "quotation" ? "Quotation" : source === "shortlist" ? "Shortlist" : "Campaign";
 
@@ -193,10 +200,10 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
           onClick={() => void onToggle(!isActive)}
         />
         <span
-          className={cn("tw-live", isActive && "on")}
+          className={cn("tw-live", isActive && "on", isNone && "none")}
           role="status"
-          aria-label={isActive ? "Client link live" : "Client link off"}
-          title={isActive ? "Live" : "Off"}
+          aria-label={statusLabel}
+          title={statusLabel}
         />
       </span>
       <ClientReviewShareDialog
