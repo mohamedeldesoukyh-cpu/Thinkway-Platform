@@ -587,6 +587,41 @@ function ConfidenceRows({ displayCreator }: { displayCreator: UnifiedCreatorResu
 const SIMILAR_CREATORS_RAIL_LIMIT = 8;
 const SIMILAR_CREATORS_MAXIMIZE_LIMIT = 24;
 
+/** Coarse similarity bands — the scorer only distinguishes a few tiers, not a ranked list. */
+function similarityMatchBand(score: number): { key: string; label: string } {
+  if (score >= 80) return { key: "strong", label: "Strong match" };
+  if (score >= 60) return { key: "good", label: "Good match" };
+  return { key: "possible", label: "Possible match" };
+}
+
+function groupSimilarByBand(
+  similar: Array<UnifiedCreatorResult & { similarity_score: number }>
+): Array<{ key: string; label: string; items: Array<UnifiedCreatorResult & { similarity_score: number }> }> {
+  const order = ["strong", "good", "possible"] as const;
+  const buckets = new Map<string, Array<UnifiedCreatorResult & { similarity_score: number }>>();
+  for (const item of similar) {
+    const band = similarityMatchBand(item.similarity_score);
+    const list = buckets.get(band.key) ?? [];
+    list.push(item);
+    buckets.set(band.key, list);
+  }
+  // Within a band, alphabetical — never score order (scores are identical within a tier).
+  for (const list of buckets.values()) {
+    list.sort((a, b) => a.display_name.localeCompare(b.display_name, undefined, { sensitivity: "base" }));
+  }
+  return order
+    .filter((key) => (buckets.get(key)?.length ?? 0) > 0)
+    .map((key) => {
+      const label =
+        key === "strong" ? "Strong match" : key === "good" ? "Good match" : "Possible match";
+      return {
+        key,
+        label,
+        items: buckets.get(key)!,
+      };
+    });
+}
+
 function SimilarCreatorsList({
   similar,
   loading,
@@ -621,6 +656,8 @@ function SimilarCreatorsList({
     );
   }
 
+  const groups = groupSimilarByBand(similar);
+
   return (
     <div
       className={cn(
@@ -629,26 +666,35 @@ function SimilarCreatorsList({
         className
       )}
     >
-      {similar.map((item) => {
-        const vm = buildDiscoveryCreatorViewModel(item);
-        const handle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
-        const secondaryLine = handle
-          ? `@${handle} · Similarity ${item.similarity_score}`
-          : `Similarity ${item.similarity_score}`;
+      {groups.map((group) => (
+        <div key={group.key} className="space-y-2">
+          <p className="px-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+            {group.label}
+            <span className="font-semibold normal-case tracking-normal text-muted-foreground/80">
+              {" "}
+              ×{group.items.length}
+            </span>
+          </p>
+          {group.items.map((item) => {
+            const vm = buildDiscoveryCreatorViewModel(item);
+            const handle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
+            const secondaryLine = handle ? `@${handle}` : group.label;
 
-        return (
-          <CreatorDetailsSummaryCard
-            key={item.unified_id}
-            displayName={item.display_name}
-            avatarUrl={vm.avatarUrl}
-            profileUrl={vm.profileUrl}
-            thinkwayStarLabel={formatThinkwayStarLabel(item.eci_investment_score)}
-            secondaryLine={secondaryLine}
-            statusLabel={formatCreatorRecencyLabel(item.last_enriched_at, item.updated_at)}
-            size={compact ? "rail" : "compact"}
-          />
-        );
-      })}
+            return (
+              <CreatorDetailsSummaryCard
+                key={item.unified_id}
+                displayName={item.display_name}
+                avatarUrl={vm.avatarUrl}
+                profileUrl={vm.profileUrl}
+                thinkwayStarLabel={formatThinkwayStarLabel(item.eci_investment_score)}
+                secondaryLine={secondaryLine}
+                statusLabel={formatCreatorRecencyLabel(item.last_enriched_at, item.updated_at)}
+                size={compact ? "rail" : "compact"}
+              />
+            );
+          })}
+        </div>
+      ))}
     </div>
   );
 }
@@ -690,27 +736,40 @@ function SimilarCreatorsMaximizeDialog({
               No similar creators found.
             </p>
           ) : (
-            <div className="creator-detail-sheet-similar-maximize-grid">
-              {similar.map((item) => {
-                const vm = buildDiscoveryCreatorViewModel(item);
-                const handle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
-                const secondaryLine = handle
-                  ? `@${handle} · Similarity ${item.similarity_score}`
-                  : `Similarity ${item.similarity_score}`;
-
-                return (
-                  <CreatorDetailsSummaryCard
-                    key={item.unified_id}
-                    displayName={item.display_name}
-                    avatarUrl={vm.avatarUrl}
-                    profileUrl={vm.profileUrl}
-                    thinkwayStarLabel={formatThinkwayStarLabel(item.eci_investment_score)}
-                    secondaryLine={secondaryLine}
-                    statusLabel={formatCreatorRecencyLabel(item.last_enriched_at, item.updated_at)}
-                    size="compact"
-                  />
-                );
-              })}
+          ) : (
+            <div className="space-y-5">
+              {groupSimilarByBand(similar).map((group) => (
+                <div key={group.key} className="space-y-2">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
+                    {group.label}
+                    <span className="font-semibold normal-case tracking-normal text-muted-foreground/80">
+                      {" "}
+                      ×{group.items.length}
+                    </span>
+                  </p>
+                  <div className="creator-detail-sheet-similar-maximize-grid">
+                    {group.items.map((item) => {
+                      const vm = buildDiscoveryCreatorViewModel(item);
+                      const handle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
+                      return (
+                        <CreatorDetailsSummaryCard
+                          key={item.unified_id}
+                          displayName={item.display_name}
+                          avatarUrl={vm.avatarUrl}
+                          profileUrl={vm.profileUrl}
+                          thinkwayStarLabel={formatThinkwayStarLabel(item.eci_investment_score)}
+                          secondaryLine={handle ? `@${handle}` : group.label}
+                          statusLabel={formatCreatorRecencyLabel(
+                            item.last_enriched_at,
+                            item.updated_at
+                          )}
+                          size="compact"
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

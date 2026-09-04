@@ -1,8 +1,6 @@
 /**
  * Live class-coverage crawl across page-2 overlay states.
- * Uses pack discovery.html (same .tw-* classes as foundation CSS) and opens
- * profile (all tabs), then samples Edit URL / Combine / Add-creators markup
- * that the React overlays emit (tw-* tokens only).
+ * Opens pack overlays for real (profile tabs, Edit URL, Combine, Add-creators drawer).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -25,39 +23,6 @@ function chrome() {
   return null;
 }
 
-/** React overlay chrome that must stay in foundation CSS (sampled from components). */
-const REACT_OVERLAY_SAMPLES: Record<string, string> = {
-  "edit-url": `
-<div class="discovery-suite">
-  <div class="tw-scrim"></div>
-  <div class="tw-cp"><div class="tw-cp__w">
-    <div class="tw-ch"><span class="tw-ct">Edit URL</span><button class="tw-dr__x" aria-label="Close"></button></div>
-    <div class="tw-pad"><label class="tw-lbl">Profile URL</label><input class="tw-in" />
-    <button class="tw-b sm pri">Save</button><button class="tw-b sm">Cancel</button></div>
-  </div></div>
-</div>`,
-  combine: `
-<div class="discovery-suite">
-  <div class="tw-scrim"></div>
-  <div class="tw-cp"><div class="tw-cp__w">
-    <div class="tw-ch"><span class="tw-ct">Combine creators</span><button class="tw-dr__x"></button></div>
-    <div class="tw-pad"><p class="tw-note">This cannot be undone.</p>
-    <button class="tw-b sm" disabled>Combine creators</button></div>
-  </div></div>
-</div>`,
-  "add-creators": `
-<div class="discovery-suite">
-  <div class="tw-dr">
-    <div class="tw-dr__h"><span class="tw-ct">Add creators</span><button class="tw-dr__x"></button></div>
-    <div class="tw-dr__s"><button class="tw-b on">Search</button><button class="tw-b">Paste links</button></div>
-    <div class="tw-pad"><input class="tw-in" placeholder="Search creators…" />
-    <div class="tw-stx"><span class="hh"><i></i><i>Followers</i><i>Engagement</i><i>Avg views</i></span>
-    <span class="rr"><span class="tw-pf"><span class="ig">IG</span></span><b class="z">—</b><b class="z">—</b><b class="z">—</b></span></div>
-    </div>
-  </div>
-</div>`,
-};
-
 async function main() {
   const executablePath = chrome();
   if (!executablePath) {
@@ -74,12 +39,10 @@ async function main() {
   const page = await browser.newPage();
   await page.setContent(html, { waitUntil: "domcontentloaded", timeout: 20_000 });
 
-  // Navigate pack to shortlist detail
   await page.evaluate(() => {
     // @ts-expect-error pack globals
     if (typeof go === "function") go("shortlist");
-    // @ts-expect-error pack globals
-    else if (typeof draw === "function") {
+    else {
       // @ts-expect-error pack globals
       PG = "shortlist";
       // @ts-expect-error pack globals
@@ -100,34 +63,73 @@ async function main() {
     });
   }
 
+  async function assertOpen(state: string, selector: string) {
+    const hit = await page.$(selector);
+    if (!hit) {
+      results.push({
+        state: `${state}:missing-dom`,
+        ok: false,
+        missing: [selector],
+        used: 0,
+      });
+      return false;
+    }
+    await capture(state);
+    return true;
+  }
+
   await capture("shortlist-default");
 
-  // Open first creator profile
   await page.evaluate(() => {
     // @ts-expect-error pack globals
-    if (typeof openCr === "function") openCr("ouda.5");
+    openCr("ouda.5");
   });
-  await capture("profile-overview");
+  await assertOpen("profile-overview", ".tw-cp");
 
   for (const tab of ["ov", "ct", "pb", "cf"] as const) {
     await page.evaluate((t) => {
       // @ts-expect-error pack globals
-      if (typeof dtab === "function") dtab(t);
+      dtab(t);
     }, tab);
     await capture(`profile-tab-${tab}`);
   }
 
-  await browser.close();
+  // Edit URL — requires open profile (DRW set)
+  await page.evaluate(() => {
+    // @ts-expect-error pack globals
+    editUrl(true);
+  });
+  await assertOpen("edit-url", '[aria-label="Edit profile URL"]');
+  await page.evaluate(() => {
+    // @ts-expect-error pack globals
+    editUrl(false);
+  });
 
-  for (const [state, sample] of Object.entries(REACT_OVERLAY_SAMPLES)) {
-    const coverage = assertClassCoverage(sample);
-    results.push({
-      state: `react-${state}`,
-      ok: coverage.ok,
-      missing: coverage.missing,
-      used: coverage.used.length,
-    });
-  }
+  // Combine — requires open profile
+  await page.evaluate(() => {
+    // @ts-expect-error pack globals
+    combine(true);
+  });
+  await assertOpen("combine", '[aria-label="Combine creators"]');
+  await page.evaluate(() => {
+    // @ts-expect-error pack globals
+    combine(false);
+  });
+
+  // Close profile, open shortlist Add-creators drawer
+  await page.evaluate(() => {
+    // @ts-expect-error pack globals
+    openCr(null);
+    // @ts-expect-error pack globals
+    slAdd(true);
+  });
+  await assertOpen("add-creators", '[aria-label="Add creators to shortlist"]');
+  await page.evaluate(() => {
+    // @ts-expect-error pack globals
+    slAdd(false);
+  });
+
+  await browser.close();
 
   const failed = results.filter((r) => !r.ok);
   console.log(JSON.stringify({ results, failedCount: failed.length }, null, 2));
@@ -138,7 +140,7 @@ async function main() {
     );
     process.exit(1);
   }
-  console.log("OK — overlay class-coverage crawl passed");
+  console.log("OK — overlay class-coverage live crawl passed");
 }
 
 main().catch((e) => {
