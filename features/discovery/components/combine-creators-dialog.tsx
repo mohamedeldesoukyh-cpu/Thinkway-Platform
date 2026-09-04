@@ -161,7 +161,8 @@ export function CombineCreatorsDialog({
               <DialogDescription className={DISCOVERY_DIALOG_DESC_CLASS}>
                 Merge a duplicate creator profile into {targetCreator.display_name}. Platform
                 accounts from the other profile will move here, then the duplicate profile is
-                removed.
+                removed. This cannot be undone — shortlist and quotation lines pointing at the
+                duplicate are re-pointed to the surviving record.
               </DialogDescription>
             </div>
           </DialogHeader>

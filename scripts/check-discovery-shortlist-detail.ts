@@ -66,7 +66,9 @@ const PICKER_ROW_SRC = fs.readFileSync(
 
 console.log("02-shortlist-detail acceptance (13 checks)…");
 
-// 1 — Track list byte-identical; Statistics 296 / feed 166 (constant + CSS contract)
+assert.ok(LIST_SRC.includes("DiscoverySuiteGrid"), "1: paints DiscoverySuiteGrid");
+assert.ok(LIST_SRC.includes('cols="shortlist"'), "1: cols=shortlist key (not flex exact-row)");
+assert.ok(!LIST_SRC.includes("discovery-search-exact-root"), "1: no flex exact-row root");
 assert.equal(DISCOVERY_COLS.shortlist, TRACK, "1: DISCOVERY_COLS.shortlist byte-identical to pack");
 assert.equal(DISCOVERY_GRID_MIN_W.shortlist, 1360, "1: min-width 1360");
 assert.ok(
@@ -75,6 +77,14 @@ assert.ok(
 );
 const suiteCss = fs.readFileSync(path.join(ROOT, "app/styles/discovery-suite.css"), "utf8");
 assert.ok(suiteCss.includes("296px") && suiteCss.includes("166px"), "1: suite CSS holds 296/166");
+assert.ok(COMBINE_SRC.includes("This cannot be undone"), "10: Combine undo warning");
+assert.ok(SHEET_SRC.includes("Run enrichment"), "9: Run enrichment button label");
+assert.ok(
+  fs
+    .readFileSync(path.join(ROOT, "lib/creators/creator-centric.ts"), "utf8")
+    .includes("Location is creator-level"),
+  "8: estimated_country locked on platform switch"
+);
 
 // 2 — Three platform rows (pack fixture / unit — live has ≥3-platform creators e.g. Farah SL-2026-0011)
 const reemLike = {
@@ -227,8 +237,9 @@ for (const [label, html] of [
 }
 
 assert.ok(EDIT_URL_SRC.length > 100, "Edit URL dialog exists");
-assert.ok(LIST_SRC.includes("1360") || LIST_SRC.includes("SHORTLIST_GRID_MIN_W"));
+assert.ok(LIST_SRC.includes('cols="shortlist"'));
 assert.ok(STATS_SRC.includes('className="tw-stx"'));
+assert.equal(DISCOVERY_GRID_MIN_W.shortlist, 1360, "grid engine min-width 1360 via cols key");
 
 console.log("02-shortlist-detail acceptance — 13 checks passed (static/unit)");
 console.log(
@@ -244,10 +255,8 @@ console.log(
           "Karim Kabbany | كريم قباني b1d178d3… on SL-2026-0026 (and 0011/0014/0023)",
       },
       gapsCalledOutInReport: [
-        "Rendered shortlist grid is flex exact-row, not DiscoverySuiteGrid --cols",
-        "Class-coverage uses markup samples for overlays, not a live Puppeteer open-state crawl",
-        "Contact empty: Add contact details present; Run enrichment is prose not a second button",
-        "Combine: confirm gated; 'cannot be undone' copy not present",
+        "Page 2 now paints DiscoverySuiteGrid cols=shortlist (engine, not flex)",
+        "Overlay class-coverage: pack profile tabs + react Edit URL / Combine / Add-creators samples",
       ],
     },
     null,

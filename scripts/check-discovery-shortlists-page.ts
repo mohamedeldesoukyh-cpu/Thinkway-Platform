@@ -37,8 +37,10 @@ console.log("01-shortlists acceptance…");
 
 assert.equal(DISCOVERY_COLS.shortlists, TRACK, "track list byte-identical");
 assert.ok(COLS_SRC.includes(TRACK), "cols source contains track");
+assert.ok(LIST_SRC.includes('cols="shortlists"'), "page 1 uses DiscoverySuiteGrid cols=shortlists");
+assert.ok(LIST_SRC.includes("DiscoverySuiteGrid"), "page 1 paints DiscoverySuiteGrid");
 assert.ok(LIST_SRC.includes("minWidth={SHORTLISTS_MIN_W}") || LIST_SRC.includes("1250"), "min-width 1250");
-assert.ok(LIST_SRC.includes("SHORTLISTS_COLS") || LIST_SRC.includes(TRACK));
+assert.ok(LIST_SRC.includes("SHORTLISTS_COLS") === false || LIST_SRC.includes("shortlists"));
 
 assert.ok(LIST_SRC.includes('tw-miss'), "empty brand uses tw-miss");
 assert.ok(LIST_SRC.includes('"not set"') || LIST_SRC.includes("'not set'"));

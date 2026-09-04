@@ -467,7 +467,8 @@ export function projectCreatorPlatformView(
   return {
     ...creator,
     metrics: buildInternalMetricsFromPlatform(account),
-    estimated_country: account.audience_country ?? creator.estimated_country,
+    // Location is creator-level — platform chips must not silently rewrite it.
+    estimated_country: creator.estimated_country,
     bio: account.profile_bio ?? creator.bio,
     hashtags: account.hashtags ?? creator.hashtags,
     mentions: account.mentions ?? creator.mentions,
@@ -497,7 +498,8 @@ export function applyPlatformMetricsView(
   return {
     ...creator,
     metrics: buildMetricsFromPlatformAccount(platformAccount, buildMetrics),
-    estimated_country: platformAccount.audience_country ?? creator.estimated_country,
+    // Location is creator-level — platform chips must not silently rewrite it.
+    estimated_country: creator.estimated_country,
     bio: platformAccount.profile_bio ?? creator.bio,
     hashtags: platformAccount.hashtags ?? creator.hashtags,
     mentions: platformAccount.mentions ?? creator.mentions,

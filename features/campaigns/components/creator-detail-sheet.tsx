@@ -313,11 +313,17 @@ function ContactFieldsGroup({ contact }: { contact: CreatorContactFields }) {
 function ContactPanel({
   identityCreator,
   platforms,
+  enrichmentStatus,
   onEditContact,
+  onEnrichmentStatusChange,
+  onCreatorUpdated,
 }: {
   identityCreator: UnifiedCreatorResult;
   platforms: UnifiedCreatorResult["platforms"];
+  enrichmentStatus: CreatorEnrichmentStatus;
   onEditContact: () => void;
+  onEnrichmentStatusChange: (status: CreatorEnrichmentStatus) => void;
+  onCreatorUpdated: (creator: UnifiedCreatorResult) => void;
 }) {
   const contactSections = resolveCreatorContactSections({
     platforms,
@@ -327,13 +333,14 @@ function ContactPanel({
   });
   const hasContact = contactSections.length > 0;
   const canEdit = Boolean(identityCreator.influencer_id);
+  const canEnrich = Boolean(identityCreator.influencer_id);
 
   return (
     <DetailSection className="border-b-0">
       <SectionTitle
         icon={<MailIcon className="size-3" />}
         action={
-          canEdit ? (
+          canEdit && hasContact ? (
             <Button
               type="button"
               variant="outline"
@@ -341,12 +348,8 @@ function ContactPanel({
               className="h-7 gap-1.5 px-2.5 text-[11px]"
               onClick={onEditContact}
             >
-              {hasContact ? (
-                <PencilIcon className="size-3" aria-hidden />
-              ) : (
-                <PlusIcon className="size-3" aria-hidden />
-              )}
-              {hasContact ? "Edit contact" : "Add contact"}
+              <PencilIcon className="size-3" aria-hidden />
+              Edit contact
             </Button>
           ) : null
         }
@@ -384,27 +387,39 @@ function ContactPanel({
           })}
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-2 py-8 text-center">
+        <div className="flex flex-col items-center gap-3 py-8 text-center">
           <span className="inline-flex size-10 items-center justify-center rounded-full bg-muted/60 text-muted-foreground">
             <PhoneIcon className="size-4" aria-hidden />
           </span>
           <p className="max-w-xs text-[12px] text-muted-foreground">
-            {canEdit
-              ? "No contact information yet. Add email, phone, or links manually — or run enrichment."
-              : "No contact information available yet. Run enrichment or import contact details to populate this section."}
+            No contact information yet
           </p>
-          {canEdit ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="mt-1 h-8 gap-1.5"
-              onClick={onEditContact}
-            >
-              <PlusIcon className="size-3.5" aria-hidden />
-              Add contact details
-            </Button>
-          ) : null}
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {canEnrich ? (
+              <RefreshCreatorMenu
+                influencerId={identityCreator.influencer_id!}
+                unifiedId={identityCreator.unified_id}
+                enrichmentStatus={enrichmentStatus}
+                size="sm"
+                variant="outline"
+                label="Run enrichment"
+                onStatusChange={onEnrichmentStatusChange}
+                onCreatorUpdated={onCreatorUpdated}
+              />
+            ) : null}
+            {canEdit ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={onEditContact}
+              >
+                <PlusIcon className="size-3.5" aria-hidden />
+                Add contact details
+              </Button>
+            ) : null}
+          </div>
         </div>
       )}
     </DetailSection>
@@ -1463,7 +1478,10 @@ export function CreatorDetailSheet({
               <ContactPanel
                 identityCreator={identityCreator}
                 platforms={platforms}
+                enrichmentStatus={enrichmentStatus}
                 onEditContact={() => setEditContactOpen(true)}
+                onEnrichmentStatusChange={setEnrichmentStatus}
+                onCreatorUpdated={handleCreatorUpdated}
               />
             </TabsContent>
 

@@ -1,23 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useMemo, useState, type MouseEvent } from "react";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
+import { CountryFlagsStack } from "@/components/creator/country-flags-stack";
 import {
-  DiscoveryCreatorExactHeader,
-  DiscoveryCreatorExactRow,
-} from "@/features/discovery/components/discovery-creator-exact-row";
-import { DISCOVERY_GRID_MIN_W } from "@/features/discovery/components/design-system/discovery-suite-cols";
+  DiscoverySuiteCell,
+  DiscoverySuiteGrid,
+  DiscoverySuiteRow,
+} from "@/features/discovery/components/design-system/discovery-suite-grid";
+import {
+  DiscoveryCreatorFeedThumbs,
+  DiscoveryCreatorPlatformStatsBox,
+} from "@/features/discovery/components/discovery-creator-platform-stats";
+import { buildDiscoveryCreatorViewModel } from "@/features/discovery/view-models/discovery-creator-view-model";
 import {
   isEnrichmentInProgress,
   resolveCreatorEnrichmentStatus,
 } from "@/features/discovery/enrichment/status";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon, ArrowUpIcon, Link2Icon, UsersIcon } from "lucide-react";
+import { ini } from "@/lib/discovery/suite/helpers";
 
-const SHORTLIST_GRID_MIN_W = DISCOVERY_GRID_MIN_W.shortlist ?? 1360;
-
-import { SHORTLIST_QUOTED_COLUMN_LABEL } from "../constants";
+import { SHORTLIST_ITEM_STATUS_LABELS, SHORTLIST_QUOTED_COLUMN_LABEL } from "../constants";
 import {
   isGroupPartiallyOrFullySelected,
   resolveGroupCheckboxState,
@@ -33,17 +38,15 @@ import {
   buildShortlistDisplayBlocks,
   type ShortlistDisplayBlock,
 } from "../shortlist-collapse-groups";
-import { ShortlistCollapseContentHeader } from "./shortlist-collapse-content-header";
 import {
   isShortlistCreatorQuoted,
   ShortlistCreatorQuotedLabel,
 } from "./shortlist-badges";
 import {
   ShortlistCreatorQuotedCell,
-  ShortlistCreatorStatusCell,
-  ShortlistCreatorTierCell,
   shortlistCreatorSyncBorderClass,
 } from "./shortlist-creator-meta-columns";
+import { resolveCreatorTierFromUnified } from "@/lib/creators/creator-tier";
 
 type ShortlistRowItem = Pick<
   ShortlistCreatorItem,
@@ -61,36 +64,6 @@ type Props = {
   onToggleSelectAll: () => void;
   onOpenCreator?: (creator: UnifiedCreatorResult) => void;
 };
-
-function shortlistCreatorMetaHeaderColumns(
-  sort: ShortlistCreatorSortState | null,
-  onSortChange: (next: ShortlistCreatorSortState) => void
-) {
-  return {
-    tier: (
-      <SortableMetaLabel label="Tier" field="tier" sort={sort} onSortChange={onSortChange} />
-    ),
-    status: (
-      <SortableMetaLabel label="Status" field="status" sort={sort} onSortChange={onSortChange} />
-    ),
-    quoted: (
-      <SortableMetaLabel
-        label={SHORTLIST_QUOTED_COLUMN_LABEL}
-        field="quoted"
-        sort={sort}
-        onSortChange={onSortChange}
-      />
-    ),
-  };
-}
-
-function shortlistCreatorMetaRowColumns(item: ShortlistRowItem) {
-  return {
-    tier: <ShortlistCreatorTierCell creator={item.creator} />,
-    status: <ShortlistCreatorStatusCell itemStatus={item.item_status} />,
-    quoted: <ShortlistCreatorQuotedCell quotationRefs={item.quotation_refs} />,
-  };
-}
 
 function SortableMetaLabel({
   label,
@@ -127,7 +100,21 @@ function SortableMetaLabel({
   );
 }
 
-function ShortlistCreatorRow({
+function statusPillClass(itemStatus: ShortlistRowItem["item_status"]): string {
+  switch (itemStatus) {
+    case "approved":
+      return "tw-p p-g";
+    case "under_review":
+      return "tw-p p-y";
+    case "rejected":
+    case "cancelled":
+      return "tw-p p-r";
+    default:
+      return "tw-p p-n";
+  }
+}
+
+function ShortlistCreatorGridRow({
   item,
   selected,
   selectable,
@@ -141,93 +128,181 @@ function ShortlistCreatorRow({
   onOpenCreator?: (creator: UnifiedCreatorResult) => void;
 }) {
   const creator = item.creator;
+  const stop = (event: MouseEvent) => event.stopPropagation();
 
   if (!creator) {
     return (
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => selectable && onToggleSelect()}
-        onKeyDown={(event) => {
-          if (!selectable) return;
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault();
-            onToggleSelect();
-          }
-        }}
-        className={cn(
-          "discovery-search-exact-row discovery-search-exact-row--with-meta",
-          shortlistCreatorSyncBorderClass("never"),
-          selected && "is-selected"
-        )}
-      >
-        <div className="discovery-search-exact-photo-cell">
+      <DiscoverySuiteRow selected={selected} className={shortlistCreatorSyncBorderClass("never")}>
+        <DiscoverySuiteCell>
           {selectable ? (
-            <span className="discovery-search-exact-select">
-              <Checkbox
-                checked={selected}
-                onCheckedChange={onToggleSelect}
-                aria-label="Select unknown creator"
-              />
-            </span>
+            <input
+              type="checkbox"
+              className="tw-ck"
+              checked={selected}
+              onChange={onToggleSelect}
+              aria-label="Select unknown creator"
+            />
           ) : null}
-          <div className="discovery-search-exact-photo-wrap flex size-[84px] items-center justify-center rounded-full bg-muted text-[11px] text-muted-foreground">
-            ?
+        </DiscoverySuiteCell>
+        <DiscoverySuiteCell>
+          <span className="tw-cw2">
+            <span className="tw-avx" aria-hidden>
+              ?
+            </span>
+            <span style={{ minWidth: 0 }}>
+              <span className="nm">Unknown creator</span>
+              <span className="hd">Profile not resolved</span>
+            </span>
+          </span>
+        </DiscoverySuiteCell>
+        <DiscoverySuiteCell>
+          <span className="tw-miss">—</span>
+        </DiscoverySuiteCell>
+        <DiscoverySuiteCell>
+          <span className="tw-miss">—</span>
+        </DiscoverySuiteCell>
+        <DiscoverySuiteCell>
+          <span className="tw-miss">No metrics</span>
+        </DiscoverySuiteCell>
+        <DiscoverySuiteCell>
+          <div className="tw-thumbs">
+            <span className="tw-thumb" aria-hidden />
+            <span className="tw-thumb" aria-hidden />
+            <span className="tw-thumb" aria-hidden />
           </div>
-        </div>
-        <div className="discovery-search-exact-info-cell">
-          <div className="discovery-search-exact-info-stack">
-            <div className="discovery-search-exact-name">Unknown creator</div>
-            <div className="discovery-search-exact-handle">Profile not resolved</div>
-            {isShortlistCreatorQuoted(item.quotation_refs) ? (
-              <div className="discovery-search-exact-info-badges">
-                <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
-              </div>
-            ) : null}
-          </div>
-        </div>
-        <div className="discovery-search-exact-tier-cell">
-          <ShortlistCreatorTierCell creator={null} />
-        </div>
-        <div className="discovery-search-exact-category-cell">
-          <span className="text-[11px] text-muted-foreground/60">—</span>
-        </div>
-        <div className="discovery-search-exact-stat-box opacity-40">
-          <span className="text-[11px] text-muted-foreground">No metrics</span>
-        </div>
-        <div className="discovery-search-exact-feed-thumbs discovery-search-exact-feed-thumbs--empty" />
-        <div className="discovery-search-exact-status-cell">
-          <ShortlistCreatorStatusCell itemStatus={item.item_status} />
-        </div>
-        <div className="discovery-search-exact-quoted-cell">
+        </DiscoverySuiteCell>
+        <DiscoverySuiteCell>
+          <span className={statusPillClass(item.item_status)}>
+            {SHORTLIST_ITEM_STATUS_LABELS[item.item_status]}
+          </span>
+        </DiscoverySuiteCell>
+        <DiscoverySuiteCell>
           <ShortlistCreatorQuotedCell quotationRefs={item.quotation_refs} />
-        </div>
-      </div>
+        </DiscoverySuiteCell>
+      </DiscoverySuiteRow>
     );
   }
 
   const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
   const enriching = isEnrichmentInProgress(enrichmentStatus);
+  const vm = buildDiscoveryCreatorViewModel(creator);
+  const tier = resolveCreatorTierFromUnified(creator);
+  const open = () => onOpenCreator?.(creator);
 
   return (
-    <DiscoveryCreatorExactRow
-      creator={creator}
+    <DiscoverySuiteRow
       selected={selected}
-      selectable={selectable}
-      enriching={enriching}
-      onToggleSelect={onToggleSelect}
-      onOpenCreator={() => onOpenCreator?.(creator)}
-      rowBehavior="open-detail"
-      interestChipVariant="icat"
-      className={shortlistCreatorSyncBorderClass(enrichmentStatus)}
-      metaColumns={shortlistCreatorMetaRowColumns(item)}
-      infoBadge={
-        isShortlistCreatorQuoted(item.quotation_refs) ? (
-          <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
-        ) : undefined
-      }
-      feedMaxItems={3}
-    />
+      className={cn(shortlistCreatorSyncBorderClass(enrichmentStatus), enriching && "wrn")}
+    >
+      <DiscoverySuiteCell>
+        {selectable ? (
+          <input
+            type="checkbox"
+            className="tw-ck"
+            checked={selected}
+            onChange={onToggleSelect}
+            onClick={stop}
+            aria-label={`${selected ? "Deselect" : "Select"} ${vm.displayName}`}
+          />
+        ) : null}
+      </DiscoverySuiteCell>
+
+      <DiscoverySuiteCell>
+        <span className="tw-cw2">
+          <span className="tw-avx relative overflow-hidden">
+            {vm.avatarUrl ? (
+              <CreatorAvatarImage
+                avatarUrl={vm.avatarUrl}
+                profileUrl={vm.profileUrl}
+                alt={vm.displayName}
+                sizeClassName="size-full"
+                className="border-0"
+              />
+            ) : (
+              <span aria-hidden>{ini(vm.displayName).slice(0, 2)}</span>
+            )}
+            {vm.countryFlagCodes.length > 0 ? (
+              <span className="fl">
+                <CountryFlagsStack
+                  countryCodes={vm.countryFlagCodes}
+                  size="sm"
+                  overlay
+                  className="size-full"
+                />
+              </span>
+            ) : null}
+          </span>
+          <span style={{ minWidth: 0 }}>
+            <button
+              type="button"
+              className="nm max-w-full min-w-0 cursor-pointer truncate border-0 bg-transparent p-0 text-left font-[inherit]"
+              title={vm.displayName}
+              onClick={(event) => {
+                stop(event);
+                open();
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault();
+                  stop(event);
+                  open();
+                }
+              }}
+            >
+              {vm.displayName}
+            </button>
+            {vm.handleLabel ? <span className="hd">{vm.handleLabel}</span> : null}
+            {vm.countryLabel !== "—" ? <span className="lo">{vm.countryLabel}</span> : null}
+            {isShortlistCreatorQuoted(item.quotation_refs) ? (
+              <span className="mt-1 block" onClick={stop}>
+                <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
+              </span>
+            ) : null}
+          </span>
+        </span>
+      </DiscoverySuiteCell>
+
+      <DiscoverySuiteCell>
+        {tier === "Unknown" ? (
+          <span className="tw-miss">—</span>
+        ) : (
+          <span className="tw-p p-v">{tier}</span>
+        )}
+      </DiscoverySuiteCell>
+
+      <DiscoverySuiteCell>
+        {vm.categories.length > 0 ? (
+          <span className="tw-tags">
+            {vm.categories.slice(0, 2).map((cat) => (
+              <span key={cat}>{cat}</span>
+            ))}
+            {vm.categories.length > 2 ? (
+              <span className="m">+{vm.categories.length - 2}</span>
+            ) : null}
+          </span>
+        ) : (
+          <span className="tw-miss">—</span>
+        )}
+      </DiscoverySuiteCell>
+
+      <DiscoverySuiteCell>
+        <DiscoveryCreatorPlatformStatsBox platformStats={vm.platformStats} />
+      </DiscoverySuiteCell>
+
+      <DiscoverySuiteCell>
+        <DiscoveryCreatorFeedThumbs publications={vm.feedPublications} maxItems={3} />
+      </DiscoverySuiteCell>
+
+      <DiscoverySuiteCell>
+        <span className={statusPillClass(item.item_status)}>
+          {SHORTLIST_ITEM_STATUS_LABELS[item.item_status]}
+        </span>
+      </DiscoverySuiteCell>
+
+      <DiscoverySuiteCell>
+        <ShortlistCreatorQuotedCell quotationRefs={item.quotation_refs} />
+      </DiscoverySuiteCell>
+    </DiscoverySuiteRow>
   );
 }
 
@@ -252,17 +327,28 @@ function ShortlistDisplayBlockRows({
     const groupSelected = isGroupPartiallyOrFullySelected(memberIds, selectedIds);
 
     return (
-      <div className="shortlist-collapse-content-block collapse-content-frame">
-        <ShortlistCollapseContentHeader
-          label={block.label}
-          creatorCount={block.items.length}
-          selectable={selectable}
-          checked={groupChecked}
-          selected={groupSelected}
-          onToggleSelect={() => onToggleSelectGroup?.(memberIds)}
-        />
+      <>
+        <div className="tw-gp">
+          {selectable ? (
+            <input
+              type="checkbox"
+              className="tw-ck mr-2"
+              checked={groupChecked === true}
+              ref={(el) => {
+                if (el) el.indeterminate = groupChecked === "indeterminate";
+              }}
+              onChange={() => onToggleSelectGroup?.(memberIds)}
+              aria-label={`Select group ${block.label}`}
+            />
+          ) : null}
+          {block.label}
+          <em>
+            {block.items.length} creator{block.items.length === 1 ? "" : "s"}
+            {groupSelected ? " · selected" : ""}
+          </em>
+        </div>
         {block.items.map((item) => (
-          <ShortlistCreatorRow
+          <ShortlistCreatorGridRow
             key={item.item_id}
             item={item}
             selected={selectedIds.has(item.item_id)}
@@ -271,13 +357,13 @@ function ShortlistDisplayBlockRows({
             onOpenCreator={onOpenCreator}
           />
         ))}
-      </div>
+      </>
     );
   }
 
   const item = block.items[0]!;
   return (
-    <ShortlistCreatorRow
+    <ShortlistCreatorGridRow
       item={item}
       selected={selectedIds.has(item.item_id)}
       selectable={selectable}
@@ -305,43 +391,68 @@ export function ShortlistCreatorList({
     [sortedItems]
   );
 
+  const header = (
+    <>
+      <DiscoverySuiteCell>
+        {selectable ? (
+          <input
+            type="checkbox"
+            className="tw-ck"
+            checked={allSelected}
+            ref={(el) => {
+              if (el) el.indeterminate = indeterminate;
+            }}
+            onChange={onToggleSelectAll}
+            aria-label="Select all creators"
+            disabled={sortedItems.length === 0}
+          />
+        ) : null}
+      </DiscoverySuiteCell>
+      <DiscoverySuiteCell>Creator</DiscoverySuiteCell>
+      <DiscoverySuiteCell>
+        <SortableMetaLabel label="Tier" field="tier" sort={sort} onSortChange={setSort} />
+      </DiscoverySuiteCell>
+      <DiscoverySuiteCell>Category</DiscoverySuiteCell>
+      <DiscoverySuiteCell>Statistics</DiscoverySuiteCell>
+      <DiscoverySuiteCell>Content from feed</DiscoverySuiteCell>
+      <DiscoverySuiteCell>
+        <SortableMetaLabel label="Status" field="status" sort={sort} onSortChange={setSort} />
+      </DiscoverySuiteCell>
+      <DiscoverySuiteCell>
+        <SortableMetaLabel
+          label={SHORTLIST_QUOTED_COLUMN_LABEL}
+          field="quoted"
+          sort={sort}
+          onSortChange={setSort}
+        />
+      </DiscoverySuiteCell>
+    </>
+  );
+
   return (
-    <div className="shortlist-creator-exact-root discovery-search-exact-root">
-      <div className="tw-sc overflow-x-auto">
-        <div style={{ minWidth: SHORTLIST_GRID_MIN_W }}>
-          <div className="discovery-search-exact-header-bar">
-            <DiscoveryCreatorExactHeader
-              total={sortedItems.length}
-              allSelected={indeterminate ? "indeterminate" : allSelected}
-              hasCreators={sortedItems.length > 0}
-              onToggleSelectAll={onToggleSelectAll}
-              showSelectAll={selectable}
-              headersClassName="shortlist-exact-table-head"
-              infoColumnLabel="Creator"
-              countLabel={`${sortedItems.length} Creator${sortedItems.length === 1 ? "" : "s"}`}
-              metaColumns={shortlistCreatorMetaHeaderColumns(sort, setSort)}
-            />
-          </div>
-          <div className="discovery-search-exact-scroll">
-            {displayBlocks.map((block) => (
-              <ShortlistDisplayBlockRows
-                key={
-                  block.kind === "collapse"
-                    ? `collapse-${block.collapseGroupId}`
-                    : block.items[0]!.item_id
-                }
-                block={block}
-                selectedIds={selectedIds}
-                selectable={selectable}
-                onToggleSelect={onToggleSelect}
-                onToggleSelectGroup={onToggleSelectGroup}
-                onOpenCreator={onOpenCreator}
-              />
-            ))}
-          </div>
-        </div>
-      </div>
-      <p className="tw-note mt-3">
+    <div>
+      <DiscoverySuiteGrid
+        cols="shortlist"
+        framed={false}
+        header={header}
+      >
+        {displayBlocks.map((block) => (
+          <ShortlistDisplayBlockRows
+            key={
+              block.kind === "collapse"
+                ? `collapse-${block.collapseGroupId}`
+                : block.items[0]!.item_id
+            }
+            block={block}
+            selectedIds={selectedIds}
+            selectable={selectable}
+            onToggleSelect={onToggleSelect}
+            onToggleSelectGroup={onToggleSelectGroup}
+            onOpenCreator={onOpenCreator}
+          />
+        ))}
+      </DiscoverySuiteGrid>
+      <p className="tw-note">
         Click a creator name to open the full profile — investment score, audience,
         publications, confidence and similar creators.
       </p>

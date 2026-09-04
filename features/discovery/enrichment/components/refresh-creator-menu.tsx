@@ -52,6 +52,8 @@ type RefreshCreatorMenuProps = {
   size?: "xs" | "sm" | "default";
   variant?: "outline" | "ghost" | "secondary" | "default";
   className?: string;
+  /** Visible trigger label (default: Refresh). */
+  label?: string;
   onStatusChange?: (status: CreatorEnrichmentStatus) => void;
   onCreatorUpdated?: (creator: UnifiedCreatorResult) => void;
 };
@@ -63,6 +65,7 @@ export function RefreshCreatorMenu({
   size = "sm",
   variant = "outline",
   className,
+  label = "Refresh",
   onStatusChange,
   onCreatorUpdated,
 }: RefreshCreatorMenuProps) {
@@ -128,7 +131,7 @@ export function RefreshCreatorMenu({
             ) : (
               <RefreshCwIcon aria-hidden />
             )}
-            Refresh
+            {label}
             <ChevronDownIcon className="opacity-60" aria-hidden />
           </Button>
         </DropdownMenuTrigger>

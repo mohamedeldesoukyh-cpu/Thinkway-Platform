@@ -58,12 +58,11 @@ import {
   DiscoverySuiteMasthead,
   DiscoverySuiteRow,
 } from "@/features/discovery/components/design-system";
-import { DISCOVERY_COLS } from "@/features/discovery/components/design-system/discovery-suite-cols";
+import { DISCOVERY_COLS, DISCOVERY_GRID_MIN_W } from "@/features/discovery/components/design-system/discovery-suite-cols";
 import { ShortlistListFilterBar } from "./shortlist-list-filter-bar";
 
-/** Pack track list — byte-identical (01-shortlists.md). */
-const SHORTLISTS_COLS = DISCOVERY_COLS.shortlists;
-const SHORTLISTS_MIN_W = 1250;
+/** Pack track list — byte-identical (01-shortlists.md). Asserted via cols="shortlists". */
+const SHORTLISTS_MIN_W = DISCOVERY_GRID_MIN_W.shortlists ?? 1250;
 
 const LIST_ACTION_RUNNERS: Record<
   ShortlistListActionKey,
@@ -362,7 +361,7 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
             />
           ) : (
             <DiscoverySuiteGrid
-              cols={SHORTLISTS_COLS}
+              cols="shortlists"
               minWidth={SHORTLISTS_MIN_W}
               framed={false}
               header={header}
