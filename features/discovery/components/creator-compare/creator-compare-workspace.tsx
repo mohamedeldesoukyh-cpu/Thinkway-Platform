@@ -50,6 +50,7 @@ export function CreatorCompareWorkspace({ shortlists: initialShortlists }: Props
     open: detailOpen,
     creator: detailCreator,
     openCreator,
+    openCreatorByHandle,
     onOpenChange: onDetailOpenChange,
   } = useCreatorDetailSheetState();
   const [addToShortlistOpen, setAddToShortlistOpen] = useState(false);
@@ -109,8 +110,10 @@ export function CreatorCompareWorkspace({ shortlists: initialShortlists }: Props
   }
 
   function handleOpenCreator(unifiedId: string) {
-    const creator = creators.find((c) => c.unified_id === unifiedId) ?? null;
-    if (creator) openCreator(creator);
+    if (!openCreatorByHandle(unifiedId, creators)) {
+      const creator = creators.find((c) => c.unified_id === unifiedId) ?? null;
+      if (creator) openCreator(creator);
+    }
   }
 
   function handleAddToShortlistConfirm({ shortlistIds }: { shortlistIds: string[] }) {

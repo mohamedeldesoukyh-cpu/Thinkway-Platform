@@ -7,12 +7,15 @@ import {
   DiscoveryCreatorExactHeader,
   DiscoveryCreatorExactRow,
 } from "@/features/discovery/components/discovery-creator-exact-row";
+import { DISCOVERY_GRID_MIN_W } from "@/features/discovery/components/design-system/discovery-suite-cols";
 import {
   isEnrichmentInProgress,
   resolveCreatorEnrichmentStatus,
 } from "@/features/discovery/enrichment/status";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon, ArrowUpIcon, Link2Icon, UsersIcon } from "lucide-react";
+
+const SHORTLIST_GRID_MIN_W = DISCOVERY_GRID_MIN_W.shortlist ?? 1360;
 
 import { SHORTLIST_QUOTED_COLUMN_LABEL } from "../constants";
 import {
@@ -223,7 +226,7 @@ function ShortlistCreatorRow({
           <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
         ) : undefined
       }
-      feedMaxItems={2}
+      feedMaxItems={3}
     />
   );
 }
@@ -304,36 +307,44 @@ export function ShortlistCreatorList({
 
   return (
     <div className="shortlist-creator-exact-root discovery-search-exact-root">
-      <div className="discovery-search-exact-header-bar">
-        <DiscoveryCreatorExactHeader
-          total={sortedItems.length}
-          allSelected={indeterminate ? "indeterminate" : allSelected}
-          hasCreators={sortedItems.length > 0}
-          onToggleSelectAll={onToggleSelectAll}
-          showSelectAll={selectable}
-          headersClassName="shortlist-exact-table-head"
-          infoColumnLabel="Creator"
-          countLabel={`${sortedItems.length} Creator${sortedItems.length === 1 ? "" : "s"}`}
-          metaColumns={shortlistCreatorMetaHeaderColumns(sort, setSort)}
-        />
+      <div className="tw-sc overflow-x-auto">
+        <div style={{ minWidth: SHORTLIST_GRID_MIN_W }}>
+          <div className="discovery-search-exact-header-bar">
+            <DiscoveryCreatorExactHeader
+              total={sortedItems.length}
+              allSelected={indeterminate ? "indeterminate" : allSelected}
+              hasCreators={sortedItems.length > 0}
+              onToggleSelectAll={onToggleSelectAll}
+              showSelectAll={selectable}
+              headersClassName="shortlist-exact-table-head"
+              infoColumnLabel="Creator"
+              countLabel={`${sortedItems.length} Creator${sortedItems.length === 1 ? "" : "s"}`}
+              metaColumns={shortlistCreatorMetaHeaderColumns(sort, setSort)}
+            />
+          </div>
+          <div className="discovery-search-exact-scroll">
+            {displayBlocks.map((block) => (
+              <ShortlistDisplayBlockRows
+                key={
+                  block.kind === "collapse"
+                    ? `collapse-${block.collapseGroupId}`
+                    : block.items[0]!.item_id
+                }
+                block={block}
+                selectedIds={selectedIds}
+                selectable={selectable}
+                onToggleSelect={onToggleSelect}
+                onToggleSelectGroup={onToggleSelectGroup}
+                onOpenCreator={onOpenCreator}
+              />
+            ))}
+          </div>
+        </div>
       </div>
-      <div className="discovery-search-exact-scroll">
-        {displayBlocks.map((block) => (
-          <ShortlistDisplayBlockRows
-            key={
-              block.kind === "collapse"
-                ? `collapse-${block.collapseGroupId}`
-                : block.items[0]!.item_id
-            }
-            block={block}
-            selectedIds={selectedIds}
-            selectable={selectable}
-            onToggleSelect={onToggleSelect}
-            onToggleSelectGroup={onToggleSelectGroup}
-            onOpenCreator={onOpenCreator}
-          />
-        ))}
-      </div>
+      <p className="tw-note mt-3">
+        Click a creator name to open the full profile — investment score, audience,
+        publications, confidence and similar creators.
+      </p>
     </div>
   );
 }

@@ -237,6 +237,7 @@ export function CreatorSearchWorkspace({
     open: detailOpen,
     creator: detailCreator,
     openCreator,
+    openCreatorByHandle,
     onOpenChange: onDetailOpenChange,
     closeIfShowing,
     patchOpenCreator,
@@ -1856,9 +1857,24 @@ export function CreatorSearchWorkspace({
         confidence: searchIntent.confidence,
         creatorUnifiedId: creator.unified_id,
       });
-      openCreator(creator);
+      // Pack cr(handle): Search results (POOL) first, then recommendations — never CR-only.
+      const handle =
+        creator.platforms.find((p) => p.handle)?.handle?.replace(/^@+/, "") ??
+        creator.unified_id;
+      const recommendationPool = recommendedCreators.map((entry) => entry.creator);
+      if (!openCreatorByHandle(handle, displayCreators, recommendationPool)) {
+        openCreator(creator);
+      }
     },
-    [debouncedSearch, openCreator, searchIntent.confidence, searchIntent.mode]
+    [
+      debouncedSearch,
+      displayCreators,
+      openCreator,
+      openCreatorByHandle,
+      recommendedCreators,
+      searchIntent.confidence,
+      searchIntent.mode,
+    ]
   );
 
   const handleSearchWithFewerWords = useCallback(() => {

@@ -6,10 +6,12 @@ import type {
   CreatorRecentPublication,
   UnifiedCreatorResult,
 } from "@/lib/creators/types";
-import { PlatformIcon } from "@/lib/performance/platform-icon";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { AB, PFC } from "@/lib/discovery/suite/helpers";
+import { cn } from "@/lib/utils";
 
 import { buildDiscoveryCreatorViewModel } from "@/features/discovery/view-models/discovery-creator-view-model";
-import { formatCreatorCount, formatEngagementRate } from "./creator-search/creator-search-utils";
+import { formatEngagementRate } from "./creator-search/creator-search-utils";
 
 function platformStatRowShowsHint(row: {
   metricsHint?: string | null;
@@ -25,12 +27,30 @@ function platformStatRowShowsHint(row: {
   );
 }
 
+function platformMark(platform: string | null): { cls: string; label: string } {
+  const key = platform ? canonicalPlatformKey(platform) : "";
+  const short =
+    key === "instagram"
+      ? "ig"
+      : key === "tiktok"
+        ? "tt"
+        : key === "youtube"
+          ? "yt"
+          : key === "facebook"
+            ? "fb"
+            : key === "snapchat"
+              ? "sc"
+              : "ig";
+  const d = PFC[short] ?? (["ig", "?"] as [string, string]);
+  return { cls: d[0], label: d[1] };
+}
+
 function FeedThumb({ publication }: { publication: CreatorRecentPublication }) {
   const src = creatorRecentPublicationDisplayUrl(publication);
   const recovery = useMediaProxyImageRecovery(src);
 
   if (!src || recovery.exhausted) {
-    return <div className="discovery-search-exact-feed-thumb discovery-search-exact-feed-thumb--empty" />;
+    return <div className="tw-thumb" aria-hidden />;
   }
 
   return (
@@ -41,7 +61,7 @@ function FeedThumb({ publication }: { publication: CreatorRecentPublication }) {
       alt=""
       referrerPolicy="no-referrer"
       loading="lazy"
-      className="discovery-search-exact-feed-thumb"
+      className="tw-thumb object-cover"
       onError={recovery.onError}
     />
   );
@@ -52,7 +72,7 @@ export function DiscoveryCreatorFeedThumbs({
   maxItems,
 }: {
   publications: CreatorRecentPublication[];
-  /** Cap visible thumbs (e.g. shortlist uses 2 to free column space). */
+  /** Cap visible thumbs (pack shortlist = 3). */
   maxItems?: number;
 }) {
   const visible =
@@ -60,14 +80,16 @@ export function DiscoveryCreatorFeedThumbs({
 
   if (visible.length === 0) {
     return (
-      <div className="discovery-search-exact-feed-thumbs discovery-search-exact-feed-thumbs--empty">
-        <div className="discovery-search-exact-feed-thumb discovery-search-exact-feed-thumb--empty" />
+      <div className="tw-thumbs">
+        <div className="tw-thumb" aria-hidden />
+        <div className="tw-thumb" aria-hidden />
+        <div className="tw-thumb" aria-hidden />
       </div>
     );
   }
 
   return (
-    <div className="discovery-search-exact-feed-thumbs">
+    <div className="tw-thumbs">
       {visible.map((pub, index) => (
         <FeedThumb key={`${pub.url ?? "pub"}-${index}`} publication={pub} />
       ))}
@@ -92,6 +114,7 @@ export function DiscoveryCreatorPlatformStatsBox({
       ? buildDiscoveryCreatorViewModel(creator, { platformFilter, isApifyAcquired }).platformStats
       : []);
 
+  /** Always keep connected platforms — null metrics render as — (.z), never hide the row. */
   const rows =
     platformStats.length > 0
       ? platformStats
@@ -106,65 +129,42 @@ export function DiscoveryCreatorPlatformStatsBox({
         ];
 
   return (
-    <div className="discovery-search-exact-stat-box">
-      <div className="discovery-search-exact-stat-head" aria-hidden>
-        <span className="discovery-search-exact-stat-platform-logo" />
-        <span className="discovery-search-exact-stat-col-label">Followers</span>
-        <span className="discovery-search-exact-stat-col-label">Engagement</span>
-        <span className="discovery-search-exact-stat-col-label">Avg views</span>
-      </div>
-      <div className="discovery-search-exact-stat-platforms">
-        {rows.map((row) => {
-          const showHint = platformStatRowShowsHint(row);
+    <div className="tw-stx">
+      <span className="hh" aria-hidden>
+        <i />
+        <i>Followers</i>
+        <i>Engagement</i>
+        <i>Avg views</i>
+      </span>
+      {rows.map((row) => {
+        const mark = platformMark(row.platform);
+        const showHint = platformStatRowShowsHint(row);
 
-          return (
-            <div key={row.key} className="discovery-search-exact-stat-platform">
-              <div className="discovery-search-exact-stat-platform-logo">
-                {row.platform ? (
-                  <PlatformIcon
-                    platform={row.platform}
-                    size="xs"
-                    variant="logo"
-                    className="!size-4"
-                  />
-                ) : null}
-              </div>
-              {showHint ? (
-                <span
-                  className="discovery-search-exact-stat-hint"
-                  title={row.metricsHint ?? undefined}
-                >
-                  {row.metricsHint}
-                </span>
-              ) : (
-                <>
-                  <b
-                    className={`discovery-search-exact-stat-value mono ${
-                      row.followers == null ? "text-muted-foreground" : ""
-                    }`}
-                  >
-                    {formatCreatorCount(row.followers)}
-                  </b>
-                  <b
-                    className={`discovery-search-exact-stat-value mono ${
-                      row.engagement == null ? "text-muted-foreground" : ""
-                    }`}
-                  >
-                    {formatEngagementRate(row.engagement)}
-                  </b>
-                  <b
-                    className={`discovery-search-exact-stat-value mono ${
-                      row.avgViews == null ? "text-muted-foreground" : ""
-                    }`}
-                  >
-                    {formatCreatorCount(row.avgViews)}
-                  </b>
-                </>
-              )}
-            </div>
-          );
-        })}
-      </div>
+        return (
+          <span key={row.key} className="rr">
+            <span className="tw-pf">
+              <span className={mark.cls}>{mark.label}</span>
+            </span>
+            {showHint ? (
+              <b className="z" style={{ gridColumn: "2 / -1", textAlign: "left" }} title={row.metricsHint ?? undefined}>
+                {row.metricsHint}
+              </b>
+            ) : (
+              <>
+                <b className={cn(row.followers == null && "z")}>
+                  {AB(row.followers)}
+                </b>
+                <b className={cn(row.engagement == null && "z")}>
+                  {formatEngagementRate(row.engagement)}
+                </b>
+                <b className={cn(row.avgViews == null && "z")}>
+                  {AB(row.avgViews)}
+                </b>
+              </>
+            )}
+          </span>
+        );
+      })}
     </div>
   );
 }

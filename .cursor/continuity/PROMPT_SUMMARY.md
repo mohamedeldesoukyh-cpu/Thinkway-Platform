@@ -1,15 +1,24 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Campaign / finance design spec (`THINKWAY_CAMPAIGN_FINANCE_DESIGN_SPEC.md`).
+**Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
+
+## Shipped 2026-09-04 — Session 1 + client-link foundation reopen
+
+- Shortlists list `f8a76e4c`: pack track, Open-only Act, switch+dot. Acceptance **1100px** scroll; footer `N of M` + Creators `X of Y`.
+- None vs Off: `.tw-live.none` grey; busy = switch opacity (no third sibling). `9b1ad84e` `fix(discovery): distinguish client-link none from off`. CSS re-frozen.
+
+## In progress 2026-09-04 — Session 2 shortlist detail (uncommitted)
+
+Per-platform `.tw-stx` (dead FB `— — —`); name `<button>`; `openCreatorByHandle` across shortlist+search pools; min-width **1360**. Gate: `npm run test:discovery-shortlist-detail`.
+
+## Shipped 2026-09-04 — Vercel Turbopack `node:fs` on Shortlists
+
+List imports `D`/`ini` from `lib/discovery/suite/helpers`. Barrel no longer re-exports class-coverage.
 
 ## Shipped 2026-09-04 — Discovery Session 0 foundation (FROZEN)
 
-Pack imported: `docs/architecture/discovery-specs/`. Frozen CSS: `app/styles/discovery.css` (scoped `.discovery-suite`, read-only). Helpers: `lib/discovery/suite/` (`D`/`F`/`AB`/`E`/`ini`/`pf`, `bindScroll`, class-coverage). Gate: `npm run test:discovery-foundation`. Cursor rule: `thinkway-discovery-css-readonly.mdc` (CSS **and** `lib/discovery/suite/`). Layout imports foundation; legacy `discovery-suite.css` kept until page cutover — do not grow overrides. Commits: `cce992b3`, rule `8e41390e`.
-
-**Pre–page-1 checks (report-only, 2026-09-04):** (1) With foundation CSS loaded, `.tw-in`/`.tw-b` borders+bg win over Tailwind preflight; without Discovery layout CSS, preflight wins (0px / transparent) — do not change load order yet. (2) App already uses `next/font` Geist + Geist Mono — do not add a second loader; `.tw-v` computes Geist Mono when foundation CSS is present. (3) Prod build: `var(--cols)` survives in 5 `.next/static/chunks/*.css` files. (4) `bindScroll` singleton guard → 1 scroll listener across StrictMode×5.
-
-**Session 1 in progress:** Shortlists list (`01-shortlists.md`) — pack markup on real data; Open-only Act; client-link = switch+dot only.
+Pack: `docs/architecture/discovery-specs/`. Frozen CSS: `app/styles/discovery.css`. Helpers: `lib/discovery/suite/`. Gate: `npm run test:discovery-foundation`. Rule: `thinkway-discovery-css-readonly.mdc`. Commits: `cce992b3`, `8e41390e`.
 
 ## In progress 2026-09-04 — Discovery suite redesign (superseded by pack)
 

@@ -188,6 +188,7 @@ export function ShortlistWorkspace({
     open: detailOpen,
     creator: detailCreator,
     openCreator,
+    openCreatorByHandle,
     onOpenChange: onDetailOpenChange,
     setCreator: setDetailCreator,
   } = useCreatorDetailSheetState();
@@ -353,6 +354,18 @@ export function ShortlistWorkspace({
         return { ...item, creator };
       }),
     [detail.creators, creatorPatches, enrichmentOverrides]
+  );
+
+  /** Handle-only open (pack cr) — shortlist items first, then any patched creators. */
+  const handleOpenCreatorByHandle = useCallback(
+    (handleOrId: string) => {
+      const shortlistPool = displayCreators
+        .map((item) => item.creator)
+        .filter((c): c is UnifiedCreatorResult => Boolean(c));
+      const patched = [...creatorPatches.values()];
+      return openCreatorByHandle(handleOrId, shortlistPool, patched);
+    },
+    [creatorPatches, displayCreators, openCreatorByHandle]
   );
 
   // Keep all hooks above event handlers — Fast Refresh can otherwise mismatch hook order
@@ -1001,7 +1014,14 @@ export function ShortlistWorkspace({
               setSelectedIds(toggleGroupSelection(itemIds, effectiveSelectedIds))
             }
             onToggleSelectAll={handleToggleSelectAll}
-            onOpenCreator={handleOpenCreator}
+            onOpenCreator={(creator) => {
+              const handle =
+                creator.platforms.find((p) => p.handle)?.handle?.replace(/^@+/, "") ??
+                creator.unified_id;
+              if (!handleOpenCreatorByHandle(handle)) {
+                handleOpenCreator(creator);
+              }
+            }}
           />
         )}
       </section>

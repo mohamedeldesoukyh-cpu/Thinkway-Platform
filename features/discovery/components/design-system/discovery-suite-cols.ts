@@ -7,7 +7,7 @@ export const DISCOVERY_COLS = {
   shortlists:
     "30px 116px minmax(180px,1.4fr) 130px 96px 92px 100px 150px 70px 110px 74px",
   shortlist:
-    "30px minmax(200px,1.4fr) 68px 140px 296px 166px 126px 96px 40px",
+    "30px minmax(200px,1.4fr) 68px 140px 296px 166px 126px 96px",
   quotations:
     "30px 116px minmax(190px,1.4fr) 120px minmax(150px,1fr) 92px 92px 150px 66px 116px 74px",
   quotation:
@@ -27,7 +27,7 @@ export type DiscoveryColsKey = keyof typeof DISCOVERY_COLS;
 /** Horizontal scroll floors from the HTML grid() minW args. */
 export const DISCOVERY_GRID_MIN_W: Partial<Record<DiscoveryColsKey, number>> = {
   shortlists: 1250,
-  shortlist: 1180,
+  shortlist: 1360,
   quotations: 1280,
   quotation: 1180,
   search: 1100,

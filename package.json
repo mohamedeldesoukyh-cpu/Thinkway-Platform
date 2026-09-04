@@ -188,6 +188,8 @@
     "test:cleanup-classification": "npx tsx lib/creators/cleanup-classification.test.ts",
     "test:discovery-ui-contract": "npx tsx features/discovery/components/discovery-ui-contract.test.ts",
     "test:discovery-foundation": "npx tsx scripts/check-discovery-foundation.ts",
+    "test:discovery-shortlists-page": "npx tsx scripts/check-discovery-shortlists-page.ts",
+    "test:discovery-shortlist-detail": "npx tsx scripts/check-discovery-shortlist-detail.ts",
     "validate:discovery-ui-contract": "node scripts/validate-discovery-ui-contract.mjs",
     "soak:creator-crm-phase2a": "npx tsx scripts/soak-creator-crm-phase2a.ts",
     "soak:creator-crm-phase2b": "npx tsx scripts/soak-creator-crm-phase2b.ts"

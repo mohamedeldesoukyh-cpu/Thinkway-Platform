@@ -217,9 +217,24 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
 
       <div className="discovery-search-exact-info-cell">
         <div className="discovery-search-exact-info-stack">
-          <div className="discovery-search-exact-name" title={vm.displayName}>
+          <button
+            type="button"
+            className="discovery-search-exact-name nm max-w-full min-w-0 cursor-pointer truncate border-0 bg-transparent p-0 text-left font-[inherit]"
+            title={vm.displayName}
+            onClick={(event) => {
+              stop(event);
+              onOpenCreator();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                event.preventDefault();
+                stop(event);
+                onOpenCreator();
+              }
+            }}
+          >
             {vm.displayName}
-          </div>
+          </button>
           {vm.handleLabel ? (
             <div className="discovery-search-exact-handle" title={vm.handleLabel}>
               {vm.handleLabel}
