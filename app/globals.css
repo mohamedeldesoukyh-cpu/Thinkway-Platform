@@ -403,42 +403,61 @@
     position: relative;
     display: flex;
     height: 100%;
-    width: 12px;
+    width: 14px;
     align-items: center;
-    justify-content: center;
-    cursor: pointer;
+    justify-content: flex-start;
+    cursor: ew-resize;
+    border: 0;
+    padding: 0;
+    background: transparent;
   }
 
+  /* Subtle full-edge hover target — almost invisible until hover. */
   .thinkway-app-sidebar-tip-bar {
     position: absolute;
-    inset: 0;
-    width: 5px;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 2px;
     margin: 0;
-    border-radius: 0 8px 8px 0;
-    background: linear-gradient(180deg, #0b3dbf 0%, #0057ff 55%, #1d9e75 100%);
-    opacity: 0.95;
-    box-shadow: 1px 0 8px rgba(0, 87, 255, 0.18);
+    border-radius: 0;
+    background: #c5cdd9;
+    opacity: 0.55;
+    box-shadow: none;
+    transition: opacity 0.15s ease, width 0.15s ease, background 0.15s ease;
   }
 
+  .thinkway-app-sidebar-tip:hover .thinkway-app-sidebar-tip-bar {
+    width: 3px;
+    opacity: 1;
+    background: #0057ff;
+  }
+
+  /* Pull nub — small line / handle in the vertical middle. */
   .thinkway-app-sidebar-tip-nub {
     position: absolute;
-    left: 3px;
+    left: 0;
     top: 50%;
     z-index: 1;
     display: grid;
     place-items: center;
-    width: 16px;
-    height: 36px;
+    width: 14px;
+    height: 48px;
     transform: translateY(-50%);
-    border-radius: 0 8px 8px 0;
+    border-radius: 0 9px 9px 0;
     background: #fff;
     color: #0b52e0;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     line-height: 1;
-    box-shadow: 0 1px 6px rgba(15, 23, 42, 0.12);
+    box-shadow: 1px 2px 10px rgba(15, 23, 42, 0.14);
     border: 1px solid #e2e8f0;
     border-left: 0;
+  }
+
+  .thinkway-app-sidebar-tip:hover .thinkway-app-sidebar-tip-nub {
+    border-color: rgba(0, 87, 255, 0.35);
+    color: #0057ff;
   }
 
   .dark .thinkway-app-sidebar-tip-nub {

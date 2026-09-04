@@ -49,8 +49,22 @@
   font-weight: 400;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
-  transition: width 0.22s var(--tw-ez);
+  transition: width 0.22s var(--tw-ez), opacity 0.16s var(--tw-ez),
+    border-color 0.16s var(--tw-ez);
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Unpinned + closed: fully gone — tip affordance is separate. */
+.tw-sb2.tw-sb2--hidden,
+.tw-sb2:not(.open) {
+  width: 0 !important;
+  min-width: 0 !important;
+  border-right-color: transparent;
+  opacity: 0;
+  pointer-events: none;
+  box-shadow: none;
+  overflow: hidden;
 }
 
 .tw-sb2 *,
@@ -70,6 +84,8 @@
 
 .tw-sb2.open {
   width: 252px;
+  opacity: 1;
+  pointer-events: auto;
   box-shadow: 14px 0 34px -18px rgba(11, 15, 26, 0.26);
 }
 

@@ -1,14 +1,17 @@
-/** Design suite sidebar — 62px rail / 252px expanded (sidebar.html §11). */
+/** Design suite sidebar — 252px expanded; unpinned = auto-hide tip (no icon rail). */
 export const APP_SIDEBAR_WIDTH_EXPANDED = "252px";
-export const APP_SIDEBAR_WIDTH_COLLAPSED = "62px";
+/** Layout reservation when unpinned — panel is overlay; tip is fixed on the edge. */
+export const APP_SIDEBAR_WIDTH_COLLAPSED = "0px";
 export const APP_SIDEBAR_WIDTH_HIDDEN = "0px";
+/** Hit / tip strip on the left edge when navigation is tucked away. */
+export const APP_SIDEBAR_TIP_WIDTH = "12px";
 export const APP_SIDEBAR_MARGIN = "0px";
 export const APP_SIDEBAR_WIDTH_CSS_VAR = "--app-sidebar-width";
 
 /** Hover leave delay before an unpinned peek collapses. */
 export const APP_SIDEBAR_PEEK_CLOSE_DELAY_MS = 220;
 
-/** Full sidebar panel vs icon rail — driven by pin (layout) or peek (overlay). */
+/** Full sidebar panel vs hidden — driven by pin (layout) or peek (overlay). */
 export function resolveAppSidebarExpanded(pinnedOrPeek: boolean): boolean {
   return pinnedOrPeek;
 }
@@ -20,7 +23,7 @@ export function resolveAppSidebarVisible(): boolean {
 
 /**
  * Layout width for main content offset.
- * Unpinned peek expands as an overlay — content stays on the rail width.
+ * Unpinned peek expands as an overlay — content uses full width (0 reserved).
  */
 export function getAppSidebarLayoutWidth(pinned: boolean): string {
   const base = pinned ? APP_SIDEBAR_WIDTH_EXPANDED : APP_SIDEBAR_WIDTH_COLLAPSED;

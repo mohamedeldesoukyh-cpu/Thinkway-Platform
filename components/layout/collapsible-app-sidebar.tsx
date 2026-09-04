@@ -345,9 +345,8 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
   const layoutWidth = layoutPinned
     ? APP_SIDEBAR_WIDTH_EXPANDED
     : APP_SIDEBAR_WIDTH_COLLAPSED;
-  const panelWidth = displayOpen
-    ? APP_SIDEBAR_WIDTH_EXPANDED
-    : APP_SIDEBAR_WIDTH_COLLAPSED;
+  const panelWidth = displayOpen ? APP_SIDEBAR_WIDTH_EXPANDED : "0px";
+  const showTip = !pinned && !displayOpen;
 
   const email = userEmail ?? null;
   const initials = initialsFromEmail(email);
@@ -361,6 +360,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
       )}
       style={{ width: layoutWidth }}
     >
+      {/* Edge hit target — mouse to the left edge opens the drawer. */}
       {!pinned ? (
         <div
           className="pointer-events-auto fixed inset-y-0 left-0 z-[65] w-3"
@@ -369,17 +369,40 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
         />
       ) : null}
 
+      {/* Collapsed affordance: thin center pull tip only (no icons). */}
+      {showTip ? (
+        <button
+          type="button"
+          className="thinkway-app-sidebar-tip fixed inset-y-0 left-0 z-[66]"
+          aria-label="Open navigation"
+          onPointerEnter={openPeek}
+          onClick={() => {
+            openPeek();
+            persistPinned(true);
+          }}
+        >
+          <span className="thinkway-app-sidebar-tip-bar" aria-hidden />
+          <span className="thinkway-app-sidebar-tip-nub" aria-hidden>
+            ›
+          </span>
+        </button>
+      ) : null}
+
       <nav
         className={cn(
           "tw-sb2",
           displayOpen && "open",
           pinned && "pin",
+          !displayOpen && "tw-sb2--hidden",
           !pinned && displayOpen
             ? "fixed inset-y-0 left-0 z-[70]"
-            : "absolute inset-y-0 left-0 z-[70]"
+            : pinned
+              ? "absolute inset-y-0 left-0 z-[70]"
+              : "fixed inset-y-0 left-0 z-[70] pointer-events-none"
         )}
         style={{ width: panelWidth }}
         aria-label="Main navigation"
+        aria-hidden={!displayOpen}
         onPointerEnter={pinned ? undefined : openPeek}
         onPointerLeave={pinned ? undefined : scheduleClosePeek}
       >

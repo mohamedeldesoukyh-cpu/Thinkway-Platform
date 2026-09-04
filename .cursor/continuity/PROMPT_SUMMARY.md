@@ -3,9 +3,9 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Campaign / finance design spec (`THINKWAY_CAMPAIGN_FINANCE_DESIGN_SPEC.md`).
 
-## In progress 2026-09-04 — Sidebar type scale match
+## In progress 2026-09-04 — Sidebar auto-hide tip
 
-Fonts looked wrong vs `sidebar.html`: CSS used missing `--font-geist-sans` (app uses `--font-sans`) and inherited Tailwind line-height 1.5 instead of HTML `font:` normal. Suite CSS now locks 8.5 / 12.5px tokens + Geist via `--font-sans`. No migrations. Not on Production.
+Unpinned nav no longer shows a 62px icon rail. Panel fully hides; only a center-edge pull tip remains. Hover left edge (or tip) peeks the 252px drawer; pin keeps it open. No migrations. Not on Production.
 
 ## In progress 2026-09-04 — Campaign display prefix Camp#
 
