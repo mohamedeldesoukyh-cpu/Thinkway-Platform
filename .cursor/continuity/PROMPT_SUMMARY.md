@@ -3,9 +3,17 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-04 — Session 3 quotations list
+
+Page 3 `/discovery/quotations`: `DiscoverySuiteGrid` `cols="quotations"` (track + minW 1300). Client `title=`; Client cost `F()` no currency in rows; masthead `Ccy EGP` once + Avg GP % tone `r`. Footer `N of M` + Lines + Client cost. Gate: `npm run test:discovery-quotations-page`.
+
+## Shipped 2026-09-04 — Session 2 similar bands + live overlay crawl
+
+Similar creators: Strong/Good match bands (no fake ordinal). Overlay crawl opens Edit URL / Combine / Add-creators live: `npm run test:discovery-shortlist-overlays`.
+
 ## Shipped 2026-09-04 — Session 2 grid engine + overlay gates
 
-Shortlist detail paints `DiscoverySuiteGrid` `cols="shortlist"` (pack track + min-width 1360). Page 1 uses `cols="shortlists"`. Combine “cannot be undone”; Contact empty has **Run enrichment** button; platform switch locks `estimated_country`. Overlay class-coverage crawl: `npm run test:discovery-shortlist-overlays`.
+Shortlist detail paints `DiscoverySuiteGrid` `cols="shortlist"` (pack track + min-width 1360). Page 1 uses `cols="shortlists"`. Combine “cannot be undone”; Contact empty has **Run enrichment** button; platform switch locks `estimated_country`.
 
 ## Shipped 2026-09-04 — Session 1 + client-link foundation reopen
 

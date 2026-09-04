@@ -28,7 +28,7 @@ export type DiscoveryColsKey = keyof typeof DISCOVERY_COLS;
 export const DISCOVERY_GRID_MIN_W: Partial<Record<DiscoveryColsKey, number>> = {
   shortlists: 1250,
   shortlist: 1360,
-  quotations: 1280,
+  quotations: 1300,
   quotation: 1180,
   search: 1100,
   intel: 980,
