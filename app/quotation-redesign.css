@@ -294,6 +294,15 @@
   font-size: 18px;
 }
 
+/* Nested .discovery-suite is token scope only (layout root already wraps the
+   page). Legacy discovery-suite.css sets min-height:100% on every
+   .discovery-suite — that made metrics/lifecycle/creators each claim a full
+   viewport and left a huge white gap under the masthead. */
+.quotation-editor-rd4 .discovery-suite {
+  min-height: auto;
+  background: transparent;
+}
+
 /* Quotation body bands — document flow only. The editor root scrolls
    (shortlist single-scrollport). Never flex:1 / min-height:0 here. */
 .quotation-editor-rd4 .quotation-body,
