@@ -4,10 +4,8 @@ import { useEffect, useState } from "react";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
-import { PlatformV6Toggle } from "@/components/platform/platform-v6-layout";
 import { ClientReviewShareDialog } from "@/features/client-workspace/components/client-review-share-dialog";
 import {
-  CLIENT_WORKSPACE_LIST_LINK_LABEL,
   type ClientWorkspaceListLink,
   type ClientWorkspaceListLinkSource,
   type CampaignClientWorkspaceLinkState,
@@ -95,7 +93,6 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const shareScope = { source, id };
-  const label = CLIENT_WORKSPACE_LIST_LINK_LABEL[state];
   const isActive = state === "active";
   const documentLabel =
     source === "quotation" ? "Quotation" : source === "shortlist" ? "Shortlist" : "Campaign";
@@ -183,77 +180,26 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
     if (isActive) void stopLink();
   }
 
-  async function onView() {
-    if (pending) return;
-    setPending(true);
-    try {
-      const cached = readClientReviewShare(shareScope);
-      if (cached) {
-        openShare(cached.url, cached.reviewNumber);
-        return;
-      }
-      const result = await postClientWorkspaceListLink(source, id, "reveal");
-      if (!result.ok) {
-        toast.error(result.message);
-        return;
-      }
-      if (!result.url || result.reviewNumber == null) {
-        toast.error("Could not open the Client Workspace link.");
-        return;
-      }
-      openShare(result.url, result.reviewNumber);
-    } catch (error) {
-      toast.error(
-        clientLinkErrorMessage(
-          error instanceof Error ? error.message : "",
-          "Could not open the Client Workspace link."
-        )
-      );
-    } finally {
-      setPending(false);
-    }
-  }
-
   return (
     <>
-      <div className="flex min-w-0 flex-col gap-1 overflow-visible whitespace-normal">
+      <span className="tw-lnk">
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isActive}
+          aria-label="Client link"
+          disabled={pending}
+          className={cn("tw-sw", isActive && "on")}
+          onClick={() => void onToggle(!isActive)}
+        />
         <span
-          className={cn(
-            "inline-flex min-w-0 items-center gap-1.5 text-xs leading-snug",
-            isActive ? "platform-v6-c-green font-semibold" : "text-muted-foreground"
-          )}
+          className={cn("tw-live", isActive && "on")}
           role="status"
-          aria-live="polite"
-          title={reviewNumber != null ? `Client Workspace v${reviewNumber}` : undefined}
-        >
-          {isActive ? (
-            <span className="platform-v6-hs-live-dot !size-2 shrink-0" aria-hidden />
-          ) : (
-            <span className="size-2 shrink-0 rounded-full bg-slate-400" aria-hidden />
-          )}
-          <span className="min-w-0 break-words">{label}</span>
-          {pending ? <Loader2Icon className="size-3 shrink-0 animate-spin" /> : null}
-        </span>
-        <div className="flex min-w-0 items-center">
-          <PlatformV6Toggle
-            checked={isActive}
-            disabled={pending}
-            aria-label="Client Workspace link active"
-            onCheckedChange={onToggle}
-          />
-        </div>
-        {isActive ? (
-          <button
-            type="button"
-            className="platform-v6-link w-fit text-left text-xs font-semibold"
-            disabled={pending}
-            aria-label="View Client Workspace link"
-            onClick={() => void onView()}
-          >
-            View
-          </button>
-        ) : null}
-      </div>
+          aria-label={isActive ? "Client link live" : "Client link off"}
+          title={isActive ? "Live" : "Off"}
+        />
+        {pending ? <Loader2Icon className="size-3 shrink-0 animate-spin text-muted-foreground" /> : null}
+      </span>
       <ClientReviewShareDialog
         open={shareOpen}
         onOpenChange={setShareOpen}

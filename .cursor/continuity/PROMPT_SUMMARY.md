@@ -7,6 +7,8 @@
 
 Full suite scaffolded from `docs/architecture/discovery.html` + `THINKWAY_DISCOVERY_DESIGN_SPEC.md`: `discovery-suite.css`, date `D()`, track lists, masthead/grid primitives. Lists (Shortlists/Quotations), detail polish (296/166 stats, Preview/Export labels, GP conflict), tools (Search filters Show-N-more, Match empty honesty, Import/Intel grids), overlays (share/live-dot/flyout/creator sheet). Extends Discovery UI Contract — no parallel rows. Real metrics only. No migrations. Not on Production.
 
+**Match pass (local, not pushed):** Live Dev screenshots vs `discovery.html` — empty masthead numbers were wrong DOM (`.tw-ms2` must wrap all metric cells; `b` ink color). Client link → `.tw-sw` + `.tw-live` only. Double chrome removed; quotations masthead above filters; Search col-count label hidden; Match uses suite masthead. Commit/push needed for Dev.
+
 ## In progress 2026-09-04 — Sidebar auto-hide tip
 
 Unpinned nav no longer shows a 62px icon rail. Panel fully hides; only a center-edge pull tip remains. Hover left edge (or tip) peeks the 252px drawer; pin keeps it open. No migrations. Not on Production.

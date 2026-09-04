@@ -16,7 +16,7 @@ export default async function DiscoveryImportPage() {
   }
 
   return (
-    <DiscoveryPageShell page="import">
+    <DiscoveryPageShell page="import" showHeader={false}>
       {errorMessage ? (
         <div className="rounded-[var(--radius-lg)] border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
           {errorMessage}

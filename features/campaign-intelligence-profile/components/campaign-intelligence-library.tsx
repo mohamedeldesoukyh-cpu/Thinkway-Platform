@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import {
   ArchiveIcon,
@@ -49,6 +49,7 @@ type Props = {
   activeProfileId?: string | null;
   compact?: boolean;
   className?: string;
+  headerAction?: ReactNode;
 };
 
 const STATUS_OPTIONS = [
@@ -63,6 +64,7 @@ export function CampaignIntelligenceLibrary({
   activeProfileId,
   compact = false,
   className,
+  headerAction,
 }: Props) {
   const [items, setItems] = useState<CampaignIntelligenceLibraryItem[]>([]);
   const [filterOptions, setFilterOptions] =
@@ -265,7 +267,9 @@ export function CampaignIntelligenceLibrary({
       {!compact ? (
         <DiscoverySuiteMasthead
           title="Campaign Intelligence Library"
+          subtitle="Shared brief intelligence for Discovery, campaigns, Studio, and AI workflows."
           metrics={mastheadMetrics}
+          actions={headerAction}
           freezeOnScroll={false}
         />
       ) : null}

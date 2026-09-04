@@ -1,9 +1,5 @@
 "use client";
 
-import {
-  DISCOVERY_PAGE_IDENTITY,
-  DiscoveryPageIconBadge,
-} from "@/features/discovery/components/discovery-page-identity";
 import { CreateShortlistDialog } from "@/features/discovery/shortlists/components/create-shortlist-dialog";
 import type { ShortlistBrandOption } from "@/features/discovery/shortlists/types";
 
@@ -18,7 +14,7 @@ type Props = {
   totalCount: number;
 };
 
-/** Single thin header row: identity + filters + create action. */
+/** Filters + create only — page title lives in DiscoverySuiteMasthead. */
 export function ShortlistsListMergedHeader({
   filters,
   onChange,
@@ -27,23 +23,7 @@ export function ShortlistsListMergedHeader({
   totalCount,
 }: Props) {
   return (
-    <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-background px-8 py-2.5">
-      <div className="flex shrink-0 items-center gap-2.5">
-        <DiscoveryPageIconBadge
-          identity={DISCOVERY_PAGE_IDENTITY.shortlists}
-          size="sm"
-          className="size-8 rounded-[9px] [&_svg]:size-4"
-        />
-        <div className="min-w-0 leading-none">
-          <h1 className="text-[15px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
-            Shortlists
-          </h1>
-          <p className="mt-0.5 hidden text-[11px] text-muted-foreground sm:block">
-            Build, review, approve, and move creators into campaigns.
-          </p>
-        </div>
-      </div>
-
+    <div className="flex shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-background px-4 py-2.5 md:px-5">
       <ShortlistListFilterBar
         filters={filters}
         onChange={onChange}

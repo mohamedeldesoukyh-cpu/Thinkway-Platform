@@ -191,7 +191,16 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
   const showFloatingBar = selectedCount > 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+    <div className="discovery-suite flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--tw-bg)]">
+      <div className="shrink-0 px-4 pt-4 md:px-8">
+        <DiscoverySuiteMasthead
+          title="Client quotations"
+          subtitle="Build, price and export influencer proposals for clients"
+          metrics={mastheadMetrics}
+          freezeOnScroll={false}
+        />
+      </div>
+
       <QuotationsListMergedHeader
         filters={filters}
         onChange={setFilters}
@@ -200,14 +209,6 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
         resultCount={filteredQuotations.length}
         totalCount={quotations.length}
       />
-
-      <div className="shrink-0 px-8 pt-4">
-        <DiscoverySuiteMasthead
-          title="Client quotations"
-          metrics={mastheadMetrics}
-          freezeOnScroll={false}
-        />
-      </div>
 
       <div
         className={cn(

@@ -258,6 +258,7 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
       <div className="shrink-0 px-4 pt-4">
         <DiscoverySuiteMasthead
           title="Shortlists"
+          subtitle="Build, review, approve and move creators into campaigns"
           metrics={mastheadMetrics}
           freezeOnScroll={false}
         />

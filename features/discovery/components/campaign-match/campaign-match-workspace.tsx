@@ -14,6 +14,7 @@ import {
 import {
   DiscoveryEmptyState,
   DiscoveryLoadingState,
+  DiscoverySuiteMasthead,
 } from "@/features/discovery/components/design-system";
 import {
   InterestChips,
@@ -38,6 +39,21 @@ export function CampaignMatchWorkspace() {
     matches.length > 0 &&
     matches.every((m) => selectedIds.has(m.creator.unified_id));
   const indeterminate = selectedIds.size > 0 && !allSelected;
+  const briefSet = brief.trim().length > 0;
+
+  const mastheadMetrics = [
+    {
+      label: "Matches",
+      value: hasRun || matches.length > 0 ? matches.length : 0,
+      tone: matches.length === 0 ? ("r" as const) : undefined,
+    },
+    {
+      label: "Brief",
+      value: briefSet ? "set" : "not set",
+      tone: "s" as const,
+    },
+    { label: "Selected", value: selectedIds.size },
+  ];
 
   function toggleSelect(unifiedId: string) {
     setSelectedIds((prev) => {
@@ -82,122 +98,124 @@ export function CampaignMatchWorkspace() {
   }
 
   return (
-    <div className="discovery-search-exact-root overflow-hidden rounded-[var(--radius-lg)] border border-[var(--tw-border)] bg-background">
-      <div className="border-b border-[var(--tw-border)] bg-[var(--surface)] px-4 py-3.5">
-        <p className="text-[12.5px] font-bold text-foreground">
-          Match workspace
-        </p>
-        <p className="mt-0.5 text-xs text-[var(--text-3)]">
-          Score creators against your brief using unified browse + fit ranking.
-        </p>
-      </div>
-
-      <div className="space-y-3 border-b border-[var(--tw-border)] px-4 py-4">
-        <Textarea
-          ref={briefRef}
-          value={brief}
-          onChange={(event) => setBrief(event.target.value)}
-          placeholder="Describe your campaign: audience, niche, platforms, goals…"
-          rows={4}
-          className="min-h-[96px] resize-y text-sm"
-        />
-        {brief.trim() ? (
-          <Button
-            type="button"
-            disabled={isPending}
-            onClick={runMatch}
-            className="h-9 gap-1.5 text-[12.5px] font-bold"
-          >
-            <SparklesIcon className="size-3.5" />
-            {isPending ? "Matching…" : "Match creators"}
-          </Button>
-        ) : null}
-      </div>
-
-      {isPending && matches.length === 0 ? (
-        <DiscoveryLoadingState
-          message="Ranking creators for your brief…"
-          className="py-12"
-        />
-      ) : matches.length === 0 ? (
-        <DiscoveryEmptyState
-          title={
-            hasRun
-              ? "No creators matched this brief"
-              : brief.trim()
-                ? "Brief ready to match"
-                : "Campaign brief not set"
-          }
-          description={
-            hasRun
-              ? "The current brief returned no matches. Refine its audience, niche, platform, or goal, then run the match again."
-              : brief.trim()
-                ? "Run the match to rank creators against the campaign requirements."
-                : "Creator matches need a campaign brief. Add the audience, niche, platforms, and goals to begin."
-          }
-          className="py-12"
-        >
-          {!brief.trim() ? (
+    <div className="discovery-suite flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--tw-bg)]">
+      <div className="shrink-0 px-4 pt-4">
+        <DiscoverySuiteMasthead
+          title="Campaign match"
+          subtitle="Score creators against your brief using unified browse and fit ranking"
+          metrics={mastheadMetrics}
+          actions={
             <Button
               type="button"
-              onClick={() => briefRef.current?.focus()}
-              className="h-9 gap-1.5 text-[12.5px] font-bold"
+              disabled={isPending || !briefSet}
+              onClick={runMatch}
+              className="h-8 gap-1.5 rounded-[8px] px-3 text-[12px] font-semibold"
             >
               <SparklesIcon className="size-3.5" />
-              Add campaign brief
+              {isPending ? "Matching…" : "Match creators"}
             </Button>
-          ) : null}
-        </DiscoveryEmptyState>
-      ) : (
-        <>
-          <DiscoveryCreatorExactHeader
-            total={matches.length}
-            allSelected={indeterminate ? "indeterminate" : allSelected}
-            hasCreators={matches.length > 0}
-            onToggleSelectAll={toggleSelectAll}
-            metaLabel="Match fit"
-          />
-          <div className="discovery-search-exact-scroll max-h-[min(70vh,960px)]">
-            {matches.map((match) => {
-              const creator = match.creator;
-              const selected = selectedIds.has(creator.unified_id);
-              return (
-                <DiscoveryCreatorExactRow
-                  key={creator.unified_id}
-                  creator={creator}
-                  selected={selected}
-                  onToggleSelect={() => toggleSelect(creator.unified_id)}
-                  onOpenCreator={() => {
-                    setDetailCreator(creator);
-                    setDetailOpen(true);
-                  }}
-                  showCampaignRelevance
-                  meta={
-                    <div className="flex flex-col gap-1.5">
-                      <RelevanceScore score={match.match_score} />
-                      <InterestChips
-                        interests={[match.rationale]}
-                        maxVisible={1}
-                        emptyLabel=""
-                        variant="compact"
-                      />
-                    </div>
-                  }
-                />
-              );
-            })}
-          </div>
-        </>
-      )}
+          }
+          freezeOnScroll={false}
+        />
+      </div>
 
-      <CreatorDetailSheet
-        creator={detailCreator}
-        open={detailOpen}
-        onOpenChange={(open) => {
-          setDetailOpen(open);
-          if (!open) setDetailCreator(null);
-        }}
-      />
+      <div className="discovery-search-exact-root mx-4 mb-4 min-h-0 flex-1 overflow-hidden rounded-[var(--radius-lg)] border border-[var(--tw-border)] bg-background">
+        <div className="space-y-3 border-b border-[var(--tw-border)] px-4 py-4">
+          <Textarea
+            ref={briefRef}
+            value={brief}
+            onChange={(event) => setBrief(event.target.value)}
+            placeholder="Describe your campaign: audience, niche, platforms, goals…"
+            rows={4}
+            className="min-h-[96px] resize-y text-sm"
+          />
+        </div>
+
+        {isPending && matches.length === 0 ? (
+          <DiscoveryLoadingState
+            message="Ranking creators for your brief…"
+            className="py-12"
+          />
+        ) : matches.length === 0 ? (
+          <DiscoveryEmptyState
+            title={
+              hasRun
+                ? "No creators matched this brief"
+                : brief.trim()
+                  ? "Brief ready to match"
+                  : "Campaign brief not set"
+            }
+            description={
+              hasRun
+                ? "The current brief returned no matches. Refine its audience, niche, platform, or goal, then run the match again."
+                : brief.trim()
+                  ? "Run the match to rank creators against the campaign requirements."
+                  : "Creator matches need a campaign brief. Add the audience, niche, platforms, and goals to begin."
+            }
+            className="py-12"
+          >
+            {!brief.trim() ? (
+              <Button
+                type="button"
+                onClick={() => briefRef.current?.focus()}
+                className="h-9 gap-1.5 text-[12.5px] font-bold"
+              >
+                <SparklesIcon className="size-3.5" />
+                Add campaign brief
+              </Button>
+            ) : null}
+          </DiscoveryEmptyState>
+        ) : (
+          <>
+            <DiscoveryCreatorExactHeader
+              total={matches.length}
+              allSelected={indeterminate ? "indeterminate" : allSelected}
+              hasCreators={matches.length > 0}
+              onToggleSelectAll={toggleSelectAll}
+              metaLabel="Match fit"
+            />
+            <div className="discovery-search-exact-scroll max-h-[min(70vh,960px)]">
+              {matches.map((match) => {
+                const creator = match.creator;
+                const selected = selectedIds.has(creator.unified_id);
+                return (
+                  <DiscoveryCreatorExactRow
+                    key={creator.unified_id}
+                    creator={creator}
+                    selected={selected}
+                    onToggleSelect={() => toggleSelect(creator.unified_id)}
+                    onOpenCreator={() => {
+                      setDetailCreator(creator);
+                      setDetailOpen(true);
+                    }}
+                    showCampaignRelevance
+                    meta={
+                      <div className="flex flex-col gap-1.5">
+                        <RelevanceScore score={match.match_score} />
+                        <InterestChips
+                          interests={[match.rationale]}
+                          maxVisible={1}
+                          emptyLabel=""
+                          variant="compact"
+                        />
+                      </div>
+                    }
+                  />
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        <CreatorDetailSheet
+          creator={detailCreator}
+          open={detailOpen}
+          onOpenChange={(open) => {
+            setDetailOpen(open);
+            if (!open) setDetailCreator(null);
+          }}
+        />
+      </div>
     </div>
   );
 }

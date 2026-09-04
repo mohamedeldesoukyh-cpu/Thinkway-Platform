@@ -96,6 +96,7 @@ export function ImportCenterWorkspace({
     <div className="discovery-suite space-y-4 bg-[var(--tw-bg)] p-4">
       <DiscoverySuiteMasthead
         title="Import center"
+        subtitle="Upload creator datasets from agencies, platforms, or clients."
         metrics={metrics}
         freezeOnScroll={false}
       />
