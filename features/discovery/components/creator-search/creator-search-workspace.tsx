@@ -2261,6 +2261,7 @@ export function CreatorSearchWorkspace({
         open={detailOpen}
         onOpenChange={onDetailOpenChange}
         onCreatorUpdated={patchCreatorInList}
+        presentation="discoveryPack"
       />
 
       <AddMissingCreatorDialog

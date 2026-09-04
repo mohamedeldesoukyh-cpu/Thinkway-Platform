@@ -119,6 +119,7 @@ export function useQuotationCreatorDetailSheet(options?: {
       onOpenChange={handleOpenChange}
       onCreatorUpdated={handleCreatorUpdated}
       preserveOpenOnCreatorRows={false}
+      presentation="discoveryPack"
     />
   );
 

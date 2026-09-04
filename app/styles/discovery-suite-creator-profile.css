@@ -1,0 +1,42 @@
+/**
+ * Discovery pack creator profile modal — local overrides only.
+ * Do not edit frozen app/styles/discovery.css.
+ * Imported only by discovery-suite-creator-profile.tsx.
+ */
+
+.discovery-suite .tw-cp__pack-refresh.tw-b,
+.discovery-suite .tw-cp__h .tw-cp__pack-refresh {
+  /* RefreshCreatorMenu uses shadcn Button; keep pack chrome proportions */
+  height: 27px;
+  padding: 0 10px;
+  font-size: 11.5px;
+  border-radius: 8px;
+  gap: 4px;
+  box-shadow: none;
+}
+
+.discovery-suite .tw-cp__pack-refresh svg {
+  width: 12px;
+  height: 12px;
+}
+
+.discovery-suite .tw-cp__b > [data-slot="tabs-content"],
+.discovery-suite .tw-cp__b > [role="tabpanel"] {
+  margin-top: 0;
+  outline: none;
+}
+
+.discovery-suite .tw-cp__av img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.discovery-suite .tw-cp__sim-empty,
+.discovery-suite .tw-cp__sim-loading {
+  padding: 12px 8px;
+  font-size: 11.5px;
+  color: var(--tw-mut);
+  text-align: center;
+}

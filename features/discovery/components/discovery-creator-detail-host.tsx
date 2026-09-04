@@ -57,6 +57,7 @@ export function DiscoveryCreatorDetailHost({
         open={open}
         onOpenChange={onOpenChange}
         onCreatorUpdated={onCreatorUpdated}
+        presentation="discoveryPack"
       />
     );
   }

@@ -1171,6 +1171,7 @@ export function ShortlistWorkspace({
           patchCreatorInList(next);
           setDetailCreator(next);
         }}
+        presentation="discoveryPack"
       />
 
       <ShortlistBulkToolbar

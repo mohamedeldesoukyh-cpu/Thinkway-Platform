@@ -21,6 +21,16 @@ export * from "./discovery-suite-grid";
 export * from "./discovery-suite-masthead";
 export * from "./discovery-suite-creator-cell";
 export {
+  DiscoverySuiteCreatorProfile,
+  buildDiscoveryPackCreatorMetaLine,
+  formatDiscoveryPackQuoteReference,
+  formatDiscoveryPackRelativeAge,
+} from "./discovery-suite-creator-profile";
+export type {
+  DiscoverySuiteCreatorProfilePlatformChip,
+  DiscoverySuiteCreatorProfileSimilarItem,
+} from "./discovery-suite-creator-profile";
+export {
   DiscoveryCreatorExactHeader,
   DiscoveryCreatorExactRow,
   CreatorSearchExactHeader,

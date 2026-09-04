@@ -4,6 +4,12 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { CreatorDetailSheetIdentityCard } from "@/features/campaigns/components/creator-detail-sheet-identity-card";
 import {
+  DiscoverySuiteCreatorProfile,
+  buildDiscoveryPackCreatorMetaLine,
+  formatDiscoveryPackQuoteReference,
+  formatDiscoveryPackRelativeAge,
+} from "@/features/discovery/components/design-system/discovery-suite-creator-profile";
+import {
   BadgeCheckIcon,
   GitMergeIcon,
   DollarSignIcon,
@@ -70,8 +76,10 @@ import {
 } from "@/features/discovery/components/design-system/discovery-design-tokens";
 import type { CreatorQuotationPriceReference } from "@/lib/creators/quotation-price-reference";
 import { CreatorCountriesDisplay } from "@/components/creator/creator-countries-display";
-import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
+import { formatCreatorCountryLabels, resolveCreatorFollowersCount } from "@/lib/creators/creator-display-utils";
 import { formatCreatorRecencyLabel } from "@/lib/creators/creator-hover-details";
+import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
+import { getInfluencerTier, normalizeInfluencerTier } from "@/lib/creators/influencer-tier";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { isAssignableCreator } from "@/lib/creators/adapters";
 import {
@@ -93,6 +101,7 @@ import type {
   UnifiedCreatorPlatform,
   UnifiedCreatorResult,
 } from "@/lib/creators/types";
+import { AB } from "@/lib/discovery/suite/helpers";
 import { resolvePrimaryProfileUrl } from "@/lib/discovery/profile-url";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { formatPricing, parseRateCard } from "@/features/vendors/utils";
@@ -103,6 +112,8 @@ export type CreatorDetailSheetUpdateMeta = {
   removedUnifiedId?: string;
   removedInfluencerId?: string | null;
 };
+
+export type CreatorDetailSheetPresentation = "sheet" | "discoveryPack";
 
 type Props = {
   creator: UnifiedCreatorResult | null;
@@ -116,6 +127,11 @@ type Props = {
   campaignHeaderId?: string;
   /** When false, clicking quotation/list rows outside the sheet closes it. Default keeps Discovery row-switch UX. */
   preserveOpenOnCreatorRows?: boolean;
+  /**
+   * `sheet` — Campaign/Studio right drawer (default).
+   * `discoveryPack` — Discovery Overlay A centered `.tw-cp` modal.
+   */
+  presentation?: CreatorDetailSheetPresentation;
 };
 
 type DetailTab = "overview" | "contact" | "publications" | "confidence" | "similar";
@@ -791,7 +807,9 @@ export function CreatorDetailSheet({
   onCreatorUpdated,
   campaignHeaderId,
   preserveOpenOnCreatorRows = true,
+  presentation = "sheet",
 }: Props) {
+  const isDiscoveryPack = presentation === "discoveryPack";
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
   const [baseCreator, setBaseCreator] = useState<UnifiedCreatorResult | null>(creator);
   const [selectedPlatformAccountId, setSelectedPlatformAccountId] = useState<string | null>(
@@ -1074,217 +1092,43 @@ export function CreatorDetailSheet({
     });
   }
 
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(nextOpen) => {
-        if (!nextOpen && nestedDialogOpen) return;
-        onOpenChange(nextOpen);
-      }}
-      modal={false}
-    >
-      <SheetContent
-        side="right"
-        showCloseButton={false}
-        showOverlay={false}
-        style={CREATOR_DETAIL_SHEET_STYLE}
-        className={CREATOR_DETAIL_SHEET_CLASS}
-        onInteractOutside={preventOutsideDismiss}
-        onPointerDownOutside={preventOutsideDismiss}
-        onFocusOutside={preventOutsideDismiss}
-      >
-        <SheetTitle className="sr-only">{identityCreator.display_name} creator profile</SheetTitle>
-        <SheetDescription className="sr-only">
-          Creator profile, metrics confidence, and similar creators.
-        </SheetDescription>
 
-        <Tabs
-          value={activeTab}
-          onValueChange={(value) => setActiveTab(value as DetailTab)}
-          className="flex min-h-0 flex-1 flex-col"
-        >
-          <div className="creator-detail-sheet-command-bar-wrap shrink-0">
-            <div className="creator-detail-sheet-command-bar">
-            <div className="creator-detail-sheet-command-bar__actions">
-              <div className="creator-detail-sheet-command-bar__context">
-                <PanelLeftIcon className="creator-detail-sheet-command-bar__context-icon" aria-hidden />
-                <span className="truncate">
-                  {platformName ?? "Creator"}
-                  {handle ? (
-                    <>
-                      <span> · </span>
-                      <span className="creator-detail-sheet-command-bar__context-handle">{handle}</span>
-                    </>
-                  ) : null}
-                </span>
-              </div>
-              <div className="creator-detail-sheet-command-bar__action-group">
-                {identityCreator.influencer_id ? (
-                  <RefreshCreatorMenu
-                    influencerId={identityCreator.influencer_id}
-                    unifiedId={identityCreator.unified_id}
-                    enrichmentStatus={enrichmentStatus}
-                    size="sm"
-                    variant="outline"
-                    className="creator-detail-sheet-action-btn"
-                    onStatusChange={setEnrichmentStatus}
-                    onCreatorUpdated={handleCreatorUpdated}
-                  />
-                ) : (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="creator-detail-sheet-action-btn"
-                    disabled
-                  >
-                    <RefreshCwIcon aria-hidden />
-                    Refresh Metrics
-                  </Button>
-                )}
-                {profileUrl ? (
-                  <Button asChild variant="outline" size="sm" className="creator-detail-sheet-action-btn">
-                    <a href={profileUrl} target="_blank" rel="noopener noreferrer">
-                      <ExternalLinkIcon aria-hidden />
-                      {platformName ? `View on ${platformName}` : "View profile"}
-                    </a>
-                  </Button>
-                ) : null}
-                {canEditProfileUrl ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="creator-detail-sheet-action-btn"
-                    onClick={() => setEditProfileUrlOpen(true)}
-                  >
-                    <PencilIcon aria-hidden />
-                    Edit URL
-                  </Button>
-                ) : null}
-                {canCombineCreators ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="creator-detail-sheet-action-btn"
-                    onClick={() => setCombineCreatorsOpen(true)}
-                  >
-                    <GitMergeIcon aria-hidden />
-                    Combine
-                  </Button>
-                ) : null}
-                <SheetClose asChild>
-                  <button
-                    type="button"
-                    className="creator-detail-sheet-action-btn creator-detail-sheet-action-btn--icon"
-                    aria-label="Close"
-                  >
-                    <XIcon aria-hidden />
-                  </button>
-                </SheetClose>
-              </div>
-            </div>
+  const engagementValue = displayCreator.metrics.engagement_rate.value;
+  const engagementLabel =
+    engagementValue != null && Number.isFinite(engagementValue)
+      ? `${engagementValue.toFixed(2)}%`
+      : "—";
+  const avgPlaysLabel =
+    avgReelsPlaysMetric.value != null ? AB(avgReelsPlaysMetric.value) : "—";
+  const rate = parseRateCard(identityCreator.rate_card);
+  const quoteRefLabel = formatDiscoveryPackQuoteReference({
+    amount: quotationPriceReference?.avg_cost ?? rate.base_rate ?? null,
+    currency:
+      quotationPriceReference?.avg_cost_currency ??
+      rate.currency ??
+      identityCreator.suggested_currency ??
+      "EGP",
+  });
+  const packVm = buildDiscoveryCreatorViewModel(identityCreator);
+  const packFlagCodes = resolveCreatorCountryCodes({
+    country_codes: identityCreator.country_codes,
+    country_code: identityCreator.country_code,
+    estimated_country: identityCreator.estimated_country,
+    platformAudienceCountries: identityCreator.platforms.map((p) => p.audience_country),
+  });
+  const followersForTier =
+    resolveCreatorFollowersCount(identityCreator) ?? selectedPlatform?.follower_count ?? 0;
+  const packTier =
+    normalizeInfluencerTier(identityCreator.role) ?? getInfluencerTier(followersForTier);
+  const packInvestmentLabel =
+    investmentRecommendation ?? (investmentScore != null ? "Scored" : "—");
+  const packInvestmentSubline =
+    investmentScore != null
+      ? `Source confidence ${Math.round(displayCreator.source_confidence)}%`
+      : null;
 
-            <div className="creator-detail-sheet-command-bar__body">
-              <CreatorDetailSheetIdentityCard
-                creator={identityCreator}
-                profileUrl={profileUrl}
-              />
-
-              {platforms.length > 0 ? (
-                <div className="creator-detail-sheet-platform-scope">
-                  <div className="creator-detail-sheet-platform-row">
-                    {platforms.map((platform) => {
-                      const active = platform.id === selectedPlatformAccountId;
-                      const canRemovePlatform =
-                        Boolean(identityCreator.influencer_id) && platforms.length >= 2;
-                      return (
-                        <div
-                          key={platform.id}
-                          className={cn(
-                            "creator-detail-sheet-platform-pill",
-                            active && "creator-detail-sheet-platform-pill--active"
-                          )}
-                        >
-                          <button
-                            type="button"
-                            onClick={() => setSelectedPlatformAccountId(platform.id)}
-                            className="creator-detail-sheet-platform-pill__select"
-                          >
-                            <PlatformIcon platform={platform.platform} size="xs" className="size-3 rounded-full border-0" />
-                            {platformLabel(platform.platform)}
-                          </button>
-                          {canRemovePlatform ? (
-                            <button
-                              type="button"
-                              className="creator-detail-sheet-platform-pill__remove"
-                              aria-label={`Remove ${platformLabel(platform.platform)} profile`}
-                              onClick={(event) => {
-                                event.stopPropagation();
-                                setPlatformToDelete(platform);
-                                setDeletePlatformOpen(true);
-                              }}
-                            >
-                              <XIcon className="size-3" aria-hidden />
-                            </button>
-                          ) : null}
-                        </div>
-                      );
-                    })}
-                    <button
-                      type="button"
-                      onClick={() => setAddPlatformOpen(true)}
-                      className="creator-detail-sheet-platform-pill creator-detail-sheet-platform-pill--add"
-                      aria-label="Add platform profile"
-                    >
-                      <PlusIcon className="size-3" aria-hidden />
-                      Add
-                    </button>
-                  </div>
-                  <p className="creator-detail-sheet-platform-scope__note">
-                    Switching platform rewrites platform-scoped figures below.
-                  </p>
-                </div>
-              ) : (
-                <div className="creator-detail-sheet-platform-row">
-                  <button
-                    type="button"
-                    onClick={() => setAddPlatformOpen(true)}
-                    className="creator-detail-sheet-platform-pill creator-detail-sheet-platform-pill--add"
-                  >
-                    <PlusIcon className="size-3" aria-hidden />
-                    Add platform
-                  </button>
-                </div>
-              )}
-
-              <TabsList
-                variant="line"
-                className="creator-detail-sheet-tabs h-auto w-full justify-start gap-0 overflow-x-auto rounded-none bg-transparent p-0"
-              >
-                <TabsTrigger value="overview" className={DETAIL_TAB_TRIGGER_CLASS}>
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="contact" className={DETAIL_TAB_TRIGGER_CLASS}>
-                  Contact
-                </TabsTrigger>
-                <TabsTrigger value="publications" className={DETAIL_TAB_TRIGGER_CLASS}>
-                  Publications
-                </TabsTrigger>
-                <TabsTrigger value="confidence" className={DETAIL_TAB_TRIGGER_CLASS}>
-                  Confidence
-                </TabsTrigger>
-                <TabsTrigger value="similar" className={cn(DETAIL_TAB_TRIGGER_CLASS, "lg:hidden")}>
-                  Similar creators
-                </TabsTrigger>
-              </TabsList>
-            </div>
-            </div>
-          </div>
-
-          <div className="creator-detail-sheet-main min-h-0 flex-1">
-            <div className="creator-detail-sheet-scroll min-h-0 min-w-0 flex-1 overflow-y-auto">
+  const detailTabPanels = (
+    <>
             <TabsContent value="overview" className="mt-0 outline-none">
               <div className="min-w-0">
                   <DetailSection>
@@ -1585,63 +1429,11 @@ export function CreatorDetailSheet({
                 <SimilarCreatorsList similar={similar} loading={similarLoading} />
               </DetailSection>
             </TabsContent>
-          </div>
+    </>
+  );
 
-            <aside className="creator-detail-sheet-similar-rail hidden lg:flex">
-              <div className="creator-detail-sheet-similar-rail__inner">
-                <SectionTitle
-                  icon={<UsersIcon className="size-3 text-[#0057FF]" />}
-                  action={
-                    <button
-                      type="button"
-                      className="creator-detail-sheet-similar-rail__maximize"
-                      aria-label="Maximize similar creators"
-                      title="Maximize similar creators"
-                      onClick={openSimilarCreatorsMaximize}
-                    >
-                      <Maximize2Icon className="size-3.5" aria-hidden />
-                    </button>
-                  }
-                >
-                  Similar creators
-                </SectionTitle>
-                <div className="creator-detail-sheet-similar-rail__scroll">
-                  <SimilarCreatorsList similar={similar} loading={similarLoading} compact />
-                </div>
-              </div>
-            </aside>
-          </div>
-        </Tabs>
-
-        {canAssign || campaignHeaderId ? (
-          <div className="creator-detail-sheet-footer">
-            <div className="creator-detail-sheet-footer__actions">
-              {campaignHeaderId ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="creator-detail-sheet-action-btn"
-                  onClick={() =>
-                    void addCreatorToCampaignShortlistAction(campaignHeaderId, identityCreator)
-                  }
-                >
-                  Save to shortlist
-                </Button>
-              ) : null}
-              {canAssign ? (
-                <Button
-                  size="sm"
-                  className="creator-detail-sheet-action-btn creator-detail-sheet-action-btn--primary"
-                  onClick={() => onAssign?.(identityCreator)}
-                >
-                  Assign to line
-                </Button>
-              ) : null}
-            </div>
-          </div>
-        ) : null}
-      </SheetContent>
-
+  const detailNestedDialogs = (
+    <>
       <SimilarCreatorsMaximizeDialog
         open={similarMaximizedOpen}
         onOpenChange={setSimilarMaximizedOpen}
@@ -1735,6 +1527,414 @@ export function CreatorDetailSheet({
           });
         }}
       />
+    </>
+  );
+
+  const packHeaderActions = (
+    <>
+      {identityCreator.influencer_id ? (
+        <RefreshCreatorMenu
+          influencerId={identityCreator.influencer_id}
+          unifiedId={identityCreator.unified_id}
+          enrichmentStatus={enrichmentStatus}
+          size="sm"
+          variant="outline"
+          className="tw-b sm tw-cp__pack-refresh"
+          label="Refresh"
+          onStatusChange={setEnrichmentStatus}
+          onCreatorUpdated={handleCreatorUpdated}
+        />
+      ) : (
+        <button type="button" className="tw-b sm" disabled>
+          Refresh
+        </button>
+      )}
+      {profileUrl ? (
+        <a href={profileUrl} target="_blank" rel="noopener noreferrer" className="tw-b sm">
+          {platformName ? `View on ${platformName}` : "View profile"}
+        </a>
+      ) : null}
+      {canEditProfileUrl ? (
+        <button type="button" className="tw-b sm" onClick={() => setEditProfileUrlOpen(true)}>
+          Edit URL
+        </button>
+      ) : null}
+      {canCombineCreators ? (
+        <button type="button" className="tw-b sm" onClick={() => setCombineCreatorsOpen(true)}>
+          Combine
+        </button>
+      ) : null}
+    </>
+  );
+
+  if (isDiscoveryPack) {
+    return (
+      <>
+        <Tabs
+          value={activeTab === "similar" ? "overview" : activeTab}
+          onValueChange={(value) => setActiveTab(value as DetailTab)}
+        >
+          <DiscoverySuiteCreatorProfile
+            open={open}
+            title={`${identityCreator.display_name} profile`}
+            displayName={identityCreator.display_name}
+            handleLabel={handle}
+            avatarUrl={packVm.avatarUrl}
+            flagCode={packFlagCodes[0] ?? null}
+            metaLine={buildDiscoveryPackCreatorMetaLine({
+              creator: identityCreator,
+              lastEnrichedAt: identityCreator.last_enriched_at,
+              updatedAt: identityCreator.updated_at,
+            })}
+            investmentScore={investmentScore}
+            investmentLabel={packInvestmentLabel}
+            investmentSubline={packInvestmentSubline}
+            eciLoading={eciLoading && !eciLoadingSkipped && investmentScore == null}
+            onSkipEciLoading={() => setEciLoadingSkipped(true)}
+            platforms={platforms.map((platform) => ({
+              id: platform.id,
+              label: platformLabel(platform.platform),
+              followers: platform.follower_count,
+              selected: platform.id === (selectedPlatform?.id ?? selectedPlatformAccountId),
+            }))}
+            onSelectPlatform={setSelectedPlatformAccountId}
+            onAddPlatform={() => setAddPlatformOpen(true)}
+            tierLabel={packTier}
+            kvRows={[
+              { label: "Engagement", value: engagementLabel },
+              { label: "Avg plays", value: avgPlaysLabel },
+              { label: "Quote reference", value: quoteRefLabel },
+              {
+                label: "Source confidence",
+                value: `${Math.round(displayCreator.source_confidence)}%`,
+              },
+              {
+                label: "Verification",
+                value: identityCreator.is_platform_verified ? "Verified" : "Unverified",
+              },
+            ]}
+            contextLabel={
+              platformName ? `${platformName}${handle ? ` · ${handle}` : ""}` : "Creator"
+            }
+            headerActions={packHeaderActions}
+            tabs={
+              <>
+                {(
+                  [
+                    ["overview", "Overview"],
+                    ["contact", "Contact"],
+                    ["publications", "Publications"],
+                    ["confidence", "Confidence"],
+                  ] as const
+                ).map(([id, label]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={activeTab === id}
+                    onClick={() => setActiveTab(id)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </>
+            }
+            body={detailTabPanels}
+            similar={similar.map((item) => {
+              const itemHandle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
+              return {
+                unifiedId: item.unified_id,
+                displayName: item.display_name,
+                handle: itemHandle,
+                score: item.similarity_score,
+                updatedLabel: formatDiscoveryPackRelativeAge(
+                  item.last_enriched_at,
+                  item.updated_at
+                ),
+              };
+            })}
+            similarLoading={similarLoading}
+            onClose={() => {
+              if (!nestedDialogOpen) onOpenChange(false);
+            }}
+            blockDismiss={nestedDialogOpen}
+          />
+        </Tabs>
+        {detailNestedDialogs}
+      </>
+    );
+  }
+
+  return (
+    <Sheet
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen && nestedDialogOpen) return;
+        onOpenChange(nextOpen);
+      }}
+      modal={false}
+    >
+      <SheetContent
+        side="right"
+        showCloseButton={false}
+        showOverlay={false}
+        style={CREATOR_DETAIL_SHEET_STYLE}
+        className={CREATOR_DETAIL_SHEET_CLASS}
+        onInteractOutside={preventOutsideDismiss}
+        onPointerDownOutside={preventOutsideDismiss}
+        onFocusOutside={preventOutsideDismiss}
+      >
+        <SheetTitle className="sr-only">{identityCreator.display_name} creator profile</SheetTitle>
+        <SheetDescription className="sr-only">
+          Creator profile, metrics confidence, and similar creators.
+        </SheetDescription>
+
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) => setActiveTab(value as DetailTab)}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="creator-detail-sheet-command-bar-wrap shrink-0">
+            <div className="creator-detail-sheet-command-bar">
+            <div className="creator-detail-sheet-command-bar__actions">
+              <div className="creator-detail-sheet-command-bar__context">
+                <PanelLeftIcon className="creator-detail-sheet-command-bar__context-icon" aria-hidden />
+                <span className="truncate">
+                  {platformName ?? "Creator"}
+                  {handle ? (
+                    <>
+                      <span> · </span>
+                      <span className="creator-detail-sheet-command-bar__context-handle">{handle}</span>
+                    </>
+                  ) : null}
+                </span>
+              </div>
+              <div className="creator-detail-sheet-command-bar__action-group">
+                {identityCreator.influencer_id ? (
+                  <RefreshCreatorMenu
+                    influencerId={identityCreator.influencer_id}
+                    unifiedId={identityCreator.unified_id}
+                    enrichmentStatus={enrichmentStatus}
+                    size="sm"
+                    variant="outline"
+                    className="creator-detail-sheet-action-btn"
+                    onStatusChange={setEnrichmentStatus}
+                    onCreatorUpdated={handleCreatorUpdated}
+                  />
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="creator-detail-sheet-action-btn"
+                    disabled
+                  >
+                    <RefreshCwIcon aria-hidden />
+                    Refresh Metrics
+                  </Button>
+                )}
+                {profileUrl ? (
+                  <Button asChild variant="outline" size="sm" className="creator-detail-sheet-action-btn">
+                    <a href={profileUrl} target="_blank" rel="noopener noreferrer">
+                      <ExternalLinkIcon aria-hidden />
+                      {platformName ? `View on ${platformName}` : "View profile"}
+                    </a>
+                  </Button>
+                ) : null}
+                {canEditProfileUrl ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="creator-detail-sheet-action-btn"
+                    onClick={() => setEditProfileUrlOpen(true)}
+                  >
+                    <PencilIcon aria-hidden />
+                    Edit URL
+                  </Button>
+                ) : null}
+                {canCombineCreators ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="creator-detail-sheet-action-btn"
+                    onClick={() => setCombineCreatorsOpen(true)}
+                  >
+                    <GitMergeIcon aria-hidden />
+                    Combine
+                  </Button>
+                ) : null}
+                <SheetClose asChild>
+                  <button
+                    type="button"
+                    className="creator-detail-sheet-action-btn creator-detail-sheet-action-btn--icon"
+                    aria-label="Close"
+                  >
+                    <XIcon aria-hidden />
+                  </button>
+                </SheetClose>
+              </div>
+            </div>
+
+            <div className="creator-detail-sheet-command-bar__body">
+              <CreatorDetailSheetIdentityCard
+                creator={identityCreator}
+                profileUrl={profileUrl}
+              />
+
+              {platforms.length > 0 ? (
+                <div className="creator-detail-sheet-platform-scope">
+                  <div className="creator-detail-sheet-platform-row">
+                    {platforms.map((platform) => {
+                      const active = platform.id === selectedPlatformAccountId;
+                      const canRemovePlatform =
+                        Boolean(identityCreator.influencer_id) && platforms.length >= 2;
+                      return (
+                        <div
+                          key={platform.id}
+                          className={cn(
+                            "creator-detail-sheet-platform-pill",
+                            active && "creator-detail-sheet-platform-pill--active"
+                          )}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPlatformAccountId(platform.id)}
+                            className="creator-detail-sheet-platform-pill__select"
+                          >
+                            <PlatformIcon platform={platform.platform} size="xs" className="size-3 rounded-full border-0" />
+                            {platformLabel(platform.platform)}
+                          </button>
+                          {canRemovePlatform ? (
+                            <button
+                              type="button"
+                              className="creator-detail-sheet-platform-pill__remove"
+                              aria-label={`Remove ${platformLabel(platform.platform)} profile`}
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setPlatformToDelete(platform);
+                                setDeletePlatformOpen(true);
+                              }}
+                            >
+                              <XIcon className="size-3" aria-hidden />
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                    <button
+                      type="button"
+                      onClick={() => setAddPlatformOpen(true)}
+                      className="creator-detail-sheet-platform-pill creator-detail-sheet-platform-pill--add"
+                      aria-label="Add platform profile"
+                    >
+                      <PlusIcon className="size-3" aria-hidden />
+                      Add
+                    </button>
+                  </div>
+                  <p className="creator-detail-sheet-platform-scope__note">
+                    Switching platform rewrites platform-scoped figures below.
+                  </p>
+                </div>
+              ) : (
+                <div className="creator-detail-sheet-platform-row">
+                  <button
+                    type="button"
+                    onClick={() => setAddPlatformOpen(true)}
+                    className="creator-detail-sheet-platform-pill creator-detail-sheet-platform-pill--add"
+                  >
+                    <PlusIcon className="size-3" aria-hidden />
+                    Add platform
+                  </button>
+                </div>
+              )}
+
+              <TabsList
+                variant="line"
+                className="creator-detail-sheet-tabs h-auto w-full justify-start gap-0 overflow-x-auto rounded-none bg-transparent p-0"
+              >
+                <TabsTrigger value="overview" className={DETAIL_TAB_TRIGGER_CLASS}>
+                  Overview
+                </TabsTrigger>
+                <TabsTrigger value="contact" className={DETAIL_TAB_TRIGGER_CLASS}>
+                  Contact
+                </TabsTrigger>
+                <TabsTrigger value="publications" className={DETAIL_TAB_TRIGGER_CLASS}>
+                  Publications
+                </TabsTrigger>
+                <TabsTrigger value="confidence" className={DETAIL_TAB_TRIGGER_CLASS}>
+                  Confidence
+                </TabsTrigger>
+                <TabsTrigger value="similar" className={cn(DETAIL_TAB_TRIGGER_CLASS, "lg:hidden")}>
+                  Similar creators
+                </TabsTrigger>
+              </TabsList>
+            </div>
+            </div>
+          </div>
+
+          <div className="creator-detail-sheet-main min-h-0 flex-1">
+            <div className="creator-detail-sheet-scroll min-h-0 min-w-0 flex-1 overflow-y-auto">
+            {detailTabPanels}
+          </div>
+
+            <aside className="creator-detail-sheet-similar-rail hidden lg:flex">
+              <div className="creator-detail-sheet-similar-rail__inner">
+                <SectionTitle
+                  icon={<UsersIcon className="size-3 text-[#0057FF]" />}
+                  action={
+                    <button
+                      type="button"
+                      className="creator-detail-sheet-similar-rail__maximize"
+                      aria-label="Maximize similar creators"
+                      title="Maximize similar creators"
+                      onClick={openSimilarCreatorsMaximize}
+                    >
+                      <Maximize2Icon className="size-3.5" aria-hidden />
+                    </button>
+                  }
+                >
+                  Similar creators
+                </SectionTitle>
+                <div className="creator-detail-sheet-similar-rail__scroll">
+                  <SimilarCreatorsList similar={similar} loading={similarLoading} compact />
+                </div>
+              </div>
+            </aside>
+          </div>
+        </Tabs>
+
+        {canAssign || campaignHeaderId ? (
+          <div className="creator-detail-sheet-footer">
+            <div className="creator-detail-sheet-footer__actions">
+              {campaignHeaderId ? (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="creator-detail-sheet-action-btn"
+                  onClick={() =>
+                    void addCreatorToCampaignShortlistAction(campaignHeaderId, identityCreator)
+                  }
+                >
+                  Save to shortlist
+                </Button>
+              ) : null}
+              {canAssign ? (
+                <Button
+                  size="sm"
+                  className="creator-detail-sheet-action-btn creator-detail-sheet-action-btn--primary"
+                  onClick={() => onAssign?.(identityCreator)}
+                >
+                  Assign to line
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </SheetContent>
+
+      {detailNestedDialogs}
+
     </Sheet>
   );
 }
