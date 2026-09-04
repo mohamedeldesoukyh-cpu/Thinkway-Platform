@@ -59,7 +59,6 @@ import {
 } from "@/features/quotations/quotation-client-review";
 import { quotationItemClientCreatorId } from "@/features/client-workspace/quotation-item-creator-id";
 import { setQuotationReviewCreatorsOnBehalfAction } from "@/features/client-workspace/actions/internal-quotation-review-selection-action";
-import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
 import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
 import { QuotationLinesGrid } from "@/features/quotations/components/quotation-lines-grid";
@@ -755,6 +754,7 @@ function QuotationWorkspaceContent({
             totalPmPct={totals.headerPmPct}
             gpTargetPct={detail.gp_target_pct}
             creatorCount={uniqueCreatorCount}
+            lineCount={visibleItems.length}
             version={detail.version}
             validDaysRemaining={detail.valid_days_remaining}
             displayCurrency={displayCurrency}
@@ -802,13 +802,6 @@ function QuotationWorkspaceContent({
       <section
         className={cn(discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
       >
-      <div className="sec compact">
-        <QuotationClientBrandPanel
-          detail={detail}
-          options={formOptions}
-          disabled={!detail.canManage}
-        />
-      </div>
       {visibleItems.length === 0 ? (
         <EmptyState
           quotationId={detail.id}

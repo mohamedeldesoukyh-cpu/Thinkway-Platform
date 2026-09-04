@@ -86,6 +86,8 @@ type Props = {
   totalPmPct: number;
   gpTargetPct: number;
   creatorCount: number;
+  /** Option lines — pack masthead shows Creators + Lines. */
+  lineCount?: number;
   version: string;
   validDaysRemaining: number | null;
   displayCurrency: string;
@@ -112,6 +114,7 @@ export function QuotationCommercialMetricsBand({
   totalPmPct,
   gpTargetPct,
   creatorCount,
+  lineCount,
   version,
   validDaysRemaining,
   displayCurrency,
@@ -143,12 +146,6 @@ export function QuotationCommercialMetricsBand({
   const base = moneyParts(totalCostEgp, displayCurrency, displayFxRateToEgp);
   const client = moneyParts(totalRevenueEgp, displayCurrency, displayFxRateToEgp);
   const gp = moneyParts(totalGpValueEgp, displayCurrency, displayFxRateToEgp);
-  const commercialGp = moneyParts(
-    totalCommercialGpEgp,
-    displayCurrency,
-    displayFxRateToEgp
-  );
-  const agencyFee = moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp);
   const gpValuesDisagree = Math.abs(totalGpValueEgp - totalCommercialGpEgp) >= 0.01;
   const showAgencyFeeConflict = gpValuesDisagree || totalAgencyFeeEgp > 0.01;
 
@@ -222,13 +219,6 @@ export function QuotationCommercialMetricsBand({
         original={originalLabels(originalTotals, "totalGpMargin")}
         staged={hasDraftEdits}
       />
-      {showAgencyFeeConflict ? (
-        <MetricItem
-          label="Commercial GP"
-          value={commercialGp.value}
-          tone="red"
-        />
-      ) : null}
       <MetricItem
         label="GP %"
         value={`${totalGpPct.toFixed(1)}%`}
@@ -238,6 +228,9 @@ export function QuotationCommercialMetricsBand({
       <MetricItem label="FM %" value={`${totalPmPct.toFixed(1)}%`} />
       <MetricItem label="Version" value={version} compact />
       <MetricItem label="Creators" value={String(creatorCount)} />
+      {lineCount != null ? (
+        <MetricItem label="Lines" value={String(lineCount)} />
+      ) : null}
       <MetricItem
         label="Days left"
         value={
@@ -255,18 +248,6 @@ export function QuotationCommercialMetricsBand({
         Staged Client cost {client.value} {client.unit} vs saved{" "}
         {savedClient.value} {savedClient.unit}. Both figures are shown — Save commits the staged
         scratchpad; Discard restores saved line masters.
-      </p>
-    ) : null}
-    {showAgencyFeeConflict ? (
-      <p className="tw-note wrn mx-3.5 mb-2">
-        Masthead GP margin {gp.value} / {totalGpPct.toFixed(1)}% includes{" "}
-        {agencyFee.value} in <b>agency fee</b> — added to what the client pays, never
-        counted as revenue. The approved block and Commercial Workspace use revenue
-        minus cost with AF excluded ({commercialGp.value} /{" "}
-        {totalRevenueEgp > 0
-          ? ((totalCommercialGpEgp / totalRevenueEgp) * 100).toFixed(1)
-          : "0.0"}
-        %). Both figures are correct.
       </p>
     ) : null}
     </div>

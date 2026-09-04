@@ -139,13 +139,6 @@ export function QuotationClientReviewPanel({
           </div>
         </div>
 
-        <div className="tw-note wrn">
-          Approved GP reads {F(approved.gpValueEgp)} while the header may report a
-          higher figure. The header computes GP as client cost minus base cost —
-          which is the <b>agency fee</b>. The approved block computes revenue minus
-          cost with AF excluded. Two definitions of GP on one screen.
-        </div>
-
         <div className="tw-fbar">
           <div className="tw-fchips">
             {filters.map((item) => {
