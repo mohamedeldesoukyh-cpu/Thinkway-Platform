@@ -1,9 +1,7 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import {
-  QUOTATION_CLIENT_SELECTION_LABEL,
   countQuotationClientSelections,
   totalsForClientSelection,
   type QuotationClientReviewView,
@@ -11,14 +9,8 @@ import {
 } from "@/features/quotations/quotation-client-review";
 import type { QuotationItemRow } from "@/features/quotations/types";
 import { CLIENT_PROPOSAL_STATUS_LABEL } from "@/features/client-workspace/constants";
+import { F } from "@/lib/discovery/suite/helpers";
 import { cn } from "@/lib/utils";
-
-function money(n: number): string {
-  return `${new Intl.NumberFormat("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Number.isFinite(n) ? n : 0)} EGP`;
-}
 
 type Props = {
   review: QuotationClientReviewView;
@@ -49,87 +41,139 @@ export function QuotationClientReviewPanel({
 }: Props) {
   const counts = countQuotationClientSelections(items, review.selectionState);
   const approved = totalsForClientSelection(items, review.selectionState, "accepted");
-  const filters: Array<{ id: QuotationClientSelectionFilter; count: number }> = [
-    { id: "all", count: counts.total },
-    { id: "accepted", count: counts.accepted },
-    { id: "in_review", count: counts.inReview },
-    { id: "rejected", count: counts.rejected },
+  const filters: Array<{
+    id: QuotationClientSelectionFilter;
+    label: string;
+    count: number;
+  }> = [
+    { id: "all", label: "All", count: counts.total },
+    { id: "accepted", label: "Approved", count: counts.accepted },
+    { id: "in_review", label: "Under review", count: counts.inReview },
+    { id: "rejected", label: "Rejected", count: counts.rejected },
   ];
 
   return (
-    <div className="mx-4 mb-3 rounded-xl border border-[#d9e4fb] bg-[#f5f8ff] p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[#274690]">
-            Client review · Proposal v{review.reviewNumber} · {CLIENT_PROPOSAL_STATUS_LABEL[review.status]}
-          </p>
-          <p className="mt-1 text-sm text-[var(--text)]">
-            {counts.accepted} approved · {counts.inReview} under review · {counts.rejected} rejected
+    <div className="discovery-suite mx-[22px] mb-3">
+      <div className="tw-c">
+        <div className="tw-ch">
+          <span className="tw-p p-b">
+            Shortlist linked · proposal v{review.reviewNumber}
+          </span>
+          <span className="tw-ct">
+            Client review · proposal v{review.reviewNumber} ·{" "}
+            {CLIENT_PROPOSAL_STATUS_LABEL[review.status]}
+          </span>
+          <span className="tw-cs">
+            {counts.accepted} approved · {counts.inReview} under review ·{" "}
+            {counts.rejected} rejected
             {review.changeRequestSummary ? ` · ${review.changeRequestSummary}` : ""}
-          </p>
+          </span>
+          <span className="tw-sp" />
+          {canManage ? (
+            <>
+              <button
+                type="button"
+                className="tw-b sm"
+                disabled={pending || counts.accepted === 0}
+                onClick={onSelectApproved}
+              >
+                Select approved
+              </button>
+              <button
+                type="button"
+                className="tw-b sm"
+                disabled={pending || counts.inReview === 0}
+                onClick={onSelectUnderReview}
+              >
+                Select under review
+              </button>
+              <button
+                type="button"
+                className="tw-b sm"
+                disabled={pending || counts.inReview === 0}
+                onClick={onAcceptOnBehalf}
+              >
+                Mark approved by Thinkway
+              </button>
+              <button
+                type="button"
+                className="tw-b sm pri"
+                disabled={pending || counts.accepted === 0}
+                onClick={onMoveApprovedToCampaign}
+                title={
+                  quotationApproved
+                    ? "Convert approved creators to the campaign"
+                    : "Approve this quotation first, then convert the approved creators"
+                }
+              >
+                Move approved to campaign
+              </button>
+            </>
+          ) : null}
         </div>
-        {canManage ? (
-          <div className="flex flex-wrap gap-2">
-            <Button type="button" size="sm" variant="outline" disabled={pending || counts.accepted === 0} onClick={onSelectApproved}>
-              Select approved
-            </Button>
-            <Button type="button" size="sm" variant="outline" disabled={pending || counts.inReview === 0} onClick={onSelectUnderReview}>
-              Select under review
-            </Button>
-            <Button type="button" size="sm" variant="outline" disabled={pending || counts.inReview === 0} onClick={onAcceptOnBehalf}>
-              Mark as approved by Thinkway
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              disabled={pending || counts.accepted === 0}
-              onClick={onMoveApprovedToCampaign}
-              title={
-                quotationApproved
-                  ? "Convert approved creators to the campaign"
-                  : "Approve this quotation first, then convert the approved creators"
-              }
-            >
-              Move approved to campaign
-            </Button>
+
+        <div
+          className="tw-ms2"
+          style={{ borderTop: "1px solid var(--tw-hair)" }}
+          aria-label="Approved selection metrics"
+        >
+          <div>
+            <i>Approved creators</i>
+            <b>{approved.creatorCount}</b>
           </div>
-        ) : null}
-      </div>
+          <div>
+            <i>Approved base cost</i>
+            <b>{F(approved.costEgp)}</b>
+          </div>
+          <div>
+            <i>{QUOTATION_CLIENT_LABELS.totalClientCost}</i>
+            <b>{F(approved.revenueEgp)}</b>
+          </div>
+          <div>
+            <i>Approved GP</i>
+            <b className="r">{F(approved.gpValueEgp)}</b>
+          </div>
+          <div>
+            <i>Approved GP %</i>
+            <b className="r">{approved.gpPct.toFixed(1)}%</b>
+          </div>
+        </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-5">
-        <Metric label="Approved creators" value={String(approved.creatorCount)} />
-        <Metric label="Approved base cost" value={money(approved.costEgp)} />
-        <Metric label={QUOTATION_CLIENT_LABELS.totalClientCost} value={money(approved.revenueEgp)} emphasis />
-        <Metric label="Approved GP" value={money(approved.gpValueEgp)} />
-        <Metric label="Approved GP%" value={`${approved.gpPct.toFixed(1)}%`} />
-      </div>
+        <div className="tw-note wrn">
+          Approved GP reads {F(approved.gpValueEgp)} while the header may report a
+          higher figure. The header computes GP as client cost minus base cost —
+          which is the <b>agency fee</b>. The approved block computes revenue minus
+          cost with AF excluded. Two definitions of GP on one screen.
+        </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {filters.map((item) => (
-          <button
-            key={item.id}
-            type="button"
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs font-semibold",
-              filter === item.id
-                ? "border-[var(--navy,#0B0F1A)] bg-[var(--navy,#0B0F1A)] text-white"
-                : "border-[#d9e4fb] bg-white text-[var(--text)]"
-            )}
-            onClick={() => onFilter(item.id)}
-          >
-            {item.id === "all" ? "All" : QUOTATION_CLIENT_SELECTION_LABEL[item.id]} · {item.count}
-          </button>
-        ))}
+        <div className="tw-fbar">
+          <div className="tw-fchips">
+            {filters.map((item) => {
+              const isOn = filter === item.id;
+              const isZero = item.id !== "all" && item.count === 0;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={cn("tw-fchip", isOn && "on", isZero && "z")}
+                  aria-pressed={isOn}
+                  disabled={isZero}
+                  onClick={() => {
+                    if (!isZero) onFilter(item.id);
+                  }}
+                >
+                  {item.label}
+                  <em>{item.count}</em>
+                </button>
+              );
+            })}
+          </div>
+          <span className="tw-sp" />
+          <span className="tw-cs">
+            Selecting rows drives the calculator and the bulk actions below
+          </span>
+        </div>
       </div>
-    </div>
-  );
-}
-
-function Metric({ label, value, emphasis }: { label: string; value: string; emphasis?: boolean }) {
-  return (
-    <div className="rounded-lg bg-white px-3 py-2">
-      <div className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className={cn("text-sm font-bold tabular-nums", emphasis && "text-[#0057FF]")}>{value}</div>
     </div>
   );
 }

@@ -102,6 +102,10 @@ export function QuotationCommercialMetricsBand({
   const gpTone: MetricDef["tone"] =
     totalGpValueEgp < 0 ? "red" : totalGpPct < gpTargetPct ? "amber" : "green";
 
+  // Pack: masthead GP margin is yellow, GP % is red when agency-fee GP is the headline figure.
+  const agencyFeeGpTone: MetricDef["tone"] = "amber";
+  const agencyFeePctTone: MetricDef["tone"] = "red";
+
   const daysTone: MetricDef["tone"] =
     validDaysRemaining == null
       ? "blue"
@@ -121,13 +125,14 @@ export function QuotationCommercialMetricsBand({
   );
   const agencyFee = moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp);
   const gpValuesDisagree = Math.abs(totalGpValueEgp - totalCommercialGpEgp) >= 0.01;
+  const showAgencyFeeConflict = gpValuesDisagree || totalAgencyFeeEgp > 0.01;
 
   return (
     <div className="discovery-suite px-4 pt-1">
     <div className="tw-ms2" aria-label="Quotation commercial metrics">
       <div className="metric metric--currency flex flex-col justify-center gap-1 py-[9px]">
         <CommercialCurrencySelect
-          label="CCY"
+          label="Ccy"
           layout="metric"
           value={displayCurrency}
           onChange={onDisplayCurrencyChange ?? (() => undefined)}
@@ -137,33 +142,32 @@ export function QuotationCommercialMetricsBand({
       <MetricItem
         label="Base cost"
         value={base.value}
-        unit={base.unit}
         original={originalLabels(originalTotals, "totalCost")}
       />
       <MetricItem
         label={QUOTATION_CLIENT_LABELS.totalClientCost}
         value={client.value}
-        unit={client.unit}
-        tone="blue"
         original={originalLabels(originalTotals, "totalClientCost")}
       />
       <MetricItem
-        label={gpValuesDisagree ? "Agency-fee GP" : "GP margin"}
+        label="GP margin"
         value={gp.value}
-        unit={gp.unit}
-        tone={gpTone}
+        tone={showAgencyFeeConflict ? agencyFeeGpTone : gpTone}
         original={originalLabels(originalTotals, "totalGpMargin")}
       />
-      {gpValuesDisagree ? (
+      {showAgencyFeeConflict ? (
         <MetricItem
           label="Commercial GP"
           value={commercialGp.value}
-          unit={commercialGp.unit}
-          tone={totalCommercialGpEgp < 0 ? "red" : "green"}
+          tone="red"
         />
       ) : null}
-      <MetricItem label="GP %" value={`${totalGpPct.toFixed(1)}%`} tone={gpTone} />
-      <MetricItem label="PM %" value={`${totalPmPct.toFixed(1)}%`} tone={gpTone} />
+      <MetricItem
+        label="GP %"
+        value={`${totalGpPct.toFixed(1)}%`}
+        tone={showAgencyFeeConflict ? agencyFeePctTone : gpTone}
+      />
+      <MetricItem label="FM %" value={`${totalPmPct.toFixed(1)}%`} />
       <MetricItem label="Version" value={version} compact />
       <MetricItem label="Creators" value={String(creatorCount)} />
       <MetricItem
@@ -178,10 +182,16 @@ export function QuotationCommercialMetricsBand({
         tone={daysTone}
       />
     </div>
-    {gpValuesDisagree ? (
-      <p className="px-3.5 pb-2 text-[10.5px] text-[var(--tw-mut)]">
-        Agency-fee GP includes {agencyFee.value} {agencyFee.unit} in agency
-        fees. The fee is added to what the client pays and is not counted as revenue.
+    {showAgencyFeeConflict ? (
+      <p className="tw-note wrn mx-3.5 mb-2">
+        Masthead GP margin {gp.value} / {totalGpPct.toFixed(1)}% includes{" "}
+        {agencyFee.value} in <b>agency fee</b> — added to what the client pays, never
+        counted as revenue. The approved block and Commercial Workspace use revenue
+        minus cost with AF excluded ({commercialGp.value} /{" "}
+        {totalRevenueEgp > 0
+          ? ((totalCommercialGpEgp / totalRevenueEgp) * 100).toFixed(1)
+          : "0.0"}
+        %). Both figures are correct.
       </p>
     ) : null}
     </div>

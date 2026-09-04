@@ -12,79 +12,49 @@ type Props = {
   trailing?: ReactNode;
 };
 
-function LifecyclePill({
-  label,
-  tone,
-  pulse,
-  href,
-}: {
-  label: string;
-  tone: "blue" | "gray" | "green";
-  pulse?: boolean;
-  href?: string;
-}) {
-  const pill = (
-    <span
-      className={cn(
-        "chip",
-        tone === "blue" && "link",
-        tone === "green" && "ok",
-        tone === "gray" && "mut"
-      )}
-    >
-      <span className={cn("d", pulse && "animate-pulse")} aria-hidden />
-      {label}
-    </span>
-  );
-
-  if (href) {
-    return (
-      <Link href={href} className="transition-opacity hover:opacity-80">
-        {pill}
-      </Link>
-    );
-  }
-
-  return pill;
-}
-
 export function QuotationLifecyclePills({ detail, className, trailing }: Props) {
   const shortlistLabel = detail.shortlist_id
-    ? `Shortlist ${detail.shortlist_serial ?? detail.shortlist_id} · Linked`
-    : "Shortlist · Not linked";
+    ? `Shortlist ${detail.shortlist_serial ?? detail.shortlist_id} · linked`
+    : "Shortlist · not linked";
 
   const campaignLabel = detail.campaign_header_id
-    ? `Campaign ${detail.campaign_document_number ?? ""} · Linked`.trim()
-    : "Campaign · Not linked";
+    ? `Campaign ${detail.campaign_document_number ?? ""} · linked`.trim()
+    : "Campaign · not linked";
 
   const syncLabel = detail.sync_enabled ? "Live sync enabled" : "Snapshot locked";
 
   return (
-    <div className={cn("lcband", className)} aria-label="Quotation lifecycle">
-      <span className="lclabel">Lifecycle</span>
+    <div
+      className={cn(
+        "discovery-suite mx-[22px] mb-2 flex flex-wrap items-center gap-2",
+        className
+      )}
+      aria-label="Quotation lifecycle"
+    >
       {detail.shortlist_id ? (
-        <LifecyclePill
-          label={shortlistLabel}
-          tone="blue"
+        <Link
           href={`/discovery/shortlists/${detail.shortlist_id}`}
-        />
+          className="tw-p p-b transition-opacity hover:opacity-80"
+        >
+          {shortlistLabel}
+        </Link>
       ) : (
-        <LifecyclePill label={shortlistLabel} tone="gray" />
+        <span className="tw-p p-n">{shortlistLabel}</span>
       )}
       {detail.campaign_header_id ? (
-        <LifecyclePill
-          label={campaignLabel}
-          tone="blue"
+        <Link
           href={`/campaigns/${detail.campaign_header_id}`}
-        />
+          className="tw-p p-b transition-opacity hover:opacity-80"
+        >
+          {campaignLabel}
+        </Link>
       ) : (
-        <LifecyclePill label={campaignLabel} tone="gray" />
+        <span className="tw-p p-n">{campaignLabel}</span>
       )}
-      <LifecyclePill
-        label={syncLabel}
-        tone={detail.sync_enabled ? "green" : "gray"}
-        pulse={detail.sync_enabled}
-      />
+      <span className={cn("tw-p", detail.sync_enabled ? "p-g" : "p-n")}>
+        {syncLabel}
+      </span>
+      <span className="tw-sp" />
       {trailing}
     </div>
   );

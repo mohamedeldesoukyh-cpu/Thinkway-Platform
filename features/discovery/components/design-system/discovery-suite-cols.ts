@@ -29,7 +29,7 @@ export const DISCOVERY_GRID_MIN_W: Partial<Record<DiscoveryColsKey, number>> = {
   shortlists: 1250,
   shortlist: 1360,
   quotations: 1300,
-  quotation: 1180,
+  quotation: 1400,
   search: 1100,
   intel: 980,
   import: 1200,

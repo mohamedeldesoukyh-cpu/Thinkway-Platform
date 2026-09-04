@@ -3,9 +3,13 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-04 — Session 4a quotation detail (partial)
+
+Page 4a: `DiscoverySuiteGrid` `cols="quotation"` minW 1400 · lifecycle `tw-p` strip · client-review + approved block (GP 0 red) · filter chips `.z` · `+ Cost detail` · GP conflict note (masthead AF vs approved commercial). Creator open reuses `openCreatorByHandle` / dual-pool cache. Gate: `npm run test:discovery-quotation-detail-4a`. Deferred to 4b: selection bar · calculator · CW · add-creators · Preview/Export. Plan 4b shared Overlay F + quotation adapter; 4c migrate page 2. Lump-sum: all 6 templates live in export API.
+
 ## Shipped 2026-09-04 — Session 3 quotations list
 
-Page 3 `/discovery/quotations`: `DiscoverySuiteGrid` `cols="quotations"` (track + minW 1300). Client `title=`; Client cost `F()` no currency in rows; masthead `Ccy EGP` once + Avg GP % tone `r`. Footer `N of M` + Lines + Client cost. Gate: `npm run test:discovery-quotations-page`.
+Page 3 `/discovery/quotations`: `DiscoverySuiteGrid` `cols="quotations"` (track + minW 1300). Client `title=`; Client cost `F()` no currency in rows; masthead `Ccy EGP` once + Avg GP % tone `r`. Footer `N of M` + Lines + Client cost. Gate: `npm run test:discovery-quotations-page`. Commit `5648b956`.
 
 ## Shipped 2026-09-04 — Session 2 similar bands + live overlay crawl
 

@@ -29,7 +29,6 @@ import {
   discoverySelectionFlyoutContentClass,
   type DiscoverySelectionFlyoutAction,
 } from "@/features/discovery/components/design-system/discovery-selection-flyout";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -65,7 +64,6 @@ import { QuotationWorkspaceHeader } from "@/features/quotations/components/quota
 import { ConvertQuotationDialog } from "@/features/quotations/components/convert-quotation-dialog";
 import { QuotationClientReviewPanel } from "@/features/quotations/components/quotation-client-review-panel";
 import {
-  QUOTATION_CLIENT_SELECTION_LABEL,
   clientSelectionForItems,
   filterItemsByClientSelection,
   itemIdsForClientSelection,
@@ -78,8 +76,7 @@ import { setQuotationReviewCreatorsOnBehalfAction } from "@/features/client-work
 import { QuotationClientBrandPanel } from "@/features/quotations/components/quotation-client-brand-panel";
 import { QuotationDocumentMetaPanel } from "@/features/quotations/components/quotation-document-meta-panel";
 import { QuotationSetupWizard } from "@/features/quotations/components/quotation-setup-wizard";
-import { QuotationCollapseContentGroupRows } from "@/features/quotations/components/quotation-collapse-content-group-rows";
-import { QuotationCreatorGroupRows } from "@/features/quotations/components/quotation-creator-group-rows";
+import { QuotationLinesGrid } from "@/features/quotations/components/quotation-lines-grid";
 import { useQuotationCreatorDetailSheet } from "@/features/quotations/hooks/use-quotation-creator-detail-sheet";
 import {
   QuotationManualSaveProvider,
@@ -107,24 +104,14 @@ import {
 } from "@/features/quotations/quotation-row-math";
 import { applyCommercialWorkspaceBulkOp } from "@/lib/quotations/commercial-workspace/bulk-transforms";
 import { resolveLiveTotalsDraft } from "@/features/quotations/quotation-pending-live-totals";
-import { formatEgpTotalInDisplayCurrency } from "@/lib/quotations/quotation-line-creator-commercial-sync";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
-import {
-  buildQuotationItemOptionContext,
-  countUniqueQuotationCreators,
-} from "@/lib/quotations/quotation-creator-options";
+import { countUniqueQuotationCreators } from "@/lib/quotations/quotation-creator-options";
 import {
   sortQuotationWorkspaceItems,
   type QuotationWorkspaceSortState,
 } from "@/lib/quotations/quotation-workspace-sort";
-import { buildQuotationWorkspaceDisplayGroups } from "@/lib/quotations/quotation-collapse-groups";
-import {
-  quotationCreatorCardPricingClass,
-  quotationDisplayGroupPricingCompleteness,
-} from "@/lib/quotations/quotation-creator-group-pricing";
 import { shouldIncludeItemInLiveTotals } from "@/lib/quotations/quotation-collapse-package";
 import { QuotationCommercialEntry } from "@/features/quotations/components/quotation-commercial-entry";
-import { QuotationWorkspaceSortableHead } from "@/features/quotations/components/quotation-workspace-sort-header";
 import {
   deliverableTypeLines,
   formatTypeLinesSummary,
@@ -400,45 +387,6 @@ function QuotationWorkspaceContent({
     [filteredItems, tableSort, drafts, pendingItemIds]
   );
 
-  const optionContextByItemId = useMemo(
-    () => buildQuotationItemOptionContext(visibleItems),
-    [visibleItems]
-  );
-
-  const displayGroups = useMemo(
-    () => buildQuotationWorkspaceDisplayGroups(sortedFilteredItems),
-    [sortedFilteredItems]
-  );
-
-  const displayGroupSections = useMemo(() => {
-    if (!clientReview) return [{ key: "all" as const, label: null as string | null, groups: displayGroups }];
-    if (clientSelectionFilter !== "all") {
-      return [
-        {
-          key: clientSelectionFilter,
-          label: QUOTATION_CLIENT_SELECTION_LABEL[clientSelectionFilter],
-          groups: displayGroups,
-        },
-      ];
-    }
-    const buckets = {
-      accepted: [] as typeof displayGroups,
-      in_review: [] as typeof displayGroups,
-      rejected: [] as typeof displayGroups,
-    };
-    for (const group of displayGroups) {
-      const items = group.kind === "creator" ? group.items : group.creatorGroups.flatMap((row) => row.items);
-      buckets[clientSelectionForItems(items, clientReview.selectionState)].push(group);
-    }
-    return (["accepted", "in_review", "rejected"] as const)
-      .filter((key) => buckets[key].length > 0)
-      .map((key) => ({
-        key,
-        label: QUOTATION_CLIENT_SELECTION_LABEL[key],
-        groups: buckets[key],
-      }));
-  }, [clientReview, clientSelectionFilter, displayGroups]);
-
   const uniqueCreatorCount = useMemo(
     () => countUniqueQuotationCreators(visibleItems),
     [visibleItems]
@@ -514,7 +462,11 @@ function QuotationWorkspaceContent({
   );
 
   const allVisibleSelected =
-    filteredItems.length > 0 && filteredItems.every((item) => selectedIds.has(item.id));
+    sortedFilteredItems.length > 0 &&
+    sortedFilteredItems.every((item) => selectedIds.has(item.id));
+  const selectionIndeterminate =
+    sortedFilteredItems.some((item) => selectedIds.has(item.id)) &&
+    !allVisibleSelected;
 
   const updateDraft = useCallback((id: string, patch: Partial<QuotationRowDraft>) => {
     setDrafts((prev) => {
@@ -625,13 +577,25 @@ function QuotationWorkspaceContent({
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (allVisibleSelected) {
-        filteredItems.forEach((item) => next.delete(item.id));
+        sortedFilteredItems.forEach((item) => next.delete(item.id));
       } else {
-        filteredItems.forEach((item) => next.add(item.id));
+        sortedFilteredItems.forEach((item) => next.add(item.id));
       }
       return next;
     });
-  }, [allVisibleSelected, filteredItems]);
+  }, [allVisibleSelected, sortedFilteredItems]);
+
+  const setSelectAllVisible = useCallback(
+    (checked: boolean) => {
+      setSelectedIds((prev) => {
+        const next = new Set(prev);
+        if (checked) sortedFilteredItems.forEach((item) => next.add(item.id));
+        else sortedFilteredItems.forEach((item) => next.delete(item.id));
+        return next;
+      });
+    },
+    [sortedFilteredItems]
+  );
 
   const applyBulkGpPct = useCallback(
     (pct: number) => {
@@ -1024,167 +988,24 @@ function QuotationWorkspaceContent({
               }
             />
 
-            <div className="creators-list">
-              <div className="clist-head sticky top-0 z-10">
-                <span className="co-chk">
-                  <Checkbox
-                    checked={allVisibleSelected}
-                    onCheckedChange={toggleSelectAllVisible}
-                    aria-label="Select all visible creators"
-                  />
-                </span>
-                <QuotationWorkspaceSortableHead
-                  variant="flex"
-                  columnClassName="co-opt"
-                  label="Option"
-                  field="option"
-                  sort={tableSort}
-                  onSortChange={setTableSort}
-                />
-                <QuotationWorkspaceSortableHead
-                  variant="flex"
-                  columnClassName="co-tier"
-                  label="Tier"
-                  field="tier"
-                  sort={tableSort}
-                  onSortChange={setTableSort}
-                />
-                <QuotationWorkspaceSortableHead
-                  variant="flex"
-                  columnClassName="co-svc"
-                  label="Service description"
-                  field="service"
-                  sort={tableSort}
-                  onSortChange={setTableSort}
-                />
-                <QuotationWorkspaceSortableHead
-                  variant="flex"
-                  columnClassName="co-plat"
-                  label="Platform"
-                  field="platform"
-                  align="center"
-                  sort={tableSort}
-                  onSortChange={setTableSort}
-                />
-                <QuotationWorkspaceSortableHead
-                  variant="flex"
-                  columnClassName="co-type"
-                  label="Type"
-                  field="type"
-                  sort={tableSort}
-                  onSortChange={setTableSort}
-                />
-                <QuotationWorkspaceSortableHead
-                  variant="flex"
-                  columnClassName="co-price"
-                  label="Price"
-                  field="price"
-                  align="right"
-                  sort={tableSort}
-                  onSortChange={setTableSort}
-                />
-                <QuotationWorkspaceSortableHead
-                  variant="flex"
-                  columnClassName="co-status"
-                  label="Status"
-                  field="status"
-                  align="center"
-                  sort={tableSort}
-                  onSortChange={setTableSort}
-                />
-                <span className="co-act" aria-hidden />
-              </div>
-
-              {displayGroupSections.map((section) => (
-                <div key={section.key}>
-                  {section.label ? (
-                    <div className="px-1 py-2 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--muted,#6B7280)]">
-                      {section.label}
-                    </div>
-                  ) : null}
-                  {section.groups.map((group, groupIndex) => {
-                const pricingCompleteness = quotationDisplayGroupPricingCompleteness(
-                  group,
-                  manualSave.getLinePendingPayload,
-                  drafts
-                );
-
-                return (
-                <div
-                  key={
-                    group.kind === "collapse"
-                      ? `collapse-${group.collapseGroupId}`
-                      : group.creatorKey
-                  }
-                  className={cn(
-                    "cgroup quotation-creator-card",
-                    quotationCreatorCardPricingClass(pricingCompleteness),
-                    group.kind === "collapse" &&
-                      "collapse-content-frame quotation-collapse-content-block"
-                  )}
-                >
-                  {group.kind === "collapse" ? (
-                    <QuotationCollapseContentGroupRows
-                      quotationId={detail.id}
-                      shortlistId={detail.shortlist_id}
-                      label={group.label}
-                      allItems={detail.items}
-                      creatorGroups={group.creatorGroups}
-                      drafts={drafts}
-                      groupIndex={groupIndex}
-                      optionContextByItemId={optionContextByItemId}
-                      selectedIds={selectedIds}
-                      onToggleSelect={toggleSelect}
-                      onDraftChange={updateDraft}
-                      onRemoved={() => router.refresh()}
-                      onLineChanged={refreshQuotationLines}
-                      onOpenCreator={openCreatorFromItem}
-                      focusItemId={focusNewItemId}
-                      displayCurrency={displayCurrency}
-                      displayFxRateToEgp={displayFxRateToEgp}
-                      selectionState={clientReview?.selectionState}
-                    />
-                  ) : (
-                    <QuotationCreatorGroupRows
-                      quotationId={detail.id}
-                      shortlistId={detail.shortlist_id}
-                      items={group.items}
-                      drafts={drafts}
-                      groupIndex={groupIndex}
-                      optionContextByItemId={optionContextByItemId}
-                      selectedIds={selectedIds}
-                      onToggleSelect={toggleSelect}
-                      onDraftChange={updateDraft}
-                      onRemoved={() => router.refresh()}
-                      onLineChanged={refreshQuotationLines}
-                      onOpenCreator={openCreatorFromItem}
-                      focusItemId={focusNewItemId}
-                      displayCurrency={displayCurrency}
-                      displayFxRateToEgp={displayFxRateToEgp}
-                      clientSelection={clientSelectionForItems(
-                        group.items,
-                        clientReview?.selectionState
-                      )}
-                    />
-                  )}
-                </div>
-                );
-                  })}
-                </div>
-              ))}
-
-              <div className="totals sticky bottom-0 z-10">
-                <span className="lbl">
-                  Totals · {uniqueCreatorCount} creators · {totalsDraftList.length} option lines
-                </span>
-                <span className="amt">
-                  {formatEgpTotalInDisplayCurrency(
-                    totals.totalClientCostEgp,
-                    displayCurrency,
-                    displayFxRateToEgp
-                  )}
-                </span>
-              </div>
+            <div className="creators-list discovery-suite">
+              <QuotationLinesGrid
+                quotationId={detail.id}
+                items={sortedFilteredItems}
+                drafts={drafts}
+                selectedIds={selectedIds}
+                allSelected={allVisibleSelected}
+                indeterminate={selectionIndeterminate}
+                onToggleSelect={toggleSelect}
+                onToggleSelectAll={setSelectAllVisible}
+                onDraftChange={updateDraft}
+                onRemoved={() => router.refresh()}
+                onLineChanged={refreshQuotationLines}
+                onOpenCreator={openCreatorFromItem}
+                uniqueCreatorCount={uniqueCreatorCount}
+                totalClientCostEgp={totals.totalClientCostEgp}
+                canManage={detail.canManage}
+              />
             </div>
             {detail.canManage ? (
               <div className="px-[var(--gut,32px)] py-3">
