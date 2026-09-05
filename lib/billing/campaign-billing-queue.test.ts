@@ -9,7 +9,10 @@ import {
   filterCampaignsWithRemainingInvoiceable,
   type CampaignBillingQueueRow,
 } from "@/lib/billing/campaign-billing-queue";
+import { resolveInvoiceConfirmSelection } from "@/lib/billing/consolidated-invoice-queue";
 import { mergeQueueRollupWithInvoiceLines } from "@/lib/billing/invoice-operational-aggregation";
+import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
+import { countSubmitPayload } from "@/lib/billing/operational-selection";
 
 function row(
   extras: Partial<CampaignBillingQueueRow> & {
@@ -118,11 +121,81 @@ function testQueueKeepsRemainingCampaigns() {
   assert.equal(kept[0]?.campaign_document_number, "TW-2026-0017");
 }
 
+function assignmentRow(
+  extras: Partial<OperationalBillingRow> & { id: string; vendor_io_id?: string | null }
+): OperationalBillingRow {
+  return {
+    id: extras.id,
+    kind: "assignment",
+    campaign_header_id: "camp-1",
+    campaign_line_id: extras.id,
+    assignment_deliverable_id: null,
+    parent_id: null,
+    label: extras.label ?? "Assignment",
+    document_number: extras.document_number ?? "TW-1-A",
+    influencer_name: "Creator",
+    platform: null,
+    deliverable_type: null,
+    billable_amount: extras.billable_amount ?? 1000,
+    invoiced_amount: extras.invoiced_amount ?? 0,
+    collected_amount: 0,
+    remaining_amount: extras.remaining_amount ?? extras.billable_amount ?? 1000,
+    billing_status: extras.billing_status ?? "moved_to_billing",
+    line_billing_status: extras.line_billing_status ?? "moved_to_billing",
+    invoice_id: null,
+    invoice_document_number: null,
+    invoice_line_item_id: null,
+    locked_at: null,
+    is_locked: false,
+    is_invoice_eligible: true,
+    is_achieved: true,
+    is_legacy_synthetic: false,
+    revenue_before_vat: extras.billable_amount ?? 1000,
+    revenue_vat_percent: 0,
+    revenue_vat_exempt: false,
+    operational_status: "io_generated",
+    vendor_io_id: extras.vendor_io_id === undefined ? "vio-1" : extras.vendor_io_id,
+    vendor_io_document_number: extras.vendor_io_id === null ? null : "VIO-1",
+    pricing_mode: "package",
+    children: [],
+  };
+}
+
+/** Create invoice with no explicit selection must use consolidated fallback, not empty payload. */
+function testUndefinedSelectionUsesConsolidatedFallback() {
+  const rows = [assignmentRow({ id: "line-1" })];
+  const resolved = resolveInvoiceConfirmSelection(rows, undefined);
+  assert.ok(resolved, "undefined selection must fall back to eligible rows");
+  assert.equal(countSubmitPayload(resolved!), 1);
+  assert.deepEqual(resolved!.line_ids, ["line-1"]);
+}
+
+/** Empty explicit selection must not invent invoiceable rows. */
+function testEmptySelectionDoesNotInventRows() {
+  const rows = [assignmentRow({ id: "line-1" })];
+  const resolved = resolveInvoiceConfirmSelection(rows, {
+    line_ids: [],
+    deliverable_ids: [],
+    post_ids: [],
+  });
+  assert.equal(resolved, null);
+}
+
+/** No VIO-eligible remaining rows → null (caller shows visible error, no empty confirm). */
+function testNoEligibleRowsReturnsNull() {
+  const rows = [assignmentRow({ id: "line-1", vendor_io_id: null })];
+  const resolved = resolveInvoiceConfirmSelection(rows, undefined);
+  assert.equal(resolved, null);
+}
+
 function run() {
   testPartialInvoiceIsNotFullyAchieved();
   testFullyInvoicedOnlyWhenRemainingIsGone();
   testQueueKeepsRemainingCampaigns();
   testSixtyPercentInvoiceLinesKeepQueueRemaining();
+  testUndefinedSelectionUsesConsolidatedFallback();
+  testEmptySelectionDoesNotInventRows();
+  testNoEligibleRowsReturnsNull();
   console.log("campaign-billing-queue.test.ts: ok");
 }
 

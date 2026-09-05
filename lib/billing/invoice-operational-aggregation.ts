@@ -14,33 +14,155 @@ function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
 }
 
-/** Sum invoice_line_items.revenue_before_vat per campaign (non-void invoices). */
-export async function loadCampaignInvoiceLineRollups(
+function resolveInvoiceCampaignId(
+  invoice: { campaign_header_id: string | null; campaign_id: string | null },
+  requested: Set<string>
+): string | null {
+  if (invoice.campaign_header_id && requested.has(invoice.campaign_header_id)) {
+    return invoice.campaign_header_id;
+  }
+  if (invoice.campaign_id && requested.has(invoice.campaign_id)) {
+    return invoice.campaign_id;
+  }
+  return null;
+}
+
+function addRollupAmount(
+  result: Map<string, CampaignInvoiceLineRollup>,
+  campaignHeaderId: string,
+  revenueBeforeVat: number
+) {
+  const amount = roundMoney(Number(revenueBeforeVat ?? 0));
+  const existing = result.get(campaignHeaderId) ?? {
+    campaign_header_id: campaignHeaderId,
+    invoiced_subtotal: 0,
+    line_count: 0,
+  };
+  existing.invoiced_subtotal = roundMoney(existing.invoiced_subtotal + amount);
+  existing.line_count += 1;
+  result.set(campaignHeaderId, existing);
+}
+
+/**
+ * Same invoice discovery as `loadOperationalInvoiceLinkage`:
+ * invoices.campaign_header_id OR invoices.campaign_id, then line items by invoice_id.
+ * Falls back to invoice_line_items.campaign_header_id when the invoice query fails.
+ */
+async function loadInvoiceLineItemsByCampaignLinkage(
   supabase: SupabaseClient,
-  campaignHeaderIds: string[]
-): Promise<Map<string, CampaignInvoiceLineRollup>> {
-  const result = new Map<string, CampaignInvoiceLineRollup>();
-  if (campaignHeaderIds.length === 0) return result;
+  requested: Set<string>
+): Promise<{
+  rows: Array<{
+    id: string;
+    invoice_id: string;
+    campaignHeaderId: string;
+    revenue_before_vat: number;
+  }>;
+  error?: string;
+}> {
+  const idList = [...requested].join(",");
+  const { data: invoices, error: invoiceError } = await supabase
+    .from("invoices")
+    .select("id, campaign_header_id, campaign_id, status, regeneration_status")
+    .or(`campaign_header_id.in.(${idList}),campaign_id.in.(${idList})`)
+    .neq("status", "void");
+
+  if (invoiceError) {
+    return { rows: [], error: invoiceError.message };
+  }
+
+  const invoiceToCampaign = new Map<string, string>();
+  for (const invoice of invoices ?? []) {
+    const typed = invoice as {
+      id: string;
+      campaign_header_id: string | null;
+      campaign_id: string | null;
+      status: string;
+      regeneration_status: string | null;
+    };
+    if (
+      !isActiveInvoiceForFinancialTotals({
+        status: typed.status,
+        regeneration_status: typed.regeneration_status,
+      })
+    ) {
+      continue;
+    }
+    const campaignHeaderId = resolveInvoiceCampaignId(typed, requested);
+    if (!campaignHeaderId) continue;
+    invoiceToCampaign.set(typed.id, campaignHeaderId);
+  }
+
+  const invoiceIds = [...invoiceToCampaign.keys()];
+  if (invoiceIds.length === 0) return { rows: [] };
 
   const { data, error } = await supabase
     .from("invoice_line_items")
+    .select("id, invoice_id, revenue_before_vat")
+    .in("invoice_id", invoiceIds);
+
+  if (error) {
+    return { rows: [], error: error.message };
+  }
+
+  const rows: Array<{
+    id: string;
+    invoice_id: string;
+    campaignHeaderId: string;
+    revenue_before_vat: number;
+  }> = [];
+
+  for (const row of data ?? []) {
+    const typed = row as {
+      id: string;
+      invoice_id: string;
+      revenue_before_vat: number;
+    };
+    const campaignHeaderId = invoiceToCampaign.get(typed.invoice_id);
+    if (!campaignHeaderId) continue;
+    rows.push({
+      id: typed.id,
+      invoice_id: typed.invoice_id,
+      campaignHeaderId,
+      revenue_before_vat: Number(typed.revenue_before_vat ?? 0),
+    });
+  }
+
+  return { rows };
+}
+
+/** Legacy path: line items that already store campaign_header_id. */
+async function loadInvoiceLineItemsByLineCampaignId(
+  supabase: SupabaseClient,
+  campaignHeaderIds: string[]
+): Promise<{
+  rows: Array<{
+    id: string;
+    campaignHeaderId: string;
+    revenue_before_vat: number;
+  }>;
+  error?: string;
+}> {
+  const { data, error } = await supabase
+    .from("invoice_line_items")
     .select(
-      "campaign_header_id, revenue_before_vat, invoice:invoices!inner(status, regeneration_status)"
+      "id, campaign_header_id, revenue_before_vat, invoice:invoices!inner(status, regeneration_status)"
     )
     .in("campaign_header_id", campaignHeaderIds);
 
   if (error) {
-    if (process.env.NODE_ENV === "development") {
-      devLog("[invoice-aggregation] line item rollup query failed", {
-        error: error.message,
-        campaignCount: campaignHeaderIds.length,
-      });
-    }
-    return result;
+    return { rows: [], error: error.message };
   }
+
+  const rows: Array<{
+    id: string;
+    campaignHeaderId: string;
+    revenue_before_vat: number;
+  }> = [];
 
   for (const row of data ?? []) {
     const typed = row as unknown as {
+      id: string;
       campaign_header_id: string | null;
       revenue_before_vat: number;
       invoice: { status: string; regeneration_status: string | null } | null;
@@ -55,22 +177,60 @@ export async function loadCampaignInvoiceLineRollups(
     ) {
       continue;
     }
+    rows.push({
+      id: typed.id,
+      campaignHeaderId: typed.campaign_header_id,
+      revenue_before_vat: Number(typed.revenue_before_vat ?? 0),
+    });
+  }
 
-    const amount = roundMoney(Number(typed.revenue_before_vat ?? 0));
-    const existing = result.get(typed.campaign_header_id) ?? {
-      campaign_header_id: typed.campaign_header_id,
-      invoiced_subtotal: 0,
-      line_count: 0,
-    };
-    existing.invoiced_subtotal = roundMoney(existing.invoiced_subtotal + amount);
-    existing.line_count += 1;
-    result.set(typed.campaign_header_id, existing);
+  return { rows };
+}
+
+/** Sum invoice_line_items.revenue_before_vat per campaign (non-void invoices). */
+export async function loadCampaignInvoiceLineRollups(
+  supabase: SupabaseClient,
+  campaignHeaderIds: string[]
+): Promise<Map<string, CampaignInvoiceLineRollup>> {
+  const result = new Map<string, CampaignInvoiceLineRollup>();
+  const requested = new Set(campaignHeaderIds.filter(Boolean));
+  if (requested.size === 0) return result;
+
+  const linked = await loadInvoiceLineItemsByCampaignLinkage(supabase, requested);
+  if (linked.error && process.env.NODE_ENV === "development") {
+    devLog("[invoice-aggregation] invoice linkage rollup query failed", {
+      error: linked.error,
+      campaignCount: requested.size,
+    });
+  }
+
+  const seenLineIds = new Set<string>();
+  for (const row of linked.rows) {
+    if (seenLineIds.has(row.id)) continue;
+    seenLineIds.add(row.id);
+    addRollupAmount(result, row.campaignHeaderId, row.revenue_before_vat);
+  }
+
+  const byLineCampaign = await loadInvoiceLineItemsByLineCampaignId(supabase, [...requested]);
+  if (byLineCampaign.error && process.env.NODE_ENV === "development") {
+    devLog("[invoice-aggregation] line item rollup query failed", {
+      error: byLineCampaign.error,
+      campaignCount: requested.size,
+    });
+  }
+
+  for (const row of byLineCampaign.rows) {
+    if (seenLineIds.has(row.id)) continue;
+    seenLineIds.add(row.id);
+    addRollupAmount(result, row.campaignHeaderId, row.revenue_before_vat);
   }
 
   if (process.env.NODE_ENV === "development") {
     devLog("[invoice-aggregation] campaign line rollups", {
-      campaignCount: campaignHeaderIds.length,
+      campaignCount: requested.size,
       withLines: result.size,
+      linkedRows: linked.rows.length,
+      lineCampaignRows: byLineCampaign.rows.length,
     });
   }
 

@@ -9,18 +9,17 @@ import {
 import type { InvoiceTargetMode } from "@/features/billing/components/invoice-target-choice-dialog";
 import { useOperationalInvoiceCreate } from "@/features/billing/hooks/use-operational-invoice-create";
 import type { CampaignOperationalBillingDetail } from "@/features/billing/types";
-import { buildConsolidatedQueueInvoiceSelection } from "@/lib/billing/consolidated-invoice-queue";
+import { resolveInvoiceConfirmSelection } from "@/lib/billing/consolidated-invoice-queue";
 import {
   buildInvoiceConfirmPreview,
   type InvoiceDraftPercents,
 } from "@/lib/billing/operational-invoice-draft";
 import {
-  countSubmitPayload,
-  payloadToSelection,
-  selectionToSubmitPayload,
-  type OperationalSelectionPayload,
-} from "@/lib/billing/operational-selection";
-import { showErrorToastOnce } from "@/lib/ui/toast-once";
+  getRemainingInvoiceableDeliverables,
+  NO_INVOICEABLE_ELIGIBLE_ROWS_MESSAGE,
+} from "@/lib/billing/queue-eligibility";
+import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
+import { toast } from "sonner";
 
 export type InvoiceConfirmFlowMeta = {
   campaignId: string;
@@ -29,26 +28,13 @@ export type InvoiceConfirmFlowMeta = {
   currency: string;
 };
 
-function resolveConfirmSelection(
-  rows: CampaignOperationalBillingDetail["operational_rows"],
-  selection?: OperationalSelectionPayload
-): OperationalSelectionPayload | null {
-  if (selection === undefined) {
-    return buildConsolidatedQueueInvoiceSelection(rows);
-  }
-  if (countSubmitPayload(selection) === 0) {
-    return null;
-  }
-  return selectionToSubmitPayload(payloadToSelection(selection), rows);
-}
-
 export function buildOperationalInvoiceConfirmPreview(
   detail: CampaignOperationalBillingDetail,
   meta: InvoiceConfirmFlowMeta,
   selection?: OperationalSelectionPayload,
   percents: InvoiceDraftPercents = {}
 ): InvoiceConfirmCampaignPreview | null {
-  const payload = resolveConfirmSelection(detail.operational_rows, selection);
+  const payload = resolveInvoiceConfirmSelection(detail.operational_rows, selection);
   if (!payload) return null;
   const totals = buildInvoiceConfirmPreview({
     rows: detail.operational_rows,
@@ -104,11 +90,13 @@ export function useInvoiceConfirmFlow({
   const requestConfirm = useCallback((inputSelection?: OperationalSelectionPayload): boolean => {
     const detail = operationalBillingRef.current;
     if (!detail) return false;
-    const payload = resolveConfirmSelection(detail.operational_rows, inputSelection);
+    const payload = resolveInvoiceConfirmSelection(detail.operational_rows, inputSelection);
     if (!payload) {
-      showErrorToastOnce("Select at least one billable assignment.", {
-        id: "invoice-generation",
-      });
+      toast.error(
+        getRemainingInvoiceableDeliverables(detail.operational_rows).length === 0
+          ? NO_INVOICEABLE_ELIGIBLE_ROWS_MESSAGE
+          : "Select at least one billable assignment."
+      );
       return false;
     }
     const nextPreview = buildOperationalInvoiceConfirmPreview(
@@ -118,9 +106,11 @@ export function useInvoiceConfirmFlow({
       percentsRef.current
     );
     if (!nextPreview) {
-      showErrorToastOnce("Set Invoice % above 0 on at least one selected row.", {
-        id: "invoice-generation",
-      });
+      toast.error(
+        getRemainingInvoiceableDeliverables(detail.operational_rows).length === 0
+          ? NO_INVOICEABLE_ELIGIBLE_ROWS_MESSAGE
+          : "Set Invoice % above 0 on at least one selected row."
+      );
       return false;
     }
     selectionRef.current = payload;

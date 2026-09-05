@@ -103,6 +103,10 @@ export function hasRemainingInvoiceableRevenue(
   return true;
 }
 
+/** Shown when Invoice / Create invoice cannot proceed because no VIO-eligible remaining rows exist. */
+export const NO_INVOICEABLE_ELIGIBLE_ROWS_MESSAGE =
+  "There are no invoiceable eligible rows. Remaining billable assignments need an approved Vendor IO.";
+
 export function getRemainingInvoiceableDeliverables(
   rows: OperationalBillingRow[]
 ): InvoiceableDeliverableRef[] {

@@ -80,7 +80,7 @@ import {
   cascadeInvoiceDraftPercent,
   type InvoiceDraftPercents,
 } from "@/lib/billing/operational-invoice-draft";
-import { showErrorToastOnce } from "@/lib/ui/toast-once";
+import { getRemainingInvoiceableDeliverables, NO_INVOICEABLE_ELIGIBLE_ROWS_MESSAGE } from "@/lib/billing/queue-eligibility";
 import { devLog } from "@/lib/dev-log";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
 import { operationalColumnsFromMetas } from "@/lib/tables/operational-filter-columns";
@@ -417,6 +417,10 @@ export function BillingCampaignQueueTable({
       const campaign = campaigns.find((row) => row.campaign_header_id === campaignId);
       if (!detail || !campaign) return null;
       const payload = resolveInvoiceSelection(campaignId, selection);
+      if (getRemainingInvoiceableDeliverables(detail.operational_rows).length === 0) {
+        toast.error(NO_INVOICEABLE_ELIGIBLE_ROWS_MESSAGE);
+        return null;
+      }
       const totals = buildInvoiceConfirmPreview({
         rows: detail.operational_rows,
         percents: invoiceDraftPercentsRef.current[campaignId] ?? {},
@@ -426,9 +430,7 @@ export function BillingCampaignQueueTable({
         remainingToInvoice: campaign.remaining_to_invoice,
       });
       if (totals.lines.length === 0) {
-        showErrorToastOnce("Set Invoice % above 0 on at least one selected row.", {
-          id: "invoice-generation",
-        });
+        toast.error("Set Invoice % above 0 on at least one selected row.");
         return null;
       }
       return {

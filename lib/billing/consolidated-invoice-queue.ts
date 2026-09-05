@@ -3,7 +3,9 @@ import { isCampaignBillingEligible } from "@/lib/billing/campaign-billing-eligib
 import { getRemainingInvoiceableDeliverables } from "@/lib/billing/queue-eligibility";
 import { getRemainingRevenue } from "@/lib/billing/partial-invoice-lifecycle";
 import {
+  countSubmitPayload,
   createEmptySelection,
+  payloadToSelection,
   selectionToSubmitPayload,
   type OperationalSelectionPayload,
 } from "@/lib/billing/operational-selection";
@@ -114,4 +116,23 @@ export function buildConsolidatedQueueInvoiceSelection(
   }
 
   return selectionToSubmitPayload(selection, operational_rows);
+}
+
+/**
+ * Confirm-flow selection: explicit payload wins; otherwise queue-eligible rows only.
+ * `undefined` means “no explicit selection” and must use the consolidated fallback.
+ * An empty payload is not the same as undefined and must not invent rows.
+ */
+export function resolveInvoiceConfirmSelection(
+  operational_rows: OperationalBillingRow[],
+  selection?: OperationalSelectionPayload
+): OperationalSelectionPayload | null {
+  if (selection === undefined) {
+    const consolidated = buildConsolidatedQueueInvoiceSelection(operational_rows);
+    return countSubmitPayload(consolidated) > 0 ? consolidated : null;
+  }
+  if (countSubmitPayload(selection) === 0) {
+    return null;
+  }
+  return selectionToSubmitPayload(payloadToSelection(selection), operational_rows);
 }

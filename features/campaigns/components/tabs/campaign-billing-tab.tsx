@@ -65,7 +65,6 @@ import type {
 import { buildConsolidatedQueueInvoiceSelection } from "@/lib/billing/consolidated-invoice-queue";
 import {
   createEmptySelection,
-  selectionToSubmitPayload,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
@@ -300,10 +299,7 @@ export function CampaignBillingTab({
 
   function beginInvoiceFlow(selection?: OperationalSelectionPayload) {
     if (!operationalBilling || invoicePending) return;
-    const rows = operationalBilling.operational_rows;
-    invoiceConfirm.requestConfirm(
-      selection ?? selectionToSubmitPayload(drilldownSelection, rows)
-    );
+    invoiceConfirm.requestConfirm(selection);
   }
 
   function handleQueueGenerateInvoice() {
