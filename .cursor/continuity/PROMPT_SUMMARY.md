@@ -3,6 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-05 — Pack creator-details scrim (platform dim)
+
+Portal host `.tw-cp-root` is a transparent fixed overlay so Search / Shortlist / Quotation stay visible under pack `.tw-scrim` (`rgba(11,15,26,.34)` + 1.5px blur). Opaque `.discovery-suite` page fill was hiding the platform behind the card.
+
 ## Shipped 2026-09-05 — Pack creator details tabs + Search chrome
 
 Search · Shortlist · Quotation name click share `presentation="discoveryPack"`. Tab bodies now match `discovery.html` `creatorModal()`: Overview (`.tw-mgrid` / pricing / recent pubs), Contact (empty + enrichment), Publications (`.tw-pubs`), Confidence (`.tw-out` / `.tw-bar3` / categories / historical). Campaign/Studio stay `sheet`. Search card header uses pack Filters · Refresh metrics · + Add missing (`tw-dlg`); Filters is the pack `tw-dr` drawer. Flag image on the 84px profile avatar. Frozen `discovery.css` untouched. Billing dirt / probe scripts left uncommitted.

@@ -241,7 +241,7 @@ export function DiscoverySuiteCreatorProfile({
     normalizeCountryCode(resolveCountryCode(metaLine.split("·")[0]));
 
   return createPortal(
-    <div className="discovery-suite">
+    <div className="discovery-suite tw-cp-root">
       <div
         className="tw-scrim"
         onClick={() => {
