@@ -1,9 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { ChevronDownIcon, ExternalLinkIcon, FileTextIcon } from "lucide-react";
+import { ChevronDownIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -15,6 +14,7 @@ import {
 import { QuotationListStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
 import { quotationDetailPath } from "@/features/quotations/constants";
 import type { QuotationStatus } from "@/types/database";
+import { cn } from "@/lib/utils";
 
 import type { ShortlistLinkedQuotation } from "../types";
 
@@ -32,6 +32,14 @@ function quotationCountLabel(count: number): string {
   return count === 1 ? "1 quotation linked" : `${count} quotations linked`;
 }
 
+/** Pack status pill — Draft → `.tw-p p-n` (HTML pgShortlist). */
+function PackStatusPill({ status }: { status: QuotationStatus }) {
+  if (status === "draft") {
+    return <span className="tw-p p-n">Draft</span>;
+  }
+  return <QuotationListStatusPill status={status} />;
+}
+
 type Props = {
   quotations: ShortlistLinkedQuotation[];
   onGenerateNewVersion: () => void;
@@ -40,6 +48,10 @@ type Props = {
   actionsOnly?: boolean;
 };
 
+/**
+ * Spec §02 / discovery.html `pgShortlist` quotation strip:
+ * `.tw-c > .tw-ch` — Quotation linked · serial · count · version · Draft · Open · Generate
+ */
 export function ShortlistQuotationPanel({
   quotations,
   onGenerateNewVersion,
@@ -53,15 +65,15 @@ export function ShortlistQuotationPanel({
   const multiple = quotations.length > 1;
   const detailHref = quotationDetailPath(latest.id, latest.serial_number);
   const displayVersion = formatDisplayVersion(latest.version_number);
+  const title = issued ? "Quotation issued" : "Quotation linked";
 
   const openButton = multiple ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button size="sm" disabled={busy}>
-          <ExternalLinkIcon className="size-4" />
+        <button type="button" className="tw-b sm pri" disabled={busy}>
           Open quotation
-          <ChevronDownIcon className="size-3.5 opacity-70" />
-        </Button>
+          <ChevronDownIcon className="size-3 opacity-70" aria-hidden />
+        </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-72">
         <DropdownMenuLabel>Linked quotations</DropdownMenuLabel>
@@ -82,62 +94,50 @@ export function ShortlistQuotationPanel({
       </DropdownMenuContent>
     </DropdownMenu>
   ) : (
-    <Button size="sm" asChild disabled={busy}>
-      <Link href={detailHref}>
-        <ExternalLinkIcon className="size-4" />
-        Open quotation
-      </Link>
-    </Button>
+    <Link
+      href={detailHref}
+      className={cn("tw-b sm pri", busy && "pointer-events-none opacity-50")}
+      aria-disabled={busy || undefined}
+    >
+      Open quotation
+    </Link>
   );
 
   const actionButtons = (
-    <div className="flex flex-wrap items-center gap-2">
+    <>
       {openButton}
-      <Button size="sm" variant="outline" onClick={onGenerateNewVersion} disabled={busy}>
-        <FileTextIcon className="size-4" />
+      <button
+        type="button"
+        className="tw-b sm"
+        onClick={onGenerateNewVersion}
+        disabled={busy}
+      >
         Generate new version
-      </Button>
-    </div>
+      </button>
+    </>
   );
 
   if (actionsOnly) {
-    return actionButtons;
+    return <div className="discovery-suite flex flex-wrap items-center gap-1.5">{actionButtons}</div>;
   }
 
   return (
-    <div className="rounded-[var(--radius-lg)] border border-[var(--tw-border)] bg-background p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-2">
-          <p className="text-[10px] font-bold uppercase tracking-[0.4px] text-[var(--text-3)]">
-            Quotation
-          </p>
-          <div className="space-y-1">
-            <p className="text-sm font-semibold text-foreground">
-              {issued ? "Quotation issued" : "Quotation linked"}
-              {latest.serial_number ? (
-                <>
-                  {" · "}
-                  <Link
-                    href={detailHref}
-                    className="font-mono text-[12.5px] font-bold text-[var(--blue-text)] hover:underline"
-                  >
-                    {latest.serial_number}
-                  </Link>
-                </>
-              ) : null}
-            </p>
-            <p className="text-xs text-[var(--text-3)]">
-              {quotationCountLabel(quotations.length)}
-              {" · "}
-              Latest version:{" "}
-              <span className="font-mono font-semibold text-foreground">
-                {displayVersion}
-              </span>
-            </p>
-          </div>
-          <QuotationListStatusPill status={latest.status} />
+    <div className="discovery-suite">
+      <div className="tw-c" style={{ marginBottom: 11 }}>
+        <div className="tw-ch">
+          <span className="tw-ct">{title}</span>
+          {latest.serial_number ? (
+            <Link href={detailHref} className="tw-id" style={{ color: "var(--tw-bi)" }}>
+              {latest.serial_number}
+            </Link>
+          ) : null}
+          <span className="tw-cs">
+            {quotationCountLabel(quotations.length)} · latest version {displayVersion}
+          </span>
+          <PackStatusPill status={latest.status} />
+          <span className="tw-sp" />
+          {actionButtons}
         </div>
-        {actionButtons}
       </div>
     </div>
   );

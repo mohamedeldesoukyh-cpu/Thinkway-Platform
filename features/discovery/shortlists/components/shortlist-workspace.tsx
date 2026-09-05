@@ -928,7 +928,7 @@ export function ShortlistWorkspace({
 
       <section className={cn(discoverySelectionFlyoutContentClass(selectedCount > 0))}>
         {hasLinkedQuotation ? (
-          <div className="border-b border-border px-8 py-2">
+          <div className="px-[15px] pt-3">
             <ShortlistQuotationPanel
               quotations={linkedQuotations}
               onGenerateNewVersion={handleGenerateNewVersion}
