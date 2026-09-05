@@ -7,7 +7,6 @@ import {
   ArchiveIcon,
   Loader2Icon,
   MoreHorizontalIcon,
-  SaveIcon,
   SendIcon,
   XCircleIcon,
 } from "lucide-react";
@@ -46,7 +45,6 @@ import { seedFromQuotation } from "@/features/campaign-outputs/hydration/seed-ad
 import { QuotationLifecycleSheet } from "@/features/quotations/components/quotation-lifecycle-sheet";
 import { QuotationLifecyclePills } from "@/features/quotations/components/quotation-lifecycle-pills";
 import { QuotationDocumentOutputToolbar } from "@/features/quotations/components/quotation-document-output-toolbar";
-import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
 import { QuotationWorkspaceStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
 import { QuotationValidityBar } from "@/features/quotations/components/quotation-validity-bar";
 import { DiscoverySuiteMasthead } from "@/features/discovery/components/design-system";
@@ -56,7 +54,11 @@ import {
   setQuotationShowOriginalCurrency,
   updateQuotationHeader,
 } from "@/features/quotations/actions";
-import { quotationDetailPath, QUOTATIONS_LIST_PATH } from "@/features/quotations/constants";
+import {
+  quotationDetailPath,
+  QUOTATIONS_LIST_PATH,
+  QUOTATION_STATUS_LABELS,
+} from "@/features/quotations/constants";
 import type { QuotationTemplateVariant } from "@/features/quotations/export/quotation-template";
 import type { PromoteWizardOptions, QuotationDetail } from "@/features/quotations/types";
 import type { QuotationClientReviewView } from "@/features/quotations/quotation-client-review";
@@ -216,22 +218,17 @@ export function QuotationWorkspaceHeader({
     });
   }
 
+  const statusLabel = detail.is_expired
+    ? "Expired"
+    : (QUOTATION_STATUS_LABELS[detail.status] ?? detail.status);
+
   return (
     <>
-      <div className="discovery-suite shrink-0 px-[14px] pt-2">
+      <div className="discovery-suite shrink-0 px-[15px] pt-2">
         <DiscoverySuiteMasthead
           title={detail.name}
           id={detail.serial_number}
-          badge={
-            <>
-              <QuotationWorkspaceStatusPill
-                status={detail.status}
-                isExpired={detail.is_expired}
-                className="spill"
-              />
-              {showGpConflict ? <span className="st r">GP conflict</span> : null}
-            </>
-          }
+          badge={<span className="st">{statusLabel}</span>}
           subtitle={[
             lineCount != null ? `${lineCount} line${lineCount === 1 ? "" : "s"}` : null,
             creatorCount != null
@@ -241,6 +238,9 @@ export function QuotationWorkspaceHeader({
           ]
             .filter(Boolean)
             .join(" · ")}
+          trailing={
+            showGpConflict ? <span className="st r">GP conflict</span> : null
+          }
           top={
             <div className="tw-top">
               <Link href={QUOTATIONS_LIST_PATH} className="tw-b sm">
@@ -283,55 +283,17 @@ export function QuotationWorkspaceHeader({
           actions={
             <div className="flex flex-wrap items-center gap-1.5">
               {detail.canManage ? (
-                <QuotationToolbarButton
-                  variant="glow"
-                  size="sm"
+                <button
+                  type="button"
+                  className="tw-b sm"
                   disabled={savePending || !hasUnsavedChanges}
                   onClick={onSave}
-                  className="btn-glow"
                 >
                   {savePending ? (
-                    <Loader2Icon className="size-3.5 animate-spin" />
-                  ) : (
-                    <SaveIcon className="size-3.5" />
-                  )}
+                    <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
+                  ) : null}
                   Save
-                </QuotationToolbarButton>
-              ) : null}
-              {detail.canManage ? (
-                <ClientWorkspaceDisplayToggles
-                  showOriginalCurrency={showOriginalCurrency}
-                  hideCostAndFees={hideCostAndFees}
-                  disabled={pending}
-                  onShowOriginalCurrencyChange={(value) => {
-                    startTransition(async () => {
-                      setOptimisticShowOriginalCurrency(value);
-                      const result = await setQuotationShowOriginalCurrency({
-                        quotationId: detail.id,
-                        value,
-                      });
-                      if (!result.ok) {
-                        toast.error(result.message);
-                        return;
-                      }
-                      router.refresh();
-                    });
-                  }}
-                  onHideCostAndFeesChange={(value) => {
-                    startTransition(async () => {
-                      setOptimisticHideCostAndFees(value);
-                      const result = await setQuotationHideCostAndFees({
-                        quotationId: detail.id,
-                        value,
-                      });
-                      if (!result.ok) {
-                        toast.error(result.message);
-                        return;
-                      }
-                      router.refresh();
-                    });
-                  }}
-                />
+                </button>
               ) : null}
               <QuotationDocumentOutputToolbar
                 quotationId={detail.id}
@@ -360,16 +322,8 @@ export function QuotationWorkspaceHeader({
                 seed={campaignSeed}
                 tab="studio"
                 workspace={{ type: "quotation", id: detail.id }}
-                variant="ghost"
-                size="md"
-                showIcon
-                buttonClassName="btn btn-ghost"
-              />
-              <GenerateOutputsLauncher
-                seed={campaignSeed}
-                tab="outputs"
-                workspace={{ type: "quotation", id: detail.id }}
-                triggerClassName="gen-trigger"
+                showIcon={false}
+                buttonClassName="tw-b sm"
               />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -377,12 +331,12 @@ export function QuotationWorkspaceHeader({
                     type="button"
                     disabled={pending}
                     aria-label="Quotation actions"
-                    className="ibtn disabled:opacity-50"
+                    className="tw-b sm disabled:opacity-50"
                   >
                     <MoreHorizontalIcon className="size-4" />
                   </button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem
                     onSelect={() => {
                       setLifecycleTab("links");
@@ -399,6 +353,62 @@ export function QuotationWorkspaceHeader({
                   >
                     Activity
                   </DropdownMenuItem>
+                  {detail.canManage ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <div
+                        className="px-2 py-2"
+                        onPointerDown={(e) => e.preventDefault()}
+                      >
+                        <ClientWorkspaceDisplayToggles
+                          showOriginalCurrency={showOriginalCurrency}
+                          hideCostAndFees={hideCostAndFees}
+                          disabled={pending}
+                          onShowOriginalCurrencyChange={(value) => {
+                            startTransition(async () => {
+                              setOptimisticShowOriginalCurrency(value);
+                              const result = await setQuotationShowOriginalCurrency({
+                                quotationId: detail.id,
+                                value,
+                              });
+                              if (!result.ok) {
+                                toast.error(result.message);
+                                return;
+                              }
+                              router.refresh();
+                            });
+                          }}
+                          onHideCostAndFeesChange={(value) => {
+                            startTransition(async () => {
+                              setOptimisticHideCostAndFees(value);
+                              const result = await setQuotationHideCostAndFees({
+                                quotationId: detail.id,
+                                value,
+                              });
+                              if (!result.ok) {
+                                toast.error(result.message);
+                                return;
+                              }
+                              router.refresh();
+                            });
+                          }}
+                        />
+                      </div>
+                      <DropdownMenuSeparator />
+                      <div
+                        className="px-1.5 py-1"
+                        onPointerDown={(e) => e.preventDefault()}
+                      >
+                        <GenerateOutputsLauncher
+                          seed={campaignSeed}
+                          tab="outputs"
+                          workspace={{ type: "quotation", id: detail.id }}
+                          tone="toolbar"
+                          triggerClassName="tw-b sm w-full justify-start"
+                        />
+                      </div>
+                    </>
+                  ) : null}
                   {detail.canManage && detail.status === "draft" ? (
                     <>
                       <DropdownMenuSeparator />

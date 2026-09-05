@@ -4,17 +4,11 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useTransition,
-  type RefObject,
-  type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
-import {
-  SearchIcon,
-  UserPlusIcon,
-} from "lucide-react";
+import { UserPlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
@@ -22,20 +16,9 @@ import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import {
   discoverySelectionFlyoutContentClass,
 } from "@/features/discovery/components/design-system/discovery-selection-flyout";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { platformLabel } from "@/features/campaigns/line-assignment";
 import { cn } from "@/lib/utils";
-import {
-  CALCULATION_MODE_LABELS,
-  quotationPreviewPath,
-} from "@/features/quotations/constants";
+import { quotationPreviewPath } from "@/features/quotations/constants";
 import { DocumentCreatorSelectionDialog } from "@/features/discovery/document-preview/document-creator-selection-dialog";
 import {
   buildQuotationCreatorOptions,
@@ -85,7 +68,6 @@ import {
   resolveQuotationHeaderCommercialTotals,
   originalCurrencyTotalsForDisplay,
   resolveQuotationRowDraft,
-  type CalculationModePreference,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
 import { resolveLiveTotalsDraft } from "@/features/quotations/quotation-pending-live-totals";
@@ -160,9 +142,6 @@ function QuotationWorkspaceContent({
   );
   const [displayFxRateToEgp, setDisplayFxRateToEgp] = useState(1);
   const [currencyPending, startCurrencyTransition] = useTransition();
-  const [globalCalcMode, setGlobalCalcMode] = useState<CalculationModePreference>("markup");
-  const [creatorSearch, setCreatorSearch] = useState("");
-  const [platformFilter, setPlatformFilter] = useState<string>("all");
   const [clientSelectionFilter, setClientSelectionFilter] =
     useState<QuotationClientSelectionFilter>("all");
   const [convertApprovedOpen, setConvertApprovedOpen] = useState(false);
@@ -174,7 +153,6 @@ function QuotationWorkspaceContent({
   const [bulkPending, startBulkTransition] = useTransition();
   const [calculatorOpen, setCalculatorOpen] = useState(false);
   const confirmDelete = useConfirmDelete();
-  const creatorSearchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     setDisplayCurrency((detail.currency || "EGP").toUpperCase());
@@ -233,27 +211,15 @@ function QuotationWorkspaceContent({
     [visibleItems, drafts]
   );
 
-  const platformOptions = useMemo(() => {
-    const set = new Set(visibleItems.map((i) => i.platform).filter(Boolean) as string[]);
-    return [...set].sort();
-  }, [visibleItems]);
-
-  const filteredItems = useMemo(() => {
-    const q = creatorSearch.trim().toLowerCase();
-    return filterItemsByClientSelection(
-      visibleItems,
-      clientReview?.selectionState,
-      clientReview ? clientSelectionFilter : "all"
-    ).filter((item) => {
-      if (platformFilter !== "all" && item.platform !== platformFilter) return false;
-      if (!q) return true;
-      const hay = [item.creator_name, item.handle, item.platform]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      return hay.includes(q);
-    });
-  }, [visibleItems, creatorSearch, platformFilter, clientReview, clientSelectionFilter]);
+  const filteredItems = useMemo(
+    () =>
+      filterItemsByClientSelection(
+        visibleItems,
+        clientReview?.selectionState,
+        clientReview ? clientSelectionFilter : "all"
+      ),
+    [visibleItems, clientReview, clientSelectionFilter]
+  );
 
   const pendingItemIds = useMemo(() => {
     const pending = new Set<string>();
@@ -628,18 +594,6 @@ function QuotationWorkspaceContent({
 
   const [previewSelectionOpen, setPreviewSelectionOpen] = useState(false);
 
-  const focusCreatorSearch = useCallback(() => {
-    const el =
-      creatorSearchRef.current ??
-      document.querySelector<HTMLInputElement>("[data-quotation-search]");
-    el?.focus();
-    el?.select();
-  }, []);
-
-  const toggleCalcMode = useCallback(() => {
-    setGlobalCalcMode((mode) => (mode === "markup" ? "margin" : "markup"));
-  }, []);
-
   const openPreview = useCallback(() => {
     setPreviewSelectionOpen(true);
   }, []);
@@ -709,8 +663,8 @@ function QuotationWorkspaceContent({
     hasSelection: selectedIds.size > 0,
     hasVisibleItems: filteredItems.length > 0,
     onAddCreator: () => setAddCreatorsOpen(true),
-    onFocusSearch: focusCreatorSearch,
-    onToggleCalcMode: toggleCalcMode,
+    onFocusSearch: () => undefined,
+    onToggleCalcMode: () => undefined,
     onSelectAllVisible: toggleSelectAllVisible,
     onClearSelection: () => setSelectedIds(new Set()),
     onDuplicateSelected: handleDuplicateSelected,
@@ -719,7 +673,7 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    <div className="quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain pb-16">
+    <div className="quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <QuotationWorkspaceHeader
         detail={detail}
@@ -775,6 +729,7 @@ function QuotationWorkspaceContent({
 
       {clientReview ? (
         <QuotationClientReviewPanel
+          detail={detail}
           review={clientReview}
           items={visibleItems}
           filter={clientSelectionFilter}
@@ -811,21 +766,16 @@ function QuotationWorkspaceContent({
           onAddCreatorsOpenChange={setAddCreatorsOpen}
         />
       ) : (
-        <>
-          <div className="sec flush">
-          <div className="sec-head">
-            <div className="min-w-0">
-              <h2>
-                Creators{" "}
-                <span>
-                  · {uniqueCreatorCount} · {visibleItems.length} lines
-                </span>
-              </h2>
-              <p>
-                Grouped by influencer — duplicated creators are labeled Option 1, 2, 3… on each line.
-              </p>
-            </div>
-            <div className="sec-tools">
+        <div className="discovery-suite px-[15px] mb-3">
+          <div className="tw-c">
+            <div className="tw-ch">
+              <span className="tw-ct">
+                Creators · {uniqueCreatorCount} · {visibleItems.length} lines
+              </span>
+              <span className="tw-cs">
+                grouped by influencer — duplicated creators are labelled Option 1, 2, 3…
+              </span>
+              <span className="tw-sp" />
               <QuotationCommercialEntry
                 quotationId={detail.id}
                 items={detail.items}
@@ -833,7 +783,7 @@ function QuotationWorkspaceContent({
                 onDraftChange={updateDraft}
                 onDraftsMerge={mergeDrafts}
                 canManage={detail.canManage}
-                triggerClassName="btn sm"
+                triggerClassName="tw-b sm"
                 displayCurrency={displayCurrency}
                 displayFxRateToEgp={displayFxRateToEgp}
                 issueDate={detail.issue_date}
@@ -844,64 +794,40 @@ function QuotationWorkspaceContent({
                 <AddCreatorsToQuotationButton
                   quotationId={detail.id}
                   onAdded={handleCreatorsAdded}
-                  label="Add creator"
+                  label="+ Add creator"
                   open={addCreatorsOpen}
                   onOpenChange={setAddCreatorsOpen}
-                  triggerClassName="btn btn-primary sm"
+                  triggerClassName="tw-b sm pri"
                 />
               ) : null}
             </div>
-          </div>
-          <Toolbar
-            creatorSearch={creatorSearch}
-            onCreatorSearch={setCreatorSearch}
-            creatorSearchRef={creatorSearchRef}
-            platformFilter={platformFilter}
-            onPlatformFilter={setPlatformFilter}
-            platformOptions={platformOptions}
-            globalCalcMode={globalCalcMode}
-            onGlobalCalcMode={setGlobalCalcMode}
-          />
-
-          <div className="creators-list">
-            <PlatformErrorBoundary
-              surface="generic"
-              title="Creators grid failed to render"
-              description="Metrics above are still valid. Retry or reload."
-            >
-            <QuotationLinesGrid
-              quotationId={detail.id}
-              items={sortedFilteredItems}
-              drafts={drafts}
-              selectedIds={selectedIds}
-              allSelected={allVisibleSelected}
-              indeterminate={selectionIndeterminate}
-              onToggleSelect={toggleSelect}
-              onToggleSelectAll={setSelectAllVisible}
-              onDraftChange={updateDraft}
-              onRemoved={() => router.refresh()}
-              onLineChanged={refreshQuotationLines}
-              onOpenCreator={openCreatorFromItem}
-              uniqueCreatorCount={uniqueCreatorCount}
-              totalClientCostEgp={totals.totalClientCostEgp}
-              canManage={detail.canManage}
-            />
-            </PlatformErrorBoundary>
-          </div>
-          {detail.canManage ? (
-            <div className="px-[var(--gut,32px)] py-3">
-              <AddCreatorsToQuotationButton
-                quotationId={detail.id}
-                onAdded={handleCreatorsAdded}
-                label="Add creator"
-                open={addCreatorsOpen}
-                onOpenChange={setAddCreatorsOpen}
-                triggerClassName="btn sm"
-              />
+            <div className="creators-list">
+              <PlatformErrorBoundary
+                surface="generic"
+                title="Creators grid failed to render"
+                description="Metrics above are still valid. Retry or reload."
+              >
+                <QuotationLinesGrid
+                  quotationId={detail.id}
+                  items={sortedFilteredItems}
+                  drafts={drafts}
+                  selectedIds={selectedIds}
+                  allSelected={allVisibleSelected}
+                  indeterminate={selectionIndeterminate}
+                  onToggleSelect={toggleSelect}
+                  onToggleSelectAll={setSelectAllVisible}
+                  onDraftChange={updateDraft}
+                  onRemoved={() => router.refresh()}
+                  onLineChanged={refreshQuotationLines}
+                  onOpenCreator={openCreatorFromItem}
+                  uniqueCreatorCount={uniqueCreatorCount}
+                  totalClientCostEgp={totals.totalClientCostEgp}
+                  canManage={detail.canManage}
+                />
+              </PlatformErrorBoundary>
             </div>
-          ) : null}
           </div>
-        </>
+        </div>
       )}
 
       <section className="sec">
@@ -1008,71 +934,6 @@ function EmptyState({
           />
         </div>
       ) : null}
-    </div>
-  );
-}
-
-function Toolbar({
-  creatorSearch,
-  onCreatorSearch,
-  creatorSearchRef,
-  platformFilter,
-  onPlatformFilter,
-  platformOptions,
-  globalCalcMode,
-  onGlobalCalcMode,
-}: {
-  creatorSearch: string;
-  onCreatorSearch: (v: string) => void;
-  creatorSearchRef?: RefObject<HTMLInputElement | null>;
-  platformFilter: string;
-  onPlatformFilter: (v: string) => void;
-  platformOptions: string[];
-  globalCalcMode: CalculationModePreference;
-  onGlobalCalcMode: (v: CalculationModePreference) => void;
-  commercialSummary?: ReactNode;
-}) {
-  return (
-    <div className="ctools">
-      <div className="searchbox">
-        <SearchIcon className="pointer-events-none size-[15px] shrink-0" />
-        <input
-          ref={creatorSearchRef}
-          type="text"
-          data-quotation-search
-          placeholder="Search creators…"
-          value={creatorSearch}
-          onChange={(e) => onCreatorSearch(e.target.value)}
-        />
-      </div>
-      <Select value={platformFilter} onValueChange={onPlatformFilter}>
-        <SelectTrigger className="selpill w-[140px]">
-          <SelectValue placeholder="Platform · All" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Platform · All</SelectItem>
-          {platformOptions.map((p) => (
-            <SelectItem key={p} value={p}>
-              {platformLabel(p)}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-      <Select
-        value={globalCalcMode}
-        onValueChange={(v) => onGlobalCalcMode(v as CalculationModePreference)}
-      >
-        <SelectTrigger className="selpill w-[160px]">
-          <SelectValue placeholder="Calc · Markup %" />
-        </SelectTrigger>
-        <SelectContent>
-          {(Object.keys(CALCULATION_MODE_LABELS) as CalculationModePreference[]).map((m) => (
-            <SelectItem key={m} value={m}>
-              Calc · {CALCULATION_MODE_LABELS[m]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
     </div>
   );
 }

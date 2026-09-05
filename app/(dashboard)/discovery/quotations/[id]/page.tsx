@@ -121,7 +121,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
       hideShellChrome
     >
       {/* Match shortlist: outer overflow-hidden; QuotationWorkspace owns the scrollport. */}
-      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-white dark:bg-[var(--background)]">
+      <div className="flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--tw-bg,#fafbfc)] dark:bg-[var(--background)]">
         <QuotationWorkspace
           detail={detail}
           formOptions={formOptions}

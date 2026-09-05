@@ -28,13 +28,13 @@
   --white: #fff;
   --hover: #f7f9fd;
   --ease: cubic-bezier(0.23, 1, 0.32, 1);
-  --gut: 32px;
+  --gut: 15px;
   --shadow-pop: 0 12px 34px rgba(15, 23, 42, 0.13), 0 3px 10px rgba(15, 23, 42, 0.06);
 
   width: 100%;
   max-width: none;
   min-width: 0;
-  background: var(--white) !important;
+  background: var(--tw-bg, #fafbfc) !important;
   color: var(--text);
   font-size: 14px;
   letter-spacing: -0.006em;
@@ -601,17 +601,17 @@
 
 /* —— Sections —— */
 .quotation-editor-rd4 .sec {
-  padding: 14px var(--gut);
+  padding: 10px var(--gut);
   border-bottom: 1px solid var(--line);
-  background: var(--white);
+  background: transparent;
 }
 
 .quotation-editor-rd4 .sec.flush {
-  padding: 10px 0;
+  padding: 8px 0;
 }
 
 .quotation-editor-rd4 .sec.compact {
-  padding: 12px var(--gut);
+  padding: 10px var(--gut);
 }
 
 .quotation-editor-rd4 .sec:last-child {
@@ -770,7 +770,26 @@
   max-width: none;
   min-width: 0;
   padding-bottom: 0;
-  background: var(--white);
+  background: transparent;
+}
+
+/* Suite grid path — flat pack rows, no cream card islands */
+.quotation-editor-rd4 .creators-list .tw-g.tw-r,
+.quotation-editor-rd4 .creators-list .tw-g.tw-hr,
+.quotation-editor-rd4 .creators-list .tw-g.tw-ft {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+.quotation-editor-rd4 .creators-list .cgroup.quotation-creator-card,
+.quotation-editor-rd4 .creators-list .quotation-creator-card {
+  margin: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  border: none !important;
 }
 
 .quotation-editor-rd4 .creators-list .clist-head {

@@ -32,6 +32,11 @@ type DiscoverySuiteMastheadProps = {
   actions?: ReactNode;
   /** Optional lifecycle / quotation strip (HTML `.tw-mb`). */
   band?: ReactNode;
+  /**
+   * Content after `.tw-sp` in `.tw-mh` (HTML order: id · h1 · badge · sub · sp · trailing).
+   * e.g. quotation `<span className="st r">GP conflict</span>`.
+   */
+  trailing?: ReactNode;
   className?: string;
   /** Enable scroll → .mini past 64px (spec §4). When false, sticky freeze is off. */
   freezeOnScroll?: boolean;
@@ -59,6 +64,7 @@ export function DiscoverySuiteMasthead({
   top,
   actions,
   band,
+  trailing,
   className,
   freezeOnScroll = true,
 }: DiscoverySuiteMastheadProps) {
@@ -111,6 +117,7 @@ export function DiscoverySuiteMasthead({
             {subtitle ? <span className="sub">{subtitle}</span> : null}
           </div>
           <span className="tw-sp" />
+          {trailing}
         </div>
         {band ? <div className="tw-mb">{band}</div> : null}
         {actions ? <div className="tw-mr">{actions}</div> : null}

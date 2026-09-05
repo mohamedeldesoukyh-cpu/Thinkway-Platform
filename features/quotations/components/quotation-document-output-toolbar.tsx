@@ -17,7 +17,6 @@ import {
   triggerBrowserDownload,
 } from "@/features/discovery/document-preview/document-export-selection";
 import { summarizeQuotationSelection } from "@/features/discovery/document-preview/document-selection-summary";
-import { QuotationToolbarButton } from "@/features/quotations/components/quotation-detail-primitives";
 import { buildExportHref } from "@/features/quotations/components/quotation-preview-downloads";
 import { quotationPreviewPath } from "@/features/quotations/constants";
 import {
@@ -27,6 +26,7 @@ import {
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
 import type { QuotationItemRow } from "@/features/quotations/types";
+import { cn } from "@/lib/utils";
 
 const QUOTATION_EXPORT_FORMATS: DocumentOutputFormatOption[] = [
   // Capability list for quotation — CSV omitted (no export API). Shortlist adapter adds it.
@@ -191,16 +191,14 @@ export function QuotationDocumentOutputToolbar({
         linkDisabled={linkDisabled || linkPending}
         sendDisabled={sendDisabled}
         renderTrigger={({ children, disabled, primary, onClick }) => (
-          <QuotationToolbarButton
-            variant={primary ? "glow" : "outline"}
-            size="sm"
-            disabled={disabled}
-            className={primary ? "btn-glow" : "btn"}
+          <button
             type="button"
+            disabled={disabled}
+            className={cn("tw-b sm", primary && "pri")}
             onClick={onClick}
           >
             {children}
-          </QuotationToolbarButton>
+          </button>
         )}
       />
 
