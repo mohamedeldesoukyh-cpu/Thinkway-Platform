@@ -205,13 +205,36 @@ assert.equal(
   "in-flight metrics poll covers collecting state"
 );
 
-// --- Loading toast only on transition into in-flight ---
-assert.equal(shouldShowMetricsSyncLoadingToast(null, "queued"), true);
+// --- Loading toast: prefetch discovery vs in-session transition ---
+// A/B/F: first observation of pre-existing queued/collecting (mount / remount) → no toast
+assert.equal(
+  shouldShowMetricsSyncLoadingToast(null, "queued"),
+  false,
+  "A: mount with already-queued must not toast"
+);
+assert.equal(
+  shouldShowMetricsSyncLoadingToast(undefined, "queued"),
+  false,
+  "A: undefined prior (prefetch) must not toast for queued"
+);
+assert.equal(
+  shouldShowMetricsSyncLoadingToast(null, "collecting"),
+  false,
+  "B: mount with already-collecting must not toast"
+);
+assert.equal(
+  shouldShowMetricsSyncLoadingToast(undefined, "collecting"),
+  false,
+  "F: remount rediscovery of collecting must not toast"
+);
+
+// C-like: genuine session transition into in-flight (policy path; explicit Refresh uses notifyMetricsSyncQueued)
 assert.equal(shouldShowMetricsSyncLoadingToast("pending", "queued"), true);
+assert.equal(shouldShowMetricsSyncLoadingToast("completed", "queued"), true);
+assert.equal(shouldShowMetricsSyncLoadingToast("failed", "collecting"), true);
 assert.equal(shouldShowMetricsSyncLoadingToast("queued", "collecting"), false);
 assert.equal(shouldShowMetricsSyncLoadingToast("collecting", "collecting"), false);
 assert.equal(shouldShowMetricsSyncLoadingToast(null, "pending"), false);
-assert.equal(shouldShowMetricsSyncLoadingToast("completed", "queued"), true);
 
 // --- Complete loading toast on terminal status, including remount / first-observation race ---
 assert.equal(
@@ -222,6 +245,24 @@ assert.equal(
   }),
   true,
   "in-flight prior to completed should finish the toast"
+);
+assert.equal(
+  shouldCompleteMetricsSyncToast({
+    priorStatus: "queued",
+    nextStatus: "completed",
+    toastWasShown: true,
+  }),
+  true,
+  "D: user refresh → completed keeps completion behavior"
+);
+assert.equal(
+  shouldCompleteMetricsSyncToast({
+    priorStatus: "collecting",
+    nextStatus: "failed",
+    toastWasShown: true,
+  }),
+  true,
+  "E: user refresh → failed keeps error/completion path"
 );
 assert.equal(
   shouldCompleteMetricsSyncToast({

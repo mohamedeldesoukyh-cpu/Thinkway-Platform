@@ -111,11 +111,18 @@ export function publicationsNeedMetricsSyncPoll(
   return publications.some((row) => isSyncInFlight(row.metrics_refresh_status));
 }
 
-/** Show loading toast only when status transitions into an in-flight state. */
+/**
+ * Show loading toast only for an in-session transition into queued/collecting.
+ *
+ * First observation (`priorStatus` null/undefined) is publication prefetch discovery —
+ * pre-existing queued/collecting must not toast. User-initiated Refresh Metrics still
+ * calls `notifyMetricsSyncQueued` directly.
+ */
 export function shouldShowMetricsSyncLoadingToast(
   priorStatus: string | null | undefined,
   nextStatus: string | null | undefined
 ): boolean {
+  if (priorStatus == null) return false;
   return isSyncInFlight(nextStatus) && !isSyncInFlight(priorStatus);
 }
 

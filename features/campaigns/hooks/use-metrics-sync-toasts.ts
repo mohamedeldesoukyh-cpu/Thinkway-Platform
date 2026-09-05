@@ -16,6 +16,10 @@ export function metricsSyncToastId(publicationId: string): string {
   return `metrics-sync-${publicationId}`;
 }
 
+/**
+ * User-initiated Metrics Refresh (Performance / selection flyout).
+ * Always shows the loading toast — unlike prefetch discovery of pre-existing queued rows.
+ */
 export function notifyMetricsSyncQueued(
   publicationId: string,
   label?: string | null
