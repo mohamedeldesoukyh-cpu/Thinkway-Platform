@@ -1,6 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
 
-import { getClientIp } from "@/lib/auth/api-auth";
 import { isApiPath } from "@/lib/auth/routes";
 import { incrementSecurityMetric } from "@/features/operations-center/metrics/security-metrics-store";
 import { assertCsrfRequest } from "@/lib/security/csrf";
@@ -14,12 +13,57 @@ import {
 } from "@/lib/security/rate-limit-policy";
 import { applySecurityHeaders } from "@/lib/security/security-headers";
 
+function getRequestClientIp(request: NextRequest): string | null {
+  return (
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    null
+  );
+}
+
 function isServerActionRequest(request: NextRequest): boolean {
   if (request.headers.has("next-action") || request.headers.has("Next-Action")) {
     return true;
   }
   const accept = request.headers.get("accept") ?? "";
   return request.method === "POST" && accept.includes("text/x-component");
+}
+
+function isGetPageRequest(request: NextRequest, pathname: string): boolean {
+  return request.method.toUpperCase() === "GET" && !isApiPath(pathname);
+}
+
+function isRouterPrefetch(request: NextRequest): boolean {
+  const prefetch = request.headers.get("next-router-prefetch");
+  return prefetch === "1" || prefetch === "true";
+}
+
+/** Next.js RSC flight for a page (not an API route or Server Action). */
+function isPageRscGet(
+  request: NextRequest,
+  pathname: string,
+  serverAction: boolean
+): boolean {
+  if (!isGetPageRequest(request, pathname) || serverAction) return false;
+  const accept = request.headers.get("accept") ?? "";
+  const rsc = request.headers.get("rsc");
+  return rsc === "1" || accept.includes("text/x-component");
+}
+
+/**
+ * Sidebar / App Router prefetches must not consume the default page bucket.
+ * API prefetches and non-default categories (discovery, export, …) still count.
+ */
+function skipDefaultPagePrefetchConsume(
+  request: NextRequest,
+  pathname: string,
+  category: string
+): boolean {
+  return (
+    category === "default" &&
+    isGetPageRequest(request, pathname) &&
+    isRouterPrefetch(request)
+  );
 }
 
 function withGuardHeaders(
@@ -51,12 +95,14 @@ export function preAuthRequestGuard(
     isServerAction: serverAction,
   });
   const identity = rateLimitIdentity({
-    ip: getClientIp(request),
+    ip: getRequestClientIp(request),
     category,
   });
-  const rate = consumeRateLimit({ category, identity });
+  const rate = skipDefaultPagePrefetchConsume(request, pathname, category)
+    ? null
+    : consumeRateLimit({ category, identity });
 
-  if (!rate.allowed) {
+  if (rate && !rate.allowed) {
     incrementSecurityMetric("rateLimitEvents");
     incrementSecurityMetric("blockedRequests");
     const body = rateLimitExceededBody(rate);
@@ -91,12 +137,15 @@ export function preAuthRequestGuard(
       "Cache-Control": "no-store",
     };
 
-    // Document navigations cannot render JSON 429 — return a recoverable HTML page.
+    // Document and page RSC flights cannot render JSON 429 — return HTML.
     const accept = request.headers.get("accept") ?? "";
     const wantsHtml =
       !isApiPath(pathname) &&
       !serverAction &&
-      (accept.includes("text/html") || accept === "" || accept.includes("*/*"));
+      (accept.includes("text/html") ||
+        accept === "" ||
+        accept.includes("*/*") ||
+        isPageRscGet(request, pathname, serverAction));
 
     if (wantsHtml) {
       const html = `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Too many requests</title><style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#fff;color:#111}main{max-width:28rem;padding:1.5rem;text-align:center}p{color:#555;line-height:1.5}a,button{margin:.5rem;padding:.6rem 1rem;border-radius:.5rem;border:1px solid #ccc;background:#111;color:#fff;text-decoration:none;font:inherit;cursor:pointer}a.secondary{background:#fff;color:#111}</style></head><body><main><h1>Too many requests</h1><p>${body.message}</p><p><button type="button" onclick="location.reload()">Reload</button> <a class="secondary" href="/login">Back to sign in</a></p></main></body></html>`;
@@ -126,12 +175,14 @@ export function preAuthRequestGuard(
       },
       { status: 403, headers: { "Cache-Control": "no-store" } }
     );
-    return withGuardHeaders(forbidden, pathname, rate);
+    return withGuardHeaders(forbidden, pathname, rate ?? undefined);
   }
 
   // Stash rate metadata on a request header for post-auth response enrichment.
   // (NextRequest headers are immutable in some runtimes — apply on the way out.)
-  (request as NextRequest & { __rateLimit?: typeof rate }).__rateLimit = rate;
+  if (rate) {
+    (request as NextRequest & { __rateLimit?: typeof rate }).__rateLimit = rate;
+  }
   return null;
 }
 
