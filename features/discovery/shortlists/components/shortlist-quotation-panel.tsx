@@ -118,12 +118,11 @@ export function ShortlistQuotationPanel({
   );
 
   if (actionsOnly) {
-    return <div className="discovery-suite flex flex-wrap items-center gap-1.5">{actionButtons}</div>;
+    return <div className="flex flex-wrap items-center gap-1.5">{actionButtons}</div>;
   }
 
   return (
-    <div className="discovery-suite">
-      <div className="tw-c" style={{ marginBottom: 11 }}>
+    <div className="tw-c" style={{ marginBottom: 11 }}>
         <div className="tw-ch">
           <span className="tw-ct">{title}</span>
           {latest.serial_number ? (
@@ -138,7 +137,6 @@ export function ShortlistQuotationPanel({
           <span className="tw-sp" />
           {actionButtons}
         </div>
-      </div>
     </div>
   );
 }

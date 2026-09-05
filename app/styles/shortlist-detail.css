@@ -1,0 +1,9 @@
+/* Shortlist detail — nested .discovery-suite is token scope only.
+   Legacy discovery-suite.css sets min-height:100% on every .discovery-suite,
+   which made quotation / creators / movement each claim a full viewport. */
+
+.shortlist-detail-workspace.discovery-suite,
+.shortlist-detail-workspace .discovery-suite {
+  min-height: auto;
+  background: transparent;
+}

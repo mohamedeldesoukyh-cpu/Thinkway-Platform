@@ -35,6 +35,7 @@ import {
 } from "@/features/client-workspace/client-review-share-memory";
 import { CLIENT_REVIEW_LINK_MISSING_MESSAGE } from "@/features/client-workspace/constants";
 import { clientReviewShareHasLink } from "@/features/client-workspace/client-review-selection";
+import "@/app/styles/shortlist-detail.css";
 import { DiscoverySuiteMasthead } from "@/features/discovery/components/design-system/discovery-suite-masthead";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
@@ -804,8 +805,8 @@ export function ShortlistWorkspace({
     detail.brand_name,
     detail.client_name
   );
-  /** Pack Creators card subtitle: brand · client (HTML pgShortlist). */
-  const creatorsCardSubtitle = [detail.brand_name, clientLabel]
+  /** Pack Creators card subtitle: client · brand (HTML pgShortlist). */
+  const creatorsCardSubtitle = [clientLabel, detail.brand_name]
     .map((part) => part?.trim())
     .filter(Boolean)
     .join(" · ");
@@ -833,7 +834,7 @@ export function ShortlistWorkspace({
   ];
 
   return (
-    <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-background">
+    <div className="shortlist-detail-workspace discovery-suite flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)]">
       <DiscoverySuiteMasthead
         title={detail.name}
         id={detail.serial_number}
@@ -946,8 +947,7 @@ export function ShortlistWorkspace({
           />
         ) : null}
 
-        <div className="discovery-suite">
-          <div className="tw-c">
+        <div className="tw-c">
             <div className="tw-ch">
               <span className="tw-ct">Creators · {displayCreators.length}</span>
               {creatorsCardSubtitle ? (
@@ -1056,12 +1056,11 @@ export function ShortlistWorkspace({
                 }}
               />
             )}
-          </div>
         </div>
       </section>
 
       {detail.movedAssignments.length > 0 ? (
-        <section className="discovery-suite px-[15px]">
+        <section className="px-[15px]">
           <div className="tw-c">
             <div className="tw-ch">
               <span className="tw-ct">Moved to campaigns</span>
@@ -1093,7 +1092,7 @@ export function ShortlistWorkspace({
         </section>
       ) : null}
 
-      <section className="discovery-suite px-[15px] pb-10">
+      <section className="px-[15px] pb-10">
         <div className="tw-c">
           <div className="tw-ch">
             <span className="tw-ct">Movement history</span>
