@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
-import { CountryFlagsStack } from "@/components/creator/country-flags-stack";
+import { countryFlag } from "@/lib/creators/creator-display-utils";
 import { ini } from "@/lib/discovery/suite/helpers";
 import { cn } from "@/lib/utils";
 
@@ -64,7 +64,9 @@ export function DiscoverySuiteCreatorCell({
   className,
   stopPropagation = false,
 }: DiscoverySuiteCreatorCellProps) {
-  const flags = (countryCodes ?? []).map((c) => c.trim()).filter(Boolean);
+  const flagEmoji = (countryCodes ?? [])
+    .map((code) => countryFlag(code))
+    .find((emoji): emoji is string => Boolean(emoji));
   const showLocation =
     Boolean(locationLabel?.trim()) && locationLabel?.trim() !== "—";
   const tone = discoverySuiteAvTone(index);
@@ -96,16 +98,7 @@ export function DiscoverySuiteCreatorCell({
             </span>
           )}
         </span>
-        {flags.length > 0 ? (
-          <span className="fl">
-            <CountryFlagsStack
-              countryCodes={flags}
-              size="xs"
-              overlay
-              className="size-full"
-            />
-          </span>
-        ) : null}
+        {flagEmoji ? <span className="fl">{flagEmoji}</span> : null}
       </span>
       <span style={{ minWidth: 0 }}>
         {onOpen ? (

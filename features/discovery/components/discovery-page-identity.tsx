@@ -125,6 +125,36 @@ export const DISCOVERY_SUB_NAV_PAGES: DiscoveryPageIdentity[] = [
   DISCOVERY_PAGE_IDENTITY.import,
 ];
 
+/** Pack / shell nav active match — Search, Intelligence, Shortlists, Client Quotations, Campaign Match, Import Center. */
+export function isDiscoveryNavPageActive(
+  activeHref: string,
+  page: DiscoveryPageIdentity
+): boolean {
+  if (activeHref === page.href) return true;
+  if (page.key === "intelligence" && activeHref.startsWith("/discovery/intelligence")) {
+    return true;
+  }
+  if (page.key === "shortlists" && activeHref.startsWith("/discovery/shortlists")) {
+    return true;
+  }
+  if (page.key === "quotations" && activeHref.startsWith("/discovery/quotations")) {
+    return true;
+  }
+  if (page.key === "search" && activeHref.startsWith("/discovery/search")) {
+    return true;
+  }
+  if (page.key === "import" && activeHref.startsWith("/discovery/import")) {
+    return true;
+  }
+  if (
+    page.key === "campaign-match" &&
+    activeHref.startsWith("/discovery/campaign-match")
+  ) {
+    return true;
+  }
+  return false;
+}
+
 type DiscoveryPageIconBadgeProps = {
   identity: DiscoveryPageIdentity;
   size?: "sm" | "md" | "lg";

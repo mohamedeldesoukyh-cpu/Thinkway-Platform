@@ -2,36 +2,10 @@
 
 import {
   DISCOVERY_SUB_NAV_PAGES,
-  type DiscoveryPageIdentity,
+  isDiscoveryNavPageActive,
 } from "@/features/discovery/components/discovery-page-identity";
 import { AppNavLink } from "@/components/navigation/app-nav-link";
 import { cn } from "@/lib/utils";
-
-function isDiscoveryTabActive(activeHref: string, page: DiscoveryPageIdentity): boolean {
-  if (activeHref === page.href) return true;
-  if (page.key === "intelligence" && activeHref.startsWith("/discovery/intelligence")) {
-    return true;
-  }
-  if (page.key === "shortlists" && activeHref.startsWith("/discovery/shortlists")) {
-    return true;
-  }
-  if (page.key === "quotations" && activeHref.startsWith("/discovery/quotations")) {
-    return true;
-  }
-  if (page.key === "search" && activeHref.startsWith("/discovery/search")) {
-    return true;
-  }
-  if (page.key === "import" && activeHref.startsWith("/discovery/import")) {
-    return true;
-  }
-  if (
-    page.key === "campaign-match" &&
-    activeHref.startsWith("/discovery/campaign-match")
-  ) {
-    return true;
-  }
-  return false;
-}
 
 /** Discovery section links for the shell topbar (next to the Thinkway logo). */
 export function DiscoveryTopNavTabs({ activeHref }: { activeHref: string }) {
@@ -41,7 +15,7 @@ export function DiscoveryTopNavTabs({ activeHref }: { activeHref: string }) {
       className="discovery-top-nav-tabs flex min-w-0 flex-1 items-center gap-5 overflow-x-auto"
     >
       {DISCOVERY_SUB_NAV_PAGES.map((page) => {
-        const isActive = isDiscoveryTabActive(activeHref, page);
+        const isActive = isDiscoveryNavPageActive(activeHref, page);
         return (
           <AppNavLink
             key={page.href}

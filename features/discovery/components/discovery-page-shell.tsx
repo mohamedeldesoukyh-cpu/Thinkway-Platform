@@ -25,8 +25,8 @@ type DiscoveryPageShellProps = {
   /** When false, skip DiscoveryPageHeader (e.g. flush workspaces with their own top bar). */
   showHeader?: boolean;
   /**
-   * Hide Thinkway logo + Discovery topnav shell chrome (Search / Shortlists / …).
-   * Use on design-faithful detail pages that own their own tw-frozen masthead.
+   * Hide Thinkway logo + shell topnav. Default true — pack nav lives in
+   * `.tw-jump` under the masthead (`DiscoverySuiteMasthead`), not beside the logo.
    */
   hideShellChrome?: boolean;
   headerActions?: ReactNode;
@@ -42,7 +42,7 @@ export function DiscoveryPageShell({
   activeHref,
   variant = "list",
   showHeader = variant !== "flush",
-  hideShellChrome = false,
+  hideShellChrome = true,
   headerActions,
   toolbar,
   children,

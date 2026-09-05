@@ -18,6 +18,7 @@ import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creat
 import {
   DiscoveryEmptyState,
   DiscoveryLoadingState,
+  DiscoverySuiteJumpNav,
   DiscoveryWorkspaceActionBar,
 } from "@/features/discovery/components/design-system";
 import {
@@ -169,26 +170,41 @@ export function CreatorCompareWorkspace({ shortlists: initialShortlists }: Props
   }
 
   if (loading) {
-    return <DiscoveryLoadingState message="Loading comparison…" />;
+    return (
+      <div className="discovery-suite flex h-full min-h-0 flex-col">
+        <div className="shrink-0 px-4 pt-3">
+          <DiscoverySuiteJumpNav />
+        </div>
+        <DiscoveryLoadingState message="Loading comparison…" />
+      </div>
+    );
   }
 
   if (!bundle || bundle.entries.length < 2) {
     return (
-      <DiscoveryEmptyState
-        title="No creators to compare"
-        description={`Select 2–${MAX_CREATOR_COMPARE} creators in Creator Search and click Compare.`}
-        icon={GitCompareArrowsIcon}
-        className="flex-1 [&>div:first-child]:text-primary/40"
-      >
-        <Button asChild>
-          <Link href="/discovery/search">Go to Creator Search</Link>
-        </Button>
-      </DiscoveryEmptyState>
+      <div className="discovery-suite flex h-full min-h-0 flex-col">
+        <div className="shrink-0 px-4 pt-3">
+          <DiscoverySuiteJumpNav />
+        </div>
+        <DiscoveryEmptyState
+          title="No creators to compare"
+          description={`Select 2–${MAX_CREATOR_COMPARE} creators in Creator Search and click Compare.`}
+          icon={GitCompareArrowsIcon}
+          className="flex-1 [&>div:first-child]:text-primary/40"
+        >
+          <Button asChild>
+            <Link href="/discovery/search">Go to Creator Search</Link>
+          </Button>
+        </DiscoveryEmptyState>
+      </div>
     );
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col overflow-hidden">
+    <div className="discovery-suite flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="shrink-0 px-4 pt-3">
+        <DiscoverySuiteJumpNav />
+      </div>
       <DiscoveryWorkspaceActionBar
         leading={
           <Button variant="ghost" size="sm" className="h-8 gap-1.5 text-xs" asChild>

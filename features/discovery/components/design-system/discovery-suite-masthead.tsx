@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 import { useEffect } from "react";
 
+import { DiscoverySuiteJumpNav } from "@/features/discovery/components/design-system/discovery-suite-jump-nav";
 import { cn } from "@/lib/utils";
 
 export type DiscoverySuiteMetricTone = "g" | "r" | "y" | "s" | undefined;
@@ -40,6 +41,14 @@ type DiscoverySuiteMastheadProps = {
   className?: string;
   /** Enable scroll → .mini past 64px (spec §4). When false, sticky freeze is off. */
   freezeOnScroll?: boolean;
+  /**
+   * Pack `.tw-jump` under the mast (Search · Intelligence · Shortlists ·
+   * Client Quotations · Campaign Match · Import Center). Hide only when this
+   * masthead is embedded outside Discovery (e.g. compact campaign chrome).
+   */
+  hideJump?: boolean;
+  /** Override pathname matching for the jump row. */
+  jumpActiveHref?: string;
 };
 
 const TONE_CLASS: Record<Exclude<DiscoverySuiteMetricTone, undefined>, string> = {
@@ -51,7 +60,7 @@ const TONE_CLASS: Record<Exclude<DiscoverySuiteMetricTone, undefined>, string> =
 
 /**
  * Spec §4 / discovery.html `bar()`:
- * `.tw-frozen > .tw-top? > .tw-mast > .tw-mh` (+ optional `.tw-mb`) `+ .tw-mr` `+ .tw-ms2`
+ * `.tw-frozen > .tw-top? > .tw-mast > .tw-mh` (+ optional `.tw-mb`) `+ .tw-mr` `+ .tw-ms2` `+ .tw-jump`
  * Metric strip is ONE `.tw-ms2` grid; each cell is `<div><i>label</i><b>value</b></div>`.
  */
 export function DiscoverySuiteMasthead({
@@ -67,6 +76,8 @@ export function DiscoverySuiteMasthead({
   trailing,
   className,
   freezeOnScroll = true,
+  hideJump = false,
+  jumpActiveHref,
 }: DiscoverySuiteMastheadProps) {
   useEffect(() => {
     if (!freezeOnScroll) return;
@@ -134,6 +145,7 @@ export function DiscoverySuiteMasthead({
           </div>
         ) : null}
       </div>
+      {hideJump ? null : <DiscoverySuiteJumpNav activeHref={jumpActiveHref} />}
     </div>
   );
 }

@@ -4,38 +4,12 @@ import { cn } from "@/lib/utils";
 
 import {
   DISCOVERY_SUB_NAV_PAGES,
-  type DiscoveryPageIdentity,
+  isDiscoveryNavPageActive,
 } from "@/features/discovery/components/discovery-page-identity";
 
 type DiscoverySubNavProps = {
   activeHref: string;
 };
-
-function isDiscoveryTabActive(activeHref: string, page: DiscoveryPageIdentity): boolean {
-  if (activeHref === page.href) return true;
-  if (page.key === "intelligence" && activeHref.startsWith("/discovery/intelligence")) {
-    return true;
-  }
-  if (page.key === "shortlists" && activeHref.startsWith("/discovery/shortlists")) {
-    return true;
-  }
-  if (page.key === "quotations" && activeHref.startsWith("/discovery/quotations")) {
-    return true;
-  }
-  if (page.key === "search" && activeHref.startsWith("/discovery/search")) {
-    return true;
-  }
-  if (page.key === "import" && activeHref.startsWith("/discovery/import")) {
-    return true;
-  }
-  if (
-    page.key === "campaign-match" &&
-    activeHref.startsWith("/discovery/campaign-match")
-  ) {
-    return true;
-  }
-  return false;
-}
 
 /**
  * Discovery tab bar — matches thinkway-client-quotations.html
@@ -49,7 +23,7 @@ export function DiscoverySubNav({ activeHref }: DiscoverySubNavProps) {
         className="flex flex-wrap items-center gap-1 pb-3"
       >
         {DISCOVERY_SUB_NAV_PAGES.map((page) => {
-          const isActive = isDiscoveryTabActive(activeHref, page);
+          const isActive = isDiscoveryNavPageActive(activeHref, page);
           const Icon = page.icon;
           return (
             <Link

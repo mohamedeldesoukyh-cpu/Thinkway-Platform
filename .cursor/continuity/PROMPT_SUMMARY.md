@@ -3,6 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## In progress 2026-09-05 — Pack jump nav + no logo header
+
+Discovery pages hide the Thinkway logo shell header. Pack `.tw-jump` (Search · Intelligence · Shortlists · Client Quotations · Campaign Match · Import Center) sits under `DiscoverySuiteMasthead` as in `discovery.html` `bar()`. Creator cells use pack `.fl` country emoji on the avatar.
+
 ## In progress 2026-09-05 — Creator profile pack modal (Overlay A)
 
 Discovery surfaces open `CreatorDetailSheet` with `presentation="discoveryPack"` (centered `.tw-scrim` + `.tw-cp` 320/flex/232). Campaign/Studio keep default `sheet`. Pack chrome: `features/discovery/components/design-system/discovery-suite-creator-profile.tsx` + local CSS override (frozen `discovery.css` untouched). Wired: quotation detail hook · shortlist workspace · creator search · `DiscoveryCreatorDetailHost`. Same fetch/ECI/tabs/nested dialogs as sheet. Not committed.
