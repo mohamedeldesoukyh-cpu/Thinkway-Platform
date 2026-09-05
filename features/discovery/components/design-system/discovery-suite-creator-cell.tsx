@@ -40,7 +40,7 @@ export type DiscoverySuiteCreatorCellProps = {
    */
   locationLabel?: string | null;
   onOpen?: () => void;
-  /** Extra content under name/handle/location (e.g. shortlist quoted chip). */
+  /** Extra content under name/handle/location. */
   children?: ReactNode;
   className?: string;
   /** When parent row handles click, stop name-button bubbling. */
@@ -77,25 +77,30 @@ export function DiscoverySuiteCreatorCell({
   return (
     <span className={cn("tw-cw2", className)}>
       <span
-        className={cn("tw-avx relative overflow-hidden", tone)}
+        className={cn("tw-avx relative", tone)}
         aria-hidden
       >
-        {avatarUrl ? (
-          <CreatorAvatarImage
-            avatarUrl={avatarUrl}
-            profileUrl={profileUrl}
-            alt={name}
-            sizeClassName="size-full"
-            className="border-0"
-          />
-        ) : (
-          <span>{ini(name).slice(0, 2)}</span>
-        )}
+        {/* Clip photo/initials only — keep `.fl` flag outside overflow so pack overlay shows. */}
+        <span className="absolute inset-0 overflow-hidden rounded-full">
+          {avatarUrl ? (
+            <CreatorAvatarImage
+              avatarUrl={avatarUrl}
+              profileUrl={profileUrl}
+              alt={name}
+              sizeClassName="size-full"
+              className="border-0"
+            />
+          ) : (
+            <span className="grid size-full place-items-center">
+              {ini(name).slice(0, 2)}
+            </span>
+          )}
+        </span>
         {flags.length > 0 ? (
           <span className="fl">
             <CountryFlagsStack
               countryCodes={flags}
-              size="sm"
+              size="xs"
               overlay
               className="size-full"
             />

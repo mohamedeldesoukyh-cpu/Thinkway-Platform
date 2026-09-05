@@ -37,10 +37,6 @@ import {
   type ShortlistDisplayBlock,
 } from "../shortlist-collapse-groups";
 import {
-  isShortlistCreatorQuoted,
-  ShortlistCreatorQuotedLabel,
-} from "./shortlist-badges";
-import {
   ShortlistCreatorQuotedCell,
   shortlistCreatorSyncBorderClass,
 } from "./shortlist-creator-meta-columns";
@@ -215,13 +211,7 @@ function ShortlistCreatorGridRow({
           locationLabel={vm.countryLabel !== "—" ? vm.countryLabel : null}
           onOpen={openCreatorDetail}
           stopPropagation
-        >
-          {isShortlistCreatorQuoted(item.quotation_refs) ? (
-            <span className="mt-1 block" onClick={stopBubble}>
-              <ShortlistCreatorQuotedLabel refs={item.quotation_refs} />
-            </span>
-          ) : null}
-        </DiscoverySuiteCreatorCell>
+        />
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>

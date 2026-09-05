@@ -66,7 +66,7 @@ import { generateQuotationVersion } from "@/features/quotations/lifecycle-action
 import { canGenerateQuotationVersion } from "@/lib/commercial-sync/rules";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
-import { formatDiscoveryDate } from "@/lib/discovery/format-discovery-date";
+import { formatDiscoveryDateTime } from "@/lib/discovery/format-discovery-date";
 import type { CreatorMovementAction } from "@/types/database";
 
 import {
@@ -804,6 +804,11 @@ export function ShortlistWorkspace({
     detail.brand_name,
     detail.client_name
   );
+  /** Pack Creators card subtitle: brand · client (HTML pgShortlist). */
+  const creatorsCardSubtitle = [detail.brand_name, clientLabel]
+    .map((part) => part?.trim())
+    .filter(Boolean)
+    .join(" · ");
   const quotedCount = detail.creators.filter(
     (item) => item.quotation_refs.length > 0
   ).length;
@@ -834,6 +839,7 @@ export function ShortlistWorkspace({
         id={detail.serial_number}
         badge={<ShortlistWorkspaceStatusPill status={detail.status} />}
         metrics={mastheadMetrics}
+        freezeOnScroll={false}
         actions={
           <div className="flex items-center gap-2">
             <EntityPrevNext
@@ -926,189 +932,199 @@ export function ShortlistWorkspace({
         }
       />
 
-      <section className={cn(discoverySelectionFlyoutContentClass(selectedCount > 0))}>
+      <section
+        className={cn(
+          "px-[15px] pt-3",
+          discoverySelectionFlyoutContentClass(selectedCount > 0)
+        )}
+      >
         {hasLinkedQuotation ? (
-          <div className="px-[15px] pt-3">
-            <ShortlistQuotationPanel
-              quotations={linkedQuotations}
-              onGenerateNewVersion={handleGenerateNewVersion}
-              busy={isPending}
-            />
-          </div>
+          <ShortlistQuotationPanel
+            quotations={linkedQuotations}
+            onGenerateNewVersion={handleGenerateNewVersion}
+            busy={isPending}
+          />
         ) : null}
-        <div className="flex items-center justify-between gap-6 px-8 py-3.5">
-          <div className="flex min-w-0 flex-1 items-center gap-5">
-            <h2 className="whitespace-nowrap text-[15px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
-              Creators{" "}
-              <span className="font-medium text-[#9aa3b5]">· {displayCreators.length}</span>
-            </h2>
 
-            {clientLabel || detail.brand_name ? (
-              <div className="flex min-w-0 items-center gap-2.5 border-l border-border/60 pl-5">
-                {clientLabel ? (
-                  <span
-                    className="truncate text-[13px] font-semibold tracking-[-0.015em] text-foreground"
-                    title={clientLabel}
-                  >
-                    {clientLabel}
-                  </span>
-                ) : null}
-                {clientLabel && detail.brand_name ? (
-                  <span
-                    aria-hidden
-                    className="shrink-0 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/55"
-                  >
-                    ×
-                  </span>
-                ) : null}
-                {detail.brand_name ? (
-                  <span
-                    className="truncate text-[13px] font-medium tracking-[-0.01em] text-[var(--text-2)]"
-                    title={detail.brand_name}
-                  >
-                    {detail.brand_name}
-                  </span>
-                ) : null}
-              </div>
+        <div className="discovery-suite">
+          <div className="tw-c">
+            <div className="tw-ch">
+              <span className="tw-ct">Creators · {displayCreators.length}</span>
+              {creatorsCardSubtitle ? (
+                <span className="tw-cs">{creatorsCardSubtitle}</span>
+              ) : null}
+              <span className="tw-sp" />
+              <button
+                type="button"
+                className="tw-b sm"
+                disabled={!editable || selectedCount === 0 || isPending}
+                onClick={() =>
+                  runAction(() =>
+                    bulkSubmitCreatorsForReview(detail.id, selectedItemIdList)
+                  )
+                }
+              >
+                Submit {selectedCount} selected
+              </button>
+              <button
+                type="button"
+                className="tw-b sm"
+                disabled={isPending}
+                onClick={handleCompare}
+              >
+                Compare
+              </button>
+              <button
+                type="button"
+                className="tw-b sm"
+                disabled={isPending || refreshingMetrics}
+                onClick={handleRefreshMetrics}
+              >
+                Refresh metrics
+              </button>
+              <button
+                type="button"
+                className="tw-b sm"
+                disabled={isPending || displayCreators.length === 0}
+                onClick={handleExportSelected}
+              >
+                Export CSV
+              </button>
+              <button
+                type="button"
+                className="tw-b sm pri"
+                disabled={isPending || displayCreators.length === 0}
+                onClick={() => {
+                  if (selectedCount > 0) {
+                    handleGenerateNewQuotation();
+                    return;
+                  }
+                  setQuoteAllOpen(true);
+                }}
+              >
+                Generate quotation
+              </button>
+            </div>
+
+            {refreshProgress ? (
+              <ShortlistMetricsRefreshBanner
+                total={refreshProgress.total}
+                completed={refreshProgress.completed}
+                failed={refreshProgress.failed}
+              />
             ) : null}
+
+            {displayCreators.length === 0 ? (
+              <ShortlistCreatorEmptyState
+                editable={editable}
+                onAddCreators={() => {
+                  setAddMode("search");
+                  setAddOpen(true);
+                }}
+                onPasteLinks={() => {
+                  setAddMode("paste");
+                  setAddOpen(true);
+                }}
+              />
+            ) : (
+              <ShortlistCreatorList
+                items={displayCreators}
+                selectedIds={effectiveSelectedIds}
+                selectable={selectable}
+                allSelected={allSelected}
+                indeterminate={indeterminate}
+                onToggleSelect={(itemId) =>
+                  setSelectedIds(
+                    toggleItemSelection(
+                      effectiveSelectedIds,
+                      itemId,
+                      !effectiveSelectedIds.has(itemId)
+                    )
+                  )
+                }
+                onToggleSelectGroup={(itemIds) =>
+                  setSelectedIds(toggleGroupSelection(itemIds, effectiveSelectedIds))
+                }
+                onToggleSelectAll={handleToggleSelectAll}
+                onOpenCreator={(creator) => {
+                  const handle =
+                    creator.platforms.find((p) => p.handle)?.handle?.replace(/^@+/, "") ??
+                    creator.unified_id;
+                  if (!handleOpenCreatorByHandle(handle)) {
+                    handleOpenCreator(creator);
+                  }
+                }}
+              />
+            )}
           </div>
         </div>
-
-        {refreshProgress ? (
-          <ShortlistMetricsRefreshBanner
-            total={refreshProgress.total}
-            completed={refreshProgress.completed}
-            failed={refreshProgress.failed}
-          />
-        ) : null}
-
-        {displayCreators.length === 0 ? (
-          <ShortlistCreatorEmptyState
-            editable={editable}
-            onAddCreators={() => {
-              setAddMode("search");
-              setAddOpen(true);
-            }}
-            onPasteLinks={() => {
-              setAddMode("paste");
-              setAddOpen(true);
-            }}
-          />
-        ) : (
-          <ShortlistCreatorList
-            items={displayCreators}
-            selectedIds={effectiveSelectedIds}
-            selectable={selectable}
-            allSelected={allSelected}
-            indeterminate={indeterminate}
-            onToggleSelect={(itemId) =>
-              setSelectedIds(
-                toggleItemSelection(
-                  effectiveSelectedIds,
-                  itemId,
-                  !effectiveSelectedIds.has(itemId)
-                )
-              )
-            }
-            onToggleSelectGroup={(itemIds) =>
-              setSelectedIds(toggleGroupSelection(itemIds, effectiveSelectedIds))
-            }
-            onToggleSelectAll={handleToggleSelectAll}
-            onOpenCreator={(creator) => {
-              const handle =
-                creator.platforms.find((p) => p.handle)?.handle?.replace(/^@+/, "") ??
-                creator.unified_id;
-              if (!handleOpenCreatorByHandle(handle)) {
-                handleOpenCreator(creator);
-              }
-            }}
-          />
-        )}
       </section>
 
       {detail.movedAssignments.length > 0 ? (
-        <section className="border-t border-border px-8 py-5">
-          <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
-            Moved to campaigns
-          </h2>
-          <p className="mt-0.5 text-[12px] text-[var(--text-3)]">
-            Creators moved from this shortlist and their current assignment status.
-          </p>
-          <div className="mt-4 space-y-2">
-            {detail.movedAssignments.map((assignment) => (
-              <div
-                key={assignment.assignment_id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2 text-sm"
-              >
-                <div className="min-w-0">
-                  <p className="truncate font-medium">
-                    {assignment.influencer_name ?? "Creator"}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {assignment.campaign_document_number ??
-                      assignment.campaign_name ??
-                      assignment.campaign_header_id}
-                  </p>
+        <section className="discovery-suite px-[15px]">
+          <div className="tw-c">
+            <div className="tw-ch">
+              <span className="tw-ct">Moved to campaigns</span>
+              <span className="tw-cs">
+                Creators moved from this shortlist and their current assignment status.
+              </span>
+            </div>
+            <div className="tw-pad space-y-2">
+              {detail.movedAssignments.map((assignment) => (
+                <div
+                  key={assignment.assignment_id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-border px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate font-medium">
+                      {assignment.influencer_name ?? "Creator"}
+                    </p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      {assignment.campaign_document_number ??
+                        assignment.campaign_name ??
+                        assignment.campaign_header_id}
+                    </p>
+                  </div>
+                  <AssignmentStatusBadge status={assignment.assignment_status} />
                 </div>
-                <AssignmentStatusBadge status={assignment.assignment_status} />
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </section>
       ) : null}
 
-      <section className="px-8 pb-10 pt-6">
-        <h2 className="text-[15px] font-extrabold tracking-[-0.02em] text-[var(--text)]">
-          Movement history
-        </h2>
-        <p className="mt-0.5 text-[12px] text-[var(--text-3)]">
-          Audit trail of every creator movement.
-        </p>
-        {detail.movements.length === 0 ? (
-          <p className="py-6 text-center text-sm text-muted-foreground">
-            No movements recorded yet.
-          </p>
-        ) : (
-          <div className="mt-[18px]">
-            {detail.movements.map((movement, index) => (
-              <div
-                key={movement.id}
-                className={cn(
-                  "relative flex gap-3 py-[11px]",
-                  index < detail.movements.length - 1 && "border-b border-border"
-                )}
-              >
-                {index < detail.movements.length - 1 ? (
-                  <span
-                    className="absolute bottom-[-11px] left-[7px] top-[27px] w-px bg-border"
-                    aria-hidden
-                  />
-                ) : null}
-                <span
-                  className="relative z-[1] mt-0.5 size-[15px] shrink-0 rounded-full border-[2.5px] border-primary bg-background shadow-[0_0_0_3px_rgba(0,87,255,0.09)]"
-                  aria-hidden
-                />
-                <div className="min-w-0 pb-0.5">
-                  <p className="text-[12.5px] font-bold text-[var(--text)]">
-                    {MOVEMENT_LABELS[movement.action]}
-                  </p>
-                  <p className="mt-0.5 text-[11.5px] text-[var(--text-3)]">
-                    {movement.performed_by_name ? (
-                      <span className="font-semibold text-[var(--blue-text)]">
-                        {movement.performed_by_name}
-                      </span>
-                    ) : (
-                      "System"
-                    )}
-                    {" · "}
-                    {formatDiscoveryDate(movement.performed_at)}
-                    {movement.notes ? ` · ${movement.notes}` : ""}
-                  </p>
-                </div>
-              </div>
-            ))}
+      <section className="discovery-suite px-[15px] pb-10">
+        <div className="tw-c">
+          <div className="tw-ch">
+            <span className="tw-ct">Movement history</span>
+            <span className="tw-cs">audit trail of every creator movement</span>
           </div>
-        )}
+          {detail.movements.length === 0 ? (
+            <p className="tw-pad tw-miss">No movements recorded yet.</p>
+          ) : (
+            <div className="tw-ms">
+              {detail.movements.map((movement) => (
+                <div key={movement.id} className="tw-mi">
+                  <span>
+                    <span className="tw-dot on" aria-hidden />
+                  </span>
+                  <span>
+                    <b style={{ fontSize: "12.5px", fontWeight: 600 }}>
+                      {MOVEMENT_LABELS[movement.action]}
+                      {movement.notes ? ` · ${movement.notes}` : ""}
+                    </b>
+                  </span>
+                  <span className="tw-t">
+                    {movement.performed_by_name || "System"}
+                  </span>
+                  <span className="tw-d">
+                    {formatDiscoveryDateTime(movement.performed_at)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
 
       <div className="h-10 shrink-0" aria-hidden />
