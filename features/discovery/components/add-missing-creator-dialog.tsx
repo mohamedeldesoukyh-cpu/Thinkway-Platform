@@ -1,30 +1,17 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Textarea } from "@/components/ui/textarea";
 import { addCreatorsByProfileUrlsAction } from "@/features/discovery/add-creator-by-url/actions";
-import {
-  DISCOVERY_DIALOG_BODY_CLASS,
-  DISCOVERY_DIALOG_CONTENT_CLASS,
-  DISCOVERY_DIALOG_DESC_CLASS,
-  DISCOVERY_DIALOG_FOOTER_CLASS,
-  DISCOVERY_DIALOG_HEADER_BAR_CLASS,
-  DISCOVERY_DIALOG_HEADER_WRAP_CLASS,
-  DISCOVERY_DIALOG_TEXTAREA_CLASS,
-  DISCOVERY_DIALOG_TITLE_CLASS,
-} from "@/features/discovery/components/design-system";
+import { DISCOVERY_DIALOG_CONTENT_CLASS } from "@/features/discovery/components/design-system";
 import {
   pollCreatorAfterRefresh,
 } from "@/features/discovery/enrichment/poll-creator-refresh";
@@ -171,82 +158,88 @@ export function AddMissingCreatorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("discovery-suite", DISCOVERY_DIALOG_CONTENT_CLASS)}>
-        <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
-          <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
-              Discovery
+      <DialogContent
+        className={cn(
+          "discovery-suite tw-dlg__w gap-0 border-0 p-0 sm:max-w-[520px]",
+          DISCOVERY_DIALOG_CONTENT_CLASS
+        )}
+      >
+        <DialogHeader className="tw-dlg__h relative space-y-0 text-left">
+          <DialogTitle className="sr-only">Add missing creator</DialogTitle>
+          <i>Discovery</i>
+          <b>Add missing creator</b>
+          <DialogDescription asChild>
+            <p>
+              Paste one or more profile links. Usernames are taken from the URL,
+              and creators already in Discovery are skipped rather than duplicated.
             </p>
-            <DialogTitle className={DISCOVERY_DIALOG_TITLE_CLASS}>
-              Add missing creator
-            </DialogTitle>
-            <DialogDescription className={DISCOVERY_DIALOG_DESC_CLASS}>
-              Paste one or more profile links. Usernames are taken from the URL.
-              Creators already in Discovery are skipped.
-            </DialogDescription>
-          </div>
+          </DialogDescription>
         </DialogHeader>
 
-        <div className={cn("space-y-2", DISCOVERY_DIALOG_BODY_CLASS)}>
-          <Textarea
+        <div className="tw-dlg__b">
+          <textarea
             value={profileUrls}
             onChange={(event) => {
               setProfileUrls(event.target.value);
               if (error) setError(null);
             }}
-            rows={6}
-            autoComplete="off"
-            placeholder={`https://www.instagram.com/username\nhttps://www.tiktok.com/@username`}
-            className={cn(DISCOVERY_DIALOG_TEXTAREA_CLASS, "min-h-[132px]")}
+            className="tw-in tw-paste"
+            spellCheck={false}
+            aria-label="Profile links"
+            placeholder={"https://www.instagram.com/username\nhttps://www.tiktok.com/@username"}
             disabled={isPending}
             autoFocus
           />
+          <div className="tw-slmeta" style={{ margin: "12px 0 0" }}>
+            <div>
+              <i>Detected</i>
+              <b>{preview.parsed.length}</b>
+            </div>
+            <div>
+              <i>New</i>
+              <b>{preview.parsed.length}</b>
+            </div>
+            <div>
+              <i>Already in Discovery</i>
+              <b>0</b>
+            </div>
+          </div>
           {error ? (
-            <p className="text-xs text-destructive">{error}</p>
-          ) : isPending ? (
-            <p className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Loader2Icon className="size-3.5 animate-spin" />
-              Adding creators…
-            </p>
-          ) : preview.parsed.length > 0 ? (
-            <p className="text-xs text-emerald-600 dark:text-emerald-400">
-              {preview.parsed.length} profile
-              {preview.parsed.length === 1 ? "" : "s"} detected
-              {preview.parsed.length > MAX_ADD_MISSING_CREATORS
-                ? ` (first ${MAX_ADD_MISSING_CREATORS} will be added)`
-                : ""}
-              {preview.invalid.length > 0
-                ? ` · ${preview.invalid.length} unrecognized`
-                : ""}
-            </p>
-          ) : profileUrls.trim().length >= 8 ? (
-            <p className="text-xs text-muted-foreground">
-              Enter supported social profile URLs, one per line.
+            <p className="tw-hint" style={{ color: "var(--tw-bad)" }}>
+              {error}
             </p>
           ) : (
-            <p className="text-xs text-muted-foreground">
-              Up to {MAX_ADD_MISSING_CREATORS} links per batch.
-            </p>
+            <div className="tw-hint">
+              Up to <b>{MAX_ADD_MISSING_CREATORS} links per batch</b>. Instagram,
+              TikTok, YouTube and X are recognised.
+              {isPending ? " Adding creators…" : ""}
+            </div>
           )}
         </div>
 
-        <DialogFooter className={DISCOVERY_DIALOG_FOOTER_CLASS}>
-          <span className="tw-cs mr-auto max-w-[18rem] text-left text-[11px] leading-snug text-muted-foreground">
-            New creators enter Discovery unenriched — metrics follow on the next sync.
+        <div className="tw-dlg__f">
+          <span className="tw-cs">
+            New creators enter Discovery unenriched — metrics follow on the next
+            sync.
           </span>
-          <Button
+          <span className="tw-sp" />
+          <button
             type="button"
-            variant="outline"
+            className="tw-b sm"
             onClick={() => onOpenChange(false)}
             disabled={isPending}
           >
             Cancel
-          </Button>
-          <Button type="button" onClick={handleConfirm} disabled={!canConfirm}>
-            {isPending ? <Loader2Icon className="size-4 animate-spin" /> : null}
-            {preview.parsed.length > 1 ? "Add creators" : "Confirm"}
-          </Button>
-        </DialogFooter>
+          </button>
+          <button
+            type="button"
+            className="tw-b sm pri"
+            onClick={handleConfirm}
+            disabled={!canConfirm}
+          >
+            {isPending ? "Adding…" : "Confirm"}
+          </button>
+        </div>
       </DialogContent>
     </Dialog>
   );

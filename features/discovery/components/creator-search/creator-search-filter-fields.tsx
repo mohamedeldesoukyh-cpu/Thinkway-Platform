@@ -1,6 +1,6 @@
 "use client";
 
-import { PlusIcon, XIcon } from "lucide-react";
+import { PlusIcon } from "lucide-react";
 import { Fragment, useState, type ReactNode } from "react";
 
 import { Input } from "@/components/ui/input";
@@ -75,7 +75,7 @@ export function FieldLabel({
   return (
     <p
       className={cn(
-        "discovery-filter-field-label mb-[7px] text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground",
+        "tw-lbl discovery-filter-field-label mb-[7px]",
         className,
       )}
     >
@@ -86,7 +86,7 @@ export function FieldLabel({
 
 export function FieldHint({ children }: { children: ReactNode }) {
   return (
-    <p className="discovery-filter-field-hint mt-[5px] text-[10px] text-[#94a3b8] dark:text-muted-foreground">
+    <p className="tw-hint discovery-filter-field-hint">
       {children}
     </p>
   );
@@ -122,7 +122,7 @@ function ExpandableChipGrid<T>({
 
   if (items.length <= previewCount) {
     return (
-      <div className="flex flex-wrap gap-1.5">
+      <div className="tw-fchips">
         {items.map((item) => (
           <Fragment key={getKey(item)}>{renderChip(item)}</Fragment>
         ))}
@@ -132,7 +132,7 @@ function ExpandableChipGrid<T>({
 
   return (
     <>
-      <div className="flex flex-wrap gap-1.5">
+      <div className="tw-fchips">
         {visibleItems.map((item) => (
           <Fragment key={getKey(item)}>{renderChip(item)}</Fragment>
         ))}
@@ -141,7 +141,7 @@ function ExpandableChipGrid<T>({
         <button
           type="button"
           onClick={() => setExpanded((value) => !value)}
-          className="mt-2 text-[11px] font-medium text-[#0057FF] transition-colors hover:text-[#0046cc]"
+          className="tw-more"
           aria-expanded={expanded}
         >
           {expanded ? "Show less" : `Show ${hiddenCount} more`}
@@ -184,21 +184,10 @@ export function FilterChip({
       type="button"
       onClick={onToggle}
       aria-pressed={active}
-      className={cn(
-        "discovery-filter-chip inline-flex h-[26px] shrink-0 items-center gap-1 whitespace-nowrap rounded-[20px] border px-2.5 text-[11px] font-medium transition-all duration-[140ms]",
-        active
-          ? "border-[rgba(0,87,255,0.32)] bg-[rgba(0,87,255,0.1)] font-semibold text-[#0057FF] dark:text-blue-300"
-          : "border-[rgba(0,87,255,0.14)] dark:border-border bg-white dark:bg-card text-[#475569] dark:text-muted-foreground hover:border-[rgba(0,87,255,0.24)] hover:bg-[rgba(239,246,255,0.95)] dark:hover:bg-primary/10 hover:text-[#0057FF] dark:hover:text-blue-300",
-      )}
+      className={cn("tw-fc", active && "on")}
     >
-      <span>{label}</span>
-      {active ? (
-        <span className="ml-px text-[12px] leading-none text-[#0057FF]">×</span>
-      ) : (
-        <span className="ml-px flex size-3.5 items-center justify-center rounded-full bg-[rgba(0,87,255,0.1)] text-[10px] font-bold text-[#0057FF]">
-          +
-        </span>
-      )}
+      {label}
+      <em>{active ? "✓" : "+"}</em>
     </button>
   );
 }
@@ -219,28 +208,16 @@ export function PlatformFilterChip({
       type="button"
       onClick={onToggle}
       aria-pressed={active}
-      className={cn(
-        "discovery-filter-platform-chip inline-flex h-9 shrink-0 items-center gap-2 rounded-[10px] border px-2.5 text-[11px] font-semibold transition-all duration-[140ms]",
-        active
-          ? "border-[rgba(0,87,255,0.38)] bg-[rgba(0,87,255,0.1)] text-[#0057FF] shadow-[0_1px_3px_rgba(0,87,255,0.12)]"
-          : filterChipInactiveClass,
-      )}
+      className={cn("tw-fc", active && "on")}
     >
       <PlatformIcon
         platform={platform}
         size="xs"
         variant="logo"
-        className="size-5 shrink-0"
+        className="size-3.5 shrink-0"
       />
-      <span>{label}</span>
-      {active ? (
-        <XIcon className="size-3 shrink-0 opacity-70" aria-hidden />
-      ) : (
-        <PlusIcon
-          className="size-3 shrink-0 text-[#0057FF] opacity-50"
-          aria-hidden
-        />
-      )}
+      {label}
+      <em>{active ? "✓" : "+"}</em>
     </button>
   );
 }
@@ -379,7 +356,7 @@ function FieldGroup({
   return (
     <div
       className={cn(
-        "discovery-filter-field-group border-t border-[rgba(0,87,255,0.1)] pt-5 first:border-t-0 first:pt-0",
+        "tw-frow discovery-filter-field-group",
         className,
       )}
     >

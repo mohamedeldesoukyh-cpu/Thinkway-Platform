@@ -100,6 +100,7 @@ export function CreatorSearchFilterPanel({
   return (
     <DiscoveryFilterDrawer
       title="Search filters"
+      description={`${6} groups · ${activeSummaryChips.length} active`}
       onClose={onClose}
       activeSummary={
         <DiscoveryFilterActiveSummary

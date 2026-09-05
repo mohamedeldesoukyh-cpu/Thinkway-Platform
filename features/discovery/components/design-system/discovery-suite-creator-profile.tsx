@@ -7,8 +7,13 @@ import { formatDistanceToNow } from "date-fns";
 
 import "@/app/styles/discovery-suite-creator-profile.css";
 
+import { CountryFlagBadge } from "@/components/creator/country-flag-badge";
 import { AB, F, ini } from "@/lib/discovery/suite/helpers";
-import { countryFlag, formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
+import { resolveCountryCode } from "@/lib/creators/country-code";
+import {
+  formatCreatorCountryLabels,
+  normalizeCountryCode,
+} from "@/lib/creators/creator-display-utils";
 import { resolveCreatorRecencyIso } from "@/lib/creators/creator-hover-details";
 import { cn } from "@/lib/utils";
 
@@ -231,7 +236,9 @@ export function DiscoverySuiteCreatorProfile({
 
   if (!open || typeof document === "undefined") return null;
 
-  const flag = countryFlag(flagCode);
+  const resolvedFlag =
+    normalizeCountryCode(resolveCountryCode(flagCode)) ??
+    normalizeCountryCode(resolveCountryCode(metaLine.split("·")[0]));
 
   return createPortal(
     <div className="discovery-suite">
@@ -256,7 +263,15 @@ export function DiscoverySuiteCreatorProfile({
               ) : (
                 ini(displayName)
               )}
-              {flag ? <span className="fl">{flag}</span> : null}
+              {resolvedFlag ? (
+                <span className="fl">
+                  <CountryFlagBadge
+                    countryCode={resolvedFlag}
+                    size="sm"
+                    className="size-full border-0 shadow-none"
+                  />
+                </span>
+              ) : null}
             </div>
             <h2>{displayName}</h2>
             {handleLabel ? <div className="hd">{handleLabel}</div> : null}

@@ -271,8 +271,13 @@ export function CreatorSearchResultList({
 
   return (
     <div className="discovery-suite discovery-search-exact-root flex min-h-0 flex-1 flex-col">
-      <div className="discovery-search-exact-header-bar shrink-0">
-        <div className="mb-2 flex flex-wrap items-center justify-end gap-2 px-1">
+      <div className="tw-c mb-0 rounded-b-none">
+        <div className="tw-ch">
+          <span className="tw-ct">Creators · {total.toLocaleString()}</span>
+          <span className="tw-cs">
+            click a name for the full profile — same panel as the shortlist
+          </span>
+          <span className="tw-sp" />
           {headerToolbar}
         </div>
         <div style={{ minWidth: SEARCH_MIN_W, ...searchColsStyle }}>

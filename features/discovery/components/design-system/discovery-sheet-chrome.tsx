@@ -73,9 +73,16 @@ export function DiscoveryFilterSheet({
       <SheetContent
         side={side}
         showCloseButton={false}
-        showOverlay={false}
-        style={DISCOVERY_FILTER_SHEET_STYLE}
-        className={cn(DISCOVERY_FILTER_SHEET_CLASS, className)}
+        showOverlay
+        style={{
+          width: "min(520px, 96vw)",
+          maxWidth: "520px",
+        }}
+        className={cn(
+          DISCOVERY_FILTER_SHEET_CLASS,
+          "discovery-suite border-l border-[var(--tw-hair,#EDF0F5)] bg-white shadow-[-18px_0_48px_-18px_rgba(11,15,26,.4)]",
+          className
+        )}
       >
         <SheetTitle className="sr-only">{title}</SheetTitle>
         {children}

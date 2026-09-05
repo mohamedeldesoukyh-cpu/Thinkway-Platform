@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  SearchIcon,
-  Settings2Icon,
-  SlidersHorizontalIcon,
-  SparklesIcon,
-  TrendingUpIcon,
-  UserIcon,
-  UsersIcon,
-  XIcon,
-} from "lucide-react";
+import { XIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 
@@ -84,7 +75,7 @@ type DiscoveryFilterDrawerSectionProps = {
 export function DiscoveryFilterDrawerSection({
   sectionId,
   title,
-  icon,
+  icon: _icon,
   count = 0,
   defaultOpen = false,
   onClearSection,
@@ -99,72 +90,40 @@ export function DiscoveryFilterDrawerSection({
   return (
     <section
       className={cn(
-        "discovery-filter-drawer-section mb-3 last:mb-0",
+        "tw-fsec discovery-filter-drawer-section",
         modified && "discovery-filter-drawer-section--modified",
         !open && "discovery-filter-drawer-section--collapsed",
       )}
     >
-      <div className="discovery-filter-drawer-section__header mb-2 flex items-stretch gap-1">
-        <button
-          type="button"
-          className="discovery-filter-drawer-section__toggle flex min-w-0 flex-1 items-center justify-between text-left"
-          onClick={() => setOpen(!open)}
-          aria-expanded={open}
-        >
-          <span className="creator-detail-sheet-section-title mb-0 min-w-0 flex-1">
-            {icon ? (
-              <span
-                className="creator-detail-sheet-section-title__icon"
-                aria-hidden
-              >
-                {icon}
-              </span>
-            ) : null}
-            <span className="creator-detail-sheet-section-title__text">
-              {title}
-            </span>
-            <DiscoveryFilterSectionCountBadge count={count} />
-          </span>
-          <span
-            className={cn(
-              "ml-2 shrink-0 text-[#0057FF] opacity-50 transition-transform duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
-              !open && "-rotate-90",
-            )}
-          >
-            <svg
-              className="block size-3.5"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              viewBox="0 0 24 24"
-              aria-hidden
-            >
-              <polyline points="18 15 12 9 6 15" />
-            </svg>
-          </span>
-        </button>
+      <button
+        type="button"
+        className="tw-fsec__h"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+      >
+        <b>{title}</b>
+        {count > 0 ? <span className="tw-cs">{count}</span> : null}
         {modified && onClearSection ? (
-          <button
-            type="button"
-            onClick={onClearSection}
-            className="discovery-filter-drawer-section__clear shrink-0 self-center px-2 text-[11px] font-medium text-[#0057FF] transition-colors hover:text-[#0046cc] dark:text-blue-400 dark:hover:text-blue-300"
+          <span
+            role="button"
+            tabIndex={0}
+            className="tw-more"
+            onClick={(event) => {
+              event.stopPropagation();
+              onClearSection();
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") return;
+              event.stopPropagation();
+              onClearSection();
+            }}
           >
             Clear
-          </button>
+          </span>
         ) : null}
-      </div>
-      <div
-        className={cn(
-          "discovery-filter-drawer-section__panel grid transition-[grid-template-rows] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]",
-          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
-        )}
-      >
-        <div className="overflow-hidden">
-          <div className="discovery-filter-drawer-section__card">
-            {children}
-          </div>
-        </div>
-      </div>
+        <span className="ar">{open ? "▾" : "▸"}</span>
+      </button>
+      {open ? <div className="tw-fsec__b">{children}</div> : null}
     </section>
   );
 }
@@ -224,6 +183,7 @@ export function DiscoveryFilterActiveSummary({
 
 type DiscoveryFilterDrawerProps = {
   title?: string;
+  description?: string;
   onClose?: () => void;
   activeSummary?: ReactNode;
   children: ReactNode;
@@ -231,9 +191,10 @@ type DiscoveryFilterDrawerProps = {
   className?: string;
 };
 
-/** Filter workspace shell — aligned with Creator Details drawer chrome. */
+/** Pack right drawer — `tw-dr` / `tw-dr__i` / `tw-dr__b` / `tw-dr__a`. */
 export function DiscoveryFilterDrawer({
-  title = "Filters",
+  title = "Search filters",
+  description,
   onClose,
   activeSummary,
   children,
@@ -243,52 +204,33 @@ export function DiscoveryFilterDrawer({
   return (
     <div
       className={cn(
-        "discovery-filter-drawer flex h-full min-h-0 flex-col overflow-hidden bg-[#f8fafc] dark:bg-background",
+        "discovery-suite discovery-filter-drawer flex h-full min-h-0 flex-col overflow-hidden bg-white",
         className,
       )}
     >
-      <div className="discovery-filter-drawer__header-wrap creator-detail-sheet-command-bar-wrap shrink-0 border-b border-[rgba(0,87,255,0.08)] pb-3.5 dark:border-border">
-        <div className="creator-detail-sheet-command-bar">
-          <div className="creator-detail-sheet-command-bar__actions">
-            <div className="creator-detail-sheet-command-bar__context min-w-0">
-              <SlidersHorizontalIcon
-                className="creator-detail-sheet-command-bar__context-icon"
-                aria-hidden
-              />
-              <span className="min-w-0 truncate">
-                <span className="block text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
-                  Discovery
-                </span>
-                <span className="block truncate text-sm font-bold tracking-[-0.02em] text-[#0f172a] dark:text-foreground">
-                  {title}
-                </span>
-              </span>
-            </div>
-            {onClose ? (
-              <div className="creator-detail-sheet-command-bar__action-group">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  title="Close"
-                  className="creator-detail-sheet-action-btn"
-                  aria-label="Close filters"
-                >
-                  <XIcon className="size-3.5" />
-                </button>
-              </div>
-            ) : null}
-          </div>
-        </div>
+      <div className="tw-dr__h">
+        <span className="k">Discovery</span>
+        <span className="tw-sp" />
+        {onClose ? (
+          <button
+            type="button"
+            className="tw-dr__x"
+            onClick={onClose}
+            aria-label="Close"
+          >
+            &#10005;
+          </button>
+        ) : null}
       </div>
-
-      <div className={DISCOVERY_FILTER_DRAWER_BODY_CLASS}>
-        {activeSummary}
-        <div className={DISCOVERY_FILTER_DRAWER_SCROLL_CLASS}>{children}</div>
+      <div className="tw-dr__i">
+        <b>{title}</b>
+        {description ? <p>{description}</p> : null}
       </div>
-
-      <div className="creator-detail-sheet-footer border-t border-[rgba(0,87,255,0.08)] dark:border-[rgba(0,87,255,0.16)] bg-[#f8fafc] dark:bg-background">
-        {footer}
-      </div>
+      {activeSummary ? (
+        <div className="px-4 pt-3">{activeSummary}</div>
+      ) : null}
+      <div className="tw-dr__b min-h-0 flex-1 overflow-y-auto">{children}</div>
+      {footer}
     </div>
   );
 }
@@ -313,27 +255,21 @@ export function DiscoveryFilterDrawerFooter({
   disabled,
 }: DiscoveryFilterDrawerFooterProps) {
   return (
-    <div className="creator-detail-sheet-footer__actions w-full justify-between">
-      <button
-        type="button"
-        onClick={onClear}
-        className="creator-detail-sheet-action-btn"
-      >
+    <div className="tw-dr__a">
+      <button type="button" className="tw-b sm" onClick={onClear}>
         {clearLabel}
       </button>
       {activeCount != null ? (
-        <span
-          className="shrink-0 text-[11px] font-semibold text-[var(--text-2)]"
-          aria-live="polite"
-        >
+        <span className="tw-cs" aria-live="polite">
           {activeCount} active
         </span>
       ) : null}
+      <span className="tw-sp" />
       <button
         type="button"
+        className="tw-b sm pri"
         onClick={onApply}
         disabled={disabled || loading || !onApply}
-        className="creator-detail-sheet-action-btn creator-detail-sheet-action-btn--primary min-w-[220px] flex-1 disabled:opacity-60"
       >
         {applyLabel}
       </button>

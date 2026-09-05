@@ -40,3 +40,65 @@
   color: var(--tw-mut);
   text-align: center;
 }
+
+/* Pack overview: drop sheet highlight cards (score already lives on the left rail). */
+.discovery-suite .tw-cp__b .creator-detail-sheet-highlight-grid {
+  display: none;
+}
+
+.discovery-suite .tw-cp__b .creator-detail-sheet-section,
+.discovery-suite .tw-cp__b [class*="DetailSection"],
+.discovery-suite .tw-cp__b > [data-slot="tabs-content"] > .min-w-0 > * {
+  margin-bottom: 16px;
+}
+
+.discovery-suite .tw-cp__b .creator-detail-sheet-section-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: var(--tw-mut);
+  margin-bottom: 9px;
+}
+
+.discovery-suite .tw-cp__b .creator-detail-sheet-section-title__icon {
+  display: none;
+}
+
+.discovery-suite .tw-cp__b .creator-detail-sheet-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
+  gap: 8px;
+}
+
+.discovery-suite .tw-cp__b .creator-detail-sheet-kpi-grid > * {
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--tw-soft);
+  border: 0;
+  box-shadow: none;
+}
+
+.discovery-suite .tw-cp__b .tw-note {
+  margin: 13px 0 0;
+}
+
+.discovery-suite .tw-cp__b .tw-empty .tw-cp__pack-refresh,
+.discovery-suite .tw-cp__b .tw-empty .tw-b {
+  height: 32px;
+}
+
+.discovery-suite .tw-pub .im img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.discovery-suite a.tw-pub {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}

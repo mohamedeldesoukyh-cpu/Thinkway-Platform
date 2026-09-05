@@ -1,27 +1,8 @@
 "use client";
 
-import { PlusIcon, WandSparklesIcon } from "lucide-react";
-import Link from "next/link";
-
-import { Button } from "@/components/ui/button";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
-import { CreatorSearchPopover } from "./creator-search-popover";
-import {
-  CreatorSearchFiltersPopover,
-  CreatorSearchFollowersPopover,
-  CreatorSearchSortPopover,
-} from "./creator-search-toolbar-popovers";
-import {
-  DISCOVERY_TOOLBAR_ICON_PROPS,
-  discoveryToolbarBtnClass,
-} from "./creator-search-toolbar-utils";
+import { CreatorSearchInlineField } from "./creator-search-inline-field";
 import type { CreatorSearchFilters, CreatorSearchSortState } from "./creator-search-types";
 
 export type CreatorSearchToolbarControlsProps = {
@@ -36,75 +17,48 @@ export type CreatorSearchToolbarControlsProps = {
   onOpenFilters: () => void;
   showCampaignRelevance?: boolean;
   onAddMissingCreator?: () => void;
+  onRefreshMetrics?: () => void;
   className?: string;
 };
 
-/** Icon popovers + AI Search — lives in the results header row. */
+/**
+ * Pack card-header actions (`discovery.html` `pgSearch` tools):
+ * search · Filters · Refresh metrics · + Add missing creator.
+ */
 export function CreatorSearchToolbarControls({
   searchQuery,
   onDebouncedSearchChange,
   onSearchSubmit,
   searchLoading,
-  sort,
-  onSortChange,
-  filters,
-  onFiltersChange,
   onOpenFilters,
-  showCampaignRelevance = false,
+  filters,
   onAddMissingCreator,
+  onRefreshMetrics,
   className,
 }: CreatorSearchToolbarControlsProps) {
+  const filterCount = filters.platforms.length;
+
   return (
-    <TooltipProvider delayDuration={300}>
-      <div className={cn("discovery-search-exact-toolbar", className)}>
-        <CreatorSearchPopover
-          searchQuery={searchQuery}
-          onDebouncedSearchChange={onDebouncedSearchChange}
-          onSearchSubmit={onSearchSubmit}
-          loading={searchLoading}
-        />
-
-        <CreatorSearchFiltersPopover
-          filters={filters}
-          onChange={onFiltersChange}
-          onOpenAllFilters={onOpenFilters}
-        />
-
-        <CreatorSearchFollowersPopover
-          filters={filters}
-          onChange={onFiltersChange}
-        />
-
-        <CreatorSearchSortPopover
-          sort={sort}
-          onSortChange={onSortChange}
-          showCampaignRelevance={showCampaignRelevance}
-        />
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button variant="ghost" size="icon" className={discoveryToolbarBtnClass()} asChild>
-              <Link href="/ai" aria-label="AI Search">
-                <WandSparklesIcon {...DISCOVERY_TOOLBAR_ICON_PROPS} />
-              </Link>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">AI Search</TooltipContent>
-        </Tooltip>
-
-        {onAddMissingCreator ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className={cn(discoveryToolbarBtnClass(), "h-8 gap-1 px-2 text-xs font-semibold")}
-            onClick={onAddMissingCreator}
-          >
-            <PlusIcon {...DISCOVERY_TOOLBAR_ICON_PROPS} />
-            <span className="whitespace-nowrap">Add missing creator</span>
-          </Button>
-        ) : null}
-      </div>
-    </TooltipProvider>
+    <div className={cn("flex min-w-0 flex-wrap items-center gap-2", className)}>
+      <CreatorSearchInlineField
+        searchQuery={searchQuery}
+        onDebouncedSearchChange={onDebouncedSearchChange}
+        onSearchSubmit={onSearchSubmit}
+        loading={searchLoading}
+      />
+      <button type="button" className="tw-b sm" onClick={onOpenFilters}>
+        Filters{filterCount > 0 ? ` · ${filterCount}` : ""}
+      </button>
+      {onRefreshMetrics ? (
+        <button type="button" className="tw-b sm" onClick={onRefreshMetrics}>
+          Refresh metrics
+        </button>
+      ) : null}
+      {onAddMissingCreator ? (
+        <button type="button" className="tw-b sm" onClick={onAddMissingCreator}>
+          + Add missing creator
+        </button>
+      ) : null}
+    </div>
   );
 }

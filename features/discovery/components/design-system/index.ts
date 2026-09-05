@@ -27,6 +27,7 @@ export {
   formatDiscoveryPackQuoteReference,
   formatDiscoveryPackRelativeAge,
 } from "./discovery-suite-creator-profile";
+export { DiscoverySuiteCreatorProfileTabs } from "./discovery-suite-creator-profile-tabs";
 export type {
   DiscoverySuiteCreatorProfilePlatformChip,
   DiscoverySuiteCreatorProfileSimilarItem,

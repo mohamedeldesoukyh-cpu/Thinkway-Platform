@@ -9,6 +9,7 @@ import {
   formatDiscoveryPackQuoteReference,
   formatDiscoveryPackRelativeAge,
 } from "@/features/discovery/components/design-system/discovery-suite-creator-profile";
+import { DiscoverySuiteCreatorProfileTabs } from "@/features/discovery/components/design-system/discovery-suite-creator-profile-tabs";
 import {
   BadgeCheckIcon,
   GitMergeIcon,
@@ -1638,7 +1639,33 @@ export function CreatorDetailSheet({
                 ))}
               </>
             }
-            body={detailTabPanels}
+            body={
+              <DiscoverySuiteCreatorProfileTabs
+                displayCreator={displayCreator}
+                identityCreator={identityCreator}
+                platformName={platformName}
+                platformKey={selectedPlatform?.platform ?? null}
+                followers={
+                  selectedPlatform?.follower_count ?? displayCreator.metrics.followers.value
+                }
+                engagement={displayCreator.metrics.engagement_rate.value}
+                avgEngagements={avgEngagementsMetric.value}
+                avgLikes={avgLikesMetric.value}
+                avgPlays={avgReelsPlaysMetric.value}
+                postsPerWeek={displayCreator.metrics.posting_frequency_per_week.value}
+                publications={displayCreator.recent_publications ?? []}
+                quotationPriceReference={quotationPriceReference}
+                history={history}
+                historyLoading={loading}
+                latestFollowers={latestFollowers}
+                enrichmentStatus={enrichmentStatus}
+                onShowPublications={() => setActiveTab("publications")}
+                onEditContact={() => setEditContactOpen(true)}
+                onEditAveragePrice={() => setEditAveragePriceOpen(true)}
+                onEnrichmentStatusChange={setEnrichmentStatus}
+                onCreatorUpdated={handleCreatorUpdated}
+              />
+            }
             similar={similar.map((item) => {
               const itemHandle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
               return {

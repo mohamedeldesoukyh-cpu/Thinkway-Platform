@@ -2239,6 +2239,7 @@ export function CreatorSearchWorkspace({
             onOpenFilters: () => setFiltersDrawerOpen(true),
             showCampaignRelevance,
             onAddMissingCreator: () => setAddMissingOpen(true),
+            onRefreshMetrics: handleBulkRefreshMetrics,
           }}
         />
       </div>
