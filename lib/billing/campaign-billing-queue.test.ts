@@ -10,7 +10,10 @@ import {
   type CampaignBillingQueueRow,
 } from "@/lib/billing/campaign-billing-queue";
 import { resolveInvoiceConfirmSelection } from "@/lib/billing/consolidated-invoice-queue";
-import { mergeQueueRollupWithInvoiceLines } from "@/lib/billing/invoice-operational-aggregation";
+import {
+  buildCampaignLinkedInvoiceRollupRows,
+  mergeQueueRollupWithInvoiceLines,
+} from "@/lib/billing/invoice-operational-aggregation";
 import type { OperationalBillingRow } from "@/lib/billing/operational-billing-rows";
 import { countSubmitPayload } from "@/lib/billing/operational-selection";
 
@@ -188,6 +191,157 @@ function testNoEligibleRowsReturnsNull() {
   assert.equal(resolved, null);
 }
 
+/**
+ * FirstCry-shaped relationship: paid/locked non-void invoice linked on the parent
+ * invoice, with commercial totals on the header and no invoice_line_items rows.
+ */
+function testFirstCryHeaderOnlyInvoiceAttributesToCampaign() {
+  const campaignId = "75b7f0d1-54bd-43d0-a199-5f64cc366710";
+  const invoiceId = "2369c9b4-bfdf-4083-aee5-1a6d6805e27e";
+  const attributed = buildCampaignLinkedInvoiceRollupRows(
+    [
+      {
+        id: invoiceId,
+        campaignHeaderId: campaignId,
+        revenue_before_vat: 600_000,
+        subtotal: 600_000,
+      },
+    ],
+    []
+  );
+
+  assert.equal(attributed.length, 1);
+  assert.equal(attributed[0]?.campaignHeaderId, campaignId);
+  assert.equal(attributed[0]?.revenue_before_vat, 600_000);
+
+  const merged = mergeQueueRollupWithInvoiceLines({
+    total_campaign_amount: 600_000,
+    achieved_revenue: 600_000,
+    already_invoiced: 0,
+    remaining_to_invoice: 600_000,
+    unachieved_revenue: 0,
+    billing_status: "draft",
+    invoice_line_invoiced: attributed[0]!.revenue_before_vat,
+  });
+  assert.equal(merged.already_invoiced, 600_000);
+  assert.equal(merged.remaining_to_invoice, 0);
+  assert.equal(merged.billing_status, "invoiced");
+
+  const kept = filterCampaignsWithRemainingInvoiceable([
+    row({
+      campaign_header_id: campaignId,
+      campaign_document_number: "TW-2026-0015",
+      campaign_name: "FirstCry",
+      remaining_to_invoice: merged.remaining_to_invoice,
+      already_invoiced: merged.already_invoiced,
+      billing_status: merged.billing_status,
+      total_campaign_amount: 600_000,
+    }),
+  ]);
+  assert.equal(kept.length, 0);
+}
+
+/** Parent invoice carries campaign link; line items omit campaign_header_id. */
+function testParentInvoiceLinkageAttributesLineItems() {
+  const campaignId = "camp-parent";
+  const attributed = buildCampaignLinkedInvoiceRollupRows(
+    [
+      {
+        id: "inv-1",
+        campaignHeaderId: campaignId,
+        revenue_before_vat: 600_000,
+        subtotal: 600_000,
+      },
+    ],
+    [
+      { id: "li-1", invoice_id: "inv-1", revenue_before_vat: 360_000 },
+      { id: "li-2", invoice_id: "inv-1", revenue_before_vat: 240_000 },
+    ]
+  );
+  assert.equal(attributed.length, 2);
+  assert.equal(
+    attributed.reduce((s, row) => s + row.revenue_before_vat, 0),
+    600_000
+  );
+  assert.ok(attributed.every((row) => row.campaignHeaderId === campaignId));
+}
+
+/** Line items win over header totals — preserves partial / mixed slices. */
+function testLineItemsPreferOverHeaderTotals() {
+  const attributed = buildCampaignLinkedInvoiceRollupRows(
+    [
+      {
+        id: "inv-partial",
+        campaignHeaderId: "camp-1",
+        revenue_before_vat: 1_000_000,
+        subtotal: 1_000_000,
+      },
+    ],
+    [{ id: "li-60", invoice_id: "inv-partial", revenue_before_vat: 600_000 }]
+  );
+  assert.equal(attributed.length, 1);
+  assert.equal(attributed[0]?.revenue_before_vat, 600_000);
+
+  const merged = mergeQueueRollupWithInvoiceLines({
+    total_campaign_amount: 1_000_000,
+    achieved_revenue: 1_000_000,
+    already_invoiced: 0,
+    remaining_to_invoice: 1_000_000,
+    unachieved_revenue: 0,
+    billing_status: "draft",
+    invoice_line_invoiced: 600_000,
+  });
+  assert.equal(merged.already_invoiced, 600_000);
+  assert.equal(merged.remaining_to_invoice, 400_000);
+  assert.equal(merged.billing_status, "partially_invoiced");
+
+  const kept = filterCampaignsWithRemainingInvoiceable([
+    row({
+      remaining_to_invoice: merged.remaining_to_invoice,
+      already_invoiced: merged.already_invoiced,
+      billing_status: merged.billing_status,
+    }),
+  ]);
+  assert.equal(kept.length, 1);
+
+  const mixed = buildCampaignLinkedInvoiceRollupRows(
+    [
+      {
+        id: "inv-a",
+        campaignHeaderId: "camp-mix",
+        revenue_before_vat: null,
+        subtotal: null,
+      },
+      {
+        id: "inv-b",
+        campaignHeaderId: "camp-mix",
+        revenue_before_vat: null,
+        subtotal: null,
+      },
+    ],
+    [
+      { id: "li-100", invoice_id: "inv-a", revenue_before_vat: 100_000 },
+      { id: "li-50", invoice_id: "inv-b", revenue_before_vat: 50_000 },
+    ]
+  );
+  assert.equal(
+    mixed.reduce((s, row) => s + row.revenue_before_vat, 0),
+    150_000
+  );
+
+  const subsequent = mergeQueueRollupWithInvoiceLines({
+    total_campaign_amount: 1_000_000,
+    achieved_revenue: 1_000_000,
+    already_invoiced: 0,
+    remaining_to_invoice: 1_000_000,
+    unachieved_revenue: 0,
+    billing_status: "draft",
+    invoice_line_invoiced: 150_000,
+  });
+  assert.equal(subsequent.remaining_to_invoice, 850_000);
+  assert.equal(subsequent.already_invoiced, 150_000);
+}
+
 function run() {
   testPartialInvoiceIsNotFullyAchieved();
   testFullyInvoicedOnlyWhenRemainingIsGone();
@@ -196,6 +350,9 @@ function run() {
   testUndefinedSelectionUsesConsolidatedFallback();
   testEmptySelectionDoesNotInventRows();
   testNoEligibleRowsReturnsNull();
+  testFirstCryHeaderOnlyInvoiceAttributesToCampaign();
+  testParentInvoiceLinkageAttributesLineItems();
+  testLineItemsPreferOverHeaderTotals();
   console.log("campaign-billing-queue.test.ts: ok");
 }
 

@@ -43,27 +43,94 @@ function addRollupAmount(
   result.set(campaignHeaderId, existing);
 }
 
+export type LinkedInvoiceForRollup = {
+  id: string;
+  campaignHeaderId: string;
+  revenue_before_vat: number | null;
+  subtotal: number | null;
+};
+
+export type LinkedInvoiceLineItemForRollup = {
+  id: string;
+  invoice_id: string;
+  revenue_before_vat: number;
+};
+
+export type CampaignLinkedRollupRow = {
+  id: string;
+  invoice_id: string;
+  campaignHeaderId: string;
+  revenue_before_vat: number;
+};
+
+/**
+ * Attribute billed amounts for campaign-linked invoices.
+ * Prefer non-void `invoice_line_items.revenue_before_vat` when present.
+ * When a linked invoice has no line items (legacy soak headers), use the
+ * invoice commercial header amount (`revenue_before_vat` ?? `subtotal`).
+ * Never invent totals from Paid/Locked/operational status alone.
+ */
+export function buildCampaignLinkedInvoiceRollupRows(
+  invoices: LinkedInvoiceForRollup[],
+  lineItems: LinkedInvoiceLineItemForRollup[]
+): CampaignLinkedRollupRow[] {
+  const linesByInvoice = new Map<string, LinkedInvoiceLineItemForRollup[]>();
+  for (const line of lineItems) {
+    const list = linesByInvoice.get(line.invoice_id) ?? [];
+    list.push(line);
+    linesByInvoice.set(line.invoice_id, list);
+  }
+
+  const rows: CampaignLinkedRollupRow[] = [];
+  for (const invoice of invoices) {
+    const lines = linesByInvoice.get(invoice.id) ?? [];
+    if (lines.length > 0) {
+      for (const line of lines) {
+        rows.push({
+          id: line.id,
+          invoice_id: invoice.id,
+          campaignHeaderId: invoice.campaignHeaderId,
+          revenue_before_vat: roundMoney(Number(line.revenue_before_vat ?? 0)),
+        });
+      }
+      continue;
+    }
+
+    const headerAmount = roundMoney(
+      Number(invoice.revenue_before_vat ?? invoice.subtotal ?? 0)
+    );
+    if (headerAmount <= 0) continue;
+
+    rows.push({
+      id: `invoice-header:${invoice.id}`,
+      invoice_id: invoice.id,
+      campaignHeaderId: invoice.campaignHeaderId,
+      revenue_before_vat: headerAmount,
+    });
+  }
+
+  return rows;
+}
+
 /**
  * Same invoice discovery as `loadOperationalInvoiceLinkage`:
  * invoices.campaign_header_id OR invoices.campaign_id, then line items by invoice_id.
  * Falls back to invoice_line_items.campaign_header_id when the invoice query fails.
+ * When a linked invoice has no line items, attributes header commercial totals.
  */
 async function loadInvoiceLineItemsByCampaignLinkage(
   supabase: SupabaseClient,
   requested: Set<string>
 ): Promise<{
-  rows: Array<{
-    id: string;
-    invoice_id: string;
-    campaignHeaderId: string;
-    revenue_before_vat: number;
-  }>;
+  rows: CampaignLinkedRollupRow[];
   error?: string;
 }> {
   const idList = [...requested].join(",");
   const { data: invoices, error: invoiceError } = await supabase
     .from("invoices")
-    .select("id, campaign_header_id, campaign_id, status, regeneration_status")
+    .select(
+      "id, campaign_header_id, campaign_id, status, regeneration_status, revenue_before_vat, subtotal"
+    )
     .or(`campaign_header_id.in.(${idList}),campaign_id.in.(${idList})`)
     .neq("status", "void");
 
@@ -71,7 +138,7 @@ async function loadInvoiceLineItemsByCampaignLinkage(
     return { rows: [], error: invoiceError.message };
   }
 
-  const invoiceToCampaign = new Map<string, string>();
+  const linkedInvoices: LinkedInvoiceForRollup[] = [];
   for (const invoice of invoices ?? []) {
     const typed = invoice as {
       id: string;
@@ -79,6 +146,8 @@ async function loadInvoiceLineItemsByCampaignLinkage(
       campaign_id: string | null;
       status: string;
       regeneration_status: string | null;
+      revenue_before_vat: number | null;
+      subtotal: number | null;
     };
     if (
       !isActiveInvoiceForFinancialTotals({
@@ -90,10 +159,15 @@ async function loadInvoiceLineItemsByCampaignLinkage(
     }
     const campaignHeaderId = resolveInvoiceCampaignId(typed, requested);
     if (!campaignHeaderId) continue;
-    invoiceToCampaign.set(typed.id, campaignHeaderId);
+    linkedInvoices.push({
+      id: typed.id,
+      campaignHeaderId,
+      revenue_before_vat: typed.revenue_before_vat,
+      subtotal: typed.subtotal,
+    });
   }
 
-  const invoiceIds = [...invoiceToCampaign.keys()];
+  const invoiceIds = linkedInvoices.map((invoice) => invoice.id);
   if (invoiceIds.length === 0) return { rows: [] };
 
   const { data, error } = await supabase
@@ -105,30 +179,20 @@ async function loadInvoiceLineItemsByCampaignLinkage(
     return { rows: [], error: error.message };
   }
 
-  const rows: Array<{
-    id: string;
-    invoice_id: string;
-    campaignHeaderId: string;
-    revenue_before_vat: number;
-  }> = [];
-
-  for (const row of data ?? []) {
+  const lineItems: LinkedInvoiceLineItemForRollup[] = (data ?? []).map((row) => {
     const typed = row as {
       id: string;
       invoice_id: string;
       revenue_before_vat: number;
     };
-    const campaignHeaderId = invoiceToCampaign.get(typed.invoice_id);
-    if (!campaignHeaderId) continue;
-    rows.push({
+    return {
       id: typed.id,
       invoice_id: typed.invoice_id,
-      campaignHeaderId,
       revenue_before_vat: Number(typed.revenue_before_vat ?? 0),
-    });
-  }
+    };
+  });
 
-  return { rows };
+  return { rows: buildCampaignLinkedInvoiceRollupRows(linkedInvoices, lineItems) };
 }
 
 /** Legacy path: line items that already store campaign_header_id. */
@@ -187,7 +251,10 @@ async function loadInvoiceLineItemsByLineCampaignId(
   return { rows };
 }
 
-/** Sum invoice_line_items.revenue_before_vat per campaign (non-void invoices). */
+/**
+ * Sum billed revenue per campaign from non-void active invoices.
+ * Line items first; header commercial totals only when a linked invoice has none.
+ */
 export async function loadCampaignInvoiceLineRollups(
   supabase: SupabaseClient,
   campaignHeaderIds: string[]
