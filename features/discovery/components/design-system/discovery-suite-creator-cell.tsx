@@ -2,10 +2,27 @@
 
 import type { ReactNode } from "react";
 
+import { CountryFlagBadge } from "@/components/creator/country-flag-badge";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
-import { countryFlag } from "@/lib/creators/creator-display-utils";
+import { resolveCountryCode } from "@/lib/creators/country-code";
+import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
 import { ini } from "@/lib/discovery/suite/helpers";
 import { cn } from "@/lib/utils";
+
+/** Search / shortlist / quotation creator photo — larger than pack 46px so the flag overlay reads. */
+const AVATAR_PX = 64;
+const FLAG_PX = 22;
+
+function resolveAvatarCountryCode(
+  countryCodes?: string[] | null,
+  locationLabel?: string | null
+): string | null {
+  for (const raw of countryCodes ?? []) {
+    const code = normalizeCountryCode(resolveCountryCode(raw));
+    if (code) return code;
+  }
+  return normalizeCountryCode(resolveCountryCode(locationLabel));
+}
 
 /** Design pack `avx`: tone cycle `(i % 3) + 1` → default / k2 / k3. */
 export function discoverySuiteAvTone(index: number): "k2" | "k3" | undefined {
@@ -64,9 +81,7 @@ export function DiscoverySuiteCreatorCell({
   className,
   stopPropagation = false,
 }: DiscoverySuiteCreatorCellProps) {
-  const flagEmoji = (countryCodes ?? [])
-    .map((code) => countryFlag(code))
-    .find((emoji): emoji is string => Boolean(emoji));
+  const flagCode = resolveAvatarCountryCode(countryCodes, locationLabel);
   const showLocation =
     Boolean(locationLabel?.trim()) && locationLabel?.trim() !== "—";
   const tone = discoverySuiteAvTone(index);
@@ -80,6 +95,7 @@ export function DiscoverySuiteCreatorCell({
     <span className={cn("tw-cw2", className)}>
       <span
         className={cn("tw-avx relative", tone)}
+        style={{ width: AVATAR_PX, height: AVATAR_PX, fontSize: 20 }}
         aria-hidden
       >
         {/* Clip photo/initials only — keep `.fl` flag outside overflow so pack overlay shows. */}
@@ -98,7 +114,15 @@ export function DiscoverySuiteCreatorCell({
             </span>
           )}
         </span>
-        {flagEmoji ? <span className="fl">{flagEmoji}</span> : null}
+        {flagCode ? (
+          <span className="fl" style={{ width: FLAG_PX, height: FLAG_PX }}>
+            <CountryFlagBadge
+              countryCode={flagCode}
+              size="sm"
+              className="size-full border-0 shadow-none"
+            />
+          </span>
+        ) : null}
       </span>
       <span style={{ minWidth: 0 }}>
         {onOpen ? (
