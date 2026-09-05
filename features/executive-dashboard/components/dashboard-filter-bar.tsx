@@ -14,6 +14,8 @@ import { devLog } from "@/lib/dev-log";
 
 type DashboardFilterBarProps = {
   options: DashboardFilterOptions;
+  /** Pack Home/Executive chrome (`docs/architecture/home-dashboard.html`). */
+  variant?: "default" | "pack";
 };
 
 const STATUS_OPTIONS = [
@@ -24,7 +26,10 @@ const STATUS_OPTIONS = [
   { value: "in_collections", label: "In collections" },
 ] as const;
 
-export function DashboardFilterBar({ options }: DashboardFilterBarProps) {
+export function DashboardFilterBar({
+  options,
+  variant = "default",
+}: DashboardFilterBarProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -56,6 +61,79 @@ export function DashboardFilterBar({ options }: DashboardFilterBarProps) {
   const reset = () => {
     applyState({});
   };
+
+  const isPack = variant === "pack";
+
+  if (isPack) {
+    return (
+      <div className="tw-filters" data-pending={isPending ? "true" : undefined}>
+        <input
+          className="tw-in"
+          type="date"
+          aria-label="From"
+          style={{ width: 150 }}
+          value={state.from ?? ""}
+          onChange={(e) => update({ from: e.target.value || undefined })}
+        />
+        <span className="tw-cs">to</span>
+        <input
+          className="tw-in"
+          type="date"
+          aria-label="To"
+          style={{ width: 150 }}
+          value={state.to ?? ""}
+          onChange={(e) => update({ to: e.target.value || undefined })}
+        />
+        <FilterSelect
+          pack
+          label="All countries"
+          value={state.country ?? "all"}
+          onChange={(v) => update({ country: v === "all" ? undefined : v })}
+          items={[
+            { value: "all", label: "All countries" },
+            ...options.countries.map((c) => ({ value: c, label: c })),
+          ]}
+        />
+        <FilterSelect
+          pack
+          label="All clients"
+          value={state.clientId ?? "all"}
+          onChange={(v) => update({ clientId: v === "all" ? undefined : v })}
+          items={[
+            { value: "all", label: "All clients" },
+            ...options.clients.map((c) => ({ value: c.id, label: c.name })),
+          ]}
+        />
+        <FilterSelect
+          pack
+          label="All brands"
+          value={state.brandId ?? "all"}
+          onChange={(v) => update({ brandId: v === "all" ? undefined : v })}
+          items={[
+            { value: "all", label: "All brands" },
+            ...options.brands.map((b) => ({ value: b.id, label: b.name })),
+          ]}
+        />
+        <FilterSelect
+          pack
+          label="All currencies"
+          value={state.currency ?? "all"}
+          onChange={(v) => update({ currency: v === "all" ? undefined : v })}
+          items={[
+            { value: "all", label: "All currencies" },
+            ...options.currencies.map((c) => ({ value: c, label: c })),
+          ]}
+        />
+        <FilterSelect
+          pack
+          label="All statuses"
+          value={state.campaignStatus ?? "all"}
+          onChange={(v) => update({ campaignStatus: v === "all" ? undefined : v })}
+          items={STATUS_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+        />
+      </div>
+    );
+  }
 
   return (
     <div
@@ -149,12 +227,32 @@ function FilterSelect({
   value,
   onChange,
   items,
+  pack = false,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   items: { value: string; label: string }[];
+  pack?: boolean;
 }) {
+  if (pack) {
+    return (
+      <select
+        className="tw-in"
+        style={{ width: "auto", minWidth: 140 }}
+        aria-label={label}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {items.map((item) => (
+          <option key={item.value} value={item.value}>
+            {item.label}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
   return (
     <div className="platform-v6-dash-filter">
       <label className="platform-v6-df-lbl">{label}</label>

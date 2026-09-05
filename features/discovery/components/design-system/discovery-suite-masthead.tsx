@@ -38,6 +38,18 @@ type DiscoverySuiteMastheadProps = {
    * e.g. quotation `<span className="st r">GP conflict</span>`.
    */
   trailing?: ReactNode;
+  /**
+   * Replaces the default `<h1>{title}</h1>` (Home / Executive page switcher).
+   * When set, `title` is unused in the heading slot.
+   */
+  titleSlot?: ReactNode;
+  /**
+   * Replaces the default Discovery jump row. Use with `hideJump` for in-page
+   * Home / Executive anchors.
+   */
+  jumpSlot?: ReactNode;
+  /** First child of `.tw-mast` (Home identity bar / watermark). */
+  mastLead?: ReactNode;
   className?: string;
   /** Enable scroll → .mini past 64px (spec §4). When false, sticky freeze is off. */
   freezeOnScroll?: boolean;
@@ -74,6 +86,9 @@ export function DiscoverySuiteMasthead({
   actions,
   band,
   trailing,
+  titleSlot,
+  jumpSlot,
+  mastLead,
   className,
   freezeOnScroll = true,
   hideJump = false,
@@ -111,6 +126,7 @@ export function DiscoverySuiteMasthead({
     >
       {top}
       <div className="tw-mast">
+        {mastLead}
         <div className="tw-mh">
           <div
             className="tw-mh__t"
@@ -123,7 +139,7 @@ export function DiscoverySuiteMasthead({
             }}
           >
             {id ? <span className="id">{id}</span> : null}
-            <h1>{title}</h1>
+            {titleSlot ?? <h1>{title}</h1>}
             {badge}
             {subtitle ? <span className="sub">{subtitle}</span> : null}
           </div>
@@ -145,7 +161,7 @@ export function DiscoverySuiteMasthead({
           </div>
         ) : null}
       </div>
-      {hideJump ? null : <DiscoverySuiteJumpNav activeHref={jumpActiveHref} />}
+      {jumpSlot ?? (hideJump ? null : <DiscoverySuiteJumpNav activeHref={jumpActiveHref} />)}
     </div>
   );
 }

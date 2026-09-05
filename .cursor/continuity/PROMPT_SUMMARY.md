@@ -3,6 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-05 — Home & Executive pack dashboard
+
+`/` and `/dashboard` now use the finance-suite pack from `docs/architecture/home-dashboard.html` (mast, page switcher, tiles, two-column cards/grids). Live data from `getHomeDashboardSnapshot` + `loadExecutiveDashboard`. Conflicts only when live figures disagree. Additive CSS: `app/styles/home-dashboard.css`. Frozen `discovery.css` untouched. Billing dirt left uncommitted.
+
 ## Shipped 2026-09-05 — Pack creator-details scrim (platform dim)
 
 Portal host `.tw-cp-root` is a transparent fixed overlay so Search / Shortlist / Quotation stay visible under pack `.tw-scrim` (`rgba(11,15,26,.34)` + 1.5px blur). Opaque `.discovery-suite` page fill was hiding the platform behind the card.
