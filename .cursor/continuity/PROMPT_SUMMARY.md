@@ -3,6 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-06 — Refresh metrics progress circle
+
+Shared `RefreshMetricsProgressCircle` beside Refresh controls and on Search / Shortlist / exact-row cards. Live % from enrichment stage map (queued 18 → collecting 62 → 100); tones Done `#1D9E75` · Failed · Partial. Linger ~5s after terminal. Surfaces: `RefreshCreatorMenu` / `RefreshCreatorButton`, suite rows, shortlist banner. Skipped campaign workspace metrics-sync (different product action). No migrations.
+
 ## Shipped 2026-09-06 — Creator avatars after Refresh metrics
 
 Avatar HTTP proxy no longer 404s low-res CDN / import crops when a profile upgrade is possible — serves usable bytes + `needsRefresh` (mirrors publication-preview). Similar creators rail now passes `avatarUrl`/`profileUrl` through `CreatorAvatarImage`. Client falls back to raw CDN before silhouette. Tests: `npm run test:media-proxy`.

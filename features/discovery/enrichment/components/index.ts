@@ -7,6 +7,8 @@ export { DataSourceBadge, type DataSource } from "./data-source-badge";
 export { EnrichmentStatusBadge } from "./enrichment-status-badge";
 export { RecentPublicationsGallery } from "./recent-publications-gallery";
 export { RefreshCreatorButton } from "./refresh-creator-button";
+export { RefreshCreatorMenu } from "./refresh-creator-menu";
+export { RefreshMetricsProgressCircle } from "./refresh-metrics-progress-circle";
 export { ManualRefreshConfirmDialog } from "./manual-refresh-confirm-dialog";
 export {
   AudienceDemographicsSection,

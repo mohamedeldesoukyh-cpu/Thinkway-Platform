@@ -12,6 +12,8 @@ import {
   DiscoveryCreatorFeedThumbs,
   DiscoveryCreatorPlatformStatsBox,
 } from "@/features/discovery/components/discovery-creator-platform-stats";
+import { RefreshMetricsProgressCircle } from "@/features/discovery/enrichment/components/refresh-metrics-progress-circle";
+import { useRefreshMetricsProgressCircle } from "@/features/discovery/enrichment/use-refresh-metrics-progress-circle";
 import {
   buildDiscoveryCreatorViewModel,
   resolveDiscoveryCreatorMetaLabel,
@@ -84,6 +86,9 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
     platformFilter,
     isApifyAcquired,
     showCampaignRelevance,
+  });
+  const refreshProgress = useRefreshMetricsProgressCircle({
+    enrichmentStatus: creator.enrichment_status,
   });
 
   const stopBubble = (event: { stopPropagation: () => void }) => {
@@ -248,6 +253,11 @@ export const DiscoveryCreatorExactRow = memo(function DiscoveryCreatorExactRow({
           {vm.countryLabel !== "—" ? (
             <div className="discovery-search-exact-handle text-[11px] text-muted-foreground" title={vm.countryLabel}>
               {vm.countryLabel}
+            </div>
+          ) : null}
+          {refreshProgress ? (
+            <div className="mt-1" onClick={stopBubble}>
+              <RefreshMetricsProgressCircle progress={refreshProgress} />
             </div>
           ) : null}
         </div>

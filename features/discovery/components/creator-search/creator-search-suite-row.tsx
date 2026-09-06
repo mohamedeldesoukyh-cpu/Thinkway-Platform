@@ -18,6 +18,8 @@ import {
   DiscoveryCreatorPlatformStatsBox,
 } from "@/features/discovery/components/discovery-creator-platform-stats";
 import { InterestChips } from "@/features/discovery/components/discovery-interest-chips";
+import { RefreshMetricsProgressCircle } from "@/features/discovery/enrichment/components/refresh-metrics-progress-circle";
+import { useRefreshMetricsProgressCircle } from "@/features/discovery/enrichment/use-refresh-metrics-progress-circle";
 import { buildDiscoveryCreatorViewModel } from "@/features/discovery/view-models/discovery-creator-view-model";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { cn } from "@/lib/utils";
@@ -66,6 +68,9 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
     isApifyAcquired,
     showCampaignRelevance: false,
   });
+  const refreshProgress = useRefreshMetricsProgressCircle({
+    enrichmentStatus: creator.enrichment_status,
+  });
 
   const stopBubble = useCallback((event: { stopPropagation: () => void }) => {
     event.stopPropagation();
@@ -98,7 +103,13 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
           locationLabel={vm.countryLabel !== "—" ? vm.countryLabel : null}
           onOpen={onOpenCreator}
           stopPropagation
-        />
+        >
+          {refreshProgress ? (
+            <span className="mt-1 inline-flex" onClick={stopBubble}>
+              <RefreshMetricsProgressCircle progress={refreshProgress} />
+            </span>
+          ) : null}
+        </DiscoverySuiteCreatorCell>
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>

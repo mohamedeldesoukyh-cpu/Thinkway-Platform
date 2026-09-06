@@ -56,6 +56,13 @@
   height: 12px;
 }
 
+/* Compact refresh % circle sits beside pack Refresh control */
+.discovery-suite .tw-cp__h > span:has(.tw-cp__pack-refresh) {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .discovery-suite .tw-cp__b > [data-slot="tabs-content"],
 .discovery-suite .tw-cp__b > [role="tabpanel"] {
   margin-top: 0;

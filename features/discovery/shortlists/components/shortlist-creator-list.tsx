@@ -13,10 +13,12 @@ import {
   DiscoveryCreatorPlatformStatsBox,
 } from "@/features/discovery/components/discovery-creator-platform-stats";
 import { buildDiscoveryCreatorViewModel } from "@/features/discovery/view-models/discovery-creator-view-model";
+import { RefreshMetricsProgressCircle } from "@/features/discovery/enrichment/components/refresh-metrics-progress-circle";
 import {
   isEnrichmentInProgress,
   resolveCreatorEnrichmentStatus,
 } from "@/features/discovery/enrichment/status";
+import { useRefreshMetricsProgressCircle } from "@/features/discovery/enrichment/use-refresh-metrics-progress-circle";
 import { cn } from "@/lib/utils";
 import { ArrowDownIcon, ArrowUpIcon, Link2Icon, UsersIcon } from "lucide-react";
 
@@ -127,6 +129,12 @@ function ShortlistCreatorGridRow({
   const stopBubble = (event: { stopPropagation: () => void }) =>
     event.stopPropagation();
 
+  const enrichmentStatus = resolveCreatorEnrichmentStatus(creator?.enrichment_status);
+  const enriching = isEnrichmentInProgress(enrichmentStatus);
+  const refreshProgress = useRefreshMetricsProgressCircle({
+    enrichmentStatus,
+  });
+
   if (!creator) {
     return (
       <DiscoverySuiteRow selected={selected} className={shortlistCreatorSyncBorderClass("never")}>
@@ -176,8 +184,6 @@ function ShortlistCreatorGridRow({
     );
   }
 
-  const enrichmentStatus = resolveCreatorEnrichmentStatus(creator.enrichment_status);
-  const enriching = isEnrichmentInProgress(enrichmentStatus);
   const vm = buildDiscoveryCreatorViewModel(creator);
   const tier = resolveCreatorTierFromUnified(creator);
   const openCreatorDetail = () => onOpenCreator?.(creator);
@@ -211,7 +217,13 @@ function ShortlistCreatorGridRow({
           locationLabel={vm.countryLabel !== "—" ? vm.countryLabel : null}
           onOpen={openCreatorDetail}
           stopPropagation
-        />
+        >
+          {refreshProgress ? (
+            <span className="mt-1 inline-flex" onClick={stopBubble}>
+              <RefreshMetricsProgressCircle progress={refreshProgress} />
+            </span>
+          ) : null}
+        </DiscoverySuiteCreatorCell>
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>

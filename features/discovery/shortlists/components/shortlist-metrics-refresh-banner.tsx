@@ -1,7 +1,7 @@
 "use client";
 
-import { Loader2Icon } from "lucide-react";
-
+import { batchRefreshProgress } from "@/features/discovery/enrichment/refresh-metrics-progress";
+import { RefreshMetricsProgressCircle } from "@/features/discovery/enrichment/components/refresh-metrics-progress-circle";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -19,6 +19,7 @@ export function ShortlistMetricsRefreshBanner({
 }: Props) {
   const inFlight = Math.max(0, total - completed);
   const done = completed >= total;
+  const progress = batchRefreshProgress({ total, completed, failed });
 
   let message: string;
   if (done) {
@@ -41,9 +42,7 @@ export function ShortlistMetricsRefreshBanner({
         className
       )}
     >
-      {!done ? (
-        <Loader2Icon className="size-3.5 shrink-0 animate-spin" aria-hidden />
-      ) : null}
+      <RefreshMetricsProgressCircle progress={progress} size="md" />
       <span className="font-medium">{message}</span>
       {!done && inFlight > 0 ? (
         <span className="text-sky-700/80 dark:text-sky-300/80">

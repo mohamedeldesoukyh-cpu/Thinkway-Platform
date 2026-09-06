@@ -30,7 +30,9 @@ import {
   type CreatorEnrichmentStatus,
 } from "../status";
 import { useManualRefreshFlow } from "../use-manual-refresh-flow";
+import { useRefreshMetricsProgressCircle } from "../use-refresh-metrics-progress-circle";
 import { ManualRefreshConfirmDialog } from "./manual-refresh-confirm-dialog";
+import { RefreshMetricsProgressCircle } from "./refresh-metrics-progress-circle";
 
 const REFRESH_OPTIONS: Array<{
   scope: EnrichmentScope;
@@ -84,6 +86,10 @@ export function RefreshCreatorMenu({
     onCreatorUpdated,
   });
   const inProgress = isPending || isEnrichmentInProgress(displayStatus);
+  const progress = useRefreshMetricsProgressCircle({
+    enrichmentStatus: displayStatus,
+    isPending,
+  });
 
   useEffect(() => {
     if (!unifiedId || !influencerId) return;
@@ -117,44 +123,47 @@ export function RefreshCreatorMenu({
 
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            size={size}
-            variant={variant}
-            disabled={inProgress}
-            className={cn("gap-1", className)}
-          >
-            {inProgress ? (
-              <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
-            ) : (
-              <RefreshCwIcon aria-hidden />
-            )}
-            {label}
-            <ChevronDownIcon className="opacity-60" aria-hidden />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          {REFRESH_OPTIONS.map((option) => (
-            <DropdownMenuItem
-              key={option.scope}
-              onClick={() =>
-                requestRefresh({
-                  influencerId,
-                  unifiedId,
-                  scope: option.scope,
-                  refreshAction: option.action,
-                  onStatusChange,
-                  onCreatorUpdated,
-                })
-              }
+      <span className="inline-flex items-center gap-1.5">
+        {progress ? <RefreshMetricsProgressCircle progress={progress} /> : null}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              type="button"
+              size={size}
+              variant={variant}
+              disabled={inProgress}
+              className={cn("gap-1", className)}
             >
-              {option.label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+              {inProgress ? (
+                <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
+              ) : (
+                <RefreshCwIcon aria-hidden />
+              )}
+              {label}
+              <ChevronDownIcon className="opacity-60" aria-hidden />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            {REFRESH_OPTIONS.map((option) => (
+              <DropdownMenuItem
+                key={option.scope}
+                onClick={() =>
+                  requestRefresh({
+                    influencerId,
+                    unifiedId,
+                    scope: option.scope,
+                    refreshAction: option.action,
+                    onStatusChange,
+                    onCreatorUpdated,
+                  })
+                }
+              >
+                {option.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </span>
 
       <ManualRefreshConfirmDialog
         open={dialogOpen}

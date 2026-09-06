@@ -17,7 +17,9 @@ import {
   type CreatorEnrichmentStatus,
 } from "../status";
 import { useManualRefreshFlow } from "../use-manual-refresh-flow";
+import { useRefreshMetricsProgressCircle } from "../use-refresh-metrics-progress-circle";
 import { ManualRefreshConfirmDialog } from "./manual-refresh-confirm-dialog";
+import { RefreshMetricsProgressCircle } from "./refresh-metrics-progress-circle";
 
 /**
  * Self-contained "Refresh Creator" control (spec §1/§3, priority 4).
@@ -72,6 +74,10 @@ export function RefreshCreatorButton({
   const displayStatus = resolveCreatorEnrichmentStatus(localStatus ?? enrichmentStatusProp);
   const inProgress = isPending || isEnrichmentInProgress(displayStatus) || isPolling;
   const isCollecting = displayStatus === "running" || (isPending && displayStatus === "queued");
+  const progress = useRefreshMetricsProgressCircle({
+    enrichmentStatus: displayStatus,
+    isPending: isPending || isPolling,
+  });
 
   function beginPoll() {
     if (!unifiedId || pollActiveRef.current) return;
@@ -141,6 +147,7 @@ export function RefreshCreatorButton({
   return (
     <>
       <div className={cn("flex items-center gap-2", className)}>
+        {progress ? <RefreshMetricsProgressCircle progress={progress} /> : null}
         <Button
           type="button"
           size={size}
