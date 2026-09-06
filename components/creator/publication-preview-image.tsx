@@ -65,14 +65,14 @@ export function PublicationPreviewImage({
     src?.trim() ||
     (publication ? creatorRecentPublicationDisplayUrl(publication) : null);
   const recovery = useMediaProxyImageRecovery(resolved);
-  const displaySrc = recovery.displaySrc ?? resolved;
+  const displaySrc = (recovery.displaySrc ?? resolved)?.trim() || null;
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
   }, [displaySrc]);
 
-  if (!resolved || recovery.exhausted) {
+  if (!displaySrc || recovery.exhausted) {
     return (
       <PreviewPlaceholder
         emptyGlyph={emptyGlyph}
