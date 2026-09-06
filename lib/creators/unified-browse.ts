@@ -108,6 +108,14 @@ import {
   requiresDiscoveryAudienceScanPath,
 } from "@/lib/creators/discovery-browse-filters";
 import {
+  accumulateCreatorBrowseFillPage,
+  CREATOR_BROWSE_FILL_BATCH,
+  CREATOR_BROWSE_SPARSE_ZERO_MATCH_WINDOW_LIMIT,
+  creatorBrowseSparseEarlyStopActive,
+  requiresCreatorBrowseCandidateFill,
+  resolveCreatorBrowseFillMaxWindows,
+} from "@/lib/creators/creator-browse-page-fill";
+import {
   browseCandidateQualificationActive,
   qualifyBrowseCandidateIds,
   resolveBrowseCreatorCountryCodes,
@@ -439,7 +447,7 @@ function applyPostBrowseFilters(
   return results;
 }
 
-const DISCOVERY_AUDIENCE_FILTER_BATCH = 100;
+const DISCOVERY_AUDIENCE_FILTER_BATCH = CREATOR_BROWSE_FILL_BATCH;
 
 const INTERNAL_ID_QUERY_BATCH_SIZE = 80;
 
@@ -628,7 +636,7 @@ async function fetchDiscoveryBrowseBatch(
  * `total` matches displayed rows (avoids "5120 matched / 0 loaded").
  *
  * Exhaustion uses raw pool candidate counts (pre Phase 1A qualification), never
- * hydrated/qualified batch length.
+ * hydrated/qualified batch length. Uses the shared Phase 1B-1 fill primitive.
  */
 async function browseDiscoveryAudienceFilteredPage(
   supabase: SupabaseClient,
@@ -638,7 +646,7 @@ async function browseDiscoveryAudienceFilteredPage(
   tracePath: SearchTracePath
 ): Promise<{ creators: UnifiedCreatorResult[]; total: number; has_more: boolean }> {
   const rawTotal = await estimateDiscoveryBrowseRawTotal(supabase, filters, tracePath);
-  const maxBatchPages = Math.max(1, Math.ceil(rawTotal / DISCOVERY_AUDIENCE_FILTER_BATCH) + 2);
+  const maxBatchPages = resolveCreatorBrowseFillMaxWindows(rawTotal);
 
   return accumulateDiscoveryAudienceScanPage({
     page,
@@ -660,6 +668,173 @@ async function browseDiscoveryAudienceFilteredPage(
       return next;
     },
   });
+}
+
+/**
+ * Phase 1B-1 — filtered fast browse page-fill.
+ * Accumulates matching creators across recency windows until targetEnd / raw
+ * exhaustion / fill budget / sparse early-stop. Unfiltered empty-filter browse
+ * must NOT call this.
+ *
+ * Page-1 with no creator-country filter restores the pre–Phase 1B Egypt-priority
+ * candidate pool on window 1 (Egypt IDs first, then global), then continues with
+ * subsequent global recency windows. Global default sort still applies once.
+ */
+async function browseFilteredFastFillPage(
+  supabase: SupabaseClient,
+  filters: UnifiedCreatorBrowseFilters,
+  page: number,
+  pageSize: number,
+  tracePath: SearchTracePath
+): Promise<{ creators: UnifiedCreatorResult[]; total: number; has_more: boolean }> {
+  const rawTotal = await estimateDiscoveryBrowseRawTotal(supabase, filters, tracePath);
+  const maxWindows = resolveCreatorBrowseFillMaxWindows(rawTotal);
+  const pinEgyptOnFirstWindow =
+    resolveBrowseCreatorCountryCodes(filters).length === 0;
+  const seenIds = new Set<string>();
+  const sparseEarlyStop = creatorBrowseSparseEarlyStopActive(filters);
+
+  const filled = await accumulateCreatorBrowseFillPage({
+    page,
+    pageSize,
+    batchSize: CREATOR_BROWSE_FILL_BATCH,
+    maxWindows,
+    sparseZeroMatchWindowLimit: sparseEarlyStop
+      ? CREATOR_BROWSE_SPARSE_ZERO_MATCH_WINDOW_LIMIT
+      : null,
+    fetchWindow: async (windowIndex) => {
+      const orderedIds: string[] = [];
+
+      if (windowIndex === 1 && pinEgyptOnFirstWindow) {
+        const [egyptSettled, globalSettled] = await Promise.allSettled([
+          queryActiveInfluencerIdsByRecencyFast(
+            supabase,
+            { ...filters, country: BROWSE_PIN_PRIORITY_COUNTRY },
+            1,
+            CREATOR_BROWSE_FILL_BATCH
+          ),
+          queryActiveInfluencerIdsByRecencyFast(
+            supabase,
+            filters,
+            1,
+            CREATOR_BROWSE_FILL_BATCH
+          ),
+        ]);
+        const egyptIds =
+          egyptSettled.status === "fulfilled" ? egyptSettled.value.ids : [];
+        const globalBrowse =
+          globalSettled.status === "fulfilled"
+            ? globalSettled.value
+            : { ids: [] as string[], hasMore: false };
+
+        for (const id of [...egyptIds, ...globalBrowse.ids]) {
+          if (seenIds.has(id)) continue;
+          seenIds.add(id);
+          orderedIds.push(id);
+        }
+
+        if (orderedIds.length === 0) {
+          return { creators: [], rawCandidateCount: 0, rawHasMore: false };
+        }
+
+        const hydrated = await fetchInternalCreators(
+          supabase,
+          { ...filters, search: undefined, page: undefined, pageSize: undefined },
+          orderedIds,
+          null,
+          browseHydrationOptionsForFilters(filters, tracePath, { skipDna: true })
+        );
+        const byId = new Map(
+          hydrated
+            .filter((creator) => creator.influencer_id)
+            .map((creator) => [creator.influencer_id as string, creator])
+        );
+        const creators = orderedIds
+          .map((id) => byId.get(id))
+          .filter((creator): creator is UnifiedCreatorResult => creator != null);
+
+        return {
+          creators,
+          rawCandidateCount: orderedIds.length,
+          rawHasMore: globalBrowse.hasMore,
+        };
+      }
+
+      // Later windows: global recency pages. When window 1 was Egypt∪global,
+      // continue at global page === windowIndex (page 2, 3, …).
+      const idPage = await queryActiveInfluencerIdsByRecencyFast(
+        supabase,
+        filters,
+        windowIndex,
+        CREATOR_BROWSE_FILL_BATCH
+      );
+
+      for (const id of idPage.ids) {
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+        orderedIds.push(id);
+      }
+
+      const rawCandidateCount = idPage.ids.length;
+      if (rawCandidateCount === 0) {
+        return { creators: [], rawCandidateCount: 0, rawHasMore: false };
+      }
+      // All IDs in this upstream page were already seen — treat as empty progress
+      // but preserve rawHasMore so exhaustion stays honest.
+      if (orderedIds.length === 0) {
+        return {
+          creators: [],
+          rawCandidateCount,
+          rawHasMore: idPage.hasMore,
+        };
+      }
+
+      const hydrated = await fetchInternalCreators(
+        supabase,
+        { ...filters, search: undefined, page: undefined, pageSize: undefined },
+        orderedIds,
+        null,
+        browseHydrationOptionsForFilters(filters, tracePath, { skipDna: true })
+      );
+      const byId = new Map(
+        hydrated
+          .filter((creator) => creator.influencer_id)
+          .map((creator) => [creator.influencer_id as string, creator])
+      );
+      const creators = orderedIds
+        .map((id) => byId.get(id))
+        .filter((creator): creator is UnifiedCreatorResult => creator != null);
+
+      return {
+        creators,
+        rawCandidateCount,
+        rawHasMore: idPage.hasMore,
+      };
+    },
+    applyFilters: (creators) => applyPostBrowseFilters(creators, filters, tracePath),
+    sort: (creators) => sortBrowseCreatorsInDefaultOrder(creators),
+  });
+
+  searchTrace(
+    "5c_filtered_fast_fill",
+    {
+      page,
+      pageSize,
+      pinEgyptOnFirstWindow,
+      sparseEarlyStop,
+      ...filled.meta,
+      returned: filled.creators.length,
+      has_more: filled.has_more,
+      total: filled.total,
+    },
+    { path: tracePath }
+  );
+
+  return {
+    creators: filled.creators,
+    total: filled.total,
+    has_more: filled.has_more,
+  };
 }
 
 /** Prefer platform account photo; fall back through avatar_url chain when missing/broken. */
@@ -1990,6 +2165,32 @@ export async function browseUnifiedCreators(
     }
 
     if (includeInternal || includeDiscovery) {
+      // Phase 1B-1: when server filters can shrink a page window, accumulate
+      // matching creators across candidate windows. Empty filters MUST stay on
+      // the slim unfiltered fast path below (no fill, no extras).
+      if (includeInternal && requiresCreatorBrowseCandidateFill(filters)) {
+        perf?.span("filtered_fast_browse_fill");
+        const filled = await browseFilteredFastFillPage(
+          supabase,
+          filters,
+          page,
+          pageSize,
+          tracePath
+        );
+        perf?.span("serialization");
+        const result = {
+          creators: slimRecentPublicationsForBrowse(filled.creators),
+          total: filled.total,
+          has_more: filled.has_more,
+          page,
+          pageSize,
+          internal_count: filled.creators.filter((c) => c.influencer_id).length,
+          discovery_count: 0,
+        };
+        perf?.end();
+        return traceBrowseUnifiedResult(result, tracePath, filters, settings);
+      }
+
       // Production statement_timeout is ~8s. The recency RPC's count(*) OVER () plus
       // sequential Egypt-60 then global-120 hydration regularly cancels unfiltered
       // Creator Search. First paint: one page of IDs, skip DNA, skip catalog counts.

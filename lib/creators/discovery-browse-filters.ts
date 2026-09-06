@@ -4,6 +4,10 @@ import { resolveCountryCode } from "@/lib/creators/country-code";
 import {
   resolveCreatorCountryCodes,
 } from "@/lib/creators/country-inference";
+import {
+  accumulateCreatorBrowseFillPage,
+  isCreatorBrowseRawWindowExhausted,
+} from "@/lib/creators/creator-browse-page-fill";
 import type { UnifiedCreatorBrowseFilters, UnifiedCreatorResult } from "@/lib/creators/types";
 import {
   audienceFilterFromSearchFields,
@@ -262,7 +266,7 @@ export function isDiscoveryAudienceRawPoolExhausted(
   rawCandidateCount: number,
   batchSize: number
 ): boolean {
-  return rawCandidateCount < batchSize;
+  return isCreatorBrowseRawWindowExhausted({ rawCandidateCount, batchSize });
 }
 
 export type DiscoveryAudienceScanBatch<T extends { unified_id: string }> = {
@@ -279,8 +283,7 @@ export type DiscoveryAudienceScanPageResult<T extends { unified_id: string }> = 
 };
 
 /**
- * Pure audience-scan loop with injectable batch fetch — used by production
- * browse and regression tests so exhaustion accounting stays identical.
+ * Audience-scan page fill — thin adapter over the shared Phase 1B-1 primitive.
  */
 export async function accumulateDiscoveryAudienceScanPage<
   T extends { unified_id: string },
@@ -293,50 +296,19 @@ export async function accumulateDiscoveryAudienceScanPage<
   applyFilters: (creators: T[]) => T[];
   sort: (creators: T[]) => T[];
 }): Promise<DiscoveryAudienceScanPageResult<T>> {
-  const {
-    page,
-    pageSize,
-    batchSize,
-    maxBatchPages,
-    fetchBatch,
-    applyFilters,
-    sort,
-  } = options;
-
-  const filtered: T[] = [];
-  let batchPage = 1;
-  let rawExhausted = false;
-  const targetEnd = page * pageSize;
-
-  while (filtered.length < targetEnd && !rawExhausted && batchPage <= maxBatchPages) {
-    const batch = await fetchBatch(batchPage);
-    // Empty raw pool ⇒ exhausted. Empty hydrated/qualified results with a full
-    // raw pool must NOT stop the scan (Phase 1A may zero a full page).
-    if (batch.rawCandidateCount === 0) {
-      rawExhausted = true;
-      break;
-    }
-    filtered.push(...applyFilters(batch.creators));
-    if (isDiscoveryAudienceRawPoolExhausted(batch.rawCandidateCount, batchSize)) {
-      rawExhausted = true;
-    }
-    batchPage += 1;
-  }
-
-  const uniqueFiltered = [...new Map(filtered.map((c) => [c.unified_id, c])).values()];
-  const sorted = sort(uniqueFiltered);
-  const offset = (page - 1) * pageSize;
-  const pageCreators = sorted.slice(offset, offset + pageSize);
-  const hasMoreInWindow = offset + pageCreators.length < sorted.length;
-  const has_more = hasMoreInWindow || !rawExhausted;
-  const total = rawExhausted
-    ? sorted.length
-    : Math.max(sorted.length, offset + pageCreators.length + (has_more ? 1 : 0));
-
+  const result = await accumulateCreatorBrowseFillPage({
+    page: options.page,
+    pageSize: options.pageSize,
+    batchSize: options.batchSize,
+    maxWindows: options.maxBatchPages,
+    fetchWindow: options.fetchBatch,
+    applyFilters: options.applyFilters,
+    sort: options.sort,
+  });
   return {
-    creators: pageCreators,
-    total,
-    has_more,
+    creators: result.creators,
+    total: result.total,
+    has_more: result.has_more,
   };
 }
 
