@@ -7,6 +7,8 @@ import { cn } from "@/lib/utils";
 type AssignmentCreatorCellProps = {
   name: string;
   avatarUrl?: string | null;
+  /** External social profile URL — enables avatar proxy OpenGraph fallback. */
+  profileUrl?: string | null;
   handle?: string | null;
   onClick?: () => void;
   className?: string;
@@ -16,6 +18,7 @@ type AssignmentCreatorCellProps = {
 export function AssignmentCreatorCell({
   name,
   avatarUrl,
+  profileUrl,
   handle,
   onClick,
   className,
@@ -25,7 +28,12 @@ export function AssignmentCreatorCell({
 
   const inner = (
     <>
-      <CreatorThumbAvatar name={displayName} avatarUrl={avatarUrl} size={26} />
+      <CreatorThumbAvatar
+        name={displayName}
+        avatarUrl={avatarUrl}
+        profileUrl={profileUrl}
+        size={26}
+      />
       <span className="min-w-0">
         <b className="block truncate text-[12.5px] font-semibold leading-tight">{displayName}</b>
         {handleLabel ? (

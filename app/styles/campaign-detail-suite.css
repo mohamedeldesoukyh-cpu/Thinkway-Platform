@@ -1701,6 +1701,40 @@
   border: 2.5px solid rgba(255, 255, 255, 0.5);
   font: 700 26px Geist, sans-serif;
   margin-bottom: 13px;
+  overflow: hidden;
+  padding: 0;
+  color: #fff;
+}
+
+.campaign-detail-creator-modal .tw-cm__av > * {
+  width: 100%;
+  height: 100%;
+  border: none !important;
+  border-radius: 50%;
+  background: transparent !important;
+}
+
+.campaign-detail-creator-modal .tw-cm__name-btn {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.campaign-detail-creator-modal .tw-cm__name-btn:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.campaign-detail-creator-modal .tw-cm__name-btn:disabled {
+  cursor: progress;
+  opacity: 0.85;
 }
 
 .campaign-detail-creator-modal .tw-cm__l h2 {

@@ -702,7 +702,20 @@ export function AssignmentSafeGrid({
                           {line.influencer_name || row.displayName ? (
                             <AssignmentCreatorCell
                               name={line.influencer_name ?? row.displayName}
-                              avatarUrl={line.creator_avatar_url}
+                              avatarUrl={
+                                line.creator_avatar_url ??
+                                line.influencer_avatar_url ??
+                                line.creator_profile_image_url
+                              }
+                              profileUrl={
+                                line.creator_platform_accounts.find((account) =>
+                                  Boolean(account.profile_url?.trim())
+                                )?.profile_url ??
+                                line.assignment?.platforms.find((platform) =>
+                                  Boolean(platform.profile_url?.trim())
+                                )?.profile_url ??
+                                null
+                              }
                               handle={resolveAssignmentPrimaryHandle(line)}
                               onClick={
                                 onOpenInfluencerDetail

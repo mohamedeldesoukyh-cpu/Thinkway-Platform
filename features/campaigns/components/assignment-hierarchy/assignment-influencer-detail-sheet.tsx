@@ -2,8 +2,9 @@
 
 import Link from "next/link";
 import { MoreHorizontalIcon, PencilIcon } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { resolveStatusTone } from "@/components/shared/status/status-utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -20,6 +21,8 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentNumber } from "@/components/ui/document-number";
+import { getUnifiedCreatorsBatchAction } from "@/features/campaigns/creator-discovery-actions";
+import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import { ASSIGNMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import { deliverableLabel } from "@/features/campaigns/line-assignment";
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
@@ -40,6 +43,7 @@ import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience
 import { resolveAssignmentsGridGates } from "@/lib/campaigns/assignments-grid-gates";
 import { formatMoney, formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
+import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { cn } from "@/lib/utils";
 import "@/app/styles/campaign-detail-suite.css";
 
@@ -456,6 +460,10 @@ export function AssignmentInfluencerDetailSheet({
   onEdit,
 }: AssignmentInfluencerDetailSheetProps) {
   const gates = resolveAssignmentsGridGates(audienceView);
+  const [avatarFailed, setAvatarFailed] = useState(false);
+  const [profileCreator, setProfileCreator] = useState<UnifiedCreatorResult | null>(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [profileLoading, setProfileLoading] = useState(false);
 
   const handle = useMemo(
     () => (group ? resolveAssignmentPrimaryHandle(group.line) : ""),
@@ -481,7 +489,40 @@ export function AssignmentInfluencerDetailSheet({
   const gp = row?.rollups.gp ?? revenue - cost;
   const margin = row?.rollups.margin_percent ?? (revenue > 0 ? (gp / revenue) * 100 : 0);
 
+  const creatorAvatarUrl =
+    line?.creator_avatar_url?.trim() ||
+    line?.influencer_avatar_url?.trim() ||
+    line?.creator_profile_image_url?.trim() ||
+    null;
+  const creatorProfileUrl =
+    platformAccounts.find((account) => Boolean(account.profile_url?.trim()))?.profile_url ??
+    line?.assignment?.platforms.find((platform) => Boolean(platform.profile_url?.trim()))
+      ?.profile_url ??
+    null;
+
+  const lineId = line?.id ?? null;
+  const influencerId = line?.influencer_id ?? null;
+
+  useEffect(() => {
+    setAvatarFailed(false);
+  }, [lineId, creatorAvatarUrl, creatorProfileUrl]);
+
+  const openCreatorProfile = useCallback(async () => {
+    if (!influencerId || profileLoading) return;
+    setProfileLoading(true);
+    try {
+      const rows = await getUnifiedCreatorsBatchAction([`inf:${influencerId}`]);
+      const creator = rows[0] ?? null;
+      if (!creator) return;
+      setProfileCreator(creator);
+      setProfileOpen(true);
+    } finally {
+      setProfileLoading(false);
+    }
+  }, [influencerId, profileLoading]);
+
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
@@ -507,9 +548,33 @@ export function AssignmentInfluencerDetailSheet({
               <div className="cr">
                 {campaignName} / {line.document_number || handle}
               </div>
-              <div className="tw-cm__av">{initialsFromName(creatorName)}</div>
+              <div className="tw-cm__av">
+                {creatorAvatarUrl && !avatarFailed ? (
+                  <CreatorAvatarImage
+                    avatarUrl={creatorAvatarUrl}
+                    profileUrl={creatorProfileUrl}
+                    alt={creatorName}
+                    sizeClassName="size-full"
+                    className="border-0 bg-transparent"
+                    onFailed={() => setAvatarFailed(true)}
+                  />
+                ) : (
+                  initialsFromName(creatorName)
+                )}
+              </div>
               <h2>
-                {creatorName}
+                {influencerId ? (
+                  <button
+                    type="button"
+                    className="tw-cm__name-btn"
+                    onClick={() => void openCreatorProfile()}
+                    disabled={profileLoading}
+                  >
+                    {creatorName}
+                  </button>
+                ) : (
+                  creatorName
+                )}
                 <span className="vf" aria-hidden>
                   ✓
                 </span>
@@ -580,9 +645,12 @@ export function AssignmentInfluencerDetailSheet({
                           Edit assignment
                         </DropdownMenuItem>
                       ) : null}
-                      {line.influencer_id ? (
-                        <DropdownMenuItem asChild>
-                          <Link href={`/vendors/${line.influencer_id}`}>Creator profile</Link>
+                      {influencerId ? (
+                        <DropdownMenuItem
+                          disabled={profileLoading}
+                          onClick={() => void openCreatorProfile()}
+                        >
+                          Creator profile
                         </DropdownMenuItem>
                       ) : null}
                     </DropdownMenuContent>
@@ -636,9 +704,16 @@ export function AssignmentInfluencerDetailSheet({
                     Open vendor IO
                   </Button>
                 )}
-                {line.influencer_id ? (
-                  <Button asChild variant="outline" size="sm" className="tw-b sm">
-                    <Link href={`/vendors/${line.influencer_id}`}>Creator profile</Link>
+                {influencerId ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="tw-b sm"
+                    disabled={profileLoading}
+                    onClick={() => void openCreatorProfile()}
+                  >
+                    {profileLoading ? "Opening…" : "Creator profile"}
                   </Button>
                 ) : null}
                 <span className="tw-sp" />
@@ -662,5 +737,16 @@ export function AssignmentInfluencerDetailSheet({
         )}
       </SheetContent>
     </Sheet>
+
+    <CreatorDetailSheet
+      creator={profileCreator}
+      open={profileOpen && profileCreator != null}
+      onOpenChange={(nextOpen) => {
+        setProfileOpen(nextOpen);
+        if (!nextOpen) setProfileCreator(null);
+      }}
+      presentation="discoveryPack"
+    />
+    </>
   );
 }

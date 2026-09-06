@@ -1,7 +1,6 @@
 "use client";
 
-import { useMediaProxyImageRecovery } from "@/hooks/use-media-proxy-image-recovery";
-import { creatorRecentPublicationDisplayUrl } from "@/lib/creators/recent-publication-thumb";
+import { PublicationPreviewImage } from "@/components/creator/publication-preview-image";
 import type {
   CreatorRecentPublication,
   UnifiedCreatorResult,
@@ -46,23 +45,12 @@ function platformMark(platform: string | null): { cls: string; label: string } {
 }
 
 function FeedThumb({ publication }: { publication: CreatorRecentPublication }) {
-  const src = creatorRecentPublicationDisplayUrl(publication);
-  const recovery = useMediaProxyImageRecovery(src);
-
-  if (!src || recovery.exhausted) {
-    return <div className="tw-thumb" aria-hidden />;
-  }
-
   return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      key={recovery.displaySrc ?? src}
-      src={recovery.displaySrc ?? src}
-      alt=""
-      referrerPolicy="no-referrer"
-      loading="lazy"
+    <PublicationPreviewImage
+      publication={publication}
       className="tw-thumb object-cover"
-      onError={recovery.onError}
+      placeholderClassName="tw-thumb"
+      emptyGlyph=""
     />
   );
 }

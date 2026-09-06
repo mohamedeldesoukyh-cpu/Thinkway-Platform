@@ -2,6 +2,7 @@
 
 import type { ReactNode } from "react";
 
+import { PublicationPreviewImage } from "@/components/creator/publication-preview-image";
 import { TabsContent } from "@/components/ui/tabs";
 import { RefreshCreatorMenu } from "@/features/discovery/enrichment/components/refresh-creator-menu";
 import { platformLabel } from "@/lib/campaigns/line-assignment";
@@ -154,12 +155,7 @@ function PackPublicationCard({ pub }: { pub: CreatorRecentPublication }) {
   const body = (
     <>
       <div className="im">
-        {pub.thumbnail ? (
-          // eslint-disable-next-line @next/next/no-img-element -- remote CDN thumbs vary
-          <img src={pub.thumbnail} alt="" />
-        ) : (
-          "▣"
-        )}
+        <PublicationPreviewImage publication={pub} emptyGlyph="▣" />
       </div>
       <div className="tx">
         <p>{pub.caption?.trim() || "Untitled publication"}</p>

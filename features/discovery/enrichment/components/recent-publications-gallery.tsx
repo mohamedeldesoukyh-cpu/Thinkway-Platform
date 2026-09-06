@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
-import { ExternalLinkIcon, HeartIcon, ImageIcon, MessageCircleIcon, PlayIcon } from "lucide-react";
+import { ExternalLinkIcon, HeartIcon, MessageCircleIcon, PlayIcon } from "lucide-react";
 
-import { creatorRecentPublicationDisplayUrl } from "@/lib/creators/recent-publication-thumb";
+import { PublicationPreviewImage } from "@/components/creator/publication-preview-image";
 import type { CreatorRecentPublication } from "@/lib/creators/types";
 import { cn } from "@/lib/utils";
 
@@ -27,44 +26,6 @@ function captionSnippet(caption: string | null | undefined): string {
   return trimmed.length > 90 ? `${trimmed.slice(0, 87)}…` : trimmed;
 }
 
-function PublicationThumbnail({
-  thumbnailUrl,
-  className,
-}: {
-  thumbnailUrl: string | null;
-  className?: string;
-}) {
-  const [failed, setFailed] = useState(false);
-
-  if (!thumbnailUrl || failed) {
-    return (
-      <div
-        className={cn(
-          "flex size-full flex-col items-center justify-center gap-1.5 bg-muted/30 text-muted-foreground",
-          className
-        )}
-      >
-        <ImageIcon className="size-5 opacity-60" aria-hidden />
-      </div>
-    );
-  }
-
-  return (
-    // eslint-disable-next-line @next/next/no-img-element
-    <img
-      src={thumbnailUrl}
-      alt=""
-      referrerPolicy="no-referrer"
-      className={cn("size-full object-cover transition-transform group-hover:scale-[1.02]", className)}
-      loading="lazy"
-      onError={(event) => {
-        event.currentTarget.onerror = null;
-        setFailed(true);
-      }}
-    />
-  );
-}
-
 function PublicationCard({
   publication,
   variant,
@@ -74,7 +35,6 @@ function PublicationCard({
   variant: "default" | "drawer";
   imageHeightClass?: string;
 }) {
-  const thumbnailUrl = creatorRecentPublicationDisplayUrl(publication);
   const isDrawer = variant === "drawer";
 
   const content = isDrawer ? (
@@ -85,7 +45,7 @@ function PublicationCard({
           imageHeightClass ?? "h-[120px]"
         )}
       >
-        <PublicationThumbnail thumbnailUrl={thumbnailUrl} />
+        <PublicationPreviewImage publication={publication} />
         {publication.url ? (
           <span className="absolute right-2 top-2 rounded-full bg-background/80 p-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
             <ExternalLinkIcon className="size-3" aria-hidden />
@@ -118,7 +78,10 @@ function PublicationCard({
   ) : (
     <>
       <div className="relative aspect-square overflow-hidden bg-muted">
-        <PublicationThumbnail thumbnailUrl={thumbnailUrl} />
+        <PublicationPreviewImage
+          publication={publication}
+          imgClassName="transition-transform group-hover:scale-[1.02]"
+        />
         {publication.url ? (
           <span className="absolute right-2 top-2 rounded-full bg-background/80 p-1 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100">
             <ExternalLinkIcon className="size-3" aria-hidden />
@@ -201,11 +164,7 @@ export function RecentPublicationsGallery({
     <div className={cn(gridClass, className)}>
       {items.map((publication, index) => (
         <PublicationCard
-          key={
-            publication.url ??
-            creatorRecentPublicationDisplayUrl(publication) ??
-            `pub-${index}`
-          }
+          key={publication.url ?? publication.posted_at ?? `pub-${index}`}
           publication={publication}
           variant={variant}
           imageHeightClass={imageHeightClass}
