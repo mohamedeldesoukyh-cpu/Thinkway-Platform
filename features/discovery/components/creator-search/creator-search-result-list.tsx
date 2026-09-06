@@ -35,6 +35,7 @@ import {
   type CreatorSearchToolbarControlsProps,
 } from "./creator-search-top-bar";
 import type { CreatorSearchSortState } from "./creator-search-types";
+import { resolveDiscoveryLoadMoreRoot } from "./creator-search-load-more-root";
 
 const ROW_ESTIMATE = 92;
 const SECTION_ESTIMATE = 52;
@@ -242,38 +243,60 @@ export function CreatorSearchResultList({
   }, [loadingMore]);
 
   useEffect(() => {
-    const root = scrollRef.current;
+    const listScroll = scrollRef.current;
     const sentinel = loadMoreSentinelRef.current;
-    if (!root || !sentinel || error || !hasMore || !hasCreators) return;
+    if (!listScroll || !sentinel || error || !hasMore || !hasCreators) return;
 
+    const tryLoadMore = () => {
+      if (!hasMore || loading || loadingMore || loadMoreLockedRef.current) return;
+      loadMoreLockedRef.current = true;
+      onLoadMore();
+    };
+
+    // Prefer the list scroller; when flex height breaks and the app shell scrolls
+    // instead, bind IO + scroll to that ancestor so load-more still fires.
+    const root = resolveDiscoveryLoadMoreRoot(listScroll);
     const observer = new IntersectionObserver(
       (entries) => {
-        if (
-          !entries[0]?.isIntersecting ||
-          !hasMore ||
-          loading ||
-          loadingMore ||
-          loadMoreLockedRef.current
-        ) {
-          return;
-        }
-        loadMoreLockedRef.current = true;
-        onLoadMore();
+        if (!entries[0]?.isIntersecting) return;
+        tryLoadMore();
       },
-      { root, rootMargin: "160px 0px", threshold: 0 }
+      { root, rootMargin: "240px 0px", threshold: 0 }
     );
     observer.observe(sentinel);
-    return () => observer.disconnect();
-  }, [error, hasCreators, hasMore, loading, loadingMore, onLoadMore]);
+
+    const scrollTarget: Element | Window = root ?? window;
+    const onScroll = () => {
+      const rootEl = root;
+      if (rootEl instanceof HTMLElement) {
+        const remaining =
+          rootEl.scrollHeight - rootEl.scrollTop - rootEl.clientHeight;
+        if (remaining <= 240) tryLoadMore();
+        return;
+      }
+      const doc = document.documentElement;
+      const remaining = doc.scrollHeight - window.scrollY - window.innerHeight;
+      if (remaining <= 240) tryLoadMore();
+    };
+    scrollTarget.addEventListener("scroll", onScroll, { passive: true });
+    // First paint: short pages must page forward without waiting for a scroll.
+    onScroll();
+
+    return () => {
+      observer.disconnect();
+      scrollTarget.removeEventListener("scroll", onScroll);
+    };
+  }, [error, hasCreators, hasMore, loading, loadingMore, onLoadMore, creators.length]);
+  const totalLabel = `${total.toLocaleString()}${hasMore ? "+" : ""}`;
   const exactMatchesCountLabel = showExactMatchesZeroHeader
     ? `Exact Matches — ${total.toLocaleString()} creator${total === 1 ? "" : "s"}`
     : undefined;
 
   return (
     <div className="discovery-suite discovery-search-exact-root flex min-h-0 flex-1 flex-col">
-      <div className="tw-c mb-0 rounded-b-none">
+      <div className="tw-c mb-0 shrink-0 rounded-b-none">
         <div className="tw-ch">
-          <span className="tw-ct">Creators · {total.toLocaleString()}</span>
+          <span className="tw-ct">Creators · {totalLabel}</span>
           <span className="tw-cs">
             click a name for the full profile — same panel as the shortlist
           </span>
@@ -286,7 +309,7 @@ export function CreatorSearchResultList({
             allSelected={allSelected}
             hasCreators={hasCreators}
             onToggleSelectAll={onToggleSelectAll}
-            countLabel={exactMatchesCountLabel}
+            countLabel={exactMatchesCountLabel ?? `${totalLabel} creators`}
           />
         </div>
         {inFlightCount > 0 && onStopAllRefresh ? (
@@ -304,7 +327,11 @@ export function CreatorSearchResultList({
         ) : null}
       </div>
 
-      <div ref={scrollRef} className="discovery-search-exact-scroll min-h-0 flex-1 overflow-auto">
+      <div
+        ref={scrollRef}
+        data-discovery-scroll
+        className="discovery-search-exact-scroll min-h-0 flex-1 overflow-auto"
+      >
         {error ? (
           <DiscoveryEmptyState
             title="Search failed"

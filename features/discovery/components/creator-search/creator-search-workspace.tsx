@@ -2026,15 +2026,35 @@ export function CreatorSearchWorkspace({
         .map((c) => c.country_code ?? c.estimated_country)
         .filter((value): value is string => Boolean(value?.trim()))
     ).size;
+    const showLowerBound =
+      hasMore && !isExactCreatorSearch && !aiModeActive && headerTotal > 0;
+    const creatorsValue = showLowerBound
+      ? `${headerTotal.toLocaleString()}+`
+      : headerTotal;
     const metrics: Array<{ label: string; value: string | number; tone?: "g" | "r" | "y" | "s" }> = [
-      { label: "Creators", value: headerTotal },
+      { label: "Creators", value: creatorsValue },
       { label: "Selected", value: selectedCreators.length },
     ];
     if (platformCount > 0) metrics.push({ label: "Platforms", value: platformCount });
     if (countryCount > 0) metrics.push({ label: "Countries", value: countryCount });
     if (shortlists.length > 0) metrics.push({ label: "Lists", value: shortlists.length });
     return metrics;
-  }, [displayCreators, headerTotal, selectedCreators.length, shortlists.length]);
+  }, [
+    aiModeActive,
+    displayCreators,
+    hasMore,
+    headerTotal,
+    isExactCreatorSearch,
+    selectedCreators.length,
+    shortlists.length,
+  ]);
+
+  const headerTotalBadge = useMemo(() => {
+    const showLowerBound =
+      hasMore && !isExactCreatorSearch && !aiModeActive && headerTotal > 0;
+    const count = `${headerTotal.toLocaleString()}${showLowerBound ? "+" : ""}`;
+    return `${count} creator${headerTotal === 1 && !showLowerBound ? "" : "s"}`;
+  }, [aiModeActive, hasMore, headerTotal, isExactCreatorSearch]);
 
   return (
     <div className="discovery-suite flex h-full min-h-0 flex-col overflow-hidden bg-[var(--tw-bg)]">
@@ -2044,7 +2064,7 @@ export function CreatorSearchWorkspace({
           subtitle="Browse, filter and shortlist creators across every connected platform"
           badge={
             <span className="st">
-              {headerTotal.toLocaleString()} creator{headerTotal === 1 ? "" : "s"}
+              {headerTotalBadge}
             </span>
           }
           metrics={searchMastheadMetrics}
@@ -2130,53 +2150,57 @@ export function CreatorSearchWorkspace({
           onEditStrategy={() => setStrategySheetOpen(true)}
         />
       ) : (
-        <CreatorSearchActiveFilters
-          filters={filters}
-          search={debouncedSearch}
-          onChange={setFilters}
-          onClearSearch={handleClearSearch}
-          onClearAll={clearAllFilters}
-        />
+        <div className="shrink-0">
+          <CreatorSearchActiveFilters
+            filters={filters}
+            search={debouncedSearch}
+            onChange={setFilters}
+            onClearSearch={handleClearSearch}
+            onClearAll={clearAllFilters}
+          />
+        </div>
       )}
 
       {backfillStatus ? (
-        <p className="border-b border-border/60 bg-muted/40 px-4 py-2 text-sm text-muted-foreground">
+        <p className="shrink-0 border-b border-border/60 bg-muted/40 px-4 py-2 text-sm text-muted-foreground">
           {backfillStatus}
         </p>
       ) : null}
 
-      <CreatorSearchBulkBar
-        selectedCount={selectedCreators.length}
-        selectedCreators={selectedCreators}
-        onClearSelection={clearCreatorSelection}
-        onAddToList={handleBulkAddToList}
-        onCreateList={() => setCreateListOpen(true)}
-        onCompare={handleBulkCompare}
-        onExport={handleBulkExport}
-        onShare={handleBulkShare}
-        onGenerateQuotation={handleGenerateQuotation}
-        onRefreshMetrics={handleBulkRefreshMetrics}
-        onStopRefresh={handleBulkStopRefresh}
-        stopRefreshDisabled={selectedInFlightCreators.length === 0}
-        onSelectAllShown={handleToggleSelectAll}
-        selectableCount={displayCreators.length}
-        onAiMatch={() => {
-          if (selectedCreators.length === 0) {
-            toast.info("Select creators, then run AI Match from AI Analyst");
-            return;
-          }
-          toast.info(
-            <span>
-              Open{" "}
-              <Link href="/ai" className="font-semibold underline">
-                AI Analyst
-              </Link>{" "}
-              to match {selectedCreators.length} selected creator(s)
-            </span>
-          );
-        }}
-        busy={isPending}
-      />
+      <div className="shrink-0">
+        <CreatorSearchBulkBar
+          selectedCount={selectedCreators.length}
+          selectedCreators={selectedCreators}
+          onClearSelection={clearCreatorSelection}
+          onAddToList={handleBulkAddToList}
+          onCreateList={() => setCreateListOpen(true)}
+          onCompare={handleBulkCompare}
+          onExport={handleBulkExport}
+          onShare={handleBulkShare}
+          onGenerateQuotation={handleGenerateQuotation}
+          onRefreshMetrics={handleBulkRefreshMetrics}
+          onStopRefresh={handleBulkStopRefresh}
+          stopRefreshDisabled={selectedInFlightCreators.length === 0}
+          onSelectAllShown={handleToggleSelectAll}
+          selectableCount={displayCreators.length}
+          onAiMatch={() => {
+            if (selectedCreators.length === 0) {
+              toast.info("Select creators, then run AI Match from AI Analyst");
+              return;
+            }
+            toast.info(
+              <span>
+                Open{" "}
+                <Link href="/ai" className="font-semibold underline">
+                  AI Analyst
+                </Link>{" "}
+                to match {selectedCreators.length} selected creator(s)
+              </span>
+            );
+          }}
+          busy={isPending}
+        />
+      </div>
 
       <div
         className={cn(

@@ -139,7 +139,10 @@ assert.ok(DISCOVERY_PLATFORMS.includes("linkedin"), "7: LinkedIn in platforms");
 assert.ok(FIELDS.includes("previewCount={4}"), "7: platform preview 4 → expand for FB/Snap/LI");
 
 assert.ok(ADD.includes("unenriched"), "add-missing: unenriched note in dialog");
-assert.ok(ADD.includes("metrics follow on the next sync"), "add-missing: next sync wording");
+assert.ok(
+  ADD.replace(/\s+/g, " ").includes("metrics follow on the next sync"),
+  "add-missing: next sync wording"
+);
 
 for (const id of [
   "stop-refresh",
@@ -160,6 +163,35 @@ assert.ok(BULK.includes("active brief"), "10: AI Match description");
 assert.ok(BULK.includes("Reach") && BULK.includes("Platforms") && BULK.includes("Avg engagement"), "flyout trio");
 
 assert.ok(FLYOUT.includes("Select all {selectableCount} shown"), "11: Select all N shown");
+
+assert.ok(
+  LIST.includes("resolveDiscoveryLoadMoreRoot"),
+  "pagination: load-more root resolver (shell vs list scroller)"
+);
+assert.ok(
+  LIST.includes("data-discovery-scroll"),
+  "pagination: list marks data-discovery-scroll"
+);
+assert.ok(
+  LIST.includes("totalLabel") && LIST.includes("hasMore ? \"+\" : \"\""),
+  "pagination: lower-bound total shows + while hasMore"
+);
+assert.ok(
+  WORKSPACE.includes("headerTotalBadge") && WORKSPACE.includes("showLowerBound"),
+  "pagination: masthead badge uses lower-bound + while paging"
+);
+const UNIFIED = fs.readFileSync(
+  path.join(ROOT, "lib/creators/unified-browse.ts"),
+  "utf8"
+);
+assert.ok(
+  UNIFIED.includes("queryActiveInfluencerIdsByRecencyFast"),
+  "pagination: unfiltered browse uses fast ID path"
+);
+assert.ok(
+  !/page,\s*\n\s*pageSize \+ 1/.test(UNIFIED),
+  "pagination: must not double-probe with pageSize+1 (offsets page 2)"
+);
 
 console.log("05-search acceptance — checks passed");
 console.log(

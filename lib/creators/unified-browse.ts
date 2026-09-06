@@ -1832,16 +1832,35 @@ export async function browseUnifiedCreators(
             browsePageOptions
           )
         : Promise.resolve<UnifiedCreatorResult[]>([]);
+      // Fast ID path already probes +1 internally — do not pass pageSize+1 here or
+      // page offsets drift (page 2 skips a row) and has_more becomes unreliable.
       const internalPromise = includeInternal
-        ? fetchInternalCreatorsBrowsePage(
-            supabase,
-            filters,
-            page,
-            pageSize + 1,
-            tracePath,
-            browsePageOptions
-          )
-        : Promise.resolve<UnifiedCreatorResult[]>([]);
+        ? (async () => {
+            const browse = await queryActiveInfluencerIdsByRecencyFast(
+              supabase,
+              filters,
+              page,
+              pageSize
+            );
+            if (browse.ids.length === 0) {
+              return { creators: [] as UnifiedCreatorResult[], hasMore: browse.hasMore };
+            }
+            const creators = await fetchInternalCreators(
+              supabase,
+              { ...filters, search: undefined, page: undefined, pageSize: undefined },
+              browse.ids,
+              null,
+              { omitHeavyFields: true, skipDna: true, tracePath }
+            );
+            const order = new Map(browse.ids.map((id, index) => [id, index]));
+            creators.sort(
+              (a, b) =>
+                (order.get(a.influencer_id ?? "") ?? Number.MAX_SAFE_INTEGER) -
+                (order.get(b.influencer_id ?? "") ?? Number.MAX_SAFE_INTEGER)
+            );
+            return { creators, hasMore: browse.hasMore };
+          })()
+        : Promise.resolve({ creators: [] as UnifiedCreatorResult[], hasMore: false });
 
       const [egyptSettled, internalSettled] = await Promise.allSettled([
         egyptPromise,
@@ -1852,14 +1871,15 @@ export async function browseUnifiedCreators(
       }
       const priorityInternal =
         egyptSettled.status === "fulfilled" ? egyptSettled.value : [];
-      const internalMain =
-        internalSettled.status === "fulfilled" ? internalSettled.value : [];
+      const internalPage =
+        internalSettled.status === "fulfilled"
+          ? internalSettled.value
+          : { creators: [] as UnifiedCreatorResult[], hasMore: false };
 
       perf?.span("merge");
-      const hasMoreFromProbe = includeInternal && internalMain.length > pageSize;
-      const internalForPage = internalMain.slice(0, pageSize);
+      const hasMoreFromProbe = includeInternal && internalPage.hasMore;
       let merged = dedupeUnifiedCreatorsById(
-        [...priorityInternal, ...internalForPage],
+        [...priorityInternal, ...internalPage.creators],
         tracePath
       );
       merged = applyPostBrowseFilters(merged, filters, tracePath);
@@ -1870,6 +1890,7 @@ export async function browseUnifiedCreators(
       perf?.span("serialization");
       const result = {
         creators: slimRecentPublicationsForBrowse(pageCreators),
+        // Lower bound while paging — UI suffixes "+" when has_more is true.
         total: offset + pageCreators.length + (hasMoreFromProbe ? 1 : 0),
         has_more: hasMoreFromProbe,
         page,
