@@ -49,6 +49,8 @@ const NONE_VALUE = "__none__";
 
 type NewVendorDialogProps = {
   currencyOptions: { value: string; label: string }[];
+  triggerClassName?: string;
+  triggerLabel?: string;
 };
 
 function FieldError({ messages }: { messages?: string[] }) {
@@ -59,7 +61,11 @@ function FieldError({ messages }: { messages?: string[] }) {
   return <p className="text-xs text-destructive">{messages[0]}</p>;
 }
 
-export function NewVendorDialog({ currencyOptions }: NewVendorDialogProps) {
+export function NewVendorDialog({
+  currencyOptions,
+  triggerClassName = "platform-v6-btn platform-v6-btn-primary",
+  triggerLabel = "+ New creator",
+}: NewVendorDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [status, setStatus] = useState("prospect");
@@ -150,9 +156,9 @@ export function NewVendorDialog({ currencyOptions }: NewVendorDialogProps) {
       }}
     >
       <DialogTrigger asChild>
-        <button type="button" className="platform-v6-btn platform-v6-btn-primary">
+        <button type="button" className={triggerClassName}>
           <PlusIcon className="size-3.5" aria-hidden />
-          New Creator
+          {triggerLabel}
         </button>
       </DialogTrigger>
       <DialogContent className="max-h-[min(90vh,840px)] overflow-y-auto sm:max-w-2xl">

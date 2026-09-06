@@ -46,7 +46,7 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
     id: "document_number",
     label: "Vendor #",
     renderCell: (vendor) => (
-      <Link href={vendorDetailPath({ ...vendor, name: vendor.display_name })} className="platform-v6-link">
+      <Link href={vendorDetailPath({ ...vendor, name: vendor.display_name })} className="tw-id">
         <DocumentNumber value={vendor.document_number} />
       </Link>
     ),
@@ -62,22 +62,26 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
         size="sm"
         showHandle={false}
         stopPropagation
-        nameClassName="font-medium text-foreground"
+        nameClassName="tw-nm"
+        nameHref={vendorDetailPath({ ...vendor, name: vendor.display_name })}
       />
     ),
   },
   {
     id: "agency",
     label: "Agency",
-    renderCell: (vendor) => (
-      <span className="platform-v6-c-gray">{vendor.legal_name ?? "—"}</span>
-    ),
+    renderCell: (vendor) =>
+      vendor.legal_name?.trim() ? (
+        <span className="tw-t">{vendor.legal_name}</span>
+      ) : (
+        <span className="tw-miss">none</span>
+      ),
   },
   {
     id: "platforms",
     label: "Platforms",
     renderCell: (vendor) => (
-      <span className="platform-v6-c-blue">{formatPlatformsSummary(vendor.platform_accounts)}</span>
+      <span className="tw-t">{formatPlatformsSummary(vendor.platform_accounts)}</span>
     ),
   },
   {
@@ -86,43 +90,53 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
     headerClassName: "text-right",
     amountCell: true,
     renderCell: (vendor) => (
-      <span className="platform-v6-num font-medium">
+      <span className="tw-v">
         {formatFollowers(getTotalFollowers(vendor.platform_accounts))}
       </span>
     ),
   },
   {
     id: "assignments",
-    label: "Assignments",
+    label: "Assign.",
     headerClassName: "text-right",
     amountCell: true,
     renderCell: (vendor) => (
-      <span className="platform-v6-num">{vendor.assignment_count}</span>
+      <span className={`tw-v${vendor.assignment_count ? "" : " z"}`}>{vendor.assignment_count}</span>
     ),
   },
   {
     id: "niche",
     label: "Niche",
-    renderCell: (vendor) => (
-      <span className="block max-w-[140px] truncate text-[11px] text-muted-foreground">
-        {formatCategoriesList(vendor.categories)}
-      </span>
-    ),
+    renderCell: (vendor) => {
+      const label = formatCategoriesList(vendor.categories);
+      if (!label || label === "—") {
+        return <span className="tw-miss">not set</span>;
+      }
+      return (
+        <span className="tw-t block max-w-[170px] truncate" title={label}>
+          {label}
+        </span>
+      );
+    },
   },
   {
     id: "pricing",
     label: "Pricing",
     headerClassName: "text-right",
     amountCell: true,
-    renderCell: (vendor) => (
-      <span className="platform-v6-c-gray">{formatPricing(vendor.rate_card)}</span>
-    ),
+    renderCell: (vendor) => {
+      const pricing = formatPricing(vendor.rate_card);
+      if (!pricing || pricing === "—") {
+        return <span className="tw-miss">no rate</span>;
+      }
+      return <span className="tw-v">{pricing}</span>;
+    },
   },
   {
     id: "crm_status",
     label: "CRM",
     renderCell: (vendor) => (
-      <span className="text-[11px] font-medium capitalize text-foreground">
+      <span className="tw-t capitalize">
         {vendor.crm_status?.replace(/_/g, " ") ??
           (vendor.has_commercial_profile ? "incomplete" : "—")}
       </span>
@@ -133,13 +147,18 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
     label: "Complete",
     headerClassName: "text-right",
     amountCell: true,
-    renderCell: (vendor) => (
-      <span className="platform-v6-num">
-        {typeof vendor.completeness_score === "number"
-          ? `${Math.round(vendor.completeness_score)}%`
-          : "—"}
-      </span>
-    ),
+    renderCell: (vendor) => {
+      if (typeof vendor.completeness_score !== "number") {
+        return <span className="tw-miss">—</span>;
+      }
+      const pct = Math.round(vendor.completeness_score);
+      return (
+        <span className={`tw-rdy2${pct ? "" : " z"}`} style={{ ["--p" as string]: `${pct}%` }}>
+          <i />
+          <b>{pct}%</b>
+        </span>
+      );
+    },
   },
   {
     id: "status",
@@ -149,16 +168,26 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
   {
     id: "country",
     label: "Country",
-    renderCell: (vendor) =>
-      formatVendorCountryLabels(vendor.country_codes, vendor.country_code),
-    cellClassName: "text-muted-foreground",
+    renderCell: (vendor) => {
+      const label = formatVendorCountryLabels(vendor.country_codes, vendor.country_code);
+      if (label === "—") return <span className="tw-miss">not set</span>;
+      return (
+        <span className="tw-t" title={label}>
+          {label}
+        </span>
+      );
+    },
   },
   {
     id: "actions",
-    label: "Actions",
+    label: "Act",
     locked: true,
     headerClassName: "text-right",
-    renderCell: (vendor) => <VendorRowActions vendor={vendor} />,
+    renderCell: (vendor) => (
+      <span className="tw-act">
+        <VendorRowActions vendor={vendor} />
+      </span>
+    ),
     cellClassName: "text-right",
   },
 ];

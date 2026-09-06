@@ -1,6 +1,5 @@
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PlatformV6Page, PlatformV6PageHeader } from "@/components/platform/platform-v6-layout";
 import { AddFromDiscoveryToCrmDialog } from "@/features/vendors/components/new-commercial-creator-dialog";
 import { NewVendorDialog } from "@/features/vendors/components/new-vendor-dialog";
 import { VendorsListSection } from "@/features/vendors/components/vendors-list-section";
@@ -87,47 +86,47 @@ export default async function VendorsPage({ searchParams }: VendorsPageProps) {
   const hasFilters = Boolean(search || status || platform);
   const meta =
     (total === 1 ? "1 creator" : `${total} creators`) +
-    (crmOnly ? " in Commercial CRM" : " (full identity inventory)") +
-    (hasFilters ? " matching filters" : "");
+    (crmOnly ? " in the CRM" : " (full identity inventory)") +
+    (vendors.length > 0 ? ` · ${vendors.length} on this page` : "") +
+    (hasFilters ? " · matching filters" : "");
 
   return (
-    <DashboardShell title="Commercial CRM" platformV6>
-      <PlatformV6Page>
-        <PlatformV6PageHeader
-          inline
-          title="Commercial CRM"
-          description={
-            crmOnly
-              ? "Creators with an active commercial relationship — Discovery stays separate until converted."
-              : "Full identity inventory (Commercial CRM filter temporarily off)."
-          }
-          actions={
-            <div className="flex flex-wrap items-center gap-2">
-              <AddFromDiscoveryToCrmDialog />
-              <NewVendorDialog currencyOptions={currencyOptions} />
+    <DashboardShell
+      title="Commercial CRM"
+      hidePageHeader
+      platformV6
+      containedMain
+      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+    >
+      <VendorsListSection
+        vendors={vendors}
+        total={total}
+        meta={meta}
+        hasFilters={hasFilters}
+        page={list.page}
+        totalPages={totalPages}
+        search={search}
+        status={status || undefined}
+        platform={platform || undefined}
+        crmOnly={crmOnly}
+        headerActions={
+          <>
+            <AddFromDiscoveryToCrmDialog triggerClassName="tw-b sm" />
+            <NewVendorDialog
+              currencyOptions={currencyOptions}
+              triggerClassName="tw-b sm pri"
+              triggerLabel="+ New creator"
+            />
+          </>
+        }
+        errorSlot={
+          errorMessage ? (
+            <div className="border-b px-4 py-3">
+              <PageAlert>{errorMessage}</PageAlert>
             </div>
-          }
-        />
-
-        <VendorsListSection
-          vendors={vendors}
-          meta={meta}
-          hasFilters={hasFilters}
-          page={list.page}
-          totalPages={totalPages}
-          search={search}
-          status={status || undefined}
-          platform={platform || undefined}
-          crmOnly={crmOnly}
-          errorSlot={
-            errorMessage ? (
-              <div className="border-b px-4 py-3">
-                <PageAlert>{errorMessage}</PageAlert>
-              </div>
-            ) : null
-          }
-        />
-      </PlatformV6Page>
+          ) : null
+        }
+      />
     </DashboardShell>
   );
 }

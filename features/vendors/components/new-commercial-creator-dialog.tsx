@@ -1,6 +1,5 @@
 "use client";
 
-import { UserPlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -32,7 +31,11 @@ type IdentityHit = {
 const convertInitial: FormActionState & { vendorId?: string } = { ok: false };
 
 /** Add existing Discovery/identity creators into Commercial CRM (no duplicate identity). */
-export function AddFromDiscoveryToCrmDialog() {
+export function AddFromDiscoveryToCrmDialog({
+  triggerClassName = "tw-b sm",
+}: {
+  triggerClassName?: string;
+} = {}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
@@ -73,10 +76,9 @@ export function AddFromDiscoveryToCrmDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm" variant="outline" className="gap-1.5">
-          <UserPlusIcon className="size-3.5" />
+        <button type="button" className={triggerClassName}>
           From Discovery
-        </Button>
+        </button>
       </DialogTrigger>
       <DialogContent className="max-w-lg">
         <DialogHeader>
