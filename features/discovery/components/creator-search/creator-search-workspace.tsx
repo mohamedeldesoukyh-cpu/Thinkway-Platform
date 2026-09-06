@@ -1113,10 +1113,15 @@ export function CreatorSearchWorkspace({
         });
 
         const serverPageEmpty = result.creators.length === 0;
-        const nextHasMore =
+        let nextHasMore =
           useAiRelevance || showAcquiredOnly || (append && serverPageEmpty)
             ? false
             : (result.has_more ?? pageNum * PAGE_SIZE < result.total);
+        // Phase 0: client-only filters can empty a server page. Stop load-more
+        // rather than spinning empty pages; Phase 1 adds page-fill.
+        if (clientOnlyActive && append && filtered.length === 0) {
+          nextHasMore = false;
+        }
         setHasMore(nextHasMore);
 
         pagesLoadedRef.current = append
@@ -2173,6 +2178,11 @@ export function CreatorSearchWorkspace({
     setStrategySheetOpen(false);
   }, [activeProfile, aiCriteria, applyAiProfileFilters]);
 
+  const clientOnlyFiltersActive = useMemo(
+    () => !aiModeActive && hasClientOnlyCreatorSearchFilters(filters),
+    [aiModeActive, filters]
+  );
+
   const searchMastheadMetrics = useMemo(() => {
     const platformCount = new Set(
       displayCreators.flatMap((c) => c.platforms.map((p) => p.platform))
@@ -2183,7 +2193,10 @@ export function CreatorSearchWorkspace({
         .filter((value): value is string => Boolean(value?.trim()))
     ).size;
     const showLowerBound =
-      hasMore && !isExactCreatorSearch && !aiModeActive && headerTotal > 0;
+      headerTotal > 0 &&
+      !isExactCreatorSearch &&
+      !aiModeActive &&
+      (hasMore || clientOnlyFiltersActive);
     const creatorsValue = showLowerBound
       ? `${headerTotal.toLocaleString()}+`
       : headerTotal;
@@ -2197,6 +2210,7 @@ export function CreatorSearchWorkspace({
     return metrics;
   }, [
     aiModeActive,
+    clientOnlyFiltersActive,
     displayCreators,
     hasMore,
     headerTotal,
@@ -2207,10 +2221,13 @@ export function CreatorSearchWorkspace({
 
   const headerTotalBadge = useMemo(() => {
     const showLowerBound =
-      hasMore && !isExactCreatorSearch && !aiModeActive && headerTotal > 0;
+      headerTotal > 0 &&
+      !isExactCreatorSearch &&
+      !aiModeActive &&
+      (hasMore || clientOnlyFiltersActive);
     const count = `${headerTotal.toLocaleString()}${showLowerBound ? "+" : ""}`;
     return `${count} creator${headerTotal === 1 && !showLowerBound ? "" : "s"}`;
-  }, [aiModeActive, hasMore, headerTotal, isExactCreatorSearch]);
+  }, [aiModeActive, clientOnlyFiltersActive, hasMore, headerTotal, isExactCreatorSearch]);
 
   return (
     <div className="discovery-suite flex h-full min-h-0 flex-col overflow-hidden bg-[var(--tw-bg)]">

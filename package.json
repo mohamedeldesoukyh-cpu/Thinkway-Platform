@@ -140,6 +140,7 @@
     "measure:media-proxy": "npx tsx scripts/measure-media-proxy.ts",
     "test:media-proxy-client-recovery": "npx tsx lib/creators/media-proxy-client-recovery.test.ts",
     "test:browse-hydration": "npx tsx lib/creators/unified-browse-browse-hydration.test.ts",
+    "test:creator-search-filter-truth": "npx tsx --test features/discovery/components/creator-search/creator-search-filter-truth.test.ts lib/creators/discovery-browse-filters.test.ts features/discovery/components/creator-search/creator-search-client-filters.test.ts lib/creators/creator-search-filter-truth.test.ts",
     "test:media-proxy": "npx tsx lib/creators/media-proxy-cache.test.ts && npx tsx lib/creators/creator-avatar-proxy.test.ts && npx tsx lib/creators/publication-preview-proxy.test.ts",
     "test:profile-url": "npx tsx lib/discovery/profile-url.test.ts",
     "test:discovery-shortlist-policy": "npx tsx features/discovery/shortlists/shortlist-policy.test.ts",

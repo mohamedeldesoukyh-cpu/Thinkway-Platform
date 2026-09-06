@@ -6,6 +6,7 @@ import {
   applyDiscoveryBrowseFilters,
   creatorMatchesDiscoveryBrowseFilters,
   hasDiscoveryAudienceBrowseFilters,
+  requiresDiscoveryAudienceScanPath,
 } from "@/lib/creators/discovery-browse-filters";
 import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
 
@@ -56,6 +57,16 @@ test("hasDiscoveryAudienceBrowseFilters detects audience chips", () => {
     hasDiscoveryAudienceBrowseFilters({ audienceInterestTags: ["Beauty"] }),
     true
   );
+});
+
+test("requiresDiscoveryAudienceScanPath excludes gender/age-only filters", () => {
+  assert.equal(requiresDiscoveryAudienceScanPath({ audienceGender: "female" }), false);
+  assert.equal(
+    requiresDiscoveryAudienceScanPath({ audienceAgeMin: "25", audienceAgeMax: "34" }),
+    false
+  );
+  assert.equal(requiresDiscoveryAudienceScanPath({ audienceCountries: ["AE"] }), true);
+  assert.equal(requiresDiscoveryAudienceScanPath({ contentLanguages: ["ar"] }), true);
 });
 
 test("creatorMatchesDiscoveryBrowseFilters enforces audience interest tags", () => {
@@ -181,4 +192,21 @@ test("creatorMatchesDiscoveryBrowseFilters uses enriched demographics for gender
 
   assert.equal(creatorMatchesDiscoveryBrowseFilters(match, filters), true);
   assert.equal(creatorMatchesDiscoveryBrowseFilters(miss, filters), false);
+});
+
+test("creatorMatchesDiscoveryBrowseFilters excludes missing demographics for gender", () => {
+  const filters: UnifiedCreatorBrowseFilters = { audienceGender: "female" };
+  const missing = makeCreator({
+    unified_id: "inf:missing-demo",
+    audience_demographics: null,
+  });
+  assert.equal(creatorMatchesDiscoveryBrowseFilters(missing, filters), false);
+});
+
+test("creatorMatchesDiscoveryBrowseFilters excludes empty language_codes when languages set", () => {
+  const filters: UnifiedCreatorBrowseFilters = { languages: ["ar"] };
+  const empty = makeCreator({ unified_id: "inf:no-lang", language_codes: [] });
+  const arabic = makeCreator({ unified_id: "inf:ar", language_codes: ["ar"] });
+  assert.equal(creatorMatchesDiscoveryBrowseFilters(empty, filters), false);
+  assert.equal(creatorMatchesDiscoveryBrowseFilters(arabic, filters), true);
 });

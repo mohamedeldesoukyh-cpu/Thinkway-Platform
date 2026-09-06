@@ -88,15 +88,15 @@ assert.ok(
 assert.ok(FIELDS.includes("168") || true, "3: engagement unclamped (live data / stats component)");
 assert.ok(FIELDS.includes("Or set a custom range below."), "8: follower hint pack wording");
 assert.ok(
-  FIELDS.includes("Requires enriched audience age distribution (future backend filter)."),
+  FIELDS.includes("Creators without audience age distribution data are excluded when an age"),
   "8: age-range honesty"
 );
 assert.ok(
-  FIELDS.includes("Applied when audience demographic data is available on the creator."),
+  FIELDS.includes("Creators without audience gender data are excluded when a gender is"),
   "8: gender honesty"
 );
 assert.ok(
-  FIELDS.includes("Filters creators with synced recent publication dates when available."),
+  FIELDS.includes("Uses synced publication dates only. Creators without a known post date are"),
   "8: last-post honesty"
 );
 

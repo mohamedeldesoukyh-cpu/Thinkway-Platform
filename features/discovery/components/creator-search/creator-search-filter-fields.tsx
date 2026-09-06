@@ -299,6 +299,7 @@ function RangeRow({
   minPlaceholder = "Min",
   maxPlaceholder = "Max",
   type = "text",
+  disabled = false,
 }: {
   min: string;
   max: string;
@@ -307,15 +308,18 @@ function RangeRow({
   minPlaceholder?: string;
   maxPlaceholder?: string;
   type?: "text" | "number";
+  disabled?: boolean;
 }) {
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn("flex items-center gap-2", disabled && "opacity-60")}>
       <FilterInput
         value={min}
         onChange={(e) => onMinChange(e.target.value)}
         placeholder={minPlaceholder}
         type={type}
         className="flex-1"
+        disabled={disabled}
+        aria-disabled={disabled || undefined}
       />
       <span className="shrink-0 text-xs text-[#94a3b8]">—</span>
       <FilterInput
@@ -324,6 +328,8 @@ function RangeRow({
         placeholder={maxPlaceholder}
         type={type}
         className="flex-1"
+        disabled={disabled}
+        aria-disabled={disabled || undefined}
       />
     </div>
   );
@@ -711,7 +717,8 @@ export function LastPostField({ filters, onChange }: FieldProps) {
         ))}
       </FilterSelect>
       <FieldHint>
-        Filters creators with synced recent publication dates when available.
+        Uses synced publication dates only. Creators without a known post date are
+        excluded when a window is selected.
       </FieldHint>
     </FieldGroup>
   );
@@ -733,20 +740,23 @@ export function BrandSafetyField({ filters, onChange }: FieldProps) {
 }
 
 export function CommercialPricingField({ filters, onChange }: FieldProps) {
+  // Phase 0: rate_card is not Search-indexed — keep control visible but disabled.
+  void onChange;
   return (
     <>
       <FieldGroup label="Pricing range (USD)" className="mt-0">
         <RangeRow
           min={filters.minEstimatedCost}
           max={filters.maxEstimatedCost}
-          onMinChange={(value) =>
-            onChange({ ...filters, minEstimatedCost: value })
-          }
-          onMaxChange={(value) =>
-            onChange({ ...filters, maxEstimatedCost: value })
-          }
+          onMinChange={() => {}}
+          onMaxChange={() => {}}
           type="number"
+          disabled
         />
+        <FieldHint>
+          Unavailable — creator rate cards are not indexed for Search yet. Pricing
+          filters will return when a reliable commercial rate source is ready.
+        </FieldHint>
       </FieldGroup>
       <FieldGroup label="Exclusivity">
         <div className="flex flex-wrap gap-1.5">
@@ -1096,7 +1106,8 @@ export function AudienceField({ filters, onChange }: FieldProps) {
           ))}
         </FilterSelect>
         <FieldHint>
-          Applied when audience demographic data is available on the creator.
+          Creators without audience gender data are excluded when a gender is
+          selected.
         </FieldHint>
       </FieldGroup>
 
@@ -1129,7 +1140,8 @@ export function AudienceField({ filters, onChange }: FieldProps) {
           </FilterSelect>
         </div>
         <FieldHint>
-          Requires enriched audience age distribution (future backend filter).
+          Creators without audience age distribution data are excluded when an age
+          range is selected.
         </FieldHint>
       </FieldGroup>
 

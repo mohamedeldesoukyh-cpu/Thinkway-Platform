@@ -9,6 +9,7 @@ import {
   audienceFilterFromSearchFields,
   hasAnyAudienceFilter,
   matchesAudienceFilter,
+  type AgeGroupKey,
 } from "@/features/discovery/enrichment/audience-filters";
 import type { AudienceDemographics } from "@/features/discovery/enrichment/components/audience-demographics-section";
 
@@ -69,6 +70,10 @@ function matchesAudienceInterestTags(
   return tags.some((tag) => hay.includes(tag.trim().toLowerCase()));
 }
 
+/**
+ * Phase 0 truth: when gender/age filters are active, missing demographic data
+ * must NOT match. (Sparse passthrough in audience-filters.ts remains for scoring.)
+ */
 function matchesDemographicFilters(
   creator: UnifiedCreatorResult,
   filters: UnifiedCreatorBrowseFilters
@@ -81,8 +86,29 @@ function matchesDemographicFilters(
   if (!hasAnyAudienceFilter(demographicFilter)) return true;
 
   const demographics = creator.audience_demographics;
-  if (!demographics) return true;
-  return matchesAudienceFilter(demographics, demographicFilter);
+  if (!demographics) return false;
+
+  if (demographicFilter.genderMinShare) {
+    const share = demographics.gender[demographicFilter.genderMinShare.gender];
+    if (share == null || share < demographicFilter.genderMinShare.min) {
+      return false;
+    }
+  }
+
+  if (demographicFilter.ageGroup) {
+    const entries = Object.entries(demographics.age) as Array<[AgeGroupKey, number | null]>;
+    let best: AgeGroupKey | null = null;
+    let bestVal = -1;
+    for (const [key, value] of entries) {
+      if (value != null && value > bestVal) {
+        bestVal = value;
+        best = key;
+      }
+    }
+    if (best == null || best !== demographicFilter.ageGroup) return false;
+  }
+
+  return true;
 }
 
 function matchesCreatorCountries(
@@ -96,17 +122,35 @@ function matchesCreatorCountries(
   return targets.some((code) => creatorCodes.includes(code));
 }
 
+/**
+ * OR within the selected language group. Missing / empty language_codes do not
+ * match when the user has selected languages (no invented language data).
+ */
 function matchesLanguageCodes(
   creator: UnifiedCreatorResult,
   languages: string[]
 ): boolean {
   if (languages.length === 0) return true;
-  const codes = creator.language_codes.map((code) => code.trim().toLowerCase()).filter(Boolean);
+  const codes = (creator.language_codes ?? [])
+    .map((code) => code.trim().toLowerCase())
+    .filter(Boolean);
   if (codes.length === 0) return false;
   return languages.some((lang) => {
     const needle = lang.trim().toLowerCase();
+    if (!needle) return false;
     return codes.some((code) => code === needle || code.includes(needle));
   });
+}
+
+/** True when creator avg views meets minViews; null views never qualify. */
+export function creatorMatchesMinViews(
+  creator: UnifiedCreatorResult,
+  minViews: number | null | undefined
+): boolean {
+  if (minViews == null) return true;
+  const views = creator.metrics?.avg_views?.value;
+  if (views == null) return false;
+  return views >= minViews;
 }
 
 /** True when Discovery UI audience / interest chips require post-hydration filtering. */
@@ -119,6 +163,23 @@ export function hasDiscoveryAudienceBrowseFilters(
     Boolean(filters.audienceGender?.trim()) ||
     Boolean(filters.audienceAgeMin?.trim()) ||
     Boolean(filters.audienceAgeMax?.trim()) ||
+    (filters.creatorCountries?.length ?? 0) > 1 ||
+    (filters.languages?.length ?? 0) > 1 ||
+    (filters.contentLanguages?.length ?? 0) > 0
+  );
+}
+
+/**
+ * Gender/age are enforced via conditional hydrate + post-filter on the normal
+ * page path (Phase 0). Do not force the full-catalog audience scan for them —
+ * sparse demographics would otherwise scan for tens of seconds and return empty.
+ */
+export function requiresDiscoveryAudienceScanPath(
+  filters: UnifiedCreatorBrowseFilters
+): boolean {
+  return (
+    (filters.audienceCountries?.length ?? 0) > 0 ||
+    (filters.audienceInterestTags?.length ?? 0) > 0 ||
     (filters.creatorCountries?.length ?? 0) > 1 ||
     (filters.languages?.length ?? 0) > 1 ||
     (filters.contentLanguages?.length ?? 0) > 0

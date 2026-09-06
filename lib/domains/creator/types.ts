@@ -218,6 +218,11 @@ export type UnifiedCreatorBrowseFilters = {
   audienceGender?: string;
   audienceAgeMin?: string;
   audienceAgeMax?: string;
+  /**
+   * Last publication window (`7d` | `30d` | …). Requires `posted_at` on recent
+   * publications; missing dates exclude the creator.
+   */
+  lastPostWithin?: string;
   /** Release 1.2 — intent signals for coverage evaluation on AI browse path. */
   coverageIntent?: {
     country?: string;

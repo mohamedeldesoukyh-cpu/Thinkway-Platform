@@ -101,8 +101,15 @@ import {
 } from "@/lib/creators/discovery-browse-pool";
 import {
   applyDiscoveryBrowseFilters,
+  creatorMatchesMinViews,
   hasDiscoveryAudienceBrowseFilters,
+  requiresDiscoveryAudienceScanPath,
 } from "@/lib/creators/discovery-browse-filters";
+import { creatorMatchesLastPostWithin } from "@/lib/creators/creator-last-post-filter";
+import {
+  resolveBrowseHydrationExtras,
+  type BrowseHydrationExtras,
+} from "@/lib/creators/creator-search-filter-truth";
 import { audienceDemographicsFromInfluencer } from "@/features/discovery/enrichment/adapters";
 import {
   applyDataFreshnessFlags,
@@ -275,7 +282,7 @@ async function fetchInternalCreatorsBrowsePage(
     { ...filters, search: undefined, page: undefined, pageSize: undefined },
     ids,
     null,
-    { omitHeavyFields: true, skipDna, tracePath }
+    browseHydrationOptionsForFilters(filters, tracePath, { skipDna })
   );
 
   const order = new Map(ids.map((id, index) => [id, index]));
@@ -379,6 +386,26 @@ function applyPostBrowseFilters(
     results = next;
   }
 
+  if (filters.minViews != null) {
+    const next = results.filter((creator) =>
+      creatorMatchesMinViews(creator, filters.minViews)
+    );
+    traceCountDrop("8_post_filter", "minViews", results.length, next.length, {
+      minViews: filters.minViews,
+    }, pathOpt);
+    results = next;
+  }
+
+  if (filters.lastPostWithin?.trim()) {
+    const next = results.filter((creator) =>
+      creatorMatchesLastPostWithin(creator, filters.lastPostWithin)
+    );
+    traceCountDrop("8_post_filter", "lastPostWithin", results.length, next.length, {
+      lastPostWithin: filters.lastPostWithin,
+    }, pathOpt);
+    results = next;
+  }
+
   traceCountDrop("8_post_filter_final", "all", initialCount, results.length, {
     country: filters.country,
     minFollowers: filters.minFollowers,
@@ -399,21 +426,26 @@ const BROWSE_FEED_THUMB_LIMIT = 3;
 /**
  * Browse-only PostgREST projection: first N publication url/thumbnail/isVideo scalars.
  * Avoids selecting the full `recent_publications` JSONB (captions/metrics arrays).
+ * When freshness filters are active, also project `posted_at` for each slot.
  */
-const BROWSE_FEED_PUBLICATION_SELECT = [
-  "feed0_url:recent_publications->0->>url",
-  "feed0_thumbnail:recent_publications->0->>thumbnail",
-  "feed0_display:recent_publications->0->>displayUrl",
-  "feed0_is_video:recent_publications->0->isVideo",
-  "feed1_url:recent_publications->1->>url",
-  "feed1_thumbnail:recent_publications->1->>thumbnail",
-  "feed1_display:recent_publications->1->>displayUrl",
-  "feed1_is_video:recent_publications->1->isVideo",
-  "feed2_url:recent_publications->2->>url",
-  "feed2_thumbnail:recent_publications->2->>thumbnail",
-  "feed2_display:recent_publications->2->>displayUrl",
-  "feed2_is_video:recent_publications->2->isVideo",
-].join(", ");
+function browseFeedPublicationSelect(includePostedAt: boolean): string {
+  const parts: string[] = [];
+  for (let i = 0; i < BROWSE_FEED_THUMB_LIMIT; i++) {
+    parts.push(
+      `feed${i}_url:recent_publications->${i}->>url`,
+      `feed${i}_thumbnail:recent_publications->${i}->>thumbnail`,
+      `feed${i}_display:recent_publications->${i}->>displayUrl`,
+      `feed${i}_is_video:recent_publications->${i}->isVideo`
+    );
+    if (includePostedAt) {
+      parts.push(`feed${i}_posted_at:recent_publications->${i}->>posted_at`);
+    }
+  }
+  return parts.join(", ");
+}
+
+/** @deprecated Prefer browseFeedPublicationSelect — kept for hydration tests that sniff source text. */
+const BROWSE_FEED_PUBLICATION_SELECT = browseFeedPublicationSelect(false);
 
 const BROWSE_PLATFORM_ACCOUNT_SELECT_CORE =
   "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_display_name";
@@ -430,6 +462,44 @@ function chunkValues<T>(values: T[], size: number): T[][] {
   return chunks;
 }
 
+function normalizeInfluencerLanguageCodes(
+  languages: string[] | null | undefined
+): string[] {
+  if (!Array.isArray(languages) || languages.length === 0) return [];
+  const seen = new Set<string>();
+  const codes: string[] = [];
+  for (const raw of languages) {
+    const code = String(raw ?? "")
+      .trim()
+      .toLowerCase();
+    if (!code || seen.has(code)) continue;
+    seen.add(code);
+    codes.push(code);
+  }
+  return codes;
+}
+
+function browseHydrationOptionsForFilters(
+  filters: UnifiedCreatorBrowseFilters,
+  tracePath: SearchTracePath,
+  extras?: { skipDna?: boolean }
+): {
+  omitHeavyFields: true;
+  skipDna?: boolean;
+  tracePath: SearchTracePath;
+  includeLanguages: boolean;
+  includeDemographics: boolean;
+  includePublicationDates: boolean;
+} {
+  const hydration = resolveBrowseHydrationExtras(filters);
+  return {
+    omitHeavyFields: true,
+    skipDna: extras?.skipDna,
+    tracePath,
+    ...hydration,
+  };
+}
+
 /** Rebuild slim publication rows from browse feed scalar columns. */
 function browseFeedPublicationsFromAccountRow(
   row: Record<string, unknown>,
@@ -440,6 +510,7 @@ function browseFeedPublicationsFromAccountRow(
     const urlRaw = row[`feed${i}_url`];
     const thumbRaw = row[`feed${i}_thumbnail`];
     const displayRaw = row[`feed${i}_display`];
+    const postedRaw = row[`feed${i}_posted_at`];
     const url = typeof urlRaw === "string" ? urlRaw : null;
     const thumbnail =
       (typeof thumbRaw === "string" && thumbRaw.trim() ? thumbRaw : null) ??
@@ -451,7 +522,7 @@ function browseFeedPublicationsFromAccountRow(
       likes: null,
       comments: null,
       views: null,
-      posted_at: null,
+      posted_at: typeof postedRaw === "string" && postedRaw.trim() ? postedRaw : null,
       caption: null,
       isVideo: row[`feed${i}_is_video`] === true,
     });
@@ -746,7 +817,14 @@ async function fetchInternalCreators(
   filters: UnifiedCreatorBrowseFilters,
   scopedInfluencerIds?: string[],
   searchRankById?: Map<string, number> | null,
-  options?: { omitHeavyFields?: boolean; skipDna?: boolean; tracePath?: SearchTracePath }
+  options?: {
+    omitHeavyFields?: boolean;
+    skipDna?: boolean;
+    tracePath?: SearchTracePath;
+    includeLanguages?: boolean;
+    includeDemographics?: boolean;
+    includePublicationDates?: boolean;
+  }
 ): Promise<UnifiedCreatorResult[]> {
   const tracePath = options?.tracePath ?? "unknown";
   const pathOpt = { path: tracePath };
@@ -759,6 +837,11 @@ async function fetchInternalCreators(
   const skipDna = options?.skipDna ?? false;
   // Browse/list: skip pre-map DNA fetch; apply once via hydrateCreatorsWithDna below.
   const skipPreMapDna = skipDna || omitHeavyFields;
+  const hydrationExtras: BrowseHydrationExtras = {
+    includeLanguages: Boolean(options?.includeLanguages),
+    includeDemographics: Boolean(options?.includeDemographics),
+    includePublicationDates: Boolean(options?.includePublicationDates),
+  };
 
   if (search && scopedInfluencerIds && scopedInfluencerIds.length === 0) {
     return [];
@@ -777,7 +860,8 @@ async function fetchInternalCreators(
     (platform ||
       filters.minFollowers != null ||
       filters.maxFollowers != null ||
-      filters.minEngagement != null)
+      filters.minEngagement != null ||
+      filters.minViews != null)
   ) {
     let accountQuery = supabase
       .from("influencer_platform_accounts")
@@ -798,6 +882,9 @@ async function fetchInternalCreators(
     }
     if (filters.minEngagement != null) {
       accountQuery = accountQuery.gte("engagement_rate", filters.minEngagement);
+    }
+    if (filters.minViews != null) {
+      accountQuery = accountQuery.gte("avg_views", filters.minViews);
     }
 
     const { data: platformMatches, error } = await accountQuery;
@@ -848,6 +935,7 @@ async function fetchInternalCreators(
     country_codes?: string[] | null;
     categories: string[];
     notes: string | null;
+    languages?: string[] | null;
     thinkway_score: number | null;
     source_confidence: number | null;
     enrichment_status?: string | null;
@@ -877,9 +965,19 @@ async function fetchInternalCreators(
   };
 
   async function queryInfluencerRows(ids: string[]): Promise<InfluencerHydrationRow[]> {
-    const influencerSelect = omitHeavyFields
-      ? "id, document_number, display_name, status, country_code, country_codes, categories, notes, thinkway_score, source_confidence, profile_id, metadata, enrichment_status, last_enriched_at, updated_at, enrichment_source, primary_avatar_url, primary_avatar_source, default_metrics_platform_account_id"
-      : "id, document_number, display_name, status, country_code, country_codes, categories, notes, email, phone, rate_card, payment_details, thinkway_score, source_confidence, profile_id, metadata, enrichment_status, last_enriched_at, updated_at, enrichment_source, primary_avatar_url, primary_avatar_source, default_metrics_platform_account_id, audience_age_13_17, audience_age_18_24, audience_age_25_34, audience_age_35_44, audience_age_45_54, audience_age_55_plus, audience_gender_male, audience_gender_female, audience_gender_unknown, audience_top_countries, demographic_source";
+    const demographicSelect =
+      ", audience_age_13_17, audience_age_18_24, audience_age_25_34, audience_age_35_44, audience_age_45_54, audience_age_55_plus, audience_gender_male, audience_gender_female, audience_gender_unknown, audience_top_countries, demographic_source";
+    const languageSelect = ", languages";
+    const slimBase =
+      "id, document_number, display_name, status, country_code, country_codes, categories, notes, thinkway_score, source_confidence, profile_id, metadata, enrichment_status, last_enriched_at, updated_at, enrichment_source, primary_avatar_url, primary_avatar_source, default_metrics_platform_account_id";
+    const fullSelect =
+      "id, document_number, display_name, status, country_code, country_codes, categories, notes, email, phone, rate_card, payment_details, thinkway_score, source_confidence, profile_id, metadata, enrichment_status, last_enriched_at, updated_at, enrichment_source, primary_avatar_url, primary_avatar_source, default_metrics_platform_account_id, languages, audience_age_13_17, audience_age_18_24, audience_age_25_34, audience_age_35_44, audience_age_45_54, audience_age_55_plus, audience_gender_male, audience_gender_female, audience_gender_unknown, audience_top_countries, demographic_source";
+
+    let influencerSelect = omitHeavyFields ? slimBase : fullSelect;
+    if (omitHeavyFields) {
+      if (hydrationExtras.includeLanguages) influencerSelect += languageSelect;
+      if (hydrationExtras.includeDemographics) influencerSelect += demographicSelect;
+    }
 
     // Dynamic select strings explode the typed client's union; keep the builder untyped.
     let rowQuery = (supabase as any).from("influencers").select(influencerSelect);
@@ -939,9 +1037,12 @@ async function fetchInternalCreators(
 
   // Browse (omitHeavyFields): project only first-N feed url/thumbnail/isVideo scalars —
   // never the full recent_publications JSONB. Detail/enrichment keeps full JSONB.
+  // When last-post filter is active, also project posted_at for the same N slots.
   // slimRecentPublicationsForBrowse still normalizes ≤3 creator-level thumbs.
   const accountSelect = omitHeavyFields
-    ? `${BROWSE_PLATFORM_ACCOUNT_SELECT_CORE}, ${BROWSE_FEED_PUBLICATION_SELECT}, ${BROWSE_PLATFORM_ACCOUNT_SELECT_TAIL}`
+    ? `${BROWSE_PLATFORM_ACCOUNT_SELECT_CORE}, ${browseFeedPublicationSelect(
+        hydrationExtras.includePublicationDates
+      )}, ${BROWSE_PLATFORM_ACCOUNT_SELECT_TAIL}`
     : `${BROWSE_PLATFORM_ACCOUNT_SELECT_CORE}, profile_bio, hashtags, mentions, recent_publications, contact_email, contact_phone, contact_links, ${BROWSE_PLATFORM_ACCOUNT_SELECT_TAIL}`;
 
   type PlatformAccountHydrationRow = MetricsPlatformAccount & {
@@ -1189,7 +1290,7 @@ async function fetchInternalCreators(
           | null
           | undefined,
       }),
-      language_codes: [],
+      language_codes: normalizeInfluencerLanguageCodes(r.languages),
       profile_image_url: profileImageUrl,
       primaryAvatarUrl: profileImageUrl,
       primaryAvatarSource: avatarResolved.source,
@@ -1672,7 +1773,7 @@ export async function browseUnifiedCreators(
   const pageSize = Math.min(200, Math.max(1, filters.pageSize ?? 20));
   const search = filters.search?.trim() ?? "";
   const sourceFilter = filters.source ?? "all";
-  const browseHydrationOptions = { omitHeavyFields: true, tracePath };
+  const browseHydrationOptions = browseHydrationOptionsForFilters(filters, tracePath);
   const categories = resolveBrowseCategories(filters);
 
   searchTrace("4_browse_entry", {
@@ -1763,7 +1864,7 @@ export async function browseUnifiedCreators(
     const includeDiscovery = sourceFilter === "all" || sourceFilter === "public_discovery" || sourceFilter === "imported";
     const categoryFilterActive = resolveBrowseCategories(filters).length > 0;
 
-    if (hasDiscoveryAudienceBrowseFilters(filters)) {
+    if (requiresDiscoveryAudienceScanPath(filters)) {
       perf?.span("discovery_audience_filter_scan");
       const filteredPage = await browseDiscoveryAudienceFilteredPage(
         supabase,
@@ -1912,7 +2013,7 @@ export async function browseUnifiedCreators(
               { ...filters, search: undefined, page: undefined, pageSize: undefined },
               unionIds,
               null,
-              { omitHeavyFields: true, skipDna: true, tracePath }
+              browseHydrationOptionsForFilters(filters, tracePath, { skipDna: true })
             )
           : [];
       const hydratedByInfluencerId = new Map(

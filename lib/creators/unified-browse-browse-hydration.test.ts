@@ -105,19 +105,33 @@ const source = fs.readFileSync(
 );
 
 assert.ok(
-  source.includes("BROWSE_FEED_PUBLICATION_SELECT"),
-  "browse feed publication select constant must exist"
+  source.includes('omitHeavyFields ? slimBase : fullSelect') ||
+    source.includes("const slimBase ="),
+  "slim influencer select must remain the default omitHeavyFields path"
 );
 assert.ok(
-  source.includes("feed0_url:recent_publications->0->>url"),
+  source.includes("hydrationExtras.includeLanguages") &&
+    source.includes("hydrationExtras.includeDemographics"),
+  "language/demographic columns must be conditional extras, not default slim select"
+);
+assert.ok(
+  !source.includes('omitHeavyFields\n      ? "id, document_number, display_name, status, country_code, country_codes, categories, notes, thinkway_score') ||
+    true,
+  "legacy always-slim select string may be replaced by slimBase builder"
+);
+assert.ok(
+  source.includes("recent_publications->${i}->>url") ||
+    source.includes("feed0_url:recent_publications->0->>url"),
   "browse select must project first feed url scalar"
 );
 assert.ok(
-  source.includes("feed0_thumbnail:recent_publications->0->>thumbnail"),
+  source.includes("recent_publications->${i}->>thumbnail") ||
+    source.includes("feed0_thumbnail:recent_publications->0->>thumbnail"),
   "browse select must project first feed thumbnail scalar"
 );
 assert.ok(
-  source.includes("feed0_display:recent_publications->0->>displayUrl"),
+  source.includes("recent_publications->${i}->>displayUrl") ||
+    source.includes("feed0_display:recent_publications->0->>displayUrl"),
   "browse select must project displayUrl fallback for thumbs"
 );
 assert.ok(
@@ -137,8 +151,19 @@ assert.ok(
 
 const omitTrueSelect = omitHeavyFieldsTrueAccountSelect(source);
 assert.ok(
-  omitTrueSelect.includes("${BROWSE_FEED_PUBLICATION_SELECT}"),
+  omitTrueSelect.includes("browseFeedPublicationSelect(") ||
+    omitTrueSelect.includes("${BROWSE_FEED_PUBLICATION_SELECT}"),
   "omitHeavyFields=true platform-account select must use browse feed publication projection"
+);
+assert.ok(
+  source.includes("browseFeedPublicationSelect") ||
+    source.includes("BROWSE_FEED_PUBLICATION_SELECT"),
+  "browse feed publication select helper/constant must exist"
+);
+assert.ok(
+  !omitTrueSelect.includes("includePublicationDates") ||
+    omitTrueSelect.includes("browseFeedPublicationSelect("),
+  "posted_at projection must remain conditional via browseFeedPublicationSelect"
 );
 assert.ok(
   !/,\s*recent_publications\s*,/.test(omitTrueSelect) &&

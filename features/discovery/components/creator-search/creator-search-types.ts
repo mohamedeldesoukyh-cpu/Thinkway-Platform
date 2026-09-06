@@ -356,14 +356,7 @@ export function buildActiveFilterChips(
       clear: { minViews: "" },
     });
   }
-  if (filters.minEstimatedCost || filters.maxEstimatedCost) {
-    chips.push({
-      id: "pricing",
-      label: rangeLabel("Pricing", filters.minEstimatedCost, filters.maxEstimatedCost),
-      section: "advanced",
-      clear: { minEstimatedCost: "", maxEstimatedCost: "" },
-    });
-  }
+  // Pricing is UI_DISABLED (Phase 0) — do not emit active chips.
   if (filters.minBrandSafety) {
     chips.push({
       id: "brandSafety",
@@ -560,6 +553,7 @@ export function filtersToBrowseParams(filters: CreatorSearchFilters, page: numbe
     minViews: filters.minViews ? Number(filters.minViews) : undefined,
     minAiScore,
     minThinkwayScore: filters.minThinkwayScore ? Number(filters.minThinkwayScore) : undefined,
+    lastPostWithin: filters.lastPostWithin.trim() || undefined,
     productionOnly: true as const,
     page,
     pageSize,
