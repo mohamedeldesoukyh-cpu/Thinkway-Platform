@@ -151,6 +151,13 @@ function publicationsRangeNote(publications: CreatorRecentPublication[]): ReactN
   );
 }
 
+function packPublicationCaption(caption: string | null | undefined): string {
+  const normalized = caption?.trim().replace(/\s+/g, " ");
+  if (!normalized) return "Untitled publication";
+  if (normalized.length <= 90) return normalized;
+  return `${normalized.slice(0, 87).trimEnd()}…`;
+}
+
 function PackPublicationCard({ pub }: { pub: CreatorRecentPublication }) {
   const body = (
     <>
@@ -158,7 +165,7 @@ function PackPublicationCard({ pub }: { pub: CreatorRecentPublication }) {
         <PublicationPreviewImage publication={pub} emptyGlyph="▣" />
       </div>
       <div className="tx">
-        <p>{pub.caption?.trim() || "Untitled publication"}</p>
+        <p>{packPublicationCaption(pub.caption)}</p>
         <div className="mm">
           <span>♡ {AB(pub.likes)}</span>
           <span>💬 {pub.comments ?? "—"}</span>

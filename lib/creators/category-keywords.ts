@@ -89,7 +89,13 @@ export const CREATOR_CATEGORY_KEYWORDS: Readonly<Record<string, string>> = {
   sahm: "Parenting",
   "stay at home mom": "Parenting",
   "stay at home mum": "Parenting",
+  pr: "PR",
+  "pr page": "PR",
+  "public relations": "PR",
 };
+
+/** Canonical tag for PR / press pages — toggled from Discovery pack checkbox. */
+export const CREATOR_PR_CATEGORY = "PR" as const;
 
 /** Canonical Discovery quick-filter category labels. */
 export const CREATOR_CATEGORY_LABELS = [
@@ -106,6 +112,29 @@ export const CREATOR_CATEGORY_LABELS = [
   "Parenting",
   "Health & Wellness",
   "Entertainment",
+  "PR",
 ] as const;
 
 export type CreatorCategoryLabel = (typeof CREATOR_CATEGORY_LABELS)[number];
+
+/** True when stored categories include the canonical PR tag (case-insensitive). */
+export function creatorHasPrCategory(
+  categories: ReadonlyArray<string> | null | undefined
+): boolean {
+  return (categories ?? []).some(
+    (tag) => tag.trim().toLowerCase() === CREATOR_PR_CATEGORY.toLowerCase()
+  );
+}
+
+/** Add or remove the canonical PR tag without replacing other categories. */
+export function withPrCategoryToggled(
+  categories: ReadonlyArray<string> | null | undefined,
+  enabled: boolean
+): string[] {
+  const next = (categories ?? [])
+    .map((tag) => tag.trim())
+    .filter(Boolean)
+    .filter((tag) => tag.toLowerCase() !== CREATOR_PR_CATEGORY.toLowerCase());
+  if (enabled) next.push(CREATOR_PR_CATEGORY);
+  return next;
+}

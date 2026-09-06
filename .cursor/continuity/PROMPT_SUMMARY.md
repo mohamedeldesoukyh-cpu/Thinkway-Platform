@@ -3,6 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-06 — Pack publications wall-of-text + PR category
+
+Publications tab dumped full Instagram captions in the 3-col `.tw-pubs` grid (no line-clamp; news pages like cairoscene). Fix: 2-line clamp in pack CSS + truncated captions in pack/gallery cards. **PR** is now a canonical category (`influencers.categories`); pack left-rail checkbox adds/removes `PR` alongside other tags; Filters quick chip + FTS/browse filter find PR pages. No migration. Develop only — Production not deployed.
+
 ## Shipped 2026-09-06 — Refresh metrics progress circle
 
 Shared `RefreshMetricsProgressCircle` beside Refresh controls and on Search / Shortlist / exact-row cards. Live % from enrichment stage map (queued 18 → collecting 62 → 100); tones Done `#1D9E75` · Failed · Partial. Linger ~5s after terminal. Surfaces: `RefreshCreatorMenu` / `RefreshCreatorButton`, suite rows, shortlist banner. Skipped campaign workspace metrics-sync (different product action). No migrations.

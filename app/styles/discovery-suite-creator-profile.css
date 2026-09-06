@@ -145,3 +145,52 @@
   color: inherit;
   text-decoration: none;
 }
+
+/*
+ * Pack publications: freeze caption to 2 lines so article-length Instagram
+ * captions cannot dump as a wall of text inside the 3-column .tw-pubs grid.
+ * (Frozen discovery.css intentionally keeps overflow-wrap without clamp.)
+ */
+.discovery-suite .tw-pub .tx p {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  white-space: normal;
+}
+
+.discovery-suite .tw-pub .im {
+  flex: 0 0 auto;
+  min-height: 82px;
+}
+
+/* PR page checkbox — sits with platform chips / Macro tier on the left rail */
+.discovery-suite .tw-chips2 label.tw-pr-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font: 600 10px var(--font-sans), Geist, sans-serif;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.discovery-suite .tw-chips2 label.tw-pr-check input {
+  width: 12px;
+  height: 12px;
+  margin: 0;
+  accent-color: #fff;
+  cursor: pointer;
+}
+
+.discovery-suite .tw-chips2 label.tw-pr-check[data-busy="true"] {
+  opacity: 0.65;
+  pointer-events: none;
+}
+
+.discovery-suite .tw-chips2 span.tw-pr-tag {
+  background: rgba(255, 255, 255, 0.28);
+}

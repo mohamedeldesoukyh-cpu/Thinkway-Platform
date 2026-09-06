@@ -48,6 +48,7 @@ const QUICK_CATEGORIES = [
   "Lifestyle",
   "Tech",
   "Gaming",
+  "PR",
 ] as const;
 
 const QUICK_INTERESTS = [

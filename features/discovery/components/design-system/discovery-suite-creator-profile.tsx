@@ -66,6 +66,11 @@ type Props = {
   onSelectPlatform: (id: string) => void;
   onAddPlatform: () => void;
   tierLabel: string | null;
+  /** Canonical PR category — stored on influencers.categories. */
+  prChecked?: boolean;
+  prBusy?: boolean;
+  canEditPr?: boolean;
+  onTogglePr?: (enabled: boolean) => void;
   kvRows: KvRow[];
   contextLabel: string;
   headerActions: ReactNode;
@@ -228,6 +233,10 @@ export function DiscoverySuiteCreatorProfile({
   onSelectPlatform,
   onAddPlatform,
   tierLabel,
+  prChecked = false,
+  prBusy = false,
+  canEditPr = false,
+  onTogglePr,
   kvRows,
   contextLabel,
   headerActions,
@@ -323,6 +332,20 @@ export function DiscoverySuiteCreatorProfile({
                 + Add
               </button>
               {tierLabel ? <span>{tierLabel}</span> : null}
+              {canEditPr ? (
+                <label className="tw-pr-check" data-busy={prBusy ? "true" : undefined}>
+                  <input
+                    type="checkbox"
+                    checked={prChecked}
+                    disabled={prBusy}
+                    onChange={(event) => onTogglePr?.(event.target.checked)}
+                    aria-label="Mark as PR page"
+                  />
+                  PR
+                </label>
+              ) : prChecked ? (
+                <span className="tw-pr-tag">PR</span>
+              ) : null}
             </div>
 
             <div className="tw-cp__kv">

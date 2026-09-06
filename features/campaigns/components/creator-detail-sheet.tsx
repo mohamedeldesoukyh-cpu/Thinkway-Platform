@@ -48,6 +48,7 @@ import { DeleteCreatorPlatformDialog } from "@/features/discovery/delete-platfor
 import { EditCreatorAveragePriceDialog } from "@/features/discovery/components/edit-creator-average-price-dialog";
 import { EditCreatorContactDialog } from "@/features/discovery/components/edit-creator-contact-dialog";
 import { EditCreatorProfileUrlDialog } from "@/features/discovery/components/edit-creator-profile-url-dialog";
+import { updateCreatorPrCategoryAction } from "@/features/discovery/creator-profile/update-creator-commercial-actions";
 import {
   CombineCreatorsDialog,
   type CombineCreatorsMergedMeta,
@@ -81,6 +82,7 @@ import { formatCreatorCountryLabels, resolveCreatorFollowersCount } from "@/lib/
 import { formatCreatorRecencyLabel } from "@/lib/creators/creator-hover-details";
 import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { getInfluencerTier, normalizeInfluencerTier } from "@/lib/creators/influencer-tier";
+import { creatorHasPrCategory } from "@/lib/creators/category-keywords";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { isAssignableCreator } from "@/lib/creators/adapters";
 import {
@@ -107,6 +109,7 @@ import { resolvePrimaryProfileUrl } from "@/lib/discovery/profile-url";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { formatPricing, parseRateCard } from "@/features/vendors/utils";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export type CreatorDetailSheetUpdateMeta = {
   forceListSync?: boolean;
@@ -827,6 +830,7 @@ export function CreatorDetailSheet({
   const [editAveragePriceOpen, setEditAveragePriceOpen] = useState(false);
   const [editProfileUrlOpen, setEditProfileUrlOpen] = useState(false);
   const [combineCreatorsOpen, setCombineCreatorsOpen] = useState(false);
+  const [prCategoryBusy, setPrCategoryBusy] = useState(false);
   const [similar, setSimilar] = useState<Array<UnifiedCreatorResult & { similarity_score: number }>>(
     []
   );
@@ -1059,6 +1063,29 @@ export function CreatorDetailSheet({
     }
 
     onCreatorUpdated?.(next, options);
+  }
+
+  async function handleTogglePrCategory(enabled: boolean) {
+    const influencerId = identityCreator.influencer_id;
+    if (!influencerId || prCategoryBusy) return;
+    setPrCategoryBusy(true);
+    try {
+      const result = await updateCreatorPrCategoryAction({
+        influencerId,
+        unifiedId: identityCreator.unified_id,
+        enabled,
+      });
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      toast.success(result.message);
+      if (result.creator) {
+        handleCreatorUpdated(result.creator, { forceListSync: true });
+      }
+    } finally {
+      setPrCategoryBusy(false);
+    }
   }
 
   function preventOutsideDismiss(event: { target: EventTarget | null; preventDefault: () => void }) {
@@ -1602,6 +1629,10 @@ export function CreatorDetailSheet({
             onSelectPlatform={setSelectedPlatformAccountId}
             onAddPlatform={() => setAddPlatformOpen(true)}
             tierLabel={packTier}
+            prChecked={creatorHasPrCategory(identityCreator.categories)}
+            prBusy={prCategoryBusy}
+            canEditPr={Boolean(identityCreator.influencer_id)}
+            onTogglePr={handleTogglePrCategory}
             kvRows={[
               { label: "Engagement", value: engagementLabel },
               { label: "Avg plays", value: avgPlaysLabel },

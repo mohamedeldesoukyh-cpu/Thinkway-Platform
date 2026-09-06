@@ -20,9 +20,11 @@ function formatPostedAt(value: string | null | undefined): string {
   return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
 }
 
-function captionSnippet(caption: string | null | undefined): string {
+function captionSnippet(caption: string | null | undefined, maxLen = 96): string {
   if (!caption?.trim()) return "No caption";
-  return caption.trim().replace(/\s+/g, " ");
+  const normalized = caption.trim().replace(/\s+/g, " ");
+  if (normalized.length <= maxLen) return normalized;
+  return `${normalized.slice(0, Math.max(0, maxLen - 1)).trimEnd()}…`;
 }
 
 function PublicationCard({

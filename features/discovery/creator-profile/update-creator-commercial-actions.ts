@@ -10,6 +10,10 @@ import {
   normalizeContactPhone,
   resolveCreatorContactFields,
 } from "@/lib/creators/contact-info";
+import {
+  CREATOR_PR_CATEGORY,
+  withPrCategoryToggled,
+} from "@/lib/creators/category-keywords";
 import { getUnifiedCreatorById } from "@/lib/creators/unified-browse";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
@@ -50,6 +54,12 @@ const averagePriceSchema = z.object({
     .toUpperCase()
     .regex(/^[A-Z]{3}$/, "Enter a valid currency")
     .default(DEFAULT_PLATFORM_CURRENCY),
+});
+
+const prCategorySchema = z.object({
+  influencerId: z.string().uuid(),
+  unifiedId: z.string().trim().min(1),
+  enabled: z.boolean(),
 });
 
 async function requireAuthedClient() {
@@ -219,6 +229,69 @@ export async function updateCreatorAveragePriceAction(input: {
   return {
     ok: true,
     message: "Average price per content saved.",
+    creator,
+  };
+}
+
+/**
+ * Toggle the canonical `PR` category on `influencers.categories`.
+ * Adds or removes PR alongside existing tags — never replaces the list.
+ * Search/filter already match free-form categories (FTS + browse overlaps).
+ */
+export async function updateCreatorPrCategoryAction(input: {
+  influencerId: string;
+  unifiedId: string;
+  enabled: boolean;
+}): Promise<CreatorCommercialActionResult> {
+  const parsed = prCategorySchema.safeParse(input);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      message: parsed.error.issues[0]?.message ?? "Invalid PR category update.",
+    };
+  }
+
+  const { supabase, error: authError } = await requireAuthedClient();
+  if (!supabase || authError) {
+    return { ok: false, message: authError ?? "Unauthorized" };
+  }
+
+  const { data: row, error: readError } = await supabase
+    .from("influencers")
+    .select("categories")
+    .eq("id", parsed.data.influencerId)
+    .maybeSingle();
+
+  if (readError) {
+    return { ok: false, message: readError.message };
+  }
+  if (!row) {
+    return { ok: false, message: "Creator profile not found." };
+  }
+
+  const existing = Array.isArray(row.categories)
+    ? (row.categories as string[])
+    : [];
+  const nextCategories = withPrCategoryToggled(existing, parsed.data.enabled);
+
+  const { error } = await supabase
+    .from("influencers")
+    .update({ categories: nextCategories })
+    .eq("id", parsed.data.influencerId);
+
+  if (error) {
+    return { ok: false, message: error.message };
+  }
+
+  const creator = await reloadCreator(supabase, parsed.data.unifiedId);
+  revalidatePath(`/vendors/${parsed.data.influencerId}`);
+  revalidatePath("/discovery");
+
+  return {
+    ok: true,
+    message: parsed.data.enabled
+      ? `${CREATOR_PR_CATEGORY} category added.`
+      : `${CREATOR_PR_CATEGORY} category removed.`,
     creator,
   };
 }
