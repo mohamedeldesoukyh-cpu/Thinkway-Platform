@@ -13,7 +13,6 @@ import {
   CLIENT_FORM_SCROLL_PADDING_CLASS,
   useClientProfilePlatformV6,
 } from "@/features/clients/components/client-form-ui";
-import { PlatformV6PageSectionHeader } from "@/components/platform/platform-v6-layout";
 import { cn } from "@/lib/utils";
 
 export {
@@ -63,7 +62,9 @@ export function VendorProfileTabShell({
   if (platformV6) {
     return (
       <div className="platform-v6-epanel-inner">
-        <PlatformV6PageSectionHeader title={title} description={description} />
+        {/* Suite chrome already names the tab; keep title for a11y only. */}
+        <h2 className="sr-only">{title}</h2>
+        {description ? <p className="sr-only">{description}</p> : null}
         {children}
       </div>
     );

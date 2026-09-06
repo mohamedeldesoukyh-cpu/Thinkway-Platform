@@ -117,8 +117,8 @@ export function VendorOverviewTab({
         saveDisabled={isPending}
         isSaving={isPending}
       >
-        {portalAccessPanel ? <div className="mb-[18px]">{portalAccessPanel}</div> : null}
-        <form id="vendor-overview-form" action={formAction} className="grid gap-[18px]">
+        <form id="vendor-overview-form" action={formAction} className="tw-vtwo">
+          <div className="grid gap-[11px]">
           <input type="hidden" name="influencer_id" value={vendor.id} />
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="country_code" value={country} />
@@ -327,6 +327,10 @@ export function VendorOverviewTab({
               disabled={isPending}
             />
           </VendorFormSection>
+          </div>
+          <div className="grid gap-[11px]">
+            {portalAccessPanel}
+          </div>
         </form>
       </VendorProfileTabShell>
     </>

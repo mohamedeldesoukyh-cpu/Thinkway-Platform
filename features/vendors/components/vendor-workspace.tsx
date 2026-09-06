@@ -2,19 +2,16 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { PageBackButton } from "@/components/navigation/page-back-button";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { MoreHorizontalIcon } from "lucide-react";
+
+import "@/app/styles/vendor-detail-suite.css";
+
 import {
   CreatorIdentityCell,
   creatorProfileSourceFromAccounts,
 } from "@/components/creator/creator-profile-link";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { MoreHorizontalIcon } from "lucide-react";
-
-import {
-  PlatformV6EntityBreadcrumb,
-  platformV6BadgeClass,
-} from "@/components/platform/platform-v6-layout";
-import { ClientProfilePlatformProvider } from "@/features/clients/components/client-form-ui";
+import { DocumentNumber } from "@/components/ui/document-number";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,14 +23,8 @@ import {
   OperationalWorkspaceTabContent,
   OperationalWorkspaceTabPanel,
 } from "@/components/workspace/operational-workspace-ui";
-import {
-  EnterpriseTabButton,
-  EnterpriseTabsRow,
-} from "@/components/workspace/enterprise-tabs";
-import { VENDOR_STATUS_OPTIONS } from "@/features/vendors/constants";
+import { ClientProfilePlatformProvider } from "@/features/clients/components/client-form-ui";
 import { VendorDependencyDialog } from "@/features/vendors/components/vendor-dependency-dialog";
-import { VendorKpiStrip } from "@/features/vendors/components/vendor-kpi-strip";
-import { CrmCompletenessStrip } from "@/features/vendors/components/crm-completeness-strip";
 import { VendorActivityTab } from "@/features/vendors/components/tabs/vendor-activity-tab";
 import { VendorAssignmentsTab } from "@/features/vendors/components/tabs/vendor-assignments-tab";
 import { VendorBillingTab } from "@/features/vendors/components/tabs/vendor-billing-tab";
@@ -43,10 +34,14 @@ import { VendorDocumentsTab } from "@/features/vendors/components/tabs/vendor-do
 import { VendorOverviewTab } from "@/features/vendors/components/tabs/vendor-overview-tab";
 import { VendorPlatformsTab } from "@/features/vendors/components/tabs/vendor-platforms-tab";
 import { VendorQuotationsTab } from "@/features/vendors/components/tabs/vendor-quotations-tab";
-import { DocumentNumber } from "@/components/ui/document-number";
-import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
+import { VENDOR_STATUS_OPTIONS } from "@/features/vendors/constants";
 import type { VendorWorkspace } from "@/features/vendors/types";
+import { formatMoney, formatPercent } from "@/features/vendors/utils";
+import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
+import type { CompletenessBreakdown } from "@/lib/creators/crm/completeness";
+import { cn } from "@/lib/utils";
 import type { InfluencerStatus } from "@/types/database";
+
 type VendorWorkspaceViewProps = {
   workspace: VendorWorkspace;
   defaultTab?: string;
@@ -93,23 +88,94 @@ const TAB_FORM_IDS: Partial<Record<VendorWorkspaceTabId, string>> = {
   contracts: "vendor-legal-form",
 };
 
-function resolveEntityStatusBadge(status: InfluencerStatus): {
-  label: string;
-  className: string;
-} {
-  const label =
-    VENDOR_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
+function statusTone(status: InfluencerStatus): string {
+  if (status === "active") return "";
+  if (status === "blacklisted") return "r";
+  return "";
+}
 
-  if (status === "active") {
-    return { label, className: platformV6BadgeClass("outline-green") };
-  }
-  if (status === "blacklisted") {
-    return { label, className: platformV6BadgeClass("red") };
-  }
-  if (status === "prospect") {
-    return { label, className: platformV6BadgeClass("blue") };
-  }
-  return { label, className: platformV6BadgeClass("gray") };
+function statusLabel(status: InfluencerStatus): string {
+  return VENDOR_STATUS_OPTIONS.find((option) => option.value === status)?.label ?? status;
+}
+
+function dimTone(value: number): "r" | "y" | "g" {
+  if (value >= 80) return "g";
+  if (value >= 40) return "y";
+  return "r";
+}
+
+function CompletenessPill({
+  completeness,
+}: {
+  completeness: CompletenessBreakdown | null;
+}) {
+  const [open, setOpen] = useState(false);
+  const overall = Math.round(completeness?.overall ?? 0);
+  const missing = completeness?.missing ?? [];
+  const dims = completeness?.dimensions;
+
+  return (
+    <span style={{ position: "relative" }}>
+      <button
+        type="button"
+        className="tw-cpill"
+        aria-expanded={open}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((value) => !value);
+        }}
+      >
+        <span className="tw-cpill__r" style={{ ["--cpill-pct" as string]: overall }} />
+        {overall}% complete
+        {missing.length > 0 ? ` · ${missing.length} missing` : ""}
+      </button>
+      {open ? (
+        <span
+          className="tw-cpop"
+          onClick={(event) => event.stopPropagation()}
+          onKeyDown={(event) => event.stopPropagation()}
+          role="dialog"
+          aria-label="Profile completeness"
+        >
+          <h5>Profile completeness</h5>
+          <p>
+            Completeness is informational. Missing fields block invites and payouts where
+            noted — they do not hide the creator from Discovery.
+          </p>
+          {dims ? (
+            <div className="tw-cgrid">
+              {(
+                [
+                  ["Overall", overall],
+                  ["Identity", dims.identity],
+                  ["Commercial", dims.commercial],
+                  ["Legal", dims.legal],
+                  ["Finance", dims.finance],
+                  ["Client compliance", dims.client_compliance],
+                ] as const
+              ).map(([label, value]) => (
+                <div key={label}>
+                  <i>{label}</i>
+                  <b className={dimTone(value)}>{Math.round(value)}%</b>
+                </div>
+              ))}
+            </div>
+          ) : null}
+          {missing.length > 0 ? (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+              {missing.slice(0, 10).map((item) => (
+                <span key={item.code} className="tw-mchip">
+                  {item.label.replace(/^Missing /i, "")}
+                </span>
+              ))}
+            </div>
+          ) : (
+            <p style={{ margin: 0 }}>No missing fields on file.</p>
+          )}
+        </span>
+      ) : null}
+    </span>
+  );
 }
 
 const tabPanelClassName =
@@ -126,6 +192,8 @@ export function VendorWorkspaceView({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [depOpen, setDepOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
+
   const countryLabel = useMemo(() => {
     return formatCreatorCountryLabels({
       country_code: workspace.country_code,
@@ -142,6 +210,7 @@ export function VendorWorkspaceView({
       })),
     });
   }, [workspace.country_code, workspace.country_codes, workspace.platform_accounts]);
+
   const initialTab = isVendorWorkspaceTabId(defaultTab) ? defaultTab : "overview";
   const [activeTab, setActiveTab] = useState<VendorWorkspaceTabId>(initialTab);
 
@@ -166,68 +235,102 @@ export function VendorWorkspaceView({
     [pathname, router, searchParams]
   );
 
-  const tabCounts = useMemo(
-    () => ({
-      platforms: workspace.counts.platforms,
-      assignments: workspace.counts.assignments,
-      documents: workspace.documents.length,
-      activity: workspace.activity.length,
-    }),
-    [
-      workspace.counts.platforms,
-      workspace.counts.assignments,
-      workspace.documents.length,
-      workspace.activity.length,
-    ]
+  const currency =
+    (workspace.payment_details as { currency?: string } | null)?.currency ?? "EGP";
+  const { counts, financials } = workspace;
+
+  const kpiItems = useMemo(
+    () =>
+      [
+        ["Assignments", String(counts.assignments), ""],
+        ["Campaigns", String(counts.campaigns), ""],
+        ["Deliverables", String(counts.deliverables), counts.deliverables === 0 ? "r" : ""],
+        ["Platforms", String(counts.platforms), ""],
+        ["Revenue", formatMoney(financials.total_revenue, currency), ""],
+        ["GP", formatMoney(financials.total_gp, currency), ""],
+        ["Margin", formatPercent(financials.margin_percent), "g"],
+        [
+          "Pending payout",
+          formatMoney(financials.pending_payout, currency),
+          financials.pending_payout > 0 ? "r" : "",
+        ],
+      ] as const,
+    [counts, currency, financials]
   );
 
   const tabs = useMemo(
     () =>
       [
-        { id: "overview" as const, label: "Overview" },
-        { id: "commercial" as const, label: "Commercial" },
-        { id: "platforms" as const, label: "Platforms", count: tabCounts.platforms },
+        { id: "overview" as const, label: "Overview", count: "" },
+        { id: "commercial" as const, label: "Commercial", count: "" },
+        {
+          id: "platforms" as const,
+          label: "Platforms",
+          count: String(counts.platforms),
+        },
         {
           id: "assignments" as const,
-          label: "Campaigns",
-          count: tabCounts.assignments,
+          label: "Assignments",
+          count: String(counts.assignments),
         },
         {
           id: "quotations" as const,
           label: "Quotations",
-          count: workspace.quotation_history?.length ?? 0,
+          count: String(workspace.quotation_history?.length ?? 0),
         },
-        { id: "billing" as const, label: "Payments" },
-        { id: "documents" as const, label: "Documents", count: tabCounts.documents },
-        { id: "contracts" as const, label: "Legal & Contracts" },
+        { id: "billing" as const, label: "Payments", count: financials.pending_payout > 0 ? "!" : "" },
+        {
+          id: "documents" as const,
+          label: "Documents",
+          count: String(workspace.documents.length),
+        },
+        { id: "contracts" as const, label: "Legal & contracts", count: "" },
         {
           id: "activity" as const,
           label: "Timeline",
-          count: tabCounts.activity,
+          count: String(workspace.activity.length),
         },
       ] satisfies Array<{
         id: VendorWorkspaceTabId;
         label: string;
-        count?: number;
+        count: string;
       }>,
-    [tabCounts, workspace.quotation_history?.length]
+    [
+      counts.assignments,
+      counts.platforms,
+      financials.pending_payout,
+      workspace.activity.length,
+      workspace.documents.length,
+      workspace.quotation_history?.length,
+    ]
   );
 
-  const entityBadge = resolveEntityStatusBadge(workspace.status);
   const saveFormId = TAB_FORM_IDS[activeTab];
+  const metaParts = [
+    countryLabel !== "—" ? countryLabel : null,
+    counts.platforms ? `${counts.platforms} platforms` : null,
+    counts.campaigns ? `${counts.campaigns} campaigns` : null,
+  ].filter(Boolean);
 
   return (
     <ClientProfilePlatformProvider platformV6>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="vendor-detail-suite">
         <Tabs
           value={activeTab}
           onValueChange={handleTabChange}
           className="mt-0 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
         >
-          <div className="platform-v6-entity-nav-bar shrink-0">
-            <div className="flex items-start justify-between gap-3 px-5 pb-2.5 pt-3.5">
-              <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-                <PageBackButton fallbackHref="/vendors" label="Back to vendors" />
+          <div className="tw-frozen">
+            <div className="tw-mast">
+              <div className="tw-mh">
+                <Link href="/vendors" className="tw-hmk" aria-label="Back to vendors">
+                  <i />
+                  <u />
+                </Link>
+                <span className="tw-hwd">
+                  THINK<em>WAY</em>
+                </span>
+                <span className="tw-hdv" />
                 <CreatorIdentityCell
                   source={creatorProfileSourceFromAccounts(
                     workspace.display_name,
@@ -237,100 +340,87 @@ export function VendorWorkspaceView({
                   showHandle={false}
                   stopPropagation
                 />
-                <span className={entityBadge.className}>{entityBadge.label}</span>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="platform-v6-btn platform-v6-btn-sm shrink-0"
-                  >
-                    <MoreHorizontalIcon className="size-3.5" aria-hidden />
-                    Actions
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => setDepOpen(true)}>
-                    View dependencies
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href={`/operations/move?vendor=${workspace.id}`}>
-                      Reassign via Move
-                    </Link>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            <p className="px-5 pb-2.5 text-[11px] text-muted-foreground">
-              <DocumentNumber value={workspace.document_number} />
-              {countryLabel !== "—" ? ` · ${countryLabel}` : null}
-            </p>
-
-            <div className="space-y-2 border-b border-border px-5 pb-2.5">
-              <VendorKpiStrip workspace={workspace} />
-              <CrmCompletenessStrip
-                profile={workspace.crm_profile}
-                completeness={workspace.crm_completeness}
-              />
-            </div>
-
-            <div className="flex min-w-0 items-center gap-2 px-5">
-              <span className="platform-v6-also-view shrink-0">Also view</span>
-              <EnterpriseTabsRow
-                variant="plain"
-                overflow="scroll"
-                className="min-w-0 flex-1"
-              >
-                {tabs.map((tab) => (
-                  <EnterpriseTabButton
-                    key={tab.id}
-                    value={tab.id}
-                    label={tab.label}
-                    count={tab.count}
-                    active={activeTab === tab.id}
-                    onClick={() => handleTabChange(tab.id)}
-                  />
-                ))}
-              </EnterpriseTabsRow>
-            </div>
-          </div>
-
-          <PlatformV6EntityBreadcrumb
-            crumbs={[
-              { label: "Vendors", href: "/vendors" },
-              { label: workspace.display_name },
-            ]}
-            actions={
-              <>
-                <button
-                  type="button"
-                  className="platform-v6-btn platform-v6-btn-sm"
-                  onClick={handleCancel}
-                >
+                <span className="id">
+                  <DocumentNumber value={workspace.document_number} />
+                </span>
+                <h1>{workspace.display_name}</h1>
+                <span className={cn("st", statusTone(workspace.status))}>
+                  {statusLabel(workspace.status)}
+                </span>
+                {metaParts.length > 0 ? (
+                  <span className="sub">{metaParts.join(" · ")}</span>
+                ) : null}
+                <span style={{ flex: 1 }} />
+                <CompletenessPill completeness={workspace.crm_completeness} />
+                <DropdownMenu open={actionsOpen} onOpenChange={setActionsOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <button type="button" className="tw-b sm" aria-label="Actions">
+                      <MoreHorizontalIcon className="size-3.5" aria-hidden />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => setDepOpen(true)}>
+                      View dependencies
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href={`/operations/move?vendor=${workspace.id}`}>
+                        Reassign via Move
+                      </Link>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <button type="button" className="tw-b sm" onClick={handleCancel}>
                   Cancel
                 </button>
                 {saveFormId ? (
                   <button
                     type="submit"
                     form={saveFormId}
-                    className="platform-v6-btn platform-v6-btn-primary platform-v6-btn-sm"
+                    className="tw-b sm pri"
                   >
                     {TAB_SAVE_LABELS[activeTab]}
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    className="platform-v6-btn platform-v6-btn-primary platform-v6-btn-sm"
-                  >
+                  <button type="button" className="tw-b sm pri">
                     {TAB_SAVE_LABELS[activeTab]}
                   </button>
                 )}
-              </>
-            }
-          />
+              </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="tw-ms2" aria-label="Creator metrics">
+                {kpiItems.map(([label, value, tone]) => (
+                  <div key={label}>
+                    <i>{label}</i>
+                    <b className={tone || undefined}>{value}</b>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="tw-step2" role="tablist" aria-label="Creator profile tabs">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className="tw-sb"
+                  aria-pressed={activeTab === tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                >
+                  <span className="tw-sb__d" />
+                  <span className="tw-sb__l">
+                    {tab.label}
+                    {tab.count ? (
+                      <em className={tab.count === "!" ? "r" : undefined}>
+                        {tab.count === "!" ? "blocked" : tab.count}
+                      </em>
+                    ) : null}
+                  </span>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="tw-main">
             <OperationalWorkspaceTabContent value="overview" className={tabPanelClassName}>
               <OperationalWorkspaceTabPanel className="flex min-h-0 flex-1 flex-col overflow-hidden">
                 <VendorOverviewTab
