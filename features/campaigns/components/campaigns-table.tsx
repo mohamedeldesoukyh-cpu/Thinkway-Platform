@@ -35,7 +35,7 @@ const CAMPAIGNS_LIST_TRACKS: Record<string, string> = {
   waiting_for: "92px",
   days_waiting: "58px",
   risk: "100px",
-  next_action: "128px",
+  next_action: "minmax(128px, 168px)",
   group_client: "minmax(140px, 1fr)",
   lines: "52px",
   status: "128px",

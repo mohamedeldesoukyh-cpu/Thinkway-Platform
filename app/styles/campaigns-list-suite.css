@@ -464,7 +464,7 @@
   padding: 2px 8px !important;
   border-radius: 999px !important;
   border: 0 !important;
-  font: 600 10px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
+  font: 600 11px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
   white-space: nowrap !important;
@@ -544,7 +544,7 @@
 }
 
 .campaigns-list-suite .tw-id {
-  font: 600 11.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font: 600 11px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   letter-spacing: -0.3px;
   color: var(--tw-ink2);
   white-space: nowrap;
@@ -553,7 +553,7 @@
 }
 
 .campaigns-list-suite .tw-nm {
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: -0.1px;
   overflow-wrap: anywhere;
@@ -570,7 +570,7 @@
 }
 
 .campaigns-list-suite .tw-br {
-  font-size: 11.5px;
+  font-size: 11px;
   font-weight: 500;
   color: var(--tw-vio);
   overflow: hidden;
@@ -579,7 +579,7 @@
 }
 
 .campaigns-list-suite .tw-t {
-  font-size: 11.5px;
+  font-size: 11px;
   color: var(--tw-ink2);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -587,7 +587,7 @@
 }
 
 .campaigns-list-suite .tw-v {
-  font: 600 11.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font: 600 11px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
   text-align: left;
@@ -604,7 +604,7 @@
 }
 
 .campaigns-list-suite .tw-d {
-  font: 500 11.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
+  font: 500 11px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   color: var(--tw-ink2);
   white-space: nowrap;
 }
@@ -612,7 +612,7 @@
 .campaigns-list-suite .tw-miss {
   color: #a9b2c3;
   font-style: italic;
-  font-size: 11.5px;
+  font-size: 11px;
 }
 
 .campaigns-list-suite .tw-cc {
@@ -633,7 +633,7 @@
   max-width: 100%;
   padding: 2px 8px !important;
   border-radius: 999px !important;
-  font: 600 10px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
+  font: 600 11px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif !important;
   letter-spacing: 0 !important;
   text-transform: none !important;
   white-space: nowrap !important;
@@ -684,7 +684,7 @@
 }
 
 .campaigns-list-suite .tw-hier b {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -693,7 +693,7 @@
 
 .campaigns-list-suite .tw-hier u {
   text-decoration: none;
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--tw-mut);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -701,10 +701,8 @@
 }
 
 .campaigns-list-suite .tw-na2 {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  font: 600 12px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
+  display: block;
+  font: 600 11px var(--font-geist-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
   color: var(--tw-bi);
   background: none;
   border: 0;
@@ -712,9 +710,10 @@
   padding: 0;
   text-decoration: none;
   max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
 }
 
 .campaigns-list-suite .tw-na2:hover {
