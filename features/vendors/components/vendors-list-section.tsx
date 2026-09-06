@@ -66,7 +66,7 @@ function buildKpis(vendors: VendorsListResult["vendors"], total: number, totalPa
   ).size;
   const active = vendors.filter((v) => v.status === "active").length;
   const followerSum = vendors.reduce(
-    (sum, v) => sum + getTotalFollowers(v.platform_accounts),
+    (sum, v) => sum + (getTotalFollowers(v.platform_accounts) ?? 0),
     0
   );
   const avgFollowers =
