@@ -62,6 +62,9 @@ export function isCreatorBrowseRawWindowExhausted(options: {
   rawHasMore?: boolean;
 }): boolean {
   if (options.rawHasMore === false) return true;
+  // Authoritative upstream "more exist" must win over a short window
+  // (e.g. exact-handle FTS uses a smaller effective limit than FILL_BATCH).
+  if (options.rawHasMore === true) return false;
   return options.rawCandidateCount < options.batchSize;
 }
 
@@ -106,6 +109,58 @@ export function creatorBrowseSparseEarlyStopActive(
 export function resolveCreatorBrowseFillMaxWindows(rawTotalEstimate: number): number {
   const fromEstimate = Math.max(1, Math.ceil(rawTotalEstimate / CREATOR_BROWSE_FILL_BATCH) + 2);
   return Math.min(CREATOR_BROWSE_MAX_FILL_WINDOWS, fromEstimate);
+}
+
+/**
+ * Phase 1B-2 — filters that can shrink the FTS hit universe after retrieval.
+ * Bare `q` alone must NOT trip this (raw FTS total_count may remain visible).
+ * productionOnly is always on and is not treated as a structured shrink signal.
+ */
+export function creatorBrowseFtsStructuredShrinkActive(
+  filters: UnifiedCreatorBrowseFilters
+): boolean {
+  if (browseCandidateQualificationActive(filters)) return true;
+  if (resolveBrowseCategoriesPresent(filters)) return true;
+  if ((filters.audienceCountries?.length ?? 0) > 0) return true;
+  if ((filters.audienceInterestTags?.length ?? 0) > 0) return true;
+  if ((filters.languages?.length ?? 0) > 0) return true;
+  if ((filters.contentLanguages?.length ?? 0) > 0) return true;
+  if (Boolean(filters.language?.trim())) return true;
+  if (Boolean(filters.audienceGender?.trim())) return true;
+  if (Boolean(filters.audienceAgeMin?.trim())) return true;
+  if (Boolean(filters.audienceAgeMax?.trim())) return true;
+  if ((filters.creatorCountries?.length ?? 0) > 0) return true;
+  if (Boolean(filters.country?.trim())) return true;
+  if (filters.lastPostWithin?.trim()) return true;
+  if (filters.minThinkwayScore != null) return true;
+  if (filters.minAiScore != null) return true;
+  return false;
+}
+
+function resolveBrowseCategoriesPresent(
+  filters: Pick<UnifiedCreatorBrowseFilters, "categories" | "category">
+): boolean {
+  if ((filters.categories?.length ?? 0) > 0) return true;
+  return Boolean(filters.category?.trim());
+}
+
+/**
+ * FTS fill displayed total.
+ * - Structured shrink → Phase 1B-1 fill total (never raw FTS total_count).
+ * - Bare q → may retain raw FTS total_count when the RPC provided one.
+ */
+export function resolveCreatorBrowseFtsFillTotal(options: {
+  structuredShrink: boolean;
+  fillTotal: number;
+  rawFtsTotalCount?: number | null;
+  pageCreatorsLength: number;
+}): number {
+  if (options.structuredShrink) return options.fillTotal;
+  const raw = options.rawFtsTotalCount;
+  if (raw != null && Number.isFinite(raw) && raw >= 0) {
+    return Math.max(raw, options.pageCreatorsLength);
+  }
+  return options.fillTotal;
 }
 
 /**

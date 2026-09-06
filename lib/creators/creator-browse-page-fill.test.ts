@@ -50,6 +50,22 @@ test("raw exhaustion ignores hydrated/match counts", () => {
     isCreatorBrowseRawWindowExhausted({ rawCandidateCount: 30, batchSize: 100 }),
     true
   );
+  assert.equal(
+    isCreatorBrowseRawWindowExhausted({
+      rawCandidateCount: 12,
+      batchSize: 100,
+      rawHasMore: true,
+    }),
+    false
+  );
+  assert.equal(
+    isCreatorBrowseRawWindowExhausted({
+      rawCandidateCount: 100,
+      batchSize: 100,
+      rawHasMore: false,
+    }),
+    true
+  );
 });
 
 test("has_more contract: budget underfill / zero → false; matching beyond page → true", () => {

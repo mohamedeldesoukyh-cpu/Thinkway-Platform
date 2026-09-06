@@ -110,10 +110,13 @@ import {
 import {
   accumulateCreatorBrowseFillPage,
   CREATOR_BROWSE_FILL_BATCH,
+  CREATOR_BROWSE_MAX_FILL_WINDOWS,
   CREATOR_BROWSE_SPARSE_ZERO_MATCH_WINDOW_LIMIT,
+  creatorBrowseFtsStructuredShrinkActive,
   creatorBrowseSparseEarlyStopActive,
   requiresCreatorBrowseCandidateFill,
   resolveCreatorBrowseFillMaxWindows,
+  resolveCreatorBrowseFtsFillTotal,
 } from "@/lib/creators/creator-browse-page-fill";
 import {
   browseCandidateQualificationActive,
@@ -821,6 +824,249 @@ async function browseFilteredFastFillPage(
       page,
       pageSize,
       pinEgyptOnFirstWindow,
+      sparseEarlyStop,
+      ...filled.meta,
+      returned: filled.creators.length,
+      has_more: filled.has_more,
+      total: filled.total,
+    },
+    { path: tracePath }
+  );
+
+  return {
+    creators: filled.creators,
+    total: filled.total,
+    has_more: filled.has_more,
+  };
+}
+
+/**
+ * Phase 1B-2 — FTS / search_creators page-fill.
+ * Always accumulates matching creators across ranked hit windows until targetEnd /
+ * raw exhaustion / fill budget / sparse early-stop. Page N = matches
+ * [(N-1)*pageSize, N*pageSize), not raw FTS offset N.
+ *
+ * Handle fallback runs only on window 1 when FTS returns zero hits (never on later
+ * windows — prevents infinite / spurious fill loops).
+ */
+async function browseFtsFillPage(
+  supabase: SupabaseClient,
+  filters: UnifiedCreatorBrowseFilters,
+  search: string,
+  page: number,
+  pageSize: number,
+  tracePath: SearchTracePath
+): Promise<{ creators: UnifiedCreatorResult[]; total: number; has_more: boolean }> {
+  const sparseEarlyStop = creatorBrowseSparseEarlyStopActive(filters);
+  const structuredShrink = creatorBrowseFtsStructuredShrinkActive(filters);
+  let rawFtsTotalCount: number | undefined;
+  let handleFallbackUsed = false;
+
+  const filled = await accumulateCreatorBrowseFillPage({
+    page,
+    pageSize,
+    batchSize: CREATOR_BROWSE_FILL_BATCH,
+    maxWindows: CREATOR_BROWSE_MAX_FILL_WINDOWS,
+    sparseZeroMatchWindowLimit: sparseEarlyStop
+      ? CREATOR_BROWSE_SPARSE_ZERO_MATCH_WINDOW_LIMIT
+      : null,
+    fetchWindow: async (windowIndex) => {
+      if (handleFallbackUsed && windowIndex > 1) {
+        return { creators: [], rawCandidateCount: 0, rawHasMore: false };
+      }
+
+      const offset = (windowIndex - 1) * CREATOR_BROWSE_FILL_BATCH;
+      const allowHandleFallback = windowIndex === 1;
+      const response = await resolveCreatorSearchHits(
+        supabase,
+        search,
+        CREATOR_BROWSE_FILL_BATCH,
+        offset,
+        tracePath,
+        { allowHandleFallback }
+      );
+
+      if (windowIndex === 1 && response.totalCount != null) {
+        rawFtsTotalCount = response.totalCount;
+      }
+      if (response.usedHandleFallback) {
+        handleFallbackUsed = true;
+      }
+
+      const hits = response.hits;
+      if (hits.length === 0) {
+        return { creators: [], rawCandidateCount: 0, rawHasMore: false };
+      }
+
+      const influencerRankMap = influencerRankMapFromHits(hits);
+      const influencerSearchIds = hits
+        .filter((hit) => hit.source_type === "influencer")
+        .map((hit) => hit.creator_id);
+      const discoverySearchIds = hits
+        .filter((hit) => hit.source_type === "discovered")
+        .map((hit) => hit.creator_id);
+      const scopedInfluencerIds =
+        influencerSearchIds.length > 0 ? influencerSearchIds : [];
+      const scopedDiscoveryIds =
+        discoverySearchIds.length > 0 ? discoverySearchIds : undefined;
+
+      const [internal, discovery] = await Promise.all([
+        fetchInternalCreators(
+          supabase,
+          { ...filters, search: undefined, page: undefined, pageSize: undefined },
+          scopedInfluencerIds,
+          influencerRankMap,
+          browseHydrationOptionsForFilters(filters, tracePath)
+        ),
+        fetchDiscoveryCreators(
+          supabase,
+          { ...filters, search: undefined, page: undefined, pageSize: undefined },
+          scopedDiscoveryIds,
+          tracePath
+        ),
+      ]);
+
+      const creators = mergeCreatorsInSearchOrder(hits, internal, discovery);
+      return {
+        creators,
+        rawCandidateCount: hits.length,
+        rawHasMore: creatorSearchHasMore(hits),
+      };
+    },
+    applyFilters: (creators) => {
+      let next = applyPostBrowseFilters(creators, filters, tracePath);
+      next = dedupeSearchResultsByHandle(next);
+      return next;
+    },
+    sort: (creators) =>
+      [...creators].sort(
+        (a, b) =>
+          (b.search_rank ?? 0) - (a.search_rank ?? 0) ||
+          a.display_name.localeCompare(b.display_name)
+      ),
+  });
+
+  const total = resolveCreatorBrowseFtsFillTotal({
+    structuredShrink,
+    fillTotal: filled.total,
+    rawFtsTotalCount,
+    pageCreatorsLength: filled.creators.length,
+  });
+
+  searchTrace(
+    "5c_fts_fill",
+    {
+      page,
+      pageSize,
+      search,
+      structuredShrink,
+      sparseEarlyStop,
+      rawFtsTotalCount: rawFtsTotalCount ?? null,
+      handleFallbackUsed,
+      ...filled.meta,
+      returned: filled.creators.length,
+      has_more: filled.has_more,
+      total,
+    },
+    { path: tracePath }
+  );
+
+  return {
+    creators: filled.creators,
+    total,
+    has_more: filled.has_more,
+  };
+}
+
+/**
+ * Phase 1B-2 — category RPC page-fill.
+ * Always accumulates matching creators across category ID windows. No Egypt pin.
+ * Preserves category RPC order (updated_at) across windows — no default browse re-sort.
+ */
+async function browseCategoryFillPage(
+  supabase: SupabaseClient,
+  filters: UnifiedCreatorBrowseFilters,
+  page: number,
+  pageSize: number,
+  tracePath: SearchTracePath
+): Promise<{ creators: UnifiedCreatorResult[]; total: number; has_more: boolean }> {
+  const rawTotal = await countInternalCreatorsBrowse(supabase, filters);
+  const maxWindows = resolveCreatorBrowseFillMaxWindows(rawTotal);
+  const sparseEarlyStop = creatorBrowseSparseEarlyStopActive(filters);
+  const seenIds = new Set<string>();
+
+  const filled = await accumulateCreatorBrowseFillPage({
+    page,
+    pageSize,
+    batchSize: CREATOR_BROWSE_FILL_BATCH,
+    maxWindows,
+    sparseZeroMatchWindowLimit: sparseEarlyStop
+      ? CREATOR_BROWSE_SPARSE_ZERO_MATCH_WINDOW_LIMIT
+      : null,
+    fetchWindow: async (windowIndex) => {
+      const browse = await queryInfluencerIdsForCategoryBrowse(
+        supabase,
+        filters,
+        windowIndex,
+        CREATOR_BROWSE_FILL_BATCH
+      );
+
+      const orderedIds: string[] = [];
+      for (const id of browse.ids) {
+        if (seenIds.has(id)) continue;
+        seenIds.add(id);
+        orderedIds.push(id);
+      }
+
+      const rawCandidateCount = browse.ids.length;
+      const offset = (windowIndex - 1) * CREATOR_BROWSE_FILL_BATCH;
+      const rawHasMore =
+        browse.ids.length > 0 && offset + browse.ids.length < browse.total;
+
+      if (rawCandidateCount === 0) {
+        return { creators: [], rawCandidateCount: 0, rawHasMore: false };
+      }
+      if (orderedIds.length === 0) {
+        return {
+          creators: [],
+          rawCandidateCount,
+          rawHasMore,
+        };
+      }
+
+      const hydrated = await fetchInternalCreators(
+        supabase,
+        { ...filters, search: undefined, page: undefined, pageSize: undefined },
+        orderedIds,
+        null,
+        browseHydrationOptionsForFilters(filters, tracePath, { skipDna: true })
+      );
+      const byId = new Map(
+        hydrated
+          .filter((creator) => creator.influencer_id)
+          .map((creator) => [creator.influencer_id as string, creator])
+      );
+      const creators = orderedIds
+        .map((id) => byId.get(id))
+        .filter((creator): creator is UnifiedCreatorResult => creator != null);
+
+      return {
+        creators,
+        rawCandidateCount,
+        rawHasMore,
+      };
+    },
+    applyFilters: (creators) => applyPostBrowseFilters(creators, filters, tracePath),
+    // Preserve first-seen (category RPC) order — do not re-rank with Egypt pin tiers.
+    sort: (creators) => creators,
+  });
+
+  searchTrace(
+    "5c_category_fill",
+    {
+      page,
+      pageSize,
+      rawTotal,
       sparseEarlyStop,
       ...filled.meta,
       returned: filled.creators.length,
@@ -1633,6 +1879,8 @@ async function fetchInternalCreators(
 type CreatorSearchHitsResult = {
   hits: CreatorSearchHit[];
   totalCount?: number;
+  /** True when results came from handle/display-name fallback (not search_creators). */
+  usedHandleFallback?: boolean;
 };
 
 async function resolveCreatorSearchHits(
@@ -1640,7 +1888,8 @@ async function resolveCreatorSearchHits(
   search: string,
   pageSize: number,
   offset: number,
-  tracePath: SearchTracePath = "unknown"
+  tracePath: SearchTracePath = "unknown",
+  options?: { allowHandleFallback?: boolean }
 ): Promise<CreatorSearchHitsResult> {
   const normalizedQuery = normalizeDiscoverySearchQuery(search);
   const exactLookup = isExactCreatorLookupSearch(search);
@@ -1648,6 +1897,7 @@ async function resolveCreatorSearchHits(
   const effectiveQuery =
     exactLookup && normalizedQuery ? normalizedQuery : search;
   const effectiveLimit = exactLookup ? Math.min(pageSize, 12) : pageSize;
+  const allowHandleFallback = options?.allowHandleFallback !== false && offset === 0;
 
   let response = await searchCreators(
     supabase,
@@ -1661,6 +1911,10 @@ async function resolveCreatorSearchHits(
   if (normalizedQuery && normalizedQuery !== search.trim() && !exactLookup) {
     response = await searchCreators(supabase, normalizedQuery, pageSize, offset, tracePath);
     if (response.hits.length > 0) return response;
+  }
+
+  if (!allowHandleFallback) {
+    return { hits: [], totalCount: 0 };
   }
 
   const fallbackIds = await searchInfluencerIdsByHandleFallback(
@@ -1678,6 +1932,7 @@ async function resolveCreatorSearchHits(
       has_more: false,
     })),
     totalCount: fallbackIds.length,
+    usedHandleFallback: true,
   };
 }
 
@@ -2120,45 +2375,23 @@ export async function browseUnifiedCreators(
     }
 
     if (categoryFilterActive && includeInternal) {
-      perf?.span("fetchInternalCreators");
-      const internalPromise = fetchInternalCreatorsBrowsePage(supabase, filters, page, pageSize, tracePath);
-      perf?.span("fetchDiscoveryCreators");
-      const discoveryPromise = includeDiscovery
-        ? fetchDiscoveryCreators(
-            supabase,
-            {
-              ...filters,
-              search: undefined,
-              page,
-              pageSize,
-            },
-            undefined,
-            tracePath
-          )
-        : Promise.resolve([]);
-      perf?.span("search_creators_count");
-      const totalPromise = countInternalCreatorsBrowse(supabase, filters);
-      const [internalPage, discovery, totalMatches] = await Promise.all([
-        internalPromise,
-        discoveryPromise,
-        totalPromise,
-      ]);
-      const internal = internalPage.creators;
-
-      perf?.span("merge");
-      const merged = applyPostBrowseFilters([...internal, ...discovery], filters, tracePath);
-      const sortedMerged = sortBrowseCreatorsInDefaultOrder(merged);
-      const offset = (page - 1) * pageSize;
-
-      perf?.span("serialization");
-      const result = {
-        creators: slimRecentPublicationsForBrowse(sortedMerged),
-        total: Math.max(totalMatches, sortedMerged.length),
-        has_more: offset + sortedMerged.length < Math.max(totalMatches, sortedMerged.length),
+      perf?.span("category_browse_fill");
+      const filled = await browseCategoryFillPage(
+        supabase,
+        filters,
         page,
         pageSize,
-        internal_count: internal.length,
-        discovery_count: discovery.length,
+        tracePath
+      );
+      perf?.span("serialization");
+      const result = {
+        creators: slimRecentPublicationsForBrowse(filled.creators),
+        total: filled.total,
+        has_more: filled.has_more,
+        page,
+        pageSize,
+        internal_count: filled.creators.filter((c) => c.influencer_id).length,
+        discovery_count: filled.creators.filter((c) => !c.influencer_id).length,
       };
       perf?.end();
       return traceBrowseUnifiedResult(result, tracePath, filters, settings);
@@ -2318,137 +2551,24 @@ export async function browseUnifiedCreators(
     }
   }
 
-  perf?.span("search_creators");
-  const searchResponse = search
-    ? await resolveCreatorSearchHits(supabase, search, pageSize, (page - 1) * pageSize, tracePath)
-    : { hits: [], totalCount: undefined };
-  const searchHits = searchResponse.hits;
-  const searchHasMore = creatorSearchHasMore(searchHits);
-  const searchTotal = page === 1 ? searchResponse.totalCount : undefined;
-  const influencerRankMap = influencerRankMapFromHits(searchHits);
-  const influencerSearchIds = search
-    ? searchHits
-        .filter((hit) => hit.source_type === "influencer")
-        .map((hit) => hit.creator_id)
-    : null;
-  const discoverySearchIds = search
-    ? searchHits
-        .filter((hit) => hit.source_type === "discovered")
-        .map((hit) => hit.creator_id)
-    : null;
-  const scopedInfluencerIds =
-    influencerSearchIds && influencerSearchIds.length > 0
-      ? influencerSearchIds
-      : search
-        ? []
-        : undefined;
-  const scopedDiscoveryIds =
-    discoverySearchIds && discoverySearchIds.length > 0 ? discoverySearchIds : undefined;
-
-  searchTrace("5_search_hits_resolved", {
+  perf?.span("fts_browse_fill");
+  const filled = await browseFtsFillPage(
+    supabase,
+    filters,
     search,
-    hitCount: searchHits.length,
-    searchTotal: searchTotal ?? null,
-    influencerHitCount: influencerSearchIds?.length ?? 0,
-    discoveredHitCount: discoverySearchIds?.length ?? 0,
-    scopedInfluencerIdCount: scopedInfluencerIds?.length ?? null,
-    scopedDiscoveryIdCount: scopedDiscoveryIds?.length ?? null,
-    country: filters.country,
-    categories,
-  }, pathOpt);
-
-  if (
-    search &&
-    searchHits.length === 0 &&
-    !filters.country &&
-    categories.length === 0 &&
-    !filters.platform &&
-    !filters.platforms?.length
-  ) {
-    traceCountDrop("5_search_hits_resolved", "fts_zero_hits", 1, 0, {
-      search,
-      country: filters.country,
-      categories,
-    }, pathOpt);
-    perf?.span("serialization");
-    const result = {
-      creators: [],
-      total: 0,
-      has_more: false,
-      page,
-      pageSize,
-      internal_count: 0,
-      discovery_count: 0,
-    };
-    perf?.end();
-    return traceBrowseUnifiedResult(result, tracePath, filters, settings);
-  }
-
-  perf?.span("fetchInternalCreators");
-  const internalPromise = fetchInternalCreators(
-    supabase,
-    { ...filters, search: undefined },
-    scopedInfluencerIds,
-    influencerRankMap,
-    browseHydrationOptions
-  );
-  perf?.span("fetchDiscoveryCreators");
-  const discoveryPromise = fetchDiscoveryCreators(
-    supabase,
-    { ...filters, search: undefined },
-    scopedDiscoveryIds,
-    tracePath
-  );
-  const [internal, discovery] = await Promise.all([internalPromise, discoveryPromise]);
-
-  searchTrace("6_7_hydration_complete", {
-    internalCount: internal.length,
-    discoveryCount: discovery.length,
-    preMergeTotal: internal.length + discovery.length,
-    country: filters.country,
-    categories,
-  }, pathOpt);
-
-  perf?.span("merge");
-  let merged: UnifiedCreatorResult[];
-  const preMergeCount = internal.length + discovery.length;
-  if (search && searchHits.length > 0) {
-    merged = mergeCreatorsInSearchOrder(searchHits, internal, discovery);
-  } else if (search) {
-    merged = [...internal, ...discovery];
-    merged.sort(
-      (a, b) =>
-        (b.search_rank ?? 0) - (a.search_rank ?? 0) ||
-        b.thinkway_score - a.thinkway_score
-    );
-  } else {
-    merged = sortBrowseCreatorsInDefaultOrder([...internal, ...discovery]);
-  }
-
-  merged = applyPostBrowseFilters(merged, filters, tracePath);
-  if (search) {
-    const beforeDedupe = merged.length;
-    merged = dedupeSearchResultsByHandle(merged);
-    traceCountDrop("8_dedupe_by_handle", "handle_dedupe", beforeDedupe, merged.length, undefined, pathOpt);
-  }
-
-  traceCountDrop("9_final", "pipeline", preMergeCount, merged.length, {
-    searchTotal: searchTotal ?? null,
-    country: filters.country,
-    categories,
-  }, pathOpt);
-
-  perf?.span("serialization");
-  const result = {
-    creators: slimRecentPublicationsForBrowse(merged),
-    total:
-      searchTotal ??
-      (page - 1) * pageSize + merged.length + (searchHasMore ? 1 : 0),
-    has_more: searchHasMore,
     page,
     pageSize,
-    internal_count: internal.length,
-    discovery_count: discovery.length,
+    tracePath
+  );
+  perf?.span("serialization");
+  const result = {
+    creators: slimRecentPublicationsForBrowse(filled.creators),
+    total: filled.total,
+    has_more: filled.has_more,
+    page,
+    pageSize,
+    internal_count: filled.creators.filter((c) => c.influencer_id).length,
+    discovery_count: filled.creators.filter((c) => !c.influencer_id).length,
   };
   perf?.end();
   return traceBrowseUnifiedResult(result, tracePath, filters, settings);

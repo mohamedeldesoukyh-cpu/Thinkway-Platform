@@ -141,7 +141,7 @@
     "test:media-proxy-client-recovery": "npx tsx lib/creators/media-proxy-client-recovery.test.ts",
     "test:browse-hydration": "npx tsx lib/creators/unified-browse-browse-hydration.test.ts",
     "test:browse-candidate-qualification": "npx tsx --test lib/creators/browse-candidate-qualification.test.ts lib/creators/discovery-browse-filters.test.ts",
-    "test:creator-browse-page-fill": "npx tsx --test lib/creators/creator-browse-page-fill.test.ts lib/creators/discovery-browse-filters.test.ts",
+    "test:creator-browse-page-fill": "npx tsx --test lib/creators/creator-browse-page-fill.test.ts lib/creators/creator-browse-fts-category-fill.test.ts lib/creators/discovery-browse-filters.test.ts",
     "test:creator-search-filter-truth": "npx tsx --test features/discovery/components/creator-search/creator-search-filter-truth.test.ts lib/creators/discovery-browse-filters.test.ts features/discovery/components/creator-search/creator-search-client-filters.test.ts lib/creators/creator-search-filter-truth.test.ts",
     "test:media-proxy": "npx tsx lib/creators/media-proxy-cache.test.ts && npx tsx lib/creators/creator-avatar-proxy.test.ts && npx tsx lib/creators/publication-preview-proxy.test.ts",
     "test:profile-url": "npx tsx lib/discovery/profile-url.test.ts",
