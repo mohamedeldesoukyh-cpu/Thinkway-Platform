@@ -2,8 +2,9 @@
 
 import { Suspense, type ReactNode } from "react";
 
+import "@/app/styles/client-detail-suite.css";
+
 import {
-  PlatformV6SectionMeta,
   PlatformV6SectionWrap,
   PlatformV6Toolbar,
 } from "@/components/platform/platform-v6-layout";
@@ -25,6 +26,7 @@ type ClientsListSectionProps = {
   totalPages: number;
   search: string;
   errorSlot?: ReactNode;
+  newClientAction?: ReactNode;
 };
 
 export function ClientsListSection({
@@ -35,37 +37,73 @@ export function ClientsListSection({
   totalPages,
   search,
   errorSlot,
+  newClientAction,
 }: ClientsListSectionProps) {
   return (
-    <OperationalTableSuiteProvider
-      tableId={OPERATIONAL_TABLE_IDS.clients}
-      columns={CLIENTS_TABLE_COLUMNS}
-      rows={clients}
-      filterAccessors={CLIENTS_TABLE_FILTER_ACCESSORS}
-    >
-      <PlatformV6SectionMeta title="All clients" meta={meta} />
-      <PlatformV6Toolbar>
-        <Suspense fallback={null}>
-          <OperationalTableToolbar contextLabel="Clients">
-            <ClientsSearch />
-          </OperationalTableToolbar>
-        </Suspense>
-      </PlatformV6Toolbar>
+    <div className="client-detail-suite">
+      <div className="tw-frozen">
+        <div className="tw-mast">
+          <div className="tw-mh">
+            <span className="tw-hmk" aria-hidden>
+              <i />
+              <u />
+            </span>
+            <span className="tw-hwd">
+              THINK<em>WAY</em>
+            </span>
+            <span className="tw-hdv" />
+            <h1>Clients</h1>
+            <span className="sub">
+              legal entities · brands and campaigns hang off each one
+            </span>
+            <span style={{ flex: 1 }} />
+            {newClientAction}
+          </div>
+        </div>
+      </div>
 
-      <PlatformV6SectionWrap>
-        {errorSlot}
-
-        {clients.length === 0 ? (
-          <ClientsEmptyState hasSearch={hasSearch} />
-        ) : (
-          <>
-            <ClientsTable clients={clients} />
-            <div className="border-t border-border px-4 py-3 md:px-[14px]">
-              <ClientsPagination page={page} totalPages={totalPages} search={search} />
+      <div className="tw-main">
+        <OperationalTableSuiteProvider
+          tableId={OPERATIONAL_TABLE_IDS.clients}
+          columns={CLIENTS_TABLE_COLUMNS}
+          rows={clients}
+          filterAccessors={CLIENTS_TABLE_FILTER_ACCESSORS}
+        >
+          <div className="tw-c">
+            <div className="tw-ch">
+              <span className="tw-ct">All clients</span>
+              <span className="tw-cs">{meta}</span>
+              <span style={{ flex: 1 }} />
             </div>
-          </>
-        )}
-      </PlatformV6SectionWrap>
-    </OperationalTableSuiteProvider>
+            <PlatformV6Toolbar>
+              <Suspense fallback={null}>
+                <OperationalTableToolbar contextLabel="Clients">
+                  <ClientsSearch />
+                </OperationalTableToolbar>
+              </Suspense>
+            </PlatformV6Toolbar>
+
+            <PlatformV6SectionWrap>
+              {errorSlot}
+
+              {clients.length === 0 ? (
+                <ClientsEmptyState hasSearch={hasSearch} />
+              ) : (
+                <>
+                  <ClientsTable clients={clients} />
+                  <div className="border-t border-[var(--tw-hair,#EDF0F5)] px-4 py-3 md:px-[14px]">
+                    <ClientsPagination
+                      page={page}
+                      totalPages={totalPages}
+                      search={search}
+                    />
+                  </div>
+                </>
+              )}
+            </PlatformV6SectionWrap>
+          </div>
+        </OperationalTableSuiteProvider>
+      </div>
+    </div>
   );
 }

@@ -65,9 +65,16 @@ const initialState: CreateClientFormState = { ok: false };
 type NewClientDialogProps = {
   groups: { id: string; name: string }[];
   currencyOptions: { value: string; label: string }[];
+  triggerClassName?: string;
+  triggerLabel?: string;
 };
 
-export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProps) {
+export function NewClientDialog({
+  groups,
+  currencyOptions,
+  triggerClassName,
+  triggerLabel = "New client",
+}: NewClientDialogProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [groupId, setGroupId] = useState("");
@@ -172,8 +179,13 @@ export function NewClientDialog({ groups, currencyOptions }: NewClientDialogProp
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <button type="button" className="platform-v6-btn platform-v6-btn-primary">
-          + New Client
+        <button
+          type="button"
+          className={cn(
+            triggerClassName ?? "platform-v6-btn platform-v6-btn-primary"
+          )}
+        >
+          {triggerLabel}
         </button>
       </DialogTrigger>
       <DialogContent className="flex max-h-[90vh] flex-col gap-0 overflow-hidden rounded-[20px] border-border p-0 shadow-[var(--card-shadow)] sm:max-w-xl">

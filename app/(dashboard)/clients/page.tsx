@@ -1,6 +1,5 @@
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import { PlatformV6Page, PlatformV6PageHeader } from "@/components/platform/platform-v6-layout";
 import { ClientsListSection } from "@/features/clients/components/clients-list-section";
 import { NewClientDialog } from "@/features/clients/components/new-client-dialog";
 import { getClientsList } from "@/features/clients/queries";
@@ -49,37 +48,41 @@ export default async function ClientsPage({ searchParams }: ClientsPageProps) {
   const hasSearch = Boolean(search);
   const meta =
     total === 1
-      ? "1 client"
-      : `${total} clients` + (hasSearch ? ` matching "${search}"` : "");
+      ? "1 legal entity"
+      : `${total} legal entities` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
-    <DashboardShell title="Clients" platformV6 workspaceNavActive="clients">
-      <PlatformV6Page>
-        <PlatformV6PageHeader
-          inline
-          title="Clients"
-          description="Clients within holding groups. Brands and campaigns hang off each client."
-          actions={
-            <NewClientDialog groups={groups} currencyOptions={currencyOptions} />
-          }
-        />
-
-        <ClientsListSection
-          clients={clients}
-          meta={meta}
-          hasSearch={hasSearch}
-          page={list.page}
-          totalPages={totalPages}
-          search={search}
-          errorSlot={
-            errorMessage ? (
-              <div className="border-b px-4 py-3">
-                <PageAlert>{errorMessage}</PageAlert>
-              </div>
-            ) : null
-          }
-        />
-      </PlatformV6Page>
+    <DashboardShell
+      title="Clients"
+      hidePageHeader
+      platformV6
+      workspaceNavActive="clients"
+      containedMain
+      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+    >
+      <ClientsListSection
+        clients={clients}
+        meta={meta}
+        hasSearch={hasSearch}
+        page={list.page}
+        totalPages={totalPages}
+        search={search}
+        newClientAction={
+          <NewClientDialog
+            groups={groups}
+            currencyOptions={currencyOptions}
+            triggerClassName="tw-b sm pri"
+            triggerLabel="+ New client"
+          />
+        }
+        errorSlot={
+          errorMessage ? (
+            <div className="border-b px-4 py-3">
+              <PageAlert>{errorMessage}</PageAlert>
+            </div>
+          ) : null
+        }
+      />
     </DashboardShell>
   );
 }

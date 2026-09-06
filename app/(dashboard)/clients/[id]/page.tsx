@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import "@/app/styles/client-detail-suite.css";
 import {
   getAssignableClientProfiles,
   getClientAccessForEntity,
@@ -28,6 +29,7 @@ import {
 
 type ClientProfilePageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ tab?: string }>;
 };
 
 export async function generateMetadata({
@@ -47,8 +49,10 @@ export async function generateMetadata({
 
 export default async function ClientProfilePage({
   params,
+  searchParams,
 }: ClientProfilePageProps) {
   const { id: routeKey } = await params;
+  const { tab } = await searchParams;
 
   const clientId = await resolveClientIdByRouteKey(routeKey);
   if (!clientId) notFound();
@@ -151,6 +155,7 @@ export default async function ClientProfilePage({
           onboardingTimeline={onboardingTimeline}
           canEditOnboardingChecklist={onboardingPermissions.canEditChecklist}
           canOverrideOnboardingStatus={onboardingPermissions.canOverrideStatus}
+          defaultTab={tab}
         />
       ) : null}
     </DashboardShell>

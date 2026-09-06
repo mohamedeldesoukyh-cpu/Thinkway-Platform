@@ -61,11 +61,12 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
     id: "group",
     label: "Group",
     colWidth: "16%",
-    renderCell: (client) => (
-      <span className="block truncate platform-v6-c-gray">
-        {client.group?.name ?? "—"}
-      </span>
-    ),
+    renderCell: (client) =>
+      client.group?.name ? (
+        <span className="tw-p p-v">{client.group.name}</span>
+      ) : (
+        <span className="tw-miss">no group</span>
+      ),
   },
   {
     id: "status",
@@ -85,17 +86,35 @@ export const CLIENTS_TABLE_COLUMNS: OperationalConfigurableColumnDef<ClientRow>[
     renderCell: (client) => {
       const email = client.billing_email?.trim();
       if (!email) {
-        return <span className="block truncate platform-v6-c-gray">—</span>;
+        return <span className="tw-miss">none on file</span>;
       }
-      return <span className="block truncate text-[11px]">{email}</span>;
+      return (
+        <span className="tw-t block truncate" title={email}>
+          {email}
+        </span>
+      );
     },
   },
   {
     id: "created",
     label: "Created",
     colWidth: "112px",
-    renderCell: (client) => format(new Date(client.created_at), "MMM d, yyyy"),
-    cellClassName: "whitespace-nowrap platform-v6-c-gray text-[11px]",
+    cellClassName: "whitespace-nowrap",
+    renderCell: (client) => (
+      <span className="tw-d">{format(new Date(client.created_at), "MMM d, yyyy")}</span>
+    ),
+  },
+  {
+    id: "actions",
+    label: "Act",
+    colWidth: "84px",
+    renderCell: (client) => (
+      <span className="tw-act">
+        <Link href={clientDetailPath(client)} className="tw-b sm">
+          Open
+        </Link>
+      </span>
+    ),
   },
 ];
 
