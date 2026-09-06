@@ -5,6 +5,7 @@ import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import {
   discoveryCreatorCategoriesLabel,
   resolveDiscoveryCreatorDisplayCategories,
+  takeDiscoveryCategoryChips,
 } from "./creator-display-categories";
 
 function drDinaCreator(
@@ -133,6 +134,23 @@ assert.deepEqual(
   ),
   [],
   "Creators without category signals should stay empty"
+);
+
+assert.deepEqual(
+  takeDiscoveryCategoryChips([
+    "Media/News Company",
+    "Travel",
+    "Lifestyle",
+    "PR",
+  ]),
+  ["PR", "Media/News Company", "Travel"],
+  "PR must stay visible inside the Discovery chip budget"
+);
+
+assert.deepEqual(
+  takeDiscoveryCategoryChips(["Travel", "Lifestyle", "Beauty"]),
+  ["Travel", "Lifestyle", "Beauty"],
+  "Non-PR lists keep natural order when within or at the limit"
 );
 
 console.log("lib/creators/creator-display-categories.test.ts — all tests passed");

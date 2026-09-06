@@ -135,6 +135,7 @@ export function withPrCategoryToggled(
     .map((tag) => tag.trim())
     .filter(Boolean)
     .filter((tag) => tag.toLowerCase() !== CREATOR_PR_CATEGORY.toLowerCase());
-  if (enabled) next.push(CREATOR_PR_CATEGORY);
+  // Front-load PR so Discovery's 3-chip Category column keeps it visible.
+  if (enabled) next.unshift(CREATOR_PR_CATEGORY);
   return next;
 }

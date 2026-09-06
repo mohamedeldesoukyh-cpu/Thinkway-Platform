@@ -82,14 +82,20 @@ import { formatCreatorCountryLabels, resolveCreatorFollowersCount } from "@/lib/
 import { formatCreatorRecencyLabel } from "@/lib/creators/creator-hover-details";
 import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { getInfluencerTier, normalizeInfluencerTier } from "@/lib/creators/influencer-tier";
-import { creatorHasPrCategory } from "@/lib/creators/category-keywords";
+import {
+  creatorHasPrCategory,
+  withPrCategoryToggled,
+} from "@/lib/creators/category-keywords";
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { isAssignableCreator } from "@/lib/creators/adapters";
 import {
   projectCreatorPlatformView,
   sortPlatformsStable,
 } from "@/lib/creators/creator-centric";
-import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator-display-categories";
+import {
+  resolveDiscoveryCreatorDisplayCategories,
+  takeDiscoveryCategoryChips,
+} from "@/lib/creators/creator-display-categories";
 import { creatorHasAnyContact, resolveCreatorContactSections, type CreatorContactFields } from "@/lib/creators/contact-info";
 import { creatorListRowEquivalent } from "@/lib/creators/creator-list-row-equivalent";
 import { shouldPreventCreatorDetailSheetOutsideDismiss } from "@/lib/creators/creator-detail-sheet-open-policy";
@@ -588,7 +594,7 @@ function ConfidenceRows({ displayCreator }: { displayCreator: UnifiedCreatorResu
             Categories
           </span>
           <div className="flex flex-wrap justify-end gap-1">
-            {storedCategories.slice(0, 5).map((category) => (
+            {takeDiscoveryCategoryChips(storedCategories, 5).map((category) => (
               <span
                 key={category}
                 className="inline-flex h-5 items-center rounded-full bg-blue-50 px-2 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/40 dark:text-blue-300"
@@ -1068,7 +1074,15 @@ export function CreatorDetailSheet({
   async function handleTogglePrCategory(enabled: boolean) {
     const influencerId = identityCreator.influencer_id;
     if (!influencerId || prCategoryBusy) return;
+    const previous = identityCreator;
+    const optimistic: UnifiedCreatorResult = {
+      ...previous,
+      categories: withPrCategoryToggled(previous.categories, enabled),
+      browse_category_tags: withPrCategoryToggled(previous.browse_category_tags, enabled),
+    };
     setPrCategoryBusy(true);
+    // Update pack + search Category column immediately (list equivalence now includes tags).
+    handleCreatorUpdated(optimistic, { forceListSync: true });
     try {
       const result = await updateCreatorPrCategoryAction({
         influencerId,
@@ -1077,6 +1091,7 @@ export function CreatorDetailSheet({
       });
       if (!result.ok) {
         toast.error(result.message);
+        handleCreatorUpdated(previous, { forceListSync: true });
         return;
       }
       toast.success(result.message);

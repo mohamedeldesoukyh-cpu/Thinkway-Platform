@@ -3,9 +3,9 @@ import { formatCreatorRecencyLabel } from "@/lib/creators/creator-hover-details"
 import { creatorProfileSourceFromUnified } from "@/lib/creators/creator-profile-source";
 import { filterPlatformsForDisplay } from "@/lib/creators/creator-centric";
 import {
-  DISCOVERY_CREATOR_CATEGORY_CHIP_LIMIT,
   discoveryCreatorCategoriesLabel,
   resolveDiscoveryCreatorDisplayCategories,
+  takeDiscoveryCategoryChips,
 } from "@/lib/creators/creator-display-categories";
 import {
   resolveCreatorBrowsePlatformStats,
@@ -253,7 +253,7 @@ export function buildDiscoveryCreatorViewModel(
     handleLabel: resolveDiscoveryCreatorHandleLabel(primaryPlatform),
     avatarUrl: profileSource.avatarUrl ?? null,
     profileUrl: profileUrl ?? profileSource.profile_url ?? null,
-    categories: categories.slice(0, DISCOVERY_CREATOR_CATEGORY_CHIP_LIMIT),
+    categories: takeDiscoveryCategoryChips(categories),
     categoriesLabel,
     metaLabel: resolveDiscoveryCreatorMetaLabel(creator, primaryPlatform),
     bio: creator.bio?.trim() || null,

@@ -24,17 +24,17 @@ test("creatorHasPrCategory is case-insensitive", () => {
 
 test("withPrCategoryToggled adds and removes without replacing peers", () => {
   assert.deepEqual(withPrCategoryToggled(["Beauty", "Macro"], true), [
+    CREATOR_PR_CATEGORY,
     "Beauty",
     "Macro",
-    CREATOR_PR_CATEGORY,
   ]);
   assert.deepEqual(withPrCategoryToggled(["Beauty", "PR", "Food"], false), [
     "Beauty",
     "Food",
   ]);
   assert.deepEqual(withPrCategoryToggled(["pr", "Beauty"], true), [
-    "Beauty",
     CREATOR_PR_CATEGORY,
+    "Beauty",
   ]);
 });
 
@@ -45,6 +45,14 @@ test("browse category filter matches PR tags", () => {
       ["PR"]
     ),
     true
+  );
+  assert.equal(
+    creatorMatchesBrowseCategories(
+      { categories: ["Beauty", "PR"], browse_category_tags: ["Beauty"] },
+      ["PR"]
+    ),
+    true,
+    "PR on categories must match even when browse snapshot lags"
   );
   assert.equal(
     creatorMatchesBrowseCategories(

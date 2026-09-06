@@ -1,3 +1,8 @@
+import {
+  creatorHasPrCategory,
+  withPrCategoryToggled,
+} from "@/lib/creators/category-keywords";
+
 /** URL/query value for creators with no category tags. */
 export const CREATOR_CATEGORY_UNCATEGORIZED = "__uncategorized__";
 
@@ -114,7 +119,13 @@ export function creatorStoredCategoriesForDisplay(creator: {
   browse_category_tags?: string[] | null;
   categories?: string[] | null;
 }): string[] {
-  return creatorBrowseCategoryTags(creator);
+  const browse = creatorBrowseCategoryTags(creator);
+  // Pack PR toggle writes influencers.categories; if a client snapshot still has
+  // browse tags without PR, pull canonical PR from `categories` so chips stay honest.
+  if (creatorHasPrCategory(browse) || !creatorHasPrCategory(creator.categories)) {
+    return browse;
+  }
+  return withPrCategoryToggled(browse, true);
 }
 
 function categoryTagMatchesFilter(tag: string, filterCategory: string): boolean {
@@ -147,7 +158,7 @@ export function creatorMatchesBrowseCategories(
   const resolved = normalizeCategoryList(categories);
   if (resolved.length === 0) return true;
 
-  const tags = creatorBrowseCategoryTags(creator);
+  const tags = creatorStoredCategoriesForDisplay(creator);
   const interestTags = normalizeCategoryList(creator.audience_interests);
   const matchTags = [...tags, ...interestTags];
 

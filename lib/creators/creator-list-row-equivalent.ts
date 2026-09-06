@@ -1,5 +1,18 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
+function stringArraysEqual(
+  left: ReadonlyArray<string> | null | undefined,
+  right: ReadonlyArray<string> | null | undefined
+): boolean {
+  const a = left ?? [];
+  const b = right ?? [];
+  if (a.length !== b.length) return false;
+  for (let index = 0; index < a.length; index += 1) {
+    if (a[index] !== b[index]) return false;
+  }
+  return true;
+}
+
 /** Skip list/detail churn when a patch does not change row-visible creator data. */
 export function creatorListRowEquivalent(
   current: UnifiedCreatorResult,
@@ -13,6 +26,11 @@ export function creatorListRowEquivalent(
   if (
     current.default_metrics_platform_account_id !== next.default_metrics_platform_account_id
   ) {
+    return false;
+  }
+  // Category chips / PR toggle — must invalidate list rows when tags change.
+  if (!stringArraysEqual(current.categories, next.categories)) return false;
+  if (!stringArraysEqual(current.browse_category_tags, next.browse_category_tags)) {
     return false;
   }
   if (current.platforms.length !== next.platforms.length) return false;

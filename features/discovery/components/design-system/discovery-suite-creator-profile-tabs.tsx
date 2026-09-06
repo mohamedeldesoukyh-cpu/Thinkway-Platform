@@ -10,7 +10,10 @@ import {
   resolveCreatorContactSections,
   type PlatformContactSection,
 } from "@/lib/creators/contact-info";
-import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator-display-categories";
+import {
+  resolveDiscoveryCreatorDisplayCategories,
+  takeDiscoveryCategoryChips,
+} from "@/lib/creators/creator-display-categories";
 import type { CreatorQuotationPriceReference } from "@/lib/creators/quotation-price-reference";
 import type {
   CreatorEnrichmentStatus,
@@ -502,7 +505,7 @@ export function DiscoverySuiteCreatorProfileTabs({
         <Section title="Categories">
           {categories.length > 0 ? (
             <div className="tw-tags">
-              {categories.map((category) => (
+              {takeDiscoveryCategoryChips(categories, 5).map((category) => (
                 <span key={category}>{category}</span>
               ))}
             </div>

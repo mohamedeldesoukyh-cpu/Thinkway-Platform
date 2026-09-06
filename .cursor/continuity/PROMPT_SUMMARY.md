@@ -3,6 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-06 — PR Category column not showing after checkbox
+
+Root cause: (1) `creatorListRowEquivalent` ignored categories so search-list upsert kept stale rows after PR toggle; (2) Discovery Category column chips hard-limit 3 and PR was appended last, so Media/News · Travel · Lifestyle hid PR. Fix: compare categories in list equivalence, optimistic pack→list sync, front-load/pin PR in chip budget, merge PR from `categories` when browse lags. Filter still matches PR. Code-only.
+
 ## Shipped 2026-09-06 — Pack publications wall-of-text + PR category
 
 Publications tab dumped full Instagram captions in the 3-col `.tw-pubs` grid (no line-clamp; news pages like cairoscene). Fix: 2-line clamp in pack CSS + truncated captions in pack/gallery cards. **PR** is now a canonical category (`influencers.categories`); pack left-rail checkbox adds/removes `PR` alongside other tags; Filters quick chip + FTS/browse filter find PR pages. No migration. Develop only — Production not deployed.
