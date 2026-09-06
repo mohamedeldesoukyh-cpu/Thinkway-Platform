@@ -3,6 +3,11 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## In progress 2026-09-06 — IndexedDB client cache Phase 0+1
+
+Phase 0: `lib/client-cache/` (`idb`, entries/meta, TTL soft/hard, keys, prefix/tag invalidation).  
+Phase 1: Discovery Search **normal browse only** — paint from IndexedDB then revalidate via `browseUnifiedCreatorsAction`; keys from `filtersToBrowseParams` + user id (server `getRequestAuth` prop, no client auth round-trip). AI / acquiredOnly / detail / shortlist **not** cached. Tests: `npm run test:client-cache`, `npm run test:discovery-search-page`.
+
 ## Shipped 2026-09-06 — PR Category column not showing after checkbox
 
 Root cause: (1) `creatorListRowEquivalent` ignored categories so search-list upsert kept stale rows after PR toggle; (2) Discovery Category column chips hard-limit 3 and PR was appended last, so Media/News · Travel · Lifestyle hid PR. Fix: compare categories in list equivalence, optimistic pack→list sync, front-load/pin PR in chip budget, merge PR from `categories` when browse lags. Filter still matches PR. Code-only.

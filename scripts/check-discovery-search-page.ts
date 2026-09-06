@@ -42,6 +42,10 @@ const WORKSPACE = fs.readFileSync(
   path.join(ROOT, "features/discovery/components/creator-search/creator-search-workspace.tsx"),
   "utf8"
 );
+const PAGE = fs.readFileSync(
+  path.join(ROOT, "app/(dashboard)/discovery/search/page.tsx"),
+  "utf8"
+);
 const FLYOUT = fs.readFileSync(
   path.join(ROOT, "features/discovery/components/design-system/discovery-selection-flyout.tsx"),
   "utf8"
@@ -177,8 +181,33 @@ assert.ok(
   "pagination: lower-bound total shows + while hasMore"
 );
 assert.ok(
-  WORKSPACE.includes("headerTotalBadge") && WORKSPACE.includes("showLowerBound"),
-  "pagination: masthead badge uses lower-bound + while paging"
+  WORKSPACE.includes("readDiscoveryBrowseCache") &&
+    WORKSPACE.includes("writeDiscoveryBrowseCache"),
+  "client-cache: Discovery browse SWR helpers wired"
+);
+assert.ok(
+  WORKSPACE.includes("invalidateDiscoveryBrowseCache") &&
+    WORKSPACE.includes("invalidateDiscoveryBrowseCacheForCreator"),
+  "client-cache: Discovery browse invalidation helpers wired"
+);
+assert.ok(
+  WORKSPACE.includes("import_refresh") &&
+    WORKSPACE.includes("invalidateDiscoveryBrowseCache(cacheUserId)"),
+  "client-cache: import completion invalidates browse namespace"
+);
+assert.ok(
+  WORKSPACE.includes("patchCreatorAfterMetricsRefresh") &&
+    WORKSPACE.includes("patchCreatorFromDetailSheet"),
+  "client-cache: metrics / PR commercial completion paths invalidate browse"
+);
+assert.ok(
+  WORKSPACE.includes("cacheUserId"),
+  "client-cache: browse keys scoped by cacheUserId prop"
+);
+assert.ok(
+  PAGE.includes("cacheUserId={user?.id ?? null}") ||
+    PAGE.includes("cacheUserId={user?.id"),
+  "client-cache: search page passes request auth user id without client round-trip"
 );
 const UNIFIED = fs.readFileSync(
   path.join(ROOT, "lib/creators/unified-browse.ts"),

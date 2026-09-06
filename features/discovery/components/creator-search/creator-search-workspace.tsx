@@ -19,6 +19,12 @@ import { cn } from "@/lib/utils";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
 import { browseUnifiedCreatorsAction, browseCreatorsByInfluencerIdsAction, getAcquisitionJobsStatusAction } from "@/features/campaigns/creator-discovery-actions";
+import {
+  invalidateDiscoveryBrowseCache,
+  invalidateDiscoveryBrowseCacheForCreator,
+  readDiscoveryBrowseCache,
+  writeDiscoveryBrowseCache,
+} from "@/features/discovery/client-cache/discovery-browse-cache";
 import { createAcquisitionSessionController } from "./creator-search-acquisition-session";
 import type { BrowseInvocationCaller } from "@/lib/discovery/browse-invocation-trace";
 import {
@@ -170,6 +176,11 @@ type Props = {
   campaigns: ShortlistCampaignOption[];
   searchTaxonomyTerms: string[];
   initialBriefState?: CampaignIntelligenceWorkspaceState | null;
+  /**
+   * Authenticated user id from the server page (request-scoped session).
+   * Used only for IndexedDB cache key scoping — never a blocking client auth fetch.
+   */
+  cacheUserId?: string | null;
 };
 
 export function CreatorSearchWorkspace({
@@ -177,6 +188,7 @@ export function CreatorSearchWorkspace({
   campaigns: initialCampaigns,
   searchTaxonomyTerms,
   initialBriefState = null,
+  cacheUserId = null,
 }: Props) {
   const router = useRouter();
   const pathname = usePathname();
@@ -864,6 +876,8 @@ export function CreatorSearchWorkspace({
 
       let result: Awaited<ReturnType<typeof browseUnifiedCreatorsAction>>;
       let pool: UnifiedCreatorResult[] = [];
+      let replaceCachedIds: string[] | null = null;
+      let revalidatingCachedPage = false;
 
       if (showAcquiredOnly && acquiredSession.length > 0) {
         pool = await browseCreatorsByInfluencerIdsAction(acquiredSession);
@@ -939,22 +953,115 @@ export function CreatorSearchWorkspace({
         };
       } else {
         setApifySourceUnifiedIds(new Set());
-        result = requireBrowseResult(
-          await browseUnifiedCreatorsAction(
-            {
-              ...filtersToBrowseParams(mergedFilters, pageNum, PAGE_SIZE),
-              searchSessionId: acquisitionSessionRef.current.getSessionId(),
-              ...(options?.skipCoverageBackfill ? { skipCoverageBackfill: true } : {}),
-            },
-            {
-              caller,
-              requestId,
-              acquisitionJobId: acquisitionPollJobRef.current[0] ?? null,
+        const browseParams = filtersToBrowseParams(mergedFilters, pageNum, PAGE_SIZE);
+        const actionFilters = {
+          ...browseParams,
+          searchSessionId: acquisitionSessionRef.current.getSessionId(),
+          ...(options?.skipCoverageBackfill ? { skipCoverageBackfill: true } : {}),
+        };
+        const invocation = {
+          caller,
+          requestId,
+          acquisitionJobId: acquisitionPollJobRef.current[0] ?? null,
+        };
+
+        // IndexedDB acceleration for normal browse only. Never SSOT; network always wins.
+        // Bypass cache read after acquisition/import so pre-backfill pages are not painted.
+        const bypassCacheRead =
+          !cacheUserId ||
+          Boolean(options?.skipCoverageBackfill) ||
+          options?.caller === "import_refresh";
+
+        let paintedFromCache = false;
+        let cachedPageCreatorIds: string[] | null = null;
+
+        if (!bypassCacheRead && cacheUserId) {
+          const cached = await readDiscoveryBrowseCache({
+            userId: cacheUserId,
+            browseParams,
+          });
+          if (
+            (cached.status === "hit" || cached.status === "stale") &&
+            !controller.signal.aborted &&
+            requestId === reqIdRef.current
+          ) {
+            paintedFromCache = true;
+            cachedPageCreatorIds = cached.entry.payload.creators.map(
+              (creator) => creator.unified_id
+            );
+            let cachedFiltered = applyCreatorSearchClientFilters(
+              cached.entry.payload.creators,
+              mergedFilters
+            );
+            cachedFiltered = dedupeCreatorsByPlatformHandle(cachedFiltered);
+            for (const creator of cachedFiltered) {
+              pinnedCreatorsRef.current.delete(creator.unified_id);
             }
-          )
+            for (const pinned of pinnedCreatorsRef.current.values()) {
+              cachedFiltered = upsertCreatorInResults(cachedFiltered, pinned).creators;
+            }
+
+            startTransition(() => {
+              const clientOnlyActive = hasClientOnlyCreatorSearchFilters(mergedFilters);
+              if (!(append && cachedFiltered.length === 0)) {
+                const displayTotal =
+                  !append && cachedFiltered.length === 0
+                    ? 0
+                    : clientOnlyActive &&
+                        !append &&
+                        cachedFiltered.length < cached.entry.payload.creators.length
+                      ? cachedFiltered.length
+                      : cached.entry.payload.total;
+                setTotal((prev) => (append ? Math.max(prev, displayTotal) : displayTotal));
+              }
+
+              setCreators((prev) => {
+                const next = append ? [...prev, ...cachedFiltered] : cachedFiltered;
+                const unique = new Map(next.map((c) => [c.unified_id, c]));
+                return [...unique.values()];
+              });
+
+              const serverPageEmpty = cached.entry.payload.creators.length === 0;
+              const nextHasMore =
+                append && serverPageEmpty
+                  ? false
+                  : (cached.entry.payload.has_more ??
+                    pageNum * PAGE_SIZE < cached.entry.payload.total);
+              setHasMore(nextHasMore);
+              pagesLoadedRef.current = append
+                ? pagesLoadedRef.current + 1
+                : cachedFiltered.length > 0 || cached.entry.payload.total > 0
+                  ? 1
+                  : 0;
+            });
+
+            startTransition(() => {
+              if (append) setLoadingMore(false);
+              else setLoading(false);
+            });
+          }
+        }
+
+        result = requireBrowseResult(
+          await browseUnifiedCreatorsAction(actionFilters, invocation)
         );
         if (controller.signal.aborted || requestId !== reqIdRef.current) return;
         pool = result.creators;
+
+        if (cacheUserId) {
+          void writeDiscoveryBrowseCache({
+            userId: cacheUserId,
+            browseParams,
+            result,
+          });
+        }
+
+        if (paintedFromCache) {
+          revalidatingCachedPage = true;
+          if (append && cachedPageCreatorIds) {
+            replaceCachedIds = cachedPageCreatorIds;
+          }
+        }
       }
 
       let filtered = useAiRelevance
@@ -993,7 +1100,14 @@ export function CreatorSearchWorkspace({
         }
 
         setCreators((prev) => {
-          const next = append ? [...prev, ...filtered] : filtered;
+          let next: UnifiedCreatorResult[];
+          if (replaceCachedIds && replaceCachedIds.length > 0) {
+            const drop = new Set(replaceCachedIds);
+            const withoutCachedPage = prev.filter((c) => !drop.has(c.unified_id));
+            next = [...withoutCachedPage, ...filtered];
+          } else {
+            next = append ? [...prev, ...filtered] : filtered;
+          }
           const unique = new Map(next.map((c) => [c.unified_id, c]));
           return [...unique.values()];
         });
@@ -1006,7 +1120,9 @@ export function CreatorSearchWorkspace({
         setHasMore(nextHasMore);
 
         pagesLoadedRef.current = append
-          ? pagesLoadedRef.current + 1
+          ? revalidatingCachedPage
+            ? pagesLoadedRef.current
+            : pagesLoadedRef.current + 1
           : filtered.length > 0 || result.total > 0
             ? 1
             : 0;
@@ -1100,7 +1216,7 @@ export function CreatorSearchWorkspace({
         setLoadingMore(false);
       });
     }
-  }, [searchTaxonomy, startTransition, stopAcquisitionPolling, fetchZeroResultRecommendations]);
+  }, [cacheUserId, searchTaxonomy, startTransition, stopAcquisitionPolling, fetchZeroResultRecommendations]);
 
   fetchPageRef.current = fetchPage;
 
@@ -1201,6 +1317,10 @@ export function CreatorSearchWorkspace({
   // Refetch when an import completes (same tab or another tab via localStorage).
   useEffect(() => {
     function refreshAfterImport() {
+      // Import can insert/move creators across many browse pages — drop the namespace.
+      if (cacheUserId) {
+        void invalidateDiscoveryBrowseCache(cacheUserId);
+      }
       setPage(1);
       void fetchPageRef.current(1, false, undefined, { caller: "import_refresh" });
     }
@@ -1215,7 +1335,7 @@ export function CreatorSearchWorkspace({
       window.removeEventListener(CREATOR_IMPORT_COMPLETED_EVENT, refreshAfterImport);
       window.removeEventListener("storage", onStorage);
     };
-  }, []);
+  }, [cacheUserId]);
 
   hasMoreRef.current = hasMore;
   loadingRef.current = loading;
@@ -1551,6 +1671,42 @@ export function CreatorSearchWorkspace({
     }
   }
 
+  /** Metrics refresh completion — drop browse pages tagged with this creator. */
+  function patchCreatorAfterMetricsRefresh(next: UnifiedCreatorResult) {
+    patchCreatorInList(next);
+    void invalidateDiscoveryBrowseCacheForCreator(next.unified_id);
+  }
+
+  /**
+   * Pack / detail-sheet upserts (PR category, commercial, metrics from sheet).
+   * Category changes can alter filtered-page membership → invalidate browse prefix.
+   */
+  function patchCreatorFromDetailSheet(
+    next: UnifiedCreatorResult,
+    meta?: { removedUnifiedId?: string; removedInfluencerId?: string | null }
+  ) {
+    const previous =
+      creators.find((row) => row.unified_id === next.unified_id) ??
+      detailCreator ??
+      pinnedCreatorsRef.current.get(next.unified_id) ??
+      null;
+    patchCreatorInList(next, meta);
+
+    const categoriesChanged =
+      previous != null &&
+      JSON.stringify(previous.categories ?? []) !==
+        JSON.stringify(next.categories ?? []);
+
+    if (categoriesChanged && cacheUserId) {
+      void invalidateDiscoveryBrowseCache(cacheUserId);
+      return;
+    }
+    void invalidateDiscoveryBrowseCacheForCreator(next.unified_id);
+    if (meta?.removedUnifiedId) {
+      void invalidateDiscoveryBrowseCacheForCreator(meta.removedUnifiedId);
+    }
+  }
+
   function handleMissingCreatorAdded(creator: UnifiedCreatorResult) {
     analyticsRef.current?.trackAddMissingCreator({
       query: debouncedSearch,
@@ -1686,7 +1842,7 @@ export function CreatorSearchWorkspace({
         patchCreatorEnrichmentStatus(unifiedId, status);
       },
       onCreatorUpdated: (updated) => {
-        patchCreatorInList(updated);
+        patchCreatorAfterMetricsRefresh(updated);
       },
     });
   }
@@ -1710,7 +1866,7 @@ export function CreatorSearchWorkspace({
         if (result.queued) {
           toast.success(result.message);
           void pollCreatorsAfterBatchRefresh(targets, {
-            onUpdated: patchCreatorInList,
+            onUpdated: patchCreatorAfterMetricsRefresh,
             onStatusChange: ({ unifiedId, status }) => {
               patchCreatorEnrichmentStatus(unifiedId, syncStatusToEnrichmentStatus(status));
             },
@@ -2285,7 +2441,7 @@ export function CreatorSearchWorkspace({
         creator={detailCreator}
         open={detailOpen}
         onOpenChange={onDetailOpenChange}
-        onCreatorUpdated={patchCreatorInList}
+        onCreatorUpdated={patchCreatorFromDetailSheet}
         presentation="discoveryPack"
       />
 

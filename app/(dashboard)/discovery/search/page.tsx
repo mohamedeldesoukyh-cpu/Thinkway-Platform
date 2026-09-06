@@ -6,6 +6,7 @@ import { CreatorSearchWorkspace } from "@/features/discovery/components/creator-
 import { DiscoveryPageShell } from "@/features/discovery/components/discovery-page-shell";
 import { loadCampaignIntelligenceWorkspaceAction } from "@/features/campaign-intelligence-profile/actions/profile-actions";
 import { metadataTitleForEntity } from "@/lib/routing/entity-page";
+import { getRequestAuth } from "@/lib/supabase/server";
 
 type PageProps = {
   searchParams: Promise<{ profileId?: string }>;
@@ -31,6 +32,8 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
 export default async function CreatorSearchPage({ searchParams }: PageProps) {
   const { profileId } = await searchParams;
+  // Same request-scoped auth as InternalWorkspaceGate — no extra client round-trip for cache keys.
+  const { user } = await getRequestAuth();
   const initialBriefState = profileId?.trim()
     ? await loadCampaignIntelligenceWorkspaceAction(profileId.trim())
     : null;
@@ -43,6 +46,7 @@ export default async function CreatorSearchPage({ searchParams }: PageProps) {
           campaigns={[]}
           searchTaxonomyTerms={[]}
           initialBriefState={initialBriefState}
+          cacheUserId={user?.id ?? null}
         />
       </Suspense>
     </DiscoveryPageShell>
