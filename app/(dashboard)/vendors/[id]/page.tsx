@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
+import "@/app/styles/vendor-detail-suite.css";
+
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { VendorPortalAccessCard } from "@/features/vendors/components/vendor-portal-access-card";
 import { CreatorSocialConnectionsInternalPanel } from "@/features/vendors/components/creator-social-connections-internal";

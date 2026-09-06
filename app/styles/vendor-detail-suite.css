@@ -503,7 +503,8 @@
 /* ---- stepper: shorter ---- */
 .vendor-detail-suite .tw-step2{padding:3px;margin-bottom:10px;border-radius:12px}
 .vendor-detail-suite .tw-sb{min-width:92px;gap:5px;padding:8px 5px 7px}
-.vendor-detail-suite .tw-sb::before,.tw-sb::after{top:13px}
+.vendor-detail-suite .tw-sb::before,
+.vendor-detail-suite .tw-sb::after{top:13px}
 .vendor-detail-suite .tw-sb__d{width:9px;height:9px}
 .vendor-detail-suite .tw-sb__l{font-size:11.5px}
 .vendor-detail-suite .tw-sb__l em{font-size:9.5px;padding:0 4px}
@@ -558,7 +559,10 @@
 .vendor-detail-suite .tw-dc2.alert{box-shadow:0 0 0 1px #EFB6B6,0 8px 24px rgba(200,33,33,.07)}
 /* masthead ring sits behind text, never over it */
 .vendor-detail-suite .tw-mast::after{left:auto;right:34%;top:-96px;width:196px;height:196px;border-width:30px}
-.vendor-detail-suite .tw-mh h1,.tw-mh .id,.tw-mh .sub,.tw-mh .st{position:relative;z-index:1}
+.vendor-detail-suite .tw-mh h1,
+.vendor-detail-suite .tw-mh .id,
+.vendor-detail-suite .tw-mh .sub,
+.vendor-detail-suite .tw-mh .st{position:relative;z-index:1}
 /* ============ lighter cards, wider, frozen header ============ */
 /* wider: 3 across instead of 5 */
 .vendor-detail-suite .tw-dash{grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:12px}
@@ -1127,6 +1131,10 @@
 .vendor-detail-suite .platform-v6-wide-form-body{padding:14px !important}
 .vendor-detail-suite .platform-v6-form-grid{gap:12px !important}
 .vendor-detail-suite form.grid{gap:11px !important}
+.vendor-detail-suite .space-y-4 > :not([hidden]) ~ :not([hidden]),
+.vendor-detail-suite .space-y-6 > :not([hidden]) ~ :not([hidden]){
+  margin-top:11px !important;
+}
 .vendor-detail-suite .tw-vtwo{align-items:start}
 .vendor-detail-suite .tw-vtwo > *{min-width:0}
 .vendor-detail-suite [data-slot="tabs-content"],
@@ -1135,3 +1143,43 @@
 .vendor-detail-suite .tw-cpill__r{
   background:conic-gradient(#FF8A8A 0 calc(var(--cpill-pct, 29) * 1%), rgba(255,255,255,.25) 0);
 }
+
+/* Masthead live avatar → HTML .tw-vav size/shape (photo instead of initials) */
+.vendor-detail-suite .tw-mh .tw-vav--photo{
+  background:transparent;box-shadow:none;padding:0;overflow:visible;
+}
+.vendor-detail-suite .tw-mh .tw-vav--photo > div{gap:0}
+.vendor-detail-suite .tw-mh .tw-vav--photo img,
+.vendor-detail-suite .tw-mh .tw-vav--photo .size-10{
+  width:40px !important;height:40px !important;border-radius:12px !important;
+  box-shadow:0 2px 10px -2px rgba(6,8,16,.4);
+}
+
+/* Portal / linked-user cards still use CampaignFlatSection — densify to suite cards */
+.vendor-detail-suite .thinkway-campaign-section-card,
+.vendor-detail-suite .thinkway-campaign-info-card{
+  background:#fff;border-radius:12px;box-shadow:var(--tw-ring);
+  overflow:hidden;margin-bottom:11px;border:0 !important;
+}
+.vendor-detail-suite .thinkway-campaign-section-head{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:11px 14px;border-bottom:1px solid var(--tw-line);
+}
+.vendor-detail-suite .thinkway-campaign-section-head > .min-w-0{display:contents}
+.vendor-detail-suite .thinkway-campaign-section-head h2,
+.vendor-detail-suite .thinkway-campaign-section-head h3{
+  font-size:13px;font-weight:600;letter-spacing:0;color:var(--tw-ink);
+}
+.vendor-detail-suite .thinkway-campaign-section-head p{
+  font-size:11px;color:var(--tw-mut);margin:0;max-width:none;line-height:1.45;
+}
+.vendor-detail-suite .thinkway-campaign-section-body{padding:14px}
+.vendor-detail-suite .thinkway-campaign-section-body .text-sm{font-size:12.5px}
+.vendor-detail-suite .thinkway-campaign-section-body button{
+  height:32px;padding:0 12px;border-radius:9px;font:600 12.5px var(--font-geist-sans),'Geist',sans-serif;
+}
+
+/* Kill any leftover platform-v6 / enterprise tab chrome inside the suite */
+.vendor-detail-suite [data-slot="vendor-workspace-tabs"],
+.vendor-detail-suite .platform-v6-kpi-strip,
+.vendor-detail-suite .platform-v6-kpi-strip--executive{display:none !important}

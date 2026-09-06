@@ -331,15 +331,20 @@ export function VendorWorkspaceView({
                   THINK<em>WAY</em>
                 </span>
                 <span className="tw-hdv" />
-                <CreatorIdentityCell
-                  source={creatorProfileSourceFromAccounts(
-                    workspace.display_name,
-                    workspace.platform_accounts
-                  )}
-                  size="md"
-                  showHandle={false}
-                  stopPropagation
-                />
+                <span className="tw-vav tw-vav--photo" aria-hidden={false}>
+                  <CreatorIdentityCell
+                    source={creatorProfileSourceFromAccounts(
+                      workspace.display_name,
+                      workspace.platform_accounts
+                    )}
+                    size="sm"
+                    showName={false}
+                    showHandle={false}
+                    showPlatformBadge={false}
+                    avatarBadge="none"
+                    stopPropagation
+                  />
+                </span>
                 <span className="id">
                   <DocumentNumber value={workspace.document_number} />
                 </span>
