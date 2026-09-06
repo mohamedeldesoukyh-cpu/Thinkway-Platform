@@ -37,7 +37,7 @@ export function CampaignWorkspaceScrollShell({
           </div>
         ) : null}
         <div
-          className="thinkway-aurora-panel min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain overscroll-x-none pb-11"
+          className="thinkway-aurora-panel min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain overscroll-x-none pb-11 [overscroll-behavior-x:none] [touch-action:pan-y]"
           data-campaign-workspace-scroll
           data-campaign-shell="content"
           role="region"

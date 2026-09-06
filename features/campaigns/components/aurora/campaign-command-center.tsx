@@ -52,6 +52,7 @@ type CampaignCommandCenterProps = {
   performanceLoaded?: boolean;
   onNavigateToTab: (tab: CampaignWorkspaceTabId) => void;
   onOpenDetails?: () => void;
+  onEditHeader?: () => void;
   onOpenResolver?: () => void;
   onContinueLifecycle?: () => void;
   lifecycle?: CampaignLifecycleView;
@@ -92,12 +93,21 @@ export function CampaignCommandCenter({
   performanceLoaded = false,
   onNavigateToTab,
   onOpenDetails,
+  onEditHeader,
   onOpenResolver,
   onContinueLifecycle,
   lifecycle,
 }: CampaignCommandCenterProps) {
   const [inlineEditing, setInlineEditing] = useState(false);
   const currency = workspace.currency_code;
+
+  const openHeaderEditor = () => {
+    if (onEditHeader) {
+      onEditHeader();
+      return;
+    }
+    setInlineEditing(true);
+  };
   const { financials } = workspace;
 
   const readiness = useMemo(
@@ -480,7 +490,7 @@ export function CampaignCommandCenter({
                     variant="outline"
                     size="sm"
                     className="thinkway-campaign-btn h-[33px] px-3 text-[12.5px]"
-                    onClick={() => setInlineEditing(true)}
+                    onClick={openHeaderEditor}
                   >
                     Edit header
                   </Button>

@@ -17,6 +17,7 @@ type CampaignOverviewTabProps = {
   /** Single lifecycle SSOT from CampaignWorkspaceView — do not recompute. */
   lifecycle: CampaignLifecycleView;
   onOpenDetails?: () => void;
+  onEditHeader?: () => void;
   onNavigateToTab: (tab: CampaignWorkspaceTabId) => void;
   onOpenResolver?: () => void;
   onContinueLifecycle?: () => void;
@@ -34,6 +35,7 @@ export function CampaignOverviewTab({
   currencyOptions,
   lifecycle,
   onOpenDetails,
+  onEditHeader,
   onNavigateToTab,
   onOpenResolver,
   onContinueLifecycle,
@@ -50,6 +52,7 @@ export function CampaignOverviewTab({
       performanceLoaded={performanceLoaded}
       onNavigateToTab={onNavigateToTab}
       onOpenDetails={onOpenDetails}
+      onEditHeader={onEditHeader}
       onOpenResolver={onOpenResolver}
       onContinueLifecycle={onContinueLifecycle}
       lifecycle={lifecycle}

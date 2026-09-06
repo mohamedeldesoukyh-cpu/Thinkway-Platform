@@ -40,8 +40,8 @@ function draftFromWorkspace(workspace: CampaignWorkspace): Draft {
   return {
     name: workspace.name ?? "",
     status: workspace.status,
-    start_date: workspace.start_date ?? "",
-    end_date: workspace.end_date ?? "",
+    start_date: toDateInputValue(workspace.start_date),
+    end_date: toDateInputValue(workspace.end_date),
     target_market: workspace.target_market ?? "",
     description: workspace.description ?? "",
     brief: workspace.brief ?? "",
@@ -51,6 +51,13 @@ function draftFromWorkspace(workspace: CampaignWorkspace): Draft {
     team_id: workspace.team?.id ?? "",
     group_id: workspace.group?.id ?? "",
   };
+}
+
+/** `<input type="date">` only accepts `YYYY-MM-DD`. */
+function toDateInputValue(value: string | null | undefined): string {
+  if (!value) return "";
+  const match = String(value).trim().match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] ?? "";
 }
 
 type CampaignHeaderInlineEditorProps = {

@@ -39,6 +39,8 @@ type CampaignDetailChromeProps = {
     focus?: DecisionFocusQuery | null
   ) => void;
   onOpenDetails: () => void;
+  /** Opens campaign name / header edit without requiring Overview scroll. */
+  onEditHeader: () => void;
 };
 
 function titleCaseStatus(value: string): string {
@@ -56,6 +58,7 @@ export function CampaignDetailChrome({
   onOpenResolver,
   onSelectStage,
   onOpenDetails,
+  onEditHeader,
 }: CampaignDetailChromeProps) {
   const router = useRouter();
   const dc = lifecycle.decisionCenter;
@@ -74,6 +77,7 @@ export function CampaignDetailChrome({
     .join(" · ");
 
   const [mini, setMini] = useState(false);
+  const [topArmed, setTopArmed] = useState(true);
   const [dcOpen, setDcOpen] = useState(false);
   const [displayCurrency, setDisplayCurrency] = useState(
     (workspace.currency_code || "EGP").toUpperCase()
@@ -105,7 +109,17 @@ export function CampaignDetailChrome({
 
     let lastHeight = chrome.getBoundingClientRect().height;
     let miniState = scroller.scrollTop > 96;
+    let armTimer: number | null = null;
     setMini(miniState);
+    setTopArmed(!miniState);
+
+    const disarmTopBriefly = () => {
+      setTopArmed(false);
+      if (armTimer != null) window.clearTimeout(armTimer);
+      // Prevent Back/Campaigns from capturing the click that ends a scroll
+      // gesture when mini chrome expands and .tw-top reappears under the cursor.
+      armTimer = window.setTimeout(() => setTopArmed(true), 400);
+    };
 
     const ro = new ResizeObserver(() => {
       const next = chrome.getBoundingClientRect().height;
@@ -126,12 +140,15 @@ export function CampaignDetailChrome({
       if (nextMini === miniState) return;
       miniState = nextMini;
       setMini(nextMini);
+      if (!nextMini) disarmTopBriefly();
+      else setTopArmed(false);
     };
 
     scroller.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       ro.disconnect();
       scroller.removeEventListener("scroll", onScroll);
+      if (armTimer != null) window.clearTimeout(armTimer);
     };
   }, []);
 
@@ -188,7 +205,10 @@ export function CampaignDetailChrome({
 
   return (
     <div className={cn("tw-frozen", mini && "is-mini")}>
-      <div className="tw-top">
+      <div
+        className={cn("tw-top", !topArmed && "tw-top-disarmed")}
+        data-top-armed={topArmed ? "true" : "false"}
+      >
         <PageBackButton
           fallbackHref="/campaigns"
           label="← Back"
@@ -225,7 +245,14 @@ export function CampaignDetailChrome({
           <span className="id">
             <DocumentNumber value={workspace.document_number} />
           </span>
-          <h1 title={workspace.name}>{workspace.name}</h1>
+          <button
+            type="button"
+            className="tw-name-edit"
+            title="Edit campaign name"
+            onClick={onEditHeader}
+          >
+            <h1>{workspace.name}</h1>
+          </button>
           <span className="st">{lifecycle.businessStateLabel}</span>
           {identityMeta ? <span className="sub">{identityMeta}</span> : null}
           <span className="tw-sp" />

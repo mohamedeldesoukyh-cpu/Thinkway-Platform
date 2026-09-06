@@ -3,6 +3,7 @@
    Does not replace platform nav. Lifecycle OS / Decision Center stay the SSOT. */
 
 .campaign-detail-suite {
+  overscroll-behavior-x: none;
   --tw-blue: #0057ff;
   --tw-b2: #1a6fff;
   --tw-bi: #0b52e0;
@@ -232,6 +233,38 @@
   letter-spacing: -0.5px;
   color: #fff;
   margin: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+}
+
+.campaign-detail-suite .tw-name-edit {
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.campaign-detail-suite .tw-name-edit:hover h1,
+.campaign-detail-suite .tw-name-edit:focus-visible h1 {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+.campaign-detail-suite .tw-name-edit:focus-visible {
+  outline: 2px solid rgba(255, 255, 255, 0.55);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.campaign-detail-suite .tw-top.tw-top-disarmed {
+  pointer-events: none;
 }
 
 .campaign-detail-suite .tw-mh .sub {

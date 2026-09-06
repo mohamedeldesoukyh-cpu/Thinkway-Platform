@@ -42,6 +42,7 @@ import type { VendorIoRow } from "@/features/io/types";
 import { OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS } from "@/components/workspace/operational-workspace-ui";
 import { TabErrorBoundary } from "@/components/ui/tab-error-boundary";
 import { CampaignDetailsSheet } from "@/features/campaigns/components/campaign-details-sheet";
+import { CampaignEditSheet } from "@/features/campaigns/components/campaign-edit-sheet";
 import { CampaignDetailChrome } from "@/features/campaigns/components/campaign-detail-chrome";
 import { CampaignHeroActions } from "@/features/campaigns/components/aurora/campaign-hero-actions";
 import "@/app/styles/campaign-detail-suite.css";
@@ -81,6 +82,7 @@ export function CampaignWorkspaceView({
   const searchParams = useSearchParams();
   const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [headerEditOpen, setHeaderEditOpen] = useState(false);
   const [resolverOpen, setResolverOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<CampaignWorkspaceTabId>(defaultTab);
   const [vendorIos, setVendorIos] = useState<VendorIoRow[]>(workspace.vendor_ios);
@@ -480,6 +482,7 @@ export function CampaignWorkspaceView({
               onOpenResolver={() => setResolverOpen(true)}
               onSelectStage={handleTabChange}
               onOpenDetails={() => setDetailsOpen(true)}
+              onEditHeader={() => setHeaderEditOpen(true)}
               actions={
                 <CampaignHeroActions
                   workspace={workspace}
@@ -512,6 +515,7 @@ export function CampaignWorkspaceView({
               currencyOptions={currencyOptions}
               lifecycle={lifecycle}
               onOpenDetails={() => setDetailsOpen(true)}
+              onEditHeader={() => setHeaderEditOpen(true)}
               onNavigateToTab={handleTabChange}
               onOpenResolver={() => setResolverOpen(true)}
               onContinueLifecycle={continueToNextAction}
@@ -739,6 +743,16 @@ export function CampaignWorkspaceView({
           handleTabChange(tabId);
           setDetailsOpen(false);
         }}
+      />
+
+      <CampaignEditSheet
+        workspace={workspace}
+        accountManagers={accountManagers}
+        teams={teams}
+        groups={groups}
+        currencyOptions={currencyOptions}
+        open={headerEditOpen}
+        onOpenChange={setHeaderEditOpen}
       />
 
       <DuplicateCampaignDialog

@@ -183,7 +183,7 @@ export function CampaignEditSheet({
                 name="start_date"
                 type="date"
                 className={DETAIL_FORM_INPUT_CLASS}
-                defaultValue={workspace.start_date ?? ""}
+                defaultValue={(workspace.start_date ?? "").slice(0, 10)}
                 disabled={isPending}
               />
             </DetailFormSection>
@@ -196,7 +196,7 @@ export function CampaignEditSheet({
                 name="end_date"
                 type="date"
                 className={DETAIL_FORM_INPUT_CLASS}
-                defaultValue={workspace.end_date ?? ""}
+                defaultValue={(workspace.end_date ?? "").slice(0, 10)}
                 disabled={isPending}
               />
             </DetailFormSection>
