@@ -395,7 +395,7 @@
 }
 
 .campaigns-list-suite .tw-rr {
-  text-align: right;
+  text-align: left;
 }
 
 .campaigns-list-suite .tw-note {
@@ -490,7 +490,7 @@
 .campaigns-list-suite .tw-g {
   display: grid;
   grid-template-columns: var(--cols);
-  align-items: center;
+  align-items: start;
   min-width: 1720px;
 }
 
@@ -556,11 +556,13 @@
   font-size: 12.5px;
   font-weight: 600;
   letter-spacing: -0.1px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  white-space: normal;
+  line-height: 1.35;
   color: var(--tw-ink);
   text-decoration: none;
+  display: block;
 }
 
 .campaigns-list-suite .tw-nm:hover {
@@ -588,7 +590,7 @@
   font: 600 11.5px var(--font-geist-mono), "Geist Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.3px;
-  text-align: right;
+  text-align: left;
   white-space: nowrap;
 }
 
@@ -638,6 +640,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   border: 0 !important;
+}
+
+.campaigns-list-suite .tw-p.tw-risk {
+  overflow: visible;
+  text-overflow: clip;
+  max-width: none;
 }
 
 .campaigns-list-suite .p-n {
@@ -770,7 +778,7 @@
 .campaigns-list-suite .tw-money {
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: flex-start;
   gap: 4px;
   min-width: 0;
 }

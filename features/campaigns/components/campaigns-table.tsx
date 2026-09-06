@@ -24,25 +24,24 @@ import { campaignProcessCueFromListItem } from "@/features/campaigns/lifecycle/c
 import type { CampaignListItem, CampaignStatus } from "@/types/database";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import { campaignDetailPathWithTab } from "@/lib/routing/entity-paths";
-import { formatDesignDateRange } from "@/lib/design/format-design-date";
 import { cn } from "@/lib/utils";
 
 /** Spec §5.1 — CSS Grid tracks excluding the leading select column. */
 const CAMPAIGNS_LIST_TRACKS: Record<string, string> = {
   document_number: "96px",
-  name: "minmax(150px, 1.3fr)",
+  name: "minmax(180px, 1.6fr)",
   brand: "112px",
   stage: "104px",
   waiting_for: "92px",
   days_waiting: "58px",
-  risk: "62px",
+  risk: "100px",
   next_action: "128px",
   group_client: "minmax(140px, 1fr)",
   lines: "52px",
   status: "128px",
   client_link: "96px",
   po_total: "150px",
-  dates: "116px",
+  dates: "108px",
 };
 
 const SELECT_TRACK = "30px";
@@ -132,11 +131,38 @@ function brandCell(campaign: CampaignListItem) {
   );
 }
 
+/** Compact list short date: `DD/MM/YY` (ranges `DD/MM/YY–DD/MM/YY`). */
+function formatCampaignListShortDate(value: unknown): string {
+  if (value == null) return "";
+  const raw = String(value).trim();
+  if (!raw) return "";
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) {
+    return `${iso[3]}/${iso[2]}/${iso[1].slice(-2)}`;
+  }
+  const slash = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
+  if (slash) {
+    const yy = slash[3].length === 2 ? slash[3] : slash[3].slice(-2);
+    return `${slash[1].padStart(2, "0")}/${slash[2].padStart(2, "0")}/${yy}`;
+  }
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    const dd = String(parsed.getUTCDate()).padStart(2, "0");
+    const mm = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+    const yy = String(parsed.getUTCFullYear()).slice(-2);
+    return `${dd}/${mm}/${yy}`;
+  }
+  return "";
+}
+
 function datesCell(campaign: CampaignListItem) {
-  const label = formatDesignDateRange(campaign.start_date, campaign.end_date);
-  if (label === "not set") {
+  const start = formatCampaignListShortDate(campaign.start_date);
+  const end = formatCampaignListShortDate(campaign.end_date);
+  if (!start && !end) {
     return <span className="tw-miss">not set</span>;
   }
+  const label =
+    start && end && start !== end ? `${start}–${end}` : start || end;
   return (
     <span className="tw-d" title={label}>
       {label}
@@ -208,13 +234,12 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "days_waiting",
     label: "Days",
-    renderHeader: () => <span className="tw-rr">Days</span>,
     renderCell: (campaign) => {
       const intel = campaignPortfolioIntel(campaign);
       return (
         <span
           className={cn(
-            "tw-v tw-rr",
+            "tw-v",
             intel.daysWaiting == null && "z",
             intel.daysWaiting != null && intel.daysWaiting >= 7 && "text-amber-800",
             intel.daysWaiting != null && intel.daysWaiting >= 14 && "text-red-700"
@@ -237,7 +262,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
       const intel = campaignPortfolioIntel(campaign);
       return (
         <span
-          className={cn("tw-p", riskBadgeClass(intel.risk))}
+          className={cn("tw-p tw-risk", riskBadgeClass(intel.risk))}
           title={`${intel.businessStateLabel} · ${intel.reason}`}
         >
           {intel.riskLabel}
@@ -287,11 +312,10 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "lines",
     label: "Lines",
-    renderHeader: () => <span className="tw-rr">Lines</span>,
     renderCell: (campaign) =>
       campaign.lines.length > 0 ? (
         <span
-          className="tw-v tw-rr"
+          className="tw-v"
           title={campaign.lines
             .map((line) => formatDocumentNumberForDisplay(line.document_number))
             .join(", ")}
@@ -299,7 +323,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
           {campaign.lines.length}
         </span>
       ) : (
-        <span className="tw-v tw-rr z">0</span>
+        <span className="tw-v z">0</span>
       ),
   },
   {
@@ -327,8 +351,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   {
     id: "po_total",
     label: "PO total",
-    renderHeader: () => <span className="tw-rr">PO&nbsp;total</span>,
-    amountCell: true,
+    renderHeader: () => <>PO&nbsp;total</>,
     renderCell: (campaign) => {
       const budget = campaignPoBudget(campaign);
       if (!(budget > 0)) {
@@ -495,9 +518,7 @@ export function CampaignsTable({ campaigns }: CampaignsTableProps) {
                 />
               </span>
               {visibleColumns.map((column) => (
-                <span key={column.id} className={column.amountCell ? "tw-rr" : undefined}>
-                  {column.renderCell(campaign)}
-                </span>
+                <span key={column.id}>{column.renderCell(campaign)}</span>
               ))}
             </div>
           );
