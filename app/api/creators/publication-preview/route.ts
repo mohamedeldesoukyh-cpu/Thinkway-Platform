@@ -31,11 +31,11 @@ export async function GET(request: Request) {
   const postUrl = parsedQuery.data.postUrl ?? null;
 
   const result = await resolvePublicationPreviewForHttpRequest({ src, postUrl });
+  if (result.needsRefresh) {
+    recordMediaProxyRefreshScheduled();
+    after(() => refreshPublicationPreviewInBackground({ src, postUrl }));
+  }
   if (!result.ok) {
-    if (result.needsRefresh) {
-      recordMediaProxyRefreshScheduled();
-      after(() => refreshPublicationPreviewInBackground({ src, postUrl }));
-    }
     return NextResponse.json(
       { error: "Preview unavailable." },
       {
@@ -54,6 +54,7 @@ export async function GET(request: Request) {
       "Content-Type": result.contentType,
       "Cache-Control": "private, max-age=3600",
       "X-Preview-Cache": result.source,
+      ...(result.needsRefresh ? { "X-Preview-Upgrade": "1" } : {}),
     },
   });
 }

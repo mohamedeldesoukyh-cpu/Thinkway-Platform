@@ -22,8 +22,7 @@ function formatPostedAt(value: string | null | undefined): string {
 
 function captionSnippet(caption: string | null | undefined): string {
   if (!caption?.trim()) return "No caption";
-  const trimmed = caption.trim().replace(/\s+/g, " ");
-  return trimmed.length > 90 ? `${trimmed.slice(0, 87)}…` : trimmed;
+  return caption.trim().replace(/\s+/g, " ");
 }
 
 function PublicationCard({
@@ -53,7 +52,7 @@ function PublicationCard({
         ) : null}
       </div>
       <div className="px-2.5 py-2">
-        <p className="mb-0.5 line-clamp-1 text-[10px] text-muted-foreground">
+        <p className="mb-0.5 text-[10px] text-muted-foreground whitespace-normal break-words">
           {captionSnippet(publication.caption)}
         </p>
         <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground">
@@ -89,7 +88,7 @@ function PublicationCard({
         ) : null}
       </div>
       <div className="space-y-2 p-3">
-        <p className="line-clamp-2 text-[11px] leading-relaxed text-muted-foreground">
+        <p className="text-[11px] leading-relaxed text-muted-foreground whitespace-normal break-words">
           {captionSnippet(publication.caption)}
         </p>
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-muted-foreground">

@@ -235,7 +235,14 @@ export async function fetchImageBuffer(
 }
 
 type PreviewResult =
-  | { ok: true; buffer: ArrayBuffer; contentType: string; source: "cache" | "cdn" | "refresh" }
+  | {
+      ok: true;
+      buffer: ArrayBuffer;
+      contentType: string;
+      source: "cache" | "cdn" | "refresh";
+      /** Still schedule background upgrade (e.g. low-res CDN served for immediate UI). */
+      needsRefresh?: boolean;
+    }
   | { ok: false; status: number; source: "cache" | "miss"; needsRefresh: boolean };
 
 export type PublicationPreviewQuality = "sharp" | "display";
@@ -461,6 +468,10 @@ async function resolvePublicationPreviewExternal(input: {
 /**
  * Request-path resolver — cache + short CDN only. Never runs oEmbed/OpenGraph/HTML scrape.
  * Callers should schedule refreshPublicationPreviewInBackground on needsRefresh.
+ *
+ * Always serve a usable CDN still when present (even if undersized) so profile /
+ * feed grids paint immediately. Low-res hits set needsRefresh so background
+ * upgrade can still run — never 404 a good image just to force an upgrade.
  */
 export async function resolvePublicationPreviewForHttpRequest(input: {
   src?: string | null;
@@ -492,21 +503,23 @@ export async function resolvePublicationPreviewForHttpRequest(input: {
     const direct = await withMediaProxyInflight(`cdn:${key}`, () =>
       fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_FAST_TIMEOUT_MS })
     );
-    if (direct.ok && !isVisiblyOvercompressedPhoto(direct.buffer)) {
+    if (direct.ok && imageBufferLooksComplete(direct.buffer)) {
+      const overcompressed = isVisiblyOvercompressedPhoto(direct.buffer);
       const edge = await imageLongestEdge(direct.buffer);
       const canUpgrade =
         Boolean(postUrl && isAllowedPublicationPreviewPostUrl(postUrl)) &&
-        isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE);
-      if (!canUpgrade) {
-        setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
-        recordMediaProxyCdnHit();
-        return {
-          ok: true,
-          buffer: direct.buffer,
-          contentType: direct.contentType,
-          source: "cdn",
-        };
-      }
+        (overcompressed || isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE));
+
+      // Serve any complete still for immediate UI paint; upgrade in background when possible.
+      setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
+      recordMediaProxyCdnHit();
+      return {
+        ok: true,
+        buffer: direct.buffer,
+        contentType: direct.contentType,
+        source: "cdn",
+        needsRefresh: canUpgrade,
+      };
     }
   }
 

@@ -187,6 +187,45 @@ async function main() {
 
   {
     resetMediaProxyMetricsForTests();
+    const tinySrc = "https://scontent.cdninstagram.com/v/t51.2885-15/s150x150/http-ui.jpg";
+    const postUrl = "https://www.instagram.com/p/HttpUiTiny/";
+    const tiny = await jpegOfSize(150, 150);
+    const originalFetch = globalThis.fetch;
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      if (String(input) === tinySrc) {
+        return new Response(tiny, {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      }
+      return new Response(null, { status: 404 });
+    }) as typeof fetch;
+
+    try {
+      const result = await resolvePublicationPreviewForHttpRequest({
+        src: tinySrc,
+        postUrl,
+      });
+      assert.equal(
+        result.ok,
+        true,
+        "HTTP path must serve a usable low-res CDN thumb instead of 404ing for upgrade"
+      );
+      if (result.ok) {
+        assert.equal(result.source, "cdn");
+        assert.equal(
+          result.needsRefresh,
+          true,
+          "low-res CDN hit should still schedule background upgrade"
+        );
+      }
+    } finally {
+      globalThis.fetch = originalFetch;
+    }
+  }
+
+  {
+    resetMediaProxyMetricsForTests();
     const tinySrc =
       "https://scontent.cdninstagram.com/v/t51.82787-15/full.jpg?oe=ABCDEF12";
     const postUrl = "https://www.instagram.com/p/DaIquJuMyax/";

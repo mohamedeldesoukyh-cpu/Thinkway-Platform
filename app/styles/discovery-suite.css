@@ -1074,10 +1074,10 @@
   .discovery-suite .tw-mgrid b{display:block;margin-top:4px;font:600 16px var(--font-geist-mono), 'Geist Mono',monospace;letter-spacing:-.4px}
   .discovery-suite .tw-pubs{display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
   .discovery-suite .tw-pub{border:1px solid var(--tw-hair);border-radius:11px;overflow:hidden;background:#fff}
-  .discovery-suite .tw-pub .im{height:82px;background:var(--tw-soft);display:grid;place-items:center;color:#C3CBD8;font-size:16px}
+  .discovery-suite .tw-pub .im{position:relative;height:82px;background:var(--tw-soft);display:grid;place-items:center;color:#C3CBD8;font-size:16px;overflow:hidden}
   .discovery-suite .tw-pub .tx{padding:8px 10px}
-  .discovery-suite .tw-pub p{font-size:11px;line-height:1.4;color:var(--tw-ink2);display:-webkit-box;-webkit-line-clamp:2;
- -webkit-box-orient:vertical;overflow:hidden}
+  .discovery-suite .tw-pub p{font-size:11px;line-height:1.45;color:var(--tw-ink2);white-space:normal;
+   overflow-wrap:anywhere;word-break:break-word}
   .discovery-suite .tw-pub .mm{display:flex;gap:9px;margin-top:6px;font:600 10px var(--font-geist-mono), 'Geist Mono',monospace;color:var(--tw-mut)}
   .discovery-suite .tw-bar3{height:5px;border-radius:999px;background:var(--tw-hair);overflow:hidden}
   .discovery-suite .tw-bar3 i{display:block;height:100%;background:var(--tw-blue)}
