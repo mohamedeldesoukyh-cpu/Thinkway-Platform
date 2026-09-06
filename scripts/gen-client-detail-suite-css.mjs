@@ -223,4 +223,19 @@ fs.writeFileSync(
   "app/styles/client-detail-suite.css",
   header + out.join("") + reactOverrides
 );
+
+// Ensure ASCII-only output for Turbopack CSS parsing
+{
+  const raw = fs.readFileSync("app/styles/client-detail-suite.css");
+  const ascii = raw.toString("latin1").replace(/[\x80-\xFF]/g, (ch) => {
+    const c = ch.charCodeAt(0);
+    if (c === 0x96 || c === 0x97) return "-";
+    if (c === 0x91 || c === 0x92) return "'";
+    if (c === 0x93 || c === 0x94) return '"';
+    if (c === 0x85) return "...";
+    if (c === 0xa0) return " ";
+    return "";
+  });
+  fs.writeFileSync("app/styles/client-detail-suite.css", ascii, "utf8");
+}
 console.log("wrote", fs.statSync("app/styles/client-detail-suite.css").size);
