@@ -605,7 +605,10 @@
 
 .client-detail-suite .tw-frozen .tw-mast,.client-detail-suite .tw-frozen .tw-step2,.client-detail-suite .tw-frozen .tw-mh,.client-detail-suite .tw-frozen .tw-mb,.client-detail-suite .tw-frozen .tw-ms2 > div,.client-detail-suite .tw-frozen .tw-sb{transition:padding .2s var(--tw-ez),font-size .2s var(--tw-ez)}
 @media(prefers-reduced-motion:reduce){.client-detail-suite .tw-frozen *{transition:none}}
-@media(max-height:720px){.tw-frozen }
+@media(max-height:720px){
+  .client-detail-suite .tw-frozen .tw-top{display:none}
+  .client-detail-suite .tw-frozen{padding-bottom:4px}
+}
 /* ---- assignments toolbar + selection bar ---- */
 .client-detail-suite .tw-tbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;
  border-bottom:1px solid var(--tw-hair);background:var(--tw-soft)}

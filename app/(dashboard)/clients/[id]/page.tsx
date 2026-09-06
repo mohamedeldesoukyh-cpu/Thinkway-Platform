@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { DashboardShell } from "@/components/layout/dashboard-shell";
-import "@/app/styles/client-detail-suite.css";
 import {
   getAssignableClientProfiles,
   getClientAccessForEntity,
