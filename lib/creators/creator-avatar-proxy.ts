@@ -270,6 +270,8 @@ type AvatarHttpResult =
       buffer: ArrayBuffer;
       contentType: string;
       source: "cache" | "storage" | "cdn";
+      /** Still schedule background upgrade (e.g. low-res CDN / import crop served for immediate UI). */
+      needsRefresh?: boolean;
     }
   | { ok: false; status: number; source: "cache" | "miss"; needsRefresh: boolean };
 
@@ -413,6 +415,10 @@ export async function fetchCreatorAvatarImage(input: {
 /**
  * Request-path resolver — memory cache, Thinkway storage, short CDN only.
  * Never scrapes HTML or OpenGraph. Schedule refreshCreatorAvatarInBackground on needsRefresh.
+ *
+ * Always serve a usable avatar when present (even if undersized / import crop) so search
+ * grids and similar rails paint immediately. Low-quality hits set needsRefresh so
+ * background upgrade can still run — never 404 a good image just to force an upgrade.
  */
 export async function resolveCreatorAvatarForHttpRequest(input: {
   src?: string | null;
@@ -453,19 +459,9 @@ export async function resolveCreatorAvatarForHttpRequest(input: {
       fetchThinkwayStoredAvatar(input.supabase!, src, MEDIA_PROXY_STORAGE_TIMEOUT_MS)
     );
     if (stored) {
-      if (
-        profileUrl &&
-        isAllowedCreatorAvatarProfileUrl(profileUrl) &&
-        isLowQualityImportedAvatarUrl(src, stored.buffer.byteLength)
-      ) {
-        recordMediaProxyPlaceholder();
-        return {
-          ok: false,
-          status: 404,
-          source: "miss",
-          needsRefresh: true,
-        };
-      }
+      const canUpgrade =
+        Boolean(profileUrl && isAllowedCreatorAvatarProfileUrl(profileUrl)) &&
+        isLowQualityImportedAvatarUrl(src, stored.buffer.byteLength);
       setMediaProxyCachePositive(key, stored.buffer, stored.contentType);
       recordMediaProxyStorageHit();
       return {
@@ -473,6 +469,7 @@ export async function resolveCreatorAvatarForHttpRequest(input: {
         buffer: stored.buffer,
         contentType: stored.contentType,
         source: "storage",
+        needsRefresh: canUpgrade,
       };
     }
   }
@@ -486,21 +483,21 @@ export async function resolveCreatorAvatarForHttpRequest(input: {
     const direct = await withMediaProxyInflight(`cdn:${key}`, () =>
       fetchImageBuffer(freshCdnSrc, { timeoutMs: MEDIA_PROXY_FAST_TIMEOUT_MS })
     );
-    if (direct.ok) {
+    if (direct.ok && imageBufferLooksComplete(direct.buffer)) {
       const edge = await imageLongestEdge(direct.buffer);
       const canUpgrade =
         Boolean(profileUrl && isAllowedCreatorAvatarProfileUrl(profileUrl)) &&
         isVisiblyLowResolutionImage(edge, MIN_SHARP_AVATAR_EDGE);
-      if (!canUpgrade) {
-        setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
-        recordMediaProxyCdnHit();
-        return {
-          ok: true,
-          buffer: direct.buffer,
-          contentType: direct.contentType,
-          source: "cdn",
-        };
-      }
+      // Serve any complete still for immediate UI paint; upgrade in background when possible.
+      setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
+      recordMediaProxyCdnHit();
+      return {
+        ok: true,
+        buffer: direct.buffer,
+        contentType: direct.contentType,
+        source: "cdn",
+        needsRefresh: canUpgrade,
+      };
     }
   }
 

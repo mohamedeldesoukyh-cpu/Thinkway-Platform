@@ -26,13 +26,11 @@ export async function GET(request: Request) {
   const profileUrl = parsedQuery.data.profileUrl ?? null;
 
   const result = await resolveCreatorAvatarForHttpRequest({ src, profileUrl, supabase });
+  if (result.needsRefresh) {
+    recordMediaProxyRefreshScheduled();
+    after(() => refreshCreatorAvatarInBackground({ src, profileUrl, supabase }));
+  }
   if (!result.ok) {
-    if (result.needsRefresh) {
-      recordMediaProxyRefreshScheduled();
-      after(() =>
-        refreshCreatorAvatarInBackground({ src, profileUrl, supabase })
-      );
-    }
     return NextResponse.json(
       { error: "Avatar unavailable." },
       {
@@ -51,6 +49,7 @@ export async function GET(request: Request) {
       "Content-Type": result.contentType,
       "Cache-Control": "private, max-age=3600",
       "X-Avatar-Cache": result.source,
+      ...(result.needsRefresh ? { "X-Avatar-Upgrade": "1" } : {}),
     },
   });
 }

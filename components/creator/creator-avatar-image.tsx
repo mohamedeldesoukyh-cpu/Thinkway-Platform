@@ -19,6 +19,12 @@ const AVATAR_CONTAINER_CLASS =
 
 export type CreatorAvatarImageSize = keyof typeof AVATAR_SIZE_CLASS;
 
+function isRawHttpAvatarUrl(url: string | null | undefined): url is string {
+  const trimmed = url?.trim();
+  if (!trimmed) return false;
+  return /^https?:\/\//i.test(trimmed);
+}
+
 export function CreatorAvatarImage({
   avatarUrl,
   profileUrl,
@@ -42,7 +48,9 @@ export function CreatorAvatarImage({
   const profileOnlySrc = profileUrl
     ? creatorAvatarBrowserDisplayUrl(null, profileUrl)
     : null;
+  const rawCdnSrc = isRawHttpAvatarUrl(avatarUrl) ? avatarUrl.trim() : null;
   const [useProfileFallback, setUseProfileFallback] = useState(false);
+  const [useRawCdnFallback, setUseRawCdnFallback] = useState(false);
 
   const activeBase =
     useProfileFallback && profileOnlySrc && profileOnlySrc !== primarySrc
@@ -54,15 +62,32 @@ export function CreatorAvatarImage({
 
   useEffect(() => {
     setUseProfileFallback(false);
+    setUseRawCdnFallback(false);
     notifiedFail.current = false;
-  }, [primarySrc, profileOnlySrc]);
+  }, [primarySrc, profileOnlySrc, rawCdnSrc]);
 
   useEffect(() => {
-    if (recovery.exhausted && !notifiedFail.current) {
-      notifiedFail.current = true;
-      onFailed?.();
-    }
-  }, [recovery.exhausted, onFailed]);
+    if (!recovery.exhausted) return;
+    if (rawCdnSrc && !useRawCdnFallback) return;
+    if (notifiedFail.current) return;
+    notifiedFail.current = true;
+    onFailed?.();
+  }, [recovery.exhausted, rawCdnSrc, useRawCdnFallback, onFailed]);
+
+  if (recovery.exhausted && rawCdnSrc && !useRawCdnFallback) {
+    return (
+      <div className={cn(AVATAR_CONTAINER_CLASS, dim, className)}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={rawCdnSrc}
+          alt={alt}
+          referrerPolicy="no-referrer"
+          className="size-full object-cover object-center"
+          onError={() => setUseRawCdnFallback(true)}
+        />
+      </div>
+    );
+  }
 
   if (!activeBase || recovery.exhausted) {
     return (

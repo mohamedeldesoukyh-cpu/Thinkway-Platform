@@ -1581,6 +1581,7 @@ export function CreatorDetailSheet({
             displayName={identityCreator.display_name}
             handleLabel={handle}
             avatarUrl={packVm.avatarUrl}
+            profileUrl={packVm.profileUrl}
             flagCode={packFlagCodes[0] ?? null}
             metaLine={buildDiscoveryPackCreatorMetaLine({
               creator: identityCreator,
@@ -1668,6 +1669,7 @@ export function CreatorDetailSheet({
             }
             similar={similar.map((item) => {
               const itemHandle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
+              const vm = buildDiscoveryCreatorViewModel(item);
               return {
                 unifiedId: item.unified_id,
                 displayName: item.display_name,
@@ -1677,6 +1679,8 @@ export function CreatorDetailSheet({
                   item.last_enriched_at,
                   item.updated_at
                 ),
+                avatarUrl: vm.avatarUrl,
+                profileUrl: vm.profileUrl,
               };
             })}
             similarLoading={similarLoading}

@@ -3,6 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Shipped 2026-09-06 — Creator avatars after Refresh metrics
+
+Avatar HTTP proxy no longer 404s low-res CDN / import crops when a profile upgrade is possible — serves usable bytes + `needsRefresh` (mirrors publication-preview). Similar creators rail now passes `avatarUrl`/`profileUrl` through `CreatorAvatarImage`. Client falls back to raw CDN before silhouette. Tests: `npm run test:media-proxy`.
+
 ## Shipped 2026-09-05 — Home & Executive pack dashboard
 
 `/` and `/dashboard` now use the finance-suite pack from `docs/architecture/home-dashboard.html` (mast, page switcher, tiles, two-column cards/grids). Live data from `getHomeDashboardSnapshot` + `loadExecutiveDashboard`. Conflicts only when live figures disagree. Additive CSS: `app/styles/home-dashboard.css`. Frozen `discovery.css` untouched. Billing dirt left uncommitted.

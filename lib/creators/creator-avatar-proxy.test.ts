@@ -110,7 +110,7 @@ test("negative cache still allows warm retry when profileUrl can recover", async
   }
 });
 
-test("resolveCreatorAvatarForHttpRequest skips tiny import crops when a live profile exists", async () => {
+test("resolveCreatorAvatarForHttpRequest serves tiny import crops and flags upgrade", async () => {
   resetMediaProxyMetricsForTests();
   const src =
     "https://example.supabase.co/storage/v1/object/public/creator-avatars/imports/d843/instagram/eyadelmogy.jpg";
@@ -132,11 +132,54 @@ test("resolveCreatorAvatarForHttpRequest skips tiny import crops when a live pro
     profileUrl,
     supabase: supabase as never,
   });
-  assert.equal(result.ok, false);
-  if (!result.ok) {
-    assert.equal(result.status, 404);
-    assert.equal(result.source, "miss");
+  assert.equal(
+    result.ok,
+    true,
+    "HTTP path must serve a usable import crop instead of 404ing for upgrade"
+  );
+  if (result.ok) {
+    assert.equal(result.source, "storage");
     assert.equal(result.needsRefresh, true);
+    assert.equal(result.buffer.byteLength, tiny.byteLength);
+  }
+});
+
+test("resolveCreatorAvatarForHttpRequest serves low-res CDN instead of 404ing for upgrade", async () => {
+  resetMediaProxyMetricsForTests();
+  const tinySrc = "https://scontent.cdninstagram.com/v/t51.2885-19/s150x150/http-ui.jpg";
+  const profileUrl = "https://www.instagram.com/HttpUiTiny/";
+  const tiny = await jpegOfSize(150, 150);
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    if (String(input) === tinySrc) {
+      return new Response(tiny, {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      });
+    }
+    return new Response(null, { status: 404 });
+  }) as typeof fetch;
+
+  try {
+    const result = await resolveCreatorAvatarForHttpRequest({
+      src: tinySrc,
+      profileUrl,
+    });
+    assert.equal(
+      result.ok,
+      true,
+      "HTTP path must serve a usable low-res CDN avatar instead of 404ing for upgrade"
+    );
+    if (result.ok) {
+      assert.equal(result.source, "cdn");
+      assert.equal(
+        result.needsRefresh,
+        true,
+        "low-res CDN hit should still schedule background upgrade"
+      );
+    }
+  } finally {
+    globalThis.fetch = originalFetch;
   }
 });
 

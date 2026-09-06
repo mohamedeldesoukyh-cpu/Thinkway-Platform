@@ -8,6 +8,7 @@ import { formatDistanceToNow } from "date-fns";
 import "@/app/styles/discovery-suite-creator-profile.css";
 
 import { CountryFlagBadge } from "@/components/creator/country-flag-badge";
+import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { AB, F, ini } from "@/lib/discovery/suite/helpers";
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import {
@@ -34,6 +35,8 @@ export type DiscoverySuiteCreatorProfileSimilarItem = {
   handle: string | null;
   score: number;
   updatedLabel: string;
+  avatarUrl?: string | null;
+  profileUrl?: string | null;
 };
 
 export type DiscoverySuiteCreatorProfilePlatformChip = {
@@ -51,6 +54,7 @@ type Props = {
   displayName: string;
   handleLabel: string | null;
   avatarUrl: string | null;
+  profileUrl?: string | null;
   flagCode: string | null;
   metaLine: string;
   investmentScore: number | null;
@@ -173,7 +177,18 @@ function SimilarRail({
     <>
       {similar.slice(0, 8).map((item) => (
         <div key={item.unifiedId} className="tw-sim">
-          <span className="a">{ini(item.displayName)}</span>
+          {item.avatarUrl ? (
+            <CreatorAvatarImage
+              avatarUrl={item.avatarUrl}
+              profileUrl={item.profileUrl}
+              alt=""
+              size="xs"
+              sizeClassName="size-[30px]"
+              className="a border-border/60"
+            />
+          ) : (
+            <span className="a">{ini(item.displayName)}</span>
+          )}
           <span style={{ minWidth: 0 }}>
             <b>{item.displayName}</b>
             {item.handle ? <u>@{item.handle.replace(/^@/, "")}</u> : null}
@@ -201,6 +216,7 @@ export function DiscoverySuiteCreatorProfile({
   displayName,
   handleLabel,
   avatarUrl,
+  profileUrl = null,
   flagCode,
   metaLine,
   investmentScore,
@@ -258,8 +274,13 @@ export function DiscoverySuiteCreatorProfile({
           <div className="tw-cp__l">
             <div className="tw-cp__av">
               {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element -- pack avatar; remote CDN URLs vary
-                <img src={avatarUrl} alt="" />
+                <CreatorAvatarImage
+                  avatarUrl={avatarUrl}
+                  profileUrl={profileUrl}
+                  alt=""
+                  sizeClassName="size-full"
+                  className="!size-full border-0 bg-transparent"
+                />
               ) : (
                 ini(displayName)
               )}
