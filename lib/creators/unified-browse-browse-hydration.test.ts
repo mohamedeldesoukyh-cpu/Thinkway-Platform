@@ -90,11 +90,11 @@ function baseCreator(
 /** Extract the omitHeavyFields === true platform-account SELECT string only. */
 function omitHeavyFieldsTrueAccountSelect(source: string): string {
   const match = source.match(
-    /const accountSelect = omitHeavyFields\s*\?\s*"([^"]+)"\s*:\s*"([^"]+)"/
+    /const accountSelect = omitHeavyFields\s*\?\s*`([^`]+)`\s*:\s*`([^`]+)`/
   );
   assert.ok(
     match?.[1],
-    "expected accountSelect ternary for omitHeavyFields in unified-browse.ts"
+    "expected accountSelect ternary (template literals) for omitHeavyFields in unified-browse.ts"
   );
   return match[1]!;
 }
@@ -104,10 +104,37 @@ const source = fs.readFileSync(
   "utf8"
 );
 
+assert.ok(
+  source.includes("BROWSE_FEED_PUBLICATION_SELECT"),
+  "browse feed publication select constant must exist"
+);
+assert.ok(
+  source.includes("feed0_url:recent_publications->0->>url"),
+  "browse select must project first feed url scalar"
+);
+assert.ok(
+  source.includes("feed0_thumbnail:recent_publications->0->>thumbnail"),
+  "browse select must project first feed thumbnail scalar"
+);
+assert.ok(
+  source.includes("feed0_display:recent_publications->0->>displayUrl"),
+  "browse select must project displayUrl fallback for thumbs"
+);
+assert.ok(
+  source.includes("Promise.all"),
+  "fetchInternalCreators hydration must parallelize independent selects"
+);
+
 const omitTrueSelect = omitHeavyFieldsTrueAccountSelect(source);
 assert.ok(
-  omitTrueSelect.includes("recent_publications"),
-  "omitHeavyFields=true platform-account select must include recent_publications for Search feed preview"
+  omitTrueSelect.includes("${BROWSE_FEED_PUBLICATION_SELECT}"),
+  "omitHeavyFields=true platform-account select must use browse feed publication projection"
+);
+assert.ok(
+  !/,\s*recent_publications\s*,/.test(omitTrueSelect) &&
+    !omitTrueSelect.includes("recent_publications,") &&
+    !omitTrueSelect.trim().endsWith("recent_publications"),
+  "omitHeavyFields=true must not select full recent_publications JSONB column"
 );
 assert.ok(
   !omitTrueSelect.includes("profile_bio"),
@@ -117,6 +144,16 @@ assert.ok(
   !omitTrueSelect.includes("contact_email"),
   "omitHeavyFields=true must not restore contact fields"
 );
+
+assert.equal(
+  browseFeedPublicationsFromAccountRowExportedShape(),
+  true,
+  "browse feed reconstruction helper must be present"
+);
+
+function browseFeedPublicationsFromAccountRowExportedShape(): boolean {
+  return source.includes("function browseFeedPublicationsFromAccountRow");
+}
 
 const withPublications = baseCreator({
   recent_publications: [

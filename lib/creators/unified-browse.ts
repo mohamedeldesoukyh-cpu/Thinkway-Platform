@@ -393,6 +393,34 @@ const DISCOVERY_AUDIENCE_FILTER_BATCH = 100;
 
 const INTERNAL_ID_QUERY_BATCH_SIZE = 80;
 
+/** Discovery Search/list feed thumbs — keep in sync with slimRecentPublicationsForBrowse. */
+const BROWSE_FEED_THUMB_LIMIT = 3;
+
+/**
+ * Browse-only PostgREST projection: first N publication url/thumbnail/isVideo scalars.
+ * Avoids selecting the full `recent_publications` JSONB (captions/metrics arrays).
+ */
+const BROWSE_FEED_PUBLICATION_SELECT = [
+  "feed0_url:recent_publications->0->>url",
+  "feed0_thumbnail:recent_publications->0->>thumbnail",
+  "feed0_display:recent_publications->0->>displayUrl",
+  "feed0_is_video:recent_publications->0->isVideo",
+  "feed1_url:recent_publications->1->>url",
+  "feed1_thumbnail:recent_publications->1->>thumbnail",
+  "feed1_display:recent_publications->1->>displayUrl",
+  "feed1_is_video:recent_publications->1->isVideo",
+  "feed2_url:recent_publications->2->>url",
+  "feed2_thumbnail:recent_publications->2->>thumbnail",
+  "feed2_display:recent_publications->2->>displayUrl",
+  "feed2_is_video:recent_publications->2->isVideo",
+].join(", ");
+
+const BROWSE_PLATFORM_ACCOUNT_SELECT_CORE =
+  "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_display_name";
+
+const BROWSE_PLATFORM_ACCOUNT_SELECT_TAIL =
+  "metrics_source, sync_status, sync_source, sync_error, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status";
+
 function chunkValues<T>(values: T[], size: number): T[][] {
   if (values.length === 0) return [];
   const chunks: T[][] = [];
@@ -400,6 +428,50 @@ function chunkValues<T>(values: T[], size: number): T[][] {
     chunks.push(values.slice(index, index + size));
   }
   return chunks;
+}
+
+/** Rebuild slim publication rows from browse feed scalar columns. */
+function browseFeedPublicationsFromAccountRow(
+  row: Record<string, unknown>,
+  limit = BROWSE_FEED_THUMB_LIMIT
+): unknown[] {
+  const pubs: unknown[] = [];
+  for (let i = 0; i < limit; i++) {
+    const urlRaw = row[`feed${i}_url`];
+    const thumbRaw = row[`feed${i}_thumbnail`];
+    const displayRaw = row[`feed${i}_display`];
+    const url = typeof urlRaw === "string" ? urlRaw : null;
+    const thumbnail =
+      (typeof thumbRaw === "string" && thumbRaw.trim() ? thumbRaw : null) ??
+      (typeof displayRaw === "string" && displayRaw.trim() ? displayRaw : null);
+    if (!url?.trim() && !thumbnail?.trim()) continue;
+    pubs.push({
+      url,
+      thumbnail,
+      likes: null,
+      comments: null,
+      views: null,
+      posted_at: null,
+      caption: null,
+      isVideo: row[`feed${i}_is_video`] === true,
+    });
+  }
+  return pubs;
+}
+
+async function selectRowsInIdChunks<T>(
+  ids: string[],
+  run: (
+    chunk: string[]
+  ) => PromiseLike<{ data: T[] | null; error: { message: string } | null }>
+): Promise<T[]> {
+  if (ids.length === 0) return [];
+  const chunks = chunkValues(ids, INTERNAL_ID_QUERY_BATCH_SIZE);
+  const parts = await Promise.all(chunks.map((chunk) => run(chunk)));
+  return parts.flatMap((result) => {
+    if (result.error) throw new Error(result.error.message);
+    return result.data ?? [];
+  });
 }
 
 async function estimateDiscoveryBrowseRawTotal(
@@ -834,9 +906,12 @@ async function fetchInternalCreators(
 
   let influencerRows: InfluencerHydrationRow[] = [];
   if (scopedIds) {
-    for (const chunk of chunkValues(scopedIds, INTERNAL_ID_QUERY_BATCH_SIZE)) {
-      influencerRows.push(...(await queryInfluencerRows(chunk)));
-    }
+    const rowChunks = await Promise.all(
+      chunkValues(scopedIds, INTERNAL_ID_QUERY_BATCH_SIZE).map((chunk) =>
+        queryInfluencerRows(chunk)
+      )
+    );
+    influencerRows = rowChunks.flat();
   } else if (filters.influencerId) {
     influencerRows = await queryInfluencerRows([filters.influencerId]);
   } else {
@@ -858,79 +933,16 @@ async function fetchInternalCreators(
   }, pathOpt);
   if (ids.length === 0) return [];
 
-  const { data: linkedDiscovery } =
-    ids.length > INTERNAL_ID_QUERY_BATCH_SIZE
-      ? {
-          data: (
-            await Promise.all(
-              chunkValues(ids, INTERNAL_ID_QUERY_BATCH_SIZE).map((chunk) =>
-                supabase
-                  .from("discovered_profiles")
-                  .select("id, influencer_id, profile_image_url")
-                  .in("influencer_id", chunk)
-              )
-            )
-          ).flatMap((result) => {
-            if (result.error) throw new Error(result.error.message);
-            return result.data ?? [];
-          }),
-        }
-      : await supabase
-          .from("discovered_profiles")
-          .select("id, influencer_id, profile_image_url")
-          .in("influencer_id", ids);
-
   const profileIds = (data ?? [])
     .map((row) => (row as { profile_id?: string | null }).profile_id)
     .filter((id): id is string => Boolean(id));
 
-  const { data: linkedProfilesById } =
-    profileIds.length > 0
-      ? await supabase
-          .from("discovered_profiles")
-          .select("id, profile_image_url")
-          .in("id", profileIds)
-      : { data: [] as Array<{ id: string; profile_image_url: string | null }> };
-
-  const discoveryByInfluencer = new Map(
-    (linkedDiscovery ?? []).map((r) => [r.influencer_id as string, r.id as string])
-  );
-  const discoveryImageByInfluencer = new Map(
-    (linkedDiscovery ?? []).map((r) => [
-      r.influencer_id as string,
-      (r as { profile_image_url?: string | null }).profile_image_url ?? null,
-    ])
-  );
-  const discoveryImageByProfileId = new Map(
-    (linkedProfilesById ?? []).map((r) => [r.id, r.profile_image_url ?? null])
-  );
-
-  const importSourceRows =
-    ids.length > INTERNAL_ID_QUERY_BATCH_SIZE
-      ? (
-          await Promise.all(
-            chunkValues(ids, INTERNAL_ID_QUERY_BATCH_SIZE).map((chunk) =>
-              supabase.from("creator_sources").select("influencer_id").in("influencer_id", chunk)
-            )
-          )
-        ).flatMap((result) => {
-          if (result.error) throw new Error(result.error.message);
-          return result.data ?? [];
-        })
-      : (
-          await supabase.from("creator_sources").select("influencer_id").in("influencer_id", ids)
-        ).data;
-
-  const importedByInfluencerId = new Set(
-    (importSourceRows ?? []).map((row) => row.influencer_id as string)
-  );
-
-  // Browse (omitHeavyFields): include recent_publications for Search feed thumbs, then
-  // slimRecentPublicationsForBrowse keeps ≤3 creator-level display rows and strips
-  // platform JSONB. Do not pull bio/contacts/hashtags on the list path.
+  // Browse (omitHeavyFields): project only first-N feed url/thumbnail/isVideo scalars —
+  // never the full recent_publications JSONB. Detail/enrichment keeps full JSONB.
+  // slimRecentPublicationsForBrowse still normalizes ≤3 creator-level thumbs.
   const accountSelect = omitHeavyFields
-    ? "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_display_name, recent_publications, metrics_source, sync_status, sync_source, sync_error, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status"
-    : "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_display_name, profile_bio, hashtags, mentions, recent_publications, contact_email, contact_phone, contact_links, metrics_source, sync_status, sync_source, sync_error, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status";
+    ? `${BROWSE_PLATFORM_ACCOUNT_SELECT_CORE}, ${BROWSE_FEED_PUBLICATION_SELECT}, ${BROWSE_PLATFORM_ACCOUNT_SELECT_TAIL}`
+    : `${BROWSE_PLATFORM_ACCOUNT_SELECT_CORE}, profile_bio, hashtags, mentions, recent_publications, contact_email, contact_phone, contact_links, ${BROWSE_PLATFORM_ACCOUNT_SELECT_TAIL}`;
 
   type PlatformAccountHydrationRow = MetricsPlatformAccount & {
     influencer_id: string;
@@ -945,27 +957,63 @@ async function fetchInternalCreators(
     enrichment_status?: CreatorEnrichmentStatus | null;
   };
 
-  const accounts: PlatformAccountHydrationRow[] =
-    ids.length > INTERNAL_ID_QUERY_BATCH_SIZE
-      ? (
-          await Promise.all(
-            chunkValues(ids, INTERNAL_ID_QUERY_BATCH_SIZE).map((chunk) =>
-              (supabase as any)
-                .from("influencer_platform_accounts")
-                .select(accountSelect)
-                .in("influencer_id", chunk)
-            )
+  type LinkedDiscoveryRow = {
+    id: string;
+    influencer_id: string;
+    profile_image_url: string | null;
+  };
+  type LinkedProfileImageRow = { id: string; profile_image_url: string | null };
+  type CreatorSourceRow = { influencer_id: string };
+
+  const [linkedDiscovery, linkedProfilesById, importSourceRows, accountRows] =
+    await Promise.all([
+      selectRowsInIdChunks<LinkedDiscoveryRow>(ids, (chunk) =>
+        supabase
+          .from("discovered_profiles")
+          .select("id, influencer_id, profile_image_url")
+          .in("influencer_id", chunk)
+      ),
+      profileIds.length > 0
+        ? selectRowsInIdChunks<LinkedProfileImageRow>(profileIds, (chunk) =>
+            supabase
+              .from("discovered_profiles")
+              .select("id, profile_image_url")
+              .in("id", chunk)
           )
-        ).flatMap((result: { data: PlatformAccountHydrationRow[] | null; error: { message: string } | null }) => {
-          if (result.error) throw new Error(result.error.message);
-          return result.data ?? [];
-        })
-      : ((
-          await (supabase as any)
-            .from("influencer_platform_accounts")
-            .select(accountSelect)
-            .in("influencer_id", ids)
-        ).data ?? []) as PlatformAccountHydrationRow[];
+        : Promise.resolve([] as LinkedProfileImageRow[]),
+      selectRowsInIdChunks<CreatorSourceRow>(ids, (chunk) =>
+        supabase.from("creator_sources").select("influencer_id").in("influencer_id", chunk)
+      ),
+      selectRowsInIdChunks<PlatformAccountHydrationRow>(ids, (chunk) =>
+        (supabase as any)
+          .from("influencer_platform_accounts")
+          .select(accountSelect)
+          .in("influencer_id", chunk)
+      ),
+    ]);
+
+  const discoveryByInfluencer = new Map(
+    linkedDiscovery.map((r) => [r.influencer_id, r.id])
+  );
+  const discoveryImageByInfluencer = new Map(
+    linkedDiscovery.map((r) => [r.influencer_id, r.profile_image_url ?? null])
+  );
+  const discoveryImageByProfileId = new Map(
+    linkedProfilesById.map((r) => [r.id, r.profile_image_url ?? null])
+  );
+
+  const importedByInfluencerId = new Set(
+    importSourceRows.map((row) => row.influencer_id)
+  );
+
+  const accounts: PlatformAccountHydrationRow[] = omitHeavyFields
+    ? accountRows.map((account) => ({
+        ...account,
+        recent_publications: browseFeedPublicationsFromAccountRow(
+          account as PlatformAccountHydrationRow & Record<string, unknown>
+        ),
+      }))
+    : accountRows;
 
   const accountsByInfluencer = new Map<string, PlatformAccountHydrationRow[]>();
   for (const account of accounts) {
@@ -1299,8 +1347,6 @@ async function resolveCreatorSearchHits(
     totalCount: fallbackIds.length,
   };
 }
-
-const BROWSE_FEED_THUMB_LIMIT = 3;
 
 /** Display-only feed thumb row — no caption/metrics payload on browse. */
 function toBrowseFeedPublication(
