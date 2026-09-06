@@ -594,10 +594,10 @@
 /* ---- freeze everything above the tabs ---- */
 .vendor-detail-suite .tw-frozen{position:sticky;top:0;z-index:60;background:var(--tw-bg);
  margin:0 -14px;padding:0 14px 6px;box-shadow:0 6px 16px -12px rgba(11,15,26,.28)}
-.vendor-detail-suite .tw-frozen .tw-mast,.tw-frozen .tw-step2{margin-bottom:8px}
+.vendor-detail-suite .tw-frozen .tw-mast,
+.vendor-detail-suite .tw-frozen .tw-step2{margin-bottom:8px}
 .vendor-detail-suite .tw-frozen .tw-jump{padding:0 0 2px}
 /* compact once scrolled: drop the action row and the blocker detail line */
-.vendor-detail-suite .tw-frozen.mini 
 .vendor-detail-suite .tw-frozen.mini .tw-mb .sub{display:none}
 .vendor-detail-suite .tw-frozen.mini .tw-mb{padding:7px 15px}
 .vendor-detail-suite .tw-frozen.mini .tw-mh{padding:8px 15px 7px}
@@ -607,10 +607,17 @@
 .vendor-detail-suite .tw-frozen.mini .tw-sb{padding:6px 5px 5px}
 .vendor-detail-suite .tw-frozen.mini .tw-top{display:none}
 .vendor-detail-suite .tw-frozen.mini .tw-jump{display:none}
-.vendor-detail-suite .tw-frozen .tw-mast,.tw-frozen .tw-step2,.tw-frozen .tw-mh,.tw-frozen .tw-mb,
-.vendor-detail-suite .tw-frozen .tw-ms2 > div,.tw-frozen .tw-sb{transition:padding .2s var(--tw-ez),font-size .2s var(--tw-ez)}
+.vendor-detail-suite .tw-frozen .tw-mast,
+.vendor-detail-suite .tw-frozen .tw-step2,
+.vendor-detail-suite .tw-frozen .tw-mh,
+.vendor-detail-suite .tw-frozen .tw-mb,
+.vendor-detail-suite .tw-frozen .tw-ms2 > div,
+.vendor-detail-suite .tw-frozen .tw-sb{transition:padding .2s var(--tw-ez),font-size .2s var(--tw-ez)}
 @media(prefers-reduced-motion:reduce){.vendor-detail-suite .tw-frozen *{transition:none}}
-@media(max-height:720px){.vendor-detail-suite .tw-frozen }
+@media(max-height:720px){
+  .vendor-detail-suite .tw-frozen .tw-top{display:none}
+  .vendor-detail-suite .tw-frozen{padding-bottom:4px}
+}
 /* ---- assignments toolbar + selection bar ---- */
 .vendor-detail-suite .tw-tbar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:10px 14px;
  border-bottom:1px solid var(--tw-hair);background:var(--tw-soft)}
