@@ -64,6 +64,7 @@
   .enterprise-tabs-list {
     display: flex;
     align-items: stretch;
+    justify-content: flex-start;
     gap: var(--etab-gap);
     min-width: 0;
     width: 100%;
@@ -92,7 +93,7 @@
     display: inline-flex;
     flex: 0 1 auto;
     align-items: center;
-    justify-content: center;
+    justify-content: flex-start;
     gap: 8px;
     box-sizing: border-box;
     min-width: var(--etab-min-w);
