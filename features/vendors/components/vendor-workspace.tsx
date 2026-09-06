@@ -335,7 +335,8 @@ export function VendorWorkspaceView({
                   <CreatorIdentityCell
                     source={creatorProfileSourceFromAccounts(
                       workspace.display_name,
-                      workspace.platform_accounts
+                      workspace.platform_accounts,
+                      { avatarUrl: workspace.primary_avatar_url }
                     )}
                     size="sm"
                     showName={false}

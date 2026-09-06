@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { MoreHorizontalIcon, PencilIcon } from "lucide-react";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { resolveStatusTone } from "@/components/shared/status/status-utils";
@@ -21,8 +21,6 @@ import {
 } from "@/components/ui/sheet";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { getUnifiedCreatorsBatchAction } from "@/features/campaigns/creator-discovery-actions";
-import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import { ASSIGNMENT_STATUS_LABELS } from "@/features/campaigns/constants";
 import { deliverableLabel } from "@/features/campaigns/line-assignment";
 import type { AssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
@@ -43,7 +41,7 @@ import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience
 import { resolveAssignmentsGridGates } from "@/lib/campaigns/assignments-grid-gates";
 import { formatMoney, formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
-import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { vendorDetailPath } from "@/lib/routing/entity-paths";
 import { cn } from "@/lib/utils";
 import "@/app/styles/campaign-detail-suite.css";
 
@@ -461,9 +459,6 @@ export function AssignmentInfluencerDetailSheet({
 }: AssignmentInfluencerDetailSheetProps) {
   const gates = resolveAssignmentsGridGates(audienceView);
   const [avatarFailed, setAvatarFailed] = useState(false);
-  const [profileCreator, setProfileCreator] = useState<UnifiedCreatorResult | null>(null);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [profileLoading, setProfileLoading] = useState(false);
 
   const handle = useMemo(
     () => (group ? resolveAssignmentPrimaryHandle(group.line) : ""),
@@ -502,27 +497,13 @@ export function AssignmentInfluencerDetailSheet({
 
   const lineId = line?.id ?? null;
   const influencerId = line?.influencer_id ?? null;
+  const vendorProfileHref = influencerId ? vendorDetailPath(influencerId) : null;
 
   useEffect(() => {
     setAvatarFailed(false);
   }, [lineId, creatorAvatarUrl, creatorProfileUrl]);
 
-  const openCreatorProfile = useCallback(async () => {
-    if (!influencerId || profileLoading) return;
-    setProfileLoading(true);
-    try {
-      const rows = await getUnifiedCreatorsBatchAction([`inf:${influencerId}`]);
-      const creator = rows[0] ?? null;
-      if (!creator) return;
-      setProfileCreator(creator);
-      setProfileOpen(true);
-    } finally {
-      setProfileLoading(false);
-    }
-  }, [influencerId, profileLoading]);
-
   return (
-    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent
         side="right"
@@ -563,15 +544,10 @@ export function AssignmentInfluencerDetailSheet({
                 )}
               </div>
               <h2>
-                {influencerId ? (
-                  <button
-                    type="button"
-                    className="tw-cm__name-btn"
-                    onClick={() => void openCreatorProfile()}
-                    disabled={profileLoading}
-                  >
+                {vendorProfileHref ? (
+                  <Link href={vendorProfileHref} className="tw-cm__name-btn">
                     {creatorName}
-                  </button>
+                  </Link>
                 ) : (
                   creatorName
                 )}
@@ -645,12 +621,9 @@ export function AssignmentInfluencerDetailSheet({
                           Edit assignment
                         </DropdownMenuItem>
                       ) : null}
-                      {influencerId ? (
-                        <DropdownMenuItem
-                          disabled={profileLoading}
-                          onClick={() => void openCreatorProfile()}
-                        >
-                          Creator profile
+                      {vendorProfileHref ? (
+                        <DropdownMenuItem asChild>
+                          <Link href={vendorProfileHref}>Creator profile</Link>
                         </DropdownMenuItem>
                       ) : null}
                     </DropdownMenuContent>
@@ -704,16 +677,9 @@ export function AssignmentInfluencerDetailSheet({
                     Open vendor IO
                   </Button>
                 )}
-                {influencerId ? (
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="tw-b sm"
-                    disabled={profileLoading}
-                    onClick={() => void openCreatorProfile()}
-                  >
-                    {profileLoading ? "Opening…" : "Creator profile"}
+                {vendorProfileHref ? (
+                  <Button asChild variant="outline" size="sm" className="tw-b sm">
+                    <Link href={vendorProfileHref}>Creator profile</Link>
                   </Button>
                 ) : null}
                 <span className="tw-sp" />
@@ -737,16 +703,5 @@ export function AssignmentInfluencerDetailSheet({
         )}
       </SheetContent>
     </Sheet>
-
-    <CreatorDetailSheet
-      creator={profileCreator}
-      open={profileOpen && profileCreator != null}
-      onOpenChange={(nextOpen) => {
-        setProfileOpen(nextOpen);
-        if (!nextOpen) setProfileCreator(null);
-      }}
-      presentation="discoveryPack"
-    />
-    </>
   );
 }

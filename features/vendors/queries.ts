@@ -84,6 +84,7 @@ const VENDOR_LIST_SELECT = `
   categories,
   rate_card,
   created_at,
+  primary_avatar_url,
   has_commercial_profile,
   crm_profile:creator_crm_profiles!creator_crm_profiles_influencer_id_fkey(
     crm_status,
@@ -312,6 +313,9 @@ export async function getVendorById(id: string): Promise<VendorDetail | null> {
         handle,
         username,
         profile_url,
+        profile_picture_url,
+        avatar_source,
+        avatar_last_synced_at,
         follower_count,
         engagement_rate,
         avg_views,

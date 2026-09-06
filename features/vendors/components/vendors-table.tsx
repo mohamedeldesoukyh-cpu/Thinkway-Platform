@@ -56,7 +56,9 @@ export const VENDORS_TABLE_COLUMNS: OperationalConfigurableColumnDef<VendorRow>[
     label: "Creator",
     renderCell: (vendor) => (
       <CreatorIdentityCell
-        source={creatorProfileSourceFromAccounts(vendor.display_name, vendor.platform_accounts)}
+        source={creatorProfileSourceFromAccounts(vendor.display_name, vendor.platform_accounts, {
+          avatarUrl: vendor.primary_avatar_url,
+        })}
         size="sm"
         showHandle={false}
         stopPropagation
