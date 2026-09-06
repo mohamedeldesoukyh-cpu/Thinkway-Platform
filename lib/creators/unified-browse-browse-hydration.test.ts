@@ -124,6 +124,16 @@ assert.ok(
   source.includes("Promise.all"),
   "fetchInternalCreators hydration must parallelize independent selects"
 );
+assert.ok(
+  source.includes("hydratedUnion") || source.includes("unionIds"),
+  "fast unfiltered page-1 must hydrate Egypt+global ID union once"
+);
+assert.ok(
+  /queryActiveInfluencerIdsByRecencyFast[\s\S]*fetchInternalCreators/.test(
+    source.slice(source.indexOf("fast_unfiltered_browse"))
+  ),
+  "fast unfiltered path resolves IDs then hydrates (no dual pool hydrate)"
+);
 
 const omitTrueSelect = omitHeavyFieldsTrueAccountSelect(source);
 assert.ok(

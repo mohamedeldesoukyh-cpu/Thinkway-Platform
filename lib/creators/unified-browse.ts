@@ -1866,61 +1866,70 @@ export async function browseUnifiedCreators(
         page === 1 &&
         includeInternal &&
         !resolveCountryCode(filters.country ?? undefined);
-      const browsePageOptions = { skipDna: true, fastIds: true } as const;
-
-      const egyptPromise = pinEgyptPool
-        ? fetchInternalCreatorsBrowsePage(
+      // Fast ID path already probes +1 internally — do not pass pageSize+1 here or
+      // page offsets drift (page 2 skips a row) and has_more becomes unreliable.
+      // Page-1 Egypt pin + global pools often share zero overlap; hydrating each
+      // pool separately doubles round-trips. Resolve IDs in parallel, then hydrate
+      // the union once (same creator set / pin-tier sort inputs as before).
+      const egyptIdsPromise = pinEgyptPool
+        ? queryActiveInfluencerIdsByRecencyFast(
             supabase,
             { ...filters, country: BROWSE_PIN_PRIORITY_COUNTRY },
             1,
-            pageSize,
-            tracePath,
-            browsePageOptions
+            pageSize
           )
-        : Promise.resolve<UnifiedCreatorResult[]>([]);
-      // Fast ID path already probes +1 internally — do not pass pageSize+1 here or
-      // page offsets drift (page 2 skips a row) and has_more becomes unreliable.
-      const internalPromise = includeInternal
-        ? (async () => {
-            const browse = await queryActiveInfluencerIdsByRecencyFast(
-              supabase,
-              filters,
-              page,
-              pageSize
-            );
-            if (browse.ids.length === 0) {
-              return { creators: [] as UnifiedCreatorResult[], hasMore: browse.hasMore };
-            }
-            const creators = await fetchInternalCreators(
+        : Promise.resolve({ ids: [] as string[], hasMore: false });
+      const globalIdsPromise = includeInternal
+        ? queryActiveInfluencerIdsByRecencyFast(supabase, filters, page, pageSize)
+        : Promise.resolve({ ids: [] as string[], hasMore: false });
+
+      const [egyptIdsSettled, globalIdsSettled] = await Promise.allSettled([
+        egyptIdsPromise,
+        globalIdsPromise,
+      ]);
+      if (egyptIdsSettled.status === "rejected" && globalIdsSettled.status === "rejected") {
+        throw globalIdsSettled.reason;
+      }
+      const egyptIds =
+        egyptIdsSettled.status === "fulfilled" ? egyptIdsSettled.value.ids : [];
+      const globalBrowse =
+        globalIdsSettled.status === "fulfilled"
+          ? globalIdsSettled.value
+          : { ids: [] as string[], hasMore: false };
+
+      const unionIds: string[] = [];
+      const seenUnionIds = new Set<string>();
+      for (const id of [...egyptIds, ...globalBrowse.ids]) {
+        if (seenUnionIds.has(id)) continue;
+        seenUnionIds.add(id);
+        unionIds.push(id);
+      }
+
+      const hydratedUnion =
+        unionIds.length > 0
+          ? await fetchInternalCreators(
               supabase,
               { ...filters, search: undefined, page: undefined, pageSize: undefined },
-              browse.ids,
+              unionIds,
               null,
               { omitHeavyFields: true, skipDna: true, tracePath }
-            );
-            const order = new Map(browse.ids.map((id, index) => [id, index]));
-            creators.sort(
-              (a, b) =>
-                (order.get(a.influencer_id ?? "") ?? Number.MAX_SAFE_INTEGER) -
-                (order.get(b.influencer_id ?? "") ?? Number.MAX_SAFE_INTEGER)
-            );
-            return { creators, hasMore: browse.hasMore };
-          })()
-        : Promise.resolve({ creators: [] as UnifiedCreatorResult[], hasMore: false });
+            )
+          : [];
+      const hydratedByInfluencerId = new Map(
+        hydratedUnion
+          .filter((creator) => creator.influencer_id)
+          .map((creator) => [creator.influencer_id as string, creator])
+      );
+      const creatorsInIdOrder = (ids: string[]): UnifiedCreatorResult[] =>
+        ids
+          .map((id) => hydratedByInfluencerId.get(id))
+          .filter((creator): creator is UnifiedCreatorResult => creator != null);
 
-      const [egyptSettled, internalSettled] = await Promise.allSettled([
-        egyptPromise,
-        internalPromise,
-      ]);
-      if (egyptSettled.status === "rejected" && internalSettled.status === "rejected") {
-        throw internalSettled.reason;
-      }
-      const priorityInternal =
-        egyptSettled.status === "fulfilled" ? egyptSettled.value : [];
-      const internalPage =
-        internalSettled.status === "fulfilled"
-          ? internalSettled.value
-          : { creators: [] as UnifiedCreatorResult[], hasMore: false };
+      const priorityInternal = creatorsInIdOrder(egyptIds);
+      const internalPage = {
+        creators: creatorsInIdOrder(globalBrowse.ids),
+        hasMore: globalBrowse.hasMore,
+      };
 
       perf?.span("merge");
       const hasMoreFromProbe = includeInternal && internalPage.hasMore;
