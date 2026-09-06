@@ -1217,9 +1217,7 @@ export function EditablePostRow({
         cols={gridCols ?? ""}
         className={cn(
           "tw-r tw-ad thinkway-campaign-asgn-child text-[11px] font-normal text-[var(--camp-text-2)]",
-          !isLastChildRow && "border-b border-[var(--camp-border)]",
-          "hover:bg-[var(--camp-row-open-hover)]",
-          fieldsActive && "bg-[var(--camp-row-open)]"
+          !isLastChildRow && "border-b border-[var(--camp-border)]"
         )}
       >
         {(parentTrackIds ?? leadingParentColumnIds).map((parentColumnId) => {

@@ -4147,7 +4147,7 @@
   }
 
   .thinkway-campaign-asgn-parent-open td {
-    background: var(--camp-row-open);
+    background: var(--camp-white);
   }
 
   .thinkway-campaign-asgn-child-hdr td {
@@ -4157,14 +4157,14 @@
     letter-spacing: 0.5px;
     text-transform: uppercase;
     color: var(--camp-text-3);
-    background: var(--camp-child-hdr);
+    background: #e7edf7;
     border-bottom: 1px solid var(--camp-border);
     white-space: nowrap;
   }
 
   .thinkway-campaign-asgn-child-hdr td[data-child-col="type"],
   .thinkway-campaign-asgn-child td[data-child-col="type"] {
-    border-left: 3px solid var(--camp-child-accent);
+    border-left: 3px solid var(--camp-blue);
     padding-left: 28px;
   }
 
@@ -4181,13 +4181,13 @@
     font-size: 11px;
     color: var(--camp-text-2);
     border-bottom: 1px solid var(--camp-border);
-    background: var(--camp-row-open);
+    background: #f4f7fc;
     vertical-align: middle;
     white-space: nowrap;
   }
 
   .thinkway-campaign-asgn-child:hover td {
-    background: var(--camp-row-open-hover);
+    background: var(--camp-white);
   }
 
   /* Nested deliverable sub-table inside expanded parent rows */
@@ -4198,14 +4198,14 @@
     letter-spacing: 0.5px;
     text-transform: uppercase;
     color: var(--camp-text-3);
-    background: var(--camp-child-hdr);
+    background: #e7edf7;
     border-bottom: 1px solid var(--camp-border);
     white-space: nowrap;
   }
 
   .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child-hdr td[data-child-col="type"],
   .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child td[data-child-col="type"] {
-    border-left: 3px solid var(--camp-child-accent);
+    border-left: 3px solid var(--camp-blue);
     padding-left: 28px;
   }
 
@@ -4222,13 +4222,13 @@
     font-size: 11px;
     color: var(--camp-text-2);
     border-bottom: 1px solid var(--camp-border);
-    background: var(--camp-row-open);
+    background: #f4f7fc;
     vertical-align: middle;
     white-space: nowrap;
   }
 
   .thinkway-campaign-asgn-wrap .thinkway-campaign-asgn-child:hover td {
-    background: var(--camp-row-open-hover);
+    background: var(--camp-white);
   }
 
   .thinkway-campaign-asgn-footer {
@@ -6039,7 +6039,13 @@
   white-space: nowrap !important;
 }
 
-.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r > *,
+/* Parent creator lines — white; exclude nested .tw-ad / .tw-adh children. */
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r:not(.tw-ad):not(.tw-adh),
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent {
+  background: var(--camp-white) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r:not(.tw-ad):not(.tw-adh) > *,
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent .thinkway-campaign-asgn-td {
   padding: 10px 10px !important;
   border-bottom: 1px solid var(--camp-border) !important;
@@ -6049,20 +6055,34 @@
   color: var(--camp-text-2) !important;
 }
 
-.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r:hover > * {
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r:not(.tw-ad):not(.tw-adh):hover,
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r:not(.tw-ad):not(.tw-adh):hover > * {
   background: var(--camp-hover) !important;
 }
 
-.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r.sel > * {
-  background: var(--camp-row-open) !important;
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r.sel:not(.tw-ad),
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r.sel:not(.tw-ad) > * {
+  background: var(--camp-blue-light) !important;
 }
 
-.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-ad > * {
+/* Nested deliverable band — intentional hierarchy wash + dark blue rail. */
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-ad {
+  background: #f4f7fc !important;
+  border-left: 3px solid var(--camp-blue) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-ad > *,
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-ad.tw-r > * {
   background: #f4f7fc !important;
 }
 
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-ad.tw-r:hover > * {
+  background: var(--camp-white) !important;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-adh,
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-adh > * {
-  background: var(--camp-child-hdr) !important;
+  background: #e7edf7 !important;
   font-size: 9px !important;
   font-weight: 700 !important;
   text-transform: uppercase !important;
@@ -6070,7 +6090,7 @@
   padding: 6px 10px !important;
 }
 
-.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r [data-assignment-col="assignment"] {
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g.tw-r:not(.tw-ad) [data-assignment-col="assignment"] {
   border-left: 3px solid var(--camp-blue) !important;
   padding-left: 9px !important;
 }
@@ -6179,14 +6199,16 @@
   padding-left: 9px !important;
 }
 
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent-open,
+.thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent-open > *,
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent-open td {
-  background: var(--camp-row-open) !important;
+  background: var(--camp-white) !important;
 }
 
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td {
   padding: 6px 10px !important;
   border-bottom: 1px solid var(--camp-border) !important;
-  background: var(--camp-child-hdr) !important;
+  background: #e7edf7 !important;
   font-size: 9px !important;
   font-weight: 700 !important;
   letter-spacing: 0.5px !important;
@@ -6198,7 +6220,7 @@
 
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child-hdr td[data-child-col="type"],
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td[data-child-col="type"] {
-  border-left: 3px solid var(--camp-child-accent) !important;
+  border-left: 3px solid var(--camp-blue) !important;
   padding-left: 28px !important;
   text-align: left !important;
 }
@@ -6221,7 +6243,7 @@
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child td {
   padding: 8px 10px !important;
   border-bottom: 1px solid var(--camp-border) !important;
-  background: var(--camp-row-open) !important;
+  background: #f4f7fc !important;
   font-size: 11px !important;
   font-weight: 400 !important;
   color: var(--camp-text-2) !important;
@@ -6230,7 +6252,7 @@
 }
 
 .thinkway-campaign-workspace .thinkway-campaign-asgn-table .thinkway-campaign-asgn-child:hover td {
-  background: var(--camp-row-open-hover) !important;
+  background: var(--camp-white) !important;
 }
 
 /* Performance publications grid (CSS grid, not <table>) */

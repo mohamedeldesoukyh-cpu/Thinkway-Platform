@@ -44,7 +44,7 @@ export const SAFE_GRID_EXPAND_CELL = cn(
 export const SAFE_GRID_CHILD_GROUP_ROW = "thinkway-campaign-asgn-child-hdr";
 
 /** Child expansion cell — left border aligns with parent row accent (no extra inset). */
-export const SAFE_GRID_CHILD_GROUP_CELL = cn("thinkway-campaign-asgn-child-group-cell bg-[var(--camp-child-hdr)] p-0");
+export const SAFE_GRID_CHILD_GROUP_CELL = cn("thinkway-campaign-asgn-child-group-cell bg-[#e7edf7] p-0");
 
 /** Full-width rule between child block and the next parent row. */
 export const SAFE_GRID_CHILD_GROUP_BOTTOM_RULE = "border-b border-[var(--camp-border)]";

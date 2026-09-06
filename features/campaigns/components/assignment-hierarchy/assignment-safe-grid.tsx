@@ -69,7 +69,6 @@ import {
 import { HIERARCHY_COLUMN_LABELS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { formatOperationalAmount, operationalZeroClass } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { OPERATIONAL_TABLE_FONT, operationalMarginAmountClass } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
-import { LINE_OPERATIONAL_ROW_CLASS } from "@/features/campaigns/constants/operational-status";
 import type {
   AssignmentHierarchy,
   AssignmentHierarchyGroup,
@@ -613,14 +612,6 @@ export function AssignmentSafeGrid({
               ? row.group.deliverables
               : [];
             const lineCurrency = resolveAssignmentLineCurrency(line);
-            const rowClass = gates.enableRowStyling
-              ? (LINE_OPERATIONAL_ROW_CLASS[row.operationalStatus] ??
-                  LINE_OPERATIONAL_ROW_CLASS.draft)
-                  .split(" ")
-                  .filter((c) => !c.startsWith("border-l"))
-                  .join(" ")
-              : "";
-
             return (
               <Fragment key={row.lineId}>
                     {tryRenderRowCells(row.lineId, parentColSpan, () => (
@@ -630,7 +621,6 @@ export function AssignmentSafeGrid({
                           "tw-r",
                           SAFE_GRID_PARENT_ROW,
                           selectedLineIds.has(row.lineId) && "sel",
-                          rowClass,
                           expanded && SAFE_GRID_PARENT_ROW_EXPANDED
                         )}
                         data-line-id={row.lineId}
