@@ -28,6 +28,23 @@ export type ConsolidatedInvoiceQueueRow = {
 
 const INVOICE_CANDIDATE_BATCH = "invoice_candidate";
 
+/** Match campaign-queue money epsilon — fully billed when remaining is effectively zero. */
+export const CONSOLIDATED_BILLING_QUEUE_REMAINING_EPSILON = 0.01;
+
+/**
+ * Campaign Finance consolidated queue gate: when campaign-level rollup remaining
+ * is gone, suppress the queue even if operational deliverables still show remaining
+ * (header-only legacy invoices). Does not rewrite assignment/deliverable remaining.
+ */
+export function campaignRollupSuppressesConsolidatedBillingQueue(
+  campaignRemainingToInvoice: number | null | undefined
+): boolean {
+  if (campaignRemainingToInvoice == null || Number.isNaN(campaignRemainingToInvoice)) {
+    return false;
+  }
+  return campaignRemainingToInvoice <= CONSOLIDATED_BILLING_QUEUE_REMAINING_EPSILON;
+}
+
 /**
  * Builds consolidated queue rows (not assignment-level).
  * On a campaign workspace, typically returns 0–1 row for the current campaign.

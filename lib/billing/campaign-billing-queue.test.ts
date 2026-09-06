@@ -11,6 +11,10 @@ import {
 } from "@/lib/billing/campaign-billing-queue";
 import { resolveInvoiceConfirmSelection } from "@/lib/billing/consolidated-invoice-queue";
 import {
+  buildConsolidatedInvoiceQueueRows,
+  campaignRollupSuppressesConsolidatedBillingQueue,
+} from "@/lib/billing/consolidated-invoice-queue";
+import {
   buildCampaignLinkedInvoiceRollupRows,
   mergeQueueRollupWithInvoiceLines,
 } from "@/lib/billing/invoice-operational-aggregation";
@@ -191,6 +195,96 @@ function testNoEligibleRowsReturnsNull() {
   assert.equal(resolved, null);
 }
 
+function buildQueueInput(operational_rows: OperationalBillingRow[]) {
+  return {
+    campaign_header_id: "camp-1",
+    campaign_document_number: "TW-2026-0015",
+    campaign_name: "FirstCry",
+    client_name: "Client",
+    brand_name: "Brand",
+    currency_code: "EGP",
+    operational_rows,
+  };
+}
+
+/**
+ * A: Header-only fully billed — rollup remaining 0 while operational still shows 600k.
+ * Campaign Finance queue must be empty (gate), without rewriting operational rows.
+ */
+function testHeaderOnlyFullyBilledSuppressesConsolidatedQueue() {
+  const operational = [
+    assignmentRow({
+      id: "line-a",
+      billable_amount: 300_000,
+      remaining_amount: 300_000,
+      invoiced_amount: 0,
+    }),
+    assignmentRow({
+      id: "line-b",
+      billable_amount: 300_000,
+      remaining_amount: 300_000,
+      invoiced_amount: 0,
+    }),
+  ];
+  assert.equal(campaignRollupSuppressesConsolidatedBillingQueue(0), true);
+  assert.equal(campaignRollupSuppressesConsolidatedBillingQueue(0.01), true);
+  assert.equal(campaignRollupSuppressesConsolidatedBillingQueue(0.02), false);
+
+  const withoutGate = buildConsolidatedInvoiceQueueRows(buildQueueInput(operational));
+  assert.equal(withoutGate.length, 1);
+  assert.equal(withoutGate[0]?.revenue_before_vat, 600_000);
+
+  const queueCount = campaignRollupSuppressesConsolidatedBillingQueue(0)
+    ? 0
+    : withoutGate.length;
+  assert.equal(queueCount, 0, "D: badge/queue count must be 0 when rollup remaining is 0");
+}
+
+/** B: Partial — rollup remaining > 0 keeps existing operational queue amount. */
+function testPartialRollupKeepsOperationalConsolidatedQueue() {
+  const operational = [
+    assignmentRow({
+      id: "line-1",
+      billable_amount: 100_000,
+      invoiced_amount: 60_000,
+      remaining_amount: 40_000,
+      billing_status: "partially_invoiced",
+      line_billing_status: "partially_invoiced",
+    }),
+  ];
+  assert.equal(campaignRollupSuppressesConsolidatedBillingQueue(40_000), false);
+  const rows = buildConsolidatedInvoiceQueueRows(buildQueueInput(operational));
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.revenue_before_vat, 40_000);
+}
+
+/** C: Mixed 100% + 50% — rollup remaining > 0; assignment-level remaining unchanged. */
+function testMixedAssignmentsKeepOperationalRemainders() {
+  const operational = [
+    assignmentRow({
+      id: "line-full",
+      billable_amount: 100_000,
+      invoiced_amount: 100_000,
+      remaining_amount: 0,
+      billing_status: "invoiced",
+      line_billing_status: "invoiced",
+    }),
+    assignmentRow({
+      id: "line-half",
+      billable_amount: 100_000,
+      invoiced_amount: 50_000,
+      remaining_amount: 50_000,
+      billing_status: "partially_invoiced",
+      line_billing_status: "partially_invoiced",
+    }),
+  ];
+  assert.equal(campaignRollupSuppressesConsolidatedBillingQueue(50_000), false);
+  const rows = buildConsolidatedInvoiceQueueRows(buildQueueInput(operational));
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0]?.revenue_before_vat, 50_000);
+  assert.equal(rows[0]?.eligible_line_count, 1);
+}
+
 /**
  * FirstCry-shaped relationship: paid/locked non-void invoice linked on the parent
  * invoice, with commercial totals on the header and no invoice_line_items rows.
@@ -353,6 +447,9 @@ function run() {
   testFirstCryHeaderOnlyInvoiceAttributesToCampaign();
   testParentInvoiceLinkageAttributesLineItems();
   testLineItemsPreferOverHeaderTotals();
+  testHeaderOnlyFullyBilledSuppressesConsolidatedQueue();
+  testPartialRollupKeepsOperationalConsolidatedQueue();
+  testMixedAssignmentsKeepOperationalRemainders();
   console.log("campaign-billing-queue.test.ts: ok");
 }
 

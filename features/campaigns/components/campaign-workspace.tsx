@@ -60,7 +60,10 @@ import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
-import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
+import {
+  buildConsolidatedInvoiceQueueRows,
+  campaignRollupSuppressesConsolidatedBillingQueue,
+} from "@/lib/billing/consolidated-invoice-queue";
 import { seedFromCampaign } from "@/features/campaign-outputs/hydration/seed-adapters";
 
 type CampaignWorkspaceViewProps = {
@@ -262,15 +265,19 @@ export function CampaignWorkspaceView({
       hierarchyLinkedInvoiceCount ?? 0
     );
     const queueCount = operationalBilling
-      ? buildConsolidatedInvoiceQueueRows({
-          campaign_header_id: workspace.id,
-          campaign_document_number: workspace.document_number,
-          campaign_name: workspace.name,
-          client_name: workspace.client?.name ?? "—",
-          brand_name: workspace.brand?.name ?? null,
-          currency_code: operationalBilling.currency_code,
-          operational_rows: operationalBilling.operational_rows,
-        }).length
+      ? campaignRollupSuppressesConsolidatedBillingQueue(
+          operationalBilling.rollup.remaining_to_invoice
+        )
+        ? 0
+        : buildConsolidatedInvoiceQueueRows({
+            campaign_header_id: workspace.id,
+            campaign_document_number: workspace.document_number,
+            campaign_name: workspace.name,
+            client_name: workspace.client?.name ?? "—",
+            brand_name: workspace.brand?.name ?? null,
+            currency_code: operationalBilling.currency_code,
+            operational_rows: operationalBilling.operational_rows,
+          }).length
       : 0;
     return linkedCount + queueCount;
   }, [

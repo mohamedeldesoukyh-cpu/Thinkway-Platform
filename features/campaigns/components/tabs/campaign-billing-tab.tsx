@@ -62,7 +62,11 @@ import type {
   BillingLineRow,
   CampaignOperationalBillingDetail,
 } from "@/features/billing/types";
-import { buildConsolidatedQueueInvoiceSelection } from "@/lib/billing/consolidated-invoice-queue";
+import {
+  buildConsolidatedInvoiceQueueRows,
+  buildConsolidatedQueueInvoiceSelection,
+  campaignRollupSuppressesConsolidatedBillingQueue,
+} from "@/lib/billing/consolidated-invoice-queue";
 import {
   createEmptySelection,
   type OperationalSelectionPayload,
@@ -74,7 +78,6 @@ import {
   type OperationalBillingFilter,
 } from "@/lib/billing/operational-row-filters";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
-import { buildConsolidatedInvoiceQueueRows } from "@/lib/billing/consolidated-invoice-queue";
 import { cn } from "@/lib/utils";
 
 type CampaignPaymentRow = CampaignWorkspace["payments"][number];
@@ -260,6 +263,13 @@ export function CampaignBillingTab({
 
   const billingQueueRows = useMemo(() => {
     if (!operationalBilling) return [];
+    if (
+      campaignRollupSuppressesConsolidatedBillingQueue(
+        operationalBilling.rollup.remaining_to_invoice
+      )
+    ) {
+      return [];
+    }
     return buildConsolidatedInvoiceQueueRows({
       campaign_header_id: workspace.id,
       campaign_document_number: workspace.document_number,
