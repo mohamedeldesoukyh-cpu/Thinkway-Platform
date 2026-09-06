@@ -226,16 +226,26 @@ fs.writeFileSync(
 
 // Ensure ASCII-only output for Turbopack CSS parsing
 {
-  const raw = fs.readFileSync("app/styles/client-detail-suite.css");
-  const ascii = raw.toString("latin1").replace(/[\x80-\xFF]/g, (ch) => {
-    const c = ch.charCodeAt(0);
-    if (c === 0x96 || c === 0x97) return "-";
-    if (c === 0x91 || c === 0x92) return "'";
-    if (c === 0x93 || c === 0x94) return '"';
-    if (c === 0x85) return "...";
-    if (c === 0xa0) return " ";
-    return "";
-  });
+  let ascii = fs
+    .readFileSync("app/styles/client-detail-suite.css")
+    .toString("latin1")
+    .replace(/[\x80-\xFF]/g, (ch) => {
+      const c = ch.charCodeAt(0);
+      if (c === 0x96 || c === 0x97) return "-";
+      if (c === 0x91 || c === 0x92) return "'";
+      if (c === 0x93 || c === 0x94) return '"';
+      if (c === 0x85) return "...";
+      if (c === 0xa0) return " ";
+      return "";
+    });
+  // HTML source ships an empty incomplete rule; mirror vendor-detail fix.
+  ascii = ascii.replace(
+    /@media\(max-height:720px\)\{\.tw-frozen\s*\}/g,
+    `@media(max-height:720px){
+  .client-detail-suite .tw-frozen .tw-top{display:none}
+  .client-detail-suite .tw-frozen{padding-bottom:4px}
+}`
+  );
   fs.writeFileSync("app/styles/client-detail-suite.css", ascii, "utf8");
 }
 console.log("wrote", fs.statSync("app/styles/client-detail-suite.css").size);
