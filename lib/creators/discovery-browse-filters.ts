@@ -173,6 +173,9 @@ export function hasDiscoveryAudienceBrowseFilters(
  * Gender/age are enforced via conditional hydrate + post-filter on the normal
  * page path (Phase 0). Do not force the full-catalog audience scan for them —
  * sparse demographics would otherwise scan for tens of seconds and return empty.
+ *
+ * Phase 1A: multi creatorCountries are enforced at ID-stage OR (pool + candidate
+ * qualification). Do not force the audience scan for creatorCountries alone.
  */
 export function requiresDiscoveryAudienceScanPath(
   filters: UnifiedCreatorBrowseFilters
@@ -180,7 +183,6 @@ export function requiresDiscoveryAudienceScanPath(
   return (
     (filters.audienceCountries?.length ?? 0) > 0 ||
     (filters.audienceInterestTags?.length ?? 0) > 0 ||
-    (filters.creatorCountries?.length ?? 0) > 1 ||
     (filters.languages?.length ?? 0) > 1 ||
     (filters.contentLanguages?.length ?? 0) > 0
   );
@@ -247,6 +249,95 @@ export function applyDiscoveryBrowseFilters(
     }
   }
   return creators.filter((creator) => creatorMatchesDiscoveryBrowseFilters(creator, filters));
+}
+
+/**
+ * Audience-scan raw-pool exhaustion.
+ *
+ * MUST use the pre-qualification candidate ID count from the pool page.
+ * NEVER use qualified / hydrated / post-filtered batch length — Phase 1A
+ * qualification can shrink a full pool page without exhausting the pool.
+ */
+export function isDiscoveryAudienceRawPoolExhausted(
+  rawCandidateCount: number,
+  batchSize: number
+): boolean {
+  return rawCandidateCount < batchSize;
+}
+
+export type DiscoveryAudienceScanBatch<T extends { unified_id: string }> = {
+  /** Creators after hydrate (may already be Phase-1A-qualified). */
+  creators: T[];
+  /** Pool IDs / discovery rows retrieved BEFORE Phase 1A qualification. */
+  rawCandidateCount: number;
+};
+
+export type DiscoveryAudienceScanPageResult<T extends { unified_id: string }> = {
+  creators: T[];
+  total: number;
+  has_more: boolean;
+};
+
+/**
+ * Pure audience-scan loop with injectable batch fetch — used by production
+ * browse and regression tests so exhaustion accounting stays identical.
+ */
+export async function accumulateDiscoveryAudienceScanPage<
+  T extends { unified_id: string },
+>(options: {
+  page: number;
+  pageSize: number;
+  batchSize: number;
+  maxBatchPages: number;
+  fetchBatch: (batchPage: number) => Promise<DiscoveryAudienceScanBatch<T>>;
+  applyFilters: (creators: T[]) => T[];
+  sort: (creators: T[]) => T[];
+}): Promise<DiscoveryAudienceScanPageResult<T>> {
+  const {
+    page,
+    pageSize,
+    batchSize,
+    maxBatchPages,
+    fetchBatch,
+    applyFilters,
+    sort,
+  } = options;
+
+  const filtered: T[] = [];
+  let batchPage = 1;
+  let rawExhausted = false;
+  const targetEnd = page * pageSize;
+
+  while (filtered.length < targetEnd && !rawExhausted && batchPage <= maxBatchPages) {
+    const batch = await fetchBatch(batchPage);
+    // Empty raw pool ⇒ exhausted. Empty hydrated/qualified results with a full
+    // raw pool must NOT stop the scan (Phase 1A may zero a full page).
+    if (batch.rawCandidateCount === 0) {
+      rawExhausted = true;
+      break;
+    }
+    filtered.push(...applyFilters(batch.creators));
+    if (isDiscoveryAudienceRawPoolExhausted(batch.rawCandidateCount, batchSize)) {
+      rawExhausted = true;
+    }
+    batchPage += 1;
+  }
+
+  const uniqueFiltered = [...new Map(filtered.map((c) => [c.unified_id, c])).values()];
+  const sorted = sort(uniqueFiltered);
+  const offset = (page - 1) * pageSize;
+  const pageCreators = sorted.slice(offset, offset + pageSize);
+  const hasMoreInWindow = offset + pageCreators.length < sorted.length;
+  const has_more = hasMoreInWindow || !rawExhausted;
+  const total = rawExhausted
+    ? sorted.length
+    : Math.max(sorted.length, offset + pageCreators.length + (has_more ? 1 : 0));
+
+  return {
+    creators: pageCreators,
+    total,
+    has_more,
+  };
 }
 
 export type { AudienceDemographics };

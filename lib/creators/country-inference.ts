@@ -281,3 +281,31 @@ export function applyInfluencerCountryBrowseFilter<
   if (!resolved) return query;
   return query.or(`country_code.eq.${resolved},country_codes.cs.{${resolved}}`);
 }
+
+/**
+ * Phase 1A — OR across multiple creator countries at the ID/candidate stage.
+ * Empty input leaves the query unchanged.
+ */
+export function applyInfluencerCountriesBrowseFilter<
+  Q extends {
+    eq: (column: string, value: string) => Q;
+    or: (filters: string) => Q;
+  },
+>(query: Q, countries: readonly string[] | null | undefined): Q {
+  if (!countries?.length) return query;
+  const codes = [
+    ...new Set(
+      countries
+        .map((value) => normalizeCountryCode(resolveCountryCode(value)))
+        .filter((code): code is string => Boolean(code))
+    ),
+  ];
+  if (codes.length === 0) return query;
+  if (codes.length === 1) {
+    return applyInfluencerCountryBrowseFilter(query, codes[0]);
+  }
+  const parts = codes.flatMap(
+    (code) => [`country_code.eq.${code}`, `country_codes.cs.{${code}}`] as const
+  );
+  return query.or(parts.join(","));
+}

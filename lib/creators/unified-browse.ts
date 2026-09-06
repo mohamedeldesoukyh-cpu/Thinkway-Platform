@@ -12,6 +12,7 @@ import { unifiedToInfluencerSearch } from "@/lib/creators/adapters";
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import {
   applyInfluencerCountryBrowseFilter,
+  applyInfluencerCountriesBrowseFilter,
   resolveCreatorCountryCodes,
 } from "@/lib/creators/country-inference";
 import {
@@ -100,11 +101,18 @@ import {
   queryBrowsableInfluencerIdsByRecency,
 } from "@/lib/creators/discovery-browse-pool";
 import {
+  accumulateDiscoveryAudienceScanPage,
   applyDiscoveryBrowseFilters,
   creatorMatchesMinViews,
   hasDiscoveryAudienceBrowseFilters,
   requiresDiscoveryAudienceScanPath,
 } from "@/lib/creators/discovery-browse-filters";
+import {
+  browseCandidateQualificationActive,
+  qualifyBrowseCandidateIds,
+  resolveBrowseCreatorCountryCodes,
+  resolveBrowsePlatformKeys,
+} from "@/lib/creators/browse-candidate-qualification";
 import { creatorMatchesLastPostWithin } from "@/lib/creators/creator-last-post-filter";
 import {
   resolveBrowseHydrationExtras,
@@ -222,7 +230,15 @@ async function queryInfluencerIdsForCategoryBrowse(
   pageSize: number
 ): Promise<{ ids: string[]; total: number }> {
   const categories = resolveBrowseCategories(filters);
-  const country = resolveCountryCode(filters.country) || null;
+  const countryCodes = resolveBrowseCreatorCountryCodes(filters);
+  // Phase 1A: multi-country OR is applied via qualifyBrowseCandidateIds after RPC.
+  // Passing only the first country into the RPC would drop valid secondary-country hits.
+  const country =
+    countryCodes.length === 1
+      ? countryCodes[0]!
+      : countryCodes.length > 1
+        ? null
+        : resolveCountryCode(filters.country) || null;
   const language = filters.language?.trim() ?? null;
   const from = (page - 1) * pageSize;
 
@@ -242,6 +258,12 @@ async function queryInfluencerIdsForCategoryBrowse(
   return { ids, total };
 }
 
+type InternalCreatorsBrowsePage = {
+  creators: UnifiedCreatorResult[];
+  /** Candidate IDs from the pool query before Phase 1A qualification. */
+  rawCandidateCount: number;
+};
+
 async function fetchInternalCreatorsBrowsePage(
   supabase: SupabaseClient,
   filters: UnifiedCreatorBrowseFilters,
@@ -249,7 +271,7 @@ async function fetchInternalCreatorsBrowsePage(
   pageSize: number,
   tracePath: SearchTracePath = "unknown",
   options?: { skipDna?: boolean; fastIds?: boolean }
-): Promise<UnifiedCreatorResult[]> {
+): Promise<InternalCreatorsBrowsePage> {
   const categories = resolveBrowseCategories(filters);
   const skipDna = options?.skipDna ?? false;
   let ids: string[] = [];
@@ -275,7 +297,8 @@ async function fetchInternalCreatorsBrowsePage(
     ids = browse.ids;
   }
 
-  if (ids.length === 0) return [];
+  const rawCandidateCount = ids.length;
+  if (ids.length === 0) return { creators: [], rawCandidateCount: 0 };
 
   const results = await fetchInternalCreators(
     supabase,
@@ -291,7 +314,7 @@ async function fetchInternalCreatorsBrowsePage(
       (order.get(a.influencer_id ?? "") ?? Number.MAX_SAFE_INTEGER) -
       (order.get(b.influencer_id ?? "") ?? Number.MAX_SAFE_INTEGER)
   );
-  return results;
+  return { creators: results, rawCandidateCount };
 }
 
 async function countInternalCreatorsBrowse(
@@ -567,7 +590,7 @@ async function fetchDiscoveryBrowseBatch(
   batchPage: number,
   batchSize: number,
   tracePath: SearchTracePath
-): Promise<UnifiedCreatorResult[]> {
+): Promise<{ creators: UnifiedCreatorResult[]; rawCandidateCount: number }> {
   const sourceFilter = filters.source ?? "all";
   const includeInternal =
     sourceFilter === "all" ||
@@ -579,10 +602,10 @@ async function fetchDiscoveryBrowseBatch(
     sourceFilter === "public_discovery" ||
     sourceFilter === "imported";
 
-  const [internal, discovery] = await Promise.all([
+  const [internalPage, discovery] = await Promise.all([
     includeInternal
       ? fetchInternalCreatorsBrowsePage(supabase, filters, batchPage, batchSize, tracePath)
-      : Promise.resolve([]),
+      : Promise.resolve({ creators: [] as UnifiedCreatorResult[], rawCandidateCount: 0 }),
     includeDiscovery
       ? fetchDiscoveryCreators(
           supabase,
@@ -590,15 +613,22 @@ async function fetchDiscoveryBrowseBatch(
           undefined,
           tracePath
         )
-      : Promise.resolve([]),
+      : Promise.resolve([] as UnifiedCreatorResult[]),
   ]);
 
-  return [...internal, ...discovery];
+  return {
+    creators: [...internalPage.creators, ...discovery],
+    // Pre-qualification pool size: internal IDs before Phase 1A + discovery rows fetched.
+    rawCandidateCount: internalPage.rawCandidateCount + discovery.length,
+  };
 }
 
 /**
  * Scan-hydrate-filter paginate when Discovery audience chips are active so
  * `total` matches displayed rows (avoids "5120 matched / 0 loaded").
+ *
+ * Exhaustion uses raw pool candidate counts (pre Phase 1A qualification), never
+ * hydrated/qualified batch length.
  */
 async function browseDiscoveryAudienceFilteredPage(
   supabase: SupabaseClient,
@@ -607,50 +637,29 @@ async function browseDiscoveryAudienceFilteredPage(
   pageSize: number,
   tracePath: SearchTracePath
 ): Promise<{ creators: UnifiedCreatorResult[]; total: number; has_more: boolean }> {
-  const filtered: UnifiedCreatorResult[] = [];
-  let batchPage = 1;
-  let rawExhausted = false;
   const rawTotal = await estimateDiscoveryBrowseRawTotal(supabase, filters, tracePath);
   const maxBatchPages = Math.max(1, Math.ceil(rawTotal / DISCOVERY_AUDIENCE_FILTER_BATCH) + 2);
-  const targetEnd = page * pageSize;
 
-  // Scan only until the requested page is filled (or raw pool exhausted).
-  // Do NOT continue scanning the full catalog just to compute an exact total —
-  // that was O(catalog) hydration. See docs/DISCOVERY_BROWSE_PERFORMANCE.md.
-  while (filtered.length < targetEnd && !rawExhausted && batchPage <= maxBatchPages) {
-    const batch = await fetchDiscoveryBrowseBatch(
-      supabase,
-      filters,
-      batchPage,
-      DISCOVERY_AUDIENCE_FILTER_BATCH,
-      tracePath
-    );
-    if (batch.length === 0) {
-      rawExhausted = true;
-      break;
-    }
-    filtered.push(...applyPostBrowseFilters(batch, filters, tracePath));
-    if (batch.length < DISCOVERY_AUDIENCE_FILTER_BATCH) rawExhausted = true;
-    batchPage += 1;
-  }
-
-  const uniqueFiltered = [...new Map(filtered.map((c) => [c.unified_id, c])).values()];
-  uniqueFiltered.sort((a, b) => compareBrowseRecencyDesc(a, b));
-  const offset = (page - 1) * pageSize;
-  const pageCreators = uniqueFiltered.slice(offset, offset + pageSize);
-  const hasMoreInWindow = offset + pageCreators.length < uniqueFiltered.length;
-  const has_more = hasMoreInWindow || !rawExhausted;
-  // Exact total only when the raw pool was exhausted during the page-fill scan;
-  // otherwise expose a lower-bound total so the UI can keep "has more" truthful.
-  const total = rawExhausted
-    ? uniqueFiltered.length
-    : Math.max(uniqueFiltered.length, offset + pageCreators.length + (has_more ? 1 : 0));
-
-  return {
-    creators: pageCreators,
-    total,
-    has_more,
-  };
+  return accumulateDiscoveryAudienceScanPage({
+    page,
+    pageSize,
+    batchSize: DISCOVERY_AUDIENCE_FILTER_BATCH,
+    maxBatchPages,
+    fetchBatch: (batchPage) =>
+      fetchDiscoveryBrowseBatch(
+        supabase,
+        filters,
+        batchPage,
+        DISCOVERY_AUDIENCE_FILTER_BATCH,
+        tracePath
+      ),
+    applyFilters: (creators) => applyPostBrowseFilters(creators, filters, tracePath),
+    sort: (creators) => {
+      const next = [...creators];
+      next.sort((a, b) => compareBrowseRecencyDesc(a, b));
+      return next;
+    },
+  });
 }
 
 /** Prefer platform account photo; fall back through avatar_url chain when missing/broken. */
@@ -847,13 +856,49 @@ async function fetchInternalCreators(
     return [];
   }
 
+  // Phase 1A: when candidates are already scoped, intersect platform / creator-country /
+  // metrics BEFORE hydration so we do not hydrate rows that hard filters will discard.
+  let qualifiedScopedInfluencerIds = scopedInfluencerIds;
+  if (
+    scopedInfluencerIds &&
+    scopedInfluencerIds.length > 0 &&
+    browseCandidateQualificationActive(filters)
+  ) {
+    qualifiedScopedInfluencerIds = await qualifyBrowseCandidateIds(
+      supabase,
+      filters,
+      scopedInfluencerIds
+    );
+    searchTrace(
+      "5b_candidate_qualification",
+      {
+        before: scopedInfluencerIds.length,
+        after: qualifiedScopedInfluencerIds.length,
+        platforms: resolveBrowsePlatformKeys(filters),
+        countries: resolveBrowseCreatorCountryCodes(filters),
+        minFollowers: filters.minFollowers ?? null,
+        maxFollowers: filters.maxFollowers ?? null,
+        minEngagement: filters.minEngagement ?? null,
+        minViews: filters.minViews ?? null,
+      },
+      pathOpt
+    );
+    if (qualifiedScopedInfluencerIds.length === 0) {
+      return [];
+    }
+  }
+
   const candidateIds =
-    scopedInfluencerIds ??
+    qualifiedScopedInfluencerIds ??
     (resolvedSearchRankById ? [...resolvedSearchRankById.keys()] : null);
 
   let influencerIds: string[] | null = candidateIds;
 
-  const scopedFromSearch = Boolean(scopedInfluencerIds && scopedInfluencerIds.length > 0);
+  // Legacy account prefilter for unscoped lookups only. Search browse always passes
+  // scoped IDs and uses qualifyBrowseCandidateIds above instead.
+  const scopedFromSearch = Boolean(
+    qualifiedScopedInfluencerIds && qualifiedScopedInfluencerIds.length > 0
+  );
 
   if (
     !scopedFromSearch &&
@@ -873,7 +918,12 @@ async function fetchInternalCreators(
       accountQuery = accountQuery.in("influencer_id", candidateIds);
     }
 
-    if (platform) accountQuery = accountQuery.eq("platform", platform);
+    const platformKeys = resolveBrowsePlatformKeys(filters);
+    if (platformKeys.length === 1) {
+      accountQuery = accountQuery.eq("platform", platformKeys[0]!);
+    } else if (platformKeys.length > 1) {
+      accountQuery = accountQuery.in("platform", platformKeys);
+    }
     if (filters.minFollowers != null) {
       accountQuery = accountQuery.gte("follower_count", filters.minFollowers);
     }
@@ -990,7 +1040,14 @@ async function fetchInternalCreators(
       rowQuery = rowQuery.eq("id", filters.influencerId);
     }
 
-    if (country) rowQuery = applyInfluencerCountryBrowseFilter(rowQuery, country);
+    // Prefer full creatorCountries OR at hydrate time so multi-country qualification
+    // is not collapsed back to the singular first country.
+    const hydrateCountryCodes = resolveBrowseCreatorCountryCodes(filters);
+    if (hydrateCountryCodes.length > 0) {
+      rowQuery = applyInfluencerCountriesBrowseFilter(rowQuery, hydrateCountryCodes);
+    } else if (country) {
+      rowQuery = applyInfluencerCountryBrowseFilter(rowQuery, country);
+    }
     if (categories.length > 0 && !scopedIds) {
       rowQuery = applyCategoriesToArrayColumnQuery(rowQuery, "categories", categories);
     }
@@ -1906,11 +1963,12 @@ export async function browseUnifiedCreators(
         : Promise.resolve([]);
       perf?.span("search_creators_count");
       const totalPromise = countInternalCreatorsBrowse(supabase, filters);
-      const [internal, discovery, totalMatches] = await Promise.all([
+      const [internalPage, discovery, totalMatches] = await Promise.all([
         internalPromise,
         discoveryPromise,
         totalPromise,
       ]);
+      const internal = internalPage.creators;
 
       perf?.span("merge");
       const merged = applyPostBrowseFilters([...internal, ...discovery], filters, tracePath);

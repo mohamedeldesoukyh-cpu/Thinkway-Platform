@@ -3,9 +3,11 @@ import test from "node:test";
 
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import {
+  accumulateDiscoveryAudienceScanPage,
   applyDiscoveryBrowseFilters,
   creatorMatchesDiscoveryBrowseFilters,
   hasDiscoveryAudienceBrowseFilters,
+  isDiscoveryAudienceRawPoolExhausted,
   requiresDiscoveryAudienceScanPath,
 } from "@/lib/creators/discovery-browse-filters";
 import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
@@ -67,6 +69,16 @@ test("requiresDiscoveryAudienceScanPath excludes gender/age-only filters", () =>
   );
   assert.equal(requiresDiscoveryAudienceScanPath({ audienceCountries: ["AE"] }), true);
   assert.equal(requiresDiscoveryAudienceScanPath({ contentLanguages: ["ar"] }), true);
+});
+
+test("requiresDiscoveryAudienceScanPath excludes multi creatorCountries after Phase 1A", () => {
+  assert.equal(
+    requiresDiscoveryAudienceScanPath({
+      country: "EG",
+      creatorCountries: ["EG", "AE"],
+    }),
+    false
+  );
 });
 
 test("creatorMatchesDiscoveryBrowseFilters enforces audience interest tags", () => {
@@ -209,4 +221,173 @@ test("creatorMatchesDiscoveryBrowseFilters excludes empty language_codes when la
   const arabic = makeCreator({ unified_id: "inf:ar", language_codes: ["ar"] });
   assert.equal(creatorMatchesDiscoveryBrowseFilters(empty, filters), false);
   assert.equal(creatorMatchesDiscoveryBrowseFilters(arabic, filters), true);
+});
+
+test("isDiscoveryAudienceRawPoolExhausted ignores hydrated length semantics", () => {
+  assert.equal(isDiscoveryAudienceRawPoolExhausted(80, 80), false);
+  assert.equal(isDiscoveryAudienceRawPoolExhausted(80, 100), true);
+  assert.equal(isDiscoveryAudienceRawPoolExhausted(30, 100), true);
+  assert.equal(isDiscoveryAudienceRawPoolExhausted(0, 100), true);
+  // Full raw pool must never look exhausted even if callers only hydrated 0–30 rows.
+  assert.equal(isDiscoveryAudienceRawPoolExhausted(100, 100), false);
+});
+
+test("audience scan continues when raw pool is full but Phase 1A qualifies few matches", async () => {
+  const BATCH = 80;
+  const PAGE = 24;
+  let fetches = 0;
+  const result = await accumulateDiscoveryAudienceScanPage({
+    page: 1,
+    pageSize: PAGE,
+    batchSize: BATCH,
+    maxBatchPages: 5,
+    fetchBatch: async (batchPage) => {
+      fetches += 1;
+      // Full raw pools while Phase 1A leaves only 30 hydrated each.
+      if (batchPage <= 3) {
+        return {
+          rawCandidateCount: BATCH,
+          creators: Array.from({ length: 30 }, (_, i) =>
+            makeCreator({ unified_id: `inf:b${batchPage}-${i}` })
+          ),
+        };
+      }
+      return { rawCandidateCount: 0, creators: [] };
+    },
+    // Audience post-filter keeps 10 per batch → needs multiple batches for PAGE.
+    applyFilters: (creators) => creators.slice(0, 10),
+    sort: (creators) => creators,
+  });
+
+  assert.ok(fetches >= 2, "must continue to next raw pool batch when page underfilled");
+  assert.equal(result.creators.length, PAGE);
+  assert.equal(new Set(result.creators.map((c) => c.unified_id)).size, PAGE);
+  assert.equal(result.has_more, true);
+  assert.ok(result.total > PAGE, "lower-bound total while pool not exhausted");
+});
+
+test("audience scan can stop when page is full even if raw pool remains", async () => {
+  const BATCH = 80;
+  const PAGE = 24;
+  let fetches = 0;
+  const result = await accumulateDiscoveryAudienceScanPage({
+    page: 1,
+    pageSize: PAGE,
+    batchSize: BATCH,
+    maxBatchPages: 5,
+    fetchBatch: async () => {
+      fetches += 1;
+      return {
+        rawCandidateCount: BATCH,
+        creators: Array.from({ length: 30 }, (_, i) =>
+          makeCreator({ unified_id: `inf:full-${fetches}-${i}` })
+        ),
+      };
+    },
+    applyFilters: (creators) => creators, // 30 matches ≥ PAGE
+    sort: (creators) => creators,
+  });
+
+  assert.equal(fetches, 1, "stop once page is filled");
+  assert.equal(result.creators.length, PAGE);
+  assert.equal(result.has_more, true);
+});
+
+test("audience scan marks exhausted when raw pool itself is short", async () => {
+  const BATCH = 80;
+  const result = await accumulateDiscoveryAudienceScanPage({
+    page: 1,
+    pageSize: 24,
+    batchSize: BATCH,
+    maxBatchPages: 5,
+    fetchBatch: async () => ({
+      rawCandidateCount: 30,
+      creators: Array.from({ length: 10 }, (_, i) =>
+        makeCreator({ unified_id: `inf:short-${i}` })
+      ),
+    }),
+    applyFilters: (creators) => creators,
+    sort: (creators) => creators,
+  });
+
+  assert.equal(result.creators.length, 10);
+  assert.equal(result.has_more, false);
+  assert.equal(result.total, 10, "exact total when raw pool exhausted");
+});
+
+test("audience scan continues when qualified/hydrated count is zero on a full raw pool", async () => {
+  const BATCH = 80;
+  let fetches = 0;
+  const result = await accumulateDiscoveryAudienceScanPage({
+    page: 1,
+    pageSize: 24,
+    batchSize: BATCH,
+    maxBatchPages: 4,
+    fetchBatch: async (batchPage) => {
+      fetches += 1;
+      if (batchPage === 1) {
+        return { rawCandidateCount: BATCH, creators: [] }; // Phase 1A wiped the page
+      }
+      if (batchPage === 2) {
+        return {
+          rawCandidateCount: BATCH,
+          creators: Array.from({ length: 40 }, (_, i) =>
+            makeCreator({ unified_id: `inf:recover-${i}` })
+          ),
+        };
+      }
+      return { rawCandidateCount: 0, creators: [] };
+    },
+    applyFilters: (creators) => creators,
+    sort: (creators) => creators,
+  });
+
+  assert.ok(fetches >= 2, "zero hydrated on full raw pool must not terminate scan");
+  assert.equal(result.creators.length, 24);
+  assert.equal(result.has_more, true);
+});
+
+test("audience scan dedupes creators across batches", async () => {
+  const BATCH = 80;
+  const result = await accumulateDiscoveryAudienceScanPage({
+    page: 1,
+    pageSize: 24,
+    batchSize: BATCH,
+    maxBatchPages: 3,
+    fetchBatch: async (batchPage) => ({
+      rawCandidateCount: BATCH,
+      creators: [
+        makeCreator({ unified_id: "inf:dup" }),
+        makeCreator({ unified_id: `inf:unique-${batchPage}` }),
+        ...Array.from({ length: 20 }, (_, i) =>
+          makeCreator({ unified_id: `inf:b${batchPage}-n${i}` })
+        ),
+      ],
+    }),
+    applyFilters: (creators) => creators,
+    sort: (creators) => creators,
+  });
+
+  const ids = result.creators.map((c) => c.unified_id);
+  assert.equal(ids.filter((id) => id === "inf:dup").length, 1);
+  assert.equal(new Set(ids).size, ids.length);
+});
+
+test("source: audience scan uses rawCandidateCount not hydrated length for exhaustion", async () => {
+  const fs = await import("node:fs");
+  const path = await import("node:path");
+  const source = fs.readFileSync(
+    path.join(process.cwd(), "lib/creators/unified-browse.ts"),
+    "utf8"
+  );
+  assert.match(source, /accumulateDiscoveryAudienceScanPage/);
+  assert.match(source, /rawCandidateCount/);
+  assert.doesNotMatch(
+    source,
+    /if \(batch\.length < DISCOVERY_AUDIENCE_FILTER_BATCH\) rawExhausted/
+  );
+  assert.match(
+    source,
+    /rawCandidateCount:\s*internalPage\.rawCandidateCount/
+  );
 });

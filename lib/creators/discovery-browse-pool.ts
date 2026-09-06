@@ -2,8 +2,12 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { CreatorEnrichmentStatus } from "@/lib/creator-enrichment/types";
 import { resolveCountryCode } from "@/lib/creators/country-code";
-import { applyInfluencerCountryBrowseFilter } from "@/lib/creators/country-inference";
+import {
+  applyInfluencerCountryBrowseFilter,
+  applyInfluencerCountriesBrowseFilter,
+} from "@/lib/creators/country-inference";
 import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
+import { resolveBrowseCreatorCountryCodes } from "@/lib/creators/browse-candidate-qualification";
 import { compareBrowseRecencyDesc } from "@/lib/creators/last-enriched-sort";
 import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
 
@@ -79,7 +83,12 @@ function applyInfluencerBrowseFilters<
     or: (filters: string) => Q;
   },
 >(query: Q, filters: UnifiedCreatorBrowseFilters): Q {
-  query = applyInfluencerCountryBrowseFilter(query, filters.country);
+  const countryCodes = resolveBrowseCreatorCountryCodes(filters);
+  if (countryCodes.length > 0) {
+    query = applyInfluencerCountriesBrowseFilter(query, countryCodes);
+  } else {
+    query = applyInfluencerCountryBrowseFilter(query, filters.country);
+  }
   if (filters.language) query = query.contains("languages", [filters.language]);
   return query;
 }
