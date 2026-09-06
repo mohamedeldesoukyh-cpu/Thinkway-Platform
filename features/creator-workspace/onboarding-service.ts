@@ -558,7 +558,7 @@ async function accountGuards(
   const row = profile as { id: string; email: string | null; role: unknown } | null;
   const { data: clientUser } = await db
     .from("client_users")
-    .select("id")
+    .select("client_id")
     .eq("profile_id", userId)
     .limit(1)
     .maybeSingle();
@@ -572,7 +572,7 @@ async function accountGuards(
     inviteEmail: invite.email,
     inviteInfluencerId: invite.influencer_id ?? "",
     roleSlug: roleSlugFrom(row?.role),
-    hasClientUser: Boolean(clientUser?.id),
+    hasClientUser: Boolean(clientUser?.client_id),
     linkedInfluencerId: (linked as { id: string } | null)?.id ?? null,
   });
   if (!check.ok) return { ok: false, message: check.message };

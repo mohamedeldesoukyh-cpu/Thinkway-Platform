@@ -23,7 +23,7 @@ export async function resolveWorkspaceActor(
   const [clientLink, creatorLink] = await Promise.all([
     supabase
       .from("client_users")
-      .select("id")
+      .select("client_id")
       .eq("profile_id", userId)
       .limit(1)
       .maybeSingle(),
@@ -35,7 +35,7 @@ export async function resolveWorkspaceActor(
       .maybeSingle(),
   ]);
 
-  if (clientLink.data?.id) {
+  if (clientLink.data?.client_id) {
     return { userId, kind: "client_portal" };
   }
   if (creatorLink.data?.id) {
