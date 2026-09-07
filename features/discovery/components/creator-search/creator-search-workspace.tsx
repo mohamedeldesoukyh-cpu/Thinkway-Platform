@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 
+import { ThinkwayPageLoader } from "@/components/layout/thinkway-page-loader";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
 import { CREATOR_IMPORT_COMPLETED_EVENT } from "@/lib/discovery-import/constants";
 
@@ -16,6 +17,18 @@ import {
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+
+/**
+ * Keep filter/search query params in the address bar without triggering the
+ * App Router `loading.tsx` remount (white full-page Thinkway flash).
+ * Same pattern as Campaign Workspace tab URLs.
+ */
+function replaceCreatorSearchUrlShallow(nextUrl: string): void {
+  if (typeof window === "undefined") return;
+  const current = `${window.location.pathname}${window.location.search}`;
+  if (current === nextUrl) return;
+  window.history.replaceState(window.history.state, "", nextUrl);
+}
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
 import { browseUnifiedCreatorsAction, browseCreatorsByInfluencerIdsAction, getAcquisitionJobsStatusAction } from "@/features/campaigns/creator-discovery-actions";
@@ -402,10 +415,10 @@ export function CreatorSearchWorkspace({
     const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
     if (nextUrl === currentUrl) return;
 
-    router.replace(nextUrl, { scroll: false });
+    replaceCreatorSearchUrlShallow(nextUrl);
     // searchParams read for merge/compare only; URL → filters handled above.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid replace loop on navigation
-  }, [filters, pathname, router]);
+  }, [filters, pathname]);
 
   // search → URL (debounced live sync)
   useEffect(() => {
@@ -429,9 +442,9 @@ export function CreatorSearchWorkspace({
     const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
     if (nextUrl === currentUrl) return;
 
-    router.replace(nextUrl, { scroll: false });
+    replaceCreatorSearchUrlShallow(nextUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: avoid replace loop on navigation
-  }, [debouncedSearch, pathname, router]);
+  }, [debouncedSearch, pathname]);
 
   const handleDebouncedSearchChange = useCallback((value: string) => {
     setDebouncedSearch((prev) => (prev === value ? prev : value));
@@ -616,8 +629,8 @@ export function CreatorSearchWorkspace({
     params.delete(CREATOR_SEARCH_QUERY_PARAM);
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
-    router.replace(nextUrl, { scroll: false });
-  }, [cancelActiveAcquisitionSession, pathname, router, searchParams]);
+    replaceCreatorSearchUrlShallow(nextUrl);
+  }, [cancelActiveAcquisitionSession, pathname, searchParams]);
 
   const startAcquisitionPolling = useCallback(
     (jobIds: string[], requestId: number, filtersSnapshot: CreatorSearchFilters) => {
@@ -1945,9 +1958,9 @@ export function CreatorSearchWorkspace({
     applyCreatorSearchFiltersToUrlParams(params, cleared);
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
-    router.replace(nextUrl, { scroll: false });
+    replaceCreatorSearchUrlShallow(nextUrl);
     setFiltersDrawerOpen(false);
-  }, [cancelActiveAcquisitionSession, pathname, router, searchParams]);
+  }, [cancelActiveAcquisitionSession, pathname, searchParams]);
 
   const applyAiProfileFilters = useCallback(
     (profile: CampaignIntelligenceProfile, criteria?: CampaignSearchCriterion[]) => {
@@ -2064,10 +2077,10 @@ export function CreatorSearchWorkspace({
       const currentQuery = searchParams.toString();
       const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
       if (nextUrl !== currentUrl) {
-        router.replace(nextUrl, { scroll: false });
+        replaceCreatorSearchUrlShallow(nextUrl);
       }
     },
-    [activeProfileId, pathname, router, searchParams]
+    [activeProfileId, pathname, searchParams]
   );
 
   const activateAiCampaignSearch = useCallback(
@@ -2138,9 +2151,9 @@ export function CreatorSearchWorkspace({
     const currentQuery = searchParams.toString();
     const currentUrl = currentQuery ? `${pathname}?${currentQuery}` : pathname;
     if (nextUrl !== currentUrl) {
-      router.replace(nextUrl, { scroll: false });
+      replaceCreatorSearchUrlShallow(nextUrl);
     }
-  }, [pathname, router, searchParams]);
+  }, [pathname, searchParams]);
 
   const handleBriefWorkspaceChange = useCallback(
     (state: CampaignIntelligenceWorkspaceState) => {
@@ -2383,6 +2396,16 @@ export function CreatorSearchWorkspace({
       >
         {aiExtracting ? (
           <CreatorSearchAiExtractingState className="absolute inset-0 z-10 bg-card" />
+        ) : null}
+        {(loading || isPending) && !aiExtracting ? (
+          <div
+            className="thinkway-navigation-loading-overlay absolute inset-0 z-10 rounded-[inherit]"
+            role="status"
+            aria-live="polite"
+            aria-label="Loading filtered creators"
+          >
+            <ThinkwayPageLoader label="Loading filtered creators" />
+          </div>
         ) : null}
         <CreatorSearchResultList
           creators={displayCreators}
