@@ -334,7 +334,7 @@ export function CreatorSearchResultList({
         data-discovery-scroll
         className="discovery-search-exact-scroll min-h-0 flex-1 overflow-auto"
       >
-        {error ? (
+        {error && !hasCreators ? (
           <DiscoveryEmptyState
             title="Search failed"
             description={error}

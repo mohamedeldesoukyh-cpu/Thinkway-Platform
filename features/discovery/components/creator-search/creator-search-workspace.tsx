@@ -880,6 +880,8 @@ export function CreatorSearchWorkspace({
       { pageNum, append, skipCoverageBackfill: options?.skipCoverageBackfill ?? false }
     );
 
+    let paintedFromCache = false;
+
     try {
       if (controller.signal.aborted) return;
 
@@ -979,7 +981,7 @@ export function CreatorSearchWorkspace({
       } else {
         setApifySourceUnifiedIds(new Set());
         const browseParams = filtersToBrowseParams(mergedFilters, pageNum, PAGE_SIZE);
-        const actionFilters = {
+        let actionFilters = {
           ...browseParams,
           searchSessionId: acquisitionSessionRef.current.getSessionId(),
           ...(options?.skipCoverageBackfill ? { skipCoverageBackfill: true } : {}),
@@ -997,7 +999,6 @@ export function CreatorSearchWorkspace({
           Boolean(options?.skipCoverageBackfill) ||
           options?.caller === "import_refresh";
 
-        let paintedFromCache = false;
         let cachedPageCreatorIds: string[] | null = null;
 
         if (!bypassCacheRead && cacheUserId) {
@@ -1011,6 +1012,9 @@ export function CreatorSearchWorkspace({
             requestId === reqIdRef.current
           ) {
             paintedFromCache = true;
+            // Revalidation should not re-run Apify coverage — that path often hits
+            // Vercel invocation timeout and used to blank the already-painted list.
+            actionFilters = { ...actionFilters, skipCoverageBackfill: true };
             cachedPageCreatorIds = cached.entry.payload.creators.map(
               (creator) => creator.unified_id
             );
@@ -1237,9 +1241,26 @@ export function CreatorSearchWorkspace({
       }
     } catch (err) {
       if (controller.signal.aborted || requestId !== reqIdRef.current) return;
-      const message = mapDiscoverySearchError(err);
+      const message = mapDiscoverySearchError(err, {
+        hasSearchQuery: Boolean(queryAtFetch.trim()),
+      });
+      // Soft-fail background revalidation / load-more: keep painted rows. A hard
+      // error here blanked Fitness (and other) results after IndexedDB paint when
+      // the network browse hit Vercel/Postgres timeout (masked Server Action digest).
+      if (append || paintedFromCache) {
+        debugDiscoverySearchPagination("fetchSoftFail", {
+          append,
+          paintedFromCache,
+          message,
+          pageNum,
+        });
+        if (append) {
+          toast.error(message);
+        }
+        return;
+      }
       startTransition(() => {
-        if (!append) setError(message);
+        setError(message);
       });
       toast.error(message);
     } finally {
