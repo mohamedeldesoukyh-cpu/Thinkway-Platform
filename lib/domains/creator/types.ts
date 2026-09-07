@@ -197,6 +197,11 @@ export type UnifiedCreatorBrowseFilters = {
   contentLanguages?: string[];
   minFollowers?: number;
   maxFollowers?: number;
+  /**
+   * Multi follower bands (OR). When set with 2+ entries, wins over singular
+   * minFollowers/maxFollowers for account qualification.
+   */
+  followerRanges?: Array<{ min: number; max?: number | null }>;
   minEngagement?: number;
   minViews?: number;
   minAiScore?: number;

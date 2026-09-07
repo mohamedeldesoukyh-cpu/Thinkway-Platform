@@ -15,6 +15,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import { applyInfluencerCountriesBrowseFilter } from "@/lib/creators/country-inference";
 import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
+import {
+  followerCountMatchesBrowseRanges,
+  resolveBrowseFollowerRanges,
+} from "@/lib/creators/follower-range-filter";
 import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
 import { resolveDiscoveryPlatform } from "@/lib/social/platforms";
 
@@ -77,8 +81,7 @@ export function browseAccountQualificationActive(
 ): boolean {
   return (
     resolveBrowsePlatformKeys(filters).length > 0 ||
-    filters.minFollowers != null ||
-    filters.maxFollowers != null ||
+    resolveBrowseFollowerRanges(filters).length > 0 ||
     filters.minEngagement != null ||
     filters.minViews != null
   );
@@ -124,10 +127,13 @@ async function fetchAccountQualifiedInfluencerIdSet(
   const qualified = new Set<string>();
   if (candidateIds.length === 0) return qualified;
 
+  const followerRanges = resolveBrowseFollowerRanges(filters);
+  const multiFollowerBands = followerRanges.length > 1;
+
   for (const chunk of chunkValues(candidateIds, IN_FILTER_BATCH_SIZE)) {
     let accountQuery = supabase
       .from("influencer_platform_accounts")
-      .select("influencer_id")
+      .select("influencer_id, follower_count")
       .in("influencer_id", chunk);
 
     if (platforms.length === 1) {
@@ -136,12 +142,16 @@ async function fetchAccountQualifiedInfluencerIdSet(
       accountQuery = accountQuery.in("platform", platforms);
     }
 
-    if (filters.minFollowers != null) {
-      accountQuery = accountQuery.gte("follower_count", filters.minFollowers);
+    if (!multiFollowerBands) {
+      const band = followerRanges[0];
+      if (band) {
+        accountQuery = accountQuery.gte("follower_count", band.min);
+        if (band.max != null) {
+          accountQuery = accountQuery.lte("follower_count", band.max);
+        }
+      }
     }
-    if (filters.maxFollowers != null) {
-      accountQuery = accountQuery.lte("follower_count", filters.maxFollowers);
-    }
+
     if (filters.minEngagement != null) {
       accountQuery = accountQuery.gte("engagement_rate", filters.minEngagement);
     }
@@ -154,7 +164,13 @@ async function fetchAccountQualifiedInfluencerIdSet(
     if (error) throw new Error(error.message);
     for (const row of data ?? []) {
       const id = row.influencer_id as string | null;
-      if (id) qualified.add(id);
+      if (!id) continue;
+      if (multiFollowerBands) {
+        if (!followerCountMatchesBrowseRanges(row.follower_count, followerRanges)) {
+          continue;
+        }
+      }
+      qualified.add(id);
     }
   }
 

@@ -6,6 +6,12 @@ import { Fragment, useState, type ReactNode } from "react";
 import { Input } from "@/components/ui/input";
 import { toggleCategoryInList } from "@/lib/creators/category-filter";
 import {
+  followerRangeKey,
+  normalizeFollowerRange,
+  resolveCreatorSearchFollowerRanges,
+  toggleFollowerRangeInList,
+} from "@/lib/creators/follower-range-filter";
+import {
   TIER_FILTER_RANGES,
   tierFilterPresetFields,
 } from "@/lib/creators/influencer-tier";
@@ -22,7 +28,10 @@ import {
   DISCOVERY_FILTER_LANGUAGES,
   LAST_POST_WITHIN_OPTIONS,
 } from "./creator-search-filter-constants";
-import type { CreatorSearchFilters } from "./creator-search-types";
+import {
+  withCreatorSearchFollowerRanges,
+  type CreatorSearchFilters,
+} from "./creator-search-types";
 
 type FieldProps = {
   filters: CreatorSearchFilters;
@@ -807,46 +816,76 @@ export function PlatformField({ filters, onChange }: FieldProps) {
 }
 
 export function FollowerRangeField({ filters, onChange }: FieldProps) {
-  const activePreset = FOLLOWER_PRESETS.find(
-    (p) => p.min === filters.minFollowers && p.max === filters.maxFollowers,
-  );
+  const selectedRanges = resolveCreatorSearchFollowerRanges(filters);
+  const selectedKeys = new Set(selectedRanges.map((range) => followerRangeKey(range)));
+  const singleCustom =
+    selectedRanges.length === 1 ? selectedRanges[0]! : { min: "", max: "" };
+
   function applyPreset(preset: (typeof FOLLOWER_PRESETS)[number]) {
-    if (activePreset?.id === preset.id) {
-      onChange({ ...filters, minFollowers: "", maxFollowers: "" });
-    } else {
-      onChange({
-        ...filters,
-        minFollowers: preset.min,
-        maxFollowers: preset.max,
-      });
-    }
+    const band = normalizeFollowerRange({
+      min: preset.min,
+      max: preset.max ?? "",
+    });
+    if (!band) return;
+    onChange(
+      withCreatorSearchFollowerRanges(
+        filters,
+        toggleFollowerRangeInList(selectedRanges, band)
+      )
+    );
   }
+
+  function applyCustomMin(value: string) {
+    onChange(
+      withCreatorSearchFollowerRanges(filters, [
+        { min: value, max: singleCustom.max },
+      ])
+    );
+  }
+
+  function applyCustomMax(value: string) {
+    onChange(
+      withCreatorSearchFollowerRanges(filters, [
+        { min: singleCustom.min, max: value },
+      ])
+    );
+  }
+
   return (
     <FieldGroup
       label="Follower range"
-      showClear={Boolean(filters.minFollowers || filters.maxFollowers)}
-      onClear={() =>
-        onChange({ ...filters, minFollowers: "", maxFollowers: "" })
-      }
+      showClear={selectedRanges.length > 0}
+      onClear={() => onChange(withCreatorSearchFollowerRanges(filters, []))}
     >
       <div className="mb-2 flex flex-wrap gap-1.5">
-        {FOLLOWER_PRESETS.map((preset) => (
-          <FilterChip
-            key={preset.id}
-            label={preset.label}
-            active={activePreset?.id === preset.id}
-            onToggle={() => applyPreset(preset)}
-          />
-        ))}
+        {FOLLOWER_PRESETS.map((preset) => {
+          const band = normalizeFollowerRange({
+            min: preset.min,
+            max: preset.max ?? "",
+          });
+          const active = band ? selectedKeys.has(followerRangeKey(band)) : false;
+          return (
+            <FilterChip
+              key={preset.id}
+              label={preset.label}
+              active={active}
+              onToggle={() => applyPreset(preset)}
+            />
+          );
+        })}
       </div>
       <RangeRow
-        min={filters.minFollowers}
-        max={filters.maxFollowers}
-        onMinChange={(value) => onChange({ ...filters, minFollowers: value })}
-        onMaxChange={(value) => onChange({ ...filters, maxFollowers: value })}
+        min={singleCustom.min}
+        max={singleCustom.max}
+        onMinChange={applyCustomMin}
+        onMaxChange={applyCustomMax}
         type="number"
       />
-      <FieldHint>Or set a custom range below.</FieldHint>
+      <FieldHint>
+        {selectedRanges.length > 1
+          ? "Multiple bands selected (OR). Edit custom fields to replace with one range."
+          : "Select multiple bands, or set a custom range below."}
+      </FieldHint>
     </FieldGroup>
   );
 }

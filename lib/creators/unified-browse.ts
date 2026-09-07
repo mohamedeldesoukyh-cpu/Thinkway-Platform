@@ -129,6 +129,10 @@ import {
   resolveBrowseCreatorCountryCodes,
   resolveBrowsePlatformKeys,
 } from "@/lib/creators/browse-candidate-qualification";
+import {
+  followerCountMatchesBrowseRanges,
+  resolveBrowseFollowerRanges,
+} from "@/lib/creators/follower-range-filter";
 import { creatorMatchesLastPostWithin } from "@/lib/creators/creator-last-post-filter";
 import {
   resolveBrowseHydrationExtras,
@@ -1341,6 +1345,7 @@ async function fetchInternalCreators(
         countries: resolveBrowseCreatorCountryCodes(filters),
         minFollowers: filters.minFollowers ?? null,
         maxFollowers: filters.maxFollowers ?? null,
+        followerRanges: resolveBrowseFollowerRanges(filters),
         minEngagement: filters.minEngagement ?? null,
         minViews: filters.minViews ?? null,
       },
@@ -1363,11 +1368,11 @@ async function fetchInternalCreators(
     qualifiedScopedInfluencerIds && qualifiedScopedInfluencerIds.length > 0
   );
 
+  const legacyFollowerRanges = resolveBrowseFollowerRanges(filters);
   if (
     !scopedFromSearch &&
     (platform ||
-      filters.minFollowers != null ||
-      filters.maxFollowers != null ||
+      legacyFollowerRanges.length > 0 ||
       filters.minEngagement != null ||
       filters.minViews != null)
   ) {
@@ -1387,11 +1392,12 @@ async function fetchInternalCreators(
     } else if (platformKeys.length > 1) {
       accountQuery = accountQuery.in("platform", platformKeys);
     }
-    if (filters.minFollowers != null) {
-      accountQuery = accountQuery.gte("follower_count", filters.minFollowers);
-    }
-    if (filters.maxFollowers != null) {
-      accountQuery = accountQuery.lte("follower_count", filters.maxFollowers);
+    if (legacyFollowerRanges.length === 1) {
+      const band = legacyFollowerRanges[0]!;
+      accountQuery = accountQuery.gte("follower_count", band.min);
+      if (band.max != null) {
+        accountQuery = accountQuery.lte("follower_count", band.max);
+      }
     }
     if (filters.minEngagement != null) {
       accountQuery = accountQuery.gte("engagement_rate", filters.minEngagement);
@@ -1403,7 +1409,20 @@ async function fetchInternalCreators(
     const { data: platformMatches, error } = await accountQuery;
     if (error) throw new Error(error.message);
 
-    const platformScopedIds = [...new Set(platformMatches?.map((r) => r.influencer_id) ?? [])];
+    const platformScopedIds = [
+      ...new Set(
+        (platformMatches ?? [])
+          .filter((row) =>
+            legacyFollowerRanges.length > 1
+              ? followerCountMatchesBrowseRanges(
+                  row.follower_count,
+                  legacyFollowerRanges
+                )
+              : true
+          )
+          .map((r) => r.influencer_id)
+      ),
+    ];
     if (platformScopedIds.length === 0) return [];
     influencerIds = influencerIds
       ? influencerIds.filter((id) => platformScopedIds.includes(id))

@@ -5,6 +5,15 @@ import { PLATFORM_LABELS } from "@/lib/social/platforms";
 import { countryLabel, languageLabel, LAST_POST_WITHIN_OPTIONS } from "./creator-search-filter-constants";
 import type { CampaignSearchCriterion } from "@/features/campaign-intelligence-profile/types/profile";
 import type { DiscoverySearchFilterKey } from "@/features/campaign-intelligence-profile/services/discovery-search-mapping/types";
+import {
+  formatFollowerRangesChipLabel,
+  normalizeFollowerRanges,
+  resolveCreatorSearchFollowerRanges,
+  toBrowseFollowerRanges,
+  type CreatorSearchFollowerRange,
+} from "@/lib/creators/follower-range-filter";
+
+export type { CreatorSearchFollowerRange };
 
 export type CreatorSearchFilters = {
   search: string;
@@ -30,6 +39,12 @@ export type CreatorSearchFilters = {
   gender: string;
   ageMin: string;
   ageMax: string;
+  /**
+   * Multi-select follower bands (OR). When non-empty, wins over legacy
+   * minFollowers/maxFollowers for browse. Legacy scalars stay synced for
+   * single-band URLs and custom range editing.
+   */
+  followerRanges: CreatorSearchFollowerRange[];
   minFollowers: string;
   maxFollowers: string;
   minEngagement: string;
@@ -60,6 +75,7 @@ export const DEFAULT_CREATOR_SEARCH_FILTERS: CreatorSearchFilters = {
   gender: "",
   ageMin: "",
   ageMax: "",
+  followerRanges: [],
   minFollowers: "",
   maxFollowers: "",
   minEngagement: "",
@@ -88,6 +104,38 @@ export function cloneCreatorSearchFilters(
     audienceInterestTags: [...base.audienceInterestTags],
     contentTags: [...base.contentTags],
     categories: [...base.categories],
+    followerRanges: base.followerRanges.map((range) => ({ ...range })),
+  };
+}
+
+/** Apply follower bands and keep legacy min/max in sync for single-band editing/URLs. */
+export function withCreatorSearchFollowerRanges(
+  filters: CreatorSearchFilters,
+  ranges: CreatorSearchFollowerRange[]
+): CreatorSearchFilters {
+  const normalized = normalizeFollowerRanges(ranges);
+  if (normalized.length === 0) {
+    return {
+      ...filters,
+      followerRanges: [],
+      minFollowers: "",
+      maxFollowers: "",
+    };
+  }
+  if (normalized.length === 1) {
+    return {
+      ...filters,
+      followerRanges: normalized,
+      minFollowers: normalized[0]!.min,
+      maxFollowers: normalized[0]!.max,
+    };
+  }
+  return {
+    ...filters,
+    followerRanges: normalized,
+    // Clear legacy scalars so browse cannot accidentally AND an envelop range.
+    minFollowers: "",
+    maxFollowers: "",
   };
 }
 
@@ -332,12 +380,13 @@ export function buildActiveFilterChips(
       clear: { ageMin: "", ageMax: "" },
     });
   }
-  if (filters.minFollowers || filters.maxFollowers) {
+  const followerBands = resolveCreatorSearchFollowerRanges(filters);
+  if (followerBands.length > 0) {
     chips.push({
       id: "followers",
-      label: rangeLabel("Followers", filters.minFollowers, filters.maxFollowers),
+      label: formatFollowerRangesChipLabel(followerBands),
       section: "performance",
-      clear: { minFollowers: "", maxFollowers: "" },
+      clear: { followerRanges: [], minFollowers: "", maxFollowers: "" },
     });
   }
   if (filters.minEngagement) {
@@ -441,6 +490,7 @@ export function clearCreatorSearchSectionFilters(
     case "performance":
       return {
         ...next,
+        followerRanges: [],
         minFollowers: "",
         maxFollowers: "",
         minEngagement: "",
@@ -508,8 +558,28 @@ function buildCoverageIntent(filters: CreatorSearchFilters) {
     niches: nicheTags.length > 0 ? nicheTags : undefined,
     platforms: platformFilters.length > 0 ? platformFilters : undefined,
     audience: audienceSignal || undefined,
-    minFollowers: filters.minFollowers ? Number(filters.minFollowers) : undefined,
-    maxFollowers: filters.maxFollowers ? Number(filters.maxFollowers) : undefined,
+    ...browseFollowerParamsFromSearchFilters(filters),
+  };
+}
+
+function browseFollowerParamsFromSearchFilters(filters: CreatorSearchFilters): {
+  minFollowers?: number;
+  maxFollowers?: number;
+  followerRanges?: Array<{ min: number; max: number | null }>;
+} {
+  const bands = toBrowseFollowerRanges(resolveCreatorSearchFollowerRanges(filters));
+  if (bands.length === 0) return {};
+  if (bands.length === 1) {
+    return {
+      minFollowers: bands[0]!.min,
+      maxFollowers: bands[0]!.max ?? undefined,
+    };
+  }
+  return {
+    followerRanges: bands.map((band) => ({
+      min: band.min,
+      max: band.max,
+    })),
   };
 }
 
@@ -547,8 +617,7 @@ export function filtersToBrowseParams(filters: CreatorSearchFilters, page: numbe
     audienceGender: filters.gender.trim() || undefined,
     audienceAgeMin: filters.ageMin.trim() || undefined,
     audienceAgeMax: filters.ageMax.trim() || undefined,
-    minFollowers: filters.minFollowers ? Number(filters.minFollowers) : undefined,
-    maxFollowers: filters.maxFollowers ? Number(filters.maxFollowers) : undefined,
+    ...browseFollowerParamsFromSearchFilters(filters),
     minEngagement: filters.minEngagement ? Number(filters.minEngagement) : undefined,
     minViews: filters.minViews ? Number(filters.minViews) : undefined,
     minAiScore,
@@ -752,24 +821,46 @@ export function creatorSearchFiltersToCriteria(
       meta: { discoveryKey: "audience_age_max", rawValue: filters.ageMax.trim() },
     });
   }
-  if (filters.minFollowers.trim()) {
+  const followerBandsForCriteria = resolveCreatorSearchFollowerRanges(filters);
+  if (followerBandsForCriteria.length === 1) {
+    const band = followerBandsForCriteria[0]!;
+    if (band.min) {
+      pushCriterion(criteria, {
+        kind: "niche",
+        label: "Min followers",
+        value: band.min,
+        weight: 1.5,
+        enabled: true,
+        meta: { discoveryKey: "follower_min", rawValue: band.min },
+      });
+    }
+    if (band.max) {
+      pushCriterion(criteria, {
+        kind: "niche",
+        label: "Max followers",
+        value: band.max,
+        weight: 1,
+        enabled: true,
+        meta: { discoveryKey: "follower_max", rawValue: band.max },
+      });
+    }
+  } else if (followerBandsForCriteria.length > 1) {
     pushCriterion(criteria, {
       kind: "niche",
-      label: "Min followers",
-      value: filters.minFollowers.trim(),
+      label: "Follower bands",
+      value: followerBandsForCriteria
+        .map((band) =>
+          band.max ? `${band.min}-${band.max}` : `${band.min}+`
+        )
+        .join(" | "),
       weight: 1.5,
       enabled: true,
-      meta: { discoveryKey: "follower_min", rawValue: filters.minFollowers.trim() },
-    });
-  }
-  if (filters.maxFollowers.trim()) {
-    pushCriterion(criteria, {
-      kind: "niche",
-      label: "Max followers",
-      value: filters.maxFollowers.trim(),
-      weight: 1,
-      enabled: true,
-      meta: { discoveryKey: "follower_max", rawValue: filters.maxFollowers.trim() },
+      meta: {
+        discoveryKey: "follower_ranges",
+        rawValue: followerBandsForCriteria
+          .map((band) => `${band.min}-${band.max}`)
+          .join(","),
+      },
     });
   }
   if (filters.minEngagement.trim()) {

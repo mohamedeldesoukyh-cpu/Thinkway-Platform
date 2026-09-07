@@ -223,8 +223,16 @@ function createQualificationMockSupabase(opts: {
               return true;
             });
             const deduped = [
-              ...new Map(rows.map((row) => [row.influencer_id, row.influencer_id])).values(),
-            ].map((influencer_id) => ({ influencer_id }));
+              ...new Map(
+                rows.map((row) => [
+                  row.influencer_id,
+                  {
+                    influencer_id: row.influencer_id,
+                    follower_count: row.follower_count,
+                  },
+                ])
+              ).values(),
+            ];
             return Promise.resolve(resolve({ data: deduped, error: null }));
           },
         };
@@ -497,6 +505,28 @@ test("followers min/max at ID stage", async () => {
   );
   // a qualifies via Instagram 10k; b 2k; e null excluded; f 9k
   assert.deepEqual(maxIds, ["a", "b", "f"]);
+});
+
+test("multi followerRanges OR at ID stage", async () => {
+  const { qualifyBrowseCandidateIds } = await import(
+    "@/lib/creators/browse-candidate-qualification"
+  );
+  const supabase = createQualificationMockSupabase({
+    accounts: MOCK_ACCOUNTS,
+    influencers: MOCK_INFLUENCERS,
+  });
+  const ids = await qualifyBrowseCandidateIds(
+    supabase as never,
+    {
+      followerRanges: [
+        { min: 1_000, max: 5_000 },
+        { min: 50_000, max: 200_000 },
+      ],
+    },
+    ORDERED
+  );
+  // b=2k (band1); a via TT 50k + c=80k (band2); d=15k / f=9k fall in the gap
+  assert.deepEqual(ids, ["a", "b", "c"]);
 });
 
 test("ER minimum and NULL metrics do not match active minima", async () => {

@@ -6,7 +6,15 @@ import {
 } from "@/lib/creators/category-filter";
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import {
+  CREATOR_SEARCH_FOLLOWERS_PARAM,
+  formatFollowerRangeToken,
+  followerRangesEqual,
+  parseFollowerRangeToken,
+  resolveCreatorSearchFollowerRanges,
+} from "@/lib/creators/follower-range-filter";
+import {
   cloneCreatorSearchFilters,
+  withCreatorSearchFollowerRanges,
   type CreatorSearchFilters,
 } from "@/features/discovery/components/creator-search/creator-search-types";
 
@@ -60,6 +68,7 @@ const FILTER_MANAGED_PARAMS = [
   CREATOR_SEARCH_AGE_MAX_PARAM,
   CREATOR_SEARCH_MIN_FOLLOWERS_PARAM,
   CREATOR_SEARCH_MAX_FOLLOWERS_PARAM,
+  CREATOR_SEARCH_FOLLOWERS_PARAM,
   CREATOR_SEARCH_MIN_ENGAGEMENT_PARAM,
   CREATOR_SEARCH_MIN_VIEWS_PARAM,
   CREATOR_SEARCH_MIN_COST_PARAM,
@@ -165,7 +174,14 @@ function languagesFromParams(source: UrlReader): string[] {
 
 /** Read creator search filters from URL params (excludes top-bar `q` search). */
 export function filtersFromUrlParams(source: UrlReader): Partial<CreatorSearchFilters> {
-  return {
+  const followerTokens = stringArrayFromParams(source, CREATOR_SEARCH_FOLLOWERS_PARAM);
+  const followerRanges = followerTokens
+    .map((token) => parseFollowerRangeToken(token))
+    .filter((range): range is NonNullable<typeof range> => range != null);
+  const minFollowers = scalarFromParams(source, CREATOR_SEARCH_MIN_FOLLOWERS_PARAM);
+  const maxFollowers = scalarFromParams(source, CREATOR_SEARCH_MAX_FOLLOWERS_PARAM);
+
+  const base: Partial<CreatorSearchFilters> = {
     handle: scalarFromParams(source, CREATOR_SEARCH_HANDLE_PARAM),
     platforms: stringArrayFromParams(source, CREATOR_SEARCH_PLATFORM_PARAM),
     countries: countryCodesFromParams(source, CREATOR_SEARCH_COUNTRY_PARAM),
@@ -182,8 +198,6 @@ export function filtersFromUrlParams(source: UrlReader): Partial<CreatorSearchFi
     gender: scalarFromParams(source, CREATOR_SEARCH_GENDER_PARAM),
     ageMin: scalarFromParams(source, CREATOR_SEARCH_AGE_MIN_PARAM),
     ageMax: scalarFromParams(source, CREATOR_SEARCH_AGE_MAX_PARAM),
-    minFollowers: scalarFromParams(source, CREATOR_SEARCH_MIN_FOLLOWERS_PARAM),
-    maxFollowers: scalarFromParams(source, CREATOR_SEARCH_MAX_FOLLOWERS_PARAM),
     minEngagement: scalarFromParams(source, CREATOR_SEARCH_MIN_ENGAGEMENT_PARAM),
     minViews: scalarFromParams(source, CREATOR_SEARCH_MIN_VIEWS_PARAM),
     minEstimatedCost: scalarFromParams(source, CREATOR_SEARCH_MIN_COST_PARAM),
@@ -194,6 +208,26 @@ export function filtersFromUrlParams(source: UrlReader): Partial<CreatorSearchFi
     minThinkwayScore: scalarFromParams(source, CREATOR_SEARCH_MIN_THINKWAY_PARAM),
     minBrandFit: scalarFromParams(source, CREATOR_SEARCH_MIN_BRAND_FIT_PARAM),
     minAiScore: scalarFromParams(source, CREATOR_SEARCH_MIN_AI_SCORE_PARAM),
+  };
+
+  if (followerRanges.length > 0) {
+    const synced = withCreatorSearchFollowerRanges(
+      { ...cloneCreatorSearchFilters(), ...base },
+      followerRanges
+    );
+    return {
+      ...base,
+      followerRanges: synced.followerRanges,
+      minFollowers: synced.minFollowers,
+      maxFollowers: synced.maxFollowers,
+    };
+  }
+
+  return {
+    ...base,
+    followerRanges: [],
+    minFollowers,
+    maxFollowers,
   };
 }
 
@@ -225,8 +259,10 @@ export function creatorSearchFiltersUrlEqual(
     a.gender === b.gender &&
     a.ageMin === b.ageMin &&
     a.ageMax === b.ageMax &&
-    a.minFollowers === b.minFollowers &&
-    a.maxFollowers === b.maxFollowers &&
+    followerRangesEqual(
+      resolveCreatorSearchFollowerRanges(a),
+      resolveCreatorSearchFollowerRanges(b)
+    ) &&
     a.minEngagement === b.minEngagement &&
     a.minViews === b.minViews &&
     a.minEstimatedCost === b.minEstimatedCost &&
@@ -278,8 +314,18 @@ export function applyCreatorSearchFiltersToUrlParams(
   applyScalarToParams(params, CREATOR_SEARCH_GENDER_PARAM, filters.gender);
   applyScalarToParams(params, CREATOR_SEARCH_AGE_MIN_PARAM, filters.ageMin);
   applyScalarToParams(params, CREATOR_SEARCH_AGE_MAX_PARAM, filters.ageMax);
-  applyScalarToParams(params, CREATOR_SEARCH_MIN_FOLLOWERS_PARAM, filters.minFollowers);
-  applyScalarToParams(params, CREATOR_SEARCH_MAX_FOLLOWERS_PARAM, filters.maxFollowers);
+  const followerBands = resolveCreatorSearchFollowerRanges(filters);
+  if (followerBands.length > 1) {
+    applyStringArrayToParams(
+      params,
+      CREATOR_SEARCH_FOLLOWERS_PARAM,
+      followerBands.map((band) => formatFollowerRangeToken(band))
+    );
+  } else if (followerBands.length === 1) {
+    // Single band keeps legacy min/max URLs shareable with older clients.
+    applyScalarToParams(params, CREATOR_SEARCH_MIN_FOLLOWERS_PARAM, followerBands[0]!.min);
+    applyScalarToParams(params, CREATOR_SEARCH_MAX_FOLLOWERS_PARAM, followerBands[0]!.max);
+  }
   applyScalarToParams(params, CREATOR_SEARCH_MIN_ENGAGEMENT_PARAM, filters.minEngagement);
   applyScalarToParams(params, CREATOR_SEARCH_MIN_VIEWS_PARAM, filters.minViews);
   applyScalarToParams(params, CREATOR_SEARCH_MIN_COST_PARAM, filters.minEstimatedCost);
