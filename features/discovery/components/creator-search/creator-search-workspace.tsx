@@ -840,6 +840,9 @@ export function CreatorSearchWorkspace({
       acquiredOnly?: boolean;
     }
   ) => {
+    // Always abort prior in-flight browse so page-1 cache revalidation cannot
+    // replace the list after the user has started paging. Load-more loops are
+    // prevented by keeping loadingMore true until the network append settles.
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
@@ -1057,10 +1060,13 @@ export function CreatorSearchWorkspace({
                   : 0;
             });
 
-            startTransition(() => {
-              if (append) setLoadingMore(false);
-              else setLoading(false);
-            });
+            // Keep loadingMore true until network settles — clearing it here
+            // unlocked another load-more that aborted this append (scroll loop).
+            if (!append) {
+              startTransition(() => {
+                setLoading(false);
+              });
+            }
           }
         }
 
@@ -1238,10 +1244,16 @@ export function CreatorSearchWorkspace({
       toast.error(message);
     } finally {
       if (requestId !== reqIdRef.current) return;
-      startTransition(() => {
-        setLoading(false);
+      // Append: clear outside startTransition so isPending does not flash the
+      // full-page overlay after load-more settles.
+      if (append) {
         setLoadingMore(false);
-      });
+      } else {
+        startTransition(() => {
+          setLoading(false);
+          setLoadingMore(false);
+        });
+      }
     }
   }, [cacheUserId, searchTaxonomy, startTransition, stopAcquisitionPolling, fetchZeroResultRecommendations]);
 
@@ -1409,6 +1421,8 @@ export function CreatorSearchWorkspace({
       return;
     }
     loadMoreInFlightRef.current = true;
+    loadingMoreRef.current = true;
+    setLoadingMore(true);
     debugDiscoverySearchPagination("fetchNextPage", {
       totalCount: total,
       renderedRows: creators.length,
@@ -2424,7 +2438,7 @@ export function CreatorSearchWorkspace({
         {aiExtracting ? (
           <CreatorSearchAiExtractingState className="absolute inset-0 z-10 bg-card" />
         ) : null}
-        {(loading || isPending) && !aiExtracting ? (
+        {(loading || isPending) && !loadingMore && !aiExtracting ? (
           <div
             className="thinkway-navigation-loading-overlay absolute inset-0 z-10 rounded-[inherit]"
             role="status"

@@ -280,7 +280,9 @@ export function CreatorSearchResultList({
     };
     scrollTarget.addEventListener("scroll", onScroll, { passive: true });
     // First paint: short pages must page forward without waiting for a scroll.
-    onScroll();
+    // Skip while a load-more is already in flight (cache paint grows the list and
+    // would otherwise re-enter tryLoadMore before network settles).
+    if (!loadingMore) onScroll();
 
     return () => {
       observer.disconnect();
