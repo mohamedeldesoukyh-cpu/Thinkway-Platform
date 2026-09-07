@@ -2,6 +2,12 @@ import {
   creatorHasPrCategory,
   withPrCategoryToggled,
 } from "@/lib/creators/category-keywords";
+import {
+  isGenericBeautyCategoryLabel,
+  isNonContentCategoryLabel,
+  profileHasBeautyEvidence,
+  refineStoredDisplayCategories,
+} from "@/lib/creators/category-signal-quality";
 
 /** URL/query value for creators with no category tags. */
 export const CREATOR_CATEGORY_UNCATEGORIZED = "__uncategorized__";
@@ -128,8 +134,46 @@ export function creatorStoredCategoriesForDisplay(creator: {
   return withPrCategoryToggled(browse, true);
 }
 
+/** Bare Beauty / skincare / makeup / cosmetics — plus common “Beauty & Cosmetics” labels. */
+function isBeautyBrowseFamilyLabel(value: string): boolean {
+  const trimmed = value.trim();
+  if (!trimmed) return false;
+  if (isGenericBeautyCategoryLabel(trimmed)) return true;
+  return /^beauty(\s*&\s*cosmetics)?$/i.test(trimmed);
+}
+
 function categoryTagMatchesFilter(tag: string, filterCategory: string): boolean {
-  return tag.trim().toLowerCase() === filterCategory.trim().toLowerCase();
+  if (tag.trim().toLowerCase() === filterCategory.trim().toLowerCase()) return true;
+  // Filter "Beauty" must match real "Beauty & Cosmetics" (and vice versa) after dumps
+  // are stripped — exact equality alone left clean beauty creators dependent on junk tags.
+  return (
+    isBeautyBrowseFamilyLabel(tag) && isBeautyBrowseFamilyLabel(filterCategory)
+  );
+}
+
+function creatorBeautyEvidenceParts(creator: {
+  bio?: string | null;
+  display_name?: string | null;
+  hashtags?: string[] | null;
+  mentions?: string[] | null;
+  platforms?: Array<{
+    profile_bio?: string | null;
+    hashtags?: string[] | null;
+    mentions?: string[] | null;
+  }> | null;
+}): Array<string | null | undefined> {
+  const parts: Array<string | null | undefined> = [
+    creator.bio,
+    creator.display_name,
+    ...(creator.hashtags ?? []),
+    ...(creator.mentions ?? []),
+  ];
+  for (const platform of creator.platforms ?? []) {
+    parts.push(platform.profile_bio);
+    parts.push(...(platform.hashtags ?? []));
+    parts.push(...(platform.mentions ?? []));
+  }
+  return parts;
 }
 
 export function categoryFilterLabel(category: string): string {
@@ -152,6 +196,15 @@ export function creatorMatchesBrowseCategories(
     browse_category_tags?: string[] | null;
     categories?: string[] | null;
     audience_interests?: string[] | null;
+    bio?: string | null;
+    display_name?: string | null;
+    hashtags?: string[] | null;
+    mentions?: string[] | null;
+    platforms?: Array<{
+      profile_bio?: string | null;
+      hashtags?: string[] | null;
+      mentions?: string[] | null;
+    }> | null;
   },
   categories: string[]
 ): boolean {
@@ -160,7 +213,31 @@ export function creatorMatchesBrowseCategories(
 
   const tags = creatorStoredCategoriesForDisplay(creator);
   const interestTags = normalizeCategoryList(creator.audience_interests);
-  const matchTags = [...tags, ...interestTags];
+  // Align with Discovery CATEGORY chips: strip uncorroborated Facebook-style
+  // Beauty dumps (Beauty+Fitness+Music+Travel) so browse does not keep creators
+  // the UI refuses to show as Beauty.
+  const hasBeautyEvidence = profileHasBeautyEvidence(
+    creatorBeautyEvidenceParts(creator)
+  );
+  const refinedStored = refineStoredDisplayCategories(tags, {
+    hasBeautyEvidence,
+  });
+  const provisionalInterests = refineStoredDisplayCategories(interestTags, {
+    hasBeautyEvidence,
+    inferredCategories: refinedStored,
+  });
+  // Interest dumps often add "Beauty & Cosmetics" next to Fitness/Music/Travel.
+  // That label is legitimate on stored categories, but must not revive Beauty
+  // from audience interests alone when competing niches remain.
+  const competingNiches = [...refinedStored, ...provisionalInterests].filter(
+    (tag) =>
+      !isBeautyBrowseFamilyLabel(tag) && !isNonContentCategoryLabel(tag)
+  );
+  const refinedInterests =
+    !hasBeautyEvidence && competingNiches.length > 0
+      ? provisionalInterests.filter((tag) => !isBeautyBrowseFamilyLabel(tag))
+      : provisionalInterests;
+  const matchTags = [...refinedStored, ...refinedInterests];
 
   return resolved.some((category) => {
     if (isUncategorizedCategoryFilter(category)) {

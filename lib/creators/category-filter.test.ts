@@ -23,9 +23,12 @@ import {
 
 test("buildCreatorSearchHref encodes category values", () => {
   assert.equal(buildCreatorSearchHref(), "/discovery/search");
-  assert.equal(
-    buildCreatorSearchHref("Beauty & Wellness"),
-    `/discovery/search?${CREATOR_SEARCH_CATEGORY_PARAM}=Beauty%20%26%20Wellness`
+  const beautyWellness = buildCreatorSearchHref("Beauty & Wellness");
+  assert.match(
+    beautyWellness,
+    new RegExp(
+      `^/discovery/search\\?${CREATOR_SEARCH_CATEGORY_PARAM}=Beauty(%20|\\+)%26(%20|\\+)Wellness$`
+    )
   );
   assert.equal(
     buildCreatorSearchHref([CREATOR_CATEGORY_UNCATEGORIZED, "Beauty"]),
@@ -86,6 +89,69 @@ test("creatorMatchesBrowseCategories matches platform interest tags", () => {
   };
   assert.equal(creatorMatchesBrowseCategories(creator, ["Beauty"]), true);
   assert.equal(creatorMatchesBrowseCategories(creator, ["Fashion"]), false);
+});
+
+test("creatorMatchesBrowseCategories rejects Facebook Beauty interest dumps", () => {
+  const dump = {
+    browse_category_tags: ["Beauty", "Fitness", "Music", "Travel"],
+    audience_interests: [
+      "Beauty",
+      "Fitness",
+      "Music",
+      "Travel",
+      "Beauty & Cosmetics",
+    ],
+    bio: null,
+    display_name: "Fitness Creator",
+  };
+  assert.equal(creatorMatchesBrowseCategories(dump, ["Beauty"]), false);
+  assert.equal(creatorMatchesBrowseCategories(dump, ["Fitness"]), true);
+});
+
+test("creatorMatchesBrowseCategories keeps stored Beauty & Cosmetics with other niches", () => {
+  assert.equal(
+    creatorMatchesBrowseCategories(
+      {
+        browse_category_tags: ["Beauty & Cosmetics", "Camera & Photography"],
+        audience_interests: [],
+        bio: null,
+        display_name: "Rafal",
+      },
+      ["Beauty"]
+    ),
+    true
+  );
+});
+
+test("creatorMatchesBrowseCategories keeps corroborated Beauty with other niches", () => {
+  assert.equal(
+    creatorMatchesBrowseCategories(
+      {
+        browse_category_tags: ["Beauty", "Fashion"],
+        bio: "Makeup artist · skincare routines",
+        display_name: "Nour",
+      },
+      ["Beauty"]
+    ),
+    true
+  );
+});
+
+test("creatorMatchesBrowseCategories aliases Beauty ↔ Beauty & Cosmetics", () => {
+  assert.equal(
+    creatorMatchesBrowseCategories(
+      { browse_category_tags: ["Beauty & Cosmetics"] },
+      ["Beauty"]
+    ),
+    true
+  );
+  assert.equal(
+    creatorMatchesBrowseCategories(
+      { browse_category_tags: ["Beauty"] },
+      ["Beauty & Cosmetics"]
+    ),
+    true
+  );
 });
 
 test("creatorMatchesBrowseCategories ignores merged display categories", () => {
