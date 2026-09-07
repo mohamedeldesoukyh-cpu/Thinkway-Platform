@@ -18,7 +18,7 @@ import {
 import {
   mergeCategoryFacetLabels,
   mergeCountryFacetOptions,
-} from "@/lib/discovery/creator-search-filter-facets";
+} from "@/lib/discovery/creator-search-filter-facet-merge";
 import { DISCOVERY_PLATFORMS } from "@/lib/discovery/types";
 import { PLATFORM_LABELS } from "@/lib/social/platforms";
 import { PlatformIcon } from "@/lib/performance/platform-icon";

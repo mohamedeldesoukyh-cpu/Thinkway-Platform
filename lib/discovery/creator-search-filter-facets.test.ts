@@ -4,7 +4,7 @@ import test from "node:test";
 import {
   mergeCategoryFacetLabels,
   mergeCountryFacetOptions,
-} from "@/lib/discovery/creator-search-filter-facets";
+} from "@/lib/discovery/creator-search-filter-facet-merge";
 
 test("mergeCategoryFacetLabels prefers live labels and dedupes case-insensitively", () => {
   assert.deepEqual(

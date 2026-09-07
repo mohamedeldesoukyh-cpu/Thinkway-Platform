@@ -1,6 +1,9 @@
 /**
  * Live Creator Search filter facets — categories / countries present on the
  * active creator catalog. Grows as new creators (and tags) are added.
+ *
+ * Server-only loader. Client UI must import merge helpers from
+ * `creator-search-filter-facet-merge.ts` (no next/headers).
  */
 
 import {
@@ -9,28 +12,27 @@ import {
 } from "@/lib/discovery/database-stats";
 import { countryLabel } from "@/features/discovery/components/creator-search/creator-search-filter-constants";
 import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import type {
+  CreatorSearchCategoryFacet,
+  CreatorSearchCountryFacet,
+} from "@/lib/discovery/creator-search-filter-facet-merge";
 
-const FACETS_TTL_MS = 15 * 60 * 1000;
-/** High enough to cover real niche tags beyond the masthead top-8. */
-const CATEGORY_FACET_LIMIT = 200;
-const COUNTRY_SAMPLE_LIMIT = 2_000;
-
-export type CreatorSearchCategoryFacet = {
-  label: string;
-  count: number;
-};
-
-export type CreatorSearchCountryFacet = {
-  code: string;
-  label: string;
-  count: number;
-};
+export type {
+  CreatorSearchCategoryFacet,
+  CreatorSearchCountryFacet,
+} from "@/lib/discovery/creator-search-filter-facet-merge";
 
 export type CreatorSearchFilterFacets = {
   categories: CreatorSearchCategoryFacet[];
   countries: CreatorSearchCountryFacet[];
   loadedAt: number;
 };
+
+const FACETS_TTL_MS = 15 * 60 * 1000;
+/** High enough to cover real niche tags beyond the masthead top-8. */
+const CATEGORY_FACET_LIMIT = 200;
+const COUNTRY_SAMPLE_LIMIT = 2_000;
 
 type FacetsCache = {
   expiresAt: number;
@@ -45,84 +47,8 @@ const EMPTY_FACETS: CreatorSearchFilterFacets = {
   loadedAt: 0,
 };
 
-/**
- * Merge seed labels with live catalog facets (case-insensitive dedupe).
- * Live labels/counts win; seeds fill gaps so empty catalogs still show basics.
- */
-export function mergeCategoryFacetLabels(
-  live: ReadonlyArray<CreatorSearchCategoryFacet>,
-  seedLabels: ReadonlyArray<string>
-): string[] {
-  const seen = new Set<string>();
-  const out: string[] = [];
-
-  for (const facet of live) {
-    const label = facet.label.trim();
-    if (!label) continue;
-    const key = label.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(label);
-  }
-
-  for (const seed of seedLabels) {
-    const label = seed.trim();
-    if (!label) continue;
-    const key = label.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(label);
-  }
-
-  return out;
-}
-
-export function mergeCountryFacetOptions(
-  live: ReadonlyArray<CreatorSearchCountryFacet>,
-  seed: ReadonlyArray<{ code: string; label: string }>
-): Array<{ code: string; label: string }> {
-  const seen = new Set<string>();
-  const out: Array<{ code: string; label: string }> = [];
-
-  for (const facet of live) {
-    const code = normalizeCountryCode(facet.code);
-    if (!code || seen.has(code)) continue;
-    seen.add(code);
-    out.push({
-      code,
-      label: facet.label.trim() || countryLabel(code),
-    });
-  }
-
-  for (const entry of seed) {
-    const code = normalizeCountryCode(entry.code);
-    if (!code || seen.has(code)) continue;
-    seen.add(code);
-    out.push({ code, label: entry.label });
-  }
-
-  return out;
-}
-
-type FacetSupabase = {
-  rpc: (
-    fn: string,
-    args: Record<string, unknown>
-  ) => Promise<{ data: unknown; error: unknown }>;
-  from: (table: string) => {
-    select: (cols: string) => {
-      neq: (
-        col: string,
-        val: string
-      ) => {
-        limit: (n: number) => Promise<{ data: unknown; error: unknown }>;
-      };
-    };
-  };
-};
-
 async function loadLiveCategoryFacets(
-  supabase: FacetSupabase
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
 ): Promise<CreatorSearchCategoryFacet[]> {
   const { data, error } = await supabase.rpc("get_discovery_database_stats", {
     category_limit: CATEGORY_FACET_LIMIT,
@@ -138,7 +64,7 @@ async function loadLiveCategoryFacets(
 }
 
 async function loadLiveCountryFacets(
-  supabase: FacetSupabase
+  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>
 ): Promise<CreatorSearchCountryFacet[]> {
   const { data, error } = await supabase
     .from("influencers")
@@ -151,10 +77,7 @@ async function loadLiveCountryFacets(
   }
 
   const counts = new Map<string, number>();
-  for (const row of data as Array<{
-    country_code?: unknown;
-    country_codes?: unknown;
-  }>) {
+  for (const row of data) {
     const codes = new Set<string>();
     const primary = normalizeCountryCode(
       typeof row.country_code === "string" ? row.country_code : ""
@@ -189,8 +112,7 @@ export async function getCreatorSearchFilterFacets(options?: {
   }
 
   try {
-    const { createSupabaseServerClient } = await import("@/lib/supabase/server");
-    const supabase = (await createSupabaseServerClient()) as unknown as FacetSupabase;
+    const supabase = await createSupabaseServerClient();
     const [categories, countries] = await Promise.all([
       loadLiveCategoryFacets(supabase),
       loadLiveCountryFacets(supabase),
