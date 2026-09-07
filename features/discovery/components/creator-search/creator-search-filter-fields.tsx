@@ -15,6 +15,10 @@ import {
   TIER_FILTER_RANGES,
   tierFilterPresetFields,
 } from "@/lib/creators/influencer-tier";
+import {
+  mergeCategoryFacetLabels,
+  mergeCountryFacetOptions,
+} from "@/lib/discovery/creator-search-filter-facets";
 import { DISCOVERY_PLATFORMS } from "@/lib/discovery/types";
 import { PLATFORM_LABELS } from "@/lib/social/platforms";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
@@ -27,6 +31,7 @@ import {
   DISCOVERY_FILTER_COUNTRIES,
   DISCOVERY_FILTER_LANGUAGES,
   LAST_POST_WITHIN_OPTIONS,
+  countryLabel,
 } from "./creator-search-filter-constants";
 import {
   withCreatorSearchFollowerRanges,
@@ -36,6 +41,10 @@ import {
 type FieldProps = {
   filters: CreatorSearchFilters;
   onChange: (next: CreatorSearchFilters) => void;
+  /** Live catalog categories (deduped); falls back to QUICK_CATEGORIES. */
+  categorySuggestions?: string[];
+  /** Live catalog countries; merged with seed MENA/global pills. */
+  countrySuggestions?: Array<{ code: string; label: string }>;
 };
 
 const FOLLOWER_PRESETS = TIER_FILTER_RANGES.map((range) => ({
@@ -408,12 +417,14 @@ function CountryPillGrid({
   draft,
   onDraftChange,
   placeholder,
+  countryOptions = DISCOVERY_FILTER_COUNTRIES,
 }: {
   selected: string[];
   onChange: (next: string[]) => void;
   draft: string;
   onDraftChange: (value: string) => void;
   placeholder: string;
+  countryOptions?: ReadonlyArray<{ code: string; label: string }>;
 }) {
   function addDraftCountry() {
     const code = draft.trim().toUpperCase();
@@ -425,6 +436,14 @@ function CountryPillGrid({
     onChange([...selected, code]);
     onDraftChange("");
   }
+
+  const labelFor = (code: string) =>
+    countryOptions.find((entry) => entry.code === code)?.label ??
+    countryLabel(code);
+
+  // Only draft/custom codes above the grid — options stay as toggle chips (no Egypt×2).
+  const optionCodes = new Set(countryOptions.map((entry) => entry.code));
+  const customSelected = selected.filter((code) => !optionCodes.has(code));
 
   return (
     <>
@@ -451,15 +470,12 @@ function CountryPillGrid({
           <PlusIcon className="size-3.5" />
         </button>
       </div>
-      {selected.length > 0 ? (
+      {customSelected.length > 0 ? (
         <div className="mb-2 flex flex-wrap gap-1.5">
-          {selected.map((code) => (
+          {customSelected.map((code) => (
             <FilterChip
               key={code}
-              label={
-                DISCOVERY_FILTER_COUNTRIES.find((entry) => entry.code === code)
-                  ?.label ?? code
-              }
+              label={labelFor(code)}
               active
               onToggle={() =>
                 onChange(selected.filter((value) => value !== code))
@@ -469,7 +485,7 @@ function CountryPillGrid({
         </div>
       ) : null}
       <ExpandableChipGrid
-        items={DISCOVERY_FILTER_COUNTRIES}
+        items={[...countryOptions]}
         previewCount={6}
         getKey={({ code }) => code}
         isHighlighted={({ code }) => selected.includes(code)}
@@ -930,9 +946,21 @@ export function EngagementField({ filters, onChange }: FieldProps) {
   );
 }
 
-export function LocationField({ filters, onChange }: FieldProps) {
+export function LocationField({
+  filters,
+  onChange,
+  countrySuggestions,
+}: FieldProps) {
   const [draftCountry, setDraftCountry] = useState("");
   const [draftLanguage, setDraftLanguage] = useState("");
+  const countryOptions = mergeCountryFacetOptions(
+    (countrySuggestions ?? []).map((entry) => ({
+      code: entry.code,
+      label: entry.label,
+      count: 0,
+    })),
+    DISCOVERY_FILTER_COUNTRIES
+  );
 
   return (
     <>
@@ -943,6 +971,7 @@ export function LocationField({ filters, onChange }: FieldProps) {
           draft={draftCountry}
           onDraftChange={setDraftCountry}
           placeholder="ISO code e.g. EG"
+          countryOptions={countryOptions}
         />
       </FieldGroup>
       <FieldGroup
@@ -974,13 +1003,25 @@ export function LocationField({ filters, onChange }: FieldProps) {
   );
 }
 
-export function CategoryField({ filters, onChange }: FieldProps) {
+export function CategoryField({
+  filters,
+  onChange,
+  categorySuggestions,
+}: FieldProps) {
   const [draftCategory, setDraftCategory] = useState("");
+  const categoryOptions = mergeCategoryFacetLabels(
+    (categorySuggestions ?? []).map((label) => ({ label, count: 1 })),
+    QUICK_CATEGORIES
+  );
 
   function addDraftCategory() {
     const value = draftCategory.trim();
     if (!value) return;
-    if (filters.categories.includes(value)) {
+    if (
+      filters.categories.some(
+        (category) => category.toLowerCase() === value.toLowerCase()
+      )
+    ) {
       setDraftCategory("");
       return;
     }
@@ -990,9 +1031,9 @@ export function CategoryField({ filters, onChange }: FieldProps) {
 
   const customCategories = filters.categories.filter(
     (category) =>
-      !QUICK_CATEGORIES.some(
-        (quick) => quick.toLowerCase() === category.toLowerCase(),
-      ),
+      !categoryOptions.some(
+        (option) => option.toLowerCase() === category.toLowerCase()
+      )
   );
 
   return (
@@ -1035,7 +1076,7 @@ export function CategoryField({ filters, onChange }: FieldProps) {
                     onChange({
                       ...filters,
                       categories: filters.categories.filter(
-                        (value) => value !== category,
+                        (value) => value !== category
                       ),
                     })
                   }
@@ -1049,26 +1090,26 @@ export function CategoryField({ filters, onChange }: FieldProps) {
           </div>
         ) : null}
         <ExpandableChipGrid
-          items={QUICK_CATEGORIES}
-          previewCount={4}
+          items={categoryOptions}
+          previewCount={8}
           getKey={(category) => category}
           isHighlighted={(category) =>
             filters.categories.some(
-              (selected) => selected.toLowerCase() === category.toLowerCase(),
+              (selected) => selected.toLowerCase() === category.toLowerCase()
             )
           }
           renderChip={(category) => (
             <FilterChip
               label={category}
               active={filters.categories.some(
-                (selected) => selected.toLowerCase() === category.toLowerCase(),
+                (selected) => selected.toLowerCase() === category.toLowerCase()
               )}
               onToggle={() =>
                 onChange({
                   ...filters,
                   categories: toggleCategoryInList(
                     filters.categories,
-                    category,
+                    category
                   ),
                 })
               }
@@ -1096,9 +1137,21 @@ function MockupChip({ label }: { label: string }) {
   );
 }
 
-export function AudienceField({ filters, onChange }: FieldProps) {
+export function AudienceField({
+  filters,
+  onChange,
+  countrySuggestions,
+}: FieldProps) {
   const [draftAudienceCountry, setDraftAudienceCountry] = useState("");
   const [draftInterest, setDraftInterest] = useState("");
+  const countryOptions = mergeCountryFacetOptions(
+    (countrySuggestions ?? []).map((entry) => ({
+      code: entry.code,
+      label: entry.label,
+      count: 0,
+    })),
+    DISCOVERY_FILTER_COUNTRIES
+  );
 
   function addDraftInterest() {
     const value = draftInterest.trim();
@@ -1129,6 +1182,7 @@ export function AudienceField({ filters, onChange }: FieldProps) {
           draft={draftAudienceCountry}
           onDraftChange={setDraftAudienceCountry}
           placeholder="ISO code e.g. AE"
+          countryOptions={countryOptions}
         />
       </FieldGroup>
 

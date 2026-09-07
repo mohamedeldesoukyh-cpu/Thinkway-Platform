@@ -48,6 +48,10 @@ type Props = {
   onClearAll: () => void;
   onClose?: () => void;
   loading?: boolean;
+  /** Live catalog category labels (deduped); merges with seed chips in CategoryField. */
+  categorySuggestions?: string[];
+  /** Live catalog countries; merges with seed MENA/global pills. */
+  countrySuggestions?: Array<{ code: string; label: string }>;
 };
 
 export function CreatorSearchFilterPanel({
@@ -57,6 +61,8 @@ export function CreatorSearchFilterPanel({
   onClearAll,
   onClose,
   loading,
+  categorySuggestions,
+  countrySuggestions,
 }: Props) {
   const [draftFilters, setDraftFilters] = useState(() =>
     cloneCreatorSearchFilters(filters),
@@ -130,8 +136,16 @@ export function CreatorSearchFilterPanel({
       >
         <NameField filters={draftFilters} onChange={setDraftFilters} />
         <PlatformField filters={draftFilters} onChange={setDraftFilters} />
-        <CategoryField filters={draftFilters} onChange={setDraftFilters} />
-        <LocationField filters={draftFilters} onChange={setDraftFilters} />
+        <CategoryField
+          filters={draftFilters}
+          onChange={setDraftFilters}
+          categorySuggestions={categorySuggestions}
+        />
+        <LocationField
+          filters={draftFilters}
+          onChange={setDraftFilters}
+          countrySuggestions={countrySuggestions}
+        />
       </DiscoveryFilterDrawerSection>
 
       <DiscoveryFilterDrawerSection
@@ -151,7 +165,11 @@ export function CreatorSearchFilterPanel({
         count={sectionCounts.audience}
         onClearSection={() => clearSection("audience")}
       >
-        <AudienceField filters={draftFilters} onChange={setDraftFilters} />
+        <AudienceField
+          filters={draftFilters}
+          onChange={setDraftFilters}
+          countrySuggestions={countrySuggestions}
+        />
       </DiscoveryFilterDrawerSection>
 
       <DiscoveryFilterDrawerSection

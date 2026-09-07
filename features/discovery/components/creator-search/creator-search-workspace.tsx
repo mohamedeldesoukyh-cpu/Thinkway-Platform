@@ -213,6 +213,12 @@ export function CreatorSearchWorkspace({
   const [shortlists, setShortlists] = useState(initialShortlists);
   const [campaigns, setCampaigns] = useState(initialCampaigns);
   const [taxonomyTerms, setTaxonomyTerms] = useState(searchTaxonomyTerms);
+  const [filterCategoryLabels, setFilterCategoryLabels] = useState<string[]>(
+    []
+  );
+  const [filterCountries, setFilterCountries] = useState<
+    Array<{ code: string; label: string }>
+  >([]);
   const [filters, setFilters] = useState<CreatorSearchFilters>(() => initialFiltersFromUrl);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [sort, setSort] = useState<CreatorSearchSortState>(DEFAULT_CREATOR_SEARCH_SORT);
@@ -1321,6 +1327,8 @@ export function CreatorSearchWorkspace({
       setShortlists(chrome.shortlists);
       setCampaigns(chrome.campaigns);
       setTaxonomyTerms(chrome.searchTaxonomyTerms);
+      setFilterCategoryLabels(chrome.filterCategoryLabels);
+      setFilterCountries(chrome.filterCountries);
     });
     return () => {
       cancelled = true;
@@ -1341,6 +1349,14 @@ export function CreatorSearchWorkspace({
       }
       setPage(1);
       void fetchPageRef.current(1, false, undefined, { caller: "import_refresh" });
+      // New creators may introduce categories/countries — refresh filter facets.
+      void loadCreatorSearchChromeAction({ forceFacets: true }).then((chrome) => {
+        setFilterCategoryLabels(chrome.filterCategoryLabels);
+        setFilterCountries(chrome.filterCountries);
+        setShortlists(chrome.shortlists);
+        setCampaigns(chrome.campaigns);
+        setTaxonomyTerms(chrome.searchTaxonomyTerms);
+      });
     }
 
     function onStorage(event: StorageEvent) {
@@ -2473,6 +2489,8 @@ export function CreatorSearchWorkspace({
             onClearAll={clearAllFilters}
             onClose={() => setFiltersDrawerOpen(false)}
             loading={loading || isPending}
+            categorySuggestions={filterCategoryLabels}
+            countrySuggestions={filterCountries}
           />
       </DiscoveryFilterSheet>
 
