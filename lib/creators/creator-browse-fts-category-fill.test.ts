@@ -328,6 +328,12 @@ test("source wiring: FTS + category always fill; audience/unfiltered/filtered-fa
   const categoryFn = source.slice(categoryFnStart, categoryFnEnd);
   assert.doesNotMatch(categoryFn, /BROWSE_PIN_PRIORITY_COUNTRY/);
   assert.doesNotMatch(categoryFn, /pinEgypt/);
+  // Multi-filter Production timeout: no pre-count RPC; metrics early-stop; LIMIT+1 has_more.
+  assert.doesNotMatch(categoryFn, /countInternalCreatorsBrowse/);
+  assert.doesNotMatch(categoryFn, /resolveCreatorBrowseFillMaxWindows/);
+  assert.match(categoryFn, /CREATOR_BROWSE_MAX_FILL_WINDOWS/);
+  assert.match(categoryFn, /browseCandidateQualificationActive/);
+  assert.match(categoryFn, /browse\.hasMore/);
   // Regressions: prior paths still present and ordered correctly.
   assert.match(source, /browseFilteredFastFillPage/);
   assert.match(source, /browseDiscoveryAudienceFilteredPage/);

@@ -244,7 +244,7 @@ async function queryInfluencerIdsForCategoryBrowse(
   filters: UnifiedCreatorBrowseFilters,
   page: number,
   pageSize: number
-): Promise<{ ids: string[]; total: number }> {
+): Promise<{ ids: string[]; total: number; hasMore: boolean }> {
   const categories = resolveBrowseCategories(filters);
   const countryCodes = resolveBrowseCreatorCountryCodes(filters);
   // Phase 1A: multi-country OR is applied via qualifyBrowseCandidateIds after RPC.
@@ -257,21 +257,34 @@ async function queryInfluencerIdsForCategoryBrowse(
         : resolveCountryCode(filters.country) || null;
   const language = filters.language?.trim() ?? null;
   const from = (page - 1) * pageSize;
+  // Fetch one extra row so has_more does not need count(*) OVER () (removed from RPC —
+  // that window forced full category×country scans and timed out multi-filter browse).
+  const fetchLimit = Math.max(pageSize, 0) + 1;
 
   const { data, error } = await supabase.rpc("browse_influencer_ids_for_categories", {
     p_categories: categories,
     p_country: country,
     p_language: language,
-    p_limit: pageSize,
+    p_limit: fetchLimit,
     p_offset: from,
   });
 
   if (error) throw new Error(error.message);
 
   const rows = (data ?? []) as CategoryBrowseIdRow[];
-  const ids = rows.map((row) => row.id).filter(Boolean);
-  const total = Number(rows[0]?.total_count ?? 0);
-  return { ids, total };
+  const hasMore = rows.length > pageSize;
+  const ids = rows
+    .slice(0, pageSize)
+    .map((row) => row.id)
+    .filter(Boolean);
+  const rpcTotal = Number(rows[0]?.total_count);
+  const total =
+    Number.isFinite(rpcTotal) && rpcTotal > 0
+      ? rpcTotal
+      : hasMore
+        ? from + ids.length + 1
+        : from + ids.length;
+  return { ids, total, hasMore };
 }
 
 type InternalCreatorsBrowsePage = {
@@ -339,6 +352,8 @@ async function countInternalCreatorsBrowse(
 ): Promise<number> {
   const categories = resolveBrowseCategories(filters);
   if (categories.length > 0) {
+    // Category RPC no longer returns an exact window total. Probe a small page and
+    // treat has_more as "at least this many + 1" for fill-budget estimates only.
     const browse = await queryInfluencerIdsForCategoryBrowse(supabase, filters, 1, 1);
     return browse.total;
   }
@@ -998,6 +1013,11 @@ async function browseFtsFillPage(
  * Phase 1B-2 — category RPC page-fill.
  * Always accumulates matching creators across category ID windows. No Egypt pin.
  * Preserves category RPC order (updated_at) across windows — no default browse re-sort.
+ *
+ * Does not pre-count the category universe (that used to re-run the RPC with
+ * count(*) OVER () and timed out multi-filter Production browse). Uses the full
+ * fill window budget + LIMIT+1 has_more. Metrics/country qualification can shrink
+ * category windows like sparse filters — enable the early-stop guardrail then.
  */
 async function browseCategoryFillPage(
   supabase: SupabaseClient,
@@ -1006,9 +1026,10 @@ async function browseCategoryFillPage(
   pageSize: number,
   tracePath: SearchTracePath
 ): Promise<{ creators: UnifiedCreatorResult[]; total: number; has_more: boolean }> {
-  const rawTotal = await countInternalCreatorsBrowse(supabase, filters);
-  const maxWindows = resolveCreatorBrowseFillMaxWindows(rawTotal);
-  const sparseEarlyStop = creatorBrowseSparseEarlyStopActive(filters);
+  const maxWindows = CREATOR_BROWSE_MAX_FILL_WINDOWS;
+  const sparseEarlyStop =
+    creatorBrowseSparseEarlyStopActive(filters) ||
+    browseCandidateQualificationActive(filters);
   const seenIds = new Set<string>();
 
   const filled = await accumulateCreatorBrowseFillPage({
@@ -1035,9 +1056,7 @@ async function browseCategoryFillPage(
       }
 
       const rawCandidateCount = browse.ids.length;
-      const offset = (windowIndex - 1) * CREATOR_BROWSE_FILL_BATCH;
-      const rawHasMore =
-        browse.ids.length > 0 && offset + browse.ids.length < browse.total;
+      const rawHasMore = browse.hasMore;
 
       if (rawCandidateCount === 0) {
         return { creators: [], rawCandidateCount: 0, rawHasMore: false };
@@ -1089,7 +1108,7 @@ async function browseCategoryFillPage(
     {
       page,
       pageSize,
-      rawTotal,
+      maxWindows,
       sparseEarlyStop,
       ...filled.meta,
       returned: filled.creators.length,
