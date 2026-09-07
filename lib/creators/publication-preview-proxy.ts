@@ -490,36 +490,45 @@ export async function resolvePublicationPreviewForHttpRequest(input: {
       source: "cache",
     };
   }
-  if (cached && !cached.ok) {
-    recordMediaProxyPlaceholder();
-    return { ok: false, status: cached.status, source: "cache", needsRefresh: false };
+  // Sharp refresh may have cached a miss on this key. Do not hard-stop HTTP paint —
+  // Client Workspace still needs a display still (including e15 CDN) while upgrade runs.
+
+  const tryCdnPaint = async (candidate: string, forceRefresh: boolean): Promise<PreviewResult | null> => {
+    if (!isAllowedPublicationPreviewSrcUrl(candidate)) return null;
+    const direct = await withMediaProxyInflight(`cdn:${key}:${forceRefresh ? "lq" : "hq"}`, () =>
+      fetchImageBuffer(candidate, { timeoutMs: MEDIA_PROXY_FAST_TIMEOUT_MS })
+    );
+    if (!direct.ok || !imageBufferLooksComplete(direct.buffer)) return null;
+    const overcompressed = isVisiblyOvercompressedPhoto(direct.buffer);
+    const edge = await imageLongestEdge(direct.buffer);
+    const canUpgrade =
+      Boolean(postUrl && isAllowedPublicationPreviewPostUrl(postUrl)) &&
+      (forceRefresh ||
+        overcompressed ||
+        isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE) ||
+        isLikelyLowQualitySocialJpeg(candidate));
+    setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
+    recordMediaProxyCdnHit();
+    return {
+      ok: true,
+      buffer: direct.buffer,
+      contentType: direct.contentType,
+      source: "cdn",
+      needsRefresh: canUpgrade,
+    };
+  };
+
+  if (src && !isLikelyLowQualitySocialJpeg(src)) {
+    const painted = await tryCdnPaint(src, false);
+    if (painted) return painted;
   }
 
-  if (
-    src &&
-    isAllowedPublicationPreviewSrcUrl(src) &&
-    !isLikelyLowQualitySocialJpeg(src)
-  ) {
-    const direct = await withMediaProxyInflight(`cdn:${key}`, () =>
-      fetchImageBuffer(src, { timeoutMs: MEDIA_PROXY_FAST_TIMEOUT_MS })
-    );
-    if (direct.ok && imageBufferLooksComplete(direct.buffer)) {
-      const overcompressed = isVisiblyOvercompressedPhoto(direct.buffer);
-      const edge = await imageLongestEdge(direct.buffer);
-      const canUpgrade =
-        Boolean(postUrl && isAllowedPublicationPreviewPostUrl(postUrl)) &&
-        (overcompressed || isVisiblyLowResolutionImage(edge, MIN_SHARP_PUBLICATION_EDGE));
-
-      // Serve any complete still for immediate UI paint; upgrade in background when possible.
-      setMediaProxyCachePositive(key, direct.buffer, direct.contentType);
-      recordMediaProxyCdnHit();
-      return {
-        ok: true,
-        buffer: direct.buffer,
-        contentType: direct.contentType,
-        source: "cdn",
-        needsRefresh: canUpgrade,
-      };
+  // Last-resort paint for Client Workspace / feed grids: e15 and similar posterized
+  // CDN thumbs are better than empty tiles while oEmbed upgrade runs in background.
+  if (src) {
+    for (const candidate of [src, ...higherResolutionSocialImageUrlCandidates(src)]) {
+      const painted = await tryCdnPaint(candidate, true);
+      if (painted) return painted;
     }
   }
 
@@ -532,7 +541,7 @@ export async function resolvePublicationPreviewForHttpRequest(input: {
   return {
     ok: false,
     status: 404,
-    source: "miss",
+    source: cached && !cached.ok ? "cache" : "miss",
     needsRefresh,
   };
 }

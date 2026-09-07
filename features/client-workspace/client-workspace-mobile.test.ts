@@ -41,6 +41,7 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
   assert.equal(css.includes("overflow-wrap:anywhere"), true);
   assert.equal(css.includes(".detail:not(.show)"), true);
   assert.equal(css.includes("display:none !important"), true);
-  assert.equal(creators.includes('viewport === "mobile" ? null'), true);
+  assert.equal(creators.includes('viewport === "desktop" ? ('), true);
+  assert.equal(creators.includes('viewport === "mobile" ? null'), false);
   assert.equal(creators.includes("show={showDetail}"), false);
 });

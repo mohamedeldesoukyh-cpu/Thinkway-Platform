@@ -697,7 +697,7 @@ export function ContentFeatureGrid({
         const platform = resolveContentPostPlatform(post);
         const inner = (
           <>
-            {src ? <RetryableReviewImage src={src} /> : null}
+            {src ? <RetryableReviewImage className="rw-post-img" src={src} /> : null}
             {platform ? (
               <span className="plat-badge" title={platform}>
                 <ReviewPlatformMark platform={platform} />

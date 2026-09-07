@@ -1,8 +1,10 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 
 import { fetchCreatorAvatarImage, resolveCreatorAvatarForHttpRequest } from "@/lib/creators/creator-avatar-proxy";
+import { recordMediaProxyRefreshScheduled } from "@/lib/creators/media-proxy-cache";
 import {
   fetchPublicationPreviewImage,
+  refreshPublicationPreviewInBackground,
   resolvePublicationPreviewForHttpRequest,
 } from "@/lib/creators/publication-preview-proxy";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
@@ -18,12 +20,18 @@ import {
 export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
-function imageResponse(buffer: ArrayBuffer, contentType: string, cacheSource?: string) {
+function imageResponse(
+  buffer: ArrayBuffer,
+  contentType: string,
+  cacheSource?: string,
+  upgrading?: boolean
+) {
   const headers: Record<string, string> = {
     "Content-Type": contentType,
     "Cache-Control": "private, max-age=3600",
   };
   if (cacheSource) headers["X-Preview-Cache"] = cacheSource;
+  if (upgrading) headers["X-Preview-Upgrade"] = "1";
   return new NextResponse(buffer, { status: 200, headers });
 }
 
@@ -83,16 +91,38 @@ export async function GET(request: Request) {
     src: allowedSrc,
     postUrl: allowedPostUrl,
   });
-  if (result.ok) {
-    return imageResponse(result.buffer, result.contentType, result.source);
+  if (result.needsRefresh) {
+    recordMediaProxyRefreshScheduled();
+    after(() =>
+      refreshPublicationPreviewInBackground({
+        src: allowedSrc,
+        postUrl: allowedPostUrl,
+      })
+    );
   }
-  const refreshed = await fetchPublicationPreviewImage({
-    src: allowedSrc,
-    postUrl: allowedPostUrl,
-  });
-  if (refreshed.ok) {
-    return imageResponse(refreshed.buffer, refreshed.contentType, "refresh");
+  if (result.ok) {
+    return imageResponse(result.buffer, result.contentType, result.source, result.needsRefresh);
   }
 
-  return NextResponse.json({ error: "Preview unavailable." }, { status: 404 });
+  // Display-quality uses a separate cache key from sharp misses, so Client Workspace
+  // tiles can still paint after a prior sharp-negative cache entry.
+  const display = await fetchPublicationPreviewImage({
+    src: allowedSrc,
+    postUrl: allowedPostUrl,
+    quality: "display",
+  });
+  if (display.ok) {
+    return imageResponse(display.buffer, display.contentType, "refresh", true);
+  }
+
+  return NextResponse.json(
+    { error: "Preview unavailable." },
+    {
+      status: 404,
+      headers: {
+        "Cache-Control": "private, max-age=30",
+        "X-Preview-Cache": result.source,
+      },
+    }
+  );
 }

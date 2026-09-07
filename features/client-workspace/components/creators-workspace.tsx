@@ -480,14 +480,14 @@ export function CreatorsWorkspace({
             pendingCommercialApproval={pendingIds.has(selected.creatorId)}
             showOriginalCurrency={showOriginalCurrency}
           />
-        ) : viewport === "mobile" ? null : (
+        ) : viewport === "desktop" ? (
           <div className="detail">
             <div className="empty">
               <p style={{ marginTop: 12, fontWeight: 600, color: "var(--ink)" }}>Select a creator</p>
               <p style={{ fontSize: 13, marginTop: 4 }}>Choose a creator to see their full profile and metrics.</p>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {selected ? (
