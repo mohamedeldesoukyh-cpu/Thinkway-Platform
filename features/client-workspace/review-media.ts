@@ -1,5 +1,5 @@
-import { isAllowedPublicationPreviewSrcUrl } from "@/lib/creators/publication-preview-proxy";
 import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
+import { SOCIAL_MEDIA_SRC_ALLOWLIST, isUrlAllowedByHostlist } from "@/lib/security/ssrf";
 import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
 
 import {
@@ -86,7 +86,7 @@ export function resolveAllowedReviewMediaSrc(
   const postOk = Boolean(allowlistedReviewMediaUrl(allowlist, postUrl));
   const profileOk = Boolean(allowlistedReviewMediaUrl(allowlist, profileUrl));
   if (!(postOk || profileOk)) return null;
-  if (!isAllowedPublicationPreviewSrcUrl(trimmed)) return null;
+  if (!isUrlAllowedByHostlist(trimmed, SOCIAL_MEDIA_SRC_ALLOWLIST)) return null;
   return normalizeMediaUrl(trimmed) || trimmed;
 }
 
