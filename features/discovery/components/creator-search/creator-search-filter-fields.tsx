@@ -18,7 +18,9 @@ import {
 import {
   mergeCategoryFacetLabels,
   mergeCountryFacetOptions,
+  mergeLanguageFacetOptions,
 } from "@/lib/discovery/creator-search-filter-facet-merge";
+import { CREATOR_CATEGORY_LABELS } from "@/lib/creators/category-keywords";
 import { DISCOVERY_PLATFORMS } from "@/lib/discovery/types";
 import { PLATFORM_LABELS } from "@/lib/social/platforms";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
@@ -32,6 +34,7 @@ import {
   DISCOVERY_FILTER_LANGUAGES,
   LAST_POST_WITHIN_OPTIONS,
   countryLabel,
+  languageLabel,
 } from "./creator-search-filter-constants";
 import {
   withCreatorSearchFollowerRanges,
@@ -41,10 +44,12 @@ import {
 type FieldProps = {
   filters: CreatorSearchFilters;
   onChange: (next: CreatorSearchFilters) => void;
-  /** Live catalog categories (deduped); falls back to QUICK_CATEGORIES. */
+  /** Live catalog categories (deduped); falls back to CREATOR_CATEGORY_LABELS. */
   categorySuggestions?: string[];
   /** Live catalog countries; merged with seed MENA/global pills. */
   countrySuggestions?: Array<{ code: string; label: string }>;
+  /** Live catalog languages; merged with seed language pills. */
+  languageSuggestions?: Array<{ code: string; label: string }>;
 };
 
 const FOLLOWER_PRESETS = TIER_FILTER_RANGES.map((range) => ({
@@ -56,18 +61,6 @@ const FOLLOWER_PRESETS = TIER_FILTER_RANGES.map((range) => ({
 const ENGAGEMENT_PRESETS = ["1", "2", "3", "5"] as const;
 
 const THINKWAY_SCORE_PRESETS = ["40", "50", "60", "70", "80"] as const;
-
-const QUICK_CATEGORIES = [
-  "Beauty",
-  "Fashion",
-  "Fitness",
-  "Food",
-  "Travel",
-  "Lifestyle",
-  "Tech",
-  "Gaming",
-  "PR",
-] as const;
 
 const QUICK_INTERESTS = [
   "Beauty & Cosmetics",
@@ -508,6 +501,7 @@ function LanguagePillGrid({
   onDraftChange,
   placeholder,
   label,
+  languageOptions = DISCOVERY_FILTER_LANGUAGES,
 }: {
   selected: string[];
   onChange: (next: string[]) => void;
@@ -515,6 +509,7 @@ function LanguagePillGrid({
   onDraftChange: (value: string) => void;
   placeholder: string;
   label?: string;
+  languageOptions?: ReadonlyArray<{ code: string; label: string }>;
 }) {
   function addDraftLanguage() {
     const code = draft.trim().toLowerCase();
@@ -526,6 +521,17 @@ function LanguagePillGrid({
     onChange([...selected, code]);
     onDraftChange("");
   }
+
+  const labelFor = (code: string) =>
+    languageOptions.find((entry) => entry.code === code)?.label ??
+    languageLabel(code);
+
+  const optionCodes = new Set(
+    languageOptions.map((entry) => entry.code.toLowerCase())
+  );
+  const customSelected = selected.filter(
+    (code) => !optionCodes.has(code.toLowerCase())
+  );
 
   return (
     <>
@@ -553,15 +559,12 @@ function LanguagePillGrid({
           <PlusIcon className="size-3.5" />
         </button>
       </div>
-      {selected.length > 0 ? (
+      {customSelected.length > 0 ? (
         <div className="mb-2 flex flex-wrap gap-1.5">
-          {selected.map((code) => (
+          {customSelected.map((code) => (
             <FilterChip
               key={code}
-              label={
-                DISCOVERY_FILTER_LANGUAGES.find((entry) => entry.code === code)
-                  ?.label ?? code
-              }
+              label={labelFor(code)}
               active
               onToggle={() =>
                 onChange(selected.filter((value) => value !== code))
@@ -571,14 +574,18 @@ function LanguagePillGrid({
         </div>
       ) : null}
       <ExpandableChipGrid
-        items={DISCOVERY_FILTER_LANGUAGES}
+        items={[...languageOptions]}
         previewCount={6}
         getKey={({ code }) => code}
-        isHighlighted={({ code }) => selected.includes(code)}
+        isHighlighted={({ code }) =>
+          selected.some((entry) => entry.toLowerCase() === code.toLowerCase())
+        }
         renderChip={({ code, label: langLabel }) => (
           <FilterChip
             label={langLabel}
-            active={selected.includes(code)}
+            active={selected.some(
+              (entry) => entry.toLowerCase() === code.toLowerCase()
+            )}
             onToggle={() =>
               onChange(
                 toggleInList(selected, code, (value) => value.toLowerCase()),
@@ -591,9 +598,21 @@ function LanguagePillGrid({
   );
 }
 
-export function ContentSearchField({ filters, onChange }: FieldProps) {
+export function ContentSearchField({
+  filters,
+  onChange,
+  languageSuggestions,
+}: FieldProps) {
   const [draftTag, setDraftTag] = useState("");
   const [draftContentLanguage, setDraftContentLanguage] = useState("");
+  const languageOptions = mergeLanguageFacetOptions(
+    (languageSuggestions ?? []).map((entry) => ({
+      code: entry.code,
+      label: entry.label,
+      count: 0,
+    })),
+    DISCOVERY_FILTER_LANGUAGES
+  );
 
   function addDraftTag() {
     const value = draftTag.trim().replace(/^#+/, "");
@@ -719,6 +738,7 @@ export function ContentSearchField({ filters, onChange }: FieldProps) {
           onDraftChange={setDraftContentLanguage}
           placeholder="ISO code e.g. en"
           label="Content language code"
+          languageOptions={languageOptions}
         />
       </FieldGroup>
     </>
@@ -950,6 +970,7 @@ export function LocationField({
   filters,
   onChange,
   countrySuggestions,
+  languageSuggestions,
 }: FieldProps) {
   const [draftCountry, setDraftCountry] = useState("");
   const [draftLanguage, setDraftLanguage] = useState("");
@@ -960,6 +981,14 @@ export function LocationField({
       count: 0,
     })),
     DISCOVERY_FILTER_COUNTRIES
+  );
+  const languageOptions = mergeLanguageFacetOptions(
+    (languageSuggestions ?? []).map((entry) => ({
+      code: entry.code,
+      label: entry.label,
+      count: 0,
+    })),
+    DISCOVERY_FILTER_LANGUAGES
   );
 
   return (
@@ -986,6 +1015,7 @@ export function LocationField({
           onDraftChange={setDraftLanguage}
           placeholder="ISO code e.g. en"
           label="Creator language code"
+          languageOptions={languageOptions}
         />
       </FieldGroup>
       <FieldGroup label="Verification">
@@ -1011,7 +1041,7 @@ export function CategoryField({
   const [draftCategory, setDraftCategory] = useState("");
   const categoryOptions = mergeCategoryFacetLabels(
     (categorySuggestions ?? []).map((label) => ({ label, count: 1 })),
-    QUICK_CATEGORIES
+    CREATOR_CATEGORY_LABELS
   );
 
   function addDraftCategory() {

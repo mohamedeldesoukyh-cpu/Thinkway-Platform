@@ -52,6 +52,8 @@ type Props = {
   categorySuggestions?: string[];
   /** Live catalog countries; merges with seed MENA/global pills. */
   countrySuggestions?: Array<{ code: string; label: string }>;
+  /** Live catalog languages; merges with seed language pills. */
+  languageSuggestions?: Array<{ code: string; label: string }>;
 };
 
 export function CreatorSearchFilterPanel({
@@ -63,6 +65,7 @@ export function CreatorSearchFilterPanel({
   loading,
   categorySuggestions,
   countrySuggestions,
+  languageSuggestions,
 }: Props) {
   const [draftFilters, setDraftFilters] = useState(() =>
     cloneCreatorSearchFilters(filters),
@@ -145,6 +148,7 @@ export function CreatorSearchFilterPanel({
           filters={draftFilters}
           onChange={setDraftFilters}
           countrySuggestions={countrySuggestions}
+          languageSuggestions={languageSuggestions}
         />
       </DiscoveryFilterDrawerSection>
 
@@ -155,7 +159,11 @@ export function CreatorSearchFilterPanel({
         count={sectionCounts.search}
         onClearSection={() => clearSection("search")}
       >
-        <ContentSearchField filters={draftFilters} onChange={setDraftFilters} />
+        <ContentSearchField
+          filters={draftFilters}
+          onChange={setDraftFilters}
+          languageSuggestions={languageSuggestions}
+        />
       </DiscoveryFilterDrawerSection>
 
       <DiscoveryFilterDrawerSection

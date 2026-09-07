@@ -219,6 +219,9 @@ export function CreatorSearchWorkspace({
   const [filterCountries, setFilterCountries] = useState<
     Array<{ code: string; label: string }>
   >([]);
+  const [filterLanguages, setFilterLanguages] = useState<
+    Array<{ code: string; label: string }>
+  >([]);
   const [filters, setFilters] = useState<CreatorSearchFilters>(() => initialFiltersFromUrl);
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [sort, setSort] = useState<CreatorSearchSortState>(DEFAULT_CREATOR_SEARCH_SORT);
@@ -1329,6 +1332,7 @@ export function CreatorSearchWorkspace({
       setTaxonomyTerms(chrome.searchTaxonomyTerms);
       setFilterCategoryLabels(chrome.filterCategoryLabels);
       setFilterCountries(chrome.filterCountries);
+      setFilterLanguages(chrome.filterLanguages);
     });
     return () => {
       cancelled = true;
@@ -1353,6 +1357,7 @@ export function CreatorSearchWorkspace({
       void loadCreatorSearchChromeAction({ forceFacets: true }).then((chrome) => {
         setFilterCategoryLabels(chrome.filterCategoryLabels);
         setFilterCountries(chrome.filterCountries);
+        setFilterLanguages(chrome.filterLanguages);
         setShortlists(chrome.shortlists);
         setCampaigns(chrome.campaigns);
         setTaxonomyTerms(chrome.searchTaxonomyTerms);
@@ -1760,6 +1765,12 @@ export function CreatorSearchWorkspace({
       const next = new Map(prev);
       next.set(creator.unified_id, creator);
       return next;
+    });
+
+    void loadCreatorSearchChromeAction({ forceFacets: true }).then((chrome) => {
+      setFilterCategoryLabels(chrome.filterCategoryLabels);
+      setFilterCountries(chrome.filterCountries);
+      setFilterLanguages(chrome.filterLanguages);
     });
   }
 
@@ -2491,6 +2502,7 @@ export function CreatorSearchWorkspace({
             loading={loading || isPending}
             categorySuggestions={filterCategoryLabels}
             countrySuggestions={filterCountries}
+            languageSuggestions={filterLanguages}
           />
       </DiscoveryFilterSheet>
 

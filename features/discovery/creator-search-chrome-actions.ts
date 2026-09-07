@@ -24,5 +24,9 @@ export async function loadCreatorSearchChromeAction(options?: {
       code: row.code,
       label: row.label,
     })),
+    filterLanguages: facets.languages.map((row) => ({
+      code: row.code,
+      label: row.label,
+    })),
   };
 }
