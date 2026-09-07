@@ -40,6 +40,10 @@ import {
   withCreatorSearchFollowerRanges,
   type CreatorSearchFilters,
 } from "./creator-search-types";
+import {
+  filterFacetOptionsByDraft,
+  resolveFacetDraftToOption,
+} from "./creator-search-filter-typeahead";
 
 type FieldProps = {
   filters: CreatorSearchFilters;
@@ -120,6 +124,7 @@ function ExpandableChipGrid<T>({
   previewCount = FILTER_CHIP_PREVIEW_COUNT,
   getKey,
   renderChip,
+  forceExpanded = false,
 }: {
   items: readonly T[];
   previewCount?: number;
@@ -127,12 +132,15 @@ function ExpandableChipGrid<T>({
   /** Retained at call sites for filter semantics; truncation stays positional per spec §7. */
   isHighlighted?: (item: T) => boolean;
   renderChip: (item: T) => ReactNode;
+  /** When true (e.g. typeahead active), show the full match list. */
+  forceExpanded?: boolean;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const visibleItems = expanded ? items : items.slice(0, previewCount);
+  const showAll = forceExpanded || expanded;
+  const visibleItems = showAll ? items : items.slice(0, previewCount);
   const hiddenCount = Math.max(0, items.length - previewCount);
 
-  if (items.length <= previewCount) {
+  if (items.length <= previewCount || forceExpanded) {
     return (
       <div className="tw-fchips">
         {items.map((item) => (
@@ -437,6 +445,12 @@ function CountryPillGrid({
   // Only draft/custom codes above the grid — options stay as toggle chips (no Egypt×2).
   const optionCodes = new Set(countryOptions.map((entry) => entry.code));
   const customSelected = selected.filter((code) => !optionCodes.has(code));
+  const visibleOptions = filterFacetOptionsByDraft(
+    countryOptions,
+    draft,
+    (entry) => `${entry.label} ${entry.code}`
+  );
+  const typeaheadActive = draft.trim().length > 0;
 
   return (
     <>
@@ -452,6 +466,8 @@ function CountryPillGrid({
           }}
           placeholder={placeholder}
           className="flex-1"
+          autoComplete="off"
+          spellCheck={false}
         />
         <button
           type="button"
@@ -477,9 +493,15 @@ function CountryPillGrid({
           ))}
         </div>
       ) : null}
+      {typeaheadActive && visibleOptions.length === 0 ? (
+        <p className="mb-2 text-[11px] text-[#64748b]">
+          No matching countries — press + to add {draft.trim().toUpperCase()}
+        </p>
+      ) : null}
       <ExpandableChipGrid
-        items={[...countryOptions]}
+        items={visibleOptions}
         previewCount={6}
+        forceExpanded={typeaheadActive}
         getKey={({ code }) => code}
         isHighlighted={({ code }) => selected.includes(code)}
         renderChip={({ code, label }) => (
@@ -532,6 +554,12 @@ function LanguagePillGrid({
   const customSelected = selected.filter(
     (code) => !optionCodes.has(code.toLowerCase())
   );
+  const visibleOptions = filterFacetOptionsByDraft(
+    languageOptions,
+    draft,
+    (entry) => `${entry.label} ${entry.code}`
+  );
+  const typeaheadActive = draft.trim().length > 0;
 
   return (
     <>
@@ -548,6 +576,8 @@ function LanguagePillGrid({
           placeholder={placeholder}
           className="flex-1"
           aria-label={label ?? "Language code"}
+          autoComplete="off"
+          spellCheck={false}
         />
         <button
           type="button"
@@ -573,9 +603,15 @@ function LanguagePillGrid({
           ))}
         </div>
       ) : null}
+      {typeaheadActive && visibleOptions.length === 0 ? (
+        <p className="mb-2 text-[11px] text-[#64748b]">
+          No matching languages — press + to add {draft.trim().toLowerCase()}
+        </p>
+      ) : null}
       <ExpandableChipGrid
-        items={[...languageOptions]}
+        items={visibleOptions}
         previewCount={6}
+        forceExpanded={typeaheadActive}
         getKey={({ code }) => code}
         isHighlighted={({ code }) =>
           selected.some((entry) => entry.toLowerCase() === code.toLowerCase())
@@ -1043,9 +1079,15 @@ export function CategoryField({
     (categorySuggestions ?? []).map((label) => ({ label, count: 1 })),
     CREATOR_CATEGORY_LABELS
   );
+  const visibleOptions = filterFacetOptionsByDraft(
+    categoryOptions,
+    draftCategory,
+    (label) => label
+  );
+  const typeaheadActive = draftCategory.trim().length > 0;
 
   function addDraftCategory() {
-    const value = draftCategory.trim();
+    const value = resolveFacetDraftToOption(draftCategory, categoryOptions);
     if (!value) return;
     if (
       filters.categories.some(
@@ -1079,8 +1121,10 @@ export function CategoryField({
                 addDraftCategory();
               }
             }}
-            placeholder="Add category…"
+            placeholder="Search or add category…"
             className="flex-1"
+            autoComplete="off"
+            spellCheck={false}
           />
           <button
             type="button"
@@ -1119,9 +1163,15 @@ export function CategoryField({
             ))}
           </div>
         ) : null}
+        {typeaheadActive && visibleOptions.length === 0 ? (
+          <p className="mb-2 text-[11px] text-[#64748b]">
+            No matching categories — press + to add “{draftCategory.trim()}”
+          </p>
+        ) : null}
         <ExpandableChipGrid
-          items={categoryOptions}
+          items={visibleOptions}
           previewCount={8}
+          forceExpanded={typeaheadActive}
           getKey={(category) => category}
           isHighlighted={(category) =>
             filters.categories.some(
@@ -1279,8 +1329,10 @@ export function AudienceField({
                 addDraftInterest();
               }
             }}
-            placeholder="Add topic…"
+            placeholder="Search or add topic…"
             className="flex-1"
+            autoComplete="off"
+            spellCheck={false}
           />
           <button
             type="button"
@@ -1312,8 +1364,13 @@ export function AudienceField({
           </div>
         ) : null}
         <ExpandableChipGrid
-          items={QUICK_INTERESTS}
+          items={filterFacetOptionsByDraft(
+            QUICK_INTERESTS,
+            draftInterest,
+            (interest) => interest
+          )}
           previewCount={4}
+          forceExpanded={draftInterest.trim().length > 0}
           getKey={(interest) => interest}
           isHighlighted={(interest) =>
             filters.audienceInterestTags.some(
