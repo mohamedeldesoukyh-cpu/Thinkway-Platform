@@ -1,8 +1,13 @@
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { creatorListRowEquivalent } from "@/lib/creators/creator-list-row-equivalent";
+import { normalizeDiscoverySearchText } from "@/lib/discovery/discovery-search-normalize";
 import { parseProfileInput } from "@/lib/social/parse-profile-url";
 
-/** Convert pasted profile URLs/handles into a searchable @handle query. */
+/**
+ * Convert pasted profile URLs/handles into a searchable @handle query.
+ * Non-URL thematic queries get Phase 3A Arabic/English text normalization
+ * (diacritics / variants / punctuation) — no synonym OR expansion here.
+ */
 export function normalizeDiscoverySearchQuery(input: string): string {
   const trimmed = typeof input === "string" ? input.trim() : "";
   if (!trimmed) return trimmed;
@@ -10,7 +15,7 @@ export function normalizeDiscoverySearchQuery(input: string): string {
   const parsed = parseProfileInput(trimmed);
   if (parsed) return `@${parsed.normalized_username}`;
 
-  return trimmed;
+  return normalizeDiscoverySearchText(trimmed);
 }
 
 /**

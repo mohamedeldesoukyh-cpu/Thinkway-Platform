@@ -67,6 +67,7 @@ import {
   isExactCreatorLookupSearch,
   normalizeDiscoverySearchQuery,
 } from "@/lib/discovery/creator-search-query";
+import { prepareDiscoverySearchQuery } from "@/lib/discovery/discovery-search-expand";
 import {
   formatCreatorBio,
   formatCreatorDisplayName,
@@ -1913,11 +1914,14 @@ async function resolveCreatorSearchHits(
   tracePath: SearchTracePath = "unknown",
   options?: { allowHandleFallback?: boolean }
 ): Promise<CreatorSearchHitsResult> {
-  const normalizedQuery = normalizeDiscoverySearchQuery(search);
-  const exactLookup = isExactCreatorLookupSearch(search);
-  // Exact URL/@handle: small page + prefer normalized handle for the RPC.
-  const effectiveQuery =
-    exactLookup && normalizedQuery ? normalizedQuery : search;
+  // Phase 3A: normalize (+ deterministic alias/transliteration OR) before FTS.
+  // Exact @handle / profile URL lookups stay unexpanded.
+  const prepared = prepareDiscoverySearchQuery(search);
+  const normalizedQuery = prepared.normalized || normalizeDiscoverySearchQuery(search);
+  const exactLookup = prepared.exactLookup || isExactCreatorLookupSearch(search);
+  const effectiveQuery = exactLookup
+    ? normalizedQuery || search
+    : prepared.rpcQuery || search;
   const effectiveLimit = exactLookup ? Math.min(pageSize, 12) : pageSize;
   const allowHandleFallback = options?.allowHandleFallback !== false && offset === 0;
 
@@ -1930,7 +1934,29 @@ async function resolveCreatorSearchHits(
   );
   if (response.hits.length > 0 || !search) return response;
 
-  if (normalizedQuery && normalizedQuery !== search.trim() && !exactLookup) {
+  // Retry with normalized primary (no OR) when expanded query returned empty.
+  if (
+    !exactLookup &&
+    prepared.expanded &&
+    normalizedQuery &&
+    normalizedQuery !== effectiveQuery
+  ) {
+    response = await searchCreators(
+      supabase,
+      normalizedQuery,
+      pageSize,
+      offset,
+      tracePath
+    );
+    if (response.hits.length > 0) return response;
+  }
+
+  if (
+    normalizedQuery &&
+    normalizedQuery !== search.trim() &&
+    normalizedQuery !== effectiveQuery &&
+    !exactLookup
+  ) {
     response = await searchCreators(supabase, normalizedQuery, pageSize, offset, tracePath);
     if (response.hits.length > 0) return response;
   }
