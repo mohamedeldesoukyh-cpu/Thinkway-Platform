@@ -87,7 +87,11 @@ import {
   getDiscoveryCoverageConfig,
   type DiscoveryCoverageIntent,
 } from "@/lib/creators/discovery-coverage";
-import { sortUnifiedCreatorsByDiscoveryRank } from "@/lib/creators/unified-ranking";
+import {
+  sortCreatorsForCategoryFill,
+  sortCreatorsForFilteredFastFill,
+  sortCreatorsForFtsFill,
+} from "@/lib/creators/unified-ranking";
 import { hydrateCreatorsWithDna, loadCanonicalDnaByInfluencerIds } from "@/lib/creators/dna-browse-hydration";
 import { extractDnaAvatarUrl } from "@/lib/creators/dna-avatar";
 import { compareBrowseRecencyDesc } from "@/lib/creators/last-enriched-sort";
@@ -815,7 +819,15 @@ async function browseFilteredFastFillPage(
       };
     },
     applyFilters: (creators) => applyPostBrowseFilters(creators, filters, tracePath),
-    sort: (creators) => sortBrowseCreatorsInDefaultOrder(creators),
+    // Phase 2: rank AFTER fill accumulate (sort callback), BEFORE page slice.
+    // Egypt/default pin order remains the retrieval prior.
+    sort: (creators) =>
+      sortCreatorsForFilteredFastFill(creators, {
+        intent: {
+          ...coverageIntentFromBrowseFilters(filters),
+          ...(filters.coverageIntent ?? {}),
+        },
+      }),
   });
 
   searchTrace(
@@ -938,12 +950,15 @@ async function browseFtsFillPage(
       next = dedupeSearchResultsByHandle(next);
       return next;
     },
+    // Phase 2: FTS search_rank remains the strongest prior; Discovery Rank v2
+    // reorders within / across soft quality signals after fill accumulate.
     sort: (creators) =>
-      [...creators].sort(
-        (a, b) =>
-          (b.search_rank ?? 0) - (a.search_rank ?? 0) ||
-          a.display_name.localeCompare(b.display_name)
-      ),
+      sortCreatorsForFtsFill(creators, {
+        intent: {
+          ...coverageIntentFromBrowseFilters(filters),
+          ...(filters.coverageIntent ?? {}),
+        },
+      }),
   });
 
   const total = resolveCreatorBrowseFtsFillTotal({
@@ -1057,8 +1072,15 @@ async function browseCategoryFillPage(
       };
     },
     applyFilters: (creators) => applyPostBrowseFilters(creators, filters, tracePath),
-    // Preserve first-seen (category RPC) order — do not re-rank with Egypt pin tiers.
-    sort: (creators) => creators,
+    // Phase 2: Discovery Rank v2 with first-seen (category RPC) order as
+    // tie-breaker. No Egypt pin on category path.
+    sort: (creators) =>
+      sortCreatorsForCategoryFill(creators, {
+        intent: {
+          ...coverageIntentFromBrowseFilters(filters),
+          ...(filters.coverageIntent ?? {}),
+        },
+      }),
   });
 
   searchTrace(
@@ -2210,7 +2232,21 @@ function traceBrowseUnifiedResult(
       ...coverageIntentFromBrowseFilters(filters ?? {}),
       ...(filters?.coverageIntent ?? {}),
     };
-    creators = sortUnifiedCreatorsByDiscoveryRank(creators, coverageIntent);
+    // Phase 2: path-aware ranking — must not destroy FTS search_rank prior or
+    // apply Egypt pin to category pages. Unfiltered / filtered-fast keep pin prior.
+    const hasFtsRank = creators.some(
+      (creator) => creator.search_rank != null && Number.isFinite(creator.search_rank)
+    );
+    const categoryOnly =
+      !filters?.search?.trim() && resolveBrowseCategories(filters ?? {}).length > 0;
+
+    if (hasFtsRank) {
+      creators = sortCreatorsForFtsFill(creators, { intent: coverageIntent });
+    } else if (categoryOnly) {
+      creators = sortCreatorsForCategoryFill(creators, { intent: coverageIntent });
+    } else {
+      creators = sortCreatorsForFilteredFastFill(creators, { intent: coverageIntent });
+    }
   }
 
   const normalized: UnifiedCreatorBrowseResult = {
