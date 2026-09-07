@@ -1,3 +1,4 @@
+import { isAllowedPublicationPreviewSrcUrl } from "@/lib/creators/publication-preview-proxy";
 import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
 import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
 
@@ -66,6 +67,27 @@ export function isReviewMediaUrlAllowed(
       allowlistedReviewMediaUrl(allowlist, postUrl) ||
       allowlistedReviewMediaUrl(allowlist, profileUrl)
   );
+}
+
+/**
+ * Snapshot allowlists freeze exact CDN URLs. Instagram/TikTok signed thumbs rotate,
+ * so when the review already authorizes the post/profile, accept any SSRF-safe CDN src.
+ */
+export function resolveAllowedReviewMediaSrc(
+  allowlist: Set<string>,
+  src?: string | null,
+  postUrl?: string | null,
+  profileUrl?: string | null
+): string | null {
+  const exact = allowlistedReviewMediaUrl(allowlist, src);
+  if (exact) return exact;
+  const trimmed = src?.trim() || "";
+  if (!trimmed) return null;
+  const postOk = Boolean(allowlistedReviewMediaUrl(allowlist, postUrl));
+  const profileOk = Boolean(allowlistedReviewMediaUrl(allowlist, profileUrl));
+  if (!(postOk || profileOk)) return null;
+  if (!isAllowedPublicationPreviewSrcUrl(trimmed)) return null;
+  return normalizeMediaUrl(trimmed) || trimmed;
 }
 
 export function clientReviewMediaPath(

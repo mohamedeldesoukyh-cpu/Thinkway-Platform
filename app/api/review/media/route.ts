@@ -11,6 +11,7 @@ import { resolveClientReviewByToken } from "@/features/client-workspace/load-cli
 import {
   allowlistedReviewMediaUrl,
   isReviewMediaUrlAllowed,
+  resolveAllowedReviewMediaSrc,
   reviewMediaAllowlist,
 } from "@/features/client-workspace/review-media";
 
@@ -51,9 +52,9 @@ export async function GET(request: Request) {
   if (!isReviewMediaUrlAllowed(allowlist, src, postUrl, profileUrl)) {
     return NextResponse.json({ error: "Preview unavailable." }, { status: 404 });
   }
-  const allowedSrc = allowlistedReviewMediaUrl(allowlist, src);
   const allowedPostUrl = allowlistedReviewMediaUrl(allowlist, postUrl);
   const allowedProfileUrl = allowlistedReviewMediaUrl(allowlist, profileUrl);
+  const allowedSrc = resolveAllowedReviewMediaSrc(allowlist, src, postUrl, profileUrl);
 
   if (kind === "avatar") {
     if (!allowedSrc && !allowedProfileUrl) {

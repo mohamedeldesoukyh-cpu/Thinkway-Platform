@@ -61,7 +61,7 @@ import { projectMediaPlanSummary, projectSelectionSummaryFromCards } from "./med
 import { briefFromSnapshotCreator, mergeFrozenBrief, needsClientBriefBackfill } from "./creator-brief";
 import { applyCrmCreatorProfile, applyLiveCreatorProfile, creatorProfileSyncFingerprint, enrichSnapshotCreatorFromUnified, mixPostsForDeliverables, optionalMetric, preferAvatarUrl, profileUrlFromHandle, resolveContentPostPlatform, shouldReplaceContentFeed } from "./creator-snapshot";
 import { breakdownForCreator, creatorPlatformBreakdown, creatorProfileLinks, dropClonedImportedEngagementRates, engagementMetersForBreakdown, avatarProfileUrlForReview } from "./platform-breakdown";
-import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, reviewMediaAllowlist } from "./review-media";
+import { clientReviewAvatarUrl, isReviewMediaUrlAllowed, resolveAllowedReviewMediaSrc, reviewMediaAllowlist } from "./review-media";
 import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
 import { diffClientReviewSnapshots, diffShortlistToQuotation, retainCreatorBriefs } from "./snapshot-diff";
 import {
@@ -1546,6 +1546,18 @@ test("review media proxy only allows URLs frozen on the snapshot", () => {
   assert.equal(
     isReviewMediaUrlAllowed(allow, "https://evil.example/x.jpg", "https://www.instagram.com/p/ABC/"),
     true
+  );
+  assert.equal(
+    resolveAllowedReviewMediaSrc(
+      allow,
+      "https://scontent.cdninstagram.com/v/t51.rotated.jpg?_nc_cat=1",
+      "https://www.instagram.com/p/ABC/"
+    ),
+    "https://scontent.cdninstagram.com/v/t51.rotated.jpg?_nc_cat=1"
+  );
+  assert.equal(
+    resolveAllowedReviewMediaSrc(allow, "https://evil.example/x.jpg", "https://www.instagram.com/p/ABC/"),
+    null
   );
   assert.equal(
     isReviewMediaUrlAllowed(allow, null, null, "https://www.instagram.com/radwaadeeel/"),

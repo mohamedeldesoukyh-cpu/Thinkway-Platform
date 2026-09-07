@@ -439,7 +439,7 @@ export function CreatorsWorkspace({
           ) : null}
         </div>
 
-        {selected ? (
+        {selected && showDetail ? (
           <CreatorDetailPane
             creator={{
               ...selected,
@@ -453,7 +453,7 @@ export function CreatorsWorkspace({
             pending={pending}
             note={note}
             onNoteChange={setNote}
-            show={showDetail}
+            show
             onBack={closeSheet}
             onAccept={() => decide(selected, nextAcceptState(selection[selected.creatorId] ?? selected.selection))}
             onReject={() => decide(selected, "rejected", note.trim() || undefined)}
@@ -480,7 +480,7 @@ export function CreatorsWorkspace({
             pendingCommercialApproval={pendingIds.has(selected.creatorId)}
             showOriginalCurrency={showOriginalCurrency}
           />
-        ) : (
+        ) : viewport === "mobile" ? null : (
           <div className="detail">
             <div className="empty">
               <p style={{ marginTop: 12, fontWeight: 600, color: "var(--ink)" }}>Select a creator</p>

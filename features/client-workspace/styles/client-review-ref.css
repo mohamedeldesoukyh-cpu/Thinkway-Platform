@@ -257,6 +257,10 @@
 }
 .tw-review .del-chip b{font-family:"Geist Mono",monospace;font-size:10px;color:var(--muted);}
 .tw-review .sec .dels{margin:0 0 10px;}
+.tw-review .posts-feat .post,
+.tw-review .posts .post{
+  background:linear-gradient(145deg,#e8edf5 0%,#f4f6fb 55%,#dfe6f2 100%);
+}
 .tw-review .posts-feat .post .plat-badge,
 .tw-review .posts .post .plat-badge{
   position:absolute;top:8px;left:8px;z-index:3;
@@ -294,7 +298,12 @@
     position:fixed;inset:0;z-index:95;max-height:none;border-radius:0;border:none;
     transform:translateX(100%);transition:transform .26s ease;box-shadow:none;
   }
-  .tw-review .detail.show{transform:none;}
+  .tw-review .detail:not(.show){
+    display:none !important;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .tw-review .detail.show{display:block;transform:none;visibility:visible;pointer-events:auto;}
 }
 
 .tw-review .dt-acts .btn.ok{
@@ -1070,7 +1079,14 @@
     position:fixed;inset:0;z-index:95;max-height:none;border-radius:0;border:none;
     transform:translateX(100%);transition:transform .26s ease;box-shadow:none;
   }
-  .tw-review .detail.show{transform:none;}
+  /* Closed sheets must not paint a full-screen white layer over the creator list
+     (iOS/WebKit can keep fixed+overflow ancestors visually covering siblings). */
+  .tw-review .detail:not(.show){
+    display:none !important;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .tw-review .detail.show{display:block;transform:none;visibility:visible;pointer-events:auto;}
   .tw-review .dhead{
     position:sticky;top:0;z-index:2;background:#fff;
     padding-top:max(12px, env(safe-area-inset-top));
@@ -1079,6 +1095,8 @@
   .tw-review .dhead .x{display:none;}
   .tw-review .cc .photo,
   .tw-review .cc .av{width:88px;}
+  .tw-review .clist{display:flex;flex-direction:column;gap:12px;min-width:0;width:100%;}
+  .tw-review .layout{min-width:0;}
 }
 @media(max-width:420px){
   .tw-review .kpis{grid-template-columns:1fr 1fr;}
