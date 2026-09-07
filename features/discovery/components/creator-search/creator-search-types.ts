@@ -6,7 +6,8 @@ import { countryLabel, languageLabel, LAST_POST_WITHIN_OPTIONS } from "./creator
 import type { CampaignSearchCriterion } from "@/features/campaign-intelligence-profile/types/profile";
 import type { DiscoverySearchFilterKey } from "@/features/campaign-intelligence-profile/services/discovery-search-mapping/types";
 import {
-  formatFollowerRangesChipLabel,
+  formatFollowerRangeChipLabel,
+  followerRangeKey,
   normalizeFollowerRanges,
   resolveCreatorSearchFollowerRanges,
   toBrowseFollowerRanges,
@@ -381,12 +382,20 @@ export function buildActiveFilterChips(
     });
   }
   const followerBands = resolveCreatorSearchFollowerRanges(filters);
-  if (followerBands.length > 0) {
+  for (const band of followerBands) {
+    const remaining = followerBands.filter(
+      (other) => followerRangeKey(other) !== followerRangeKey(band)
+    );
+    const synced = withCreatorSearchFollowerRanges(filters, remaining);
     chips.push({
-      id: "followers",
-      label: formatFollowerRangesChipLabel(followerBands),
+      id: `followers:${followerRangeKey(band)}`,
+      label: formatFollowerRangeChipLabel(band),
       section: "performance",
-      clear: { followerRanges: [], minFollowers: "", maxFollowers: "" },
+      clear: {
+        followerRanges: synced.followerRanges,
+        minFollowers: synced.minFollowers,
+        maxFollowers: synced.maxFollowers,
+      },
     });
   }
   if (filters.minEngagement) {

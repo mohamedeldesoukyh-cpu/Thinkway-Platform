@@ -2,6 +2,8 @@
  * Creator Search follower bands — single range or multi-select OR of bands.
  */
 
+import { TIER_FILTER_RANGES } from "@/lib/creators/influencer-tier";
+
 export type CreatorSearchFollowerRange = {
   /** Inclusive lower bound (digits as string for filter state). */
   min: string;
@@ -156,15 +158,26 @@ export function followerCountMatchesBrowseRanges(
   });
 }
 
+/** Single-band chip label; prefer tier preset name when the band matches a preset. */
+export function formatFollowerRangeChipLabel(range: CreatorSearchFollowerRange): string {
+  const min = Number(range.min);
+  const max = range.max.trim() === "" ? null : Number(range.max);
+  const preset = TIER_FILTER_RANGES.find(
+    (entry) =>
+      entry.min === min &&
+      (entry.max == null ? max == null : entry.max === max)
+  );
+  if (preset) return `Followers: ${preset.label}`;
+  if (max == null) return `Followers: ${min.toLocaleString()}+`;
+  return `Followers: ${min.toLocaleString()}–${max.toLocaleString()}`;
+}
+
 export function formatFollowerRangesChipLabel(
   ranges: ReadonlyArray<CreatorSearchFollowerRange>
 ): string {
   if (ranges.length === 0) return "Followers";
-  const parts = ranges.map((range) => {
-    if (!range.max) return `${Number(range.min).toLocaleString()}+`;
-    return `${Number(range.min).toLocaleString()}–${Number(range.max).toLocaleString()}`;
-  });
-  return `Followers: ${parts.join(", ")}`;
+  if (ranges.length === 1) return formatFollowerRangeChipLabel(ranges[0]!);
+  return `Followers: ${ranges.map((range) => formatFollowerRangeChipLabel(range).replace(/^Followers:\s*/, "")).join(", ")}`;
 }
 
 /** Toggle a preset band in the multi-select list (add if absent, remove if present). */

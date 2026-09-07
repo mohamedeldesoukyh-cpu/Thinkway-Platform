@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  buildActiveFilterChips,
   filtersToBrowseParams,
   withCreatorSearchFollowerRanges,
   cloneCreatorSearchFilters,
@@ -108,4 +109,19 @@ test("legacy min/max URL still resolves to one band", () => {
   assert.deepEqual(resolveBrowseFollowerRanges(filtersToBrowseParams(filters, 1, 24)), [
     { min: 10_000, max: 99_999 },
   ]);
+});
+
+test("active filter chips emit one removable card per follower band", () => {
+  const filters = withCreatorSearchFollowerRanges(cloneCreatorSearchFilters(), [
+    { min: "10000", max: "99999" },
+    { min: "500000", max: "999999" },
+  ]);
+  const chips = buildActiveFilterChips(filters).filter((chip) =>
+    String(chip.id).startsWith("followers:")
+  );
+  assert.equal(chips.length, 2);
+  assert.match(chips[0]!.label, /Followers:/);
+  assert.match(chips[1]!.label, /Followers:/);
+  assert.equal(chips[0]!.clear.followerRanges?.length, 1);
+  assert.equal(chips[1]!.clear.followerRanges?.length, 1);
 });
