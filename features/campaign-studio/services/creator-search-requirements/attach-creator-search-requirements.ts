@@ -135,3 +135,35 @@ export async function resolveValidatedIntelligenceForProfile(
     return undefined;
   }
 }
+
+/**
+ * Minimal structural view of workflow state — avoids importing the workflow
+ * engine's types (and its module graph) into the CSR module.
+ */
+export type ValidatedIntelligenceStateCarrier = { data: Record<string, unknown> };
+
+/**
+ * Workflow-state contract: whenever `campaignIntelligenceProfileId` is present,
+ * `validatedCampaignIntelligence` must hold the canonical validated intelligence
+ * for that same profile, so the downstream synchronous CSR attachment receives it.
+ *
+ * Resolves at most once per profile id — `validatedCampaignIntelligenceProfileId`
+ * records which profile the stored value belongs to, so a resume issues no query
+ * when the value is already current, and a profile that changes mid-workflow is
+ * re-resolved instead of going stale. Never throws.
+ */
+export async function hydrateValidatedIntelligenceOnState(
+  state: ValidatedIntelligenceStateCarrier,
+  supabase: SupabaseClient | undefined,
+  profileId: string | null | undefined
+): Promise<void> {
+  const id = typeof profileId === "string" ? profileId.trim() : "";
+  if (!supabase || !id) return;
+  if (state.data.validatedCampaignIntelligenceProfileId === id) return;
+
+  state.data.validatedCampaignIntelligence = await resolveValidatedIntelligenceForProfile(
+    supabase,
+    id
+  );
+  state.data.validatedCampaignIntelligenceProfileId = id;
+}
