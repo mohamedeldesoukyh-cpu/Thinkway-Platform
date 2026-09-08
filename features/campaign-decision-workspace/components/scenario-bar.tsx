@@ -37,7 +37,7 @@ export function ScenarioBar({ workspace, className }: ScenarioBarProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 overflow-x-auto rounded-xl border border-border/60 bg-muted/20 px-2 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
+        "cs-scn-bar flex items-center gap-1.5 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden",
         className
       )}
       role="tablist"
@@ -125,17 +125,23 @@ function ScenarioChip({
       aria-selected={selected}
       onClick={onClick}
       className={cn(
-        "inline-flex h-7 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[11px] font-medium transition-colors",
+        "cs-scn",
+        selected && "on",
+        "inline-flex !grid-cols-none h-auto shrink-0 !flex-row items-center gap-2 !border-0 !px-3 !py-2",
         STUDIO_CLASSES.focusRingInset,
         selected
-          ? "border-brand-product/50 bg-brand-product/10 text-brand-product"
-          : "border-border/60 bg-background text-foreground hover:border-brand-product/30 hover:bg-brand-product/5"
+          ? "bg-[#EFF4FF] text-[#0B52E0]"
+          : "bg-background text-foreground hover:bg-[#EFF4FF]/60"
       )}
     >
-      {label}
-      {score != null ? (
-        <span className="tabular-nums text-[10px] opacity-80">{score}</span>
-      ) : null}
+      <span className="min-w-0">
+        <b className="block truncate text-[13px]">{label}</b>
+        {score != null ? (
+          <p className="m-0 text-[11px] text-[#64748B]">Score {score}</p>
+        ) : (
+          <p className="m-0 text-[11px] text-[#64748B]">Create scenario</p>
+        )}
+      </span>
     </button>
   );
 }

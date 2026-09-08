@@ -1,7 +1,17 @@
 # Prompt Summary — Current Sprint
 
 **Branch:** `develop` · Production `main`  
-**Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
+**Focus:** Campaign Mode Studio visual refresh (Architecture Reopen approved) + Discovery pack.
+
+## In progress 2026-09-08 — Campaign Mode Studio visual refresh
+
+**Approved reopen:** Campaign Mode Studio workspace only — map `docs/architecture/studio-specs/campaign-studio.html` onto existing Studio (no engines/SSOTs/nav/Workspace OS changes).  
+**Mapping:** `docs/architecture/studio-specs/CAMPAIGN_STUDIO_VISUAL_REFRESH_MAPPING.md`  
+**Hierarchy:** **APPROVED · FROZEN** (mast → mode tabs → body).  
+**Polish:** Implemented (uncommitted) — mast/tabs/rail/doc/review/Outputs/Director/Decision/responsive CSS + class-only chrome tweaks. Awaiting Product review of polish shots before commit/deploy.  
+**QA:** `tsc --noEmit` pass; local `next build` blocked by Windows SWC policy; Vercel preview build OK.  
+**Preview:** `/dev/campaign-mode-hierarchy` · shots `docs/architecture/studio-specs/review-shots/polish-*.png`  
+**Engines/SSOTs/handlers:** untouched.
 
 ## Shipped 2026-09-08 — Client review mobile cards + frozen tabs
 

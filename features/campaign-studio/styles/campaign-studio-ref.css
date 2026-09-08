@@ -2022,3 +2022,1384 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ===== Campaign Mode Studio visual refresh (prototype campaign-studio.html) ===== */
+
+.campaign-studio-ref.cs-studio-desktop {
+  --cs-bg: #fafbfc;
+  --cs-soft: #f6f8fb;
+  --cs-hair: #edf0f5;
+  --cs-line: #e2e8f0;
+  --cs-ink: #0b0f1a;
+  --cs-ink2: #41495a;
+  --cs-mut: #64748b;
+  --cs-bi: #0b52e0;
+  --cs-blue: #0057ff;
+  --cs-lavender: #eff4ff;
+  --cs-ok: #0a7a55;
+  --cs-wrn: #8a5d12;
+  --cs-bad: #c82121;
+  --cs-okb: #e9f7f1;
+  --cs-wrnb: #fff6e8;
+  --cs-badb: #fef2f2;
+  --cs-ring: 0 0 0 1px rgba(0, 87, 255, 0.05), 0 8px 24px rgba(0, 87, 255, 0.06);
+  --cs-ez: cubic-bezier(0.23, 1, 0.32, 1);
+  background:
+    radial-gradient(1100px 520px at 12% -8%, rgba(0, 87, 255, 0.055), transparent 62%),
+    radial-gradient(900px 460px at 92% 4%, rgba(91, 63, 209, 0.045), transparent 60%),
+    var(--cs-bg);
+}
+
+.campaign-studio-ref.cs-studio-desktop .cs-chrome-stack {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: transparent;
+  padding: 10px 16px 6px;
+  box-shadow: none;
+}
+
+.campaign-studio-ref .cs-frozen {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Masthead */
+.campaign-studio-ref .cs-mast {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: var(--cs-ring);
+}
+
+.campaign-studio-ref .cs-mast::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  background: linear-gradient(107deg, #0b3dbf 0%, #0f55e8 34%, #3d82ff 62%, #8fb6ff 100%);
+}
+
+.campaign-studio-ref .cs-mast::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: 34%;
+  top: -96px;
+  width: 196px;
+  height: 196px;
+  border-radius: 50%;
+  border: 30px solid rgba(255, 255, 255, 0.13);
+}
+
+.campaign-studio-ref .cs-mh {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 11px 15px 10px;
+  color: #fff;
+}
+
+.campaign-studio-ref .cs-hmk {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.campaign-studio-ref .cs-hmk i,
+.campaign-studio-ref .cs-hmk u {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.85);
+  text-decoration: none;
+}
+
+.campaign-studio-ref .cs-hmk u {
+  inset: 5px;
+  border-width: 2.5px;
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+.campaign-studio-ref .cs-hwd {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  color: #fff;
+}
+
+.campaign-studio-ref .cs-hwd em {
+  font-style: normal;
+  opacity: 0.72;
+}
+
+.campaign-studio-ref .cs-hdv {
+  width: 1px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.28);
+  margin: 0 2px;
+}
+
+.campaign-studio-ref .cs-mh .id {
+  font: 600 10px var(--font-geist-mono), "Geist Mono", monospace;
+  letter-spacing: 0.2px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+}
+
+.campaign-studio-ref .cs-mh h1 {
+  margin: 0;
+  font: 600 19px inherit;
+  letter-spacing: -0.5px;
+  color: #fff;
+  position: relative;
+  z-index: 1;
+}
+
+.campaign-studio-ref .cs-mh .sub {
+  font-size: 11.5px;
+  color: rgba(255, 255, 255, 0.74);
+  position: relative;
+  z-index: 1;
+}
+
+.campaign-studio-ref .cs-mh .st {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 600 10px inherit;
+  background: rgba(255, 255, 255, 0.18);
+  color: #fff;
+  position: relative;
+  z-index: 1;
+}
+
+.campaign-studio-ref .cs-mh .st.r {
+  background: #fff;
+  color: var(--cs-bad);
+}
+
+.campaign-studio-ref .cs-mh-actions {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1;
+}
+
+.campaign-studio-ref .cs-mh-btn {
+  height: 27px;
+  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0.8px solid rgba(255, 255, 255, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: 600 11.5px inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.campaign-studio-ref .cs-mh-btn:hover {
+  background: rgba(255, 255, 255, 0.26);
+}
+
+.campaign-studio-ref .cs-mh-btn.pri {
+  background: #fff;
+  border-color: #fff;
+  color: var(--cs-bi);
+  font-weight: 700;
+}
+
+.campaign-studio-ref .cs-mh-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+/* Mode tabs — Studio / Outputs / Director / Decision */
+.campaign-studio-ref .cs-step2 {
+  display: flex;
+  align-items: stretch;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--cs-ring);
+  padding: 3px;
+  margin: 0;
+  overflow-x: auto;
+}
+
+.campaign-studio-ref .cs-sb {
+  flex: 1 1 0;
+  min-width: 92px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 8px 5px 7px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  cursor: pointer;
+  position: relative;
+  font-family: inherit;
+}
+
+.campaign-studio-ref .cs-sb:hover {
+  background: var(--cs-soft);
+}
+
+.campaign-studio-ref .cs-sb[aria-pressed="true"] {
+  background: var(--cs-lavender);
+}
+
+.campaign-studio-ref .cs-sb__d {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 2px solid var(--cs-line);
+  background: #fff;
+  z-index: 1;
+}
+
+.campaign-studio-ref .cs-sb[aria-pressed="true"] .cs-sb__d {
+  background: var(--cs-blue);
+  border-color: var(--cs-blue);
+  box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.18);
+}
+
+.campaign-studio-ref .cs-sb__l {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font: 600 11.5px inherit;
+  color: var(--cs-mut);
+  white-space: nowrap;
+}
+
+.campaign-studio-ref .cs-sb[aria-pressed="true"] .cs-sb__l {
+  color: var(--cs-bi);
+}
+
+.campaign-studio-ref .cs-sb:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+/* Document wrap + planning rail */
+.campaign-studio-ref.cs-studio-desktop .cs-shell {
+  background: transparent;
+  display: block;
+  overflow: auto;
+}
+
+.campaign-studio-ref .cs-wrap {
+  display: grid;
+  grid-template-columns: 214px minmax(0, 1fr);
+  gap: 38px;
+  max-width: 1340px;
+  margin: 0 auto;
+  padding: 18px 24px 96px;
+}
+
+@media (max-width: 1080px) {
+  .campaign-studio-ref .cs-wrap {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+}
+
+.campaign-studio-ref .cs-rail4 {
+  position: sticky;
+  top: 12px;
+  align-self: start;
+}
+
+.campaign-studio-ref .cs-rail4-h {
+  font: 700 9.5px inherit;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--cs-mut);
+  margin: 0 0 14px;
+}
+
+.campaign-studio-ref .cs-stp {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  align-items: baseline;
+  padding: 10px 10px 10px 0;
+  cursor: pointer;
+  border: 0;
+  background: none;
+  width: 100%;
+  text-align: left;
+  border-radius: 9px;
+  transition: background 0.18s var(--cs-ez);
+  font-family: inherit;
+  color: inherit;
+}
+
+.campaign-studio-ref .cs-stp:hover {
+  background: rgba(11, 15, 26, 0.035);
+}
+
+.campaign-studio-ref .cs-stp.on {
+  background: var(--cs-lavender);
+}
+
+.campaign-studio-ref .cs-stp::before {
+  content: "";
+  position: absolute;
+  left: -10px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  border-radius: 2px;
+  background: transparent;
+}
+
+.campaign-studio-ref .cs-stp.on::before {
+  background: var(--cs-blue);
+}
+
+.campaign-studio-ref .cs-stp__n {
+  font: 600 11px var(--font-geist-mono), "Geist Mono", monospace;
+  color: var(--cs-mut);
+}
+
+.campaign-studio-ref .cs-stp b {
+  display: inline;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--cs-ink2);
+}
+
+.campaign-studio-ref .cs-stp.on .cs-stp__n,
+.campaign-studio-ref .cs-stp.on b {
+  color: var(--cs-bi);
+}
+
+.campaign-studio-ref .cs-stp.on b {
+  font-weight: 600;
+}
+
+.campaign-studio-ref .cs-stp u {
+  display: block;
+  text-decoration: none;
+  font-size: 10.5px;
+  color: var(--cs-mut);
+  margin-top: 2px;
+}
+
+.campaign-studio-ref .cs-stp__f {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  margin-left: 6px;
+  vertical-align: middle;
+}
+
+.campaign-studio-ref .cs-stp__f.r {
+  background: var(--cs-bad);
+}
+
+.campaign-studio-ref .cs-stp__f.y {
+  background: var(--cs-wrn);
+}
+
+.campaign-studio-ref .cs-railsep {
+  height: 1px;
+  background: var(--cs-hair);
+  margin: 18px 0;
+}
+
+.campaign-studio-ref .cs-doc {
+  max-width: 880px;
+  min-width: 0;
+}
+
+.campaign-studio-ref.cs-studio-desktop .cs-navigator {
+  width: auto;
+  background: transparent;
+  border: none;
+  padding: 0;
+  overflow: visible;
+}
+
+.campaign-studio-ref.cs-studio-desktop .cs-main-column,
+.campaign-studio-ref.cs-studio-desktop .cs-main {
+  overflow: visible;
+  min-height: 0;
+}
+
+.campaign-studio-ref.cs-studio-desktop .cs-content {
+  padding: 0;
+  max-width: none;
+}
+
+.campaign-studio-ref.cs-studio-desktop .cs-step-bar {
+  display: none;
+}
+
+/* Document section headers */
+.campaign-studio-ref .cs-sect {
+  margin-bottom: 40px;
+}
+
+.campaign-studio-ref .cs-sect__h {
+  margin-bottom: 20px;
+}
+
+.campaign-studio-ref .cs-sect__h h2 {
+  margin: 0;
+  font-size: 27px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  line-height: 1.15;
+  background: linear-gradient(180deg, var(--cs-ink), #2a3446);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.campaign-studio-ref .cs-sect__h p {
+  font-size: 13.5px;
+  color: var(--cs-mut);
+  margin-top: 8px;
+  line-height: 1.65;
+  max-width: 62ch;
+}
+
+.campaign-studio-ref .cs-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font: 700 9.5px inherit;
+  letter-spacing: 1.1px;
+  text-transform: uppercase;
+  color: var(--cs-bi);
+  margin-bottom: 11px;
+}
+
+.campaign-studio-ref .cs-eyebrow::before {
+  content: "";
+  width: 16px;
+  height: 1.5px;
+  border-radius: 2px;
+  background: var(--cs-blue);
+}
+
+.campaign-studio-ref .cs-band2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  border: 1px solid var(--cs-line);
+  border-radius: 14px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 1px 2px rgba(11, 15, 26, 0.04), 0 10px 26px -18px rgba(11, 15, 26, 0.22);
+}
+
+.campaign-studio-ref .cs-band2 > div {
+  padding: 17px 19px;
+  border-right: 1px solid var(--cs-hair);
+  position: relative;
+}
+
+.campaign-studio-ref .cs-band2 > div:last-child {
+  border-right: 0;
+}
+
+.campaign-studio-ref .cs-band2 i {
+  display: block;
+  font-style: normal;
+  font: 600 10px inherit;
+  letter-spacing: 0.55px;
+  text-transform: uppercase;
+  color: var(--cs-mut);
+}
+
+.campaign-studio-ref .cs-band2 b {
+  display: block;
+  margin-top: 7px;
+  font: 600 21px var(--font-geist-mono), "Geist Mono", monospace;
+  letter-spacing: -0.7px;
+}
+
+.campaign-studio-ref .cs-q2 {
+  position: relative;
+  padding: 14px 16px 14px 18px;
+  margin: 22px 0;
+  border-radius: 11px;
+  background: linear-gradient(100deg, rgba(255, 246, 232, 0.9), rgba(255, 251, 244, 0.6));
+  border: 1px solid #f2e3c8;
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: #6b4e12;
+}
+
+.campaign-studio-ref .cs-q2::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--cs-wrn);
+}
+
+.campaign-studio-ref .cs-fx {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--cs-wrnb);
+  color: var(--cs-wrn);
+  font: 600 10px inherit;
+  cursor: pointer;
+  border: 1px solid #f0dfbe;
+  white-space: nowrap;
+}
+
+.campaign-studio-ref .cs-fx::before {
+  content: "";
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.campaign-studio-ref .cs-fx.r {
+  background: var(--cs-badb);
+  color: var(--cs-bad);
+  border-color: #f3c4c4;
+}
+
+/* Review drawer */
+.campaign-studio-ref .cs-scrim3 {
+  position: fixed;
+  inset: 0;
+  background: rgba(6, 8, 16, 0.32);
+  z-index: 75;
+  backdrop-filter: blur(1.5px);
+}
+
+.campaign-studio-ref .cs-rev2 {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 440px;
+  max-width: 94vw;
+  background: #fff;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -24px 0 60px -24px rgba(11, 15, 26, 0.34);
+}
+
+.campaign-studio-ref .cs-rev2__h {
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid var(--cs-line);
+  background: linear-gradient(160deg, #f7faff, #fff);
+}
+
+.campaign-studio-ref .cs-rev2__h h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+}
+
+.campaign-studio-ref .cs-rev2__h p {
+  font-size: 12.5px;
+  color: var(--cs-mut);
+  margin-top: 5px;
+  line-height: 1.6;
+}
+
+.campaign-studio-ref .cs-rev2__b {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 24px 24px;
+}
+
+.campaign-studio-ref .cs-fnd {
+  padding: 17px 0;
+  border-bottom: 1px solid var(--cs-hair);
+}
+
+.campaign-studio-ref .cs-fnd:last-child {
+  border-bottom: 0;
+}
+
+.campaign-studio-ref .cs-fnd__t {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.campaign-studio-ref .cs-fnd__t b {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.campaign-studio-ref .cs-fnd p {
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: var(--cs-ink2);
+  margin: 0;
+}
+
+.campaign-studio-ref .cs-fnd__w {
+  font: 700 9.5px inherit;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--cs-mut);
+  margin-top: 10px;
+  display: block;
+}
+
+.campaign-studio-ref .cs-sev {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font: 600 9.5px inherit;
+  letter-spacing: 0.45px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.campaign-studio-ref .cs-sev.hi {
+  background: var(--cs-badb);
+  color: var(--cs-bad);
+}
+
+.campaign-studio-ref .cs-sev.md {
+  background: var(--cs-wrnb);
+  color: var(--cs-wrn);
+}
+
+/* Decision scenarios */
+.campaign-studio-ref .cs-scn {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 124px 76px 100px;
+  gap: 20px;
+  padding: 17px 12px;
+  border-bottom: 1px solid var(--cs-hair);
+  align-items: center;
+  cursor: pointer;
+  border-radius: 10px;
+  border: 0;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
+  color: inherit;
+}
+
+.campaign-studio-ref .cs-scn:hover {
+  background: rgba(0, 87, 255, 0.03);
+}
+
+.campaign-studio-ref .cs-scn.on {
+  background: var(--cs-lavender);
+  box-shadow: inset 2px 0 0 var(--cs-blue);
+}
+
+.campaign-studio-ref .cs-scn b {
+  font-size: 13.5px;
+  font-weight: 500;
+}
+
+.campaign-studio-ref .cs-scn p {
+  font-size: 11.5px;
+  color: var(--cs-mut);
+  margin-top: 4px;
+  line-height: 1.55;
+}
+
+.campaign-studio-ref .cs-sc2 {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 19px 21px;
+  border: 1px solid var(--cs-line);
+  border-radius: 14px;
+  background: linear-gradient(150deg, #fff, #fafcff);
+  box-shadow: 0 1px 2px rgba(11, 15, 26, 0.04), 0 12px 30px -20px rgba(0, 87, 255, 0.3);
+}
+
+.campaign-studio-ref .cs-sc2__r {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  flex: 0 0 66px;
+}
+
+.campaign-studio-ref .cs-sc2__t {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 700 19px var(--font-geist-mono), "Geist Mono", monospace;
+  letter-spacing: -0.5px;
+}
+
+.campaign-studio-ref .cs-rec2 {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--cs-hair);
+}
+
+.campaign-studio-ref .cs-rec2:last-child {
+  border-bottom: 0;
+}
+
+/* Unified Campaign Mode header: mast → mode tabs (panel-owned) */
+.campaign-studio-ref .cs-campaign-chrome {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  padding: 10px 16px 8px;
+  background:
+    radial-gradient(1100px 520px at 12% -8%, rgba(0, 87, 255, 0.055), transparent 62%),
+    var(--cs-bg, #fafbfc);
+  box-shadow: 0 6px 16px -12px rgba(11, 15, 26, 0.28);
+}
+
+.campaign-studio-ref .cs-campaign-chrome .cs-frozen {
+  position: static;
+  background: transparent;
+  box-shadow: none;
+  margin: 0;
+  padding: 0;
+}
+
+.campaign-studio-ref .cs-campaign-chrome .cs-mast {
+  margin-bottom: 0;
+}
+
+.campaign-studio-ref .cs-campaign-chrome .cs-step2 {
+  margin: 0;
+}
+
+/* When panel owns chrome, Studio body should fill remaining height */
+.campaign-studio-ref.cs-studio-desktop > .cs-campaign-chrome + * .cs-shell {
+  overflow: auto;
+}
+
+/* Panel-level mode bar uses cs-step2 when main variant */
+.campaign-studio-ref .cs-subnav.cs-subnav--proto {
+  height: auto;
+  min-height: 0;
+  padding: 10px 16px 6px;
+  background: transparent;
+  border-bottom: none;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.campaign-studio-ref .cs-subnav.cs-subnav--proto .cs-subtabs {
+  display: flex;
+  width: 100%;
+  gap: 0;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: var(--cs-ring);
+  padding: 3px;
+  overflow-x: auto;
+}
+
+.campaign-studio-ref .cs-subnav.cs-subnav--proto .cs-subtab {
+  flex: 1 1 0;
+  min-width: 92px;
+  margin: 0;
+  padding: 8px 5px 7px;
+  border: 0;
+  border-radius: 10px;
+  border-bottom: none;
+  flex-direction: column;
+  gap: 5px;
+  color: var(--cs-mut);
+  font-size: 11.5px;
+}
+
+.campaign-studio-ref .cs-subnav.cs-subnav--proto .cs-subtab.active {
+  background: var(--cs-lavender);
+  color: var(--cs-bi);
+  border-bottom: none;
+}
+
+.campaign-studio-ref .cs-subnav.cs-subnav--proto .cs-subnav-actions {
+  justify-content: flex-end;
+}
+
+/* ===== Visual polish pass (hierarchy frozen) ===== */
+
+/* Mast: tighter rhythm + glass CTAs + white progress label */
+.campaign-studio-ref .cs-mh {
+  gap: 8px 10px;
+  padding: 12px 16px;
+}
+
+.campaign-studio-ref .cs-hmk {
+  width: 26px;
+  height: 26px;
+}
+
+.campaign-studio-ref .cs-hwd {
+  font-size: 11.5px;
+  letter-spacing: 0.7px;
+}
+
+.campaign-studio-ref .cs-mh h1 {
+  font-size: 18px;
+  letter-spacing: -0.45px;
+  max-width: min(42ch, 100%);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.campaign-studio-ref .cs-mh-actions {
+  gap: 7px;
+  max-width: 100%;
+}
+
+.campaign-studio-ref .cs-mh-btn {
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 9px;
+  font-size: 11.5px;
+  transition: background 0.15s var(--cs-ez), border-color 0.15s var(--cs-ez);
+}
+
+.campaign-studio-ref .cs-mh-btn.pri {
+  box-shadow: 0 1px 0 rgba(11, 15, 26, 0.04);
+}
+
+/* New Campaign / History inside mast — glass treatment, not ink buttons */
+.campaign-studio-ref .cs-mh-actions .cs-btn {
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 9px;
+  border: 0.8px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+  font: 600 11.5px inherit;
+  box-shadow: none;
+}
+
+.campaign-studio-ref .cs-mh-actions .cs-btn:hover {
+  background: rgba(255, 255, 255, 0.26);
+  color: #fff;
+}
+
+.campaign-studio-ref .cs-mh-actions .cs-btn-primary {
+  background: #fff;
+  border-color: #fff;
+  color: var(--cs-bi);
+  font-weight: 700;
+}
+
+.campaign-studio-ref .cs-mh-actions .cs-btn-primary:hover {
+  background: #f3f7ff;
+  color: var(--cs-bi);
+}
+
+.campaign-studio-ref .cs-mast .cs-progress-ring-wrap {
+  margin-left: 2px;
+}
+
+.campaign-studio-ref .cs-mast .cs-progress-label b {
+  color: #fff;
+  font-size: 11px;
+  line-height: 1;
+}
+
+.campaign-studio-ref .cs-mast .cs-progress-label span {
+  color: rgba(255, 255, 255, 0.78);
+  font-size: 7.5px;
+  letter-spacing: 0.5px;
+}
+
+.campaign-studio-ref .cs-mast .cs-progress-ring circle:first-child {
+  stroke: rgba(255, 255, 255, 0.28);
+}
+
+.campaign-studio-ref .cs-mast .cs-progress-ring circle:last-child {
+  stroke: #fff;
+}
+
+/* Mode tabs — connector line + clearer active state */
+.campaign-studio-ref .cs-step2 {
+  gap: 0;
+  margin-top: 8px;
+}
+
+.campaign-studio-ref .cs-sb::before,
+.campaign-studio-ref .cs-sb::after {
+  content: "";
+  position: absolute;
+  top: 13px;
+  width: 50%;
+  height: 2px;
+  background: var(--cs-line);
+  z-index: 0;
+}
+
+.campaign-studio-ref .cs-sb::before {
+  left: 0;
+}
+
+.campaign-studio-ref .cs-sb::after {
+  right: 0;
+}
+
+.campaign-studio-ref .cs-sb:first-child::before,
+.campaign-studio-ref .cs-sb:last-child::after {
+  display: none;
+}
+
+.campaign-studio-ref .cs-sb[aria-pressed="true"]::before,
+.campaign-studio-ref .cs-sb[aria-pressed="true"]::after {
+  background: rgba(0, 87, 255, 0.35);
+}
+
+.campaign-studio-ref .cs-sb[aria-pressed="true"] {
+  background: var(--cs-lavender);
+}
+
+.campaign-studio-ref .cs-sb[aria-pressed="true"] .cs-sb__l {
+  color: var(--cs-bi);
+}
+
+.campaign-studio-ref .cs-campaign-chrome .cs-step2 {
+  margin-top: 8px;
+}
+
+/* Planning rail */
+.campaign-studio-ref .cs-rail4 {
+  top: 8px;
+  padding-right: 4px;
+}
+
+.campaign-studio-ref .cs-rail4-h {
+  margin-bottom: 12px;
+  letter-spacing: 1.1px;
+}
+
+.campaign-studio-ref .cs-stp {
+  padding: 9px 10px 9px 8px;
+  margin-bottom: 2px;
+}
+
+.campaign-studio-ref .cs-stp.on {
+  background: var(--cs-lavender);
+  box-shadow: inset 2px 0 0 var(--cs-blue);
+}
+
+.campaign-studio-ref .cs-stp.on::before {
+  display: none;
+}
+
+.campaign-studio-ref .cs-stp__n {
+  font-size: 11px;
+  padding-top: 1px;
+}
+
+.campaign-studio-ref .cs-stp b {
+  font-size: 12.5px;
+}
+
+.campaign-studio-ref .cs-stp u {
+  font-size: 10px;
+  margin-top: 1px;
+}
+
+.campaign-studio-ref .cs-railsep {
+  margin: 14px 0 10px;
+}
+
+/* Document / section headers */
+.campaign-studio-ref .cs-sect {
+  margin-bottom: 36px;
+}
+
+.campaign-studio-ref .cs-sect__h {
+  margin-bottom: 18px;
+}
+
+.campaign-studio-ref .cs-sect__h h2 {
+  font-size: 26px;
+  letter-spacing: -0.9px;
+}
+
+.campaign-studio-ref .cs-sect__h p {
+  margin-top: 6px;
+  font-size: 13px;
+  max-width: 58ch;
+}
+
+.campaign-studio-ref .cs-eyebrow {
+  margin-bottom: 9px;
+  letter-spacing: 1.15px;
+}
+
+.campaign-studio-ref .cs-band2 {
+  border-radius: 12px;
+  margin-bottom: 18px;
+}
+
+.campaign-studio-ref .cs-band2 > div {
+  padding: 14px 16px;
+}
+
+.campaign-studio-ref .cs-band2 b {
+  font-size: 18px;
+}
+
+/* Attention / Review */
+.campaign-studio-ref .cs-q2 {
+  margin: 16px 0;
+  padding: 13px 15px 13px 17px;
+  border-radius: 12px;
+  font-size: 12.5px;
+}
+
+.campaign-studio-ref .cs-q2.warn {
+  background: linear-gradient(100deg, rgba(255, 246, 232, 0.95), rgba(255, 251, 244, 0.72));
+  border-color: #f0dfbe;
+  color: #6b4e12;
+}
+
+.campaign-studio-ref .cs-rev2__h {
+  padding: 20px 22px 16px;
+}
+
+.campaign-studio-ref .cs-rev2__b {
+  padding: 4px 22px 22px;
+}
+
+.campaign-studio-ref .cs-fnd {
+  padding: 15px 0;
+}
+
+.campaign-studio-ref .cs-fnd__t b {
+  font-size: 12.5px;
+}
+
+.campaign-studio-ref .cs-sev.lo {
+  background: var(--cs-soft);
+  color: var(--cs-mut);
+}
+
+/* Mode body padding for Outputs / Director (no rail) */
+.campaign-studio-ref .cs-mode-body {
+  min-height: 0;
+}
+
+.campaign-studio-ref .cs-mode-body-pad {
+  padding: 14px 24px 40px;
+  box-sizing: border-box;
+}
+
+.campaign-studio-ref .cs-mode-body .cs-director {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: var(--cs-ring);
+  padding: 22px 24px 18px;
+  max-width: 1100px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Director recommendations */
+.campaign-studio-ref .cs-rec2 {
+  padding: 18px 0;
+  border-bottom: 1px solid var(--cs-hair);
+}
+
+.campaign-studio-ref .cs-rec2:last-child {
+  border-bottom: 0;
+  padding-bottom: 6px;
+}
+
+.campaign-studio-ref .cs-rec2__apply,
+.campaign-studio-ref .cs-rec2__modify,
+.campaign-studio-ref .cs-rec2__dismiss {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 11px;
+  border-radius: 8px;
+  font: 600 11.5px inherit;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s var(--cs-ez), border-color 0.15s var(--cs-ez);
+}
+
+.campaign-studio-ref .cs-rec2__apply {
+  background: var(--cs-blue);
+  color: #fff;
+}
+
+.campaign-studio-ref .cs-rec2__apply:hover:not(:disabled) {
+  background: var(--cs-bi);
+}
+
+.campaign-studio-ref .cs-rec2__apply:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.campaign-studio-ref .cs-rec2__modify {
+  background: #fff;
+  border-color: var(--cs-line);
+  color: var(--cs-ink2);
+}
+
+.campaign-studio-ref .cs-rec2__modify:hover {
+  border-color: rgba(0, 87, 255, 0.35);
+  background: var(--cs-lavender);
+  color: var(--cs-bi);
+}
+
+.campaign-studio-ref .cs-rec2__dismiss {
+  background: transparent;
+  color: var(--cs-mut);
+}
+
+.campaign-studio-ref .cs-rec2__dismiss:hover {
+  background: var(--cs-soft);
+  color: var(--cs-ink2);
+}
+
+.campaign-studio-ref .cs-rec2__advisory {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 8px;
+  border: 1px solid var(--cs-line);
+  background: var(--cs-soft);
+  color: var(--cs-mut);
+  font: 600 10.5px inherit;
+}
+
+.campaign-studio-ref .cs-rec2__input {
+  border: 1px solid var(--cs-line);
+  border-radius: 9px;
+  background: #fff;
+  padding: 8px 11px;
+  font: 500 12px inherit;
+  color: var(--cs-ink);
+}
+
+.campaign-studio-ref .cs-rec2__input:focus {
+  outline: none;
+  border-color: rgba(0, 87, 255, 0.45);
+  box-shadow: 0 0 0 3px rgba(0, 87, 255, 0.12);
+}
+
+/* Decision scenario bar */
+.campaign-studio-ref .cs-scn-bar {
+  border: 1px solid var(--cs-line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--cs-ring);
+  padding: 6px;
+  gap: 6px;
+}
+
+.campaign-studio-ref .cs-scn-bar .cs-scn {
+  display: inline-flex;
+  grid-template-columns: none;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: auto;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border-bottom: 0;
+  box-shadow: none;
+}
+
+.campaign-studio-ref .cs-scn-bar .cs-scn.on {
+  background: var(--cs-lavender);
+  box-shadow: inset 0 0 0 1px rgba(0, 87, 255, 0.18);
+}
+
+.campaign-studio-ref .cs-scn-bar .cs-scn b {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.campaign-studio-ref .cs-scn-bar .cs-scn p {
+  margin-top: 1px;
+  font-size: 10.5px;
+}
+
+.campaign-studio-ref .cs-sc2 {
+  border-radius: 12px;
+  padding: 16px 18px;
+}
+
+/* Outputs / Director: mode-body-pad owns outer spacing */
+.campaign-studio-ref .cs-mode-body-pad > .p-4 {
+  padding: 0;
+}
+
+/* Responsive — tablet */
+@media (max-width: 1180px) {
+  .campaign-studio-ref .cs-wrap {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 14px 18px 72px;
+  }
+
+  .campaign-studio-ref .cs-rail4 {
+    position: static;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 4px 8px;
+    padding: 10px 12px;
+    border: 1px solid var(--cs-line);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: var(--cs-ring);
+  }
+
+  .campaign-studio-ref .cs-rail4-h {
+    grid-column: 1 / -1;
+    margin-bottom: 4px;
+  }
+
+  .campaign-studio-ref .cs-railsep {
+    display: none;
+  }
+
+  .campaign-studio-ref .cs-stp {
+    margin: 0;
+  }
+
+  .campaign-studio-ref .cs-mode-body-pad {
+    padding: 12px 16px 32px;
+  }
+
+  .campaign-studio-ref .cs-mode-body .cs-director {
+    padding: 18px;
+  }
+}
+
+/* Responsive — narrow / mobile */
+@media (max-width: 720px) {
+  .campaign-studio-ref .cs-campaign-chrome {
+    padding: 8px 10px 6px;
+  }
+
+  .campaign-studio-ref .cs-mh {
+    padding: 10px 12px;
+    gap: 7px;
+  }
+
+  .campaign-studio-ref .cs-hmk,
+  .campaign-studio-ref .cs-hwd,
+  .campaign-studio-ref .cs-hdv {
+    display: none;
+  }
+
+  .campaign-studio-ref .cs-mh h1 {
+    font-size: 15px;
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+
+  .campaign-studio-ref .cs-mh .sub {
+    display: none;
+  }
+
+  .campaign-studio-ref .cs-mh-actions {
+    margin-left: 0;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .campaign-studio-ref .cs-mast .cs-progress-ring-wrap {
+    margin-left: auto;
+  }
+
+  .campaign-studio-ref .cs-step2 {
+    margin-top: 6px;
+    border-radius: 10px;
+  }
+
+  .campaign-studio-ref .cs-sb {
+    min-width: 76px;
+    padding: 7px 4px 6px;
+    gap: 4px;
+  }
+
+  .campaign-studio-ref .cs-sb__l {
+    font-size: 10.5px;
+  }
+
+  .campaign-studio-ref .cs-sb::before,
+  .campaign-studio-ref .cs-sb::after {
+    top: 11px;
+  }
+
+  .campaign-studio-ref .cs-wrap {
+    padding: 12px 12px 64px;
+    gap: 14px;
+  }
+
+  .campaign-studio-ref .cs-rail4 {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .campaign-studio-ref .cs-sect__h h2 {
+    font-size: 22px;
+  }
+
+  .campaign-studio-ref .cs-mode-body-pad {
+    padding: 8px 10px 28px;
+  }
+
+  .campaign-studio-ref .cs-mode-body .cs-director {
+    padding: 14px;
+    border-radius: 12px;
+  }
+
+  .campaign-studio-ref .cs-rev2 {
+    width: 100%;
+    max-width: 100vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .campaign-studio-ref .cs-mh-btn,
+  .campaign-studio-ref .cs-stp,
+  .campaign-studio-ref .cs-rec2__apply,
+  .campaign-studio-ref .cs-rec2__modify,
+  .campaign-studio-ref .cs-rec2__dismiss {
+    transition: none;
+  }
+}

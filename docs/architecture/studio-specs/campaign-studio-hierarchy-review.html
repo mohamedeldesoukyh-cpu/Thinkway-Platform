@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Campaign Mode — Hierarchy Review (unified mast + tabs)</title>
+  <link rel="stylesheet" href="/app/thinkway-design-tokens.css" />
+  <link rel="stylesheet" href="/features/campaign-studio/styles/campaign-studio-ref.css" />
+  <style>
+    html, body { margin: 0; background: #e8ecf2; font-family: Geist, Inter, system-ui, sans-serif; }
+    .review-bar {
+      position: sticky; top: 0; z-index: 100; display: flex; gap: 8px; flex-wrap: wrap;
+      padding: 10px 14px; background: #0b0f1a; color: #fff; align-items: center;
+    }
+    .review-bar b { font-size: 12px; letter-spacing: .3px; margin-right: 8px; }
+    .review-bar a {
+      color: #fff; text-decoration: none; font: 600 11.5px inherit; padding: 6px 10px;
+      border-radius: 8px; background: rgba(255,255,255,.12);
+    }
+    .review-bar a:hover, .review-bar a.on { background: #0057FF; }
+    .review-note {
+      margin: 12px 16px 0; padding: 12px 14px; border-radius: 10px; background: #fff;
+      border: 1px solid #dfe4ee; font-size: 12.5px; line-height: 1.55; color: #41495a; max-width: 1100px;
+    }
+    .mode-frame {
+      margin: 14px 16px 40px; height: calc(100vh - 120px); min-height: 720px;
+      border-radius: 16px; overflow: hidden; border: 1px solid #cfd6e4;
+      box-shadow: 0 18px 40px -24px rgba(11,15,26,.45); background: #fff;
+      display: none; flex-direction: column;
+    }
+    .mode-frame.show { display: flex; }
+    .mode-label {
+      flex: 0 0 auto; padding: 8px 14px; background: #f1f4f9; border-bottom: 1px solid #dfe4ee;
+      font: 700 11px inherit; letter-spacing: .7px; text-transform: uppercase; color: #64748b;
+    }
+    .mode-body {
+      flex: 1; min-height: 0; overflow: auto;
+      display: flex; flex-direction: column;
+    }
+    /* Unified frozen Campaign Mode header: mast THEN tabs */
+    .cs-campaign-chrome {
+      flex: 0 0 auto;
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      padding: 10px 16px 8px;
+      background:
+        radial-gradient(1100px 520px at 12% -8%, rgba(0, 87, 255, 0.055), transparent 62%),
+        #fafbfc;
+      box-shadow: 0 6px 16px -12px rgba(11,15,26,.28);
+    }
+    .cs-campaign-chrome .cs-mast { margin-bottom: 8px; }
+    .cs-campaign-chrome .cs-step2 { margin: 0; }
+    .mode-workspace { flex: 1; min-height: 0; }
+    .placeholder-doc h3 { margin: 0 0 8px; font-size: 18px; }
+    .placeholder-doc p { margin: 0; color: #64748b; font-size: 13px; line-height: 1.6; max-width: 62ch; }
+    .action-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+    .action-row button {
+      height: 30px; padding: 0 12px; border-radius: 8px; border: 1px solid #e2e8f0;
+      background: #fff; font: 600 12px inherit; color: #0b52e0; cursor: default;
+    }
+    .tile-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 12px; margin-top: 8px; }
+    .tile {
+      min-height: 110px; border-radius: 14px; padding: 14px; color: #fff;
+      background: linear-gradient(145deg, #0040CC, #0057FF, #1A6FFF);
+      box-shadow: 0 10px 26px -10px rgba(0,87,255,.4);
+    }
+    .tile i { display: block; font-style: normal; font-size: 10px; opacity: .8; text-transform: uppercase; letter-spacing: .5px; }
+    .tile b { display: block; margin-top: 8px; font-size: 14px; }
+    .tile.soft { background: linear-gradient(150deg, #EFF4FF, #DFE9FF); color: #060810; }
+    .scenario-list { margin: 0 24px; border-top: 1px solid #e2e8f0; }
+    .outputs-pad, .director-pad { padding: 22px 28px 48px; max-width: 1100px; }
+    .director-pad { max-width: 880px; }
+  </style>
+</head>
+<body>
+  <div class="review-bar">
+    <b>Hierarchy review · unified mast → tabs → body</b>
+    <a href="#studio" data-mode="studio" class="on">1 · Studio</a>
+    <a href="#outputs" data-mode="outputs">2 · Outputs</a>
+    <a href="#director" data-mode="director">3 · Director</a>
+    <a href="#decision" data-mode="decision">4 · Decision mode</a>
+  </div>
+
+  <p class="review-note">
+    <b>Live code applied</b> in <code>CampaignStudioPanel</code> (variant=main):
+    frozen <b>Campaign Mast → Mode tabs → body</b> on all four modes.
+    Local Next on this agent machine cannot start (Windows Application Control blocks Next SWC),
+    so use this fixture for structure — or open <code>/dev/campaign-mode-hierarchy</code> when logged into your local/dev app.
+  </p>
+
+  <!-- Shared chrome template helpers are inlined per frame so each screenshot is self-contained -->
+
+  <!-- ========== STUDIO ========== -->
+  <section id="studio" class="mode-frame show" data-shot="studio">
+    <div class="mode-label">Mode 1 — Studio · body: rail + document</div>
+    <div class="mode-body campaign-studio-ref cs-studio-desktop">
+      <div class="cs-campaign-chrome">
+        <div class="cs-mast">
+          <div class="cs-mh">
+            <span class="cs-hmk" aria-hidden><i></i><u></u></span>
+            <span class="cs-hwd">THINK<em>WAY</em></span>
+            <span class="cs-hdv"></span>
+            <span class="id">TW-2026-0124</span>
+            <h1>Tafareeh Tea — Ramadan 2026</h1>
+            <span class="sub">Campaign Mode</span>
+            <span class="st r">In progress · 62%</span>
+            <div class="cs-mh-actions">
+              <button type="button" class="cs-mh-btn">Review · 4</button>
+              <button type="button" class="cs-mh-btn">Export</button>
+            </div>
+          </div>
+        </div>
+        <div class="cs-step2" role="tablist" aria-label="Campaign Mode">
+          <button type="button" class="cs-sb" aria-pressed="true"><span class="cs-sb__d"></span><span class="cs-sb__l">Studio</span></button>
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Outputs</span></button>
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Director</span></button>
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Decision mode</span></button>
+        </div>
+      </div>
+      <div class="mode-workspace cs-shell">
+        <div class="cs-wrap">
+          <nav class="cs-rail4" aria-label="Planning">
+            <h6 class="cs-rail4-h">Planning</h6>
+            <button type="button" class="cs-stp on"><span class="cs-stp__n">1</span><span><b>Intake<span class="cs-stp__f y"></span></b><u>In progress</u></span></button>
+            <button type="button" class="cs-stp"><span class="cs-stp__n">2</span><span><b>Strategy</b><u>Ready</u></span></button>
+            <button type="button" class="cs-stp"><span class="cs-stp__n">3</span><span><b>Creators<span class="cs-stp__f r"></span></b><u>Attention</u></span></button>
+            <button type="button" class="cs-stp"><span class="cs-stp__n">4</span><span><b>Content</b><u>Ready</u></span></button>
+            <button type="button" class="cs-stp"><span class="cs-stp__n">5</span><span><b>Commercial</b><u>Ready</u></span></button>
+            <button type="button" class="cs-stp"><span class="cs-stp__n">6</span><span><b>Package</b><u>Blocked</u></span></button>
+            <div class="cs-railsep"></div>
+          </nav>
+          <div class="cs-doc">
+            <div class="cs-sect">
+              <header class="cs-sect__h">
+                <span class="cs-eyebrow">In progress</span>
+                <h2>Intake</h2>
+                <p>Confirm the brief facts that ground strategy, slate, and commercial recommendations.</p>
+              </header>
+              <div class="cs-band2" style="margin-bottom:22px">
+                <div><i>Budget</i><b>EGP 1.2M</b><u>Confirmed</u></div>
+                <div><i>Duration</i><b>6 wks</b><u>Ramadan</u></div>
+                <div><i>Markets</i><b>EG</b><u>Primary</u></div>
+                <div><i>Platforms</i><b>3</b><u>IG · TT · YT</u></div>
+              </div>
+              <div class="cs-q2 warn">
+                Brief stops mid-sentence. Confirm the missing clause before Strategy locks.
+                <button type="button" class="cs-fx" style="margin-left:8px">review</button>
+              </div>
+              <div class="action-row">
+                <button type="button">Confirm intake</button>
+                <button type="button">Edit brief</button>
+                <button type="button">Ask Copilot</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== OUTPUTS ========== -->
+  <section id="outputs" class="mode-frame" data-shot="outputs">
+    <div class="mode-label">Mode 2 — Outputs · body: outputs only (no rail)</div>
+    <div class="mode-body campaign-studio-ref cs-studio-desktop">
+      <div class="cs-campaign-chrome">
+        <div class="cs-mast">
+          <div class="cs-mh">
+            <span class="cs-hmk" aria-hidden><i></i><u></u></span>
+            <span class="cs-hwd">THINK<em>WAY</em></span>
+            <span class="cs-hdv"></span>
+            <span class="id">TW-2026-0124</span>
+            <h1>Tafareeh Tea — Ramadan 2026</h1>
+            <span class="sub">Campaign Mode</span>
+            <span class="st r">In progress · 62%</span>
+            <div class="cs-mh-actions">
+              <button type="button" class="cs-mh-btn">Review · 4</button>
+              <button type="button" class="cs-mh-btn">Export</button>
+            </div>
+          </div>
+        </div>
+        <div class="cs-step2" role="tablist" aria-label="Campaign Mode">
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Studio</span></button>
+          <button type="button" class="cs-sb" aria-pressed="true"><span class="cs-sb__d"></span><span class="cs-sb__l">Outputs</span></button>
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Director</span></button>
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Decision mode</span></button>
+        </div>
+      </div>
+      <div class="mode-workspace outputs-pad">
+        <div class="cs-eyebrow" style="margin-bottom:10px">Outputs Center</div>
+        <div class="tile-grid">
+          <div class="tile"><i>Strategy</i><b>Executive proposal</b></div>
+          <div class="tile soft"><i>Planning</i><b>Media Plan</b></div>
+          <div class="tile"><i>Client</i><b>Presentation</b></div>
+          <div class="tile soft"><i>Internal</i><b>Brief pack</b></div>
+        </div>
+        <div class="action-row">
+          <button type="button">Generate missing</button>
+          <button type="button">Open Media Plan</button>
+          <button type="button">Build quotation</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== DIRECTOR ========== -->
+  <section id="director" class="mode-frame" data-shot="director">
+    <div class="mode-label">Mode 3 — Director · body: recommendations (no rail)</div>
+    <div class="mode-body campaign-studio-ref cs-studio-desktop">
+      <div class="cs-campaign-chrome">
+        <div class="cs-mast">
+          <div class="cs-mh">
+            <span class="cs-hmk" aria-hidden><i></i><u></u></span>
+            <span class="cs-hwd">THINK<em>WAY</em></span>
+            <span class="cs-hdv"></span>
+            <span class="id">TW-2026-0124</span>
+            <h1>Tafareeh Tea — Ramadan 2026</h1>
+            <span class="sub">Campaign Mode</span>
+            <span class="st r">In progress · 62%</span>
+            <div class="cs-mh-actions">
+              <button type="button" class="cs-mh-btn">Review · 4</button>
+              <button type="button" class="cs-mh-btn">Export</button>
+            </div>
+          </div>
+        </div>
+        <div class="cs-step2" role="tablist" aria-label="Campaign Mode">
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Studio</span></button>
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Outputs</span></button>
+          <button type="button" class="cs-sb" aria-pressed="true"><span class="cs-sb__d"></span><span class="cs-sb__l">Director</span></button>
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Decision mode</span></button>
+        </div>
+      </div>
+      <div class="mode-workspace director-pad">
+        <div class="cs-eyebrow" style="margin-bottom:10px">Campaign Director</div>
+        <div class="cs-rec2">
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:7px">
+            <span class="cs-sev hi">Decide</span>
+            <b style="font-size:13px">Lead with TikTok for Ramadan reach</b>
+          </div>
+          <p style="margin:0;font-size:12.5px;line-height:1.7;color:#41495A">Platform mix in Strategy underweights TikTok relative to audience facts.</p>
+          <span class="cs-fnd__w">What to do</span>
+          <div class="action-row"><button type="button">Apply</button><button type="button">Modify</button></div>
+        </div>
+        <div class="cs-rec2">
+          <div style="display:flex;align-items:baseline;gap:10px;margin-bottom:7px">
+            <span class="cs-sev md">Check</span>
+            <b style="font-size:13px">Add two micro creators for diversity</b>
+          </div>
+          <p style="margin:0;font-size:12.5px;line-height:1.7;color:#41495A">Slate concentration risk vs category benchmarks.</p>
+          <div class="action-row"><button type="button">Apply</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== DECISION ========== -->
+  <section id="decision" class="mode-frame" data-shot="decision">
+    <div class="mode-label">Mode 4 — Decision · body: scenarios + rail + document</div>
+    <div class="mode-body campaign-studio-ref cs-studio-desktop">
+      <div class="cs-campaign-chrome">
+        <div class="cs-mast">
+          <div class="cs-mh">
+            <span class="cs-hmk" aria-hidden><i></i><u></u></span>
+            <span class="cs-hwd">THINK<em>WAY</em></span>
+            <span class="cs-hdv"></span>
+            <span class="id">TW-2026-0124</span>
+            <h1>Tafareeh Tea — Ramadan 2026</h1>
+            <span class="sub">Campaign Mode</span>
+            <span class="st">Ready · 100%</span>
+            <div class="cs-mh-actions">
+              <button type="button" class="cs-mh-btn">Review · 2</button>
+              <button type="button" class="cs-mh-btn pri">Promote scenario</button>
+            </div>
+          </div>
+        </div>
+        <div class="cs-step2" role="tablist" aria-label="Campaign Mode">
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Studio</span></button>
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Outputs</span></button>
+          <button type="button" class="cs-sb" aria-pressed="false"><span class="cs-sb__d"></span><span class="cs-sb__l">Director</span></button>
+          <button type="button" class="cs-sb" aria-pressed="true"><span class="cs-sb__d"></span><span class="cs-sb__l">Decision mode</span></button>
+        </div>
+      </div>
+      <div class="mode-workspace">
+        <div class="scenario-list">
+          <button type="button" class="cs-scn on">
+            <span><b>Original</b><p>Baseline slate · EGP 1.2M</p></span>
+            <span class="num">Score 78</span>
+            <span class="num">12</span>
+            <span style="text-align:right;font:600 11.5px monospace">—</span>
+          </button>
+          <button type="button" class="cs-scn">
+            <span><b>Budget cut −15%</b><p>Protect hero creators</p></span>
+            <span class="num">Score 74</span>
+            <span class="num">10</span>
+            <span style="text-align:right;font:600 11.5px monospace;color:#C82121">−4</span>
+          </button>
+          <button type="button" class="cs-scn">
+            <span><b>Luxury positioning</b><p>Fewer creators · higher CPMs</p></span>
+            <span class="num">Score 81</span>
+            <span class="num">8</span>
+            <span style="text-align:right;font:600 11.5px monospace;color:#0A7A55">+3</span>
+          </button>
+        </div>
+        <div class="cs-shell">
+          <div class="cs-wrap">
+            <nav class="cs-rail4">
+              <h6 class="cs-rail4-h">Planning</h6>
+              <button type="button" class="cs-stp"><span class="cs-stp__n">1</span><span><b>Intake</b><u>Ready</u></span></button>
+              <button type="button" class="cs-stp on"><span class="cs-stp__n">2</span><span><b>Strategy</b><u>Comparing</u></span></button>
+              <button type="button" class="cs-stp"><span class="cs-stp__n">3</span><span><b>Creators</b><u>Ready</u></span></button>
+              <button type="button" class="cs-stp"><span class="cs-stp__n">4</span><span><b>Content</b><u>Ready</u></span></button>
+              <button type="button" class="cs-stp"><span class="cs-stp__n">5</span><span><b>Commercial</b><u>Ready</u></span></button>
+              <button type="button" class="cs-stp"><span class="cs-stp__n">6</span><span><b>Package</b><u>Ready</u></span></button>
+            </nav>
+            <div class="cs-doc">
+              <div class="cs-sect">
+                <header class="cs-sect__h">
+                  <span class="cs-eyebrow">Decision workspace</span>
+                  <h2>Strategy under scenario</h2>
+                  <p>Scenario overlays the same Studio document — promote writes back to the Campaign Object.</p>
+                </header>
+                <div class="cs-q2 warn">Verdict compares creator quality vs baseline. Review deltas before promote.</div>
+                <div class="action-row">
+                  <button type="button">Apply budget change</button>
+                  <button type="button">Open creator</button>
+                  <button type="button">Promote to campaign</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    var links = document.querySelectorAll('.review-bar a[data-mode]');
+    var frames = document.querySelectorAll('.mode-frame');
+    function show(mode) {
+      frames.forEach(function (f) { f.classList.toggle('show', f.id === mode); });
+      links.forEach(function (a) { a.classList.toggle('on', a.getAttribute('data-mode') === mode); });
+      history.replaceState(null, '', '#' + mode);
+    }
+    links.forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        e.preventDefault();
+        show(a.getAttribute('data-mode'));
+      });
+    });
+    var initial = (location.hash || '#studio').slice(1);
+    if (!document.getElementById(initial)) initial = 'studio';
+    show(initial);
+  </script>
+</body>
+</html>

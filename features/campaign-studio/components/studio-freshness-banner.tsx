@@ -6,7 +6,9 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { regenerateStaleOutputsAction } from "@/features/campaign-outputs/actions/regenerate-stale-outputs";
+import { cn } from "@/lib/utils";
 
+import { STUDIO_REF_CLASSES } from "../constants/campaign-studio-ref-tokens";
 import type { StudioFreshnessSummary } from "../services/studio-facts-freshness";
 
 type StudioFreshnessBannerProps = {
@@ -55,7 +57,11 @@ export function StudioFreshnessBanner({
 
   return (
     <div
-      className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50/90 px-3 py-2.5 shadow-sm backdrop-blur-sm dark:border-amber-800 dark:bg-amber-950/80"
+      className={cn(
+        STUDIO_REF_CLASSES.callout,
+        STUDIO_REF_CLASSES.calloutWarn,
+        "sticky top-0 z-10 flex flex-wrap items-center justify-between gap-3"
+      )}
       role="status"
       aria-live="polite"
     >

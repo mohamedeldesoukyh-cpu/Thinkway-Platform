@@ -260,7 +260,7 @@ export function StudioOutputsView({
 
   if (mode === "director") {
     return (
-      <div className="p-4 sm:p-5">
+      <div className="min-w-0 p-4 sm:p-5 [.cs-mode-body-pad_&]:!p-0">
         <DirectorRecommendationsPanel
           summary={directorReview.summary}
           recommendations={directorReview.recommendations}

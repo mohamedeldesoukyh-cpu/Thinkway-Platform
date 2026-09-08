@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { LayersIcon, LayoutDashboardIcon, SparklesIcon } from "lucide-react";
+import { LayersIcon, LayoutDashboardIcon, ScaleIcon, SparklesIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { OUTPUTS_CLASSES } from "@/features/campaign-outputs/constants/outputs-center-tokens";
@@ -10,8 +10,16 @@ import { STUDIO_REF_CLASSES } from "@/features/campaign-studio/constants/campaig
 import "@/features/campaign-studio/styles/campaign-studio-ref.css";
 import { OutputsPlanReadinessBanner } from "@/features/campaign-outputs/components/outputs-plan-readiness-banner";
 import { CampaignStudioHost } from "@/features/campaign-decision-workspace/components/campaign-studio-host";
+import type { StudioWorkspaceMode } from "@/features/campaign-decision-workspace/components/studio-mode-toggle";
 import { GenerateCampaignLauncher } from "@/features/campaign-plan/components/generate-campaign-launcher";
 import { GenerateQuotationLauncher } from "@/features/campaign-plan/components/generate-quotation-launcher";
+import { StudioTopChrome } from "@/features/campaign-studio/components/studio-top-chrome";
+import { StudioReviewDrawer } from "@/features/campaign-studio/components/studio-review-drawer";
+import { buildStudioReviewFindings } from "@/features/campaign-studio/services/studio-review-findings";
+import {
+  resolvePresentationCompletion,
+  resolveStudioCampaignDisplayTitle,
+} from "@/features/campaign-studio/services/section-data-resolver";
 
 const StudioOutputsView = dynamic(
   () =>
@@ -41,14 +49,14 @@ import {
 import { mergeActionCards } from "@/features/campaign-studio/services/studio-search-pool";
 import { StudioConversationControls } from "./studio-conversation-controls";
 import { toWorkflowDisplayMetadata } from "./workflow-dashboard-panel";
-import { resolvePresentationCompletion } from "@/features/campaign-studio/services/section-data-resolver";
 
-type StudioView = "studio" | "outputs" | "director";
+type StudioView = "studio" | "outputs" | "director" | "decision";
 
 const STUDIO_TABS: Array<{ id: StudioView; label: string; icon: typeof LayoutDashboardIcon }> = [
   { id: "studio", label: "Studio", icon: LayoutDashboardIcon },
   { id: "outputs", label: "Outputs", icon: LayersIcon },
   { id: "director", label: "Director", icon: SparklesIcon },
+  { id: "decision", label: "Decision mode", icon: ScaleIcon },
 ];
 
 export { findLatestStudioMessage };
@@ -120,6 +128,7 @@ export function CampaignStudioPanel({
   const boundCampaignObject = display?.campaignObject;
   const hasCampaignObject = Boolean(boundCampaignObject);
   const [view, setView] = useState<StudioView>(initialView ?? "studio");
+  const [reviewOpen, setReviewOpen] = useState(false);
   const navigateOutputKind =
     typeof message?.metadata?.outputNavigate === "string"
       ? message.metadata.outputNavigate
@@ -155,6 +164,20 @@ export function CampaignStudioPanel({
     });
   }, [message?.id, display, streamingInput, hasCampaignObject]);
 
+  const reviewFindings = useMemo(
+    () => buildStudioReviewFindings(boundCampaignObject),
+    [boundCampaignObject]
+  );
+
+  const campaignDisplayTitle = useMemo(
+    () =>
+      resolveStudioCampaignDisplayTitle(boundCampaignObject) ||
+      display?.workflowName ||
+      streamingInput?.workflowName ||
+      "Campaign",
+    [boundCampaignObject, display?.workflowName, streamingInput?.workflowName]
+  );
+
   if (!hasCampaignObject && !streamingInput) return null;
 
   const campaignObjectId = boundCampaignObject?.id;
@@ -166,9 +189,22 @@ export function CampaignStudioPanel({
       ? Math.round((display.completedTasks.length / display.totalSteps) * 100)
       : streamingInput?.progressPercent ?? 0;
 
+  const decisionReady = Boolean(
+    boundCampaignObject &&
+      (display?.status === "completed" ||
+        progressPercent >= 100 ||
+        (boundCampaignObject.sections &&
+          Object.values(boundCampaignObject.sections).every(
+            (section) => section?.status === "complete"
+          )))
+  );
+
   const showEditTargetBar =
     Boolean(onFocusSection) &&
     (variant !== "main" || copilotOpen || Boolean(focusedSectionId));
+
+  const workspaceMode: StudioWorkspaceMode =
+    view === "decision" ? "decision" : "presentation";
 
   const studioHostProps: CampaignStudioInput & {
     conversationId?: string;
@@ -199,62 +235,100 @@ export function CampaignStudioPanel({
         conversationId,
       };
 
-  return (
-    <div
-      className={cn(
-        "flex h-full min-h-0 flex-col overflow-hidden",
-        variant === "side" ? "border-l border-border/80 bg-muted/20" : STUDIO_REF_CLASSES.scope
-      )}
-    >
-      {/* Workspace navigation — Studio / Outputs Center / Director */}
-      <div
-        className={cn(
-          variant === "main" ? STUDIO_REF_CLASSES.subnav : "flex h-[46px] shrink-0 items-center justify-between gap-2 border-b border-[#DFE4EE] bg-white px-4 dark:border-border dark:bg-background"
-        )}
-      >
-        <div className={variant === "main" ? STUDIO_REF_CLASSES.subtabs : "flex min-w-0 items-center gap-1 overflow-x-auto"}>
-          {STUDIO_TABS.map((tab) => {
-            const active = view === tab.id;
-            const Icon = tab.icon;
-            const disabled = !hasCampaignObject && tab.id !== "studio";
-            return (
-              <button
-                key={tab.id}
-                type="button"
-                disabled={disabled}
-                onClick={() => setView(tab.id)}
-                aria-pressed={active}
-                className={cn(
-                  variant === "main"
-                    ? cn(STUDIO_REF_CLASSES.subtab, active && STUDIO_REF_CLASSES.subtabActive)
-                    : cn(
-                        "mr-[22px] inline-flex shrink-0 items-center gap-1.5 border-b-2 px-1.5 pb-[13px] pt-[13px] text-[13px] font-semibold transition-colors",
-                        active
-                          ? "border-[#0057FF] text-[#0B0F1A]"
-                          : "border-transparent text-[#6B7280] hover:text-[#0B0F1A]",
-                        disabled && "pointer-events-none opacity-40"
-                      )
-                )}
-              >
-                <Icon aria-hidden className={variant === "main" ? undefined : "size-3.5"} />
-                {tab.label}
-              </button>
-            );
-          })}
-        </div>
-        {variant === "main" ? (
-          <div className={STUDIO_REF_CLASSES.subnavActions}>
-            <StudioConversationControls activeId={conversationId} refMode />
-          </div>
-        ) : null}
-      </div>
+  const isMain = variant === "main";
 
-      {view === "studio" ? (
+  const renderStudioHost = (mode: StudioWorkspaceMode) => (
+    <CampaignStudioHost
+      {...studioHostProps}
+      layoutMode="panel"
+      viewportMode={isMain ? "desktop" : "default"}
+      className={isMain ? "flex min-h-0 flex-1 flex-col" : undefined}
+      workspaceMode={mode}
+      hideModeToggle={isMain}
+      hideTopChrome={isMain}
+      onWorkspaceModeChange={(next) =>
+        setView(next === "decision" ? "decision" : "studio")
+      }
+      onCardUpdated={
+        message
+          ? (cardId, status) => onCardUpdated?.(message.id, cardId, status)
+          : undefined
+      }
+      onVendorDecisionsUpdated={
+        message
+          ? (decisions) => onVendorDecisionsUpdated?.(message.id, decisions)
+          : undefined
+      }
+      onSlateUpdated={
+        message
+          ? (campaignObject) => onSlateUpdated?.(message.id, campaignObject)
+          : undefined
+      }
+    />
+  );
+
+  const modeTabs = (
+    <div
+      className={isMain ? STUDIO_REF_CLASSES.modeStepBar : "flex min-w-0 items-center gap-1 overflow-x-auto"}
+      role="tablist"
+      aria-label="Campaign Mode"
+    >
+      {STUDIO_TABS.map((tab) => {
+        const active = view === tab.id;
+        const Icon = tab.icon;
+        const disabled =
+          (!hasCampaignObject && tab.id !== "studio") ||
+          (tab.id === "decision" && !decisionReady);
+        return (
+          <button
+            key={tab.id}
+            type="button"
+            disabled={disabled}
+            onClick={() => setView(tab.id)}
+            role="tab"
+            aria-pressed={active}
+            title={
+              tab.id === "decision" && !decisionReady
+                ? "Available when the studio workflow completes"
+                : undefined
+            }
+            className={cn(
+              isMain
+                ? STUDIO_REF_CLASSES.modeStepBtn
+                : cn(
+                    "mr-[22px] inline-flex shrink-0 items-center gap-1.5 border-b-2 px-1.5 pb-[13px] pt-[13px] text-[13px] font-semibold transition-colors",
+                    active
+                      ? "border-[#0057FF] text-[#0B0F1A]"
+                      : "border-transparent text-[#6B7280] hover:text-[#0B0F1A]",
+                    disabled && "pointer-events-none opacity-40"
+                  )
+            )}
+          >
+            {isMain ? (
+              <>
+                <span className={STUDIO_REF_CLASSES.modeStepDot} aria-hidden />
+                <span className={STUDIO_REF_CLASSES.modeStepLabel}>{tab.label}</span>
+              </>
+            ) : (
+              <>
+                <Icon aria-hidden className="size-3.5" />
+                {tab.label}
+              </>
+            )}
+          </button>
+        );
+      })}
+    </div>
+  );
+
+  const modeBody = (
+    <>
+      {view === "studio" || view === "decision" ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          {showEditTargetBar ? (
+          {view === "studio" && showEditTargetBar ? (
             <div
               className={cn(
-                variant === "main" ? STUDIO_REF_CLASSES.editTargetBar : "border-b border-border/60 px-4 py-2.5"
+                isMain ? STUDIO_REF_CLASSES.editTargetBar : "border-b border-border/60 px-4 py-2.5"
               )}
             >
               <div className="flex flex-wrap items-center gap-1.5">
@@ -266,7 +340,7 @@ export function CampaignStudioPanel({
                       key={s.id}
                       type="button"
                       className={cn(
-                        variant === "main"
+                        isMain
                           ? cn(
                               STUDIO_REF_CLASSES.editTargetPill,
                               active && STUDIO_REF_CLASSES.editTargetPillActive
@@ -289,32 +363,12 @@ export function CampaignStudioPanel({
           <div
             className={cn(
               "min-h-0 flex-1",
-              variant === "main" ? "flex flex-col overflow-hidden" : "overflow-y-auto p-3 sm:p-4"
+              isMain ? "flex flex-col overflow-hidden" : "overflow-y-auto p-3 sm:p-4"
             )}
           >
-            <CampaignStudioHost
-              {...studioHostProps}
-              layoutMode="panel"
-              viewportMode={variant === "main" ? "desktop" : "default"}
-              className={variant === "main" ? "flex min-h-0 flex-1 flex-col" : undefined}
-              onCardUpdated={
-                message
-                  ? (cardId, status) => onCardUpdated?.(message.id, cardId, status)
-                  : undefined
-              }
-              onVendorDecisionsUpdated={
-                message
-                  ? (decisions) => onVendorDecisionsUpdated?.(message.id, decisions)
-                  : undefined
-              }
-              onSlateUpdated={
-                message
-                  ? (campaignObject) => onSlateUpdated?.(message.id, campaignObject)
-                  : undefined
-              }
-            />
+            {renderStudioHost(workspaceMode)}
           </div>
-          {campaignObjectId ? (
+          {view === "studio" && campaignObjectId ? (
             <CampaignHistoryPanel
               campaignObjectId={campaignObjectId}
               changeLog={changeLog}
@@ -325,7 +379,12 @@ export function CampaignStudioPanel({
           ) : null}
         </div>
       ) : view === "outputs" && hasCampaignObject ? (
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div
+          className={cn(
+            "flex min-h-0 flex-1 flex-col overflow-hidden",
+            isMain && "cs-mode-body-pad"
+          )}
+        >
           <StudioOutputsView
             key={campaignBindKey}
             campaignObject={boundCampaignObject!}
@@ -367,7 +426,12 @@ export function CampaignStudioPanel({
           />
         </div>
       ) : hasCampaignObject ? (
-        <div className="min-h-0 flex-1 overflow-y-auto">
+        <div
+          className={cn(
+            "min-h-0 flex-1 overflow-y-auto",
+            isMain && "cs-mode-body-pad"
+          )}
+        >
           <StudioOutputsView
             campaignObject={boundCampaignObject!}
             mode="director"
@@ -375,6 +439,61 @@ export function CampaignStudioPanel({
           />
         </div>
       ) : null}
+    </>
+  );
+
+  if (isMain) {
+    return (
+      <div
+        className={cn(
+          "flex h-full min-h-0 flex-col overflow-hidden",
+          STUDIO_REF_CLASSES.scope,
+          STUDIO_REF_CLASSES.studioDesktop
+        )}
+      >
+        <div className={STUDIO_REF_CLASSES.campaignChrome}>
+          <StudioTopChrome
+            displayTitle={campaignDisplayTitle}
+            workflowName={display?.workflowName || streamingInput?.workflowName || "Campaign Studio"}
+            currentSectionTitle="Campaign Mode"
+            campaignObjectId={campaignObjectId}
+            conversationId={conversationId}
+            progressPercent={progressPercent}
+            showExportActions={Boolean(campaignObjectId && progressPercent >= 100)}
+            layoutMode="panel"
+            compact
+            refMode
+            reviewCount={reviewFindings.length}
+            onOpenReview={() => setReviewOpen(true)}
+            campaignCode={campaignObjectId?.slice(0, 14)}
+            mastExtras={
+              <StudioConversationControls activeId={conversationId} refMode />
+            }
+          />
+          {modeTabs}
+        </div>
+        <div className="cs-mode-body flex min-h-0 flex-1 flex-col overflow-hidden">
+          {modeBody}
+        </div>
+        <StudioReviewDrawer
+          open={reviewOpen}
+          findings={reviewFindings}
+          onClose={() => setReviewOpen(false)}
+          onNavigate={() => {
+            setView("studio");
+            setReviewOpen(false);
+          }}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex h-full min-h-0 flex-col overflow-hidden border-l border-border/80 bg-muted/20">
+      <div className="flex h-[46px] shrink-0 items-center justify-between gap-2 border-b border-[#DFE4EE] bg-white px-4 dark:border-border dark:bg-background">
+        {modeTabs}
+      </div>
+      {modeBody}
     </div>
   );
 }

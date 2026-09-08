@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
@@ -48,6 +48,13 @@ type CampaignStudioHostProps = CampaignStudioInput & {
   layoutMode?: CampaignStudioLayoutMode;
   viewportMode?: CampaignStudioViewportMode;
   scrollContainer?: HTMLElement | null;
+  /** Controlled workspace mode (panel owns Studio vs Decision tabs). */
+  workspaceMode?: StudioWorkspaceMode;
+  onWorkspaceModeChange?: (mode: StudioWorkspaceMode) => void;
+  /** Hide Presentation | Decision toggle when parent panel owns mode tabs. */
+  hideModeToggle?: boolean;
+  /** Parent Campaign Mode panel owns mast + mode tabs. */
+  hideTopChrome?: boolean;
 };
 
 function isWorkflowComplete(workflowStatus?: string): boolean {
@@ -77,9 +84,15 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
         isWorkflowComplete(metaStatus) ||
         sectionsReadyForDecision(props.campaignObject))
   );
-  const [mode, setMode] = useState<StudioWorkspaceMode>("presentation");
+  const [internalMode, setInternalMode] = useState<StudioWorkspaceMode>("presentation");
+  const mode = props.workspaceMode ?? internalMode;
+  const setMode = props.onWorkspaceModeChange ?? setInternalMode;
 
-  const modeToggle = (
+  useEffect(() => {
+    if (props.workspaceMode) setInternalMode(props.workspaceMode);
+  }, [props.workspaceMode]);
+
+  const modeToggle = props.hideModeToggle ? null : (
     <StudioModeToggle
       mode={mode}
       onModeChange={setMode}
@@ -98,6 +111,10 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
       layoutMode = "chat",
       scrollContainer,
       viewportMode = "default",
+      workspaceMode: _wm,
+      onWorkspaceModeChange: _owm,
+      hideModeToggle: _hmt,
+      hideTopChrome = false,
       ...studioInput
     } = props;
     return (
@@ -107,7 +124,7 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
           className
         )}
       >
-        {!decisionReady && viewportMode !== "desktop" ? (
+        {!decisionReady && viewportMode !== "desktop" && !props.hideModeToggle ? (
           <p className="text-right text-[10px] text-muted-foreground">
             Decision Mode unlocks when the studio workflow completes.
           </p>
@@ -123,13 +140,21 @@ export function CampaignStudioHost(props: CampaignStudioHostProps) {
           layoutMode={layoutMode}
           viewportMode={viewportMode}
           scrollContainer={scrollContainer}
+          hideTopChrome={hideTopChrome}
           className={layoutMode === "panel" ? "h-full min-h-0" : undefined}
         />
       </div>
     );
   }
 
-  return <CampaignStudioDecisionHost {...props} modeToggle={modeToggle} initialMode={mode} />;
+  return (
+    <CampaignStudioDecisionHost
+      {...props}
+      modeToggle={modeToggle}
+      initialMode={mode}
+      onModeChange={setMode}
+    />
+  );
 }
 
 function CampaignStudioDecisionHost({
@@ -143,19 +168,29 @@ function CampaignStudioDecisionHost({
   campaignObject,
   modeToggle,
   initialMode,
+  onModeChange,
   layoutMode = "chat",
   scrollContainer,
   viewportMode = "default",
+  hideModeToggle: _hideModeToggle,
+  hideTopChrome = false,
+  workspaceMode: _workspaceMode,
+  onWorkspaceModeChange: _onWorkspaceModeChange,
   ...studioInput
 }: CampaignStudioHostProps & {
   modeToggle: ReactNode;
   initialMode: StudioWorkspaceMode;
+  onModeChange: (mode: StudioWorkspaceMode) => void;
 }) {
   const [mode, setMode] = useState<StudioWorkspaceMode>(initialMode);
   const [budgetSlider, setBudgetSlider] = useState(0);
   const [drawerCreator, setDrawerCreator] = useState<CreatorDrawerSelection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [promotedObject, setPromotedObject] = useState<CampaignObject | undefined>();
+
+  useEffect(() => {
+    setMode(initialMode);
+  }, [initialMode]);
 
   const sourceCampaignObject = promotedObject ?? campaignObject!;
 
@@ -215,14 +250,21 @@ function CampaignStudioDecisionHost({
     evaluateClientCreatorUrls: workspace.evaluateClientCreatorUrls,
   };
 
-  const toggle = (
-    <StudioModeToggle mode={mode} onModeChange={setMode} />
-  );
+  const setWorkspaceMode = (next: StudioWorkspaceMode) => {
+    setMode(next);
+    onModeChange(next);
+  };
+
+  const toggle = _hideModeToggle
+    ? null
+    : modeToggle ?? (
+        <StudioModeToggle mode={mode} onModeChange={setWorkspaceMode} />
+      );
 
   if (mode === "presentation") {
     return (
-      <div className={cn("space-y-3", className)}>
-        <div className="flex justify-end">{toggle}</div>
+      <div className={cn(hideTopChrome ? "flex min-h-0 flex-1 flex-col" : "space-y-3", className)}>
+        {toggle ? <div className="flex justify-end">{toggle}</div> : null}
         <CampaignStudio
           {...studioInput}
           campaignObject={sourceCampaignObject}
@@ -234,20 +276,21 @@ function CampaignStudioDecisionHost({
           layoutMode={layoutMode}
           viewportMode={viewportMode}
           scrollContainer={scrollContainer}
+          hideTopChrome={hideTopChrome}
         />
       </div>
     );
   }
 
   return (
-    <div className={cn("space-y-3", className)}>
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className={cn(hideTopChrome ? "flex min-h-0 flex-1 flex-col gap-3" : "space-y-3", className)}>
+      <div className="flex flex-wrap items-center justify-between gap-3 px-1">
         <ScenarioBar workspace={workspace} className="min-w-0 flex-1" />
         {toggle}
       </div>
 
-      <div className="flex min-w-0 items-start gap-4">
-        <div className="min-w-0 flex-1 space-y-3">
+      <div className="flex min-h-0 min-w-0 flex-1 items-start gap-4">
+        <div className="min-h-0 min-w-0 flex-1 space-y-3">
           <CampaignStudio
             {...studioInput}
             campaignObject={displayCampaignObject}
@@ -259,6 +302,8 @@ function CampaignStudioDecisionHost({
             decisionMode={decisionMode}
             layoutMode={layoutMode}
             scrollContainer={scrollContainer}
+            viewportMode={viewportMode}
+            hideTopChrome={hideTopChrome}
           />
 
           <DecisionRightPanel workspace={workspace} variant="stacked" className="xl:hidden" />

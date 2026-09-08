@@ -29,6 +29,13 @@ type StudioTopChromeProps = {
   className?: string;
   compact?: boolean;
   refMode?: boolean;
+  /** Review finding count — mast CTA opens the review drawer. */
+  reviewCount?: number;
+  onOpenReview?: () => void;
+  /** Optional campaign id chip (e.g. TW-2026-0124). */
+  campaignCode?: string;
+  /** Extra mast actions (e.g. New Campaign) — stays in shared chrome, not mode bodies. */
+  mastExtras?: ReactNode;
 };
 
 function publishChromeHeight(el: HTMLElement) {
@@ -86,6 +93,10 @@ export function StudioTopChrome({
   className,
   compact = false,
   refMode = false,
+  reviewCount = 0,
+  onOpenReview,
+  campaignCode,
+  mastExtras,
 }: StudioTopChromeProps) {
   const headerRef = useRef<HTMLElement>(null);
   const isChatLayout = layoutMode === "chat";
@@ -103,33 +114,77 @@ export function StudioTopChrome({
     observer?.observe(el);
 
     return () => observer?.disconnect();
-  }, [displayTitle, workflowName, currentSectionTitle, showExportActions, showNavToggle, isChatLayout, refMode]);
+  }, [
+    displayTitle,
+    workflowName,
+    currentSectionTitle,
+    showExportActions,
+    showNavToggle,
+    isChatLayout,
+    refMode,
+    reviewCount,
+  ]);
 
   const metaTitle = displayTitle?.trim() || workflowName;
+  const readinessLabel = resolveStudioReadinessLabel(progressPercent);
+  const statusRisk = progressPercent < 100 || reviewCount > 0;
 
   if (refMode) {
     return (
       <header
         ref={headerRef}
         data-studio-top-chrome
-        className={cn(STUDIO_REF_CLASSES.metaBar, className)}
+        className={cn(STUDIO_REF_CLASSES.frozen, className)}
       >
-        <div className={STUDIO_REF_CLASSES.metaLeft}>
-          <div className={STUDIO_REF_CLASSES.crumb}>
-            <b>{CAMPAIGN_STUDIO_COPY.studioLabel}</b> / {currentSectionTitle}
+        <div className={STUDIO_REF_CLASSES.mast}>
+          <div className={STUDIO_REF_CLASSES.mastHead}>
+            <span className={STUDIO_REF_CLASSES.mastMark} aria-hidden>
+              <i />
+              <u />
+            </span>
+            <span className={STUDIO_REF_CLASSES.mastWord}>
+              THINK<em>WAY</em>
+            </span>
+            <span className={STUDIO_REF_CLASSES.mastDivider} aria-hidden />
+            {campaignCode || campaignObjectId ? (
+              <span className={STUDIO_REF_CLASSES.mastId}>
+                {(campaignCode || campaignObjectId || "").slice(0, 14)}
+              </span>
+            ) : null}
+            <h1>{metaTitle}</h1>
+            <span className={STUDIO_REF_CLASSES.mastSub}>{currentSectionTitle}</span>
+            <span
+              className={cn(
+                STUDIO_REF_CLASSES.mastStatus,
+                statusRisk && STUDIO_REF_CLASSES.mastStatusRisk
+              )}
+            >
+              {readinessLabel} · {progressPercent}%
+            </span>
+            <div className={STUDIO_REF_CLASSES.mastActions}>
+              {onOpenReview ? (
+                <button
+                  type="button"
+                  className={cn(STUDIO_REF_CLASSES.mastBtn, STUDIO_REF_CLASSES.mastBtnPri)}
+                  onClick={onOpenReview}
+                >
+                  Review · {reviewCount}
+                </button>
+              ) : null}
+              {showExportActions && campaignObjectId ? (
+                <span className="inline-flex [&_button]:h-[27px] [&_button]:rounded-lg [&_button]:border [&_button]:border-white/35 [&_button]:bg-white/14 [&_button]:px-2.5 [&_button]:text-[11.5px] [&_button]:font-semibold [&_button]:text-white">
+                  <CampaignProposalExportActions
+                    campaignObjectId={campaignObjectId}
+                    conversationId={conversationId}
+                  />
+                </span>
+              ) : null}
+              {mastExtras}
+              <ProgressRing percent={progressPercent} />
+            </div>
           </div>
-          <div className={STUDIO_REF_CLASSES.metaTitle}>{metaTitle}</div>
         </div>
-        <div className={STUDIO_REF_CLASSES.metaRight}>
-          {showExportActions && campaignObjectId ? (
-            <CampaignProposalExportActions
-              campaignObjectId={campaignObjectId}
-              conversationId={conversationId}
-            />
-          ) : null}
-          {studioModeToggle}
-          <ProgressRing percent={progressPercent} />
-        </div>
+        {studioModeToggle ? <div>{studioModeToggle}</div> : null}
       </header>
     );
   }

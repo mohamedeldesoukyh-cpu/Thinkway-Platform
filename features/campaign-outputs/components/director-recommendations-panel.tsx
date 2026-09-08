@@ -7,10 +7,10 @@ import { cn } from "@/lib/utils";
 
 import type { DirectorRecommendation, DirectorConfidence } from "../director/director-types";
 
-const CONFIDENCE_STYLE: Record<DirectorConfidence, string> = {
-  High: "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  Medium: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
-  Low: "border-border bg-muted/40 text-muted-foreground",
+const CONFIDENCE_CLASS: Record<DirectorConfidence, string> = {
+  High: "hi",
+  Medium: "md",
+  Low: "lo",
 };
 
 export type DirectorRecommendationsPanelProps = {
@@ -40,43 +40,43 @@ export function DirectorRecommendationsPanel({
   );
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <span className="flex size-7 items-center justify-center rounded-lg bg-gradient-to-br from-violet-600 to-indigo-600">
+    <div className="cs-director space-y-5">
+      <div className="cs-director__head flex items-center gap-2.5">
+        <span className="cs-director__ico flex size-8 items-center justify-center rounded-[10px] bg-gradient-to-br from-[#5B3FD1] to-[#0057FF]">
           <SparklesIcon className="size-4 text-white" />
         </span>
         <div>
-          <h2 className="text-sm font-bold text-foreground">AI Campaign Director</h2>
-          <p className="text-[11px] text-muted-foreground">{summary}</p>
+          <h2 className="text-[15px] font-semibold tracking-tight text-[#0B0F1A]">
+            AI Campaign Director
+          </h2>
+          <p className="text-[12px] leading-relaxed text-[#64748B]">{summary}</p>
         </div>
       </div>
 
       {visible.length === 0 ? (
-        <p className="rounded-lg border border-border bg-muted/20 p-4 text-[13px] text-muted-foreground">
+        <p className="rounded-[12px] border border-[#E2E8F0] bg-[#F6F8FB] p-4 text-[13px] text-[#64748B]">
           No open recommendations — the campaign looks well-balanced.
         </p>
       ) : (
-        <div className="space-y-3">
+        <div className="cs-director__list">
           {visible.map((rec) => (
-            <div key={rec.id} className="rounded-xl border border-border bg-background p-4 shadow-sm">
-              <div className="flex items-start justify-between gap-2">
-                <h3 className="text-sm font-bold text-foreground">{rec.title}</h3>
-                <span
-                  className={cn(
-                    "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold",
-                    CONFIDENCE_STYLE[rec.confidence]
-                  )}
-                >
+            <div key={rec.id} className="cs-rec2">
+              <div className="flex items-start justify-between gap-3">
+                <h3 className="text-[13.5px] font-semibold tracking-tight text-[#0B0F1A]">
+                  {rec.title}
+                </h3>
+                <span className={cn("cs-sev shrink-0", CONFIDENCE_CLASS[rec.confidence])}>
                   {rec.confidence}
                 </span>
               </div>
-              <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/90">{rec.recommendation}</p>
-              <p className="mt-2 text-[12px] text-muted-foreground">
-                <span className="font-semibold text-foreground/80">Reason:</span> {rec.reason}
+              <p className="mt-1.5 text-[13px] leading-relaxed text-[#41495A]">{rec.recommendation}</p>
+              <p className="mt-2 text-[12px] leading-relaxed text-[#64748B]">
+                <span className="font-semibold text-[#41495A]">Reason:</span> {rec.reason}
               </p>
               {rec.evidence.length ? (
-                <p className="mt-1 text-[11px] text-muted-foreground">
-                  <span className="font-semibold text-foreground/70">Evidence:</span> {rec.evidence.join("; ")}
+                <p className="mt-1 text-[11.5px] leading-relaxed text-[#64748B]">
+                  <span className="font-semibold text-[#41495A]">Evidence:</span>{" "}
+                  {rec.evidence.join("; ")}
                 </p>
               ) : null}
 
@@ -85,19 +85,19 @@ export function DirectorRecommendationsPanel({
                   type="text"
                   value={editing[rec.id]}
                   onChange={(e) => setEditing((prev) => ({ ...prev, [rec.id]: e.target.value }))}
-                  className="mt-3 w-full rounded-md border border-border bg-background px-2.5 py-1.5 text-[12px] text-foreground focus:border-[#1D9E75] focus:outline-none"
+                  className="cs-rec2__input mt-3 w-full rounded-[9px] border border-[#E2E8F0] bg-white px-2.5 py-2 text-[12px] text-[#0B0F1A] outline-none focus:border-[rgba(0,87,255,0.45)] focus:shadow-[0_0_0_3px_rgba(0,87,255,0.12)]"
                   aria-label="Edit the command before applying"
                 />
               ) : null}
 
-              <div className="mt-3 flex flex-wrap gap-1.5">
+              <div className="cs-rec2__actions mt-3 flex flex-wrap items-center gap-2">
                 {rec.proposedCommand ? (
                   <>
                     <button
                       type="button"
                       onClick={() => onApply?.(editing[rec.id] ?? rec.proposedCommand!)}
                       disabled={!onApply}
-                      className="inline-flex items-center gap-1.5 rounded-md bg-[#1D9E75] px-2.5 py-1.5 text-[11px] font-semibold text-white transition-colors hover:bg-[#178a66] disabled:opacity-40"
+                      className="cs-rec2__apply"
                     >
                       <CheckIcon className="size-3.5" /> Apply
                     </button>
@@ -110,20 +110,21 @@ export function DirectorRecommendationsPanel({
                             : { ...prev, [rec.id]: rec.proposedCommand! }
                         )
                       }
-                      className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-[11px] font-semibold text-foreground/80 transition-colors hover:bg-muted/60"
+                      className="cs-rec2__modify"
                     >
-                      <PencilIcon className="size-3.5" /> {editing[rec.id] !== undefined ? "Cancel" : "Modify"}
+                      <PencilIcon className="size-3.5" />{" "}
+                      {editing[rec.id] !== undefined ? "Cancel" : "Modify"}
                     </button>
                   </>
                 ) : (
-                  <span className="rounded-md border border-border/70 px-2 py-1 text-[10px] text-muted-foreground">
+                  <span className="cs-rec2__advisory">
                     Advisory — reflected when outputs regenerate
                   </span>
                 )}
                 <button
                   type="button"
                   onClick={() => setDismissed((prev) => new Set(prev).add(rec.id))}
-                  className="ml-auto inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground transition-colors hover:bg-muted/60"
+                  className="cs-rec2__dismiss ml-auto"
                 >
                   <XIcon className="size-3.5" /> Dismiss
                 </button>

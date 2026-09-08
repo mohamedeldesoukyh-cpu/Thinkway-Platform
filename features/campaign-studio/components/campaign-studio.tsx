@@ -19,6 +19,7 @@ import type { StudioDraftState } from "@/features/campaign-intelligence/types/se
 
 import { StudioDraftBar } from "./studio-draft-bar";
 import { StudioFreshnessBanner } from "./studio-freshness-banner";
+import { StudioReviewDrawer } from "./studio-review-drawer";
 import { StudioSectionSidebarSheet } from "./studio-section-sidebar";
 import { StudioTopChrome } from "./studio-top-chrome";
 import { StudioWorkspaceNav } from "./studio-workspace-nav";
@@ -30,6 +31,7 @@ import {
   outdatedStudioSections,
   studioFreshnessSummary,
 } from "../services/studio-facts-freshness";
+import { buildStudioReviewFindings } from "../services/studio-review-findings";
 import {
   defaultStudioWorkspaceStep,
   resolveStudioWorkspaceSteps,
@@ -70,6 +72,8 @@ type CampaignStudioProps = CampaignStudioInput & {
   layoutMode?: CampaignStudioLayoutMode;
   viewportMode?: CampaignStudioViewportMode;
   scrollContainer?: HTMLElement | null;
+  /** Parent Campaign Mode panel owns mast + mode tabs. */
+  hideTopChrome?: boolean;
 };
 
 export function CampaignStudio({
@@ -84,6 +88,7 @@ export function CampaignStudio({
   layoutMode = "panel",
   viewportMode = "default",
   scrollContainer: _scrollContainer,
+  hideTopChrome = false,
   ...input
 }: CampaignStudioProps) {
   const studio = useCampaignStudio(input);
@@ -102,6 +107,7 @@ export function CampaignStudio({
     );
   }, [input.campaignObject, input.actionCards, onSlateUpdated]);
   const [navOpen, setNavOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
   const [scrollRoot, setScrollRoot] = useState<HTMLDivElement | null>(null);
   const isChatLayout = layoutMode === "chat";
   const isDesktopViewport = viewportMode === "desktop" && !isChatLayout;
@@ -117,6 +123,10 @@ export function CampaignStudio({
   const freshness = useMemo(
     () => studioFreshnessSummary(studio?.campaignObject, outdatedSections),
     [studio?.campaignObject, outdatedSections]
+  );
+  const reviewFindings = useMemo(
+    () => buildStudioReviewFindings(studio?.campaignObject, studioDraft),
+    [studio?.campaignObject, studioDraft]
   );
 
   const actionCardHydration = useMemo(() => {
@@ -265,7 +275,7 @@ export function CampaignStudio({
       steps={workspaceSteps}
       activeStepId={activeStep.id}
       onNavigate={goToStep}
-      campaignTitle={campaignDisplayTitle}
+      campaignTitle={hideTopChrome ? undefined : campaignDisplayTitle}
     />
   );
 
@@ -276,11 +286,13 @@ export function CampaignStudio({
           isChatLayout
             ? STUDIO_CLASSES.shellChat
             : isDesktopViewport
-              ? cn(
-                  STUDIO_REF_CLASSES.scope,
-                  STUDIO_REF_CLASSES.studioDesktop,
-                  "min-w-0"
-                )
+              ? hideTopChrome
+                ? "flex min-h-0 min-w-0 flex-1 flex-col"
+                : cn(
+                    STUDIO_REF_CLASSES.scope,
+                    STUDIO_REF_CLASSES.studioDesktop,
+                    "min-w-0"
+                  )
               : STUDIO_CLASSES.shell,
           !isChatLayout && className?.includes("h-full") && "!h-full max-h-none",
           !isDesktopViewport && "min-w-0",
@@ -289,47 +301,56 @@ export function CampaignStudio({
       >
         {isDesktopViewport ? (
           <>
-            <div className={STUDIO_REF_CLASSES.chromeStack}>
-              <StudioTopChrome
-                displayTitle={campaignDisplayTitle}
-                workflowName={studio.workflowName}
-                currentSectionTitle={activeStep.label}
-                campaignObjectId={studio.campaignObject?.id}
-                conversationId={conversationId}
-                progressPercent={readinessPercent}
-                showExportActions={Boolean(
-                  studio.campaignObject?.id && readinessPercent >= 100
-                )}
-                studioModeToggle={studioModeToggle}
-                onOpenNav={() => setNavOpen(true)}
-                showNavToggle={false}
-                layoutMode={layoutMode}
-                compact
-                refMode
-              />
-              <StudioWorkspaceStepBar
-                steps={workspaceSteps}
-                activeStepId={activeStep.id}
-                onNavigate={goToStep}
-              />
-            </div>
+            {!hideTopChrome ? (
+              <div className={STUDIO_REF_CLASSES.chromeStack}>
+                <StudioTopChrome
+                  displayTitle={campaignDisplayTitle}
+                  workflowName={studio.workflowName}
+                  currentSectionTitle={activeStep.label}
+                  campaignObjectId={studio.campaignObject?.id}
+                  conversationId={conversationId}
+                  progressPercent={readinessPercent}
+                  showExportActions={Boolean(
+                    studio.campaignObject?.id && readinessPercent >= 100
+                  )}
+                  studioModeToggle={studioModeToggle}
+                  onOpenNav={() => setNavOpen(true)}
+                  showNavToggle={false}
+                  layoutMode={layoutMode}
+                  compact
+                  refMode
+                  reviewCount={reviewFindings.length}
+                  onOpenReview={() => setReviewOpen(true)}
+                />
+              </div>
+            ) : null}
             <div className={STUDIO_REF_CLASSES.shell}>
-              {nav}
+              <div className={STUDIO_REF_CLASSES.wrap}>
+                {nav}
+                <div className={STUDIO_REF_CLASSES.doc}>
+                  <div ref={setScrollRoot} className={STUDIO_REF_CLASSES.main}>
+                    <div className={STUDIO_REF_CLASSES.content}>{renderCanvasBody()}</div>
+                  </div>
+                </div>
+              </div>
               <StudioSectionSidebarSheet open={navOpen} onOpenChange={setNavOpen} refMode>
                 <StudioWorkspaceNav
                   steps={workspaceSteps}
                   activeStepId={activeStep.id}
                   onNavigate={goToStep}
-                  campaignTitle={campaignDisplayTitle}
+                  campaignTitle={hideTopChrome ? undefined : campaignDisplayTitle}
                   embedded
                 />
               </StudioSectionSidebarSheet>
-              <div className={STUDIO_REF_CLASSES.mainColumn}>
-                <div ref={setScrollRoot} className={STUDIO_REF_CLASSES.main}>
-                  <div className={STUDIO_REF_CLASSES.content}>{renderCanvasBody()}</div>
-                </div>
-              </div>
             </div>
+            {!hideTopChrome ? (
+              <StudioReviewDrawer
+                open={reviewOpen}
+                findings={reviewFindings}
+                onClose={() => setReviewOpen(false)}
+                onNavigate={goToStep}
+              />
+            ) : null}
           </>
         ) : (
           <>
