@@ -1,25 +1,36 @@
 /**
- * Phase 1 gap fix: validated intelligence must reach the CSR builder at runtime.
+ * Phase 1 runtime wiring: canonical validated intelligence must reach CSR
+ * through the ACTUAL production call chain, not just via a helper in isolation.
  *
- * These tests exercise the async attachment path with a stubbed Supabase client.
- * No real database access, no brief parsing, no selection behaviour.
+ * Production chain under test:
+ *   state.data.validatedCampaignIntelligence      (set by workflow-engine)
+ *     → CampaignDirector.applyTaskResult(result, state.data)
+ *       → applyTaskResultToCampaignObject(obj, result, stateData)
+ *         → proposeInitialCreatorSlate(obj, { validated })
+ *           → attachCreatorSearchRequirements(obj, { validated })
+ *             → buildCreatorSearchRequirements({ validated, ... })
+ *
+ * No database access, no brief parsing, no selection behaviour.
  */
 
 import assert from "node:assert/strict";
 import test from "node:test";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { CampaignDirector } from "@/features/campaign-intelligence/services/campaign-director";
+import {
+  applyTaskResultToCampaignObject,
+  createEmptyCampaignObject,
+} from "@/features/campaign-intelligence/services/section-updaters";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
+import { DIRECTOR_PIPELINE_STATE_KEY } from "@/features/campaign-director/services/campaign-director";
 import type { NormalizedCampaignEntities } from "@/features/campaign-intelligence-profile/services/normalization/types";
 import type { ValidatedCampaignIntelligence } from "@/features/campaign-intelligence-profile/types/validated-intelligence";
+import type { WorkflowTaskResult } from "@/features/ai-workflows/types";
 
-import {
-  attachCreatorSearchRequirements,
-  attachCreatorSearchRequirementsWithValidatedIntelligence,
-  resolveValidatedIntelligenceForCampaignObject,
-} from "./attach-creator-search-requirements";
+import { resolveValidatedIntelligenceForProfile } from "./attach-creator-search-requirements";
 
 const NOW = "2026-01-01T00:00:00.000Z";
 const PROFILE_ID = "cip-123";
@@ -44,6 +55,7 @@ const strategy: CampaignStrategyDocument = {
   creatorTierStrategy: [{ tier: "Macro", allocationPercent: 100, why: "Reach" }],
 };
 
+/** Values here appear NOWHERE in strategy or facts — so they prove provenance. */
 const validatedIntelligence: ValidatedCampaignIntelligence = {
   brand: { brandName: "BabyJoy" },
   market: { countryCode: "EG", countryLabel: "Egypt", cities: ["Cairo"] },
@@ -89,34 +101,68 @@ const normalizedEntities: NormalizedCampaignEntities = {
   fieldEvidence: {},
 };
 
+/** Built with the production factory so every section the updater touches exists. */
 function campaignObject(creatorsData: CreatorsSectionData = {}): CampaignObject {
-  return {
+  const object = createEmptyCampaignObject({
     id: "co-1",
     conversationId: "conv-1",
     workflowId: "create-campaign",
-    updatedAt: NOW,
-    sections: {
-      creators: { status: "complete", content: "", data: creatorsData },
-      strategy: { status: "complete", content: "Parenting campaign" },
-      summary: { status: "complete", content: "BabyJoy" },
-      timeline: { status: "complete", content: "", data: {} },
+  });
+  object.sections.creators.data = creatorsData as unknown as Record<string, unknown>;
+  object.meta = {
+    ...object.meta,
+    status: "building",
+    campaignStrategyDocument: strategy,
+    campaignFacts: {
+      brandName: "BabyJoy",
+      objective: "Awareness among mothers",
+      platforms: ["Instagram"],
+      geography: ["Egypt"],
+      audience: "Mothers",
+      extractedAt: NOW,
+      confidence: {},
+      sources: {},
     },
-    meta: {
-      status: "complete",
-      specialistProgress: [],
-      campaignStrategyDocument: strategy,
-      campaignFacts: {
-        brandName: "BabyJoy",
-        objective: "Awareness among mothers",
-        platforms: ["Instagram"],
-        geography: ["Egypt"],
-        audience: "Mothers",
-        extractedAt: NOW,
-        confidence: {},
-        sources: {},
+  } as unknown as CampaignObject["meta"];
+  return object;
+}
+
+/** Workflow state exactly as the engine leaves it before applyTaskResult. */
+function workflowStateData(
+  overrides: Record<string, unknown> = {}
+): Record<string, unknown> {
+  return {
+    campaignStrategyDocument: strategy,
+    campaignIntelligenceProfileId: PROFILE_ID,
+    [DIRECTOR_PIPELINE_STATE_KEY]: {
+      strategyDocument: strategy,
+      specialistOutputs: [],
+      crossReviewFindings: [],
+      challenges: [],
+      approvedSections: [],
+      approvalGate: {
+        approved: true,
+        unresolvedConflictCount: 0,
+        crossReviewOpenCount: 0,
+        revisionRounds: 1,
+        blockers: [],
       },
     },
-  } as unknown as CampaignObject;
+    ...overrides,
+  };
+}
+
+const taskResult: WorkflowTaskResult = {
+  taskId: "build-shortlist",
+  status: "completed",
+  agentId: "scout",
+  content: "Ranked the vendor shortlist.",
+  startedAt: NOW,
+  completedAt: NOW,
+} as unknown as WorkflowTaskResult;
+
+function csrOf(object: CampaignObject) {
+  return (object.sections.creators.data as CreatorsSectionData).searchRequirements;
 }
 
 /** Minimal stub of the single query getCampaignIntelligenceProfileById issues. */
@@ -137,28 +183,19 @@ function supabaseStub(
   } as unknown as SupabaseClient;
 }
 
-function requirementsOf(object: CampaignObject) {
-  return (object.sections.creators.data as CreatorsSectionData).searchRequirements;
-}
+// === PRODUCTION CHAIN =======================================================
 
-// A — validatedIntelligence reaches the builder -------------------------------
-
-test("A: profile.validatedIntelligence reaches the CSR builder", async () => {
-  const supabase = supabaseStub({
-    data: { id: PROFILE_ID, profile: { validatedIntelligence } },
-    error: null,
-  });
-
-  const result = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID }),
-    { now: NOW }
+test("PRODUCTION: applyTaskResultToCampaignObject passes workflow-state validated intelligence into CSR", () => {
+  const updated = applyTaskResultToCampaignObject(
+    campaignObject(),
+    taskResult,
+    workflowStateData({ validatedCampaignIntelligence: validatedIntelligence })
   );
 
-  const csr = requirementsOf(result);
-  assert.ok(csr, "CSR should be attached");
+  const csr = csrOf(updated);
+  assert.ok(csr, "CSR must be attached by the production path");
 
-  // Fields that can ONLY come from validated intelligence.
+  // Every one of these can ONLY come from validated intelligence.
   assert.equal(csr.search.audienceGender?.value, "female");
   assert.equal(csr.search.audienceAgeMin?.value, 28);
   assert.equal(csr.search.audienceAgeMax?.value, 40);
@@ -171,44 +208,63 @@ test("A: profile.validatedIntelligence reaches the CSR builder", async () => {
   assert.deepEqual(csr.search.cities.map((c) => c.value), ["Cairo"]);
   assert.equal(csr.fieldEvidence.platforms?.confidence, 0.95);
 
-  // Strategy still wins for campaign intent.
+  // Strategy still owns campaign intent.
   assert.equal(csr.strategyRef?.id, "strategy-1");
   assert.equal(csr.search.platforms[0]?.source, "strategy");
 });
 
-test("A: without the async path CSR carries no validated-only fields", async () => {
-  // Demonstrates the gap this change closes.
-  const syncOnly = attachCreatorSearchRequirements(
-    campaignObject({ cipProfileId: PROFILE_ID }),
-    { now: NOW }
-  );
-  const csr = requirementsOf(syncOnly);
+test("PRODUCTION: CampaignDirector.applyTaskResult carries validated intelligence through", () => {
+  const director = new CampaignDirector(campaignObject());
 
+  const updated = director.applyTaskResult(
+    taskResult,
+    workflowStateData({ validatedCampaignIntelligence: validatedIntelligence })
+  );
+
+  const csr = csrOf(updated);
+  assert.ok(csr);
+  assert.equal(csr.search.audienceGender?.value, "female");
+  assert.equal(csr.search.brandSafety, "required");
+  assert.deepEqual(csr.search.languages.map((l) => l.value), ["ar"]);
+});
+
+test("PRODUCTION: without validated intelligence on state, CSR is Strategy + Facts only", () => {
+  // This is the pre-fix behaviour — it must remain the fallback, not the norm.
+  const updated = applyTaskResultToCampaignObject(
+    campaignObject(),
+    taskResult,
+    workflowStateData()
+  );
+
+  const csr = csrOf(updated);
   assert.ok(csr);
   assert.equal(csr.search.audienceGender, undefined);
   assert.equal(csr.search.followerFloor, undefined);
   assert.equal(csr.search.brandSafety, "none");
   assert.deepEqual(csr.search.languages, []);
+  // Strategy is still applied.
+  assert.equal(csr.strategyRef?.id, "strategy-1");
 });
 
-// B — normalizedEntities fallback via getValidatedIntelligence ---------------
-
-test("B: normalizedEntities are resolved by getValidatedIntelligence and reach the builder", async () => {
+test("PRODUCTION: normalizedEntities-derived intelligence also reaches CSR", async () => {
+  // The engine resolves via getValidatedIntelligence(), which derives from
+  // normalizedEntities when validatedIntelligence is absent.
   const supabase = supabaseStub({
     data: { id: PROFILE_ID, profile: { normalizedEntities } },
     error: null,
   });
+  const resolved = await resolveValidatedIntelligenceForProfile(supabase, PROFILE_ID);
+  assert.ok(resolved, "canonical helper derives from normalizedEntities");
 
-  const result = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID }),
-    { now: NOW }
+  const updated = applyTaskResultToCampaignObject(
+    campaignObject(),
+    taskResult,
+    workflowStateData({ validatedCampaignIntelligence: resolved })
   );
 
-  const csr = requirementsOf(result);
+  const csr = csrOf(updated);
   assert.ok(csr);
-
-  // Derived from normalizedEntities, not validatedIntelligence.
+  // AE / en / 25-35 appear nowhere in strategy or facts.
   assert.equal(csr.search.audienceAgeMin?.value, 25);
   assert.equal(csr.search.audienceAgeMax?.value, 35);
   assert.equal(csr.search.followerFloor?.value, 5_000);
@@ -217,192 +273,125 @@ test("B: normalizedEntities are resolved by getValidatedIntelligence and reach t
   assert.equal(csr.search.audienceCountries[0]?.source, "validated_intel");
 });
 
-test("B: the resolver returns the canonical value directly", async () => {
-  const withValidated = supabaseStub({
-    data: { profile: { validatedIntelligence } },
-    error: null,
-  });
-  const resolved = await resolveValidatedIntelligenceForCampaignObject(
-    withValidated,
-    campaignObject({ cipProfileId: PROFILE_ID })
-  );
+// === RESOLVER (the engine's step) ===========================================
+
+test("resolver returns profile.validatedIntelligence when present", async () => {
+  const supabase = supabaseStub({ data: { profile: { validatedIntelligence } }, error: null });
+  const resolved = await resolveValidatedIntelligenceForProfile(supabase, PROFILE_ID);
   assert.equal(resolved?.audience.ageMin, 28);
   assert.equal(resolved?.brandSafety, "required");
 });
 
-// C — fallbacks preserved, never crashes -------------------------------------
-
-test("C: no cipProfileId issues no query and preserves existing behaviour", async () => {
+test("resolver issues no query without a profile id", async () => {
   const calls: string[] = [];
   const supabase = supabaseStub({ data: null, error: null }, calls);
 
-  const result = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    campaignObject(),
-    { now: NOW }
-  );
-
-  assert.deepEqual(calls, [], "no profile read should be attempted");
-  const csr = requirementsOf(result);
-  assert.ok(csr);
-  assert.equal(csr.search.audienceGender, undefined);
-  assert.equal(csr.search.brandSafety, "none");
+  assert.equal(await resolveValidatedIntelligenceForProfile(supabase, undefined), undefined);
+  assert.equal(await resolveValidatedIntelligenceForProfile(supabase, null), undefined);
+  assert.equal(await resolveValidatedIntelligenceForProfile(supabase, "   "), undefined);
+  assert.deepEqual(calls, []);
 });
 
-test("C: a missing profile row falls back without throwing", async () => {
-  const supabase = supabaseStub({ data: null, error: null });
-
-  const result = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID }),
-    { now: NOW }
+test("resolver falls back without throwing on a missing row or read error", async () => {
+  assert.equal(
+    await resolveValidatedIntelligenceForProfile(
+      supabaseStub({ data: null, error: null }),
+      PROFILE_ID
+    ),
+    undefined
   );
-
-  const csr = requirementsOf(result);
-  assert.ok(csr);
-  assert.equal(csr.search.brandSafety, "none");
-  assert.equal(csr.strategyRef?.id, "strategy-1", "Strategy is still applied");
+  assert.equal(
+    await resolveValidatedIntelligenceForProfile(
+      supabaseStub({ data: null, error: { message: "permission denied" } }),
+      PROFILE_ID
+    ),
+    undefined
+  );
 });
 
-test("C: a profile read error falls back without throwing", async () => {
-  const supabase = supabaseStub({ data: null, error: { message: "permission denied" } });
-
-  const resolved = await resolveValidatedIntelligenceForCampaignObject(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID })
-  );
-  assert.equal(resolved, undefined);
-
-  const result = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID }),
-    { now: NOW }
-  );
-  assert.ok(requirementsOf(result));
-});
-
-test("C: an empty profile resolves to undefined via the canonical helper", async () => {
+test("resolver returns undefined for an empty profile", async () => {
   const supabase = supabaseStub({ data: { profile: {} }, error: null });
-
-  const resolved = await resolveValidatedIntelligenceForCampaignObject(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID })
-  );
-  assert.equal(resolved, undefined);
+  assert.equal(await resolveValidatedIntelligenceForProfile(supabase, PROFILE_ID), undefined);
 });
 
-test("C: a legacy raw-field profile yields no search-relevant requirements", async () => {
+test("a legacy raw-field profile yields no search-relevant requirements", async () => {
   // normalizeCampaignIntelligenceProfile derives normalizedEntities from legacy
-  // raw fields, so getValidatedIntelligence returns a value — but one carrying
-  // no searchable signal. CSR must not invent anything from it.
+  // raw fields, so the canonical helper returns a value — but one with no
+  // searchable signal. CSR must not invent anything from it.
   const supabase = supabaseStub({ data: { profile: { brandName: "BabyJoy" } }, error: null });
-
-  const resolved = await resolveValidatedIntelligenceForCampaignObject(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID })
-  );
-  assert.ok(resolved, "the canonical helper derives from legacy fields");
+  const resolved = await resolveValidatedIntelligenceForProfile(supabase, PROFILE_ID);
+  assert.ok(resolved);
   assert.deepEqual(resolved.platforms, []);
-  assert.deepEqual(resolved.categories, []);
   assert.equal(resolved.brandSafety, "none");
 
-  const result = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID }),
-    { now: NOW }
+  const updated = applyTaskResultToCampaignObject(
+    campaignObject(),
+    taskResult,
+    workflowStateData({ validatedCampaignIntelligence: resolved })
   );
-  const csr = requirementsOf(result);
+  const csr = csrOf(updated);
   assert.ok(csr);
   assert.equal(csr.search.audienceGender, undefined);
-  assert.equal(csr.search.followerFloor, undefined);
   assert.deepEqual(csr.search.languages, []);
-  // Strategy still drives platform selection.
   assert.equal(csr.search.platforms[0]?.source, "strategy");
 });
 
-// Idempotence / currentness is unchanged --------------------------------------
+// === IDEMPOTENCE + SELECTION SAFETY =========================================
 
-test("an up-to-date CSR is returned untouched and issues no profile read", async () => {
-  const calls: string[] = [];
-  const supabase = supabaseStub({
-    data: { profile: { validatedIntelligence } },
-    error: null,
-  });
-  const supabaseCounting = supabaseStub(
-    { data: { profile: { validatedIntelligence } }, error: null },
-    calls
+test("CSR currentness is unchanged: same strategy revision is not regenerated", () => {
+  const first = applyTaskResultToCampaignObject(
+    campaignObject(),
+    taskResult,
+    workflowStateData({ validatedCampaignIntelligence: validatedIntelligence })
   );
+  const firstCsr = csrOf(first);
 
-  const first = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID }),
-    { now: NOW }
-  );
-
-  const second = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabaseCounting,
+  const second = applyTaskResultToCampaignObject(
     first,
-    { now: "2026-02-02T00:00:00.000Z" }
+    taskResult,
+    workflowStateData({ validatedCampaignIntelligence: validatedIntelligence })
   );
 
-  assert.equal(second, first, "same reference — no churn");
-  assert.deepEqual(calls, [], "no profile read when CSR is already current");
+  assert.equal(csrOf(second)?.generatedAt, firstCsr?.generatedAt);
+  assert.equal(csrOf(second)?.strategyRef?.version, 2);
 });
 
-test("a bumped strategy revision regenerates CSR and re-reads validated intelligence", async () => {
-  const supabase = supabaseStub({ data: { profile: { validatedIntelligence } }, error: null });
-  const first = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    campaignObject({ cipProfileId: PROFILE_ID }),
-    { now: NOW }
-  );
-
-  const bumped = {
-    ...first,
-    meta: { ...first.meta, campaignStrategyDocument: { ...strategy, version: 3 } },
-  } as unknown as CampaignObject;
-
-  const second = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    bumped,
-    { now: "2026-03-03T00:00:00.000Z" }
-  );
-
-  const csr = requirementsOf(second);
-  assert.equal(csr?.strategyRef?.version, 3);
-  assert.equal(csr?.generatedAt, "2026-03-03T00:00:00.000Z");
-  assert.equal(csr?.search.audienceGender?.value, "female", "validated intelligence still applied");
-});
-
-// Selection safety -------------------------------------------------------------
-
-test("the async attach adds only searchRequirements — nothing else changes", async () => {
-  const supabase = supabaseStub({ data: { profile: { validatedIntelligence } }, error: null });
-  const original = campaignObject({
-    cipProfileId: PROFILE_ID,
-    recommendations: { creatorIds: ["cr-1", "cr-2"] },
-  } as unknown as CreatorsSectionData);
-  const snapshot = structuredClone(original);
-
-  const result = await attachCreatorSearchRequirementsWithValidatedIntelligence(
-    supabase,
-    original,
-    { now: NOW }
-  );
-
-  assert.deepStrictEqual(original, snapshot, "input object is never mutated");
-
-  const data = { ...(result.sections.creators.data as CreatorsSectionData) };
-  assert.ok(data.searchRequirements);
-  delete data.searchRequirements;
-  assert.deepStrictEqual(data, snapshot.sections.creators.data);
-
-  const rebuilt = {
-    ...result,
-    sections: {
-      ...result.sections,
-      creators: { ...result.sections.creators, data },
+test("SELECTION SAFETY: validated intelligence does not change slate membership", () => {
+  const creatorsData = {
+    phase: "discovery",
+    discovery: { creatorIds: ["cr-1", "cr-2", "cr-3", "cr-4", "cr-5"], total: 5 },
+    recommendations: {
+      creatorIds: [],
+      selectedReasoning: [
+        { creatorId: "cr-1", displayName: "One", handle: "@one", platform: "instagram", confidence: 0.92 },
+        { creatorId: "cr-2", displayName: "Two", handle: "@two", platform: "instagram", confidence: 0.81 },
+        { creatorId: "cr-3", displayName: "Three", handle: "@three", platform: "instagram", confidence: 0.74 },
+        { creatorId: "cr-4", displayName: "Four", handle: "@four", platform: "tiktok", confidence: 0.66 },
+        { creatorId: "cr-5", displayName: "Five", handle: "@five", platform: "instagram", confidence: 0.58 },
+      ],
     },
-  };
-  assert.deepStrictEqual(rebuilt, snapshot);
+  } as unknown as CreatorsSectionData;
+
+  const withValidated = applyTaskResultToCampaignObject(
+    campaignObject(creatorsData),
+    taskResult,
+    workflowStateData({ validatedCampaignIntelligence: validatedIntelligence })
+  );
+  const withoutValidated = applyTaskResultToCampaignObject(
+    campaignObject(creatorsData),
+    taskResult,
+    workflowStateData()
+  );
+
+  const a = withValidated.sections.creators.data as CreatorsSectionData;
+  const b = withoutValidated.sections.creators.data as CreatorsSectionData;
+
+  assert.deepEqual(a.recommendations?.creatorIds, b.recommendations?.creatorIds);
+  assert.deepEqual(a.recommendations?.creatorFitScores, b.recommendations?.creatorFitScores);
+  assert.equal(a.recommendationsDisplay, b.recommendationsDisplay);
+  assert.deepEqual(a.discovery?.creatorIds, b.discovery?.creatorIds);
+
+  // ...while only CSR differs.
+  assert.equal(a.searchRequirements?.search.brandSafety, "required");
+  assert.equal(b.searchRequirements?.search.brandSafety, "none");
 });

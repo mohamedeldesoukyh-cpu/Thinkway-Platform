@@ -10,15 +10,20 @@
  * from the same Strategy revision, so repeated calls do not churn the object.
  * Re-ranking on Strategy change is deliberately NOT implemented yet.
  *
- * Two entry points, because CSR is built from three sources but the two existing
- * callers are synchronous and have no database access:
+ * CSR is built from Strategy + Validated Intelligence + Facts, but the attach
+ * call sites are synchronous and have no database access. Validated intelligence
+ * is therefore resolved upstream — in the workflow engine, which already holds a
+ * Supabase client and the campaign's CIP id — parked on the workflow state as
+ * `validatedCampaignIntelligence`, and threaded down through the existing
+ * stateData argument, the same way `campaignFacts` already travels.
  *
- *   attachCreatorSearchRequirements(...)                     — sync; caller may
- *       supply already-resolved validated intelligence.
- *   attachCreatorSearchRequirementsWithValidatedIntelligence — async; resolves
- *       validated intelligence from the campaign's CIP, then delegates to the
- *       sync path. Resolution is read-only and reuses the canonical helper; it
- *       never re-parses a brief.
+ * Production chain:
+ *   workflow-engine  → resolveValidatedIntelligenceForProfile(supabase, id)
+ *                    → state.data.validatedCampaignIntelligence
+ *   CampaignDirector.applyTaskResult(result, state.data)
+ *                    → applyTaskResultToCampaignObject(..., stateData)
+ *                    → proposeInitialCreatorSlate(obj, { validated })
+ *                    → attachCreatorSearchRequirements(obj, { validated })
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -103,64 +108,30 @@ export function attachCreatorSearchRequirements(
 }
 
 /**
- * Resolve canonical validated intelligence for a campaign object.
+ * Resolve canonical validated intelligence for a Campaign Intelligence Profile.
  *
  * Reuses the existing repository read and the canonical
  * `getValidatedIntelligence()` resolver — which prefers
  * `profile.validatedIntelligence` and otherwise derives from
  * `profile.normalizedEntities`. It never re-parses a raw brief.
  *
- * Returns undefined (never throws) when there is no `cipProfileId`, the profile
- * cannot be retrieved, or the profile carries no validated intelligence, so the
- * caller falls back to the existing Strategy + Facts behaviour.
+ * Returns undefined (never throws) when there is no profile id, the profile
+ * cannot be retrieved, or it carries no validated intelligence, so callers fall
+ * back to the existing Strategy + Facts behaviour.
  */
-export async function resolveValidatedIntelligenceForCampaignObject(
+export async function resolveValidatedIntelligenceForProfile(
   supabase: SupabaseClient,
-  campaignObject: CampaignObject
+  profileId: string | null | undefined
 ): Promise<ValidatedCampaignIntelligence | undefined> {
-  const creatorsData = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
-  const profileId = creatorsData.cipProfileId?.trim();
-  if (!profileId) return undefined;
+  const id = profileId?.trim();
+  if (!id) return undefined;
 
   try {
-    const row = await getCampaignIntelligenceProfileById(supabase, profileId);
+    const row = await getCampaignIntelligenceProfileById(supabase, id);
     if (!row) return undefined;
     return getValidatedIntelligence(normalizeCampaignIntelligenceProfile(row.profile));
   } catch {
-    // A profile read failure must never break slate proposal or CSR attachment.
+    // A profile read failure must never break the workflow or CSR attachment.
     return undefined;
   }
-}
-
-/**
- * Server-side attachment: resolves validated intelligence from the campaign's
- * Campaign Intelligence Profile, then delegates to the synchronous path so CSR
- * is built from Strategy + Validated Intelligence + Facts.
- *
- * Idempotence is unchanged and checked first: when the stored CSR already
- * reflects the current Strategy revision the object is returned untouched and
- * no profile read is issued.
- */
-export async function attachCreatorSearchRequirementsWithValidatedIntelligence(
-  supabase: SupabaseClient,
-  campaignObject: CampaignObject,
-  options?: { now?: string }
-): Promise<CampaignObject> {
-  const creatorsData = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
-  const strategy = getStrategyFromWorkflowData(
-    campaignObject.meta as unknown as Record<string, unknown>
-  );
-
-  if (
-    isCreatorSearchRequirementsCurrent(
-      creatorsData.searchRequirements,
-      strategy?.id,
-      strategy?.version
-    )
-  ) {
-    return campaignObject;
-  }
-
-  const validated = await resolveValidatedIntelligenceForCampaignObject(supabase, campaignObject);
-  return attachCreatorSearchRequirements(campaignObject, { ...options, validated });
 }

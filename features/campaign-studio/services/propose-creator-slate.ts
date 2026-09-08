@@ -1,4 +1,5 @@
 import type { GroundedCreator } from "@/features/ai-workflows/formatters/creator-formatter";
+import type { ValidatedCampaignIntelligence } from "@/features/campaign-intelligence-profile/types/validated-intelligence";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
   CreatorsSectionData,
@@ -22,6 +23,12 @@ import { attachCreatorSearchRequirements } from "./creator-search-requirements/a
 export type ProposeCreatorSlateOptions = {
   poolCreators?: GroundedCreator[];
   query?: string;
+  /**
+   * Canonical validated intelligence resolved upstream (workflow engine).
+   * Used only to build Creator Search Requirements — never for pool
+   * resolution, filtering, ranking, or slate composition.
+   */
+  validated?: ValidatedCampaignIntelligence | null;
 };
 
 export type ProposeCreatorSlateResult = {
@@ -57,7 +64,9 @@ export function proposeInitialCreatorSlateWithStatus(
   const result = runCreatorSlateProposal(campaignObject, options);
   return {
     ...result,
-    campaignObject: attachCreatorSearchRequirements(result.campaignObject),
+    campaignObject: attachCreatorSearchRequirements(result.campaignObject, {
+      validated: options.validated,
+    }),
   };
 }
 

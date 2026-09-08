@@ -46,6 +46,8 @@ import { ensureWorkflowCampaignIntelligenceProfile } from "@/features/campaign-i
 import { getCampaignIntelligenceProfileById } from "@/features/campaign-intelligence-profile/services/profile-repository";
 import { isCampaignIntelligenceConfirmed } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
+import { getValidatedIntelligence } from "@/features/campaign-intelligence-profile/services/get-validated-intelligence";
+import { resolveValidatedIntelligenceForProfile } from "@/features/campaign-studio/services/creator-search-requirements/attach-creator-search-requirements";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import { writeStrategyDocumentFromBrief } from "@/features/campaign-director/services/strategy-document";
 import { mergeMissingCampaignFacts } from "@/features/campaign-director/facts/merge-campaign-facts";
@@ -287,6 +289,9 @@ export async function executeWorkflow(
         );
         if (ensured) {
           const profile = normalizeCampaignIntelligenceProfile(ensured.profile);
+          // Canonical validated intelligence for Creator Search Requirements.
+          // Reuses the row already read above — no additional query.
+          state.data.validatedCampaignIntelligence = getValidatedIntelligence(profile);
           if (isCampaignIntelligenceConfirmed(profile)) {
             campaignFacts = profileToCampaignFacts(profile);
             strategyDocument = writeStrategyDocumentFromBrief(
@@ -483,6 +488,13 @@ export async function executeWorkflow(
           ...effectiveAiContext,
           campaignIntelligenceProfileId: ensuredProfileId,
         };
+        // The CIP may only become known (or may change) here. Resolve canonical
+        // validated intelligence onto workflow state so the synchronous CSR
+        // attachment downstream receives it. Never throws; undefined on failure.
+        if (!state.data.validatedCampaignIntelligence) {
+          state.data.validatedCampaignIntelligence =
+            await resolveValidatedIntelligenceForProfile(options.supabase, ensuredProfileId);
+        }
       }
     }
 

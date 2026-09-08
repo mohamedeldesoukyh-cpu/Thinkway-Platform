@@ -627,9 +627,16 @@ export function applyTaskResultToCampaignObject(
     const poolCreators = Array.isArray(stateData.searchResults)
       ? (stateData.searchResults as GroundedCreator[])
       : undefined;
+    // Canonical validated intelligence resolved upstream by the workflow engine
+    // and carried on workflow state, the same way campaignFacts travels. Used
+    // only to build Creator Search Requirements — never for creator selection.
+    const validated = stateData.validatedCampaignIntelligence as
+      | import("@/features/campaign-intelligence-profile/types/validated-intelligence").ValidatedCampaignIntelligence
+      | undefined;
     updated = proposeInitialCreatorSlate(updated, {
       poolCreators,
       query: typeof stateData.searchQuery === "string" ? stateData.searchQuery : undefined,
+      validated,
     });
     // Boardroom handoff requires Campaign Outputs media_plan for readiness.
     // Auto-generate once when Director has approved and a slate exists — do not

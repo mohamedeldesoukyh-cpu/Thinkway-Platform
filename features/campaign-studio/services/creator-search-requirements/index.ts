@@ -1,8 +1,7 @@
 export {
   attachCreatorSearchRequirements,
-  attachCreatorSearchRequirementsWithValidatedIntelligence,
   isCreatorSearchRequirementsCurrent,
-  resolveValidatedIntelligenceForCampaignObject,
+  resolveValidatedIntelligenceForProfile,
 } from "./attach-creator-search-requirements";
 export {
   buildCreatorSearchRequirements,
