@@ -1,5 +1,7 @@
 /** Structured campaign section payloads — stored on CampaignObject.sections[*].content and .data */
 
+import type { CreatorSearchRequirements } from "@/features/campaign-studio/types/creator-search-requirements";
+
 export type BudgetAllocationLine = {
   category: string;
   amount?: number;
@@ -287,6 +289,12 @@ export type CreatorsSectionData = {
     rationale: string;
     evidence: string[];
   };
+  /**
+   * Strategy-derived Creator Search Requirements (Phase 1 — foundation only).
+   * Optional: campaigns created before CSR existed keep working unchanged, and
+   * nothing in creator search, ranking, or slate membership reads this yet.
+   */
+  searchRequirements?: CreatorSearchRequirements;
 };
 
 export type ExecutiveStrategyReasoning = {

@@ -17,6 +17,7 @@ import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
 import { computeSlateIntelligence } from "./slate-intelligence";
 import { groundedCreatorToSearchCard } from "./plan-section-regeneration";
 import { deriveCreatorQuantityRecommendation } from "./creator-quantity";
+import { attachCreatorSearchRequirements } from "./creator-search-requirements/attach-creator-search-requirements";
 
 export type ProposeCreatorSlateOptions = {
   poolCreators?: GroundedCreator[];
@@ -41,7 +42,26 @@ export function proposeInitialCreatorSlate(
   return proposeInitialCreatorSlateWithStatus(campaignObject, options).campaignObject;
 }
 
+/**
+ * Public entry point. Slate selection runs first and unchanged; the
+ * Strategy-derived Creator Search Requirements are then attached to the RESULT.
+ *
+ * Phase 1 contract: CSR is written to the campaign object but never read by
+ * pool resolution, filtering, ranking, or slate composition — creator
+ * recommendations are identical with and without it.
+ */
 export function proposeInitialCreatorSlateWithStatus(
+  campaignObject: CampaignObject,
+  options: ProposeCreatorSlateOptions = {}
+): ProposeCreatorSlateResult {
+  const result = runCreatorSlateProposal(campaignObject, options);
+  return {
+    ...result,
+    campaignObject: attachCreatorSearchRequirements(result.campaignObject),
+  };
+}
+
+function runCreatorSlateProposal(
   campaignObject: CampaignObject,
   options: ProposeCreatorSlateOptions = {}
 ): ProposeCreatorSlateResult {
