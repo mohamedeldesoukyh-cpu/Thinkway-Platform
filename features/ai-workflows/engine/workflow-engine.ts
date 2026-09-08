@@ -46,6 +46,8 @@ import { ensureWorkflowCampaignIntelligenceProfile } from "@/features/campaign-i
 import { getCampaignIntelligenceProfileById } from "@/features/campaign-intelligence-profile/services/profile-repository";
 import { isCampaignIntelligenceConfirmed } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
+import { getValidatedIntelligence } from "@/features/campaign-intelligence-profile/services/get-validated-intelligence";
+import { hydrateValidatedIntelligenceOnState } from "@/features/campaign-studio/services/creator-search-requirements/attach-creator-search-requirements";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import { writeStrategyDocumentFromBrief } from "@/features/campaign-director/services/strategy-document";
 import { mergeMissingCampaignFacts } from "@/features/campaign-director/facts/merge-campaign-facts";
@@ -287,6 +289,10 @@ export async function executeWorkflow(
         );
         if (ensured) {
           const profile = normalizeCampaignIntelligenceProfile(ensured.profile);
+          // Canonical validated intelligence for Creator Search Requirements.
+          // Reuses the row already read above — no additional query.
+          state.data.validatedCampaignIntelligence = getValidatedIntelligence(profile);
+          state.data.validatedCampaignIntelligenceProfileId = intelligenceProfileId;
           if (isCampaignIntelligenceConfirmed(profile)) {
             campaignFacts = profileToCampaignFacts(profile);
             strategyDocument = writeStrategyDocumentFromBrief(
@@ -366,6 +372,15 @@ export async function executeWorkflow(
       ...effectiveAiContext,
       campaignIntelligenceProfileId: state.data.campaignIntelligenceProfileId,
     };
+    // Resume hydration. The bootstrap block above only resolves validated
+    // intelligence on the run that creates the profile; a resumed workflow
+    // already carries the id and would otherwise reach CSR without it.
+    // No-ops (and issues no query) when the value is already current.
+    await hydrateValidatedIntelligenceOnState(
+      state,
+      options.supabase,
+      state.data.campaignIntelligenceProfileId
+    );
   }
 
   let resolvedCampaignId =
@@ -483,6 +498,10 @@ export async function executeWorkflow(
           ...effectiveAiContext,
           campaignIntelligenceProfileId: ensuredProfileId,
         };
+        // The CIP may only become known (or may change) here — e.g. a brief too
+        // short to build a profile at bootstrap. Keeps the state contract true;
+        // no query when the stored value already belongs to this profile.
+        await hydrateValidatedIntelligenceOnState(state, options.supabase, ensuredProfileId);
       }
     }
 

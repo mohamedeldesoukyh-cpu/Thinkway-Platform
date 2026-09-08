@@ -1,4 +1,11 @@
 export {
+  attachCreatorSearchRequirements,
+  hydrateValidatedIntelligenceOnState,
+  isCreatorSearchRequirementsCurrent,
+  resolveValidatedIntelligenceForProfile,
+  type ValidatedIntelligenceStateCarrier,
+} from "./attach-creator-search-requirements";
+export {
   buildCreatorSearchRequirements,
   type BuildCreatorSearchRequirementsInput,
   type CreatorSearchRequirementsOverrides,
