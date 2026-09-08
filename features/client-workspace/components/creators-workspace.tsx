@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
@@ -148,9 +147,9 @@ export function CreatorsWorkspace({
   };
 
   useEffect(() => {
-    // Known-good redesign sheet mode: phones only (≤760). CSS stacks layout at 980;
-    // do not put tablet widths into portal/sheet mode.
-    const media = window.matchMedia("(max-width: 760px)");
+    // Narrow chrome (phone + tablet portrait): sheet only — never auto-mount a
+    // side/detail panel (CSS would fullscreen it and freeze tabs/list).
+    const media = window.matchMedia("(max-width: 980px)");
     const sync = () => setViewport(media.matches ? "mobile" : "desktop");
     sync();
     media.addEventListener("change", sync);
@@ -235,6 +234,7 @@ export function CreatorsWorkspace({
     ? view.creators.findIndex((creator) => creator.creatorId === selected.creatorId)
     : 0;
   const showDetail = Boolean(selected) && (sheetOpen || viewport === "desktop");
+  // On mobile/narrow, detail is sheet-only (sheetOpen). Desktop keeps the side panel.
 
   cwDebugLiveState.sheetOpen = sheetOpen;
   cwDebugLiveState.viewportMode = viewport;
@@ -571,17 +571,8 @@ export function CreatorsWorkspace({
                 showOriginalCurrency={showOriginalCurrency}
               />
             ) : null;
-          if (detailPane && viewport === "mobile" && typeof document !== "undefined") {
-            return createPortal(
-              <>
-                {isClientWorkspaceDebugEnabled() ? (
-                  <CwDebugPortalMountProbe label="mobile-detail" />
-                ) : null}
-                {detailPane}
-              </>,
-              document.body
-            );
-          }
+          // Keep detail in-layout (do NOT portal to document.body). A body portal
+          // stacks above review chrome and freezes tabs.
           if (detailPane) return detailPane;
           if (viewport === "desktop") {
             return (
@@ -616,38 +607,6 @@ export function CreatorsWorkspace({
       ) : null}
     </div>
   );
-}
-
-function CwDebugPortalMountProbe({ label }: { label: string }) {
-  useEffect(() => {
-    if (!isClientWorkspaceDebugEnabled()) return;
-    cwDebugLiveState.portalMounted = true;
-    cwDebugLog("portal.mount", {
-      label,
-      detailCount: document.querySelectorAll(".detail").length,
-      bodyOverflow: document.body.style.overflow || "(empty)",
-      ...cwDebugLiveState,
-    });
-    captureClientWorkspaceDomProbe({
-      event: `portal.mount:${label}`,
-      section: cwDebugLiveState.section,
-      sheetOpen: cwDebugLiveState.sheetOpen,
-      viewportMode: cwDebugLiveState.viewportMode,
-      showDetail: cwDebugLiveState.showDetail,
-      creatorsLen: cwDebugLiveState.creatorsLen,
-      filteredLen: cwDebugLiveState.filteredLen,
-    });
-    return () => {
-      cwDebugLiveState.portalMounted = false;
-      cwDebugLog("portal.unmount", {
-        label,
-        detailCount: document.querySelectorAll(".detail").length,
-        bodyOverflow: document.body.style.overflow || "(empty)",
-        ...cwDebugLiveState,
-      });
-    };
-  }, [label]);
-  return null;
 }
 
 function CreatorDetailPane({

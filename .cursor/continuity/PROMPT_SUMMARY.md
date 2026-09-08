@@ -3,10 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## Shipped 2026-09-08 — Client review mobile scroll unlock
+## Shipped 2026-09-08 — Client review mobile cards + frozen tabs
 
-**Cause:** Nested `overflow:hidden` (`.tw-review-root` → `.tw-review`) + only `.tw-review-body` scrolling broke iOS touch scroll — sumbar visible, creator cards unreachable (rubber-band).  
-**Fix:** ≤980px unlock nested overflow so platform shell scrolls; restore sheet `matchMedia` to 760px; close sheet + clear `body.overflow` on section hide / pageshow. Develop only.
+**Why desktop OK / mobile broken:** Desktop uses a side detail panel. Mobile/narrow used a full-screen `.detail.show` (and previously a `document.body` portal) that covered the creator list and intercepted tab taps — summary counts still rendered above. Nested flex/`overflow:hidden` also trapped iOS scroll.  
+**Fix:** ≤980px shell `flex:none` + overflow unlock; no body portal; sheet only when opened; detail sits below header/tabs (`z-index` 90 vs tabs 200). Develop `ae67cc7c`+follow-up.
 
 ## Shipped 2026-09-08 — Client review mobile tabs dead + slow
 
