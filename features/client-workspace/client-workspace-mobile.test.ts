@@ -45,3 +45,16 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
   assert.equal(creators.includes('viewport === "mobile" ? null'), false);
   assert.equal(creators.includes("show={showDetail}"), false);
 });
+
+test("Client Workspace tab switches must not pushState a new [section] URL", () => {
+  // Next.js 16 patches history.pushState and re-fetches RSC for path changes.
+  // Changing /review/[id]/[section] remounts loading.tsx + loadClientWorkspace.
+  const app = readFileSync(
+    resolve("features/client-workspace/components/client-workspace-app.tsx"),
+    "utf8"
+  );
+  assert.equal(app.includes("CLIENT_WORKSPACE_HISTORY_SECTION"), true);
+  assert.equal(app.includes('window.history.pushState({ section: next }, "", buildClientReviewPath'), false);
+  assert.equal(app.includes("buildClientReviewPath(pathReviewId, token, next)"), false);
+  assert.match(app, /window\.history\.pushState\(\{[\s\S]*CLIENT_WORKSPACE_HISTORY_SECTION[\s\S]*\}, ""\)/);
+});

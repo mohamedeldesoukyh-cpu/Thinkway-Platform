@@ -79,7 +79,9 @@ export function ClientWorkspaceShell({
   const headerHref = buildClientReviewPath(pathReviewId, token, headerCta.section);
 
   function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: ClientWorkspaceSectionId) {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    // Touch / some WebViews omit button; only block real non-primary buttons.
+    if (typeof event.button === "number" && event.button !== 0) return;
     event.preventDefault();
     onSectionChange(next);
   }

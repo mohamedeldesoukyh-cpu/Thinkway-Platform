@@ -3,6 +3,11 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
+## Ready to ship 2026-09-08 — Client review mobile tabs dead + slow
+
+**Root cause (proven in Next 16 `app-router.js`):** tab `history.pushState` to another `/review/[id]/[section]` URL triggers patched History API → `ACTION_RESTORE` → `spawnDynamicRequests` → re-runs `loadClientWorkspace` + full-screen `[section]/loading.tsx`. Tabs looked dead; every click felt like a cold load.  
+**Fix:** `ClientWorkspaceApp.go` pushes history **state only** (no URL); shell click guard tolerates missing `button` on touch. Not committed yet.
+
 ## In progress 2026-09-06 — IndexedDB client cache Phase 0+1
 
 Phase 0: `lib/client-cache/` (`idb`, entries/meta, TTL soft/hard, keys, prefix/tag invalidation).  
