@@ -13,6 +13,12 @@ import {
   selectCreatorAction,
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
+import {
+  captureClientWorkspaceDomProbe,
+  cwDebugLiveState,
+  cwDebugLog,
+  isClientWorkspaceDebugEnabled,
+} from "../debug/client-workspace-dom-probe";
 import { deliverablesLabel } from "../deliverables";
 import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatCompactCount, formatHandleLabel, formatLocation, formatMatchPercent, NOT_AVAILABLE, TO_BE_CONFIRMED, clientCreatorCardDescription } from "../format";
 import {
@@ -173,8 +179,10 @@ export function CreatorsWorkspace({
   useEffect(() => {
     if (!sheetOpen) return;
     const previous = document.body.style.overflow;
+    cwDebugLog("body.overflow.set", { from: previous || "(empty)", to: "hidden", sheetOpen: true });
     document.body.style.overflow = "hidden";
     return () => {
+      cwDebugLog("body.overflow.restore", { to: previous || "(empty)", sheetOpen: false });
       document.body.style.overflow = previous;
     };
   }, [sheetOpen]);
@@ -185,7 +193,38 @@ export function CreatorsWorkspace({
     : 0;
   const showDetail = Boolean(selected) && (sheetOpen || viewport === "desktop");
 
+  cwDebugLiveState.sheetOpen = sheetOpen;
+  cwDebugLiveState.viewportMode = viewport;
+  cwDebugLiveState.showDetail = showDetail;
+  cwDebugLiveState.creatorsLen = view.creators.length;
+  cwDebugLiveState.filteredLen = filtered.length;
+  if (explore) cwDebugLiveState.section = "shortlist/creators-explore";
+
+  useEffect(() => {
+    if (!isClientWorkspaceDebugEnabled()) return;
+    const id = window.setTimeout(() => {
+      captureClientWorkspaceDomProbe({
+        event: `creators-state sheetOpen=${sheetOpen} viewport=${viewport} showDetail=${showDetail}`,
+        section: explore ? "shortlist/creators-explore" : "creators/decide",
+        sheetOpen,
+        viewportMode: viewport,
+        showDetail,
+        creatorsLen: view.creators.length,
+        filteredLen: filtered.length,
+      });
+    }, 50);
+    return () => window.clearTimeout(id);
+  }, [
+    explore,
+    filtered.length,
+    sheetOpen,
+    showDetail,
+    view.creators.length,
+    viewport,
+  ]);
+
   function openCreator(creatorId: string) {
+    cwDebugLog("openCreator", { creatorId, viewport });
     setDetailClosed(false);
     setSelectedId(creatorId);
     setNote("");
@@ -194,6 +233,7 @@ export function CreatorsWorkspace({
   }
 
   function closeSheet() {
+    cwDebugLog("closeSheet", { viewport, selectedId });
     setSheetOpen(false);
     setReportOpen(false);
     setDetailClosed(true);
@@ -489,7 +529,15 @@ export function CreatorsWorkspace({
               />
             ) : null;
           if (detailPane && viewport === "mobile" && typeof document !== "undefined") {
-            return createPortal(detailPane, document.body);
+            return createPortal(
+              <>
+                {isClientWorkspaceDebugEnabled() ? (
+                  <CwDebugPortalMountProbe label="mobile-detail" />
+                ) : null}
+                {detailPane}
+              </>,
+              document.body
+            );
           }
           if (detailPane) return detailPane;
           if (viewport === "desktop") {
@@ -525,6 +573,38 @@ export function CreatorsWorkspace({
       ) : null}
     </div>
   );
+}
+
+function CwDebugPortalMountProbe({ label }: { label: string }) {
+  useEffect(() => {
+    if (!isClientWorkspaceDebugEnabled()) return;
+    cwDebugLiveState.portalMounted = true;
+    cwDebugLog("portal.mount", {
+      label,
+      detailCount: document.querySelectorAll(".detail").length,
+      bodyOverflow: document.body.style.overflow || "(empty)",
+      ...cwDebugLiveState,
+    });
+    captureClientWorkspaceDomProbe({
+      event: `portal.mount:${label}`,
+      section: cwDebugLiveState.section,
+      sheetOpen: cwDebugLiveState.sheetOpen,
+      viewportMode: cwDebugLiveState.viewportMode,
+      showDetail: cwDebugLiveState.showDetail,
+      creatorsLen: cwDebugLiveState.creatorsLen,
+      filteredLen: cwDebugLiveState.filteredLen,
+    });
+    return () => {
+      cwDebugLiveState.portalMounted = false;
+      cwDebugLog("portal.unmount", {
+        label,
+        detailCount: document.querySelectorAll(".detail").length,
+        bodyOverflow: document.body.style.overflow || "(empty)",
+        ...cwDebugLiveState,
+      });
+    };
+  }, [label]);
+  return null;
 }
 
 function CreatorDetailPane({

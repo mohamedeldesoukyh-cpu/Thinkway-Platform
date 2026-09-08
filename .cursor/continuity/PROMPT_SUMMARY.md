@@ -3,10 +3,17 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## Ready to ship 2026-09-08 — Client review mobile tabs dead + slow
+## In progress 2026-09-08 — Client review blank roster DOM proof (no prod)
+
+**Agreed:** not a shortlist data-load bug — 5 creators reach React/`filtered`/`.cc` tree.  
+**Phase 1 (instrument only, no sheet lifecycle fix yet):** `features/client-workspace/debug/client-workspace-dom-probe.ts` + hooks in `CreatorsWorkspace` / `ClientWorkspaceApp` / shell. Enable **only** `?debugCw=1` (no sticky localStorage). Panel is `pointer-events:none`; capture via top-right button. Hit-test hides panel in `try/finally`. Paths redact `sign`. No network. **develop only — no main/prod.**
+
+## Shipped 2026-09-08 — Client review mobile tabs dead + slow
 
 **Root cause (proven in Next 16 `app-router.js`):** tab `history.pushState` to another `/review/[id]/[section]` URL triggers patched History API → `ACTION_RESTORE` → `spawnDynamicRequests` → re-runs `loadClientWorkspace` + full-screen `[section]/loading.tsx`. Tabs looked dead; every click felt like a cold load.  
-**Fix:** `ClientWorkspaceApp.go` pushes history **state only** (no URL); shell click guard tolerates missing `button` on touch. Not committed yet.
+**Fix:** `ClientWorkspaceApp.go` pushes history **state only** (no URL); shell click guard tolerates missing `button` on touch.  
+**Ship:** `b113df27` → develop + main · prod `dpl_C4BqeVBoy8KxPygjEEuS8zvP2BaV` aliased to app.thinkwaymedia.com.
+
 
 ## In progress 2026-09-06 — IndexedDB client cache Phase 0+1
 

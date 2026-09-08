@@ -13,6 +13,7 @@ import {
 import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { headerPartnerIdentity, preparedForClientLabel } from "../identity-logo";
+import { cwDebugLog } from "../debug/client-workspace-dom-probe";
 import { ClientJourneyStrip } from "./journey-strip";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { ClientWorkspaceIdentityMark } from "./identity-logo-mark";
@@ -79,6 +80,7 @@ export function ClientWorkspaceShell({
   const headerHref = buildClientReviewPath(pathReviewId, token, headerCta.section);
 
   function openSection(next: ClientWorkspaceSectionId) {
+    cwDebugLog("shell.openSection", { from: section, to: next });
     onSectionChange(next);
   }
 
