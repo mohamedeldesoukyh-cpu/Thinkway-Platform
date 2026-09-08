@@ -11,9 +11,6 @@ import { ClientWorkspaceSectionView } from "./client-workspace-section-view";
 import { ClientWorkspaceShell } from "./client-workspace-shell";
 import { ClientWorkspaceStateProvider } from "./client-workspace-state";
 
-/** History-state key for in-shell section back/forward (URL path stays put). */
-export const CLIENT_WORKSPACE_HISTORY_SECTION = "twClientWorkspaceSection";
-
 function isSection(value: string | undefined): value is ClientWorkspaceSectionId {
   return Boolean(value && CLIENT_WORKSPACE_SECTIONS.includes(value as ClientWorkspaceSectionId));
 }
@@ -51,37 +48,22 @@ export function ClientWorkspaceApp({
     });
   }, []);
 
+  const go = useCallback((next: ClientWorkspaceSectionId) => {
+    if (next === active) return;
+    reveal(next);
+    // Do not call history.pushState/replaceState with a new /review/.../[section] URL.
+    // Next.js 16 patches the History API and re-fetches the section RSC payload
+    // (full loadClientWorkspace + loading overlay), which freezes mobile tabs.
+  }, [active, reveal]);
+
   useEffect(() => {
-    function onPop(event: PopStateEvent) {
-      const fromState = (event.state as Record<string, unknown> | null)?.[CLIENT_WORKSPACE_HISTORY_SECTION];
-      if (typeof fromState === "string" && isSection(fromState)) {
-        reveal(fromState);
-        return;
-      }
+    function onPop() {
       const part = window.location.pathname.split("/").filter(Boolean).at(-1);
       if (isSection(part)) reveal(part);
     }
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [reveal]);
-
-  const go = useCallback(
-    (next: ClientWorkspaceSectionId) => {
-      if (next === active) return;
-      reveal(next);
-      // Next.js 16 patches history.pushState: a URL change to another
-      // /review/[id]/[section] path dispatches ACTION_RESTORE + spawnDynamicRequests,
-      // which re-runs loadClientWorkspace and mounts the full-screen section loading
-      // overlay — tabs look dead and every click feels like a cold reload.
-      // Push history state only (no URL) so the shell stays mounted and instant.
-      const prior =
-        window.history.state && typeof window.history.state === "object"
-          ? (window.history.state as Record<string, unknown>)
-          : {};
-      window.history.pushState({ ...prior, [CLIENT_WORKSPACE_HISTORY_SECTION]: next }, "");
-    },
-    [active, reveal]
-  );
 
   const renderSections = view.visibleSections.includes(active)
     ? view.visibleSections

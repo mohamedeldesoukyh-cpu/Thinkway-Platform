@@ -78,11 +78,7 @@ export function ClientWorkspaceShell({
   const showHeaderSelectionNav = Boolean(view.canDecide && section !== hideHeaderCtaOn);
   const headerHref = buildClientReviewPath(pathReviewId, token, headerCta.section);
 
-  function openSection(event: React.MouseEvent<HTMLAnchorElement>, next: ClientWorkspaceSectionId) {
-    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    // Touch / some WebViews omit button; only block real non-primary buttons.
-    if (typeof event.button === "number" && event.button !== 0) return;
-    event.preventDefault();
+  function openSection(next: ClientWorkspaceSectionId) {
     onSectionChange(next);
   }
 
@@ -103,7 +99,12 @@ export function ClientWorkspaceShell({
               <a
                 className="btn sec"
                 href={buildClientReviewPath(pathReviewId, token, "feedback")}
-                onClick={(event) => openSection(event, "feedback")}
+                onClick={(event) => {
+                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                  if (typeof event.button === "number" && event.button !== 0) return;
+                  event.preventDefault();
+                  openSection("feedback");
+                }}
               >
                 Request changes
               </a>
@@ -111,7 +112,12 @@ export function ClientWorkspaceShell({
                 <a
                   className="btn sec"
                   href={headerHref}
-                  onClick={(event) => openSection(event, headerCta.section)}
+                  onClick={(event) => {
+                    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+                    if (typeof event.button === "number" && event.button !== 0) return;
+                    event.preventDefault();
+                    openSection(headerCta.section);
+                  }}
                 >
                   {headerCta.label}
                 </a>
@@ -144,16 +150,18 @@ export function ClientWorkspaceShell({
             </p>
           </div>
         ) : null}
-        <nav className="tabs">
+        <nav className="tabs" aria-label="Workspace sections">
           <div className="wrap row">
             {view.visibleSections.map((item) => {
               const locked = !isClientWorkspaceSectionOpen(view.entitlement, item);
+              const on = item === section;
               return (
-                <a
+                <button
                   key={item}
-                  href={buildClientReviewPath(pathReviewId, token, item)}
-                  className={`${item === section ? "tab on" : "tab"}${locked ? " is-locked" : ""}`}
-                  onClick={(event) => openSection(event, item)}
+                  type="button"
+                  className={`${on ? "tab on" : "tab"}${locked ? " is-locked" : ""}`}
+                  aria-current={on ? "page" : undefined}
+                  onClick={() => openSection(item)}
                 >
                   {CLIENT_WORKSPACE_SECTION_LABEL[item]}
                   {locked ? (
@@ -161,7 +169,7 @@ export function ClientWorkspaceShell({
                       <path d="M17 8V7a5 5 0 00-10 0v1H5v14h14V8h-2zm-8 0V7a3 3 0 016 0v1H9z" />
                     </svg>
                   ) : null}
-                </a>
+                </button>
               );
             })}
           </div>

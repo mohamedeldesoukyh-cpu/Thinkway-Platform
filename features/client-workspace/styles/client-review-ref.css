@@ -653,7 +653,7 @@
   border-bottom:1px solid var(--line);
   position:sticky;
   top:0;
-  z-index:39;
+  z-index:120;
 }
 .tw-review nav.tabs .row{
   display:flex;
@@ -662,10 +662,12 @@
   height:auto;
 }
 .tw-review nav.tabs a.tab,
-.tw-review nav.tabs .tab{
+.tw-review nav.tabs .tab,
+.tw-review nav.tabs button.tab{
   font-size:13.5px;font-weight:600;color:var(--muted);
   padding:14px 15px;cursor:pointer;border-bottom:2px solid transparent;
   white-space:nowrap;text-decoration:none;background:transparent;border-top:none;border-left:none;border-right:none;
+  font-family:inherit;appearance:none;-webkit-appearance:none;
 }
 .tw-review nav.tabs a.tab:hover,
 .tw-review nav.tabs .tab:hover{color:var(--ink);}
@@ -2370,6 +2372,60 @@
   font-size:14.5px;
 }
 .tw-review .cx-expired-error{color:var(--bad);font-size:12.5px;margin:10px 0 0}
+
+/* Mobile roster / tabs — final cascade wins over earlier sticky/fixed .detail copies.
+   Closed sheets must not leave a WebKit fixed layer over the creator list or tabs. */
+@media (max-width: 980px) {
+  .tw-review nav.tabs{
+    position:sticky;
+    top:0;
+    z-index:120;
+  }
+  .tw-review .layout,
+  .tw-review .md{
+    grid-template-columns:1fr;
+  }
+  .tw-review .clist,
+  .tw-review .clist2{
+    display:flex !important;
+    flex-direction:column;
+    gap:12px;
+    width:100%;
+    min-width:0;
+    visibility:visible !important;
+  }
+  .tw-review .creators-page .cc{
+    display:flex !important;
+    visibility:visible !important;
+    opacity:1 !important;
+    min-height:120px;
+  }
+  .tw-review .detail:not(.show){
+    display:none !important;
+    visibility:hidden !important;
+    pointer-events:none !important;
+    position:absolute !important;
+    inset:auto !important;
+    width:0 !important;
+    height:0 !important;
+    overflow:hidden !important;
+    transform:none !important;
+    z-index:-1 !important;
+  }
+  .tw-review .detail.show{
+    position:fixed !important;
+    inset:0 !important;
+    z-index:95;
+    display:block !important;
+    transform:none !important;
+    visibility:visible !important;
+    pointer-events:auto !important;
+    max-height:none;
+    border-radius:0;
+    border:none;
+  }
+}
+
 
 
 

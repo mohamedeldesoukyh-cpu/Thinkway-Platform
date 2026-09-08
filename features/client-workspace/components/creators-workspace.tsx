@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
@@ -140,7 +141,9 @@ export function CreatorsWorkspace({
   };
 
   useEffect(() => {
-    const media = window.matchMedia("(max-width: 760px)");
+    // Match the CSS single-column breakpoint (980px), not only 760px, so we never
+    // mount a desktop sticky/fixed .detail sibling that can cover the roster on phones.
+    const media = window.matchMedia("(max-width: 980px)");
     const sync = () => setViewport(media.matches ? "mobile" : "desktop");
     sync();
     media.addEventListener("change", sync);
@@ -439,55 +442,70 @@ export function CreatorsWorkspace({
           ) : null}
         </div>
 
-        {selected && showDetail ? (
-          <CreatorDetailPane
-            creator={{
-              ...selected,
-              selection: selection[selected.creatorId] ?? selected.selection,
-            }}
-            brief={brief?.creatorId === selected.creatorId ? brief : null}
-            index={Math.max(0, selectedIndex)}
-            token={token}
-            currency={view.commercial.currency}
-            canDecide={canSelectCreator(selected.creatorId)}
-            pending={pending}
-            note={note}
-            onNoteChange={setNote}
-            show
-            onBack={closeSheet}
-            onAccept={() => decide(selected, nextAcceptState(selection[selected.creatorId] ?? selected.selection))}
-            onReject={() => decide(selected, "rejected", note.trim() || undefined)}
-            onRequestChanges={() => {
-              if (!note.trim()) return;
-              startTransition(async () => {
-                await addReviewCommentAction({
-                  token,
-                  targetType: "creator",
-                  targetId: selected.creatorId,
-                  message: `Change request: ${note.trim()}`,
-                });
-                setNote("");
-                router.refresh();
-              });
-            }}
-            onOpenReport={() => setReportOpen(true)}
-            cpm={view.mediaPlanSummary.creatorForecasts[selected.creatorId]?.cpm}
-            selectionConfirmed={confirmed}
-            commerciallyApproved={isValidClientCommercialApproval({
-              quotationStage: view.journey?.quotationStage ?? "",
-              selectedCount: counts.accepted,
-            })}
-            pendingCommercialApproval={pendingIds.has(selected.creatorId)}
-            showOriginalCurrency={showOriginalCurrency}
-          />
-        ) : viewport === "desktop" ? (
-          <div className="detail">
-            <div className="empty">
-              <p style={{ marginTop: 12, fontWeight: 600, color: "var(--ink)" }}>Select a creator</p>
-              <p style={{ fontSize: 13, marginTop: 4 }}>Choose a creator to see their full profile and metrics.</p>
-            </div>
-          </div>
-        ) : null}
+        {(() => {
+          const detailPane =
+            selected && showDetail ? (
+              <CreatorDetailPane
+                creator={{
+                  ...selected,
+                  selection: selection[selected.creatorId] ?? selected.selection,
+                }}
+                brief={brief?.creatorId === selected.creatorId ? brief : null}
+                index={Math.max(0, selectedIndex)}
+                token={token}
+                currency={view.commercial.currency}
+                canDecide={canSelectCreator(selected.creatorId)}
+                pending={pending}
+                note={note}
+                onNoteChange={setNote}
+                show
+                onBack={closeSheet}
+                onAccept={() =>
+                  decide(selected, nextAcceptState(selection[selected.creatorId] ?? selected.selection))
+                }
+                onReject={() => decide(selected, "rejected", note.trim() || undefined)}
+                onRequestChanges={() => {
+                  if (!note.trim()) return;
+                  startTransition(async () => {
+                    await addReviewCommentAction({
+                      token,
+                      targetType: "creator",
+                      targetId: selected.creatorId,
+                      message: `Change request: ${note.trim()}`,
+                    });
+                    setNote("");
+                    router.refresh();
+                  });
+                }}
+                onOpenReport={() => setReportOpen(true)}
+                cpm={view.mediaPlanSummary.creatorForecasts[selected.creatorId]?.cpm}
+                selectionConfirmed={confirmed}
+                commerciallyApproved={isValidClientCommercialApproval({
+                  quotationStage: view.journey?.quotationStage ?? "",
+                  selectedCount: counts.accepted,
+                })}
+                pendingCommercialApproval={pendingIds.has(selected.creatorId)}
+                showOriginalCurrency={showOriginalCurrency}
+              />
+            ) : null;
+          if (detailPane && viewport === "mobile" && typeof document !== "undefined") {
+            return createPortal(detailPane, document.body);
+          }
+          if (detailPane) return detailPane;
+          if (viewport === "desktop") {
+            return (
+              <div className="detail">
+                <div className="empty">
+                  <p style={{ marginTop: 12, fontWeight: 600, color: "var(--ink)" }}>Select a creator</p>
+                  <p style={{ fontSize: 13, marginTop: 4 }}>
+                    Choose a creator to see their full profile and metrics.
+                  </p>
+                </div>
+              </div>
+            );
+          }
+          return null;
+        })()}
       </div>
 
       {selected ? (

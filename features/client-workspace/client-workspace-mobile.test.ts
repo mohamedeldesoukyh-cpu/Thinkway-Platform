@@ -41,8 +41,8 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
   assert.equal(css.includes("overflow-wrap:anywhere"), true);
   assert.equal(css.includes(".detail:not(.show)"), true);
   assert.equal(css.includes("display:none !important"), true);
-  assert.equal(creators.includes('viewport === "desktop" ? ('), true);
-  assert.equal(creators.includes('viewport === "mobile" ? null'), false);
+  assert.equal(creators.includes('viewport === "desktop"'), true);
+  assert.equal(creators.includes("createPortal"), true);
   assert.equal(creators.includes("show={showDetail}"), false);
 });
 
@@ -53,8 +53,22 @@ test("Client Workspace tab switches must not pushState a new [section] URL", () 
     resolve("features/client-workspace/components/client-workspace-app.tsx"),
     "utf8"
   );
-  assert.equal(app.includes("CLIENT_WORKSPACE_HISTORY_SECTION"), true);
-  assert.equal(app.includes('window.history.pushState({ section: next }, "", buildClientReviewPath'), false);
+  const shell = readFileSync(
+    resolve("features/client-workspace/components/client-workspace-shell.tsx"),
+    "utf8"
+  );
+  const creators = readFileSync(
+    resolve("features/client-workspace/components/creators-workspace.tsx"),
+    "utf8"
+  );
+  const css = readFileSync(resolve("features/client-workspace/styles/client-review-ref.css"), "utf8");
+  assert.equal(app.includes("window.history.pushState"), false);
+  assert.equal(app.includes("history.pushState("), false);
   assert.equal(app.includes("buildClientReviewPath(pathReviewId, token, next)"), false);
-  assert.match(app, /window\.history\.pushState\(\{[\s\S]*CLIENT_WORKSPACE_HISTORY_SECTION[\s\S]*\}, ""\)/);
+  assert.equal(shell.includes('<nav className="tabs"'), true);
+  assert.match(shell, /<button[\s\S]*type="button"[\s\S]*className=\{`\$\{on \? "tab on" : "tab"/);
+  assert.equal(creators.includes("createPortal"), true);
+  assert.equal(creators.includes("(max-width: 980px)"), true);
+  assert.equal(css.includes("z-index:120"), true);
+  assert.equal(css.includes("position:absolute !important"), true);
 });
