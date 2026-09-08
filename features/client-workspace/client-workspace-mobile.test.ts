@@ -68,7 +68,14 @@ test("Client Workspace tab switches must not pushState a new [section] URL", () 
   assert.equal(shell.includes('<nav className="tabs"'), true);
   assert.match(shell, /<button[\s\S]*type="button"[\s\S]*className=\{`\$\{on \? "tab on" : "tab"/);
   assert.equal(creators.includes("createPortal"), true);
-  assert.equal(creators.includes("(max-width: 980px)"), true);
+  assert.equal(creators.includes("(max-width: 760px)"), true);
+  assert.equal(creators.includes("(max-width: 980px)"), false);
   assert.equal(css.includes("z-index:120"), true);
   assert.equal(css.includes("position:absolute !important"), true);
+  // Mobile must unlock nested overflow so iOS can reach the creator list.
+  assert.equal(css.includes("@media (max-width: 980px) {"), true);
+  assert.match(
+    css,
+    /@media \(max-width: 980px\) \{[\s\S]*?\.tw-review-body \{[\s\S]*?overflow:\s*visible/
+  );
 });

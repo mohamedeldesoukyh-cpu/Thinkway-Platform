@@ -3,10 +3,10 @@
 **Branch:** `develop` · Production `main`  
 **Focus:** Discovery pack rebuild (`docs/architecture/discovery-specs/`).
 
-## In progress 2026-09-08 — Client review blank roster DOM proof (no prod)
+## Shipped 2026-09-08 — Client review mobile scroll unlock
 
-**Agreed:** not a shortlist data-load bug — 5 creators reach React/`filtered`/`.cc` tree.  
-**Phase 1 (instrument only, no sheet lifecycle fix yet):** `features/client-workspace/debug/client-workspace-dom-probe.ts` + hooks in `CreatorsWorkspace` / `ClientWorkspaceApp` / shell. Enable **only** `?debugCw=1` (no sticky localStorage). Panel is `pointer-events:none`; capture via top-right button. Hit-test hides panel in `try/finally`. Paths redact `sign`. No network. **develop only — no main/prod.**
+**Cause:** Nested `overflow:hidden` (`.tw-review-root` → `.tw-review`) + only `.tw-review-body` scrolling broke iOS touch scroll — sumbar visible, creator cards unreachable (rubber-band).  
+**Fix:** ≤980px unlock nested overflow so platform shell scrolls; restore sheet `matchMedia` to 760px; close sheet + clear `body.overflow` on section hide / pageshow. Develop only.
 
 ## Shipped 2026-09-08 — Client review mobile tabs dead + slow
 

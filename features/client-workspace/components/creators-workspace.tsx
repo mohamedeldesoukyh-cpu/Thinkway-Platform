@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
@@ -89,6 +89,7 @@ export function CreatorsWorkspace({
   const [brief, setBrief] = useState<ClientCreatorBrief | null>(null);
   const [note, setNote] = useState("");
   const [detailClosed, setDetailClosed] = useState(false);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const selection = sharedSelection;
   const explore = intent === "explore";
   const pendingIds = new Set(view.journey?.pendingCommercialApprovalCreatorIds ?? []);
@@ -147,13 +148,35 @@ export function CreatorsWorkspace({
   };
 
   useEffect(() => {
-    // Match the CSS single-column breakpoint (980px), not only 760px, so we never
-    // mount a desktop sticky/fixed .detail sibling that can cover the roster on phones.
-    const media = window.matchMedia("(max-width: 980px)");
+    // Known-good redesign sheet mode: phones only (≤760). CSS stacks layout at 980;
+    // do not put tablet widths into portal/sheet mode.
+    const media = window.matchMedia("(max-width: 760px)");
     const sync = () => setViewport(media.matches ? "mobile" : "desktop");
     sync();
     media.addEventListener("change", sync);
     return () => media.removeEventListener("change", sync);
+  }, []);
+
+  // If Shortlist/Your Selection is hidden (tab switch), tear down sheet so a
+  // portaled .detail cannot keep locking scroll over other sections.
+  useEffect(() => {
+    const host = rootRef.current?.closest("[data-cw-section]");
+    if (!host) return;
+    const syncHidden = () => {
+      if (host.hasAttribute("hidden")) {
+        setSheetOpen(false);
+        setReportOpen(false);
+        setDetailClosed(true);
+        setSelectedId(null);
+        if (document.body.style.overflow === "hidden") {
+          document.body.style.overflow = "";
+        }
+      }
+    };
+    syncHidden();
+    const obs = new MutationObserver(syncHidden);
+    obs.observe(host, { attributes: true, attributeFilter: ["hidden"] });
+    return () => obs.disconnect();
   }, []);
 
   const activeId =
@@ -186,6 +209,26 @@ export function CreatorsWorkspace({
       document.body.style.overflow = previous;
     };
   }, [sheetOpen]);
+
+  // Background restore: never leave body scroll locked if the sheet is gone.
+  useEffect(() => {
+    function onPageShow() {
+      const openDetail = document.querySelector(".detail.show");
+      if (!openDetail && document.body.style.overflow === "hidden") {
+        document.body.style.overflow = "";
+        setSheetOpen(false);
+      }
+    }
+    function onVis() {
+      if (document.visibilityState === "visible") onPageShow();
+    }
+    window.addEventListener("pageshow", onPageShow);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
 
   const selected = view.creators.find((creator) => creator.creatorId === activeId) ?? null;
   const selectedIndex = selected
@@ -266,7 +309,7 @@ export function CreatorsWorkspace({
   }
 
   return (
-    <div className="creators-page">
+    <div className="creators-page" ref={rootRef}>
       {explore ? (
         <div className="card" style={{ marginBottom: 16 }}>
           <p className="ck">Creator shortlist</p>
