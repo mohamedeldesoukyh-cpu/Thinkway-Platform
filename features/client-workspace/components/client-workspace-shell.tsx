@@ -2,7 +2,7 @@
 
 import type { ClientWorkspaceSectionId } from "../constants";
 import { CLIENT_WORKSPACE_SECTION_LABEL } from "../constants";
-import { SHORTLIST_STAGE_LABEL, clientWorkspacePathReviewId, clientWorkspaceVersionPill } from "../journey-state";
+import { SHORTLIST_STAGE_LABEL, clientWorkspaceVersionPill } from "../journey-state";
 import { isClientWorkspaceSectionOpen } from "../entitlement";
 import {
   commercialStageCopy,
@@ -10,7 +10,6 @@ import {
   isPricedClientInvestment,
   selectionCalculator,
 } from "../selection-flow";
-import { buildClientReviewPath } from "../security/review-token";
 import type { ClientWorkspaceView } from "../types";
 import { headerPartnerIdentity, preparedForClientLabel } from "../identity-logo";
 import { cwDebugLog } from "../debug/client-workspace-dom-probe";
@@ -46,11 +45,6 @@ export function ClientWorkspaceShell({
     brandName: view.overview.brandName,
     campaignName: view.overview.campaignName,
   });
-  const pathReviewId = clientWorkspacePathReviewId({
-    historical: Boolean(view.journey?.historical),
-    viewedReviewId: view.review.id,
-    canonicalReviewId: view.journey?.canonicalReviewId,
-  });
   const commercialCopy = view.journey
     ? commercialStageCopy({
         quotationStage: view.journey.quotationStage,
@@ -77,7 +71,6 @@ export function ClientWorkspaceShell({
   });
   const hideHeaderCtaOn = headerCta.section;
   const showHeaderSelectionNav = Boolean(view.canDecide && section !== hideHeaderCtaOn);
-  const headerHref = buildClientReviewPath(pathReviewId, token, headerCta.section);
 
   function openSection(next: ClientWorkspaceSectionId) {
     cwDebugLog("shell.openSection", { from: section, to: next });
@@ -98,31 +91,21 @@ export function ClientWorkspaceShell({
           <span className="stpill cur">{versionLabel}</span>
           {view.canDecide ? (
             <>
-              <a
+              <button
+                type="button"
                 className="btn sec"
-                href={buildClientReviewPath(pathReviewId, token, "feedback")}
-                onClick={(event) => {
-                  if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                  if (typeof event.button === "number" && event.button !== 0) return;
-                  event.preventDefault();
-                  openSection("feedback");
-                }}
+                onClick={() => openSection("feedback")}
               >
                 Request changes
-              </a>
+              </button>
               {showHeaderSelectionNav ? (
-                <a
+                <button
+                  type="button"
                   className="btn sec"
-                  href={headerHref}
-                  onClick={(event) => {
-                    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-                    if (typeof event.button === "number" && event.button !== 0) return;
-                    event.preventDefault();
-                    openSection(headerCta.section);
-                  }}
+                  onClick={() => openSection(headerCta.section)}
                 >
                   {headerCta.label}
-                </a>
+                </button>
               ) : null}
             </>
           ) : null}

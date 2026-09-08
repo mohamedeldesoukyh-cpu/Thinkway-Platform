@@ -172,7 +172,6 @@ export function ProposalSummaryCard({
     next: "creators" | "commercial"
   ) {
     if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
-    if (typeof event.button === "number" && event.button !== 0) return;
     event.preventDefault();
     goToSection(next);
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
@@ -83,12 +84,17 @@ export function CreatorsWorkspace({
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [viewport, setViewport] = useState<"unknown" | "mobile" | "desktop">("unknown");
+  const [viewport, setViewport] = useState<"unknown" | "mobile" | "desktop">(() => {
+    if (typeof window === "undefined") return "unknown";
+    return window.matchMedia("(max-width: 980px)").matches ? "mobile" : "desktop";
+  });
   const [reportOpen, setReportOpen] = useState(false);
   const [brief, setBrief] = useState<ClientCreatorBrief | null>(null);
   const [note, setNote] = useState("");
   const [detailClosed, setDetailClosed] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const sheetHostRef = useRef<Element | null>(null);
+  const [sheetHost, setSheetHost] = useState<Element | null>(null);
   const selection = sharedSelection;
   const explore = intent === "explore";
   const pendingIds = new Set(view.journey?.pendingCommercialApprovalCreatorIds ?? []);
@@ -156,8 +162,14 @@ export function CreatorsWorkspace({
     return () => media.removeEventListener("change", sync);
   }, []);
 
+  useEffect(() => {
+    const host = rootRef.current?.closest(".tw-review") ?? null;
+    sheetHostRef.current = host;
+    setSheetHost(host);
+  }, []);
+
   // If Shortlist/Your Selection is hidden (tab switch), tear down sheet so a
-  // portaled .detail cannot keep locking scroll over other sections.
+  // sheet cannot keep covering other sections.
   useEffect(() => {
     const host = rootRef.current?.closest("[data-cw-section]");
     if (!host) return;
@@ -167,9 +179,6 @@ export function CreatorsWorkspace({
         setReportOpen(false);
         setDetailClosed(true);
         setSelectedId(null);
-        if (document.body.style.overflow === "hidden") {
-          document.body.style.overflow = "";
-        }
       }
     };
     syncHidden();
@@ -198,36 +207,9 @@ export function CreatorsWorkspace({
     };
   }, [activeId, token]);
 
-  useEffect(() => {
-    if (!sheetOpen) return;
-    const previous = document.body.style.overflow;
-    cwDebugLog("body.overflow.set", { from: previous || "(empty)", to: "hidden", sheetOpen: true });
-    document.body.style.overflow = "hidden";
-    return () => {
-      cwDebugLog("body.overflow.restore", { to: previous || "(empty)", sheetOpen: false });
-      document.body.style.overflow = previous;
-    };
-  }, [sheetOpen]);
-
-  // Background restore: never leave body scroll locked if the sheet is gone.
-  useEffect(() => {
-    function onPageShow() {
-      const openDetail = document.querySelector(".detail.show");
-      if (!openDetail && document.body.style.overflow === "hidden") {
-        document.body.style.overflow = "";
-        setSheetOpen(false);
-      }
-    }
-    function onVis() {
-      if (document.visibilityState === "visible") onPageShow();
-    }
-    window.addEventListener("pageshow", onPageShow);
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      window.removeEventListener("pageshow", onPageShow);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, []);
+  // Do NOT lock document.body.overflow here. Mobile CSS unlocks body with
+  // !important for document scrolling; a stale inline overflow:hidden plus
+  // visibility/pageshow handlers was immediately closing the creator sheet.
 
   const selected = view.creators.find((creator) => creator.creatorId === activeId) ?? null;
   const selectedIndex = selected
@@ -272,7 +254,8 @@ export function CreatorsWorkspace({
     setSelectedId(creatorId);
     setNote("");
     setReportOpen(false);
-    if (viewport === "mobile") setSheetOpen(true);
+    // Sheet for any non-desktop viewport (includes "unknown" before media sync).
+    if (viewport !== "desktop") setSheetOpen(true);
   }
 
   function closeSheet() {
@@ -571,10 +554,10 @@ export function CreatorsWorkspace({
                 showOriginalCurrency={showOriginalCurrency}
               />
             ) : null;
-          // Keep detail in-layout (do NOT portal to document.body). A body portal
-          // stacks above review chrome and freezes tabs.
-          if (detailPane) return detailPane;
+
+          // Desktop: keep detail in the layout grid.
           if (viewport === "desktop") {
+            if (detailPane) return detailPane;
             return (
               <div className="detail">
                 <div className="empty">
@@ -586,7 +569,13 @@ export function CreatorsWorkspace({
               </div>
             );
           }
-          return null;
+
+          // Mobile/narrow: portal onto `.tw-review` (not document.body) so the sheet
+          // escapes the roster stacking context without covering sticky tabs/header.
+          if (!detailPane) return null;
+          const host = sheetHost ?? sheetHostRef.current;
+          if (host) return createPortal(detailPane, host);
+          return detailPane;
         })()}
       </div>
 

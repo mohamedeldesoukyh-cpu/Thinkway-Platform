@@ -42,8 +42,11 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
   assert.equal(css.includes(".detail:not(.show)"), true);
   assert.equal(css.includes("display:none !important"), true);
   assert.equal(creators.includes('viewport === "desktop"'), true);
-  assert.equal(creators.includes("createPortal"), false);
+  assert.equal(creators.includes("createPortal(detailPane, host)"), true);
+  assert.equal(creators.includes("createPortal(detailPane, document.body)"), false);
   assert.equal(creators.includes("show={showDetail}"), false);
+  assert.equal(creators.includes('viewport !== "desktop"'), true);
+  assert.equal(creators.includes("document.body.style.overflow"), false);
 });
 
 test("Client Workspace tab switches must not pushState a new [section] URL", () => {
@@ -67,9 +70,10 @@ test("Client Workspace tab switches must not pushState a new [section] URL", () 
   assert.equal(app.includes("buildClientReviewPath(pathReviewId, token, next)"), false);
   assert.equal(shell.includes('<nav className="tabs"'), true);
   assert.match(shell, /<button[\s\S]*type="button"[\s\S]*className=\{`\$\{on \? "tab on" : "tab"/);
-  assert.equal(creators.includes("createPortal"), false);
+  assert.equal(shell.includes("buildClientReviewPath"), false);
+  assert.equal(creators.includes("createPortal(detailPane, host)"), true);
   assert.equal(creators.includes("(max-width: 980px)"), true);
-  assert.equal(css.includes("z-index:120") || css.includes("z-index: 200") || css.includes("z-index:200"), true);
+  assert.equal(css.includes("z-index:180") || css.includes("z-index: 180"), true);
   assert.equal(css.includes("position:absolute !important"), true);
   assert.equal(css.includes("flex: none !important"), true);
   assert.equal(css.includes("html[data-tw-cw]"), true);
