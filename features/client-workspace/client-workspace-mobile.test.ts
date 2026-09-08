@@ -72,6 +72,8 @@ test("Client Workspace tab switches must not pushState a new [section] URL", () 
   assert.equal(css.includes("z-index:120") || css.includes("z-index: 200") || css.includes("z-index:200"), true);
   assert.equal(css.includes("position:absolute !important"), true);
   assert.equal(css.includes("flex: none !important"), true);
+  assert.equal(css.includes("html[data-tw-cw]"), true);
+  assert.equal(css.includes("[data-tw-app-shell]"), true);
   assert.match(
     css,
     /@media \(max-width: 980px\) \{[\s\S]*?\.tw-review-body \{[\s\S]*?overflow:\s*visible/

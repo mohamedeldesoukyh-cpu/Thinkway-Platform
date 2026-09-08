@@ -13,14 +13,22 @@ export function PwaSplash() {
     const el = document.getElementById("pwa-splash");
     if (!el) return;
 
-    if (!isStandaloneDisplay()) {
-      el.setAttribute("data-done", "true");
-      return;
-    }
-
     const hide = () => {
       el.setAttribute("data-done", "true");
     };
+
+    // Client Review / token links must never stay under the black splash.
+    // Standalone restore (pageshow) can otherwise leave a full-screen cover.
+    const path = window.location.pathname;
+    if (path.startsWith("/review")) {
+      hide();
+      return;
+    }
+
+    if (!isStandaloneDisplay()) {
+      hide();
+      return;
+    }
 
     const timer = window.setTimeout(hide, 900);
     if (document.readyState === "complete") {
@@ -31,7 +39,13 @@ export function PwaSplash() {
       });
     }
 
-    return () => window.clearTimeout(timer);
+    const onPageShow = () => hide();
+    window.addEventListener("pageshow", onPageShow);
+
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("pageshow", onPageShow);
+    };
   }, []);
 
   return null;

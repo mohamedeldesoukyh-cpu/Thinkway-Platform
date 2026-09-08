@@ -41,9 +41,24 @@
  * Mobile / narrow (≤980px):
  * 1) Nested overflow + flex:1 trapped iOS scroll (sumbar visible, cards unreachable).
  * 2) Portaled / fixed .detail.show covered the page and froze tabs.
- * Unlock height growth into the platform shell scroller; keep chrome usable.
+ * 3) Root layout body is h-svh + overflow-hidden with an inner overflow-y-auto shell —
+ *    that outer lock still traps WebKit even after .tw-review-* unlock. When Client
+ *    Workspace marks html[data-tw-cw], promote document scroll for the whole chain.
  */
 @media (max-width: 980px) {
+  html[data-tw-cw],
+  html[data-tw-cw] body {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  html[data-tw-cw] [data-tw-app-shell] {
+    flex: none !important;
+    height: auto !important;
+    max-height: none !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
   .tw-review-root {
     flex: none !important;
     overflow: visible !important;

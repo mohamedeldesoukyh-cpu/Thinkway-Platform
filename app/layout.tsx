@@ -155,7 +155,10 @@ export default function RootLayout({
         </div>
         <AppProviders>
           <EnvironmentChrome>
-            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <div
+              data-tw-app-shell=""
+              className="flex min-h-0 flex-1 flex-col overflow-y-auto"
+            >
               {children}
             </div>
           </EnvironmentChrome>
