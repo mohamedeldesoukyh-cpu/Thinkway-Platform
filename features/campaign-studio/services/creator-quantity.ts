@@ -18,7 +18,8 @@ export type CreatorQuantityRecommendation = {
 const MIN_SLATE = 4;
 const MAX_SLATE = 16;
 
-function objectiveKind(
+/** Objective classification shared with Creator Search Requirements. */
+export function objectiveKindOf(
   objective: string | undefined
 ): "awareness" | "acquisition" | "both" | "other" {
   const text = objective?.toLowerCase() ?? "";
@@ -98,7 +99,7 @@ export function deriveCreatorQuantityRecommendation(
   const mix = facts ? buildCreatorMixFromFacts(facts) : [];
   const duration = durationBase(facts?.durationWeeks);
   const budget = budgetLift(facts);
-  const kind = objectiveKind(facts?.objective);
+  const kind = objectiveKindOf(facts?.objective);
   const platforms = (facts?.platforms ?? []).filter((p) => p.trim());
   const evidence: string[] = [];
 
