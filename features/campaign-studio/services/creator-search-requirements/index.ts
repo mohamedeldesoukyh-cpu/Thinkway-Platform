@@ -1,4 +1,10 @@
 export {
+  attachCreatorSearchRequirements,
+  attachCreatorSearchRequirementsWithValidatedIntelligence,
+  isCreatorSearchRequirementsCurrent,
+  resolveValidatedIntelligenceForCampaignObject,
+} from "./attach-creator-search-requirements";
+export {
   buildCreatorSearchRequirements,
   type BuildCreatorSearchRequirementsInput,
   type CreatorSearchRequirementsOverrides,
