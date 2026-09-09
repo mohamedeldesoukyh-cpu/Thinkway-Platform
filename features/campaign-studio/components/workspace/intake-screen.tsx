@@ -31,7 +31,6 @@ import {
   requiredIntakeFacts,
   type IntakeFactsEdit,
 } from "../../services/studio-intake-facts";
-import { deriveCreatorCategoriesFromBrief } from "../../services/derive-creator-categories";
 import { isStudioIntakeConfirmed } from "../../services/studio-workspace-status";
 import type { StudioWorkspaceStepId } from "../../constants/studio-workspace";
 import { STUDIO_WORKSPACE_STEPS } from "../../constants/studio-workspace";
@@ -125,6 +124,7 @@ export function IntakeScreen({
         platforms: splitList(draft.platforms),
         deliverables: splitList(draft.deliverables),
         kpis: splitList(draft.kpis),
+        creatorCategories: splitList(draft.creatorCategories),
         budgetAmount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
         budgetCurrency: draft.currency,
         durationWeeks: Number.isFinite(weeks) && weeks > 0 ? weeks : undefined,
@@ -146,13 +146,9 @@ export function IntakeScreen({
       objective: displayFacts?.objective ?? "",
       audience: displayFacts?.audience ?? "",
       category: displayFacts?.industry ?? "",
-      creatorCategories: deriveCreatorCategoriesFromBrief({
-        briefText: displayFacts?.rawBriefExcerpt,
-        objective: displayFacts?.objective,
-        audience: displayFacts?.audience,
-        campaignName: displayFacts?.product,
-        products: displayFacts?.product ? [displayFacts.product] : undefined,
-      }).join(", "),
+      // Canonical value resolved by the intelligence pipeline. Intake renders
+      // stored intelligence — it must never reinterpret the brief at render time.
+      creatorCategories: (displayFacts?.creatorCategories ?? []).join(", "),
       platforms: (displayFacts?.platforms ?? []).join(", "),
       deliverables: (displayFacts?.deliverables ?? []).join(", "),
       kpis: (displayFacts?.kpis ?? []).join(", "),

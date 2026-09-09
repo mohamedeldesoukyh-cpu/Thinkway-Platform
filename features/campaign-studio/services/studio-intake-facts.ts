@@ -1,10 +1,13 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
-import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
+import type {
+  CampaignFacts,
+  CampaignFactsField,
+} from "@/features/campaign-director/facts/campaign-facts-types";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { applyConfirmedCampaignFactsToCampaignObject } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
 
 import { patchCampaignFacts } from "./copilot/campaign-facts-mutations";
-import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
+import { resolveCanonicalCategories } from "@/lib/creator-intelligence/taxonomy";
 
 export type IntakeFactState = "confirmed" | "missing";
 
@@ -84,15 +87,12 @@ function presentPlatforms(facts: CampaignFacts | undefined): string | null {
   return joinList(facts?.platforms);
 }
 
+/**
+ * Canonical creator categories resolved by the intelligence pipeline.
+ * Intake renders stored intelligence — it never re-reads the brief here.
+ */
 function presentCreatorCategories(facts: CampaignFacts | undefined): string | null {
-  const categories = deriveCreatorCategoriesFromBrief({
-    briefText: facts?.rawBriefExcerpt,
-    objective: facts?.objective,
-    audience: facts?.audience,
-    campaignName: facts?.product,
-    products: facts?.product ? [facts.product] : undefined,
-  });
-  return categories.length > 0 ? categories.join(", ") : null;
+  return joinList(facts?.creatorCategories);
 }
 
 /**
@@ -206,16 +206,57 @@ export function mergeIntakeDisplayFacts(
   };
 }
 
+/**
+ * Stamp `operator` on every field the human actually supplied, leaving all other
+ * field provenance untouched. Without this a typed value is indistinguishable
+ * from an extracted one.
+ */
+function withOperatorSources(
+  base: CampaignFacts | undefined,
+  operatorFields: Array<[CampaignFactsField, boolean]>
+): Pick<CampaignFacts, "confidence" | "sources"> {
+  const confidence = { ...(base?.confidence ?? {}) };
+  const sources = { ...(base?.sources ?? {}) };
+  for (const [field, supplied] of operatorFields) {
+    if (!supplied) continue;
+    sources[field] = "operator";
+    confidence[field] = 1;
+  }
+  return { confidence, sources };
+}
+
 export function campaignFactsFromIntakeEdit(
   edit: IntakeFactsEdit,
   base?: CampaignFacts
 ): CampaignFacts {
   const amount = edit.budgetAmount;
   const currency = edit.budgetCurrency?.trim();
+  const budgetSupplied =
+    amount != null && Number.isFinite(amount) && amount > 0 && Boolean(currency);
+  const meta = withOperatorSources(base, [
+    ["clientName", Boolean(edit.clientName?.trim())],
+    ["brandName", Boolean(edit.brandName?.trim())],
+    ["product", Boolean(edit.product?.trim())],
+    ["industry", Boolean(edit.industry?.trim())],
+    ["objective", Boolean(edit.objective?.trim())],
+    ["audience", Boolean(edit.audience?.trim())],
+    ["geography", Boolean(edit.geography?.some((value) => value.trim()))],
+    ["platforms", Boolean(edit.platforms?.some((value) => value.trim()))],
+    ["deliverables", Boolean(edit.deliverables?.some((value) => value.trim()))],
+    ["kpis", Boolean(edit.kpis?.some((value) => value.trim()))],
+    ["creatorCategories", Boolean(edit.creatorCategories?.some((value) => value.trim()))],
+    ["budget", budgetSupplied],
+    [
+      "durationWeeks",
+      edit.durationWeeks != null &&
+        Number.isFinite(edit.durationWeeks) &&
+        edit.durationWeeks > 0,
+    ],
+  ]);
   return {
     extractedAt: base?.extractedAt ?? new Date().toISOString(),
-    confidence: { ...(base?.confidence ?? {}) },
-    sources: { ...(base?.sources ?? {}) },
+    confidence: meta.confidence,
+    sources: meta.sources,
     clientName: edit.clientName?.trim() || base?.clientName,
     brandName: edit.brandName?.trim() || base?.brandName,
     product: edit.product?.trim() || base?.product,
@@ -226,6 +267,10 @@ export function campaignFactsFromIntakeEdit(
     platforms: edit.platforms?.filter((value) => value.trim()) ?? base?.platforms,
     deliverables: edit.deliverables?.filter((value) => value.trim()) ?? base?.deliverables,
     kpis: edit.kpis?.filter((value) => value.trim()) ?? base?.kpis,
+    creatorCategories:
+      edit.creatorCategories && edit.creatorCategories.some((value) => value.trim())
+        ? resolveCanonicalCategories(edit.creatorCategories)
+        : base?.creatorCategories,
     durationWeeks:
       edit.durationWeeks != null && Number.isFinite(edit.durationWeeks) && edit.durationWeeks > 0
         ? Math.round(edit.durationWeeks)
@@ -264,24 +309,13 @@ export function applyIntakeEditToProfile(
     edit.kpis && edit.kpis.some((value) => value.trim())
       ? edit.kpis.map((value) => value.trim()).filter(Boolean)
       : profile.kpis;
+  // An operator's explicit selection is authoritative — canonicalize the labels,
+  // never re-derive them from the brief. With no edit, keep what the pipeline stored.
+  const editedCategories = edit.creatorCategories?.filter((value) => value.trim()) ?? [];
   const creatorCategories =
-    edit.creatorCategories && edit.creatorCategories.some((value) => value.trim())
-      ? deriveCreatorCategoriesFromBrief({
-          briefText: profile.rawBriefExcerpt,
-          objective,
-          audience,
-          campaignName,
-          products: campaignName ? [campaignName] : profile.products,
-          existingCategories: edit.creatorCategories,
-        })
-      : deriveCreatorCategoriesFromBrief({
-          briefText: profile.rawBriefExcerpt,
-          objective,
-          audience,
-          campaignName,
-          products: campaignName ? [campaignName] : profile.products,
-          existingCategories: profile.creatorCategories,
-        });
+    editedCategories.length > 0
+      ? resolveCanonicalCategories(editedCategories)
+      : profile.creatorCategories;
   const durationWeeks =
     edit.durationWeeks != null && Number.isFinite(edit.durationWeeks) && edit.durationWeeks > 0
       ? Math.round(edit.durationWeeks)
@@ -309,7 +343,7 @@ export function applyIntakeEditToProfile(
     platforms,
     deliverables,
     kpis,
-    creatorCategories: creatorCategories.length > 0 ? creatorCategories : undefined,
+    creatorCategories: creatorCategories?.length ? creatorCategories : undefined,
     durationWeeks,
     budget,
   };

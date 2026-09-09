@@ -102,6 +102,16 @@ export function profileToCampaignFacts(
     platforms: profile.platforms,
     kpis: profile.kpis,
     deliverables: profile.deliverables,
+    // Campaign intent carried on the profile — NOT Discovery filters.
+    // validatedIntelligence stays Discovery-shaped; these reach Strategy/Intake here.
+    creatorCategories: profile.creatorCategories?.length
+      ? profile.creatorCategories
+      : undefined,
+    keyMessage: profile.keyMessage,
+    callToAction: profile.callToAction,
+    campaignFunnel: profile.campaignFunnel?.length ? profile.campaignFunnel : undefined,
+    toneOfVoice: profile.toneOfVoice?.length ? profile.toneOfVoice : undefined,
+    contentFormats: profile.contentStyle?.length ? profile.contentStyle : undefined,
     constraints: [
       ...(profile.requirements?.mandatory ?? []),
       ...(profile.constraints ?? []),

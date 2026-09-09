@@ -63,6 +63,9 @@ const extractionSchema = z.object({
   kpis: z.array(z.string()).nullable().optional(),
   toneOfVoice: z.array(z.string()).nullable().optional(),
   contentStyle: z.array(z.string()).nullable().optional(),
+  keyMessage: z.string().nullable().optional(),
+  callToAction: z.string().nullable().optional(),
+  campaignFunnel: z.array(z.string()).nullable().optional(),
   brandSafetyLevel: z.enum(["required", "preferred", "none"]).nullable().optional(),
   requirements: z
     .object({
@@ -100,6 +103,10 @@ Rules:
 - Only treat creators as finance/education specialists when the brief explicitly asks for finance educators or personal-finance influencers.
 - Put follower ranges in followerRange, not creatorCategories.
 - Put content keywords in keywords array.
+- keyMessage: the single core brand message, verbatim from the brief. null if absent.
+- callToAction: the explicit CTA, verbatim. null if absent.
+- campaignFunnel: ordered funnel stages if the brief states them (e.g. ["Awareness","Interest","Trial"]). Funnel stages are NOT kpis.
+- kpis: only measurable success targets stated in the brief. Never restate the objective or funnel as a KPI.
 - fieldConfidence: per-field extraction confidence 0–1 (how certain you are the value appears in the brief).
 - confidence reflects extraction certainty only — not business importance.`;
 
@@ -216,6 +223,10 @@ export function fillBriefSourcedHeuristicGaps(
   take("durationWeeks", "durationWeeks");
   take("platforms", "platforms");
   take("deliverables", "deliverables");
+  take("keyMessage", "keyMessage");
+  take("callToAction", "callToAction");
+  take("campaignFunnel", "campaignFunnel");
+  take("toneOfVoice", "toneOfVoice");
 
   if (!next.campaignName?.trim() && heuristic.campaignName?.trim()) {
     next.campaignName = heuristic.campaignName;
@@ -265,6 +276,11 @@ function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
   profile.budget = facts.budget;
   profile.durationWeeks = facts.durationWeeks;
   profile.kpis = facts.kpis;
+  profile.deliverables = facts.deliverables;
+  profile.keyMessage = facts.keyMessage;
+  profile.callToAction = facts.callToAction;
+  profile.campaignFunnel = facts.campaignFunnel;
+  profile.toneOfVoice = facts.toneOfVoice;
   profile.constraints = facts.constraints;
   profile.risks = facts.risks;
   profile.rawBriefExcerpt = briefText.slice(0, 500);
@@ -281,6 +297,8 @@ function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
   });
   if (derivedCategories.length > 0) {
     profile.creatorCategories = derivedCategories;
+    // Assistive inference from brief content — must never read as stated fact.
+    setProfileFieldMeta(profile, "creatorCategories", "inferred", 0.6);
   }
 
   if (facts.audience) {
@@ -353,7 +371,17 @@ function applyExtractedData(
     products: data.products ?? undefined,
     existingCategories: data.creatorCategories ?? undefined,
   });
-  if (profile.creatorCategories.length === 0) profile.creatorCategories = undefined;
+  if (profile.creatorCategories.length === 0) {
+    profile.creatorCategories = undefined;
+  } else {
+    // Categories are resolved/inferred from brief content, never quoted from it.
+    setProfileFieldMeta(
+      profile,
+      "creatorCategories",
+      data.creatorCategories?.length ? "brief" : "inferred",
+      data.creatorCategories?.length ? 0.85 : 0.6
+    );
+  }
   profile.creatorNiches = data.creatorNiches ?? undefined;
   profile.budget = data.budget ?? undefined;
   profile.durationWeeks = data.durationWeeks ?? undefined;
@@ -361,6 +389,9 @@ function applyExtractedData(
   profile.kpis = data.kpis ?? undefined;
   profile.toneOfVoice = data.toneOfVoice ?? undefined;
   profile.contentStyle = data.contentStyle ?? undefined;
+  profile.keyMessage = data.keyMessage ?? undefined;
+  profile.callToAction = data.callToAction ?? undefined;
+  profile.campaignFunnel = data.campaignFunnel ?? undefined;
   profile.brandSafetyLevel = data.brandSafetyLevel ?? undefined;
   profile.requirements = data.requirements
     ? {

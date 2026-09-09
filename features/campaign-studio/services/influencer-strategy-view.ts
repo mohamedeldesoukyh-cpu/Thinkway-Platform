@@ -4,8 +4,12 @@ import {
   deriveEnterprisePlanningNarrative,
   type EnterprisePlanningNarrative,
 } from "./planning-narrative";
-import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
-import { deriveCreatorQuantityRecommendation } from "./creator-quantity";
+import {
+  deriveCreatorQuantityRecommendation,
+  formatCreatorTierMixSummary,
+} from "./creator-quantity";
+import { creatorTierStrategyToMix } from "@/features/campaign-director/facts/facts-display-bridge";
+import { getStrategyFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
 
 export type InfluencerStrategyAnswer = {
   key: string;
@@ -31,15 +35,20 @@ export function deriveInfluencerStrategyView(
 ): InfluencerStrategyAnswer[] {
   const story = narrative ?? deriveEnterprisePlanningNarrative(campaignObject);
   const facts = getCampaignFacts(campaignObject);
-  const quantity = deriveCreatorQuantityRecommendation(facts);
+  // One tier-mix source of truth: an explicit Strategy allocation, else the
+  // documented industry fallback. Both the summary line and the tier allocation
+  // below read this same value, so they cannot contradict each other.
+  const strategy = getStrategyFromWorkflowData(
+    campaignObject.meta as unknown as Record<string, unknown>
+  );
+  const strategyTierMix = strategy?.creatorTierStrategy?.length
+    ? creatorTierStrategyToMix(strategy.creatorTierStrategy)
+    : undefined;
+  const quantity = deriveCreatorQuantityRecommendation(facts, { tierMix: strategyTierMix });
   const mix = quantity.mix;
-  const categories = deriveCreatorCategoriesFromBrief({
-    briefText: facts?.rawBriefExcerpt,
-    objective: facts?.objective,
-    audience: facts?.audience,
-    campaignName: facts?.product,
-    products: facts?.product ? [facts.product] : undefined,
-  });
+  const mixSummary = formatCreatorTierMixSummary(mix);
+  // Canonical categories resolved by the intelligence pipeline.
+  const categories = facts?.creatorCategories ?? [];
 
   const pillar = (key: string) => story.strategyPillars.find((item) => item.key === key)?.body;
 
@@ -72,7 +81,8 @@ export function deriveInfluencerStrategyView(
     {
       key: "influencerStrategy",
       label: "Influencer strategy",
-      body: firstUseful(pillar("creatorStrategy"), story.creatorPackageThesis),
+      // Derived from the same mix as "Creator tiers" — never a separate table.
+      body: firstUseful(mixSummary, pillar("creatorStrategy"), story.creatorPackageThesis),
     },
     {
       key: "creatorCategories",
