@@ -30,6 +30,8 @@ export type StructuredBriefBlock =
 
 export type StructuredBriefSection = {
   title?: string;
+  /** Level of the heading that named this section, when it came from one. */
+  headingLevel?: number;
   blocks: StructuredBriefBlock[];
 };
 

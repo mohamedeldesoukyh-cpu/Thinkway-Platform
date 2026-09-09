@@ -1,6 +1,7 @@
 import JSZip from "jszip";
 import mammoth from "mammoth";
 
+import { liftDocumentTitle } from "./lift-document-title";
 import type { StructuredBriefBlock, StructuredBriefDocument, StructuredBriefSection } from "./types";
 
 function decodeXmlEntities(text: string): string {
@@ -75,8 +76,10 @@ function parseDocumentXml(xml: string): StructuredBriefSection[] {
         sections.push(current);
         current = { blocks: [] };
       }
+      // A heading is represented ONCE, as the section title. Storing it as a
+      // block too made every label render twice ("Section: Market" / "Market").
       current.title = text;
-      current.blocks.push({ type: "heading", level: headingLevel, text });
+      current.headingLevel = headingLevel;
       continue;
     }
 
@@ -131,11 +134,11 @@ async function parseDocxFromXml(buffer: Buffer): Promise<StructuredBriefDocument
     return { sections: [], sourceFormat: "docx" };
   }
 
-  const sections = parseDocumentXml(docXml);
-  const title = sections[0]?.title ?? sections[0]?.blocks.find((b) => b.type === "heading")?.text;
+  const parsedSections = parseDocumentXml(docXml);
+  const { title, sections } = liftDocumentTitle(parsedSections);
 
   return {
-    title: title?.trim(),
+    title,
     sections: sections.length > 0 ? sections : [{ blocks: [] }],
     sourceFormat: "docx",
   };
@@ -173,8 +176,9 @@ async function parseDocxFromMammothHtml(buffer: Buffer): Promise<StructuredBrief
             sections.push(current);
             current = { blocks: [] };
           }
+          // Same rule as the OOXML branch: the heading is the section title.
           current.title = text;
-          current.blocks.push({ type: "heading", level: Number(tag[1]), text });
+          current.headingLevel = Number(tag[1]);
         }
       } else if (tag === "p") {
         const text = htmlToText(inner);

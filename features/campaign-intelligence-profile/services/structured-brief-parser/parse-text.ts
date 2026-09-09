@@ -1,3 +1,4 @@
+import { liftDocumentTitle } from "./lift-document-title";
 import type { StructuredBriefBlock, StructuredBriefDocument, StructuredBriefSection } from "./types";
 
 const SECTION_HEADING_PATTERN = /^(section|campaign information|overview|requirements|deliverables)\b/i;
@@ -72,8 +73,10 @@ function groupBlocksIntoSections(blocks: StructuredBriefBlock[]): StructuredBrie
         sections.push(current);
         current = { blocks: [] };
       }
+      // The heading names the section; it is not also stored as a block, or
+      // every label would render twice in plainText and llmText.
       current.title = block.text;
-      current.blocks.push(block);
+      current.headingLevel = block.level;
       continue;
     }
     current.blocks.push(block);
@@ -94,14 +97,12 @@ export function parsePlainTextStructured(
 ): StructuredBriefDocument {
   const lines = text.split(/\r?\n/).map((l) => l.trim());
   const blocks = parseLinesToBlocks(lines);
-  const sections = groupBlocksIntoSections(blocks);
-  const title =
-    sections[0]?.title ??
-    (sections[0]?.blocks.find((b) => b.type === "heading") as { text: string } | undefined)?.text;
+  const grouped = groupBlocksIntoSections(blocks);
+  const { title, sections } = liftDocumentTitle(grouped);
 
   return {
-    title: title?.trim(),
-    sections,
+    title,
+    sections: sections.length > 0 ? sections : grouped,
     sourceFormat,
     parserMode,
   };
