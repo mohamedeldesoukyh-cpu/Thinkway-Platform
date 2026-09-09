@@ -1,5 +1,6 @@
 import type { AiOrchestrator } from "@/features/ai";
 import type { ContextBuilderInput } from "@/features/ai/shared";
+import type { CreatorSearchRequirements } from "@/features/campaign-studio/types/creator-search-requirements";
 
 import type { TaskRunnerInput, TaskRunnerOutput } from "../types";
 import { workflowTrace } from "@/lib/creators/search-trace";
@@ -56,6 +57,15 @@ export async function runWorkflowTask(
           (typeof input.workflowData?.campaignIntelligenceProfileId === "string"
             ? input.workflowData.campaignIntelligenceProfileId
             : undefined),
+        // Same fallback chain as the profile id above: the context builder
+        // allowlists fields, so CSR must be named here to survive into the
+        // searchCreators executor.
+        creatorSearchRequirements:
+          contextInput?.creatorSearchRequirements ??
+          input.context?.creatorSearchRequirements ??
+          (input.workflowData?.creatorSearchRequirements as
+            | CreatorSearchRequirements
+            | undefined),
       }
     );
 

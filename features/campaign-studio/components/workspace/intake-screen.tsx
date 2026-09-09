@@ -357,7 +357,15 @@ export function IntakeScreen({
               <dt className="flex items-center justify-between gap-2 text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
                 {row.label}
                 <span className={row.state === "missing" ? "text-amber-700" : "text-[#0C9D57]"}>
-                  {row.state === "missing" ? "Missing" : "Confirmed"}
+                  {/* An optional fact that is absent is not a blocker — Budget is
+                      the case that matters, but the same is true of every
+                      non-required row. Saying "Missing" for both reads as if
+                      Confirm were blocked when it is not. */}
+                  {row.state === "confirmed"
+                    ? "Confirmed"
+                    : row.required
+                      ? "Missing"
+                      : "To be confirmed"}
                 </span>
               </dt>
               <dd className="mt-1">

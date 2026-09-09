@@ -100,4 +100,11 @@ export interface AiContext {
   conversation?: ConversationState;
   /** Release 1 — saved Campaign Intelligence Profile for search + Director SSOT. */
   campaignIntelligenceProfileId?: string;
+  /**
+   * Phase 2 — Strategy-derived Creator Search Requirements, resolved by the
+   * workflow engine BEFORE the search-creators task. Absent for every caller
+   * that does not run inside the campaign workflow; live Discovery then behaves
+   * exactly as it did before CSR existed.
+   */
+  creatorSearchRequirements?: import("@/features/campaign-studio/types/creator-search-requirements").CreatorSearchRequirements;
 }

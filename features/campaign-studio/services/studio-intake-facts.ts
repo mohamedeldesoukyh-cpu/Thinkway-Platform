@@ -104,7 +104,13 @@ export function requiredIntakeFacts(facts: CampaignFacts | undefined): IntakeFac
     row("campaign", "Campaign", present(facts?.product), true),
     row("brand", "Brand", present(facts?.brandName) ?? present(facts?.clientName), true),
     row("country", "Country", joinList(facts?.geography), true),
-    row("budget", "Budget", formatBudget(facts), true),
+    // Budget is a commercial fact, not campaign intelligence. A client may brief
+    // without one, and that campaign must still complete Intake and run through
+    // Strategy → CSR → Discovery → recommendations → Shortlist. The later
+    // commercial gates (studio-package-readiness `evaluateCreators` /
+    // `evaluateCommercial`, and the governance `qa_budget_present` pause at
+    // workflow finalization) still require it before anything is finalized.
+    row("budget", "Budget", formatBudget(facts), false),
     row("duration", "Duration", formatDurationWeeks(facts?.durationWeeks), true),
     row("objective", "Objective", present(facts?.objective), true),
     row("audience", "Audience", presentAudience(facts), false),

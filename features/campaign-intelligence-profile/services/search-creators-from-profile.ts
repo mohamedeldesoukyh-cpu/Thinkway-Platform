@@ -7,7 +7,11 @@ import { mergeAiCandidatePools } from "@/lib/discovery/ai-candidate-pool";
 import { applyEnterpriseConstraints } from "@/lib/discovery/enterprise-constraint-engine";
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 import { dedupeByCreatorId } from "@/lib/creators/dedupe-creators";
-import { searchTrace } from "@/lib/creators/search-trace";
+import {
+  AI_SEARCH_TRACE_ENABLED,
+  DISCOVERY_STRUCTURED_METRICS_ENABLED,
+  searchTrace,
+} from "@/lib/creators/search-trace";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { filtersToRelaxedBrowseParams } from "@/features/discovery/components/creator-search/creator-search-types";
 
@@ -21,6 +25,9 @@ import { hasValidatedIntelligence } from "../services/get-validated-intelligence
 import { normalizeCampaignIntelligenceProfile } from "../services/normalize-profile";
 import type { CampaignIntelligenceProfile } from "../types/profile";
 
+import type { CreatorSearchRequirements } from "@/features/campaign-studio/types/creator-search-requirements";
+import { compareCsrAgainstCurrentFilters } from "@/features/campaign-studio/services/creator-search-requirements/shadow-compare";
+import { mergeCsrFiltersIntoDiscoveryFilters } from "@/features/campaign-studio/services/creator-search-requirements/merge-csr-into-discovery-filters";
 import { mapBrowseCreatorToSearchResult } from "@/features/campaign-studio/services/creator-platform-utils";
 import {
   buildCreatorContentIdea,
@@ -35,7 +42,8 @@ import { getIndustryCreatorMix } from "@/features/campaign-studio/services/prese
 export async function searchCreatorsFromCampaignIntelligenceProfile(
   supabase: SupabaseClient,
   profileId: string,
-  pageSize = 50
+  pageSize = 50,
+  requirements?: CreatorSearchRequirements | null
 ) {
   const row = await getCampaignIntelligenceProfileById(supabase, profileId);
   if (!row) {
@@ -47,7 +55,7 @@ export async function searchCreatorsFromCampaignIntelligenceProfile(
     throw new Error("Campaign intelligence profile is not ready for discovery search.");
   }
 
-  return searchCreatorsFromProfileData(supabase, profile, profileId, pageSize);
+  return searchCreatorsFromProfileData(supabase, profile, profileId, pageSize, requirements);
 }
 
 /**
@@ -68,9 +76,39 @@ export async function searchCreatorsFromProfileData(
   supabase: SupabaseClient,
   profile: CampaignIntelligenceProfile,
   profileId: string,
-  pageSize = 50
+  pageSize = 50,
+  /**
+   * Phase 2 — Strategy-derived Creator Search Requirements, resolved before the
+   * search task. Optional and trailing: every existing caller omits it and gets
+   * byte-identical filters, because the merge returns the CIP set unchanged.
+   */
+  requirements?: CreatorSearchRequirements | null
 ) {
-  const { filters: mappedFilters } = mapCampaignIntelligenceToDiscoverySearch(profile);
+  // CIP remains the source of the live filter set — including everything
+  // enrichBriefSearchSignals infers from a thin brief. CSR is additive on top.
+  const { filters: cipFilters } = mapCampaignIntelligenceToDiscoverySearch(profile);
+  const merged = mergeCsrFiltersIntoDiscoveryFilters({ current: cipFilters, requirements });
+  const mappedFilters = merged.filters;
+
+  // Phase 1 built this comparison but never ran it against a live campaign.
+  // Telemetry only — it reads the filters and changes nothing. `searchTrace`
+  // takes eager data, so the comparison is computed only when something will
+  // actually consume it, rather than on every live search.
+  if (requirements && (AI_SEARCH_TRACE_ENABLED || DISCOVERY_STRUCTURED_METRICS_ENABLED)) {
+    searchTrace(
+      "csr_shadow",
+      {
+        profileId,
+        added: merged.added,
+        comparison: compareCsrAgainstCurrentFilters({
+          currentFilters: cipFilters,
+          requirements,
+        }),
+      },
+      { path: "ai" }
+    );
+  }
+
   const browseFilters = preferCategoryBrowseOverKeywordSearch({
     ...discoveryMappedFiltersToBrowseFilters(mappedFilters, 1, pageSize),
     campaignIntelligenceProfileId: profileId,
