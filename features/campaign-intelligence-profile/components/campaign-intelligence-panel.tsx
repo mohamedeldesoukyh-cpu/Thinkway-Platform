@@ -32,6 +32,8 @@ import { CampaignIntelligenceLinkDialog } from "./campaign-intelligence-link-dia
 export type CampaignIntelligencePanelProps = {
   initialState?: CampaignIntelligenceWorkspaceState | null;
   onWorkspaceChange?: (state: CampaignIntelligenceWorkspaceState) => void;
+  /** Campaign Object re-synced by a same-conversation brief replacement. */
+  onCampaignObjectSynced?: (campaignObject: Record<string, unknown>) => void;
   /** Called after Confirm with projected Campaign Facts. */
   onConfirmed?: (facts: import("@/features/campaign-director/facts/campaign-facts-types").CampaignFacts) => void;
   /** @deprecated Use variant="inline" */
@@ -70,6 +72,7 @@ function shouldShowSparseHint(state: CampaignIntelligenceWorkspaceState): boolea
 export function CampaignIntelligencePanel({
   initialState,
   onWorkspaceChange,
+  onCampaignObjectSynced,
   onConfirmed,
   compact,
   variant,
@@ -165,6 +168,9 @@ export function CampaignIntelligencePanel({
         }
 
         applyLoaded(step.workspace);
+        // The replacement already re-synced the Campaign Object's facts, so
+        // Intake's lower panel adopts them here rather than waiting for a reload.
+        if (step.campaignObject) onCampaignObjectSynced?.(step.campaignObject);
 
         if (shouldShowSparseHint(step.workspace)) {
           toast.message(`"${file.name}" uploaded — review and edit fields below.`);
@@ -177,7 +183,7 @@ export function CampaignIntelligencePanel({
         toast.error(message);
       }
     },
-    [applyLoaded, conversationId]
+    [applyLoaded, conversationId, onCampaignObjectSynced]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({

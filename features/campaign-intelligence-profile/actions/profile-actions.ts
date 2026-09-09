@@ -38,12 +38,18 @@ import {
 } from "../services/profile-repository-elevated";
 import { resolveBriefTextForExtraction } from "../services/resolve-brief-text";
 import { runCampaignIntelligencePipeline } from "../services/run-intelligence-pipeline";
+import { applyConfirmedCampaignFactsToCampaignObject } from "../services/campaign-facts-spine";
+import { profileToCampaignFacts } from "../services/profile-to-facts";
 import {
   linkRequiresBrandSelection,
   resolveBriefUploadProfileTarget,
 } from "../services/brief-upload-profile-target";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
-import { loadCampaignObjectFromPersistence } from "@/features/campaign-intelligence/services/campaign-object-store";
+import {
+  loadCampaignObjectFromPersistence,
+  saveCampaignObject,
+  serializeCampaignObject,
+} from "@/features/campaign-intelligence/services/campaign-object-store";
 import { mergeReanalyzedCampaignProfile } from "@/features/campaign-studio/services/reanalyze-campaign-brief";
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import {
@@ -207,6 +213,11 @@ export async function uploadCampaignBriefAction(
       documentId: string;
       fileName: string;
       workspace: CampaignIntelligenceWorkspaceState;
+      /**
+       * Present when a same-conversation replacement re-synced the Campaign
+       * Object's facts, so Intake can adopt them without a reload.
+       */
+      campaignObject?: Record<string, unknown>;
     }
   | {
       ok: true;
@@ -322,7 +333,7 @@ export async function uploadCampaignBriefAction(
         reanalyzed: merged,
       });
 
-      return finalizeCampaignBriefUpload({
+      const finalized = await finalizeCampaignBriefUpload({
         supabase,
         userId,
         documentId: doc.id,
@@ -338,6 +349,33 @@ export async function uploadCampaignBriefAction(
         // this conversation, so a missing CRM brand must not block replacement.
         allowMissingBrand: uploadTarget.allowMissingBrand,
       });
+
+      if (!finalized.ok || !campaignObject) return finalized;
+
+      // Keep the Campaign Object's facts as the persisted profile now reads.
+      // Intake's lower panel prefers meta.campaignFacts over the CIP profile
+      // (mergeIntakeDisplayFacts), so without this the two halves of the screen
+      // disagree after a replacement. applyConfirmedCampaignFactsToCampaignObject
+      // is the established facts writer: it replaces meta.campaignFacts, refreshes
+      // the fact-derived summary cards and timeline, and marks outputs stale. It
+      // spreads sections, so creators — the slate and shortlist — pass through by
+      // identity. mergeBriefIntoCampaignObject stays pure, sync and untouched.
+      const syncedCampaignObject = await saveCampaignObject(
+        conversationId!,
+        applyConfirmedCampaignFactsToCampaignObject(
+          campaignObject,
+          profileToCampaignFacts(reused)
+        ),
+        { supabase, userId, persistToDb: true, saveReason: "manual" }
+      );
+
+      return {
+        ...finalized,
+        campaignObject: serializeCampaignObject(syncedCampaignObject) as unknown as Record<
+          string,
+          unknown
+        >,
+      };
     }
 
     if (!brandId || skipBrandDetection) {

@@ -308,6 +308,7 @@ export function IntakeScreen({
           conversationId={conversationId}
           isAnalyzing={isExtracting && !cipState?.profileId}
           onWorkspaceChange={setCipState}
+          onCampaignObjectSynced={onCampaignObjectUpdated}
         />
       ) : null}
 
