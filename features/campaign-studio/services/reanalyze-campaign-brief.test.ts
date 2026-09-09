@@ -384,3 +384,44 @@ test("saving an edited brief preserves slate, shortlist and Discovery selections
     ["c1", "c3"]
   );
 });
+
+// The UI synchronization invariant.
+//
+// Save Brief updates the SAME profile in place, so `profileId` is stable across
+// a re-analysis while the profile content changes. Any component that mirrors
+// the workspace state into local state must therefore resync on the state
+// itself, never on the id — keying CampaignIntelligencePanel's effect on
+// `initialState?.profileId` left the Intake panel rendering the profile it
+// copied at mount, while the Campaign Object beneath it showed the new values.
+
+test("profileId is stable across a re-analysis — it cannot be a UI change signal", async () => {
+  const stale = await analyze(SPARSE_BRIEF);
+  const { store, calls } = fakeStore({ id: "profile-7a9b1208", profile: stale });
+
+  const result = await reanalyzeBriefIntelligence(store, {
+    conversationId: "conv-1",
+    briefText: FULL_BRIEF,
+  });
+
+  // Same row, no duplicate — the persistence contract this invariant rests on.
+  assert.equal(result?.created, false);
+  assert.equal(calls.creates.length, 0);
+  assert.equal(result?.profileId, "profile-7a9b1208");
+
+  // …yet the content genuinely changed.
+  const before = profileToCampaignFacts(stale);
+  const after = profileToCampaignFacts(result!.profile);
+  assert.equal(before.audience, undefined);
+  assert.equal(before.deliverables, undefined);
+  assert.ok(after.audience, "audience is populated after re-analysis");
+  assert.ok(after.deliverables?.length, "deliverables are populated after re-analysis");
+  assert.notEqual(after.objective, before.objective);
+
+  // Hence: id unchanged + content changed ⇒ an id-keyed resync never fires.
+  assert.equal(
+    result?.profileId,
+    "profile-7a9b1208",
+    "a component keyed on profileId would miss this update entirely"
+  );
+  assert.notDeepEqual(result?.profile, stale, "the workspace state itself did change");
+});
