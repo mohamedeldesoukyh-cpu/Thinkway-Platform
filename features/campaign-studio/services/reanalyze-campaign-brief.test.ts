@@ -425,3 +425,85 @@ test("profileId is stable across a re-analysis — it cannot be a UI change sign
   );
   assert.notDeepEqual(result?.profile, stale, "the workspace state itself did change");
 });
+
+// Replace/Upload Brief reuses the same merge, so the same guarantees apply.
+
+test("an operator campaign name survives a replaced brief that does not name one", async () => {
+  const base = await analyze(FULL_BRIEF);
+  // Intake stamps `product` operator-owned; the profile carries it on
+  // campaignName + products (applyIntakeEditToProfile).
+  const withOperatorName: CampaignIntelligenceProfile = {
+    ...base,
+    campaignName: "Tafareeh Ramadan Push",
+    products: ["Tafareeh Ramadan Push"],
+    sources: { ...base.sources, product: "operator" },
+    confidence: { ...base.confidence, product: 1 },
+  };
+
+  const replaced = await analyze(SPARSE_BRIEF);
+  const merged = mergeReanalyzedCampaignProfile({
+    previousProfile: withOperatorName,
+    reanalyzed: replaced,
+  });
+  const facts = profileToCampaignFacts(merged);
+
+  assert.equal(merged.campaignName, "Tafareeh Ramadan Push");
+  assert.deepEqual(merged.products, ["Tafareeh Ramadan Push"]);
+  assert.equal(facts.product, "Tafareeh Ramadan Push");
+  assert.equal(facts.sources.product, "operator");
+});
+
+test("operator name and budget survive together while brief fields are replaced", async () => {
+  const base = await analyze(FULL_BRIEF);
+  const previousProfile: CampaignIntelligenceProfile = {
+    ...base,
+    campaignName: "Tafareeh Ramadan Push",
+    products: ["Tafareeh Ramadan Push"],
+    budget: { amount: 300_000, currency: "EGP" },
+    sources: { ...base.sources, product: "operator", budget: "operator" },
+  };
+
+  const changed = FULL_BRIEF.replace(
+    "Objective: Build awareness and encourage people to try the product.",
+    "Objective: Drive repeat purchase among existing drinkers."
+  );
+  const merged = mergeReanalyzedCampaignProfile({
+    previousProfile,
+    reanalyzed: await analyze(changed),
+  });
+  const facts = profileToCampaignFacts(merged);
+
+  // Operator-owned: preserved, with provenance intact.
+  assert.equal(facts.product, "Tafareeh Ramadan Push");
+  assert.equal(facts.sources.product, "operator");
+  assert.deepEqual(facts.budget, { amount: 300_000, currency: "EGP" });
+  assert.equal(facts.sources.budget, "operator");
+
+  // Brief-derived: replaced by the new brief.
+  assert.match(facts.objective ?? "", /Drive repeat purchase/i);
+  assert.equal(facts.sources.objective, "brief");
+});
+
+// 7 + 8 — nothing is invented to fill the Intake checklist.
+
+test("the Tafareeh DOCX invents neither KPIs nor a campaign name", async () => {
+  const bytes = await buildTafareehTeaDocx();
+  const briefText = (
+    await extractBriefDocumentText(
+      bytes,
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "tafareeh-tea-brief.docx"
+    )
+  ).trim();
+
+  const profile = await analyze(briefText);
+  const facts = profileToCampaignFacts(profile);
+
+  // The brief states no measurable target.
+  assert.deepEqual(facts.kpis ?? [], []);
+
+  // "Tafareeh Tea – Campaign Brief" is a document title, not a campaign name.
+  assert.equal(profile.campaignName, undefined);
+  assert.equal(facts.product, undefined);
+  assert.doesNotMatch(profile.campaignName ?? "", /Campaign Brief/i);
+});

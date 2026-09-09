@@ -1,6 +1,9 @@
 import { z } from "zod";
 
-import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
+import {
+  detectIndustryFromBrief,
+  getIndustryProfile,
+} from "@/features/campaign-studio/services/industry-intelligence";
 import { deriveCreatorCategoriesFromBrief } from "@/features/campaign-studio/services/derive-creator-categories";
 import { extractCampaignFacts } from "@/features/campaign-director/facts/extract-campaign-facts";
 import { validateCampaignFacts } from "@/features/campaign-director/facts/validate-campaign-facts";
@@ -265,7 +268,10 @@ function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
   profile.clientName = facts.clientName;
   profile.campaignName = facts.product;
   profile.products = facts.product ? [facts.product] : undefined;
-  profile.industry = facts.industry ?? detectIndustryFromBrief(briefText);
+  // facts.industry is already the label; the fallback must be one too, never a
+  // raw CampaignIndustry key.
+  profile.industry =
+    facts.industry ?? getIndustryProfile(detectIndustryFromBrief(briefText)).label;
   profile.campaignType = facts.campaignType;
   profile.objective = facts.objective;
   profile.objectives = facts.objective ? [facts.objective] : [];
@@ -404,7 +410,11 @@ function applyExtractedData(
   profile.constraints = data.constraints ?? profile.requirements?.mandatory;
   profile.risks = data.risks ?? undefined;
   profile.expectedCreatorCount = data.expectedCreatorCount ?? undefined;
-  profile.industry = detectIndustryFromBrief(briefText);
+  // The industry is stored as the human-readable label, exactly as the
+  // heuristic arm does (extract-campaign-facts.ts). detectIndustryFromBrief
+  // returns a CampaignIndustry key, and Intake renders `industry` verbatim, so
+  // storing the key here surfaced "general" instead of "Brand Campaign".
+  profile.industry = getIndustryProfile(detectIndustryFromBrief(briefText)).label;
   profile.rawBriefExcerpt = briefText.slice(0, 500);
   profile.extractedAt = new Date().toISOString();
 
