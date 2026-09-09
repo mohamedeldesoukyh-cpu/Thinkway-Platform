@@ -12,6 +12,8 @@ import {
   getCampaignFacts,
 } from "@/features/campaign-director/facts/facts-display-bridge";
 import { getStrategyFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
+import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
+import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 
 import { computeCampaignScores } from "./campaign-scores";
@@ -28,6 +30,31 @@ import {
 import { loadStudioEciPlanningSignals } from "./eci/load-studio-eci-signals";
 import { patchSlateIntelligence } from "./slate-intelligence";
 import { normalizeCreatorId } from "./studio-draft";
+
+/**
+ * The tier mix re-optimization measures the edited slate against.
+ *
+ * The mix the slate was actually composed to wins. This path runs from a server
+ * action with no workflow state, so it cannot reach the approved Strategy
+ * document; re-deriving from Campaign Facts would score tier adherence against
+ * a different target than the slate was built to, and an edit would then move
+ * the health score for no visible reason. The persisted mix is that target —
+ * no extra lookup and no new I/O.
+ *
+ * The Strategy → Facts order below is the pre-existing fallback, unchanged, for
+ * a campaign whose slate predates the persisted composition.
+ */
+export function resolveReoptimizationTierMix(input: {
+  composedMix?: Array<{ tier: string; percent: number }>;
+  strategy?: CampaignStrategyDocument | null;
+  facts?: CampaignFacts;
+}): Array<{ tier: string; percent: number }> {
+  if (input.composedMix && input.composedMix.length > 0) return input.composedMix;
+  if (input.strategy?.creatorTierStrategy?.length) {
+    return creatorTierStrategyToMix(input.strategy.creatorTierStrategy);
+  }
+  return input.facts ? buildCreatorMixFromFacts(input.facts) : [];
+}
 
 /**
  * Drop slate-derived analysis that can no longer be recomputed.
@@ -125,17 +152,13 @@ export async function reoptimizeCampaignAfterApply(
 
   // Re-rank with the strategy mix; append anything compose dropped (e.g. a
   // hand-picked off-platform creator) so no chosen creator disappears.
-  // Same precedence as the initial proposal: the campaign's own Strategy
-  // allocation wins over the industry default, so the health scores measure
-  // adherence to this campaign's mix rather than a generic one.
-  const strategy = getStrategyFromWorkflowData(
-    campaignObject.meta as unknown as Record<string, unknown>
-  );
-  const tierMix = strategy?.creatorTierStrategy?.length
-    ? creatorTierStrategyToMix(strategy.creatorTierStrategy)
-    : facts
-      ? buildCreatorMixFromFacts(facts)
-      : [];
+  const tierMix = resolveReoptimizationTierMix({
+    composedMix: creatorsData.slateComposition?.requestedMix,
+    strategy: getStrategyFromWorkflowData(
+      campaignObject.meta as unknown as Record<string, unknown>
+    ),
+    facts,
+  });
   const { creators: ranked } = composeCreatorSlate(cards, {
     platforms: facts?.platforms,
     tierMix,

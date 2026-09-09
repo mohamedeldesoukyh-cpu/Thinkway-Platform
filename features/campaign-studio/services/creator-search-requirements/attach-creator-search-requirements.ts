@@ -39,6 +39,7 @@ import { getValidatedIntelligence } from "@/features/campaign-intelligence-profi
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 import { getCampaignIntelligenceProfileById } from "@/features/campaign-intelligence-profile/services/profile-repository";
 import type { ValidatedCampaignIntelligence } from "@/features/campaign-intelligence-profile/types/validated-intelligence";
+import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
 
 import type { CreatorSearchRequirements } from "../../types/creator-search-requirements";
 import { buildCreatorSearchRequirements } from "./build-creator-search-requirements";
@@ -70,12 +71,21 @@ export function attachCreatorSearchRequirements(
      * is then built from Strategy + Facts exactly as before.
      */
     validated?: ValidatedCampaignIntelligence | null;
+    /**
+     * The approved Strategy, resolved by the caller from workflow state.
+     *
+     * It carries the `strategyRef` this module version-keys on. Without it the
+     * meta lookup below yields undefined, both sides of
+     * `isCreatorSearchRequirementsCurrent` are empty, and a stored CSR reports
+     * itself current forever — so it never rebuilds when Strategy changes.
+     */
+    strategy?: CampaignStrategyDocument | null;
   }
 ): CampaignObject {
   const creatorsData = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
-  const strategy = getStrategyFromWorkflowData(
-    campaignObject.meta as unknown as Record<string, unknown>
-  );
+  const strategy =
+    options?.strategy ??
+    getStrategyFromWorkflowData(campaignObject.meta as unknown as Record<string, unknown>);
 
   if (
     isCreatorSearchRequirementsCurrent(

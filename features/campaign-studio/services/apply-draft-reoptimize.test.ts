@@ -171,3 +171,70 @@ test("an empty slate keeps its existing early-return behaviour", async () => {
   // Deliberately unchanged: with no slate at all there is no edit to reflect.
   assert.ok(performanceOf(after).campaignForecast);
 });
+
+// E — after the slate exists, re-optimization scores against the mix the slate
+// was actually composed to, not a re-derived industry default. This path has no
+// workflow state, so without the persisted mix an edit would silently move the
+// health score by changing the target it is measured against.
+
+test("re-optimization uses the persisted composed mix, not the facts mix", async () => {
+  const { resolveReoptimizationTierMix } = await import("./apply-draft-reoptimize");
+
+  const facts = {
+    industry: "Telecom",
+    brandName: "Etisalat",
+    extractedAt: "",
+    confidence: {},
+    sources: {},
+  } as unknown as Parameters<typeof resolveReoptimizationTierMix>[0]["facts"];
+
+  // What the slate was composed to — the approved Strategy's allocation.
+  const composed = [
+    { tier: "Macro", percent: 20 },
+    { tier: "Micro", percent: 40 },
+    { tier: "Nano", percent: 40 },
+  ];
+
+  assert.deepEqual(
+    resolveReoptimizationTierMix({ composedMix: composed, strategy: undefined, facts }),
+    composed,
+    "the persisted mix is authoritative once a slate exists"
+  );
+
+  // Guard: the facts fallback really is different, so this is a live choice.
+  const fallback = resolveReoptimizationTierMix({
+    composedMix: [],
+    strategy: undefined,
+    facts,
+  });
+  assert.notDeepEqual(fallback, composed);
+  assert.ok(
+    fallback.some((tier) => tier.tier === "Celebrity"),
+    "guard: the Telecom facts mix leads with Celebrity"
+  );
+});
+
+test("with no persisted mix the existing fallback order is unchanged", async () => {
+  const { resolveReoptimizationTierMix } = await import("./apply-draft-reoptimize");
+
+  const facts = {
+    industry: "Telecom",
+    extractedAt: "",
+    confidence: {},
+    sources: {},
+  } as unknown as Parameters<typeof resolveReoptimizationTierMix>[0]["facts"];
+  const strategy = {
+    creatorTierStrategy: [{ tier: "Mega", allocationPercent: 100, why: "" }],
+  } as unknown as Parameters<typeof resolveReoptimizationTierMix>[0]["strategy"];
+
+  // Strategy still beats facts when there is no composed mix …
+  assert.deepEqual(
+    resolveReoptimizationTierMix({ composedMix: [], strategy, facts }).map((t) => t.tier),
+    ["Mega"]
+  );
+  // … and with neither, nothing is invented.
+  assert.deepEqual(
+    resolveReoptimizationTierMix({ composedMix: [], strategy: undefined, facts: undefined }),
+    []
+  );
+});

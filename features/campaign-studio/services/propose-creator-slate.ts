@@ -1,5 +1,6 @@
 import type { GroundedCreator } from "@/features/ai-workflows/formatters/creator-formatter";
 import type { ValidatedCampaignIntelligence } from "@/features/campaign-intelligence-profile/types/validated-intelligence";
+import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
   CreatorsSectionData,
@@ -34,6 +35,18 @@ export type ProposeCreatorSlateOptions = {
    * resolution, filtering, ranking, or slate composition.
    */
   validated?: ValidatedCampaignIntelligence | null;
+  /**
+   * The approved Campaign Strategy, resolved upstream by the workflow engine —
+   * the same route `validated` takes, and for the same reason: the Strategy
+   * document lives on workflow state, and the campaign object has no field for
+   * it, so a synchronous caller reading `campaignObject.meta` finds nothing.
+   *
+   * This is the authoritative source of `creatorTierStrategy`. Its allocation
+   * is decided by the Director debate and can differ materially from the
+   * industry default derived from Campaign Facts; without it the slate executes
+   * a mix the approved Strategy never asked for.
+   */
+  strategy?: CampaignStrategyDocument | null;
 };
 
 export type ProposeCreatorSlateResult = {
@@ -71,6 +84,9 @@ export function proposeInitialCreatorSlateWithStatus(
     ...result,
     campaignObject: attachCreatorSearchRequirements(result.campaignObject, {
       validated: options.validated,
+      // Gives CSR a real `strategyRef`. Without one, both sides of the
+      // freshness check are empty and CSR considers itself current forever.
+      strategy: options.strategy,
     }),
   };
 }
@@ -109,9 +125,12 @@ function runCreatorSlateProposal(
   }
 
   const facts = getCampaignFacts(campaignObject);
-  const strategy = getStrategyFromWorkflowData(
-    campaignObject.meta as unknown as Record<string, unknown>
-  );
+  // The caller's Strategy is authoritative. The meta lookup stays as the
+  // fallback for callers that have no workflow state; it resolves to undefined
+  // today, and the facts-derived mix then applies exactly as before.
+  const strategy =
+    options.strategy ??
+    getStrategyFromWorkflowData(campaignObject.meta as unknown as Record<string, unknown>);
 
   const cards = pool.map(groundedCreatorToSearchCard);
 
