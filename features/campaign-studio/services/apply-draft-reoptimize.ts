@@ -30,6 +30,45 @@ import { patchSlateIntelligence } from "./slate-intelligence";
 import { normalizeCreatorId } from "./studio-draft";
 
 /**
+ * Drop slate-derived analysis that can no longer be recomputed.
+ *
+ * Every one of these is a function of the creator slate, written together by
+ * this module, so they are cleared together — leaving a stale launch-readiness
+ * decision beside a cleared forecast would be the same defect in a new place.
+ * Everything else on the performance section (KPIs the operator confirmed,
+ * success probability, benchmarks) is untouched.
+ */
+function withoutStaleCampaignAnalysis(campaignObject: CampaignObject): CampaignObject {
+  const performanceData = (campaignObject.sections.performance?.data ??
+    {}) as PerformanceSectionData;
+  if (
+    !performanceData.campaignForecast &&
+    !performanceData.campaignScores &&
+    !performanceData.campaignOptimization &&
+    !performanceData.campaignDecision
+  ) {
+    return campaignObject;
+  }
+
+  const next = { ...performanceData };
+  delete next.campaignForecast;
+  delete next.campaignScores;
+  delete next.campaignOptimization;
+  delete next.campaignDecision;
+
+  return {
+    ...campaignObject,
+    sections: {
+      ...campaignObject.sections,
+      performance: {
+        ...campaignObject.sections.performance,
+        data: next as unknown as Record<string, unknown>,
+      },
+    },
+  };
+}
+
+/**
  * Post-apply re-optimization: re-rank the applied slate with the strategy
  * tier mix, refresh creator roles, and recompute the campaign scores from
  * the real creator data. Hand-picked creators are protected — re-ranking
@@ -56,7 +95,17 @@ export async function reoptimizeCampaignAfterApply(
         .map(normalizeCreatorId)
     ),
   ];
-  if (influencerIds.length === 0) return campaignObject;
+  // A Discovery-only slate (every id dp:/dis:) has nothing to hydrate, so it
+  // cannot be re-ranked. It must still not keep analysis describing the
+  // creator set the operator just changed: the stale artifacts are dropped.
+  //
+  // They are dropped rather than recomputed from an empty card set, because
+  // the engines return audienceSize 0 / estimatedReach 0 for no cards — a
+  // false zero is worse than no figure. Absent is how this codebase already
+  // represents "not computable" (cost metrics without a budget,
+  // averageEngagementRate without ER data), and the panel renders nothing
+  // when both artifacts are missing.
+  if (influencerIds.length === 0) return withoutStaleCampaignAnalysis(campaignObject);
 
   let cards;
   try {
