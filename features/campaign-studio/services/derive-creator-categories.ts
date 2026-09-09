@@ -102,11 +102,24 @@ export function deriveCreatorCategoriesFromBrief(input: CreatorCategorySource): 
   if (/\b(gaming|gamer|esports)\b/i.test(text)) {
     addCanonical(inferred, "Gaming");
   }
-  if (/\b(parenting|moms?|mums?|family)\b/i.test(text)) {
+  if (/\b(parenting|moms?|mums?|famil(?:y|ies))\b/i.test(text)) {
     addCanonical(inferred, "Parenting");
   }
   if (/\b(comedy|entertainment|music)\b/i.test(text)) {
     addCanonical(inferred, "Entertainment");
+  }
+  if (
+    /\b(food|beverage|drinks?|tea|coffee|juice|snacks?|cooking|recipes?|restaurants?|dining|culinary|fmcg\s+food)\b/i.test(
+      text
+    )
+  ) {
+    addCanonical(inferred, "Food");
+  }
+  if (/\b(automotive|cars?|vehicles?|motors?)\b/i.test(text)) {
+    addCanonical(inferred, "Automotive");
+  }
+  if (/\b(wellness|wellbeing|well-being|nutrition|healthcare|health)\b/i.test(text)) {
+    addCanonical(inferred, "Health & Wellness");
   }
 
   if (isMassAwarenessCreatorBrief(text)) {
@@ -122,7 +135,7 @@ export function deriveCreatorCategoriesFromBrief(input: CreatorCategorySource): 
     addCanonical(inferred, "Tech");
   }
 
-  const preferredOrder = ["Sports", "Lifestyle", "Entertainment", "Beauty", "Fashion", "Fitness", "Travel", "Gaming", "Parenting", "Tech"];
+  const preferredOrder = ["Sports", "Lifestyle", "Entertainment", "Beauty", "Fashion", "Fitness", "Food", "Travel", "Gaming", "Parenting", "Health & Wellness", "Automotive", "Tech"];
   const merged = [...new Set([...inferred, ...kept])];
   if (merged.length === 0) return [];
 

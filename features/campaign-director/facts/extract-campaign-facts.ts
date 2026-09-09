@@ -1,6 +1,5 @@
 import {
   detectCurrencyFromSources,
-  parseAudienceFromText,
   parseBrandFromText,
   parseBudgetTotalFromText,
   parseMarketFromText,
@@ -212,23 +211,149 @@ function extractPlatforms(text: string): string[] {
   return found;
 }
 
-function extractKpis(text: string, objective: string): string[] {
-  const kpis: string[] = [];
+/**
+ * Read a labelled block from a brief: `Label: value`, or `Label:` on its own
+ * line with the value on the lines beneath. Returns undefined rather than a
+ * bare label, so a heading never becomes the extracted value.
+ */
+export function readLabeledBriefValue(
+  text: string,
+  labels: readonly string[]
+): string | undefined {
+  for (const label of labels) {
+    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const pattern = new RegExp(
+      `^[ \\t>*\\-•]*${escaped}[ \\t]*[:\\-—][ \\t]*([\\s\\S]*?)(?=\\n\\s*\\n|\\n[\\s>*\\-•]*[A-Z][\\w /&'()-]{2,40}[ \\t]*[:\\-—]|(?![\\s\\S]))`,
+      "im"
+    );
+    const match = text.match(pattern);
+    if (!match?.[1]) continue;
 
-  const reachMatch = text.match(/reach[:\s]*([\d,.]+\s*(?:M|K|m|k|%)?(?:\s+\w+)?)/i);
-  if (reachMatch) kpis.push(`Reach: ${reachMatch[1].trim()}`);
+    const value = match[1]
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^[\s>*\-•]+/, "").trim())
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
 
-  const engagementMatch = text.match(/engagement\s*rate[:\s]*([\d.]+\s*%?)/i);
-  if (engagementMatch) kpis.push(`Engagement rate: ${engagementMatch[1].trim()}`);
-
-  if (/conversion|sales|leads?/i.test(objective)) {
-    kpis.push("Conversion rate: Category benchmark +15%");
+    // A value that is only another label (e.g. "Target" → "Audience:") is not a value.
+    if (!value || /^[A-Za-z][\w /&'()-]{0,40}[:\-—]$/.test(value)) continue;
+    if (value.length < 3) continue;
+    return value;
   }
+  return undefined;
+}
 
-  if (/awareness/i.test(objective) && kpis.length === 0) {
-    // Placeholder vocabulary ("TBD") is rejected by the governance QA gate
-    // (qa_no_placeholder) — the default KPI must be honest without it.
-    kpis.push("Reach: confirm target with brand");
+const AUDIENCE_LABELS = [
+  "Target audience",
+  "Primary audience",
+  "Target Audience",
+  "Audience",
+  "Who we are talking to",
+  "Who we're talking to",
+  "Consumer target",
+  "Target consumer",
+] as const;
+
+/** Audience prose from a labelled brief block. Never returns a bare label. */
+export function extractAudienceFromBrief(text: string): string | undefined {
+  const labeled = readLabeledBriefValue(text, AUDIENCE_LABELS);
+  if (labeled) return labeled;
+
+  // Unlabelled audience statements briefs commonly use in prose.
+  const mass = text.match(/\btargeting\s+(?:a\s+)?(mass audience)\b/i);
+  if (mass?.[1]) return mass[1].trim();
+  const mothers = text.match(/mothers?\s+with\s+[^.\n]+/i);
+  if (mothers?.[0]) return mothers[0].trim();
+  const genZ = text.match(/gen\s*z[^.\n]+/i);
+  if (genZ?.[0]) return genZ[0].trim();
+  return undefined;
+}
+
+const KEY_MESSAGE_LABELS = ["Key message", "Core message", "Message", "Key msg"] as const;
+const CTA_LABELS = ["Call to action", "CTA", "Call-to-action"] as const;
+const TONE_LABELS = ["Tone", "Tone of voice", "Voice"] as const;
+const FUNNEL_LABELS = ["Campaign goal", "Funnel", "Campaign funnel", "Goal"] as const;
+
+/** Key message stated in the brief. Undefined when absent — never invented. */
+export function extractKeyMessageFromBrief(text: string): string | undefined {
+  return readLabeledBriefValue(text, KEY_MESSAGE_LABELS);
+}
+
+/** Call to action stated in the brief. */
+export function extractCallToActionFromBrief(text: string): string | undefined {
+  return readLabeledBriefValue(text, CTA_LABELS);
+}
+
+/** Tone descriptors stated in the brief, split on commas. */
+export function extractToneFromBrief(text: string): string[] {
+  const value = readLabeledBriefValue(text, TONE_LABELS);
+  if (!value) return [];
+  return value
+    .split(/[,;]|\band\b/i)
+    .map((part) => part.trim().replace(/[.]+$/, ""))
+    .filter((part) => part.length > 1);
+}
+
+/**
+ * Funnel stages stated in the brief (e.g. "Awareness → Interest → Trial").
+ * A funnel is campaign intent, never a KPI.
+ */
+export function extractCampaignFunnelFromBrief(text: string): string[] {
+  const value = readLabeledBriefValue(text, FUNNEL_LABELS);
+  const source = value ?? text;
+  const chain = source.match(
+    /([A-Za-z][A-Za-z /&-]{2,24}?)\s*(?:->|→|➞|>|then)\s*([A-Za-z][A-Za-z /&-]{2,24}?)(?:\s*(?:->|→|➞|>|then)\s*([A-Za-z][A-Za-z /&-]{2,24}?))?(?=[.\n]|$)/
+  );
+  if (!chain) return [];
+  return [chain[1], chain[2], chain[3]]
+    .filter((stage): stage is string => Boolean(stage?.trim()))
+    .map((stage) => stage.trim().replace(/[.]+$/, ""));
+}
+
+/**
+ * KPIs explicitly stated in the brief.
+ *
+ * Never synthesises a KPI. A brief that states no success measurement yields an
+ * empty list, so Intake can show it as genuinely missing rather than inventing
+ * a target and labelling it `brief`.
+ */
+function extractKpis(text: string): string[] {
+  const kpis: string[] = [];
+  const seen = new Set<string>();
+
+  const push = (label: string, value: string) => {
+    const cleaned = value.trim().replace(/[.,;:\s]+$/, "");
+    if (!cleaned || !/\d/.test(cleaned)) return;
+    const entry = `${label}: ${cleaned}`;
+    if (seen.has(entry.toLowerCase())) return;
+    seen.add(entry.toLowerCase());
+    kpis.push(entry);
+  };
+
+  // A numeric value is required — a bare metric word is an objective, not a KPI.
+  // Briefs write both orders ("5M reach" and "reach: 5M"), so try each.
+  const metrics: Array<{ label: string; word: string; unit: string }> = [
+    { label: "Reach", word: "reach", unit: "(?:M|K|BN|B)?" },
+    { label: "Views", word: "(?:video\\s+)?views", unit: "(?:M|K)?" },
+    { label: "Engagement rate", word: "engagement(?:\\s*rate)?", unit: "%?" },
+    { label: "Conversion rate", word: "conversion(?:\\s*rate)?", unit: "%?" },
+    { label: "Impressions", word: "impressions", unit: "(?:M|K)?" },
+  ];
+
+  for (const { label, word, unit } of metrics) {
+    const valueFirst = text.match(
+      new RegExp(`(\\d[\\d,.]*\\s*${unit})\\s*(?:of\\s+)?${word}\\b`, "i")
+    );
+    if (valueFirst?.[1]) {
+      push(label, valueFirst[1]);
+      continue;
+    }
+    const labelFirst = text.match(
+      new RegExp(`\\b${word}\\b[^\\d\\n]{0,20}(\\d[\\d,.]*\\s*${unit})`, "i")
+    );
+    if (labelFirst?.[1]) push(label, labelFirst[1]);
   }
 
   return kpis;
@@ -331,19 +456,30 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
     setField(facts, "geography", geography, "brief", 0.85);
   }
 
-  const audience = parseAudienceFromText(text);
+  const audience = extractAudienceFromBrief(text);
   if (audience) {
     setField(facts, "audience", audience, "brief", 0.88);
-  } else {
-    const mothersMatch = text.match(/mothers?\s+with\s+[^.]+/i);
-    if (mothersMatch) {
-      setField(facts, "audience", mothersMatch[0], "brief", 0.85);
-    } else {
-      const genZMatch = text.match(/gen\s*z[^.]+/i);
-      if (genZMatch) {
-        setField(facts, "audience", genZMatch[0], "brief", 0.85);
-      }
-    }
+  }
+
+  // Campaign intent stated in the brief. Absent → left undefined, never invented.
+  const keyMessage = extractKeyMessageFromBrief(text);
+  if (keyMessage) {
+    setField(facts, "keyMessage", keyMessage, "brief", 0.85);
+  }
+
+  const callToAction = extractCallToActionFromBrief(text);
+  if (callToAction) {
+    setField(facts, "callToAction", callToAction, "brief", 0.85);
+  }
+
+  const campaignFunnel = extractCampaignFunnelFromBrief(text);
+  if (campaignFunnel.length > 0) {
+    setField(facts, "campaignFunnel", campaignFunnel, "brief", 0.85);
+  }
+
+  const toneOfVoice = extractToneFromBrief(text);
+  if (toneOfVoice.length > 0) {
+    setField(facts, "toneOfVoice", toneOfVoice, "brief", 0.85);
   }
 
   const platforms = extractPlatforms(text);
@@ -351,7 +487,7 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
     setField(facts, "platforms", platforms, "brief", 0.9);
   }
 
-  const kpis = extractKpis(text, objective);
+  const kpis = extractKpis(text);
   if (kpis.length > 0) {
     setField(facts, "kpis", kpis, "brief", 0.8);
   }

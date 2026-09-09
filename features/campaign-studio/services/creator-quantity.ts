@@ -89,14 +89,39 @@ function applyMixCounts(mix: CreatorMixTier[], recommended: number): CreatorMixT
 }
 
 /**
+ * Single source of truth for the creator tier mix.
+ *
+ * An explicit Strategy allocation wins; otherwise one documented industry
+ * fallback is used. Every UI representation of the mix must read this, so the
+ * summary line and the tier allocation can never disagree.
+ */
+export function resolveCreatorTierMix(
+  facts: CampaignFacts | null | undefined,
+  strategyTierMix?: CreatorMixTier[]
+): CreatorMixTier[] {
+  if (strategyTierMix?.length) return strategyTierMix;
+  return facts ? buildCreatorMixFromFacts(facts) : [];
+}
+
+/** Human summary of a tier mix, derived from the same value the allocation uses. */
+export function formatCreatorTierMixSummary(mix: CreatorMixTier[]): string | undefined {
+  const present = mix.filter((tier) => tier.percent > 0 || (tier.count ?? 0) > 0);
+  if (present.length === 0) return undefined;
+  const ordered = [...present].sort((a, b) => b.percent - a.percent);
+  return `${ordered.map((tier) => tier.tier).join(" + ")} · ${ordered
+    .map((tier) => `${tier.percent}%`)
+    .join(" / ")}`;
+}
+
+/**
  * Evidence-based slate size from Campaign Facts. Never defaults to 10 when
  * evidence is missing — returns null so Studio cannot present a fake CURRENT quantity.
  */
 export function deriveCreatorQuantityRecommendation(
   facts: CampaignFacts | null | undefined,
-  options?: { poolSize?: number }
+  options?: { poolSize?: number; tierMix?: CreatorMixTier[] }
 ): CreatorQuantityRecommendation {
-  const mix = facts ? buildCreatorMixFromFacts(facts) : [];
+  const mix = resolveCreatorTierMix(facts, options?.tierMix);
   const duration = durationBase(facts?.durationWeeks);
   const budget = budgetLift(facts);
   const kind = objectiveKindOf(facts?.objective);

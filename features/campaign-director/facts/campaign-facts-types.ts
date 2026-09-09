@@ -1,6 +1,13 @@
 /** Structured campaign facts — SSOT subset; see CampaignIntelligenceProfile for the full object. */
 
-export type CampaignFactsSource = "brief" | "inferred" | "default";
+/**
+ * Where a fact came from.
+ * - `brief`    — explicitly stated in the source brief
+ * - `inferred` — derived by the pipeline from brief content (assistive, not stated)
+ * - `default`  — a documented system default, not tied to this brief
+ * - `operator` — typed or picked by a human in Intake
+ */
+export type CampaignFactsSource = "brief" | "inferred" | "default" | "operator";
 
 export type CampaignFactsField =
   | "clientName"
@@ -19,7 +26,13 @@ export type CampaignFactsField =
   | "kpis"
   | "deliverables"
   | "constraints"
-  | "risks";
+  | "risks"
+  | "creatorCategories"
+  | "keyMessage"
+  | "callToAction"
+  | "campaignFunnel"
+  | "toneOfVoice"
+  | "contentFormats";
 
 export type CampaignFacts = {
   clientName?: string;
@@ -57,6 +70,21 @@ export type CampaignFacts = {
   deliverables?: string[];
   constraints?: string[];
   risks?: string[];
+  /**
+   * Canonical creator categories resolved by the intelligence pipeline.
+   * Campaign intent, NOT a Discovery filter — Discovery reads validatedIntelligence.
+   */
+  creatorCategories?: string[];
+  /** Single-sentence brand message stated in the brief. */
+  keyMessage?: string;
+  /** Explicit call to action stated in the brief. */
+  callToAction?: string;
+  /** Campaign funnel stages, e.g. ["Awareness","Interest","Trial"]. Not KPIs. */
+  campaignFunnel?: string[];
+  /** Tone descriptors stated in the brief. */
+  toneOfVoice?: string[];
+  /** Content formats/styles stated in the brief. */
+  contentFormats?: string[];
   /** Non-authoritative excerpt for context only — never use for factual claims. */
   rawBriefExcerpt?: string;
   extractedAt: string;
