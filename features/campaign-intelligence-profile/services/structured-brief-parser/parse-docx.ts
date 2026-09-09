@@ -218,9 +218,13 @@ export async function parseDocxStructured(buffer: Buffer): Promise<StructuredBri
 
   const fromHtml = await parseDocxFromMammothHtml(buffer);
   if (fromHtml.some((s) => s.blocks.length > 0)) {
+    // Same title handling as the OOXML and plain-text paths. Taking
+    // `fromHtml[0].title` while also keeping that section emitted the document
+    // title twice for any brief whose first line is a real heading.
+    const { title, sections } = liftDocumentTitle(fromHtml);
     return {
-      title: fromHtml[0]?.title,
-      sections: fromHtml,
+      title,
+      sections,
       sourceFormat: "docx",
       parserMode: "docx_mammoth_html",
     };

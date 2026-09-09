@@ -56,13 +56,19 @@ const cell = (text: string) =>
 
 /**
  * The real Tafareeh shape: a heading-styled document title, heading-labelled
- * sections, and a table. The table is what routes the file down the OOXML
- * branch — the only branch that sets `document.title`, and therefore the one
- * that produced the third copy.
+ * sections, and optionally a table. The table routes the file down the OOXML
+ * branch; without one it takes the mammoth-HTML branch. Both branches must
+ * emit the title exactly once.
  */
-async function buildTafareehDocx(options: { withTable?: boolean } = {}): Promise<Buffer> {
+async function buildTafareehDocx(
+  options: { withTable?: boolean; intro?: string } = {}
+): Promise<Buffer> {
   const body = [
-    heading(TITLE, "Title"),
+    // Heading1, not "Title": mammoth renders a Title-styled paragraph as <p>,
+    // which never reaches the branch's title assignment. The real brief uses a
+    // real heading, so the fixture must too.
+    heading(TITLE),
+    options.intro ? paragraph(options.intro) : "",
     heading("Campaign Objective"),
     paragraph("Build awareness for Tafareeh Tea and encourage people to try and buy the product."),
     heading("Market"),
@@ -236,7 +242,7 @@ test("genuinely repeated body text stays repeated", async () => {
 
 // 12 — mammoth-HTML branch (a table-less DOCX takes this path).
 
-test("mammoth-HTML DOCX: labels appear once and values survive", async () => {
+test("mammoth-HTML DOCX: a Heading1 title appears once — the reported case", async () => {
   const parsed = await parseStructuredBriefDocument(
     await buildTafareehDocx({ withTable: false }),
     DOCX_MIME,
@@ -378,4 +384,75 @@ test("plain text: a heading-shaped title is lifted to the document title once", 
     1
   );
   assert.ok(structuredBriefToPlainText(document).includes("Build awareness."));
+});
+
+
+// The remaining title duplication after the heading fix, and its latent twin.
+
+test("mammoth-HTML: document.title and sections[0].title are never both set", async () => {
+  const parsed = await parseStructuredBriefDocument(
+    await buildTafareehDocx({ withTable: false }),
+    DOCX_MIME,
+    "tafareeh.docx"
+  );
+
+  assert.equal(parsed.document.parserMode, "docx_mammoth_html");
+  assert.equal(parsed.document.title, TITLE, "the title-only section is lifted");
+  assert.ok(
+    !parsed.document.sections.some((section) => section.title === TITLE),
+    "the lifted section must not remain as a section too"
+  );
+  assert.equal(occurrences(parsed.plainText, TITLE), 1);
+  assert.equal(occurrences(parsed.llmText, TITLE), 1);
+});
+
+test("OOXML: a title with no following content is lifted and appears once", async () => {
+  const parsed = await parseStructuredBriefDocument(
+    await buildTafareehDocx(),
+    DOCX_MIME,
+    "tafareeh.docx"
+  );
+
+  assert.equal(parsed.document.parserMode, "docx_ooxml_tables");
+  assert.equal(parsed.document.title, TITLE);
+  assert.equal(occurrences(parsed.plainText, TITLE), 1);
+  assert.equal(occurrences(parsed.llmText, TITLE), 1);
+});
+
+test("a title followed by an intro paragraph appears once and keeps the intro", async () => {
+  const intro = "Prepared by the Thinkway team, October 2026.";
+  const parsed = await parseStructuredBriefDocument(
+    await buildTafareehDocx({ intro }),
+    DOCX_MIME,
+    "tafareeh.docx"
+  );
+
+  // The section holds real content, so it keeps its title and stays — and the
+  // document is left unnamed rather than repeating that heading.
+  assert.equal(parsed.document.title, undefined);
+  assert.equal(occurrences(parsed.plainText, TITLE), 1, "title once in plainText");
+  assert.equal(occurrences(parsed.llmText, TITLE), 1, "title once in llmText");
+  assert.ok(parsed.plainText.includes(intro), "the intro paragraph survives");
+  assert.ok(parsed.llmText.includes(intro), "the intro paragraph survives");
+
+  for (const label of ["Campaign Objective", "Market", "Campaign Duration"]) {
+    assert.equal(occurrences(parsed.plainText, label), 1, `${label} once`);
+    assert.equal(occurrences(parsed.llmText, label), 1, `${label} once`);
+  }
+  assert.ok(parsed.plainText.includes("Egypt"));
+  assert.ok(parsed.plainText.includes("2 weeks"));
+});
+
+test("heading identity survives: every label is still reachable as a section title", async () => {
+  const parsed = await parseStructuredBriefDocument(
+    await buildTafareehDocx({ intro: "Prepared by the Thinkway team." }),
+    DOCX_MIME,
+    "tafareeh.docx"
+  );
+
+  const titles = parsed.document.sections.map((section) => section.title);
+  for (const label of ["Campaign Objective", "Market", "Campaign Duration", "Target Audience"]) {
+    assert.ok(titles.includes(label), `${label} is still a section title`);
+  }
+  assert.ok(titles.includes(TITLE), "the retained leading section keeps its own title");
 });
