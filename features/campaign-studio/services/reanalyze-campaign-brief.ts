@@ -30,6 +30,11 @@ const PROFILE_KEYS_BY_FACT: Partial<Record<CampaignFactsField, readonly string[]
   objective: ["objective", "objectives"],
   budget: ["budget"],
   durationWeeks: ["durationWeeks"],
+  // The fact is `requestedCreatorCount`; the profile stores it as
+  // `expectedCreatorCount`. Without this entry an operator-entered creator
+  // quantity was dropped by brief re-analysis, while a brief-derived one
+  // correctly re-derives from the new brief.
+  requestedCreatorCount: ["expectedCreatorCount"],
   campaignStartDate: ["campaignStartDate", "requestedStartDate", "scheduledStartDate"],
   campaignEndDate: ["campaignEndDate"],
   geography: ["geography", "market"],

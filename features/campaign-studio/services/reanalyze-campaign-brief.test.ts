@@ -507,3 +507,48 @@ test("the Tafareeh DOCX invents neither KPIs nor a campaign name", async () => {
   assert.equal(facts.product, undefined);
   assert.doesNotMatch(profile.campaignName ?? "", /Campaign Brief/i);
 });
+
+// A replaced brief must be able to change the creator quantity — but an
+// operator-entered quantity is a decision, not brief-derived data, so it
+// survives exactly as an operator budget or campaign name does. Without
+// `requestedCreatorCount` registered in PROFILE_KEYS_BY_FACT the operator's
+// number was silently dropped by re-analysis.
+
+test("an operator creator quantity survives a brief that states none", async () => {
+  const base = await saveEditedBrief({ briefText: FULL_BRIEF });
+  const withOperatorQuantity: CampaignIntelligenceProfile = {
+    ...base.profile,
+    expectedCreatorCount: 10,
+    sources: { ...base.profile.sources, requestedCreatorCount: "operator" },
+    confidence: { ...base.profile.confidence, requestedCreatorCount: 1 },
+  };
+
+  const after = await saveEditedBrief({
+    briefText: SPARSE_BRIEF,
+    previousProfile: withOperatorQuantity,
+  });
+
+  assert.equal(after.facts.requestedCreatorCount, 10);
+  assert.equal(after.facts.sources.requestedCreatorCount, "operator");
+  assert.ok(
+    collectOperatorOwnedFields(after.facts).has("requestedCreatorCount"),
+    "the field must be recognised as operator-owned for the next re-analysis too"
+  );
+});
+
+test("a brief-derived creator quantity is not preserved when the new brief drops it", async () => {
+  // No operator stamp — the value came from the brief, so a brief that no
+  // longer states one must leave it undefined rather than freezing the old number.
+  const base = await saveEditedBrief({ briefText: FULL_BRIEF });
+  const withBriefQuantity: CampaignIntelligenceProfile = {
+    ...base.profile,
+    expectedCreatorCount: 10,
+  };
+
+  const after = await saveEditedBrief({
+    briefText: SPARSE_BRIEF,
+    previousProfile: withBriefQuantity,
+  });
+
+  assert.equal(after.facts.requestedCreatorCount, undefined);
+});
