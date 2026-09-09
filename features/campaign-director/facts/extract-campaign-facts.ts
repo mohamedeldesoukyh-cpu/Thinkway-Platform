@@ -238,6 +238,20 @@ function stripBulletMarker(line: string): string {
   return line.replace(/^[\s>*\-•]+/, "").trim();
 }
 
+/** True when a line merely restates the label just matched (heading duplication). */
+function isRepeatOfLabel(line: string, label: string): boolean {
+  const normalize = (value: string) =>
+    value
+      .trim()
+      .replace(/^[\s>*\-•#]+/, "")
+      .replace(/^section[ \t]*[:：][ \t]*/i, "")
+      .replace(/[:：\-—]+$/, "")
+      .trim()
+      .toLowerCase();
+  const normalized = normalize(line);
+  return normalized.length > 0 && normalized === normalize(label);
+}
+
 /** True when a line opens a new labelled block, closing the one being read. */
 function isBlockBoundaryLine(line: string): boolean {
   const trimmed = line.trim();
@@ -320,7 +334,16 @@ export function readLabeledBriefBlocks(
       // A mid-sentence label owns only the rest of its own line.
       const body: string[] = [];
       if (atLineStart) {
-        for (let j = i + 1; j < lines.length; j += 1) {
+        // parseDocxStructured() records a heading as both the section title and
+        // a heading block, so the serializer emits the label twice:
+        //   Section: Campaign Objective
+        //   Campaign Objective
+        //   Build awareness …
+        // The repeat is the same label, not the next field — skip it, or the
+        // block reads as empty and the value is lost.
+        let start = i + 1;
+        if (isRepeatOfLabel(lines[start] ?? "", label)) start += 1;
+        for (let j = start; j < lines.length; j += 1) {
           if (isBlockBoundaryLine(lines[j] ?? "")) break;
           const content = stripBulletMarker(lines[j] ?? "");
           if (content) body.push(content);
