@@ -252,7 +252,9 @@ export function extractProfileFieldsFromStructuredBrief(
       continue;
     }
 
-    if (labelMatches(label, [/^deliverables?$/i])) {
+    // Briefs qualify the label ("Creator Deliverables", "Agency Deliverables"),
+    // so an exact `^deliverables?$` match silently dropped the whole row.
+    if (labelMatches(label, [/(?:^|\s)deliverables?$/i])) {
       deliverables.push(...splitList(value));
       continue;
     }

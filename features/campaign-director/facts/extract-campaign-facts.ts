@@ -154,37 +154,270 @@ function extractGeography(text: string): string[] {
   return [...deduped.values()];
 }
 
-const DELIVERABLES_LABEL = /\b(?:agency\s+)?deliverables?\s*(?:->|[:：])\s*(.*)$/i;
-const NEXT_LABEL_LINE = /^\s*[A-Za-z][A-Za-z\s/&]{0,40}[:：]\s*/;
+/**
+ * Labels that open a labelled block in a brief.
+ *
+ * Document uploads reach extraction through `serializeStructuredBrief()`, which
+ * writes section titles as `Section: <title>` and heading blocks as bare text —
+ * neither carries a trailing colon. A bare `Deliverables` line therefore closes
+ * the preceding block exactly as `Deliverables:` does.
+ */
+const CANONICAL_BRIEF_LABELS = [
+  "Objective",
+  "Objectives",
+  "Campaign objective",
+  "Campaign objectives",
+  "Target audience",
+  "Primary audience",
+  "Audience",
+  "Consumer target",
+  "Target consumer",
+  "Key message",
+  "Core message",
+  "Message",
+  "Key msg",
+  "Call to action",
+  "Call-to-action",
+  "CTA",
+  "Tone",
+  "Tone of voice",
+  "Voice",
+  "Campaign goal",
+  "Campaign funnel",
+  "Funnel",
+  "Goal",
+  "Deliverable",
+  "Deliverables",
+  "Agency deliverables",
+  "Creator deliverables",
+  "Brand",
+  "Client",
+  "Market",
+  "Budget",
+  "Platform",
+  "Platforms",
+  "Duration",
+  "Campaign duration",
+  "KPI",
+  "KPIs",
+  "Category",
+  "Product",
+] as const;
+
+const CANONICAL_BRIEF_LABEL_SET = new Set(
+  CANONICAL_BRIEF_LABELS.map((label) => label.toLowerCase())
+);
+
+/** Bullet / quote / markdown-heading noise permitted before a label. */
+const LABEL_LEAD = String.raw`[ \t>*\-•#]*`;
+/** `serializeStructuredBrief()` prefixes section titles with this marker. */
+const SECTION_MARKER = String.raw`(?:section[ \t]*[:：][ \t]*)?`;
+/** `Label: value`, `Label — value`, and the serialized key/value table `Label -> value`. */
+const LABEL_SEPARATOR = String.raw`(?:->|[:：\-—])`;
+/**
+ * Separator set for labels that also occur as ordinary hyphenated words, where
+ * a bare dash is not a label separator at all ("Deliverable-based pricing…").
+ * A colon or the serialized table arrow is required.
+ */
+const EXPLICIT_LABEL_SEPARATOR = String.raw`(?:->|[:：])`;
+/**
+ * A line that opens the next labelled field, closing the block above it.
+ *
+ * Deliberately as broad as the terminator it replaced: the label may contain
+ * digits ("Phase 1: launch") and may be closed by a dash or em dash
+ * ("Awareness - drive trial", "Note — see appendix"), not only a colon.
+ * Narrowing it silently let those lines be absorbed into the previous value.
+ */
+const NEXT_LABEL_LINE = /^[\s>*\-•]*[A-Za-z][\w /&'()-]{2,40}[ \t]*[:：\-—]/;
+
+function escapeForRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function stripBulletMarker(line: string): string {
+  return line.replace(/^[\s>*\-•]+/, "").trim();
+}
+
+/** True when a line merely restates the label just matched (heading duplication). */
+function isRepeatOfLabel(line: string, label: string): boolean {
+  const normalize = (value: string) =>
+    value
+      .trim()
+      .replace(/^[\s>*\-•#]+/, "")
+      .replace(/^section[ \t]*[:：][ \t]*/i, "")
+      .replace(/[:：\-—]+$/, "")
+      .trim()
+      .toLowerCase();
+  const normalized = normalize(line);
+  return normalized.length > 0 && normalized === normalize(label);
+}
+
+/** True when a line opens a new labelled block, closing the one being read. */
+function isBlockBoundaryLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed) return true;
+  if (/^[-•*]/.test(trimmed)) return false; // bullets are block content, not a new label
+  if (/^section[ \t]*[:：]/i.test(trimmed)) return true;
+  // Covers serialized key/value table rows too (`Market -> Egypt`), since the
+  // dash of the arrow closes the label.
+  if (NEXT_LABEL_LINE.test(trimmed)) return true;
+  const bare = trimmed.replace(/[:：\-—]+$/, "").trim().toLowerCase();
+  return CANONICAL_BRIEF_LABEL_SET.has(bare);
+}
+
+export type LabeledBriefBlock = {
+  /** Text on the label line itself; empty when the label stands alone as a heading. */
+  inline: string;
+  /** Lines beneath the label, up to the next blank line or labelled block. */
+  lines: string[];
+  /** False when the label was matched mid-sentence (single-line chat briefs). */
+  atLineStart: boolean;
+};
+
+/**
+ * Canonical labelled-block reader. Recognises every label shape the platform
+ * actually receives:
+ *
+ *   `Label: value`                     — chat and single-line briefs
+ *   `Label:` + value on the next line  — block-form briefs
+ *   `Section: Label` + value beneath   — serialized section titles
+ *   `Label` + value on the next line   — serialized heading blocks
+ *   `Label -> value`                   — serialized key/value tables
+ *
+ * Returns one candidate block per label, in label order, so callers can fall
+ * through to the next label when a block turns out to hold no usable value.
+ */
+export function readLabeledBriefBlocks(
+  text: string,
+  labels: readonly string[],
+  options: { allowMidLine?: boolean; requireExplicitSeparator?: boolean } = {}
+): LabeledBriefBlock[] {
+  const lines = text.split(/\r?\n/);
+  const blocks: LabeledBriefBlock[] = [];
+  const separator = options.requireExplicitSeparator
+    ? EXPLICIT_LABEL_SEPARATOR
+    : LABEL_SEPARATOR;
+
+  for (const label of labels) {
+    const escaped = escapeForRegExp(label);
+    const inlinePattern = new RegExp(
+      `^${LABEL_LEAD}${SECTION_MARKER}${escaped}[ \\t]*${separator}[ \\t]*(\\S.*)$`,
+      "i"
+    );
+    const headingPattern = new RegExp(
+      `^${LABEL_LEAD}${SECTION_MARKER}${escaped}[ \\t]*(?:${separator})?[ \\t]*$`,
+      "i"
+    );
+    const midLinePattern = options.allowMidLine
+      ? new RegExp(`\\b${escaped}[ \\t]*${separator}[ \\t]*(.*)$`, "i")
+      : undefined;
+
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i] ?? "";
+      let inline: string | undefined;
+      let atLineStart = true;
+
+      const inlineMatch = line.match(inlinePattern);
+      if (inlineMatch) {
+        inline = inlineMatch[1]?.trim() ?? "";
+      } else if (headingPattern.test(line)) {
+        inline = "";
+      } else if (midLinePattern) {
+        const midMatch = line.match(midLinePattern);
+        if (midMatch) {
+          inline = midMatch[1]?.trim() ?? "";
+          atLineStart = false;
+        }
+      }
+      if (inline === undefined) continue;
+
+      // A mid-sentence label owns only the rest of its own line.
+      const body: string[] = [];
+      if (atLineStart) {
+        // parseDocxStructured() records a heading as both the section title and
+        // a heading block, so the serializer emits the label twice:
+        //   Section: Campaign Objective
+        //   Campaign Objective
+        //   Build awareness …
+        // The repeat is the same label, not the next field — skip it, or the
+        // block reads as empty and the value is lost.
+        let start = i + 1;
+        if (isRepeatOfLabel(lines[start] ?? "", label)) start += 1;
+        for (let j = start; j < lines.length; j += 1) {
+          if (isBlockBoundaryLine(lines[j] ?? "")) break;
+          const content = stripBulletMarker(lines[j] ?? "");
+          if (content) body.push(content);
+        }
+      }
+
+      blocks.push({ inline, lines: body, atLineStart });
+      break;
+    }
+  }
+
+  return blocks;
+}
+
+/**
+ * Read a labelled block from a brief as a single string. Returns undefined
+ * rather than a bare label, so a heading never becomes the extracted value.
+ */
+export function readLabeledBriefValue(
+  text: string,
+  labels: readonly string[]
+): string | undefined {
+  for (const block of readLabeledBriefBlocks(text, labels)) {
+    const value = [block.inline, ...block.lines]
+      .filter(Boolean)
+      .join(" ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    // A value that is only another label (e.g. "Target" → "Audience:") is not a value.
+    if (!value || /^[A-Za-z][\w /&'()-]{0,40}[:\-—]$/.test(value)) continue;
+    if (value.length < 3) continue;
+    return value;
+  }
+  return undefined;
+}
+
+const DELIVERABLES_LABELS = [
+  "Agency deliverables",
+  "Creator deliverables",
+  "Content deliverables",
+  "Deliverables",
+  "Deliverable",
+] as const;
+
+/** Ordered-list marker left by a serialized `1. item` list block. */
+const ORDERED_LIST_MARKER = /^\d+[.)]\s+/;
 
 function extractDeliverables(text: string): string[] {
-  const lines = text.split(/\r?\n/);
+  // `requireExplicitSeparator`: "Deliverable" is also an ordinary word stem, so
+  // a bare dash must not open the block ("Deliverable-based pricing is …").
+  const [block] = readLabeledBriefBlocks(text, DELIVERABLES_LABELS, {
+    allowMidLine: true,
+    requireExplicitSeparator: true,
+  });
+  if (!block) return [];
+
   const items: string[] = [];
 
-  for (let i = 0; i < lines.length; i += 1) {
-    const label = lines[i].match(DELIVERABLES_LABEL);
-    if (!label) continue;
+  // Same-line list: "Deliverables: 2 reels, 4 stories." — when the label sits
+  // mid-sentence, stop the inline list at the first sentence boundary.
+  let inline = block.inline;
+  if (!block.atLineStart) {
+    inline = inline.split(/\.(?:\s|$)/)[0] ?? "";
+  }
+  inline = inline.replace(/\.\s*$/, "").trim();
+  if (inline) {
+    items.push(...inline.split(/[,;·|]/));
+  }
 
-    // Same-line list: "Deliverables: 2 reels, 4 stories." — when the label sits
-    // mid-sentence, stop the inline list at the first sentence boundary.
-    const labelAtLineStart = /^\s*(?:agency\s+)?deliverables?/i.test(lines[i]);
-    let inline = label[1]?.trim() ?? "";
-    if (!labelAtLineStart) {
-      inline = inline.split(/\.(?:\s|$)/)[0] ?? "";
-    }
-    inline = inline.replace(/\.\s*$/, "").trim();
-    if (inline) {
-      items.push(...inline.split(/[,;·|]/));
-    }
-
-    // Following bullet/plain lines until a blank line or the next "Label:" line.
-    for (let j = i + 1; j < lines.length; j += 1) {
-      const line = lines[j].trim();
-      if (!line) break;
-      if (NEXT_LABEL_LINE.test(line) && !/^[-•*]/.test(lines[j].trim())) break;
-      items.push(line.replace(/^[-•*\d.)\s]+/, ""));
-    }
-    break;
+  // Bullet / plain lines beneath the label are one deliverable each — never
+  // comma-split, or a single line listing metrics would fragment into noise.
+  for (const line of block.lines) {
+    items.push(line.replace(ORDERED_LIST_MARKER, ""));
   }
 
   return items
@@ -211,40 +444,6 @@ function extractPlatforms(text: string): string[] {
   return found;
 }
 
-/**
- * Read a labelled block from a brief: `Label: value`, or `Label:` on its own
- * line with the value on the lines beneath. Returns undefined rather than a
- * bare label, so a heading never becomes the extracted value.
- */
-export function readLabeledBriefValue(
-  text: string,
-  labels: readonly string[]
-): string | undefined {
-  for (const label of labels) {
-    const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const pattern = new RegExp(
-      `^[ \\t>*\\-•]*${escaped}[ \\t]*[:\\-—][ \\t]*([\\s\\S]*?)(?=\\n\\s*\\n|\\n[\\s>*\\-•]*[A-Z][\\w /&'()-]{2,40}[ \\t]*[:\\-—]|(?![\\s\\S]))`,
-      "im"
-    );
-    const match = text.match(pattern);
-    if (!match?.[1]) continue;
-
-    const value = match[1]
-      .split(/\r?\n/)
-      .map((line) => line.replace(/^[\s>*\-•]+/, "").trim())
-      .filter(Boolean)
-      .join(" ")
-      .replace(/\s+/g, " ")
-      .trim();
-
-    // A value that is only another label (e.g. "Target" → "Audience:") is not a value.
-    if (!value || /^[A-Za-z][\w /&'()-]{0,40}[:\-—]$/.test(value)) continue;
-    if (value.length < 3) continue;
-    return value;
-  }
-  return undefined;
-}
-
 const AUDIENCE_LABELS = [
   "Target audience",
   "Primary audience",
@@ -269,6 +468,25 @@ export function extractAudienceFromBrief(text: string): string | undefined {
   const genZ = text.match(/gen\s*z[^.\n]+/i);
   if (genZ?.[0]) return genZ[0].trim();
   return undefined;
+}
+
+const OBJECTIVE_LABELS = [
+  "Campaign objective",
+  "Campaign objectives",
+  "Objective",
+  "Objectives",
+] as const;
+
+/**
+ * Campaign objective stated in the brief.
+ *
+ * The canonical labelled-block reader runs first so uploaded documents — whose
+ * serialized text carries `Section: Campaign Objective` headings with no colon
+ * after the label — resolve. Single-line chat briefs ("… Objective: awareness
+ * and engagement. Need 3 creators …") keep the mid-sentence parser.
+ */
+export function extractObjectiveFromBrief(text: string): string | undefined {
+  return readLabeledBriefValue(text, OBJECTIVE_LABELS) ?? parseObjectiveFromText(text);
 }
 
 const KEY_MESSAGE_LABELS = ["Key message", "Core message", "Message", "Key msg"] as const;
@@ -431,13 +649,13 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
   const product = parseProductFromText(text);
   if (product) setField(facts, "product", product, "brief", 0.85);
 
-  const objective = parseObjectiveFromText(text) ?? "Brand awareness and engagement";
+  const briefObjective = extractObjectiveFromBrief(text);
   setField(
     facts,
     "objective",
-    objective,
-    parseObjectiveFromText(text) ? "brief" : "default",
-    parseObjectiveFromText(text) ? 0.9 : 0.5
+    briefObjective ?? "Brand awareness and engagement",
+    briefObjective ? "brief" : "default",
+    briefObjective ? 0.9 : 0.5
   );
 
   const currency = detectCurrencyFromSources(text);

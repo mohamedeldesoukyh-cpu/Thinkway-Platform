@@ -14,8 +14,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import type { CampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/types/profile";
 
-import { applyCampaignBriefAction } from "../../actions/campaign-brief-actions";
+import {
+  applyCampaignBriefAction,
+  extractBriefFileTextAction,
+} from "../../actions/campaign-brief-actions";
+
+/** Matches the server-side floor in applyCampaignBriefAction. */
+const MIN_BRIEF_CHARS = 40;
 
 type CampaignBriefDialogProps = {
   open: boolean;
@@ -24,6 +31,11 @@ type CampaignBriefDialogProps = {
   conversationId?: string;
   messageId?: string;
   onBriefApplied?: (campaignObject: Record<string, unknown>) => void;
+  /** Canonical intelligence re-analyzed from the saved brief. */
+  onIntelligenceReanalyzed?: (input: {
+    profileId: string;
+    profile: CampaignIntelligenceProfile;
+  }) => void;
 };
 
 export function CampaignBriefDialog({
@@ -33,15 +45,19 @@ export function CampaignBriefDialog({
   conversationId,
   messageId,
   onBriefApplied,
+  onIntelligenceReanalyzed,
 }: CampaignBriefDialogProps) {
   const [briefText, setBriefText] = useState(initialBriefText);
   const [pending, startTransition] = useTransition();
+  const [extracting, startExtracting] = useTransition();
 
   useEffect(() => {
     if (open) setBriefText(initialBriefText);
   }, [open, initialBriefText]);
 
-  const canSave = Boolean(conversationId && messageId && briefText.trim().length >= 40);
+  const canSave = Boolean(
+    conversationId && messageId && briefText.trim().length >= MIN_BRIEF_CHARS
+  );
 
   const saveBrief = useCallback(() => {
     if (!canSave) return;
@@ -53,28 +69,52 @@ export function CampaignBriefDialog({
       });
       if (result.ok) {
         toast.success(result.message);
+        // Intake reads the re-analyzed profile the action just persisted — the
+        // canonical data changed, so no reload or re-poll is needed.
+        if (result.profileId && result.profile) {
+          onIntelligenceReanalyzed?.({ profileId: result.profileId, profile: result.profile });
+        }
         if (result.campaignObject) onBriefApplied?.(result.campaignObject);
         onOpenChange(false);
       } else {
         toast.error(result.message);
       }
     });
-  }, [briefText, canSave, conversationId, messageId, onBriefApplied, onOpenChange]);
+  }, [
+    briefText,
+    canSave,
+    conversationId,
+    messageId,
+    onBriefApplied,
+    onIntelligenceReanalyzed,
+    onOpenChange,
+  ]);
 
+  /**
+   * Office briefs are binary containers — reading them in the browser put raw
+   * ZIP bytes ("PK…[Content_Types].xml") in the textarea. Extraction runs on
+   * the server through the same parser as the Campaign Brief upload flow.
+   */
   const onFileChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      const text = typeof reader.result === "string" ? reader.result.trim() : "";
-      if (text.length >= 40) {
-        setBriefText(text);
-      } else {
-        toast.error("That file looks too short — use a fuller campaign brief.");
-      }
-    };
-    reader.readAsText(file);
     event.target.value = "";
+    if (!file) return;
+
+    startExtracting(async () => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const result = await extractBriefFileTextAction(formData);
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      if (result.text.length < MIN_BRIEF_CHARS) {
+        toast.error("That file looks too short — use a fuller campaign brief.");
+        return;
+      }
+      setBriefText(result.text);
+      toast.success(`Loaded ${result.fileName}`);
+    });
   }, []);
 
   return (
@@ -101,14 +141,18 @@ export function CampaignBriefDialog({
             <label className="inline-flex cursor-pointer items-center gap-1 rounded-md border border-border/70 px-2.5 py-1.5 text-[11px] font-semibold text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground">
               <input
                 type="file"
-                accept=".txt,.md,.doc,.docx"
+                accept=".txt,.md,.rtf,.doc,.docx,.pdf,.pptx"
                 className="sr-only"
                 onChange={onFileChange}
+                disabled={extracting}
               />
-              Upload text file
+              {extracting ? (
+                <Loader2Icon className="size-3 animate-spin" aria-hidden />
+              ) : null}
+              {extracting ? "Reading file…" : "Upload brief file"}
             </label>
             <p className="text-[11px] text-muted-foreground">
-              Minimum 40 characters. Saving merges strategy — creators on the slate are never cleared.
+              PDF, Word, PowerPoint, TXT, MD or RTF. Minimum 40 characters. Saving merges strategy — creators on the slate are never cleared.
             </p>
           </div>
         </div>

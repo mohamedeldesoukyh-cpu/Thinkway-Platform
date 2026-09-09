@@ -141,6 +141,16 @@ async function parseDocxFromXml(buffer: Buffer): Promise<StructuredBriefDocument
   };
 }
 
+/**
+ * Strip HTML tags, then decode entities — in that order, so a decoded `&lt;`
+ * is never mistaken for a tag. Without the decode, mammoth's escaping leaked
+ * into extracted text ("Awareness -&gt; Interest"), which broke funnel parsing
+ * and put raw entities in front of the operator.
+ */
+function htmlToText(html: string): string {
+  return decodeXmlEntities(html.replace(/<[^>]+>/g, "")).trim();
+}
+
 async function parseDocxFromMammothHtml(buffer: Buffer): Promise<StructuredBriefSection[]> {
   try {
     const result = await mammoth.convertToHtml({ buffer });
@@ -157,7 +167,7 @@ async function parseDocxFromMammothHtml(buffer: Buffer): Promise<StructuredBrief
       const inner = match[2]!;
 
       if (tag.startsWith("h")) {
-        const text = inner.replace(/<[^>]+>/g, "").trim();
+        const text = htmlToText(inner);
         if (text) {
           if (current.blocks.length > 0 || current.title) {
             sections.push(current);
@@ -167,21 +177,21 @@ async function parseDocxFromMammothHtml(buffer: Buffer): Promise<StructuredBrief
           current.blocks.push({ type: "heading", level: Number(tag[1]), text });
         }
       } else if (tag === "p") {
-        const text = inner.replace(/<[^>]+>/g, "").trim();
+        const text = htmlToText(inner);
         if (text) current.blocks.push({ type: "paragraph", text });
       } else if (tag === "table") {
         const rows: string[][] = [];
         const rowMatches = inner.match(/<tr[^>]*>([\s\S]*?)<\/tr>/gi) ?? [];
         for (const rowHtml of rowMatches) {
           const cells = rowHtml.match(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi) ?? [];
-          const row = cells.map((c) => c.replace(/<[^>]+>/g, "").trim());
+          const row = cells.map(htmlToText);
           if (row.some(Boolean)) rows.push(row);
         }
         if (rows.length > 0) current.blocks.push({ type: "table", rows });
       } else if (tag === "ul" || tag === "ol") {
-        const items = (inner.match(/<li[^>]*>([\s\S]*?)<\/li>/gi) ?? []).map((li) =>
-          li.replace(/<[^>]+>/g, "").trim()
-        ).filter(Boolean);
+        const items = (inner.match(/<li[^>]*>([\s\S]*?)<\/li>/gi) ?? [])
+          .map(htmlToText)
+          .filter(Boolean);
         if (items.length > 0) {
           current.blocks.push({ type: "list", ordered: tag === "ol", items });
         }
