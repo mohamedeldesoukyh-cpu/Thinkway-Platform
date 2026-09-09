@@ -214,7 +214,21 @@ const LABEL_LEAD = String.raw`[ \t>*\-•#]*`;
 const SECTION_MARKER = String.raw`(?:section[ \t]*[:：][ \t]*)?`;
 /** `Label: value`, `Label — value`, and the serialized key/value table `Label -> value`. */
 const LABEL_SEPARATOR = String.raw`(?:->|[:：\-—])`;
-const NEXT_LABEL_LINE = /^\s*[A-Za-z][A-Za-z\s/&]{0,40}[:：]\s*/;
+/**
+ * Separator set for labels that also occur as ordinary hyphenated words, where
+ * a bare dash is not a label separator at all ("Deliverable-based pricing…").
+ * A colon or the serialized table arrow is required.
+ */
+const EXPLICIT_LABEL_SEPARATOR = String.raw`(?:->|[:：])`;
+/**
+ * A line that opens the next labelled field, closing the block above it.
+ *
+ * Deliberately as broad as the terminator it replaced: the label may contain
+ * digits ("Phase 1: launch") and may be closed by a dash or em dash
+ * ("Awareness - drive trial", "Note — see appendix"), not only a colon.
+ * Narrowing it silently let those lines be absorbed into the previous value.
+ */
+const NEXT_LABEL_LINE = /^[\s>*\-•]*[A-Za-z][\w /&'()-]{2,40}[ \t]*[:：\-—]/;
 
 function escapeForRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -230,13 +244,9 @@ function isBlockBoundaryLine(line: string): boolean {
   if (!trimmed) return true;
   if (/^[-•*]/.test(trimmed)) return false; // bullets are block content, not a new label
   if (/^section[ \t]*[:：]/i.test(trimmed)) return true;
+  // Covers serialized key/value table rows too (`Market -> Egypt`), since the
+  // dash of the arrow closes the label.
   if (NEXT_LABEL_LINE.test(trimmed)) return true;
-  // Serialized key/value table row (`Market -> Egypt`). Only a known label ends
-  // the block — a funnel value ("Awareness -> Interest -> Trial") is content.
-  const arrowRow = trimmed.match(/^([A-Za-z][A-Za-z\s/&'()-]{0,40}?)[ \t]*->/);
-  if (arrowRow?.[1] && CANONICAL_BRIEF_LABEL_SET.has(arrowRow[1].trim().toLowerCase())) {
-    return true;
-  }
   const bare = trimmed.replace(/[:：\-—]+$/, "").trim().toLowerCase();
   return CANONICAL_BRIEF_LABEL_SET.has(bare);
 }
@@ -266,23 +276,26 @@ export type LabeledBriefBlock = {
 export function readLabeledBriefBlocks(
   text: string,
   labels: readonly string[],
-  options: { allowMidLine?: boolean } = {}
+  options: { allowMidLine?: boolean; requireExplicitSeparator?: boolean } = {}
 ): LabeledBriefBlock[] {
   const lines = text.split(/\r?\n/);
   const blocks: LabeledBriefBlock[] = [];
+  const separator = options.requireExplicitSeparator
+    ? EXPLICIT_LABEL_SEPARATOR
+    : LABEL_SEPARATOR;
 
   for (const label of labels) {
     const escaped = escapeForRegExp(label);
     const inlinePattern = new RegExp(
-      `^${LABEL_LEAD}${SECTION_MARKER}${escaped}[ \\t]*${LABEL_SEPARATOR}[ \\t]*(\\S.*)$`,
+      `^${LABEL_LEAD}${SECTION_MARKER}${escaped}[ \\t]*${separator}[ \\t]*(\\S.*)$`,
       "i"
     );
     const headingPattern = new RegExp(
-      `^${LABEL_LEAD}${SECTION_MARKER}${escaped}[ \\t]*(?:${LABEL_SEPARATOR})?[ \\t]*$`,
+      `^${LABEL_LEAD}${SECTION_MARKER}${escaped}[ \\t]*(?:${separator})?[ \\t]*$`,
       "i"
     );
     const midLinePattern = options.allowMidLine
-      ? new RegExp(`\\b${escaped}[ \\t]*${LABEL_SEPARATOR}[ \\t]*(.*)$`, "i")
+      ? new RegExp(`\\b${escaped}[ \\t]*${separator}[ \\t]*(.*)$`, "i")
       : undefined;
 
     for (let i = 0; i < lines.length; i += 1) {
@@ -357,7 +370,12 @@ const DELIVERABLES_LABELS = [
 const ORDERED_LIST_MARKER = /^\d+[.)]\s+/;
 
 function extractDeliverables(text: string): string[] {
-  const [block] = readLabeledBriefBlocks(text, DELIVERABLES_LABELS, { allowMidLine: true });
+  // `requireExplicitSeparator`: "Deliverable" is also an ordinary word stem, so
+  // a bare dash must not open the block ("Deliverable-based pricing is …").
+  const [block] = readLabeledBriefBlocks(text, DELIVERABLES_LABELS, {
+    allowMidLine: true,
+    requireExplicitSeparator: true,
+  });
   if (!block) return [];
 
   const items: string[] = [];

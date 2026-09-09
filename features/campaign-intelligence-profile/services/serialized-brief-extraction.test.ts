@@ -275,3 +275,79 @@ test("deliverables: a qualified table label is no longer dropped by the structur
     "Performance report",
   ]);
 });
+
+// Block termination — a labelled block must not absorb the next labelled line.
+// These shapes are not colon-and-letters only, and a narrower boundary test let
+// each of them be swallowed into the value above.
+
+test("block termination: a label containing digits ends the block", () => {
+  const facts = extractCampaignFacts({
+    rawMessage: "Objective:\nBuild awareness\nPhase 1: launch\n",
+  });
+  assert.equal(facts.objective, "Build awareness");
+});
+
+test("block termination: a dash-closed label ends the block", () => {
+  const facts = extractCampaignFacts({
+    rawMessage: "Objective:\nBuild awareness\nAwareness - drive trial\n",
+  });
+  assert.equal(facts.objective, "Build awareness");
+});
+
+test("block termination: an em-dash-closed label ends the block", () => {
+  const facts = extractCampaignFacts({
+    rawMessage: "Key message:\nStrong tea\nNote — see appendix\n",
+  });
+  assert.equal(facts.keyMessage, "Strong tea");
+});
+
+test("block termination: audience does not absorb the labelled line beneath it", () => {
+  const facts = extractCampaignFacts({
+    rawMessage: "Target Audience:\nYoung Egyptians\nPhase 1 - launch\n",
+  });
+  assert.equal(facts.audience, "Young Egyptians");
+});
+
+test("block termination: blank lines and bullets still behave as before", () => {
+  const blank = extractCampaignFacts({
+    rawMessage: "Objective:\nBuild awareness\n\nPhase 1 - launch\n",
+  });
+  assert.equal(blank.objective, "Build awareness");
+
+  // A bullet is block content, never a new label.
+  const bullet = extractCampaignFacts({
+    rawMessage: "Objective:\nBuild awareness\n- and drive trial\n",
+  });
+  assert.equal(bullet.objective, "Build awareness and drive trial");
+});
+
+// Deliverables label precision — "Deliverable" is also an ordinary word stem.
+
+test("deliverables: a hyphenated word is not a deliverables label", () => {
+  const facts = extractCampaignFacts({
+    rawMessage: "Deliverable-based pricing is preferred for this campaign.",
+  });
+  assert.equal(facts.deliverables, undefined);
+});
+
+test("deliverables: explicit separators still open the block", () => {
+  assert.deepEqual(
+    extractCampaignFacts({ rawMessage: "Creator Deliverables -> 2 reels, 4 stories\nMarket -> Egypt" })
+      .deliverables,
+    ["2 reels", "4 stories"]
+  );
+  assert.deepEqual(
+    extractCampaignFacts({ rawMessage: "Agency Deliverables: 2 reels, 4 stories\n\nMarket: Egypt" })
+      .deliverables,
+    ["2 reels", "4 stories"]
+  );
+  assert.deepEqual(
+    extractCampaignFacts({ rawMessage: "Content Deliverables\n- 2 reels\n- 4 stories\n\nMarket: Egypt" })
+      .deliverables,
+    ["2 reels", "4 stories"]
+  );
+  assert.deepEqual(
+    extractCampaignFacts({ rawMessage: "Deliverable: one reel\n\nMarket: Egypt" }).deliverables,
+    ["one reel"]
+  );
+});
