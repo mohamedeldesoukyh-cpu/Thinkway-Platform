@@ -41,6 +41,33 @@ export function isMassAwarenessCreatorBrief(text: string): boolean {
   return /\bmass\s+(audience|market|reach|awareness)\b/i.test(text);
 }
 
+/**
+ * Intrinsic parenting-creator vocabulary. These name a creator vertical no
+ * matter where they appear in a brief.
+ */
+const PARENTING_CREATOR_VOCABULARY =
+  /\b(parenting|motherhood|maternity|moms?|mums?)\b/i;
+
+/**
+ * "family" only names a creator strategy when the brief ties it to creators or
+ * content — "family creators", "creators for families". A brief whose AUDIENCE
+ * merely includes families ("Egyptian tea drinkers, mainly young adults and
+ * families") is describing who should see the campaign, not who should make it.
+ *
+ * Note this is deliberately stricter than CREATOR_CATEGORY_KEYWORDS, where
+ * `family: "Parenting"` is correct: that map classifies a CREATOR from their own
+ * bio and tags. Here we are reading a BRIEF, so audience prose must not become a
+ * Discovery category filter.
+ */
+const FAMILY_CREATOR_STRATEGY =
+  /\bfamil(?:y|ies)[\s-]+(?:creators?|influencers?|content|bloggers?|vloggers?|accounts?|niche|category|segment|focused)\b|\b(?:creators?|influencers?|bloggers?|vloggers?)\s+(?:for|in|targeting|covering)\s+(?:the\s+)?famil(?:y|ies)\b/i;
+
+/** True when the brief asks for parenting/family CREATORS, not just a family audience. */
+export function wantsParentingCreators(text: string): boolean {
+  if (PARENTING_CREATOR_VOCABULARY.test(text)) return true;
+  return FAMILY_CREATOR_STRATEGY.test(text);
+}
+
 export type CreatorCategorySource = {
   briefText?: string;
   objective?: string;
@@ -102,7 +129,7 @@ export function deriveCreatorCategoriesFromBrief(input: CreatorCategorySource): 
   if (/\b(gaming|gamer|esports)\b/i.test(text)) {
     addCanonical(inferred, "Gaming");
   }
-  if (/\b(parenting|moms?|mums?|famil(?:y|ies))\b/i.test(text)) {
+  if (wantsParentingCreators(text)) {
     addCanonical(inferred, "Parenting");
   }
   if (/\b(comedy|entertainment|music)\b/i.test(text)) {

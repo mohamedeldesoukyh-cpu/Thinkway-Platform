@@ -60,3 +60,74 @@ test("beauty briefs still resolve to Beauty, not a mass sports mix", () => {
   assert.ok(categories.includes("Beauty"));
   assert.ok(!categories.includes("Sports"));
 });
+
+/**
+ * Audience prose is not a creator strategy.
+ *
+ * CREATOR_CATEGORY_KEYWORDS maps `family → Parenting`, and that is correct where
+ * it is used: classifying a CREATOR from their own bio and tags. Reading a BRIEF
+ * is the opposite direction — a campaign whose audience happens to include
+ * families is saying who should SEE the work, not who should MAKE it. Because
+ * these categories become preferred Discovery category filters, the brief must
+ * name a parenting/family creator strategy before Parenting is inferred.
+ */
+test("a family audience alone does not become a Parenting creator category", () => {
+  const categories = deriveCreatorCategoriesFromBrief({
+    briefText:
+      "Tafareeh Tea, Egypt. Target Audience: Egyptian tea drinkers, mainly young adults and families.",
+  });
+
+  assert.ok(categories.includes("Food"), `expected Food, got ${categories.join(", ")}`);
+  assert.ok(
+    !categories.includes("Parenting"),
+    `audience families must not infer Parenting, got ${categories.join(", ")}`
+  );
+});
+
+test("singular 'family' in audience prose also does not infer Parenting", () => {
+  const categories = deriveCreatorCategoriesFromBrief({
+    briefText: "Audience: family time in Egypt",
+  });
+  assert.ok(!categories.includes("Parenting"), `got ${categories.join(", ")}`);
+});
+
+test("an explicit parenting/family creator strategy does infer Parenting", () => {
+  const explicit = deriveCreatorCategoriesFromBrief({
+    briefText: "Target Egyptian parents and family/parenting creators",
+  });
+  assert.ok(
+    explicit.includes("Parenting"),
+    `expected Parenting, got ${explicit.join(", ")}`
+  );
+
+  for (const briefText of [
+    "We want family creators in Egypt",
+    "Brief calls for family influencers",
+    "family content on Instagram",
+    "creators for families in Cairo",
+    "family-focused creators",
+    "mom creators and parenting influencers",
+    "motherhood creators for the launch",
+  ]) {
+    const categories = deriveCreatorCategoriesFromBrief({ briefText });
+    assert.ok(
+      categories.includes("Parenting"),
+      `expected Parenting for "${briefText}", got ${categories.join(", ")}`
+    );
+  }
+});
+
+test("Food/Beverage detection is unaffected by the Parenting narrowing", () => {
+  for (const briefText of [
+    "Tafareeh Tea campaign in Egypt",
+    "a coffee brand launch",
+    "beverage campaign for a juice brand",
+    "cooking and recipe content",
+  ]) {
+    const categories = deriveCreatorCategoriesFromBrief({ briefText });
+    assert.ok(
+      categories.includes("Food"),
+      `expected Food for "${briefText}", got ${categories.join(", ")}`
+    );
+  }
+});

@@ -84,6 +84,17 @@ test("B: a tea brief resolves canonical Food and survives to facts and Intake", 
   assert.match(intakeRow(facts, "creatorCategories")?.value ?? "", /Food/);
 });
 
+test("B3: a family AUDIENCE does not add Parenting anywhere in the chain", async () => {
+  // The brief's audience mentions families; it never asks for family creators.
+  // These categories become preferred Discovery filters, so audience prose must
+  // not silently widen the creator strategy.
+  const { profile, facts } = await tafareeh();
+  assert.deepEqual(profile.creatorCategories, ["Food"]);
+  assert.deepEqual(facts.creatorCategories, ["Food"]);
+  assert.deepEqual(profile.validatedIntelligence?.categories, ["Food"]);
+  assert.equal(intakeRow(facts, "creatorCategories")?.value, "Food");
+});
+
 test("B2: derived categories are marked inferred, never as stated fact", async () => {
   const { profile } = await tafareeh();
   assert.equal(profile.sources?.creatorCategories, "inferred");
@@ -246,7 +257,7 @@ test("validatedIntelligence stays Discovery-shaped — no campaign intent leaks 
 
 test("canonical categories reach Discovery as preferred signals, not mandatory ones", async () => {
   const { profile } = await tafareeh();
-  assert.deepEqual(profile.validatedIntelligence?.categories, ["Food", "Parenting"]);
+  assert.deepEqual(profile.validatedIntelligence?.categories, ["Food"]);
 });
 
 // S — backward compatibility ----------------------------------------------
