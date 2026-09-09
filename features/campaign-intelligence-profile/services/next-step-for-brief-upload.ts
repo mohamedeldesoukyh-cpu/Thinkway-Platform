@@ -1,10 +1,20 @@
 export type CampaignBriefUploadResult<TWorkspace, TPending> =
-  | { ok: true; phase: "complete"; workspace: TWorkspace }
+  | {
+      ok: true;
+      phase: "complete";
+      workspace: TWorkspace;
+      /** Present when the upload also re-synced the Campaign Object facts. */
+      campaignObject?: Record<string, unknown>;
+    }
   | { ok: true; phase: "brand_selection"; pending: TPending }
   | { ok: false; message: string };
 
 export type IntakeBriefUploadNextStep<TWorkspace, TPending> =
-  | { kind: "apply_workspace"; workspace: TWorkspace }
+  | {
+      kind: "apply_workspace";
+      workspace: TWorkspace;
+      campaignObject?: Record<string, unknown>;
+    }
   | { kind: "select_brand"; pending: TPending }
   | { kind: "error"; message: string };
 
@@ -21,5 +31,9 @@ export function nextStepForCampaignBriefUpload<TWorkspace, TPending>(
   if (result.phase === "brand_selection") {
     return { kind: "select_brand", pending: result.pending };
   }
-  return { kind: "apply_workspace", workspace: result.workspace };
+  return {
+    kind: "apply_workspace",
+    workspace: result.workspace,
+    campaignObject: result.campaignObject,
+  };
 }

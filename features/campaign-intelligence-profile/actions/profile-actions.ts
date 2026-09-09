@@ -38,6 +38,19 @@ import {
 } from "../services/profile-repository-elevated";
 import { resolveBriefTextForExtraction } from "../services/resolve-brief-text";
 import { runCampaignIntelligencePipeline } from "../services/run-intelligence-pipeline";
+import { applyConfirmedCampaignFactsToCampaignObject } from "../services/campaign-facts-spine";
+import { profileToCampaignFacts } from "../services/profile-to-facts";
+import {
+  linkRequiresBrandSelection,
+  resolveBriefUploadProfileTarget,
+} from "../services/brief-upload-profile-target";
+import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
+import {
+  loadCampaignObjectFromPersistence,
+  saveCampaignObject,
+  serializeCampaignObject,
+} from "@/features/campaign-intelligence/services/campaign-object-store";
+import { mergeReanalyzedCampaignProfile } from "@/features/campaign-studio/services/reanalyze-campaign-brief";
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import {
   confirmCampaignIntelligenceProfile,
@@ -200,6 +213,11 @@ export async function uploadCampaignBriefAction(
       documentId: string;
       fileName: string;
       workspace: CampaignIntelligenceWorkspaceState;
+      /**
+       * Present when a same-conversation replacement re-synced the Campaign
+       * Object's facts, so Intake can adopt them without a reload.
+       */
+      campaignObject?: Record<string, unknown>;
     }
   | {
       ok: true;
@@ -287,6 +305,78 @@ export async function uploadCampaignBriefAction(
       parseStatus,
       parseError,
     });
+
+    // Same-conversation replacement: reuse the conversation's current profile
+    // instead of forking a second canonical row for it. Brand detection and the
+    // brand-selection detour are skipped — the campaign already has a profile,
+    // and interrupting a brief replacement with a brand picker would both
+    // surprise the operator and route back through the create path.
+    const existingForConversation = conversationId
+      ? await getCampaignIntelligenceProfileForConversation(supabase, conversationId)
+      : null;
+
+    const uploadTarget = resolveBriefUploadProfileTarget({
+      conversationId,
+      existingProfileId: existingForConversation?.id,
+    });
+
+    if (existingForConversation && uploadTarget.mode === "link") {
+      const previousProfile = normalizeCampaignIntelligenceProfile(
+        existingForConversation.profile
+      );
+      // Operator provenance lives in two canonical records: the CIP profile and
+      // the Campaign Object facts. Both are consulted, exactly as Save Brief does.
+      const campaignObject = await loadCampaignObjectFromPersistence(supabase, conversationId!);
+      const reused = mergeReanalyzedCampaignProfile({
+        previousProfile,
+        previousFacts: getCampaignFacts(campaignObject),
+        reanalyzed: merged,
+      });
+
+      const finalized = await finalizeCampaignBriefUpload({
+        supabase,
+        userId,
+        documentId: doc.id,
+        fileName: file.name,
+        fileSizeBytes: file.size,
+        profile: reused,
+        brandId: brandId ?? existingForConversation.brand_id ?? null,
+        campaignHeaderId,
+        conversationId,
+        mode: uploadTarget.mode,
+        linkProfileId: uploadTarget.linkProfileId,
+        // Scoped to same-conversation reuse only: the profile already belongs to
+        // this conversation, so a missing CRM brand must not block replacement.
+        allowMissingBrand: uploadTarget.allowMissingBrand,
+      });
+
+      if (!finalized.ok || !campaignObject) return finalized;
+
+      // Keep the Campaign Object's facts as the persisted profile now reads.
+      // Intake's lower panel prefers meta.campaignFacts over the CIP profile
+      // (mergeIntakeDisplayFacts), so without this the two halves of the screen
+      // disagree after a replacement. applyConfirmedCampaignFactsToCampaignObject
+      // is the established facts writer: it replaces meta.campaignFacts, refreshes
+      // the fact-derived summary cards and timeline, and marks outputs stale. It
+      // spreads sections, so creators — the slate and shortlist — pass through by
+      // identity. mergeBriefIntoCampaignObject stays pure, sync and untouched.
+      const syncedCampaignObject = await saveCampaignObject(
+        conversationId!,
+        applyConfirmedCampaignFactsToCampaignObject(
+          campaignObject,
+          profileToCampaignFacts(reused)
+        ),
+        { supabase, userId, persistToDb: true, saveReason: "manual" }
+      );
+
+      return {
+        ...finalized,
+        campaignObject: serializeCampaignObject(syncedCampaignObject) as unknown as Record<
+          string,
+          unknown
+        >,
+      };
+    }
 
     if (!brandId || skipBrandDetection) {
       const profileForDetection = {
@@ -400,14 +490,18 @@ async function finalizeCampaignBriefUpload(
   let profileId = input.linkProfileId ?? null;
 
   if (input.mode === "link" && profileId) {
-    if (!brandId) {
+    // A brand is still required when the operator links an unrelated library
+    // record. Only same-conversation reuse passes allowMissingBrand, so
+    // replacing the brief of a campaign whose brand is not in the CRM catalog
+    // is not blocked.
+    if (linkRequiresBrandSelection({ brandId, allowMissingBrand: input.allowMissingBrand })) {
       return { ok: false, message: "Select a brand to continue." };
     }
     const existingProfile = await getCampaignIntelligenceProfileById(input.supabase, profileId);
     if (!existingProfile) {
       return { ok: false, message: "Selected intelligence record was not found." };
     }
-    if (existingProfile.brand_id && existingProfile.brand_id !== brandId) {
+    if (brandId && existingProfile.brand_id && existingProfile.brand_id !== brandId) {
       return {
         ok: false,
         message: "Selected intelligence record belongs to a different brand.",
@@ -427,7 +521,8 @@ async function finalizeCampaignBriefUpload(
       profile: { ...input.profile, status: "saved" },
       status: "saved",
       title,
-      brandId,
+      // Omit brandId when we have none, so reuse never clears a brand link.
+      ...(brandId ? { brandId } : {}),
       campaignHeaderId: input.campaignHeaderId ?? null,
       conversationId: input.conversationId ?? null,
     });
