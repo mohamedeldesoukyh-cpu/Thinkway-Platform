@@ -9,9 +9,14 @@ import type { StructuredBriefSection } from "./types";
  * alongside the heading block.
  *
  * The section is removed only when it is exactly the document title and holds
- * no content of its own. A first section with real blocks keeps its title and
- * stays; genuinely repeated text elsewhere in the document is never touched,
- * because nothing here compares strings across the document.
+ * no content of its own, and `document.title` is set only in that case — so the
+ * title string is owned by exactly one representation and cannot be emitted
+ * twice. A first section with real blocks keeps its title and stays, and the
+ * document is then left unnamed rather than repeating that heading.
+ *
+ * Genuinely repeated text elsewhere in the document is never touched: this
+ * reasons about the section that produced the title, never about matching
+ * strings across the document.
  */
 export function liftDocumentTitle(sections: StructuredBriefSection[]): {
   title?: string;
@@ -24,7 +29,8 @@ export function liftDocumentTitle(sections: StructuredBriefSection[]): {
     return { title: firstTitle, sections: sections.slice(1) };
   }
 
-  // Otherwise the first section is real content — name the document after it
-  // without removing anything.
-  return { title: firstTitle || undefined, sections };
+  // The first section is real content, so it keeps its title and stays. Naming
+  // the document after it as well would emit the same words twice — once as
+  // `document.title`, once as that section's heading.
+  return { sections };
 }
