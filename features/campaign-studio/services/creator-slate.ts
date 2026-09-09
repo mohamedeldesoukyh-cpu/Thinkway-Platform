@@ -32,6 +32,16 @@ export type SlateCompositionMeta = {
   categoryFallback?: boolean;
   offCategoryPadCount?: number;
   categoryFallbackReason?: string;
+  /** Slate size the campaign asked for, after category/inventory limits. */
+  targetCount?: number;
+  /** Creators actually placed. Below `targetCount` when the mix ran out of supply. */
+  achievedCount?: number;
+  /**
+   * Per-tier supply shortage against the Strategy allocation. Present only for
+   * tiers that could not be filled — the planner sees the gap instead of it
+   * being papered over with creators from a tier the Strategy never asked for.
+   */
+  tierShortfall?: Array<{ tier: string; requested: number; achieved: number }>;
 };
 
 /** Lowercased tier labels accepted per strategy-mix tier name. */
@@ -250,9 +260,17 @@ export function composeCreatorSlate(
   const requestedTarget = options.targetCount ?? fitBiased.length;
   let effectiveTarget = Math.min(requestedTarget, fitBiased.length);
 
+  // MAX_QUALITY_SLATE keeps an UNSPECIFIED slate short — it must never override
+  // a quantity the campaign actually asked for. An explicit target raises the
+  // ceiling to itself; without one the established cap of 10 still applies.
+  const qualityCeiling =
+    options.targetCount != null
+      ? Math.max(MAX_QUALITY_SLATE, options.targetCount)
+      : MAX_QUALITY_SLATE;
+
   if (preferredCategories.length > 0) {
     // Vertical briefs: prefer quality over filling a long generic slate.
-    effectiveTarget = Math.min(effectiveTarget, MAX_QUALITY_SLATE);
+    effectiveTarget = Math.min(effectiveTarget, qualityCeiling);
     const onCategory = fitBiased.filter((c) =>
       creatorMatchesPreferredCategories(c, preferredCategories)
     );
@@ -268,7 +286,7 @@ export function composeCreatorSlate(
     const MIN_ON_CATEGORY_NO_PAD = 3;
     if (onCategory.length >= MIN_ON_CATEGORY_NO_PAD) {
       orderedPool = onCategory;
-      effectiveTarget = Math.min(effectiveTarget, onCategory.length, MAX_QUALITY_SLATE);
+      effectiveTarget = Math.min(effectiveTarget, onCategory.length, qualityCeiling);
     } else if (onCategory.length > 0 && onCategory.length >= requestedTarget) {
       // Requested slate is small enough to stay fully on-category.
       orderedPool = onCategory;
@@ -314,6 +332,8 @@ export function composeCreatorSlate(
         categoryFallback: categoryFallback || padded > 0,
         offCategoryPadCount: categoryFallback ? Math.max(offCategoryPadCount, padded) : padded,
         categoryFallbackReason,
+        targetCount,
+        achievedCount: slate.length,
       },
     };
   }
@@ -336,13 +356,56 @@ export function composeCreatorSlate(
     }
   }
 
-  // Backfill under-supplied tiers from the (already category-gated) pool.
+  // Backfill toward the requested quantity from tiers the Strategy ASKED FOR —
+  // a tier that has spare supply may over-fill to cover one that ran dry, which
+  // is still an on-strategy recommendation.
+  //
+  // A creator whose tier the Strategy never named is NEVER pulled in to make
+  // the number look complete: that is how a Macro/Micro/Nano campaign ended up
+  // recommending Celebrity and Mega. When the requested tiers cannot supply the
+  // full quantity the slate comes up short and `tierShortfall` says exactly
+  // where, so the planner can decide rather than being handed a silent swap.
+  const strategyTierKeys = mix.map((m) => m.tier.toLowerCase());
+  const inStrategyMix = (creator: SearchCreatorCardItem): boolean =>
+    strategyTierKeys.some((tierKey) =>
+      (TIER_ALIASES[tierKey] ?? [tierKey]).includes((creator.tier ?? "").toLowerCase())
+    );
+
+  /**
+   * Only a creator whose tier is KNOWN and absent from the mix is a
+   * substitution. A creator with no follower data resolves to "Unknown" — that
+   * is missing data, not a different tier, and dropping those would empty
+   * slates built from sources that carry no follower counts.
+   */
+  const isSubstitution = (creator: SearchCreatorCardItem): boolean => {
+    const label = (creator.tier ?? "").toLowerCase();
+    if (!label || label === "unknown") return false;
+    return !inStrategyMix(creator);
+  };
+
   for (const creator of orderedPool) {
     if (slate.length >= targetCount) break;
     if (used.has(creator.id)) continue;
+    if (isSubstitution(creator)) continue;
     slate.push(creator);
     used.add(creator.id);
   }
+
+  const achievedByTier = new Map<string, number>();
+  for (const creator of slate) {
+    const label = (creator.tier ?? creatorTierOf(creator)).toLowerCase();
+    achievedByTier.set(label, (achievedByTier.get(label) ?? 0) + 1);
+  }
+  const tierShortfall = mix
+    .map((m) => {
+      const tierKey = m.tier.toLowerCase();
+      const accepted = TIER_ALIASES[tierKey] ?? [tierKey];
+      const achieved = [...achievedByTier.entries()]
+        .filter(([label]) => accepted.includes(label))
+        .reduce((sum, [, count]) => sum + count, 0);
+      return { tier: m.tier, requested: counts.get(tierKey) ?? 0, achieved };
+    })
+    .filter((entry) => entry.achieved < entry.requested);
 
   const padded = slate.filter(
     (c) =>
@@ -361,6 +424,9 @@ export function composeCreatorSlate(
       categoryFallback: categoryFallback || padded > 0,
       offCategoryPadCount: categoryFallback ? Math.max(offCategoryPadCount, padded) : padded,
       categoryFallbackReason,
+      targetCount,
+      achievedCount: slate.length,
+      ...(tierShortfall.length > 0 ? { tierShortfall } : {}),
     },
   };
 }

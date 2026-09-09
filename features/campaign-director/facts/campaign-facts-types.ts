@@ -28,6 +28,7 @@ export type CampaignFactsField =
   | "constraints"
   | "risks"
   | "creatorCategories"
+  | "requestedCreatorCount"
   | "keyMessage"
   | "callToAction"
   | "campaignFunnel"
@@ -43,6 +44,14 @@ export type CampaignFacts = {
   objective?: string;
   budget?: { amount: number; currency: string };
   durationWeeks?: number;
+  /**
+   * How many creators the campaign asked for — stated in the brief or typed by
+   * the operator on Intake. Optional and never inferred: absent means the
+   * planner has not set a target, and the evidence-based heuristic applies.
+   *
+   * A target, not a maximum, and never a Discovery filter.
+   */
+  requestedCreatorCount?: number;
   /**
    * ISO calendar date (YYYY-MM-DD) for the user-requested first day of the campaign.
    * Alias of {@link requestedStartDate}; kept for backward compatibility.

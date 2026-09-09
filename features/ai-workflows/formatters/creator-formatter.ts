@@ -292,11 +292,21 @@ export function formatRankedResults(
 }
 
 /** Shortlist suggestion from ranked grounded creators. */
+/** Default cap for a suggestion built from a raw, unsized ranking. */
+const DEFAULT_SHORTLIST_SUGGESTION_LIMIT = 10;
+
 export function formatShortlistSuggestion(
   ranked: RankedCreator[],
-  query?: string
+  query?: string,
+  /**
+   * Maximum creators to suggest. The default protects callers that hand over a
+   * raw search ranking; a caller whose list is ALREADY a composed slate sized
+   * to the campaign's requested quantity passes that length so the slate is
+   * not silently truncated.
+   */
+  limit: number = DEFAULT_SHORTLIST_SUGGESTION_LIMIT
 ): ShortlistSuggestion {
-  const top = ranked.slice(0, 10);
+  const top = ranked.slice(0, Math.max(0, limit));
   const label = query?.trim() ? query.trim().slice(0, 60) : "Recommended";
   const name = `${label} — Top ${top.length} Creators`;
 

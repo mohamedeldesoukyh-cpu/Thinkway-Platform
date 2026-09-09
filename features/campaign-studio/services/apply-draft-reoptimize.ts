@@ -8,8 +8,10 @@ import type {
 } from "@/features/campaign-intelligence/types/section-schemas";
 import {
   buildCreatorMixFromFacts,
+  creatorTierStrategyToMix,
   getCampaignFacts,
 } from "@/features/campaign-director/facts/facts-display-bridge";
+import { getStrategyFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 
 import { computeCampaignScores } from "./campaign-scores";
@@ -74,7 +76,17 @@ export async function reoptimizeCampaignAfterApply(
 
   // Re-rank with the strategy mix; append anything compose dropped (e.g. a
   // hand-picked off-platform creator) so no chosen creator disappears.
-  const tierMix = facts ? buildCreatorMixFromFacts(facts) : [];
+  // Same precedence as the initial proposal: the campaign's own Strategy
+  // allocation wins over the industry default, so the health scores measure
+  // adherence to this campaign's mix rather than a generic one.
+  const strategy = getStrategyFromWorkflowData(
+    campaignObject.meta as unknown as Record<string, unknown>
+  );
+  const tierMix = strategy?.creatorTierStrategy?.length
+    ? creatorTierStrategyToMix(strategy.creatorTierStrategy)
+    : facts
+      ? buildCreatorMixFromFacts(facts)
+      : [];
   const { creators: ranked } = composeCreatorSlate(cards, {
     platforms: facts?.platforms,
     tierMix,

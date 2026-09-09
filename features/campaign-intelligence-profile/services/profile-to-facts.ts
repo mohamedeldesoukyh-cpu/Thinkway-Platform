@@ -97,6 +97,14 @@ export function profileToCampaignFacts(
       profile.campaignName,
     budget: profile.budget,
     durationWeeks: profile.durationWeeks,
+    // The brief's own creator quantity, already extracted upstream. Carried to
+    // Facts so Strategy and the slate can honour it; still never a filter.
+    requestedCreatorCount:
+      profile.expectedCreatorCount != null &&
+      Number.isFinite(profile.expectedCreatorCount) &&
+      profile.expectedCreatorCount > 0
+        ? Math.round(profile.expectedCreatorCount)
+        : undefined,
     geography: resolveGeography(profile),
     audience: profile.audience ?? composeAudienceFromDetail(profile.audienceDetail),
     platforms: profile.platforms,

@@ -114,14 +114,36 @@ export function formatCreatorTierMixSummary(mix: CreatorMixTier[]): string | und
 }
 
 /**
- * Evidence-based slate size from Campaign Facts. Never defaults to 10 when
- * evidence is missing — returns null so Studio cannot present a fake CURRENT quantity.
+ * Slate size from Campaign Facts.
+ *
+ * Precedence: an explicitly requested quantity wins outright; otherwise the
+ * evidence-based heuristic (duration, budget, objective, platforms) applies.
+ * Never defaults to 10 when evidence is missing — returns null so Studio cannot
+ * present a fake CURRENT quantity.
  */
 export function deriveCreatorQuantityRecommendation(
   facts: CampaignFacts | null | undefined,
   options?: { poolSize?: number; tierMix?: CreatorMixTier[] }
 ): CreatorQuantityRecommendation {
   const mix = resolveCreatorTierMix(facts, options?.tierMix);
+
+  // An explicitly requested quantity is a decision, not evidence to weigh. When
+  // the brief states one or the operator types one it IS the target, so the
+  // heuristic below is skipped entirely — and with it the MIN_SLATE/MAX_SLATE
+  // clamp and the pool-size cap. A pool smaller than the request is an
+  // inventory shortage to surface, not a reason to quietly ask for less.
+  const requested = facts?.requestedCreatorCount;
+  if (requested != null && Number.isFinite(requested) && requested > 0) {
+    const recommended = Math.round(requested);
+    return {
+      recommended,
+      confidence: 1,
+      rationale: `Recommend ${recommended} creators because the campaign requested ${recommended}.`,
+      evidence: [`Requested creator quantity: ${recommended}.`],
+      mix: mix.length > 0 ? applyMixCounts(mix, recommended) : mix,
+    };
+  }
+
   const duration = durationBase(facts?.durationWeeks);
   const budget = budgetLift(facts);
   const kind = objectiveKindOf(facts?.objective);
