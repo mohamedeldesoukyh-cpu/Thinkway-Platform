@@ -1,3 +1,5 @@
+import type { CreatorSearchRequirements } from "@/features/campaign-studio/types/creator-search-requirements";
+
 import type {
   AiContext,
   AiRequest,
@@ -23,6 +25,8 @@ export interface ContextBuilderInput {
   snapshot?: SnapshotExtension;
   /** Workflow / Studio — routes searchCreators through CIP enterprise discovery. */
   campaignIntelligenceProfileId?: string;
+  /** Phase 2 — Strategy-derived CSR, merged into the CIP filters at search time. */
+  creatorSearchRequirements?: CreatorSearchRequirements;
 }
 
 export interface ContextBuilderOptions {
@@ -62,6 +66,10 @@ export class ContextBuilder {
       campaignIntelligenceProfileId:
         input.campaignIntelligenceProfileId ??
         requestContext.campaignIntelligenceProfileId,
+      // This builder allowlists fields explicitly — a context property without a
+      // line here is silently dropped before it can reach a tool executor.
+      creatorSearchRequirements:
+        input.creatorSearchRequirements ?? requestContext.creatorSearchRequirements,
     };
 
     if (this.snapshotProvider) {

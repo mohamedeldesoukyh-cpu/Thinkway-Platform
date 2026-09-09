@@ -50,7 +50,11 @@ export async function executeSearchCreatorsProduction(
     const result = await searchCreatorsFromCampaignIntelligenceProfile(
       supabase,
       profileId,
-      input.limit ?? AI_SEARCH_CREATORS_PAGE_SIZE
+      input.limit ?? AI_SEARCH_CREATORS_PAGE_SIZE,
+      // Phase 2 — present only inside the campaign workflow, which resolves CSR
+      // before this task. Undefined elsewhere, and Discovery then behaves
+      // exactly as it did before CSR existed.
+      context.creatorSearchRequirements
     );
     const output = {
       creators: result.creators,

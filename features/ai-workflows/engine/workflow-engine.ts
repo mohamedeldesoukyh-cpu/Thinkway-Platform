@@ -47,7 +47,10 @@ import { getCampaignIntelligenceProfileById } from "@/features/campaign-intellig
 import { isCampaignIntelligenceConfirmed } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 import { getValidatedIntelligence } from "@/features/campaign-intelligence-profile/services/get-validated-intelligence";
-import { hydrateValidatedIntelligenceOnState } from "@/features/campaign-studio/services/creator-search-requirements/attach-creator-search-requirements";
+import {
+  buildPreSearchCreatorSearchRequirements,
+  hydrateValidatedIntelligenceOnState,
+} from "@/features/campaign-studio/services/creator-search-requirements/attach-creator-search-requirements";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import { writeStrategyDocumentFromBrief } from "@/features/campaign-director/services/strategy-document";
 import { mergeMissingCampaignFacts } from "@/features/campaign-director/facts/merge-campaign-facts";
@@ -505,6 +508,26 @@ export async function executeWorkflow(
       }
     }
 
+    // Phase 2 — Creator Search Requirements must exist BEFORE creator search.
+    //
+    // CSR is also attached to the Campaign Object after slate proposal, for
+    // persistence and audit; that copy arrives too late to steer retrieval.
+    // This builds the same contract, with the same pure builder, from the state
+    // the engine already holds: the bootstrap Director-SSOT strategy document
+    // (`campaignStrategyDocument`), the validated intelligence hydrated just
+    // above, and Campaign Facts.
+    //
+    // Deliberately unconditional on `options.supabase`:
+    // `buildCreatorSearchRequirements` is pure and synchronous, so a run
+    // without a database still reaches Discovery with whatever Strategy and
+    // Facts it has. Campaign budget is not consulted and is never a gap — a
+    // campaign with no budget produces a CSR and searches normally.
+    if (task.id === "search-creators" && definition.id === "create-campaign") {
+      const requirements = buildPreSearchCreatorSearchRequirements(state.data);
+      state.data.creatorSearchRequirements = requirements;
+      effectiveAiContext = { ...effectiveAiContext, creatorSearchRequirements: requirements };
+    }
+
     let result: WorkflowTaskResult;
 
     if (options.dryRun) {
@@ -537,6 +560,9 @@ export async function executeWorkflow(
             (typeof state.data.campaignIntelligenceProfileId === "string"
               ? state.data.campaignIntelligenceProfileId
               : options.contextInput?.campaignIntelligenceProfileId),
+          creatorSearchRequirements:
+            effectiveAiContext.creatorSearchRequirements ??
+            options.contextInput?.creatorSearchRequirements,
         }
       );
       result = taskResultFromOutput(task.id, output);

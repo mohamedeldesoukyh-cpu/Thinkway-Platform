@@ -137,11 +137,18 @@ test("Intake missing required facts stay Missing and cannot confirm", () => {
   });
   assert.equal(intake.canConfirm, false);
   const missingKeys = intake.missing.map((row) => row.key);
-  assert.ok(missingKeys.includes("budget"));
   assert.ok(missingKeys.includes("duration"));
   assert.ok(missingKeys.includes("objective"));
-  assert.equal(intake.rows.find((row) => row.key === "budget")?.state, "missing");
   assert.equal(intake.rows.find((row) => row.key === "country")?.state, "confirmed");
+
+  // Budget is a commercial fact, not campaign intelligence: the row is still
+  // shown and still reads as unset, but it does not block Intake. The later
+  // commercial gates (Creators / Commercial readiness, and the governance
+  // budget pause at workflow finalization) still require it.
+  const budgetRow = intake.rows.find((row) => row.key === "budget");
+  assert.equal(budgetRow?.state, "missing");
+  assert.equal(budgetRow?.required, false);
+  assert.ok(!missingKeys.includes("budget"));
 });
 
 test("left rail keeps later steps Blocked until Intake is confirmed, even if Discovery is running", () => {

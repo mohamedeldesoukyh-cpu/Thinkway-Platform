@@ -31,7 +31,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
-import { getStrategyFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
+import {
+  getCampaignFactsFromWorkflowData,
+  getStrategyFromWorkflowData,
+} from "@/features/campaign-director/services/campaign-director";
 import { getValidatedIntelligence } from "@/features/campaign-intelligence-profile/services/get-validated-intelligence";
 import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 import { getCampaignIntelligenceProfileById } from "@/features/campaign-intelligence-profile/services/profile-repository";
@@ -166,4 +169,35 @@ export async function hydrateValidatedIntelligenceOnState(
     id
   );
   state.data.validatedCampaignIntelligenceProfileId = id;
+}
+
+/**
+ * Build the pre-search CSR from workflow state.
+ *
+ * Phase 2. The CSR attached by `attachCreatorSearchRequirements` lands on the
+ * Campaign Object AFTER slate proposal, which is after creator search — too
+ * late to steer retrieval. The workflow engine calls this immediately before
+ * the `search-creators` task instead, so the same contract, built by the same
+ * pure builder, reaches live Discovery.
+ *
+ * Reads only what the engine already holds: the bootstrap Director-SSOT
+ * strategy document, the validated intelligence hydrated by
+ * `hydrateValidatedIntelligenceOnState`, and Campaign Facts. It performs no
+ * I/O, invents nothing, and never consults campaign budget — a campaign
+ * briefed without one produces a CSR and searches normally.
+ */
+export function buildPreSearchCreatorSearchRequirements(
+  data: Record<string, unknown>,
+  now?: string
+): CreatorSearchRequirements {
+  return buildCreatorSearchRequirements({
+    strategy: getStrategyFromWorkflowData(data),
+    validated: data.validatedCampaignIntelligence as ValidatedCampaignIntelligence | undefined,
+    facts: getCampaignFactsFromWorkflowData(data),
+    campaignIntelligenceProfileId:
+      typeof data.campaignIntelligenceProfileId === "string"
+        ? data.campaignIntelligenceProfileId
+        : undefined,
+    now,
+  });
 }
