@@ -102,6 +102,12 @@ export function CampaignIntelligencePanel({
 
   const processing = uploadPhase === "uploading" || uploadPhase === "analyzing" || (isAnalyzing && !profileId);
 
+  // Resync on the workspace state itself, not on its id. Save Brief re-analyzes
+  // and persists the SAME profile in place, so the id is unchanged while the
+  // content changes — keying on the id left this panel rendering the profile it
+  // copied at mount. Matches campaign-brief-sidebar, which already resyncs on
+  // `initialState`. Every call site passes a stable prop or state value, never
+  // an inline object, so this cannot loop.
   useEffect(() => {
     if (!initialState?.profileId) return;
     setProfileId(initialState.profileId);
@@ -110,7 +116,7 @@ export function CampaignIntelligencePanel({
     setUploadedFileSize(initialState.fileSizeBytes);
     setParsedTextLength(initialState.parsedTextLength);
     setUploadPhase("ready");
-  }, [initialState?.profileId]);
+  }, [initialState]);
 
   const applyLoaded = useCallback(
     (state: CampaignIntelligenceWorkspaceState) => {
