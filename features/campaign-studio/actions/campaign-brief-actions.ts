@@ -14,8 +14,12 @@ import { getOutputDefinition } from "@/features/campaign-outputs/output-catalog"
 import { staleCampaignOutputKinds } from "@/features/campaign-outputs/output-registry";
 import { syncLatestStudioMessageCampaignObject } from "@/features/ai-workspace/services/conversation-campaign-hydration";
 import { getConversationWithMessages } from "@/features/ai-workspace/services/conversation-service";
+import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
+import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
+import type { CampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/types/profile";
 
 import { mergeBriefIntoCampaignObject } from "../services/merge-campaign-brief";
+import { reanalyzeAndPersistBriefIntelligence } from "../services/persist-reanalyzed-brief-intelligence";
 import {
   campaignObjectFromLatestStudioMessage,
   resolveCampaignObjectForBriefEdit,
@@ -130,6 +134,9 @@ export type ApplyCampaignBriefResult = {
   ok: boolean;
   message: string;
   campaignObject?: Record<string, unknown>;
+  /** Re-analyzed canonical intelligence, so Intake updates without re-polling. */
+  profileId?: string;
+  profile?: CampaignIntelligenceProfile;
 };
 
 export async function applyCampaignBriefAction(
@@ -184,7 +191,30 @@ export async function applyCampaignBriefAction(
       };
     }
 
-    const saved = await saveCampaignObject(input.conversationId, result.campaignObject, {
+    // The brief is the source of campaign intelligence, so an edited brief must
+    // be re-analyzed — mergeBriefIntoCampaignObject deliberately carries the old
+    // facts forward and never rewrites the SSOT. Operator-entered values are
+    // preserved inside the re-analysis merge, keyed off both canonical records.
+    let campaignObject = result.campaignObject;
+    const reanalyzed = await reanalyzeAndPersistBriefIntelligence({
+      supabase,
+      userId,
+      conversationId: input.conversationId,
+      briefText: trimmed,
+      previousFacts: getCampaignFacts(canonical),
+    });
+
+    if (reanalyzed) {
+      campaignObject = {
+        ...campaignObject,
+        meta: {
+          ...campaignObject.meta,
+          campaignFacts: profileToCampaignFacts(reanalyzed.profile),
+        },
+      };
+    }
+
+    const saved = await saveCampaignObject(input.conversationId, campaignObject, {
       supabase,
       userId,
       persistToDb: true,
@@ -210,6 +240,8 @@ export async function applyCampaignBriefAction(
       ok: true,
       message,
       campaignObject: serializeCampaignObject(saved) as unknown as Record<string, unknown>,
+      profileId: reanalyzed?.profileId,
+      profile: reanalyzed?.profile,
     };
   } catch (error) {
     return {

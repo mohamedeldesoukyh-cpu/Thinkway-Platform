@@ -27,6 +27,8 @@ function paragraph(text: string): string {
 export async function buildTafareehTeaDocx(): Promise<Buffer> {
   const body = [
     paragraph("Tafareeh Tea Campaign Brief"),
+    heading("Brand"),
+    paragraph("Tafareeh Tea"),
     heading("Campaign Objective"),
     paragraph(
       "Build awareness for Tafareeh Tea and encourage people to try and buy the product."

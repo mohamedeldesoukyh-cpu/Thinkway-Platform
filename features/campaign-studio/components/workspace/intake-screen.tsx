@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { CheckCircle2Icon, Loader2Icon, ArrowRightIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -19,6 +19,7 @@ import {
 } from "@/features/campaign-intelligence-profile/services/campaign-facts-spine";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { CampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/types/profile";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 
 import {
@@ -188,6 +189,27 @@ export function IntakeScreen({
     };
   }, [conversationId]);
 
+  /**
+   * Saving an edited brief re-analyzes and persists the canonical profile, and
+   * the action returns it. Adopt it directly so Intake shows the new
+   * intelligence — including fields the edited brief dropped, which a stale
+   * profile would otherwise keep displaying.
+   */
+  const applyReanalyzedIntelligence = useCallback(
+    (input: { profileId: string; profile: CampaignIntelligenceProfile }) => {
+      setCipState((previous) => ({
+        ...(previous ?? {}),
+        profileId: input.profileId,
+        profile: input.profile,
+        fileName: previous?.fileName ?? null,
+        fileSizeBytes: previous?.fileSizeBytes ?? null,
+        hasExtractedData: true,
+        parsedTextLength: input.profile.rawBriefExcerpt?.length ?? 0,
+      }));
+    },
+    []
+  );
+
   const creatorsData = (campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData;
   const profileId = cipState?.profileId ?? creatorsData.cipProfileId;
   const workflowBusy =
@@ -275,6 +297,7 @@ export function IntakeScreen({
         conversationId={conversationId}
         messageId={messageId}
         onBriefApplied={onCampaignObjectUpdated}
+        onIntelligenceReanalyzed={applyReanalyzedIntelligence}
       />
 
       {conversationId ? (

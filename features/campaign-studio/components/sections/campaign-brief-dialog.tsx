@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import type { CampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/types/profile";
 
 import {
   applyCampaignBriefAction,
@@ -30,6 +31,11 @@ type CampaignBriefDialogProps = {
   conversationId?: string;
   messageId?: string;
   onBriefApplied?: (campaignObject: Record<string, unknown>) => void;
+  /** Canonical intelligence re-analyzed from the saved brief. */
+  onIntelligenceReanalyzed?: (input: {
+    profileId: string;
+    profile: CampaignIntelligenceProfile;
+  }) => void;
 };
 
 export function CampaignBriefDialog({
@@ -39,6 +45,7 @@ export function CampaignBriefDialog({
   conversationId,
   messageId,
   onBriefApplied,
+  onIntelligenceReanalyzed,
 }: CampaignBriefDialogProps) {
   const [briefText, setBriefText] = useState(initialBriefText);
   const [pending, startTransition] = useTransition();
@@ -62,13 +69,26 @@ export function CampaignBriefDialog({
       });
       if (result.ok) {
         toast.success(result.message);
+        // Intake reads the re-analyzed profile the action just persisted — the
+        // canonical data changed, so no reload or re-poll is needed.
+        if (result.profileId && result.profile) {
+          onIntelligenceReanalyzed?.({ profileId: result.profileId, profile: result.profile });
+        }
         if (result.campaignObject) onBriefApplied?.(result.campaignObject);
         onOpenChange(false);
       } else {
         toast.error(result.message);
       }
     });
-  }, [briefText, canSave, conversationId, messageId, onBriefApplied, onOpenChange]);
+  }, [
+    briefText,
+    canSave,
+    conversationId,
+    messageId,
+    onBriefApplied,
+    onIntelligenceReanalyzed,
+    onOpenChange,
+  ]);
 
   /**
    * Office briefs are binary containers — reading them in the browser put raw

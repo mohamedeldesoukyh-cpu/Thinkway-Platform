@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { OUTPUTS_CLASSES } from "@/features/campaign-outputs/constants/outputs-center-tokens";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { CampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/types/profile";
 
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 
@@ -42,6 +43,10 @@ type CampaignBriefCardProps = {
   messageId?: string;
 
   onBriefApplied?: (campaignObject: Record<string, unknown>) => void;
+  onIntelligenceReanalyzed?: (input: {
+    profileId: string;
+    profile: CampaignIntelligenceProfile;
+  }) => void;
 
   className?: string;
 
@@ -94,6 +99,7 @@ export function CampaignBriefCard({
   messageId,
 
   onBriefApplied,
+  onIntelligenceReanalyzed,
 
   className,
 
@@ -189,6 +195,7 @@ export function CampaignBriefCard({
           conversationId={conversationId}
           messageId={messageId}
           onBriefApplied={onBriefApplied}
+          onIntelligenceReanalyzed={onIntelligenceReanalyzed}
         />
       </>
     );
@@ -337,6 +344,7 @@ export function CampaignBriefCard({
         messageId={messageId}
 
         onBriefApplied={onBriefApplied}
+        onIntelligenceReanalyzed={onIntelligenceReanalyzed}
 
       />
 
