@@ -5,6 +5,20 @@ import { createPortal } from "react-dom";
 
 import { formatDistanceToNow } from "date-fns";
 
+/*
+ * The pack's geometry — `.tw-cp__w` grid, `.tw-cp__av` 84px avatar circle,
+ * `.tw-scrim` — lives in the frozen foundation sheet, which until now was
+ * imported only by `app/(dashboard)/discovery/layout.tsx`. Rendered from any
+ * other route (Studio creator details, quotations, campaign match, compare) the
+ * markup arrived unstyled: `.tw-cp__av` had no size, so the avatar `<img>` fell
+ * back to its intrinsic dimensions and covered the screen. The portal root
+ * carries `.discovery-suite` itself, and every rule in the frozen sheet is
+ * scoped under that class, so importing it here styles the pack wherever it
+ * renders and changes nothing outside it. Same pattern as
+ * `home-dashboard-pack`. The legacy suite sheet is deliberately NOT imported:
+ * it carries one unscoped `.tip` rule that the app sidebar also uses.
+ */
+import "@/app/styles/discovery.css";
 import "@/app/styles/discovery-suite-creator-profile.css";
 
 import { CountryFlagBadge } from "@/components/creator/country-flag-badge";

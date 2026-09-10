@@ -1,4 +1,5 @@
 import { resolveCreatorTierLabel, type CreatorTierLabel } from "@/lib/creators/creator-tier";
+import { resolveUnifiedCreatorAvatarUrl } from "@/lib/creators/creator-profile-source";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { studioCreatorHomeCountryLabel } from "./studio-market-creators";
 import { resolveStudioCreatorCategories } from "./studio-creator-category-fit";
@@ -91,14 +92,28 @@ function extractFollowers(
   return Math.max(...candidates);
 }
 
+/**
+ * The creator's avatar, resolved exactly as Discovery resolves it.
+ *
+ * This used to take `primaryAvatarUrl ?? profile_image_url` and return it
+ * unchecked. Discovery's canonical resolver instead picks the best USABLE
+ * candidate across the profile and every platform account, and falls back to a
+ * recent-publication thumbnail when the stored CDN URL has expired — common
+ * after enrichment without a durable upload. So for those creators Discovery
+ * showed a real image and the Studio card showed a dead URL, which the media
+ * proxy could not recover, leaving the generic placeholder.
+ *
+ * One mapping now, Discovery's. The platform-preference fallback below is kept
+ * for a creator the canonical resolver cannot resolve at all.
+ */
 function extractAvatarUrl(
   creator: UnifiedCreatorResult,
   preferredPlatforms?: string[]
 ): string | undefined {
-  const account = extractPrimaryAccount(creator, preferredPlatforms);
-  const primary = creator.primaryAvatarUrl ?? creator.profile_image_url;
-  if (primary?.trim()) return primary.trim();
+  const canonical = resolveUnifiedCreatorAvatarUrl(creator);
+  if (canonical?.trim()) return canonical.trim();
 
+  const account = extractPrimaryAccount(creator, preferredPlatforms);
   const resolved = resolveBrowseCreatorProfileImageUrl({
     platform: account?.platform,
     platformPictureUrl: account?.profile_picture_url,

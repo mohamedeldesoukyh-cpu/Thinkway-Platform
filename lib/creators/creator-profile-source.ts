@@ -91,7 +91,7 @@ function resolvePublicationAvatarFallback(creator: UnifiedCreatorResult): string
  * common after enrichment without durable upload — prefer a publication preview
  * URL (has postUrl scrape fallback) over a dead profile CDN that only silhouettes.
  */
-function resolveUnifiedCreatorAvatarUrl(creator: UnifiedCreatorResult): string | null {
+export function resolveUnifiedCreatorAvatarUrl(creator: UnifiedCreatorResult): string | null {
   const primary = pickBestAvatarCandidate([
     creator.primaryAvatarUrl,
     creator.profile_image_url,

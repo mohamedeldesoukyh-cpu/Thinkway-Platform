@@ -58,8 +58,8 @@ test("a creator ECI no longer recommends is flagged, not hidden", () => {
   assert.equal(classified[0].ineligibility, "eci_not_recommended");
   assert.equal(
     CANDIDATE_INELIGIBILITY_LABEL[classified[0].ineligibility!],
-    "ECI: not recommended",
-    "the operator is told why"
+    "Campaign recommendation: not recommended",
+    "the operator is told why, in client-facing wording — ECI stays internal"
   );
   assert.equal(
     candidateIsSelectable(classified[0]),

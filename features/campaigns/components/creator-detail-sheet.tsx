@@ -157,7 +157,13 @@ type Props = {
   contextSlot?: ReactNode;
 };
 
-type DetailTab = "overview" | "contact" | "publications" | "confidence" | "similar";
+/**
+ * `campaign` exists only when a caller supplies `contextSlot` — Studio's
+ * campaign-specific intelligence. It is the first tab there, so Studio opens on
+ * its own Home area inside the canonical profile shell rather than in a
+ * separate drawer.
+ */
+type DetailTab = "campaign" | "overview" | "contact" | "publications" | "confidence" | "similar";
 
 const CREATOR_DETAIL_SHEET_STYLE = {
   width: `min(${Math.max(CREATOR_DETAIL_SHEET_MAX_WIDTH_PX, 920)}px, 100vw)`,
@@ -841,7 +847,11 @@ export function CreatorDetailSheet({
     creator?.default_metrics_platform_account_id ?? creator?.platforms[0]?.id ?? null
   );
   const [enrichmentStatus, setEnrichmentStatus] = useState<CreatorEnrichmentStatus>("never");
-  const [activeTab, setActiveTab] = useState<DetailTab>("overview");
+  // `campaign` is a tab in the canonical pack layout only; the legacy sheet
+  // renders the slot as a block above Overview and has no such tab.
+  const [activeTab, setActiveTab] = useState<DetailTab>(
+    contextSlot && isDiscoveryPack ? "campaign" : "overview"
+  );
   const [addPlatformOpen, setAddPlatformOpen] = useState(false);
   const [deletePlatformOpen, setDeletePlatformOpen] = useState(false);
   const [platformToDelete, setPlatformToDelete] = useState<UnifiedCreatorPlatform | null>(null);
@@ -1694,11 +1704,12 @@ export function CreatorDetailSheet({
               <>
                 {(
                   [
+                    ...(contextSlot ? ([["campaign", "Campaign"]] as const) : []),
                     ["overview", "Overview"],
                     ["contact", "Contact"],
                     ["publications", "Publications"],
                     ["confidence", "Confidence"],
-                  ] as const
+                  ] as ReadonlyArray<readonly [DetailTab, string]>
                 ).map(([id, label]) => (
                   <button
                     key={id}
@@ -1712,10 +1723,9 @@ export function CreatorDetailSheet({
               </>
             }
             body={
-              <>
-                {contextSlot ? (
-                  <div className="creator-detail-sheet-context-slot">{contextSlot}</div>
-                ) : null}
+              activeTab === "campaign" && contextSlot ? (
+                <div className="creator-detail-sheet-context-slot">{contextSlot}</div>
+              ) : (
                 <DiscoverySuiteCreatorProfileTabs
                 displayCreator={displayCreator}
                 identityCreator={identityCreator}
@@ -1739,9 +1749,9 @@ export function CreatorDetailSheet({
                 onEditContact={() => setEditContactOpen(true)}
                 onEditAveragePrice={() => setEditAveragePriceOpen(true)}
                 onEnrichmentStatusChange={setEnrichmentStatus}
-                onCreatorUpdated={handleCreatorUpdated}
+                  onCreatorUpdated={handleCreatorUpdated}
                 />
-              </>
+              )
             }
             similar={similar.map((item) => {
               const itemHandle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
