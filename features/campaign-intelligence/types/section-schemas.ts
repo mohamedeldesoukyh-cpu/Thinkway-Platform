@@ -290,6 +290,12 @@ export type CreatorsSectionData = {
     evidence: string[];
   };
   /**
+   * How the slate was actually composed: requested vs achieved tier mix, the
+   * target it aimed for, and any per-tier shortage. Surfaced so a slate that
+   * could not fulfil the Strategy mix shows the gap rather than hiding it.
+   */
+  slateComposition?: import("@/features/campaign-studio/services/creator-slate").SlateCompositionMeta;
+  /**
    * Strategy-derived Creator Search Requirements (Phase 1 — foundation only).
    * Optional: campaigns created before CSR existed keep working unchanged, and
    * nothing in creator search, ranking, or slate membership reads this yet.

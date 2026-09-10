@@ -112,6 +112,16 @@ export function requiredIntakeFacts(facts: CampaignFacts | undefined): IntakeFac
     // workflow finalization) still require it before anything is finalized.
     row("budget", "Budget", formatBudget(facts), false),
     row("duration", "Duration", formatDurationWeeks(facts?.durationWeeks), true),
+    // Optional planning target, never inferred. Absent means "no target set" —
+    // the evidence-based quantity heuristic then applies.
+    row(
+      "requestedCreators",
+      "Requested creators",
+      facts?.requestedCreatorCount && facts.requestedCreatorCount > 0
+        ? String(facts.requestedCreatorCount)
+        : null,
+      false
+    ),
     row("objective", "Objective", present(facts?.objective), true),
     row("audience", "Audience", presentAudience(facts), false),
     row("category", "Category", present(facts?.industry) ?? present(facts?.campaignType), false),
@@ -248,6 +258,10 @@ export function campaignFactsFromIntakeEdit(
     ["audience", Boolean(edit.audience?.trim())],
     ["geography", Boolean(edit.geography?.some((value) => value.trim()))],
     ["platforms", Boolean(edit.platforms?.some((value) => value.trim()))],
+    [
+      "requestedCreatorCount",
+      edit.requestedCreatorCount != null && Number.isFinite(edit.requestedCreatorCount),
+    ],
     ["deliverables", Boolean(edit.deliverables?.some((value) => value.trim()))],
     ["kpis", Boolean(edit.kpis?.some((value) => value.trim()))],
     ["creatorCategories", Boolean(edit.creatorCategories?.some((value) => value.trim()))],
@@ -285,6 +299,12 @@ export function campaignFactsFromIntakeEdit(
       amount != null && Number.isFinite(amount) && amount > 0 && currency
         ? { amount: Math.round(amount), currency }
         : base?.budget,
+    requestedCreatorCount:
+      edit.requestedCreatorCount != null && Number.isFinite(edit.requestedCreatorCount)
+        ? edit.requestedCreatorCount > 0
+          ? Math.round(edit.requestedCreatorCount)
+          : undefined
+        : base?.requestedCreatorCount,
     rawBriefExcerpt: base?.rawBriefExcerpt,
   };
 }
@@ -333,9 +353,18 @@ export function applyIntakeEditToProfile(
           currency: (edit.budgetCurrency ?? profile.budget?.currency ?? "EGP").trim(),
         }
       : profile.budget;
+  // The operator's target overrides whatever the brief stated; with no edit the
+  // extracted value stands. Zero clears it back to "no target".
+  const expectedCreatorCount =
+    edit.requestedCreatorCount != null && Number.isFinite(edit.requestedCreatorCount)
+      ? edit.requestedCreatorCount > 0
+        ? Math.round(edit.requestedCreatorCount)
+        : undefined
+      : profile.expectedCreatorCount;
 
   return {
     ...profile,
+    expectedCreatorCount,
     clientName,
     brandName,
     campaignName,
@@ -368,6 +397,7 @@ export type IntakeFactsEdit = {
   kpis?: string[];
   creatorCategories?: string[];
   budgetAmount?: number;
+  requestedCreatorCount?: number;
   budgetCurrency?: string;
   durationWeeks?: number;
 };
@@ -405,6 +435,11 @@ export function applyIntakeFactsEdit(
             currency: (edit.budgetCurrency ?? facts.budget?.currency ?? "EGP").trim(),
           },
         }
+      : {}),
+    ...(edit.requestedCreatorCount != null && Number.isFinite(edit.requestedCreatorCount)
+      ? edit.requestedCreatorCount > 0
+        ? { requestedCreatorCount: Math.round(edit.requestedCreatorCount) }
+        : { requestedCreatorCount: undefined }
       : {}),
   });
 }

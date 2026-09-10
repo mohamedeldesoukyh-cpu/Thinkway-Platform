@@ -38,6 +38,7 @@ import {
   normalizeCreatorId,
 } from "../../services/studio-draft";
 import { previewCreatorsSectionFromDraft } from "../../services/studio-draft-preview";
+import { CampaignAnalysisPanel } from "./campaign-analysis-panel";
 import { AddCreatorPanel } from "./add-creator-panel";
 import { formatEngagement, formatFollowers } from "./shared/format-utils";
 import { SectionSkeleton } from "./shared/section-skeleton";
@@ -1488,6 +1489,7 @@ export function VendorRecommendationsSection({
           + {hiddenCount} more recommended creators · Show all {marketVendors.length}
         </ShowMoreButton>
       ) : null}
+      <CampaignAnalysisPanel campaignObject={campaignObject} />
       {conversationId && messageId ? (
         <AddCreatorPanel
           conversationId={conversationId}

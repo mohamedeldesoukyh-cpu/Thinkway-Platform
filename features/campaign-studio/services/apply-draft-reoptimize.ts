@@ -8,8 +8,12 @@ import type {
 } from "@/features/campaign-intelligence/types/section-schemas";
 import {
   buildCreatorMixFromFacts,
+  creatorTierStrategyToMix,
   getCampaignFacts,
 } from "@/features/campaign-director/facts/facts-display-bridge";
+import { getStrategyFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
+import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
+import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import { browseUnifiedCreators } from "@/lib/creators/unified-browse";
 
 import { computeCampaignScores } from "./campaign-scores";
@@ -26,6 +30,70 @@ import {
 import { loadStudioEciPlanningSignals } from "./eci/load-studio-eci-signals";
 import { patchSlateIntelligence } from "./slate-intelligence";
 import { normalizeCreatorId } from "./studio-draft";
+
+/**
+ * The tier mix re-optimization measures the edited slate against.
+ *
+ * The mix the slate was actually composed to wins. This path runs from a server
+ * action with no workflow state, so it cannot reach the approved Strategy
+ * document; re-deriving from Campaign Facts would score tier adherence against
+ * a different target than the slate was built to, and an edit would then move
+ * the health score for no visible reason. The persisted mix is that target —
+ * no extra lookup and no new I/O.
+ *
+ * The Strategy → Facts order below is the pre-existing fallback, unchanged, for
+ * a campaign whose slate predates the persisted composition.
+ */
+export function resolveReoptimizationTierMix(input: {
+  composedMix?: Array<{ tier: string; percent: number }>;
+  strategy?: CampaignStrategyDocument | null;
+  facts?: CampaignFacts;
+}): Array<{ tier: string; percent: number }> {
+  if (input.composedMix && input.composedMix.length > 0) return input.composedMix;
+  if (input.strategy?.creatorTierStrategy?.length) {
+    return creatorTierStrategyToMix(input.strategy.creatorTierStrategy);
+  }
+  return input.facts ? buildCreatorMixFromFacts(input.facts) : [];
+}
+
+/**
+ * Drop slate-derived analysis that can no longer be recomputed.
+ *
+ * Every one of these is a function of the creator slate, written together by
+ * this module, so they are cleared together — leaving a stale launch-readiness
+ * decision beside a cleared forecast would be the same defect in a new place.
+ * Everything else on the performance section (KPIs the operator confirmed,
+ * success probability, benchmarks) is untouched.
+ */
+function withoutStaleCampaignAnalysis(campaignObject: CampaignObject): CampaignObject {
+  const performanceData = (campaignObject.sections.performance?.data ??
+    {}) as PerformanceSectionData;
+  if (
+    !performanceData.campaignForecast &&
+    !performanceData.campaignScores &&
+    !performanceData.campaignOptimization &&
+    !performanceData.campaignDecision
+  ) {
+    return campaignObject;
+  }
+
+  const next = { ...performanceData };
+  delete next.campaignForecast;
+  delete next.campaignScores;
+  delete next.campaignOptimization;
+  delete next.campaignDecision;
+
+  return {
+    ...campaignObject,
+    sections: {
+      ...campaignObject.sections,
+      performance: {
+        ...campaignObject.sections.performance,
+        data: next as unknown as Record<string, unknown>,
+      },
+    },
+  };
+}
 
 /**
  * Post-apply re-optimization: re-rank the applied slate with the strategy
@@ -54,7 +122,17 @@ export async function reoptimizeCampaignAfterApply(
         .map(normalizeCreatorId)
     ),
   ];
-  if (influencerIds.length === 0) return campaignObject;
+  // A Discovery-only slate (every id dp:/dis:) has nothing to hydrate, so it
+  // cannot be re-ranked. It must still not keep analysis describing the
+  // creator set the operator just changed: the stale artifacts are dropped.
+  //
+  // They are dropped rather than recomputed from an empty card set, because
+  // the engines return audienceSize 0 / estimatedReach 0 for no cards — a
+  // false zero is worse than no figure. Absent is how this codebase already
+  // represents "not computable" (cost metrics without a budget,
+  // averageEngagementRate without ER data), and the panel renders nothing
+  // when both artifacts are missing.
+  if (influencerIds.length === 0) return withoutStaleCampaignAnalysis(campaignObject);
 
   let cards;
   try {
@@ -74,7 +152,13 @@ export async function reoptimizeCampaignAfterApply(
 
   // Re-rank with the strategy mix; append anything compose dropped (e.g. a
   // hand-picked off-platform creator) so no chosen creator disappears.
-  const tierMix = facts ? buildCreatorMixFromFacts(facts) : [];
+  const tierMix = resolveReoptimizationTierMix({
+    composedMix: creatorsData.slateComposition?.requestedMix,
+    strategy: getStrategyFromWorkflowData(
+      campaignObject.meta as unknown as Record<string, unknown>
+    ),
+    facts,
+  });
   const { creators: ranked } = composeCreatorSlate(cards, {
     platforms: facts?.platforms,
     tierMix,

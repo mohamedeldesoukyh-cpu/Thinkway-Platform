@@ -1,19 +1,25 @@
 import type { GroundedCreator } from "@/features/ai-workflows/formatters/creator-formatter";
 import type { ValidatedCampaignIntelligence } from "@/features/campaign-intelligence-profile/types/validated-intelligence";
+import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
   CreatorsSectionData,
   PendingCreatorProposal,
+  PerformanceSectionData,
   VendorSelectedReasoning,
 } from "@/features/campaign-intelligence/types/section-schemas";
+import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import { buildCreatorRecommendationData, formatRecommendationDisplay } from "@/features/campaign-intelligence/services/structured-section-builders";
 import {
   buildCreatorMixFromFacts,
+  creatorTierStrategyToMix,
   getCampaignFacts,
 } from "@/features/campaign-director/facts/facts-display-bridge";
 import { getStrategyFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
 
-import { composeCreatorSlate } from "./creator-slate";
+import { composeCreatorSlate, type SlateCompositionMeta } from "./creator-slate";
+import { computeCampaignScores } from "./campaign-scores";
+import { studioForecastArtifacts } from "./campaign-forecast-service";
 import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
 import { computeSlateIntelligence } from "./slate-intelligence";
 import { groundedCreatorToSearchCard } from "./plan-section-regeneration";
@@ -29,6 +35,18 @@ export type ProposeCreatorSlateOptions = {
    * resolution, filtering, ranking, or slate composition.
    */
   validated?: ValidatedCampaignIntelligence | null;
+  /**
+   * The approved Campaign Strategy, resolved upstream by the workflow engine —
+   * the same route `validated` takes, and for the same reason: the Strategy
+   * document lives on workflow state, and the campaign object has no field for
+   * it, so a synchronous caller reading `campaignObject.meta` finds nothing.
+   *
+   * This is the authoritative source of `creatorTierStrategy`. Its allocation
+   * is decided by the Director debate and can differ materially from the
+   * industry default derived from Campaign Facts; without it the slate executes
+   * a mix the approved Strategy never asked for.
+   */
+  strategy?: CampaignStrategyDocument | null;
 };
 
 export type ProposeCreatorSlateResult = {
@@ -66,6 +84,9 @@ export function proposeInitialCreatorSlateWithStatus(
     ...result,
     campaignObject: attachCreatorSearchRequirements(result.campaignObject, {
       validated: options.validated,
+      // Gives CSR a real `strategyRef`. Without one, both sides of the
+      // freshness check are empty and CSR considers itself current forever.
+      strategy: options.strategy,
     }),
   };
 }
@@ -104,16 +125,30 @@ function runCreatorSlateProposal(
   }
 
   const facts = getCampaignFacts(campaignObject);
-  const strategy = getStrategyFromWorkflowData(
-    campaignObject.meta as unknown as Record<string, unknown>
-  );
+  // The caller's Strategy is authoritative. The meta lookup stays as the
+  // fallback for callers that have no workflow state; it resolves to undefined
+  // today, and the facts-derived mix then applies exactly as before.
+  const strategy =
+    options.strategy ??
+    getStrategyFromWorkflowData(campaignObject.meta as unknown as Record<string, unknown>);
 
   const cards = pool.map(groundedCreatorToSearchCard);
-  const quantity = deriveCreatorQuantityRecommendation(facts, { poolSize: cards.length });
+
+  // The campaign's own Strategy allocation is authoritative over the industry
+  // default. `resolveCreatorTierMix` (inside deriveCreatorQuantityRecommendation)
+  // already prefers an explicit Strategy mix — it just was never handed one
+  // here, which is why the slate tracked a generic industry mix instead.
+  const strategyTierMix = strategy?.creatorTierStrategy?.length
+    ? creatorTierStrategyToMix(strategy.creatorTierStrategy)
+    : undefined;
+  const quantity = deriveCreatorQuantityRecommendation(facts, {
+    poolSize: cards.length,
+    tierMix: strategyTierMix,
+  });
   const tierMix =
     quantity.mix.length > 0 ? quantity.mix : facts ? buildCreatorMixFromFacts(facts) : [];
   const targetCount = quantity.recommended ?? cards.length;
-  const { creators: ranked } = composeCreatorSlate(cards, {
+  const { creators: ranked, meta: slateMeta } = composeCreatorSlate(cards, {
     platforms: facts?.platforms,
     tierMix,
     targetCount,
@@ -141,7 +176,9 @@ function runCreatorSlateProposal(
     options.query,
     facts,
     strategy,
-    pool
+    pool,
+    // `ranked` is the composed slate, already sized to the requested quantity.
+    { creatorsAreComposedSlate: true }
   );
 
   if (!recommendationData.creatorIds.length) {
@@ -182,7 +219,80 @@ function runCreatorSlateProposal(
     },
   });
 
-  return { campaignObject: withRecommendations, proposed: true };
+  // Campaign analysis on the FIRST recommendation, not only after an operator
+  // edit. Same two engines `reoptimizeCampaignAfterApply` already runs, so the
+  // Campaign Analysis panel is populated the moment a slate exists.
+  return {
+    campaignObject: withCampaignAnalysis(withRecommendations, {
+      cards: ranked,
+      facts,
+      tierMix,
+      slateMeta,
+    }),
+    proposed: true,
+  };
+}
+
+/**
+ * Attach forecast + health to the campaign object, recomputed from the slate.
+ *
+ * Reuses the existing Campaign Forecast Engine and campaign scores untouched —
+ * this only makes them run at proposal time as well as after a draft apply, and
+ * carries the slate composition meta so the planner can see requested vs
+ * achieved mix and any tier shortage.
+ */
+function withCampaignAnalysis(
+  campaignObject: CampaignObject,
+  input: {
+    cards: ReturnType<typeof composeCreatorSlate>["creators"];
+    facts: CampaignFacts | undefined;
+    tierMix: Array<{ tier: string; percent: number }>;
+    slateMeta: SlateCompositionMeta;
+  }
+): CampaignObject {
+  const scores = computeCampaignScores({
+    cards: input.cards,
+    facts: input.facts,
+    tierMix: input.tierMix,
+  });
+  const { snapshot, groundedKpis } = studioForecastArtifacts({
+    cards: input.cards,
+    facts: input.facts,
+  });
+
+  // Older campaign objects (and Director scaffolding) may not carry a
+  // performance section yet — analysis must never be the thing that throws.
+  const performanceSection = campaignObject.sections.performance ?? {
+    id: "performance",
+    title: "Performance",
+    status: "complete" as const,
+    content: "",
+    data: {},
+  };
+  const performanceData = (performanceSection.data ?? {}) as PerformanceSectionData;
+
+  return {
+    ...campaignObject,
+    sections: {
+      ...campaignObject.sections,
+      performance: {
+        ...performanceSection,
+        data: {
+          ...performanceData,
+          campaignScores: scores,
+          campaignForecast: snapshot,
+          groundedKpis,
+        } satisfies PerformanceSectionData as unknown as Record<string, unknown>,
+      },
+      creators: {
+        ...campaignObject.sections.creators,
+        data: {
+          ...((campaignObject.sections.creators.data ?? {}) as CreatorsSectionData),
+          slateComposition: input.slateMeta,
+        } satisfies CreatorsSectionData as unknown as Record<string, unknown>,
+      },
+    },
+  };
 }
 
 function commitCreatorProposal(

@@ -376,13 +376,25 @@ export function buildCreatorRecommendationData(
   query?: string,
   facts?: CampaignFacts,
   strategy?: CampaignStrategyDocument,
-  poolCreators?: GroundedCreator[]
+  poolCreators?: GroundedCreator[],
+  options?: {
+    /**
+     * True when `creators` is already a composed slate sized to the campaign's
+     * requested quantity, so the default 10-creator suggestion cap must not
+     * truncate it. Callers passing a raw pool leave this unset.
+     */
+    creatorsAreComposedSlate?: boolean;
+  }
 ): CreatorRecommendationSectionData {
   const deduped = normalizeCreators(creators, "campaignObjectRecommendations");
   const ranked = hasCampaignRelevanceScores(deduped)
     ? assignCampaignRelevanceRanks(deduped)
     : assignDiscoveryOrderRanks(deduped);
-  const suggestion = formatShortlistSuggestion(ranked, query);
+  const suggestion = formatShortlistSuggestion(
+    ranked,
+    query,
+    options?.creatorsAreComposedSlate ? ranked.length : undefined
+  );
   const avgFitScore =
     ranked.length > 0
       ? Math.round(ranked.reduce((sum, c) => sum + c.fitScore, 0) / ranked.length)

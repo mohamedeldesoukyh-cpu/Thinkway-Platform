@@ -55,6 +55,20 @@ type IntakeScreenProps = {
   workflowProgressPercent?: number;
 };
 
+/**
+ * Requested creators from the Intake input.
+ *
+ * An empty field means "no target" and must stay undefined — never 0, never a
+ * guess. An explicit 0 clears a previously stored target.
+ */
+function parseRequestedCreators(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) return undefined;
+  return Math.round(parsed);
+}
+
 function splitList(value: string): string[] {
   return value
     .split(/[,;\n]/)
@@ -94,6 +108,7 @@ export function IntakeScreen({
     budget: "",
     currency: "EGP",
     durationWeeks: "",
+    requestedCreators: "",
     objective: "",
     audience: "",
     category: "",
@@ -129,6 +144,7 @@ export function IntakeScreen({
         budgetAmount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
         budgetCurrency: draft.currency,
         durationWeeks: Number.isFinite(weeks) && weeks > 0 ? weeks : undefined,
+        requestedCreatorCount: parseRequestedCreators(draft.requestedCreators),
       },
       displayFacts
     );
@@ -144,6 +160,7 @@ export function IntakeScreen({
       budget: displayFacts?.budget?.amount?.toString() ?? "",
       currency: displayFacts?.budget?.currency ?? "EGP",
       durationWeeks: displayFacts?.durationWeeks?.toString() ?? "",
+      requestedCreators: displayFacts?.requestedCreatorCount?.toString() ?? "",
       objective: displayFacts?.objective ?? "",
       audience: displayFacts?.audience ?? "",
       category: displayFacts?.industry ?? "",
@@ -235,6 +252,7 @@ export function IntakeScreen({
       budgetAmount: Number.isFinite(amount) && amount > 0 ? amount : undefined,
       budgetCurrency: draft.currency,
       durationWeeks: Number.isFinite(weeks) && weeks > 0 ? weeks : undefined,
+      requestedCreatorCount: parseRequestedCreators(draft.requestedCreators),
     };
   }
 
@@ -401,6 +419,16 @@ export function IntakeScreen({
                       </p>
                     ) : null}
                   </div>
+                ) : row.key === "requestedCreators" ? (
+                  <Input
+                    className="h-8 text-sm"
+                    value={draft.requestedCreators}
+                    onChange={(event) =>
+                      setDraft((prev) => ({ ...prev, requestedCreators: event.target.value }))
+                    }
+                    aria-label="Requested creators"
+                    placeholder="Optional — leave empty if not requested"
+                  />
                 ) : row.key === "country" ? (
                   <select
                     className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"

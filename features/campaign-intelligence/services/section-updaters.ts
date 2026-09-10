@@ -637,6 +637,11 @@ export function applyTaskResultToCampaignObject(
       poolCreators,
       query: typeof stateData.searchQuery === "string" ? stateData.searchQuery : undefined,
       validated,
+      // The approved Strategy lives on workflow state and the campaign object
+      // has no field for it, so the slate could not see it and fell back to the
+      // industry mix from Campaign Facts — recommending creators the approved
+      // Strategy never asked for. Threaded the same way `validated` is.
+      strategy: getStrategyFromWorkflowData(stateData),
     });
     // Boardroom handoff requires Campaign Outputs media_plan for readiness.
     // Auto-generate once when Director has approved and a slate exists — do not

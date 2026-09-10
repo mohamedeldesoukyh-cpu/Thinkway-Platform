@@ -189,3 +189,77 @@ test("first-run failure does not create pendingProposal", () => {
   assert.equal(data.pendingProposal, undefined);
   assert.equal(data.slateProposalStatus?.status, "blocked");
 });
+
+test("campaign analysis is computed on the first proposal, not only after an edit", () => {
+  const result = proposeInitialCreatorSlateWithStatus(
+    baseObject({
+      recommendations: {
+        creatorIds: [],
+        selectedReasoning: [
+          {
+            creatorId: "inf:strategy-1",
+            displayName: "Salma",
+            expectedRole: "Macro",
+            whySelected: "Director pick",
+            audienceMatch: "",
+            risk: "",
+            alternative: "",
+            confidence: 0.8,
+            evidence: "",
+            tradeoff: "",
+          },
+        ],
+      },
+    })
+  );
+
+  assert.equal(result.proposed, true);
+  const performance = (result.campaignObject.sections.performance?.data ??
+    {}) as Record<string, unknown>;
+  assert.ok(performance.campaignForecast, "the forecast must exist before any operator edit");
+  assert.ok(performance.campaignScores, "campaign health must exist before any operator edit");
+
+  const scores = performance.campaignScores as { overall: number; basis: string[] };
+  assert.ok(Number.isFinite(scores.overall));
+  assert.ok(scores.basis.length > 0, "every health dimension carries its explanation");
+
+  // Slate composition is exposed so requested vs achieved mix is visible.
+  const data = result.campaignObject.sections.creators.data as CreatorsSectionData;
+  assert.ok(data.slateComposition, "slate composition must be persisted");
+  assert.equal(
+    data.slateComposition!.achievedCount,
+    data.recommendations?.creatorIds.length
+  );
+});
+
+test("campaign analysis needs neither a budget nor creator pricing", () => {
+  const object = baseObject({
+    recommendations: {
+      creatorIds: [],
+      selectedReasoning: [
+        {
+          creatorId: "inf:strategy-1",
+          displayName: "Salma",
+          expectedRole: "Macro",
+          whySelected: "Director pick",
+          audienceMatch: "",
+          risk: "",
+          alternative: "",
+          confidence: 0.8,
+          evidence: "",
+          tradeoff: "",
+        },
+      ],
+    },
+  });
+  const facts = (object.meta as Record<string, unknown>).campaignFacts as Record<string, unknown>;
+  delete facts.budget;
+
+  const result = proposeInitialCreatorSlateWithStatus(object);
+  const performance = (result.campaignObject.sections.performance?.data ??
+    {}) as Record<string, unknown>;
+
+  assert.equal(result.proposed, true);
+  assert.ok(performance.campaignForecast, "a budget-less campaign still gets a forecast");
+  assert.ok(performance.campaignScores, "a budget-less campaign still gets health scores");
+});
