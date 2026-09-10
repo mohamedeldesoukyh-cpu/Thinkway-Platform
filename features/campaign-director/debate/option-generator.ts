@@ -4,6 +4,11 @@ import {
 } from "@/features/campaign-studio/services/timeline-duration";
 
 import type { CampaignFacts } from "../facts/campaign-facts-types";
+import {
+  creatorTierPreferenceFromFacts,
+  resolveCreatorTierMixFromPreference,
+} from "../facts/creator-tier-preference";
+import { creatorTierStrategyToMix } from "../facts/facts-display-bridge";
 import type { CampaignStrategyDocument } from "../types";
 import { buildActivationPlan, describeActivationOrder } from "./activation-plan";
 import type { CampaignOption, OptionId } from "./debate-types";
@@ -68,6 +73,49 @@ function maxEngagementTiers(
     { tier: "Micro", allocationPercent: 45, why: "Micro tier carries engagement and UGC volume" },
     { tier: "Nano", allocationPercent: 40, why: "Heavy Nano mix maximizes peer-trust UGC" },
   ]);
+}
+
+/**
+ * Project a generated archetype ladder onto the campaign's confirmed tier set.
+ *
+ * `maxReachTiers` and `maxEngagementTiers` return fixed ladders — they inspect
+ * the base only to decide whether Mega is in play — so a Macro/Mid/Micro brief
+ * got a generated option carrying Nano and no Mid, and `applyWinnerOptionToStrategy`
+ * persisted that as `strategy.creatorTierStrategy`. A generated option must not
+ * introduce a tier the confirmed campaign excludes.
+ *
+ * Precedence comes from the existing single source of truth,
+ * `CampaignFacts.creatorTiers` and `resolveCreatorTierMixFromPreference`:
+ *
+ *   1. an operator-approved tier set (stamped `sources.creatorTiers = "operator"`)
+ *      and 2. a brief-stated tier set are the same field — either one confirms
+ *      the tiers, and the archetype's split is expressed over exactly those;
+ *   3. no stated preference leaves the ladder exactly as the archetype built it.
+ *
+ * The archetype's emphasis survives: each confirmed tier is weighted by what the
+ * ladder gave it, so a reach option stays Macro-led and an engagement option
+ * stays Micro-led. This constrains GENERATED options only — an operator editing
+ * Strategy to add a tier is a decision, and `revision-engine` writes it directly.
+ */
+function constrainToConfirmedTiers(
+  tiers: CampaignStrategyDocument["creatorTierStrategy"],
+  facts: CampaignFacts
+): CampaignStrategyDocument["creatorTierStrategy"] {
+  const preference = creatorTierPreferenceFromFacts(facts);
+  if (preference.length === 0) return tiers;
+
+  const { mix } = resolveCreatorTierMixFromPreference({
+    preference,
+    baseMix: creatorTierStrategyToMix(tiers),
+  });
+
+  return mix
+    .filter((tier) => tier.percent > 0)
+    .map((tier) => ({
+      tier: tier.tier,
+      allocationPercent: tier.percent,
+      why: tier.reasoning,
+    }));
 }
 
 function buildKpisForArchetype(
@@ -155,7 +203,7 @@ export function generateCampaignOptions(
     label: "Maximum Reach",
     archetype: "max_reach",
     strategySlice: `${brand} — Maximum Reach: heavy Macro/Mega roster, burst Week 1 activation (${burstPlan.weekWeights[0]}% creators), impressions-led KPIs, higher CPM tolerance for ${objective}.`,
-    creatorTierStrategy: maxReachTiers(baseTiers),
+    creatorTierStrategy: constrainToConfirmedTiers(maxReachTiers(baseTiers), facts),
     timeline: {
       durationWeeks,
       rationale: `${durationWeeks}-week campaign — burst activation front-loads Macro/Mega for fast awareness`,
@@ -186,7 +234,7 @@ export function generateCampaignOptions(
     label: "Balanced",
     archetype: "balanced",
     strategySlice: `${brand} — Balanced: Director default tier waterfall, even ${durationWeeks}-week cadence (${evenPlan.weekWeights.map((w, i) => `W${i + 1} ${w}%`).join(", ")}), moderate risk/efficiency for ${objective}.`,
-    creatorTierStrategy: balancedTiers(baseTiers),
+    creatorTierStrategy: constrainToConfirmedTiers(balancedTiers(baseTiers), facts),
     timeline: {
       durationWeeks,
       rationale:
@@ -214,7 +262,7 @@ export function generateCampaignOptions(
     label: "Maximum Engagement",
     archetype: "max_engagement",
     strategySlice: `${brand} — Maximum Engagement: heavy Micro/Nano UGC-first mix, ramp activation (${rampPlan.weekWeights.map((w, i) => `W${i + 1} ${w}%`).join(", ")}), ER-led KPIs, lowest CPE for ${objective}.`,
-    creatorTierStrategy: maxEngagementTiers(baseTiers),
+    creatorTierStrategy: constrainToConfirmedTiers(maxEngagementTiers(baseTiers), facts),
     timeline: {
       durationWeeks,
       rationale: `${durationWeeks}-week campaign — ramp activation builds Micro/Nano UGC volume toward mid-campaign peak`,
