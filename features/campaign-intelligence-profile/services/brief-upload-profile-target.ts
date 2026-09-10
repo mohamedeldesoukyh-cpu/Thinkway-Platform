@@ -11,18 +11,32 @@
  * without the database or the server action around them.
  */
 
-export type BriefUploadProfileTarget =
-  | { mode: "link"; linkProfileId: string; allowMissingBrand: true }
-  | { mode: "create"; linkProfileId: null; allowMissingBrand: false };
+export type BriefUploadProfileTarget = {
+  mode: "link" | "create";
+  linkProfileId: string | null;
+  allowMissingBrand: boolean;
+  /**
+   * True when the upload came from inside an existing campaign conversation —
+   * Studio Intake's dropzone, or the New Campaign dialog after it created the
+   * conversation. The campaign is already the target, so the brand-selection
+   * detour must not interrupt the analysis: it exists to decide which brand a
+   * *library* record belongs to, and there is nothing to decide here.
+   */
+  ownsConversation: boolean;
+};
 
 /**
- * Reuse the conversation's existing profile when there is one; otherwise keep
- * the established create behaviour.
+ * Where an uploaded brief's intelligence is written, and whether the brand
+ * detour applies.
  *
- * `allowMissingBrand` is granted ONLY for same-conversation reuse: the profile
- * already belongs to this campaign, so a brand absent from the CRM catalog must
- * not block replacing its brief. It is never granted to a create, nor to the
- * operator linking an unrelated library record.
+ * Reuse the conversation's existing profile when there is one. A first upload
+ * into a conversation still creates the row, but it is that campaign's row, not
+ * a library record.
+ *
+ * `allowMissingBrand` follows conversation ownership, not the create/link
+ * distinction: a campaign whose brand is absent from the CRM catalog must still
+ * be able to receive its brief. It is never granted to a library upload, nor to
+ * the operator linking an unrelated library record.
  */
 export function resolveBriefUploadProfileTarget(input: {
   conversationId?: string | null;
@@ -32,9 +46,27 @@ export function resolveBriefUploadProfileTarget(input: {
   const existingProfileId = input.existingProfileId?.trim();
 
   if (conversationId && existingProfileId) {
-    return { mode: "link", linkProfileId: existingProfileId, allowMissingBrand: true };
+    return {
+      mode: "link",
+      linkProfileId: existingProfileId,
+      allowMissingBrand: true,
+      ownsConversation: true,
+    };
   }
-  return { mode: "create", linkProfileId: null, allowMissingBrand: false };
+  if (conversationId) {
+    return {
+      mode: "create",
+      linkProfileId: null,
+      allowMissingBrand: true,
+      ownsConversation: true,
+    };
+  }
+  return {
+    mode: "create",
+    linkProfileId: null,
+    allowMissingBrand: false,
+    ownsConversation: false,
+  };
 }
 
 /**

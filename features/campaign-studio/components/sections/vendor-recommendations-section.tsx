@@ -7,6 +7,7 @@ import {
   Columns2Icon,
   GitMergeIcon,
   ListRestartIcon,
+  Loader2Icon,
   PlusIcon,
   Trash2Icon,
   Undo2Icon,
@@ -38,6 +39,11 @@ import {
   normalizeCreatorId,
 } from "../../services/studio-draft";
 import { previewCreatorsSectionFromDraft } from "../../services/studio-draft-preview";
+import {
+  creatorGroupingKey,
+  splitRecommendedCreatorIds,
+} from "../../services/studio-creator-slate-split";
+import type { StudioCreatorReplacementTarget } from "../../services/studio-creator-replacement";
 import { CampaignAnalysisPanel } from "./campaign-analysis-panel";
 import { AddCreatorPanel } from "./add-creator-panel";
 import { formatEngagement, formatFollowers } from "./shared/format-utils";
@@ -69,7 +75,15 @@ import { vendorMatchesCampaignMarket } from "../../services/studio-market-creato
 import {
   recommendationFromVendor,
   selectStudioRecommendedVendors,
+  vendorPassesStudioRecommendationGate,
 } from "../../services/studio-recommended-vendors";
+import {
+  CANDIDATE_INELIGIBILITY_LABEL,
+  candidateIsSelectable,
+  classifyReplacementCandidates,
+  summarizeCandidates,
+  type CandidateIneligibility,
+} from "../../services/studio-replacement-candidates";
 import {
   sortByStudioRequirements,
   studioCreatorRequirementScore,
@@ -88,7 +102,7 @@ import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 import type { StudioEciPlanningSignal } from "../../services/eci/project-studio-eci-signal";
 import { ShortlistSlatePickerDialog } from "./shortlist-slate-picker-dialog";
 import { StudioCreatorCompareDialog } from "./studio-creator-compare-dialog";
-import { StudioPlanningCreatorDetail } from "./studio-planning-creator-detail";
+import { StudioCreatorDetailHost } from "./studio-creator-detail-host";
 import { StudioPlanningIntelligenceStrip } from "./shared/studio-planning-intelligence-strip";
 import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
 import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
@@ -113,6 +127,11 @@ type VendorRecommendationsSectionProps = {
 type DisplayVendor = {
   id?: string;
   rank?: number;
+  /**
+   * Set only on a replacement candidate that the campaign's own gates would
+   * reject. The card states it; the creator is never dropped from the list.
+   */
+  candidateIneligibility?: CandidateIneligibility;
   displayName: string;
   handle: string;
   platform: string;
@@ -334,6 +353,25 @@ function RequirementsMetBadge({
   );
 }
 
+/**
+ * A replacement candidate the campaign's own gates would reject.
+ *
+ * The creator stays on the list — silently removing it cost the operator a
+ * replacement option with no explanation. The reason is shown instead, and an
+ * out-of-market candidate is additionally not offered in the Replace panel.
+ */
+function CandidateIneligibilityBadge({ vendor }: { vendor: DisplayVendor }) {
+  if (!vendor.candidateIneligibility) return null;
+  return (
+    <span
+      className="rounded-full bg-amber-100 px-2 py-0.5 text-[9px] font-extrabold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200"
+      title="No longer eligible for this campaign — kept visible rather than removed without explanation"
+    >
+      {CANDIDATE_INELIGIBILITY_LABEL[vendor.candidateIneligibility]}
+    </span>
+  );
+}
+
 function VendorCardBlock({
   vendor,
   index,
@@ -347,6 +385,7 @@ function VendorCardBlock({
   applyDecision,
   stageRoleChange,
   openCreatorDetails,
+  onReplace,
   observeCreator,
 }: {
   vendor: DisplayVendor;
@@ -366,6 +405,8 @@ function VendorCardBlock({
   ) => Promise<void>;
   stageRoleChange: (creatorId: string, role: "main" | "alternative", displayName?: string) => Promise<void>;
   openCreatorDetails: (vendor: DisplayVendor) => void;
+  /** Present only for a SELECTED creator — the alternatives have nothing to replace. */
+  onReplace?: (vendor: DisplayVendor) => void;
   observeCreator: (creatorId: string | null | undefined) => (node: HTMLElement | null) => void;
 }) {
   const refMode = useStudioRefMode();
@@ -475,6 +516,18 @@ function VendorCardBlock({
       >
         View details
       </button>
+      {onReplace ? (
+        <button
+          type="button"
+          disabled={!canAct || isPending}
+          className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
+          onClick={() => onReplace(vendor)}
+          title="Replace this creator — from the other recommendations, Discovery, or a profile link"
+        >
+          <ListRestartIcon className="size-3" />
+          Replace
+        </button>
+      ) : null}
       <button
         type="button"
         disabled={!canAct || isPending}
@@ -523,6 +576,7 @@ function VendorCardBlock({
               </span>
             ) : null}
             <RequirementsMetBadge vendor={vendor} campaignObject={campaignObject} refMode />
+            <CandidateIneligibilityBadge vendor={vendor} />
             {vendor.planningSignal ? null : vendor.fitScore != null ? (
               <span className={cn(STUDIO_REF_CLASSES.vbadge, STUDIO_REF_CLASSES.vbadgeFit)}>
                 Planning fit {Math.round(vendor.fitScore)}/100
@@ -607,6 +661,7 @@ function VendorCardBlock({
           ) : null}
           {vendor.tier ? <span className={STUDIO_CLASSES.pillTier}>{vendor.tier}</span> : null}
           <RequirementsMetBadge vendor={vendor} campaignObject={campaignObject} refMode={false} />
+          <CandidateIneligibilityBadge vendor={vendor} />
           {vendor.expectedRole ? (
             <span className="rounded-full bg-muted px-2 py-0.5 text-[9px] font-semibold text-muted-foreground">
               {vendor.expectedRole}
@@ -748,6 +803,10 @@ export function VendorRecommendationsSection({
   const [drawerCreator, setDrawerCreator] = useState<CreatorDrawerSelection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shortlistPickerMode, setShortlistPickerMode] = useState<"replace" | "merge" | null>(null);
+  /** The selected creator being replaced, or null when adding. */
+  const [replaceTarget, setReplaceTarget] = useState<StudioCreatorReplacementTarget | null>(
+    null
+  );
   const [compareOpen, setCompareOpen] = useState(false);
   const confirmDelete = useConfirmDelete();
   const refMode = useStudioRefMode();
@@ -950,6 +1009,19 @@ export function VendorRecommendationsSection({
     !usingDraftPreview && discoveryIds.length > slateIds.length ? discoveryIds : slateIds;
   const safeRationale = isEmptyGlobalRationale(rationale) ? undefined : rationale;
   const hasCommittedRecommendations = recommendationIds.length > 0;
+  // Selected vs recommended-but-not-selected, derived from ids the campaign
+  // already persists — `recommendations.creatorIds` against the pool in
+  // `discovery.creatorIds`. Nothing new is stored, and the existing
+  // `recommendationCount` keeps its meaning.
+  const slateSplit = useMemo(
+    () =>
+      splitRecommendedCreatorIds({
+        recommendationIds: usingDraftPreview ? previewIds : recommendationIds,
+        discoveryIds,
+        excludeIds: appliedRemovedCreatorIds ?? [],
+      }),
+    [usingDraftPreview, previewIds, recommendationIds, discoveryIds, appliedRemovedCreatorIds]
+  );
   const pendingProposal = creatorsData.pendingProposal;
   const isRegeneratingProposal = pendingProposal?.status === "generating";
   const proposalRegenerationFailed =
@@ -976,12 +1048,17 @@ export function VendorRecommendationsSection({
   }, [campaignObject, creatorFitScores]);
 
   const { observeCreator } = useViewportCreatorIds();
-  const { vendors: hydrated, loading } = useCreatorHydration(
-    ids,
-    safeRationale,
-    avgFitScore,
-    mapperOptions
-  );
+  // `phase` was returned by the hook and discarded here, so the section showed
+  // its skeleton only while ZERO creators existed and then declared itself done
+  // after wave 1 — while phases 2 (ECI) and 3 (quotation) were still running.
+  // Those are the waves that reorder cards and, once an ECI decision arrives,
+  // filter one out. Keeping the real phase makes the list say it is still
+  // settling instead of presenting a mid-hydration state as final.
+  const {
+    vendors: hydrated,
+    loading,
+    phase: hydrationPhase,
+  } = useCreatorHydration(ids, safeRationale, avgFitScore, mapperOptions);
 
   const campaignFacts = getCampaignFacts(campaignObject);
 
@@ -1160,27 +1237,132 @@ export function VendorRecommendationsSection({
       )
     ).map((vendor, index) => ({ ...vendor, rank: index + 1 }));
   }, [vendors, campaignFacts]);
-  const excludedByMarket = Math.max(
-    0,
-    vendors.filter(
-      (vendor) =>
-        !vendorMatchesCampaignMarket(
-          { country: vendor.country, countryCode: vendor.countryCode },
-          campaignFacts?.geography
-        )
-    ).length
-  );
   const marketLabel = campaignFacts?.geography?.filter((value) => value.trim()).join(", ") || null;
 
-  const mainVendors = marketVendors.filter((v) => v.slateRole !== "maybe");
-  const maybeVendors = marketVendors.filter((v) => v.slateRole === "maybe");
-  const displayGroups =
-    maybeVendors.length > 0
+  // The section already hydrates the whole pool, so the remaining
+  // recommendations are here — they were simply rendered indistinguishably from
+  // the slate. Split them so it is clear which creators are selected.
+  const selectedKeys = useMemo(
+    () => new Set(slateSplit.selectedIds.map(creatorGroupingKey)),
+    [slateSplit.selectedIds]
+  );
+  const selectedVendors = useMemo(
+    () => marketVendors.filter((v) => v.id && selectedKeys.has(creatorGroupingKey(v.id))),
+    [marketVendors, selectedKeys]
+  );
+  // Candidates come from the ungated hydrated pool, NOT from `marketVendors`.
+  // `selectStudioRecommendedVendors` decides what belongs on the SELECTED
+  // recommendations list ("once a decision exists, only Recommended belongs");
+  // deriving the alternatives from its output applied that rule to candidates
+  // too, so a creator ECI later judged differently disappeared and the
+  // alternatives count shrank silently. Every remaining recommendation is
+  // listed here, and one that is no longer eligible carries its reason.
+  const otherRecommendedCandidates = useMemo(() => {
+    const remaining = vendors.filter(
+      (vendor) => !vendor.id || !selectedKeys.has(creatorGroupingKey(vendor.id))
+    );
+    const ordered = sortByStudioRequirements(remaining, (vendor) =>
+      studioCreatorRequirementScore(
+        {
+          country: vendor.country,
+          countryCode: vendor.countryCode,
+          platform: vendor.platform,
+          audienceSummary: vendor.audienceSummary,
+          categories: vendor.categories,
+          handle: vendor.handle,
+          displayName: vendor.displayName,
+        },
+        campaignFacts
+      )
+    );
+    return classifyReplacementCandidates(ordered, {
+      matchesMarket: (vendor) =>
+        vendorMatchesCampaignMarket(
+          { country: vendor.country, countryCode: vendor.countryCode },
+          campaignFacts?.geography
+        ),
+      passesEciGate: (vendor) =>
+        vendorPassesStudioRecommendationGate(recommendationFromVendor(vendor)),
+      fitsBriefMix: (vendor) =>
+        vendorFitsStudioBriefMix(
+          {
+            audienceSummary: vendor.audienceSummary,
+            categories: vendor.categories,
+            handle: vendor.handle,
+            displayName: vendor.displayName,
+          },
+          campaignFacts
+        ),
+    });
+  }, [vendors, selectedKeys, campaignFacts]);
+  const otherRecommendedVendors = useMemo(
+    () =>
+      otherRecommendedCandidates.map(({ vendor, ineligibility }) =>
+        ineligibility ? { ...vendor, candidateIneligibility: ineligibility } : vendor
+      ),
+    [otherRecommendedCandidates]
+  );
+  const candidateSummary = useMemo(
+    () => summarizeCandidates(otherRecommendedCandidates),
+    [otherRecommendedCandidates]
+  );
+  // Before a slate exists every hydrated creator is a candidate, not a
+  // selection — keep the established single-list rendering for that.
+  const hasSlateSplit = selectedVendors.length > 0;
+  // Route A of Replace: the campaign's own remaining recommendations, already
+  // hydrated here, handed to the existing add panel as candidate refs.
+  const replacementCandidates = useMemo(
+    () =>
+      otherRecommendedCandidates
+        .filter((candidate) => Boolean(candidate.vendor.id) && candidateIsSelectable(candidate))
+        .map(({ vendor }) => ({
+          creatorId: vendor.id!,
+          displayName: vendor.displayName,
+          handle: vendor.handle,
+          platform: vendor.platform,
+          followers: vendor.followers,
+          avatarUrl: vendor.avatarUrl,
+          source: "discovery" as const,
+          enrichmentStatus: "not_requested" as const,
+        })),
+    [otherRecommendedCandidates]
+  );
+  const slateVendors = hasSlateSplit ? selectedVendors : marketVendors;
+
+  const mainVendors = slateVendors.filter((v) => v.slateRole !== "maybe");
+  const maybeVendors = slateVendors.filter((v) => v.slateRole === "maybe");
+  const displayGroups = [
+    ...(maybeVendors.length > 0
       ? [
-          { title: "Main picks", items: mainVendors.length > 0 ? mainVendors : marketVendors },
+          { title: "Main picks", items: mainVendors.length > 0 ? mainVendors : slateVendors },
           { title: "Maybe / replacements", items: maybeVendors },
         ]
-      : [{ title: null as string | null, items: marketVendors }];
+      : [{ title: null as string | null, items: slateVendors }]),
+    ...(hasSlateSplit && otherRecommendedVendors.length > 0
+      ? [
+          {
+            title: `Other Recommended Creators (${otherRecommendedVendors.length})`,
+            items: otherRecommendedVendors,
+          },
+        ]
+      : []),
+  ];
+
+  // Out-of-market creators that are genuinely not on screen anywhere. An
+  // out-of-market candidate is now listed with its reason, so counting it as
+  // "hidden" would contradict the card the operator can see.
+  const renderedIdKeys = new Set(
+    displayGroups.flatMap((group) =>
+      group.items.flatMap((vendor) => (vendor.id ? [creatorGroupingKey(vendor.id)] : []))
+    )
+  );
+  const excludedByMarket = vendors.filter(
+    (vendor) =>
+      !vendorMatchesCampaignMarket(
+        { country: vendor.country, countryCode: vendor.countryCode },
+        campaignFacts?.geography
+      ) && (!vendor.id || !renderedIdKeys.has(creatorGroupingKey(vendor.id)))
+  ).length;
 
   const visibleGroupItems = showAllVendors
     ? displayGroups
@@ -1188,7 +1370,11 @@ export function VendorRecommendationsSection({
         ...group,
         items: group.items.slice(0, STUDIO_VENDOR_INITIAL_VISIBLE),
       }));
-  const hiddenCount = Math.max(0, marketVendors.length - STUDIO_VENDOR_INITIAL_VISIBLE);
+  // Counted across every rendered group: the old count knew only about the
+  // selected list, so truncated replacement candidates had no "show all".
+  const displayedTotal = displayGroups.reduce((sum, group) => sum + group.items.length, 0);
+  const visibleTotal = visibleGroupItems.reduce((sum, group) => sum + group.items.length, 0);
+  const hiddenCount = Math.max(0, displayedTotal - visibleTotal);
   const preferredPlatformLabel = mapperOptions.preferredPlatforms?.length
     ? mapperOptions.preferredPlatforms.join(" + ")
     : undefined;
@@ -1376,6 +1562,25 @@ export function VendorRecommendationsSection({
           {creatorsData.constraintReport.rejectedMandatoryCount === 1 ? "" : "s"} excluded.
         </p>
       ) : null}
+      {hasSlateSplit ? (
+        <div className="flex flex-wrap items-baseline gap-2 rounded-xl border border-[#1D9E75]/25 bg-[#1D9E75]/5 px-3 py-2">
+          <span className="text-sm font-extrabold text-[#1D9E75]">
+            {slateSplit.selectedCount} Selected
+          </span>
+          <span className="text-sm text-muted-foreground">
+            / {slateSplit.candidatePoolCount} Recommended
+          </span>
+          {otherRecommendedVendors.length > 0 ? (
+            <span className="text-[11px] text-muted-foreground">
+              · {otherRecommendedVendors.length} kept available below as replacement
+              candidates
+              {candidateSummary.flagged > 0
+                ? ` (${candidateSummary.flagged} flagged)`
+                : ""}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
         <p className="text-[11px] text-muted-foreground">
           {marketVendors.length} recommended creator{marketVendors.length === 1 ? "" : "s"}
@@ -1390,6 +1595,13 @@ export function VendorRecommendationsSection({
             <span className="text-foreground/80">
               {" "}
               · Brief platform: {preferredPlatformLabel}
+            </span>
+          ) : null}
+          {hydrationPhase < 3 ? (
+            <span className="inline-flex items-center gap-1 text-foreground/70">
+              {" · "}
+              <Loader2Icon className="size-3 animate-spin" aria-hidden />
+              Resolving creator signals…
             </span>
           ) : null}
         </p>
@@ -1479,6 +1691,18 @@ export function VendorRecommendationsSection({
               applyDecision={applyDecision}
               stageRoleChange={stageRoleChange}
               openCreatorDetails={openCreatorDetails}
+              onReplace={
+                conversationId &&
+                messageId &&
+                vendor.id &&
+                selectedKeys.has(creatorGroupingKey(vendor.id))
+                  ? () =>
+                      setReplaceTarget({
+                        creatorId: vendor.id!,
+                        displayName: vendor.displayName,
+                      })
+                  : undefined
+              }
               observeCreator={observeCreator}
             />
           ))}
@@ -1486,7 +1710,7 @@ export function VendorRecommendationsSection({
       ))}
       {hiddenCount > 0 && !showAllVendors ? (
         <ShowMoreButton onClick={() => setShowAllVendors(true)}>
-          + {hiddenCount} more recommended creators · Show all {marketVendors.length}
+          + {hiddenCount} more recommended creators · Show all {displayedTotal}
         </ShowMoreButton>
       ) : null}
       <CampaignAnalysisPanel campaignObject={campaignObject} />
@@ -1496,6 +1720,22 @@ export function VendorRecommendationsSection({
           messageId={messageId}
           draft={draft}
           onDraftUpdated={publishDraft}
+          replaceTarget={replaceTarget}
+          candidates={replacementCandidates}
+          onSelectionStaged={({ undoCreatorId, displayName }) => {
+            setReplaceTarget(null);
+            // Undo reuses the existing unstage path, so it restores the exact
+            // pre-replacement state rather than tracking its own history.
+            toast.success(
+              displayName ? `${displayName} replaced` : "Creator replaced",
+              {
+                action: {
+                  label: "Undo",
+                  onClick: () => void undoDraftChange(undoCreatorId),
+                },
+              }
+            );
+          }}
         />
       ) : null}
       {conversationId && messageId && shortlistPickerMode ? (
@@ -1514,7 +1754,7 @@ export function VendorRecommendationsSection({
         />
       ) : null}
       {!onCreatorClick ? (
-        <StudioPlanningCreatorDetail
+        <StudioCreatorDetailHost
           selection={drawerCreator}
           open={drawerOpen}
           onOpenChange={setDrawerOpen}

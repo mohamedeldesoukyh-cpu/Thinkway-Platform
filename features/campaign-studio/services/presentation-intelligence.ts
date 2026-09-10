@@ -115,6 +115,28 @@ const CONCEPT_TEMPLATES: Record<
       hashtagBase: ["#ExclusiveAccess", "#PrivateViewing", "#LuxuryLife"],
     },
   ],
+  beauty: [
+    {
+      name: "My Hair Concern",
+      bigIdea: "Name the problem before naming the product",
+      hook: "What's actually wrong with my hair?",
+      keyVisual: "Honest close-up of hair texture before the routine",
+      contentTheme: "Diagnosis then solution",
+      cta: "Find the right routine for your hair",
+      sampleCaption: "I stopped guessing and started matching the product to the problem.",
+      hashtagBase: ["#HairConcern", "#HaircareRoutine", "#HairDiagnosis"],
+    },
+    {
+      name: "The Routine",
+      bigIdea: "A premium product earns its place in a real routine",
+      hook: "This is the step I stopped skipping",
+      keyVisual: "Application and texture shots in the creator's own bathroom",
+      contentTheme: "Routine integration and demonstration",
+      cta: "Build your routine",
+      sampleCaption: "Same routine, one change. That change is the whole post.",
+      hashtagBase: ["#MyRoutine", "#HaircareSteps", "#RealResults"],
+    },
+  ],
   tourism: [
     {
       name: "Ancient Wonders Reimagined",
@@ -318,6 +340,11 @@ const CONCEPT_ENHANCEMENTS: Record<
     { targetEmotion: "Confidence & achievement", contentStyle: "Portrait documentary", creatorStyle: "Lifestyle macro creator", visualDirection: "Architectural backdrops, muted palette" },
     { targetEmotion: "Exclusivity & privilege", contentStyle: "Behind-the-scenes access", creatorStyle: "Luxury insider creator", visualDirection: "Velvet textures, intimate framing" },
   ],
+  beauty: [
+    { targetEmotion: "Recognition & relief", contentStyle: "Problem/solution talking head", creatorStyle: "Haircare-literate creator", visualDirection: "Natural bathroom light, honest close-ups" },
+    { targetEmotion: "Confidence & results", contentStyle: "Before/after routine", creatorStyle: "Beauty routine creator", visualDirection: "Consistent framing across the flight" },
+    { targetEmotion: "Trust & expertise", contentStyle: "Ingredient and step explainer", creatorStyle: "Professional or salon creator", visualDirection: "Clean product visibility, texture macro" },
+  ],
   tourism: [
     { targetEmotion: "Wonder & discovery", contentStyle: "POV travel vlog", creatorStyle: "Destination storyteller", visualDirection: "Sunrise golden light at landmarks" },
     { targetEmotion: "Authenticity & connection", contentStyle: "Street-level documentary", creatorStyle: "Local guide creator", visualDirection: "Vibrant markets, candid moments" },
@@ -385,6 +412,13 @@ const MIX_BY_INDUSTRY: Record<CampaignIndustry, CreatorMixTier[]> = {
     { tier: "Mid", count: 3, percent: 30, reasoning: "Lifestyle aspiration content" },
     { tier: "Micro", count: 2, percent: 15, reasoning: "Niche luxury communities" },
     { tier: "Nano", count: 0, percent: 5, reasoning: "Reserved for event coverage" },
+  ],
+  beauty: [
+    { tier: "Macro", count: 1, percent: 20, reasoning: "Category authority and campaign scale" },
+    { tier: "Mid", count: 3, percent: 30, reasoning: "Routine and demonstration content depth" },
+    { tier: "Micro", count: 4, percent: 35, reasoning: "Trusted haircare and skincare communities" },
+    { tier: "Nano", count: 3, percent: 15, reasoning: "Authentic before/after proof at volume" },
+    { tier: "Celebrity", count: 0, percent: 0, reasoning: "Not required for consideration-led beauty" },
   ],
   tourism: [
     { tier: "Macro", count: 2, percent: 25, reasoning: "Travel storytellers with global reach" },
@@ -462,6 +496,12 @@ const CONTENT_DELIVERABLES: Record<
     { platform: "Instagram", contentType: "Stories", quantity: 8, creatorTier: "Macro", objective: "Exclusivity" },
     { platform: "YouTube", contentType: "Long-form", quantity: 2, creatorTier: "Macro", objective: "Craftsmanship" },
     { platform: "YouTube", contentType: "Shorts", quantity: 3, creatorTier: "Mid", objective: "Discovery" },
+  ],
+  beauty: [
+    { platform: "Instagram", contentType: "Reels", quantity: 5, creatorTier: "Mid", objective: "Demonstration" },
+    { platform: "TikTok", contentType: "Videos", quantity: 5, creatorTier: "Micro", objective: "Trial" },
+    { platform: "Instagram", contentType: "Stories", quantity: 15, creatorTier: "Micro", objective: "Routine proof" },
+    { platform: "YouTube", contentType: "Shorts", quantity: 3, creatorTier: "Mid", objective: "Consideration" },
   ],
   tourism: [
     { platform: "TikTok", contentType: "Videos", quantity: 6, creatorTier: "Mid", objective: "Discovery" },
@@ -541,6 +581,12 @@ export function deriveWhyAiInsights(
       evidence: "47 luxury campaigns · avg fit score 87/100 · HNW audience match 72%",
       source: "Creator",
       confidence: 92,
+    },
+    beauty: {
+      rationale: "AI matched beauty and haircare creators with demonstrated routine and results content",
+      evidence: "Beauty vertical · routine content ER 4.6% · save rate 6.1%",
+      source: "Historical",
+      confidence: 90,
     },
     tourism: {
       rationale: "AI identified travel storytellers with proven destination content performance",
@@ -645,6 +691,7 @@ export function deriveExecutiveStrategyFields(
 
   const challengeByIndustry: Record<CampaignIndustry, string> = {
     luxury: "Standing out in saturated premium market while maintaining exclusivity",
+    beauty: "Proving product efficacy credibly in a category crowded with claims",
     tourism: "Converting awareness into trip planning intent in competitive MENA travel market",
     baby: "Building trust with skeptical first-time parents in crowded diaper category",
     retail: "Driving product trial and conversion during competitive launch window",
@@ -655,6 +702,7 @@ export function deriveExecutiveStrategyFields(
 
   const insightByIndustry: Record<CampaignIndustry, string> = {
     luxury: "Luxury buyers seek validation from peers, not ads — creator authenticity drives consideration",
+    beauty: "Beauty buyers act on visible results — problem/solution routine content drives trial",
     tourism: "Travel decisions are emotional and visual — destination content triggers planning behavior",
     baby: "Moms trust other moms 3x more than brand messaging for product decisions",
     retail: "Try-on and fit content reduces purchase hesitation by 40% in sportswear",
@@ -665,6 +713,7 @@ export function deriveExecutiveStrategyFields(
 
   const journeyByIndustry: Record<CampaignIndustry, string> = {
     luxury: "Discovery → Aspiration → Consideration → Boutique visit",
+    beauty: "Concern → Recommendation → Trial → Routine adoption",
     tourism: "Inspiration → Research → Planning → Booking",
     baby: "Awareness → Peer validation → Trial → Loyalty",
     retail: "Hype → Try-on → Purchase → Advocacy",
@@ -675,6 +724,7 @@ export function deriveExecutiveStrategyFields(
 
   const advantageByIndustry: Record<CampaignIndustry, string> = {
     luxury: "Curated creator roster with proven luxury brand collaborations",
+    beauty: "Beauty and haircare creator bench with proven routine-integration content",
     tourism: "Local creator network with on-ground production capability",
     baby: "Verified mom creator community with authentic parenting content",
     retail: "Multi-tier creator mix optimized for launch velocity and conversion",
@@ -1031,6 +1081,7 @@ export function deriveSuccessProbability(
 
   const scores: Record<CampaignIndustry, number> = {
     luxury: 78,
+    beauty: 83,
     tourism: 85,
     baby: 88,
     retail: 82,
@@ -1045,6 +1096,12 @@ export function deriveSuccessProbability(
       weaknesses: ["Limited macro creator availability in MENA", "Extended approval cycles may compress timeline", "High CPM reduces reach efficiency"],
       risks: ["Brand dilution from off-brand aesthetics", "Creator scheduling conflicts during peak season"],
       improvements: ["Secure backup macro roster now", "Pre-approve visual guidelines before outreach", "Add 1 week buffer to production phase"],
+    },
+    beauty: {
+      strengths: ["Beauty and haircare creator bench with routine-integration history", "Strong demonstration and results content formats", "High save and share rates on routine content"],
+      weaknesses: ["Efficacy claims need review before publishing", "Category is crowded with competing product messaging"],
+      risks: ["Competitor haircare collaborations during the flight", "Results content that overpromises and invites scrutiny"],
+      improvements: ["Pre-approve claim language before outreach", "Brief creators on their own hair concern as the hook", "Reserve budget for a conversion-weighted final week"],
     },
     tourism: {
       strengths: ["Multi-platform travel storyteller network", "Strong visual content pipeline", "High organic save rates on destination content"],
@@ -1129,6 +1186,11 @@ export function deriveOpportunities(
       { category: "Budget Optimization", title: "Shift 5% from contingency to production", description: "Premium asset quality drives +18% brand favorability lift", impact: "medium", source: "Historical" },
       { category: "Competitor Gap", title: "Heritage storytelling underserved", description: "Competitors focus on product — craftsmanship narrative is open territory", impact: "high", source: "Industry" },
     ],
+    beauty: [
+      { category: "Content Gap", title: "Hair-concern diagnostic content", description: "Problem-first content converts better than product-first in haircare", impact: "high", source: "Industry" },
+      { category: "Creator Tiers", title: "Weight micro tier for trust", description: "Micro beauty creators carry the highest recommendation credibility in category", impact: "high", source: "Historical" },
+      { category: "Missing Platforms", title: "YouTube long-form routine", description: "Extended routine content underused for premium haircare consideration", impact: "medium", source: "Industry" },
+    ],
     tourism: [
       { category: "Untapped Audiences", title: "Cultural explorers (30–50)", description: "Higher trip value segment — 40% longer stays, 2.3x booking value", impact: "high", source: "Creator" },
       { category: "Missing Platforms", title: "Pinterest travel planning", description: "Pre-planning audience on Pinterest — strong save-to-book conversion", impact: "medium", source: "Industry" },
@@ -1206,6 +1268,7 @@ export function deriveExecutiveSummary(
 
   const summaries: Record<CampaignIndustry, string> = {
     luxury: `${client} requires a prestige-building campaign targeting affluent professionals through curated macro and celebrity creators on Instagram and YouTube. The ${weeks}-week plan prioritizes editorial-quality production and selective paid amplification to HNW audiences.`,
+    beauty: `${client} requires a consideration and conversion campaign activating beauty and haircare creators on Instagram and TikTok. The ${weeks}-week plan leads with hair-concern diagnosis and product demonstration, then weights the closing weeks toward conversion.`,
     tourism: `${client} needs a destination awareness campaign leveraging travel storytellers across TikTok, Instagram, and YouTube. The ${weeks}-week strategy drives trip-planning intent through visual destination content and geo-targeted amplification in key feeder markets.`,
     baby: `${client} launches with an authenticity-first UGC strategy activating mom creators on Instagram and TikTok. The ${weeks}-week plan builds purchase trust through peer validation at scale — 80+ authentic reviews targeted.`,
     retail: `${client} product launch demands high-velocity creator activation across nano, micro, and mid tiers. The ${weeks}-week plan front-loads try-on and fit content to drive conversion during the competitive launch window.`,
@@ -1285,6 +1348,7 @@ export function deriveVendorRankingFactors(
 
   const industryErBenchmark: Record<CampaignIndustry, number> = {
     luxury: 3.1,
+    beauty: 4.6,
     tourism: 4.5,
     baby: 5.2,
     retail: 3.9,

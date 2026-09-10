@@ -105,19 +105,27 @@ function applyBudgetMagnitude(raw: string, suffix?: string): number {
   return value * multiplier;
 }
 
-// Number with optional magnitude suffix: 1M, 1.5 mn, 250k, 2 million, 1,000,000
-const BUDGET_AMOUNT = String.raw`([\d,]+(?:\.\d+)?)\s*(k|mm|mn|m|bn|thousand|million|billion)?\b`;
+/**
+ * Number with optional magnitude suffix: 1M, 1.5 mn, 250k, 2 million, 1,000,000
+ *
+ * The suffix must sit on the SAME line as the amount and end on a non-letter.
+ * `\s*` used to cross a line break and `\b` did not stop a following accented
+ * word (in JS regex "é" is not a word character), so a brief reading
+ * "Budget: EGP 3,000,000\nKérastase is looking to…" took the "K" of the brand
+ * name as "thousand" and reported a budget 1000× too large.
+ */
+const BUDGET_AMOUNT = String.raw`([\d,]+(?:\.\d+)?)(?:[ \t]*(k|mm|mn|m|bn|thousand|million|billion)(?![\p{L}\p{N}]))?`;
 
 export function parseBudgetTotalFromText(text: string): number | undefined {
   const patterns = [
-    new RegExp(String.raw`(?:budget|total)(?:\s+of)?[:\s]*[$€£]?\s*${BUDGET_AMOUNT}`, "i"),
+    new RegExp(String.raw`(?:budget|total)(?:\s+of)?[:\s]*[$€£]?\s*${BUDGET_AMOUNT}`, "iu"),
     new RegExp(
       String.raw`(?:budget|total)(?:\s+of)?[:\s]*(?:EGP|AED|SAR|USD|EUR|GBP)?\s*${BUDGET_AMOUNT}`,
-      "i"
+      "iu"
     ),
-    new RegExp(String.raw`[$€£]\s*${BUDGET_AMOUNT}`, "i"),
-    new RegExp(String.raw`\b(?:EGP|AED|SAR|USD|EUR|GBP)\s*${BUDGET_AMOUNT}`, "i"),
-    new RegExp(String.raw`${BUDGET_AMOUNT}\s*(?:EGP|AED|SAR|USD|EUR|GBP)\b`, "i"),
+    new RegExp(String.raw`[$€£]\s*${BUDGET_AMOUNT}`, "iu"),
+    new RegExp(String.raw`\b(?:EGP|AED|SAR|USD|EUR|GBP)\s*${BUDGET_AMOUNT}`, "iu"),
+    new RegExp(String.raw`${BUDGET_AMOUNT}\s*(?:EGP|AED|SAR|USD|EUR|GBP)\b`, "iu"),
   ];
   for (const pattern of patterns) {
     const match = text.match(pattern);

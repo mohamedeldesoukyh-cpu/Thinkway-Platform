@@ -100,6 +100,113 @@ function parseAudienceGender(value: string): string | undefined {
   return undefined;
 }
 
+/**
+ * Prose briefs state deliverables, KPIs, the key message and the CTA as a
+ * HEADING followed by a list — never as a table row. `collectKeyValueRows` reads
+ * table cells only, so those sections were parsed, correctly titled, and then
+ * dropped. These patterns match the section title; the section's own content is
+ * the value, so nothing is inferred and nothing is synthesized.
+ */
+const SECTION_LIST_FIELDS = [
+  {
+    field: "deliverables" as const,
+    patterns: [/\bcontent\s+deliverables?\b/i, /\bdeliverables?\b/i, /\bcontent\s+requirements?\b/i],
+  },
+  {
+    field: "kpis" as const,
+    // "11. KPIs", "Primary KPIs" and "Secondary KPIs" are separate sections in
+    // a heading-structured brief; all three are the campaign's stated KPIs.
+    patterns: [/\bkpis?\b/i, /\bsuccess\s+(?:metrics|measurement)\b/i],
+  },
+] as const;
+
+const SECTION_TEXT_FIELDS = [
+  {
+    field: "keyMessage" as const,
+    patterns: [/\bkey\s+(?:campaign\s+)?message\b/i, /\bkey\s+messaging\b/i],
+  },
+  {
+    field: "callToAction" as const,
+    patterns: [/\bcall[-\s]?to[-\s]?action\b/i, /^\s*(?:\d+\.\s*)?cta\b/i],
+  },
+] as const;
+
+/** A list item or short bullet-like paragraph — never a whole prose paragraph. */
+function cleanSectionItem(value: string): string | undefined {
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  if (!trimmed || trimmed.length > 200) return undefined;
+  // Trailing-colon lines introduce the list ("Suggested deliverables:"), they
+  // are not deliverables themselves.
+  if (/:$/.test(trimmed)) return undefined;
+  return trimmed;
+}
+
+/** Strip smart quotes so a quoted key message reads as the message itself. */
+function unquote(value: string): string {
+  return value.trim().replace(/^["“”'']+/, "").replace(/["“”'']+$/, "").trim();
+}
+
+/**
+ * Collect list-block items and the leading paragraph of every section whose
+ * title names one of the fields above. Values come verbatim from the brief.
+ */
+function collectSectionFields(
+  document: StructuredBriefDocument
+): Partial<Pick<CampaignIntelligenceProfile, "deliverables" | "kpis" | "keyMessage" | "callToAction">> {
+  const out: Partial<
+    Pick<CampaignIntelligenceProfile, "deliverables" | "kpis" | "keyMessage" | "callToAction">
+  > = {};
+  const lists: Record<"deliverables" | "kpis", string[]> = { deliverables: [], kpis: [] };
+  const texts: Record<"keyMessage" | "callToAction", string[]> = {
+    keyMessage: [],
+    callToAction: [],
+  };
+
+  for (const section of document.sections) {
+    const title = section.title?.trim();
+    if (!title) continue;
+
+    for (const { field, patterns } of SECTION_LIST_FIELDS) {
+      if (!labelMatches(title, [...patterns])) continue;
+      for (const block of section.blocks) {
+        if (block.type !== "list") continue;
+        for (const item of block.items) {
+          const cleaned = cleanSectionItem(item);
+          if (cleaned) lists[field].push(cleaned);
+        }
+      }
+    }
+
+    for (const { field, patterns } of SECTION_TEXT_FIELDS) {
+      if (!labelMatches(title, [...patterns])) continue;
+      // A key message is a single stated line (often quoted); a CTA section
+      // lists the approved CTAs. Prefer the list, else the first real sentence.
+      const listItems = section.blocks
+        .filter((block): block is Extract<typeof block, { type: "list" }> => block.type === "list")
+        .flatMap((block) => block.items)
+        .map(cleanSectionItem)
+        .filter((item): item is string => Boolean(item));
+      if (listItems.length > 0) {
+        texts[field].push(...listItems.map(unquote));
+        continue;
+      }
+      const paragraph = section.blocks.find(
+        (block) => block.type === "paragraph" && cleanSectionItem(block.text)
+      );
+      if (paragraph && paragraph.type === "paragraph") {
+        texts[field].push(unquote(paragraph.text));
+      }
+    }
+  }
+
+  if (lists.deliverables.length) out.deliverables = [...new Set(lists.deliverables)];
+  if (lists.kpis.length) out.kpis = [...new Set(lists.kpis)];
+  if (texts.keyMessage.length) out.keyMessage = [...new Set(texts.keyMessage)].join(" · ");
+  if (texts.callToAction.length) out.callToAction = [...new Set(texts.callToAction)].join(" · ");
+
+  return out;
+}
+
 /** Map structured parser table rows to CIP profile fields (deterministic KV briefs). */
 export function extractProfileFieldsFromStructuredBrief(
   document: StructuredBriefDocument
@@ -282,6 +389,22 @@ export function extractProfileFieldsFromStructuredBrief(
   if (contentStyle.length) patch.contentStyle = [...new Set(contentStyle)];
   if (deliverables.length) patch.deliverables = [...new Set(deliverables)];
   if (kpis.length) patch.kpis = [...new Set(kpis)];
+
+  // Heading + list sections, for the fields a table row did not already supply.
+  // An explicit KV row stays authoritative; this only fills what was empty.
+  const fromSections = collectSectionFields(document);
+  if (!patch.deliverables?.length && fromSections.deliverables?.length) {
+    patch.deliverables = fromSections.deliverables;
+  }
+  if (!patch.kpis?.length && fromSections.kpis?.length) {
+    patch.kpis = fromSections.kpis;
+  }
+  if (!patch.keyMessage?.trim() && fromSections.keyMessage?.trim()) {
+    patch.keyMessage = fromSections.keyMessage;
+  }
+  if (!patch.callToAction?.trim() && fromSections.callToAction?.trim()) {
+    patch.callToAction = fromSections.callToAction;
+  }
   if (creatorNiches.length) {
     patch.creatorNiches = [...new Set(creatorNiches)];
     for (const niche of creatorNiches) {
@@ -352,6 +475,9 @@ export function applyStructuredBriefFields(
     "durationWeeks",
     "deliverables",
     "kpis",
+    // Stated verbatim in the brief's own sections — brief-sourced, like the rest.
+    "keyMessage",
+    "callToAction",
     "creatorCategories",
     "creatorNiches",
     "products",

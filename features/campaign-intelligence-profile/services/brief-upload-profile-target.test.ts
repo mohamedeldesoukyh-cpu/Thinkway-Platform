@@ -31,22 +31,50 @@ test("an existing conversation profile is reused, never duplicated", () => {
   assert.equal(target.linkProfileId, "profile-7a9b1208");
 });
 
-test("no existing profile keeps the established create behaviour", () => {
+test("a first upload into a campaign creates that campaign's row, not a library record", () => {
   const target = resolveBriefUploadProfileTarget({
     conversationId: "conv-1",
     existingProfileId: null,
   });
 
-  assert.equal(target.mode, "create");
+  assert.equal(target.mode, "create", "there is no row yet, so one is created");
   assert.equal(target.linkProfileId, null);
-  assert.equal(target.allowMissingBrand, false, "create must not gain a brand exemption");
+  assert.equal(
+    target.ownsConversation,
+    true,
+    "the campaign is already the target — no brand decision to make"
+  );
+  assert.equal(
+    target.allowMissingBrand,
+    true,
+    "a campaign whose brand is absent from the CRM must still receive its first brief"
+  );
 });
 
-test("a library upload with no conversation still creates", () => {
+test("a library upload with no conversation still creates and still needs a brand", () => {
   const target = resolveBriefUploadProfileTarget({ existingProfileId: "profile-x" });
 
   assert.equal(target.mode, "create");
-  assert.equal(target.allowMissingBrand, false);
+  assert.equal(target.ownsConversation, false, "a library record has no campaign to belong to");
+  assert.equal(target.allowMissingBrand, false, "the library brand requirement is unchanged");
+  assert.equal(
+    linkRequiresBrandSelection({ brandId: null, allowMissingBrand: target.allowMissingBrand }),
+    true
+  );
+});
+
+test("conversation ownership, not create-vs-link, decides the brand exemption", () => {
+  // Studio Intake first upload, Studio Intake replacement, and the New
+  // Campaign dialog (which creates the conversation first) all own their
+  // conversation — every one of them must persist without a brand detour.
+  for (const existingProfileId of [null, "profile-7a9b1208"]) {
+    const target = resolveBriefUploadProfileTarget({
+      conversationId: "conv-1",
+      existingProfileId,
+    });
+    assert.equal(target.ownsConversation, true);
+    assert.equal(target.allowMissingBrand, true);
+  }
 });
 
 // 5 — the brand exemption is scoped to same-conversation reuse only.

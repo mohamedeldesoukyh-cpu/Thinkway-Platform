@@ -947,8 +947,18 @@ export function IntelligenceWorkspace({
   }, [conversationId, loadConversation]);
 
   const handleAttachFile = useCallback(() => {
+    // Inside an open campaign the brief belongs to THAT campaign. This used to
+    // push /studio?start=upload unconditionally, which left the campaign and
+    // opened the New Campaign dialog — so attaching a brief from Copilot
+    // created a second conversation and a second profile instead of analyzing
+    // into the one on screen. Reveal Studio's Intake dropzone instead; it runs
+    // the same uploadCampaignBriefAction pipeline against this conversation.
+    if (conversationId && campaignMode) {
+      setDockCollapsed(true);
+      return;
+    }
     router.push("/studio?start=upload");
-  }, [router]);
+  }, [campaignMode, conversationId, router]);
 
   // Chat surface — shared between full-screen (Conversation Mode) and the dock.
   // In the dock there is no floating topbar above the thread, so drop the
@@ -1073,7 +1083,14 @@ export function IntelligenceWorkspace({
     );
   };
 
-  if (campaignMode && (latestStudioMessage || isCreateCampaignStreaming)) {
+  // `awaitingStudioDesktop` exists to hold Campaign Mode while the finished
+  // create-campaign run reloads its studio message. It was in `campaignMode`
+  // but missing from this guard, so the instant streaming stopped — before the
+  // message arrived — the workspace fell through to the chat surface and the
+  // operator was dropped back into Copilot, having to re-open Studio to see the
+  // result they had just waited for. The guard now honours the same three
+  // states `campaignMode` does.
+  if (campaignMode && (latestStudioMessage || isCreateCampaignStreaming || awaitingStudioDesktop)) {
     // CAMPAIGN MODE — the Campaign Studio *is* the application. The AI-workspace
     // identity is gone: no branded topbar, no conversation sidebar, no lavender
     // AI surface. The Studio owns the page and its own header/navigation; the
