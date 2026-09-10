@@ -258,6 +258,25 @@ export const CANONICAL_INDUSTRY_LABELS: string[] = (
   Object.keys(INDUSTRY_PROFILES) as CampaignIndustry[]
 ).map((key) => INDUSTRY_PROFILES[key].label);
 
+/**
+ * The industry a stored label names.
+ *
+ * `facts.industry` holds the human LABEL, and running it back through
+ * `detectIndustryFromBrief` is guesswork: "Beauty & Personal Care" contains
+ * none of the beauty signal words, so it resolved to `general` and the campaign
+ * silently fell back to the generic mix. The label is a closed set — look it up.
+ */
+export function resolveIndustryFromLabel(
+  label: string | null | undefined
+): CampaignIndustry | null {
+  const wanted = label?.trim().toLowerCase();
+  if (!wanted) return null;
+  for (const key of Object.keys(INDUSTRY_PROFILES) as CampaignIndustry[]) {
+    if (INDUSTRY_PROFILES[key].label.toLowerCase() === wanted) return key;
+  }
+  return null;
+}
+
 export function getIndustryProfile(
   industry: CampaignIndustry,
   contextText?: string

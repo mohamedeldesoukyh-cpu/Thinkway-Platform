@@ -5,44 +5,29 @@ import {
 
 import type { CampaignFacts } from "../facts/campaign-facts-types";
 import { listPopulatedFactsFields } from "../facts/facts-to-context";
+import { resolveCreatorTierMixFromFacts } from "../facts/facts-display-bridge";
 import { validateCampaignFacts } from "../facts/validate-campaign-facts";
 import type { CampaignBriefInput, CampaignStrategyDocument } from "../types";
 
+/**
+ * The Strategy document's creator tier allocation.
+ *
+ * This used to be a second copy of the industry ladder, ending in a universal
+ * `Macro 40 / Micro 35 / Nano 25` for every industry without a branch. It now
+ * reads the same resolution the rest of the platform reads, so the brief's
+ * stated tiers reach the generated Strategy — and the Strategy allocation the
+ * slate consumes is that same mix, not a parallel default.
+ */
 function defaultCreatorTierStrategy(
-  industry: ReturnType<typeof detectIndustryFromBrief>
+  facts: CampaignFacts
 ): CampaignStrategyDocument["creatorTierStrategy"] {
-  const profile = getIndustryProfile(industry);
-  if (profile.label === "Baby & Parenting") {
-    return [
-      { tier: "Macro", allocationPercent: 35, why: "Trusted mom voices drive authentic UGC at scale" },
-      { tier: "Micro", allocationPercent: 40, why: "Micro creators deliver high engagement in niche parenting communities" },
-      { tier: "Nano", allocationPercent: 25, why: "Nano tier fills long-tail authenticity and cost efficiency" },
-    ];
-  }
-
-  if (profile.label === "Telecom") {
-    return [
-      { tier: "Celebrity", allocationPercent: 25, why: "Celebrity anchors launch the sound with instant mass awareness" },
-      { tier: "Macro", allocationPercent: 30, why: "Macro entertainers convert awareness into challenge participation" },
-      { tier: "Micro", allocationPercent: 30, why: "Micro trend waves keep the sound alive week over week" },
-      { tier: "Nano", allocationPercent: 15, why: "Nano creators make participation feel organic and community-owned" },
-    ];
-  }
-
-  if (/beverage|cpg|fmcg/i.test(profile.label)) {
-    return [
-      { tier: "Mega", allocationPercent: 20, why: "Mega creators anchor mass reach for summer engagement peaks" },
-      { tier: "Macro", allocationPercent: 35, why: "Macro tier sustains weekly content velocity across platforms" },
-      { tier: "Micro", allocationPercent: 30, why: "Micro creators localize Gen Z cultural moments" },
-      { tier: "Nano", allocationPercent: 15, why: "Nano tier tests viral formats before scaling spend" },
-    ];
-  }
-
-  return [
-    { tier: "Macro", allocationPercent: 40, why: "Macro creators balance reach and production quality" },
-    { tier: "Micro", allocationPercent: 35, why: "Micro tier drives engagement in category communities" },
-    { tier: "Nano", allocationPercent: 25, why: "Nano tier provides cost-efficient long-tail coverage" },
-  ];
+  return resolveCreatorTierMixFromFacts(facts)
+    .mix.filter((tier) => tier.percent > 0)
+    .map((tier) => ({
+      tier: tier.tier,
+      allocationPercent: tier.percent,
+      why: tier.reasoning,
+    }));
 }
 
 function resolveFacts(brief: CampaignBriefInput): CampaignFacts {
@@ -103,7 +88,7 @@ export function writeStrategyDocumentFromBrief(
   const platforms = facts.platforms ?? profile.platforms.slice(0, 3);
   const geography = facts.geography?.join(", ");
   const kpis = factsToStrategyKpis(facts);
-  const creatorTierStrategy = defaultCreatorTierStrategy(industry);
+  const creatorTierStrategy = defaultCreatorTierStrategy(facts);
   const constraints =
     facts.constraints && facts.constraints.length > 0
       ? facts.constraints

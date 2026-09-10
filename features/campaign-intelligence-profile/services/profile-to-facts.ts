@@ -115,6 +115,9 @@ export function profileToCampaignFacts(
     creatorCategories: profile.creatorCategories?.length
       ? profile.creatorCategories
       : undefined,
+    // The brief's stated creator tier preference. Carried to Facts so Strategy
+    // and the slate honour it; never a Discovery filter.
+    creatorTiers: profile.creatorTiers?.length ? profile.creatorTiers : undefined,
     keyMessage: profile.keyMessage,
     callToAction: profile.callToAction,
     campaignFunnel: profile.campaignFunnel?.length ? profile.campaignFunnel : undefined,

@@ -28,6 +28,7 @@ import {
   getIndustryProfile,
 } from "@/features/campaign-studio/services/industry-intelligence";
 import { requiredIntakeFacts } from "@/features/campaign-studio/services/studio-intake-facts";
+import { resolveCreatorTierMixWithBasis } from "@/features/campaign-studio/services/creator-quantity";
 
 import { buildKerastaseEgyptDocx } from "../fixtures/build-kerastase-docx";
 import { profileToCampaignFacts } from "./profile-to-facts";
@@ -259,4 +260,26 @@ test("fields the brief does not state stay empty", async () => {
   // test itself against passing on an empty extraction.
   assert.equal(facts.durationWeeks, 4);
   assert.deepEqual(facts.geography, ["Egypt"]);
+});
+
+test("the brief's preferred creator mix survives the upload path as a stated fact", async () => {
+  const { facts } = await extractKerastase();
+
+  // "Preferred Creator Mix: Macro / Mid / Micro" — tier names, no percentages.
+  // Nothing captured this before, so Strategy fell back to a generic
+  // Macro 40 / Micro 35 / Nano 25 for every campaign in this industry.
+  assert.deepEqual(facts.creatorTiers, [{ tier: "Macro" }, { tier: "Mid" }, { tier: "Micro" }]);
+  assert.equal(facts.sources.creatorTiers, "brief");
+});
+
+test("the tier mix Strategy would use is the brief's tiers, not the generic split", async () => {
+  const { facts } = await extractKerastase();
+  const { mix, basis } = resolveCreatorTierMixWithBasis(facts);
+
+  assert.deepEqual(mix.map((tier) => tier.tier), ["Macro", "Mid", "Micro"]);
+  assert.equal(basis, "brief_tiers_recommended_split");
+  assert.notEqual(
+    mix.map((tier) => `${tier.tier} ${tier.percent}%`).join(" / "),
+    "Macro 40% / Micro 35% / Nano 25%"
+  );
 });

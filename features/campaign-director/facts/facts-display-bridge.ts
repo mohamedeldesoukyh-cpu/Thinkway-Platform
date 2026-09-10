@@ -10,7 +10,16 @@ import {
   buildSingleCreatorFeesAllocation,
   deriveInfluencerBudgetAllocations,
 } from "@/features/campaign-studio/services/budget-allocation";
-import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
+import {
+  detectIndustryFromBrief,
+  resolveIndustryFromLabel,
+} from "@/features/campaign-studio/services/industry-intelligence";
+import { getIndustryCreatorMix } from "@/features/campaign-studio/services/creator-tier-mix-by-industry";
+import {
+  creatorTierPreferenceFromFacts,
+  resolveCreatorTierMixFromPreference,
+  type CreatorTierMixBasis,
+} from "./creator-tier-preference";
 import {
   clampCampaignDurationWeeks,
   resolveGoLiveWeek,
@@ -182,41 +191,39 @@ export function buildCreatorMixFromReasoningTiers(
   );
 }
 
-/** Derive creator mix tiers from facts industry (mirrors strategy-document defaults). */
+/**
+ * The tier mix for a campaign, and how it was arrived at.
+ *
+ * The brief comes first. Two hardcoded industry ladders used to live here and
+ * in `strategy-document`, each with four branches and the same universal
+ * `Macro 40 / Micro 35 / Nano 25` for everything else — which is why unrelated
+ * campaigns all showed 40/35/25 and a brief asking for Macro/Mid/Micro was
+ * ignored. Both now read the one industry table
+ * (`getIndustryCreatorMix`) and apply the brief's stated preference over it.
+ */
+export function resolveCreatorTierMixFromFacts(facts: CampaignFacts): {
+  mix: CreatorMixTier[];
+  basis: CreatorTierMixBasis;
+} {
+  // The stored `industry` is the canonical LABEL, so resolve it as one; only
+  // fall back to signal detection when it is something else (or absent).
+  const industry =
+    resolveIndustryFromLabel(facts.industry) ??
+    detectIndustryFromBrief(facts.industry ?? facts.brandName ?? "");
+
+  const baseMix = getIndustryCreatorMix(industry, facts.rawBriefExcerpt).filter(
+    (tier) => tier.percent > 0 || (tier.count ?? 0) > 0
+  );
+
+  return resolveCreatorTierMixFromPreference({
+    preference: creatorTierPreferenceFromFacts(facts),
+    baseMix,
+  });
+}
+
+/** Derive creator mix tiers from the brief's preference, else the industry mix. */
 export function buildCreatorMixFromFacts(facts: CampaignFacts): CreatorMixTier[] {
-  const industry = detectIndustryFromBrief(facts.industry ?? facts.brandName ?? "");
-
-  if (industry === "baby" || /baby|parenting/i.test(facts.industry ?? "")) {
-    return creatorTierStrategyToMix([
-      { tier: "Macro", allocationPercent: 35, why: "Trusted mom voices drive authentic UGC at scale" },
-      { tier: "Micro", allocationPercent: 40, why: "Micro creators deliver high engagement in niche parenting communities" },
-      { tier: "Nano", allocationPercent: 25, why: "Nano tier fills long-tail authenticity and cost efficiency" },
-    ]);
-  }
-
-  if (industry === "telecom" || /telecom|telco/i.test(facts.industry ?? "")) {
-    return creatorTierStrategyToMix([
-      { tier: "Celebrity", allocationPercent: 25, why: "Celebrity anchors launch the sound with instant mass awareness" },
-      { tier: "Macro", allocationPercent: 30, why: "Macro entertainers convert awareness into challenge participation" },
-      { tier: "Micro", allocationPercent: 30, why: "Micro trend waves keep the sound alive week over week" },
-      { tier: "Nano", allocationPercent: 15, why: "Nano creators make participation feel organic and community-owned" },
-    ]);
-  }
-
-  if (/beverage|cpg|fmcg/i.test(facts.industry ?? "") || industry === "retail") {
-    return creatorTierStrategyToMix([
-      { tier: "Mega", allocationPercent: 20, why: "Mega creators anchor mass reach for engagement peaks" },
-      { tier: "Macro", allocationPercent: 35, why: "Macro tier sustains weekly content velocity across platforms" },
-      { tier: "Micro", allocationPercent: 30, why: "Micro creators localize cultural moments" },
-      { tier: "Nano", allocationPercent: 15, why: "Nano tier tests viral formats before scaling spend" },
-    ]);
-  }
-
-  return creatorTierStrategyToMix([
-    { tier: "Macro", allocationPercent: 40, why: "Macro creators balance reach and production quality" },
-    { tier: "Micro", allocationPercent: 35, why: "Micro tier drives engagement in category communities" },
-    { tier: "Nano", allocationPercent: 25, why: "Nano tier provides cost-efficient long-tail coverage" },
-  ]);
+  return resolveCreatorTierMixFromFacts(facts).mix;
 }
 
 export function buildGroundedKpisFromFacts(facts: CampaignFacts): GroundedKpi[] {

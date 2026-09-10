@@ -7,7 +7,6 @@ import type {
   VendorSelectedReasoning,
 } from "@/features/campaign-intelligence/types/section-schemas";
 import {
-  buildCreatorMixFromFacts,
   creatorTierStrategyToMix,
   getCampaignFacts,
 } from "@/features/campaign-director/facts/facts-display-bridge";
@@ -21,6 +20,7 @@ import { studioForecastArtifacts } from "./campaign-forecast-service";
 import { studioDecisionArtifacts } from "./campaign-decision-service";
 import { mapBrowseCreatorToSearchResult } from "./creator-platform-utils";
 import { composeCreatorSlate, creatorTierOf } from "./creator-slate";
+import { resolveCreatorTierMix } from "./creator-quantity";
 import { deriveCreatorCategoriesFromBrief } from "./derive-creator-categories";
 import {
   formatStudioEciReason,
@@ -50,10 +50,13 @@ export function resolveReoptimizationTierMix(input: {
   facts?: CampaignFacts;
 }): Array<{ tier: string; percent: number }> {
   if (input.composedMix && input.composedMix.length > 0) return input.composedMix;
-  if (input.strategy?.creatorTierStrategy?.length) {
-    return creatorTierStrategyToMix(input.strategy.creatorTierStrategy);
-  }
-  return input.facts ? buildCreatorMixFromFacts(input.facts) : [];
+  // Legacy slate with no persisted composition: resolve through the one SSOT so
+  // the fallback target honours the brief's stated tiers, exactly like the
+  // Strategy screen and the slate composer do.
+  const strategyMix = input.strategy?.creatorTierStrategy?.length
+    ? creatorTierStrategyToMix(input.strategy.creatorTierStrategy)
+    : undefined;
+  return resolveCreatorTierMix(input.facts ?? null, strategyMix);
 }
 
 /**

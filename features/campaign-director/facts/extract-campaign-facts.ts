@@ -23,6 +23,7 @@ import type {
   CampaignFactsField,
   CampaignFactsSource,
 } from "./campaign-facts-types";
+import { parseCreatorTierPreference } from "./creator-tier-preference";
 
 function setField<T extends CampaignFactsField>(
   facts: CampaignFacts,
@@ -723,6 +724,14 @@ export function extractCampaignFacts(input: CampaignFactsExtractInput): Campaign
   const risks = extractRisks(text);
   if (risks.length > 0) {
     setField(facts, "risks", risks, "inferred", 0.7);
+  }
+
+  // A stated creator tier preference. Read only from a labelled mix/tier
+  // statement, so an incidental "macro creators" never becomes a brief fact,
+  // and percentages are carried only where the brief actually gave them.
+  const creatorTiers = parseCreatorTierPreference(text);
+  if (creatorTiers.length > 0) {
+    setField(facts, "creatorTiers", creatorTiers, "brief", 0.9);
   }
 
   return facts;
