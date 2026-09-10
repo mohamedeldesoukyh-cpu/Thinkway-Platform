@@ -21,7 +21,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { toCampaignDecisionLabel } from "./eci/strategy-confidence";
-import { selectStudioRecommendedVendors, vendorPassesStudioRecommendationGate } from "./studio-recommended-vendors";
+import { selectStudioRecommendedVendors } from "./studio-recommended-vendors";
+import { resolveCampaignCreatorDecision } from "./studio-campaign-creator-decision";
 import { creatorGroupingKey, splitRecommendedCreatorIds } from "./studio-creator-slate-split";
 import {
   classifyReplacementCandidates,
@@ -66,10 +67,11 @@ const SLATE = ["inf:a", "inf:b", "inf:c", "inf:d", "inf:e"];
 
 /** The section's grouping, built from the same helpers the component uses. */
 function buildGroups(slate: string[]): Array<StudioCreatorGroup<Vendor>> {
+  // The gate is the campaign's own requirements. The ECI investment verdict is
+  // no longer one of them — see `studio-campaign-creator-decision`.
   const gated = selectStudioRecommendedVendors(POOL, {
     markets: ["Egypt"],
     locationOf: (vendor) => ({ country: vendor.country, countryCode: null }),
-    recommendationOf: (vendor) => vendor.eciRecommendation,
   });
 
   const split = splitRecommendedCreatorIds({
@@ -82,7 +84,6 @@ function buildGroups(slate: string[]): Array<StudioCreatorGroup<Vendor>> {
   const remaining = POOL.filter((vendor) => !selectedKeys.has(creatorGroupingKey(vendor.id)));
   const classified = classifyReplacementCandidates(remaining, {
     matchesMarket: (vendor) => vendor.country === "Egypt",
-    passesEciGate: (vendor) => vendorPassesStudioRecommendationGate(vendor.eciRecommendation),
     fitsBriefMix: () => true,
   });
 
@@ -106,23 +107,34 @@ test("the section's own grouping has no recommendation contradiction", () => {
   assert.deepEqual(conflicts, [], `contradictions: ${JSON.stringify(conflicts, null, 2)}`);
 });
 
-test("a creator the ECI rejects never reaches the selected group", () => {
-  // The rejected creators are in the pool and two of them are even named in the
-  // slate ids — the gate is what keeps them out of the selected group.
+test("an investment verdict no longer decides selected-group membership", () => {
+  // Updated deliberately. This used to assert that a creator ECI rated "Not
+  // recommended" could never reach the selected group — the ECI INVESTMENT
+  // verdict deciding campaign membership. That conflation is exactly what put
+  // "Campaign recommendation: not recommended" on a card inside the campaign
+  // recommendation area. Campaign membership is now the campaign's own
+  // requirements, and the creator's campaign decision is what the card states.
   const groups = buildGroups([...SLATE, "inf:g", "inf:h"]);
   const selected = groups.find((group) => group.kind === "selected")!;
 
   assert.ok(
-    !selected.items.some(isNotRecommended),
-    `selected group holds a rejected creator: ${selected.items
-      .filter(isNotRecommended)
-      .map((vendor) => vendor.id)
-      .join(", ")}`
+    selected.items.some((vendor) => vendor.id === "inf:g"),
+    "a thin investment record no longer removes an in-market slate member"
   );
-  assert.deepEqual(studioCreatorGroupConflicts(groups, READ), []);
+
+  // And the campaign decision for such a creator is a recommendation, because
+  // the campaign's requirements are met.
+  const decision = resolveCampaignCreatorDecision({
+    onSlate: true,
+    requirements: [
+      { label: "Market", met: true },
+      { label: "Creator mix", met: true },
+    ],
+  });
+  assert.equal(decision.status, "recommended");
 });
 
-test("the alternatives group may hold rejected creators — it claims nothing", () => {
+test("the alternatives group may hold creators with an adverse signal — it claims nothing", () => {
   const groups = buildGroups(SLATE);
   const alternatives = groups.find((group) => group.kind === "alternatives")!;
 
@@ -177,29 +189,38 @@ test("the old heading is reported as a contradiction", () => {
 // ---------------------------------------------------------------------------
 // The two systems stay separate and keep their own meanings.
 
-test("a cautious ECI decision is a recommendation, and stays selectable", () => {
-  // "Consider" is a cautious yes — documented in `toCampaignDecisionLabel`.
+test("a cautious investment reading is not a negative one", () => {
+  // "Consider" is a cautious yes — documented in `toCampaignDecisionLabel`,
+  // which still classifies the INVESTMENT verdict for supporting display.
   assert.equal(toCampaignDecisionLabel("Consider"), "Recommended");
-  assert.equal(vendorPassesStudioRecommendationGate("Consider"), true);
 });
 
 test("a creator with no ECI signal yet is not treated as rejected", () => {
-  // Pending hydration must not read as a negative decision.
-  assert.equal(vendorPassesStudioRecommendationGate(undefined), true);
   assert.equal(isNotRecommended(POOL[2]!), false);
+  const decision = resolveCampaignCreatorDecision({
+    onSlate: true,
+    requirements: [{ label: "Market", met: true }],
+    supportingSignal: null,
+  });
+  assert.equal(decision.status, "recommended");
 });
 
-test("every negative ECI phrasing the projection uses is caught", () => {
-  for (const recommendation of [
-    "Not recommended",
-    "High risk — avoid",
-    "Insufficient evidence",
-  ]) {
-    assert.equal(
-      toCampaignDecisionLabel(recommendation),
-      "Not Recommended",
-      recommendation
-    );
-    assert.equal(vendorPassesStudioRecommendationGate(recommendation), false, recommendation);
+test("insufficient investment evidence is never a campaign rejection", () => {
+  // `toCampaignDecisionLabel` still reads these as negative INVESTMENT
+  // verdicts, which is correct for that layer. What changed is that they no
+  // longer decide the campaign.
+  for (const recommendation of ["Not recommended", "High risk — avoid", "Insufficient evidence"]) {
+    assert.equal(toCampaignDecisionLabel(recommendation), "Not Recommended", recommendation);
   }
+
+  // A campaign that cannot yet judge a creator gets the neutral state.
+  const unknown = resolveCampaignCreatorDecision({
+    onSlate: false,
+    requirements: [
+      { label: "Market", met: null },
+      { label: "Creator mix", met: null },
+    ],
+  });
+  assert.equal(unknown.status, "needs_review");
+  assert.doesNotMatch(unknown.label, /not recommended/i);
 });

@@ -1,8 +1,10 @@
 "use client";
 
 import { ListIcon, ZapIcon } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useRef, type ReactNode } from "react";
 
+import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { cn } from "@/lib/utils";
 
 import type { CampaignStudioLayoutMode } from "../types/campaign-studio";
@@ -10,7 +12,7 @@ import type { CampaignStudioLayoutMode } from "../types/campaign-studio";
 import { CAMPAIGN_STUDIO_COPY } from "../constants/copy";
 import { STUDIO_REF_CLASSES } from "../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../constants/studio-tokens";
-import { resolveStudioReadinessLabel } from "../services/section-data-resolver";
+import type { StudioReadinessStatus } from "../services/studio-readiness-status";
 import { CampaignProposalExportActions } from "./campaign-proposal-export-actions";
 
 type StudioTopChromeProps = {
@@ -21,6 +23,13 @@ type StudioTopChromeProps = {
   campaignObjectId?: string;
   conversationId?: string;
   progressPercent: number;
+  /**
+   * The one readiness status — `resolveStudioReadinessStatus`, fed by the
+   * Package readiness service. The mast used to relabel the completion
+   * percentage itself ("Ready" at 75%+), which is how the header said "Ready"
+   * while the Package screen said "Not ready".
+   */
+  readiness: StudioReadinessStatus;
   showExportActions: boolean;
   studioModeToggle?: ReactNode;
   onOpenNav?: () => void;
@@ -47,11 +56,35 @@ function publishChromeHeight(el: HTMLElement) {
   );
 }
 
-function ProgressRing({ percent }: { percent: number }) {
+/**
+ * Claim the page's application header for the campaign mast.
+ *
+ * The Studio route rendered the white global Thinkway header AND this blue
+ * campaign header. Campaign Mode's own contract is that "the Campaign Studio
+ * *is* the application" — the mast is the first header, as on the Shortlist and
+ * Quotation workspaces. The route cannot drop the shell header server-side
+ * because the same route renders plain Copilot chat, which needs it, so the
+ * mast marks the shell while it is mounted and releases it on unmount.
+ */
+function claimShellChrome(el: HTMLElement): () => void {
+  const root = el.closest<HTMLElement>("[data-dashboard-shell-root]");
+  if (!root) return () => undefined;
+  root.dataset.pageOwnsChrome = "true";
+  return () => {
+    delete root.dataset.pageOwnsChrome;
+  };
+}
+
+function ProgressRing({
+  percent,
+  readyLabel,
+}: {
+  percent: number;
+  readyLabel: string;
+}) {
   const radius = 15.5;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference - (percent / 100) * circumference;
-  const readyLabel = resolveStudioReadinessLabel(percent);
 
   return (
     <div className={STUDIO_REF_CLASSES.progressRingWrap}>
@@ -85,6 +118,7 @@ export function StudioTopChrome({
   campaignObjectId,
   conversationId,
   progressPercent,
+  readiness,
   showExportActions,
   studioModeToggle,
   onOpenNav,
@@ -106,6 +140,9 @@ export function StudioTopChrome({
     if (!el) return;
 
     publishChromeHeight(el);
+    // Only the reference mast is a full application header; the legacy compact
+    // chrome sits under the shell header and must not remove it.
+    const releaseChrome = refMode ? claimShellChrome(el) : () => undefined;
 
     const observer =
       typeof ResizeObserver !== "undefined"
@@ -113,7 +150,10 @@ export function StudioTopChrome({
         : null;
     observer?.observe(el);
 
-    return () => observer?.disconnect();
+    return () => {
+      observer?.disconnect();
+      releaseChrome();
+    };
   }, [
     displayTitle,
     workflowName,
@@ -121,13 +161,15 @@ export function StudioTopChrome({
     showExportActions,
     showNavToggle,
     isChatLayout,
+    readiness.summary,
     refMode,
     reviewCount,
   ]);
 
   const metaTitle = displayTitle?.trim() || workflowName;
-  const readinessLabel = resolveStudioReadinessLabel(progressPercent);
-  const statusRisk = progressPercent < 100 || reviewCount > 0;
+  // Readiness comes from the Package service; the percentage is progress, and
+  // is shown beside the status rather than standing in for it.
+  const statusRisk = !readiness.ready || reviewCount > 0;
 
   if (refMode) {
     return (
@@ -139,17 +181,26 @@ export function StudioTopChrome({
         <div className={STUDIO_REF_CLASSES.mast}>
           <div className={STUDIO_REF_CLASSES.mastHead}>
             {/*
-              No brand lockup here. Every product route that mounts this mast
-              renders it directly under the app header, which already carries
-              the canonical Thinkway logo component; drawing a second wordmark
-              stacked two Thinkway headers on the campaign screen, and did it with a
-              hand-built mark instead of the approved asset. The mast owns
-              campaign identity (code · title · section · readiness) only.
+              The application's real logo, from the approved component the
+              dashboard and portal shells already use. Nothing is redrawn here:
+              a hand-built mark plus a text wordmark is what used to sit in this
+              slot, under a second Thinkway header.
             */}
-            {campaignCode || campaignObjectId ? (
-              <span className={STUDIO_REF_CLASSES.mastId}>
-                {(campaignCode || campaignObjectId || "").slice(0, 14)}
-              </span>
+            <Link
+              href="/"
+              className="flex shrink-0 items-center [&_.login-v2-logo-text]:text-white"
+              title="Thinkway home"
+            >
+              <ThinkwayLogo compact showText className="mb-0" />
+            </Link>
+            <span className={STUDIO_REF_CLASSES.mastDivider} aria-hidden />
+            {/*
+              A campaign UUID is not an identifier a person reads. Only a real
+              campaign code is shown; the raw object id is not, and the campaign
+              name beside it is the identity either way.
+            */}
+            {campaignCode?.trim() ? (
+              <span className={STUDIO_REF_CLASSES.mastId}>{campaignCode.trim()}</span>
             ) : null}
             <h1>{metaTitle}</h1>
             <span className={STUDIO_REF_CLASSES.mastSub}>{currentSectionTitle}</span>
@@ -159,7 +210,7 @@ export function StudioTopChrome({
                 statusRisk && STUDIO_REF_CLASSES.mastStatusRisk
               )}
             >
-              {readinessLabel} · {progressPercent}%
+              {readiness.summary}
             </span>
             <div className={STUDIO_REF_CLASSES.mastActions}>
               {onOpenReview ? (
@@ -180,7 +231,7 @@ export function StudioTopChrome({
                 </span>
               ) : null}
               {mastExtras}
-              <ProgressRing percent={progressPercent} />
+              <ProgressRing percent={progressPercent} readyLabel={readiness.label} />
             </div>
           </div>
         </div>

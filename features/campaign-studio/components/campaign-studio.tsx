@@ -25,6 +25,8 @@ import { StudioTopChrome } from "./studio-top-chrome";
 import { StudioWorkspaceNav } from "./studio-workspace-nav";
 import { StudioWorkspaceStepBar } from "./studio-workspace-step-bar";
 import { StudioWorkspaceScreen } from "./workspace/studio-workspace-screen";
+import { resolveStudioPackageReadiness } from "../services/studio-package-readiness";
+import { resolveStudioReadinessStatus } from "../services/studio-readiness-status";
 import { StudioRefModeProvider } from "../hooks/use-studio-ref-mode";
 import { getStudioDraft } from "../services/studio-draft";
 import {
@@ -144,14 +146,43 @@ export function CampaignStudio({
     };
   }, [studio?.campaignObject?.meta.campaignFacts]);
 
+  /**
+   * The authoritative package state, computed once and shared.
+   *
+   * Three surfaces used to answer "is this ready?" from three different
+   * sources: the mast relabelled the completion percentage (75%+ read
+   * "Ready"), the nav's Package step used `sections.presentation.status`
+   * alone, and only the Package screen consulted this service. That is how
+   * "Ready · 89%", "Package — Ready" and "Not ready" appeared together.
+   */
+  const campaignObject = studio?.campaignObject;
+  const studioSections = studio?.sections;
+  const packageState = useMemo(
+    () =>
+      campaignObject
+        ? resolveStudioPackageReadiness(campaignObject, {
+            outdatedSections,
+            sectionStatuses: Object.fromEntries(
+              (studioSections ?? []).map((section) => [section.id, section.status])
+            ),
+          }).overall
+        : undefined,
+    [campaignObject, studioSections, outdatedSections]
+  );
+
   const workspaceSteps = useMemo(
     () =>
       resolveStudioWorkspaceSteps({
         campaignObject: studio?.campaignObject,
         sections: studio?.sections ?? [],
         outdatedSections,
+        packageReady:
+          packageState == null
+            ? undefined
+            : packageState === "ready_for_client" ||
+              packageState === "ready_for_internal_review",
       }),
-    [studio?.campaignObject, studio?.sections, outdatedSections]
+    [studio?.campaignObject, studio?.sections, outdatedSections, packageState]
   );
 
   const resolvedStepId = activeStepId ?? defaultStudioWorkspaceStep(workspaceSteps);
@@ -174,6 +205,15 @@ export function CampaignStudio({
     }
     return studio.progressPercent;
   }, [studio, completeStepCount, workspaceSteps.length]);
+
+  const readiness = useMemo(
+    () =>
+      resolveStudioReadinessStatus({
+        packageState: packageState ?? "in_progress",
+        completionPercent: readinessPercent,
+      }),
+    [packageState, readinessPercent]
+  );
 
   function goToStep(stepId: StudioWorkspaceStepId) {
     setActiveStepId(stepId);
@@ -310,6 +350,7 @@ export function CampaignStudio({
                   campaignObjectId={studio.campaignObject?.id}
                   conversationId={conversationId}
                   progressPercent={readinessPercent}
+                  readiness={readiness}
                   showExportActions={Boolean(
                     studio.campaignObject?.id && readinessPercent >= 100
                   )}
@@ -381,6 +422,7 @@ export function CampaignStudio({
                   campaignObjectId={studio.campaignObject?.id}
                   conversationId={conversationId}
                   progressPercent={readinessPercent}
+                  readiness={readiness}
                   showExportActions={Boolean(
                     studio.campaignObject?.id && readinessPercent >= 100
                   )}

@@ -2,10 +2,9 @@
  * Eligibility of a replacement candidate — stated, never silently applied.
  *
  * `selectStudioRecommendedVendors` drops a creator from the recommendations
- * list on three grounds: outside the campaign market, an ECI decision that is
- * not "Recommended", and off the brief's creator mix. Its own contract says
- * "Once a decision exists, only Recommended belongs on the 'recommended
- * creators' list" — that is a rule about the SELECTED slate.
+ * list on the campaign's own requirements: outside the campaign market, and off
+ * the brief's creator mix. (It once also required a positive ECI investment
+ * verdict; investment intelligence no longer decides campaign membership.)
  *
  * Deriving the alternatives from that same filtered list applied the rule to
  * candidates too, so a recommended creator that ECI later judged differently
@@ -18,11 +17,19 @@
  * promoted — the operator sees the real state and decides.
  */
 
-export type CandidateIneligibility = "outside_market" | "eci_not_recommended" | "off_brief_mix";
+/**
+ * Why a candidate would not join the campaign's recommendation.
+ *
+ * `eci_not_recommended` used to be one of these, labelled "Campaign
+ * recommendation: not recommended" — an INVESTMENT verdict presented as the
+ * campaign's answer. Investment intelligence no longer gates campaign
+ * membership, so the class is gone with it; both remaining reasons are
+ * requirements the campaign itself stated.
+ */
+export type CandidateIneligibility = "outside_market" | "off_brief_mix";
 
 export const CANDIDATE_INELIGIBILITY_LABEL: Record<CandidateIneligibility, string> = {
   outside_market: "Outside campaign market",
-  eci_not_recommended: "Campaign recommendation: not recommended",
   off_brief_mix: "Off brief creator mix",
 };
 
@@ -43,16 +50,12 @@ export function classifyReplacementCandidates<T>(
   vendors: T[],
   gates: {
     matchesMarket: (vendor: T) => boolean;
-    passesEciGate: (vendor: T) => boolean;
     fitsBriefMix: (vendor: T) => boolean;
   }
 ): Array<ClassifiedCandidate<T>> {
   return vendors.map((vendor) => {
     if (!gates.matchesMarket(vendor)) {
       return { vendor, ineligibility: "outside_market" as const };
-    }
-    if (!gates.passesEciGate(vendor)) {
-      return { vendor, ineligibility: "eci_not_recommended" as const };
     }
     if (!gates.fitsBriefMix(vendor)) {
       return { vendor, ineligibility: "off_brief_mix" as const };
@@ -65,8 +68,8 @@ export function classifyReplacementCandidates<T>(
  * Candidates offered as replacements.
  *
  * Market is a campaign rule, so an out-of-market creator is listed with its
- * reason but not offered. An ECI judgement and a brief-mix miss are advisory:
- * the creator stays selectable, flagged, because replacement runs through
+ * reason but not offered. A brief-mix miss is advisory: the creator stays
+ * selectable, flagged, because replacement runs through
  * `reoptimizeCampaignAfterApply`, which re-scores the campaign either way.
  */
 export function candidateIsSelectable<T>(candidate: ClassifiedCandidate<T>): boolean {

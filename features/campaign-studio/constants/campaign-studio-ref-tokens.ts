@@ -224,6 +224,7 @@ export const STUDIO_REF_CLASSES = {
   /** Prototype visual refresh — Campaign Mode Studio chrome */
   frozen: "cs-frozen",
   mast: "cs-mast",
+  mastDivider: "cs-hdv",
   mastHead: "cs-mh",
   mastId: "id",
   mastSub: "sub",

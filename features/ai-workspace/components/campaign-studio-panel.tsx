@@ -14,9 +14,12 @@ import type { StudioWorkspaceMode } from "@/features/campaign-decision-workspace
 import { GenerateCampaignLauncher } from "@/features/campaign-plan/components/generate-campaign-launcher";
 import { GenerateQuotationLauncher } from "@/features/campaign-plan/components/generate-quotation-launcher";
 import { StudioTopChrome } from "@/features/campaign-studio/components/studio-top-chrome";
+import { resolveStudioPackageReadiness } from "@/features/campaign-studio/services/studio-package-readiness";
+import { resolveStudioReadinessStatus } from "@/features/campaign-studio/services/studio-readiness-status";
 import { StudioReviewDrawer } from "@/features/campaign-studio/components/studio-review-drawer";
 import { buildStudioReviewFindings } from "@/features/campaign-studio/services/studio-review-findings";
 import {
+  resolveDisplayCampaignCode,
   resolvePresentationCompletion,
   resolveStudioCampaignDisplayTitle,
 } from "@/features/campaign-studio/services/section-data-resolver";
@@ -188,6 +191,15 @@ export function CampaignStudioPanel({
     : display?.totalSteps
       ? Math.round((display.completedTasks.length / display.totalSteps) * 100)
       : streamingInput?.progressPercent ?? 0;
+
+  // One readiness status, from the Package readiness service — not the
+  // completion percentage relabelled.
+  const readiness = resolveStudioReadinessStatus({
+    packageState: boundCampaignObject
+      ? resolveStudioPackageReadiness(boundCampaignObject).overall
+      : "in_progress",
+    completionPercent: progressPercent,
+  });
 
   const decisionReady = Boolean(
     boundCampaignObject &&
@@ -459,13 +471,14 @@ export function CampaignStudioPanel({
             campaignObjectId={campaignObjectId}
             conversationId={conversationId}
             progressPercent={progressPercent}
+            readiness={readiness}
             showExportActions={Boolean(campaignObjectId && progressPercent >= 100)}
             layoutMode="panel"
             compact
             refMode
             reviewCount={reviewFindings.length}
             onOpenReview={() => setReviewOpen(true)}
-            campaignCode={campaignObjectId?.slice(0, 14)}
+            campaignCode={resolveDisplayCampaignCode(campaignObjectId)}
             mastExtras={
               <StudioConversationControls activeId={conversationId} refMode />
             }

@@ -1166,8 +1166,24 @@ export function resolveStudioCampaignDisplayTitle(
 }
 
 /** Progress ring subtitle — reference uses "READY" from ~75% section completion upward. */
-export function resolveStudioReadinessLabel(percent: number): "Ready" | "Building" {
-  return percent >= 75 ? "Ready" : "Building";
+/**
+ * A campaign code a person can read, or nothing.
+ *
+ * The mast was fed `campaignObjectId.slice(0, 14)`, so a campaign stored under
+ * a UUID displayed "20ae6f6e-2df4-" where the brand belongs. Campaign ids are
+ * sometimes a real code (TW-2026-0124) and sometimes a UUID; only the former is
+ * an identifier worth showing. Nothing is invented when there is none — the
+ * campaign name beside it is the identity either way.
+ */
+export function resolveDisplayCampaignCode(
+  campaignObjectId: string | undefined
+): string | undefined {
+  const value = campaignObjectId?.trim();
+  if (!value) return undefined;
+  const isUuid =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value);
+  if (isUuid) return undefined;
+  return value.slice(0, 14);
 }
 
 export function resolvePresentationData(
