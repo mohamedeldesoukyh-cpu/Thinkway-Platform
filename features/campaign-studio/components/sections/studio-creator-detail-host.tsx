@@ -6,14 +6,9 @@ import { CreatorDetailSheet } from "@/features/campaigns/components/creator-deta
 import { getUnifiedCreatorsBatchAction } from "@/features/campaigns/creator-discovery-actions";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
 import type { StudioEciPlanningSignal } from "@/features/campaign-studio/services/eci/project-studio-eci-signal";
-import {
-  discoveryDetailStateForSource,
-  resolveStudioCreatorDetailSource,
-} from "@/features/campaign-studio/services/studio-creator-detail-source";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 import { StudioExecutiveRecommendationBlock } from "./shared/studio-executive-recommendation-block";
-import { StudioPlanningCreatorDetail } from "./studio-planning-creator-detail";
 
 type Props = {
   selection: CreatorDrawerSelection | null;
@@ -35,26 +30,24 @@ type Props = {
  * The campaign's executive recommendation rides in the sheet's `contextSlot`
  * so planning context is not lost to the parity change.
  *
- * When a creator has no unified record yet — one just added by URL, before
- * enrichment returns — there is no Discovery detail to show, so the planning
- * sheet renders with an explicit loading or unavailable line instead of a
- * half-populated profile.
+ * Until that record resolves — and for a creator that has none, such as one
+ * just added by URL before enrichment returns — the SAME pack renders with the
+ * identity from the clicked card and its own loading state. It is never
+ * replaced by a different drawer: showing the planning sheet for those seconds
+ * and swapping it out was the transition the operator saw.
  */
 export function StudioCreatorDetailHost({ selection, open, onOpenChange, signal }: Props) {
   const [creator, setCreator] = useState<UnifiedCreatorResult | null>(null);
-  const [resolving, setResolving] = useState(false);
   const creatorId = selection?.id?.trim() || null;
 
   useEffect(() => {
     if (!open || !creatorId) {
       setCreator(null);
-      setResolving(false);
       return;
     }
 
     let cancelled = false;
     setCreator(null);
-    setResolving(true);
     void getUnifiedCreatorsBatchAction([creatorId])
       .then((rows) => {
         if (cancelled) return;
@@ -62,9 +55,6 @@ export function StudioCreatorDetailHost({ selection, open, onOpenChange, signal 
       })
       .catch(() => {
         if (!cancelled) setCreator(null);
-      })
-      .finally(() => {
-        if (!cancelled) setResolving(false);
       });
 
     return () => {
@@ -72,43 +62,36 @@ export function StudioCreatorDetailHost({ selection, open, onOpenChange, signal 
     };
   }, [open, creatorId]);
 
-  const source = resolveStudioCreatorDetailSource({
-    open,
-    creatorId,
-    unifiedCreatorResolved: Boolean(creator),
-    resolving,
-  });
-
-  if (source === "discovery_detail" && creator) {
-    return (
-      <CreatorDetailSheet
-        key={creator.unified_id}
-        creator={creator}
-        open={open}
-        onOpenChange={onOpenChange}
-        // The canonical Discovery design. `sheet` renders the legacy right
-        // drawer inside the same component — that prop was why Studio still
-        // showed the old layout.
-        presentation="discoveryPack"
-        contextSlot={
-          <StudioExecutiveRecommendationBlock
-            creatorId={creatorId}
-            displayName={selection?.displayName}
-            signal={signal}
-            active={open}
-          />
-        }
-      />
-    );
-  }
-
+  // One component, always. The canonical pack opens on click and shows its own
+  // loading state; it is never replaced by a different drawer. The planning
+  // recommendation lives in the pack's Campaign tab.
   return (
-    <StudioPlanningCreatorDetail
-      selection={selection}
+    <CreatorDetailSheet
+      key={creator?.unified_id ?? creatorId ?? "pending"}
+      creator={creator}
       open={open}
       onOpenChange={onOpenChange}
-      signal={signal}
-      discoveryDetailState={discoveryDetailStateForSource(source)}
+      presentation="discoveryPack"
+      pendingIdentity={
+        selection
+          ? {
+              displayName: selection.displayName,
+              handle: selection.handle ?? null,
+              avatarUrl: selection.avatarUrl ?? null,
+              profileUrl: selection.profileUrl ?? null,
+              platform: selection.platform ?? null,
+              countryLabel: selection.country ?? null,
+            }
+          : null
+      }
+      contextSlot={
+        <StudioExecutiveRecommendationBlock
+          creatorId={creatorId}
+          displayName={selection?.displayName}
+          signal={signal}
+          active={open}
+        />
+      }
     />
   );
 }

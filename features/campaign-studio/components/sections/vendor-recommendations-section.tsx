@@ -85,6 +85,7 @@ import {
   summarizeCandidates,
   type CandidateIneligibility,
   type StudioCreatorGroup,
+  type StudioCreatorGroupKind,
 } from "../../services/studio-replacement-candidates";
 import {
   sortByStudioRequirements,
@@ -114,6 +115,9 @@ import {
   resolveStudioCreatorListState,
   studioCreatorListIsLoading,
 } from "../../services/studio-creator-list-state";
+import { clientSafeLine } from "../../services/studio-creator-client-decision";
+import { partitionStudioCreatorGroups } from "../../services/studio-creator-groups";
+import { resolveStudioCreatorShortfall } from "../../services/studio-creator-shortfall";
 
 type VendorRecommendationsSectionProps = {
   campaignObject?: CampaignObject;
@@ -393,6 +397,7 @@ function VendorCardBlock({
   applyDecision,
   stageRoleChange,
   openCreatorDetails,
+  group,
   onReplace,
   observeCreator,
 }: {
@@ -413,6 +418,8 @@ function VendorCardBlock({
   ) => Promise<void>;
   stageRoleChange: (creatorId: string, role: "main" | "alternative", displayName?: string) => Promise<void>;
   openCreatorDetails: (vendor: DisplayVendor) => void;
+  /** Which group this card is rendered in — decides its decision wording. */
+  group: StudioCreatorGroupKind;
   /** Present only for a SELECTED creator — the alternatives have nothing to replace. */
   onReplace?: (vendor: DisplayVendor) => void;
   observeCreator: (creatorId: string | null | undefined) => (node: HTMLElement | null) => void;
@@ -442,9 +449,12 @@ function VendorCardBlock({
       eciWhy: vendor.planningSignal?.why,
       eciCommercialJustification: vendor.planningSignal?.commercialJustification,
       eciEvidence: vendor.planningSignal?.evidence,
+      // The campaign's own reason only. The ECI sentence used to seed this and
+      // reached the card's "Why" line verbatim — analyst language on a
+      // client-facing card. It is still carried above as `eciWhy` for the
+      // intelligence layer and shown, filtered, in the detail's Campaign tab.
       rationale:
-        vendor.planningSignal?.why ||
-        (vendor.reason && !isEmptyGlobalRationale(vendor.reason) ? vendor.reason : undefined),
+        vendor.reason && !isEmptyGlobalRationale(vendor.reason) ? vendor.reason : undefined,
     },
     campaignObject,
     index
@@ -601,7 +611,13 @@ function VendorCardBlock({
         </div>
 
         <div className={STUDIO_REF_CLASSES.vendorWhy}>
-          <b>Why:</b> {vendor.planningSignal?.why ?? grounding.whySelected}
+          {/*
+            The campaign's own rationale — never the ECI signal's raw sentence,
+            which is analyst language ("Overall score 40 with multiple high
+            risks"). The client-safe version of that reasoning is in the strip
+            below, and the full narrative in the detail's Campaign tab.
+          */}
+          <b>Why:</b> {clientSafeLine(grounding.whySelected) ?? "Selected against this campaign's creator requirements."}
           {vendor.contentIdea ? (
             <>
               <br />
@@ -610,7 +626,11 @@ function VendorCardBlock({
           ) : null}
         </div>
 
-        <StudioPlanningIntelligenceStrip signal={vendor.planningSignal} />
+        <StudioPlanningIntelligenceStrip
+          signal={vendor.planningSignal}
+          group={group}
+          requirementsMet={vendorCampaignRequirementScore(vendor, campaignObject)}
+        />
 
         <div className={STUDIO_REF_CLASSES.vendorScores}>
           {grounding.factors.slice(0, 5).map((f) => (
@@ -729,7 +749,9 @@ function VendorCardBlock({
         ) : null}
 
         <p className="mt-1.5 text-xs text-foreground">
-          <b>Why:</b> {vendor.planningSignal?.why ?? grounding.whySelected}
+          <b>Why:</b>{" "}
+          {clientSafeLine(grounding.whySelected) ??
+            "Selected against this campaign's creator requirements."}
         </p>
         {vendor.slateReason ? (
           <p className="mt-1 text-[11px] text-muted-foreground">
@@ -743,18 +765,18 @@ function VendorCardBlock({
           <p className="mt-1 text-xs font-semibold text-[#0057FF]">{vendor.contentIdea}</p>
         ) : null}
 
-        <StudioPlanningIntelligenceStrip signal={vendor.planningSignal} />
+        <StudioPlanningIntelligenceStrip
+          signal={vendor.planningSignal}
+          group={group}
+          requirementsMet={vendorCampaignRequirementScore(vendor, campaignObject)}
+        />
 
-        {vendor.confidence != null || vendor.eciConfidencePercent != null ? (
-          <p className="mt-1 text-[10px] text-muted-foreground">
-            Confidence:{" "}
-            {Math.round(
-              vendor.eciConfidencePercent ??
-                (vendor.confidence != null ? vendor.confidence * 100 : 0)
-            )}
-            %
-          </p>
-        ) : null}
+        {/*
+          No raw confidence percentage. A bare "Confidence: 62%" is an internal
+          reliability reading with no stated basis — it read as a claim about
+          the creator. The decision and its reasons are above; the confidence
+          inputs stay in the detail's Campaign tab.
+        */}
 
         <div className="mt-2 flex flex-wrap gap-1">
           {grounding.factors.slice(0, 5).map((f) => (
@@ -1256,10 +1278,29 @@ export function VendorRecommendationsSection({
     () => new Set(slateSplit.selectedIds.map(creatorGroupingKey)),
     [slateSplit.selectedIds]
   );
-  const selectedVendors = useMemo(
-    () => marketVendors.filter((v) => v.id && selectedKeys.has(creatorGroupingKey(v.id))),
-    [marketVendors, selectedKeys]
+  /**
+   * One partition, so the three groups close over the hydrated pool.
+   *
+   * SELECTED used to filter the GATED list while ALTERNATIVES was the ungated
+   * pool minus the slate, so a slate member the gate rejected was in neither
+   * and vanished. Content reads the same slate ungated and kept every member —
+   * that gap is why Content listed ten creators and this screen showed three.
+   * `needsReview` now carries them, with the gate's verdict, and they are never
+   * counted as recommended.
+   */
+  const creatorGroups = useMemo(
+    () =>
+      partitionStudioCreatorGroups({
+        pool: vendors,
+        gated: marketVendors,
+        slateIds: slateSplit.selectedIds,
+        idOf: (vendor) => vendor.id,
+        normalize: creatorGroupingKey,
+      }),
+    [vendors, marketVendors, slateSplit.selectedIds]
   );
+  const selectedVendors = creatorGroups.selected;
+  const needsReviewVendors = creatorGroups.needsReview;
   // Candidates come from the ungated hydrated pool, NOT from `marketVendors`.
   // `selectStudioRecommendedVendors` decides what belongs on the SELECTED
   // recommendations list ("once a decision exists, only Recommended belongs");
@@ -1268,10 +1309,7 @@ export function VendorRecommendationsSection({
   // alternatives count shrank silently. Every remaining recommendation is
   // listed here, and one that is no longer eligible carries its reason.
   const otherRecommendedCandidates = useMemo(() => {
-    const remaining = vendors.filter(
-      (vendor) => !vendor.id || !selectedKeys.has(creatorGroupingKey(vendor.id))
-    );
-    const ordered = sortByStudioRequirements(remaining, (vendor) =>
+    const ordered = sortByStudioRequirements(creatorGroups.alternatives, (vendor) =>
       studioCreatorRankingScore(
         {
           country: vendor.country,
@@ -1304,12 +1342,54 @@ export function VendorRecommendationsSection({
           campaignFacts
         ),
     });
-  }, [vendors, selectedKeys, campaignFacts]);
+  }, [creatorGroups.alternatives, campaignFacts]);
+  // Same classifier the alternatives use, so a rejected slate member states the
+  // gate that rejected it rather than just disappearing.
+  const needsReviewClassified = useMemo(
+    () =>
+      classifyReplacementCandidates(needsReviewVendors, {
+        matchesMarket: (vendor) =>
+          vendorMatchesCampaignMarket(
+            { country: vendor.country, countryCode: vendor.countryCode },
+            campaignFacts?.geography
+          ),
+        passesEciGate: (vendor) =>
+          vendorPassesStudioRecommendationGate(recommendationFromVendor(vendor)),
+        fitsBriefMix: (vendor) =>
+          vendorFitsStudioBriefMix(
+            {
+              audienceSummary: vendor.audienceSummary,
+              categories: vendor.categories,
+              handle: vendor.handle,
+              displayName: vendor.displayName,
+            },
+            campaignFacts
+          ),
+      }),
+    [needsReviewVendors, campaignFacts]
+  );
+  const needsReviewDisplayVendors = useMemo(
+    () =>
+      needsReviewClassified.map(({ vendor, ineligibility }) => ({
+        ...vendor,
+        // Slate position, contiguous after the recommended members.
+        rank: undefined,
+        ...(ineligibility ? { candidateIneligibility: ineligibility } : {}),
+      })),
+    [needsReviewClassified]
+  );
+
   const otherRecommendedVendors = useMemo(
     () =>
-      otherRecommendedCandidates.map(({ vendor, ineligibility }) =>
-        ineligibility ? { ...vendor, candidateIneligibility: ineligibility } : vendor
-      ),
+      otherRecommendedCandidates.map(({ vendor, ineligibility }) => ({
+        ...vendor,
+        // No `#`. These carried their position in the hydrated Discovery pool,
+        // rendered in the same list as the slate's contiguous positions — which
+        // is why the numbering read 1,2,3 … 10 then jumped to 16. A pool
+        // position is not a slate position, so it is not shown as one.
+        rank: undefined,
+        ...(ineligibility ? { candidateIneligibility: ineligibility } : {}),
+      })),
     [otherRecommendedCandidates]
   );
   const candidateSummary = useMemo(
@@ -1344,6 +1424,13 @@ export function VendorRecommendationsSection({
         })),
     [otherRecommendedCandidates]
   );
+  // The canonical slate is what the campaign persisted; `selectedVendors` is
+  // what still passes the campaign gates. The gap is real and is stated, never
+  // absorbed by moving creators into the alternatives bucket.
+  const slateShortfall = resolveStudioCreatorShortfall({
+    requestedCount: slateSplit.selectedCount,
+    recommendedCount: selectedVendors.length,
+  });
   const slateVendors = hasSlateSplit ? selectedVendors : marketVendors;
 
   const mainVendors = slateVendors.filter((v) => v.slateRole !== "maybe");
@@ -1364,6 +1451,15 @@ export function VendorRecommendationsSection({
           { kind: "selected" as const, title: "Maybe / replacements", items: maybeVendors },
         ]
       : [{ kind: "selected" as const, title: null as string | null, items: slateVendors }]),
+    ...(needsReviewDisplayVendors.length > 0
+      ? [
+          {
+            kind: "needs_review" as const,
+            title: `On the slate · needs review (${needsReviewDisplayVendors.length})`,
+            items: needsReviewDisplayVendors,
+          },
+        ]
+      : []),
     ...(hasSlateSplit && otherRecommendedVendors.length > 0
       ? [
           {
@@ -1601,10 +1697,22 @@ export function VendorRecommendationsSection({
           {creatorsData.constraintReport.rejectedMandatoryCount === 1 ? "" : "s"} excluded.
         </p>
       ) : null}
+      {slateShortfall.summary ? (
+        <p className="rounded-xl border border-amber-300/70 bg-amber-50/80 px-3 py-2 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+          {slateShortfall.summary}
+          {needsReviewDisplayVendors.length > 0 ? (
+            <span className="mt-1 block text-[11px] font-normal">
+              {needsReviewDisplayVendors.length} of the slate{" "}
+              {needsReviewDisplayVendors.length === 1 ? "creator is" : "creators are"} listed
+              below under “needs review” with the reason. Nothing was substituted.
+            </span>
+          ) : null}
+        </p>
+      ) : null}
       {hasSlateSplit ? (
         <div className="flex flex-wrap items-baseline gap-2 rounded-xl border border-[#1D9E75]/25 bg-[#1D9E75]/5 px-3 py-2">
           <span className="text-sm font-extrabold text-[#1D9E75]">
-            {slateSplit.selectedCount} Selected
+            {selectedVendors.length} Recommended
           </span>
           {/*
             `candidatePoolCount` is selected + everything else Discovery
@@ -1735,6 +1843,7 @@ export function VendorRecommendationsSection({
               applyDecision={applyDecision}
               stageRoleChange={stageRoleChange}
               openCreatorDetails={openCreatorDetails}
+              group={group.kind}
               onReplace={
                 conversationId &&
                 messageId &&

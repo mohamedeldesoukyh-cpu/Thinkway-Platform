@@ -125,10 +125,12 @@ test("the Discovery tabs are reused verbatim for everything else", () => {
 
 test("no second creator detail component was introduced", () => {
   const host = read(STUDIO_HOST);
-  // The planning sheet survives ONLY as the state for a creator with no
-  // unified Discovery record.
-  assert.match(host, /StudioPlanningCreatorDetail/);
-  assert.match(host, /source === "discovery_detail" && creator/);
+  // Updated deliberately — see the note in `creator-detail-canonical.test.ts`.
+  // Allowing the planning sheet as the unresolved state is exactly what made
+  // the drawer appear and then swap out; the pack now opens immediately with
+  // its own loading state.
+  assert.doesNotMatch(host, /StudioPlanningCreatorDetail/);
+  assert.equal((host.match(/<CreatorDetailSheet\b/g) ?? []).length, 1);
   assert.ok(!/CreatorDrawer\b/.test(host), "no slim legacy drawer fallback");
 });
 

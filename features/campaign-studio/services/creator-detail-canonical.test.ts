@@ -108,14 +108,20 @@ test("Studio adds only contextual actions — it does not render a second detail
     "features/campaign-studio/components/sections/studio-creator-detail-host.tsx"
   );
 
-  // The planning sheet remains ONLY as the state for a creator with no unified
-  // Discovery record. It must never be the design shown for a resolved one.
-  assert.match(studioHost, /StudioPlanningCreatorDetail/);
-  assert.match(
-    studioHost,
-    /source === "discovery_detail" && creator/,
-    "a resolved creator must take the canonical branch"
+  // Updated deliberately. This used to allow the planning sheet as the state
+  // for a creator with no unified Discovery record. Browser evidence showed
+  // what that cost: the planning drawer opened on every click and was replaced
+  // by the canonical pack a few seconds later, once
+  // `getUnifiedCreatorsBatchAction` resolved. The canonical pack now opens
+  // immediately and carries its own loading state, so there is no second
+  // detail component in the host at all.
+  assert.doesNotMatch(studioHost, /StudioPlanningCreatorDetail/);
+  assert.equal(
+    (studioHost.match(/<CreatorDetailSheet\b/g) ?? []).length,
+    1,
+    "one detail component, from the first frame"
   );
+  assert.match(studioHost, /pendingIdentity/, "the pack loads with the clicked card's identity");
   assert.ok(
     !/CreatorDrawer\b/.test(studioHost),
     "the slim legacy drawer must not be a Studio fallback"

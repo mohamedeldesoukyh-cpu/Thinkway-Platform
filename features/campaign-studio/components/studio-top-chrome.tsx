@@ -138,14 +138,14 @@ export function StudioTopChrome({
       >
         <div className={STUDIO_REF_CLASSES.mast}>
           <div className={STUDIO_REF_CLASSES.mastHead}>
-            <span className={STUDIO_REF_CLASSES.mastMark} aria-hidden>
-              <i />
-              <u />
-            </span>
-            <span className={STUDIO_REF_CLASSES.mastWord}>
-              THINK<em>WAY</em>
-            </span>
-            <span className={STUDIO_REF_CLASSES.mastDivider} aria-hidden />
+            {/*
+              No brand lockup here. Every product route that mounts this mast
+              renders it directly under the app header, which already carries
+              the canonical Thinkway logo component; drawing a second wordmark
+              stacked two Thinkway headers on the campaign screen, and did it with a
+              hand-built mark instead of the approved asset. The mast owns
+              campaign identity (code · title · section · readiness) only.
+            */}
             {campaignCode || campaignObjectId ? (
               <span className={STUDIO_REF_CLASSES.mastId}>
                 {(campaignCode || campaignObjectId || "").slice(0, 14)}
