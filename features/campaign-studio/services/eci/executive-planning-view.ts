@@ -376,7 +376,7 @@ export function buildStudioExecutivePlanningSummary(
           : `Planning confidence is ${level.toLowerCase()} — strengthen evidence coverage and confirm commercial inputs before boardroom sign-off.`,
       evidenceSupports:
         signals && signals.length > 0
-          ? `ECI signals available for ${signals.length} creator${signals.length === 1 ? "" : "s"}; average evidence coverage ${avgCoverage}%.`
+          ? `Investment intelligence available for ${signals.length} creator${signals.length === 1 ? "" : "s"}; average evidence coverage ${avgCoverage}%.`
           : INSUFFICIENT_EVIDENCE,
       assumptions: "Assumes brief, budget, and market inputs remain stable through presentation.",
       whatCouldReduce: "Budget cuts, audience mismatch, or missing commercial history would reduce confidence.",

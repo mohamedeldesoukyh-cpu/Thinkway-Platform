@@ -22,7 +22,7 @@ export type CandidateIneligibility = "outside_market" | "eci_not_recommended" | 
 
 export const CANDIDATE_INELIGIBILITY_LABEL: Record<CandidateIneligibility, string> = {
   outside_market: "Outside campaign market",
-  eci_not_recommended: "ECI: not recommended",
+  eci_not_recommended: "Campaign recommendation: not recommended",
   off_brief_mix: "Off brief creator mix",
 };
 

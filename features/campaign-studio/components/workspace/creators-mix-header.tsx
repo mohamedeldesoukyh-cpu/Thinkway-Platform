@@ -12,6 +12,7 @@ import { runStudioDiscoveryAction } from "../../actions/run-studio-discovery-act
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
 import { resolveStudioDiscoverySufficiency } from "../../services/studio-discovery-sufficiency";
+import { resolveStudioCreatorShortfall } from "../../services/studio-creator-shortfall";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
 type CreatorsMixHeaderProps = {
@@ -49,6 +50,13 @@ export function CreatorsMixHeader({
   const qualified = sufficiency.qualifiedCount;
   const missing =
     required != null && qualified < required ? required - qualified : 0;
+  // The slate never pads with an off-strategy creator, so a short slate is a
+  // real supply outcome. Say so in one line instead of leaving the operator to
+  // read it out of two stat tiles.
+  const shortfall = resolveStudioCreatorShortfall({
+    requestedCount: required,
+    recommendedCount: qualified,
+  });
   // Offered while a confirmed profile exists and inventory has not been
   // searched, and again after a search that returned nothing so the operator
   // can re-run once filters or inventory change.
@@ -94,6 +102,11 @@ export function CreatorsMixHeader({
         <Stat label="Missing" value={String(missing)} />
         <Stat label="Discovery" value={sufficiency.title} />
       </div>
+      {shortfall.summary ? (
+        <p className="mt-3 rounded-lg border border-amber-300/60 bg-amber-50/70 px-3 py-2 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+          {shortfall.summary}
+        </p>
+      ) : null}
       <p className="mt-3 text-sm text-muted-foreground">{sufficiency.detail}</p>
       <p className="mt-1 text-sm font-semibold text-foreground">Action: {sufficiency.nextAction}</p>
 
