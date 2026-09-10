@@ -3,7 +3,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { hasValidatedIntelligence } from "./get-validated-intelligence";
 import { detectBrandFromProfile } from "./match-brand-from-profile";
 import { normalizeCampaignIntelligenceProfile } from "./normalize-profile";
-import type { CampaignIntelligenceProfileRow } from "../types/profile";
+import type {
+  CampaignIntelligenceProfile,
+  CampaignIntelligenceProfileRow,
+} from "../types/profile";
 import {
   findSavedCampaignIntelligenceProfileForWorkflow,
   getCampaignIntelligenceProfileById,
@@ -14,6 +17,7 @@ import {
   elevatedUpdateCampaignIntelligenceProfile,
 } from "./profile-repository-elevated";
 import {
+  profileAlreadyExtractedFromBrief,
   resolveBriefTextForExtraction,
   resolveStructuredDocumentForBriefText,
 } from "./resolve-brief-text";
@@ -157,14 +161,15 @@ export async function ensureWorkflowCampaignIntelligenceProfile(
     brandName?: string | null;
   }
 ): Promise<string | undefined> {
+  let existingProfile: CampaignIntelligenceProfile | null = null;
   if (input.existingProfileId) {
     const existing = await getCampaignIntelligenceProfileById(
       supabase,
       input.existingProfileId
     );
     if (existing) {
-      const profile = normalizeCampaignIntelligenceProfile(existing.profile);
-      if (hasValidatedIntelligence(profile)) {
+      existingProfile = normalizeCampaignIntelligenceProfile(existing.profile);
+      if (hasValidatedIntelligence(existingProfile)) {
         return existing.id;
       }
     }
@@ -199,6 +204,30 @@ export async function ensureWorkflowCampaignIntelligenceProfile(
 
   if (briefText.length < MIN_BRIEF_CHARS) {
     return undefined;
+  }
+
+  // `create-campaign` calls this twice: once at bootstrap and again before
+  // search-creators, because a brief too short to profile at bootstrap may
+  // become profilable later. When bootstrap already built this conversation's
+  // profile from this exact text and it did not clear the validated-intelligence
+  // gate, the second call used to extract the identical text again — a second
+  // LLM round-trip that, extraction being deterministic, can only produce the
+  // same unvalidated profile, and then persisted it as a duplicate row for the
+  // same conversation. Reuse the row instead.
+  //
+  // Placed after resolveWorkflowCampaignIntelligenceProfile deliberately: the
+  // second call carries brand hints the first did not, and attaching a saved
+  // library brief with real validated intelligence is still preferred over
+  // reusing an unvalidated row. Only the provably repeated extraction is skipped.
+  if (
+    input.existingProfileId &&
+    existingProfile &&
+    profileAlreadyExtractedFromBrief({
+      rawBriefExcerpt: existingProfile.rawBriefExcerpt,
+      briefText,
+    })
+  ) {
+    return input.existingProfileId;
   }
 
   const { profile: extracted } = await runCampaignIntelligencePipeline({

@@ -42,6 +42,33 @@ export function resolveBriefTextForExtraction(input: {
   return { text: excerpt, source: "raw_excerpt" };
 }
 
+/**
+ * How much of the brief text a profile stores as its excerpt.
+ * `ensureWorkflowCampaignIntelligenceProfile` and the upload pipeline both
+ * persist `briefText.slice(0, RAW_BRIEF_EXCERPT_CHARS)`.
+ */
+export const RAW_BRIEF_EXCERPT_CHARS = 500;
+
+/**
+ * True when this profile was already extracted from this exact brief text.
+ *
+ * Extraction is deterministic — the same brief produces the same profile — so
+ * re-running it on text a profile was already built from cannot yield anything
+ * new. It can only cost a second LLM round-trip and persist a duplicate row.
+ * Compared on the stored excerpt because that is precisely what both writers
+ * persist, so the comparison is exact rather than a heuristic.
+ */
+export function profileAlreadyExtractedFromBrief(input: {
+  rawBriefExcerpt?: string | null;
+  briefText: string;
+}): boolean {
+  const stored = input.rawBriefExcerpt?.trim();
+  if (!stored) return false;
+  const candidate = input.briefText.trim().slice(0, RAW_BRIEF_EXCERPT_CHARS).trim();
+  if (!candidate) return false;
+  return stored === candidate;
+}
+
 /** Only a document with real sections can drive the section field mapper. */
 function usableStructuredDocument(
   document: StructuredBriefDocument | null | undefined
