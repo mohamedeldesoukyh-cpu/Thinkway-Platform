@@ -17,6 +17,8 @@ import test from "node:test";
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
 import { buildExecutiveStrategyReasoning } from "@/features/campaign-intelligence/services/reasoning/executive-strategy-reasoning";
+import { applyWinnerOptionToStrategy } from "@/features/campaign-director/debate/apply-winner";
+import { generateCampaignOptions } from "@/features/campaign-director/debate/option-generator";
 
 import { buildCreatorSearchRequirements } from "./creator-search-requirements/build-creator-search-requirements";
 import { deriveCreatorQuantityRecommendation, resolveCreatorTierMix } from "./creator-quantity";
@@ -146,5 +148,35 @@ test("the tier why-text survives into CSR", () => {
   assert.ok(
     csr.strategic.tierMix.some((entry) => /recommended allocation/i.test(entry.why)),
     "a computed split says it is a recommendation"
+  );
+});
+
+// ---------------------------------------------------------------------------
+// The debate winner is part of this chain too.
+
+test("a debate winner's tiers reach CSR unchanged and still exclude Nano", () => {
+  const options = generateCampaignOptions(FACTS, STALE_STRATEGY);
+  const reachOption = options.find((option) => option.id === "A");
+  assert.ok(reachOption);
+
+  // The generated option is already constrained to the brief's tiers.
+  assert.ok(!reachOption.creatorTierStrategy.some((tier) => tier.tier === "Nano"));
+
+  const winningStrategy = applyWinnerOptionToStrategy(STALE_STRATEGY, {
+    options,
+    meeting: { winnerId: "A", directorConclusion: "Option A approved" },
+  } as never);
+
+  const csr = buildCreatorSearchRequirements({
+    facts: FACTS,
+    strategy: winningStrategy,
+    now: NOW,
+  });
+
+  assert.deepEqual(tiersOf(csr.strategic.tierMix), ["Macro", "Mid", "Micro"]);
+  assert.deepEqual(
+    new Set(tiersOf(resolveCreatorTierMix(FACTS))),
+    new Set(tiersOf(csr.strategic.tierMix)),
+    "Strategy, the debate winner and CSR agree on the tier set"
   );
 });
