@@ -84,6 +84,7 @@ import {
   classifyReplacementCandidates,
   summarizeCandidates,
   type CandidateIneligibility,
+  type StudioCreatorGroup,
 } from "../../services/studio-replacement-candidates";
 import {
   sortByStudioRequirements,
@@ -1347,17 +1348,27 @@ export function VendorRecommendationsSection({
 
   const mainVendors = slateVendors.filter((v) => v.slateRole !== "maybe");
   const maybeVendors = slateVendors.filter((v) => v.slateRole === "maybe");
-  const displayGroups = [
+  // Each group carries what it MEANS, not just a heading. The alternatives group
+  // is Discovery's remaining pool — searched, hydrated, not in the slate — and
+  // it asserts no recommendation, because each card shows its own ECI decision.
+  // Titling it "Other Recommended Creators" put a red "Not Recommended" pill
+  // under a heading that claimed the opposite.
+  const displayGroups: Array<StudioCreatorGroup<DisplayVendor>> = [
     ...(maybeVendors.length > 0
       ? [
-          { title: "Main picks", items: mainVendors.length > 0 ? mainVendors : slateVendors },
-          { title: "Maybe / replacements", items: maybeVendors },
+          {
+            kind: "selected" as const,
+            title: "Main picks",
+            items: mainVendors.length > 0 ? mainVendors : slateVendors,
+          },
+          { kind: "selected" as const, title: "Maybe / replacements", items: maybeVendors },
         ]
-      : [{ title: null as string | null, items: slateVendors }]),
+      : [{ kind: "selected" as const, title: null as string | null, items: slateVendors }]),
     ...(hasSlateSplit && otherRecommendedVendors.length > 0
       ? [
           {
-            title: `Other Recommended Creators (${otherRecommendedVendors.length})`,
+            kind: "alternatives" as const,
+            title: `Other creators from Discovery (${otherRecommendedVendors.length})`,
             items: otherRecommendedVendors,
           },
         ]
@@ -1595,13 +1606,18 @@ export function VendorRecommendationsSection({
           <span className="text-sm font-extrabold text-[#1D9E75]">
             {slateSplit.selectedCount} Selected
           </span>
+          {/*
+            `candidatePoolCount` is selected + everything else Discovery
+            returned. It is not a recommendation count — `recommendationCount`
+            keeps that meaning — so it is not labelled as one.
+          */}
           <span className="text-sm text-muted-foreground">
-            / {slateSplit.candidatePoolCount} Recommended
+            of {slateSplit.candidatePoolCount} creators available
           </span>
           {otherRecommendedVendors.length > 0 ? (
             <span className="text-[11px] text-muted-foreground">
-              · {otherRecommendedVendors.length} kept available below as replacement
-              candidates
+              · {otherRecommendedVendors.length} more from Discovery, available as
+              replacements
               {candidateSummary.flagged > 0
                 ? ` (${candidateSummary.flagged} flagged)`
                 : ""}
