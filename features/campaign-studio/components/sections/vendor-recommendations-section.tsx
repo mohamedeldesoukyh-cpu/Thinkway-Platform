@@ -1424,11 +1424,12 @@ export function VendorRecommendationsSection({
         })),
     [otherRecommendedCandidates]
   );
-  // The canonical slate is what the campaign persisted; `selectedVendors` is
-  // what still passes the campaign gates. The gap is real and is stated, never
-  // absorbed by moving creators into the alternatives bucket.
+  // "Requested" is what the campaign ASKED FOR — the Strategy's evidence-based
+  // quantity, falling back to the slate it actually composed. Using the slate
+  // size for both sides could never report the Strategy-vs-slate gap, which is
+  // the shortfall the requested count implies.
   const slateShortfall = resolveStudioCreatorShortfall({
-    requestedCount: slateSplit.selectedCount,
+    requestedCount: quantityRecommendation?.recommended ?? slateSplit.selectedCount,
     recommendedCount: selectedVendors.length,
   });
   const slateVendors = hasSlateSplit ? selectedVendors : marketVendors;
