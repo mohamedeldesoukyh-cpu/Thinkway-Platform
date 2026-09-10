@@ -4,6 +4,7 @@ import {
   getCampaignFacts,
   resolveFactsCurrency,
 } from "@/features/campaign-director/facts/facts-display-bridge";
+import { activeCampaignCreatorIds } from "@/features/campaign-studio/services/creator-decision-status";
 import { resolveCreatorIds } from "@/features/campaign-studio/services/section-data-resolver";
 import { normalizeCreatorId } from "@/features/campaign-studio/services/studio-draft";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
@@ -46,16 +47,16 @@ function readCreatorsData(campaignObject: CampaignObject): CreatorsSectionData {
   return (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
 }
 
-/** Slate creator ids approved for execution — excludes explicit rejections. */
+/**
+ * Slate creator ids approved for execution — excludes explicit rejections.
+ *
+ * The rule itself now lives in `activeCampaignCreatorIds` so Content reads the
+ * campaign's active creators exactly as execution does. Behaviour is unchanged:
+ * it was Content that disagreed, by ignoring `vendorDecisions` entirely.
+ */
 export function filterExecutionCreatorIds(campaignObject: CampaignObject): string[] {
   const { ids } = resolveCreatorIds(campaignObject);
-  const decisions = readCreatorsData(campaignObject).vendorDecisions ?? {};
-  if (Object.keys(decisions).length === 0) return ids;
-
-  return ids.filter((id) => {
-    const decision = decisions[id] ?? decisions[normalizeCreatorId(id)];
-    return decision !== "rejected";
-  });
+  return activeCampaignCreatorIds(ids, readCreatorsData(campaignObject).vendorDecisions);
 }
 
 function resolveCreatorFeesTotal(

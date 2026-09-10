@@ -107,6 +107,19 @@ export function summarizeCandidates<T>(candidates: Array<ClassifiedCandidate<T>>
 export type StudioCreatorGroupKind =
   /** The composed slate — every member passed the recommendation gate. */
   | "selected"
+  /**
+   * ON the canonical slate, but a campaign gate now rejects it.
+   *
+   * These used to appear NOWHERE. The selected group was
+   * `marketVendors.filter(in slate)` — already gated — and the alternatives
+   * group was the pool MINUS the slate, so a slate member the gate rejected
+   * fell through both and disappeared from the screen. Content, which reads the
+   * same slate ungated, kept showing all ten: ten in Content, three in Studio.
+   *
+   * They are the recommendation the campaign persisted, so they are shown; the
+   * gate's verdict is shown with them; and they are not counted as recommended.
+   */
+  | "needs_review"
   /** Discovery's remaining pool, offered as replacements. Not a recommendation. */
   | "alternatives";
 

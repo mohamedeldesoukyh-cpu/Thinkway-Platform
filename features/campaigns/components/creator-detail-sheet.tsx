@@ -148,6 +148,25 @@ type Props = {
    */
   assignLabel?: string;
   /**
+   * Identity the caller already holds, for the moment before the unified
+   * record resolves.
+   *
+   * Without it a caller that opens the sheet on click has nothing to render —
+   * this component returns null with no creator — so Studio showed a different
+   * component for those seconds and swapped it out. With it, the canonical pack
+   * opens immediately, empty of metrics and honest about loading, and fills in
+   * when the record arrives. Nothing here is invented: it is the identity from
+   * the card that was clicked.
+   */
+  pendingIdentity?: {
+    displayName: string;
+    handle?: string | null;
+    avatarUrl?: string | null;
+    profileUrl?: string | null;
+    platform?: string | null;
+    countryLabel?: string | null;
+  } | null;
+  /**
    * Optional caller-owned block rendered at the top of the Overview tab.
    *
    * Studio uses it to keep its executive planning recommendation alongside the
@@ -839,6 +858,7 @@ export function CreatorDetailSheet({
   presentation = "sheet",
   contextSlot,
   assignLabel = "Assign to line",
+  pendingIdentity = null,
 }: Props) {
   const isDiscoveryPack = presentation === "discoveryPack";
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
@@ -1009,7 +1029,48 @@ export function CreatorDetailSheet({
     creator && baseCreator?.unified_id === creator.unified_id
       ? baseCreator
       : (creator ?? baseCreator);
-  if (!open || !activeCreator) return null;
+  if (!open) return null;
+  if (!activeCreator) {
+    // The canonical shell, opened immediately. Only the identity the caller
+    // already had is shown; every metric slot stays empty until the record
+    // loads. `discoveryPack` only — the legacy sheet has no such shell, and its
+    // callers all pass a resolved creator.
+    if (!pendingIdentity || !isDiscoveryPack) return null;
+    return (
+      <DiscoverySuiteCreatorProfile
+        open
+        title={`${pendingIdentity.displayName} profile`}
+        displayName={pendingIdentity.displayName}
+        handleLabel={pendingIdentity.handle ?? null}
+        avatarUrl={pendingIdentity.avatarUrl ?? null}
+        profileUrl={pendingIdentity.profileUrl ?? null}
+        flagCode={pendingIdentity.countryLabel ?? null}
+        metaLine="Loading creator profile…"
+        investmentScore={null}
+        investmentLabel="Investment intelligence"
+        investmentSubline="Loading…"
+        eciLoading
+        onSkipEciLoading={() => undefined}
+        platforms={[]}
+        onSelectPlatform={() => undefined}
+        onAddPlatform={() => undefined}
+        tierLabel={null}
+        kvRows={[]}
+        contextLabel={pendingIdentity.platform ?? "Creator"}
+        headerActions={null}
+        tabs={null}
+        body={
+          <p className="tw-miss" role="status">
+            Loading creator profile…
+          </p>
+        }
+        similar={[]}
+        similarLoading
+        onClose={() => onOpenChange(false)}
+        blockDismiss={false}
+      />
+    );
+  }
 
   const displayCreator = projectCreatorPlatformView(activeCreator, selectedPlatformAccountId);
   const identityCreator = activeCreator;

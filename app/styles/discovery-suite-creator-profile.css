@@ -194,3 +194,32 @@
 .discovery-suite .tw-chips2 span.tw-pr-tag {
   background: rgba(255, 255, 255, 0.28);
 }
+
+/*
+ * Scroll chain for the pack's three columns.
+ *
+ * The frozen sheet gives `.tw-cp__w` `max-height:calc(100vh - 40px)` with
+ * `overflow:hidden`, makes `.tw-cp__m` a flex column, and puts
+ * `overflow-y:auto` on `.tw-cp__b`. That only scrolls if the intermediate
+ * boxes may shrink below their content: a grid item and a flex item both
+ * default to `min-height:auto`, so `.tw-cp__m` grew to its content height and
+ * `.tw-cp__b` never became a scroller — the tail of the profile was simply
+ * clipped by the wrapper's `overflow:hidden`, with no scrollbar to reach it.
+ *
+ * `min-height: 0` on the wrapper and on each column restores it. Overrides
+ * only — no geometry, no new scroller, and the frozen sheet is untouched.
+ */
+.discovery-suite.tw-cp-root .tw-cp__w {
+  min-height: 0;
+}
+
+.discovery-suite.tw-cp-root .tw-cp__l,
+.discovery-suite.tw-cp-root .tw-cp__m,
+.discovery-suite.tw-cp-root .tw-cp__r {
+  min-height: 0;
+}
+
+.discovery-suite.tw-cp-root .tw-cp__b {
+  min-height: 0;
+  overscroll-behavior: contain;
+}

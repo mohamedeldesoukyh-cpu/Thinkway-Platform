@@ -548,6 +548,12 @@ export type ContentPlanItem = {
   creatorId?: string;
   creatorName?: string;
   creatorRole?: string;
+  /**
+   * Derived, never persisted: the creator's status on the campaign slate
+   * (`proposed` until an operator decision exists). A Content row must state
+   * what it is, so a proposal is never read as an approved campaign creator.
+   */
+  creatorStatus?: import("@/features/campaign-studio/services/creator-decision-status").CampaignCreatorStatus;
   contentConcept?: string;
   hook?: string;
   keyMessage?: string;

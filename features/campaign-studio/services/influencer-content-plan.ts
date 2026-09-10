@@ -5,6 +5,7 @@ import type {
   CreatorsSectionData,
 } from "@/features/campaign-intelligence/types/section-schemas";
 import { getCampaignFacts, buildCreatorMixFromFacts } from "@/features/campaign-director/facts/facts-display-bridge";
+import { creatorDecisionStatus, isCreatorRejected } from "./creator-decision-status";
 import { resolveCampaignDurationWeeks } from "./timeline-duration";
 
 const PLATFORM_DELIVERABLE: Record<string, string> = {
@@ -65,8 +66,18 @@ export function deriveInfluencerContentPlan(
   const slateById = new Map(
     (creatorsData.slateIntelligence?.recommendations ?? []).map((row) => [row.creatorId, row])
   );
+  /**
+   * The working slate, minus the creators the operator rejected.
+   *
+   * `approve_creator` / `reject_creator` do not change slate membership — they
+   * write `vendorDecisions` — so a rejected creator stays in
+   * `selectedReasoning`. Content planned deliverables for it anyway, and
+   * `projectClientContent` showed that row to the client, while the commercial
+   * execution mapper had already excluded it. Same rule, one place, both
+   * consumers.
+   */
   const reasoning = (creatorsData.recommendations?.selectedReasoning ?? []).filter(
-    (entry) => entry.creatorId?.trim()
+    (entry) => entry.creatorId?.trim() && !isCreatorRejected(creatorsData.vendorDecisions, entry.creatorId)
   );
   if (reasoning.length === 0) return [];
 
@@ -122,6 +133,9 @@ export function deriveInfluencerContentPlan(
       postingDate: `Week ${week}`,
       objective,
       creatorId: entry.creatorId,
+      // Every Content creator carries a defined status, so no row can read as
+      // an approved campaign creator when it is only a proposal.
+      creatorStatus: creatorDecisionStatus(creatorsData.vendorDecisions, entry.creatorId),
       creatorName: entry.displayName?.trim() || entry.handle || entry.creatorId,
       creatorRole: role,
       contentConcept: concept?.bigIdea || slate?.contentPillar || concept?.name || contentStrategy,

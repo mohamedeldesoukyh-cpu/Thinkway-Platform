@@ -10,8 +10,14 @@ import { ObjectiveBadge } from "./shared/studio-ui-primitives";
 import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
+import {
+  CAMPAIGN_CREATOR_STATUS_LABEL,
+  campaignContentBasisLine,
+  isCreatorRejected,
+} from "../../services/creator-decision-status";
 import { resolveContentPlan } from "../../services/section-data-resolver";
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
 type ContentPlanSectionProps = {
@@ -32,6 +38,14 @@ export function ContentPlanSection({
   }
 
   const items = resolveContentPlan(campaignObject);
+  const creatorsData = (campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData;
+  const slateRows = creatorsData.recommendations?.selectedReasoning ?? [];
+  const basisLine = campaignContentBasisLine({
+    creatorCount: items.length,
+    rejectedCount: slateRows.filter(
+      (row) => row.creatorId?.trim() && isCreatorRejected(creatorsData.vendorDecisions, row.creatorId)
+    ).length,
+  });
   if (items.length === 0) {
     if (shouldShowPendingPlaceholder(status, false)) {
       return <SectionPendingMessage label="Content plan pending…" />;
@@ -96,6 +110,16 @@ export function ContentPlanSection({
                 <span className="mt-0.5 block text-[10px] text-muted-foreground">
                   {item.creatorRole ?? item.creatorTier}
                 </span>
+                {/*
+                  Every row states what its creator is. Content reads the
+                  working slate, so an unlabelled row read as an approved
+                  campaign creator.
+                */}
+                {item.creatorStatus ? (
+                  <span className="mt-0.5 inline-block rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
+                    {CAMPAIGN_CREATOR_STATUS_LABEL[item.creatorStatus]}
+                  </span>
+                ) : null}
               </td>
               <td className={tdClass}>{item.platform}</td>
               <td className={tdClass}>{item.contentType}</td>
@@ -112,6 +136,7 @@ export function ContentPlanSection({
           ))}
         </tbody>
       </table>
+      <p className="mt-2 text-[11px] text-muted-foreground">{basisLine}</p>
       {items[0]?.strategyTrace ? (
         <p className="mt-2 text-[11px] text-muted-foreground">{items[0].strategyTrace}</p>
       ) : null}
