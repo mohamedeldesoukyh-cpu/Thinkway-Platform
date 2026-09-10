@@ -29,6 +29,7 @@ import { createEmptyCampaignObject } from "@/features/campaign-intelligence/serv
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 
+import { deriveInfluencerStrategyView } from "./influencer-strategy-view";
 import { resolveStudioDiscoverySufficiency } from "./studio-discovery-sufficiency";
 import { resolveStudioPackageReadiness } from "./studio-package-readiness";
 import { resolveStudioReadinessStatus } from "./studio-readiness-status";
@@ -137,25 +138,50 @@ test("a generated Strategy is not called blocked for want of an output document"
 });
 
 test("a campaign with no Strategy at all is still blocked", () => {
-  // The section is empty AND no strategy document exists — nothing to show.
-  const object = kerastase({ strategyContent: "" });
-  object.sections.strategy.status = "pending";
-  const check = strategyCheck(object);
+  // Nothing to project: no facts, so `deriveInfluencerStrategyView` returns
+  // "Insufficient evidence" for every required row — a genuine absence, and the
+  // Strategy screen shows nothing either.
+  const bare = createEmptyCampaignObject({
+    id: "bare",
+    conversationId: "conv-bare",
+    workflowId: "create-campaign",
+  });
+  const check = strategyCheck(bare);
   assert.equal(check.state, "blocked");
   assert.match(check.reason ?? "", /has not been generated/i);
 });
 
-test("existence is the Strategy section, not the output document", () => {
-  // `deriveInfluencerStrategyView` projects Campaign Facts, so it can never
-  // report a missing strategy — the section the Strategy screen renders is the
-  // signal, with the output document as the alternative.
+test("existence is the projection the Strategy screen renders", () => {
+  // Browser evidence: Package said Strategy was not generated while the
+  // Strategy screen rendered it in full. `executive-strategy-section.tsx`
+  // renders `deriveInfluencerStrategyView`, so that is the authority — and it
+  // is not vacuous, because thin facts come back as "Insufficient evidence".
   const object = kerastase();
-  assert.equal(object.sections.strategy.status, "complete");
   assert.notEqual(strategyCheck(object).state, "blocked");
 
-  const emptySection = kerastase({ strategyContent: "" });
-  emptySection.sections.strategy.status = "pending";
-  assert.equal(strategyCheck(emptySection).state, "blocked");
+  // `sections.strategy` is NOT what the screen reads, so its status must not
+  // decide this. The Kérastase campaign has a full strategy on screen either
+  // way.
+  const noSection = kerastase({ strategyContent: "" });
+  noSection.sections.strategy.status = "pending";
+  assert.notEqual(
+    strategyCheck(noSection).state,
+    "blocked",
+    "the Strategy screen renders from Campaign Facts, not this section"
+  );
+});
+
+test("Package and the Strategy screen cannot disagree about existence", () => {
+  const object = kerastase();
+  const view = deriveInfluencerStrategyView(object);
+  const required = ["influencerStrategy", "platformStrategy", "contentStrategy"];
+  const populated = required.filter((key) => {
+    const body = view.find((row) => row.key === key)?.body ?? "";
+    return body.trim() && !/insufficient evidence/i.test(body);
+  });
+
+  assert.deepEqual(populated, required, "the screen shows all three");
+  assert.notEqual(strategyCheck(object).state, "blocked", "so Package cannot call it absent");
 });
 
 // ---------------------------------------------------------------------------

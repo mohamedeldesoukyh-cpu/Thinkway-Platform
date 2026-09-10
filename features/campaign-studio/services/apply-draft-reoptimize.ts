@@ -29,6 +29,10 @@ import {
 } from "./eci/project-studio-eci-signal";
 import { loadStudioEciPlanningSignals } from "./eci/load-studio-eci-signals";
 import { patchSlateIntelligence } from "./slate-intelligence";
+import {
+  placeholderReasoningForSlateMember,
+  reconcileCreatorSlateReasoning,
+} from "./creator-slate-integrity";
 import { normalizeCreatorId } from "./studio-draft";
 
 /**
@@ -199,15 +203,51 @@ export async function reoptimizeCampaignAfterApply(
       entry,
     ])
   );
+  /*
+   * Every slate id keeps a reasoning row.
+   *
+   * `if (!existing) continue` used to drop a slate member from
+   * `selectedReasoning` while its id was still written to `creatorIds` below.
+   * Content, the client content projection and the quotation mapper read
+   * `selectedReasoning`; the Creators header and Campaign Analysis read
+   * `creatorIds`. That is how one campaign showed ten creators on Creators and
+   * six in Content, with "6 vendor(s)" in the Package footer — and the loss was
+   * cumulative, because each rebuild could only preserve rows that already
+   * existed.
+   *
+   * A member with no prior rationale now carries an identity-only row that says
+   * so. No metric is invented.
+   */
+  const cardByNormalized = new Map(
+    finalCards.map((card) => [normalizeCreatorId(card.id), card] as const)
+  );
   const nextReasoning: VendorSelectedReasoning[] = [];
   for (const card of finalCards) {
     const existing = reasoningByNormalized.get(normalizeCreatorId(card.id));
-    if (!existing) continue;
-    nextReasoning.push({ ...existing, expectedRole: creatorTierOf(card) });
+    nextReasoning.push(
+      existing
+        ? { ...existing, expectedRole: creatorTierOf(card) }
+        : placeholderReasoningForSlateMember({
+            creatorId:
+              originalIdByNormalized.get(normalizeCreatorId(card.id)) ?? card.id,
+            displayName: card.displayName,
+            handle: card.handle,
+            platform: card.platform,
+            expectedRole: creatorTierOf(card),
+          })
+    );
   }
   for (const id of unhydratedIds) {
     const existing = reasoningByNormalized.get(normalizeCreatorId(id));
-    if (existing) nextReasoning.push(existing);
+    nextReasoning.push(
+      existing ??
+        placeholderReasoningForSlateMember({
+          creatorId: id,
+          expectedRole: cardByNormalized.get(normalizeCreatorId(id))
+            ? creatorTierOf(cardByNormalized.get(normalizeCreatorId(id))!)
+            : undefined,
+        })
+    );
   }
 
   const eciSignals = await loadStudioEciPlanningSignals(supabase, influencerIds, {
@@ -224,6 +264,7 @@ export async function reoptimizeCampaignAfterApply(
       ? Math.round(fitValues.reduce((a, b) => a + b, 0) / fitValues.length)
       : recommendations?.avgFitScore;
 
+  const slateCreatorIds = [...orderedIds, ...unhydratedIds];
   const nextReasoningWithEci = nextReasoning.map((entry) => {
     const signal = lookupStudioEciSignal(eciSignals, entry.creatorId);
     if (!signal) return entry;
@@ -287,8 +328,15 @@ export async function reoptimizeCampaignAfterApply(
           ...creatorsData,
           recommendations: {
             ...(recommendations ?? { creatorIds: [] }),
-            creatorIds: [...orderedIds, ...unhydratedIds],
-            selectedReasoning: nextReasoningWithEci,
+            creatorIds: slateCreatorIds,
+            // Reconciled against the ids that are actually written, in the same
+            // order, so the two halves of `recommendations` can never describe
+            // different slates again.
+            selectedReasoning: reconcileCreatorSlateReasoning({
+              creatorIds: slateCreatorIds,
+              selectedReasoning: nextReasoningWithEci,
+              normalize: normalizeCreatorId,
+            }),
             creatorFitScores: fitScores,
             avgFitScore,
           },

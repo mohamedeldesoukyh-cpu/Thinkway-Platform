@@ -6,6 +6,8 @@ import type {
 } from "@/features/campaign-intelligence/types/section-schemas";
 import { getCampaignFacts, buildCreatorMixFromFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { creatorDecisionStatus, isCreatorRejected } from "./creator-decision-status";
+import { reconcileCreatorSlateReasoning } from "./creator-slate-integrity";
+import { creatorGroupingKey } from "./studio-creator-slate-split";
 import { resolveCampaignDurationWeeks } from "./timeline-duration";
 
 const PLATFORM_DELIVERABLE: Record<string, string> = {
@@ -67,16 +69,26 @@ export function deriveInfluencerContentPlan(
     (creatorsData.slateIntelligence?.recommendations ?? []).map((row) => [row.creatorId, row])
   );
   /**
-   * The working slate, minus the creators the operator rejected.
+   * The canonical slate — `recommendations.creatorIds` — minus the creators the
+   * operator rejected.
    *
-   * `approve_creator` / `reject_creator` do not change slate membership — they
-   * write `vendorDecisions` — so a rejected creator stays in
-   * `selectedReasoning`. Content planned deliverables for it anyway, and
-   * `projectClientContent` showed that row to the client, while the commercial
-   * execution mapper had already excluded it. Same rule, one place, both
-   * consumers.
+   * Content used to iterate `selectedReasoning` alone. That array had drifted
+   * from `creatorIds` (see `creator-slate-integrity`), so a campaign whose
+   * Creators screen and Campaign Analysis showed ten creators rendered six
+   * here. Membership now comes from the ids, which is what the Creators header,
+   * Campaign Analysis, the Package footer and execution all read; the reasoning
+   * rows supply each creator's detail, and a member with no row carries an
+   * identity-only one rather than disappearing.
+   *
+   * `approve_creator` / `reject_creator` do not change membership — they write
+   * `vendorDecisions` — so the rejection filter stays, one rule for Content and
+   * for commercial execution.
    */
-  const reasoning = (creatorsData.recommendations?.selectedReasoning ?? []).filter(
+  const reasoning = reconcileCreatorSlateReasoning({
+    creatorIds: creatorsData.recommendations?.creatorIds ?? [],
+    selectedReasoning: creatorsData.recommendations?.selectedReasoning ?? [],
+    normalize: creatorGroupingKey,
+  }).filter(
     (entry) => entry.creatorId?.trim() && !isCreatorRejected(creatorsData.vendorDecisions, entry.creatorId)
   );
   if (reasoning.length === 0) return [];

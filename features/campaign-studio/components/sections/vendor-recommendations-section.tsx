@@ -1788,7 +1788,15 @@ export function VendorRecommendationsSection({
       ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
         <p className="text-[11px] text-muted-foreground">
-          {marketVendors.length} recommended creator{marketVendors.length === 1 ? "" : "s"}
+          {/*
+            `marketVendors` is the whole hydrated pool that passes the campaign's
+            requirements — the slate PLUS Discovery's alternatives. Labelling it
+            "recommended creators" put a second, larger recommendation count on
+            the same screen as the real one ("N Recommended" above), which is
+            how this screen appeared to claim ten recommended creators while the
+            slate, Content and the Package footer all had six.
+          */}
+          {marketVendors.length} creator{marketVendors.length === 1 ? "" : "s"} hydrated
           {marketLabel ? ` in ${marketLabel}` : ""}
           {excludedByMarket > 0 ? (
             <span>
@@ -1916,7 +1924,7 @@ export function VendorRecommendationsSection({
       ))}
       {hiddenCount > 0 && !showAllVendors ? (
         <ShowMoreButton onClick={() => setShowAllVendors(true)}>
-          + {hiddenCount} more recommended creators · Show all {displayedTotal}
+          + {hiddenCount} more · Show all {displayedTotal}
         </ShowMoreButton>
       ) : null}
       <CampaignAnalysisPanel campaignObject={campaignObject} />

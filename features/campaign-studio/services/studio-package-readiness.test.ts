@@ -246,8 +246,19 @@ test("C. Discovery requires enrichment → NOT READY when evidence is insufficie
   object.sections.creators.data = creatorsData as unknown as Record<string, unknown>;
   const generated = generatePlanningPackage(object);
   const ready = readinessOf(generated);
-  assert.equal(ready.checks.find((item) => item.id === "discovery")?.state, "blocked");
+  /*
+   * Updated deliberately. This asserted `blocked`. An incomplete creator
+   * ENRICHMENT record is creator-data completeness, not a gap in the campaign:
+   * browser evidence showed a campaign with Egypt confirmed, a slate, and
+   * Creators / Content / Commercial / Timeline all ready reported "Not ready"
+   * with Create client review withheld because a creator's record was missing a
+   * field. `in_progress` keeps it out of `ready_for_client` and out of
+   * `canCreateClientReview` — which is what this test is really about, and is
+   * still asserted below — without claiming planning cannot proceed.
+   */
+  assert.equal(ready.checks.find((item) => item.id === "discovery")?.state, "in_progress");
   assert.equal(ready.readyForClient, false);
+  assert.equal(ready.canCreateClientReview, false);
 });
 
 test("D. Creator quantity has no evidence → NOT READY", () => {

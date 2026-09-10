@@ -298,27 +298,33 @@ function evaluateStrategy(
     );
   }
   /*
-   * Strategy exists when the STRATEGY SECTION exists — the thing the Strategy
-   * screen renders — or when the strategy output document has been generated.
+   * Judge the SAME projection the Strategy screen renders.
    *
-   * This used to require the `full_strategy` OUTPUT record alone. That record is
-   * created only by `ensurePlanningOutputsForHandoff` (Director approval gate
-   * plus a composed slate) or by generating the document explicitly, so in the
-   * non-linear journey a campaign could carry a complete, current Strategy on
-   * screen and no such record — and Package reported "Influencer strategy has
-   * not been generated from current facts" over a visibly generated strategy.
+   * Browser evidence: Package reported "Influencer strategy has not been
+   * generated from current facts" while the Strategy screen showed a complete
+   * strategy — objective, audience, influencer strategy, creator tiers,
+   * platform strategy, content strategy, quantity, commercial, risks.
    *
-   * `deriveInfluencerStrategyView` is NOT the test for existence: it projects
-   * Campaign Facts, so it returns a full strategy for any campaign with facts.
-   * It is used below for what it does know — whether the approach is
-   * evidence-backed.
+   * Two earlier signals were both wrong for this question:
+   *   - the `full_strategy` OUTPUT record, created only by
+   *     `ensurePlanningOutputsForHandoff` (Director approval gate plus a
+   *     composed slate) or by generating the document explicitly;
+   *   - `sections.strategy`, which the Strategy screen does not read either.
+   *
+   * `executive-strategy-section.tsx` renders
+   * `deriveInfluencerStrategyView(campaignObject, narrative)`. That projection
+   * is therefore the authority, and it is not vacuous: with thin facts its rows
+   * come back as "Insufficient evidence", which is a genuine absence. The
+   * output record keeps the one thing it does know — `needs_update` means the
+   * DOCUMENT is stale, reported as "outdated" by the branch above.
    */
-  const strategySection = campaignObject.sections.strategy;
-  const strategyContent =
-    typeof strategySection.content === "string" ? strategySection.content.trim() : "";
-  const sectionGenerated = strategySection.status === "complete" && strategyContent.length > 0;
-  const documentGenerated = outputLiveStatus(campaignObject, "full_strategy") === "generated";
-  if (!sectionGenerated && !documentGenerated) {
+  const view = deriveInfluencerStrategyView(campaignObject);
+  const required = ["influencerStrategy", "platformStrategy", "contentStrategy"] as const;
+  const missing = required.filter((key) => {
+    const body = view.find((item) => item.key === key)?.body ?? "";
+    return !body.trim() || body === INSUFFICIENT_STRATEGY || /insufficient evidence/i.test(body);
+  });
+  if (missing.length === required.length) {
     return check(
       "strategy",
       "Strategy",
@@ -327,13 +333,6 @@ function evaluateStrategy(
       "Generate Strategy after confirming Campaign Intelligence."
     );
   }
-
-  const view = deriveInfluencerStrategyView(campaignObject);
-  const required = ["influencerStrategy", "platformStrategy", "contentStrategy"] as const;
-  const missing = required.filter((key) => {
-    const body = view.find((item) => item.key === key)?.body ?? "";
-    return !body.trim() || body === INSUFFICIENT_STRATEGY || /insufficient evidence/i.test(body);
-  });
   if (missing.length > 0) {
     return check(
       "strategy",
@@ -372,6 +371,31 @@ function evaluateDiscovery(
   }
   if (sufficiency.state === "discovery_sufficient") {
     return check("discovery", "Discovery", "ready");
+  }
+  /*
+   * An incomplete creator enrichment record is not a planning blocker.
+   *
+   * The campaign's geography is confirmed, a slate exists, and Creators,
+   * Content, Commercial and Timeline are all ready — but a field missing from a
+   * creator's enrichment record made the whole package "Not ready" and withheld
+   * Create client review. It is creator-data completeness, not a gap in the
+   * campaign.
+   *
+   * `in_progress` is the state that already means this: it keeps the package
+   * out of `ready_for_client` and out of `canCreateClientReview` — you should
+   * not put creators in front of a client whose data you cannot vouch for —
+   * without asserting that planning cannot proceed. Every other Discovery
+   * state keeps its meaning: no inventory, too few qualified creators, or
+   * unconfirmed facts genuinely stop planning and stay blocked.
+   */
+  if (sufficiency.state === "enrichment_required") {
+    return check(
+      "discovery",
+      "Discovery",
+      "in_progress",
+      sufficiency.detail,
+      sufficiency.nextAction
+    );
   }
   if (sufficiency.state === "discovery_ready") {
     return check(
