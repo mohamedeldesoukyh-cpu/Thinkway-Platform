@@ -124,6 +124,8 @@ export function StudioWorkspaceScreen(props: StudioWorkspaceScreenProps) {
         <CreatorsMixHeader
           campaignObject={props.campaignObject}
           discoveryStatus={byId.get("creator-discovery")?.status ?? "pending"}
+          conversationId={props.conversationId}
+          onCampaignObjectUpdated={props.onSlateUpdated}
         />
         {renderSection(byId.get("creator-discovery"), props)}
         {renderSection(byId.get("creator-recommendations"), props)}

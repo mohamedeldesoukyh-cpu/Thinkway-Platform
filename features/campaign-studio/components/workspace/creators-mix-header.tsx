@@ -1,8 +1,15 @@
 "use client";
 
+import { useState, useTransition } from "react";
+import { Loader2Icon, SearchIcon } from "lucide-react";
+import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 
+import { runStudioDiscoveryAction } from "../../actions/run-studio-discovery-action";
+import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
 import { resolveStudioDiscoverySufficiency } from "../../services/studio-discovery-sufficiency";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -10,6 +17,8 @@ import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 type CreatorsMixHeaderProps = {
   campaignObject?: CampaignObject;
   discoveryStatus: CampaignStudioSectionStatus;
+  conversationId?: string;
+  onCampaignObjectUpdated?: (campaignObject: Record<string, unknown>) => void;
 };
 
 function confidenceLabel(confidence: number): string {
@@ -19,7 +28,17 @@ function confidenceLabel(confidence: number): string {
   return "Unknown";
 }
 
-export function CreatorsMixHeader({ campaignObject, discoveryStatus }: CreatorsMixHeaderProps) {
+export function CreatorsMixHeader({
+  campaignObject,
+  discoveryStatus,
+  conversationId,
+  onCampaignObjectUpdated,
+}: CreatorsMixHeaderProps) {
+  const [running, startRun] = useTransition();
+  // A failed search is its own outcome. Nothing is persisted on failure, so the
+  // stage keeps its previous state and this line says the search failed rather
+  // than letting it read as "searched, zero results".
+  const [searchFailure, setSearchFailure] = useState<string | null>(null);
   const facts = getCampaignFacts(campaignObject);
   const quantity = deriveCreatorQuantityRecommendation(facts);
   const sufficiency = resolveStudioDiscoverySufficiency(
@@ -30,6 +49,13 @@ export function CreatorsMixHeader({ campaignObject, discoveryStatus }: CreatorsM
   const qualified = sufficiency.qualifiedCount;
   const missing =
     required != null && qualified < required ? required - qualified : 0;
+  // Offered while a confirmed profile exists and inventory has not been
+  // searched, and again after a search that returned nothing so the operator
+  // can re-run once filters or inventory change.
+  const canRunDiscovery =
+    Boolean(conversationId) &&
+    sufficiency.factsConfirmed &&
+    (sufficiency.state === "discovery_ready" || sufficiency.state === "no_inventory");
 
   return (
     <section className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
@@ -45,8 +71,13 @@ export function CreatorsMixHeader({ campaignObject, discoveryStatus }: CreatorsM
           {required} creators recommended
         </h3>
       )}
+      {/*
+        This is confidence in the recommended QUANTITY, computed from budget,
+        duration and objective evidence. It says nothing about whether creators
+        have been found — inventory and qualified counts below are the facts.
+      */}
       <p className="mt-1 text-sm text-muted-foreground">
-        Confidence: {confidenceLabel(quantity.confidence)}
+        Recommendation confidence (quantity): {confidenceLabel(quantity.confidence)}
       </p>
       <p className="mt-2 text-sm text-foreground">{quantity.rationale}</p>
       {quantity.evidence.length > 0 ? (
@@ -65,6 +96,47 @@ export function CreatorsMixHeader({ campaignObject, discoveryStatus }: CreatorsM
       </div>
       <p className="mt-3 text-sm text-muted-foreground">{sufficiency.detail}</p>
       <p className="mt-1 text-sm font-semibold text-foreground">Action: {sufficiency.nextAction}</p>
+
+      {searchFailure ? (
+        <p className="mt-2 text-sm font-semibold text-destructive">
+          Discovery search failed: {searchFailure}
+        </p>
+      ) : null}
+
+      {canRunDiscovery ? (
+        <Button
+          type="button"
+          size="sm"
+          className={`mt-3 ${STUDIO_CLASSES.primaryBtn}`}
+          disabled={running}
+          onClick={() =>
+            startRun(async () => {
+              setSearchFailure(null);
+              const result = await runStudioDiscoveryAction({ conversationId: conversationId! });
+              if (!result.ok) {
+                setSearchFailure(result.message);
+                toast.error(result.message);
+                return;
+              }
+              onCampaignObjectUpdated?.(result.campaignObject);
+              if (result.creatorCount === 0) toast.info(result.message);
+              else toast.success(result.message);
+            })
+          }
+        >
+          {running ? (
+            <>
+              <Loader2Icon className="size-3.5 animate-spin" />
+              Searching Discovery…
+            </>
+          ) : (
+            <>
+              <SearchIcon className="size-3.5" />
+              Run Discovery
+            </>
+          )}
+        </Button>
+      ) : null}
     </section>
   );
 }

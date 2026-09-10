@@ -113,7 +113,13 @@ test("Arab Bank quantity is evidence-based and not a silent default of 10", () =
   assert.match(quantity.rationale, /5,000,000 EGP|5,000,000/);
   assert.match(quantity.rationale, /4-week|4 week/i);
   assert.doesNotMatch(quantity.rationale, /default 10|capped at 10/i);
-  assert.ok(quantity.evidence.some((line) => /awareness plus acquisition/i.test(line)));
+  // The objective spans the funnel, so the evidence must say both sides are
+  // covered. The line names the campaign's own objective rather than asserting
+  // a category, so match on the coverage claim.
+  assert.ok(
+    quantity.evidence.some((line) => /both reach and conversion coverage/i.test(line)),
+    `expected funnel-spanning evidence, got ${JSON.stringify(quantity.evidence)}`
+  );
   assert.ok(quantity.confidence >= 0.8);
 });
 

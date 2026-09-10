@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  CompassIcon,
   Link2Icon,
   Loader2Icon,
   PlusIcon,
@@ -44,6 +45,8 @@ import {
   type StudioCreatorReplacementTarget,
 } from "../../services/studio-creator-replacement";
 import { formatFollowers } from "./shared/format-utils";
+import { hasStudioCampaignBrowseConstraints } from "../../services/studio-discovery-browse-filters";
+import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
 
 type AddCreatorPanelProps = {
   conversationId: string;
@@ -63,10 +66,16 @@ type AddCreatorPanelProps = {
   candidates?: StudioDraftCreatorRef[];
   /** Replacement staged — lets the caller close its dialog and offer Undo. */
   onSelectionStaged?: (input: { undoCreatorId: string; displayName?: string }) => void;
+  /**
+   * The campaign's own Discovery filters, for browsing rather than searching by
+   * name. Supplied by the caller (which holds the campaign object) via
+   * `studioCampaignBrowseFilters`.
+   */
+  browseFilters?: UnifiedCreatorBrowseFilters;
 };
 
 /** "recommended" is offered only while replacing; it has no meaning for a plain add. */
-type AddMode = "recommended" | "discovery" | "url";
+type AddMode = "recommended" | "browse" | "discovery" | "url";
 
 function toDraftRef(
   creator: UnifiedCreatorResult,
@@ -121,15 +130,12 @@ export function AddCreatorPanel({
   replaceTarget = null,
   candidates = [],
   onSelectionStaged,
+  browseFilters,
 }: AddCreatorPanelProps) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<AddMode>(
     replaceTarget && candidates.length > 0 ? "recommended" : "discovery"
   );
-  // Read inside the Replace effect without re-running it as hydration fills the
-  // candidate list — that would reset a mode the operator had just changed.
-  const candidateCountRef = useRef(candidates.length);
-  candidateCountRef.current = candidates.length;
   const [query, setQuery] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
   const [searching, setSearching] = useState(false);
@@ -143,14 +149,23 @@ export function AddCreatorPanel({
   useEffect(() => {
     if (!replaceTargetId) return;
     setOpen(true);
-    setMode(candidateCountRef.current > 0 ? "recommended" : "discovery");
+    // Always the candidate tab; `effectiveMode` below demotes it to Browse
+    // Discovery when there is nothing left to recommend, and promotes it again
+    // if hydration produces candidates. No ref read during render.
+    setMode("recommended");
   }, [replaceTargetId]);
 
   // "recommended" only means anything while replacing. Once the replacement is
   // staged the target clears, so fall back rather than leave a list that says
   // it replaces a creator it no longer has.
   const effectiveMode: AddMode =
-    mode === "recommended" && !(replaceTarget && candidates.length > 0) ? "discovery" : mode;
+    mode === "recommended" && !(replaceTarget && candidates.length > 0)
+      ? browseFilters
+        ? "browse"
+        : "discovery"
+      : mode === "browse" && !browseFilters
+        ? "discovery"
+        : mode;
 
   const stagedAdditions = draft.changes.filter((c) => c.kind === "add_creator");
   const stagedIds = new Set(
@@ -283,6 +298,43 @@ export function AddCreatorPanel({
       }
     },
     [setEnrichment]
+  );
+
+  /**
+   * Browse Discovery with the campaign's own constraints — the same
+   * `browseUnifiedCreatorsAction` Discovery itself calls, with the filter set
+   * projected from Creator Search Requirements. Needs no query, so it works
+   * when there are no remaining recommended candidates and nothing has been
+   * searched yet.
+   */
+  const browseDiscovery = useCallback(async () => {
+    if (!browseFilters) return;
+    setSearching(true);
+    try {
+      const result = await browseUnifiedCreatorsAction(browseFilters, {
+        caller: "studio_browse_discovery",
+      });
+      if (result.error) {
+        toast.error(result.error);
+        return;
+      }
+      setResults(result.creators);
+      if (result.creators.length === 0) {
+        toast.info("No Discovery creators match the campaign filters yet.");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Browse failed.");
+    } finally {
+      setSearching(false);
+    }
+  }, [browseFilters]);
+
+  /** One staging path for both Discovery routes — browse and search by name. */
+  const pickDiscoveryCreator = useCallback(
+    (creator: UnifiedCreatorResult) => {
+      void stageAddition(toDraftRef(creator, "discovery", "not_requested"));
+    },
+    [stageAddition]
   );
 
   const searchDiscovery = useCallback(async () => {
@@ -477,6 +529,23 @@ export function AddCreatorPanel({
                   Other recommended ({candidates.length})
                 </Button>
               ) : null}
+              {browseFilters ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  role="tab"
+                  aria-selected={effectiveMode === "browse"}
+                  variant={effectiveMode === "browse" ? "secondary" : "ghost"}
+                  className={cn("h-7 px-2.5 text-xs", STUDIO_CLASSES.focusRingInset)}
+                  onClick={() => {
+                    setMode("browse");
+                    if (results.length === 0) void browseDiscovery();
+                  }}
+                >
+                  <CompassIcon className="size-3" aria-hidden />
+                  Browse Discovery
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 size="xs"
@@ -487,7 +556,7 @@ export function AddCreatorPanel({
                 onClick={() => setMode("discovery")}
               >
                 <SearchIcon className="size-3" aria-hidden />
-                From Discovery
+                Search by name
               </Button>
               <Button
                 type="button"
@@ -564,6 +633,37 @@ export function AddCreatorPanel({
                 ))}
               </ul>
             </div>
+          ) : effectiveMode === "browse" ? (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-[11px] text-muted-foreground">
+                  {hasStudioCampaignBrowseConstraints(browseFilters ?? {})
+                    ? "Discovery creators that match this campaign's confirmed market, platforms and categories."
+                    : "Browsing Discovery without campaign filters — this campaign has no confirmed constraints yet."}
+                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={searching}
+                  className={cn("h-8 px-3 text-xs sm:shrink-0", STUDIO_CLASSES.primaryBtn)}
+                  onClick={() => void browseDiscovery()}
+                >
+                  {searching ? (
+                    <Loader2Icon className="size-3.5 animate-spin" />
+                  ) : results.length > 0 ? (
+                    "Refresh"
+                  ) : (
+                    "Browse"
+                  )}
+                </Button>
+              </div>
+              <DiscoveryResultList
+                results={results}
+                stagedIds={stagedIds}
+                replacing={Boolean(replaceTarget)}
+                onPick={pickDiscoveryCreator}
+              />
+            </div>
           ) : effectiveMode === "discovery" ? (
             <div className="space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row">
@@ -590,43 +690,12 @@ export function AddCreatorPanel({
                 Discovery picks keep their current data — use Refresh Intelligence per creator
                 when you want updated metrics.
               </p>
-              {results.map((creator) => {
-                const alreadyStaged = stagedIds.has(normalizeCreatorId(creator.unified_id));
-                return (
-                  <div
-                    key={creator.unified_id}
-                    className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-background/80 px-2.5 py-2"
-                  >
-                    <CreatorAvatarImage
-                      avatarUrl={creator.primaryAvatarUrl ?? creator.profile_image_url}
-                      size="sm"
-                      alt={creator.display_name}
-                    />
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-xs font-semibold">{creator.display_name}</p>
-                      <p className="text-[10px] text-muted-foreground">
-                        {creator.platforms[0]?.platform ?? "—"} ·{" "}
-                        {formatFollowers(creator.metrics.followers.value ?? undefined)} followers
-                      </p>
-                    </div>
-                    <Button
-                      type="button"
-                      size="xs"
-                      disabled={alreadyStaged}
-                      className={cn(
-                        "h-7 px-2.5 disabled:opacity-50 sm:shrink-0",
-                        STUDIO_CLASSES.primaryBtn
-                      )}
-                      onClick={() =>
-                        void stageAddition(toDraftRef(creator, "discovery", "not_requested"))
-                      }
-                    >
-                      <PlusIcon className="size-3" />
-                      {alreadyStaged ? "Staged" : "Add"}
-                    </Button>
-                  </div>
-                );
-              })}
+              <DiscoveryResultList
+                results={results}
+                stagedIds={stagedIds}
+                replacing={Boolean(replaceTarget)}
+                onPick={pickDiscoveryCreator}
+              />
             </div>
           ) : (
             <div className="space-y-2">
@@ -659,5 +728,59 @@ export function AddCreatorPanel({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Discovery result rows, shared by Browse Discovery and search-by-name so both
+ * routes render and stage identically.
+ */
+function DiscoveryResultList({
+  results,
+  stagedIds,
+  replacing,
+  onPick,
+}: {
+  results: UnifiedCreatorResult[];
+  stagedIds: Set<string>;
+  replacing: boolean;
+  onPick: (creator: UnifiedCreatorResult) => void;
+}) {
+  if (results.length === 0) return null;
+  return (
+    <ul className="space-y-1.5">
+      {results.map((creator) => {
+        const alreadyStaged = stagedIds.has(normalizeCreatorId(creator.unified_id));
+        return (
+          <li
+            key={creator.unified_id}
+            className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-background/80 px-2.5 py-2"
+          >
+            <CreatorAvatarImage
+              avatarUrl={creator.primaryAvatarUrl ?? creator.profile_image_url}
+              size="sm"
+              alt={creator.display_name}
+            />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-semibold">{creator.display_name}</p>
+              <p className="text-[10px] text-muted-foreground">
+                {creator.platforms[0]?.platform ?? "—"} ·{" "}
+                {formatFollowers(creator.metrics.followers.value ?? undefined)} followers
+              </p>
+            </div>
+            <Button
+              type="button"
+              size="xs"
+              disabled={alreadyStaged}
+              className={cn("h-7 px-2.5 disabled:opacity-50 sm:shrink-0", STUDIO_CLASSES.primaryBtn)}
+              onClick={() => onPick(creator)}
+            >
+              <PlusIcon className="size-3" />
+              {alreadyStaged ? "Staged" : replacing ? "Use" : "Add"}
+            </Button>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

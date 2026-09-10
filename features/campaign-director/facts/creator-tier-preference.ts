@@ -130,6 +130,9 @@ export function parseCreatorTierPreference(
     const colon = line.search(/[:：]/);
     const block: string[] = [colon >= 0 ? line.slice(colon + 1) : line];
     for (let next = index + 1; next < lines.length && next <= index + 8; next += 1) {
+      // A blank line between the label and its list is layout, not the end of
+      // the statement — briefs put the tiers in the block below the heading.
+      if (!lines[next]!.trim()) continue;
       if (!isTierContinuationLine(lines[next]!)) break;
       block.push(lines[next]!);
     }

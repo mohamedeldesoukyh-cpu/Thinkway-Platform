@@ -21,6 +21,12 @@ import {
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 
 import {
+  creatorTierPreferenceFromFacts,
+  resolveCreatorTierMixFromPreference,
+} from "@/features/campaign-director/facts/creator-tier-preference";
+import { getIndustryCreatorMix } from "./creator-tier-mix-by-industry";
+
+import {
   deriveCreatorQuantityRecommendation,
   formatCreatorTierMixSummary,
   resolveCreatorTierMix,
@@ -237,4 +243,61 @@ test("the stated split survives into the slate's counted mix", () => {
     quantity.mix.every((tier) => tier.count >= 0),
     "counts are allocated from the stated percentages"
   );
+});
+
+// ---------------------------------------------------------------------------
+// Tier integrity through Discovery (Part 7).
+//
+// Strategy correctly dropped Nano for a Macro/Mid/Micro brief, but the
+// Discovery search composed its slate straight from the industry mix — which
+// for beauty includes Nano — so the tier the brief excluded came back at the
+// acquisition step.
+
+test("Discovery's slate mix honours the brief's tiers, not the raw industry mix", () => {
+  const facts = factsFrom(KERASTASE_BRIEF);
+  const industryMix = getIndustryCreatorMix("beauty").filter((tier) => tier.percent > 0);
+
+  assert.ok(
+    industryMix.some((tier) => tier.tier === "Nano"),
+    "precondition: the beauty industry mix contains Nano"
+  );
+
+  // The same resolution the Discovery search now applies to its base mix.
+  const { mix } = resolveCreatorTierMixFromPreference({
+    preference: creatorTierPreferenceFromFacts(facts),
+    baseMix: getIndustryCreatorMix("beauty"),
+  });
+
+  assert.deepEqual(mix.map((tier) => tier.tier), ["Macro", "Mid", "Micro"]);
+  assert.ok(
+    !mix.some((tier) => tier.tier === "Nano" || tier.tier === "Mega" || tier.tier === "Celebrity"),
+    "no tier outside the brief is recommended automatically"
+  );
+});
+
+test("with no stated tiers Discovery keeps the industry mix exactly", () => {
+  const facts = factsFrom(NO_PREFERENCE_BRIEF);
+  const baseMix = getIndustryCreatorMix("general");
+
+  const { mix, basis } = resolveCreatorTierMixFromPreference({
+    preference: creatorTierPreferenceFromFacts(facts),
+    baseMix,
+  });
+
+  assert.equal(basis, "recommended");
+  assert.deepEqual(mix, baseMix, "unchanged when the brief states nothing");
+});
+
+test("the same approved tier set reaches Strategy, the slate and Discovery", () => {
+  const facts = factsFrom(KERASTASE_BRIEF);
+
+  const strategyTiers = resolveCreatorTierMix(facts).map((tier) => tier.tier);
+  const slateTiers = deriveCreatorQuantityRecommendation(facts).mix.map((tier) => tier.tier);
+  const discoveryTiers = resolveCreatorTierMixFromPreference({
+    preference: creatorTierPreferenceFromFacts(facts),
+    baseMix: getIndustryCreatorMix("beauty"),
+  }).mix.map((tier) => tier.tier);
+
+  assert.deepEqual(new Set(slateTiers), new Set(strategyTiers));
+  assert.deepEqual(new Set(discoveryTiers), new Set(strategyTiers));
 });

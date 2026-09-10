@@ -23,13 +23,26 @@ export type CreatorQuantityRecommendation = {
 const MIN_SLATE = 4;
 const MAX_SLATE = 16;
 
-/** Objective classification shared with Creator Search Requirements. */
+/**
+ * Objective classification shared with Creator Search Requirements.
+ *
+ * The acquisition pattern used to match `convert` but not "conversion", and
+ * named no other bottom-funnel word, so "Drive Consideration & Conversion"
+ * classified as awareness ONLY — "consider" matched the awareness side. The
+ * campaign then carried the line "Awareness objective concentrates spend on
+ * fewer higher-reach creators" against a conversion brief. Bottom-funnel
+ * vocabulary (conversion, purchase, order, traffic, checkout, install,
+ * subscription, download, redeem, coupon/promo code) is matched here.
+ */
 export function objectiveKindOf(
   objective: string | undefined
 ): "awareness" | "acquisition" | "both" | "other" {
   const text = objective?.toLowerCase() ?? "";
   const awareness = /aware|reach|brand|consider/i.test(text);
-  const acquisition = /acqui|convert|lead|sale|app |issuance|sign.?up/i.test(text);
+  const acquisition =
+    /acqui|convers|convert|purchas|\borders?\b|checkout|traffic|lead|sale|app |install|issuance|sign.?up|subscri|download|redeem|promo\s?code|coupon/i.test(
+      text
+    );
   if (awareness && acquisition) return "both";
   if (acquisition) return "acquisition";
   if (awareness) return "awareness";
@@ -205,16 +218,21 @@ export function deriveCreatorQuantityRecommendation(
   recommended += budget.lift;
   if (budget.evidence) evidence.push(budget.evidence);
 
+  // Each line names the campaign's own confirmed objective. The previous
+  // wording asserted a category ("Awareness objective…"), which read as a
+  // contradiction on a screen that states the objective right above it.
+  const objectiveText = facts?.objective?.trim();
+  const objectiveLabel = objectiveText ? `Objective “${objectiveText}”` : "This objective";
   if (kind === "acquisition") {
     recommended += 2;
-    evidence.push("Acquisition objective adds creators for conversion coverage.");
+    evidence.push(`${objectiveLabel} adds creators for conversion coverage.`);
   } else if (kind === "both") {
     recommended += 1;
-    evidence.push("Awareness plus acquisition needs both reach and conversion coverage.");
+    evidence.push(`${objectiveLabel} needs both reach and conversion coverage.`);
   } else if (kind === "awareness") {
-    evidence.push("Awareness objective concentrates spend on fewer higher-reach creators.");
-  } else if (facts?.objective?.trim()) {
-    evidence.push(`Objective “${facts.objective.trim()}” shapes mix, not a fixed headcount.`);
+    evidence.push(`${objectiveLabel} concentrates spend on fewer higher-reach creators.`);
+  } else if (objectiveText) {
+    evidence.push(`${objectiveLabel} shapes mix, not a fixed headcount.`);
   }
 
   if (platforms.length >= 3) {

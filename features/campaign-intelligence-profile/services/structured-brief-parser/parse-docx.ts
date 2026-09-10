@@ -149,9 +149,19 @@ async function parseDocxFromXml(buffer: Buffer): Promise<StructuredBriefDocument
  * is never mistaken for a tag. Without the decode, mammoth's escaping leaked
  * into extracted text ("Awareness -&gt; Interest"), which broke funnel parsing
  * and put raw entities in front of the operator.
+ *
+ * A soft line break inside a Word paragraph (`<w:br/>`, i.e. Shift+Enter)
+ * reaches us as `<br />`. Stripping it with every other tag glued the lines
+ * either side of it into one string — the Kérastase brief extracted as
+ * "Brand: KérastaseMarket: EgyptCampaign Duration: 4 Weeks", which is what the
+ * operator saw on Intake. Every labelled value after the first on such a
+ * paragraph was unreadable to the field extractors. A break is a line, so it
+ * becomes a newline before the tags go.
  */
 function htmlToText(html: string): string {
-  return decodeXmlEntities(html.replace(/<[^>]+>/g, "")).trim();
+  return decodeXmlEntities(
+    html.replace(/<br\s*\/?>/gi, "\n").replace(/<[^>]+>/g, "")
+  ).trim();
 }
 
 async function parseDocxFromMammothHtml(buffer: Buffer): Promise<StructuredBriefSection[]> {
