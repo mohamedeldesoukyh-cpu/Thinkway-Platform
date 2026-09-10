@@ -4658,6 +4658,13 @@
   color: #fff !important;
 }
 
+/* Caller-owned context block above the creator profile tabs (Studio's
+   executive planning recommendation). Spacing only — the canonical Discovery
+   creator profile design is unchanged. */
+.creator-detail-sheet-context-slot {
+  margin-bottom: 12px;
+}
+
 .creator-detail-sheet-footer {
   flex-shrink: 0;
   border-top: 1px solid var(--border, #e3e8f2);

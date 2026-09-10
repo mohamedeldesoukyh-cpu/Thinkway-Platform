@@ -86,7 +86,10 @@ export function StudioCreatorDetailHost({ selection, open, onOpenChange, signal 
         creator={creator}
         open={open}
         onOpenChange={onOpenChange}
-        presentation="sheet"
+        // The canonical Discovery design. `sheet` renders the legacy right
+        // drawer inside the same component — that prop was why Studio still
+        // showed the old layout.
+        presentation="discoveryPack"
         contextSlot={
           <StudioExecutiveRecommendationBlock
             creatorId={creatorId}

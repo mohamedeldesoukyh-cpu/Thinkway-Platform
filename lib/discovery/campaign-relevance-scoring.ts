@@ -62,6 +62,28 @@ export type CampaignRelevanceBreakdown = {
   unknownCount: number;
 };
 
+/**
+ * Platform is a filter, not a quality signal.
+ *
+ * Platform was scored like every other criterion, so a creator on the campaign's
+ * platform outranked an equally-fitting creator on another — and because
+ * `composeCreatorSlate` gates on this score at FIT_FLOOR and sorts by it,
+ * platform changed WHICH creators were recommended. Platform is already applied
+ * where it belongs: as SQL browse filters, as the mandatory platform gate in
+ * slate composition, and as displayed campaign context.
+ *
+ * It stays out of the score. Any other campaign eligibility rule (market,
+ * category, audience, follower band, engagement floor, brand safety) is
+ * unchanged.
+ */
+export function isSelectionScoringCriterion(criterion: CampaignSearchCriterion): boolean {
+  // Both identities a criterion can carry: its Discovery filter key (set by the
+  // CIP / CSR projection in `meta.discoveryKey`) and its own kind.
+  const discoveryKey = criterion.meta?.discoveryKey;
+  if (typeof discoveryKey === "string" && discoveryKey === "platform") return false;
+  return criterion.kind !== "platform";
+}
+
 function toEvaluation(matched: boolean): CriterionEvaluation {
   return matched ? "match" : "no_match";
 }
@@ -337,7 +359,9 @@ export function scoreCreatorCampaignRelevance(
   creator: UnifiedCreatorResult,
   criteria: CampaignSearchCriterion[]
 ): CampaignRelevanceBreakdown {
-  const enabled = criteria.filter((c) => c.enabled && c.value.trim());
+  const enabled = criteria.filter(
+    (c) => c.enabled && c.value.trim() && isSelectionScoringCriterion(c)
+  );
   if (enabled.length === 0) {
     return {
       score: 100,
@@ -404,6 +428,9 @@ export function attachCampaignRelevanceScores(
   if (enabled.length === 0) return creators;
 
   return creators.map((creator) => {
+    // `scoreCreatorCampaignRelevance` drops non-scoring criteria itself, so the
+    // score is platform-free even though the enabled set below still gates on
+    // whether campaign criteria exist at all.
     const breakdown = scoreCreatorCampaignRelevance(creator, enabled);
     return {
       ...creator,

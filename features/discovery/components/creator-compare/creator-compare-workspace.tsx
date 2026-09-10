@@ -252,6 +252,7 @@ export function CreatorCompareWorkspace({ shortlists: initialShortlists }: Props
       />
 
       <CreatorDetailSheet
+        presentation="discoveryPack"
         creator={detailCreator}
         open={detailOpen}
         onOpenChange={onDetailOpenChange}
