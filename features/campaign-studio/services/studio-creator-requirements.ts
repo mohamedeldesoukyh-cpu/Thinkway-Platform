@@ -72,7 +72,16 @@ export function studioFactsFromHydrationOptions(
   };
 }
 
-/** Campaign Facts the operator confirmed — never invent extra requirement rows. */
+/**
+ * Campaign Facts the operator confirmed — never invent extra requirement rows.
+ *
+ * `forRanking` drops the platform row. Platform is campaign eligibility, not a
+ * creator quality signal: it is applied as a Discovery filter and as the
+ * mandatory platform gate in slate composition, and it is shown on the card.
+ * Scoring it here made it a third of the ratio that ORDERS the recommended
+ * creators, so a platform match reordered the slate. The badge keeps counting
+ * it, because "2 of 3 requirements met" is context the operator reads.
+ */
 export function studioCreatorRequirementScore(
   input: StudioCreatorLocation & {
     platform?: string;
@@ -82,7 +91,8 @@ export function studioCreatorRequirementScore(
     handle?: string;
     displayName?: string;
   },
-  facts: CampaignFacts | undefined
+  facts: CampaignFacts | undefined,
+  options?: { forRanking?: boolean }
 ): StudioRequirementScore {
   const checks: boolean[] = [];
   const markets = facts?.geography?.filter((value) => value.trim()) ?? [];
@@ -90,7 +100,7 @@ export function studioCreatorRequirementScore(
     checks.push(vendorMatchesCampaignMarket(input, markets));
   }
   const platforms = (facts?.platforms ?? []).map((item) => item.trim()).filter(Boolean);
-  if (platforms.length > 0) {
+  if (platforms.length > 0 && !options?.forRanking) {
     checks.push(platformMatches(input.platform, platforms));
   }
   const preferredCategories = deriveCreatorCategoriesFromBrief({
@@ -125,6 +135,17 @@ export function studioCreatorRequirementScore(
     total,
     ratio: total > 0 ? met / total : 1,
   };
+}
+
+/**
+ * The score that ORDERS creators. Identical to the requirement score minus the
+ * platform row — see `studioCreatorRequirementScore`.
+ */
+export function studioCreatorRankingScore(
+  input: Parameters<typeof studioCreatorRequirementScore>[0],
+  facts: CampaignFacts | undefined
+): StudioRequirementScore {
+  return studioCreatorRequirementScore(input, facts, { forRanking: true });
 }
 
 /** Recommended list gate: skip when the brief has no mix; otherwise require a real fit. */

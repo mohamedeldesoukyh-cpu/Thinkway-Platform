@@ -103,7 +103,9 @@ function buildCreatorSummaries(creators: UnifiedCreatorResult[]): string {
           }),
       aiCategory: creator.ai_category,
       aiNiche: creator.ai_niche,
-      platform: primary?.platform ?? null,
+      // Platform is deliberately NOT sent: this summary is a ranking input, and
+      // platform is campaign eligibility (applied as a filter and as the
+      // mandatory slate gate), never a creator quality signal.
       handle: primary?.handle ?? null,
       followers: creator.metrics.followers.value ?? primary?.follower_count ?? null,
       engagementRate: creator.metrics.engagement_rate.value ?? primary?.engagement_rate ?? null,

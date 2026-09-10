@@ -397,7 +397,13 @@ export function useCreatorHydration(
     }
 
     for (const id of pendingDna) inFlightRef.current.add(normalizeIdKey(id));
-    setLoading(vendors.length === 0);
+    // `vendors` here is the closure from the render that created this effect,
+    // and on a slate change the reset effect above has already emptied the
+    // state — so reading it said "not loading" while nothing was on screen, and
+    // the Creators section fell through to its zero-results branch. The done
+    // set is reset with the slate, so an empty one means nothing has hydrated
+    // for THIS slate yet, which is exactly when we are loading.
+    setLoading(dnaDoneRef.current.size === 0);
     setPhase(1);
 
     const sessionTimer = startLoadTimer("studio.creator-hydration.viewport-batch");

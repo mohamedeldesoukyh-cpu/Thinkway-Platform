@@ -41,6 +41,7 @@ import {
 import { previewCreatorsSectionFromDraft } from "../../services/studio-draft-preview";
 import {
   creatorGroupingKey,
+  creatorIdsToHydrate,
   splitRecommendedCreatorIds,
 } from "../../services/studio-creator-slate-split";
 import type { StudioCreatorReplacementTarget } from "../../services/studio-creator-replacement";
@@ -86,6 +87,7 @@ import {
 } from "../../services/studio-replacement-candidates";
 import {
   sortByStudioRequirements,
+  studioCreatorRankingScore,
   studioCreatorRequirementScore,
   studioRequirementBadgeLabel,
   vendorFitsStudioBriefMix,
@@ -107,6 +109,10 @@ import { StudioPlanningIntelligenceStrip } from "./shared/studio-planning-intell
 import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
 import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
 import { studioCampaignBrowseFilters } from "../../services/studio-discovery-browse-filters";
+import {
+  resolveStudioCreatorListState,
+  studioCreatorListIsLoading,
+} from "../../services/studio-creator-list-state";
 
 type VendorRecommendationsSectionProps = {
   campaignObject?: CampaignObject;
@@ -1224,7 +1230,9 @@ export function VendorRecommendationsSection({
         ),
     });
     return sortByStudioRequirements(recommended, (vendor) =>
-      studioCreatorRequirementScore(
+      // Ranking score: platform is eligibility, not a quality signal, so it
+      // orders nothing. The card badge still counts it.
+      studioCreatorRankingScore(
         {
           country: vendor.country,
           countryCode: vendor.countryCode,
@@ -1263,7 +1271,7 @@ export function VendorRecommendationsSection({
       (vendor) => !vendor.id || !selectedKeys.has(creatorGroupingKey(vendor.id))
     );
     const ordered = sortByStudioRequirements(remaining, (vendor) =>
-      studioCreatorRequirementScore(
+      studioCreatorRankingScore(
         {
           country: vendor.country,
           countryCode: vendor.countryCode,
@@ -1391,7 +1399,19 @@ export function VendorRecommendationsSection({
     creatorsData.fitScoreCount ??
     (creatorFitScores ? Object.keys(creatorFitScores).length : 0);
 
-  if ((isRunning || loading || isRegeneratingProposal) && vendors.length === 0 && (hasCommittedRecommendations || usingDraftPreview)) {
+  // Searching or hydrating must never render as "Discovery returned nothing".
+  // The campaign holding creator ids while no card has hydrated yet is the case
+  // that used to fall through to the empty area.
+  const listState = resolveStudioCreatorListState({
+    expectedCreatorIdCount: creatorIdsToHydrate(slateSplit).length,
+    hydratedCount: vendors.length,
+    searching: isRunning || isRegeneratingProposal,
+    hydrationLoading: loading,
+    hasSearched: Boolean(creatorsData.lastDiscoveryAt),
+    proposalBlocked: creatorsData.slateProposalStatus?.status === "blocked",
+  });
+
+  if (studioCreatorListIsLoading(listState) && vendors.length === 0) {
     return <SectionSkeleton variant="vendors" />;
   }
 

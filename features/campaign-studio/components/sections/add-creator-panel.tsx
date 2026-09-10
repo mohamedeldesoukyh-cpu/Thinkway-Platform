@@ -46,6 +46,7 @@ import {
 } from "../../services/studio-creator-replacement";
 import { formatFollowers } from "./shared/format-utils";
 import { hasStudioCampaignBrowseConstraints } from "../../services/studio-discovery-browse-filters";
+import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import type { UnifiedCreatorBrowseFilters } from "@/lib/creators/types";
 
 type AddCreatorPanelProps = {
@@ -142,6 +143,13 @@ export function AddCreatorPanel({
   const [addingUrl, setAddingUrl] = useState(false);
   const [results, setResults] = useState<UnifiedCreatorResult[]>([]);
   const [busyCreatorId, setBusyCreatorId] = useState<string | null>(null);
+  /**
+   * The creator whose details are open. Rendered by Discovery's own
+   * `CreatorDetailSheet` in its canonical `discoveryPack` presentation — the
+   * same component and design as Discovery, with the replacement action added
+   * through the sheet's existing `onAssign` hook.
+   */
+  const [detailCreator, setDetailCreator] = useState<UnifiedCreatorResult | null>(null);
 
   // Replace is clicked on a creator card above this panel, which is collapsed
   // by default — so without this the operator clicked Replace and saw nothing.
@@ -662,6 +670,7 @@ export function AddCreatorPanel({
                 stagedIds={stagedIds}
                 replacing={Boolean(replaceTarget)}
                 onPick={pickDiscoveryCreator}
+                onOpenDetails={setDetailCreator}
               />
             </div>
           ) : effectiveMode === "discovery" ? (
@@ -695,6 +704,7 @@ export function AddCreatorPanel({
                 stagedIds={stagedIds}
                 replacing={Boolean(replaceTarget)}
                 onPick={pickDiscoveryCreator}
+                onOpenDetails={setDetailCreator}
               />
             </div>
           ) : (
@@ -727,6 +737,22 @@ export function AddCreatorPanel({
           )}
         </div>
       )}
+      {detailCreator ? (
+        <CreatorDetailSheet
+          key={detailCreator.unified_id}
+          creator={detailCreator}
+          open
+          onOpenChange={(next) => {
+            if (!next) setDetailCreator(null);
+          }}
+          presentation="discoveryPack"
+          onAssign={(creator) => {
+            setDetailCreator(null);
+            pickDiscoveryCreator(creator);
+          }}
+          assignLabel={replaceTarget ? "Use for replacement" : "Add to plan"}
+        />
+      ) : null}
     </div>
   );
 }
@@ -740,11 +766,13 @@ function DiscoveryResultList({
   stagedIds,
   replacing,
   onPick,
+  onOpenDetails,
 }: {
   results: UnifiedCreatorResult[];
   stagedIds: Set<string>;
   replacing: boolean;
   onPick: (creator: UnifiedCreatorResult) => void;
+  onOpenDetails: (creator: UnifiedCreatorResult) => void;
 }) {
   if (results.length === 0) return null;
   return (
@@ -762,12 +790,27 @@ function DiscoveryResultList({
               alt={creator.display_name}
             />
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-semibold">{creator.display_name}</p>
+              <button
+                type="button"
+                className="block max-w-full truncate text-left text-xs font-semibold hover:text-[#0057FF]"
+                onClick={() => onOpenDetails(creator)}
+              >
+                {creator.display_name}
+              </button>
               <p className="text-[10px] text-muted-foreground">
                 {creator.platforms[0]?.platform ?? "—"} ·{" "}
                 {formatFollowers(creator.metrics.followers.value ?? undefined)} followers
               </p>
             </div>
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              className="h-7 px-2 text-[11px] text-muted-foreground sm:shrink-0"
+              onClick={() => onOpenDetails(creator)}
+            >
+              Details
+            </Button>
             <Button
               type="button"
               size="xs"

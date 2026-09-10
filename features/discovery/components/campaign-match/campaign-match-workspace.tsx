@@ -376,6 +376,7 @@ export function CampaignMatchWorkspace() {
       </div>
 
       <CreatorDetailSheet
+        presentation="discoveryPack"
         creator={detailCreator}
         open={detailOpen}
         onOpenChange={(open) => {

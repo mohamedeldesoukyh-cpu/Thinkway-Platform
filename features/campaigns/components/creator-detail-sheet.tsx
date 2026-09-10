@@ -143,6 +143,11 @@ type Props = {
    */
   presentation?: CreatorDetailSheetPresentation;
   /**
+   * Label for the assign action, when `onAssign` is set. Studio replaces a
+   * creator rather than assigning a quotation line, and the button says so.
+   */
+  assignLabel?: string;
+  /**
    * Optional caller-owned block rendered at the top of the Overview tab.
    *
    * Studio uses it to keep its executive planning recommendation alongside the
@@ -827,6 +832,7 @@ export function CreatorDetailSheet({
   preserveOpenOnCreatorRows = true,
   presentation = "sheet",
   contextSlot,
+  assignLabel = "Assign to line",
 }: Props) {
   const isDiscoveryPack = presentation === "discoveryPack";
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
@@ -1585,6 +1591,15 @@ export function CreatorDetailSheet({
 
   const packHeaderActions = (
     <>
+      {canAssign ? (
+        <button
+          type="button"
+          className="tw-b sm"
+          onClick={() => onAssign?.(identityCreator)}
+        >
+          {assignLabel}
+        </button>
+      ) : null}
       {identityCreator.influencer_id ? (
         <RefreshCreatorMenu
           influencerId={identityCreator.influencer_id}
@@ -1697,7 +1712,11 @@ export function CreatorDetailSheet({
               </>
             }
             body={
-              <DiscoverySuiteCreatorProfileTabs
+              <>
+                {contextSlot ? (
+                  <div className="creator-detail-sheet-context-slot">{contextSlot}</div>
+                ) : null}
+                <DiscoverySuiteCreatorProfileTabs
                 displayCreator={displayCreator}
                 identityCreator={identityCreator}
                 platformName={platformName}
@@ -1721,7 +1740,8 @@ export function CreatorDetailSheet({
                 onEditAveragePrice={() => setEditAveragePriceOpen(true)}
                 onEnrichmentStatusChange={setEnrichmentStatus}
                 onCreatorUpdated={handleCreatorUpdated}
-              />
+                />
+              </>
             }
             similar={similar.map((item) => {
               const itemHandle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
@@ -2012,7 +2032,7 @@ export function CreatorDetailSheet({
                   className="creator-detail-sheet-action-btn creator-detail-sheet-action-btn--primary"
                   onClick={() => onAssign?.(identityCreator)}
                 >
-                  Assign to line
+                  {assignLabel}
                 </Button>
               ) : null}
             </div>

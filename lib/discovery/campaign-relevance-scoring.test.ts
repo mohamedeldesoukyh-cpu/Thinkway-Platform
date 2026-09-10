@@ -116,10 +116,15 @@ test("scoreCreatorCampaignRelevance returns weighted partial match percentage", 
     }),
   ];
 
+  // Five criteria are supplied, but platform is not a scoring criterion — it is
+  // campaign eligibility, applied as a filter and as the mandatory slate gate.
+  // Four are scored; this creator matches category, country and engagement and
+  // misses the luxury niche. Before platform was excluded it also earned the
+  // platform match, which is exactly the contribution being removed.
   const breakdown = scoreCreatorCampaignRelevance(creator, criteria);
-  assert.equal(breakdown.criterionCount, 5);
-  assert.equal(breakdown.matchedCount, 4);
-  assert.equal(breakdown.score, 80);
+  assert.equal(breakdown.criterionCount, 4);
+  assert.equal(breakdown.matchedCount, 3);
+  assert.equal(breakdown.score, 75);
 });
 
 test("rankCreatorsByCampaignRelevance never returns empty when creators exist", () => {
@@ -264,8 +269,10 @@ test("unknown creator data discounts relevance instead of counting as a mismatch
   const sparse = scoreCreatorCampaignRelevance(sparsePerfectFit, briefCriteria);
   const enriched = scoreCreatorCampaignRelevance(enrichedOffBrief, briefCriteria);
 
-  // Sparse creator matches all 4 criteria it has data for; 4 are unknown, 0 proven mismatches.
-  assert.equal(sparse.matchedCount, 4);
+  // Sparse creator matches every criterion it has data for; the rest are
+  // unknown, with 0 proven mismatches. Platform is excluded from scoring, so
+  // one fewer match is counted than the criteria list suggests.
+  assert.equal(sparse.matchedCount, 3);
   assert.equal(sparse.unknownCount, 4);
   assert.equal(sparse.knownWeight, sparse.matchedWeight);
   // Enriched creator has zero unknowns but fails the campaign-defining content criteria.
@@ -330,7 +337,8 @@ test("creator with no data at all scores zero, not one hundred", () => {
   ];
   const breakdown = scoreCreatorCampaignRelevance(empty, criteria);
   assert.equal(breakdown.score, 0);
-  assert.equal(breakdown.unknownCount, 2);
+  // Country is unknown for this creator; the platform criterion is not scored.
+  assert.equal(breakdown.unknownCount, 1);
 });
 
 test("isCampaignRelevanceSearchActive requires AI mode and enabled criteria", () => {

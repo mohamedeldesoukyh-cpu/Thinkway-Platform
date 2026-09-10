@@ -443,6 +443,7 @@ export function CreatorBrowserDialog({
       </Dialog>
 
       <CreatorDetailSheet
+        presentation="discoveryPack"
         creator={detailCreator}
         open={detailOpen}
         onOpenChange={onDetailOpenChange}
