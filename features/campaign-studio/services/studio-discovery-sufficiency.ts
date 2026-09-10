@@ -129,8 +129,17 @@ export function resolveStudioDiscoverySufficiency(
     return {
       ...base,
       state: "enrichment_required",
-      title: "Enrichment required",
-      detail: `Inventory exists, but ${missingIntelligence.slice(0, 3).join("; ")} is still missing. Enrich only the shortlisted creators — not the whole database.`,
+      title: "Creator enrichment required",
+      /*
+       * These gaps come from `selectedReasoning[].missingData` — fields missing
+       * from a CREATOR's enrichment record. The line used to read "Inventory
+       * exists, but Geography is still missing", which named a campaign fact:
+       * an operator with Egypt confirmed in Intake and in the Strategy read it
+       * as the campaign losing its market. It never was. Name the subject.
+       */
+      detail: `Inventory exists. ${missingIntelligence.slice(0, 3).join("; ")} ${
+        missingIntelligence.length === 1 ? "is" : "are"
+      } missing from the enrichment records of creators on this slate — not from the campaign's confirmed facts. Enrich only the shortlisted creators — not the whole database.`,
       nextAction: "Refresh intelligence for the current slate, then re-check sufficiency.",
     };
   }

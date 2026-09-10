@@ -1,74 +1,76 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import type { StudioEciPlanningSignal } from "@/features/campaign-studio/services/eci/project-studio-eci-signal";
-import { studioClientDecision } from "@/features/campaign-studio/services/studio-creator-client-decision";
-import type { StudioCreatorGroupKind } from "@/features/campaign-studio/services/studio-replacement-candidates";
+import type { CampaignCreatorDecision } from "@/features/campaign-studio/services/studio-campaign-creator-decision";
 
 type StudioPlanningIntelligenceStripProps = {
-  signal?: StudioEciPlanningSignal | null;
-  className?: string;
   /**
-   * Which group this card is in. The decision line is stated in that group's
-   * vocabulary, so a heading and a card can never contradict each other.
+   * The campaign's decision for this creator — the single authority. The
+   * heading, this pill, the Why and the Evidence all read this one object, so
+   * they cannot disagree.
    */
-  group?: StudioCreatorGroupKind;
-  /** Requirement rows met / total, when the card has them. */
-  requirementsMet?: { met: number; total: number } | null;
+  decision: CampaignCreatorDecision;
+  className?: string;
 };
 
 /**
- * Compact executive cue on creator cards — decision first, not score-first.
- * Expanded state uses the canonical recommendation narrative (same order everywhere).
+ * The creator card's campaign decision.
+ *
+ * It used to render the ECI investment verdict as the campaign's answer, which
+ * is how a card inside the campaign recommendation area came to say "Campaign
+ * recommendation: not recommended", with analyst reasoning beneath it. The
+ * decision now comes from campaign requirements; investment intelligence
+ * appears below it, labelled as support, and cannot change it.
  */
 export function StudioPlanningIntelligenceStrip({
-  signal,
+  decision,
   className,
-  group = "selected",
-  requirementsMet = null,
 }: StudioPlanningIntelligenceStripProps) {
-  // A creator with no intelligence yet says nothing extra on the recommended
-  // list — the group heading already states the recommendation. In the other
-  // groups the decision line is the only thing distinguishing a slate member
-  // held for review from a Discovery alternative, so it is stated from the
-  // group alone.
-  if (!signal && group === "selected") return null;
-
-  // Client-facing decision and reasons. The internal reasoning behind them is
-  // unchanged and still available in the creator detail's Campaign tab; it is
-  // simply not printed on the card.
-  const client = studioClientDecision({ group, signal, requirementsMet });
-
   return (
     <div className={cn("mt-2 space-y-1", className)}>
       <div className="flex flex-wrap items-center gap-1.5">
         <span
           className={cn(
             "rounded-full px-2 py-0.5 text-[9px] font-extrabold",
-            client.tone === "positive"
+            decision.status === "recommended"
               ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
-              : client.tone === "negative"
+              : decision.status === "not_recommended"
                 ? "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-200"
                 : "bg-muted text-muted-foreground"
           )}
         >
-          {client.label}
+          {decision.label}
         </span>
       </div>
 
-      <ul className="m-0 list-none space-y-0.5 p-0 text-[11px] text-muted-foreground">
-        {client.reasons.map((reason) => (
-          <li key={reason} className="leading-snug">
-            {reason}
-          </li>
-        ))}
-      </ul>
+      <p className="text-[11px] leading-snug text-foreground">{decision.why}</p>
 
-      {/*
-        The full decision narrative — evidence, alternatives, decision impact —
-        stays in the creator detail's Campaign tab. It is analyst-facing
-        reasoning and was being expanded inline on the client-facing card.
-      */}
+      {decision.evidence.length > 0 ? (
+        <ul className="m-0 list-none space-y-0.5 p-0 text-[11px] text-muted-foreground">
+          {decision.evidence.map((line) => (
+            <li key={line} className="leading-snug">
+              {line}
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      {decision.supporting.length > 0 ? (
+        <div className="text-[10px] text-muted-foreground">
+          {/*
+            Labelled as support so it cannot be read as the decision. The full
+            analyst narrative stays in the creator detail's Campaign tab.
+          */}
+          <p className="font-semibold uppercase tracking-wide">Supporting intelligence</p>
+          <ul className="m-0 mt-0.5 list-none space-y-0.5 p-0">
+            {decision.supporting.map((line) => (
+              <li key={line} className="leading-snug">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }

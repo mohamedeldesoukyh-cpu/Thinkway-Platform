@@ -74,9 +74,7 @@ import {
 } from "@/features/campaign-director/facts/facts-display-bridge";
 import { vendorMatchesCampaignMarket } from "../../services/studio-market-creators";
 import {
-  recommendationFromVendor,
   selectStudioRecommendedVendors,
-  vendorPassesStudioRecommendationGate,
 } from "../../services/studio-recommended-vendors";
 import {
   CANDIDATE_INELIGIBILITY_LABEL,
@@ -115,6 +113,12 @@ import {
   resolveStudioCreatorListState,
   studioCreatorListIsLoading,
 } from "../../services/studio-creator-list-state";
+import type { CampaignCreatorStatus } from "../../services/creator-decision-status";
+import {
+  campaignRequirementChecks,
+  resolveCampaignCreatorDecision,
+  type CampaignCreatorDecision,
+} from "../../services/studio-campaign-creator-decision";
 import { clientSafeLine } from "../../services/studio-creator-client-decision";
 import { partitionStudioCreatorGroups } from "../../services/studio-creator-groups";
 import { resolveStudioCreatorShortfall } from "../../services/studio-creator-shortfall";
@@ -332,6 +336,41 @@ function vendorCampaignRequirementScore(
   );
 }
 
+/**
+ * The one campaign decision for a card.
+ *
+ * Built from the campaign's own requirements and the operator's decision. The
+ * ECI signal rides along as supporting intelligence only — it cannot change the
+ * status, which is what let an investment verdict appear as the campaign's
+ * answer.
+ */
+function vendorCampaignDecision(
+  vendor: DisplayVendor,
+  campaignObject: CampaignObject | undefined,
+  input: {
+    onSlate: boolean;
+    operatorStatus?: CampaignCreatorStatus;
+    slateRationale?: string | null;
+  }
+): CampaignCreatorDecision {
+  const creator = {
+    country: vendor.country,
+    countryCode: vendor.countryCode,
+    platform: vendor.platform,
+    audienceSummary: vendor.audienceSummary,
+    categories: vendor.categories,
+    handle: vendor.handle,
+    displayName: vendor.displayName,
+  };
+  return resolveCampaignCreatorDecision({
+    onSlate: input.onSlate,
+    operatorStatus: input.operatorStatus,
+    requirements: campaignRequirementChecks(creator, getCampaignFacts(campaignObject)),
+    slateRationale: input.slateRationale,
+    supportingSignal: vendor.planningSignal,
+  });
+}
+
 function RequirementsMetBadge({
   vendor,
   campaignObject,
@@ -433,6 +472,8 @@ function VendorCardBlock({
   const pendingReject = draftChange?.kind === "reject_creator";
   const pendingPromote = draftChange?.kind === "promote_main";
   const pendingDemote = draftChange?.kind === "demote_alternative";
+  // ONE decision object per card. The pill, the Why, the Evidence and the
+  // group this card sits in all read it.
   const grounding = resolveVendorGrounding(
     {
       displayName: vendor.displayName,
@@ -459,6 +500,15 @@ function VendorCardBlock({
     campaignObject,
     index
   );
+
+  // ONE decision object per card. The pill, the Why, the Evidence and the group
+  // this card sits in all read it — including the campaign's own reason for the
+  // creator, so there is no second competing "Why" line.
+  const campaignDecision = vendorCampaignDecision(vendor, campaignObject, {
+    onSlate: group === "selected" || group === "needs_review",
+    operatorStatus: decision,
+    slateRationale: clientSafeLine(grounding.whySelected),
+  });
 
   const actionButtons = pendingRemoval ? (
     <button
@@ -612,12 +662,11 @@ function VendorCardBlock({
 
         <div className={STUDIO_REF_CLASSES.vendorWhy}>
           {/*
-            The campaign's own rationale — never the ECI signal's raw sentence,
-            which is analyst language ("Overall score 40 with multiple high
-            risks"). The client-safe version of that reasoning is in the strip
-            below, and the full narrative in the detail's Campaign tab.
+            The campaign's reason now rides in the one decision object below, as
+            its leading evidence. Two "Why" lines from two sources on one card
+            was how a recommendation and a rejection came to sit side by side.
           */}
-          <b>Why:</b> {clientSafeLine(grounding.whySelected) ?? "Selected against this campaign's creator requirements."}
+          <b>Why:</b> {campaignDecision.why}
           {vendor.contentIdea ? (
             <>
               <br />
@@ -626,11 +675,7 @@ function VendorCardBlock({
           ) : null}
         </div>
 
-        <StudioPlanningIntelligenceStrip
-          signal={vendor.planningSignal}
-          group={group}
-          requirementsMet={vendorCampaignRequirementScore(vendor, campaignObject)}
-        />
+        <StudioPlanningIntelligenceStrip decision={campaignDecision} />
 
         <div className={STUDIO_REF_CLASSES.vendorScores}>
           {grounding.factors.slice(0, 5).map((f) => (
@@ -749,9 +794,7 @@ function VendorCardBlock({
         ) : null}
 
         <p className="mt-1.5 text-xs text-foreground">
-          <b>Why:</b>{" "}
-          {clientSafeLine(grounding.whySelected) ??
-            "Selected against this campaign's creator requirements."}
+          <b>Why:</b> {campaignDecision.why}
         </p>
         {vendor.slateReason ? (
           <p className="mt-1 text-[11px] text-muted-foreground">
@@ -765,11 +808,7 @@ function VendorCardBlock({
           <p className="mt-1 text-xs font-semibold text-[#0057FF]">{vendor.contentIdea}</p>
         ) : null}
 
-        <StudioPlanningIntelligenceStrip
-          signal={vendor.planningSignal}
-          group={group}
-          requirementsMet={vendorCampaignRequirementScore(vendor, campaignObject)}
-        />
+        <StudioPlanningIntelligenceStrip decision={campaignDecision} />
 
         {/*
           No raw confidence percentage. A bare "Confidence: 62%" is an internal
@@ -1240,7 +1279,6 @@ export function VendorRecommendationsSection({
         country: vendor.country,
         countryCode: vendor.countryCode,
       }),
-      recommendationOf: (vendor) => recommendationFromVendor(vendor),
       fitsBriefMix: (vendor) =>
         vendorFitsStudioBriefMix(
           {
@@ -1288,17 +1326,33 @@ export function VendorRecommendationsSection({
    * `needsReview` now carries them, with the gate's verdict, and they are never
    * counted as recommended.
    */
-  const creatorGroups = useMemo(
-    () =>
-      partitionStudioCreatorGroups({
-        pool: vendors,
-        gated: marketVendors,
-        slateIds: slateSplit.selectedIds,
-        idOf: (vendor) => vendor.id,
-        normalize: creatorGroupingKey,
-      }),
-    [vendors, marketVendors, slateSplit.selectedIds]
-  );
+  const creatorGroups = useMemo(() => {
+    // The gated set IS the set whose campaign decision is "recommended", so a
+    // group heading can never claim something its cards deny. It also covers an
+    // operator rejection, which the requirement gates know nothing about.
+    const recommended = marketVendors.filter((vendor) => {
+      const key = vendor.id ? creatorGroupingKey(vendor.id) : "";
+      const decision = vendorCampaignDecision(vendor, campaignObject, {
+        onSlate: Boolean(key) && selectedKeys.has(key),
+        operatorStatus: vendor.id ? previewVendorDecisions[vendor.id] : undefined,
+      });
+      return decision.status === "recommended";
+    });
+    return partitionStudioCreatorGroups({
+      pool: vendors,
+      gated: recommended,
+      slateIds: slateSplit.selectedIds,
+      idOf: (vendor) => vendor.id,
+      normalize: creatorGroupingKey,
+    });
+  }, [
+    vendors,
+    marketVendors,
+    slateSplit.selectedIds,
+    selectedKeys,
+    campaignObject,
+    previewVendorDecisions,
+  ]);
   const selectedVendors = creatorGroups.selected;
   const needsReviewVendors = creatorGroups.needsReview;
   // Candidates come from the ungated hydrated pool, NOT from `marketVendors`.
@@ -1329,8 +1383,6 @@ export function VendorRecommendationsSection({
           { country: vendor.country, countryCode: vendor.countryCode },
           campaignFacts?.geography
         ),
-      passesEciGate: (vendor) =>
-        vendorPassesStudioRecommendationGate(recommendationFromVendor(vendor)),
       fitsBriefMix: (vendor) =>
         vendorFitsStudioBriefMix(
           {
@@ -1353,8 +1405,6 @@ export function VendorRecommendationsSection({
             { country: vendor.country, countryCode: vendor.countryCode },
             campaignFacts?.geography
           ),
-        passesEciGate: (vendor) =>
-          vendorPassesStudioRecommendationGate(recommendationFromVendor(vendor)),
         fitsBriefMix: (vendor) =>
           vendorFitsStudioBriefMix(
             {
@@ -1456,7 +1506,9 @@ export function VendorRecommendationsSection({
       ? [
           {
             kind: "needs_review" as const,
-            title: `On the slate · needs review (${needsReviewDisplayVendors.length})`,
+            // Factual for every member: on the campaign's slate, and not in the
+            // recommendation. Each card states its own campaign decision.
+            title: `On the slate · not in the recommendation (${needsReviewDisplayVendors.length})`,
             items: needsReviewDisplayVendors,
           },
         ]

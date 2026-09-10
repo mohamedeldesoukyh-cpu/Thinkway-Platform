@@ -19,6 +19,7 @@ import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
 import { studioSectionDomId } from "../../hooks/use-studio-section-nav";
 import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
+import { resolveStudioIntakeDisplayStatus } from "../../services/studio-workspace-status";
 import type { CampaignStudioLayoutMode, CampaignStudioViewportMode } from "../../types/campaign-studio";
 import type { StudioLayoutType } from "../../constants/studio-layout";
 import type { CampaignStudioSection } from "../../types/campaign-studio";
@@ -163,7 +164,18 @@ export function StudioSectionCard({
   const isChatLayout = layoutMode === "chat";
   const isDesktopViewport = viewportMode === "desktop" && !isChatLayout;
   const refMode = useStudioRefMode();
-  const styles = STATUS_STYLES[section.status as keyof typeof STATUS_STYLES];
+  /*
+   * Campaign Intelligence reads the canonical intake state, not the specialist
+   * workflow's own section status. The workflow status stays "pending" until a
+   * specialist writes the section, which is how the card showed "Pending"
+   * beside confirmed facts and 100% planning completeness. Every other section
+   * keeps its workflow status, which is the right authority for it.
+   */
+  const displayStatus =
+    section.id === "campaign-summary"
+      ? resolveStudioIntakeDisplayStatus(campaignObject, section.status)
+      : section.status;
+  const styles = STATUS_STYLES[displayStatus as keyof typeof STATUS_STYLES];
   const isLoading = section.status === "pending";
   const hasRenderableContent =
     section.status !== "pending" || campaignObject != null;
@@ -205,9 +217,9 @@ export function StudioSectionCard({
   const badgeLabel = outdated ? "Outdated" : styles.label;
   const badgeClass = outdated
     ? "outdated"
-    : section.status === "complete"
+    : displayStatus === "complete"
       ? undefined
-      : section.status;
+      : displayStatus;
 
   const body = (
     <div ref={containerRef} className="min-w-0">

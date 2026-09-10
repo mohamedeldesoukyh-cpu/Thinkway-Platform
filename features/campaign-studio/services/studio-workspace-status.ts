@@ -1,7 +1,11 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 
-import type { CampaignStudioSection, CampaignStudioSectionId } from "../types/campaign-studio";
+import type {
+  CampaignStudioSection,
+  CampaignStudioSectionId,
+  CampaignStudioSectionStatus,
+} from "../types/campaign-studio";
 import {
   STUDIO_WORKSPACE_STEPS,
   type StudioWorkspaceStepId,
@@ -94,6 +98,16 @@ export function resolveStudioWorkspaceSteps(input: {
   campaignObject?: CampaignObject;
   sections: CampaignStudioSection[];
   outdatedSections: ReadonlySet<CampaignStudioSectionId>;
+  /**
+   * The authoritative package readiness, when the caller has it.
+   *
+   * The Package step used to call itself "ready" from
+   * `sections.presentation.status === "complete"` alone, so the nav said
+   * "Package — Ready" while the Package screen said "Not ready". Given the real
+   * status, the step reports it; without it the step stays "current" rather
+   * than claiming a readiness nobody evaluated.
+   */
+  packageReady?: boolean;
 }): StudioWorkspaceStepView[] {
   const byId = sectionById(input.sections);
   const outdatedSteps = outdatedWorkspaceSteps(input.outdatedSections);
@@ -130,7 +144,14 @@ export function resolveStudioWorkspaceSteps(input: {
     }
 
     if (step.id === "package" && sectionStatus === "complete" && outdatedSteps.size === 0) {
-      return { ...step, status: "ready", complete: true };
+      // Only the readiness service may call the package ready.
+      if (input.packageReady === true) {
+        return { ...step, status: "ready", complete: true };
+      }
+      if (input.packageReady === false) {
+        return { ...step, status: "in_progress", complete: false };
+      }
+      return { ...step, status: "current", complete: true };
     }
 
     if (sectionStatus === "complete") {
@@ -161,4 +182,41 @@ export function defaultStudioWorkspaceStep(
   if (blocked) return blocked.id;
 
   return "intake";
+}
+
+/**
+ * The status an intake surface should DISPLAY for Campaign Intelligence.
+ *
+ * Two vocabularies were describing the same thing. The specialist workflow
+ * writes `sections.campaign-summary.status` (pending / running / complete /
+ * blocked) and stays `pending` until a specialist writes that section, while
+ * the canonical intake state is `meta.factsConfirmedAt` plus
+ * `requiredIntakeFacts` — which is what the workspace nav and Package readiness
+ * already read. So the card showed "Pending" above facts the operator had
+ * confirmed, with planning completeness at 100%.
+ *
+ * There is a genuine third state and it is kept: while a specialist is running,
+ * extraction really is in flight, and that still reads as in progress.
+ *
+ * This adds no stored status and does not touch the confirmation gate — it
+ * chooses which existing authority the badge reads.
+ */
+export function resolveStudioIntakeDisplayStatus(
+  campaignObject: CampaignObject | undefined,
+  sectionStatus: CampaignStudioSectionStatus
+): CampaignStudioSectionStatus {
+  // Extraction in flight is real, and outranks the confirmation stamp.
+  if (sectionStatus === "running") return "running";
+  if (!campaignObject) return sectionStatus;
+
+  const facts = getCampaignFacts(campaignObject);
+  if (!facts) return sectionStatus;
+
+  const intake = requiredIntakeFacts(facts);
+  if (isStudioIntakeConfirmed(campaignObject) && intake.missing.length === 0) {
+    return "complete";
+  }
+  // Facts exist but are not confirmed, or a required fact is missing: that is
+  // work in progress, not "nothing has happened yet".
+  return sectionStatus === "pending" ? "blocked" : sectionStatus;
 }

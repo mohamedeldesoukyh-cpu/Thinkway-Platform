@@ -11,6 +11,7 @@ import {
 } from "./shared/section-status-utils";
 import { BudgetHero, BudgetRow, RationaleBar } from "./shared/studio-ui-primitives";
 import { resolveBudgetData } from "../../services/section-data-resolver";
+import { budgetAllocationBasisLine } from "../../services/budget-allocation";
 import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -90,6 +91,20 @@ export function BudgetPlannerSection({
           amount={`${line.percent ?? percents[index]}% · ${line.amount ? formatCurrency(line.amount, budget.currency) : "—"}`}
         />
       ))}
+
+      {/*
+        What these numbers are. "Creator fees 100% · EGP 3,000,000" under
+        "Campaign budget EGP 3,000,000" read as the whole budget already
+        committed as negotiated creator pricing.
+      */}
+      {budget.allocations.length > 0 ? (
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          {budgetAllocationBasisLine({
+            hasCommercialPricing: false,
+            splitFromBrief: budget.allocations.length > 1,
+          })}
+        </p>
+      ) : null}
 
       {budget.budgetPlannerReasoning ? (
         <RationaleBar>

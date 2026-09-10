@@ -83,6 +83,16 @@ export function DashboardShell({
 
   return (
     <div
+      /*
+       * A page that owns its own application header marks this element, and the
+       * shell's headers stand down. Campaign Studio does exactly that: its blue
+       * campaign mast IS the first application header, the way the Shortlist
+       * and Quotation workspaces work. The Studio reaches Campaign Mode from
+       * client state on a route that also renders plain chat, so the route
+       * cannot decide this server-side — hence the marker, set by the mast
+       * itself and cleared when it unmounts.
+       */
+      data-dashboard-shell-root
       className={cn(
         "flex min-h-0 min-w-0 flex-1 flex-col",
         // Fill remaining viewport under the environment banner (root flex chain).

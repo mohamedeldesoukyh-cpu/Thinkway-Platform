@@ -138,3 +138,29 @@ export function resolveBudgetAllocations(
 
   return deriveInfluencerBudgetAllocations(industry, contextText, total);
 }
+
+/**
+ * What a budget allocation line IS, said on the screen.
+ *
+ * The Commercial screen showed "Campaign budget EGP 3,000,000" and "Creator
+ * fees 100% · EGP 3,000,000" with nothing between them, which reads as the
+ * whole budget already committed as negotiated creator pricing. It is neither:
+ * it is the campaign's own budget allocated to creator fees because the brief
+ * named no split, and actual creator prices are still optional and set later.
+ *
+ * The estimator is untouched and no price is fabricated — this states the basis
+ * of the number already shown.
+ */
+export function budgetAllocationBasisLine(input: {
+  /** True when any line carries negotiated / quoted commercial figures. */
+  hasCommercialPricing: boolean;
+  /** True when the split came from the brief rather than the single-line default. */
+  splitFromBrief: boolean;
+}): string {
+  if (input.hasCommercialPricing) {
+    return "Based on quoted commercial figures for this campaign.";
+  }
+  return input.splitFromBrief
+    ? "Planned allocation of the campaign budget, from the split the brief states. Not negotiated creator pricing — actual creator prices are set in Commercial."
+    : "Planned allocation of the campaign budget. The brief states no split, so all of it sits under creator fees. Not negotiated creator pricing — actual creator prices are set in Commercial.";
+}

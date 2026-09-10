@@ -162,12 +162,17 @@ test("the canonical logo component is the app's, unchanged and reused", () => {
   }
 });
 
-test("Studio neither reimplements nor restyles the canonical logo", () => {
+test("Studio reuses the canonical logo and reimplements nothing", () => {
   const mast = read(MAST);
-  // No wordmark text node of its own, and no import of the canonical component
-  // to place a second brand lockup under the app header.
+  // Updated deliberately. This used to require NO logo in the mast at all,
+  // because the mast then sat under the global Thinkway header. The Studio
+  // route no longer renders that header — the campaign mast is the first
+  // application header, as on the Shortlist and Quotation workspaces — so the
+  // approved component belongs here. What must never come back is a redrawn
+  // one: no wordmark text node, no hand-built mark.
+  assert.match(mast, /<ThinkwayLogo compact showText/);
   assert.doesNotMatch(mast, />\s*THINK/);
-  assert.doesNotMatch(mast, /<ThinkwayLogo/);
+  assert.doesNotMatch(mast, /mastMark|mastWord/);
 
   // And nothing in Studio redefines the approved logo's own classes.
   const studioCss = readRules("features/campaign-studio/styles/campaign-studio-ref.css");
@@ -191,8 +196,11 @@ test("cards do not print the ECI signal's raw sentence", () => {
     /rationale:\s*\n?\s*vendor\.planningSignal\?\.why/,
     "and it seeded the rationale the Why line falls back to"
   );
-  // Whatever the rationale holds, the last gate before the screen is applied.
-  assert.match(source, /clientSafeLine\(grounding\.whySelected\)/);
+  // The card's Why is now the decision's own sentence, with the campaign's
+  // rationale carried inside that object as its leading evidence — one Why per
+  // card, from one source.
+  assert.match(source, /<b>Why:<\/b> \{campaignDecision\.why\}/);
+  assert.match(source, /slateRationale: clientSafeLine\(grounding\.whySelected\)/);
 });
 
 test("cards do not print a raw confidence percentage", () => {
@@ -205,22 +213,30 @@ test("cards do not print a raw confidence percentage", () => {
   assert.doesNotMatch(source, /eciConfidencePercent \?\?\s*$/m);
 });
 
-test("the card's decision line comes from the group, through one service", () => {
+test("the card's decision comes from one authoritative object", () => {
   const strip = read(STRIP);
-  assert.match(strip, /studioClientDecision/);
-  assert.match(strip, /group/);
+  // Updated deliberately. The strip used to derive its own label from the
+  // card's GROUP plus the ECI signal. Both the group and the card now read one
+  // `CampaignCreatorDecision`, so a heading and a card cannot disagree.
+  assert.match(strip, /decision: CampaignCreatorDecision/);
+  assert.match(strip, /\{decision\.label\}/);
+  assert.match(strip, /\{decision\.why\}/);
+  assert.match(strip, /decision\.evidence/);
+  assert.match(strip, /Supporting intelligence/, "ECI is labelled as support");
   // The raw narrative and the confidence chip were rendered inline here.
   assert.doesNotMatch(strip, /StudioRecommendationNarrative/);
   assert.doesNotMatch(strip, /confidencePercent/);
 });
 
-test("every card group passes its own group to the decision service", () => {
+test("every card strip renders that same decision object", () => {
   const source = read(CARDS);
   const strips = source.match(/<StudioPlanningIntelligenceStrip[\s\S]{0,220}?\/>/g) ?? [];
   assert.ok(strips.length >= 1, "no card strip found");
   for (const strip of strips) {
-    assert.match(strip, /group=\{group\}/, strip);
+    assert.match(strip, /decision=\{campaignDecision\}/, strip);
   }
+  // And the group a card sits in is derived from the same decision.
+  assert.match(source, /decision\.status === "recommended"/);
 });
 
 test("the analyst narrative is still reachable, in the detail's Campaign tab", () => {

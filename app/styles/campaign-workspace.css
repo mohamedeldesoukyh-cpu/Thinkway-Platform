@@ -6315,3 +6315,22 @@
   box-shadow: none !important;
 }
 
+
+/*
+ * A page that owns its own application header.
+ *
+ * Campaign Studio's blue campaign mast is the first application header on its
+ * route — the Shortlist and Quotation workspaces read the same way. The Studio
+ * route also renders plain Copilot chat, which DOES need the shell header, so
+ * the route cannot drop it server-side: the mast marks the shell root while it
+ * is mounted and clears the marker when it unmounts.
+ *
+ * Scoped to this marker, so Discovery, Shortlists, Quotations and every other
+ * module are untouched. The mobile header is left alone — it is the only
+ * navigation at that width.
+ */
+@media (min-width: 768px) {
+  [data-dashboard-shell-root][data-page-owns-chrome="true"] > header {
+    display: none;
+  }
+}

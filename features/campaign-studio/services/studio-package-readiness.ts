@@ -297,8 +297,28 @@ function evaluateStrategy(
       "Regenerate Strategy from confirmed Campaign Facts."
     );
   }
-  const status = outputLiveStatus(campaignObject, "full_strategy");
-  if (status !== "generated") {
+  /*
+   * Strategy exists when the STRATEGY SECTION exists — the thing the Strategy
+   * screen renders — or when the strategy output document has been generated.
+   *
+   * This used to require the `full_strategy` OUTPUT record alone. That record is
+   * created only by `ensurePlanningOutputsForHandoff` (Director approval gate
+   * plus a composed slate) or by generating the document explicitly, so in the
+   * non-linear journey a campaign could carry a complete, current Strategy on
+   * screen and no such record — and Package reported "Influencer strategy has
+   * not been generated from current facts" over a visibly generated strategy.
+   *
+   * `deriveInfluencerStrategyView` is NOT the test for existence: it projects
+   * Campaign Facts, so it returns a full strategy for any campaign with facts.
+   * It is used below for what it does know — whether the approach is
+   * evidence-backed.
+   */
+  const strategySection = campaignObject.sections.strategy;
+  const strategyContent =
+    typeof strategySection.content === "string" ? strategySection.content.trim() : "";
+  const sectionGenerated = strategySection.status === "complete" && strategyContent.length > 0;
+  const documentGenerated = outputLiveStatus(campaignObject, "full_strategy") === "generated";
+  if (!sectionGenerated && !documentGenerated) {
     return check(
       "strategy",
       "Strategy",
@@ -307,6 +327,7 @@ function evaluateStrategy(
       "Generate Strategy after confirming Campaign Intelligence."
     );
   }
+
   const view = deriveInfluencerStrategyView(campaignObject);
   const required = ["influencerStrategy", "platformStrategy", "contentStrategy"] as const;
   const missing = required.filter((key) => {
