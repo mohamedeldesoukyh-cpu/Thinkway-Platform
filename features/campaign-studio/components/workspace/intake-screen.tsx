@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { CheckCircle2Icon, Loader2Icon, ArrowRightIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -43,6 +43,10 @@ import {
   INTAKE_PLATFORM_OPTIONS,
 } from "../../constants/intake-field-options";
 import { CANONICAL_INDUSTRY_LABELS } from "../../services/industry-intelligence";
+import {
+  INTAKE_CIP_POLL_INTERVAL_MS,
+  shouldContinueIntakeIntelligencePoll,
+} from "../../services/studio-intake-polling";
 import { CampaignBriefCard } from "../sections/campaign-brief-card";
 import { IntakeOptionChips } from "./intake-option-chips";
 
@@ -174,10 +178,17 @@ export function IntakeScreen({
     });
   }, [displayFacts]);
 
+  // Read on a ref so a status change never restarts the poll loop below — a
+  // restart would reset its counters and could keep it alive indefinitely.
+  const workflowRunningRef = useRef(false);
+  workflowRunningRef.current =
+    workflowStatus === "running" || campaignObject?.meta.status === "building";
+
   useEffect(() => {
     if (!conversationId) return;
     let cancelled = false;
     let attempts = 0;
+    let idleAttempts = 0;
 
     async function loadCip() {
       const row = await getConversationCampaignIntelligenceAction(conversationId!);
@@ -196,10 +207,23 @@ export function IntakeScreen({
     void loadCip();
     const timer = window.setInterval(() => {
       attempts += 1;
+      const workflowRunning = workflowRunningRef.current;
+      if (!workflowRunning) idleAttempts += 1;
       void loadCip().then((found) => {
-        if (found || attempts >= 20) window.clearInterval(timer);
+        // Keep waiting while a run is still producing the intelligence; the
+        // idle budget is unchanged for everything else.
+        if (
+          !shouldContinueIntakeIntelligencePoll({
+            found,
+            attempts,
+            idleAttempts,
+            workflowRunning,
+          })
+        ) {
+          window.clearInterval(timer);
+        }
       });
-    }, 2500);
+    }, INTAKE_CIP_POLL_INTERVAL_MS);
 
     return () => {
       cancelled = true;
