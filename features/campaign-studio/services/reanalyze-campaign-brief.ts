@@ -45,6 +45,7 @@ const PROFILE_KEYS_BY_FACT: Partial<Record<CampaignFactsField, readonly string[]
   constraints: ["constraints"],
   risks: ["risks"],
   creatorCategories: ["creatorCategories"],
+  creatorTiers: ["creatorTiers"],
   keyMessage: ["keyMessage"],
   callToAction: ["callToAction"],
   campaignFunnel: ["campaignFunnel"],

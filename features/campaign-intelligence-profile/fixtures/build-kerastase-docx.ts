@@ -16,6 +16,21 @@ function paragraph(text: string): string {
   return `<w:p><w:r><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;
 }
 
+/**
+ * One paragraph whose lines are separated by soft breaks (Shift+Enter) — how a
+ * real Word brief writes a stacked block of labelled values. Mammoth converts
+ * `<w:br/>` to `<br />`.
+ */
+export function paragraphWithSoftBreaks(lines: string[]): string {
+  const runs = lines
+    .map(
+      (line, index) =>
+        `${index > 0 ? "<w:r><w:br/></w:r>" : ""}<w:r><w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r>`
+    )
+    .join("");
+  return `<w:p>${runs}</w:p>`;
+}
+
 /** A numbered/bulleted paragraph — the shape a real Word list produces. */
 function listItem(text: string): string {
   return `<w:p><w:pPr><w:pStyle w:val="ListParagraph"/><w:numPr><w:ilvl w:val="0"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:t xml:space="preserve">${escapeXml(text)}</w:t></w:r></w:p>`;

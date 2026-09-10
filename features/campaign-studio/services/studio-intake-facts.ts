@@ -274,6 +274,11 @@ export function campaignFactsFromIntakeEdit(
     ],
   ]);
   return {
+    // Spread the base first: this function used to enumerate every field it
+    // returned, so any fact outside that list — the brief's creator tiers, key
+    // message, CTA, funnel, tone, constraints, risks, campaign dates — was
+    // dropped from the merged result and read as missing on Intake.
+    ...base,
     extractedAt: base?.extractedAt ?? new Date().toISOString(),
     confidence: meta.confidence,
     sources: meta.sources,

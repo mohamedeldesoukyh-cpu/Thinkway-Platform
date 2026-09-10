@@ -16,6 +16,8 @@ export type BrowseInvocationCaller =
   | "explicit_run_search"
   | "zero_results_recommendations"
   | "studio_add_creator"
+  /** Studio Replace → Browse Discovery, using the campaign's own filters. */
+  | "studio_browse_discovery"
   | "unknown";
 
 export type BrowseInvocationTrace = {

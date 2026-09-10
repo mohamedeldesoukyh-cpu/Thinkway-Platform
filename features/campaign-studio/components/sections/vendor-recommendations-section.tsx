@@ -106,6 +106,7 @@ import { StudioCreatorDetailHost } from "./studio-creator-detail-host";
 import { StudioPlanningIntelligenceStrip } from "./shared/studio-planning-intelligence-strip";
 import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
 import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
+import { studioCampaignBrowseFilters } from "../../services/studio-discovery-browse-filters";
 
 type VendorRecommendationsSectionProps = {
   campaignObject?: CampaignObject;
@@ -1309,6 +1310,13 @@ export function VendorRecommendationsSection({
   // Before a slate exists every hydrated creator is a candidate, not a
   // selection — keep the established single-list rendering for that.
   const hasSlateSplit = selectedVendors.length > 0;
+  // Route B of Replace: browsing Discovery with the campaign's own confirmed
+  // constraints, so the operator is not forced to type a name when no
+  // recommended candidate is left.
+  const campaignBrowseFilters = useMemo(
+    () => studioCampaignBrowseFilters(campaignObject),
+    [campaignObject]
+  );
   // Route A of Replace: the campaign's own remaining recommendations, already
   // hydrated here, handed to the existing add panel as candidate refs.
   const replacementCandidates = useMemo(
@@ -1722,6 +1730,7 @@ export function VendorRecommendationsSection({
           onDraftUpdated={publishDraft}
           replaceTarget={replaceTarget}
           candidates={replacementCandidates}
+          browseFilters={campaignBrowseFilters}
           onSelectionStaged={({ undoCreatorId, displayName }) => {
             setReplaceTarget(null);
             // Undo reuses the existing unstage path, so it restores the exact

@@ -35,8 +35,15 @@ import {
   sanitizePreferredCategories,
 } from "@/features/campaign-studio/services/creator-slate";
 import { deriveCreatorCategoriesFromBrief } from "@/features/campaign-studio/services/derive-creator-categories";
-import { detectIndustryFromBrief } from "@/features/campaign-studio/services/industry-intelligence";
+import {
+  detectIndustryFromBrief,
+  resolveIndustryFromLabel,
+} from "@/features/campaign-studio/services/industry-intelligence";
 import { getIndustryCreatorMix } from "@/features/campaign-studio/services/presentation-intelligence";
+import {
+  creatorTierPreferenceFromFacts,
+  resolveCreatorTierMixFromPreference,
+} from "@/features/campaign-director/facts/creator-tier-preference";
 
 /** Studio + tools — search creators from CIP with coverage backfill + re-browse. */
 export async function searchCreatorsFromCampaignIntelligenceProfile(
@@ -293,18 +300,24 @@ export async function searchCreatorsFromProfileData(
   // Strategy coherence: recommendations must execute the strategy — explicit
   // brief platforms are a hard constraint and the slate tracks the industry
   // tier mix (the same mix the strategy document uses).
-  const industry = detectIndustryFromBrief(
-    profile.industry,
-    profile.rawBriefExcerpt,
-    profile.objective
-  );
+  // `profile.industry` is the canonical LABEL, so resolve it as one first —
+  // "Beauty & Personal Care" contains no beauty signal word and detection alone
+  // returned `general`.
+  const industry =
+    resolveIndustryFromLabel(profile.industry) ??
+    detectIndustryFromBrief(profile.industry, profile.rawBriefExcerpt, profile.objective);
   const briefContext = [profile.rawBriefExcerpt, profile.objective, profile.audience]
     .filter(Boolean)
     .join("\n");
-  const tierMix = getIndustryCreatorMix(industry, briefContext).map((t) => ({
-    tier: t.tier,
-    percent: t.percent,
-  }));
+  // The brief's stated tiers are authoritative here too. Composing the slate
+  // straight from the industry mix reintroduced tiers the brief excluded — a
+  // Macro/Mid/Micro brief acquired Nano creators at this step, after Strategy
+  // had correctly dropped it. Same resolution as Strategy and the Studio slate;
+  // with no stated preference the industry mix applies exactly as before.
+  const tierMix = resolveCreatorTierMixFromPreference({
+    preference: creatorTierPreferenceFromFacts(profile),
+    baseMix: getIndustryCreatorMix(industry, briefContext),
+  }).mix.map((t) => ({ tier: t.tier, percent: t.percent }));
   const preferredCategories = sanitizePreferredCategories(
     deriveCreatorCategoriesFromBrief({
       briefText: profile.rawBriefExcerpt,
