@@ -39,6 +39,11 @@ import {
   normalizeCreatorId,
 } from "../../services/studio-draft";
 import { previewCreatorsSectionFromDraft } from "../../services/studio-draft-preview";
+import {
+  creatorGroupingKey,
+  splitRecommendedCreatorIds,
+} from "../../services/studio-creator-slate-split";
+import type { StudioCreatorReplacementTarget } from "../../services/studio-creator-replacement";
 import { CampaignAnalysisPanel } from "./campaign-analysis-panel";
 import { AddCreatorPanel } from "./add-creator-panel";
 import { formatEngagement, formatFollowers } from "./shared/format-utils";
@@ -348,6 +353,7 @@ function VendorCardBlock({
   applyDecision,
   stageRoleChange,
   openCreatorDetails,
+  onReplace,
   observeCreator,
 }: {
   vendor: DisplayVendor;
@@ -367,6 +373,8 @@ function VendorCardBlock({
   ) => Promise<void>;
   stageRoleChange: (creatorId: string, role: "main" | "alternative", displayName?: string) => Promise<void>;
   openCreatorDetails: (vendor: DisplayVendor) => void;
+  /** Present only for a SELECTED creator — the alternatives have nothing to replace. */
+  onReplace?: (vendor: DisplayVendor) => void;
   observeCreator: (creatorId: string | null | undefined) => (node: HTMLElement | null) => void;
 }) {
   const refMode = useStudioRefMode();
@@ -476,6 +484,18 @@ function VendorCardBlock({
       >
         View details
       </button>
+      {onReplace ? (
+        <button
+          type="button"
+          disabled={!canAct || isPending}
+          className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
+          onClick={() => onReplace(vendor)}
+          title="Replace this creator — from the other recommendations, Discovery, or a profile link"
+        >
+          <ListRestartIcon className="size-3" />
+          Replace
+        </button>
+      ) : null}
       <button
         type="button"
         disabled={!canAct || isPending}
@@ -749,6 +769,10 @@ export function VendorRecommendationsSection({
   const [drawerCreator, setDrawerCreator] = useState<CreatorDrawerSelection | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [shortlistPickerMode, setShortlistPickerMode] = useState<"replace" | "merge" | null>(null);
+  /** The selected creator being replaced, or null when adding. */
+  const [replaceTarget, setReplaceTarget] = useState<StudioCreatorReplacementTarget | null>(
+    null
+  );
   const [compareOpen, setCompareOpen] = useState(false);
   const confirmDelete = useConfirmDelete();
   const refMode = useStudioRefMode();
@@ -951,6 +975,19 @@ export function VendorRecommendationsSection({
     !usingDraftPreview && discoveryIds.length > slateIds.length ? discoveryIds : slateIds;
   const safeRationale = isEmptyGlobalRationale(rationale) ? undefined : rationale;
   const hasCommittedRecommendations = recommendationIds.length > 0;
+  // Selected vs recommended-but-not-selected, derived from ids the campaign
+  // already persists — `recommendations.creatorIds` against the pool in
+  // `discovery.creatorIds`. Nothing new is stored, and the existing
+  // `recommendationCount` keeps its meaning.
+  const slateSplit = useMemo(
+    () =>
+      splitRecommendedCreatorIds({
+        recommendationIds: usingDraftPreview ? previewIds : recommendationIds,
+        discoveryIds,
+        excludeIds: appliedRemovedCreatorIds ?? [],
+      }),
+    [usingDraftPreview, previewIds, recommendationIds, discoveryIds, appliedRemovedCreatorIds]
+  );
   const pendingProposal = creatorsData.pendingProposal;
   const isRegeneratingProposal = pendingProposal?.status === "generating";
   const proposalRegenerationFailed =
@@ -1178,15 +1215,62 @@ export function VendorRecommendationsSection({
   );
   const marketLabel = campaignFacts?.geography?.filter((value) => value.trim()).join(", ") || null;
 
-  const mainVendors = marketVendors.filter((v) => v.slateRole !== "maybe");
-  const maybeVendors = marketVendors.filter((v) => v.slateRole === "maybe");
-  const displayGroups =
-    maybeVendors.length > 0
+  // The section already hydrates the whole pool, so the remaining
+  // recommendations are here — they were simply rendered indistinguishably from
+  // the slate. Split them so it is clear which creators are selected.
+  const selectedKeys = useMemo(
+    () => new Set(slateSplit.selectedIds.map(creatorGroupingKey)),
+    [slateSplit.selectedIds]
+  );
+  const selectedVendors = useMemo(
+    () => marketVendors.filter((v) => v.id && selectedKeys.has(creatorGroupingKey(v.id))),
+    [marketVendors, selectedKeys]
+  );
+  const otherRecommendedVendors = useMemo(
+    () => marketVendors.filter((v) => !v.id || !selectedKeys.has(creatorGroupingKey(v.id))),
+    [marketVendors, selectedKeys]
+  );
+  // Before a slate exists every hydrated creator is a candidate, not a
+  // selection — keep the established single-list rendering for that.
+  const hasSlateSplit = selectedVendors.length > 0;
+  // Route A of Replace: the campaign's own remaining recommendations, already
+  // hydrated here, handed to the existing add panel as candidate refs.
+  const replacementCandidates = useMemo(
+    () =>
+      otherRecommendedVendors
+        .filter((vendor) => Boolean(vendor.id))
+        .map((vendor) => ({
+          creatorId: vendor.id!,
+          displayName: vendor.displayName,
+          handle: vendor.handle,
+          platform: vendor.platform,
+          followers: vendor.followers,
+          avatarUrl: vendor.avatarUrl,
+          source: "discovery" as const,
+          enrichmentStatus: "not_requested" as const,
+        })),
+    [otherRecommendedVendors]
+  );
+  const slateVendors = hasSlateSplit ? selectedVendors : marketVendors;
+
+  const mainVendors = slateVendors.filter((v) => v.slateRole !== "maybe");
+  const maybeVendors = slateVendors.filter((v) => v.slateRole === "maybe");
+  const displayGroups = [
+    ...(maybeVendors.length > 0
       ? [
-          { title: "Main picks", items: mainVendors.length > 0 ? mainVendors : marketVendors },
+          { title: "Main picks", items: mainVendors.length > 0 ? mainVendors : slateVendors },
           { title: "Maybe / replacements", items: maybeVendors },
         ]
-      : [{ title: null as string | null, items: marketVendors }];
+      : [{ title: null as string | null, items: slateVendors }]),
+    ...(hasSlateSplit && otherRecommendedVendors.length > 0
+      ? [
+          {
+            title: `Other Recommended Creators (${otherRecommendedVendors.length})`,
+            items: otherRecommendedVendors,
+          },
+        ]
+      : []),
+  ];
 
   const visibleGroupItems = showAllVendors
     ? displayGroups
@@ -1382,6 +1466,22 @@ export function VendorRecommendationsSection({
           {creatorsData.constraintReport.rejectedMandatoryCount === 1 ? "" : "s"} excluded.
         </p>
       ) : null}
+      {hasSlateSplit ? (
+        <div className="flex flex-wrap items-baseline gap-2 rounded-xl border border-[#1D9E75]/25 bg-[#1D9E75]/5 px-3 py-2">
+          <span className="text-sm font-extrabold text-[#1D9E75]">
+            {slateSplit.selectedCount} Selected
+          </span>
+          <span className="text-sm text-muted-foreground">
+            / {slateSplit.candidatePoolCount} Recommended
+          </span>
+          {otherRecommendedVendors.length > 0 ? (
+            <span className="text-[11px] text-muted-foreground">
+              · {otherRecommendedVendors.length} kept available below as replacement
+              candidates
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <div className="flex flex-wrap items-center justify-between gap-2 px-0.5">
         <p className="text-[11px] text-muted-foreground">
           {marketVendors.length} recommended creator{marketVendors.length === 1 ? "" : "s"}
@@ -1492,6 +1592,18 @@ export function VendorRecommendationsSection({
               applyDecision={applyDecision}
               stageRoleChange={stageRoleChange}
               openCreatorDetails={openCreatorDetails}
+              onReplace={
+                conversationId &&
+                messageId &&
+                vendor.id &&
+                selectedKeys.has(creatorGroupingKey(vendor.id))
+                  ? () =>
+                      setReplaceTarget({
+                        creatorId: vendor.id!,
+                        displayName: vendor.displayName,
+                      })
+                  : undefined
+              }
               observeCreator={observeCreator}
             />
           ))}
@@ -1509,6 +1621,22 @@ export function VendorRecommendationsSection({
           messageId={messageId}
           draft={draft}
           onDraftUpdated={publishDraft}
+          replaceTarget={replaceTarget}
+          candidates={replacementCandidates}
+          onSelectionStaged={({ undoCreatorId, displayName }) => {
+            setReplaceTarget(null);
+            // Undo reuses the existing unstage path, so it restores the exact
+            // pre-replacement state rather than tracking its own history.
+            toast.success(
+              displayName ? `${displayName} replaced` : "Creator replaced",
+              {
+                action: {
+                  label: "Undo",
+                  onClick: () => void undoDraftChange(undoCreatorId),
+                },
+              }
+            );
+          }}
         />
       ) : null}
       {conversationId && messageId && shortlistPickerMode ? (

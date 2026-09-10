@@ -37,6 +37,12 @@ import {
 } from "../../actions/studio-draft-actions";
 import { normalizeCreatorId } from "../../services/studio-draft";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import {
+  buildCreatorSelectionChange,
+  enrichmentStatusForSelection,
+  undoTargetIdForSelectionChange,
+  type StudioCreatorReplacementTarget,
+} from "../../services/studio-creator-replacement";
 import { formatFollowers } from "./shared/format-utils";
 
 type AddCreatorPanelProps = {
@@ -44,9 +50,23 @@ type AddCreatorPanelProps = {
   messageId: string;
   draft: StudioDraftState;
   onDraftUpdated: (draft: StudioDraftState) => void;
+  /**
+   * Set when this panel is replacing a selected creator rather than adding one.
+   * Every route then stages `replace_creator` against this target instead of
+   * `add_creator` — the same draft machinery, with a target.
+   */
+  replaceTarget?: StudioCreatorReplacementTarget | null;
+  /**
+   * Recommended-but-not-selected creators, offered first when replacing. These
+   * are derived from the campaign's own persisted pool, not fetched.
+   */
+  candidates?: StudioDraftCreatorRef[];
+  /** Replacement staged — lets the caller close its dialog and offer Undo. */
+  onSelectionStaged?: (input: { undoCreatorId: string; displayName?: string }) => void;
 };
 
-type AddMode = "discovery" | "url";
+/** "recommended" is offered only while replacing; it has no meaning for a plain add. */
+type AddMode = "recommended" | "discovery" | "url";
 
 function toDraftRef(
   creator: UnifiedCreatorResult,
@@ -98,9 +118,14 @@ export function AddCreatorPanel({
   messageId,
   draft,
   onDraftUpdated,
+  replaceTarget = null,
+  candidates = [],
+  onSelectionStaged,
 }: AddCreatorPanelProps) {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<AddMode>("discovery");
+  const [mode, setMode] = useState<AddMode>(
+    replaceTarget && candidates.length > 0 ? "recommended" : "discovery"
+  );
   const [query, setQuery] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
   const [searching, setSearching] = useState(false);
@@ -117,10 +142,18 @@ export function AddCreatorPanel({
 
   const stageAddition = useCallback(
     async (ref: StudioDraftCreatorRef) => {
+      // One staging path for both. `replace_creator` already exists as a draft
+      // change and `applyStudioDraftChanges` + `reoptimizeCampaignAfterApply`
+      // already commit and re-score it, so replacing is adding with a target.
+      const change = buildCreatorSelectionChange({
+        replacement: ref,
+        target: replaceTarget,
+        stagedAt: new Date().toISOString(),
+      });
       const result = await stageStudioDraftChangeAction({
         conversationId,
         messageId,
-        change: { kind: "add_creator", creator: ref },
+        change,
       });
       if (!result.ok) {
         toast.error(result.message);
@@ -128,9 +161,16 @@ export function AddCreatorPanel({
       }
       if (result.draft) onDraftUpdated(result.draft);
       toast.success(result.message);
+      const undoCreatorId = undoTargetIdForSelectionChange(change);
+      if (undoCreatorId) {
+        onSelectionStaged?.({
+          undoCreatorId,
+          displayName: replaceTarget?.displayName ?? ref.displayName,
+        });
+      }
       return true;
     },
-    [conversationId, messageId, onDraftUpdated]
+    [conversationId, messageId, onDraftUpdated, onSelectionStaged, replaceTarget]
   );
 
   const setEnrichment = useCallback(
@@ -269,7 +309,10 @@ export function AddCreatorPanel({
       const ref = toDraftRef(
         result.creator,
         "external_url",
-        result.enrichmentQueued ? "pending" : "not_requested"
+        enrichmentStatusForSelection({
+          source: "external_url",
+          queued: Boolean(result.enrichmentQueued),
+        })
       );
       const staged = await stageAddition(ref);
       if (!staged) return;
@@ -401,6 +444,20 @@ export function AddCreatorPanel({
               role="tablist"
               aria-label="Add creator source"
             >
+              {replaceTarget && candidates.length > 0 ? (
+                <Button
+                  type="button"
+                  size="xs"
+                  role="tab"
+                  aria-selected={mode === "recommended"}
+                  variant={mode === "recommended" ? "secondary" : "ghost"}
+                  className={cn("h-7 px-2.5 text-xs", STUDIO_CLASSES.focusRingInset)}
+                  onClick={() => setMode("recommended")}
+                >
+                  <SparklesIcon className="size-3" aria-hidden />
+                  Other recommended ({candidates.length})
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 size="xs"
@@ -437,7 +494,58 @@ export function AddCreatorPanel({
             </Button>
           </div>
 
-          {mode === "discovery" ? (
+          {mode === "recommended" ? (
+            <div className="space-y-1.5">
+              <p className="text-[11px] text-muted-foreground">
+                Recommended for this campaign and not currently selected. Already
+                enriched — picking one replaces{" "}
+                <span className="font-semibold">{replaceTarget?.displayName ?? "the creator"}</span>{" "}
+                straight away.
+              </p>
+              <ul className="space-y-1">
+                {candidates.map((candidate) => (
+                  <li
+                    key={candidate.creatorId}
+                    className="flex items-center gap-2 rounded-lg border border-border/60 bg-background px-2 py-1.5"
+                  >
+                    <CreatorAvatarImage
+                      avatarUrl={candidate.avatarUrl}
+                      size="xs"
+                      alt={candidate.displayName ?? candidate.handle ?? ""}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-semibold">
+                        {candidate.displayName ?? candidate.handle ?? candidate.creatorId}
+                      </p>
+                      <p className="truncate text-[10px] text-muted-foreground">
+                        {[
+                          candidate.handle ? `@${candidate.handle}` : null,
+                          candidate.platform,
+                          candidate.followers != null
+                            ? `${formatFollowers(candidate.followers)} followers`
+                            : null,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </p>
+                    </div>
+                    <Button
+                      type="button"
+                      size="xs"
+                      disabled={busyCreatorId === candidate.creatorId}
+                      className={cn("h-7 px-2.5 text-xs", STUDIO_CLASSES.primaryBtn)}
+                      onClick={() => {
+                        setBusyCreatorId(candidate.creatorId);
+                        void stageAddition(candidate).finally(() => setBusyCreatorId(null));
+                      }}
+                    >
+                      Use this creator
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : mode === "discovery" ? (
             <div className="space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input

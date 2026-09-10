@@ -4,7 +4,10 @@ import { useEffect, useState } from "react";
 import { ExternalLinkIcon } from "lucide-react";
 import Link from "next/link";
 
-import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
+import {
+  CreatorDetailsSummaryCard,
+  formatThinkwayStarLabel,
+} from "@/features/discovery/components/creator-details-summary-card";
 import { Button } from "@/components/ui/button";
 import {
   Sheet,
@@ -100,29 +103,36 @@ export function StudioPlanningCreatorDetail({
 
         {selection ? (
           <div className="mt-6 space-y-3.5">
-            <div className="flex items-start gap-3">
-              <CreatorAvatarImage
-                avatarUrl={selection.avatarUrl}
-                profileUrl={selection.profileUrl}
-                size="md"
-                alt={selection.displayName}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-base font-semibold">{selection.displayName}</p>
-                {selection.handle ? (
-                  <p className="text-sm text-muted-foreground">{selection.handle}</p>
-                ) : null}
-                <div className="mt-1.5 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                  {selection.platform ? <span className="capitalize">{selection.platform}</span> : null}
-                  {selection.followers != null ? (
-                    <span>{formatFollowers(selection.followers)} followers</span>
-                  ) : null}
-                  {selection.engagementRate != null ? (
-                    <span>{formatEngagement(selection.engagementRate)} ER</span>
-                  ) : null}
-                </div>
-              </div>
-            </div>
+            {/*
+              Discovery's own identity header, not a Studio copy of it. The card
+              and its Thinkway star formatting come straight from Discovery, so
+              the creator reads identically in both places and there is one
+              implementation to change. Only stated values are passed — an
+              absent follower count or country stays absent.
+            */}
+            <CreatorDetailsSummaryCard
+              size="sheet"
+              displayName={selection.displayName}
+              avatarUrl={selection.avatarUrl ?? null}
+              profileUrl={selection.profileUrl ?? null}
+              thinkwayStarLabel={formatThinkwayStarLabel(
+                selection.matchPercent ?? undefined
+              )}
+              secondaryLine={[
+                selection.handle ? `@${selection.handle.replace(/^@/, "")}` : null,
+                selection.platform,
+                selection.followers != null
+                  ? `${formatFollowers(selection.followers)} followers`
+                  : null,
+                selection.engagementRate != null
+                  ? `${formatEngagement(selection.engagementRate)} ER`
+                  : null,
+                selection.tier,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+              countryLabel={selection.country ?? null}
+            />
 
             {loading ? (
               <p className="text-sm text-muted-foreground">Preparing executive recommendation…</p>
