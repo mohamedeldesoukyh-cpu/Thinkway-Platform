@@ -42,6 +42,7 @@ import {
   INTAKE_KPI_OPTIONS,
   INTAKE_PLATFORM_OPTIONS,
 } from "../../constants/intake-field-options";
+import { CANONICAL_INDUSTRY_LABELS } from "../../services/industry-intelligence";
 import { CampaignBriefCard } from "../sections/campaign-brief-card";
 import { IntakeOptionChips } from "./intake-option-chips";
 
@@ -450,6 +451,30 @@ export function IntakeScreen({
                     {INTAKE_COUNTRY_OPTIONS.map((option) => (
                       <option key={option.value} value={option.value}>
                         {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : row.key === "category" ? (
+                  // Controlled: the client industry is a canonical taxonomy
+                  // value read downstream by Strategy / CSR / Discovery, so it
+                  // is picked, never typed. An existing value outside the
+                  // taxonomy (older campaign) stays selectable so editing one
+                  // field never silently rewrites another.
+                  <select
+                    className="h-8 w-full rounded-md border border-input bg-background px-2 text-sm"
+                    value={draft.category}
+                    onChange={(event) =>
+                      setDraft((prev) => ({ ...prev, category: event.target.value }))
+                    }
+                    aria-label="Category"
+                  >
+                    <option value="">Select category</option>
+                    {draft.category && !CANONICAL_INDUSTRY_LABELS.includes(draft.category) ? (
+                      <option value={draft.category}>{draft.category}</option>
+                    ) : null}
+                    {CANONICAL_INDUSTRY_LABELS.map((label) => (
+                      <option key={label} value={label}>
+                        {label}
                       </option>
                     ))}
                   </select>

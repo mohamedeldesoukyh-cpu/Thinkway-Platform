@@ -20,6 +20,19 @@ test("budget magnitude suffixes parse to full amounts", () => {
   assert.equal(parseBudgetTotalFromText("no numbers here"), undefined);
 });
 
+test("a magnitude suffix never spans a line break or a following word", () => {
+  // Kérastase Egypt: "Budget: EGP 3,000,000" with the brand name on the next
+  // line read the "K" of "Kérastase" as "thousand" — a 1000× budget. "é" is not
+  // a regex word character, so the trailing \b did not stop it.
+  assert.equal(
+    parseBudgetTotalFromText("Total Influencer Budget: EGP 3,000,000\nKérastase is looking to partner"),
+    3_000_000
+  );
+  assert.equal(parseBudgetTotalFromText("Budget: EGP 3,000,000\nKickoff in July"), 3_000_000);
+  assert.equal(parseBudgetTotalFromText("Budget: EGP 3,000,000\nMedia plan follows"), 3_000_000);
+  assert.equal(parseBudgetTotalFromText("Budget: EGP 3,000,000"), 3_000_000);
+});
+
 test("EGP 1M brief produces a 1,000,000 EGP budget fact", () => {
   const facts = extractCampaignFacts({
     rawMessage: "Launch a campaign for Koala Snacks in Egypt. Budget: EGP 1M. 6 weeks.",

@@ -14,6 +14,7 @@ import type {
 
 export type CampaignIndustry =
   | "luxury"
+  | "beauty"
   | "tourism"
   | "baby"
   | "retail"
@@ -35,6 +36,16 @@ export type IndustryProfile = {
 
 const INDUSTRY_SIGNALS: Array<{ industry: CampaignIndustry; patterns: RegExp[] }> = [
   {
+    // Checked before `retail`: a haircare/skincare brief routinely asks for
+    // beauty AND fashion creators, and the fashion mention used to classify the
+    // client as Retail & Sportswear. Product-category words decide, not the
+    // creator brief. Ahead of `luxury` too — "premium haircare" is beauty.
+    industry: "beauty",
+    patterns: [
+      /haircare|hair\s?care|shampoo|conditioner|skincare|skin\s?care|cosmetics?|make-?up|fragrance|perfume|salon|dermatolog|k[eé]rastase|l'?or[eé]al|loreal/i,
+    ],
+  },
+  {
     industry: "luxury",
     patterns: [/rolex|luxury|premium watch|haute|prestige|jewel/i],
   },
@@ -48,7 +59,11 @@ const INDUSTRY_SIGNALS: Array<{ industry: CampaignIndustry; patterns: RegExp[] }
   },
   {
     industry: "retail",
-    patterns: [/adidas|nike|sportswear|retail|fashion|apparel|sneaker|store launch|coca-?cola|pepsi|beverage|fmcg/i],
+    // `fashion` must not be the creator brief ("fashion creators") — that names
+    // who to hire, not what the client sells. See industryClassificationText.
+    patterns: [
+      /adidas|nike|sportswear|retail|fashion(?!\s*(?:creators?|influencers?))|apparel|sneaker|store launch|coca-?cola|pepsi|beverage|fmcg/i,
+    ],
   },
   {
     industry: "telecom",
@@ -62,8 +77,37 @@ const INDUSTRY_SIGNALS: Array<{ industry: CampaignIndustry; patterns: RegExp[] }
   },
 ];
 
+/** Content verticals a brief uses to describe the creators it wants to book. */
+const CREATOR_VERTICAL =
+  String.raw`(?:beauty|haircare|hair\s?care|skincare|skin\s?care|fashion|lifestyle|fitness|food|travel|gaming|tech|technology|music|comedy|sports|parenting)`;
+
+/**
+ * A run of content verticals that directly qualifies a creator noun —
+ * "beauty, haircare, lifestyle and fashion creators". Only the vertical list is
+ * matched; the creator noun itself is left in place via lookahead.
+ */
+const CREATOR_SOURCING_PHRASE = new RegExp(
+  String.raw`\b${CREATOR_VERTICAL}\b(?:\s*(?:,|and|&|\/|\+)\s*${CREATOR_VERTICAL}\b)*(?=\s+(?:content\s+)?(?:creators?|influencers?))`,
+  "gi"
+);
+
+/**
+ * Text the industry signals may read.
+ *
+ * A brief names content verticals to describe the talent to book ("Follow
+ * beauty, haircare, lifestyle and fashion creators") — that is the creator
+ * brief, not the client's industry. Matching it classified a haircare brand as
+ * Retail & Sportswear. Only those vertical lists are withheld, and only from
+ * classification: the surrounding sentence (which often carries the real client
+ * signal, e.g. "an influencer campaign for e&") is preserved, and every other
+ * consumer still reads the full text.
+ */
+function industryClassificationText(text: string): string {
+  return text.replace(CREATOR_SOURCING_PHRASE, " ");
+}
+
 export function detectIndustryFromBrief(...sources: Array<string | undefined>): CampaignIndustry {
-  const combined = sources.filter(Boolean).join("\n");
+  const combined = industryClassificationText(sources.filter(Boolean).join("\n"));
   for (const { industry, patterns } of INDUSTRY_SIGNALS) {
     if (patterns.some((p) => p.test(combined))) return industry;
   }
@@ -104,6 +148,23 @@ const INDUSTRY_PROFILES: Record<CampaignIndustry, Omit<IndustryProfile, "industr
     ],
     cpmAssumption: "$4–$9 CPM (mass reach inventory)",
     cpeAssumption: "$0.05–$0.15 CPE (telecom/mass benchmark)",
+  },
+  beauty: {
+    label: "Beauty & Personal Care",
+    campaignType: "Product consideration & conversion",
+    platforms: ["Instagram", "TikTok", "YouTube"],
+    creatorMixSummary: "Micro + Mid + Macro · beauty & haircare creators",
+    estimatedReach: "3M–7M qualified impressions",
+    budgetWeights: [
+      { category: "Creator fees", percent: 50 },
+      { category: "Content production", percent: 18 },
+      { category: "Usage rights", percent: 9 },
+      { category: "Paid amplification", percent: 15 },
+      { category: "Agency coordination", percent: 5 },
+      { category: "Contingency reserve", percent: 3 },
+    ],
+    cpmAssumption: "$6–$12 CPM (beauty vertical)",
+    cpeAssumption: "$0.08–$0.20 CPE",
   },
   tourism: {
     label: "Tourism",
@@ -187,6 +248,15 @@ const INDUSTRY_PROFILES: Record<CampaignIndustry, Omit<IndustryProfile, "industr
     cpeAssumption: "$0.10–$0.22 CPE",
   },
 };
+
+/**
+ * Every canonical industry label, in taxonomy order — derived from
+ * INDUSTRY_PROFILES so the controlled Intake selector and the classifier can
+ * never drift apart. `industry` is stored and read as the LABEL everywhere.
+ */
+export const CANONICAL_INDUSTRY_LABELS: string[] = (
+  Object.keys(INDUSTRY_PROFILES) as CampaignIndustry[]
+).map((key) => INDUSTRY_PROFILES[key].label);
 
 export function getIndustryProfile(
   industry: CampaignIndustry,
@@ -546,6 +616,38 @@ const BUDGET_REASONS: Record<
       confidence: 74,
     },
   },
+  beauty: {
+    "Creator fees": {
+      reason: "Micro/Mid beauty creators carry recommendation credibility — the majority of spend buys trusted voices",
+      source: "Historical",
+      confidence: 90,
+    },
+    "Content production": {
+      reason: "Routine and demonstration formats need clean, well-lit product visibility",
+      source: "Industry",
+      confidence: 91,
+    },
+    "Usage rights": {
+      reason: "Before/after and routine assets are reused across paid and retailer channels",
+      source: "Historical",
+      confidence: 87,
+    },
+    "Paid amplification": {
+      reason: "Boosting the strongest results content drives trial in a crowded category",
+      source: "Historical",
+      confidence: 88,
+    },
+    "Agency coordination": {
+      reason: "Claim review and brand approval cycles on efficacy content",
+      source: "Industry",
+      confidence: 86,
+    },
+    "Contingency reserve": {
+      reason: "Reserve for creator replacement and reshoots on unusable results content",
+      source: "Industry",
+      confidence: 84,
+    },
+  },
   tourism: {
     "Creator fees": {
       reason: "Multi-platform travel storytellers across destination content pillars",
@@ -749,6 +851,7 @@ export function getGroundedKpis(
   const profile = INDUSTRY_PROFILES[industry];
   const similarCampaigns: Record<CampaignIndustry, number> = {
     luxury: 47,
+    beauty: 96,
     tourism: 83,
     baby: 124,
     retail: 156,
@@ -768,6 +871,14 @@ export function getGroundedKpis(
       { reason: "Share of voice analysis vs category competitors", calculationSource: "Competitive intelligence", confidence: 82 },
       { reason: "EMV ratio from comparable luxury spend tiers", calculationSource: "Historical EMV data", confidence: 86 },
       { reason: "HNW audience ER from verified luxury creator profiles", calculationSource: "Creator intelligence", confidence: 90 },
+    ],
+    beauty: [
+      { reason: "Consideration lift benchmarks from MENA beauty and haircare campaigns", calculationSource: "Industry benchmark", confidence: 88 },
+      { reason: "Instagram and TikTok reach model from the beauty creator roster", calculationSource: "Creator reach aggregation", confidence: 90 },
+      { reason: "Routine and demonstration content ER benchmarks", calculationSource: "Industry benchmark", confidence: 87 },
+      { reason: "Link click model from comparable product-trial campaigns", calculationSource: "Historical conversion data", confidence: 84 },
+      { reason: "Saves and shares projection from beauty vertical content norms", calculationSource: "Industry benchmark", confidence: 86 },
+      { reason: "Audience ER from verified beauty creator profiles", calculationSource: "Creator intelligence", confidence: 90 },
     ],
     tourism: [
       { reason: "Destination consideration lift from 83 MENA tourism campaigns", calculationSource: "83 historical campaigns", confidence: 92 },

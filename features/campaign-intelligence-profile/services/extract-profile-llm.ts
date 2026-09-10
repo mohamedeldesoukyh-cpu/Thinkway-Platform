@@ -217,6 +217,28 @@ export function fillBriefSourcedHeuristicGaps(
     );
   };
 
+  /**
+   * Adopt the brief's own value over one the extractor only inferred.
+   *
+   * `take` skips a field that already holds anything, so an inferred value
+   * shadowed a stated one — and `stripInferredStrictFacts` then deleted the
+   * inferred value at persistence, leaving the field empty even though the
+   * brief stated it plainly. This runs ONLY when the brief itself supplies the
+   * field: a genuinely inferred value with no brief evidence is left alone and
+   * still stripped by the existing provenance rules.
+   */
+  const preferBriefOverInferred = (
+    key: keyof CampaignIntelligenceProfile,
+    sourceKey: keyof NonNullable<CampaignIntelligenceProfile["sources"]>
+  ) => {
+    const current = next.sources?.[sourceKey];
+    if (current !== "inferred" && current !== "default") return;
+    if (heuristic.sources?.[sourceKey] !== "brief") return;
+    if (!hasProfileValue(heuristic[key])) return;
+    (next as Record<string, unknown>)[key as string] = heuristic[key];
+    setProfileFieldMeta(next, sourceKey, "brief", heuristic.confidence?.[sourceKey] ?? 0.85);
+  };
+
   take("brandName", "brandName");
   take("clientName", "clientName");
   take("objective", "objective");
@@ -226,10 +248,18 @@ export function fillBriefSourcedHeuristicGaps(
   take("durationWeeks", "durationWeeks");
   take("platforms", "platforms");
   take("deliverables", "deliverables");
+  // The brief's stated KPIs had no recovery slot at all: when the LLM returned
+  // none they were dropped outright, with no second source.
+  take("kpis", "kpis");
   take("keyMessage", "keyMessage");
   take("callToAction", "callToAction");
   take("campaignFunnel", "campaignFunnel");
   take("toneOfVoice", "toneOfVoice");
+
+  // An audience stated in the brief must survive normalization. Scoped to
+  // audience deliberately — the other strict fields (geography, platforms) keep
+  // their existing behaviour untouched.
+  preferBriefOverInferred("audience", "audience");
 
   if (!next.campaignName?.trim() && heuristic.campaignName?.trim()) {
     next.campaignName = heuristic.campaignName;
