@@ -3,6 +3,8 @@ import type { CampaignStrategyDocument } from "@/features/campaign-director/type
 import type { DebateResult } from "@/features/campaign-director/debate";
 
 import { buildIs1CampaignContext, formatBudgetRef, type Is1CampaignContext } from "./campaign-context";
+import { creatorTierStrategyToMix } from "@/features/campaign-director/facts/facts-display-bridge";
+import { resolveCreatorTierMix } from "@/features/campaign-studio/services/creator-quantity";
 
 export type ExecutiveStrategyReasoning = {
   businessChallenge: string;
@@ -85,10 +87,12 @@ function successConditions(
   ];
 }
 
-function babyJoyReasoning(ctx: Is1CampaignContext, strategy: CampaignStrategyDocument): ExecutiveStrategyReasoning {
-  const tierMix = strategy.creatorTierStrategy
-    .map((t) => `${t.tier} ${t.allocationPercent}%`)
-    .join(" · ");
+function babyJoyReasoning(
+  ctx: Is1CampaignContext,
+  strategy: CampaignStrategyDocument,
+  facts: CampaignFacts
+): ExecutiveStrategyReasoning {
+  const tierMix = formatStrategyTierMix(facts, strategy);
 
   return {
     businessChallenge: `${ctx.brand} enters Egypt's crowded premium diaper segment where Pampers and Huggies own parent trust — mothers 0–3 in ${ctx.geography} default to incumbent brands unless peer validation overcomes skepticism on overnight dryness claims.`,
@@ -121,10 +125,12 @@ function babyJoyReasoning(ctx: Is1CampaignContext, strategy: CampaignStrategyDoc
   };
 }
 
-function cocaColaReasoning(ctx: Is1CampaignContext, strategy: CampaignStrategyDocument): ExecutiveStrategyReasoning {
-  const tierMix = strategy.creatorTierStrategy
-    .map((t) => `${t.tier} ${t.allocationPercent}%`)
-    .join(" · ");
+function cocaColaReasoning(
+  ctx: Is1CampaignContext,
+  strategy: CampaignStrategyDocument,
+  facts: CampaignFacts
+): ExecutiveStrategyReasoning {
+  const tierMix = formatStrategyTierMix(facts, strategy);
 
   return {
     businessChallenge: `${ctx.brand} must reignite summer ritual relevance with Gen Z who associate cola with nostalgia but not daily social identity — ${ctx.platforms.join(" and ")} attention is fragmented and ad-skipping is default behavior during ${ctx.durationWeeks}-week heat-season window.`,
@@ -157,10 +163,12 @@ function cocaColaReasoning(ctx: Is1CampaignContext, strategy: CampaignStrategyDo
   };
 }
 
-function genericReasoning(ctx: Is1CampaignContext, strategy: CampaignStrategyDocument): ExecutiveStrategyReasoning {
-  const tierMix = strategy.creatorTierStrategy
-    .map((t) => `${t.tier} ${t.allocationPercent}%`)
-    .join(" · ");
+function genericReasoning(
+  ctx: Is1CampaignContext,
+  strategy: CampaignStrategyDocument,
+  facts: CampaignFacts
+): ExecutiveStrategyReasoning {
+  const tierMix = formatStrategyTierMix(facts, strategy);
 
   return {
     businessChallenge: `${ctx.brand} must break through ${ctx.industry} category noise in ${ctx.geography} where consumers distrust brand-only messaging — ${ctx.objective} requires creator-mediated credibility within ${ctx.durationWeeks} weeks and ${formatBudgetRef(ctx)}.`,
@@ -196,6 +204,28 @@ function genericReasoning(ctx: Is1CampaignContext, strategy: CampaignStrategyDoc
   };
 }
 
+/**
+ * The tier mix this narrative may state.
+ *
+ * These sentences printed `strategy.creatorTierStrategy` verbatim, so a stored
+ * allocation carrying a tier the brief excluded appeared in the Director
+ * conclusion while the Creator Tiers card beside it showed the reconciled mix —
+ * two different tier mixes on one screen. Resolved through the single source of
+ * truth; with no stated preference it is the strategy allocation, unchanged.
+ */
+function formatStrategyTierMix(
+  facts: CampaignFacts | undefined,
+  strategy: CampaignStrategyDocument
+): string {
+  const resolved = resolveCreatorTierMix(
+    facts,
+    strategy.creatorTierStrategy?.length
+      ? creatorTierStrategyToMix(strategy.creatorTierStrategy)
+      : undefined
+  );
+  return resolved.map((tier) => `${tier.tier} ${tier.percent}%`).join(" · ");
+}
+
 function factsConfidence(ctx: Is1CampaignContext, base: number): number {
   let score = base;
   if (ctx.budgetAmount) score += 3;
@@ -213,15 +243,15 @@ export function buildExecutiveStrategyReasoning(
 
   let reasoning: ExecutiveStrategyReasoning;
   if (/babyjoy|baby\s*joy/i.test(brandLower) || /baby|diaper|parenting/i.test(ctx.industry)) {
-    reasoning = babyJoyReasoning(ctx, strategy);
+    reasoning = babyJoyReasoning(ctx, strategy, facts);
   } else if (
     /coca.?cola|coke/i.test(brandLower) ||
     (/beverage|cpg|fmcg/i.test(ctx.industry) &&
       /gen\s*z|summer|engagement/i.test(`${ctx.objective} ${ctx.audience}`))
   ) {
-    reasoning = cocaColaReasoning(ctx, strategy);
+    reasoning = cocaColaReasoning(ctx, strategy, facts);
   } else {
-    reasoning = genericReasoning(ctx, strategy);
+    reasoning = genericReasoning(ctx, strategy, facts);
   }
   return enrichWithDebate(reasoning, debateResult);
 }

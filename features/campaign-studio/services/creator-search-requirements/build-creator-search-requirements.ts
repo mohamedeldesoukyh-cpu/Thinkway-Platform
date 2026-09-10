@@ -32,7 +32,8 @@ import { resolveCanonicalCategory } from "@/lib/creator-intelligence/taxonomy";
 import type { DiscoveryPlatform } from "@/lib/discovery/types";
 
 import { deriveCreatorCategoriesFromBrief } from "../derive-creator-categories";
-import { objectiveKindOf } from "../creator-quantity";
+import { objectiveKindOf, resolveCreatorTierMix } from "../creator-quantity";
+import { creatorTierStrategyToMix } from "@/features/campaign-director/facts/facts-display-bridge";
 import {
   CREATOR_SEARCH_REQUIREMENTS_SCHEMA_VERSION,
   type CreatorRequirement,
@@ -536,11 +537,24 @@ function buildStrategicLayer(input: BuildCreatorSearchRequirementsInput): {
     });
   }
 
-  const tierMix = (strategy?.creatorTierStrategy ?? [])
+  // The canonical resolution, not the raw stored allocation. CSR read
+  // `strategy.creatorTierStrategy` directly, so a Strategy document generated
+  // before the brief's tiers were captured — or a debate winner carrying a tier
+  // the brief excluded — reached Discovery with that tier while the Strategy
+  // screen and the slate showed the reconciled mix. Same function the rest of
+  // the platform reads; with no stated preference it returns the strategy
+  // allocation unchanged.
+  const resolvedTierMix = resolveCreatorTierMix(
+    input.facts,
+    strategy?.creatorTierStrategy?.length
+      ? creatorTierStrategyToMix(strategy.creatorTierStrategy)
+      : undefined
+  );
+  const tierMix = resolvedTierMix
     .map((entry) => {
       const tier = normalizeInfluencerTier(entry.tier);
       if (!tier) return null;
-      return { tier, percent: entry.allocationPercent, why: entry.why };
+      return { tier, percent: entry.percent, why: entry.reasoning };
     })
     .filter((entry): entry is CreatorStrategicLayer["tierMix"][number] => entry !== null);
   if (tierMix.length === 0) {

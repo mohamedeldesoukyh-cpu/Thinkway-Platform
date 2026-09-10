@@ -1502,7 +1502,7 @@ export function VendorRecommendationsSection({
               ? ` · ${quantityRecommendation.recommended} creators`
               : ""}
             {quantityRecommendation.confidence > 0
-              ? ` · ${Math.round(quantityRecommendation.confidence * 100)}% confidence`
+              ? ` · ${Math.round(quantityRecommendation.confidence * 100)}% confidence in this quantity`
               : ""}
           </p>
           <p className="mt-1 text-foreground">{quantityRecommendation.rationale}</p>

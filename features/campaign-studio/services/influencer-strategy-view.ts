@@ -57,9 +57,13 @@ export function deriveInfluencerStrategyView(
 
   const pillar = (key: string) => story.strategyPillars.find((item) => item.key === key)?.body;
 
+  // The confidence is Thinkway's confidence in the QUANTITY recommendation —
+  // it is computed from how many of duration, budget and objective are
+  // confirmed, and says nothing about creator quality, creator fit, or the
+  // chance of finding creators. Naming it stops that misreading.
   const quantityBody =
     quantity.recommended != null
-      ? `${quantity.recommended} creators (${Math.round(quantity.confidence * 100)}% confidence). ${quantity.rationale}`
+      ? `${quantity.recommended} creators · ${Math.round(quantity.confidence * 100)}% confidence in this quantity recommendation. ${quantity.rationale}`
       : quantity.rationale;
 
   const tierBody =
