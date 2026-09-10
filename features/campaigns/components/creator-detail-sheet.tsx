@@ -142,6 +142,14 @@ type Props = {
    * `discoveryPack` — Discovery Overlay A centered `.tw-cp` modal.
    */
   presentation?: CreatorDetailSheetPresentation;
+  /**
+   * Optional caller-owned block rendered at the top of the Overview tab.
+   *
+   * Studio uses it to keep its executive planning recommendation alongside the
+   * creator's real Discovery detail, instead of maintaining a second detail
+   * view. Discovery passes nothing and renders exactly as before.
+   */
+  contextSlot?: ReactNode;
 };
 
 type DetailTab = "overview" | "contact" | "publications" | "confidence" | "similar";
@@ -818,6 +826,7 @@ export function CreatorDetailSheet({
   campaignHeaderId,
   preserveOpenOnCreatorRows = true,
   presentation = "sheet",
+  contextSlot,
 }: Props) {
   const isDiscoveryPack = presentation === "discoveryPack";
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
@@ -1174,6 +1183,7 @@ export function CreatorDetailSheet({
     <>
             <TabsContent value="overview" className="mt-0 outline-none">
               <div className="min-w-0">
+                  {contextSlot ? <DetailSection>{contextSlot}</DetailSection> : null}
                   <DetailSection>
                     <div className="creator-detail-sheet-highlight-grid">
                       <div className="creator-detail-sheet-highlight-card creator-detail-sheet-highlight-card--score">

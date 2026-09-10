@@ -126,12 +126,31 @@ export function AddCreatorPanel({
   const [mode, setMode] = useState<AddMode>(
     replaceTarget && candidates.length > 0 ? "recommended" : "discovery"
   );
+  // Read inside the Replace effect without re-running it as hydration fills the
+  // candidate list — that would reset a mode the operator had just changed.
+  const candidateCountRef = useRef(candidates.length);
+  candidateCountRef.current = candidates.length;
   const [query, setQuery] = useState("");
   const [profileUrl, setProfileUrl] = useState("");
   const [searching, setSearching] = useState(false);
   const [addingUrl, setAddingUrl] = useState(false);
   const [results, setResults] = useState<UnifiedCreatorResult[]>([]);
   const [busyCreatorId, setBusyCreatorId] = useState<string | null>(null);
+
+  // Replace is clicked on a creator card above this panel, which is collapsed
+  // by default — so without this the operator clicked Replace and saw nothing.
+  const replaceTargetId = replaceTarget?.creatorId ?? null;
+  useEffect(() => {
+    if (!replaceTargetId) return;
+    setOpen(true);
+    setMode(candidateCountRef.current > 0 ? "recommended" : "discovery");
+  }, [replaceTargetId]);
+
+  // "recommended" only means anything while replacing. Once the replacement is
+  // staged the target clears, so fall back rather than leave a list that says
+  // it replaces a creator it no longer has.
+  const effectiveMode: AddMode =
+    mode === "recommended" && !(replaceTarget && candidates.length > 0) ? "discovery" : mode;
 
   const stagedAdditions = draft.changes.filter((c) => c.kind === "add_creator");
   const stagedIds = new Set(
@@ -449,8 +468,8 @@ export function AddCreatorPanel({
                   type="button"
                   size="xs"
                   role="tab"
-                  aria-selected={mode === "recommended"}
-                  variant={mode === "recommended" ? "secondary" : "ghost"}
+                  aria-selected={effectiveMode === "recommended"}
+                  variant={effectiveMode === "recommended" ? "secondary" : "ghost"}
                   className={cn("h-7 px-2.5 text-xs", STUDIO_CLASSES.focusRingInset)}
                   onClick={() => setMode("recommended")}
                 >
@@ -462,8 +481,8 @@ export function AddCreatorPanel({
                 type="button"
                 size="xs"
                 role="tab"
-                aria-selected={mode === "discovery"}
-                variant={mode === "discovery" ? "secondary" : "ghost"}
+                aria-selected={effectiveMode === "discovery"}
+                variant={effectiveMode === "discovery" ? "secondary" : "ghost"}
                 className={cn("h-7 px-2.5 text-xs", STUDIO_CLASSES.focusRingInset)}
                 onClick={() => setMode("discovery")}
               >
@@ -474,8 +493,8 @@ export function AddCreatorPanel({
                 type="button"
                 size="xs"
                 role="tab"
-                aria-selected={mode === "url"}
-                variant={mode === "url" ? "secondary" : "ghost"}
+                aria-selected={effectiveMode === "url"}
+                variant={effectiveMode === "url" ? "secondary" : "ghost"}
                 className={cn("h-7 px-2.5 text-xs", STUDIO_CLASSES.focusRingInset)}
                 onClick={() => setMode("url")}
               >
@@ -494,7 +513,7 @@ export function AddCreatorPanel({
             </Button>
           </div>
 
-          {mode === "recommended" ? (
+          {effectiveMode === "recommended" ? (
             <div className="space-y-1.5">
               <p className="text-[11px] text-muted-foreground">
                 Recommended for this campaign and not currently selected. Already
@@ -545,7 +564,7 @@ export function AddCreatorPanel({
                 ))}
               </ul>
             </div>
-          ) : mode === "discovery" ? (
+          ) : effectiveMode === "discovery" ? (
             <div className="space-y-2">
               <div className="flex flex-col gap-2 sm:flex-row">
                 <Input

@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { ExternalLinkIcon } from "lucide-react";
 import Link from "next/link";
 
@@ -17,79 +16,50 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
-import { loadStudioEciPlanningSignalsAction } from "@/features/campaign-studio/actions/studio-eci-actions";
 import type { StudioEciPlanningSignal } from "@/features/campaign-studio/services/eci/project-studio-eci-signal";
-import { toExecutiveCreatorDetailView } from "@/features/campaign-studio/services/eci/executive-planning-view";
 import {
   formatEngagement,
   formatFollowers,
 } from "@/features/campaign-studio/components/sections/shared/format-utils";
-import { StudioRecommendationNarrative } from "./shared/studio-recommendation-narrative";
+import {
+  ExecBlock,
+  StudioExecutiveRecommendationBlock,
+} from "./shared/studio-executive-recommendation-block";
 
 type StudioPlanningCreatorDetailProps = {
   selection: CreatorDrawerSelection | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   signal?: StudioEciPlanningSignal | null;
+  /**
+   * Why Discovery's full creator detail is not being shown. `resolving` while
+   * the lookup is in flight, `unavailable` when this creator has no unified
+   * Discovery record yet (a creator just added by URL, for instance).
+   */
+  discoveryDetailState?: "resolving" | "unavailable";
 };
 
-function ExecBlock({ title, body }: { title: string; body: string }) {
-  if (!body?.trim()) return null;
-  return (
-    <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-sm">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-        {title}
-      </p>
-      <p className="mt-1 text-foreground">{body}</p>
-    </div>
-  );
-}
-
 /**
- * Creator Detail — decision-first executive thinking.
- * Same sheet chrome; reorganized content only (no redesign).
+ * Planning fallback for a creator with no Discovery detail to show.
+ *
+ * The creator detail view IS Discovery's `CreatorDetailSheet` — see
+ * `StudioCreatorDetailHost`. This sheet is what the operator gets when that
+ * sheet has nothing to render: the campaign's own planning recommendation plus
+ * the stated values already on the card, and an explicit line saying the
+ * Discovery profile is loading or not available. Nothing here stands in for
+ * Discovery data that does not exist.
  */
 export function StudioPlanningCreatorDetail({
   selection,
   open,
   onOpenChange,
-  signal: signalProp,
+  signal,
+  discoveryDetailState,
 }: StudioPlanningCreatorDetailProps) {
-  const [signal, setSignal] = useState<StudioEciPlanningSignal | null>(signalProp ?? null);
-  const [loading, setLoading] = useState(false);
-  const [showDetailed, setShowDetailed] = useState(false);
-
-  useEffect(() => {
-    if (!open || !selection?.id) {
-      setSignal(signalProp ?? null);
-      setShowDetailed(false);
-      return;
-    }
-    if (signalProp) {
-      setSignal(signalProp);
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    void loadStudioEciPlanningSignalsAction([selection.id]).then((record) => {
-      if (cancelled) return;
-      const bare = selection.id!.replace(/^inf:/, "").replace(/^dis:/, "");
-      setSignal(record[bare] ?? record[selection.id!] ?? null);
-      setLoading(false);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [open, selection?.id, signalProp]);
-
   const internalHref =
     selection?.id?.startsWith("inf:") && selection.id.slice(4)
       ? `/vendors/${selection.id.slice(4)}`
       : undefined;
-
-  const exec = signal
-    ? toExecutiveCreatorDetailView(signal, selection?.displayName)
-    : null;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -104,11 +74,9 @@ export function StudioPlanningCreatorDetail({
         {selection ? (
           <div className="mt-6 space-y-3.5">
             {/*
-              Discovery's own identity header, not a Studio copy of it. The card
-              and its Thinkway star formatting come straight from Discovery, so
-              the creator reads identically in both places and there is one
-              implementation to change. Only stated values are passed — an
-              absent follower count or country stays absent.
+              Discovery's own identity header, not a Studio copy of it. Only
+              stated values are passed — an absent follower count or country
+              stays absent.
             */}
             <CreatorDetailsSummaryCard
               size="sheet"
@@ -134,85 +102,20 @@ export function StudioPlanningCreatorDetail({
               countryLabel={selection.country ?? null}
             />
 
-            {loading ? (
-              <p className="text-sm text-muted-foreground">Preparing executive recommendation…</p>
-            ) : exec ? (
-              <>
-                <div className="rounded-lg border border-[#0057FF]/25 bg-[#0057FF]/5 p-3 text-sm">
-                  <p className="text-[10px] font-medium uppercase tracking-wide text-[#0057FF]">
-                    Executive Recommendation
-                  </p>
-                  <p className="mt-1.5 font-semibold text-foreground">
-                    {exec.executiveRecommendation}
-                  </p>
-                  <p className="mt-2 text-[11px] text-muted-foreground">
-                    Planning confidence: <b>{exec.strategyConfidence.level}</b> —{" "}
-                    {exec.strategyConfidence.why}
-                  </p>
-                </div>
-
-                <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
-                  <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-                    Decision narrative
-                  </p>
-                  <StudioRecommendationNarrative narrative={exec.narrative} variant="full" />
-                </div>
-
-                <ExecBlock title="Campaign Contribution" body={exec.campaignContribution} />
-                <ExecBlock title="Historical Evidence" body={exec.historicalEvidence} />
-
-                <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-[11px] text-muted-foreground">
-                  <p className="font-semibold text-foreground">Why this confidence level</p>
-                  <p className="mt-1">{exec.strategyConfidence.evidenceSupports}</p>
-                  <p className="mt-1">
-                    <span className="font-semibold text-foreground">Assumptions:</span>{" "}
-                    {exec.strategyConfidence.assumptions}
-                  </p>
-                  <p className="mt-1">
-                    <span className="font-semibold text-foreground">What could reduce confidence:</span>{" "}
-                    {exec.strategyConfidence.whatCouldReduce}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  className="text-[11px] font-semibold text-[#0057FF] hover:underline"
-                  onClick={() => setShowDetailed((v) => !v)}
-                >
-                  {showDetailed ? "Hide detailed intelligence" : "Show detailed intelligence"}
-                </button>
-
-                {showDetailed ? (
-                  <div className="space-y-2.5">
-                    <ExecBlock
-                      title="What the planning recommendation means"
-                      body={exec.detailedIntelligence.investmentMeaning}
-                    />
-                    <ExecBlock
-                      title="What the commercial outlook means"
-                      body={exec.detailedIntelligence.commercialMeaning}
-                    />
-                    <ExecBlock
-                      title="What the audience outlook means"
-                      body={exec.detailedIntelligence.audienceMeaning}
-                    />
-                    <ExecBlock
-                      title="What the performance outlook means"
-                      body={exec.detailedIntelligence.performanceMeaning}
-                    />
-                    <ExecBlock
-                      title="What category & brand fit means"
-                      body={exec.detailedIntelligence.categoryBrandMeaning}
-                    />
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                An executive recommendation is not available yet for this creator. Profile context
-                remains below.
+            {discoveryDetailState ? (
+              <p className="rounded-lg border border-border/60 bg-muted/10 p-3 text-[11px] text-muted-foreground">
+                {discoveryDetailState === "resolving"
+                  ? "Loading the full creator profile…"
+                  : "The full creator profile is not available for this creator yet. Planning context is shown below."}
               </p>
-            )}
+            ) : null}
+
+            <StudioExecutiveRecommendationBlock
+              creatorId={selection.id}
+              displayName={selection.displayName}
+              signal={signal}
+              active={open}
+            />
 
             {selection.audienceSummary ? (
               <ExecBlock title="Audience snapshot" body={selection.audienceSummary} />
