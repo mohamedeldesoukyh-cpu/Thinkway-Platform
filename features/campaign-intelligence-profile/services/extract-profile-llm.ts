@@ -255,6 +255,9 @@ export function fillBriefSourcedHeuristicGaps(
   take("callToAction", "callToAction");
   take("campaignFunnel", "campaignFunnel");
   take("toneOfVoice", "toneOfVoice");
+  // The extraction schema has no creator-mix field, so this is the only path
+  // by which the brief's stated tiers survive the LLM route.
+  take("creatorTiers", "creatorTiers");
 
   // An audience stated in the brief must survive normalization. Scoped to
   // audience deliberately — the other strict fields (geography, platforms) keep
@@ -317,6 +320,9 @@ function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
   profile.callToAction = facts.callToAction;
   profile.campaignFunnel = facts.campaignFunnel;
   profile.toneOfVoice = facts.toneOfVoice;
+  // The brief's stated creator tier preference — tiers are the fact, the split
+  // only when the brief gave one.
+  profile.creatorTiers = facts.creatorTiers;
   profile.constraints = facts.constraints;
   profile.risks = facts.risks;
   profile.rawBriefExcerpt = briefText.slice(0, 500);

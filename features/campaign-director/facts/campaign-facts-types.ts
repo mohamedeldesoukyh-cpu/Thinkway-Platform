@@ -28,6 +28,7 @@ export type CampaignFactsField =
   | "constraints"
   | "risks"
   | "creatorCategories"
+  | "creatorTiers"
   | "requestedCreatorCount"
   | "keyMessage"
   | "callToAction"
@@ -84,6 +85,18 @@ export type CampaignFacts = {
    * Campaign intent, NOT a Discovery filter — Discovery reads validatedIntelligence.
    */
   creatorCategories?: string[];
+  /**
+   * The creator tier preference the brief stated, in the brief's own order.
+   *
+   * `percent` is present ONLY when the brief gave a percentage for that tier.
+   * Tier names without percentages are exactly that: the tiers are the stated
+   * fact, the split is not, and Strategy recommends the split over these tiers
+   * rather than attributing figures to the brief.
+   *
+   * Never inferred: absent means the brief did not specify a mix, and the
+   * industry recommendation applies. Not a Discovery filter.
+   */
+  creatorTiers?: Array<{ tier: string; percent?: number }>;
   /** Single-sentence brand message stated in the brief. */
   keyMessage?: string;
   /** Explicit call to action stated in the brief. */

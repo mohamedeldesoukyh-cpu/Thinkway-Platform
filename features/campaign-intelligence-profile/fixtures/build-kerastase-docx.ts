@@ -71,6 +71,12 @@ export async function buildKerastaseEgyptDocx(): Promise<Buffer> {
     listItem("High-quality and visually appealing content."),
     listItem("An audience predominantly located in Egypt."),
 
+    heading("7. Preferred Creator Mix"),
+    paragraph("Preferred Creator Mix: Macro / Mid / Micro"),
+    paragraph(
+      "The final allocation across these tiers can be recommended based on budget and reach."
+    ),
+
     heading("5. Key Campaign Message"),
     paragraph("“Professional-level haircare designed around your hair needs.”"),
     paragraph(

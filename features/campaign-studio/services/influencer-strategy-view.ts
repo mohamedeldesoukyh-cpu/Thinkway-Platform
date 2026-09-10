@@ -6,9 +6,11 @@ import {
 } from "./planning-narrative";
 import {
   deriveCreatorQuantityRecommendation,
+  resolveCreatorTierMixWithBasis,
   formatCreatorTierMixSummary,
 } from "./creator-quantity";
 import { creatorTierStrategyToMix } from "@/features/campaign-director/facts/facts-display-bridge";
+import { CREATOR_TIER_MIX_BASIS_LABEL } from "@/features/campaign-director/facts/creator-tier-preference";
 import { getStrategyFromWorkflowData } from "@/features/campaign-director/services/campaign-director";
 
 export type InfluencerStrategyAnswer = {
@@ -47,6 +49,9 @@ export function deriveInfluencerStrategyView(
   const quantity = deriveCreatorQuantityRecommendation(facts, { tierMix: strategyTierMix });
   const mix = quantity.mix;
   const mixSummary = formatCreatorTierMixSummary(mix);
+  // Say where the allocation came from. A split the brief did not state must
+  // never read as though it did.
+  const { basis: mixBasis } = resolveCreatorTierMixWithBasis(facts, strategyTierMix);
   // Canonical categories resolved by the intelligence pipeline.
   const categories = facts?.creatorCategories ?? [];
 
@@ -59,12 +64,13 @@ export function deriveInfluencerStrategyView(
 
   const tierBody =
     mix.length > 0
-      ? mix
-          .map(
+      ? [
+          `${CREATOR_TIER_MIX_BASIS_LABEL[mixBasis]}.`,
+          ...mix.map(
             (tier) =>
               `${tier.count} ${tier.tier} (${tier.percent}%)${tier.reasoning ? ` — ${tier.reasoning}` : ""}`
-          )
-          .join(" ")
+          ),
+        ].join(" ")
       : firstUseful(pillar("creatorStrategy"));
 
   return [

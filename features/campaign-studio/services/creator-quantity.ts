@@ -2,6 +2,11 @@ import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-
 import {
   buildCreatorMixFromFacts,
 } from "@/features/campaign-director/facts/facts-display-bridge";
+import {
+  creatorTierPreferenceFromFacts,
+  resolveCreatorTierMixFromPreference,
+  type CreatorTierMixBasis,
+} from "@/features/campaign-director/facts/creator-tier-preference";
 import type { CreatorMixTier } from "@/features/campaign-intelligence/types/section-schemas";
 
 import { allocateTierCounts } from "./creator-slate";
@@ -89,18 +94,46 @@ function applyMixCounts(mix: CreatorMixTier[], recommended: number): CreatorMixT
 }
 
 /**
- * Single source of truth for the creator tier mix.
+ * Single source of truth for the creator tier mix, and how it was arrived at.
  *
- * An explicit Strategy allocation wins; otherwise one documented industry
- * fallback is used. Every UI representation of the mix must read this, so the
- * summary line and the tier allocation can never disagree.
+ * Precedence:
+ *   1. the brief's stated creator tiers — the tier SET is authoritative, and
+ *      when the brief also gave percentages those are used exactly;
+ *   2. an explicit Strategy allocation, as the weights across those tiers (or
+ *      as the whole mix when the brief stated no preference);
+ *   3. the documented industry recommendation.
+ *
+ * Why the brief outranks the Strategy allocation: that allocation is itself
+ * generated (`defaultCreatorTierStrategy`), so leaving it on top meant a
+ * generated default silently overrode what the brief actually asked for. An
+ * allocation an operator revised still decides the split — the brief only
+ * fixes which tiers are in play.
+ *
+ * Every UI representation of the mix reads this, so the summary line and the
+ * tier allocation can never disagree.
  */
+export function resolveCreatorTierMixWithBasis(
+  facts: CampaignFacts | null | undefined,
+  strategyTierMix?: CreatorMixTier[]
+): { mix: CreatorMixTier[]; basis: CreatorTierMixBasis } {
+  const baseMix = strategyTierMix?.length
+    ? strategyTierMix
+    : facts
+      ? buildCreatorMixFromFacts(facts)
+      : [];
+
+  const preference = creatorTierPreferenceFromFacts(facts);
+  if (preference.length === 0) return { mix: baseMix, basis: "recommended" };
+  // Idempotent when `baseMix` already came from the brief: re-weighting the
+  // same tiers by their own percentages returns the same split.
+  return resolveCreatorTierMixFromPreference({ preference, baseMix });
+}
+
 export function resolveCreatorTierMix(
   facts: CampaignFacts | null | undefined,
   strategyTierMix?: CreatorMixTier[]
 ): CreatorMixTier[] {
-  if (strategyTierMix?.length) return strategyTierMix;
-  return facts ? buildCreatorMixFromFacts(facts) : [];
+  return resolveCreatorTierMixWithBasis(facts, strategyTierMix).mix;
 }
 
 /** Human summary of a tier mix, derived from the same value the allocation uses. */

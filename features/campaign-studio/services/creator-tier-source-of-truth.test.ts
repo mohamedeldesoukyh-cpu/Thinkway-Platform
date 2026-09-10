@@ -21,6 +21,7 @@ import {
   resolveCreatorTierMix,
 } from "./creator-quantity";
 import { deriveInfluencerStrategyView } from "./influencer-strategy-view";
+import { getIndustryCreatorMix } from "./creator-tier-mix-by-industry";
 
 const NOW = "2026-01-01T00:00:00.000Z";
 
@@ -96,10 +97,23 @@ test("O: an explicit Strategy tier allocation is the source of truth", () => {
 
 test("O: with no Strategy allocation, one documented fallback is used", () => {
   const mix = resolveCreatorTierMix(facts);
+
+  // The fallback is now the industry recommendation for this campaign's
+  // industry, taken from the one industry mix table. It is deliberately NOT a
+  // universal percentage: `Macro 40 / Micro 35 / Nano 25` used to be returned
+  // for every industry without a branch, which is what made unrelated
+  // campaigns identical.
   assert.deepEqual(
     mix.map((tier) => `${tier.tier} ${tier.percent}%`),
-    ["Macro 40%", "Micro 35%", "Nano 25%"]
+    getIndustryCreatorMix("general")
+      .filter((tier) => tier.percent > 0 || tier.count > 0)
+      .map((tier) => `${tier.tier} ${tier.percent}%`)
   );
+  assert.notEqual(
+    mix.map((tier) => `${tier.tier} ${tier.percent}%`).join(" / "),
+    "Macro 40% / Micro 35% / Nano 25%"
+  );
+  assert.equal(mix.reduce((sum, tier) => sum + tier.percent, 0), 100);
 });
 
 test("O: the summary line and the tier allocation agree — fallback case", () => {
@@ -110,13 +124,16 @@ test("O: the summary line and the tier allocation agree — fallback case", () =
   assert.notEqual(summary, "", "summary should render");
   assert.notEqual(tiers, "", "tier allocation should render");
 
-  for (const tier of ["Macro", "Micro", "Nano"]) {
-    assert.ok(summary.includes(tier), `summary names ${tier}`);
-    assert.ok(tiers.includes(tier), `allocation names ${tier}`);
+  // Both representations must name exactly the resolved mix's tiers — asserted
+  // against the resolved value rather than a fixed list, so the check survives
+  // a change to the industry recommendation.
+  const resolved = resolveCreatorTierMix(facts).map((tier) => tier.tier);
+  const allTiers = ["Celebrity", "Mega", "Macro", "Mid", "Micro", "Nano"] as const;
+  for (const tier of allTiers) {
+    const expected = resolved.includes(tier);
+    assert.equal(summary.includes(tier), expected, `summary / ${tier}`);
+    assert.equal(tiers.includes(tier), expected, `allocation / ${tier}`);
   }
-  // The pre-fix contradiction: summary claimed Mid while allocation had none.
-  assert.equal(summary.includes("Mid"), false);
-  assert.equal(tiers.includes("Mid"), false);
 });
 
 test("O: the summary line and the tier allocation agree — Strategy case", () => {
@@ -148,7 +165,10 @@ test("quantity recommendation honours an injected Strategy mix", () => {
   const fallback = deriveCreatorQuantityRecommendation(facts);
   assert.deepEqual(
     fallback.mix.map((tier) => tier.tier),
-    ["Macro", "Micro", "Nano"]
+    getIndustryCreatorMix("general")
+      .filter((tier) => tier.percent > 0 || tier.count > 0)
+      .map((tier) => tier.tier),
+    "with no Strategy allocation the industry recommendation applies"
   );
   assert.equal(withStrategy.recommended, fallback.recommended, "headcount logic unchanged");
 });
