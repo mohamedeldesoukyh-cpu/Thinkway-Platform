@@ -378,7 +378,13 @@ export async function uploadCampaignBriefAction(
       };
     }
 
-    if (!brandId || skipBrandDetection) {
+    // The brand-selection detour decides which brand a LIBRARY record belongs
+    // to. An upload into an open campaign conversation already has its target,
+    // and returning `brand_selection` there left the analysis unpersisted
+    // behind a brand picker — a Studio upload appeared to succeed and Intake
+    // never populated. Owned-conversation uploads persist straight away; the
+    // brand can still be linked afterwards.
+    if ((!brandId || skipBrandDetection) && !uploadTarget.ownsConversation) {
       const profileForDetection = {
         ...merged,
         rawBriefExcerpt: merged.rawBriefExcerpt?.trim() || parsedText.slice(0, 500),
@@ -435,6 +441,9 @@ export async function uploadCampaignBriefAction(
       campaignHeaderId,
       conversationId,
       mode: "create",
+      // A campaign whose brand is not in the CRM catalog must still receive its
+      // first brief. Library uploads (no conversation) keep requiring a brand.
+      allowMissingBrand: uploadTarget.allowMissingBrand,
     });
   } catch (error) {
     return {
