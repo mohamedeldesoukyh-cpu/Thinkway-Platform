@@ -4,7 +4,8 @@ import type { DebateResult } from "@/features/campaign-director/debate";
 
 import { buildIs1CampaignContext, formatBudgetRef, type Is1CampaignContext } from "./campaign-context";
 import { creatorTierStrategyToMix } from "@/features/campaign-director/facts/facts-display-bridge";
-import { resolveCreatorTierMix } from "@/features/campaign-studio/services/creator-quantity";
+import { resolveCreatorTierMixWithBasis } from "@/features/campaign-studio/services/creator-quantity";
+import type { CreatorTierMixBasis } from "@/features/campaign-director/facts/creator-tier-preference";
 
 export type ExecutiveStrategyReasoning = {
   businessChallenge: string;
@@ -168,7 +169,19 @@ function genericReasoning(
   strategy: CampaignStrategyDocument,
   facts: CampaignFacts
 ): ExecutiveStrategyReasoning {
-  const tierMix = formatStrategyTierMix(facts, strategy);
+  const tier = resolveStrategyTierMix(facts, strategy);
+  const tierMix = tier.label;
+  // A tier mix the brief did not state is Thinkway's recommendation. Saying so
+  // is what separates a default from a confirmed choice — the Strategy card one
+  // row down already says "the brief did not specify one", and these lines used
+  // to claim the brief and a Director approval for the very same mix.
+  const tierMixApproval = tier.fromBrief ? "Director-approved" : "recommended";
+  // "Confirmed" covers both routes to an authoritative mix: stated in the brief,
+  // or chosen by an operator. Neither is a Thinkway default, and the resolver
+  // reports only that distinction.
+  const tierMixGrounding = tier.fromBrief
+    ? "grounded in the confirmed creator mix and approved strategy"
+    : "recommended by Thinkway — the brief did not specify a creator mix";
 
   return {
     businessChallenge: `${ctx.brand} must break through ${ctx.industry} category noise in ${ctx.geography} where consumers distrust brand-only messaging — ${ctx.objective} requires creator-mediated credibility within ${ctx.durationWeeks} weeks and ${formatBudgetRef(ctx)}.`,
@@ -178,13 +191,13 @@ function genericReasoning(
         ? ctx.audience
         : `${ctx.audience} in ${ctx.geography}`
     } responds to creator authenticity over polished ads; reaching this cohort requires tier-sequenced voices aligned to the brief audience.`,
-    strategicInsight: `${ctx.audience} responds to creator authenticity over polished ads; Director tier mix (${tierMix}) balances reach and cost for ${ctx.platforms.join(", ")} consumption patterns.`,
+    strategicInsight: `${ctx.audience} responds to creator authenticity over polished ads; the ${tierMixApproval} tier mix (${tierMix}) balances reach and cost for ${ctx.platforms.join(", ")} consumption patterns.`,
     rejectedAlternatives: [
       `Paid media-only plan — rejected; the campaign objective (${ctx.objective}) requires creator trust transfer.`,
       `Single-tier creator roster — rejected; ${formatBudgetRef(ctx)} cannot deliver reach + authenticity without tier waterfall.`,
       `Extended timeline without tier sequencing — rejected; ${ctx.durationWeeks}-week window requires front-loaded Macro/Mega activation per Director timeline.`,
     ],
-    chosenStrategy: `Creator-led ${ctx.objective.toLowerCase()} on ${ctx.platforms.join(" + ")} using Director-approved ${tierMix} for ${ctx.geography}.`,
+    chosenStrategy: `Creator-led ${ctx.objective.toLowerCase()} on ${ctx.platforms.join(" + ")} using ${tierMixApproval} ${tierMix} for ${ctx.geography}.`,
     whyThisStrategyWins: `Aligns ${ctx.brand} spend to audience behavior on ${ctx.platforms.join("/")} while preserving budget efficiency — each tier rationale is documented in the approved Director strategy.`,
     expectedTradeoffs: [
       "Reduced message control vs brand-owned creative",
@@ -194,7 +207,7 @@ function genericReasoning(
     risks: baseRisks(ctx, strategy),
     successConditions: successConditions(ctx, strategy),
     confidenceLevel: factsConfidence(ctx, 78),
-    directorConclusion: `Director approves creator-tier strategy for ${ctx.brand} — ${ctx.objective} in ${ctx.geography} via ${tierMix}, grounded in the brief and approved strategy.`,
+    directorConclusion: `Director approves creator-tier strategy for ${ctx.brand} — ${ctx.objective} in ${ctx.geography} via ${tierMix}, ${tierMixGrounding}.`,
     evidence: [
       `CampaignFacts.brandName=${ctx.brand}`,
       `CampaignFacts.objective=${ctx.objective}`,
@@ -217,13 +230,41 @@ function formatStrategyTierMix(
   facts: CampaignFacts | undefined,
   strategy: CampaignStrategyDocument
 ): string {
-  const resolved = resolveCreatorTierMix(
+  return resolveStrategyTierMix(facts, strategy).label;
+}
+
+/**
+ * The tier mix AND where it came from.
+ *
+ * Browser evidence: the Strategy screen showed "Recommended creator mix — the
+ * brief did not specify one · 2 Macro · 3 Mid · 4 Micro · 1 Nano" while the
+ * decision line above it read "Director approves creator-tier strategy … via
+ * Macro 20% · Mid 30% · Micro 35% · Nano 15%, grounded in the brief and
+ * approved strategy". The mix is Thinkway's own recommendation for the
+ * industry, correctly labelled as such one card down — but the narrative
+ * claimed the brief and a Director approval for it. That is what made Nano look
+ * like a brief-approved tier.
+ *
+ * `resolveCreatorTierMixWithBasis` already reports the basis. The narrative now
+ * says which it is, so an operator can tell a default from a confirmed choice.
+ * The mix itself is unchanged, and an explicit operator or brief tier set still
+ * constrains it exactly as before.
+ */
+function resolveStrategyTierMix(
+  facts: CampaignFacts | undefined,
+  strategy: CampaignStrategyDocument
+): { label: string; basis: CreatorTierMixBasis; fromBrief: boolean } {
+  const { mix, basis } = resolveCreatorTierMixWithBasis(
     facts,
     strategy.creatorTierStrategy?.length
       ? creatorTierStrategyToMix(strategy.creatorTierStrategy)
       : undefined
   );
-  return resolved.map((tier) => `${tier.tier} ${tier.percent}%`).join(" · ");
+  return {
+    label: mix.map((tier) => `${tier.tier} ${tier.percent}%`).join(" · "),
+    basis,
+    fromBrief: basis !== "recommended",
+  };
 }
 
 function factsConfidence(ctx: Is1CampaignContext, base: number): number {
