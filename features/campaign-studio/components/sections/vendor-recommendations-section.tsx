@@ -7,6 +7,7 @@ import {
   Columns2Icon,
   GitMergeIcon,
   ListRestartIcon,
+  Loader2Icon,
   PlusIcon,
   Trash2Icon,
   Undo2Icon,
@@ -976,12 +977,17 @@ export function VendorRecommendationsSection({
   }, [campaignObject, creatorFitScores]);
 
   const { observeCreator } = useViewportCreatorIds();
-  const { vendors: hydrated, loading } = useCreatorHydration(
-    ids,
-    safeRationale,
-    avgFitScore,
-    mapperOptions
-  );
+  // `phase` was returned by the hook and discarded here, so the section showed
+  // its skeleton only while ZERO creators existed and then declared itself done
+  // after wave 1 — while phases 2 (ECI) and 3 (quotation) were still running.
+  // Those are the waves that reorder cards and, once an ECI decision arrives,
+  // filter one out. Keeping the real phase makes the list say it is still
+  // settling instead of presenting a mid-hydration state as final.
+  const {
+    vendors: hydrated,
+    loading,
+    phase: hydrationPhase,
+  } = useCreatorHydration(ids, safeRationale, avgFitScore, mapperOptions);
 
   const campaignFacts = getCampaignFacts(campaignObject);
 
@@ -1390,6 +1396,13 @@ export function VendorRecommendationsSection({
             <span className="text-foreground/80">
               {" "}
               · Brief platform: {preferredPlatformLabel}
+            </span>
+          ) : null}
+          {hydrationPhase < 3 ? (
+            <span className="inline-flex items-center gap-1 text-foreground/70">
+              {" · "}
+              <Loader2Icon className="size-3 animate-spin" aria-hidden />
+              Resolving creator signals…
             </span>
           ) : null}
         </p>

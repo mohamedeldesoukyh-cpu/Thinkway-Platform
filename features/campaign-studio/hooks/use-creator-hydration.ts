@@ -13,6 +13,7 @@ import {
   STUDIO_CREATOR_HYDRATION_LIMIT,
   STUDIO_VENDOR_INITIAL_VISIBLE,
 } from "../constants/hydration-limits";
+import { preserveResolvedAvatar } from "../services/creator-avatar-stability";
 import { loadStudioEciPlanningSignalsAction } from "../actions/studio-eci-actions";
 import {
   mapCreatorToHydratedVendor,
@@ -102,8 +103,7 @@ function mergeVendorWaves(primary: HydratedVendor[], overlay: HydratedVendor[]):
       planningSignal: v.planningSignal ?? prev.planningSignal,
       priceEstimate: v.priceEstimate ?? prev.priceEstimate,
       reason: v.planningSignal ? v.reason : prev.reason ?? v.reason,
-      avatarUrl: v.avatarUrl ?? prev.avatarUrl,
-      profileUrl: v.profileUrl ?? prev.profileUrl,
+      ...preserveResolvedAvatar(prev, v),
     });
   }
   return [...byId.values()];
@@ -205,9 +205,12 @@ async function backfillMissingAvatars(
   vendors: HydratedVendor[],
   mapperOptions?: HydrationMapperOptions
 ): Promise<HydratedVendor[]> {
+  // Only a creator with no avatar at all. Re-fetching one that already resolved
+  // just to attach a profileUrl changed the rendered src and restarted the
+  // avatar — see preserveResolvedAvatar.
   const needsBackfill = vendors
     .map((vendor, index) => ({ vendor, index }))
-    .filter(({ vendor }) => !vendor.avatarUrl || !vendor.profileUrl)
+    .filter(({ vendor }) => !vendor.avatarUrl)
     .slice(0, STUDIO_VENDOR_INITIAL_VISIBLE);
 
   if (needsBackfill.length === 0) return vendors;
