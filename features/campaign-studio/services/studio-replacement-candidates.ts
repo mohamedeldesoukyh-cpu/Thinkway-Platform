@@ -89,3 +89,80 @@ export function summarizeCandidates<T>(candidates: Array<ClassifiedCandidate<T>>
   }
   return { total: candidates.length, eligible, flagged, notSelectable };
 }
+
+// ---------------------------------------------------------------------------
+// Group semantics.
+//
+// The Creators screen renders creators in groups, and a group used to be
+// identified only by its heading text. One heading said "Other Recommended
+// Creators" while the cards inside it carried the ECI campaign decision — so a
+// creator could sit under a "recommended" heading with a red "Not Recommended"
+// pill and a reason. The two states come from different systems and both were
+// telling the truth; the heading was the lie.
+//
+// Membership of the alternatives group means "searched by Discovery and not in
+// the slate". It asserts nothing about the ECI decision, which is exactly why
+// the heading must not claim a recommendation.
+
+export type StudioCreatorGroupKind =
+  /** The composed slate — every member passed the recommendation gate. */
+  | "selected"
+  /** Discovery's remaining pool, offered as replacements. Not a recommendation. */
+  | "alternatives";
+
+export type StudioCreatorGroup<T> = {
+  kind: StudioCreatorGroupKind;
+  title: string | null;
+  items: T[];
+};
+
+export type StudioCreatorGroupConflict = {
+  kind: StudioCreatorGroupKind;
+  title: string | null;
+  creatorId?: string;
+  reason: "not_recommended_in_selected_group" | "recommendation_claimed_in_title";
+};
+
+/** Headings that assert a recommendation, and so may only head a slate group. */
+const CLAIMS_RECOMMENDATION = /\brecommend(ed|ation)?\b/i;
+
+/**
+ * Contradictions between group membership and per-card recommendation state.
+ *
+ * Two rules, both about one screen telling one story:
+ *   - a creator the ECI decision rejects may not sit in the SELECTED group;
+ *   - a group that is not the selected slate may not claim a recommendation in
+ *     its heading, because its members' decisions are shown per card.
+ */
+export function studioCreatorGroupConflicts<T>(
+  groups: Array<StudioCreatorGroup<T>>,
+  read: {
+    /** The ECI campaign decision for this creator, when hydrated. */
+    isNotRecommended: (item: T) => boolean;
+    creatorIdOf?: (item: T) => string | undefined;
+  }
+): StudioCreatorGroupConflict[] {
+  const conflicts: StudioCreatorGroupConflict[] = [];
+
+  for (const group of groups) {
+    if (group.kind !== "selected" && group.title && CLAIMS_RECOMMENDATION.test(group.title)) {
+      conflicts.push({
+        kind: group.kind,
+        title: group.title,
+        reason: "recommendation_claimed_in_title",
+      });
+    }
+    if (group.kind !== "selected") continue;
+    for (const item of group.items) {
+      if (!read.isNotRecommended(item)) continue;
+      conflicts.push({
+        kind: group.kind,
+        title: group.title,
+        creatorId: read.creatorIdOf?.(item),
+        reason: "not_recommended_in_selected_group",
+      });
+    }
+  }
+
+  return conflicts;
+}
