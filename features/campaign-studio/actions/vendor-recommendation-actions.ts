@@ -9,6 +9,7 @@ import type { CreatorsSectionData } from "@/features/campaign-intelligence/types
 
 import { stageStudioDraftChangeAction } from "./studio-draft-actions";
 import { requireStudioUser } from "./persist-campaign-object-on-message";
+import { resolveGeneratedShortlistName } from "../services/studio-creator-selection";
 
 export type VendorRecommendationDecision = "approved" | "rejected" | "shortlisted";
 
@@ -178,6 +179,114 @@ export async function shortlistVendorRecommendationAction(input: {
     return {
       ok: false,
       message: error instanceof Error ? error.message : "Shortlist failed.",
+    };
+  }
+}
+
+export type GenerateStudioShortlistResult = {
+  ok: boolean;
+  message: string;
+  /** Creators actually written to the shortlist by this call. */
+  added?: number;
+  /** Creators that were already on it — still part of the generated shortlist. */
+  alreadyOnList?: number;
+  /** The selection size this generation covered. */
+  selectedCount?: number;
+  linkedShortlistId?: string;
+  shortlistUrl?: string;
+};
+
+/**
+ * Generate the shortlist for the Studio selection, in one call.
+ *
+ * The per-creator path (`shortlistVendorRecommendationAction`) already creates
+ * the shortlist on the first pick and adds creators one at a time; this is the
+ * same two helpers — `createShortlistV2` and `addCreatorsToShortlistsV2` —
+ * called once for the whole selection, which is what the batch helper is for.
+ * No new shortlist mechanism and no new identifier.
+ *
+ * The campaign name is optional. `resolveGeneratedShortlistName` owns that
+ * policy: with a name the shortlist is "<campaign> — Studio picks", without one
+ * it carries the product's existing reference label. Generation is never
+ * blocked for want of a name, and no campaign name is invented.
+ *
+ * The result reports what the helper actually did — added, already on the list,
+ * and the selection size — so the UI cannot claim a success the write did not
+ * produce.
+ */
+export async function generateStudioShortlistAction(input: {
+  conversationId: string;
+  messageId: string;
+  /** Canonical unified ids for the selected creators. */
+  creatorUnifiedIds: string[];
+  /** Operator-supplied campaign name. Optional by design. */
+  campaignName?: string;
+}): Promise<GenerateStudioShortlistResult> {
+  try {
+    const unifiedIds = [...new Set(input.creatorUnifiedIds.map((id) => id.trim()).filter(Boolean))];
+    if (unifiedIds.length === 0) {
+      return { ok: false, message: "Select at least one creator before generating a shortlist." };
+    }
+
+    const { supabase, userId } = await requireStudioUser();
+    const conversation = await getConversationWithMessages(
+      supabase,
+      input.conversationId,
+      userId
+    );
+    const message = conversation?.messages?.find((m) => m.id === input.messageId);
+    const existingObject = message?.metadata?.campaignObject
+      ? deserializeCampaignObject(
+          message.metadata.campaignObject as Parameters<typeof deserializeCampaignObject>[0]
+        )
+      : null;
+
+    let shortlistId = existingObject
+      ? ((existingObject.sections.creators.data ?? {}) as CreatorsSectionData).linkedShortlistId
+      : undefined;
+
+    if (!shortlistId) {
+      const created = await createShortlistV2({
+        name: resolveGeneratedShortlistName(input.campaignName),
+        visibility: "private",
+      });
+      shortlistId = created.id;
+    }
+
+    const addResult = await addCreatorsToShortlistsV2({
+      shortlistIds: [shortlistId],
+      creators: unifiedIds.map((unifiedId) => ({ unifiedId })),
+    });
+
+    if (!addResult.ok) {
+      return {
+        ok: false,
+        message: addResult.message ?? "Could not generate the shortlist.",
+        selectedCount: unifiedIds.length,
+        linkedShortlistId: shortlistId,
+      };
+    }
+
+    const added = addResult.added ?? 0;
+    const alreadyOnList = addResult.alreadyOnList ?? 0;
+    const covered = added + alreadyOnList;
+
+    return {
+      ok: true,
+      message:
+        covered > 0
+          ? `Shortlist generated with ${covered} creator${covered === 1 ? "" : "s"}.`
+          : "Shortlist generated.",
+      added,
+      alreadyOnList,
+      selectedCount: unifiedIds.length,
+      linkedShortlistId: shortlistId,
+      shortlistUrl: `/discovery/shortlists/${shortlistId}`,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not generate the shortlist.",
     };
   }
 }

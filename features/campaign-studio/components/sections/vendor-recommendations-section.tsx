@@ -26,6 +26,7 @@ import type {
 
 import {
   decideVendorRecommendationAction,
+  generateStudioShortlistAction,
   shortlistVendorRecommendationAction,
   stageVendorRoleAction,
 } from "../../actions/vendor-recommendation-actions";
@@ -104,6 +105,8 @@ import type { StudioEciPlanningSignal } from "../../services/eci/project-studio-
 import { ShortlistSlatePickerDialog } from "./shortlist-slate-picker-dialog";
 import { StudioCreatorCompareDialog } from "./studio-creator-compare-dialog";
 import { StudioCreatorDetailHost } from "./studio-creator-detail-host";
+import { StudioCreatorSelectionPanel } from "./shared/studio-creator-selection-panel";
+import { StudioGenerateShortlistDialog } from "./shared/studio-generate-shortlist-dialog";
 import { StudioPlanningIntelligenceStrip } from "./shared/studio-planning-intelligence-strip";
 import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
 import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
@@ -121,6 +124,13 @@ import {
 import { clientSafeLine } from "../../services/studio-creator-client-decision";
 import { resolveCreatorTierMix } from "../../services/creator-quantity";
 import { withSlatePositions } from "../../services/creator-slate-integrity";
+import {
+  isCreatorSelected,
+  resolveStudioCreatorSelection,
+  withOptimisticSelection,
+  withoutOptimisticSelection,
+  type StudioSelectionOverlay,
+} from "../../services/studio-creator-selection";
 import {
   orderReplacementCandidatesByRole,
   replacementCandidateIsEligible,
@@ -439,6 +449,8 @@ function VendorCardBlock({
   draft,
   stageRemoval,
   undoDraftChange,
+  selected,
+  onSelect,
   applyDecision,
   stageRoleChange,
   openCreatorDetails,
@@ -455,6 +467,10 @@ function VendorCardBlock({
   draft: StudioDraftState;
   stageRemoval: (vendor: DisplayVendor) => Promise<void>;
   undoDraftChange: (creatorId: string) => Promise<void>;
+  /** True when this creator is already on the shortlist selection. */
+  selected: boolean;
+  /** Adds to the canonical selection, optimistically, and prevents duplicates. */
+  onSelect: (creatorId: string) => Promise<void>;
   applyDecision: (
     creatorId: string,
     action: "approve" | "reject" | "shortlist",
@@ -541,7 +557,12 @@ function VendorCardBlock({
         }
       >
         <CheckIcon className="size-3" />
-        {decision === "approved" || pendingApprove ? "Approved (staged)" : "Approve"}
+        {/* Truthful: "Approving…" only while the action is actually running. */}
+        {isPending
+          ? "Approving…"
+          : decision === "approved" || pendingApprove
+            ? "Approved (staged)"
+            : "Approve"}
       </button>
       <button
         type="button"
@@ -572,16 +593,30 @@ function VendorCardBlock({
             vendor.id && void stageRoleChange(vendor.id, "alternative", vendor.displayName)
           }
         >
-          Move to alt
+          {isPending ? "Moving…" : "Move to alt"}
         </button>
       )}
       <button
         type="button"
-        disabled={!canAct || isPending || decision === "shortlisted"}
+        disabled={!canAct || isPending}
         className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
-        onClick={() => vendor.id && void applyDecision(vendor.id, "shortlist", vendor.id)}
+        onClick={() => vendor.id && void onSelect(vendor.id)}
       >
-        <PlusIcon className="size-3" />+ Shortlist
+        {isPending && selected ? (
+          <>
+            <Loader2Icon className="size-3 animate-spin" aria-hidden />
+            Adding…
+          </>
+        ) : selected ? (
+          <>
+            <CheckIcon className="size-3" aria-hidden />
+            In selection
+          </>
+        ) : (
+          <>
+            <PlusIcon className="size-3" />+ Shortlist
+          </>
+        )}
       </button>
       <button
         type="button"
@@ -599,7 +634,7 @@ function VendorCardBlock({
           title="Replace this creator — from the other recommendations, Discovery, or a profile link"
         >
           <ListRestartIcon className="size-3" />
-          Replace
+          {isPending ? "Replacing…" : "Replace"}
         </button>
       ) : null}
       <button
@@ -1048,6 +1083,20 @@ export function VendorRecommendationsSection({
     [confirmDelete, conversationId, messageId, publishDraft]
   );
 
+  /*
+   * Selection state: derived, never duplicated.
+   *
+   * The canonical selection is `vendorDecisions[id] === "shortlisted"`, which
+   * `shortlistVendorRecommendationAction` stages and Apply commits. The overlay
+   * below is optimistic only — it makes a click land on the panel immediately
+   * and is dropped the moment the real decisions arrive, so the panel, the card
+   * buttons and Generate Shortlist always read one source.
+   */
+  const [selectionOverlay, setSelectionOverlay] = useState<StudioSelectionOverlay>({});
+  const [generateOpen, setGenerateOpen] = useState(false);
+  const [generating, setGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+
   const undoDraftChange = useCallback(
     async (creatorId: string) => {
       if (!conversationId || !messageId) return;
@@ -1070,6 +1119,49 @@ export function VendorRecommendationsSection({
     },
     [conversationId, messageId, publishDraft]
   );
+
+  /**
+   * Add to the selection — immediately on screen, then confirmed by the server.
+   *
+   * Reuses `shortlistVendorRecommendationAction` through `applyDecision`; the
+   * only addition is the optimistic overlay so the panel and the button do not
+   * wait for the round trip. A creator already on the selection is not added
+   * again.
+   */
+  const selectCreator = useCallback(
+    async (creatorId: string) => {
+      if (
+        isCreatorSelected({
+          creatorId,
+          decisions: previewVendorDecisions,
+          overlay: selectionOverlay,
+        })
+      ) {
+        return;
+      }
+      setSelectionOverlay((overlay) => withOptimisticSelection(overlay, creatorId, "selected"));
+      try {
+        await applyDecision(creatorId, "shortlist", creatorId);
+      } finally {
+        setSelectionOverlay((overlay) => withoutOptimisticSelection(overlay, creatorId));
+      }
+    },
+    [applyDecision, previewVendorDecisions, selectionOverlay]
+  );
+
+  /** Remove from the selection — the existing unstage path, shown immediately. */
+  const deselectCreator = useCallback(
+    async (creatorId: string) => {
+      setSelectionOverlay((overlay) => withOptimisticSelection(overlay, creatorId, "removed"));
+      try {
+        await undoDraftChange(creatorId);
+      } finally {
+        setSelectionOverlay((overlay) => withoutOptimisticSelection(overlay, creatorId));
+      }
+    },
+    [undoDraftChange]
+  );
+
 
   const parsedVendors = resolveVendorRecommendations(campaignObject);
   const { ids: persistedIds, rationale, avgFitScore, creatorFitScores } = resolveCreatorIds(
@@ -1710,8 +1802,73 @@ export function VendorRecommendationsSection({
     );
   }
 
+  // The same campaign name the per-creator shortlist action already reads, so
+  // the dialog prefills what the campaign actually holds.
+  const campaignDisplayName = (
+    campaignObject?.sections.presentation.data as { campaignName?: string } | undefined
+  )?.campaignName?.trim();
+
+  const selectedForShortlist = resolveStudioCreatorSelection({
+    vendors,
+    decisions: previewVendorDecisions,
+    overlay: selectionOverlay,
+    pendingIds: pendingCreatorId ? [pendingCreatorId] : [],
+  });
+
+  async function generateShortlist(campaignNameInput: string) {
+    if (!conversationId || !messageId) return;
+    setGenerating(true);
+    setGenerateError(null);
+    try {
+      const result = await generateStudioShortlistAction({
+        conversationId,
+        messageId,
+        creatorUnifiedIds: selectedForShortlist.map((creator) => creator.creatorId),
+        campaignName: campaignNameInput,
+      });
+      if (!result.ok) {
+        // The selection is untouched so the operator can retry.
+        setGenerateError(result.message);
+        return;
+      }
+      if (result.linkedShortlistId) setLinkedShortlistId(result.linkedShortlistId);
+      setGenerateOpen(false);
+      toast.success(result.message, {
+        action: result.shortlistUrl
+          ? {
+              label: "Open shortlist",
+              onClick: () => window.open(result.shortlistUrl, "_blank"),
+            }
+          : undefined,
+      });
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  const selectionPanel = (
+    <StudioCreatorSelectionPanel
+      creators={selectedForShortlist}
+      onRemove={(creatorId) => void deselectCreator(creatorId)}
+      onGenerate={() => {
+        setGenerateError(null);
+        setGenerateOpen(true);
+      }}
+      generating={generating}
+      canAct={canAct}
+      className="xl:sticky xl:top-2 xl:max-h-[calc(100vh-140px)]"
+    />
+  );
+
   return (
-    <div className="min-w-0 space-y-2">
+    /*
+     * The selection panel is a persistent RIGHT-hand column of the Creators
+     * workspace, so browsing, searching, filtering and opening Creator Details
+     * all leave it in place. Below `xl` it stacks underneath — the panel is
+     * never allowed to force horizontal overflow.
+     */
+    <div className="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
+      <div className="min-w-0 space-y-2">
       {quantityRecommendation ? (
         <div className="rounded-lg border border-[#1D9E75]/25 bg-[#1D9E75]/5 px-3 py-2.5 text-[12px]">
           <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#1D9E75]">
@@ -1959,6 +2116,12 @@ export function VendorRecommendationsSection({
               draft={draft}
               stageRemoval={stageRemoval}
               undoDraftChange={undoDraftChange}
+              selected={isCreatorSelected({
+                creatorId: vendor.id,
+                decisions: previewVendorDecisions,
+                overlay: selectionOverlay,
+              })}
+              onSelect={selectCreator}
               applyDecision={applyDecision}
               stageRoleChange={stageRoleChange}
               openCreatorDetails={openCreatorDetails}
@@ -2058,6 +2221,19 @@ export function VendorRecommendationsSection({
           const match = marketVendors.find((v) => v.id === unifiedId);
           if (match) openCreatorDetails(match);
         }}
+      />
+      </div>
+
+      {selectionPanel}
+
+      <StudioGenerateShortlistDialog
+        open={generateOpen}
+        onOpenChange={setGenerateOpen}
+        selectedCount={selectedForShortlist.length}
+        defaultCampaignName={campaignDisplayName}
+        generating={generating}
+        error={generateError}
+        onConfirm={(name) => void generateShortlist(name)}
       />
     </div>
   );
