@@ -44,6 +44,7 @@ import {
   type KpiReasoningEntry,
   type BudgetAllocationReasoning,
   type VendorSelectedReasoning,
+  type StudioDraftState,
 } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStudioSectionId } from "../types/campaign-studio";
 import {
@@ -1008,9 +1009,11 @@ export function resolveCreativeConcepts(
 }
 
 export function resolveContentPlan(
-  campaignObject: CampaignObject | undefined
+  campaignObject: CampaignObject | undefined,
+  /** Staged Studio edits, so Content reads the slate the Creators screen shows. */
+  draft?: StudioDraftState
 ): ContentPlanItem[] {
-  const influencerPlan = deriveInfluencerContentPlan(campaignObject);
+  const influencerPlan = deriveInfluencerContentPlan(campaignObject, draft);
   if (influencerPlan.length > 0) return influencerPlan;
   const stored = readTimelineExtras(campaignObject)?.contentPlan ?? [];
   return stored.filter((item) => Boolean(item.creatorId));

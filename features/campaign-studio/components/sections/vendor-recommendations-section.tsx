@@ -78,7 +78,6 @@ import {
 } from "../../services/studio-recommended-vendors";
 import {
   CANDIDATE_INELIGIBILITY_LABEL,
-  candidateIsSelectable,
   classifyReplacementCandidates,
   summarizeCandidates,
   type CandidateIneligibility,
@@ -120,6 +119,13 @@ import {
   type CampaignCreatorDecision,
 } from "../../services/studio-campaign-creator-decision";
 import { clientSafeLine } from "../../services/studio-creator-client-decision";
+import { resolveCreatorTierMix } from "../../services/creator-quantity";
+import { withSlatePositions } from "../../services/creator-slate-integrity";
+import {
+  orderReplacementCandidatesByRole,
+  replacementCandidateIsEligible,
+  replacementShortageNote,
+} from "../../services/studio-replacement-eligibility";
 import { partitionStudioCreatorGroups } from "../../services/studio-creator-groups";
 import { resolveStudioCreatorShortfall } from "../../services/studio-creator-shortfall";
 
@@ -1305,7 +1311,10 @@ export function VendorRecommendationsSection({
         },
         campaignFacts
       )
-    ).map((vendor, index) => ({ ...vendor, rank: index + 1 }));
+    );
+    // No serial here. This is the gated POOL — slate plus alternatives — and
+    // stamping positions on it is what put "#3" on the first recommended card.
+    // The slate's own positions are assigned below, after the partition.
   }, [vendors, campaignFacts]);
   const marketLabel = campaignFacts?.geography?.filter((value) => value.trim()).join(", ") || null;
 
@@ -1456,24 +1465,65 @@ export function VendorRecommendationsSection({
     () => studioCampaignBrowseFilters(campaignObject),
     [campaignObject]
   );
-  // Route A of Replace: the campaign's own remaining recommendations, already
-  // hydrated here, handed to the existing add panel as candidate refs.
-  const replacementCandidates = useMemo(
-    () =>
-      otherRecommendedCandidates
-        .filter((candidate) => Boolean(candidate.vendor.id) && candidateIsSelectable(candidate))
-        .map(({ vendor }) => ({
-          creatorId: vendor.id!,
-          displayName: vendor.displayName,
-          handle: vendor.handle,
-          platform: vendor.platform,
-          followers: vendor.followers,
-          avatarUrl: vendor.avatarUrl,
-          source: "discovery" as const,
-          enrichmentStatus: "not_requested" as const,
-        })),
-    [otherRecommendedCandidates]
+  /*
+   * Route A of Replace: the campaign's own remaining recommendations, already
+   * hydrated here, handed to the existing add panel as candidate refs.
+   *
+   * Eligibility is EVERY campaign requirement the classifier checked, not just
+   * market. Treating a brief-mix miss as advisory is how a Food creator came to
+   * be offered as a replacement on a premium-haircare campaign. Such a creator
+   * stays visible in the alternatives list with its reason — nothing is hidden
+   * — it is simply not offered as a replacement. Ordering then prefers the
+   * tier of the creator being replaced and drops tiers the Strategy did not
+   * approve, reusing the campaign's own tier mix.
+   */
+  const replaceTargetId = replaceTarget?.creatorId ?? null;
+  const replaceTargetTier = useMemo(() => {
+    if (!replaceTargetId) return null;
+    const key = creatorGroupingKey(replaceTargetId);
+    const match = vendors.find((vendor) => vendor.id && creatorGroupingKey(vendor.id) === key);
+    return match?.expectedRole ?? match?.slateRole ?? null;
+  }, [replaceTargetId, vendors]);
+
+  const approvedTiers = useMemo(
+    () => resolveCreatorTierMix(campaignFacts).map((tier) => tier.tier),
+    [campaignFacts]
   );
+
+  const replacementCandidates = useMemo(() => {
+    const eligible = otherRecommendedCandidates.filter(
+      (candidate) => Boolean(candidate.vendor.id) && replacementCandidateIsEligible(candidate)
+    );
+    const ordered = orderReplacementCandidatesByRole(eligible, {
+      targetTier: replaceTargetTier,
+      tierOf: (candidate) => candidate.vendor.expectedRole,
+      approvedTiers,
+    });
+    return ordered.map(({ vendor }) => ({
+      creatorId: vendor.id!,
+      displayName: vendor.displayName,
+      handle: vendor.handle,
+      platform: vendor.platform,
+      followers: vendor.followers,
+      avatarUrl: vendor.avatarUrl,
+      source: "discovery" as const,
+      enrichmentStatus: "not_requested" as const,
+    }));
+  }, [otherRecommendedCandidates, replaceTargetTier, approvedTiers]);
+
+  /** Stated when the campaign's own candidates yield no eligible replacement. */
+  const replacementShortage = useMemo(() => {
+    if (replacementCandidates.length > 0) return null;
+    const excludedBy: Partial<Record<CandidateIneligibility, number>> = {};
+    for (const candidate of otherRecommendedCandidates) {
+      if (!candidate.ineligibility) continue;
+      excludedBy[candidate.ineligibility] = (excludedBy[candidate.ineligibility] ?? 0) + 1;
+    }
+    return replacementShortageNote({
+      consideredCount: otherRecommendedCandidates.length,
+      excludedBy,
+    });
+  }, [replacementCandidates.length, otherRecommendedCandidates]);
   // "Requested" is what the campaign ASKED FOR — the Strategy's evidence-based
   // quantity, falling back to the slate it actually composed. Using the slate
   // size for both sides could never report the Strategy-vs-slate gap, which is
@@ -1484,8 +1534,16 @@ export function VendorRecommendationsSection({
   });
   const slateVendors = hasSlateSplit ? selectedVendors : marketVendors;
 
-  const mainVendors = slateVendors.filter((v) => v.slateRole !== "maybe");
-  const maybeVendors = slateVendors.filter((v) => v.slateRole === "maybe");
+  // Campaign slate positions, contiguous from #1 in RENDER order — main picks
+  // first, then maybe/replacements — assigned after the partition and after the
+  // main/maybe split, so neither a pool position nor a skipped group can leave
+  // a gap.
+  const orderedSlateVendors = withSlatePositions([
+    ...slateVendors.filter((v) => v.slateRole !== "maybe"),
+    ...slateVendors.filter((v) => v.slateRole === "maybe"),
+  ]);
+  const mainVendors = orderedSlateVendors.filter((v) => v.slateRole !== "maybe");
+  const maybeVendors = orderedSlateVendors.filter((v) => v.slateRole === "maybe");
   // Each group carries what it MEANS, not just a heading. The alternatives group
   // is Discovery's remaining pool — searched, hydrated, not in the slate — and
   // it asserts no recommendation, because each card shows its own ECI decision.
@@ -1497,11 +1555,11 @@ export function VendorRecommendationsSection({
           {
             kind: "selected" as const,
             title: "Main picks",
-            items: mainVendors.length > 0 ? mainVendors : slateVendors,
+            items: mainVendors.length > 0 ? mainVendors : orderedSlateVendors,
           },
           { kind: "selected" as const, title: "Maybe / replacements", items: maybeVendors },
         ]
-      : [{ kind: "selected" as const, title: null as string | null, items: slateVendors }]),
+      : [{ kind: "selected" as const, title: null as string | null, items: orderedSlateVendors }]),
     ...(needsReviewDisplayVendors.length > 0
       ? [
           {
@@ -1935,6 +1993,7 @@ export function VendorRecommendationsSection({
           draft={draft}
           onDraftUpdated={publishDraft}
           replaceTarget={replaceTarget}
+          candidateShortage={replacementShortage}
           candidates={replacementCandidates}
           browseFilters={campaignBrowseFilters}
           onSelectionStaged={({ undoCreatorId, displayName }) => {

@@ -3,10 +3,12 @@ import type {
   ContentPlanItem,
   CreativeConcept,
   CreatorsSectionData,
+  StudioDraftState,
 } from "@/features/campaign-intelligence/types/section-schemas";
 import { getCampaignFacts, buildCreatorMixFromFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { creatorDecisionStatus, isCreatorRejected } from "./creator-decision-status";
 import { reconcileCreatorSlateReasoning } from "./creator-slate-integrity";
+import { previewCreatorsSectionFromDraft } from "./studio-draft-preview";
 import { creatorGroupingKey } from "./studio-creator-slate-split";
 import { resolveCampaignDurationWeeks } from "./timeline-duration";
 
@@ -61,10 +63,26 @@ function kpiFor(factsKpis: string[], role: string, index: number): string {
  * Generic industry templates are not used when a slate exists.
  */
 export function deriveInfluencerContentPlan(
-  campaignObject: CampaignObject | undefined
+  campaignObject: CampaignObject | undefined,
+  /**
+   * Staged Studio edits, when the caller has them.
+   *
+   * The Creators screen renders `previewCreatorsSectionFromDraft`, so a staged
+   * add / remove / replace shows there immediately. Content read the raw
+   * persisted object, so the same campaign reported seven creators on Creators
+   * and six in Content — one staged change apart. Given the draft, Content
+   * reads the SAME projection. `outdatedSectionsForDraft` still marks Content
+   * outdated until Apply, which is what tells the operator these edits are not
+   * committed; the two screens no longer disagree about who is on the slate.
+   */
+  draft?: StudioDraftState
 ): ContentPlanItem[] {
   if (!campaignObject) return [];
-  const creatorsData = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
+  const creatorsData = (
+    draft && draft.changes.length > 0
+      ? previewCreatorsSectionFromDraft(campaignObject, draft)
+      : ((campaignObject.sections.creators.data ?? {}) as CreatorsSectionData)
+  ) as CreatorsSectionData;
   const slateById = new Map(
     (creatorsData.slateIntelligence?.recommendations ?? []).map((row) => [row.creatorId, row])
   );

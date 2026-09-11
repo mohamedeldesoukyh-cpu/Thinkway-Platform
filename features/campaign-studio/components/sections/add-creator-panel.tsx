@@ -61,6 +61,11 @@ type AddCreatorPanelProps = {
    */
   replaceTarget?: StudioCreatorReplacementTarget | null;
   /**
+   * Stated when the campaign's own candidates yield no eligible replacement.
+   * Silence here is what let an unrelated creator look like the answer.
+   */
+  candidateShortage?: string | null;
+  /**
    * Recommended-but-not-selected creators, offered first when replacing. These
    * are derived from the campaign's own persisted pool, not fetched.
    */
@@ -130,6 +135,7 @@ export function AddCreatorPanel({
   onDraftUpdated,
   replaceTarget = null,
   candidates = [],
+  candidateShortage = null,
   onSelectionStaged,
   browseFilters,
 }: AddCreatorPanelProps) {
@@ -536,6 +542,11 @@ export function AddCreatorPanel({
                   <SparklesIcon className="size-3" aria-hidden />
                   Other recommended ({candidates.length})
                 </Button>
+              ) : null}
+              {replaceTarget && candidates.length === 0 && candidateShortage ? (
+                <p className="px-1.5 py-1 text-[11px] text-muted-foreground">
+                  {candidateShortage}
+                </p>
               ) : null}
               {browseFilters ? (
                 <Button

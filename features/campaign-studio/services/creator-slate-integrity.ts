@@ -139,3 +139,20 @@ export function reconcileCreatorSlateReasoning(input: {
   }
   return reconciled;
 }
+
+/**
+ * The visible serial on a recommended creator card.
+ *
+ * Browser evidence: cards showed "#3", "#4" with no "#1". The list was stamped
+ * `rank: index + 1` over the GATED POOL — the slate plus Discovery's
+ * alternatives, ordered by requirement score — and the recommendation group was
+ * then filtered out of that list, so each card kept its position in the pool.
+ *
+ * A pool position is a Discovery/ranking diagnostic. The client-facing list
+ * shows the creator's position in the campaign's recommendation, contiguous
+ * from 1, in the order the cards render. Removed, rejected and unhydrated pool
+ * members cannot leave a gap because they are not in this list.
+ */
+export function withSlatePositions<T extends { rank?: number }>(vendors: T[]): T[] {
+  return vendors.map((vendor, index) => ({ ...vendor, rank: index + 1 }));
+}

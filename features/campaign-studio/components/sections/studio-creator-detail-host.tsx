@@ -87,7 +87,6 @@ export function StudioCreatorDetailHost({ selection, open, onOpenChange, signal 
       contextSlot={
         <StudioExecutiveRecommendationBlock
           creatorId={creatorId}
-          displayName={selection?.displayName}
           signal={signal}
           active={open}
         />

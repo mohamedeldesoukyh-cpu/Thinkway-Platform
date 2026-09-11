@@ -4,9 +4,7 @@ import { useEffect, useState } from "react";
 
 import { loadStudioEciPlanningSignalsAction } from "@/features/campaign-studio/actions/studio-eci-actions";
 import type { StudioEciPlanningSignal } from "@/features/campaign-studio/services/eci/project-studio-eci-signal";
-import { toExecutiveCreatorDetailView } from "@/features/campaign-studio/services/eci/executive-planning-view";
-
-import { StudioRecommendationNarrative } from "./studio-recommendation-narrative";
+import { creatorFactualIntelligence } from "@/features/campaign-studio/services/studio-creator-factual-intelligence";
 
 /** Labelled paragraph used across the planning blocks. */
 export function ExecBlock({ title, body }: { title: string; body?: string | null }) {
@@ -22,23 +20,27 @@ export function ExecBlock({ title, body }: { title: string; body?: string | null
 }
 
 /**
- * Studio's executive planning recommendation for one creator.
+ * Creator intelligence for one creator, on this campaign — factual only.
  *
- * Extracted so it can be rendered INSIDE Discovery's own creator detail sheet
- * (as its `contextSlot`) as well as in the planning fallback. There is one
- * implementation of this content and one creator detail view — Discovery's.
+ * Rendered INSIDE Discovery's own creator detail sheet as its `contextSlot`.
+ * There is one implementation of this content and one creator detail view.
  *
- * Nothing is fabricated: with no ECI signal the block says the recommendation
- * is not available yet.
+ * It used to render `toExecutiveCreatorDetailView` verbatim, so Creator Details
+ * opened with "Not Recommended: do not prioritize esraafahmy for this
+ * campaign", a decision narrative, and "Business value: High Risk". That is the
+ * internal decision layer. It still exists and still shows where it belongs —
+ * the creator card and the recommendation groups, from
+ * `resolveCampaignCreatorDecision`.
+ *
+ * Here the operator gets measurements and evidence. Negative facts stay
+ * visible; absent ones are named as absent; nothing positive is invented.
  */
 export function StudioExecutiveRecommendationBlock({
   creatorId,
-  displayName,
   signal: signalProp,
   active,
 }: {
   creatorId?: string | null;
-  displayName?: string;
   /** Already-hydrated signal from the card, when the section has one. */
   signal?: StudioEciPlanningSignal | null;
   /** Load only while the detail view is actually open. */
@@ -46,12 +48,10 @@ export function StudioExecutiveRecommendationBlock({
 }) {
   const [signal, setSignal] = useState<StudioEciPlanningSignal | null>(signalProp ?? null);
   const [loading, setLoading] = useState(false);
-  const [showDetailed, setShowDetailed] = useState(false);
 
   useEffect(() => {
     if (!active || !creatorId) {
       setSignal(signalProp ?? null);
-      setShowDetailed(false);
       return;
     }
     if (signalProp) {
@@ -72,86 +72,60 @@ export function StudioExecutiveRecommendationBlock({
   }, [active, creatorId, signalProp]);
 
   if (loading) {
-    return (
-      <p className="text-sm text-muted-foreground">Preparing executive recommendation…</p>
-    );
+    return <p className="text-sm text-muted-foreground">Loading creator intelligence…</p>;
   }
 
-  const exec = signal ? toExecutiveCreatorDetailView(signal, displayName) : null;
-  if (!exec) {
-    return (
-      <p className="text-sm text-muted-foreground">
-        An executive recommendation is not available yet for this creator.
-      </p>
-    );
-  }
+  const facts = creatorFactualIntelligence(signal);
 
   return (
     <div className="space-y-3.5">
-      <div className="rounded-lg border border-[#0057FF]/25 bg-[#0057FF]/5 p-3 text-sm">
-        <p className="text-[10px] font-medium uppercase tracking-wide text-[#0057FF]">
-          Executive Recommendation
-        </p>
-        <p className="mt-1.5 font-semibold text-foreground">{exec.executiveRecommendation}</p>
-        <p className="mt-2 text-[11px] text-muted-foreground">
-          Planning confidence: <b>{exec.strategyConfidence.level}</b> —{" "}
-          {exec.strategyConfidence.why}
-        </p>
-      </div>
+      {facts.measurements.length > 0 ? (
+        <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Measurements
+          </p>
+          <dl className="grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
+            {facts.measurements.map((row) => (
+              <div key={row.label} className="flex items-baseline justify-between gap-2">
+                <dt className="text-muted-foreground">{row.label}</dt>
+                <dd className="font-semibold text-foreground">{row.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : null}
 
-      <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
-        <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-          Decision narrative
-        </p>
-        <StudioRecommendationNarrative narrative={exec.narrative} variant="full" />
-      </div>
+      {facts.observations.length > 0 ? (
+        <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Evidence on record
+          </p>
+          <ul className="m-0 list-none space-y-1 p-0 text-sm text-foreground">
+            {facts.observations.map((line) => (
+              <li key={line} className="leading-snug">
+                {line}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
 
-      <ExecBlock title="Campaign Contribution" body={exec.campaignContribution} />
-      <ExecBlock title="Historical Evidence" body={exec.historicalEvidence} />
-
-      <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-[11px] text-muted-foreground">
-        <p className="font-semibold text-foreground">Why this confidence level</p>
-        <p className="mt-1">{exec.strategyConfidence.evidenceSupports}</p>
-        <p className="mt-1">
-          <span className="font-semibold text-foreground">Assumptions:</span>{" "}
-          {exec.strategyConfidence.assumptions}
-        </p>
-        <p className="mt-1">
-          <span className="font-semibold text-foreground">What could reduce confidence:</span>{" "}
-          {exec.strategyConfidence.whatCouldReduce}
-        </p>
-      </div>
-
-      <button
-        type="button"
-        className="text-[11px] font-semibold text-[#0057FF] hover:underline"
-        onClick={() => setShowDetailed((v) => !v)}
-      >
-        {showDetailed ? "Hide detailed intelligence" : "Show detailed intelligence"}
-      </button>
-
-      {showDetailed ? (
-        <div className="space-y-2.5">
-          <ExecBlock
-            title="What the planning recommendation means"
-            body={exec.detailedIntelligence.investmentMeaning}
-          />
-          <ExecBlock
-            title="What the commercial outlook means"
-            body={exec.detailedIntelligence.commercialMeaning}
-          />
-          <ExecBlock
-            title="What the audience outlook means"
-            body={exec.detailedIntelligence.audienceMeaning}
-          />
-          <ExecBlock
-            title="What the performance outlook means"
-            body={exec.detailedIntelligence.performanceMeaning}
-          />
-          <ExecBlock
-            title="What category & brand fit means"
-            body={exec.detailedIntelligence.categoryBrandMeaning}
-          />
+      {facts.missing.length > 0 ? (
+        <div className="rounded-lg border border-dashed border-border/70 bg-muted/5 p-3">
+          {/*
+            Named explicitly. Absent data must never read as a negative
+            judgement about the creator.
+          */}
+          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Not available
+          </p>
+          <ul className="m-0 list-none space-y-1 p-0 text-sm text-muted-foreground">
+            {facts.missing.map((line) => (
+              <li key={line} className="leading-snug">
+                {line}
+              </li>
+            ))}
+          </ul>
         </div>
       ) : null}
     </div>

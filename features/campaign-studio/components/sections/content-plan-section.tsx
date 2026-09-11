@@ -16,20 +16,27 @@ import {
   isCreatorRejected,
 } from "../../services/creator-decision-status";
 import { resolveContentPlan } from "../../services/section-data-resolver";
+import { previewCreatorsSectionFromDraft } from "../../services/studio-draft-preview";
 import type { CampaignObject } from "@/features/campaign-intelligence";
-import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
+import type {
+  CreatorsSectionData,
+  StudioDraftState,
+} from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
 
 type ContentPlanSectionProps = {
   campaignObject?: CampaignObject;
   fallbackText: string;
   status: CampaignStudioSectionStatus;
+  /** Staged Studio edits — Content reads the slate the Creators screen shows. */
+  studioDraft?: StudioDraftState;
 };
 
 export function ContentPlanSection({
   campaignObject,
   fallbackText,
   status,
+  studioDraft,
 }: ContentPlanSectionProps) {
   const refMode = useStudioRefMode();
 
@@ -37,8 +44,15 @@ export function ContentPlanSection({
     return <SectionSkeleton variant="cards" />;
   }
 
-  const items = resolveContentPlan(campaignObject);
-  const creatorsData = (campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData;
+  // The same projection the Creators screen renders: staged edits included, so
+  // the two screens cannot report different slate sizes. `outdatedSectionsForDraft`
+  // still badges this section until Apply.
+  const items = resolveContentPlan(campaignObject, studioDraft);
+  const creatorsData = (
+    campaignObject && studioDraft && studioDraft.changes.length > 0
+      ? previewCreatorsSectionFromDraft(campaignObject, studioDraft)
+      : ((campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData)
+  ) as CreatorsSectionData;
   const slateRows = creatorsData.recommendations?.selectedReasoning ?? [];
   const basisLine = campaignContentBasisLine({
     creatorCount: items.length,
