@@ -60,6 +60,10 @@ export function ContentPlanSection({
       (row) => row.creatorId?.trim() && isCreatorRejected(creatorsData.vendorDecisions, row.creatorId)
     ).length,
   });
+  const staged = Boolean(studioDraft?.changes.length);
+  const activeSlateCount = slateRows.filter(
+    (row) => !row.creatorId?.trim() || !isCreatorRejected(creatorsData.vendorDecisions, row.creatorId)
+  ).length;
   if (items.length === 0) {
     if (shouldShowPendingPlaceholder(status, false)) {
       return <SectionPendingMessage label="Content plan pending…" />;
@@ -80,6 +84,14 @@ export function ContentPlanSection({
 
   return (
     <div className="overflow-x-auto">
+      <div className="cs-slate-context" role="status">
+        <b>{activeSlateCount || items.length} creator{(activeSlateCount || items.length) === 1 ? "" : "s"} in this content plan</b>
+        <span>
+          {staged
+            ? "Showing the staged slate preview until Apply Changes commits it."
+            : "Content follows the current campaign slate."}
+        </span>
+      </div>
       <table className={tableClass}>
         <caption className="sr-only">Per-creator influencer content plan</caption>
         <thead>

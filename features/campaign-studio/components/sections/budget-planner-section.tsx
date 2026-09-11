@@ -9,7 +9,7 @@ import {
   SectionPendingMessage,
   shouldShowPendingPlaceholder,
 } from "./shared/section-status-utils";
-import { BudgetHero, BudgetRow, RationaleBar } from "./shared/studio-ui-primitives";
+import { BudgetHero, RationaleBar } from "./shared/studio-ui-primitives";
 import { resolveBudgetData } from "../../services/section-data-resolver";
 import { budgetAllocationBasisLine } from "../../services/budget-allocation";
 import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
@@ -21,6 +21,15 @@ type BudgetPlannerSectionProps = {
   fallbackText: string;
   status: CampaignStudioSectionStatus;
 };
+
+const COMMERCIAL_LINE_ORDER = [
+  ["creator", "Creator fees", /creator|talent|influencer/i],
+  ["agency", "Agency fee", /agency|management/i],
+  ["production", "Production", /production/i],
+  ["amplification", "Paid amplification", /amplif|media spend|paid media/i],
+  ["vat", "VAT", /\bvat\b|tax/i],
+  ["contingency", "Contingency", /contingen|reserve/i],
+] as const;
 
 export function BudgetPlannerSection({
   campaignObject,
@@ -48,9 +57,15 @@ export function BudgetPlannerSection({
   const total =
     budget.total ??
     budget.allocations.reduce((sum, line) => sum + (line.amount ?? 0), 0);
-  const percents = budget.allocations.map(
-    (a) => a.percent ?? (total ? Math.round(((a.amount ?? 0) / total) * 100) : 0)
+  const allocationsByLine = COMMERCIAL_LINE_ORDER.map(([kind, label, pattern]) => {
+    const line = budget.allocations.find((candidate) => pattern.test(candidate.category));
+    return { kind, label, line };
+  });
+  const unclassifiedAllocations = budget.allocations.filter(
+    (line) => !COMMERCIAL_LINE_ORDER.some(([, , pattern]) => pattern.test(line.category))
   );
+  const allocatedAmount = budget.allocations.reduce((sum, line) => sum + (line.amount ?? 0), 0);
+  const unallocatedAmount = total > allocatedAmount ? total - allocatedAmount : null;
 
   return (
     <div className="min-w-0 w-full space-y-2.5">
@@ -84,13 +99,59 @@ export function BudgetPlannerSection({
         />
       ) : null}
 
-      {budget.allocations.map((line, index) => (
-        <BudgetRow
-          key={line.category}
-          name={line.category}
-          amount={`${line.percent ?? percents[index]}% · ${line.amount ? formatCurrency(line.amount, budget.currency) : "—"}`}
-        />
-      ))}
+      <div className="cs-planning-band" aria-label="Commercial summary">
+        <div>
+          <i>Budget</i>
+          <b>{total > 0 ? formatCurrency(total, budget.currency) : "Not modelled"}</b>
+          <u>Campaign allocation</u>
+        </div>
+        <div>
+          <i>Modelled lines</i>
+          <b>{budget.allocations.length}</b>
+          <u>Canonical commercial allocations</u>
+        </div>
+        {unallocatedAmount != null ? (
+          <div>
+            <i>Unallocated</i>
+            <b className="risk">{formatCurrency(unallocatedAmount, budget.currency)}</b>
+            <u>Not assigned by the current allocation</u>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="cs-commercial-list" aria-label="Commercial allocation lines">
+        {allocationsByLine.map(({ kind, label, line }) => (
+          <div
+            key={kind}
+            className={`cs-commercial-row ${kind === "creator" && line ? "creator" : ""} ${
+              line ? "" : "unavailable"
+            }`}
+          >
+            <span>{line?.category ?? label}</span>
+            <span>
+              {line?.amount != null
+                ? `${line.percent ?? Math.round((line.amount / total) * 100)}% · ${formatCurrency(line.amount, budget.currency)}`
+                : "Not modelled"}
+            </span>
+          </div>
+        ))}
+        {unclassifiedAllocations.map((line) => (
+          <div key={line.category} className="cs-commercial-row">
+            <span>{line.category}</span>
+            <span>
+              {line.amount != null
+                ? `${line.percent ?? Math.round((line.amount / total) * 100)}% · ${formatCurrency(line.amount, budget.currency)}`
+                : "Not modelled"}
+            </span>
+          </div>
+        ))}
+        {unallocatedAmount != null ? (
+          <div className="cs-commercial-row unallocated">
+            <span>Unallocated / unexplained</span>
+            <span>{formatCurrency(unallocatedAmount, budget.currency)}</span>
+          </div>
+        ) : null}
+      </div>
 
       {/*
         What these numbers are. "Creator fees 100% · EGP 3,000,000" under
@@ -104,6 +165,16 @@ export function BudgetPlannerSection({
             splitFromBrief: budget.allocations.length > 1,
           })}
         </p>
+      ) : null}
+
+      {allocationsByLine.some(({ line }) => !line) ? (
+        <div className="cs-planning-callout">
+          <strong>Commercial coverage</strong>
+          <span>
+            Lines without a canonical allocation remain not modelled. Studio does not assume zero
+            cost or invent a fee split.
+          </span>
+        </div>
       ) : null}
 
       {budget.budgetPlannerReasoning ? (

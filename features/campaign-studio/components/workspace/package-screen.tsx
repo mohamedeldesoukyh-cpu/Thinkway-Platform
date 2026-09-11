@@ -24,6 +24,7 @@ import {
   resolveStudioPackageReadiness,
   STUDIO_PACKAGE_DIMENSION_LABEL,
 } from "../../services/studio-package-readiness";
+import { resolvePresentationCompletion } from "../../services/section-data-resolver";
 
 type PackageScreenProps = {
   campaignObject?: CampaignObject;
@@ -59,6 +60,9 @@ export function PackageScreen({
   >["review"]>(null);
   const attention = readiness.checks.filter((check) => !check.ready);
   const canRegenerate = Boolean(conversationId && campaignObject?.id && attention.length > 0);
+  const presentationCompletion = campaignObject
+    ? resolvePresentationCompletion(campaignObject)
+    : null;
 
   useEffect(() => {
     if (!campaignObject?.id) return;
@@ -186,6 +190,32 @@ export function PackageScreen({
 
   return (
     <div className="min-w-0 space-y-5">
+      <section className="cs-planning-band" aria-label="Package readiness summary">
+        <div>
+          <i>Status</i>
+          <b className={readiness.readyForClient ? undefined : "risk"}>{readiness.headline}</b>
+          <u>{readiness.readyForClient ? "Client-ready package" : "Needs attention"}</u>
+        </div>
+        <div>
+          <i>Blockers / attention</i>
+          <b className={attention.length > 0 ? "risk" : undefined}>{readiness.attentionCount}</b>
+          <u>Readiness checks requiring action</u>
+        </div>
+        {presentationCompletion?.version ? (
+          <div>
+            <i>Presentation version</i>
+            <b>v{presentationCompletion.version}</b>
+            <u>{presentationCompletion.completionPercent}% complete</u>
+          </div>
+        ) : null}
+        {clientReview ? (
+          <div>
+            <i>Client review</i>
+            <b>v{clientReview.reviewNumber}</b>
+            <u>{clientReview.status.replaceAll("_", " ")}</u>
+          </div>
+        ) : null}
+      </section>
       <section className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
         <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-muted-foreground">
           Campaign package
@@ -194,9 +224,9 @@ export function PackageScreen({
         {readiness.attentionSummary ? (
           <p className="mt-1 text-sm text-muted-foreground">{readiness.attentionSummary}</p>
         ) : null}
-        <ul className="mt-4 space-y-2.5">
+        <ul className="cs-package-matrix mt-4 space-y-2.5">
           {readiness.checks.map((check) => (
-            <li key={check.id} className="flex items-start gap-2 text-sm">
+            <li key={check.id} className="cs-package-matrix__row flex items-start gap-2 text-sm">
               <span
                 className={
                   check.ready
@@ -208,17 +238,15 @@ export function PackageScreen({
               </span>
               <span className="min-w-0">
                 <span className="font-semibold">{check.label}</span>
-                {check.ready ? null : (
-                  <span className="ml-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
-                    {STUDIO_PACKAGE_DIMENSION_LABEL[check.state]}
-                  </span>
-                )}
                 {check.reason && !check.ready ? (
                   <span className="mt-0.5 block text-xs text-muted-foreground">
                     {check.reason}
                     {check.action ? ` ${check.action}` : ""}
                   </span>
                 ) : null}
+              </span>
+              <span className={`state ${check.ready ? "" : "risk"}`}>
+                {check.ready ? "Current" : STUDIO_PACKAGE_DIMENSION_LABEL[check.state]}
               </span>
             </li>
           ))}

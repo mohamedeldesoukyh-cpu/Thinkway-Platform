@@ -335,6 +335,24 @@ export function IntakeScreen({
         </div>
       ) : null}
 
+      <section className="cs-planning-band" aria-label="Campaign facts summary">
+        <div>
+          <i>Facts confirmed</i>
+          <b>{intake.rows.filter((row) => row.state === "confirmed").length}</b>
+          <u>of {intake.rows.length} planning facts</u>
+        </div>
+        <div>
+          <i>Required missing</i>
+          <b className={intake.missing.length > 0 ? "risk" : undefined}>{intake.missing.length}</b>
+          <u>{intake.missing.length > 0 ? "Review before Strategy" : "Ready to confirm"}</u>
+        </div>
+        <div>
+          <i>Brief intelligence</i>
+          <b>{cipState?.profile ? "Read" : isExtracting ? "Reading" : "Pending"}</b>
+          <u>{cipState?.fileName ?? "Campaign Intelligence Profile"}</u>
+        </div>
+      </section>
+
       <CampaignBriefCard
         campaignObject={campaignObject}
         conversationId={conversationId}
@@ -379,7 +397,7 @@ export function IntakeScreen({
         </p>
       </section>
 
-      <section className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
+      <section className="cs-document-card rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div>
             <h3 className="text-sm font-extrabold tracking-tight">What Thinkway understood</h3>
@@ -394,9 +412,14 @@ export function IntakeScreen({
             </span>
           ) : null}
         </div>
-        <dl className="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
+        <dl className="cs-fact-grid grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2">
           {intake.rows.map((row) => (
-            <div key={row.key} className="min-w-0 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5">
+            <div
+              key={row.key}
+              className={`min-w-0 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5 ${
+                row.state === "missing" ? "missing" : ""
+              }`}
+            >
               <dt className="flex items-center justify-between gap-2 text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">
                 {row.label}
                 <span className={row.state === "missing" ? "text-amber-700" : "text-[#0C9D57]"}>
@@ -584,8 +607,9 @@ export function IntakeScreen({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         {intake.missing.length > 0 ? (
-          <p className="text-sm text-amber-800 dark:text-amber-200">
-            Missing: {intake.missing.map((row) => row.label).join(", ")}
+          <p className="cs-planning-callout text-sm text-amber-800 dark:text-amber-200">
+            <strong>Review required</strong>
+            <span>Missing: {intake.missing.map((row) => row.label).join(", ")}</span>
           </p>
         ) : (
           <p className="text-sm text-muted-foreground">

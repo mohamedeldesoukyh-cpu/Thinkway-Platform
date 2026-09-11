@@ -136,52 +136,52 @@ export function CampaignBriefCard({
   if (refMode) {
     return (
       <>
-        {hasBrief ? <span className={STUDIO_REF_CLASSES.briefStatus}>Active</span> : null}
-        <div className={cn(STUDIO_REF_CLASSES.briefText, className)}>
-          {preview ??
-            "No planning request yet — add a marketing brief, objective, or planning input to start the Enterprise Planning Package."}
-        </div>
-        {completeness ? (
-          <div className="mb-2 text-[11px] text-muted-foreground">
-            <b className="text-foreground">
-              Planning completeness {completeness.scorePercent}%
-            </b>
-            {" — "}
-            {completeness.summary}
-            {completeness.missingLabels.length > 0 ? (
-              <ul className="mt-1 list-disc pl-4">
-                {completeness.missingLabels.map((label) => (
-                  <li key={label}>{label}</li>
-                ))}
-              </ul>
-            ) : null}
+        <section className="cs-document-card">
+          <div className="cs-document-card__head">
+            <div>
+              <span className="cs-panel-label">Campaign brief</span>
+              <h3>{hasBrief ? "Client planning request" : "Planning request"}</h3>
+            </div>
+            {hasBrief ? <span className={STUDIO_REF_CLASSES.briefStatus}>Active</span> : null}
           </div>
-        ) : null}
-        <div className={STUDIO_REF_CLASSES.briefActions}>
-          {hasBrief ? (
-            <button type="button" onClick={() => setViewerOpen(true)}>
-              <EyeIcon className="size-3" aria-hidden />
-              View brief
-            </button>
-          ) : null}
-          <button
-            type="button"
-            disabled={!canEdit && !hasBrief}
-            onClick={() => setDialogOpen(true)}
-          >
-            {hasBrief ? (
-              <>
-                <PencilIcon className="size-3" aria-hidden />
-                Edit brief
-              </>
-            ) : (
-              <>
-                <PlusIcon className="size-3" aria-hidden />
-                Add brief
-              </>
-            )}
-          </button>
-        </div>
+          <div className="cs-document-card__body">
+            <div className={cn(STUDIO_REF_CLASSES.briefText, className)}>
+              {preview ??
+                "No planning request yet — add a marketing brief, objective, or planning input to start the Enterprise Planning Package."}
+            </div>
+            {completeness ? (
+              <div className="mt-3 text-[11px] text-muted-foreground">
+                <b className="text-foreground">Planning completeness {completeness.scorePercent}%</b>
+                {" — "}{completeness.summary}
+                {completeness.missingLabels.length > 0 ? (
+                  <div className="cs-planning-callout">
+                    <strong>Review facts</strong>
+                    <span>{completeness.missingLabels.join(", ")}</span>
+                  </div>
+                ) : null}
+              </div>
+            ) : null}
+            <div className={STUDIO_REF_CLASSES.briefActions}>
+              {hasBrief ? (
+                <button type="button" onClick={() => setViewerOpen(true)}>
+                  <EyeIcon className="size-3" aria-hidden />
+                  View brief
+                </button>
+              ) : null}
+              <button
+                type="button"
+                disabled={!canEdit && !hasBrief}
+                onClick={() => setDialogOpen(true)}
+              >
+                {hasBrief ? (
+                  <><PencilIcon className="size-3" aria-hidden />Edit brief</>
+                ) : (
+                  <><PlusIcon className="size-3" aria-hidden />Add brief</>
+                )}
+              </button>
+            </div>
+          </div>
+        </section>
 
         <CampaignBriefViewer
           open={viewerOpen}

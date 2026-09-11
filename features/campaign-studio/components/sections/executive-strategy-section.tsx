@@ -15,6 +15,7 @@ import {
   type EnterprisePlanningNarrative,
 } from "../../services/planning-narrative";
 import { deriveInfluencerStrategyView } from "../../services/influencer-strategy-view";
+import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignStudioSectionStatus } from "../../types/campaign-studio";
@@ -68,9 +69,32 @@ export function ExecutiveStrategySection({
     return <SectionFallbackContent text={fallbackText} />;
   }
 
+  const facts = getCampaignFacts(campaignObject);
+  const compactFacts = [
+    ["Objective", facts?.objective],
+    ["Audience", facts?.audience],
+    ["Platforms", facts?.platforms?.join(", ")],
+  ].filter((item): item is [string, string] => Boolean(item[1]?.trim()));
+
   return (
     <div className="min-w-0 space-y-3">
-      <p className="text-[12px] text-muted-foreground">
+      <div className="cs-strategy-grid">
+        <div className="cs-strategy-group">
+          <span className="cs-panel-label">Campaign approach</span>
+          <p>{narrative.campaignStrategy}</p>
+        </div>
+        <div className="cs-strategy-group">
+          <span className="cs-panel-label">Creator strategy</span>
+          <p>{narrative.creatorStrategy}</p>
+        </div>
+        {compactFacts.map(([label, value]) => (
+          <div key={label} className="cs-strategy-group">
+            <span className="cs-panel-label">{label}</span>
+            <p>{value}</p>
+          </div>
+        ))}
+      </div>
+      <p className="rounded-lg border border-border/60 bg-muted/10 px-3 py-2 text-[12px] text-muted-foreground">
         <span className="font-semibold text-foreground">Recommended business decision:</span>{" "}
         {narrative.recommendedBusinessDecision}
       </p>
@@ -81,6 +105,17 @@ export function ExecutiveStrategySection({
             ))
           : null}
       </InsightGrid>
+      {narrative.openDecisions.length > 0 ? (
+        <section className="cs-open-decisions" aria-label="Open decisions">
+          <span className="cs-panel-label">Open decisions</span>
+          {narrative.openDecisions.map((item) => (
+            <div key={`${item.decision}:${item.ownerHint}`} className="cs-open-decision">
+              <span>{item.decision}</span>
+              {item.ownerHint ? <span>{item.ownerHint}</span> : null}
+            </div>
+          ))}
+        </section>
+      ) : null}
     </div>
   );
 }
