@@ -2,7 +2,10 @@
 
 import { createShortlistV2, addCreatorsToShortlistsV2 } from "@/features/discovery/shortlists/actions";
 
-import { stageStudioDraftChangeAction } from "./studio-draft-actions";
+import {
+  stageStudioDraftChangeAction,
+  unstageStudioDraftChangeAction,
+} from "./studio-draft-actions";
 import { resolveGeneratedShortlistName } from "../services/studio-creator-selection";
 
 export type VendorRecommendationDecision = "approved" | "rejected" | "shortlisted";
@@ -37,25 +40,64 @@ export async function decideVendorRecommendationAction(input: {
 
     if (!result.ok) return { ok: false, message: result.message };
 
-    const previewDecisions: Record<string, VendorRecommendationDecision> = {};
-    for (const change of result.draft?.changes ?? []) {
-      if (change.kind === "approve_creator") previewDecisions[change.creatorId] = "approved";
-      if (change.kind === "reject_creator") previewDecisions[change.creatorId] = "rejected";
-    }
-
+    /*
+     * The draft, and nothing else.
+     *
+     * This used to rebuild `vendorDecisions` from the draft changes alone and
+     * the caller REPLACED its state with it — so an already-applied decision
+     * vanished, and because the rebuild ignored `shortlist_creator`, approving
+     * a selected creator wiped its selection. Approval and selection are
+     * separate facts; `resolveCreatorDecisionState` derives both from the
+     * persisted decisions plus this draft, without flattening either away.
+     */
     return {
       ok: true,
       message:
         input.decision === "approved"
           ? "Approval staged — apply changes to commit."
           : "Rejection staged — apply changes to commit.",
-      vendorDecisions: previewDecisions,
       draft: result.draft,
     };
   } catch (error) {
     return {
       ok: false,
       message: error instanceof Error ? error.message : "Could not stage decision.",
+    };
+  }
+}
+
+/**
+ * Clear ONE staged decision for a creator, leaving its others intact.
+ *
+ * Unapproving must not drop a shortlist selection, and removing from the
+ * selection must not unapprove — the two were coupled because the unstage path
+ * removed every change for the creator.
+ */
+export async function clearVendorDecisionAction(input: {
+  conversationId: string;
+  messageId: string;
+  creatorId: string;
+  decision: "approved" | "selected";
+}): Promise<VendorRecommendationActionResult> {
+  try {
+    const result = await unstageStudioDraftChangeAction({
+      conversationId: input.conversationId,
+      messageId: input.messageId,
+      creatorId: input.creatorId,
+      kind: input.decision === "approved" ? "approve_creator" : "shortlist_creator",
+    });
+
+    if (!result.ok) return { ok: false, message: result.message };
+
+    return {
+      ok: true,
+      message: input.decision === "approved" ? "Approval removed." : "Removed from the selection.",
+      draft: result.draft,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error ? error.message : "Could not update the decision.",
     };
   }
 }
@@ -133,17 +175,11 @@ export async function selectCreatorForShortlistAction(input: {
 
     if (!stageResult.ok) return { ok: false, message: stageResult.message };
 
-    const previewDecisions: Record<string, VendorRecommendationDecision> = {};
-    for (const change of stageResult.draft?.changes ?? []) {
-      if (change.kind === "shortlist_creator") previewDecisions[change.creatorId] = "shortlisted";
-      if (change.kind === "approve_creator") previewDecisions[change.creatorId] = "approved";
-      if (change.kind === "reject_creator") previewDecisions[change.creatorId] = "rejected";
-    }
-
+    // The draft only — see `decideVendorRecommendationAction`. A flattened
+    // decision map cannot carry approval and selection for one creator.
     return {
       ok: true,
       message: "Added to the selection.",
-      vendorDecisions: previewDecisions,
       draft: stageResult.draft,
     };
   } catch (error) {

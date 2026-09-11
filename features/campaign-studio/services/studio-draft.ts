@@ -96,13 +96,27 @@ export function stageDraftChange(
 /** Undo a single staged change by the creator it targets. */
 export function unstageDraftChange(
   draft: StudioDraftState,
-  creatorId: string
+  creatorId: string,
+  options?: {
+    /**
+     * Unstage only this kind of change for the creator.
+     *
+     * Approval and shortlist selection are separate decisions and a creator can
+     * hold both at once, as two separate draft changes. Without this filter,
+     * unapproving a creator also dropped its selection (and vice versa),
+     * because every change for that creator was removed. Omitted, the
+     * behaviour is unchanged: the card's "undo" clears everything staged for
+     * that creator.
+     */
+    kind?: StudioDraftChange["kind"];
+  }
 ): StudioDraftState {
   return {
     changes: draft.changes.filter((existing) => {
       const existingCreatorId = targetCreatorIdOf(existing);
       if (existingCreatorId == null) return true;
-      return !sameCreator(existingCreatorId, creatorId);
+      if (!sameCreator(existingCreatorId, creatorId)) return true;
+      return options?.kind ? existing.kind !== options.kind : false;
     }),
     updatedAt: new Date().toISOString(),
   };

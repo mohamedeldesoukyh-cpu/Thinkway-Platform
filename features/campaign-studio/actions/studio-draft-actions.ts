@@ -114,11 +114,19 @@ export async function stageStudioDraftChangeAction(
 }
 
 export async function unstageStudioDraftChangeAction(
-  input: DraftMessageRef & { creatorId: string }
+  input: DraftMessageRef & {
+    creatorId: string;
+    /**
+     * Unstage only this decision, leaving the creator's others alone — so
+     * unapproving does not also clear a shortlist selection. Omitted, every
+     * staged change for the creator is undone, as before.
+     */
+    kind?: import("@/features/campaign-intelligence/types/section-schemas").StudioDraftChange["kind"];
+  }
 ): Promise<StudioDraftActionResult> {
   try {
     const draft = await patchDraftOnMessage(input, (current) =>
-      unstageDraftChange(current, input.creatorId)
+      unstageDraftChange(current, input.creatorId, input.kind ? { kind: input.kind } : undefined)
     );
     if (!draft) return { ok: false, message: "Campaign studio message not found." };
     return { ok: true, message: "Pending change undone.", draft };

@@ -185,7 +185,23 @@ export function CampaignStudio({
     [studio?.campaignObject, studio?.sections, outdatedSections, packageState]
   );
 
-  const resolvedStepId = activeStepId ?? defaultStudioWorkspaceStep(workspaceSteps);
+  /*
+   * The step the operator is on does not move because a status changed.
+   *
+   * `defaultStudioWorkspaceStep` picks from the steps' statuses, and every
+   * creator decision restages the draft, which changes those statuses. With
+   * `activeStepId` still null — the operator had not clicked a step, only
+   * scrolled — the default could resolve to a DIFFERENT step mid-session, so
+   * the rendered section swapped underneath them. That is the aggressive jump:
+   * not a scroll bug, a section change.
+   *
+   * The first resolution is pinned. Clicking a step still moves them, because
+   * `goToStep` sets `activeStepId` explicitly.
+   */
+  const [pinnedDefaultStepId] = useState<StudioWorkspaceStepId | null>(() =>
+    workspaceSteps.length > 0 ? defaultStudioWorkspaceStep(workspaceSteps) : null
+  );
+  const resolvedStepId = activeStepId ?? pinnedDefaultStepId ?? workspaceSteps[0]?.id;
   const activeStep =
     workspaceSteps.find((step) => step.id === resolvedStepId) ?? workspaceSteps[0];
 

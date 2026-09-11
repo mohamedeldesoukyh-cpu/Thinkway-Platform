@@ -63,10 +63,16 @@ test("A. the selection action cannot reach a shortlist helper", () => {
 });
 
 test("A. the card's + Shortlist click goes to the selection action", () => {
+  // The click runs `selectCreator`, which is the only selection path now —
+  // `applyDecision`'s old shortlist branch (and the local decision-map rebuild
+  // it fed) is gone, so a decision cannot re-create the campaign object.
   const section = read(SECTION);
-  const branch = section.slice(section.indexOf('if (action === "shortlist")'));
-  assert.match(branch.slice(0, 900), /selectCreatorForShortlistAction/);
-  assert.doesNotMatch(branch.slice(0, 900), /createShortlistV2|addCreatorsToShortlistsV2/);
+  const handler = section.slice(section.indexOf("const selectCreator = useCallback"));
+  const body = handler.slice(0, handler.indexOf("\n  );"));
+  assert.match(body, /selectCreatorForShortlistAction/);
+  assert.match(body, /runCreatorDecision\(creatorId, "selected", true/);
+  assert.doesNotMatch(body, /createShortlistV2|addCreatorsToShortlistsV2/);
+  assert.match(section, /onSelect\(vendor\.id, vendor\.displayName\)/);
 });
 
 test("A. the per-creator write path no longer exists anywhere", () => {
