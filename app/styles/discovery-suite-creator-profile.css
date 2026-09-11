@@ -223,3 +223,33 @@
   min-height: 0;
   overscroll-behavior: contain;
 }
+
+/*
+ * The pack's single grid row must be BOUNDED, or nothing inside it scrolls.
+ *
+ * `.tw-cp__w` is a grid with `max-height: calc(100vh - 40px)` and
+ * `overflow: hidden`, and its row is implicit and `auto`-sized. A `max-height`
+ * is not a definite height, so the row was sized to its tallest child's content
+ * and the wrapper simply clipped the overflow — the `min-height: 0` overrides
+ * let the columns shrink, but nothing ever asked them to. `.tw-cp__b` therefore
+ * never became a scroller, and the Campaign tab's lower content was
+ * unreachable even though a scrollbar appeared.
+ *
+ * `minmax(0, 1fr)` makes that row a bounded track: the middle column gets a
+ * definite height, and `.tw-cp__b` — which the frozen sheet already declares
+ * `flex: 1 1 auto; overflow-y: auto` — owns the scrolling. No second scroller
+ * is added, and the frozen geometry (columns, max-height, radius, shadow) is
+ * untouched.
+ */
+.discovery-suite.tw-cp-root .tw-cp__w {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+/*
+ * The header and tab strip keep their own height inside that bounded column, so
+ * a long body cannot squash them.
+ */
+.discovery-suite.tw-cp-root .tw-cp__h,
+.discovery-suite.tw-cp-root .tw-cp__t {
+  flex: 0 0 auto;
+}

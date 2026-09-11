@@ -112,7 +112,6 @@ export function StudioPlanningCreatorDetail({
 
             <StudioExecutiveRecommendationBlock
               creatorId={selection.id}
-              displayName={selection.displayName}
               signal={signal}
               active={open}
             />
