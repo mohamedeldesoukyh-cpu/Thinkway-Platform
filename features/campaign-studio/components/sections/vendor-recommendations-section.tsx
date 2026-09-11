@@ -27,6 +27,7 @@ import type {
 import {
   decideVendorRecommendationAction,
   generateStudioShortlistAction,
+  clearVendorDecisionAction,
   selectCreatorForShortlistAction,
   stageVendorRoleAction,
 } from "../../actions/vendor-recommendation-actions";
@@ -128,12 +129,14 @@ import { clientSafeLine } from "../../services/studio-creator-client-decision";
 import { resolveCreatorTierMix } from "../../services/creator-quantity";
 import { withSlatePositions } from "../../services/creator-slate-integrity";
 import {
-  isCreatorSelected,
-  resolveStudioCreatorSelection,
-  withOptimisticSelection,
-  withoutOptimisticSelection,
-  type StudioSelectionOverlay,
-} from "../../services/studio-creator-selection";
+  approvedNotSelected,
+  resolveCreatorDecisionState,
+  resolveStudioDecisionRows,
+  withOptimisticDecision,
+  withoutOptimisticDecision,
+  type StudioCreatorDecisionState,
+  type StudioDecisionOverlay,
+} from "../../services/studio-creator-decisions";
 import {
   orderReplacementCandidatesByRole,
   replacementCandidateIsEligible,
@@ -149,6 +152,14 @@ type VendorRecommendationsSectionProps = {
   onCreatorClick?: (creator: CreatorDrawerSelection) => void;
   conversationId?: string;
   messageId?: string;
+  /**
+   * Legacy notification from when a decision returned a rebuilt decision map.
+   *
+   * Nothing in this section calls it: decisions propagate through the campaign
+   * draft (`onStudioDraftUpdated`), which every other screen already reads.
+   * Pushing a rebuilt map upward re-created the campaign object in the
+   * workspace and moved the viewport on every click.
+   */
   onVendorDecisionsUpdated?: (
     decisions: Record<string, "approved" | "rejected" | "shortlisted">
   ) => void;
@@ -452,8 +463,11 @@ function VendorCardBlock({
   draft,
   stageRemoval,
   undoDraftChange,
-  selected,
+  decisionState,
   onSelect,
+  onApprove,
+  onUnapprove,
+  onDeselect,
   applyDecision,
   stageRoleChange,
   openCreatorDetails,
@@ -470,13 +484,19 @@ function VendorCardBlock({
   draft: StudioDraftState;
   stageRemoval: (vendor: DisplayVendor) => Promise<void>;
   undoDraftChange: (creatorId: string) => Promise<void>;
-  /** True when this creator is already on the shortlist selection. */
-  selected: boolean;
+  /**
+   * Approval and selection, derived together. A creator may be approved,
+   * selected, both or neither — none of these overwrites another.
+   */
+  decisionState: StudioCreatorDecisionState;
   /** Adds to the canonical selection, optimistically, and prevents duplicates. */
-  onSelect: (creatorId: string) => Promise<void>;
+  onSelect: (creatorId: string, displayName?: string) => Promise<void>;
+  onApprove: (creatorId: string, displayName?: string) => Promise<void>;
+  onUnapprove: (creatorId: string) => Promise<void>;
+  onDeselect: (creatorId: string) => Promise<void>;
   applyDecision: (
     creatorId: string,
-    action: "approve" | "reject" | "shortlist",
+    action: "reject",
     unifiedId?: string,
     displayName?: string
   ) => Promise<void>;
@@ -547,24 +567,43 @@ function VendorCardBlock({
     </button>
   ) : (
     <>
+      {/*
+        One button, two states. It used to disable itself once approved, leaving
+        no way back and no visual weight — "Approved (staged)" in the same
+        treatment as "Approve". Approved now reads Unapprove and carries a
+        distinctly different treatment, and clicking it clears the approval
+        WITHOUT touching the creator's selection.
+      */}
       <button
         type="button"
-        disabled={!canAct || isPending || decision === "approved" || pendingApprove}
-        className={
+        disabled={!canAct || isPending}
+        aria-pressed={decisionState.approved}
+        className={cn(
           refMode
             ? cn(STUDIO_REF_CLASSES.vaction, STUDIO_REF_CLASSES.vactionApprove)
-            : STUDIO_CLASSES.actBtnApprove
-        }
+            : STUDIO_CLASSES.actBtnApprove,
+          decisionState.approved &&
+            "!border-[#0C9D57] !bg-[#0C9D57] !text-white hover:!bg-[#0a8a4c]"
+        )}
         onClick={() =>
-          vendor.id && void applyDecision(vendor.id, "approve", undefined, vendor.displayName)
+          vendor.id &&
+          void (decisionState.approved
+            ? onUnapprove(vendor.id)
+            : onApprove(vendor.id, vendor.displayName))
         }
       >
-        <CheckIcon className="size-3" />
-        {/* Truthful: "Approving…" only while the action is actually running. */}
+        {isPending ? (
+          <Loader2Icon className="size-3 animate-spin" aria-hidden />
+        ) : (
+          <CheckIcon className="size-3" />
+        )}
+        {/* Truthful: the pending label names what is actually running. */}
         {isPending
-          ? "Approving…"
-          : decision === "approved" || pendingApprove
-            ? "Approved (staged)"
+          ? decisionState.approved
+            ? "Approving…"
+            : "Unapproving…"
+          : decisionState.approved
+            ? "Unapprove"
             : "Approve"}
       </button>
       <button
@@ -603,14 +642,19 @@ function VendorCardBlock({
         type="button"
         disabled={!canAct || isPending}
         className={refMode ? STUDIO_REF_CLASSES.vaction : STUDIO_CLASSES.actBtn}
-        onClick={() => vendor.id && void onSelect(vendor.id)}
+        onClick={() =>
+          vendor.id &&
+          void (decisionState.selected
+            ? onDeselect(vendor.id)
+            : onSelect(vendor.id, vendor.displayName))
+        }
       >
-        {isPending && selected ? (
+        {isPending ? (
           <>
             <Loader2Icon className="size-3 animate-spin" aria-hidden />
-            Adding…
+            {decisionState.selected ? "Removing…" : "Adding…"}
           </>
-        ) : selected ? (
+        ) : decisionState.selected ? (
           <>
             <CheckIcon className="size-3" aria-hidden />
             In selection
@@ -887,7 +931,6 @@ export function VendorRecommendationsSection({
   onCreatorClick,
   conversationId,
   messageId,
-  onVendorDecisionsUpdated,
   studioDraft,
   onStudioDraftUpdated,
   appliedRemovedCreatorIds,
@@ -905,9 +948,6 @@ export function VendorRecommendationsSection({
     },
     [onStudioDraftUpdated]
   );
-  const [vendorDecisions, setVendorDecisions] = useState<
-    Record<string, "approved" | "rejected" | "shortlisted">
-  >(creatorsData.vendorDecisions ?? {});
   const [pendingCreatorId, setPendingCreatorId] = useState<string | null>(null);
   const [linkedShortlistId, setLinkedShortlistId] = useState<string | undefined>(
     creatorsData.linkedShortlistId
@@ -933,7 +973,17 @@ export function VendorRecommendationsSection({
   }, [campaignObject, draft]);
 
   const slateIntelligence = previewCreatorsData.slateIntelligence;
-  const previewVendorDecisions = previewCreatorsData.vendorDecisions ?? vendorDecisions;
+  /*
+   * The persisted decisions, projected through the draft. There used to be a
+   * local copy of this map that the decision actions REPLACED with a rebuild
+   * from the draft changes alone — which is how an applied decision vanished
+   * and how approving a selected creator wiped its selection. The campaign
+   * object plus its draft are the only source now.
+   */
+  const previewVendorDecisions = useMemo(
+    () => previewCreatorsData.vendorDecisions ?? creatorsData.vendorDecisions ?? {},
+    [previewCreatorsData.vendorDecisions, creatorsData.vendorDecisions]
+  );
   const creatorsPhase = previewCreatorsData.phase ?? creatorsData.phase;
   const creatorPackageThesis = useMemo(() => {
     if (!campaignObject) return null;
@@ -960,47 +1010,32 @@ export function VendorRecommendationsSection({
 
   const canAct = Boolean(conversationId && messageId);
 
+  /**
+   * Rejection, staged like every other decision: the draft is published and
+   * nothing else moves.
+   *
+   * This used to handle approve / reject / shortlist, replace the local
+   * decision map with the action's rebuild AND push that map upward through
+   * `onVendorDecisionsUpdated` — which rebuilt the campaign object in the
+   * workspace, recomputed every memo and re-laid out the shell, so the
+   * viewport jumped on each click. Approval and selection now run through
+   * `runCreatorDecision`; this keeps rejection on the same footing.
+   */
   const applyDecision = useCallback(
     async (
       creatorId: string,
-      action: "approve" | "reject" | "shortlist",
-      unifiedId?: string,
+      action: "reject",
+      _unifiedId?: string,
       displayName?: string
     ) => {
       if (!conversationId || !messageId || !creatorId) return;
       setPendingCreatorId(creatorId);
       try {
-        if (action === "shortlist") {
-          /*
-           * Selection only. This used to call
-           * `shortlistVendorRecommendationAction`, which created a shortlist on
-           * the first pick and wrote each creator to it — so selecting creators
-           * WAS generating shortlists. The write now happens once, from the
-           * confirmed Generate Shortlist dialog, and never from here.
-           */
-          const result = await selectCreatorForShortlistAction({
-            conversationId,
-            messageId,
-            creatorId,
-            displayName,
-          });
-          if (!result.ok) {
-            toast.error(result.message);
-            return;
-          }
-          if (result.draft) publishDraft(result.draft);
-          if (result.vendorDecisions) {
-            setVendorDecisions(result.vendorDecisions);
-            onVendorDecisionsUpdated?.(result.vendorDecisions);
-          }
-          return;
-        }
-
         const result = await decideVendorRecommendationAction({
           conversationId,
           messageId,
           creatorId,
-          decision: action === "approve" ? "approved" : "rejected",
+          decision: "rejected",
           displayName,
         });
         if (!result.ok) {
@@ -1008,18 +1043,12 @@ export function VendorRecommendationsSection({
           return;
         }
         if (result.draft) publishDraft(result.draft);
-        if (result.vendorDecisions) {
-          setVendorDecisions(result.vendorDecisions);
-          onVendorDecisionsUpdated?.(result.vendorDecisions);
-        }
         toast.success(result.message);
       } finally {
         setPendingCreatorId(null);
       }
     },
-    // `campaignObject` is no longer read here: the shortlist branch used it for
-    // the campaign name, which only the Generate dialog needs now.
-    [conversationId, messageId, onVendorDecisionsUpdated, publishDraft]
+    [conversationId, messageId, publishDraft]
   );
 
   const stageRoleChange = useCallback(
@@ -1081,15 +1110,18 @@ export function VendorRecommendationsSection({
   );
 
   /*
-   * Selection state: derived, never duplicated.
+  /*
+   * Decision state: derived, never duplicated, and never flattened.
    *
-   * The canonical selection is `vendorDecisions[id] === "shortlisted"`, which
-   * `selectCreatorForShortlistAction` stages and Apply commits. The overlay
-   * below is optimistic only — it makes a click land on the panel immediately
-   * and is dropped the moment the real decisions arrive, so the panel, the card
-   * buttons and Generate Shortlist always read one source.
+   * Approval and shortlist selection are SEPARATE facts. They live in the
+   * campaign's `vendorDecisions` plus the staged draft changes, which hold them
+   * apart (`approve_creator` and `shortlist_creator` are distinct entries).
+   * `resolveCreatorDecisionState` reads both. The overlay below is optimistic
+   * only, per creator AND per field, so an approval and a selection in flight
+   * cannot overwrite one another.
    */
-  const [selectionOverlay, setSelectionOverlay] = useState<StudioSelectionOverlay>({});
+  const [decisionOverlay, setDecisionOverlay] = useState<StudioDecisionOverlay>({});
+  const [addingApproved, setAddingApproved] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -1118,47 +1150,95 @@ export function VendorRecommendationsSection({
   );
 
   /**
-   * Add to the selection — immediately on screen, then confirmed by the server.
+   * One shape for every creator decision: patch the optimistic overlay, run the
+   * existing server action, then drop that overlay field so the canonical state
+   * answers again. On failure only the affected creator reverts.
    *
-   * Reuses `selectCreatorForShortlistAction` through `applyDecision`, which
-   * stages a draft change and writes no shortlist; the only addition is the
-   * optimistic overlay so the panel and the button do not wait for the round
-   * trip. A creator already on the selection is not added again.
+   * Nothing here replaces the whole decision map and nothing pushes a rebuilt
+   * campaign object upward — that is what remounted the workspace and moved the
+   * viewport on every click.
    */
-  const selectCreator = useCallback(
-    async (creatorId: string) => {
-      if (
-        isCreatorSelected({
+  const runCreatorDecision = useCallback(
+    async (
+      creatorId: string,
+      field: "approved" | "selected",
+      value: boolean,
+      run: () => Promise<{ ok: boolean; message: string; draft?: StudioDraftState }>
+    ) => {
+      if (!conversationId || !messageId || !creatorId) return;
+      setDecisionOverlay((overlay) =>
+        withOptimisticDecision(overlay, creatorId, { [field]: value })
+      );
+      setPendingCreatorId(creatorId);
+      try {
+        const result = await run();
+        if (!result.ok) {
+          toast.error(result.message);
+          return;
+        }
+        if (result.draft) publishDraft(result.draft);
+      } finally {
+        setDecisionOverlay((overlay) => withoutOptimisticDecision(overlay, creatorId, field));
+        setPendingCreatorId(null);
+      }
+    },
+    [conversationId, messageId, publishDraft]
+  );
+
+  const approveCreator = useCallback(
+    (creatorId: string, displayName?: string) =>
+      runCreatorDecision(creatorId, "approved", true, () =>
+        decideVendorRecommendationAction({
+          conversationId: conversationId!,
+          messageId: messageId!,
           creatorId,
-          decisions: previewVendorDecisions,
-          overlay: selectionOverlay,
+          decision: "approved",
+          displayName,
         })
-      ) {
-        return;
-      }
-      setSelectionOverlay((overlay) => withOptimisticSelection(overlay, creatorId, "selected"));
-      try {
-        await applyDecision(creatorId, "shortlist", creatorId);
-      } finally {
-        setSelectionOverlay((overlay) => withoutOptimisticSelection(overlay, creatorId));
-      }
-    },
-    [applyDecision, previewVendorDecisions, selectionOverlay]
+      ),
+    [runCreatorDecision, conversationId, messageId]
   );
 
-  /** Remove from the selection — the existing unstage path, shown immediately. */
+  /** Clears the approval only — the creator's selection is untouched. */
+  const unapproveCreator = useCallback(
+    (creatorId: string) =>
+      runCreatorDecision(creatorId, "approved", false, () =>
+        clearVendorDecisionAction({
+          conversationId: conversationId!,
+          messageId: messageId!,
+          creatorId,
+          decision: "approved",
+        })
+      ),
+    [runCreatorDecision, conversationId, messageId]
+  );
+
+  const selectCreator = useCallback(
+    (creatorId: string, displayName?: string) =>
+      runCreatorDecision(creatorId, "selected", true, () =>
+        selectCreatorForShortlistAction({
+          conversationId: conversationId!,
+          messageId: messageId!,
+          creatorId,
+          displayName,
+        })
+      ),
+    [runCreatorDecision, conversationId, messageId]
+  );
+
+  /** Clears the selection only — the creator's approval is untouched. */
   const deselectCreator = useCallback(
-    async (creatorId: string) => {
-      setSelectionOverlay((overlay) => withOptimisticSelection(overlay, creatorId, "removed"));
-      try {
-        await undoDraftChange(creatorId);
-      } finally {
-        setSelectionOverlay((overlay) => withoutOptimisticSelection(overlay, creatorId));
-      }
-    },
-    [undoDraftChange]
+    (creatorId: string) =>
+      runCreatorDecision(creatorId, "selected", false, () =>
+        clearVendorDecisionAction({
+          conversationId: conversationId!,
+          messageId: messageId!,
+          creatorId,
+          decision: "selected",
+        })
+      ),
+    [runCreatorDecision, conversationId, messageId]
   );
-
 
   const parsedVendors = resolveVendorRecommendations(campaignObject);
   const { ids: persistedIds, rationale, avgFitScore, creatorFitScores } = resolveCreatorIds(
@@ -1805,12 +1885,21 @@ export function VendorRecommendationsSection({
     campaignObject?.sections.presentation.data as { campaignName?: string } | undefined
   )?.campaignName?.trim();
 
-  const selectedForShortlist = resolveStudioCreatorSelection({
+  /*
+   * One row per creator carrying a decision, with BOTH facts on it — so the
+   * panel can show "Approved · Selected" instead of listing a creator twice,
+   * and neither count can overwrite the other.
+   */
+  const decisionRows = resolveStudioDecisionRows({
     vendors,
-    decisions: previewVendorDecisions,
-    overlay: selectionOverlay,
+    persisted: creatorsData.vendorDecisions,
+    changes: draft.changes,
+    overlay: decisionOverlay,
     pendingIds: pendingCreatorId ? [pendingCreatorId] : [],
   });
+  const selectedForShortlist = decisionRows.filter((row) => row.selected);
+  const approvedRows = decisionRows.filter((row) => row.approved);
+  const approvedToAdd = approvedNotSelected(decisionRows);
 
   /**
    * The one place this flow writes a shortlist, and only from the confirmed
@@ -1849,15 +1938,41 @@ export function VendorRecommendationsSection({
     }
   }
 
+  /**
+   * Add every approved creator that is not already selected.
+   *
+   * Adds to the SELECTION only — no persisted shortlist is created, which is
+   * the boundary 5cd4df24 established. Already-selected creators are skipped
+   * rather than duplicated, and each add carries its own optimistic state so
+   * the panel reflects real progress instead of a single global spinner.
+   */
+  async function addAllApproved() {
+    const pending = approvedToAdd.map((row) => row.creatorId);
+    if (pending.length === 0) return;
+    setAddingApproved(true);
+    try {
+      for (const creatorId of pending) {
+        await selectCreator(creatorId);
+      }
+    } finally {
+      setAddingApproved(false);
+    }
+  }
+
   const selectionPanel = (
     <StudioCreatorSelectionPanel
-      creators={selectedForShortlist}
+      selected={selectedForShortlist}
+      approved={approvedRows}
+      approvedToAdd={approvedToAdd}
       onRemove={(creatorId) => void deselectCreator(creatorId)}
+      onAddApproved={(creatorId) => void selectCreator(creatorId)}
+      onAddAllApproved={() => void addAllApproved()}
       onGenerate={() => {
         setGenerateError(null);
         setGenerateOpen(true);
       }}
       generating={generating}
+      addingApproved={addingApproved}
       canAct={canAct}
       className="xl:sticky xl:top-2 xl:max-h-[calc(100vh-140px)]"
     />
@@ -2119,12 +2234,16 @@ export function VendorRecommendationsSection({
               draft={draft}
               stageRemoval={stageRemoval}
               undoDraftChange={undoDraftChange}
-              selected={isCreatorSelected({
+              decisionState={resolveCreatorDecisionState({
                 creatorId: vendor.id,
-                decisions: previewVendorDecisions,
-                overlay: selectionOverlay,
+                persisted: creatorsData.vendorDecisions,
+                changes: draft.changes,
+                overlay: decisionOverlay,
               })}
               onSelect={selectCreator}
+              onApprove={approveCreator}
+              onUnapprove={unapproveCreator}
+              onDeselect={deselectCreator}
               applyDecision={applyDecision}
               stageRoleChange={stageRoleChange}
               openCreatorDetails={openCreatorDetails}

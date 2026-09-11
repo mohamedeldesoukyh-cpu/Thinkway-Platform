@@ -146,9 +146,10 @@ test("A. selection survives opening and closing Creator Details", () => {
     "features/campaign-studio/components/sections/vendor-recommendations-section.tsx"
   );
   const detailMount = source.slice(source.indexOf("<StudioCreatorDetailHost"));
-  assert.doesNotMatch(detailMount.slice(0, 400), /setSelectionOverlay|setVendorDecisions/);
+  assert.doesNotMatch(detailMount.slice(0, 400), /setDecisionOverlay|setVendorDecisions/);
   // And the panel reads the same derived selection regardless of the drawer.
-  assert.match(source, /creators=\{selectedForShortlist\}/);
+  // (The prop is `selected` since the panel also carries an Approved section.)
+  assert.match(source, /selected=\{selectedForShortlist\}/);
 });
 
 // ---------------------------------------------------------------------------
@@ -308,9 +309,9 @@ test("D. no completed state is shown while the action is still running", () => {
   const source = read(
     "features/campaign-studio/components/sections/vendor-recommendations-section.tsx"
   );
-  // The Approve label checks `isPending` BEFORE reporting the staged state.
+  // The Approve label checks `isPending` BEFORE reporting the decision state.
   const approve = source.slice(source.indexOf("Truthful:"));
-  assert.match(approve.slice(0, 240), /isPending\s*\n?\s*\?\s*"Approving…"/);
+  assert.match(approve.slice(0, 320), /isPending\s*\n?\s*\?[\s\S]{0,120}"Approving…"/);
 
   const panel = read(
     "features/campaign-studio/components/sections/shared/studio-creator-selection-panel.tsx"
@@ -322,11 +323,14 @@ test("D. the selection is derived, so a pending action cannot desync it", () => 
   const source = read(
     "features/campaign-studio/components/sections/vendor-recommendations-section.tsx"
   );
-  // One derivation feeds the panel and the card buttons.
-  assert.match(source, /resolveStudioCreatorSelection\(\{/);
-  assert.match(source, /selected=\{isCreatorSelected\(\{/);
+  // One derivation feeds the panel and the card buttons. It is now
+  // `resolveStudioDecisionRows`, which carries approval alongside selection on
+  // the same row rather than deriving the two from separate passes.
+  assert.match(source, /resolveStudioDecisionRows\(\{/);
+  assert.match(source, /const selectedForShortlist = decisionRows\.filter\(\(row\) => row\.selected\)/);
+  assert.match(source, /decisionState=\{/, "the cards read the same derived rows");
   assert.equal(
-    (source.match(/useState<StudioSelectionOverlay>/g) ?? []).length,
+    (source.match(/useState<StudioDecisionOverlay>/g) ?? []).length,
     1,
     "exactly one optimistic overlay, and no second selection store"
   );

@@ -47,13 +47,24 @@ type StudioTopChromeProps = {
   mastExtras?: ReactNode;
 };
 
+/**
+ * Publish the mast's height, and only when it actually changed.
+ *
+ * This ran on every re-render of the mast — and every creator decision
+ * restages the draft, which changes the readiness inputs and re-renders it.
+ * Rewriting `--studio-chrome-height` with an identical value still invalidates
+ * layout for everything that consumes it, which is the header flicker the
+ * operator saw after each action.
+ */
 function publishChromeHeight(el: HTMLElement) {
   const height = `${el.offsetHeight}px`;
-  el.style.setProperty("--studio-chrome-height", height);
-  el.closest<HTMLElement>(".studio-shell-chat")?.style.setProperty(
-    "--studio-chrome-height",
-    height
-  );
+  if (el.style.getPropertyValue("--studio-chrome-height") !== height) {
+    el.style.setProperty("--studio-chrome-height", height);
+  }
+  const shell = el.closest<HTMLElement>(".studio-shell-chat");
+  if (shell && shell.style.getPropertyValue("--studio-chrome-height") !== height) {
+    shell.style.setProperty("--studio-chrome-height", height);
+  }
 }
 
 /**
