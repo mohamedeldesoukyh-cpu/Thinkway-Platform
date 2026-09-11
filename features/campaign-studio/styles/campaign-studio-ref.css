@@ -2302,13 +2302,34 @@
   overflow: auto;
 }
 
+/*
+ * Studio uses the page width the Shortlist and Quotation workspaces use.
+ *
+ * `DiscoveryPageShell` — the container behind both of those — renders its
+ * content full width inside `DashboardShell containedMain`, with a `px-4`
+ * gutter (`p-4 md:p-5` in the workspace variant) and NO `max-width` and no
+ * `mx-auto`. Studio instead centred itself at 1340px and then capped the
+ * document column at 880px (see `.cs-doc`), so on a wide desktop the workspace
+ * used roughly two thirds of the space and scrolled far more than it needed to.
+ *
+ * The nav column keeps its 214px track; the document column takes the rest.
+ * The gutter matches the reference shell (16px, 20px from `md`), so Studio's
+ * left and right edges line up with Shortlist and Quotation.
+ */
 .campaign-studio-ref .cs-wrap {
   display: grid;
   grid-template-columns: 214px minmax(0, 1fr);
   gap: 38px;
-  max-width: 1340px;
-  margin: 0 auto;
-  padding: 18px 24px 96px;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 16px 16px 96px;
+}
+
+@media (min-width: 768px) {
+  .campaign-studio-ref .cs-wrap {
+    padding: 20px 20px 96px;
+  }
 }
 
 @media (max-width: 1080px) {
@@ -2425,8 +2446,16 @@
   margin: 18px 0;
 }
 
+/*
+ * The document column follows the grid track, not a fixed 880px.
+ *
+ * This cap was the narrowness: whatever width `.cs-wrap` had, the workspace
+ * stopped at 880px and the rest of the row stayed empty. Content that wants a
+ * comfortable reading measure sets it on itself; the column no longer decides
+ * for the whole workspace.
+ */
 .campaign-studio-ref .cs-doc {
-  max-width: 880px;
+  max-width: none;
   min-width: 0;
 }
 
@@ -3272,7 +3301,7 @@
   .campaign-studio-ref .cs-wrap {
     grid-template-columns: 1fr;
     gap: 20px;
-    padding: 14px 18px 72px;
+    padding: 16px 16px 72px;
   }
 
   .campaign-studio-ref .cs-rail4 {
