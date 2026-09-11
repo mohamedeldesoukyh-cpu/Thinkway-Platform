@@ -51,6 +51,7 @@
     "test:creator-crm-phase2b": "npx tsx --test lib/campaigns/campaign-influencer-commercial.test.ts lib/creators/crm/activation-helpers.test.ts lib/creators/crm/boundary.test.ts lib/creators/crm/ensure-commercial-creator.test.ts lib/services/quotations/quotation-lifecycle-crm.test.ts",
     "validate:creator-crm-phase1": "node scripts/psql-development.mjs -f scripts/validate-creator-crm-phase1.sql",
     "verify:vendor-io-terms-production": "node scripts/verify-vendor-io-terms-production.mjs",
+    "verify:campaign-intelligence-storage-policies-production": "node scripts/verify-campaign-intelligence-storage-policies-production.mjs",
     "test:creator-intelligence": "npx tsx lib/creator-intelligence/creator-intelligence.test.ts",
     "test:creator-search-parser": "npx tsx features/ai/tools/creator-search-parser.test.ts",
     "test:metrics-sync-poll-policy": "npx tsx features/campaigns/hooks/metrics-sync-poll-policy.test.ts",
