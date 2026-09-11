@@ -2,9 +2,15 @@
  * The Studio shortlist selection UX.
  *
  * The selection has ONE source of truth: `vendorDecisions[id] === "shortlisted"`,
- * staged by `shortlistVendorRecommendationAction` and committed by Apply. The
+ * staged by `selectCreatorForShortlistAction` and committed by Apply. The
  * panel, the card buttons and Generate Shortlist all derive from it — the only
  * additional state is an optimistic overlay so a click lands immediately.
+ *
+ * Selecting a creator, applying a draft, and generating a shortlist are three
+ * different operations. `selectCreatorForShortlistAction` used to be
+ * `shortlistVendorRecommendationAction`, which created a shortlist on the first
+ * pick and wrote each creator to it — so selecting WAS generating. Those tests
+ * live in `studio-shortlist-generation.test.ts`.
  */
 
 import assert from "node:assert/strict";
@@ -177,9 +183,10 @@ test("B. the dialog shows the real count and keeps the name optional", () => {
   );
   assert.match(dialog, /\{selectedCount\} selected creator/);
   assert.match(dialog, /placeholder="Optional"/);
-  // Confirm is gated on the selection only.
-  assert.match(dialog, /disabled=\{generating \|\| selectedCount === 0\}/);
+  // Confirm is never gated on the campaign name — only on the selection, and
+  // on a chosen shortlist in the existing branch.
   assert.doesNotMatch(dialog, /disabled=\{[^}]*campaignName/);
+  assert.match(dialog, /mode === "existing" && !selectedShortlistId/);
 });
 
 test("B. generation reuses the existing shortlist helpers, batched", () => {
