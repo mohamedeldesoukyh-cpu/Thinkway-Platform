@@ -1,14 +1,8 @@
 "use server";
 
 import { createShortlistV2, addCreatorsToShortlistsV2 } from "@/features/discovery/shortlists/actions";
-import { getConversationWithMessages } from "@/features/ai-workspace/services/conversation-service";
-import {
-  deserializeCampaignObject,
-} from "@/features/campaign-intelligence";
-import type { CreatorsSectionData } from "@/features/campaign-intelligence/types/section-schemas";
 
 import { stageStudioDraftChangeAction } from "./studio-draft-actions";
-import { requireStudioUser } from "./persist-campaign-object-on-message";
 import { resolveGeneratedShortlistName } from "../services/studio-creator-selection";
 
 export type VendorRecommendationDecision = "approved" | "rejected" | "shortlisted";
@@ -101,52 +95,32 @@ export async function stageVendorRoleAction(input: {
   }
 }
 
-export async function shortlistVendorRecommendationAction(input: {
+/**
+ * Put a creator on the Studio SELECTION. Nothing is persisted to a shortlist.
+ *
+ * This replaces `shortlistVendorRecommendationAction`, which called
+ * `createShortlistV2` and `addCreatorsToShortlistsV2` on every "+ Shortlist"
+ * click. That made selecting a creator the same operation as generating a
+ * shortlist: the first pick created a shortlist, and because the linked id is
+ * only persisted when the draft is APPLIED, a fresh unapplied draft created
+ * another one on the next pick — hence separate shortlists appearing mid-
+ * selection instead of one intentional shortlist at the end.
+ *
+ * Three operations, kept apart:
+ *   A. selecting a creator      — this action: stage a draft change only;
+ *   B. applying a Studio draft  — `applyStudioDraftAction`, unchanged;
+ *   C. generating a shortlist   — `generateStudioShortlistAction`, and only
+ *      from the confirmed Generate Shortlist dialog.
+ *
+ * No shortlist helper is reachable from here.
+ */
+export async function selectCreatorForShortlistAction(input: {
   conversationId: string;
   messageId: string;
   creatorId: string;
-  creatorUnifiedId: string;
-  campaignName?: string;
   displayName?: string;
 }): Promise<VendorRecommendationActionResult> {
   try {
-    const { supabase, userId } = await requireStudioUser();
-
-    const conversation = await getConversationWithMessages(
-      supabase,
-      input.conversationId,
-      userId
-    );
-    const message = conversation?.messages?.find((m) => m.id === input.messageId);
-    const existingObject = message?.metadata?.campaignObject
-      ? deserializeCampaignObject(
-          message.metadata.campaignObject as Parameters<typeof deserializeCampaignObject>[0]
-        )
-      : null;
-
-    const existingShortlistId = existingObject
-      ? ((existingObject.sections.creators.data ?? {}) as CreatorsSectionData).linkedShortlistId
-      : undefined;
-
-    // Discovery shortlist write is external UX only — Campaign Plan slate state stages until Apply.
-    let shortlistId = existingShortlistId;
-    if (!shortlistId) {
-      const name = input.campaignName?.trim()
-        ? `${input.campaignName.trim()} — Studio picks`
-        : "Campaign Studio shortlist";
-      const created = await createShortlistV2({ name, visibility: "private" });
-      shortlistId = created.id;
-    }
-
-    const addResult = await addCreatorsToShortlistsV2({
-      shortlistIds: [shortlistId],
-      creators: [{ unifiedId: input.creatorUnifiedId }],
-    });
-
-    if (!addResult.ok) {
-      return { ok: false, message: addResult.message ?? "Could not add creator to shortlist." };
-    }
-
     const stageResult = await stageStudioDraftChangeAction({
       conversationId: input.conversationId,
       messageId: input.messageId,
@@ -154,7 +128,6 @@ export async function shortlistVendorRecommendationAction(input: {
         kind: "shortlist_creator",
         creatorId: input.creatorId,
         displayName: input.displayName,
-        linkedShortlistId: shortlistId,
       },
     });
 
@@ -169,16 +142,14 @@ export async function shortlistVendorRecommendationAction(input: {
 
     return {
       ok: true,
-      message: "Shortlist staged — apply changes to commit to the campaign plan.",
+      message: "Added to the selection.",
       vendorDecisions: previewDecisions,
-      linkedShortlistId: shortlistId,
-      shortlistUrl: `/discovery/shortlists/${shortlistId}`,
       draft: stageResult.draft,
     };
   } catch (error) {
     return {
       ok: false,
-      message: error instanceof Error ? error.message : "Shortlist failed.",
+      message: error instanceof Error ? error.message : "Could not update the selection.",
     };
   }
 }
@@ -197,13 +168,13 @@ export type GenerateStudioShortlistResult = {
 };
 
 /**
- * Generate the shortlist for the Studio selection, in one call.
+ * The ONLY place the Studio selection flow writes a shortlist.
  *
- * The per-creator path (`shortlistVendorRecommendationAction`) already creates
- * the shortlist on the first pick and adds creators one at a time; this is the
- * same two helpers — `createShortlistV2` and `addCreatorsToShortlistsV2` —
- * called once for the whole selection, which is what the batch helper is for.
- * No new shortlist mechanism and no new identifier.
+ * One call for the whole selection, so A, B, C, D become one shortlist with
+ * four creators rather than four shortlists with one each. It uses the same two
+ * helpers as the rest of the product — `createShortlistV2` and
+ * `addCreatorsToShortlistsV2`, the latter built to take an array — and adds no
+ * shortlist mechanism or identifier of its own.
  *
  * The campaign name is optional. `resolveGeneratedShortlistName` owns that
  * policy: with a name the shortlist is "<campaign> — Studio picks", without one
@@ -219,7 +190,15 @@ export async function generateStudioShortlistAction(input: {
   messageId: string;
   /** Canonical unified ids for the selected creators. */
   creatorUnifiedIds: string[];
-  /** Operator-supplied campaign name. Optional by design. */
+  /**
+   * `new` creates one shortlist for the selection; `existing` adds the
+   * selection to the shortlist the operator chose. Defaults to `new`, the
+   * safer behaviour.
+   */
+  mode?: "new" | "existing";
+  /** Required for `existing` — the shortlist the operator picked. */
+  shortlistId?: string;
+  /** Read for `new` only. Optional by design, and ignored for `existing`. */
   campaignName?: string;
 }): Promise<GenerateStudioShortlistResult> {
   try {
@@ -228,24 +207,22 @@ export async function generateStudioShortlistAction(input: {
       return { ok: false, message: "Select at least one creator before generating a shortlist." };
     }
 
-    const { supabase, userId } = await requireStudioUser();
-    const conversation = await getConversationWithMessages(
-      supabase,
-      input.conversationId,
-      userId
-    );
-    const message = conversation?.messages?.find((m) => m.id === input.messageId);
-    const existingObject = message?.metadata?.campaignObject
-      ? deserializeCampaignObject(
-          message.metadata.campaignObject as Parameters<typeof deserializeCampaignObject>[0]
-        )
-      : null;
+    const mode = input.mode ?? "new";
 
-    let shortlistId = existingObject
-      ? ((existingObject.sections.creators.data ?? {}) as CreatorsSectionData).linkedShortlistId
-      : undefined;
-
-    if (!shortlistId) {
+    /*
+     * ONE write, whichever branch runs.
+     *
+     * `existing` adds the whole selection to the shortlist the operator chose —
+     * it never creates a shortlist, never renames the chosen one, and never
+     * reads a campaign name, because the operator already named that list.
+     */
+    let shortlistId: string | undefined;
+    if (mode === "existing") {
+      shortlistId = input.shortlistId?.trim();
+      if (!shortlistId) {
+        return { ok: false, message: "Choose a shortlist to add these creators to." };
+      }
+    } else {
       const created = await createShortlistV2({
         name: resolveGeneratedShortlistName(input.campaignName),
         visibility: "private",
@@ -269,14 +246,23 @@ export async function generateStudioShortlistAction(input: {
 
     const added = addResult.added ?? 0;
     const alreadyOnList = addResult.alreadyOnList ?? 0;
-    const covered = added + alreadyOnList;
+
+    /*
+     * Report what the write did, never the selection size. The helper already
+     * skips creators that are on the list, so a duplicate is impossible — and
+     * saying "8 added" when 6 were added would be a lie.
+     */
+    const parts = [`${unifiedIds.length} selected`];
+    if (added > 0) parts.push(`${added} added`);
+    if (alreadyOnList > 0) parts.push(`${alreadyOnList} already in shortlist`);
+    if (added === 0 && alreadyOnList === 0) parts.push("nothing to add");
 
     return {
       ok: true,
       message:
-        covered > 0
-          ? `Shortlist generated with ${covered} creator${covered === 1 ? "" : "s"}.`
-          : "Shortlist generated.",
+        mode === "existing"
+          ? `Added to shortlist — ${parts.join(", ")}.`
+          : `Shortlist generated — ${parts.join(", ")}.`,
       added,
       alreadyOnList,
       selectedCount: unifiedIds.length,

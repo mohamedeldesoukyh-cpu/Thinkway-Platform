@@ -27,7 +27,7 @@ import type {
 import {
   decideVendorRecommendationAction,
   generateStudioShortlistAction,
-  shortlistVendorRecommendationAction,
+  selectCreatorForShortlistAction,
   stageVendorRoleAction,
 } from "../../actions/vendor-recommendation-actions";
 import {
@@ -106,7 +106,10 @@ import { ShortlistSlatePickerDialog } from "./shortlist-slate-picker-dialog";
 import { StudioCreatorCompareDialog } from "./studio-creator-compare-dialog";
 import { StudioCreatorDetailHost } from "./studio-creator-detail-host";
 import { StudioCreatorSelectionPanel } from "./shared/studio-creator-selection-panel";
-import { StudioGenerateShortlistDialog } from "./shared/studio-generate-shortlist-dialog";
+import {
+  StudioGenerateShortlistDialog,
+  type GenerateShortlistConfirmation,
+} from "./shared/studio-generate-shortlist-dialog";
 import { StudioPlanningIntelligenceStrip } from "./shared/studio-planning-intelligence-strip";
 import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
 import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
@@ -968,19 +971,17 @@ export function VendorRecommendationsSection({
       setPendingCreatorId(creatorId);
       try {
         if (action === "shortlist") {
-          if (!unifiedId) {
-            toast.error("Creator ID missing — re-run discovery.");
-            return;
-          }
-          const presentation = campaignObject?.sections.presentation.data as
-            | { campaignName?: string }
-            | undefined;
-          const result = await shortlistVendorRecommendationAction({
+          /*
+           * Selection only. This used to call
+           * `shortlistVendorRecommendationAction`, which created a shortlist on
+           * the first pick and wrote each creator to it — so selecting creators
+           * WAS generating shortlists. The write now happens once, from the
+           * confirmed Generate Shortlist dialog, and never from here.
+           */
+          const result = await selectCreatorForShortlistAction({
             conversationId,
             messageId,
             creatorId,
-            creatorUnifiedId: unifiedId,
-            campaignName: presentation?.campaignName,
             displayName,
           });
           if (!result.ok) {
@@ -992,12 +993,6 @@ export function VendorRecommendationsSection({
             setVendorDecisions(result.vendorDecisions);
             onVendorDecisionsUpdated?.(result.vendorDecisions);
           }
-          if (result.linkedShortlistId) setLinkedShortlistId(result.linkedShortlistId);
-          toast.success(result.message, {
-            action: result.shortlistUrl
-              ? { label: "Open shortlist", onClick: () => window.open(result.shortlistUrl, "_blank") }
-              : undefined,
-          });
           return;
         }
 
@@ -1022,7 +1017,9 @@ export function VendorRecommendationsSection({
         setPendingCreatorId(null);
       }
     },
-    [campaignObject, conversationId, messageId, onVendorDecisionsUpdated, publishDraft]
+    // `campaignObject` is no longer read here: the shortlist branch used it for
+    // the campaign name, which only the Generate dialog needs now.
+    [conversationId, messageId, onVendorDecisionsUpdated, publishDraft]
   );
 
   const stageRoleChange = useCallback(
@@ -1087,7 +1084,7 @@ export function VendorRecommendationsSection({
    * Selection state: derived, never duplicated.
    *
    * The canonical selection is `vendorDecisions[id] === "shortlisted"`, which
-   * `shortlistVendorRecommendationAction` stages and Apply commits. The overlay
+   * `selectCreatorForShortlistAction` stages and Apply commits. The overlay
    * below is optimistic only — it makes a click land on the panel immediately
    * and is dropped the moment the real decisions arrive, so the panel, the card
    * buttons and Generate Shortlist always read one source.
@@ -1123,10 +1120,10 @@ export function VendorRecommendationsSection({
   /**
    * Add to the selection — immediately on screen, then confirmed by the server.
    *
-   * Reuses `shortlistVendorRecommendationAction` through `applyDecision`; the
-   * only addition is the optimistic overlay so the panel and the button do not
-   * wait for the round trip. A creator already on the selection is not added
-   * again.
+   * Reuses `selectCreatorForShortlistAction` through `applyDecision`, which
+   * stages a draft change and writes no shortlist; the only addition is the
+   * optimistic overlay so the panel and the button do not wait for the round
+   * trip. A creator already on the selection is not added again.
    */
   const selectCreator = useCallback(
     async (creatorId: string) => {
@@ -1815,7 +1812,11 @@ export function VendorRecommendationsSection({
     pendingIds: pendingCreatorId ? [pendingCreatorId] : [],
   });
 
-  async function generateShortlist(campaignNameInput: string) {
+  /**
+   * The one place this flow writes a shortlist, and only from the confirmed
+   * dialog. Selecting creators reaches nothing here.
+   */
+  async function generateShortlist(confirmation: GenerateShortlistConfirmation) {
     if (!conversationId || !messageId) return;
     setGenerating(true);
     setGenerateError(null);
@@ -1824,7 +1825,9 @@ export function VendorRecommendationsSection({
         conversationId,
         messageId,
         creatorUnifiedIds: selectedForShortlist.map((creator) => creator.creatorId),
-        campaignName: campaignNameInput,
+        ...(confirmation.mode === "existing"
+          ? { mode: "existing" as const, shortlistId: confirmation.shortlistId }
+          : { mode: "new" as const, campaignName: confirmation.campaignName }),
       });
       if (!result.ok) {
         // The selection is untouched so the operator can retry.
@@ -2233,7 +2236,9 @@ export function VendorRecommendationsSection({
         defaultCampaignName={campaignDisplayName}
         generating={generating}
         error={generateError}
-        onConfirm={(name) => void generateShortlist(name)}
+        conversationId={conversationId}
+        messageId={messageId}
+        onConfirm={(confirmation) => void generateShortlist(confirmation)}
       />
     </div>
   );
