@@ -62,7 +62,7 @@ import {
   resolveVendorGrounding,
   resolveVendorRecommendations,
 } from "../../services/section-data-resolver";
-import { dedupeByCreatorId } from "@/lib/creators/dedupe-creators";
+import { dedupeByCreatorId, dedupeCreatorIds } from "@/lib/creators/dedupe-creators";
 import {
   resolveCreatorTierLabel,
   type CreatorTierLabel,
@@ -1249,8 +1249,25 @@ export function VendorRecommendationsSection({
   const usingDraftPreview = draft.changes.length > 0 && previewIds.length > 0;
   const { recommendationIds, discoveryIds } = resolveCreatorCounts(campaignObject);
   const slateIds = usingDraftPreview ? previewIds : persistedIds;
-  const ids =
-    !usingDraftPreview && discoveryIds.length > slateIds.length ? discoveryIds : slateIds;
+  /*
+   * The creator INVENTORY this screen hydrates: the slate plus the Discovery
+   * pool it was drawn from, which is what the "other recommendations" and
+   * alternative groups render.
+   *
+   * It used to be `!usingDraftPreview ? discoveryIds : previewIds`, so staging
+   * the FIRST change flipped the id source from the pool to the slate. The set
+   * shrank from the pool to ten, `useCreatorHydration` treated that as a new
+   * slate, and the whole inventory was dropped and re-hydrated — the first
+   * Approve emptied the creator list and the page appeared to reload. The union
+   * is stable across decisions: staging a change adds or removes a slate
+   * member, it does not change which creators the session has loaded, and a
+   * staged removal keeps its card (with Undo) instead of vanishing.
+   *
+   * Slate members come first so the hydration cap can never drop one, and no
+   * memo is needed: `useCreatorHydration` keys on the ids themselves, so a new
+   * array with the same members is not a new slate.
+   */
+  const ids = dedupeCreatorIds([...slateIds, ...discoveryIds]);
   const safeRationale = isEmptyGlobalRationale(rationale) ? undefined : rationale;
   const hasCommittedRecommendations = recommendationIds.length > 0;
   // Selected vs recommended-but-not-selected, derived from ids the campaign

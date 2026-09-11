@@ -3,6 +3,8 @@ import type { CreatorsSectionData } from "@/features/campaign-intelligence/types
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 
 import { deriveCreatorQuantityRecommendation } from "./creator-quantity";
+import { activeCampaignCreatorIds } from "./creator-decision-status";
+import { creatorGroupingKey } from "./studio-creator-slate-split";
 import { resolveCreatorCounts } from "./section-data-resolver";
 import { isStudioIntakeConfirmed } from "./studio-workspace-status";
 
@@ -30,9 +32,33 @@ function readCreatorsData(campaignObject: CampaignObject | undefined): CreatorsS
   return (campaignObject?.sections.creators.data ?? {}) as CreatorsSectionData;
 }
 
+/**
+ * Enrichment gaps for the creators actually on the slate right now.
+ *
+ * `selectedReasoning` outlives the slate: rows stay behind for creators that
+ * were replaced, removed or rejected, and a reasoning row is also written for
+ * pool creators that were considered. Reading every row meant a field missing
+ * from a creator who is no longer on the slate held the whole package at
+ * "Discovery — in progress", and the copy said "creators on this slate" while
+ * naming a creator who was not.
+ *
+ * Membership is the canonical slate — `recommendations.creatorIds` minus the
+ * creators the operator rejected — which is the same rule Content and
+ * commercial execution use. Only those rows are evaluated, so the check is
+ * about the current slate and enrichment stays scoped to it rather than to the
+ * whole database.
+ */
 function enrichmentGaps(creatorsData: CreatorsSectionData): string[] {
   const gaps = new Set<string>();
+  const slate = new Set(
+    activeCampaignCreatorIds(
+      creatorsData.recommendations?.creatorIds ?? [],
+      creatorsData.vendorDecisions
+    ).map(creatorGroupingKey)
+  );
   for (const entry of creatorsData.recommendations?.selectedReasoning ?? []) {
+    if (!entry.creatorId?.trim()) continue;
+    if (slate.size > 0 && !slate.has(creatorGroupingKey(entry.creatorId))) continue;
     for (const missing of entry.missingData ?? []) {
       if (missing.trim()) gaps.add(missing.trim());
     }

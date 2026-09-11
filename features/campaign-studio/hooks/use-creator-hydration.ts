@@ -304,13 +304,33 @@ export function useCreatorHydration(
   const quoteDoneRef = useRef(new Set<string>());
   const inFlightRef = useRef(new Set<string>());
 
-  // Reset tracking when the slate identity changes.
+  /*
+   * The inventory is never thrown away — it is PRUNED to the new id set.
+   *
+   * This used to `setVendors([])` whenever `idsKey` changed, and the id set
+   * changes for reasons that have nothing to do with the creators on screen:
+   * staging the first decision flips the section's id source from the Discovery
+   * pool to the slate preview, so the very first Approve emptied the creator
+   * inventory and re-hydrated it from scratch. That read as a page refresh —
+   * the list blanked, the document collapsed to a short page (taking the scroll
+   * anchor with it), then the creators trickled back.
+   *
+   * Keeping the already-hydrated creators that are still in the set means a
+   * decision costs nothing, and a genuinely new slate still ends up empty
+   * because nothing survives the prune.
+   */
   useEffect(() => {
-    dnaDoneRef.current = new Set();
-    eciDoneRef.current = new Set();
-    quoteDoneRef.current = new Set();
-    inFlightRef.current = new Set();
-    setVendors([]);
+    const keep = new Set(idsKey.split(",").filter(Boolean).map(normalizeIdKey));
+    const prune = (seen: Set<string>) => new Set([...seen].filter((key) => keep.has(key)));
+    dnaDoneRef.current = prune(dnaDoneRef.current);
+    eciDoneRef.current = prune(eciDoneRef.current);
+    quoteDoneRef.current = prune(quoteDoneRef.current);
+    inFlightRef.current = prune(inFlightRef.current);
+    setVendors((prev) => {
+      const next = prev.filter((vendor) => keep.has(normalizeIdKey(vendor.id)));
+      // Same members, same array — no render, no remount of the cards.
+      return next.length === prev.length ? prev : next;
+    });
     setPhase(1);
   }, [idsKey]);
 
@@ -397,12 +417,11 @@ export function useCreatorHydration(
     }
 
     for (const id of pendingDna) inFlightRef.current.add(normalizeIdKey(id));
-    // `vendors` here is the closure from the render that created this effect,
-    // and on a slate change the reset effect above has already emptied the
-    // state — so reading it said "not loading" while nothing was on screen, and
-    // the Creators section fell through to its zero-results branch. The done
-    // set is reset with the slate, so an empty one means nothing has hydrated
-    // for THIS slate yet, which is exactly when we are loading.
+    // Loading means "nothing on screen for this set yet", which is exactly an
+    // empty done-set: the prune above keeps the entries for ids that survived,
+    // so adding ids to an inventory that is already rendered does not raise a
+    // loading state over creators the operator can see. Reading `vendors` here
+    // would read the closure from the render that created this effect.
     setLoading(dnaDoneRef.current.size === 0);
     setPhase(1);
 

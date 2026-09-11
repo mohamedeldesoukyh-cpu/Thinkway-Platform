@@ -1,4 +1,6 @@
 import type { GroundedCreator, RankedCreator } from "@/features/ai-workflows/formatters/creator-formatter";
+import { resolveCountryCode } from "@/lib/creators/country-code";
+
 import type { Is1CampaignContext } from "./campaign-context";
 
 export type CampaignRequirementEvidence = {
@@ -6,6 +8,17 @@ export type CampaignRequirementEvidence = {
   evidence: string;
   matched: boolean;
   confidence: number;
+  /**
+   * The requirement could not be evaluated because the CREATOR RECORD lacks
+   * the field it needs — as opposed to being evaluated and not matching.
+   *
+   * Only this belongs in `missingData`, which Package reports as "missing from
+   * the enrichment records of creators on this slate". A creator whose country
+   * is on record but outside the market is a fit judgement for ranking, not an
+   * enrichment gap, and reporting it as one held the package at "in progress"
+   * with an instruction (refresh intelligence) that could never clear it.
+   */
+  dataMissing: boolean;
 };
 
 function creatorFitScore(creator: GroundedCreator): number {
@@ -43,10 +56,44 @@ function evaluateRequirement(
         : `Primary platform ${creator.platform ?? "unknown"} — verify multi-platform presence`,
       matched,
       confidence: matched ? 88 : 35,
+      dataMissing: !creator.platform,
     };
   }
 
   if (lower.startsWith("geography:")) {
+    /*
+     * Judge the market requirement against the creator's GEOGRAPHY.
+     *
+     * This used to search the campaign's market tokens in
+     * `${displayName} ${handle}` — so a creator recorded in Egypt matched only
+     * if "egypt" appeared in their username. Practically no creator passed,
+     * every slate row carried `missingData: ["Geography"]`, and Package sat at
+     * "Discovery — in progress" claiming geography was missing from creator
+     * enrichment records that actually held it. The creator's country is now
+     * carried through `GroundedCreator.country`, and country names and ISO-2
+     * codes are compared through the platform's one country registry.
+     *
+     * A creator with no country on record is still unverified — that is a real
+     * enrichment gap, and the name heuristic remains as the only signal left.
+     */
+    const wanted = ctx.geography
+      .split(/[,/]+/)
+      .map((value) => resolveCountryCode(value))
+      .filter(Boolean);
+    const creatorCountry = resolveCountryCode(creator.country);
+    if (creatorCountry) {
+      const matched = wanted.length === 0 || wanted.includes(creatorCountry);
+      return {
+        requirement,
+        evidence: matched
+          ? `Creator record country ${creatorCountry} matches ${ctx.geography}`
+          : `Creator record country ${creatorCountry} is outside ${ctx.geography}`,
+        matched,
+        confidence: matched ? 82 : 40,
+        // The country is on record either way — nothing to enrich.
+        dataMissing: false,
+      };
+    }
     const geoTokens = ctx.geography.toLowerCase().split(/[,\s]+/).filter(Boolean);
     const haystack = `${creator.displayName} ${creator.handle}`.toLowerCase();
     const matched = geoTokens.some((token) => token.length > 2 && haystack.includes(token));
@@ -54,9 +101,10 @@ function evaluateRequirement(
       requirement,
       evidence: matched
         ? `Creator profile aligns with ${ctx.geography} market signals`
-        : `Geography match unverified — confirm audience country in Creator DNA`,
+        : `Geography match unverified — no country on the creator record`,
       matched,
       confidence: matched ? 82 : 40,
+      dataMissing: !matched,
     };
   }
 
@@ -75,6 +123,7 @@ function evaluateRequirement(
       evidence: `${followers}, ${er} on ${creator.platform ?? "platform TBD"}`,
       matched,
       confidence: matched ? 75 : 30,
+      dataMissing: !matched,
     };
   }
 
@@ -89,6 +138,7 @@ function evaluateRequirement(
           : "Campaign fit score unavailable — template fallback used",
       matched,
       confidence: score ?? 45,
+      dataMissing: score == null,
     };
   }
 
@@ -97,6 +147,7 @@ function evaluateRequirement(
     evidence: "Insufficient data to evaluate",
     matched: false,
     confidence: 25,
+    dataMissing: true,
   };
 }
 
@@ -128,7 +179,8 @@ export function evidenceMissingDataFields(
   if (creator.campaignRelevanceScore == null && !(creator as RankedCreator).fitScore) {
     missing.push("Campaign fit score");
   }
-  for (const item of evidence.filter((e) => !e.matched)) {
+  // Only requirements the creator record cannot answer — see `dataMissing`.
+  for (const item of evidence.filter((e) => e.dataMissing)) {
     missing.push(item.requirement.replace(/:.*/, ""));
   }
   return [...new Set(missing)];

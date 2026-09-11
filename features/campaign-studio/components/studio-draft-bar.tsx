@@ -11,6 +11,7 @@ import {
   applyStudioDraftAction,
   discardStudioDraftAction,
 } from "../actions/studio-draft-actions";
+import { applicableDraftChanges } from "../services/studio-draft";
 
 type StudioDraftBarProps = {
   conversationId: string;
@@ -25,7 +26,7 @@ type StudioDraftBarProps = {
 
 function describeChanges(draft: StudioDraftState): string {
   const counts = new Map<string, number>();
-  for (const change of draft.changes) {
+  for (const change of applicableDraftChanges(draft)) {
     counts.set(change.kind, (counts.get(change.kind) ?? 0) + 1);
   }
   const labels: Record<string, [string, string]> = {
@@ -59,7 +60,10 @@ export function StudioDraftBar({
 }: StudioDraftBarProps) {
   const [busy, setBusy] = useState<"apply" | "discard" | null>(null);
 
-  if (draft.changes.length === 0) return null;
+  // Only what Apply commits — a staged shortlist selection waits for Generate
+  // Shortlist and is never "pending" here.
+  const pending = applicableDraftChanges(draft);
+  if (pending.length === 0) return null;
 
   const run = async (action: "apply" | "discard") => {
     setBusy(action);
@@ -101,7 +105,7 @@ export function StudioDraftBar({
         </div>
         <div className="min-w-0">
           <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
-            {draft.changes.length} pending change{draft.changes.length === 1 ? "" : "s"} —
+            {pending.length} pending change{pending.length === 1 ? "" : "s"} —
             click Apply Changes to update creators and regenerate the plan
           </p>
           <p className="break-words text-[11px] text-amber-800/80 dark:text-amber-300/80">
