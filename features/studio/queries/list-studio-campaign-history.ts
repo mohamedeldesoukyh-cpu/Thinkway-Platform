@@ -28,13 +28,18 @@ export async function listStudioCampaignHistory(): Promise<
   if (headsError) return { error: headsError.message };
   if (!heads?.length) return [];
 
-  const objectIds = heads.map((row) => row.id);
   const conversationIds = [...new Set(heads.map((row) => row.conversation_id))];
+  const versionFilter = heads
+    .map(
+      (row) =>
+        `and(campaign_object_id.eq.${row.id},version.eq.${row.current_version})`
+    )
+    .join(",");
 
   const { data: versions, error: versionsError } = await supabase
     .from("campaign_object_versions")
     .select("campaign_object_id, version, snapshot")
-    .in("campaign_object_id", objectIds);
+    .or(versionFilter);
 
   if (versionsError) return { error: versionsError.message };
 
