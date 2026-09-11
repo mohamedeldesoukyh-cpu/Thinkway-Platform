@@ -11,6 +11,8 @@ import { CampaignStudioPanel } from "@/features/ai-workspace/components/campaign
 import type { AiMessage } from "@/features/ai-workspace/types";
 import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
 
+const HIERARCHY_PREVIEW_CONVERSATION_ID = "00000000-0000-4000-8000-000000000002";
+
 export default function CampaignModeHierarchyPreviewPage() {
   const [viewHint, setViewHint] = useState<
     "studio" | "outputs" | "director" | "decision" | undefined
@@ -33,7 +35,7 @@ export default function CampaignModeHierarchyPreviewPage() {
     campaignObject.id = "TW-2026-0124";
     return {
       id: "hierarchy-preview-msg",
-      conversationId: "hierarchy-preview-conv",
+      conversationId: HIERARCHY_PREVIEW_CONVERSATION_ID,
       role: "assistant",
       content: "Campaign Studio hierarchy preview",
       createdAt: new Date().toISOString(),
@@ -82,7 +84,7 @@ export default function CampaignModeHierarchyPreviewPage() {
           <CampaignStudioPanel
             key={viewHint ?? "default"}
             message={message}
-            conversationId="hierarchy-preview-conv"
+            conversationId={HIERARCHY_PREVIEW_CONVERSATION_ID}
             variant="main"
             initialView={viewHint}
             onSendMessage={() => {}}
