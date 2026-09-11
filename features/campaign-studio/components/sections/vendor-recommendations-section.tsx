@@ -112,8 +112,6 @@ import {
   type GenerateShortlistConfirmation,
 } from "./shared/studio-generate-shortlist-dialog";
 import { StudioPlanningIntelligenceStrip } from "./shared/studio-planning-intelligence-strip";
-import { deriveEnterprisePlanningNarrative } from "../../services/planning-narrative";
-import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
 import { studioCampaignBrowseFilters } from "../../services/studio-discovery-browse-filters";
 import {
   resolveStudioCreatorListState,
@@ -143,7 +141,6 @@ import {
   replacementShortageNote,
 } from "../../services/studio-replacement-eligibility";
 import { partitionStudioCreatorGroups } from "../../services/studio-creator-groups";
-import { resolveStudioCreatorShortfall } from "../../services/studio-creator-shortfall";
 
 type VendorRecommendationsSectionProps = {
   campaignObject?: CampaignObject;
@@ -985,16 +982,6 @@ export function VendorRecommendationsSection({
     [previewCreatorsData.vendorDecisions, creatorsData.vendorDecisions]
   );
   const creatorsPhase = previewCreatorsData.phase ?? creatorsData.phase;
-  const creatorPackageThesis = useMemo(() => {
-    if (!campaignObject) return null;
-    return deriveEnterprisePlanningNarrative(campaignObject).creatorPackageThesis;
-  }, [campaignObject]);
-  const quantityRecommendation = useMemo(() => {
-    if (previewCreatorsData.quantityRecommendation) return previewCreatorsData.quantityRecommendation;
-    if (!campaignObject) return null;
-    return deriveCreatorQuantityRecommendation(getCampaignFacts(campaignObject));
-  }, [campaignObject, previewCreatorsData.quantityRecommendation]);
-
   const openCreatorDetails = useCallback(
     (vendor: DisplayVendor) => {
       const selection = toDrawerSelection(vendor);
@@ -1710,14 +1697,14 @@ export function VendorRecommendationsSection({
       excludedBy,
     });
   }, [replacementCandidates.length, otherRecommendedCandidates]);
-  // "Requested" is what the campaign ASKED FOR — the Strategy's evidence-based
-  // quantity, falling back to the slate it actually composed. Using the slate
-  // size for both sides could never report the Strategy-vs-slate gap, which is
-  // the shortfall the requested count implies.
-  const slateShortfall = resolveStudioCreatorShortfall({
-    requestedCount: quantityRecommendation?.recommended ?? slateSplit.selectedCount,
-    recommendedCount: selectedVendors.length,
-  });
+  /*
+   * The requested-vs-slate shortfall is NOT computed here.
+   *
+   * `CreatorsMixHeader` states it once at the top of this screen from the same
+   * two canonical numbers (the Strategy quantity and
+   * `recommendations.creatorIds`). Computing it again here produced a second
+   * line with the same three words over a different pair of numbers.
+   */
   const slateVendors = hasSlateSplit ? selectedVendors : marketVendors;
 
   // Campaign slate positions, contiguous from #1 in RENDER order — main picks
@@ -2004,28 +1991,14 @@ export function VendorRecommendationsSection({
      */
     <div className="grid min-w-0 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-start">
       <div className="min-w-0 space-y-2">
-      {quantityRecommendation ? (
-        <div className="rounded-lg border border-[#1D9E75]/25 bg-[#1D9E75]/5 px-3 py-2.5 text-[12px]">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#1D9E75]">
-            Recommended quantity
-            {quantityRecommendation.recommended != null
-              ? ` · ${quantityRecommendation.recommended} creators`
-              : ""}
-            {quantityRecommendation.confidence > 0
-              ? ` · ${Math.round(quantityRecommendation.confidence * 100)}% confidence in this quantity`
-              : ""}
-          </p>
-          <p className="mt-1 text-foreground">{quantityRecommendation.rationale}</p>
-        </div>
-      ) : null}
-      {creatorPackageThesis ? (
-        <div className="rounded-lg border border-[#0057FF]/25 bg-[#0057FF]/5 px-3 py-2.5 text-[12px]">
-          <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#0057FF]">
-            Creator strategy · Enterprise Planning Package
-          </p>
-          <p className="mt-1 text-foreground">{creatorPackageThesis}</p>
-        </div>
-      ) : null}
+      {/*
+        The quantity recommendation and the creator-strategy thesis are NOT
+        rendered here.
+        `CreatorsMixHeader` states the quantity, its confidence and its
+        rationale at the top of this same screen, and the Strategy step owns the
+        creator-strategy explanation — so both cards restated, in full, text the
+        operator had already scrolled past.
+      */}
       {isRegeneratingProposal ? (
         <div className="rounded-lg border border-[#0057FF]/30 bg-[#0057FF]/5 px-3 py-2">
           <p className="text-[11px] font-semibold text-[#0057FF]">Regenerating creator slate…</p>
@@ -2050,13 +2023,16 @@ export function VendorRecommendationsSection({
         </div>
       ) : null}
       {creatorsPhase === "proposal" ? (
-        <div className="rounded-lg border border-[#0057FF]/40 bg-[#0057FF]/5 px-3 py-2">
-          <p className="text-[11px] font-bold text-[#0057FF]">AI-proposed creator slate</p>
-          <p className="text-[10px] text-muted-foreground">
-            Campaign Director approved the strategy and Thinkway auto-proposed this slate. Review,
-            stage edits, then Apply Changes to regenerate the full plan.
-          </p>
-        </div>
+        /*
+          Provenance, in one line. The second sentence here used to repeat the
+          pending-changes bar's instruction ("stage edits, then Apply Changes to
+          regenerate the full plan") on a screen that already shows that bar
+          whenever anything is staged.
+        */
+        <p className="rounded-md border border-[#0057FF]/30 bg-[#0057FF]/5 px-2.5 py-1.5 text-[10px] text-muted-foreground">
+          <span className="font-semibold text-[#0057FF]">AI-proposed slate</span> — Campaign
+          Director approved the strategy and Thinkway proposed these creators.
+        </p>
       ) : null}
       {discoveryEngine ? (
         <p className="rounded-md border border-[#1D9E75]/30 bg-[#1D9E75]/5 px-2.5 py-1.5 text-[10px] text-muted-foreground">
@@ -2100,16 +2076,29 @@ export function VendorRecommendationsSection({
           {creatorsData.constraintReport.rejectedMandatoryCount === 1 ? "" : "s"} excluded.
         </p>
       ) : null}
-      {slateShortfall.summary ? (
+      {/*
+        Two different facts were being reported with the same three words.
+        The header's "10 requested · 6 recommended · 4 creators shortfall"
+        measures the Strategy quantity against slate MEMBERSHIP
+        (`recommendations.creatorIds`). This line measured the same quantity
+        against the creators that also clear the campaign requirement gate, so
+        the identical phrasing read "5 recommended · 5 shortfall" one block
+        later and looked like a contradiction. Both numbers are real and neither
+        is changed: the requested-vs-slate shortfall is stated once, in the
+        header, and what is stated here is the part only this screen knows —
+        how many slate members still need a decision.
+      */}
+      {needsReviewDisplayVendors.length > 0 ? (
         <p className="rounded-xl border border-amber-300/70 bg-amber-50/80 px-3 py-2 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
-          {slateShortfall.summary}
-          {needsReviewDisplayVendors.length > 0 ? (
-            <span className="mt-1 block text-[11px] font-normal">
-              {needsReviewDisplayVendors.length} of the slate{" "}
-              {needsReviewDisplayVendors.length === 1 ? "creator is" : "creators are"} listed
-              below under “needs review” with the reason. Nothing was substituted.
-            </span>
-          ) : null}
+          {slateSplit.selectedCount} on the campaign slate · {selectedVendors.length}{" "}
+          campaign-ready · {needsReviewDisplayVendors.length} need
+          {needsReviewDisplayVendors.length === 1 ? "s" : ""} review
+          <span className="mt-1 block text-[11px] font-normal">
+            {needsReviewDisplayVendors.length === 1
+              ? "That creator is listed below under “needs review” with the reason."
+              : "Those creators are listed below under “needs review” with the reason."}{" "}
+            Nothing was substituted.
+          </span>
         </p>
       ) : null}
       {hasSlateSplit ? (

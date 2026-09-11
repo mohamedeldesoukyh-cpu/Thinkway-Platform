@@ -257,9 +257,15 @@ test("the three card groups come from one partition of the hydrated pool", () =>
 });
 
 test("the shortfall is stated, never absorbed by the alternatives group", () => {
+  // The Creators header states the requested-vs-slate shortfall; this list
+  // states the part only it knows — slate members still awaiting a decision.
+  const header = read("features/campaign-studio/components/workspace/creators-mix-header.tsx");
+  assert.match(header, /resolveStudioCreatorShortfall/);
+  assert.match(header, /shortfall\.summary/);
   const source = read(CARDS);
-  assert.match(source, /resolveStudioCreatorShortfall/);
-  assert.match(source, /slateShortfall\.summary/);
+  assert.match(source, /needsReviewDisplayVendors\.length > 0 \? \(/);
+  assert.match(source, /on the campaign slate · \{selectedVendors\.length\}/);
+  assert.match(source, /campaign-ready · \{needsReviewDisplayVendors\.length\} need/);
 });
 
 test("a pool position is never shown as a slate number", () => {

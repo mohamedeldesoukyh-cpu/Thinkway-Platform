@@ -75,17 +75,23 @@ export function CreatorsMixHeader({
           Creator quantity cannot yet be determined.
         </h3>
       ) : (
+        /*
+          "Recommended quantity", not "N creators recommended": the second
+          reading collides with the slate count, and the page already used the
+          word "recommended" for both the quantity the brief asks for and the
+          creators actually on the slate.
+        */
         <h3 className="mt-1 text-lg font-extrabold tracking-tight">
-          {required} creators recommended
+          Recommended quantity: {required} creators
         </h3>
       )}
       {/*
-        This is confidence in the recommended QUANTITY, computed from budget,
-        duration and objective evidence. It says nothing about whether creators
-        have been found — inventory and qualified counts below are the facts.
+        Confidence in the recommended QUANTITY, computed from budget, duration
+        and objective evidence. It says nothing about whether creators have been
+        found — the tiles below are that fact.
       */}
       <p className="mt-1 text-sm text-muted-foreground">
-        Recommendation confidence (quantity): {confidenceLabel(quantity.confidence)}
+        Quantity confidence: {confidenceLabel(quantity.confidence)}
       </p>
       <p className="mt-2 text-sm text-foreground">{quantity.rationale}</p>
       {quantity.evidence.length > 0 ? (
@@ -96,10 +102,17 @@ export function CreatorsMixHeader({
         </ul>
       ) : null}
 
+      {/*
+        The one quantity / coverage summary on the Creators screen.
+        `Qualified` is the campaign slate as the campaign object holds it
+        (`recommendations.creatorIds`), which is also the "Recommended" chip on
+        the Discovery pipeline below — the two are the same number by
+        construction, not two measurements.
+      */}
       <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <Stat label="Required" value={required == null ? "—" : String(required)} />
-        <Stat label="Qualified" value={String(qualified)} />
-        <Stat label="Missing" value={String(missing)} />
+        <Stat label="On slate" value={String(qualified)} />
+        <Stat label="Short" value={String(missing)} />
         <Stat label="Discovery" value={sufficiency.title} />
       </div>
       {shortfall.summary ? (
@@ -107,8 +120,13 @@ export function CreatorsMixHeader({
           {shortfall.summary}
         </p>
       ) : null}
-      <p className="mt-3 text-sm text-muted-foreground">{sufficiency.detail}</p>
-      <p className="mt-1 text-sm font-semibold text-foreground">Action: {sufficiency.nextAction}</p>
+      {/*
+        `sufficiency.detail` and `Action: nextAction` used to be repeated here
+        AND in the Discovery section immediately below, word for word — the
+        enrichment sentence appeared twice before the operator reached a single
+        creator. The Discovery block owns that explanation; this block owns the
+        numbers, and the tile above carries the state so the two do not drift.
+      */}
 
       {searchFailure ? (
         <p className="mt-2 text-sm font-semibold text-destructive">

@@ -132,10 +132,13 @@ test("no second readiness label function survives", () => {
 // What must not have changed (issues 9-12).
 
 test("the shortfall states the requested count, and does not rewrite it", () => {
-  const cards = read(CARDS);
-  assert.match(cards, /resolveStudioCreatorShortfall/);
-  assert.match(cards, /quantityRecommendation\?\.recommended \?\? slateSplit\.selectedCount/);
-  assert.match(cards, /slateShortfall\.summary/);
+  // Stated once, in the Creators header, from the Strategy quantity against
+  // slate membership. The recommendations list used to compute a second one
+  // over a different pair of numbers and phrase it identically.
+  const header = read("features/campaign-studio/components/workspace/creators-mix-header.tsx");
+  assert.match(header, /resolveStudioCreatorShortfall\(\{\s*requestedCount: required,\s*recommendedCount: qualified,/);
+  assert.match(header, /shortfall\.summary/);
+  assert.doesNotMatch(read(CARDS), /resolveStudioCreatorShortfall/);
 });
 
 test("an alternative never inherits a campaign slate position", () => {

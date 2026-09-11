@@ -104,12 +104,21 @@ export function StudioDraftBar({
           <PencilRulerIcon className="size-3.5 text-amber-700 dark:text-amber-300" />
         </div>
         <div className="min-w-0">
+          {/*
+            Three different actions, and the operator has to be able to tell
+            them apart. This bar used to say "click Apply Changes to update
+            creators and regenerate the plan" over "staged edits preview in
+            Vendor Recommendations until apply", which named neither the
+            decision that is staged nor the one action that writes a shortlist.
+          */}
           <p className="text-xs font-bold text-amber-900 dark:text-amber-200">
-            {pending.length} pending change{pending.length === 1 ? "" : "s"} —
-            click Apply Changes to update creators and regenerate the plan
+            {pending.length} pending creator decision{pending.length === 1 ? "" : "s"}:{" "}
+            {describeChanges(draft)}
           </p>
           <p className="break-words text-[11px] text-amber-800/80 dark:text-amber-300/80">
-            {describeChanges(draft)} · staged edits preview in Vendor Recommendations until apply
+            Staged, and previewed on this screen. Apply Changes commits{" "}
+            {pending.length === 1 ? "it" : "them"} to the campaign and reconciles the plan.
+            Generate Shortlist is separate — only it creates a shortlist.
           </p>
         </div>
       </div>
