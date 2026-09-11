@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   verifyTotpChallengeAction,
@@ -14,6 +15,13 @@ const initial: MfaActionState = { ok: false };
 
 export function MfaChallengeForm({ nextPath = "/" }: { nextPath?: string }) {
   const [state, action, pending] = useActionState(verifyTotpChallengeAction, initial);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (state.ok && state.next) {
+      router.replace(state.next);
+    }
+  }, [router, state]);
 
   return (
     <form action={action} className="mx-auto grid w-full max-w-sm gap-4">

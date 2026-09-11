@@ -13,6 +13,7 @@ import {
 export type MfaActionState = {
   ok: boolean;
   error?: string;
+  next?: string;
   factorId?: string;
   qrCode?: string;
   secret?: string;
@@ -163,7 +164,7 @@ export async function verifyTotpChallengeAction(
       return { ok: false, error: verified.error.message };
     }
 
-    redirect(next);
+    return { ok: true, next };
   } catch (error) {
     if (error && typeof error === "object" && "digest" in error) {
       throw error;
