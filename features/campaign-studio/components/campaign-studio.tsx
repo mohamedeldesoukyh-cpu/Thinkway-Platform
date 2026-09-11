@@ -28,7 +28,7 @@ import { StudioWorkspaceScreen } from "./workspace/studio-workspace-screen";
 import { resolveStudioPackageReadiness } from "../services/studio-package-readiness";
 import { resolveStudioReadinessStatus } from "../services/studio-readiness-status";
 import { StudioRefModeProvider } from "../hooks/use-studio-ref-mode";
-import { getStudioDraft } from "../services/studio-draft";
+import { applicableDraftChanges, getStudioDraft } from "../services/studio-draft";
 import {
   outdatedStudioSections,
   studioFreshnessSummary,
@@ -247,7 +247,12 @@ export function CampaignStudio({
 
   const renderCanvasBody = () => (
     <>
-      {conversationId && messageId && studioDraft.changes.length > 0 ? (
+      {/*
+        A shortlist selection is not a pending change: Apply does not commit it
+        and Generate Shortlist does, so it must not raise an Apply bar that
+        pressing Apply can never clear.
+      */}
+      {conversationId && messageId && applicableDraftChanges(studioDraft).length > 0 ? (
         <StudioDraftBar
           conversationId={conversationId}
           messageId={messageId}

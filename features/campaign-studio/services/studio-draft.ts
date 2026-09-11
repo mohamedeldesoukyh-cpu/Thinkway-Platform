@@ -158,11 +158,30 @@ const SLATE_CHANGE_KINDS = new Set<StudioDraftChange["kind"]>([
   "replace_creator",
   "replace_shortlist",
   "merge_shortlist",
-  "approve_creator",
+  // A rejected creator leaves the effective plan — Content and commercial
+  // execution both exclude one — so the plan really is out of date.
   "reject_creator",
-  "shortlist_creator",
   "promote_main",
   "demote_alternative",
+]);
+
+/**
+ * Changes that alter no generated artifact.
+ *
+ * Approving a creator records the operator's verdict on someone already on the
+ * slate, and selecting one builds a working set for Generate Shortlist. Neither
+ * changes slate membership, budget, duration, content or any other plan input.
+ *
+ * Both used to be classified as slate changes, so a single Approve marked
+ * Content, Commercial, Timeline, Proposal and Presentation outdated and the
+ * Package screen reported the whole plan stale — "Content was generated against
+ * a previous strategy or creator slate", "Timeline still reflects a previous
+ * duration" — while nothing about the campaign had changed. Regenerating
+ * cleared nothing, because the next approval marked it all outdated again.
+ */
+const DECISION_ONLY_CHANGE_KINDS = new Set<StudioDraftChange["kind"]>([
+  "approve_creator",
+  "shortlist_creator",
 ]);
 
 export function outdatedSectionsForDraft(
@@ -170,6 +189,7 @@ export function outdatedSectionsForDraft(
 ): Set<CampaignStudioSectionId> {
   const outdated = new Set<CampaignStudioSectionId>();
   for (const change of draft.changes) {
+    if (DECISION_ONLY_CHANGE_KINDS.has(change.kind)) continue;
     const affected =
       change.kind === "refresh_intelligence"
         ? REFRESH_DEPENDENT_SECTIONS
@@ -179,6 +199,17 @@ export function outdatedSectionsForDraft(
     for (const sectionId of affected) outdated.add(sectionId);
   }
   return outdated;
+}
+
+/**
+ * The staged changes Apply actually commits.
+ *
+ * A shortlist selection is not one of them — it stays staged until Generate
+ * Shortlist consumes it — so it must not be counted as a pending change that
+ * asks the operator to press Apply.
+ */
+export function applicableDraftChanges(draft: StudioDraftState): StudioDraftChange[] {
+  return draft.changes.filter((change) => change.kind !== "shortlist_creator");
 }
 
 /** Patch the campaign object with a new draft state (no recalculation). */
@@ -264,6 +295,10 @@ export type ApplyStudioDraftResult = {
   campaignObject: CampaignObject;
   removedCreatorIds: string[];
   addedCreatorIds: string[];
+  /**
+   * Changes still staged after the apply — a shortlist selection, which Apply
+   * does not commit because only Generate Shortlist writes a shortlist.
+   */
   unappliedChanges: StudioDraftChange[];
 };
 
@@ -353,6 +388,28 @@ export function applyStudioDraftChanges(campaignObject: CampaignObject): ApplySt
   const shortlistVendorDecisions =
     shortlistChange?.kind === "replace_shortlist" ? {} : vendorDecisions;
 
+  /*
+   * Apply commits SLATE edits. A shortlist selection is not one.
+   *
+   * `shortlist_creator` stages the operator's working set for Generate
+   * Shortlist — it adds nobody to the slate and regenerates nothing. Clearing
+   * the whole draft on Apply therefore threw the selection away, and because
+   * `vendorDecisions` has one slot per creator, an approved creator's
+   * selection had nowhere to be remembered: the right-hand panel emptied after
+   * Apply with no action from the operator.
+   *
+   * Those changes stay staged (and are reported as `unappliedChanges`) until
+   * Generate Shortlist consumes them, which keeps approval persisted and
+   * selection live at the same time without a second decision store.
+   */
+  const retainedChanges = draft.changes.filter(
+    (change) =>
+      change.kind === "shortlist_creator" &&
+      // A replace wipes the decision map, so a selection staged against the
+      // replaced slate no longer means anything.
+      shortlistChange?.kind !== "replace_shortlist"
+  );
+
   const nextData: CreatorsSectionData = {
     ...creatorsData,
     recommendations: {
@@ -361,7 +418,10 @@ export function applyStudioDraftChanges(campaignObject: CampaignObject): ApplySt
     },
     vendorDecisions: shortlistVendorDecisions,
     slateIntelligence,
-    studioDraft: undefined,
+    studioDraft:
+      retainedChanges.length > 0
+        ? { changes: retainedChanges, updatedAt: new Date().toISOString() }
+        : undefined,
     ...(stagedLinkedShortlistId ? { linkedShortlistId: stagedLinkedShortlistId } : {}),
     ...(shortlistCreatorChanges.length > 0 ? { phase: "shortlist" as const } : {}),
     ...(shortlistChange &&
@@ -391,6 +451,6 @@ export function applyStudioDraftChanges(campaignObject: CampaignObject): ApplySt
       return original ?? id;
     }),
     addedCreatorIds,
-    unappliedChanges: [],
+    unappliedChanges: retainedChanges,
   };
 }

@@ -148,16 +148,51 @@ function reasoningForPreviewAddition(ref: StudioDraftCreatorRef): VendorSelected
   };
 }
 
-/** Preview vendor decisions from staged approve/reject changes. */
+/**
+ * Preview vendor decisions from staged approve / reject / shortlist changes.
+ *
+ * `vendorDecisions` holds ONE value per creator, and this projection is what
+ * the decision pill reads and what Apply persists. It used to be last-write-
+ * wins, so selecting an approved creator overwrote its approval with
+ * "shortlisted": the pill stopped saying Approved while the button still said
+ * Unapprove, and on Apply the approval was gone for good.
+ *
+ * The operator's verdict on a creator — approved or rejected — is the durable
+ * decision and owns the slot. Selection is a working set for Generate
+ * Shortlist; it is projected only for a creator with no verdict yet, and it
+ * never erases one. Approve and reject still override each other in staged
+ * order, because they are the same fact being changed.
+ *
+ * Both facts remain separately readable: `resolveCreatorDecisionState` reads
+ * this map AND the draft changes, so an approved + selected creator reports
+ * both.
+ */
 export function previewVendorDecisionsFromDraft(
   existing: Record<string, "approved" | "rejected" | "shortlisted"> | undefined,
   changes: StudioDraftChange[]
 ): Record<string, "approved" | "rejected" | "shortlisted"> {
   const decisions = { ...(existing ?? {}) };
+  const verdicts = new Set<string>();
   for (const change of changes) {
-    if (change.kind === "approve_creator") decisions[change.creatorId] = "approved";
-    if (change.kind === "reject_creator") decisions[change.creatorId] = "rejected";
-    if (change.kind === "shortlist_creator") decisions[change.creatorId] = "shortlisted";
+    if (change.kind === "approve_creator") {
+      decisions[change.creatorId] = "approved";
+      verdicts.add(normalizeCreatorId(change.creatorId));
+    }
+    if (change.kind === "reject_creator") {
+      decisions[change.creatorId] = "rejected";
+      verdicts.add(normalizeCreatorId(change.creatorId));
+    }
+  }
+  for (const change of changes) {
+    if (change.kind !== "shortlist_creator") continue;
+    if (verdicts.has(normalizeCreatorId(change.creatorId))) continue;
+    const verdictOnRecord = Object.entries(decisions).some(
+      ([id, decision]) =>
+        (decision === "approved" || decision === "rejected") &&
+        sameCreator(id, change.creatorId)
+    );
+    if (verdictOnRecord) continue;
+    decisions[change.creatorId] = "shortlisted";
   }
   return decisions;
 }

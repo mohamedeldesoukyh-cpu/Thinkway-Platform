@@ -18,6 +18,8 @@ export type SearchCreatorCardItem = {
   tier?: string;
   /** Proposed content concept matched to the creator's category. */
   contentIdea?: string;
+  /** Creator location (ISO-2 or country name) from the creator record. */
+  country?: string;
 };
 
 /** Build external profile URL from platform + handle when DB URL is missing. */
@@ -127,5 +129,12 @@ export function mapBrowseCreatorToSearchResult(
       ...(creator.ai_category ? [creator.ai_category] : []),
       ...(creator.ai_niche ? [creator.ai_niche] : []),
     ].filter(Boolean),
+    // Carried so campaign requirement evidence can judge a market requirement
+    // against the creator's geography instead of against their username.
+    country:
+      creator.country_code?.trim() ||
+      creator.estimated_country?.trim() ||
+      account?.audience_country?.trim() ||
+      undefined,
   };
 }

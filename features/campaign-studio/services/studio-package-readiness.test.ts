@@ -97,9 +97,23 @@ function arabBankObject(options?: { creatorCount?: number }): CampaignObject {
     lastDiscoveryAt: new Date().toISOString(),
   } as unknown as Record<string, unknown>;
 
+  /*
+   * Confirm the facts the object already carries, overlaid with whatever the
+   * brief actually produced.
+   *
+   * Spreading `facts!` wholesale overwrote the object's values with the
+   * `undefined` entries the brief never mentioned — the Arab Bank brief names
+   * no platforms, so `platforms` went from ["Instagram", "TikTok"] to
+   * undefined. Strategy then projected "Insufficient evidence" for platform and
+   * content strategy and the package could never be READY, which is the
+   * opposite of what these tests set up.
+   */
+  const projected = Object.fromEntries(
+    Object.entries(facts!).filter(([, value]) => value !== undefined)
+  ) as Partial<typeof facts>;
   return confirmStudioIntakeOnCampaignObject(object, {
     ...getCampaignFacts(object)!,
-    ...facts!,
+    ...projected,
     clientName: "Arab Bank",
     brandName: "Arab Bank",
     product: "Credit Card Instant Issuance",
@@ -344,7 +358,16 @@ test("duration 4 → 6 weeks marks package outdated; regen restores 6 weeks ever
   assert.doesNotMatch(proposalText, /4-week flight|over 4 weeks/i);
   const after = readinessOf(refreshed);
   assert.equal(after.checks.find((item) => item.id === "timeline")?.state, "ready");
-  assert.equal(after.overall, "ready_for_client");
+  /*
+   * Regenerating outputs brings the DOCUMENTS to six weeks; it does not resize
+   * the slate. A six-week flight recommends more creators than a four-week one,
+   * so the eleven-creator slate is now genuinely short of the recommendation
+   * and Discovery says so. That is the quantity rule working, not stale
+   * readiness — every other dimension is current.
+   */
+  const attention = after.checks.filter((item) => !item.ready);
+  assert.deepEqual(attention.map((item) => item.id), ["discovery"]);
+  assert.match(attention[0]!.reason ?? "", /qualified creators? versus \d+ recommended/);
   assert.equal(after.sourceState.durationWeeks, 6);
 });
 
@@ -408,8 +431,16 @@ test("regeneration recomputes readiness from the updated campaign object", () =>
   const { campaignObject: stale } = applyTimelineChange(generated, { durationWeeks: 6 });
   assert.equal(readinessOf(stale).readyForClient, false);
   const refreshed = regenerateStaleCampaignOutputs(stale);
-  assert.equal(readinessOf(refreshed).readyForClient, true);
-  assert.equal(readinessOf(refreshed).sourceState.durationWeeks, 6);
+  const after = readinessOf(refreshed);
+  // Readiness is recomputed from the refreshed object: the stale-output
+  // dimensions are current again and the duration is the new one. What remains
+  // is the quantity recommendation a six-week flight asks for — see the test
+  // above — not a leftover stale artifact.
+  assert.equal(after.sourceState.durationWeeks, 6);
+  assert.deepEqual(
+    after.checks.filter((item) => !item.ready).map((item) => item.id),
+    ["discovery"]
+  );
 });
 
 test("PDF/PPTX existence is not readiness — stale generated outputs stay not ready", () => {

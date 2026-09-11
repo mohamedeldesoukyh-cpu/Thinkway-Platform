@@ -19,6 +19,7 @@ import type {
 
 import type { CampaignStudioSectionId } from "../types/campaign-studio";
 import type { StudioWorkspaceStepId } from "../constants/studio-workspace";
+import { activeCampaignCreatorIds } from "./creator-decision-status";
 import { deriveCreatorQuantityRecommendation } from "./creator-quantity";
 import { deriveInfluencerContentPlan } from "./influencer-content-plan";
 import { deriveInfluencerStrategyView } from "./influencer-strategy-view";
@@ -211,10 +212,22 @@ function readCreatorsData(campaignObject: CampaignObject): CreatorsSectionData {
   return (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
 }
 
+/**
+ * The creators on the campaign right now — the slate minus the ones the
+ * operator rejected.
+ *
+ * Content, commercial execution and the Creators header all read the slate
+ * through that rejection filter (`activeCampaignCreatorIds`). This function did
+ * not, so rejecting a single creator made the Content plan and this list
+ * disagree by one member and `evaluateContent` reported "Content still refers
+ * to a previous creator slate" — a decision, not a stale artifact, turning the
+ * package outdated. One rule for both.
+ */
 function currentCreatorIds(campaignObject: CampaignObject): string[] {
+  const creatorsData = readCreatorsData(campaignObject);
   const fromSlate = resolveSlate(campaignObject).map((creator) => creator.creatorId);
-  if (fromSlate.length > 0) return fromSlate;
-  return readCreatorsData(campaignObject).recommendations?.creatorIds ?? [];
+  const ids = fromSlate.length > 0 ? fromSlate : creatorsData.recommendations?.creatorIds ?? [];
+  return activeCampaignCreatorIds(ids, creatorsData.vendorDecisions);
 }
 
 function presentationStatus(
@@ -658,13 +671,24 @@ function evaluateTimeline(
   return check("timeline", "Timeline", "ready");
 }
 
+/** The artifacts a client-facing document is generated from. */
+const CLIENT_OUTPUT_PREREQUISITES = [
+  "strategy",
+  "creators",
+  "content",
+  "commercial",
+  "timeline",
+] as const;
+
 function evaluateGeneratedClientOutput(
   campaignObject: CampaignObject,
   id: "proposal" | "presentation",
   kind: CampaignOutputKind,
   fallbackKind: CampaignOutputKind | null,
   outdatedFlag: boolean,
-  label: string
+  label: string,
+  /** Checks already evaluated this pass — the dependency chain, as measured. */
+  upstream: StudioPackageCheck[]
 ): StudioPackageCheck {
   const live = outputLiveStatus(campaignObject, kind);
   const fallback = fallbackKind ? outputLiveStatus(campaignObject, fallbackKind) : undefined;
@@ -679,12 +703,36 @@ function evaluateGeneratedClientOutput(
     );
   }
   if (status !== "generated") {
+    /*
+     * Say which half of the dependency is actually missing.
+     *
+     * The action used to read "Generate X after Strategy, Creators, Content,
+     * Commercial, and Timeline are current" even when all five WERE current and
+     * shown as current in the same list — so the package told the operator to
+     * wait for prerequisites it had already met, with no way to tell that the
+     * only remaining step was generating the document. The dependency is
+     * unchanged; it is now reported from the checks that were just measured.
+     */
+    const blocking = CLIENT_OUTPUT_PREREQUISITES.map((prerequisite) =>
+      upstream.find((item) => item.id === prerequisite)
+    ).filter((item): item is StudioPackageCheck => Boolean(item) && !item!.ready);
+    if (blocking.length === 0) {
+      return check(
+        id,
+        label,
+        "blocked",
+        `${label} has not been generated from the current campaign state. A successful PDF/PPTX export is not readiness.`,
+        `Generate ${label} — Strategy, Creators, Content, Commercial, and Timeline are current.`
+      );
+    }
     return check(
       id,
       label,
       "blocked",
-      `${label} is not current. A successful PDF/PPTX export is not readiness.`,
-      `Generate ${label} after Strategy, Creators, Content, Commercial, and Timeline are current.`
+      `${label} is not current, and ${blocking.map((item) => item.label).join(", ")} ${
+        blocking.length === 1 ? "is" : "are"
+      } not current either.`,
+      `Bring ${blocking.map((item) => item.label).join(", ")} current, then generate ${label}.`
     );
   }
   return check(id, label, "ready");
@@ -896,7 +944,9 @@ export function resolveStudioPackageReadiness(
     readCreatorsData(campaignObject).phase === "discovery";
   const strategyRunning = options.sectionStatuses?.["executive-strategy"] === "running";
 
-  const checks: StudioPackageCheck[] = [
+  // The planning checks first: the two client documents report their blockers
+  // from these measured results rather than from a fixed sentence.
+  const planningChecks: StudioPackageCheck[] = [
     evaluateIntake(campaignObject),
     evaluateStrategy(campaignObject, outdated, strategyRunning),
     evaluateDiscovery(campaignObject, outdated, discoveryRunning),
@@ -904,13 +954,17 @@ export function resolveStudioPackageReadiness(
     evaluateContent(campaignObject, outdated),
     evaluateCommercial(campaignObject, outdated, facts),
     evaluateTimeline(campaignObject, outdated, facts),
+  ];
+  const checks: StudioPackageCheck[] = [
+    ...planningChecks,
     evaluateGeneratedClientOutput(
       campaignObject,
       "proposal",
       "executive_proposal",
       null,
       outdated.has("executive-summary"),
-      "Proposal"
+      "Proposal",
+      planningChecks
     ),
     evaluateGeneratedClientOutput(
       campaignObject,
@@ -918,7 +972,8 @@ export function resolveStudioPackageReadiness(
       "client_presentation",
       "executive_proposal",
       outdated.has("presentation-status"),
-      "Presentation"
+      "Presentation",
+      planningChecks
     ),
   ];
 

@@ -14,6 +14,16 @@ export interface GroundedCreator {
   campaignRelevanceScore?: number;
   /** Discovery content verticals when the search tool provided them. */
   categories?: string[];
+  /**
+   * Creator location, as the creator record holds it (ISO-2 code or country
+   * name).
+   *
+   * Campaign requirement evidence needs the creator's own geography to judge a
+   * market requirement. Without it the geography check had nothing to read but
+   * the display name and handle, so an Egyptian creator whose username does not
+   * contain "egypt" was reported as missing geography.
+   */
+  country?: string;
 }
 
 export interface RankedCreator extends GroundedCreator {
@@ -103,6 +113,11 @@ export function normalizeCreators(
       categories: Array.isArray(obj.categories)
         ? obj.categories.filter((value): value is string => typeof value === "string" && Boolean(value.trim()))
         : undefined,
+      country:
+        ["country", "country_code", "estimated_country", "audience_country"]
+          .map((key) => obj[key])
+          .find((value): value is string => typeof value === "string" && Boolean(value.trim()))
+          ?.trim() ?? undefined,
     });
   }
   return dedupeGroundedCreators(creators, stage).creators;
