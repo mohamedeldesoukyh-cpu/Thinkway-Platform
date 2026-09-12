@@ -59,12 +59,12 @@ export function StudioGenerateShortlistDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={generating ? undefined : onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-h-[90vh] overflow-y-auto p-0 sm:max-w-lg">
+        <DialogHeader className="border-b border-border/70 px-5 py-4">
           <DialogTitle>Generate Shortlist</DialogTitle>
           <DialogDescription>
-            {selectedCount} selected creator{selectedCount === 1 ? "" : "s"}. What would you like
-            to do?
+            Selection is working state. Confirming below is the persistence boundary for {selectedCount}{" "}
+            selected creator{selectedCount === 1 ? "" : "s"}.
           </DialogDescription>
         </DialogHeader>
 
@@ -136,9 +136,13 @@ function GenerateShortlistForm({
 
   return (
     <>
-      <fieldset className="grid gap-2" disabled={generating}>
+      <fieldset className="grid gap-2 border-b border-border/70 px-5 py-4" disabled={generating}>
         <legend className="sr-only">What would you like to do?</legend>
-        <Label className="flex items-start gap-2 rounded-lg border border-border/70 p-2.5 text-sm font-normal">
+        <Label
+          className={`flex items-start gap-3 rounded-xl border p-3 text-sm font-normal transition-colors ${
+            mode === "new" ? "border-[#0057FF]/45 bg-[#0057FF]/5" : "border-border/70"
+          }`}
+        >
           <input
             type="radio"
             name="studio-shortlist-mode"
@@ -149,13 +153,17 @@ function GenerateShortlistForm({
           />
           <span>
             <span className="block font-semibold text-foreground">Generate new shortlist</span>
-            <span className="block text-[11px] text-muted-foreground">
-              Creates one shortlist containing the {selectedCount} selected creator
+            <span className="block text-[11px] leading-4 text-muted-foreground">
+              Creates a new persisted shortlist containing the {selectedCount} selected creator
               {selectedCount === 1 ? "" : "s"}.
             </span>
           </span>
         </Label>
-        <Label className="flex items-start gap-2 rounded-lg border border-border/70 p-2.5 text-sm font-normal">
+        <Label
+          className={`flex items-start gap-3 rounded-xl border p-3 text-sm font-normal transition-colors ${
+            mode === "existing" ? "border-[#0057FF]/45 bg-[#0057FF]/5" : "border-border/70"
+          }`}
+        >
           <input
             type="radio"
             name="studio-shortlist-mode"
@@ -166,13 +174,14 @@ function GenerateShortlistForm({
           />
           <span>
             <span className="block font-semibold text-foreground">Add to existing shortlist</span>
-            <span className="block text-[11px] text-muted-foreground">
-              Adds the selection to a shortlist you already have.
+            <span className="block text-[11px] leading-4 text-muted-foreground">
+              Adds these {selectedCount} selected creator{selectedCount === 1 ? "" : "s"} to a shortlist you already have.
             </span>
           </span>
         </Label>
       </fieldset>
 
+      <div className="space-y-4 px-5 py-4">
       {mode === "new" ? (
         <div className="space-y-1.5">
           <Label htmlFor="studio-shortlist-campaign-name">Campaign name</Label>
@@ -264,7 +273,7 @@ function GenerateShortlistForm({
         </p>
       ) : null}
 
-      <DialogFooter>
+      <DialogFooter className="border-t border-border/70 px-5 py-4">
         <Button type="button" variant="ghost" disabled={generating} onClick={onCancel}>
           Cancel
         </Button>
@@ -297,6 +306,7 @@ function GenerateShortlistForm({
           )}
         </Button>
       </DialogFooter>
+      </div>
     </>
   );
 }

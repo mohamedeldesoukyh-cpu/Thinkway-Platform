@@ -10,8 +10,8 @@ import { creatorFactualIntelligence } from "@/features/campaign-studio/services/
 export function ExecBlock({ title, body }: { title: string; body?: string | null }) {
   if (!body?.trim()) return null;
   return (
-    <div className="rounded-lg border border-border/60 bg-muted/10 p-3 text-sm">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="rounded-xl border border-border/60 bg-muted/10 p-3 text-sm">
+      <p className="text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
         {title}
       </p>
       <p className="mt-1 text-foreground">{body}</p>
@@ -78,10 +78,10 @@ export function StudioExecutiveRecommendationBlock({
   const facts = creatorFactualIntelligence(signal);
 
   return (
-    <div className="space-y-3.5">
+    <div className="space-y-3.5 rounded-xl border border-border/60 bg-muted/[0.03] p-3">
       {facts.measurements.length > 0 ? (
-        <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+        <div className="rounded-lg border border-[#0057FF]/20 bg-[#0057FF]/[0.03] p-3">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-[#0057FF]">
             Measurements
           </p>
           <dl className="grid grid-cols-1 gap-1.5 text-sm sm:grid-cols-2">
@@ -96,9 +96,9 @@ export function StudioExecutiveRecommendationBlock({
       ) : null}
 
       {facts.observations.length > 0 ? (
-        <div className="rounded-lg border border-border/60 bg-muted/10 p-3">
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            Evidence on record
+        <div className="rounded-lg border border-border/60 bg-background/60 p-3">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
+            Factual campaign evidence
           </p>
           <ul className="m-0 list-none space-y-1 p-0 text-sm text-foreground">
             {facts.observations.map((line) => (
@@ -116,7 +116,7 @@ export function StudioExecutiveRecommendationBlock({
             Named explicitly. Absent data must never read as a negative
             judgement about the creator.
           */}
-          <p className="mb-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+          <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.1em] text-muted-foreground">
             Not available
           </p>
           <ul className="m-0 list-none space-y-1 p-0 text-sm text-muted-foreground">

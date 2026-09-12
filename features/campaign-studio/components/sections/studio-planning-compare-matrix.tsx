@@ -1,5 +1,7 @@
 "use client";
 
+import { Fragment } from "react";
+
 import { cn } from "@/lib/utils";
 import type { StudioEciPlanningSignal } from "@/features/campaign-studio/services/eci/project-studio-eci-signal";
 import { INSUFFICIENT_EVIDENCE } from "@/features/campaign-studio/services/eci/recommendation-narrative";
@@ -16,6 +18,7 @@ export type StudioPlanningCompareColumn = {
 };
 
 type Row = {
+  group: string;
   label: string;
   values: string[];
 };
@@ -46,6 +49,7 @@ export function StudioPlanningCompareMatrix({
 
   const rows: Row[] = [
     {
+      group: "Decision evidence",
       label: "Recommendation",
       values: columns.map((c) =>
         cellFromNarrative(c.signal, c.displayName, (v) =>
@@ -54,36 +58,42 @@ export function StudioPlanningCompareMatrix({
       ),
     },
     {
+      group: "Decision evidence",
       label: "Why",
       values: columns.map((c) =>
         cellFromNarrative(c.signal, c.displayName, (v) => v.narrative.whyBest)
       ),
     },
     {
+      group: "Decision evidence",
       label: "Evidence",
       values: columns.map((c) =>
         cellFromNarrative(c.signal, c.displayName, (v) => v.narrative.evidence)
       ),
     },
     {
+      group: "Campaign impact",
       label: "Business value",
       values: columns.map((c) =>
         cellFromNarrative(c.signal, c.displayName, (v) => v.narrative.businessObjective)
       ),
     },
     {
+      group: "Campaign impact",
       label: "Commercial value",
       values: columns.map((c) =>
         cellFromNarrative(c.signal, c.displayName, (v) => v.narrative.commercialValue)
       ),
     },
     {
+      group: "Risk & alternatives",
       label: "Risk",
       values: columns.map((c) =>
         cellFromNarrative(c.signal, c.displayName, (v) => v.narrative.risks)
       ),
     },
     {
+      group: "Risk & alternatives",
       label: "Alternative",
       values: columns.map((c) =>
         cellFromNarrative(
@@ -95,18 +105,21 @@ export function StudioPlanningCompareMatrix({
       ),
     },
     {
+      group: "Risk & alternatives",
       label: "Trade-offs",
       values: columns.map((c) =>
         cellFromNarrative(c.signal, c.displayName, (v) => v.narrative.alternatives.tradeOffs)
       ),
     },
     {
+      group: "Campaign impact",
       label: "Decision impact",
       values: columns.map((c) =>
         cellFromNarrative(c.signal, c.displayName, (v) => v.narrative.decisionImpactSummary)
       ),
     },
     {
+      group: "Risk & alternatives",
       label: "Confidence",
       values: columns.map((c) =>
         cellFromNarrative(c.signal, c.displayName, (v) => v.narrative.confidenceStatement)
@@ -179,20 +192,32 @@ export function StudioPlanningCompareMatrix({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row) => (
-              <tr key={row.label} className="align-top">
-                <th className="sticky left-0 z-10 border-b border-r border-border bg-background px-3 py-2.5 text-left text-[11px] font-semibold text-muted-foreground">
-                  {row.label}
-                </th>
-                {row.values.map((value, i) => (
-                  <td
-                    key={`${row.label}-${columns[i]?.id}`}
-                    className="border-b border-border px-3 py-2.5 text-foreground"
-                  >
-                    {value}
-                  </td>
-                ))}
-              </tr>
+            {rows.map((row, index) => (
+              <Fragment key={row.label}>
+                {index === 0 || row.group !== rows[index - 1]?.group ? (
+                  <tr>
+                    <th
+                      colSpan={columns.length + 1}
+                      className="border-b border-border bg-muted/50 px-3 py-1.5 text-left text-[10px] font-extrabold uppercase tracking-[0.1em] text-muted-foreground"
+                    >
+                      {row.group}
+                    </th>
+                  </tr>
+                ) : null}
+                <tr className="align-top">
+                  <th className="sticky left-0 z-10 border-b border-r border-border bg-background px-3 py-2.5 text-left text-[11px] font-semibold text-muted-foreground">
+                    {row.label}
+                  </th>
+                  {row.values.map((value, i) => (
+                    <td
+                      key={`${row.label}-${columns[i]?.id}`}
+                      className="border-b border-border px-3 py-2.5 leading-5 text-foreground"
+                    >
+                      {value}
+                    </td>
+                  ))}
+                </tr>
+              </Fragment>
             ))}
           </tbody>
         </table>

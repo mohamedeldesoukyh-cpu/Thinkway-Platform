@@ -136,18 +136,32 @@ export function CampaignAnalysisPanel({ campaignObject }: { campaignObject?: Cam
       : null;
 
   return (
-    <section className="space-y-5">
-      <header className="space-y-1">
-        <h3 className="text-sm font-extrabold uppercase tracking-wide text-muted-foreground">
-          Campaign analysis
-        </h3>
-        <p className="text-xs text-muted-foreground">
-          {requested != null
-            ? `Requested ${requested} · Recommended ${selectedCount}`
-            : `Recommended ${selectedCount} creators`}
-          {forecast ? ` · Forecast confidence ${forecast.confidenceLabel}` : ""}
+    <section className="space-y-2.5">
+      {shortfall.length > 0 ? (
+        <p className="rounded-xl border border-amber-300/70 bg-amber-50/80 px-3 py-2.5 text-[11px] leading-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+          <span className="font-bold">Mix warning:</span>{" "}
+          {shortfall.map((t) => `${t.tier} ${t.achieved}/${t.requested}`).join(" · ")}. Inventory could not fill these tiers; no unrequested tier was substituted.
         </p>
-      </header>
+      ) : null}
+
+      <details className="group rounded-xl border border-border/70 bg-muted/10">
+        <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2 px-3 py-3 marker:content-none [&::-webkit-details-marker]:hidden">
+          <div>
+            <h3 className="text-xs font-extrabold uppercase tracking-wide text-muted-foreground">
+              Campaign analysis
+            </h3>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              {requested != null
+                ? `Requested ${requested} · Recommended ${selectedCount}`
+                : `Recommended ${selectedCount} creators`}
+              {forecast ? ` · Forecast confidence ${forecast.confidenceLabel}` : ""}
+            </p>
+          </div>
+          <span className="text-[11px] font-semibold text-[#0057FF] group-open:hidden">View analysis</span>
+          <span className="hidden text-[11px] font-semibold text-[#0057FF] group-open:inline">Hide analysis</span>
+        </summary>
+
+        <div className="space-y-5 border-t border-border/60 p-3">
 
       {composition?.requestedMix?.length ? (
         <div className="space-y-1.5 rounded-xl border border-border/60 bg-muted/20 px-3 py-2.5">
@@ -161,17 +175,6 @@ export function CampaignAnalysisPanel({ campaignObject }: { campaignObject?: Cam
               ? composition.achievedMix.map((t) => `${t.count} ${t.tier}`).join(" · ")
               : "—"}
           </p>
-          {shortfall.length > 0 ? (
-            <p className="text-[11px] text-amber-800 dark:text-amber-300">
-              <span className="font-semibold">Mix warning:</span>{" "}
-              {shortfall
-                .map((t) => `${t.tier} ${t.achieved}/${t.requested}`)
-                .join(" · ")}{" "}
-              — inventory could not fill these tiers. No creator from an
-              unrequested tier was substituted; broaden Discovery or adjust the
-              mix.
-            </p>
-          ) : null}
         </div>
       ) : null}
 
@@ -248,6 +251,8 @@ export function CampaignAnalysisPanel({ campaignObject }: { campaignObject?: Cam
           ))}
         </ul>
       ) : null}
+        </div>
+      </details>
     </section>
   );
 }

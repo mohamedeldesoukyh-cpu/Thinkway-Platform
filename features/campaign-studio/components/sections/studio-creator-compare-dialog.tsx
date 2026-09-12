@@ -122,19 +122,25 @@ export function StudioCreatorCompareDialog({
         <DialogHeader className="shrink-0 border-b border-border px-4 py-3 sm:px-5">
           <DialogTitle className="flex items-center gap-2 text-[15px]">
             <Columns2Icon className="size-4 text-[#0057FF]" aria-hidden />
-            Strategy Compare
+            Planning Compare
           </DialogTitle>
           <DialogDescription className="text-[12px]">
-            Who is the better choice for this campaign — business impact, commercial impact,
-            expected outcomes, risks, and a final recommendation. Not Discovery Compare.
+            Pick 2–5 creators, then compare the existing campaign planning evidence. This does not
+            change Approval, Selection, or shortlist state.
           </DialogDescription>
         </DialogHeader>
 
         {picking || !columns ? (
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-4 py-4 sm:px-5">
-            <p className="text-[12px] text-muted-foreground">
-              Selected {selectedIds.length}/{MAX_PLANNING_COMPARE}
-            </p>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[#0057FF]/20 bg-[#0057FF]/5 px-3 py-2.5">
+              <div>
+                <p className="text-[12px] font-bold text-foreground">Pick creators to compare</p>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">Choose at least two. The comparison remains read-only.</p>
+              </div>
+              <span className="rounded-full bg-background px-2 py-1 text-[11px] font-extrabold text-[#0057FF] ring-1 ring-[#0057FF]/20">
+                {selectedIds.length}/{MAX_PLANNING_COMPARE} selected
+              </span>
+            </div>
             <ul className="space-y-2">
               {available.map((creator) => {
                 const checked = selectedIds.includes(creator.id);
@@ -142,7 +148,7 @@ export function StudioCreatorCompareDialog({
                   <li key={creator.id}>
                     <label
                       className={cn(
-                        "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5",
+                        "flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition-colors",
                         checked
                           ? "border-[#0057FF]/40 bg-[#0057FF]/5"
                           : "border-border bg-background"
@@ -177,7 +183,7 @@ export function StudioCreatorCompareDialog({
           <div className="min-h-0 flex-1 overflow-hidden">
             <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-2 sm:px-5">
               <p className="text-[11px] text-muted-foreground">
-                Planning intelligence · scroll horizontally on smaller screens
+                Planning evidence · the matrix scrolls horizontally on smaller screens
               </p>
               <Button
                 type="button"
@@ -187,7 +193,7 @@ export function StudioCreatorCompareDialog({
                 onClick={() => setPicking(true)}
               >
                 <PlusIcon className="size-3" aria-hidden />
-                Add / change
+                Change creators
               </Button>
             </div>
             <StudioPlanningCompareMatrix

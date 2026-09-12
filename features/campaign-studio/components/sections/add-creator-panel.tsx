@@ -443,6 +443,19 @@ export function AddCreatorPanel({
 
   return (
     <div className="space-y-2">
+      {stagedAdditions.length > 0 ? (
+        <section className="space-y-2 rounded-xl border border-dashed border-brand-product/50 bg-brand-product/5 p-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <div>
+              <h4 className="text-xs font-extrabold text-foreground">Pending additions</h4>
+              <p className="mt-0.5 text-[10px] text-muted-foreground">
+                Staged in the working plan; apply changes to commit them.
+              </p>
+            </div>
+            <Badge className="h-auto bg-brand-product/10 px-1.5 py-0.5 text-[9px] font-semibold text-brand-product">
+              {stagedAdditions.length}
+            </Badge>
+          </div>
       {stagedAdditions.map((change) => {
         if (change.kind !== "add_creator") return null;
         const ref = change.creator;
@@ -451,7 +464,7 @@ export function AddCreatorPanel({
         return (
           <div
             key={ref.creatorId}
-            className="flex flex-col gap-3 rounded-xl border border-dashed border-brand-product/50 bg-brand-product/5 p-3 sm:flex-row sm:items-center"
+            className="flex flex-col gap-3 rounded-lg border border-brand-product/20 bg-background/75 p-3 sm:flex-row sm:items-center"
           >
             <CreatorAvatarImage
               avatarUrl={ref.avatarUrl}
@@ -509,6 +522,8 @@ export function AddCreatorPanel({
           </div>
         );
       })}
+        </section>
+      ) : null}
 
       {!open ? (
         <Button
@@ -519,16 +534,32 @@ export function AddCreatorPanel({
           onClick={() => setOpen(true)}
         >
           <UserPlusIcon className="size-3.5" />
-          Add creator to the plan
+          Add or replace creator
         </Button>
       ) : (
-        <div className="space-y-2.5 rounded-xl border border-border/70 bg-muted/20 p-3">
+        <div className="space-y-3 rounded-xl border border-border/70 bg-muted/20 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 pb-3">
+            <div>
+              <h4 className="text-sm font-extrabold text-foreground">Add or replace creator</h4>
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                Choose a source, then stage the creator in this campaign plan.
+              </p>
+            </div>
+            {replaceTarget ? (
+              <div className="max-w-full rounded-lg border border-amber-300/70 bg-amber-50/80 px-2.5 py-2 text-[11px] text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                <span className="font-bold">Replacing:</span>{" "}
+                {replaceTarget.displayName ?? "selected creator"}. Your choice stages a replacement; Apply Changes commits it.
+              </div>
+            ) : null}
+          </div>
           <div className="flex items-center justify-between gap-2">
-            <div
-              className="flex gap-1 rounded-lg bg-muted/60 p-0.5"
-              role="tablist"
-              aria-label="Add creator source"
-            >
+            <div className="min-w-0">
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[0.12em] text-muted-foreground">Source / search</p>
+              <div
+                className="flex flex-wrap gap-1 rounded-lg bg-muted/60 p-0.5"
+                role="tablist"
+                aria-label="Add creator source"
+              >
               {replaceTarget && candidates.length > 0 ? (
                 <Button
                   type="button"
@@ -589,6 +620,7 @@ export function AddCreatorPanel({
                 <Link2Icon className="size-3" aria-hidden />
                 From profile URL
               </Button>
+              </div>
             </div>
             <Button
               type="button"
@@ -820,7 +852,7 @@ function DiscoveryResultList({
               className="h-7 px-2 text-[11px] text-muted-foreground sm:shrink-0"
               onClick={() => onOpenDetails(creator)}
             >
-              Details
+              View Creator Details
             </Button>
             <Button
               type="button"

@@ -105,8 +105,8 @@ export function ShortlistSlatePickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[85vh] max-w-lg overflow-hidden sm:max-w-lg">
-        <DialogHeader>
+      <DialogContent className="max-h-[85vh] max-w-lg overflow-hidden p-0 sm:max-w-lg">
+        <DialogHeader className="border-b border-border/70 px-5 py-4">
           <DialogTitle className="flex items-center gap-2">
             <ListIcon className="size-4 text-[#0057FF]" />
             {title}
@@ -114,7 +114,15 @@ export function ShortlistSlatePickerDialog({
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
 
-        <div className="max-h-[min(360px,50vh)] overflow-y-auto rounded-lg border border-border/70">
+        <div className="mx-5 mt-4 rounded-lg border border-[#0057FF]/20 bg-[#0057FF]/5 px-3 py-2 text-[12px] leading-5 text-muted-foreground">
+          <span className="font-semibold text-foreground">Staging only.</span>{" "}
+          {mode === "replace"
+            ? "This stages a complete slate replacement."
+            : "This stages deduplicated creators into the current slate."}{" "}
+          Nothing is committed until <span className="font-semibold text-foreground">Apply Changes</span>.
+        </div>
+
+        <div className="mx-5 mt-3 max-h-[min(360px,50vh)] overflow-y-auto rounded-xl border border-border/70">
           {loading ? (
             <div className="flex items-center justify-center gap-2 px-4 py-10 text-sm text-muted-foreground">
               <Loader2Icon className="size-4 animate-spin" />
@@ -135,8 +143,8 @@ export function ShortlistSlatePickerDialog({
                     <button
                       type="button"
                       className={cn(
-                        "flex w-full flex-col gap-0.5 px-3 py-2.5 text-left transition-colors",
-                        active ? "bg-[#0057FF]/8" : "hover:bg-muted/40"
+                        "flex w-full flex-col gap-1 px-3.5 py-3 text-left transition-colors",
+                        active ? "bg-[#0057FF]/10 ring-1 ring-inset ring-[#0057FF]/30" : "hover:bg-muted/40"
                       )}
                       onClick={() => setSelectedId(row.id)}
                       aria-pressed={active}
@@ -158,7 +166,7 @@ export function ShortlistSlatePickerDialog({
           )}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="mt-4 border-t border-border/70 px-5 py-4 sm:gap-2">
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
@@ -174,9 +182,9 @@ export function ShortlistSlatePickerDialog({
                 Applying…
               </>
             ) : mode === "replace" ? (
-              "Stage replace"
+              "Stage Replace"
             ) : (
-              "Stage merge"
+              "Stage Merge"
             )}
           </Button>
         </DialogFooter>
