@@ -39,6 +39,7 @@ export function normalizeCampaignIntelligenceProfile(
     structuredBrief: obj.structuredBrief,
     pipelineDebug: obj.pipelineDebug,
     confirmedAt: obj.confirmedAt,
+    campaignUnderstanding: obj.campaignUnderstanding,
   };
 
   if (profileHasExtractedData(profile)) {
@@ -48,6 +49,7 @@ export function normalizeCampaignIntelligenceProfile(
       confirmedAt: obj.confirmedAt ?? profile.confirmedAt,
       structuredBrief: obj.structuredBrief ?? profile.structuredBrief,
       pipelineDebug: obj.pipelineDebug ?? profile.pipelineDebug,
+      campaignUnderstanding: obj.campaignUnderstanding ?? profile.campaignUnderstanding,
     };
   }
 

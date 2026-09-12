@@ -13,6 +13,7 @@ import type { StructuredBriefDocument } from "../services/structured-brief-parse
 
 import type { CampaignIntelligencePipelineDebug } from "./pipeline-debug";
 import type { ValidatedCampaignIntelligence } from "./validated-intelligence";
+import type { CampaignUnderstanding } from "./campaign-understanding";
 
 /** Release 1 — weighted criterion for Discovery AI search (in-memory until Release 2 persistence). */
 export type CampaignSearchCriterion = {
@@ -76,6 +77,12 @@ export type CampaignIntelligenceProfile = CampaignFacts & {
    * Pipeline: Upload → Extract → Normalize → Validate → validatedIntelligence → Persist.
    */
   validatedIntelligence?: ValidatedCampaignIntelligence;
+  /**
+   * Versioned semantic understanding retained alongside the fixed CIP
+   * compatibility projection. Phase 4B persists this in existing profile JSONB;
+   * Campaign Facts and validatedIntelligence remain their current projections.
+   */
+  campaignUnderstanding?: CampaignUnderstanding;
   /** @deprecated Use validatedIntelligence. Kept for legacy rows during migration. */
   normalizedEntities?: NormalizedCampaignEntities;
   /** Malformed extraction values rejected during normalization (not search filters). */

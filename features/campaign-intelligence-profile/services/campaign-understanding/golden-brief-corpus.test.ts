@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import type { CampaignUnderstanding, FactScope } from "../../types/campaign-understanding";
+import { createEmptyCampaignIntelligenceProfile } from "../../types/profile";
+import { runCampaignIntelligencePipeline } from "../run-intelligence-pipeline";
+import type { CampaignUnderstanding, FactScope, SourceMaterialBlock } from "../../types/campaign-understanding";
+import type { StructuredBriefDocument } from "../structured-brief-parser/types";
 import { parseCampaignUnderstanding } from "./campaign-understanding-schema";
 import { GOLDEN_BRIEF_CORPUS, type GoldenBriefScenario, type SemanticAssertion } from "./golden-brief-corpus";
 import { evaluateCampaignUnderstandingQualityGate } from "./quality-gate";
@@ -11,8 +14,7 @@ function equalScope(actual: FactScope | undefined, expected: FactScope): boolean
   return JSON.stringify(actual) === JSON.stringify(expected);
 }
 
-function assertScenarioAssertion(scenario: GoldenBriefScenario, assertion: SemanticAssertion): void {
-  const understanding = scenario.understanding;
+function assertScenarioAssertion(understanding: CampaignUnderstanding, assertion: SemanticAssertion): void {
   switch (assertion.kind) {
     case "source_block_preserved":
       assert.ok(understanding.sourceDocuments.some((document) => document.id === assertion.sourceDocumentId && document.blocks.some((block) => block.id === assertion.sourceBlockId)));
@@ -31,6 +33,60 @@ function assertScenarioAssertion(scenario: GoldenBriefScenario, assertion: Seman
   }
 }
 
+function structuredDocument(blocks: SourceMaterialBlock[]): StructuredBriefDocument {
+  return {
+    sourceFormat: "txt",
+    parserMode: "plain_text",
+    sections: [{
+      blocks: blocks.map((block) => {
+        if (block.kind === "heading") return { type: "heading" as const, level: 2, text: block.text };
+        if (block.kind === "list") return { type: "list" as const, ordered: false, items: block.text.split("\n") };
+        if (block.kind === "table") return { type: "table" as const, rows: block.text.split("\n").map((row) => row.split("|")) };
+        return { type: "paragraph" as const, text: block.text };
+      }),
+    }],
+  };
+}
+
+async function runGoldenSemanticPipeline(
+  scenario: GoldenBriefScenario,
+  semanticOverride?: Partial<Pick<CampaignUnderstanding, "facts" | "constraints" | "questions" | "conflicts">>
+): Promise<CampaignUnderstanding> {
+  const result = await runCampaignIntelligencePipeline({
+    briefText: scenario.input.sourceDocuments.map((document) => document.rawText).join("\n\n"),
+    briefTextSource: "upload",
+    structuredParserOutput: structuredDocument(scenario.input.sourceDocuments[0].structuredBlocks),
+    campaignUnderstandingSources: scenario.input.sourceDocuments.map((document) => ({
+      id: document.id,
+      kind: document.kind,
+      rawText: document.rawText,
+      sourceDocument: {
+        id: document.id,
+        kind: document.kind,
+        blocks: structuredClone(document.structuredBlocks),
+      },
+    })),
+    profileExtractionAdapter: async () => ({
+      profile: createEmptyCampaignIntelligenceProfile(),
+      debug: {
+        systemPrompt: "recorded semantic-pipeline fixture",
+        userPrompt: "recorded semantic-pipeline fixture",
+        model: "recorded-fixture",
+        rawResponse: null,
+        heuristicFallback: true,
+      },
+    }),
+    semanticExtractionAdapter: {
+      facts: structuredClone(semanticOverride?.facts ?? scenario.understanding.facts),
+      constraints: structuredClone(semanticOverride?.constraints ?? scenario.understanding.constraints),
+      questions: structuredClone(semanticOverride?.questions ?? scenario.understanding.questions),
+      conflicts: structuredClone(semanticOverride?.conflicts ?? scenario.understanding.conflicts),
+    },
+  });
+  assert.ok(result.profile.campaignUnderstanding, "pipeline must retain Campaign Understanding in the profile envelope");
+  return result.profile.campaignUnderstanding;
+}
+
 function cloneScenario(id: string): CampaignUnderstanding {
   return structuredClone(GOLDEN_BRIEF_CORPUS.find((scenario) => scenario.id === id)!.understanding);
 }
@@ -46,8 +102,18 @@ test("golden brief corpus has fifteen structurally varied parser-ready scenarios
 
 for (const scenario of GOLDEN_BRIEF_CORPUS) {
   test(`golden corpus preserves semantic invariants: ${scenario.id}`, () => {
-    for (const assertion of scenario.assertions) assertScenarioAssertion(scenario, assertion);
+    for (const assertion of scenario.assertions) assertScenarioAssertion(scenario.understanding, assertion);
     assert.deepEqual(new Set(validateCampaignUnderstanding(scenario.understanding).map((issue) => issue.code)), new Set(scenario.expectedValidationIssueCodes));
+  });
+
+  test(`golden semantic pipeline preserves invariants: ${scenario.id}`, async () => {
+    const understanding = await runGoldenSemanticPipeline(scenario);
+    for (const assertion of scenario.assertions) assertScenarioAssertion(understanding, assertion);
+    assert.deepEqual(
+      new Set(validateCampaignUnderstanding(understanding).map((issue) => issue.code)),
+      new Set(scenario.expectedValidationIssueCodes)
+    );
+    assert.equal(deriveUnderstandingCoverage(understanding).unrepresentedMaterialSourceBlockIds.length, 0);
   });
 }
 
@@ -138,4 +204,37 @@ test("AI recommendations retain AI provenance even when source evidence exists",
   base.facts.push({ ...base.facts[0], id: "ai-recommended-mix", concept: "creator_mix_recommendation", origin: "AI_RECOMMENDED", disclosure: "AI recommendation based on source requirements." });
   assert.equal(base.facts.at(-1)?.origin, "AI_RECOMMENDED");
   assert.equal(validateCampaignUnderstanding(base).length, 0);
+});
+
+test("semantic extraction adapter rejects malformed output through the runtime parser", async () => {
+  const scenario = GOLDEN_BRIEF_CORPUS[0];
+  await assert.rejects(() => runGoldenSemanticPipeline(scenario, {
+    facts: [{ ...scenario.understanding.facts[0], origin: "NOT_A_PROVENANCE" } as never],
+  }));
+});
+
+test("semantic extraction adapter exposes invalid provenance and evidence to validation", async () => {
+  const scenario = GOLDEN_BRIEF_CORPUS[0];
+  const invalidEvidence = structuredClone(scenario.understanding.facts);
+  invalidEvidence[0].evidence[0].sourceBlockId = "missing-block";
+  const understanding = await runGoldenSemanticPipeline(scenario, {
+    facts: [{ ...invalidEvidence[0], origin: "LEGACY_UNVERIFIED" }, ...invalidEvidence.slice(1)],
+  });
+  const codes = new Set(validateCampaignUnderstanding(understanding).map((issue) => issue.code));
+  assert.ok(codes.has("UNKNOWN_EVIDENCE_BLOCK"));
+  assert.equal(understanding.facts[0].origin, "LEGACY_UNVERIFIED");
+});
+
+test("semantic extraction adapter surfaces low confidence, contradictions, and unknown material", async () => {
+  const lowConfidence = await runGoldenSemanticPipeline(GOLDEN_BRIEF_CORPUS[0], {
+    facts: [{ ...GOLDEN_BRIEF_CORPUS[0].understanding.facts[0], confidence: 0.1 }, ...GOLDEN_BRIEF_CORPUS[0].understanding.facts.slice(1)],
+  });
+  assert.equal(evaluateCampaignUnderstandingQualityGate(lowConfidence, { minimumConfidence: 0.5 }).status, "warning");
+
+  const contradictory = await runGoldenSemanticPipeline(GOLDEN_BRIEF_CORPUS.find((scenario) => scenario.id === "contradictory-requirements")!);
+  assert.ok(contradictory.conflicts.some((conflict) => conflict.status === "open"));
+  assert.equal(evaluateCampaignUnderstandingQualityGate(contradictory, { stage: "strategy" }).status, "blocked");
+
+  const unknown = await runGoldenSemanticPipeline(GOLDEN_BRIEF_CORPUS.find((scenario) => scenario.id === "unknown-material-requirement")!);
+  assert.ok(unknown.facts.some((fact) => fact.concept.startsWith("unclassified:") && fact.status === "needs_classification"));
 });

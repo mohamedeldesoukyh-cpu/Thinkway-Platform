@@ -32,6 +32,16 @@ export function confirmCampaignIntelligenceProfile(
     schemaVersion: 1,
     status: profile.status === "archived" ? "archived" : "saved",
     confirmedAt,
+    campaignUnderstanding: profile.campaignUnderstanding
+      ? {
+          ...profile.campaignUnderstanding,
+          confirmation: {
+            status: "confirmed",
+            confirmedFactIds: profile.campaignUnderstanding.facts.map((fact) => fact.id),
+            confirmedAt,
+          },
+        }
+      : undefined,
   };
 }
 
@@ -44,6 +54,12 @@ export function unconfirmCampaignIntelligenceProfile(
     status: profile.status === "archived" ? "archived" : "saved",
   };
   delete next.confirmedAt;
+  if (next.campaignUnderstanding) {
+    next.campaignUnderstanding = {
+      ...next.campaignUnderstanding,
+      confirmation: { status: "unconfirmed", confirmedFactIds: [] },
+    };
+  }
   return next;
 }
 

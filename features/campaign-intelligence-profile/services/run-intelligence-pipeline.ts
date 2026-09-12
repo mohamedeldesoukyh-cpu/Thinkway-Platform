@@ -8,9 +8,11 @@ import {
   normalizeFromProfile,
 } from "./normalization";
 import { applyStructuredBriefFields } from "./structured-brief-parser/extract-profile-fields";
+import { buildCampaignUnderstanding, type CampaignUnderstandingSourceInput } from "./campaign-understanding/build-campaign-understanding";
 import type { BriefTextSource } from "./resolve-brief-text";
 import type { StructuredBriefDocument } from "./structured-brief-parser/types";
 import type { CampaignIntelligenceProfile } from "../types/profile";
+import type { CampaignUnderstanding } from "../types/campaign-understanding";
 import type {
   CampaignIntelligenceExtractionMode,
   CampaignIntelligencePipelineDebug,
@@ -21,6 +23,18 @@ export type RunCampaignIntelligencePipelineInput = {
   briefText: string;
   briefTextSource: BriefTextSource | "upload";
   structuredParserOutput?: StructuredBriefDocument;
+  /** Additive source support; callers may supply appendices/legal attachments without a second pipeline. */
+  campaignUnderstandingSources?: CampaignUnderstandingSourceInput[];
+  /** Deterministic regression seam; production never supplies this. */
+  semanticExtractionAdapter?: Pick<CampaignUnderstanding, "facts" | "constraints" | "questions" | "conflicts">;
+  /**
+   * Recorded CIP extraction used by semantic-pipeline regression tests. Leaving
+   * this undefined retains the production LLM/heuristic extraction behavior.
+   */
+  profileExtractionAdapter?: (briefText: string) => Promise<{
+    profile: CampaignIntelligenceProfile;
+    debug: LlmExtractionDebug;
+  }>;
 };
 
 export type RunCampaignIntelligencePipelineResult = {
@@ -50,8 +64,9 @@ export async function runCampaignIntelligencePipeline(
   input: RunCampaignIntelligencePipelineInput
 ): Promise<RunCampaignIntelligencePipelineResult> {
   const briefText = input.briefText.trim();
-  const { profile: extracted, debug: llmDebug } =
-    await extractCampaignIntelligenceProfileWithDebug(briefText);
+  const { profile: extracted, debug: llmDebug } = input.profileExtractionAdapter
+    ? await input.profileExtractionAdapter(briefText)
+    : await extractCampaignIntelligenceProfileWithDebug(briefText);
 
   const withBriefGaps = fillBriefSourcedHeuristicGaps(extracted, briefText);
   const enriched = applyStructuredBriefFields(withBriefGaps, input.structuredParserOutput);
@@ -74,6 +89,20 @@ export async function runCampaignIntelligencePipeline(
         }
       : normalizedProfile.structuredBrief,
   };
+  const campaignUnderstanding = buildCampaignUnderstanding({
+    profile: merged,
+    sourceDocuments:
+      input.campaignUnderstandingSources ??
+      [
+        {
+          id: "source-brief",
+          kind: "brief",
+          document: input.structuredParserOutput,
+          rawText: briefText,
+        },
+      ],
+    semanticExtraction: input.semanticExtractionAdapter,
+  });
 
   const pipelineDebug: CampaignIntelligencePipelineDebug = {
     capturedAt: new Date().toISOString(),
@@ -103,6 +132,7 @@ export async function runCampaignIntelligencePipeline(
   return {
     profile: {
       ...merged,
+      campaignUnderstanding,
       pipelineDebug,
     },
     pipelineDebug,

@@ -661,6 +661,14 @@ export async function confirmCampaignBriefUploadAction(input: {
       briefText: resolved.text,
       briefTextSource: resolved.source,
       structuredParserOutput,
+      campaignUnderstandingSources: [
+        {
+          id: documentId,
+          kind: "brief",
+          document: structuredParserOutput,
+          rawText: resolved.text,
+        },
+      ],
     });
 
     const result = await finalizeCampaignBriefUpload({
@@ -728,6 +736,14 @@ export async function analyzeCampaignBriefAction(
       briefText: resolved.text,
       briefTextSource: resolved.source,
       structuredParserOutput,
+      campaignUnderstandingSources: [
+        {
+          id: doc?.id ?? "source-brief",
+          kind: "brief",
+          document: structuredParserOutput,
+          rawText: resolved.text,
+        },
+      ],
     });
 
     await elevatedUpdateCampaignIntelligenceProfile(supabase, profileId, {
