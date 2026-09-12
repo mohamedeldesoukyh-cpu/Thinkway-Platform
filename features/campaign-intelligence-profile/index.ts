@@ -3,6 +3,45 @@ export type {
   CampaignIntelligenceProfileRow,
   CampaignSearchCriterion,
 } from "./types/profile";
+export type {
+  CampaignConstraint,
+  CampaignUnderstanding,
+  CampaignUnderstandingStage,
+  EvidenceReference,
+  FactOrigin,
+  FactScope,
+  FactDerivation,
+  QualityGateAssessment,
+  QualityGateDimension,
+  QualityGateStatus,
+  SemanticFact,
+  ScopeDimension,
+  ScopeSelector,
+  SourceMaterialBlock,
+  SourceDocument,
+  StageQualityGateRequirements,
+  StageQualityGateResult,
+  UnderstandingConfirmation,
+  UnderstandingConflict,
+  UnderstandingCoverage,
+  UnderstandingQuestion,
+  UnderstandingValidationIssue,
+  RequirementCondition,
+  RequirementConditionClause,
+} from "./types/campaign-understanding";
+export { CAMPAIGN_UNDERSTANDING_SCHEMA_VERSION } from "./types/campaign-understanding";
+export { evaluateCampaignUnderstandingQualityGate } from "./services/campaign-understanding/quality-gate";
+export {
+  deriveUnderstandingCoverage,
+  hasSourceEvidence,
+  issuesForStage,
+  validateCampaignUnderstanding,
+} from "./services/campaign-understanding/validation";
+export {
+  campaignUnderstandingSchema,
+  parseCampaignUnderstanding,
+  safeParseCampaignUnderstanding,
+} from "./services/campaign-understanding/campaign-understanding-schema";
 export { profileToCampaignFacts } from "./services/profile-to-facts";
 export {
   applyConfirmedCampaignFactsToCampaignObject,
