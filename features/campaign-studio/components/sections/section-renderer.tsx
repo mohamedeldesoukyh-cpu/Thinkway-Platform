@@ -174,7 +174,7 @@ export function SectionRenderer({
     case "creative-concepts":
       return <CreativeConceptsSection {...common} />;
     case "content-plan":
-      return <ContentPlanSection {...common} studioDraft={studioDraft} />;
+      return <ContentPlanSection {...common} studioDraft={studioDraft} conversationId={conversationId} />;
     case "creator-mix":
       return <CreatorMixSection {...common} />;
     case "why-ai":

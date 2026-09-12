@@ -1,16 +1,10 @@
-import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
   ContentPlanItem,
   CreativeConcept,
-  CreatorsSectionData,
   StudioDraftState,
 } from "@/features/campaign-intelligence/types/section-schemas";
-import { getCampaignFacts, buildCreatorMixFromFacts } from "@/features/campaign-director/facts/facts-display-bridge";
-import { creatorDecisionStatus, isCreatorRejected } from "./creator-decision-status";
-import { reconcileCreatorSlateReasoning } from "./creator-slate-integrity";
-import { previewCreatorsSectionFromDraft } from "./studio-draft-preview";
-import { creatorGroupingKey } from "./studio-creator-slate-split";
-import { resolveCampaignDurationWeeks } from "./timeline-duration";
+import type { CampaignObject } from "@/features/campaign-intelligence";
+import { buildContentContext, type ContentContext } from "./content-context";
 
 const PLATFORM_DELIVERABLE: Record<string, string> = {
   instagram: "Reel",
@@ -62,30 +56,18 @@ function kpiFor(factsKpis: string[], role: string, index: number): string {
  * Per-creator influencer content plan from Strategy + recommended slate.
  * Generic industry templates are not used when a slate exists.
  */
+export function deriveInfluencerContentPlan(context: ContentContext): ContentPlanItem[];
+/** @deprecated Live resolution and regeneration pass ContentContext explicitly. */
+export function deriveInfluencerContentPlan(campaignObject: CampaignObject | undefined, draft?: StudioDraftState): ContentPlanItem[];
 export function deriveInfluencerContentPlan(
-  campaignObject: CampaignObject | undefined,
-  /**
-   * Staged Studio edits, when the caller has them.
-   *
-   * The Creators screen renders `previewCreatorsSectionFromDraft`, so a staged
-   * add / remove / replace shows there immediately. Content read the raw
-   * persisted object, so the same campaign reported seven creators on Creators
-   * and six in Content — one staged change apart. Given the draft, Content
-   * reads the SAME projection. `outdatedSectionsForDraft` still marks Content
-   * outdated until Apply, which is what tells the operator these edits are not
-   * committed; the two screens no longer disagree about who is on the slate.
-   */
+  input: ContentContext | CampaignObject | undefined,
   draft?: StudioDraftState
 ): ContentPlanItem[] {
-  if (!campaignObject) return [];
-  const creatorsData = (
-    draft && draft.changes.length > 0
-      ? previewCreatorsSectionFromDraft(campaignObject, draft)
-      : ((campaignObject.sections.creators.data ?? {}) as CreatorsSectionData)
-  ) as CreatorsSectionData;
-  const slateById = new Map(
-    (creatorsData.slateIntelligence?.recommendations ?? []).map((row) => [row.creatorId, row])
-  );
+  const context = input && "sections" in input
+    ? buildContentContext({ campaignObject: input, draft })
+    : input;
+  if (!context) return [];
+  if (context.readiness.status === "BLOCKED") return [];
   /**
    * The canonical slate — `recommendations.creatorIds` — minus the creators the
    * operator rejected.
@@ -102,80 +84,49 @@ export function deriveInfluencerContentPlan(
    * `vendorDecisions` — so the rejection filter stays, one rule for Content and
    * for commercial execution.
    */
-  const reasoning = reconcileCreatorSlateReasoning({
-    creatorIds: creatorsData.recommendations?.creatorIds ?? [],
-    selectedReasoning: creatorsData.recommendations?.selectedReasoning ?? [],
-    normalize: creatorGroupingKey,
-  }).filter(
-    (entry) => entry.creatorId?.trim() && !isCreatorRejected(creatorsData.vendorDecisions, entry.creatorId)
-  );
-  if (reasoning.length === 0) return [];
+  const creators = context.creators;
+  if (creators.length === 0) return [];
+  const concepts = context.strategy.creativeConcepts ?? [];
+  const mix = context.strategy.creatorMix?.length ? context.strategy.creatorMix : [];
+  const durationWeeks = context.durationWeeks ?? creators.length;
+  const platforms = context.platforms.filter((item) => item.priority === "primary" || item.priority === "secondary").map((item) => item.platform);
+  const objective = context.objective?.trim() || "Campaign objective";
+  const contentStrategy = context.objective?.trim() ? `Creator content must advance ${context.objective.trim()} on ${platforms.join(" + ") || "confirmed platforms"}.` : undefined;
 
-  const facts = getCampaignFacts(campaignObject);
-  const strategyText =
-    typeof campaignObject.sections.strategy.content === "string"
-      ? campaignObject.sections.strategy.content.trim()
-      : "";
-  const contentStrategy = facts?.objective?.trim()
-    ? `Creator content must advance ${facts.objective.trim()} on ${(facts.platforms ?? []).join(" + ") || "priority platforms"}.`
-    : strategyText.slice(0, 280);
-  const strategyData = (campaignObject.sections.strategy.data ?? {}) as {
-    creativeConcepts?: CreativeConcept[];
-    creatorMix?: Array<{ tier: string }>;
-  };
-  const concepts = strategyData.creativeConcepts ?? [];
-  const mix = strategyData.creatorMix?.length
-    ? strategyData.creatorMix
-    : facts
-      ? buildCreatorMixFromFacts(facts)
-      : [];
-  const durationWeeks =
-    facts?.durationWeeks ??
-    resolveCampaignDurationWeeks(
-      typeof campaignObject.sections.summary.content === "string"
-        ? campaignObject.sections.summary.content
-        : "",
-      typeof campaignObject.sections.strategy.content === "string"
-        ? campaignObject.sections.strategy.content
-        : ""
-    ) ??
-    reasoning.length;
-  const platforms = facts?.platforms?.length ? facts.platforms : ["Instagram"];
-  const objective = facts?.objective?.trim() || "Campaign objective";
-  const deliverables = facts?.deliverables ?? [];
-  const kpis = facts?.kpis ?? [];
-
-  return reasoning.map((entry, index) => {
-    const platform = entry.platform?.trim() || platforms[index % platforms.length]!;
-    const slate = slateById.get(entry.creatorId);
-    const concept = conceptFor(concepts, slate?.contentPillar, index);
+  const plan: Array<ContentPlanItem | null> = creators.map((creator, index) => {
+    const platform = creator.platform?.trim() || platforms[index % platforms.length];
+    if (!platform) return null;
+    const concept = conceptFor(concepts, undefined, index);
     const role =
-      entry.expectedRole?.trim() ||
-      slate?.role ||
+      creator.creatorRole ||
       mix[index % Math.max(mix.length, 1)]?.tier ||
       "Creator";
     const week = (index % Math.max(1, durationWeeks)) + 1;
     return {
       platform,
-      contentType: deliverableFor(platform, deliverables),
+      contentType: deliverableFor(platform, context.deliverables),
       creatorTier: role,
       quantity: 1,
       postingDate: `Week ${week}`,
       objective,
-      creatorId: entry.creatorId,
+      creatorId: creator.creatorId,
       // Every Content creator carries a defined status, so no row can read as
       // an approved campaign creator when it is only a proposal.
-      creatorStatus: creatorDecisionStatus(creatorsData.vendorDecisions, entry.creatorId),
-      creatorName: entry.displayName?.trim() || entry.handle || entry.creatorId,
+      creatorStatus: creator.status,
+      creatorName: creator.creatorName,
       creatorRole: role,
-      contentConcept: concept?.bigIdea || slate?.contentPillar || concept?.name || contentStrategy,
-      hook: concept?.hook || entry.whySelected,
-      keyMessage: concept?.contentTheme || concept?.keyVisual || contentStrategy,
-      cta: concept?.cta || "Drive the campaign action from this creator’s audience.",
-      expectedKpi: kpiFor(kpis, role, index),
+      contentConcept: concept?.bigIdea || concept?.name || contentStrategy,
+      hook: concept?.hook || creator.whySelected,
+      keyMessage: concept?.contentTheme || concept?.keyVisual || context.keyMessages[0] || contentStrategy,
+      // A confirmed CTA always wins. The legacy compatibility value is not
+      // source-stated: it preserves existing readable campaigns that predate
+      // Campaign Understanding while the context remains explicitly WARNING.
+      cta: context.cta ?? concept?.cta ?? (context.legacyCompatibility ? "Learn more" : undefined),
+      expectedKpi: kpiFor(context.kpis, role, index),
       strategyTrace: contentStrategy
         ? `Strategy: ${contentStrategy}`
         : "Strategy: confirm content strategy in Campaign Intelligence.",
     };
   });
+  return plan.filter((item): item is ContentPlanItem => item !== null);
 }

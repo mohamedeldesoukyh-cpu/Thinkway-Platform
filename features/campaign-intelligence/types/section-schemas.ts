@@ -673,6 +673,20 @@ export type BudgetSectionExtras = {
 export type TimelineSectionExtras = {
   weekDetails?: TimelineWeekDetail[];
   contentPlan?: ContentPlanItem[];
+  /** Compact Content boundary state. Full ContentContext is derived on read. */
+  contentPlanState?: {
+    readiness: {
+      status: "READY" | "WARNING" | "BLOCKED";
+      blockers: string[];
+      warnings: string[];
+    };
+    strategyBasisStatus: import("@/features/campaign-director/services/strategy-basis").StrategyBasisStatus;
+    campaignUnderstanding?: {
+      schemaVersion: number;
+      confirmationStatus: import("@/features/campaign-intelligence-profile/types/campaign-understanding").CampaignUnderstanding["confirmation"]["status"];
+      confirmedFactIds: string[];
+    };
+  };
   creatorActivationTimeline?: CreatorActivationTimeline;
 };
 

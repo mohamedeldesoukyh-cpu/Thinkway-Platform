@@ -1,6 +1,8 @@
 "use server";
 
 import { saveCampaignObject } from "@/features/campaign-intelligence/services/campaign-object-store";
+import { getCampaignIntelligenceProfileForConversation } from "@/features/campaign-intelligence-profile/services/profile-repository";
+import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intelligence-profile/services/normalize-profile";
 import { serializeCampaignObject } from "@/features/campaign-intelligence";
 import type {
   StudioDraftChange,
@@ -222,6 +224,13 @@ export async function applyStudioDraftAction(
 > {
   try {
     const { supabase, userId } = await requireStudioUser();
+    const intelligenceRow = await getCampaignIntelligenceProfileForConversation(
+      supabase,
+      input.conversationId
+    );
+    const campaignUnderstanding = intelligenceRow
+      ? normalizeCampaignIntelligenceProfile(intelligenceRow.profile).campaignUnderstanding
+      : undefined;
     let removedCreatorIds: string[] = [];
     let addedCreatorIds: string[] = [];
 
@@ -244,6 +253,7 @@ export async function applyStudioDraftAction(
 
         return commitCreatorSlateAndRegeneratePlan(supabase, result.campaignObject, {
           unenrichedCreatorIds,
+          campaignUnderstanding,
         });
       }
     );

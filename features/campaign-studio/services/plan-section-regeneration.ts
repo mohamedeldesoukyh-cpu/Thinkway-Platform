@@ -1,4 +1,5 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { CampaignUnderstanding } from "@/features/campaign-intelligence-profile/types/campaign-understanding";
 import type {
   BudgetSectionData,
   CreatorsSectionData,
@@ -15,7 +16,7 @@ import {
   deriveCreativeConcepts,
   deriveWhyAiInsights,
 } from "@/features/campaign-studio/services/presentation-intelligence";
-import { deriveInfluencerContentPlan } from "./influencer-content-plan";
+import { resolveContentPlanState } from "./section-data-resolver";
 
 import type { SearchCreatorCardItem } from "./creator-platform-utils";
 import { estimateCreatorPostFee } from "./creator-fee-estimator";
@@ -221,10 +222,13 @@ function patchKpiForecastFromSlate(
   };
 }
 
-function patchContentPlanFromSlate(campaignObject: CampaignObject): CampaignObject {
+function patchContentPlanFromSlate(
+  campaignObject: CampaignObject,
+  campaignUnderstanding?: CampaignUnderstanding
+): CampaignObject {
   const timelineData = (campaignObject.sections.timeline.data ?? {}) as TimelineSectionExtras;
-  const contentPlan = deriveInfluencerContentPlan(campaignObject);
-  if (contentPlan.length === 0) return campaignObject;
+  const resolved = resolveContentPlanState(campaignObject, undefined, campaignUnderstanding);
+  if (!resolved) return campaignObject;
 
   return {
     ...campaignObject,
@@ -234,7 +238,15 @@ function patchContentPlanFromSlate(campaignObject: CampaignObject): CampaignObje
         ...campaignObject.sections.timeline,
         data: {
           ...timelineData,
-          contentPlan,
+          // A blocked state deliberately replaces a prior plan: retained rows
+          // would look actionable after the authority that produced them is no
+          // longer safe to consume.
+          contentPlan: resolved.items,
+          contentPlanState: {
+            readiness: resolved.context.readiness,
+            strategyBasisStatus: resolved.context.strategy.basisStatus,
+            ...(resolved.context.campaignUnderstanding ? { campaignUnderstanding: resolved.context.campaignUnderstanding } : {}),
+          },
         },
       },
     },
@@ -309,7 +321,8 @@ function factsToActualMix(
  */
 export function regeneratePlanSectionsFromSlate(
   campaignObject: CampaignObject,
-  cards: SearchCreatorCardItem[]
+  cards: SearchCreatorCardItem[],
+  campaignUnderstanding?: CampaignUnderstanding
 ): CampaignObject {
   const creatorsData = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
   const slateIntelligence = creatorsData.slateIntelligence;
@@ -328,7 +341,7 @@ export function regeneratePlanSectionsFromSlate(
   next = redistributeActivationTimeline(next, cards, mainIds);
   next = patchBudgetFromSlate(next, cards);
   next = patchKpiForecastFromSlate(next, cards);
-  next = patchContentPlanFromSlate(next);
+  next = patchContentPlanFromSlate(next, campaignUnderstanding);
   next = patchDirectorInsightsFromSlate(next, cards.length);
   return next;
 }

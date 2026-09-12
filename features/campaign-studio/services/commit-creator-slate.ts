@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import type { CampaignUnderstanding } from "@/features/campaign-intelligence-profile/types/campaign-understanding";
 import {
   markStaleCampaignOutputs,
   regenerateStaleCampaignOutputs,
@@ -20,7 +21,7 @@ import { normalizeCreatorId } from "./studio-draft";
 export async function commitCreatorSlateAndRegeneratePlan(
   supabase: SupabaseClient,
   campaignObject: CampaignObject,
-  options: { unenrichedCreatorIds?: string[] } = {}
+  options: { unenrichedCreatorIds?: string[]; campaignUnderstanding?: CampaignUnderstanding } = {}
 ): Promise<CampaignObject> {
   const reoptimized = await reoptimizeCampaignAfterApply(supabase, campaignObject, {
     unenrichedCreatorIds: options.unenrichedCreatorIds,
@@ -52,7 +53,7 @@ export async function commitCreatorSlateAndRegeneratePlan(
         const cards = result.creators.map((c) =>
           mapBrowseCreatorToSearchResult(c, facts?.platforms)
         );
-        next = regeneratePlanSectionsFromSlate(reoptimized, cards);
+        next = regeneratePlanSectionsFromSlate(reoptimized, cards, options.campaignUnderstanding);
       } catch {
         next = reoptimized;
       }

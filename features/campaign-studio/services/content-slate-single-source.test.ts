@@ -242,7 +242,7 @@ test("Content keeps the slate's order and each creator's own role", () => {
 // Source contract: no second creator list in the Content path.
 
 test("the Content plan reads only the campaign's recommendation rows", () => {
-  const source = readFileSync("features/campaign-studio/services/influencer-content-plan.ts", "utf8");
+  const source = readFileSync("features/campaign-studio/services/content-context.ts", "utf8");
   assert.match(source, /recommendations\?\.selectedReasoning/);
   // Never the pool, never a top-N of creators, never ranked search output.
   // (`strategyText.slice(0, 280)` truncates narrative text, not the slate.)

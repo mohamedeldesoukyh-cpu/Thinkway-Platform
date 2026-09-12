@@ -54,6 +54,8 @@ import {
 } from "./presentation-intelligence";
 import { detectIndustryFromBrief } from "./industry-intelligence";
 import { deriveInfluencerContentPlan } from "./influencer-content-plan";
+import { buildContentContext, type ContentContext } from "./content-context";
+import type { CampaignUnderstanding } from "@/features/campaign-intelligence-profile/types/campaign-understanding";
 import {
   normalizeBudgetAllocationPercents,
 } from "./budget-allocation";
@@ -1008,15 +1010,32 @@ export function resolveCreativeConcepts(
   return readStrategyData(campaignObject)?.creativeConcepts ?? [];
 }
 
-export function resolveContentPlan(
+export type ContentPlanResolution = {
+  context: ContentContext;
+  items: ContentPlanItem[];
+};
+
+/** Shared live/read boundary; callers explicitly supply confirmed understanding. */
+export function resolveContentPlanState(
   campaignObject: CampaignObject | undefined,
   /** Staged Studio edits, so Content reads the slate the Creators screen shows. */
-  draft?: StudioDraftState
-): ContentPlanItem[] {
-  const influencerPlan = deriveInfluencerContentPlan(campaignObject, draft);
-  if (influencerPlan.length > 0) return influencerPlan;
+  draft?: StudioDraftState,
+  campaignUnderstanding?: CampaignUnderstanding
+): ContentPlanResolution | undefined {
+  if (!campaignObject) return undefined;
+  const context = buildContentContext({ campaignObject, draft, campaignUnderstanding });
+  const influencerPlan = deriveInfluencerContentPlan(context);
+  if (influencerPlan.length > 0 || context.readiness.status === "BLOCKED") return { context, items: influencerPlan };
   const stored = readTimelineExtras(campaignObject)?.contentPlan ?? [];
-  return stored.filter((item) => Boolean(item.creatorId));
+  return { context, items: stored.filter((item) => Boolean(item.creatorId)) };
+}
+
+export function resolveContentPlan(
+  campaignObject: CampaignObject | undefined,
+  draft?: StudioDraftState,
+  campaignUnderstanding?: CampaignUnderstanding
+): ContentPlanItem[] {
+  return resolveContentPlanState(campaignObject, draft, campaignUnderstanding)?.items ?? [];
 }
 
 export function resolveCreatorMix(
