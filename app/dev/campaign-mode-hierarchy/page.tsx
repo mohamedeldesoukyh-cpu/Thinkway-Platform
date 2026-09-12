@@ -7,6 +7,7 @@
 
 import { useMemo, useState } from "react";
 
+import { ConfirmActionProvider } from "@/components/shared/confirm-action-provider";
 import { CampaignStudioPanel } from "@/features/ai-workspace/components/campaign-studio-panel";
 import type { AiMessage } from "@/features/ai-workspace/types";
 import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
@@ -88,14 +89,16 @@ export default function CampaignModeHierarchyPreviewPage() {
       </div>
       <div className="min-h-0 flex-1 overflow-hidden p-3">
         <div className="h-full overflow-hidden rounded-2xl border border-[#CFD6E4] bg-white shadow-lg">
-          <CampaignStudioPanel
-            key={viewHint ?? "default"}
-            message={message}
-            conversationId={HIERARCHY_PREVIEW_CONVERSATION_ID}
-            variant="main"
-            initialView={viewHint}
-            onSendMessage={() => {}}
-          />
+          <ConfirmActionProvider>
+            <CampaignStudioPanel
+              key={viewHint ?? "default"}
+              message={message}
+              conversationId={HIERARCHY_PREVIEW_CONVERSATION_ID}
+              variant="main"
+              initialView={viewHint}
+              onSendMessage={() => {}}
+            />
+          </ConfirmActionProvider>
         </div>
       </div>
     </div>
