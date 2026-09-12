@@ -12,6 +12,12 @@ import type { AiMessage } from "@/features/ai-workspace/types";
 import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
 
 const HIERARCHY_PREVIEW_CONVERSATION_ID = "00000000-0000-4000-8000-000000000002";
+const HIERARCHY_PREVIEW_CREATORS = [
+  { id: "00000000-0000-4000-8000-000000000011", name: "Nour Star", tier: "Celebrity" },
+  { id: "00000000-0000-4000-8000-000000000012", name: "Layla Macro", tier: "Macro" },
+  { id: "00000000-0000-4000-8000-000000000013", name: "Omar Macro", tier: "Macro" },
+  { id: "00000000-0000-4000-8000-000000000014", name: "Sara Micro", tier: "Micro" },
+];
 
 export default function CampaignModeHierarchyPreviewPage() {
   const [viewHint, setViewHint] = useState<
@@ -20,6 +26,7 @@ export default function CampaignModeHierarchyPreviewPage() {
 
   const message = useMemo((): AiMessage => {
     const campaignObject = buildCampaignObjectFixture({
+      creators: HIERARCHY_PREVIEW_CREATORS,
       facts: {
         brandName: "Tafareeh Tea",
         clientName: "Tafareeh",
