@@ -36,11 +36,14 @@ export function VendorDiscoverySection({
   }
 
   return (
-    <div className="min-w-0 space-y-3">
-      <div className="rounded-xl border border-[#0057FF]/20 bg-[#0057FF]/5 px-3 py-2.5">
-        <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#0057FF]">
-          {sufficiency.title}
-        </p>
+    <div className="min-w-0 space-y-2">
+      <div className="rounded-xl border border-[#0057FF]/20 bg-[#0057FF]/5 px-3 py-2">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-[10px] font-extrabold uppercase tracking-wide text-[#0057FF]">
+            Discovery · {sufficiency.title}
+          </p>
+          <p className="text-[10px] font-semibold text-muted-foreground">Next: {sufficiency.nextAction}</p>
+        </div>
         {/*
           The single Discovery explanation on the Creators screen.
           The header block above carries the numbers — required, on slate,
@@ -48,15 +51,12 @@ export function VendorDiscoverySection({
           Recommended quantity N" line that used to sit here repeated all three
           of them one block later.
         */}
-        <p className="mt-1 text-[12px] text-foreground">{sufficiency.detail}</p>
+        <p className="mt-0.5 text-[11px] text-foreground">{sufficiency.detail}</p>
         {sufficiency.missingIntelligence.length > 0 ? (
           <p className="mt-1 text-[11px] text-amber-800 dark:text-amber-200">
             Missing intelligence: {sufficiency.missingIntelligence.slice(0, 4).join("; ")}
           </p>
         ) : null}
-        <p className="mt-1 text-[11px] font-semibold text-foreground">
-          Next: {sufficiency.nextAction}
-        </p>
       </div>
 
       {/*

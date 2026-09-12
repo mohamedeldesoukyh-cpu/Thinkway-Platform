@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useMemo, useState } from "react";
 import {
   CheckIcon,
+  ChevronDownIcon,
   Columns2Icon,
   GitMergeIcon,
   ListRestartIcon,
@@ -506,6 +507,7 @@ function VendorCardBlock({
   observeCreator: (creatorId: string | null | undefined) => (node: HTMLElement | null) => void;
 }) {
   const refMode = useStudioRefMode();
+  const [advancedOpen, setAdvancedOpen] = useState(false);
   const decision = vendor.id ? vendorDecisions[vendor.id] : undefined;
   const isPending = pendingCreatorId === vendor.id;
   const draftChange = draftChangeForCreator(draft, vendor.id);
@@ -514,6 +516,9 @@ function VendorCardBlock({
   const pendingReject = draftChange?.kind === "reject_creator";
   const pendingPromote = draftChange?.kind === "promote_main";
   const pendingDemote = draftChange?.kind === "demote_alternative";
+  const hasPendingChange = Boolean(
+    pendingRemoval || pendingApprove || pendingReject || pendingPromote || pendingDemote
+  );
   // ONE decision object per card. The pill, the Why, the Evidence and the
   // group this card sits in all read it.
   const grounding = resolveVendorGrounding(
@@ -723,6 +728,26 @@ function VendorCardBlock({
             </div>
           </div>
           <div className={STUDIO_REF_CLASSES.vendorBadges}>
+            {hasPendingChange ? (
+              <span className={cn(STUDIO_REF_CLASSES.creatorState, STUDIO_REF_CLASSES.creatorStatePending)}>
+                Pending change
+              </span>
+            ) : null}
+            {decisionState.approved ? (
+              <span className={cn(STUDIO_REF_CLASSES.creatorState, STUDIO_REF_CLASSES.creatorStateApproved)}>
+                Approved
+              </span>
+            ) : null}
+            {decisionState.selected ? (
+              <span className={cn(STUDIO_REF_CLASSES.creatorState, STUDIO_REF_CLASSES.creatorStateSelected)}>
+                Selected
+              </span>
+            ) : null}
+            {vendor.slateRole === "maybe" ? (
+              <span className={cn(STUDIO_REF_CLASSES.creatorState, STUDIO_REF_CLASSES.creatorStateAlternative)}>
+                Alternative
+              </span>
+            ) : null}
             {vendor.tier ? (
               <span className={cn(STUDIO_REF_CLASSES.vbadge, STUDIO_REF_CLASSES.vbadgeTier)}>
                 {vendor.tier}
@@ -760,14 +785,28 @@ function VendorCardBlock({
           ) : null}
         </div>
 
-        <StudioPlanningIntelligenceStrip decision={campaignDecision} />
-
-        <div className={STUDIO_REF_CLASSES.vendorScores}>
-          {grounding.factors.slice(0, 5).map((f) => (
-            <span key={f.factor} className={STUDIO_REF_CLASSES.scoreChip} title={f.reason}>
-              {f.factor} {f.score}
-            </span>
-          ))}
+        <div className={STUDIO_REF_CLASSES.creatorAdvanced}>
+          <button
+            type="button"
+            className={STUDIO_REF_CLASSES.creatorAdvancedToggle}
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen((open) => !open)}
+          >
+            {advancedOpen ? "Hide planning evidence" : "Show planning evidence"}
+            <ChevronDownIcon className={cn("ml-1 inline size-3 transition-transform", advancedOpen && "rotate-180")} />
+          </button>
+          {advancedOpen ? (
+            <div className="mt-2">
+              <StudioPlanningIntelligenceStrip decision={campaignDecision} />
+              <div className={STUDIO_REF_CLASSES.vendorScores}>
+                {grounding.factors.slice(0, 5).map((f) => (
+                  <span key={f.factor} className={STUDIO_REF_CLASSES.scoreChip} title={f.reason}>
+                    {f.factor} {f.score}
+                  </span>
+                ))}
+              </div>
+            </div>
+          ) : null}
         </div>
 
         <div className={STUDIO_REF_CLASSES.vendorActions}>{actionButtons}</div>
@@ -1978,6 +2017,7 @@ export function VendorRecommendationsSection({
       generating={generating}
       addingApproved={addingApproved}
       canAct={canAct}
+      hasPendingChanges={draft.changes.some((change) => change.kind !== "shortlist_creator")}
       className="xl:sticky xl:top-2 xl:max-h-[calc(100vh-140px)]"
     />
   );
@@ -2218,16 +2258,32 @@ export function VendorRecommendationsSection({
           </Link>
         </p>
       ) : null}
+      <div className={refMode ? STUDIO_REF_CLASSES.creatorWorkspaceHead : "flex items-end justify-between gap-3 px-0.5"}>
+        <div>
+          <p className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">Creator decisions</p>
+          <h3>Campaign Slate</h3>
+        </div>
+        <p className="text-[11px] text-muted-foreground">Actions stage decisions; shortlist generation is separate.</p>
+      </div>
       {visibleGroupItems.map((group) => (
         <div
           key={group.title ?? "all"}
           className={refMode ? STUDIO_REF_CLASSES.vendorList : STUDIO_CLASSES.vendorList}
         >
-          {group.title ? (
-            <p className="px-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase">
-              {group.title}
-            </p>
-          ) : null}
+          <div className={refMode ? STUDIO_REF_CLASSES.creatorGroupHead : "px-0.5 text-[10px] font-extrabold tracking-wide text-muted-foreground uppercase"}>
+            <span>
+              {group.kind === "needs_review"
+                ? "Needs review"
+                : group.kind === "alternatives"
+                  ? "Alternatives"
+                  : group.title ?? "Campaign Slate"}
+            </span>
+            {group.kind === "alternatives" ? (
+              <span className={refMode ? STUDIO_REF_CLASSES.creatorGroupNote : "text-[10px] font-normal normal-case"}>
+                Discovery candidates
+              </span>
+            ) : null}
+          </div>
           {group.items.map((vendor, index) => (
             <VendorCardBlock
               key={vendor.id ?? `${vendor.handle}-${index}`}

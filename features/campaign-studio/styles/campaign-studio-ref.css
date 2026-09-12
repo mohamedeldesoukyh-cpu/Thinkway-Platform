@@ -1317,6 +1317,132 @@
   gap: 6px;
 }
 
+/* Creator decision workspace */
+.campaign-studio-ref .cs-creator-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--cs-border);
+  border-radius: var(--cs-radius-lg);
+  background: var(--cs-border);
+}
+
+.campaign-studio-ref .cs-creator-summary-item {
+  min-width: 0;
+  padding: 11px 13px;
+  background: var(--cs-white);
+}
+
+.campaign-studio-ref .cs-creator-summary-label,
+.campaign-studio-ref .cs-creator-group-note {
+  color: var(--cs-text-3);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+}
+
+.campaign-studio-ref .cs-creator-summary-value {
+  display: block;
+  margin-top: 3px;
+  color: var(--cs-text);
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.campaign-studio-ref .cs-creator-workspace-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 2px 2px;
+}
+
+.campaign-studio-ref .cs-creator-workspace-head h3 {
+  margin: 0;
+  color: var(--cs-text);
+  font-size: 16px;
+  font-weight: 750;
+}
+
+.campaign-studio-ref .cs-creator-group-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px;
+  color: var(--cs-text);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.campaign-studio-ref .cs-creator-state {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 10px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.campaign-studio-ref .cs-creator-state.approved { background: var(--cs-green-bg); color: var(--cs-green-text); }
+.campaign-studio-ref .cs-creator-state.selected { background: var(--cs-blue-light); color: var(--cs-blue-text); }
+.campaign-studio-ref .cs-creator-state.pending { background: var(--cs-amber-bg); color: var(--cs-amber-text); }
+.campaign-studio-ref .cs-creator-state.alternative { background: var(--cs-surface); color: var(--cs-text-2); }
+
+.campaign-studio-ref .cs-creator-advanced {
+  margin-top: 10px;
+  border-top: 1px solid var(--cs-border);
+  padding-top: 10px;
+}
+
+.campaign-studio-ref .cs-creator-advanced-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--cs-blue-text);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 0;
+}
+
+.campaign-studio-ref .cs-selection-panel {
+  border: 1px solid color-mix(in srgb, var(--cs-blue) 22%, var(--cs-border));
+  border-radius: var(--cs-radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 87, 255, .06);
+}
+
+.campaign-studio-ref .cs-selection-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.campaign-studio-ref .cs-selection-count {
+  border-radius: 999px;
+  background: var(--cs-blue-light);
+  color: var(--cs-blue-text);
+  font-size: 11px;
+  font-weight: 750;
+  padding: 3px 8px;
+}
+
+.campaign-studio-ref .cs-selection-section { border-color: var(--cs-border); }
+.campaign-studio-ref .cs-selection-persist-note {
+  border-radius: var(--cs-radius);
+  background: var(--cs-blue-light);
+  color: var(--cs-blue-text);
+  font-size: 11px;
+  line-height: 1.45;
+  padding: 8px 9px;
+}
+
 .campaign-studio-ref .cs-vaction {
   height: 28px;
   padding: 0 11px;

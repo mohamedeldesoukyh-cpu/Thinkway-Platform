@@ -8,6 +8,8 @@ import {
 } from "@/features/campaign-studio/services/studio-creator-selection";
 import type { StudioDecisionRow } from "@/features/campaign-studio/services/studio-creator-decisions";
 import { cn } from "@/lib/utils";
+import { STUDIO_REF_CLASSES } from "@/features/campaign-studio/constants/campaign-studio-ref-tokens";
+import { useStudioRefMode } from "@/features/campaign-studio/hooks/use-studio-ref-mode";
 
 /**
  * The selection calculator that stays open while the operator browses.
@@ -33,6 +35,7 @@ export function StudioCreatorSelectionPanel({
   generating,
   addingApproved,
   canAct,
+  hasPendingChanges = false,
   className,
 }: {
   selected: StudioDecisionRow[];
@@ -46,9 +49,11 @@ export function StudioCreatorSelectionPanel({
   generating: boolean;
   addingApproved: boolean;
   canAct: boolean;
+  hasPendingChanges?: boolean;
   className?: string;
 }) {
   const selectedCount = selected.length;
+  const refMode = useStudioRefMode();
 
   return (
     <aside
@@ -56,14 +61,28 @@ export function StudioCreatorSelectionPanel({
       data-studio-selection-panel
       className={cn(
         "flex min-h-0 flex-col gap-3 rounded-xl border border-[#0B0F1A]/8 bg-white p-3 dark:border-border dark:bg-background",
+        refMode && STUDIO_REF_CLASSES.selectionPanel,
         className
       )}
     >
-      <header>
+      <header className={refMode ? STUDIO_REF_CLASSES.selectionHead : undefined}>
         <h3 className="text-sm font-extrabold tracking-[-0.2px] text-foreground">Selection</h3>
+        <span className={refMode ? STUDIO_REF_CLASSES.selectionCount : "text-[11px] font-semibold text-muted-foreground"}>
+          {selectedCount} selected
+        </span>
       </header>
 
-      <section className="min-h-0">
+      <p className={refMode ? STUDIO_REF_CLASSES.selectionPersistNote : "rounded-lg bg-[#0057FF]/5 px-2.5 py-2 text-[11px] text-[#0057FF]"}>
+        Working selection only. Generate Shortlist is the persistence step.
+      </p>
+
+      {hasPendingChanges ? (
+        <p className="rounded-lg border border-amber-300/70 bg-amber-50/80 px-2.5 py-2 text-[11px] text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+          Creator changes are staged. Use Apply Changes above to commit them.
+        </p>
+      ) : null}
+
+      <section className={cn("min-h-0", refMode && STUDIO_REF_CLASSES.selectionSection)}>
         <p className="text-[11px] font-extrabold tracking-wide text-muted-foreground uppercase">
           Selected
         </p>
@@ -113,7 +132,7 @@ export function StudioCreatorSelectionPanel({
         )}
       </section>
 
-      <section className="min-h-0 border-t border-border/60 pt-2.5">
+      <section className={cn("min-h-0 border-t border-border/60 pt-2.5", refMode && STUDIO_REF_CLASSES.selectionSection)}>
         <p className="text-[11px] font-extrabold tracking-wide text-muted-foreground uppercase">
           Approved
         </p>

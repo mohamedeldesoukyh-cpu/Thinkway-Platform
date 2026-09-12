@@ -7,9 +7,12 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import type { CampaignObject } from "@/features/campaign-intelligence";
+import { cn } from "@/lib/utils";
 
 import { runStudioDiscoveryAction } from "../../actions/run-studio-discovery-action";
 import { STUDIO_CLASSES } from "../../constants/studio-tokens";
+import { STUDIO_REF_CLASSES } from "../../constants/campaign-studio-ref-tokens";
+import { useStudioRefMode } from "../../hooks/use-studio-ref-mode";
 import { deriveCreatorQuantityRecommendation } from "../../services/creator-quantity";
 import { resolveStudioDiscoverySufficiency } from "../../services/studio-discovery-sufficiency";
 import { resolveStudioCreatorShortfall } from "../../services/studio-creator-shortfall";
@@ -35,6 +38,7 @@ export function CreatorsMixHeader({
   conversationId,
   onCampaignObjectUpdated,
 }: CreatorsMixHeaderProps) {
+  const refMode = useStudioRefMode();
   const [running, startRun] = useTransition();
   // A failed search is its own outcome. Nothing is persisted on failure, so the
   // stage keeps its previous state and this line says the search failed rather
@@ -68,7 +72,7 @@ export function CreatorsMixHeader({
   return (
     <section className="rounded-2xl border border-border/70 bg-card p-4 sm:p-5">
       <p className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-[#1D9E75]">
-        Recommended creator mix
+        Creator summary
       </p>
       {required == null ? (
         <h3 className="mt-1 text-lg font-extrabold tracking-tight">
@@ -90,17 +94,20 @@ export function CreatorsMixHeader({
         and objective evidence. It says nothing about whether creators have been
         found — the tiles below are that fact.
       */}
-      <p className="mt-1 text-sm text-muted-foreground">
+      <p className="mt-1 text-[11px] text-muted-foreground">
         Quantity confidence: {confidenceLabel(quantity.confidence)}
       </p>
-      <p className="mt-2 text-sm text-foreground">{quantity.rationale}</p>
-      {quantity.evidence.length > 0 ? (
-        <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
+      <details className="mt-2 text-[11px] text-muted-foreground">
+        <summary className="cursor-pointer font-semibold text-[#0057FF]">View quantity rationale</summary>
+        <p className="mt-2 text-sm text-foreground">{quantity.rationale}</p>
+        {quantity.evidence.length > 0 ? (
+        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
           {quantity.evidence.map((item) => (
             <li key={item}>{item}</li>
           ))}
         </ul>
-      ) : null}
+        ) : null}
+      </details>
 
       {/*
         The one quantity / coverage summary on the Creators screen.
@@ -109,11 +116,11 @@ export function CreatorsMixHeader({
         the Discovery pipeline below — the two are the same number by
         construction, not two measurements.
       */}
-      <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Stat label="Required" value={required == null ? "—" : String(required)} />
-        <Stat label="On slate" value={String(qualified)} />
-        <Stat label="Short" value={String(missing)} />
-        <Stat label="Discovery" value={sufficiency.title} />
+      <div className={cn("mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4", refMode && STUDIO_REF_CLASSES.creatorSummary)}>
+        <Stat label="Required" value={required == null ? "—" : String(required)} refMode={refMode} />
+        <Stat label="On slate" value={String(qualified)} refMode={refMode} />
+        <Stat label="Short" value={String(missing)} refMode={refMode} />
+        <Stat label="Discovery" value={sufficiency.title} refMode={refMode} />
       </div>
       {shortfall.summary ? (
         <p className="mt-3 rounded-lg border border-amber-300/60 bg-amber-50/70 px-3 py-2 text-sm font-semibold text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
@@ -172,11 +179,11 @@ export function CreatorsMixHeader({
   );
 }
 
-function Stat({ label, value }: { label: string; value: string }) {
+function Stat({ label, value, refMode }: { label: string; value: string; refMode: boolean }) {
   return (
-    <div className="rounded-xl border border-border/60 bg-muted/20 px-3 py-2">
-      <p className="text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className="mt-0.5 text-sm font-bold">{value}</p>
+    <div className={cn("rounded-xl border border-border/60 bg-muted/20 px-3 py-2", refMode && STUDIO_REF_CLASSES.creatorSummaryItem)}>
+      <p className={refMode ? STUDIO_REF_CLASSES.creatorSummaryLabel : "text-[10px] font-extrabold uppercase tracking-wide text-muted-foreground"}>{label}</p>
+      <p className={refMode ? STUDIO_REF_CLASSES.creatorSummaryValue : "mt-0.5 text-sm font-bold"}>{value}</p>
     </div>
   );
 }
