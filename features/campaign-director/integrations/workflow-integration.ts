@@ -4,6 +4,7 @@ import type { CampaignSpecialistId } from "@/features/campaign-intelligence/type
 
 import { buildCampaignGovernanceMeta } from "@/features/campaign-governance/governance-pipeline";
 import type { CampaignFacts } from "../facts/campaign-facts-types";
+import { buildStrategyBasis } from "../services/strategy-basis";
 import type { CampaignStrategyDocument, DirectorApprovedSection, DirectorPipelineResult, DirectorSpecialistId } from "../types";
 import { DIRECTOR_PIPELINE_STATE_KEY, finalizeDirectorPipelineFromWorkflow } from "../services/campaign-director";
 
@@ -204,6 +205,7 @@ export function applyDirectorPipelineToCampaignObject(
   const governanceMeta = pipeline.governance
     ? buildCampaignGovernanceMeta(pipeline.governance)
     : undefined;
+  const strategyBasis = buildStrategyBasis(pipeline.strategyDocument);
 
   if (!pipeline.approvalGate.approved || pipeline.approvedSections.length === 0) {
     // Not approved: existing sections are preserved untouched (never discarded)
@@ -237,6 +239,9 @@ export function applyDirectorPipelineToCampaignObject(
       directorPipeline: {
         approved: true,
         strategyDocumentId: pipeline.strategyDocument.id,
+        // Written with the approved sections so provenance always describes
+        // the exact Strategy now materialized in `sections.strategy`.
+        ...(strategyBasis ? { strategyBasis } : {}),
         revisionRounds: pipeline.approvalGate.revisionRounds,
         approvedAt: pipeline.approvalGate.approvedAt,
         reviewReport: pipeline.reviewReport,

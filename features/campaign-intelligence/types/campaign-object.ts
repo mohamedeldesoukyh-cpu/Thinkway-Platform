@@ -45,6 +45,12 @@ export type SpecialistProgress = {
 export type CampaignDirectorPipelineMeta = {
   approved: boolean;
   strategyDocumentId?: string;
+  /**
+   * Provenance for the Strategy currently materialized in `sections.strategy`.
+   * This is identity/readiness metadata only; Strategy content remains in the
+   * section and the full StrategyContext remains transient workflow input.
+   */
+  strategyBasis?: CampaignStrategyBasis;
   unresolvedConflicts?: number;
   revisionRounds?: number;
   approvedAt?: string;
@@ -56,6 +62,27 @@ export type CampaignDirectorPipelineMeta = {
   governance?: import("@/features/campaign-governance/governance-types").CampaignGovernanceMeta;
   /** Governance self-repair audit — blockers, attempted repairs, user questions, outcome. */
   governanceRepair?: import("@/features/campaign-governance/governance-repair").GovernanceRepairSummary;
+};
+
+export type CampaignStrategyBasis = {
+  schemaVersion: 1;
+  campaignUnderstanding: {
+    schemaVersion: number;
+    confirmationStatus: import("@/features/campaign-intelligence-profile/types/campaign-understanding").CampaignUnderstanding["confirmation"]["status"];
+    confirmedAt?: string;
+    /** Deterministic identity for the confirmed fact revision, not a fact copy. */
+    confirmedFactIdsFingerprint: string;
+  };
+  strategyContext: {
+    schemaVersion: 1;
+    /** Deterministic fingerprint of the material context used to write Strategy. */
+    fingerprint: string;
+  };
+  readiness: {
+    status: "ready" | "warning" | "blocked";
+  };
+  /** Strategy document generation time, retained as provenance rather than content. */
+  generatedAt: string;
 };
 
 export type CampaignObjectMeta = {
