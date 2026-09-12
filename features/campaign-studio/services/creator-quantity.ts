@@ -8,6 +8,7 @@ import {
   type CreatorTierMixBasis,
 } from "@/features/campaign-director/facts/creator-tier-preference";
 import type { CreatorMixTier } from "@/features/campaign-intelligence/types/section-schemas";
+import type { StrategyContext } from "@/features/campaign-intelligence-profile/services/campaign-understanding/build-strategy-context";
 
 import { allocateTierCounts } from "./creator-slate";
 
@@ -18,6 +19,10 @@ export type CreatorQuantityRecommendation = {
   rationale: string;
   evidence: string[];
   mix: CreatorMixTier[];
+  /** Makes explicit requests and heuristic output distinguishable to consumers. */
+  basis: "SOURCE_STATED" | "OPERATOR_STATED" | "HEURISTIC_DEFAULT";
+  disclosure?: string;
+  range?: { min: number; max: number };
 };
 
 const MIN_SLATE = 4;
@@ -169,7 +174,7 @@ export function formatCreatorTierMixSummary(mix: CreatorMixTier[]): string | und
  */
 export function deriveCreatorQuantityRecommendation(
   facts: CampaignFacts | null | undefined,
-  options?: { poolSize?: number; tierMix?: CreatorMixTier[] }
+  options?: { poolSize?: number; tierMix?: CreatorMixTier[]; strategyContext?: StrategyContext }
 ): CreatorQuantityRecommendation {
   const mix = resolveCreatorTierMix(facts, options?.tierMix);
 
@@ -187,8 +192,24 @@ export function deriveCreatorQuantityRecommendation(
       rationale: `Recommend ${recommended} creators because the campaign requested ${recommended}.`,
       evidence: [`Requested creator quantity: ${recommended}.`],
       mix: mix.length > 0 ? applyMixCounts(mix, recommended) : mix,
+      basis: facts?.sources.requestedCreatorCount === "operator" ? "OPERATOR_STATED" : "SOURCE_STATED",
     };
   }
+
+  const countFact = options?.strategyContext?.creatorRequirements.find((fact) =>
+    /creator_count(_range)?/.test(fact.concept) && fact.status === "confirmed" && !fact.scope && !fact.condition
+  );
+  const countValue = countFact?.value;
+  if (typeof countValue === "number" && countValue > 0) {
+    const recommended = Math.round(countValue);
+    const confirmedCountFact = countFact!;
+    return { recommended, confidence: confirmedCountFact.confidence ?? 1, rationale: `Recommend ${recommended} creators because confirmed Campaign Understanding specifies that count.`, evidence: [confirmedCountFact.label], mix: mix.length ? applyMixCounts(mix, recommended) : mix, basis: confirmedCountFact.origin === "OPERATOR_STATED" ? "OPERATOR_STATED" : "SOURCE_STATED" };
+  }
+  const range = countValue && typeof countValue === "object" && !Array.isArray(countValue)
+    ? countValue as { min?: unknown; max?: unknown } : undefined;
+  const min = typeof range?.min === "number" ? Math.round(range.min) : undefined;
+  const max = typeof range?.max === "number" ? Math.round(range.max) : undefined;
+  const confirmedRange = min != null && max != null && min > 0 && max >= min ? { min, max } : undefined;
 
   const duration = durationBase(facts?.durationWeeks);
   const budget = budgetLift(facts);
@@ -210,6 +231,8 @@ export function deriveCreatorQuantityRecommendation(
         "Recommended creator quantity cannot be set until campaign budget, duration, and objective are confirmed.",
       evidence: [],
       mix,
+      basis: "HEURISTIC_DEFAULT",
+      disclosure: "Quantity is unresolved because budget, duration, and objective are not confirmed.",
     };
   }
 
@@ -249,6 +272,7 @@ export function deriveCreatorQuantityRecommendation(
   }
 
   recommended = Math.max(MIN_SLATE, Math.min(MAX_SLATE, Math.round(recommended)));
+  if (confirmedRange) recommended = Math.max(confirmedRange.min, Math.min(confirmedRange.max, recommended));
 
   const poolSize = options?.poolSize;
   if (poolSize != null && poolSize > 0 && poolSize < recommended) {
@@ -267,5 +291,8 @@ export function deriveCreatorQuantityRecommendation(
     rationale: `Recommend ${recommended} creators because ${evidence.slice(0, 3).join(" ")}`,
     evidence,
     mix: sizedMix,
+    basis: "HEURISTIC_DEFAULT",
+    disclosure: "Quantity is a planning heuristic based on available campaign facts; confirm before treating it as a client requirement.",
+    ...(confirmedRange ? { range: confirmedRange } : {}),
   };
 }

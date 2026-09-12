@@ -53,6 +53,7 @@ import {
 } from "@/features/campaign-studio/services/creator-search-requirements/attach-creator-search-requirements";
 import { profileToCampaignFacts } from "@/features/campaign-intelligence-profile/services/profile-to-facts";
 import { writeStrategyDocumentFromBrief } from "@/features/campaign-director/services/strategy-document";
+import { buildStrategyContext } from "@/features/campaign-intelligence-profile/services/campaign-understanding/build-strategy-context";
 import { mergeMissingCampaignFacts } from "@/features/campaign-director/facts/merge-campaign-facts";
 import { formatGovernanceUserQuestions } from "@/features/campaign-governance/governance-repair";
 
@@ -298,13 +299,15 @@ export async function executeWorkflow(
           state.data.validatedCampaignIntelligenceProfileId = intelligenceProfileId;
           if (isCampaignIntelligenceConfirmed(profile)) {
             campaignFacts = profileToCampaignFacts(profile);
+            const strategyContext = buildStrategyContext(profile.campaignUnderstanding);
             strategyDocument = writeStrategyDocumentFromBrief(
               {
                 rawMessage: profile.rawBriefExcerpt ?? request.message,
                 brandName: campaignFacts.brandName,
                 campaignFacts,
               },
-              campaignFacts
+              campaignFacts,
+              strategyContext
             );
           }
         }

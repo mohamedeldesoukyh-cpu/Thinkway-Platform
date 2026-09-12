@@ -26,6 +26,7 @@ import type {
   FieldProvenance,
   NormalizedGender,
 } from "@/features/campaign-intelligence-profile/services/normalization/types";
+import type { StrategyContext, StrategyPlatformDirective } from "@/features/campaign-intelligence-profile/services/campaign-understanding/build-strategy-context";
 
 export const CREATOR_SEARCH_REQUIREMENTS_SCHEMA_VERSION = 1 as const;
 
@@ -116,6 +117,9 @@ export type CreatorStrategicLayer = {
     minPlatformsCovered: number;
   };
   budget?: { amount: number; currency: string };
+  /** Retained semantic intent that cannot safely become a Discovery filter. */
+  strategyContext?: Pick<StrategyContext, "campaignUnderstandingRef" | "scopedRequirements" | "creatorRequirements" | "constraints" | "readiness">;
+  platformDirectives?: StrategyPlatformDirective[];
 };
 
 /** A requirement the campaign needs but could not be resolved. Never invented. */

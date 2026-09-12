@@ -12,6 +12,7 @@ import { normalizeCampaignIntelligenceProfile } from "@/features/campaign-intell
 import { getWorkflowCampaignIntelligenceProfileForConversation } from "@/features/campaign-intelligence-profile/services/profile-repository";
 import { searchCreatorsFromProfileData } from "@/features/campaign-intelligence-profile/services/search-creators-from-profile";
 import { buildCreatorSearchRequirements } from "@/features/campaign-studio/services/creator-search-requirements/build-creator-search-requirements";
+import { buildStrategyContext } from "@/features/campaign-intelligence-profile/services/campaign-understanding/build-strategy-context";
 import { syncLatestStudioMessageCampaignObject } from "@/features/ai-workspace/services/conversation-campaign-hydration";
 import { getConversationWithMessages } from "@/features/ai-workspace/services/conversation-service";
 
@@ -107,6 +108,7 @@ export async function runStudioDiscoveryAction(
       strategy,
       validated,
       campaignIntelligenceProfileId: row.id,
+      strategyContext: buildStrategyContext(profile.campaignUnderstanding),
     });
 
     const result = await searchCreatorsFromProfileData(

@@ -2,6 +2,7 @@
 
 import type { CampaignFacts } from "../facts/campaign-facts-types";
 import type { DirectorReviewReport } from "./review-conversation";
+import type { StrategyContext } from "@/features/campaign-intelligence-profile/services/campaign-understanding/build-strategy-context";
 
 export type DirectorSpecialistId =
   | "strategy"
@@ -31,6 +32,20 @@ export type CampaignStrategyDocument = {
     extractedAt: string;
     fields: string[];
   };
+  /** Bounded confirmed semantic context; the Campaign Object remains planning SSOT. */
+  strategyContext?: StrategyContext;
+  campaignUnderstandingRef?: StrategyContext["campaignUnderstandingRef"];
+  readiness?: StrategyContext["readiness"];
+  /** A blocked document is an explicit gate result, never a usable recommendation. */
+  status?: "ready" | "blocked";
+  /** Scoped directives stay separate so market/platform pairs cannot flatten. */
+  scopedRecommendations?: StrategyContext["scopedRequirements"];
+  decisionBasis?: Record<string, {
+    origin: string;
+    confidence?: number;
+    factIds: string[];
+    disclosure?: string;
+  }>;
   /** Parsed campaign brief — director understanding before specialist dispatch. */
   understanding: {
     client?: string;
@@ -51,9 +66,9 @@ export type CampaignStrategyDocument = {
   /** Director-approved strategic pillars with rationale. */
   pillars: Array<{ title: string; what: string; why: string }>;
   /** Platform mix decisions. */
-  platformMix: Array<{ platform: string; role: string; why: string }>;
+  platformMix: Array<{ platform: string; role: string; why: string; priority?: "primary" | "secondary" | "optional" | "conditional" | "excluded"; basis?: { origin: string; confidence?: number; factIds: string[]; disclosure?: string } }>;
   /** Creator tier strategy. */
-  creatorTierStrategy: Array<{ tier: string; allocationPercent: number; why: string }>;
+  creatorTierStrategy: Array<{ tier: string; allocationPercent: number; why: string; basis?: { origin: string; confidence?: number; factIds: string[]; disclosure?: string } }>;
 };
 
 export type SpecialistOutput = {

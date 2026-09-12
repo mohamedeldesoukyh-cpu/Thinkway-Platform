@@ -46,7 +46,7 @@ export function deriveInfluencerStrategyView(
   const strategyTierMix = strategy?.creatorTierStrategy?.length
     ? creatorTierStrategyToMix(strategy.creatorTierStrategy)
     : undefined;
-  const quantity = deriveCreatorQuantityRecommendation(facts, { tierMix: strategyTierMix });
+  const quantity = deriveCreatorQuantityRecommendation(facts, { tierMix: strategyTierMix, strategyContext: strategy?.strategyContext });
   const mix = quantity.mix;
   const mixSummary = formatCreatorTierMixSummary(mix);
   // Say where the allocation came from. A split the brief did not state must

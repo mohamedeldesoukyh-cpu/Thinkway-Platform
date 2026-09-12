@@ -45,11 +45,14 @@ import {
 } from "./strategy-document";
 import { buildClientTimelineFromStrategy, isInternalTimelinePhase } from "./timeline-rules";
 import { getSpecialistDomain } from "./specialist-dispatch";
+import type { StrategyContext } from "@/features/campaign-intelligence-profile/services/campaign-understanding/build-strategy-context";
 
 export type RunDirectorPipelineInput = {
   brief: CampaignBriefInput;
   taskResults?: Record<string, WorkflowTaskResult>;
   campaignFacts?: CampaignFacts;
+  /** Confirmed, bounded semantic context supplied by the CIP boundary. */
+  strategyContext?: StrategyContext;
 };
 
 /**
@@ -73,7 +76,8 @@ export function runCampaignDirectorPipeline(
 
   const baseStrategyDocument = writeStrategyDocumentFromBrief(
     { ...input.brief, campaignFacts },
-    campaignFacts
+    campaignFacts,
+    input.strategyContext
   );
 
   const debateResult = runDirectorDebateEngine(campaignFacts, baseStrategyDocument);

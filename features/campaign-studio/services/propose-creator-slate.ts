@@ -144,6 +144,7 @@ function runCreatorSlateProposal(
   const quantity = deriveCreatorQuantityRecommendation(facts, {
     poolSize: cards.length,
     tierMix: strategyTierMix,
+    strategyContext: strategy?.strategyContext,
   });
   const tierMix =
     quantity.mix.length > 0 ? quantity.mix : facts ? buildCreatorMixFromFacts(facts) : [];

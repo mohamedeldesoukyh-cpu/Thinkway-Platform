@@ -16,6 +16,7 @@
  */
 
 import type { CampaignStrategyDocument } from "@/features/campaign-director/types";
+import type { StrategyContext } from "@/features/campaign-intelligence-profile/services/campaign-understanding/build-strategy-context";
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import type { ValidatedCampaignIntelligence } from "@/features/campaign-intelligence-profile/types/validated-intelligence";
 import type {
@@ -61,6 +62,8 @@ export type BuildCreatorSearchRequirementsInput = {
   facts?: CampaignFacts | null;
   overrides?: CreatorSearchRequirementsOverrides;
   campaignIntelligenceProfileId?: string;
+  /** Confirmed bounded semantic context; never raw source text. */
+  strategyContext?: StrategyContext;
   /** Injectable for deterministic tests. */
   now?: string;
 };
@@ -207,12 +210,19 @@ function buildSearchLayer(input: BuildCreatorSearchRequirementsInput): {
   search: CreatorSearchLayer;
   gaps: CreatorRequirementGap[];
 } {
-  const { strategy, validated, facts, overrides } = input;
+  const { strategy, validated, facts, overrides, strategyContext } = input;
   const gaps: CreatorRequirementGap[] = [];
 
   // ---- platforms ----------------------------------------------------------
   const platformCandidates = firstNonEmpty([
     candidatesFrom(overrides?.platforms, "operator", "Operator-selected platform."),
+    candidatesFrom(
+      strategyContext?.platformDirectives
+        .filter((directive) => directive.priority === "primary" && !directive.basis.scope && !directive.basis.condition)
+        .map((directive) => directive.platform),
+      "strategy",
+      "Unconditional primary platform from confirmed Campaign Understanding."
+    ),
     candidatesFrom(
       strategy?.understanding.platforms,
       "strategy",
@@ -512,7 +522,7 @@ function buildStrategicLayer(input: BuildCreatorSearchRequirementsInput): {
   strategic: CreatorStrategicLayer;
   gaps: CreatorRequirementGap[];
 } {
-  const { strategy, facts, overrides } = input;
+  const { strategy, facts, overrides, strategyContext } = input;
   const gaps: CreatorRequirementGap[] = [];
 
   const objective = strategy?.understanding.objective?.trim() || facts?.objective?.trim() || "";
@@ -610,6 +620,16 @@ function buildStrategicLayer(input: BuildCreatorSearchRequirementsInput): {
         minPlatformsCovered: 0,
       },
       ...(facts?.budget ? { budget: facts.budget } : {}),
+      ...(strategyContext ? {
+        strategyContext: {
+          campaignUnderstandingRef: strategyContext.campaignUnderstandingRef,
+          scopedRequirements: strategyContext.scopedRequirements,
+          creatorRequirements: strategyContext.creatorRequirements,
+          constraints: strategyContext.constraints,
+          readiness: strategyContext.readiness,
+        },
+        platformDirectives: strategyContext.platformDirectives,
+      } : {}),
     },
     gaps,
   };
@@ -626,6 +646,13 @@ export function buildCreatorSearchRequirements(
   const { strategic, gaps: strategicGaps } = buildStrategicLayer(input);
 
   const gaps = [...searchGaps, ...strategicGaps];
+  if (input.strategyContext?.readiness.creatorPlanning.status === "blocked") {
+    gaps.unshift({
+      field: "strategyContext.creatorPlanning",
+      reason: "Confirmed Campaign Understanding has a blocking creator-planning requirement.",
+      blocking: true,
+    });
+  }
   if (!input.strategy) {
     gaps.unshift({
       field: "strategyRef",
