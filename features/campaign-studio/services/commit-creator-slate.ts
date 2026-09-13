@@ -13,6 +13,7 @@ import { reoptimizeCampaignAfterApply } from "./apply-draft-reoptimize";
 import { mapBrowseCreatorToSearchResult } from "./creator-platform-utils";
 import { regeneratePlanSectionsFromSlate } from "./plan-section-regeneration";
 import { normalizeCreatorId } from "./studio-draft";
+import { loadCreatorContentEvidence } from "./creator-content-evidence";
 
 /**
  * After draft changes are applied to the slate: reoptimize, regenerate dependent
@@ -53,7 +54,13 @@ export async function commitCreatorSlateAndRegeneratePlan(
         const cards = result.creators.map((c) =>
           mapBrowseCreatorToSearchResult(c, facts?.platforms)
         );
-        next = regeneratePlanSectionsFromSlate(reoptimized, cards, options.campaignUnderstanding);
+        const creatorEvidence = await loadCreatorContentEvidence(supabase, slateIds);
+        next = regeneratePlanSectionsFromSlate(
+          reoptimized,
+          cards,
+          options.campaignUnderstanding,
+          creatorEvidence
+        );
       } catch {
         next = reoptimized;
       }
