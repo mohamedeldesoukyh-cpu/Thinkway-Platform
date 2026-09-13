@@ -33,6 +33,7 @@ import { tryExecuteWorkflow, buildPausedWorkflowSnapshot, getPausedWorkflowSnaps
 import type { ChatRequestBody } from "@/features/ai-workspace/types";
 import { createStreamingOpenAiProvider } from "@/features/ai-workspace/services/streaming-openai-provider";
 import { runWithToolAuthContext } from "@/features/ai/tools/tool-auth";
+import { shouldRoutePausedWorkflowToStudioOutput } from "@/features/ai-workspace/services/paused-workflow-studio-output-routing";
 import { parseJsonWithSchema } from "@/lib/validation/http";
 import { aiChatBodySchema } from "@/lib/validation/schemas";
 import {
@@ -234,9 +235,19 @@ export async function POST(request: Request) {
         const contextSnapshot = existingConversation?.contextSnapshot as
           | Record<string, unknown>
           | undefined;
-        const activeCampaignObject = pausedWorkflow
-          ? null
-          : await loadCampaignObjectForConversation(supabase, conversationId, contextSnapshot);
+        const campaignObjectForCopilot = await loadCampaignObjectForConversation(
+          supabase,
+          conversationId,
+          contextSnapshot
+        );
+        const activeCampaignObject =
+          pausedWorkflow &&
+          !shouldRoutePausedWorkflowToStudioOutput({
+            hasCampaignObject: Boolean(campaignObjectForCopilot),
+            message: body.message,
+          })
+            ? null
+            : campaignObjectForCopilot;
 
         if (activeCampaignObject && !isNewCampaignRequest(body.message)) {
           const copilot = await runStudioCopilot({

@@ -628,6 +628,7 @@ function evaluateGeneratedClientOutput(
   /** Checks already evaluated this pass — the dependency chain, as measured. */
   upstream: StudioPackageCheck[]
 ): StudioPackageCheck {
+  const generationLabel = id === "presentation" ? "Executive Proposal" : label;
   const live = outputLiveStatus(campaignObject, kind);
   const fallback = fallbackKind ? outputLiveStatus(campaignObject, fallbackKind) : undefined;
   const status = live ?? fallback;
@@ -637,7 +638,7 @@ function evaluateGeneratedClientOutput(
       label,
       "outdated",
       `${label} was generated before the latest campaign changes.`,
-      `Regenerate ${label} from current Campaign Facts.`
+      `Regenerate ${generationLabel} from current Campaign Facts.`
     );
   }
   if (status !== "generated") {
@@ -660,7 +661,7 @@ function evaluateGeneratedClientOutput(
         label,
         "blocked",
         `${label} has not been generated from the current campaign state. A successful PDF/PPTX export is not readiness.`,
-        `Generate ${label} — Strategy, Creators, Content, and Timeline are current.`
+        `Generate ${generationLabel} — Strategy, Creators, Content, and Timeline are current.`
       );
     }
     return check(
@@ -670,7 +671,7 @@ function evaluateGeneratedClientOutput(
       `${label} is not current, and ${blocking.map((item) => item.label).join(", ")} ${
         blocking.length === 1 ? "is" : "are"
       } not current either.`,
-      `Bring ${blocking.map((item) => item.label).join(", ")} current, then generate ${label}.`
+      `Bring ${blocking.map((item) => item.label).join(", ")} current, then generate ${generationLabel}.`
     );
   }
   return check(id, label, "ready");

@@ -222,6 +222,31 @@ test("Arab Bank 4-week package is READY FOR CLIENT when intelligence is current 
   assert.ok(!JSON.stringify(ready.checks).includes("fingerprint"));
 });
 
+test("missing Presentation directs Package remediation to the wired Executive Proposal", () => {
+  const ready = readinessOf(arabBankObject());
+  const proposal = ready.checks.find((item) => item.id === "proposal");
+  const presentation = ready.checks.find((item) => item.id === "presentation");
+
+  assert.equal(proposal?.state, "blocked");
+  assert.equal(presentation?.state, "blocked");
+  assert.match(proposal?.action ?? "", /Generate Proposal/i);
+  assert.match(presentation?.action ?? "", /Generate Executive Proposal/i);
+  assert.doesNotMatch(presentation?.action ?? "", /Generate Presentation/i);
+  assert.equal(ready.checks.some((item) => item.id === "commercial"), false);
+});
+
+test("current Executive Proposal registry state satisfies Presentation through the existing fallback", () => {
+  const generated = generatePlanningPackage(arabBankObject());
+  const proposal = generated.meta.campaignOutputs?.executive_proposal;
+  const readiness = readinessOf(generated);
+
+  assert.equal(proposal?.status, "generated");
+  assert.ok(proposal?.sourceFingerprint);
+  assert.equal(getCampaignOutput(generated, "executive_proposal")?.status, "generated");
+  assert.equal(readiness.checks.find((item) => item.id === "proposal")?.state, "ready");
+  assert.equal(readiness.checks.find((item) => item.id === "presentation")?.state, "ready");
+});
+
 test("A. Strategy exists but is stale → NOT READY", () => {
   const generated = generatePlanningPackage(arabBankObject());
   const { campaignObject: stale } = applyTimelineChange(generated, { durationWeeks: 6 });
