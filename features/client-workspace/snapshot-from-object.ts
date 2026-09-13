@@ -61,7 +61,9 @@ export function snapshotFromCampaignObject(
   hydrated: UnifiedCreatorResult[] = []
 ): ClientReviewSourceSnapshot {
   const overview = projectClientOverview(campaignObject);
-  const creators = projectClientCreators(campaignObject, selection, hydrated);
+  const creators = projectClientCreators(campaignObject, selection, hydrated, {
+    includeCommercial: false,
+  });
   const narrative = deriveEnterprisePlanningNarrative(campaignObject);
   const snapshot: ClientReviewSourceSnapshot = {
     source: "studio",

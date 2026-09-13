@@ -94,6 +94,7 @@ export function CreatorsWorkspace({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const selection = sharedSelection;
   const explore = intent === "explore";
+  const strategicOnly = view.review.source === "studio";
   const pendingIds = new Set(view.journey?.pendingCommercialApprovalCreatorIds ?? []);
   const confirmed = Boolean(view.journey?.selectionConfirmed);
   const canSelectCreator = (creatorId: string) =>
@@ -111,7 +112,7 @@ export function CreatorsWorkspace({
         selectionConfirmed: confirmed,
         clientApprovedCreatorIds: view.journey?.clientApprovedCreatorIds,
       });
-  const filters = STATUS_FILTERS;
+  const filters = strategicOnly ? STATUS_FILTERS.filter((filter) => filter.id !== "pending") : STATUS_FILTERS;
   const counts = countSelections(
     selection,
     view.creators.map((creator) => creator.creatorId)
@@ -480,6 +481,7 @@ export function CreatorsWorkspace({
                       return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
                     })()}
                   </span>
+                  {!strategicOnly ? (
                   <span className={clientFacingCreatorCardAmount(creator) != null ? "inv" : "inv tbc"}>
                     {(() => {
                       const amount = clientFacingCreatorCardAmount(creator);
@@ -499,6 +501,7 @@ export function CreatorsWorkspace({
                       ) : null;
                     })()}
                   </span>
+                  ) : null}
                 </div>
                 <div className="ccfoot">
                   {thinkwayStatusLabel(creator.thinkwayStatus) ? (
@@ -515,7 +518,7 @@ export function CreatorsWorkspace({
                       pendingCommercialApproval: pendingIds.has(creator.creatorId),
                     })}
                   </span>
-                  {state === "accepted" && !isPricedClientInvestment(creator.investmentAmount) ? (
+                  {!strategicOnly && state === "accepted" && !isPricedClientInvestment(creator.investmentAmount) ? (
                     <span className="sc warn">Pricing required</span>
                   ) : null}
                 </div>

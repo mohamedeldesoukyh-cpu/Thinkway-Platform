@@ -109,7 +109,8 @@ export function projectClientCommercial(
 export function projectClientCreators(
   campaignObject: CampaignObject,
   selection: Record<string, ClientCreatorSelectionState>,
-  hydrated: UnifiedCreatorResult[] = []
+  hydrated: UnifiedCreatorResult[] = [],
+  options: { includeCommercial?: boolean } = {}
 ): ClientCreatorCard[] {
   const ids = clientCreatorIds(campaignObject);
   const reasoning = reasoningById(campaignObject);
@@ -135,8 +136,8 @@ export function projectClientCreators(
                 row.serviceTypes.map((type) => ({ type, platform, quantity: 1 }))
               )
             : undefined,
-          investmentAmount: row?.quotedRevenue,
-          investmentCurrency: row?.quotedCurrency,
+          investmentAmount: options.includeCommercial === false ? undefined : row?.quotedRevenue,
+          investmentCurrency: options.includeCommercial === false ? undefined : row?.quotedCurrency,
           avatarUrl: row?.avatarUrl,
         },
         profile

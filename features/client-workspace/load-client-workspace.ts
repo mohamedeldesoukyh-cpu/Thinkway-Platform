@@ -345,7 +345,12 @@ function viewFromSnapshot(
     newerReviewNumber: newer,
     overview,
     strategyBody: snapshot.strategyBody,
-    creators: applyCreatorForecasts(projectCreatorsFromSnapshot(snapshot, selection), packageSummary),
+    creators: applyCreatorForecasts(
+      projectCreatorsFromSnapshot(snapshot, selection, {
+        includeCommercial: review.source !== "studio",
+      }),
+      packageSummary
+    ),
     content: snapshot.content,
     timeline: snapshot.timeline,
     commercial,
@@ -641,7 +646,7 @@ export async function loadClientWorkspace(
     view.packageSummary = plans.packageSummary;
     view.mediaPlanSummary = plans.mediaPlanSummary;
     view.creators = applyCreatorForecasts(
-      projectClientCreators(campaignObject, selection, hydrated),
+      projectClientCreators(campaignObject, selection, hydrated, { includeCommercial: false }),
       plans.packageSummary
     );
     view.visibleSections = visibleClientWorkspaceSections(view);

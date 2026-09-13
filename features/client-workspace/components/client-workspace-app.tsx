@@ -74,6 +74,13 @@ export function ClientWorkspaceApp({
   cwDebugLiveState.appMountId = mountIdRef.current;
 
   const reveal = useCallback((next: ClientWorkspaceSectionId) => {
+    if (!view.visibleSections.includes(next)) {
+      cwDebugLog("tab.blocked.hidden-section", {
+        mountId: mountIdRef.current,
+        section: next,
+      });
+      return;
+    }
     setActive(next);
     setSeen((current) => {
       if (current.has(next)) return current;
@@ -81,7 +88,7 @@ export function ClientWorkspaceApp({
       copy.add(next);
       return copy;
     });
-  }, []);
+  }, [view.visibleSections]);
 
   const go = useCallback(
     (next: ClientWorkspaceSectionId) => {
@@ -179,14 +186,10 @@ export function ClientWorkspaceApp({
     };
   }, [active]);
 
-  const renderSections = view.visibleSections.includes(active)
-    ? view.visibleSections
-    : [...view.visibleSections, active];
-
   return (
     <ClientWorkspaceStateProvider view={view} token={token} onSectionChange={go}>
       <ClientWorkspaceShell view={view} token={token} section={active} onSectionChange={go}>
-        {renderSections
+        {view.visibleSections
           .filter((item) => seen.has(item))
           .map((item) => (
             <div

@@ -222,6 +222,7 @@ import {
   resolveClientWorkspaceSection,
   visibleClientWorkspaceSections,
   defaultClientWorkspaceSection,
+  postCreatorApprovalSection,
 } from "./visible-sections";
 import {
   clientPackageFingerprintsMatch,
@@ -4471,6 +4472,58 @@ test("shortlist and quotation Client Reviews retain Commercial navigation", () =
     visibleClientWorkspaceSections({ review: { source: "quotation" } } as never).includes("commercial"),
     true
   );
+});
+
+test("creator approval stays inside Studio's strategic Client Review journey", () => {
+  const studioVisible = visibleClientWorkspaceSections({ review: { source: "studio" } } as never);
+  assert.equal(
+    postCreatorApprovalSection({ review: { source: "studio" }, visibleSections: studioVisible } as never),
+    "creators"
+  );
+  assert.equal(studioVisible.includes("commercial"), false);
+
+  const shortlistVisible = visibleClientWorkspaceSections({ review: { source: "shortlist" } } as never);
+  assert.equal(
+    postCreatorApprovalSection({ review: { source: "shortlist" }, visibleSections: shortlistVisible } as never),
+    "commercial"
+  );
+  const quotationVisible = visibleClientWorkspaceSections({ review: { source: "quotation" } } as never);
+  assert.equal(
+    postCreatorApprovalSection({ review: { source: "quotation" }, visibleSections: quotationVisible } as never),
+    "commercial"
+  );
+});
+
+test("Studio creator projections suppress commercial fields without changing other sources", () => {
+  const object = buildCampaignObjectFixture();
+  const reasoning = (object.sections.creators.data as {
+    recommendations?: { selectedReasoning?: Array<{ quotedRevenue?: number; quotedCurrency?: string }> };
+  }).recommendations?.selectedReasoning?.[0];
+  assert.ok(reasoning);
+  reasoning.quotedRevenue = 50_000;
+  reasoning.quotedCurrency = "EGP";
+  const studioCards = projectClientCreators(object, {}, [], { includeCommercial: false });
+  assert.equal(studioCards.every((creator) => creator.investmentAmount === undefined), true);
+  assert.equal(studioCards.every((creator) => creator.investmentCurrency === undefined), true);
+  assert.equal(projectClientCreators(object, {})[0]?.investmentAmount, 50_000);
+  assert.equal(projectClientCreators(object, {})[0]?.investmentCurrency, "EGP");
+
+  const snapshot = parseSourceSnapshot({
+    source: "quotation",
+    brandName: "Acme",
+    campaignName: "Summer",
+    clientLabel: "Acme",
+    platforms: [],
+    deliverables: [],
+    creators: [{ creatorId: "creator-1", displayName: "Creator", investmentAmount: 50_000, investmentCurrency: "EGP" }],
+    content: [],
+    timeline: { durationWeeks: null, durationLabel: "", phases: [] },
+    commercial: { currency: "EGP", creatorInvestment: 50_000, totalInvestment: 50_000, lines: [], selectedCount: 1, totalCount: 1 },
+    creatorIds: ["creator-1"],
+  })!;
+  assert.equal(projectCreatorsFromSnapshot(snapshot, {}, { includeCommercial: false })[0]?.investmentAmount, undefined);
+  assert.equal(projectCreatorsFromSnapshot(snapshot, {})[0]?.investmentAmount, 50_000);
+  assert.equal(projectCreatorsFromSnapshot(snapshot, {})[0]?.investmentCurrency, "EGP");
 });
 
 test("Overview remains the last accessible nav tab and is not a journey stage", () => {

@@ -15,7 +15,6 @@ import { projectSelectionSummaryFromCards } from "../media-plan-summary";
 import { clientWorkspacePathReviewId } from "../journey-state";
 import { buildClientReviewPath } from "../security/review-token";
 import {
-  AFTER_CREATOR_APPROVAL_SECTION,
   APPROVE_SELECTED_CREATORS_LABEL,
   CONFIRM_CREATORS_SUPPORTING_TEXT,
   CONTINUE_TO_YOUR_SELECTION_LABEL,
@@ -28,6 +27,7 @@ import {
   shortlistContinueToYourSelection,
 } from "../selection-flow";
 import type { ClientWorkspaceView } from "../types";
+import { postCreatorApprovalSection } from "../visible-sections";
 import { clientShowsCostAndFees } from "../quotation-client-facing";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { IconCheck } from "./review-icons";
@@ -114,6 +114,7 @@ export function ProposalSummaryCard({
     lockedIds
   );
   const calc = selectionCalculator(view.creators, resolvedSelection);
+  const strategicOnly = view.review.source === "studio";
   const currency = view.commercial.currency;
   const showCostAndFees = clientShowsCostAndFees(Boolean(view.hideCostAndFees));
   const clientCost = calc.pricedInvestment;
@@ -184,7 +185,7 @@ export function ProposalSummaryCard({
         return;
       }
       setConfirmOpen(false);
-      goToSection(AFTER_CREATOR_APPROVAL_SECTION);
+      goToSection(postCreatorApprovalSection(view));
       router.refresh();
     });
   }
@@ -214,13 +215,13 @@ export function ProposalSummaryCard({
       <>
       <div className="summary sumbar">
         <Metric label="Selected" value={`${calc.selectedCount} / ${view.creators.length}`} />
-        <Metric label="Priced" value={String(calc.pricedSelectedCount)} />
-        <Metric
+        {!strategicOnly ? <Metric label="Priced" value={String(calc.pricedSelectedCount)} /> : null}
+        {!strategicOnly ? <Metric
           label="Pricing required"
           value={String(calc.unpricedSelectedCount)}
           missing={calc.unpricedSelectedCount > 0}
-        />
-        {showCostAndFees ? (
+        /> : null}
+        {!strategicOnly && showCostAndFees ? (
           <>
         <Metric
           label="Cost"
@@ -234,11 +235,11 @@ export function ProposalSummaryCard({
         />
           </>
         ) : null}
-        <Metric
+        {!strategicOnly ? <Metric
           label="Total Investment"
           value={hasPricedTotals ? formatMoneyKpi(totalInvestment, currency) : TO_BE_CONFIRMED}
           missing={!hasPricedTotals}
-        />
+        /> : null}
         <div className="sp" />
         {showBulkControls || showContinueToSelection || showApproveSelected || confirmed ? (
           <div className="sumbar-cta">
@@ -289,7 +290,7 @@ export function ProposalSummaryCard({
             <p className="ck">Confirm selection</p>
             <h2 id="approve-creators-title">{APPROVE_SELECTED_CREATORS_LABEL}</h2>
             <p className="note">{CONFIRM_CREATORS_SUPPORTING_TEXT}</p>
-            {confirmation.priced.length > 0 ? (
+            {!strategicOnly && confirmation.priced.length > 0 ? (
               <>
                 <p className="subh">Priced creators</p>
                 {confirmation.priced.map((row) => (
@@ -303,7 +304,7 @@ export function ProposalSummaryCard({
                 ))}
               </>
             ) : null}
-            {confirmation.unpriced.length > 0 ? (
+            {!strategicOnly && confirmation.unpriced.length > 0 ? (
               <>
                 <p className="subh">Pricing required</p>
                 {confirmation.unpriced.map((row) => (
@@ -321,15 +322,15 @@ export function ProposalSummaryCard({
               <span className="k">Selected creators</span>
               <span className="v">{confirmation.selectedCount}</span>
             </div>
-            <div className="sumrow">
+            {!strategicOnly ? <div className="sumrow">
               <span className="k">Priced creators</span>
               <span className="v">{confirmation.pricedCount}</span>
-            </div>
-            <div className="sumrow">
+            </div> : null}
+            {!strategicOnly ? <div className="sumrow">
               <span className="k">Pricing required</span>
               <span className={confirmation.unpricedCount > 0 ? "v tbc" : "v"}>{confirmation.unpricedCount}</span>
-            </div>
-            {showCostAndFees ? (
+            </div> : null}
+            {!strategicOnly && showCostAndFees ? (
               <>
             <div className="sumrow">
               <span className="k">Cost</span>
@@ -345,13 +346,13 @@ export function ProposalSummaryCard({
             </div>
               </>
             ) : null}
-            <div className="sumrow big">
+            {!strategicOnly ? <div className="sumrow big">
               <span className="k">Total Investment</span>
               <span className={hasPricedTotals ? "v" : "v tbc"}>
                 {hasPricedTotals ? formatMoneyKpi(confirmation.totalInvestment, currency) : TO_BE_CONFIRMED}
               </span>
-            </div>
-            <p className="note">{UNPRICED_INCLUDED_MESSAGE}</p>
+            </div> : null}
+            {!strategicOnly ? <p className="note">{UNPRICED_INCLUDED_MESSAGE}</p> : null}
             <div className="dacts" style={{ justifyContent: "flex-start", marginTop: 16 }}>
               <button type="button" className="btn sec" disabled={pending} onClick={() => setConfirmOpen(false)}>
                 Back / Review Selection
@@ -375,14 +376,14 @@ export function ProposalSummaryCard({
         {view.overview.campaignName} · v{view.review.reviewNumber}
         {primary.kind === "confirm" ? ` · ${CONFIRM_CREATORS_SUPPORTING_TEXT}` : ""}
       </p>
-      {showCostAndFees ? (
+      {!strategicOnly && showCostAndFees ? (
         <>
-      <Row
+      {!strategicOnly ? <Row
         label="Cost"
         value={hasPricedTotals ? formatMoneyKpi(clientCost, currency) : TO_BE_CONFIRMED}
         missing={!hasPricedTotals}
         big
-      />
+      /> : null}
       <Row
         label="Agency Fees"
         value={hasPricedTotals ? formatMoneyKpi(agencyFees, currency) : TO_BE_CONFIRMED}
@@ -396,12 +397,12 @@ export function ProposalSummaryCard({
         missing={!hasPricedTotals}
       />
       <Row label="Creators selected" hint="based on selection" value={String(calc.selectedCount)} />
-      <Row label="Priced" value={String(calc.pricedSelectedCount)} />
-      <Row
+      {!strategicOnly ? <Row label="Priced" value={String(calc.pricedSelectedCount)} /> : null}
+      {!strategicOnly ? <Row
         label="Pricing required"
         value={String(calc.unpricedSelectedCount)}
         missing={calc.unpricedSelectedCount > 0}
-      />
+      /> : null}
       <Row
         label="Est. reach"
         hint="based on selection"

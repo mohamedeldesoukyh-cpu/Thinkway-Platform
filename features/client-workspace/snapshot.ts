@@ -455,17 +455,28 @@ export function projectCommercialFromSnapshot(
 
 export function projectCreatorsFromSnapshot(
   snapshot: ClientReviewSourceSnapshot,
-  selection: Record<string, ClientCreatorSelectionState>
+  selection: Record<string, ClientCreatorSelectionState>,
+  options: { includeCommercial?: boolean } = {}
 ): ClientCreatorCard[] {
   const currency = snapshot.commercial.currency;
   return sortCreatorsPricedFirst(
     snapshot.creators.map((creator) => {
       const withCurrency = applyQuotationCurrency(creator, currency);
-      return {
+      const card = {
         ...withCurrency,
         selection: selection[creator.creatorId] ?? "in_review",
         contentExamples: withCurrency.contentFeed?.slice(0, 3) ?? [],
       };
+      if (options.includeCommercial === false) {
+        return {
+          ...card,
+          investmentAmount: undefined,
+          investmentCurrency: undefined,
+          agencyFeeAmount: undefined,
+          usageRightsAmount: undefined,
+        };
+      }
+      return card;
     })
   );
 }

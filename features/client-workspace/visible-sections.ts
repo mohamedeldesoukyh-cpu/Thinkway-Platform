@@ -19,6 +19,20 @@ export function visibleClientWorkspaceSections(view?: SectionSource): ClientWork
   return [...CLIENT_WORKSPACE_JOURNEY_SECTIONS];
 }
 
+/**
+ * Keep the selection confirmation inside the source's visible journey.
+ * Studio reviews are strategic-only; shortlist and quotation reviews retain
+ * their established Commercial destination.
+ */
+export function postCreatorApprovalSection(
+  view: Pick<ClientWorkspaceView, "review" | "visibleSections">
+): ClientWorkspaceSectionId {
+  const preferred = view.review.source === "studio" ? "creators" : "commercial";
+  return view.visibleSections.includes(preferred)
+    ? preferred
+    : defaultClientWorkspaceSection(view.visibleSections);
+}
+
 export function resolveClientWorkspaceSection(section: ClientWorkspaceSectionId): ClientWorkspaceSectionId {
   if (section === "strategy" || section === "timeline" || section === "content") return "shortlist";
   if (section === "quotation") return "commercial";
