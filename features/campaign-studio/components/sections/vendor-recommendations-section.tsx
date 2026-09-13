@@ -1345,6 +1345,9 @@ export function VendorRecommendationsSection({
     vendors: hydrated,
     loading,
     phase: hydrationPhase,
+    completed: hydrationCompleted,
+    failed: hydrationFailed,
+    retry: retryHydration,
   } = useCreatorHydration(ids, safeRationale, avgFitScore, mapperOptions);
 
   const campaignFacts = getCampaignFacts(campaignObject);
@@ -1837,6 +1840,8 @@ export function VendorRecommendationsSection({
     hydratedCount: vendors.length,
     searching: isRunning || isRegeneratingProposal,
     hydrationLoading: loading,
+    hydrationCompleted,
+    hydrationFailed,
     hasSearched: Boolean(creatorsData.lastDiscoveryAt),
     proposalBlocked: creatorsData.slateProposalStatus?.status === "blocked",
   });
@@ -1886,6 +1891,25 @@ export function VendorRecommendationsSection({
           </div>
           {shortlistPickerDialog}
         </>
+      );
+    }
+    if (listState === "unavailable") {
+      return (
+        <div className="rounded-xl border border-amber-300/80 bg-amber-50/80 px-4 py-5 text-center dark:border-amber-800 dark:bg-amber-950/30">
+          <p className="text-sm font-medium text-amber-900 dark:text-amber-100">
+            Creator profiles could not be loaded.
+          </p>
+          <p className="mt-1 text-xs text-amber-900/80 dark:text-amber-100/80">
+            The campaign recommendations are unchanged. Retry loading profiles to continue reviewing them.
+          </p>
+          <button
+            type="button"
+            className="mt-3 rounded-md border border-amber-400 bg-white px-3 py-1.5 text-xs font-semibold text-amber-900 hover:bg-amber-100 dark:bg-transparent dark:text-amber-100"
+            onClick={retryHydration}
+          >
+            Retry profiles
+          </button>
+        </div>
       );
     }
     if (shouldShowPendingPlaceholder(status, hasCommittedRecommendations)) {

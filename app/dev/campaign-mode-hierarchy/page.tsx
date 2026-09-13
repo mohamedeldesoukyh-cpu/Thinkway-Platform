@@ -11,6 +11,8 @@ import { ConfirmActionProvider } from "@/components/shared/confirm-action-provid
 import { CampaignStudioPanel } from "@/features/ai-workspace/components/campaign-studio-panel";
 import type { AiMessage } from "@/features/ai-workspace/types";
 import { buildCampaignObjectFixture } from "@/features/campaign-outputs/output-test-fixture";
+import { CreatorHydrationFixtureProvider } from "@/features/campaign-studio/hooks/creator-hydration-fixture";
+import type { HydratedVendor } from "@/features/campaign-studio/services/creator-hydration-mapper";
 
 const HIERARCHY_PREVIEW_CONVERSATION_ID = "00000000-0000-4000-8000-000000000002";
 const HIERARCHY_PREVIEW_CREATORS = [
@@ -18,6 +20,64 @@ const HIERARCHY_PREVIEW_CREATORS = [
   { id: "00000000-0000-4000-8000-000000000012", name: "Layla Macro", tier: "Macro" },
   { id: "00000000-0000-4000-8000-000000000013", name: "Omar Macro", tier: "Macro" },
   { id: "00000000-0000-4000-8000-000000000014", name: "Sara Micro", tier: "Micro" },
+];
+
+// This review surface intentionally uses non-persisted UUIDs. Its local
+// hydration provider makes those cards inspectable without changing the live
+// Creator DNA / unified-creator lookup used everywhere else.
+const HIERARCHY_PREVIEW_HYDRATED_CREATORS: HydratedVendor[] = [
+  {
+    id: HIERARCHY_PREVIEW_CREATORS[0].id,
+    displayName: "Nour Star",
+    handle: "@nourstar",
+    platform: "instagram",
+    followers: 2_100_000,
+    engagementRate: 4.8,
+    country: "Egypt",
+    categories: ["Lifestyle", "Beauty"],
+    tier: "Celebrity",
+    brandFit: 86,
+    reason: "High-reach awareness anchor for the campaign launch.",
+  },
+  {
+    id: HIERARCHY_PREVIEW_CREATORS[1].id,
+    displayName: "Layla Macro",
+    handle: "@laylamacro",
+    platform: "tiktok",
+    followers: 720_000,
+    engagementRate: 5.4,
+    country: "Egypt",
+    categories: ["Food", "Lifestyle"],
+    tier: "Macro",
+    brandFit: 82,
+    reason: "Creator-native storytelling for consideration and engagement.",
+  },
+  {
+    id: HIERARCHY_PREVIEW_CREATORS[2].id,
+    displayName: "Omar Macro",
+    handle: "@omarmacro",
+    platform: "youtube",
+    followers: 610_000,
+    engagementRate: 4.1,
+    country: "Egypt",
+    categories: ["Travel", "Entertainment"],
+    tier: "Macro",
+    brandFit: 79,
+    reason: "Adds considered long-form context to the creator mix.",
+  },
+  {
+    id: HIERARCHY_PREVIEW_CREATORS[3].id,
+    displayName: "Sara Micro",
+    handle: "@saramicro",
+    platform: "instagram",
+    followers: 145_000,
+    engagementRate: 6.2,
+    country: "Egypt",
+    categories: ["Fashion", "Lifestyle"],
+    tier: "Micro",
+    brandFit: 77,
+    reason: "Provides credible community-level proof and frequency.",
+  },
 ];
 
 export default function CampaignModeHierarchyPreviewPage() {
@@ -90,14 +150,16 @@ export default function CampaignModeHierarchyPreviewPage() {
       <div className="min-h-0 flex-1 overflow-hidden p-3">
         <div className="h-full overflow-hidden rounded-2xl border border-[#CFD6E4] bg-white shadow-lg">
           <ConfirmActionProvider>
-            <CampaignStudioPanel
-              key={viewHint ?? "default"}
-              message={message}
-              conversationId={HIERARCHY_PREVIEW_CONVERSATION_ID}
-              variant="main"
-              initialView={viewHint}
-              onSendMessage={() => {}}
-            />
+            <CreatorHydrationFixtureProvider vendors={HIERARCHY_PREVIEW_HYDRATED_CREATORS}>
+              <CampaignStudioPanel
+                key={viewHint ?? "default"}
+                message={message}
+                conversationId={HIERARCHY_PREVIEW_CONVERSATION_ID}
+                variant="main"
+                initialView={viewHint}
+                onSendMessage={() => {}}
+              />
+            </CreatorHydrationFixtureProvider>
           </ConfirmActionProvider>
         </div>
       </div>

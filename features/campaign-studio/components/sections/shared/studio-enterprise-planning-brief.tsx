@@ -27,6 +27,11 @@ export function StudioEnterprisePlanningBrief({
 }: StudioEnterprisePlanningBriefProps) {
   const lines = formatExecutiveBriefLines(narrative);
   const decisionLines = formatExecutiveDecisionSummaryLines(narrative);
+  const packageDisplayLabel = (label: string) => {
+    if (label === "Commercial Outlook") return "Budget Outlook";
+    if (label === "Commercial impact") return "Budget implications";
+    return label;
+  };
 
   return (
     <div
@@ -44,7 +49,7 @@ export function StudioEnterprisePlanningBrief({
       <ul className="m-0 list-none space-y-1.5 p-0 text-[12.5px] text-foreground">
         {lines.map((line) => (
           <li key={line.label}>
-            <b>{line.label}:</b> {line.body}
+            <b>{packageDisplayLabel(line.label)}:</b> {line.body}
           </li>
         ))}
       </ul>
@@ -107,7 +112,7 @@ export function StudioEnterprisePlanningBrief({
           <ul className="m-0 list-none space-y-1 p-0">
             {decisionLines.map((line) => (
               <li key={line.label}>
-                <b>{line.label}:</b> {line.body}
+                <b>{packageDisplayLabel(line.label)}:</b> {line.body}
               </li>
             ))}
           </ul>

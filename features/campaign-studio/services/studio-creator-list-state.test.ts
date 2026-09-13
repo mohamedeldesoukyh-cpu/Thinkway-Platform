@@ -20,6 +20,8 @@ const IDLE = {
   hydratedCount: 0,
   searching: false,
   hydrationLoading: false,
+  hydrationCompleted: false,
+  hydrationFailed: false,
   hasSearched: false,
   proposalBlocked: false,
 };
@@ -60,6 +62,51 @@ test("the stale-flag case: ids exist, hydration reports not-loading, still loadi
 
   assert.equal(state, "hydrating");
   assert.notEqual(state, "no_results");
+});
+
+test("a completed empty hydration is a terminal no-result state, not loading", () => {
+  const state = resolveStudioCreatorListState({
+    ...IDLE,
+    expectedCreatorIdCount: 4,
+    hydrationCompleted: true,
+    hasSearched: true,
+  });
+
+  assert.equal(state, "no_results");
+  assert.equal(studioCreatorListIsLoading(state), false);
+});
+
+test("a failed hydration is recoverable unavailable, not loading", () => {
+  const state = resolveStudioCreatorListState({
+    ...IDLE,
+    expectedCreatorIdCount: 4,
+    hydrationCompleted: true,
+    hydrationFailed: true,
+  });
+
+  assert.equal(state, "unavailable");
+  assert.equal(studioCreatorListIsLoading(state), false);
+});
+
+test("a changed id set resets terminal completion until the new set settles", () => {
+  const state = resolveStudioCreatorListState({
+    ...IDLE,
+    expectedCreatorIdCount: 2,
+    hydrationCompleted: false,
+  });
+
+  assert.equal(state, "hydrating");
+});
+
+test("an active hydration remains loading during a transient zero-card wave", () => {
+  const state = resolveStudioCreatorListState({
+    ...IDLE,
+    expectedCreatorIdCount: 4,
+    hydrationLoading: true,
+    hydrationCompleted: false,
+  });
+
+  assert.equal(state, "hydrating");
 });
 
 test("hydrated creators are results", () => {

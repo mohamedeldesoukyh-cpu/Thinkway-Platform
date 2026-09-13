@@ -21,6 +21,8 @@ export type StudioCreatorListState =
   | "hydrating"
   /** Hydrated creators are on screen. */
   | "results"
+  /** Hydration completed but no record could be resolved for these ids. */
+  | "unavailable"
   /** A search completed and the campaign genuinely has no creators. */
   | "no_results"
   /** The slate proposal is blocked and says why. */
@@ -35,6 +37,10 @@ export function resolveStudioCreatorListState(input: {
   searching: boolean;
   /** The hydration hook's own loading flag. */
   hydrationLoading: boolean;
+  /** The current id set has reached a terminal hydration result. */
+  hydrationCompleted: boolean;
+  /** Hydration exhausted its fallbacks without a usable result. */
+  hydrationFailed: boolean;
   /** A search has completed at least once for this campaign. */
   hasSearched: boolean;
   /** The slate proposal recorded a blocking reason. */
@@ -42,10 +48,12 @@ export function resolveStudioCreatorListState(input: {
 }): StudioCreatorListState {
   if (input.hydratedCount > 0) return "results";
   if (input.searching) return "searching";
-  // Ids without cards is loading — never "no results". This is the case that
-  // was showing an empty area.
+  // Ids without cards are loading only until this id set reaches a terminal
+  // hydration result. A completed empty result must never keep the operator in
+  // a permanent skeleton.
   if (input.expectedCreatorIdCount > 0) {
-    return input.hydrationLoading || input.hydratedCount === 0 ? "hydrating" : "results";
+    if (input.hydrationLoading || !input.hydrationCompleted) return "hydrating";
+    return input.hydrationFailed ? "unavailable" : "no_results";
   }
   if (input.proposalBlocked) return "blocked";
   return input.hasSearched ? "no_results" : "ready_to_run";

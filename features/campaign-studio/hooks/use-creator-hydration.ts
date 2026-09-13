@@ -25,11 +25,17 @@ import {
   type StudioEciPlanningSignal,
 } from "../services/eci/project-studio-eci-signal";
 import { estimateViewportHydrationSeedCount } from "./use-viewport-creator-ids";
+import {
+  resolveFixtureHydratedVendors,
+  useCreatorHydrationFixture,
+} from "./creator-hydration-fixture";
 
 export type { HydratedVendor } from "../services/creator-hydration-mapper";
 export { mapCreatorToHydratedVendor } from "../services/creator-hydration-mapper";
 
-const hydrationResultCache = new Map<string, Promise<HydratedVendor[]>>();
+type HydrationResult = { vendors: HydratedVendor[]; failed: boolean };
+
+const hydrationResultCache = new Map<string, Promise<HydrationResult>>();
 
 function lookupSignal(
   map: Map<string, StudioEciPlanningSignal>,
@@ -114,14 +120,15 @@ async function loadHydratedVendors(
   rationale: string | undefined,
   avgFitScore: number | undefined,
   mapperOptions: HydrationMapperOptions | undefined,
-  wave: { includeEci: boolean; includeQuotationPrices: boolean }
-): Promise<HydratedVendor[]> {
-  if (ids.length === 0) return [];
-  const cacheKey = `${ids.join(",")}|${rationale ?? ""}|${avgFitScore ?? ""}|${JSON.stringify(mapperOptions ?? {})}|eci:${wave.includeEci}|qp:${wave.includeQuotationPrices}`;
+  wave: { includeEci: boolean; includeQuotationPrices: boolean },
+  cacheScope = ""
+): Promise<HydrationResult> {
+  if (ids.length === 0) return { vendors: [], failed: false };
+  const cacheKey = `${ids.join(",")}|${rationale ?? ""}|${avgFitScore ?? ""}|${JSON.stringify(mapperOptions ?? {})}|eci:${wave.includeEci}|qp:${wave.includeQuotationPrices}|${cacheScope}`;
   const cached = hydrationResultCache.get(cacheKey);
   if (cached) return cached;
 
-  const promise = (async (): Promise<HydratedVendor[]> => {
+  const promise = (async (): Promise<HydrationResult> => {
     type WaveHydrationOptions = HydrationMapperOptions & {
       includeEci?: boolean;
       includeQuotationPrices?: boolean;
@@ -141,12 +148,15 @@ async function loadHydratedVendors(
       );
       if (dnaResult.vendors.length > 0) {
         const deduped = dedupeByCreatorId(dnaResult.vendors, (v) => v.id).items;
-        return orderVendorsByCreatorIds(
-          wave.includeEci
-            ? await backfillMissingAvatars(deduped, serializableOptions)
-            : deduped,
-          ids
-        );
+        return {
+          vendors: orderVendorsByCreatorIds(
+            wave.includeEci
+              ? await backfillMissingAvatars(deduped, serializableOptions)
+              : deduped,
+            ids
+          ),
+          failed: false,
+        };
       }
     } catch {
       // Fall through to unified browse hydration
@@ -166,12 +176,15 @@ async function loadHydratedVendors(
           );
         }
       }
-      return orderVendorsByCreatorIds(
-        dedupeByCreatorId(results, (v) => v.id).items,
-        ids
-      );
+      return {
+        vendors: orderVendorsByCreatorIds(
+          dedupeByCreatorId(results, (v) => v.id).items,
+          ids
+        ),
+        failed: false,
+      };
     } catch {
-      return [];
+      return { vendors: [], failed: true };
     }
   })();
 
@@ -288,10 +301,24 @@ export function useCreatorHydration(
   avgFitScore?: number,
   mapperOptions?: HydrationMapperOptions,
   options?: UseCreatorHydrationOptions
-): { vendors: HydratedVendor[]; loading: boolean; phase: 1 | 2 | 3 } {
+): {
+  vendors: HydratedVendor[];
+  loading: boolean;
+  phase: 1 | 2 | 3;
+  completed: boolean;
+  failed: boolean;
+  retry: () => void;
+} {
   const [vendors, setVendors] = useState<HydratedVendor[]>([]);
   const [loading, setLoading] = useState(false);
   const [phase, setPhase] = useState<1 | 2 | 3>(1);
+  // Completion belongs to an id set, not to the component lifetime. Deriving
+  // it from this key prevents a just-replaced slate from flashing a terminal
+  // empty state before its next hydration wave starts.
+  const [completedIdsKey, setCompletedIdsKey] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [retryNonce, setRetryNonce] = useState(0);
+  const fixtureVendors = useCreatorHydrationFixture();
 
   const idsKey = dedupeCreatorIds(creatorIds).join(",");
   const rationaleKey = rationale ?? "";
@@ -332,6 +359,8 @@ export function useCreatorHydration(
       return next.length === prev.length ? prev : next;
     });
     setPhase(1);
+    setCompletedIdsKey(null);
+    setFailed(false);
   }, [idsKey]);
 
   useEffect(() => {
@@ -339,12 +368,26 @@ export function useCreatorHydration(
       setVendors([]);
       setPhase(1);
       setLoading(false);
+      setCompletedIdsKey(idsKey);
+      setFailed(false);
       return;
     }
 
     let cancelled = false;
     const allIds = idsKey.split(",").filter(Boolean).slice(0, STUDIO_CREATOR_HYDRATION_LIMIT);
     const allKeySet = new Set(allIds.map(normalizeIdKey));
+
+    if (fixtureVendors) {
+      const fixtureResults = resolveFixtureHydratedVendors(allIds, fixtureVendors);
+      if (fixtureResults.length > 0) {
+        setVendors(fixtureResults);
+        setLoading(false);
+        setPhase(3);
+        setCompletedIdsKey(idsKey);
+        setFailed(false);
+        return;
+      }
+    }
 
     const viewportDriven = options?.visibleCreatorIds !== undefined;
     const requestedVisible = (visibleKey ? visibleKey.split(",") : []).filter(Boolean);
@@ -400,12 +443,13 @@ export function useCreatorHydration(
           rationaleKey || undefined,
           avgFitKey >= 0 ? avgFitKey : undefined,
           { ...mapperOptions, eciSignalsByInfluencerId: eciMap },
-          { includeEci: true, includeQuotationPrices: true }
+          { includeEci: true, includeQuotationPrices: true },
+          String(retryNonce)
         );
         if (cancelled) return;
         for (const id of needQuote) quoteDoneRef.current.add(normalizeIdKey(id));
         setVendors((prev) =>
-          orderVendorsByCreatorIds(mergeVendorWaves(prev, quoteWave), allIds)
+          orderVendorsByCreatorIds(mergeVendorWaves(prev, quoteWave.vendors), allIds)
         );
       })();
       return;
@@ -413,6 +457,9 @@ export function useCreatorHydration(
 
     if (pendingDna.length === 0) {
       setLoading(false);
+      if (allIds.every((id) => dnaDoneRef.current.has(normalizeIdKey(id)))) {
+        setCompletedIdsKey(idsKey);
+      }
       return;
     }
 
@@ -436,9 +483,10 @@ export function useCreatorHydration(
         rationaleKey || undefined,
         avgFitKey >= 0 ? avgFitKey : undefined,
         mapperOptions,
-        { includeEci: false, includeQuotationPrices: false }
+        { includeEci: false, includeQuotationPrices: false },
+        String(retryNonce)
       );
-      wave1Timer.end({ count: wave1.length, mode: viewportDriven ? "viewport" : "chunked" });
+      wave1Timer.end({ count: wave1.vendors.length, mode: viewportDriven ? "viewport" : "chunked" });
       if (cancelled) return;
 
       for (const id of batchIds) {
@@ -447,9 +495,10 @@ export function useCreatorHydration(
       }
 
       setVendors((prev) =>
-        orderVendorsByCreatorIds(mergeVendorWaves(prev, wave1), allIds)
+        orderVendorsByCreatorIds(mergeVendorWaves(prev, wave1.vendors), allIds)
       );
       setLoading(false);
+      setFailed(wave1.failed);
       setPhase(2);
 
       const wave2Timer = startLoadTimer("studio.creator-hydration.phase2");
@@ -473,13 +522,14 @@ export function useCreatorHydration(
         rationaleKey || undefined,
         avgFitKey >= 0 ? avgFitKey : undefined,
         { ...mapperOptions, eciSignalsByInfluencerId: eciMap },
-        { includeEci: true, includeQuotationPrices: true }
+        { includeEci: true, includeQuotationPrices: true },
+        String(retryNonce)
       );
-      wave3Timer.end({ quoteCount: quoteWave.length });
+      wave3Timer.end({ quoteCount: quoteWave.vendors.length });
       if (cancelled) return;
       for (const id of batchIds) quoteDoneRef.current.add(normalizeIdKey(id));
       setVendors((prev) =>
-        orderVendorsByCreatorIds(mergeVendorWaves(prev, quoteWave), allIds)
+        orderVendorsByCreatorIds(mergeVendorWaves(prev, quoteWave.vendors), allIds)
       );
     }
 
@@ -498,9 +548,14 @@ export function useCreatorHydration(
             await hydrateBatch(remaining);
           }
         }
+        if (!cancelled) setCompletedIdsKey(idsKey);
       } catch {
         for (const id of pendingDna) inFlightRef.current.delete(normalizeIdKey(id));
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setLoading(false);
+          setFailed(true);
+          setCompletedIdsKey(idsKey);
+        }
       }
     })();
 
@@ -508,7 +563,25 @@ export function useCreatorHydration(
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- viewport-driven batches
-  }, [idsKey, rationaleKey, avgFitKey, optionsKey, visibleKey]);
+  }, [idsKey, rationaleKey, avgFitKey, optionsKey, visibleKey, fixtureVendors, retryNonce]);
 
-  return { vendors, loading, phase };
+  const retry = () => {
+    dnaDoneRef.current.clear();
+    eciDoneRef.current.clear();
+    quoteDoneRef.current.clear();
+    inFlightRef.current.clear();
+    setCompletedIdsKey(null);
+    setFailed(false);
+    setLoading(true);
+    setRetryNonce((current) => current + 1);
+  };
+
+  return {
+    vendors,
+    loading,
+    phase,
+    completed: completedIdsKey === idsKey,
+    failed,
+    retry,
+  };
 }

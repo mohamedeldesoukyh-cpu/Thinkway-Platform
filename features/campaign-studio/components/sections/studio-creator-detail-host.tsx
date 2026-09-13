@@ -1,12 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import { getUnifiedCreatorsBatchAction } from "@/features/campaigns/creator-discovery-actions";
 import type { CreatorDrawerSelection } from "@/features/campaign-decision-workspace/components/creator-drawer";
 import type { StudioEciPlanningSignal } from "@/features/campaign-studio/services/eci/project-studio-eci-signal";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import {
+  resolveFixtureCreatorDetail,
+  useCreatorHydrationFixture,
+} from "../../hooks/creator-hydration-fixture";
 
 import { StudioExecutiveRecommendationBlock } from "./shared/studio-executive-recommendation-block";
 
@@ -39,6 +43,11 @@ type Props = {
 export function StudioCreatorDetailHost({ selection, open, onOpenChange, signal }: Props) {
   const [creator, setCreator] = useState<UnifiedCreatorResult | null>(null);
   const creatorId = selection?.id?.trim() || null;
+  const fixtureVendors = useCreatorHydrationFixture();
+  const fixtureCreator = useMemo(
+    () => (creatorId ? resolveFixtureCreatorDetail(creatorId, fixtureVendors) : null),
+    [creatorId, fixtureVendors]
+  );
 
   useEffect(() => {
     if (!open || !creatorId) {
@@ -47,7 +56,8 @@ export function StudioCreatorDetailHost({ selection, open, onOpenChange, signal 
     }
 
     let cancelled = false;
-    setCreator(null);
+    setCreator(fixtureCreator);
+    if (fixtureCreator) return;
     void getUnifiedCreatorsBatchAction([creatorId])
       .then((rows) => {
         if (cancelled) return;
@@ -60,7 +70,7 @@ export function StudioCreatorDetailHost({ selection, open, onOpenChange, signal 
     return () => {
       cancelled = true;
     };
-  }, [open, creatorId]);
+  }, [open, creatorId, fixtureCreator]);
 
   // One component, always. The canonical pack opens on click and shows its own
   // loading state; it is never replaced by a different drawer. The planning
