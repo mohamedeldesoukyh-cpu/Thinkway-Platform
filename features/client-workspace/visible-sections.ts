@@ -13,7 +13,9 @@ type SectionSource = Pick<
  * Commercial stays visible; download/send still require Approve Selected Creators.
  */
 export function visibleClientWorkspaceSections(view?: SectionSource): ClientWorkspaceSectionId[] {
-  void view;
+  if (view?.review.source === "studio") {
+    return CLIENT_WORKSPACE_JOURNEY_SECTIONS.filter((section) => section !== "commercial");
+  }
   return [...CLIENT_WORKSPACE_JOURNEY_SECTIONS];
 }
 

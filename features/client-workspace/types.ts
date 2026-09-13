@@ -447,7 +447,8 @@ export type ClientOverview = {
   deliverables: string[];
   creatorCount: number;
   whyThisApproach: string;
-  commercial: ClientCommercialSummary;
+  /** Studio's strategic-only overview does not include a Commercial projection. */
+  commercial?: ClientCommercialSummary;
 };
 
 export type ClientWorkspaceView = {

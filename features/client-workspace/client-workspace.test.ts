@@ -232,6 +232,7 @@ import {
   projectClientOverview,
   projectClientTimeline,
 } from "./project-client-view";
+import { snapshotFromCampaignObject } from "./snapshot-from-object";
 import {
   hashClientReviewToken as hashToken,
   parseReviewCookie,
@@ -4439,6 +4440,37 @@ test("canonical Client Workspace defaults to Shortlist", () => {
   assert.notEqual(defaultClientWorkspaceSection(visible), "overview");
   assert.notEqual(defaultClientWorkspaceSection(visible), "creators");
   assert.notEqual(defaultClientWorkspaceSection(visible), "commercial");
+});
+
+test("Studio Client Reviews stay strategic and omit Commercial navigation and budget projections", () => {
+  const object = buildCampaignObjectFixture();
+  const ids = clientCreatorIds(object);
+  const selection = Object.fromEntries(
+    ids.map((id, index) => [id, index === 0 ? "accepted" : "in_review"])
+  );
+  const snapshot = snapshotFromCampaignObject(object, selection);
+  const overview = projectClientOverview(object);
+  const visible = visibleClientWorkspaceSections({ review: { source: "studio" } } as never);
+
+  assert.equal(overview.commercial, undefined);
+  assert.equal(snapshot.commercial.creatorInvestment, 0);
+  assert.equal(snapshot.commercial.quotationTotal, 0);
+  assert.deepEqual(snapshot.commercial.lines, []);
+  assert.equal(visible.includes("commercial"), false);
+  assert.equal(visible.includes("shortlist"), true);
+  assert.equal(visible.includes("creators"), true);
+  assert.equal(visible.includes("approval"), true);
+});
+
+test("shortlist and quotation Client Reviews retain Commercial navigation", () => {
+  assert.equal(
+    visibleClientWorkspaceSections({ review: { source: "shortlist" } } as never).includes("commercial"),
+    true
+  );
+  assert.equal(
+    visibleClientWorkspaceSections({ review: { source: "quotation" } } as never).includes("commercial"),
+    true
+  );
 });
 
 test("Overview remains the last accessible nav tab and is not a journey stage", () => {

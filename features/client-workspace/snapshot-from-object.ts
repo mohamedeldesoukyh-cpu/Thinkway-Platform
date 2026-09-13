@@ -3,10 +3,10 @@ import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
 import type { ClientCreatorSelectionState } from "./constants";
+import { emptyClientCommercialSummary } from "./entitlement";
 import { buildMediaPlanSummary } from "./media-plan-summary";
 import {
   clientCreatorIds,
-  projectClientCommercial,
   projectClientContent,
   projectClientCreators,
   projectClientOverview,
@@ -60,7 +60,7 @@ export function snapshotFromCampaignObject(
   selection: Record<string, ClientCreatorSelectionState>,
   hydrated: UnifiedCreatorResult[] = []
 ): ClientReviewSourceSnapshot {
-  const overview = projectClientOverview(campaignObject, selection);
+  const overview = projectClientOverview(campaignObject);
   const creators = projectClientCreators(campaignObject, selection, hydrated);
   const narrative = deriveEnterprisePlanningNarrative(campaignObject);
   const snapshot: ClientReviewSourceSnapshot = {
@@ -82,7 +82,9 @@ export function snapshotFromCampaignObject(
     creators: creators.map(snapshotCreatorCard),
     content: projectClientContent(campaignObject),
     timeline: projectClientTimeline(campaignObject),
-    commercial: projectClientCommercial(campaignObject, selection),
+    // Studio is a strategic recommendation. It intentionally persists no budget-based
+    // or selected-creator-ratio Commercial projection.
+    commercial: emptyClientCommercialSummary(),
     creatorIds: clientCreatorIds(campaignObject),
   };
   snapshot.mediaPlanSummary = buildMediaPlanSummary(snapshot);

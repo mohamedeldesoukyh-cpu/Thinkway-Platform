@@ -151,10 +151,11 @@ export function OverviewWorkspace({
     hasSelection && forecast.estimatedReach != null ? formatCompactCount(forecast.estimatedReach) : undefined;
   const engagementLabel =
     hasSelection && forecast.averageEngagementRate != null ? formatEngagementPct(forecast.averageEngagementRate) : undefined;
-  const commercialOpen = isClientWorkspaceSectionOpen(view.entitlement, "commercial");
+  const commercialOpen =
+    view.review.source !== "studio" && isClientWorkspaceSectionOpen(view.entitlement, "commercial");
   const investmentLabel =
     commercialOpen && selectedCommercial.totalInvestment > 0
-      ? formatMoneyKpi(selectedCommercial.totalInvestment, o.commercial.currency)
+      ? formatMoneyKpi(selectedCommercial.totalInvestment, selectedCommercial.currency)
       : undefined;
   const lead = overviewExecutiveLead({
     selectedCount: selectedCreators.length,

@@ -6,6 +6,7 @@ import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { type ClientCreatorSelectionState } from "./constants";
+import { emptyClientCommercialSummary } from "./entitlement";
 import { mapClientReviewRow, type ReviewRow } from "./persist-client-review";
 import { hashClientReviewToken } from "./security/review-token";
 import {
@@ -13,7 +14,6 @@ import {
   projectClientCreators,
   projectClientOverview,
   projectClientTimeline,
-  projectClientCommercial,
 } from "./project-client-view";
 import {
   projectCommercialFromSnapshot,
@@ -334,7 +334,10 @@ function viewFromSnapshot(
   activity: ClientActivityEvent[],
   newer: number | null
 ): ClientWorkspaceView {
-  const commercial = projectCommercialFromSnapshot(snapshot, selection);
+  const commercial =
+    review.source === "studio"
+      ? emptyClientCommercialSummary()
+      : projectCommercialFromSnapshot(snapshot, selection);
   const overview = projectOverviewFromSnapshot(snapshot, commercial);
   const { packageSummary, mediaPlanSummary } = projectClientMediaPlans(snapshot, selection);
   const view: ClientWorkspaceView = {
@@ -633,8 +636,7 @@ export async function loadClientWorkspace(
     view = viewFromSnapshot(activeReview, freezeSnapshotForHydrate, selection, comments, activity, newer);
     view.content = projectClientContent(campaignObject);
     view.timeline = projectClientTimeline(campaignObject);
-    view.commercial = projectClientCommercial(campaignObject, selection);
-    view.overview = projectClientOverview(campaignObject, selection);
+    view.overview = projectClientOverview(campaignObject);
     const plans = projectClientMediaPlans(freezeSnapshotForHydrate, selection);
     view.packageSummary = plans.packageSummary;
     view.mediaPlanSummary = plans.mediaPlanSummary;

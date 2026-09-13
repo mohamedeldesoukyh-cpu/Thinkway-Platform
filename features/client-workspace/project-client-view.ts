@@ -203,12 +203,10 @@ export function projectClientTimeline(campaignObject: CampaignObject): {
 }
 
 export function projectClientOverview(
-  campaignObject: CampaignObject,
-  selection: Record<string, ClientCreatorSelectionState>
+  campaignObject: CampaignObject
 ): ClientOverview {
   const facts = getCampaignFacts(campaignObject);
   const narrative = deriveEnterprisePlanningNarrative(campaignObject);
-  const commercial = projectClientCommercial(campaignObject, selection);
   const why = [narrative.recommendedBusinessDecision, narrative.campaignStrategy]
     .filter((part) => part && !/^insufficient/i.test(part))
     .join(" ");
@@ -226,7 +224,6 @@ export function projectClientOverview(
     deliverables: facts?.deliverables ?? [],
     creatorCount: clientCreatorIds(campaignObject).length,
     whyThisApproach: why.slice(0, 480) || "Thinkway recommends this creator-led approach based on the confirmed campaign facts.",
-    commercial,
   };
 }
 

@@ -63,10 +63,14 @@ function nodeCopy(
 export function ClientJourneyStrip({ view }: { view: ClientWorkspaceView }) {
   const { selection } = useClientWorkspaceState();
   const calc = selectionCalculator(view.creators, selection);
+  const nodes =
+    view.review.source === "studio"
+      ? NODES.filter((node) => node.id !== "commercial")
+      : NODES;
   return (
     <nav className="journey" aria-label="Campaign journey">
       <div className="wrap journey-row">
-        {NODES.map((node, index) => {
+        {nodes.map((node, index) => {
           const copy = nodeCopy(view, node.id, calc);
           return (
             <div key={node.id} className={`journey-node tone-${copy.tone}`}>
