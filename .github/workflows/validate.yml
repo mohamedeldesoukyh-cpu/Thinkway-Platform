@@ -2,7 +2,7 @@ name: Validate
 
 on:
   push:
-    branches: [main, master, develop]
+    branches: [main, master, develop, validation/phase-4d2-content-intelligence]
   pull_request:
     branches: [main, master, develop]
 
@@ -42,6 +42,24 @@ jobs:
 
       - name: Typecheck
         run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Phase 4D.2 exact validation
+        if: github.ref == 'refs/heads/validation/phase-4d2-content-intelligence'
+        run: |
+          git diff --check HEAD^ HEAD
+          node --import tsx --test \
+            features/campaign-studio/services/creator-content-context.test.ts \
+            features/campaign-studio/services/content-context.test.ts \
+            features/campaign-studio/services/content-slate-single-source.test.ts \
+            features/campaign-studio/services/studio-draft.test.ts \
+            features/campaign-studio/services/studio-draft-preview.test.ts \
+            features/campaign-director/services/strategy-basis.test.ts \
+            features/campaign-intelligence-profile/services/canonical-intelligence-pipeline.test.ts \
+            features/campaign-intelligence-profile/services/serialized-brief-extraction.test.ts \
+            features/campaign-intelligence-profile/services/campaign-understanding/build-campaign-understanding.test.ts \
+            features/campaign-intelligence-profile/services/campaign-understanding/build-strategy-context.test.ts \
+            features/campaign-intelligence-profile/services/campaign-understanding/golden-brief-corpus.test.ts \
+            features/campaign-studio/services/creator-tier-source-of-truth.test.ts
 
       - name: Build
         env:

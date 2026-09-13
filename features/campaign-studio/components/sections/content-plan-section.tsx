@@ -20,7 +20,9 @@ import {
 import { resolveContentPlanState } from "../../services/section-data-resolver";
 import { previewCreatorsSectionFromDraft } from "../../services/studio-draft-preview";
 import { getConversationCampaignIntelligenceAction } from "@/features/campaign-intelligence-profile/actions/profile-actions";
+import { loadCreatorContentEvidenceAction } from "@/features/campaign-studio/actions/creator-content-evidence-actions";
 import type { CampaignUnderstanding } from "@/features/campaign-intelligence-profile/types/campaign-understanding";
+import type { CreatorContentEvidenceByCreatorId } from "../../services/creator-content-evidence";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type {
   CreatorsSectionData,
@@ -50,6 +52,10 @@ export function ContentPlanSection({
   const [campaignUnderstanding, setCampaignUnderstanding] = useState<CampaignUnderstanding | null | undefined>(
     conversationId ? undefined : null
   );
+  const [creatorEvidence, setCreatorEvidence] = useState<CreatorContentEvidenceByCreatorId>({});
+  const evidenceCreatorIds = resolveContentPlanState(campaignObject, studioDraft)?.context.creators
+    .map((creator) => creator.creatorId)
+    .filter(Boolean) ?? [];
 
   useEffect(() => {
     setCampaignUnderstanding(undefined);
@@ -68,6 +74,24 @@ export function ContentPlanSection({
     return () => { cancelled = true; };
   }, [conversationId]);
 
+  useEffect(() => {
+    let cancelled = false;
+    if (evidenceCreatorIds.length === 0) {
+      setCreatorEvidence({});
+      return () => { cancelled = true; };
+    }
+    void loadCreatorContentEvidenceAction(evidenceCreatorIds)
+      .then((result) => {
+        if (!cancelled) setCreatorEvidence(result);
+      })
+      // Sparse or temporarily unavailable evidence must leave a safe campaign
+      // role-based treatment, not break Content planning.
+      .catch(() => {
+        if (!cancelled) setCreatorEvidence({});
+      });
+    return () => { cancelled = true; };
+  }, [campaignObject, studioDraft, evidenceCreatorIds.join(",")]);
+
   if (status === "running" && !fallbackText.trim() && !campaignObject) {
     return <SectionSkeleton variant="cards" />;
   }
@@ -77,7 +101,7 @@ export function ContentPlanSection({
   // still badges this section until Apply.
   const contentState = campaignUnderstanding === undefined && conversationId
     ? undefined
-    : resolveContentPlanState(campaignObject, studioDraft, campaignUnderstanding ?? undefined);
+    : resolveContentPlanState(campaignObject, studioDraft, campaignUnderstanding ?? undefined, creatorEvidence);
   const items = contentState?.items ?? [];
   const creatorsData = (
     campaignObject && studioDraft && studioDraft.changes.length > 0
@@ -172,6 +196,9 @@ export function ContentPlanSection({
             <th scope="col" className={thClass}>
               Expected KPI
             </th>
+            <th scope="col" className={thClass}>
+              Creator treatment
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -204,6 +231,26 @@ export function ContentPlanSection({
                 <ObjectiveBadge objective={item.objective} />
               </td>
               <td className={tdClass}>{item.expectedKpi ?? "—"}</td>
+              <td className={tdClass}>
+                <details className="min-w-48">
+                  <summary className="cursor-pointer text-xs font-semibold text-primary">
+                    {item.contentAngle ?? "Campaign treatment"}
+                  </summary>
+                  <div className="mt-2 space-y-1 text-[11px] leading-relaxed text-muted-foreground">
+                    {item.format ? <p><b>Recommendation:</b> {item.format}{item.hookDirection ? ` · ${item.hookDirection}` : ""}</p> : null}
+                    {item.creatorAdaptation ? <p><b>Creator adaptation:</b> {item.creatorAdaptation}</p> : null}
+                    {item.rationale ? <p><b>Why:</b> {item.rationale}</p> : null}
+                    <p><b>Evidence strength:</b> {item.evidenceStrength ?? "none"}</p>
+                    {item.evidenceRefs?.length ? (
+                      <p><b>Observed / derived evidence:</b> {item.evidenceRefs.map((ref) => `${ref.label} (${ref.provenance.toLowerCase().replaceAll("_", " ")})`).join(" · ")}</p>
+                    ) : (
+                      <p><b>Evidence:</b> Limited — treatment is based on campaign role and approved requirements.</p>
+                    )}
+                    {item.mandatoryInclusions?.length ? <p><b>Must include:</b> {item.mandatoryInclusions.join(" · ")}</p> : null}
+                    {item.prohibitedPoints?.length ? <p><b>Do not include:</b> {item.prohibitedPoints.join(" · ")}</p> : null}
+                  </div>
+                </details>
+              </td>
             </tr>
           ))}
         </tbody>

@@ -2,7 +2,7 @@ import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CreatorsSectionData, StudioDraftState } from "@/features/campaign-intelligence/types/section-schemas";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
 import { buildStrategyContext } from "@/features/campaign-intelligence-profile/services/campaign-understanding/build-strategy-context";
-import type { CampaignUnderstanding, SemanticFact } from "@/features/campaign-intelligence-profile/types/campaign-understanding";
+import type { CampaignConstraint, CampaignUnderstanding, SemanticFact } from "@/features/campaign-intelligence-profile/types/campaign-understanding";
 import { evaluateCampaignUnderstandingQualityGate } from "@/features/campaign-intelligence-profile/services/campaign-understanding/quality-gate";
 import { resolveStrategyBasisStatus, type StrategyBasisStatus } from "@/features/campaign-director/services/strategy-basis";
 
@@ -18,6 +18,10 @@ export type ContentContextCreator = {
   creatorName: string;
   creatorRole?: string;
   platform?: string;
+  serviceTypes?: string[];
+  serviceLabel?: string;
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
   whySelected?: string;
   status: ReturnType<typeof creatorDecisionStatus>;
 };
@@ -47,7 +51,8 @@ export type ContentContext = {
   deliverables: string[];
   durationWeeks?: number;
   creators: ContentContextCreator[];
-  requirements: Array<Pick<SemanticFact, "id" | "concept" | "origin" | "status" | "scope" | "condition" | "evidence">>;
+  requirements: Array<Pick<SemanticFact, "id" | "concept" | "label" | "value" | "origin" | "status" | "scope" | "condition" | "evidence">>;
+  constraints: Array<Pick<CampaignConstraint, "id" | "kind" | "statement" | "severity" | "origin" | "status" | "scope" | "condition" | "evidence">>;
 };
 
 function strategyData(campaignObject: CampaignObject) {
@@ -107,6 +112,10 @@ function activeCreators(campaignObject: CampaignObject, draft?: StudioDraftState
         creatorName: entry.displayName?.trim() || entry.handle || entry.creatorId,
         creatorRole: entry.expectedRole?.trim() || slate?.role,
         platform: entry.platform?.trim(),
+        serviceTypes: entry.serviceTypes?.filter((value) => value.trim()),
+        serviceLabel: entry.serviceLabel?.trim(),
+        assignmentDeliverableId: entry.assignmentDeliverableId,
+        assignmentPostScheduleId: entry.assignmentPostScheduleId,
         whySelected: entry.whySelected,
         status: creatorDecisionStatus(creatorsData.vendorDecisions, entry.creatorId),
       };
@@ -130,6 +139,9 @@ export function buildContentContext(input: {
   const strategy = strategyData(campaignObject);
   const basisStatus = resolveStrategyAuthority(campaignObject, confirmedUnderstanding);
   const semanticFacts = (confirmedUnderstanding?.facts ?? []).filter(relevantToContent);
+  const constraints = (confirmedUnderstanding?.constraints ?? [])
+    .filter((constraint) => !constraint.appliesToStages || constraint.appliesToStages.includes("content"))
+    .filter((constraint) => constraint.status === "active");
   const context = confirmedUnderstanding ? buildStrategyContext(confirmedUnderstanding) : undefined;
   const directives = context?.platformDirectives ?? [];
   const excluded = new Set(directives.filter((item) => item.priority === "excluded").map((item) => item.platform.toLowerCase()));
@@ -190,6 +202,7 @@ export function buildContentContext(input: {
     deliverables: facts?.deliverables ?? [],
     durationWeeks: facts?.durationWeeks,
     creators,
-    requirements: semanticFacts.map(({ id, concept, origin, status, scope, condition, evidence }) => ({ id, concept, origin, status, scope, condition, evidence })),
+    requirements: semanticFacts.map(({ id, concept, label, value, origin, status, scope, condition, evidence }) => ({ id, concept, label, value, origin, status, scope, condition, evidence })),
+    constraints: constraints.map(({ id, kind, statement, severity, origin, status, scope, condition, evidence }) => ({ id, kind, statement, severity, origin, status, scope, condition, evidence })),
   };
 }

@@ -89,6 +89,20 @@ function campaignObject(source = understanding()): CampaignObject {
 test("ContentContext consumes confirmed Campaign Understanding and a CURRENT Strategy basis", () => {
   const source = understanding();
   const object = campaignObject(source);
+  const creatorEvidence = {
+    "creator-1": {
+      creatorId: "creator-1",
+      platform: "Instagram",
+      categories: ["fitness"],
+      interests: [],
+      languages: ["Arabic"],
+      recentPublications: [],
+      evidenceRefs: [
+        { id: "dna:categories", label: "Creator category signals", provenance: "OBSERVED" as const },
+        { id: "dna:languages", label: "Creator languages", provenance: "OBSERVED" as const },
+      ],
+    },
+  };
   const context = buildContentContext({ campaignObject: object, campaignUnderstanding: source });
   assert.equal(context.strategy.basisStatus, "CURRENT");
   assert.equal(context.campaignUnderstanding?.confirmationStatus, "confirmed");
@@ -97,10 +111,11 @@ test("ContentContext consumes confirmed Campaign Understanding and a CURRENT Str
   assert.equal(context.readiness.status, "READY");
   assert.equal(context.requirements.find((fact) => fact.concept === "cta")?.origin, "SOURCE_STATED");
 
-  const live = resolveContentPlanState(object, undefined, source)!;
-  const regenerated = regeneratePlanSectionsFromSlate(object, [], source);
+  const live = resolveContentPlanState(object, undefined, source, creatorEvidence)!;
+  const regenerated = regeneratePlanSectionsFromSlate(object, [], source, creatorEvidence);
   assert.deepEqual(regenerated.sections.timeline.data?.contentPlan, live.items);
   assert.deepEqual(regenerated.sections.timeline.data?.contentPlanState?.readiness, live.context.readiness);
+  assert.equal(live.items[0]?.evidenceStrength, "weak");
 });
 
 test("Content readiness gates stale, blocked, and legacy Strategy authority without mutating legacy objects", () => {

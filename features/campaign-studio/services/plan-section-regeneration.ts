@@ -17,6 +17,7 @@ import {
   deriveWhyAiInsights,
 } from "@/features/campaign-studio/services/presentation-intelligence";
 import { resolveContentPlanState } from "./section-data-resolver";
+import type { CreatorContentEvidenceByCreatorId } from "./creator-content-evidence";
 
 import type { SearchCreatorCardItem } from "./creator-platform-utils";
 import { estimateCreatorPostFee } from "./creator-fee-estimator";
@@ -224,10 +225,11 @@ function patchKpiForecastFromSlate(
 
 function patchContentPlanFromSlate(
   campaignObject: CampaignObject,
-  campaignUnderstanding?: CampaignUnderstanding
+  campaignUnderstanding?: CampaignUnderstanding,
+  creatorEvidence?: CreatorContentEvidenceByCreatorId
 ): CampaignObject {
   const timelineData = (campaignObject.sections.timeline.data ?? {}) as TimelineSectionExtras;
-  const resolved = resolveContentPlanState(campaignObject, undefined, campaignUnderstanding);
+  const resolved = resolveContentPlanState(campaignObject, undefined, campaignUnderstanding, creatorEvidence);
   if (!resolved) return campaignObject;
 
   return {
@@ -322,7 +324,8 @@ function factsToActualMix(
 export function regeneratePlanSectionsFromSlate(
   campaignObject: CampaignObject,
   cards: SearchCreatorCardItem[],
-  campaignUnderstanding?: CampaignUnderstanding
+  campaignUnderstanding?: CampaignUnderstanding,
+  creatorEvidence?: CreatorContentEvidenceByCreatorId
 ): CampaignObject {
   const creatorsData = (campaignObject.sections.creators.data ?? {}) as CreatorsSectionData;
   const slateIntelligence = creatorsData.slateIntelligence;
@@ -341,7 +344,7 @@ export function regeneratePlanSectionsFromSlate(
   next = redistributeActivationTimeline(next, cards, mainIds);
   next = patchBudgetFromSlate(next, cards);
   next = patchKpiForecastFromSlate(next, cards);
-  next = patchContentPlanFromSlate(next, campaignUnderstanding);
+  next = patchContentPlanFromSlate(next, campaignUnderstanding, creatorEvidence);
   next = patchDirectorInsightsFromSlate(next, cards.length);
   return next;
 }

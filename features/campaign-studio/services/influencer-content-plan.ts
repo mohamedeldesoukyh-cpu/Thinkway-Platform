@@ -5,6 +5,14 @@ import type {
 } from "@/features/campaign-intelligence/types/section-schemas";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { buildContentContext, type ContentContext } from "./content-context";
+import {
+  buildCreatorContentContext,
+  deriveCreatorTreatment,
+} from "./creator-content-context";
+import {
+  evidenceForCreator,
+  type CreatorContentEvidenceByCreatorId,
+} from "./creator-content-evidence";
 
 const PLATFORM_DELIVERABLE: Record<string, string> = {
   instagram: "Reel",
@@ -56,16 +64,23 @@ function kpiFor(factsKpis: string[], role: string, index: number): string {
  * Per-creator influencer content plan from Strategy + recommended slate.
  * Generic industry templates are not used when a slate exists.
  */
-export function deriveInfluencerContentPlan(context: ContentContext): ContentPlanItem[];
+export function deriveInfluencerContentPlan(
+  context: ContentContext,
+  evidence?: CreatorContentEvidenceByCreatorId
+): ContentPlanItem[];
 /** @deprecated Live resolution and regeneration pass ContentContext explicitly. */
 export function deriveInfluencerContentPlan(campaignObject: CampaignObject | undefined, draft?: StudioDraftState): ContentPlanItem[];
 export function deriveInfluencerContentPlan(
   input: ContentContext | CampaignObject | undefined,
-  draft?: StudioDraftState
+  draftOrEvidence?: StudioDraftState | CreatorContentEvidenceByCreatorId,
+  maybeEvidence?: CreatorContentEvidenceByCreatorId
 ): ContentPlanItem[] {
   const context = input && "sections" in input
-    ? buildContentContext({ campaignObject: input, draft })
+    ? buildContentContext({ campaignObject: input, draft: draftOrEvidence as StudioDraftState | undefined })
     : input;
+  const evidence = input && "sections" in input
+    ? maybeEvidence
+    : (draftOrEvidence as CreatorContentEvidenceByCreatorId | undefined);
   if (!context) return [];
   if (context.readiness.status === "BLOCKED") return [];
   /**
@@ -93,18 +108,35 @@ export function deriveInfluencerContentPlan(
   const objective = context.objective?.trim() || "Campaign objective";
   const contentStrategy = context.objective?.trim() ? `Creator content must advance ${context.objective.trim()} on ${platforms.join(" + ") || "confirmed platforms"}.` : undefined;
 
-  const plan: Array<ContentPlanItem | null> = creators.map((creator, index) => {
+  const plan: Array<ContentPlanItem | null> = creators.flatMap((creator, index) => {
     const platform = creator.platform?.trim() || platforms[index % platforms.length];
-    if (!platform) return null;
+    if (!platform) return [];
     const concept = conceptFor(concepts, undefined, index);
     const role =
       creator.creatorRole ||
       mix[index % Math.max(mix.length, 1)]?.tier ||
       "Creator";
     const week = (index % Math.max(1, durationWeeks)) + 1;
-    return {
+    const baseFormat = deliverableFor(platform, context.deliverables);
+    const treatmentContext = buildCreatorContentContext({
+      content: context,
+      creator,
+      evidence: evidenceForCreator(evidence, creator.creatorId),
+    });
+    const treatment = deriveCreatorTreatment(treatmentContext, {
+      baseFormat,
+      baseHook: concept?.hook || creator.whySelected,
+      baseConcept: concept?.bigIdea || concept?.name || contentStrategy,
+    });
+    // Existing selected-reasoning service types are the canonical per-creator
+    // deliverable signal. A plan is already an array, so each known service
+    // type becomes one row without introducing a parallel deliverable model.
+    const deliverables = creator.serviceTypes?.length
+      ? creator.serviceTypes
+      : [creator.serviceLabel || baseFormat];
+    return deliverables.map((contentType, deliverableIndex) => ({
       platform,
-      contentType: deliverableFor(platform, context.deliverables),
+      contentType,
       creatorTier: role,
       quantity: 1,
       postingDate: `Week ${week}`,
@@ -115,6 +147,8 @@ export function deriveInfluencerContentPlan(
       creatorStatus: creator.status,
       creatorName: creator.creatorName,
       creatorRole: role,
+      assignmentDeliverableId: creator.assignmentDeliverableId,
+      assignmentPostScheduleId: creator.assignmentPostScheduleId,
       contentConcept: concept?.bigIdea || concept?.name || contentStrategy,
       hook: concept?.hook || creator.whySelected,
       keyMessage: concept?.contentTheme || concept?.keyVisual || context.keyMessages[0] || contentStrategy,
@@ -126,7 +160,12 @@ export function deriveInfluencerContentPlan(
       strategyTrace: contentStrategy
         ? `Strategy: ${contentStrategy}`
         : "Strategy: confirm content strategy in Campaign Intelligence.",
-    };
+      ...treatment,
+      // Week assignment remains an explicit deterministic recommendation when
+      // the canonical slate contains no creator-scoped phase/wave record.
+      timingProvenance: "HEURISTIC_DEFAULT" as const,
+      ...(deliverableIndex > 0 ? { postingDate: `Week ${week} · deliverable ${deliverableIndex + 1}` } : {}),
+    }));
   });
   return plan.filter((item): item is ContentPlanItem => item !== null);
 }

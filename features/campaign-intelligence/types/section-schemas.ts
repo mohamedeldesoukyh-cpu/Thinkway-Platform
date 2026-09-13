@@ -560,7 +560,43 @@ export type ContentPlanItem = {
   cta?: string;
   expectedKpi?: string;
   strategyTrace?: string;
+  /**
+   * Additive, bounded creator-treatment guidance. This is planning guidance,
+   * not a Script Management document or a copy of Creator DNA.
+   */
+  contentAngle?: string;
+  format?: string;
+  hookDirection?: string;
+  talkingPoints?: string[];
+  creatorAdaptation?: string;
+  mandatoryInclusions?: string[];
+  prohibitedPoints?: string[];
+  evidenceRefs?: CreatorContentEvidenceRef[];
+  rationale?: string;
+  treatmentProvenance?: CreatorContentProvenance[];
+  evidenceStrength?: "none" | "weak" | "medium" | "strong";
+  /** Explicitly disclose a recommended timing when no scoped timing exists. */
+  timingProvenance?: CreatorContentProvenance;
+  /** Existing execution identifiers, when a selected creator already has them. */
+  assignmentDeliverableId?: string | null;
+  assignmentPostScheduleId?: string | null;
 };
+
+/** Compact references only; full Creator DNA and publication history stay canonical elsewhere. */
+export type CreatorContentEvidenceRef = {
+  id: string;
+  label: string;
+  provenance: CreatorContentProvenance;
+  freshness?: string;
+  scope?: string;
+};
+
+export type CreatorContentProvenance =
+  | "OBSERVED"
+  | "DERIVED"
+  | "STRATEGY_DECISION"
+  | "AI_RECOMMENDED"
+  | "HEURISTIC_DEFAULT";
 
 export type CreatorMixTier = {
   tier: "Nano" | "Micro" | "Mid" | "Macro" | "Mega" | "Celebrity";
