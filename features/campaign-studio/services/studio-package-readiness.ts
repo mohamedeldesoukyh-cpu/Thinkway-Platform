@@ -1,7 +1,6 @@
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import type { CampaignFacts } from "@/features/campaign-director/facts/campaign-facts-types";
 import { getCampaignFacts } from "@/features/campaign-director/facts/facts-display-bridge";
-import { formatMoneyKpi } from "@/lib/finance/currency-format";
 import type {
   CreatorsSectionData,
   PresentationStatusSectionData,
@@ -23,7 +22,7 @@ import { activeCampaignCreatorIds } from "./creator-decision-status";
 import { deriveCreatorQuantityRecommendation } from "./creator-quantity";
 import { deriveInfluencerContentPlan } from "./influencer-content-plan";
 import { deriveInfluencerStrategyView } from "./influencer-strategy-view";
-import { resolveBudgetData, resolveTimelineData } from "./section-data-resolver";
+import { resolveTimelineData } from "./section-data-resolver";
 import { resolveStudioDiscoverySufficiency } from "./studio-discovery-sufficiency";
 import { requiredIntakeFacts } from "./studio-intake-facts";
 import { isStudioIntakeConfirmed } from "./studio-workspace-status";
@@ -34,7 +33,6 @@ export type StudioPackageCheckId =
   | "discovery"
   | "creators"
   | "content"
-  | "commercial"
   | "timeline"
   | "proposal"
   | "presentation";
@@ -136,7 +134,6 @@ const DIMENSION_FIX_TARGET: Record<StudioPackageCheckId, StudioWorkspaceStepId> 
   discovery: "creators",
   creators: "creators",
   content: "content",
-  commercial: "commercial",
   timeline: "package",
   proposal: "package",
   presentation: "package",
@@ -550,64 +547,6 @@ function evaluateContent(
   return check("content", "Content", "ready");
 }
 
-function evaluateCommercial(
-  campaignObject: CampaignObject,
-  outdated: ReadonlySet<CampaignStudioSectionId>,
-  facts: CampaignFacts | undefined
-): StudioPackageCheck {
-  const budget = facts?.budget;
-  if (!budget || !(budget.amount > 0) || !budget.currency?.trim()) {
-    return check(
-      "commercial",
-      "Commercial",
-      "blocked",
-      "Budget is required to finalize Commercial.",
-      "Confirm campaign budget on Intake. Do not invent a value."
-    );
-  }
-  if (outdated.has("budget-planner") || outputLiveStatus(campaignObject, "budget_allocation") === "needs_update") {
-    return check(
-      "commercial",
-      "Commercial",
-      "outdated",
-      "Commercial values changed after creator selection, budget, or quantity updates.",
-      "Recalculate the commercial plan from the current slate."
-    );
-  }
-  const commercial = resolveBudgetData(campaignObject);
-  if (!commercial || commercial.allocations.length === 0) {
-    return check(
-      "commercial",
-      "Commercial",
-      "blocked",
-      "Commercial totals are not available from the current slate.",
-      "Rebuild commercial values from confirmed facts and creators."
-    );
-  }
-  if (
-    commercial.total != null &&
-    Math.abs((commercial.total ?? 0) - budget.amount) > 1
-  ) {
-    return check(
-      "commercial",
-      "Commercial",
-      "blocked",
-      "Commercial totals do not match the confirmed campaign budget.",
-      "Recalculate commercial from Campaign Facts."
-    );
-  }
-  if (commercial.currency && commercial.currency !== budget.currency) {
-    return check(
-      "commercial",
-      "Commercial",
-      "blocked",
-      "Commercial currency does not match Campaign Facts.",
-      "Recalculate commercial in the confirmed currency."
-    );
-  }
-  return check("commercial", "Commercial", "ready");
-}
-
 function evaluateTimeline(
   campaignObject: CampaignObject,
   outdated: ReadonlySet<CampaignStudioSectionId>,
@@ -676,7 +615,6 @@ const CLIENT_OUTPUT_PREREQUISITES = [
   "strategy",
   "creators",
   "content",
-  "commercial",
   "timeline",
 ] as const;
 
@@ -707,7 +645,7 @@ function evaluateGeneratedClientOutput(
      * Say which half of the dependency is actually missing.
      *
      * The action used to read "Generate X after Strategy, Creators, Content,
-     * Commercial, and Timeline are current" even when all five WERE current and
+     * and Timeline are current" even when all four WERE current and
      * shown as current in the same list — so the package told the operator to
      * wait for prerequisites it had already met, with no way to tell that the
      * only remaining step was generating the document. The dependency is
@@ -722,7 +660,7 @@ function evaluateGeneratedClientOutput(
         label,
         "blocked",
         `${label} has not been generated from the current campaign state. A successful PDF/PPTX export is not readiness.`,
-        `Generate ${label} — Strategy, Creators, Content, Commercial, and Timeline are current.`
+        `Generate ${label} — Strategy, Creators, Content, and Timeline are current.`
       );
     }
     return check(
@@ -809,32 +747,6 @@ function collectConsistencyIssues(
           fixTarget: "package",
         });
       }
-    }
-  }
-  if (facts.budget) {
-    const formatted = formatMoneyKpi(facts.budget.amount, facts.budget.currency);
-    const amount = Math.round(facts.budget.amount).toLocaleString("en-US");
-    if (
-      proposalReady &&
-      proposalText &&
-      !proposalText.includes(formatted) &&
-      !proposalText.includes(amount) &&
-      !proposalText.includes(String(Math.round(facts.budget.amount)))
-    ) {
-      issues.push({
-        key: "budget",
-        label: "Budget",
-        reason: `Proposal does not show the confirmed budget of ${formatted}.`,
-        fixTarget: "commercial",
-      });
-    }
-    if (proposalReady && facts.budget.currency && !includesNormalized(proposalText, facts.budget.currency)) {
-      issues.push({
-        key: "currency",
-        label: "Currency",
-        reason: "Package currency does not match Commercial.",
-        fixTarget: "commercial",
-      });
     }
   }
   if (proposalReady && creatorIds.length > 0) {
@@ -926,7 +838,7 @@ function emptyReadiness(headline: string): StudioPackageReadiness {
 /**
  * Package-level readiness and consistency gate.
  * Derives from Campaign Facts, Wave 1 fingerprints, Discovery sufficiency,
- * quantity, content, commercial, and the output registry — not a second SSOT.
+ * quantity, content, timeline, and the output registry — not a second SSOT.
  */
 export function resolveStudioPackageReadiness(
   campaignObject: CampaignObject | undefined,
@@ -952,7 +864,6 @@ export function resolveStudioPackageReadiness(
     evaluateDiscovery(campaignObject, outdated, discoveryRunning),
     evaluateCreators(campaignObject, outdated, facts),
     evaluateContent(campaignObject, outdated),
-    evaluateCommercial(campaignObject, outdated, facts),
     evaluateTimeline(campaignObject, outdated, facts),
   ];
   const checks: StudioPackageCheck[] = [
@@ -984,13 +895,11 @@ export function resolveStudioPackageReadiness(
       const dim =
         issue.key === "duration"
           ? checks.find((item) => item.id === "timeline")
-          : issue.key === "budget" || issue.key === "currency"
-            ? checks.find((item) => item.id === "commercial")
-            : issue.key === "objective"
-              ? checks.find((item) => item.id === "strategy")
-              : issue.key === "creator_selection"
-                ? checks.find((item) => item.id === "proposal")
-                : target ?? checks.find((item) => item.id === "proposal");
+          : issue.key === "objective"
+            ? checks.find((item) => item.id === "strategy")
+            : issue.key === "creator_selection"
+              ? checks.find((item) => item.id === "proposal")
+              : target ?? checks.find((item) => item.id === "proposal");
       if (dim && isDimensionPassing(dim.state)) {
         dim.state = "outdated";
         dim.ready = false;
@@ -1045,9 +954,5 @@ export function canCreateClientReview(readiness: StudioPackageReadiness): boolea
 export function firstPackageFixTarget(
   readiness: StudioPackageReadiness
 ): StudioWorkspaceStepId {
-  const commercial = readiness.checks.find((item) => item.id === "commercial" && !item.ready);
-  if (commercial && /budget/i.test(`${commercial.reason ?? ""} ${commercial.action ?? ""}`)) {
-    return "intake";
-  }
   return readiness.checks.find((item) => !item.ready)?.fixTarget ?? "package";
 }

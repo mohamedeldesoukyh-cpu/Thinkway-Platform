@@ -142,9 +142,7 @@ test("Intake missing required facts stay Missing and cannot confirm", () => {
   assert.equal(intake.rows.find((row) => row.key === "country")?.state, "confirmed");
 
   // Budget is a commercial fact, not campaign intelligence: the row is still
-  // shown and still reads as unset, but it does not block Intake. The later
-  // commercial gates (Creators / Commercial readiness, and the governance
-  // budget pause at workflow finalization) still require it.
+  // shown and still reads as unset, but it does not block Intake.
   const budgetRow = intake.rows.find((row) => row.key === "budget");
   assert.equal(budgetRow?.state, "missing");
   assert.equal(budgetRow?.required, false);
@@ -171,7 +169,6 @@ test("left rail keeps later steps Blocked until Intake is confirmed, even if Dis
   assert.equal(steps.find((step) => step.id === "strategy")?.status, "blocked");
   assert.equal(steps.find((step) => step.id === "creators")?.status, "blocked");
   assert.equal(steps.find((step) => step.id === "content")?.status, "blocked");
-  assert.equal(steps.find((step) => step.id === "commercial")?.status, "blocked");
   assert.equal(steps.find((step) => step.id === "package")?.status, "blocked");
   assert.equal(defaultStudioWorkspaceStep(steps), "intake");
 });
@@ -242,7 +239,7 @@ test("workspace steps map engines to Intake → Package without KPI cards", () =
   });
   assert.deepEqual(
     steps.map((step) => step.id),
-    ["intake", "strategy", "creators", "content", "commercial", "package"]
+    ["intake", "strategy", "creators", "content", "package"]
   );
   assert.equal(steps[0]?.status, "current");
   assert.equal(defaultStudioWorkspaceStep(steps), "intake");
@@ -259,7 +256,6 @@ test("duration 1 month → 6 weeks marks dependent steps Outdated, Intake stays 
   assert.ok(outdatedSteps.has("strategy"));
   assert.ok(outdatedSteps.has("creators"));
   assert.ok(outdatedSteps.has("content"));
-  assert.ok(outdatedSteps.has("commercial"));
   assert.ok(outdatedSteps.has("package"));
 
   const steps = resolveStudioWorkspaceSteps({
@@ -271,14 +267,13 @@ test("duration 1 month → 6 weeks marks dependent steps Outdated, Intake stays 
   assert.equal(steps.find((step) => step.id === "strategy")?.status, "outdated");
   assert.equal(steps.find((step) => step.id === "creators")?.status, "outdated");
   assert.equal(steps.find((step) => step.id === "content")?.status, "outdated");
-  assert.equal(steps.find((step) => step.id === "commercial")?.status, "outdated");
   assert.equal(steps.find((step) => step.id === "package")?.status, "outdated");
 
   const freshness = studioFreshnessSummary(stale, outdatedSections);
   assert.equal(freshness.showBanner, true);
 });
 
-test("budget EGP 5M → 3M marks Strategy/Creators/Content/Commercial/Package Outdated", () => {
+test("budget EGP 5M → 3M marks active dependent steps Outdated without a Commercial route", () => {
   const generated = generatePlanningPackage(arabBankObject());
   const { campaignObject: stale } = applyBudgetChange(generated, {
     amount: 3_000_000,
@@ -292,7 +287,6 @@ test("budget EGP 5M → 3M marks Strategy/Creators/Content/Commercial/Package Ou
   assert.ok(outdatedSteps.has("strategy"));
   assert.ok(outdatedSteps.has("creators"));
   assert.ok(outdatedSteps.has("content"));
-  assert.ok(outdatedSteps.has("commercial"));
   assert.ok(outdatedSteps.has("package"));
 
   const steps = resolveStudioWorkspaceSteps({
@@ -302,7 +296,6 @@ test("budget EGP 5M → 3M marks Strategy/Creators/Content/Commercial/Package Ou
   });
   assert.equal(steps.find((step) => step.id === "intake")?.status, "current");
   assert.equal(steps.find((step) => step.id === "strategy")?.status, "outdated");
-  assert.equal(steps.find((step) => step.id === "commercial")?.status, "outdated");
   assert.equal(steps.find((step) => step.id === "package")?.status, "outdated");
 });
 
@@ -427,8 +420,7 @@ test("workspace Next helper walks Intake → Package", () => {
   assert.equal(nextStudioWorkspaceStep("intake"), "strategy");
   assert.equal(nextStudioWorkspaceStep("strategy"), "creators");
   assert.equal(nextStudioWorkspaceStep("creators"), "content");
-  assert.equal(nextStudioWorkspaceStep("content"), "commercial");
-  assert.equal(nextStudioWorkspaceStep("commercial"), "package");
+  assert.equal(nextStudioWorkspaceStep("content"), "package");
   assert.equal(nextStudioWorkspaceStep("package"), null);
 });
 

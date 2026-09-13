@@ -5,10 +5,9 @@ import {
   FileTextIcon,
   LayoutGridIcon,
   UsersIcon,
-  WalletIcon,
 } from "lucide-react";
 
-/** Visual config for the six-step Studio workspace rail. */
+/** Visual config for the five-step Studio workspace rail. */
 export const STUDIO_PHASE_NAV: Record<
   string,
   {
@@ -36,11 +35,6 @@ export const STUDIO_PHASE_NAV: Record<
     icon: LayoutGridIcon,
     iconBgClass: "bg-[#D97706]/20",
     iconTextClass: "text-[#FFC98A]",
-  },
-  commercial: {
-    icon: WalletIcon,
-    iconBgClass: "bg-[#0C9D57]/20",
-    iconTextClass: "text-[#8FE3B5]",
   },
   package: {
     icon: CheckSquareIcon,

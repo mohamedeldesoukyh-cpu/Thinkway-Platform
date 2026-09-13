@@ -147,7 +147,7 @@ test("A. Apply does not change slate membership for a decision-only draft", () =
 
 test("A. Apply on a decision-only draft does not stale the generated outputs", () => {
   // The output fingerprint is built from the slate, not from decisions, so a
-  // committed approval leaves Content, Commercial, Timeline and the client
+  // committed approval leaves Content, Timeline and the client
   // documents exactly as generated.
   let object = buildCampaignObjectFixture();
   for (const kind of ["full_strategy", "executive_proposal", "content_calendar"] as const) {
@@ -167,7 +167,7 @@ test("A. Apply on a decision-only draft does not stale the generated outputs", (
   const readiness = resolveStudioPackageReadiness(applied, {
     outdatedSections: outdatedStudioSections(applied, { changes: [approve("cr_macro1")], updatedAt: at }),
   });
-  for (const id of ["content", "commercial", "timeline"] as const) {
+  for (const id of ["content", "timeline"] as const) {
     assert.notEqual(readiness.checks.find((item) => item.id === id)?.state, "outdated", id);
   }
 });

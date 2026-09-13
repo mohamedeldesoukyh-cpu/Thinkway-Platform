@@ -11,7 +11,6 @@ export const STUDIO_WORKSPACE_STEP_IDS = [
   "strategy",
   "creators",
   "content",
-  "commercial",
   "package",
 ] as const;
 
@@ -49,12 +48,6 @@ export const STUDIO_WORKSPACE_STEPS: readonly StudioWorkspaceStepDef[] = [
     label: "Content",
     question: "What does each creator make?",
     sections: ["content-plan"],
-  },
-  {
-    id: "commercial",
-    label: "Commercial",
-    question: "How does the money work?",
-    sections: ["budget-planner"],
   },
   {
     id: "package",
@@ -97,6 +90,11 @@ export const STUDIO_WORKSPACE_FOLDED_SECTIONS: ReadonlyArray<{
     id: "executive-summary",
     destination: "package",
     reason: "One strategy narrative — Package shows readiness, not a second summary",
+  },
+  {
+    id: "budget-planner",
+    destination: null,
+    reason: "Commercial execution begins after Generate Shortlist",
   },
   {
     id: "kpi-forecast",

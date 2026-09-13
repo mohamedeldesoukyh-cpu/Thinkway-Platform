@@ -24,7 +24,6 @@ import { outdatedStudioSections } from "./studio-facts-freshness";
 import { confirmStudioIntakeOnCampaignObject } from "./studio-intake-facts";
 import {
   canCreateClientReview,
-  firstPackageFixTarget,
   resolveStudioPackageReadiness,
 } from "./studio-package-readiness";
 
@@ -210,7 +209,7 @@ test("Arab Bank 4-week package is READY FOR CLIENT when intelligence is current 
   assert.equal(byId.discovery?.state, "ready");
   assert.equal(byId.creators?.state, "ready");
   assert.equal(byId.content?.state, "ready");
-  assert.equal(byId.commercial?.state, "ready");
+  assert.equal(byId.commercial, undefined);
   assert.equal(byId.timeline?.state, "ready");
   assert.equal(byId.proposal?.state, "ready");
   assert.equal(byId.presentation?.state, "ready");
@@ -292,7 +291,7 @@ test("E. Content exists but belongs to an old creator slate → NOT READY", () =
   assert.equal(ready.readyForClient, false);
 });
 
-test("F. Commercial exists but budget changed → NOT READY", () => {
+test("F. a budget change keeps current strategic outputs stale without adding a Commercial Package gate", () => {
   const generated = generatePlanningPackage(arabBankObject());
   const { campaignObject: stale } = applyBudgetChange(generated, {
     amount: 3_000_000,
@@ -300,7 +299,7 @@ test("F. Commercial exists but budget changed → NOT READY", () => {
   });
   const ready = readinessOf(stale);
   assert.equal(ready.checks.find((item) => item.id === "intake")?.state, "current");
-  assert.ok(["outdated", "blocked"].includes(ready.checks.find((item) => item.id === "commercial")?.state ?? ""));
+  assert.equal(ready.checks.some((item) => item.id === "commercial"), false);
   assert.equal(ready.readyForClient, false);
   assert.equal(canCreateClientReview(ready), false);
 });
@@ -387,7 +386,7 @@ test("budget EGP 5M → 3M cannot remain READY FOR CLIENT; regen reflects 3M", (
   assert.doesNotMatch(proposalText, /5,000,000/);
   const after = readinessOf(refreshed);
   assert.equal(getCampaignFacts(refreshed)?.budget?.amount, 3_000_000);
-  assert.equal(after.checks.find((item) => item.id === "commercial")?.state, "ready");
+  assert.equal(after.checks.some((item) => item.id === "commercial"), false);
   assert.equal(after.overall, "ready_for_client");
 });
 
@@ -397,25 +396,25 @@ test("creator slate change does not leave downstream package dimensions falsely 
   const ready = readinessOf(stale);
   assert.equal(ready.checks.find((item) => item.id === "creators")?.state, "ready");
   assert.notEqual(ready.checks.find((item) => item.id === "content")?.state, "ready");
-  assert.notEqual(ready.checks.find((item) => item.id === "commercial")?.state, "ready");
+  assert.equal(ready.checks.some((item) => item.id === "commercial"), false);
   assert.notEqual(ready.checks.find((item) => item.id === "proposal")?.state, "ready");
   assert.notEqual(ready.checks.find((item) => item.id === "presentation")?.state, "ready");
   assert.equal(ready.readyForClient, false);
 });
 
-test("missing budget is not invented and blocks Commercial plus Client Review", () => {
+test("legacy Commercial data is not a prerequisite for Package readiness", () => {
   const generated = generatePlanningPackage(arabBankObject());
-  const missing = stripBudget(generated);
-  assert.equal(getCampaignFacts(missing)?.budget, undefined);
-  const ready = readinessOf(missing);
-  assert.equal(ready.checks.find((item) => item.id === "intake")?.state, "current");
-  const commercial = ready.checks.find((item) => item.id === "commercial");
-  assert.equal(commercial?.state, "blocked");
-  assert.match(commercial?.reason ?? "", /Budget is required to finalize Commercial/i);
-  assert.doesNotMatch(commercial?.reason ?? "", /system error/i);
-  assert.equal(ready.readyForClient, false);
-  assert.equal(canCreateClientReview(ready), false);
-  assert.equal(firstPackageFixTarget(ready), "intake");
+  const withoutCommercial: CampaignObject = {
+    ...generated,
+    sections: {
+      ...generated.sections,
+      budget: { ...generated.sections.budget, data: undefined },
+    },
+  };
+  const ready = readinessOf(withoutCommercial);
+  assert.equal(ready.checks.some((item) => item.id === "commercial"), false);
+  assert.equal(ready.overall, "ready_for_client");
+  assert.equal(canCreateClientReview(ready), true);
 });
 
 test("Create Client Review is blocked unless overall is READY FOR CLIENT", () => {

@@ -35,14 +35,14 @@ const ALL_SECTION_IDS: CampaignStudioSectionId[] = [
   "presentation-status",
 ];
 
-test("primary workspace is six planning steps", () => {
+test("primary workspace is five planning steps", () => {
   assert.deepEqual(
     STUDIO_WORKSPACE_STEPS.map((step) => step.id),
-    ["intake", "strategy", "creators", "content", "commercial", "package"]
+    ["intake", "strategy", "creators", "content", "package"]
   );
   assert.deepEqual(
     STUDIO_STORY_ARC.map((phase) => phase.id),
-    ["intake", "strategy", "creators", "content", "commercial", "package"]
+    ["intake", "strategy", "creators", "content", "package"]
   );
 });
 
@@ -71,7 +71,7 @@ test("folded cards are not dumped into Package", () => {
   assert.equal(workspaceStepForSection("executive-strategy"), "strategy");
   assert.equal(workspaceStepForSection("creator-recommendations"), "creators");
   assert.equal(workspaceStepForSection("content-plan"), "content");
-  assert.equal(workspaceStepForSection("budget-planner"), "commercial");
+  assert.equal(workspaceStepForSection("budget-planner"), null);
   assert.equal(workspaceStepForSection("timeline"), "package");
   assert.equal(workspaceStepForSection("kpi-forecast"), null);
 });
@@ -91,8 +91,7 @@ test("grouping renders only primary sections and skips empty steps", () => {
   assert.ok(!rendered.includes("executive-summary"));
 
   const partial = groupSectionsByStoryPhase([{ id: "budget-planner" as const }]);
-  assert.equal(partial.length, 1);
-  assert.equal(partial[0]?.id, "commercial");
+  assert.equal(partial.length, 0);
 });
 
 test("unmapped section ids are omitted from the primary rail", () => {

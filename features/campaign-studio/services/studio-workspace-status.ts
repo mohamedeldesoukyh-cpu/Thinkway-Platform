@@ -91,7 +91,7 @@ function stepSectionStatus(
 }
 
 /**
- * Derive the six-step rail from Campaign Facts + Wave 1 outdated sections.
+ * Derive the five-step rail from Campaign Facts + Wave 1 outdated sections.
  * Does not invent a second freshness engine.
  */
 export function resolveStudioWorkspaceSteps(input: {

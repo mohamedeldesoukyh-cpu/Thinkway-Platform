@@ -1,8 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { ArrowRightIcon, FileSpreadsheetIcon } from "lucide-react";
-import { toast } from "sonner";
+import { ArrowRightIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -129,34 +128,6 @@ export function StudioWorkspaceScreen(props: StudioWorkspaceScreenProps) {
         />
         {renderSection(byId.get("creator-discovery"), props)}
         {renderSection(byId.get("creator-recommendations"), props)}
-      </StudioStepShell>
-    );
-  }
-
-  if (step.id === "commercial") {
-    return (
-      <StudioStepShell
-        step={step}
-        actions={
-          <div className="flex flex-wrap items-center gap-2">
-            {nextAction}
-            <Button
-              type="button"
-              className="bg-[#0057FF] hover:bg-[#0040CC]"
-              onClick={() =>
-                toast.message("Build quotation continues after Package.", {
-                  description:
-                    "Commercial stays on the existing engine. Create Client Review is the next product bridge.",
-                })
-              }
-            >
-              <FileSpreadsheetIcon className="size-4" />
-              Build quotation
-            </Button>
-          </div>
-        }
-      >
-        {renderSection(byId.get("budget-planner"), props)}
       </StudioStepShell>
     );
   }

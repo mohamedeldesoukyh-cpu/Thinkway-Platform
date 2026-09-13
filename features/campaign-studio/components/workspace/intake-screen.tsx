@@ -392,8 +392,7 @@ export function IntakeScreen({
           ))}
         </ol>
         <p className="mt-2 text-sm text-muted-foreground">
-          Confirm the facts on this screen, then Strategy. After that: Creators, Content, Commercial,
-          and Package.
+          Confirm the facts on this screen, then Strategy. After that: Creators, Content, and Package.
         </p>
       </section>
 

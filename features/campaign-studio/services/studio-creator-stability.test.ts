@@ -460,23 +460,21 @@ test("I. Content is still reported outdated when it genuinely is", () => {
   assert.match(content.reason ?? "", /previous strategy or creator slate/);
 });
 
-test("I. Timeline and Commercial are judged against confirmed facts", () => {
+test("I. Timeline is judged against confirmed facts", () => {
   const object = buildCampaignObjectFixture({
     facts: { durationWeeks: 4, budget: { amount: 3_000_000, currency: "EGP" } },
   });
   const readiness = resolveStudioPackageReadiness(object);
   const timeline = readiness.checks.find((item) => item.id === "timeline")!;
-  const commercial = readiness.checks.find((item) => item.id === "commercial")!;
   // Whatever the verdict, it must be stated against the confirmed numbers —
   // never a bare "outdated" with no measurement.
   if (!timeline.ready) assert.match(timeline.reason ?? "", /4 weeks|duration/i);
-  if (!commercial.ready) assert.match(commercial.reason ?? "", /budget|slate|currency/i);
 });
 
 test("I. an ungenerated Proposal does not blame prerequisites that are current", () => {
   const object = buildCampaignObjectFixture();
   const readiness = resolveStudioPackageReadiness(object);
-  const upstreamReady = ["strategy", "creators", "content", "commercial", "timeline"].every(
+  const upstreamReady = ["strategy", "creators", "content", "timeline"].every(
     (id) => readiness.checks.find((item) => item.id === id)?.ready
   );
   for (const id of ["proposal", "presentation"] as const) {
@@ -486,8 +484,8 @@ test("I. an ungenerated Proposal does not blame prerequisites that are current",
       assert.match(check.action ?? "", new RegExp(`Generate ${check.label}`));
       assert.doesNotMatch(
         check.action ?? "",
-        /after Strategy, Creators, Content, Commercial, and Timeline are current/,
-        "it must not ask for prerequisites that are already current"
+        /after Strategy, Creators, Content, and Timeline are current/,
+        "it names the current active Studio prerequisites"
       );
     } else {
       // Otherwise it names the ones that actually are not current.
@@ -497,7 +495,7 @@ test("I. an ungenerated Proposal does not blame prerequisites that are current",
 });
 
 test("I. staging an approval or a selection marks NOTHING outdated", () => {
-  // The Package cascade: one Approve used to mark Content, Commercial,
+  // The Package cascade: one Approve used to mark Content,
   // Timeline, Proposal and Presentation outdated, because approvals were
   // classified as slate changes.
   for (const change of [approve("inf:a"), select("inf:a")]) {
@@ -511,7 +509,7 @@ test("I. staging an approval or a selection marks NOTHING outdated", () => {
   const readiness = resolveStudioPackageReadiness(object, {
     outdatedSections: outdatedStudioSections(object, { changes: [approve("cr_macro1")], updatedAt: at }),
   });
-  for (const id of ["content", "commercial", "timeline"] as const) {
+  for (const id of ["content", "timeline"] as const) {
     assert.notEqual(
       readiness.checks.find((item) => item.id === id)?.state,
       "outdated",
