@@ -151,6 +151,27 @@ test("C. the existing branch creates nothing and renames nothing", () => {
   assert.match(existing, /input\.shortlistId/);
 });
 
+test("B / C. successful generation persists the actual shortlist link only after the batch add", () => {
+  const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
+  const addSuccess = generate.indexOf("if (!addResult.ok)");
+  const persist = generate.indexOf("persistCampaignObjectOnMessage");
+  assert.ok(addSuccess !== -1, "the canonical add result is checked");
+  assert.ok(persist > addSuccess, "the Campaign Object link is written only after a successful add");
+  assert.match(persist === -1 ? "" : generate.slice(persist, persist + 850), /linkedShortlistId: shortlistId/);
+});
+
+test("B. Studio does not require or fabricate a campaign header to generate a new shortlist", () => {
+  const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
+  const creation = generate.slice(generate.indexOf("createShortlistV2"), generate.indexOf("addCreatorsToShortlistsV2"));
+  assert.doesNotMatch(creation, /campaignHeaderId|campaign_header_id|clientId|brandId/);
+});
+
+test("G. failed canonical add cannot persist a successful Studio handoff link", () => {
+  const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
+  const failure = generate.slice(generate.indexOf("if (!addResult.ok)"), generate.indexOf("const added"));
+  assert.doesNotMatch(failure, /persistCampaignObjectOnMessage|linkedShortlistId/);
+});
+
 test("C. the existing branch requires a chosen shortlist", () => {
   const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
   assert.match(generate, /Choose a shortlist to add these creators to/);

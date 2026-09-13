@@ -6,6 +6,10 @@ import {
   stageStudioDraftChangeAction,
   unstageStudioDraftChangeAction,
 } from "./studio-draft-actions";
+import {
+  persistCampaignObjectOnMessage,
+  requireStudioUser,
+} from "./persist-campaign-object-on-message";
 import { resolveGeneratedShortlistName } from "../services/studio-creator-selection";
 
 export type VendorRecommendationDecision = "approved" | "rejected" | "shortlisted";
@@ -277,6 +281,37 @@ export async function generateStudioShortlistAction(input: {
         message: addResult.message ?? "Could not generate the shortlist.",
         selectedCount: unifiedIds.length,
         linkedShortlistId: shortlistId,
+      };
+    }
+
+    // A Studio shortlist may be generated before an operational campaign
+    // header exists. The generated/list-selected shortlist is nevertheless
+    // part of this Campaign Object's planning history, so record the actual
+    // successful handoff only after the canonical add operation has succeeded.
+    const { userId } = await requireStudioUser();
+    const updated = await persistCampaignObjectOnMessage(
+      input.conversationId,
+      input.messageId,
+      userId,
+      (campaignObject) => ({
+        ...campaignObject,
+        sections: {
+          ...campaignObject.sections,
+          creators: {
+            ...campaignObject.sections.creators,
+            data: {
+              ...(campaignObject.sections.creators.data ?? {}),
+              linkedShortlistId: shortlistId,
+            },
+          },
+        },
+      })
+    );
+    if (!updated) {
+      return {
+        ok: false,
+        message: "Creators were added to the shortlist, but the Studio handoff link could not be saved.",
+        selectedCount: unifiedIds.length,
       };
     }
 
