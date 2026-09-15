@@ -4,6 +4,7 @@
 
 import { createEmptyEnvelope } from "./field-envelope";
 import type { CreatorDNADocument } from "../types";
+import type { CreatorRecentPublication } from "@/lib/creators/types";
 
 function emptyAudience() {
   return {
@@ -26,17 +27,7 @@ function emptyContent() {
   return {
     profileUrl: createEmptyEnvelope<string | null>(null),
     username: createEmptyEnvelope<string | null>(null),
-    recentPublications: createEmptyEnvelope<
-      Array<{
-        url: string | null;
-        thumbnail: string | null;
-        likes: number | null;
-        comments: number | null;
-        views: number | null;
-        posted_at: string | null;
-        caption: string | null;
-      }>
-    >([]),
+    recentPublications: createEmptyEnvelope<CreatorRecentPublication[]>([]),
   };
 }
 

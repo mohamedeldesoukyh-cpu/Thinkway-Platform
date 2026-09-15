@@ -370,6 +370,7 @@ export async function runBatchProfileAcquisition(
             profileRows: bundle.profileRows,
             postRows: bundle.postRows,
             apifyRunId: primaryRunId,
+            apifyDatasetId: fetchResult.apifyDatasetId,
             uploadAvatar: input.uploadAvatars ?? false,
             // Batch already paid for Apify — never launch per-creator IG backfill runs.
             allowLiveApifyBackfill: false,

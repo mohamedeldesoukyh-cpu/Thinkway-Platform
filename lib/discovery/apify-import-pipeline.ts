@@ -62,6 +62,7 @@ export type ApifyStoredPayloadImportInput = ApifyImportPipelineInput & {
   profileRows: Record<string, unknown>[];
   postRows?: Record<string, unknown>[];
   apifyRunId?: string | null;
+  apifyDatasetId?: string | null;
   detailsRunId?: string | null;
   postsRunId?: string | null;
   /** Download profilePictureUrl into Supabase storage (no Apify call). */
@@ -504,6 +505,7 @@ export async function importApifyStoredPayloadWithDnaPipeline(
   }
 
   let apifyRunId = input.apifyRunId ?? null;
+  const apifyDatasetId = input.apifyDatasetId ?? null;
 
   let normalized = normalizeApifyProfileData({
     platformKey: platform,
@@ -512,6 +514,7 @@ export async function importApifyStoredPayloadWithDnaPipeline(
     profileRows,
     postRows,
     apifyRunId,
+    apifyDatasetId,
   });
 
   if (
@@ -759,8 +762,11 @@ export async function importApifyProfileWithDnaPipeline(
       profileRows: rawResult.profileRows,
       postRows: rawResult.postRows,
       apifyRunId: rawResult.apifyRunId,
+      apifyDatasetId: rawResult.apifyDatasetId,
       detailsRunId: rawResult.detailsRunId,
+      detailsDatasetId: rawResult.detailsDatasetId,
       postsRunId: rawResult.postsRunId,
+      postsDatasetId: rawResult.postsDatasetId,
       platformKey: platform,
       profileUrl,
       username,

@@ -239,6 +239,7 @@ export async function fetchBatchProfileRowsFromApify(input: {
   profileRows: Record<string, unknown>[];
   postRows: Record<string, unknown>[];
   apifyRunIds: string[];
+  apifyDatasetId: string | null;
   reason: string;
 }> {
   const detailsInput = buildBatchProfileDetailsInput(
@@ -263,11 +264,13 @@ export async function fetchBatchProfileRowsFromApify(input: {
       profileRows: [],
       postRows: [],
       apifyRunIds: detailsRun.apifyRunId ? [detailsRun.apifyRunId] : [],
+      apifyDatasetId: detailsRun.datasetId,
       reason: detailsRun.reason,
     };
   }
 
   const apifyRunIds = detailsRun.apifyRunId ? [detailsRun.apifyRunId] : [];
+  let apifyDatasetId = detailsRun.datasetId;
   let postRows: Record<string, unknown>[] = [];
 
   const postsInput = shouldIncludeApifyProfilePosts(input.scope)
@@ -286,6 +289,7 @@ export async function fetchBatchProfileRowsFromApify(input: {
     if (postsRun.ok) {
       postRows = postsRun.rows;
       if (postsRun.apifyRunId) apifyRunIds.push(postsRun.apifyRunId);
+      apifyDatasetId = postsRun.datasetId ?? apifyDatasetId;
     }
   }
 
@@ -306,6 +310,7 @@ export async function fetchBatchProfileRowsFromApify(input: {
       if (facebookPostsRun.ok) {
         postRows = facebookPostsRun.rows;
         if (facebookPostsRun.apifyRunId) apifyRunIds.push(facebookPostsRun.apifyRunId);
+        apifyDatasetId = facebookPostsRun.datasetId ?? apifyDatasetId;
       }
     }
   }
@@ -315,6 +320,7 @@ export async function fetchBatchProfileRowsFromApify(input: {
     profileRows: detailsRun.rows,
     postRows,
     apifyRunIds,
+    apifyDatasetId,
     reason: `Batch profile fetch returned ${detailsRun.rows.length} detail row(s) and ${postRows.length} post row(s).`,
   };
 }
@@ -341,6 +347,7 @@ export async function fetchBatchProfileRowsWithRetry(input: {
   profileRows: Record<string, unknown>[];
   postRows: Record<string, unknown>[];
   apifyRunIds: string[];
+  apifyDatasetId: string | null;
   reason: string;
   attempts: number;
 }> {
@@ -380,6 +387,7 @@ export async function fetchBatchProfileRowsWithRetry(input: {
     profileRows: [],
     postRows: [],
     apifyRunIds: [],
+    apifyDatasetId: null,
     reason: lastReason,
     attempts: input.maxRetries,
   };

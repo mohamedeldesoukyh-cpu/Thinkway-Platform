@@ -85,6 +85,16 @@ test("the canonical design is the Discovery suite profile, not a Studio copy", (
   assert.match(sheet, /presentation === "discoveryPack"/);
 });
 
+test("both canonical Creator Details presentations use the shared publication-evidence renderer", () => {
+  for (const file of [
+    "features/discovery/enrichment/components/recent-publications-gallery.tsx",
+    "features/discovery/components/design-system/discovery-suite-creator-profile-tabs.tsx",
+  ]) {
+    const source = read(file);
+    assert.match(source, /PublicationEvidenceDetails/);
+  }
+});
+
 test("Studio and Discovery resolve the creator from the same data source", () => {
   const studioHost = read(
     "features/campaign-studio/components/sections/studio-creator-detail-host.tsx"

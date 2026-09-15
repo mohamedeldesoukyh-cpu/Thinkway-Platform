@@ -1,4 +1,5 @@
 import type { CreatorRecentPublication } from "@/lib/creators/types";
+import { normalizeCreatorPublicationEvidence } from "@/lib/creators/publication-evidence";
 import {
   pickApifyPreviewImageUrl,
   pickApifyTikTokCoverUrls,
@@ -429,10 +430,11 @@ export function normalizeCreatorRecentPublications(
         thumbnail,
         likes: num(row.likes) ?? num(row.likesCount) ?? num(row.diggCount),
         comments: num(row.comments) ?? num(row.commentsCount),
-        views: num(row.views) ?? num(row.videoViewCount) ?? num(row.playCount),
+    views: num(row.views) ?? num(row.videoViewCount) ?? num(row.videoPlayCount) ?? num(row.playCount),
         posted_at,
         caption,
         isVideo: isCreatorRecentPublicationVideo(row),
+        ...normalizeCreatorPublicationEvidence(row),
       };
     })
     .filter((pub): pub is CreatorRecentPublication => pub != null);

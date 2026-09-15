@@ -70,6 +70,62 @@ export type CreatorRecentPublication = {
   caption: string | null;
   /** True for reels, TikTok, YouTube, etc. — persisted from enrichment when known. */
   isVideo?: boolean;
+  /** Stable external post identity when supplied by the source platform. */
+  platformPostId?: string | null;
+  /** Publication-level Apify provenance. Never implies a creator-level fact. */
+  source?: CreatorPublicationSource | null;
+  /** Instagram/API media classification. */
+  contentType?: string | null;
+  productType?: string | null;
+  /** Whether the source explicitly marked this individual post as paid. */
+  paidPartnership?: boolean | null;
+  taggedUsers?: CreatorPublicationPerson[];
+  coauthorProducers?: CreatorPublicationPerson[];
+  locationName?: string | null;
+  locationId?: string | null;
+  music?: CreatorPublicationMusic | null;
+  video?: CreatorPublicationVideo | null;
+  media?: CreatorPublicationMedia | null;
+};
+
+export type CreatorPublicationSource = {
+  provider: "apify";
+  apifyRunId: string | null;
+  apifyDatasetId: string | null;
+  platformPostId: string | null;
+  capturedAt: string | null;
+};
+
+export type CreatorPublicationPerson = {
+  id: string | null;
+  username: string | null;
+  displayName: string | null;
+  isVerified: boolean | null;
+};
+
+export type CreatorPublicationMusic = {
+  audioId: string | null;
+  songName: string | null;
+  artistName: string | null;
+  audioUrl: string | null;
+  usesOriginalAudio: boolean | null;
+};
+
+export type CreatorPublicationVideo = {
+  durationSeconds: number | null;
+  playCount: number | null;
+  viewCount: number | null;
+  url: string | null;
+};
+
+export type CreatorPublicationMedia = {
+  displayUrl: string | null;
+  width: number | null;
+  height: number | null;
+  originalWidth: number | null;
+  originalHeight: number | null;
+  imageUrls: string[];
+  childPostUrls: string[];
 };
 
 export type CreatorEnrichmentStatus =

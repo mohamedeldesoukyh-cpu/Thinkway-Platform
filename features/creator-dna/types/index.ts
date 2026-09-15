@@ -4,6 +4,7 @@
  */
 
 import type { RawProviderPayload } from "@/lib/intelligence-persistence/types";
+import type { CreatorRecentPublication } from "@/lib/creators/types";
 
 /** Source priority: manual > campaign > oauth > ipl > ai_infer */
 export type DnaSource =
@@ -124,17 +125,7 @@ export type CreatorDNAContact = {
 export type CreatorDNAContent = {
   profileUrl: FieldEnvelope<string | null>;
   username: FieldEnvelope<string | null>;
-  recentPublications: FieldEnvelope<
-    Array<{
-      url: string | null;
-      thumbnail: string | null;
-      likes: number | null;
-      comments: number | null;
-      views: number | null;
-      posted_at: string | null;
-      caption: string | null;
-    }>
-  >;
+  recentPublications: FieldEnvelope<CreatorRecentPublication[]>;
 };
 
 export type CreatorDNAScores = {

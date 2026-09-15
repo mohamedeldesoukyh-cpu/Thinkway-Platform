@@ -68,6 +68,7 @@ import {
 import {
   recentPublicationsLackThumbnails,
 } from "@/lib/creators/recent-publication-thumb";
+import { mergeCreatorRecentPublications } from "@/lib/creators/publication-evidence";
 import { loadCreatorIntelligenceBundle } from "@/lib/enterprise-creator-intelligence";
 import { getMetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
 import { apifyProfileActorIdForPlatform } from "@/lib/performance/metrics-collector/providers/apify-input";
@@ -720,6 +721,11 @@ export async function runCreatorEnrichment(
       inferredCategories
     );
 
+    const mergedPublications = mergeCreatorRecentPublications(
+      account.recent_publications,
+      data.recentPublications
+    );
+
     const incoming: IncomingField[] = [
       { field: "profile_display_name", value: data.displayName, source: APIFY },
       { field: "profile_bio", value: data.bio, source: APIFY },
@@ -744,7 +750,7 @@ export async function runCreatorEnrichment(
         value: enrichedInterestCategories.length > 0 ? enrichedInterestCategories : null,
         source: APIFY,
       },
-      { field: "recent_publications", value: data.recentPublications, source: APIFY },
+      { field: "recent_publications", value: mergedPublications, source: APIFY },
       { field: "contact_email", value: data.contactEmail, source: APIFY },
       { field: "contact_phone", value: data.contactPhone, source: APIFY },
       {
@@ -812,7 +818,7 @@ export async function runCreatorEnrichment(
         Boolean(payload.bypassMetricsManualOverride));
 
     if (shouldForcePublicationRefresh && !merged.fieldsUpdated.includes("recent_publications")) {
-      merged.updates.recent_publications = data.recentPublications;
+      merged.updates.recent_publications = mergedPublications;
       merged.fieldSources.recent_publications = APIFY;
       merged.fieldsUpdated.push("recent_publications");
     }

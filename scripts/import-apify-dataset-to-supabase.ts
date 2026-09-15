@@ -119,6 +119,7 @@ async function main(): Promise<void> {
 
   let rows: Record<string, unknown>[] = [];
   let sourceLabel = "";
+  let resolvedDatasetId: string | null = null;
 
   if (file) {
     rows = loadRowsFromFile(file);
@@ -130,7 +131,7 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
-    const resolvedDatasetId = datasetId ?? (await resolveDatasetIdFromRun(runId!, token));
+    resolvedDatasetId = datasetId ?? (await resolveDatasetIdFromRun(runId!, token));
     rows = await fetchApifyDatasetItems(resolvedDatasetId, token);
     sourceLabel = datasetId
       ? `dataset:${resolvedDatasetId}`
@@ -175,6 +176,7 @@ async function main(): Promise<void> {
         profileRows: bundle.profileRows,
         postRows: bundle.postRows,
         apifyRunId,
+        apifyDatasetId: file ? null : resolvedDatasetId,
         uploadAvatar: uploadAvatars,
       });
 

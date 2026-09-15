@@ -37,8 +37,11 @@ export type RawProviderPayload = {
   profileRows: Record<string, unknown>[];
   postRows: Record<string, unknown>[];
   apifyRunId?: string | null;
+  apifyDatasetId?: string | null;
   detailsRunId?: string | null;
+  detailsDatasetId?: string | null;
   postsRunId?: string | null;
+  postsDatasetId?: string | null;
   platformKey: string;
   profileUrl: string;
   username: string | null;

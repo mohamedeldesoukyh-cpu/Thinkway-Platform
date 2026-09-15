@@ -214,4 +214,36 @@ assert.equal(facebookWithPosts?.postsCount, null, "page likes must not become po
 assert.equal(facebookWithPosts?.avgViews, Math.round((58_900 + 41_200) / 2));
 assert.ok((facebookWithPosts?.engagementRate ?? 0) > 0);
 
+const instagramRichPublication = normalizeApifyProfileData({
+  platformKey: "instagram",
+  username: "creator",
+  profileUrl: "https://www.instagram.com/creator/",
+  profileRows: [],
+  postRows: [
+    {
+      id: "ig-post-1",
+      url: "https://www.instagram.com/p/example/",
+      ownerUsername: "creator",
+      caption: "A reel",
+      type: "Video",
+      productType: "clips",
+      paidPartnership: false,
+      taggedUsers: [{ id: "tag-1", username: "tagged", full_name: "Tagged" }],
+      musicInfo: { audio_id: "audio-1", artist_name: "Artist", song_name: "Song" },
+      videoDuration: 16,
+      videoPlayCount: 200,
+      displayUrl: "https://cdn.example.test/post.jpg",
+      dimensionsWidth: 1080,
+      dimensionsHeight: 1920,
+    },
+  ],
+  apifyRunId: "run-ig-1",
+  apifyDatasetId: "dataset-ig-1",
+  fetchedAt: "2026-09-15T00:00:00.000Z",
+});
+assert.equal(instagramRichPublication?.recentPublications[0]?.platformPostId, "ig-post-1");
+assert.equal(instagramRichPublication?.recentPublications[0]?.source?.apifyDatasetId, "dataset-ig-1");
+assert.equal(instagramRichPublication?.recentPublications[0]?.paidPartnership, false);
+assert.equal(instagramRichPublication?.recentPublications[0]?.music?.songName, "Song");
+
 console.log("apify-profile tests passed");

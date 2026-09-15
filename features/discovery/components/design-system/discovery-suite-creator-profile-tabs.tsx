@@ -3,6 +3,7 @@
 import type { ReactNode } from "react";
 
 import { PublicationPreviewImage } from "@/components/creator/publication-preview-image";
+import { PublicationEvidenceDetails } from "@/components/creator/publication-evidence-details";
 import { TabsContent } from "@/components/ui/tabs";
 import { RefreshCreatorMenu } from "@/features/discovery/enrichment/components/refresh-creator-menu";
 import { platformLabel } from "@/lib/campaigns/line-assignment";
@@ -179,6 +180,7 @@ function PackPublicationCard({ pub }: { pub: CreatorRecentPublication }) {
             {D(pub.posted_at)}
           </div>
         ) : null}
+        <PublicationEvidenceDetails publication={pub} compact />
       </div>
     </>
   );

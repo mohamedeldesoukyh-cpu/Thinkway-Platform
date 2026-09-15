@@ -3,6 +3,7 @@
 import { ExternalLinkIcon, HeartIcon, MessageCircleIcon, PlayIcon } from "lucide-react";
 
 import { PublicationPreviewImage } from "@/components/creator/publication-preview-image";
+import { PublicationEvidenceDetails } from "@/components/creator/publication-evidence-details";
 import type { CreatorRecentPublication } from "@/lib/creators/types";
 import { cn } from "@/lib/utils";
 
@@ -74,6 +75,7 @@ function PublicationCard({
           ) : null}
         </div>
         <p className="mt-0.5 text-[10px] text-muted-foreground">{formatPostedAt(publication.posted_at)}</p>
+        <PublicationEvidenceDetails publication={publication} compact />
       </div>
     </>
   ) : (
@@ -110,6 +112,7 @@ function PublicationCard({
           ) : null}
         </div>
         <p className="text-[10px] text-muted-foreground/80">{formatPostedAt(publication.posted_at)}</p>
+        <PublicationEvidenceDetails publication={publication} />
       </div>
     </>
   );

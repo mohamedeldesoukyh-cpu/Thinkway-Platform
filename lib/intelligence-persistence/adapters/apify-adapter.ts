@@ -34,6 +34,7 @@ export const apifyAdapter: ProviderAdapter = {
       profileRows: raw.profileRows,
       postRows: raw.postRows,
       apifyRunId: raw.apifyRunId ?? null,
+      apifyDatasetId: raw.apifyDatasetId ?? raw.postsDatasetId ?? raw.detailsDatasetId ?? null,
     });
   },
 

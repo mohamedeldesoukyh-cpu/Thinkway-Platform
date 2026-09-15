@@ -26,6 +26,8 @@ import {
   isCreatorRecentPublicationVideo,
   resolveCreatorRecentPublicationThumbnail,
 } from "@/lib/creators/recent-publication-thumb";
+import { normalizeCreatorPublicationEvidence } from "@/lib/creators/publication-evidence";
+import type { CreatorPublicationSource } from "@/lib/creators/types";
 import {
   CREATOR_METRIC_SAMPLE_LIMIT,
   resolveAvgEngagements,
@@ -61,6 +63,7 @@ export type ApifyProfileFetchResult =
 
 type ApifyActorRunResult = {
   runId: string | null;
+  datasetId: string | null;
   rows: Record<string, unknown>[];
   error?: string;
 };
@@ -242,7 +245,8 @@ function resolvePublicationRows(input: {
 
 function toRecentPublications(
   platformKey: string,
-  rows: Record<string, unknown>[]
+  rows: Record<string, unknown>[],
+  source?: CreatorPublicationSource | null
 ): RecentPublication[] {
   return rows
     .slice(0, CREATOR_METRIC_SAMPLE_LIMIT)
@@ -279,6 +283,7 @@ function toRecentPublications(
           null,
         caption: str(row.caption) ?? str(row.text) ?? str(row.title) ?? null,
         isVideo: isCreatorRecentPublicationVideo(row),
+        ...normalizeCreatorPublicationEvidence(row, source),
       };
     })
     .filter((pub) => pub.url || pub.caption || pub.likes != null || pub.comments != null);
@@ -330,7 +335,7 @@ async function launchApifyActor(input: {
       reason: gate.reason,
       stage: "cooldown_gate",
     });
-    return { runId: null, rows: [], error: gate.reason };
+    return { runId: null, datasetId: null, rows: [], error: gate.reason };
   }
 
   logApifyEnrichment("Launching actor", {
@@ -357,7 +362,7 @@ async function launchApifyActor(input: {
   );
 
   if (!response.ok) {
-    return { runId: null, rows: [], error: `Apify HTTP ${response.status}` };
+    return { runId: null, datasetId: null, rows: [], error: `Apify HTTP ${response.status}` };
   }
 
   const payload = (await response.json()) as {
@@ -379,7 +384,7 @@ async function launchApifyActor(input: {
 
   const datasetId = str(payload.data?.defaultDatasetId);
   if (!datasetId) {
-    return { runId, rows: [], error: "Apify run returned no dataset." };
+    return { runId, datasetId: null, rows: [], error: "Apify run returned no dataset." };
   }
 
   const itemsResponse = await fetch(
@@ -387,7 +392,7 @@ async function launchApifyActor(input: {
     { signal: AbortSignal.timeout(30_000) }
   );
   if (!itemsResponse.ok) {
-    return { runId, rows: [], error: `Apify dataset HTTP ${itemsResponse.status}` };
+    return { runId, datasetId, rows: [], error: `Apify dataset HTTP ${itemsResponse.status}` };
   }
 
   const items = (await itemsResponse.json()) as unknown[];
@@ -410,10 +415,10 @@ async function launchApifyActor(input: {
 
   const errorReason = apifyErrorReason(rows);
   if (errorReason && filterUsableRows(rows).length === 0) {
-    return { runId, rows: [], error: errorReason };
+    return { runId, datasetId, rows: [], error: errorReason };
   }
 
-  return { runId, rows: filterUsableRows(rows) };
+  return { runId, datasetId, rows: filterUsableRows(rows) };
 }
 
 function pickApifyProfilePictureUrl(
@@ -539,6 +544,8 @@ export function normalizeApifyProfileData(input: {
   profileRows: Record<string, unknown>[];
   postRows: Record<string, unknown>[];
   apifyRunId: string | null;
+  apifyDatasetId?: string | null;
+  fetchedAt?: string | null;
 }): ApifyProfileData | null {
   const metricRows =
     input.profileRows.length > 0 ? input.profileRows : input.postRows;
@@ -582,7 +589,13 @@ export function normalizeApifyProfileData(input: {
     (input.platformKey === "facebook" ? null : num(head.likes)) ??
     null;
 
-  const recent = toRecentPublications(input.platformKey, publicationRows);
+  const recent = toRecentPublications(input.platformKey, publicationRows, {
+    provider: "apify",
+    apifyRunId: input.apifyRunId,
+    apifyDatasetId: input.apifyDatasetId ?? null,
+    platformPostId: null,
+    capturedAt: input.fetchedAt ?? null,
+  });
   const hashtags = extractHashtags(publicationRows);
   const avgLikes = resolveAvgLikes({ publications: recent });
   const avgCommentsValues = recent
@@ -703,8 +716,11 @@ export type ApifyRawFetchSuccess = {
   profileRows: Record<string, unknown>[];
   postRows: Record<string, unknown>[];
   apifyRunId: string | null;
+  apifyDatasetId: string | null;
   detailsRunId: string | null;
+  detailsDatasetId: string | null;
   postsRunId: string | null;
+  postsDatasetId: string | null;
   durationMs: number;
 };
 
@@ -834,7 +850,9 @@ export async function fetchApifyProfileRaw(input: {
 
     let postRows: Record<string, unknown>[] = [];
     let apifyRunId = detailsRun.runId;
+    let apifyDatasetId = detailsRun.datasetId;
     let postsRunId: string | null = null;
+    let postsDatasetId: string | null = null;
 
     if (postsInput) {
       const postsRun = await launchApifyActor({
@@ -854,7 +872,9 @@ export async function fetchApifyProfileRaw(input: {
       } else {
         postRows = postsRun.rows;
         apifyRunId = postsRun.runId ?? apifyRunId;
+        apifyDatasetId = postsRun.datasetId ?? apifyDatasetId;
         postsRunId = postsRun.runId;
+        postsDatasetId = postsRun.datasetId;
       }
     }
 
@@ -878,7 +898,9 @@ export async function fetchApifyProfileRaw(input: {
         } else {
           postRows = facebookPostsRun.rows;
           apifyRunId = facebookPostsRun.runId ?? apifyRunId;
+          apifyDatasetId = facebookPostsRun.datasetId ?? apifyDatasetId;
           postsRunId = facebookPostsRun.runId;
+          postsDatasetId = facebookPostsRun.datasetId;
         }
       }
     }
@@ -896,8 +918,11 @@ export async function fetchApifyProfileRaw(input: {
       profileRows: detailsRun.rows,
       postRows,
       apifyRunId,
+      apifyDatasetId,
       detailsRunId: detailsRun.runId,
+      detailsDatasetId: detailsRun.datasetId,
       postsRunId,
+      postsDatasetId,
       durationMs: Date.now() - started,
     };
   } catch (error) {
@@ -987,6 +1012,8 @@ export async function fetchApifyProfile(input: {
     profileRows: raw.profileRows,
     postRows: raw.postRows,
     apifyRunId: raw.apifyRunId,
+    apifyDatasetId: raw.apifyDatasetId,
+    fetchedAt: new Date().toISOString(),
   });
 
   if (!data) {

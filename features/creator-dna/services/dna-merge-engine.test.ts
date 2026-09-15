@@ -3,9 +3,10 @@
  * Run: npx tsx features/creator-dna/services/dna-merge-engine.test.ts
  */
 
-import { mergeFieldCandidate, mergeTierPriority, sourceToMergeTier } from "./dna-merge-engine";
+import { mergeCandidatesIntoDocument, mergeFieldCandidate, mergeTierPriority, sourceToMergeTier } from "./dna-merge-engine";
 import { wrapValue } from "./field-envelope";
 import type { DnaFieldCandidate } from "../types";
+import { createEmptyCreatorDNADocument } from "./document-factory";
 
 let passed = 0;
 let failed = 0;
@@ -54,6 +55,24 @@ function runTests(): void {
 
   const emptyMerge = mergeFieldCandidate(verifiedCurrent, emptyCandidate);
   assert("empty incoming does not clear verified", emptyMerge.value === "Verified Name");
+
+  const document = createEmptyCreatorDNADocument();
+  document.content.recentPublications = wrapValue(
+    [{ platformPostId: "post-1", url: "https://instagram.test/p/one", caption: "Verified caption", thumbnail: null, likes: 1, comments: 1, views: null, posted_at: null }],
+    "manual",
+    1,
+    { updatedAt: "2026-01-01T00:00:00.000Z" }
+  );
+  mergeCandidatesIntoDocument(document, [{
+    path: "content.recentPublications",
+    value: [{ platformPostId: "post-1", url: "https://instagram.test/p/one", caption: null, thumbnail: null, likes: null, comments: null, views: 99, posted_at: null, paidPartnership: true, source: { provider: "apify", apifyRunId: "run-1", apifyDatasetId: "dataset-1", platformPostId: "post-1", capturedAt: "2026-02-01T00:00:00.000Z" } }],
+    confidence: 0.7,
+    source: "ipl",
+    updatedAt: "2026-02-01T00:00:00.000Z",
+  }]);
+  const publication = document.content.recentPublications.value[0];
+  assert("publication evidence fills missing metadata under stronger authority", publication?.paidPartnership === true && publication?.views === 99);
+  assert("publication evidence preserves stronger existing values and envelope source", publication?.caption === "Verified caption" && document.content.recentPublications.source === "manual");
 
   console.log(`\nResults: ${passed} passed, ${failed} failed\n`);
   if (failed > 0) process.exit(1);

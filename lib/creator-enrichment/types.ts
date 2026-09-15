@@ -122,16 +122,7 @@ export type ApifyProfileData = {
   apifyRunId: string | null;
 };
 
-export type RecentPublication = {
-  url: string | null;
-  thumbnail: string | null;
-  likes: number | null;
-  comments: number | null;
-  views: number | null;
-  posted_at: string | null;
-  caption: string | null;
-  isVideo?: boolean;
-};
+export type RecentPublication = import("@/lib/creators/types").CreatorRecentPublication;
 
 export type CreatorEnrichmentResult = {
   ok: boolean;
