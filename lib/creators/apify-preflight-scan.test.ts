@@ -6,9 +6,67 @@ import { ApifyPreflightCache } from "./apify-preflight-cache";
 import { readDataset, scanDatasets } from "./apify-preflight-scan";
 import { getPreflightJson, type ReadProgress } from "./preflight-get";
 import { createReadOnlyStorage, TARGETS } from "./apify-publication-preflight";
-import { runPreflight } from "@/scripts/backfill-apify-rich-publication-evidence";
+import { normalizePreflightActorReference, runPreflight } from "@/scripts/backfill-apify-rich-publication-evidence";
 
 const modifiedAt = "2026-01-01T00:00:00.000Z";
+
+test("actor reference normalizes owner/name to owner~name", () => {
+  assert.equal(normalizePreflightActorReference("owner/instagram-scraper"), "owner~instagram-scraper");
+  assert.equal(normalizePreflightActorReference("  owner/instagram-scraper  "), "owner~instagram-scraper");
+});
+
+test("actor reference preserves owner~name", () => {
+  assert.equal(normalizePreflightActorReference("owner~instagram-scraper"), "owner~instagram-scraper");
+});
+
+test("actor reference preserves opaque actor IDs and case", () => {
+  assert.equal(normalizePreflightActorReference("AbC123xYz789LmN456"), "AbC123xYz789LmN456");
+});
+
+test("malformed actor references fail before any network request and do not expose the value", async () => {
+  const values = [undefined, "", " ", "/name", "owner/", "owner//name", "owner/name/", "owner/name/runs",
+    "owner/name/run-sync-get-dataset-items", "owner~name/runs", "owner~~name", "owner/name~other", "owner~name/other",
+    "../name", "owner/../name", "owner\\name", "owner%2Fname", "owner%252Fname", "owner~name?token=private",
+    "owner/name#private", "https://api.apify.com/v2/acts/owner~name", "owner/na me", "owner/na\nme", "owner/na\0me",
+    "~name", "owner~", "owner/.name", "owner/é", "owner/name&token=private"];
+  let requests = 0;
+  const fake = (async () => { requests++; throw new Error("Unexpected network"); }) as typeof fetch;
+  for (const value of values) {
+    assert.throws(() => normalizePreflightActorReference(value), /Instagram actor/);
+    await assert.rejects(runPreflight(["--preflight", "--target=production", "--no-cache"], { APIFY_INSTAGRAM_ACTOR_ID: value }, fake), error => {
+      assert.match(String(error), /Instagram actor/);
+      assert.doesNotMatch(String(error), /private|api\.apify\.com/);
+      return true;
+    });
+  }
+  assert.equal(requests, 0);
+});
+
+test("all actor reference formats pass the unchanged GET-only guard and use the resolved actor ID", async () => {
+  const id = "AbC123xYz789LmN456";
+  for (const reference of ["owner/name", "owner~name", id]) {
+    const paths: string[] = [];
+    const fake = (async (input, init) => {
+      assert.equal(init?.method, "GET"); assert.equal(init?.redirect, "error");
+      const path = new URL(String(input)).pathname;
+      paths.push(path);
+      const json = (data: unknown, count?: number) => new Response(JSON.stringify(data), { headers: count === undefined ? {} : { "content-range": `*/${count}` } });
+      if (path.endsWith("influencer_platform_accounts")) return json([{ id: "account", influencer_id: "creator", platform: "instagram", username: "creator", recent_publications: [] }], 1);
+      if (path.endsWith("creator_dna") || path.endsWith("ipl_snapshots")) return json([], 0);
+      if (path === `/v2/acts/${reference.replace("/", "~")}`) return json({ data: { id } });
+      if (path === `/v2/actors/${id}/runs`) return json({ data: { total: 0, items: [] } });
+      assert.fail("Unexpected offline request");
+    }) as typeof fetch;
+    const report = await runPreflight(["--preflight", "--target=production", "--no-cache"], {
+      NEXT_PUBLIC_SUPABASE_URL: `https://${TARGETS.production}.supabase.co`, SUPABASE_SERVICE_ROLE_KEY: "sb_secret_fixture",
+      APIFY_TOKEN: "fixture", APIFY_INSTAGRAM_ACTOR_ID: reference,
+    }, fake);
+    assert.equal(report.actualWrites, 0);
+    assert.equal(paths.length, 5);
+    assert.equal(paths[3], `/v2/acts/${reference.replace("/", "~")}`);
+    assert.equal(paths[4], `/v2/actors/${id}/runs`);
+  }
+});
 async function withCache(fn: (cache: ApifyPreflightCache, directory: string) => Promise<void>) {
   const base = resolve(".tmp");
   await mkdir(base, { recursive: true });
@@ -182,7 +240,9 @@ test("dataset transport requires exact headers and blocks action endpoints and q
   const fake = (async () => { calls++; return new Response('[]'); }) as typeof fetch;
   const reader = createReadOnlyStorage("production", `https://${TARGETS.production}.supabase.co`, "sb_secret_fake", "apify_fake", fake);
   await assert.rejects(reader.datasetPage("dataset", 0, 10_000), /Unverifiable/);
-  for (const path of ["actors/fixture/run-sync-get-dataset-items", "acts/fixture/runs", "actors/fixture/runs?token=secret", "datasets/x/../items", "datasets/x/items?fields=id", "datasets/x/items?clean=true&token=secret"]) await assert.rejects(reader.apify(path), /not allowed/);
+  for (const path of ["actors/fixture/run-sync-get-dataset-items", "acts/fixture/runs", "actors/fixture/runs?token=secret", "datasets/x/../items", "datasets/x/items?fields=id", "datasets/x/items?clean=true&token=secret",
+    "acts/owner/name", "acts/owner%2Fname", "acts/owner~name/runs", "acts/owner~name/run-sync", "actors/owner~name/run-sync-get-dataset-items", "actor-runs/fixture/resurrect", "actor-runs/fixture/abort", "actor-runs/fixture/reboot",
+  ]) await assert.rejects(reader.apify(path), /not allowed/);
   assert.equal(calls, 1);
 });
 

@@ -11,6 +11,18 @@ import type { ReadOptions, ReadProgress } from "@/lib/creators/preflight-get";
 type Run = { id: string; actId?: string; actorId?: string; defaultDatasetId?: string; finishedAt?: string; status: string };
 type Snapshot = { platform_account_id: string; influencer_id: string; raw_snapshot: { platformKey?: string; username?: string; profileRows?: Record<string, unknown>[] } };
 
+/** Configuration compatibility only; never decode URLs or accept endpoint paths. */
+export function normalizePreflightActorReference(reference: string | undefined): string {
+  const value = reference?.trim();
+  if (!value) throw new Error("Configured Instagram actor required");
+  const normalized = /^[A-Za-z0-9][A-Za-z0-9_-]*\/[A-Za-z0-9][A-Za-z0-9_-]*$/.test(value)
+    ? value.replace("/", "~") : value;
+  if (!/^[A-Za-z0-9][A-Za-z0-9_-]*(?:~[A-Za-z0-9][A-Za-z0-9_-]*)?$/.test(normalized)) {
+    throw new Error("Invalid configured Instagram actor reference");
+  }
+  return normalized;
+}
+
 export async function runPreflight(args: string[], env: Record<string, string | undefined>, transport: typeof fetch = fetch, options: ReadOptions = {}) {
   if (args.some(a => !/^--(target=(development|production)|preflight|before=.+|explain|no-cache|cache-dir=.+|concurrency=\d+|page-size=\d+)$/.test(a))) throw new Error("Unsupported option. This command has no write mode.");
   const optionNames = args.map(a => a.split("=")[0]);
@@ -21,6 +33,7 @@ export async function runPreflight(args: string[], env: Record<string, string | 
   const before = args.find(a => a.startsWith("--before="))?.slice(9) ?? new Date().toISOString();
   if (!Number.isFinite(Date.parse(before))) throw new Error("Invalid snapshot boundary");
   const boundary = new Date(before).toISOString();
+  const actorName = normalizePreflightActorReference(env.APIFY_INSTAGRAM_ACTOR_ID);
   const concurrency = Number(args.find(a => a.startsWith("--concurrency="))?.split("=")[1] ?? 4);
   const pageSize = Number(args.find(a => a.startsWith("--page-size="))?.split("=")[1] ?? 10_000);
   if (concurrency < 1 || concurrency > 8 || pageSize < 1 || pageSize > 50_000) throw new Error("Invalid bounded scan options");
@@ -54,8 +67,6 @@ export async function runPreflight(args: string[], env: Record<string, string | 
       if (id && username && username === normalizeUsername(snapshot.raw_snapshot.username)) account.stableIds = [...new Set([...account.stableIds, id])];
     }
   }
-  const actorName = env.APIFY_INSTAGRAM_ACTOR_ID?.trim();
-  if (!actorName) throw new Error("Configured Instagram actor required");
   const actor = await reader.apify<{ data: { id: string } }>(`acts/${encodeURIComponent(actorName)}`);
   if (!actor.data?.id) throw new Error("Instagram actor identity unavailable");
   const runs = (await readAllPages<Run>(async (offset, limit) => {
