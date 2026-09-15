@@ -279,12 +279,24 @@ function mergeMedia<T>(current: T, incoming: T): T {
   return merged as T;
 }
 
-function publicationIdentity(publication: CreatorRecentPublication): string | null {
-  const id = publication.platformPostId?.trim();
-  if (id) return `post:${id}`;
-  const url = publication.url?.trim().toLowerCase();
-  return url ? `url:${url}` : null;
+export function canonicalPublicationUrl(value: unknown): string | null {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const url = new URL(value);
+    if (!['https:', 'http:'].includes(url.protocol)) return null;
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    if (host === "instagram.com") {
+      const match = url.pathname.match(/^\/(?:p|reel|reels|tv)\/([^/]+)\/?$/);
+      // Shortcodes are case-sensitive. /p and /reel can address the same post.
+      return match ? `https://instagram.com/p/${match[1]}` : null;
+    }
+    return `${url.protocol}//${host}${url.pathname.replace(/\/$/, "")}`;
+  } catch {
+    return null;
+  }
 }
+
+export type PublicationIdentityIssue = { kind: "conflict" | "ambiguous"; publication: CreatorRecentPublication };
 
 /**
  * Deduplicate by a stable platform post id (or canonical URL fallback) and only
@@ -293,20 +305,45 @@ function publicationIdentity(publication: CreatorRecentPublication): string | nu
  */
 export function mergeCreatorRecentPublications(
   existing: unknown,
-  incoming: CreatorRecentPublication[]
+  incoming: CreatorRecentPublication[],
+  onIssue?: (issue: PublicationIdentityIssue) => void
 ): CreatorRecentPublication[] {
   const base = Array.isArray(existing) ? (existing as CreatorRecentPublication[]) : [];
   const output: CreatorRecentPublication[] = [];
-  const byIdentity = new Map<string, number>();
+  // Pre-index claims across both sets, so an early URL-only row cannot bridge
+  // two different stable IDs depending on input order.
+  const claims = new Map<string, Set<string>>();
+  for (const publication of [...base, ...incoming]) {
+    const url = canonicalPublicationUrl(publication.url);
+    const id = publication.platformPostId?.trim();
+    if (url && id) claims.set(url, new Set([...(claims.get(url) ?? []), id]));
+  }
 
-  const add = (publication: CreatorRecentPublication) => {
-    const identity = publicationIdentity(publication);
-    if (!identity || !byIdentity.has(identity)) {
-      if (identity) byIdentity.set(identity, output.length);
+  const add = (publication: CreatorRecentPublication, retained: boolean) => {
+    const id = publication.platformPostId?.trim();
+    const url = canonicalPublicationUrl(publication.url);
+    const conflictingUrl = url != null && (claims.get(url)?.size ?? 0) > 1;
+    if (conflictingUrl) {
+      onIssue?.({ kind: "conflict", publication });
+      if (retained) output.push(publication);
+      return;
+    }
+    const matches = output.flatMap((current, index) => {
+      const currentId = current.platformPostId?.trim();
+      const sameId = id && currentId && id === currentId;
+      const sameUrl = url && url === canonicalPublicationUrl(current.url);
+      return sameId || (sameUrl && (!id || !currentId || id === currentId)) ? [index] : [];
+    });
+    if (matches.length > 1) {
+      onIssue?.({ kind: "ambiguous", publication });
+      if (retained) output.push(publication);
+      return;
+    }
+    if (matches.length === 0) {
       output.push(publication);
       return;
     }
-    const index = byIdentity.get(identity)!;
+    const index = matches[0]!;
     const current = output[index]!;
     const merged = Object.fromEntries(
       Object.keys({ ...current, ...publication }).map((key) => [
@@ -332,7 +369,7 @@ export function mergeCreatorRecentPublications(
     output[index] = merged;
   };
 
-  for (const publication of base) add(publication);
-  for (const publication of incoming) add(publication);
+  for (const publication of base) add(publication, true);
+  for (const publication of incoming) add(publication, false);
   return output;
 }

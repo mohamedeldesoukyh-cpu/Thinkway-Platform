@@ -21,7 +21,6 @@ import {
   setNestedEnvelope,
 } from "./field-envelope";
 import { mergeCreatorRecentPublications } from "@/lib/creators/publication-evidence";
-import type { CreatorRecentPublication } from "@/lib/creators/types";
 
 export function sourceToMergeTier(source: DnaSource, hasValue: boolean): DnaMergeTier {
   if (!hasValue) return "empty";
@@ -95,26 +94,31 @@ export function mergeCandidatesIntoDocument(
     const current = getNestedEnvelope(docRecord, candidate.path) as
       | FieldEnvelope<unknown>
       | undefined;
-    const publicationEvidenceCandidate =
-      candidate.path === "content.recentPublications" &&
-      Array.isArray(current?.value) &&
-      Array.isArray(candidate.value)
-        ? {
-            ...candidate,
-            // Keep the established field authority while allowing the public,
-            // post-scoped Apify source nested on each matching publication to
-            // fill only missing evidence.
-            value: mergeCreatorRecentPublications(
-              current.value as CreatorRecentPublication[],
-              candidate.value as CreatorRecentPublication[]
-            ),
-            source: current.source,
-            confidence: Math.max(current.confidence, candidate.confidence),
-            sourceVersion: current.sourceVersion,
-          }
-        : candidate;
+    if (candidate.path === "content.recentPublications" &&
+        Array.isArray(current?.value) && current.value.length > 0 && Array.isArray(candidate.value)) {
+      const value = mergeCreatorRecentPublications(current.value, candidate.value);
+      if (JSON.stringify(value) !== JSON.stringify(current.value)) {
+        // Historical evidence may predate the verified envelope. Fill gaps
+        // without changing its authority or discarding its existing history.
+        setNestedEnvelope(docRecord, candidate.path, {
+          ...current,
+          value,
+          history: [...current.history, {
+            value: candidate.value,
+            confidence: candidate.confidence,
+            source: candidate.source,
+            sourceVersion: candidate.sourceVersion ?? null,
+            updatedAt: candidate.updatedAt,
+            snapshotId: candidate.snapshotId ?? null,
+          }],
+        });
+        changedFields.push(candidate.path);
+      }
+      fieldConfidences[candidate.path] = current.confidence;
+      continue;
+    }
     const prevJson = JSON.stringify(current?.value ?? null);
-    const resolved = mergeFieldCandidate(current, publicationEvidenceCandidate);
+    const resolved = mergeFieldCandidate(current, candidate);
     const nextJson = JSON.stringify(resolved.value ?? null);
 
     setNestedEnvelope(docRecord, candidate.path, resolved);

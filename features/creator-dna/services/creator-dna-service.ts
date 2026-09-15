@@ -278,11 +278,13 @@ export class CreatorDNAService {
       influencer_id: influencerId,
       document: nextDocument as never,
       version: nextVersion,
-      last_snapshot_id: input.snapshotId ?? null,
+      last_snapshot_id: input.snapshotId ?? existing?.lastSnapshotId ?? null,
       last_enrichment_run_id: input.enrichmentRunId ?? existing?.lastEnrichmentRunId ?? null,
       platform_account_ids: [...platformAccountIds],
       dna_completeness_score: completeness.dnaCompleteness,
-      raw_apify_snapshot: (input.rawApifySnapshot ?? null) as never,
+      // Omit absent raw evidence on upsert: publication-only enrichment must
+      // never erase the retained provider snapshot.
+      ...(input.rawApifySnapshot != null ? { raw_apify_snapshot: input.rawApifySnapshot } : {}),
       enriched_at: intelligenceSource === "apify_enrichment" ? mergedAt : undefined,
       apify_run_id: apifyRunId,
       updated_at: mergedAt,
