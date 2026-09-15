@@ -4,6 +4,7 @@ import type { CreatorRecentPublication } from "./types";
 import { mergeCandidatesIntoDocument } from "@/features/creator-dna/services/dna-merge-engine";
 import { createEmptyCreatorDNADocument } from "@/features/creator-dna/services/document-factory";
 import type { CreatorDNADocument } from "@/features/creator-dna/types";
+import { getPreflightJson, type ReadOptions } from "./preflight-get";
 
 export const TARGETS = { development: "hsxrewjcbvmbkqdlzjhs", production: "ienowhwfyxoqtzbgltno" } as const;
 export type Account = {
@@ -159,7 +160,7 @@ export async function readAllPages<T>(read: (offset: number, limit: number) => P
   return output;
 }
 
-export function createReadOnlyStorage(target: keyof typeof TARGETS, supabaseUrl: string, credential: string, apifyToken: string, transport: typeof fetch = fetch) {
+export function createReadOnlyStorage(target: keyof typeof TARGETS, supabaseUrl: string, credential: string, apifyToken: string, transport: typeof fetch = fetch, options: ReadOptions = {}) {
   if (!Object.hasOwn(TARGETS, target) || supabaseUrl !== `https://${TARGETS[target]}.supabase.co`) throw new Error("Explicit target does not match Supabase URL");
   // Anonymous and ordinary user JWTs can silently return RLS-filtered emptiness.
   // Only a server-validated administrative read credential is accepted here.
@@ -167,9 +168,19 @@ export function createReadOnlyStorage(target: keyof typeof TARGETS, supabaseUrl:
   try { role = JSON.parse(Buffer.from(credential.split('.')[1] ?? '', 'base64url').toString()).role; } catch { /* opaque secret */ }
   if (!credential.startsWith("sb_secret_") && role !== "service_role") throw new Error("Authenticated unrestricted read credential required; anon/user access refused");
   async function get(url: string, headers: Record<string, string>) {
-    const response = await transport(url, { method: "GET", headers, redirect: "error" });
-    if (!response.ok) throw new Error(`Authenticated storage read failed (${response.status})`);
-    return response;
+    return getPreflightJson(transport, url, headers, options);
+  }
+  async function apifyRead(path: string) {
+    // Explicit endpoint/query allowlists; no run-launch or other action endpoints.
+    const [pathname, query = ""] = path.split("?");
+    const allowed = /^acts\/[\w~-]+$/.test(pathname!) ? [] :
+      /^actors\/[\w~-]+\/runs$/.test(pathname!) ? ["offset", "limit", "desc", "status", "startedBefore"] :
+      pathname === "actor-runs" ? ["offset", "limit", "desc"] :
+      /^datasets\/[\w-]+$/.test(pathname!) ? [] :
+      /^datasets\/[\w-]+\/items$/.test(pathname!) ? ["format", "offset", "limit", "clean", "desc"] : null;
+    if (!apifyToken || !allowed || /[#\\]/.test(path) || path.split("?").length > 2 ||
+        [...new URLSearchParams(query).keys()].some(key => !allowed.includes(key))) throw new Error("Apify storage path not allowed");
+    return get(`https://api.apify.com/v2/${path}`, { Authorization: `Bearer ${apifyToken}` });
   }
   return {
     async table<T>(table: "influencer_platform_accounts" | "creator_dna" | "ipl_snapshots", query: string): Promise<T[]> {
@@ -179,14 +190,25 @@ export function createReadOnlyStorage(target: keyof typeof TARGETS, supabaseUrl:
         const range = response.headers.get("content-range");
         const count = range?.match(/\/(\d+)$/)?.[1];
         if (count == null) throw new Error("Unverifiable authenticated read count");
-        const items = await response.json();
+        const items = response.data;
         if (!Array.isArray(items)) throw new Error("Invalid table response");
         return { items: items as T[], total: Number(count) };
       });
     },
     async apify<T>(path: string): Promise<T> {
-      if (!apifyToken || !/^(actor-runs\?|acts\/[^/?]+$|datasets\/[^/?]+(?:\/items\?|$))/.test(path) || path.includes('..') || path.includes('#')) throw new Error("Apify storage path not allowed");
-      return (await get(`https://api.apify.com/v2/${path}`, { Authorization: `Bearer ${apifyToken}` })).json() as Promise<T>;
+      return (await apifyRead(path)).data as T;
+    },
+    async datasetPage(id: string, offset: number, limit: number) {
+      if (![offset, limit].every(Number.isSafeInteger) || offset < 0 || limit < 1) throw new Error("Invalid dataset pagination");
+      const response = await apifyRead(`datasets/${id}/items?format=json&offset=${offset}&limit=${limit}&clean=false&desc=0`);
+      const count = response.headers.get("x-apify-pagination-total");
+      const start = response.headers.get("x-apify-pagination-offset");
+      const items = response.data;
+      if (!count || !/^\d+$/.test(count) || !Number.isSafeInteger(Number(count)) ||
+          start === null || !/^\d+$/.test(start) || Number(start) !== offset || !Array.isArray(items) || items.length > limit) {
+        throw new Error("Unverifiable dataset page");
+      }
+      return { items, total: Number(count) };
     },
   };
 }

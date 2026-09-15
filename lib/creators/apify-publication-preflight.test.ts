@@ -157,20 +157,22 @@ test("entire Production preflight is offline GET-only, paginates datasets, rejec
     if (url.pathname.endsWith("creator_dna")) return response([], 0);
     if (url.pathname.endsWith("ipl_snapshots")) return response([{ platform_account_id: a.id, influencer_id: a.influencer_id, raw_snapshot: { platformKey: "instagram", username: "creator", profileRows: [{ id: "123", username: "creator" }, { id: "wrong", username: "unrelated" }] } }], 1);
     if (url.pathname.endsWith("acts/instagram-fixture")) return response({ data: { id: "instagram-fixture" } });
-    if (url.pathname.endsWith("actor-runs")) return response({ data: { total: 2, items: [{ id: "run", actId: "instagram-fixture", status: "SUCCEEDED", defaultDatasetId: "dataset", finishedAt: "2026-01-01T00:00:00Z" }, { id: "other", actId: "tiktok", status: "SUCCEEDED", defaultDatasetId: "wrong-dataset", finishedAt: "2026-01-01T00:00:00Z" }] } });
-    if (url.pathname.endsWith("datasets/dataset")) return response({ data: { itemCount: 1001 } });
+    if (url.pathname.endsWith("actors/instagram-fixture/runs")) return response({ data: { total: 2, items: [{ id: "run", actId: "instagram-fixture", status: "SUCCEEDED", defaultDatasetId: "dataset", finishedAt: "2026-01-01T00:00:00Z" }, { id: "other", actId: "tiktok", status: "SUCCEEDED", defaultDatasetId: "wrong-dataset", finishedAt: "2026-01-01T00:00:00Z" }] } });
+    if (url.pathname.endsWith("datasets/dataset")) return response({ data: { id: "dataset", itemCount: 1001, modifiedAt: "2026-01-01T00:00:00Z" } });
     if (url.pathname.endsWith("datasets/dataset/items")) {
       const offset = Number(url.searchParams.get("offset"));
       // Invalid rows are counted, not silently dropped; the final valid row
       // demonstrates that evidence after row 1000 reaches the real planner.
-      return response(offset === 0 ? Array(1000).fill(null) : [{ ownerId: "123", ownerUsername: "oldname", id: "post-1", url: "https://instagram.com/p/AbC/", paidPartnership: false }]);
+      return new Response(JSON.stringify(offset === 0 ? Array(1000).fill(null) : [{ ownerId: "123", ownerUsername: "oldname", id: "post-1", url: "https://instagram.com/p/AbC/", paidPartnership: false }]), {
+        headers: { "x-apify-pagination-total": "1001", "x-apify-pagination-offset": String(offset) },
+      });
     }
     throw new Error(`Unexpected fixture request ${url.pathname}`);
   }) as typeof fetch;
   await assert.rejects(runPreflight(["--preflight", "--target=production", "--apply"], env, fake), /no write mode/);
   await assert.rejects(runPreflight(["--preflight"], env, fake), /Require/);
   assert.equal(requests.length, 0);
-  const report = await runPreflight(["--preflight", "--target=production", "--before=2026-09-15"], env, fake);
+  const report = await runPreflight(["--preflight", "--target=production", "--before=2026-09-15", "--no-cache"], env, fake);
   assert.equal(report.instagramRuns, 1);
   assert.equal(report.scannedRows, 1001);
   assert.equal(report.accountsChanged, 1);
