@@ -114,15 +114,26 @@ test("A. the creator inventory id set does not change when the first decision is
   );
 });
 
-test("A. hydration prunes the inventory, it never empties it", () => {
+test("A. hydration preserves surviving cards and exposes a terminal, recoverable lifecycle", () => {
   const code = readCode(HYDRATION);
-  const reset = code.slice(code.indexOf("useEffect(() => {\n    const keep"));
-  const body = reset.slice(0, reset.indexOf("}, [idsKey]);"));
-  assert.match(body, /prev\.filter\(\(vendor\) => keep\.has\(normalizeIdKey\(vendor\.id\)\)\)/);
-  assert.match(body, /next\.length === prev\.length \? prev : next/, "same members, same array");
+  // A changed slate keeps hydrated cards that still belong to it, then resets
+  // completion/failure for the new id set before the next wave starts.
+  assert.match(code, /const next = prev\.filter\(\(vendor\) => keep\.has\(normalizeIdKey\(vendor\.id\)\)\);/);
+  assert.match(code, /return next\.length === prev\.length \? prev : next/, "same members, same array");
+  assert.match(code, /setCompletedIdsKey\(null\);\s*setFailed\(false\);\s*\}, \[idsKey\]\);/);
   // Exactly one blanket clear remains, and it is the "no ids at all" case.
   assert.equal((code.match(/setVendors\(\[\]\)/g) ?? []).length, 1);
   assert.match(code, /if \(!idsKey\) \{\s*setVendors\(\[\]\)/);
+
+  // Initial hydration is visibly loading, while a completed empty lookup is
+  // terminal rather than an infinite skeleton. A failed lookup is explicit
+  // and the returned retry starts a fresh id-set attempt.
+  assert.match(code, /setLoading\(dnaDoneRef\.current\.size === 0\);/);
+  assert.match(code, /if \(pendingDna\.length === 0\) \{\s*setLoading\(false\);[\s\S]*setCompletedIdsKey\(idsKey\);/);
+  assert.match(code, /setLoading\(false\);\s*setFailed\(wave1\.failed\);/);
+  assert.match(code, /catch \{[\s\S]*setLoading\(false\);\s*setFailed\(true\);\s*setCompletedIdsKey\(idsKey\);/);
+  assert.match(code, /completed: completedIdsKey === idsKey,/);
+  assert.match(code, /const retry = \(\) => \{[\s\S]*setCompletedIdsKey\(null\);\s*setFailed\(false\);\s*setLoading\(true\);\s*setRetryNonce/);
 });
 
 test("A. a decision publishes the draft and nothing else", () => {
@@ -481,11 +492,12 @@ test("I. an ungenerated Proposal does not blame prerequisites that are current",
     const check = readiness.checks.find((item) => item.id === id)!;
     if (check.ready) continue;
     if (upstreamReady) {
-      assert.match(check.action ?? "", new RegExp(`Generate ${check.label}`));
+      const generationLabel = id === "presentation" ? "Executive Proposal" : check.label;
+      assert.match(check.action ?? "", new RegExp(`Generate ${generationLabel}`));
       assert.doesNotMatch(
         check.action ?? "",
-        /after Strategy, Creators, Content, and Timeline are current/,
-        "it names the current active Studio prerequisites"
+        /Commercial/,
+        "it never names the removed Commercial Studio stage"
       );
     } else {
       // Otherwise it names the ones that actually are not current.
