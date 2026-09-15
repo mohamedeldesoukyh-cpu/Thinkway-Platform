@@ -160,6 +160,16 @@ test("B / C. successful generation persists the actual shortlist link only after
   assert.match(persist === -1 ? "" : generate.slice(persist, persist + 850), /linkedShortlistId: shortlistId/);
 });
 
+test("B / C. both New and Existing modes join the one successful handoff path", () => {
+  const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
+  const existing = generate.indexOf('if (mode === "existing")');
+  const create = generate.indexOf("createShortlistV2");
+  const add = generate.indexOf("addCreatorsToShortlistsV2");
+  const persist = generate.indexOf("persistCampaignObjectOnMessage");
+  assert.ok(existing < create && create < add && add < persist);
+  assert.equal((generate.match(/linkedShortlistId: shortlistId/g) ?? []).length, 2);
+});
+
 test("B. Studio does not require or fabricate a campaign header to generate a new shortlist", () => {
   const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
   const creation = generate.slice(generate.indexOf("createShortlistV2"), generate.indexOf("addCreatorsToShortlistsV2"));
@@ -168,8 +178,21 @@ test("B. Studio does not require or fabricate a campaign header to generate a ne
 
 test("G. failed canonical add cannot persist a successful Studio handoff link", () => {
   const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
-  const failure = generate.slice(generate.indexOf("if (!addResult.ok)"), generate.indexOf("const added"));
+  const failure = generate.slice(
+    generate.indexOf("if (!addResult.ok)"),
+    generate.indexOf("// A Studio shortlist may be generated")
+  );
   assert.doesNotMatch(failure, /persistCampaignObjectOnMessage|linkedShortlistId/);
+});
+
+test("G. Campaign Object persistence failure cannot report a completed Studio handoff", () => {
+  const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
+  const persistenceFailure = generate.slice(
+    generate.indexOf("if (!updated)"),
+    generate.indexOf("const added")
+  );
+  assert.match(persistenceFailure, /ok: false/);
+  assert.doesNotMatch(persistenceFailure, /linkedShortlistId|shortlistUrl/);
 });
 
 test("C. the existing branch requires a chosen shortlist", () => {
@@ -217,6 +240,7 @@ test("D. confirm is never gated on the campaign name", () => {
 
 test("E. duplicates are the helper's business, and are reported as such", () => {
   const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
+  assert.match(generate, /\[\.\.\.new Set\(input\.creatorUnifiedIds/);
   // The helper already skips creators already on the list; we report its counts.
   assert.match(generate, /addResult\.added/);
   assert.match(generate, /addResult\.alreadyOnList/);
@@ -225,6 +249,13 @@ test("E. duplicates are the helper's business, and are reported as such", () => 
   assert.match(generate, /\$\{added\} added/);
   // The selection size is never reported as the number added.
   assert.doesNotMatch(generate, /\$\{unifiedIds\.length\} added/);
+});
+
+test("E. an empty selection returns before either New or Existing shortlist write", () => {
+  const generate = functionSource(ACTIONS, "export async function generateStudioShortlistAction");
+  const noSelection = generate.slice(0, generate.indexOf('const mode = input.mode ?? "new"'));
+  assert.match(noSelection, /Select at least one creator before generating a shortlist/);
+  assert.doesNotMatch(noSelection, /createShortlistV2|addCreatorsToShortlistsV2/);
 });
 
 test("E. a failed write can never report success", () => {

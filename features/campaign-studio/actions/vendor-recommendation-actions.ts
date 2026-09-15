@@ -280,7 +280,6 @@ export async function generateStudioShortlistAction(input: {
         ok: false,
         message: addResult.message ?? "Could not generate the shortlist.",
         selectedCount: unifiedIds.length,
-        linkedShortlistId: shortlistId,
       };
     }
 
