@@ -166,3 +166,10 @@ metric, proposed write count and optional plan. With any unresolved dataset,
 `complete` is false and `recommendation` remains BLOCKED. Subset write counts
 are not an exact estimate for the full historical inventory. Quarantine is
 reported in JSON/progress, never saved as a completion or permanent skip marker.
+
+Malformed Creator DNA documents are reported separately as `malformedDnaRows`
+(influencer ID and reason) and `unresolvedMalformedDna`. They are excluded from
+DNA proposals, including creation of a replacement document for the same
+influencer. Valid creators continue planning. Any unresolved malformed DNA keeps
+`complete` false and `recommendation` BLOCKED; the preflight never repairs or
+writes the Production row.

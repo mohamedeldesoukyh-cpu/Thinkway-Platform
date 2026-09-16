@@ -14,7 +14,30 @@ export type Account = {
   stableIds: string[]; recent_publications: unknown; field_sources?: unknown;
 };
 export type DnaRow = { influencer_id: string; document: CreatorDNADocument; [key: string]: unknown };
+export type RawDnaRow = { influencer_id: string; document: unknown; [key: string]: unknown };
+export type MalformedDnaRow = { influencerId: string; reason: string };
 export type Evidence = { ownerId: string | null; username: string | null; publication: CreatorRecentPublication; capturedAt: string };
+const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
+
+/** Preflight only: quarantine documents that cannot safely enter publication planning. */
+export function splitPreflightDnaRows(rows: RawDnaRow[]) {
+  const valid: DnaRow[] = [];
+  const malformed: MalformedDnaRow[] = [];
+  for (const row of rows) {
+    const document = row.document;
+    const content = record(document) ? document.content : null;
+    const publications = record(content) ? content.recentPublications : null;
+    const reason = !record(document) ? "Missing or invalid DNA document" :
+      !record(content) ? "Missing or invalid DNA document content" :
+      !record(publications) || !Array.isArray(publications.value) ||
+      !publications.value.every(record) || !Array.isArray(publications.history) ||
+      typeof publications.confidence !== "number" || typeof publications.source !== "string"
+        ? "Invalid DNA recentPublications envelope" : null;
+    if (reason) malformed.push({ influencerId: row.influencer_id, reason });
+    else valid.push(row as DnaRow);
+  }
+  return { valid, malformed };
+}
 export function stableId(value: unknown): string | null {
   if (typeof value === "number") return Number.isSafeInteger(value) && value >= 0 ? String(value) : null;
   return typeof value === "string" && value.trim() ? value.trim() : null;
@@ -60,7 +83,7 @@ function changedPosts(before: CreatorRecentPublication[], after: CreatorRecentPu
     return !old || !same(old, p);
   });
 }
-export function planPublicationBackfill(accounts: Account[], dnaRows: DnaRow[], evidence: Evidence[]) {
+export function planPublicationBackfill(accounts: Account[], dnaRows: DnaRow[], evidence: Evidence[], excludedDnaInfluencerIds: ReadonlySet<string> = new Set()) {
   const skipped: { reason: string; ownerId: string | null; username: string | null }[] = [];
   const incoming = new Map<string, Evidence[]>();
   // A reused username with multiple historical owners must not authorize a
@@ -113,6 +136,8 @@ export function planPublicationBackfill(accounts: Account[], dnaRows: DnaRow[], 
     for (const p of changedPosts(before, publications)) enriched.add(countKey(account.influencer_id, postKey(p)));
   }
   for (const [influencerId, rows] of byCreator) {
+    // A quarantined existing DNA row must never become a proposed new document.
+    if (excludedDnaInfluencerIds.has(influencerId)) continue;
     const found = dnaRows.filter(r => r.influencer_id === influencerId);
     if (found.length > 1) throw new Error(`Duplicate DNA rows for ${influencerId}`);
     const existing = found[0]?.document;

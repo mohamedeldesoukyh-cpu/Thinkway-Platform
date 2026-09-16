@@ -2,7 +2,7 @@
 import { normalizeApifyProfileData } from "@/lib/creator-enrichment/apify-profile";
 import {
   createReadOnlyStorage, normalizeUsername, planPublicationBackfill, readAllPages,
-  stableId, TARGETS, type Account, type DnaRow, type Evidence,
+  stableId, TARGETS, splitPreflightDnaRows, type Account, type RawDnaRow, type Evidence,
 } from "@/lib/creators/apify-publication-preflight";
 import { ApifyPreflightCache } from "@/lib/creators/apify-preflight-cache";
 import { scanDatasets } from "@/lib/creators/apify-preflight-scan";
@@ -54,7 +54,10 @@ export async function runPreflight(args: string[], env: Record<string, string | 
   const accounts = (await reader.table<Omit<Account, "stableIds">>("influencer_platform_accounts", "select=id,influencer_id,platform,handle,username,normalized_username,recent_publications,field_sources&platform=ilike.instagram&order=id.asc"))
     .map(a => ({ ...a, stableIds: [] as string[] }));
   if (!accounts.length) throw new Error("No Instagram accounts visible; refusing an unverifiable empty preflight");
-  const dna = await reader.table<DnaRow>("creator_dna", "select=*&order=influencer_id.asc");
+  const dnaRows = await reader.table<RawDnaRow>("creator_dna", "select=*&order=influencer_id.asc");
+  const { valid: dna, malformed: malformedDnaRows } = splitPreflightDnaRows(dnaRows);
+  const malformedDnaIds = new Set(malformedDnaRows.map(row => row.influencerId));
+  for (const row of malformedDnaRows) progress({ event: "dna-quarantined", influencerId: row.influencerId, reason: row.reason });
   const snapshots = await reader.table<Snapshot>("ipl_snapshots", "select=platform_account_id,influencer_id,raw_snapshot&provider=eq.apify&platform=ilike.instagram&order=id.asc");
   for (const snapshot of snapshots) {
     const account = accounts.find(a => a.id === snapshot.platform_account_id);
@@ -112,15 +115,16 @@ export async function runPreflight(args: string[], env: Record<string, string | 
   // concurrent download completion. Matching and merge semantics stay unchanged.
   const evidence = runs.flatMap(run => evidenceByRun.get(run.id) ?? []);
   progress({ event: "planning", scannedRows, invalidRows });
-  const plan = planPublicationBackfill(accounts, dna, evidence);
+  const plan = planPublicationBackfill(accounts, dna, evidence, malformedDnaIds);
   const quarantinedDatasets = scan.quarantined.map(dataset => ({ ...dataset,
     runIds: runsByDataset.get(dataset.datasetId)!.map(run => run.id).sort(),
   }));
-  return { complete: scan.complete, evidenceScope: "complete-datasets-only",
+  return { complete: scan.complete && malformedDnaRows.length === 0, evidenceScope: "complete-datasets-only",
     completeDatasetIds: scan.completeDatasetIds, quarantinedDatasets, unresolvedDatasets: scan.unresolvedDatasets,
+    malformedDnaRows, unresolvedMalformedDna: malformedDnaRows.length,
     target, mode: "read-only-preflight", boundary, instagramRuns: runs.length, scannedRows, invalidRows, readStats: { ...readStats, ...scan },
     ...plan.summary, skipped: plan.summary.skipped + invalidRows,
-    recommendation: scan.unresolvedDatasets || plan.summary.conflicts || plan.summary.ambiguous || invalidRows ? "BLOCKED" : "REVIEW_REQUIRED_NO_WRITE_MODE",
+    recommendation: scan.unresolvedDatasets || malformedDnaRows.length || plan.summary.conflicts || plan.summary.ambiguous || invalidRows ? "BLOCKED" : "REVIEW_REQUIRED_NO_WRITE_MODE",
     skippedDetails: plan.skipped, identityIssues: plan.identityIssues,
     ...(args.includes("--explain") ? { accountPlans: plan.accountPlans, dnaPlans: plan.dnaPlans } : {}),
   };

@@ -7,6 +7,7 @@ import { readDataset, scanDatasets } from "./apify-preflight-scan";
 import { getPreflightJson, type ReadProgress } from "./preflight-get";
 import { createReadOnlyStorage, TARGETS } from "./apify-publication-preflight";
 import { normalizePreflightActorReference, runPreflight } from "@/scripts/backfill-apify-rich-publication-evidence";
+import { createEmptyCreatorDNADocument } from "@/features/creator-dna/services/document-factory";
 
 const modifiedAt = "2026-01-01T00:00:00.000Z";
 
@@ -358,4 +359,39 @@ test("missing dataset metadata quarantines the dataset and continues", async () 
   assert.deepEqual(consumed, ["good"]);
   assert.deepEqual(report.completeDatasetIds, ["good"]);
   assert.deepEqual(report.quarantined, [{ datasetId: "bad", reason: "Unverifiable dataset metadata (bad)" }]);
+});
+
+test("full preflight reports malformed DNA separately, blocks and plans valid creators", async () => {
+  const env = { NEXT_PUBLIC_SUPABASE_URL: `https://${TARGETS.production}.supabase.co`, SUPABASE_SERVICE_ROLE_KEY: "sb_secret_fixture", APIFY_TOKEN: "fixture", APIFY_INSTAGRAM_ACTOR_ID: "actor" };
+  const accounts = ["bad", "good"].map(id => ({ id: `account-${id}`, influencer_id: `creator-${id}`, platform: "instagram", username: id, recent_publications: [] }));
+  const dna = [
+    { influencer_id: "creator-bad", document: { identity: { marker: "MUST_NOT_ENTER_DNA_PLAN" } } },
+    { influencer_id: "creator-good", document: createEmptyCreatorDNADocument() },
+  ];
+  const posts = ["bad", "good"].map(id => ({ ownerUsername: id, id: `post-${id}`, url: `https://instagram.com/p/${id}` }));
+  const requests: RequestInit[] = [], events: ReadProgress[] = [];
+  const fake = (async (input, init) => {
+    requests.push(init!);
+    const path = new URL(String(input)).pathname;
+    const json = (data: unknown, headers: Record<string, string> = {}) => new Response(JSON.stringify(data), { headers });
+    if (path.endsWith("influencer_platform_accounts")) return json(accounts, { "content-range": "0-1/2" });
+    if (path.endsWith("creator_dna")) return json(dna, { "content-range": "0-1/2" });
+    if (path.endsWith("ipl_snapshots")) return json([], { "content-range": "*/0" });
+    if (path.endsWith("acts/actor")) return json({ data: { id: "actor" } });
+    if (path.endsWith("actors/actor/runs")) return json({ data: { total: 1, items: [{ id: "run", actId: "actor", status: "SUCCEEDED", defaultDatasetId: "dataset", finishedAt: modifiedAt }] } });
+    if (path.endsWith("datasets/dataset/items")) return json(posts, { "x-apify-pagination-offset": "0", "x-apify-pagination-total": "2" });
+    if (path.endsWith("datasets/dataset")) return json({ data: { id: "dataset", itemCount: 2, modifiedAt } });
+    assert.fail(`Unexpected offline request ${path}`);
+  }) as typeof fetch;
+  const report = await runPreflight(["--preflight", "--target=production", "--before=2026-09-16T00:00:00.000Z", "--no-cache", "--explain"], env, fake, { progress: e => events.push(e) });
+  assert.equal(report.complete, false); assert.equal(report.recommendation, "BLOCKED");
+  assert.equal(report.unresolvedDatasets, 0); assert.deepEqual(report.quarantinedDatasets, []);
+  assert.equal(report.unresolvedMalformedDna, 1);
+  assert.deepEqual(report.malformedDnaRows, [{ influencerId: "creator-bad", reason: "Missing or invalid DNA document content" }]);
+  assert.ok(events.some(e => e.event === "dna-quarantined" && e.influencerId === "creator-bad"));
+  assert.deepEqual(report.accountPlans.map(plan => plan.influencerId).sort(), ["creator-bad", "creator-good"]);
+  assert.deepEqual(report.dnaPlans.map(plan => plan.influencerId), ["creator-good"]);
+  assert.doesNotMatch(JSON.stringify(report.dnaPlans), /MUST_NOT_ENTER_DNA_PLAN/);
+  assert.equal(report.actualWrites, 0);
+  assert.ok(requests.every(init => init.method === "GET" && init.redirect === "error"));
 });

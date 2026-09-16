@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { readFileSync } from "node:fs";
-import { createReadOnlyStorage, matchAccount, planPublicationBackfill, readAllPages, TARGETS, type Account, type Evidence } from "./apify-publication-preflight";
+import { createReadOnlyStorage, matchAccount, planPublicationBackfill, readAllPages, splitPreflightDnaRows, TARGETS, type Account, type Evidence } from "./apify-publication-preflight";
 import { canonicalPublicationUrl, mergeCreatorRecentPublications } from "./publication-evidence";
 import type { CreatorRecentPublication } from "./types";
 import { createEmptyCreatorDNADocument } from "@/features/creator-dna/services/document-factory";
@@ -12,6 +12,34 @@ import { runPreflight } from "@/scripts/backfill-apify-rich-publication-evidence
 const post = (extra: Partial<CreatorRecentPublication> = {}): CreatorRecentPublication => ({ url: "https://www.instagram.com/p/AbC/", caption: null, thumbnail: null, likes: null, comments: null, views: null, posted_at: null, ...extra });
 const account = (extra: Partial<Account> = {}): Account => ({ id: "account-1", influencer_id: "creator-1", platform: "instagram", username: "creator", stableIds: ["123"], recent_publications: [], ...extra });
 const evidence = (extra: Partial<Evidence> = {}): Evidence => ({ ownerId: "123", username: "creator", publication: post({ platformPostId: "post-1", paidPartnership: false }), capturedAt: "2025-01-01T00:00:00Z", ...extra });
+
+test("preflight quarantines malformed DNA shapes without normalizing them into valid documents", () => {
+  const good = createEmptyCreatorDNADocument();
+  const rows = [
+    { influencer_id: "missing", document: null },
+    { influencer_id: "content", document: { identity: {} } },
+    { influencer_id: "envelope", document: { content: { recentPublications: { value: [null] } } } },
+    { influencer_id: "good", document: good },
+  ];
+  const result = splitPreflightDnaRows(rows);
+  assert.deepEqual(result.valid.map(row => row.influencer_id), ["good"]);
+  assert.deepEqual(result.malformed, [
+    { influencerId: "missing", reason: "Missing or invalid DNA document" },
+    { influencerId: "content", reason: "Missing or invalid DNA document content" },
+    { influencerId: "envelope", reason: "Invalid DNA recentPublications envelope" },
+  ]);
+  assert.deepEqual(rows[1]!.document, { identity: {} });
+});
+
+test("quarantined DNA influencer receives no DNA proposal while valid creators continue", () => {
+  const accounts = [account(), account({ id: "account-2", influencer_id: "creator-2", username: "second", stableIds: ["456"] })];
+  const second = evidence({ ownerId: "456", username: "second", publication: post({ platformPostId: "post-2", url: "https://instagram.com/p/DEF" }) });
+  const plan = planPublicationBackfill(accounts, [{ influencer_id: "creator-2", document: createEmptyCreatorDNADocument() }],
+    [evidence(), second], new Set(["creator-1"]));
+  assert.equal(plan.summary.accountsMatched, 2);
+  assert.deepEqual(plan.dnaPlans.map(row => row.influencerId), ["creator-2"]);
+  assert.equal(plan.summary.dnaDocumentsChanged, 1);
+});
 
 test("stable ID matches a renamed account; never use the internal account UUID", () => {
   assert.equal(matchAccount([account()], "123", "oldname").kind, "matched");
