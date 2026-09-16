@@ -1,6 +1,9 @@
 import { ApifyPreflightCache, type DatasetRevision } from "./apify-preflight-cache";
 import type { ReadProgress } from "./preflight-get";
 
+/** Only dataset completeness/consistency failures may be quarantined. */
+export class DatasetValidationError extends Error {}
+
 type Reader = {
   apify<T>(path: string): Promise<T>;
   datasetPage(id: string, offset: number, limit: number): Promise<{ items: unknown[]; total: number }>;
@@ -19,8 +22,8 @@ export async function readDataset(reader: Reader, id: string, options: ScanOptio
   if (!Number.isInteger(pageSize) || pageSize < 1 || pageSize > 50_000) throw new Error("Invalid dataset page size");
   const metadata = async (): Promise<DatasetRevision> => {
     const { data } = await reader.apify<{ data: DatasetRevision & { id: string } }>(`datasets/${id}`);
-    if (data?.id !== id || !Number.isSafeInteger(data.itemCount) || data.itemCount < 0 ||
-        !Number.isFinite(Date.parse(data.modifiedAt))) throw new Error(`Unverifiable dataset metadata (${id})`);
+    if (data?.id !== id || !Number.isSafeInteger(data?.itemCount) || data.itemCount < 0 ||
+        !Number.isFinite(Date.parse(data?.modifiedAt))) throw new DatasetValidationError(`Unverifiable dataset metadata (${id})`);
     return { itemCount: data.itemCount, modifiedAt: data.modifiedAt };
   };
   let cached = await options.cache?.load(id);
@@ -46,24 +49,24 @@ export async function readDataset(reader: Reader, id: string, options: ScanOptio
     if (!Number.isSafeInteger(page.total) || page.total < 0 || !Array.isArray(page.items) ||
         (total !== undefined && page.total !== total) || page.items.length > pageSize ||
         (!page.items.length && offset < page.total) || offset + page.items.length > page.total) {
-      throw new Error(`Incomplete or changing dataset (${id}, offset ${offset})`);
+      throw new DatasetValidationError(`Incomplete or changing dataset (${id}, offset ${offset})`);
     }
     total = page.total;
     const firstPage = !revision;
     if (firstPage) {
       revision = await metadata();
-      if (revision.itemCount !== total) throw new Error(`Dataset changed during read (${id})`);
+      if (revision.itemCount !== total) throw new DatasetValidationError(`Dataset changed during read (${id})`);
     }
     // Checkpoint each page. A partial dataset is NEVER returned to the planner.
     if (options.cache) pages = await options.cache.checkpoint(id, revision!, pages, offset, page.items);
     for (const item of page.items) rows.push(item);
     options.progress?.({ event: "dataset-page", dataset: id, offset, rows: rows.length, total });
     if (rows.length === total) {
-      if (!firstPage && !equal(revision!, await metadata())) throw new Error(`Dataset changed during read (${id})`);
+      if (!firstPage && !equal(revision!, await metadata())) throw new DatasetValidationError(`Dataset changed during read (${id})`);
       return rows;
     }
   } while (rows.length < total);
-  throw new Error(`Incomplete dataset (${id})`);
+  throw new DatasetValidationError(`Incomplete dataset (${id})`);
 }
 
 /** Bounded workers drain before rejecting; no background reads survive a failed scan. */
@@ -76,19 +79,36 @@ export async function scanDatasets(
   const ids = [...new Set(datasetIds)];
   let cursor = 0, completed = 0;
   let failure: Error | undefined;
+  const completeDatasetIds: string[] = [];
+  const quarantined: { datasetId: string; reason: string }[] = [];
   options.progress?.({ event: "datasets-start", total: ids.length, concurrency });
   await Promise.all(Array.from({ length: Math.min(concurrency, ids.length) }, async () => {
     while (!failure && cursor < ids.length) {
       const id = ids[cursor++]!;
+      let rows: unknown[];
       try {
-        const rows = await readDataset(reader, id, options);
+        rows = await readDataset(reader, id, options);
+      } catch (error) {
+        if (error instanceof DatasetValidationError) {
+          quarantined.push({ datasetId: id, reason: error.message });
+          options.progress?.({ event: "dataset-quarantined", dataset: id, reason: error.message, unresolved: quarantined.length });
+          continue;
+        }
+        failure ??= new Error(`Dataset ${id} failed; preflight incomplete. ${error instanceof Error ? error.message : "Read failed"}`);
+        continue;
+      }
+      try {
         consume(id, rows);
+        completeDatasetIds.push(id);
         options.progress?.({ event: "dataset-complete", dataset: id, completed: ++completed, total: ids.length });
       } catch (error) {
-        failure ??= new Error(`Dataset ${id} failed; preflight incomplete. ${error instanceof Error ? error.message : "Read failed"}`);
+        failure ??= new Error(`Dataset ${id} failed; preflight incomplete. ${error instanceof Error ? error.message : "Planning failed"}`);
       }
     }
   }));
   if (failure) throw failure;
-  return { uniqueDatasets: ids.length, completedDatasets: completed };
+  completeDatasetIds.sort();
+  quarantined.sort((a, b) => a.datasetId.localeCompare(b.datasetId));
+  return { uniqueDatasets: ids.length, completedDatasets: completed, completeDatasetIds,
+    unresolvedDatasets: quarantined.length, quarantined, complete: quarantined.length === 0 };
 }

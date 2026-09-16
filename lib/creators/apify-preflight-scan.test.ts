@@ -285,3 +285,77 @@ test("full preflight cold/warm/concurrent reports agree and shared datasets keep
   assert.equal(c.uniqueDatasets, 2); assert.equal(cold.scannedRows, 3);
   assert.equal(cold.actualWrites, 0);
 }));
+
+test("quarantine excludes partial evidence, reports runs, continues and preserves reusable caches", async () => withCache(async (cache, directory) => {
+  const env = { NEXT_PUBLIC_SUPABASE_URL: "https://" + TARGETS.production + ".supabase.co", SUPABASE_SERVICE_ROLE_KEY: "sb_secret_fixture", APIFY_TOKEN: "fixture", APIFY_INSTAGRAM_ACTOR_ID: "actor" };
+  const post = { ownerUsername: "creator", id: "goodpost", url: "https://instagram.com/p/Good", caption: "complete evidence" };
+  let includeBad = true;
+  const reads: string[] = [], events: ReadProgress[] = [];
+  const fake = (async (input, init) => {
+    assert.equal(init?.method, "GET"); assert.equal(init?.redirect, "error");
+    const u = new URL(String(input));
+    const json = (data: unknown, headers: Record<string, string> = {}) => new Response(JSON.stringify(data), { headers });
+    if (u.pathname.endsWith("influencer_platform_accounts")) return json([{ id: "account", influencer_id: "creator", platform: "instagram", username: "creator", recent_publications: [] }], { "content-range": "0-0/1" });
+    if (u.pathname.endsWith("creator_dna") || u.pathname.endsWith("ipl_snapshots")) return json([], { "content-range": "*/0" });
+    if (u.pathname.endsWith("acts/actor")) return json({ data: { id: "actor" } });
+    if (u.pathname.endsWith("actors/actor/runs")) {
+      const runs = (includeBad ? ["bad-a", "bad-b", "good"] : ["good"]).map(id => ({ id, actId: "actor", status: "SUCCEEDED", defaultDatasetId: id.startsWith("bad") ? "bad" : "good", finishedAt: modifiedAt }));
+      return json({ data: { total: runs.length, items: runs } });
+    }
+    const id = u.pathname.split("/")[3];
+    assert.ok(id === "bad" || id === "good");
+    if (u.pathname.endsWith("/items")) {
+      const offset = Number(u.searchParams.get("offset")); reads.push(id + ":" + offset);
+      const rows = id === "good" ? [post] : offset === 0 ? [{ ...post, id: "corruptpost", url: "https://instagram.com/p/Corrupt", caption: "MUST_NOT_ENTER_PLAN" }] : [];
+      return json(rows, { "x-apify-pagination-offset": String(offset), "x-apify-pagination-total": id === "bad" ? "2" : "1" });
+    }
+    return json({ data: { id, itemCount: id === "bad" ? 2 : 1, modifiedAt } });
+  }) as typeof fetch;
+  const args = ["--preflight", "--target=production", "--before=2026-09-16T00:00:00.000Z", "--explain", "--concurrency=1", "--cache-dir=" + directory];
+  const cold = await runPreflight(args, env, fake, { progress: e => events.push(e) });
+  assert.equal(cold.complete, false); assert.equal(cold.recommendation, "BLOCKED");
+  assert.equal(cold.evidenceScope, "complete-datasets-only"); assert.equal(cold.unresolvedDatasets, 1);
+  assert.deepEqual(cold.completeDatasetIds, ["good"]);
+  assert.deepEqual(cold.quarantinedDatasets, [{ datasetId: "bad", runIds: ["bad-a", "bad-b"], reason: "Incomplete or changing dataset (bad, offset 1)" }]);
+  assert.equal(cold.readStats.completedDatasets, 1); assert.equal(cold.scannedRows, 1); assert.equal(cold.actualWrites, 0);
+  assert.ok(events.some(e => e.event === "dataset-quarantined"));
+  assert.deepEqual(reads, ["bad:0", "bad:1", "good:0"]);
+  assert.doesNotMatch(JSON.stringify([cold.accountPlans, cold.dnaPlans]), /MUST_NOT_ENTER_PLAN|corruptpost|Corrupt/);
+  assert.match(JSON.stringify(cold.accountPlans), /goodpost/);
+  assert.equal((await cache.load("bad"))?.rows.length, 1);
+  const files = await readdir(directory);
+  const before = await Promise.all(files.map(file => readFile(join(directory, file), "utf8")));
+  reads.length = 0;
+  const warm = await runPreflight(args, env, fake);
+  assert.deepEqual(reads, ["bad:1"]);
+  assert.deepEqual(warm.accountPlans, cold.accountPlans); assert.deepEqual(warm.dnaPlans, cold.dnaPlans);
+  assert.equal(warm.recommendation, "BLOCKED"); assert.equal(warm.actualWrites, 0);
+  assert.deepEqual(await Promise.all(files.map(file => readFile(join(directory, file), "utf8"))), before);
+  includeBad = false;
+  const completeOnly = await runPreflight(args, env, fake);
+  assert.equal(completeOnly.complete, true); assert.equal(completeOnly.unresolvedDatasets, 0);
+  assert.deepEqual(cold.accountPlans, completeOnly.accountPlans); assert.deepEqual(cold.dnaPlans, completeOnly.dnaPlans);
+}));
+
+test("unverifiable page headers quarantine without weakening validation", async () => {
+  const reader = createReadOnlyStorage("production", "https://" + TARGETS.production + ".supabase.co", "sb_secret_fixture", "fixture",
+    (async () => new Response('[]')) as typeof fetch);
+  let consumed = 0;
+  const report = await scanDatasets(reader, ["bad"], () => { consumed++; });
+  assert.equal(consumed, 0); assert.equal(report.complete, false);
+  assert.deepEqual(report.quarantined, [{ datasetId: "bad", reason: "Unverifiable dataset page" }]);
+});
+
+test("missing dataset metadata quarantines the dataset and continues", async () => {
+  const consumed: string[] = [];
+  const reader = {
+    async apify<T>(path: string): Promise<T> {
+      return { data: path === "datasets/bad" ? null : { id: "good", itemCount: 1, modifiedAt } } as T;
+    },
+    async datasetPage() { return { items: [{ id: "row" }], total: 1 }; },
+  };
+  const report = await scanDatasets(reader, ["bad", "good"], id => consumed.push(id), { concurrency: 1 });
+  assert.deepEqual(consumed, ["good"]);
+  assert.deepEqual(report.completeDatasetIds, ["good"]);
+  assert.deepEqual(report.quarantined, [{ datasetId: "bad", reason: "Unverifiable dataset metadata (bad)" }]);
+});

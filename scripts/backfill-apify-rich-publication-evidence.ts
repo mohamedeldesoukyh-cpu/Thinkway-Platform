@@ -110,12 +110,17 @@ export async function runPreflight(args: string[], env: Record<string, string | 
   }, { cache, concurrency, pageSize, progress });
   // Restore the original newest-run-first evidence order, independently of
   // concurrent download completion. Matching and merge semantics stay unchanged.
-  const evidence = runs.flatMap(run => evidenceByRun.get(run.id)!);
+  const evidence = runs.flatMap(run => evidenceByRun.get(run.id) ?? []);
   progress({ event: "planning", scannedRows, invalidRows });
   const plan = planPublicationBackfill(accounts, dna, evidence);
-  return { target, mode: "read-only-preflight", boundary, instagramRuns: runs.length, scannedRows, invalidRows, readStats: { ...readStats, ...scan },
+  const quarantinedDatasets = scan.quarantined.map(dataset => ({ ...dataset,
+    runIds: runsByDataset.get(dataset.datasetId)!.map(run => run.id).sort(),
+  }));
+  return { complete: scan.complete, evidenceScope: "complete-datasets-only",
+    completeDatasetIds: scan.completeDatasetIds, quarantinedDatasets, unresolvedDatasets: scan.unresolvedDatasets,
+    target, mode: "read-only-preflight", boundary, instagramRuns: runs.length, scannedRows, invalidRows, readStats: { ...readStats, ...scan },
     ...plan.summary, skipped: plan.summary.skipped + invalidRows,
-    recommendation: plan.summary.conflicts || plan.summary.ambiguous || invalidRows ? "BLOCKED" : "REVIEW_REQUIRED_NO_WRITE_MODE",
+    recommendation: scan.unresolvedDatasets || plan.summary.conflicts || plan.summary.ambiguous || invalidRows ? "BLOCKED" : "REVIEW_REQUIRED_NO_WRITE_MODE",
     skippedDetails: plan.skipped, identityIssues: plan.identityIssues,
     ...(args.includes("--explain") ? { accountPlans: plan.accountPlans, dnaPlans: plan.dnaPlans } : {}),
   };

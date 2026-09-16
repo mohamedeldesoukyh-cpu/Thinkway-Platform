@@ -1,3 +1,4 @@
+import { DatasetValidationError } from "./apify-preflight-scan";
 /** Pure planning and GET-only storage access. No database writer dependencies. */
 import { mergeCreatorRecentPublications, canonicalPublicationUrl } from "./publication-evidence";
 import type { CreatorRecentPublication } from "./types";
@@ -206,7 +207,7 @@ export function createReadOnlyStorage(target: keyof typeof TARGETS, supabaseUrl:
       const items = response.data;
       if (!count || !/^\d+$/.test(count) || !Number.isSafeInteger(Number(count)) ||
           start === null || !/^\d+$/.test(start) || Number(start) !== offset || !Array.isArray(items) || items.length > limit) {
-        throw new Error("Unverifiable dataset page");
+        throw new DatasetValidationError("Unverifiable dataset page");
       }
       return { items, total: Number(count) };
     },

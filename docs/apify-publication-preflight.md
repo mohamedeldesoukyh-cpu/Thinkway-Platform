@@ -37,7 +37,7 @@ There is no lookback limit, creator filter, sampling or top-N cutoff. Each uniqu
 dataset is downloaded once in unfiltered JSON (`clean=false`), requesting 10,000
 rows per page. Short server-capped pages continue at the actual returned offset
 until the exact total. Missing counts, gaps, conflicting totals, duplicate run IDs
-and failed datasets block the entire report.
+and dataset validation failures keep the final recommendation BLOCKED.
 
 Expected requests, excluding retries and invalidated/corrupt caches:
 
@@ -59,7 +59,7 @@ Concurrency reduces elapsed time, not request count.
 ## Reliability, progress and resume
 
 - Four dataset workers by default (`--concurrency=1..8`); pages within each worker
-  are sequential. On failure, workers stop taking new datasets and drain before
+  are sequential. On transport or unexpected failure, workers stop taking new datasets and drain before
   the preflight rejects, leaving no background reads after the report.
 - 429, 5xx, network errors, timeouts and broken JSON receive up to four retries
   (five attempts total). Backoff starts at 1 second and doubles. Retry-After is
@@ -88,7 +88,7 @@ cache directory, only when live access is authorized. Run inventory and Producti
 tables are always freshly read. Cached datasets are authenticated and revalidated
 against count and modification timestamp. Complete unchanged datasets reuse local
 pages; partial datasets resume at the next offset. Missing/corrupt/stale cache
-data is downloaded again. A 403/404/failed validation blocks the report; local data
+data is downloaded again. A 403/404 aborts the scan; failed validation is quarantined. Local data
 never hides a missing remote dataset. No partial dataset reaches the planner.
 
 Shared dataset rows are still normalized for every original run, preserving run
@@ -123,9 +123,10 @@ node --require tsx/cjs --test lib/creators/apify-preflight-scan.test.ts lib/crea
   records. Shortcodes remain case-sensitive; tracking parameters and /p versus
   /reel aliases do not create a second publication. Conflicting IDs sharing one
   URL are skipped rather than combined.
-- Dataset items are paginated to the declared count. Read failures, changing
-  counts or empty intermediate pages abort rather than produce a complete-looking
-  partial report. Rows outside the supported post shape are counted as invalid.
+- Dataset items are paginated to the declared count. Dataset validation failures,
+  including changing counts or empty intermediate pages, are quarantined rather
+  than produce a complete-looking partial report. Transport failures abort the
+  scan. Rows outside the supported post shape are counted as invalid.
 
 ## Report and preservation
 
@@ -148,3 +149,20 @@ called by the preflight.
 These safeguards do not authorize a live read or a future write. There is no
 claim that paginated reads form a database transaction snapshot. A later write
 implementation would require a separate reviewed plan and concurrency checks.
+
+## Unresolved dataset quarantine
+
+Dataset completeness/consistency failures are quarantined and scanning continues.
+Validation is unchanged. No evidence from a quarantined dataset reaches planning,
+including its cached partial pages and every run referencing the dataset.
+Transport/authentication and unexpected failures still stop the scan and drain
+active workers. Checkpoints are preserved; complete unchanged datasets remain
+reusable after authenticated metadata validation.
+
+The report separates `completeDatasetIds`, `quarantinedDatasets` (dataset ID,
+all run IDs and validation reason), and `unresolvedDatasets`.
+`evidenceScope: complete-datasets-only` applies to every evidence count, coverage
+metric, proposed write count and optional plan. With any unresolved dataset,
+`complete` is false and `recommendation` remains BLOCKED. Subset write counts
+are not an exact estimate for the full historical inventory. Quarantine is
+reported in JSON/progress, never saved as a completion or permanent skip marker.
