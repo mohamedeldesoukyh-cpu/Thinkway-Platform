@@ -164,6 +164,11 @@ function QuotationPackLineRow({
     ? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(clientCommercials.clientCost)} ${originalCurrency}`
     : null;
 
+  function updateServiceDescription(description: string) {
+    lineFields.setServiceDescription(description);
+    manualSave.registerLinePending(item.id, { service_description: description });
+  }
+
   function applyDeliverable(key: string, next: QuotationDeliverable) {
     if (next.cost_currency) {
       onDraftChange(item.id, { costCurrency: next.cost_currency });
@@ -268,7 +273,7 @@ function QuotationPackLineRow({
           aria-label="Service description"
           onChange={(event) => {
             if (!canManage) return;
-            lineFields.setServiceDescription(event.target.value);
+            updateServiceDescription(event.target.value);
           }}
           title={lineFields.serviceDescription || undefined}
         />
@@ -295,6 +300,15 @@ function QuotationPackLineRow({
                   allowedCreatorPlatforms,
                   deliverable.platform || item.platform || ""
                 );
+                const previousRowLines = lineFields.deliverableDrafts.flatMap(deliverableTypeLines);
+                const nextRowLines = lineFields.deliverableDrafts.flatMap((entry) =>
+                  entry.key === deliverable.key ? synced.type_lines : deliverableTypeLines(entry)
+                );
+                updateServiceDescription(syncServiceDescriptionWithTypeLines(
+                  lineFields.serviceDescription,
+                  previousRowLines,
+                  nextRowLines
+                ));
                 applyDeliverable(deliverable.key, {
                   ...deliverable,
                   ...synced,
