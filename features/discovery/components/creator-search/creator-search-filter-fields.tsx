@@ -1,4 +1,5 @@
 "use client";
+import { cleanDiscoveryCategories } from "@/lib/discovery/normal-search";
 
 import { PlusIcon } from "lucide-react";
 import { Fragment, useState, type ReactNode } from "react";
@@ -693,6 +694,7 @@ export function ContentSearchField({
       </div>
 
       <FieldGroup label="Keyword / hashtag" className="mt-3">
+        <FieldHint>Searches stored bios, hashtags and available recent caption excerpts.</FieldHint>
         <FilterInput
           value={filters.contentKeyword}
           onChange={(e) =>
@@ -760,6 +762,7 @@ export function ContentSearchField({
         </FieldGroup>
       ) : null}
 
+      <fieldset disabled title="Dedicated content-language evidence unavailable">
       <FieldGroup
         label="Content language"
         showClear={filters.contentLanguages.length > 0}
@@ -777,6 +780,8 @@ export function ContentSearchField({
           languageOptions={languageOptions}
         />
       </FieldGroup>
+      <p className="text-xs">Content language unavailable; creator language remains supported.</p>
+      </fieldset>
     </>
   );
 }
@@ -805,19 +810,9 @@ export function LastPostField({ filters, onChange }: FieldProps) {
   );
 }
 
-export function BrandSafetyField({ filters, onChange }: FieldProps) {
-  return (
-    <FieldGroup label="Min. brand safety score" className="mt-0">
-      <FilterInput
-        value={filters.minBrandSafety}
-        onChange={(e) =>
-          onChange({ ...filters, minBrandSafety: e.target.value })
-        }
-        type="number"
-        placeholder="60"
-      />
-    </FieldGroup>
-  );
+export function BrandSafetyField(_props: FieldProps) {
+  void _props;
+  return <FieldHint>Brand safety filtering is unavailable pending supported content evidence.</FieldHint>;
 }
 
 export function CommercialPricingField({ filters, onChange }: FieldProps) {
@@ -1075,10 +1070,10 @@ export function CategoryField({
   categorySuggestions,
 }: FieldProps) {
   const [draftCategory, setDraftCategory] = useState("");
-  const categoryOptions = mergeCategoryFacetLabels(
+  const categoryOptions = cleanDiscoveryCategories(mergeCategoryFacetLabels(
     (categorySuggestions ?? []).map((label) => ({ label, count: 1 })),
     CREATOR_CATEGORY_LABELS
-  );
+  ));
   const visibleOptions = filterFacetOptionsByDraft(
     categoryOptions,
     draftCategory,
@@ -1088,7 +1083,7 @@ export function CategoryField({
 
   function addDraftCategory() {
     const value = resolveFacetDraftToOption(draftCategory, categoryOptions);
-    if (!value) return;
+    if (!value || !cleanDiscoveryCategories([value]).length) return;
     if (
       filters.categories.some(
         (category) => category.toLowerCase() === value.toLowerCase()
@@ -1266,7 +1261,7 @@ export function AudienceField({
         />
       </FieldGroup>
 
-      <FieldGroup label="Gender">
+      <FieldGroup label="Audience gender">
         <FilterSelect
           value={filters.gender.toLowerCase()}
           onChange={(e) => onChange({ ...filters, gender: e.target.value })}
@@ -1279,12 +1274,12 @@ export function AudienceField({
           ))}
         </FilterSelect>
         <FieldHint>
-          Creators without audience gender data are excluded when a gender is
-          selected.
+          Requires at least 50% observed audience share. Creators without audience
+          gender data are excluded.
         </FieldHint>
       </FieldGroup>
 
-      <FieldGroup label="Age range">
+      <FieldGroup label="Audience age range">
         <div className="flex items-center gap-2">
           <FilterSelect
             value={filters.ageMin}
@@ -1313,11 +1308,12 @@ export function AudienceField({
           </FilterSelect>
         </div>
         <FieldHint>
-          Creators without audience age distribution data are excluded when an age
-          range is selected.
+          Matches overlap with the largest observed audience age band. Creators
+          without audience age distribution data are excluded.
         </FieldHint>
       </FieldGroup>
 
+      <fieldset disabled title="Unavailable: no supported evidence contract">
       <FieldGroup label="Audience interests">
         <div className="mb-2 flex gap-1.5">
           <FilterInput
@@ -1397,6 +1393,8 @@ export function AudienceField({
           )}
         />
       </FieldGroup>
+      <p className="text-xs">Unavailable: requires supported source data.</p>
+      </fieldset>
     </>
   );
 }
@@ -1431,13 +1429,14 @@ export function AiField({ filters, onChange }: FieldProps) {
           ))}
         </div>
       </FieldGroup>
-      <FieldGroup label="Brand fit category">
+      <FieldGroup label="Creator niche">
         <FilterInput
           value={filters.aiNiche}
           onChange={(e) => onChange({ ...filters, aiNiche: e.target.value })}
           placeholder="e.g. Camera & Photography"
         />
       </FieldGroup>
+      <fieldset disabled title="Unavailable: no supported evidence contract">
       <FieldGroup label="Source confidence">
         <RangeRow
           min={filters.minBrandFit}
@@ -1449,6 +1448,8 @@ export function AiField({ filters, onChange }: FieldProps) {
           type="number"
         />
       </FieldGroup>
+      <p className="text-xs">Unavailable: requires supported source data.</p>
+      </fieldset>
     </>
   );
 }

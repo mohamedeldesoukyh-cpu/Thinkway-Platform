@@ -27,12 +27,15 @@ import { cn } from "@/lib/utils";
 export const SEARCH_COLS = DISCOVERY_COLS.search;
 export const SEARCH_MIN_W = DISCOVERY_GRID_MIN_W.search ?? 1180;
 
+export const relevanceColsStyle = { "--cols": `${SEARCH_COLS} 140px` } as CSSProperties;
+
 export const searchColsStyle = {
   "--cols": SEARCH_COLS,
 } as CSSProperties;
 
 type Props = {
   creator: UnifiedCreatorResult;
+  showRelevance?: boolean;
   selected: boolean;
   index?: number;
   addedToShortlist?: boolean;
@@ -52,6 +55,7 @@ type Props = {
  */
 export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
   creator,
+  showRelevance,
   selected,
   index = 0,
   addedToShortlist = false,
@@ -156,6 +160,13 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
           ) : null}
         </span>
       </DiscoverySuiteCell>
+      {showRelevance ? <DiscoverySuiteCell>
+        <details onClick={stopBubble} className="text-xs">
+          <summary className="cursor-pointer" aria-label={`Relevance for ${vm.displayName}`}>{creator.discovery_relevance?.score == null ? "Insufficient data" : `${creator.discovery_relevance.score}%`}</summary>
+          {creator.discovery_relevance?.score == null ? <p className="mt-2">These filters qualify creators but do not provide enough detail to rank their relevance.</p> : null}
+          <ul className="mt-2 space-y-1">{creator.discovery_relevance?.reasons.map((r,index) => <li key={index}>{r.dimension}: {r.outcome}{r.detail ? ` — ${r.detail}` : ""}</li>)}</ul>
+        </details>
+      </DiscoverySuiteCell> : null}
     </DiscoverySuiteRow>
   );
 });
@@ -166,18 +177,20 @@ export function CreatorSearchSuiteHeader({
   hasCreators,
   onToggleSelectAll,
   countLabel,
+  showRelevance,
 }: {
   total: number;
   allSelected: boolean | "indeterminate";
   hasCreators: boolean;
   onToggleSelectAll: () => void;
   countLabel?: string;
+  showRelevance?: boolean;
 }) {
   const resolved =
     countLabel ?? `${total.toLocaleString()} Creator${total === 1 ? "" : "s"}`;
 
   return (
-    <div className="tw-g tw-hr" role="row" style={searchColsStyle}>
+    <div className="tw-g tw-hr" role="row" style={showRelevance ? relevanceColsStyle : searchColsStyle}>
       <DiscoverySuiteCell>
         <Checkbox
           checked={allSelected}
@@ -212,6 +225,7 @@ export function CreatorSearchSuiteHeader({
           Action
         </span>
       </DiscoverySuiteCell>
+      {showRelevance ? <DiscoverySuiteCell>Relevance</DiscoverySuiteCell> : null}
     </div>
   );
 }

@@ -1,4 +1,6 @@
 "use client";
+import { searchNormalDiscoveryAction } from "@/features/discovery/normal-search-action";
+import { hasNormalSearchContext, sanitizeNormalFilters, type SearchCompleteness } from "@/lib/discovery/normal-search";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import Link from "next/link";
@@ -222,9 +224,12 @@ export function CreatorSearchWorkspace({
   const [filterLanguages, setFilterLanguages] = useState<
     Array<{ code: string; label: string }>
   >([]);
-  const [filters, setFilters] = useState<CreatorSearchFilters>(() => initialFiltersFromUrl);
+  const [filters, setFilters] = useState<CreatorSearchFilters>(() => sanitizeNormalFilters(initialFiltersFromUrl));
   const [debouncedSearch, setDebouncedSearch] = useState(initialSearch);
   const [sort, setSort] = useState<CreatorSearchSortState>(DEFAULT_CREATOR_SEARCH_SORT);
+  const sortRef = useRef(sort);
+  useEffect(() => { sortRef.current = sort; }, [sort]);
+  const [completeness, setCompleteness] = useState<SearchCompleteness | undefined>();
   const [page, setPage] = useState(1);
   const [creators, setCreators] = useState<UnifiedCreatorResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -401,7 +406,7 @@ export function CreatorSearchWorkspace({
     setFilters((prev) => {
       if (creatorSearchFiltersUrlEqual(prev, filtersFromUrl)) return prev;
       skipFilterUrlWriteRef.current = true;
-      return cloneCreatorSearchFilters(filtersFromUrl);
+      return sanitizeNormalFilters(cloneCreatorSearchFilters(filtersFromUrl));
     });
   }, [filtersFromUrl]);
 
@@ -456,6 +461,9 @@ export function CreatorSearchWorkspace({
   }, [debouncedSearch, pathname]);
 
   const handleDebouncedSearchChange = useCallback((value: string) => {
+    abortRef.current?.abort();
+    searchRef.current = value;
+    if (value.trim()) setSort({ field: "relevance", direction: "desc" });
     setDebouncedSearch((prev) => (prev === value ? prev : value));
   }, []);
 
@@ -496,12 +504,12 @@ export function CreatorSearchWorkspace({
   );
 
   useEffect(() => {
-    if (!showCampaignRelevance && sort.field === "relevance") {
+    if (!showCampaignRelevance && !hasNormalSearchContext({ ...filters, search: debouncedSearch }) && sort.field === "relevance") {
       setSort({ field: "followers", direction: "desc" });
     }
-  }, [showCampaignRelevance, sort.field]);
+  }, [showCampaignRelevance, sort.field, filters, debouncedSearch]);
 
-  const sortedCreators = useMemo(() => sortCreators(creators, sort), [creators, sort]);
+  const sortedCreators = useMemo(() => aiModeActive ? sortCreators(creators, sort) : creators, [creators, sort, aiModeActive]);
   const exactMatches = useMemo(() => {
     if (!debouncedSearch.trim()) return [];
     if (searchIntent.mode === "discovery") return [];
@@ -510,7 +518,7 @@ export function CreatorSearchWorkspace({
 
   const displayCreators = useMemo(() => {
     const base =
-      !debouncedSearch.trim() || searchIntent.mode === "discovery"
+      !aiModeActive || !debouncedSearch.trim() || searchIntent.mode === "discovery"
         ? sortedCreators
         : isExactCreatorSearch
           ? exactMatches
@@ -524,6 +532,7 @@ export function CreatorSearchWorkspace({
     isExactCreatorSearch,
     searchIntent.mode,
     sortedCreators,
+    aiModeActive,
   ]);
 
   const shortlistedIds = useMemo(
@@ -532,7 +541,7 @@ export function CreatorSearchWorkspace({
   );
 
   const hybridListItems = useMemo(() => {
-    if (!isHybridCreatorSearch || !debouncedSearch.trim()) return undefined;
+    if (!aiModeActive || !isHybridCreatorSearch || !debouncedSearch.trim()) return undefined;
     const visibleExact =
       hiddenUnifiedIds.size === 0
         ? exactMatches
@@ -551,6 +560,7 @@ export function CreatorSearchWorkspace({
     hiddenUnifiedIds,
     isHybridCreatorSearch,
     sortedCreators,
+    aiModeActive,
   ]);
 
   const resultCount = useMemo(() => {
@@ -614,9 +624,10 @@ export function CreatorSearchWorkspace({
   }, []);
 
   const cancelActiveAcquisitionSession = useCallback(async () => {
+    const hadActiveAcquisition = acquisitionPollJobRef.current.length > 0;
     stopAcquisitionPolling();
     acquisitionSessionRef.current.stopHeartbeat();
-    await acquisitionSessionRef.current.cancelSession();
+    if (hadActiveAcquisition) await acquisitionSessionRef.current.cancelSession();
   }, [stopAcquisitionPolling]);
 
   const handleClearSearch = useCallback(() => {
@@ -840,6 +851,33 @@ export function CreatorSearchWorkspace({
       acquiredOnly?: boolean;
     }
   ) => {
+    if (!aiModeRef.current && !options?.acquiredOnly) {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      const requestId = ++reqIdRef.current;
+      if (append) setLoadingMore(true);
+      else { setLoading(true); setCreators([]); setCompleteness(undefined); }
+      setError(null);
+      try {
+        const activeFilters = sanitizeNormalFilters(filterOverride ?? { ...filtersRef.current, search: searchRef.current });
+        const result = await searchNormalDiscoveryAction({ filters: activeFilters, sort: sortRef.current, page: pageNum, pageSize: PAGE_SIZE });
+        if (controller.signal.aborted || requestId !== reqIdRef.current) return;
+        setCreators(previous => append ? [...new Map([...previous, ...result.creators].map(c => [c.unified_id,c])).values()] : result.creators);
+        setTotal(result.total);
+        setCompleteness(result.completeness);
+        setHasMore(result.has_more);
+        pagesLoadedRef.current = pageNum;
+      } catch (error) {
+        if (!controller.signal.aborted && requestId === reqIdRef.current) {
+          setError(error instanceof Error ? error.message : "Discovery search failed");
+          setHasMore(false);
+        }
+      } finally {
+        if (!controller.signal.aborted && requestId === reqIdRef.current) { setLoading(false); setLoadingMore(false); }
+      }
+      return;
+    }
     // Always abort prior in-flight browse so page-1 cache revalidation cannot
     // replace the list after the user has started paging. Load-more loops are
     // prevented by keeping loadingMore true until the network append settles.
@@ -1284,7 +1322,8 @@ export function CreatorSearchWorkspace({
     const session = acquisitionSessionRef.current;
 
     const onBeforeUnload = () => {
-      session.dispose();
+      if (acquisitionPollJobRef.current.length) session.dispose();
+      else session.stopHeartbeat();
     };
     window.addEventListener("beforeunload", onBeforeUnload);
 
@@ -1292,11 +1331,12 @@ export function CreatorSearchWorkspace({
       window.removeEventListener("beforeunload", onBeforeUnload);
       // Stop heartbeat first — do not leave a timer firing server actions after unmount.
       session.stopHeartbeat();
-      void session.cancelSession();
+      if (acquisitionPollJobRef.current.length) void session.cancelSession();
     };
   }, []);
 
   const headerTotal = useMemo(() => {
+    if (!aiModeActive) return total;
     if (displayCreators.length === 0 && (acquisitionPolling || (!loading && !loadingMore))) {
       return 0;
     }
@@ -1309,6 +1349,7 @@ export function CreatorSearchWorkspace({
     loadingMore,
     resultCount,
     total,
+    aiModeActive,
   ]);
 
   useEffect(() => {
@@ -1326,18 +1367,21 @@ export function CreatorSearchWorkspace({
 
   const runSearch = useCallback(
     (immediateQuery?: string) => {
-      if (loading) return;
       if (typeof immediateQuery === "string") {
-        const normalizedQuery = normalizeDiscoverySearchQuery(immediateQuery);
+        const normalizedQuery = immediateQuery.trim();
+        const changed = normalizedQuery !== searchRef.current;
         searchRef.current = normalizedQuery;
+        const sortChanged = !!normalizedQuery && (sortRef.current.field !== "relevance" || sortRef.current.direction !== "desc");
+        if (sortChanged) { sortRef.current = { field: "relevance", direction: "desc" }; setSort(sortRef.current); }
         setDebouncedSearch(normalizedQuery);
+        if (changed || sortChanged) return;
       }
       setPage(1);
       setHasMore(true);
       clearCreatorSelection();
       void fetchPageRef.current(1, false, undefined, { caller: "explicit_run_search" });
     },
-    [loading]
+    []
   );
 
   useEffect(() => {
@@ -1348,7 +1392,7 @@ export function CreatorSearchWorkspace({
     setPage(1);
     setHasMore(true);
     void fetchPageRef.current(1, false, undefined, { caller: "filter_sync" });
-  }, [filters, debouncedSearch]);
+  }, [filters, debouncedSearch, sort]);
 
   useEffect(() => {
     return () => {
@@ -2269,9 +2313,8 @@ export function CreatorSearchWorkspace({
     ).size;
     const showLowerBound =
       headerTotal > 0 &&
-      !isExactCreatorSearch &&
       !aiModeActive &&
-      (hasMore || clientOnlyFiltersActive);
+      (completeness ? completeness.status === "incomplete" : !isExactCreatorSearch && (hasMore || clientOnlyFiltersActive));
     const creatorsValue = showLowerBound
       ? `${headerTotal.toLocaleString()}+`
       : headerTotal;
@@ -2286,6 +2329,7 @@ export function CreatorSearchWorkspace({
   }, [
     aiModeActive,
     clientOnlyFiltersActive,
+    completeness,
     displayCreators,
     hasMore,
     headerTotal,
@@ -2297,12 +2341,11 @@ export function CreatorSearchWorkspace({
   const headerTotalBadge = useMemo(() => {
     const showLowerBound =
       headerTotal > 0 &&
-      !isExactCreatorSearch &&
       !aiModeActive &&
-      (hasMore || clientOnlyFiltersActive);
+      (completeness ? completeness.status === "incomplete" : !isExactCreatorSearch && (hasMore || clientOnlyFiltersActive));
     const count = `${headerTotal.toLocaleString()}${showLowerBound ? "+" : ""}`;
     return `${count} creator${headerTotal === 1 && !showLowerBound ? "" : "s"}`;
-  }, [aiModeActive, clientOnlyFiltersActive, hasMore, headerTotal, isExactCreatorSearch]);
+  }, [aiModeActive, clientOnlyFiltersActive, completeness, hasMore, headerTotal, isExactCreatorSearch]);
 
   return (
     <div className="discovery-suite flex h-full min-h-0 flex-col overflow-hidden bg-[var(--tw-bg)]">
@@ -2472,15 +2515,17 @@ export function CreatorSearchWorkspace({
         <CreatorSearchResultList
           creators={displayCreators}
           hybridListItems={hybridListItems}
-          searchMode={searchIntent.mode}
+          searchMode={aiModeActive ? searchIntent.mode : "discovery"}
           sort={sort}
           onSortChange={setSort}
           platformFilter={filters.platforms}
           loading={loading && displayCreators.length === 0}
           loadingMore={loadingMore}
-          hasMore={isExactCreatorSearch || aiModeActive ? false : hasMore}
+          hasMore={aiModeActive || completeness?.status === "incomplete" ? false : hasMore}
           error={error}
           total={headerTotal}
+          completeness={completeness}
+          showRelevance={!aiModeActive && hasNormalSearchContext({ ...filters, search: debouncedSearch })}
           apifySourceUnifiedIds={apifySourceUnifiedIds}
           showCampaignRelevance={showCampaignRelevance}
           selectedIds={selectedIds}
@@ -2506,7 +2551,7 @@ export function CreatorSearchWorkspace({
           onMissingCreatorEnrichmentStatusChange={patchCreatorEnrichmentStatus}
           onMissingCreatorUpdated={handleMissingCreatorUpdated}
           onCreatorDeleted={handleCreatorDeleted}
-          showExactMatchesZeroHeader={showZeroResultsRecommendations}
+          showExactMatchesZeroHeader={aiModeActive && showZeroResultsRecommendations}
           recommendations={visibleRecommendations}
           loadingRecommendations={loadingRecommendations}
           toolbar={{
@@ -2531,7 +2576,7 @@ export function CreatorSearchWorkspace({
             key={filterResetKey}
             open={filtersDrawerOpen}
             filters={filters}
-            onApply={setFilters}
+            onApply={(next) => setFilters(sanitizeNormalFilters(next))}
             onClearAll={clearAllFilters}
             onClose={() => setFiltersDrawerOpen(false)}
             loading={loading || isPending}

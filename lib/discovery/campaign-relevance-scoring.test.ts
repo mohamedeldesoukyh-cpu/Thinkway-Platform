@@ -24,6 +24,7 @@ function sampleCreator(overrides: Partial<UnifiedCreatorResult> = {}): UnifiedCr
     categories: ["beauty", "skincare"],
     browse_category_tags: ["beauty"],
     audience_interests: ["makeup", "skincare"],
+    audience_demographics: { source: "manual", topCountries: [{ code: "EG", percent: 60 }], topCities: null, gender: { male: null, female: null, unknown: null }, age: { "13_17": null, "18_24": null, "25_34": null, "35_44": null, "45_54": null, "55_plus": null } },
     language_codes: ["ar"],
     profile_image_url: null,
     bio: "Egyptian beauty and skincare content",
@@ -130,6 +131,7 @@ test("scoreCreatorCampaignRelevance returns weighted partial match percentage", 
 test("rankCreatorsByCampaignRelevance never returns empty when creators exist", () => {
   const weak = sampleCreator({
     unified_id: "inf:weak",
+    audience_demographics: undefined,
     display_name: "Generic Creator",
     country_code: "US",
     categories: [],
@@ -359,4 +361,21 @@ test("isCampaignRelevanceSearchActive requires AI mode and enabled criteria", ()
     false
   );
   assert.equal(isCampaignRelevanceSearchActive(true, criteria), true);
+});
+
+for (const key of ["creator_gender", "creator_age_min", "creator_age_max"] as const) {
+  test(key + " never matches using audience demographics", () => {
+    const result = scoreCreatorCampaignRelevance(sampleCreator(), [criterion({id:"separate",label:key,value:"25",meta:{discoveryKey:key,rawValue:"25"}})]);
+    assert.equal(result.unknownCount,1); assert.equal(result.matchedCount,0);
+  });
+}
+test("audience country cannot establish creator country",()=> {
+  const result=scoreCreatorCampaignRelevance(sampleCreator({country_code:null,estimated_country:null,platforms:[]}),[criterion({id:"country",label:"Creator country",value:"EG",kind:"country",meta:{discoveryKey:"creator_country",rawValue:"EG"}})]);
+  assert.equal(result.unknownCount,1);
+});
+test("engagement maximum and verification are actually evaluated",()=> {
+  for (const [key,value] of [["engagement_max","2"],["verified","true"]] as const) {
+    const result=scoreCreatorCampaignRelevance(sampleCreator(),[criterion({id:key,label:key,value,meta:{discoveryKey:key,rawValue:value}})]);
+    assert.equal(result.matchedCount,0); assert.equal(result.unknownCount,0);
+  }
 });
