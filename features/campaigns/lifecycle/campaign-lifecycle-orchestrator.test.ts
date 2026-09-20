@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { CampaignWorkspaceGuidance } from "@/features/campaigns/lifecycle/components/campaign-workspace-guidance";
 
 import {
   buildWorkspaceGuidance,
@@ -185,6 +188,8 @@ describe("campaign lifecycle orchestrator", () => {
     assert.match(guidance.whatHappened, /Vendor IO will be issued after Client IO approval/i);
     assert.ok(!/drafts are ready/i.test(guidance.whatHappened));
     assert.match(guidance.currentSituation, /Sending is disabled until/i);
+    assert.equal(guidance.isLocked, true);
+    assert.match(renderToStaticMarkup(createElement(CampaignWorkspaceGuidance, { guidance })), /Locked/);
     assert.match(guidance.nextAction, /Client IO/i);
     assert.equal(guidance.businessStageLabel, "Client IO");
     assert.ok(lifecycle.decisionCenter.blockers.length > 0);
@@ -234,6 +239,41 @@ describe("campaign lifecycle orchestrator", () => {
     // May be out-of-band vs Deliverables stage, but must NOT invent a Client IO send lock.
     assert.ok(!/Sending is disabled until/i.test(guidance.currentSituation ?? ""));
     assert.ok(!/Client IO is approved/i.test(guidance.unlockHint ?? ""));
+  });
+
+  it("keeps delivered Vendor IOs as follow-up during Performance until accepted", () => {
+    const signals = base({
+      lineCount: 5,
+      hasClientIo: true,
+      clientIoStatus: "approved",
+      vendorIoCount: 5,
+      sentVendorIoCount: 5,
+      approvedVendorIoCount: 0,
+      deliverableCount: 55,
+      activePerformance: true,
+      publicationCount: 8,
+    });
+    const pending = deriveLifecycleForTest(signals);
+    const guidance = buildWorkspaceGuidance(pending, "vendor-io");
+    assert.equal(pending.businessStageId, "publications");
+    assert.equal(guidance.outOfBand, true);
+    assert.equal(guidance.isLocked, false);
+    assert.equal(pending.decisionCenter.narrative.progressionAllowed, true);
+    assert.match(guidance.currentSituation, /5 acknowledgements pending/);
+    assert.doesNotMatch(guidance.currentSituation, /Vendor IO 5 Vendor IOs/);
+    assert.equal(pending.processCue.stageSignals["vendor-io"], "waiting_vendor");
+    const markup = renderToStaticMarkup(createElement(CampaignWorkspaceGuidance, { guidance }));
+    assert.match(markup, /Follow-up/);
+    assert.doesNotMatch(markup, /Locked|is-locked/);
+
+    const accepted = deriveLifecycleForTest({ ...signals, approvedVendorIoCount: 5 });
+    assert.equal(accepted.businessStageId, "publications");
+    assert.equal(accepted.processCue.stageSignals["vendor-io"], "completed");
+    assert.equal(accepted.decisionCenter.blockers.some((item) => item.objectKind === "vendor_io"), false);
+    assert.equal(buildWorkspaceGuidance(accepted, "vendor-io").isLocked, false);
+    assert.equal(renderToStaticMarkup(createElement(CampaignWorkspaceGuidance, {
+      guidance: buildWorkspaceGuidance(accepted, "vendor-io"),
+    })), "");
   });
 
   it("STAB-018: Assignments Completed is not Done merely because lines exist", () => {

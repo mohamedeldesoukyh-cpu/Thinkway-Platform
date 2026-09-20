@@ -8,6 +8,7 @@ import {
   vendorIoAlreadySentOrDelivered,
   vendorIoIsManualDeliveryCandidate,
   vendorIoNeedsSend,
+  vendorIoNeedsMarkAccepted,
 } from "@/features/io/bulk/vendor-io-bulk-helpers";
 import type { VendorIoRow } from "@/features/io/types";
 
@@ -59,6 +60,21 @@ function row(overrides: Partial<VendorIoRow> = {}): VendorIoRow {
 }
 
 describe("vendor IO bulk helpers", () => {
+  it("accept-all includes delivered IOs and excludes unsent, accepted, and invalid revisions", () => {
+    const candidates = [
+      row({ id: "manual", status: "sent", delivery_method: "manual", delivery_status: "completed" }),
+      row({ id: "email", status: "sent", delivery_method: "email", delivery_status: "sent" }),
+      row({ id: "accepted", status: "approved" }),
+      row({ id: "draft", status: "draft" }),
+      row({ id: "generated", status: "generated" }),
+      row({ id: "cancelled", status: "cancelled", delivery_method: "manual", delivery_status: "completed" }),
+      row({ id: "rejected", status: "rejected" }),
+      row({ id: "revision", status: "revision_required", delivery_method: "manual", delivery_status: "completed" }),
+      row({ id: "superseded", status: "sent", is_superseded: true }),
+    ];
+    assert.deepEqual(candidates.filter(vendorIoNeedsMarkAccepted).map((item) => item.id), ["manual", "email"]);
+  });
+
   it("labels all-manual selections as Mark Delivered Manually", () => {
     const rows = [row(), row({ id: "vio-2", influencer_email: " " })];
     assert.equal(describeVendorIoSendBulkLabel(rows), "Mark Delivered Manually");

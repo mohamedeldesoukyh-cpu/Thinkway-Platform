@@ -10,26 +10,25 @@ type Props = {
 };
 
 /**
- * Locked-workspace notice only — never duplicates Decision Center / State Strip.
- * In-band tabs render nothing (workspace data first).
+ * Workspace restrictions are distinct from follow-up in an earlier stage.
  */
 export function CampaignWorkspaceGuidance({ guidance, onContinue, className }: Props) {
-  const locked = guidance.outOfBand && Boolean(guidance.unlockHint);
-  if (!locked && !guidance.currentSituation) return null;
-
-  if (!locked) return null;
+  const locked = Boolean(guidance.isLocked);
+  if (!guidance.outOfBand || !guidance.currentSituation) return null;
+  // Completed earlier workspaces do not need a navigation reminder.
+  if (!locked && !guidance.unlockHint) return null;
 
   return (
     <aside
       className={cn(
         "thinkway-lc-guidance",
         "is-out-of-band",
-        "is-locked",
+        locked && "is-locked",
         className
       )}
-      aria-label={`${guidance.workspaceLabel} locked`}
+      aria-label={`${guidance.workspaceLabel} ${locked ? "locked" : "follow-up"}`}
     >
-      <div className="thinkway-lc-guidance-kicker">Locked · {guidance.workspaceLabel}</div>
+      <div className="thinkway-lc-guidance-kicker">{locked ? "Locked" : "Follow-up"} · {guidance.workspaceLabel}</div>
       <div className="thinkway-lc-guidance-compact">
         <div>
           <p className="mt-0.5">{guidance.whatHappened}</p>

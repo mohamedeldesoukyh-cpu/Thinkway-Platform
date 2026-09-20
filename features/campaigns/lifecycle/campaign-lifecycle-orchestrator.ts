@@ -80,6 +80,8 @@ export type WorkspaceGuidance = {
   missingCount: number;
   /** True when this workspace is ahead of / behind the business stage. */
   outOfBand: boolean;
+  /** A real workspace restriction, not simply viewing another stage. */
+  isLocked?: boolean;
 };
 
 export type CampaignReadinessItem = {
@@ -635,7 +637,7 @@ function guidanceBase(
   partial: Pick<
     WorkspaceGuidance,
     "whatHappened" | "currentSituation" | "nextAction" | "owner" | "outOfBand" | "unlockHint"
-  >
+  > & Pick<Partial<WorkspaceGuidance>, "isLocked">
 ): WorkspaceGuidance {
   const completedCount = lifecycle.requirements.filter((item) => item.met).length;
   return {
@@ -646,6 +648,7 @@ function guidanceBase(
     expectedResult: lifecycle.expectedResult,
     completedCount,
     missingCount: lifecycle.missing.length,
+    isLocked: false,
     ...partial,
   };
 }
@@ -683,6 +686,7 @@ export function buildWorkspaceGuidance(
     if (!billingReady && lifecycle.businessStageId !== "billing") {
       return guidanceBase(lifecycle, activeTab, "Finance", {
         whatHappened: `Invoice creation is disabled until Billing starts.`,
+        isLocked: true,
         currentSituation: primary
           ? `${primaryRef} is blocking Finance. ${primary.reason}`
           : "Complete the current stage before creating invoices.",
@@ -702,6 +706,7 @@ export function buildWorkspaceGuidance(
     ) {
       return guidanceBase(lifecycle, activeTab, "Performance", {
         whatHappened: "Performance metrics unlock after publications go live.",
+        isLocked: true,
         currentSituation: primary
           ? `${primaryRef} · ${primary.waitingLabel}.`
           : "Advance delivery so creators can publish.",
@@ -729,6 +734,7 @@ export function buildWorkspaceGuidance(
       // STAB-011: do not claim drafts are ready when zero Vendor IO records exist.
       const draftsExist = lifecycle.vendorIoCount > 0;
       return guidanceBase(lifecycle, activeTab, "Vendor IO", {
+        isLocked: true,
         whatHappened: draftsExist
           ? "Vendor IO drafts are ready."
           : "Vendor IO will be issued after Client IO approval.",
@@ -752,6 +758,7 @@ export function buildWorkspaceGuidance(
         : "Client IO";
       return guidanceBase(lifecycle, activeTab, "Deliverables", {
         whatHappened: "Deliverables stay locked until commercial approvals finish.",
+        isLocked: true,
         currentSituation: `Work is disabled until ${lockRef} clears.`,
         nextAction: primaryAction,
         owner: lifecycle.owner,
@@ -790,11 +797,13 @@ export function buildWorkspaceGuidance(
   return guidanceBase(lifecycle, activeTab, policy.label, {
     whatHappened: `Viewing ${policy.label} while work is in ${lifecycle.businessStageLabel}.`,
     currentSituation: primary
-      ? `${primaryRef} · Waiting: ${primary.waitingLabel}.`
+      ? primary.objectKind === "vendor_io"
+        ? primary.reason
+        : `${primaryRef} · Waiting: ${primary.waitingLabel}.`
       : `Return to ${lifecycle.businessStageLabel} to advance.`,
     nextAction: primaryAction,
     owner: lifecycle.owner,
-    unlockHint: primary ? `Open ${primary.objectRef}` : `Open ${lifecycle.businessStageLabel}`,
+    unlockHint: primary ? `Open ${primary.objectRef}` : null,
     outOfBand: true,
   });
 }

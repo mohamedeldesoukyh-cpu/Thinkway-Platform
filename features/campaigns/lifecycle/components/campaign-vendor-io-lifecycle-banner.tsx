@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import type { VendorIoRow } from "@/features/io/types";
+import { VendorIoAcceptAllButton } from "@/features/io/components/vendor-io-accept-all-button";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -85,12 +86,14 @@ export function CampaignVendorIoLifecycleBanner({
         </p>
       ) : stats.approved < stats.prepared ? (
         <p className="thinkway-lc-vio-banner-note">
-          Vendor IO compliance is still outstanding.
+          {stats.prepared - stats.approved} Vendor IO acknowledgement{stats.prepared - stats.approved === 1 ? " is" : "s are"} pending.
+          {" "}Sent or manually delivered IOs still need creator acceptance recorded.
           {lifecycle.decisionCenter.narrative.progressionAllowed
             ? " Campaign may continue."
             : " Campaign progression is blocked — resolve Decision Center first."}
         </p>
       ) : null}
+      {!waitingClient ? <VendorIoAcceptAllButton rows={rows} /> : null}
     </aside>
   );
 }
