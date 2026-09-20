@@ -180,16 +180,9 @@ function PoEditFields({
         />
       </DetailEditField>
       <DetailEditField label={`FX rate (${campaignCurrency})`}>
-        <Input
-          id="po_exchange_rate"
-          name="po_exchange_rate"
-          type="number"
-          min={0}
-          step="0.000001"
-          className={cn(DETAIL_FIELD_INPUT_CLASS, "text-right tabular-nums")}
-          defaultValue={po.po_exchange_rate ?? 1}
-          disabled={pending}
-        />
+        <span title="The current effective rate from Finance → Exchange rates is applied when you save.">
+          Automatic from exchange rates
+        </span>
       </DetailEditField>
       <DetailEditField label="PO expiry" align="start">
         <Input
@@ -225,6 +218,12 @@ export function CampaignPoEditSheet({
   onOpenChange,
 }: CampaignPoEditSheetProps) {
   const [poCurrency, setPoCurrency] = useState(po.po_currency ?? campaignCurrency);
+  const currencyResetKey = `${open}:${po.po_currency ?? campaignCurrency}`;
+  const [previousCurrencyResetKey, setPreviousCurrencyResetKey] = useState(currencyResetKey);
+  if (previousCurrencyResetKey !== currencyResetKey) {
+    setPreviousCurrencyResetKey(currencyResetKey);
+    if (open) setPoCurrency(po.po_currency ?? campaignCurrency);
+  }
   const [state, formAction, pending] = useActionState(updateCampaignPoAction, {
     ok: false,
   } satisfies FinanceActionState);
@@ -238,11 +237,6 @@ export function CampaignPoEditSheet({
     }
     toast.error(state.message);
   }, [state, onOpenChange]);
-
-  useEffect(() => {
-    if (!open) return;
-    setPoCurrency(po.po_currency ?? campaignCurrency);
-  }, [open, po.po_currency, campaignCurrency]);
 
   const title = po.po_number?.trim() || "Client PO";
 

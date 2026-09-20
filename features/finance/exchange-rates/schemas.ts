@@ -35,7 +35,6 @@ export const updateCampaignPoSchema = z.object({
   po_number: z.string().trim().max(120).optional().or(z.literal("")),
   po_currency: currencyCodeSchema,
   po_amount_original: z.coerce.number().min(0),
-  po_exchange_rate: z.coerce.number().positive(),
   po_expiry_date: optionalDate,
   override_reason: z.string().trim().max(500).optional().or(z.literal("")),
 });
