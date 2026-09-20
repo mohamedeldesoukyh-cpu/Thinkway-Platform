@@ -49,8 +49,8 @@ LANGUAGE sql STABLE SECURITY INVOKER SET search_path = pg_catalog, public, pg_te
     LEFT JOIN LATERAL (SELECT followers,engagement_rate,avg_views FROM public.profile_metrics
       WHERE profile_id=dp.id ORDER BY captured_at DESC,id LIMIT 1) m ON true
     WHERE dp.influencer_id IS NULL AND NOT public.creator_search_is_synthetic_username(dp.username::text)
-      AND (cardinality(f.platforms)=0 OR lower(btrim(dp.platform))=ANY(f.platforms)
-        OR lower(btrim(dp.platform)) NOT IN ('instagram','tiktok','youtube','facebook','twitter','snapchat','linkedin'))
+      AND (cardinality(f.platforms)=0 OR lower(btrim(dp.platform::text))=ANY(f.platforms)
+        OR lower(btrim(dp.platform::text)) NOT IN ('instagram','tiktok','youtube','facebook','twitter','snapchat','linkedin'))
       AND (jsonb_array_length(f.ranges)=0 OR EXISTS(SELECT 1 FROM jsonb_array_elements(f.ranges) r
         WHERE m.followers >= (r->>'min')::numeric AND ((r->>'max') IS NULL OR m.followers <= (r->>'max')::numeric)))
       AND (f.min_er IS NULL OR m.engagement_rate >= f.min_er)
@@ -176,7 +176,7 @@ BEGIN
     WHERE NOT EXISTS (
       SELECT 1 FROM public.influencer_platform_accounts owned
       JOIN public.influencers owner ON owner.id=owned.influencer_id AND owner.status='active'
-      WHERE lower(owned.platform)=lower(dp.platform)
+      WHERE lower(owned.platform)=lower(dp.platform::text)
         AND lower(ltrim(coalesce(owned.normalized_username,owned.username,owned.handle),'@'))=lower(ltrim(dp.username,'@'))
     )
   ), combined AS (SELECT * FROM internal_rows UNION ALL SELECT * FROM discovered_rows)
