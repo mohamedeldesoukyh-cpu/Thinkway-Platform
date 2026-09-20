@@ -1248,6 +1248,7 @@ export function AudienceField({
 
   return (
     <>
+      <fieldset disabled aria-label="Audience country unavailable">
       <FieldGroup label="Audience country" className="mt-0">
         <CountryPillGrid
           selected={filters.audienceCountries}
@@ -1260,6 +1261,8 @@ export function AudienceField({
           countryOptions={countryOptions}
         />
       </FieldGroup>
+      <p className="text-xs">Audience geography will be available when audience demographic data is available.</p>
+      </fieldset>
 
       <FieldGroup label="Audience gender">
         <FilterSelect

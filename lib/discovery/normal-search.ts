@@ -23,7 +23,7 @@ const num = (s: string) => s.trim() && Number.isFinite(Number(s)) ? Number(s) : 
 
 /** Disabled controls and old bookmarked values cannot reintroduce proxy semantics. */
 export function sanitizeNormalFilters(f: CreatorSearchFilters): CreatorSearchFilters {
-  return { ...f, categories: cleanDiscoveryCategories(f.categories), minBrandSafety: "", minAiScore: "", minBrandFit: "", minEstimatedCost: "", maxEstimatedCost: "", audienceInterestTags: [], contentLanguages: [] };
+  return { ...f, categories: cleanDiscoveryCategories(f.categories), minBrandSafety: "", minAiScore: "", minBrandFit: "", minEstimatedCost: "", maxEstimatedCost: "", audienceCountries: [], audienceInterestTags: [], contentLanguages: [] };
 }
 export function hasNormalSearchContext(input: CreatorSearchFilters): boolean {
   const f = sanitizeNormalFilters(input);

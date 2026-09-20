@@ -36,9 +36,9 @@ test("missing metrics do not qualify a hard requirement",()=>{const c=creator();
 test("same account must satisfy platform and all metrics",()=>{const c=creator();c.platforms.push({...c.platforms[0],id:"tt",platform:"tiktok",follower_count:500,engagement_rate:30});assert.equal(evaluate({platforms:["tiktok"],minFollowers:"500000",minEngagement:"4"},c).eligible,false)});
 test("secondary account handle works",()=>{const c=creator();c.platforms.push({...c.platforms[0],handle:"second"});assert.equal(evaluate({handle:"second"},c).eligible,true)});
 test("creator country inference remains",()=>{const r=evaluate({countries:["EG"]},creator("a",{country_code:null,platforms:[],bio:"Cairo Egypt"}));assert.equal(r.eligible,true)});
-test("audience geography never uses creator or account location",()=>{const c=creator();assert.equal(evaluate({audienceCountries:["EG"]},c).eligible,false);assert.equal(creatorMatchesDiscoveryBrowseFilters(c,{audienceCountries:["EG"]}),false)});
+test("audience geography never uses creator or account location",()=>{const c=creator();assert.equal(creatorMatchesDiscoveryBrowseFilters(c,{audienceCountries:["EG"]}),false)});
 const demographics = { source:"manual" as const, topCountries:[{code:"AE",percent:80}], topCities:null,gender:{male:20,female:80,unknown:null},age:{"13_17":null,"18_24":15,"25_34":85,"35_44":null,"45_54":null,"55_plus":null} };
-test("genuine audience OR geography",()=>assert.equal(evaluate({audienceCountries:["SA","AE"]},creator("a",{audience_demographics:demographics})).eligible,true));
+test("future genuine audience OR geography contract remains",()=>assert.equal(creatorMatchesDiscoveryBrowseFilters(creator("a",{audience_demographics:demographics}),{audienceCountries:["SA","AE"]}),true));
 test("audience gender uses audience share",()=>assert.equal(evaluate({gender:"female"},creator("a",{audience_demographics:demographics})).eligible,true));
 test("audience age range uses observed dominant band overlap",()=>assert.equal(evaluate({ageMin:"18",ageMax:"34"},creator("a",{audience_demographics:demographics})).eligible,true));
 test("unavailable demographics never qualify",()=>assert.equal(evaluate({gender:"female"},creator("a",{audience_demographics:{...demographics,source:"unavailable"}})).eligible,false));
@@ -186,4 +186,20 @@ test("exact identity precedes a higher combined relevance score within the retri
   const r=await search([other,exact],{search:'@amina',minEngagement:'4'},undefined,1,24);
   assert.equal(r.creators[0].unified_id,'inf:exact');
   assert.ok(r.creators[0].discovery_relevance!.score!<r.creators[1].discovery_relevance!.score!);
+});
+
+
+test("unsupported audience country from saved filters cannot activate search or relevance", async () => {
+  const stale = filters({ audienceCountries: ["EG"] });
+  assert.deepEqual(sanitizeNormalFilters(stale).audienceCountries, []);
+  assert.deepEqual(stale.audienceCountries, ["EG"]);
+  assert.equal(hasNormalSearchContext(stale), false);
+  assert.deepEqual(await search([creator()], { audienceCountries: ["EG"] }), await search([creator()]));
+});
+
+test("unsupported audience country does not change supported filter results or relevance", async () => {
+  const supported = { countries: ["EG"], categories: ["Beauty"], minEngagement: "3", search: "beauty" };
+  const candidates = [creator(), creator("other", { country_code: "AE", bio: "Dubai" })];
+  assert.deepEqual(await search(candidates, { ...supported, audienceCountries: ["AE"] }), await search(candidates, supported));
+  assert.deepEqual(sanitizeNormalFilters(filters()).audienceCountries, []);
 });
