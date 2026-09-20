@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignMoney } from "../campaign-money";
 import Link from "next/link";
 import {
   CheckIcon,
@@ -38,7 +39,7 @@ import {
   OperationalAmountField,
   OperationalQtyField,
 } from "@/features/campaigns/components/assignment-hierarchy/operational-amount-field";
-import { formatOperationalAmount, roundOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
+import { roundOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
 import {
   OPERATIONAL_AMOUNT_CLASS,
@@ -194,6 +195,7 @@ export function EditablePostRow({
   gridCols,
   parentTrackIds,
 }: EditablePostRowProps) {
+  const formatOperationalAmount = (amount: number) => campaignMoney(amount, currency);
   const col = useOperationalChildColumnVisibleChecker();
   const leadingParentColumnIds =
     leadingParentColumnIdsProp ?? assignmentChildLeadingParentColumnIds(showExpandColumn);
@@ -831,7 +833,8 @@ export function EditablePostRow({
           <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalAmountField
-                value={commercial.draft.revPerAd}
+                currency={currency}
+              value={commercial.draft.revPerAd}
                 onChange={(n) => commercial.setRevPerAd(n)}
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
@@ -849,7 +852,8 @@ export function EditablePostRow({
           <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalAmountField
-                value={commercial.draft.costPerAd}
+                currency={currency}
+              value={commercial.draft.costPerAd}
                 onChange={(n) => commercial.setCostPerAd(n)}
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
@@ -873,7 +877,8 @@ export function EditablePostRow({
           <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalAmountField
-                value={commercial.draft.rev}
+                currency={currency}
+              value={commercial.draft.rev}
                 onChange={(n) => commercial.setRev(n)}
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
@@ -960,7 +965,8 @@ export function EditablePostRow({
           >
             {col("cost") && showDeliverableCommercial ? (
               <OperationalAmountField
-                value={commercial.draft.cost}
+                currency={currency}
+              value={commercial.draft.cost}
                 onChange={(n) => commercial.setCost(n)}
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}

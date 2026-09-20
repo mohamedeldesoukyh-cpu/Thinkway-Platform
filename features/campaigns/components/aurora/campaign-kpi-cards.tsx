@@ -1,7 +1,8 @@
 "use client";
 
+import { CampaignSummaryMoney } from "@/features/campaigns/components/campaign-money";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useTransition, type ReactNode } from "react";
 import {
   WalletIcon,
   ReceiptIcon,
@@ -13,9 +14,8 @@ import { toast } from "sonner";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { updateCampaignDisplayCurrencyAction } from "@/features/campaigns/actions";
 import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
-import { formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
+import { formatPercent } from "@/features/campaigns/utils";
 import { fromEgp } from "@/lib/commercial/fx-aggregation";
-import { resolveCommercialRateToEgp } from "@/features/quotations/actions";
 import { cn } from "@/lib/utils";
 
 type CampaignKpiCardsProps = {
@@ -26,7 +26,7 @@ type CampaignKpiCardsProps = {
 type KpiCardDef = {
   id: string;
   label: string;
-  value: string;
+  value: ReactNode;
   sub: ReactNode;
   icon: ReactNode;
   tint: "blue" | "slate" | "emer" | "violet";
@@ -37,24 +37,10 @@ type KpiCardDef = {
 export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps) {
   const router = useRouter();
   const { financials, lines } = workspace;
-  const [displayCurrency, setDisplayCurrency] = useState(
-    (workspace.currency_code || "EGP").toUpperCase()
-  );
-  const [displayFxRateToEgp, setDisplayFxRateToEgp] = useState(
-    Number(financials.display_fx_rate_to_egp) > 0
-      ? Number(financials.display_fx_rate_to_egp)
-      : 1
-  );
+  const displayCurrency = (workspace.currency_code || "EGP").toUpperCase();
+  const displayFxRateToEgp = Number(workspace.financials.display_fx_rate_to_egp) || 1;
   const [currencyPending, startCurrencyTransition] = useTransition();
 
-  useEffect(() => {
-    setDisplayCurrency((workspace.currency_code || "EGP").toUpperCase());
-    setDisplayFxRateToEgp(
-      Number(financials.display_fx_rate_to_egp) > 0
-        ? Number(financials.display_fx_rate_to_egp)
-        : 1
-    );
-  }, [workspace.currency_code, financials.display_fx_rate_to_egp]);
 
   const revenue = fromEgp(
     Number(financials.revenue_egp ?? financials.revenue ?? 0),
@@ -78,22 +64,10 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
 
   const handleCurrencyChange = (currency: string) => {
     const next = currency.toUpperCase();
-    const previous = displayCurrency;
-    setDisplayCurrency(next);
     startCurrencyTransition(async () => {
-      const [rateRes, saveRes] = await Promise.all([
-        resolveCommercialRateToEgp(next),
-        updateCampaignDisplayCurrencyAction({
-          campaignId: workspace.id,
-          currency: next,
-        }),
-      ]);
-      if (rateRes.ok && rateRes.data) {
-        setDisplayFxRateToEgp(rateRes.data.rate);
-      }
+      const saveRes = await updateCampaignDisplayCurrencyAction({ campaignId: workspace.id, currency: next });
       if (!saveRes.ok) {
         toast.error(saveRes.message ?? "Failed to update currency.");
-        setDisplayCurrency(previous);
         return;
       }
       router.refresh();
@@ -104,7 +78,7 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
     {
       id: "revenue",
       label: "Revenue",
-      value: formatMoneyCompact(revenue, displayCurrency),
+      value: <CampaignSummaryMoney amount={revenue} currency={displayCurrency} metric="revenue" />,
       sub: "Billable campaign value",
       tint: "blue",
       icon: <WalletIcon aria-hidden />,
@@ -112,7 +86,7 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
     {
       id: "cost",
       label: "Cost",
-      value: formatMoneyCompact(cost, displayCurrency),
+      value: <CampaignSummaryMoney amount={cost} currency={displayCurrency} metric="cost" />,
       sub: "Committed vendor cost",
       tint: "slate",
       icon: <ReceiptIcon aria-hidden />,
@@ -120,7 +94,7 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
     {
       id: "gp",
       label: "Gross Profit",
-      value: formatMoneyCompact(gp, displayCurrency),
+      value: <CampaignSummaryMoney amount={gp} currency={displayCurrency} metric="gp" />,
       valueClassName:
         gp < 0 ? "text-[var(--camp-red-text)]" : "text-[var(--camp-green-text)]",
       sub: `${formatPercent(marginPercent)} GP`,

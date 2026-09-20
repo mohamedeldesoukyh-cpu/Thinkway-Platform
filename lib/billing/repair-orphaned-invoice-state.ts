@@ -658,7 +658,7 @@ export async function repairActiveInvoiceOperationalRelock(
   for (const invoice of invoices ?? []) {
     const inv = invoice as { id: string };
     const { data: invoiceLineItems } = await supabase
-      .from("invoice_line_items")
+      .from("invoice_line_items_operational")
       .select("campaign_line_id, revenue_before_vat")
       .eq("invoice_id", inv.id);
 
@@ -839,7 +839,7 @@ export async function repairAppendMissingInvoiceLineItems(
   const deliverables = (deliverableRows ?? []) as DeliverableRow[];
 
   const { data: lineItems } = await supabase
-    .from("invoice_line_items")
+    .from("invoice_line_items_operational")
     .select(
       "id, invoice_id, assignment_deliverable_id, campaign_line_id, revenue_before_vat"
     )

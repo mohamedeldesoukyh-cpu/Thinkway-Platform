@@ -1,5 +1,6 @@
 "use client";
 
+import { CampaignCurrencyProvider } from "./campaign-money";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Tabs } from "@/components/ui/tabs";
@@ -469,6 +470,7 @@ export function CampaignWorkspaceView({
   );
 
   return (
+    <CampaignCurrencyProvider workspace={workspace}>
     <CampaignOperationalRefreshProvider
       reloadOperationalBilling={reloadOperationalBilling}
       reloadPublications={reloadPublications}
@@ -778,5 +780,6 @@ export function CampaignWorkspaceView({
       />
     </div>
     </CampaignOperationalRefreshProvider>
+    </CampaignCurrencyProvider>
   );
 }

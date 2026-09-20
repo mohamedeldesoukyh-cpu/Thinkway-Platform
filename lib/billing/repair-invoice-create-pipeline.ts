@@ -570,7 +570,7 @@ export async function repairStaleLiveDraftInvoicePostLinks(
 
   const activeLineItemIds = await loadActiveInvoiceLineItemIds(supabase, lineItemIds);
   const { data: lineItems } = await supabase
-    .from("invoice_line_items")
+    .from("invoice_line_items_operational")
     .select("id, invoice_id, assignment_post_schedule_id, revenue_before_vat")
     .in("id", lineItemIds);
 

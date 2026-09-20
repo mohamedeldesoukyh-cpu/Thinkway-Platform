@@ -49,7 +49,7 @@ export async function loadOperationalInvoiceLinkage(
   }
 
   const { data, error } = await supabase
-    .from("invoice_line_items")
+    .from("invoice_line_items_operational")
     .select(
       `
       assignment_deliverable_id,

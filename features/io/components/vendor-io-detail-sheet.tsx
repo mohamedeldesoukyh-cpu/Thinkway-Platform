@@ -35,7 +35,8 @@ import {
   formatAssignmentDetailDate,
   initialsFromName,
 } from "@/lib/campaigns/assignment-detail-presenters";
-import { formatMoney } from "@/features/campaigns/utils";
+import { campaignMoney as formatMoney } from "@/features/campaigns/components/campaign-money";
+
 import {
   parseTermsText,
   resolveEffectiveVendorIoTerms,

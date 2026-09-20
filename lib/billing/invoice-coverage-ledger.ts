@@ -46,7 +46,7 @@ export async function loadInvoiceCoverageSums(
   for (const batch of batches) {
     if (batch.ids.length === 0) continue;
     const { data, error } = await supabase
-      .from("invoice_line_items")
+      .from("invoice_line_items_operational")
       .select(select)
       .in(batch.column, batch.ids);
     if (error) {

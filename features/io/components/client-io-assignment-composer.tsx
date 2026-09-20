@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignMoney, CampaignMoneyTotal } from "@/features/campaigns/components/campaign-money";
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -12,7 +13,6 @@ import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-
 import { DETAIL_FORM_INPUT_CLASS } from "@/features/campaigns/components/operational-detail-panel";
 import { updateAssignmentCommercialNotesAction } from "@/features/campaigns/actions";
 import { saveClientIoAssignmentsAction } from "@/features/io/actions";
-import { formatMoney } from "@/lib/campaigns/utils";
 import { isClientIoComposerEditable } from "@/lib/io/client-io-assignments";
 import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 import type { ClientIoStatus } from "@/features/io/types";
@@ -99,11 +99,6 @@ export function ClientIoAssignmentComposer({
     [selected]
   );
 
-  const selectedRevenue = useMemo(() => {
-    return assignments
-      .filter((row) => selected.has(row.id))
-      .reduce((sum, row) => sum + Number(row.revenue_before_vat ?? 0), 0);
-  }, [assignments, selected]);
 
   function toggle(id: string, next: boolean) {
     setSelected((prev) => {
@@ -227,7 +222,7 @@ export function ClientIoAssignmentComposer({
                         nameClassName="text-sm font-medium"
                       />
                       <p className="text-xs tabular-nums text-muted-foreground">
-                        {formatMoney(Number(row.revenue_before_vat ?? 0), currencyCode)}
+                        {campaignMoney(Number(row.revenue_before_vat ?? 0), row.currency_code || currencyCode)}
                       </p>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
@@ -291,7 +286,7 @@ export function ClientIoAssignmentComposer({
           <p className="text-xs text-muted-foreground">
             {selected.size} selected · rollup{" "}
             <span className="font-medium text-foreground">
-              {formatMoney(selectedRevenue, currencyCode)}
+              {<CampaignMoneyTotal currency={currencyCode} amounts={assignments.filter(row => selected.has(row.id)).map(row => ({ amount: Number(row.revenue_before_vat) || 0, currency: row.currency_code || currencyCode }))} />}
             </span>
           </p>
           {editable ? (

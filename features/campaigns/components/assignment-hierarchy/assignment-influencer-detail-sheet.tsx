@@ -39,7 +39,8 @@ import {
 import { formatDesignDateRange } from "@/lib/design/format-design-date";
 import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience-view";
 import { resolveAssignmentsGridGates } from "@/lib/campaigns/assignments-grid-gates";
-import { formatMoney, formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
+import { campaignMoney as formatMoney, campaignMoney as formatMoneyCompact, CampaignLineFinancial } from "@/features/campaigns/components/campaign-money";
+import { formatPercent } from "@/features/campaigns/utils";
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
 import { vendorDetailPath } from "@/lib/routing/entity-paths";
 import { cn } from "@/lib/utils";
@@ -164,7 +165,7 @@ function ParticipationDetailsTab({
       </DetailField>
       {showInternalFinancials ? (
         <DetailField label="Inf cost" valueClassName="m">
-          {formatMoney(line.cost_before_vat ?? line.cost, currency)}
+          {<CampaignLineFinancial line={line} metric="cost" />}
         </DetailField>
       ) : null}
       <DetailField label="Revenue" valueClassName="m">
@@ -173,10 +174,10 @@ function ParticipationDetailsTab({
       {showInternalFinancials ? (
         <>
           <DetailField label="Profit" valueClassName="m g">
-            {formatMoney(row.rollups.gp, currency)}
+            {<CampaignLineFinancial line={line} metric="gp" />}
           </DetailField>
           <DetailField label="Creator profit %" valueClassName="m">
-            {formatPercent(row.rollups.margin_percent)}
+            {<CampaignLineFinancial line={line} metric="margin_percent" />}
           </DetailField>
         </>
       ) : null}
@@ -571,19 +572,19 @@ export function AssignmentInfluencerDetailSheet({
                 {gates.showInternalFinancials ? (
                   <div>
                     <i>Cost</i>
-                    <b>{formatMoneyCompact(cost, currency)}</b>
+                    <b>{line ? <CampaignLineFinancial line={line} metric="cost" /> : formatMoneyCompact(cost, currency)}</b>
                   </div>
                 ) : null}
                 {gates.showInternalFinancials ? (
                   <div>
                     <i>Gross profit</i>
-                    <b className={gp >= 0 ? "g" : undefined}>{formatMoneyCompact(gp, currency)}</b>
+                    <b className={gp >= 0 ? "g" : undefined}>{line ? <CampaignLineFinancial line={line} metric="gp" /> : formatMoneyCompact(gp, currency)}</b>
                   </div>
                 ) : null}
                 {gates.showInternalFinancials ? (
                   <div>
                     <i>Margin</i>
-                    <b className={margin >= 20 ? "g" : undefined}>{formatPercent(margin)}</b>
+                    <b className={margin >= 20 ? "g" : undefined}>{line ? <CampaignLineFinancial line={line} metric="margin_percent" /> : formatPercent(margin)}</b>
                   </div>
                 ) : null}
                 <div>

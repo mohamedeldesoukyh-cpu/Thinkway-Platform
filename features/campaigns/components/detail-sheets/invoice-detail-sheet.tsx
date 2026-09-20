@@ -16,7 +16,8 @@ import {
   OperationalDetailSheet,
 } from "@/features/campaigns/components/operational-detail-panel";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
-import { formatMoney } from "@/features/campaigns/utils";
+import { campaignMoney as formatMoney } from "@/features/campaigns/components/campaign-money";
+
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type InvoiceDetailSheetProps = {

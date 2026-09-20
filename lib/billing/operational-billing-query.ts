@@ -1,3 +1,5 @@
+import { projectBillingRows, convertMoney } from "./billing-currency";
+import { loadCurrencyRates } from "./billing-currency-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
@@ -469,6 +471,7 @@ export async function loadCampaignOperationalBilling(
     const assignmentRow: OperationalBillingRow = {
       id: line.id,
       kind: "assignment",
+      currency_code: line.currency_code,
       campaign_header_id: campaignId,
       campaign_line_id: line.id,
       assignment_deliverable_id: null,
@@ -620,12 +623,12 @@ export async function loadBillingCampaignQueue(
 
   const { data: lineRows } = await supabase
     .from("campaign_lines")
-    .select("id, campaign_header_id, billing_status, revenue, invoice_id")
+    .select("id, campaign_header_id, billing_status, revenue, currency_code, invoice_id")
     .in("campaign_header_id", headerIds);
 
   const linesByCampaign = new Map<
     string,
-    Array<{ id: string; billing_status: string; revenue: number; invoice_id: string | null }>
+    Array<{ id: string; billing_status: string; revenue: number; currency_code: string; invoice_id: string | null }>
   >();
   for (const line of lineRows ?? []) {
     const list = linesByCampaign.get(line.campaign_header_id) ?? [];
@@ -633,6 +636,7 @@ export async function loadBillingCampaignQueue(
       id: line.id,
       billing_status: line.billing_status,
       revenue: Number(line.revenue),
+      currency_code: line.currency_code,
       invoice_id: line.invoice_id,
     });
     linesByCampaign.set(line.campaign_header_id, list);
@@ -648,7 +652,7 @@ export async function loadBillingCampaignQueue(
     seenCampaignIds.add(header.id);
 
     const campaignLines = linesByCampaign.get(header.id) ?? [];
-    const { operational_rows, groups, error } = await loadCampaignOperationalBilling(
+    const { operational_rows: nativeRows, groups, error } = await loadCampaignOperationalBilling(
       supabase,
       header.id
     );
@@ -665,22 +669,25 @@ export async function loadBillingCampaignQueue(
       }
     }
 
+    const rates = await loadCurrencyRates(supabase, [header.currency_code, ...groups.map(g => g.currency_code), ...campaignLines.map(l => l.currency_code)]);
+    const legacyAmount = (line: typeof campaignLines[number]) => convertMoney(line.revenue, line.currency_code, header.currency_code, rates);
+    const operational_rows = projectBillingRows(nativeRows, header.currency_code, rates);
     const legacyRevenue = error
-      ? campaignLines.reduce((s, line) => s + line.revenue, 0)
-      : groups.reduce((s, g) => s + g.total_value, 0);
+      ? campaignLines.reduce((s, line) => s + legacyAmount(line), 0)
+      : operational_rows.reduce((s, row) => s + row.billable_amount, 0);
     const legacyInvoiced = error
       ? campaignLines.reduce((s, line) => {
-          if (line.invoice_id) return s + line.revenue;
+          if (line.invoice_id) return s + legacyAmount(line);
           if (
             ["invoiced", "partially_invoiced", "partially_paid", "paid", "closed"].includes(
               line.billing_status
             )
           ) {
-            return s + line.revenue;
+            return s + legacyAmount(line);
           }
           return s;
         }, 0)
-      : groups.reduce((s, g) => s + g.invoiced_value, 0);
+      : operational_rows.reduce((s, row) => s + row.invoiced_amount, 0);
 
     if (!error) {
       operationalRowsByCampaign.set(header.id, operational_rows);

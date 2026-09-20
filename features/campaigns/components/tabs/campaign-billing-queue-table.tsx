@@ -1,5 +1,6 @@
 "use client";
 
+import { CampaignMoneyTotal, campaignMoney } from "../campaign-money";
 import { FileTextIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,7 +23,6 @@ import {
 } from "@/features/campaigns/components/campaign-operational-table";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
-import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { OPERATIONAL_REVENUE_AMOUNT_CLASS } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
@@ -167,17 +167,17 @@ function CampaignBillingQueueTableRow({
       ) : null}
       {showRevenueBeforeVat ? (
         <CampaignOperationalTableCellAmount className={OPERATIONAL_REVENUE_AMOUNT_CLASS}>
-          {formatOperationalAmount(row.revenue_before_vat)}
+          {row.originals?.length ? <CampaignMoneyTotal currency={row.currency_code} displayAmount={row.revenue_before_vat} amounts={row.originals.map(o => ({ currency: o.currency, amount: o.revenue_before_vat }))} /> : campaignMoney(row.revenue_before_vat, row.currency_code)}
         </CampaignOperationalTableCellAmount>
       ) : null}
       {showVatAmount ? (
         <CampaignOperationalTableCellAmount>
-          {formatOperationalAmount(row.vat_amount)}
+          {row.originals?.length ? <CampaignMoneyTotal currency={row.currency_code} displayAmount={row.vat_amount} amounts={row.originals.map(o => ({ currency: o.currency, amount: o.vat_amount }))} /> : campaignMoney(row.vat_amount, row.currency_code)}
         </CampaignOperationalTableCellAmount>
       ) : null}
       {showRevenueAfterVat ? (
         <CampaignOperationalTableCellAmount className={OPERATIONAL_REVENUE_AMOUNT_CLASS}>
-          {formatOperationalAmount(row.revenue_after_vat)}
+          {row.originals?.length ? <CampaignMoneyTotal currency={row.currency_code} displayAmount={row.revenue_after_vat} amounts={row.originals.map(o => ({ currency: o.currency, amount: o.revenue_after_vat }))} /> : campaignMoney(row.revenue_after_vat, row.currency_code)}
         </CampaignOperationalTableCellAmount>
       ) : null}
     </CampaignOperationalTableRow>

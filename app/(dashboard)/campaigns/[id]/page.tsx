@@ -177,6 +177,7 @@ export default async function CampaignWorkspacePage({
         <PlatformErrorBoundary surface="campaigns">
           <div className="flex min-h-0 flex-1 flex-col">
             <CampaignWorkspaceView
+              key={`${workspace.id}:${workspace.currency_code}:${JSON.stringify(workspace.currency_rates)}`}
               workspace={workspace}
               defaultTab={defaultTab}
               initialAssignmentHierarchy={assignmentHierarchy!}

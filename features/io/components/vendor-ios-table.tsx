@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignMoney } from "@/features/campaigns/components/campaign-money";
 import Link from "next/link";
 import { useMemo } from "react";
 
@@ -10,7 +11,6 @@ import {
 } from "@/components/tables/operational-configurable-table";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
@@ -67,7 +67,7 @@ function buildVendorIosColumns(
       label: "Amount",
       headerClassName: "text-right",
       amountCell: true,
-      renderCell: (row) => formatOperationalAmount(row.amount),
+      renderCell: (row) => campaignMoney(row.amount, row.currency_code),
     },
     {
       id: "status",

@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignMoney } from "@/features/campaigns/components/campaign-money";
 import Link from "next/link";
 import { format } from "date-fns";
 import { useMemo } from "react";
@@ -12,7 +13,6 @@ import {
   type OperationalConfigurableColumnDef,
   getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
-import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { InvoiceUngenerateTrigger } from "@/features/finance/invoices/components/invoice-ungenerate-dialog";
 import type { FinanceInvoiceRegisterRow } from "@/features/finance/invoices/types";
 import {
@@ -112,21 +112,21 @@ function buildFinanceInvoiceRegisterBaseColumns(
       label: "Rev. before VAT",
       headerClassName: "text-right",
       amountCell: true,
-      renderCell: (row) => formatOperationalAmount(row.revenue_before_vat),
+      renderCell: (row) => campaignMoney(row.revenue_before_vat, row.currency),
     },
     {
       id: "vat",
       label: "VAT",
       headerClassName: "text-right",
       amountCell: true,
-      renderCell: (row) => formatOperationalAmount(row.vat_amount),
+      renderCell: (row) => campaignMoney(row.vat_amount, row.currency),
     },
     {
       id: "revenue_after_vat",
       label: "Rev. after VAT",
       headerClassName: "text-right",
       amountCell: true,
-      renderCell: (row) => formatOperationalAmount(row.revenue_after_vat),
+      renderCell: (row) => campaignMoney(row.revenue_after_vat, row.currency),
     },
     {
       id: "invoice_status",

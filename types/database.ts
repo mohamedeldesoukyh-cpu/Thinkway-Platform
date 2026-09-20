@@ -3765,6 +3765,7 @@ export type Database = {
         };
         Returns: number;
       };
+      set_campaign_display_currency: { Args: { p_campaign_id: string; p_currency: string }; Returns: number };
       sync_campaign_header_po_consumption: {
         Args: { p_header_id: string };
         Returns: undefined;
