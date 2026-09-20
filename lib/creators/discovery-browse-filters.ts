@@ -47,31 +47,16 @@ function matchesAudienceCountries(
     }
   }
 
-  const platformMatch = creator.platforms.some((platform) =>
-    targets.has(normalizeCountryCode(platform.audience_country))
-  );
-  if (platformMatch) return true;
-
-  return creatorCountryCodes(creator).some((code) => targets.has(code));
+  return false;
 }
 
 function matchesAudienceInterestTags(
-  creator: UnifiedCreatorResult,
   tags: string[]
 ): boolean {
   if (tags.length === 0) return true;
-  const hay = [
-    creator.ai_category,
-    creator.ai_niche,
-    ...(creator.audience_interests ?? []),
-    ...creator.categories,
-    ...(creator.browse_category_tags ?? []),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-
-  return tags.some((tag) => hay.includes(tag.trim().toLowerCase()));
+  // This legacy field mixes content/category imports; it is not demographic evidence.
+  // Normal Discovery disables this control until a genuine audience-interest source exists.
+  return false;
 }
 
 /**
@@ -90,7 +75,7 @@ function matchesDemographicFilters(
   if (!hasAnyAudienceFilter(demographicFilter)) return true;
 
   const demographics = creator.audience_demographics;
-  if (!demographics) return false;
+  if (!demographics || demographics.source === "unavailable") return false;
 
   if (demographicFilter.genderMinShare) {
     const share = demographics.gender[demographicFilter.genderMinShare.gender];
@@ -211,7 +196,7 @@ export function creatorMatchesDiscoveryBrowseFilters(
   if (!matchesCreatorCountries(creator, creatorCountries)) return false;
 
   if (!matchesAudienceCountries(creator, filters.audienceCountries ?? [])) return false;
-  if (!matchesAudienceInterestTags(creator, filters.audienceInterestTags ?? [])) return false;
+  if (!matchesAudienceInterestTags(filters.audienceInterestTags ?? [])) return false;
   if (!matchesDemographicFilters(creator, filters)) return false;
 
   const languageFilters = [

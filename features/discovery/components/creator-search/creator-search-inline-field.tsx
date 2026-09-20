@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createSearchDebouncer } from "./creator-search-timing";
 
 import { normalizeDiscoverySearchQuery } from "@/lib/discovery/creator-search-query";
 
@@ -11,7 +12,7 @@ import {
 } from "./creator-search-draft-storage";
 
 function normalizeSearchDraft(value: string): string {
-  const normalized = normalizeDiscoverySearchQuery(value);
+  const normalized = /^https?:\/\//i.test(value.trim()) || value.trim().startsWith("@") ? normalizeDiscoverySearchQuery(value) : value.trim();
   return normalized || value;
 }
 
@@ -32,19 +33,22 @@ export function CreatorSearchInlineField({
   const [draft, setDraft] = useState(
     () => searchQuery.trim() || readDiscoverySearchDraft()
   );
+  const [debouncer] = useState(() => createSearchDebouncer());
+  const [previousQuery, setPreviousQuery] = useState(searchQuery);
+  if (previousQuery !== searchQuery) { setPreviousQuery(searchQuery); setDraft(searchQuery); }
+  useEffect(() => () => debouncer.cancel(), [debouncer]);
 
   useEffect(() => {
-    setDraft(searchQuery);
+    debouncer.cancel();
     if (!searchQuery.trim()) clearDiscoverySearchDraft();
     else writeDiscoverySearchDraft(searchQuery);
-  }, [searchQuery]);
+  }, [searchQuery, debouncer]);
 
   function apply(next: string) {
     const normalized = normalizeSearchDraft(next);
     setDraft(normalized);
     writeDiscoverySearchDraft(normalized);
-    onDebouncedSearchChange(normalized);
-    onSearchSubmit(normalized);
+    debouncer.submit(() => onSearchSubmit(normalized));
   }
 
   return (
@@ -62,10 +66,12 @@ export function CreatorSearchInlineField({
         aria-label="Search creators"
         aria-busy={loading || undefined}
         onChange={(event) => {
-          const next = normalizeSearchDraft(event.target.value);
+          const next = event.target.value;
           setDraft(next);
           writeDiscoverySearchDraft(next);
-          onDebouncedSearchChange(next);
+          debouncer.schedule(() => {
+            onDebouncedSearchChange(normalizeSearchDraft(next));
+          });
         }}
         onKeyDown={(event) => {
           if (event.key === "Enter") {

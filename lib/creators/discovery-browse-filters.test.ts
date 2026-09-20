@@ -81,7 +81,7 @@ test("requiresDiscoveryAudienceScanPath excludes multi creatorCountries after Ph
   );
 });
 
-test("creatorMatchesDiscoveryBrowseFilters enforces audience interest tags", () => {
+test("creatorMatchesDiscoveryBrowseFilters rejects legacy audience interest proxies", () => {
   const filters: UnifiedCreatorBrowseFilters = {
     audienceInterestTags: ["beauty & cosmetics"],
   };
@@ -94,9 +94,9 @@ test("creatorMatchesDiscoveryBrowseFilters enforces audience interest tags", () 
     audience_interests: ["Sports"],
   });
 
-  assert.equal(creatorMatchesDiscoveryBrowseFilters(match, filters), true);
+  assert.equal(creatorMatchesDiscoveryBrowseFilters(match, filters), false);
   assert.equal(creatorMatchesDiscoveryBrowseFilters(miss, filters), false);
-  assert.equal(applyDiscoveryBrowseFilters([match, miss], filters).length, 1);
+  assert.equal(applyDiscoveryBrowseFilters([match, miss], filters).length, 0);
 });
 
 test("creatorMatchesDiscoveryBrowseFilters matches secondary country_codes entries", () => {
@@ -118,7 +118,7 @@ test("creatorMatchesDiscoveryBrowseFilters matches secondary country_codes entri
   assert.equal(creatorMatchesDiscoveryBrowseFilters(noMatch, filters), false);
 });
 
-test("creatorMatchesDiscoveryBrowseFilters accepts UAE via creator country fallback", () => {
+test("creatorMatchesDiscoveryBrowseFilters rejects UAE creator country as audience geography", () => {
   const filters: UnifiedCreatorBrowseFilters = {
     audienceCountries: ["AE"],
   };
@@ -132,7 +132,7 @@ test("creatorMatchesDiscoveryBrowseFilters accepts UAE via creator country fallb
     country_code: "EG",
   });
 
-  assert.equal(creatorMatchesDiscoveryBrowseFilters(uaeCreator, filters), true);
+  assert.equal(creatorMatchesDiscoveryBrowseFilters(uaeCreator, filters), false);
   assert.equal(creatorMatchesDiscoveryBrowseFilters(egCreator, filters), false);
 });
 

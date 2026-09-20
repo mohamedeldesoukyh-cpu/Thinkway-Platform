@@ -112,7 +112,7 @@ test("scoreCreatorSearchIntent can classify ambiguous handle-like queries as hyb
 });
 
 test("simplifyCreatorSearchQuery trims to first meaningful token", () => {
-  assert.equal(simplifyCreatorSearchQuery("Mohamed Ahmed Mostafa"), "Mohamed");
+  assert.equal(simplifyCreatorSearchQuery("Mohamed Ahmed Mostafa"), "mohamed");
   assert.equal(simplifyCreatorSearchQuery("maryammoustafaa.1"), "maryammoustafaa");
   assert.equal(simplifyCreatorSearchQuery("@reem_almasry"), "reem");
 });

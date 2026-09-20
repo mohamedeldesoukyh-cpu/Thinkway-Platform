@@ -24,6 +24,7 @@ import {
   CreatorSearchSuiteRow,
   SEARCH_MIN_W,
   searchColsStyle,
+  relevanceColsStyle,
 } from "./creator-search-suite-row";
 import {
   CreatorSearchHybridSectionHeader,
@@ -41,6 +42,8 @@ const ROW_ESTIMATE = 92;
 const SECTION_ESTIMATE = 52;
 
 type Props = {
+  completeness?: import("@/lib/discovery/normal-search").SearchCompleteness;
+  showRelevance?: boolean;
   creators: UnifiedCreatorResult[];
   hybridListItems?: CreatorSearchHybridListItem[];
   searchMode?: CreatorSearchIntentMode;
@@ -91,6 +94,7 @@ type Props = {
 };
 
 type VirtualRowProps = {
+  showRelevance?: boolean;
   creator: UnifiedCreatorResult;
   selected: boolean;
   index: number;
@@ -106,6 +110,7 @@ type VirtualRowProps = {
 
 const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
   creator,
+  showRelevance,
   selected,
   index,
   addedToShortlist,
@@ -137,6 +142,7 @@ const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
   return (
     <CreatorSearchSuiteRow
       creator={creator}
+      showRelevance={showRelevance}
       selected={selected}
       index={index}
       addedToShortlist={addedToShortlist}
@@ -152,6 +158,8 @@ const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
 });
 
 export function CreatorSearchResultList({
+  completeness,
+  showRelevance,
   creators,
   hybridListItems,
   searchMode = "discovery",
@@ -289,7 +297,7 @@ export function CreatorSearchResultList({
       scrollTarget.removeEventListener("scroll", onScroll);
     };
   }, [error, hasCreators, hasMore, loading, loadingMore, onLoadMore, creators.length]);
-  const totalLabel = `${total.toLocaleString()}${hasMore ? "+" : ""}`;
+  const totalLabel = `${total.toLocaleString()}${completeness ? completeness.totalKind === "lower_bound" ? "+" : "" : hasMore ? "+" : ""}`;
   const exactMatchesCountLabel = showExactMatchesZeroHeader
     ? `Exact Matches — ${total.toLocaleString()} creator${total === 1 ? "" : "s"}`
     : undefined;
@@ -300,14 +308,15 @@ export function CreatorSearchResultList({
         <div className="tw-ch">
           <span className="tw-ct">Creators · {totalLabel}</span>
           <span className="tw-cs">
-            click a name for the full profile — same panel as the shortlist
+            {visibleCreatorIds.length} loaded · click a name for the full profile
           </span>
           <span className="tw-sp" />
           {headerToolbar}
         </div>
-        <div style={{ minWidth: SEARCH_MIN_W, ...searchColsStyle }}>
+        <div style={{ minWidth: SEARCH_MIN_W + (showRelevance ? 140 : 0), ...(showRelevance ? relevanceColsStyle : searchColsStyle) }}>
           <CreatorSearchSuiteHeader
-            total={total}
+            showRelevance={showRelevance}
+            total={visibleCreatorIds.length}
             allSelected={allSelected}
             hasCreators={hasCreators}
             onToggleSelectAll={onToggleSelectAll}
@@ -334,7 +343,7 @@ export function CreatorSearchResultList({
         data-discovery-scroll
         className="discovery-search-exact-scroll min-h-0 flex-1 overflow-auto"
       >
-        {error && !hasCreators ? (
+        {completeness?.status === "incomplete" ? <div role="status" className="p-6 text-sm">Search incomplete: the work limit was reached after checking {completeness.examined.toLocaleString()} candidates. At least {completeness.matched.toLocaleString()} qualify. Narrow the search or retry; a globally ranked page is not available yet.</div> : error && !hasCreators ? (
           <DiscoveryEmptyState
             title="Search failed"
             description={error}
@@ -426,8 +435,8 @@ export function CreatorSearchResultList({
               className="relative w-full"
               style={{
                 height: virtualizer.getTotalSize(),
-                minWidth: SEARCH_MIN_W,
-                ...searchColsStyle,
+                minWidth: SEARCH_MIN_W + (showRelevance ? 140 : 0),
+                ...(showRelevance ? relevanceColsStyle : searchColsStyle),
               }}
             >
               {virtualizer.getVirtualItems().map((virtualRow) => {
@@ -460,6 +469,7 @@ export function CreatorSearchResultList({
                     style={{ transform: `translateY(${virtualRow.start}px)` }}
                   >
                     <CreatorSearchVirtualRow
+                      showRelevance={showRelevance}
                       creator={item.creator}
                       selected={selectedIds.has(item.creator.unified_id)}
                       index={virtualRow.index}

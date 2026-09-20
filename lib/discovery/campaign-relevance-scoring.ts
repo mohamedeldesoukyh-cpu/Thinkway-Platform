@@ -144,12 +144,7 @@ function evaluateCountry(creator: UnifiedCreatorResult, code: string): Criterion
   const codes = creatorCountryCodes(creator);
   if (codes.includes(target)) return "match";
 
-  if (demographicsAvailable(creator)) {
-    const filter = audienceFilterFromSearchFields({ audienceCountry: target });
-    if (matchesAudienceFilter(creator.audience_demographics!, filter)) return "match";
-  }
-
-  const hasGeoSignal = codes.length > 0 || demographicsAvailable(creator);
+  const hasGeoSignal = codes.length > 0;
   return hasGeoSignal ? "no_match" : "unknown";
 }
 
@@ -278,18 +273,25 @@ function evaluateCriterion(
       case "content_tag":
       case "content_keyword":
         return evaluateNicheOrTag(creator, value);
-      case "creator_country":
-      case "creator_city":
-      case "audience_country":
-      case "audience_city":
-        return evaluateCountry(creator, value);
-      case "creator_gender":
+      case "creator_country": return evaluateCountry(creator, value);
+      case "creator_city": return creator.city ? toEvaluation(creator.city.toLowerCase() === value.toLowerCase()) : "unknown";
+      case "audience_country": {
+        const d = creator.audience_demographics;
+        if (!d || d.source === "unavailable" || !d.topCountries?.length) return "unknown";
+        return toEvaluation(d.topCountries.some(c => resolveCountryCode(c.code ?? c.name) === resolveCountryCode(value)));
+      }
+      case "audience_city": {
+        const d = creator.audience_demographics;
+        if (!d || d.source === "unavailable" || !d.topCities?.length) return "unknown";
+        return toEvaluation(d.topCities.some(c => c.name?.toLowerCase() === value.toLowerCase()));
+      }
+      case "creator_gender": return "unknown";
       case "audience_gender":
         return evaluateAudienceDemographics(creator, { gender: value.toLowerCase() });
-      case "creator_age_min":
+      case "creator_age_min": return "unknown";
       case "audience_age_min":
         return evaluateAudienceDemographics(creator, { ageMin: value });
-      case "creator_age_max":
+      case "creator_age_max": return "unknown";
       case "audience_age_max":
         return evaluateAudienceDemographics(creator, { ageMax: value });
       case "language":
@@ -306,9 +308,16 @@ function evaluateCriterion(
         return evaluateBrandSafetyMin(creator, value);
       case "brand_fit_min":
         return evaluateBrandFitMin(creator, value);
-      case "engagement_max":
-      case "verified":
-        return "match";
+      case "engagement_max": {
+        const rate = creator.metrics.engagement_rate.value;
+        return rate == null || !Number.isFinite(Number(value)) ? "unknown" : toEvaluation(rate <= Number(value));
+      }
+      case "verified": {
+        const known = creator.platforms.filter(p => typeof p.is_verified === "boolean");
+        if (!known.length) return "unknown";
+        if (!["true","false","verified","unverified"].includes(value.toLowerCase())) return "unknown";
+        return toEvaluation(known.some(p => p.is_verified === ["true","verified"].includes(value.toLowerCase())));
+      }
       default:
         break;
     }

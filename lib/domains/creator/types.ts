@@ -139,6 +139,8 @@ export type CreatorEnrichmentStatus =
   | "skipped";
 
 export type UnifiedCreatorResult = {
+  /** Ephemeral normal-search relevance, never persisted into Creator DNA. */
+  discovery_relevance?: import("@/lib/discovery/normal-search").SearchRelevance;
   /** Stable composite key: `inf:uuid` or `dis:uuid` */
   unified_id: string;
   source_type: CreatorSourceType;
@@ -306,6 +308,7 @@ export type UnifiedCreatorBrowseFilters = {
 };
 
 export type UnifiedCreatorBrowseResult = {
+  completeness?: import("@/lib/discovery/normal-search").SearchCompleteness;
   creators: UnifiedCreatorResult[];
   total: number;
   has_more?: boolean;
