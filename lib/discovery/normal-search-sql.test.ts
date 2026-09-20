@@ -110,9 +110,9 @@ test("real PostgreSQL: existing lexical functions + compact RPC, read-only trans
       const started=Date.now();
       const request={filters:{...cloneCreatorSearchFilters(),...patch},sort:{field:'engagement' as const,direction:'desc' as const},page:1,pageSize:24};
       const result=await runNormalSearchTransport(client,request);
-      assert.equal(result.completeness.status,'complete',name);
-      assert.equal(result.total,name==='Egypt' || name==='Egypt Beauty' ? 502 : 251,name);
-      assert.ok(result.total>=250,name);assert.equal(result.creators.length,24,name);
+      assert.equal(result.completeness.status,'bounded',name);
+      assert.equal(result.completeness.totalKind,'lower_bound',name);
+      assert.ok(result.total>=24,name);assert.equal(result.creators.length,24,name);
       assert.ok(result.completeness.examined<600,`${name}: scanned ${result.completeness.examined}`);
       const next=await runNormalSearchTransport(client,{...request,page:2});
       assert.equal(new Set([...result.creators,...next.creators].map(c=>c.unified_id)).size,48,name);
@@ -165,6 +165,45 @@ test("real PostgreSQL: existing lexical functions + compact RPC, read-only trans
     }
     assert.throws(()=>sql("SET ROLE anon; SELECT discovery_normal_candidate_window();"),/permission denied/);
     assert.throws(()=>sql("SET ROLE authenticated; SELECT * FROM discovery_normal_filter_candidates('{}',1,0);"),/permission denied/);
+    // Compare installed helpers across real late windows, including retained inference candidates.
+    const optimization='20260920150000_discovery_country_candidate_short_circuit.sql';
+    const helperSignature='discovery_normal_filter_candidates(jsonb,integer,integer)';
+    const helperHash=()=>sql(`SELECT md5(pg_get_functiondef('${helperSignature}'::regprocedure));`);
+    const oldHash=helperHash();
+    const rpcHash=sql("SELECT md5(pg_get_functiondef('discovery_normal_candidate_window(text,integer,integer,boolean,boolean,jsonb)'::regprocedure));");
+    sql(`INSERT INTO influencers(id,display_name,country_code,categories)
+      SELECT ('00000000-0000-4000-8000-'||lpad(n::text,12,'0'))::uuid,'Country fixture '||n,
+      CASE n%4 WHEN 0 THEN NULL WHEN 1 THEN 'Egypt' WHEN 2 THEN 'EG' ELSE 'US' END,ARRAY['Beauty'] FROM generate_series(50000,58999) n;
+      INSERT INTO influencer_platform_accounts(id,influencer_id,platform,follower_count,engagement_rate,avg_views)
+      SELECT id,id,CASE right(id::text,1)::integer%3 WHEN 0 THEN 'instagram' WHEN 1 THEN 'youtube' ELSE 'tiktok' END,600000,8,20000
+      FROM influencers WHERE display_name LIKE 'Country fixture %';
+      INSERT INTO creator_dna(influencer_id,document) SELECT id,'{"audience":{"country":{"value":"US"}}}'::jsonb FROM influencers WHERE display_name LIKE 'Country fixture %'; ANALYZE;`);
+    const country={countries:['EG'],countryValues:['eg','egypt','مصر']};
+    const parityFilters=[country,{categories:['beauty']},{...country,categories:['beauty']},
+      {platforms:['instagram'],ranges:[{min:500000,max:1000000}]},{minEngagement:4},
+      {...country,categories:['beauty'],platforms:['instagram'],minEngagement:4},
+      {platforms:['youtube','tiktok'],minEngagement:4},{platforms:['twitter']}];
+    const offsets=[0,200,6000];
+    const rows=(filters:object,offset:number)=>JSON.parse(sql(`BEGIN READ ONLY; SELECT coalesce(jsonb_agg(to_jsonb(r)-'ordinality' ORDER BY ordinality),'[]') FROM discovery_normal_filter_candidates('${JSON.stringify(filters)}',200,${offset}) WITH ORDINALITY r; COMMIT;`));
+    const expected=parityFilters.map(filters=>offsets.map(offset=>rows(filters,offset)));
+    assert.equal(expected[0][2].length,200,'Egypt fixture must exercise a populated offset 6000');
+    const explainCountry=(source:string)=>{
+      const body=source.split('AS $$')[1].split('$$;')[0].replace(/\bp_filters\b/g,()=>`'${JSON.stringify(country)}'::jsonb`).replace(/\bp_limit\b/g,'200').replace(/\bp_offset\b/g,'0');
+      return JSON.parse(sql(`BEGIN READ ONLY; EXPLAIN (ANALYZE,FORMAT JSON) ${body} COMMIT;`))[0].Plan;
+    };
+    type PlanNode={ 'Relation Name'?:string; 'Actual Loops'?:number; Plans?:PlanNode[] };
+    const lookupLoops=(node:PlanNode,table:string):number=>(node['Relation Name']===table ? node['Actual Loops'] ?? 0 : 0)+(node.Plans ?? []).reduce((n,child)=>n+lookupLoops(child,table),0);
+    const beforePlan=explainCountry(readFileSync(`supabase/rollbacks/${optimization}`,'utf8'));
+    sql(readFileSync(`supabase/migrations/${optimization}`,'utf8'));
+    for(const [i,filters] of parityFilters.entries()) for(const [j,offset] of offsets.entries()) assert.deepEqual(rows(filters,offset),expected[i][j],`candidate/order/continuation parity ${i}/${offset}`);
+    const afterPlan=explainCountry(readFileSync(`supabase/migrations/${optimization}`,'utf8'));
+    for(const table of ['creator_dna','influencer_platform_accounts']) assert.ok(lookupLoops(afterPlan,table)<lookupLoops(beforePlan,table),`${table}: unnecessary country probes avoided`);
+    assert.equal(sql("SET ROLE authenticated; BEGIN READ ONLY; SELECT jsonb_typeof(discovery_normal_candidate_window('',0,200,false,false,'{}')->'items'); COMMIT; RESET ROLE;"),'array');
+    assert.throws(()=>sql("SET ROLE anon; SELECT discovery_normal_candidate_window();"),/permission denied/);
+    assert.throws(()=>sql("SET ROLE authenticated; SELECT * FROM discovery_normal_filter_candidates('{}',1,0);"),/permission denied/);
+    assert.equal(sql("SELECT md5(pg_get_functiondef('discovery_normal_candidate_window(text,integer,integer,boolean,boolean,jsonb)'::regprocedure));"),rpcHash);
+    sql(readFileSync(`supabase/rollbacks/${optimization}`,'utf8'));
+    assert.equal(helperHash(),oldHash,'rollback restores exact installed helper definition');
     sql(readFileSync('supabase/rollbacks/20260920100000_discovery_normal_candidate_window.sql','utf8'));
   } finally { command("pg_ctl",["-D",data,"-m","fast","-w","stop"]); }
 });

@@ -1,5 +1,7 @@
 # Phase 1 final closure review
 
+Historical closure record. Its exhaustive/global ranking requirement and commit recommendation are superseded by DISCOVERY_PHASE1_BOUNDED_EXECUTION.md and the final product decision.
+
 Local review only. No Production access, migration application outside the fixture, backfill, Apify run, commit, push, deployment or Phase 2 work.
 
 ## A. Relevance scenario matrix

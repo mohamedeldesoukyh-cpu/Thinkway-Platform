@@ -56,13 +56,13 @@ test("Arabic normalization symmetrical",()=>assert.equal(normalizeDiscoverySearc
 for(const url of ["https://www.instagram.com/amina/","https://www.tiktok.com/@amina"]) test(`profile URL ${url}`,()=>assert.equal(normalRetrievalQuery(filters({search:url})),"@amina"));
 test("taxonomy removes country not categories",()=>assert.deepEqual(cleanDiscoveryCategories(["egypt","EG","Beauty","Fitness"]),["Beauty","Fitness"]));
 test("clear reset removes relevance and constraints",()=>assert.equal(hasNormalSearchContext(filters()),false));
-test("best candidate beyond window one reaches page one",async()=>{const cs=Array.from({length:260},(_,i)=>creator(String(i),{display_name:`Other ${i}`}));cs[250]=creator("best",{display_name:"Target"});const result=await search(cs,{search:"Target"});assert.equal(result.creators[0].unified_id,"inf:best");assert.equal(result.creators[0].discovery_relevance?.score,100)});
-for(const field of ["followers","engagement","relevance"] as const) test(`global ${field} deterministic pagination`,async()=>{
+test("first page does not wait for a higher-scoring candidate in a later pool",async()=>{const cs=Array.from({length:260},(_,i)=>creator(String(i),{display_name:`Other ${i}`}));cs[250]=creator("best",{display_name:"Target"});const result=await search(cs,{search:"Target"});assert.equal(result.completeness.examined,200);assert.equal(result.completeness.status,"bounded");assert.ok(!result.creators.some(c=>c.unified_id==="inf:best"));});
+for(const field of ["followers","engagement","relevance"] as const) test(`pool ${field} deterministic pagination`,async()=>{
   const cs=Array.from({length:230},(_,i)=>{const c=creator(String(i).padStart(3,"0"),{display_name:`Amina ${i}`});c.platforms[0].follower_count=i;c.platforms[0].engagement_rate=i;return c});
   const sort={field,direction:"desc" as const};const p2=await search(cs,{search:"amina"},sort,2,20);const p1=await search(cs,{search:"amina"},sort,1,20);const all=await search(cs,{search:"amina"},sort,1,40);
   assert.deepEqual([...p1.creators,...p2.creators].map(c=>c.unified_id),all.creators.map(c=>c.unified_id));assert.equal(new Set([...p1.creators,...p2.creators].map(c=>c.unified_id)).size,40);
 });
-test("budget stop is incomplete, never false exhaustion or a falsely global page",async()=>{const r=await search(Array.from({length:250},(_,i)=>creator(String(i))),{},undefined,1,10,200);assert.equal(r.has_more,true);assert.equal(r.completeness.status,"incomplete");assert.equal(r.completeness.totalKind,"lower_bound");assert.deepEqual(r.creators,[])});
+test("budget stop before a qualified pool is incomplete and honest",async()=>{const cs=Array.from({length:250},(_,i)=>creator(String(i),{country_code:"EG"}));const r=await search(cs,{countries:["AE"]},undefined,1,10,200);assert.equal(r.has_more,true);assert.equal(r.completeness.status,"incomplete");assert.equal(r.completeness.totalKind,"lower_bound");assert.deepEqual(r.creators,[])});
 test("sparse windows do not hide a later match",async()=>{const cs=Array.from({length:650},(_,i)=>creator(String(i),{country_code:i===649?"AE":"EG"}));assert.equal((await search(cs,{countries:["AE"]})).total,1)});
 test("normal transport exposes no mutation capability",async()=>{const calls:string[]=[];const client={rpc:async(name:string)=>{calls.push(name);return {data:{items:[creator()],exhausted:true},error:null}}} as unknown as Pick<SupabaseClient,"rpc">;await runNormalSearchTransport(client,{filters:filters(),sort:{field:"name",direction:"asc"},page:1,pageSize:24});assert.deepEqual(calls,["discovery_normal_candidate_window"])});
 test("migration absence fails closed without old write path",async()=>{const client={rpc:async()=>({error:{code:"PGRST202",message:"missing"}})} as unknown as Pick<SupabaseClient,"rpc">;await assert.rejects(runNormalSearchTransport(client,{filters:filters(),sort:{field:"name",direction:"asc"},page:1,pageSize:24}),/migration/)});
@@ -145,4 +145,45 @@ test("numeric headroom is contextual, not an unrequested quality bonus",()=>{
 test("requested content phrase differentiates contiguous versus dispersed evidence",()=>{
   assert.equal(evaluate({contentKeyword:"makeup tips"}).relevance.score,100);
   assert.equal(evaluate({contentKeyword:"makeup tips"},creator("b",{bio:"makeup and useful tips"})).relevance.score,80);
+});
+
+test("bounded page returns from one window with an honest count",async()=>{
+  const cs=Array.from({length:900},(_,i)=>creator(String(i).padStart(4,'0')));
+  const r=await search(cs,{countries:['EG']},undefined,1,24);
+  assert.equal(r.creators.length,24);assert.equal(r.completeness.examined,200);
+  assert.equal(r.total,200);assert.equal(r.has_more,true);assert.equal(r.completeness.status,'bounded');
+  assert.equal(r.completeness.totalKind,'lower_bound');assert.ok(r.creators.every(c=>c.discovery_relevance?.score===null));
+});
+
+test("all pages cross fixed pool boundaries without loss, duplication or reshuffling",async()=>{
+  const cs=Array.from({length:465},(_,i)=>{const c=creator(String(i).padStart(4,'0'));c.platforms[0].engagement_rate=i+4;return c});
+  // Simulate repeated IDs across retrieval windows; raw offsets must still advance.
+  cs.splice(210,0,cs[4]);
+  const ids:string[]=[];
+  for(let page=1;page<=20;page++){
+    const r=await search(cs,{minEngagement:'4'},undefined,page,24);
+    const repeat=await search(cs,{minEngagement:'4'},undefined,page,24);
+    assert.deepEqual(r.creators,repeat.creators);
+    ids.push(...r.creators.map(c=>c.unified_id));
+    if(page===20){assert.equal(r.has_more,false);assert.equal(r.total,465);assert.equal(r.completeness.totalKind,'exact');}
+  }
+  assert.equal(ids.length,465);assert.equal(new Set(ids).size,465);
+  assert.deepEqual([...ids].sort(),[...new Set(cs.map(c=>c.unified_id))].sort());
+});
+
+test("sparse windows close a pool only at a deterministic full-window boundary",async()=>{
+  const cs=Array.from({length:850},(_,i)=>creator(String(i).padStart(4,'0'),{country_code:i%10===0?'AE':'EG'}));
+  const a=await search(cs,{countries:['AE']},undefined,1,24);
+  const b=await search(cs,{countries:['AE']},undefined,2,24);
+  assert.equal(a.completeness.examined,400);assert.equal(a.creators.length,24);
+  assert.equal(b.completeness.examined,800);assert.equal(b.creators.length,24);
+  assert.equal(new Set([...a.creators,...b.creators].map(c=>c.unified_id)).size,48);
+});
+
+test("exact identity precedes a higher combined relevance score within the retrieved pool",async()=>{
+  const exact=creator('exact');exact.platforms[0].engagement_rate=4;
+  const other=creator('other',{display_name:'Amina extended'});other.platforms[0].handle='aminax';other.platforms[0].engagement_rate=100;
+  const r=await search([other,exact],{search:'@amina',minEngagement:'4'},undefined,1,24);
+  assert.equal(r.creators[0].unified_id,'inf:exact');
+  assert.ok(r.creators[0].discovery_relevance!.score!<r.creators[1].discovery_relevance!.score!);
 });

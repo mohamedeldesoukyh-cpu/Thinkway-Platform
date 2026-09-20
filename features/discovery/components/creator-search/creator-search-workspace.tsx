@@ -2314,7 +2314,7 @@ export function CreatorSearchWorkspace({
     const showLowerBound =
       headerTotal > 0 &&
       !aiModeActive &&
-      (completeness ? completeness.status === "incomplete" : !isExactCreatorSearch && (hasMore || clientOnlyFiltersActive));
+      (completeness ? completeness.totalKind === "lower_bound" : !isExactCreatorSearch && (hasMore || clientOnlyFiltersActive));
     const creatorsValue = showLowerBound
       ? `${headerTotal.toLocaleString()}+`
       : headerTotal;
@@ -2342,7 +2342,7 @@ export function CreatorSearchWorkspace({
     const showLowerBound =
       headerTotal > 0 &&
       !aiModeActive &&
-      (completeness ? completeness.status === "incomplete" : !isExactCreatorSearch && (hasMore || clientOnlyFiltersActive));
+      (completeness ? completeness.totalKind === "lower_bound" : !isExactCreatorSearch && (hasMore || clientOnlyFiltersActive));
     const count = `${headerTotal.toLocaleString()}${showLowerBound ? "+" : ""}`;
     return `${count} creator${headerTotal === 1 && !showLowerBound ? "" : "s"}`;
   }, [aiModeActive, clientOnlyFiltersActive, completeness, hasMore, headerTotal, isExactCreatorSearch]);
