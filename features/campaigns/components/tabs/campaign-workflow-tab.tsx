@@ -89,6 +89,16 @@ function buildApprovalsColumns(
       cellClassName: "text-muted-foreground",
       renderCell: (a) => (a.due_at ? format(new Date(a.due_at), "MMM d, yyyy") : "—"),
     },
+    {
+      id: "approved_by",
+      label: "Approved by",
+      renderCell: (a) => a.approved_by_name ?? "—",
+    },
+    {
+      id: "decided_at",
+      label: "Decision date",
+      renderCell: (a) => a.decided_at ? format(new Date(a.decided_at), "MMM d, yyyy HH:mm") : "—",
+    },
   ];
 }
 
@@ -194,6 +204,8 @@ export function CampaignWorkflowTab({
               approval: (row) => row.title ?? row.document_number,
               entity: (row) => row.entity_type,
               assignee: (row) => row.assigned_to_name,
+              approved_by: (row) => row.approved_by_name,
+              decided_at: (row) => row.decided_at,
               status: (row) => row.status,
               due: (row) => row.due_at,
             }}
@@ -215,7 +227,7 @@ export function CampaignWorkflowTab({
               {workspace.approvals.length === 0 ? (
                 <AuroraEmptyState
                   title="No approval records yet."
-                  description="This register fills when Client IO, Vendor IO, or billing needs sign-off. Decision Center owns why work is waiting — open the next action there. Operations / Commercial own the clearance path."
+                  description="Issued Client IOs, Vendor IOs, and recorded approval requests appear here with their current decision status."
                 />
               ) : (
                 <OperationalConfigurableTable
@@ -236,6 +248,7 @@ export function CampaignWorkflowTab({
         }}
         row={detailApproval}
         campaignName={workspace.name}
+        campaignId={workspace.id}
       />
     </>
   );

@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildCampaignApprovalRegister } from "@/lib/campaigns/campaign-approval-register";
 
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import { filterUuids, isUuid } from "@/lib/validation/uuid";
@@ -859,7 +860,7 @@ export async function getCampaignWorkspace(
     publication_count: publicationCount,
     invoices,
     payments,
-    approvals,
+    approvals: buildCampaignApprovalRegister(approvals, clientIo, vendorIos ?? []),
     activity: filteredAudit.slice(0, 30).map((log) => {
       const row = log as unknown as {
         id: string;

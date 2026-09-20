@@ -21,13 +21,14 @@ type ApprovalDetailSheetProps = {
   onOpenChange: (open: boolean) => void;
   row: CampaignApprovalRow | null;
   campaignName: string;
+  campaignId?: string;
 };
 
 function formatApprovalDate(value: string | null | undefined): string {
   if (!value?.trim()) return "—";
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) return value;
-  return format(parsed, "MMM d, yyyy");
+  return format(parsed, "MMM d, yyyy HH:mm");
 }
 
 export function ApprovalDetailSheet({
@@ -35,6 +36,7 @@ export function ApprovalDetailSheet({
   onOpenChange,
   row,
   campaignName,
+  campaignId,
 }: ApprovalDetailSheetProps) {
   const title = row?.title ?? "Approval";
 
@@ -100,6 +102,14 @@ export function ApprovalDetailSheet({
                     {row.entity_type}
                   </DetailField>
                   <DetailField label="Assignee">{row.assigned_to_name ?? "—"}</DetailField>
+                  <DetailField label="Approved by">{row.approved_by_name ?? "—"}</DetailField>
+                  {campaignId && row.source_tab && row.source_id ? (
+                    <DetailField label="Source document">
+                      <a className="text-primary underline" href={`/campaigns/${encodeURIComponent(campaignId)}?tab=${row.source_tab}&io=${encodeURIComponent(row.source_id)}`}>
+                        Open {row.entity_type} {row.document_number}
+                      </a>
+                    </DetailField>
+                  ) : null}
                   <DetailField label="Status" valueClassName="capitalize">
                     {row.status.replace(/_/g, " ")}
                   </DetailField>

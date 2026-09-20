@@ -263,6 +263,9 @@ export type CampaignApprovalRow = {
   assigned_to_name: string | null;
   due_at: string | null;
   decided_at: string | null;
+  approved_by_name?: string | null;
+  source_tab?: "client-io" | "vendor-io";
+  source_id?: string;
 };
 
 export type CampaignActivityItem = {
