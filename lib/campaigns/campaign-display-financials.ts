@@ -72,12 +72,12 @@ export type CampaignDisplayFinancials = {
 export function aggregateCampaignDisplayFinancials(input: {
   lines: CampaignLineCommercialFxInput[];
   displayCurrency: string;
-  /** Map of currency code → rate to EGP. Missing rates treated as identity (1). */
+  /** Map of currency code → rate to EGP. Missing rates are errors. */
   rateToEgpByCurrency: ReadonlyMap<string, number>;
 }): CampaignDisplayFinancials {
   const displayCurrency =
     (input.displayCurrency || "EGP").trim().toUpperCase() || "EGP";
-  const displayRate = input.rateToEgpByCurrency.get(displayCurrency) ?? 1;
+  const displayRate = requireReportingRate(input.rateToEgpByCurrency, displayCurrency);
 
   let revenueEgp = 0;
   let costEgp = 0;
@@ -104,8 +104,8 @@ export function aggregateCampaignDisplayFinancials(input: {
     const revCcy = resolveLineRevenueCurrency(line, displayCurrency);
     const costCcy = resolveLineCostCurrency(line, displayCurrency);
     const costAmount = resolveLineCostAmount(line);
-    const revRate = input.rateToEgpByCurrency.get(revCcy) ?? 1;
-    const costRate = input.rateToEgpByCurrency.get(costCcy) ?? 1;
+    const revRate = requireReportingRate(input.rateToEgpByCurrency, revCcy);
+    const costRate = requireReportingRate(input.rateToEgpByCurrency, costCcy);
 
     revenueEgp += toEgp(commercial.billableBase, revRate);
     costEgp += toEgp(costAmount, costRate);
@@ -138,4 +138,13 @@ export function aggregateCampaignDisplayFinancials(input: {
     native_billable_base: Math.round(nativeBillable * 100) / 100,
     native_cost: Math.round(nativeCost * 100) / 100,
   };
+}
+
+export function requireReportingRate(rates: ReadonlyMap<string, number>, currency: string): number {
+  if (currency === "EGP") return 1;
+  const rate = rates.get(currency);
+  if (rate == null || !Number.isFinite(rate) || rate <= 0) {
+    throw new Error(`Missing FX rate: ${currency} → EGP`);
+  }
+  return rate;
 }

@@ -18,6 +18,7 @@ export type CurrencyMasterRow = {
   decimal_places: number;
   country_code: string | null;
   is_active: boolean;
+  effective_rate_to_egp?: number | null;
 };
 
 export type FxAuditLogRow = {

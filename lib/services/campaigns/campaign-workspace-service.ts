@@ -1,3 +1,5 @@
+import { fromEgp, toEgp } from "@/lib/commercial/fx-aggregation";
+import { getCampaignPoFxTotals, resolveFxPoSummary } from "@/lib/finance/po/fx-totals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildCampaignApprovalRegister } from "@/lib/campaigns/campaign-approval-register";
 
@@ -5,7 +7,6 @@ import { resolveCountryCode } from "@/lib/creators/country-code";
 import { filterUuids, isUuid } from "@/lib/validation/uuid";
 import { traceCampaignRoute, traceCampaignRouteError } from "@/lib/performance/campaign-route-trace";
 import {
-  resolveOperationalPo,
   resolveWorkspacePoAlert,
 } from "@/lib/finance/po/operational-budget";
 import type { PoStatus } from "@/lib/finance/po/status";
@@ -419,9 +420,6 @@ export async function getCampaignWorkspace(
     payments = await fetchPaymentsForInvoiceIds(supabase, invoiceIds, invoiceDocMap);
   }
 
-  let campaignBillableBase = 0;
-  let campaignCost = 0;
-
   // Invoice / view CCY is the campaign header currency (editable like quotation CCY).
   // Brand currency remains the create-time default only — it must not override display.
   const headerCurrency = header as unknown as HeaderWithRelations;
@@ -443,6 +441,7 @@ export async function getCampaignWorkspace(
       .toUpperCase();
     currenciesNeeded.add(costCcy || workspaceCurrency);
   }
+  for (const invoice of invoices) currenciesNeeded.add(invoice.currency.trim().toUpperCase());
   const rateToEgpByCurrency = new Map<string, number>();
   await Promise.all(
     [...currenciesNeeded].map(async (code) => {
@@ -454,8 +453,6 @@ export async function getCampaignWorkspace(
     displayCurrency: workspaceCurrency,
     rateToEgpByCurrency,
   });
-  campaignBillableBase = displayFinancials.native_billable_base;
-  campaignCost = displayFinancials.native_cost;
 
   const workspaceLines = lines.map((line) => {
     const revenue = Number(line.revenue);
@@ -584,12 +581,15 @@ export async function getCampaignWorkspace(
     };
   });
 
-  const legacyBudget = workspaceLines.reduce((s, l) => s + l.po_amount, 0);
   const revenue = displayFinancials.revenue;
   const cost = displayFinancials.cost;
   const gp = displayFinancials.gp;
-  const billingOutstanding = invoices.reduce((s, i) => s + i.outstanding, 0);
-  const collected = invoices.reduce((s, i) => s + i.amount_paid, 0);
+  const invoiceDisplayAmount = (amount: number, currency: string) => fromEgp(
+    toEgp(amount, rateToEgpByCurrency.get(currency.trim().toUpperCase())), workspaceCurrency,
+    displayFinancials.display_fx_rate_to_egp,
+  );
+  const billingOutstanding = invoices.reduce((s, i) => s + invoiceDisplayAmount(i.outstanding, i.currency), 0);
+  const collected = invoices.reduce((s, i) => s + invoiceDisplayAmount(i.amount_paid, i.currency), 0);
 
   const deliverables = (deliverablesResult.data ?? []).map((row) => {
     const d = row as unknown as {
@@ -729,15 +729,10 @@ export async function getCampaignWorkspace(
     invoices,
   });
 
-  const operationalPo = resolveOperationalPo({
-    po_amount_campaign_currency: headerRow.po_amount_campaign_currency,
-    po_consumed_amount: campaignBillableBase,
-    po_remaining_amount: null,
-    po_remaining_percent: null,
-    po_status: headerRow.po_status,
-    po_expiry_date: headerRow.po_expiry_date,
-    legacy_budget: legacyBudget,
-    legacy_consumed: campaignBillableBase,
+  const poFxTotals = (await getCampaignPoFxTotals(supabase, [headerRow.id])).get(headerRow.id);
+  if (!poFxTotals) throw new Error("Campaign PO currency totals unavailable.");
+  const operationalPo = resolveFxPoSummary(poFxTotals, {
+    po_status: headerRow.po_status ?? "draft", po_expiry_date: headerRow.po_expiry_date ?? null,
   });
 
   const poAlert = resolveWorkspacePoAlert({
@@ -811,14 +806,8 @@ export async function getCampaignWorkspace(
     po: {
       po_number: headerRow.po_number ?? null,
       po_currency: headerRow.po_currency ?? workspaceCurrency,
-      po_exchange_rate:
-        headerRow.po_exchange_rate != null
-          ? Number(headerRow.po_exchange_rate)
-          : null,
-      po_amount_original: Number(
-        headerRow.po_amount_original ??
-          (operationalPo.uses_governance ? operationalPo.po_amount : legacyBudget)
-      ),
+      po_exchange_rate: poFxTotals.po_rate,
+      po_amount_original: Number(headerRow.po_amount_original ?? 0),
       po_amount_campaign_currency: operationalPo.po_amount,
       po_consumed_amount: operationalPo.po_consumed,
       po_remaining_amount: operationalPo.po_remaining,

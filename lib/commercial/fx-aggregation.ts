@@ -49,9 +49,8 @@ function safe(value: number | null | undefined): number {
 /** Convert an amount in `fromCurrency` to EGP using a pre-resolved rate. */
 export function toEgp(amount: number | null | undefined, fxRateToEgp: number | null | undefined): number {
   const rate = safe(fxRateToEgp);
-  // Identity when rate missing/invalid keeps totals safe rather than zeroing data.
-  const effective = rate > 0 ? rate : 1;
-  return round2(safe(amount) * effective);
+  if (rate <= 0) throw new Error("A valid FX rate is required for conversion.");
+  return round2(safe(amount) * rate);
 }
 
 /** Convert an EGP amount into a display currency using that currency's rate → EGP. */
@@ -63,8 +62,8 @@ export function fromEgp(
   const code = (displayCurrency || REPORTING_CURRENCY).toUpperCase();
   if (code === REPORTING_CURRENCY) return round2(safe(amountEgp));
   const rate = safe(fxRateToEgp);
-  const effective = rate > 0 ? rate : 1;
-  return round2(safe(amountEgp) / effective);
+  if (rate <= 0) throw new Error(`A valid EGP → ${code} FX rate is required.`);
+  return round2(safe(amountEgp) / rate);
 }
 
 /** Display helper: "500 USD / 25,000 EGP" style dual-currency string. */

@@ -153,9 +153,9 @@ assert.equal(isCommercialCurrency("JPY"), false);
 
 // 500 USD @ 50 EGP/USD → 25,000 EGP
 assert.equal(toEgp(500, 50), 25000);
-// Missing/zero rate falls back to identity (never zeroes data)
-assert.equal(toEgp(500, 0), 500);
-assert.equal(toEgp(500, null), 500);
+// Missing/zero foreign rates must never silently masquerade as EGP.
+assert.throws(() => toEgp(500, 0), /valid FX rate/);
+assert.throws(() => toEgp(500, null), /valid FX rate/);
 
 assert.equal(formatDualCurrency({ amount: 500, currency: "USD", egpAmount: 25000 }), "500 USD / 25,000 EGP");
 assert.equal(formatDualCurrency({ amount: 1000, currency: "EGP", egpAmount: 1000 }), "1,000 EGP");

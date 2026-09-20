@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 
-import { normalizeAuditAction, AUDIT_ACTIONS } from "@/lib/audit/audit-action";
 import {
   requireFinanceOverrideAccess,
   requireFinancePermission,
@@ -103,59 +102,15 @@ export async function upsertExchangeRateAction(
   const access = await requireFinanceOverrideAccess(supabase);
   if ("error" in access) return { ok: false, message: access.error };
 
-  const payload = {
-    from_currency: parsed.data.from_currency,
-    to_currency: parsed.data.to_currency,
-    exchange_rate: parsed.data.exchange_rate,
-    effective_start_date: parsed.data.effective_start_date,
-    effective_end_date: parsed.data.effective_end_date,
-    source: emptyToNull(parsed.data.source),
-    notes: emptyToNull(parsed.data.notes),
-    is_active: true,
-    created_by: user.id,
-  };
-
-  let oldData: Record<string, unknown> = {};
-  if (parsed.data.id) {
-    const { data: existing } = await supabase
-      .from("md_exchange_rates")
-      .select("*")
-      .eq("id", parsed.data.id)
-      .maybeSingle();
-    oldData = existing ? (existing as unknown as Record<string, unknown>) : {};
-
-    const { error: updateError } = await supabase
-      .from("md_exchange_rates")
-      .update(payload as never)
-      .eq("id", parsed.data.id);
-    if (updateError) return { ok: false, message: updateError.message };
-  } else {
-    const { error: insertError } = await supabase
-      .from("md_exchange_rates")
-      .insert(payload as never);
-    if (insertError) return { ok: false, message: insertError.message };
-  }
-
-  await supabase.from("fx_rate_audit_logs").insert({
-    action: normalizeAuditAction(parsed.data.id ? AUDIT_ACTIONS.UPDATE : AUDIT_ACTIONS.CREATE),
-    old_data: oldData,
-    new_data: payload,
-    override_reason: emptyToNull(parsed.data.override_reason),
-    recalculation_scope:
-      parsed.data.apply_mode === "override_historical"
-        ? "historical_recalculation"
-        : "future_effective",
-    changed_by: user.id,
+  const { data, error: saveError } = await supabase.rpc("save_exchange_rate" as never, {
+    p_input: parsed.data,
   } as never);
-
-  revalidatePath("/finance/exchange-rates");
-  revalidatePath("/discovery/quotations");
+  if (saveError) return { ok: false, message: saveError.message };
+  const count = Number((data as { recalculated_items?: number } | null)?.recalculated_items ?? 0);
+  revalidatePath("/", "layout");
   return {
     ok: true,
-    message:
-      parsed.data.apply_mode === "override_historical"
-        ? "Rate saved and override logged. Open draft quotations to refresh identity FX snapshots, then Save. Finance-locked documents keep frozen rates."
-        : "Exchange rate saved. New resolves (and draft quotations with identity FX) use this effective date going forward.",
+    message: `Rate saved and audited. ${count} draft quotation lines recalculated. Campaign and PO reporting use effective rates. Issued and linked document amounts are preserved.`,
   };
 }
 
