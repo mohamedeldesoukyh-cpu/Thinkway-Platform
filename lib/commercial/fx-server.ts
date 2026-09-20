@@ -5,7 +5,7 @@ import { REPORTING_CURRENCY } from "@/lib/commercial/fx-aggregation";
 /**
  * Resolve a FX rate from `currency` → EGP using the existing platform RPC
  * `resolve_effective_exchange_rate` (direct, inverse, then USD triangulation).
- * Returns 1 for EGP or when no active rate exists (safe identity fallback).
+ * Returns 1 only for EGP. Missing rates and lookup failures are explicit errors.
  */
 export async function resolveRateToEgp(
   supabase: SupabaseClient,
@@ -28,7 +28,8 @@ export async function resolveRateToEgp(
     "resolve_effective_exchange_rate",
     payload
   );
-  if (error) return 1;
+  if (error) throw new Error(`Cannot resolve ${code} → EGP: ${error.message}`);
   const rate = Number(data);
-  return Number.isFinite(rate) && rate > 0 ? rate : 1;
+  if (!Number.isFinite(rate) || rate <= 0) throw new Error(`Missing FX rate: ${code} → EGP`);
+  return rate;
 }

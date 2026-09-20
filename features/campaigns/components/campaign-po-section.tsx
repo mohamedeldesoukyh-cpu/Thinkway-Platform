@@ -82,7 +82,7 @@ export function CampaignPoSection({
         <CampaignOpsStat label="PO number" value={po.po_number ?? "—"} />
         <CampaignOpsStat
           label="PO amount"
-          value={formatMoney(po.po_amount_original, po.po_currency ?? campaignCurrency)}
+          value={po.po_amount_original > 0 ? formatMoney(po.po_amount_original, po.po_currency ?? campaignCurrency) : "Not recorded"}
           tone="amber"
         />
         <CampaignOpsStat
@@ -98,7 +98,7 @@ export function CampaignPoSection({
           }
         />
         <CampaignOpsStat
-          label="Converted PO"
+          label={po.po_amount_original > 0 ? "Converted PO" : "Assignment budget"}
           value={formatMoney(po.po_amount_campaign_currency, campaignCurrency)}
         />
         <CampaignOpsStat

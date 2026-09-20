@@ -1,3 +1,4 @@
+import { getCampaignPoFxTotals, resolveFxPoSummary } from "@/lib/finance/po/fx-totals";
 import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
@@ -96,7 +97,7 @@ export async function getPoTrackerWorkspace(
   if (filters.brand_id) query = query.eq("brand_id", filters.brand_id);
   if (filters.campaign_id) query = query.eq("id", filters.campaign_id);
   if (filters.currency) query = query.eq("po_currency", filters.currency);
-  if (filters.po_status) query = query.eq("po_status", filters.po_status);
+
   if (filters.account_manager_id) {
     query = query.eq("account_manager_id", filters.account_manager_id);
   }
@@ -118,6 +119,8 @@ export async function getPoTrackerWorkspace(
     ]);
 
   if (error) throw new Error(error.message);
+
+  const fxTotals = await getCampaignPoFxTotals(supabase, (data ?? []).map(row => row.id));
 
   let rows: PoTrackerRow[] = ((data ?? []) as unknown as HeaderRow[]).map((row) => ({
     campaign_id: row.id,
@@ -151,6 +154,17 @@ export async function getPoTrackerWorkspace(
       Number(row.po_amount_campaign_currency ?? 0) > 0 &&
       Number(row.po_consumed_amount ?? 0) > Number(row.po_amount_campaign_currency ?? 0),
   }));
+
+  rows = rows.map(row => {
+    const fx = fxTotals.get(row.campaign_id);
+    if (!fx) throw new Error("Campaign PO currency totals unavailable.");
+    const current = resolveFxPoSummary(fx, row);
+    return { ...row, po_exchange_rate: fx.po_rate,
+      po_amount_campaign_currency: current.po_amount, po_consumed_amount: current.po_consumed,
+      po_remaining_amount: current.po_remaining, po_remaining_percent: current.po_remaining_percent,
+      po_status: current.po_status, is_over_consumed: current.po_exceeded };
+  });
+  if (filters.po_status) rows = rows.filter(row => row.po_status === filters.po_status);
 
   if (filters.country_code) {
     rows = rows.filter(

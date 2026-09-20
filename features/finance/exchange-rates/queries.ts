@@ -32,6 +32,16 @@ export async function getExchangeRatesWorkspace(): Promise<ExchangeRatesWorkspac
     (profilesRes.data ?? []).map((p) => [p.id, p.full_name ?? p.email])
   );
 
+  const currentRates = new Map<string, number | null>();
+  await Promise.all((currenciesRes.data ?? []).map(async ({ code }) => {
+    const { data, error } = await supabase.rpc("resolve_effective_exchange_rate", {
+      p_from_currency: code, p_to_currency: "EGP",
+      p_as_of: new Date().toISOString().slice(0, 10),
+    });
+    const rate = Number(data);
+    currentRates.set(code, !error && Number.isFinite(rate) && rate > 0 ? rate : null);
+  }));
+
   return {
     currencies: (currenciesRes.data ?? []).map((row) => ({
       code: row.code,
@@ -40,6 +50,7 @@ export async function getExchangeRatesWorkspace(): Promise<ExchangeRatesWorkspac
       decimal_places: row.decimal_places ?? 2,
       country_code: row.country_code,
       is_active: row.is_active,
+      effective_rate_to_egp: currentRates.get(row.code) ?? null,
     })),
     rates: (ratesRes.data ?? []).map((row) => ({
       id: row.id,
@@ -87,5 +98,7 @@ export async function resolveEffectiveExchangeRate(input: {
     throw new Error(error.message);
   }
 
-  return Number(data ?? 1);
+  const rate = Number(data);
+  if (!Number.isFinite(rate) || rate <= 0) throw new Error(`Missing FX rate: ${input.from_currency} → ${input.to_currency}`);
+  return rate;
 }

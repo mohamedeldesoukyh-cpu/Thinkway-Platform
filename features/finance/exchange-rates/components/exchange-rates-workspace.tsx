@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
-  getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
@@ -64,6 +63,12 @@ const CURRENCY_COLUMNS: OperationalConfigurableColumnDef<CurrencyRow>[] = [
   { id: "symbol", label: "Symbol", renderCell: (c) => c.symbol ?? "—" },
   { id: "decimals", label: "Decimals", renderCell: (c) => c.decimal_places },
   {
+    id: "effective_egp", label: "Current rate to EGP", monoCell: true,
+    renderCell: (c) => c.effective_rate_to_egp != null
+      ? `1 ${c.code} = ${c.effective_rate_to_egp.toLocaleString(undefined, { maximumFractionDigits: 8 })} EGP`
+      : <span className="text-destructive">Missing rate</span>,
+  },
+  {
     id: "status",
     label: "Status",
     renderCell: (c) => (
@@ -102,8 +107,6 @@ const EXCHANGE_RATE_COLUMNS: OperationalConfigurableColumnDef<ExchangeRateRow>[]
   },
 ];
 
-const CURRENCY_COLUMN_METAS = getOperationalTableColumnMetas(CURRENCY_COLUMNS);
-const EXCHANGE_RATE_COLUMN_METAS = getOperationalTableColumnMetas(EXCHANGE_RATE_COLUMNS);
 
 type ExchangeRatesWorkspaceProps = {
   data: ExchangeRatesWorkspaceData;
@@ -340,8 +343,11 @@ function ExchangeRateForm({
     () => currencies.filter((c) => c.is_active).map((c) => c.code),
     [currencies]
   );
-  const [fromCurrency, setFromCurrency] = useState("USD");
-  const [toCurrency, setToCurrency] = useState("EGP");
+  const [selectedFromCurrency, setFromCurrency] = useState("USD");
+  const [selectedToCurrency, setToCurrency] = useState("EGP");
+  const fromCurrency = activeCodes.includes(selectedFromCurrency) ? selectedFromCurrency : activeCodes[0] ?? "";
+  const toCurrency = activeCodes.includes(selectedToCurrency) ? selectedToCurrency
+    : activeCodes.includes("EGP") ? "EGP" : activeCodes[0] ?? "";
   const [applyMode, setApplyMode] = useState<"future" | "override_historical">("future");
   const [state, action, pending] = useActionState(upsertExchangeRateAction, {
     ok: false,
@@ -351,14 +357,6 @@ function ExchangeRateForm({
     if (!state.message) return;
     toast[state.ok ? "success" : "error"](state.message);
   }, [state]);
-
-  useEffect(() => {
-    if (activeCodes.length === 0) return;
-    if (!activeCodes.includes(fromCurrency)) setFromCurrency(activeCodes[0]!);
-    if (!activeCodes.includes(toCurrency)) {
-      setToCurrency(activeCodes.includes("EGP") ? "EGP" : activeCodes[0]!);
-    }
-  }, [activeCodes, fromCurrency, toCurrency]);
 
   return (
     <OperationalFormSection
@@ -416,7 +414,7 @@ function ExchangeRateForm({
               <SelectContent>
                 <SelectItem value="future">Apply starting from new date</SelectItem>
                 <SelectItem value="override_historical">
-                  Override all historical records
+                  Recalculate historical conversions
                 </SelectItem>
               </SelectContent>
             </Select>
@@ -430,7 +428,7 @@ function ExchangeRateForm({
         </form>
       <p className="text-xs text-muted-foreground">
         Enter From→To as the multiplier (e.g. AED→EGP ≈ 14.16). Missing pairs can also resolve via USD triangulation.
-        Draft quotations refresh identity FX snapshots on open; finance-locked documents keep their frozen rates.
+        Historical mode replaces earlier rates for this pair and recalculates unlinked draft quotations. Campaign and PO reporting refresh automatically. Issued and linked documents keep their original amounts.
       </p>
     </OperationalFormSection>
   );

@@ -28,6 +28,9 @@ jobs:
       - name: Service layer tests
         run: npm run test:services
 
+      - name: FX reporting regression
+        run: npm run test:fx
+
       - name: Creator CRM Phase 2B regression
         run: npm run test:creator-crm-phase2b
 

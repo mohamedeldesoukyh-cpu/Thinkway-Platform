@@ -18,5 +18,7 @@ export async function resolveEffectiveExchangeRate(input: {
     throw new Error(error.message);
   }
 
-  return Number(data ?? 1);
+  const rate = Number(data);
+  if (!Number.isFinite(rate) || rate <= 0) throw new Error(`Missing FX rate: ${input.from_currency} → ${input.to_currency}`);
+  return rate;
 }

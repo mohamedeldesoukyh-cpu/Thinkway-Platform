@@ -1,3 +1,6 @@
+import { resolveRateToEgp } from "@/lib/commercial/fx-server";
+import { fromEgp, toEgp } from "@/lib/commercial/fx-aggregation";
+import { resolveClientTaxableBase } from "@/lib/assignments/client-billing-commercial";
 import { fetchClientCreditLimitFlagsSafe } from "@/lib/clients/safe-client-query";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -31,7 +34,8 @@ export type ClientCreditLimitCheck = {
 type CampaignExposureRow = {
   id: string;
   po_amount_campaign_currency: number;
-  lines: { revenue: number }[] | null;
+  currency_code: string;
+  lines: { revenue: number; revenue_before_vat: number | null; currency_code: string | null; usage_rights_amount: number; agency_fee_amount: number; agency_fee_percent: number }[] | null;
 };
 
 /**
@@ -60,32 +64,12 @@ export async function getClientCreditExposure(
 
   const { data: invoices, error: invoicesError } = await supabase
     .from("invoices")
-    .select("total, amount_paid, status, campaign_header_id")
+    .select("total, amount_paid, status, campaign_header_id, currency")
     .eq("client_id", clientId)
     .not("status", "in", EXCLUDED_INVOICE_STATUSES);
 
   if (invoicesError) {
     throw new Error(invoicesError.message);
-  }
-
-  const outstanding_receivables = roundMoney(
-    (invoices ?? []).reduce(
-      (sum, invoice) =>
-        sum + Math.max(0, Number(invoice.total) - Number(invoice.amount_paid)),
-      0
-    )
-  );
-
-  const invoiced_by_campaign = new Map<string, number>();
-  for (const invoice of invoices ?? []) {
-    const campaignId = invoice.campaign_header_id;
-    if (!campaignId) continue;
-    invoiced_by_campaign.set(
-      campaignId,
-      roundMoney(
-        (invoiced_by_campaign.get(campaignId) ?? 0) + Number(invoice.total)
-      )
-    );
   }
 
   const { data: headers, error: headersError } = await supabase
@@ -94,7 +78,8 @@ export async function getClientCreditExposure(
       `
       id,
       po_amount_campaign_currency,
-      lines:campaign_lines(revenue)
+      currency_code,
+      lines:campaign_lines(revenue,revenue_before_vat,currency_code,usage_rights_amount,agency_fee_amount,agency_fee_percent)
     `
     )
     .eq("client_id", clientId)
@@ -104,14 +89,37 @@ export async function getClientCreditExposure(
     throw new Error(headersError.message);
   }
 
+  const currency = String(client.currency ?? "USD").trim().toUpperCase();
+  const currencies = new Set([currency]);
+  for (const invoice of invoices ?? []) currencies.add(invoice.currency);
+  for (const header of (headers ?? []) as CampaignExposureRow[]) {
+    currencies.add(header.currency_code);
+    for (const line of header.lines ?? []) currencies.add(line.currency_code || header.currency_code);
+  }
+  const rates = new Map<string, number>();
+  await Promise.all([...currencies].map(async code => rates.set(code, await resolveRateToEgp(supabase, code))));
+  const convert = (amount: number, from: string) => fromEgp(toEgp(amount, rates.get(from)), currency, rates.get(currency));
+  const outstanding_receivables = roundMoney((invoices ?? []).reduce((sum, invoice) =>
+    sum + convert(Math.max(0, Number(invoice.total) - Number(invoice.amount_paid)), invoice.currency), 0));
+  const invoiced_by_campaign = new Map<string, number>();
+  for (const invoice of invoices ?? []) {
+    if (!invoice.campaign_header_id) continue;
+    invoiced_by_campaign.set(invoice.campaign_header_id,
+      roundMoney((invoiced_by_campaign.get(invoice.campaign_header_id) ?? 0) + convert(Number(invoice.total), invoice.currency)));
+  }
+
   let unbilled_planned = 0;
   for (const header of (headers ?? []) as CampaignExposureRow[]) {
     const line_revenue = (header.lines ?? []).reduce(
-      (sum, line) => sum + Number(line.revenue),
+      (sum, line) => sum + convert(resolveClientTaxableBase({
+        revenueBeforeVat: Number(line.revenue_before_vat ?? line.revenue),
+        usageRightsAmount: Number(line.usage_rights_amount), agencyFeeAmount: Number(line.agency_fee_amount),
+        agencyFeePercent: Number(line.agency_fee_percent),
+      }), line.currency_code || header.currency_code),
       0
     );
     const planned =
-      line_revenue > 0 ? line_revenue : Number(header.po_amount_campaign_currency);
+      line_revenue > 0 ? line_revenue : convert(Number(header.po_amount_campaign_currency), header.currency_code);
     const invoiced = invoiced_by_campaign.get(header.id) ?? 0;
     unbilled_planned += Math.max(0, planned - invoiced);
   }
@@ -122,7 +130,7 @@ export async function getClientCreditExposure(
     exposure: roundMoney(outstanding_receivables + unbilled_planned),
     outstanding_receivables,
     unbilled_planned,
-    currency: String(client.currency ?? "USD"),
+    currency,
   };
 }
 
