@@ -32,11 +32,12 @@ test("real PostgreSQL: existing lexical functions + compact RPC, read-only trans
       CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
       CREATE SCHEMA IF NOT EXISTS extensions; CREATE EXTENSION IF NOT EXISTS unaccent WITH SCHEMA extensions;
       CREATE FUNCTION has_permission(text) RETURNS boolean LANGUAGE sql STABLE AS $$ SELECT coalesce(current_setting('fixture.allowed',true),'yes')='yes' $$;
+      CREATE TYPE public.discovery_platform AS ENUM ('instagram','tiktok','youtube','twitter');
       CREATE TABLE influencers(id uuid PRIMARY KEY,document_number text,display_name text,legal_name text,email text,status text DEFAULT 'active',country_code text,country_codes text[],city text,nationality text,languages text[],categories text[],notes text,influencer_url text,metadata jsonb DEFAULT '{}',search_vector tsvector,primary_avatar_url text,default_metrics_platform_account_id uuid,thinkway_score numeric,source_confidence numeric,last_enriched_at timestamptz,updated_at timestamptz DEFAULT now(),demographic_source text,audience_top_countries jsonb,audience_gender_male numeric,audience_gender_female numeric,audience_gender_unknown numeric,audience_age_13_17 numeric,audience_age_18_24 numeric,audience_age_25_34 numeric,audience_age_35_44 numeric,audience_age_45_54 numeric,audience_age_55_plus numeric);
       CREATE TABLE influencer_platform_accounts(id uuid PRIMARY KEY,influencer_id uuid,platform text,handle text,username text,normalized_username text,profile_url text,profile_display_name text,profile_bio text,follower_count numeric,engagement_rate numeric,avg_likes numeric,avg_comments numeric,avg_views numeric,audience_country text,is_verified boolean,is_primary boolean,profile_picture_url text,hashtags text[],mentions text[],interest_categories text[],metrics_source text,sync_status text,metadata jsonb DEFAULT '{}',recent_publications jsonb DEFAULT '[]',contact_email text,contact_links jsonb);
       CREATE TABLE creator_sources(influencer_id uuid);
       CREATE TABLE creator_dna(influencer_id uuid PRIMARY KEY, document jsonb);
-      CREATE TABLE discovered_profiles(id uuid PRIMARY KEY,influencer_id uuid,platform text,username text,profile_url text,display_name text,bio text,profile_image_url text,country_code text,city text,language_codes text[],category_tags text[],stage text,thinkway_score numeric,source_confidence numeric,last_enriched_at timestamptz,updated_at timestamptz,search_vector tsvector,metadata jsonb DEFAULT '{}');
+      CREATE TABLE discovered_profiles(id uuid PRIMARY KEY,influencer_id uuid,platform public.discovery_platform,username text,profile_url text,display_name text,bio text,profile_image_url text,country_code text,city text,language_codes text[],category_tags text[],stage text,thinkway_score numeric,source_confidence numeric,last_enriched_at timestamptz,updated_at timestamptz,search_vector tsvector,metadata jsonb DEFAULT '{}');
       CREATE TABLE profile_metrics(id uuid,profile_id uuid,followers numeric,engagement_rate numeric,avg_likes numeric,avg_comments numeric,avg_views numeric,captured_at timestamptz);
       CREATE TABLE profile_ai_scores(id uuid,profile_id uuid,niche text,scored_at timestamptz);`);
     for(const file of ["20260630170000_discovery_search_modernization.sql","20260709020000_discovery_search_performance.sql","20260710060000_discovery_search_bio_hashtag.sql","20260718070000_discovery_browse_recency.sql"]) {
@@ -144,5 +145,26 @@ test("real PostgreSQL: existing lexical functions + compact RPC, read-only trans
     assert.equal(sql("SELECT to_regprocedure('discovery_normal_candidate_window(text,integer,integer,boolean,boolean,jsonb)') IS NULL;"),'t');
     assert.equal(sql("SELECT to_regprocedure('discovery_normal_filter_candidates(jsonb,integer,integer)') IS NULL;"),'t');
     assert.equal(sql("SELECT md5(pg_get_functiondef('search_creators_impl(text,integer,integer)'::regprocedure));"),retrievalDefinition);
+    // Reapply after rollback, retaining the real Production platform type contract.
+    sql(readFileSync('supabase/migrations/20260920100000_discovery_normal_candidate_window.sql','utf8'));
+    assert.equal(sql("SELECT atttypid::regtype::text FROM pg_attribute WHERE attrelid='discovered_profiles'::regclass AND attname='platform';"),'discovery_platform');
+    const platforms=['instagram','tiktok','youtube','twitter'];
+    assert.deepEqual(JSON.parse(sql("SELECT to_json(enum_range(NULL::public.discovery_platform));")),platforms);
+    for (const [index,platform] of platforms.entries()) {
+      const id=uuid(40000+index);
+      const handle=`enumcreator${index}`;
+      sql(`INSERT INTO discovered_profiles(id,platform,username,display_name,search_vector) VALUES('${id}','${platform}','${handle}','${handle}',to_tsvector('simple','${handle}'));
+        INSERT INTO profile_metrics(id,profile_id,followers,engagement_rate,avg_views,captured_at) VALUES('${id}','${id}',600000,8,20000,now());`);
+      const filters=JSON.stringify({platforms:[platform],ranges:[{min:500000,max:1000000}],minEngagement:4});
+      for (const query of [`@${handle}`,handle.slice(0,-1),'']) {
+        const response=JSON.parse(sql(`SET ROLE authenticated; BEGIN READ ONLY; SELECT discovery_normal_candidate_window('${query}',0,200,false,false,'${filters}'); COMMIT; RESET ROLE;`));
+        const creator=response.items.find((item:{unified_id:string})=>item.unified_id===`dis:${id}`);
+        assert.ok(creator,`${platform}: ${query || 'filter-only'}`);
+        assert.equal(creator.platforms[0].platform,platform);
+      }
+    }
+    assert.throws(()=>sql("SET ROLE anon; SELECT discovery_normal_candidate_window();"),/permission denied/);
+    assert.throws(()=>sql("SET ROLE authenticated; SELECT * FROM discovery_normal_filter_candidates('{}',1,0);"),/permission denied/);
+    sql(readFileSync('supabase/rollbacks/20260920100000_discovery_normal_candidate_window.sql','utf8'));
   } finally { command("pg_ctl",["-D",data,"-m","fast","-w","stop"]); }
 });
