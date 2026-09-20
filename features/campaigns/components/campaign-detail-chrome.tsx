@@ -1,5 +1,6 @@
 "use client";
 
+import { CampaignSummaryMoney } from "@/features/campaigns/components/campaign-money";
 import { useEffect, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -19,9 +20,8 @@ import { CampaignDecisionCenterPanel } from "@/features/campaigns/lifecycle/comp
 import { portfolioIntelFromLifecycle } from "@/features/campaigns/lifecycle/campaign-portfolio-intelligence";
 import type { DecisionFocusQuery } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
-import { formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
+import { formatPercent } from "@/features/campaigns/utils";
 import { fromEgp } from "@/lib/commercial/fx-aggregation";
-import { resolveCommercialRateToEgp } from "@/features/quotations/actions";
 import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { cn } from "@/lib/utils";
@@ -79,24 +79,10 @@ export function CampaignDetailChrome({
   const [mini, setMini] = useState(false);
   const [topArmed, setTopArmed] = useState(true);
   const [dcOpen, setDcOpen] = useState(false);
-  const [displayCurrency, setDisplayCurrency] = useState(
-    (workspace.currency_code || "EGP").toUpperCase()
-  );
-  const [displayFxRateToEgp, setDisplayFxRateToEgp] = useState(
-    Number(workspace.financials.display_fx_rate_to_egp) > 0
-      ? Number(workspace.financials.display_fx_rate_to_egp)
-      : 1
-  );
+  const displayCurrency = (workspace.currency_code || "EGP").toUpperCase();
+  const displayFxRateToEgp = Number(workspace.financials.display_fx_rate_to_egp) || 1;
   const [currencyPending, startCurrencyTransition] = useTransition();
 
-  useEffect(() => {
-    setDisplayCurrency((workspace.currency_code || "EGP").toUpperCase());
-    setDisplayFxRateToEgp(
-      Number(workspace.financials.display_fx_rate_to_egp) > 0
-        ? Number(workspace.financials.display_fx_rate_to_egp)
-        : 1
-    );
-  }, [workspace.currency_code, workspace.financials.display_fx_rate_to_egp]);
 
   useEffect(() => {
     const scroller = document.querySelector<HTMLElement>(
@@ -174,22 +160,10 @@ export function CampaignDetailChrome({
 
   const handleCurrencyChange = (currency: string) => {
     const next = currency.toUpperCase();
-    const previous = displayCurrency;
-    setDisplayCurrency(next);
     startCurrencyTransition(async () => {
-      const [rateRes, saveRes] = await Promise.all([
-        resolveCommercialRateToEgp(next),
-        updateCampaignDisplayCurrencyAction({
-          campaignId: workspace.id,
-          currency: next,
-        }),
-      ]);
-      if (rateRes.ok && rateRes.data) {
-        setDisplayFxRateToEgp(rateRes.data.rate);
-      }
+      const saveRes = await updateCampaignDisplayCurrencyAction({ campaignId: workspace.id, currency: next });
       if (!saveRes.ok) {
         toast.error(saveRes.message ?? "Failed to update currency.");
-        setDisplayCurrency(previous);
         return;
       }
       router.refresh();
@@ -311,16 +285,16 @@ export function CampaignDetailChrome({
           </div>
           <div>
             <i>Revenue</i>
-            <b>{formatMoneyCompact(revenue, displayCurrency)}</b>
+            <b>{<CampaignSummaryMoney amount={revenue} currency={displayCurrency} metric="revenue" />}</b>
           </div>
           <div>
             <i>Cost</i>
-            <b>{formatMoneyCompact(cost, displayCurrency)}</b>
+            <b>{<CampaignSummaryMoney amount={cost} currency={displayCurrency} metric="cost" />}</b>
           </div>
           <div>
             <i>Gross profit</i>
             <b className={gp >= 0 ? "g" : "r"}>
-              {formatMoneyCompact(gp, displayCurrency)}
+              {<CampaignSummaryMoney amount={gp} currency={displayCurrency} metric="gp" />}
             </b>
           </div>
           <div>

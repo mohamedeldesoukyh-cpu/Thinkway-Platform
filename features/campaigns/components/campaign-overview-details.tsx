@@ -1,5 +1,6 @@
 "use client";
 
+import { CampaignSummaryMoney } from "./campaign-money";
 import { useState, type ReactNode } from "react";
 import { format } from "date-fns";
 import Link from "next/link";
@@ -180,16 +181,16 @@ export function CampaignOverviewDetails({
         ) : null}
         <CampaignOpsStat
           label="Revenue"
-          value={formatMoney(workspace.financials.revenue, currency)}
+          value={<CampaignSummaryMoney amount={workspace.financials.revenue} currency={currency} metric="revenue" />}
           tone="blue"
         />
         <CampaignOpsStat
           label="Cost"
-          value={formatMoney(workspace.financials.cost, currency)}
+          value={<CampaignSummaryMoney amount={workspace.financials.cost} currency={currency} metric="cost" />}
         />
         <CampaignOpsStat
           label="GP"
-          value={formatMoney(workspace.financials.gp, currency)}
+          value={<CampaignSummaryMoney amount={workspace.financials.gp} currency={currency} metric="gp" />}
           tone={
             workspace.financials.gp < 0
               ? "amber"

@@ -20,7 +20,7 @@ export async function syncDeliverableCollectionsForInvoice(
   const collectionRatio = Math.min(1, amountPaid / total);
 
   const { data: items } = await supabase
-    .from("invoice_line_items")
+    .from("invoice_line_items_operational")
     .select("assignment_deliverable_id, revenue_before_vat, unit_price")
     .eq("invoice_id", invoiceId)
     .not("assignment_deliverable_id", "is", null);

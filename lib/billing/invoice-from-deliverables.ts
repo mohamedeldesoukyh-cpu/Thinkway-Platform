@@ -188,6 +188,7 @@ function deliverableInvoiceLinePayload(
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,
+    metadata: { operational_source_amount: beforeVat, operational_fx_refresh: Boolean(options?.forRegeneration) },
     revenue_vat_percent: vatExempt ? 0 : vatPercent,
     revenue_vat_exempt: vatExempt,
   };
@@ -246,6 +247,7 @@ export function packageAssignmentLineItemPayload(
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,
+    metadata: { operational_source_amount: beforeVat, operational_fx_refresh: Boolean(options?.forRegeneration) },
     revenue_vat_percent: vatPercent,
     revenue_vat_exempt: vatExempt,
   };
@@ -351,7 +353,7 @@ export async function insertPackageAssignmentLineItems(
   }
 
   const { data: existingItems } = await supabase
-    .from("invoice_line_items")
+    .from("invoice_line_items_operational")
     .select("campaign_line_id, revenue_before_vat")
     .eq("invoice_id", invoiceId)
     .in("campaign_line_id", lineIds);
@@ -807,7 +809,7 @@ export async function lockDeliverablesOnInvoice(
 
     if (reuseLineItem && lineItemId) {
       const { data: existingItem, error: loadError } = await supabase
-        .from("invoice_line_items")
+        .from("invoice_line_items_operational")
         .select("id, assignment_deliverable_id, revenue_before_vat")
         .eq("id", lineItemId)
         .eq("invoice_id", invoiceId)

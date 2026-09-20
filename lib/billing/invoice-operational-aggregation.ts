@@ -1,3 +1,5 @@
+import { convertMoney } from "./billing-currency";
+import { loadCurrencyRates } from "./billing-currency-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { isActiveInvoiceForFinancialTotals } from "@/lib/billing/invoice-status";
@@ -129,7 +131,7 @@ async function loadInvoiceLineItemsByCampaignLinkage(
   const { data: invoices, error: invoiceError } = await supabase
     .from("invoices")
     .select(
-      "id, campaign_header_id, campaign_id, status, regeneration_status, revenue_before_vat, subtotal"
+      "id, campaign_header_id, campaign_id, status, regeneration_status, revenue_before_vat, subtotal, currency"
     )
     .or(`campaign_header_id.in.(${idList}),campaign_id.in.(${idList})`)
     .neq("status", "void");
@@ -138,6 +140,11 @@ async function loadInvoiceLineItemsByCampaignLinkage(
     return { rows: [], error: invoiceError.message };
   }
 
+  const { data: headers, error: headerError } = await supabase.from("campaign_headers").select("id,currency_code").in("id", [...requested]);
+  if (headerError) return { rows: [], error: headerError.message };
+  const currencies = new Map((headers ?? []).map(h => [h.id, h.currency_code as string]));
+  const rates = await loadCurrencyRates(supabase, [...currencies.values(), ...(invoices ?? []).map(i => i.currency as string)]);
+  const invoiceConversion = new Map<string, (amount: number) => number>();
   const linkedInvoices: LinkedInvoiceForRollup[] = [];
   for (const invoice of invoices ?? []) {
     const typed = invoice as {
@@ -159,11 +166,16 @@ async function loadInvoiceLineItemsByCampaignLinkage(
     }
     const campaignHeaderId = resolveInvoiceCampaignId(typed, requested);
     if (!campaignHeaderId) continue;
+    const source = (invoice as unknown as { currency: string }).currency;
+    const target = currencies.get(campaignHeaderId);
+    if (!target) throw new Error("Missing campaign currency");
+    const convert = (amount: number) => convertMoney(amount, source, target, rates);
+    invoiceConversion.set(typed.id, convert);
     linkedInvoices.push({
       id: typed.id,
       campaignHeaderId,
-      revenue_before_vat: typed.revenue_before_vat,
-      subtotal: typed.subtotal,
+      revenue_before_vat: convert(Number(typed.revenue_before_vat ?? typed.subtotal ?? 0)),
+      subtotal: convert(Number(typed.subtotal ?? 0)),
     });
   }
 
@@ -172,13 +184,15 @@ async function loadInvoiceLineItemsByCampaignLinkage(
 
   const { data, error } = await supabase
     .from("invoice_line_items")
-    .select("id, invoice_id, revenue_before_vat")
+    .select("id, invoice_id, revenue_before_vat, metadata")
     .in("invoice_id", invoiceIds);
 
   if (error) {
     return { rows: [], error: error.message };
   }
 
+  const snapshots = (data ?? []).map(row => row.metadata?.billing_fx as { source_currency: string } | undefined).filter(Boolean);
+  Object.assign(rates, await loadCurrencyRates(supabase, snapshots.map(s => s!.source_currency)));
   const lineItems: LinkedInvoiceLineItemForRollup[] = (data ?? []).map((row) => {
     const typed = row as {
       id: string;
@@ -188,7 +202,10 @@ async function loadInvoiceLineItemsByCampaignLinkage(
     return {
       id: typed.id,
       invoice_id: typed.invoice_id,
-      revenue_before_vat: Number(typed.revenue_before_vat ?? 0),
+      revenue_before_vat: row.metadata?.billing_fx
+        ? convertMoney(Number(row.metadata.billing_fx.source_amount), row.metadata.billing_fx.source_currency,
+            currencies.get(linkedInvoices.find(i => i.id === typed.invoice_id)!.campaignHeaderId)!, rates)
+        : invoiceConversion.get(typed.invoice_id)!(Number(typed.revenue_before_vat ?? 0)),
     };
   });
 
@@ -210,7 +227,7 @@ async function loadInvoiceLineItemsByLineCampaignId(
   const { data, error } = await supabase
     .from("invoice_line_items")
     .select(
-      "id, campaign_header_id, revenue_before_vat, invoice:invoices!inner(status, regeneration_status)"
+      "id, campaign_header_id, revenue_before_vat, metadata, invoice:invoices!inner(status, regeneration_status, currency)"
     )
     .in("campaign_header_id", campaignHeaderIds);
 
@@ -218,11 +235,12 @@ async function loadInvoiceLineItemsByLineCampaignId(
     return { rows: [], error: error.message };
   }
 
-  const rows: Array<{
-    id: string;
-    campaignHeaderId: string;
-    revenue_before_vat: number;
-  }> = [];
+  const { data: headers, error: headerError } = await supabase.from("campaign_headers").select("id,currency_code").in("id", campaignHeaderIds);
+  if (headerError) return { rows: [], error: headerError.message };
+  const currencies = new Map((headers ?? []).map(h => [h.id, h.currency_code as string]));
+  const invoiceCurrency = (row: unknown) => (row as { invoice: { currency: string } }).invoice.currency;
+  const rates = await loadCurrencyRates(supabase, [...currencies.values(), ...(data ?? []).map(invoiceCurrency), ...(data ?? []).flatMap(row => row.metadata?.billing_fx?.source_currency ? [row.metadata.billing_fx.source_currency as string] : [])]);
+  const rows: Array<{ id: string; campaignHeaderId: string; revenue_before_vat: number }> = [];
 
   for (const row of data ?? []) {
     const typed = row as unknown as {
@@ -244,7 +262,7 @@ async function loadInvoiceLineItemsByLineCampaignId(
     rows.push({
       id: typed.id,
       campaignHeaderId: typed.campaign_header_id,
-      revenue_before_vat: Number(typed.revenue_before_vat ?? 0),
+      revenue_before_vat: convertMoney(Number(row.metadata?.billing_fx?.source_amount ?? typed.revenue_before_vat ?? 0), row.metadata?.billing_fx?.source_currency ?? invoiceCurrency(row), currencies.get(typed.campaign_header_id)!, rates),
     });
   }
 

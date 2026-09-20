@@ -1,3 +1,5 @@
+import { projectBillingRows } from "@/lib/billing/billing-currency";
+import { loadCurrencyRates } from "@/lib/billing/billing-currency-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { resolveOperationalPo } from "@/lib/finance/po/operational-budget";
@@ -708,8 +710,10 @@ export async function getCampaignOperationalBillingDetail(
     header.client_id
   );
 
-  const legacyRevenue = groups.reduce((sum, group) => sum + group.total_value, 0);
-  const legacyInvoiced = groups.reduce((sum, group) => sum + group.invoiced_value, 0);
+  const rates = await loadCurrencyRates(supabase, [header.currency_code, ...groups.map(g => g.currency_code)]);
+  operational_rows = projectBillingRows(operational_rows, header.currency_code, rates);
+  const legacyRevenue = operational_rows.reduce((sum, row) => sum + row.billable_amount, 0);
+  const legacyInvoiced = operational_rows.reduce((sum, row) => sum + row.invoiced_amount, 0);
   const baseRollup = computeCampaignFinancialRollup({
     operational_rows,
     legacy_line_revenue: legacyRevenue,

@@ -1,7 +1,8 @@
 "use client";
 
+import { CampaignMoneyTotal } from "@/features/campaigns/components/campaign-money";
 import Link from "next/link";
-import { useActionState, useEffect, useMemo } from "react";
+import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -20,7 +21,6 @@ import type {
   ClientIoVersionSummary,
 } from "@/features/io/types";
 import type { ClientIoMilestoneDraft } from "@/lib/io/client-io-milestones";
-import { formatMoney } from "@/features/campaigns/utils";
 
 const INITIAL_STATE = { ok: false } as const;
 
@@ -78,11 +78,6 @@ export function ClientIoTab({
   }, [ensureState]);
 
   const latestSend = sendHistory[0] ?? null;
-  const agreedAmount = useMemo(
-    () =>
-      assignments.reduce((sum, row) => sum + (Number(row.revenue_before_vat) || 0), 0),
-    [assignments]
-  );
 
   const setupAction = (
     <form action={ensureAction}>
@@ -170,7 +165,7 @@ export function ClientIoTab({
         {
           key: "amount",
           label: "Agreed amount",
-          value: formatMoney(agreedAmount, currencyCode),
+          value: <CampaignMoneyTotal currency={currencyCode} amounts={assignments.map(row => ({ amount: Number(row.revenue_before_vat) || 0, currency: row.currency_code || currencyCode }))} />,
           tone: "blue",
         },
       ]}

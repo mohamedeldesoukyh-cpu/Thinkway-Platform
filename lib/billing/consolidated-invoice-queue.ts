@@ -13,6 +13,7 @@ import { computeVatLine } from "@/lib/vat/calculations";
 
 /** One consolidated invoice candidate per campaign + batch state. */
 export type ConsolidatedInvoiceQueueRow = {
+  originals?: { currency: string; revenue_before_vat: number; vat_amount: number; revenue_after_vat: number }[];
   batch_key: string;
   campaign_header_id: string;
   campaign_document_number: string;
@@ -70,6 +71,7 @@ export function buildConsolidatedInvoiceQueueRows(input: {
   };
   collectRows(input.operational_rows);
 
+  const originals: NonNullable<ConsolidatedInvoiceQueueRow["originals"]> = [];
   let revenue_before_vat = 0;
   let vat_amount = 0;
   let revenue_after_vat = 0;
@@ -88,6 +90,10 @@ export function buildConsolidatedInvoiceQueueRows(input: {
       exempt: row.revenue_vat_exempt,
     });
 
+    if (row.source_money) {
+      const originalVat = computeVatLine({ beforeVat: row.source_money.amounts.remaining_amount ?? 0, vatPercent: row.revenue_vat_percent, exempt: row.revenue_vat_exempt });
+      originals.push({ currency: row.source_money.currency, revenue_before_vat: originalVat.beforeVat, vat_amount: originalVat.vatAmount, revenue_after_vat: originalVat.afterVat });
+    }
     revenue_before_vat += vat.beforeVat;
     vat_amount += vat.vatAmount;
     revenue_after_vat += vat.afterVat;
@@ -99,6 +105,7 @@ export function buildConsolidatedInvoiceQueueRows(input: {
 
   return [
     {
+      originals,
       batch_key: INVOICE_CANDIDATE_BATCH,
       campaign_header_id: input.campaign_header_id,
       campaign_document_number: input.campaign_document_number,

@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignMoney } from "../campaign-money";
 import { useCallback, useEffect, useId, useMemo, useState } from "react";
 
 import {
@@ -16,6 +17,7 @@ const INPUT_CLASS = cn(
 );
 
 type OperationalAmountFieldProps = {
+  currency?: string;
   value: number;
   onChange: (value: number) => void;
   onBlur?: () => void;
@@ -30,6 +32,7 @@ type OperationalAmountFieldProps = {
 };
 
 export function OperationalAmountField({
+  currency,
   value,
   onChange,
   onBlur,
@@ -66,7 +69,7 @@ export function OperationalAmountField({
   if (disabled) {
     return (
       <span className={cn(OPERATIONAL_AMOUNT_CLASS, className)}>
-        {format(value)}
+        {currency ? campaignMoney(value, currency) : format(value)}
       </span>
     );
   }
@@ -85,7 +88,7 @@ export function OperationalAmountField({
           setFocused(true);
         }}
       >
-        {format(value)}
+        {currency ? campaignMoney(value, currency) : format(value)}
       </button>
     );
   }
@@ -94,6 +97,8 @@ export function OperationalAmountField({
     <input
       id={inputId}
       type="text"
+      title={currency ? `Edit original amount in ${currency}` : undefined}
+      aria-label={currency ? `Original amount in ${currency}` : undefined}
       inputMode="decimal"
       autoComplete="off"
       value={text}

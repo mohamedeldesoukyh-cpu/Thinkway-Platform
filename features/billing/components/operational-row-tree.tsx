@@ -1,5 +1,6 @@
 "use client";
 
+import { originalBillingRows } from "@/lib/billing/billing-currency";
 import { memo, useCallback, useMemo, useState, type ChangeEvent, type FocusEvent } from "react";
 import { ChevronDownIcon, ChevronRightIcon } from "lucide-react";
 
@@ -152,6 +153,7 @@ export function DraftNumericInput({
 }
 
 export function OperationalInvoiceDraftCells({
+  original,
   draft,
   currency,
   editable,
@@ -160,6 +162,7 @@ export function OperationalInvoiceDraftCells({
   onPercentChange,
   onToBeInvoicedChange,
 }: {
+  original?: { draft: InvoiceDraftLine; currency: string };
   draft: InvoiceDraftLine;
   currency: string;
   editable: boolean;
@@ -168,10 +171,12 @@ export function OperationalInvoiceDraftCells({
   onPercentChange: (percent: number) => void;
   onToBeInvoicedChange: (amount: number) => void;
 }) {
+  const reference = (key: keyof InvoiceDraftLine) => original && original.currency !== currency
+    ? <small className="block text-[10px] font-normal text-muted-foreground">{formatBillingMoney(original.draft[key], original.currency)} original</small> : null;
   return (
     <>
       <CampaignOperationalTableCellAmount>
-        {formatBillingMoney(draft.amount, currency)}
+        {formatBillingMoney(draft.amount, currency)}{reference("amount")}
       </CampaignOperationalTableCellAmount>
       <CampaignOperationalTableCell className="w-[5.5rem] text-right">
         <div className="flex items-center justify-end gap-0.5">
@@ -198,16 +203,16 @@ export function OperationalInvoiceDraftCells({
           />
         ) : (
           formatBillingMoney(draft.toBeInvoiced, currency)
-        )}
+        )}{reference("toBeInvoiced")}
       </CampaignOperationalTableCellAmount>
       <CampaignOperationalTableCellAmount>
-        {formatBillingMoney(draft.vatAmount, currency)}
+        {formatBillingMoney(draft.vatAmount, currency)}{reference("vatAmount")}
       </CampaignOperationalTableCellAmount>
       <CampaignOperationalTableCellAmount>
-        {formatBillingMoney(draft.totalInvoice, currency)}
+        {formatBillingMoney(draft.totalInvoice, currency)}{reference("totalInvoice")}
       </CampaignOperationalTableCellAmount>
       <CampaignOperationalTableCellAmount>
-        {formatBillingMoney(draft.remaining, currency)}
+        {formatBillingMoney(draft.remaining, currency)}{reference("remaining")}
       </CampaignOperationalTableCellAmount>
     </>
   );
@@ -327,6 +332,7 @@ export const OperationalRowTree = memo(function OperationalRowTree({
           </div>
         </CampaignOperationalTableCell>
         <OperationalInvoiceDraftCells
+          original={row.source_money ? { draft: computeInvoiceDraftLine(originalBillingRows([row])[0], percents), currency: row.source_money.currency } : undefined}
           draft={draft}
           currency={currency}
           editable={editable}

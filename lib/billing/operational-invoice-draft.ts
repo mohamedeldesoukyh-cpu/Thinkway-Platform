@@ -167,7 +167,10 @@ function computeLeafDraft(
 ): InvoiceDraftLine {
   const amount = roundMoney(Math.max(0, row.remaining_amount));
   const percent = storedPercent(row, percents);
-  const toBeInvoiced = amountFromPercent(amount, percent);
+  const sourceAmount = row.source_money?.amounts.remaining_amount;
+  const toBeInvoiced = sourceAmount != null && row.source_money?.rate != null
+    ? roundMoney(amountFromPercent(Math.max(0, sourceAmount), percent) * row.source_money.rate)
+    : amountFromPercent(amount, percent);
   const vat = computeVatLine({
     beforeVat: toBeInvoiced,
     vatPercent: leafVatContext(row).vatPercent,

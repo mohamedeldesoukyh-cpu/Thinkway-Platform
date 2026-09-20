@@ -281,6 +281,7 @@ export type CampaignActivityItem = {
 };
 
 export type CampaignWorkspace = {
+  currency_rates?: Record<string, number>;
   id: string;
   document_number: string;
   name: string;

@@ -442,6 +442,8 @@ export async function getCampaignWorkspace(
     currenciesNeeded.add(costCcy || workspaceCurrency);
   }
   for (const invoice of invoices) currenciesNeeded.add(invoice.currency.trim().toUpperCase());
+  for (const io of vendorIos ?? []) currenciesNeeded.add(io.currency_code);
+  for (const payment of payments) currenciesNeeded.add(payment.currency);
   const rateToEgpByCurrency = new Map<string, number>();
   await Promise.all(
     [...currenciesNeeded].map(async (code) => {
@@ -787,6 +789,7 @@ export async function getCampaignWorkspace(
     brief: campaignIntelligence?.requirementsSummary ?? headerRow.brief,
     status: headerRow.status,
     currency_code: workspaceCurrency,
+    currency_rates: Object.fromEntries([...rateToEgpByCurrency].sort(([a], [b]) => a.localeCompare(b))),
     start_date: headerRow.start_date,
     end_date: headerRow.end_date,
     target_market: targetMarket,

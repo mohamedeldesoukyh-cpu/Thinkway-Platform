@@ -17,7 +17,7 @@ import {
   CampaignOperationalTableRow,
 } from "@/features/campaigns/components/campaign-operational-table";
 import { DocumentNumber } from "@/components/ui/document-number";
-import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
+import { campaignMoney } from "@/features/campaigns/components/campaign-money";
 import { BillingStatusBadge } from "@/features/billing/components/billing-status-badge";
 import { DeliverableBillingStatusBadge } from "@/features/billing/components/deliverable-billing-status-badge";
 import { isDeliverableInvoiceEligible } from "@/lib/billing/deliverable-billing";
@@ -198,12 +198,12 @@ function AssignmentBillingGroupRow({
         ) : null}
         {showTotal ? (
           <CampaignOperationalTableCellAmount>
-            {formatOperationalAmount(group.total_value)}
+            {campaignMoney(group.total_value, group.currency_code)}
           </CampaignOperationalTableCellAmount>
         ) : null}
         {showInvoiced ? (
           <CampaignOperationalTableCellAmount>
-            {formatOperationalAmount(group.invoiced_value)}
+            {campaignMoney(group.invoiced_value, group.currency_code)}
             {group.total_value > 0 ? (
               <span className="ml-1 text-[11px] font-normal text-muted-foreground">
                 {Math.round((group.invoiced_value / group.total_value) * 100)}%
@@ -213,12 +213,12 @@ function AssignmentBillingGroupRow({
         ) : null}
         {showRemaining ? (
           <CampaignOperationalTableCellAmount>
-            {formatOperationalAmount(group.remaining_value)}
+            {campaignMoney(group.remaining_value, group.currency_code)}
           </CampaignOperationalTableCellAmount>
         ) : null}
         {showCollected ? (
           <CampaignOperationalTableCellAmount>
-            {formatOperationalAmount(group.collected_value)}
+            {campaignMoney(group.collected_value, group.currency_code)}
           </CampaignOperationalTableCellAmount>
         ) : null}
         {showInvoice ? (
@@ -246,6 +246,7 @@ function AssignmentBillingGroupRow({
         group.deliverables.map((deliverable) => (
           <AssignmentBillingDeliverableRow
             key={deliverable.id}
+            currency={group.currency_code}
             deliverable={deliverable}
             showExpand={showExpand}
             showAssignment={showAssignment}
@@ -263,6 +264,7 @@ function AssignmentBillingGroupRow({
 }
 
 function AssignmentBillingDeliverableRow({
+  currency,
   deliverable,
   showExpand,
   showAssignment,
@@ -274,6 +276,7 @@ function AssignmentBillingDeliverableRow({
   showInvoice,
   showActions,
 }: {
+  currency: string;
   deliverable: AssignmentBillingGroup["deliverables"][number];
   showExpand: boolean;
   showAssignment: boolean;
@@ -313,22 +316,22 @@ function AssignmentBillingDeliverableRow({
       ) : null}
       {showTotal ? (
         <CampaignOperationalTableCellAmount>
-          {formatOperationalAmount(deliverable.billable_amount)}
+          {campaignMoney(deliverable.billable_amount, currency)}
         </CampaignOperationalTableCellAmount>
       ) : null}
       {showInvoiced ? (
         <CampaignOperationalTableCellAmount>
-          {formatOperationalAmount(deliverable.invoiced_amount)}
+          {campaignMoney(deliverable.invoiced_amount, currency)}
         </CampaignOperationalTableCellAmount>
       ) : null}
       {showRemaining ? (
         <CampaignOperationalTableCellAmount>
-          {formatOperationalAmount(deliverable.remaining_amount)}
+          {campaignMoney(deliverable.remaining_amount, currency)}
         </CampaignOperationalTableCellAmount>
       ) : null}
       {showCollected ? (
         <CampaignOperationalTableCellAmount>
-          {formatOperationalAmount(deliverable.collected_amount)}
+          {campaignMoney(deliverable.collected_amount, currency)}
         </CampaignOperationalTableCellAmount>
       ) : null}
       {showInvoice ? <CampaignOperationalTableCell /> : null}

@@ -1,5 +1,6 @@
 "use client";
 
+import { campaignMoney, CampaignSummaryMoney, CampaignMoneyTotal } from "../campaign-money";
 import Link from "next/link";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -32,7 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import {
   FinanceInvoiceRegisterTable,
   getFinanceInvoiceRegisterColumnMetas,
@@ -119,7 +119,7 @@ function buildCampaignPaymentsColumns(
       label: "Amount",
       headerClassName: "text-right",
       amountCell: true,
-      renderCell: (p) => formatOperationalAmount(p.amount),
+      renderCell: (p) => campaignMoney(p.amount, p.currency),
     },
     {
       id: "status",
@@ -326,8 +326,7 @@ export function CampaignBillingTab({
       ? sumIoGatedAssignmentBillable(operationalRows)
       : null;
   const billingRevenue = ioGatedBillable ?? financials.revenue;
-  const billingPoConsumed = ioGatedBillable ?? financials.po_consumed;
-  const billingRemainingPo = financials.po_total - billingPoConsumed;
+  const billingRemainingPo = financials.remaining_po;
 
   return (
     <div>
@@ -400,18 +399,18 @@ export function CampaignBillingTab({
           {
             key: "revenue",
             label: "Revenue",
-            value: formatMoneyCompact(billingRevenue, currency),
+            value: <CampaignSummaryMoney amount={billingRevenue} currency={currency} metric="revenue" />,
             tone: "blue",
           },
           {
             key: "cost",
             label: "Cost",
-            value: formatMoneyCompact(financials.cost, currency),
+            value: <CampaignSummaryMoney amount={financials.cost} currency={currency} metric="cost" />,
           },
           {
             key: "gp",
             label: "Gross Profit",
-            value: formatMoneyCompact(financials.gp, currency),
+            value: <CampaignSummaryMoney amount={financials.gp} currency={currency} metric="gp" />,
             tone: financials.gp < 0 ? "amber" : "pos",
           },
           {
@@ -422,19 +421,19 @@ export function CampaignBillingTab({
           {
             key: "collected",
             label: "Collected",
-            value: formatMoneyCompact(financials.collected, currency),
+            value: <CampaignMoneyTotal currency={currency} amounts={workspace.invoices.map(i => ({ amount: i.amount_paid, currency: i.currency }))} />,
             tone: "pos",
           },
           {
             key: "outstanding",
             label: "Outstanding",
-            value: formatMoneyCompact(financials.billing_outstanding, currency),
+            value: <CampaignMoneyTotal currency={currency} amounts={workspace.invoices.map(i => ({ amount: i.outstanding, currency: i.currency }))} />,
             tone: financials.billing_outstanding > 0 ? "amber" : "mut",
           },
           {
             key: "receivable",
             label: "Receivable",
-            value: formatMoneyCompact(financials.billing_outstanding, currency),
+            value: <CampaignMoneyTotal currency={currency} amounts={workspace.invoices.map(i => ({ amount: i.outstanding, currency: i.currency }))} />,
             tone: financials.billing_outstanding > 0 ? "amber" : "mut",
           },
           {

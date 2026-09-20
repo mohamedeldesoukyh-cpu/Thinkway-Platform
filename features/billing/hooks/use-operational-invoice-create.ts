@@ -1,5 +1,6 @@
 "use client";
 
+import { originalBillingRows } from "@/lib/billing/billing-currency";
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 
 import {
@@ -90,7 +91,7 @@ export function useOperationalInvoiceCreate(options?: {
       countSubmitPayload(input.selection) > 0
         ? selectionToSubmitPayload(payloadToSelection(input.selection), input.rows)
         : input.selection;
-    const bundle = buildInvoiceDraftSubmit(input.rows, input.percents, resolved);
+    const bundle = buildInvoiceDraftSubmit(originalBillingRows(input.rows), input.percents, resolved);
     if (countSubmitPayload(bundle.payload) === 0) {
       showErrorToastOnce("Set Invoice % above 0 on at least one selected row.", {
         id: "invoice-generation",

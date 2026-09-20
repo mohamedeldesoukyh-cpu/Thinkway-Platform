@@ -136,7 +136,7 @@ export async function updateCampaignHeaderAction(
 export async function updateCampaignDisplayCurrencyAction(input: {
   campaignId: string;
   currency: string;
-}): Promise<{ ok: true } | { ok: false; message: string }> {
+}): Promise<{ ok: true; rate: number } | { ok: false; message: string }> {
   const currency = input.currency.trim().toUpperCase();
   if (!input.campaignId || !currency) {
     return { ok: false, message: "Campaign and currency are required." };
@@ -168,21 +168,16 @@ export async function updateCampaignDisplayCurrencyAction(input: {
     currency_code: string | null;
   };
 
-  if ((row.currency_code || "").toUpperCase() === currency) {
-    return { ok: true };
-  }
-
-  const { error } = await supabase
-    .from("campaign_headers")
-    .update({ currency_code: currency } as never)
-    .eq("id", input.campaignId);
+  const { data: rate, error } = await supabase.rpc("set_campaign_display_currency", {
+    p_campaign_id: input.campaignId, p_currency: currency,
+  });
 
   if (error) {
     return { ok: false, message: error.message };
   }
 
   revalidateCampaign(input.campaignId, row.client_id ?? undefined);
-  return { ok: true };
+  return { ok: true, rate: Number(rate) };
 }
 
 export async function createCampaignLineAction(

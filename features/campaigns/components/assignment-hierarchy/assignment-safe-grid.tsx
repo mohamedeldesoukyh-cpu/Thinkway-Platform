@@ -1,5 +1,8 @@
 "use client";
 
+import { campaignMoney, useCampaignCurrency, CampaignLineFinancial } from "../campaign-money";
+import { aggregateCampaignDisplayFinancials } from "@/lib/campaigns/campaign-display-financials";
+import { convertMoney } from "@/lib/billing/billing-currency";
 import { PencilIcon } from "lucide-react";
 import {
   Fragment,
@@ -67,7 +70,7 @@ import {
   sumVisibleParentColumnWidths,
 } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-layout";
 import { HIERARCHY_COLUMN_LABELS } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
-import { formatOperationalAmount, operationalZeroClass } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
+import { operationalZeroClass } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { OPERATIONAL_TABLE_FONT, operationalMarginAmountClass } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import type {
   AssignmentHierarchy,
@@ -359,6 +362,7 @@ export function AssignmentSafeGrid({
     });
   }, [onInvoiceLines, invoiceLineIds, invoiceDeliverableIds]);
 
+  const currencyWorkspace = useCampaignCurrency();
   const selectionTotals = useMemo((): AssignmentSelectionTotals => {
     const currencies = new Set<string>();
     let revenue = 0;
@@ -380,11 +384,15 @@ export function AssignmentSafeGrid({
         vatExempt: Boolean(line.revenue_vat_exempt),
         costBeforeVat,
       });
-      revenue += billing.revenueBeforeVat;
-      cost += costBeforeVat;
-      gp += billing.gp;
-      totalBilling += billing.totalBilling;
-      currencies.add(resolveAssignmentLineCurrency(line));
+      const source = resolveAssignmentLineCurrency(line);
+      const target = currencyWorkspace?.currency_code ?? source;
+      const convert = (amount: number) => convertMoney(amount, source, target, currencyWorkspace?.currency_rates ?? {});
+      revenue += convert(billing.revenueBeforeVat);
+      const financials = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: target, rateToEgpByCurrency: new Map(Object.entries(currencyWorkspace?.currency_rates ?? { [source]: 1 })) });
+      cost += financials.cost;
+      gp += financials.gp;
+      totalBilling += convert(billing.totalBilling);
+      currencies.add(target);
     }
     return {
       count: selectedLineIds.size + selectedDeliverableIds.size,
@@ -396,7 +404,7 @@ export function AssignmentSafeGrid({
       currency: currencies.size === 1 ? [...currencies][0]! : null,
       currencyMixed: currencies.size > 1,
     };
-  }, [selectedLineIds, selectedDeliverableIds, preparedRows]);
+  }, [selectedLineIds, selectedDeliverableIds, preparedRows, currencyWorkspace]);
 
   const calculatorLines = useMemo((): AssignmentCalculatorLine[] => {
     const rows: AssignmentCalculatorLine[] = [];
@@ -767,13 +775,13 @@ export function AssignmentSafeGrid({
                               variant="rev"
                               className={operationalZeroClass(row.rollups.revenue)}
                             >
-                              {formatOperationalAmount(row.rollups.revenue)}
+                              {campaignMoney(row.rollups.revenue, resolveAssignmentLineCurrency(line))}
                             </AssignmentHighlightAmount>
                           </AssignmentGridCell>
                         ) : null}
                         {col("usageRights") ? (
                           <AssignmentGridCell columnId="usageRights" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.usage_rights_amount))}>
-                            {formatOperationalAmount(line.usage_rights_amount)}
+                            {campaignMoney(line.usage_rights_amount, resolveAssignmentLineCurrency(line))}
                           </AssignmentGridCell>
                         ) : null}
                         {col("agencyFeePercent") ? (
@@ -783,7 +791,7 @@ export function AssignmentSafeGrid({
                         ) : null}
                         {col("agencyFee") ? (
                           <AssignmentGridCell columnId="agencyFee" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.agency_fee_amount))}>
-                            {formatOperationalAmount(line.agency_fee_amount)}
+                            {campaignMoney(line.agency_fee_amount, resolveAssignmentLineCurrency(line))}
                           </AssignmentGridCell>
                         ) : null}
                         {gates.showInternalFinancials && col("cost") ? (
@@ -792,18 +800,18 @@ export function AssignmentSafeGrid({
                               variant="cost"
                               className={operationalZeroClass(line.cost_before_vat)}
                             >
-                              {formatOperationalAmount(line.cost_before_vat)}
+                              {<CampaignLineFinancial line={line} metric="cost" />}
                             </AssignmentHighlightAmount>
                           </AssignmentGridCell>
                         ) : null}
                         {gates.showInternalFinancials && col("usageRightsCost") ? (
                           <AssignmentGridCell columnId="usageRightsCost" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.usage_rights_cost))}>
-                            {formatOperationalAmount(line.usage_rights_cost)}
+                            {campaignMoney(line.usage_rights_cost, resolveAssignmentLineCurrency(line))}
                           </AssignmentGridCell>
                         ) : null}
                         {col("vat") ? (
                           <AssignmentGridCell columnId="vat" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_VAT_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.revenue_vat_amount))}>
-                            {formatOperationalAmount(line.revenue_vat_amount)}
+                            {campaignMoney(line.revenue_vat_amount, resolveAssignmentLineCurrency(line))}
                           </AssignmentGridCell>
                         ) : null}
                         {col("totalBilling") ? (
@@ -812,7 +820,7 @@ export function AssignmentSafeGrid({
                               variant="billing"
                               className={operationalZeroClass(line.revenue_after_vat)}
                             >
-                              {formatOperationalAmount(line.revenue_after_vat)}
+                              {campaignMoney(line.revenue_after_vat, resolveAssignmentLineCurrency(line))}
                             </AssignmentHighlightAmount>
                           </AssignmentGridCell>
                         ) : null}
@@ -825,7 +833,7 @@ export function AssignmentSafeGrid({
                               operationalZeroClass(row.rollups.gp)
                             )}
                           >
-                            {formatOperationalAmount(row.rollups.gp)}
+                            {<CampaignLineFinancial line={line} metric="gp" />}
                           </AssignmentGridCell>
                         ) : null}
                         {gates.showInternalFinancials && col("margin") ? (
@@ -837,7 +845,7 @@ export function AssignmentSafeGrid({
                               operationalMarginAmountClass(row.rollups.margin_percent)
                             )}
                           >
-                            {formatPercent(row.rollups.margin_percent)}
+                            {<CampaignLineFinancial line={line} metric="margin_percent" />}
                           </AssignmentGridCell>
                         ) : null}
                         {col("opsStatus") ? (
