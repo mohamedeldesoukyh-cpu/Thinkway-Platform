@@ -145,9 +145,16 @@ export async function updateCampaignPoAction(
     return { ok: false, message: fetchError?.message ?? "Campaign not found." };
   }
 
+  const { data: effectiveRate, error: rateError } = await supabase.rpc("resolve_effective_exchange_rate", {
+    p_from_currency: parsed.data.po_currency, p_to_currency: header.currency_code,
+  });
+  if (rateError || !Number.isFinite(Number(effectiveRate)) || Number(effectiveRate) <= 0) {
+    return { ok: false, message: rateError?.message ?? "A valid PO exchange rate is required." };
+  }
+  const poExchangeRate = Number(effectiveRate);
   const converted = convertAmount({
     amount: parsed.data.po_amount_original,
-    exchange_rate: parsed.data.po_exchange_rate,
+    exchange_rate: poExchangeRate,
   });
 
   const oldSnapshot = {
@@ -164,7 +171,7 @@ export async function updateCampaignPoAction(
     .update({
       po_number: emptyToNull(parsed.data.po_number),
       po_currency: parsed.data.po_currency,
-      po_exchange_rate: parsed.data.po_exchange_rate,
+      po_exchange_rate: poExchangeRate,
       po_amount_original: parsed.data.po_amount_original,
       po_amount_campaign_currency: converted,
       po_expiry_date: parsed.data.po_expiry_date,
@@ -183,7 +190,7 @@ export async function updateCampaignPoAction(
     new_value: {
       po_number: parsed.data.po_number,
       po_currency: parsed.data.po_currency,
-      po_exchange_rate: parsed.data.po_exchange_rate,
+      po_exchange_rate: poExchangeRate,
       po_amount_original: parsed.data.po_amount_original,
       po_amount_campaign_currency: converted,
       po_expiry_date: parsed.data.po_expiry_date,

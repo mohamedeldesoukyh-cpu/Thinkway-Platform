@@ -2,13 +2,16 @@
 BEGIN;
 DO $$
 DECLARE v_user uuid; v_draft uuid; v_issued uuid; v_item uuid; v_before jsonb;
-  v_audits int; v_result jsonb; v numeric;
+  v_audits int; v_result jsonb; v_header uuid;
 BEGIN
   SELECT p.id INTO v_user FROM public.profiles p JOIN public.roles r ON r.id=p.role_id
     WHERE r.slug='super_admin' LIMIT 1;
   IF v_user IS NULL THEN RAISE EXCEPTION 'Test requires an existing development admin'; END IF;
   PERFORM set_config('request.jwt.claim.sub',v_user::text,true);
   PERFORM set_config('request.jwt.claim.role','authenticated',true);
+  SELECT id INTO v_header FROM public.campaign_headers WHERE currency_code='EGP' LIMIT 1;
+  UPDATE public.campaign_headers SET po_currency='USD',po_amount_original=100,
+    po_amount_campaign_currency=5200,po_exchange_rate=52 WHERE id=v_header;
   INSERT INTO public.quotations(name,issue_date) VALUES('FX regression draft','2026-08-01') RETURNING id INTO v_draft;
   INSERT INTO public.quotation_items(quotation_id,creator_name,cost_currency,cost,revenue,fx_rate_to_egp,cost_egp,revenue_egp)
     VALUES(v_draft,'FX fixture','USD',100,120,52,5200,6240) RETURNING id INTO v_item;
@@ -26,6 +29,7 @@ BEGIN
   ASSERT abs(public.resolve_effective_exchange_rate('EUR','GBP','2026-09-20')-0.79/0.92)<0.000001,'cross pair';
   ASSERT (SELECT cost_egp=6000 AND revenue_egp=7200 AND fx_rate_to_egp=60 FROM public.quotation_items WHERE id=v_item),'draft refreshed';
   ASSERT (SELECT total_cost_egp=6000 AND total_revenue_egp=7200 AND total_gp_value_egp=1200 FROM public.quotations WHERE id=v_draft),'draft header refreshed';
+  ASSERT (SELECT po_amount_campaign_currency=6000 AND po_exchange_rate=60 FROM public.campaign_headers WHERE id=v_header),'stored PO FX refreshed for billing';
   ASSERT v_before=(SELECT jsonb_agg(to_jsonb(i)) FROM public.quotation_items i WHERE quotation_id=v_issued),'approved document unchanged';
   ASSERT (SELECT count(*) FROM public.fx_rate_audit_logs)=v_audits+1,'audit inserted';
   ASSERT (SELECT exchange_rate_id IS NOT NULL AND impacted_record_count>=1 FROM public.fx_rate_audit_logs ORDER BY created_at DESC,id DESC LIMIT 1),'audit linked';
