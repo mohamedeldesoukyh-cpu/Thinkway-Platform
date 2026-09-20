@@ -231,6 +231,7 @@ export function CreatorSearchWorkspace({
   useEffect(() => { sortRef.current = sort; }, [sort]);
   const [completeness, setCompleteness] = useState<SearchCompleteness | undefined>();
   const [page, setPage] = useState(1);
+  const normalContinuationRef = useRef<string | undefined>(undefined);
   const [creators, setCreators] = useState<UnifiedCreatorResult[]>([]);
   const [total, setTotal] = useState(0);
   const [hasMore, setHasMore] = useState(true);
@@ -859,11 +860,13 @@ export function CreatorSearchWorkspace({
       if (append) setLoadingMore(true);
       else { setLoading(true); setCreators([]); setCompleteness(undefined); }
       setError(null);
+      if (!append || pageNum === 1) normalContinuationRef.current = undefined;
       try {
         const activeFilters = sanitizeNormalFilters(filterOverride ?? { ...filtersRef.current, search: searchRef.current });
-        const result = await searchNormalDiscoveryAction({ filters: activeFilters, sort: sortRef.current, page: pageNum, pageSize: PAGE_SIZE });
+        const result = await searchNormalDiscoveryAction({ filters: activeFilters, sort: sortRef.current, page: pageNum, pageSize: PAGE_SIZE, continuation: append ? normalContinuationRef.current : undefined });
         if (controller.signal.aborted || requestId !== reqIdRef.current) return;
         setCreators(previous => append ? [...new Map([...previous, ...result.creators].map(c => [c.unified_id,c])).values()] : result.creators);
+        normalContinuationRef.current = result.continuation;
         setTotal(result.total);
         setCompleteness(result.completeness);
         setHasMore(result.has_more);
@@ -1376,6 +1379,7 @@ export function CreatorSearchWorkspace({
         setDebouncedSearch(normalizedQuery);
         if (changed || sortChanged) return;
       }
+      normalContinuationRef.current = undefined;
       setPage(1);
       setHasMore(true);
       clearCreatorSelection();
@@ -1389,6 +1393,7 @@ export function CreatorSearchWorkspace({
       skipNextFilterFetchRef.current = false;
       return;
     }
+    normalContinuationRef.current = undefined;
     setPage(1);
     setHasMore(true);
     void fetchPageRef.current(1, false, undefined, { caller: "filter_sync" });
@@ -1428,6 +1433,7 @@ export function CreatorSearchWorkspace({
       if (cacheUserId) {
         void invalidateDiscoveryBrowseCache(cacheUserId);
       }
+      normalContinuationRef.current = undefined;
       setPage(1);
       void fetchPageRef.current(1, false, undefined, { caller: "import_refresh" });
       // New creators may introduce categories/countries — refresh filter facets.
@@ -2051,6 +2057,7 @@ export function CreatorSearchWorkspace({
     setRecommendedCreators([]);
     setLoadingRecommendations(false);
     recommendationReqRef.current += 1;
+    normalContinuationRef.current = undefined;
     setPage(1);
     setHasMore(true);
     setFilterResetKey((key) => key + 1);
@@ -2087,6 +2094,7 @@ export function CreatorSearchWorkspace({
       skipSearchUrlWriteRef.current = true;
       setSort({ field: "relevance", direction: "desc" });
       setAiModeActive(true);
+      normalContinuationRef.current = undefined;
       setPage(1);
       setHasMore(false);
       setCreators([]);
@@ -2245,6 +2253,7 @@ export function CreatorSearchWorkspace({
     setAiModeActive(false);
     setAiExtracting(false);
     setFilters(cloneCreatorSearchFilters());
+    normalContinuationRef.current = undefined;
     setPage(1);
     setHasMore(true);
 

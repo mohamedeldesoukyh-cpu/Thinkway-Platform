@@ -15,7 +15,7 @@ export type RelevanceReason = { dimension: string; outcome: "Match" | "Not avail
 export type SearchRelevance = { score: number | null; reasons: RelevanceReason[]; methodology: "discovery-v1" };
 export type SearchCompleteness = { status: "complete" | "bounded" | "incomplete"; reason?: "work_budget" | "time_budget"; examined: number; matched: number; totalKind: "exact" | "lower_bound" };
 export type Candidate = UnifiedCreatorResult & { content_text?: string; last_post_at?: string | null; stored_thinkway_score?: number | null };
-export type NormalSearchRequest = { filters: CreatorSearchFilters; sort: CreatorSearchSortState; page: number; pageSize: number };
+export type NormalSearchRequest = { filters: CreatorSearchFilters; sort: CreatorSearchSortState; page: number; pageSize: number; continuation?: string };
 export const NORMAL_SEARCH_SORTS = ["relevance", "name", "platform", "followers", "country", "categories", "engagement", "views", "source", "thinkway", "last_synced"] as const;
 const norm = (value: string) => normalizeDiscoverySearchText(value).replace(/^@/, "");
 const values = (xs: string[]) => xs.map(norm).filter(Boolean);
@@ -160,31 +160,44 @@ export function compareNormalCandidates(a: Candidate, b: Candidate, sort: Creato
 }
 
 export type CandidateWindow = { candidates: Candidate[]; exhausted: boolean; scannedCount?: number };
+export type NormalSearchContinuation = {
+  remaining: Candidate[]; examined: number; matched: number; internalCount: number;
+  discoveryCount: number; exhausted: boolean; sealedCount: number; seen: string[]; evaluatedAt: number;
+};
 /** Stable window pools: finish a whole 200-candidate window, qualify, then seal/sort
  * once a page is available. Sparse windows accumulate only until a page qualifies.
- * Replay identical pool boundaries for later pages; never rerank a growing prefix. */
-export async function executeNormalSearch(request: NormalSearchRequest, readWindow: (offset: number, limit: number) => Promise<CandidateWindow>, options: { maxCandidates?: number; maxMs?: number; now?: () => number } = {}) {
+ * Resume trusted sealed pools; never rerank a growing prefix. */
+export async function executeNormalSearch(request: NormalSearchRequest, readWindow: (offset: number, limit: number) => Promise<CandidateWindow>, options: { maxCandidates?: number; maxMs?: number; now?: () => number; continuation?: NormalSearchContinuation } = {}) {
   const f = sanitizeNormalFilters(request.filters);
   const page = Math.max(1, Math.min(100, request.page));
   const pageSize = Math.max(1, Math.min(100, request.pageSize));
   const end = page * pageSize;
   const max = options.maxCandidates ?? 10000;
   const clock = options.now ?? Date.now, started = clock();
-  let examined = 0, matched = 0, internalCount = 0, discoveryCount = 0, exhausted = false;
+  const prior = options.continuation;
+  const evaluatedAt = prior?.evaluatedAt ?? started;
+  let examined = prior?.examined ?? 0, matched = prior?.matched ?? 0, internalCount = prior?.internalCount ?? 0, discoveryCount = prior?.discoveryCount ?? 0, exhausted = prior?.exhausted ?? false;
   let reason: "work_budget" | "time_budget" = "work_budget";
-  let pool: Candidate[] = [], sealedCount = 0;
+  let pool: Candidate[] = [], sealedCount = prior?.sealedCount ?? 0;
+  const remaining: Candidate[] = [];
   const selected: Candidate[] = [];
-  const seen = new Set<string>();
+  const seen = new Set<string>(prior?.seen);
+  for (const [index, c] of (prior?.remaining ?? []).entries()) {
+    const ordinal = sealedCount - prior!.remaining.length + index;
+    if (ordinal >= end-pageSize && ordinal < end) selected.push(c);
+    else if (ordinal >= end) remaining.push(c);
+  }
   const exact = (c: Candidate) => c.discovery_relevance?.reasons.some(r => r.dimension === "Search text" && r.detail === "Exact name or handle") ? 1 : 0;
   const seal = () => {
     pool.sort((a,b) => exact(b)-exact(a) || compareNormalCandidates(a,b,request.sort));
     for (const c of pool) {
       if (sealedCount >= end-pageSize && sealedCount < end) selected.push(c);
+      else if (sealedCount >= end) remaining.push(c);
       sealedCount++;
     }
     pool = [];
   };
-  while (examined < max) {
+  while (examined < max && sealedCount < end && !exhausted) {
     if (clock()-started >= (options.maxMs ?? 6000)) { reason = "time_budget"; break; }
     const window = await readWindow(examined, Math.min(200, max-examined));
     const scanned = window.scannedCount ?? window.candidates.length;
@@ -192,7 +205,7 @@ export async function executeNormalSearch(request: NormalSearchRequest, readWind
     for (const c of window.candidates) {
       if (seen.has(c.unified_id)) continue;
       seen.add(c.unified_id);
-      const evaluated = evaluateNormalCandidate(c, f, started);
+      const evaluated = evaluateNormalCandidate(c, f, evaluatedAt);
       if (!evaluated.eligible) continue;
       matched++;
       if (c.influencer_id) internalCount++; else discoveryCount++;
@@ -205,5 +218,7 @@ export async function executeNormalSearch(request: NormalSearchRequest, readWind
   }
   const ready = exhausted || sealedCount >= end;
   const completeness: SearchCompleteness = { status: exhausted ? "complete" : ready ? "bounded" : "incomplete", ...(!ready ? {reason} : {}), examined, matched, totalKind: exhausted ? "exact" : "lower_bound" };
-  return { creators: ready ? selected : [], total: matched, has_more: !exhausted || matched > end, page, pageSize, internal_count: internalCount, discovery_count: discoveryCount, completeness };
+  const continuation: NormalSearchContinuation | undefined = ready && (!exhausted || remaining.length > 0)
+    ? { remaining, examined, matched, internalCount, discoveryCount, exhausted, sealedCount, seen: [...seen], evaluatedAt } : undefined;
+  return { continuation, creators: ready ? selected : [], total: matched, has_more: !exhausted || matched > end, page, pageSize, internal_count: internalCount, discovery_count: discoveryCount, completeness };
 }

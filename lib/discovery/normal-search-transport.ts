@@ -3,11 +3,11 @@ import { COUNTRY_OPTIONS } from "@/lib/master-data/constants";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { resolveCreatorSearchFollowerRanges, toBrowseFollowerRanges } from "@/lib/creators/follower-range-filter";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { executeNormalSearch, normalRetrievalQuery, sanitizeNormalFilters, type Candidate, type NormalSearchRequest } from "./normal-search";
+import { executeNormalSearch, normalRetrievalQuery, sanitizeNormalFilters, type Candidate, type NormalSearchRequest, type NormalSearchContinuation } from "./normal-search";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 /** No write-capable callbacks. The only network capability used here is the read-only RPC. */
-export async function runNormalSearchTransport(client: Pick<SupabaseClient, "rpc">, request: NormalSearchRequest) {
+export async function runNormalSearchTransport(client: Pick<SupabaseClient, "rpc">, request: NormalSearchRequest, continuation?: NormalSearchContinuation) {
   const f = sanitizeNormalFilters(request.filters);
   const countryCodes = f.countries.map(resolveCountryCode);
   const countryValues = [...countryCodes, ...COUNTRY_OPTIONS.filter(c => countryCodes.includes(c.value)).map(c => c.label), ...Object.keys(COUNTRY_ALIASES).filter(k => countryCodes.includes(COUNTRY_ALIASES[k]))].map(v => v.toLowerCase());
@@ -28,7 +28,7 @@ export async function runNormalSearchTransport(client: Pick<SupabaseClient, "rpc
     const window = data as { items: Partial<Candidate>[]; exhausted: boolean; scannedCount?: number };
     if (!Array.isArray(window?.items) || typeof window.exhausted !== "boolean") throw new Error("Invalid Discovery candidate response");
     return { exhausted: window.exhausted, scannedCount: window.scannedCount, candidates: window.items.map(candidateFromProjection) };
-  });
+  }, { continuation });
 }
 export function candidateFromProjection(row: Partial<Candidate>): Candidate {
   const metric = { value: null, confidence: "estimated" as const };
