@@ -4,6 +4,7 @@ import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
 import { DocumentNumber } from "@/components/ui/document-number";
+import { ApprovalDocumentLinks } from "@/features/campaigns/components/approval-document-links";
 import {
   DetailField,
   DetailPanelHeader,
@@ -103,6 +104,9 @@ export function ApprovalDetailSheet({
                   </DetailField>
                   <DetailField label="Assignee">{row.assigned_to_name ?? "—"}</DetailField>
                   <DetailField label="Approved by">{row.approved_by_name ?? "—"}</DetailField>
+                  {row.status === "approved" ? (
+                    <DetailField label="Approved documents"><ApprovalDocumentLinks row={row} /></DetailField>
+                  ) : null}
                   {campaignId && row.source_tab && row.source_id ? (
                     <DetailField label="Source document">
                       <a className="text-primary underline" href={`/campaigns/${encodeURIComponent(campaignId)}?tab=${row.source_tab}&io=${encodeURIComponent(row.source_id)}`}>

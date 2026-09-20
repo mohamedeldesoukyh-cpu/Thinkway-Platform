@@ -266,6 +266,9 @@ export type CampaignApprovalRow = {
   approved_by_name?: string | null;
   source_tab?: "client-io" | "vendor-io";
   source_id?: string;
+  document_url?: string | null;
+  attachment_url?: string | null;
+  attachment_label?: "Signed copy" | "Attachment";
 };
 
 export type CampaignActivityItem = {

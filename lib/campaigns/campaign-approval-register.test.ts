@@ -13,6 +13,28 @@ const vendor = {
 };
 
 describe("unified campaign approval register", () => {
+  it("links approved PDFs through authenticated endpoints and labels attachments accurately", () => {
+    const result = buildCampaignApprovalRegister([], { ...io, attachment_url: "https://example.com/po.pdf" }, [
+      { ...vendor, attachment_url: "https://example.com/signed.pdf" },
+    ]);
+    const client = result.find((row) => row.source_tab === "client-io")!;
+    const creator = result.find((row) => row.source_tab === "vendor-io")!;
+    assert.equal(client.document_url, "/api/client-ios/client-1/document?format=pdf");
+    assert.equal(client.attachment_label, "Attachment");
+    assert.equal(creator.document_url, "/api/vendor-ios/vendor-1/document?format=pdf");
+    assert.equal(creator.attachment_label, "Signed copy");
+    assert.equal(creator.attachment_url, "https://example.com/signed.pdf");
+  });
+
+  it("never exposes pending or revised documents as approved and rejects unsafe attachments", () => {
+    const result = buildCampaignApprovalRegister([], { ...io, attachment_url: "javascript:alert(1)" }, [
+      { ...vendor, status: "sent", attachment_url: "https://example.com/old.pdf" },
+      { ...vendor, id: "revision", status: "revision_required", attachment_url: "https://example.com/old.pdf" },
+    ]);
+    assert.equal(result.find((row) => row.source_tab === "client-io")?.attachment_url, null);
+    assert.ok(result.filter((row) => row.source_tab === "vendor-io").every((row) => !row.document_url && !row.attachment_url));
+  });
+
   it("shows existing Client IO and five manually accepted Vendor IOs without separate requests", () => {
     const result = buildCampaignApprovalRegister([], io, Array.from({ length: 5 }, (_, i) => ({ ...vendor, id: `vendor-${i}` })));
     assert.equal(result.length, 6);

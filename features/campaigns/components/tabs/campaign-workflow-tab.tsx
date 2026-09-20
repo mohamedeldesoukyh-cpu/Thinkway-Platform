@@ -21,6 +21,7 @@ import { WORKFLOW_STAGE_OPTIONS } from "@/features/campaigns/constants";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { ApprovalDetailSheet } from "@/features/campaigns/components/detail-sheets/approval-detail-sheet";
+import { ApprovalDocumentLinks } from "@/features/campaigns/components/approval-document-links";
 import { DetailClickableLabel } from "@/features/campaigns/components/detail-sheets/detail-clickable-label";
 import { OPERATIONAL_TABLE_FONT } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
@@ -88,6 +89,11 @@ function buildApprovalsColumns(
       label: "Due",
       cellClassName: "text-muted-foreground",
       renderCell: (a) => (a.due_at ? format(new Date(a.due_at), "MMM d, yyyy") : "—"),
+    },
+    {
+      id: "documents",
+      label: "Approved documents",
+      renderCell: (a) => <ApprovalDocumentLinks row={a} />,
     },
     {
       id: "approved_by",
