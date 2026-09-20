@@ -20,6 +20,7 @@ import { resolveCreatorLineCostDualLabel } from "@/lib/quotations/quotation-line
 import { resolveCreatorProfileUrl } from "@/lib/discovery/profile-url";
 import { cn } from "@/lib/utils";
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
+import { computeQuotationRowComputed, computeQuotationRowClientCommercials } from "@/features/quotations/quotation-row-math";
 import type { QuotationItemRow } from "@/features/quotations/types";
 
 const MODE_OPTIONS = Object.entries(COMMERCIAL_INPUT_MODE_LABELS) as [
@@ -77,6 +78,9 @@ export function QuotationCommercialWorkspaceRowCard({
   displayFxRateToEgp = 1,
 }: Props) {
   const band = resolveProfitabilityBand(row.gpPct);
+  const computed = computeQuotationRowComputed(row.draft);
+  const client = computeQuotationRowClientCommercials(row.draft);
+  const formatMoney = (value: number) => `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(value)} ${row.draft.costCurrency || "EGP"}`;
   const profile = resolveQuotationCreatorProfileSource(
     row.item,
     row.item.platform ? [row.item.platform] : []
@@ -251,7 +255,7 @@ export function QuotationCommercialWorkspaceRowCard({
 
           {show("revenue") ? (
             <div className="cw-field">
-              <span className="cw-field-label">Revenue</span>
+              <span className="cw-field-label">Base revenue</span>
               {canManage ? (
                 <QuotationDecimalInput
                   className="h-8 w-[120px] text-right text-xs tabular-nums"
@@ -271,7 +275,7 @@ export function QuotationCommercialWorkspaceRowCard({
                 />
               ) : (
                 <span className="text-[12px] font-semibold tabular-nums text-[#0d1220]">
-                  {fmtCell(row.revenueEgp)}
+                  {formatMoney(computed.revenue)}
                 </span>
               )}
             </div>
@@ -305,7 +309,7 @@ export function QuotationCommercialWorkspaceRowCard({
 
           {show("gp") ? (
             <div className="cw-field">
-              <span className="cw-field-label">GP</span>
+              <span className="cw-field-label">GP margin (EGP)</span>
               <span className="cw-field-value">{fmtCell(row.gpValueEgp)}</span>
             </div>
           ) : null}
@@ -321,17 +325,19 @@ export function QuotationCommercialWorkspaceRowCard({
 
           {show("afPct") ? (
             <div className="cw-field">
-              <span className="cw-field-label">AF %</span>
+              <span className="cw-field-label">Agency fee %</span>
               {canManage ? (
                 <Input
                   type="number"
+                  min={0}
+                  aria-label="Agency fee percent"
                   className="h-8 w-[72px] text-right text-xs"
                   value={row.draft.afPct}
                   onChange={(e) => {
                     const pct = Number(e.target.value);
                     onStageDraft({
                       ...row.draft,
-                      afPct: Number.isFinite(pct) ? pct : 0,
+                      afPct: Number.isFinite(pct) ? Math.max(0, pct) : 0,
                     });
                   }}
                 />
@@ -340,8 +346,14 @@ export function QuotationCommercialWorkspaceRowCard({
                   {row.draft.afPct.toFixed(1)}
                 </span>
               )}
+              <span className="text-[10.5px] tabular-nums text-muted-foreground">{formatMoney(computed.afValue)}</span>
             </div>
           ) : null}
+
+          <div className="cw-field">
+            <span className="cw-field-label">Client cost (incl. fees)</span>
+            <span className="text-xs font-semibold tabular-nums">{formatMoney(client.clientCost)}</span>
+          </div>
 
           {show("currency") ? (
             <div className="cw-field">

@@ -25,19 +25,23 @@ export const DEFAULT_COMMERCIAL_WORKSPACE_COLUMNS: CommercialWorkspaceColumnPref
     gp: true,
     gpPct: true,
     gpPctInput: true,
-    afPct: false,
+    afPct: true,
     fx: false,
     currency: true,
     mode: true,
   };
 
-const STORAGE_KEY = "tw:quotation-commercial-workspace:columns";
+const LEGACY_STORAGE_KEY = "tw:quotation-commercial-workspace:columns";
+const STORAGE_KEY = `${LEGACY_STORAGE_KEY}:v2`;
 
 export function readCommercialWorkspaceColumnPrefs(): CommercialWorkspaceColumnPrefs {
   if (typeof window === "undefined") return { ...DEFAULT_COMMERCIAL_WORKSPACE_COLUMNS };
   try {
     const raw = window.localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { ...DEFAULT_COMMERCIAL_WORKSPACE_COLUMNS };
+    if (!raw) {
+      const legacy = window.localStorage.getItem(LEGACY_STORAGE_KEY);
+      return { ...DEFAULT_COMMERCIAL_WORKSPACE_COLUMNS, ...(legacy ? JSON.parse(legacy) : {}), afPct: true };
+    }
     const parsed = JSON.parse(raw) as Partial<CommercialWorkspaceColumnPrefs>;
     return { ...DEFAULT_COMMERCIAL_WORKSPACE_COLUMNS, ...parsed };
   } catch {
@@ -60,12 +64,12 @@ export const COMMERCIAL_WORKSPACE_COLUMN_LABELS: Record<
   CommercialWorkspaceColumnId,
   string
 > = {
-  revenue: "Revenue",
+  revenue: "Base revenue",
   cost: "Cost",
-  gp: "GP",
+  gp: "GP margin (incl. fees)",
   gpPct: "GP %",
   gpPctInput: "GP % input",
-  afPct: "AF %",
+  afPct: "Agency fee % and amount",
   fx: "FX",
   currency: "Currency",
   mode: "Mode",

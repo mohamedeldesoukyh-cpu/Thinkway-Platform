@@ -143,6 +143,20 @@ export function computeLiveQuotationTotals(
   return computeQuotationTotals(lines);
 }
 
+/** Client-facing row amounts, including agency fees, matching quotation totals. */
+export function computeQuotationRowClientCommercials(draft: QuotationRowDraft) {
+  const row = computeQuotationRowComputed(draft);
+  const clientCost = roundMoney(row.revenue + row.afValue);
+  const clientCostEgp = roundMoney(row.revenueEgp + row.afValueEgp);
+  return {
+    clientCost,
+    clientCostEgp,
+    agencyFeeEgp: row.afValueEgp,
+    marginEgp: row.agencyMarginEgp,
+    marginPct: clientCostEgp > 0 ? (row.agencyMarginEgp / clientCostEgp) * 100 : 0,
+  };
+}
+
 export type QuotationHeaderCommercialTotals = CommercialTotals & {
   /** Client cost including agency fee (base revenue + AF). */
   totalClientCostEgp: number;

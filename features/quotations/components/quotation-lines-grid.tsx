@@ -37,6 +37,7 @@ import {
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
 import {
   computeQuotationRowComputed,
+  computeQuotationRowClientCommercials,
   resolveQuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
 import type { QuotationDeliverable, QuotationItemRow } from "@/features/quotations/types";
@@ -156,7 +157,12 @@ function QuotationPackLineRow({
       .map((platform) => platform.trim())
       .filter(Boolean);
   });
-  const clientPrice = Math.round(computed.revenueEgp);
+  const clientCommercials = computeQuotationRowClientCommercials(resolved);
+  const clientPrice = clientCommercials.clientCostEgp;
+  const originalCurrency = (resolved.costCurrency || "EGP").trim().toUpperCase();
+  const originalPrice = originalCurrency !== "EGP"
+    ? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(clientCommercials.clientCost)} ${originalCurrency}`
+    : null;
 
   function applyDeliverable(key: string, next: QuotationDeliverable) {
     if (next.cost_currency) {
@@ -319,7 +325,7 @@ function QuotationPackLineRow({
               item={item}
               draft={draft}
               priceLabel={`${F(clientPrice)} EGP`}
-              priceSecondaryLabel={null}
+              priceSecondaryLabel={originalPrice}
               gpPctLabel={formatDeliverableGpPct(
                 primary,
                 draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1
@@ -339,7 +345,10 @@ function QuotationPackLineRow({
                 </span>
               </>
             ) : null}
-            {F(clientPrice)} EGP
+            <span className="inline-flex flex-col items-end">
+              <span>{F(clientPrice)} EGP</span>
+              {originalPrice ? <span className="text-[11px] font-normal text-muted-foreground">{originalPrice}</span> : null}
+            </span>
           </span>
         )}
       </DiscoverySuiteCell>
