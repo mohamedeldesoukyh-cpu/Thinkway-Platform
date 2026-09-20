@@ -3,7 +3,6 @@
 import { useCallback, useTransition } from "react";
 import {
   CopyIcon,
-  MoreHorizontalIcon,
   PlusIcon,
   Trash2Icon,
 } from "lucide-react";
@@ -26,6 +25,8 @@ import {
 } from "@/features/discovery/components/design-system";
 import { DISCOVERY_GRID_MIN_W } from "@/features/discovery/components/design-system/discovery-suite-cols";
 import { QuotationDeliverableCostDetails } from "@/features/quotations/components/quotation-deliverable-cost-details";
+import { QuotationDeliverableTypeLinesEditor } from "@/features/quotations/components/quotation-deliverable-type-lines";
+import { QuotationDeliverablePlatformIcons } from "@/features/quotations/components/quotation-deliverable-platform-icons";
 import { useQuotationManualSave } from "@/features/quotations/components/quotation-manual-save";
 import { useQuotationLineFields } from "@/features/quotations/components/quotation-line-fields";
 import {
@@ -40,37 +41,19 @@ import {
 } from "@/features/quotations/quotation-row-math";
 import type { QuotationDeliverable, QuotationItemRow } from "@/features/quotations/types";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
-import { F, PFC } from "@/lib/discovery/suite/helpers";
-import { optionNumberLabel } from "@/lib/quotations/quotation-deliverable-types";
+import { F } from "@/lib/discovery/suite/helpers";
+import {
+  deliverableTypeLines,
+  optionNumberLabel,
+  platformsFromSelectedPostTypes,
+  selectedTypesFromTypeLines,
+  syncDeliverableFromTypeLines,
+  syncServiceDescriptionWithTypeLines,
+  typeLinesIncludeAllPlatforms,
+} from "@/lib/quotations/quotation-deliverable-types";
 import { formatDeliverableGpPct } from "@/lib/quotations/quotation-deliverable-commercial";
 
 const QUOTATION_MIN_W = DISCOVERY_GRID_MIN_W.quotation ?? 1400;
-
-const TYPE_OPTIONS = [
-  "1× IG Set of stories",
-  "1× IG Reel",
-  "1× TT Video",
-] as const;
-
-function PlatformMarks({ platforms }: { platforms: string | null | undefined }) {
-  const keys = (platforms ?? "")
-    .split(",")
-    .map((k) => k.trim().toLowerCase())
-    .filter(Boolean);
-  if (keys.length === 0) return <span className="tw-miss">—</span>;
-  return (
-    <span className="tw-pf">
-      {keys.map((k) => {
-        const d = PFC[k] ?? (["ig", "?"] as [string, string]);
-        return (
-          <span key={k} className={d[0]}>
-            {d[1]}
-          </span>
-        );
-      })}
-    </span>
-  );
-}
 
 function quotationCreatorCountryCodes(item: QuotationItemRow): string[] | null {
   const fromSource = item.creator_profile_source?.countryCodes?.filter(Boolean);
@@ -161,6 +144,18 @@ function QuotationPackLineRow({
   );
 
   const primary = lineFields.deliverableDrafts[0];
+  const allowedCreatorPlatforms = lineFields.platformSelectOptions.map((p) => p.platform);
+  const selectedPlatforms = lineFields.deliverableDrafts.flatMap((deliverable) => {
+    const fromTypes = platformsFromSelectedPostTypes(
+      selectedTypesFromTypeLines(deliverableTypeLines(deliverable)),
+      allowedCreatorPlatforms
+    );
+    if (fromTypes.length > 0) return fromTypes;
+    return (deliverable.platform || item.platform || "")
+      .split(",")
+      .map((platform) => platform.trim())
+      .filter(Boolean);
+  });
   const clientPrice = Math.round(computed.revenueEgp);
 
   function applyDeliverable(key: string, next: QuotationDeliverable) {
@@ -273,21 +268,40 @@ function QuotationPackLineRow({
         />
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>
-        <PlatformMarks platforms={item.platform} />
+        <QuotationDeliverablePlatformIcons
+          platforms={selectedPlatforms}
+          allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)}
+          loading={lineFields.loadingPlatforms}
+        />
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>
-        <select
-          className="tw-in"
-          aria-label="Type"
-          defaultValue={TYPE_OPTIONS[0]}
-          disabled={!canManage}
-        >
-          {TYPE_OPTIONS.map((opt) => (
-            <option key={opt} value={opt}>
-              {opt}
-            </option>
+        <div className="min-w-0 space-y-2">
+          {lineFields.deliverableDrafts.map((deliverable) => (
+            <QuotationDeliverableTypeLinesEditor
+              key={deliverable.key}
+              lines={deliverableTypeLines(deliverable)}
+              allowedPlatforms={allowedCreatorPlatforms}
+              disabled={!canManage}
+              onChange={(lines) => {
+                const previousLines = deliverableTypeLines(deliverable);
+                const synced = syncDeliverableFromTypeLines(
+                  lines,
+                  allowedCreatorPlatforms,
+                  deliverable.platform || item.platform || ""
+                );
+                applyDeliverable(deliverable.key, {
+                  ...deliverable,
+                  ...synced,
+                  service_description: syncServiceDescriptionWithTypeLines(
+                    deliverable.service_description,
+                    previousLines,
+                    synced.type_lines
+                  ),
+                });
+              }}
+            />
           ))}
-        </select>
+        </div>
       </DiscoverySuiteCell>
       <DiscoverySuiteCell align="end">
         {primary ? (
