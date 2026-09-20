@@ -27,6 +27,8 @@ import {
 } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import { CampaignBlockerResolverDrawer } from "@/features/campaigns/lifecycle/components/campaign-blocker-resolver-drawer";
 import { CampaignVendorIoLifecycleBanner } from "@/features/campaigns/lifecycle/components/campaign-vendor-io-lifecycle-banner";
+import { VendorIoAcceptAllButton } from "@/features/io/components/vendor-io-accept-all-button";
+import { vendorIoNeedsMarkAccepted } from "@/features/io/bulk/vendor-io-bulk-helpers";
 import { CampaignWorkspaceGuidance } from "@/features/campaigns/lifecycle/components/campaign-workspace-guidance";
 import {
   campaignProcessCueFromWorkspace,
@@ -364,6 +366,13 @@ export function CampaignWorkspaceView({
       <CampaignWorkspaceGuidance
         guidance={buildWorkspaceGuidance(lifecycle, tabId)}
         onContinue={continueToNextAction}
+        action={
+          tabId === "vendor-io" &&
+          lifecycle.processCue.stageSignals["client-io"] === "completed" &&
+          vendorIos.some(vendorIoNeedsMarkAccepted)
+            ? <VendorIoAcceptAllButton rows={vendorIos} />
+            : undefined
+        }
       />
       {content}
     </>

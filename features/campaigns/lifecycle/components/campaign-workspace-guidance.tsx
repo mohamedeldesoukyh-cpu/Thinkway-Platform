@@ -1,18 +1,20 @@
 "use client";
 
+import type { ReactNode } from "react";
 import type { WorkspaceGuidance } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import { cn } from "@/lib/utils";
 
 type Props = {
   guidance: WorkspaceGuidance;
   onContinue?: () => void;
+  action?: ReactNode;
   className?: string;
 };
 
 /**
  * Workspace restrictions are distinct from follow-up in an earlier stage.
  */
-export function CampaignWorkspaceGuidance({ guidance, onContinue, className }: Props) {
+export function CampaignWorkspaceGuidance({ guidance, onContinue, action, className }: Props) {
   const locked = Boolean(guidance.isLocked);
   if (!guidance.outOfBand || !guidance.currentSituation) return null;
   // Completed earlier workspaces do not need a navigation reminder.
@@ -34,11 +36,11 @@ export function CampaignWorkspaceGuidance({ guidance, onContinue, className }: P
           <p className="mt-0.5">{guidance.whatHappened}</p>
           <p className="thinkway-lc-unlock mt-1">{guidance.currentSituation}</p>
         </div>
-        {onContinue ? (
+        {action ?? (onContinue ? (
           <button type="button" className="thinkway-bp-continue" onClick={onContinue}>
             {guidance.unlockHint ?? guidance.nextAction}
           </button>
-        ) : null}
+        ) : null)}
       </div>
     </aside>
   );
