@@ -67,6 +67,7 @@ import { useQuotationManualSave } from "@/features/quotations/components/quotati
 import { QuotationCommercialWorkspaceRowCard } from "@/features/quotations/components/quotation-commercial-workspace-row-card";
 import {
   computeQuotationRowComputed,
+  computeQuotationRowClientCommercials,
   resolveQuotationRowDraft,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
@@ -113,6 +114,7 @@ type WorkspaceRow = {
   influencerName: string;
   optionLabel: string | null;
   revenueEgp: number;
+  agencyFeeEgp: number;
   costEgp: number;
   gpValueEgp: number;
   gpPct: number;
@@ -129,6 +131,7 @@ function buildRows(
     .map((item) => {
       const draft = resolveQuotationRowDraft(item, drafts[item.id]);
       const computed = computeQuotationRowComputed(draft);
+      const client = computeQuotationRowClientCommercials(draft);
       const optionCtx = optionContext.get(item.id);
       const showOption = (optionCtx?.duplicateCount ?? 1) > 1;
       return {
@@ -139,10 +142,11 @@ function buildRows(
         optionLabel: showOption
           ? (optionNumberLabel(optionCtx?.optionNumber ?? item.option_number) ?? null)
           : null,
-        revenueEgp: computed.revenueEgp,
+        revenueEgp: client.clientCostEgp,
+        agencyFeeEgp: client.agencyFeeEgp,
         costEgp: computed.costEgp,
-        gpValueEgp: computed.gpValueEgp,
-        gpPct: computed.gpPct,
+        gpValueEgp: client.marginEgp,
+        gpPct: client.marginPct,
         draft,
       };
     });
@@ -154,9 +158,10 @@ function sumRows(rows: WorkspaceRow[]) {
       acc.revenue += row.revenueEgp;
       acc.cost += row.costEgp;
       acc.gp += row.gpValueEgp;
+      acc.agencyFee += row.agencyFeeEgp;
       return acc;
     },
-    { revenue: 0, cost: 0, gp: 0 }
+    { revenue: 0, cost: 0, gp: 0, agencyFee: 0 }
   );
 }
 
@@ -518,7 +523,7 @@ export function QuotationCommercialWorkspaceDialog({
                 <p className="cw-kpi-title">Selection · {selectionRows.length}</p>
                 <div className="cw-stat-grid">
                   <StatCard
-                    label="Revenue"
+                    label="Client cost (incl. fees)"
                     value={fmtStat(
                       selectionTotals.revenue,
                       displayCurrency,
@@ -534,7 +539,7 @@ export function QuotationCommercialWorkspaceDialog({
                     )}
                   />
                   <StatCard
-                    label="GP"
+                    label="GP margin"
                     value={fmtStat(
                       selectionTotals.gp,
                       displayCurrency,
@@ -547,6 +552,7 @@ export function QuotationCommercialWorkspaceDialog({
                     value={fmtGpPct(selectionTotals.gp, selectionTotals.revenue, 0)}
                     tone="green"
                   />
+                  <StatCard label="Agency fees" value={fmtStat(selectionTotals.agencyFee, displayCurrency, displayFxRateToEgp)} />
                 </div>
               </div>
             </div>
@@ -555,7 +561,7 @@ export function QuotationCommercialWorkspaceDialog({
                 <p className="cw-kpi-title">Quotation · {rows.length}</p>
                 <div className="cw-stat-grid">
                   <StatCard
-                    label="Revenue"
+                    label="Client cost (incl. fees)"
                     value={fmtStat(
                       quotationTotals.revenue,
                       displayCurrency,
@@ -571,7 +577,7 @@ export function QuotationCommercialWorkspaceDialog({
                     )}
                   />
                   <StatCard
-                    label="GP"
+                    label="GP margin"
                     value={fmtStat(
                       quotationTotals.gp,
                       displayCurrency,
@@ -584,6 +590,7 @@ export function QuotationCommercialWorkspaceDialog({
                     value={fmtGpPct(quotationTotals.gp, quotationTotals.revenue, 0)}
                     tone="green"
                   />
+                  <StatCard label="Agency fees" value={fmtStat(quotationTotals.agencyFee, displayCurrency, displayFxRateToEgp)} />
                 </div>
               </div>
             </div>
@@ -773,8 +780,8 @@ export function QuotationCommercialWorkspaceDialog({
                 [
                   ["influencer", "Influencer"],
                   ["cost", "Cost"],
-                  ["revenue", "Revenue"],
-                  ["gp", "GP"],
+                  ["revenue", "Client cost"],
+                  ["gp", "GP margin"],
                   ["gpPct", "GP %"],
                 ] as const
               ).map(([field, label]) => (
