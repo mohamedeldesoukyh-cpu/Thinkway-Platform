@@ -6,9 +6,9 @@ Status: local implementation; not committed, deployed, or applied to Production.
 
 Normal Discovery now uses one authenticated server action and pure execution contract:
 
-request -> existing lexical retrieval or selective filter-only SQL windows -> hard eligibility -> contextual relevance -> requested global sort -> final page + completeness metadata.
+request -> existing lexical retrieval or selective filter-only SQL windows -> hard eligibility -> bounded qualified pool -> contextual relevance and deterministic pool sort -> page + continuation/count metadata.
 
-The SQL RPC returns candidate windows, not a pre-ranked final page. The server execution layer evaluates every retrieved window before returning a globally ordered page. Normal UI preserves that order. Legacy explicit acquisition workflows remain separate.
+The SQL RPC returns candidate windows. The server seals and sorts a qualified pool without exhausting the catalog. Later page requests replay fixed pool boundaries rather than sorting an expanding prefix. Normal UI preserves server order. Legacy explicit acquisition workflows remain separate. See DISCOVERY_PHASE1_BOUNDED_EXECUTION.md for the superseding execution rule and measured continuation limitation.
 
 ## B. Files
 
@@ -82,7 +82,7 @@ This table supersedes the older Phase 0 truth matrix for the new normal-search p
 | Source confidence / AI score / Brand fit / price | Unsupported normal controls disabled; old values stripped | Never qualify through proxies |
 | Creator gender/age; verification | No new normal control enabled; existing unavailable controls retained | No inferred demographic data |
 
-Selected platform, follower range, engagement and views must all be satisfied by the same account. Metrics used by global sorting come from that qualified account, preferring the stored default account when it qualifies.
+Selected platform, follower range, engagement and views must all be satisfied by the same account. Metrics used by pool sorting come from that qualified account, preferring the stored default account when it qualifies.
 
 Creator Country inference is intentionally preserved, including the existing account location signal historically named audience_country. That signal cannot qualify Audience Geography. Actual audience demographics cannot establish creator gender/age or creator location. Country-like taxonomy labels are removed from options, typed entries, restored filters and result categories.
 
@@ -120,13 +120,15 @@ This is contextual match strength, not campaign Match %, creator quality or a li
 
 No active supported query/filter context: no Relevance column or Relevance sort option. Active context: optional Relevance column with percentage or Insufficient data; expandable reasons use Match / Not available / Does not match and describe the text tier. The ordinary view does not expose creator-country confidence numbers. Visible sort and direction controls use the existing grid; no brief upload/AI/Match UI was added.
 
-## M–N. Global sorting, pagination and counts
+## M–N. Pool sorting, pagination and counts
 
 Supported sorts: Relevance, name, platform, followers, creator country, categories, engagement, views, source, stored Thinkway and last synced. Requested direction applies to known values, nulls stay last, and unified creator ID breaks ties. No client quality precedence or exact/hybrid regrouping overrides normal server order.
 
-Each request scans compact windows of up to 200 candidates, retains only the best page*pageSize+1 candidates, and returns the requested page after proving exhaustion. Counts cover all qualifying candidates in that exhausted universe, not the loaded page. Internal/discovery subtotals use actual matched source counts. Under stable data/query/sort, offsets and tie-breaking give deterministic nonoverlapping pages. As with ordinary offset pagination, concurrent catalog changes are not a cross-request database snapshot guarantee.
+Each complete 200-candidate retrieval window is qualified. When accumulated qualified candidates reach pageSize, the pool is sealed and sorted; otherwise another window is read. Exhaustion seals a smaller final pool. Completed pools are concatenated, and only those needed for the requested page are evaluated. At pageSize 24 a pool contains at most 223 unique qualified candidates. Exact name/handle matches precede other candidates within a pool, without changing displayed Relevance. Remaining sorting uses the requested field/direction and ID tie-break.
 
-Limits: 10,000 raw candidates and a 6-second elapsed budget checked between window calls; page and pageSize bounded to 100. A budget stop reports incomplete, reason, examined, matched, lower_bound and has_more=true. It returns no falsely globally ranked page. UI displays the incomplete state, a lower-bound count, suppresses auto-loading and asks for a narrower search or retry. RPC errors are errors, never false empty results. An individual SQL call can exceed the between-window time budget; database statement timeout remains an independent constraint.
+The same query, pageSize and stable catalog reproduce pool boundaries, so later pools never reorder earlier ones. Candidate IDs are deduplicated before qualification. Counts are lower bounds until exhaustion is actually observed. A bounded response is usable and supports load-more; it is not an error or a claim of catalog-wide ranking.
+
+The existing 10,000-candidate and six-second safety limits remain. If a requested page cannot be supplied from sealed pools before a limit, the response is incomplete with an honest lower bound. No budget is extended. Later page requests currently replay earlier windows; Production verification found keyword page two returning a deterministic 24-row page in 6.701 seconds, beyond the between-window budget because the final RPC supplied the page. This remains a rollout latency concern.
 
 ## O. No search side effects
 
@@ -136,7 +138,7 @@ No Production access, data writes, backfill, Apify launch, migration application
 
 ## P–Q. Validation
 
-Final local validation: 196 tests passed, 0 failed, 0 skipped. Application TypeScript and the focused new-test type-check passed. Focused lint across 19 changed TypeScript files reports 11 pre-existing workspace errors and 8 pre-existing warnings; no new findings. Tracked and newly added file whitespace checks passed. Validation includes:
+Initial closure validation (before bounded execution): 196 tests passed, 0 failed, 0 skipped. Application TypeScript and the focused new-test type-check passed. Focused lint across 19 changed TypeScript files reports 11 pre-existing workspace errors and 8 pre-existing warnings; no new findings. Tracked and newly added file whitespace checks passed. Validation includes:
 - Pure execution/filter/request matrix and timer tests.
 - Existing category/follower/language/demographic/search-intent/page-fill/criterion regressions.
 - Real PostgreSQL 17 fixture: original lexical functions + new migration, English/Arabic/@handle/name/prefix, fallback, multiple windows, source/feed scalar preservation, canonical identity dedupe, permission denial, anon denial and read-only transaction.
