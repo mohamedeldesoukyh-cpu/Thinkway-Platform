@@ -2,6 +2,7 @@
 import './bank-editor.css';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -40,6 +41,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
     if (bank.payment_type !== 'B') required.push(...(routeMode === 'swift' ? ['swift' as const] : ['bank_name', 'bank_branch', 'bank_address', 'identifier', 'clearing_code'] as const));
     const complete = required.filter(key => String(activeBank[key]).trim()).length;
     const remaining = required.length - complete;
+    const currencyOptions = [...new Set([...COMMERCIAL_CURRENCIES, ...(bank.currency ? [bank.currency] : [])])];
     function update(key: keyof BankDetails, value: string) {
         setIssues([]);
         setBank(previous => ({ ...previous, [key]: value, registered: false }));
@@ -86,7 +88,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
             {ibanChecked && conflicts.length > 0 && <div className="cbd-note cbd-warning">Existing {conflicts.map(([key]) => key.replaceAll('_', ' ')).join(', ')} differ from the IBAN. Your entries were kept. <button type="button" className="cbd-button" onClick={() => { setBank(previous => fillFromIban(previous, true)); setIssues([]); }}>Use detected details</button></div>}
           </section>
           <section className="cbd-section"><div className="cbd-section-title">2 · Beneficiary</div><div className="cbd-grid">
-            {field('beneficiary_name', 'Beneficiary name')}{field('beneficiary_address', 'Beneficiary address')}{field('country', 'Bank country', 'AE, EG, SA…')}{field('currency', 'Beneficiary currency', 'USD, AED, EGP…')}
+            {field('beneficiary_name', 'Beneficiary name')}{field('beneficiary_address', 'Beneficiary address')}{field('country', 'Bank country', 'AE, EG, SA…')}<label className="cbd-field">Beneficiary currency<select className="cbd-input" aria-required="true" value={bank.currency} onChange={e => update('currency', e.target.value)}><option value="">Select currency</option>{currencyOptions.map(currency => <option key={currency} value={currency}>{currency}</option>)}</select></label>
             <label className="cbd-field">Transfer type<select className="cbd-input" value={bank.payment_type} aria-required="true" onChange={e => update('payment_type', e.target.value)}><option value="">Select transfer type</option><option value="B">Within AAIB</option><option value="D">Domestic (EGP)</option><option value="I">International / foreign currency</option></select></label>
             {field('nickname', 'AAIB beneficiary nickname', 'Exact nickname in AAIBeConnect')}
           </div>{bank.payment_type === 'D' && (bank.currency !== 'EGP' || (info?.country && info.country !== 'EG')) && <p className="cbd-note cbd-warning">Domestic is for Egyptian EGP transfers. Select International / foreign currency for this beneficiary.</p>}</section>
