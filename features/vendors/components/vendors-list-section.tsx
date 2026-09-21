@@ -1,5 +1,7 @@
 "use client";
 
+import { BeneficiaryExport } from '@/features/creator-payments/beneficiary-export';
+
 import { Suspense, type ReactNode } from "react";
 
 import "@/app/styles/vendors-list-suite.css";
@@ -132,6 +134,7 @@ export function VendorsListSection({
             </span>
             <span style={{ flex: 1 }} />
             {headerActions}
+            <BeneficiaryExport creators={vendors} />
           </div>
           <div className="tw-ms2" aria-label="Commercial CRM metrics">
             {kpis.map(([label, value, tone]) => (

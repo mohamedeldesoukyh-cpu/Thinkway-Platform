@@ -1,0 +1,136 @@
+"use client";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
+import { toast } from 'sonner';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { loadCreatorPayments, exportCreatorPayments, downloadCreatorPaymentBatch, confirmCreatorPayment } from './actions';
+import { AaibBankEditor, downloadFile } from './bank-editor';
+import { calculatePayment, ioBadge, paymentStatus, money, type PaymentRow, type PaymentDraft, type PaymentBatch } from './model';
+import { PAYMENT_FILENAME, validateBank, type ExportSettings } from './aaib';
+import purposes from './purpose-codes.json';
+const fmt = (n: number, c: string) => `${Number.isFinite(n) ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n) : '—'} ${c}`;
+const inputClass = 'h-9 rounded-md border bg-white px-2 text-sm';
+const defaultDraft = (r: PaymentRow): PaymentDraft => ({ fee: r.fee, vat: r.vat, currency: r.currency, rate: 1, mode: 'full', percent: 100, amount: 0 });
+function Totals({ rows, drafts, selected = false }: {
+    rows: PaymentRow[];
+    drafts: Record<string, PaymentDraft>;
+    selected?: boolean;
+}) {
+    const totals = new Map<string, {
+        fee: number;
+        vat: number;
+        total: number;
+        paid: number;
+        outstanding: number;
+        remaining: number;
+    }>();
+    const payments = new Map<string, number>();
+    for (const row of rows) {
+        const draft = drafts[row.assignmentId] ?? defaultDraft(row);
+        const c = calculatePayment(row, draft);
+        const t = totals.get(row.currency) ?? { fee: 0, vat: 0, total: 0, paid: 0, outstanding: 0, remaining: 0 };
+        t.fee += c.fee;
+        t.vat += c.vatAmount;
+        t.total += c.total;
+        t.paid += row.paid;
+        t.outstanding += c.outstanding;
+        t.remaining += c.remaining;
+        totals.set(row.currency, t);
+        payments.set(draft.currency, (payments.get(draft.currency) ?? 0) + (Number.isFinite(c.payNow) ? c.payNow : 0));
+    }
+    return <div className="space-y-2 rounded-xl border bg-slate-50 p-3"><p className="text-sm font-semibold">{selected ? `${new Set(rows.map(r => r.creatorId)).size} selected creators · ${rows.length} payments` : 'Creator payment totals'}</p>{[...totals].map(([currency, t]) => <div key={currency} className="flex flex-wrap gap-x-6 gap-y-2 text-xs">{Object.entries({ 'Agreed fees': t.fee, VAT: t.vat, 'Total creator fees': t.total, Paid: t.paid, Outstanding: t.outstanding, ...(selected ? { 'Remaining after payment': t.remaining } : {}) }).map(([label, value]) => <div key={label}><span className="text-muted-foreground">{label}</span><p className="font-semibold tabular-nums">{fmt(money(value), currency)}</p></div>)}</div>)}{selected && <div className="text-sm font-semibold">Pay now: {[...payments].map(([c, v]) => fmt(money(v), c)).join(' · ')}</div>}</div>;
+}
+export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
+    campaignId?: string;
+    creatorId?: string;
+}) {
+    const router = useRouter();
+    const [canWrite, setCanWrite] = useState(false);
+    const [search, setSearch] = useState('');
+    const [campaignFilter, setCampaignFilter] = useState('');
+    const [rows, setRows] = useState<PaymentRow[]>([]);
+    const [batches, setBatches] = useState<PaymentBatch[]>([]);
+    const [drafts, setDrafts] = useState<Record<string, PaymentDraft>>({});
+    const [selected, setSelected] = useState<Set<string>>(new Set());
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+    const [busy, setBusy] = useState(false);
+    const [bankRow, setBankRow] = useState<PaymentRow | null>(null);
+    const [exportOpen, setExportOpen] = useState(false);
+    const [resultOpen, setResultOpen] = useState<string | null>(null);
+    const [reference, setReference] = useState('');
+    const [outcome, setOutcome] = useState<'paid' | 'failed'>('paid');
+    const [bulkPct, setBulkPct] = useState(50);
+    const [bulkCurrency, setBulkCurrency] = useState('');
+    const requestId = useRef<string | null>(null);
+    const [settings, setSettings] = useState<ExportSettings>({ debitAccount: '', date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()), charge: 'SHA', purpose: '', details: 'Creator campaign payment', advice: false });
+    const acceptResult = useCallback((r: Awaited<ReturnType<typeof loadCreatorPayments>>) => { setLoading(false); if (!r.ok) {
+        setError(r.message);
+        return;
+    } setError(''); setCanWrite(r.canWrite); setRows(r.rows); setBatches(r.batches); setDrafts({}); setSelected(new Set()); }, []);
+    const reload = useCallback(async () => { acceptResult(await loadCreatorPayments({ campaignId, creatorId })); }, [campaignId, creatorId, acceptResult]);
+    useEffect(() => { let ignore = false; void loadCreatorPayments({ campaignId, creatorId }).then(r => { if (!ignore)
+        acceptResult(r); }); return () => { ignore = true; }; }, [campaignId, creatorId, acceptResult]);
+    function patch(row: PaymentRow, change: Partial<PaymentDraft>) { requestId.current = null; setDrafts(current => ({ ...current, [row.assignmentId]: { ...(current[row.assignmentId] ?? defaultDraft(row)), ...change } })); }
+    const visibleRows = rows.filter(r => (!campaignFilter || r.campaignId === campaignFilter) && r.creator.toLowerCase().includes(search.toLowerCase()));
+    const chosen = rows.filter(r => selected.has(r.assignmentId));
+    const oneCampaign = new Set(chosen.map(r => r.campaignId)).size === 1;
+    const purposeSource = chosen.some(r => r.bank.payment_type === 'I') ? purposes.international : purposes.domestic;
+    const purposeOptions = purposeSource.filter(p => chosen.every(r => (r.bank.payment_type === 'I' ? purposes.international : purposes.domestic).some(code => code.value === p.value)));
+    async function exportBatch() { if (!chosen.length || !oneCampaign)
+        return; setBusy(true); requestId.current ??= crypto.randomUUID(); const r = await exportCreatorPayments({ id: requestId.current, campaignId: chosen[0].campaignId, settings, rows: chosen.map(row => ({ assignmentId: row.assignmentId, draft: drafts[row.assignmentId] ?? defaultDraft(row) })) }); setBusy(false); if (!r.ok) {
+        toast.error(r.message);
+        return;
+    } downloadFile(r.csv, PAYMENT_FILENAME, 'text/csv;charset=windows-1252'); setExportOpen(false); requestId.current = null; toast.success('Export saved. Confirm results after the bank processes it.'); await reload(); router.refresh(); }
+    return <section className="space-y-4 rounded-xl border bg-white p-4" aria-label="Creator payments">
+    <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-lg font-semibold">Creator Payments</h2><p className="text-xs text-muted-foreground">Generated creator IOs · VAT-inclusive payments · manual AAIB upload</p></div><Button variant="outline" onClick={() => void reload()} disabled={loading}>Refresh</Button></div>
+    {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{loading ? <p className="text-sm">Loading payments…</p> : <>
+    <Totals rows={rows} drafts={{}}/>
+    {!rows.length && !error && <p className="text-sm text-muted-foreground">Creator payments appear here after a creator IO has been generated. Continue using the existing IO workflow.</p>}
+    {!!rows.length && <><div className="flex flex-wrap items-center gap-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={!canWrite} checked={visibleRows.length > 0 && visibleRows.every(r => selected.has(r.assignmentId))} onChange={e => { requestId.current = null; setSelected(previous => { const next = new Set(previous); visibleRows.forEach(r => { if (e.target.checked && r.payable !== false)
+                next.add(r.assignmentId);
+            else
+                next.delete(r.assignmentId); }); return next; }); }}/>Select all</label><Input aria-label="Apply percentage to selected creators" className="w-20" type="number" min="0" max="100" value={bulkPct} onChange={e => setBulkPct(Number(e.target.value))}/><Button variant="outline" disabled={!chosen.length} onClick={() => chosen.forEach(r => patch(r, { mode: 'percent', percent: bulkPct }))}>Apply %</Button><select aria-label="Payment currency for selected creators" className={inputClass} value={bulkCurrency} onChange={e => setBulkCurrency(e.target.value)}><option value="">Currency</option>{COMMERCIAL_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select><Button variant="outline" disabled={!chosen.length || !/^[A-Z]{3}$/.test(bulkCurrency)} onClick={() => chosen.forEach(r => patch(r, { currency: bulkCurrency, rate: bulkCurrency === r.currency ? 1 : 0 }))}>Apply currency</Button><Button disabled={!canWrite || !chosen.length || !oneCampaign} onClick={() => { requestId.current = null; setExportOpen(true); }}>Export AAIB payments</Button>{chosen.length > 0 && !oneCampaign && <span className="text-xs text-amber-800">Select creators from one campaign per file.</span>}</div>
+    <div className="flex flex-wrap gap-2"><Input className="max-w-xs" aria-label="Filter creators" placeholder="Find creator…" value={search} onChange={e => setSearch(e.target.value)}/>{!campaignId && <select className={inputClass} aria-label="Filter campaigns" value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}><option value="">All campaigns</option>{[...new Map(rows.map(r => [r.campaignId, r.campaign])).entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>}</div>{!!chosen.length && <Totals rows={chosen} drafts={drafts} selected/>}<div className="space-y-3">{visibleRows.map(row => {
+                    const d = drafts[row.assignmentId] ?? defaultDraft(row);
+                    const c = calculatePayment(row, d);
+                    const status = paymentStatus(row.paid, money(row.fee+row.fee*row.vat/100));
+                    const badge = ioBadge(row.ioStatus);
+                    const issues = validateBank(row.bank);
+                    return <article key={row.assignmentId} className="rounded-xl border p-3">
+      <div className="mb-3 flex flex-wrap items-center gap-2"><input type="checkbox" disabled={!canWrite || row.payable === false} aria-label={`Select ${row.creator}`} checked={selected.has(row.assignmentId)} onChange={e => { requestId.current = null; setSelected(s => { const n = new Set(s); if (e.target.checked)
+                        n.add(row.assignmentId);
+                    else
+                        n.delete(row.assignmentId); return n; }); }}/><strong className="text-sm">{row.creator}</strong><span className={`rounded-full px-2 py-1 text-xs ${badge.className}`}>{badge.label}</span><span className="text-xs text-muted-foreground">{row.ioNumber}{!campaignId ? ` · ${row.campaign}` : ''}</span><span className={`rounded-full px-2 py-1 text-xs ${status.className}`}>{status.label}</span><Button size="sm" variant="outline" onClick={() => setBankRow(row)}>{issues.length ? 'Complete bank details' : row.bank.registered ? 'Edit bank details' : 'Confirm bank registration'}</Button></div>
+      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+        <label className="text-xs">Agreed fee ({row.currency}, excluding VAT)<Input type="number" min="0" step="0.01" value={d.fee} onChange={e => patch(row, { fee: Number(e.target.value) })}/></label>
+        <label className="text-xs">VAT %<Input type="number" min="0" max="100" step="0.01" value={d.vat} onChange={e => patch(row, { vat: Number(e.target.value) })}/><span className="text-muted-foreground">VAT {fmt(c.vatAmount, row.currency)}</span></label>
+        <div className="text-xs">Total creator fees<p className="mt-2 font-semibold">{fmt(c.total, row.currency)}</p><p className="mt-1 text-muted-foreground">Paid {fmt(row.paid, row.currency)}</p></div>
+        <label className="text-xs">Payment currency<select className={`${inputClass} mt-1 w-full`} value={d.currency} onChange={e => patch(row, { currency: e.target.value, rate: e.target.value === row.currency ? 1 : 0 })}>{[...new Set([...COMMERCIAL_CURRENCIES, row.currency, row.bank.currency].filter(Boolean))].map(code => <option key={code}>{code}</option>)}</select>{d.currency !== row.currency && <span>1 {row.currency} =<Input aria-label={`Exchange rate for ${row.creator}`} type="number" min="0" step="0.000001" value={d.rate} onChange={e => patch(row, { rate: Number(e.target.value) })}/>{d.currency}</span>}</label>
+        <label className="text-xs">Payment calculation<select className={`${inputClass} w-full`} value={d.mode === 'percent' ? [25, 50, 75].includes(d.percent) ? String(d.percent) : 'custom' : d.mode} onChange={e => patch(row, e.target.value === 'full' || e.target.value === 'manual' ? { mode: e.target.value } : { mode: 'percent', percent: e.target.value === 'custom' ? d.percent : Number(e.target.value) })}><option value="full">Full available balance</option><option value="25">25% of total incl. VAT</option><option value="50">50% of total incl. VAT</option><option value="75">75% of total incl. VAT</option><option value="custom">Custom % of total incl. VAT</option><option value="manual">Manual amount</option></select>{d.mode === 'percent' && <Input aria-label={`Payment percentage for ${row.creator}`} type="number" min="0" max="100" value={d.percent} onChange={e => patch(row, { percent: Number(e.target.value) })}/>}</label>
+        <label className="text-xs">Pay now ({d.currency})<Input type="number" min="0" step="0.01" value={Number.isFinite(c.payNow) ? c.payNow : 0} onChange={e => patch(row, { mode: 'manual', amount: Number(e.target.value) })}/>{d.currency !== row.currency && <span className="text-muted-foreground">{fmt(Number.isFinite(c.originalPay) ? c.originalPay : 0, row.currency)} equivalent</span>}</label>
+      </div><div className="mt-3 flex flex-wrap gap-4 text-xs"><span>Outstanding: <b>{fmt(c.outstanding, row.currency)}</b></span><span>Pending exports: <b>{fmt(row.reserved, row.currency)}</b></span><span>Remaining after this payment: <b>{fmt(Number.isFinite(c.remaining * c.rate) ? c.remaining * c.rate : 0, d.currency)}</b>{d.currency !== row.currency && <small className="block text-muted-foreground">{fmt(Number.isFinite(c.remaining) ? c.remaining : 0, row.currency)} original</small>}</span></div>
+      {(d.fee !== row.fee || d.vat !== row.vat) && <p className="mt-2 text-xs text-amber-800">Payment-basis adjustment will be saved with the export. The issued IO and campaign agreement are unchanged.</p>}
+      {selected.has(row.assignmentId) && c.errors.map(e => <p key={e} className="mt-1 text-xs text-red-700">{e}</p>)}
+    </article>;
+                })}</div></>}
+
+    <details className="rounded-xl border p-3"><summary className="cursor-pointer font-semibold">Payment batch history ({batches.length})</summary>{batches.map(batch => <div key={batch.id} className="mt-3 space-y-2 border-t pt-3"><div className="flex items-center justify-between text-sm"><span>{batch.transfer_date} · {batch.entries.length} payments</span><Button variant="outline" size="sm" onClick={async () => { const r = await downloadCreatorPaymentBatch(batch.id); if (r.ok)
+            downloadFile(r.csv, PAYMENT_FILENAME, 'text/csv;charset=utf-8');
+        else
+            toast.error(r.message); }}>Download same file</Button></div>{batch.entries.map(e => <div key={e.id} className="flex flex-wrap items-center justify-between gap-2 text-xs"><span>{e.creator_name} · {fmt(e.payment_amount, e.payment_currency)} · <b>{e.status === 'exported' ? 'Awaiting bank result' : e.status}</b>{e.bank_reference ? ` · ${e.bank_reference}` : ''}</span>{canWrite && e.status === 'exported' && <Button size="sm" variant="outline" onClick={() => { setResultOpen(e.id); setReference(''); setOutcome('paid'); }}>Confirm result</Button>}</div>)}</div>)}</details>
+    </>}
+    <Dialog open={!!bankRow} onOpenChange={open => { if (!open)
+        setBankRow(null); }}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl"><DialogTitle>Creator bank details</DialogTitle>{bankRow && <AaibBankEditor key={bankRow.creatorId} creatorId={bankRow.creatorId} initial={bankRow.bank} onSaved={() => { setBankRow(null); void reload(); }}/>}</DialogContent></Dialog>
+    <Dialog open={exportOpen} onOpenChange={setExportOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl"><DialogTitle>Review AAIB payment export</DialogTitle><p className="text-xs text-muted-foreground">Exporting does not mark payments as paid. Upload the file to AAIB, then confirm each result.</p><Totals rows={chosen} drafts={drafts} selected/>{(['debitAccount', 'date', 'details'] as const).map(key => <label key={key} className="text-sm">{key === 'debitAccount' ? 'Company AAIB debit account / IBAN' : key === 'date' ? 'Transfer date' : 'Payment details'}<Input type={key === 'date' ? 'date' : 'text'} value={settings[key]} onChange={e => { requestId.current = null; setSettings({ ...settings, [key]: e.target.value }); }}/></label>)}<label className="text-sm">Charges<select className={`${inputClass} w-full`} value={settings.charge} onChange={e => { requestId.current = null; setSettings({ ...settings, charge: e.target.value }); }}><option value="SHA">SHA — shared</option><option value="OUR">OUR — company pays</option><option value="BEN">BEN — beneficiary pays</option></select></label><label className="text-sm">Purpose code<select className={`${inputClass} w-full`} value={settings.purpose} onChange={e => { requestId.current = null; setSettings({ ...settings, purpose: e.target.value }); }}><option value="">Select bank purpose code</option>{purposeOptions.map((p, i) => <option key={`${p.value}-${i}`} value={p.value}>{p.value} — {p.label}</option>)}</select></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.advice} onChange={e => { requestId.current = null; setSettings({ ...settings, advice: e.target.checked }); }}/>Send beneficiary advice through AAIB (email required)</label>{settings.advice && chosen.map(row => { const d = drafts[row.assignmentId] ?? defaultDraft(row); return <fieldset key={row.assignmentId} className="space-y-2 rounded border p-3"><legend className="text-sm font-semibold">{row.creator} · invoice advice</legend><Input aria-label="Invoice number" placeholder="Actual invoice number" value={d.invoiceNumber ?? ''} onChange={e => patch(row, { invoiceNumber: e.target.value })}/><Input aria-label="Invoice date" type="date" value={d.invoiceDate ?? ''} onChange={e => patch(row, { invoiceDate: e.target.value })}/><label className="text-xs">Invoice amount ({d.currency})<Input type="number" min="0" step="0.01" value={d.invoiceAmount ?? ''} onChange={e => patch(row, { invoiceAmount: Number(e.target.value) })}/></label></fieldset>; })}<Button disabled={busy || !canWrite} onClick={() => void exportBatch()}>{busy ? 'Preparing…' : `Download ${PAYMENT_FILENAME}`}</Button></DialogContent></Dialog>
+    <Dialog open={!!resultOpen} onOpenChange={open => { if (!open)
+        setResultOpen(null); }}><DialogContent><DialogTitle>Confirm bank payment result</DialogTitle><p className="text-sm">Record the actual result from AAIB. A successful result updates the creator balance everywhere.</p><select aria-label="Bank result" className={inputClass} value={outcome} onChange={e => setOutcome(e.target.value as 'paid' | 'failed')}><option value="paid">Successful payment</option><option value="failed">Rejected / cancelled before payment</option></select><Input aria-label="Bank reference or rejection reason" placeholder="Bank reference or rejection reason" value={reference} onChange={e => setReference(e.target.value)}/><Button disabled={busy || !reference.trim()} onClick={async () => { if (!resultOpen)
+        return; setBusy(true); const r = await confirmCreatorPayment(resultOpen, outcome, reference); setBusy(false); if (!r.ok) {
+        toast.error(r.message);
+        return;
+    } setResultOpen(null); toast.success('Payment result recorded.'); await reload(); router.refresh(); }}>Confirm result</Button></DialogContent></Dialog>
+  </section>;
+}

@@ -1,5 +1,7 @@
 "use client";
 
+import { CreatorPaymentsWorkspace } from '@/features/creator-payments/workspace';
+
 import { campaignMoney, CampaignSummaryMoney, CampaignMoneyTotal } from "../campaign-money";
 import Link from "next/link";
 
@@ -352,6 +354,7 @@ export function CampaignBillingTab({
           ) : null}
         </aside>
       ) : null}
+      <div className="mb-4"><CreatorPaymentsWorkspace campaignId={workspace.id} /></div>
       <CampaignWorkspaceFrame
         title="Finance"
         subtitle="Commercial snapshot and billing registers"

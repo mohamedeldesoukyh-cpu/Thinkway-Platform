@@ -73,6 +73,9 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: {
+    '/*': ['./features/creator-payments/templates/**/*'],
+  },
   env: releaseEnv,
   // Pre-existing type debt outside Phase 3 scope can block bundle measurement.
   typescript: {

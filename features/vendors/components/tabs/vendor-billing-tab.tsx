@@ -1,5 +1,8 @@
 "use client";
 
+import { CreatorPaymentsWorkspace } from '@/features/creator-payments/workspace';
+import { CrmAaibBankEditor } from '@/features/creator-payments/bank-editor';
+
 import {
   ReceiptIcon,
   TrendingUpIcon,
@@ -29,6 +32,16 @@ export function VendorBillingTab({
     (workspace.payment_details as { currency?: string })?.currency ??
     "EGP";
   const { financials } = workspace;
+  const payoutTotal = (paid: boolean) => {
+    const totals=new Map<string,number>();
+    for(const row of workspace.payouts){
+      if(!paid&&row.status==='cancelled') continue;
+      const paidAmount=row.paid_amount??(row.status==='paid'?row.amount:0);
+      const amount=paid?paidAmount:Math.max(0,row.amount-paidAmount);
+      totals.set(row.currency,(totals.get(row.currency)??0)+amount);
+    }
+    return [...totals].map(([code,amount])=>formatMoney(amount,code)).join(' · ') || formatMoney(0,currency);
+  };
 
   const summaryItems: KpiCarouselItem[] = [
     {
@@ -62,14 +75,14 @@ export function VendorBillingTab({
     {
       id: "paid",
       label: "Paid out",
-      value: formatMoney(financials.paid_out, currency),
+      value: payoutTotal(true),
       icon: WalletIcon,
       accentKey: "green",
     },
     {
       id: "pending",
       label: "Pending payout",
-      value: formatMoney(financials.pending_payout, currency),
+      value: payoutTotal(false),
       icon: ReceiptIcon,
       accentKey: "pink",
     },
@@ -82,6 +95,8 @@ export function VendorBillingTab({
       onCancel={onCancel}
     >
       <div className="grid gap-[18px]">
+        <details className="rounded-xl border bg-white p-4"><summary className="cursor-pointer font-semibold">AAIB beneficiary bank details</summary><CrmAaibBankEditor creatorId={workspace.id} details={(workspace.payment_details ?? {}) as Record<string, unknown>} /></details>
+        <CreatorPaymentsWorkspace creatorId={workspace.id} />
         <VendorPaymentOpsSection workspace={workspace} />
         <VendorBankAccountsSection workspace={workspace} />
         <VendorBankDetailsSection workspace={workspace} />

@@ -1,5 +1,7 @@
 "use client";
 
+import { CreatorPaymentsWorkspace } from '@/features/creator-payments/workspace';
+
 import { useMemo } from "react";
 import type { ReactNode } from "react";
 
@@ -317,6 +319,7 @@ export function BillingWorkspaceView({ dashboard }: BillingWorkspaceViewProps) {
 
         <TabsContent value="vendors" className={BILLING_TAB_PANEL_CLASS}>
           <OperationalWorkspaceTabPanel className={BILLING_TAB_BODY_CLASS}>
+            <CreatorPaymentsWorkspace />
             <OperationalTableSuiteProvider
               tableId={OPERATIONAL_TABLE_IDS.billingVendorAssignments}
               columns={vendorAssignmentColumns}

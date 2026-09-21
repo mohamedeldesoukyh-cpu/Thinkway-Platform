@@ -84,6 +84,8 @@ export type VendorPayoutIoSummary = {
 };
 
 export type VendorPayoutRow = {
+  paid_amount?: number;
+  has_payment_ledger?: boolean;
   id: string;
   assignment_id: string;
   campaign_id: string | null;

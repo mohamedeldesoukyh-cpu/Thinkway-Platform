@@ -1,0 +1,9 @@
+| Record Type,| Debit Account No.,| Beneficiary Nickname,| Beneficiary Account/IBAN No.,Beneficiary Name,Beneficiary Address,Beneficiary Bank Country (ISO),SWIFT Code/BIC,Clearing Code,Beneficiary Bank Name,Beneficiary Bank Address,| Transaction Date,| Transaction Currency,| Transaction Amount,| Charge Type,Purpose Code,| Payment Details ,| Customer Reference,Intermediate Bank Swift Code / BIC,Deal Reference Number ,| Beneficiary Advice (Y/N),| Recipient Email Address,| Mail Reference
+TRF,,,,,,,,,,,,,,,,,,,,,,
+INV,Invoice1,0,Invoice Amount,Adjustment,Net Amount,Invoice Date,Bill Number,,,,,,,,,,,,,,,
+INV,,1,,,,,"														",,,,,,,,,,,,,,,
+INV,,2,,,,,"													",,,,,,,,,,,,,,,
+TRF,,,,,,,,,,,,,,,,,,,,,,
+INV,Invoice2,0,Invoice Amount,Adjustment,Net Amount,Invoice Date,Bill Number,,,,,,,,,,,,,,,
+INV,,1,,,,,"														",,,,,,,,,,,,,,,
+INV,,2,,,,,"	",,,,,,,,,,,,,,,
