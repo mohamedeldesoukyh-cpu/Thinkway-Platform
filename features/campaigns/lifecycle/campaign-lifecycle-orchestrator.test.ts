@@ -34,6 +34,31 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
 }
 
 describe("campaign lifecycle orchestrator", () => {
+  it("keeps invoicing available during Performance without moving the campaign stage", () => {
+    const lifecycle = deriveLifecycleForTest(base({
+      lineCount: 2,
+      hasClientIo: true,
+      clientIoStatus: "approved",
+      vendorIoCount: 2,
+      approvedVendorIoCount: 2,
+      deliverableCount: 2,
+      uploadedDeliverableCount: 2,
+      publicationCount: 2,
+      activePerformance: true,
+    }));
+    const stageBefore = lifecycle.businessStageId;
+    assert.equal(stageBefore, "publications");
+    const guidance = buildWorkspaceGuidance(lifecycle, "billing");
+    assert.equal(guidance.isLocked, false);
+    assert.equal(guidance.outOfBand, false);
+    assert.equal(guidance.unlockHint, null);
+    assert.equal(renderToStaticMarkup(createElement(CampaignWorkspaceGuidance, {
+      guidance,
+      onContinue: () => {},
+    })), "");
+    assert.equal(lifecycle.businessStageId, stageBefore);
+  });
+
   it("maps waiting client cue to Waiting Client business state", () => {
     const lifecycle = deriveLifecycleForTest(
       base({
@@ -162,13 +187,14 @@ describe("campaign lifecycle orchestrator", () => {
     );
   });
 
-  it("explains Finance and Performance when ahead of business stage", () => {
+  it("keeps Finance available while explaining Performance prerequisites", () => {
     const lifecycle = deriveLifecycleForTest(base({ lineCount: 0 }));
     const finance = buildWorkspaceGuidance(lifecycle, "billing");
-    assert.match(finance.whatHappened, /Invoice creation is disabled/i);
+    assert.equal(finance.whatHappened, "");
+    assert.equal(finance.isLocked, false);
     assert.equal(finance.businessStageLabel, lifecycle.businessStageLabel);
-    assert.equal(finance.outOfBand, true);
-    assert.ok(finance.unlockHint);
+    assert.equal(finance.outOfBand, false);
+    assert.equal(finance.unlockHint, null);
 
     const performance = buildWorkspaceGuidance(lifecycle, "publications");
     assert.match(performance.whatHappened, /Performance metrics unlock/i);

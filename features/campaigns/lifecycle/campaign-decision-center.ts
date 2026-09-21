@@ -1401,18 +1401,6 @@ export function refineGenericAction(
   return trimmed;
 }
 
-/** Create Invoice only when Billing has started (or invoices already exist). */
-export function isBillingInvoiceCreationUnlocked(input: {
-  businessStageId: CampaignWorkspaceTabId;
-  billingSignal: string | undefined;
-  invoiceCount: number;
-}): boolean {
-  if (input.invoiceCount > 0) return true;
-  if (input.businessStageId === "billing") return true;
-  const signal = input.billingSignal ?? "upcoming";
-  return signal !== "upcoming";
-}
-
 /** Build object snapshot from a campaign workspace row (presentation only). */
 export function decisionObjectsFromWorkspace(workspace: {
   document_number?: string | null;
