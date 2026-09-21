@@ -65,12 +65,12 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         const vat = Number(term?.vat ?? a?.cost_vat_percent ?? 0);
         const paid = ledger.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.original_amount), 0);
         const saved = paymentDraftSchema.safeParse(plans.data?.find(p => p.assignment_id === io.assignment_id)?.draft);
-        return { history: ledger.filter(e=>e.status === 'paid').sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
+        return { history: ledger.filter(e=>e.status === 'paid' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
             campaign: campaign?.name ?? campaign?.document_number ?? 'Campaign',
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
             payable: !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
             currency: a?.currency ?? io.currency_code, fee, vat,
-            paid: paid || (a?.vendor_payment_status === 'paid' ? fee + Math.round(fee * vat) / 100 : 0),
+            paid: money(paid || (!ledger.length && a?.vendor_payment_status === 'paid' ? fee + Math.round(fee * vat) / 100 : 0)),
             reserved: ledger.filter(e => e.status === 'exported').reduce((s, e) => s + Number(e.original_amount), 0),
             bank: bankDetails(creator?.payment_details ?? {}) };
     });
@@ -192,6 +192,30 @@ export async function downloadCreatorPaymentBatch(id: string) {
     catch (e) {
         return fail(e);
     }
+}
+export async function reviseCreatorPayment(input: {id:string; revision:number; amount:number; date:string; clear:boolean; reason:string}) {
+    try {
+        const db=await access(true);
+        const item=z.object({id:z.string().uuid(),revision:z.number().int().nonnegative(),amount:z.number().finite().nonnegative(),date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),clear:z.boolean(),reason:z.string().trim().min(1).max(250)}).parse(input);
+        const {error}=await db.rpc('revise_creator_payment',{p_entry:item.id,p_revision:item.revision,p_amount:item.amount,p_date:item.date,p_clear:item.clear,p_reason:item.reason});
+        if(error) throw new Error(error.message);
+        revalidatePath('/campaigns','layout'); revalidatePath('/vendors','layout'); revalidatePath('/billing');
+        return {ok:true as const};
+    } catch(error) {return fail(error);}
+}
+export async function recordCreatorPaymentSeries(assignmentId:string,input:{requestId:string;draft:PaymentDraft}[]) {
+    try {
+        const db=await access(true);
+        z.string().uuid().parse(assignmentId);
+        const items=z.array(z.object({requestId:z.string().uuid(),draft:paymentDraftSchema})).min(1).max(50).parse(input);
+        const {rows}=await loadRows(db,{assignmentIds:[assignmentId]});
+        const row=rows[0]; if(!row) throw new Error('Creator payment unavailable. Refresh payments.');
+        const payments=items.map(({requestId,draft})=>({requestId,assignmentId,creator:row.creator,fee:draft.fee,vat:draft.vat,currency:draft.currency,rate:draft.currency===row.currency?1:draft.rate,amount:draft.amount,paymentDate:draft.paymentDate}));
+        const {error}=await db.rpc('record_creator_payment_series',{p_rows:payments});
+        if(error) throw new Error(error.message);
+        revalidatePath('/campaigns','layout'); revalidatePath('/vendors','layout'); revalidatePath('/billing');
+        return {ok:true as const};
+    } catch(error) {return fail(error);}
 }
 export async function confirmCreatorPayment(id: string, status: 'paid' | 'failed', reference: string) {
     try {

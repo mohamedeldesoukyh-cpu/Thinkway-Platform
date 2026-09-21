@@ -3,7 +3,7 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { defaultPaymentDraft as initialDraft, changedPaymentPlans } from './payment-plan';
-import { paymentAllocation } from './allocations';
+import { paymentAllocation, matchesPaymentFilter } from './allocations';
 import { PaymentHistory } from './payment-history';
 import { DecimalInput } from './decimal-input';
 import { validateBank } from './aaib';
@@ -17,16 +17,13 @@ type Props = {
   showCampaign: boolean; filters: ReactNode; canReview: boolean;
   onPatch: (row: PaymentRow, change: Partial<PaymentDraft>) => void;
   onBank: (row: PaymentRow) => void; onSelect: (id: string, checked: boolean) => void;
-  onSelectAll: (ids: string[], checked: boolean) => void; onExport: () => void; onReview: () => void;
+  onSelectAll: (ids: string[], checked: boolean) => void; onExport: () => void; onReview: () => void; onSaved: () => void;
 };
 
-export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign, filters, canReview, onPatch, onBank, onSelect, onSelectAll, onExport, onReview }: Props) {
+export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign, filters, canReview, onPatch, onBank, onSelect, onSelectAll, onExport, onReview, onSaved }: Props) {
   const [filter, setFilter] = useState('all');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const visible = rows.filter(row => {
-    const allocation = paymentAllocation(row);
-    return filter === 'all' || (filter === 'advance' ? allocation.advance > 0 : filter === 'paid' ? allocation.fullyPaid : allocation.remaining > 0);
-  });
+  const visible = rows.filter(row => matchesPaymentFilter(row,filter));
   const eligible = visible.filter(row => row.payable !== false);
   const incomplete = visible.filter(row => validateBank(row.bank).length > 0);
   const ready = visible.filter(row => {
@@ -44,6 +41,7 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
         <button className="cp-button" onClick={onExport}>Export</button><button className="cp-button primary" disabled={!canReview} onClick={onReview}>Review selected</button></div>
     </div>
     <div className="cp-register-filters">{filters}</div>
+    {filter==='paid'&&<p className="cp-note">Creators with recorded payments, including partial payments and advances. Open payment history to revise or clear an individual record.</p>}
     {incomplete.length > 0 && <p className="cp-note warning"><b>{incomplete.length} of {visible.length}</b> payment lines need bank details before export. You can prepare amounts now; open a creator’s bank details to complete the required fields.</p>}
     <div className="cp-table-scroll" tabIndex={0} role="region" aria-label="Creator payments table">
       <table className="cp-table"><colgroup>{[32,210,110,125,105,82,118,112,160,125,118].map((width,i) => <col key={i} style={{ width }}/>)}</colgroup>
@@ -73,7 +71,7 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
               <td className="numeric"><b>{number(calculation.remaining * calculation.rate)}</b><small>{draft.currency}{draft.currency !== row.currency && <> · {amount(calculation.remaining,row.currency)} original</>}</small><small>Unpaid: {amount(calculation.outstanding,row.currency)}</small></td>
             </tr>
             {(open || errors.length > 0 || draft.vat !== row.vat) && <tr className="cp-detail-row" id={`payment-details-${row.assignmentId}`}><td colSpan={11}>{open && <div className="cp-balances"><span>Paid <b>{amount(row.paid,row.currency)}</b></span><span>Pending exports <b>{amount(row.reserved,row.currency)}</b></span><span>Remaining after payment <b>{amount(calculation.remaining * calculation.rate,draft.currency)}</b>{draft.currency !== row.currency && <small>{amount(calculation.remaining,row.currency)} original</small>}</span></div>}{draft.vat !== row.vat && <p className="cp-vat-note">VAT is recorded with the payment or bank export. The issued IO and campaign agreement remain unchanged.</p>}{errors.map(error => <p key={error} role="alert" className="cp-error">{error}</p>)}</td></tr>}
-            <tr className="cp-detail-row"><td colSpan={11}><PaymentHistory row={row}/></td></tr>
+            <tr className="cp-detail-row"><td colSpan={11}><PaymentHistory row={row} canWrite={canWrite} onSaved={onSaved}/></td></tr>
           </Fragment>;
         })}{!visible.length && <tr><td colSpan={11} className="cp-empty">No creators match these filters.</td></tr>}</tbody>
         <tfoot><tr><td/><td>{new Set(visible.map(row => row.creatorId)).size} creators</td><td/><td>{ready.length} ready</td><td className="numeric">{currencies.map(currency => <div key={currency}>{amount(sum(currency,'fee'),currency)}</div>)}</td><td className="numeric"><small>VAT amount</small>{currencies.map(currency => <div key={currency}>{amount(sum(currency,'vatAmount'),currency)}</div>)}</td><td className="numeric">{currencies.map(currency => <div key={currency}>{amount(sum(currency,'total'),currency)}</div>)}</td><td/><td>Selected pay now</td><td className="numeric">{payCurrencies.length ? payCurrencies.map(currency => <div key={currency}>{amount(visible.filter(row => selected.has(row.assignmentId) && (drafts[row.assignmentId] ?? initialDraft(row)).currency === currency).reduce((total,row) => { const value = calculatePayment(row,drafts[row.assignmentId] ?? initialDraft(row)).payNow; return total + (Number.isFinite(value) ? value : 0); },0),currency)}</div>) : '—'}</td><td className="numeric">{currencies.map(currency => <div key={currency}>{amount(sum(currency,'remaining'),currency)}</div>)}</td></tr></tfoot>
