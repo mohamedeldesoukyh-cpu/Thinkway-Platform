@@ -349,7 +349,8 @@ export function CreatorSearchResultList({
         data-discovery-scroll
         className="discovery-search-exact-scroll min-h-0 flex-1 overflow-auto"
       >
-        {completeness?.status === "incomplete" ? <div role="status" className="p-6 text-sm">Search incomplete: the work limit was reached after checking {completeness.examined.toLocaleString()} candidates. At least {completeness.matched.toLocaleString()} qualify. Narrow the search or retry to load this page.</div> : error && !hasCreators ? (
+        {completeness?.status === "incomplete" && <div role="status" className="p-6 text-sm">Search incomplete: the {completeness.reason === "time_budget" ? "time" : "work"} limit was reached after checking {completeness.examined.toLocaleString()} candidates. At least {completeness.matched.toLocaleString()} qualify. {hasCreators ? "Showing qualified results; more results may be available." : "Narrow the search or retry to load this page."}</div>}
+        {completeness?.status === "incomplete" && !hasCreators ? null : error && !hasCreators ? (
           <DiscoveryEmptyState
             title="Search failed"
             description={error}

@@ -1,3 +1,4 @@
+import { normalizeInfluencerTier } from "@/lib/creators/influencer-tier";
 import type { CampaignIntelligenceProfile } from "../../types/profile";
 import type { DiscoveryCampaignRequirements } from "../discovery-campaign-requirements";
 
@@ -201,7 +202,7 @@ export function normalizeCampaignIntelligence(
     ["creatorRequirements.countries", profile.creatorRequirements?.countries, "countries", resolveCountryCode],
     ["creatorRequirements.languages", profile.creatorRequirements?.languages, "languages", normalizeRequirementLanguage],
     ["contentLanguages", profile.contentLanguages, "contentLanguages", normalizeRequirementLanguage],
-    ["creatorRequirements.tiers", profile.creatorRequirements?.tiers, "tiers", (v: string) => /^(nano|micro|mid|macro|mega|celebrity)$/i.test(v.trim()) ? v.trim().toLowerCase() : null],
+    ["creatorRequirements.tiers", profile.creatorRequirements?.tiers, "tiers", (v: string) => normalizeInfluencerTier(v)?.toLowerCase() ?? null],
   ] as const) {
     if (!rawValues?.length) continue;
     const provenance = getFieldProvenance(profile, field);

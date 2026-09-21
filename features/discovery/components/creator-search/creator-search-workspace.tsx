@@ -886,7 +886,7 @@ export function CreatorSearchWorkspace({
         normalContinuationRef.current = result.continuation;
         setTotal(result.total);
         setCompleteness(result.completeness);
-        setHasMore(result.has_more);
+        setHasMore(result.has_more && (result.completeness?.status !== "incomplete" || Boolean(result.continuation)));
         pagesLoadedRef.current = pageNum;
       } catch (error) {
         if (!controller.signal.aborted && requestId === reqIdRef.current) {
@@ -2461,7 +2461,7 @@ export function CreatorSearchWorkspace({
           platformFilter={filters.platforms}
           loading={loading && displayCreators.length === 0}
           loadingMore={loadingMore}
-          hasMore={aiModeActive || completeness?.status === "incomplete" ? false : hasMore}
+          hasMore={aiModeActive ? false : hasMore}
           error={error}
           total={headerTotal}
           completeness={completeness}
