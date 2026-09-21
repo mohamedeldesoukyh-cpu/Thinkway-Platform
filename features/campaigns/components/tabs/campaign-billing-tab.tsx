@@ -1,6 +1,7 @@
 "use client";
 
 import { CreatorPaymentsWorkspace } from '@/features/creator-payments/workspace';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 
 import { campaignMoney, CampaignSummaryMoney, CampaignMoneyTotal } from "../campaign-money";
 import Link from "next/link";
@@ -331,7 +332,12 @@ export function CampaignBillingTab({
   const billingRemainingPo = financials.remaining_po;
 
   return (
-    <div>
+    <Tabs defaultValue="billing" className="campaign-finance-workspace">
+      <TabsList aria-label="Finance sections" className="campaign-finance-tabs">
+        <TabsTrigger value="billing" className="thinkway-campaign-btn">Billing</TabsTrigger>
+        <TabsTrigger value="creator-payments" className="thinkway-campaign-btn">Creator Payments</TabsTrigger>
+      </TabsList>
+      <TabsContent value="billing" forceMount className="data-[state=inactive]:hidden">
       {!invoiceCreationUnlocked ? (
         <aside className="thinkway-lc-finance-lock mb-3" aria-label="Invoice availability">
           <div className="thinkway-bp-label">Create Invoice unavailable</div>
@@ -354,7 +360,6 @@ export function CampaignBillingTab({
           ) : null}
         </aside>
       ) : null}
-      <div className="mb-4"><CreatorPaymentsWorkspace campaignId={workspace.id} /></div>
       <CampaignWorkspaceFrame
         title="Finance"
         subtitle="Commercial snapshot and billing registers"
@@ -689,6 +694,10 @@ export function CampaignBillingTab({
         </OperationalTableSection>
       </OperationalTableSuiteProvider>
       </CampaignWorkspaceFrame>
+      </TabsContent>
+      <TabsContent value="creator-payments" forceMount className="data-[state=inactive]:hidden">
+        <CreatorPaymentsWorkspace campaignId={workspace.id} />
+      </TabsContent>
 
       <CreateInvoiceSheet
         campaignId={workspace.id}
@@ -720,6 +729,6 @@ export function CampaignBillingTab({
         row={detailPayment}
         campaignName={workspace.name}
       />
-    </div>
+    </Tabs>
   );
 }

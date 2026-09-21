@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { toast } from 'sonner';
@@ -11,13 +11,16 @@ import { AaibBankEditor, downloadFile } from './bank-editor';
 import { calculatePayment, ioBadge, paymentStatus, money, type PaymentRow, type PaymentDraft, type PaymentBatch } from './model';
 import { PAYMENT_FILENAME, validateBank, type ExportSettings } from './aaib';
 import purposes from './purpose-codes.json';
+import { CampaignWorkspaceFrame, type WorkspaceSummaryStat } from '@/features/campaigns/components/aurora/campaign-workspace-frame';
+import '@/app/styles/creator-payments.css';
 const fmt = (n: number, c: string) => `${Number.isFinite(n) ? new Intl.NumberFormat('en-US', { maximumFractionDigits: 2 }).format(n) : '—'} ${c}`;
 const inputClass = 'h-9 rounded-md border bg-white px-2 text-sm';
 const defaultDraft = (r: PaymentRow): PaymentDraft => ({ fee: r.fee, vat: r.vat, currency: r.currency, rate: 1, mode: 'full', percent: 100, amount: 0 });
-function Totals({ rows, drafts, selected = false }: {
+function Totals({ rows, drafts, selected = false, tools }: {
     rows: PaymentRow[];
     drafts: Record<string, PaymentDraft>;
     selected?: boolean;
+    tools?: ReactNode;
 }) {
     const totals = new Map<string, {
         fee: number;
@@ -41,7 +44,25 @@ function Totals({ rows, drafts, selected = false }: {
         totals.set(row.currency, t);
         payments.set(draft.currency, (payments.get(draft.currency) ?? 0) + (Number.isFinite(c.payNow) ? c.payNow : 0));
     }
-    return <div className="space-y-2 rounded-xl border bg-slate-50 p-3"><p className="text-sm font-semibold">{selected ? `${new Set(rows.map(r => r.creatorId)).size} selected creators · ${rows.length} payments` : 'Creator payment totals'}</p>{[...totals].map(([currency, t]) => <div key={currency} className="flex flex-wrap gap-x-6 gap-y-2 text-xs">{Object.entries({ 'Agreed fees': t.fee, VAT: t.vat, 'Total creator fees': t.total, Paid: t.paid, Outstanding: t.outstanding, ...(selected ? { 'Remaining after payment': t.remaining } : {}) }).map(([label, value]) => <div key={label}><span className="text-muted-foreground">{label}</span><p className="font-semibold tabular-nums">{fmt(money(value), currency)}</p></div>)}</div>)}{selected && <div className="text-sm font-semibold">Pay now: {[...payments].map(([c, v]) => fmt(money(v), c)).join(' · ')}</div>}</div>;
+    const metrics: { key: keyof NonNullable<ReturnType<typeof totals.get>>; label: string; tone?: WorkspaceSummaryStat['tone'] }[] = [
+        { key: 'fee', label: 'Agreed fees', tone: 'blue' },
+        { key: 'vat', label: 'VAT' },
+        { key: 'total', label: 'Total creator fees' },
+        { key: 'paid', label: 'Paid', tone: 'pos' },
+        { key: 'outstanding', label: 'Outstanding', tone: 'amber' },
+        ...(selected ? [{ key: 'remaining' as const, label: 'Remaining after payment' }] : []),
+    ];
+    const stats: WorkspaceSummaryStat[] = metrics.map(metric => ({
+        key: metric.key, label: metric.label, tone: metric.tone,
+        value: totals.size ? <div className="space-y-1">{[...totals].map(([currency, total]) => <div key={currency}>{currency} {fmt(money(total[metric.key]), currency).replace(' '+currency, '')}</div>)}</div> : '—',
+    }));
+    if (selected) stats.push({ key: 'pay-now', label: 'Pay now', tone: 'blue', value: <div className="space-y-1">{[...payments].map(([currency, value]) => <div key={currency}>{fmt(money(value),currency)}</div>)}</div> });
+    return <CampaignWorkspaceFrame
+        title={selected ? 'Selected creator payments' : 'Creator payment totals'}
+        subtitle={selected ? `${new Set(rows.map(row => row.creatorId)).size} creators · ${rows.length} payments` : 'Agreed fees, VAT and payment balances · original currencies'}
+        tools={tools}
+        stats={stats}
+    />;
 }
 export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
     campaignId?: string;
@@ -85,10 +106,9 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
         toast.error(r.message);
         return;
     } downloadFile(r.csv, PAYMENT_FILENAME, 'text/csv;charset=windows-1252'); setExportOpen(false); requestId.current = null; toast.success('Export saved. Confirm results after the bank processes it.'); await reload(); router.refresh(); }
-    return <section className="space-y-4 rounded-xl border bg-white p-4" aria-label="Creator payments">
-    <div className="flex flex-wrap items-center justify-between gap-2"><div><h2 className="text-lg font-semibold">Creator Payments</h2><p className="text-xs text-muted-foreground">Generated creator IOs · VAT-inclusive payments · manual AAIB upload</p></div><Button variant="outline" onClick={() => void reload()} disabled={loading}>Refresh</Button></div>
+    return <section className="thinkway-creator-payments space-y-3" aria-label="Creator payments">
+    <Totals rows={rows} drafts={{}} tools={<Button className="thinkway-campaign-btn" variant="outline" onClick={() => void reload()} disabled={loading}>Refresh</Button>}/>
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{loading ? <p className="text-sm">Loading payments…</p> : <>
-    <Totals rows={rows} drafts={{}}/>
     {!rows.length && !error && <p className="text-sm text-muted-foreground">Creator payments appear here after a creator IO has been generated. Continue using the existing IO workflow.</p>}
     {!!rows.length && <><div className="flex flex-wrap items-center gap-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={!canWrite} checked={visibleRows.length > 0 && visibleRows.every(r => selected.has(r.assignmentId))} onChange={e => { requestId.current = null; setSelected(previous => { const next = new Set(previous); visibleRows.forEach(r => { if (e.target.checked && r.payable !== false)
                 next.add(r.assignmentId);
@@ -100,19 +120,19 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
                     const status = paymentStatus(row.paid, money(row.fee+row.fee*row.vat/100));
                     const badge = ioBadge(row.ioStatus);
                     const issues = validateBank(row.bank);
-                    return <article key={row.assignmentId} className="rounded-xl border p-3">
-      <div className="mb-3 flex flex-wrap items-center gap-2"><input type="checkbox" disabled={!canWrite || row.payable === false} aria-label={`Select ${row.creator}`} checked={selected.has(row.assignmentId)} onChange={e => { requestId.current = null; setSelected(s => { const n = new Set(s); if (e.target.checked)
+                    return <article key={row.assignmentId} className="creator-payment-card">
+      <div className="creator-payment-card-head flex flex-wrap items-center gap-2"><input type="checkbox" disabled={!canWrite || row.payable === false} aria-label={`Select ${row.creator}`} checked={selected.has(row.assignmentId)} onChange={e => { requestId.current = null; setSelected(s => { const n = new Set(s); if (e.target.checked)
                         n.add(row.assignmentId);
                     else
                         n.delete(row.assignmentId); return n; }); }}/><strong className="text-sm">{row.creator}</strong><span className={`rounded-full px-2 py-1 text-xs ${badge.className}`}>{badge.label}</span><span className="text-xs text-muted-foreground">{row.ioNumber}{!campaignId ? ` · ${row.campaign}` : ''}</span><span className={`rounded-full px-2 py-1 text-xs ${status.className}`}>{status.label}</span><Button size="sm" variant="outline" onClick={() => setBankRow(row)}>{issues.length ? 'Complete bank details' : row.bank.registered ? 'Edit bank details' : 'Confirm bank registration'}</Button></div>
-      <div className="grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
+      <div className="creator-payment-fields grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
         <label className="text-xs">Agreed fee ({row.currency}, excluding VAT)<Input type="number" min="0" step="0.01" value={d.fee} onChange={e => patch(row, { fee: Number(e.target.value) })}/></label>
         <label className="text-xs">VAT %<Input type="number" min="0" max="100" step="0.01" value={d.vat} onChange={e => patch(row, { vat: Number(e.target.value) })}/><span className="text-muted-foreground">VAT {fmt(c.vatAmount, row.currency)}</span></label>
         <div className="text-xs">Total creator fees<p className="mt-2 font-semibold">{fmt(c.total, row.currency)}</p><p className="mt-1 text-muted-foreground">Paid {fmt(row.paid, row.currency)}</p></div>
         <label className="text-xs">Payment currency<select className={`${inputClass} mt-1 w-full`} value={d.currency} onChange={e => patch(row, { currency: e.target.value, rate: e.target.value === row.currency ? 1 : 0 })}>{[...new Set([...COMMERCIAL_CURRENCIES, row.currency, row.bank.currency].filter(Boolean))].map(code => <option key={code}>{code}</option>)}</select>{d.currency !== row.currency && <span>1 {row.currency} =<Input aria-label={`Exchange rate for ${row.creator}`} type="number" min="0" step="0.000001" value={d.rate} onChange={e => patch(row, { rate: Number(e.target.value) })}/>{d.currency}</span>}</label>
         <label className="text-xs">Payment calculation<select className={`${inputClass} w-full`} value={d.mode === 'percent' ? [25, 50, 75].includes(d.percent) ? String(d.percent) : 'custom' : d.mode} onChange={e => patch(row, e.target.value === 'full' || e.target.value === 'manual' ? { mode: e.target.value } : { mode: 'percent', percent: e.target.value === 'custom' ? d.percent : Number(e.target.value) })}><option value="full">Full available balance</option><option value="25">25% of total incl. VAT</option><option value="50">50% of total incl. VAT</option><option value="75">75% of total incl. VAT</option><option value="custom">Custom % of total incl. VAT</option><option value="manual">Manual amount</option></select>{d.mode === 'percent' && <Input aria-label={`Payment percentage for ${row.creator}`} type="number" min="0" max="100" value={d.percent} onChange={e => patch(row, { percent: Number(e.target.value) })}/>}</label>
         <label className="text-xs">Pay now ({d.currency})<Input type="number" min="0" step="0.01" value={Number.isFinite(c.payNow) ? c.payNow : 0} onChange={e => patch(row, { mode: 'manual', amount: Number(e.target.value) })}/>{d.currency !== row.currency && <span className="text-muted-foreground">{fmt(Number.isFinite(c.originalPay) ? c.originalPay : 0, row.currency)} equivalent</span>}</label>
-      </div><div className="mt-3 flex flex-wrap gap-4 text-xs"><span>Outstanding: <b>{fmt(c.outstanding, row.currency)}</b></span><span>Pending exports: <b>{fmt(row.reserved, row.currency)}</b></span><span>Remaining after this payment: <b>{fmt(Number.isFinite(c.remaining * c.rate) ? c.remaining * c.rate : 0, d.currency)}</b>{d.currency !== row.currency && <small className="block text-muted-foreground">{fmt(Number.isFinite(c.remaining) ? c.remaining : 0, row.currency)} original</small>}</span></div>
+      </div><div className="creator-payment-balances flex flex-wrap gap-4"><span>Outstanding: <b>{fmt(c.outstanding, row.currency)}</b></span><span>Pending exports: <b>{fmt(row.reserved, row.currency)}</b></span><span>Remaining after this payment: <b>{fmt(Number.isFinite(c.remaining * c.rate) ? c.remaining * c.rate : 0, d.currency)}</b>{d.currency !== row.currency && <small className="block text-muted-foreground">{fmt(Number.isFinite(c.remaining) ? c.remaining : 0, row.currency)} original</small>}</span></div>
       {(d.fee !== row.fee || d.vat !== row.vat) && <p className="mt-2 text-xs text-amber-800">Payment-basis adjustment will be saved with the export. The issued IO and campaign agreement are unchanged.</p>}
       {selected.has(row.assignmentId) && c.errors.map(e => <p key={e} className="mt-1 text-xs text-red-700">{e}</p>)}
     </article>;
