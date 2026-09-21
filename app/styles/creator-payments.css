@@ -1,0 +1,98 @@
+/* Shared campaign Finance styling; payment calculations remain in the model. */
+.campaign-finance-workspace .campaign-finance-tabs {
+  height: auto;
+  padding: 0;
+  gap: 8px;
+  background: transparent;
+  margin-bottom: 8px;
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.campaign-finance-tabs [role="tab"] {
+  flex: 0 0 auto;
+  min-width: max-content;
+  min-height: 34px;
+  padding: 8px 14px;
+  border: 1px solid var(--tw-line, var(--border)) !important;
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--tw-ink2, var(--foreground));
+  font-size: 12.5px;
+  font-weight: 500;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 4%);
+}
+.campaign-finance-tabs [role="tab"][data-state="active"] {
+  border-color: var(--tw-blue, var(--primary)) !important;
+  background: var(--tw-lav, var(--accent));
+  color: var(--tw-blue, var(--primary));
+}
+.campaign-finance-workspace [role="tabpanel"][data-state="inactive"] {
+  display: none;
+}
+.thinkway-creator-payments {
+  font-family: var(--font-geist-sans), Geist, Inter, "Segoe UI", sans-serif;
+  color: var(--tw-ink2, var(--foreground));
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.thinkway-creator-payments .creator-payment-card {
+  overflow: hidden;
+  border: 1px solid var(--tw-line, var(--border));
+  border-radius: 14px;
+  background: var(--card);
+}
+.thinkway-creator-payments .creator-payment-card-head {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--tw-hair, var(--border));
+  background: var(--tw-soft, var(--muted));
+}
+.thinkway-creator-payments .creator-payment-card-head strong {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--tw-ink, var(--foreground));
+}
+.thinkway-creator-payments .creator-payment-fields {
+  padding: 14px;
+}
+.thinkway-creator-payments .creator-payment-fields > label,
+.thinkway-creator-payments .creator-payment-fields > div {
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 400;
+}
+.thinkway-creator-payments input:not([type="checkbox"]),
+.thinkway-creator-payments select,
+.thinkway-creator-payments button {
+  font-family: inherit;
+  font-size: 12.5px;
+}
+.thinkway-creator-payments .creator-payment-fields input,
+.thinkway-creator-payments .creator-payment-fields select {
+  margin-top: 5px;
+  border-radius: 8px;
+  border-color: var(--tw-line, var(--border));
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+.thinkway-creator-payments .creator-payment-fields .text-muted-foreground,
+.thinkway-creator-payments .creator-payment-balances small {
+  display: block;
+  font-size: 11px;
+  color: var(--tw-mut, var(--muted-foreground));
+}
+.thinkway-creator-payments .creator-payment-balances {
+  padding: 11px 14px;
+  border-top: 1px solid var(--tw-hair, var(--border));
+  font-size: 12.5px;
+  font-variant-numeric: tabular-nums;
+}
+.thinkway-creator-payments .creator-payment-balances b {
+  font-weight: 500;
+}
+.thinkway-creator-payments .creator-payment-card > p {
+  padding: 0 14px 8px;
+}
+.thinkway-creator-payments details.creator-payment-card {
+  padding: 11px 14px;
+}
