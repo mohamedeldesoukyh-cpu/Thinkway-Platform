@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { loadCreatorPayments, exportCreatorPayments, downloadCreatorPaymentBatch, confirmCreatorPayment } from './actions';
+import { CREATOR_BANK_SAVED, applySavedCreatorBank, type CreatorBankSaved } from './bank-sync';
 import { AaibBankEditor, downloadFile } from './bank-editor';
 import { calculatePayment, money, type PaymentRow, type PaymentDraft, type PaymentBatch } from './model';
 import { PAYMENT_FILENAME, type ExportSettings } from './aaib';
@@ -104,15 +105,41 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
     const [outcome, setOutcome] = useState<'paid' | 'failed'>('paid');
     const [bulkPct, setBulkPct] = useState(50);
     const [bulkCurrency, setBulkCurrency] = useState('');
+    const loadVersion = useRef(0);
     const requestId = useRef<string | null>(null);
     const [settings, setSettings] = useState<ExportSettings>({ debitAccount: '', date: new Intl.DateTimeFormat('en-CA', { timeZone: 'Africa/Cairo', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date()), charge: 'SHA', purpose: '', details: 'Creator campaign payment', advice: false });
-    const acceptResult = useCallback((r: Awaited<ReturnType<typeof loadCreatorPayments>>) => { setLoading(false); if (!r.ok) {
+    const acceptResult = useCallback((r: Awaited<ReturnType<typeof loadCreatorPayments>>, preserveDrafts = false) => { setLoading(false); if (!r.ok) {
         setError(r.message);
         return;
-    } setError(''); setCanWrite(r.canWrite); setRows(r.rows); setBatches(r.batches); setDrafts({}); setSelected(new Set()); }, []);
-    const reload = useCallback(async () => { setLoading(true); setError(''); try { acceptResult(await loadCreatorPayments({ campaignId, creatorId })); } catch { setLoading(false); setError('Could not load payments. Please try Refresh again.'); } }, [campaignId, creatorId, acceptResult]);
-    useEffect(() => { let ignore = false; void loadCreatorPayments({ campaignId, creatorId }).then(r => { if (!ignore)
-        acceptResult(r); }).catch(() => { if (!ignore) { setLoading(false); setError('Could not load payments. Please try Refresh again.'); } }); return () => { ignore = true; }; }, [campaignId, creatorId, acceptResult]);
+    } setError(''); setCanWrite(r.canWrite); setRows(r.rows); setBatches(r.batches); if (!preserveDrafts) { setDrafts({}); setSelected(new Set()); } }, []);
+    const reload = useCallback(async (preserveDrafts = false) => {
+        const version = ++loadVersion.current;
+        if (!preserveDrafts) setLoading(true);
+        setError('');
+        try { const result = await loadCreatorPayments({ campaignId, creatorId }); if (version === loadVersion.current) acceptResult(result, preserveDrafts); }
+        catch { if (version === loadVersion.current) { setLoading(false); setError('Could not load payments. Please try Refresh again.'); } }
+    }, [campaignId, creatorId, acceptResult]);
+    // The counter intentionally invalidates every outstanding request on cleanup.
+    // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+    useEffect(() => { void reload(); return () => { loadVersion.current++; }; }, [reload]);
+    useEffect(() => {
+        const saved = (event: Event) => {
+            const change = (event as CustomEvent<CreatorBankSaved>).detail;
+            if (!change?.creatorId || !change.bank) return;
+            // A completed save supersedes every load that started before it.
+            loadVersion.current++;
+            requestId.current = null;
+            setLoading(false);
+            setRows(current => applySavedCreatorBank(current, change));
+            setBankRow(current => current?.creatorId === change.creatorId ? { ...current, bank: change.bank } : current);
+            void reload(true);
+        };
+        const refresh = () => { if (document.visibilityState === 'visible') void reload(true); };
+        window.addEventListener(CREATOR_BANK_SAVED, saved);
+        window.addEventListener('focus', refresh);
+        document.addEventListener('visibilitychange', refresh);
+        return () => { window.removeEventListener(CREATOR_BANK_SAVED, saved); window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+    }, [reload]);
     function patch(row: PaymentRow, change: Partial<PaymentDraft>) { requestId.current = null; setDrafts(current => ({ ...current, [row.assignmentId]: { ...(current[row.assignmentId] ?? defaultDraft(row)), ...change } })); }
     const visibleRows = rows.filter(r => (!campaignFilter || r.campaignId === campaignFilter) && `${r.creator} ${r.username ?? ""}`.toLowerCase().includes(search.toLowerCase()));
     const chosen = rows.filter(r => selected.has(r.assignmentId));
@@ -141,7 +168,7 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
     </>}
     <Dialog open={calculatorOpen} onOpenChange={setCalculatorOpen}><DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl"><DialogTitle>Selected payment calculator</DialogTitle><Totals rows={chosen} drafts={drafts} selected/><div className="flex flex-wrap items-center gap-2"><DecimalInput aria-label="Apply percentage to selected creators" className="w-20"  min="0" max="100" value={bulkPct} onValueChange={value => setBulkPct(value)}/><Button variant="outline" disabled={!chosen.length} onClick={() => chosen.forEach(r => patch(r, { mode: 'percent', percent: bulkPct }))}>Apply %</Button><select aria-label="Payment currency for selected creators" className={inputClass} value={bulkCurrency} onChange={e => setBulkCurrency(e.target.value)}><option value="">Currency</option>{COMMERCIAL_CURRENCIES.map(code => <option key={code}>{code}</option>)}</select><Button variant="outline" disabled={!chosen.length || !/^[A-Z]{3}$/.test(bulkCurrency)} onClick={() => chosen.forEach(r => patch(r, { currency: bulkCurrency, rate: bulkCurrency === r.currency ? 1 : 0 }))}>Apply currency</Button></div><p className="text-xs text-muted-foreground">Percentages use total creator fees including VAT. For a different payment currency, enter each creator’s exchange rate.</p><Button onClick={() => setCalculatorOpen(false)}>Done</Button></DialogContent></Dialog>
     <Dialog open={!!bankRow} onOpenChange={open => { if (!open)
-        setBankRow(null); }}><DialogContent className="creator-bank-dialog"><DialogTitle className="sr-only">Creator bank details</DialogTitle>{bankRow && <AaibBankEditor key={bankRow.creatorId} creatorId={bankRow.creatorId} row={bankRow} initial={bankRow.bank} onSaved={() => { void reload(); }}/>}</DialogContent></Dialog>
+        setBankRow(null); }}><DialogContent className="creator-bank-dialog"><DialogTitle className="sr-only">Creator bank details</DialogTitle>{bankRow && <AaibBankEditor key={bankRow.creatorId} creatorId={bankRow.creatorId} row={bankRow} initial={bankRow.bank}/>}</DialogContent></Dialog>
     <Dialog open={exportOpen} onOpenChange={setExportOpen}><DialogContent className="creator-payment-export-dialog thinkway-campaign-workspace max-h-[85vh] overflow-y-auto sm:max-w-3xl"><DialogTitle>Review AAIB payment export</DialogTitle><p className="text-xs text-muted-foreground">Exporting does not mark payments as paid. Upload the file to AAIB, then confirm each result.</p><Totals rows={chosen} drafts={drafts} selected/>{(['debitAccount', 'date', 'details'] as const).map(key => <label key={key} className="text-sm">{key === 'debitAccount' ? 'Company AAIB debit account / IBAN' : key === 'date' ? 'Transfer date' : 'Payment details'}<Input type={key === 'date' ? 'date' : 'text'} value={settings[key]} onChange={e => { requestId.current = null; setSettings({ ...settings, [key]: e.target.value }); }}/></label>)}<label className="text-sm">Charges<select className={`${inputClass} w-full`} value={settings.charge} onChange={e => { requestId.current = null; setSettings({ ...settings, charge: e.target.value }); }}><option value="SHA">SHA — shared</option><option value="OUR">OUR — company pays</option><option value="BEN">BEN — beneficiary pays</option></select></label><label className="text-sm">Purpose code<select className={`${inputClass} w-full`} value={settings.purpose} onChange={e => { requestId.current = null; setSettings({ ...settings, purpose: e.target.value }); }}><option value="">Select bank purpose code</option>{purposeOptions.map((p, i) => <option key={`${p.value}-${i}`} value={p.value}>{p.value} — {p.label}</option>)}</select></label><label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={settings.advice} onChange={e => { requestId.current = null; setSettings({ ...settings, advice: e.target.checked }); }}/>Send beneficiary advice through AAIB (email required)</label>{settings.advice && chosen.map(row => { const d = drafts[row.assignmentId] ?? defaultDraft(row); return <fieldset key={row.assignmentId} className="space-y-2 rounded border p-3"><legend className="text-sm font-semibold">{row.creator} · invoice advice</legend><Input aria-label="Invoice number" placeholder="Actual invoice number" value={d.invoiceNumber ?? ''} onChange={e => patch(row, { invoiceNumber: e.target.value })}/><Input aria-label="Invoice date" type="date" value={d.invoiceDate ?? ''} onChange={e => patch(row, { invoiceDate: e.target.value })}/><label className="text-xs">Invoice amount ({d.currency})<DecimalInput  min="0" step="0.01" value={d.invoiceAmount ?? 0} onValueChange={value => patch(row, { invoiceAmount: value })}/></label></fieldset>; })}<Button disabled={busy || !canWrite} onClick={() => void exportBatch()}>{busy ? 'Preparing…' : `Download ${PAYMENT_FILENAME}`}</Button></DialogContent></Dialog>
     <Dialog open={!!resultOpen} onOpenChange={open => { if (!open)
         setResultOpen(null); }}><DialogContent><DialogTitle>Confirm bank payment result</DialogTitle><p className="text-sm">Record the actual result from AAIB. A successful result updates the creator balance everywhere.</p><select aria-label="Bank result" className={inputClass} value={outcome} onChange={e => setOutcome(e.target.value as 'paid' | 'failed')}><option value="paid">Successful payment</option><option value="failed">Rejected / cancelled before payment</option></select><Input aria-label="Bank reference or rejection reason" placeholder="Bank reference or rejection reason" value={reference} onChange={e => setReference(e.target.value)}/><Button disabled={busy || !reference.trim()} onClick={async () => { if (!resultOpen)
