@@ -10,6 +10,7 @@ import { requireFinancePermission, requirePermission } from "@/lib/auth/permissi
 import { bankDetails, calculatePayment, money, type PaymentRow, type PaymentDraft, type BankDetails, type PaymentBatch, type PaymentEntry } from "./model";
 import { beneficiaryCells, createPaymentCsv, validateBank, type ExportSettings } from "./aaib";
 import { isEmptyBank, type BankDuplicate } from './bank-form-state';
+import { paymentUnits } from './allocations';
 import { paymentDraftSchema } from './payment-plan';
 import { allPaymentRows, paymentRowsByIds } from './query-pages';
 async function access(write = false) {
@@ -39,12 +40,19 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         return { rows: [] as PaymentRow[], batches: [] as PaymentBatch[] };
     const assignmentIds = ios.map(io => io.assignment_id);
     const [assignments, creators, terms, entries, campaigns, plans] = await Promise.all([
-        paymentRowsByIds(assignmentIds,ids=>db.from('campaign_influencers').select('id,agreed_fee,cost_before_vat,cost_vat_percent,currency,vendor_payment_status').in('id', ids).order('id')),
+        paymentRowsByIds(assignmentIds,ids=>db.from('campaign_influencers').select('id,campaign_line_id,agreed_fee,cost_before_vat,cost_vat_percent,currency,vendor_payment_status').in('id', ids).order('id')),
         paymentRowsByIds(ios.map(io=>io.influencer_id),ids=>db.from('influencers').select('id,display_name,legal_name,payment_details,platform_accounts:influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(handle,username,profile_display_name,is_primary)').in('id', ids).order('id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_terms').select('*').in('assignment_id', ids).order('assignment_id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_entries').select('*').in('assignment_id', ids).order('created_at', { ascending: false }).order('id')),
         paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('campaign_headers').select('id,name,document_number').in('id', ids).order('id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_plans').select('assignment_id,draft').in('assignment_id', ids).order('assignment_id')),
+    ]);
+    const lineIds = assignments.data.map(a=>a.campaign_line_id).filter((id): id is string=>!!id);
+    const [deliverables, posts, publications, links] = await Promise.all([
+        paymentRowsByIds(lineIds,ids=>db.from('assignment_deliverables').select('id,campaign_line_id,quantity,sort_order,deliverable_type,created_at').in('campaign_line_id',ids).order('id')),
+        paymentRowsByIds(lineIds,ids=>db.from('assignment_post_schedule').select('id,assignment_deliverable_id,sequence_number,status').in('campaign_line_id',ids).order('id')),
+        paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('campaign_publications').select('id,assignment_deliverable_id,assignment_post_schedule_id,status').in('campaign_header_id',ids).order('id')),
+        paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('deliverable_publication_links').select('id,assignment_deliverable_id,assignment_post_schedule_id,publication_id').in('campaign_header_id',ids).order('id')),
     ]);
     const rows: PaymentRow[] = ios.map(io => {
         const a = assignments.data?.find(a => a.id === io.assignment_id);
@@ -57,7 +65,7 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         const vat = Number(term?.vat ?? a?.cost_vat_percent ?? 0);
         const paid = ledger.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.original_amount), 0);
         const saved = paymentDraftSchema.safeParse(plans.data?.find(p => p.assignment_id === io.assignment_id)?.draft);
-        return { savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
+        return { history: ledger.filter(e=>e.status === 'paid').sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
             campaign: campaign?.name ?? campaign?.document_number ?? 'Campaign',
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
             payable: !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
@@ -66,7 +74,7 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
             reserved: ledger.filter(e => e.status === 'exported').reduce((s, e) => s + Number(e.original_amount), 0),
             bank: bankDetails(creator?.payment_details ?? {}) };
     });
-    const batchIds = [...new Set((entries.data ?? []).map(e => e.batch_id))];
+    const batchIds = [...new Set((entries.data ?? []).map(e => e.batch_id).filter((id): id is string=>!!id))];
     let batches: PaymentBatch[] = [];
     if (batchIds.length) {
         const result = await paymentRowsByIds(batchIds,ids=>db.from('creator_payment_exports').select('id,created_at,transfer_date').in('id', ids).order('created_at', { ascending: false }).order('id'));
@@ -101,6 +109,30 @@ export async function saveCreatorPaymentPlans(input: { assignmentId: string; dra
         revalidatePath('/campaigns', 'layout');
         return { ok: true as const };
     } catch (error) { return fail(error); }
+}
+export async function recordCreatorPayments(requestId: string, input: { assignmentId: string; draft: PaymentDraft }[]) {
+    try {
+        const db = await access(true);
+        z.string().uuid().parse(requestId);
+        const items = z.array(z.object({ assignmentId: z.string().uuid(), draft: paymentDraftSchema })).min(1).max(200).parse(input);
+        const { rows } = await loadRows(db, { assignmentIds: items.map(item=>item.assignmentId) });
+        const payments = items.map(item=>{
+            const row = rows.find(row=>row.assignmentId===item.assignmentId);
+            if (!row) throw new Error('Creator payment is unavailable. Refresh payments.');
+            const calc = calculatePayment(row,item.draft);
+            const date = item.draft.paymentDate;
+            if (!date || !Number.isFinite(Date.parse(date)) || new Date(date).toISOString().slice(0,10)!==date) throw new Error(row.creator+': enter a valid payment date.');
+            // Amount/balance/IO checks happen under a database lock, after idempotent
+            // retry detection. A successful retry must not fail on its reduced balance.
+            return { assignmentId:row.assignmentId, creator:row.creator, fee:item.draft.fee, vat:item.draft.vat, amount:calc.payNow, rate:calc.rate, currency:item.draft.currency, paymentDate:date };
+        });
+        const result = await db.rpc('record_creator_payments',{p_request:requestId,p_rows:payments});
+        if (result.error) throw new Error(result.error.message);
+        revalidatePath('/campaigns','layout');
+        revalidatePath('/vendors','layout');
+        revalidatePath('/billing');
+        return {ok:true as const};
+    } catch(error) {return fail(error);}
 }
 export async function exportCreatorPayments(input: {
     id: string;

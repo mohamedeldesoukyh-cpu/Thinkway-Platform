@@ -7,7 +7,14 @@
 .thinkway-creator-payments .cp-button { height: 28px; padding: 0 10px; border: 1px solid var(--tw-line, var(--border)); border-radius: 8px; background: var(--card); color: var(--tw-ink2, var(--foreground)); font-size: 11.5px; font-weight: 600; cursor: pointer; }
 .thinkway-creator-payments .cp-button.primary { color: var(--tw-blue, var(--primary)); border-color: #b9cefc; box-shadow: 0 0 0 3px rgb(0 87 255 / 5%); }
 .thinkway-creator-payments .cp-button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
-.thinkway-creator-payments .cp-summary { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); }
+.thinkway-creator-payments .cp-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr)); }
+.thinkway-creator-payments .cp-payment-date { display:block; margin-top:8px; font-size:11px; color:var(--muted-foreground); }
+.thinkway-creator-payments .cp-payment-date input { width:100%; margin-top:4px; }
+.thinkway-creator-payments .cp-payment-history { font-size:12px; }
+.thinkway-creator-payments .cp-payment-history details { padding:10px 12px; }
+.thinkway-creator-payments .cp-payment-history summary { cursor:pointer; font-weight:600; }
+.thinkway-creator-payments .cp-payment-history li { padding:6px 0; }
+.thinkway-creator-payments .cp-payment-history table { width:100%; margin-top:8px; }
 .thinkway-creator-payments .cp-summary > div { padding: 10px 14px; border-right: 1px solid var(--tw-hair, var(--border)); }
 .thinkway-creator-payments .cp-summary > div:last-child { border: 0; }
 .thinkway-creator-payments .cp-summary > div > span { display: block; text-transform: uppercase; font-size: 8.5px; font-weight: 700; letter-spacing: .6px; color: var(--tw-mut, var(--muted-foreground)); }
