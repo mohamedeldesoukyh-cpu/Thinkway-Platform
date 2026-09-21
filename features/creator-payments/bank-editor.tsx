@@ -1,6 +1,6 @@
 "use client";
 import './bank-editor.css';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { toast } from 'sonner';
@@ -50,6 +50,14 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
         setIbanChecked(true);
         setBank(previous => fillFromIban(previous));
     }
+    useEffect(() => {
+        if (accountMode !== 'iban' || !bank.iban.trim() || pending) return;
+        const timer = setTimeout(() => {
+            setIbanChecked(true);
+            setBank(previous => fillFromIban(previous));
+        }, 500);
+        return () => clearTimeout(timer);
+    }, [bank.iban, accountMode, pending]);
     async function save() {
         const errors = validateBank(activeBank);
         if (accountMode === 'iban' && !bank.iban.trim()) errors.unshift('Enter an IBAN or select Account number.');
@@ -84,7 +92,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
             <div className="cbd-segment" aria-label="Account identifier">{[['iban', 'IBAN'], ['account', 'Account number']].map(([value, label]) => <button key={value} type="button" aria-pressed={accountMode === value} onClick={() => { if (accountMode === value) return; setAccountMode(value); setIssues([]); setBank(previous => ({ ...previous, registered: false })); }}>{label}</button>)}</div>
             <div className="cbd-pane">{accountMode === 'iban' ? <><label className="cbd-field">IBAN<Input className="cbd-input cbd-mono" value={bank.iban} placeholder="Paste IBAN to fill available bank details" maxLength={42} aria-required="true" aria-invalid={ibanChecked && !!bank.iban && !!info?.error} onChange={e => { setIbanChecked(false); setIssues([]); setBank(previous => changeIban(previous, e.target.value)); }} onBlur={detect}/></label><p className="cbd-hint">Fills country and account details for UAE and Egyptian IBANs; bank name and SWIFT for supported banks. Name, address, currency and registration stay manual.</p></> : <>{field('account_number', 'Account number', 'Local account number')}<p className="cbd-hint">Use where the beneficiary bank does not issue an IBAN.</p></>}</div>
             {ibanChecked && info?.error && <p role="alert" className="cbd-note cbd-error">{info.error}</p>}
-            {ibanChecked && info?.detected && <p role="status" className="cbd-hint cbd-success">Checksum checked · {info.country}{info.bankCode ? ` · Bank code ${info.bankCode}` : ''}. {info.detected.bank_name || 'Enter bank name and SWIFT manually.'} Review bank details before saving; account ownership is not verified.</p>}
+            {ibanChecked && info?.detected && <><p role="status" className="cbd-hint cbd-success">IBAN checksum checked · {info.country}{info.bankCode ? ` · Bank code ${info.bankCode}` : ''}{info.detected.bank_name ? ` · ${info.detected.bank_name}` : ''}. Review bank details before saving; account ownership is not verified.</p>{!info.detected.bank_name && <p className="cbd-note cbd-warning">This bank is not yet supported by automatic bank lookup. Country and available account details were detected; enter the bank name and SWIFT manually. Personal details and currency always require your input.</p>}</>}
             {ibanChecked && conflicts.length > 0 && <div className="cbd-note cbd-warning">Existing {conflicts.map(([key]) => key.replaceAll('_', ' ')).join(', ')} differ from the IBAN. Your entries were kept. <button type="button" className="cbd-button" onClick={() => { setBank(previous => fillFromIban(previous, true)); setIssues([]); }}>Use detected details</button></div>}
           </section>
           <section className="cbd-section"><div className="cbd-section-title">2 · Beneficiary</div><div className="cbd-grid">
