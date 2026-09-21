@@ -1,0 +1,43 @@
+BEGIN;
+DO $$
+DECLARE creator uuid; actor uuid; first_id uuid; second_id uuid; other uuid; d jsonb; snapshot text; after_snapshot text; rejected boolean;
+BEGIN
+ SELECT id INTO creator FROM influencers LIMIT 1;
+ SELECT p.id INTO actor FROM profiles p JOIN roles r ON r.id=p.role_id WHERE p.is_active AND r.slug='super_admin' LIMIT 1;
+ IF creator IS NULL OR actor IS NULL THEN RAISE EXCEPTION 'Test fixtures unavailable'; END IF;
+ SELECT md5(coalesce(string_agg(id::text||csv_content,'' ORDER BY id),'')) INTO snapshot FROM creator_payment_exports;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);
+ SET LOCAL ROLE authenticated;
+ d:=jsonb_build_object('aaib_nickname','test-'||gen_random_uuid()::text,'beneficiary_name','Synthetic creator','account_number','0011223344','iban','','swift','TESTAEAA','bank_name','Test Bank','bank_branch','','aaib_country','AE','aaib_currency','USD','aaib_registered',true);
+ first_id:=save_creator_bank_account(creator,null,d,true);
+ second_id:=save_creator_bank_account(creator,null,d||jsonb_build_object('aaib_nickname','test-'||gen_random_uuid()::text,'aaib_currency','AED'),false);
+ IF (SELECT count(*) FROM influencer_bank_accounts WHERE influencer_id=creator AND is_default)<>1 THEN RAISE EXCEPTION 'Incorrect default count'; END IF;
+ IF (SELECT payment_details->>'aaib_currency' FROM influencers WHERE id=creator)<>'USD' THEN RAISE EXCEPTION 'Secondary account changed default'; END IF;
+ PERFORM save_creator_bank_account(creator,second_id,null,true);
+ IF (SELECT payment_details->>'aaib_currency' FROM influencers WHERE id=creator)<>'AED' OR (SELECT payment_details->>'aaib_registered' FROM influencers WHERE id=creator)<>'true' THEN RAISE EXCEPTION 'Default switch lost bank details/registration'; END IF;
+ rejected:=false;
+ BEGIN
+  PERFORM save_creator_bank_account(creator,null,d||jsonb_build_object('aaib_nickname','  '||upper(d->>'aaib_nickname')||'  '),true);
+ EXCEPTION WHEN unique_violation THEN rejected:=true;
+ END;
+ IF NOT rejected THEN RAISE EXCEPTION 'Duplicate nickname accepted'; END IF;
+ IF NOT (SELECT is_default FROM influencer_bank_accounts WHERE id=second_id) THEN RAISE EXCEPTION 'Failed save lost default'; END IF;
+ PERFORM save_creator_bank_account(creator,first_id,d||jsonb_build_object('bank_name','Changed Bank'),false);
+ IF (SELECT aaib_details->>'aaib_registered' FROM influencer_bank_accounts WHERE id=first_id)<>'false' THEN RAISE EXCEPTION 'Changed details retained registration'; END IF;
+ UPDATE influencers SET payment_details=payment_details||'{"swift":"CHNGAEAA"}'::jsonb WHERE id=creator;
+ IF (SELECT swift FROM influencer_bank_accounts WHERE id=second_id)<>'CHNGAEAA' OR (SELECT aaib_details->>'aaib_registered' FROM influencer_bank_accounts WHERE id=second_id)<>'false' THEN RAISE EXCEPTION 'Legacy edit failed to synchronize'; END IF;
+ rejected:=false;
+ BEGIN PERFORM save_creator_bank_account(creator,gen_random_uuid(),null,true);
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Bank account unavailable' THEN RAISE; END IF; rejected:=true; END;
+ IF NOT rejected THEN RAISE EXCEPTION 'Unknown account accepted'; END IF;
+ PERFORM set_config('request.jwt.claim.sub',gen_random_uuid()::text,true);
+ rejected:=false;
+ BEGIN PERFORM save_creator_bank_account(creator,second_id,null,true);
+ EXCEPTION WHEN OTHERS THEN IF SQLERRM<>'Creator write access required' THEN RAISE; END IF; rejected:=true; END;
+ IF NOT rejected THEN RAISE EXCEPTION 'Unauthorized change accepted'; END IF;
+ RESET ROLE;
+ SELECT md5(coalesce(string_agg(id::text||csv_content,'' ORDER BY id),'')) INTO after_snapshot FROM creator_payment_exports;
+ IF snapshot IS DISTINCT FROM after_snapshot THEN RAISE EXCEPTION 'Existing export changed'; END IF;
+ RAISE NOTICE 'PASS: multiple accounts, one default, registration retained on switch, normalized duplicates rejected atomically, edits invalidate registration, CRM sync, missing account rejection, authorization, immutable exports';
+END $$;
+ROLLBACK;

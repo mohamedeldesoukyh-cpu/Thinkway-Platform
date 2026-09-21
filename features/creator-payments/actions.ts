@@ -152,7 +152,7 @@ export async function confirmCreatorPayment(id: string, status: 'paid' | 'failed
         return fail(e);
     }
 }
-export async function saveAaibBank(creatorId: string, bank: BankDetails) {
+export async function saveAaibBank(creatorId: string, bank: BankDetails, accountId: string | null = null, makeDefault = false) {
     try {
         const ctx = await requireRequestUser();
         const db = ctx.supabase as SupabaseClient;
@@ -165,25 +165,30 @@ export async function saveAaibBank(creatorId: string, bank: BankDetails) {
         const issues = validateBank(bank);
         if (issues.length)
             throw new Error(issues.join(' '));
-        const old = await db.from('influencers').select('payment_details').eq('id', creatorId).single();
-        if (old.error)
-            throw new Error(old.error.message);
-        const previous = bankDetails(old.data.payment_details ?? {});
-        const changed = previous.nickname && JSON.stringify({ ...previous, registered: false }) !== JSON.stringify({ ...bank, registered: false });
-        const registered = changed ? false : bank.registered;
-        const details = { ...(old.data.payment_details ?? {}), beneficiary_name: bank.beneficiary_name, account_number: bank.account_number, iban: bank.iban, swift: bank.swift, bank_name: bank.bank_name, bank_branch: bank.bank_branch,
-            aaib_payment_type: bank.payment_type, aaib_currency: bank.currency, aaib_nickname: bank.nickname, aaib_address: bank.beneficiary_address, aaib_email: bank.email, aaib_mobile: bank.mobile, aaib_country: bank.country, aaib_identifier: bank.identifier, aaib_clearing_code: bank.clearing_code, aaib_bank_address: bank.bank_address, aaib_registered: registered };
-        const saved = await db.from('influencers').update({ payment_details: details }).eq('id', creatorId);
-        if (saved.error)
-            throw new Error(saved.error.message);
-        revalidatePath(`/vendors/${creatorId}`);
-        return { ok: true as const, bank: bankDetails(details), message: changed ? 'Bank details changed. Confirm AAIB registration again after updating the bank.' : 'Bank details saved.' };
+        if (accountId) z.string().uuid().parse(accountId);
+        const details = { beneficiary_name: bank.beneficiary_name, account_number: bank.account_number, iban: bank.iban, swift: bank.swift, bank_name: bank.bank_name, bank_branch: bank.bank_branch,
+            aaib_payment_type: bank.payment_type, aaib_currency: bank.currency, aaib_nickname: bank.nickname.trim(), aaib_address: bank.beneficiary_address, aaib_email: bank.email, aaib_mobile: bank.mobile, aaib_country: bank.country, aaib_identifier: bank.identifier, aaib_clearing_code: bank.clearing_code, aaib_bank_address: bank.bank_address, aaib_registered: bank.registered };
+        const saved = await db.rpc('save_creator_bank_account', { p_creator: creatorId, p_account: accountId, p_details: details, p_default: makeDefault });
+        if (saved.error) {
+            if (saved.error.code === '23505') {
+                const match = await db.from('influencer_bank_accounts').select('id,influencer_id').ilike('aaib_details->>aaib_nickname', bank.nickname.trim().replace(/[\\%_]/g, '\\$&'));
+                const duplicate = match.data?.find(item => item.id !== accountId);
+                const creator = duplicate ? await db.from('influencers').select('id,display_name,legal_name').eq('id', duplicate.influencer_id).maybeSingle() : null;
+                return { ok: false as const, message: creator?.data ? 'This AAIB beneficiary nickname is already used by a saved bank account. Open the creator below to review it, or use the distinct nickname registered with AAIB.' : 'This AAIB beneficiary nickname is already used by another saved account. You do not have access to its creator details; ask an administrator to review the duplicate.', duplicate: creator?.data ? { id: creator.data.id, name: creator.data.legal_name || creator.data.display_name || 'Creator' } : undefined };
+            }
+            throw new Error('Could not save the bank account. Please refresh and try again.');
+        }
+        const account = await db.from('influencer_bank_accounts').select('aaib_details').eq('id', saved.data).single();
+        if (account.error) throw new Error('Account saved; refresh to load its details.');
+        const result = bankDetails(account.data.aaib_details);
+        revalidatePath('/vendors'); revalidatePath('/campaigns'); revalidatePath(`/vendors/${creatorId}`);
+        return { ok: true as const, bank: result, accountId: saved.data as string, message: bank.registered && !result.registered ? 'Bank details changed. Confirm AAIB registration again after updating the bank.' : 'Bank account saved.' };
     }
     catch (e) {
         return fail(e);
     }
 }
-export async function exportAaibBeneficiaries(ids: string[]) {
+export async function exportAaibBeneficiaries(ids: string[], accountId?: string) {
     try {
         const db = await access();
         z.array(z.string().uuid()).min(1).max(200).parse(ids);
@@ -192,6 +197,14 @@ export async function exportAaibBeneficiaries(ids: string[]) {
             throw new Error(result.error.message);
         if (result.data?.length !== new Set(ids).size)
             throw new Error('Some selected creators are unavailable.');
+        let selectedBank: BankDetails | undefined;
+        if (accountId) {
+            z.string().uuid().parse(accountId);
+            if (ids.length !== 1) throw new Error('Select one creator for an individual bank account export.');
+            const account = await db.from('influencer_bank_accounts').select('aaib_details').eq('id', accountId).eq('influencer_id', ids[0]).single();
+            if (account.error) throw new Error('Bank account unavailable.');
+            selectedBank = bankDetails(account.data.aaib_details);
+        }
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.readFile(template('beneficiaries.xlsx'));
         const sheet = workbook.getWorksheet('Beneficiary Details');
@@ -199,7 +212,7 @@ export async function exportAaibBeneficiaries(ids: string[]) {
             throw new Error('Bank template missing.');
         const seen = new Set<string>();
         result.data.forEach((creator, index) => {
-            const bank = bankDetails(creator.payment_details ?? {});
+            const bank = selectedBank ?? bankDetails(creator.payment_details ?? {});
             const errors = validateBank(bank);
             if (errors.length)
                 throw new Error(`${creator.display_name}: ${errors.join(' ')}`);
@@ -213,4 +226,26 @@ export async function exportAaibBeneficiaries(ids: string[]) {
     catch (e) {
         return fail(e);
     }
+}
+
+export async function loadCreatorBankAccounts(creatorId: string) {
+    try {
+        const { supabase } = await requireRequestUser();
+        z.string().uuid().parse(creatorId);
+        const { data, error } = await (supabase as SupabaseClient).from('influencer_bank_accounts').select('id,is_default,aaib_details,bank_name,beneficiary_name,account_holder,iban,account_number,swift,branch_name,country_code,currency').eq('influencer_id', creatorId).order('created_at');
+        if (error) throw new Error('Could not load saved bank accounts. Please try again.');
+        return { ok: true as const, accounts: (data ?? []).map(a => ({ id: a.id as string, isDefault: a.is_default as boolean, bank: bankDetails({ ...a.aaib_details, bank_name: a.bank_name ?? '', beneficiary_name: a.beneficiary_name ?? a.account_holder ?? '', iban: a.iban ?? '', account_number: a.account_number ?? '', swift: a.swift ?? '', bank_branch: a.branch_name ?? '', aaib_country: a.country_code ?? '', aaib_currency: a.currency ?? '' }) })) };
+    } catch (e) { return fail(e); }
+}
+export async function setCreatorDefaultBank(creatorId: string, accountId: string) {
+    try {
+        const { supabase } = await requireRequestUser();
+        const permission = await requirePermission(supabase, 'influencers.write');
+        if ('error' in permission) throw new Error(permission.error);
+        z.string().uuid().parse(creatorId); z.string().uuid().parse(accountId);
+        const { error } = await (supabase as SupabaseClient).rpc('save_creator_bank_account', { p_creator: creatorId, p_account: accountId, p_details: null, p_default: true });
+        if (error) throw new Error('Could not change the default account. Refresh and try again.');
+        revalidatePath('/vendors'); revalidatePath('/campaigns'); revalidatePath(`/vendors/${creatorId}`);
+        return { ok: true as const };
+    } catch (e) { return fail(e); }
 }
