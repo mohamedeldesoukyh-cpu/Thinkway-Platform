@@ -1,4 +1,5 @@
 import type { BankDetails } from './model';
+import { IBAN_BANKS } from './iban-banks';
 
 // Country layouts: CBUAE / CBE IBAN standards. Never convert account digits to numbers.
 // https://centralbank.ae/en/our-operations/payments-and-settlements/regulations-and-standards/iban/
@@ -19,26 +20,10 @@ export function inspectIban(value: string) {
     const account = country === 'AE' ? iban.slice(7) : country === 'EG' ? iban.slice(12) : undefined;
     const detected: Partial<BankDetails> = { country };
     if (account) detected.account_number = account;
-    // Only verified bank mappings belong here. Unknown banks stay manual.
-    // Bank 026: https://www.emiratesnbd.com/-/media/enbd/files/others/form-center/retail-banking/service-forms/direct_debit_authority_loans_emirates_nbd.pdf
-    // BIC: https://www.emiratesnbd.com/en/help-and-support/receiving-a-transfer-or-payment
-    if (country === 'AE' && bankCode === '026') {
-        detected.bank_name = 'Emirates NBD Bank PJSC';
-        detected.swift = 'EBILAEAD';
-    }
-    // CBUAE UAEWPS AUX500 sponsoring-bank directory: 041 = Sharjah Islamic Bank.
-    // https://www.gcaa.gov.ae/en/epublication/EPublications/Forms%20Download/Safety%20Affairs/General%20Publications/UAE%20Central%20Bank%20WPS/UAEWPS%20AUX500%20-%20V2018-001%20-%20SPONSORING%20EMPLOYERS%20INTO%20UAEWPS.pdf
-    // Bank-issued BIC: https://www.sib.ae/docs/default-source/default-document-library/merchant-services-agreement-form_june-2025.pdf
-    if (country === 'AE' && bankCode === '041') {
-        detected.bank_name = 'Sharjah Islamic Bank';
-        detected.swift = 'NBSHAEAS';
-    }
-    // Bank 086: Convera's UAE IBAN directory (WIO BANK P.J.S.C.).
-    // https://convera.com/en-gb/resources/iban-codes/united-arab-emirates/ae560860000009192749396/
-    // BIC: https://ibanapi.com/bank/43434/wio-bank-p.j.s.c.
-    if (country === 'AE' && bankCode === '086') {
-        detected.bank_name = 'Wio Bank PJSC';
-        detected.swift = 'WIOBAEAD';
+    const bank = bankCode ? IBAN_BANKS[country]?.[bankCode] : undefined;
+    if (bank) {
+        detected.bank_name = bank[0];
+        detected.swift = bank[1];
     }
     return { iban, country, bankCode, detected, error: undefined };
 }

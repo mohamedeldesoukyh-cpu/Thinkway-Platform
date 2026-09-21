@@ -3,12 +3,42 @@ import assert from 'node:assert/strict';
 import { bankDetails } from './model';
 import { bankFieldRequirement, changeIban, fillFromIban, inspectIban } from './iban';
 import { validateBank } from './aaib';
+import { IBAN_BANKS } from './iban-banks';
 
 // Synthetic account numbers with independently calculated check digits.
 function sample(country: string, bban: string) {
     const numeric = (bban + country + '00').replace(/[A-Z]/g, c => String(c.charCodeAt(0) - 55));
     return country + String(98n - BigInt(numeric) % 97n).padStart(2, '0') + bban;
 }
+test('Emirates Islamic code 034 fills bank routing after a new IBAN is entered', () => {
+    const bank = fillFromIban(changeIban(bankDetails(), sample('AE', '0340000000000000001')));
+    assert.equal(bank.bank_name, 'Emirates Islamic Bank PJSC');
+    assert.equal(bank.swift, 'MEBLAEAD');
+    assert.equal(bank.country, 'AE');
+    assert.equal(bank.account_number, '0000000000000001');
+    assert.equal(bank.currency, '');
+    assert.equal(bank.beneficiary_name, '');
+});
+test('the UAE directory fills all covered codes and switching banks retires previous routing', () => {
+    assert.ok(Object.keys(IBAN_BANKS.AE).length >= 40);
+    let bank = bankDetails();
+    for (const [code, [name, swift]] of Object.entries(IBAN_BANKS.AE)) {
+        assert.match(code, /^\d{3}$/);
+        assert.match(swift, /^[A-Z]{4}AE[A-Z0-9]{2}$/);
+        bank = fillFromIban(changeIban(bank, sample('AE', code + '0000000000000001')));
+        assert.equal(bank.bank_name, name, code);
+        assert.equal(bank.swift, swift, code);
+        assert.equal(bank.account_number, '0000000000000001');
+        assert.equal(bank.registered, false);
+        assert.equal(bank.currency, '');
+    }
+    // Neither legacy merger routing nor an AutoPay placeholder is a safe BIC.
+    for (const code of ['027', '045', '051', '052', '097', '999']) {
+        const unknown = fillFromIban(changeIban(bank, sample('AE', code + '0000000000000001')));
+        assert.equal(unknown.swift, '');
+        assert.equal(unknown.bank_name, '');
+    }
+});
 test('IBAN detection preserves leading zeros and fills only supported bank metadata', () => {
     const iban = sample('AE', '0260000000000000001');
     const bank = fillFromIban({ ...bankDetails(), iban, currency: 'USD' });
