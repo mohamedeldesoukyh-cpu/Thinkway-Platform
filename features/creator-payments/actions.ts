@@ -10,6 +10,7 @@ import { requireFinancePermission, requirePermission } from "@/lib/auth/permissi
 import { bankDetails, calculatePayment, money, type PaymentRow, type PaymentDraft, type BankDetails, type PaymentBatch, type PaymentEntry } from "./model";
 import { beneficiaryCells, createPaymentCsv, validateBank, type ExportSettings } from "./aaib";
 import { isEmptyBank, type BankDuplicate } from './bank-form-state';
+import { paymentDraftSchema } from './payment-plan';
 import { allPaymentRows, paymentRowsByIds } from './query-pages';
 async function access(write = false) {
     const ctx = await requireRequestUser();
@@ -23,6 +24,7 @@ const template = (name: string) => path.join(process.cwd(), 'features', 'creator
 type Scope = {
     campaignId?: string;
     creatorId?: string;
+    assignmentIds?: string[];
 };
 async function loadRows(db: SupabaseClient, scope: Scope) {
     let query = db.from('vendor_ios').select('id,assignment_id,campaign_header_id,influencer_id,document_number,status,amount,currency_code,created_at,is_superseded').not('document_generated_at', 'is', null).order('created_at', { ascending: false });
@@ -30,17 +32,19 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         query = query.eq('campaign_header_id', z.string().uuid().parse(scope.campaignId));
     if (scope.creatorId)
         query = query.eq('influencer_id', z.string().uuid().parse(scope.creatorId));
+    if (scope.assignmentIds) query = query.in('assignment_id', scope.assignmentIds);
     const ioResult = await allPaymentRows(query.order('id'));
     const ios = [...new Map((ioResult.data ?? []).reverse().map(io => [io.assignment_id, io])).values()];
     if (!ios.length)
         return { rows: [] as PaymentRow[], batches: [] as PaymentBatch[] };
     const assignmentIds = ios.map(io => io.assignment_id);
-    const [assignments, creators, terms, entries, campaigns] = await Promise.all([
+    const [assignments, creators, terms, entries, campaigns, plans] = await Promise.all([
         paymentRowsByIds(assignmentIds,ids=>db.from('campaign_influencers').select('id,agreed_fee,cost_before_vat,cost_vat_percent,currency,vendor_payment_status').in('id', ids).order('id')),
         paymentRowsByIds(ios.map(io=>io.influencer_id),ids=>db.from('influencers').select('id,display_name,legal_name,payment_details,platform_accounts:influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(handle,username,profile_display_name,is_primary)').in('id', ids).order('id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_terms').select('*').in('assignment_id', ids).order('assignment_id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_entries').select('*').in('assignment_id', ids).order('created_at', { ascending: false }).order('id')),
         paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('campaign_headers').select('id,name,document_number').in('id', ids).order('id')),
+        paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_plans').select('assignment_id,draft').in('assignment_id', ids).order('assignment_id')),
     ]);
     const rows: PaymentRow[] = ios.map(io => {
         const a = assignments.data?.find(a => a.id === io.assignment_id);
@@ -52,7 +56,8 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         const fee = Number(a?.cost_before_vat ?? a?.agreed_fee ?? io.amount ?? 0);
         const vat = Number(term?.vat ?? a?.cost_vat_percent ?? 0);
         const paid = ledger.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.original_amount), 0);
-        return { assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
+        const saved = paymentDraftSchema.safeParse(plans.data?.find(p => p.assignment_id === io.assignment_id)?.draft);
+        return { savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
             campaign: campaign?.name ?? campaign?.document_number ?? 'Campaign',
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
             payable: !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
@@ -79,6 +84,24 @@ export async function loadCreatorPayments(scope: Scope) {
         return fail(e);
     }
 }
+export async function saveCreatorPaymentPlans(input: { assignmentId: string; draft: PaymentDraft }[]) {
+    try {
+        const db = await access(true);
+        const items = z.array(z.object({ assignmentId: z.string().uuid(), draft: paymentDraftSchema })).min(1).max(200).parse(input);
+        const { rows } = await loadRows(db, { assignmentIds: items.map(item => item.assignmentId) });
+        for (const item of items) {
+            const row = rows.find(row => row.assignmentId === item.assignmentId);
+            if (!row || row.payable === false) throw new Error('Creator IO is unavailable. Refresh payments.');
+            if (money(item.draft.fee) !== money(row.fee)) throw new Error(row.creator + ': agreed fee changed. Refresh payments.');
+            const calc = calculatePayment(row, item.draft);
+            if (calc.errors.length) throw new Error(row.creator + ': ' + calc.errors.join(' '));
+        }
+        const result = await db.rpc('save_creator_payment_plans', { p_rows: items });
+        if (result.error) throw new Error(result.error.message);
+        revalidatePath('/campaigns', 'layout');
+        return { ok: true as const };
+    } catch (error) { return fail(error); }
+}
 export async function exportCreatorPayments(input: {
     id: string;
     campaignId: string;
@@ -102,7 +125,7 @@ export async function exportCreatorPayments(input: {
             const row = rows.find(r => r.assignmentId === item.assignmentId);
             if (!row)
                 throw new Error('Creator IO is unavailable. Refresh the campaign.');
-            const draft = z.object({ fee: z.number().finite().nonnegative(), vat: z.number().min(0).max(100), currency: z.string().regex(/^[A-Z]{3}$/), rate: z.number().finite().positive(), mode: z.enum(['full', 'percent', 'manual']), percent: z.number().min(0).max(100), amount: z.number().finite().nonnegative(), invoiceNumber: z.string().max(100).optional(), invoiceDate: z.string().optional(), invoiceAmount: z.number().finite().nonnegative().optional() }).parse(item.draft);
+            const draft = paymentDraftSchema.parse(item.draft);
             if (money(draft.fee) !== money(row.fee)) throw new Error(`${row.creator}: agreed fee changed. Refresh and use the agreed amount.`);
             const calc = calculatePayment(row, draft);
             if (calc.errors.length)

@@ -220,3 +220,5 @@
 @keyframes cp-loading-slide{from{transform:translateX(-100%)}to{transform:translateX(386%)}}
 @keyframes cp-loading-pulse{50%{opacity:.45}}
 @media(prefers-reduced-motion:reduce){.thinkway-creator-payments .cp-loading-spinner,.thinkway-creator-payments .cp-loading-track>span,.thinkway-creator-payments .cp-loading-placeholder{animation:none}}
+.thinkway-creator-payments .cp-save-bar { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; padding:12px 16px; background:#fff7e8; border:1px solid #f5d39b; border-radius:12px; color:#80521a; font-size:13px; }
+.thinkway-creator-payments .cp-save-bar > div { display:flex; gap:8px; }
