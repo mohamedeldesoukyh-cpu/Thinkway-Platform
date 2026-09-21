@@ -23,7 +23,6 @@ import {
   buildCampaignWorkspaceTabUrl,
 } from "@/features/campaigns/lifecycle/campaign-workspace-entry-routing";
 import {
-  isBillingInvoiceCreationUnlocked,
   type DecisionFocusQuery,
 } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import { CampaignBlockerResolverDrawer } from "@/features/campaigns/lifecycle/components/campaign-blocker-resolver-drawer";
@@ -344,20 +343,6 @@ export function CampaignWorkspaceView({
     lifecycle.decisionCenter.primaryActionTab,
     lifecycle.decisionCenter.primaryFocusQuery,
   ]);
-
-  const invoiceCreationUnlocked = useMemo(
-    () =>
-      isBillingInvoiceCreationUnlocked({
-        businessStageId: lifecycle.businessStageId,
-        billingSignal: lifecycle.processCue.stageSignals.billing,
-        invoiceCount: processSignals.invoiceCount,
-      }),
-    [
-      lifecycle.businessStageId,
-      lifecycle.processCue.stageSignals.billing,
-      processSignals.invoiceCount,
-    ]
-  );
 
   const renderWithLifecycleGuidance = (
     tabId: CampaignWorkspaceTabId,
@@ -697,13 +682,6 @@ export function CampaignWorkspaceView({
                     billingGroups={billingGroups}
                     operationalBilling={operationalBilling}
                     campaignInvoiceRegister={campaignInvoiceRegister}
-                    invoiceCreationUnlocked={invoiceCreationUnlocked}
-                    invoiceUnlockHint={
-                      lifecycle.decisionCenter.blockers[0]?.reason ||
-                      lifecycle.decisionCenter.continueReason ||
-                      null
-                    }
-                    onNavigateToLifecycleAction={continueToNextAction}
                     initialDetailInvoiceId={searchParams.get("invoice")}
                     initialDetailPaymentId={searchParams.get("payment")}
                   />

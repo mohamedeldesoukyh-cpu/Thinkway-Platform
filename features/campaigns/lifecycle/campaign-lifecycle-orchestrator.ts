@@ -678,24 +678,17 @@ export function buildWorkspaceGuidance(
     : lifecycle.businessStageLabel;
   const primaryAction = lifecycle.decisionCenter.primaryAction;
 
+  // Invoicing runs alongside delivery and creator payouts. Invoice actions
+  // enforce commercial eligibility; campaign stage must not lock Finance.
   if (activeTab === "billing") {
-    const billingReady =
-      lifecycle.processCue.stageSignals.billing === "completed" ||
-      lifecycle.processCue.stageSignals.billing === "current" ||
-      lifecycle.businessStageId === "billing";
-    if (!billingReady && lifecycle.businessStageId !== "billing") {
-      return guidanceBase(lifecycle, activeTab, "Finance", {
-        whatHappened: `Invoice creation is disabled until Billing starts.`,
-        isLocked: true,
-        currentSituation: primary
-          ? `${primaryRef} is blocking Finance. ${primary.reason}`
-          : "Complete the current stage before creating invoices.",
-        nextAction: primaryAction,
-        owner: lifecycle.owner,
-        unlockHint: `Sending / Create Invoice stays disabled until ${primaryRef} is cleared.`,
-        outOfBand: true,
-      });
-    }
+    return guidanceBase(lifecycle, activeTab, "Finance", {
+      whatHappened: "",
+      currentSituation: "",
+      nextAction: primaryAction,
+      owner: lifecycle.owner,
+      unlockHint: null,
+      outOfBand: false,
+    });
   }
 
   if (activeTab === "publications") {

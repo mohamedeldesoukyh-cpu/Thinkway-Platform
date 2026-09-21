@@ -5,7 +5,6 @@ import {
   applyDecisionFocusToSearch,
   buildDecisionCenter,
   DECISION_CLEAR_PATH_MESSAGE,
-  isBillingInvoiceCreationUnlocked,
   refineGenericAction,
   unlocksForStage,
   type DecisionCenterObjects,
@@ -442,25 +441,6 @@ describe("campaign decision center", () => {
     assert.equal(
       lifecycle.decisionCenter.clearPathMessage,
       DECISION_CLEAR_PATH_MESSAGE
-    );
-  });
-
-  it("keeps Create Invoice locked until Billing has started", () => {
-    assert.equal(
-      isBillingInvoiceCreationUnlocked({
-        businessStageId: "client-io",
-        billingSignal: "upcoming",
-        invoiceCount: 0,
-      }),
-      false
-    );
-    assert.equal(
-      isBillingInvoiceCreationUnlocked({
-        businessStageId: "billing",
-        billingSignal: "current",
-        invoiceCount: 0,
-      }),
-      true
     );
   });
 
