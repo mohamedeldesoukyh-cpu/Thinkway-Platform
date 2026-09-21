@@ -5,6 +5,7 @@ import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { defaultPaymentDraft as initialDraft, changedPaymentPlans } from './payment-plan';
 import { paymentAllocation, matchesPaymentFilter } from './allocations';
 import { PaymentHistory } from './payment-history';
+import { AdvanceRegister } from './advance-register';
 import { DecimalInput } from './decimal-input';
 import { validateBank } from './aaib';
 import { calculatePayment, ioBadge, paymentStatus, type PaymentDraft, type PaymentRow } from './model';
@@ -14,14 +15,14 @@ const amount = (value: number, currency: string) => `${number(value)} ${currency
 
 type Props = {
   rows: PaymentRow[]; drafts: Record<string, PaymentDraft>; selected: Set<string>; canWrite: boolean;
-  showCampaign: boolean; filters: ReactNode; canReview: boolean;
+  showCampaign: boolean; filters: ReactNode; canReview: boolean; filter: string; onFilterChange: (filter:string) => void;
   onPatch: (row: PaymentRow, change: Partial<PaymentDraft>) => void;
   onBank: (row: PaymentRow) => void; onSelect: (id: string, checked: boolean) => void;
   onSelectAll: (ids: string[], checked: boolean) => void; onExport: () => void; onReview: () => void; onSaved: () => void;
 };
 
-export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign, filters, canReview, onPatch, onBank, onSelect, onSelectAll, onExport, onReview, onSaved }: Props) {
-  const [filter, setFilter] = useState('all');
+export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign, filters, canReview, onPatch, onBank, onSelect, onSelectAll, onExport, onReview, onSaved, filter, onFilterChange }: Props) {
+
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const visible = rows.filter(row => matchesPaymentFilter(row,filter));
   const eligible = visible.filter(row => row.payable !== false);
@@ -36,11 +37,12 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
 
   return <section className="cp-panel" aria-label="Creator payment register">
     <div className="cp-panel-head">
-      <h2>Creator payments</h2><span>{new Set(visible.map(row => row.creatorId)).size} creators · {ready.length} ready to export</span>
-      <div className="cp-head-actions"><div className="cp-segments" aria-label="Payment status filter">{[['all','All'],['unpaid','Unpaid'],['paid','Paid'],['advance','Advance']].map(([value,label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div>
-        <button className="cp-button" onClick={onExport}>Export</button><button className="cp-button primary" disabled={!canReview} onClick={onReview}>Review selected</button></div>
+      <h2>Creator payments</h2><span>{new Set(visible.map(row => row.creatorId)).size} creators{filter!=='advance'&&<> · {ready.length} ready to export</>}</span>
+      <div className="cp-head-actions"><div className="cp-segments" aria-label="Payment status filter">{[['all','All'],['unpaid','Unpaid'],['paid','Paid'],['advance','Advance']].map(([value,label]) => <button key={value} aria-pressed={filter === value} onClick={() => onFilterChange(value)}>{label}</button>)}</div>
+        {filter!=='advance'&&<><button className="cp-button" onClick={onExport}>Export</button><button className="cp-button primary" disabled={!canReview} onClick={onReview}>Review selected</button></>}</div>
     </div>
     <div className="cp-register-filters">{filters}</div>
+    {filter==='advance'?<AdvanceRegister rows={visible} showCampaign={showCampaign}/>:<>
     {filter==='paid'&&<p className="cp-note">Creators with recorded payments, including partial payments and advances. Open payment history to revise or clear an individual record.</p>}
     {incomplete.length > 0 && <p className="cp-note warning"><b>{incomplete.length} of {visible.length}</b> payment lines need bank details before export. You can prepare amounts now; open a creator’s bank details to complete the required fields.</p>}
     <div className="cp-table-scroll" tabIndex={0} role="region" aria-label="Creator payments table">
@@ -78,5 +80,6 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
       </table>
     </div>
     {incomplete.length > 0 && <div className="cp-warning-footer">Complete the highlighted bank records before generating a bank payment file. Exporting reserves the amounts; confirm the bank results afterwards.</div>}
+    </>}
   </section>;
 }
