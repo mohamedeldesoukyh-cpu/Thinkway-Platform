@@ -26,6 +26,13 @@ export function inspectIban(value: string) {
         detected.bank_name = 'Emirates NBD Bank PJSC';
         detected.swift = 'EBILAEAD';
     }
+    // CBUAE UAEWPS AUX500 sponsoring-bank directory: 041 = Sharjah Islamic Bank.
+    // https://www.gcaa.gov.ae/en/epublication/EPublications/Forms%20Download/Safety%20Affairs/General%20Publications/UAE%20Central%20Bank%20WPS/UAEWPS%20AUX500%20-%20V2018-001%20-%20SPONSORING%20EMPLOYERS%20INTO%20UAEWPS.pdf
+    // Bank-issued BIC: https://www.sib.ae/docs/default-source/default-document-library/merchant-services-agreement-form_june-2025.pdf
+    if (country === 'AE' && bankCode === '041') {
+        detected.bank_name = 'Sharjah Islamic Bank';
+        detected.swift = 'NBSHAEAS';
+    }
     return { iban, country, bankCode, detected, error: undefined };
 }
 

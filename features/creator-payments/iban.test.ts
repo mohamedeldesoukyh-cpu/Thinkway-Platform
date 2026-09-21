@@ -31,6 +31,19 @@ test('Egyptian layout extracts account without treating branch code as branch na
     assert.equal(info.detected?.account_number, '00000000000000001');
     assert.equal(info.detected?.bank_branch, undefined);
 });
+test('Sharjah Islamic Bank code 041 fills routing without inferring personal details or currency', () => {
+    const bank = fillFromIban({ ...bankDetails(), iban: sample('AE', '0410000000000000001') });
+    assert.equal(bank.bank_name, 'Sharjah Islamic Bank');
+    assert.equal(bank.swift, 'NBSHAEAS');
+    assert.equal(bank.country, 'AE');
+    assert.equal(bank.account_number, '0000000000000001');
+    assert.equal(bank.currency, '');
+    assert.equal(bank.beneficiary_address, '');
+    assert.equal(bank.registered, false);
+    const changed = fillFromIban(changeIban(bank, sample('AE', '0260000000000000002')));
+    assert.equal(changed.swift, 'EBILAEAD');
+    assert.equal(changed.bank_name, 'Emirates NBD Bank PJSC');
+});
 test('invalid checksum and country length never populate fields and fail save validation', () => {
     const iban = sample('AE', '0260000000000000001');
     for (const invalid of [iban.slice(0, -1) + '2', sample('AE', '02600000000000000001'), 'AE123']) {
