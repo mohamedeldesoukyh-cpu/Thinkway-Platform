@@ -1,4 +1,64 @@
 /* Shared campaign Finance styling; payment calculations remain in the model. */
+.thinkway-creator-payments .cp-panel { background: var(--card); border: 1px solid var(--tw-hair, var(--border)); border-radius: 12px; box-shadow: 0 0 0 1px rgb(0 87 255 / 3%), 0 8px 24px rgb(0 87 255 / 4%); overflow: hidden; margin-bottom: 11px; }
+.thinkway-creator-payments .cp-panel-head { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; padding: 11px 14px; border-bottom: 1px solid var(--tw-line, var(--border)); }
+.thinkway-creator-payments .cp-panel-head h2 { font-size: 12.5px; font-weight: 600; color: var(--tw-ink, var(--foreground)); margin: 0; }
+.thinkway-creator-payments .cp-panel-head > span { font-size: 11px; color: var(--tw-mut, var(--muted-foreground)); }
+.thinkway-creator-payments .cp-head-actions { margin-left: auto; display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+.thinkway-creator-payments .cp-button { height: 28px; padding: 0 10px; border: 1px solid var(--tw-line, var(--border)); border-radius: 8px; background: var(--card); color: var(--tw-ink2, var(--foreground)); font-size: 11.5px; font-weight: 600; cursor: pointer; }
+.thinkway-creator-payments .cp-button.primary { color: var(--tw-blue, var(--primary)); border-color: #b9cefc; box-shadow: 0 0 0 3px rgb(0 87 255 / 5%); }
+.thinkway-creator-payments .cp-button:disabled { opacity: .45; cursor: not-allowed; box-shadow: none; }
+.thinkway-creator-payments .cp-summary { display: grid; grid-template-columns: repeat(5, minmax(0,1fr)); }
+.thinkway-creator-payments .cp-summary > div { padding: 10px 14px; border-right: 1px solid var(--tw-hair, var(--border)); }
+.thinkway-creator-payments .cp-summary > div:last-child { border: 0; }
+.thinkway-creator-payments .cp-summary > div > span { display: block; text-transform: uppercase; font-size: 8.5px; font-weight: 700; letter-spacing: .6px; color: var(--tw-mut, var(--muted-foreground)); }
+.thinkway-creator-payments .cp-summary strong { display: block; margin-top: 3px; font: 600 12.5px var(--font-geist-mono), ui-monospace, monospace; color: var(--tw-ink, var(--foreground)); }
+.thinkway-creator-payments .cp-note { margin: 0 14px 12px; padding: 10px 12px; background: var(--tw-soft, var(--muted)); border-radius: 8px; color: var(--tw-mut, var(--muted-foreground)); font-size: 11.5px; }
+.thinkway-creator-payments .cp-note.warning { background: #fff6e8; color: #8a5d12; border: 1px solid #f0d6a4; }
+.thinkway-creator-payments .cp-register-filters { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px; }
+.thinkway-creator-payments .cp-register-filters input { max-width: 280px; height: 30px; border-radius: 8px; }
+.thinkway-creator-payments .cp-segments { display: flex; gap: 2px; background: var(--tw-soft, var(--muted)); border: 1px solid var(--tw-hair, var(--border)); border-radius: 9px; padding: 2px; }
+.thinkway-creator-payments .cp-segments button { background: transparent; border: 0; border-radius: 7px; padding: 5px 11px; font-weight: 600; font-size: 11.5px; color: var(--tw-mut, var(--muted-foreground)); }
+.thinkway-creator-payments .cp-segments button[aria-pressed="true"] { background: var(--card); color: var(--tw-blue, var(--primary)); box-shadow: 0 1px 2px rgb(11 15 26 / 8%); }
+.thinkway-creator-payments .cp-table-scroll { overflow-x: auto; }
+.thinkway-creator-payments .cp-table { width: 100%; min-width: 1297px; table-layout: fixed; border-collapse: collapse; color: var(--tw-ink2, var(--foreground)); }
+.thinkway-creator-payments .cp-table th { background: var(--tw-soft, var(--muted)); padding: 9px 8px; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--tw-mut, var(--muted-foreground)); border-bottom: 1px solid var(--tw-line, var(--border)); }
+.thinkway-creator-payments .cp-table td { padding: 11px 8px; border-bottom: 1px solid var(--tw-hair, var(--border)); vertical-align: middle; font-size: 12px; }
+.thinkway-creator-payments .cp-table .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+.thinkway-creator-payments .cp-table td.numeric { font: 500 12.5px var(--font-geist-mono), ui-monospace, monospace; }
+.thinkway-creator-payments .cp-table td b { font-weight: 600; }
+.thinkway-creator-payments .cp-table small { display: block; font-size: 10px; color: var(--tw-mut, var(--muted-foreground)); margin-top: 3px; }
+.thinkway-creator-payments .cp-table tr.bank-warning { background: #fffcf5; }
+.thinkway-creator-payments .cp-table tr.bank-warning > td:first-child { box-shadow: inset 3px 0 #e0a93c; }
+.thinkway-creator-payments .cp-table tr.selected { background: var(--tw-lav, #eff4ff); }
+.thinkway-creator-payments .cp-table input:not([type="checkbox"]), .thinkway-creator-payments .cp-table select { width: 100%; min-width: 0; height: 30px; border: 1px solid var(--tw-line, var(--border)); border-radius: 8px; background: var(--card); padding: 0 7px; font-size: 11.5px; color: var(--tw-ink, var(--foreground)); }
+.thinkway-creator-payments .cp-table input:not([type="checkbox"]) { text-align: right; font-family: var(--font-geist-mono), ui-monospace, monospace; }
+.thinkway-creator-payments .cp-table select + input { margin-top: 5px; }
+.thinkway-creator-payments .cp-table input[type="checkbox"] { width: 15px; height: 15px; accent-color: var(--tw-blue, #0057ff); }
+.thinkway-creator-payments .cp-creator { display: flex; align-items: center; gap: 8px; }
+.thinkway-creator-payments .cp-creator > div { min-width: 0; }
+.thinkway-creator-payments .cp-creator strong { display: block; font-size: 12px; color: var(--tw-ink, var(--foreground)); overflow-wrap: anywhere; }
+.thinkway-creator-payments .cp-avatar { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; border-radius: 50%; background: #eaf0fe; color: #365fc0; font-size: 10px; font-weight: 700; }
+.thinkway-creator-payments .cp-code { font: 500 10.5px var(--font-geist-mono), monospace; overflow-wrap: anywhere; }
+.thinkway-creator-payments .cp-status { display: flex; flex-wrap: wrap; gap: 4px; }
+.thinkway-creator-payments .cp-pill { padding: 2px 7px; border-radius: 999px; font-size: 10px; font-weight: 600; }
+.thinkway-creator-payments .cp-bank { margin-top: 6px; border: 1px solid transparent; border-radius: 6px; padding: 3px 6px; font-size: 10px; font-weight: 600; text-align: left; }
+.thinkway-creator-payments .cp-bank.warning { color: #8a5d12; background: #fff0d4; border-color: #f0d6a4; }
+.thinkway-creator-payments .cp-bank.ready { color: #0a7a55; background: #e9f7f1; border-color: #bfe6d5; }
+.thinkway-creator-payments .cp-detail-toggle { display: block; padding: 0; border: 0; background: transparent; color: var(--tw-blue, #0057ff); font-size: 10px; margin-top: 6px; }
+.thinkway-creator-payments .cp-fx { display: block; font-size: 10px; color: var(--tw-mut, var(--muted-foreground)); margin-top: 5px; }
+.thinkway-creator-payments .cp-detail-row { background: var(--tw-soft, var(--muted)); }
+.thinkway-creator-payments .cp-balances { display: flex; flex-wrap: wrap; gap: 20px; padding: 2px 8px; }
+.thinkway-creator-payments .cp-balances span { font-size: 11px; color: var(--tw-mut, var(--muted-foreground)); }
+.thinkway-creator-payments .cp-balances b { margin-left: 6px; color: var(--tw-ink, var(--foreground)); font-family: var(--font-geist-mono), monospace; }
+.thinkway-creator-payments .cp-vat-note { color: #8a5d12; font-size: 11px; padding: 4px 8px; }
+.thinkway-creator-payments .cp-error { color: #c82121; font-size: 11px; padding: 2px 8px; }
+.thinkway-creator-payments .cp-table tfoot { background: #f2f5fa; border-top: 2px solid var(--tw-line, var(--border)); }
+.thinkway-creator-payments .cp-table tfoot td { font-size: 11px; font-weight: 600; }
+.thinkway-creator-payments .cp-table tfoot .numeric { font-size: 10.5px; overflow-wrap: anywhere; }
+.thinkway-creator-payments .cp-warning-footer { background: #fff6e8; color: #8a5d12; padding: 9px 16px; border-top: 1px solid #f0d6a4; font-size: 11.5px; }
+.thinkway-creator-payments .cp-empty { text-align: center; padding: 24px; }
+.thinkway-creator-payments .cp-panel button:focus-visible, .thinkway-creator-payments .cp-table input:focus-visible, .thinkway-creator-payments .cp-table select:focus-visible { outline: 2px solid var(--tw-blue, #0057ff); outline-offset: 2px; }
+@media (max-width: 640px) { .thinkway-creator-payments .cp-summary { grid-template-columns: repeat(2, minmax(0,1fr)); } .thinkway-creator-payments .cp-head-actions { margin-left: 0; } }
 .campaign-finance-workspace .campaign-finance-tabs {
   height: auto;
   padding: 0;

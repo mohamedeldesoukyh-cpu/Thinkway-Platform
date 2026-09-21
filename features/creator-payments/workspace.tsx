@@ -5,25 +5,21 @@ import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { toast } from 'sonner';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { OperationalFloatingActionBar } from '@/components/workspace/operational-floating-action-bar';
+import { DecimalInput } from './decimal-input';
+import { PaymentRegister } from './payment-register';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { loadCreatorPayments, exportCreatorPayments, downloadCreatorPaymentBatch, confirmCreatorPayment } from './actions';
 import { AaibBankEditor, downloadFile } from './bank-editor';
-import { calculatePayment, ioBadge, paymentStatus, money, type PaymentRow, type PaymentDraft, type PaymentBatch } from './model';
-import { PAYMENT_FILENAME, validateBank, type ExportSettings } from './aaib';
+import { calculatePayment, money, type PaymentRow, type PaymentDraft, type PaymentBatch } from './model';
+import { PAYMENT_FILENAME, type ExportSettings } from './aaib';
 import purposes from './purpose-codes.json';
 import { CampaignWorkspaceFrame, type WorkspaceSummaryStat } from '@/features/campaigns/components/aurora/campaign-workspace-frame';
 import '@/app/styles/creator-payments.css';
 const fmt = (n: number, c: string) => `${Number.isFinite(n) ? new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n) : '—'} ${c}`;
 const inputClass = 'h-9 rounded-md border bg-background px-2 text-sm';
 const defaultDraft = (r: PaymentRow): PaymentDraft => ({ fee: r.fee, vat: r.vat, currency: r.currency, rate: 1, mode: 'full', percent: 100, amount: 0 });
-function DecimalInput({ value, onValueChange, precision = 2, ...props }: Omit<React.ComponentProps<typeof Input>, 'value' | 'onChange' | 'type'> & { value: number; onValueChange: (value: number) => void; precision?: number }) {
-    const [text, setText] = useState(Number.isFinite(value) ? value.toFixed(precision) : '');
-    const focused = useRef(false);
-    useEffect(() => { if (!focused.current) setText(Number.isFinite(value) ? value.toFixed(precision) : ''); }, [value, precision]);
-    return <Input {...props} type="text" inputMode="decimal" placeholder={precision === 2 ? '0.00' : '0.000000'} value={text} onFocus={() => { focused.current = true; }} onChange={e => { const raw = e.target.value.replace(/,/g, ''); if (/^\d*\.?\d*$/.test(raw)) { setText(raw); onValueChange(raw === '' ? 0 : Number(raw)); } }} onBlur={() => { focused.current = false; setText(Number.isFinite(value) ? value.toFixed(precision) : ''); }}/>
-}
 function Totals({ rows, drafts, selected = false, floating = false, tools }: {
     rows: PaymentRow[];
     drafts: Record<string, PaymentDraft>;
@@ -67,6 +63,7 @@ function Totals({ rows, drafts, selected = false, floating = false, tools }: {
     }));
     if (selected) stats.push({ key: 'pay-now', label: 'Pay now', tone: 'blue', value: <div className="space-y-1">{[...payments].map(([currency, value]) => <div key={currency}>{fmt(money(value),currency)}</div>)}</div> });
     if (floating) return <div className="tw-selbar-sum">{stats.filter(stat => ["fee", "vat", "total", "pay-now", "remaining"].includes(stat.key)).map(stat => <span key={stat.key} className="tw-selbar-metric"><i>{stat.label}</i><b className={stat.key === "pay-now" ? "g" : undefined}>{stat.value}</b></span>)}</div>;
+    if (!selected) return <div className="cp-panel"><div className="cp-panel-head"><h2>Creator payment totals</h2><span>Agreed fees, VAT and balances · original currencies</span><div className="cp-head-actions">{tools}</div></div><div className="cp-summary">{stats.map(stat => <div key={stat.key}><span>{stat.label}</span><strong>{stat.value}</strong></div>)}</div><p className="cp-note">{new Set(rows.map(row => row.creatorId)).size} creators · {rows.length} payment lines. Totals are grouped by original currency; payment drafts are shown in the register.</p></div>;
     return <CampaignWorkspaceFrame
         title={selected ? 'Selected creator payments' : 'Creator payment totals'}
         subtitle={selected ? `${new Set(rows.map(row => row.creatorId)).size} creators · ${rows.length} payments` : 'Agreed fees, VAT and payment balances · original currencies'}
@@ -124,33 +121,7 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{loading ? <p className="text-sm">Loading payments…</p> : <>
     {!rows.length && !error && <p className="text-sm text-muted-foreground">Creator payments appear here after a creator IO has been generated. Continue using the existing IO workflow.</p>}
     <Tabs value={activeTab} onValueChange={setActiveTab} className="campaign-finance-workspace"><TabsList aria-label="Creator payment sections" className="campaign-finance-tabs"><TabsTrigger value="payments">Payments</TabsTrigger><TabsTrigger value="export">Export</TabsTrigger></TabsList><TabsContent value="payments">
-    {!!rows.length && <><div className="flex flex-wrap items-center gap-2"><label className="flex items-center gap-2 text-sm"><input type="checkbox" disabled={!canWrite} checked={visibleRows.length > 0 && visibleRows.every(r => selected.has(r.assignmentId))} onChange={e => { requestId.current = null; setSelected(previous => { const next = new Set(previous); visibleRows.forEach(r => { if (e.target.checked && r.payable !== false)
-                next.add(r.assignmentId);
-            else
-                next.delete(r.assignmentId); }); return next; }); }}/>Select all</label></div>
-    <div className="flex flex-wrap gap-2"><Input className="max-w-xs" aria-label="Filter creators" placeholder="Find creator…" value={search} onChange={e => setSearch(e.target.value)}/>{!campaignId && <select className={inputClass} aria-label="Filter campaigns" value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}><option value="">All campaigns</option>{[...new Map(rows.map(r => [r.campaignId, r.campaign])).entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>}</div><div className="space-y-3">{visibleRows.map(row => {
-                    const d = drafts[row.assignmentId] ?? defaultDraft(row);
-                    const c = calculatePayment(row, d);
-                    const status = paymentStatus(row.paid, money(row.fee+row.fee*row.vat/100));
-                    const badge = ioBadge(row.ioStatus);
-                    const issues = validateBank(row.bank);
-                    return <article key={row.assignmentId} className="creator-payment-card">
-      <div className="creator-payment-card-head flex flex-wrap items-center gap-2"><input type="checkbox" disabled={!canWrite || row.payable === false} aria-label={`Select ${row.creator}`} checked={selected.has(row.assignmentId)} onChange={e => { requestId.current = null; setSelected(s => { const n = new Set(s); if (e.target.checked)
-                        n.add(row.assignmentId);
-                    else
-                        n.delete(row.assignmentId); return n; }); }}/><span className="creator-payment-identity"><strong>{row.creator}</strong>{row.username && <small>@{row.username.replace(/^@/, "")}</small>}</span><span className={`rounded-full px-2 py-1 text-xs ${badge.className}`}>{badge.label}</span><span className="text-xs text-muted-foreground">{row.ioNumber}{!campaignId ? ` · ${row.campaign}` : ''}</span><span className={`rounded-full px-2 py-1 text-xs ${status.className}`}>{status.label}</span><Button size="sm" variant="outline" className={issues.length ? "payment-bank-warning" : "payment-bank-ready"} onClick={() => setBankRow(row)}>{issues.length ? "Complete bank details" : row.bank.registered ? "Bank details complete ✓" : "Details complete · confirm registration"}</Button></div>
-      <div className="creator-payment-fields grid gap-3 sm:grid-cols-3 xl:grid-cols-6">
-        <label className="text-xs">Agreed fee ({row.currency}, excluding VAT)<Input readOnly aria-readonly="true" value={row.fee.toFixed(2)} title="Agreed fee from the campaign agreement"/><span className="text-muted-foreground">Agreed amount · read-only</span></label>
-        <label className="text-xs">VAT %<DecimalInput  min="0" max="100" step="0.01" value={d.vat} onValueChange={value => patch(row, { vat: value })}/><span className="text-muted-foreground">VAT {fmt(c.vatAmount, row.currency)}</span></label>
-        <div className="text-xs">Total creator fees<p className="mt-2 font-semibold">{fmt(c.total, row.currency)}</p><p className="mt-1 text-muted-foreground">Paid {fmt(row.paid, row.currency)}</p></div>
-        <label className="text-xs">Payment currency<select className={`${inputClass} mt-1 w-full`} value={d.currency} onChange={e => patch(row, { currency: e.target.value, rate: e.target.value === row.currency ? 1 : 0 })}>{[...new Set([...COMMERCIAL_CURRENCIES, row.currency, row.bank.currency].filter(Boolean))].map(code => <option key={code}>{code}</option>)}</select>{d.currency !== row.currency && <span>1 {row.currency} =<DecimalInput aria-label={`Exchange rate for ${row.creator}`}  min="0" step="0.000001" precision={6} value={d.rate} onValueChange={value => patch(row, { rate: value })}/>{d.currency}</span>}</label>
-        <label className="text-xs">Payment calculation<select className={`${inputClass} w-full`} value={d.mode === 'percent' ? [25, 50, 75].includes(d.percent) ? String(d.percent) : 'custom' : d.mode} onChange={e => patch(row, e.target.value === 'full' || e.target.value === 'manual' ? { mode: e.target.value } : { mode: 'percent', percent: e.target.value === 'custom' ? d.percent : Number(e.target.value) })}><option value="full">Full available balance</option><option value="25">25% of total incl. VAT</option><option value="50">50% of total incl. VAT</option><option value="75">75% of total incl. VAT</option><option value="custom">Custom % of total incl. VAT</option><option value="manual">Manual amount</option></select>{d.mode === 'percent' && <DecimalInput aria-label={`Payment percentage for ${row.creator}`}  min="0" max="100" value={d.percent} onValueChange={value => patch(row, { percent: value })}/>}</label>
-        <label className="text-xs">Pay now ({d.currency})<DecimalInput  min="0" step="0.01" value={Number.isFinite(c.payNow) ? c.payNow : 0} onValueChange={value => patch(row, { mode: 'manual', amount: value })}/>{d.currency !== row.currency && <span className="text-muted-foreground">{fmt(Number.isFinite(c.originalPay) ? c.originalPay : 0, row.currency)} equivalent</span>}</label>
-      </div><div className="creator-payment-balances flex flex-wrap gap-4"><span>Outstanding: <b>{fmt(c.outstanding, row.currency)}</b></span><span>Pending exports: <b>{fmt(row.reserved, row.currency)}</b></span><span>Remaining after this payment: <b>{fmt(Number.isFinite(c.remaining * c.rate) ? c.remaining * c.rate : 0, d.currency)}</b>{d.currency !== row.currency && <small className="block text-muted-foreground">{fmt(Number.isFinite(c.remaining) ? c.remaining : 0, row.currency)} original</small>}</span></div>
-      {(d.vat !== row.vat) && <p className="mt-2 text-xs text-amber-800">VAT adjustment will be saved with the export. The issued IO and campaign agreement are unchanged.</p>}
-      {selected.has(row.assignmentId) && c.errors.map(e => <p key={e} className="mt-1 text-xs text-red-700">{e}</p>)}
-    </article>;
-                })}</div></>}
+    {!!rows.length && <PaymentRegister rows={visibleRows} drafts={drafts} selected={selected} canWrite={canWrite} showCampaign={!campaignId} onPatch={patch} onBank={setBankRow} onSelect={(id, checked) => { requestId.current = null; setSelected(current => { const next = new Set(current); if (checked) next.add(id); else next.delete(id); return next; }); }} onSelectAll={(ids, checked) => { requestId.current = null; setSelected(current => { const next = new Set(current); ids.forEach(id => checked ? next.add(id) : next.delete(id)); return next; }); }} onExport={() => setActiveTab('export')} onReview={() => { requestId.current = null; setExportOpen(true); }} canReview={canWrite && chosen.length > 0 && oneCampaign} filters={<><Input aria-label="Filter creators" placeholder="Find creator…" value={search} onChange={e => setSearch(e.target.value)}/>{!campaignId && <select className={inputClass} aria-label="Filter campaigns" value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}><option value="">All campaigns</option>{[...new Map(rows.map(r => [r.campaignId, r.campaign])).entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>}</>}/>}
 
     </TabsContent><TabsContent value="export"><div className="creator-payment-export-panel space-y-3"><h3 className="font-semibold">Export payments</h3><p className="text-muted-foreground">Select creators in Payments, then choose your bank template.</p><label className="block">Bank template<select className={`${inputClass} mt-1 block w-full max-w-md`} value={template} onChange={e => setTemplate(e.target.value)}><option value="aaib-bulk-advice">AAIB — Bulk payment with advice (CSV)</option></select></label><p>{chosen.length} payments selected · {new Set(chosen.map(r => r.creatorId)).size} creators</p>{chosen.length > 0 && !oneCampaign && <p className="text-amber-800">Select creators from one campaign per file.</p>}<div className="flex flex-wrap gap-2"><Button variant="outline" onClick={() => setActiveTab('payments')}>Choose creators</Button><Button disabled={!canWrite || !chosen.length || !oneCampaign || template !== 'aaib-bulk-advice'} onClick={() => { requestId.current = null; setExportOpen(true); }}>Review export</Button></div></div>
     <details className="rounded-xl border p-3"><summary className="cursor-pointer font-semibold">Payment batch history ({batches.length})</summary>{batches.map(batch => <div key={batch.id} className="mt-3 space-y-2 border-t pt-3"><div className="flex items-center justify-between text-sm"><span>{batch.transfer_date} · {batch.entries.length} payments</span><Button variant="outline" size="sm" onClick={async () => { const r = await downloadCreatorPaymentBatch(batch.id); if (r.ok)
