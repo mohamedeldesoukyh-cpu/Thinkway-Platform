@@ -22,6 +22,7 @@ export type PaymentRow = {
     campaignId: string;
     creatorId: string;
     creator: string;
+    username?: string;
     campaign?: string;
     payable?: boolean;
     ioId: string;
