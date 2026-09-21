@@ -93,7 +93,8 @@ export function CampaignDetailChrome({
     );
     if (!scroller || !chrome) return;
 
-    let lastHeight = chrome.getBoundingClientRect().height;
+    let upwardIntent = false;
+    let touchY = 0;
     let miniState = scroller.scrollTop > 96;
     let armTimer: number | null = null;
     setMini(miniState);
@@ -107,22 +108,16 @@ export function CampaignDetailChrome({
       armTimer = window.setTimeout(() => setTopArmed(true), 400);
     };
 
-    const ro = new ResizeObserver(() => {
-      const next = chrome.getBoundingClientRect().height;
-      const delta = lastHeight - next;
-      lastHeight = next;
-      // Chrome sits above the scroller — when it shrinks/grows, keep the same
-      // content under the cursor so Assignments/Vendor IO don't jump upward.
-      if (Math.abs(delta) > 1) {
-        scroller.scrollTop = Math.max(0, scroller.scrollTop + delta);
-      }
-    });
-    ro.observe(chrome);
-
+    // Expanding the content viewport can clamp scrollTop on short panels.
+    // Only user upward intent may expand the header; never resize feedback.
+    const onWheel = (event: WheelEvent) => { upwardIntent = event.deltaY < 0; if (upwardIntent) onScroll(); };
+    const onTouchStart = (event: TouchEvent) => { touchY = event.touches[0]?.clientY ?? 0; };
+    const onTouchMove = (event: TouchEvent) => { const next = event.touches[0]?.clientY ?? touchY; upwardIntent = next > touchY; touchY = next; if (upwardIntent) onScroll(); };
+    const onKeyDown = (event: KeyboardEvent) => { upwardIntent = ['ArrowUp', 'PageUp', 'Home'].includes(event.key); if (upwardIntent) onScroll(); };
     const onScroll = () => {
       const y = scroller.scrollTop;
       // Hysteresis avoids mini on/off chatter near the threshold.
-      const nextMini = miniState ? y > 40 : y > 96;
+      const nextMini = miniState ? !(upwardIntent && y <= 40) : y > 96;
       if (nextMini === miniState) return;
       miniState = nextMini;
       setMini(nextMini);
@@ -131,8 +126,15 @@ export function CampaignDetailChrome({
     };
 
     scroller.addEventListener("scroll", onScroll, { passive: true });
+    scroller.addEventListener("wheel", onWheel, { passive: true });
+    scroller.addEventListener("touchstart", onTouchStart, { passive: true });
+    scroller.addEventListener("touchmove", onTouchMove, { passive: true });
+    scroller.addEventListener("keydown", onKeyDown);
     return () => {
-      ro.disconnect();
+      scroller.removeEventListener("wheel", onWheel);
+      scroller.removeEventListener("touchstart", onTouchStart);
+      scroller.removeEventListener("touchmove", onTouchMove);
+      scroller.removeEventListener("keydown", onKeyDown);
       scroller.removeEventListener("scroll", onScroll);
       if (armTimer != null) window.clearTimeout(armTimer);
     };
