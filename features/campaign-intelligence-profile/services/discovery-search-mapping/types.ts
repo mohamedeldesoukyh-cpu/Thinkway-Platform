@@ -5,6 +5,7 @@
 
 export const DISCOVERY_SEARCH_FILTER_KEYS = [
   "creator_country",
+  "creator_tier",
   "creator_city",
   "audience_country",
   "audience_city",
@@ -64,7 +65,10 @@ export type DiscoveryMappedFilter = {
   confidence: number;
 };
 
+export type DiscoveryRequirement = { id: string; key: string; label: string; value: string; classification: "HARD" | "SOFT" | "CONTEXT" | "UNSUPPORTED"; source?: string };
+
 export type DiscoverySearchMappingResult = {
+  requirements?: DiscoveryRequirement[];
   filters: DiscoveryMappedFilter[];
   /** Field labels considered but skipped (low confidence or unmappable). */
   skipped: string[];

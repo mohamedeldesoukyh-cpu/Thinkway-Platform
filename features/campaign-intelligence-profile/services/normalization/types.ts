@@ -11,6 +11,8 @@ export type FieldProvenance = {
   level: EvidenceLevel;
   confidence: number;
   sourceField?: string;
+  /** Verbatim supporting brief text, or operator-entered field evidence. */
+  excerpt?: string;
 };
 
 export type NormalizedBrandEntities = {
@@ -34,6 +36,11 @@ export type NormalizedAudienceEntities = {
 };
 
 export type NormalizedCreatorEntities = {
+  countries?: string[];
+  languages?: string[];
+  contentLanguages?: string[];
+  gender?: NormalizedGender;
+  tiers?: string[];
   niches: string[];
   creatorTypes: string[];
   followerMin?: number;

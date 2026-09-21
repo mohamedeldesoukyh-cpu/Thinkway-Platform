@@ -16,6 +16,7 @@ import {
 } from "./creator-search-types";
 
 type Props = {
+  aiFields?: string[];
   filters: CreatorSearchFilters;
   search?: string;
   onChange: (next: CreatorSearchFilters) => void;
@@ -25,11 +26,13 @@ type Props = {
 
 function FilterChipButton({
   chip,
+  aiFields,
   filters,
   onChange,
   onClearSearch,
 }: {
   chip: ActiveFilterChip;
+  aiFields?: string[];
   filters: CreatorSearchFilters;
   onChange: (next: CreatorSearchFilters) => void;
   onClearSearch?: () => void;
@@ -50,7 +53,7 @@ function FilterChipButton({
         "text-[11px] font-medium text-[#168a66] dark:text-emerald-300 transition-colors hover:bg-[#d1fae5] dark:hover:bg-emerald-500/20"
       )}
     >
-      <span className="max-w-[220px] truncate">{chip.label}</span>
+      <span className="max-w-[220px] truncate">{Object.keys(chip.clear).some(k => aiFields?.includes(k)) ? "[AI] " : ""}{chip.label}</span>
       <XIcon className="size-3 opacity-60 transition-opacity group-hover:opacity-100" />
     </button>
   );
@@ -59,6 +62,7 @@ function FilterChipButton({
 export function CreatorSearchActiveFilters({
   filters,
   search = "",
+  aiFields,
   onChange,
   onClearSearch,
   onClearAll,
@@ -110,6 +114,7 @@ export function CreatorSearchActiveFilters({
               <FilterChipButton
                 key={chip.id}
                 chip={chip}
+                aiFields={aiFields}
                 filters={filters}
                 onChange={onChange}
                 onClearSearch={onClearSearch}

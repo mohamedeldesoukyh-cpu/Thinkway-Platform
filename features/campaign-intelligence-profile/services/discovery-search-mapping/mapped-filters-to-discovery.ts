@@ -1,3 +1,4 @@
+import { TIER_FILTER_RANGES } from "@/lib/creators/influencer-tier";
 import type { CreatorSearchFilters } from "@/features/discovery/components/creator-search/creator-search-types";
 import {
   cloneCreatorSearchFilters,
@@ -22,15 +23,17 @@ export function discoveryMappedFiltersToCreatorFilters(
 
   for (const item of mapped) {
     switch (item.key) {
+      case "creator_tier": {
+        const range = TIER_FILTER_RANGES.find(r => r.id === item.value.toLowerCase());
+        if (range) filters.followerRanges.push({ min: String(range.min), max: range.max == null ? "" : String(range.max) });
+        break;
+      }
       case "category":
         if (!filters.categories.includes(item.value)) {
           filters.categories.push(item.value);
         }
         break;
       case "niche":
-        if (!filters.audienceInterestTags.includes(item.value)) {
-          filters.audienceInterestTags.push(item.value);
-        }
         if (!filters.aiNiche) filters.aiNiche = item.value;
         break;
       case "creator_country":
@@ -107,6 +110,19 @@ export function discoveryMappedFiltersToCreatorFilters(
     }
   }
 
+  // Tier choices are alternatives; explicit numeric limits constrain every band.
+  if (filters.followerRanges.length && (filters.minFollowers || filters.maxFollowers)) {
+    const min = filters.minFollowers ? Number(filters.minFollowers) : 0;
+    const max = filters.maxFollowers ? Number(filters.maxFollowers) : Infinity;
+    filters.followerRanges = filters.followerRanges.map(range => ({
+      min: String(Math.max(Number(range.min), min)),
+      max: Number.isFinite(Math.min(range.max ? Number(range.max) : Infinity, max))
+        ? String(Math.min(range.max ? Number(range.max) : Infinity, max)) : "",
+    })).filter(range => !range.max || Number(range.min) <= Number(range.max));
+    if (!filters.followerRanges.length) throw new Error("Creator tiers and follower limits do not overlap. Review campaign requirements.");
+    filters.minFollowers = "";
+    filters.maxFollowers = "";
+  }
   return filters;
 }
 

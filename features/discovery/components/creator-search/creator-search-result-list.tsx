@@ -43,6 +43,7 @@ const SECTION_ESTIMATE = 52;
 
 type Props = {
   completeness?: import("@/lib/discovery/normal-search").SearchCompleteness;
+  relevanceLabel?: "Relevance" | "Match";
   showRelevance?: boolean;
   creators: UnifiedCreatorResult[];
   hybridListItems?: CreatorSearchHybridListItem[];
@@ -94,6 +95,7 @@ type Props = {
 };
 
 type VirtualRowProps = {
+  relevanceLabel?: "Relevance" | "Match";
   showRelevance?: boolean;
   creator: UnifiedCreatorResult;
   selected: boolean;
@@ -111,6 +113,7 @@ type VirtualRowProps = {
 const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
   creator,
   showRelevance,
+  relevanceLabel = "Relevance",
   selected,
   index,
   addedToShortlist,
@@ -143,6 +146,7 @@ const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
     <CreatorSearchSuiteRow
       creator={creator}
       showRelevance={showRelevance}
+      relevanceLabel={relevanceLabel}
       selected={selected}
       index={index}
       addedToShortlist={addedToShortlist}
@@ -160,6 +164,7 @@ const CreatorSearchVirtualRow = memo(function CreatorSearchVirtualRow({
 export function CreatorSearchResultList({
   completeness,
   showRelevance,
+  relevanceLabel = "Relevance",
   creators,
   hybridListItems,
   searchMode = "discovery",
@@ -316,6 +321,7 @@ export function CreatorSearchResultList({
         <div style={{ minWidth: SEARCH_MIN_W + (showRelevance ? 140 : 0), ...(showRelevance ? relevanceColsStyle : searchColsStyle) }}>
           <CreatorSearchSuiteHeader
             showRelevance={showRelevance}
+            relevanceLabel={relevanceLabel}
             total={visibleCreatorIds.length}
             allSelected={allSelected}
             hasCreators={hasCreators}
@@ -470,6 +476,7 @@ export function CreatorSearchResultList({
                   >
                     <CreatorSearchVirtualRow
                       showRelevance={showRelevance}
+                      relevanceLabel={relevanceLabel}
                       creator={item.creator}
                       selected={selectedIds.has(item.creator.unified_id)}
                       index={virtualRow.index}

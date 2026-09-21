@@ -58,6 +58,9 @@ export function normalizeCampaignIntelligenceProfile(
 
 export function profileHasExtractedData(profile: CampaignIntelligenceProfile): boolean {
   return Boolean(
+    (profile.creatorRequirements?.countries?.length ?? 0) > 0 ||
+    (profile.creatorRequirements?.languages?.length ?? 0) > 0 ||
+    (profile.contentLanguages?.length ?? 0) > 0 ||
     profile.brandName?.trim() ||
       profile.campaignName?.trim() ||
       profile.market?.trim() ||

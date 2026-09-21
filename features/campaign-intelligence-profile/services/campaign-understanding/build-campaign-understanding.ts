@@ -90,6 +90,12 @@ type ProfileField = { concept: string; label: string; value: JsonValue | undefin
 
 function profileFields(profile: CampaignIntelligenceProfile): ProfileField[] {
   return [
+    { concept: "creator_country", label: "Creator country", value: profile.creatorRequirements?.countries },
+    { concept: "creator_language", label: "Creator language", value: profile.creatorRequirements?.languages },
+    { concept: "content_language", label: "Content language", value: profile.contentLanguages },
+    { concept: "creator_gender", label: "Creator gender", value: profile.creatorRequirements?.gender },
+    { concept: "audience_country", label: "Audience country", value: profile.audienceDetail?.countries },
+    { concept: "audience_language", label: "Audience language", value: profile.audienceDetail?.languages },
     { concept: "brand", label: "Brand", value: profile.brandName },
     { concept: "client", label: "Client", value: profile.clientName },
     { concept: "campaign_name", label: "Campaign name", value: profile.campaignName },
@@ -121,7 +127,9 @@ export function buildCampaignUnderstanding(input: {
     for (const field of profileFields(input.profile)) {
       if (field.value == null || (Array.isArray(field.value) && field.value.length === 0)) continue;
       const valueText = typeof field.value === "string" ? field.value : Array.isArray(field.value) ? field.value.join(" ") : JSON.stringify(field.value);
-      const evidence =
+      const sourceKey = ({ creator_country: "creatorRequirements.countries", creator_language: "creatorRequirements.languages", content_language: "contentLanguages", creator_gender: "creatorRequirements.gender", audience_country: "audienceDetail.countries", audience_language: "audienceDetail.languages" } as Record<string, string>)[field.concept];
+      const quote = sourceKey ? input.profile.fieldProvenance?.[sourceKey]?.excerpt : undefined;
+      const evidence = quote ? firstEvidence(sourceDocuments, quote) : sourceKey ? null :
         firstEvidence(sourceDocuments, valueText) ??
         (Array.isArray(field.value)
           ? field.value

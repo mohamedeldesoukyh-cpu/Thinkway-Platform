@@ -26,6 +26,7 @@ import type {
 export const CSR_MIN_FILTER_CONFIDENCE = 0.55;
 
 const FILTER_LABELS: Record<DiscoverySearchFilterKey, string> = {
+  creator_tier: "Creator Tier",
   creator_country: "Creator Country",
   creator_city: "Creator City",
   audience_country: "Audience Country",
