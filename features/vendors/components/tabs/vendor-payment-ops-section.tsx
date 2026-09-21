@@ -143,7 +143,7 @@ export function VendorPaymentOpsSection({
                       {formatMoney(row.amount, row.currency)}
                     </td>
                     <td className="px-2 py-2.5 capitalize">
-                      {VENDOR_PAYMENT_STATUS_LABELS[row.status] ?? row.status}
+                      {(row.paid_amount??0)>0 && (row.paid_amount??0)<row.amount ? 'Partially paid' : VENDOR_PAYMENT_STATUS_LABELS[row.status] ?? row.status}
                     </td>
                     <td className="px-2 py-2.5">
                       <Badge
@@ -524,9 +524,9 @@ function PaymentOpsDetail({
           <Button
             type="submit"
             size="sm"
-            disabled={payPending || !ready || !payout.campaign_id || payout.status === "paid"}
+            disabled={payPending || !ready || !payout.campaign_id || payout.status === "paid" || payout.has_payment_ledger}
           >
-            {payout.status === "paid" ? "Already paid" : "Approve & record payment"}
+            {payout.has_payment_ledger ? "Manage in Creator Payments above" : payout.status === "paid" ? "Already paid" : "Approve & record payment"}
           </Button>
         </form>
       </VendorFormSection>

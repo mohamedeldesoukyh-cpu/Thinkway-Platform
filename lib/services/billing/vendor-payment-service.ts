@@ -24,6 +24,11 @@ export async function recordVendorPayment(
     return { ok: false, message: assignError?.message ?? "Assignment not found." };
   }
 
+  const ledger = await supabase.from('creator_payment_entries').select('id').eq('assignment_id',input.assignment_id).in('status',['paid','exported']).limit(1);
+  if (ledger.error || ledger.data?.length) {
+    return {ok:false,message:ledger.error?.message ?? 'This assignment uses Creator Payments. Confirm the bank result there to update its balance.'};
+  }
+
   const influencerId = (assignment as { influencer_id?: string }).influencer_id;
   if (!influencerId) {
     return { ok: false, message: "Assignment has no creator." };

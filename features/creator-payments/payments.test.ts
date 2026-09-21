@@ -1,0 +1,95 @@
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import ExcelJS from 'exceljs';
+import { bankDetails, calculatePayment, paymentStatus, ioBadge, type PaymentRow, type PaymentDraft } from './model';
+import { beneficiaryCells, createPaymentCsv, validateBank, paymentFileBytes } from './aaib';
+import purposes from './purpose-codes.json';
+import { allPaymentRows, paymentRowsByIds } from './query-pages';
+test('large ledgers are paged without truncating paid balances or long ID filters',async()=>{
+    const records=Array.from({length:1101},(_,id)=>({id}));
+    const result=await allPaymentRows({range:async(from,to)=>({data:records.slice(from,to+1),error:null})});
+    assert.equal(result.data.length,1101);
+    const chunks:number[]=[];
+    const byId=await paymentRowsByIds(Array.from({length:205},(_,i)=>String(i)),ids=>{chunks.push(ids.length);return {range:async()=>({data:ids,error:null})};});
+    assert.deepEqual(chunks,[100,100,5]);assert.equal(byId.data.length,205);
+});
+const bank = { ...bankDetails(), payment_type: 'D', currency: 'EGP', nickname: 'Creator01', beneficiary_name: 'Example Creator', account_number: '00123456789', beneficiary_address: 'Cairo', country: 'EG', swift: 'CIBEEGCX', email: 'test@example.com', registered: true };
+const row: PaymentRow = { assignmentId: 'a', campaignId: 'c', creatorId: 'i', creator: 'Example', ioId: 'io', ioNumber: 'IO-1', ioStatus: 'generated', currency: 'USD', fee: 1000, vat: 14, paid: 0, reserved: 0, bank };
+const draft: PaymentDraft = { fee: 1000, vat: 14, currency: 'EGP', rate: 50, mode: 'percent', percent: 50, amount: 0 };
+test('VAT is included in installments, original equivalent, and outstanding', () => {
+    const c = calculatePayment(row, draft);
+    assert.deepEqual([c.fee, c.vatAmount, c.total, c.originalPay, c.payNow, c.remaining], [1000, 140, 1140, 570, 28500, 570]);
+    assert.deepEqual(c.errors, []);
+    const final = calculatePayment({ ...row, paid: 570 }, { ...draft, mode: 'full' });
+    assert.equal(final.payNow, 28500);
+    assert.equal(final.remaining, 0);
+    assert.equal(paymentStatus(0, 1140).label, 'Unpaid');
+    assert.equal(paymentStatus(570, 1140).label, 'Partially paid');
+    assert.equal(paymentStatus(1140, 1140).label, 'Fully paid');
+});
+test('manual amount uses the actual rounded bank transfer for the original balance', () => {
+    const c = calculatePayment(row, { ...draft, mode: 'manual', amount: 10000 });
+    assert.equal(c.originalPay, 200);
+    assert.equal(c.remaining, 940);
+    const rounding = calculatePayment(row, { ...draft, rate: 3.141592, mode: 'manual', amount: 100.123 });
+    assert.equal(rounding.payNow, 100.12);
+    assert.equal(rounding.originalPay, 31.87);
+});
+test('pending exports reserve balance and block fee changes, invalid FX, and overpayment', () => {
+    assert.equal(calculatePayment({ ...row, reserved: 570 }, { ...draft, mode: 'full' }).originalPay, 570);
+    assert.ok(calculatePayment({ ...row, reserved: 600 }, draft).errors.some(e => e.includes('exceeds')));
+    assert.ok(calculatePayment({ ...row, reserved: 100 }, { ...draft, fee: 2000 }).errors.some(e => e.includes('pending bank')));
+    assert.ok(calculatePayment(row, { ...draft, rate: 0 }).errors.length);
+});
+test('generated IO has pending approval badge, approved and rejected are distinct', () => {
+    assert.match(ioBadge('generated').label, /pending/);
+    assert.match(ioBadge('approved').className, /green/);
+    assert.match(ioBadge('rejected').className, /red/);
+});
+test('beneficiary validation preserves account leading zeros and validates IBAN / SWIFT', () => {
+    assert.deepEqual(validateBank(bank), []);
+    assert.equal(beneficiaryCells(bank)[4], '00123456789');
+    assert.equal(beneficiaryCells(bank).length, 15);
+    assert.ok(validateBank({ ...bank, iban: 'EG000000000000000000000000000' }).some(e => e.includes('IBAN')));
+    assert.ok(validateBank({ ...bank, swift: 'CIBEAECX' }).some(e => e.includes('country')));
+    assert.ok(validateBank({ ...bank, currency: 'USD' }).some(e => e.includes('Domestic') || e.includes('domestic')));
+});
+test('payment file preserves bank header and exact TRF/INV layout', async () => {
+    const bytes = await readFile('features/creator-payments/templates/payments.csv');
+    const header = bytes.toString('latin1').split(/\r?\n/)[0];
+    const settings = { debitAccount: '00112233', date: '2026-09-21', charge: 'SHA', purpose: purposes.domestic[0].value, details: 'Creator payment', advice: false };
+    const transfer = { bank, currency: 'EGP', amount: 570, reference: 'A1230001', invoiceNumber: 'INV-123', invoiceDate: '2026-09-20', invoiceAmount: 1140 };
+    const csv = createPaymentCsv(header, settings, [transfer], '2026-09-21');
+    const lines = csv.trimEnd().split('\r\n');
+    assert.equal(lines[0], header);
+    assert.equal(lines.length, 2);
+    assert.ok(Buffer.from(paymentFileBytes(csv)).subarray(0, header.length).equals(bytes.subarray(0, header.length)));
+    const cells = lines[1].split(',');
+    assert.equal(cells.length, 23);
+    assert.equal(cells[1], '00112233');
+    assert.equal(cells[2], 'Creator01');
+    assert.equal(cells[11], '21/09/2026');
+    assert.equal(cells[13], '570.00');
+    assert.equal(cells[20], 'N');
+    const advice = createPaymentCsv(header, { ...settings, advice: true }, [transfer], '2026-09-21').trimEnd().split('\r\n');
+    assert.equal(advice.length, 4);
+    assert.equal(advice[2].split(',').length, 23);
+    assert.equal(advice[3].split(',')[6], '20/09/2026');
+    assert.equal(advice[3].split(',')[4], '570.00');
+    assert.throws(() => createPaymentCsv(header, { ...settings, date: '2026-10-06' }, [transfer], '2026-09-21'), /14 days/);
+    assert.throws(() => createPaymentCsv(header, settings, [{ ...transfer, bank: { ...bank, registered: false } }], '2026-09-21'), /registration/);
+    assert.throws(() => createPaymentCsv(header, settings, [transfer, transfer], '2026-09-21'), /unique/);
+    assert.throws(() => createPaymentCsv(header, { ...settings, details: '=FORMULA' }, [transfer], '2026-09-21'), /formula/);
+});
+test('beneficiary workbook keeps reference sheets and text account values on export', async () => {
+    const w = new ExcelJS.Workbook();
+    await w.xlsx.readFile('features/creator-payments/templates/beneficiaries.xlsx');
+    const names = w.worksheets.map(s => s.name);
+    const s = w.getWorksheet('Beneficiary Details')!;
+    beneficiaryCells(bank).forEach((v, i) => { s.getCell(2, i + 1).value = v; s.getCell(2, i + 1).numFmt = '@'; });
+    const copy = new ExcelJS.Workbook();
+    await copy.xlsx.load(await w.xlsx.writeBuffer());
+    assert.deepEqual(copy.worksheets.map(s => s.name), names);
+    assert.equal(copy.getWorksheet('Beneficiary Details')!.getCell('E2').value, '00123456789');
+});

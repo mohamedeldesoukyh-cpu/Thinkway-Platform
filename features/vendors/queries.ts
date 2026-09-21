@@ -1,4 +1,5 @@
 import { createSupabaseServerClient, requireRequestUser, type RequestUser } from "@/lib/supabase/server";
+import { creatorPaymentBalances } from '@/features/creator-payments/balances';
 import { REL } from "@/lib/supabase/relation-hints";
 import type {
   InfluencerPlatformAccountRow,
@@ -727,6 +728,7 @@ export async function getVendorWorkspace(
         .join(" · ")
     : null;
 
+  const creatorBalances = await creatorPaymentBalances(supabase, assignments.map(a=>a.id));
   const payouts: VendorPayoutRow[] = assignments.map((a) => {
     const ctx = a.campaign_id ? campaignContextById.get(a.campaign_id) : null;
     const versions =
@@ -744,7 +746,9 @@ export async function getVendorWorkspace(
       client_name: ctx?.client_name ?? null,
       brand_name: ctx?.brand_name ?? null,
       line_id: a.campaign_line_id,
-      amount: a.agreed_fee,
+      amount: creatorBalances.get(a.id)?.total ?? a.agreed_fee,
+      paid_amount: creatorBalances.get(a.id)?.paid ?? (a.vendor_payment_status === 'paid' ? a.agreed_fee : 0),
+      has_payment_ledger: creatorBalances.has(a.id),
       currency: a.currency,
       status: a.vendor_payment_status ?? "unpaid",
       paid_at: null,
@@ -787,11 +791,10 @@ export async function getVendorWorkspace(
     .filter((a) => a.billing_status && !["draft", "approved"].includes(a.billing_status))
     .reduce((s, a) => s + a.revenue, 0);
   const paidOut = payouts
-    .filter((p) => p.status === "paid")
-    .reduce((s, p) => s + p.amount, 0);
+    .reduce((s, p) => s + (p.paid_amount ?? 0), 0);
   const pendingPayout = payouts
     .filter((p) => p.status !== "paid" && p.status !== "cancelled")
-    .reduce((s, p) => s + p.amount, 0);
+    .reduce((s, p) => s + Math.max(0,p.amount-(p.paid_amount ?? 0)), 0);
 
   const financials: VendorFinancialSummary = {
     total_revenue: totalRevenue,

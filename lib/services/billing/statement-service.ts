@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { creatorPaymentBalances } from '@/features/creator-payments/balances';
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { REL } from "@/lib/supabase/relation-hints";
@@ -311,6 +312,12 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
     (assignmentsResult.data ?? []) as unknown as AssignmentPaymentQueryRow[]
   ).map(mapVendorAssignmentPaymentRow);
 
+  const creatorBalances = await creatorPaymentBalances(supabase, vendor_assignments.map(row=>row.id));
+  for (const row of vendor_assignments) {
+    const balance = creatorBalances.get(row.id);
+    if (balance) { row.vendor_cost = balance.total; row.paid_amount = balance.paid; }
+  }
+
   vendor_assignments.sort((a, b) => {
     const campaignCmp = (a.campaign_document_number ?? "").localeCompare(
       b.campaign_document_number ?? ""
@@ -325,7 +332,7 @@ export async function getBillingDashboard(supabase: SupabaseClient): Promise<Bil
     (sum, row) =>
       sum +
       (row.payment_status === "unpaid" || row.payment_status === "pending"
-        ? row.vendor_cost ?? 0
+        ? Math.max(0,(row.vendor_cost ?? 0)-row.paid_amount)
         : 0),
     0
   );
