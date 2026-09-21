@@ -1,4 +1,5 @@
 import type { BankDetails } from "./model";
+import { inspectIban } from "./iban";
 import purposes from "./purpose-codes.json";
 export const BENEFICIARY_FILENAME = "AAIBeConnect - Beneficiary_Registration_Template.xlsx";
 export const PAYMENT_FILENAME = "BulkPayment_With_Advice.csv";
@@ -55,16 +56,8 @@ export function validateBank(bank: BankDetails): string[] {
     if (bank.iban) {
         const iban = bank.iban.replace(/\s/g, '').toUpperCase();
         if (iban.slice(0,2)!==bank.country) errors.push('IBAN country must match bank country.');
-        if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(iban))
-            errors.push("IBAN format is invalid.");
-        else {
-            const digits = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, c => String(c.charCodeAt(0) - 55));
-            let mod = 0;
-            for (const digit of digits)
-                mod = (mod * 10 + Number(digit)) % 97;
-            if (mod !== 1)
-                errors.push("IBAN checksum is invalid.");
-        }
+        const info = inspectIban(iban);
+        if (info.error) errors.push(info.error);
     }
     for (const value of Object.values(bank))
         if (typeof value === 'string' && /[\r\n\t]/.test(value))
