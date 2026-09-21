@@ -205,3 +205,18 @@
   .creator-payment-flybar-totals > div { min-width: 90px; padding: 0 8px; }
   .creator-payments-has-selection { padding-bottom: 40vh; }
 }
+/* Indeterminate loading: no invented percentages or empty creator totals. */
+.thinkway-creator-payments .cp-loading .cp-panel-head{justify-content:flex-start;gap:12px}
+.thinkway-creator-payments .cp-loading .cp-panel-head p{margin:4px 0 0;color:#64748b;font-size:12px}
+.thinkway-creator-payments .cp-loading-spinner{width:22px;height:22px;flex:0 0 22px;border:2px solid #dce6ff;border-top-color:#0057ff;border-radius:50%;animation:cp-loading-spin .8s linear infinite}
+.thinkway-creator-payments .cp-loading-track{height:3px;overflow:hidden;background:#edf2ff}
+.thinkway-creator-payments .cp-loading-track>span{display:block;width:35%;height:100%;background:#0057ff;border-radius:3px;animation:cp-loading-slide 1.5s ease-in-out infinite}
+.thinkway-creator-payments .cp-loading-placeholder{display:block;height:14px;width:65%;border-radius:5px;background:#e9eef6;animation:cp-loading-pulse 1.5s ease-in-out infinite}
+.thinkway-creator-payments .cp-summary .cp-loading-placeholder{margin-top:10px}
+.thinkway-creator-payments .cp-loading-rows{padding:0 18px}
+.thinkway-creator-payments .cp-loading-row{display:grid;grid-template-columns:36px 2fr 1fr 1fr;gap:18px;align-items:center;padding:18px 0;border-top:1px solid #edf0f5}
+.thinkway-creator-payments .cp-loading-avatar{width:34px;height:34px;border-radius:50%}
+@keyframes cp-loading-spin{to{transform:rotate(360deg)}}
+@keyframes cp-loading-slide{from{transform:translateX(-100%)}to{transform:translateX(386%)}}
+@keyframes cp-loading-pulse{50%{opacity:.45}}
+@media(prefers-reduced-motion:reduce){.thinkway-creator-payments .cp-loading-spinner,.thinkway-creator-payments .cp-loading-track>span,.thinkway-creator-payments .cp-loading-placeholder{animation:none}}
