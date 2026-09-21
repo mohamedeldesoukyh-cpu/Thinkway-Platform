@@ -9,6 +9,7 @@ import { requireRequestUser } from "@/lib/supabase/server";
 import { requireFinancePermission, requirePermission } from "@/lib/auth/permissions-server";
 import { bankDetails, calculatePayment, money, type PaymentRow, type PaymentDraft, type BankDetails, type PaymentBatch, type PaymentEntry } from "./model";
 import { beneficiaryCells, createPaymentCsv, validateBank, type ExportSettings } from "./aaib";
+import { isEmptyBank, type BankDuplicate } from './bank-form-state';
 import { allPaymentRows, paymentRowsByIds } from './query-pages';
 async function access(write = false) {
     const ctx = await requireRequestUser();
@@ -162,7 +163,7 @@ export async function saveAaibBank(creatorId: string, bank: BankDetails, account
         z.string().uuid().parse(creatorId);
         const schema = z.object({ payment_type: z.string(), currency: z.string(), nickname: z.string(), beneficiary_name: z.string(), account_number: z.string(), iban: z.string(), beneficiary_address: z.string(), email: z.string(), mobile: z.string(), country: z.string(), swift: z.string(), identifier: z.string(), clearing_code: z.string(), bank_name: z.string(), bank_address: z.string(), bank_branch: z.string(), registered: z.boolean() });
         bank = schema.parse(bank);
-        const issues = validateBank(bank);
+        const issues = isEmptyBank(bank) ? [] : validateBank(bank);
         if (issues.length)
             throw new Error(issues.join(' '));
         if (accountId) z.string().uuid().parse(accountId);
@@ -182,7 +183,7 @@ export async function saveAaibBank(creatorId: string, bank: BankDetails, account
         if (account.error) throw new Error('Account saved; refresh to load its details.');
         const result = bankDetails(account.data.aaib_details);
         revalidatePath('/vendors'); revalidatePath('/campaigns'); revalidatePath(`/vendors/${creatorId}`);
-        return { ok: true as const, bank: result, accountId: saved.data as string, message: bank.registered && !result.registered ? 'Bank details changed. Confirm AAIB registration again after updating the bank.' : 'Bank account saved.' };
+        return { ok: true as const, bank: result, accountId: saved.data as string, message: isEmptyBank(result) ? 'Bank details cleared. Add correct details before exporting payments.' : bank.registered && !result.registered ? 'Bank details changed. Confirm AAIB registration again after updating the bank.' : 'Bank account saved.' };
     }
     catch (e) {
         return fail(e);
@@ -230,11 +231,11 @@ export async function exportAaibBeneficiaries(ids: string[], accountId?: string)
 
 export async function loadCreatorBankAccounts(creatorId: string) {
     try {
-        const { supabase } = await requireRequestUser();
+        const { supabase, userId } = await requireRequestUser();
         z.string().uuid().parse(creatorId);
         const { data, error } = await (supabase as SupabaseClient).from('influencer_bank_accounts').select('id,is_default,aaib_details,bank_name,beneficiary_name,account_holder,iban,account_number,swift,branch_name,country_code,currency').eq('influencer_id', creatorId).order('created_at');
         if (error) throw new Error('Could not load saved bank accounts. Please try again.');
-        return { ok: true as const, accounts: (data ?? []).map(a => ({ id: a.id as string, isDefault: a.is_default as boolean, bank: bankDetails({ ...a.aaib_details, bank_name: a.bank_name ?? '', beneficiary_name: a.beneficiary_name ?? a.account_holder ?? '', iban: a.iban ?? '', account_number: a.account_number ?? '', swift: a.swift ?? '', bank_branch: a.branch_name ?? '', aaib_country: a.country_code ?? '', aaib_currency: a.currency ?? '' }) })) };
+        return { ok: true as const, draftScope: userId, accounts: (data ?? []).map(a => ({ id: a.id as string, isDefault: a.is_default as boolean, bank: bankDetails({ ...a.aaib_details, bank_name: a.bank_name ?? '', beneficiary_name: a.beneficiary_name ?? a.account_holder ?? '', iban: a.iban ?? '', account_number: a.account_number ?? '', swift: a.swift ?? '', bank_branch: a.branch_name ?? '', aaib_country: a.country_code ?? '', aaib_currency: a.currency ?? '' }) })) };
     } catch (e) { return fail(e); }
 }
 export async function setCreatorDefaultBank(creatorId: string, accountId: string) {
@@ -247,5 +248,18 @@ export async function setCreatorDefaultBank(creatorId: string, accountId: string
         if (error) throw new Error('Could not change the default account. Refresh and try again.');
         revalidatePath('/vendors'); revalidatePath('/campaigns'); revalidatePath(`/vendors/${creatorId}`);
         return { ok: true as const };
+    } catch (e) { return fail(e); }
+}
+
+export async function checkCreatorBankDuplicates(creatorId: string, accountId: string | null, values: Record<string, string>) {
+    try {
+        const { supabase } = await requireRequestUser();
+        const permission = await requirePermission(supabase, 'influencers.write');
+        if ('error' in permission) throw new Error(permission.error);
+        z.string().uuid().parse(creatorId); if (accountId) z.string().uuid().parse(accountId);
+        const input = z.object({ nickname: z.string().max(200), iban: z.string().max(200), account_number: z.string().max(200), beneficiary_name: z.string().max(200), beneficiary_address: z.string().max(500), email: z.string().max(200), mobile: z.string().max(200), country: z.string().max(20), swift: z.string().max(50), bank_name: z.string().max(200) }).parse(values);
+        const { data, error } = await (supabase as SupabaseClient).rpc('find_creator_bank_duplicates', { p_creator: creatorId, p_account: accountId, p_values: input });
+        if (error) throw new Error('Duplicate check is unavailable. Saving still checks beneficiary nickname uniqueness.');
+        return { ok: true as const, matches: (data ?? []) as BankDuplicate[] };
     } catch (e) { return fail(e); }
 }

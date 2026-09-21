@@ -6,9 +6,10 @@ import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { saveAaibBank, exportAaibBeneficiaries, loadCreatorBankAccounts, setCreatorDefaultBank } from './actions';
+import { saveAaibBank, exportAaibBeneficiaries, loadCreatorBankAccounts, setCreatorDefaultBank, checkCreatorBankDuplicates } from './actions';
 import { BENEFICIARY_FILENAME, PAYMENT_FILENAME, paymentFileBytes, validateBank } from './aaib';
 import { bankDetails, ioBadge, money, paymentStatus, type PaymentRow, type BankDetails } from './model';
+import { isEmptyBank, duplicateFieldLabels, draftKey, readBankDrafts, type BankDuplicate } from './bank-form-state';
 import { changeIban, fillFromIban, inspectIban } from './iban';
 export function downloadFile(data: string, name: string, type: string, base64 = false) {
     const bytes = base64 ? Uint8Array.from(atob(data), c => c.charCodeAt(0)) : name === PAYMENT_FILENAME ? paymentFileBytes(data) : data;
@@ -22,6 +23,12 @@ export function downloadFile(data: string, name: string, type: string, base64 = 
 export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
     creatorId: string; initial: BankDetails; onSaved?: () => void; row?: PaymentRow;
 }) {
+    const [draftStorageKey, setDraftStorageKey] = useState('');
+    const [draftNotice, setDraftNotice] = useState('');
+    const [draftStorageError, setDraftStorageError] = useState('');
+    const [matches, setMatches] = useState<BankDuplicate[]>([]);
+    const [checkingDuplicates, setCheckingDuplicates] = useState(false);
+    const [duplicateCheckError, setDuplicateCheckError] = useState('');
     const [accounts, setAccounts] = useState<{ id: string; isDefault: boolean; bank: BankDetails }[]>([]);
     const [accountId, setAccountId] = useState<string | null>(null);
     const [accountsLoading, setAccountsLoading] = useState(true);
@@ -48,13 +55,44 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
     const complete = required.filter(key => String(activeBank[key]).trim()).length;
     const remaining = required.length - complete;
     const currencyOptions = [...new Set([...COMMERCIAL_CURRENCIES, ...(bank.currency ? [bank.currency] : [])])];
-    function chooseAccount(id: string) {
+    function rememberDraft() {
+        if (!draftStorageKey || accountsLoading || accountsError) return;
+        try {
+            const cache = readBankDrafts(sessionStorage.getItem(draftStorageKey));
+            cache.selected = accountId;
+            if (dirty || makeDefault) cache.drafts[accountId ?? 'new'] = { bank, accountMode, routeMode, makeDefault, updatedAt: Date.now() };
+            else delete cache.drafts[accountId ?? 'new'];
+            sessionStorage.setItem(draftStorageKey, JSON.stringify(cache));
+            setDraftStorageError('');
+        } catch { setDraftStorageError('This browser could not keep your draft. Save before leaving this form.'); }
+    }
+    // Storage availability is external state; report failures instead of claiming the draft was kept.
+    // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+    useEffect(() => { rememberDraft(); }, [bank, savedBank, accountId, accountMode, routeMode, makeDefault, draftStorageKey, accountsLoading, accountsError]);
+    function forgetDraft() {
+        if (!draftStorageKey) return;
+        try {
+            const cache = readBankDrafts(sessionStorage.getItem(draftStorageKey));
+            delete cache.drafts[accountId ?? 'new'];
+            sessionStorage.setItem(draftStorageKey, JSON.stringify(cache));
+        } catch { /* Saving remains available when browser storage is blocked. */ }
+    }
+    function chooseAccount(id: string, discard = false) {
+        if (discard) forgetDraft(); else rememberDraft();
         const chosen = accounts.find(account => account.id === id);
         const next = chosen?.bank ?? bankDetails();
-        setAccountId(chosen?.id ?? null); setBank(next); setSavedBank(next);
-        setAccountMode(next.iban || !next.account_number ? 'iban' : 'account');
-        setRouteMode(!next.swift && next.identifier ? 'clearing' : 'swift');
-        setIbanChecked(false); setIssues([]); setDuplicate(null); setMakeDefault(false);
+        let draft;
+        try { draft = !discard && draftStorageKey ? readBankDrafts(sessionStorage.getItem(draftStorageKey)).drafts[id || 'new'] : undefined; } catch { /* Use saved data. */ }
+        setAccountId(chosen?.id ?? null); setBank(draft?.bank ?? next); setSavedBank(next);
+        setAccountMode(draft?.accountMode ?? (next.iban || !next.account_number ? 'iban' : 'account'));
+        setRouteMode(draft?.routeMode ?? (!next.swift && next.identifier ? 'clearing' : 'swift'));
+        setIbanChecked(false); setIssues([]); setDuplicate(null); setMatches([]); setMakeDefault(draft?.makeDefault ?? false);
+        setDraftNotice(draft ? 'Restored your unsaved draft. Review it before saving.' : '');
+    }
+    function clearDetails() {
+        setBank(bankDetails()); setAccountMode('iban'); setRouteMode('swift'); setMakeDefault(false);
+        setIbanChecked(false); setIssues([]); setDuplicate(null); setMatches([]);
+        setDraftNotice('Details cleared in this draft. Save cleared details to remove the incorrect saved data.');
     }
     useEffect(() => {
         let cancelled = false;
@@ -62,16 +100,48 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
             if (cancelled) return;
             if (!result.ok) { setAccountsError(result.message); return; }
             setAccounts(result.accounts);
-            const current = result.accounts.find(a => a.isDefault) ?? result.accounts[0];
-            if (current) {
-                setAccountId(current.id); setBank(current.bank); setSavedBank(current.bank);
-                setAccountMode(current.bank.iban || !current.bank.account_number ? 'iban' : 'account');
-                setRouteMode(!current.bank.swift && current.bank.identifier ? 'clearing' : 'swift');
-            }
+            const key = draftKey(result.draftScope, creatorId);
+            setDraftStorageKey(key);
+            let cache;
+            try { cache = readBankDrafts(sessionStorage.getItem(key)); } catch { /* Storage is optional. */ }
+            const selected = cache?.selected;
+            const current = result.accounts.find(a => a.id === selected) ?? (cache?.drafts.new && selected === null ? undefined : result.accounts.find(a => a.isDefault) ?? result.accounts[0]);
+            const restored = cache?.drafts[current?.id ?? 'new'];
+            const saved = current?.bank ?? (cache?.drafts.new && selected === null ? bankDetails() : initial);
+            const next = restored?.bank ?? saved;
+            setAccountId(current?.id ?? null); setBank(next); setSavedBank(saved);
+            setAccountMode(restored?.accountMode ?? (next.iban || !next.account_number ? 'iban' : 'account'));
+            setRouteMode(restored?.routeMode ?? (!next.swift && next.identifier ? 'clearing' : 'swift'));
+            setMakeDefault(restored?.makeDefault ?? false);
+            if (restored) setDraftNotice('Restored your unsaved draft. Review it before saving.');
         }).catch(() => { if (!cancelled) setAccountsError('Could not load saved bank accounts. Close and reopen this form to retry.'); })
           .finally(() => { if (!cancelled) setAccountsLoading(false); });
         return () => { cancelled = true; };
-    }, [creatorId]);
+    }, [creatorId]); // eslint-disable-line react-hooks/exhaustive-deps
+    const duplicateInput = JSON.stringify({ nickname: bank.nickname, iban: accountMode === 'iban' ? bank.iban : '', account_number: accountMode === 'account' ? bank.account_number : '', beneficiary_name: bank.beneficiary_name, beneficiary_address: bank.beneficiary_address, email: bank.email, mobile: bank.mobile, country: bank.country, swift: bank.swift, bank_name: bank.bank_name });
+    useEffect(() => {
+        if (accountsLoading || accountsError) return;
+        let cancelled = false;
+        // Reset the previous request's feedback before subscribing to the new lookup.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
+        setMatches([]); setDuplicateCheckError('');
+        const values = JSON.parse(duplicateInput) as Record<string, string>;
+        if (!Object.keys(duplicateFieldLabels).some(key => values[key]?.trim().length >= 3)) { setCheckingDuplicates(false); return; }
+        setCheckingDuplicates(true);
+        const timer = setTimeout(() => {
+            void checkCreatorBankDuplicates(creatorId, accountId, values).then(result => {
+                if (cancelled) return;
+                if (result.ok) setMatches(result.matches); else setDuplicateCheckError(result.message);
+            }).catch(() => { if (!cancelled) setDuplicateCheckError('Duplicate check unavailable. Saving still checks beneficiary nickname uniqueness.'); })
+              .finally(() => { if (!cancelled) setCheckingDuplicates(false); });
+        }, 600);
+        return () => { cancelled = true; clearTimeout(timer); };
+    }, [creatorId, accountId, duplicateInput, accountsLoading, accountsError]);
+    function duplicateHint(key: string) {
+        const found = matches.filter(match => match.field === key);
+        if (!found.length) return null;
+        return <span className={key === 'nickname' ? 'cbd-inline-duplicate cbd-error' : 'cbd-inline-duplicate cbd-warning'} role="status">{key === 'nickname' ? 'Already used — choose a distinct AAIB nickname.' : 'Also used by another saved account. Check that this is intentional.'} {found.map(match => <a key={match.account_id} href={`/vendors/${match.creator_id}`} target="_blank" rel="noopener noreferrer">{match.creator_name} ↗</a>)}</span>;
+    }
     async function changeDefault() {
         if (!accountId) return;
         setPending(true);
@@ -100,14 +170,17 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
         return () => clearTimeout(timer);
     }, [bank.iban, accountMode, pending]);
     async function save() {
-        const errors = validateBank(activeBank);
-        if (accountMode === 'iban' && !bank.iban.trim()) errors.unshift('Enter an IBAN or select Account number.');
+        const empty = isEmptyBank(activeBank);
+        const errors = empty ? [] : validateBank(activeBank);
+        if (!empty && accountMode === 'iban' && !bank.iban.trim()) errors.unshift('Enter an IBAN or select Account number.');
+        if (!empty && matches.some(match => match.field === 'nickname')) errors.push('This AAIB beneficiary nickname is already used. Review the matching creator next to the nickname field.');
         setIssues(errors);
         if (errors.length) return;
         setPending(true);
         try {
             const r = await saveAaibBank(creatorId, activeBank, accountId, makeDefault);
             if (!r.ok) { setIssues([r.message]); setDuplicate('duplicate' in r ? r.duplicate ?? null : null); return; }
+            forgetDraft(); setDraftNotice('');
             setAccountId(r.accountId); setDuplicate(null); setMakeDefault(false);
             const list = await loadCreatorBankAccounts(creatorId);
             if (list.ok) setAccounts(list.accounts);
@@ -115,7 +188,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
         } catch { setIssues(['Could not save bank details. Please try again.']); } finally { setPending(false); }
     }
     function field(key: Exclude<keyof BankDetails, 'registered'>, label: string, placeholder = '', note?: string) {
-        return <label className="cbd-field">{label}{note && <span> · {note}</span>}<Input className="cbd-input" value={bank[key]} placeholder={placeholder} aria-required={required.includes(key)} onChange={e => update(key, ['country', 'currency', 'swift'].includes(key) ? e.target.value.toUpperCase().replace(/\s/g, '') : e.target.value)}/></label>;
+        return <label className="cbd-field">{label}{note && <span> · {note}</span>}<Input className="cbd-input" value={bank[key]} placeholder={placeholder} aria-required={required.includes(key)} onChange={e => update(key, ['country', 'currency', 'swift'].includes(key) ? e.target.value.toUpperCase().replace(/\s/g, '') : e.target.value)}/>{duplicateHint(key)}</label>;
     }
     const name = row?.creator || initial.beneficiary_name || 'Creator bank details';
     const initials = name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
@@ -135,15 +208,15 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
           <section className="cbd-section">
             <div className="cbd-section-title">Saved bank accounts <span>{accounts.length} saved</span></div>
             {accountsLoading ? <p role="status">Loading saved accounts…</p> : accountsError ? <p role="alert" className="cbd-error">{accountsError}</p> : <>
-              <div className="cbd-account-actions"><label className="cbd-field">Bank account<select className="cbd-input" value={accountId ?? ''} disabled={dirty} onChange={e => chooseAccount(e.target.value)}><option value="">New bank account</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.bank.bank_name || a.bank.nickname || 'Bank account'} · {a.bank.currency || 'Currency not set'} · …{(a.bank.iban || a.bank.account_number).slice(-4)}{a.isDefault ? ' · Default' : ''}</option>)}</select></label><Button className="cbd-button" variant="outline" disabled={dirty || !accountId} onClick={() => chooseAccount('')}>+ Add account</Button>{accountId && !accounts.find(a => a.id === accountId)?.isDefault && <Button className="cbd-button" variant="outline" disabled={dirty} onClick={() => void changeDefault()}>Make default</Button>}</div>
+              <div className="cbd-account-actions"><label className="cbd-field">Bank account<select className="cbd-input" value={accountId ?? ''} onChange={e => chooseAccount(e.target.value)}><option value="">New bank account</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.bank.bank_name || a.bank.nickname || (isEmptyBank(a.bank) ? 'Empty account' : 'Bank account')} · {a.bank.currency || 'Currency not set'} · …{(a.bank.iban || a.bank.account_number).slice(-4)}{a.isDefault ? ' · Default' : ''}</option>)}</select></label><Button className="cbd-button" variant="outline" disabled={!accountId} onClick={() => chooseAccount('')}>+ Add account</Button><Button className="cbd-button" variant="outline" onClick={clearDetails}>Clear details</Button>{accountId && !accounts.find(a => a.id === accountId)?.isDefault && <Button className="cbd-button" variant="outline" disabled={dirty} onClick={() => void changeDefault()}>Make default</Button>}</div>
               {!accountId && accounts.length > 0 && <label className="cbd-confirm"><input type="checkbox" checked={makeDefault} onChange={e => setMakeDefault(e.target.checked)}/>Use as default after saving</label>}
               <p className="cbd-hint">The default account is used for new campaign payment exports. Previously exported files and payment history stay unchanged.</p>
-              {dirty && <p className="cbd-hint">Save your changes before switching accounts. <button type="button" className="cbd-button" onClick={() => chooseAccount(accountId ?? '')}>Discard changes</button></p>}
+              {draftNotice && <p className="cbd-note" role="status">{draftNotice}</p>}{draftStorageError && <p className="cbd-note cbd-warning" role="alert">{draftStorageError}</p>}{checkingDuplicates && <p className="cbd-hint" role="status">Checking for duplicate details…</p>}{duplicateCheckError && <p className="cbd-hint cbd-warning">{duplicateCheckError}</p>}{dirty && <p className="cbd-hint">{draftStorageError ? 'Changes have not been saved.' : 'Unsaved draft kept in this browser tab for up to 24 hours.'} <button type="button" className="cbd-button" onClick={() => chooseAccount(accountId ?? '', true)}>Discard changes</button></p>}
             </>}
           </section>
           <section className="cbd-section"><div className="cbd-section-title">1 · Account <span>Required unless marked optional</span></div>
             <div className="cbd-segment" aria-label="Account identifier">{[['iban', 'IBAN'], ['account', 'Account number']].map(([value, label]) => <button key={value} type="button" aria-pressed={accountMode === value} onClick={() => { if (accountMode === value) return; setAccountMode(value); setIssues([]); setBank(previous => ({ ...previous, registered: false })); }}>{label}</button>)}</div>
-            <div className="cbd-pane">{accountMode === 'iban' ? <><label className="cbd-field">IBAN<Input className="cbd-input cbd-mono" value={bank.iban} placeholder="Paste IBAN to fill available bank details" maxLength={42} aria-required="true" aria-invalid={ibanChecked && !!bank.iban && !!info?.error} onChange={e => { setIbanChecked(false); setIssues([]); setBank(previous => changeIban(previous, e.target.value)); }} onBlur={detect}/></label><p className="cbd-hint">Fills country and account details for UAE and Egyptian IBANs; bank name and SWIFT for supported banks. Name, address, currency and registration stay manual.</p></> : <>{field('account_number', 'Account number', 'Local account number')}<p className="cbd-hint">Use where the beneficiary bank does not issue an IBAN.</p></>}</div>
+            <div className="cbd-pane">{accountMode === 'iban' ? <><label className="cbd-field">IBAN<Input className="cbd-input cbd-mono" value={bank.iban} placeholder="Paste IBAN to fill available bank details" maxLength={42} aria-required="true" aria-invalid={ibanChecked && !!bank.iban && !!info?.error} onChange={e => { setIbanChecked(false); setIssues([]); setBank(previous => changeIban(previous, e.target.value)); }} onBlur={detect}/>{duplicateHint('iban')}</label><p className="cbd-hint">Fills country and account details for UAE and Egyptian IBANs; bank name and SWIFT for supported banks. Name, address, currency and registration stay manual.</p></> : <>{field('account_number', 'Account number', 'Local account number')}<p className="cbd-hint">Use where the beneficiary bank does not issue an IBAN.</p></>}</div>
             {ibanChecked && info?.error && <p role="alert" className="cbd-note cbd-error">{info.error}</p>}
             {ibanChecked && info?.detected && <><p role="status" className="cbd-hint cbd-success">IBAN checksum checked · {info.country}{info.bankCode ? ` · Bank code ${info.bankCode}` : ''}{info.detected.bank_name ? ` · ${info.detected.bank_name}` : ''}. Review bank details before saving; account ownership is not verified.</p>{!info.detected.bank_name && <p className="cbd-note cbd-warning">This bank is not yet supported by automatic bank lookup. Country and available account details were detected; enter the bank name and SWIFT manually. Personal details and currency always require your input.</p>}</>}
             {ibanChecked && conflicts.length > 0 && <div className="cbd-note cbd-warning">Existing {conflicts.map(([key]) => key.replaceAll('_', ' ')).join(', ')} differ from the IBAN. Your entries were kept. <button type="button" className="cbd-button" onClick={() => { setBank(previous => fillFromIban(previous, true)); setIssues([]); }}>Use detected details</button></div>}
@@ -161,7 +234,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
           <section className="cbd-section"><div className="cbd-section-title">5 · AAIB registration</div><label className="cbd-confirm"><input type="checkbox" checked={bank.registered} onChange={e => setBank({ ...bank, registered: e.target.checked })}/>I confirm these beneficiary details are registered and accepted in AAIB</label><p className="cbd-note">Required to export a payment run. You can save and export the beneficiary registration file without confirmation.</p></section>
           {issues.length > 0 && <div role="alert" className="cbd-note cbd-error"><strong>Bank details could not be saved:</strong><ul>{issues.map(issue => <li key={issue}>{issue}</li>)}</ul>{duplicate && <a className="cbd-duplicate-link" href={`/vendors/${duplicate.id}`} target="_blank" rel="noopener noreferrer">Open {duplicate.name} — creator details ↗</a>}</div>}
         </fieldset>
-        <footer className="cbd-footer"><Button className="cbd-button cbd-primary" disabled={pending || accountsLoading || !!accountsError} onClick={() => void save()}>{pending ? 'Please wait…' : 'Save bank details'}</Button><Button className="cbd-button" variant="outline" disabled={pending || accountsLoading || !!accountsError || !accountId || dirty || remaining > 0 || validateBank(activeBank).length > 0} onClick={async () => { setPending(true); try { const r = await exportAaibBeneficiaries([creatorId], accountId ?? undefined); if (r.ok) downloadFile(r.base64, BENEFICIARY_FILENAME, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', true); else setIssues([r.message]); } finally { setPending(false); } }}>Export beneficiary</Button><p aria-live="polite">{remaining ? `${remaining} required fields remaining` : dirty ? 'Save changes before exporting' : 'Required fields filled · review details'}</p></footer>
+        <footer className="cbd-footer"><Button className="cbd-button cbd-primary" disabled={pending || accountsLoading || !!accountsError} onClick={() => void save()}>{pending ? 'Please wait…' : isEmptyBank(activeBank) ? 'Save cleared details' : 'Save bank details'}</Button><Button className="cbd-button" variant="outline" disabled={pending || accountsLoading || !!accountsError || !accountId || dirty || remaining > 0 || validateBank(activeBank).length > 0} onClick={async () => { setPending(true); try { const r = await exportAaibBeneficiaries([creatorId], accountId ?? undefined); if (r.ok) downloadFile(r.base64, BENEFICIARY_FILENAME, 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', true); else setIssues([r.message]); } finally { setPending(false); } }}>Export beneficiary</Button><p aria-live="polite">{isEmptyBank(activeBank) ? 'Empty details can be saved · payments require complete bank details' : remaining ? `${remaining} required fields remaining` : dirty ? 'Save changes before exporting' : 'Required fields filled · review details'}</p></footer>
       </div>
     </section>;
 }
