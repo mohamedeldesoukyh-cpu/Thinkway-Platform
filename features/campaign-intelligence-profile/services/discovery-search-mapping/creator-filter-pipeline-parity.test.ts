@@ -81,31 +81,14 @@ assert.deepEqual(
   "filtersToBrowseParams on canonical filters must match Studio browse"
 );
 
-// ISO country codes preserved (not display labels)
-assert.ok(
-  discoveryCreatorFilters.countries.includes("EG"),
-  "creator country must stay ISO EG"
-);
-assert.ok(
-  !discoveryCreatorFilters.countries.includes("Egypt"),
-  "creator country must not use display label Egypt"
-);
-assert.equal(discoveryBrowse.country, "EG", "browse country must be ISO EG");
-assert.notEqual(discoveryBrowse.country, "EGYPT", "browse country must not be corrupted label");
-
-// Gender, age, keywords preserved
-assert.equal(discoveryCreatorFilters.gender, "female");
-assert.equal(discoveryCreatorFilters.ageMin, "25");
-assert.equal(discoveryCreatorFilters.ageMax, "45");
+// Campaign/audience geography never becomes creator eligibility in either consumer.
+assert.deepEqual(discoveryCreatorFilters.countries, []);
+assert.equal(discoveryCreatorFilters.gender, "");
+assert.equal(discoveryCreatorFilters.ageMin, "");
+assert.equal(discoveryCreatorFilters.ageMax, "");
 assert.ok(discoveryCreatorFilters.categories.includes("Beauty"));
-assert.ok(
-  discoveryCreatorFilters.contentKeyword === "skincare" ||
-    discoveryCreatorFilters.contentKeyword === "vitamin c" ||
-    discoveryCreatorFilters.audienceInterestTags.some((t) =>
-      ["skincare", "vitamin c"].includes(t)
-    ),
-  "keywords/niches must map into canonical filters"
-);
+assert.equal(discoveryCreatorFilters.contentKeyword, "", "soft topics must not become hard filters");
+assert.deepEqual(discoveryCreatorFilters.audienceInterestTags, []);
 assert.ok(discoveryCreatorFilters.platforms.includes("instagram"));
 assert.ok(discoveryCreatorFilters.platforms.includes("tiktok"));
 

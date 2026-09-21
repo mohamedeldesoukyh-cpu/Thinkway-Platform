@@ -7,7 +7,7 @@ import { executeNormalSearch, normalRetrievalQuery, sanitizeNormalFilters, type 
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
 /** No write-capable callbacks. The only network capability used here is the read-only RPC. */
-export async function runNormalSearchTransport(client: Pick<SupabaseClient, "rpc">, request: NormalSearchRequest, continuation?: NormalSearchContinuation) {
+export async function runNormalSearchTransport(client: Pick<SupabaseClient, "rpc">, request: NormalSearchRequest, continuation?: NormalSearchContinuation, ranking?: { evaluate: NonNullable<Parameters<typeof executeNormalSearch>[2]>["evaluate"]; needsContent: boolean }) {
   const f = sanitizeNormalFilters(request.filters);
   const countryCodes = f.countries.map(resolveCountryCode);
   const countryValues = [...countryCodes, ...COUNTRY_OPTIONS.filter(c => countryCodes.includes(c.value)).map(c => c.label), ...Object.keys(COUNTRY_ALIASES).filter(k => countryCodes.includes(COUNTRY_ALIASES[k]))].map(v => v.toLowerCase());
@@ -21,14 +21,14 @@ export async function runNormalSearchTransport(client: Pick<SupabaseClient, "rpc
   return executeNormalSearch(request, async (offset, limit) => {
     const { data, error } = await client.rpc("discovery_normal_candidate_window", {
       p_filters: databaseFilters, p_query: normalRetrievalQuery(f), p_offset: offset, p_limit: limit,
-      p_content: Boolean(request.filters.contentKeyword || request.filters.contentTags.length),
+      p_content: Boolean(ranking?.needsContent || request.filters.contentKeyword || request.filters.contentTags.length),
       p_dates: Boolean(request.filters.lastPostWithin),
     });
     if (error) throw new Error(error.code === "PGRST202" ? "Discovery Phase 1 requires its reviewed database migration. No legacy search fallback was executed." : error.message);
     const window = data as { items: Partial<Candidate>[]; exhausted: boolean; scannedCount?: number };
     if (!Array.isArray(window?.items) || typeof window.exhausted !== "boolean") throw new Error("Invalid Discovery candidate response");
     return { exhausted: window.exhausted, scannedCount: window.scannedCount, candidates: window.items.map(candidateFromProjection) };
-  }, { continuation });
+  }, { continuation, evaluate: ranking?.evaluate });
 }
 export function candidateFromProjection(row: Partial<Candidate>): Candidate {
   const metric = { value: null, confidence: "estimated" as const };

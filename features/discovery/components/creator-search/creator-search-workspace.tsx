@@ -1,4 +1,7 @@
 "use client";
+import { CreatorSearchBriefPanel } from "./creator-search-brief-panel";
+import { applyBriefSelections, markManualChanges, type SelectionOwners } from "@/lib/discovery/brief-search";
+import { mapCampaignIntelligenceToDiscoverySearch } from "@/features/campaign-intelligence-profile/services/discovery-search-mapping";
 import { searchNormalDiscoveryAction } from "@/features/discovery/normal-search-action";
 import { hasNormalSearchContext, sanitizeNormalFilters, type SearchCompleteness } from "@/lib/discovery/normal-search";
 
@@ -97,9 +100,6 @@ import { CreatorSearchBulkBar } from "./creator-search-bulk-bar";
 import { CreatorSearchFilterPanel } from "./creator-search-filter-panel";
 import { CreatorSearchResultList } from "./creator-search-result-list";
 import {
-  CampaignBriefSidebar,
-  AiSearchStrategySheet,
-  CreatorSearchCampaignRequirementsPanel,
   CreateListDialog,
   AddToShortlistDialog,
   SelectPlatformAccountsDialog,
@@ -146,13 +146,11 @@ import { stashDiscoverySelection } from "./discovery-selection-storage";
 import {
   useCreatorSelection,
 } from "@/features/creators/picker/creator-selection-hooks";
-import { CreatorSearchAiCriteriaChips } from "./creator-search-ai-criteria-chips";
 import { CreatorSearchAiExtractingState } from "./creator-search-ai-extracting-state";
 import { type CreatorSearchRecommendation } from "./creator-search-recommended-section";
 import { buildCreatorSearchRecommendations } from "./creator-search-zero-results-recommendations";
 import type { CampaignIntelligenceWorkspaceState } from "@/features/campaign-intelligence-profile/actions/profile-actions";
 import {
-  buildCreatorFiltersFromProfile,
   buildSearchStrategyFromProfile,
 } from "@/features/campaign-intelligence-profile/services/search-strategy";
 import type { CampaignIntelligenceProfile, CampaignSearchCriterion } from "@/features/campaign-intelligence-profile/types/profile";
@@ -332,7 +330,6 @@ export function CreatorSearchWorkspace({
   /** Prevents server-provided brief from re-applying after the user clears everything. */
   const suppressBriefHydrationRef = useRef(false);
   /** Runs AI campaign search once when opening /discovery/search?profileId=… */
-  const initialBriefSearchDoneRef = useRef(false);
   const searchRef = useRef(initialSearch);
   const searchStartedAtRef = useRef<number | null>(null);
   const analyticsRef = useRef<DiscoverySearchAnalyticsTracker | null>(null);
@@ -343,14 +340,30 @@ export function CreatorSearchWorkspace({
     profileIdFromUrl ?? initialBriefState?.profileId ?? null
   );
   const [aiCriteria, setAiCriteria] = useState<CampaignSearchCriterion[]>([]);
-  const [aiModeActive, setAiModeActive] = useState(aiModeFromUrl);
+  const [aiModeActive, setAiModeActive] = useState(false);
   const [aiExtracting, setAiExtracting] = useState(false);
-  const [strategySheetOpen, setStrategySheetOpen] = useState(false);
   const [briefSidebarOpen, setBriefSidebarOpen] = useState(false);
   const [briefWorkspaceState, setBriefWorkspaceState] = useState(initialBriefState);
   const [briefFileName, setBriefFileName] = useState<string | null>(
     initialBriefState?.fileName ?? null
   );
+  const [briefEnabled, setBriefEnabled] = useState(aiModeFromUrl && Boolean(initialBriefState));
+  const [disabledSoftIds, setDisabledSoftIds] = useState<string[]>(() => searchParams.getAll("briefOff"));
+  const [selectionOwners, setSelectionOwners] = useState<SelectionOwners>(() => Object.fromEntries(Object.keys(filters).map(key => [key, searchParams.get("aiKeys")?.split(",").includes(key) ? "ai" : searchParams.get("manualKeys")?.split(",").includes(key) || Boolean(Array.isArray(filters[key as keyof CreatorSearchFilters]) ? (filters[key as keyof CreatorSearchFilters] as unknown[]).length : filters[key as keyof CreatorSearchFilters]) ? "manual" : undefined])));
+  const ownersRef = useRef(selectionOwners);
+  const ownersFromUrl = searchParams.get("aiKeys") ?? "";
+  const manualOwnersFromUrl = searchParams.get("manualKeys") ?? "";
+  useEffect(() => {
+    if (!ownersFromUrl && !manualOwnersFromUrl) return;
+    ownersRef.current = Object.fromEntries([...ownersFromUrl.split(",").filter(Boolean).map(k => [k, "ai"]), ...manualOwnersFromUrl.split(",").filter(Boolean).map(k => [k, "manual"])]);
+  }, [ownersFromUrl, manualOwnersFromUrl]);
+  const briefRequestRef = useRef<{ profileId: string; disabledSoftIds: string[] } | undefined>(undefined);
+  useEffect(() => { briefRequestRef.current = briefEnabled && activeProfileId ? { profileId: activeProfileId, disabledSoftIds } : undefined; }, [briefEnabled, activeProfileId, disabledSoftIds]);
+  const changeManualFilters = useCallback((next: CreatorSearchFilters) => {
+    ownersRef.current = markManualChanges(filtersRef.current, next, ownersRef.current);
+    setSelectionOwners(ownersRef.current);
+    setFilters(next);
+  }, []);
   const [filterResetKey, setFilterResetKey] = useState(0);
   const aiModeRef = useRef(aiModeActive);
   const aiCriteriaRef = useRef(aiCriteria);
@@ -373,7 +386,7 @@ export function CreatorSearchWorkspace({
     if (!pending) return;
 
     if (pending === "all") {
-      if (searchParams.toString() === "") {
+      if (!searchParams.has(CREATOR_SEARCH_QUERY_PARAM) && creatorSearchFiltersUrlEqual(creatorSearchFiltersFromUrlParams(searchParams), cloneCreatorSearchFilters())) {
         pendingUrlClearRef.current = false;
       }
       return;
@@ -424,6 +437,10 @@ export function CreatorSearchWorkspace({
 
     const params = new URLSearchParams(searchParams.toString());
     applyCreatorSearchFiltersToUrlParams(params, filters);
+    if (activeProfileId) {
+      params.set("aiKeys", Object.keys(ownersRef.current).filter(k => ownersRef.current[k as keyof CreatorSearchFilters] === "ai").join(","));
+      params.set("manualKeys", Object.keys(ownersRef.current).filter(k => ownersRef.current[k as keyof CreatorSearchFilters] === "manual").join(","));
+    }
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     const currentQuery = searchParams.toString();
@@ -473,10 +490,10 @@ export function CreatorSearchWorkspace({
     [selectedCreatorMap]
   );
 
-  function clearCreatorSelection() {
+  const clearCreatorSelection = useCallback(() => {
     setSelectedIds(new Set());
     setSelectedCreatorMap(new Map());
-  }
+  }, [setSelectedIds]);
 
   function syncPendingCreators(nextCreators: UnifiedCreatorResult[]) {
     setPendingAddCreators(nextCreators);
@@ -505,10 +522,10 @@ export function CreatorSearchWorkspace({
   );
 
   useEffect(() => {
-    if (!showCampaignRelevance && !hasNormalSearchContext({ ...filters, search: debouncedSearch }) && sort.field === "relevance") {
+    if (!briefEnabled && !showCampaignRelevance && !hasNormalSearchContext({ ...filters, search: debouncedSearch }) && sort.field === "relevance") {
       setSort({ field: "followers", direction: "desc" });
     }
-  }, [showCampaignRelevance, sort.field, filters, debouncedSearch]);
+  }, [briefEnabled, showCampaignRelevance, sort.field, filters, debouncedSearch]);
 
   const sortedCreators = useMemo(() => aiModeActive ? sortCreators(creators, sort) : creators, [creators, sort, aiModeActive]);
   const exactMatches = useMemo(() => {
@@ -863,7 +880,7 @@ export function CreatorSearchWorkspace({
       if (!append || pageNum === 1) normalContinuationRef.current = undefined;
       try {
         const activeFilters = sanitizeNormalFilters(filterOverride ?? { ...filtersRef.current, search: searchRef.current });
-        const result = await searchNormalDiscoveryAction({ filters: activeFilters, sort: sortRef.current, page: pageNum, pageSize: PAGE_SIZE, continuation: append ? normalContinuationRef.current : undefined });
+        const result = await searchNormalDiscoveryAction({ filters: activeFilters, sort: sortRef.current, page: pageNum, pageSize: PAGE_SIZE, continuation: append ? normalContinuationRef.current : undefined }, briefRequestRef.current);
         if (controller.signal.aborted || requestId !== reqIdRef.current) return;
         setCreators(previous => append ? [...new Map([...previous, ...result.creators].map(c => [c.unified_id,c])).values()] : result.creators);
         normalContinuationRef.current = result.continuation;
@@ -1397,7 +1414,7 @@ export function CreatorSearchWorkspace({
     setPage(1);
     setHasMore(true);
     void fetchPageRef.current(1, false, undefined, { caller: "filter_sync" });
-  }, [filters, debouncedSearch, sort]);
+  }, [filters, debouncedSearch, sort, briefEnabled, briefWorkspaceState, disabledSoftIds]);
 
   useEffect(() => {
     return () => {
@@ -2021,7 +2038,6 @@ export function CreatorSearchWorkspace({
   const clearAllFilters = useCallback(() => {
     pendingUrlClearRef.current = "all";
     suppressBriefHydrationRef.current = true;
-    initialBriefSearchDoneRef.current = false;
 
     abortRef.current?.abort();
     reqIdRef.current += 1;
@@ -2047,11 +2063,9 @@ export function CreatorSearchWorkspace({
     setAiCriteria([]);
     setAiModeActive(false);
     setAiExtracting(false);
-    setStrategySheetOpen(false);
-    setBriefWorkspaceState(null);
-    setBriefFileName(null);
-    setActiveProfileId(null);
-    setActiveProfile(null);
+    ownersRef.current = Object.fromEntries(Object.keys(cleared).map(key => [key, "manual"]));
+    setSelectionOwners(ownersRef.current);
+    setDisabledSoftIds(activeProfile ? (mapCampaignIntelligenceToDiscoverySearch(activeProfile).requirements ?? []).filter(r => r.classification === "SOFT").map(r => r.id) : []);
     setSort(DEFAULT_CREATOR_SEARCH_SORT);
     setBackfillStatus(null);
     setRecommendedCreators([]);
@@ -2065,64 +2079,34 @@ export function CreatorSearchWorkspace({
 
     const params = new URLSearchParams(searchParams.toString());
     params.delete(CREATOR_SEARCH_QUERY_PARAM);
-    params.delete("profileId");
-    params.delete("mode");
     params.delete("brief");
+    params.delete("aiKeys");
+    if (activeProfileId) {
+      params.set("manualKeys", Object.keys(cleared).join(","));
+      params.delete("briefOff");
+      for (const r of activeProfile ? (mapCampaignIntelligenceToDiscoverySearch(activeProfile).requirements ?? []).filter(r => r.classification === "SOFT") : []) params.append("briefOff", r.id);
+    }
     applyCreatorSearchFiltersToUrlParams(params, cleared);
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     replaceCreatorSearchUrlShallow(nextUrl);
     setFiltersDrawerOpen(false);
-  }, [cancelActiveAcquisitionSession, pathname, searchParams]);
+  }, [cancelActiveAcquisitionSession, pathname, searchParams, activeProfile, activeProfileId, clearCreatorSelection]);
 
   const applyAiProfileFilters = useCallback(
     (profile: CampaignIntelligenceProfile, criteria?: CampaignSearchCriterion[]) => {
-      sessionAcquiredInfluencerIdsRef.current = [];
-      setApifySourceUnifiedIds(new Set());
-      void cancelActiveAcquisitionSession();
-      const chipCriteria = criteria ?? buildSearchStrategyFromProfile(profile);
-      const nextFilters = buildCreatorFiltersFromProfile(profile, chipCriteria);
-
-      aiModeRef.current = true;
-      aiCriteriaRef.current = chipCriteria;
-      filtersRef.current = nextFilters;
-      skipNextFilterFetchRef.current = true;
-
-      setAiCriteria(chipCriteria);
-      setFilters(nextFilters);
-      setDebouncedSearch("");
-      skipSearchUrlWriteRef.current = true;
+      void criteria; // Legacy caller compatibility; validated mapping is authoritative.
+      const next = applyBriefSelections(profile, { ...filtersRef.current, search: searchRef.current }, ownersRef.current);
+      ownersRef.current = next.owners;
+      setSelectionOwners(next.owners);
+      filtersRef.current = next.filters;
+      setFilters(next.filters);
+      setBriefEnabled(true);
       setSort({ field: "relevance", direction: "desc" });
-      setAiModeActive(true);
       normalContinuationRef.current = undefined;
       setPage(1);
-      setHasMore(false);
-      setCreators([]);
-      setTotal(0);
-      setLoading(true);
-      setError(null);
       clearCreatorSelection();
-
-      void fetchPageRef.current(1, false, nextFilters, {
-        caller: "ai_brief_search",
-        skipCoverageBackfill: true,
-      });
-    },
-    [clearCreatorSelection, cancelActiveAcquisitionSession]
-  );
-
-  const handleRemoveAiCriterion = useCallback(
-    (id: string) => {
-      const next = aiCriteria.filter((c) => c.id !== id);
-      setAiCriteria(next);
-      if (next.length === 0) {
-        clearAllFilters();
-        return;
-      }
-      if (!activeProfile) return;
-      applyAiProfileFilters(activeProfile, next);
-    },
-    [activeProfile, aiCriteria, applyAiProfileFilters, clearAllFilters]
+    }, [clearCreatorSelection]
   );
 
   function handleSaveSearch() {
@@ -2199,6 +2183,7 @@ export function CreatorSearchWorkspace({
 
   const activateAiCampaignSearch = useCallback(
     (profile: CampaignIntelligenceProfile, profileId: string, fileName: string | null) => {
+      try { applyAiProfileFilters(profile); } catch (error) { toast.error(error instanceof Error ? error.message : "Review campaign requirements."); return; }
       suppressBriefHydrationRef.current = false;
       setBriefWorkspaceState((prev) =>
         prev?.profileId === profileId
@@ -2216,32 +2201,12 @@ export function CreatorSearchWorkspace({
       setBriefFileName(fileName);
       setActiveProfileId(profileId);
       setActiveProfile(profile);
-      const criteria = buildSearchStrategyFromProfile(profile);
       syncBriefUrl(profileId, { aiMode: true });
-      applyAiProfileFilters(profile, criteria);
       setAiExtracting(true);
       setBriefSidebarOpen(false);
     },
     [applyAiProfileFilters, syncBriefUrl]
   );
-
-  const handleBriefAnalyzed = useCallback(
-    (state: CampaignIntelligenceWorkspaceState) => {
-      activateAiCampaignSearch(state.profile, state.profileId, state.fileName);
-    },
-    [activateAiCampaignSearch]
-  );
-
-  useEffect(() => {
-    if (!initialBriefState || suppressBriefHydrationRef.current) return;
-    if (initialBriefSearchDoneRef.current) return;
-    initialBriefSearchDoneRef.current = true;
-    activateAiCampaignSearch(
-      initialBriefState.profile,
-      initialBriefState.profileId,
-      initialBriefState.fileName
-    );
-  }, [activateAiCampaignSearch, initialBriefState]);
 
   const handleBriefCleared = useCallback(() => {
     suppressBriefHydrationRef.current = true;
@@ -2252,7 +2217,12 @@ export function CreatorSearchWorkspace({
     setAiCriteria([]);
     setAiModeActive(false);
     setAiExtracting(false);
-    setFilters(cloneCreatorSearchFilters());
+    setBriefEnabled(false);
+    briefRequestRef.current = undefined;
+    setDisabledSoftIds([]);
+    ownersRef.current = {};
+    setSelectionOwners({});
+    setFilters(previous => ({ ...previous }));
     normalContinuationRef.current = undefined;
     setPage(1);
     setHasMore(true);
@@ -2261,6 +2231,9 @@ export function CreatorSearchWorkspace({
     params.delete("brief");
     params.delete("profileId");
     params.delete("mode");
+    params.delete("aiKeys");
+    params.delete("manualKeys");
+    params.delete("briefOff");
     const nextQuery = params.toString();
     const nextUrl = nextQuery ? `${pathname}?${nextQuery}` : pathname;
     const currentQuery = searchParams.toString();
@@ -2296,15 +2269,6 @@ export function CreatorSearchWorkspace({
     if (!aiExtracting) return;
     if (!loading) setAiExtracting(false);
   }, [aiExtracting, loading]);
-
-  const handleRunAiSearch = useCallback(() => {
-    if (!activeProfile) {
-      toast.info("Add a campaign brief first.");
-      return;
-    }
-    applyAiProfileFilters(activeProfile, aiCriteria);
-    setStrategySheetOpen(false);
-  }, [activeProfile, aiCriteria, applyAiProfileFilters]);
 
   const clientOnlyFiltersActive = useMemo(
     () => !aiModeActive && hasClientOnlyCreatorSearchFilters(filters),
@@ -2412,54 +2376,21 @@ export function CreatorSearchWorkspace({
         />
       </div>
 
-      {briefSidebarOpen ? (
-        <CampaignBriefSidebar
-          open={briefSidebarOpen}
-          onOpenChange={setBriefSidebarOpen}
-          initialState={briefWorkspaceState}
-          onWorkspaceChange={handleBriefWorkspaceChange}
-          onBriefCleared={handleBriefCleared}
-          onRunAiSearch={handleUseAiCampaign}
-          onBriefAnalyzed={handleBriefAnalyzed}
-        />
-      ) : null}
-
-      {activeProfile && aiModeActive ? (
-        <CreatorSearchCampaignRequirementsPanel
-          profile={activeProfile}
-          fileName={briefFileName}
-          onEdit={() => setBriefSidebarOpen(true)}
-        />
-      ) : null}
-
-      {strategySheetOpen ? (
-        <AiSearchStrategySheet
-          open={strategySheetOpen}
-          onOpenChange={setStrategySheetOpen}
-          criteria={aiCriteria}
-          onCriteriaChange={setAiCriteria}
-          onRunSearch={handleRunAiSearch}
-          running={loading || isPending}
-        />
-      ) : null}
-
-      {aiModeActive && aiCriteria.some((c) => c.enabled) ? (
-        <CreatorSearchAiCriteriaChips
-          criteria={aiCriteria}
-          onRemove={handleRemoveAiCriterion}
-          onEditStrategy={() => setStrategySheetOpen(true)}
-        />
-      ) : (
-        <div className="shrink-0">
-          <CreatorSearchActiveFilters
-            filters={filters}
-            search={debouncedSearch}
-            onChange={setFilters}
-            onClearSearch={handleClearSearch}
-            onClearAll={clearAllFilters}
-          />
-        </div>
-      )}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border px-4 py-2">
+        <Button variant="outline" size="sm" onClick={() => setBriefSidebarOpen(true)}>{activeProfile ? "Review requirements" : "+ Add Campaign Brief"}</Button>
+        {activeProfile ? <><span className="max-w-60 truncate text-xs" title={briefFileName ?? undefined}>{briefFileName ?? "Campaign brief"}</span>
+          <Button size="sm" onClick={handleUseAiCampaign}>Use AI to Find Creators</Button>
+          <Button variant="ghost" size="sm" onClick={handleBriefCleared}>Remove brief</Button></> : null}
+      </div>
+      {briefSidebarOpen ? <CreatorSearchBriefPanel state={briefWorkspaceState} onClose={() => setBriefSidebarOpen(false)}
+        onChange={handleBriefWorkspaceChange} onRemove={handleBriefCleared}
+        onRun={state => { handleBriefWorkspaceChange(state); activateAiCampaignSearch(state.profile, state.profileId, state.fileName); }} /> : null}
+      {briefEnabled && activeProfile ? <div className="flex flex-wrap gap-2 px-4 py-2">{(mapCampaignIntelligenceToDiscoverySearch(activeProfile).requirements ?? []).filter(r => r.classification === "SOFT" && !disabledSoftIds.includes(r.id)).map(r =>
+        <Button key={r.id} variant="outline" size="sm" onClick={() => { setDisabledSoftIds(ids => [...ids, r.id]); const params = new URLSearchParams(searchParams.toString()); params.append("briefOff", r.id); replaceCreatorSearchUrlShallow(`${pathname}?${params}`); }}>[AI] {r.value} ×</Button>
+      )}</div> : null}
+      <div className="shrink-0"><CreatorSearchActiveFilters filters={filters} search={debouncedSearch} onChange={changeManualFilters}
+        aiFields={briefEnabled ? Object.keys(selectionOwners).filter(k => selectionOwners[k as keyof CreatorSearchFilters] === "ai") : []}
+        onClearSearch={handleClearSearch} onClearAll={clearAllFilters} /></div>
 
       {backfillStatus ? (
         <p className="shrink-0 border-b border-border/60 bg-muted/40 px-4 py-2 text-sm text-muted-foreground">
@@ -2534,7 +2465,8 @@ export function CreatorSearchWorkspace({
           error={error}
           total={headerTotal}
           completeness={completeness}
-          showRelevance={!aiModeActive && hasNormalSearchContext({ ...filters, search: debouncedSearch })}
+          showRelevance={briefEnabled || (!aiModeActive && hasNormalSearchContext({ ...filters, search: debouncedSearch }))}
+          relevanceLabel={briefEnabled ? "Match" : "Relevance"}
           apifySourceUnifiedIds={apifySourceUnifiedIds}
           showCampaignRelevance={showCampaignRelevance}
           selectedIds={selectedIds}
@@ -2564,6 +2496,7 @@ export function CreatorSearchWorkspace({
           recommendations={visibleRecommendations}
           loadingRecommendations={loadingRecommendations}
           toolbar={{
+            relevanceLabel: briefEnabled ? "Match" : "Relevance",
             searchQuery: debouncedSearch,
             onDebouncedSearchChange: handleDebouncedSearchChange,
             onSearchSubmit: (query) => runSearch(query),
@@ -2571,7 +2504,7 @@ export function CreatorSearchWorkspace({
             sort,
             onSortChange: setSort,
             filters,
-            onFiltersChange: setFilters,
+            onFiltersChange: changeManualFilters,
             onOpenFilters: () => setFiltersDrawerOpen(true),
             showCampaignRelevance,
             onAddMissingCreator: () => setAddMissingOpen(true),
@@ -2585,7 +2518,7 @@ export function CreatorSearchWorkspace({
             key={filterResetKey}
             open={filtersDrawerOpen}
             filters={filters}
-            onApply={(next) => setFilters(sanitizeNormalFilters(next))}
+            onApply={(next) => changeManualFilters(sanitizeNormalFilters(next))}
             onClearAll={clearAllFilters}
             onClose={() => setFiltersDrawerOpen(false)}
             loading={loading || isPending}

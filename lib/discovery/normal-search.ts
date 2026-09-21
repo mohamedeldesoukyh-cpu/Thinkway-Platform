@@ -167,7 +167,7 @@ export type NormalSearchContinuation = {
 /** Stable window pools: finish a whole 200-candidate window, qualify, then seal/sort
  * once a page is available. Sparse windows accumulate only until a page qualifies.
  * Resume trusted sealed pools; never rerank a growing prefix. */
-export async function executeNormalSearch(request: NormalSearchRequest, readWindow: (offset: number, limit: number) => Promise<CandidateWindow>, options: { maxCandidates?: number; maxMs?: number; now?: () => number; continuation?: NormalSearchContinuation } = {}) {
+export async function executeNormalSearch(request: NormalSearchRequest, readWindow: (offset: number, limit: number) => Promise<CandidateWindow>, options: { maxCandidates?: number; maxMs?: number; now?: () => number; continuation?: NormalSearchContinuation; evaluate?: typeof evaluateNormalCandidate } = {}) {
   const f = sanitizeNormalFilters(request.filters);
   const page = Math.max(1, Math.min(100, request.page));
   const pageSize = Math.max(1, Math.min(100, request.pageSize));
@@ -205,11 +205,11 @@ export async function executeNormalSearch(request: NormalSearchRequest, readWind
     for (const c of window.candidates) {
       if (seen.has(c.unified_id)) continue;
       seen.add(c.unified_id);
-      const evaluated = evaluateNormalCandidate(c, f, evaluatedAt);
+      const evaluated = (options.evaluate ?? evaluateNormalCandidate)(c, f, evaluatedAt);
       if (!evaluated.eligible) continue;
       matched++;
       if (c.influencer_id) internalCount++; else discoveryCount++;
-      pool.push({ ...evaluated.creator, discovery_relevance: hasNormalSearchContext(f) ? evaluated.relevance : undefined });
+      pool.push({ ...evaluated.creator, discovery_relevance: options.evaluate || hasNormalSearchContext(f) ? evaluated.relevance : undefined });
     }
     examined += scanned;
     exhausted = window.exhausted;

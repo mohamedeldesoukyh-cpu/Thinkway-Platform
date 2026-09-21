@@ -56,7 +56,7 @@ export function decodeContinuation(token: string, request: NormalSearchRequest, 
 }
 
 /** Called only after fresh authentication. Recheck permission even for carried-only pages. */
-export async function runContinuedNormalSearch(client: Parameters<typeof runNormalSearchTransport>[0], request: NormalSearchRequest, context: string, secret: string) {
+export async function runContinuedNormalSearch(client: Parameters<typeof runNormalSearchTransport>[0], request: NormalSearchRequest, context: string, secret: string, ranking?: Parameters<typeof runNormalSearchTransport>[3]) {
   const discovery = await client.rpc("has_permission", { p_permission: "discovery.read" });
   if (discovery.error) throw new Error("Unauthorized");
   if (discovery.data !== true) {
@@ -67,6 +67,6 @@ export async function runContinuedNormalSearch(client: Parameters<typeof runNorm
   if (request.page > 1 && !request.continuation) throw invalid();
   if (request.page === 1 && request.continuation) throw invalid();
   const state = request.continuation ? decodeContinuation(request.continuation, request, context, secret) : undefined;
-  const { continuation, ...result } = await runNormalSearchTransport(client, request, state);
+  const { continuation, ...result } = await runNormalSearchTransport(client, request, state, ranking);
   return { ...result, continuation: continuation ? encodeContinuation(continuation, request, context, secret) : undefined };
 }

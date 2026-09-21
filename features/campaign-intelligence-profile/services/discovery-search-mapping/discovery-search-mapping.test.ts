@@ -47,9 +47,9 @@ const { filters, skipped } = mapCampaignIntelligenceToDiscoverySearch(profile);
 
 assert.ok(filters.some((f) => f.key === "platform" && f.value === "instagram"));
 assert.ok(filters.some((f) => f.key === "platform" && f.value === "tiktok"));
-assert.ok(filters.some((f) => f.key === "audience_country" && f.value === "EG"));
-assert.ok(filters.some((f) => f.key === "creator_country" && f.value === "EG"));
-assert.ok(filters.some((f) => f.key === "audience_gender" && f.value === "female"));
+assert.ok(!filters.some((f) => f.key === "audience_country"));
+assert.ok(!filters.some((f) => f.key === "creator_country"), "market/audience is not creator location");
+assert.ok(!filters.some((f) => f.key === "audience_gender"));
 assert.ok(filters.some((f) => f.key === "category" && f.value === "Beauty"));
 assert.ok(!filters.some((f) => f.label.toLowerCase().includes("budget")));
 assert.ok(!filters.some((f) => f.label.toLowerCase().includes("deliverable")));

@@ -54,6 +54,15 @@ const extractionSchema = z.object({
   platforms: z.array(z.string()).nullable().optional(),
   creatorCategories: z.array(z.string()).nullable().optional(),
   creatorNiches: z.array(z.string()).nullable().optional(),
+  creatorRequirements: z.object({
+    countries: z.array(z.string()).nullable().optional(),
+    languages: z.array(z.string()).nullable().optional(),
+    gender: z.string().nullable().optional(),
+    tiers: z.array(z.string()).nullable().optional(),
+    engagementMin: z.number().min(0).max(100).nullable().optional(),
+  }).nullable().optional(),
+  contentLanguages: z.array(z.string()).nullable().optional(),
+  evidenceExcerpts: z.record(z.string(), z.string()).nullable().optional(),
   budget: z
     .object({
       amount: z.number(),
@@ -106,6 +115,11 @@ Rules:
 - Only treat creators as finance/education specialists when the brief explicitly asks for finance educators or personal-finance influencers.
 - Put follower ranges in followerRange, not creatorCategories.
 - Put content keywords in keywords array.
+- Keep market/geography (campaign context), audienceDetail.countries/languages/gender, creatorRequirements.countries/languages/gender/tiers/engagementMin and contentLanguages SEPARATE. Never populate one from another. Missing or ambiguous means null.
+- "Egyptian creators" means creatorRequirements.countries=["EG"]; "audience in Egypt" means audienceDetail.countries=["EG"]; "campaign in Egypt" means market="Egypt" only. "Creators on Instagram in Egypt" is ambiguous: preserve in requirements, do not infer creator country.
+- "Arabic-speaking creators" means creatorRequirements.languages=["ar"]; "Arabic content/Reels" means contentLanguages=["ar"]; "Arabic-speaking audience" means audienceDetail.languages=["ar"]. Do not transfer language between these fields.
+- Female/male creators belong in creatorRequirements.gender, never audienceDetail.gender. Preserve macro/mega/celebrity tiers in creatorRequirements.tiers. A campaign engagement KPI is not a creator minimum.
+- evidenceExcerpts: for each populated creatorRequirements.* and contentLanguages field provide its exact supporting brief quote under that dotted field name. Do the same for market and audienceDetail fields. Use creator-specific evidence; never infer from audience, market, brand, image, or campaign objective.
 - keyMessage: the single core brand message, verbatim from the brief. null if absent.
 - callToAction: the explicit CTA, verbatim. null if absent.
 - campaignFunnel: ordered funnel stages if the brief states them (e.g. ["Awareness","Interest","Trial"]). Funnel stages are NOT kpis.
@@ -242,8 +256,10 @@ export function fillBriefSourcedHeuristicGaps(
   take("brandName", "brandName");
   take("clientName", "clientName");
   take("objective", "objective");
-  take("audience", "audience");
-  take("geography", "geography");
+  if (!profile.explicitRequirementScopes) {
+    take("audience", "audience");
+    take("geography", "geography");
+  }
   take("budget", "budget");
   take("durationWeeks", "durationWeeks");
   take("platforms", "platforms");
@@ -262,7 +278,7 @@ export function fillBriefSourcedHeuristicGaps(
   // An audience stated in the brief must survive normalization. Scoped to
   // audience deliberately — the other strict fields (geography, platforms) keep
   // their existing behaviour untouched.
-  preferBriefOverInferred("audience", "audience");
+  if (!profile.explicitRequirementScopes) preferBriefOverInferred("audience", "audience");
 
   if (!next.campaignName?.trim() && heuristic.campaignName?.trim()) {
     next.campaignName = heuristic.campaignName;
@@ -271,7 +287,7 @@ export function fillBriefSourcedHeuristicGaps(
     next.products = heuristic.products;
   }
 
-  if (!next.market?.trim() && next.geography?.[0] && heuristic.sources?.geography === "brief") {
+  if (!profile.explicitRequirementScopes && !next.market?.trim() && next.geography?.[0] && heuristic.sources?.geography === "brief") {
     next.market = next.geography[0];
   }
   if ((!next.objectives || next.objectives.length === 0) && next.objective?.trim()) {
@@ -345,7 +361,7 @@ function heuristicExtract(briefText: string): CampaignIntelligenceProfile {
 
   if (facts.audience) {
     profile.audienceDetail = {
-      countries: facts.geography ?? [],
+      countries: [],
     };
   }
 
@@ -373,6 +389,7 @@ function applyExtractedData(
   briefText: string
 ): CampaignIntelligenceProfile {
   const profile = createEmptyCampaignIntelligenceProfile();
+  profile.explicitRequirementScopes = true;
 
   const brandCandidate = data.brandName ? sanitizeBrandName(data.brandName) : "";
   profile.brandName =
@@ -402,17 +419,18 @@ function applyExtractedData(
     : undefined;
   profile.geography =
     cleanGeoEntities(data.geography) ??
-    audienceCountries ??
     (profile.market ? [profile.market] : undefined);
+  profile.creatorRequirements = data.creatorRequirements ? {
+    countries: data.creatorRequirements.countries ?? undefined,
+    languages: data.creatorRequirements.languages ?? undefined,
+    gender: data.creatorRequirements.gender ?? undefined,
+    tiers: data.creatorRequirements.tiers ?? undefined,
+    engagementMin: data.creatorRequirements.engagementMin ?? undefined,
+  } : undefined;
+  profile.contentLanguages = data.contentLanguages ?? undefined;
+  profile.keywords = data.keywords ?? undefined;
   profile.platforms = data.platforms ?? undefined;
-  profile.creatorCategories = deriveCreatorCategoriesFromBrief({
-    briefText,
-    objective: data.objective ?? data.objectives?.join(" "),
-    audience: data.audience ?? undefined,
-    campaignName: data.campaignName ?? undefined,
-    products: data.products ?? undefined,
-    existingCategories: data.creatorCategories ?? undefined,
-  });
+  profile.creatorCategories = data.creatorCategories ?? [];
   if (profile.creatorCategories.length === 0) {
     profile.creatorCategories = undefined;
   } else {
@@ -512,11 +530,16 @@ function applyExtractedData(
     data.keywords?.length ? "keywords" : "",
   ].filter(Boolean) as string[];
 
-  return attachLlmFieldProvenance(
+  const result = attachLlmFieldProvenance(
     validateCampaignFacts(profile) as CampaignIntelligenceProfile,
     extractedFieldKeys,
     fieldConfidence
   );
+  for (const [field, excerpt] of Object.entries(data.evidenceExcerpts ?? {})) {
+    if (!excerpt.trim() || !briefText.includes(excerpt)) continue;
+    result.fieldProvenance![field] = { level: "extracted", confidence: fieldConfidence[field] ?? 0.85, sourceField: field, excerpt };
+  }
+  return result;
 }
 
 export async function extractCampaignIntelligenceProfileWithDebug(

@@ -2,7 +2,6 @@ import type { CampaignIntelligenceProfile } from "../../types/profile";
 import type { DiscoveryCampaignRequirements } from "../discovery-campaign-requirements";
 
 import {
-  buildFieldProvenanceFromProfile,
   getFieldProvenance,
   userConfirmedProvenance,
 } from "./field-provenance";
@@ -58,6 +57,7 @@ function normalizedProvenance(
     level: level === "inferred" ? "inferred" : "normalized",
     confidence: level === "inferred" ? baseConfidence : Math.min(0.95, baseConfidence + 0.05),
     sourceField,
+    excerpt: raw?.excerpt,
   };
 }
 
@@ -70,39 +70,14 @@ function extractedProvenance(
     level: raw?.level === "inferred" ? "inferred" : "extracted",
     confidence: raw?.confidence ?? 0.85,
     sourceField,
+    excerpt: raw?.excerpt,
   };
 }
 
-function collectExplicitCountryCandidates(
-  profile: CampaignIntelligenceProfile
-): Array<{ value: string; field: string; provenance: FieldProvenance }> {
-  buildFieldProvenanceFromProfile(profile);
-  const candidates: Array<{ value: string; field: string; provenance: FieldProvenance }> = [];
-
-  const push = (value: string | undefined, field: string) => {
-    if (!value?.trim()) return;
-    const provenance = extractedProvenance(profile, field);
-    if (provenance.level === "inferred") return;
-    candidates.push({ value: value.trim(), field, provenance });
-  };
-
-  push(profile.market, "market");
-  for (const g of profile.geography ?? []) {
-    candidates.push({
-      value: g,
-      field: "geography",
-      provenance: extractedProvenance(profile, "geography"),
-    });
-  }
-  for (const c of profile.audienceDetail?.countries ?? []) {
-    candidates.push({
-      value: c,
-      field: "audienceDetail.countries",
-      provenance: extractedProvenance(profile, "audienceDetail.countries"),
-    });
-  }
-
-  return candidates.filter((c) => c.provenance.level !== "inferred");
+export function normalizeRequirementLanguage(raw: string): string | null {
+  const aliases: Record<string, string> = { arabic: "ar", english: "en", french: "fr", spanish: "es", german: "de", turkish: "tr", hindi: "hi", urdu: "ur", العربية: "ar", عربي: "ar" };
+  const value = raw.trim().toLowerCase();
+  return aliases[value] ?? (/^[a-z]{2}$/.test(value) ? value : null);
 }
 
 /**
@@ -200,53 +175,61 @@ export function normalizeCampaignIntelligence(
     );
   }
 
-  const resolvedCountries = new Map<string, { raw: string; provenance: FieldProvenance }>();
-  for (const { value, field, provenance } of collectExplicitCountryCandidates(profile)) {
-    const code = resolveCountryCode(value);
-    if (code) {
-      const existing = resolvedCountries.get(code);
-      if (!existing || provenance.confidence > existing.provenance.confidence) {
-        resolvedCountries.set(code, { raw: value, provenance: normalizedProvenance(profile, field) });
-      }
-    } else {
-      pushIssue(issues, field, value, "Could not resolve to a valid country code");
-      issues[issues.length - 1]!.kind = "malformed";
+  // Market and audience are independent; neither implies creator requirements.
+  for (const raw of [profile.market, ...(profile.geography ?? [])]) {
+    if (raw && !resolveCountryCode(raw)) pushIssue(issues, "market", raw, "Could not resolve campaign market", "warning");
+  }
+  const marketRaw = [profile.market, ...(profile.geography ?? [])].find(v => v && resolveCountryCode(v));
+  if (marketRaw) {
+    const code = resolveCountryCode(marketRaw);
+    const provenance = extractedProvenance(profile, profile.market ? "market" : "geography");
+    if (code && provenance.level !== "inferred") {
+      normalized.market.countryCode = code;
+      normalized.market.countryLabel = countryLabel(code);
+      setEvidence(normalized, "market.countryCode", provenance);
     }
   }
-
-  const countryCodes = [...resolvedCountries.keys()];
-  if (countryCodes.length > 0) {
-    normalized.audience.countries = [...countryCodes];
-    const primary = resolvedCountries.get(countryCodes[0])!;
-    normalized.market.countryCode = countryCodes[0];
-    normalized.market.countryLabel = countryLabel(countryCodes[0]);
-    setEvidence(normalized, "market.countryCode", primary.provenance);
-    setEvidence(normalized, "audience.countries", {
-      level: "normalized",
-      confidence: Math.max(...[...resolvedCountries.values()].map((v) => v.provenance.confidence)),
-      sourceField: "geography",
-    });
-  }
-
-  if (profile.market?.trim()) {
-    const marketCode = resolveCountryCode(profile.market);
-    const marketProv = extractedProvenance(profile, "market");
-    if (marketCode && marketProv.level !== "inferred") {
-      normalized.market.countryCode = marketCode;
-      normalized.market.countryLabel = countryLabel(marketCode);
-      setEvidence(normalized, "market.countryCode", normalizedProvenance(profile, "market"));
-      if (!normalized.audience.countries.includes(marketCode)) {
-        normalized.audience.countries.unshift(marketCode);
-      }
+  for (const raw of profile.audienceDetail?.countries ?? []) {
+    const code = resolveCountryCode(raw);
+    const provenance = extractedProvenance(profile, "audienceDetail.countries");
+    if (code && provenance.level !== "inferred") {
+      if (!normalized.audience.countries.includes(code)) normalized.audience.countries.push(code);
+      setEvidence(normalized, "audience.countries", provenance);
     }
+  }
+  for (const [field, rawValues, target, resolve] of [
+    ["creatorRequirements.countries", profile.creatorRequirements?.countries, "countries", resolveCountryCode],
+    ["creatorRequirements.languages", profile.creatorRequirements?.languages, "languages", normalizeRequirementLanguage],
+    ["contentLanguages", profile.contentLanguages, "contentLanguages", normalizeRequirementLanguage],
+    ["creatorRequirements.tiers", profile.creatorRequirements?.tiers, "tiers", (v: string) => /^(nano|micro|mid|macro|mega|celebrity)$/i.test(v.trim()) ? v.trim().toLowerCase() : null],
+  ] as const) {
+    if (!rawValues?.length) continue;
+    const provenance = getFieldProvenance(profile, field);
+    if (!provenance || provenance.level === "inferred" || provenance.confidence < 0.65 || !provenance.excerpt) {
+      pushIssue(issues, field, rawValues.join(", "), "Explicit requirement evidence needed — review before search", "warning");
+      continue;
+    }
+    const accepted = rawValues.map(resolve).filter((v): v is string => Boolean(v));
+    normalized.creator[target] = [...new Set(accepted)];
+    setEvidence(normalized, `creator.${target}`, { ...provenance, sourceField: field });
+    if (accepted.length !== rawValues.length) pushIssue(issues, field, rawValues.join(", "), "Unrecognized requirement value — review before search", "warning");
+  }
+  const creatorGender = profile.creatorRequirements?.gender;
+  const genderEvidence = getFieldProvenance(profile, "creatorRequirements.gender");
+  if (creatorGender && genderEvidence?.excerpt && genderEvidence.level !== "inferred" && genderEvidence.confidence >= 0.65) {
+    normalized.creator.gender = normalizeGender(creatorGender) ?? undefined;
+    setEvidence(normalized, "creator.gender", genderEvidence);
+  }
+  const er = profile.creatorRequirements?.engagementMin;
+  const erEvidence = getFieldProvenance(profile, "creatorRequirements.engagementMin");
+  if (er != null && Number.isFinite(er) && er >= 0 && er <= 100 && erEvidence?.excerpt && erEvidence.level !== "inferred" && erEvidence.confidence >= 0.65) {
+    normalized.creator.engagementMin = er;
+    setEvidence(normalized, "creator.engagementMin", erEvidence);
   }
 
   for (const city of profile.audienceDetail?.cities ?? []) {
     if (isValidCity(city)) {
       normalized.audience.cities.push(city.trim());
-      if (!normalized.market.cities.includes(city.trim())) {
-        normalized.market.cities.push(city.trim());
-      }
     } else {
       pushIssue(issues, "audienceDetail.cities", city, "Invalid city name");
       issues[issues.length - 1]!.kind = "malformed";
@@ -379,8 +362,7 @@ export function normalizeCampaignIntelligence(
   }
 
   const keywordCandidates = [
-    ...(profile.products ?? []),
-    ...(profile.contentStyle ?? []),
+    ...(profile.keywords ?? []),
     ...normalized.creator.niches.filter((n) => n.split(/\s+/).length <= 3),
   ];
   for (const raw of keywordCandidates) {
@@ -393,6 +375,7 @@ export function normalizeCampaignIntelligence(
   }
 
   normalized.brandSafety = normalizeBrandSafety(profile.brandSafetyLevel);
+  if (profile.fieldProvenance?.keywords) setEvidence(normalized, "keywords", profile.fieldProvenance.keywords);
 
   return { normalizedEntities: normalized, extractionIssues: issues };
 }
@@ -431,13 +414,6 @@ export function normalizedEntitiesFromDiscoveryRequirements(
   if (normalized.audience.countries.length > 0) {
     setEvidence(normalized, "audience.countries", confirmed);
   }
-  if (
-    normalized.market.countryCode &&
-    !normalized.audience.countries.includes(normalized.market.countryCode)
-  ) {
-    normalized.audience.countries.unshift(normalized.market.countryCode);
-  }
-
   const gender = req.audienceGender ? normalizeGender(req.audienceGender) : null;
   if (gender && gender !== "any") {
     normalized.audience.gender = gender;
