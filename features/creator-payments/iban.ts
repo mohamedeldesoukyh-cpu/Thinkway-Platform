@@ -33,6 +33,13 @@ export function inspectIban(value: string) {
         detected.bank_name = 'Sharjah Islamic Bank';
         detected.swift = 'NBSHAEAS';
     }
+    // Bank 086: Convera's UAE IBAN directory (WIO BANK P.J.S.C.).
+    // https://convera.com/en-gb/resources/iban-codes/united-arab-emirates/ae560860000009192749396/
+    // BIC: https://ibanapi.com/bank/43434/wio-bank-p.j.s.c.
+    if (country === 'AE' && bankCode === '086') {
+        detected.bank_name = 'Wio Bank PJSC';
+        detected.swift = 'WIOBAEAD';
+    }
     return { iban, country, bankCode, detected, error: undefined };
 }
 
