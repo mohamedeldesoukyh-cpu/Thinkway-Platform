@@ -18,6 +18,7 @@ export type BankDetails = {
     registered: boolean;
 };
 export type PaymentRow = {
+    savedDraft?: PaymentDraft;
     assignmentId: string;
     campaignId: string;
     creatorId: string;
@@ -95,7 +96,7 @@ export function calculatePayment(row: PaymentRow, draft: PaymentDraft) {
     if (originalPay > available + 0.005)
         errors.push("Pay now exceeds the available balance, including pending exports.");
     return { fee, vatAmount, total, outstanding, available, rate, originalPay, payNow,
-        remaining: money(outstanding - originalPay), errors };
+        remaining: money(available - originalPay), errors };
 }
 export function paymentStatus(paid: number, total: number) {
     if (paid <= 0)
