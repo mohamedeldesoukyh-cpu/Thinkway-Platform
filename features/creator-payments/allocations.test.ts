@@ -1,7 +1,16 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {paymentAllocation,paymentUnits} from './allocations';
+import {paymentAllocation,paymentUnits,matchesPaymentFilter} from './allocations';
 const units = [1,2,3].map(n=>({id:String(n),label:`Deliverable ${n}`,live:n<3}));
+test('Paid includes partial and advance payments independently of live deliverables',()=>{
+ const row={fee:90000,vat:0,paid:75000,units};
+ assert.equal(matchesPaymentFilter(row,'paid'),true);
+ assert.equal(matchesPaymentFilter(row,'advance'),true);
+ assert.equal(matchesPaymentFilter({...row,paid:100},'paid'),true);
+ assert.equal(matchesPaymentFilter({...row,paid:0},'paid'),false);
+ assert.equal(matchesPaymentFilter({...row,paid:0},'unpaid'),true);
+ assert.equal(matchesPaymentFilter({...row,paid:90000},'unpaid'),false);
+});
 test('90000 / three units: 75000 paid, two live gives 60000 earned and 15000 advance',()=>{
  const r=paymentAllocation({fee:90000,vat:0,paid:75000,units});
  assert.deepEqual([r.earned,r.actual,r.advance,r.remaining],[60000,60000,15000,15000]);

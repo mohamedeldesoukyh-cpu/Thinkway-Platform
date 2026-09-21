@@ -52,6 +52,9 @@ export type PaymentDraft = {
     invoiceAmount?: number;
 };
 export type PaymentEntry = {
+    revision?: number;
+    cleared_at?: string | null;
+    exchange_rate?: number;
     payment_date?: string | null;
     payment_sequence?: number | null;
     source?: string;

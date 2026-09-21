@@ -7,6 +7,11 @@ type Publication = { id:string; assignment_deliverable_id:string|null; assignmen
 type Link = { assignment_deliverable_id:string; assignment_post_schedule_id:string|null; publication_id:string };
 const liveStatuses = new Set(['published','live','posted','verified']);
 
+export function matchesPaymentFilter(row: Pick<PaymentRow,'fee'|'vat'|'paid'|'units'>,filter:string) {
+    const allocation=paymentAllocation(row);
+    return filter==='all' || (filter==='paid' ? row.paid>0 : filter==='advance' ? allocation.advance>0 : allocation.remaining>0);
+}
+
 export function paymentUnits(deliverables: Deliverable[], posts: Post[], publications: Publication[], links: Link[]): PaymentUnit[] {
     const live = publications.filter(p => liveStatuses.has(p.status.toLowerCase()));
     const references = [...live, ...links.filter(l => live.some(p => p.id === l.publication_id))];
