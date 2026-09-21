@@ -10,6 +10,7 @@ import { saveAaibBank, exportAaibBeneficiaries, loadCreatorBankAccounts, setCrea
 import { BENEFICIARY_FILENAME, PAYMENT_FILENAME, paymentFileBytes, validateBank } from './aaib';
 import { bankDetails, ioBadge, money, paymentStatus, type PaymentRow, type BankDetails } from './model';
 import { isEmptyBank, duplicateFieldLabels, draftKey, readBankDrafts, type BankDuplicate } from './bank-form-state';
+import { notifyCreatorBankSaved } from './bank-sync';
 import { changeIban, fillFromIban, inspectIban } from './iban';
 export function downloadFile(data: string, name: string, type: string, base64 = false) {
     const bytes = base64 ? Uint8Array.from(atob(data), c => c.charCodeAt(0)) : name === PAYMENT_FILENAME ? paymentFileBytes(data) : data;
@@ -148,6 +149,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
         try {
             const result = await setCreatorDefaultBank(creatorId, accountId);
             if (!result.ok) { setIssues([result.message]); return; }
+            notifyCreatorBankSaved(creatorId, result.defaultBank);
             setAccounts(previous => previous.map(a => ({ ...a, isDefault: a.id === accountId })));
             toast.success('Default bank account updated. New payment exports will use this account.'); onSaved?.(); router.refresh();
         } catch { setIssues(['Could not change the default account. Please try again.']); }
@@ -180,6 +182,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
         try {
             const r = await saveAaibBank(creatorId, activeBank, accountId, makeDefault);
             if (!r.ok) { setIssues([r.message]); setDuplicate('duplicate' in r ? r.duplicate ?? null : null); return; }
+            notifyCreatorBankSaved(creatorId, r.defaultBank);
             forgetDraft(); setDraftNotice('');
             setAccountId(r.accountId); setDuplicate(null); setMakeDefault(false);
             const list = await loadCreatorBankAccounts(creatorId);

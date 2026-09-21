@@ -182,8 +182,10 @@ export async function saveAaibBank(creatorId: string, bank: BankDetails, account
         const account = await db.from('influencer_bank_accounts').select('aaib_details').eq('id', saved.data).single();
         if (account.error) throw new Error('Account saved; refresh to load its details.');
         const result = bankDetails(account.data.aaib_details);
+        const currentDefault = await db.from('influencers').select('payment_details').eq('id', creatorId).single();
+        if (currentDefault.error) throw new Error('Bank account saved. Refresh the payment list to load its status.');
         revalidatePath('/vendors'); revalidatePath('/campaigns'); revalidatePath(`/vendors/${creatorId}`);
-        return { ok: true as const, bank: result, accountId: saved.data as string, message: isEmptyBank(result) ? 'Bank details cleared. Add correct details before exporting payments.' : bank.registered && !result.registered ? 'Bank details changed. Confirm AAIB registration again after updating the bank.' : 'Bank account saved.' };
+        return { ok: true as const, bank: result, defaultBank: bankDetails(currentDefault.data.payment_details ?? {}), accountId: saved.data as string, message: isEmptyBank(result) ? 'Bank details cleared. Add correct details before exporting payments.' : bank.registered && !result.registered ? 'Bank details changed. Confirm AAIB registration again after updating the bank.' : 'Bank account saved.' };
     }
     catch (e) {
         return fail(e);
@@ -247,7 +249,9 @@ export async function setCreatorDefaultBank(creatorId: string, accountId: string
         const { error } = await (supabase as SupabaseClient).rpc('save_creator_bank_account', { p_creator: creatorId, p_account: accountId, p_details: null, p_default: true });
         if (error) throw new Error('Could not change the default account. Refresh and try again.');
         revalidatePath('/vendors'); revalidatePath('/campaigns'); revalidatePath(`/vendors/${creatorId}`);
-        return { ok: true as const };
+        const currentDefault = await (supabase as SupabaseClient).from('influencers').select('payment_details').eq('id', creatorId).single();
+        if (currentDefault.error) throw new Error('Default updated. Refresh the payment list to load its status.');
+        return { ok: true as const, defaultBank: bankDetails(currentDefault.data.payment_details ?? {}) };
     } catch (e) { return fail(e); }
 }
 
