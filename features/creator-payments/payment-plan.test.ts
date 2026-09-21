@@ -3,14 +3,15 @@ import assert from 'node:assert/strict';
 import { bankDetails, calculatePayment, paymentStatus, type PaymentRow } from './model';
 import { changedPaymentPlans, defaultPaymentDraft, paymentDraftSchema } from './payment-plan';
 const row: PaymentRow = { assignmentId:'a', campaignId:'c', creatorId:'i', creator:'Example', ioId:'io', ioNumber:'IO', ioStatus:'approved', currency:'USD', fee:5000, vat:0, paid:0, reserved:0, bank:bankDetails() };
-test('50% is an unsaved preview until explicitly saved, and save does not mark it paid', () => {
+test('new payment entries start empty even when an old preparation plan exists', () => {
     const draft = { ...defaultPaymentDraft(row), mode:'percent', percent:50 };
     assert.equal(changedPaymentPlans([row],{a:draft}).length,1);
     assert.equal(calculatePayment(row,draft).remaining,2500);
     assert.equal(calculatePayment(row,draft).outstanding,5000);
     const saved = { ...row, savedDraft:draft };
-    assert.deepEqual(defaultPaymentDraft(saved),draft);
-    assert.equal(changedPaymentPlans([saved],{a:draft}).length,0);
+    assert.equal(defaultPaymentDraft(saved).amount,0);
+    assert.equal(defaultPaymentDraft(saved).mode,'manual');
+    assert.equal(changedPaymentPlans([saved],{a:draft}).length,1);
     assert.equal(paymentStatus(saved.paid,5000).label,'Unpaid');
     assert.equal(changedPaymentPlans([saved],{a:{...draft,percent:25}}).length,1);
     assert.equal(changedPaymentPlans([saved],{}).length,0);

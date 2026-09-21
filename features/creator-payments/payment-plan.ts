@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type { PaymentDraft, PaymentRow } from './model';
 
 export const paymentDraftSchema = z.object({
+    paymentDate: z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/),z.literal('')]).optional(),
     fee: z.number().finite().nonnegative(), vat: z.number().min(0).max(100),
     currency: z.string().regex(/^[A-Z]{3}$/), rate: z.number().finite().positive().max(999999999),
     mode: z.enum(['full', 'percent', 'manual']), percent: z.number().min(0).max(100),
@@ -9,9 +10,7 @@ export const paymentDraftSchema = z.object({
     invoiceNumber: z.string().max(100).optional(), invoiceDate: z.string().max(10).optional(),
     invoiceAmount: z.number().finite().nonnegative().optional(),
 });
-export const defaultPaymentDraft = (row: PaymentRow): PaymentDraft => row.savedDraft
-    ? { ...row.savedDraft, fee: row.fee }
-    : { fee: row.fee, vat: row.vat, currency: row.currency, rate: 1, mode: 'full', percent: 100, amount: 0 };
+export const defaultPaymentDraft = (row: PaymentRow): PaymentDraft => ({ fee: row.fee, vat: row.vat, currency: row.currency, rate: 1, mode: 'manual', percent: 100, amount: 0, paymentDate: '' });
 
 export function changedPaymentPlans(rows: PaymentRow[], drafts: Record<string, PaymentDraft>) {
     return rows.filter(row => {

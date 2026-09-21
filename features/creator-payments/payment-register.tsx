@@ -3,9 +3,11 @@
 import { Fragment, useState, type ReactNode } from 'react';
 import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { defaultPaymentDraft as initialDraft, changedPaymentPlans } from './payment-plan';
+import { paymentAllocation } from './allocations';
+import { PaymentHistory } from './payment-history';
 import { DecimalInput } from './decimal-input';
 import { validateBank } from './aaib';
-import { calculatePayment, ioBadge, money, paymentStatus, type PaymentDraft, type PaymentRow } from './model';
+import { calculatePayment, ioBadge, paymentStatus, type PaymentDraft, type PaymentRow } from './model';
 
 const number = (value: number) => Number.isFinite(value) ? value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '—';
 const amount = (value: number, currency: string) => `${number(value)} ${currency}`;
@@ -22,8 +24,8 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
   const [filter, setFilter] = useState('all');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const visible = rows.filter(row => {
-    const status = paymentStatus(row.paid, money(row.fee * (1 + row.vat / 100))).label;
-    return filter === 'all' || (filter === 'paid' ? status === 'Fully paid' : status !== 'Fully paid');
+    const allocation = paymentAllocation(row);
+    return filter === 'all' || (filter === 'advance' ? allocation.advance > 0 : filter === 'paid' ? allocation.fullyPaid : allocation.remaining > 0);
   });
   const eligible = visible.filter(row => row.payable !== false);
   const incomplete = visible.filter(row => validateBank(row.bank).length > 0);
@@ -38,7 +40,7 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
   return <section className="cp-panel" aria-label="Creator payment register">
     <div className="cp-panel-head">
       <h2>Creator payments</h2><span>{new Set(visible.map(row => row.creatorId)).size} creators · {ready.length} ready to export</span>
-      <div className="cp-head-actions"><div className="cp-segments" aria-label="Payment status filter">{[['all','All'],['unpaid','Unpaid'],['paid','Paid']].map(([value,label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div>
+      <div className="cp-head-actions"><div className="cp-segments" aria-label="Payment status filter">{[['all','All'],['unpaid','Unpaid'],['paid','Paid'],['advance','Advance']].map(([value,label]) => <button key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{label}</button>)}</div>
         <button className="cp-button" onClick={onExport}>Export</button><button className="cp-button primary" disabled={!canReview} onClick={onReview}>Review selected</button></div>
     </div>
     <div className="cp-register-filters">{filters}</div>
@@ -49,12 +51,13 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
         <tbody>{visible.map(row => {
           const draft = drafts[row.assignmentId] ?? initialDraft(row);
           const calculation = calculatePayment(row, draft);
-          const status = paymentStatus(row.paid, calculation.total);
+          const allocation = paymentAllocation(row);
+          const status = allocation.fullyPaid ? {label:'Paid',className:'bg-green-50 text-green-700'} : allocation.advance>0 ? {label:'Advance',className:'bg-orange-50 text-orange-700'} : paymentStatus(row.paid,allocation.total);
           const dirty = changedPaymentPlans([row], drafts).length > 0;
           const badge = ioBadge(row.ioStatus);
           const missing = validateBank(row.bank).length > 0;
           const open = expanded.has(row.assignmentId);
-          const errors = selected.has(row.assignmentId) ? calculation.errors : [];
+          const errors = selected.has(row.assignmentId) && calculation.payNow > 0 ? calculation.errors : [];
           return <Fragment key={row.assignmentId}>
             <tr className={`${missing ? 'bank-warning' : ''} ${selected.has(row.assignmentId) ? 'selected' : ''}`}>
               <td><input type="checkbox" aria-label={`Select ${row.creator}`} disabled={!canWrite || row.payable === false} checked={selected.has(row.assignmentId)} onChange={e => onSelect(row.assignmentId, e.target.checked)}/></td>
@@ -66,10 +69,11 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
               <td className="numeric"><b>{number(calculation.total)}</b><small>{row.currency}</small></td>
               <td><select aria-label={`Payment currency for ${row.creator}`} disabled={!canWrite} value={draft.currency} onChange={e => onPatch(row,{currency:e.target.value,rate:e.target.value === row.currency ? 1 : 0})}>{[...new Set([...COMMERCIAL_CURRENCIES,row.currency,row.bank.currency].filter(Boolean))].map(code => <option key={code}>{code}</option>)}</select>{draft.currency !== row.currency && <label className="cp-fx">1 {row.currency} =<DecimalInput aria-label={`Exchange rate for ${row.creator}`} disabled={!canWrite} precision={6} value={draft.rate} onValueChange={rate => onPatch(row,{rate})}/>{draft.currency}</label>}</td>
               <td><select aria-label={`Payment calculation for ${row.creator}`} disabled={!canWrite} value={draft.mode === 'percent' ? [25,50,75,100].includes(draft.percent) ? String(draft.percent) : 'custom' : draft.mode} onChange={e => onPatch(row,e.target.value === 'full' || e.target.value === 'manual' ? {mode:e.target.value} : {mode:'percent',percent:e.target.value === 'custom' ? draft.percent : Number(e.target.value)})}><option value="full">Full balance</option>{[25,50,75,100].map(value => <option key={value} value={value}>{value}% incl. VAT</option>)}<option value="custom">Custom %</option><option value="manual">Manual amount</option></select>{draft.mode === 'percent' && <DecimalInput percentage aria-label={`Payment percentage for ${row.creator}`} disabled={!canWrite} value={draft.percent} onValueChange={percent => onPatch(row,{percent})}/>}</td>
-              <td><DecimalInput aria-label={`Pay now for ${row.creator} (${draft.currency})`} disabled={!canWrite} value={Number.isFinite(calculation.payNow) ? calculation.payNow : 0} onValueChange={value => onPatch(row,{mode:'manual',amount:value})}/><small className="numeric">{dirty ? 'Unsaved · ' : row.savedDraft ? 'Saved · ' : ''}{draft.currency}{draft.currency !== row.currency && <> · {amount(calculation.originalPay,row.currency)} original</>}</small></td>
+              <td><DecimalInput emptyZero placeholder="Enter amount" aria-label={`Pay now for ${row.creator} (${draft.currency})`} disabled={!canWrite} value={Number.isFinite(calculation.payNow) ? calculation.payNow : 0} onValueChange={value => onPatch(row,{mode:'manual',amount:value})}/><label className="cp-payment-date">Payment date<input type="date" aria-label={`Payment date for ${row.creator}`} disabled={!canWrite} value={draft.paymentDate ?? ''} onChange={e=>onPatch(row,{paymentDate:e.target.value})}/></label><small className="numeric">{dirty && calculation.payNow>0 ? 'Not recorded · ' : ''}{draft.currency}{draft.currency !== row.currency && <> · {amount(calculation.originalPay,row.currency)} original</>}</small></td>
               <td className="numeric"><b>{number(calculation.remaining * calculation.rate)}</b><small>{draft.currency}{draft.currency !== row.currency && <> · {amount(calculation.remaining,row.currency)} original</>}</small><small>Unpaid: {amount(calculation.outstanding,row.currency)}</small></td>
             </tr>
-            {(open || errors.length > 0 || draft.vat !== row.vat) && <tr className="cp-detail-row" id={`payment-details-${row.assignmentId}`}><td colSpan={11}>{open && <div className="cp-balances"><span>Paid <b>{amount(row.paid,row.currency)}</b></span><span>Pending exports <b>{amount(row.reserved,row.currency)}</b></span><span>Remaining after payment <b>{amount(calculation.remaining * calculation.rate,draft.currency)}</b>{draft.currency !== row.currency && <small>{amount(calculation.remaining,row.currency)} original</small>}</span></div>}{draft.vat !== row.vat && <p className="cp-vat-note">Save changes to keep this VAT adjustment in the payment plan. The issued IO and campaign agreement remain unchanged.</p>}{errors.map(error => <p key={error} role="alert" className="cp-error">{error}</p>)}</td></tr>}
+            {(open || errors.length > 0 || draft.vat !== row.vat) && <tr className="cp-detail-row" id={`payment-details-${row.assignmentId}`}><td colSpan={11}>{open && <div className="cp-balances"><span>Paid <b>{amount(row.paid,row.currency)}</b></span><span>Pending exports <b>{amount(row.reserved,row.currency)}</b></span><span>Remaining after payment <b>{amount(calculation.remaining * calculation.rate,draft.currency)}</b>{draft.currency !== row.currency && <small>{amount(calculation.remaining,row.currency)} original</small>}</span></div>}{draft.vat !== row.vat && <p className="cp-vat-note">VAT is recorded with the payment or bank export. The issued IO and campaign agreement remain unchanged.</p>}{errors.map(error => <p key={error} role="alert" className="cp-error">{error}</p>)}</td></tr>}
+            <tr className="cp-detail-row"><td colSpan={11}><PaymentHistory row={row}/></td></tr>
           </Fragment>;
         })}{!visible.length && <tr><td colSpan={11} className="cp-empty">No creators match these filters.</td></tr>}</tbody>
         <tfoot><tr><td/><td>{new Set(visible.map(row => row.creatorId)).size} creators</td><td/><td>{ready.length} ready</td><td className="numeric">{currencies.map(currency => <div key={currency}>{amount(sum(currency,'fee'),currency)}</div>)}</td><td className="numeric"><small>VAT amount</small>{currencies.map(currency => <div key={currency}>{amount(sum(currency,'vatAmount'),currency)}</div>)}</td><td className="numeric">{currencies.map(currency => <div key={currency}>{amount(sum(currency,'total'),currency)}</div>)}</td><td/><td>Selected pay now</td><td className="numeric">{payCurrencies.length ? payCurrencies.map(currency => <div key={currency}>{amount(visible.filter(row => selected.has(row.assignmentId) && (drafts[row.assignmentId] ?? initialDraft(row)).currency === currency).reduce((total,row) => { const value = calculatePayment(row,drafts[row.assignmentId] ?? initialDraft(row)).payNow; return total + (Number.isFinite(value) ? value : 0); },0),currency)}</div>) : '—'}</td><td className="numeric">{currencies.map(currency => <div key={currency}>{amount(sum(currency,'remaining'),currency)}</div>)}</td></tr></tfoot>

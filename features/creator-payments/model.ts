@@ -18,6 +18,8 @@ export type BankDetails = {
     registered: boolean;
 };
 export type PaymentRow = {
+    units?: import('./allocations').PaymentUnit[];
+    history?: PaymentEntry[];
     savedDraft?: PaymentDraft;
     assignmentId: string;
     campaignId: string;
@@ -37,6 +39,7 @@ export type PaymentRow = {
     bank: BankDetails;
 };
 export type PaymentDraft = {
+    paymentDate?: string;
     fee: number;
     vat: number;
     currency: string;
@@ -49,8 +52,12 @@ export type PaymentDraft = {
     invoiceAmount?: number;
 };
 export type PaymentEntry = {
+    payment_date?: string | null;
+    payment_sequence?: number | null;
+    source?: string;
+    created_at?: string;
     id: string;
-    batch_id: string;
+    batch_id: string | null;
     assignment_id: string;
     creator_name: string;
     original_currency: string;
