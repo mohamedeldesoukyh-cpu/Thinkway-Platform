@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeInfluencerTier } from "@/lib/creators/influencer-tier";
 
 import {
   detectIndustryFromBrief,
@@ -20,6 +21,7 @@ import {
   resolveCountryCode,
   sanitizeBrandName,
   countryLabel,
+  canonicalizeCategory,
 } from "./normalization/validators";
 
 export const CIP_EXTRACTION_MODEL = "gpt-4o-mini";
@@ -145,7 +147,7 @@ export function buildLlmExtractionPrompts(briefText: string): {
 } {
   const trimmed = briefText.trim();
   return {
-    systemPrompt: SYSTEM_PROMPT,
+    systemPrompt: `${SYSTEM_PROMPT}\n\nReturn one object matching this JSON schema. Preserve the exact property names and nesting; do not flatten creatorRequirements or audienceDetail. Supply exact supporting quotes for creatorCategories and keywords too.\n${JSON.stringify(z.toJSONSchema(extractionSchema))}`,
     userPrompt: `Structured campaign brief:\n\n${trimmed.slice(0, MAX_BRIEF_CHARS)}`,
     model: AI_MODEL,
   };
@@ -306,6 +308,51 @@ export function fillBriefSourcedHeuristicGaps(
     }
   }
 
+  // Recover only a closed, affirmative creator-modifier clause. Unknown words,
+  // negation, alternatives and market/audience clauses cannot establish creator
+  // identity requirements. This extends the existing brief-evidence gap fill;
+  // it does not run another document parser or provider call.
+  const modifiers = "Egyptian|Arabic-speaking|English-speaking|nano|micro|mid-tier|mid|macro|mega|celebrity|Beauty|Fashion|Sports|Lifestyle|Entertainment|Tech";
+  const creatorClause = new RegExp(`(?:^|[.!?]\\s+)(?:We need |We require )?((?:(?:${modifiers})\\s+)+)creators\\b`, "gi");
+  next.fieldProvenance = { ...next.fieldProvenance };
+  next.creatorRequirements = { ...next.creatorRequirements };
+  const evidence = (field: string, excerpt: string) => {
+    next.fieldProvenance![field] = { level: "extracted", confidence: 1, sourceField: field, excerpt };
+  };
+  for (const match of briefText.matchAll(creatorClause)) {
+    const excerpt = match[0].replace(/^[.!?]\s*/, "");
+    const words = match[1].trim().split(/\s+/);
+    for (const [key, selected] of [
+      ["countries", words.filter(w => /^Egyptian$/i.test(w)).map(() => "EG")],
+      ["languages", words.filter(w => /^(Arabic|English)-speaking$/i.test(w)).map(w => /^Arabic/i.test(w) ? "ar" : "en")],
+      ["tiers", words.filter(w => /^(nano|micro|mid-tier|mid|macro|mega|celebrity)$/i.test(w)).map(w => normalizeInfluencerTier(w)!.toLowerCase())],
+    ] as const) {
+      if (!selected.length) continue;
+      const current = next.creatorRequirements[key];
+      if (!current?.length) next.creatorRequirements[key] = [...new Set(selected)];
+      if (!current?.length || current.every(v => selected.some(value => value === (key === "tiers" ? normalizeInfluencerTier(v)?.toLowerCase() : v)))) {
+        if (!next.fieldProvenance[`creatorRequirements.${key}`]?.excerpt) evidence(`creatorRequirements.${key}`, excerpt);
+      }
+    }
+    const categories = words.filter(w => /^(Beauty|Fashion|Sports|Lifestyle|Entertainment|Tech)$/i.test(w)).map(canonicalizeCategory).filter((v): v is string => Boolean(v));
+    if (categories.length && (!next.creatorCategories?.length || next.sources?.creatorCategories === "inferred")) {
+      next.creatorCategories = [...new Set(categories)];
+      setProfileFieldMeta(next, "creatorCategories", "brief", 1);
+      evidence("creatorCategories", excerpt);
+    }
+    // A topic must explicitly modify content following this creator clause.
+    const tail = briefText.slice((match.index ?? 0) + match[0].length).split(/[.!?]/)[0];
+    const topic = tail.match(/^(?: on Instagram)? with (skincare|makeup|fitness|fashion) content\b/i);
+    if (topic && !next.keywords?.length) {
+      next.keywords = [topic[1].toLowerCase()];
+      evidence("keywords", excerpt + topic[0]);
+    }
+    const audience = tail.match(/^(?: on Instagram)?(?: with (?:skincare|makeup|fitness|fashion) content,?)? targeting audiences in (Saudi Arabia|Egypt)\b/i);
+    if (audience && !next.audienceDetail?.countries?.length) {
+      next.audienceDetail = { ...next.audienceDetail, countries: [countryLabel(resolveCountryCode(audience[1])!)] };
+      evidence("audienceDetail.countries", excerpt + audience[0]);
+    }
+  }
   return next;
 }
 

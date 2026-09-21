@@ -34,7 +34,9 @@ export function mapCampaignIntelligenceToDiscoverySearch(profile: CampaignIntell
     add("creator.gender", "Creator gender", v.creator.gender, "UNSUPPORTED");
     add("creator.tiers", "Creator tier", v.creator.tiers, "HARD", "creator_tier");
     add("platforms", "Platform", v.platforms, "HARD", "platform");
-    const categoryInferred = profile.fieldProvenance?.creatorCategories?.level === "inferred" || profile.sources?.creatorCategories === "inferred";
+    const categoryInferred = profile.fieldProvenance?.creatorCategories
+      ? profile.fieldProvenance.creatorCategories.level === "inferred"
+      : profile.sources?.creatorCategories === "inferred";
     add("categories", "Category", v.categories.filter(c => !isClientIndustryCategory(c)), categoryInferred ? "CONTEXT" : "HARD", "category");
     add("creator.followerMin", "Follower minimum", v.creator.followerMin, "HARD", "follower_min");
     add("creator.followerMax", "Follower maximum", v.creator.followerMax, "HARD", "follower_max");

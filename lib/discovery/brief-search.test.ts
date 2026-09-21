@@ -10,7 +10,47 @@ import { cloneCreatorSearchFilters } from "@/features/discovery/components/creat
 import { applyBriefSelections, briefRanking, markManualChanges } from "./brief-search";
 import { candidateFromProjection } from "./normal-search-transport";
 import { executeNormalSearch, evaluateNormalCandidate, type NormalSearchRequest } from "./normal-search";
-import { runContinuedNormalSearch } from "./normal-search-continuation";
+import { runContinuedNormalSearch, encodeContinuation, decodeContinuation } from "./normal-search-continuation";
+
+test("confirmed category evidence overrides stale legacy inferred source", () => {
+  const p = { ...profile(), creatorCategories: ["Beauty"], sources: { creatorCategories: "inferred" as const }, fieldProvenance: { creatorCategories: { level: "extracted" as const, confidence: 1, sourceField: "operator", excerpt: "Beauty creators" } } };
+  assert.deepEqual(applyBriefSelections(p, cloneCreatorSearchFilters(), {}).filters.categories, ["Beauty"]);
+});
+
+test("Beauty eligibility uses canonical categories and excludes unrelated-only creators", () => {
+  const f = request().filters;
+  for (const categories of [["Food"], ["Travel"], ["Lifestyle"]]) assert.equal(evaluateNormalCandidate({ ...candidate(), categories, bio: "Travel and food" }, f).eligible, false);
+  for (const categories of [["Beauty"], ["Beauty & Cosmetics"], ["Beauty", "Food"]]) assert.equal(evaluateNormalCandidate({ ...candidate(), categories }, f).eligible, true);
+});
+
+test("brief beauty refinement returns a sparse budget pool and continues without replay or gaps", async () => {
+  const req = request(); req.filters.search = "beauty";
+  const ranking = briefRanking(profile());
+  const rows = Array.from({ length: 1000 }, (_, i) => ({ ...candidate(String(i).padStart(4, "0")), categories: i < 800 && i % 40 !== 0 ? ["Food"] : ["Beauty"], bio: i < 800 && i % 40 !== 0 ? "Food" : "Beauty skincare" }));
+  let time = 1000;
+  const offsets: number[] = [];
+  const reader = async (offset: number, limit: number) => { offsets.push(offset); time += 1600; return { candidates: rows.slice(offset, offset + limit), exhausted: offset + limit >= rows.length }; };
+  const first = await executeNormalSearch(req, reader, { evaluate: ranking.evaluate, now: () => time });
+  assert.equal(first.creators.length, 20);
+  assert.equal(first.completeness.status, "incomplete");
+  assert.equal(first.completeness.reason, "time_budget");
+  assert.equal(first.completeness.examined, 800);
+  assert.deepEqual(offsets, [0, 200, 400, 600]);
+  assert.ok(first.continuation);
+  const secret = randomBytes(32).toString("base64url");
+  const secondReq = { ...req, page: 2 };
+  const token = encodeContinuation(first.continuation, req, ranking.binding, secret);
+  const state = decodeContinuation(token, secondReq, ranking.binding, secret);
+  offsets.length = 0;
+  const second = await executeNormalSearch(secondReq, reader, { evaluate: ranking.evaluate, now: () => time, continuation: state });
+  assert.deepEqual(offsets, [800]);
+  assert.equal(second.creators.length, 24);
+  const ids = [...first.creators, ...second.creators].map(c => c.unified_id);
+  assert.equal(new Set(ids).size, 44);
+  const repeated = await executeNormalSearch(secondReq, reader, { evaluate: ranking.evaluate, now: () => time, continuation: state });
+  assert.deepEqual(repeated.creators, second.creators);
+  assert.equal(second.creators[0].unified_id, "inf:0800");
+});
 
 function profile() {
   const v = createEmptyValidatedIntelligence();
