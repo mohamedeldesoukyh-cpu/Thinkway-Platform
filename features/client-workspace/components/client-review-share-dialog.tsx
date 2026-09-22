@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { clientLinkName, clientLinkShareText } from '../link-label';
 import { shareImagePath } from '../share-preview';
+import { campaignShareUrl } from '../share-landing';
 import { updateShareCoverAction } from '../actions/update-share-cover-action';
 
 export function ClientReviewShareDialog({
@@ -41,12 +42,14 @@ export function ClientReviewShareDialog({
 }) {
   const [copied, setCopied] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
-  const [coverVersion, setCoverVersion] = useState("1");
+  const [coverVersion, setCoverVersion] = useState("2");
+  let shareUrl = url;
   let previewUrl: string | null = null;
   let reviewId = "";
   let sign = "";
   try {
     const parsed = new URL(url || "");
+    shareUrl = campaignShareUrl(parsed.href, coverVersion);
     reviewId = parsed.pathname.split("/")[2] || "";
     sign = parsed.searchParams.get("sign") || "";
     if (reviewId && sign) previewUrl = shareImagePath(reviewId, sign, coverVersion);
@@ -69,9 +72,9 @@ export function ClientReviewShareDialog({
   const title = reviewNumber != null ? `Client review v${reviewNumber}` : "Client review link";
 
   async function copyLink(withName = false) {
-    if (!url) return;
+    if (!shareUrl) return;
     try {
-      await navigator.clipboard.writeText(withName ? clientLinkShareText(campaignName, url) : url);
+      await navigator.clipboard.writeText(withName ? clientLinkShareText(campaignName, shareUrl) : shareUrl);
       setCopied(true);
       toast.success(withName ? 'Campaign name and link copied.' : "Review link copied.");
       window.setTimeout(() => setCopied(false), 2000);
@@ -162,7 +165,7 @@ export function ClientReviewShareDialog({
           <div className="flex gap-2">
             <Input
               readOnly
-              value={url}
+              value={shareUrl || url}
               aria-label="Client review link"
               className="font-mono text-xs"
               onFocus={(event) => event.currentTarget.select()}
