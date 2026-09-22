@@ -20,3 +20,8 @@ export function sumVendorIoLineAmounts(
 ): number {
   return lines.reduce((sum, line) => sum + resolveVendorIoLineAmount(line), 0);
 }
+
+/** Stored IO amount is ex-VAT; document Total Due includes the separate tax amount. */
+export function resolveVendorIoTotalDue(storedFee: number, fallbackFee: number, vatAmount: number): number {
+  return Math.round(((storedFee || fallbackFee) + vatAmount + Number.EPSILON) * 100) / 100;
+}

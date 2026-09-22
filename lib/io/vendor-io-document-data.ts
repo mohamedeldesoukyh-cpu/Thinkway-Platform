@@ -5,7 +5,7 @@ import { resolveEffectiveVendorIoTerms } from "@/lib/io/client-io-terms";
 import { resolveVendorIoPaymentSchedule } from "@/lib/io/vendor-io-payment-terms";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import type { VendorIoDocumentData, VendorIoDeliverableRow } from "@/lib/io/vendor-io-document-types";
-import { sumVendorIoLineAmounts } from "@/lib/io/vendor-io-line-amount";
+import { resolveVendorIoTotalDue, sumVendorIoLineAmounts } from "@/lib/io/vendor-io-line-amount";
 
 function formatAddress(parts: Array<string | null | undefined>): string | null {
   const joined = parts.filter(Boolean).join(", ");
@@ -215,15 +215,14 @@ export async function loadVendorIoDocumentData(
     0
   );
   const vatPercent =
-    Number((deliverables?.[0] as { cost_vat_percent?: number } | undefined)?.cost_vat_percent) ||
-    THINKWAY_AGENCY_DEFAULTS.defaultVatPercent;
+    Number((deliverables?.[0] as { cost_vat_percent?: number } | undefined)?.cost_vat_percent ?? 0);
 
   const linkedUsageRightsTotal = linkedLines.reduce(
     (sum, line) => sum + Number(line?.usage_rights_amount ?? 0),
     0
   );
   const usageRightsFee = linkedUsageRightsTotal;
-  const totalDue = Number(typedVio.amount) || lineSubtotal + usageRightsFee + vatAmount;
+  const totalDue = resolveVendorIoTotalDue(Number(typedVio.amount), lineSubtotal + usageRightsFee, vatAmount);
 
   const platforms = [
     ...new Set([
