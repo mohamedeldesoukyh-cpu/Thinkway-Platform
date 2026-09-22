@@ -17,6 +17,7 @@ import { ClientJourneyStrip } from "./journey-strip";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { ClientWorkspaceIdentityMark } from "./identity-logo-mark";
 import { ReviewUpdateBanner } from "./review-update-banner";
+import { clientLinkName } from '../link-label';
 
 export function ClientWorkspaceShell({
   view,
@@ -79,7 +80,9 @@ export function ClientWorkspaceShell({
 
   return (
     <div className="tw-review">
+      <title>{`${clientLinkName(view.overview.campaignName)} | Thinkway`}</title>
       <header className="bar">
+        <div className="wrap cx-campaign-heading"><p>Client workspace</p><h1 dir="auto">{clientLinkName(view.overview.campaignName)}</h1></div>
         <div className="wrap row">
           <ClientWorkspaceIdentityMark identityLogo={partnerIdentity} />
           <div className="sp" />

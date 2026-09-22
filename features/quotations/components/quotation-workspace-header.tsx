@@ -461,6 +461,7 @@ export function QuotationWorkspaceHeader({
         defaultTab={lifecycleTab}
       />
       <ClientReviewShareDialog
+        campaignName={detail.campaign_name || detail.name}
         open={shareOpen}
         onOpenChange={setShareOpen}
         url={shareUrl}

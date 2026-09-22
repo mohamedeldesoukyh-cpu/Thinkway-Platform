@@ -433,6 +433,7 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
                     </DiscoverySuiteCell>
                     <DiscoverySuiteCell>
                       <ClientWorkspaceListLinkCell
+                        campaignName={row.name}
                         source="quotation"
                         id={row.id}
                         link={row.client_workspace_link}

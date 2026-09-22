@@ -342,6 +342,7 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
     renderCell: (campaign) => (
       <span className="tw-lnk">
         <CampaignListClientLinkCell
+          campaignName={campaign.name}
           campaignHeaderId={campaign.id}
           link={campaign.client_workspace_link}
         />

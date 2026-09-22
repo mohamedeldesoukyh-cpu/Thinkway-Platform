@@ -412,6 +412,7 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
                     </DiscoverySuiteCell>
                     <DiscoverySuiteCell>
                       <ClientWorkspaceListLinkCell
+                        campaignName={row.name}
                         source="shortlist"
                         id={row.id}
                         link={row.client_workspace_link}
