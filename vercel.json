@@ -12,6 +12,9 @@
     "app/**/review/**/share/route.ts": {
       "regions": ["fra1"]
     },
+    "app/**/review/**/share/**/route.ts": {
+      "regions": ["fra1"]
+    },
     "app/api/review/share-image/route.tsx": {
       "regions": ["fra1"]
     },

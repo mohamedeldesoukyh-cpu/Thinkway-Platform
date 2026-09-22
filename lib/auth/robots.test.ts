@@ -7,5 +7,5 @@ test("crawler discovery is public while app pages remain private", () => {
   assert.equal(isPublicPath("/robots.txt"), true);
   assert.equal(isPublicPath("/robots.txt/private"), false);
   assert.equal(isPublicPath("/campaigns"), false);
-  assert.deepEqual(robots().rules, { userAgent: "*", disallow: "/", allow: ["/review/*/share?", "/api/review/share-image?"] });
+  assert.deepEqual(robots().rules, { userAgent: "*", disallow: "/", allow: ["/review/*/share?", "/review/*/share/*?", "/api/review/share-image?"] });
 });

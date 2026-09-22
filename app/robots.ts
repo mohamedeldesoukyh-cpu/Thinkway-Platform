@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       disallow: "/",
       // Allow only signed preview endpoints. Token checks and noindex remain.
-      allow: ["/review/*/share?", "/api/review/share-image?"],
+      allow: ["/review/*/share?", "/review/*/share/*?", "/api/review/share-image?"],
     },
   };
 }

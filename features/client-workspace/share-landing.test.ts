@@ -5,9 +5,9 @@ import { campaignShareHtml, campaignShareUrl } from "./share-landing";
 test("copied share links preserve access tokens and use a fresh preview URL", () => {
   const original = "https://app.thinkwaymedia.com/review/example?sign=signed%26value";
   const shared = new URL(campaignShareUrl(original));
-  assert.equal(shared.pathname, "/review/example/share");
+  assert.equal(shared.pathname, "/review/example/share/3");
   assert.equal(shared.searchParams.get("sign"), "signed&value");
-  assert.equal(shared.searchParams.get("preview"), "3");
+  assert.equal(shared.searchParams.get("preview"), null);
   assert.notEqual(campaignShareUrl(original, "4"), shared.href);
   assert.equal(campaignShareUrl("https://app.thinkwaymedia.com/login"), "https://app.thinkwaymedia.com/login");
 });
