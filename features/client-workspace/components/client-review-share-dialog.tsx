@@ -14,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { clientLinkName, clientLinkShareText } from '../link-label';
 
 export function ClientReviewShareDialog({
   open,
@@ -23,6 +24,7 @@ export function ClientReviewShareDialog({
   status,
   version,
   documentLabel,
+  campaignName,
   linkEnabled = Boolean(url),
 }: {
   open: boolean;
@@ -32,17 +34,18 @@ export function ClientReviewShareDialog({
   status?: string | null;
   version?: string | number | null;
   documentLabel?: string | null;
+  campaignName?: string | null;
   linkEnabled?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const title = reviewNumber != null ? `Client review v${reviewNumber}` : "Client review link";
 
-  async function copyLink() {
+  async function copyLink(withName = false) {
     if (!url) return;
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(withName ? clientLinkShareText(campaignName, url) : url);
       setCopied(true);
-      toast.success("Review link copied.");
+      toast.success(withName ? 'Campaign name and link copied.' : "Review link copied.");
       window.setTimeout(() => setCopied(false), 2000);
     } catch {
       toast.error("Could not copy the link. Select it and copy manually.");
@@ -60,6 +63,7 @@ export function ClientReviewShareDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
+          {campaignName?.trim() && <p className="break-words text-base font-semibold" dir="auto">{clientLinkName(campaignName)}</p>}
           <DialogDescription>
             {linkEnabled
               ? "Share this signed link with the client, or open it to check the proposal. The URL stays the same when the quotation changes. Use Send to Client to email it."
@@ -124,6 +128,7 @@ export function ClientReviewShareDialog({
           </div>
         ) : null}
         <DialogFooter>
+          {url && campaignName?.trim() && <Button type="button" onClick={() => void copyLink(true)}>Copy with campaign name</Button>}
           {url ? (
             <Button type="button" variant="outline" asChild>
               <a href={url} target="_blank" rel="noreferrer">

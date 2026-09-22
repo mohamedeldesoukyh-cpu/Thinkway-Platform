@@ -93,7 +93,7 @@ export function CampaignHeroActions({
           Media Plans
         </a>
       </Button>
-      <CampaignClientReviewLinkButton campaignHeaderId={workspace.id} />
+      <CampaignClientReviewLinkButton campaignHeaderId={workspace.id} campaignName={workspace.name} />
       <ClientIoCampaignChrome
         io={workspace.client_io}
         campaignId={workspace.id}

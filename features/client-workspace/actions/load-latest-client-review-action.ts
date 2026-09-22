@@ -15,6 +15,7 @@ export async function loadLatestClientReviewAction(campaignObjectId: string) {
     ok: true as const,
     review: {
       id: review.id,
+      campaignName: review.campaignName,
       reviewNumber: review.reviewNumber,
       status: review.status,
       changeRequestSummary: review.changeRequestSummary,

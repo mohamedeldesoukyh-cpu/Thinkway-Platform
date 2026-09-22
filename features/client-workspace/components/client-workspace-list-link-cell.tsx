@@ -19,6 +19,7 @@ import { cn } from "@/lib/utils";
 
 type Props = {
   source: ClientWorkspaceListLinkSource;
+  campaignName?: string;
   id: string;
   link?: ClientWorkspaceListLink;
 };
@@ -85,7 +86,7 @@ function clientLinkErrorMessage(message: string, fallback: string): string {
   return message.trim() || fallback;
 }
 
-export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
+export function ClientWorkspaceListLinkCell({ source, id, link, campaignName }: Props) {
   const [pending, setPending] = useState(false);
   const [state, setState] = useState<CampaignClientWorkspaceLinkState>(link?.state ?? "none");
   const [reviewNumber, setReviewNumber] = useState<number | undefined>(link?.reviewNumber);
@@ -207,6 +208,7 @@ export function ClientWorkspaceListLinkCell({ source, id, link }: Props) {
         />
       </span>
       <ClientReviewShareDialog
+        campaignName={campaignName}
         open={shareOpen}
         onOpenChange={setShareOpen}
         url={shareUrl}

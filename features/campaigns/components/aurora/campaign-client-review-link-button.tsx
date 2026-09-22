@@ -19,9 +19,10 @@ import { clientReviewShareHasLink } from "@/features/client-workspace/client-rev
 
 type Props = {
   campaignHeaderId: string;
+  campaignName?: string;
 };
 
-export function CampaignClientReviewLinkButton({ campaignHeaderId }: Props) {
+export function CampaignClientReviewLinkButton({ campaignHeaderId, campaignName }: Props) {
   const [pending, startTransition] = useTransition();
   const [shareOpen, setShareOpen] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
@@ -87,6 +88,7 @@ export function CampaignClientReviewLinkButton({ campaignHeaderId }: Props) {
         {hasLink ? "Show link" : "Generate link"}
       </Button>
       <ClientReviewShareDialog
+        campaignName={campaignName}
         open={shareOpen}
         onOpenChange={setShareOpen}
         url={shareUrl}

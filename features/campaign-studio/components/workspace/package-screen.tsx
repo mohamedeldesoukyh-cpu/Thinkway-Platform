@@ -305,6 +305,7 @@ export function PackageScreen({
 
       <div className="min-w-0">{presentation}</div>
       <ClientReviewShareDialog
+        campaignName={clientReview?.campaignName}
         open={shareOpen}
         onOpenChange={setShareOpen}
         url={shareUrl}

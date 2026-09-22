@@ -1217,6 +1217,7 @@ export function ShortlistWorkspace({
         onClearSelection={clearSelection}
       />
       <ClientReviewShareDialog
+        campaignName={detail.name}
         open={shareOpen}
         onOpenChange={setShareOpen}
         url={shareUrl}
