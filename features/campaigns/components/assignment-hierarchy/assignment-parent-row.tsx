@@ -206,6 +206,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       >
         {formatOperationalAmount(line.cost_before_vat)}
       </TableCell>
+      {(["costVatPercent", "costVat", "costTotal"] as const).map(id => <TableCell key={id} {...assignmentParentColDataAttr(id)} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>{id === "costVatPercent" ? (line.cost_vat_exempt ? "Exempt" : (line.cost_vat_percent ?? 0) + "%") : formatOperationalAmount(id === "costVat" ? line.cost_vat_amount : line.cost_after_vat)}</TableCell>)}
       <TableCell {...assignmentParentColDataAttr("usageRightsCost")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {formatOperationalAmount(line.usage_rights_cost)}
       </TableCell>

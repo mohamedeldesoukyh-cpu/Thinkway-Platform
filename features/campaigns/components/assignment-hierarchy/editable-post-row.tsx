@@ -108,6 +108,7 @@ type EditablePostRowProps = {
   readOnly: boolean;
   revenueVatExempt: boolean;
   defaultRevenueVatPercent: number;
+  costVatPercent?: number;
   platformOptions: { value: string; label: string }[];
   deliverableScoped: boolean;
   showSelection: boolean;
@@ -179,6 +180,7 @@ export function EditablePostRow({
   readOnly,
   revenueVatExempt,
   defaultRevenueVatPercent,
+  costVatPercent = 0,
   platformOptions,
   deliverableScoped,
   showSelection,
@@ -980,6 +982,18 @@ export function EditablePostRow({
             )}
           </AssignmentGridCell>
         );
+      case "costVatPercent":
+      case "costVat":
+      case "costTotal": {
+        const rate = costVatPercent;
+        const cost = Number(commercial.draft.cost ?? 0);
+        const vat = Math.round(cost * rate) / 100;
+        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={cn(GRID_CELL.money, OPERATIONAL_AMOUNT_CLASS)}>
+          {col(parentColumnId) && showDeliverableCommercial
+            ? parentColumnId === "costVatPercent" ? rate + "%" : formatOperationalAmount(parentColumnId === "costVat" ? vat : cost + vat)
+            : "—"}
+        </AssignmentGridCell>;
+      }
       case "usageRightsCost":
         return (
           <AssignmentGridCell

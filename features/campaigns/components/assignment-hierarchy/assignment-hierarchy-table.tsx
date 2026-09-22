@@ -336,6 +336,7 @@ export function AssignmentHierarchyTable({
                 <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.cost}
                 </CampaignOperationalTableHead>
+                {(["costVatPercent", "costVat", "costTotal"] as const).map(id => <CampaignOperationalTableHead key={id} className="tabular-nums">{HIERARCHY_COLUMN_LABELS[id]}</CampaignOperationalTableHead>)}
                 <CampaignOperationalTableHead className="tabular-nums">
                   {HIERARCHY_COLUMN_LABELS.usageRightsCost}
                 </CampaignOperationalTableHead>

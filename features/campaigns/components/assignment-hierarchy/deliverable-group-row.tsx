@@ -24,6 +24,7 @@ type DeliverableGroupRowProps = {
   showSelection: boolean;
   revenueVatExempt: boolean;
   defaultRevenueVatPercent: number;
+  costVatPercent?: number;
   platformOptions: { value: string; label: string }[];
   showExpandColumn?: boolean;
   leadingParentColumnIds?: readonly string[];
@@ -45,6 +46,7 @@ export function DeliverableGroupRow({
   showSelection,
   revenueVatExempt,
   defaultRevenueVatPercent,
+  costVatPercent = 0,
   platformOptions,
   showExpandColumn = false,
   leadingParentColumnIds,
@@ -98,6 +100,7 @@ export function DeliverableGroupRow({
           readOnly={readOnly}
           revenueVatExempt={revenueVatExempt}
           defaultRevenueVatPercent={defaultRevenueVatPercent}
+          costVatPercent={costVatPercent}
           platformOptions={platformOptions}
           deliverableScoped={deliverableScoped}
           showSelection={showSelection && index === 0}
