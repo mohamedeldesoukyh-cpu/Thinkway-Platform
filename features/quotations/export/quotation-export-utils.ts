@@ -3,6 +3,7 @@
  * Does not affect the quotation workspace UI.
  */
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { quotationServiceDescription } from "@/lib/quotations/service-description";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveQuotationCreatorDisplayCategories } from "@/lib/quotations/quotation-creator-categories";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
@@ -231,18 +232,7 @@ export function exportItemTypeLabel(item: QuotationExportItem): string {
 }
 
 export function exportItemServiceDescription(item: QuotationExportItem): string {
-  // Workspace "Service description" column is per-deliverable; prefer that first.
-  const deliverables = (item.deliverables ?? []) as DeliverableJson[];
-  const fromDeliverables = deliverables
-    .map((deliverable) => deliverable.service_description?.trim())
-    .filter((value): value is string => Boolean(value));
-  if (fromDeliverables.length > 0) {
-    return [...new Set(fromDeliverables)].join(" · ");
-  }
-  // Line-level service description is the fallback SSOT when deliverables omit it.
-  const lineLevel = item.service_description?.trim();
-  if (lineLevel) return lineLevel;
-  return "—";
+  return quotationServiceDescription(item) ?? "—";
 }
 
 export function exportItemTierLabel(item: QuotationExportItem): string {

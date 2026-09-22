@@ -1,4 +1,5 @@
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
+import { quotationServiceDescription } from "@/lib/quotations/service-description";
 
 import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
 import { clientFacingAgencyFeeFromLine, clientFacingQuotationPrice } from "./quotation-client-facing";
@@ -16,11 +17,7 @@ export function clientServiceDescriptionFromQuotationItem(item: {
   service_description?: string | null;
   deliverables?: Array<{ service_description?: string | null }> | null;
 }): string | undefined {
-  const fromDeliverables = (item.deliverables ?? [])
-    .map((line) => line.service_description?.trim())
-    .filter((value): value is string => Boolean(value));
-  if (fromDeliverables.length > 0) return [...new Set(fromDeliverables)].join(" · ");
-  return item.service_description?.trim() || undefined;
+  return quotationServiceDescription(item);
 }
 
 export function quotationItemSnapshotCreator(
