@@ -98,6 +98,9 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/review/content": "public",
   "/api/review/quotation": "public",
   "/api/review/brand-logo": "public",
+  // Signed-token authorization is enforced by the image handler. Register this
+  // for signed-in users too; middleware denies unclassified APIs for sessions.
+  "/api/review/share-image": "public",
   "/api/review/request-access": "public",
   "/api/creator-social/callback": "client_workspace",
   "/api/vendors/platform-accounts/enrich": "internal_workspace",
@@ -128,6 +131,7 @@ export const SERVER_ACTION_MODULE_CLASSIFICATIONS: Record<string, WorkspaceClass
   "features/client-access": "internal_workspace",
   "features/settings": "internal_workspace",
   "features/finance": "internal_workspace",
+  "features/creator-payments": "internal_workspace",
   "features/billing": "internal_workspace",
   "features/collections": "internal_workspace",
   "features/operations": "internal_workspace",

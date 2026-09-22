@@ -143,8 +143,7 @@ export function ClientReviewShareDialog({
         {previewUrl && linkEnabled && (
           <details className="rounded-lg border border-border p-3">
             <summary className="cursor-pointer text-sm font-semibold">Campaign link preview</summary>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={previewUrl} alt="Campaign link cover" className="mt-3 aspect-[1200/630] w-full rounded-lg object-cover" />
+            <CampaignCoverPreview key={previewUrl} src={previewUrl} onRetry={() => setCoverVersion(String(Date.now()))} />
             <p className="mt-2 text-sm font-semibold">{campaignName || "Your campaign"}</p>
             <p className="mt-1 text-xs text-muted-foreground">Automatic branded cover, or upload your own. Recommended: 1200 × 630. WhatsApp may retain older previews.</p>
             <label className="mt-3 block text-xs font-medium">Custom cover (JPG, PNG or WebP; up to 5 MB)
@@ -191,4 +190,19 @@ export function ClientReviewShareDialog({
       </DialogContent>
     </Dialog>
   );
+}
+
+function CampaignCoverPreview({ src, onRetry }: { src: string; onRetry: () => void }) {
+  const [status, setStatus] = useState<"loading" | "loaded" | "error">("loading");
+  return <div className="relative mt-3 aspect-[1200/630] overflow-hidden rounded-lg bg-muted/30">
+    {status !== "error" && <>
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={src} alt="Campaign link cover" className={`h-full w-full object-cover ${status === "loaded" ? "" : "invisible"}`}
+        onLoad={() => setStatus("loaded")} onError={() => setStatus("error")} />
+    </>}
+    {status !== "loaded" && <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4 text-center text-sm text-muted-foreground" role="status">
+      <span>{status === "loading" ? "Loading campaign cover…" : "The cover could not be displayed. Your cover setting is saved."}</span>
+      {status === "error" && <Button type="button" variant="outline" size="sm" onClick={onRetry}>Retry preview</Button>}
+    </div>}
+  </div>;
 }
