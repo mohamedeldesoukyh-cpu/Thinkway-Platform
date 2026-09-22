@@ -9,21 +9,24 @@ export function inspectIban(value: string) {
     const country = iban.slice(0, 2);
     if (!/^[A-Z]{2}\d{2}[A-Z0-9]{10,30}$/.test(iban))
         return { iban, error: 'Enter a complete IBAN, including its country code.' };
-    const length = ({ AE: 23, EG: 29 } as Record<string, number>)[country];
-    if (length && (iban.length !== length || !/^\d+$/.test(iban.slice(4))))
-        return { iban, error: `${country} IBANs must have ${length} characters with digits after the country code.` };
+    // SWIFT registry: SA has a two-digit bank code and an 18-character alphanumeric account.
+    // https://www.swift.com/sites/default/files/files/SWIFT_IBAN_Registry.pdf
+    const length = ({ AE: 23, EG: 29, SA: 24 } as Record<string, number>)[country];
+    const layout = country === 'SA' ? /^\d{2}[A-Z0-9]{18}$/ : /^\d+$/;
+    if (length && (iban.length !== length || !layout.test(iban.slice(4))))
+        return { iban, error: `${country} IBANs must have ${length} characters and a valid bank/account format.` };
     const digits = (iban.slice(4) + iban.slice(0, 4)).replace(/[A-Z]/g, c => String(c.charCodeAt(0) - 55));
     let mod = 0;
     for (const digit of digits) mod = (mod * 10 + Number(digit)) % 97;
     if (mod !== 1) return { iban, error: 'IBAN checksum is invalid. Check the number with the creator.' };
-    const bankCode = country === 'AE' ? iban.slice(4, 7) : country === 'EG' ? iban.slice(4, 8) : undefined;
-    const account = country === 'AE' ? iban.slice(7) : country === 'EG' ? iban.slice(12) : undefined;
+    const bankCode = country === 'AE' ? iban.slice(4, 7) : country === 'EG' ? iban.slice(4, 8) : country === 'SA' ? iban.slice(4, 6) : undefined;
+    const account = country === 'AE' ? iban.slice(7) : country === 'EG' ? iban.slice(12) : country === 'SA' ? iban.slice(6) : undefined;
     const detected: Partial<BankDetails> = { country };
     if (account) detected.account_number = account;
     const bank = bankCode ? IBAN_BANKS[country]?.[bankCode] : undefined;
     if (bank) {
         detected.bank_name = bank[0];
-        detected.swift = bank[1];
+        if (bank[1]) detected.swift = bank[1];
     }
     return { iban, country, bankCode, detected, error: undefined };
 }

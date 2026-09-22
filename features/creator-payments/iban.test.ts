@@ -24,7 +24,7 @@ test('the UAE directory fills all covered codes and switching banks retires prev
     let bank = bankDetails();
     for (const [code, [name, swift]] of Object.entries(IBAN_BANKS.AE)) {
         assert.match(code, /^\d{3}$/);
-        assert.match(swift, /^[A-Z]{4}AE[A-Z0-9]{2}$/);
+        assert.match(swift, /^[A-Z0-9]{4}AE[A-Z0-9]{2}$/);
         bank = fillFromIban(changeIban(bank, sample('AE', code + '0000000000000001')));
         assert.equal(bank.bank_name, name, code);
         assert.equal(bank.swift, swift, code);
@@ -33,7 +33,7 @@ test('the UAE directory fills all covered codes and switching banks retires prev
         assert.equal(bank.currency, '');
     }
     // Neither legacy merger routing nor an AutoPay placeholder is a safe BIC.
-    for (const code of ['027', '045', '051', '052', '097', '999']) {
+    for (const code of ['027', '045', '051', '052', '999']) {
         const unknown = fillFromIban(changeIban(bank, sample('AE', code + '0000000000000001')));
         assert.equal(unknown.swift, '');
         assert.equal(unknown.bank_name, '');
@@ -129,4 +129,55 @@ test('changing an IBAN removes stale detected routing, without changing personal
     assert.equal(changed.beneficiary_name, 'Example');
     assert.equal(changed.currency, 'USD');
     assert.equal(changed.registered, false);
+});
+
+test('Egypt and Saudi directories fill every published code without inventing personal information', () => {
+    for (const country of ['EG', 'SA']) {
+        assert.ok(Object.keys(IBAN_BANKS[country]).length >= 30);
+        for (const [code, [name, swift]] of Object.entries(IBAN_BANKS[country])) {
+            const account = country === 'EG' ? '00000000000000001' : '000000000000000001';
+            const iban = sample(country, code + (country === 'EG' ? '0002' : '') + account);
+            const bank = fillFromIban({ ...bankDetails(), iban });
+            assert.equal(bank.bank_name, name, country + code);
+            assert.equal(bank.swift, swift, country + code);
+            assert.equal(bank.account_number, account);
+            assert.equal(bank.country, country);
+            assert.equal(bank.currency, '');
+            assert.equal(bank.beneficiary_name, '');
+            assert.equal(bank.beneficiary_address, '');
+            assert.equal(bank.registered, false);
+            if (swift) assert.match(swift, new RegExp('^[A-Z0-9]{4}' + country + '[A-Z0-9]{2}$'));
+        }
+    }
+});
+test('Egypt 0003 identifies National Bank of Egypt; unknown and legacy routing remains explicit', () => {
+    const bank = fillFromIban({ ...bankDetails(), iban: sample('EG', '0003000200000000000000001') });
+    assert.equal(bank.bank_name, 'National Bank of Egypt');
+    assert.equal(bank.swift, 'NBEGEGCX');
+    const legacy = fillFromIban(changeIban(bank, sample('EG', '0013000200000000000000001')));
+    assert.match(legacy.bank_name, /Blom/);
+    assert.equal(legacy.swift, '');
+    const unknown = fillFromIban(changeIban(bank, sample('EG', '9999000200000000000000001')));
+    assert.equal(unknown.bank_name, '');
+    assert.equal(unknown.swift, '');
+});
+test('Saudi layout supports alphanumeric accounts but rejects invalid bank codes and lengths', () => {
+    const iban = sample('SA', '800000000000000000A1');
+    const bank = fillFromIban({ ...bankDetails(), iban });
+    assert.equal(bank.swift, 'RJHISARI');
+    assert.equal(bank.account_number, '0000000000000000A1');
+    assert.equal(bank.payment_type, 'I');
+    for (const invalid of [sample('SA', '8A0000000000000000A1'), sample('SA', '80000000000000000A1'), iban.slice(0, -1) + '2']) {
+        assert.ok(inspectIban(invalid).error);
+    }
+});
+test('modern UAE alphanumeric BICs pass save validation; malformed BICs do not', () => {
+    for (const [code, swift] of [['097', 'E097AEXX'], ['132', 'E132AEXX']]) {
+        const bank = fillFromIban({ ...bankDetails(), iban: sample('AE', code + '0000000000000001') });
+        assert.equal(bank.swift, swift);
+        assert.ok(!validateBank(bank).some(error => error.includes('SWIFT')));
+        for (const invalid of ['E13212XX', 'E132AEX', 'E132AE_!']) {
+            assert.ok(validateBank({ ...bank, swift: invalid }).some(error => error.includes('SWIFT')));
+        }
+    }
 });
