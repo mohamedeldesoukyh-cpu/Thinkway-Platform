@@ -42,7 +42,7 @@ export function ClientReviewShareDialog({
 }) {
   const [copied, setCopied] = useState(false);
   const [coverBusy, setCoverBusy] = useState(false);
-  const [coverVersion, setCoverVersion] = useState("2");
+  const [coverVersion, setCoverVersion] = useState("3");
   let shareUrl = url;
   let previewUrl: string | null = null;
   let reviewId = "";

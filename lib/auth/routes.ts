@@ -16,6 +16,7 @@ export const PUBLIC_ROUTE_PREFIXES = [
 ] as const;
 
 export function isPublicPath(pathname: string): boolean {
+  if (pathname === "/robots.txt") return true;
   return PUBLIC_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );

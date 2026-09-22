@@ -1,7 +1,7 @@
 import { SHARE_DESCRIPTION, shareImagePath } from "./share-preview";
 
 /** Keep the original signed destination; the share route only supplies crawler metadata. */
-export function campaignShareUrl(reviewUrl: string, version = "2"): string {
+export function campaignShareUrl(reviewUrl: string, version = "3"): string {
   const url = new URL(reviewUrl);
   const match = url.pathname.match(/^\/review\/([^/]+)(?:\/.*)?$/);
   if (!match || !url.searchParams.get("sign")) return reviewUrl;

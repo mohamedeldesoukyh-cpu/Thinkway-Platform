@@ -37,6 +37,22 @@ test("API headers tighten CORP to same-origin", () => {
   assert.equal(headers["Cross-Origin-Resource-Policy"], "same-origin");
 });
 
+test("only signed preview endpoints allow cross-origin preview consumers", () => {
+  for (const pathname of ["/api/review/share-image", "/review/493e23ae-0a78-4b2e-b071-37d54974e294/share"]) {
+    const headers = new Headers();
+    applySecurityHeaders(headers, { api: pathname.startsWith("/api/"), pathname });
+    assert.equal(headers.get("Cross-Origin-Resource-Policy"), "cross-origin");
+    assert.equal(headers.get("Access-Control-Allow-Origin"), "*");
+    assert.equal(headers.get("Access-Control-Allow-Credentials"), null);
+  }
+  for (const pathname of ["/api/review/quotation", "/api/review/share-image/private", "/api/finance", "/review/493e23ae-0a78-4b2e-b071-37d54974e294"]) {
+    const headers = new Headers();
+    applySecurityHeaders(headers, { api: true, pathname });
+    assert.equal(headers.get("Cross-Origin-Resource-Policy"), "same-origin");
+    assert.equal(headers.get("Access-Control-Allow-Origin"), null);
+  }
+});
+
 test("applySecurityHeaders does not overwrite existing values", () => {
   const headers = new Headers({ "X-Frame-Options": "SAMEORIGIN" });
   applySecurityHeaders(headers);
