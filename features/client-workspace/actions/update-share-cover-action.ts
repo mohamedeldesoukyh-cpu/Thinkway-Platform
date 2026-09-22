@@ -1,6 +1,5 @@
 "use server";
 
-import sharp from "sharp";
 import { randomUUID } from "node:crypto";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -44,6 +43,9 @@ export async function updateShareCoverAction(form: FormData): Promise<{ ok: bool
       || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
       return { ok: false, message: "Choose a JPG, PNG or WebP image up to 5 MB." };
     }
+    // Load native image processing only for an authorized upload, never when the
+    // shared server-action registry loads for Finance or quotation requests.
+    const { default: sharp } = await import("sharp");
     const image = await sharp(Buffer.from(await file.arrayBuffer()), { limitInputPixels: 25_000_000 })
       .rotate().resize(1200, 630, { fit: "cover" }).jpeg({ quality: 90 }).toBuffer();
     const path = `${preview.ownerId}/${randomUUID()}.jpg`;

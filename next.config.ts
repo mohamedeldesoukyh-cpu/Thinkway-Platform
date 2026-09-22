@@ -74,7 +74,13 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
-    '/*': ['./features/creator-payments/templates/**/*'],
+    '/*': [
+      './features/creator-payments/templates/**/*',
+      // Sharp's native binding dynamically loads libvips. Trace both the app
+      // and Next.js copies so Linux deployments retain their matching binaries.
+      './node_modules/@img/sharp-*/**/*',
+      './node_modules/next/node_modules/@img/sharp-*/**/*',
+    ],
   },
   env: releaseEnv,
   // Pre-existing type debt outside Phase 3 scope can block bundle measurement.
