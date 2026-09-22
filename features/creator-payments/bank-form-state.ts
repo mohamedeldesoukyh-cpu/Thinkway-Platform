@@ -3,7 +3,7 @@ import { bankDetails, type BankDetails } from './model';
 export function isEmptyBank(bank: BankDetails) {
     return Object.entries(bank).every(([key, value]) => key === 'registered' ? value === false : typeof value === 'string' && !value.trim());
 }
-export const duplicateFieldLabels = { nickname: 'AAIB beneficiary nickname', iban: 'IBAN', account_number: 'Account number', beneficiary_name: 'Beneficiary name', beneficiary_address: 'Beneficiary address', email: 'Advice email', mobile: 'Mobile' } as const;
+export const duplicateFieldLabels = { nickname: 'AAIB beneficiary nickname', iban: 'IBAN', account_number: 'Account number', beneficiary_name: 'Beneficiary name', email: 'Advice email', mobile: 'Mobile' } as const;
 export type BankDuplicate = { account_id: string; creator_id: string; creator_name: string; field: keyof typeof duplicateFieldLabels };
 export type BankDraft = { bank: BankDetails; accountMode: string; routeMode: string; makeDefault: boolean; updatedAt: number };
 type DraftCache = { selected: string | null; drafts: Record<string, BankDraft> };
