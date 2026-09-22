@@ -303,8 +303,17 @@
   background: transparent;
 }
 
-/* freezeOnScroll={false}: keep masthead in document flow (design sticky is
-   opt-in). Do not edit frozen discovery.css — quotation-scoped override. */
+/* Pin the outer header to the quotation scrollport. The shared masthead stays
+   static inside it so its short wrapper cannot constrain sticky positioning. */
+.quotation-editor-rd4 > .quotation-frozen-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--tw-bg, #fafbfc);
+  box-shadow: 0 8px 12px -12px rgba(15, 23, 42, 0.35);
+}
+
+/* The outer header owns freezing; avoid a second sticky surface inside it. */
 .quotation-editor-rd4 .tw-frozen.tw-frozen--static {
   position: relative;
   top: auto;
