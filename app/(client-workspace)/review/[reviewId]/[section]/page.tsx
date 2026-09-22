@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+export { generateReviewShareMetadata as generateMetadata } from "@/features/client-workspace/share-preview-server";
 
 import { ClientWorkspaceApp } from "@/features/client-workspace/components/client-workspace-app";
 import { ClientWorkspaceClosed } from "@/features/client-workspace/components/client-workspace-closed";

@@ -5,6 +5,7 @@ import { loadClientWorkspace } from "@/features/client-workspace/load-client-wor
 import { reviewIdBelongsToJourney } from "@/features/client-workspace/journey-state";
 import { resolveReviewToken } from "@/features/client-workspace/security/resolve-request-token";
 import { defaultClientWorkspaceSection } from "@/features/client-workspace/visible-sections";
+export { generateReviewShareMetadata as generateMetadata } from "@/features/client-workspace/share-preview-server";
 
 type Props = {
   params: Promise<{ reviewId: string }>;
