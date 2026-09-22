@@ -54,6 +54,11 @@ test("unregistered API paths classify as null (fail-closed)", () => {
   assert.equal(classifyApiPath("/api/finance/leak"), null);
 });
 
+test("signed campaign cover route is registered for authenticated browser requests", () => {
+  assert.equal(classifyApiPath("/api/review/share-image"), "public");
+  assert.equal(classifyApiPath("/api/review/share-image?reviewId=test&sign=test&v=2"), "public");
+});
+
 test("page prefix classification covers isolation zones", () => {
   assert.equal(classifyPagePath("/finance/invoices"), "internal_workspace");
   assert.equal(classifyPagePath("/operations/move"), "internal_workspace");
