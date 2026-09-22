@@ -9,6 +9,12 @@
   },
   "ignoreCommand": "node scripts/vercel-ignored-build-step.mjs",
   "functions": {
+    "app/**/review/**/share/route.ts": {
+      "regions": ["fra1"]
+    },
+    "app/api/review/share-image/route.tsx": {
+      "regions": ["fra1"]
+    },
     "app/api/cron/publication-metrics/route.ts": {
       "maxDuration": 300
     },
