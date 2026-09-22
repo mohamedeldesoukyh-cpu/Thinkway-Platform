@@ -149,6 +149,7 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
           showSelection={showSelection}
           revenueVatExempt={line.revenue_vat_exempt}
           defaultRevenueVatPercent={line.revenue_vat_percent}
+          costVatPercent={line.cost_vat_exempt ? 0 : line.cost_vat_percent}
           platformOptions={platformOptions}
           showExpandColumn={showExpandColumn}
           leadingParentColumnIds={leadingParentColumnIds}

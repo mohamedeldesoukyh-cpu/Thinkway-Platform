@@ -25,6 +25,7 @@ export function isAssignmentGridColumnVisible(
       // Chevron renders inside the assignment cell — never allocate a parent column.
       return false;
     case "cost":
+    case "costVatPercent": case "costVat": case "costTotal":
     case "usageRightsCost":
     case "gp":
     case "margin":

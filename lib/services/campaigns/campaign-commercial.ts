@@ -123,7 +123,7 @@ export function resolveLineVatInput(
   const revenueBeforeVat = parsed.revenue_before_vat ?? parsed.revenue;
   const costBeforeVat = parsed.cost_before_vat ?? parsed.cost;
   const revenueExempt = parsed.revenue_vat_exempt ?? false;
-  const costExempt = parsed.cost_vat_exempt ?? false;
+  const costExempt = parsed.cost_vat_exempt ?? !defaults.vendorVatRegistered;
 
   const revenueVatPercent = revenueExempt
     ? 0
@@ -133,7 +133,7 @@ export function resolveLineVatInput(
 
   const costVatPercent = costExempt
     ? 0
-    : parsed.cost_vat_percent > 0
+    : parsed.cost_vat_percent >= 0
       ? parsed.cost_vat_percent
       : defaults.vendorVatRegistered
         ? defaults.vendorVatRate
@@ -148,7 +148,7 @@ export function resolveLineVatInput(
     revenue_vat_exempt: revenueExempt,
     cost_before_vat: costBeforeVat,
     cost_vat_percent: costVatPercent,
-    cost_vat_exempt: costExempt || !defaults.vendorVatRegistered,
+    cost_vat_exempt: costExempt,
   });
 }
 

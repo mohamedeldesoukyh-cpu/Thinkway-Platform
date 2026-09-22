@@ -1,3 +1,4 @@
+import { isDeepStrictEqual } from "node:util";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { assignmentCommercialMastersChanged } from "@/lib/assignments/assignment-commercial-masters";
@@ -399,6 +400,8 @@ export async function updateCampaignLine(
     finance_override_until?: string | null;
     vendor_io_id?: string | null;
     vendor_assignment_locked?: boolean | null;
+    start_date?: string | null;
+    end_date?: string | null;
     metadata?: Record<string, unknown> | null;
     operational_status?: string | null;
     invoice_id?: string | null;
@@ -420,6 +423,13 @@ export async function updateCampaignLine(
 
   const revenueBeforeVat = parsed.revenue_before_vat ?? parsed.revenue;
   const costBeforeVat = parsed.cost_before_vat ?? parsed.cost;
+  const costVatChanged = Number(existingLineMeta.cost_vat_percent ?? 0) !== Number(parsed.cost_vat_percent)
+    || Boolean(existingLineMeta.cost_vat_exempt) !== Boolean(parsed.cost_vat_exempt);
+  const revenueVatChanged = Number(existingLineMeta.revenue_vat_percent ?? 0) !== Number(parsed.revenue_vat_percent)
+    || Boolean(existingLineMeta.revenue_vat_exempt) !== Boolean(parsed.revenue_vat_exempt);
+  if (costVatChanged && (existingLineMeta.cost_locked || existingLineMeta.vat_locked || existingLineMeta.vendor_assignment_locked) && !financeOverrideActive) {
+    return {ok:false,message:'Cost VAT is locked. Use the existing finance override / IO revision process before changing it.'};
+  }
 
   {
     const masterChanges: MasterCommercialValues = {
@@ -436,7 +446,7 @@ export async function updateCampaignLine(
     };
     if (parsed.fx_rate != null) masterChanges.exchange_rate = parsed.fx_rate;
 
-    const mastersChanged =
+    const mastersChanged = costVatChanged || revenueVatChanged ||
       Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost) !==
         Number(costBeforeVat) ||
       Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue) !==
@@ -639,7 +649,24 @@ export async function updateCampaignLine(
   const canSyncAssignment =
     !existingLineMeta.vendor_assignment_locked || financeOverrideActive;
 
-  if (canSyncAssignment) {
+  const previousAssignment = parseLineAssignment(existingLineMeta.metadata);
+  const vatOnlyChange = costVatChanged && !revenueVatChanged
+    && isDeepStrictEqual(
+      (previousAssignment?.platforms ?? []).map(({ platform, deliverables }) => ({ platform, deliverables })),
+      platforms.map(({ platform, deliverables }) => ({ platform, deliverables }))
+    )
+    && isDeepStrictEqual(previousAssignment?.commercial_rows ?? [], commercial.commercial_rows)
+    && previousAssignment?.pricing_mode === commercial.pricing_mode
+    && existingLineMeta.currency_code === currency
+    && (existingLineMeta.start_date ?? null) === (parsed.start_date ?? null)
+    && (existingLineMeta.end_date ?? null) === (parsed.end_date ?? null)
+    && !assignmentCommercialMastersChanged(existingLineMeta, {
+      revenue_before_vat: vatPayload.revenue_before_vat, cost_before_vat: vatPayload.cost_before_vat,
+      agency_fee_percent: commercialBilling.agency_fee_percent, usage_rights_amount: commercialBilling.usage_rights_amount,
+      usage_rights_cost: commercialBilling.usage_rights_cost,
+    });
+  // Cost VAT is propagated in-place by the database; never rebuild live deliverables for a tax correction.
+  if (canSyncAssignment && !vatOnlyChange) {
     const vendorVatPayload = buildVendorCostVatPayload({
       cost_before_vat: vatPayload.cost_before_vat,
       cost_vat_percent: vatPayload.cost_vat_percent,
@@ -694,7 +721,7 @@ export async function updateCampaignLine(
     });
   }
 
-  const commercialChanged = assignmentCommercialMastersChanged(
+  const commercialChanged = costVatChanged || revenueVatChanged || assignmentCommercialMastersChanged(
     {
       revenue_before_vat: existingLineMeta.revenue_before_vat,
       revenue: existingLineMeta.revenue,
@@ -768,14 +795,14 @@ export async function updateCampaignLine(
   let markedRevisionRequired = false;
   if (shouldMarkRevisionRequired) {
     const { applyBusinessChangeImpact } = await import("@/lib/change-impact/apply");
-    const costChanged =
+    const costChanged = costVatChanged ||
       Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost) !==
       Number(costBeforeVat);
     const reasonCode = costChanged
       ? ("creator_price_changed" as const)
       : ("commercial_correction" as const);
     const reasonDetail = costChanged
-      ? "Creator price changed after document issuance."
+      ? (costVatChanged ? "Creator cost VAT changed after document issuance." : "Creator price changed after document issuance.")
       : "Commercial correction after invoice un-generate.";
 
     const impactResult = await applyBusinessChangeImpact(supabase, {

@@ -62,7 +62,7 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         const campaign = campaigns.data?.find(c => c.id === io.campaign_header_id);
         const ledger = (entries.data ?? []).filter(e => e.assignment_id === io.assignment_id);
         const fee = Number(a?.cost_before_vat ?? a?.agreed_fee ?? io.amount ?? 0);
-        const vat = Number(term?.vat ?? a?.cost_vat_percent ?? 0);
+        const vat = Number(a?.cost_vat_percent ?? term?.vat ?? 0);
         const paid = ledger.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.original_amount), 0);
         const saved = paymentDraftSchema.safeParse(plans.data?.find(p => p.assignment_id === io.assignment_id)?.draft);
         return { history: ledger.filter(e=>e.status === 'paid' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,

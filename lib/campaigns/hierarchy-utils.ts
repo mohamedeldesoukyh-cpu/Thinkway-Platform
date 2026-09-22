@@ -68,8 +68,9 @@ export const HIERARCHY_COLUMN_LABELS = {
   agencyFeePercent: "AF %",
   agencyFee: "AF",
   cost: "Cost",
+  costVatPercent: "Cost VAT %", costVat: "Cost VAT", costTotal: "Cost incl. VAT",
   usageRightsCost: "UR Cost",
-  vat: "VAT",
+  vat: "Revenue VAT",
   totalBilling: "Total billing",
   gp: "GP",
   margin: "MGN",
@@ -92,8 +93,9 @@ export const CHILD_COLUMN_LABELS = {
   agencyFeePercent: "AF %",
   agencyFee: "AF",
   cost: "Cost",
+  costVatPercent: "Cost VAT %", costVat: "Cost VAT", costTotal: "Cost incl. VAT",
   usageRightsCost: "UR Cost",
-  vat: "VAT",
+  vat: "Revenue VAT",
   totalBilling: "Total Billing",
   billing: "Billing",
   invoice: "Invoice",
@@ -155,13 +157,14 @@ export const ASSIGNMENT_CHILD_TRAILING_PARENT_FINANCIAL_COLUMN_IDS = [
   "agencyFeePercent",
   "agencyFee",
   "cost",
+  "costVatPercent", "costVat", "costTotal",
   "usageRightsCost",
   "vat",
   "totalBilling",
 ] as const;
 
-export const ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND = 25;
-export const ASSIGNMENT_CHILD_ROW_COL_COUNT = 24;
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND = 28;
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT = 27;
 
 export function assignmentChildLeadingParentColumnIds(
   showExpandColumn: boolean
