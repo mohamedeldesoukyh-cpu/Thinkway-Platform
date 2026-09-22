@@ -105,6 +105,7 @@ export function CommercialRevisionDialog({
       }
 
       toast.success(result.message ?? "Commercial Revision submitted");
+      window.dispatchEvent(new Event("commercial-revisions-changed"));
       setReason("");
       setComments("");
       onOpenChange(false);

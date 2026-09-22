@@ -115,6 +115,7 @@ export function CommercialVersionHistoryDialog({
         return;
       }
       toast.success(result.message ?? "Decision recorded");
+      window.dispatchEvent(new Event("commercial-revisions-changed"));
       refresh();
     });
   }

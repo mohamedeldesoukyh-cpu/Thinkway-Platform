@@ -11,6 +11,7 @@ import {
 } from "@/features/campaigns/components/aurora/campaign-ops-card";
 import { CampaignOperationalReadinessChecklist } from "@/features/campaigns/components/campaign-operational-readiness-checklist";
 import { CampaignHeaderInlineEditor } from "@/features/campaigns/components/campaign-header-inline-editor";
+import { CampaignCommercialApprovals } from "@/features/campaigns/components/campaign-commercial-approvals";
 import { CampaignOverviewDetails } from "@/features/campaigns/components/campaign-overview-details";
 import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
 import { CampaignIntelligenceReference } from "@/features/campaigns/components/campaign-intelligence-reference";
@@ -177,6 +178,7 @@ export function CampaignCommandCenter({
 
   return (
     <div className="thinkway-aurora-command">
+      <CampaignCommercialApprovals key={workspace.id} campaignHeaderId={workspace.id} refreshKey={workspace} />
       {lifecycle ? null : (
         <>
           <CampaignOperationalReadinessChecklist readiness={readiness} />
