@@ -31,7 +31,7 @@ export function validateBank(bank: BankDetails): string[] {
         errors.push("Bank country requires a two-letter ISO code.");
     if (bank.payment_type === 'D' && bank.currency !== 'EGP')
         errors.push("AAIB domestic transfers require EGP. Use International for foreign currency.");
-    if (bank.swift && !/^[A-Z]{6}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bank.swift))
+    if (bank.swift && !/^[A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$/.test(bank.swift))
         errors.push("SWIFT must contain 8 or 11 letters/digits.");
     if (bank.swift && bank.swift.slice(4, 6) !== bank.country)
         errors.push("SWIFT country must match bank country.");

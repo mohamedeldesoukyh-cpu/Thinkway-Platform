@@ -4,10 +4,91 @@
  * https://www.business.hsbc.ae/-/media/library/markets-selective/uae/pdf/list-of-beneficiary-bank-codes-for-autopay-services.pdf
  * Reviewed 2026-09-21. Excludes exchange houses, placeholder BICs and legacy
  * merged-bank entries whose current routing cannot be established from this list.
- * Add verified country/code entries here, without changing the parser or form.
+ * Egypt codes: https://docs.dlocal.com/docs/egypt-payouts-v3#bank-codes
+ * Egypt BICs: https://tranglo.com/docs/tranglo-connect/service-specification/egypt/
+ * Additional receiving instructions: https://www.afnci.org.eg/?page_id=22451 (published receiving instructions)
+ * https://askaribank.com/gallery/List-of-Correspondent-Banks.pdf
+ * Saudi codes/BICs: https://developer.anb.com.sa/apis/api/single-payment (Appendix B).
+ * EG/SA reviewed 2026-09-22. Empty BIC means name-only recognition: do not guess
+ * routing for legacy/merged banks or invent a branch-specific BIC from an IBAN.
  * A directory match is not confirmation of account ownership or bank acceptance.
  */
 export const IBAN_BANKS: Readonly<Record<string, Readonly<Record<string, readonly [name: string, swift: string]>>>> = {
+    EG: {
+        '0002': ['Banque Misr', 'BMISEGCX'],
+        '0003': ['National Bank of Egypt', 'NBEGEGCX'],
+        '0004': ['Banque du Caire', 'BCAIEGCX'],
+        '0005': ['Bank of Alexandria', 'ALEXEGCX'],
+        '0007': ['Egyptian Arab Land Bank', 'ARLBEGCA'],
+        '0008': ['Industrial Development Bank', 'DIBBEGCA'],
+        '0009': ['Agricultural Bank of Egypt', 'BDACEGCA'],
+        '0010': ['Commercial International Bank Egypt', 'CIBEEGCX'],
+        '0013': ['Blom Bank Egypt (legacy code)', ''],
+        '0014': ['Emirates NBD Egypt', 'EBILEGCX'],
+        '0017': ['Suez Canal Bank', 'SUCAEGCX'],
+        '0018': ['Al Ahli Bank of Kuwait - Egypt', 'ECBAEGCA'],
+        '0019': ['Bank Audi Egypt (legacy code)', ''],
+        '0020': ['Kuwait Finance House Egypt (formerly Ahli United Bank)', 'DEIBEGCX'],
+        '0022': ['Al Baraka Bank Egypt', 'ABRKEGCA'],
+        '0023': ['National Bank of Kuwait - Egypt', 'WABAEGCX'],
+        '0025': ['HSBC Bank Egypt', 'EBBKEGCX'],
+        '0027': ['Abu Dhabi Commercial Bank - Egypt', 'ADCBEGCX'],
+        '0029': ['Egyptian Gulf Bank', 'EGGBEGCA'],
+        '0030': ['Abu Dhabi Islamic Bank - Egypt', 'ABDIEGCA'],
+        '0031': ['The United Bank', 'UBOEEGCX'],
+        '0033': ['MIDBANK', 'MIDBEGCX'],
+        '0034': ['Attijariwafa Bank Egypt', 'BCBIEGCX'],
+        '0035': ['Societe Arabe Internationale de Banque', 'SBNKEGCX'],
+        '0036': ['Credit Agricole Egypt', 'AGRIEGCX'],
+        '0037': ['QNB Egypt', 'QNBAEGCX'],
+        '0038': ['Housing and Development Bank', 'HDBKEGCA'],
+        '0040': ['Bank ABC Egypt', 'EAABEGCX'],
+        '0042': ['First Abu Dhabi Bank Egypt', 'NBADEGCA'],
+        '0043': ['Citibank Egypt', 'CITIEGCX'],
+        '0044': ['Arab Bank Egypt', 'ARABEGCX'],
+        '0046': ['Mashreq Bank Egypt', 'MSHQEGCA'],
+        '0048': ['National Bank of Greece Egypt (legacy code)', ''],
+        '0056': ['Arab International Bank', 'ARIBEGCX'],
+        '0057': ['Arab African International Bank', 'ARAIEGCX'],
+        '0058': ['Arab Investment Bank', 'AINBEGCA'],
+        '0059': ['Faisal Islamic Bank of Egypt', 'FIEGEGCX'],
+        '0061': ['Export Development Bank of Egypt', 'EXDEEGCX'],
+        '9003': ['Nasser Social Bank', 'NSOBEGC1'],
+    },
+    SA: {
+        '01': ['Saudi Central Bank', 'SAMASARI'],
+        '05': ['Alinma Bank', 'INMASARI'],
+        '10': ['Saudi National Bank', 'NCBKSAJE'],
+        '15': ['Bank Albilad', 'ALBISARI'],
+        '20': ['Riyad Bank', 'RIBLSARI'],
+        '30': ['Arab National Bank', 'ARNBSARI'],
+        '36': ['D360 Bank', 'DBAKSARI'],
+        '45': ['Saudi Awwal Bank', 'SABBSARI'],
+        '55': ['Banque Saudi Fransi', 'BSFRSARI'],
+        '60': ['Bank AlJazira', 'BJAZSAJE'],
+        '65': ['Saudi Investment Bank', 'SIBCSARI'],
+        '71': ['National Bank of Bahrain', 'NBOBSARI'],
+        '72': ['Qatar National Bank', 'QNBASARI'],
+        '73': ['First Abu Dhabi Bank', 'FABMSARI'],
+        '75': ['National Bank of Kuwait', 'NBOKSAJE'],
+        '76': ['Bank Muscat', 'BMUSSARI'],
+        '78': ['STC Bank', 'STCJSARI'],
+        '79': ['National Bank of Iraq', 'NBIQSARI'],
+        '80': ['Al Rajhi Bank', 'RJHISARI'],
+        '81': ['Deutsche Bank', 'DEUTSARI'],
+        '82': ['National Bank of Pakistan', 'NBPASARI'],
+        '84': ['T.C. Ziraat Bankasi', 'TCZBSARI'],
+        '85': ['BNP Paribas', 'BNPASARI'],
+        '86': ['JP Morgan Chase', 'CHASSARI'],
+        '87': ['Industrial and Commercial Bank of China', 'ICBKSARI'],
+        '88': ['MUFG Bank', 'BOTKSARI'],
+        '89': ['Credit Suisse', 'CRESSARY'],
+        '90': ['Gulf International Bank', 'GULFSARI'],
+        '91': ['Standard Chartered Bank', 'SCBLSAR2'],
+        '92': ['Sohar International Bank', 'BSHRSARI'],
+        '93': ['Vision Bank', 'VIIOSARI'],
+        '95': ['Emirates NBD', 'EBILSARI'],
+    },
     AE: {
         '003': ['Abu Dhabi Commercial Bank', 'ADCBAEAA'],
         '004': ['Al Ahli Bank of Kuwait', 'ABKKAEAD'],
@@ -61,5 +142,9 @@ export const IBAN_BANKS: Readonly<Record<string, Readonly<Record<string, readonl
         '086': ['Wio Bank PJSC', 'WIOBAEAD'],
         '092': ['Gulf International Bank', 'GULFAEAA'],
         '093': ['Intesa Sanpaolo', 'BCITAEAB'],
+        // https://www.mbank.ae/ (routing 009710001 and BIC)
+        '097': ['Al Maryah Community Bank', 'E097AEXX'],
+        // https://business.ruyabank.ae/ (routing 413240101 and BIC)
+        '132': ['Ruya Community Islamic Bank', 'E132AEXX'],
     },
 };
