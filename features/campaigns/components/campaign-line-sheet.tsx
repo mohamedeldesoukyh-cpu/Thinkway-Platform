@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { useActionState, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
@@ -115,7 +115,16 @@ export function CampaignLineSheet({
   hasIssuedClientIo = false,
 }: CampaignLineSheetProps) {
   const router = useRouter();
-  const { confirm } = useConfirmAction();
+  const { confirm: confirmAction } = useConfirmAction();
+  const [confirmationOpen, setConfirmationOpen] = useState(false);
+  const confirm = useCallback(async (options: Parameters<typeof confirmAction>[0]) => {
+    setConfirmationOpen(true);
+    try {
+      return await confirmAction(options);
+    } finally {
+      setConfirmationOpen(false);
+    }
+  }, [confirmAction]);
   const isEdit = line !== null;
   const [assignmentStatus, setAssignmentStatus] =
     useState<CampaignLineAssignmentStatus>(line?.assignment_status ?? "assigned");
@@ -790,7 +799,11 @@ export function CampaignLineSheet({
   return (
     <OperationalDetailSheet
       open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={(next) => {
+        // Portaled confirmations and revision forms must not dismiss their owning editor.
+        if (!next && (confirmationOpen || revisionOpen || ioRevisionOpen)) return;
+        onOpenChange(next);
+      }}
       title={sheetTitle}
       description="Influencer assignment commercial planning"
       variant="detail"
