@@ -224,7 +224,7 @@ export function QuotationWorkspaceHeader({
 
   return (
     <>
-      <div className="discovery-suite shrink-0 px-[15px] pt-2">
+      <div className="discovery-suite quotation-frozen-header shrink-0 px-[15px] pt-2">
         <DiscoverySuiteMasthead
           title={detail.name}
           id={detail.serial_number}
