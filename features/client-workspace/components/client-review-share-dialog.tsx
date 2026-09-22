@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { clientLinkName, clientLinkShareText } from '../link-label';
+import { shareImagePath } from '../share-preview';
+import { updateShareCoverAction } from '../actions/update-share-cover-action';
 
 export function ClientReviewShareDialog({
   open,
@@ -38,6 +40,32 @@ export function ClientReviewShareDialog({
   linkEnabled?: boolean;
 }) {
   const [copied, setCopied] = useState(false);
+  const [coverBusy, setCoverBusy] = useState(false);
+  const [coverVersion, setCoverVersion] = useState("1");
+  let previewUrl: string | null = null;
+  let reviewId = "";
+  let sign = "";
+  try {
+    const parsed = new URL(url || "");
+    reviewId = parsed.pathname.split("/")[2] || "";
+    sign = parsed.searchParams.get("sign") || "";
+    if (reviewId && sign) previewUrl = shareImagePath(reviewId, sign, coverVersion);
+  } catch { /* No link yet. */ }
+
+  async function changeCover(file?: File) {
+    if (coverBusy) return;
+    setCoverBusy(true);
+    try {
+      const form = new FormData();
+      form.set("reviewId", reviewId);
+      form.set("sign", sign);
+      if (file) form.set("file", file); else form.set("remove", "true");
+      const result = await updateShareCoverAction(form);
+      if (result.ok) { setCoverVersion(String(Date.now())); toast.success(result.message); }
+      else toast.error(result.message);
+    } catch { toast.error("Could not update the cover. Please try again."); }
+    finally { setCoverBusy(false); }
+  }
   const title = reviewNumber != null ? `Client review v${reviewNumber}` : "Client review link";
 
   async function copyLink(withName = false) {
@@ -60,7 +88,7 @@ export function ClientReviewShareDialog({
         onOpenChange(next);
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           {campaignName?.trim() && <p className="break-words text-base font-semibold" dir="auto">{clientLinkName(campaignName)}</p>}
@@ -112,6 +140,25 @@ export function ClientReviewShareDialog({
             </p>
           </div>
         ) : null}
+        {previewUrl && linkEnabled && (
+          <details className="rounded-lg border border-border p-3">
+            <summary className="cursor-pointer text-sm font-semibold">Campaign link preview</summary>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewUrl} alt="Campaign link cover" className="mt-3 aspect-[1200/630] w-full rounded-lg object-cover" />
+            <p className="mt-2 text-sm font-semibold">{campaignName || "Your campaign"}</p>
+            <p className="mt-1 text-xs text-muted-foreground">Automatic branded cover, or upload your own. Recommended: 1200 × 630. WhatsApp may retain older previews.</p>
+            <label className="mt-3 block text-xs font-medium">Custom cover (JPG, PNG or WebP; up to 5 MB)
+              <Input type="file" accept="image/jpeg,image/png,image/webp" disabled={coverBusy} className="mt-1" onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void changeCover(file);
+                event.target.value = "";
+              }} />
+            </label>
+            <Button type="button" variant="outline" size="sm" className="mt-2" disabled={coverBusy} onClick={() => void changeCover()}>
+              {coverBusy ? "Updating cover…" : "Use automatic cover"}
+            </Button>
+          </details>
+        )}
         {url ? (
           <div className="flex gap-2">
             <Input
