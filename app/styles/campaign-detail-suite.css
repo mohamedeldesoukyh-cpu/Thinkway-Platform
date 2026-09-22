@@ -643,7 +643,7 @@
 .campaign-detail-suite .thinkway-aurora-ops-grid,
 .campaign-detail-suite .thinkway-command-ops {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(392px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 392px), 1fr));
   gap: 12px;
 }
 

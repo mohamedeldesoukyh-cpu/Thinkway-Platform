@@ -380,7 +380,7 @@
 .vendor-detail-suite .tw-sb__l em{font-style:normal;font:600 10px 'Geist Mono',monospace;padding:1px 5px;border-radius:999px;
  background:var(--tw-soft);color:var(--tw-mut)}
 /* dashboard: 2 columns, roomy */
-.vendor-detail-suite .tw-dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px}
+.vendor-detail-suite .tw-dash{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px}
 .vendor-detail-suite .tw-dc2{background:#fff;border-radius:13px;box-shadow:var(--tw-ring);overflow:hidden}
 .vendor-detail-suite .tw-dc2__h{display:flex;align-items:center;gap:10px;padding:14px 17px 12px}
 .vendor-detail-suite .tw-dc2__h b{font-size:14px;font-weight:600}
@@ -565,7 +565,7 @@
 .vendor-detail-suite .tw-mh .st{position:relative;z-index:1}
 /* ============ lighter cards, wider, frozen header ============ */
 /* wider: 3 across instead of 5 */
-.vendor-detail-suite .tw-dash{grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:12px}
+.vendor-detail-suite .tw-dash{grid-template-columns:repeat(auto-fit,minmax(min(100%,392px),1fr));gap:12px}
 /* light headers â€” tint + ink text, brand blue only as accent */
 .vendor-detail-suite .tw-dc2__h{background:linear-gradient(107deg,#E9F0FF 0%,#F2F7FF 58%,#F7FAFF 100%);
  color:var(--tw-ink);border-bottom:1px solid #DDE7FA}

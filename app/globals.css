@@ -4,6 +4,7 @@
 @import "./thinkway-design-tokens.css";
 @import "./thinkway-dropdown.css" layer(components);
 @import "./styles/chrome-logo.css" layer(components);
+@import "./styles/responsive.css";
 
 @custom-variant dark (&:is(.dark *));
 

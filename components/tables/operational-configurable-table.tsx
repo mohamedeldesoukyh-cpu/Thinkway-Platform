@@ -135,9 +135,15 @@ function OperationalConfigurableTableView<T>({
   wrapRow?: (row: T, rowElement: ReactElement) => ReactNode;
 }) {
   const columnWidths = resolveOperationalTableColumnWidths(columns);
+  // Preserve readable columns on phones; scroll the table, not the entire page.
+  const minimumWidth = columns.reduce((width, column) => {
+    const pixels = column.colWidth?.match(/^(\d+)px$/);
+    return width + (pixels ? Number(pixels[1]) : 160);
+  }, 0);
 
   return (
-    <CampaignOperationalTable className={cn("table-fixed w-full", className)}>
+    <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain" tabIndex={0} role="region" aria-label="Scrollable data table">
+    <CampaignOperationalTable className={cn("table-fixed w-full", className)} style={{ minWidth: minimumWidth }}>
       <colgroup>
         {columns.map((column, index) => (
           <col key={column.id} style={{ width: columnWidths[index] }} />
@@ -216,5 +222,6 @@ function OperationalConfigurableTableView<T>({
         })}
       </CampaignOperationalTableBody>
     </CampaignOperationalTable>
+    </div>
   );
 }

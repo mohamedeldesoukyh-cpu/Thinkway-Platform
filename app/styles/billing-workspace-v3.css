@@ -932,12 +932,20 @@
 @media (max-width: 1250px) {
   .tw-billing-v3 .bq-kwrap,
   .tw-billing-v3 .bq-k2 {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .tw-billing-v3 .bq-two {
     grid-template-columns: 1fr;
   }
+}
+
+@media (max-width: 600px) {
+  .tw-billing-v3 .bq-kwrap,
+  .tw-billing-v3 .bq-k2 { grid-template-columns: minmax(0, 1fr); }
+  .tw-billing-v3 .bq-k__v,
+  .tw-billing-v3 .bq-m b { white-space: normal; overflow-wrap: anywhere; }
+  .tw-billing-v3 .bq-m { flex-wrap: wrap; }
 }
 
 .dark .tw-billing-v3 .bq-k,

@@ -140,7 +140,7 @@ export default function RootLayout({
       </head>
       <body
         suppressHydrationWarning
-        className="flex h-svh max-h-svh flex-col overflow-hidden bg-background text-foreground"
+        className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-background text-foreground"
       >
         <div id="pwa-splash" aria-hidden="true">
           {/* Splash must paint before hydration; next/image is unsuitable here. */}

@@ -59,7 +59,7 @@ export function CollectionsFilterBar({ options }: CollectionsFilterBarProps) {
 
   return (
     <div
-      className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:-mx-8 md:px-8"
+      className="sticky top-0 z-20 min-w-0 border-b border-border bg-background/95 py-3 backdrop-blur"
       data-pending={isPending ? "true" : undefined}
     >
       <div className="flex flex-wrap items-end gap-3">
