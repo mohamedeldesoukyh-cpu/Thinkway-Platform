@@ -427,9 +427,7 @@ export async function updateCampaignLine(
     || Boolean(existingLineMeta.cost_vat_exempt) !== Boolean(parsed.cost_vat_exempt);
   const revenueVatChanged = Number(existingLineMeta.revenue_vat_percent ?? 0) !== Number(parsed.revenue_vat_percent)
     || Boolean(existingLineMeta.revenue_vat_exempt) !== Boolean(parsed.revenue_vat_exempt);
-  if (costVatChanged && (existingLineMeta.cost_locked || existingLineMeta.vat_locked || existingLineMeta.vendor_assignment_locked) && !financeOverrideActive) {
-    return {ok:false,message:'Cost VAT is locked. Use the existing finance override / IO revision process before changing it.'};
-  }
+
 
   {
     const masterChanges: MasterCommercialValues = {
@@ -482,6 +480,11 @@ export async function updateCampaignLine(
         };
       }
     }
+  }
+
+  // Let the linked finance gate return revision context before enforcing row locks.
+  if (costVatChanged && (existingLineMeta.cost_locked || existingLineMeta.vat_locked || existingLineMeta.vendor_assignment_locked) && !financeOverrideActive) {
+    return {ok:false,message:'Cost VAT is locked. Use the existing finance override / IO revision process before changing it.'};
   }
 
   if (
