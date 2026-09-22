@@ -1,4 +1,6 @@
 "use server";
+import { resolveRateToEgp } from "@/lib/commercial/fx-server";
+import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import ExcelJS from "exceljs";
@@ -48,6 +50,10 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_plans').select('assignment_id,draft').in('assignment_id', ids).order('assignment_id')),
     ]);
     const lineIds = assignments.data.map(a=>a.campaign_line_id).filter((id): id is string=>!!id);
+    const [fxLines, currencyRates] = await Promise.all([
+        paymentRowsByIds(lineIds, ids => db.from("campaign_lines").select("id,cost_fx_override").in("id", ids).order("id")),
+        Promise.all([...new Set([...COMMERCIAL_CURRENCIES, ...assignments.data.map(a => a.currency).filter(Boolean)])].map(async currency => [currency, await resolveRateToEgp(db, currency).catch(() => 0)] as const)).then(Object.fromEntries),
+    ]);
     const [deliverables, posts, publications, links] = await Promise.all([
         paymentRowsByIds(lineIds,ids=>db.from('assignment_deliverables').select('id,campaign_line_id,quantity,sort_order,deliverable_type,created_at').in('campaign_line_id',ids).order('id')),
         paymentRowsByIds(lineIds,ids=>db.from('assignment_post_schedule').select('id,assignment_deliverable_id,sequence_number,status').in('campaign_line_id',ids).order('id')),
@@ -70,6 +76,7 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
             payable: !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
             currency: a?.currency ?? io.currency_code, fee, vat,
+            costFxOverride: fxLines.data.find(line => line.id === a?.campaign_line_id)?.cost_fx_override ?? null, currencyRates,
             paid: money(paid || (!ledger.length && a?.vendor_payment_status === 'paid' ? fee + Math.round(fee * vat) / 100 : 0)),
             reserved: ledger.filter(e => e.status === 'exported').reduce((s, e) => s + Number(e.original_amount), 0),
             bank: bankDetails(creator?.payment_details ?? {}) };

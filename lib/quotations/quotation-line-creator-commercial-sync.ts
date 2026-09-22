@@ -11,6 +11,7 @@
  * creators footer so they match the metrics band.
  */
 
+import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-types";
 import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math";
 import {
@@ -67,7 +68,8 @@ export function formatDualCurrencyAmountLabel(
   lineCurrency: string,
   lineFxRateToEgp: number,
   quotationCurrency: string,
-  quotationFxRateToEgp: number
+  quotationFxRateToEgp: number,
+  override?: string | null
 ): DualCurrencyAmountLabel {
   const entry = (lineCurrency || "EGP").toUpperCase();
   const quote = (quotationCurrency || "EGP").toUpperCase();
@@ -77,12 +79,7 @@ export function formatDualCurrencyAmountLabel(
   }
   return {
     primary,
-    secondary: formatAmountInDisplayCurrency(
-      amountInLineCurrency,
-      lineFxRateToEgp,
-      quote,
-      quotationFxRateToEgp
-    ),
+    secondary: formatAmount(creatorFxAmount(amountInLineCurrency, { from: entry, to: quote, sourceRateToEgp: lineFxRateToEgp, targetRateToEgp: quotationFxRateToEgp, override }), quote),
   };
 }
 
@@ -297,7 +294,8 @@ export function resolveCreatorLinePriceDualLabel(
     resolved.lineCurrency,
     resolved.lineFx,
     quotationCurrency,
-    quotationFx
+    quotationFx,
+    draft?.revenueFxOverride
   );
 }
 
@@ -342,6 +340,7 @@ export function resolveCreatorLineCostDualLabel(
     lineCurrency,
     lineFx,
     quotationCurrency,
-    quotationFx
+    quotationFx,
+    draft?.costFxOverride
   );
 }

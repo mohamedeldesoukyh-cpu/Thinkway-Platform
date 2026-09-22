@@ -87,7 +87,7 @@ export function createSupabaseCommercialSyncPorts(
     const { data } = await supabase
       .from("quotation_items")
       .select(
-        "cost, revenue, cost_currency, fx_rate_to_egp, af_pct, commercial_input_mode, gp_pct, gp_value"
+        "cost_fx_override, revenue_fx_override, cost, revenue, cost_currency, fx_rate_to_egp, af_pct, commercial_input_mode, gp_pct, gp_value"
       )
       .eq("id", quotationItemId)
       .maybeSingle();
@@ -99,7 +99,7 @@ export function createSupabaseCommercialSyncPorts(
     const { data } = await supabase
       .from("campaign_lines")
       .select(
-        "cost, revenue, cost_before_vat, revenue_before_vat, currency_code, fx_rate, agency_fee_percent, pricing_mode, markup_margin, profit, usage_rights_amount, usage_rights_cost, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt"
+        "cost_fx_override, revenue_fx_override, cost, revenue, cost_before_vat, revenue_before_vat, currency_code, fx_rate, agency_fee_percent, pricing_mode, markup_margin, profit, usage_rights_amount, usage_rights_cost, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt"
       )
       .eq("id", assignmentId)
       .maybeSingle();
@@ -163,6 +163,7 @@ export function createSupabaseCommercialSyncPorts(
     });
 
     const patch: Record<string, unknown> = {
+      ...columns,
       commercial_input_mode: normalized.commercial_input_mode,
       cost: normalized.cost,
       cost_currency: normalized.cost_currency,

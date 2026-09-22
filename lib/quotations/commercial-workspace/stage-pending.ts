@@ -18,6 +18,8 @@ export function draftToLinePending(
     mode: draft.mode,
     cost: draft.cost,
     cost_currency: draft.costCurrency,
+    cost_fx_override: draft.costFxOverride ?? null,
+    revenue_fx_override: draft.revenueFxOverride ?? null,
     revenue: draft.revenue,
     gp_pct: draft.gpPct,
     gp_value: draft.gpValue,

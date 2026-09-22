@@ -1,3 +1,4 @@
+import { creatorFxRate } from "@/lib/commercial/creator-fx";
 import { z } from 'zod';
 import type { PaymentDraft, PaymentRow } from './model';
 
@@ -19,4 +20,9 @@ export function changedPaymentPlans(rows: PaymentRow[], drafts: Record<string, P
         const saved = defaultPaymentDraft(row);
         return (Object.keys({ ...saved, ...draft }) as (keyof PaymentDraft)[]).some(key => saved[key] !== draft[key]);
     });
+}
+
+export function paymentCurrencyRate(row: PaymentRow, currency: string): number {
+    try { return creatorFxRate({ from: row.currency, to: currency, sourceRateToEgp: row.currencyRates?.[row.currency] ?? 0, targetRateToEgp: row.currencyRates?.[currency] ?? 0, override: row.costFxOverride }); }
+    catch { return 0; }
 }

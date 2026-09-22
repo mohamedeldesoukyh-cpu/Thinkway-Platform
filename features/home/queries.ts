@@ -136,7 +136,7 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     supabase
       .from("campaign_lines")
       .select(
-        "campaign_header_id, revenue, cost, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, currency_code, cost_received, cost_received_currency"
+        "campaign_header_id, cost_fx_override, revenue_fx_override, revenue, cost, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, currency_code, cost_received, cost_received_currency"
       )
       .limit(6000),
     supabase
@@ -208,6 +208,8 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     if (!operationalHeaderIds.has(line.campaign_header_id)) continue;
     const bucket = linesByHeader.get(line.campaign_header_id) ?? [];
     bucket.push({
+      cost_fx_override: line.cost_fx_override,
+      revenue_fx_override: line.revenue_fx_override,
       revenue: line.revenue,
       cost: line.cost,
       revenue_before_vat: line.revenue_before_vat,

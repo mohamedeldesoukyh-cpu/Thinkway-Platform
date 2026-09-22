@@ -62,6 +62,7 @@ import {
 import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-pending";
 import {
   computeLiveQuotationTotals,
+  computeQuotationDisplayTotals,
   computeQuotationRowComputed,
   draftFromQuotationItem,
   draftsFromItems,
@@ -698,6 +699,7 @@ function QuotationWorkspaceContent({
         }
         metricsSlot={
           <QuotationCommercialMetricsBand
+            projected={computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp)}
             embedded
             totalCostEgp={totals.totalCostEgp}
             totalRevenueEgp={totals.totalClientCostEgp}
@@ -808,6 +810,8 @@ function QuotationWorkspaceContent({
                 description="Metrics above are still valid. Retry or reload."
               >
                 <QuotationLinesGrid
+                  displayCurrency={displayCurrency}
+                  displayFxRateToEgp={displayFxRateToEgp}
                   quotationId={detail.id}
                   items={sortedFilteredItems}
                   drafts={drafts}

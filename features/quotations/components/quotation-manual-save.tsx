@@ -45,6 +45,8 @@ export type QuotationLinePendingPayload = {
   revenue?: number | null;
   cost?: number | null;
   cost_currency?: string;
+  cost_fx_override?: string | null;
+  revenue_fx_override?: string | null;
   gp_pct?: number | null;
   gp_value?: number | null;
   af_pct?: number | null;
@@ -385,6 +387,8 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
               client_revenue: item.revenue,
               cost_currency: item.cost_currency,
               exchange_rate: item.fx_rate_to_egp,
+              cost_fx_override: item.cost_fx_override ?? null,
+              revenue_fx_override: item.revenue_fx_override ?? null,
               agency_fee_percent: item.af_pct,
               commercial_input_mode: item.commercial_input_mode,
               gp_pct_input: item.gp_pct,
@@ -394,8 +398,10 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
               creator_cost: rolled?.cost ?? payload.cost ?? item.cost,
               client_revenue:
                 rolled?.revenue ?? payload.revenue ?? item.revenue,
-              cost_currency: item.cost_currency,
+              cost_currency: payload.cost_currency ?? item.cost_currency,
               exchange_rate: item.fx_rate_to_egp,
+              cost_fx_override: payload.cost_fx_override !== undefined ? payload.cost_fx_override : item.cost_fx_override ?? null,
+              revenue_fx_override: payload.revenue_fx_override !== undefined ? payload.revenue_fx_override : item.revenue_fx_override ?? null,
               agency_fee_percent:
                 rolled?.afPct ?? payload.af_pct ?? item.af_pct,
               commercial_input_mode: (rolled

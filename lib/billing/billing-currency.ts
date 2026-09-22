@@ -1,3 +1,4 @@
+import { creatorFxRate, creatorFxAmount } from "@/lib/commercial/creator-fx";
 import type { OperationalBillingRow } from "./operational-billing-rows";
 
 export const operationalMoneyFields = [
@@ -22,15 +23,17 @@ export function convertMoney(amount: number, source: string, target: string, rat
 }
 
 /** Read projection only. Eligibility and coverage remain in original assignment units. */
-export function projectBillingRows(rows: OperationalBillingRow[], target: string, rates: Record<string, number>, inherited?: string): OperationalBillingRow[] {
+export function projectBillingRows(rows: OperationalBillingRow[], target: string, rates: Record<string, number>, inherited?: string, inheritedFx?: string | null): OperationalBillingRow[] {
   return rows.map(row => {
     const source = row.source_money?.currency ?? row.currency_code ?? inherited;
     if (!source) throw new Error(`Missing source currency for billing row ${row.id}`);
+    const override = row.revenue_fx_override ?? inheritedFx;
+    const conversion = { from: source, to: target, sourceRateToEgp: rates[source], targetRateToEgp: rates[target], override };
     const amounts = row.source_money?.amounts ?? Object.fromEntries(operationalMoneyFields.map(key => [key, row[key]]));
     const converted = Object.fromEntries(operationalMoneyFields.filter(key => amounts[key] != null)
-      .map(key => [key, convertMoney(amounts[key]!, source, target, rates)]));
-    return { ...row, ...converted, currency_code: target, source_money: { currency: source, amounts, rate: source === target ? 1 : (source === "EGP" ? 1 : rates[source]) / (target === "EGP" ? 1 : rates[target]) },
-      children: projectBillingRows(row.children, target, rates, source) };
+      .map(key => [key, creatorFxAmount(amounts[key]!, conversion)]));
+    return { ...row, ...converted, currency_code: target, source_money: { currency: source, amounts, rate: creatorFxRate(conversion) },
+      children: projectBillingRows(row.children, target, rates, source, override) };
   });
 }
 

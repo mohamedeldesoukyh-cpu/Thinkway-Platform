@@ -58,6 +58,7 @@ import {
 import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-pending";
 import { COMMERCIAL_WORKSPACE_TRIGGER_CLASS } from "@/lib/commercial/commercial-workspace-trigger";
 import { cn } from "@/lib/utils";
+import { readCreatorFx } from "@/lib/commercial/creator-fx";
 
 import {
   recordCommercialWorkspaceSaveAudit,
@@ -66,13 +67,13 @@ import {
 import { useQuotationManualSave } from "@/features/quotations/components/quotation-manual-save";
 import { QuotationCommercialWorkspaceRowCard } from "@/features/quotations/components/quotation-commercial-workspace-row-card";
 import {
+  computeQuotationDisplayTotals,
   computeQuotationRowComputed,
   computeQuotationRowClientCommercials,
   resolveQuotationRowDraft,
   type QuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
 import type { QuotationItemRow } from "@/features/quotations/types";
-import { fromEgp } from "@/lib/commercial/fx-aggregation";
 import {
   sortQuotationCommercialSummaryRows,
   type QuotationCommercialSummarySortState,
@@ -92,11 +93,10 @@ const CS = {
 } as const;
 
 function fmtStat(
-  amountEgp: number,
+  amount: number,
   displayCurrency: string,
-  displayFxRateToEgp: number
+  _displayFxRateToEgp: number
 ): string {
-  const amount = fromEgp(amountEgp, displayCurrency, displayFxRateToEgp);
   return `${new Intl.NumberFormat("en-US", {
     maximumFractionDigits: 0,
   }).format(Number.isFinite(amount) ? amount : 0)} ${(displayCurrency || "EGP").toUpperCase()}`;
@@ -119,11 +119,13 @@ type WorkspaceRow = {
   gpValueEgp: number;
   gpPct: number;
   draft: QuotationRowDraft;
+  displayTotals: ReturnType<typeof computeQuotationDisplayTotals>;
 };
 
 function buildRows(
   items: QuotationItemRow[],
-  drafts: Record<string, QuotationRowDraft | undefined>
+  drafts: Record<string, QuotationRowDraft | undefined>,
+  displayCurrency: string, displayFxRateToEgp: number
 ): WorkspaceRow[] {
   const optionContext = buildQuotationItemOptionContext(items);
   return [...items]
@@ -135,6 +137,7 @@ function buildRows(
       const optionCtx = optionContext.get(item.id);
       const showOption = (optionCtx?.duplicateCount ?? 1) > 1;
       return {
+        displayTotals: computeQuotationDisplayTotals([draft], displayCurrency, displayFxRateToEgp),
         itemId: item.id,
         item,
         influencerName:
@@ -155,10 +158,10 @@ function buildRows(
 function sumRows(rows: WorkspaceRow[]) {
   return rows.reduce(
     (acc, row) => {
-      acc.revenue += row.revenueEgp;
-      acc.cost += row.costEgp;
-      acc.gp += row.gpValueEgp;
-      acc.agencyFee += row.agencyFeeEgp;
+      acc.revenue += row.displayTotals.clientCost;
+      acc.cost += row.displayTotals.cost;
+      acc.gp += row.displayTotals.margin;
+      acc.agencyFee += row.displayTotals.af;
       return acc;
     },
     { revenue: 0, cost: 0, gp: 0, agencyFee: 0 }
@@ -259,7 +262,7 @@ export function QuotationCommercialWorkspaceDialog({
     setHistory(createCommercialDraftHistory(drafts));
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- snapshot on open only
 
-  const rows = useMemo(() => buildRows(items, drafts), [items, drafts]);
+  const rows = useMemo(() => buildRows(items, drafts, displayCurrency, displayFxRateToEgp), [items, drafts, displayCurrency, displayFxRateToEgp]);
   const filtered = useMemo(
     () => filterCommercialWorkspaceRows(rows, quickFilter, search),
     [rows, quickFilter, search]
@@ -286,17 +289,18 @@ export function QuotationCommercialWorkspaceDialog({
 
   const withResolvedFx = useCallback(async (draft: QuotationRowDraft) => {
     const currency = (draft.costCurrency || "EGP").toUpperCase();
+    const overrides = { costFxOverride: readCreatorFx(draft.costFxOverride)?.from === currency ? draft.costFxOverride : null, revenueFxOverride: readCreatorFx(draft.revenueFxOverride)?.from === currency ? draft.revenueFxOverride : null };
     if (currency === "EGP") {
-      return { ...draft, costCurrency: "EGP", fxRateToEgp: 1 };
+      return { ...draft, ...overrides, costCurrency: "EGP", fxRateToEgp: 1 };
     }
     const rateRes = await resolveCommercialRateToEgp(currency, issueDate);
     if (!rateRes.ok || !rateRes.data) return draft;
-    return { ...draft, costCurrency: currency, fxRateToEgp: rateRes.data.rate };
+    return { ...draft, ...overrides, costCurrency: currency, fxRateToEgp: rateRes.data.rate };
   }, [issueDate]);
 
   const stageDraft = useCallback(
     (id: string, next: QuotationRowDraft, recordHistory = true) => {
-      const prevCurrency = (drafts[id]?.costCurrency || "EGP").toUpperCase();
+      const prevCurrency = (drafts[id]?.costCurrency || itemsById.get(id)?.cost_currency || "EGP").toUpperCase();
       const nextCurrency = (next.costCurrency || "EGP").toUpperCase();
       const apply = (resolved: QuotationRowDraft) => {
         if (recordHistory) {
@@ -324,10 +328,10 @@ export function QuotationCommercialWorkspaceDialog({
       void (async () => {
         const resolvedEntries = await Promise.all(
           Object.entries(patched).map(async ([id, draft]) => {
-            const prevCurrency = (drafts[id]?.costCurrency || "EGP").toUpperCase();
+            const prevCurrency = (drafts[id]?.costCurrency || itemsById.get(id)?.cost_currency || "EGP").toUpperCase();
             const nextCurrency = (draft.costCurrency || "EGP").toUpperCase();
             const hasRealFx =
-              nextCurrency === "EGP" || (draft.fxRateToEgp ?? 0) > 1;
+              nextCurrency === "EGP" || (draft.fxRateToEgp ?? 0) > 0;
             if (prevCurrency === nextCurrency && hasRealFx) {
               return [id, draft] as const;
             }

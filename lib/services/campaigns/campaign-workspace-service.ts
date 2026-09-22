@@ -113,6 +113,8 @@ type LineRow = {
   revenue_vat_amount?: number;
   revenue_after_vat?: number;
   revenue_vat_exempt?: boolean;
+  cost_fx_override?: string | null;
+  revenue_fx_override?: string | null;
   cost_received?: number | null;
   cost_received_currency?: string | null;
   fx_from_currency?: string | null;
@@ -540,6 +542,8 @@ export async function getCampaignWorkspace(
       revenue_vat_amount: Number(line.revenue_vat_amount ?? 0),
       revenue_after_vat: Number(line.revenue_after_vat ?? revenue),
       revenue_vat_exempt: line.revenue_vat_exempt ?? false,
+      cost_fx_override: line.cost_fx_override ?? null,
+      revenue_fx_override: line.revenue_fx_override ?? null,
       cost_received: Number(line.cost_received ?? line.cost_before_vat ?? cost),
       cost_received_currency:
         line.cost_received_currency ??

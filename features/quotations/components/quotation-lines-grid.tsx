@@ -78,6 +78,8 @@ type LineRowProps = {
   onLineChanged: () => void;
   onOpenCreator?: (item: QuotationItemRow) => void;
   canManage: boolean;
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
 };
 
 function QuotationPackLineRow({
@@ -92,6 +94,8 @@ function QuotationPackLineRow({
   onLineChanged,
   onOpenCreator,
   canManage,
+  displayCurrency,
+  displayFxRateToEgp,
 }: LineRowProps) {
   const [pending, startTransition] = useTransition();
   const confirmDelete = useConfirmDelete();
@@ -335,6 +339,15 @@ function QuotationPackLineRow({
               </>
             ) : null}
             <QuotationDeliverableCostDetails
+                    displayCurrency={displayCurrency}
+                    displayFxRateToEgp={displayFxRateToEgp}
+                    onFxChange={patch => {
+                      onDraftChange(item.id, patch);
+                      manualSave.registerLinePending(item.id, {
+                        ...(patch.costFxOverride !== undefined ? { cost_fx_override: patch.costFxOverride } : {}),
+                        ...(patch.revenueFxOverride !== undefined ? { revenue_fx_override: patch.revenueFxOverride } : {}),
+                      });
+                    }}
               deliverable={primary}
               item={item}
               draft={draft}
@@ -439,6 +452,8 @@ type Props = {
   uniqueCreatorCount: number;
   totalClientCostEgp: number;
   canManage: boolean;
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
 };
 
 export function QuotationLinesGrid({
@@ -457,6 +472,8 @@ export function QuotationLinesGrid({
   uniqueCreatorCount,
   totalClientCostEgp,
   canManage,
+  displayCurrency,
+  displayFxRateToEgp,
 }: Props) {
   const header = (
     <>
@@ -529,6 +546,8 @@ export function QuotationLinesGrid({
           onRemoved={onRemoved}
           onLineChanged={onLineChanged}
           onOpenCreator={onOpenCreator}
+          displayCurrency={displayCurrency}
+          displayFxRateToEgp={displayFxRateToEgp}
           canManage={canManage}
         />
       ))}

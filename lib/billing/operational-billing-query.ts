@@ -57,6 +57,7 @@ import {
 } from "@/lib/campaigns/line-assignment";
 
 type LineRow = {
+  revenue_fx_override?: string | null;
   id: string;
   document_number: string;
   name: string;
@@ -169,9 +170,9 @@ export async function loadCampaignOperationalBilling(
   error?: string;
 }> {
   const lineSelectWithSort =
-    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, currency_code, pricing_mode, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, sort_order, invoice:invoices(id, document_number, regeneration_status), vendor_io:vendor_ios(document_number)";
+    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, revenue_fx_override, currency_code, pricing_mode, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, sort_order, invoice:invoices(id, document_number, regeneration_status), vendor_io:vendor_ios(document_number)";
   const lineSelectFallback =
-    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, currency_code, pricing_mode, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, invoice:invoices(id, document_number, regeneration_status), vendor_io:vendor_ios(document_number)";
+    "id, document_number, name, campaign_header_id, billing_status, operational_status, vendor_io_id, revenue_fx_override, currency_code, pricing_mode, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, metadata, invoice_id, invoice:invoices(id, document_number, regeneration_status), vendor_io:vendor_ios(document_number)";
 
   const { data: lines, error: linesError } =
     await queryCampaignLinesWithDisplayOrder<LineRow>(async (orderColumn, includeSortOrderColumn) => {
@@ -469,6 +470,7 @@ export async function loadCampaignOperationalBilling(
     const lineVatExempt = Boolean(line.revenue_vat_exempt);
 
     const assignmentRow: OperationalBillingRow = {
+      revenue_fx_override: line.revenue_fx_override ?? null,
       id: line.id,
       kind: "assignment",
       currency_code: line.currency_code,

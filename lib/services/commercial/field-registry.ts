@@ -28,6 +28,8 @@ export type FieldPersistenceMap = {
 };
 
 const MASTER_FIELDS: FieldPersistenceMap[] = [
+  { key: "cost_fx_override", level: "master", quotationColumn: "cost_fx_override", campaignColumn: "cost_fx_override", description: "Negotiated creator cost currency pair" },
+  { key: "revenue_fx_override", level: "master", quotationColumn: "revenue_fx_override", campaignColumn: "revenue_fx_override", description: "Negotiated client revenue currency pair" },
   {
     key: "creator_cost",
     level: "master",
@@ -374,6 +376,8 @@ const MASTER_LABELS: Record<CommercialMasterFieldKey, string> = {
   client_revenue: "Client Revenue",
   cost_currency: "Currency",
   exchange_rate: "Exchange Rate",
+  cost_fx_override: "Cost Exchange Rate",
+  revenue_fx_override: "Revenue Exchange Rate",
   agency_fee_percent: "Agency Fee / Commission",
   commercial_input_mode: "Pricing Mode",
   gp_pct_input: "GP %",
@@ -391,6 +395,8 @@ const MASTER_DERIVED_DEPS: Record<
   CommercialMasterFieldKey,
   readonly CommercialDerivedFieldKey[]
 > = {
+  cost_fx_override: ["cost_egp", "gp_value_egp", "quotation_totals", "campaign_financial_summary"],
+  revenue_fx_override: ["revenue_egp", "gp_value_egp", "af_value_egp", "quotation_totals", "campaign_financial_summary"],
   creator_cost: [
     "total_cost",
     "gross_profit",

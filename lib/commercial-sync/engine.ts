@@ -1,3 +1,4 @@
+import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -230,10 +231,11 @@ export async function syncShortlistChangeToQuotation(
       .eq("source_shortlist_item_id", item.id)
       .maybeSingle();
 
+    const systemRate = await resolveRateToEgp(supabase, item.cost_currency || "EGP");
     if (existing?.id) {
       await supabase
         .from("quotation_items")
-        .update(commercialPatchFromShortlistItem(item) as never)
+        .update({ ...commercialPatchFromShortlistItem(item), fx_rate_to_egp: systemRate } as never)
         .eq("id", (existing as { id: string }).id);
 
       await logQuotationLifecycleEvent(supabase, {
@@ -281,7 +283,7 @@ export async function syncShortlistChangeToQuotation(
       gp_value: item.gp_value ?? 0,
       af_pct: seed.af_pct ?? 0,
       af_value: 0,
-      fx_rate_to_egp: item.cost_egp != null ? 1 : 1,
+      fx_rate_to_egp: systemRate,
       cost_egp: item.cost_egp ?? 0,
       revenue_egp: item.revenue_egp ?? 0,
       gp_value_egp: item.gp_value_egp ?? 0,

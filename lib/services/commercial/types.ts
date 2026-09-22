@@ -27,6 +27,8 @@ export type CommercialMasterFieldKey =
   | "client_revenue"
   | "cost_currency"
   | "exchange_rate"
+  | "cost_fx_override"
+  | "revenue_fx_override"
   | "agency_fee_percent"
   | "commercial_input_mode"
   | "gp_pct_input"

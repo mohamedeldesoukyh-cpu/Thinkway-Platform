@@ -204,10 +204,14 @@ export function QuotationCreatorDeliverableRows({
       const next = (currency || "EGP").toUpperCase();
       const current = (draft?.costCurrency || item.cost_currency || "EGP").toUpperCase();
       const liveFx = draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 0;
-      // Identity (1) on a non-EGP line means the rate never resolved — refresh it.
-      const hasRealFx = next === "EGP" || liveFx > 1;
+      // Positive rates, including rates below one, are valid system conversions.
+      const hasRealFx = next === "EGP" || liveFx > 0;
       if (next === current && hasRealFx) {
         return;
+      }
+      if (next !== current) {
+        onDraftChange(item.id, { costFxOverride: null, revenueFxOverride: null });
+        manualSave.registerLinePending(item.id, { cost_fx_override: null, revenue_fx_override: null });
       }
       if (next === "EGP") {
         onDraftChange(item.id, { costCurrency: "EGP", fxRateToEgp: 1 });
@@ -228,6 +232,7 @@ export function QuotationCreatorDeliverableRows({
       item.fx_rate_to_egp,
       item.id,
       onDraftChange,
+      manualSave,
     ]
   );
 
@@ -683,6 +688,15 @@ export function QuotationCreatorDeliverableRows({
                 });
                 return (
                   <QuotationDeliverableCostDetails
+                    displayCurrency={displayCurrency}
+                    displayFxRateToEgp={displayFxRateToEgp}
+                    onFxChange={patch => {
+                      onDraftChange(item.id, patch);
+                      manualSave.registerLinePending(item.id, {
+                        ...(patch.costFxOverride !== undefined ? { cost_fx_override: patch.costFxOverride } : {}),
+                        ...(patch.revenueFxOverride !== undefined ? { revenue_fx_override: patch.revenueFxOverride } : {}),
+                      });
+                    }}
                     deliverable={deliverable}
                     item={item}
                     draft={draft}

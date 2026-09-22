@@ -1,5 +1,7 @@
 "use client";
 
+import { readCreatorFx } from "@/lib/commercial/creator-fx";
+
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
@@ -40,6 +42,8 @@ type CommercialRevisionDialogProps = {
 };
 
 function formatValue(value: unknown): string {
+  const pair = readCreatorFx(value);
+  if (pair) return `1 ${pair.from} = ${pair.rate.toLocaleString("en-US", { maximumFractionDigits: 8 })} ${pair.to}`;
   if (value == null || value === "") return "—";
   if (typeof value === "boolean") return value ? "Yes" : "No";
   return String(value);

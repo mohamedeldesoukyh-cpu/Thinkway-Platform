@@ -201,6 +201,8 @@ export async function updateQuotationItemCommercials(
     mode: CommercialInputMode;
     cost: number | null;
     cost_currency: string;
+    cost_fx_override?: string | null;
+    revenue_fx_override?: string | null;
     gp_pct?: number | null;
     revenue?: number | null;
     gp_value?: number | null;

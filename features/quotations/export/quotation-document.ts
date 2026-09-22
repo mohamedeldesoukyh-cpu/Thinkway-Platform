@@ -1,3 +1,4 @@
+import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 /**
  * Pure quotation document model (no DB, no rendering deps).
  */
@@ -902,8 +903,8 @@ export function buildQuotationDocument(
   const hideCostAndFees = Boolean(detail.hideCostAndFees);
   const displayCurrency = (detail.currency || REPORTING_CURRENCY).toUpperCase();
   const displayFxRateToEgp = options?.displayFxRateToEgp ?? 1;
-  const formatDisplayMoney = (amountEgp: number) => {
-    const amount = fromEgp(amountEgp, displayCurrency, displayFxRateToEgp);
+  const formatDisplayMoney = (amountEgp: number, projected?: number) => {
+    const amount = projected ?? fromEgp(amountEgp, displayCurrency, displayFxRateToEgp);
     return `${num(amount)} ${displayCurrency}`;
   };
   const publicationShotsByCreatorKey = isCreatorDeckTemplate(template)
@@ -924,6 +925,14 @@ export function buildQuotationDocument(
       ? detail.items.filter((item) => itemIdSet.has(item.id))
       : detail.items
   ) as QuotationExportItem[];
+  const hasCustomFx = items.some(item => item.cost_fx_override || item.revenue_fx_override);
+  const projected = hasCustomFx ? items.reduce((sum, item) => {
+    const conversion = { from: item.cost_currency, to: displayCurrency, sourceRateToEgp: item.fx_rate_to_egp, targetRateToEgp: displayFxRateToEgp };
+    sum.cost += creatorFxAmount(item.cost, { ...conversion, override: item.cost_fx_override });
+    sum.revenue += creatorFxAmount(item.revenue, { ...conversion, override: item.revenue_fx_override });
+    sum.af += creatorFxAmount(item.af_value, { ...conversion, override: item.revenue_fx_override });
+    return sum;
+  }, { cost: 0, revenue: 0, af: 0 }) : undefined;
   const selectionActive = Boolean(itemIdSet);
   const selectedCostEgp = selectionActive
     ? items.reduce((sum, item) => sum + (Number(item.cost_egp) || 0), 0)
@@ -1024,10 +1033,10 @@ export function buildQuotationDocument(
         ? exportEngagementRateLabel(rosterForecast.averageEngagementRate)
         : "—";
 
-  const totalClientCost = formatDisplayMoney(selectedRevenueEgp);
-  const totalAf = formatDisplayMoney(selectedAfEgp);
+  const totalClientCost = formatDisplayMoney(selectedRevenueEgp, projected?.revenue);
+  const totalAf = formatDisplayMoney(selectedAfEgp, projected?.af);
   const totalAgencyMargin = formatDisplayMoney(selectedAgencyMarginEgp);
-  const grandTotal = formatDisplayMoney(selectedRevenueEgp + selectedAfEgp);
+  const grandTotal = formatDisplayMoney(selectedRevenueEgp + selectedAfEgp, projected ? projected.revenue + projected.af : undefined);
   const insightBullets = buildSummaryInsightBullets({
     creatorCount: uniqueCreatorCount,
     categoryBreakdown,
@@ -1055,11 +1064,11 @@ export function buildQuotationDocument(
   const gpPctForDisplay = selectionActive ? selectedGpPct : detail.total_gp_pct;
   const internalKpis: QuotationDocumentKpi[] = [
     ...clientKpis.slice(0, 3),
-    { label: "Total Cost", value: formatDisplayMoney(selectedCostEgp) },
+    { label: "Total Cost", value: formatDisplayMoney(selectedCostEgp, projected?.cost) },
     ...clientKpis.slice(3),
     {
       label: "Gross Profit",
-      value: formatDisplayMoney(selectedGpValueEgp),
+      value: formatDisplayMoney(selectedGpValueEgp, projected ? projected.revenue - projected.cost : undefined),
       valueColor: gpColor,
     },
     { label: "GP %", value: `${num(gpPctForDisplay)}%`, valueColor: gpColor },
@@ -1116,8 +1125,8 @@ export function buildQuotationDocument(
     summary: {
       ...(audience === "internal"
         ? {
-            totalCost: formatDisplayMoney(selectedCostEgp),
-            totalGpValue: formatDisplayMoney(selectedGpValueEgp),
+            totalCost: formatDisplayMoney(selectedCostEgp, projected?.cost),
+            totalGpValue: formatDisplayMoney(selectedGpValueEgp, projected ? projected.revenue - projected.cost : undefined),
             totalGpPct: `${num(gpPctForDisplay)}%`,
             gpColor,
           }

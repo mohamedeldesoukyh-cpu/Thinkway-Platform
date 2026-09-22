@@ -14,15 +14,17 @@ import {
   parseDecimalInput,
 } from "@/lib/quotations/quotation-numeric-input";
 
-function displayDecimalText(value: number, blankWhenZero: boolean): string {
+function displayDecimalText(value: number, blankWhenZero: boolean, precision?: number): string {
   if (blankWhenZero && value === 0) return "";
-  return formatNumDisplay(value);
+  return precision == null ? formatNumDisplay(value) : value.toLocaleString("en-US", { maximumFractionDigits: precision });
 }
 
 /** Focus/blur money input — grouped thousands when idle, raw typing while focused. */
 export function QuotationDecimalInput({
   value,
   onCommit,
+  precision,
+  isValid,
   blankWhenZero = false,
   placeholder = "0",
   ...props
@@ -30,13 +32,15 @@ export function QuotationDecimalInput({
   value: number;
   onCommit: (next: number) => void;
   blankWhenZero?: boolean;
+  precision?: number;
+  isValid?: (value: number) => boolean;
 } & Omit<ComponentProps<typeof Input>, "value" | "onChange" | "type">) {
-  const [text, setText] = useState(() => displayDecimalText(value, blankWhenZero));
+  const [text, setText] = useState(() => displayDecimalText(value, blankWhenZero, precision));
   const focusedRef = useRef(false);
 
   useEffect(() => {
-    if (!focusedRef.current) setText(displayDecimalText(value, blankWhenZero));
-  }, [value, blankWhenZero]);
+    if (!focusedRef.current) setText(displayDecimalText(value, blankWhenZero, precision));
+  }, [value, blankWhenZero, precision]);
 
   return (
     <Input
@@ -52,13 +56,15 @@ export function QuotationDecimalInput({
       onChange={(event) => {
         const next = event.target.value;
         setText(next);
-        onCommit(parseDecimalInput(next));
+        const parsed = parseDecimalInput(next);
+        if (!isValid || isValid(parsed)) onCommit(parsed);
       }}
       onBlur={(event) => {
         focusedRef.current = false;
         const parsed = parseDecimalInput(text);
-        onCommit(parsed);
-        setText(displayDecimalText(parsed, blankWhenZero));
+        const valid = !isValid || isValid(parsed);
+        if (valid) onCommit(parsed);
+        setText(displayDecimalText(valid ? parsed : value, blankWhenZero, precision));
         props.onBlur?.(event);
       }}
       onPaste={(event) => {
@@ -72,7 +78,8 @@ export function QuotationDecimalInput({
           target.selectionEnd
         );
         setText(merged);
-        onCommit(parseDecimalInput(merged));
+        const parsed = parseDecimalInput(merged);
+        if (!isValid || isValid(parsed)) onCommit(parsed);
         props.onPaste?.(event);
       }}
     />

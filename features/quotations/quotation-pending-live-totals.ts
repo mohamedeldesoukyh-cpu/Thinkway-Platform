@@ -22,6 +22,9 @@ export function applyPendingToQuotationItem(
 
   return {
     ...item,
+    ...(pending.cost_currency !== undefined ? { cost_currency: pending.cost_currency } : {}),
+    ...(pending.cost_fx_override !== undefined ? { cost_fx_override: pending.cost_fx_override } : {}),
+    ...(pending.revenue_fx_override !== undefined ? { revenue_fx_override: pending.revenue_fx_override } : {}),
     ...(pendingDeliverables ? { deliverables: pendingDeliverables } : {}),
     ...(pending.service_description !== undefined
       ? { service_description: pending.service_description }
@@ -66,6 +69,9 @@ export function resolveLiveTotalsDraft(
 
   return resolveQuotationRowDraft(mergedItem, {
     ...base,
+    ...(pending.cost_currency !== undefined ? { costCurrency: pending.cost_currency } : {}),
+    ...(pending.cost_fx_override !== undefined ? { costFxOverride: pending.cost_fx_override } : {}),
+    ...(pending.revenue_fx_override !== undefined ? { revenueFxOverride: pending.revenue_fx_override } : {}),
     cost: positiveOrKeep(pending.cost, base.cost),
     revenue: positiveOrKeep(pending.revenue, base.revenue),
     gpPct: pending.gp_pct != null ? pending.gp_pct : base.gpPct,
