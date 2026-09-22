@@ -54,6 +54,8 @@ export type QuotationItemRow = {
   gp_pct: number;
   gp_value: number;
   fx_rate_to_egp: number;
+  cost_fx_override?: string | null;
+  revenue_fx_override?: string | null;
   cost_egp: number;
   revenue_egp: number;
   gp_value_egp: number;

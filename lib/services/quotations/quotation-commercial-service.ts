@@ -1,3 +1,4 @@
+import { readCreatorFx, creatorFxAmount } from "@/lib/commercial/creator-fx";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { syncQuotationChangeToShortlist } from "@/lib/commercial-sync/engine";
@@ -59,6 +60,8 @@ export async function updateQuotationItemCommercials(
     mode: CommercialInputMode;
     cost: number | null;
     cost_currency: string;
+    cost_fx_override?: string | null;
+    revenue_fx_override?: string | null;
     gp_pct?: number | null;
     revenue?: number | null;
     gp_value?: number | null;
@@ -90,7 +93,18 @@ export async function updateQuotationItemCommercials(
   if (locked) return locked;
   const issueDate =
     (quotationMeta as { issue_date?: string | null } | null)?.issue_date ?? null;
-  const rate = await resolveRateToEgp(supabase, input.cost_currency, issueDate);
+  const { data: savedItem, error: savedError } = await supabase.from("quotation_items")
+    .select("cost_currency,cost_fx_override,revenue_fx_override").eq("id", input.item_id).eq("quotation_id", input.quotation_id).maybeSingle();
+  if (savedError || !savedItem) return { ok: false as const, message: savedError?.message ?? "Quotation line not found." };
+  const saved = savedItem as unknown as { cost_currency: string; cost_fx_override: string | null; revenue_fx_override: string | null };
+  const currency = input.cost_currency.toUpperCase();
+  const costOverride = input.cost_fx_override !== undefined ? input.cost_fx_override : saved.cost_currency === currency ? saved.cost_fx_override : null;
+  const revenueOverride = input.revenue_fx_override !== undefined ? input.revenue_fx_override : saved.cost_currency === currency ? saved.revenue_fx_override : null;
+  for (const value of [costOverride, revenueOverride]) {
+    if (value != null && (!readCreatorFx(value) || readCreatorFx(value)?.from !== currency))
+      return { ok: false as const, message: "The custom exchange rate is invalid or belongs to a different original currency." };
+  }
+  const rate = await resolveRateToEgp(supabase, currency, issueDate);
   const rolled = input.deliverables?.length
     ? rollupDeliverableCommercials(input.deliverables, {
         lineCurrency: input.cost_currency,
@@ -114,6 +128,8 @@ export async function updateQuotationItemCommercials(
   });
 
   const masterChanges: MasterCommercialValues = {
+    cost_fx_override: costOverride,
+    revenue_fx_override: revenueOverride,
     creator_cost: line.cost,
     client_revenue: line.revenue,
     cost_currency: line.cost_currency,
@@ -162,6 +178,14 @@ export async function updateQuotationItemCommercials(
         gp_value_egp: line.gp_value_egp,
         af_value_egp: line.af_value_egp,
       };
+
+  patch.cost_fx_override = costOverride;
+  patch.revenue_fx_override = revenueOverride;
+  const conversion = { from: currency, to: "EGP", sourceRateToEgp: rate, targetRateToEgp: 1 };
+  patch.cost_egp = creatorFxAmount(line.cost, { ...conversion, override: costOverride });
+  patch.revenue_egp = creatorFxAmount(line.revenue, { ...conversion, override: revenueOverride });
+  patch.gp_value_egp = Math.round((Number(patch.revenue_egp) - Number(patch.cost_egp)) * 100) / 100;
+  patch.af_value_egp = creatorFxAmount(line.af_value, { ...conversion, override: revenueOverride });
 
   // Cost Detail path: persist deliverables + rolled Master in one UPDATE.
   // Line-Master path (Commercial Workspace / bulk): strip deliverable commercial

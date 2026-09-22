@@ -1,4 +1,5 @@
 "use client";
+import { paymentCurrencyRate } from "./payment-plan";
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -43,7 +44,7 @@ export function PaymentRecordEditor({row,payment,clear=false,onClose,onSaved}:{r
         {!clear&&items.map((item,index)=><fieldset key={item.requestId} className="grid grid-cols-2 gap-3 rounded-xl border p-3"><legend className="px-1 text-sm font-semibold">{payment?`Payment ${payment.payment_sequence}`:`Payment ${nextSequence+index}`}</legend>
             <label className="text-sm">Amount<DecimalInput emptyZero placeholder="Enter amount" disabled={busy} value={item.draft.amount} onValueChange={amount=>patch(index,{amount})}/></label>
             <label className="text-sm">Payment date<input className="h-10 w-full rounded-md border px-3" type="date" disabled={busy} value={item.draft.paymentDate??''} onChange={e=>patch(index,{paymentDate:e.target.value})}/></label>
-            <label className="text-sm">Currency<select className="h-10 w-full rounded-md border px-3" disabled={busy||!!payment} value={item.draft.currency} onChange={e=>patch(index,{currency:e.target.value,rate:e.target.value===row.currency?1:0})}>{[...new Set([...COMMERCIAL_CURRENCIES,row.currency,item.draft.currency])].map(c=><option key={c}>{c}</option>)}</select></label>
+            <label className="text-sm">Currency<select className="h-10 w-full rounded-md border px-3" disabled={busy||!!payment} value={item.draft.currency} onChange={e=>patch(index,{currency:e.target.value,rate:paymentCurrencyRate(row,e.target.value)})}>{[...new Set([...COMMERCIAL_CURRENCIES,row.currency,item.draft.currency])].map(c=><option key={c}>{c}</option>)}</select></label>
             {item.draft.currency!==row.currency&&<label className="text-sm">1 {row.currency} in {item.draft.currency}<DecimalInput precision={6} disabled={busy||!!payment} value={item.draft.rate} onValueChange={rate=>patch(index,{rate})}/><small>Original amount: {item.draft.rate>0?(item.draft.amount/item.draft.rate).toFixed(2):'—'} {row.currency}</small></label>}
             {!payment&&items.length>1&&<Button variant="outline" disabled={busy} onClick={()=>setItems(current=>current.filter((_,i)=>i!==index))}>Remove unsaved row</Button>}
         </fieldset>)}

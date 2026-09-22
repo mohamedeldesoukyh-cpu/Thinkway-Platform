@@ -777,13 +777,13 @@ export function AssignmentSafeGrid({
                               variant="rev"
                               className={operationalZeroClass(row.rollups.revenue)}
                             >
-                              {campaignMoney(row.rollups.revenue, resolveAssignmentLineCurrency(line))}
+                              {campaignMoney(row.rollups.revenue, resolveAssignmentLineCurrency(line), line.revenue_fx_override)}
                             </AssignmentHighlightAmount>
                           </AssignmentGridCell>
                         ) : null}
                         {col("usageRights") ? (
                           <AssignmentGridCell columnId="usageRights" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.usage_rights_amount))}>
-                            {campaignMoney(line.usage_rights_amount, resolveAssignmentLineCurrency(line))}
+                            {campaignMoney(line.usage_rights_amount, resolveAssignmentLineCurrency(line), line.revenue_fx_override)}
                           </AssignmentGridCell>
                         ) : null}
                         {col("agencyFeePercent") ? (
@@ -793,13 +793,13 @@ export function AssignmentSafeGrid({
                         ) : null}
                         {col("agencyFee") ? (
                           <AssignmentGridCell columnId="agencyFee" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.agency_fee_amount))}>
-                            {campaignMoney(line.agency_fee_amount, resolveAssignmentLineCurrency(line))}
+                            {campaignMoney(line.agency_fee_amount, resolveAssignmentLineCurrency(line), line.revenue_fx_override)}
                           </AssignmentGridCell>
                         ) : null}
                         {col("revenueVatPercent") ? <AssignmentGridCell columnId="revenueVatPercent" className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>{Number(line.revenue_vat_exempt ? 0 : line.revenue_vat_percent ?? 0).toFixed(1)}%</AssignmentGridCell> : null}
 {col("vat") ? (
                           <AssignmentGridCell columnId="vat" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_VAT_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.revenue_vat_amount))}>
-                            {campaignMoney(line.revenue_vat_amount, resolveAssignmentLineCurrency(line))}
+                            {campaignMoney(line.revenue_vat_amount, resolveAssignmentLineCurrency(line), line.revenue_fx_override)}
                           </AssignmentGridCell>
                         ) : null}
                         {col("totalBilling") ? (
@@ -808,7 +808,7 @@ export function AssignmentSafeGrid({
                               variant="billing"
                               className={operationalZeroClass(line.revenue_after_vat)}
                             >
-                              {campaignMoney(line.revenue_after_vat, resolveAssignmentLineCurrency(line))}
+                              {campaignMoney(line.revenue_after_vat, resolveAssignmentLineCurrency(line), line.revenue_fx_override)}
                             </AssignmentHighlightAmount>
                           </AssignmentGridCell>
                         ) : null}
@@ -824,10 +824,10 @@ export function AssignmentSafeGrid({
                         ) : null}
                         {gates.showInternalFinancials && col("usageRightsCost") ? (
                           <AssignmentGridCell columnId="usageRightsCost" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_MONEY_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.usage_rights_cost))}>
-                            {campaignMoney(line.usage_rights_cost, resolveAssignmentLineCurrency(line))}
+                            {campaignMoney(line.usage_rights_cost, resolveAssignmentLineCurrency(line), line.cost_fx_override)}
                           </AssignmentGridCell>
                         ) : null}
-                        {gates.showInternalFinancials && (["costVatPercent", "costVat", "costTotal"] as const).map(id => col(id) ? <AssignmentGridCell key={id} columnId={id} className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>{id === "costVatPercent" ? `${Number(line.cost_vat_exempt ? 0 : line.cost_vat_percent ?? 0).toFixed(1)}%` : campaignMoney(id === "costVat" ? line.cost_vat_amount : line.cost_after_vat, resolveAssignmentLineCurrency(line))}</AssignmentGridCell> : null)}
+                        {gates.showInternalFinancials && (["costVatPercent", "costVat", "costTotal"] as const).map(id => col(id) ? <AssignmentGridCell key={id} columnId={id} className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>{id === "costVatPercent" ? `${Number(line.cost_vat_exempt ? 0 : line.cost_vat_percent ?? 0).toFixed(1)}%` : campaignMoney(id === "costVat" ? line.cost_vat_amount : line.cost_after_vat, resolveAssignmentLineCurrency(line), line.cost_fx_override)}</AssignmentGridCell> : null)}
                         {gates.showInternalFinancials && col("gp") ? (
                           <AssignmentGridCell
                             columnId="gp"

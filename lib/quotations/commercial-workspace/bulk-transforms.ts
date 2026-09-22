@@ -3,6 +3,7 @@
  * Stages into drafts only — Save goes through existing SSOT pipeline.
  */
 
+import { makeCreatorFx } from "@/lib/commercial/creator-fx";
 import type { CommercialInputMode } from "@/lib/commercial/commercial-engine";
 import { computeCommercials } from "@/lib/commercial/commercial-engine";
 
@@ -132,6 +133,8 @@ export function applyCommercialWorkspaceBulkOp(
       return {
         ...draft,
         costCurrency: op.currency.toUpperCase(),
+        costFxOverride: null,
+        revenueFxOverride: null,
         fxRateToEgp:
           op.fxRateToEgp ??
           (op.currency.toUpperCase() === "EGP" ? 1 : draft.fxRateToEgp),
@@ -139,6 +142,8 @@ export function applyCommercialWorkspaceBulkOp(
     case "set_fx":
       return {
         ...draft,
+        costFxOverride: draft.costCurrency !== "EGP" && op.fxRateToEgp > 0 ? makeCreatorFx(draft.costCurrency, "EGP", op.fxRateToEgp, 1) : draft.costFxOverride,
+        revenueFxOverride: draft.costCurrency !== "EGP" && op.fxRateToEgp > 0 ? makeCreatorFx(draft.costCurrency, "EGP", op.fxRateToEgp, 1) : draft.revenueFxOverride,
         fxRateToEgp: Math.max(0, Number.isFinite(op.fxRateToEgp) ? op.fxRateToEgp : 0),
       };
     case "set_af_pct":

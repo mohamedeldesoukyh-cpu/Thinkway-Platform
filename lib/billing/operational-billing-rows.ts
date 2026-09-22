@@ -41,6 +41,7 @@ function hasRemainingInvoiceableRevenue(
 export type OperationalBillingRowKind = "assignment" | "deliverable_group" | "post";
 
 export type OperationalBillingRow = {
+  revenue_fx_override?: string | null;
   currency_code?: string;
   source_money?: import("./billing-currency").BillingSourceMoney;
   id: string;

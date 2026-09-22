@@ -18,6 +18,8 @@ export type BankDetails = {
     registered: boolean;
 };
 export type PaymentRow = {
+    costFxOverride?: string | null;
+    currencyRates?: Record<string, number>;
     nextPaymentSequence?: number;
     units?: import('./allocations').PaymentUnit[];
     history?: PaymentEntry[];

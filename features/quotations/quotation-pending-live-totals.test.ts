@@ -55,6 +55,10 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
 {
   const item = mockItem();
   const pending = {
+    // The editor stages line masters alongside the deliverable breakdown.
+    cost: 5000,
+    revenue: 7000,
+    mode: "cost_revenue" as const,
     deliverables: [
       {
         platform: "instagram",

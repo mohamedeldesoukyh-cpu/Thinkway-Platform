@@ -1,5 +1,6 @@
 "use client";
 
+import { QuotationCreatorFxFields } from "./quotation-creator-fx-fields";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { InterestChips } from "@/features/discovery/components/discovery-interest-chips";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -164,6 +165,7 @@ export function QuotationCommercialWorkspaceRowCard({
         </div>
 
         <div className="cw-card-fields">
+          <div className="w-full min-w-0"><QuotationCreatorFxFields draft={row.draft} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} disabled={!canManage} onChange={patch => onStageDraft({ ...row.draft, ...patch })} /></div>
           {show("mode") ? (
             <div className="cw-field min-w-[128px]">
               <span className="cw-field-label">Mode</span>

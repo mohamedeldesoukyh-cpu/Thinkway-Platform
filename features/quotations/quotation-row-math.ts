@@ -9,7 +9,7 @@ import {
   type CommercialInputMode,
 } from "@/lib/commercial/commercial-engine";
 import type { CommercialTotals } from "@/lib/commercial/fx-aggregation";
-import { toEgp } from "@/lib/commercial/fx-aggregation";
+import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 import { computeQuotationTotals } from "@/features/quotations/quotation-engine";
 import type { QuotationItemRow } from "@/features/quotations/types";
 
@@ -23,6 +23,8 @@ export type QuotationRowDraft = {
   gpValue: number;
   afPct: number;
   fxRateToEgp: number;
+  costFxOverride?: string | null;
+  revenueFxOverride?: string | null;
 };
 
 export type QuotationRowComputed = {
@@ -68,6 +70,8 @@ export function draftFromQuotationItem(item: QuotationItemRow): QuotationRowDraf
     gpValue: item.gp_value,
     afPct: item.af_pct,
     fxRateToEgp: item.fx_rate_to_egp,
+    costFxOverride: item.cost_fx_override ?? null,
+    revenueFxOverride: item.revenue_fx_override ?? null,
   };
 }
 
@@ -108,12 +112,15 @@ export function computeQuotationRowComputed(draft: QuotationRowDraft): Quotation
     gpValue: r.gpValue,
   });
   const rate = effectiveFxRate(draft);
-  const afValueEgp = toEgp(af.afValue, rate);
-  const agencyMarginEgp = toEgp(af.agencyMargin, rate);
+  const conversion = { from: draft.costCurrency, to: "EGP", sourceRateToEgp: rate, targetRateToEgp: 1 };
+  const costEgp = creatorFxAmount(r.cost, { ...conversion, override: draft.costFxOverride });
+  const revenueEgp = creatorFxAmount(r.revenue, { ...conversion, override: draft.revenueFxOverride });
+  const afValueEgp = creatorFxAmount(af.afValue, { ...conversion, override: draft.revenueFxOverride });
+  const agencyMarginEgp = roundMoney(revenueEgp - costEgp + afValueEgp);
   return {
-    costEgp: toEgp(r.cost, rate),
-    revenueEgp: toEgp(r.revenue, rate),
-    gpValueEgp: toEgp(r.gpValue, rate),
+    costEgp,
+    revenueEgp,
+    gpValueEgp: roundMoney(revenueEgp - costEgp),
     gpPct: r.gpPct,
     revenue: r.revenue,
     gpValue: r.gpValue,
@@ -155,6 +162,21 @@ export function computeQuotationRowClientCommercials(draft: QuotationRowDraft) {
     marginEgp: row.agencyMarginEgp,
     marginPct: clientCostEgp > 0 ? (row.agencyMarginEgp / clientCostEgp) * 100 : 0,
   };
+}
+
+/** Display projections use each negotiated pair directly, including an EGP original shown in USD. */
+export function computeQuotationDisplayTotals(drafts: QuotationRowDraft[], currency: string, rateToEgp: number) {
+  const totals = drafts.reduce((sum, draft) => {
+    const row = computeQuotationRowComputed(draft);
+    const conversion = { from: draft.costCurrency, to: currency, sourceRateToEgp: draft.fxRateToEgp, targetRateToEgp: rateToEgp };
+    sum.cost += creatorFxAmount(draft.cost, { ...conversion, override: draft.costFxOverride });
+    sum.revenue += creatorFxAmount(row.revenue, { ...conversion, override: draft.revenueFxOverride });
+    sum.af += creatorFxAmount(row.afValue, { ...conversion, override: draft.revenueFxOverride });
+    return sum;
+  }, { cost: 0, revenue: 0, af: 0 });
+  const cost = roundMoney(totals.cost), revenue = roundMoney(totals.revenue), af = roundMoney(totals.af);
+  const clientCost = roundMoney(revenue + af), gp = roundMoney(revenue - cost), margin = roundMoney(clientCost - cost);
+  return { cost, revenue, af, clientCost, gp, margin, marginPct: clientCost ? margin / clientCost * 100 : 0, markupPct: cost ? margin / cost * 100 : 0 };
 }
 
 export type QuotationHeaderCommercialTotals = CommercialTotals & {

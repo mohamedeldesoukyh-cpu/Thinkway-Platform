@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 
+import { QuotationCreatorFxFields } from "./quotation-creator-fx-fields";
+import { resolveQuotationRowDraft } from "@/features/quotations/quotation-row-math";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -310,6 +312,9 @@ type Props = {
   item: QuotationItemRow;
   draft: QuotationRowDraft | undefined;
   onApply: (next: QuotationDeliverable) => void;
+  onFxChange?: (patch: Partial<QuotationRowDraft>) => void;
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
   /** Live sync while the panel is open so parent/card state can update before close. */
   onLiveChange?: (next: QuotationDeliverable) => void;
   /** When set, price and trigger render on one line (price first, then Cost details). */
@@ -328,6 +333,9 @@ export function QuotationDeliverableCostDetails({
   item,
   draft,
   onApply,
+  onFxChange,
+  displayCurrency,
+  displayFxRateToEgp,
   onLiveChange,
   priceLabel,
   priceSecondaryLabel,
@@ -510,6 +518,7 @@ export function QuotationDeliverableCostDetails({
       <DialogDescription className="quotation-cost-detail-panel__hint">
         Values stay when you close this panel. Click Save on the quotation to persist.
       </DialogDescription>
+      {onFxChange && <QuotationCreatorFxFields draft={resolveQuotationRowDraft(item, draft)} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} onChange={onFxChange} />}
       <div
         ref={fieldsGridRef}
         className="quotation-cost-detail-panel__grid grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3"

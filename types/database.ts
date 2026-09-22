@@ -264,6 +264,8 @@ export type CampaignHeaderRow = {
 };
 
 export type CampaignLineRow = {
+  cost_fx_override?: string | null;
+  revenue_fx_override?: string | null;
   id: string;
   document_number: string;
   campaign_header_id: string;
@@ -1369,6 +1371,8 @@ export type Database = {
       campaign_lines: {
         Row: CampaignLineRow;
         Insert: {
+          cost_fx_override?: string | null;
+          revenue_fx_override?: string | null;
           id?: string;
           document_number?: string;
           campaign_header_id: string;
@@ -3535,6 +3539,8 @@ export type Database = {
       };
       quotation_items: {
         Row: {
+          cost_fx_override?: string | null;
+          revenue_fx_override?: string | null;
           id: string;
           quotation_id: string;
           influencer_id: string | null;
@@ -3572,6 +3578,8 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          cost_fx_override?: string | null;
+          revenue_fx_override?: string | null;
           id?: string;
           quotation_id: string;
           influencer_id?: string | null;

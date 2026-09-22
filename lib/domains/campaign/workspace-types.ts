@@ -155,6 +155,8 @@ export type CampaignLineWorkspace = {
   revenue_vat_amount: number;
   revenue_after_vat: number;
   revenue_vat_exempt: boolean;
+  cost_fx_override?: string | null;
+  revenue_fx_override?: string | null;
   cost_received: number;
   cost_received_currency: string;
   cost_before_vat: number;

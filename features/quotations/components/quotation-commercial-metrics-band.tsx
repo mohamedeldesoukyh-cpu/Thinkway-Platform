@@ -20,9 +20,10 @@ type MetricDef = {
 function moneyParts(
   amountEgp: number,
   displayCurrency: string,
-  fxRateToEgp: number
+  fxRateToEgp: number,
+  projected?: number
 ): { value: string; unit: string } {
-  const amount = fromEgp(amountEgp, displayCurrency, fxRateToEgp);
+  const amount = projected ?? fromEgp(amountEgp, displayCurrency, fxRateToEgp);
   return {
     value: new Intl.NumberFormat("en-US", {
       minimumFractionDigits: 0,
@@ -77,6 +78,7 @@ function MetricItem({ label, value, unit, tone, compact, original, staged }: Met
 }
 
 type Props = {
+  projected?: ReturnType<typeof import("@/features/quotations/quotation-row-math").computeQuotationDisplayTotals>;
   totalCostEgp: number;
   totalRevenueEgp: number;
   totalCommercialGpEgp: number;
@@ -105,6 +107,7 @@ type Props = {
 };
 
 export function QuotationCommercialMetricsBand({
+  projected,
   totalCostEgp,
   totalRevenueEgp,
   totalCommercialGpEgp,
@@ -143,9 +146,9 @@ export function QuotationCommercialMetricsBand({
           ? "amber"
           : "blue";
 
-  const base = moneyParts(totalCostEgp, displayCurrency, displayFxRateToEgp);
-  const client = moneyParts(totalRevenueEgp, displayCurrency, displayFxRateToEgp);
-  const gp = moneyParts(totalGpValueEgp, displayCurrency, displayFxRateToEgp);
+  const base = moneyParts(totalCostEgp, displayCurrency, displayFxRateToEgp, projected?.cost);
+  const client = moneyParts(totalRevenueEgp, displayCurrency, displayFxRateToEgp, projected?.clientCost);
+  const gp = moneyParts(totalGpValueEgp, displayCurrency, displayFxRateToEgp, projected?.margin);
   const gpValuesDisagree = Math.abs(totalGpValueEgp - totalCommercialGpEgp) >= 0.01;
   const showAgencyFeeConflict = gpValuesDisagree || totalAgencyFeeEgp > 0.01;
 
@@ -221,11 +224,11 @@ export function QuotationCommercialMetricsBand({
       />
       <MetricItem
         label="GP %"
-        value={`${totalGpPct.toFixed(1)}%`}
+        value={`${(projected?.marginPct ?? totalGpPct).toFixed(1)}%`}
         tone={showAgencyFeeConflict ? agencyFeePctTone : gpTone}
         staged={hasDraftEdits}
       />
-      <MetricItem label="FM %" value={`${totalPmPct.toFixed(1)}%`} />
+      <MetricItem label="FM %" value={`${(projected?.markupPct ?? totalPmPct).toFixed(1)}%`} />
       <MetricItem label="Version" value={version} compact />
       <MetricItem label="Creators" value={String(creatorCount)} />
       {lineCount != null ? (

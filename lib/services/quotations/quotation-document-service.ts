@@ -83,6 +83,8 @@ function mapItem(raw: Record<string, unknown>): QuotationItemRow {
     gp_pct: Number(raw.gp_pct ?? 0),
     gp_value: Number(raw.gp_value ?? 0),
     fx_rate_to_egp: Number(raw.fx_rate_to_egp ?? 1),
+    cost_fx_override: (raw.cost_fx_override as string | null) ?? null,
+    revenue_fx_override: (raw.revenue_fx_override as string | null) ?? null,
     cost_egp: Number(raw.cost_egp ?? 0),
     revenue_egp: Number(raw.revenue_egp ?? 0),
     gp_value_egp: Number(raw.gp_value_egp ?? 0),

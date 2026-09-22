@@ -1,3 +1,4 @@
+import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 import { fromEgp, toEgp } from "@/lib/commercial/fx-aggregation";
 import { computeAgencyFee } from "@/lib/commercial/commercial-engine";
 
@@ -33,6 +34,7 @@ export function clientFacingQuotationPrice(input: {
   revenue: number | null | undefined;
   revenueEgp?: number | null;
   costCurrency?: string | null;
+  revenueFxOverride?: string | null;
   lineFxRateToEgp?: number | null;
   quotationCurrency: string;
   quotationFxRateToEgp: number;
@@ -42,7 +44,7 @@ export function clientFacingQuotationPrice(input: {
     return { amount: undefined, currency: quote };
   }
   const original = (input.costCurrency || quote).toUpperCase();
-  const amount = convertLineRevenueToQuotationCurrency({
+  const amount = input.revenueFxOverride ? creatorFxAmount(input.revenue!, { from: original, to: quote, sourceRateToEgp: input.lineFxRateToEgp ?? 1, targetRateToEgp: input.quotationFxRateToEgp, override: input.revenueFxOverride }) : convertLineRevenueToQuotationCurrency({
     revenue: input.revenue!,
     revenueEgp: input.revenueEgp ?? undefined,
     lineFxRateToEgp: input.lineFxRateToEgp ?? 1,
@@ -64,12 +66,14 @@ export function convertClientFacingAmount(input: {
   amount: number | null | undefined;
   amountEgp?: number | null;
   costCurrency?: string | null;
+  revenueFxOverride?: string | null;
   lineFxRateToEgp?: number | null;
   quotationCurrency: string;
   quotationFxRateToEgp: number;
 }): number {
   const value = Number(input.amount);
   if (!Number.isFinite(value) || value <= 0) return 0;
+  if (input.revenueFxOverride) return creatorFxAmount(value, { from: (input.costCurrency || "EGP").toUpperCase(), to: input.quotationCurrency.toUpperCase(), sourceRateToEgp: input.lineFxRateToEgp ?? 1, targetRateToEgp: input.quotationFxRateToEgp, override: input.revenueFxOverride });
   return convertLineRevenueToQuotationCurrency({
     revenue: value,
     revenueEgp: input.amountEgp ?? undefined,
@@ -85,6 +89,7 @@ export function clientFacingAgencyFeeFromLine(input: {
   afPct?: number | null;
   convertedRevenue: number;
   costCurrency?: string | null;
+  revenueFxOverride?: string | null;
   lineFxRateToEgp?: number | null;
   quotationCurrency: string;
   quotationFxRateToEgp: number;
@@ -93,6 +98,7 @@ export function clientFacingAgencyFeeFromLine(input: {
     amount: input.afValue,
     amountEgp: input.afValueEgp,
     costCurrency: input.costCurrency,
+    revenueFxOverride: input.revenueFxOverride,
     lineFxRateToEgp: input.lineFxRateToEgp,
     quotationCurrency: input.quotationCurrency,
     quotationFxRateToEgp: input.quotationFxRateToEgp,
