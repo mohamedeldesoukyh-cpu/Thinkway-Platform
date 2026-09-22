@@ -1,9 +1,9 @@
 /** Shared financial column widths — parent + child grids stay aligned. */
 export const ASSIGNMENT_GRID_MONEY_COL =
-  "w-[76px] min-w-[76px] max-w-[76px] text-center tabular-nums";
+  "w-[140px] min-w-[140px] max-w-[140px] text-center tabular-nums";
 
 export const ASSIGNMENT_GRID_VAT_COL =
-  "w-[56px] min-w-[56px] max-w-[56px] text-center tabular-nums";
+  "w-[100px] min-w-[100px] max-w-[100px] text-center tabular-nums";
 
 /** Fixed pixel widths for parent safe-grid colgroup (matches Tailwind min/max above). */
 export const ASSIGNMENT_GRID_COLUMN_WIDTH_PX = {
@@ -17,20 +17,21 @@ export const ASSIGNMENT_GRID_COLUMN_WIDTH_PX = {
   fullDescription: 180,
   postingDates: 84,
   costCurrency: 56,
-  revenue: 76,
-  usageRights: 76,
-  agencyFeePercent: 56,
-  agencyFee: 76,
-  cost: 76,
-  costVatPercent: 76, costVat: 88, costTotal: 100,
-  usageRightsCost: 76,
-  vat: 56,
-  totalBilling: 96,
-  gp: 76,
-  margin: 56,
-  opsStatus: 72,
-  billing: 72,
-  payout: 88,
+  revenue: 140,
+  usageRights: 140,
+  agencyFeePercent: 100,
+  agencyFee: 140,
+  cost: 140,
+  costVatPercent: 100, costVat: 140, costTotal: 150,
+  usageRightsCost: 140,
+  revenueVatPercent: 100,
+  vat: 140,
+  totalBilling: 140,
+  gp: 140,
+  margin: 100,
+  opsStatus: 120,
+  billing: 120,
+  payout: 120,
   actions: 40,
 } as const;
 
@@ -51,14 +52,17 @@ export const CHILD_GRID_LIVE_DATE_COL =
 
 /** Child cols 10+ (after Rev) — UR Rev, AF %, AF, Cost, then child-only cols. */
 export const CHILD_GRID_TRAILING_COLUMNS = [
-  { id: "usageRights", width: 76 },
-  { id: "agencyFeePercent", width: 56 },
-  { id: "agencyFee", width: 76 },
-  { id: "cost", width: 76 },
-  { id: "costVatPercent", width: 76 }, { id: "costVat", width: 88 }, { id: "costTotal", width: 100 },
-  { id: "usageRightsCost", width: 76 },
-  { id: "vat", width: 56 },
-  { id: "totalBilling", width: 76 },
+  { id: "usageRights", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.usageRights },
+  { id: "agencyFeePercent", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.agencyFeePercent },
+  { id: "agencyFee", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.agencyFee },
+  { id: "revenueVatPercent", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.revenueVatPercent },
+  { id: "vat", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.vat },
+  { id: "totalBilling", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.totalBilling },
+  { id: "cost", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.cost },
+  { id: "usageRightsCost", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.usageRightsCost },
+  { id: "costVatPercent", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.costVatPercent },
+  { id: "costVat", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.costVat },
+  { id: "costTotal", width: ASSIGNMENT_GRID_COLUMN_WIDTH_PX.costTotal },
   { id: "postDate", width: 200 },
   { id: "liveAdMonth", width: 84 },
   { id: "invoice", width: 64 },
@@ -76,11 +80,14 @@ export const CHILD_GRID_TRAILING_FINANCIAL_COLUMN_IDS = [
   "usageRights",
   "agencyFeePercent",
   "agencyFee",
-  "cost",
-  "costVatPercent", "costVat", "costTotal",
-  "usageRightsCost",
+  "revenueVatPercent",
   "vat",
   "totalBilling",
+  "cost",
+  "usageRightsCost",
+  "costVatPercent",
+  "costVat",
+  "costTotal",
 ] as const satisfies readonly ChildGridTrailingColumnId[];
 
 export const CHILD_GRID_TRAILING_COL_WIDTHS = CHILD_GRID_TRAILING_COLUMNS.map(

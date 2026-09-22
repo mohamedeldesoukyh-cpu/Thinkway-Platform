@@ -70,7 +70,8 @@ export const HIERARCHY_COLUMN_LABELS = {
   cost: "Cost",
   costVatPercent: "Cost VAT %", costVat: "Cost VAT", costTotal: "Cost incl. VAT",
   usageRightsCost: "UR Cost",
-  vat: "Revenue VAT",
+  revenueVatPercent: "Rev VAT %",
+  vat: "Rev VAT",
   totalBilling: "Total billing",
   gp: "GP",
   margin: "MGN",
@@ -95,7 +96,8 @@ export const CHILD_COLUMN_LABELS = {
   cost: "Cost",
   costVatPercent: "Cost VAT %", costVat: "Cost VAT", costTotal: "Cost incl. VAT",
   usageRightsCost: "UR Cost",
-  vat: "Revenue VAT",
+  revenueVatPercent: "Rev VAT %",
+  vat: "Rev VAT",
   totalBilling: "Total Billing",
   billing: "Billing",
   invoice: "Invoice",
@@ -156,15 +158,18 @@ export const ASSIGNMENT_CHILD_TRAILING_PARENT_FINANCIAL_COLUMN_IDS = [
   "usageRights",
   "agencyFeePercent",
   "agencyFee",
-  "cost",
-  "costVatPercent", "costVat", "costTotal",
-  "usageRightsCost",
+  "revenueVatPercent",
   "vat",
   "totalBilling",
+  "cost",
+  "usageRightsCost",
+  "costVatPercent",
+  "costVat",
+  "costTotal",
 ] as const;
 
-export const ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND = 28;
-export const ASSIGNMENT_CHILD_ROW_COL_COUNT = 27;
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT_WITH_EXPAND = 29;
+export const ASSIGNMENT_CHILD_ROW_COL_COUNT = 28;
 
 export function assignmentChildLeadingParentColumnIds(
   showExpandColumn: boolean

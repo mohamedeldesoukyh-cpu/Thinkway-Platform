@@ -7,6 +7,7 @@ test('Paid includes partial and advance payments independently of live deliverab
  assert.equal(matchesPaymentFilter(row,'paid'),true);
  assert.equal(matchesPaymentFilter(row,'advance'),true);
  assert.equal(matchesPaymentFilter({...row,paid:100},'paid'),true);
+ assert.equal(matchesPaymentFilter({...row,paid:100},'unpaid'),false);
  assert.equal(matchesPaymentFilter({...row,paid:0},'paid'),false);
  assert.equal(matchesPaymentFilter({...row,paid:0},'unpaid'),true);
  assert.equal(matchesPaymentFilter({...row,paid:90000},'unpaid'),false);

@@ -5,6 +5,7 @@ import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { defaultPaymentDraft as initialDraft, changedPaymentPlans } from './payment-plan';
 import { paymentAllocation, matchesPaymentFilter } from './allocations';
 import { PaymentHistory } from './payment-history';
+import { PaidRegister } from './paid-register';
 import { AdvanceRegister } from './advance-register';
 import { DecimalInput } from './decimal-input';
 import { validateBank } from './aaib';
@@ -18,7 +19,7 @@ type Props = {
   showCampaign: boolean; filters: ReactNode; canReview: boolean; filter: string; onFilterChange: (filter:string) => void;
   onPatch: (row: PaymentRow, change: Partial<PaymentDraft>) => void;
   onBank: (row: PaymentRow) => void; onSelect: (id: string, checked: boolean) => void;
-  onSelectAll: (ids: string[], checked: boolean) => void; onExport: () => void; onReview: () => void; onSaved: () => void;
+  onSelectAll: (ids: string[], checked: boolean) => void; onExport: () => void; onReview: () => void; onSaved: (row?: PaymentRow) => void | Promise<void>;
 };
 
 export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign, filters, canReview, onPatch, onBank, onSelect, onSelectAll, onExport, onReview, onSaved, filter, onFilterChange }: Props) {
@@ -37,13 +38,12 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
 
   return <section className="cp-panel" aria-label="Creator payment register">
     <div className="cp-panel-head">
-      <h2>Creator payments</h2><span>{new Set(visible.map(row => row.creatorId)).size} creators{filter!=='advance'&&<> · {ready.length} ready to export</>}</span>
+      <h2>Creator payments</h2><span>{new Set(visible.map(row => row.creatorId)).size} creators{!['advance','paid'].includes(filter)&&<> · {ready.length} ready to export</>}</span>
       <div className="cp-head-actions"><div className="cp-segments" aria-label="Payment status filter">{[['all','All'],['unpaid','Unpaid'],['paid','Paid'],['advance','Advance']].map(([value,label]) => <button key={value} aria-pressed={filter === value} onClick={() => onFilterChange(value)}>{label}</button>)}</div>
-        {filter!=='advance'&&<><button className="cp-button" onClick={onExport}>Export</button><button className="cp-button primary" disabled={!canReview} onClick={onReview}>Review selected</button></>}</div>
+        {!['advance','paid'].includes(filter)&&<><button className="cp-button" onClick={onExport}>Export</button><button className="cp-button primary" disabled={!canReview} onClick={onReview}>Review selected</button></>}</div>
     </div>
     <div className="cp-register-filters">{filters}</div>
-    {filter==='advance'?<AdvanceRegister rows={visible} showCampaign={showCampaign}/>:<>
-    {filter==='paid'&&<p className="cp-note">Creators with recorded payments, including partial payments and advances. Open payment history to revise or clear an individual record.</p>}
+    {filter==='paid'?<PaidRegister rows={visible} showCampaign={showCampaign} canWrite={canWrite} onSaved={onSaved}/>:filter==='advance'?<AdvanceRegister rows={visible} showCampaign={showCampaign}/>:<>
     {incomplete.length > 0 && <p className="cp-note warning"><b>{incomplete.length} of {visible.length}</b> payment lines need bank details before export. You can prepare amounts now; open a creator’s bank details to complete the required fields.</p>}
     <div className="cp-table-scroll" tabIndex={0} role="region" aria-label="Creator payments table">
       <table className="cp-table"><colgroup>{[32,210,110,125,105,82,118,112,160,125,118].map((width,i) => <col key={i} style={{ width }}/>)}</colgroup>

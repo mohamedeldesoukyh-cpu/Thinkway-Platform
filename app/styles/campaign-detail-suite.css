@@ -2518,3 +2518,28 @@
   font-size: 11.5px;
   color: var(--tw-wrn);
 }
+
+/* Keep grid cells on common tracks and paint complete rows, including hover. */
+.campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g {
+  align-items: stretch;
+  padding-inline: 0 !important;
+}
+.campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g > [data-assignment-col] {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  overflow-wrap: normal;
+}
+.campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-g > :is([data-assignment-col="revenue"],[data-assignment-col="usageRights"],[data-assignment-col="agencyFee"],[data-assignment-col="cost"],[data-assignment-col="usageRightsCost"],[data-assignment-col="costVat"],[data-assignment-col="costTotal"],[data-assignment-col="vat"],[data-assignment-col="totalBilling"],[data-assignment-col="gp"]) {
+  white-space: nowrap !important;
+  text-align: right !important;
+  justify-content: flex-start;
+}
+.campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-ad.tw-r:hover,
+.campaign-detail-suite.thinkway-campaign-workspace .thinkway-campaign-asgn-table .tw-ad.tw-r:hover > [data-assignment-col] {
+  background: #edf2fa !important;
+  box-shadow: none !important;
+}
