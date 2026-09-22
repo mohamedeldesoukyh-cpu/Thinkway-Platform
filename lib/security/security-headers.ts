@@ -81,7 +81,7 @@ export function applySecurityHeaders(
   // These responses authenticate via a signed link, not browser cookies. Social
   // previews must be readable/embeddable from outside the application origin.
   if (options?.pathname === "/api/review/share-image" ||
-      /^\/review\/[0-9a-f-]{36}\/share\/?$/i.test(options?.pathname ?? "")) {
+      /^\/review\/[0-9a-f-]{36}\/share(?:\/[^/]+)?\/?$/i.test(options?.pathname ?? "")) {
     headers.set("Cross-Origin-Resource-Policy", "cross-origin");
     headers.set("Access-Control-Allow-Origin", "*");
   }

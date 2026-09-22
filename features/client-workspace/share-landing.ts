@@ -5,8 +5,12 @@ export function campaignShareUrl(reviewUrl: string, version = "3"): string {
   const url = new URL(reviewUrl);
   const match = url.pathname.match(/^\/review\/([^/]+)(?:\/.*)?$/);
   if (!match || !url.searchParams.get("sign")) return reviewUrl;
-  url.pathname = `/review/${match[1]}/share`;
-  url.searchParams.set("preview", version);
+  const previewVersion = version.trim().slice(0, 64) || "3";
+  // WhatsApp may retain a failed card for a route even when its query changes.
+  // A versioned path creates a new crawler cache key while preserving the signed
+  // token and the original client-review destination.
+  url.pathname = `/review/${encodeURIComponent(match[1])}/share/${encodeURIComponent(previewVersion)}`;
+  url.searchParams.delete("preview");
   return url.href;
 }
 

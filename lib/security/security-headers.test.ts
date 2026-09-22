@@ -38,7 +38,7 @@ test("API headers tighten CORP to same-origin", () => {
 });
 
 test("only signed preview endpoints allow cross-origin preview consumers", () => {
-  for (const pathname of ["/api/review/share-image", "/review/493e23ae-0a78-4b2e-b071-37d54974e294/share"]) {
+  for (const pathname of ["/api/review/share-image", "/review/493e23ae-0a78-4b2e-b071-37d54974e294/share", "/review/493e23ae-0a78-4b2e-b071-37d54974e294/share/4"]) {
     const headers = new Headers();
     applySecurityHeaders(headers, { api: pathname.startsWith("/api/"), pathname });
     assert.equal(headers.get("Cross-Origin-Resource-Policy"), "cross-origin");
