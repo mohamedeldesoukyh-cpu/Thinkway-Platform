@@ -44,11 +44,16 @@ html[data-companion-window="1"] .mobile-app-navigation { display: none; }
   [data-slot="dialog-content"], [data-slot="alert-dialog-content"] { max-width: calc(100vw - 2rem); }
 }
 
-/* Avoid Safari focus zoom while preserving pinch zoom. Coarse pointer includes iPad. */
-@media (pointer: coarse) {
-  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea {
-    font-size: max(16px, 1em) !important;
+/* Important declarations in an early layer outrank the compact component input
+   rules. Keep Safari focus zoom off without disabling the user's pinch zoom. */
+@layer base {
+  @media (any-pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea {
+      font-size: max(16px, 1em) !important;
+    }
   }
+}
+@media (pointer: coarse) {
   [data-slot="button"], [data-slot="dialog-close"], [data-slot="sheet-close"], [role="tab"],
   .tw-li, .tw-grp, .discovery-top-nav-tabs a, .cw .tab, .cw .signout, .tw-review .btn { min-height: 44px; }
   [data-slot="button"]:has(> svg:only-child), [data-slot="dialog-close"], [data-slot="sheet-close"] { min-width: 44px; }

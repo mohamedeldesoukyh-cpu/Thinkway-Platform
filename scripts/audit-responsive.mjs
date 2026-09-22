@@ -28,7 +28,7 @@ try {
   fs.mkdirSync('tmp/responsive',{recursive:true});
   for(const route of routes) {
     await page.setViewport({width:sizes[0],height:844,isMobile:true,hasTouch:true,deviceScaleFactor:1});
-    const response=await page.goto(base+route,{waitUntil:'domcontentloaded'});
+    const response=await page.goto(base+route,{waitUntil:'load'});
     await page.waitForSelector('main, form', {timeout:60000});
     await new Promise(r=>setTimeout(r,1500));
     if(process.env.RESPONSIVE_DETAILS === '1' && ['/campaigns','/clients','/vendors'].includes(route)) {
