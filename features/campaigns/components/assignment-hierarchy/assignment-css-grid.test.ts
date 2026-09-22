@@ -20,3 +20,12 @@ test("every parent track maps to a child field", () => {
     assert.ok(PARENT_TRACK_TO_CHILD_FIELD[id], `missing child map for ${id}`);
   }
 });
+
+test("financial tracks keep revenue VAT and billing before creator costs", () => {
+  const start = ASSIGNMENT_GRID_PARENT_COLUMN_ORDER.indexOf("revenue");
+  assert.deepEqual(ASSIGNMENT_GRID_PARENT_COLUMN_ORDER.slice(start, -1), [
+    "revenue", "usageRights", "agencyFeePercent", "agencyFee", "revenueVatPercent",
+    "vat", "totalBilling", "cost", "usageRightsCost", "costVatPercent", "costVat",
+    "costTotal", "gp", "margin", "opsStatus", "billing", "payout",
+  ]);
+});

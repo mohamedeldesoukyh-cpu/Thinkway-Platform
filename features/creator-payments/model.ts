@@ -18,6 +18,7 @@ export type BankDetails = {
     registered: boolean;
 };
 export type PaymentRow = {
+    nextPaymentSequence?: number;
     units?: import('./allocations').PaymentUnit[];
     history?: PaymentEntry[];
     savedDraft?: PaymentDraft;

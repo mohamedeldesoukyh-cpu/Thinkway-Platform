@@ -990,7 +990,7 @@ export function EditablePostRow({
         const vat = Math.round(cost * rate) / 100;
         return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={cn(GRID_CELL.money, OPERATIONAL_AMOUNT_CLASS)}>
           {col(parentColumnId) && showDeliverableCommercial
-            ? parentColumnId === "costVatPercent" ? rate + "%" : formatOperationalAmount(parentColumnId === "costVat" ? vat : cost + vat)
+            ? parentColumnId === "costVatPercent" ? rate.toFixed(1) + "%" : formatOperationalAmount(parentColumnId === "costVat" ? vat : cost + vat)
             : "—"}
         </AssignmentGridCell>;
       }
@@ -1010,6 +1010,8 @@ export function EditablePostRow({
                 : <span />}
           </AssignmentGridCell>
         );
+      case "revenueVatPercent":
+        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.agencyFeePercent}>{col("revenueVatPercent") && showDeliverableCommercial ? fieldsActive && !revenueVatExempt ? <Input type="number" min={0} max={100} step="0.1" value={meta.revenue_vat_percent} onChange={e=>setMeta(m=>({...m,revenue_vat_percent:Number(e.target.value)||0}))} disabled={gridEdit.saving}/> : Number(revenueVatExempt ? 0 : meta.revenue_vat_percent).toFixed(1)+"%" : "—"}</AssignmentGridCell>;
       case "vat":
         return (
           <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.vat}>
@@ -1017,24 +1019,8 @@ export function EditablePostRow({
               <span />
             ) : !showDeliverableCommercial ? (
               <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
-            ) : fieldsActive && !revenueVatExempt ? (
-              <Input
-                type="number"
-                min={0}
-                max={100}
-                step="0.1"
-                value={meta.revenue_vat_percent}
-                onChange={(e) =>
-                  setMeta((m) => ({
-                    ...m,
-                    revenue_vat_percent: Number(e.target.value) || 0,
-                  }))
-                }
-                disabled={gridEdit.saving}
-                className="h-auto min-h-0 w-full border-0 bg-transparent py-0 text-center text-[11px] font-normal shadow-none focus-visible:ring-1"
-              />
             ) : revenueVatExempt ? (
-              <span className={OPERATIONAL_AMOUNT_CLASS}>Ex</span>
+              <span className={OPERATIONAL_AMOUNT_CLASS}>{formatOperationalAmount(0)}</span>
             ) : (
               <span className={OPERATIONAL_AMOUNT_CLASS}>
                 {formatOperationalAmount(computedVat)}
@@ -1428,6 +1414,10 @@ export function OperationalGridHeader({
       agencyFeePercent: OPERATIONAL_GRID_LABELS.agencyFeePercent,
       agencyFee: OPERATIONAL_GRID_LABELS.agencyFee,
       cost: OPERATIONAL_GRID_LABELS.cost,
+      costVatPercent: OPERATIONAL_GRID_LABELS.costVatPercent,
+      costVat: OPERATIONAL_GRID_LABELS.costVat,
+      costTotal: OPERATIONAL_GRID_LABELS.costTotal,
+      revenueVatPercent: OPERATIONAL_GRID_LABELS.revenueVatPercent,
       usageRightsCost: OPERATIONAL_GRID_LABELS.usageRightsCost,
       vat: OPERATIONAL_GRID_LABELS.vat,
       totalBilling: OPERATIONAL_GRID_LABELS.totalBilling,

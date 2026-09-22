@@ -65,7 +65,7 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         const vat = Number(a?.cost_vat_percent ?? term?.vat ?? 0);
         const paid = ledger.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.original_amount), 0);
         const saved = paymentDraftSchema.safeParse(plans.data?.find(p => p.assignment_id === io.assignment_id)?.draft);
-        return { history: ledger.filter(e=>e.status === 'paid' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
+        return { nextPaymentSequence: Math.max(0, ...ledger.map(e => Number(e.payment_sequence ?? 0))) + 1, history: ledger.filter(e=>e.status === 'paid' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
             campaign: campaign?.name ?? campaign?.document_number ?? 'Campaign',
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
             payable: !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
@@ -214,7 +214,8 @@ export async function recordCreatorPaymentSeries(assignmentId:string,input:{requ
         const {error}=await db.rpc('record_creator_payment_series',{p_rows:payments});
         if(error) throw new Error(error.message);
         revalidatePath('/campaigns','layout'); revalidatePath('/vendors','layout'); revalidatePath('/billing');
-        return {ok:true as const};
+        const refreshed = await loadRows(db,{assignmentIds:[assignmentId]});
+        return {ok:true as const,row:refreshed.rows[0]};
     } catch(error) {return fail(error);}
 }
 export async function confirmCreatorPayment(id: string, status: 'paid' | 'failed', reference: string) {

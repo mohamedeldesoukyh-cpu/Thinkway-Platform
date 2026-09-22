@@ -52,6 +52,7 @@ export const PARENT_TRACK_TO_CHILD_FIELD: Record<string, string> = {
   costVat: "costVat",
   costTotal: "costTotal",
   usageRightsCost: "usageRightsCost",
+  revenueVatPercent: "revenueVatPercent",
   vat: "vat",
   totalBilling: "totalBilling",
   gp: "postDate",
