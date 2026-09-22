@@ -341,7 +341,7 @@ export async function checkCreatorBankDuplicates(creatorId: string, accountId: s
         const permission = await requirePermission(supabase, 'influencers.write');
         if ('error' in permission) throw new Error(permission.error);
         z.string().uuid().parse(creatorId); if (accountId) z.string().uuid().parse(accountId);
-        const input = z.object({ nickname: z.string().max(200), iban: z.string().max(200), account_number: z.string().max(200), beneficiary_name: z.string().max(200), beneficiary_address: z.string().max(500), email: z.string().max(200), mobile: z.string().max(200), country: z.string().max(20), swift: z.string().max(50), bank_name: z.string().max(200) }).parse(values);
+        const input = z.object({ nickname: z.string().max(200), iban: z.string().max(200), account_number: z.string().max(200), beneficiary_name: z.string().max(200), email: z.string().max(200), mobile: z.string().max(200), country: z.string().max(20), swift: z.string().max(50), bank_name: z.string().max(200) }).parse(values);
         const { data, error } = await (supabase as SupabaseClient).rpc('find_creator_bank_duplicates', { p_creator: creatorId, p_account: accountId, p_values: input });
         if (error) throw new Error('Duplicate check is unavailable. Saving still checks beneficiary nickname uniqueness.');
         return { ok: true as const, matches: (data ?? []) as BankDuplicate[] };

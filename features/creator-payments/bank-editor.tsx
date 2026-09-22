@@ -119,7 +119,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
           .finally(() => { if (!cancelled) setAccountsLoading(false); });
         return () => { cancelled = true; };
     }, [creatorId]); // eslint-disable-line react-hooks/exhaustive-deps
-    const duplicateInput = JSON.stringify({ nickname: bank.nickname, iban: accountMode === 'iban' ? bank.iban : '', account_number: accountMode === 'account' ? bank.account_number : '', beneficiary_name: bank.beneficiary_name, beneficiary_address: bank.beneficiary_address, email: bank.email, mobile: bank.mobile, country: bank.country, swift: bank.swift, bank_name: bank.bank_name });
+    const duplicateInput = JSON.stringify({ nickname: bank.nickname, iban: accountMode === 'iban' ? bank.iban : '', account_number: accountMode === 'account' ? bank.account_number : '', beneficiary_name: bank.beneficiary_name, email: bank.email, mobile: bank.mobile, country: bank.country, swift: bank.swift, bank_name: bank.bank_name });
     useEffect(() => {
         if (accountsLoading || accountsError) return;
         let cancelled = false;
@@ -139,6 +139,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
         return () => { cancelled = true; clearTimeout(timer); };
     }, [creatorId, accountId, duplicateInput, accountsLoading, accountsError]);
     function duplicateHint(key: string) {
+        if (!(key in duplicateFieldLabels)) return null;
         const found = matches.filter(match => match.field === key);
         if (!found.length) return null;
         return <span className={key === 'nickname' ? 'cbd-inline-duplicate cbd-error' : 'cbd-inline-duplicate cbd-warning'} role="status">{key === 'nickname' ? 'Already used — choose a distinct AAIB nickname.' : 'Also used by another saved account. Check that this is intentional.'} {found.map(match => <a key={match.account_id} href={`/vendors/${match.creator_id}`} target="_blank" rel="noopener noreferrer">{match.creator_name} ↗</a>)}</span>;
