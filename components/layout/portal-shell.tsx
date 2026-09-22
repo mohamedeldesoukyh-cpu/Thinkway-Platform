@@ -62,10 +62,10 @@ export function PortalShell({
   const compact = navVariant === "compact";
 
   return (
-    <div className="flex min-h-svh bg-background">
+    <div className="flex min-h-0 min-w-0 flex-1 bg-background">
       <aside
         className={cn(
-          "hidden w-64 shrink-0 border-r border-border bg-card/40 md:flex md:flex-col",
+          "hidden w-64 shrink-0 border-r border-border bg-card/40 lg:flex lg:flex-col",
           compact ? "px-3 py-4" : "p-4"
         )}
       >
@@ -101,10 +101,10 @@ export function PortalShell({
         <header
           className={cn(
             "border-b border-border",
-            compact ? "px-4 py-3 md:hidden" : "px-4 py-4 md:px-8"
+            compact ? "px-4 py-3 lg:hidden" : "px-4 py-4 lg:px-8"
           )}
         >
-          <div className="mb-3 flex items-center justify-between gap-3 md:hidden">
+          <div className="mb-3 flex items-center justify-between gap-3 lg:hidden">
             <div className="flex min-w-0 items-center gap-3">
               <ThinkwayLogo className="mb-0" />
               <PortalPartnerMark identityLogo={identityLogo} />
@@ -114,11 +114,11 @@ export function PortalShell({
           {compact ? (
             <>
               {workspaceLabel ? (
-                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground md:hidden">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground lg:hidden">
                   {workspaceLabel}
                 </p>
               ) : null}
-              <h1 className="font-heading text-base font-semibold tracking-tight md:hidden">
+              <h1 className="font-heading text-base font-semibold tracking-tight lg:hidden">
                 {title}
               </h1>
             </>
@@ -135,10 +135,10 @@ export function PortalShell({
         <main
           className={
             mobileNavPlacement === "bottom"
-              ? "min-h-0 flex-1 overflow-y-auto p-4 pb-24 md:p-8 md:pb-8"
+              ? "min-h-0 flex-1 overflow-y-auto p-4 pb-24 lg:p-8 lg:pb-8"
               : compact
-                ? "min-h-0 flex-1 overflow-y-auto p-4 md:px-6 md:py-5"
-                : "min-h-0 flex-1 overflow-y-auto p-4 md:p-8"
+                ? "min-h-0 flex-1 overflow-y-auto p-4 lg:px-6 lg:py-5"
+                : "min-h-0 flex-1 overflow-y-auto p-4 lg:p-8"
           }
         >
           {children}

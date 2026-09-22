@@ -26,9 +26,9 @@ export function PortalMobileNav({
     return (
       <nav
         aria-label="Creator Workspace"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)] backdrop-blur lg:hidden"
       >
-        <div className="grid grid-cols-4">
+        <div className="flex overflow-x-auto">
           {items.map((item) => {
             const active = isPortalNavActive(pathname, item.href);
             return (
@@ -36,7 +36,7 @@ export function PortalMobileNav({
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex min-h-12 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium",
+                  "flex min-h-12 min-w-20 flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium",
                   active ? "text-primary" : "text-muted-foreground"
                 )}
               >
@@ -60,7 +60,7 @@ export function PortalMobileNav({
     return (
       <nav
         aria-label="Workspace"
-        className="flex gap-1 overflow-x-auto border-b border-border px-4 md:hidden"
+        className="flex gap-1 overflow-x-auto border-b border-border px-4 lg:hidden"
       >
         {items.map((item) => {
           const active = isPortalNavActive(pathname, item.href);
@@ -92,7 +92,7 @@ export function PortalMobileNav({
   }
 
   return (
-    <nav className="flex gap-2 overflow-x-auto border-b border-border px-4 py-2 md:hidden">
+    <nav className="flex gap-2 overflow-x-auto border-b border-border px-4 py-2 lg:hidden">
       {items.map((item) => {
         const active = isPortalNavActive(pathname, item.href);
 

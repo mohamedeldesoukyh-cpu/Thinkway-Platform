@@ -5,6 +5,8 @@ import { CollapsibleAppSidebar } from "@/components/layout/collapsible-app-sideb
 import { DashboardSidebarAuth } from "@/components/layout/dashboard-sidebar-auth";
 import { InternalWorkspaceGate } from "@/components/layout/internal-workspace-gate";
 import { NavigationLoadingProvider } from "@/components/layout/navigation-loading-provider";
+import { MobileAppNavigation } from "@/components/layout/mobile-app-navigation";
+import { DashboardShellUserSlot } from "@/components/layout/dashboard-shell-user-slot";
 
 /**
  * Dashboard-only design systems (not loaded on login / portals):
@@ -39,6 +41,7 @@ export default function DashboardLayout({
               <DashboardSidebarAuth />
             </Suspense>
             <div className="relative flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden transition-all duration-300 ease-in-out">
+              <Suspense fallback={null}><MobileAppNavigation account={<DashboardShellUserSlot compact inSidebar={false} />} /></Suspense>
               <Suspense fallback={null}>
                 <NavigationLoadingProvider>{children}</NavigationLoadingProvider>
               </Suspense>

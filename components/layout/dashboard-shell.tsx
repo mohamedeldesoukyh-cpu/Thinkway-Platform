@@ -1,12 +1,4 @@
 import Link from "next/link";
-import {
-  Building2Icon,
-  FileSignatureIcon,
-  LayoutDashboardIcon,
-  MegaphoneIcon,
-  Settings2Icon,
-  UsersIcon,
-} from "lucide-react";
 
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { EnvironmentBadgeSlot } from "@/components/environment/environment-badge-slot";
@@ -14,7 +6,7 @@ import { DashboardHelpButton } from "@/components/layout/dashboard-help-button";
 import { DashboardShellUserSlot } from "@/components/layout/dashboard-shell-user-slot";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { PageBackButton } from "@/components/navigation/page-back-button";
-import { AppNavLink } from "@/components/navigation/app-nav-link";
+
 import { DiscoveryTopNavTabs } from "@/features/discovery/components/discovery-top-nav-tabs";
 import {
   HomeWorkspaceNavTabs,
@@ -22,14 +14,6 @@ import {
 } from "@/features/home/components/home-workspace-nav-tabs";
 import { cn } from "@/lib/utils";
 
-const mobileNavItems = [
-  { href: "/", label: "Home", icon: LayoutDashboardIcon },
-  { href: "/clients", label: "Clients", icon: Building2Icon },
-  { href: "/campaigns", label: "Campaigns", icon: MegaphoneIcon },
-  { href: "/ios/client", label: "IOs", icon: FileSignatureIcon },
-  { href: "/settings/users", label: "Settings", icon: Settings2Icon },
-  { href: "/vendors", label: "Vendors", icon: UsersIcon },
-] as const;
 
 type DashboardShellProps = {
   children: React.ReactNode;
@@ -99,50 +83,21 @@ export function DashboardShell({
         containedMain && "h-full max-h-full min-h-0 overflow-hidden"
       )}
     >
-        {!immersiveLayout ? (
-        <div className="flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur-md md:hidden dark:bg-background/90">
-          <Link href="/" className="flex items-center">
-            <ThinkwayLogo compact className="mb-0" />
-          </Link>
-          {showDiscoveryNav ? (
+        {!immersiveLayout && showDiscoveryNav ? (
+          <div className="min-w-0 overflow-x-auto border-b px-3 lg:hidden">
             <DiscoveryTopNavTabs activeHref={discoveryNavActiveHref!} />
-          ) : (
-            <nav className="flex items-center gap-1">
-              {mobileNavItems.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <AppNavLink
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-1.5 rounded-2xl border border-border px-3 py-2 text-xs font-medium",
-                      "bg-card text-foreground shadow-[var(--card-shadow)]"
-                    )}
-                  >
-                    <Icon className="size-3.5" />
-                    {item.label}
-                  </AppNavLink>
-                );
-              })}
-            </nav>
-          )}
-          <div className="flex items-center gap-2">
-            <EnvironmentBadgeSlot />
-            <DashboardHelpButton />
-            <ThemeToggle />
-            <DashboardShellUserSlot compact inSidebar={false} />
           </div>
-        </div>
         ) : null}
         {!immersiveLayout && workspaceNavActive ? (
-          <div className="thinkway-platform-v6 thinkway-platform-v6-workspace-nav-mobile md:hidden">
+          <div className="thinkway-platform-v6 thinkway-platform-v6-workspace-nav-mobile lg:hidden">
             <HomeWorkspaceNavTabs active={workspaceNavActive} />
           </div>
         ) : null}
         {!immersiveLayout && !hideDesktopHeader && hidePageHeader ? (
           <header
+            data-desktop-chrome
             className={cn(
-              "hidden items-center justify-between gap-3 md:flex",
+              "hidden items-center justify-between gap-3 lg:flex",
               platformV6
                 ? cn(
                     "thinkway-platform-v6-topbar",
@@ -179,8 +134,9 @@ export function DashboardShell({
           </header>
         ) : !immersiveLayout && !hideDesktopHeader && platformV6 ? (
           <header
+            data-desktop-chrome
             className={cn(
-              "thinkway-platform-v6-topbar hidden w-full md:flex",
+              "thinkway-platform-v6-topbar hidden w-full lg:flex",
               "thinkway-platform-v6",
               workspaceNavActive && "thinkway-platform-v6-topbar--workspace-nav"
             )}
@@ -201,7 +157,7 @@ export function DashboardShell({
             <div className="flex min-w-0 items-start gap-3">
               <Link
                 href="/"
-                className="hidden shrink-0 items-center md:flex"
+                className="hidden shrink-0 items-center lg:flex"
                 title="Thinkway home"
               >
                 <ThinkwayLogo compact showText className="mb-0" />
@@ -242,7 +198,7 @@ export function DashboardShell({
             containedMain
               ? "flex min-h-0 flex-1 flex-col overflow-hidden bg-background"
               : "min-h-0 flex-1 overflow-y-auto bg-background p-4 md:p-6",
-            platformV6 && !containedMain && "bg-background p-6 md:p-6",
+            platformV6 && !containedMain && "bg-background p-4 md:p-6",
             platformV6 && containedMain && "bg-background",
             mainClassName
           )}
