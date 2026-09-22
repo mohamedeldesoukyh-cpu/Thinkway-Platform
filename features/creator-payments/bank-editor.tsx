@@ -93,7 +93,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
     function clearDetails() {
         setBank(bankDetails()); setAccountMode('iban'); setRouteMode('swift'); setMakeDefault(false);
         setIbanChecked(false); setIssues([]); setDuplicate(null); setMatches([]);
-        setDraftNotice('Details cleared in this draft. Save cleared details to remove the incorrect saved data.');
+        setDraftNotice(accountId ? 'Selected account details cleared in this draft. Save cleared details to remove them from CRM and duplicate checks. Other accounts are unchanged.' : 'New account draft cleared. To clear a saved account, select it from Bank account first.');
     }
     useEffect(() => {
         let cancelled = false;

@@ -247,6 +247,7 @@ export async function saveAaibBank(creatorId: string, bank: BankDetails, account
         if (issues.length)
             throw new Error(issues.join(' '));
         if (accountId) z.string().uuid().parse(accountId);
+        if (!accountId && isEmptyBank(bank)) throw new Error('Select a saved account to clear. The new account draft is already empty.');
         const details = { beneficiary_name: bank.beneficiary_name, account_number: bank.account_number, iban: bank.iban, swift: bank.swift, bank_name: bank.bank_name, bank_branch: bank.bank_branch,
             aaib_payment_type: bank.payment_type, aaib_currency: bank.currency, aaib_nickname: bank.nickname.trim(), aaib_address: bank.beneficiary_address, aaib_email: bank.email, aaib_mobile: bank.mobile, aaib_country: bank.country, aaib_identifier: bank.identifier, aaib_clearing_code: bank.clearing_code, aaib_bank_address: bank.bank_address, aaib_registered: bank.registered };
         const saved = await db.rpc('save_creator_bank_account', { p_creator: creatorId, p_account: accountId, p_details: details, p_default: makeDefault });
@@ -270,6 +271,21 @@ export async function saveAaibBank(creatorId: string, bank: BankDetails, account
     catch (e) {
         return fail(e);
     }
+}
+export async function deleteCreatorBankAccount(creatorId: string, accountId: string) {
+    try {
+        const { supabase, userId } = await requireRequestUser();
+        const permission = await requirePermission(supabase, 'influencers.write');
+        if ('error' in permission) throw new Error(permission.error);
+        z.string().uuid().parse(creatorId); z.string().uuid().parse(accountId);
+        const db = supabase as SupabaseClient;
+        const { error } = await db.rpc('delete_creator_bank_account', { p_creator: creatorId, p_account: accountId });
+        if (error) throw new Error('Could not delete this bank account. Refresh and try again.');
+        revalidatePath('/vendors'); revalidatePath('/campaigns'); revalidatePath(`/vendors/${creatorId}`);
+        const current = await db.from('influencers').select('payment_details').eq('id', creatorId).single();
+        if (current.error) throw new Error('Account deleted. Refresh to load the current bank details.');
+        return { ok: true as const, defaultBank: bankDetails(current.data.payment_details ?? {}), draftScope: userId };
+    } catch (e) { return fail(e); }
 }
 export async function exportAaibBeneficiaries(ids: string[], accountId?: string) {
     try {

@@ -3,6 +3,10 @@
 import { useActionState, useEffect, useState } from "react";
 import { LandmarkIcon } from "lucide-react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { deleteCreatorBankAccount } from "@/features/creator-payments/actions";
+import { draftKey, readBankDrafts } from "@/features/creator-payments/bank-form-state";
+import { notifyCreatorBankSaved } from "@/features/creator-payments/bank-sync";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -36,6 +40,26 @@ export function VendorBankAccountsSection({
   workspace: VendorWorkspace;
 }) {
   const accounts = workspace.bank_accounts ?? [];
+  const router = useRouter();
+  const [deleting, setDeleting] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  async function removeAccount(id: string) {
+    setDeleting(id);
+    try {
+      const result = await deleteCreatorBankAccount(workspace.id, id);
+      if (!result.ok) { toast.error(result.message); return; }
+      try {
+        const key = draftKey(result.draftScope, workspace.id);
+        const cache = readBankDrafts(sessionStorage.getItem(key));
+        delete cache.drafts[id];
+        if (cache.selected === id) cache.selected = null;
+        sessionStorage.setItem(key, JSON.stringify(cache));
+      } catch { /* Deletion has already persisted. */ }
+      notifyCreatorBankSaved(workspace.id, result.defaultBank);
+      setConfirmDelete(null); router.refresh(); toast.success('Bank account deleted. Payment history is unchanged.');
+    } catch { toast.error('Could not delete this account. Please try again.'); }
+    finally { setDeleting(null); }
+  }
   const [relationship, setRelationship] = useState("account_owner");
   const [upsertState, upsertAction, upsertPending] = useActionState(
     upsertInfluencerBankAccountAction,
@@ -92,6 +116,11 @@ export function VendorBankAccountsSection({
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
+                  {confirmDelete === account.id ? <div className="flex flex-wrap items-center gap-2 text-xs" role="alert">
+                    <span>Delete this account? {account.is_default ? 'The next saved account becomes default, if available.' : 'Other accounts stay unchanged.'}</span>
+                    <Button type="button" size="sm" variant="destructive" disabled={!!deleting} onClick={() => void removeAccount(account.id)}>{deleting === account.id ? 'Deleting…' : 'Confirm delete'}</Button>
+                    <Button type="button" size="sm" variant="outline" disabled={!!deleting} onClick={() => setConfirmDelete(null)}>Cancel</Button>
+                  </div> : <Button type="button" size="sm" variant="outline" className="text-red-600" disabled={!!deleting || defaultPending} onClick={() => setConfirmDelete(account.id)}>Delete account</Button>}
                   {account.is_default ? (
                     <Badge variant="secondary">Default</Badge>
                   ) : null}
