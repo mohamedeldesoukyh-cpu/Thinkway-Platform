@@ -7,8 +7,8 @@ test("copied share links preserve access tokens and use a fresh preview URL", ()
   const shared = new URL(campaignShareUrl(original));
   assert.equal(shared.pathname, "/review/example/share");
   assert.equal(shared.searchParams.get("sign"), "signed&value");
-  assert.equal(shared.searchParams.get("preview"), "2");
-  assert.notEqual(campaignShareUrl(original, "3"), shared.href);
+  assert.equal(shared.searchParams.get("preview"), "3");
+  assert.notEqual(campaignShareUrl(original, "4"), shared.href);
   assert.equal(campaignShareUrl("https://app.thinkwaymedia.com/login"), "https://app.thinkwaymedia.com/login");
 });
 

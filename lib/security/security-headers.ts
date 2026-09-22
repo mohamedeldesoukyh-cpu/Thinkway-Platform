@@ -68,7 +68,7 @@ export function buildApiSecurityHeaders(): SecurityHeaderMap {
 
 export function applySecurityHeaders(
   headers: Headers,
-  options?: { api?: boolean }
+  options?: { api?: boolean; pathname?: string }
 ): void {
   const map = options?.api
     ? buildApiSecurityHeaders()
@@ -77,5 +77,12 @@ export function applySecurityHeaders(
     if (!headers.has(key)) {
       headers.set(key, value);
     }
+  }
+  // These responses authenticate via a signed link, not browser cookies. Social
+  // previews must be readable/embeddable from outside the application origin.
+  if (options?.pathname === "/api/review/share-image" ||
+      /^\/review\/[0-9a-f-]{36}\/share\/?$/i.test(options?.pathname ?? "")) {
+    headers.set("Cross-Origin-Resource-Policy", "cross-origin");
+    headers.set("Access-Control-Allow-Origin", "*");
   }
 }

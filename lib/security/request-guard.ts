@@ -71,7 +71,7 @@ function withGuardHeaders(
   pathname: string,
   rate?: { limit: number; remaining: number; resetAt: number }
 ): NextResponse {
-  applySecurityHeaders(response.headers, { api: isApiPath(pathname) });
+  applySecurityHeaders(response.headers, { api: isApiPath(pathname), pathname });
   if (rate) {
     response.headers.set("X-RateLimit-Limit", String(rate.limit));
     response.headers.set("X-RateLimit-Remaining", String(rate.remaining));
