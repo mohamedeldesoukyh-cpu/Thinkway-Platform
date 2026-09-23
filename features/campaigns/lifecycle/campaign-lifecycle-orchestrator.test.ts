@@ -34,6 +34,20 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
 }
 
 describe("campaign lifecycle orchestrator", () => {
+  it("shows Assignments with a Finance-owned PO warning before IO generation", () => {
+    const lifecycle = deriveLifecycleForTest(base({
+      lineCount: 7,
+      deliverableCount: 7,
+      hasClientIo: true,
+      clientIoStatus: "draft",
+      poExceeded: true,
+    }));
+    assert.equal(lifecycle.businessStageId, "lines");
+    assert.equal(lifecycle.businessStageLabel, "Assignments");
+    assert.equal(lifecycle.nextActionTab, "billing");
+    assert.equal(lifecycle.nextAction, "Review PO Limit");
+  });
+
   it("keeps invoicing available during Performance without moving the campaign stage", () => {
     const lifecycle = deriveLifecycleForTest(base({
       lineCount: 2,

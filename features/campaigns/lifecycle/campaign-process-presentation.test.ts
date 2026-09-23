@@ -99,7 +99,7 @@ describe("deriveCampaignProcessCue — business rules", () => {
     assert.equal(cue.stageSignals["client-io"], "completed");
   });
 
-  it("still hard-blocks on PO exceeded", () => {
+  it("still hard-blocks on PO exceeded without advancing the workflow", () => {
     const cue = deriveCampaignProcessCue(
       base({
         lineCount: 2,
@@ -108,7 +108,8 @@ describe("deriveCampaignProcessCue — business rules", () => {
         poExceeded: true,
       })
     );
-    assert.equal(cue.entryStageId, "billing");
+    assert.equal(cue.entryStageId, "deliverables");
+    assert.equal(cue.nextActionTab, "billing");
     assert.equal(cue.lifecycleSignal, "blocked");
     assert.match(cue.statusLabel, /PO limit/i);
   });
@@ -163,7 +164,7 @@ describe("deriveCampaignProcessCue — business rules", () => {
         po_status: "draft",
       } as never)
     );
-    assert.equal(cue.entryStageId, "billing");
+    assert.equal(cue.entryStageId, "deliverables");
     assert.equal(cue.lifecycleSignal, "blocked");
     assert.equal(cue.nextActionLabel, "Review PO Limit");
     assert.ok(!/Open Vendor IO/i.test(cue.nextActionLabel));
@@ -177,7 +178,8 @@ describe("deriveCampaignProcessCue — business rules", () => {
         clientIoStatus: "draft",
       })
     );
-    assert.equal(cue.entryStageId, "client-io");
+    assert.equal(cue.entryStageId, "lines");
+    assert.equal(cue.nextActionTab, "client-io");
     assert.equal(cue.nextActionLabel, "Complete Client IO");
     assert.equal(cue.statusLabel, "Draft in progress");
     assert.ok(!/Generate Client IO/i.test(cue.nextActionLabel));
@@ -192,6 +194,28 @@ describe("deriveCampaignProcessCue — business rules", () => {
       })
     );
     assert.equal(cue.nextActionLabel, "Generate Client IO");
+    assert.equal(cue.currentStageLabel, "Assignments");
+    assert.equal(cue.nextActionTab, "client-io");
+  });
+
+  it("keeps unissued IOs upcoming despite a PO breach (TW-2026-0005)", () => {
+    for (const clientIoStatus of [null, "draft"] as const) {
+      const cue = deriveCampaignProcessCue(base({
+        lineCount: 7,
+        deliverableCount: 7,
+        hasClientIo: clientIoStatus !== null,
+        clientIoStatus,
+        poExceeded: true,
+      }));
+      assert.equal(cue.currentStageLabel, "Assignments");
+      assert.equal(cue.entryStageId, "lines");
+      assert.equal(cue.stageSignals["client-io"], "upcoming");
+      assert.equal(cue.stageSignals["vendor-io"], "upcoming");
+      assert.equal(cue.stageSignals.billing, "upcoming");
+      assert.equal(cue.lifecycleSignal, "blocked");
+      assert.equal(cue.nextActionTab, "billing");
+      assert.equal(cue.nextActionLabel, "Review PO Limit");
+    }
   });
 
   it("generated Client IO says Send Client IO", () => {
