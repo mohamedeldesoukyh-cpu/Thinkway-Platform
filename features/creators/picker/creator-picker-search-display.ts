@@ -2,8 +2,19 @@ import { filterExactCreatorMatches } from "@/features/discovery/components/creat
 import { scoreCreatorSearchIntent } from "@/features/discovery/components/creator-search/creator-search-intent-engine";
 import { buildDiscoverySearchTaxonomyIndex } from "@/features/discovery/components/creator-search/creator-search-taxonomy";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { normalizeDiscoverySearchQuery } from "@/lib/discovery/creator-search-query";
 
 const PICKER_SEARCH_TAXONOMY = buildDiscoverySearchTaxonomyIndex([]);
+
+/**
+ * Normalize completed search terms without removing a space the user has just
+ * typed between parts of a creator name. The browse request and result display
+ * trim the query independently, so retaining that space only affects editing.
+ */
+export function resolveCreatorPickerSearchInput(input: string): string {
+  if (/\s$/.test(input)) return input;
+  return normalizeDiscoverySearchQuery(input) || input;
+}
 
 export type CreatorPickerSearchDisplay = {
   creators: UnifiedCreatorResult[];

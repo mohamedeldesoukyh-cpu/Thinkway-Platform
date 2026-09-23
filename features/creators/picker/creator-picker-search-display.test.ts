@@ -3,7 +3,10 @@ import test from "node:test";
 
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
-import { resolveCreatorPickerSearchDisplay } from "./creator-picker-search-display";
+import {
+  resolveCreatorPickerSearchDisplay,
+  resolveCreatorPickerSearchInput,
+} from "./creator-picker-search-display";
 
 function makeCreator(
   partial: Partial<UnifiedCreatorResult> & Pick<UnifiedCreatorResult, "unified_id" | "display_name">
@@ -44,6 +47,18 @@ function makeCreator(
     unified_id,
   };
 }
+
+test("creator picker retains a just-typed space in a creator name", () => {
+  assert.equal(resolveCreatorPickerSearchInput("Amina "), "Amina ");
+  assert.equal(resolveCreatorPickerSearchInput("Amina Amr"), "amina amr");
+});
+
+test("creator picker continues to normalize complete profile lookups", () => {
+  assert.equal(
+    resolveCreatorPickerSearchInput("https://www.instagram.com/Amina.Amr/"),
+    "@amina.amr"
+  );
+});
 
 test("handle-like query with only fuzzy hits shows add-missing empty state", () => {
   const fuzzyOnly = [
