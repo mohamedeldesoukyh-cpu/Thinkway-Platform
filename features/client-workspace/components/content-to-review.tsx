@@ -402,7 +402,7 @@ export function ContentToReview({
               <article key={reviewItemKey(item)} style={{ minWidth: 0, padding: 16, border: "1px solid #dde3ec", borderRadius: 12, overflowWrap: "anywhere" }}>
                 <h3>{item.creatorName} · {item.fileName || item.deliverable}</h3>
                 <p>v{item.versionNumber} · {item.platformLabel} · Approved</p>
-                <p>{item.approvedAt ? <>Approved {new Date(item.approvedAt).toLocaleString("en-GB", { timeZoneName: "short" })} · {item.approvedBy === "internal" ? "Thinkway team" : "Client"}</> : "Published content · approval date not recorded"}</p>
+                <p>{item.approvedAt ? <>Approved {new Date(item.approvedAt).toLocaleString("en-GB", { timeZone: "Africa/Cairo", timeZoneName: "short" })} · {item.approvedBy === "internal" ? "Thinkway team" : "Client"}</> : "Published content · approval date not recorded"}</p>
                 <div className="cx-rev__acts">
                   {item.canDownloadOriginal ? <a className="btn" href={clientContentAssetUrl({ token, versionId: item.versionId, mode: "download" })}>{DOWNLOAD_ORIGINAL_LABEL}</a> : null}
                   {item.previewKind !== "none" && item.canDownloadOriginal ? <ClientContentFullSizeButton token={token} versionId={item.versionId} kind={item.previewKind} title={item.fileName || item.deliverable} /> : null}

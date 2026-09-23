@@ -28,7 +28,7 @@ export function ContentDecisionControls({ campaignHeaderId, version, onSaved }: 
   }
   return <section className="mt-3 space-y-2 rounded-md border p-3" aria-label="Content approval">
     <p className="text-sm font-medium">{decision?.decision === "approved" ? "Approved content" : decision?.decision === "changes_requested" ? "Changes requested" : "Awaiting content approval"}</p>
-    {decision?.decidedAt ? <p className="text-xs text-muted-foreground">{new Date(decision.decidedAt).toLocaleString("en-GB")} · {decision.actorKind === "internal" ? "Thinkway team" : "Client"}</p> : null}
+    {decision?.decidedAt ? <p className="text-xs text-muted-foreground">{new Date(decision.decidedAt).toLocaleString("en-GB", { timeZone: "Africa/Cairo", timeZoneName: "short" })} · {decision.actorKind === "internal" ? "Thinkway team" : "Client"}</p> : null}
     {decision?.comment ? <p className="whitespace-pre-wrap text-xs">{decision.comment}</p> : null}
     <Textarea aria-label="Content decision notes" placeholder="Notes (optional)" value={comment} onChange={e => setComment(e.target.value)} disabled={pending} rows={2} />
     <div className="flex flex-wrap gap-2">
