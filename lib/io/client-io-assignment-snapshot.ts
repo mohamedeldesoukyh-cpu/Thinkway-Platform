@@ -12,6 +12,7 @@ export type ClientIoAssignmentSnapshotLine = {
   revenue_vat_percent: number | null;
   revenue_vat_exempt: boolean | null;
   currency_code: string;
+  revenue_fx_override?: string | null;
   sort_order: number | null;
 };
 
@@ -27,6 +28,8 @@ export type ClientIoAssignmentSnapshotDeliverable = {
 export type ClientIoAssignmentSnapshotV1 = {
   version: 1;
   capturedAt: string;
+  documentCurrency?: string;
+  assignmentFxRates?: Record<string, number>;
   selectedCampaignLineIds: string[];
   lines: ClientIoAssignmentSnapshotLine[];
   deliverables: ClientIoAssignmentSnapshotDeliverable[];
@@ -48,6 +51,8 @@ export function isClientIoAssignmentSnapshotV1(
 
 export function buildClientIoAssignmentSnapshot(input: {
   capturedAt?: string;
+  documentCurrency?: string;
+  assignmentFxRates?: Record<string, number>;
   selectedCampaignLineIds: string[];
   lines: ClientIoAssignmentSnapshotLine[];
   deliverables: ClientIoAssignmentSnapshotDeliverable[];
@@ -56,6 +61,7 @@ export function buildClientIoAssignmentSnapshot(input: {
   const selectedSet = new Set(selected);
   return {
     version: 1,
+    ...(input.documentCurrency ? { documentCurrency: input.documentCurrency, assignmentFxRates: input.assignmentFxRates } : {}),
     capturedAt: input.capturedAt ?? new Date().toISOString(),
     selectedCampaignLineIds: selected,
     lines: input.lines.filter((line) => selectedSet.has(line.id)),

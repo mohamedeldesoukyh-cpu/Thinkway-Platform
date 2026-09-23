@@ -27,6 +27,8 @@ export function buildQuotationConvertSnapshotHash(input: {
       revenue: unit.primaryItem.revenue,
       cost: unit.primaryItem.cost,
       af_pct: unit.primaryItem.af_pct,
+      ...(unit.primaryItem.cost_fx_override ? { costFxOverride: unit.primaryItem.cost_fx_override } : {}),
+      ...(unit.primaryItem.revenue_fx_override ? { revenueFxOverride: unit.primaryItem.revenue_fx_override } : {}),
       collapseGroupId: unit.kind === "package" ? unit.collapseGroupId : null,
     })),
   };
@@ -42,6 +44,7 @@ export const CONVERT_COPIED_FIELDS = [
   "Selected creators / packages → Assignments",
   "Deliverable scope (platform, type, quantity)",
   "Operational PO amounts (revenue, cost, AF%)",
+  "Custom cost and revenue exchange rates (when set)",
   "Tentative schedule hints (if present)",
   "Provenance (source quotation + item ids)",
   "Commercial snapshot (immutable)",

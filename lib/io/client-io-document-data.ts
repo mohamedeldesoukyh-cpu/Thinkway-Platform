@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { clientIoFxRates } from "@/lib/io/client-io-fx";
+import type { ClientIoAssignmentSnapshotV1 } from "@/lib/io/client-io-assignment-snapshot";
 
 import {
   computeAgencyFeeAmount,
@@ -38,6 +40,8 @@ import type {
 import { computeVatLine, roundMoney } from "@/lib/vat/calculations";
 
 export type LoadClientIoDocumentDataOptions = {
+  /** Generation uses exactly the snapshot captured for this document. */
+  assignmentSnapshot?: ClientIoAssignmentSnapshotV1;
   /** Use live Assignments (composer / generate). Default: prefer issued snapshot when present. */
   forceLive?: boolean;
 };
@@ -204,13 +208,13 @@ export async function loadClientIoDocumentData(
   };
 
   const selectedAssignmentIds = await listClientIoAssignmentIds(supabase, clientIoId);
-  const snapshot = isClientIoAssignmentSnapshotV1(typedCio.assignment_snapshot)
+  const snapshot = options?.assignmentSnapshot ?? (isClientIoAssignmentSnapshotV1(typedCio.assignment_snapshot)
     ? typedCio.assignment_snapshot
-    : null;
+    : null);
   const useSnapshot =
     !options?.forceLive &&
     snapshot != null &&
-    typedCio.status !== "draft";
+    (typedCio.status !== "draft" || Boolean(options?.assignmentSnapshot));
 
   const profilePromise = actorId
     ? supabase
@@ -241,7 +245,7 @@ export async function loadClientIoDocumentData(
       : supabase
           .from("campaign_lines")
           .select(
-            "id, document_number, name, description, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, sort_order"
+            "id, document_number, name, description, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, revenue_fx_override, sort_order"
           )
           .eq("campaign_header_id", typedCio.campaign_header_id)
           .order("sort_order", { ascending: true }),
@@ -294,6 +298,7 @@ export async function loadClientIoDocumentData(
   };
 
   type LineRow = {
+    revenue_fx_override?: string | null;
     id: string;
     document_number: string | null;
     name: string;
@@ -336,6 +341,7 @@ export async function loadClientIoDocumentData(
       revenue_vat_percent: line.revenue_vat_percent,
       revenue_vat_exempt: line.revenue_vat_exempt,
       currency_code: line.currency_code,
+      revenue_fx_override: line.revenue_fx_override,
     }));
     deliverables = snapshot.deliverables.map(
       (row: ClientIoAssignmentSnapshotDeliverable) => ({
@@ -465,6 +471,13 @@ export async function loadClientIoDocumentData(
     };
   });
 
+  // Legacy issued snapshots retain their original currency and totals.
+  const currencyCode = useSnapshot
+    ? snapshot?.documentCurrency ?? typedLines[0]?.currency_code ?? typedCampaign.currency_code ?? "EGP"
+    : typedCampaign.currency_code ?? "EGP";
+  const fxRates = useSnapshot
+    ? snapshot?.assignmentFxRates
+    : await clientIoFxRates(supabase, typedLines, currencyCode);
   const assignmentPricing: ClientIoAssignmentPricing[] = typedLines.map((line) => {
     const assignment = parseLineAssignment(line.metadata);
     const revenueBeforeVat = roundMoney(
@@ -484,9 +497,9 @@ export async function loadClientIoDocumentData(
       lineDocumentNumber: line.document_number,
       lineName: line.name,
       influencerName: assignment?.influencer_name ?? line.name,
-      revenueBeforeVat,
-      usageRightsAmount,
-      agencyFeeAmount,
+      revenueBeforeVat: roundMoney(revenueBeforeVat * (fxRates?.[line.id] ?? 1)),
+      usageRightsAmount: roundMoney(usageRightsAmount * (fxRates?.[line.id] ?? 1)),
+      agencyFeeAmount: roundMoney(agencyFeeAmount * (fxRates?.[line.id] ?? 1)),
     };
   });
 
@@ -494,8 +507,6 @@ export async function loadClientIoDocumentData(
   const vatPercent =
     Number(primaryLine?.revenue_vat_percent ?? 0) || THINKWAY_AGENCY_DEFAULTS.defaultVatPercent;
   const vatExempt = Boolean(primaryLine?.revenue_vat_exempt);
-  const currencyCode =
-    primaryLine?.currency_code ?? typedCampaign.currency_code ?? "EGP";
 
   const pricing = buildCampaignPricing(
     assignmentPricing,

@@ -5,11 +5,14 @@ import ts from "typescript";
 import * as selection from "@/lib/domains/commercial/quotation-convert-selection";
 import * as snapshot from "@/lib/domains/commercial/quotation-convert-snapshot";
 import * as policy from "./quotation-append-policy";
+import { makeCreatorFx } from "@/lib/commercial/creator-fx";
+import { resolveLinePoBillableBase } from "@/lib/finance/po/billable-base";
 
 // Exercise the actual orchestration with in-memory database and external services.
 // This verifies writes and early-return behavior without touching campaign records.
-function fixture(options: { status?: string; targetBrand?: string; existing?: boolean; readError?: boolean } = {}) {
+function fixture(options: { status?: string; targetBrand?: string; existing?: boolean; readError?: boolean; customFx?: boolean } = {}) {
   const item = { id: "new-item", influencer_id: "creator", creator_name: "New creator", source_shortlist_item_id: "shortlist-item", option_number: 1, sort_order: 0, cost: 100, revenue: 250, af_pct: 5, deliverables: [{ platform: "instagram", type: "reel", quantity: 2 }] };
+  Object.assign(item, { cost_currency: "USD", cost_fx_override: options.customFx ? makeCreatorFx("USD", "EGP", 52, 1) : null, revenue_fx_override: options.customFx ? makeCreatorFx("USD", "EGP", 55, 1) : null });
   const quote = { status: options.status ?? "approved", brand_id: "brand", client_id: "client", currency: "EGP", shortlist_id: "shortlist" };
   const writes: { kind: string; payload: Record<string, unknown> }[] = [];
   const target = { id: "campaign", document_number: "TW-TEST", brand_id: options.targetBrand ?? "brand", client_id: "client", status: "active" };
@@ -28,6 +31,7 @@ function fixture(options: { status?: string; targetBrand?: string; existing?: bo
   } };
   const mocks = {
     ...selection, ...snapshot, ...policy,
+    resolveLinePoBillableBase,
     loadQuotationRow: async () => quote,
     canCreateCampaignFromQuotation: (s: string) => s === "approved",
     isQuotationExpired: () => false,
@@ -62,6 +66,16 @@ test("preview performs no writes; append copies only selected pricing and delive
   assert.equal(f.writes[0].payload.revenue, 250);
   assert.equal(f.writes[0].payload.cost, 100);
   assert.equal(JSON.parse(String(f.writes[0].payload.assignment_json)).platforms[0].quantity, 2);
+});
+
+test("quotation conversion carries independent custom rates; normal quotes remain unmodified", async () => {
+  for (const customFx of [false, true]) {
+    const f = fixture({ customFx });
+    assert.equal((await f.run(false)).ok, true);
+    const line = f.writes.find(w => w.kind === "line")!.payload;
+    assert.equal(line.cost_fx_override, customFx ? makeCreatorFx("USD", "EGP", 52, 1) : null);
+    assert.equal(line.revenue_fx_override, customFx ? makeCreatorFx("USD", "EGP", 55, 1) : null);
+  }
 });
 test("creator already transferred from previous quotation version is not duplicated", async () => {
   const f = fixture({ existing: true });

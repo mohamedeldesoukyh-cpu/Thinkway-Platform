@@ -170,7 +170,7 @@ function ParticipationDetailsTab({
         </DetailField>
       ) : null}
       <DetailField label="Revenue" valueClassName="m">
-        {formatMoney(line.revenue_after_vat ?? line.revenue_before_vat, currency)}
+        {formatMoney(line.revenue_after_vat ?? line.revenue_before_vat, currency, line.revenue_fx_override)}
       </DetailField>
       {showInternalFinancials ? (
         <>
@@ -368,7 +368,7 @@ function ActivityTab({ group }: { group: AssignmentHierarchyGroup }) {
                       deliverableLabel(deliverable.deliverable_type)}
                   </td>
                   <td className="tw-v">
-                    {formatMoney(deliverable.revenue_before_vat, currency)}
+                    {formatMoney(deliverable.revenue_before_vat, currency, line.revenue_fx_override)}
                   </td>
                 </tr>
               ))}
@@ -390,7 +390,7 @@ function ActivityTab({ group }: { group: AssignmentHierarchyGroup }) {
             {textOrMiss(line.payment_status)}
           </DetailField>
           <DetailField label="Cost received" valueClassName="m">
-            {formatMoney(line.cost_received, line.cost_received_currency || currency)}
+            {formatMoney(line.cost_received, line.cost_received_currency || currency, line.cost_fx_override)}
           </DetailField>
         </>
       ) : null}
@@ -568,7 +568,7 @@ export function AssignmentInfluencerDetailSheet({
               <div className="tw-cm__st">
                 <div>
                   <i>Revenue</i>
-                  <b>{formatMoneyCompact(revenue, currency)}</b>
+                  <b>{formatMoneyCompact(revenue, currency, line?.revenue_fx_override)}</b>
                 </div>
                 {gates.showInternalFinancials ? (
                   <div>

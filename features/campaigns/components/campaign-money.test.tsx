@@ -4,8 +4,16 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CampaignCurrencyProvider, CampaignMoney, CampaignLineFinancial } from "./campaign-money";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
+import { makeCreatorFx } from "@/lib/commercial/creator-fx";
+import { OperationalAmountField } from "./assignment-hierarchy/operational-amount-field";
 
 const rates = { EGP: 1, USD: 52.2151, AED: 14, EUR: 56.75 };
+
+test("expanded assignment amounts respect the quotation rate and retain normal FX otherwise", () => {
+  const props = { currency: "USD", value: 500, disabled: true, onChange: () => {} };
+  assert.match(render("EGP", createElement(OperationalAmountField, { ...props, fxOverride: makeCreatorFx("USD", "EGP", 55, 1) })), /EGP 27,500\.00/);
+  assert.match(render("EGP", createElement(OperationalAmountField, props)), /EGP 26,107\.55/);
+});
 function render(currency: string, child: React.ReactNode) {
   return renderToStaticMarkup(<CampaignCurrencyProvider workspace={{ currency_code: currency, currency_rates: rates, lines: [] } as unknown as CampaignWorkspace}>{child}</CampaignCurrencyProvider>).replace(/<[^>]*>/g, " ").replace(/\s+/g, " ");
 }
