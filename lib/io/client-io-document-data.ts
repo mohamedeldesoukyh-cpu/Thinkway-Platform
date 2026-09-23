@@ -46,6 +46,25 @@ export type LoadClientIoDocumentDataOptions = {
   forceLive?: boolean;
 };
 
+/** The register reports the generated document, even if live assignments later change. */
+export function clientIoSnapshotTotal(value: unknown) {
+  if (!isClientIoAssignmentSnapshotV1(value)) return null;
+  const first = value.lines[0];
+  const lines = value.lines.map(line => {
+    const rate = value.assignmentFxRates?.[line.id] ?? 1;
+    const revenueBeforeVat = Number(line.revenue_before_vat ?? line.revenue ?? 0);
+    const usageRightsAmount = Number(line.usage_rights_amount ?? 0);
+    const agencyFeeAmount = resolveLineAgencyFeeAmount({ revenueBeforeVat, usageRightsAmount,
+      agencyFeeAmount: line.agency_fee_amount, agencyFeePercent: Number(line.agency_fee_percent ?? 0) });
+    return { lineId: line.id, lineDocumentNumber: line.document_number, lineName: line.name, influencerName: line.name,
+      revenueBeforeVat: roundMoney(revenueBeforeVat * rate), usageRightsAmount: roundMoney(usageRightsAmount * rate), agencyFeeAmount: roundMoney(agencyFeeAmount * rate) };
+  });
+  const currency = value.documentCurrency ?? first?.currency_code ?? "EGP";
+  const pricing = buildCampaignPricing(lines, currency,
+    Number(first?.revenue_vat_percent ?? 0) || THINKWAY_AGENCY_DEFAULTS.defaultVatPercent, Boolean(first?.revenue_vat_exempt));
+  return { amount: pricing.total, currency, assignmentCount: value.lines.length };
+}
+
 function unwrapRelation<T>(value: T | T[] | null | undefined): T | null {
   if (value == null) return null;
   return Array.isArray(value) ? (value[0] ?? null) : value;

@@ -2,12 +2,20 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { CampaignCurrencyProvider, CampaignMoney, CampaignLineFinancial } from "./campaign-money";
+import { CampaignCurrencyProvider, CampaignMoney, CampaignLineFinancial, CampaignMoneyTotal } from "./campaign-money";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { makeCreatorFx } from "@/lib/commercial/creator-fx";
 import { OperationalAmountField } from "./assignment-hierarchy/operational-amount-field";
 
 const rates = { EGP: 1, USD: 52.2151, AED: 14, EUR: 56.75 };
+
+test("Client IO rollup honors the custom rate without relabeling native amounts", () => {
+  const total = createElement(CampaignMoneyTotal, { currency: "EGP", amounts: [
+    { amount: 627, currency: "USD", override: makeCreatorFx("USD", "EGP", 55, 1) },
+    { amount: 1254, currency: "AED" },
+  ] });
+  assert.match(render("EGP", total), /EGP 52,041\.00/);
+});
 
 test("expanded assignment amounts respect the quotation rate and retain normal FX otherwise", () => {
   const props = { currency: "USD", value: 500, disabled: true, onChange: () => {} };

@@ -2,7 +2,6 @@
 
 import { createContext, useContext, type ReactNode } from "react";
 import { creatorFxAmount } from "@/lib/commercial/creator-fx";
-import { convertMoney } from "@/lib/billing/billing-currency";
 import { formatMoney } from "@/features/campaigns/utils";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { aggregateCampaignDisplayFinancials } from "@/lib/campaigns/campaign-display-financials";
@@ -27,13 +26,13 @@ export function CampaignMoney({ amount, currency, override }: { amount: number; 
 /** JSX formatter for read-only cells; never use in document generation or editor inputs. */
 export function campaignMoney(amount: number, currency: string, override?: string | null) { return <CampaignMoney amount={amount} currency={currency} override={override} />; }
 
-export function CampaignMoneyTotal({ amounts, currency, displayAmount }: { amounts: { amount: number; currency: string }[]; currency: string; displayAmount?: number }) {
+export function CampaignMoneyTotal({ amounts, currency, displayAmount }: { amounts: { amount: number; currency: string; override?: string | null }[]; currency: string; displayAmount?: number }) {
   const workspace = useCampaignCurrency();
   const target = workspace?.currency_code ?? currency;
   const originals = new Map<string, number>();
   let total = 0;
   for (const entry of amounts) {
-    total += convertMoney(entry.amount, entry.currency, target, workspace?.currency_rates ?? {});
+    total += creatorFxAmount(entry.amount, { from: entry.currency, to: target, sourceRateToEgp: workspace?.currency_rates?.[entry.currency] ?? 0, targetRateToEgp: workspace?.currency_rates?.[target] ?? 0, override: entry.override });
     originals.set(entry.currency, (originals.get(entry.currency) ?? 0) + entry.amount);
   }
   return <span className="inline-flex flex-col tabular-nums"><span>{formatMoney(displayAmount ?? total, target)}</span>

@@ -1,6 +1,7 @@
 "use client";
 
 import { campaignMoney, CampaignMoneyTotal } from "@/features/campaigns/components/campaign-money";
+import { assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
 import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -26,6 +27,12 @@ export type ClientIoComposerAssignment = {
   influencer_name: string | null;
   revenue_before_vat: number;
   currency_code?: string;
+  revenue_fx_override?: string | null;
+  usage_rights_amount?: number;
+  agency_fee_amount?: number;
+  agency_fee_percent?: number;
+  revenue_vat_percent?: number;
+  revenue_vat_exempt?: boolean;
   description?: string | null;
   usage_period?: string | null;
 };
@@ -222,7 +229,8 @@ export function ClientIoAssignmentComposer({
                         nameClassName="text-sm font-medium"
                       />
                       <p className="text-xs tabular-nums text-muted-foreground">
-                        {campaignMoney(Number(row.revenue_before_vat ?? 0), row.currency_code || currencyCode)}
+                        {campaignMoney(assignmentClientBilling(row).totalBilling, row.currency_code || currencyCode, row.revenue_fx_override)}
+                        <span className="block">Including fees and VAT</span>
                       </p>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
@@ -284,9 +292,9 @@ export function ClientIoAssignmentComposer({
 
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-xs text-muted-foreground">
-            {selected.size} selected · rollup{" "}
+            {selected.size} selected · total including fees and VAT{" "}
             <span className="font-medium text-foreground">
-              {<CampaignMoneyTotal currency={currencyCode} amounts={assignments.filter(row => selected.has(row.id)).map(row => ({ amount: Number(row.revenue_before_vat) || 0, currency: row.currency_code || currencyCode }))} />}
+              {<CampaignMoneyTotal currency={currencyCode} amounts={assignments.filter(row => selected.has(row.id)).map(row => ({ amount: assignmentClientBilling(row).totalBilling, currency: row.currency_code || currencyCode, override: row.revenue_fx_override }))} />}
             </span>
           </p>
           {editable ? (
