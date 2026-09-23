@@ -32,6 +32,7 @@ import { QuotationTermsAccordion } from "@/features/quotations/components/quotat
 import { QuotationCommercialMetricsBand } from "@/features/quotations/components/quotation-commercial-metrics-band";
 import { QuotationWorkspaceHeader } from "@/features/quotations/components/quotation-workspace-header";
 import { ConvertQuotationDialog } from "@/features/quotations/components/convert-quotation-dialog";
+import { AppendQuotationCreatorDialog } from "@/features/quotations/components/append-quotation-creator-dialog";
 import { QuotationClientReviewPanel } from "@/features/quotations/components/quotation-client-review-panel";
 import {
   clientSelectionForItems,
@@ -146,6 +147,7 @@ function QuotationWorkspaceContent({
   const [clientSelectionFilter, setClientSelectionFilter] =
     useState<QuotationClientSelectionFilter>("all");
   const [convertApprovedOpen, setConvertApprovedOpen] = useState(false);
+  const [appendCreatorId, setAppendCreatorId] = useState<string | null>(null);
   const [exportTemplate, setExportTemplate] = useState<QuotationTemplateVariant>("detailed");
   const [addCreatorsOpen, setAddCreatorsOpen] = useState(false);
   const [commercialWorkspaceOpen, setCommercialWorkspaceOpen] = useState(false);
@@ -872,6 +874,12 @@ function QuotationWorkspaceContent({
         onToggleCalculator={() => setCalculatorOpen((open) => !open)}
         onDuplicate={handleDuplicateSelected}
         onDelete={() => void handleRemoveSelected()}
+        onAddToCampaign={detail.canManage ? () => {
+          if (manualSave.hasUnsavedChanges) { toast.error("Save your quotation changes first."); return; }
+          if (detail.status !== "approved") { toast.error("Approve this quotation version before adding its creator to a campaign."); return; }
+          const itemId = [...selectedIds][0];
+          if (selectedIds.size === 1 && itemId) setAppendCreatorId(itemId);
+        } : undefined}
       />
       <QuotationPricingCalculatorPanel
         open={calculatorOpen && selectedIds.size > 0}
@@ -899,6 +907,7 @@ function QuotationWorkspaceContent({
         onOpenChange={setConvertApprovedOpen}
         itemIds={approvedItemIds}
       />
+      {appendCreatorId && <AppendQuotationCreatorDialog quotationId={detail.id} itemId={appendCreatorId} linkedCampaignId={detail.campaign_header_id} onClose={() => setAppendCreatorId(null)} />}
     </div>
   );
 }

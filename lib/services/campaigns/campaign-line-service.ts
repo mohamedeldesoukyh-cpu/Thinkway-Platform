@@ -152,7 +152,8 @@ export type CampaignLineMutationInput = {
 export async function createCampaignLine(
   supabase: SupabaseClient,
   userId: string,
-  parsed: CampaignLineMutationInput
+  parsed: CampaignLineMutationInput,
+  options?: { lineId: string },
 ): Promise<{ ok: true; message: string; clientId?: string; lineId: string } | { ok: false; message: string }> {
   const assignmentResult = parseAssignmentJson(parsed.assignment_json);
   if (parsed.pricing_mode !== "per_deliverable" && !assignmentResult.ok) {
@@ -251,6 +252,7 @@ export async function createCampaignLine(
   };
 
   const { data: line, error: lineError } = await insertCampaignLine(supabase, {
+    ...(options?.lineId ? { id: options.lineId } : {}),
     campaign_header_id: parsed.campaign_id,
     name: lineTitle,
     description: emptyToNull(parsed.description ?? undefined),
@@ -277,6 +279,9 @@ export async function createCampaignLine(
   });
 
   if (lineError || !line) {
+    if (options?.lineId && lineError?.code === "23505") {
+      return { ok: false, message: "This creator is already being added or already exists in this campaign. Preview again before retrying." };
+    }
     return { ok: false, message: lineError?.message ?? "Failed to create line." };
   }
 
