@@ -60,7 +60,8 @@ export type ClientIoRow = {
   approved_by_name: string | null;
   brand_name: string | null;
   client_io_terms_text: string | null;
-  send_recipients: Array<{ name: string; email: string }>;
+  recipients_configured?: boolean;
+  send_recipients: Array<{ name: string; email: string; role?: "to" | "cc" | "bcc"; documentRole?: "main" | "other" }>;
   /** Release 2.2 — Assignments included in composition (`campaign_lines.id`). */
   selected_assignment_ids: string[];
   generated_total?: { amount: number; currency: string; assignmentCount: number } | null;

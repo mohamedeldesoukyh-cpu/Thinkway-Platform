@@ -2,7 +2,7 @@
 
 import { campaignMoney, CampaignMoneyTotal } from "@/features/campaigns/components/campaign-money";
 import { assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
-import { useActionState, useEffect, useMemo, useState, useTransition } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { CreatorNameStack } from "@/components/creator/creator-name-stack";
@@ -75,24 +75,26 @@ export function ClientIoAssignmentComposer({
     saveClientIoAssignmentsAction,
     INITIAL_STATE
   );
-  const [notesPending, startNotesTransition] = useTransition();
+  const notesRef = useRef(notesById);
+  const dirtyNotes = useRef(new Set<string>());
+  const savingNotes = useRef(new Set<string>());
+  const [noteStatus, setNoteStatus] = useState<Record<string, string>>({});
+  const selectionSource = JSON.stringify(selectedAssignmentIds);
 
   useEffect(() => {
-    setSelected(new Set(selectedAssignmentIds));
-  }, [selectedAssignmentIds]);
+    setSelected(new Set(JSON.parse(selectionSource) as string[]));
+  }, [selectionSource]);
 
   useEffect(() => {
-    setNotesById(
-      Object.fromEntries(
-        assignments.map((row) => [
-          row.id,
-          {
-            description: row.description ?? "",
-            usagePeriod: row.usage_period ?? "",
-          },
-        ])
-      )
-    );
+    setNotesById(previous => {
+      const next = Object.fromEntries(assignments.map(row => [row.id,
+        dirtyNotes.current.has(row.id) || savingNotes.current.has(row.id)
+          ? previous[row.id] ?? { description: "", usagePeriod: "" }
+          : { description: row.description ?? "", usagePeriod: row.usage_period ?? "" }
+      ]));
+      notesRef.current = next;
+      return next;
+    });
   }, [assignments]);
 
   useEffect(() => {
@@ -124,28 +126,35 @@ export function ClientIoAssignmentComposer({
     setSelected(new Set());
   }
 
-  function persistNotes(lineId: string) {
-    const draft = notesById[lineId];
-    const source = assignments.find((row) => row.id === lineId);
-    if (!draft || !source) return;
-    const nextDescription = draft.description.trim();
-    const nextUsage = draft.usagePeriod.trim();
-    const prevDescription = (source.description ?? "").trim();
-    const prevUsage = (source.usage_period ?? "").trim();
-    if (nextDescription === prevDescription && nextUsage === prevUsage) return;
+  function changeNotes(lineId: string, patch: Partial<{ description: string; usagePeriod: string }>) {
+    dirtyNotes.current.add(lineId);
+    const next = { ...notesRef.current, [lineId]: { ...notesRef.current[lineId], ...patch } };
+    notesRef.current = next;
+    setNotesById(next);
+    setNoteStatus(previous => ({ ...previous, [lineId]: "Unsaved changes" }));
+  }
 
-    startNotesTransition(async () => {
-      const result = await updateAssignmentCommercialNotesAction({
-        campaign_id: campaignHeaderId,
-        line_id: lineId,
-        description: nextDescription || null,
-        usage_period: nextUsage || null,
-      });
-      if (!result.ok) {
-        toast.error(result.message ?? "Could not save influencer notes.");
-        return;
+  async function persistNotes(lineId: string) {
+    if (savingNotes.current.has(lineId) || !dirtyNotes.current.has(lineId)) return;
+    savingNotes.current.add(lineId);
+    setNoteStatus(previous => ({ ...previous, [lineId]: "Saving…" }));
+    try {
+      // Serialize saves per assignment. Other rows and fields remain editable.
+      while (dirtyNotes.current.has(lineId)) {
+        const draft = notesRef.current[lineId];
+        const result = await updateAssignmentCommercialNotesAction({
+          campaign_id: campaignHeaderId, line_id: lineId,
+          description: draft.description.trim() || null,
+          usage_period: draft.usagePeriod.trim() || null,
+        });
+        if (!result.ok) throw new Error(result.message ?? "Could not save assignment notes.");
+        if (notesRef.current[lineId] === draft) dirtyNotes.current.delete(lineId);
       }
-    });
+      setNoteStatus(previous => ({ ...previous, [lineId]: "Saved" }));
+    } catch (error) {
+      setNoteStatus(previous => ({ ...previous, [lineId]: "Not saved — retry" }));
+      toast.error(error instanceof Error ? error.message : "Could not save assignment notes.");
+    } finally { savingNotes.current.delete(lineId); }
   }
 
   if (assignments.length === 0) {
@@ -246,19 +255,12 @@ export function ClientIoAssignmentComposer({
                       Full Description
                     </p>
                     <Textarea
+                      aria-label={`Full description for ${ariaLabel}`}
                       value={notes.description}
-                      onChange={(event) =>
-                        setNotesById((prev) => ({
-                          ...prev,
-                          [row.id]: {
-                            ...notes,
-                            description: event.target.value,
-                          },
-                        }))
-                      }
-                      onBlur={() => persistNotes(row.id)}
+                      onChange={event => changeNotes(row.id, { description: event.target.value })}
+                      onBlur={() => void persistNotes(row.id)}
                       rows={2}
-                      disabled={!editable || notesPending}
+                      disabled={!editable}
                       placeholder="Full description…"
                       className="min-h-[3rem] resize-y text-xs"
                     />
@@ -268,23 +270,20 @@ export function ClientIoAssignmentComposer({
                       Usage Period
                     </p>
                     <Input
+                      aria-label={`Usage period for ${ariaLabel}`}
                       value={notes.usagePeriod}
-                      onChange={(event) =>
-                        setNotesById((prev) => ({
-                          ...prev,
-                          [row.id]: {
-                            ...notes,
-                            usagePeriod: event.target.value,
-                          },
-                        }))
-                      }
-                      onBlur={() => persistNotes(row.id)}
-                      disabled={!editable || notesPending}
+                      onChange={event => changeNotes(row.id, { usagePeriod: event.target.value })}
+                      onBlur={() => void persistNotes(row.id)}
+                      disabled={!editable}
                       placeholder="e.g. 30 days / Organic only"
                       className="h-9 text-xs"
                     />
                   </div>
                 </div>
+                {noteStatus[row.id] ? <p aria-live="polite" className="ml-7 text-xs text-muted-foreground">
+                  {noteStatus[row.id]}
+                  {noteStatus[row.id] === "Not saved — retry" ? <Button type="button" size="sm" variant="ghost" onClick={() => void persistNotes(row.id)}>Retry save</Button> : null}
+                </p> : null}
               </li>
             );
           })}

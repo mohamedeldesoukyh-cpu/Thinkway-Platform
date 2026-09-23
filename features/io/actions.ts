@@ -62,10 +62,10 @@ import {
   serializeTermsText,
 } from "@/lib/io/client-io-terms";
 import {
+  clientIoDeliveryRecipients,
+  validateClientIoRecipients,
   parseSendRecipientsField,
-  parseSendRecipientsJson,
   serializeSendRecipients,
-  type ClientIoRecipientEntry,
 } from "@/lib/io/client-io-send-recipients";
 import { debugIo, buildIoEmailLink } from "@/features/io/queries";
 import type { ClientIoStatus, VendorIoStatus } from "@/features/io/types";
@@ -492,9 +492,8 @@ export async function updateClientIoAction(
   }
 
   const sendRecipients = parseSendRecipientsField(sendRecipientsRaw);
-  if (sendRecipientsRaw && sendRecipients.length === 0) {
-    return { ok: false, message: "Recipients must include at least one valid email address." };
-  }
+  const recipientError = validateClientIoRecipients(sendRecipientsRaw || "[]");
+  if (recipientError) return { ok: false, message: recipientError };
 
   const { supabase, user, error } = await requireAuthUser();
   if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
@@ -528,6 +527,34 @@ export async function updateClientIoAction(
   return { ok: true, message: "Client IO saved." };
 }
 
+export async function saveClientIoRecipientsAction(_prev: IoActionState, formData: FormData): Promise<IoActionState> {
+  const id = String(formData.get("id") ?? "");
+  const campaignId = String(formData.get("campaign_header_id") ?? "");
+  const raw = String(formData.get("send_recipients") ?? "[]");
+  const invalid = validateClientIoRecipients(raw);
+  if (invalid) return { ok: false, message: invalid };
+  const { supabase, user, error } = await requireAuthUser();
+  if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
+  const existing = await fetchClientIoRow(supabase, id);
+  if (!existing || existing.campaign_header_id !== campaignId) return { ok: false, message: "Client IO not found." };
+  if (existing.is_superseded) return { ok: false, message: "Edit the current Client IO version." };
+  const { data, error: saveError } = await supabase.from("client_ios")
+    .update({ send_recipients: parseSendRecipientsField(raw), updated_by: user.id } as never)
+    .eq("id", id).eq("campaign_header_id", campaignId).select("id").single();
+  if (saveError || !data) return { ok: false, message: saveError?.message ?? "Recipients were not saved." };
+  if (existing.document_generated_at && isClientIoRegenerateAllowed(existing.status)) {
+    try { await generateClientIoDocument(supabase, id, user.id); }
+    catch (error) {
+      revalidateIoPaths(campaignId);
+      return { ok: false, message: "Recipients saved, but the document could not be refreshed. Regenerate before sending. " + (error instanceof Error ? error.message : "") };
+    }
+  }
+  revalidateIoPaths(campaignId);
+  return { ok: true, message: existing.document_generated_at && !isClientIoRegenerateAllowed(existing.status)
+    ? "Recipients saved for delivery. Use an amendment to change an already sent document header."
+    : "Recipients saved. The Client IO header is up to date." };
+}
+
 export async function sendClientIoAction(
   _prev: IoActionState,
   formData: FormData
@@ -550,15 +577,15 @@ export async function sendClientIoAction(
     return { ok: false, message: "Generate the Client IO document before sending." };
   }
 
-  let recipients: ClientIoRecipientEntry[] = parseSendRecipientsField(recipientsRaw);
-  if (recipients.length === 0) {
-    recipients = clientIo.send_recipients ?? [];
+  if (clientIo.campaign_header_id !== campaignHeaderId || clientIo.is_superseded) {
+    return { ok: false, message: "Use the current Client IO for this campaign." };
   }
-  // Final normalize — expand any multi-email cells and drop invalids.
-  recipients = parseSendRecipientsJson(recipients);
-  if (recipients.length === 0) {
-    return { ok: false, message: "Add at least one recipient with a valid email address." };
-  }
+  const recipientInput = recipientsRaw || serializeSendRecipients(clientIo.send_recipients ?? []);
+  const recipientError = validateClientIoRecipients(recipientInput);
+  if (recipientError) return { ok: false, message: recipientError };
+  const recipients = parseSendRecipientsField(recipientInput);
+  const delivery = clientIoDeliveryRecipients(recipients, user.email);
+  if (delivery.to.length === 0) return { ok: false, message: "Add at least one TO recipient with a valid email address." };
 
   const emailReady = assertOutboundEmailReady();
   if (!emailReady.ok) {
@@ -650,28 +677,15 @@ export async function sendClientIoAction(
   const succeeded: string[] = [];
   const failed: Array<{ email: string; error: string }> = [];
 
-  for (const recipient of recipients) {
-    const approvalUrl = token
-      ? buildIoEmailLink("client", token, { email: recipient.email })
-      : null;
-    const html = buildClientIoEmailHtml({
-      io: emailSummary,
-      senderName,
-      approvalUrl,
-    });
-    const emailText = buildClientIoEmailPlainText({
-      io: emailSummary,
-      senderName,
-      approvalUrl,
-    });
-    const emailResult = await sendEmail({
-      to: [{ email: recipient.email, name: recipient.name || undefined }],
-      subject,
-      html,
-      text: emailText,
-      attachments: pdfAttachment ? [pdfAttachment] : undefined,
-    });
-
+  // Shared message: confirm the approver's email instead of attributing all clicks to the first TO.
+  const approvalUrl = token ? buildIoEmailLink("client", token) : null;
+  const html = buildClientIoEmailHtml({ io: emailSummary, senderName, approvalUrl });
+  const emailText = buildClientIoEmailPlainText({ io: emailSummary, senderName, approvalUrl });
+  const emailResult = await sendEmail({
+    ...delivery, subject, html, text: emailText,
+    attachments: pdfAttachment ? [pdfAttachment] : undefined,
+  });
+  for (const recipient of [...delivery.to, ...delivery.cc, ...delivery.bcc]) {
     if (emailResult.ok) succeeded.push(recipient.email);
     else failed.push({ email: recipient.email, error: emailResult.error });
 
@@ -705,6 +719,7 @@ export async function sendClientIoAction(
         email_html: html,
         email_text: emailText,
         sender_display_name: senderName,
+        recipient_role: recipient.role ?? "to",
         ...deliveryMeta,
       },
       sent_at: sentAt,

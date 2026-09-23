@@ -63,21 +63,21 @@ export function ClientIoHeaderControls({
     () =>
       seedRecipientsFromContacts(
         parseSendRecipientsJson(io.send_recipients),
-        contactRecipients
+        contactRecipients,
+        io.recipients_configured
       ),
-    [io.send_recipients, contactRecipients]
+    [io.send_recipients, io.recipients_configured, contactRecipients]
   );
 
   const effectiveRecipients = useMemo(() => {
-    const live = liveRecipients ? parseSendRecipientsJson(liveRecipients) : [];
-    if (live.length > 0) return live;
+    if (liveRecipients !== null) return liveRecipients;
     return seededRecipients;
   }, [liveRecipients, seededRecipients]);
 
   const sendRecipientsJson = serializeSendRecipients(effectiveRecipients);
   const recipientCount = effectiveRecipients.filter((r) => r.email.trim()).length;
   const recipientsNeedSave =
-    recipientCount > 0 && parseSendRecipientsJson(io.send_recipients).length === 0;
+    sendRecipientsJson !== serializeSendRecipients(parseSendRecipientsJson(io.send_recipients));
 
   const hasDocument = Boolean(
     io.document_generated_at || io.generated_html_url || io.generated_pdf_url

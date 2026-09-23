@@ -199,9 +199,20 @@ export async function completeClientIoApprovalByToken(input: {
       typed.generated_pdf_url
     );
     try {
+      const { data: sourceCampaign } = await db.from("campaign_headers")
+        .select("accepted_quotation_id, quotation_id").eq("id", typed.campaign_header_id).maybeSingle();
+      const source = sourceCampaign as { accepted_quotation_id?: string | null; quotation_id?: string | null } | null;
+      const quotationId = source?.accepted_quotation_id || source?.quotation_id;
+      let quotationNumber: string | null = null;
+      if (quotationId) {
+        const { data: quotation } = await db.from("quotations").select("serial_number, version_number").eq("id", quotationId).maybeSingle();
+        const quote = quotation as { serial_number?: string; version_number?: number } | null;
+        if (quote?.serial_number) quotationNumber = /-V\d+$/i.test(quote.serial_number) ? quote.serial_number : quote.serial_number + (quote.version_number ? "-V" + quote.version_number : "");
+      }
       await sendIoApprovalConfirmationEmails({
         supabase: db,
         kind: "client",
+        quotationNumber,
         ioId: typed.id,
         documentNumber: typed.document_number,
         campaignName: campaign?.name ?? null,

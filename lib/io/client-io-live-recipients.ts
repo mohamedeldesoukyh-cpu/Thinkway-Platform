@@ -1,11 +1,8 @@
 import type { ClientIoRecipientEntry } from "@/lib/io/client-io-send-recipients";
-import { parseSendRecipientsJson } from "@/lib/io/client-io-send-recipients";
 
 const EVENT = "thinkway:client-io-recipients";
 
-function storageKey(clientIoId: string): string {
-  return `thinkway:client-io-recipients:${clientIoId}`;
-}
+const liveRecipients = new Map<string, ClientIoRecipientEntry[]>();
 
 /** Publish the live recipient list so hero toolbar Send matches the form editor. */
 export function publishClientIoLiveRecipients(
@@ -14,7 +11,7 @@ export function publishClientIoLiveRecipients(
 ): void {
   if (typeof window === "undefined" || !clientIoId) return;
   try {
-    window.sessionStorage.setItem(storageKey(clientIoId), JSON.stringify(recipients));
+    liveRecipients.set(clientIoId, recipients);
     window.dispatchEvent(
       new CustomEvent(EVENT, { detail: { clientIoId, recipients } })
     );
@@ -25,15 +22,9 @@ export function publishClientIoLiveRecipients(
 
 export function readClientIoLiveRecipients(
   clientIoId: string
-): ClientIoRecipientEntry[] {
-  if (typeof window === "undefined" || !clientIoId) return [];
-  try {
-    const raw = window.sessionStorage.getItem(storageKey(clientIoId));
-    if (!raw) return [];
-    return parseSendRecipientsJson(JSON.parse(raw));
-  } catch {
-    return [];
-  }
+): ClientIoRecipientEntry[] | null {
+  if (typeof window === "undefined" || !clientIoId) return null;
+  return liveRecipients.get(clientIoId) ?? null;
 }
 
 export function subscribeClientIoLiveRecipients(

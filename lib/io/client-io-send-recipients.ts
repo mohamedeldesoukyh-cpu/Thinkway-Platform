@@ -1,6 +1,8 @@
 export type ClientIoRecipientEntry = {
   name: string;
   email: string;
+  role?: "to" | "cc" | "bcc";
+  documentRole?: "main" | "other";
 };
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,7 +56,7 @@ export function applyRecipientEmailEdit(
     const key = email.toLowerCase();
     if (existing.has(key)) continue;
     existing.add(key);
-    extras.push({ name: "", email });
+    extras.push({ name: "", email, ...(recipients[index]?.role ? { role: recipients[index].role } : {}) });
   }
   if (extras.length === 0) return next;
   next.splice(index + 1, 0, ...extras);
@@ -71,6 +73,10 @@ export function parseSendRecipientsJson(raw: unknown): ClientIoRecipientEntry[] 
     if (!item || typeof item !== "object") continue;
     const name = String((item as { name?: unknown }).name ?? "").trim();
     const emailRaw = String((item as { email?: unknown }).email ?? "").trim();
+    const role = (item as { role?: unknown }).role;
+    const documentRole = (item as { documentRole?: unknown }).documentRole;
+    const documentField = documentRole === "main" || documentRole === "other" ? { documentRole } : {};
+    const roleField = role === "to" || role === "cc" || role === "bcc" ? { role } : {};
     // Support stored rows that accidentally contain multiple addresses.
     const emails = splitRecipientEmails(emailRaw);
     if (emails.length === 0) continue;
@@ -79,7 +85,7 @@ export function parseSendRecipientsJson(raw: unknown): ClientIoRecipientEntry[] 
       const key = email.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      recipients.push({ name: i === 0 ? name : "", email });
+      recipients.push({ name: i === 0 ? name : "", email, ...roleField, ...documentField } as ClientIoRecipientEntry);
     }
   }
 
@@ -102,18 +108,59 @@ export function serializeSendRecipients(recipients: ClientIoRecipientEntry[]): s
       .map((r) => ({
         name: r.name.trim(),
         email: r.email.trim(),
+        ...(r.role ? { role: r.role } : {}),
+        ...(r.documentRole ? { documentRole: r.documentRole } : {}),
       }))
-      .filter((r) => r.email)
   );
 }
 
 export function seedRecipientsFromContacts(
   existing: ClientIoRecipientEntry[],
-  contacts: Array<{ label: string; email: string }>
+  contacts: Array<{ label: string; email: string }>,
+  configured = false
 ): ClientIoRecipientEntry[] {
-  if (existing.length > 0) return existing;
+  if (configured || existing.length > 0) return existing;
   return contacts.map((contact) => ({
     name: contact.label.replace(/\s*\(Primary\)\s*$/i, "").replace(/\s+billing\s*$/i, "").trim(),
     email: contact.email,
   }));
+}
+
+/** Reject invalid rows instead of silently dropping recipients. */
+export function validateClientIoRecipients(raw: string): string | null {
+  try {
+    const rows: unknown = JSON.parse(raw);
+    if (!Array.isArray(rows)) return "Invalid recipient list.";
+    for (const row of rows) {
+      if (!row || typeof row !== "object" || typeof row.email !== "string" || !isValidClientIoEmail(row.email) ||
+          (row.role !== undefined && !["to", "cc", "bcc"].includes(row.role)) ||
+          (row.documentRole !== undefined && !["main", "other"].includes(row.documentRole))) {
+        return "Enter a valid email and TO, CC or BCC role for every recipient.";
+      }
+      if (/[\r\n]/.test(String(row.name ?? ""))) return "Contact names must be on one line.";
+    }
+    const emails = rows.map(row => row.email.trim().toLowerCase());
+    if (new Set(emails).size !== emails.length) return "Each email can appear only once. Choose its TO, CC or BCC role.";
+    return null;
+  } catch { return "Invalid recipient list."; }
+}
+
+export function clientIoDeliveryRecipients(recipients: ClientIoRecipientEntry[], senderEmail?: string | null) {
+  const result = { to: [] as ClientIoRecipientEntry[], cc: [] as ClientIoRecipientEntry[], bcc: [] as ClientIoRecipientEntry[] };
+  const normalized = parseSendRecipientsJson(recipients);
+  for (const recipient of normalized) result[recipient.role ?? "to"].push(recipient);
+  const seen = new Set(normalized.map(r => r.email.toLowerCase()));
+  for (const email of ["traffic@thinkwaymedia.com", senderEmail?.trim()]) {
+    if (!email || !isValidClientIoEmail(email) || seen.has(email.toLowerCase())) continue;
+    seen.add(email.toLowerCase());
+    result.bcc.push({ name: "", email, role: "bcc" });
+  }
+  return result;
+}
+
+/** Document contact selection is independent of email delivery role. Legacy lists use their first TO. */
+export function clientIoDocumentRecipients(recipients: ClientIoRecipientEntry[]): ClientIoRecipientEntry[] {
+  if (recipients.some(r => r.documentRole !== undefined)) return recipients.filter(r => r.documentRole === "main");
+  const firstTo = recipients.find(r => !r.role || r.role === "to");
+  return firstTo ? [firstTo] : [];
 }

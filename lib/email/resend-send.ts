@@ -7,6 +7,8 @@ export type ResendAttachment = {
 export type SendResendEmailInput = {
   from: string;
   to: Array<{ name?: string; email: string }>;
+  cc?: Array<{ name?: string; email: string }>;
+  bcc?: Array<{ name?: string; email: string }>;
   subject: string;
   html: string;
   text?: string;
@@ -54,6 +56,9 @@ export async function sendResendEmail(
     subject: input.subject,
     html: input.html,
   };
+
+  if (input.cc?.length) payload.cc = input.cc.map(r => formatAddress(r.name, r.email));
+  if (input.bcc?.length) payload.bcc = input.bcc.map(r => formatAddress(r.name, r.email));
 
   if (input.text?.trim()) {
     payload.text = input.text;

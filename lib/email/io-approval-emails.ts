@@ -30,7 +30,11 @@ function formatApprovalWhen(iso: string | null | undefined): string {
 export function buildIoApprovalConfirmationSubject(input: {
   kind: IoApprovalEmailKind;
   documentNumber: string | null;
+  quotationNumber?: string | null;
 }): string {
+  if (input.kind === "client" && input.quotationNumber?.trim()) {
+    return `Approved quotation ${input.quotationNumber.trim()} – ${input.documentNumber ?? "Client IO"} – Thinkway Media`;
+  }
   const doc = input.documentNumber?.trim() || (input.kind === "client" ? "CIO" : "VIO");
   const label = input.kind === "client" ? "Client IO" : "Vendor IO";
   return `${label} ${doc} – Approval Confirmed – Thinkway Media`;
@@ -39,6 +43,7 @@ export function buildIoApprovalConfirmationSubject(input: {
 export function buildIoApprovalConfirmationHtml(input: {
   kind: IoApprovalEmailKind;
   documentNumber: string | null;
+  quotationNumber?: string | null;
   approvedAt: string | null;
   recipientName?: string | null;
 }): string {
@@ -72,6 +77,7 @@ export function buildIoApprovalConfirmationHtml(input: {
 export function buildIoApprovalConfirmationPlainText(input: {
   kind: IoApprovalEmailKind;
   documentNumber: string | null;
+  quotationNumber?: string | null;
   approvedAt: string | null;
   recipientName?: string | null;
 }): string {
@@ -92,6 +98,7 @@ export function buildIoApprovalConfirmationPlainText(input: {
 export function buildIoApprovalInternalHtml(input: {
   kind: IoApprovalEmailKind;
   documentNumber: string | null;
+  quotationNumber?: string | null;
   approvedAt: string | null;
   approvedByEmail: string | null;
   campaignName: string | null;
@@ -123,6 +130,7 @@ export async function sendIoApprovalConfirmationEmails(input: {
   kind: IoApprovalEmailKind;
   ioId: string;
   documentNumber: string | null;
+  quotationNumber?: string | null;
   campaignName: string | null;
   approvedAt: string | null;
   approvedByEmail: string;
@@ -132,16 +140,19 @@ export async function sendIoApprovalConfirmationEmails(input: {
   const subject = buildIoApprovalConfirmationSubject({
     kind: input.kind,
     documentNumber: input.documentNumber,
+    quotationNumber: input.quotationNumber,
   });
   const html = buildIoApprovalConfirmationHtml({
     kind: input.kind,
     documentNumber: input.documentNumber,
+    quotationNumber: input.quotationNumber,
     approvedAt: input.approvedAt,
     recipientName: input.approvedByName,
   });
   const text = buildIoApprovalConfirmationPlainText({
     kind: input.kind,
     documentNumber: input.documentNumber,
+    quotationNumber: input.quotationNumber,
     approvedAt: input.approvedAt,
     recipientName: input.approvedByName,
   });
@@ -185,12 +196,13 @@ export async function sendIoApprovalConfirmationEmails(input: {
     sent_at: sentAt,
   } as never);
 
-  const internalSubject = `${
+  const internalSubject = input.kind === "client" && input.quotationNumber ? subject : `${
     input.kind === "client" ? "Client IO" : "Vendor IO"
   } ${input.documentNumber ?? ""} – Approved – Thinkway Media`.replace(/\s+/g, " ").trim();
   const internalHtml = buildIoApprovalInternalHtml({
     kind: input.kind,
     documentNumber: input.documentNumber,
+    quotationNumber: input.quotationNumber,
     approvedAt: input.approvedAt,
     approvedByEmail: input.approvedByEmail,
     campaignName: input.campaignName,

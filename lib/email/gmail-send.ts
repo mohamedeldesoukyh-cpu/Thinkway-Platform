@@ -8,6 +8,8 @@ export type GmailAttachment = {
 
 export type SendGmailEmailInput = {
   to: Array<{ name?: string; email: string }>;
+  cc?: Array<{ name?: string; email: string }>;
+  bcc?: Array<{ name?: string; email: string }>;
   subject: string;
   html: string;
   text?: string;
@@ -72,7 +74,7 @@ function toBase64Url(buffer: Buffer): string {
     .replace(/=+$/g, "");
 }
 
-function buildMimeMessage(input: SendGmailEmailInput, config: GmailConfig): string {
+export function buildMimeMessage(input: SendGmailEmailInput, config: GmailConfig): string {
   const boundary = `thinkway_${Date.now()}`;
   const toHeader = input.to.map((r) => formatAddress(r.name, r.email)).join(", ");
   const fromHeader = formatAddress(config.fromName, config.fromEmail);
@@ -81,6 +83,8 @@ function buildMimeMessage(input: SendGmailEmailInput, config: GmailConfig): stri
   const lines: string[] = [
     `From: ${fromHeader}`,
     `To: ${toHeader}`,
+    ...(input.cc?.length ? [`Cc: ${input.cc.map(r => formatAddress(r.name, r.email)).join(", ")}`] : []),
+    ...(input.bcc?.length ? [`Bcc: ${input.bcc.map(r => formatAddress(r.name, r.email)).join(", ")}`] : []),
     `Subject: ${input.subject}`,
     "MIME-Version: 1.0",
     `Content-Type: multipart/mixed; boundary="${boundary}"`,

@@ -1,3 +1,4 @@
+import { parseSendRecipientsJson, clientIoDocumentRecipients } from "@/lib/io/client-io-send-recipients";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientIoFxRates } from "@/lib/io/client-io-fx";
 import type { ClientIoAssignmentSnapshotV1 } from "@/lib/io/client-io-assignment-snapshot";
@@ -190,7 +191,7 @@ export async function loadClientIoDocumentData(
   let clientIoResult = await supabase
     .from("client_ios")
     .select(
-      "id, document_number, status, billing_terms, terms_text, created_at, campaign_header_id, client_id, assignment_snapshot"
+      "id, document_number, status, billing_terms, terms_text, created_at, campaign_header_id, client_id, send_recipients, assignment_snapshot"
     )
     .eq("id", clientIoId)
     .single();
@@ -202,7 +203,7 @@ export async function loadClientIoDocumentData(
     clientIoResult = await supabase
       .from("client_ios")
       .select(
-        "id, document_number, status, billing_terms, terms_text, created_at, campaign_header_id, client_id"
+        "id, document_number, status, billing_terms, terms_text, created_at, campaign_header_id, client_id, send_recipients"
       )
       .eq("id", clientIoId)
       .single();
@@ -224,6 +225,7 @@ export async function loadClientIoDocumentData(
     campaign_header_id: string;
     client_id: string;
     assignment_snapshot?: unknown;
+    send_recipients?: unknown;
   };
 
   const selectedAssignmentIds = await listClientIoAssignmentIds(supabase, clientIoId);
@@ -536,7 +538,10 @@ export async function loadClientIoDocumentData(
 
   const platforms = [...new Set(deliverableRows.map((row) => row.platform))];
   const clientMetadata = typedClient.metadata ?? {};
+  const recipients = parseSendRecipientsJson(typedCio.send_recipients);
+  const documentRecipients = clientIoDocumentRecipients(recipients);
   const contactPerson =
+    recipients.length > 0 ? documentRecipients.map(r => r.name || r.email).join(", ") || null :
     (typeof clientMetadata.primary_contact === "string" &&
       clientMetadata.primary_contact.trim()) ||
     (typeof clientMetadata.contact_name === "string" && clientMetadata.contact_name.trim()) ||
@@ -596,7 +601,7 @@ export async function loadClientIoDocumentData(
         country: typedClient.country,
       }),
       contactPerson,
-      email: typedClient.billing_email,
+      email: recipients.length > 0 ? documentRecipients.map(r => r.email).join(", ") || null : typedClient.billing_email,
       agencyOrDirect: typedClient.agency_or_direct ?? null,
     },
     campaign: {

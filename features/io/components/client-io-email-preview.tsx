@@ -27,7 +27,7 @@ function formatRecipients(recipients: ClientIoRecipientEntry[]): string {
   const valid = recipients.filter((r) => r.email.trim());
   if (valid.length === 0) return "—";
   return valid
-    .map((r) => (r.name.trim() ? `${r.name.trim()} <${r.email.trim()}>` : r.email.trim()))
+    .map((r) => `${(r.role ?? "to").toUpperCase()}: ${r.name.trim() ? `${r.name.trim()} <${r.email.trim()}>` : r.email.trim()}`)
     .join(", ");
 }
 
@@ -84,9 +84,10 @@ export function ClientIoEmailPreviewSection({
             </div>
             <div>
               <div className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-                To
+                Recipients
               </div>
               <div className="mt-0.5 text-foreground">{formatRecipients(recipients)}</div>
+              <p className="mt-1 text-xs text-muted-foreground">Automatic BCC: traffic@thinkwaymedia.com and the sending user.</p>
             </div>
           </div>
 

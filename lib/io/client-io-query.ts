@@ -81,6 +81,7 @@ export function mapClientIoQueryRow(row: ClientIoQueryRow): ClientIoRow {
     brand_name: brand?.name ?? null,
     client_io_terms_text: row.client?.client_io_terms_text ?? null,
     send_recipients: parseSendRecipientsJson(row.send_recipients),
+    recipients_configured: Array.isArray(row.send_recipients),
     selected_assignment_ids: [],
     generated_total: row.status !== "draft" ? clientIoSnapshotTotal(row.assignment_snapshot) : null,
     revision_number: Number(row.revision_number ?? 0),
