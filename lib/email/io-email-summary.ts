@@ -1,7 +1,6 @@
-import {
-  isClientIoAssignmentSnapshotV1,
-  type ClientIoAssignmentSnapshotV1,
-} from "@/lib/io/client-io-assignment-snapshot";
+import { assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
+import { creatorFxAmount } from "@/lib/commercial/creator-fx";
+import { roundMoney } from "@/lib/vat/calculations";
 import { formatMoneyDetail } from "@/lib/finance/currency-format";
 
 export function formatIoCampaignDuration(
@@ -38,49 +37,37 @@ export function formatIoAgreedAmount(
   return formatMoneyDetail(value, currencyCode);
 }
 
-export function sumClientIoSnapshotAgreedAmount(
-  snapshot: unknown
-): { amount: number; currencyCode: string } | null {
-  if (!isClientIoAssignmentSnapshotV1(snapshot)) return null;
-  return sumClientIoLinesAgreedAmount(snapshot);
+
+/** The email must use the generated document's frozen total and its own currency. */
+export function clientIoGeneratedEmailTotal(total: { amount: number; currency: string } | null | undefined): { amount: number; currencyCode: string } | null {
+  if (!total || !Number.isFinite(total.amount) || !total.currency.trim()) return null;
+  return { amount: total.amount, currencyCode: total.currency };
 }
 
-export function sumClientIoLinesAgreedAmount(
-  snapshot: Pick<ClientIoAssignmentSnapshotV1, "lines">
-): { amount: number; currencyCode: string } | null {
-  if (!snapshot.lines.length) return null;
-  const currencyCode = snapshot.lines[0]?.currency_code?.trim() || "USD";
-  const amount = snapshot.lines.reduce(
-    (sum, line) =>
-      sum + (Number(line.revenue_before_vat ?? line.revenue) || 0),
-    0
-  );
-  return { amount, currencyCode };
-}
-
-/** Live preview total from selected composer assignments (before snapshot hydrate). */
+/** Draft preview only. Issued documents always use clientIoGeneratedEmailTotal. */
 export function sumClientIoComposerAgreedAmount(
   assignments: Array<{
-    id: string;
-    revenue_before_vat?: number | null;
-    currency_code?: string | null;
+    id: string; revenue_before_vat?: number | null; currency_code?: string | null;
+    usage_rights_amount?: number | null; agency_fee_amount?: number | null;
+    agency_fee_percent?: number | null; revenue_vat_percent?: number | null;
+    revenue_vat_exempt?: boolean | null; revenue_fx_override?: string | null;
   }>,
   selectedAssignmentIds: string[] | null | undefined,
-  fallbackCurrencyCode?: string | null
+  fallbackCurrencyCode?: string | null,
+  rates: Record<string, number> = {}
 ): { amount: number; currencyCode: string } | null {
-  const selected =
-    selectedAssignmentIds && selectedAssignmentIds.length > 0
-      ? assignments.filter((row) => selectedAssignmentIds.includes(row.id))
-      : assignments;
+  const selected = assignments.filter(row => selectedAssignmentIds?.includes(row.id));
   if (!selected.length) return null;
-  // Campaign/workspace currency wins — line codes may be stale defaults.
-  const currencyCode =
-    fallbackCurrencyCode?.trim() ||
-    selected[0]?.currency_code?.trim() ||
-    "USD";
-  const amount = selected.reduce(
-    (sum, row) => sum + (Number(row.revenue_before_vat) || 0),
-    0
-  );
-  return { amount, currencyCode };
+  const currencyCode = fallbackCurrencyCode?.trim() || selected[0]?.currency_code?.trim() || "USD";
+  try {
+    const amount = selected.reduce((sum, row) => {
+      const source = row.currency_code?.trim() || currencyCode;
+      const billing = assignmentClientBilling({ ...row, revenue_before_vat: Number(row.revenue_before_vat ?? 0) });
+      return sum + creatorFxAmount(billing.totalBilling, {
+        from: source, to: currencyCode, sourceRateToEgp: rates[source] ?? 0,
+        targetRateToEgp: rates[currencyCode] ?? 0, override: row.revenue_fx_override,
+      });
+    }, 0);
+    return { amount: roundMoney(amount), currencyCode };
+  } catch { return null; }
 }

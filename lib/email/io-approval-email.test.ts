@@ -15,8 +15,9 @@ import {
   formatIoAgreedAmount,
   formatIoCampaignDuration,
   sumClientIoComposerAgreedAmount,
-  sumClientIoSnapshotAgreedAmount,
+  clientIoGeneratedEmailTotal,
 } from "@/lib/email/io-email-summary";
+import { clientIoSnapshotTotal } from "@/lib/io/client-io-document-data";
 import { renderEmailApprovalCta } from "@/lib/email/layout";
 import {
   buildVendorIoEmailHtml,
@@ -42,14 +43,13 @@ describe("io approval email experience", () => {
         { id: "c", revenue_before_vat: 999, currency_code: "EGP" },
       ],
       ["a", "b"],
-      "USD"
+      "EGP"
     );
-    // Campaign/workspace currency wins over stale line codes.
-    assert.deepEqual(sum, { amount: 18448, currencyCode: "USD" });
+    assert.deepEqual(sum, { amount: 18448, currencyCode: "EGP" });
   });
 
-  it("sums Client IO snapshot revenue as agreed amount", () => {
-    const sum = sumClientIoSnapshotAgreedAmount({
+  it("uses the generated snapshot total including taxes", () => {
+    const sum = clientIoGeneratedEmailTotal(clientIoSnapshotTotal({
       version: 1,
       capturedAt: "2026-07-01T00:00:00.000Z",
       selectedCampaignLineIds: ["a", "b"],
@@ -86,8 +86,8 @@ describe("io approval email experience", () => {
         },
       ],
       deliverables: [],
-    });
-    assert.deepEqual(sum, { amount: 1500, currencyCode: "USD" });
+    }));
+    assert.deepEqual(sum, { amount: 1710, currencyCode: "USD" });
   });
 
   it("renders blue Approve CTA with legal notice", () => {
@@ -126,7 +126,7 @@ describe("io approval email experience", () => {
     assert.match(html, /Campaign Name/);
     assert.match(html, /Brand Name/);
     assert.match(html, /Campaign Duration/);
-    assert.match(html, /Agreed Amount/);
+    assert.match(html, /Total IO \(including taxes\)/);
     assert.match(html, /Approve Client IO/);
     assert.doesNotMatch(html, /deliverable/i);
     assert.doesNotMatch(html, /payment schedule/i);

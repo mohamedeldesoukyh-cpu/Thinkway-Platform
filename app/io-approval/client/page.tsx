@@ -18,6 +18,7 @@ export default async function ClientIoApprovalPage({ searchParams }: Props) {
 
   let outcome: IoApprovalOutcomeCode = "invalid";
   let documentNumber: string | null = null;
+  let confirmationEmailSent: boolean | undefined;
 
   if (token) {
     const result = await completeClientIoApprovalByToken({
@@ -26,6 +27,7 @@ export default async function ClientIoApprovalPage({ searchParams }: Props) {
     });
     outcome = result.outcome;
     documentNumber = result.documentNumber ?? null;
+    confirmationEmailSent = result.ok ? result.confirmationEmailSent : undefined;
   }
 
   return (
@@ -33,6 +35,7 @@ export default async function ClientIoApprovalPage({ searchParams }: Props) {
       kindLabel="Client IO"
       outcome={outcome}
       documentNumber={documentNumber}
+      confirmationEmailSent={confirmationEmailSent}
     />
   );
 }

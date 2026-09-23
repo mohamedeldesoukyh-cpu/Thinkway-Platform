@@ -4,6 +4,7 @@ import { clientIoFxRates } from "./client-io-fx";
 import { makeCreatorFx } from "@/lib/commercial/creator-fx";
 import { buildClientIoAssignmentSnapshot } from "./client-io-assignment-snapshot";
 import { loadClientIoDocumentData, clientIoSnapshotTotal } from "./client-io-document-data";
+import { clientIoGeneratedEmailTotal, sumClientIoComposerAgreedAmount } from "@/lib/email/io-email-summary";
 
 test("mixed-currency Client IO freezes custom rates and normal rates independently", async () => {
   const db = { rpc: async (_name: string, args: { p_from_currency: string }) => ({ data: args.p_from_currency === "USD" ? 52.2151 : 15.5, error: null }) };
@@ -54,4 +55,12 @@ test("Client IO document totals include custom FX for revenue, usage and fees an
   assert.equal(frozen.pricing.revenueTotal, 43000);
   assert.equal(frozen.pricing.usageRightsTotal, 5500);
   assert.equal(frozen.pricing.agencyFeeTotal, 4850);
+  assert.deepEqual(clientIoGeneratedEmailTotal(clientIoSnapshotTotal(snapshot)), {
+    amount: frozen.pricing.total, currencyCode: frozen.currencyCode,
+  });
+  assert.deepEqual(sumClientIoComposerAgreedAmount(lines, lines.map(line => line.id), "EGP", { EGP: 1, USD: 52.2151, AED: 15.5 }), {
+    amount: frozen.pricing.total, currencyCode: "EGP",
+  });
+  assert.equal(sumClientIoComposerAgreedAmount(lines, [], "EGP"), null);
+  assert.equal(sumClientIoComposerAgreedAmount(lines, ["aed"], "EGP"), null);
 });
