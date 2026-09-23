@@ -6438,7 +6438,7 @@ test("historical Client Workspace content is empty and captions are not review c
   assert.deepEqual(skipped.items, []);
 });
 
-test("live story screenshots stay off Creator content approval", () => {
+test("image story screenshots stay off Creator content approval while legacy story videos require review", () => {
   const projected = projectContent({
     assets: [
       contentAsset({
@@ -6474,6 +6474,55 @@ test("live story screenshots stay off Creator content approval", () => {
   assert.equal(projected.items.length, 1);
   assert.equal(projected.items[0]?.assetId, "story-draft");
   assert.equal(clientContentToReview(projected.items).length, 1);
+});
+
+test("a released MP4 saved under the legacy Story Screenshot type is available for client approval", () => {
+  const projected = projectContent({
+    assets: [
+      contentAsset({
+        id: "legacy-story-video",
+        assetType: "story_screenshot",
+        currentVersionId: "v-legacy-story-video",
+      }),
+    ],
+    versions: [
+      contentVersion({
+        id: "v-legacy-story-video",
+        assetId: "legacy-story-video",
+        fileName: "WhatsApp Video 2026-09-23 at 3.41.15 PM.mp4",
+        mimeType: "video/mp4",
+        releasedToClientAt: "2026-09-23T12:41:15.000Z",
+      }),
+    ],
+  });
+
+  assert.equal(projected.items.length, 1);
+  assert.equal(projected.items[0]?.status, "approval_required");
+  assert.equal(projected.items[0]?.previewKind, "video");
+  assert.equal(clientContentToReview(projected.items).length, 1);
+});
+
+test("ordinary released documentation does not become a client approval request", () => {
+  const projected = projectContent({
+    assets: [
+      contentAsset({
+        id: "brief-document",
+        assetType: "brief",
+        currentVersionId: "v-brief-document",
+      }),
+    ],
+    versions: [
+      contentVersion({
+        id: "v-brief-document",
+        assetId: "brief-document",
+        fileName: "creator-brief.pdf",
+        mimeType: "application/pdf",
+        releasedToClientAt: "2026-09-23T12:41:15.000Z",
+      }),
+    ],
+  });
+
+  assert.deepEqual(projected.items, []);
 });
 
 test("content approval is independent of quotation approval", () => {

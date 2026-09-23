@@ -185,10 +185,21 @@ export function isClientReviewableMedium(medium: string): medium is "file" | "ex
   return medium === "file" || medium === "external_link";
 }
 
-/** Story screenshots are live-post proof, not pre-publish approval files. */
-export function isClientApprovalContentAssetType(assetType: string | null | undefined): boolean {
+/**
+ * Only media deliberately used for creative review belongs in the client
+ * approval queue. Story slots used to default every upload to
+ * `story_screenshot`, including MP4 drafts; retain those legacy video drafts
+ * for review while keeping image screenshots and ordinary documentation out.
+ */
+export function isClientApprovalContentAsset(
+  assetType: string | null | undefined,
+  mimeType: string | null | undefined
+): boolean {
   const type = (assetType ?? "").trim().toLowerCase();
-  return type !== "story_screenshot";
+  if (type === "draft_video" || type === "final_video" || type === "feed_image") {
+    return true;
+  }
+  return type === "story_screenshot" && clientContentPreviewKind(mimeType) === "video";
 }
 
 export function projectClientCampaignContent(input: {
@@ -212,11 +223,11 @@ export function projectClientCampaignContent(input: {
   for (const asset of input.assets) {
     if (asset.archivedAt || asset.campaignHeaderId !== input.campaignHeaderId) continue;
     if (!isClientReviewableMedium(asset.medium)) continue;
-    if (!isClientApprovalContentAssetType(asset.assetType)) continue;
     const versions = [...(versionsByAsset.get(asset.id) ?? [])]
       .filter((version) => Boolean(version.releasedToClientAt?.trim()))
       .sort((left, right) => left.versionNumber - right.versionNumber);
     const latest = currentContentVersion(versions, asset.currentVersionId);
+    if (!latest || !isClientApprovalContentAsset(asset.assetType, latest.mimeType)) continue;
     // Approved originals remain available when a new version is submitted.
     const visibleVersions = versions.filter((version) => version.id === latest?.id ||
       latestDecisionForVersion(input.decisions, version.id)?.decision === "approved");
