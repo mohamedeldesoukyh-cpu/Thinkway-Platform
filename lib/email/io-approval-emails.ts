@@ -136,7 +136,7 @@ export async function sendIoApprovalConfirmationEmails(input: {
   approvedByEmail: string;
   approvedByName?: string | null;
   pdfAttachment: EmailAttachment | null;
-}): Promise<void> {
+}): Promise<{ approverSent: boolean; internalSent: boolean }> {
   const subject = buildIoApprovalConfirmationSubject({
     kind: input.kind,
     documentNumber: input.documentNumber,
@@ -253,4 +253,5 @@ export async function sendIoApprovalConfirmationEmails(input: {
     },
     sent_at: sentAt,
   } as never);
+  return { approverSent: approverResult.ok, internalSent: trafficResult.ok };
 }

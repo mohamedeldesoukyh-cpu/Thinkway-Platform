@@ -47,7 +47,7 @@ function summaryRows(io: ClientIoEmailSummaryFields) {
       value: formatIoCampaignDuration(io.campaign_start_date, io.campaign_end_date),
     },
     {
-      label: "Agreed Amount",
+      label: "Total IO (including taxes)",
       value: formatIoAgreedAmount(io.agreed_amount, io.currency_code),
     },
   ];
@@ -78,7 +78,7 @@ export function buildClientIoEmailPlainText(input: {
 
 export function buildClientIoEmailPreview(input: {
   io: Pick<ClientIoRow, "document_number" | "campaign_name" | "brand_name" | "generated_pdf_url"> &
-    Partial<ClientIoEmailSummaryFields>;
+    Partial<ClientIoEmailSummaryFields> & { terms_html?: string | null };
   senderName: string | null;
   approvalUrl?: string | null;
   isDraftPreview?: boolean;
@@ -111,7 +111,7 @@ export function buildClientIoEmailPreview(input: {
       approvalUrl: input.approvalUrl ?? null,
       includeAcknowledgmentNote: Boolean(input.isDraftPreview && !input.approvalUrl),
     }),
-    hasPdfAttachment: Boolean(input.io.generated_pdf_url),
+    hasPdfAttachment: Boolean(input.io.generated_pdf_url || input.io.terms_html),
   };
 }
 

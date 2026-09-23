@@ -34,7 +34,6 @@ import {
   buildClientIoEmailHtml,
   buildClientIoEmailPlainText,
   buildClientIoEmailSubject,
-  buildClientIoPdfAttachmentFromBuffer,
 } from "@/lib/email/client-io-email";
 import {
   buildVendorIoEmailHtml,
@@ -48,14 +47,14 @@ import {
   getEmailFromAddress,
   sendEmail,
 } from "@/lib/email/provider";
-import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
+import { prepareClientIoEmailAttachment } from "@/lib/io/client-io-email-attachment";
 import {
   hasValidVendorEmail,
   VENDOR_IO_MANUAL_DELIVERY_RECIPIENT,
 } from "@/lib/io/vendor-io-delivery";
 import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
 import { downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
-import { sumClientIoSnapshotAgreedAmount } from "@/lib/email/io-email-summary";
+import { clientIoGeneratedEmailTotal } from "@/lib/email/io-email-summary";
 import {
   normalizeIoTermsText,
   parseTermsText,
@@ -580,6 +579,8 @@ export async function sendClientIoAction(
   if (clientIo.campaign_header_id !== campaignHeaderId || clientIo.is_superseded) {
     return { ok: false, message: "Use the current Client IO for this campaign." };
   }
+  const agreed = clientIoGeneratedEmailTotal(clientIo.generated_total);
+  if (!agreed) return { ok: false, message: "The generated Client IO total is unavailable. Regenerate the document or create an amendment before sending." };
   const recipientInput = recipientsRaw || serializeSendRecipients(clientIo.send_recipients ?? []);
   const recipientError = validateClientIoRecipients(recipientInput);
   if (recipientError) return { ok: false, message: recipientError };
@@ -591,6 +592,11 @@ export async function sendClientIoAction(
   if (!emailReady.ok) {
     return { ok: false, message: emailReady.message };
   }
+
+  // Prepare the required PDF before any send lifecycle transition.
+  const prepared = await prepareClientIoEmailAttachment(supabase, clientIo);
+  if (!prepared.ok) return { ok: false, message: prepared.error };
+  const pdfAttachment = prepared.attachment;
 
   // Persist recipients used for this send (e.g. contact-seeded / live form, not yet draft-saved).
   const { error: recipientsPersistError } = await supabase
@@ -624,51 +630,22 @@ export async function sendClientIoAction(
   if (rpcError) return { ok: false, message: rpcError.message };
   const token = (data as string | null) ?? "";
 
-  const [{ data: campaignDates }, { data: cioExtras }] = await Promise.all([
-    supabase
-      .from("campaign_headers")
-      .select("start_date, end_date, currency_code, brand:brands(currency_code)")
-      .eq("id", campaignHeaderId)
-      .maybeSingle(),
-    supabase
-      .from("client_ios")
-      .select("assignment_snapshot")
-      .eq("id", id)
-      .maybeSingle(),
-  ]);
-
-  const campaignMeta = campaignDates as {
-    start_date: string | null;
-    end_date: string | null;
-    currency_code: string | null;
-    brand?: { currency_code?: string | null } | null;
-  } | null;
-  const agreed = sumClientIoSnapshotAgreedAmount(
-    (cioExtras as { assignment_snapshot?: unknown } | null)?.assignment_snapshot
-  );
-  const syncedCurrency =
-    campaignMeta?.currency_code?.trim() ||
-    campaignMeta?.brand?.currency_code?.trim() ||
-    agreed?.currencyCode ||
-    null;
+  const { data: campaignDates } = await supabase
+    .from("campaign_headers").select("start_date, end_date")
+    .eq("id", campaignHeaderId).maybeSingle();
+  const campaignMeta = campaignDates as { start_date: string | null; end_date: string | null } | null;
 
   const emailSummary = {
     campaign_name: clientIo.campaign_name,
     brand_name: clientIo.brand_name,
     campaign_start_date: campaignMeta?.start_date ?? null,
     campaign_end_date: campaignMeta?.end_date ?? null,
-    agreed_amount: agreed?.amount ?? null,
-    currency_code: syncedCurrency,
+    agreed_amount: agreed.amount,
+    currency_code: agreed.currencyCode,
     document_number: clientIo.document_number,
   };
 
   const subject = buildClientIoEmailSubject(clientIo);
-  const pdfBuffer = await downloadIoDocumentBuffer(
-    supabase,
-    CLIENT_IO_DOCUMENTS_BUCKET,
-    clientIo.generated_pdf_url
-  );
-  const pdfAttachment = buildClientIoPdfAttachmentFromBuffer(pdfBuffer);
 
   const sendBatchId = crypto.randomUUID();
   const senderEmail = getEmailFromAddress();
@@ -683,7 +660,7 @@ export async function sendClientIoAction(
   const emailText = buildClientIoEmailPlainText({ io: emailSummary, senderName, approvalUrl });
   const emailResult = await sendEmail({
     ...delivery, subject, html, text: emailText,
-    attachments: pdfAttachment ? [pdfAttachment] : undefined,
+    attachments: [pdfAttachment],
   });
   for (const recipient of [...delivery.to, ...delivery.cc, ...delivery.bcc]) {
     if (emailResult.ok) succeeded.push(recipient.email);

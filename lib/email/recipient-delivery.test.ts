@@ -9,6 +9,7 @@ const message = {
   cc: [{ email: "copy@example.com" }],
   bcc: [{ email: "traffic@thinkwaymedia.com" }, { email: "sender@example.com" }],
   subject: "Client IO", html: "<p>Review document</p>",
+  attachments: [{ filename: "CIO-2026-0005.pdf", mimeType: "application/pdf", content: Buffer.from("%PDF-1.7\nfixture") }],
 };
 
 it("forwards TO/CC/BCC through the active provider without putting blind copies in the body", async () => {
@@ -26,6 +27,7 @@ it("forwards TO/CC/BCC through the active provider without putting blind copies 
     assert.deepEqual(payload?.to, ["client@example.com"]);
     assert.deepEqual(payload?.cc, ["copy@example.com"]);
     assert.deepEqual(payload?.bcc, ["traffic@thinkwaymedia.com", "sender@example.com"]);
+    assert.deepEqual(payload?.attachments, [{ filename: "CIO-2026-0005.pdf", content_type: "application/pdf", content: message.attachments[0].content.toString("base64") }]);
     assert.doesNotMatch(String(payload?.html), /sender@example.com|traffic@thinkwaymedia.com/);
   } finally {
     globalThis.fetch = previousFetch;
@@ -38,6 +40,7 @@ it("forwards TO/CC/BCC through the active provider without putting blind copies 
 it("includes CC and BCC envelope headers for Gmail submission", () => {
   const mime = buildMimeMessage(message, { clientId: "mock", clientSecret: "mock", refreshToken: "mock", fromName: "Traffic", fromEmail: "traffic@thinkwaymedia.com" });
   assert.match(mime, /\r\nTo: client@example.com\r\nCc: copy@example.com\r\nBcc: traffic@thinkwaymedia.com, sender@example.com\r\n/);
+  assert.match(mime, /Content-Disposition: attachment; filename="CIO-2026-0005.pdf"/);
 });
 
 it("uses the quotation number in client approval confirmations while retaining IO tracking", () => {

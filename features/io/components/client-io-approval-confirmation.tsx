@@ -8,7 +8,7 @@ import { IoApprovalResultCard } from "@/features/io/components/io-approval-resul
 
 export function ClientIoApprovalConfirmation({ token }: { token: string }) {
   const [state, action, pending] = useActionState(confirmClientIoApprovalAction, {});
-  if (state.result) return <IoApprovalResultCard kindLabel="Client IO" outcome={state.result.outcome} documentNumber={state.result.documentNumber} />;
+  if (state.result) return <IoApprovalResultCard kindLabel="Client IO" outcome={state.result.outcome} documentNumber={state.result.documentNumber} confirmationEmailSent={state.result.ok ? state.result.confirmationEmailSent : undefined} />;
   return <main className="mx-auto max-w-lg p-4 md:p-8">
     <form action={action} className="space-y-4 rounded-xl border bg-card p-6">
       <h1 className="text-xl font-semibold">Approve Client IO</h1>

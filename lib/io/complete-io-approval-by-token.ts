@@ -1,10 +1,9 @@
 import { headers } from "next/headers";
 
 import { sendIoApprovalConfirmationEmails } from "@/lib/email/io-approval-emails";
-import { buildClientIoPdfAttachmentFromBuffer } from "@/lib/email/client-io-email";
+import { prepareClientIoEmailAttachment } from "@/lib/io/client-io-email-attachment";
 import { buildVendorIoPdfAttachmentFromBuffer } from "@/lib/email/vendor-io-email";
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
-import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
 import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
 import { downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
 import {
@@ -21,6 +20,7 @@ export type OneClickApprovalResult =
       ok: true;
       outcome: "approved" | "already_approved";
       documentNumber: string | null;
+      confirmationEmailSent?: boolean;
     }
   | {
       ok: false;
@@ -112,7 +112,7 @@ export async function completeClientIoApprovalByToken(input: {
   const { data: cio, error: cioError } = await db
     .from("client_ios")
     .select(
-      "id, campaign_header_id, document_number, revision_number, approved_at, generated_pdf_url, campaign:campaign_headers!client_ios_campaign_header_id_fkey(name)"
+      "id, campaign_header_id, document_number, revision_number, approved_at, generated_pdf_url, terms_html, campaign:campaign_headers!client_ios_campaign_header_id_fkey(name)"
     )
     .eq("id", payload.io_id)
     .maybeSingle();
@@ -128,6 +128,7 @@ export async function completeClientIoApprovalByToken(input: {
     revision_number: number | null;
     approved_at: string | null;
     generated_pdf_url: string | null;
+    terms_html: string | null;
     campaign: { name: string } | { name: string }[] | null;
   } | null;
 
@@ -191,14 +192,13 @@ export async function completeClientIoApprovalByToken(input: {
     debugIo("io-approval", "campaign status sync after client approve failed", syncError);
   }
 
+  let confirmationEmailSent = false;
   // Always attempt confirmation when we have an email (from the approval link).
   if (approverEmail) {
-    const pdfBuffer = await downloadIoDocumentBuffer(
-      db,
-      CLIENT_IO_DOCUMENTS_BUCKET,
-      typed.generated_pdf_url
-    );
     try {
+      if (!typed.approved_at) throw new Error("Recorded approval date is unavailable.");
+      const prepared = await prepareClientIoEmailAttachment(db, typed, typed.approved_at);
+      if (!prepared.ok) throw new Error(prepared.error);
       const { data: sourceCampaign } = await db.from("campaign_headers")
         .select("accepted_quotation_id, quotation_id").eq("id", typed.campaign_header_id).maybeSingle();
       const source = sourceCampaign as { accepted_quotation_id?: string | null; quotation_id?: string | null } | null;
@@ -209,7 +209,7 @@ export async function completeClientIoApprovalByToken(input: {
         const quote = quotation as { serial_number?: string; version_number?: number } | null;
         if (quote?.serial_number) quotationNumber = /-V\d+$/i.test(quote.serial_number) ? quote.serial_number : quote.serial_number + (quote.version_number ? "-V" + quote.version_number : "");
       }
-      await sendIoApprovalConfirmationEmails({
+      const delivery = await sendIoApprovalConfirmationEmails({
         supabase: db,
         kind: "client",
         quotationNumber,
@@ -219,8 +219,9 @@ export async function completeClientIoApprovalByToken(input: {
         approvedAt: typed.approved_at ?? new Date().toISOString(),
         approvedByEmail: approverEmail,
         approvedByName,
-        pdfAttachment: buildClientIoPdfAttachmentFromBuffer(pdfBuffer),
+        pdfAttachment: prepared.attachment,
       });
+      confirmationEmailSent = delivery.approverSent;
     } catch (emailError) {
       debugIo("io-approval", "client confirmation email failed", emailError);
     }
@@ -232,6 +233,7 @@ export async function completeClientIoApprovalByToken(input: {
     ok: true,
     outcome: "approved",
     documentNumber: typed.document_number,
+    confirmationEmailSent,
   };
 }
 

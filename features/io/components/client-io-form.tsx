@@ -46,7 +46,8 @@ import {
   getClientIoPaymentTermsPreset,
   type ClientIoPaymentTermsPresetId,
 } from "@/lib/io/client-io-payment-terms";
-import { sumClientIoComposerAgreedAmount } from "@/lib/email/io-email-summary";
+import { useCampaignCurrency } from "@/features/campaigns/components/campaign-money";
+import { clientIoGeneratedEmailTotal, sumClientIoComposerAgreedAmount } from "@/lib/email/io-email-summary";
 import { publishClientIoLiveRecipients } from "@/lib/io/client-io-live-recipients";
 import {
   parseSendRecipientsJson,
@@ -250,20 +251,24 @@ export function ClientIoForm({
     [sendRecipients]
   );
 
+  const campaignCurrency = useCampaignCurrency();
   const emailSummary = useMemo(() => {
-    const agreed = sumClientIoComposerAgreedAmount(
+    const agreed = hasDocument ? clientIoGeneratedEmailTotal(row.generated_total) : sumClientIoComposerAgreedAmount(
       assignments,
       row.selected_assignment_ids,
-      currencyCode
+      currencyCode,
+      campaignCurrency?.currency_rates
     );
     return {
       campaign_start_date: campaignStartDate,
       campaign_end_date: campaignEndDate,
       agreed_amount: agreed?.amount ?? null,
-      // Sync to campaign header invoice / view CCY (editable on workspace KPIs).
-      currency_code: currencyCode,
+      currency_code: agreed?.currencyCode ?? currencyCode,
     };
   }, [
+    hasDocument,
+    row.generated_total,
+    campaignCurrency?.currency_rates,
     assignments,
     row.selected_assignment_ids,
     currencyCode,

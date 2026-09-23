@@ -21,12 +21,14 @@ type Props = {
   kindLabel: "Client IO" | "Vendor IO";
   outcome: IoApprovalOutcomeCode;
   documentNumber?: string | null;
+  confirmationEmailSent?: boolean;
 };
 
 export function IoApprovalResultCard({
   kindLabel,
   outcome,
   documentNumber,
+  confirmationEmailSent,
 }: Props) {
   const view = getIoApprovalOutcomeView(outcome);
 
@@ -47,7 +49,9 @@ export function IoApprovalResultCard({
             ) : null}
             {outcome === "approved" ? (
               <p className="mt-2 text-muted-foreground">
-                A confirmation email has been sent with the approved PDF attached.
+                {confirmationEmailSent === false
+                  ? "Your approval is recorded, but the confirmation email could not be delivered. Please contact Traffic Operations for your approved IO copy."
+                  : "A confirmation email has been sent with the approved PDF attached."}
               </p>
             ) : null}
           </div>
