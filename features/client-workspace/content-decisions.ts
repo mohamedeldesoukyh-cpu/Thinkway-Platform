@@ -1,3 +1,4 @@
+import { isVersionReleasedToClient } from "@/lib/services/deliverables/client-release";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -61,80 +62,66 @@ export async function requireCurrentCampaignContentAccess(token: string): Promis
   return { ok: true, review: current, campaignHeaderId };
 }
 
+export type ContentDecisionResult = { ok: boolean; message: string; decidedAt?: string };
+
 export async function recordClientContentDecision(input: {
-  token: string;
-  versionId: string;
-  decision: ClientContentDecision;
-  comment?: string | null;
-}): Promise<{ ok: boolean; message: string }> {
-  if (!CLIENT_CONTENT_DECISIONS.includes(input.decision)) {
-    return { ok: false, message: "That content decision is not available." };
-  }
-  const comment = input.comment?.trim() || null;
+  token: string; versionId?: string; versionIds?: string[];
+  decision: ClientContentDecision; comment?: string | null;
+}): Promise<ContentDecisionResult> {
   const access = await requireCurrentCampaignContentAccess(input.token);
   if (!access.ok) return access;
+  return recordContentVersionDecisions({ ...input,
+    versionIds: input.versionIds ?? (input.versionId ? [input.versionId] : []),
+    campaignHeaderId: access.campaignHeaderId, actorKind: "client",
+    actorLabel: access.review.clientLabel, reviewId: access.review.id, journeyId: access.review.journeyId });
+}
 
-  const { data: version, error: versionError } = await db()
-    .from("deliverable_asset_versions")
-    .select("id, asset_id, storage_bucket, storage_path, external_url")
-    .eq("id", input.versionId)
-    .maybeSingle();
-  if (versionError || !version) {
-    return { ok: false, message: "That content version was not found." };
+/** Call only after checking token entitlement or internal campaign permissions. */
+export async function recordContentVersionDecisions(input: {
+  versionIds: string[]; campaignHeaderId: string; decision: ClientContentDecision;
+  comment?: string | null; actorKind: "client" | "internal";
+  actorLabel?: string | null; actorUserId?: string; reviewId?: string; journeyId?: string | null;
+}, client?: SupabaseClient): Promise<ContentDecisionResult> {
+  if (!CLIENT_CONTENT_DECISIONS.includes(input.decision)) return { ok: false, message: "Invalid content decision." };
+  const ids = [...new Set(input.versionIds)];
+  if (!ids.length || ids.length > 100) return { ok: false, message: "Select between 1 and 100 content files." };
+  const supabase = client ?? db();
+  const { data: versions, error: versionError } = await supabase.from("deliverable_asset_versions")
+    .select("id, asset_id, metadata, storage_bucket, storage_path, external_url").in("id", ids);
+  if (versionError || versions?.length !== ids.length) return { ok: false, message: "Content version not found." };
+  const { data: assets, error: assetError } = await supabase.from("deliverable_assets")
+    .select("id, campaign_header_id, assignment_deliverable_id, assignment_post_schedule_id, medium, archived_at, current_version_id, asset_type")
+    .in("id", [...new Set(versions.map(v => v.asset_id))]);
+  if (assetError || !assets) return { ok: false, message: "Could not load content assets." };
+  const missingCurrent = assets.filter(asset => !asset.current_version_id).map(asset => asset.id);
+  if (missingCurrent.length) {
+    const { data: siblings, error } = await supabase.from("deliverable_asset_versions")
+      .select("id, asset_id, version_number").in("asset_id", missingCurrent).order("version_number", { ascending: false });
+    if (error) return { ok: false, message: "Could not verify the current content version." };
+    for (const asset of assets) if (!asset.current_version_id) asset.current_version_id = siblings?.find(v => v.asset_id === asset.id)?.id ?? null;
   }
-
-  const { data: asset, error: assetError } = await db()
-    .from("deliverable_assets")
-    .select(
-      "id, campaign_header_id, assignment_deliverable_id, assignment_post_schedule_id, medium, archived_at, current_version_id"
-    )
-    .eq("id", version.asset_id)
-    .maybeSingle();
-  if (assetError || !asset || asset.archived_at) {
-    return { ok: false, message: "That content asset was not found." };
+  const rows = [];
+  for (const version of versions) {
+    const asset = assets.find(a => a.id === version.asset_id);
+    if (!asset || asset.archived_at || asset.campaign_header_id !== input.campaignHeaderId ||
+        !["file", "external_link"].includes(asset.medium) || asset.asset_type === "story_screenshot") {
+      return { ok: false, message: "That content cannot be reviewed in this campaign." };
+    }
+    if (asset.current_version_id !== version.id) return { ok: false, message: "Only the current content version can be reviewed. Refresh to see the latest version." };
+    if (!isVersionReleasedToClient(version.metadata)) return { ok: false, message: "Release this content to the client before recording a decision." };
+    if (asset.medium === "file" ? !(version.storage_bucket && version.storage_path) : !version.external_url) {
+      return { ok: false, message: "The content has not finished saving." };
+    }
+    rows.push({ campaign_header_id: asset.campaign_header_id, assignment_deliverable_id: asset.assignment_deliverable_id,
+      assignment_post_schedule_id: asset.assignment_post_schedule_id, asset_id: asset.id, version_id: version.id,
+      review_id: input.reviewId ?? null, journey_id: input.journeyId ?? null, decision: input.decision,
+      comment: input.comment?.trim() || null, actor_kind: input.actorKind, actor_label: input.actorLabel ?? null,
+      actor_user_id: input.actorUserId ?? null });
   }
-  if (asset.campaign_header_id !== access.campaignHeaderId) {
-    return { ok: false, message: "That content does not belong to this campaign." };
-  }
-  if (asset.medium !== "file" && asset.medium !== "external_link") {
-    return { ok: false, message: "That content cannot be reviewed here." };
-  }
-
-  const { data: siblingVersions } = await db()
-    .from("deliverable_asset_versions")
-    .select("id, version_number")
-    .eq("asset_id", asset.id);
-  const currentVersionId =
-    asset.current_version_id ||
-    [...(siblingVersions ?? [])].sort(
-      (left, right) => Number(left.version_number) - Number(right.version_number)
-    ).at(-1)?.id;
-  if (currentVersionId && currentVersionId !== version.id) {
-    return { ok: false, message: "Only the current content version can be reviewed." };
-  }
-
-  const { error } = await db().from("campaign_client_content_decisions").insert({
-    campaign_header_id: asset.campaign_header_id,
-    assignment_deliverable_id: asset.assignment_deliverable_id,
-    assignment_post_schedule_id: asset.assignment_post_schedule_id,
-    asset_id: asset.id,
-    version_id: version.id,
-    review_id: access.review.id,
-    journey_id: access.review.journeyId,
-    decision: input.decision,
-    comment,
-    actor_kind: "client",
-    actor_label: access.review.clientLabel,
-  });
+  // One atomic insert for the whole selection, with database approval timestamps.
+  const { data, error } = await supabase.from("campaign_client_content_decisions").insert(rows).select("decided_at");
   if (error) return { ok: false, message: error.message };
-
-  return {
-    ok: true,
-    message:
-      input.decision === "approved"
-        ? "Content approved."
-        : "Changes requested. Thinkway will upload a new version for review.",
-  };
+  return { ok: true, message: input.decision === "approved" ? "Content approved." : "Changes requested.", decidedAt: data?.[0]?.decided_at };
 }
 
 export async function createClientContentSignedUrl(input: {
@@ -150,10 +137,10 @@ export async function createClientContentSignedUrl(input: {
 
   const { data: version, error: versionError } = await db()
     .from("deliverable_asset_versions")
-    .select("id, asset_id, storage_bucket, storage_path, file_name, mime_type")
+    .select("id, asset_id, storage_bucket, storage_path, file_name, mime_type, metadata")
     .eq("id", input.versionId)
     .maybeSingle();
-  if (versionError || !version?.storage_bucket || !version.storage_path) {
+  if (versionError || !version?.storage_bucket || !version.storage_path || !isVersionReleasedToClient(version.metadata)) {
     return { ok: false, message: "Original file is not available for this content.", status: 404 };
   }
 

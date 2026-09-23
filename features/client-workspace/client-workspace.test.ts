@@ -6624,3 +6624,28 @@ test("approval prices include fees and usage rights and reconcile with frozen co
   assert.equal(selectionCalculator(creators, selection).totalInvestment, 1350);
   assert.equal(clientQuotationCommercialView(creators, { confirmedAt: "2026-09-23", creatorIds: ["priced"], commerciallyIncludedCreatorIds: ["priced"] }).totalInvestment, 1350);
 });
+
+
+test("approved originals remain downloadable with their real approval date after replacement", () => {
+  const result = projectContent({
+    assets: [contentAsset({ currentVersionId: "v2" })],
+    versions: [contentVersion({ id: "v1", versionNumber: 1 }), contentVersion({ id: "v2", versionNumber: 2 })],
+    decisions: [{ id: "approved-1", versionId: "v1", decision: "approved", comment: null, decidedAt: "2026-09-23T12:00:00Z", actorKind: "internal" }],
+  });
+  assert.equal(result.items.length, 2);
+  assert.equal(clientContentToReview(result.items).length, 1);
+  const approved = result.items.find(item => item.versionId === "v1")!;
+  assert.equal(approved.approvedAt, "2026-09-23T12:00:00Z");
+  assert.equal(approved.approvedBy, "internal");
+  assert.equal(approved.canDownloadOriginal, true);
+  assert.equal(result.items.find(item => item.versionId === "v2")?.approvedAt, null);
+});
+
+test("unreleased approved versions are not exposed to clients", () => {
+  const result = projectContent({
+    assets: [contentAsset({ currentVersionId: "v1" })],
+    versions: [contentVersion({ id: "v1", releasedToClientAt: null })],
+    decisions: [{ id: "approved-1", versionId: "v1", decision: "approved", comment: null, decidedAt: "2026-09-23T12:00:00Z", actorKind: "client" }],
+  });
+  assert.equal(result.items.length, 0);
+});

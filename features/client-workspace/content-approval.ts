@@ -70,6 +70,8 @@ export type ClientContentReviewItem = {
   fileName: string | null;
   mimeType: string | null;
   uploadedAt: string;
+  approvedAt?: string | null;
+  approvedBy?: "client" | "internal" | null;
   status: ClientContentStatus;
   comment: string | null;
   canDownloadOriginal: boolean;
@@ -214,59 +216,64 @@ export function projectClientCampaignContent(input: {
     const versions = [...(versionsByAsset.get(asset.id) ?? [])]
       .filter((version) => Boolean(version.releasedToClientAt?.trim()))
       .sort((left, right) => left.versionNumber - right.versionNumber);
-    const current = currentContentVersion(versions, asset.currentVersionId);
-    if (!current) continue;
-    const hasFile = Boolean(current.storageBucket && current.storagePath);
-    const externalUrl = current.externalUrl?.trim() || null;
-    if (asset.medium === "file" && !hasFile) continue;
-    if (asset.medium === "external_link" && !externalUrl) continue;
+    const latest = currentContentVersion(versions, asset.currentVersionId);
+    // Approved originals remain available when a new version is submitted.
+    const visibleVersions = versions.filter((version) => version.id === latest?.id ||
+      latestDecisionForVersion(input.decisions, version.id)?.decision === "approved");
+    for (const current of visibleVersions) {
+      const hasFile = Boolean(current.storageBucket && current.storagePath);
+      const externalUrl = current.externalUrl?.trim() || null;
+      if (asset.medium === "file" && !hasFile) continue;
+      if (asset.medium === "external_link" && !externalUrl) continue;
 
-    const currentDecision = latestDecisionForVersion(input.decisions, current.id);
-    const livePublished = contentAssetIsLivePublished(asset, input.publishedUnits ?? []);
-    const status = resolveClientContentStatus(currentDecision, livePublished);
-    const platform = input.platformByDeliverableId[asset.assignmentDeliverableId] ?? "";
-    const type = input.deliverableTypeByDeliverableId[asset.assignmentDeliverableId] ?? "";
-    const assetType = asset.assetType as DeliverableAssetType;
-    items.push({
-      assetId: asset.id,
-      versionId: current.id,
-      versionNumber: current.versionNumber,
-      campaignHeaderId: asset.campaignHeaderId,
-      assignmentDeliverableId: asset.assignmentDeliverableId,
-      assignmentPostScheduleId: asset.assignmentPostScheduleId,
-      creatorName: input.creatorNameByDeliverableId[asset.assignmentDeliverableId] ?? "Creator",
-      platform,
-      platformLabel: platform ? getPlatformOptionLabel(platform) : "",
-      deliverable: asset.label?.trim() || deliverableTypeShortLabel(type || "other"),
-      assetType: asset.assetType,
-      assetTypeLabel: DELIVERABLE_ASSET_TYPE_LABELS[assetType] ?? asset.assetType,
-      medium: asset.medium,
-      fileName: current.fileName,
-      mimeType: current.mimeType,
-      uploadedAt: current.uploadedAt,
-      status,
-      comment: currentDecision?.comment ?? null,
-      canDownloadOriginal: asset.medium === "file" && hasFile,
-      externalUrl: asset.medium === "external_link" ? externalUrl : null,
-      previewKind: hasFile ? clientContentPreviewKind(current.mimeType) : "none",
-      history: versions.map((version) => {
-        const decision = latestDecisionForVersion(input.decisions, version.id);
-        const versionLive = version.id === current.id && livePublished;
-        return {
-          versionId: version.id,
-          versionNumber: version.versionNumber,
-          uploadedAt: version.uploadedAt,
-          status: decision
-            ? resolveClientContentStatus(decision, versionLive)
-            : versionLive
-              ? "approved"
-              : "uploaded",
-          comment: decision?.comment ?? null,
-        };
-      }),
-    });
+      const currentDecision = latestDecisionForVersion(input.decisions, current.id);
+      const livePublished = current.id === latest?.id && contentAssetIsLivePublished(asset, input.publishedUnits ?? []);
+      const status = resolveClientContentStatus(currentDecision, livePublished);
+      const platform = input.platformByDeliverableId[asset.assignmentDeliverableId] ?? "";
+      const type = input.deliverableTypeByDeliverableId[asset.assignmentDeliverableId] ?? "";
+      const assetType = asset.assetType as DeliverableAssetType;
+      items.push({
+        assetId: asset.id,
+        versionId: current.id,
+        versionNumber: current.versionNumber,
+        campaignHeaderId: asset.campaignHeaderId,
+        assignmentDeliverableId: asset.assignmentDeliverableId,
+        assignmentPostScheduleId: asset.assignmentPostScheduleId,
+        creatorName: input.creatorNameByDeliverableId[asset.assignmentDeliverableId] ?? "Creator",
+        platform,
+        platformLabel: platform ? getPlatformOptionLabel(platform) : "",
+        deliverable: asset.label?.trim() || deliverableTypeShortLabel(type || "other"),
+        assetType: asset.assetType,
+        assetTypeLabel: DELIVERABLE_ASSET_TYPE_LABELS[assetType] ?? asset.assetType,
+        medium: asset.medium,
+        fileName: current.fileName,
+        mimeType: current.mimeType,
+        uploadedAt: current.uploadedAt,
+        status,
+        approvedAt: currentDecision?.decision === "approved" ? currentDecision.decidedAt : null,
+        approvedBy: currentDecision?.decision === "approved" ? currentDecision.actorKind : null,
+        comment: currentDecision?.comment ?? null,
+        canDownloadOriginal: asset.medium === "file" && hasFile,
+        externalUrl: asset.medium === "external_link" ? externalUrl : null,
+        previewKind: hasFile ? clientContentPreviewKind(current.mimeType) : "none",
+        history: versions.map((version) => {
+          const decision = latestDecisionForVersion(input.decisions, version.id);
+          const versionLive = version.id === current.id && livePublished;
+          return {
+            versionId: version.id,
+            versionNumber: version.versionNumber,
+            uploadedAt: version.uploadedAt,
+            status: decision
+              ? resolveClientContentStatus(decision, versionLive)
+              : versionLive
+                ? "approved"
+                : "uploaded",
+            comment: decision?.comment ?? null,
+          };
+        }),
+      });
+    }
   }
-
   items.sort((left, right) => {
     const statusOrder = Number(left.status === "approved") - Number(right.status === "approved");
     if (statusOrder !== 0) return statusOrder;

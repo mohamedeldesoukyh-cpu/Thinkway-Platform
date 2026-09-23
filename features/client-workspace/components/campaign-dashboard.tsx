@@ -59,14 +59,21 @@ export function CampaignDashboard({
   const dashboard = projectClientCampaignDashboard(posts);
   const { agreed: agreedPosts, addedValue: addedValuePosts } =
     partitionClientCampaignPostsByValueScope(posts);
-  const pendingReview = clientContentToReview(contentItems);
+  const [savedDecisions, setSavedDecisions] = useState<Record<string, Partial<ClientContentReviewItem>>>({});
+  const displayedContent = contentItems.map(item => ({ ...item, ...savedDecisions[item.versionId] }));
+  const pendingReview = clientContentToReview(displayedContent);
   const [overdueFocus, setOverdueFocus] = useState(0);
   const contentSection = (
     <ContentToReview
-      items={contentItems}
+      items={displayedContent}
       token={token}
       note={CONTENT_REVIEW_NOTE}
       creators={creators}
+      onDecisionSaved={(ids, status, comment, decidedAt) => {
+        setSavedDecisions(previous => ({ ...previous, ...Object.fromEntries(ids.map(id => [id, {
+          status, comment, approvedAt: status === "approved" ? decidedAt : null, approvedBy: "client",
+        }])) }));
+      }}
     />
   );
   const updatedLabel = formatCampaignPageUpdatedAt(updatedAt);

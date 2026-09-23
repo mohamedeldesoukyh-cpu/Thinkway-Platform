@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+
 
 import {
   APPROVED_CONTENT_HEADING,
@@ -106,14 +106,15 @@ function ContentReviewPane({
   token,
   creators,
   creatorIndex,
+  onDecided,
 }: {
   item: ClientContentReviewItem;
   siblings: ClientContentReviewItem[];
   token: string;
   creators: ClientCreatorCard[];
   creatorIndex: number;
+  onDecided: (ids: string[], decision: "approved" | "changes_requested", comment: string | null, decidedAt?: string) => void;
 }) {
-  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -132,28 +133,28 @@ function ContentReviewPane({
   function decide(decision: "approved" | "changes_requested") {
     setError(null);
     startTransition(async () => {
+      try {
       const result = await decideOne(item.versionId, decision);
       if (!result.ok) {
         setError(result.message);
         return;
       }
       setComment("");
-      router.refresh();
+      onDecided([item.versionId], decision, comment.trim() || null, result.decidedAt);
+      } catch { setError("Could not save the decision. Please try again."); }
     });
   }
 
   function approveAllFromCreator() {
     setError(null);
     startTransition(async () => {
-      for (const sibling of siblings) {
-        const result = await decideOne(sibling.versionId, "approved");
-        if (!result.ok) {
-          setError(result.message);
-          return;
-        }
-      }
+      try {
+      const ids = siblings.map(sibling => sibling.versionId);
+      const result = await decideContentAction({ token, versionIds: ids, decision: "approved", comment: comment.trim() || null });
+      if (!result.ok) { setError(result.message); return; }
       setComment("");
-      router.refresh();
+      onDecided(ids, "approved", comment.trim() || null, result.decidedAt);
+      } catch { setError("Could not save the decision. Please try again."); }
     });
   }
 
@@ -223,10 +224,10 @@ function ContentReviewPane({
             disabled={pending}
             onChange={(event) => setComment(event.target.value)}
           />
-          {error ? <p className="note">{error}</p> : null}
+          {error ? <p className="note" role="alert">{error}</p> : null}
           <div className="cx-rev__acts">
             <button type="button" className="btn pri" disabled={pending} onClick={() => decide("approved")}>
-              {APPROVE_CONTENT_LABEL}
+              {pending ? "Saving…" : APPROVE_CONTENT_LABEL}
             </button>
             <button
               type="button"
@@ -300,11 +301,13 @@ export function ContentToReview({
   token,
   note,
   creators = [],
+  onDecisionSaved,
 }: {
   items: ClientContentReviewItem[];
   token: string;
   note?: string;
   creators?: ClientCreatorCard[];
+  onDecisionSaved: (ids: string[], status: "approved" | "changes_requested", comment: string | null, decidedAt?: string) => void;
 }) {
   const pending = clientContentToReview(items);
   const approved = items.filter((item) => item.status === "approved");
@@ -379,6 +382,7 @@ export function ContentToReview({
             token={token}
             creators={creators}
             creatorIndex={selectedGroupIndex}
+            onDecided={onDecisionSaved}
           />
         </div>
       ) : approved.length > 0 ? (
@@ -391,16 +395,22 @@ export function ContentToReview({
       )}
 
       {approved.length > 0 ? (
-        <div className="cx-approved">
+        <div className="cx-approved" aria-live="polite">
           <p className="ck">{APPROVED_CONTENT_HEADING}</p>
-          <ul>
+          <div style={{ display: "grid", gap: 16 }}>
             {approved.map((item) => (
-              <li key={`approved:${reviewItemKey(item)}`}>
-                {item.creatorName} · {item.fileName || item.deliverable} ·{" "}
-                {CLIENT_CONTENT_STATUS_LABEL.approved}
-              </li>
+              <article key={reviewItemKey(item)} style={{ minWidth: 0, padding: 16, border: "1px solid #dde3ec", borderRadius: 12, overflowWrap: "anywhere" }}>
+                <h3>{item.creatorName} · {item.fileName || item.deliverable}</h3>
+                <p>v{item.versionNumber} · {item.platformLabel} · Approved</p>
+                <p>{item.approvedAt ? <>Approved {new Date(item.approvedAt).toLocaleString("en-GB", { timeZoneName: "short" })} · {item.approvedBy === "internal" ? "Thinkway team" : "Client"}</> : "Published content · approval date not recorded"}</p>
+                <div className="cx-rev__acts">
+                  {item.canDownloadOriginal ? <a className="btn" href={clientContentAssetUrl({ token, versionId: item.versionId, mode: "download" })}>{DOWNLOAD_ORIGINAL_LABEL}</a> : null}
+                  {item.previewKind !== "none" && item.canDownloadOriginal ? <ClientContentFullSizeButton token={token} versionId={item.versionId} kind={item.previewKind} title={item.fileName || item.deliverable} /> : null}
+                  {item.externalUrl ? <a className="btn" href={item.externalUrl} target="_blank" rel="noopener noreferrer">{VIEW_EXTERNAL_LINK_LABEL}</a> : null}
+                </div>
+              </article>
             ))}
-          </ul>
+          </div>
         </div>
       ) : null}
     </div>

@@ -147,14 +147,12 @@ export async function getDocumentationUnitDetail(
     includeEvents?: boolean;
   }
 ): Promise<DocumentationUnitDetail | null> {
-  const assets = await loadAssetsForUnit(supabase, input);
-  const comments = await loadComments(supabase, {
-    assignmentDeliverableId: input.assignmentDeliverableId,
-    assignmentPostScheduleId: input.assignmentPostScheduleId,
-    audience: input.commentAudience,
-  });
-  const events =
-    input.includeEvents === false ? [] : await loadEvents(supabase, input);
+  const [assets, comments, events] = await Promise.all([
+    loadAssetsForUnit(supabase, input),
+    loadComments(supabase, { assignmentDeliverableId: input.assignmentDeliverableId,
+      assignmentPostScheduleId: input.assignmentPostScheduleId, audience: input.commentAudience }),
+    input.includeEvents === false ? Promise.resolve([]) : loadEvents(supabase, input),
+  ]);
   const agg = emptyAgg();
   const received = assets.some(
     (asset) =>
@@ -1107,9 +1105,17 @@ async function loadAssetsForUnit(
     .in("asset_id", ids)
     .order("version_number", { ascending: false });
 
+  const versionIds = (versions ?? []).map(version => version.id);
+  const { data: contentDecisions } = versionIds.length ? await supabase
+    .from("campaign_client_content_decisions").select("version_id, decision, decided_at, actor_kind, comment")
+    .in("version_id", versionIds).order("decided_at", { ascending: false }).order("id", { ascending: false }) : { data: [] };
   const byAsset = new Map<string, DeliverableAssetVersionView[]>();
   for (const version of versions ?? []) {
     const view: DeliverableAssetVersionView = {
+      contentDecision: (() => {
+        const row = contentDecisions?.find(decision => decision.version_id === version.id);
+        return row ? { decision: row.decision as "approved" | "changes_requested", decidedAt: row.decided_at, actorKind: row.actor_kind, comment: row.comment } : null;
+      })(),
       id: version.id,
       versionNumber: version.version_number,
       storageBucket: version.storage_bucket,
