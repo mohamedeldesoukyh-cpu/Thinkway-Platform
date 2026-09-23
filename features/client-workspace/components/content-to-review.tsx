@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 
 
 import {
@@ -69,6 +69,27 @@ function ContentPreview({ item, token }: { item: ClientContentReviewItem; token:
     );
   }
   return null;
+}
+
+/** Only load approved media near the viewport, keeping long archives light. */
+function ApprovedContentPreview({ item, token }: { item: ClientContentReviewItem; token: string }) {
+  const container = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const node = container.current;
+    if (!node) return;
+    const observer = new IntersectionObserver(entries => {
+      if (entries.some(entry => entry.isIntersecting)) {
+        setVisible(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "120px" });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+  return <div ref={container} className="cx-approved-card__preview cx-rev__media">
+    {visible ? <ContentPreview item={item} token={token} /> : <span className="cx-rev__ph">Preview</span>}
+  </div>;
 }
 
 function CreatorAvatar({
@@ -397,17 +418,35 @@ export function ContentToReview({
       {approved.length > 0 ? (
         <div className="cx-approved" aria-live="polite">
           <p className="ck">{APPROVED_CONTENT_HEADING}</p>
-          <div style={{ display: "grid", gap: 16 }}>
-            {approved.map((item) => (
-              <article key={reviewItemKey(item)} style={{ minWidth: 0, padding: 16, border: "1px solid #dde3ec", borderRadius: 12, overflowWrap: "anywhere" }}>
-                <h3>{item.creatorName} · {item.fileName || item.deliverable}</h3>
-                <p>v{item.versionNumber} · {item.platformLabel} · Approved</p>
-                <p>{item.approvedAt ? <>Approved {new Date(item.approvedAt).toLocaleString("en-GB", { timeZone: "Africa/Cairo", timeZoneName: "short" })} · {item.approvedBy === "internal" ? "Thinkway team" : "Client"}</> : "Published content · approval date not recorded"}</p>
-                <div className="cx-rev__acts">
-                  {item.canDownloadOriginal ? <a className="btn" href={clientContentAssetUrl({ token, versionId: item.versionId, mode: "download" })}>{DOWNLOAD_ORIGINAL_LABEL}</a> : null}
-                  {item.previewKind !== "none" && item.canDownloadOriginal ? <ClientContentFullSizeButton token={token} versionId={item.versionId} kind={item.previewKind} title={item.fileName || item.deliverable} /> : null}
-                  {item.externalUrl ? <a className="btn" href={item.externalUrl} target="_blank" rel="noopener noreferrer">{VIEW_EXTERNAL_LINK_LABEL}</a> : null}
+          <div className="cx-approved__list">
+            {approved.map((item, index) => (
+              <article key={reviewItemKey(item)} className="cx-approved-card">
+                <div className="cx-approved-card__body">
+                  <div className="cx-rev__who">
+                    <CreatorAvatar name={item.creatorName} index={index} token={token} creators={creators} className="cx-av" />
+                    <span className="cx-rev__who-text">
+                      <span className="cx-rev__name">{item.creatorName}</span>
+                      <span className="cx-rev__file">{item.fileName || item.deliverable}</span>
+                    </span>
+                  </div>
+                  <div className="cx-approved-card__status">
+                    <span className="cx-badge cx-badge--ok">✓ Approved</span>
+                    <span>{item.platformLabel || item.platform} · {item.assetTypeLabel} · v{item.versionNumber}</span>
+                  </div>
+                  <div className="cx-approved-card__date">
+                    <span>Approval date</span>
+                    {item.approvedAt ? <>
+                      <time dateTime={item.approvedAt}>{new Date(item.approvedAt).toLocaleString("en-GB", { timeZone: "Africa/Cairo", timeZoneName: "short" })}</time>
+                      <span>{item.approvedBy === "internal" ? "Thinkway team" : "Client"}</span>
+                    </> : <span>Published content · date not recorded</span>}
+                  </div>
+                  <div className="cx-rev__acts">
+                    {item.canDownloadOriginal ? <a className="btn" href={clientContentAssetUrl({ token, versionId: item.versionId, mode: "download" })}>{DOWNLOAD_ORIGINAL_LABEL}</a> : null}
+                    {item.previewKind !== "none" && item.canDownloadOriginal ? <ClientContentFullSizeButton token={token} versionId={item.versionId} kind={item.previewKind} title={item.fileName || item.deliverable} /> : null}
+                    {item.externalUrl ? <a className="btn" href={item.externalUrl} target="_blank" rel="noopener noreferrer">{VIEW_EXTERNAL_LINK_LABEL}</a> : null}
+                  </div>
                 </div>
+                {item.previewKind !== "none" || googleDriveFilePreviewUrl(item.externalUrl) ? <ApprovedContentPreview item={item} token={token} /> : null}
               </article>
             ))}
           </div>
