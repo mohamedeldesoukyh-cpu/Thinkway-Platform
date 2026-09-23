@@ -6,7 +6,7 @@ import {
 } from "@/lib/social/platforms";
 
 /** Master-data deliverable taxonomy keyed by social platform. */
-export const DELIVERABLE_TYPES_BY_PLATFORM: Record<
+const PLATFORM_SPECIFIC_DELIVERABLE_TYPES: Record<
   string,
   readonly { value: string; label: string; shortLabel: string }[]
 > = {
@@ -42,6 +42,16 @@ export const DELIVERABLE_TYPES_BY_PLATFORM: Record<
   ],
   other: [{ value: "other", label: "Other", shortLabel: "Other" }],
 };
+
+/** Platform-neutral production type, available alongside each platform's formats. */
+const UGC_VIDEO_TYPE = { value: "ugc_video", label: "UGC Video", shortLabel: "UGC Video" } as const;
+
+export const DELIVERABLE_TYPES_BY_PLATFORM: typeof PLATFORM_SPECIFIC_DELIVERABLE_TYPES = Object.fromEntries(
+  Object.entries(PLATFORM_SPECIFIC_DELIVERABLE_TYPES).map(([platform, types]) => [
+    platform,
+    [...types, UGC_VIDEO_TYPE],
+  ])
+);
 
 const DELIVERABLE_LABEL_INDEX = new Map<string, string>();
 const DELIVERABLE_SHORT_INDEX = new Map<string, string>();
