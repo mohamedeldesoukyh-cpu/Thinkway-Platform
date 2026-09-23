@@ -38,7 +38,7 @@ export function MobileAppNavigation({ account }: { account: React.ReactNode }) {
               return <section key={index} className="mb-4">
                 <h2 className="px-3 py-2 text-xs font-semibold text-muted-foreground">{section.group ?? section.subgroup}</h2>
                 {items.map((item) => <AppNavLink key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={(item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`)) ? "page" : undefined} className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm aria-[current=page]:bg-accent aria-[current=page]:font-semibold">
-                  <SidebarSuiteIcon name={item.icon} />{item.label}
+                  <SidebarSuiteIcon name={item.icon} className="size-[18px] shrink-0" />{item.label}
                 </AppNavLink>)}
               </section>;
             })}
