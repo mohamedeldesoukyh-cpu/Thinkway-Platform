@@ -2,7 +2,7 @@
 
 import { campaignMoney, useCampaignCurrency, CampaignLineFinancial } from "../campaign-money";
 import { aggregateCampaignDisplayFinancials } from "@/lib/campaigns/campaign-display-financials";
-import { convertMoney } from "@/lib/billing/billing-currency";
+import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 import { PencilIcon } from "lucide-react";
 import {
   Fragment,
@@ -386,7 +386,10 @@ export function AssignmentSafeGrid({
       });
       const source = resolveAssignmentLineCurrency(line);
       const target = currencyWorkspace?.currency_code ?? source;
-      const convert = (amount: number) => convertMoney(amount, source, target, currencyWorkspace?.currency_rates ?? {});
+      const convert = (amount: number) => creatorFxAmount(amount, { from: source, to: target,
+        sourceRateToEgp: currencyWorkspace?.currency_rates?.[source] ?? 0,
+        targetRateToEgp: currencyWorkspace?.currency_rates?.[target] ?? 0,
+        override: line.revenue_fx_override });
       revenue += convert(billing.revenueBeforeVat);
       const financials = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: target, rateToEgpByCurrency: new Map(Object.entries(currencyWorkspace?.currency_rates ?? { [source]: 1 })) });
       cost += financials.cost;

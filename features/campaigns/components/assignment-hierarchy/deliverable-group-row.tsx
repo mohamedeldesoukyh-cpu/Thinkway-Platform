@@ -96,6 +96,8 @@ export function DeliverableGroupRow({
           deliverable={deliverable}
           post={post}
           currency={currency}
+          costFxOverride={line?.cost_fx_override}
+          revenueFxOverride={line?.revenue_fx_override}
           parentOperationalStatus={safeParentStatus}
           readOnly={readOnly}
           revenueVatExempt={revenueVatExempt}

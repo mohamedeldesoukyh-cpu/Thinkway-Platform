@@ -26,6 +26,8 @@ export type QuotationItemExecutionRow = {
   cost: number;
   revenue: number;
   cost_currency: string;
+  cost_fx_override?: string | null;
+  revenue_fx_override?: string | null;
   option_number: number | null;
 };
 
@@ -192,6 +194,8 @@ export function mapQuotationItemsToExecutionLineSeeds(input: {
       revenue,
       cost,
       currencyCode: item.cost_currency || input.defaultCurrency,
+      costFxOverride: item.cost_fx_override ?? null,
+      revenueFxOverride: item.revenue_fx_override ?? null,
       scheduleHints: buildScheduleHintsFromQuotationDeliverables(deliverables),
     });
   }

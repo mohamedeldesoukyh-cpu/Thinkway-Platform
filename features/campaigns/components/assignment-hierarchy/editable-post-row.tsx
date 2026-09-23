@@ -104,6 +104,8 @@ type EditablePostRowProps = {
   deliverable: AssignmentDeliverableHierarchyRow;
   post: AssignmentPostOperationalRow;
   currency: string;
+  costFxOverride?: string | null;
+  revenueFxOverride?: string | null;
   parentOperationalStatus: CampaignLineOperationalStatus;
   readOnly: boolean;
   revenueVatExempt: boolean;
@@ -176,6 +178,8 @@ export function EditablePostRow({
   deliverable,
   post,
   currency,
+  costFxOverride,
+  revenueFxOverride,
   parentOperationalStatus,
   readOnly,
   revenueVatExempt,
@@ -197,7 +201,8 @@ export function EditablePostRow({
   gridCols,
   parentTrackIds,
 }: EditablePostRowProps) {
-  const formatOperationalAmount = (amount: number) => campaignMoney(amount, currency);
+  const formatOperationalAmount = (amount: number) => campaignMoney(amount, currency, revenueFxOverride);
+  const formatCostAmount = (amount: number) => campaignMoney(amount, currency, costFxOverride);
   const col = useOperationalChildColumnVisibleChecker();
   const leadingParentColumnIds =
     leadingParentColumnIdsProp ?? assignmentChildLeadingParentColumnIds(showExpandColumn);
@@ -841,7 +846,7 @@ export function EditablePostRow({
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
                 alwaysEditing={amountAlwaysEditing}
-                editTint="rev"
+                fxOverride={revenueFxOverride} editTint="rev"
                 perUnit
               />
             ) : (
@@ -860,7 +865,7 @@ export function EditablePostRow({
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
                 alwaysEditing={amountAlwaysEditing}
-                editTint="cost"
+                fxOverride={costFxOverride} editTint="cost"
                 perUnit
               />
             ) : (
@@ -885,7 +890,7 @@ export function EditablePostRow({
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
                 alwaysEditing={amountAlwaysEditing}
-                editTint="rev"
+                fxOverride={revenueFxOverride} editTint="rev"
               />
             ) : (
               <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
@@ -973,7 +978,7 @@ export function EditablePostRow({
                 onBlur={gridEdit.hasSession ? undefined : persistCommercial}
                 disabled={commercialLocked}
                 alwaysEditing={amountAlwaysEditing}
-                editTint="cost"
+                fxOverride={costFxOverride} editTint="cost"
               />
             ) : col("cost") ? (
               <span className={OPERATIONAL_AMOUNT_CLASS}>—</span>
@@ -990,7 +995,7 @@ export function EditablePostRow({
         const vat = Math.round(cost * rate) / 100;
         return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={cn(GRID_CELL.money, OPERATIONAL_AMOUNT_CLASS)}>
           {col(parentColumnId) && showDeliverableCommercial
-            ? parentColumnId === "costVatPercent" ? rate.toFixed(1) + "%" : formatOperationalAmount(parentColumnId === "costVat" ? vat : cost + vat)
+            ? parentColumnId === "costVatPercent" ? rate.toFixed(1) + "%" : formatCostAmount(parentColumnId === "costVat" ? vat : cost + vat)
             : "—"}
         </AssignmentGridCell>;
       }
@@ -1002,7 +1007,7 @@ export function EditablePostRow({
             className={cn(GRID_CELL.usageRightsCost, OPERATIONAL_AMOUNT_CLASS)}
           >
             {col("usageRightsCost") && showDeliverableCommercial
-              ? formatOperationalAmount(
+              ? formatCostAmount(
                   typeCommercial?.usageRightsCost ?? deliverable.usage_rights_cost
                 )
               : col("usageRightsCost")

@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from "node:util";
+import { readCreatorFx } from "@/lib/commercial/creator-fx";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { assignmentCommercialMastersChanged } from "@/lib/assignments/assignment-commercial-masters";
@@ -136,6 +137,8 @@ export type CampaignLineMutationInput = {
   cost_received?: number;
   cost_received_currency?: string;
   fx_rate?: number;
+  cost_fx_override?: string | null;
+  revenue_fx_override?: string | null;
   fx_from_currency?: string;
   fx_to_currency?: string;
   currency_code?: string;
@@ -192,6 +195,11 @@ export async function createCampaignLine(
   const commercial = commercialResolved.value;
   const currency =
     parsed.currency_code || header?.currency_code || DEFAULT_PLATFORM_CURRENCY;
+  for (const value of [parsed.cost_fx_override, parsed.revenue_fx_override]) {
+    if (value && readCreatorFx(value)?.from !== currency) {
+      return { ok: false, message: "The custom exchange rate is invalid or belongs to another currency." };
+    }
+  }
   const costFx = resolveAssignmentMultiCurrencyCost({
     ...parsed,
     currency_code: currency,
@@ -267,6 +275,8 @@ export async function createCampaignLine(
     cost_received_currency: costFx.cost_received_currency,
     currency_code: currency,
     base_currency: DEFAULT_PLATFORM_CURRENCY,
+    cost_fx_override: parsed.cost_fx_override ?? null,
+    revenue_fx_override: parsed.revenue_fx_override ?? null,
     fx_rate: costFx.fx_rate,
     fx_from_currency: costFx.fx_from_currency,
     fx_to_currency: costFx.fx_to_currency,

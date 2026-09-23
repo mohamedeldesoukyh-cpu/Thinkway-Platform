@@ -184,6 +184,8 @@ function toItemRow(raw: Record<string, unknown>): QuotationItemRow {
     gp_pct: Number(raw.gp_pct ?? 0),
     gp_value: Number(raw.gp_value ?? 0),
     fx_rate_to_egp: Number(raw.fx_rate_to_egp ?? 1),
+    cost_fx_override: (raw.cost_fx_override as string | null) ?? null,
+    revenue_fx_override: (raw.revenue_fx_override as string | null) ?? null,
     cost_egp: Number(raw.cost_egp ?? 0),
     revenue_egp: Number(raw.revenue_egp ?? 0),
     gp_value_egp: Number(raw.gp_value_egp ?? 0),
@@ -402,7 +404,7 @@ export async function convertQuotationToAssignments(
   const { data: itemRows, error: itemsError } = await supabase
     .from("quotation_items")
     .select(
-      "id, influencer_id, profile_id, unified_id, source_shortlist_item_id, creator_name, platform, handle, followers, engagement_rate, country_code, deliverables, profile_image_url, profile_url, option_number, service_description, commercial_input_mode, cost, cost_currency, revenue, gp_pct, gp_value, fx_rate_to_egp, cost_egp, revenue_egp, gp_value_egp, af_pct, af_value, af_value_egp, sort_order, collapse_group_id, collapse_label"
+      "id, influencer_id, profile_id, unified_id, source_shortlist_item_id, creator_name, platform, handle, followers, engagement_rate, country_code, deliverables, profile_image_url, profile_url, option_number, service_description, commercial_input_mode, cost, cost_currency, revenue, gp_pct, gp_value, fx_rate_to_egp, cost_fx_override, revenue_fx_override, cost_egp, revenue_egp, gp_value_egp, af_pct, af_value, af_value_egp, sort_order, collapse_group_id, collapse_label"
     )
     .eq("quotation_id", input.quotationId)
     .order("sort_order", { ascending: true });
@@ -759,6 +761,8 @@ export async function convertQuotationToAssignments(
       revenue_vat_percent: 0,
       cost_vat_percent: 0,
       currency_code: seed.currencyCode,
+      cost_fx_override: unit.primaryItem.cost_fx_override ?? null,
+      revenue_fx_override: unit.primaryItem.revenue_fx_override ?? null,
       start_date: null,
       end_date: null,
       assignment_status: "assigned",

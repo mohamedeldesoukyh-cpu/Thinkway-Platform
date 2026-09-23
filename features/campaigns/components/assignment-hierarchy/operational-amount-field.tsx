@@ -18,6 +18,7 @@ const INPUT_CLASS = cn(
 
 type OperationalAmountFieldProps = {
   currency?: string;
+  fxOverride?: string | null;
   value: number;
   onChange: (value: number) => void;
   onBlur?: () => void;
@@ -33,6 +34,7 @@ type OperationalAmountFieldProps = {
 
 export function OperationalAmountField({
   currency,
+  fxOverride,
   value,
   onChange,
   onBlur,
@@ -69,7 +71,7 @@ export function OperationalAmountField({
   if (disabled) {
     return (
       <span className={cn(OPERATIONAL_AMOUNT_CLASS, className)}>
-        {currency ? campaignMoney(value, currency) : format(value)}
+        {currency ? campaignMoney(value, currency, fxOverride) : format(value)}
       </span>
     );
   }
@@ -88,7 +90,7 @@ export function OperationalAmountField({
           setFocused(true);
         }}
       >
-        {currency ? campaignMoney(value, currency) : format(value)}
+        {currency ? campaignMoney(value, currency, fxOverride) : format(value)}
       </button>
     );
   }

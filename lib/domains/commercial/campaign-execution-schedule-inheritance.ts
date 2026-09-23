@@ -17,6 +17,8 @@ export type ExecutionDeliverableScheduleHint = {
 } & QuotationTentativeScheduleFields;
 
 export type ExecutionLineSeed = CampaignPlanLineSeed & {
+  costFxOverride?: string | null;
+  revenueFxOverride?: string | null;
   scheduleHints: ExecutionDeliverableScheduleHint[];
 };
 

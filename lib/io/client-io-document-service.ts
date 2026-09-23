@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { clientIoFxRates } from "@/lib/io/client-io-fx";
 
 import {
   isClientIoRegenerateAllowed,
@@ -56,7 +57,7 @@ async function captureAssignmentSnapshot(
   const { data: lines, error: linesError } = await supabase
     .from("campaign_lines")
     .select(
-      "id, document_number, name, description, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, sort_order"
+      "id, document_number, name, description, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, revenue_fx_override, sort_order"
     )
     .eq("campaign_header_id", campaignHeaderId)
     .in("id", selectedCampaignLineIds)
@@ -80,6 +81,7 @@ async function captureAssignmentSnapshot(
     revenue_vat_percent: number | null;
     revenue_vat_exempt: boolean | null;
     currency_code: string;
+    revenue_fx_override: string | null;
     sort_order: number | null;
   }>;
 
@@ -97,7 +99,14 @@ async function captureAssignmentSnapshot(
     throw new Error(deliverablesError.message);
   }
 
+  const { data: campaign, error: campaignError } = await supabase.from("campaign_headers")
+    .select("currency_code").eq("id", campaignHeaderId).single();
+  if (campaignError || !campaign) throw new Error(campaignError?.message ?? "Campaign not found");
+  const documentCurrency = campaign.currency_code || "EGP";
+  const assignmentFxRates = await clientIoFxRates(supabase, typedLines, documentCurrency);
   return buildClientIoAssignmentSnapshot({
+    documentCurrency,
+    assignmentFxRates,
     capturedAt,
     selectedCampaignLineIds,
     lines: typedLines.map((line) => ({
@@ -114,6 +123,7 @@ async function captureAssignmentSnapshot(
       revenue_vat_percent: line.revenue_vat_percent,
       revenue_vat_exempt: line.revenue_vat_exempt,
       currency_code: line.currency_code,
+      revenue_fx_override: line.revenue_fx_override,
       sort_order: line.sort_order,
     })),
     deliverables: ((deliverables ?? []) as Array<{
@@ -204,7 +214,7 @@ export async function generateClientIoDocument(
   }
 
   const data = await loadClientIoDocumentData(supabase, clientIoId, actorId, {
-    forceLive: true,
+    assignmentSnapshot: snapshot,
   });
   const html = renderClientIoHtml(data, layout);
 

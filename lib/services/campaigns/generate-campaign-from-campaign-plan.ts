@@ -152,7 +152,7 @@ async function loadQuotationExecutionSource(
   const { data: items } = await supabase
     .from("quotation_items")
     .select(
-      "id, influencer_id, unified_id, creator_name, platform, handle, deliverables, cost, revenue, cost_currency, option_number"
+      "id, influencer_id, unified_id, creator_name, platform, handle, deliverables, cost, revenue, cost_currency, cost_fx_override, revenue_fx_override, option_number"
     )
     .eq("quotation_id", quotation.id)
     .order("sort_order");
@@ -172,6 +172,8 @@ async function loadQuotationExecutionSource(
       cost: Number(row.cost ?? 0),
       revenue: Number(row.revenue ?? 0),
       cost_currency: row.cost_currency ?? "EGP",
+      cost_fx_override: row.cost_fx_override ?? null,
+      revenue_fx_override: row.revenue_fx_override ?? null,
       option_number: row.option_number,
     })),
   };
@@ -495,6 +497,8 @@ export async function generateCampaignFromCampaignPlan(
       revenue_vat_percent: 0,
       cost_vat_percent: 0,
       currency_code: seed.currencyCode,
+      cost_fx_override: seed.costFxOverride ?? null,
+      revenue_fx_override: seed.revenueFxOverride ?? null,
       start_date: startDate,
       end_date: endDate,
       assignment_status: "assigned",
