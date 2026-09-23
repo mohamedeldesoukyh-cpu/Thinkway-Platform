@@ -2321,7 +2321,7 @@ export function CreatorSearchWorkspace({
   }, [aiModeActive, clientOnlyFiltersActive, completeness, hasMore, headerTotal, isExactCreatorSearch]);
 
   return (
-    <div className="discovery-suite flex h-full min-h-0 flex-col overflow-hidden bg-[var(--tw-bg)]">
+    <div className="discovery-suite creator-search-workspace flex h-full min-h-0 flex-col overflow-hidden bg-[var(--tw-bg)]">
       <div className="shrink-0 px-4 pt-3">
         <DiscoverySuiteMasthead
           title="Creator search"
@@ -2435,7 +2435,7 @@ export function CreatorSearchWorkspace({
 
       <div
         className={cn(
-          "relative flex min-h-0 flex-1 overflow-hidden",
+          "creator-search-results-pane relative flex min-h-0 flex-1 overflow-hidden",
           discoverySelectionFlyoutContentClass(selectedCreators.length > 0)
         )}
       >

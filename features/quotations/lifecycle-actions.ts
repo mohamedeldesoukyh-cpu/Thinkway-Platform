@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -39,6 +40,54 @@ import type { ActionResult } from "./types";
 type Supabase = SupabaseClient<Database>;
 
 const SHORTLIST_LIST = "/discovery/shortlists";
+
+const appendCreatorSchema = z.object({
+  quotationId: z.string().uuid(),
+  campaignId: z.string().uuid(),
+  itemId: z.string().uuid(),
+  dryRun: z.boolean(),
+});
+
+export async function listQuotationCampaignTargets(quotationId: string) {
+  if (!z.string().uuid().safeParse(quotationId).success) return { ok: false as const, message: "Invalid quotation." };
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const auth = await requirePermission(actor.supabase, "campaigns.write");
+  if ("error" in auth) return { ok: false as const, message: "Campaign write access is required." };
+  const { loadQuotationRow } = await import("@/lib/services/quotations/repositories/quotation-repository");
+  const { APPEND_CAMPAIGN_STATUSES } = await import("@/lib/services/campaigns/quotation-append-policy");
+  const row = await loadQuotationRow(actor.supabase, quotationId);
+  if (!row?.brand_id) return { ok: false as const, message: "The quotation needs a saved brand." };
+  let query = actor.supabase.from("campaign_headers").select("id, name, document_number, status")
+    .eq("brand_id", String(row.brand_id)).in("status", APPEND_CAMPAIGN_STATUSES as Database["public"]["Enums"]["campaign_status"][])
+    .order("created_at", { ascending: false });
+  if (row.client_id) query = query.eq("client_id", String(row.client_id));
+  const { data, error } = await query;
+  if (error) return { ok: false as const, message: error.message };
+  return { ok: true as const, campaigns: data ?? [] };
+}
+
+/** Explicit additive flow, independent of the legacy full-quotation conversion flag. */
+export async function appendQuotationCreatorToCampaign(input: z.infer<typeof appendCreatorSchema>) {
+  const parsed = appendCreatorSchema.safeParse(input);
+  if (!parsed.success) return { ok: false as const, message: "Select one quotation creator and a campaign." };
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const auth = await requirePermission(actor.supabase, "campaigns.write");
+  if ("error" in auth) return { ok: false as const, message: "Campaign write access is required." };
+  const { convertQuotationToAssignments } = await import("@/lib/services/campaigns/convert-quotation-to-assignments");
+  const result = await convertQuotationToAssignments(actor.supabase, actor.userId, {
+    quotationId: parsed.data.quotationId,
+    appendToCampaignId: parsed.data.campaignId,
+    itemIds: [parsed.data.itemId],
+    dryRun: parsed.data.dryRun,
+  });
+  if (result.ok && !parsed.data.dryRun) {
+    revalidateQuotation(parsed.data.quotationId, result.shortlistId, result.campaignId);
+    revalidatePath("/campaigns");
+  }
+  return result;
+}
 
 function revalidateQuotation(id: string, shortlistId?: string | null, campaignId?: string | null) {
   revalidatePath(QUOTATIONS_LIST_PATH);

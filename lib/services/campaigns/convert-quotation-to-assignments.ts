@@ -37,6 +37,7 @@ import { normalizeCreatorId } from "@/features/campaign-studio/services/studio-d
 
 import { applyInheritedTentativeScheduleToLine } from "./apply-inherited-tentative-schedule";
 import { createCampaignLine } from "./campaign-line-service";
+import { quotationAppendLineId, quotationAppendTargetError, selectQuotationAppendUnit } from "./quotation-append-policy";
 import { maybeActivateCommercialCreatorForAssignment } from "@/lib/campaigns/campaign-influencer-commercial";
 
 import {
@@ -54,6 +55,8 @@ export type ConvertQuotationToAssignmentsInput = {
   campaignName?: string | null;
   /** Reuse an existing header (backfill). */
   reuseHeaderId?: string | null;
+  /** Explicit additive operation; preserve the existing campaign header and baseline. */
+  appendToCampaignId?: string;
   /** When true, only compute plan — no writes. */
   dryRun?: boolean;
   /** Convert only these quotation item ids (client-approved subset). Option 1 still wins per creator. */
@@ -66,6 +69,7 @@ export type ConvertAssignmentPreviewRow = {
   revenue: number;
   cost: number;
   afPct: number;
+  currencyCode: string;
   memberCount: number;
   deliverableCount: number;
   primaryItemId: string;
@@ -139,6 +143,7 @@ function buildPreview(input: {
       revenue: unit.primaryItem.revenue,
       cost: unit.primaryItem.cost,
       afPct: unit.primaryItem.af_pct,
+      currencyCode: unit.primaryItem.cost_currency || String(input.row.currency ?? "EGP"),
       memberCount: unit.memberItems.length,
       deliverableCount: countDeliverables(unit.memberItems),
       primaryItemId: unit.primaryItem.id,
@@ -381,6 +386,17 @@ export async function convertQuotationToAssignments(
     };
   }
 
+  let appendTarget: { id: string; document_number: string } | null = null;
+  if (input.appendToCampaignId) {
+    const { data: target, error } = await supabase.from("campaign_headers")
+      .select("id, document_number, brand_id, client_id, status")
+      .eq("id", input.appendToCampaignId).maybeSingle();
+    if (error) return { ok: false, message: error.message };
+    const targetError = quotationAppendTargetError(row, target);
+    if (targetError) return { ok: false, message: targetError };
+    appendTarget = target;
+  }
+
   const warnings: string[] = [];
   const { data: itemRows, error: itemsError } = await supabase
     .from("quotation_items")
@@ -402,6 +418,11 @@ export async function convertQuotationToAssignments(
   }
   const selection = summarizeQuotationConvertSelection(scopedItems);
   let units = buildQuotationConvertUnits(scopedItems);
+  if (appendTarget) {
+    const selected = selectQuotationAppendUnit(items, input.itemIds ?? []);
+    if (selected.error) return { ok: false, message: selected.error };
+    units = [selected.unit];
+  }
 
   if (units.length === 0) {
     const hasLines = items.length > 0;
@@ -422,6 +443,7 @@ export async function convertQuotationToAssignments(
 
   // Idempotency: existing Assignments for this quote pin / header.
   const existingHeaderId =
+    appendTarget?.id ||
     input.reuseHeaderId?.trim() ||
     (row.campaign_header_id as string | null) ||
     null;
@@ -429,16 +451,29 @@ export async function convertQuotationToAssignments(
   // Partial convert resume: skip units that already have a line for this quote item.
   let existingSourceItemIds = new Set<string>();
   if (existingHeaderId) {
-    const { data: existingLines } = await supabase
+    const { data: existingLines, error: existingLinesError } = await supabase
       .from("campaign_lines")
       .select("id, source_quotation_item_id")
       .eq("campaign_header_id", existingHeaderId);
+    if (existingLinesError) return { ok: false, message: existingLinesError.message };
 
     existingSourceItemIds = new Set(
       (existingLines ?? [])
         .map((line) => (line as { source_quotation_item_id?: string | null }).source_quotation_item_id)
         .filter((id): id is string => Boolean(id))
     );
+
+    if (appendTarget && existingSourceItemIds.size) {
+      const { data: origins, error } = await supabase.from("quotation_items")
+        .select("id, source_shortlist_item_id").in("id", [...existingSourceItemIds]);
+      if (error) return { ok: false, message: error.message };
+      const shortlistOrigins = new Set((origins ?? []).map(i => i.source_shortlist_item_id).filter(Boolean));
+      for (const unit of units) {
+        if (unit.primaryItem.source_shortlist_item_id && shortlistOrigins.has(unit.primaryItem.source_shortlist_item_id)) {
+          existingSourceItemIds.add(unit.primaryItem.id);
+        }
+      }
+    }
 
     const pendingUnits = units.filter(
       (unit) => !existingSourceItemIds.has(unit.primaryItem.id)
@@ -483,7 +518,7 @@ export async function convertQuotationToAssignments(
       ok: true,
       dryRun: true,
       campaignId: existingHeaderId ?? "",
-      documentNumber: "",
+      documentNumber: appendTarget?.document_number ?? "",
       shortlistId: (row.shortlist_id as string | null) ?? null,
       linesCreated: units.length,
       lineIds: [],
@@ -501,7 +536,9 @@ export async function convertQuotationToAssignments(
     };
   }
 
-  const shortlistResult = await ensureShortlist(
+  const shortlistResult = appendTarget
+    ? { ok: true as const, shortlistId: (row.shortlist_id as string | null) ?? null }
+    : await ensureShortlist(
     supabase,
     userId,
     input.quotationId,
@@ -533,6 +570,8 @@ export async function convertQuotationToAssignments(
     if (!created.ok) return created;
     campaignId = created.id;
     documentNumber = created.document_number;
+  } else if (appendTarget) {
+    documentNumber = appendTarget.document_number;
   } else {
     const { data: header, error: headerError } = await supabase
       .from("campaign_headers")
@@ -557,7 +596,7 @@ export async function convertQuotationToAssignments(
   }
 
   // Do not duplicate commercial snapshot when resuming a partial convert.
-  if (existingSourceItemIds.size === 0) {
+  if (!appendTarget && existingSourceItemIds.size === 0) {
     const snapshotPayload = buildSnapshotPayload({
       row,
       units,
@@ -717,7 +756,7 @@ export async function convertQuotationToAssignments(
       assignment_status: "assigned",
       source_quotation_id: input.quotationId,
       source_quotation_item_id: unit.primaryItem.id,
-    });
+    }, appendTarget ? { lineId: quotationAppendLineId(campaignId, unit.primaryItem) } : undefined);
 
     if (!result.ok) {
       skippedItems += 1;
@@ -834,8 +873,10 @@ export async function convertQuotationToAssignments(
     };
   }
 
-  await linkQuotationToCampaign(supabase, input.quotationId, campaignId);
-  await linkShortlistToCampaign(supabase, shortlistResult.shortlistId, campaignId);
+  if (!appendTarget) {
+    await linkQuotationToCampaign(supabase, input.quotationId, campaignId);
+    await linkShortlistToCampaign(supabase, shortlistResult.shortlistId!, campaignId);
+  }
 
   await logQuotationLifecycleEvent(supabase, {
     quotationId: input.quotationId,

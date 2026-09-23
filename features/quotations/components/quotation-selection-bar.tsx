@@ -15,6 +15,7 @@ type Props = {
   onDuplicate: () => void;
   onDelete: () => void;
   onMore?: () => void;
+  onAddToCampaign?: () => void;
 };
 
 /**
@@ -32,6 +33,7 @@ export function QuotationSelectionBar({
   onDuplicate,
   onDelete,
   onMore,
+  onAddToCampaign,
 }: Props) {
   if (selectedCount <= 0) return null;
 
@@ -78,6 +80,7 @@ export function QuotationSelectionBar({
           </span>
         </span>
         <span className="acts">
+          {onAddToCampaign && <button type="button" className="tw-b sm pri" disabled={busy || selectedCount !== 1} onClick={onAddToCampaign}>Add to existing campaign</button>}
           <button
             type="button"
             className={cn("tw-b sm", calculatorOpen && "pri")}

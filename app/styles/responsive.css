@@ -1,4 +1,30 @@
 /* Shared viewport rules apply to dashboard, public pages and both portals. */
+@media (max-width: 1023px) {
+  /* Keep the virtualized list's own scroller, but let its large header scroll
+     offscreen instead of consuming all of the list's available height. */
+  .creator-search-workspace {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .creator-search-workspace > * { flex-shrink: 0; }
+  .creator-search-workspace .creator-search-results-pane {
+    flex: 0 0 auto;
+    height: calc(100dvh - 64px);
+    min-height: 560px;
+  }
+  .creator-search-workspace .tw-frozen { position: static; }
+  .creator-search-workspace .tw-ms2 {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+  .creator-search-workspace .tw-ms2 > div { padding: 8px 6px; }
+  .creator-search-workspace .tw-ms2 i { overflow-wrap: anywhere; }
+  .creator-search-workspace .tw-jump {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .creator-search-workspace .tw-jump a { flex-shrink: 0; }
+}
+
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
 body {
   padding-top: env(safe-area-inset-top, 0px);
@@ -47,12 +73,19 @@ html[data-companion-window="1"] .mobile-app-navigation { display: none; }
 /* Important declarations in an early layer outrank the compact component input
    rules. Keep Safari focus zoom off without disabling the user's pinch zoom. */
 @layer base {
-  /* `any-pointer` also matches a touchscreen on desktop Windows machines,
-     even while their active pointer is a mouse. Use the primary pointer so
-     desktop quotation inputs retain their compact sizing. */
-  @media (pointer: coarse) {
+  /* A touchscreen desktop must retain its workspace typography. */
+  @media (pointer: coarse) and (max-width: 1023px) {
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea {
       font-size: max(16px, 1em) !important;
+    }
+  }
+  /* iPad Pro can use a desktop-width viewport; Safari still needs 16px to
+     avoid zooming the page when an input receives focus. */
+  @supports (-webkit-touch-callout: none) {
+    @media (pointer: coarse) {
+      input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]), select, textarea {
+        font-size: max(16px, 1em) !important;
+      }
     }
   }
 }
