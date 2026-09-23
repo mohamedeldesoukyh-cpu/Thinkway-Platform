@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import {
 import {
   applyClientIoPaymentTermsPresetAction,
   updateClientIoAction,
+  saveClientIoRecipientsAction,
 } from "@/features/io/actions";
 import { generateClientIoDocumentAction } from "@/features/io/generate-client-io-document-action";
 import { useRouter } from "next/navigation";
@@ -134,7 +135,7 @@ export function ClientIoForm({
   // UI may seed contacts for convenience, but dirty-check against persisted IO recipients
   // so "Save draft" stays enabled until those seeds are stored.
   const [sendRecipients, setSendRecipients] = useState<ClientIoRecipientEntry[]>(() =>
-    seedRecipientsFromContacts(parseSendRecipientsJson(row.send_recipients), contactSeeds)
+    seedRecipientsFromContacts(parseSendRecipientsJson(row.send_recipients), contactSeeds, row.recipients_configured)
   );
   const [draftBaseline, setDraftBaseline] = useState(() =>
     JSON.stringify({
@@ -157,18 +158,31 @@ export function ClientIoForm({
     INITIAL_STATE
   );
 
+  const [recipientSaveState, recipientSaveAction, savingRecipients] = useActionState(saveClientIoRecipientsAction, INITIAL_STATE);
+  const formSource = JSON.stringify([row.id, row.terms_text, row.billing_terms, row.attachment_url, defaultTerms]);
+  const previousFormSource = useRef(formSource);
+  const recipientSource = JSON.stringify([row.id, row.send_recipients, row.recipients_configured, contactSeeds]);
+  const previousRecipientSource = useRef(recipientSource);
   useEffect(() => {
+    if (previousRecipientSource.current === recipientSource) return;
+    previousRecipientSource.current = recipientSource;
+    const persisted = parseSendRecipientsJson(row.send_recipients);
+    setSendRecipients(seedRecipientsFromContacts(persisted, contactSeeds, row.recipients_configured));
+    setDraftBaseline(previous => JSON.stringify({ ...JSON.parse(previous), sendRecipients: persisted }));
+  }, [recipientSource, row.send_recipients, row.recipients_configured, contactSeeds]);
+
+  useEffect(() => {
+    if (previousFormSource.current === formSource) return;
+    previousFormSource.current = formSource;
     const nextTerms = parseTermsText(row.terms_text) ?? defaultTerms;
     const nextUseDefault = !parseTermsText(row.terms_text);
     const nextBilling = row.billing_terms ?? "";
     const nextAttachment = row.attachment_url ?? "";
     const nextPersistedRecipients = parseSendRecipientsJson(row.send_recipients);
-    const nextRecipients = seedRecipientsFromContacts(nextPersistedRecipients, contactSeeds);
     setTerms(nextTerms);
     setUseDefaultTerms(nextUseDefault);
     setBillingTerms(nextBilling);
     setAttachmentUrl(nextAttachment);
-    setSendRecipients(nextRecipients);
     setDraftBaseline(
       JSON.stringify({
         terms: nextTerms,
@@ -178,7 +192,7 @@ export function ClientIoForm({
         sendRecipients: nextPersistedRecipients,
       })
     );
-  }, [row, defaultTerms, contactSeeds]);
+  }, [row, defaultTerms, contactSeeds, formSource]);
 
   useEffect(() => {
     if (!saveState.message) return;
@@ -256,6 +270,13 @@ export function ClientIoForm({
     campaignStartDate,
     campaignEndDate,
   ]);
+
+  useEffect(() => {
+    if (!recipientSaveState.message) return;
+    if (!recipientSaveState.ok) { toast.error(recipientSaveState.message); return; }
+    toast.success(recipientSaveState.message);
+    router.refresh();
+  }, [recipientSaveState, router]);
 
   const termsTextPayload = useMemo(() => {
     if (useDefaultTerms || termsAreEqual(terms, defaultTerms)) {
@@ -395,6 +416,11 @@ export function ClientIoForm({
             <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
           </form>
 
+          <form id="client-io-save-recipients" action={recipientSaveAction} className="hidden">
+            <input type="hidden" name="id" value={row.id} />
+            <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
+            <input type="hidden" name="send_recipients" value={sendRecipientsPayload} />
+          </form>
           <form id="client-io-save" action={saveAction} className="flex flex-col">
             <input type="hidden" name="id" value={row.id} />
             <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
@@ -405,7 +431,9 @@ export function ClientIoForm({
             <ClientIoRecipientsEditor
               recipients={sendRecipients}
               onChange={setSendRecipients}
-              disabled={saving}
+              saveFormId="client-io-save-recipients"
+              saving={savingRecipients}
+              disabled={saving || savingRecipients || row.is_superseded}
               unsavedHint={
                 draftDirty &&
                 parseSendRecipientsJson(row.send_recipients).length === 0 &&

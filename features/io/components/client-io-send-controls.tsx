@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { sendClientIoAction } from "@/features/io/actions";
 import { OPERATIONAL_CHROME_LABEL } from "@/features/campaigns/components/assignment-hierarchy/operational-table-typography";
 import type { ClientIoRow } from "@/features/io/types";
+import { parseSendRecipientsField, clientIoDocumentRecipients } from "@/lib/io/client-io-send-recipients";
 import { cn } from "@/lib/utils";
 
 const INITIAL_STATE = { ok: false } as const;
@@ -56,7 +57,11 @@ export function ClientIoSendControls({
     return null;
   }
 
-  const disabled = sending || recipientCount === 0 || !hasDocument;
+  const recipients = parseSendRecipientsField(sendRecipientsJson);
+  const hasTo = recipients.some(r => !r.role || r.role === "to");
+  const mainRecipients = clientIoDocumentRecipients(recipients);
+  const recipientSummary = recipients.map(r => `${(r.role ?? "to").toUpperCase()}${mainRecipients.includes(r) ? " · Main" : ""}: ${r.name ? r.name + " " : ""}${r.email}`).join(" · ");
+  const disabled = sending || !hasTo || !hasDocument;
 
   return (
     <form action={sendAction} className="flex flex-wrap items-center gap-2">
@@ -87,10 +92,12 @@ export function ClientIoSendControls({
             : "Add at least one recipient email above"}
         </span>
       ) : (
-        <span className="text-[11px] text-muted-foreground">
-          {recipientsNeedSave
+        <span title={recipientSummary} className="max-w-xl break-words text-[11px] text-muted-foreground">
+          {recipientSummary} {recipientsNeedSave ? "(unsaved)" : ""}
+          {!hasTo ? " — Add a TO recipient" : null}
+          <span className="sr-only">{recipientsNeedSave
             ? `Ready to send to ${recipientCount}`
-            : `Sends to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"}`}
+            : `Sends to ${recipientCount} recipient${recipientCount === 1 ? "" : "s"}`}</span>
         </span>
       )}
     </form>

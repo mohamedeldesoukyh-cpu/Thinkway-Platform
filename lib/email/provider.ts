@@ -15,6 +15,8 @@ export type EmailAttachment = {
 
 export type SendEmailInput = {
   to: Array<{ name?: string; email: string }>;
+  cc?: Array<{ name?: string; email: string }>;
+  bcc?: Array<{ name?: string; email: string }>;
   subject: string;
   html: string;
   text?: string;
@@ -160,6 +162,8 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     return sendResendEmail({
       from: getEmailFromHeader(),
       to: input.to,
+    cc: input.cc,
+    bcc: input.bcc,
       subject: input.subject,
       html: input.html,
       text: input.text,
@@ -178,6 +182,8 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
 
   return sendGmailEmail({
     to: input.to,
+    cc: input.cc,
+    bcc: input.bcc,
     subject: input.subject,
     html: input.html,
     text: input.text,
