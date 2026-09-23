@@ -171,6 +171,14 @@ describe("Campaign Workspace Lifecycle OS — regression (baseline v1)", () => {
         buildCampaignWorkspaceTabUrl("/campaigns/demo", "", "overview"),
         "/campaigns/demo?tab=overview"
       );
+      assert.equal(
+        buildCampaignWorkspaceTabUrl(
+          "/campaigns/demo",
+          "?tab=billing&financeTab=creator-payments",
+          "billing"
+        ),
+        "/campaigns/demo?tab=billing&financeTab=creator-payments"
+      );
     });
   });
 

@@ -2,6 +2,7 @@
 
 import { CreatorPaymentsWorkspace } from '@/features/creator-payments/workspace';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { usePathname, useSearchParams } from 'next/navigation';
 
 import { campaignMoney, CampaignSummaryMoney, CampaignMoneyTotal } from "../campaign-money";
 import Link from "next/link";
@@ -84,6 +85,11 @@ import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { cn } from "@/lib/utils";
 
 type CampaignPaymentRow = CampaignWorkspace["payments"][number];
+type CampaignFinanceSection = "billing" | "creator-payments";
+
+function resolveCampaignFinanceSection(value: string | null): CampaignFinanceSection {
+  return value === "creator-payments" ? "creator-payments" : "billing";
+}
 
 function paymentStatusBadgeClass(status: string): string {
   const key = status.toLowerCase();
@@ -174,9 +180,14 @@ export function CampaignBillingTab({
   initialDetailInvoiceId = null,
   initialDetailPaymentId = null,
 }: CampaignBillingTabProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const { financials } = workspace;
   const currency = workspace.currency_code;
+  const [financeSection, setFinanceSection] = useState<CampaignFinanceSection>(() =>
+    resolveCampaignFinanceSection(searchParams.get("financeTab"))
+  );
   const [legacyInvoiceOpen, setLegacyInvoiceOpen] = useState(false);
   const [invoiceDraftPercents, setInvoiceDraftPercents] = useState<InvoiceDraftPercents>({});
   const invoiceConfirm = useInvoiceConfirmFlow({
@@ -207,6 +218,23 @@ export function CampaignBillingTab({
   const [detailPaymentId, setDetailPaymentId] = useState<string | null>(
     () => initialDetailPaymentId
   );
+
+  useEffect(() => {
+    setFinanceSection(resolveCampaignFinanceSection(searchParams.get("financeTab")));
+  }, [searchParams]);
+
+  const handleFinanceSectionChange = (value: string) => {
+    const section = resolveCampaignFinanceSection(value);
+    setFinanceSection(section);
+    const params = new URLSearchParams(window.location.search);
+    params.set("financeTab", section);
+    const query = params.toString();
+    window.history.replaceState(
+      window.history.state,
+      "",
+      query ? `${pathname}?${query}` : pathname
+    );
+  };
 
   useEffect(() => {
     if (!initialDetailInvoiceId) return;
@@ -321,7 +349,11 @@ export function CampaignBillingTab({
   const billingRemainingPo = financials.remaining_po;
 
   return (
-    <Tabs defaultValue="billing" className="campaign-finance-workspace">
+    <Tabs
+      value={financeSection}
+      onValueChange={handleFinanceSectionChange}
+      className="campaign-finance-workspace"
+    >
       <TabsList aria-label="Finance sections" className="campaign-finance-tabs">
         <TabsTrigger value="billing" className="thinkway-campaign-btn">Billing</TabsTrigger>
         <TabsTrigger value="creator-payments" className="thinkway-campaign-btn">Creator Payments</TabsTrigger>
