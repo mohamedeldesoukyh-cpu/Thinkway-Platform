@@ -194,6 +194,10 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
     resolve("features/campaigns/actions/campaign-script-actions.ts"),
     "utf8"
   );
+  const conversationNames = readFileSync(
+    resolve("lib/campaign-script/conversation-display-names.ts"),
+    "utf8"
+  );
   const deliverablesTab = readFileSync(
     resolve("features/campaigns/components/tabs/campaign-deliverables-tab.tsx"),
     "utf8"
@@ -231,6 +235,9 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
   assert.match(actions, /export async function listCampaignUnitScriptConversationAction/);
   assert.match(actions, /export async function addCampaignUnitScriptConversationMessageAction/);
   assert.match(actions, /Client \(entered by Thinkway\)/);
+  assert.match(actions, /loadCampaignScriptConversationDisplayNames/);
+  assert.match(conversationNames, /Creator \(entered by Thinkway\)/);
+  assert.match(conversationNames, /scriptConversationAuthorDisplayName/);
   assert.match(actions, /saveCampaignScriptForUnit\(/);
   assert.match(actions, /loadCampaignScriptForUnit\(/);
   assert.match(actions, /getCampaignScriptOriginalDocumentUrlAction/);
@@ -316,6 +323,7 @@ test("Client UI attaches Script to both publication-plan units and the relevant 
   assert.match(clientActions, /getClientCampaignScriptOriginalDocumentUrlAction/);
   assert.match(clientActions, /createCampaignScriptOriginalSignedUrlForUnit/);
   assert.match(clientActions, /actorKind: "client"/);
+  assert.match(clientActions, /loadCampaignScriptConversationDisplayNames/);
   assert.equal(clientActions.includes("saveCampaignScriptMaster("), false);
   assert.equal(clientActions.includes("loadCampaignScriptMaster("), false);
   assert.equal(clientActions.includes("campaign_script_assignments"), false);
