@@ -15,6 +15,8 @@ export type ClientIoGenerationSignals = {
   terms_html?: string | null;
   document_generated_at?: string | null;
   generated_html_url?: string | null;
+  generated_pdf_url?: string | null;
+  approved_at?: string | null;
 };
 
 export type CampaignLineBillingSnapshot = {
@@ -40,7 +42,7 @@ export function isClientIoGenerated(row: ClientIoGenerationSignals | null): bool
     return false;
   }
 
-  if (row.document_generated_at || row.generated_html_url) {
+  if (row.document_generated_at || row.generated_html_url || row.generated_pdf_url || row.approved_at) {
     return true;
   }
 

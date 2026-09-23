@@ -1,3 +1,4 @@
+import { isClientIoGenerated, type ClientIoGenerationSignals } from "@/lib/campaigns/sync-campaign-header-status";
 /**
  * Platform Finance Lock gateway.
  *
@@ -47,6 +48,17 @@ async function exists(
   return (data?.length ?? 0) > 0;
 }
 
+async function hasCommittedClientIo(supabase: Supabase, campaignId: string): Promise<boolean> {
+  const { data, error } = await supabase.from("client_ios")
+    .select("status, document_generated_at, generated_html_url, generated_pdf_url, sent_at, approved_at, attachment_url")
+    .eq("campaign_header_id", campaignId);
+  if (error) throw new Error(error.message);
+  // Retain protection for prior issued revisions and non-draft lifecycle states.
+  return (data ?? []).some((row: ClientIoGenerationSignals) =>
+    (row.status != null && row.status !== "draft") || isClientIoGenerated(row)
+  );
+}
+
 /**
  * Evaluate whether any downstream finance artefact exists for the Campaign.
  * Single gateway for the entire platform.
@@ -75,9 +87,7 @@ export async function isCampaignFinanceLocked(
     exists(
       supabase.from("vendor_ios").select("id").eq("campaign_header_id", id).limit(1)
     ),
-    exists(
-      supabase.from("client_ios").select("id").eq("campaign_header_id", id).limit(1)
-    ),
+    hasCommittedClientIo(supabase, id),
     exists(
       supabase
         .from("campaign_purchase_orders")
