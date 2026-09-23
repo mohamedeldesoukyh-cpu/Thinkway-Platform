@@ -26,6 +26,10 @@ import { saveCampaignScriptOverride } from "@/lib/campaign-script/save-override"
 import { CAMPAIGN_SCRIPT_FILE_MAX_BYTES } from "@/lib/campaign-script/types";
 import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/server";
+import {
+  addInternalComment,
+  getDocumentationUnitDetail,
+} from "@/lib/services/deliverables/documentation-service";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -515,6 +519,91 @@ export async function loadCampaignScriptForUnitAction(input: {
       message: error instanceof Error ? error.message : "Could not load the unit script.",
     };
   }
+}
+
+type ScriptConversationAuthor = "thinkway" | "client" | "creator";
+
+const SCRIPT_CONVERSATION_AUTHOR_LABEL: Record<ScriptConversationAuthor, string> = {
+  thinkway: "Thinkway",
+  client: "Client (entered by Thinkway)",
+  creator: "Creator (entered by Thinkway)",
+};
+
+/**
+ * The client, creator, and internal workspace all read the same creator-facing
+ * thread. Internal-only documentation comments deliberately stay out of it.
+ */
+export async function listCampaignUnitScriptConversationAction(input: {
+  campaignId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+}): Promise<CampaignScriptActionResult<Array<{
+  id: string;
+  body: string;
+  authorDisplayName: string | null;
+  createdAt: string;
+}>>> {
+  const unit = parseUnitIds(input);
+  if (!unit.ok) return unit;
+  const actor = await getReadActor();
+  if (!actor.ok) return actor;
+  const detail = await getDocumentationUnitDetail(actor.supabase, {
+    campaignHeaderId: unit.campaignId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+    assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    commentAudience: "creator",
+    includeEvents: false,
+  });
+  return {
+    ok: true,
+    data: (detail?.comments ?? []).reverse().map((comment) => ({
+      id: comment.id,
+      body: comment.body,
+      authorDisplayName: comment.authorDisplayName,
+      createdAt: comment.createdAt,
+    })),
+  };
+}
+
+/**
+ * Records a client or creator message without disguising the staff member who
+ * entered it. The stored author id remains the signed-in Thinkway user.
+ */
+export async function addCampaignUnitScriptConversationMessageAction(input: {
+  campaignId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+  body: string;
+  author: ScriptConversationAuthor;
+}): Promise<CampaignScriptActionResult<null>> {
+  const unit = parseUnitIds(input);
+  if (!unit.ok) return unit;
+  const author = input.author;
+  if (!(author in SCRIPT_CONVERSATION_AUTHOR_LABEL)) {
+    return { ok: false, message: "Choose who this message is from." };
+  }
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const result = await addInternalComment(actor.supabase, {
+    actorId: actor.userId,
+    actorDisplayName:
+      author === "thinkway"
+        ? SCRIPT_CONVERSATION_AUTHOR_LABEL.thinkway
+        : SCRIPT_CONVERSATION_AUTHOR_LABEL[author],
+    campaignHeaderId: unit.campaignId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+    assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    body: input.body,
+    audience: "creator",
+  });
+  if (!result.ok) return result;
+  revalidatePath(campaignDetailPath(unit.campaignId));
+  revalidatePath("/creator-portal");
+  revalidatePath("/creator-portal/deliverables");
+  revalidatePath(`/creator-portal/campaigns/${unit.campaignId}`);
+  revalidatePath("/review/[reviewId]", "page");
+  revalidatePath("/review/[reviewId]/[section]", "page");
+  return { ok: true, data: null };
 }
 
 export async function saveCampaignScriptForUnitAction(input: {

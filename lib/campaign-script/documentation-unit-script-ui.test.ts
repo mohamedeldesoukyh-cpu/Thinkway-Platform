@@ -212,6 +212,9 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
   assert.match(list, /onOpenScript/);
 
   assert.match(sheet, /loadCampaignScriptForUnitAction/);
+  assert.match(sheet, /listCampaignUnitScriptConversationAction/);
+  assert.match(sheet, /addCampaignUnitScriptConversationMessageAction/);
+  assert.match(sheet, /Shared with the client and creator/);
   assert.match(sheet, /saveCampaignScriptForUnitAction/);
   assert.match(sheet, /translateCampaignScriptForUnitAction/);
   assert.match(sheet, /originalFile/);
@@ -225,6 +228,9 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
   assert.equal(sheet.includes("deliverable_assets"), false);
 
   assert.match(actions, /export async function saveCampaignScriptForUnitAction/);
+  assert.match(actions, /export async function listCampaignUnitScriptConversationAction/);
+  assert.match(actions, /export async function addCampaignUnitScriptConversationMessageAction/);
+  assert.match(actions, /Client \(entered by Thinkway\)/);
   assert.match(actions, /saveCampaignScriptForUnit\(/);
   assert.match(actions, /loadCampaignScriptForUnit\(/);
   assert.match(actions, /getCampaignScriptOriginalDocumentUrlAction/);
@@ -287,6 +293,7 @@ test("Client UI attaches Script to publication-plan units and hides campaign-lev
   assert.equal(dashboard.includes("loadClientCampaignScriptAction"), false);
   assert.equal(plan.includes("CampaignPublicationPlan"), true);
   assert.match(plan, /DocumentationUnitScriptActions/);
+  assert.match(plan, /Script & conversation/);
   assert.match(plan, /DocumentationUnitScriptSheet/);
   assert.match(plan, /listClientCampaignScriptPresenceAction/);
   assert.match(plan, /hasOriginalDocument/);

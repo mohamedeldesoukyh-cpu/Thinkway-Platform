@@ -829,7 +829,12 @@ export function CampaignDeliverablesDocumentationTab({
                           slotReceiptStatus(selected, boundDetail)
                         )}
                       </div>
-                      <DocumentationUnitScriptActions
+                      <div className="flex flex-wrap items-center gap-2 rounded-md border bg-background/70 px-2 py-1.5">
+                        <div className="mr-1">
+                          <p className="text-[11px] font-medium text-[var(--camp-text)]">Script</p>
+                          <p className="text-[10px] text-[var(--camp-text-3)]">Shared with client and creator</p>
+                        </div>
+                        <DocumentationUnitScriptActions
                         hasScript={scriptPresence.has(selected.unitKey)}
                         campaignId={campaignId}
                         assignmentDeliverableId={selected.assignmentDeliverableId}
@@ -848,8 +853,19 @@ export function CampaignDeliverablesDocumentationTab({
                         onAdd={() => openUnitScript(selected.unitKey, "edit")}
                         onUpload={() => openUnitScript(selected.unitKey, "upload")}
                         onOpen={() => openUnitScript(selected.unitKey, "edit")}
-                        onPreview={() => openUnitScript(selected.unitKey, "preview")}
-                      />
+                          onPreview={() => openUnitScript(selected.unitKey, "preview")}
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="thinkway-campaign-btn h-8 text-[11px] shadow-none"
+                          disabled={pending || !documentationUnitCanHoldScript(selected)}
+                          onClick={() => openUnitScript(selected.unitKey, scriptPresence.has(selected.unitKey) ? "edit" : "upload")}
+                        >
+                          {scriptPresence.has(selected.unitKey) ? "Open script & chat" : "Add script"}
+                        </Button>
+                      </div>
                       <p className="truncate text-[12px] text-[var(--camp-text-2)]">
                         {selected.creatorName ?? "Unassigned creator"}
                       </p>

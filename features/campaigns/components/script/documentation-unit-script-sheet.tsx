@@ -36,6 +36,8 @@ import {
 } from "@/features/campaigns/components/script/campaign-script-fields";
 import {
   extractCampaignScriptFileAction,
+  addCampaignUnitScriptConversationMessageAction,
+  listCampaignUnitScriptConversationAction,
   loadCampaignScriptForUnitAction,
   saveCampaignScriptForUnitAction,
   translateCampaignScriptForUnitAction,
@@ -165,6 +167,8 @@ export function DocumentationUnitScriptSheet({
     createdAt: string;
   }>>([]);
   const [conversationBody, setConversationBody] = useState("");
+  const [conversationAuthor, setConversationAuthor] =
+    useState<"thinkway" | "client" | "creator">("thinkway");
   const [replaceBothLanguages, setReplaceBothLanguages] = useState(false);
   const uploadPreserveRef = useRef<{
     extractedText: string;
@@ -251,41 +255,60 @@ export function DocumentationUnitScriptSheet({
         window.setTimeout(() => fileRef.current?.click(), 0);
       }
     });
-    if (clientMode) {
-      void listClientUnitScriptConversationAction({
-        token,
-        assignmentDeliverableId: unit.assignmentDeliverableId,
-        assignmentPostScheduleId: unit.assignmentPostScheduleId,
-      }).then((result) => {
-        if (!cancelled && result.ok) setConversation(result.data);
-      });
-    }
+    const loadConversation = clientMode
+      ? listClientUnitScriptConversationAction({
+          token,
+          assignmentDeliverableId: unit.assignmentDeliverableId,
+          assignmentPostScheduleId: unit.assignmentPostScheduleId,
+        })
+      : listCampaignUnitScriptConversationAction({
+          campaignId,
+          assignmentDeliverableId: unit.assignmentDeliverableId,
+          assignmentPostScheduleId: unit.assignmentPostScheduleId,
+        });
+    void loadConversation.then((result) => {
+      if (!cancelled && result.ok) setConversation(result.data);
+    });
     return () => {
       cancelled = true;
     };
-  }, [applyScript, clientMode, intent, loadUnit, open, token, unit]);
+  }, [applyScript, campaignId, clientMode, intent, loadUnit, open, token, unit]);
 
   const sendConversationMessage = () => {
     if (!unit || !conversationBody.trim()) return;
     startTransition(async () => {
-      const result = await addClientUnitScriptMessageAction({
-        token,
-        assignmentDeliverableId: unit.assignmentDeliverableId,
-        assignmentPostScheduleId: unit.assignmentPostScheduleId,
-        body: conversationBody,
-      });
+      const result = clientMode
+        ? await addClientUnitScriptMessageAction({
+            token,
+            assignmentDeliverableId: unit.assignmentDeliverableId,
+            assignmentPostScheduleId: unit.assignmentPostScheduleId,
+            body: conversationBody,
+          })
+        : await addCampaignUnitScriptConversationMessageAction({
+            campaignId,
+            assignmentDeliverableId: unit.assignmentDeliverableId,
+            assignmentPostScheduleId: unit.assignmentPostScheduleId,
+            body: conversationBody,
+            author: conversationAuthor,
+          });
       if (!result.ok) {
         toast.error(result.message);
         return;
       }
       setConversationBody("");
-      const latest = await listClientUnitScriptConversationAction({
-        token,
-        assignmentDeliverableId: unit.assignmentDeliverableId,
-        assignmentPostScheduleId: unit.assignmentPostScheduleId,
-      });
+      const latest = clientMode
+        ? await listClientUnitScriptConversationAction({
+            token,
+            assignmentDeliverableId: unit.assignmentDeliverableId,
+            assignmentPostScheduleId: unit.assignmentPostScheduleId,
+          })
+        : await listCampaignUnitScriptConversationAction({
+            campaignId,
+            assignmentDeliverableId: unit.assignmentDeliverableId,
+            assignmentPostScheduleId: unit.assignmentPostScheduleId,
+          });
       if (latest.ok) setConversation(latest.data);
-      toast.success("Message sent to the creator.");
+      toast.success(clientMode ? "Message sent to the creator." : "Conversation message saved.");
     });
   };
 
@@ -889,6 +912,66 @@ export function DocumentationUnitScriptSheet({
             />
           </div>
         )}
+
+        <section className="rounded-lg border bg-muted/20 p-3" aria-label="Script conversation">
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-semibold">Script conversation</h3>
+              <p className="text-[11px] text-muted-foreground">
+                Shared with the client and creator. Internal comments stay private.
+              </p>
+            </div>
+          </div>
+          {conversation.length ? (
+            <div className="max-h-64 space-y-2 overflow-y-auto">
+              {conversation.map((message) => (
+                <div key={message.id} className="rounded-md bg-background px-3 py-2 text-sm">
+                  <div className="mb-1 flex justify-between gap-2 text-xs text-muted-foreground">
+                    <span>{message.authorDisplayName || "Creator"}</span>
+                    <time>{new Date(message.createdAt).toLocaleString()}</time>
+                  </div>
+                  <p className="whitespace-pre-wrap">{message.body}</p>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No script messages yet.</p>
+          )}
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <Textarea
+              className="min-h-16 flex-1 text-sm"
+              value={conversationBody}
+              onChange={(event) => setConversationBody(event.target.value)}
+              placeholder="Write a message about this script…"
+              disabled={pending || loading}
+            />
+            <div className="flex items-end gap-2">
+              <Select
+                value={conversationAuthor}
+                onValueChange={(value) =>
+                  setConversationAuthor(value as "thinkway" | "client" | "creator")
+                }
+              >
+                <SelectTrigger className="h-9 w-[190px] text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="thinkway">Send as Thinkway</SelectItem>
+                  <SelectItem value="client">Client (entered by Thinkway)</SelectItem>
+                  <SelectItem value="creator">Creator (entered by Thinkway)</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                size="sm"
+                disabled={pending || loading || !conversationBody.trim()}
+                onClick={sendConversationMessage}
+              >
+                Send
+              </Button>
+            </div>
+          </div>
+        </section>
       </DetailFormScrollBody>
     </OperationalDetailSheet>
   );

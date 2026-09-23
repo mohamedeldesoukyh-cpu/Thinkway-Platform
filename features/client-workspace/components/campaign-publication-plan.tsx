@@ -188,20 +188,31 @@ function DeliverableScriptCell({
         {count > 1 ? <span className="cx-xn">×{count}</span> : null}
       </span>
       {unit && count === 1 ? (
-        <DocumentationUnitScriptActions
-          variant="client"
-          token={token}
-          hasScript={Boolean(presence)}
-          assignmentDeliverableId={unit.assignmentDeliverableId}
-          assignmentPostScheduleId={unit.assignmentPostScheduleId}
-          originalFileName={presence?.originalFileName}
-          originalMimeType={presence?.originalMimeType}
-          hasOriginalDocument={presence?.hasOriginalDocument}
-          onAdd={() => onOpen(post, "preview")}
-          onUpload={() => onOpen(post, "preview")}
-          onOpen={() => onOpen(post, "preview")}
-          onPreview={() => onOpen(post, "preview")}
-        />
+        <>
+          <DocumentationUnitScriptActions
+            variant="client"
+            token={token}
+            hasScript={Boolean(presence)}
+            assignmentDeliverableId={unit.assignmentDeliverableId}
+            assignmentPostScheduleId={unit.assignmentPostScheduleId}
+            originalFileName={presence?.originalFileName}
+            originalMimeType={presence?.originalMimeType}
+            hasOriginalDocument={presence?.hasOriginalDocument}
+            onAdd={() => onOpen(post, "preview")}
+            onUpload={() => onOpen(post, "preview")}
+            onOpen={() => onOpen(post, "preview")}
+            onPreview={() => onOpen(post, "preview")}
+          />
+          {presence ? (
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => onOpen(post, "preview")}
+            >
+              Script & conversation
+            </button>
+          ) : null}
+        </>
       ) : null}
     </div>
   );

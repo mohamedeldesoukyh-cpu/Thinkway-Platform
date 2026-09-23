@@ -343,16 +343,29 @@ export function CreatorDocumentationUnitCard({
             {unit.comments.length > 0 ? (
               <div className="thread">
                 {unit.comments.map((item) => {
+                  const proxyClient =
+                    item.authorDisplayName === "Client (entered by Thinkway)";
+                  const proxyCreator =
+                    item.authorDisplayName === "Creator (entered by Thinkway)";
                   const agency =
-                    item.authorDisplayName === CREATOR_ON_BEHALF_ACTOR_LABEL ||
-                    (item.authorDisplayName ?? "").toLowerCase().includes("thinkway");
-                  const client = !agency && !item.authorUserId;
+                    !proxyClient &&
+                    !proxyCreator &&
+                    (item.authorDisplayName === CREATOR_ON_BEHALF_ACTOR_LABEL ||
+                      (item.authorDisplayName ?? "").toLowerCase().includes("thinkway"));
+                  const client = proxyClient || (!agency && !proxyCreator && !item.authorUserId);
+                  const mine = proxyCreator || (!agency && !client);
                   return (
-                    <div key={item.id} className="msg" data-me={!agency && !client}>
+                    <div key={item.id} className="msg" data-me={mine}>
                       <span className="msg__a">{agency ? "TW" : client ? "CL" : "You"}</span>
                       <span className="msg__b">
                         <span className="msg__h">
-                          {agency ? "Thinkway" : client ? item.authorDisplayName ?? "Client" : item.authorDisplayName ?? "You"}
+                          {agency
+                            ? "Thinkway"
+                            : client
+                              ? item.authorDisplayName ?? "Client"
+                              : proxyCreator
+                                ? "Creator (entered by Thinkway)"
+                                : item.authorDisplayName ?? "You"}
                           <i>{new Date(item.createdAt).toLocaleString()}</i>
                         </span>
                         <span className="msg__x">{item.body}</span>
