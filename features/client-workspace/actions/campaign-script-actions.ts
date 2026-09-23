@@ -24,7 +24,10 @@ import {
 } from "@/lib/campaign-script/conversation-display-names";
 import {
   addInternalComment,
+  deleteDocumentationComment,
   getDocumentationUnitDetail,
+  markDocumentationCommentsSeen,
+  updateDocumentationComment,
 } from "@/lib/services/deliverables/documentation-service";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -155,14 +158,19 @@ export async function listClientUnitScriptConversationAction(input: {
   if (!unit.ok) return unit;
   const access = await requireCurrentCampaignContentAccess(input.token);
   if (!access.ok) return access;
-  const detail = await getDocumentationUnitDetail(db() as never, {
+  const database = db();
+  await markDocumentationCommentsSeen(database as never, {
+    campaignHeaderId: access.campaignHeaderId, assignmentDeliverableId: unit.assignmentDeliverableId,
+    assignmentPostScheduleId: unit.assignmentPostScheduleId, audience: "creator", viewer: "client",
+  });
+  const detail = await getDocumentationUnitDetail(database as never, {
     campaignHeaderId: access.campaignHeaderId,
     assignmentDeliverableId: unit.assignmentDeliverableId,
     assignmentPostScheduleId: unit.assignmentPostScheduleId,
     commentAudience: "creator",
     includeEvents: false,
   });
-  const names = await loadCampaignScriptConversationDisplayNames(db(), {
+  const names = await loadCampaignScriptConversationDisplayNames(database, {
     campaignHeaderId: access.campaignHeaderId,
     assignmentDeliverableId: unit.assignmentDeliverableId,
     clientFallback: access.review.clientLabel,
@@ -174,6 +182,10 @@ export async function listClientUnitScriptConversationAction(input: {
       body: comment.body,
       authorDisplayName: scriptConversationAuthorDisplayName(comment.authorDisplayName, names),
       createdAt: comment.createdAt,
+      editedAt: comment.editedAt,
+      clientSeenAt: comment.clientSeenAt,
+      internalSeenAt: comment.internalSeenAt,
+      canEdit: [names.clientName, access.review.clientLabel].filter(Boolean).includes(comment.authorDisplayName ?? ""),
     })),
   };
 }
@@ -188,14 +200,61 @@ export async function addClientUnitScriptMessageAction(input: {
   if (!unit.ok) return unit;
   const access = await requireCurrentCampaignContentAccess(input.token);
   if (!access.ok) return access;
+  const names = await loadCampaignScriptConversationDisplayNames(db(), {
+    campaignHeaderId: access.campaignHeaderId, assignmentDeliverableId: unit.assignmentDeliverableId,
+    clientFallback: access.review.clientLabel,
+  });
   const result = await addInternalComment(db() as never, {
     actorId: null,
-    actorDisplayName: access.review.clientLabel?.trim() || "Client",
+    actorDisplayName: names.clientName,
     campaignHeaderId: access.campaignHeaderId,
     assignmentDeliverableId: unit.assignmentDeliverableId,
     assignmentPostScheduleId: unit.assignmentPostScheduleId,
     body: input.body,
     audience: "creator",
+  });
+  return result.ok ? { ok: true, data: null } : result;
+}
+
+export async function updateClientUnitScriptMessageAction(input: {
+  token: string; assignmentDeliverableId: string; assignmentPostScheduleId?: string | null;
+  commentId: string; body: string;
+}): Promise<ClientCampaignScriptActionResult<null>> {
+  const unit = parseClientUnit(input);
+  if (!unit.ok || !uuidSchema.safeParse(input.commentId).success) return { ok: false, message: "Message is missing." };
+  const access = await requireCurrentCampaignContentAccess(input.token);
+  if (!access.ok) return access;
+  const database = db();
+  const names = await loadCampaignScriptConversationDisplayNames(database, {
+    campaignHeaderId: access.campaignHeaderId, assignmentDeliverableId: unit.assignmentDeliverableId,
+    clientFallback: access.review.clientLabel,
+  });
+  const result = await updateDocumentationComment(database as never, {
+    commentId: input.commentId, campaignHeaderId: access.campaignHeaderId,
+    assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    audience: "creator", body: input.body,
+    allowedAuthorDisplayNames: [names.clientName, access.review.clientLabel].filter(Boolean),
+  });
+  return result.ok ? { ok: true, data: null } : result;
+}
+
+export async function deleteClientUnitScriptMessageAction(input: {
+  token: string; assignmentDeliverableId: string; assignmentPostScheduleId?: string | null;
+  commentId: string;
+}): Promise<ClientCampaignScriptActionResult<null>> {
+  const unit = parseClientUnit(input);
+  if (!unit.ok || !uuidSchema.safeParse(input.commentId).success) return { ok: false, message: "Message is missing." };
+  const access = await requireCurrentCampaignContentAccess(input.token);
+  if (!access.ok) return access;
+  const database = db();
+  const names = await loadCampaignScriptConversationDisplayNames(database, {
+    campaignHeaderId: access.campaignHeaderId, assignmentDeliverableId: unit.assignmentDeliverableId,
+    clientFallback: access.review.clientLabel,
+  });
+  const result = await deleteDocumentationComment(database as never, {
+    commentId: input.commentId, actorId: null, campaignHeaderId: access.campaignHeaderId,
+    assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    audience: "creator", allowedAuthorDisplayNames: [names.clientName, access.review.clientLabel].filter(Boolean),
   });
   return result.ok ? { ok: true, data: null } : result;
 }

@@ -21,8 +21,10 @@ import {
 import { decideContentAction } from "../actions/client-workspace-actions";
 import {
   addClientUnitScriptMessageAction,
+  deleteClientUnitScriptMessageAction,
   listClientUnitScriptConversationAction,
   loadClientCampaignScriptForUnitAction,
+  updateClientUnitScriptMessageAction,
 } from "../actions/campaign-script-actions";
 import { groupClientContentByCreator, matchClientCreatorByName } from "../campaign-tab-aggregates";
 import { googleDriveFilePreviewUrl } from "@/lib/services/deliverables/documentation-types";
@@ -36,6 +38,10 @@ type ScriptConversationMessage = {
   body: string;
   authorDisplayName: string | null;
   createdAt: string;
+  editedAt?: string | null;
+  clientSeenAt?: string | null;
+  internalSeenAt?: string | null;
+  canEdit?: boolean;
 };
 
 function reviewItemKey(item: ClientContentReviewItem) {
@@ -158,6 +164,9 @@ function ContentReviewPane({
   const [script, setScript] = useState<CampaignScriptMasterView | null>(null);
   const [messages, setMessages] = useState<ScriptConversationMessage[]>([]);
   const [messageBody, setMessageBody] = useState("");
+  const [scriptExpanded, setScriptExpanded] = useState(true);
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingMessageBody, setEditingMessageBody] = useState("");
   const latestMessageIdRef = useRef<string | null>(null);
   const prior = item.history.filter((version) => version.versionId !== item.versionId);
   const bulkCount = siblings.length;
@@ -227,6 +236,7 @@ function ContentReviewPane({
 
   function openConversation() {
     setConversationOpen(true);
+    setScriptExpanded(true);
     setConversationLoading(true);
     void loadConversation(false)
       .catch((loadError) => toast.error(loadError instanceof Error ? loadError.message : "Could not load the script conversation."))
@@ -251,6 +261,27 @@ function ContentReviewPane({
       setMessageBody("");
       await loadConversation(false);
       toast.success("Comment sent to Thinkway and the creator.");
+    });
+  }
+
+  function editConversationMessage(messageId: string) {
+    const body = editingMessageBody.trim();
+    if (!body) return;
+    startTransition(async () => {
+      const result = await updateClientUnitScriptMessageAction({ token, assignmentDeliverableId: item.assignmentDeliverableId, assignmentPostScheduleId: item.assignmentPostScheduleId, commentId: messageId, body });
+      if (!result.ok) { toast.error(result.message); return; }
+      setEditingMessageId(null);
+      await loadConversation(false);
+      toast.success("Message updated.");
+    });
+  }
+
+  function deleteConversationMessage(messageId: string) {
+    startTransition(async () => {
+      const result = await deleteClientUnitScriptMessageAction({ token, assignmentDeliverableId: item.assignmentDeliverableId, assignmentPostScheduleId: item.assignmentPostScheduleId, commentId: messageId });
+      if (!result.ok) { toast.error(result.message); return; }
+      await loadConversation(false);
+      toast.success("Message deleted.");
     });
   }
 
@@ -337,10 +368,8 @@ function ContentReviewPane({
                 {conversationLoading ? <p className="text-sm text-muted-foreground">Loading script conversation…</p> : null}
                 {!conversationLoading && script ? (
                   <div className="rounded-md bg-muted/40 p-3 text-sm">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Script</p>
-                    <div className="max-h-52 overflow-auto whitespace-pre-wrap" dir={script.sourceLanguage === "ar" ? "rtl" : "ltr"}>
-                      {script.sourceLanguage === "ar" ? script.bodyAr : script.bodyEn}
-                    </div>
+                    <div className="mb-2 flex items-center justify-between gap-2"><p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Script</p><button type="button" className="btn btn-sm" onClick={() => setScriptExpanded((open) => !open)}>{scriptExpanded ? "Collapse script" : "Show script"}</button></div>
+                    {scriptExpanded ? <div className="max-h-52 overflow-auto whitespace-pre-wrap" dir={script.sourceLanguage === "ar" ? "rtl" : "ltr"}>{script.sourceLanguage === "ar" ? script.bodyAr : script.bodyEn}</div> : null}
                   </div>
                 ) : null}
                 {!conversationLoading && !script ? (
@@ -351,10 +380,11 @@ function ContentReviewPane({
                     {messages.map((message) => (
                       <div key={message.id} className="rounded-md border px-3 py-2 text-sm">
                         <div className="mb-1 flex justify-between gap-2 text-xs text-muted-foreground">
-                          <span>{message.authorDisplayName || "Creator"}</span>
-                          <time>{new Date(message.createdAt).toLocaleString()}</time>
+                          <span>{message.authorDisplayName || "Creator"}{message.editedAt ? " · Edited" : ""}</span>
+                          <time>{new Date(message.createdAt).toLocaleString()} {(message.canEdit ? message.internalSeenAt : message.clientSeenAt) ? "· Seen" : "· Sent"}</time>
                         </div>
-                        <p className="whitespace-pre-wrap">{message.body}</p>
+                        {editingMessageId === message.id ? <div className="space-y-2"><textarea className="cx-rev__notes" rows={2} value={editingMessageBody} onChange={(event) => setEditingMessageBody(event.target.value)} disabled={pending} /><div className="flex gap-2"><button type="button" className="btn pri btn-sm" onClick={() => editConversationMessage(message.id)} disabled={pending || !editingMessageBody.trim()}>Save</button><button type="button" className="btn btn-sm" onClick={() => setEditingMessageId(null)}>Cancel</button></div></div> : <p className="whitespace-pre-wrap">{message.body}</p>}
+                        {message.canEdit ? <div className="mt-2 flex gap-2"><button type="button" className="btn btn-sm" onClick={() => { setEditingMessageId(message.id); setEditingMessageBody(message.body); }} disabled={pending}>Edit</button><button type="button" className="btn btn-sm" onClick={() => deleteConversationMessage(message.id)} disabled={pending}>Delete</button></div> : null}
                       </div>
                     ))}
                   </div>
