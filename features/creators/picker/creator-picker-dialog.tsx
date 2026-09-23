@@ -28,7 +28,6 @@ import {
 } from "@/features/discovery/components/design-system/discovery-sheet-chrome";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import {
-  normalizeDiscoverySearchQuery,
   resolveCreatorSearchQueryFromCreator,
 } from "@/lib/discovery/creator-search-query";
 
@@ -43,7 +42,10 @@ import {
   useCreatorSelection,
   useDebouncedValue,
 } from "./creator-selection-hooks";
-import { resolveCreatorPickerSearchDisplay } from "./creator-picker-search-display";
+import {
+  resolveCreatorPickerSearchDisplay,
+  resolveCreatorPickerSearchInput,
+} from "./creator-picker-search-display";
 import { CreatorSelectionProvider } from "./creator-selection-provider";
 import { CreatorSelectionTable } from "./creator-selection-table";
 import { CreatorSelectionToolbar } from "./creator-selection-toolbar";
@@ -109,7 +111,7 @@ export function CreatorPickerDialog({
 
   function handleSearchChange(value: string) {
     if (onSearchInput?.(value)) return;
-    setSearch(normalizeDiscoverySearchQuery(value) || value);
+    setSearch(resolveCreatorPickerSearchInput(value));
   }
   const [selectedCreatorMap, setSelectedCreatorMap] = useState<
     Map<string, UnifiedCreatorResult>
@@ -232,7 +234,7 @@ export function CreatorPickerDialog({
     }
 
     const query = resolveCreatorSearchQueryFromCreator(creator);
-    if (query) setSearch(normalizeDiscoverySearchQuery(query));
+    if (query) setSearch(resolveCreatorPickerSearchInput(query));
 
     browse.upsertCreator(creator);
 

@@ -4216,6 +4216,7 @@
   border-radius: 12px;
   background: #fff;
   padding: 10px 10px 9px;
+  font-family: var(--font-sans), Geist, Inter, "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif;
 }
 
 .creator-picker-card.is-selected {
@@ -4275,6 +4276,96 @@
 .creator-picker-card__stats {
   margin-top: 8px;
   padding-left: 26px;
+}
+
+/* The picker is also used outside .discovery-suite, so the shared platform
+   statistics need their component styles here rather than inheriting browser
+   inline/italic defaults. */
+.creator-picker-card__stats .tw-stx {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px solid #e3e8f2;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 7px 9px;
+}
+
+.creator-picker-card__stats .tw-stx .hh,
+.creator-picker-card__stats .tw-stx .rr {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 6px;
+}
+
+.creator-picker-card__stats .tw-stx i {
+  color: #6b7280;
+  font-family: var(--font-sans), Geist, Inter, "Segoe UI", system-ui, sans-serif;
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.creator-picker-card__stats .tw-stx b {
+  color: #0b0f1a;
+  font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+
+.creator-picker-card__stats .tw-stx b.z {
+  color: #b6becd;
+  font-weight: 500;
+}
+
+.creator-picker-card__stats .tw-stx .rr:not(:last-child) {
+  border-bottom: 1px solid #e7ecf4;
+  padding-bottom: 2px;
+}
+
+.creator-picker-card__stats .tw-pf {
+  display: flex;
+  gap: 3px;
+}
+
+.creator-picker-card__stats .tw-pf span {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border-radius: 6px;
+  color: #fff;
+  font-family: var(--font-sans), Geist, Inter, "Segoe UI", system-ui, sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.creator-picker-card__stats .tw-pf .ig {
+  background: linear-gradient(135deg, #f58529, #dd2a7b, #8134af);
+}
+
+.creator-picker-card__stats .tw-pf .tt {
+  background: #0b0f1a;
+}
+
+.creator-picker-card__stats .tw-pf .yt {
+  background: #e5322d;
+}
+
+.creator-picker-card__stats .tw-pf .fb {
+  background: #1877f2;
+}
+
+.creator-picker-card__stats .tw-pf .sc {
+  background: #f5d90a;
+  color: #0b0f1a;
 }
 
 .creator-picker-card__stats .discovery-search-exact-stat-box {
