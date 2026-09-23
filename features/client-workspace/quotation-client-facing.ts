@@ -2,7 +2,7 @@ import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 import { fromEgp, toEgp } from "@/lib/commercial/fx-aggregation";
 import { computeAgencyFee } from "@/lib/commercial/commercial-engine";
 
-import { isPricedClientInvestment } from "./selection-flow";
+import { clientFacingCreatorCardAmount, isPricedClientInvestment } from "./selection-flow";
 
 export type ClientFacingQuotationPrice = {
   amount: number | undefined;
@@ -118,22 +118,7 @@ export type ClientFacingCreatorCardAmounts = {
   originalInvestmentCurrency?: string;
 };
 
-function additiveClientFacingExtra(amount: number | null | undefined): number {
-  const value = Number(amount);
-  return Number.isFinite(value) && value > 0 ? value : 0;
-}
-
-/** Display-only card total: client cost + agency fees + usage rights. Calculator keeps the split. */
-export function clientFacingCreatorCardAmount(
-  creator: Pick<ClientFacingCreatorCardAmounts, "investmentAmount" | "agencyFeeAmount" | "usageRightsAmount">
-): number | undefined {
-  if (!isPricedClientInvestment(creator.investmentAmount)) return undefined;
-  return (
-    (creator.investmentAmount ?? 0) +
-    additiveClientFacingExtra(creator.agencyFeeAmount) +
-    additiveClientFacingExtra(creator.usageRightsAmount)
-  );
-}
+export { clientFacingCreatorCardAmount } from "./selection-flow";
 
 export function originalInvestmentForDisplay(
   creator: {

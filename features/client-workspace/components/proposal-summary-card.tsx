@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
@@ -285,11 +286,12 @@ export function ProposalSummaryCard({
         {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
       </div>
       {confirmOpen ? (
-        <div className="confirm-mask" role="dialog" aria-modal="true" aria-labelledby="approve-creators-title">
+        <Dialog open={confirmOpen} onOpenChange={(open) => { if (!pending) setConfirmOpen(open); }}>
+        <DialogContent className="tw-review creator-approval-dialog" overlayClassName="!z-[300]" showCloseButton={false}>
           <div className="card confirm-panel">
             <p className="ck">Confirm selection</p>
-            <h2 id="approve-creators-title">{APPROVE_SELECTED_CREATORS_LABEL}</h2>
-            <p className="note">{CONFIRM_CREATORS_SUPPORTING_TEXT}</p>
+            <DialogTitle asChild><h2 id="approve-creators-title">{APPROVE_SELECTED_CREATORS_LABEL}</h2></DialogTitle>
+            <DialogDescription asChild><p className="note">{CONFIRM_CREATORS_SUPPORTING_TEXT}</p></DialogDescription>
             {!strategicOnly && confirmation.priced.length > 0 ? (
               <>
                 <p className="subh">Priced creators</p>
@@ -298,6 +300,7 @@ export function ProposalSummaryCard({
                     <span className="k">
                       {row.displayName}
                       <span className="hint">{row.deliverables}</span>
+                      {row.basePrice != null ? <span className="hint">Creator services {formatMoneyKpi(row.basePrice, currency)} · Agency fees {formatMoneyKpi(row.agencyFee ?? 0, currency)}{row.usageRights ? ` · Usage rights ${formatMoneyKpi(row.usageRights, currency)}` : ""}</span> : null}
                     </span>
                     <span className="v">{formatMoneyKpi(row.price ?? 0, currency)}</span>
                   </div>
@@ -330,7 +333,7 @@ export function ProposalSummaryCard({
               <span className="k">Pricing required</span>
               <span className={confirmation.unpricedCount > 0 ? "v tbc" : "v"}>{confirmation.unpricedCount}</span>
             </div> : null}
-            {!strategicOnly && showCostAndFees ? (
+            {!strategicOnly ? (
               <>
             <div className="sumrow">
               <span className="k">Cost</span>
@@ -346,6 +349,7 @@ export function ProposalSummaryCard({
             </div>
               </>
             ) : null}
+            {!strategicOnly && confirmation.usageRights > 0 ? <div className="sumrow"><span className="k">Usage rights</span><span className="v">{formatMoneyKpi(confirmation.usageRights, currency)}</span></div> : null}
             {!strategicOnly ? <div className="sumrow big">
               <span className="k">Total Investment</span>
               <span className={hasPricedTotals ? "v" : "v tbc"}>
@@ -363,7 +367,8 @@ export function ProposalSummaryCard({
               </button>
             </div>
           </div>
-        </div>
+        </DialogContent>
+        </Dialog>
       ) : null}
       </>
     );

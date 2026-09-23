@@ -1,5 +1,7 @@
 "use client";
 
+import { clientFacingCreatorCardAmount } from "../selection-flow";
+
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import { clientCreatorIdentity, DELIVERABLES_TO_BE_CONFIRMED, formatHandleLabel, formatPlatformLabel, NOT_AVAILABLE, TO_BE_CONFIRMED } from "../format";
@@ -228,7 +230,7 @@ export function CommercialWorkspace({
                     (row) => row.platform && row.platform !== "_other"
                   );
                   const fee = Number(creator.agencyFeeAmount) || 0;
-                  const lineTotal = (creator.investmentAmount ?? 0) + fee;
+                  const lineTotal = clientFacingCreatorCardAmount(creator) ?? 0;
                   const original = visibleOriginalCurrencyAmount(
                     originalInvestmentForDisplay(creator, commercial.currency),
                     showOriginalCurrency
@@ -343,7 +345,7 @@ export function CommercialWorkspace({
                     (row) => row.platform && row.platform !== "_other"
                   );
                   const fee = Number(creator.agencyFeeAmount) || 0;
-                  const lineTotal = (creator.investmentAmount ?? 0) + fee;
+                  const lineTotal = clientFacingCreatorCardAmount(creator) ?? 0;
                   return (
                     <tr key={creator.creatorId}>
                       <td>

@@ -4915,7 +4915,8 @@ test("creator cards show cost plus agency fees and usage rights while calculator
   const calc = selectionCalculator([creator], { "priced-a": "accepted" });
   assert.equal(calc.pricedInvestment, 400_000);
   assert.equal(calc.agencyFees, 80_000);
-  assert.equal(calc.totalInvestment, 480_000);
+  assert.equal(calc.usageRights, 20_000);
+  assert.equal(calc.totalInvestment, 500_000);
   assert.equal(clientFacingCreatorCardAmount({ creatorId: "open", displayName: "C" } as never), undefined);
 });
 
@@ -6610,3 +6611,16 @@ test("Client Workspace shows a version only after Internal release", () => {
   assert.equal(released.items[0]?.versionId, "v2");
 });
 
+
+test("approval prices include fees and usage rights and reconcile with frozen commercial totals", () => {
+  const creators = [{ creatorId: "priced", displayName: "Creator", investmentAmount: 1000, agencyFeeAmount: 100, usageRightsAmount: 250 }, { creatorId: "unpriced", displayName: "Pending", agencyFeeAmount: 900, usageRightsAmount: 900 }];
+  const selection = { priced: "accepted" as const, unpriced: "accepted" as const };
+  const result = buildCreatorApprovalConfirmation(creators, selection);
+  assert.equal(result.priced[0].price, 1350);
+  assert.equal(result.priced[0].basePrice, 1000);
+  assert.equal(result.agencyFees, 100);
+  assert.equal(result.usageRights, 250);
+  assert.equal(result.totalInvestment, 1350);
+  assert.equal(selectionCalculator(creators, selection).totalInvestment, 1350);
+  assert.equal(clientQuotationCommercialView(creators, { confirmedAt: "2026-09-23", creatorIds: ["priced"], commerciallyIncludedCreatorIds: ["priced"] }).totalInvestment, 1350);
+});

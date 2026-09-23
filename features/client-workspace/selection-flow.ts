@@ -81,6 +81,7 @@ export type SelectionCalculator = {
   /** Client-facing creator/service cost (quotation revenue), priced selected only. */
   pricedInvestment: number;
   agencyFees: number;
+  usageRights: number;
   totalInvestment: number;
   unpricedMessage: string | null;
 };
@@ -202,6 +203,7 @@ export function withClientSelectionFreeze(
 export type PricedIdentityCreator = ClientCreatorIdentityFields & {
   investmentAmount?: number;
   agencyFeeAmount?: number;
+  usageRightsAmount?: number;
 };
 
 export type ResolvedClientSelectionFreeze = {
@@ -355,19 +357,21 @@ export type ClientQuotationCommercialSection = {
   creatorIds: string[];
   cost: number;
   agencyFees: number;
+  usageRights: number;
   total: number;
 };
 
 function sectionTotals(
   creators: PricedIdentityCreator[],
   creatorIds: string[]
-): Pick<ClientQuotationCommercialSection, "cost" | "agencyFees" | "total"> {
+): Pick<ClientQuotationCommercialSection, "cost" | "agencyFees" | "usageRights" | "total"> {
   const rows = creators.filter(
     (creator) => creatorIds.includes(creator.creatorId) && isPricedClientInvestment(creator.investmentAmount)
   );
   const cost = rows.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0);
   const agencyFees = rows.reduce((sum, creator) => sum + (Number(creator.agencyFeeAmount) || 0), 0);
-  return { cost, agencyFees, total: cost + agencyFees };
+  const usageRights = rows.reduce((sum, creator) => sum + (Number(creator.usageRightsAmount) || 0), 0);
+  return { cost, agencyFees, usageRights, total: rows.reduce((sum, creator) => sum + (clientFacingCreatorCardAmount(creator) ?? 0), 0) };
 }
 
 export function clientQuotationCommercialView(
@@ -412,11 +416,12 @@ export function clientQuotationCommercialView(
 }
 
 export function selectionCalculator(
-  creators: Array<{ creatorId: string; investmentAmount?: number; agencyFeeAmount?: number }>,
+  creators: Array<{ creatorId: string; investmentAmount?: number; agencyFeeAmount?: number; usageRightsAmount?: number }>,
   selection: Record<string, ClientCreatorSelectionState>
 ): SelectionCalculator {
   const selected = creators.filter((creator) => isSelectedForCalculator(selection[creator.creatorId]));
   const priced = selected.filter((creator) => isPricedClientInvestment(creator.investmentAmount));
+  const usageRights = priced.reduce((sum, creator) => sum + (Number(creator.usageRightsAmount) || 0), 0);
   const unpricedSelectedCount = selected.length - priced.length;
   const pricedInvestment = priced.reduce((sum, creator) => sum + (creator.investmentAmount ?? 0), 0);
   const agencyFees = priced.reduce((sum, creator) => sum + (Number(creator.agencyFeeAmount) || 0), 0);
@@ -426,7 +431,8 @@ export function selectionCalculator(
     unpricedSelectedCount,
     pricedInvestment,
     agencyFees,
-    totalInvestment: pricedInvestment + agencyFees,
+    usageRights,
+    totalInvestment: priced.reduce((sum, creator) => sum + (clientFacingCreatorCardAmount(creator) ?? 0), 0),
     unpricedMessage: unpricedSelectedCount > 0 ? UNPRICED_INCLUDED_MESSAGE : null,
   };
 }
@@ -936,6 +942,9 @@ export type CreatorApprovalConfirmationRow = {
   displayName: string;
   deliverables: string;
   price?: number;
+  basePrice?: number;
+  agencyFee?: number;
+  usageRights?: number;
 };
 
 export type CreatorApprovalConfirmation = {
@@ -946,6 +955,7 @@ export type CreatorApprovalConfirmation = {
   unpricedCount: number;
   clientCost: number;
   agencyFees: number;
+  usageRights: number;
   totalInvestment: number;
   helper: string;
 };
@@ -957,6 +967,7 @@ export function buildCreatorApprovalConfirmation(
     deliverables?: string;
     investmentAmount?: number;
     agencyFeeAmount?: number;
+    usageRightsAmount?: number;
   }>,
   selection: Record<string, ClientCreatorSelectionState>
 ): CreatorApprovalConfirmation {
@@ -968,7 +979,10 @@ export function buildCreatorApprovalConfirmation(
       creatorId: creator.creatorId,
       displayName: creator.displayName,
       deliverables: creator.deliverables?.trim() || "To be confirmed",
-      price: creator.investmentAmount,
+      basePrice: creator.investmentAmount,
+      agencyFee: creator.agencyFeeAmount ?? 0,
+      usageRights: creator.usageRightsAmount ?? 0,
+      price: clientFacingCreatorCardAmount(creator),
     }));
   const unpriced = selected
     .filter((creator) => !isPricedClientInvestment(creator.investmentAmount))
@@ -985,6 +999,7 @@ export function buildCreatorApprovalConfirmation(
     unpricedCount: calc.unpricedSelectedCount,
     clientCost: calc.pricedInvestment,
     agencyFees: calc.agencyFees,
+    usageRights: calc.usageRights,
     totalInvestment: calc.totalInvestment,
     helper: UNPRICED_INCLUDED_MESSAGE,
   };
@@ -1217,4 +1232,21 @@ export function selectionJourneyFlags(input: {
 
 export function sourceForConfirm(source: ClientReviewSource): ClientReviewSource {
   return source;
+}
+
+function additiveClientFacingExtra(amount: number | null | undefined): number {
+  const value = Number(amount);
+  return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+/** Shared client total for cards, selection approval, and commercial rows. */
+export function clientFacingCreatorCardAmount(
+  creator: { investmentAmount?: number | null; agencyFeeAmount?: number | null; usageRightsAmount?: number | null }
+): number | undefined {
+  if (!isPricedClientInvestment(creator.investmentAmount)) return undefined;
+  return (
+    (creator.investmentAmount ?? 0) +
+    additiveClientFacingExtra(creator.agencyFeeAmount) +
+    additiveClientFacingExtra(creator.usageRightsAmount)
+  );
 }
