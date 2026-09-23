@@ -197,9 +197,9 @@ function DeliverableScriptCell({
           originalFileName={presence?.originalFileName}
           originalMimeType={presence?.originalMimeType}
           hasOriginalDocument={presence?.hasOriginalDocument}
-          onAdd={() => onOpen(post, "edit")}
-          onUpload={() => onOpen(post, "upload")}
-          onOpen={() => onOpen(post, "edit")}
+          onAdd={() => onOpen(post, "preview")}
+          onUpload={() => onOpen(post, "preview")}
+          onOpen={() => onOpen(post, "preview")}
           onPreview={() => onOpen(post, "preview")}
         />
       ) : null}

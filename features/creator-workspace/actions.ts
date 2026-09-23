@@ -93,6 +93,8 @@ function revalidateCreator(campaignHeaderId: string) {
   revalidatePath("/creator-portal/campaigns");
   revalidatePath(`/creator-portal/campaigns/${campaignHeaderId}`);
   revalidatePath(`/campaigns/${campaignHeaderId}`);
+  revalidatePath("/review/[reviewId]", "page");
+  revalidatePath("/review/[reviewId]/[section]", "page");
 }
 
 export async function beginCreatorDocumentationUploadAction(input: {
@@ -191,7 +193,7 @@ export async function completeCreatorDocumentationUploadAction(input: {
     versionId: input.versionId,
     versionNumber: input.versionNumber,
     storagePath: input.storagePath,
-    releaseToClient: false,
+    releaseToClient: true,
   });
   if (!result.ok) return result;
   revalidateCreator(access.campaignHeaderId);

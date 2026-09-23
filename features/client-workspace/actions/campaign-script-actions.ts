@@ -18,6 +18,10 @@ import {
 } from "@/lib/campaign-script";
 import { CAMPAIGN_SCRIPT_FILE_MAX_BYTES } from "@/lib/campaign-script/types";
 import { createCampaignScriptOriginalSignedUrlForUnit } from "@/lib/campaign-script/original-document";
+import {
+  addInternalComment,
+  getDocumentationUnitDetail,
+} from "@/lib/services/deliverables/documentation-service";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -131,6 +135,57 @@ export async function loadClientCampaignScriptForUnitAction(input: {
       message: error instanceof Error ? error.message : "Could not load the unit script.",
     };
   }
+}
+
+export async function listClientUnitScriptConversationAction(input: {
+  token: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+}): Promise<ClientCampaignScriptActionResult<Array<{
+  id: string;
+  body: string;
+  authorDisplayName: string | null;
+  createdAt: string;
+}>>> {
+  const unit = parseClientUnit(input);
+  if (!unit.ok) return unit;
+  const access = await requireCurrentCampaignContentAccess(input.token);
+  if (!access.ok) return access;
+  const detail = await getDocumentationUnitDetail(db() as never, {
+    campaignHeaderId: access.campaignHeaderId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+    assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    commentAudience: "creator",
+    includeEvents: false,
+  });
+  return { ok: true, data: (detail?.comments ?? []).reverse().map((comment) => ({
+    id: comment.id,
+    body: comment.body,
+    authorDisplayName: comment.authorDisplayName,
+    createdAt: comment.createdAt,
+  })) };
+}
+
+export async function addClientUnitScriptMessageAction(input: {
+  token: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+  body: string;
+}): Promise<ClientCampaignScriptActionResult<null>> {
+  const unit = parseClientUnit(input);
+  if (!unit.ok) return unit;
+  const access = await requireCurrentCampaignContentAccess(input.token);
+  if (!access.ok) return access;
+  const result = await addInternalComment(db() as never, {
+    actorId: null,
+    actorDisplayName: access.review.clientLabel?.trim() || "Client",
+    campaignHeaderId: access.campaignHeaderId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+    assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    body: input.body,
+    audience: "creator",
+  });
+  return result.ok ? { ok: true, data: null } : result;
 }
 
 export async function saveClientCampaignScriptForUnitAction(input: {

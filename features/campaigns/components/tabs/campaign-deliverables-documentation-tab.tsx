@@ -1009,7 +1009,7 @@ export function CampaignDeliverablesDocumentationTab({
                         </h4>
                         <div className="grid gap-2">
                           <div className="space-y-1">
-                            <Label className="text-[11px]">Asset type</Label>
+                            <Label className="text-[11px]">Content status</Label>
                             <Select
                               value={drafts.assetType}
                               onValueChange={(value) =>
@@ -1020,9 +1020,9 @@ export function CampaignDeliverablesDocumentationTab({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent>
-                                {DELIVERABLE_ASSET_TYPES.map((type) => (
+                                {["draft_video", "final_video", ...DELIVERABLE_ASSET_TYPES.filter((type) => type !== "draft_video" && type !== "final_video")].map((type) => (
                                   <SelectItem key={type} value={type}>
-                                    {DELIVERABLE_ASSET_TYPE_LABELS[type]}
+                                    {DELIVERABLE_ASSET_TYPE_LABELS[type as keyof typeof DELIVERABLE_ASSET_TYPE_LABELS]}
                                   </SelectItem>
                                 ))}
                               </SelectContent>

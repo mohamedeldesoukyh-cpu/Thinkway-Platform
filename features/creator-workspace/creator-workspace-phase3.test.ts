@@ -67,9 +67,9 @@ describe("Internal on-behalf uses the same documentation SSOT", () => {
     assert.doesNotMatch(onBehalfModule, /CREATE TABLE/);
   });
 
-  it("keeps on-behalf uploads unreleased until explicit Internal release", () => {
-    assert.match(onBehalfActions, /completeDeliverableOnBehalfUploadAction[\s\S]*releaseToClient:\s*false/);
-    assert.match(documentationService, /const releaseToClient = input\.onBehalf \? false : input\.releaseToClient !== false/);
+  it("releases on-behalf uploads for client approval when the upload completes", () => {
+    assert.match(onBehalfActions, /completeDeliverableOnBehalfUploadAction[\s\S]*releaseToClient:\s*true/);
+    assert.match(documentationService, /const releaseToClient = input\.releaseToClient \?\? !input\.onBehalf/);
     const completeFn = internalComplete.slice(
       internalComplete.indexOf("export async function completeDeliverableFileUploadAction"),
       internalComplete.indexOf("export async function getDeliverableAssetDownloadUrlAction")

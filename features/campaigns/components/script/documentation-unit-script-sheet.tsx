@@ -42,6 +42,8 @@ import {
 } from "@/features/campaigns/actions/campaign-script-actions";
 import {
   extractClientCampaignScriptFileAction,
+  addClientUnitScriptMessageAction,
+  listClientUnitScriptConversationAction,
   loadClientCampaignScriptForUnitAction,
   saveClientCampaignScriptForUnitAction,
   translateClientCampaignScriptForUnitAction,
@@ -156,6 +158,13 @@ export function DocumentationUnitScriptSheet({
   const [baseline, setBaseline] = useState<Draft>(EMPTY_DRAFT);
   const [conflict, setConflict] = useState<CampaignScriptMasterView | null>(null);
   const [mixedLanguage, setMixedLanguage] = useState(false);
+  const [conversation, setConversation] = useState<Array<{
+    id: string;
+    body: string;
+    authorDisplayName: string | null;
+    createdAt: string;
+  }>>([]);
+  const [conversationBody, setConversationBody] = useState("");
   const [replaceBothLanguages, setReplaceBothLanguages] = useState(false);
   const uploadPreserveRef = useRef<{
     extractedText: string;
@@ -226,7 +235,7 @@ export function DocumentationUnitScriptSheet({
     if (!open || !unit) return;
     let cancelled = false;
     setLoading(true);
-    setMode(intent === "preview" ? "preview" : "edit");
+    setMode(clientMode || intent === "preview" ? "preview" : "edit");
     autoUploadRef.current = intent === "upload";
     void loadUnit(unit).then((result) => {
       if (cancelled) return;
@@ -242,10 +251,43 @@ export function DocumentationUnitScriptSheet({
         window.setTimeout(() => fileRef.current?.click(), 0);
       }
     });
+    if (clientMode) {
+      void listClientUnitScriptConversationAction({
+        token,
+        assignmentDeliverableId: unit.assignmentDeliverableId,
+        assignmentPostScheduleId: unit.assignmentPostScheduleId,
+      }).then((result) => {
+        if (!cancelled && result.ok) setConversation(result.data);
+      });
+    }
     return () => {
       cancelled = true;
     };
-  }, [applyScript, intent, loadUnit, open, unit]);
+  }, [applyScript, clientMode, intent, loadUnit, open, token, unit]);
+
+  const sendConversationMessage = () => {
+    if (!unit || !conversationBody.trim()) return;
+    startTransition(async () => {
+      const result = await addClientUnitScriptMessageAction({
+        token,
+        assignmentDeliverableId: unit.assignmentDeliverableId,
+        assignmentPostScheduleId: unit.assignmentPostScheduleId,
+        body: conversationBody,
+      });
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      setConversationBody("");
+      const latest = await listClientUnitScriptConversationAction({
+        token,
+        assignmentDeliverableId: unit.assignmentDeliverableId,
+        assignmentPostScheduleId: unit.assignmentPostScheduleId,
+      });
+      if (latest.ok) setConversation(latest.data);
+      toast.success("Message sent to the creator.");
+    });
+  };
 
   useEffect(() => {
     if (!open || !unit || loading || dirty || script?.translationStatus !== "pending") return;
@@ -584,6 +626,10 @@ export function DocumentationUnitScriptSheet({
         }
         fileInput={fileInput}
         translating={translating}
+        conversation={conversation}
+        conversationBody={conversationBody}
+        onConversationBodyChange={setConversationBody}
+        onSendConversationMessage={sendConversationMessage}
       />
     );
   }

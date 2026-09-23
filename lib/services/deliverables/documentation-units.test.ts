@@ -6,6 +6,7 @@ import type { AssignmentHierarchy } from "@/lib/domains/campaign/assignment-hier
 import { buildDocumentationUnitsFromHierarchy, emptyAgg } from "./build-documentation-units";
 import {
   defaultOpenTypeGroupKeys,
+  documentationCreatorTypeGroupKey,
   documentationSlotDestinationLabel,
   documentationSlotRowLabel,
   documentationSlotTitle,
@@ -265,7 +266,7 @@ describe("Documentation repository grouping", () => {
     );
   });
 
-  it("collapses large type groups unless the selected slot is inside", () => {
+  it("keeps creator groups collapsed unless the selected slot is inside", () => {
     const units = buildDocumentationUnitsFromHierarchy(
       hierarchyFixture(),
       "ch1",
@@ -278,11 +279,24 @@ describe("Documentation repository grouping", () => {
     }));
     const grouped = groupDocumentationUnits([units[0]!, ...manyStories]);
     const openDefault = defaultOpenTypeGroupKeys(grouped, null);
-    assert.equal(openDefault.has(grouped[0]!.types[0]!.groupKey), true);
+    assert.equal(openDefault.has(grouped[0]!.types[0]!.groupKey), false);
     assert.equal(openDefault.has(grouped[0]!.types[1]!.groupKey), false);
 
     const openSelected = defaultOpenTypeGroupKeys(grouped, manyStories[2]!.unitKey);
     assert.equal(openSelected.has(grouped[0]!.types[1]!.groupKey), true);
+  });
+
+  it("uses a distinct expand state for the same type under different creators", () => {
+    assert.notEqual(
+      documentationCreatorTypeGroupKey(
+        { creatorId: "creator-a", creatorName: "Amina" },
+        { groupKey: "instagram:ig_reel" }
+      ),
+      documentationCreatorTypeGroupKey(
+        { creatorId: "creator-b", creatorName: "Mona" },
+        { groupKey: "instagram:ig_reel" }
+      )
+    );
   });
 
   it("marks unfinished uploads incomplete instead of missing", () => {

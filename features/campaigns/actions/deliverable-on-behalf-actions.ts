@@ -72,6 +72,8 @@ function revalidateOnBehalf(campaignHeaderId: string) {
   revalidatePath("/creator-portal/deliverables");
   revalidatePath("/creator-portal/campaigns");
   revalidatePath(`/creator-portal/campaigns/${campaignHeaderId}`);
+  revalidatePath("/review/[reviewId]", "page");
+  revalidatePath("/review/[reviewId]/[section]", "page");
 }
 
 export async function resolveAssignedInfluencerId(
@@ -206,7 +208,7 @@ export async function completeDeliverableOnBehalfUploadAction(input: {
     versionId: input.versionId,
     versionNumber: input.versionNumber,
     storagePath: input.storagePath,
-    releaseToClient: false,
+    releaseToClient: true,
     onBehalf: {
       ...access.attribution,
       kind: onBehalfKindForVersionNumber(input.versionNumber),
@@ -245,7 +247,7 @@ export async function addDeliverableOnBehalfExternalLinkAction(input: {
     assetType,
     label: input.label,
     externalUrl: input.externalUrl,
-    releaseToClient: false,
+    releaseToClient: true,
     onBehalf: { ...access.attribution, kind: "submit" },
   });
   if (!result.ok) return result;
@@ -278,7 +280,7 @@ export async function addDeliverableOnBehalfTextAction(input: {
     assetType,
     label: input.label,
     textBody: input.textBody,
-    releaseToClient: false,
+    releaseToClient: true,
     onBehalf: { ...access.attribution, kind: "submit" },
   });
   if (!result.ok) return result;

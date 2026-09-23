@@ -62,6 +62,10 @@ export function ClientScriptDrawer({
   conflict,
   fileInput,
   translating,
+  conversation,
+  conversationBody,
+  onConversationBodyChange,
+  onSendConversationMessage,
 }: {
   open: boolean;
   onClose: () => void;
@@ -100,6 +104,15 @@ export function ClientScriptDrawer({
   conflict: ReactNode;
   fileInput: ReactNode;
   translating: boolean;
+  conversation: Array<{
+    id: string;
+    body: string;
+    authorDisplayName: string | null;
+    createdAt: string;
+  }>;
+  conversationBody: string;
+  onConversationBodyChange: (value: string) => void;
+  onSendConversationMessage: () => void;
 }) {
   const [mounted, setMounted] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
@@ -189,9 +202,6 @@ export function ClientScriptDrawer({
                 onClick={() => onModeChange("preview")}
               >
                 Preview
-              </button>
-              <button type="button" aria-pressed={isEdit} onClick={() => onModeChange("edit")}>
-                Edit
               </button>
             </span>
             <span className="cx-spacer" />
@@ -390,6 +400,44 @@ export function ClientScriptDrawer({
           ) : (
             <EmptyScriptState onAdd={() => onModeChange("edit")} onUpload={onUploadClick} />
           )}
+          <section className="mt-5 border-t pt-4" aria-label="Script conversation">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <h3 className="text-sm font-semibold">Script conversation</h3>
+              <span className="text-xs text-muted-foreground">Visible to the creator</span>
+            </div>
+            {conversation.length ? (
+              <div className="space-y-2">
+                {conversation.map((message) => (
+                  <div key={message.id} className="rounded-md bg-muted/50 px-3 py-2 text-sm">
+                    <div className="mb-1 flex justify-between gap-2 text-xs text-muted-foreground">
+                      <span>{message.authorDisplayName || "Creator"}</span>
+                      <time>{new Date(message.createdAt).toLocaleString()}</time>
+                    </div>
+                    <p className="whitespace-pre-wrap">{message.body}</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No script messages yet.</p>
+            )}
+            <div className="mt-3 flex gap-2">
+              <textarea
+                className="min-h-16 flex-1 rounded-md border bg-background p-2 text-sm"
+                value={conversationBody}
+                onChange={(event) => onConversationBodyChange(event.target.value)}
+                placeholder="Reply to the creator about this script…"
+                disabled={busy}
+              />
+              <button
+                type="button"
+                className="btn btn-primary self-end"
+                onClick={onSendConversationMessage}
+                disabled={busy || !conversationBody.trim()}
+              >
+                Send
+              </button>
+            </div>
+          </section>
         </div>
 
         <div className="cx-dw__ft">
