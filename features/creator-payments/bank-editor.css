@@ -66,7 +66,12 @@
 .creator-bank-card .cbd-inline-duplicate a { display:inline-block; margin-left:6px; color:#004bff; text-decoration:underline; font-weight:600; }
 
 /* Assignment details already provide the creator identity alongside this tab. */
-.assignment-creator-bank .creator-bank-card{grid-template-columns:minmax(0,1fr)}
+.campaign-detail-creator-modal .tw-cm__w:has(.assignment-creator-bank[data-state=active]){height:calc(100dvh - 44px);max-height:calc(100dvh - 44px);grid-template-rows:minmax(0,1fr)}
+.campaign-detail-creator-modal .tw-cm__b:has(>.assignment-creator-bank[data-state=active]){display:flex;overflow:hidden}
+.assignment-creator-bank[data-state=active]{display:flex;flex:1;min-height:0}
+.assignment-creator-bank .creator-bank-card{width:100%;flex:1;min-height:0;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
 .assignment-creator-bank .cbd-identity{display:none}
 .assignment-creator-bank .cbd-body{max-height:none}
-.assignment-creator-bank .cbd-main{max-height:none}
+.assignment-creator-bank .cbd-main{max-height:100%;min-height:0}
+.assignment-creator-bank .cbd-header,.assignment-creator-bank .cbd-footer{flex-shrink:0}
+@media(max-width:860px){.campaign-detail-creator-modal .tw-cm__w:has(.assignment-creator-bank[data-state=active]){grid-template-rows:150px minmax(0,1fr)}}
