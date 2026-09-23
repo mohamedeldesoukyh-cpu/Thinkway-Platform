@@ -403,7 +403,7 @@ export function ClientScriptDrawer({
           <section className="mt-5 border-t pt-4" aria-label="Script conversation">
             <div className="mb-2 flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold">Script conversation</h3>
-              <span className="text-xs text-muted-foreground">Visible to the creator</span>
+              <span className="text-xs text-muted-foreground">Visible to the creator and Thinkway</span>
             </div>
             {conversation.length ? (
               <div className="space-y-2">
@@ -425,7 +425,7 @@ export function ClientScriptDrawer({
                 className="min-h-16 flex-1 rounded-md border bg-background p-2 text-sm"
                 value={conversationBody}
                 onChange={(event) => onConversationBodyChange(event.target.value)}
-                placeholder="Reply to the creator about this script…"
+                placeholder="Reply about this script…"
                 disabled={busy}
               />
               <button
