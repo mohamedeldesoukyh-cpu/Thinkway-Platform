@@ -1,7 +1,8 @@
 "use client";
 
+import { creatorFinancialDisplay } from "@/features/vendors/financial-display";
+
 import { CreatorPaymentsWorkspace } from '@/features/creator-payments/workspace';
-import { CrmAaibBankEditor } from '@/features/creator-payments/bank-editor';
 
 import {
   ReceiptIcon,
@@ -16,7 +17,6 @@ import { VendorFinanceTab } from "@/features/vendors/components/tabs/vendor-fina
 import { VendorPaymentOpsSection } from "@/features/vendors/components/tabs/vendor-payment-ops-section";
 import { VendorProfileTabShell } from "@/features/vendors/components/vendor-form-ui";
 import type { VendorWorkspace } from "@/features/vendors/types";
-import { formatMoney } from "@/features/vendors/utils";
 
 export function VendorBillingTab({
   workspace,
@@ -27,62 +27,48 @@ export function VendorBillingTab({
   currencyOptions?: { value: string; label: string }[];
   onCancel?: () => void;
 }) {
-  const currency =
-    workspace.bank_accounts.find((b) => b.is_default)?.currency ??
-    (workspace.payment_details as { currency?: string })?.currency ??
-    "EGP";
-  const { financials } = workspace;
-  const payoutTotal = (paid: boolean) => {
-    const totals=new Map<string,number>();
-    for(const row of workspace.payouts){
-      if(!paid&&row.status==='cancelled') continue;
-      const paidAmount=row.paid_amount??(row.status==='paid'?row.amount:0);
-      const amount=paid?paidAmount:Math.max(0,row.amount-paidAmount);
-      totals.set(row.currency,(totals.get(row.currency)??0)+amount);
-    }
-    return [...totals].map(([code,amount])=>formatMoney(amount,code)).join(' · ') || formatMoney(0,currency);
-  };
+  const display = creatorFinancialDisplay(workspace.assignments, workspace.payouts);
 
   const summaryItems: KpiCarouselItem[] = [
     {
       id: "revenue",
-      label: "Assignment revenue",
-      value: formatMoney(financials.total_revenue, currency),
+      label: "Client revenue",
+      value: display.revenue,
       icon: TrendingUpIcon,
       accentKey: "purple",
     },
     {
       id: "cost",
       label: "Creator cost",
-      value: formatMoney(financials.total_cost, currency),
+      value: display.cost,
       icon: WalletIcon,
       accentKey: "pink",
     },
     {
       id: "gp",
       label: "GP contribution",
-      value: formatMoney(financials.total_gp, currency),
+      value: display.gp,
       icon: TrendingUpIcon,
       accentKey: "green",
     },
     {
       id: "invoiced",
       label: "Invoiced",
-      value: formatMoney(financials.invoiced_amount, currency),
+      value: display.invoiced,
       icon: ReceiptIcon,
       accentKey: "blue",
     },
     {
       id: "paid",
       label: "Paid out",
-      value: payoutTotal(true),
+      value: display.paid,
       icon: WalletIcon,
       accentKey: "green",
     },
     {
       id: "pending",
       label: "Pending payout",
-      value: payoutTotal(false),
+      value: display.pending,
       icon: ReceiptIcon,
       accentKey: "pink",
     },
@@ -94,11 +80,10 @@ export function VendorBillingTab({
       description="Payment readiness, PO, IO, signed IO, communication, and payout recording — Profile Completeness never blocks payment."
       onCancel={onCancel}
     >
-      <div className="grid gap-[18px]">
-        <details className="rounded-xl border bg-white p-4"><summary className="cursor-pointer font-semibold">AAIB beneficiary bank details</summary><CrmAaibBankEditor creatorId={workspace.id} details={(workspace.payment_details ?? {}) as Record<string, unknown>} /></details>
+      <div className="grid min-w-0 grid-cols-1 gap-[18px] [&>*]:min-w-0">
+        <VendorBankAccountsSection workspace={workspace} />
         <CreatorPaymentsWorkspace creatorId={workspace.id} />
         <VendorPaymentOpsSection workspace={workspace} />
-        <VendorBankAccountsSection workspace={workspace} />
         <VendorBankDetailsSection workspace={workspace} />
 
         <VendorFinanceTab

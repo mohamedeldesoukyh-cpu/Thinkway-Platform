@@ -6,7 +6,7 @@ import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { saveAaibBank, exportAaibBeneficiaries, loadCreatorBankAccounts, setCreatorDefaultBank, checkCreatorBankDuplicates } from './actions';
+import { saveAaibBank, exportAaibBeneficiaries, loadCreatorBankAccounts, setCreatorDefaultBank, checkCreatorBankDuplicates, deleteCreatorBankAccount } from './actions';
 import { BENEFICIARY_FILENAME, PAYMENT_FILENAME, paymentFileBytes, validateBank } from './aaib';
 import { bankDetails, ioBadge, money, paymentStatus, type PaymentRow, type BankDetails } from './model';
 import { isEmptyBank, duplicateFieldLabels, draftKey, readBankDrafts, type BankDuplicate } from './bank-form-state';
@@ -21,8 +21,8 @@ export function downloadFile(data: string, name: string, type: string, base64 = 
     link.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
-export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
-    creatorId: string; initial: BankDetails; onSaved?: () => void; row?: PaymentRow;
+export function AaibBankEditor({ creatorId, initial, onSaved, row, creatorName }: {
+    creatorId: string; initial: BankDetails; onSaved?: () => void; row?: PaymentRow; creatorName?: string;
 }) {
     const [draftStorageKey, setDraftStorageKey] = useState('');
     const [draftNotice, setDraftNotice] = useState('');
@@ -43,6 +43,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
     const [pending, setPending] = useState(false);
     const [ibanChecked, setIbanChecked] = useState(false);
     const [issues, setIssues] = useState<string[]>([]);
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const router = useRouter();
     const activeBank = { ...bank, iban: accountMode === 'iban' ? bank.iban : '', swift: routeMode === 'swift' ? bank.swift : '', identifier: routeMode === 'clearing' ? bank.identifier : '', clearing_code: routeMode === 'clearing' ? bank.clearing_code : '' };
     const dirty = JSON.stringify(activeBank) !== JSON.stringify(savedBank);
@@ -79,6 +80,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
         } catch { /* Saving remains available when browser storage is blocked. */ }
     }
     function chooseAccount(id: string, discard = false) {
+        setConfirmDelete(false);
         if (discard) forgetDraft(); else rememberDraft();
         const chosen = accounts.find(account => account.id === id);
         const next = chosen?.bank ?? bankDetails();
@@ -108,7 +110,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
             const selected = cache?.selected;
             const current = result.accounts.find(a => a.id === selected) ?? (cache?.drafts.new && selected === null ? undefined : result.accounts.find(a => a.isDefault) ?? result.accounts[0]);
             const restored = cache?.drafts[current?.id ?? 'new'];
-            const saved = current?.bank ?? (cache?.drafts.new && selected === null ? bankDetails() : initial);
+            const saved = current?.bank ?? (cache?.drafts.new && selected === null ? bankDetails() : result.defaultBank);
             const next = restored?.bank ?? saved;
             setAccountId(current?.id ?? null); setBank(next); setSavedBank(saved);
             setAccountMode(restored?.accountMode ?? (next.iban || !next.account_number ? 'iban' : 'account'));
@@ -118,7 +120,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
         }).catch(() => { if (!cancelled) setAccountsError('Could not load saved bank accounts. Close and reopen this form to retry.'); })
           .finally(() => { if (!cancelled) setAccountsLoading(false); });
         return () => { cancelled = true; };
-    }, [creatorId]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [creatorId]);
     const duplicateInput = JSON.stringify({ nickname: bank.nickname, iban: accountMode === 'iban' ? bank.iban : '', account_number: accountMode === 'account' ? bank.account_number : '', beneficiary_name: bank.beneficiary_name, email: bank.email, mobile: bank.mobile, country: bank.country, swift: bank.swift, bank_name: bank.bank_name });
     useEffect(() => {
         if (accountsLoading || accountsError) return;
@@ -154,6 +156,28 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
             setAccounts(previous => previous.map(a => ({ ...a, isDefault: a.id === accountId })));
             toast.success('Default bank account updated. New payment exports will use this account.'); onSaved?.(); router.refresh();
         } catch { setIssues(['Could not change the default account. Please try again.']); }
+        finally { setPending(false); }
+    }
+    async function removeAccount() {
+        if (!accountId) return;
+        setPending(true);
+        try {
+            const result = await deleteCreatorBankAccount(creatorId, accountId);
+            if (!result.ok) { setIssues([result.message]); return; }
+            forgetDraft();
+            const refreshed = await loadCreatorBankAccounts(creatorId);
+            if (!refreshed.ok) { setAccountsError('Account deleted. Reload to see the remaining accounts.'); notifyCreatorBankSaved(creatorId, result.defaultBank); router.refresh(); return; }
+            const remainingAccounts = refreshed.accounts;
+            const next = remainingAccounts.find(account => account.isDefault) ?? remainingAccounts[0];
+            const nextBank = next?.bank ?? bankDetails();
+            setAccounts(remainingAccounts);
+            setAccountId(next?.id ?? null); setBank(nextBank); setSavedBank(nextBank);
+            setAccountMode(nextBank.iban || !nextBank.account_number ? 'iban' : 'account');
+            setRouteMode(!nextBank.swift && nextBank.identifier ? 'clearing' : 'swift');
+            setMakeDefault(false); setConfirmDelete(false); setIssues([]); setDuplicate(null); setMatches([]); setDraftNotice('');
+            notifyCreatorBankSaved(creatorId, result.defaultBank);
+            router.refresh(); onSaved?.(); toast.success('Bank account deleted. Payment history is unchanged.');
+        } catch { setIssues(['Could not delete this account. Please try again.']); }
         finally { setPending(false); }
     }
     function update(key: keyof BankDetails, value: string) {
@@ -194,13 +218,13 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
     function field(key: Exclude<keyof BankDetails, 'registered'>, label: string, placeholder = '', note?: string) {
         return <label className="cbd-field">{label}{note && <span> · {note}</span>}<Input className="cbd-input" value={bank[key]} placeholder={placeholder} aria-required={required.includes(key)} onChange={e => update(key, ['country', 'currency', 'swift'].includes(key) ? e.target.value.toUpperCase().replace(/\s/g, '') : e.target.value)}/>{duplicateHint(key)}</label>;
     }
-    const name = row?.creator || initial.beneficiary_name || 'Creator bank details';
+    const name = row?.creator || creatorName || initial.beneficiary_name || 'Creator bank details';
     const initials = name.split(/\s+/).slice(0, 2).map(part => part[0]).join('').toUpperCase();
     const total = row ? money(row.fee + money(row.fee * row.vat / 100)) : 0;
     const amount = (value: number) => `${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${row?.currency ?? ''}`;
     return <section className="creator-bank-card">
       <aside className="cbd-identity">
-        <div className="cbd-avatar" aria-hidden="true">{row || initial.beneficiary_name ? initials : 'AAIB'}</div>
+        <div className="cbd-avatar" aria-hidden="true">{row || creatorName || initial.beneficiary_name ? initials : 'AAIB'}</div>
         {row?.campaign && <p className="cbd-campaign">{row.campaign}</p>}
         <h2>{name}</h2>{row?.username && <p className="cbd-handle">@{row.username.replace(/^@/, '')}</p>}
         {row && <div className="cbd-stats"><div><span>Vendor IO</span><b>{row.ioNumber}</b></div><div><span>Agreed fee</span><b>{amount(row.fee)}</b></div><div><span>Outstanding</span><b className="cbd-positive">{amount(Math.max(0, total - row.paid))}</b></div></div>}
@@ -213,6 +237,7 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
             <div className="cbd-section-title">Saved bank accounts <span>{accounts.length} saved</span></div>
             {accountsLoading ? <p role="status">Loading saved accounts…</p> : accountsError ? <p role="alert" className="cbd-error">{accountsError}</p> : <>
               <div className="cbd-account-actions"><label className="cbd-field">Bank account<select className="cbd-input" value={accountId ?? ''} onChange={e => chooseAccount(e.target.value)}><option value="">New bank account</option>{accounts.map(a => <option key={a.id} value={a.id}>{a.bank.bank_name || a.bank.nickname || (isEmptyBank(a.bank) ? 'Empty account' : 'Bank account')} · {a.bank.currency || 'Currency not set'} · …{(a.bank.iban || a.bank.account_number).slice(-4)}{a.isDefault ? ' · Default' : ''}</option>)}</select></label><Button className="cbd-button" variant="outline" disabled={!accountId} onClick={() => chooseAccount('')}>+ Add account</Button><Button className="cbd-button" variant="outline" onClick={clearDetails}>Clear details</Button>{accountId && !accounts.find(a => a.id === accountId)?.isDefault && <Button className="cbd-button" variant="outline" disabled={dirty} onClick={() => void changeDefault()}>Make default</Button>}</div>
+              {accountId && (confirmDelete ? <div className="cbd-note" role="alert">Delete this account and its unsaved draft? Payment history stays unchanged. If this is the default account, another saved account becomes the default when available.<div className="cbd-account-actions"><Button type="button" className="cbd-button" variant="destructive" onClick={() => void removeAccount()}>Confirm delete</Button><Button type="button" className="cbd-button" variant="outline" onClick={() => setConfirmDelete(false)}>Cancel</Button></div></div> : <Button type="button" className="cbd-button" variant="outline" onClick={() => setConfirmDelete(true)}>Delete account</Button>)}
               {!accountId && accounts.length > 0 && <label className="cbd-confirm"><input type="checkbox" checked={makeDefault} onChange={e => setMakeDefault(e.target.checked)}/>Use as default after saving</label>}
               <p className="cbd-hint">The default account is used for new campaign payment exports. Previously exported files and payment history stay unchanged.</p>
               {draftNotice && <p className="cbd-note" role="status">{draftNotice}</p>}{draftStorageError && <p className="cbd-note cbd-warning" role="alert">{draftStorageError}</p>}{checkingDuplicates && <p className="cbd-hint" role="status">Checking for duplicate details…</p>}{duplicateCheckError && <p className="cbd-hint cbd-warning">{duplicateCheckError}</p>}{dirty && <p className="cbd-hint">{draftStorageError ? 'Changes have not been saved.' : 'Unsaved draft kept in this browser tab for up to 24 hours.'} <button type="button" className="cbd-button" onClick={() => chooseAccount(accountId ?? '', true)}>Discard changes</button></p>}
@@ -242,6 +267,6 @@ export function AaibBankEditor({ creatorId, initial, onSaved, row }: {
       </div>
     </section>;
 }
-export function CrmAaibBankEditor({ creatorId, details }: { creatorId: string; details: Record<string, unknown> }) {
-    return <AaibBankEditor key={JSON.stringify(details)} creatorId={creatorId} initial={bankDetails(details)}/>;
+export function CrmAaibBankEditor({ creatorId, details, creatorName }: { creatorId: string; details: Record<string, unknown>; creatorName?: string }) {
+    return <AaibBankEditor key={JSON.stringify(details)} creatorId={creatorId} creatorName={creatorName} initial={bankDetails(details)}/>;
 }

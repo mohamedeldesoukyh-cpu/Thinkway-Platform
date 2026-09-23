@@ -64,3 +64,9 @@
 .creator-bank-card .cbd-duplicate-link { display: inline-block; color: #004bff; font-weight: 600; text-decoration: underline; margin-top: 8px; }
 .creator-bank-card .cbd-field .cbd-inline-duplicate { display:block; padding:8px; margin-top:6px; border-radius:6px; font-size:11px; font-weight:400; text-transform:none; letter-spacing:normal; }
 .creator-bank-card .cbd-inline-duplicate a { display:inline-block; margin-left:6px; color:#004bff; text-decoration:underline; font-weight:600; }
+
+/* Assignment details already provide the creator identity alongside this tab. */
+.assignment-creator-bank .creator-bank-card{grid-template-columns:minmax(0,1fr)}
+.assignment-creator-bank .cbd-identity{display:none}
+.assignment-creator-bank .cbd-body{max-height:none}
+.assignment-creator-bank .cbd-main{max-height:none}

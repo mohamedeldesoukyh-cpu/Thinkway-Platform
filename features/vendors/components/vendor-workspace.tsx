@@ -1,5 +1,7 @@
 "use client";
 
+import { creatorFinancialDisplay } from "@/features/vendors/financial-display";
+
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -36,7 +38,6 @@ import { VendorPlatformsTab } from "@/features/vendors/components/tabs/vendor-pl
 import { VendorQuotationsTab } from "@/features/vendors/components/tabs/vendor-quotations-tab";
 import { VENDOR_STATUS_OPTIONS } from "@/features/vendors/constants";
 import type { VendorWorkspace } from "@/features/vendors/types";
-import { formatMoney, formatPercent } from "@/features/vendors/utils";
 import { formatCreatorCountryLabels } from "@/lib/creators/creator-display-utils";
 import type { CompletenessBreakdown } from "@/lib/creators/crm/completeness";
 import { cn } from "@/lib/utils";
@@ -235,9 +236,8 @@ export function VendorWorkspaceView({
     [pathname, router, searchParams]
   );
 
-  const currency =
-    (workspace.payment_details as { currency?: string } | null)?.currency ?? "EGP";
   const { counts, financials } = workspace;
+  const display = useMemo(() => creatorFinancialDisplay(workspace.assignments, workspace.payouts), [workspace.assignments, workspace.payouts]);
 
   const kpiItems = useMemo(
     () =>
@@ -246,16 +246,17 @@ export function VendorWorkspaceView({
         ["Campaigns", String(counts.campaigns), ""],
         ["Deliverables", String(counts.deliverables), counts.deliverables === 0 ? "r" : ""],
         ["Platforms", String(counts.platforms), ""],
-        ["Revenue", formatMoney(financials.total_revenue, currency), ""],
-        ["GP", formatMoney(financials.total_gp, currency), ""],
-        ["Margin", formatPercent(financials.margin_percent), "g"],
+        ["Client revenue", display.revenue, ""],
+        ["Creator cost", display.cost, ""],
+        ["GP", display.gp, ""],
+        ["Margin", display.margin, "g"],
         [
           "Pending payout",
-          formatMoney(financials.pending_payout, currency),
+          display.pending,
           financials.pending_payout > 0 ? "r" : "",
         ],
       ] as const,
-    [counts, currency, financials]
+    [counts, display, financials]
   );
 
   const tabs = useMemo(

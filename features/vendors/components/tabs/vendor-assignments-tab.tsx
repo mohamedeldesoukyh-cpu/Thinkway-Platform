@@ -1,5 +1,7 @@
 "use client";
 
+import { creatorFinancialDisplay, formatCreatorMoney, assignmentCostParts } from "@/features/vendors/financial-display";
+
 import { BriefcaseIcon } from "lucide-react";
 
 import Link from "next/link";
@@ -23,7 +25,7 @@ import {
   VendorProfileTabShell,
 } from "@/features/vendors/components/vendor-form-ui";
 import type { VendorWorkspace } from "@/features/vendors/types";
-import { formatMoney, formatPercent } from "@/features/vendors/utils";
+import { formatMoney } from "@/features/vendors/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
 import { VENDOR_ASSIGNMENTS_FILTER_ACCESSORS } from "@/lib/tables/workspace-table-filter-fields";
@@ -105,7 +107,7 @@ function buildVendorAssignmentsColumns(
       amountCell: true,
       amountVariant: "revenue",
       renderCell: (assignment) =>
-        formatMoney(assignment.revenue, assignment.currency || currency),
+        formatMoney(assignment.revenue, assignment.revenue_currency || assignment.currency || currency),
     },
     {
       id: "cost",
@@ -113,7 +115,7 @@ function buildVendorAssignmentsColumns(
       amountCell: true,
       amountVariant: "cost",
       renderCell: (assignment) =>
-        formatMoney(assignment.cost, assignment.currency || currency),
+        formatCreatorMoney(assignmentCostParts(assignment)),
     },
     {
       id: "gp",
@@ -122,7 +124,7 @@ function buildVendorAssignmentsColumns(
       amountVariant: "gp",
       amountValue: (assignment) => assignment.gp,
       renderCell: (assignment) =>
-        formatMoney(assignment.gp, assignment.currency || currency),
+        formatMoney(assignment.gp, assignment.revenue_currency || assignment.currency || currency),
     },
     {
       id: "payout",
@@ -197,8 +199,8 @@ export function VendorAssignmentsTab({
           description="Aggregate GP contribution across assignments."
         >
           <p className="text-[13px] leading-relaxed text-[#5B6575]">
-            GP contribution: {formatMoney(workspace.financials.total_gp, currency)} (
-            {formatPercent(workspace.financials.margin_percent)} margin) across{" "}
+            GP contribution: {creatorFinancialDisplay(workspace.assignments, workspace.payouts).gp} (
+            {creatorFinancialDisplay(workspace.assignments, workspace.payouts).margin} margin) across{" "}
             {workspace.counts.assignments} assignment(s).
           </p>
         </VendorFormSection>

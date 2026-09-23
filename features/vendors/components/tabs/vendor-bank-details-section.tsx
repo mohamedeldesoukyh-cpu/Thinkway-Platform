@@ -1,17 +1,14 @@
 "use client";
 
 import { format } from "date-fns";
-import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
 import { useFormActionWithToast } from "@/hooks/use-form-action-with-toast";
 
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { DocumentUploadForm } from "@/components/forms/document-upload-form";
-import { FieldError } from "@/components/forms/field-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -21,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DETAIL_FORM_INPUT_CLASS,
   DETAIL_FORM_SELECT_TRIGGER_CLASS,
 } from "@/features/campaigns/components/operational-detail-panel";
 import { DocumentDownloadButton } from "@/features/documents";
@@ -67,7 +63,7 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
   );
   const [paymentMethod, setPaymentMethod] = useState(paymentDetails.payment_method);
 
-  const [state, formAction, isPending] = useFormActionWithToast(
+  const [, formAction, isPending] = useFormActionWithToast(
     updateVendorBankDetailsAction,
     INITIAL_STATE
   );
@@ -87,8 +83,8 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
   return (
     <div className="space-y-4 px-4 md:px-5">
       <CampaignFlatSection
-        title="Vendor payout bank details"
-        description="Saved here on Billing & Payments and rendered live on Vendor IO Section 6 (Vendor Payment Details)."
+        title="Payment preferences"
+        description="Payment terms and method for Vendor IO. Manage bank accounts in the shared bank-details card above."
         actions={
           bankConfigured ? (
             <Badge variant="secondary" className="font-normal">
@@ -145,95 +141,14 @@ export function VendorBankDetailsSection({ workspace }: VendorBankDetailsSection
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="beneficiary_name">Beneficiary name</Label>
-              <Input
-                id="beneficiary_name"
-                name="beneficiary_name"
-                className={DETAIL_FORM_INPUT_CLASS}
-                defaultValue={
-                  paymentDetails.beneficiary_name ||
-                  workspace.legal_name ||
-                  workspace.display_name
-                }
-                disabled={isPending}
-              />
-              <FieldError messages={state.fieldErrors?.beneficiary_name} />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="grid gap-2">
-              <Label htmlFor="bank_name">Bank name</Label>
-              <Input
-                id="bank_name"
-                name="bank_name"
-                className={DETAIL_FORM_INPUT_CLASS}
-                defaultValue={paymentDetails.bank_name}
-                placeholder="e.g. Arab African International Bank"
-                disabled={isPending}
-              />
-              <FieldError messages={state.fieldErrors?.bank_name} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="bank_branch">Branch</Label>
-              <Input
-                id="bank_branch"
-                name="bank_branch"
-                className={DETAIL_FORM_INPUT_CLASS}
-                defaultValue={paymentDetails.bank_branch}
-                placeholder="e.g. Park Street Branch"
-                disabled={isPending}
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="grid gap-2">
-              <Label htmlFor="account_number">Account number</Label>
-              <Input
-                id="account_number"
-                name="account_number"
-                className={DETAIL_FORM_INPUT_CLASS}
-                defaultValue={paymentDetails.account_number}
-                disabled={isPending}
-              />
-              <FieldError messages={state.fieldErrors?.account_number} />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="swift">SWIFT / BIC</Label>
-              <Input
-                id="swift"
-                name="swift"
-                className={DETAIL_FORM_INPUT_CLASS}
-                defaultValue={paymentDetails.swift}
-                disabled={isPending}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="iban">IBAN</Label>
-              <Input
-                id="iban"
-                name="iban"
-                className={DETAIL_FORM_INPUT_CLASS}
-                defaultValue={paymentDetails.iban}
-                placeholder="EG00…"
-                disabled={isPending}
-              />
-              <FieldError messages={state.fieldErrors?.iban} />
-            </div>
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/40 pt-4">
             <p className="text-[11px] text-muted-foreground">
-              Updates apply immediately to{" "}
-              <Link href="/ios/vendor" className="text-foreground hover:underline">
-                Vendor IO
-              </Link>{" "}
-              preview and HTML export.
+              Bank details are saved separately in the shared card above.
             </p>
             <Button type="submit" disabled={isPending}>
-              {isPending ? "Saving…" : "Save bank details"}
+              {isPending ? "Saving…" : "Save payment preferences"}
             </Button>
           </div>
         </form>

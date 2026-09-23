@@ -1,5 +1,7 @@
 import { createSupabaseServerClient, requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 import { creatorPaymentBalances } from '@/features/creator-payments/balances';
+import { creatorAssignmentCommercials } from './financial-display';
+import type { CampaignLineCommercialFxInput } from '@/lib/campaigns/campaign-display-financials';
 import { REL } from "@/lib/supabase/relation-hints";
 import type {
   InfluencerPlatformAccountRow,
@@ -457,7 +459,9 @@ export async function getVendorWorkspace(
       vendor_payment_status, vendor_paid_at, invited_at, confirmed_at,
       campaign:${REL.campaignInfluencers.campaignHeader}(id, document_number, name, status),
       line:${REL.campaignInfluencers.campaignLine}(
-        id, document_number, name, revenue, cost, profit,
+        id, document_number, name, revenue, cost, profit, currency_code,
+        revenue_before_vat, cost_before_vat, usage_rights_amount, usage_rights_cost,
+        agency_fee_percent, agency_fee_amount, cost_received, cost_received_currency,
         billing_status, assignment_status, metadata
       )
     `
@@ -480,7 +484,7 @@ export async function getVendorWorkspace(
       invited_at: string | null;
       confirmed_at: string | null;
       campaign: { id: string; document_number: string; name: string; status: string } | null;
-      line: {
+      line: CampaignLineCommercialFxInput & {
         id: string;
         document_number: string;
         name: string;
@@ -507,9 +511,7 @@ export async function getVendorWorkspace(
       currency: r.currency,
       deliverable_count: r.deliverable_count,
       vendor_payment_status: r.vendor_payment_status,
-      revenue: Number(r.line?.revenue ?? r.agreed_fee),
-      cost: Number(r.line?.cost ?? r.agreed_fee),
-      gp: Number(r.line?.profit ?? 0),
+      ...creatorAssignmentCommercials(r.line, Number(r.agreed_fee), r.currency),
       invited_at: r.invited_at,
       confirmed_at: r.confirmed_at,
     };

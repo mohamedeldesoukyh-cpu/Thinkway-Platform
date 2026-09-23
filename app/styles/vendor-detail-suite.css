@@ -1183,3 +1183,6 @@
 .vendor-detail-suite [data-slot="vendor-workspace-tabs"],
 .vendor-detail-suite .platform-v6-kpi-strip,
 .vendor-detail-suite .platform-v6-kpi-strip--executive{display:none !important}
+/* Currency-separated creator totals must remain readable in the header. */
+.vendor-detail-suite .tw-ms2 > div{min-width:0}
+.vendor-detail-suite .tw-ms2 b{white-space:normal;overflow-wrap:anywhere;line-height:1.4}
