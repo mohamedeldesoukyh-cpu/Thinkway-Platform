@@ -1,7 +1,7 @@
 "use client";
 
 import { CampaignSummaryMoney } from "@/features/campaigns/components/campaign-money";
-import { useEffect, useState, useTransition, type ReactNode } from "react";
+import { useCallback, useEffect, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -82,6 +82,13 @@ export function CampaignDetailChrome({
   const displayCurrency = (workspace.currency_code || "EGP").toUpperCase();
   const displayFxRateToEgp = Number(workspace.financials.display_fx_rate_to_egp) || 1;
   const [currencyPending, startCurrencyTransition] = useTransition();
+
+  const refreshWorkspace = useCallback(() => {
+    // router.refresh keeps the current path and complete query string. The
+    // workspace and nested section selections are therefore restored from the
+    // URL instead of sending the user back to the lifecycle entry stage.
+    router.refresh();
+  }, [router]);
 
 
   useEffect(() => {
@@ -212,6 +219,14 @@ export function CampaignDetailChrome({
           {lifecycle.businessStageLabel}
         </span>
         <span className="tw-sp" />
+        <button
+          type="button"
+          className="tw-b sm"
+          onClick={refreshWorkspace}
+          title="Refresh this workspace"
+        >
+          Refresh
+        </button>
         <span className="tw-p p-b">{titleCaseStatus(workspace.status)}</span>
         <EnvironmentBadgeSlot />
       </div>
