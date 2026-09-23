@@ -84,10 +84,11 @@ export async function decideReviewAction(input: {
 
 export async function decideContentAction(input: {
   token: string;
-  versionId: string;
+  versionId?: string;
+  versionIds?: string[];
   decision: ClientContentDecision;
   comment?: string | null;
-}): Promise<{ ok: boolean; message: string }> {
+}) {
   return recordClientContentDecision(input);
 }
 

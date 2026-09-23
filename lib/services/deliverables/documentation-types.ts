@@ -305,6 +305,7 @@ export type DocumentationUnitSummary = DocumentationUnitId & {
 };
 
 export type DeliverableAssetVersionView = {
+  contentDecision?: { decision: "approved" | "changes_requested"; decidedAt: string; actorKind: string; comment: string | null } | null;
   id: string;
   versionNumber: number;
   storageBucket: string | null;

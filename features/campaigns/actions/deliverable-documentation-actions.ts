@@ -1,5 +1,6 @@
 "use server";
 
+import { recordContentVersionDecisions } from "@/features/client-workspace/content-decisions";
 import { revalidatePath } from "next/cache";
 
 import { requirePermission } from "@/lib/auth/permissions-server";
@@ -412,4 +413,16 @@ export async function releaseDeliverableVersionToClientAction(input: {
   if (!result.ok) return result;
   revalidatePath(`/campaigns/${input.campaignHeaderId}`);
   return { ok: true, data: null };
+}
+
+/** Team decisions use the same append-only record consumed by the client portal. */
+export async function decideDeliverableContentAction(input: {
+  campaignHeaderId: string; versionId: string; decision: "approved" | "changes_requested"; comment?: string;
+}) {
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  // Query through the user's RLS client before the service-role write.
+  const { data: campaign, error } = await actor.supabase.from("campaign_headers").select("id").eq("id", input.campaignHeaderId).maybeSingle();
+  if (error || !campaign) return { ok: false, message: "Campaign access denied." };
+  return recordContentVersionDecisions({ ...input, versionIds: [input.versionId], actorKind: "internal", actorUserId: actor.userId, actorLabel: "Thinkway team" });
 }

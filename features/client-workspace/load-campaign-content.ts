@@ -88,7 +88,7 @@ export async function loadClientCampaignContent(
   const headerId = campaignHeaderId?.trim();
   if (!headerId) return emptyClientCampaignContent();
 
-  const [assetsResult, deliverablesResult, linesResult, influencersResult, publicationsResult] = await Promise.all([
+  const [assetsResult, deliverablesResult, linesResult, influencersResult, publicationsResult, decisionsResult] = await Promise.all([
     supabase
       .from("deliverable_assets")
       .select(
@@ -109,6 +109,9 @@ export async function loadClientCampaignContent(
       .from("campaign_publications")
       .select("assignment_deliverable_id, assignment_post_schedule_id, content_url")
       .eq("campaign_header_id", headerId),
+    supabase.from("campaign_client_content_decisions")
+      .select("id, version_id, decision, comment, decided_at, actor_kind")
+      .eq("campaign_header_id", headerId).order("decided_at", { ascending: false }),
   ]);
 
   logContentLoadError("assets", assetsResult.error?.message);
@@ -132,11 +135,6 @@ export async function loadClientCampaignContent(
   }
 
   let decisions: DecisionRow[] = [];
-  const decisionsResult = await supabase
-    .from("campaign_client_content_decisions")
-    .select("id, version_id, decision, comment, decided_at, actor_kind")
-    .eq("campaign_header_id", headerId)
-    .order("decided_at", { ascending: false });
   if (decisionsResult.error) {
     logContentLoadError("decisions", decisionsResult.error.message);
   } else {

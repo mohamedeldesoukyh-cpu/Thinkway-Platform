@@ -58,6 +58,7 @@ import {
 } from "@/features/campaigns/deliverable-asset-upload";
 import { DeliverableAssetPreview } from "@/features/campaigns/components/deliverables/deliverable-asset-preview";
 import { DocumentationAssetActions } from "@/features/campaigns/components/deliverables/documentation-asset-actions";
+import { ContentDecisionControls } from "@/features/campaigns/components/deliverables/content-decision-controls";
 import { ReleaseVersionToClientButton } from "@/features/campaigns/components/deliverables/release-version-to-client-button";
 import {
   DocumentationRepositoryList,
@@ -980,6 +981,10 @@ export function CampaignDeliverablesDocumentationTab({
                                       loadDetailForKey(selected.unitKey, units);
                                     }}
                                   />
+                                ) : null}
+                                {asset.currentVersion && ["file", "external_link"].includes(asset.medium) && asset.assetType !== "story_screenshot" ? (
+                                  <ContentDecisionControls key={asset.currentVersion.id + (asset.currentVersion.contentDecision?.decidedAt ?? "")} campaignHeaderId={campaignId} version={asset.currentVersion}
+                                    onSaved={() => { refreshList(); loadDetailForKey(selected.unitKey, units); }} />
                                 ) : null}
                                 {asset.medium === "text" ? null : (
                                   <DocumentationAssetActions
