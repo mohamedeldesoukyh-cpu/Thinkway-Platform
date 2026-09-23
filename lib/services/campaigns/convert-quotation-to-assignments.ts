@@ -34,6 +34,7 @@ import type { QuotationDeliverable } from "@/lib/domains/commercial/quotation-ty
 import { isRelease20AssignmentConvertEnabled } from "@/lib/release/release-2-0-feature-flag";
 import type { Database } from "@/types/database";
 import { normalizeCreatorId } from "@/features/campaign-studio/services/studio-draft";
+import { resolveLinePoBillableBase } from "@/lib/finance/po/billable-base";
 
 import { applyInheritedTentativeScheduleToLine } from "./apply-inherited-tentative-schedule";
 import { createCampaignLine } from "./campaign-line-service";
@@ -740,7 +741,14 @@ export async function convertQuotationToAssignments(
       pricing_mode: "package",
       name: seed.displayName,
       description: serviceDescription,
-      po_amount: seed.revenue,
+      // PO consumption includes Revenue + UR Rev + agency fee. Seed the same
+      // commercial base here so a newly converted quotation cannot be marked
+      // over its PO solely because it has an agency fee.
+      po_amount: resolveLinePoBillableBase({
+        revenue_before_vat: seed.revenue,
+        usage_rights_amount: 0,
+        agency_fee_percent: Number(unit.primaryItem.af_pct ?? 0),
+      }),
       revenue: seed.revenue,
       cost: seed.cost,
       revenue_before_vat: seed.revenue,
