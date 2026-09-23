@@ -303,6 +303,7 @@ type ProgressDraft = {
   waitingFor: BusinessProcessWaitingParty;
   nextStageId?: CampaignWorkspaceTabId | null;
   owner?: BusinessProcessOwner;
+  nextActionTab?: CampaignWorkspaceTabId;
 };
 
 function toCue(
@@ -351,7 +352,7 @@ function toCue(
     health: health.health,
     healthLabel: health.healthLabel,
     nextAction: draft.nextActionLabel,
-    nextActionTab: current.id,
+    nextActionTab: draft.nextActionTab ?? current.id,
   };
 }
 
@@ -413,18 +414,22 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
     });
   }
 
-  // Only PO exceeded short-circuits the cue. Soft workspace alerts (payouts,
-  // content, billing) must not pin stage or invent "Blocked by open issues"
-  // after Client IO is already approved — that locks Vendor IO incorrectly.
+  // A PO blocker changes health and the recommended action, not workflow progress.
+  // Derive the real stage first so unissued IOs are never marked completed.
   if (signals.poExceeded) {
-    return toCue({
-      currentStageId: "billing",
+    const progress = deriveCampaignProcessCue({ ...signals, poExceeded: false });
+    return {
+      ...progress,
       statusLabel: "PO limit exceeded",
       lifecycleSignal: "blocked",
       nextActionLabel: "Review PO Limit",
+      nextAction: "Review PO Limit",
+      nextActionTab: "billing",
       waitingFor: "Finance",
       owner: "Finance",
-    });
+      ...healthFromSignal("blocked"),
+      stageSignals: { ...progress.stageSignals, [progress.currentStageId]: "blocked" },
+    };
   }
 
   // 1) Assignments incomplete
@@ -469,24 +474,26 @@ export function deriveCampaignProcessCue(signals: CampaignProcessSignals): Campa
   // "Generate Client IO" only when no Client IO exists; draft → complete composition.
   if (!signals.hasClientIo || !clientStatus) {
     return toCue({
-      currentStageId: "client-io",
+      currentStageId: "lines",
       statusLabel: "In Progress",
       lifecycleSignal: "waiting_internal",
       nextActionLabel: "Generate Client IO",
       waitingFor: "Commercial",
-      nextStageId: "vendor-io",
+      nextStageId: "client-io",
+      nextActionTab: "client-io",
       owner: "Commercial",
     });
   }
 
   if (clientStatus === "draft") {
     return toCue({
-      currentStageId: "client-io",
+      currentStageId: "lines",
       statusLabel: "Draft in progress",
       lifecycleSignal: "waiting_internal",
       nextActionLabel: "Complete Client IO",
       waitingFor: "Commercial",
-      nextStageId: "vendor-io",
+      nextStageId: "client-io",
+      nextActionTab: "client-io",
       owner: "Commercial",
     });
   }
