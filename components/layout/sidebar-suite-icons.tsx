@@ -107,6 +107,13 @@ export function SidebarSuiteIcon({
   return (
     <svg
       viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
       className={className}
       aria-hidden
       dangerouslySetInnerHTML={{ __html: PATHS[name] ?? PATHS.doc }}

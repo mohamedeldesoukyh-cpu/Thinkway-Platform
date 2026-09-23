@@ -48,6 +48,7 @@ export function HomeDashboardMasthead({
 
   return (
     <DiscoverySuiteMasthead
+      freezeOnScroll={false}
       title={title}
       id={id}
       subtitle={subtitle}

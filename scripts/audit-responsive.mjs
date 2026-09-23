@@ -7,6 +7,11 @@ nextEnv.loadEnvConfig(process.cwd(), true);
 const base = process.env.RESPONSIVE_BASE_URL || 'http://localhost:3000';
 const browser = await puppeteer.launch({headless:true, pipe:true, executablePath:process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe'});
 const page = await browser.newPage();
+await page.setBypassServiceWorker(true);
+if(process.env.RESPONSIVE_BYPASS_SECRET) {
+  await page.setRequestInterception(true);
+  page.on('request', request => request.continue(new URL(request.url()).origin === new URL(base).origin ? {headers:{...request.headers(),'x-vercel-protection-bypass':process.env.RESPONSIVE_BYPASS_SECRET}} : {}));
+}
 page.setDefaultNavigationTimeout(120000);
 await page.evaluateOnNewDocument(()=>{ try { localStorage.setItem('thinkway.pwa.dismissedAt',new Date().toISOString()); } catch {} });
 const errors=[];
@@ -43,11 +48,28 @@ try {
         title:document.title,
         documentWidth:document.documentElement.scrollWidth,
         viewport:innerWidth,
-        overflowing:[...document.querySelectorAll('main, [data-dashboard-shell-root], .tw-main, .platform-v6-page, header')].filter(e=>e.clientWidth && e.scrollWidth>e.clientWidth+2).map(e=>({tag:e.tagName,cls:e.className,width:e.clientWidth,scroll:e.scrollWidth})),
+        overflowing:[...document.querySelectorAll('main, [data-dashboard-shell-root], .home-dashboard-suite, .tw-main, .platform-v6-page, header, .home-dashboard-suite .tw-ms2 b, .home-dashboard-suite .tw-jn, .home-dashboard-suite .tw-lr span, .home-dashboard-suite .tw-qd, .home-dashboard-suite .tw-big')].filter(e=>e.clientWidth && e.scrollWidth>e.clientWidth+2).map(e=>({tag:e.tagName,cls:e.className,width:e.clientWidth,scroll:e.scrollWidth})),
       }));
       results.push({route,width,status:response.status(),url:page.url(),...measurement});
       console.log(JSON.stringify({route,width,status:response.status(),overflow:measurement.overflowing}));
-      if(width===390 || width===768) await page.screenshot({path:`tmp/responsive/${route.replace(/[^\w-]/g,'_')||'home'}-${width}.png`});
+      if(width===390 || width===768 || route==='/') await page.screenshot({path:`tmp/responsive/${route.replace(/[^\w-]/g,'_')||'home'}-${width}.png`});
+      const home = await page.$('.home-dashboard-suite');
+      if(home) {
+        const layout = await page.evaluate(() => {
+          const root=document.querySelector('.home-dashboard-suite');
+          root.scrollTop=0;
+          const mast=root.querySelector('.tw-frozen').getBoundingClientRect();
+          const content=root.querySelector('.tw-main').getBoundingClientRect();
+          return {overlap:mast.bottom>content.top+1,contentWidth:content.width,available:root.clientWidth};
+        });
+        if(layout.overlap || layout.contentWidth>layout.available+2) throw new Error(`Home overlap or clipped content: ${JSON.stringify(layout)}`);
+        await home.evaluate(e=>{e.scrollTop=e.scrollHeight;});
+        await new Promise(r=>setTimeout(r,300));
+        const reachable=await page.$eval('.home-dashboard-suite',e=>e.scrollTop+e.clientHeight>=e.scrollHeight-2);
+        if(!reachable) throw new Error('Home bottom cannot be reached');
+        if(width===390 || width===768 || route==='/') await page.screenshot({path:`tmp/responsive/${route.replace(/[^\w-]/g,'_')}-bottom-${width}.png`});
+        await home.evaluate(e=>{e.scrollTop=0;});
+      }
     }
     if(route===routes[0]) {
       await page.setViewport({width:390,height:844,isMobile:true,hasTouch:true});
@@ -57,12 +79,20 @@ try {
       await page.waitForSelector('[role="dialog"]');
       const count=await page.$$eval('[role="dialog"] nav a',els=>els.length);
       if(count<30) throw new Error(`Navigation incomplete: ${count} destinations`);
+      const sizes=await page.$$eval('[role="dialog"] nav a',els=>els.map(e=>({height:e.getBoundingClientRect().height,icon:e.querySelector('svg')?.getBoundingClientRect().width})));
+      if(sizes.some(s=>s.height<44 || s.height>70 || !s.icon || s.icon>24)) throw new Error(`Navigation rows or icons incorrectly sized: ${JSON.stringify(sizes)}`);
+      await page.screenshot({path:'tmp/responsive/navigation-top.png'});
+      const last=await page.$('[role="dialog"] nav section:last-child a:last-child');
+      await last.evaluate(e=>e.scrollIntoView({block:'center'}));
+      const reachable=await last.evaluate(e=>{const r=e.getBoundingClientRect();return r.top>=0&&r.bottom<=innerHeight;});
+      if(!reachable) throw new Error('Last navigation destination cannot be reached');
+      await page.screenshot({path:'tmp/responsive/navigation-bottom.png'});
       await page.type('#mobile-navigation-search','Treasury');
       const filtered=await page.$$eval('[role="dialog"] nav a',els=>els.map(e=>e.textContent));
       if(filtered.length!==1 || !filtered[0].includes('Treasury')) throw new Error('Workspace search failed');
       await page.keyboard.press('Escape');
       await page.waitForSelector('[role="dialog"]',{hidden:true});
-      console.log(`Mobile navigation: ${count} destinations, Escape closes drawer`);
+      console.log(`Mobile navigation: ${count} correctly sized destinations; last link reachable; search and Escape passed`);
     }
   }
   const report = process.env.RESPONSIVE_REPORT || 'results';
