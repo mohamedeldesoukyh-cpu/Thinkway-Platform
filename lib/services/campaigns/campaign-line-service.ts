@@ -27,6 +27,7 @@ import {
 } from "@/lib/campaigns/line-assignment";
 
 import { applyCampaignMasterSyncIfLinked } from "@/lib/services/commercial/linked-commercial-gate";
+import { fromCampaignRow } from "@/lib/services/commercial/field-registry";
 import type { MasterCommercialValues } from "@/lib/services/commercial/types";
 
 import {
@@ -375,6 +376,8 @@ export async function updateCampaignLine(
       message: string;
       code?: string;
       commercialSync?: {
+        revisionCurrent?: MasterCommercialValues;
+        revisionProposed?: MasterCommercialValues;
         quotationSerial?: string | null;
         campaignDocumentNumber?: string | null;
         concurrencyToken?: string | null;
@@ -481,7 +484,11 @@ export async function updateCampaignLine(
           ok: false,
           message: gate.message,
           code: gate.code,
-          commercialSync: gate.commercialSync,
+          commercialSync: gate.commercialSync ? {
+            ...gate.commercialSync,
+            revisionCurrent: fromCampaignRow(existingLine as unknown as Record<string, unknown>),
+            revisionProposed: masterChanges,
+          } : undefined,
         };
       }
     }

@@ -192,7 +192,7 @@ export function CommercialRevisionDialog({
           >
             Cancel
           </Button>
-          <Button type="button" onClick={handleSubmit} disabled={pending}>
+          <Button type="button" onClick={handleSubmit} disabled={pending || fieldChanges.length === 0}>
             {pending ? "Submitting…" : "Submit for Approval"}
           </Button>
         </DialogFooter>

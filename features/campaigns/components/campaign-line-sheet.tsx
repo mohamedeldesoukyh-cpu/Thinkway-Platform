@@ -521,7 +521,7 @@ export function CampaignLineSheet({
             commercialLineId,
             assignmentIds: state.commercialSync?.assignmentIds ?? [line.id],
             concurrencyToken: state.commercialSync?.concurrencyToken ?? null,
-            current: {
+            current: state.commercialSync?.revisionCurrent ?? {
               creator_cost: line.cost_before_vat ?? line.cost ?? 0,
               client_revenue: line.revenue_before_vat ?? line.revenue ?? 0,
               cost_currency: line.currency_code ?? currencyCode,
@@ -533,7 +533,7 @@ export function CampaignLineSheet({
               revenue_vat_exempt: line.revenue_vat_exempt ?? false,
               cost_vat_exempt: line.cost_vat_exempt ?? true,
             },
-            proposed: {
+            proposed: state.commercialSync?.revisionProposed ?? {
               creator_cost: cost,
               client_revenue: revenue,
               cost_currency: currency,
