@@ -486,3 +486,26 @@ describe("Commercial Revision Phase 4", () => {
     assert.equal(created.data.lines[0]?.commercialLineId, "CML-MERGE");
   });
 });
+
+it("approved revision persists VAT exemptions and usage rights on both linked masters", async () => {
+  const commercial = createInMemoryCommercialStore();
+  seedLinkedCommercial(commercial);
+  commercial.financeLock = { locked: true, reasons: ["vendor_io"] };
+  const sync = createInMemoryCommercialSyncPorts(commercial);
+  const revisions = createInMemoryRevisionPorts({ loadConcurrencyToken: id => sync.loadConcurrencyToken(id) });
+  const svc = createCommercialRevisionService(revisions, sync);
+  const proposed = { creator_cost: 1500, client_revenue: 1500, agency_fee_percent: 10,
+    usage_rights_amount: 0, usage_rights_cost: 0, revenue_vat_percent: 14,
+    cost_vat_percent: 0, revenue_vat_exempt: false, cost_vat_exempt: true };
+  const created = await svc.createRevision({ actorId: "requester", campaignHeaderId: "ch1", quotationId: "q1", reason: "New addition",
+    lines: buildRevisionLinesFromProposals([{ commercialLineId: "CML-001", assignmentIds: ["asg-A"], current: { creator_cost: 2000, client_revenue: 3000 }, proposed }]),
+    concurrencyTokens: { "CML-001": "token-v1" } });
+  assert.ok(created.ok); if (!created.ok) return;
+  assert.ok((await svc.submitRevision(created.data.id, "requester")).ok);
+  const result = await svc.approveAndApplyRevision(created.data.id, "approver", "OK");
+  assert.ok(result.ok);
+  for (const [key, value] of Object.entries(proposed)) {
+    assert.equal(commercial.quotationItems.get("CML-001")?.values[key], value);
+    assert.equal(commercial.assignments.get("asg-A")?.values[key], value);
+  }
+});

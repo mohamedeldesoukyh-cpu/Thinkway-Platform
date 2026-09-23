@@ -3539,6 +3539,12 @@ export type Database = {
       };
       quotation_items: {
         Row: {
+          usage_rights_amount?: number | null;
+          usage_rights_cost?: number | null;
+          revenue_vat_percent?: number | null;
+          cost_vat_percent?: number | null;
+          revenue_vat_exempt?: boolean | null;
+          cost_vat_exempt?: boolean | null;
           cost_fx_override?: string | null;
           revenue_fx_override?: string | null;
           id: string;
@@ -3578,6 +3584,12 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          usage_rights_amount?: number | null;
+          usage_rights_cost?: number | null;
+          revenue_vat_percent?: number | null;
+          cost_vat_percent?: number | null;
+          revenue_vat_exempt?: boolean | null;
+          cost_vat_exempt?: boolean | null;
           cost_fx_override?: string | null;
           revenue_fx_override?: string | null;
           id?: string;
