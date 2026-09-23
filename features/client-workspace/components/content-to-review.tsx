@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { toast } from "sonner";
 
 
 import {
@@ -18,11 +19,24 @@ import {
   type ClientContentReviewItem,
 } from "../content-approval";
 import { decideContentAction } from "../actions/client-workspace-actions";
+import {
+  addClientUnitScriptMessageAction,
+  listClientUnitScriptConversationAction,
+  loadClientCampaignScriptForUnitAction,
+} from "../actions/campaign-script-actions";
 import { groupClientContentByCreator, matchClientCreatorByName } from "../campaign-tab-aggregates";
 import { googleDriveFilePreviewUrl } from "@/lib/services/deliverables/documentation-types";
 import type { ClientCreatorCard } from "../types";
 import { ClientContentFullSizeButton, ClientVideoPreview } from "./client-content-media";
 import { ReviewAvatar } from "./review-avatar";
+import type { CampaignScriptMasterView } from "@/lib/campaign-script";
+
+type ScriptConversationMessage = {
+  id: string;
+  body: string;
+  authorDisplayName: string | null;
+  createdAt: string;
+};
 
 function reviewItemKey(item: ClientContentReviewItem) {
   return `${item.assetId}:${item.versionId}`;
@@ -139,6 +153,12 @@ function ContentReviewPane({
   const [pending, startTransition] = useTransition();
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [conversationOpen, setConversationOpen] = useState(false);
+  const [conversationLoading, setConversationLoading] = useState(false);
+  const [script, setScript] = useState<CampaignScriptMasterView | null>(null);
+  const [messages, setMessages] = useState<ScriptConversationMessage[]>([]);
+  const [messageBody, setMessageBody] = useState("");
+  const latestMessageIdRef = useRef<string | null>(null);
   const prior = item.history.filter((version) => version.versionId !== item.versionId);
   const bulkCount = siblings.length;
 
@@ -178,6 +198,69 @@ function ContentReviewPane({
       } catch { setError("Could not save the decision. Please try again."); }
     });
   }
+
+  const loadConversation = useCallback(async (showNewMessageToast: boolean) => {
+    const unit = {
+      token,
+      assignmentDeliverableId: item.assignmentDeliverableId,
+      assignmentPostScheduleId: item.assignmentPostScheduleId,
+    };
+    const scriptResult = await loadClientCampaignScriptForUnitAction(unit);
+    const messagesResult = await listClientUnitScriptConversationAction(unit);
+    if (!scriptResult.ok) throw new Error(scriptResult.message);
+    if (!messagesResult.ok) throw new Error(messagesResult.message);
+    const latestMessageId = messagesResult.data.at(-1)?.id ?? null;
+    if (
+      showNewMessageToast &&
+      latestMessageIdRef.current &&
+      latestMessageId &&
+      latestMessageId !== latestMessageIdRef.current
+    ) {
+      toast("New script comment", {
+        description: "The conversation was updated.",
+      });
+    }
+    latestMessageIdRef.current = latestMessageId;
+    setScript(scriptResult.data);
+    setMessages(messagesResult.data);
+  }, [item.assignmentDeliverableId, item.assignmentPostScheduleId, token]);
+
+  function openConversation() {
+    setConversationOpen(true);
+    setConversationLoading(true);
+    void loadConversation(false)
+      .catch((loadError) => toast.error(loadError instanceof Error ? loadError.message : "Could not load the script conversation."))
+      .finally(() => setConversationLoading(false));
+  }
+
+  function sendConversationMessage() {
+    const body = messageBody.trim();
+    if (!body) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await addClientUnitScriptMessageAction({
+        token,
+        assignmentDeliverableId: item.assignmentDeliverableId,
+        assignmentPostScheduleId: item.assignmentPostScheduleId,
+        body,
+      });
+      if (!result.ok) {
+        toast.error(result.message);
+        return;
+      }
+      setMessageBody("");
+      await loadConversation(false);
+      toast.success("Comment sent to Thinkway and the creator.");
+    });
+  }
+
+  useEffect(() => {
+    if (!conversationOpen) return;
+    const timer = window.setInterval(() => {
+      void loadConversation(true).catch(() => undefined);
+    }, 30_000);
+    return () => window.clearInterval(timer);
+  }, [conversationOpen, loadConversation]);
 
   return (
     <div className="cx-pane">
@@ -236,6 +319,69 @@ function ContentReviewPane({
           </div>
 
           {item.comment ? <p className="camp-content-comment">{item.comment}</p> : null}
+
+          <section className="mt-4 border-t pt-4" aria-label="Script and conversation">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-sm font-semibold">Script &amp; conversation</h3>
+                <p className="text-xs text-muted-foreground">Shared with Thinkway and the creator.</p>
+              </div>
+              {conversationOpen ? null : (
+                <button type="button" className="btn btn-sm" onClick={openConversation}>
+                  View script &amp; reply
+                </button>
+              )}
+            </div>
+            {conversationOpen ? (
+              <div className="mt-3 space-y-3">
+                {conversationLoading ? <p className="text-sm text-muted-foreground">Loading script conversation…</p> : null}
+                {!conversationLoading && script ? (
+                  <div className="rounded-md bg-muted/40 p-3 text-sm">
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">Script</p>
+                    <div className="max-h-52 overflow-auto whitespace-pre-wrap" dir={script.sourceLanguage === "ar" ? "rtl" : "ltr"}>
+                      {script.sourceLanguage === "ar" ? script.bodyAr : script.bodyEn}
+                    </div>
+                  </div>
+                ) : null}
+                {!conversationLoading && !script ? (
+                  <p className="text-sm text-muted-foreground">No script has been shared for this deliverable yet.</p>
+                ) : null}
+                {messages.length ? (
+                  <div className="space-y-2">
+                    {messages.map((message) => (
+                      <div key={message.id} className="rounded-md border px-3 py-2 text-sm">
+                        <div className="mb-1 flex justify-between gap-2 text-xs text-muted-foreground">
+                          <span>{message.authorDisplayName || "Creator"}</span>
+                          <time>{new Date(message.createdAt).toLocaleString()}</time>
+                        </div>
+                        <p className="whitespace-pre-wrap">{message.body}</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : !conversationLoading ? (
+                  <p className="text-sm text-muted-foreground">No comments yet.</p>
+                ) : null}
+                <div className="flex gap-2">
+                  <textarea
+                    className="cx-rev__notes flex-1"
+                    rows={2}
+                    value={messageBody}
+                    onChange={(event) => setMessageBody(event.target.value)}
+                    placeholder="Reply about this script or video…"
+                    disabled={pending || conversationLoading}
+                  />
+                  <button
+                    type="button"
+                    className="btn pri self-end"
+                    onClick={sendConversationMessage}
+                    disabled={pending || conversationLoading || !messageBody.trim()}
+                  >
+                    Send reply
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </section>
 
           <textarea
             className="cx-rev__notes"
@@ -336,9 +482,7 @@ export function ContentToReview({
   const [selectedKey, setSelectedKey] = useState(() =>
     pending[0] ? reviewItemKey(pending[0]) : ""
   );
-  const selected = useMemo(() => {
-    return pending.find((item) => reviewItemKey(item) === selectedKey) ?? pending[0] ?? null;
-  }, [pending, selectedKey]);
+  const selected = pending.find((item) => reviewItemKey(item) === selectedKey) ?? pending[0] ?? null;
   const selectedGroupIndex = selected
     ? Math.max(
         0,

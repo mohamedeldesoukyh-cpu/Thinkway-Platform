@@ -266,13 +266,17 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
   assert.equal(deliverablesTab.includes("campaign-script-register"), false);
 });
 
-test("Client UI attaches Script to publication-plan units and hides campaign-level Script", () => {
+test("Client UI attaches Script to both publication-plan units and the relevant content-review card", () => {
   const dashboard = readFileSync(
     resolve("features/client-workspace/components/campaign-dashboard.tsx"),
     "utf8"
   );
   const approval = readFileSync(
     resolve("features/client-workspace/components/approval-workspace.tsx"),
+    "utf8"
+  );
+  const contentReview = readFileSync(
+    resolve("features/client-workspace/components/content-to-review.tsx"),
     "utf8"
   );
   const plan = readFileSync(
@@ -324,6 +328,14 @@ test("Client UI attaches Script to publication-plan units and hides campaign-lev
   assert.match(sheet, /headerAvatar/);
   assert.match(plan, /ReviewAvatar/);
   assert.match(plan, /headerAvatar/);
+
+  assert.match(contentReview, /View script &amp; reply/);
+  assert.match(contentReview, /Script &amp; conversation/);
+  assert.match(contentReview, /loadClientCampaignScriptForUnitAction/);
+  assert.match(contentReview, /listClientUnitScriptConversationAction/);
+  assert.match(contentReview, /addClientUnitScriptMessageAction/);
+  assert.match(contentReview, /New script comment/);
+  assert.match(contentReview, /Comment sent to Thinkway and the creator/);
 });
 
 test("script preview splits cue blocks and counts words", () => {
