@@ -87,7 +87,7 @@ export function createSupabaseCommercialSyncPorts(
     const { data } = await supabase
       .from("quotation_items")
       .select(
-        "cost_fx_override, revenue_fx_override, cost, revenue, cost_currency, fx_rate_to_egp, af_pct, commercial_input_mode, gp_pct, gp_value"
+        "cost_fx_override, revenue_fx_override, cost, revenue, cost_currency, fx_rate_to_egp, af_pct, commercial_input_mode, gp_pct, gp_value, usage_rights_amount, usage_rights_cost, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt"
       )
       .eq("id", quotationItemId)
       .maybeSingle();
