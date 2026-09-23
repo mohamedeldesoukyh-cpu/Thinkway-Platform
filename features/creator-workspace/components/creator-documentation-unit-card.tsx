@@ -332,7 +332,7 @@ export function CreatorDocumentationUnitCard({
 
           <div className="blk">
             <span className="blk__l">
-              Client feedback
+              Client messages
               {unit.comments.length ? (
                 <>
                   {" "}
@@ -346,12 +346,13 @@ export function CreatorDocumentationUnitCard({
                   const agency =
                     item.authorDisplayName === CREATOR_ON_BEHALF_ACTOR_LABEL ||
                     (item.authorDisplayName ?? "").toLowerCase().includes("thinkway");
+                  const client = !agency && !item.authorUserId;
                   return (
-                    <div key={item.id} className="msg" data-me={!agency}>
-                      <span className="msg__a">{agency ? "TW" : "You"}</span>
+                    <div key={item.id} className="msg" data-me={!agency && !client}>
+                      <span className="msg__a">{agency ? "TW" : client ? "CL" : "You"}</span>
                       <span className="msg__b">
                         <span className="msg__h">
-                          {agency ? "Thinkway" : item.authorDisplayName ?? "You"}
+                          {agency ? "Thinkway" : client ? item.authorDisplayName ?? "Client" : item.authorDisplayName ?? "You"}
                           <i>{new Date(item.createdAt).toLocaleString()}</i>
                         </span>
                         <span className="msg__x">{item.body}</span>
@@ -362,7 +363,7 @@ export function CreatorDocumentationUnitCard({
               </div>
             ) : (
               <p className="blk__none">
-                No comments yet. Thinkway will leave feedback here after reviewing.
+                No messages yet. Client and Thinkway replies about this deliverable or its script appear here.
               </p>
             )}
             <form
@@ -391,7 +392,7 @@ export function CreatorDocumentationUnitCard({
                 className="inp"
                 value={comment}
                 onChange={(event) => setComment(event.target.value)}
-                placeholder="Reply to Thinkway…"
+                placeholder="Reply about this deliverable or script…"
                 disabled={pending}
               />
               <button type="submit" className="btn btn-sm" disabled={pending}>

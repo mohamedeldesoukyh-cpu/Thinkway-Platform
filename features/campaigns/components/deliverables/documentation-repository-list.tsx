@@ -9,8 +9,8 @@ import { DeliverableExplorerTypePill } from "@/features/campaigns/components/del
 import { DocumentationUnitScriptActions } from "@/features/campaigns/components/script/documentation-unit-script-actions";
 import {
   defaultOpenTypeGroupKeys,
+  documentationCreatorTypeGroupKey,
   documentationSlotRowLabel,
-  documentationTypeGroupKey,
   groupDocumentationUnits,
   type DocumentationTypeGroup,
 } from "@/lib/services/deliverables/documentation-list-groups";
@@ -99,14 +99,23 @@ export function DocumentationRepositoryList({
     if (!selectedKey) return;
     const selected = units.find((unit) => unit.unitKey === selectedKey);
     if (!selected) return;
-    const key = documentationTypeGroupKey(selected);
+    const creator = creatorGroups.find((group) =>
+      group.types.some((typeGroup) =>
+        typeGroup.units.some((unit) => unit.unitKey === selectedKey)
+      )
+    );
+    const typeGroup = creator?.types.find((group) =>
+      group.units.some((unit) => unit.unitKey === selectedKey)
+    );
+    if (!creator || !typeGroup) return;
+    const key = documentationCreatorTypeGroupKey(creator, typeGroup);
     setTypeOpenOverrides((prev) => {
       if (!(key in prev) || prev[key]) return prev;
       const next = { ...prev };
       delete next[key];
       return next;
     });
-  }, [selectedKey, units]);
+  }, [creatorGroups, selectedKey, units]);
 
   function isTypeOpen(groupKey: string): boolean {
     if (Object.prototype.hasOwnProperty.call(typeOpenOverrides, groupKey)) {
@@ -135,12 +144,13 @@ export function DocumentationRepositoryList({
             </header>
           ) : null}
           {creator.types.map((typeGroup) => {
-            const open = isTypeOpen(typeGroup.groupKey);
+            const scopedGroupKey = documentationCreatorTypeGroupKey(creator, typeGroup);
+            const open = isTypeOpen(scopedGroupKey);
             return (
               <div key={`${creator.creatorId ?? "x"}:${typeGroup.groupKey}`}>
                 <button
                   type="button"
-                  onClick={() => toggleType(typeGroup.groupKey)}
+                  onClick={() => toggleType(scopedGroupKey)}
                   aria-expanded={open}
                   className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/30"
                 >

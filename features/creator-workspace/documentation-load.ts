@@ -61,7 +61,13 @@ export type CreatorUnitView = CreatorDocumentationUnitCard & {
   currentVersionNumber: number | null;
   versions: CreatorUnitVersionView[];
   onBehalfLabel: string | null;
-  comments: Array<{ id: string; body: string; createdAt: string; authorDisplayName: string | null }>;
+  comments: Array<{
+    id: string;
+    body: string;
+    createdAt: string;
+    authorUserId: string | null;
+    authorDisplayName: string | null;
+  }>;
   clientFeedback: { decision: "approved" | "changes_requested"; comment: string | null } | null;
   publicationUrl: string | null;
   publicationStatus: string | null;
@@ -331,6 +337,7 @@ async function hydrateCreatorUnitView(
         id: row.id,
         body: row.body,
         createdAt: row.createdAt,
+        authorUserId: row.authorUserId,
         authorDisplayName: row.authorDisplayName,
       })),
     clientFeedback,

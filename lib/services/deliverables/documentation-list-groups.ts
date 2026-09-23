@@ -39,6 +39,14 @@ export type DocumentationTypeOption = {
   label: string;
 };
 
+/** UI state must include creator identity: a campaign can have the same type for many creators. */
+export function documentationCreatorTypeGroupKey(
+  creator: Pick<DocumentationCreatorGroup, "creatorId" | "creatorName">,
+  typeGroup: Pick<DocumentationTypeGroup, "groupKey">
+): string {
+  return `${creator.creatorId ?? creator.creatorName ?? "unassigned"}:${typeGroup.groupKey}`;
+}
+
 export function documentationTypeGroupKey(unit: {
   platform: string | null;
   deliverableType: string | null;
@@ -207,16 +215,8 @@ export function defaultOpenTypeGroupKeys(
       );
       if (containsSelected) {
         open.add(typeGroup.groupKey);
-        continue;
-      }
-      if (typeGroup.units.length <= 6) {
-        open.add(typeGroup.groupKey);
       }
     }
-  }
-  if (open.size === 0) {
-    const first = groups[0]?.types[0]?.groupKey;
-    if (first) open.add(first);
   }
   return open;
 }

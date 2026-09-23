@@ -263,7 +263,7 @@ describe("Legacy creator upload is not the product path", () => {
     assert.doesNotMatch(creatorActions, /creatorUploadDeliverableAction/);
     assert.doesNotMatch(creatorActions, /portal_uploads/);
     assert.doesNotMatch(creatorActions, /saveCampaignScriptForUnit/);
-    assert.match(creatorActions, /releaseToClient: false/);
+    assert.match(creatorActions, /releaseToClient: true/);
     assert.match(creatorActions, /audience: "creator"/);
     assert.match(portalActions, /@deprecated Phase 2 product path/);
   });
@@ -279,10 +279,10 @@ describe("Creator script is read-only and unit-scoped", () => {
 });
 
 describe("Creator upload uses documentation-service versioning", () => {
-  it("creates the asset/version on the owned unit and leaves it unreleased", () => {
+  it("creates the asset/version on the owned unit and releases it for client approval", () => {
     assert.match(creatorActions, /beginFileAssetUpload/);
     assert.match(creatorActions, /completeFileAssetUpload/);
-    assert.match(creatorActions, /releaseToClient: false/);
+    assert.match(creatorActions, /releaseToClient: true/);
     assert.match(documentationService, /function beginFileAssetUpload[\s\S]*loadOwnedAsset/);
     assert.match(documentationService, /function completeFileAssetUpload[\s\S]*loadOwnedAsset/);
     assert.match(documentationService, /function createSignedAssetDownloadUrl[\s\S]*loadOwnedAsset/);

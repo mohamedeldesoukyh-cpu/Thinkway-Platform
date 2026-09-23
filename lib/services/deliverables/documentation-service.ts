@@ -58,7 +58,7 @@ function versionInsertMetadata(input: {
   releaseToClient?: boolean;
   onBehalf?: OnBehalfAttribution | null;
 }): Record<string, unknown> {
-  const releaseToClient = input.onBehalf ? false : input.releaseToClient !== false;
+  const releaseToClient = input.releaseToClient ?? !input.onBehalf;
   return {
     ...versionReleaseMetadata(releaseToClient),
     ...onBehalfMetadata(input.onBehalf),
@@ -149,7 +149,7 @@ export async function getDocumentationUnitDetail(
 ): Promise<DocumentationUnitDetail | null> {
   const [assets, comments, events] = await Promise.all([
     loadAssetsForUnit(supabase, input),
-    loadComments(supabase, { assignmentDeliverableId: input.assignmentDeliverableId,
+    loadComments(supabase, { campaignHeaderId: input.campaignHeaderId, assignmentDeliverableId: input.assignmentDeliverableId,
       assignmentPostScheduleId: input.assignmentPostScheduleId, audience: input.commentAudience }),
     input.includeEvents === false ? Promise.resolve([]) : loadEvents(supabase, input),
   ]);
@@ -793,7 +793,7 @@ async function loadOwnedAsset(
 export async function addInternalComment(
   supabase: Supabase,
   input: {
-    actorId: string;
+    actorId: string | null;
     actorDisplayName?: string | null;
     campaignHeaderId: string;
     assignmentDeliverableId: string;
@@ -1075,6 +1075,7 @@ async function loadAggregates(
 async function loadAssetsForUnit(
   supabase: Supabase,
   input: {
+    campaignHeaderId: string;
     assignmentDeliverableId: string;
     assignmentPostScheduleId: string | null;
   }
@@ -1161,6 +1162,7 @@ async function loadAssetsForUnit(
 async function loadComments(
   supabase: Supabase,
   input: {
+    campaignHeaderId: string;
     assignmentDeliverableId: string;
     assignmentPostScheduleId: string | null;
     audience?: DocumentationAudience;
@@ -1169,6 +1171,7 @@ async function loadComments(
   let query = supabase
     .from("deliverable_comments")
     .select("*")
+    .eq("campaign_header_id", input.campaignHeaderId)
     .eq("assignment_deliverable_id", input.assignmentDeliverableId)
     .is("deleted_at", null)
     .order("created_at", { ascending: false });
@@ -1237,7 +1240,7 @@ async function logEvent(
     versionId?: string | null;
     commentId?: string | null;
     eventType: string;
-    actorUserId: string;
+    actorUserId: string | null;
     payload: Record<string, unknown>;
   }
 ) {

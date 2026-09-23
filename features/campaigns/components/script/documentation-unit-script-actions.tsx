@@ -113,23 +113,31 @@ export function DocumentationUnitScriptActions({
         data-documentation-script-actions={hasScript ? "present" : "empty"}
       >
         {hasScript ? (
-          <>
-            <IconAction hint={labels.primary} onClick={onOpen}>
-              <PencilIcon className="size-4" aria-hidden />
-            </IconAction>
+          client ? (
             <IconAction hint={labels.secondary} onClick={onPreview}>
               <EyeIcon className="size-4" aria-hidden />
             </IconAction>
-          </>
+          ) : (
+            <>
+              <IconAction hint={labels.primary} onClick={onOpen}>
+                <PencilIcon className="size-4" aria-hidden />
+              </IconAction>
+              <IconAction hint={labels.secondary} onClick={onPreview}>
+                <EyeIcon className="size-4" aria-hidden />
+              </IconAction>
+            </>
+          )
         ) : (
-          <>
-            <IconAction hint={labels.primary} onClick={onAdd}>
-              <PaperclipIcon className="size-4" aria-hidden />
-            </IconAction>
-            <IconAction hint={labels.secondary} onClick={onUpload}>
-              <FileUpIcon className="size-4" aria-hidden />
-            </IconAction>
-          </>
+          client ? null : (
+            <>
+              <IconAction hint={labels.primary} onClick={onAdd}>
+                <PaperclipIcon className="size-4" aria-hidden />
+              </IconAction>
+              <IconAction hint={labels.secondary} onClick={onUpload}>
+                <FileUpIcon className="size-4" aria-hidden />
+              </IconAction>
+            </>
+          )
         )}
         {showOriginal ? (
           <DocumentationUnitOriginalDocumentButton
