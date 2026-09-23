@@ -885,14 +885,15 @@ export async function updateVendorBankDetailsAction(
 
   const paymentDetails: Record<string, unknown> = {
     ...currentDetails,
-    beneficiary_name: emptyToNull(parsed.data.beneficiary_name),
     method: emptyToNull(parsed.data.payment_method) ?? "bank_transfer",
-    bank_name: emptyToNull(parsed.data.bank_name),
-    bank_branch: emptyToNull(parsed.data.bank_branch),
-    account_number: emptyToNull(parsed.data.account_number),
-    swift: emptyToNull(parsed.data.swift),
-    iban: emptyToNull(parsed.data.iban)?.replace(/\s/g, "").toUpperCase() ?? null,
   };
+  // Preferences-only submissions must not clear the shared bank card's data.
+  const bankFields = ["beneficiary_name", "bank_name", "bank_branch", "account_number", "swift", "iban"] as const;
+  for (const key of bankFields) {
+    if (!formData.has(key)) continue;
+    const value = emptyToNull(parsed.data[key]);
+    paymentDetails[key] = key === "iban" ? value?.replace(/\s/g, "").toUpperCase() ?? null : value;
+  }
 
   const { error: updateError } = await supabase
     .from("influencers")
@@ -914,7 +915,7 @@ export async function updateVendorBankDetailsAction(
     .eq("influencer_id", parsed.data.influencer_id)
     .limit(1);
 
-  if (!existingBanks?.length) {
+  if (bankFields.some((key) => formData.has(key)) && !existingBanks?.length) {
     await supabase.from("influencer_bank_accounts").insert({
       influencer_id: parsed.data.influencer_id,
       bank_name: paymentDetails.bank_name,
@@ -932,7 +933,7 @@ export async function updateVendorBankDetailsAction(
   revalidatePath("/vendors");
   revalidatePath("/ios/vendor");
 
-  return { ok: true, message: "Bank details saved." };
+  return { ok: true, message: "Payment preferences saved." };
 }
 
 export async function savePlatformAccountsAction(

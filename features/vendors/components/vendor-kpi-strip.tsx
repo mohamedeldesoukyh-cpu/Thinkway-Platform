@@ -1,5 +1,7 @@
 "use client";
 
+import { creatorFinancialDisplay } from "@/features/vendors/financial-display";
+
 import {
   FileTextIcon,
   LayersIcon,
@@ -13,7 +15,6 @@ import {
 
 import { PlatformV6KpiStrip } from "@/components/platform/platform-v6-kpi-strip";
 import type { VendorWorkspace } from "@/features/vendors/types";
-import { formatMoney, formatPercent } from "@/features/vendors/utils";
 import { cn } from "@/lib/utils";
 
 type VendorKpiStripProps = {
@@ -22,9 +23,8 @@ type VendorKpiStripProps = {
 };
 
 export function VendorKpiStrip({ workspace, className }: VendorKpiStripProps) {
-  const { counts, financials } = workspace;
-  const currency =
-    (workspace.payment_details as { currency?: string })?.currency ?? "USD";
+  const { counts } = workspace;
+  const display = creatorFinancialDisplay(workspace.assignments, workspace.payouts);
 
   return (
     <PlatformV6KpiStrip
@@ -64,17 +64,18 @@ export function VendorKpiStrip({ workspace, className }: VendorKpiStripProps) {
         },
         {
           id: "revenue",
-          label: "Revenue",
-          value: formatMoney(financials.total_revenue, currency),
+          label: "Client revenue",
+          value: display.revenue,
           icon: TrendingUpIcon,
           iconStroke: "#2563eb",
           iconBg: "#eff6ff",
           valueClassName: "platform-v6-c-blue !text-[12px]",
         },
+        { id: "cost", label: "Creator cost", value: display.cost, icon: WalletIcon },
         {
           id: "gp",
           label: "GP",
-          value: formatMoney(financials.total_gp, currency),
+          value: display.gp,
           icon: WalletIcon,
           iconStroke: "#10b981",
           iconBg: "#ecfdf5",
@@ -83,7 +84,7 @@ export function VendorKpiStrip({ workspace, className }: VendorKpiStripProps) {
         {
           id: "margin",
           label: "Margin",
-          value: formatPercent(financials.margin_percent),
+          value: display.margin,
           icon: PercentIcon,
           iconStroke: "#f59e0b",
           iconBg: "#fffbeb",
@@ -91,7 +92,7 @@ export function VendorKpiStrip({ workspace, className }: VendorKpiStripProps) {
         {
           id: "payout",
           label: "Pending payout",
-          value: formatMoney(financials.pending_payout, currency),
+          value: display.pending,
           icon: FileTextIcon,
           iconStroke: "#ec4899",
           iconBg: "#fdf2f8",

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { CrmAaibBankEditor } from "@/features/creator-payments/bank-editor";
 import { MoreHorizontalIcon, PencilIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 
@@ -604,6 +605,7 @@ export function AssignmentInfluencerDetailSheet({
                   <TabsList className="tw-cdt h-auto flex-1 justify-start gap-0.5 rounded-none bg-transparent p-0">
                     <TabsTrigger value="participation">Participation details</TabsTrigger>
                     <TabsTrigger value="general">General</TabsTrigger>
+                    {gates.showInternalFinancials && influencerId && <TabsTrigger value="bank">Bank details</TabsTrigger>}
                     <TabsTrigger value="social">Social data</TabsTrigger>
                     <TabsTrigger value="activity">Activity</TabsTrigger>
                     <TabsTrigger value="performance">Performance</TabsTrigger>
@@ -656,6 +658,11 @@ export function AssignmentInfluencerDetailSheet({
                       showInternalFinancials={gates.showInternalFinancials}
                     />
                   </TabsContent>
+                  {gates.showInternalFinancials && influencerId && (
+                    <TabsContent value="bank" className="assignment-creator-bank mt-0 min-w-0 p-3 outline-none">
+                      <CrmAaibBankEditor creatorId={influencerId} creatorName={creatorName} details={{}} />
+                    </TabsContent>
+                  )}
                   <TabsContent value="social" className="mt-0 outline-none">
                     <SocialDataTab group={group} />
                   </TabsContent>

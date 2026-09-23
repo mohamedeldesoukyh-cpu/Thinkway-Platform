@@ -56,6 +56,9 @@ export type VendorAssignmentRow = {
   revenue: number;
   cost: number;
   gp: number;
+  revenue_currency?: string;
+  cost_currency?: string;
+  usage_rights_cost?: number;
   invited_at: string | null;
   confirmed_at: string | null;
 };

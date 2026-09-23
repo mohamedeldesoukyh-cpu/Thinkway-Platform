@@ -340,7 +340,9 @@ export async function loadCreatorBankAccounts(creatorId: string) {
         z.string().uuid().parse(creatorId);
         const { data, error } = await (supabase as SupabaseClient).from('influencer_bank_accounts').select('id,is_default,aaib_details,bank_name,beneficiary_name,account_holder,iban,account_number,swift,branch_name,country_code,currency').eq('influencer_id', creatorId).order('created_at');
         if (error) throw new Error('Could not load saved bank accounts. Please try again.');
-        return { ok: true as const, draftScope: userId, accounts: (data ?? []).map(a => ({ id: a.id as string, isDefault: a.is_default as boolean, bank: bankDetails({ ...a.aaib_details, bank_name: a.bank_name ?? '', beneficiary_name: a.beneficiary_name ?? a.account_holder ?? '', iban: a.iban ?? '', account_number: a.account_number ?? '', swift: a.swift ?? '', bank_branch: a.branch_name ?? '', aaib_country: a.country_code ?? '', aaib_currency: a.currency ?? '' }) })) };
+        const creator = await (supabase as SupabaseClient).from('influencers').select('payment_details').eq('id', creatorId).single();
+        if (creator.error) throw new Error('Could not load creator bank details. Please try again.');
+        return { ok: true as const, draftScope: userId, defaultBank: bankDetails(creator.data.payment_details ?? {}), accounts: (data ?? []).map(a => ({ id: a.id as string, isDefault: a.is_default as boolean, bank: bankDetails({ ...a.aaib_details, bank_name: a.bank_name ?? '', beneficiary_name: a.beneficiary_name ?? a.account_holder ?? '', iban: a.iban ?? '', account_number: a.account_number ?? '', swift: a.swift ?? '', bank_branch: a.branch_name ?? '', aaib_country: a.country_code ?? '', aaib_currency: a.currency ?? '' }) })) };
     } catch (e) { return fail(e); }
 }
 export async function setCreatorDefaultBank(creatorId: string, accountId: string) {
