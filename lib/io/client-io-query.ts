@@ -3,10 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ClientIoRow, ClientIoVersionSummary } from "@/lib/domains/io/types";
 import { listClientIoAssignmentIds } from "@/lib/io/client-io-assignments";
 import { parseSendRecipientsJson } from "@/lib/io/client-io-send-recipients";
+import { clientIoSnapshotTotal } from "@/lib/io/client-io-document-data";
 
 export const CLIENT_IO_LIST_SELECT = `
   id, document_number, campaign_header_id, client_id, status, terms_html, terms_text, billing_terms,
-  attachment_url, generated_html_url, generated_pdf_url, document_generated_at,
+  attachment_url, generated_html_url, generated_pdf_url, document_generated_at, assignment_snapshot,
   sent_at, approved_at, approved_by_name, send_recipients, created_by, created_at, updated_at,
   revision_number, is_superseded, root_client_io_id, replaces_client_io_id,
   campaign:campaign_headers!client_ios_campaign_header_id_fkey(document_number, name, brand:brands(name)),
@@ -37,6 +38,7 @@ type ClientIoQueryRow = {
   approved_at: string | null;
   approved_by_name: string | null;
   send_recipients?: unknown;
+  assignment_snapshot?: unknown;
   revision_number?: number | null;
   is_superseded?: boolean | null;
   root_client_io_id?: string | null;
@@ -80,6 +82,7 @@ export function mapClientIoQueryRow(row: ClientIoQueryRow): ClientIoRow {
     client_io_terms_text: row.client?.client_io_terms_text ?? null,
     send_recipients: parseSendRecipientsJson(row.send_recipients),
     selected_assignment_ids: [],
+    generated_total: row.status !== "draft" ? clientIoSnapshotTotal(row.assignment_snapshot) : null,
     revision_number: Number(row.revision_number ?? 0),
     is_superseded: Boolean(row.is_superseded),
     root_client_io_id: row.root_client_io_id ?? null,

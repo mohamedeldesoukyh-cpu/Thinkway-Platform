@@ -1,6 +1,19 @@
 import { roundMoney } from "@/lib/vat/calculations";
 import { computeVatLine } from "@/lib/vat/calculations";
 
+/** Read-side billing from the commercial masters, including fees in the VAT base. */
+export function assignmentClientBilling(line: {
+  revenue_before_vat: number; usage_rights_amount?: number | null;
+  agency_fee_amount?: number | null; agency_fee_percent?: number | null;
+  revenue_vat_percent?: number | null; revenue_vat_exempt?: boolean | null;
+}) {
+  const beforeVat = resolveClientTaxableBase({ revenueBeforeVat: line.revenue_before_vat,
+    usageRightsAmount: line.usage_rights_amount ?? 0, agencyFeeAmount: line.agency_fee_amount,
+    agencyFeePercent: line.agency_fee_percent ?? 0 });
+  const vat = computeVatLine({ beforeVat, vatPercent: line.revenue_vat_percent ?? 0, exempt: Boolean(line.revenue_vat_exempt) });
+  return { subtotal: beforeVat, vatAmount: vat.vatAmount, totalBilling: vat.afterVat };
+}
+
 export function computeAgencyFeeAmount(
   revenueBeforeVat: number,
   usageRightsAmount: number,

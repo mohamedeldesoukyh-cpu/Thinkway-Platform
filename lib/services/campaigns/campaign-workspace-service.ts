@@ -40,7 +40,7 @@ import {
   parseLineAssignment,
   platformLabel,
 } from "@/lib/campaigns/line-assignment";
-import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
+import { rollupLineClientCommercial, assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
 import { aggregateCampaignDisplayFinancials } from "@/lib/campaigns/campaign-display-financials";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import {
@@ -539,8 +539,8 @@ export async function getCampaignWorkspace(
       agency_fee_percent: agencyFeePercent,
       agency_fee_amount: agencyFeeAmount,
       revenue_vat_percent: Number(line.revenue_vat_percent ?? 0),
-      revenue_vat_amount: Number(line.revenue_vat_amount ?? 0),
-      revenue_after_vat: Number(line.revenue_after_vat ?? revenue),
+      revenue_vat_amount: assignmentClientBilling({ ...line, revenue_before_vat: revenueBeforeVat }).vatAmount,
+      revenue_after_vat: assignmentClientBilling({ ...line, revenue_before_vat: revenueBeforeVat }).totalBilling,
       revenue_vat_exempt: line.revenue_vat_exempt ?? false,
       cost_fx_override: line.cost_fx_override ?? null,
       revenue_fx_override: line.revenue_fx_override ?? null,

@@ -100,7 +100,7 @@ import {
 import { formatPercent } from "@/features/campaigns/utils";
 import { resolveAssignmentPrimaryHandle } from "@/lib/campaigns/assignment-detail-presenters";
 import { cn } from "@/lib/utils";
-import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
+import { computeClientBilling, assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import {
   useOperationalChildColumnVisibleChecker,
@@ -618,6 +618,7 @@ export function AssignmentSafeGrid({
           </AssignmentGridRow>
           {preparedRows.map((row) => {
             const line = row.group.line;
+            const clientBilling = assignmentClientBilling(line);
             const expanded = gates.enableExpansion && expandedIds.has(row.lineId);
             const meta = row.meta;
             const selectable = gates.enableCheckboxes && meta.rowSelectable;
@@ -802,7 +803,7 @@ export function AssignmentSafeGrid({
                         {col("revenueVatPercent") ? <AssignmentGridCell columnId="revenueVatPercent" className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>{Number(line.revenue_vat_exempt ? 0 : line.revenue_vat_percent ?? 0).toFixed(1)}%</AssignmentGridCell> : null}
 {col("vat") ? (
                           <AssignmentGridCell columnId="vat" className={cn(SAFE_GRID_TD, ASSIGNMENT_GRID_VAT_COL, SAFE_GRID_AMOUNT, operationalZeroClass(line.revenue_vat_amount))}>
-                            {campaignMoney(line.revenue_vat_amount, resolveAssignmentLineCurrency(line), line.revenue_fx_override)}
+                            {campaignMoney(clientBilling.vatAmount, resolveAssignmentLineCurrency(line), line.revenue_fx_override)}
                           </AssignmentGridCell>
                         ) : null}
                         {col("totalBilling") ? (
@@ -811,7 +812,7 @@ export function AssignmentSafeGrid({
                               variant="billing"
                               className={operationalZeroClass(line.revenue_after_vat)}
                             >
-                              {campaignMoney(line.revenue_after_vat, resolveAssignmentLineCurrency(line), line.revenue_fx_override)}
+                              {campaignMoney(clientBilling.totalBilling, resolveAssignmentLineCurrency(line), line.revenue_fx_override)}
                             </AssignmentHighlightAmount>
                           </AssignmentGridCell>
                         ) : null}

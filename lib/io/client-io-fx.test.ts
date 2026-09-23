@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { clientIoFxRates } from "./client-io-fx";
 import { makeCreatorFx } from "@/lib/commercial/creator-fx";
 import { buildClientIoAssignmentSnapshot } from "./client-io-assignment-snapshot";
-import { loadClientIoDocumentData } from "./client-io-document-data";
+import { loadClientIoDocumentData, clientIoSnapshotTotal } from "./client-io-document-data";
 
 test("mixed-currency Client IO freezes custom rates and normal rates independently", async () => {
   const db = { rpc: async (_name: string, args: { p_from_currency: string }) => ({ data: args.p_from_currency === "USD" ? 52.2151 : 15.5, error: null }) };
@@ -50,6 +50,7 @@ test("Client IO document totals include custom FX for revenue, usage and fees an
   db.rpc = async () => { throw new Error("Frozen document must not request current FX"); };
   const frozen = await loadClientIoDocumentData(db as never, "io", null, { assignmentSnapshot: snapshot });
   assert.deepEqual(frozen.pricing, live.pricing);
+  assert.deepEqual(clientIoSnapshotTotal(snapshot), { amount: frozen.pricing.total, currency: "EGP", assignmentCount: 2 });
   assert.equal(frozen.pricing.revenueTotal, 43000);
   assert.equal(frozen.pricing.usageRightsTotal, 5500);
   assert.equal(frozen.pricing.agencyFeeTotal, 4850);

@@ -3,6 +3,8 @@
 import { isClientIoGenerated } from "@/lib/campaigns/sync-campaign-header-status";
 
 import { CampaignMoneyTotal } from "@/features/campaigns/components/campaign-money";
+import { assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
+import { formatMoney } from "@/features/campaigns/utils";
 import Link from "next/link";
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
@@ -166,8 +168,8 @@ export function ClientIoTab({
         },
         {
           key: "amount",
-          label: "Agreed amount",
-          value: <CampaignMoneyTotal currency={currencyCode} amounts={assignments.map(row => ({ amount: Number(row.revenue_before_vat) || 0, currency: row.currency_code || currencyCode }))} />,
+          label: io.generated_total ? `Generated total · ${io.generated_total.assignmentCount} assignments · incl. VAT` : "Selected total · incl. fees & VAT",
+          value: io.generated_total ? formatMoney(io.generated_total.amount, io.generated_total.currency) : <CampaignMoneyTotal currency={currencyCode} amounts={assignments.filter(row => io.selected_assignment_ids.includes(row.id)).map(row => ({ amount: assignmentClientBilling(row).totalBilling, currency: row.currency_code || currencyCode, override: row.revenue_fx_override }))} />,
           tone: "blue",
         },
       ]}

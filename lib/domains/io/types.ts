@@ -63,6 +63,7 @@ export type ClientIoRow = {
   send_recipients: Array<{ name: string; email: string }>;
   /** Release 2.2 — Assignments included in composition (`campaign_lines.id`). */
   selected_assignment_ids: string[];
+  generated_total?: { amount: number; currency: string; assignmentCount: number } | null;
   /** Release 2.2.B — 0 = original; 1+ = /A{n}. */
   revision_number: number;
   is_superseded: boolean;
