@@ -1,7 +1,7 @@
 "use client";
 
 import { CampaignSummaryMoney } from "@/features/campaigns/components/campaign-money";
-import { useCallback, useEffect, useState, useTransition, type ReactNode } from "react";
+import { useEffect, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -83,12 +83,11 @@ export function CampaignDetailChrome({
   const displayFxRateToEgp = Number(workspace.financials.display_fx_rate_to_egp) || 1;
   const [currencyPending, startCurrencyTransition] = useTransition();
 
-  const refreshWorkspace = useCallback(() => {
-    // router.refresh keeps the current path and complete query string. The
-    // workspace and nested section selections are therefore restored from the
-    // URL instead of sending the user back to the lifecycle entry stage.
-    router.refresh();
-  }, [router]);
+  const refreshWorkspace = () => {
+    // A full reload avoids a stale RSC cache while retaining the complete URL,
+    // including the active workspace and Finance section query parameters.
+    window.location.reload();
+  };
 
 
   useEffect(() => {
