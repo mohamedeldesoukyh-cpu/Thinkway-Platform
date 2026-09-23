@@ -5,6 +5,7 @@ import { test } from "node:test";
 
 import { canCreateCampaignFromQuotation } from "@/lib/commercial-sync/rules";
 import { buildQuotationConvertUnits } from "@/lib/domains/commercial/quotation-convert-selection";
+import { resolveLinePoBillableBase } from "@/lib/finance/po/billable-base";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
 test("D1: only approved quotations may convert", () => {
@@ -92,6 +93,23 @@ test("D3: package creates one convert unit", () => {
   assert.equal(units[0]?.kind, "package");
   assert.equal(units[0]?.memberItems.length, 2);
   assert.equal(units[0]?.primaryItem.revenue, 500);
+});
+
+test("quotation conversion seeds the PO with the same ex-VAT client billable base it consumes", () => {
+  assert.equal(
+    resolveLinePoBillableBase({
+      revenue_before_vat: 1_000,
+      usage_rights_amount: 0,
+      agency_fee_percent: 10,
+    }),
+    1_100
+  );
+
+  const src = readFileSync(
+    join(process.cwd(), "lib/services/campaigns/convert-quotation-to-assignments.ts"),
+    "utf8"
+  );
+  assert.match(src, /po_amount:\s*resolveLinePoBillableBase/);
 });
 
 test("convert service wires Path A behind feature flag", () => {
