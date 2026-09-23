@@ -37,16 +37,20 @@ import {
 import {
   extractCampaignScriptFileAction,
   addCampaignUnitScriptConversationMessageAction,
+  deleteCampaignUnitScriptConversationMessageAction,
   listCampaignUnitScriptConversationAction,
   loadCampaignScriptForUnitAction,
+  updateCampaignUnitScriptConversationMessageAction,
   saveCampaignScriptForUnitAction,
   translateCampaignScriptForUnitAction,
 } from "@/features/campaigns/actions/campaign-script-actions";
 import {
   extractClientCampaignScriptFileAction,
   addClientUnitScriptMessageAction,
+  deleteClientUnitScriptMessageAction,
   listClientUnitScriptConversationAction,
   loadClientCampaignScriptForUnitAction,
+  updateClientUnitScriptMessageAction,
   saveClientCampaignScriptForUnitAction,
   translateClientCampaignScriptForUnitAction,
 } from "@/features/client-workspace/actions/campaign-script-actions";
@@ -165,8 +169,14 @@ export function DocumentationUnitScriptSheet({
     body: string;
     authorDisplayName: string | null;
     createdAt: string;
+    editedAt?: string | null;
+    clientSeenAt?: string | null;
+    internalSeenAt?: string | null;
+    canEdit?: boolean;
   }>>([]);
   const [conversationBody, setConversationBody] = useState("");
+  const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+  const [editingMessageBody, setEditingMessageBody] = useState("");
   const [conversationAuthor, setConversationAuthor] =
     useState<"thinkway" | "client" | "creator">("thinkway");
   const [replaceBothLanguages, setReplaceBothLanguages] = useState(false);
@@ -309,6 +319,40 @@ export function DocumentationUnitScriptSheet({
           });
       if (latest.ok) setConversation(latest.data);
       toast.success(clientMode ? "Message sent to the creator." : "Conversation message saved.");
+    });
+  };
+
+  const refreshConversation = async () => {
+    if (!unit) return;
+    const result = clientMode
+      ? await listClientUnitScriptConversationAction({ token, assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId })
+      : await listCampaignUnitScriptConversationAction({ campaignId, assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId });
+    if (result.ok) setConversation(result.data);
+    else toast.error(result.message);
+  };
+
+  const editConversationMessage = (messageId: string, body: string, author?: "thinkway" | "client" | "creator") => {
+    if (!unit) return;
+    startTransition(async () => {
+      const result = clientMode
+        ? await updateClientUnitScriptMessageAction({ token, assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId, commentId: messageId, body })
+        : await updateCampaignUnitScriptConversationMessageAction({ campaignId, assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId, commentId: messageId, body, author });
+      if (!result.ok) { toast.error(result.message); return; }
+      setEditingMessageId(null);
+      await refreshConversation();
+      toast.success("Message updated.");
+    });
+  };
+
+  const deleteConversationMessage = (messageId: string) => {
+    if (!unit) return;
+    startTransition(async () => {
+      const result = clientMode
+        ? await deleteClientUnitScriptMessageAction({ token, assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId, commentId: messageId })
+        : await deleteCampaignUnitScriptConversationMessageAction({ campaignId, assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId, commentId: messageId });
+      if (!result.ok) { toast.error(result.message); return; }
+      await refreshConversation();
+      toast.success("Message deleted.");
     });
   };
 
@@ -927,10 +971,19 @@ export function DocumentationUnitScriptSheet({
               {conversation.map((message) => (
                 <div key={message.id} className="rounded-md bg-background px-3 py-2 text-sm">
                   <div className="mb-1 flex justify-between gap-2 text-xs text-muted-foreground">
-                    <span>{message.authorDisplayName || "Creator"}</span>
-                    <time>{new Date(message.createdAt).toLocaleString()}</time>
+                    <span>{message.authorDisplayName || "Creator"}{message.editedAt ? " · Edited" : ""}</span>
+                    <time>{new Date(message.createdAt).toLocaleString()} {(clientMode ? (message.canEdit ? message.internalSeenAt : message.clientSeenAt) : (message.authorDisplayName === "Thinkway" ? message.clientSeenAt : message.internalSeenAt)) ? "· Seen" : "· Sent"}</time>
                   </div>
-                  <p className="whitespace-pre-wrap">{message.body}</p>
+                  {editingMessageId === message.id ? (
+                    <div className="space-y-2">
+                      <Textarea value={editingMessageBody} onChange={(event) => setEditingMessageBody(event.target.value)} className="min-h-16 text-sm" disabled={pending} />
+                      <div className="flex gap-2"><Button type="button" size="sm" onClick={() => editConversationMessage(message.id, editingMessageBody)} disabled={pending || !editingMessageBody.trim()}>Save</Button><Button type="button" size="sm" variant="ghost" onClick={() => setEditingMessageId(null)}>Cancel</Button></div>
+                    </div>
+                  ) : <p className="whitespace-pre-wrap">{message.body}</p>}
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {message.canEdit !== false ? <><Button type="button" size="sm" variant="ghost" onClick={() => { setEditingMessageId(message.id); setEditingMessageBody(message.body); }} disabled={pending}>Edit</Button><Button type="button" size="sm" variant="ghost" onClick={() => deleteConversationMessage(message.id)} disabled={pending}>Delete</Button></> : null}
+                    {!clientMode ? <Select onValueChange={(value) => editConversationMessage(message.id, message.body, value as "thinkway" | "client" | "creator")}><SelectTrigger className="h-8 w-[210px] text-xs"><SelectValue placeholder="Change sender" /></SelectTrigger><SelectContent><SelectItem value="thinkway">Send as Thinkway</SelectItem><SelectItem value="client">Client (entered by Thinkway)</SelectItem><SelectItem value="creator">Creator (entered by Thinkway)</SelectItem></SelectContent></Select> : null}
+                  </div>
                 </div>
               ))}
             </div>

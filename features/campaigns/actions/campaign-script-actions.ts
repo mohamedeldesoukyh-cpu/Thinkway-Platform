@@ -32,7 +32,10 @@ import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import { createSupabaseServerClient, getRequestAuth } from "@/lib/supabase/server";
 import {
   addInternalComment,
+  deleteDocumentationComment,
   getDocumentationUnitDetail,
+  markDocumentationCommentsSeen,
+  updateDocumentationComment,
 } from "@/lib/services/deliverables/documentation-service";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -533,6 +536,14 @@ const SCRIPT_CONVERSATION_AUTHOR_LABEL: Record<ScriptConversationAuthor, string>
   creator: "Creator (entered by Thinkway)",
 };
 
+function scriptConversationAuthorName(
+  author: ScriptConversationAuthor,
+  names: Awaited<ReturnType<typeof loadCampaignScriptConversationDisplayNames>>
+) {
+  if (author === "thinkway") return SCRIPT_CONVERSATION_AUTHOR_LABEL.thinkway;
+  return author === "client" ? names.clientName : names.creatorName;
+}
+
 /**
  * The client, creator, and internal workspace all read the same creator-facing
  * thread. Internal-only documentation comments deliberately stay out of it.
@@ -551,6 +562,13 @@ export async function listCampaignUnitScriptConversationAction(input: {
   if (!unit.ok) return unit;
   const actor = await getReadActor();
   if (!actor.ok) return actor;
+  await markDocumentationCommentsSeen(actor.supabase, {
+    campaignHeaderId: unit.campaignId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+    assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    audience: "creator",
+    viewer: "internal",
+  });
   const detail = await getDocumentationUnitDetail(actor.supabase, {
     campaignHeaderId: unit.campaignId,
     assignmentDeliverableId: unit.assignmentDeliverableId,
@@ -569,6 +587,10 @@ export async function listCampaignUnitScriptConversationAction(input: {
       body: comment.body,
       authorDisplayName: scriptConversationAuthorDisplayName(comment.authorDisplayName, names),
       createdAt: comment.createdAt,
+      editedAt: comment.editedAt,
+      clientSeenAt: comment.clientSeenAt,
+      internalSeenAt: comment.internalSeenAt,
+      canEdit: true,
     })),
   };
 }
@@ -598,12 +620,7 @@ export async function addCampaignUnitScriptConversationMessageAction(input: {
   });
   const result = await addInternalComment(actor.supabase, {
     actorId: actor.userId,
-    actorDisplayName:
-      author === "thinkway"
-        ? SCRIPT_CONVERSATION_AUTHOR_LABEL.thinkway
-        : author === "client"
-          ? names.clientName
-          : names.creatorName,
+    actorDisplayName: scriptConversationAuthorName(author, names),
     campaignHeaderId: unit.campaignId,
     assignmentDeliverableId: unit.assignmentDeliverableId,
     assignmentPostScheduleId: unit.assignmentPostScheduleId,
@@ -617,6 +634,55 @@ export async function addCampaignUnitScriptConversationMessageAction(input: {
   revalidatePath(`/creator-portal/campaigns/${unit.campaignId}`);
   revalidatePath("/review/[reviewId]", "page");
   revalidatePath("/review/[reviewId]/[section]", "page");
+  return { ok: true, data: null };
+}
+
+export async function updateCampaignUnitScriptConversationMessageAction(input: {
+  campaignId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+  commentId: string;
+  body?: string;
+  author?: ScriptConversationAuthor;
+}): Promise<CampaignScriptActionResult<null>> {
+  const unit = parseUnitIds(input);
+  if (!unit.ok || !postIdSchema.safeParse(input.commentId).success) return { ok: false, message: "Message is missing." };
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const names = await loadCampaignScriptConversationDisplayNames(actor.supabase, {
+    campaignHeaderId: unit.campaignId, assignmentDeliverableId: unit.assignmentDeliverableId,
+  });
+  if (input.author && !(input.author in SCRIPT_CONVERSATION_AUTHOR_LABEL)) return { ok: false, message: "Choose who this message is from." };
+  const result = await updateDocumentationComment(actor.supabase, {
+    commentId: input.commentId, campaignHeaderId: unit.campaignId,
+    assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    audience: "creator", body: input.body,
+    authorDisplayName: input.author ? scriptConversationAuthorName(input.author, names) : undefined,
+  });
+  if (!result.ok) return result;
+  revalidatePath(campaignDetailPath(unit.campaignId));
+  revalidatePath("/review/[reviewId]", "page");
+  return { ok: true, data: null };
+}
+
+export async function deleteCampaignUnitScriptConversationMessageAction(input: {
+  campaignId: string;
+  assignmentDeliverableId: string;
+  assignmentPostScheduleId?: string | null;
+  commentId: string;
+}): Promise<CampaignScriptActionResult<null>> {
+  const unit = parseUnitIds(input);
+  if (!unit.ok || !postIdSchema.safeParse(input.commentId).success) return { ok: false, message: "Message is missing." };
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const result = await deleteDocumentationComment(actor.supabase, {
+    commentId: input.commentId, actorId: actor.userId, campaignHeaderId: unit.campaignId,
+    assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId,
+    audience: "creator",
+  });
+  if (!result.ok) return result;
+  revalidatePath(campaignDetailPath(unit.campaignId));
+  revalidatePath("/review/[reviewId]", "page");
   return { ok: true, data: null };
 }
 

@@ -218,6 +218,8 @@ test("Documentation UI opens a unit sheet and never loads the leftover campaign 
   assert.match(sheet, /loadCampaignScriptForUnitAction/);
   assert.match(sheet, /listCampaignUnitScriptConversationAction/);
   assert.match(sheet, /addCampaignUnitScriptConversationMessageAction/);
+  assert.match(sheet, /updateCampaignUnitScriptConversationMessageAction/);
+  assert.match(sheet, /deleteCampaignUnitScriptConversationMessageAction/);
   assert.match(sheet, /Shared with the client and creator/);
   assert.match(sheet, /saveCampaignScriptForUnitAction/);
   assert.match(sheet, /translateCampaignScriptForUnitAction/);
@@ -324,6 +326,8 @@ test("Client UI attaches Script to both publication-plan units and the relevant 
   assert.match(clientActions, /createCampaignScriptOriginalSignedUrlForUnit/);
   assert.match(clientActions, /actorKind: "client"/);
   assert.match(clientActions, /loadCampaignScriptConversationDisplayNames/);
+  assert.match(clientActions, /updateClientUnitScriptMessageAction/);
+  assert.match(clientActions, /deleteClientUnitScriptMessageAction/);
   assert.equal(clientActions.includes("saveCampaignScriptMaster("), false);
   assert.equal(clientActions.includes("loadCampaignScriptMaster("), false);
   assert.equal(clientActions.includes("campaign_script_assignments"), false);
@@ -342,6 +346,7 @@ test("Client UI attaches Script to both publication-plan units and the relevant 
   assert.match(contentReview, /loadClientCampaignScriptForUnitAction/);
   assert.match(contentReview, /listClientUnitScriptConversationAction/);
   assert.match(contentReview, /addClientUnitScriptMessageAction/);
+  assert.match(contentReview, /Collapse script/);
   assert.match(contentReview, /New script comment/);
   assert.match(contentReview, /Comment sent to Thinkway and the creator/);
 });

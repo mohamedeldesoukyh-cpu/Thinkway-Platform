@@ -342,6 +342,9 @@ export type DeliverableCommentView = {
   authorUserId: string | null;
   authorDisplayName: string | null;
   createdAt: string;
+  editedAt: string | null;
+  clientSeenAt: string | null;
+  internalSeenAt: string | null;
 };
 
 export type DeliverableDocumentationEventView = {

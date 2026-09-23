@@ -840,6 +840,108 @@ export async function addInternalComment(
   return { ok: true };
 }
 
+export async function updateDocumentationComment(
+  supabase: Supabase,
+  input: {
+    commentId: string;
+    campaignHeaderId: string;
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId: string | null;
+    body?: string;
+    authorDisplayName?: string;
+    audience?: DocumentationAudience;
+    allowedAuthorDisplayNames?: string[];
+  }
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  const changes: Record<string, string> = { edited_at: new Date().toISOString() };
+  if (input.body !== undefined) {
+    const body = input.body.trim();
+    if (!body) return { ok: false, message: "Comment body is required." };
+    changes.body = body;
+  }
+  if (input.authorDisplayName !== undefined) changes.author_display_name = input.authorDisplayName;
+  let query = supabase
+    .from("deliverable_comments")
+    .update(changes as never)
+    .eq("id", input.commentId)
+    .eq("campaign_header_id", input.campaignHeaderId)
+    .eq("assignment_deliverable_id", input.assignmentDeliverableId)
+    .is("deleted_at", null);
+  query = input.assignmentPostScheduleId
+    ? query.eq("assignment_post_schedule_id", input.assignmentPostScheduleId)
+    : query.is("assignment_post_schedule_id", null);
+  if (input.audience) query = query.eq("audience", input.audience);
+  if (input.allowedAuthorDisplayNames?.length) {
+    query = query.in("author_display_name", input.allowedAuthorDisplayNames);
+  }
+  const { data, error } = await query.select("id").maybeSingle();
+  if (error || !data) return { ok: false, message: error?.message ?? "That message can no longer be edited." };
+  return { ok: true };
+}
+
+export async function deleteDocumentationComment(
+  supabase: Supabase,
+  input: {
+    commentId: string;
+    campaignHeaderId: string;
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId: string | null;
+    actorId: string | null;
+    audience?: DocumentationAudience;
+    allowedAuthorDisplayNames?: string[];
+  }
+): Promise<{ ok: true } | { ok: false; message: string }> {
+  let query = supabase
+    .from("deliverable_comments")
+    .update({ deleted_at: new Date().toISOString() } as never)
+    .eq("id", input.commentId)
+    .eq("campaign_header_id", input.campaignHeaderId)
+    .eq("assignment_deliverable_id", input.assignmentDeliverableId)
+    .is("deleted_at", null);
+  query = input.assignmentPostScheduleId
+    ? query.eq("assignment_post_schedule_id", input.assignmentPostScheduleId)
+    : query.is("assignment_post_schedule_id", null);
+  if (input.audience) query = query.eq("audience", input.audience);
+  if (input.allowedAuthorDisplayNames?.length) query = query.in("author_display_name", input.allowedAuthorDisplayNames);
+  const { data, error } = await query.select("id").maybeSingle();
+  if (error || !data) return { ok: false, message: error?.message ?? "That message can no longer be deleted." };
+  await logEvent(supabase, {
+    campaignHeaderId: input.campaignHeaderId,
+    assignmentDeliverableId: input.assignmentDeliverableId,
+    assignmentPostScheduleId: input.assignmentPostScheduleId,
+    commentId: input.commentId,
+    eventType: "delete",
+    actorUserId: input.actorId,
+    payload: { audience: input.audience ?? "internal", kind: "comment" },
+  });
+  return { ok: true };
+}
+
+export async function markDocumentationCommentsSeen(
+  supabase: Supabase,
+  input: {
+    campaignHeaderId: string;
+    assignmentDeliverableId: string;
+    assignmentPostScheduleId: string | null;
+    audience: DocumentationAudience;
+    viewer: "client" | "internal";
+  }
+) {
+  const column = input.viewer === "client" ? "client_seen_at" : "internal_seen_at";
+  let query = supabase
+    .from("deliverable_comments")
+    .update({ [column]: new Date().toISOString() } as never)
+    .eq("campaign_header_id", input.campaignHeaderId)
+    .eq("assignment_deliverable_id", input.assignmentDeliverableId)
+    .eq("audience", input.audience)
+    .is("deleted_at", null)
+    .is(column, null);
+  query = input.assignmentPostScheduleId
+    ? query.eq("assignment_post_schedule_id", input.assignmentPostScheduleId)
+    : query.is("assignment_post_schedule_id", null);
+  await query;
+}
+
 export async function createSignedAssetDownloadUrl(
   supabase: Supabase,
   input: {
@@ -1196,6 +1298,9 @@ async function loadComments(
     authorUserId: row.author_user_id,
     authorDisplayName: row.author_display_name,
     createdAt: row.created_at,
+    editedAt: row.edited_at ?? null,
+    clientSeenAt: row.client_seen_at ?? null,
+    internalSeenAt: row.internal_seen_at ?? null,
   }));
 }
 
