@@ -19,6 +19,10 @@ import {
 import { CAMPAIGN_SCRIPT_FILE_MAX_BYTES } from "@/lib/campaign-script/types";
 import { createCampaignScriptOriginalSignedUrlForUnit } from "@/lib/campaign-script/original-document";
 import {
+  loadCampaignScriptConversationDisplayNames,
+  scriptConversationAuthorDisplayName,
+} from "@/lib/campaign-script/conversation-display-names";
+import {
   addInternalComment,
   getDocumentationUnitDetail,
 } from "@/lib/services/deliverables/documentation-service";
@@ -158,12 +162,20 @@ export async function listClientUnitScriptConversationAction(input: {
     commentAudience: "creator",
     includeEvents: false,
   });
-  return { ok: true, data: (detail?.comments ?? []).reverse().map((comment) => ({
-    id: comment.id,
-    body: comment.body,
-    authorDisplayName: comment.authorDisplayName,
-    createdAt: comment.createdAt,
-  })) };
+  const names = await loadCampaignScriptConversationDisplayNames(db(), {
+    campaignHeaderId: access.campaignHeaderId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+    clientFallback: access.review.clientLabel,
+  });
+  return {
+    ok: true,
+    data: (detail?.comments ?? []).reverse().map((comment) => ({
+      id: comment.id,
+      body: comment.body,
+      authorDisplayName: scriptConversationAuthorDisplayName(comment.authorDisplayName, names),
+      createdAt: comment.createdAt,
+    })),
+  };
 }
 
 export async function addClientUnitScriptMessageAction(input: {

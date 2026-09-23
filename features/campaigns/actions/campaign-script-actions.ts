@@ -8,6 +8,10 @@ import { extractCampaignScriptText } from "@/lib/campaign-script/extract-text";
 import { loadCampaignScriptMaster, loadCampaignScriptForUnit, listAttachedCampaignScriptPresence } from "@/lib/campaign-script/load-master";
 import { saveCampaignScriptMaster, saveCampaignScriptForUnit } from "@/lib/campaign-script/save-master";
 import { createCampaignScriptOriginalSignedUrlForUnit } from "@/lib/campaign-script/original-document";
+import {
+  loadCampaignScriptConversationDisplayNames,
+  scriptConversationAuthorDisplayName,
+} from "@/lib/campaign-script/conversation-display-names";
 import { queueCampaignScriptAssignmentTranslation, queueCampaignScriptTranslation } from "@/lib/campaign-script/queue";
 import { applyMasterScriptToLineIds, customizeCampaignScriptAssignment, listCreatorScriptStatuses, loadCampaignScriptAssignmentById, previewApplyMasterScriptToLineIds, reapplyMasterToCampaignScriptAssignment } from "@/lib/campaign-script/assignments";
 import {
@@ -554,12 +558,16 @@ export async function listCampaignUnitScriptConversationAction(input: {
     commentAudience: "creator",
     includeEvents: false,
   });
+  const names = await loadCampaignScriptConversationDisplayNames(actor.supabase, {
+    campaignHeaderId: unit.campaignId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+  });
   return {
     ok: true,
     data: (detail?.comments ?? []).reverse().map((comment) => ({
       id: comment.id,
       body: comment.body,
-      authorDisplayName: comment.authorDisplayName,
+      authorDisplayName: scriptConversationAuthorDisplayName(comment.authorDisplayName, names),
       createdAt: comment.createdAt,
     })),
   };
@@ -584,12 +592,18 @@ export async function addCampaignUnitScriptConversationMessageAction(input: {
   }
   const actor = await getWriteActor();
   if (!actor.ok) return actor;
+  const names = await loadCampaignScriptConversationDisplayNames(actor.supabase, {
+    campaignHeaderId: unit.campaignId,
+    assignmentDeliverableId: unit.assignmentDeliverableId,
+  });
   const result = await addInternalComment(actor.supabase, {
     actorId: actor.userId,
     actorDisplayName:
       author === "thinkway"
         ? SCRIPT_CONVERSATION_AUTHOR_LABEL.thinkway
-        : SCRIPT_CONVERSATION_AUTHOR_LABEL[author],
+        : author === "client"
+          ? names.clientName
+          : names.creatorName,
     campaignHeaderId: unit.campaignId,
     assignmentDeliverableId: unit.assignmentDeliverableId,
     assignmentPostScheduleId: unit.assignmentPostScheduleId,
