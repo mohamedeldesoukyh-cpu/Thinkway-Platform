@@ -1,5 +1,7 @@
 "use client";
 
+import { isClientIoGenerated } from "@/lib/campaigns/sync-campaign-header-status";
+
 import { CampaignCurrencyProvider } from "./campaign-money";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -296,7 +298,7 @@ export function CampaignWorkspaceView({
   const tabCounts = useMemo(
     () => ({
       lines: workspace.lines.length,
-      clientIo: workspace.client_io ? 1 : 0,
+      clientIo: isClientIoGenerated(workspace.client_io) ? 1 : 0,
       vendorIo: vendorIos.length,
       deliverables: operationalDeliverableCount,
       publications:

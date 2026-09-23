@@ -201,34 +201,19 @@ export async function getCampaignClientIo(campaignHeaderId: string): Promise<Cli
   const result = await safeOperationalQuery(
     "io:getCampaignClientIo",
     async () => {
-      const { supabase, user } = await requireUser();
-      const { data } = await (supabase as any).rpc("ensure_client_io_for_campaign", {
-        p_campaign_header_id: campaignHeaderId,
-        p_actor_id: user.id,
-      });
-
-      const clientIoId = data as string | null;
-      if (!clientIoId) {
-        return null;
-      }
-
-      const { ensureClientIoAssignmentsSeeded } = await import(
-        "@/lib/io/client-io-assignments"
-      );
-      try {
-        await ensureClientIoAssignmentsSeeded(supabase, {
-          clientIoId,
-          campaignHeaderId,
-        });
-      } catch (error) {
-        console.warn("[io:getCampaignClientIo] assignment seed skipped", error);
-      }
-
-      const row = await fetchClientIoRow(supabase, clientIoId);
-      if (!row) {
-        throw new Error("Client IO not found.");
-      }
-
+      const { supabase } = await requireUser();
+      // Reading a campaign must never create or seed a commercial document.
+      const { data, error } = await supabase
+        .from("client_ios")
+        .select("id")
+        .eq("campaign_header_id", campaignHeaderId)
+        .eq("is_superseded", false)
+        .order("revision_number", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      if (!data) return null;
+      const row = await fetchClientIoRow(supabase, (data as { id: string }).id);
       return row;
     },
     null

@@ -134,3 +134,39 @@ describe("Campaign.isFinanceLocked platform gateway", () => {
     );
   });
 });
+
+describe("Client IO draft finance boundary", () => {
+  const evaluate = (clientIos: Row[], extra: Record<string, Row[]> = {}) => isCampaignFinanceLocked(mockSupabase({
+    campaign_headers: [{ id: "ch1", start_date: "2026-07-01" }],
+    financial_periods: [{ year: 2026, month: 7, status: "open" }],
+    client_ios: clientIos.map(row => ({ campaign_header_id: "ch1", ...row })),
+    ...extra,
+  }), "ch1");
+
+  it("does not lock for a draft with only template terms", async () => {
+    const result = await evaluate([{ id: "draft", status: "draft", terms_html: "Standard terms" }]);
+    assert.equal(result.locked, false);
+    assert.deepEqual(result.reasons, []);
+  });
+
+  it("retains the lock for generated, sent, approved, and prior issued revisions", async () => {
+    for (const status of ["generated", "sent", "approved", "rejected", "cancelled"]) {
+      const result = await evaluate([{ status: "draft" }, { status, is_superseded: true }]);
+      assert.equal(result.locked, true);
+      assert.ok(result.reasons.includes("client_io"));
+    }
+  });
+
+  it("retains the lock when a draft still has evidence of issuance", async () => {
+    for (const field of ["document_generated_at", "generated_html_url", "generated_pdf_url", "sent_at", "approved_at", "attachment_url"]) {
+      assert.equal((await evaluate([{ status: "draft", [field]: "issued" }])).locked, true);
+    }
+  });
+
+  it("does not bypass other finance documents when the Client IO is a draft", async () => {
+    const result = await evaluate([{ status: "draft" }], { invoices: [{ id: "inv", campaign_header_id: "ch1" }] });
+    assert.equal(result.locked, true);
+    assert.ok(result.reasons.includes("invoice"));
+    assert.ok(!result.reasons.includes("client_io"));
+  });
+});

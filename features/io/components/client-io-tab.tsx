@@ -1,5 +1,7 @@
 "use client";
 
+import { isClientIoGenerated } from "@/lib/campaigns/sync-campaign-header-status";
+
 import { CampaignMoneyTotal } from "@/features/campaigns/components/campaign-money";
 import Link from "next/link";
 import { useActionState, useEffect } from "react";
@@ -139,7 +141,7 @@ export function ClientIoTab({
         {
           key: "generated",
           label: "Generated",
-          value: String(Math.max(versions.length || 1, io.status === "draft" ? 0 : 1)),
+          value: String(versions.length ? versions.filter(isClientIoGenerated).length : Number(isClientIoGenerated(io))),
           tone: "blue",
         },
         {
