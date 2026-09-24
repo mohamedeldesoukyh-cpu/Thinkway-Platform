@@ -294,7 +294,26 @@ function ContentReviewPane({
   }, [conversationOpen, loadConversation]);
 
   return (
-    <div className="cx-pane">
+    <>
+      <section className="cx-review__stage" aria-label="Content preview">
+        <p className="cx-review__stage-label">Content preview</p>
+        <div className="cx-rev__media">
+          {item.previewKind !== "none" || googleDriveFilePreviewUrl(item.externalUrl) ? (
+            <ContentPreview item={item} token={token} />
+          ) : (
+            <div className="cx-rev__ph">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="#5b6478" aria-hidden="true">
+                <path d="M8 5v14l11-7z" />
+              </svg>
+              <span>
+                {item.assetTypeLabel} · v{item.versionNumber}
+              </span>
+            </div>
+          )}
+        </div>
+        <p className="cx-review__stage-file">{item.fileName || item.deliverable}</p>
+      </section>
+      <div className="cx-pane cx-review__detail">
       <div className="cx-rev__head">
         <div className="cx-rev__who">
           <CreatorAvatar
@@ -315,20 +334,6 @@ function ContentReviewPane({
       </div>
 
       <div className="cx-rev">
-        <div className="cx-rev__media">
-          {item.previewKind !== "none" || googleDriveFilePreviewUrl(item.externalUrl) ? (
-            <ContentPreview item={item} token={token} />
-          ) : (
-            <div className="cx-rev__ph">
-              <svg width="30" height="30" viewBox="0 0 24 24" fill="#5b6478" aria-hidden="true">
-                <path d="M8 5v14l11-7z" />
-              </svg>
-              <span>
-                {item.assetTypeLabel} · v{item.versionNumber}
-              </span>
-            </div>
-          )}
-        </div>
         <div>
           <div className="cx-rev__meta" style={{ marginTop: 0, borderTop: "none", paddingTop: 0 }}>
             <div>
@@ -489,7 +494,8 @@ function ContentReviewPane({
           ) : null}
         </div>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
 
@@ -620,7 +626,16 @@ export function ContentToReview({
                     {item.externalUrl ? <a className="btn" href={item.externalUrl} target="_blank" rel="noopener noreferrer">{VIEW_EXTERNAL_LINK_LABEL}</a> : null}
                   </div>
                 </div>
-                {item.previewKind !== "none" || googleDriveFilePreviewUrl(item.externalUrl) ? <ApprovedContentPreview item={item} token={token} /> : null}
+                {item.previewKind !== "none" || googleDriveFilePreviewUrl(item.externalUrl) ? (
+                  <div className="cx-approved-card__media">
+                    <ApprovedContentPreview item={item} token={token} />
+                    <div className="cx-approved-card__hover-actions" aria-label="Content actions">
+                      {item.canDownloadOriginal ? <a className="btn" href={clientContentAssetUrl({ token, versionId: item.versionId, mode: "download" })}>{DOWNLOAD_ORIGINAL_LABEL}</a> : null}
+                      {item.previewKind !== "none" && item.canDownloadOriginal ? <ClientContentFullSizeButton token={token} versionId={item.versionId} kind={item.previewKind} title={item.fileName || item.deliverable} /> : null}
+                      {item.externalUrl ? <a className="btn" href={item.externalUrl} target="_blank" rel="noopener noreferrer">{VIEW_EXTERNAL_LINK_LABEL}</a> : null}
+                    </div>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
