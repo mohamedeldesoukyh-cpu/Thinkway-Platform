@@ -48,17 +48,15 @@ export default async function VendorIoPreviewPage({ params }: PageProps) {
         />
         <a
           className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-          href={`/api/vendor-ios/${id}/document?format=html`}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`/api/vendor-ios/${id}/document?format=html&download=1`}
+          download
         >
           Download HTML
         </a>
         <a
           className="inline-flex h-8 items-center rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"
-          href={`/api/vendor-ios/${id}/document?format=pdf`}
-          target="_blank"
-          rel="noopener noreferrer"
+          href={`/api/vendor-ios/${id}/document?format=pdf&download=1`}
+          download
         >
           Download PDF
         </a>

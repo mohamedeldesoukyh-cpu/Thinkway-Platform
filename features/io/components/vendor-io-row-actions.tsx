@@ -63,11 +63,10 @@ export function VendorIoRowActions({ row, onViewDetail }: Props) {
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
             <a
-              href={`/api/vendor-ios/${row.id}/document?format=pdf`}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={`/api/vendor-ios/${row.id}/document?format=pdf&download=1`}
+              download
             >
-              Open PDF
+              Download PDF
             </a>
           </DropdownMenuItem>
           {signedUrl ? (
