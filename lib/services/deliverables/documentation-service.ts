@@ -1291,17 +1291,25 @@ async function loadComments(
   }
 
   const { data } = await query;
-  return (data ?? []).map((row) => ({
-    id: row.id,
-    audience: row.audience as DocumentationAudience,
-    body: row.body,
-    authorUserId: row.author_user_id,
-    authorDisplayName: row.author_display_name,
-    createdAt: row.created_at,
-    editedAt: row.edited_at ?? null,
-    clientSeenAt: row.client_seen_at ?? null,
-    internalSeenAt: row.internal_seen_at ?? null,
-  }));
+  return (data ?? []).map((row) => {
+    // The migration introduces these optional fields; retain compatibility with
+    // generated database types until the next schema type refresh.
+    const comment = row as typeof row & {
+      client_seen_at?: string | null;
+      internal_seen_at?: string | null;
+    };
+    return {
+      id: comment.id,
+      audience: comment.audience as DocumentationAudience,
+      body: comment.body,
+      authorUserId: comment.author_user_id,
+      authorDisplayName: comment.author_display_name,
+      createdAt: comment.created_at,
+      editedAt: comment.edited_at ?? null,
+      clientSeenAt: comment.client_seen_at ?? null,
+      internalSeenAt: comment.internal_seen_at ?? null,
+    };
+  });
 }
 
 async function loadEvents(
