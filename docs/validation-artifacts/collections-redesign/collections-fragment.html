@@ -1,0 +1,165 @@
+<style>
+/* ═══ Collections — only what the spec has no component for ═══ */
+.tw-deck{display:grid;grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:12px;
+ margin-bottom:11px}                                   /* §6 dashboard-card deck */
+.tw-deck2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:11px;
+ padding:14px 15px}
+.tw-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:13px;
+ padding:15px;border-bottom:1px solid var(--tw-hair)}
+.tw-fc{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;padding:18px 15px;
+ align-items:end;height:168px;border-bottom:1px solid var(--tw-hair)}
+.tw-fc__b{display:flex;flex-direction:column;justify-content:flex-end;height:100%;text-align:center}
+.tw-fc__b s{display:block;min-height:3px;border-radius:5px 5px 0 0;text-decoration:none;
+ background:var(--tw-grad);margin-bottom:7px}
+.tw-fc__b b{font-size:10px;font-weight:600;color:var(--tw-ink2)}
+.tw-fc__b em{display:block;font-style:normal;margin-top:2px;
+ font:500 10px 'Geist Mono',monospace;color:var(--tw-mut)}
+.tw-mr .tw-b[data-s]{gap:6px}
+@media(max-width:1000px){.tw-deck{grid-template-columns:1fr}
+ .tw-fc{grid-template-columns:repeat(4,1fr);height:auto;row-gap:16px}}
+@media(max-width:560px){.tw-fc{grid-template-columns:repeat(2,1fr)}}
+
+</style>
+<!-- §6 Masthead — one band replacing three. No separate KPI cards above a table. -->
+<div class="tw-mast">
+ <div class="tw-mh"><span class="id">A/R</span><h1>Collections</h1>
+  <span class="sub">Aging, receivables and collection performance · aged from the <b>due date</b>,
+   as of 24 Sep 26</span>
+  <span class="tw-sp"></span><span class="st">EGP presentation</span></div>
+
+ <div class="tw-mb"><span class="lb">Blocker</span>
+  <span><span class="msg">Every open balance is past due</span>
+   <span class="sub">100% of A/R sits in 31–60 days. Production reports “over 40%”, which is a
+    hard-coded string — §13.</span></span>
+  <span class="tw-sp"></span><button class="go">Open A/R aging</button></div>
+
+ <div class="tw-mr">
+  <button class="tw-b sm pri" data-s="dash">Collections dashboard</button><button class="tw-b sm" data-s="aging">A/R aging <span class="tw-cc">1</span></button><button class="tw-b sm" data-s="overdue">Overdue management <span class="tw-cc">1</span></button><button class="tw-b sm" data-s="stmt">Client statements</button><button class="tw-b sm" data-s="fcast">Collections forecast</button><button class="tw-b sm" data-s="record">Record client payment</button>
+  <span class="tw-sp"></span>
+  <select class="tw-in" style="width:150px;height:27px"><option>All clients</option>
+   <option>Wavemaker</option><option>Mind Share Egypt LTD</option></select>
+  <button class="tw-b sm">Reset</button></div>
+
+ <div class="tw-ms2">
+  <div><i>Total outstanding</i><b>1,007,096.00</b></div>
+  <div><i>Overdue</i><b class="r">1,007,096.00</b></div>
+  <div><i>Current</i><b class="s">—</b></div>
+  <div><i>Collected MTD</i><b class="s">—</b></div>
+  <div><i>Expected</i><b class="s">—</b></div>
+  <div><i>DSO days</i><b class="s">—</b></div>
+  <div><i>Bad debt 90+</i><b class="s">—</b></div>
+  <div><i>Open invoices</i><b>1</b></div>
+ </div>
+</div>
+
+<section data-p="dash">
+ <div class="tw-deck">
+  <div class="tw-dc2 alert"><div class="tw-dc2__h"><b>Overdue receivables</b>
+   <u>Every open balance is past due</u></div>
+   <div class="tw-pad"><div class="tw-st"><span><i>Past due</i><b class="bad">1,007,096.00</b></span>
+    <span><i>Invoices</i><b>1</b></span></div>
+   <p class="tw-hint">Production reports “over 40% of AR is past due”. It is 100%.</p></div></div>
+
+  <div class="tw-dc2 alert"><div class="tw-dc2__h"><b>Single-client concentration</b>
+   <u>Wavemaker carries the whole book</u></div>
+   <div class="tw-pad"><div class="tw-st"><span><i>Share of A/R</i><b class="bad">100%</b></span>
+    <span><i>Clients</i><b>2</b></span></div>
+   <p class="tw-hint">Mind Share Egypt LTD has no issued invoice.</p></div></div>
+
+  <div class="tw-dc2 n"><div class="tw-dc2__h"><b>Collection activity</b>
+   <u>Nothing recorded this month</u></div>
+   <div class="tw-pad"><div class="tw-st"><span><i>Collected MTD</i><b>—</b></span>
+    <span><i>Last contact</i><b>not set</b></span></div>
+   <p class="tw-hint">No receipt has been posted and no reminder logged against INV-2026-2.</p></div></div>
+ </div>
+
+ <div class="tw-c"><div class="tw-ch"><span class="tw-ct">A/R aging</span>
+   <span class="tw-cs">Client → invoice · buckets as columns</span><span class="tw-sp"></span>
+   <button class="tw-b sm">Open treasury dashboard</button></div>
+  <div class="tw-sc"><div style="min-width:1000px"><div class="tw-g tw-hr" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span>Client</span><span class="tw-rr">Current</span><span class="tw-rr">1–30</span><span class="tw-rr">31–60</span><span class="tw-rr">61–90</span><span class="tw-rr">90+</span><span class="tw-rr">Total A/R</span><span class="tw-rr">% overdue</span></div><div class="tw-g tw-r" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span><button class="tw-b sm" aria-expanded="true">−</button></span><span class="tw-t"><b>Wavemaker</b></span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v">100%</span></div><div class="tw-ad"><div class="tw-g tw-adh" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span>Invoice · issued · due</span><span class="tw-rr">Current</span><span class="tw-rr">1–30</span><span class="tw-rr">31–60</span><span class="tw-rr">61–90</span><span class="tw-rr">90+</span><span class="tw-rr">Open</span><span class="tw-rr">Days</span></div><div class="tw-g tw-adr" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span class="tw-t"><span class="tw-code">INV-2026-2</span> · 12 Jul 26 → due 26 Jul 26</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v">60</span></div><div class="tw-g tw-adf" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span>1 invoice</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span></span></div></div><div class="tw-g tw-r" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span><button class="tw-b sm" aria-expanded="false">+</button></span><span class="tw-t"><b>Mind Share Egypt LTD</b></span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span></div><div class="tw-ad"><div class="tw-note">No open invoice for this client. Nothing has been issued, so there is nothing to age — this is not a filter result.</div></div><div class="tw-g tw-ft" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span>2 clients</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v">100%</span></div></div></div></div>
+</section>
+
+<section data-p="aging" hidden>
+ <div class="tw-c"><div class="tw-ch"><span class="tw-ct">A/R aging</span>
+   <span class="tw-cs">Aged from the due date · reference 24 Sep 26</span>
+   <span class="tw-sp"></span><button class="tw-b sm">Export</button></div>
+  <div class="tw-sc"><div style="min-width:1000px"><div class="tw-g tw-hr" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span>Client</span><span class="tw-rr">Current</span><span class="tw-rr">1–30</span><span class="tw-rr">31–60</span><span class="tw-rr">61–90</span><span class="tw-rr">90+</span><span class="tw-rr">Total A/R</span><span class="tw-rr">% overdue</span></div><div class="tw-g tw-r" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span><button class="tw-b sm" aria-expanded="true">−</button></span><span class="tw-t"><b>Wavemaker</b></span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v">100%</span></div><div class="tw-ad"><div class="tw-g tw-adh" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span>Invoice · issued · due</span><span class="tw-rr">Current</span><span class="tw-rr">1–30</span><span class="tw-rr">31–60</span><span class="tw-rr">61–90</span><span class="tw-rr">90+</span><span class="tw-rr">Open</span><span class="tw-rr">Days</span></div><div class="tw-g tw-adr" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span class="tw-t"><span class="tw-code">INV-2026-2</span> · 12 Jul 26 → due 26 Jul 26</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v">60</span></div><div class="tw-g tw-adf" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span>1 invoice</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span></span></div></div><div class="tw-g tw-r" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span><button class="tw-b sm" aria-expanded="false">+</button></span><span class="tw-t"><b>Mind Share Egypt LTD</b></span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v z">—</span></div><div class="tw-ad"><div class="tw-note">No open invoice for this client. Nothing has been issued, so there is nothing to age — this is not a filter result.</div></div><div class="tw-g tw-ft" style="--cols:28px minmax(186px,1.3fr) 108px 108px 108px 108px 108px 126px 86px"><span></span><span>2 clients</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v z">—</span><span class="tw-v z">—</span><span class="tw-v">1,007,096.00</span><span class="tw-v">100%</span></div></div></div>
+  <div class="tw-note">Buckets with no invoice read — rather than 0.00 — §8.2. <b>Current</b> is
+   shown even when empty so “issued, not yet due” stays distinguishable from “overdue” — §8.4.</div></div>
+</section>
+
+<section data-p="overdue" hidden>
+ <div class="tw-c"><div class="tw-ch"><span class="tw-ct">Overdue management</span>
+   <span class="tw-cs">1 invoice · 1,007,096 EGP past due</span><span class="tw-sp"></span>
+   <span class="tw-seg"><button aria-pressed="true">All</button>
+    <button aria-pressed="false">31–60</button><button aria-pressed="false">61–90</button>
+    <button aria-pressed="false">90+</button></span>
+   <button class="tw-b sm">Send reminders</button></div>
+  <div class="tw-sc"><div style="min-width:1040px"><div class="tw-g tw-hr" style="--cols:88px minmax(148px,1.2fr) 96px 96px 78px 106px 128px 112px 166px"><span>Invoice</span><span>Client</span><span>Issued</span><span>Due</span><span class="tw-rr">Days</span><span>Bucket</span><span class="tw-rr">Outstanding</span><span>Last contact</span><span></span></div><div class="tw-g tw-r wrn" style="--cols:88px minmax(148px,1.2fr) 96px 96px 78px 106px 128px 112px 166px"><span class="tw-code">INV-2026-2</span><span class="tw-t">Wavemaker</span><span class="tw-t">12 Jul 26</span><span class="tw-t">26 Jul 26</span><span class="tw-v">60</span><span><span class="tw-p p-y">31–60 days</span></span><span class="tw-v">1,007,096.00</span><span class="tw-miss">not set</span><span style="display:flex;gap:4px;justify-content:flex-end"><button class="tw-b sm">Remind</button><button class="tw-b sm">Record</button><button class="tw-b sm pri">Open</button></span></div><div class="tw-g tw-ft" style="--cols:88px minmax(148px,1.2fr) 96px 96px 78px 106px 128px 112px 166px"><span>1 invoice</span><span></span><span></span><span></span><span class="tw-v">60</span><span></span><span class="tw-v">1,007,096.00</span><span></span><span></span></div></div></div></div>
+</section>
+
+<section data-p="stmt" hidden>
+ <div class="tw-c"><div class="tw-ch"><span class="tw-ct">Client statements</span>
+   <span class="tw-cs">Pick a client</span></div>
+  <div class="tw-deck2">
+   <div class="tw-k"><i>Wavemaker</i><b>1,007,096.00</b><u>1 invoice · all past due</u></div>
+   <div class="tw-k"><i>Mind Share Egypt LTD</i><b>—</b><u>no invoice issued</u></div></div>
+  <div class="tw-ch" style="border-top:1px solid var(--tw-hair)">
+   <span class="tw-ct">Wavemaker — statement of account</span>
+   <span class="tw-cs">as of 24 Sep 26</span><span class="tw-sp"></span>
+   <button class="tw-b sm">Email</button><button class="tw-b sm pri">Export PDF</button></div>
+  <div class="tw-g tw-hr" style="--cols:96px 106px 106px minmax(140px,1fr) 126px 126px">
+   <span>Invoice</span><span>Issued</span><span>Due</span><span>Campaign</span>
+   <span class="tw-rr">Invoiced</span><span class="tw-rr">Open</span></div>
+  <div class="tw-g tw-r" style="--cols:96px 106px 106px minmax(140px,1fr) 126px 126px">
+   <span class="tw-code">INV-2026-2</span><span class="tw-t">12 Jul 26</span>
+   <span class="tw-t">26 Jul 26</span><span class="tw-t">Limitless UAE August 2026</span>
+   <span class="tw-v">1,007,096.00</span><span class="tw-v">1,007,096.00</span></div>
+  <div class="tw-g tw-ft" style="--cols:96px 106px 106px minmax(140px,1fr) 126px 126px">
+   <span>1 invoice</span><span></span><span></span><span></span>
+   <span class="tw-v">1,007,096.00</span><span class="tw-v">1,007,096.00</span></div></div>
+</section>
+
+<section data-p="fcast" hidden>
+ <div class="tw-c"><div class="tw-ch"><span class="tw-ct">Collections &amp; cashflow forecast</span>
+   <span class="tw-cs">From open A/R due dates · no prediction</span></div>
+  <div class="tw-fc"><div class="tw-fc__b"><s style="height:28%"></s><b>Wk 1</b><em>220,000</em></div><div class="tw-fc__b"><s style="height:0%"></s><b>Wk 2</b><em>—</em></div><div class="tw-fc__b"><s style="height:0%"></s><b>Wk 3</b><em>—</em></div><div class="tw-fc__b"><s style="height:0%"></s><b>Wk 4</b><em>—</em></div><div class="tw-fc__b"><s style="height:0%"></s><b>Wk 5</b><em>—</em></div><div class="tw-fc__b"><s style="height:0%"></s><b>Wk 6</b><em>—</em></div><div class="tw-fc__b"><s style="height:0%"></s><b>Wk 7</b><em>—</em></div><div class="tw-fc__b"><s style="height:100%"></s><b>Wk 8</b><em>787,096</em></div></div>
+  <div class="tw-note wrn">Both instalments are already past due, so these are recovery dates rather
+   than expected receipts. Forecast equals the open book exactly — there is no second source.</div></div>
+</section>
+
+<section data-p="record" hidden>
+ <div class="tw-c"><div class="tw-ch"><span class="tw-ct">Record client payment</span>
+   <span class="tw-cs">Partial receipts update the invoice balance</span></div>
+  <div class="tw-form">
+   <div class="tw-f"><label class="tw-lbl">Invoice</label>
+    <select class="tw-in"><option>INV-2026-2 · Wavemaker · EGP 1,007,096 open</option></select></div>
+   <div class="tw-f"><label class="tw-lbl">Amount received</label>
+    <input class="tw-cwin" placeholder="0.00"></div>
+   <div class="tw-f"><label class="tw-lbl">Currency</label>
+    <select class="tw-in"><option>EGP</option><option>USD</option><option>AED</option></select></div>
+   <div class="tw-f"><label class="tw-lbl">Payment method</label>
+    <select class="tw-in"><option>Bank transfer</option><option>Cheque</option><option>Cash</option></select></div>
+   <div class="tw-f"><label class="tw-lbl">Value date</label><input class="tw-in" type="date"></div>
+   <div class="tw-f"><label class="tw-lbl">Bank reference</label><input class="tw-in"></div></div>
+  <div class="tw-po"><div><i>Invoice total</i><b>1,007,096.00</b></div>
+   <div><i>Already received</i><b class="z">—</b></div>
+   <div><i>This receipt</i><b class="z">—</b></div>
+   <div><i>Remaining after</i><b>1,007,096.00</b></div></div>
+  <div class="tw-ch" style="border-top:1px solid var(--tw-hair);border-bottom:0">
+   <span class="tw-sp"></span><button class="tw-b">Save draft</button>
+   <button class="tw-b pri">Record payment</button></div></div>
+</section>
+
+<script>(function(){
+ var mr=document.querySelector('.tw-mr');
+ mr.addEventListener('click',function(e){
+  var b=e.target.closest('[data-s]'); if(!b) return;
+  mr.querySelectorAll('[data-s]').forEach(function(x){x.classList.toggle('pri',x===b)});
+  document.querySelectorAll('[data-p]').forEach(function(p){p.hidden=p.dataset.p!==b.dataset.s});
+  history.replaceState(null,'','?tab='+b.dataset.s);
+  window.scrollTo({top:0,behavior:'smooth'});
+ });
+ var t=new URLSearchParams(location.search).get('tab');
+ if(t){var b=mr.querySelector('[data-s="'+t+'"]'); if(b) b.click();}
+})();</script>
