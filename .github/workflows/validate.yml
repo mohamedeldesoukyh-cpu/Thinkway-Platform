@@ -31,6 +31,11 @@ jobs:
       - name: FX reporting regression
         run: npm run test:fx
 
+      - name: Collections grids and data honesty
+        run: |
+          node scripts/check-collections-grid.cjs
+          npx tsx --test features/collections/redesign-data.test.ts lib/vendor-payables/currency-totals.test.ts
+
       - name: Creator CRM Phase 2B regression
         run: npm run test:creator-crm-phase2b
 

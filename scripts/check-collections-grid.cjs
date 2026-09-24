@@ -42,7 +42,7 @@ const payableFixture = fs.readFileSync(path.join(root, 'docs/validation-artifact
 const combined = validate(result.blocks === 20 ? reference + payableFixture : reference);
 assert.deepEqual(combined, { blocks: 38, trackLists: 5 });
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'docs/validation-artifacts/collections-redesign/extraction-manifest.json'), 'utf8'));
-for (const rule of manifest) assert.ok(fs.readFileSync(path.join(root, rule.source), 'utf8').includes(rule.body), `Declaration changed at ${rule.source}:${rule.line}`);
+for (const rule of manifest) assert.ok(fs.readFileSync(path.join(root, rule.source), 'utf8').replace(/\r\n/g, '\n').includes(rule.body.replace(/\r\n/g, '\n')), `Declaration changed at ${rule.source}:${rule.line}`);
 for (const file of ['collections-platform-shared.css', 'collections-fragment.css']) {
   const css = postcss.parse(fs.readFileSync(path.join(root, 'app/styles', file), 'utf8'));
   css.walkRules(rule => { for (const selector of rule.selectors) {
