@@ -233,7 +233,9 @@ export async function updateClientUnitScriptMessageAction(input: {
     commentId: input.commentId, campaignHeaderId: access.campaignHeaderId,
     assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId,
     audience: "creator", body: input.body,
-    allowedAuthorDisplayNames: [names.clientName, access.review.clientLabel].filter(Boolean),
+    allowedAuthorDisplayNames: [names.clientName, access.review.clientLabel].filter(
+      (label): label is string => Boolean(label?.trim())
+    ),
   });
   return result.ok ? { ok: true, data: null } : result;
 }
@@ -254,7 +256,10 @@ export async function deleteClientUnitScriptMessageAction(input: {
   const result = await deleteDocumentationComment(database as never, {
     commentId: input.commentId, actorId: null, campaignHeaderId: access.campaignHeaderId,
     assignmentDeliverableId: unit.assignmentDeliverableId, assignmentPostScheduleId: unit.assignmentPostScheduleId,
-    audience: "creator", allowedAuthorDisplayNames: [names.clientName, access.review.clientLabel].filter(Boolean),
+    audience: "creator",
+    allowedAuthorDisplayNames: [names.clientName, access.review.clientLabel].filter(
+      (label): label is string => Boolean(label?.trim())
+    ),
   });
   return result.ok ? { ok: true, data: null } : result;
 }
