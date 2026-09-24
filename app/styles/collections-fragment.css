@@ -2,8 +2,24 @@
 /* ═══ Collections — only what the spec has no component for ═══ */
 .collections-suite .tw-deck{display:grid;grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:12px;
  margin-bottom:11px}                                   /* §6 dashboard-card deck */
-.collections-suite .tw-deck2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:11px;
- padding:14px 15px}
+/* two-pane statements — scales to 100+ clients */
+.collections-suite .tw-stmt2{display:grid;grid-template-columns:266px minmax(0,1fr);border-top:1px solid var(--tw-hair)}
+.collections-suite .tw-stmt2__l{border-right:1px solid var(--tw-hair);display:flex;flex-direction:column;min-width:0}
+.collections-suite .tw-stmt2__t{padding:11px 12px;border-bottom:1px solid var(--tw-hair)}
+.collections-suite .tw-stmt2__t .tw-seg{display:flex;width:100%}
+.collections-suite .tw-stmt2__t .tw-seg button{flex:1;display:inline-flex;align-items:center;justify-content:center;
+ gap:5px}
+.collections-suite .tw-stmt2__t .tw-seg em{font-style:normal;font:700 9.5px 'Geist Mono',monospace;opacity:.65}
+.collections-suite .tw-stmt2__s{overflow-y:auto;max-height:420px;overscroll-behavior:contain}
+.collections-suite .tw-stmt2__s .tw-r{width:100%;border:0;border-bottom:1px solid var(--tw-hair);background:none;
+ cursor:pointer;text-align:left;border-left:2px solid transparent}
+.collections-suite .tw-stmt2__s .tw-r.sel{background:var(--tw-lav);border-left-color:var(--tw-blue)}
+.collections-suite .tw-stmt2__s .tw-t b{display:block;font-size:12px;font-weight:600;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+.collections-suite .tw-stmt2__s .tw-t u{display:block;text-decoration:none;font-size:10px;color:var(--tw-mut)}
+.collections-suite .tw-stmt2__f{padding:10px 12px;border-top:1px solid var(--tw-hair);font-size:10px;
+ color:var(--tw-mut);line-height:1.5}
+.collections-suite .tw-stmt2__r{min-width:0}
 .collections-suite .tw-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:13px;
  padding:15px;border-bottom:1px solid var(--tw-hair)}
 .collections-suite .tw-fc{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;padding:18px 15px;
@@ -16,8 +32,12 @@
  font:500 10px 'Geist Mono',monospace;color:var(--tw-mut)}
 .collections-suite .tw-mr .tw-b[data-s]{gap:6px}
 @media(max-width:1000px){.collections-suite .tw-deck{grid-template-columns:1fr}
+ .collections-suite .tw-stmt2{grid-template-columns:1fr}
+ .collections-suite .tw-stmt2__l{border-right:0;border-bottom:1px solid var(--tw-hair)}
+ .collections-suite .tw-stmt2__s{max-height:220px}
  .collections-suite .tw-fc{grid-template-columns:repeat(4,1fr);height:auto;row-gap:16px}}
 @media(max-width:560px){.collections-suite .tw-fc{grid-template-columns:repeat(2,1fr)}}
+
 
 /* Collections typography: consistent body size and left-aligned financial values. */
 .collections-suite .tw-c{font-size:12px;line-height:1.5}

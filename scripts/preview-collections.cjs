@@ -6,10 +6,9 @@ const root = path.resolve(__dirname, '..');
 const out = path.join(root, 'tmp/collections-preview');
 fs.mkdirSync(out, { recursive: true });
 const data = {
-  asOf: '2026-09-24T12:00:00Z', warnings: [], contacts: {}, dueDates: {}, vendorIos: {}, assignmentClients: {}, receipts: [],
-  clients: [{ id: 'client-1', name: 'Wavemaker' }, { id: 'client-2', name: 'Mind Share Egypt LTD' }],
+  asOf: '2026-09-24T12:00:00Z', warnings: [], contacts: {}, receipts: [],
+  clients: Array.from({length: Number(process.env.COLLECTIONS_PREVIEW_CLIENTS || 5)}, (_, i) => ({ id: 'client-'+(i+1), name: ['Wavemaker','Mind Share Egypt LTD','Bundle Plus Communication','Essencemediacom','OMG'][i] || 'Test client '+(i+1) })),
   invoices: [{ id: 'invoice-1', document_number: 'INV-2026-2', client_id: 'client-1', client_name: 'Wavemaker', campaign_name: 'Wavemaker x NBK Bank: Summer Influencers Campaign', currency: 'EGP', total: 1007095.95, amount_paid: 0, outstanding: 1007095.95, issue_date: '2026-07-12', due_date: '2026-07-26', status: 'issued', collection_status: 'pending', aging_bucket: '31_60', days_past_due: 60 }],
-  payables: Array.from({ length: 54 }, (_, i) => ({ id: `assignment-${i}`, assignment_id: `assignment-${i}`, influencer_name: `Creator ${i + 1}`, campaign_name: `Campaign ${i % 6 + 1}`, currency: i < 41 ? 'EGP' : i < 48 ? 'USD' : 'AED', agreed_fee: i < 41 ? 10000 : 1000, status: i < 14 || i === 41 || i === 42 ? 'paid' : 'pending', due_hint: null })),
 };
 const entry = `import React from 'react'; import {createRoot} from 'react-dom/client'; import {CollectionsRedesign} from './features/collections/components/collections-redesign'; createRoot(document.getElementById('root')).render(<CollectionsRedesign data={${JSON.stringify(data)}}/>);`;
 const mocks = {

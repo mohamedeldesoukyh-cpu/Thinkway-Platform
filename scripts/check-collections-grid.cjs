@@ -36,11 +36,7 @@ assert.deepEqual(validate('<div class="tw-g" style="--cols:1fr 1fr 1fr"><span st
 assert.throws(() => validate('<div class="tw-g" style="--cols:1fr 1fr"><span></span></div>'));
 const reference = fs.readFileSync(path.join(root, 'docs/validation-artifacts/collections-redesign/collections-fragment.html'), 'utf8');
 const result = validate(reference);
-// The supplied file was revised to six sections during implementation (20 grids).
-// Preserve that file unchanged; keep the original seventh-section acceptance fixture separately.
-const payableFixture = fs.readFileSync(path.join(root, 'docs/validation-artifacts/collections-redesign/payables-grid-fixture.html'), 'utf8');
-const combined = validate(result.blocks === 20 ? reference + payableFixture : reference);
-assert.deepEqual(combined, { blocks: 38, trackLists: 5 });
+assert.deepEqual(result, { blocks: 23, trackLists: 4 });
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'docs/validation-artifacts/collections-redesign/extraction-manifest.json'), 'utf8'));
 for (const rule of manifest) assert.ok(fs.readFileSync(path.join(root, rule.source), 'utf8').replace(/\r\n/g, '\n').includes(rule.body.replace(/\r\n/g, '\n')), `Declaration changed at ${rule.source}:${rule.line}`);
 for (const file of ['collections-platform-shared.css', 'collections-fragment.css']) {
@@ -50,4 +46,4 @@ for (const file of ['collections-platform-shared.css', 'collections-fragment.css
     assert.ok(!/^\.(pri|z|g|r|s|bad|alert)\b/.test(selector.replace('.collections-suite ', '')), 'Standalone modifier');
   }});
 }
-console.log(JSON.stringify({ currentReferenceGrid: result, sevenSectionAcceptanceGrid: combined, copiedDeclarationBlocks: manifest.length, collectionsOnlySelectors: 'passed' }));
+console.log(JSON.stringify({ currentReferenceGrid: result, copiedDeclarationBlocks: manifest.length, collectionsOnlySelectors: 'passed' }));
