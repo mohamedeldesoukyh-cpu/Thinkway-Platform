@@ -2593,6 +2593,7 @@ export type Database = {
         Insert: {
           id?: string;
           document_number?: string;
+          metadata?: Record<string, unknown>;
           display_name: string;
           legal_name?: string | null;
           email?: string | null;

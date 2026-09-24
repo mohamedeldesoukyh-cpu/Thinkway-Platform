@@ -784,7 +784,7 @@ export async function updateVendorLegalAction(
   if (loadError || !current) {
     return { ok: false, message: loadError?.message ?? "Creator not found." };
   }
-  const legalMetadata = parsed.data.trade_license === undefined ? {} : {
+  const legalMetadata: { metadata?: Record<string, unknown> } = parsed.data.trade_license === undefined ? {} : {
     metadata: { ...current.metadata, trade_license: emptyToNull(parsed.data.trade_license) },
   };
 
