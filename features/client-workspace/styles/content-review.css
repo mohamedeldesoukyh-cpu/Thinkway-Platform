@@ -68,10 +68,10 @@
 .tw-review #review .cx-approved-card__preview.cx-rev__media{height:100%;width:100%;aspect-ratio:9/16;min-height:0!important;max-height:none}
 .tw-review #review .cx-approved-card__body{padding:11px 12px 12px}
 .tw-review #review .cx-approved-identity{display:flex;align-items:center;gap:8px;min-width:0}
-.tw-review #review .cx-approved-identity>div{min-width:0;flex:1}
+.tw-review #review .cx-approved-identity>div:not(.cx-av){min-width:0;flex:1}
 .tw-review #review .cx-approved-identity b{display:block;font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tw-review #review .cx-approved-identity small{display:block;font-size:9.5px;color:#64748b}
-.tw-review #review .cx-approved-identity .cx-av{width:26px;height:26px}
+.tw-review #review .cx-approved-identity .cx-av{width:26px;height:26px;flex:0 0 26px;overflow:hidden}
 .tw-review #review .cx-approved-identity .cx-badge{font-size:9.5px;padding:2px 7px}
 .tw-review #review .cx-approved-filename{margin:9px 0 0;font:500 10.5px ui-monospace,monospace;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;color:#3f4757}
 .tw-review #review .cx-approved-dateline{display:flex;gap:8px;align-items:center;margin-top:10px;padding-top:9px;border-top:1px solid #eef2f8;font-size:9.5px;color:#64748b}
@@ -88,7 +88,7 @@
 .tw-review #review .cx-approved-card__hover-actions .btn{pointer-events:auto;font-size:10px;padding:5px 9px}
 .tw-review #review .cx-approved-card__media:not(:hover):not(:focus-within) .cx-approved-card__hover-actions .btn{pointer-events:none}
 .tw-review #review .cx-approved__list--rows{grid-template-columns:1fr}
-.tw-review #review .cx-approved__list--rows .cx-approved-card{display:grid;grid-template-columns:100px 1fr}
+.tw-review #review .cx-approved__list--rows .cx-approved-card{display:grid;grid-template-columns:100px minmax(0,1fr)}
 .tw-review #review .cx-approved__list--rows .cx-approved-card__media{grid-column:1;grid-row:1}
 .tw-review #review .cx-approved__list--rows .cx-approved-card__body{grid-column:2;grid-row:1}
 @media(hover:hover) and (pointer:fine){.tw-review #review .cx-approved-card:has(.cx-approved-card__media) .cx-approved-card__body>.cx-rev__acts{display:none}}
