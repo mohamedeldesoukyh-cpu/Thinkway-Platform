@@ -418,7 +418,7 @@ export function VendorWorkspaceView({
                     {tab.label}
                     {tab.count ? (
                       <em className={tab.count === "!" ? "r" : undefined}>
-                        {tab.count === "!" ? "blocked" : tab.count}
+                        {tab.count === "!" ? "pending" : tab.count}
                       </em>
                     ) : null}
                   </span>

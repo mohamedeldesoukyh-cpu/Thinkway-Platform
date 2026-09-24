@@ -505,6 +505,7 @@ export type ClientDocumentType =
   | "sow";
 
 export type InfluencerDocumentType =
+  | "trade_license"
   | "passport"
   | "national_id"
   | "signed_contract"

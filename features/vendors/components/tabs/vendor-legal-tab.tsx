@@ -78,9 +78,19 @@ export function VendorLegalTab({
       <VendorFormSection
         icon={ScaleIcon}
         title="Legal & contract"
-        description="Contract status, expiry, and exclusivity terms."
+        description="Trade license number, contract status, expiry, and exclusivity terms. Upload supporting files in the Documents tab."
       >
         <VendorFormGrid className="lg:grid-cols-3">
+          <VendorFormField label="Trade license / commercial registration number" htmlFor="trade_license">
+            <Input
+              id="trade_license"
+              name="trade_license"
+              maxLength={100}
+              className={VENDOR_FORM_INPUT_CLASS}
+              defaultValue={typeof vendor.metadata?.trade_license === "string" ? vendor.metadata.trade_license : ""}
+              disabled={isPending}
+            />
+          </VendorFormField>
           <VendorFormField label="Contract status">
             <Select
               value={contractStatus}

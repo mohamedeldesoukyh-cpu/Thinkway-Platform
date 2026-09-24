@@ -145,6 +145,7 @@ export const CLIENT_DOCUMENT_TYPE_OPTIONS = [
 ] as const;
 
 export const INFLUENCER_DOCUMENT_TYPE_OPTIONS = [
+  { value: "trade_license", label: "Trade License / CR" },
   { value: "passport", label: "Passport" },
   { value: "national_id", label: "National ID" },
   { value: "signed_contract", label: "Signed Contract" },

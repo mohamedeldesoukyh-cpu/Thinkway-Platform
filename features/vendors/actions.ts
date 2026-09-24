@@ -776,9 +776,22 @@ export async function updateVendorLegalAction(
     return { ok: false, message: authError };
   }
 
+  const { data: current, error: loadError } = await supabase
+    .from("influencers")
+    .select("metadata")
+    .eq("id", parsed.data.influencer_id)
+    .maybeSingle();
+  if (loadError || !current) {
+    return { ok: false, message: loadError?.message ?? "Creator not found." };
+  }
+  const legalMetadata = parsed.data.trade_license === undefined ? {} : {
+    metadata: { ...current.metadata, trade_license: emptyToNull(parsed.data.trade_license) },
+  };
+
   const { error } = await supabase
     .from("influencers")
     .update({
+      ...legalMetadata,
       contract_status: parsed.data.contract_status as ContractStatus,
       contract_expiry: parsed.data.contract_expiry,
       exclusivity: (emptyToNull(parsed.data.exclusivity) ??

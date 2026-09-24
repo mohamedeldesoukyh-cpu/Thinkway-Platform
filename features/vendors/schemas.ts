@@ -164,6 +164,7 @@ export const updateVendorOverviewSchema = z.object({
 
 export const updateVendorLegalSchema = z.object({
   influencer_id: z.string().uuid(),
+  trade_license: z.string().trim().max(100).optional(),
   contract_status: contractStatusSchema,
   contract_expiry: optionalDate,
   exclusivity: exclusivitySchema.optional().or(z.literal("")),
@@ -260,6 +261,7 @@ export const savePlatformAccountsSchema = z.object({
 export const uploadInfluencerDocumentSchema = z.object({
   influencer_id: z.string().uuid(),
   document_type: z.enum([
+    "trade_license",
     "passport",
     "national_id",
     "signed_contract",
