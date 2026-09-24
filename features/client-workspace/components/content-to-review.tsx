@@ -312,8 +312,13 @@ function ContentReviewPane({
           )}
         </div>
         <p className="cx-review__stage-file">{item.fileName || item.deliverable}</p>
+        <div className="cx-review__stage-actions">
+          {item.canDownloadOriginal ? <a className="btn" href={clientContentAssetUrl({ token, versionId: item.versionId, mode: "download" })}>{DOWNLOAD_ORIGINAL_LABEL}</a> : null}
+          {item.previewKind !== "none" && item.canDownloadOriginal ? <ClientContentFullSizeButton token={token} versionId={item.versionId} kind={item.previewKind} title={item.fileName || item.deliverable} /> : null}
+        </div>
       </section>
       <div className="cx-pane cx-review__detail">
+      <p className="cx-detail-block">The submission</p>
       <div className="cx-rev__head">
         <div className="cx-rev__who">
           <CreatorAvatar
@@ -354,7 +359,7 @@ function ContentReviewPane({
             </div>
           </div>
 
-          {item.comment ? <p className="camp-content-comment">{item.comment}</p> : null}
+          {item.comment ? <section className="cx-caption" aria-label="Caption and on-screen text"><p className="cx-detail-block">Caption &amp; on-screen text</p><p className="camp-content-comment">{item.comment}</p></section> : null}
 
           <section className="mt-4 border-t pt-4" aria-label="Script and conversation">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -418,6 +423,8 @@ function ContentReviewPane({
             ) : null}
           </section>
 
+          <section className="cx-decision" aria-label="Your decision">
+          <div className="cx-decision__heading"><strong>Your decision</strong><span>Approve to release for publishing, or request changes with a note to Thinkway.</span></div>
           <textarea
             className="cx-rev__notes"
             rows={3}
@@ -475,6 +482,7 @@ function ContentReviewPane({
               </button>
             </div>
           ) : null}
+          </section>
 
           {prior.length > 0 ? (
             <div className="camp-content-history">
@@ -530,10 +538,16 @@ export function ContentToReview({
     : [];
 
   return (
-    <div className="card" id="review">
-      <p className="ck">Content to review</p>
-      <h2>Creator content</h2>
-      {note ? <p className="note">{note}</p> : null}
+    <div className="card cx-content-review" id="review">
+      <p className="ck cx-content-review__eyebrow">Content to review</p>
+      <section className="cx-review-panel">
+        <header className="cx-content-review__head">
+          <div>
+            <h2>Creator content</h2>
+            <p>{note || "Approve to release for publishing, or request changes with a note back to Thinkway."}</p>
+          </div>
+          {pending.length ? <span className="cx-content-review__count">{pending.length} waiting · {groups.length} creators</span> : null}
+        </header>
 
       {pending.length > 0 && selected ? (
         <div className="cx-review">
@@ -566,9 +580,12 @@ export function ContentToReview({
                       aria-current={current}
                       onClick={() => setSelectedKey(key)}
                     >
-                      <span className="cx-ritem__f">{item.fileName || item.deliverable}</span>
-                      <span className="cx-ritem__m">
-                        {item.assetTypeLabel} · v{item.versionNumber} · {submittedLabel(item.uploadedAt)}
+                      <span className="cx-ritem__thumb" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" /></svg></span>
+                      <span className="cx-ritem__copy">
+                        <span className="cx-ritem__f">{item.fileName || item.deliverable}</span>
+                        <span className="cx-ritem__m">
+                          {item.assetTypeLabel} · v{item.versionNumber} · {submittedLabel(item.uploadedAt)}
+                        </span>
                       </span>
                     </button>
                   );
@@ -594,10 +611,16 @@ export function ContentToReview({
           <p className="note">{NO_CONTENT_TO_REVIEW_HINT}</p>
         </>
       )}
+      </section>
 
       {approved.length > 0 ? (
-        <div className="cx-approved" aria-live="polite">
-          <p className="ck">{APPROVED_CONTENT_HEADING}</p>
+        <section className="cx-approved cx-approved-panel" aria-live="polite">
+          <header className="cx-content-review__head">
+            <div>
+              <h2>{APPROVED_CONTENT_HEADING}</h2>
+              <p>{approved.length} items you have signed off. Published pieces are marked.</p>
+            </div>
+          </header>
           <div className="cx-approved__list">
             {approved.map((item, index) => (
               <article key={reviewItemKey(item)} className="cx-approved-card">
@@ -639,7 +662,7 @@ export function ContentToReview({
               </article>
             ))}
           </div>
-        </div>
+        </section>
       ) : null}
     </div>
   );
