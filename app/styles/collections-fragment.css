@@ -1,0 +1,21 @@
+
+/* ═══ Collections — only what the spec has no component for ═══ */
+.collections-suite .tw-deck{display:grid;grid-template-columns:repeat(auto-fit,minmax(392px,1fr));gap:12px;
+ margin-bottom:11px}                                   /* §6 dashboard-card deck */
+.collections-suite .tw-deck2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:11px;
+ padding:14px 15px}
+.collections-suite .tw-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(196px,1fr));gap:13px;
+ padding:15px;border-bottom:1px solid var(--tw-hair)}
+.collections-suite .tw-fc{display:grid;grid-template-columns:repeat(8,1fr);gap:10px;padding:18px 15px;
+ align-items:end;height:168px;border-bottom:1px solid var(--tw-hair)}
+.collections-suite .tw-fc__b{display:flex;flex-direction:column;justify-content:flex-end;height:100%;text-align:center}
+.collections-suite .tw-fc__b s{display:block;min-height:3px;border-radius:5px 5px 0 0;text-decoration:none;
+ background:var(--tw-grad);margin-bottom:7px}
+.collections-suite .tw-fc__b b{font-size:10px;font-weight:600;color:var(--tw-ink2)}
+.collections-suite .tw-fc__b em{display:block;font-style:normal;margin-top:2px;
+ font:500 10px 'Geist Mono',monospace;color:var(--tw-mut)}
+.collections-suite .tw-mr .tw-b[data-s]{gap:6px}
+@media(max-width:1000px){.collections-suite .tw-deck{grid-template-columns:1fr}
+ .collections-suite .tw-fc{grid-template-columns:repeat(4,1fr);height:auto;row-gap:16px}}
+@media(max-width:560px){.collections-suite .tw-fc{grid-template-columns:repeat(2,1fr)}}
+
