@@ -341,8 +341,9 @@ test("Client UI attaches Script to both publication-plan units and the relevant 
   assert.match(plan, /ReviewAvatar/);
   assert.match(plan, /headerAvatar/);
 
-  assert.match(contentReview, /View script &amp; reply/);
-  assert.match(contentReview, /Script &amp; conversation/);
+  assert.match(contentReview, /aria-label="Script and conversation"/);
+  assert.match(contentReview, /loadConversation\(false\)/);
+  assert.doesNotMatch(contentReview, /View script &amp; reply/);
   assert.match(contentReview, /loadClientCampaignScriptForUnitAction/);
   assert.match(contentReview, /listClientUnitScriptConversationAction/);
   assert.match(contentReview, /addClientUnitScriptMessageAction/);
