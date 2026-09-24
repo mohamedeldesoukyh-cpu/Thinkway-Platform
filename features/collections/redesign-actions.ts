@@ -1,0 +1,34 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { z } from "zod";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { planningDb } from "@/lib/supabase/governance-client";
+import { requirePermission } from "@/lib/auth/permissions-server";
+
+const schema = z.object({
+  kind: z.enum(["contact", "due"]),
+  id: z.string().uuid(),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v => !Number.isNaN(Date.parse(v)) && new Date(v).toISOString().slice(0, 10) === v, "Enter a valid date."),
+  notes: z.string().trim().max(1000),
+});
+
+export async function saveCollectionFollowUp(input: z.infer<typeof schema>) {
+  const parsed = schema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: "Enter a valid date and a note of at most 1,000 characters." };
+  const db = await createSupabaseServerClient();
+  const auth = await requirePermission(db, "collections.write");
+  if ("error" in auth) return { ok: false, error: auth.error };
+  const { kind, id, date, notes } = parsed.data;
+  if (kind === "contact" && date > new Date().toISOString().slice(0, 10)) return { ok: false, error: "Contact cannot be recorded in the future." };
+  const { data: target, error: targetError } = await db.from(kind === "contact" ? "invoices" : "campaign_influencers").select("id").eq("id", id).maybeSingle();
+  if (targetError || !target) return { ok: false, error: "The selected record is unavailable. Reload Collections and try again." };
+  const { error } = await planningDb(db).from("collection_audit_logs").insert({
+    entity_type: kind === "contact" ? "invoice" : "assignment", entity_id: id,
+    action: kind === "contact" ? "contact_recorded" : "payable_due_date_set", actor_id: auth.userId,
+    metadata: kind === "contact" ? { contact_at: date, notes, channel: "manual" } : { due_date: date, notes },
+  });
+  if (error) return { ok: false, error: "Could not save the follow-up. Check your Collections access and retry." };
+  revalidatePath("/collections");
+  return { ok: true };
+}

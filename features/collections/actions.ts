@@ -200,7 +200,7 @@ export async function recordCollectionPaymentFromWorkspaceAction(
 
   const { data: invoice, error: invError } = await supabase
     .from("invoices")
-    .select("id, client_id, currency, document_number")
+    .select("id, client_id, currency, document_number, total, amount_paid, status")
     .eq("id", parsed.data.invoice_id)
     .maybeSingle();
 
@@ -213,9 +213,23 @@ export async function recordCollectionPaymentFromWorkspaceAction(
     client_id: string;
     currency: string;
     document_number: string;
+    total: number;
+    amount_paid: number;
+    status: string;
   };
 
-  const paidAt = new Date().toISOString();
+  if (inv.status === "void" || parsed.data.amount > Math.max(0, Number(inv.total) - Number(inv.amount_paid))) {
+    return { ok: false, error: "The receipt exceeds the current open invoice balance, or the invoice is void. Reload and review the amount." };
+  }
+
+  const suppliedDate = formData.get("paid_at");
+  let paidAt = new Date().toISOString();
+  if (typeof suppliedDate === "string" && suppliedDate) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(suppliedDate) || Number.isNaN(Date.parse(suppliedDate)) || new Date(suppliedDate).toISOString().slice(0, 10) !== suppliedDate || suppliedDate > paidAt.slice(0, 10)) {
+      return { ok: false, error: "Enter a valid payment date that is not in the future." };
+    }
+    paidAt = `${suppliedDate}T12:00:00.000Z`;
+  }
 
   const { data: payment, error } = await supabase
     .from("payments")

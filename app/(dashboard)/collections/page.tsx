@@ -1,63 +1,18 @@
+import { Suspense } from "react";
+import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
+import { CollectionsRedesign } from "@/features/collections/components/collections-redesign";
+import { loadCollectionsRedesign } from "@/features/collections/load-redesign";
+import "@/app/styles/collections-platform-shared.css";
+import "@/app/styles/collections-fragment.css";
+
 export const dynamic = "force-dynamic";
 
-import { Suspense } from "react";
-import Link from "next/link";
-
-import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
-import { CollectionsWorkspaceView } from "@/features/collections/components/collections-workspace-view";
-import { loadCollectionsWorkspace } from "@/features/collections/load-workspace";
-import { parseCollectionsSearchParams } from "@/lib/collections/dashboard-filters";
-import { safeAnalyticsQuery } from "@/lib/platform/safe-query";
-
-type PageProps = {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
-};
-
-export default async function CollectionsPage({ searchParams }: PageProps) {
-  const params = await searchParams;
-  const filterState = parseCollectionsSearchParams(params);
-
-  const result = await safeAnalyticsQuery(
-    "collections-workspace-page",
-    () => loadCollectionsWorkspace(filterState),
-    null
-  );
-
-  const payload = result.data;
-  const errorMessage = result.ok
-    ? null
-    : result.error ?? "Collections workspace could not be loaded.";
-
-  return (
-    <FinanceSuiteShell
-      title="Collections"
-      description="Aging, receivables and collection performance"
-      hideDefaultActions
-      actions={<Link className="tw-b pri" href={`/collections?tab=allocation${filterState.clientId ? `&client=${encodeURIComponent(filterState.clientId)}` : ""}`}>Record client payment</Link>}
-    >
-      {errorMessage && !payload ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : payload ? (
-        <Suspense
-          fallback={
-            <div className="space-y-4">
-              <div className="h-14 animate-pulse rounded-2xl bg-muted" />
-              <div className="h-32 animate-pulse rounded-2xl bg-muted" />
-            </div>
-          }
-        >
-          <PlatformErrorBoundary surface="collections">
-            <CollectionsWorkspaceView data={payload} />
-          </PlatformErrorBoundary>
-        </Suspense>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Sign in with collections permissions to access this workspace.
-        </p>
-      )}
-    </FinanceSuiteShell>
-  );
+export default async function CollectionsPage() {
+  const data = await loadCollectionsRedesign().catch(() => null);
+  return <DashboardShell title="Collections" hidePageHeader hideDesktopHeader mainClassName="tw-main">
+    <PlatformErrorBoundary surface="collections">
+      {data ? <Suspense fallback={<p>Loading Collections…</p>}><CollectionsRedesign data={data} /></Suspense> : <div className="tw-note">Collections is unavailable. Sign in with Collections access, then reload this page.</div>}
+    </PlatformErrorBoundary>
+  </DashboardShell>;
 }
