@@ -70,10 +70,6 @@ export type VendorListFilters = {
   crmOnly?: boolean;
 };
 
-function escapeIlikePattern(value: string): string {
-  return value.replace(/[%_\\,]/g, "\\$&");
-}
-
 /** List columns only — avoids heavy enrichment JSONB on `*`. */
 const VENDOR_LIST_SELECT = `
   id,
@@ -124,13 +120,13 @@ export async function getVendorsList(
   const to = from + VENDORS_PAGE_SIZE - 1;
 
   // Middleware already validates the session; RLS enforces row access.
-  // Pagination total uses vendor_list_total_count (avoids PostgREST exact-count
+  // Pagination total uses vendor_identity_search_total_count (avoids PostgREST exact-count
   // under per-row RLS, which timed out on ~7k influencers).
   const supabase = await createSupabaseServerClient();
 
   const select = platform ? VENDOR_LIST_SELECT_PLATFORM_FILTER : VENDOR_LIST_SELECT;
   let query = supabase
-    .from("influencers")
+    .rpc("search_vendor_identities", { p_search: search || null })
     .select(select)
     .order("created_at", { ascending: false });
 
@@ -143,21 +139,10 @@ export async function getVendorsList(
   if (status) {
     query = query.eq("status", status);
   }
-  if (search) {
-    const pattern = `%${escapeIlikePattern(search)}%`;
-    query = query.or(
-      [
-        `display_name.ilike.${pattern}`,
-        `legal_name.ilike.${pattern}`,
-        `document_number.ilike.${pattern}`,
-        `email.ilike.${pattern}`,
-      ].join(",")
-    );
-  }
 
   const [pageResult, countResult] = await Promise.all([
     query.range(from, to),
-    supabase.rpc("vendor_list_total_count", {
+    supabase.rpc("vendor_identity_search_total_count", {
       p_search: search || null,
       p_status: status ?? null,
       p_platform: platform || null,
@@ -242,23 +227,12 @@ async function enrichVendorList(
 export async function searchIdentitiesForCrmImport(query: string, limit = 20) {
   const supabase = await createSupabaseServerClient();
   const search = query.trim();
-  let q = supabase
-    .from("influencers")
+  const q = supabase
+    .rpc("search_vendor_identities", { p_search: search || null })
     .select("id, display_name, legal_name, email, document_number, has_commercial_profile")
     .eq("has_commercial_profile", false)
     .order("display_name")
     .limit(limit);
-  if (search) {
-    const pattern = `%${escapeIlikePattern(search)}%`;
-    q = q.or(
-      [
-        `display_name.ilike.${pattern}`,
-        `legal_name.ilike.${pattern}`,
-        `email.ilike.${pattern}`,
-        `document_number.ilike.${pattern}`,
-      ].join(",")
-    );
-  }
   const { data, error } = await q;
   if (error) throw new Error(error.message);
   return data ?? [];

@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
-import { createIoDocumentSignedUrl } from "@/lib/io/io-document-storage";
 import { renderLiveVendorIoHtml } from "@/lib/io/render-live-vendor-io-html";
-import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
 import {
   INSERTION_ORDER_PDF_OPTIONS,
   pdfUnavailableMessage,
@@ -32,7 +30,7 @@ export async function GET(request: Request, context: RouteContext) {
   try {
     const { data: vendorIo } = await supabase
       .from("vendor_ios")
-      .select("generated_html_url, generated_pdf_url, document_number, terms_html")
+      .select("document_number")
       .eq("id", id)
       .maybeSingle();
 
@@ -41,29 +39,14 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const typed = vendorIo as {
-      generated_pdf_url: string | null;
-      generated_html_url: string | null;
       document_number: string | null;
-      terms_html: string | null;
     };
 
     const disposition = download ? "attachment" : "inline";
     const baseName = typed.document_number ?? id;
 
     if (format === "pdf") {
-      // Inline view may use the stored generated PDF for speed.
-      // Download always re-renders from live HTML so PDF matches Preview.
-      if (typed.generated_pdf_url && !download) {
-        const signedUrl = await createIoDocumentSignedUrl(
-          supabase,
-          VENDOR_IO_DOCUMENTS_BUCKET,
-          typed.generated_pdf_url
-        );
-        if (signedUrl) {
-          return NextResponse.redirect(signedUrl);
-        }
-      }
-
+      // Both inline and download reflect campaign overrides and platform clause updates.
       const html = await renderLiveVendorIoHtml(supabase, id);
       const pdfResult = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
       if (!pdfResult.ok) {

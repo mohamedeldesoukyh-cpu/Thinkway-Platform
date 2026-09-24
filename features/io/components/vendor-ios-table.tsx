@@ -15,6 +15,7 @@ import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
 import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor-io-special-payment-terms-cell";
+import { VendorIoCampaignTermsEditor } from "./vendor-io-campaign-terms-editor";
 import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
@@ -98,9 +99,19 @@ function buildVendorIosColumns(
     },
     {
       id: "current_payment_terms",
-      label: "Current payment terms",
+      label: "Payment terms",
       cellClassName: "text-muted-foreground max-w-[10rem]",
-      renderCell: (row) => row.vendor_payment_terms_label || "—",
+      renderCell: (row) => <VendorIoCampaignTermsEditor row={row} />,
+    },
+    {
+      id: "usage_rights",
+      label: "Usage rights",
+      renderCell: (row) => <VendorIoCampaignTermsEditor row={row} field="usage" />,
+    },
+    {
+      id: "compliance_country",
+      label: "Compliance country",
+      renderCell: (row) => <VendorIoCampaignTermsEditor row={row} field="country" />,
     },
     {
       id: "special_payment_terms",

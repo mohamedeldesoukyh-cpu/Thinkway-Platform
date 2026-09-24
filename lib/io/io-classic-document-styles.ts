@@ -137,6 +137,7 @@ body{
   .qtable thead,.deliv-table thead{display:table-header-group}
   .qtable tbody,.deliv-table tbody{display:table-row-group}
   .qtable tr,.deliv-table tr{break-inside:avoid;page-break-inside:avoid}
+  .terms-section .terms-list li{break-inside:avoid;page-break-inside:avoid}
   p,li{orphans:3;widows:3}
 }
 `.trim();

@@ -3836,11 +3836,31 @@ export type Database = {
           total_count: number;
         }[];
       };
+      search_vendor_identities: {
+        Args: { p_search?: string | null };
+        Returns: InfluencerRow[];
+        SetofOptions: {
+          from: "*";
+          to: "influencers";
+          isOneToOne: false;
+          isSetofReturn: true;
+        };
+      };
+      vendor_identity_search_total_count: {
+        Args: {
+          p_search?: string | null;
+          p_status?: string | null;
+          p_platform?: string | null;
+          p_crm_only?: boolean;
+        };
+        Returns: number;
+      };
       vendor_list_total_count: {
         Args: {
           p_search?: string | null;
           p_status?: string | null;
           p_platform?: string | null;
+          p_crm_only?: boolean;
         };
         Returns: number;
       };

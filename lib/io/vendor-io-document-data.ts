@@ -28,7 +28,7 @@ export async function loadVendorIoDocumentData(
   const { data: vendorIo, error: vioError } = await supabase
     .from("vendor_ios")
     .select(
-      "id, document_number, revision_number, amount, currency_code, status, usage_rights, special_payment_terms, terms_text, created_at, influencer_id, campaign_header_id"
+      "id, document_number, revision_number, amount, currency_code, status, usage_rights, exclusivity, compliance_country_code, special_payment_terms, terms_text, created_at, influencer_id, campaign_header_id"
     )
     .eq("id", vendorIoId)
     .single();
@@ -45,6 +45,8 @@ export async function loadVendorIoDocumentData(
     currency_code: string;
     status: string;
     usage_rights: string | null;
+    exclusivity: string | null;
+    compliance_country_code: string | null;
     special_payment_terms: string | null;
     terms_text: string | null;
     created_at: string;
@@ -96,7 +98,8 @@ export async function loadVendorIoDocumentData(
 
   const terms = resolveEffectiveVendorIoTerms(
     typedInfluencer.vendor_io_terms_text,
-    typedVio.terms_text
+    typedVio.terms_text,
+    { override: typedVio.compliance_country_code, creatorCountry: typedInfluencer.country_code }
   );
 
   const typedCampaignRaw = campaign as {
@@ -272,6 +275,7 @@ export async function loadVendorIoDocumentData(
     status: typedVio.status,
     amount: Number(typedVio.amount),
     usageRights: typedVio.usage_rights,
+    exclusivity: typedVio.exclusivity,
     terms,
     influencer: {
       id: typedInfluencer.id,

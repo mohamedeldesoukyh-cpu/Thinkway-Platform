@@ -120,6 +120,9 @@ export type VendorIoRow = {
   terms_html: string | null;
   terms_text: string | null;
   usage_rights: string | null;
+  /** IO-only override; null inherits the CRM country. */
+  compliance_country_code?: "AE" | "EG" | null;
+  creator_country_code?: string | null;
   exclusivity: string | null;
   attachment_url: string | null;
   generated_html_url: string | null;

@@ -1,5 +1,6 @@
 import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
 import { VENDOR_IO_DEFAULT_TERMS } from "@/lib/io/vendor-io-default-terms";
+import { applyVendorIoComplianceCountry, resolveVendorIoCountry } from "./vendor-io-country";
 
 export type ClientIoTerm = {
   title: string;
@@ -82,13 +83,17 @@ export function resolveDefaultTermsForVendor(
 /** Full Vendor IO hierarchy: IO → vendor → platform. */
 export function resolveEffectiveVendorIoTerms(
   vendorTermsText: string | null | undefined,
-  ioTermsText: string | null | undefined
+  ioTermsText: string | null | undefined,
+  country?: { override?: string | null; creatorCountry?: string | null }
 ): ClientIoTerm[] {
-  return resolveEffectiveTerms(
+  const terms = resolveEffectiveTerms(
     VENDOR_IO_DEFAULT_TERMS,
     parseTermsText(vendorTermsText),
     parseTermsText(ioTermsText)
   );
+  return country
+    ? applyVendorIoComplianceCountry(terms, resolveVendorIoCountry(country.override, country.creatorCountry))
+    : terms;
 }
 
 export function resolveIoTermsSource(

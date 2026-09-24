@@ -25,10 +25,9 @@ import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-bad
 import { VendorIoDocumentActions } from "@/features/io/components/vendor-io-document-actions";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
-import { VENDOR_IO_DEFAULT_TERMS } from "@/lib/io/vendor-io-default-terms";
 import {
   parseTermsText,
-  resolveDefaultTermsForVendor,
+  resolveEffectiveVendorIoTerms,
   resolveIoTermsSource,
   serializeTermsText,
   termsAreEqual,
@@ -43,11 +42,16 @@ type Props = {
 
 export function VendorIoForm({ row }: Props) {
   const vendorDefaultTerms = useMemo(
-    () => resolveDefaultTermsForVendor(row.vendor_io_terms_text),
-    [row.vendor_io_terms_text]
+    () => resolveEffectiveVendorIoTerms(row.vendor_io_terms_text, null, {
+      override: row.compliance_country_code, creatorCountry: row.creator_country_code,
+    }),
+    [row.vendor_io_terms_text, row.compliance_country_code, row.creator_country_code]
   );
 
-  const ioParsedTerms = useMemo(() => parseTermsText(row.terms_text), [row.terms_text]);
+  const ioParsedTerms = useMemo(() => parseTermsText(row.terms_text)
+    ? resolveEffectiveVendorIoTerms(row.vendor_io_terms_text, row.terms_text, {
+        override: row.compliance_country_code, creatorCountry: row.creator_country_code,
+      }) : null, [row.terms_text, row.vendor_io_terms_text, row.compliance_country_code, row.creator_country_code]);
 
   const [terms, setTerms] = useState<ClientIoTerm[]>(
     () => ioParsedTerms ?? vendorDefaultTerms
@@ -61,13 +65,13 @@ export function VendorIoForm({ row }: Props) {
   const [saveState, saveAction, saving] = useActionState(updateVendorIoAction, INITIAL_STATE);
 
   useEffect(() => {
-    const parsed = parseTermsText(row.terms_text);
+    const parsed = ioParsedTerms;
     setTerms(parsed ?? vendorDefaultTerms);
     setUseInheritedTerms(!parsed);
     setUsageRights(row.usage_rights ?? "");
     setExclusivity(row.exclusivity ?? "");
     setAttachmentUrl(row.attachment_url ?? "");
-  }, [row, vendorDefaultTerms]);
+  }, [row, vendorDefaultTerms, ioParsedTerms]);
 
   useEffect(() => {
     if (!saveState.message) return;
@@ -99,7 +103,9 @@ export function VendorIoForm({ row }: Props) {
   }
 
   function handleRestorePlatformDefault() {
-    setTerms(VENDOR_IO_DEFAULT_TERMS);
+    setTerms(resolveEffectiveVendorIoTerms(null, null, {
+      override: row.compliance_country_code, creatorCountry: row.creator_country_code,
+    }));
     // Inherit when vendor has no defaults; otherwise persist platform copy as IO override.
     setUseInheritedTerms(!parseTermsText(row.vendor_io_terms_text));
     toast.message("Terms reset to platform default. Save draft to apply.");

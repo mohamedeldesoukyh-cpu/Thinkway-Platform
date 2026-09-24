@@ -35,6 +35,7 @@ type VendorIoQueryRow = {
   terms_html: string | null;
   terms_text: string | null;
   usage_rights: string | null;
+  compliance_country_code?: "AE" | "EG" | null;
   exclusivity: string | null;
   attachment_url: string | null;
   generated_html_url: string | null;
@@ -58,12 +59,14 @@ type VendorIoQueryRow = {
         email?: string | null;
         payment_terms?: PaymentTerms | string | null;
         vendor_io_terms_text?: string | null;
+        country_code?: string | null;
       }
     | Array<{
         display_name: string;
         email?: string | null;
         payment_terms?: PaymentTerms | string | null;
         vendor_io_terms_text?: string | null;
+        country_code?: string | null;
       }>
     | null;
   assignment:
@@ -129,6 +132,8 @@ export function mapVendorIoQueryRow(row: VendorIoQueryRow): VendorIoRow {
     terms_html: row.terms_html,
     terms_text: row.terms_text,
     usage_rights: row.usage_rights,
+    compliance_country_code: row.compliance_country_code ?? null,
+    creator_country_code: influencer?.country_code ?? null,
     exclusivity: row.exclusivity,
     attachment_url: row.attachment_url,
     generated_html_url: row.generated_html_url,

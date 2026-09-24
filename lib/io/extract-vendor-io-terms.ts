@@ -25,9 +25,11 @@ export function extractTermsFromVendorIoHtml(html: string): ClientIoTerm[] {
   return terms;
 }
 
-/** Normalize PDF/plain text for legal-term comparison (whitespace collapsed). */
+/** Normalize layout whitespace and equivalent apostrophe glyphs from PDF fonts. */
 export function normalizeLegalText(value: string): string {
   return value
+    .replace(/[\u2018\u2019\u02bc]/g, "'")
+    .replace(/-\s*\r?\n\s*/g, "-")
     .replace(/\u00a0/g, " ")
     .replace(/\s+/g, " ")
     .trim();

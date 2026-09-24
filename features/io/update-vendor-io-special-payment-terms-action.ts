@@ -42,18 +42,22 @@ export async function updateVendorIoSpecialPaymentTermsAction(
 
   const value = parsed.data.special_payment_terms?.trim() || null;
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("vendor_ios")
     .update({
       special_payment_terms: value,
       updated_by: user.id,
     } as never)
     .eq("id", parsed.data.id)
-    .eq("is_superseded", false);
+    .eq("campaign_header_id", parsed.data.campaign_header_id)
+    .eq("is_superseded", false)
+    .select("id")
+    .maybeSingle();
 
   if (error) {
     return { ok: false, message: error.message };
   }
+  if (!data) return { ok: false, message: "This campaign IO is no longer editable. Refresh and try again." };
 
   if (!formDataDefersRevalidate(formData)) {
     revalidatePath(`/campaigns/${parsed.data.campaign_header_id}`);

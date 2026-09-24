@@ -15,12 +15,14 @@ import type { Database } from "@/types/database";
 type Supabase = SupabaseClient<Database>;
 
 /**
- * Sole supported entry into the Commercial Creator (CRM) lifecycle.
+ * Application entry into the Commercial Creator (CRM) lifecycle.
+ * Assignment and Vendor IO writes also ensure membership atomically in DB triggers.
  *
  * - Idempotent on influencer_id (PK).
  * - Never creates influencers, platform accounts, or discovered_profiles.
  * - Never advances Incomplete → Active automatically.
- * - Respects CREATOR_CRM_WRITERS_ENABLED (default OFF in Phase 2A).
+ * - Respects CREATOR_CRM_WRITERS_ENABLED for application/manual activation.
+ *   Committed operational rows always retain CRM membership, independently of this flag.
  * - Identity lifecycle must not call this for Discovery import/Apify/promote alone.
  */
 export async function ensureCommercialCreator(

@@ -27,6 +27,7 @@ import { VendorIoManualApproveButton } from "@/features/io/components/vendor-io-
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
 import { VendorIoSignedAttachmentField } from "@/features/io/components/vendor-io-signed-attachment-field";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
+import { VendorIoCampaignTermsEditor } from "./vendor-io-campaign-terms-editor";
 import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-badge";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
@@ -135,7 +136,8 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
   const vendorTerms = parseTermsText(row.vendor_io_terms_text);
   const effective = resolveEffectiveVendorIoTerms(
     row.vendor_io_terms_text,
-    row.terms_text
+    row.terms_text,
+    { override: row.compliance_country_code, creatorCountry: row.creator_country_code }
   );
   const source = resolveIoTermsSource(vendorTerms, ioTerms);
 
@@ -143,7 +145,7 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
     <div className="space-y-3 px-0.5">
       <DetailFieldGroup title="Commercial terms">
         <DetailField label="Usage rights" valueClassName="max-w-[70%]">
-          {row.usage_rights?.trim() || "—"}
+          <VendorIoCampaignTermsEditor row={row} field="usage" />
         </DetailField>
         <DetailField label="Exclusivity" valueClassName="max-w-[70%]">
           {row.exclusivity?.trim() || "—"}
@@ -155,7 +157,10 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
           {row.special_payment_terms?.trim() || "—"}
         </DetailField>
         <DetailField label="IO payment schedule" valueClassName="max-w-[70%]">
-          {row.effective_payment_terms_label || "—"}
+          <VendorIoCampaignTermsEditor row={row} />
+        </DetailField>
+        <DetailField label="Local compliance country" valueClassName="max-w-[70%]">
+          <VendorIoCampaignTermsEditor row={row} field="country" />
         </DetailField>
         <VendorIoSignedAttachmentField row={row} />
       </DetailFieldGroup>

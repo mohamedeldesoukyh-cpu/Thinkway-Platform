@@ -96,7 +96,7 @@ export function AddFromDiscoveryToCrmDialog({
               id="crm-import-search"
               value={q}
               onChange={(e) => runSearch(e.target.value)}
-              placeholder="Name, email, or vendor #"
+              placeholder="Name, username, short name, URL, email or vendor #"
             />
           </div>
           {pendingSearch ? (

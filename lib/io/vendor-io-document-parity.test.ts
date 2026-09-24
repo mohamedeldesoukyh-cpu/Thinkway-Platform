@@ -3,6 +3,8 @@
  * Run via: npm run test:vendor-io-terms
  */
 import assert from "node:assert/strict";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
 
 import {
   renderTermsListHtml,
@@ -18,6 +20,7 @@ import { renderVendorIoHtml } from "./vendor-io-template-render";
 import { INSERTION_ORDER_PDF_OPTIONS, renderHtmlToPdf } from "./vendor-io-pdf";
 import { extractPdfText } from "@/lib/discovery-import/parsers/pdf-text";
 import { VENDOR_IO_DEFAULT_TERMS } from "./vendor-io-default-terms";
+import { applyVendorIoComplianceCountry } from "./vendor-io-country";
 import type { VendorIoDocumentData } from "./vendor-io-document-types";
 
 function fixtureData(terms: ClientIoTerm[]): VendorIoDocumentData {
@@ -30,7 +33,7 @@ function fixtureData(terms: ClientIoTerm[]): VendorIoDocumentData {
     currencyCode: "EGP",
     status: "draft",
     amount: 1000,
-    usageRights: null,
+    usageRights: "30 days from first publication",
     terms,
     influencer: {
       id: "00000000-0000-4000-8000-000000000002",
@@ -44,7 +47,7 @@ function fixtureData(terms: ClientIoTerm[]): VendorIoDocumentData {
       categories: [],
       countryCode: "EG",
       languages: [],
-      paymentDetails: {},
+      paymentDetails: { payment_schedule: "50% advance, 50% on completion" },
     },
     campaign: {
       id: "00000000-0000-4000-8000-000000000003",
@@ -55,7 +58,7 @@ function fixtureData(terms: ClientIoTerm[]): VendorIoDocumentData {
       clientName: "Parity Client",
       brandName: "Parity Brand",
       channels: "Instagram",
-      usagePeriod: null,
+      usagePeriod: "30 days from first publication",
     },
     influencerMetrics: {
       handle: "@parity",
@@ -90,6 +93,7 @@ function fixtureData(terms: ClientIoTerm[]): VendorIoDocumentData {
 
 const SCENARIOS: Array<{ name: string; terms: ClientIoTerm[] }> = [
   { name: "Platform Default", terms: VENDOR_IO_DEFAULT_TERMS },
+  { name: "UAE Default", terms: applyVendorIoComplianceCountry(VENDOR_IO_DEFAULT_TERMS, "AE") },
   {
     name: "Vendor Default",
     terms: [
@@ -126,6 +130,17 @@ async function assertHtmlPdfParity(name: string, terms: ClientIoTerm[]) {
   if (!pdfResult.ok) return;
 
   const pdfText = await extractPdfText(pdfResult.buffer);
+  const outputDir = process.env.VENDOR_IO_PARITY_OUTPUT_DIR;
+  if (outputDir) {
+    mkdirSync(outputDir, { recursive: true });
+    const base = name.toLowerCase().replace(/\s+/g, "-");
+    writeFileSync(join(outputDir, `${base}.pdf`), pdfResult.buffer);
+    writeFileSync(join(outputDir, `${base}.html`), html);
+    writeFileSync(join(outputDir, `${base}.txt`), pdfText);
+  }
+  const normalizedPdfText = pdfText.replace(/\s+/g, " ");
+  assert.ok(normalizedPdfText.includes("30 days from first publication"), "Usage period missing from PDF");
+  assert.ok(normalizedPdfText.includes("50% advance, 50% on completion"), "Payment schedule missing from PDF");
   assert.ok(
     pdfContainsTermsInOrder(pdfText, terms),
     `${name}: PDF text missing terms in order (legal wording drift)`

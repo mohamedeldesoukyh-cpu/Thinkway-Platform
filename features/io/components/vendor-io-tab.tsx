@@ -25,6 +25,7 @@ import {
 import { VendorIoDeliveryBadge } from "@/features/io/components/vendor-io-delivery-badge";
 import { VendorIoRowActions } from "@/features/io/components/vendor-io-row-actions";
 import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor-io-special-payment-terms-cell";
+import { VendorIoCampaignTermsEditor } from "./vendor-io-campaign-terms-editor";
 import { VendorIoStatusPill } from "@/features/io/components/vendor-io-status-pill";
 import type { VendorIoRow } from "@/features/io/types";
 import {
@@ -169,15 +170,26 @@ function buildCampaignVendorIoColumns(
       label: "Payment terms",
       colWidth: "12%",
       cellClassName: "whitespace-normal break-words align-top",
-      renderCell: (row) => (
-        <span className="thinkway-campaign-cell-muted block whitespace-normal break-words leading-snug">
-          {row.vendor_payment_terms_label || "—"}
-        </span>
-      ),
+      renderCell: (row) => <VendorIoCampaignTermsEditor row={row} />,
+    },
+    {
+      id: "usage_rights",
+      label: "Usage rights",
+      colWidth: "12%",
+      cellClassName: "whitespace-normal break-words align-top",
+      renderCell: (row) => <VendorIoCampaignTermsEditor row={row} field="usage" />,
+    },
+    {
+      id: "compliance_country",
+      label: "Compliance country",
+      colWidth: "10%",
+      cellClassName: "whitespace-normal break-words align-top",
+      renderCell: (row) => <VendorIoCampaignTermsEditor row={row} field="country" />,
     },
     {
       id: "special_payment_terms",
       label: "Special terms",
+      defaultVisible: false,
       colWidth: "14%",
       cellClassName: "whitespace-normal break-words align-top",
       renderCell: (row) => <VendorIoSpecialPaymentTermsCell row={row} />,

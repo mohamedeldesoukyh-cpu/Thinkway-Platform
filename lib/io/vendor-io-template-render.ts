@@ -162,6 +162,7 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
      "Engagement",
      fld("Channel", display(data.campaign.channels)) +
        fld("Usage Period", display(data.campaign.usagePeriod)) +
+       fld("Exclusivity", display(data.exclusivity, "Non-exclusive")) +
        fld("Currency", escapeHtml(currency))
    )}
  </div>`
@@ -258,9 +259,10 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 ${IO_CLASSIC_DOCUMENT_STYLES}
+@media print { .vendor-io-document .qsec:has(> .qgrid2) { break-inside: avoid; page-break-inside: avoid; } }
 </style>
 </head>
-<body>
+<body class="vendor-io-document">
 <div class="paper"><div class="doc">
 ${hero}
 ${parties}${campaign}${profile}${deliverables}${pricing}${payment}${signature}${terms}

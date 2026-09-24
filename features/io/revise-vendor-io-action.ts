@@ -163,7 +163,7 @@ export async function reviseVendorIosFromLinesAction(
     const { data: oldVio, error: oldError } = await supabase
       .from("vendor_ios")
       .select(
-        "id, document_number, revision_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status, terms_text, terms_html, usage_rights, exclusivity, special_payment_terms, attachment_url, root_vendor_io_id, is_superseded"
+        "id, document_number, revision_number, assignment_id, campaign_header_id, influencer_id, amount, currency_code, status, terms_text, terms_html, usage_rights, exclusivity, compliance_country_code, special_payment_terms, attachment_url, root_vendor_io_id, is_superseded"
       )
       .eq("id", oldVioId)
       .maybeSingle();
@@ -186,6 +186,7 @@ export async function reviseVendorIosFromLinesAction(
       terms_text: string | null;
       terms_html: string | null;
       usage_rights: string | null;
+      compliance_country_code: "AE" | "EG" | null;
       exclusivity: string | null;
       special_payment_terms: string | null;
       attachment_url: string | null;
@@ -243,11 +244,12 @@ export async function reviseVendorIosFromLinesAction(
         amount: groupTotal || old.amount,
         currency_code: old.currency_code,
         status: "draft",
-        terms_text: old.terms_text
-          ? `${old.terms_text}\n\n[Revision ${nextRevision}: ${reason}]`
-          : `Revision ${nextRevision}: ${reason}`,
+        // Keep structured JSON intact; revision notes belong outside legal terms.
+        terms_text: old.terms_text,
+        lifecycle_reason_detail: reason,
         terms_html: old.terms_html,
         usage_rights: old.usage_rights,
+        compliance_country_code: old.compliance_country_code,
         exclusivity: old.exclusivity,
         special_payment_terms: old.special_payment_terms,
         attachment_url: old.attachment_url,

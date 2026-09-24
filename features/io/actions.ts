@@ -52,8 +52,8 @@ import {
   hasValidVendorEmail,
   VENDOR_IO_MANUAL_DELIVERY_RECIPIENT,
 } from "@/lib/io/vendor-io-delivery";
-import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
-import { downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
+import { renderLiveVendorIoHtml } from "@/lib/io/render-live-vendor-io-html";
+import { renderHtmlToPdf, INSERTION_ORDER_PDF_OPTIONS } from "@/lib/io/vendor-io-pdf";
 import { clientIoGeneratedEmailTotal } from "@/lib/email/io-email-summary";
 import {
   normalizeIoTermsText,
@@ -976,10 +976,22 @@ export async function sendVendorIoAction(
   const recipientEmail = influencer?.email?.trim() ?? "";
   const sendByEmail = hasValidVendorEmail(recipientEmail);
 
+  // Render before advancing delivery so campaign edits reach the attached IO.
+  // Do not call generateVendorIoDocument here: it would reset workflow status.
+  let currentPdfBuffer: Buffer | null = null;
+
   if (sendByEmail) {
     const emailReady = assertOutboundEmailReady();
     if (!emailReady.ok) {
       return { ok: false, message: emailReady.message };
+    }
+    try {
+      const html = await renderLiveVendorIoHtml(supabase, id);
+      const pdf = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
+      if (pdf.ok) currentPdfBuffer = pdf.buffer;
+      else console.warn("[vendor-io] Current PDF unavailable; sending the existing document-link email format.", pdf.error);
+    } catch (renderError) {
+      console.warn("[vendor-io] Current PDF unavailable; sending the existing document-link email format.", renderError);
     }
   }
 
@@ -1077,12 +1089,7 @@ export async function sendVendorIoAction(
     generated_pdf_url: typed.generated_pdf_url,
   };
 
-  const pdfBuffer = await downloadIoDocumentBuffer(
-    supabase,
-    VENDOR_IO_DOCUMENTS_BUCKET,
-    typed.generated_pdf_url
-  );
-  const pdfAttachment = buildVendorIoPdfAttachmentFromBuffer(pdfBuffer);
+  const pdfAttachment = buildVendorIoPdfAttachmentFromBuffer(currentPdfBuffer);
   const hasPdfAttachment = Boolean(pdfAttachment);
 
   const subject = buildVendorIoEmailSubject(emailIo);
@@ -1174,4 +1181,3 @@ export async function sendVendorIoAction(
 
   return { ok: true, message: "Email Sent" };
 }
-

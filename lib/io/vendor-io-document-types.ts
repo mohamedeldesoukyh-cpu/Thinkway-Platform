@@ -20,6 +20,7 @@ export type VendorIoDocumentData = {
   status: string;
   amount: number;
   usageRights: string | null;
+  exclusivity?: string | null;
   /** Resolved Section 8 terms (IO → vendor → platform). */
   terms: ClientIoTerm[];
   influencer: {
