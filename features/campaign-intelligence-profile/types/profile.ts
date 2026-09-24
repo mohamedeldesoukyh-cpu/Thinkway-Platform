@@ -59,6 +59,19 @@ export type CampaignIntelligenceProfile = CampaignFacts & {
     languages?: string[];
   };
   creatorCategories?: string[];
+  /** Explicit creator-directed requirements only. Never projected from market/audience. */
+  creatorRequirements?: {
+    countries?: string[];
+    languages?: string[];
+    gender?: string;
+    tiers?: string[];
+    engagementMin?: number;
+  };
+  contentLanguages?: string[];
+  /** Explicit content topics, distinct from products and subjective content style. */
+  keywords?: string[];
+  /** New extractions distinguish creator, audience and market scopes; no legacy gap fallback. */
+  explicitRequirementScopes?: true;
   creatorNiches?: string[];
   deliverables?: string[];
   toneOfVoice?: string[];

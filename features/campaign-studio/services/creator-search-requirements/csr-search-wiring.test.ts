@@ -236,6 +236,12 @@ test("with CSR the browse parameters keep every value they had and add no duplic
       );
       continue;
     }
+    if (key === "coverageIntent") {
+      const prior = value as Record<string, unknown>;
+      const next = after[key] as Record<string, unknown>;
+      for (const [field, existing] of Object.entries(prior)) if (existing !== undefined) assert.deepEqual(next[field], existing);
+      continue;
+    }
     // Scalars are single-valued AND filters: CSR must never overwrite one.
     if (value !== undefined) {
       assert.deepEqual(after[key], value, `${key} was overwritten by CSR`);

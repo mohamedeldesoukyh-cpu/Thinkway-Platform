@@ -306,6 +306,13 @@ export async function uploadCampaignBriefAction(
       parseError,
     });
 
+    // Direct Discovery owns a standalone brief; no Studio conversation or strategy.
+    if (formData.get("discoveryBrief") === "true" && !conversationId && !campaignHeaderId && !brandId) {
+      return finalizeCampaignBriefUpload({ supabase, userId, documentId: doc.id,
+        fileName: file.name, fileSizeBytes: file.size, profile: merged,
+        mode: "create", allowMissingBrand: true });
+    }
+
     // Same-conversation replacement: reuse the conversation's current profile
     // instead of forking a second canonical row for it. Brand detection and the
     // brand-selection detour are skipped — the campaign already has a profile,

@@ -35,6 +35,7 @@ export const searchColsStyle = {
 
 type Props = {
   creator: UnifiedCreatorResult;
+  relevanceLabel?: "Relevance" | "Match";
   showRelevance?: boolean;
   selected: boolean;
   index?: number;
@@ -56,6 +57,7 @@ type Props = {
 export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
   creator,
   showRelevance,
+  relevanceLabel = "Relevance",
   selected,
   index = 0,
   addedToShortlist = false,
@@ -162,7 +164,7 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
       </DiscoverySuiteCell>
       {showRelevance ? <DiscoverySuiteCell>
         <details onClick={stopBubble} className="text-xs">
-          <summary className="cursor-pointer" aria-label={`Relevance for ${vm.displayName}`}>{creator.discovery_relevance?.score == null ? "Insufficient data" : `${creator.discovery_relevance.score}%`}</summary>
+          <summary className="cursor-pointer" aria-label={`${relevanceLabel} for ${vm.displayName}`}>{creator.discovery_relevance?.score == null ? "Insufficient data" : `${creator.discovery_relevance.score}%`}</summary>
           {creator.discovery_relevance?.score == null ? <p className="mt-2">These filters qualify creators but do not provide enough detail to rank their relevance.</p> : null}
           <ul className="mt-2 space-y-1">{creator.discovery_relevance?.reasons.map((r,index) => <li key={index}>{r.dimension}: {r.outcome}{r.detail ? ` — ${r.detail}` : ""}</li>)}</ul>
         </details>
@@ -178,12 +180,14 @@ export function CreatorSearchSuiteHeader({
   onToggleSelectAll,
   countLabel,
   showRelevance,
+  relevanceLabel = "Relevance",
 }: {
   total: number;
   allSelected: boolean | "indeterminate";
   hasCreators: boolean;
   onToggleSelectAll: () => void;
   countLabel?: string;
+  relevanceLabel?: "Relevance" | "Match";
   showRelevance?: boolean;
 }) {
   const resolved =
@@ -225,7 +229,7 @@ export function CreatorSearchSuiteHeader({
           Action
         </span>
       </DiscoverySuiteCell>
-      {showRelevance ? <DiscoverySuiteCell>Relevance</DiscoverySuiteCell> : null}
+      {showRelevance ? <DiscoverySuiteCell>{relevanceLabel}</DiscoverySuiteCell> : null}
     </div>
   );
 }

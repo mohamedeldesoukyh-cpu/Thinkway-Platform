@@ -19,14 +19,6 @@ const STRICT_EVIDENCE_KEYS = [
   "creator.followerMax",
 ] as const;
 
-function setEvidence(
-  entities: NormalizedCampaignEntities,
-  key: string,
-  provenance: FieldProvenance
-): void {
-  entities.fieldEvidence[key] = provenance;
-}
-
 function clearStrictKey(entities: NormalizedCampaignEntities, key: string): void {
   switch (key) {
     case "market.countryCode":
@@ -235,14 +227,6 @@ export function validateNormalizedEvidence(
         delete next.market.countryCode;
         delete next.market.countryLabel;
         delete next.fieldEvidence["market.countryCode"];
-      } else if (!next.market.countryCode && allowed.length > 0) {
-        next.market.countryCode = allowed[0];
-        next.market.countryLabel = countryLabel(allowed[0]);
-        setEvidence(next, "market.countryCode", {
-          level: "normalized",
-          confidence: next.fieldEvidence["audience.countries"]?.confidence ?? 0.8,
-          sourceField: "audience.countries",
-        });
       }
     }
   }

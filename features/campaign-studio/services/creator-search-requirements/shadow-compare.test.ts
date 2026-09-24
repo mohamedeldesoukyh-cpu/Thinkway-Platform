@@ -99,7 +99,7 @@ test("shared filters are recognised as shared, not as additions", () => {
 
   const shared = comparison.shared.map((s) => `${s.key}=${s.value}`);
   assert.ok(shared.includes("platform=instagram"));
-  assert.ok(shared.includes("audience_country=EG"));
+  assert.ok(!shared.includes("audience_country=EG"), "CIP does not emit unsupported audience filters");
   assert.ok(shared.includes("category=Parenting"));
   assert.equal(comparison.currentFilterCount, current.length);
 });

@@ -23,7 +23,7 @@ const num = (s: string) => s.trim() && Number.isFinite(Number(s)) ? Number(s) : 
 
 /** Disabled controls and old bookmarked values cannot reintroduce proxy semantics. */
 export function sanitizeNormalFilters(f: CreatorSearchFilters): CreatorSearchFilters {
-  return { ...f, categories: cleanDiscoveryCategories(f.categories), minBrandSafety: "", minAiScore: "", minBrandFit: "", minEstimatedCost: "", maxEstimatedCost: "", audienceInterestTags: [], contentLanguages: [] };
+  return { ...f, categories: cleanDiscoveryCategories(f.categories), minBrandSafety: "", minAiScore: "", minBrandFit: "", minEstimatedCost: "", maxEstimatedCost: "", audienceCountries: [], audienceInterestTags: [], contentLanguages: [] };
 }
 export function hasNormalSearchContext(input: CreatorSearchFilters): boolean {
   const f = sanitizeNormalFilters(input);
@@ -163,15 +163,18 @@ export type CandidateWindow = { candidates: Candidate[]; exhausted: boolean; sca
 export type NormalSearchContinuation = {
   remaining: Candidate[]; examined: number; matched: number; internalCount: number;
   discoveryCount: number; exhausted: boolean; sealedCount: number; seen: string[]; evaluatedAt: number;
+  /** Actual delivered rows, including a brief page sealed at a budget boundary. */
+  deliveredCount?: number;
 };
 /** Stable window pools: finish a whole 200-candidate window, qualify, then seal/sort
  * once a page is available. Sparse windows accumulate only until a page qualifies.
  * Resume trusted sealed pools; never rerank a growing prefix. */
-export async function executeNormalSearch(request: NormalSearchRequest, readWindow: (offset: number, limit: number) => Promise<CandidateWindow>, options: { maxCandidates?: number; maxMs?: number; now?: () => number; continuation?: NormalSearchContinuation } = {}) {
+export async function executeNormalSearch(request: NormalSearchRequest, readWindow: (offset: number, limit: number) => Promise<CandidateWindow>, options: { maxCandidates?: number; maxMs?: number; now?: () => number; continuation?: NormalSearchContinuation; evaluate?: typeof evaluateNormalCandidate } = {}) {
   const f = sanitizeNormalFilters(request.filters);
   const page = Math.max(1, Math.min(100, request.page));
   const pageSize = Math.max(1, Math.min(100, request.pageSize));
-  const end = page * pageSize;
+  const start = options.continuation?.deliveredCount ?? (page - 1) * pageSize;
+  const end = start + pageSize;
   const max = options.maxCandidates ?? 10000;
   const clock = options.now ?? Date.now, started = clock();
   const prior = options.continuation;
@@ -184,14 +187,14 @@ export async function executeNormalSearch(request: NormalSearchRequest, readWind
   const seen = new Set<string>(prior?.seen);
   for (const [index, c] of (prior?.remaining ?? []).entries()) {
     const ordinal = sealedCount - prior!.remaining.length + index;
-    if (ordinal >= end-pageSize && ordinal < end) selected.push(c);
+    if (ordinal >= start && ordinal < end) selected.push(c);
     else if (ordinal >= end) remaining.push(c);
   }
   const exact = (c: Candidate) => c.discovery_relevance?.reasons.some(r => r.dimension === "Search text" && r.detail === "Exact name or handle") ? 1 : 0;
   const seal = () => {
     pool.sort((a,b) => exact(b)-exact(a) || compareNormalCandidates(a,b,request.sort));
     for (const c of pool) {
-      if (sealedCount >= end-pageSize && sealedCount < end) selected.push(c);
+      if (sealedCount >= start && sealedCount < end) selected.push(c);
       else if (sealedCount >= end) remaining.push(c);
       sealedCount++;
     }
@@ -205,11 +208,11 @@ export async function executeNormalSearch(request: NormalSearchRequest, readWind
     for (const c of window.candidates) {
       if (seen.has(c.unified_id)) continue;
       seen.add(c.unified_id);
-      const evaluated = evaluateNormalCandidate(c, f, evaluatedAt);
+      const evaluated = (options.evaluate ?? evaluateNormalCandidate)(c, f, evaluatedAt);
       if (!evaluated.eligible) continue;
       matched++;
       if (c.influencer_id) internalCount++; else discoveryCount++;
-      pool.push({ ...evaluated.creator, discovery_relevance: hasNormalSearchContext(f) ? evaluated.relevance : undefined });
+      pool.push({ ...evaluated.creator, discovery_relevance: options.evaluate || hasNormalSearchContext(f) ? evaluated.relevance : undefined });
     }
     examined += scanned;
     exhausted = window.exhausted;
@@ -217,8 +220,13 @@ export async function executeNormalSearch(request: NormalSearchRequest, readWind
     if (sealedCount >= end || exhausted) break;
   }
   const ready = exhausted || sealedCount >= end;
+  // Brief refinement may have a sparse but useful qualified pool. Seal it at the
+  // existing budget boundary, keep the incomplete warning, and resume past that
+  // exact boundary. Do not discard matches or replay/rerank the delivered prefix.
+  if (!ready && options.evaluate) seal();
   const completeness: SearchCompleteness = { status: exhausted ? "complete" : ready ? "bounded" : "incomplete", ...(!ready ? {reason} : {}), examined, matched, totalKind: exhausted ? "exact" : "lower_bound" };
-  const continuation: NormalSearchContinuation | undefined = ready && (!exhausted || remaining.length > 0)
-    ? { remaining, examined, matched, internalCount, discoveryCount, exhausted, sealedCount, seen: [...seen], evaluatedAt } : undefined;
-  return { continuation, creators: ready ? selected : [], total: matched, has_more: !exhausted || matched > end, page, pageSize, internal_count: internalCount, discovery_count: discoveryCount, completeness };
+  const deliver = ready || Boolean(options.evaluate && selected.length);
+  const continuation: NormalSearchContinuation | undefined = deliver && (remaining.length > 0 || (!exhausted && examined < max))
+    ? { remaining, examined, matched, internalCount, discoveryCount, exhausted, sealedCount, seen: [...seen], evaluatedAt, deliveredCount: start + selected.length } : undefined;
+  return { continuation, creators: deliver ? selected : [], total: matched, has_more: !exhausted || matched > end, page, pageSize, internal_count: internalCount, discovery_count: discoveryCount, completeness };
 }

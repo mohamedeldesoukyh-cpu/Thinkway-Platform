@@ -102,7 +102,7 @@ function assertCipPreserved(
   }
 }
 
-test("telecom/youth enrichment survives the merge intact", () => {
+test("CIP retains no invented telecom/youth hard filters", () => {
   const profile = profileFor(validatedFor({ brandName: "Etisalat", platforms: [] }), {
     rawBriefExcerpt: "Etisalat 5G launch for Gen Z across Egypt.",
   });
@@ -116,17 +116,11 @@ test("telecom/youth enrichment survives the merge intact", () => {
 
   assertCipPreserved(cipFilters, merged);
 
-  const values = merged.map((f) => `${f.key}:${f.value.toLowerCase()}`);
-  assert.ok(values.includes("content_keyword:5g"), "telecom keyword enrichment lost");
-  assert.ok(values.includes("content_keyword:telecom"), "telecom keyword enrichment lost");
-  assert.ok(values.includes("category:technology"), "telecom category enrichment lost");
-  assert.ok(values.includes("category:entertainment"), "telecom category enrichment lost");
-  assert.ok(values.includes("platform:tiktok"), "telecom default platform lost");
-  assert.ok(values.includes("audience_age_min:18"), "youth age floor lost");
-  assert.ok(values.includes("audience_age_max:24"), "youth age ceiling lost");
+  assert.ok(!cipFilters.some(f => f.key === "content_keyword" || f.key.startsWith("audience_age")), "CIP no longer invents telecom/youth filters");
+  assert.ok(!cipFilters.some(f => f.key === "platform"), "unstated platforms are not hard requirements");
 });
 
-test("thin-brief category inference survives the merge", () => {
+test("thin brief context creates no inferred hard category", () => {
   const profile = profileFor(validatedFor({ brandName: "Glow" }), {
     rawBriefExcerpt: "A skincare and dermatology launch in Egypt.",
   });
@@ -138,14 +132,11 @@ test("thin-brief category inference survives the merge", () => {
   }).filters;
 
   assertCipPreserved(cipFilters, merged);
-  const values = merged.map((f) => `${f.key}:${f.value.toLowerCase()}`);
-  assert.ok(values.includes("category:beauty"), "thin-brief Beauty inference lost");
+  assert.ok(!cipFilters.some(f => f.key === "category"), "context is not a mandatory creator category");
 });
 
-test("creator age bounds — which CSR cannot express — survive the merge", () => {
-  // The CIP mapper derives creator_age_* from the validated AUDIENCE age band.
-  // CSR has no creator-age requirement at all, so these exist only because the
-  // CIP mapper produced them.
+test("audience age never becomes creator age", () => {
+  // An audience age band must not become creator age in either consumer.
   const withCreatorAges = validatedFor({
     brandName: "Brand",
     categories: ["Food"],
@@ -156,8 +147,8 @@ test("creator age bounds — which CSR cannot express — survive the merge", ()
     profileFor(withCreatorAges)
   ).filters;
 
-  // Guard: the fixture really does produce creator age filters.
-  assert.ok(cipFilters.some((f) => f.key === "creator_age_min"));
+  // Guard: the audience fixture does not produce creator age filters.
+  assert.ok(!cipFilters.some((f) => f.key === "creator_age_min"));
 
   const merged = mergeCsrFiltersIntoDiscoveryFilters({
     current: cipFilters,
@@ -165,8 +156,8 @@ test("creator age bounds — which CSR cannot express — survive the merge", ()
   }).filters;
 
   assertCipPreserved(cipFilters, merged);
-  assert.equal(merged.filter((f) => f.key === "creator_age_min").length, 1);
-  assert.equal(merged.filter((f) => f.key === "creator_age_max").length, 1);
+  assert.equal(merged.filter((f) => f.key === "creator_age_min").length, 0);
+  assert.equal(merged.filter((f) => f.key === "creator_age_max").length, 0);
 });
 
 test("content_tag and verified — which CSR cannot express — survive the merge", () => {
