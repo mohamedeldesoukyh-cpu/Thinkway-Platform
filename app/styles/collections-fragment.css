@@ -19,3 +19,15 @@
  .collections-suite .tw-fc{grid-template-columns:repeat(4,1fr);height:auto;row-gap:16px}}
 @media(max-width:560px){.collections-suite .tw-fc{grid-template-columns:repeat(2,1fr)}}
 
+/* Collections typography: consistent body size and left-aligned financial values. */
+.collections-suite .tw-c{font-size:12px;line-height:1.5}
+.collections-suite .tw-g{font-size:12px;line-height:1.5;text-align:left}
+.collections-suite .tw-v,.collections-suite .tw-rr,.collections-suite .tw-cwin,.collections-suite .tw-k,.collections-suite .tw-fc__b{text-align:left}
+.collections-suite .tw-v,.collections-suite .tw-code,.collections-suite .tw-ms2 b,.collections-suite .tw-po b,.collections-suite .tw-st b,.collections-suite .tw-k b,.collections-suite .tw-cwin{font-family:var(--font-sans,Geist),sans-serif;font-style:normal;font-variant-numeric:tabular-nums;letter-spacing:0}
+.collections-suite .tw-code{white-space:nowrap;font-size:12px}
+.collections-suite .tw-t{white-space:normal;overflow-wrap:anywhere}
+.collections-suite .tw-miss{font-style:normal}
+.collections-suite .tw-g .tw-b[aria-pressed]{height:auto;min-height:27px;white-space:normal;text-align:left;font-size:12px;font-weight:500}
+.collections-suite .tw-k[aria-pressed="true"],.collections-suite .tw-g .tw-b[aria-pressed="true"]{outline:2px solid var(--tw-blue);outline-offset:-2px}
+.collections-suite .tw-form{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+
