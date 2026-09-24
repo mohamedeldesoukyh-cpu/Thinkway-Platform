@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,6 @@ import {
   recordCollectionPaymentFromWorkspaceAction,
 } from "@/features/collections/actions";
 import type { CollectionInvoiceRow } from "@/lib/collections/queries/load-collection-invoices";
-import { formatAnalyticsAmount } from "@/lib/analytics/currency/engine";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import type { AnalyticsCurrencyContext } from "@/lib/analytics/types/metrics";
 
@@ -30,8 +30,8 @@ type PaymentAllocationSectionProps = {
 
 export function PaymentAllocationSection({
   invoices,
-  currency,
 }: PaymentAllocationSectionProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [invoiceId, setInvoiceId] = useState("");
   const [amount, setAmount] = useState("");
@@ -42,7 +42,7 @@ export function PaymentAllocationSection({
   const [selected, setSelected] = useState<Record<string, string>>({});
 
   const open = invoices.filter((i) => i.outstanding > 0);
-  const format = (n: number) => formatAnalyticsAmount(n, currency);
+  const selectedInvoice = open.find((invoice) => invoice.id === invoiceId);
 
   const recordSingle = () => {
     const fd = new FormData();
@@ -54,7 +54,14 @@ export function PaymentAllocationSection({
     startTransition(async () => {
       const result = await recordCollectionPaymentFromWorkspaceAction(fd);
       if (!result.ok) toast.error(result.error);
-      else toast.success(result.message ?? "Payment recorded.");
+      else {
+        toast.success(result.message ?? "Payment recorded.");
+        setInvoiceId("");
+        setAmount("");
+        setReference("");
+        setNotes("");
+        router.refresh();
+      }
     });
   };
 
@@ -75,48 +82,71 @@ export function PaymentAllocationSection({
         allocations,
       });
       if (!result.ok) toast.error(result.error);
-      else toast.success(result.message ?? "Payments allocated.");
+      else {
+        toast.success(result.message ?? "Payments allocated.");
+        setMultiAmount("");
+        setSelected({});
+        router.refresh();
+      }
     });
   };
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <div className="rounded-2xl border border-border p-4 space-y-3">
-        <h3 className="font-heading text-sm font-semibold">Record payment</h3>
+        <h3 className="font-heading text-sm font-semibold">Record client payment</h3>
+        <p className="text-sm text-muted-foreground">Select the client's invoice and enter the money received. Partial receipts update the invoice's remaining balance.</p>
+        {open.length === 0 && <p className="text-sm text-muted-foreground">No invoices with an outstanding balance match your filters. Change the client filter or issue an invoice first.</p>}
         <div className="grid gap-2">
-          <Label className="text-xs">Invoice</Label>
+          <Label htmlFor="receipt-invoice" className="text-xs">Invoice</Label>
           <Select value={invoiceId} onValueChange={setInvoiceId}>
-            <SelectTrigger className="h-9">
+            <SelectTrigger id="receipt-invoice" className="h-9">
               <SelectValue placeholder="Select invoice" />
             </SelectTrigger>
             <SelectContent>
               {open.map((inv) => (
                 <SelectItem key={inv.id} value={inv.id}>
-                  {formatDocumentNumberForDisplay(inv.document_number)} — {format(inv.outstanding)}
+                  {formatDocumentNumberForDisplay(inv.document_number)} — {inv.client_name} — {inv.currency} {inv.outstanding.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} outstanding
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs">Amount</Label>
-          <Input type="number" min={0} value={amount} onChange={(e) => setAmount(e.target.value)} />
+          {selectedInvoice?.campaign_name && <p className="text-xs text-muted-foreground">Campaign: {selectedInvoice.campaign_name}</p>}
+          <Label htmlFor="receipt-amount" className="text-xs">Amount received{selectedInvoice ? ` (${selectedInvoice.currency})` : ""}</Label>
+          <Input id="receipt-amount" type="number" min={0.01} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} />
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs">Reference</Label>
-          <Input value={reference} onChange={(e) => setReference(e.target.value)} />
+          <Label htmlFor="receipt-method" className="text-xs">Payment method</Label>
+          <Select value={method} onValueChange={setMethod}>
+            <SelectTrigger id="receipt-method"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="bank_transfer">Bank transfer</SelectItem>
+              <SelectItem value="wire">Wire transfer</SelectItem>
+              <SelectItem value="check">Check</SelectItem>
+              <SelectItem value="credit_card">Credit card</SelectItem>
+              <SelectItem value="debit_card">Debit card</SelectItem>
+              <SelectItem value="paypal">PayPal</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
         <div className="grid gap-2">
-          <Label className="text-xs">Notes / proof</Label>
-          <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+          <Label htmlFor="receipt-reference" className="text-xs">Bank / payment reference</Label>
+          <Input id="receipt-reference" maxLength={120} value={reference} onChange={(e) => setReference(e.target.value)} />
         </div>
-        <Button type="button" size="sm" disabled={isPending || !invoiceId} onClick={recordSingle}>
-          Mark paid / partial
+        <div className="grid gap-2">
+          <Label htmlFor="receipt-notes" className="text-xs">Notes or proof link</Label>
+          <Textarea id="receipt-notes" maxLength={500} value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
+        </div>
+        <Button type="button" size="sm" disabled={isPending || !selectedInvoice || !Number.isFinite(Number(amount)) || Number(amount) <= 0} onClick={recordSingle}>
+          {isPending ? "Recording…" : "Record payment"}
         </Button>
       </div>
 
       <div className="rounded-2xl border border-border p-4 space-y-3">
-        <h3 className="font-heading text-sm font-semibold">Split allocation</h3>
+        <h3 className="font-heading text-sm font-semibold">Split one receipt across invoices</h3>
         <div className="grid gap-2">
           <Label className="text-xs">Total receipt amount</Label>
           <Input

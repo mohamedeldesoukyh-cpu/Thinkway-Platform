@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import { Suspense } from "react";
+import Link from "next/link";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
@@ -32,6 +33,8 @@ export default async function CollectionsPage({ searchParams }: PageProps) {
     <FinanceSuiteShell
       title="Collections"
       description="Aging, receivables and collection performance"
+      hideDefaultActions
+      actions={<Link className="tw-b pri" href={`/collections?tab=allocation${filterState.clientId ? `&client=${encodeURIComponent(filterState.clientId)}` : ""}`}>Record client payment</Link>}
     >
       {errorMessage && !payload ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">

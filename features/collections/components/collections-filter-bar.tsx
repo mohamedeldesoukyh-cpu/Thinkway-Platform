@@ -25,7 +25,7 @@ const TABS = [
   { value: "dashboard", label: "Collections dashboard" },
   { value: "aging", label: "AR aging" },
   { value: "statements", label: "Client statements" },
-  { value: "allocation", label: "Payment allocation" },
+  { value: "allocation", label: "Record client payment" },
   { value: "forecast", label: "Collections forecast" },
   { value: "overdue", label: "Overdue management" },
   { value: "payables", label: "Vendor payables" },

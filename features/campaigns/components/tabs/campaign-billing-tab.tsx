@@ -671,15 +671,15 @@ export function CampaignBillingTab({
           cardSurface
           leading={
             <CampaignOperationalSectionHeader
-              title="Payments"
-              actions={<OperationalTableControlsSlot contextLabel="Campaign payments" />}
+              title="Client payments"
+              actions={<><Button asChild size="sm"><Link href="/collections?tab=allocation">Record client payment</Link></Button><OperationalTableControlsSlot contextLabel="Campaign payments" /></>}
             />
           }
         >
           {workspace.payments.length === 0 ? (
             <AuroraEmptyState
-              title="Payments are not available yet."
-              description="Collections unlock after invoices exist. Decision Center shows any finance blocker. Owner: Finance — open the invoice register action when Billing starts."
+              title="No client payments recorded for this campaign."
+              description="Use Record client payment to select an invoice and enter the amount received. Creator payouts are managed in the Creator payments tab."
             />
           ) : (
             <OperationalConfigurableTable

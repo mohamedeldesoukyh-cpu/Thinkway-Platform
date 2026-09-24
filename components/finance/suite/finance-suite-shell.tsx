@@ -8,6 +8,7 @@ type FinanceSuiteShellProps = {
   title: string;
   description?: string;
   actions?: ReactNode;
+  hideDefaultActions?: boolean;
   backFallbackHref?: string;
   backLabel?: string;
 };
@@ -17,6 +18,7 @@ export function FinanceSuiteShell({
   title,
   description,
   actions,
+  hideDefaultActions = false,
   backFallbackHref,
   backLabel = "Go back",
 }: FinanceSuiteShellProps) {
@@ -42,12 +44,12 @@ export function FinanceSuiteShell({
         </div>
         <span className="tw-sp" />
         {actions}
-        <button type="button" className="tw-b">
+        {!hideDefaultActions && <><button type="button" className="tw-b">
           Export
         </button>
         <button type="button" className="tw-b pri">
           Actions
-        </button>
+        </button></>}
       </div>
       {children}
     </DashboardShell>

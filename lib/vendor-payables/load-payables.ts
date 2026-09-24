@@ -50,7 +50,7 @@ export async function loadVendorPayables(
       `
       id, agreed_fee, currency, vendor_payment_status, vendor_paid_at,
       influencer:influencers(id, display_name, legal_name),
-      campaign:campaign_headers(id, name)
+      campaign:campaign_headers!campaign_influencers_campaign_header_id_fkey(id, name)
     `
     )
     .in("vendor_payment_status", ["unpaid", "pending", "paid"])

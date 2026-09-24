@@ -93,7 +93,7 @@ export function CollectionsWorkspaceView({ data }: CollectionsWorkspaceViewProps
 
       {tab === "allocation" ? (
         <PaymentAllocationSection
-          invoices={dashboard.aged_invoices}
+          invoices={dashboard.aged_invoices.filter((invoice) => !data.filterState.clientId || invoice.client_id === data.filterState.clientId)}
           currency={dashboard.currency}
         />
       ) : null}
