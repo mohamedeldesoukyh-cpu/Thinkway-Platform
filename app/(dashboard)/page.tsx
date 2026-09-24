@@ -1,9 +1,11 @@
+import {loadVatLedger} from "@/features/finance/vat/ledger-query";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { HomePage } from "@/features/home/components/home-page";
 import { getHomeDashboardSnapshot } from "@/features/home/queries";
 import { loadExecutiveDashboard } from "@/features/analytics/load-executive-dashboard";
 
 export default async function DashboardPage() {
+  const vat=await loadVatLedger().catch(()=>null);
   let snapshot = null;
   let executive = null;
   let bannerError: string | null = null;
@@ -40,7 +42,7 @@ export default async function DashboardPage() {
       mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden p-0 md:p-0"
     >
       {snapshot ? (
-        <HomePage snapshot={snapshot} executive={executive} />
+        <HomePage snapshot={snapshot} executive={executive} vat={vat} />
       ) : bannerError ? (
         <div className="m-5 rounded-[10px] border border-destructive/30 bg-destructive/10 px-4 py-3 text-[11px] text-destructive">
           {bannerError}

@@ -1,4 +1,6 @@
 import Link from "next/link";
+import {HomeVatCard} from "./home-vat-card";
+import type {VatLedger} from "@/features/finance/vat/ledger-model";
 
 import type { ExecutiveDashboardPayload } from "@/features/analytics/load-executive-dashboard";
 import { HomeDashboardMasthead } from "@/features/home/components/home-dashboard-masthead";
@@ -26,6 +28,7 @@ import type { FinanceAlert } from "@/lib/analytics/queries/dashboard-alerts";
 
 type HomePageProps = {
   snapshot: HomeDashboardSnapshot;
+  vat?:VatLedger|null;
   executive?: ExecutiveDashboardPayload | null;
 };
 
@@ -61,7 +64,7 @@ function formatDateLabel(date: Date): string {
   });
 }
 
-export function HomePage({ snapshot, executive = null }: HomePageProps) {
+export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
   const now = new Date();
   const currency = snapshot.currency_code;
   const money = (value: number) => formatMoneyKpi(value, currency);
@@ -185,6 +188,7 @@ export function HomePage({ snapshot, executive = null }: HomePageProps) {
       />
 
       <div className="tw-main">
+        {vat && <HomeVatCard data={vat}/>}
         <div className="tw-tiles" style={{ marginBottom: 14 }}>
           <Link className="tw-tile" href="/billing">
             <button type="button" className="tw-star" tabIndex={-1} aria-hidden>

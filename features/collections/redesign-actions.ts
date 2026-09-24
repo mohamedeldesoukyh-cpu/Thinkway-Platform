@@ -32,3 +32,14 @@ export async function saveCollectionFollowUp(input: z.infer<typeof schema>) {
   revalidatePath("/collections");
   return { ok: true };
 }
+
+export async function reviseCollectionPayment(input: { id: string; revision: number; amount: number; date: string; method: string; reference: string; notes: string; reason: string }) {
+ const db = await createSupabaseServerClient(); const auth = await requirePermission(db, "collections.write");
+ if ("error" in auth) return {ok:false,error:auth.error};
+ const parsed = z.object({id:z.string().uuid(),revision:z.number().int().min(0),amount:z.number().positive().finite(),date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),method:z.string(),reference:z.string().max(120),notes:z.string().max(2000),reason:z.string().trim().min(1).max(500)}).safeParse(input);
+ if (!parsed.success) return {ok:false,error:"Check the payment details and enter a correction reason."};
+ const {error}=await planningDb(db).rpc("revise_collection_payment",{p_id:input.id,p_revision:input.revision,p_amount:input.amount,p_date:input.date,p_method:input.method,p_reference:input.reference,p_notes:input.notes,p_reason:input.reason});
+ if(error) return {ok:false,error:"Could not save the correction. Refresh and check the invoice balance, payment date and your payment-edit permission."};
+ for(const path of ["/collections","/billing","/treasury","/"]) revalidatePath(path);
+ return {ok:true};
+}

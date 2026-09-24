@@ -1,30 +1,6 @@
-import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
-import { VatWorkspace } from "@/features/finance/vat/components/vat-workspace";
-import { getVatWorkspace } from "@/features/finance/vat/queries";
-
-export default async function FinanceVatPage() {
-  let data;
-  let errorMessage: string | null = null;
-
-  try {
-    data = await getVatWorkspace();
-  } catch (error) {
-    errorMessage =
-      error instanceof Error ? error.message : "Failed to load VAT workspace.";
-  }
-
-  return (
-    <FinanceSuiteShell
-      title="VAT"
-      description="Output and input VAT settlement"
-    >
-      {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : data ? (
-        <VatWorkspace data={data} />
-      ) : null}
-    </FinanceSuiteShell>
-  );
-}
+import {Suspense} from 'react';
+import {FinanceSuiteShell} from '@/components/finance/suite/finance-suite-shell';
+import {VatLedgerWorkspace} from '@/features/finance/vat/components/vat-ledger-workspace';
+import {loadVatLedger} from '@/features/finance/vat/ledger-query';
+export const dynamic='force-dynamic';
+export default async function FinanceVatPage(){const data=await loadVatLedger().catch(()=>null);return <FinanceSuiteShell title="VAT" description="Monthly invoice VAT and tax authority payment records">{data?<Suspense fallback={<p>Loading VAT…</p>}><VatLedgerWorkspace data={data}/></Suspense>:<p>VAT records are unavailable. Reload or check your Finance access.</p>}</FinanceSuiteShell>;}

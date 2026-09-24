@@ -15,7 +15,7 @@ const mocks = {
   'next/link': `import React from 'react';export default function Link({children,...props}){return <a {...props}>{children}</a>}`,
   'next/navigation': `import {useState,useEffect} from 'react';export function useRouter(){return {refresh(){location.reload()}}} export function useSearchParams(){const [search,setSearch]=useState(location.search);useEffect(()=>{const fn=()=>setSearch(location.search);addEventListener('popstate',fn);return()=>removeEventListener('popstate',fn)},[]);return ReactParams(search)} const cache=new Map();function ReactParams(s){if(!cache.has(s))cache.set(s,new URLSearchParams(s));return cache.get(s)}`,
   '@/features/collections/actions': `export async function recordCollectionPaymentFromWorkspaceAction(){return {ok:false,error:'Preview only: no payment was recorded.'}}`,
-  '@/features/collections/redesign-actions': `export async function saveCollectionFollowUp(){return {ok:false,error:'Preview only: no history was saved.'}}`,
+  '@/features/collections/redesign-actions': `export async function saveCollectionFollowUp(){return {ok:false,error:'Preview only: no history was saved.'}} export async function reviseCollectionPayment(){return {ok:false,error:'Preview only: no payment changed.'}}`,
 };
 (async () => {
   await esbuild.build({ stdin: { contents: entry, resolveDir: root, loader: 'tsx' }, bundle: true, outfile: path.join(out, 'app.js'), jsx: 'automatic', define: { 'process.env.NODE_ENV': '"development"' }, plugins: [{ name: 'preview-stubs', setup(build) {

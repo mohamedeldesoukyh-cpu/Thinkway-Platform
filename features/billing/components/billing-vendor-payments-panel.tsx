@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Fragment, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 
 import { DocumentNumber } from "@/components/ui/document-number";
@@ -165,7 +166,7 @@ export function BillingVendorPaymentsPanel({
         <BillingCardHeader
           title="Vendor payments"
           subtitle="one row per assignment — a creator on a campaign"
-          actions={settingsSlot}
+          actions={<>{settingsSlot}<Link className="bq-btn" href="/billing/creator-invoices">Creator invoices</Link></>}
         />
       </div>
       <div className="bq-pad" style={{ paddingBottom: 6 }}>
@@ -240,6 +241,7 @@ export function BillingVendorPaymentsPanel({
                       {cols.creator ? (
                         <span className="bq-kn" title={row.creator_name}>
                           {row.creator_name}
+                          <Link className="block text-xs text-blue-600" href={`/billing/creator-invoices?assignment=${row.id}`}>Add creator invoice</Link>
                         </span>
                       ) : null}
                       {cols.campaign ? (
