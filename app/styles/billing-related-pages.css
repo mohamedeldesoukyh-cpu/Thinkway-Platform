@@ -43,3 +43,21 @@
 .tw-billing-v3.billing-related .related-summary-deck .tw-hint { font-size: 12px; margin-top: 8px; }
 .tw-billing-v3.billing-related .related-summary-deck .tw-dc2__h b { white-space: normal; }
 .tw-billing-v3.billing-related .bq-card { box-shadow: var(--tw-ring); }
+
+/* Inner workspaces: all tab bodies share the Collections card rhythm. */
+.tw-billing-v3.billing-related [data-sticky="operational-workspace-tabs"] { background: #fff; border: 1px solid #e0e9ff; border-radius: 12px; padding: 12px; margin-bottom: 14px; }
+.tw-billing-v3.billing-related [role="tablist"] { background: #fff; gap: 6px; }
+.tw-billing-v3.billing-related [role="tab"] { border: 1px solid #dce6ff; border-radius: 8px; background: #fff; color: #41495a; padding: 8px 12px; }
+.tw-billing-v3.billing-related [role="tab"][data-state="active"] { color: #0057ff; border-color: #80aaff; background: #f3f7ff; box-shadow: 0 0 0 3px rgba(0,87,255,.06); }
+.tw-billing-v3.billing-related [role="tabpanel"] { margin-top: 0; padding-bottom: 16px; }
+.tw-billing-v3.billing-related .thinkway-campaign-section-card { border: 1px solid #e0e9ff; border-radius: 13px; background: #fff; box-shadow: 0 8px 24px rgba(0,87,255,.04); overflow: hidden; }
+.tw-billing-v3.billing-related .thinkway-campaign-section-head { background: linear-gradient(107deg,#e9f0ff,#f7faff); border-bottom: 1px solid #dde7fa; padding: 14px 18px; flex-wrap: wrap; }
+.tw-billing-v3.billing-related .thinkway-campaign-section-head h2 { font-size: 14px; font-weight: 600; color: #0b0f1a; }
+.tw-billing-v3.billing-related .thinkway-campaign-section-body { padding: 16px 18px; }
+.tw-billing-v3.billing-related .thinkway-campaign-section-body > .justify-between { display: grid; grid-template-columns: minmax(120px,1fr) minmax(0,1.3fr); gap: 12px; }
+.tw-billing-v3.billing-related .thinkway-campaign-section-body .text-right { text-align: left; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.tw-billing-v3.billing-related .related-inner-panel { padding: 18px; border: 1px solid #e0e9ff; border-radius: 13px; background: #fff; box-shadow: var(--tw-ring); }
+.tw-billing-v3.billing-related .related-inner-panel > h3 { font-size: 15px; color: #0b0f1a; }
+.tw-billing-v3.billing-related .group-mast-logo { height: 34px; width: auto; max-width: 140px; object-fit: contain; background: #fff; border-radius: 6px; padding: 4px; }
+.tw-billing-v3.billing-related.group-detail-design .related-summary-deck { grid-template-columns: repeat(auto-fit,minmax(min(250px,100%),1fr)); }
+.tw-billing-v3.billing-related [data-slot="table-head"], .tw-billing-v3.billing-related [data-slot="table-cell"] { text-align: left; }

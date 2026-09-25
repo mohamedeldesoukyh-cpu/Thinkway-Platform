@@ -5,7 +5,6 @@ import { useMemo } from "react";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
-  OperationalWorkspaceChrome,
   OperationalWorkspaceSortableTabsBar,
   OperationalWorkspaceTabPanel,
   type OperationalWorkspaceTabDef,
@@ -19,7 +18,7 @@ import {
   isGroupWorkspaceTabId,
   type GroupWorkspaceTabId,
 } from "@/lib/workspace/platform-workspace-tabs";
-import { ClientStatusBadge } from "@/features/clients/components/client-status-badge";
+
 import { GroupKpiStrip } from "@/features/groups/components/group-kpi-strip";
 import { GroupActivityTab } from "@/features/groups/components/tabs/group-activity-tab";
 import { GroupBrandsTab } from "@/features/groups/components/tabs/group-brands-tab";
@@ -68,31 +67,22 @@ export function GroupWorkspaceView({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-0">
       <div className="space-y-4">
-        <OperationalWorkspaceChrome
-          backButton={
-            <PageBackButton fallbackHref="/groups" label="Back to groups" />
-          }
-          title={
-            <span className="inline-flex min-w-0 items-center gap-2">
+        <div className="collections-suite">
+          <header className="tw-mast">
+            <div className="tw-mh">
+              <span className="id"><DocumentNumber value={workspace.document_number} /></span>
               {workspace.logo_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={workspace.logo_url}
-                  alt=""
-                  className="h-8 w-auto max-h-8 max-w-[132px] object-contain"
-                />
+                <img src={workspace.logo_url} alt="" className="group-mast-logo" />
               ) : null}
-              <span className="truncate">{workspace.name}</span>
-            </span>
-          }
-          badges={<ClientStatusBadge status={workspace.status} />}
-          meta={
-            <>
-              <DocumentNumber value={workspace.document_number} />
-              {workspace.region ? ` · ${workspace.region}` : null}
-            </>
-          }
-        />
+              <h1>{workspace.name}</h1>
+              <span className="sub">Holding Group workspace{workspace.region ? ` · ${workspace.region}` : ""}</span>
+              <span className="st">{workspace.status}</span>
+              <span className="tw-sp" />
+              <div className="related-mast-actions"><PageBackButton fallbackHref="/groups" label="Back to groups" variant="text" /></div>
+            </div>
+          </header>
+        </div>
         <GroupKpiStrip workspace={workspace} />
       </div>
 
@@ -108,7 +98,7 @@ export function GroupWorkspaceView({
         />
 
         <TabsContent value="overview" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+          <OperationalWorkspaceTabPanel className="related-inner-panel">
             <GroupOverviewTab workspace={workspace} accountDirectors={accountDirectors} />
           </OperationalWorkspaceTabPanel>
         </TabsContent>
@@ -132,7 +122,7 @@ export function GroupWorkspaceView({
           </OperationalWorkspaceTabPanel>
         </TabsContent>
         <TabsContent value="financial" className={OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS}>
-          <OperationalWorkspaceTabPanel className="p-4 md:p-5">
+          <OperationalWorkspaceTabPanel className="related-inner-panel">
             <GroupFinancialTab workspace={workspace} />
           </OperationalWorkspaceTabPanel>
         </TabsContent>

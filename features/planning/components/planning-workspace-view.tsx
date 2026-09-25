@@ -59,7 +59,7 @@ export function PlanningWorkspaceView({ data }: PlanningWorkspaceViewProps) {
       ) : null}
 
       {tab === "dashboard" ? (
-        <section className="space-y-6">
+        <section className="related-inner-panel space-y-6">
           <PlanningKpiStrip
             cards={data.dashboard.kpis}
             currency={data.dashboard.currency}
@@ -76,7 +76,7 @@ export function PlanningWorkspaceView({ data }: PlanningWorkspaceViewProps) {
       ) : null}
 
       {tab === "versions" ? (
-        <section className="space-y-4">
+        <section className="related-inner-panel space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-heading text-lg font-semibold">Budget versions</h3>
             {data.permissions.canWrite ? (
@@ -113,7 +113,7 @@ export function PlanningWorkspaceView({ data }: PlanningWorkspaceViewProps) {
       ) : null}
 
       {tab === "variance" ? (
-        <section className="space-y-6">
+        <section className="related-inner-panel space-y-6">
           <h3 className="font-heading text-lg font-semibold">Budget variance</h3>
           <PlanningChartsGrid charts={data.dashboard.charts} mode="variance" />
           <VarianceTables
@@ -128,6 +128,7 @@ export function PlanningWorkspaceView({ data }: PlanningWorkspaceViewProps) {
       ) : null}
 
       {tab === "forecasting" ? (
+        <section className="related-inner-panel">
         <ForecastSection
           fiscalYear={data.fiscalYear}
           forecasts={data.forecasts}
@@ -137,14 +138,17 @@ export function PlanningWorkspaceView({ data }: PlanningWorkspaceViewProps) {
           selectedForecastId={data.selectedForecastId}
           selectedVersionId={data.selectedVersionId}
         />
+        </section>
       ) : null}
 
       {tab === "allocations" ? (
+        <section className="related-inner-panel">
         <AllocationsSection
           allocations={data.allocations}
           permissions={data.permissions}
           currencyCode={selectedVersion?.currency_code}
         />
+        </section>
       ) : null}
 
       <BudgetCreateSheet

@@ -1,3 +1,6 @@
+import "@/app/styles/billing-workspace-v3.css";
+import "@/app/styles/collections-platform-shared.css";
+import "@/app/styles/billing-related-pages.css";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -78,12 +81,12 @@ export default async function GroupWorkspacePage({
   }
 
   return (
-    <DashboardShell
+    <div className="tw-billing-v3 billing-related group-detail-design flex min-h-0 min-w-0 flex-1 flex-col"><DashboardShell
       title={workspace?.name ?? "Group workspace"}
       hidePageHeader
-      platformV6
-      containedMain
-      mainClassName="flex min-h-0 flex-1 flex-col overflow-hidden"
+      hideDesktopHeader
+
+      mainClassName="bq-main"
     >
       {errorMessage ? (
         <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
@@ -97,6 +100,6 @@ export default async function GroupWorkspacePage({
           unlinkedClients={unlinkedClients}
         />
       ) : null}
-    </DashboardShell>
+    </DashboardShell></div>
   );
 }
