@@ -1,3 +1,5 @@
+import {isActiveInvoiceForFinancialTotals,getInvoiceRegisterStatusLabel} from '../../../lib/finance/status/invoice-status';
+export function vatInvoiceEligibility(invoice:{status:string;regeneration_status?:string|null;issue_date?:string|null}){return {included:isActiveInvoiceForFinancialTotals(invoice)&&!!invoice.issue_date,status:invoice.regeneration_status==='regenerated'?'Superseded':getInvoiceRegisterStatusLabel(invoice)};}
 export type VatEntry={id:string;date:string;name:string;invoice:string;country:string;currency:string;vatIn:number;vatOut:number;source:string;status?:string;included?:boolean};
 export type VatPayment={id:string;period:string;country_code:string;currency:string;amount:number;paid_at:string;method:string;reference:string;authority:string;notes:string|null};
 export type VatLedger={entries:VatEntry[];payments:VatPayment[];provisional:{currency:string;amount:number}[]};
