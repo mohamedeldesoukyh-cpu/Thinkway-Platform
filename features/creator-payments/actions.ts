@@ -375,8 +375,8 @@ export async function checkCreatorBankDuplicates(creatorId: string, accountId: s
     } catch (e) { return fail(e); }
 }
 
-export async function saveCreatorPaymentInvoice(input:{assignmentId:string;number:string;date:string;country:string;vat:boolean;revision:number;expectedVat:number}){
- try{const db=await access(true);const v=z.object({assignmentId:z.string().uuid(),number:z.string().trim().max(100),date:z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/),z.literal('')]),country:z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),vat:z.boolean(),revision:z.number().int().nonnegative(),expectedVat:z.number().min(0).max(100)}).parse(input);
- const r=await db.rpc('save_creator_payment_invoice',{p_assignment:v.assignmentId,p_number:v.number,p_date:v.date||null,p_country:v.country,p_vat:v.vat,p_revision:v.revision,p_expected_vat:v.expectedVat});if(r.error)throw new Error(r.error.code==='23505'?'This creator invoice is already registered. Open Creator invoices to review it.':r.error.message);
+export async function saveCreatorPaymentInvoice(input:{assignmentId:string;number:string;date:string;country:string;vat:boolean;revision:number;expectedVat:number;overrideReason?:string}){
+ try{const db=await access(true);const v=z.object({assignmentId:z.string().uuid(),number:z.string().trim().max(100),date:z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/),z.literal('')]),country:z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),vat:z.boolean(),revision:z.number().int().nonnegative(),expectedVat:z.number().min(0).max(100),overrideReason:z.string().trim().max(1000).optional()}).parse(input);
+ const r=await db.rpc('save_creator_payment_invoice',{p_assignment:v.assignmentId,p_number:v.number,p_date:v.date||null,p_country:v.country,p_vat:v.vat,p_revision:v.revision,p_expected_vat:v.expectedVat,p_override_reason:v.overrideReason||null});if(r.error)throw new Error(r.error.code==='23505'?'This creator invoice is already registered. Open Creator invoices to review it.':r.error.message);
  for(const path of ['/campaigns','/vendors','/billing','/billing/creator-invoices','/finance/vat','/'])revalidatePath(path,'layout');return {ok:true as const};}catch(error){return fail(error);}
 }
