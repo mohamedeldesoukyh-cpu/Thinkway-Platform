@@ -41,13 +41,14 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
     if (!ios.length)
         return { rows: [] as PaymentRow[], batches: [] as PaymentBatch[] };
     const assignmentIds = ios.map(io => io.assignment_id);
-    const [assignments, creators, terms, entries, campaigns, plans] = await Promise.all([
+    const [assignments, creators, terms, entries, campaigns, plans, supplierInvoices] = await Promise.all([
         paymentRowsByIds(assignmentIds,ids=>db.from('campaign_influencers').select('id,campaign_line_id,agreed_fee,cost_before_vat,cost_vat_percent,currency,vendor_payment_status').in('id', ids).order('id')),
-        paymentRowsByIds(ios.map(io=>io.influencer_id),ids=>db.from('influencers').select('id,display_name,legal_name,payment_details,platform_accounts:influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(handle,username,profile_display_name,is_primary)').in('id', ids).order('id')),
+        paymentRowsByIds(ios.map(io=>io.influencer_id),ids=>db.from('influencers').select('id,display_name,legal_name,country_code,payment_details,platform_accounts:influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(handle,username,profile_display_name,is_primary)').in('id', ids).order('id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_terms').select('*').in('assignment_id', ids).order('assignment_id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_entries').select('*').in('assignment_id', ids).order('created_at', { ascending: false }).order('id')),
         paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('campaign_headers').select('id,name,document_number').in('id', ids).order('id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_plans').select('assignment_id,draft').in('assignment_id', ids).order('assignment_id')),
+        paymentRowsByIds(assignmentIds,ids=>db.from('creator_supplier_invoices').select('assignment_id,invoice_number,invoice_date,country_code,revision').eq('from_payment_register',true).in('assignment_id',ids).order('assignment_id')),
     ]);
     const lineIds = assignments.data.map(a=>a.campaign_line_id).filter((id): id is string=>!!id);
     const [fxLines, currencyRates] = await Promise.all([
@@ -71,7 +72,8 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         const vat = Number(a?.cost_vat_percent ?? term?.vat ?? 0);
         const paid = ledger.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.original_amount), 0);
         const saved = paymentDraftSchema.safeParse(plans.data?.find(p => p.assignment_id === io.assignment_id)?.draft);
-        return { nextPaymentSequence: Math.max(0, ...ledger.map(e => Number(e.payment_sequence ?? 0))) + 1, history: ledger.filter(e=>e.status === 'paid' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
+        const invoice=supplierInvoices.data.find(i=>i.assignment_id===io.assignment_id);
+        return {creatorCountry:creator?.country_code??'',creatorInvoice:invoice?{number:invoice.invoice_number??'',date:invoice.invoice_date??'',country:invoice.country_code,revision:invoice.revision}:undefined, nextPaymentSequence: Math.max(0, ...ledger.map(e => Number(e.payment_sequence ?? 0))) + 1, history: ledger.filter(e=>e.status === 'paid' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
             campaign: campaign?.name ?? campaign?.document_number ?? 'Campaign',
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
             payable: !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
@@ -371,4 +373,10 @@ export async function checkCreatorBankDuplicates(creatorId: string, accountId: s
         if (error) throw new Error('Duplicate check is unavailable. Saving still checks beneficiary nickname uniqueness.');
         return { ok: true as const, matches: (data ?? []) as BankDuplicate[] };
     } catch (e) { return fail(e); }
+}
+
+export async function saveCreatorPaymentInvoice(input:{assignmentId:string;number:string;date:string;country:string;vat:boolean;revision:number;expectedVat:number}){
+ try{const db=await access(true);const v=z.object({assignmentId:z.string().uuid(),number:z.string().trim().max(100),date:z.union([z.string().regex(/^\d{4}-\d{2}-\d{2}$/),z.literal('')]),country:z.string().trim().toUpperCase().regex(/^[A-Z]{2}$/),vat:z.boolean(),revision:z.number().int().nonnegative(),expectedVat:z.number().min(0).max(100)}).parse(input);
+ const r=await db.rpc('save_creator_payment_invoice',{p_assignment:v.assignmentId,p_number:v.number,p_date:v.date||null,p_country:v.country,p_vat:v.vat,p_revision:v.revision,p_expected_vat:v.expectedVat});if(r.error)throw new Error(r.error.code==='23505'?'This creator invoice is already registered. Open Creator invoices to review it.':r.error.message);
+ for(const path of ['/campaigns','/vendors','/billing','/billing/creator-invoices','/finance/vat','/'])revalidatePath(path,'layout');return {ok:true as const};}catch(error){return fail(error);}
 }

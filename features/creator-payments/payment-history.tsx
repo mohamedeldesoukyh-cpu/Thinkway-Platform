@@ -1,3 +1,4 @@
+import {InvoiceVatEditor} from './invoice-vat-editor';
 import { paymentAllocation } from './allocations';
 import type { PaymentRow } from './model';
 import { useState } from 'react';
@@ -9,6 +10,7 @@ export function PaymentHistory({row,canWrite,onSaved,allowAdd=true,compact=false
     const [editor,setEditor]=useState<{payment?:PaymentEntry;clear?:boolean}|null>(null);
     const allocation = paymentAllocation(row);
     return <div className="cp-payment-history">
+        <InvoiceVatEditor row={row} canWrite={canWrite} onSaved={onSaved}/>
         {allowAdd&&canWrite&&row.payable!==false&&<button className="cp-button" onClick={()=>setEditor({})}>+ Add payments</button>}
         {editor&&<PaymentRecordEditor row={row} {...editor} onClose={()=>setEditor(null)} onSaved={onSaved}/>}
         {!compact&&<div className="cp-balances"><span>Total agreed incl. VAT <b>{amount(allocation.total,row.currency)}</b></span><span>Total paid <b>{amount(row.paid,row.currency)}</b></span><span>Remaining <b>{amount(allocation.remaining,row.currency)}</b></span><span>Actual / earned <b>{amount(allocation.earned,row.currency)}</b></span><span>Advance <b>{amount(allocation.advance,row.currency)}</b></span></div>}

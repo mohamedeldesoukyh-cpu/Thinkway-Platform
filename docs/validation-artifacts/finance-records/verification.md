@@ -7,3 +7,10 @@
 - SQL migrations were applied directly with the project's production/development psql runners (this project has no supabase_migrations.schema_migrations table). Rollback-only integration tests passed on both: payment balance/allocation/audit, stale edits, overpayment, historical creator invoices, confirmation, invalid invoice details, negative payments and unauthenticated writes. No supplier invoice or authority payment test records remain in production.
 - TypeScript, nine data/currency regression tests and Collections 23-grid / four-track checks pass.
 - New client invoice VAT remains on invoices; adding VAT to a receipt would double count it. Creator VAT can be backfilled by adding the original invoice to the old paid assignment without recording another payment.
+
+## September 25 corrections
+- VAT registry displays all invoice statuses across all periods/currencies by default, with explicit exclusions from confirmed balances. Draft/void/unreviewed invoices remain visible; balances never sum currencies together.
+- Creator invoice and VAT routes share Collections masthead, panels, controls, left-aligned numeric formatting, and Back/Billing navigation.
+- Payment history offers Creator Inv# / invoice date / tax country and VAT No (0%) or Yes (14%). Save uses the existing campaign-line VAT synchronization, keeps payment history unchanged, rejects pending-export/locked/overpaid/stale changes, and audits invoice revisions.
+- Numbered invoices create a single linked confirmed supplier invoice for the original tax month. Missing invoices remain provisional. Full legal details and attachments can be edited separately without changing financial values.
+- TypeScript and 19 unit/regression tests passed; Collections grid CI remains 23 blocks / 4 track lists. Both database environments passed rollback integration checks for historical dates, 14% cost totals, unchanged payments, metadata edits and stale/date/auth rejection.

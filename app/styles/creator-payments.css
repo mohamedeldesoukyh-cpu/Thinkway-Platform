@@ -30,7 +30,7 @@
 .thinkway-creator-payments .cp-table { width: 100%; min-width: 1297px; table-layout: fixed; border-collapse: collapse; color: var(--tw-ink2, var(--foreground)); }
 .thinkway-creator-payments .cp-table th { background: var(--tw-soft, var(--muted)); padding: 9px 8px; text-align: left; font-size: 9px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--tw-mut, var(--muted-foreground)); border-bottom: 1px solid var(--tw-line, var(--border)); }
 .thinkway-creator-payments .cp-table td { padding: 11px 8px; border-bottom: 1px solid var(--tw-hair, var(--border)); vertical-align: middle; font-size: 12px; }
-.thinkway-creator-payments .cp-table .numeric { text-align: right; font-variant-numeric: tabular-nums; }
+.thinkway-creator-payments .cp-table .numeric { text-align: left; font-variant-numeric: tabular-nums; }
 .thinkway-creator-payments .cp-table td.numeric { font: 500 12.5px var(--font-geist-mono), ui-monospace, monospace; }
 .thinkway-creator-payments .cp-table td b { font-weight: 600; }
 .thinkway-creator-payments .cp-table small { display: block; font-size: 10px; color: var(--tw-mut, var(--muted-foreground)); margin-top: 3px; }

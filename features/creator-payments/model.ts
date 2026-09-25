@@ -18,6 +18,8 @@ export type BankDetails = {
     registered: boolean;
 };
 export type PaymentRow = {
+    creatorInvoice?: {number:string;date:string;country:string;revision:number};
+    creatorCountry?: string;
     costFxOverride?: string | null;
     currencyRates?: Record<string, number>;
     nextPaymentSequence?: number;
