@@ -9,7 +9,7 @@ import { updateAssignmentLineCommercialsAction } from "@/features/campaigns/acti
 import { updateAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-currency";
-import { computeAgencyFeeAmount } from "@/lib/assignments/client-billing-commercial";
+import { computeAgencyFeeAmount, rollupLineClientCommercial } from "@/lib/assignments/client-billing-commercial";
 import { computeVatLine, roundMoney } from "@/lib/vat/calculations";
 import { resolveAssignmentTypeCommercial } from "@/lib/campaigns/assignment-type-commercial";
 import { useAssignmentGridEditSession } from "./assignment-grid-edit-session";
@@ -20,6 +20,23 @@ type Draft = { currency: string; qty: number; cost: number; urCost: number; cost
 const PaneContext = createContext<{ open: (target: Target) => void; selected: Target | null }>({ open: () => {}, selected: null });
 export const useAssignmentCommercialPane = () => useContext(PaneContext);
 const keyOf = (target: Target) => `${target.lineId}:${target.deliverableId ?? "parent"}`;
+
+function FormattedNumber({ value, onChange, disabled, integer = false, max }: {
+  value: number; onChange: (value: number) => void; disabled?: boolean; integer?: boolean; max?: number;
+}) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const formatted = value.toLocaleString("en-US", { minimumFractionDigits: integer ? 0 : 2, maximumFractionDigits: integer ? 0 : 2 });
+  return <input type="text" inputMode={integer ? "numeric" : "decimal"} autoComplete="off" disabled={disabled}
+    value={editing ?? formatted} onFocus={() => setEditing(String(value))}
+    onChange={event => {
+      const next = event.target.value.replace(/,/g, "").trim();
+      if (!(integer ? /^\d*$/ : /^\d*(?:\.\d{0,2})?$/).test(next)) return;
+      const parsed = Number(next);
+      if (!Number.isFinite(parsed) || (max !== undefined && parsed > max)) return;
+      setEditing(next);
+      onChange(integer ? Math.max(1, parsed) : parsed);
+    }} onBlur={() => setEditing(null)} />;
+}
 
 export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, currencies, enabled, children }: {
   campaignId: string; hierarchy: AssignmentHierarchy; currencies: { value: string; label: string }[]; enabled: boolean; children: ReactNode;
@@ -59,6 +76,11 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const afAmount = computeAgencyFeeAmount(draft.revenue, draft.urRevenue, draft.af);
   const costTax = computeVatLine({ beforeVat: draft.cost, vatPercent: draft.costVat });
   const revenueTax = computeVatLine({ beforeVat: draft.revenue + draft.urRevenue + afAmount, vatPercent: draft.revVat });
+  const profit = rollupLineClientCommercial({ revenueBeforeVat: draft.revenue, usageRightsAmount: draft.urRevenue, usageRightsCost: draft.urCost, agencyFeePercent: draft.af, costBeforeVat: draft.cost });
+  const profitCost = roundMoney(draft.cost + draft.urCost);
+  const health = profit.gp < 0 ? "weak" : profit.billableBase <= 0 ? "neutral" : profit.marginPercent >= 20 ? "healthy" : profit.marginPercent < 10 ? "weak" : "watch";
+  const percent = (value: number | null) => value === null ? "—" : value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
+  const profitAmount = draft.currency + " " + profit.gp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   function open(target: Target) {
     if (!enabled || pending) return;
     setSelected(target); setMessage(null);
@@ -95,7 +117,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
     } catch { setMessage({ ok: false, text: "Unable to save. Your edits have been kept; please try again." }); }
     finally { setPending(false); }
   }
-  const number = (label: string, field: keyof Omit<Draft, "currency">, options?: { disabled?: boolean; max?: number; integer?: boolean }) => <label className="acp-field">{label}<input type="number" min={options?.integer ? 1 : 0} max={options?.max} step={options?.integer ? 1 : "0.01"} value={draft[field]} disabled={readOnly || options?.disabled} onChange={event => change(field, options?.integer ? Math.max(1, Math.floor(Number(event.target.value))) : Number(event.target.value))} /></label>;
+  const number = (label: string, field: keyof Omit<Draft, "currency">, options?: { disabled?: boolean; max?: number; integer?: boolean }) => <label className="acp-field">{label}<FormattedNumber key={selectedKey + field} value={draft[field]} disabled={readOnly || options?.disabled} integer={options?.integer} max={options?.max} onChange={value => change(field, value)} /></label>;
   const total = (label: string, value: number) => <div className="acp-total"><span>{label}</span><output>{value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</output></div>;
   const editor = enabled && line && selected ? <section ref={pane} className="assignment-commercial-pane" aria-label="Assignment cost and revenue editor" style={{ height }}>
     <div className="acp-resizer" role="separator" aria-label="Resize assignment editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={Math.max(180, Math.floor((host?.clientHeight ?? 700) * .65))} aria-valuenow={Math.round(height)} tabIndex={0} title="Drag to resize; double-click to reset"
@@ -106,6 +128,12 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
     <div className="acp-heading">
       <label className="acp-currency">Curr<select aria-label="Assignment editor currency" value={draft.currency} disabled={readOnly || Boolean(child)} onChange={event => change("currency", event.target.value)}>{!currencies.some(entry => entry.value === draft.currency) && <option value={draft.currency}>{draft.currency}</option>}{currencies.map(entry => <option key={entry.value} value={entry.value}>{entry.value}</option>)}</select></label>
       <div className="acp-identity"><strong>{line.document_number} · {formatCreatorDisplayName(line.assignment?.influencer_name ?? line.name)}</strong><span>{child ? `Child · ${selectedPost?.platform ?? child.platform} · ${selectedPost?.deliverable_type_label ?? child.deliverable_type_label} · ${isPackageChild ? "package share" : "deliverable totals"} (${draft.qty} ${draft.qty === 1 ? "unit" : "units"})` : "Parent assignment · package / assignment totals"}</span></div>
+      <div className="acp-profit" data-health={health} aria-label="Live profitability" title="Margin health: green ≥20%, amber 10–20%, red <10% or a loss. Based on GP divided by revenue, excluding VAT.">
+        <div title="Revenue + UR Rev + AF − Cost − UR Cost; excludes VAT"><span>GP</span><output>{profitAmount}</output></div>
+        <div title="GP ÷ revenue including UR Rev and AF, excluding VAT"><span>GP %</span><output>{percent(profit.billableBase > 0 ? profit.marginPercent : null)}</output></div>
+        <div title="Same profit amount as GP, excluding VAT"><span>Margin</span><output>{profitAmount}</output></div>
+        <div title="GP ÷ cost including UR Cost, excluding VAT"><span>Margin % (markup)</span><output>{percent(profitCost > 0 ? profit.gp / profitCost * 100 : null)}</output></div>
+      </div>
       <button type="button" className="acp-button" aria-label="Close assignment editor" disabled={pending} onClick={() => setSelected(null)}><X size={16} /></button>
     </div>
     <form className="acp-form" onSubmit={event => { event.preventDefault(); void save(); }} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); event.stopPropagation(); event.currentTarget.requestSubmit(); } }}>
@@ -114,13 +142,13 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
         {isPackageChild && <div className="acp-notice">This child is a calculated share of the package. <button type="button" onClick={() => open({ lineId: line.id })}>Edit package totals</button></div>}
         {!isPackageChild && child?.is_locked && <div className="acp-notice">This child is invoiced. Financial changes use the existing finance revision workflow.</div>}
         <div className="acp-sections">
-          <section className="acp-section" aria-label="Cost"><h3>Cost</h3><div className="acp-fields">
+          <section className="acp-section acp-cost" aria-label="Cost"><h3>Cost</h3><div className="acp-fields">
             {number("Unit", "qty", { integer: true, max: 999, disabled: !child })}
-            <label className="acp-field">Unit cost<input type="number" min="0" step="0.01" disabled={readOnly} value={roundMoney(draft.cost / draft.qty)} onChange={event => change("cost", roundMoney(Number(event.target.value) * draft.qty))} /></label>
+            <label className="acp-field">Unit cost<FormattedNumber key={selectedKey + "unitCost"} disabled={readOnly} value={roundMoney(draft.cost / draft.qty)} onChange={value => change("cost", roundMoney(value * draft.qty))} /></label>
             {number("Cost amount", "cost")}{number("UR Cost", "urCost")}{number("Cost VAT %", "costVat", { max: 100 })}
             {total("Cost VAT", costTax.vatAmount)}{total("Cost incl. VAT", costTax.afterVat)}{total("Total cost", roundMoney(costTax.afterVat + draft.urCost))}
           </div></section>
-          <section className="acp-section" aria-label="Revenue"><h3>Revenue</h3><div className="acp-fields">
+          <section className="acp-section acp-revenue" aria-label="Revenue"><h3>Revenue</h3><div className="acp-fields">
             {number("Revenue", "revenue")}{number("UR Rev", "urRevenue")}{number("AF %", "af", { max: 100 })}{total("AF", afAmount)}{number("Rev VAT %", "revVat", { max: 100 })}{total("Rev VAT", revenueTax.vatAmount)}{total("Total Billing", revenueTax.afterVat)}
           </div></section>
         </div>

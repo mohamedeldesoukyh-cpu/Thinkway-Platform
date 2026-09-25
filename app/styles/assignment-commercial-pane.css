@@ -32,3 +32,19 @@
 [data-assignment-editor-selected="true"] { box-shadow:inset 3px 0 #0057ff; background:#edf4ff!important; }
 @media(max-width:900px) { .assignment-commercial-pane .acp-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media(max-width:560px) { .assignment-commercial-pane .acp-sections { grid-template-columns:minmax(0,1fr); } .assignment-commercial-pane .acp-section + .acp-section { border-left:0; border-top:1px solid #e0e9f7; } }
+
+.assignment-commercial-pane .acp-heading { display:grid; grid-template-columns:auto minmax(160px,1fr) auto minmax(0,1fr) auto; }
+.assignment-commercial-pane .acp-heading > .acp-button { grid-column:5; justify-self:end; }
+.assignment-commercial-pane .acp-identity strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.assignment-commercial-pane .acp-profit { display:flex; gap:18px; color:#52637c; }
+.assignment-commercial-pane .acp-profit > div { display:flex; flex-direction:column; gap:3px; }
+.assignment-commercial-pane .acp-profit span { color:#52637c; font-size:10px; }
+.assignment-commercial-pane .acp-profit output { font-size:12px; font-weight:600; font-variant-numeric:tabular-nums; white-space:nowrap; text-align:left; }
+.assignment-commercial-pane .acp-profit[data-health="healthy"] { color:#087443; }
+.assignment-commercial-pane .acp-profit[data-health="watch"] { color:#854d0e; }
+.assignment-commercial-pane .acp-profit[data-health="weak"] { color:#b91c1c; }
+.assignment-commercial-pane .acp-section h3 { margin:-8px -12px 8px; padding:6px 12px; }
+.assignment-commercial-pane .acp-cost h3 { background:#fff3d9; color:#854d0e; border-bottom:1px solid #f4d69b; }
+.assignment-commercial-pane .acp-revenue h3 { background:#eaf2ff; color:#174ea6; border-bottom:1px solid #c6d9ff; }
+.assignment-commercial-pane .acp-field input:focus-visible { outline:2px solid #85adff; outline-offset:1px; }
+@media(max-width:1100px) { .assignment-commercial-pane .acp-heading { grid-template-columns:auto minmax(0,1fr) auto; } .assignment-commercial-pane .acp-heading > .acp-button { grid-column:3; grid-row:1; } .assignment-commercial-pane .acp-profit { grid-column:1/-1; justify-content:center; flex-wrap:wrap; gap:8px 20px; } }
