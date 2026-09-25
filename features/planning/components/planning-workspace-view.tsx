@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { BillingStyleKpis } from "@/components/finance/billing-style-surfaces";
 import { PlusIcon } from "lucide-react";
 
 import { PlanningChartsGrid } from "@/components/planning/charts/planning-charts-grid";
@@ -38,6 +39,12 @@ export function PlanningWorkspaceView({ data }: PlanningWorkspaceViewProps) {
 
   return (
     <div className="space-y-6">
+      <BillingStyleKpis items={[
+        { id: "year", label: "Fiscal year", value: String(data.fiscalYear), hint: "Current planning period" },
+        { id: "versions", label: "Budget versions", value: String(data.versions.length), hint: "Available for the selected year" },
+        { id: "forecasts", label: "Forecast versions", value: String(data.forecasts.length), hint: "Available in this workspace" },
+        { id: "selected", label: "Selected budget", value: selectedVersion?.name ?? "Not selected", hint: selectedVersion?.status ?? "Create or approve a budget version" },
+      ]} />
       <PlanningFilterBar
         options={data.filterOptions}
         versions={data.versions}

@@ -19,3 +19,27 @@
 .tw-billing-v3.billing-related .tw-bar > i.r { background: var(--bq-bad); }
 .tw-billing-v3.billing-related .tw-bar > i.y { background: var(--bq-wrn); }
 .tw-billing-v3.billing-related .billing-help { padding: 12px 16px; color: var(--bq-mut); font-size: 12px; line-height: 1.6; border-bottom: 1px solid var(--bq-line); margin: 0; }
+
+/* Collections visual language, scoped to these four workspaces. */
+.tw-billing-v3.billing-related {
+  --bq-blue: #0057ff; --bq-bi: #0048dd; --bq-lav: #eef4ff; --bq-ok: #0057ff;
+  --tw-blue: #0057ff; --tw-bi: #0048dd; --tw-navy: #0b0f1a;
+  --tw-ink: #0b0f1a; --tw-ink2: #41495a; --tw-mut: #64748b;
+  --tw-line: #e2e8f0; --tw-hair: #edf0f5; --tw-soft: #f6f8fb;
+  --tw-bad: #c82121; --tw-ok: #0a7a55;
+  --tw-ring: 0 0 0 1px #e0e9ff, 0 8px 24px rgba(0, 87, 255, .04);
+}
+.tw-billing-v3.billing-related .tw-mast { margin-bottom: 14px; }
+.tw-billing-v3.billing-related .tw-mh { min-height: 70px; padding: 18px; gap: 12px; }
+.tw-billing-v3.billing-related .tw-mh h1 { font-size: 21px; }
+.tw-billing-v3.billing-related .tw-mh .sub { font-size: 13px; line-height: 1.5; }
+.tw-billing-v3.billing-related .related-mast-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.tw-billing-v3.billing-related .related-mast-actions button { background: #fff; color: #0057ff; border: 1px solid #dce6ff; box-shadow: none; }
+.tw-billing-v3.billing-related .tw-mast .billing-related-nav { background: #fff; margin: 0; padding: 12px 18px; border: 0; gap: 8px; }
+.tw-billing-v3.billing-related .billing-related-nav > a { background: #fff; border-color: #dce6ff; }
+.tw-billing-v3.billing-related .billing-related-nav > a[aria-current="page"] { background: #fff; color: #0057ff; border-color: #80aaff; box-shadow: 0 0 0 3px rgba(0,87,255,.08); }
+.tw-billing-v3.billing-related .related-summary-deck { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(220px,100%),1fr)); gap: 12px; margin-bottom: 14px; }
+.tw-billing-v3.billing-related .related-summary-deck .tw-st b { font-family: var(--font-sans, Geist), sans-serif; font-size: 22px; text-align: left; overflow-wrap: anywhere; }
+.tw-billing-v3.billing-related .related-summary-deck .tw-hint { font-size: 12px; margin-top: 8px; }
+.tw-billing-v3.billing-related .related-summary-deck .tw-dc2__h b { white-space: normal; }
+.tw-billing-v3.billing-related .bq-card { box-shadow: var(--tw-ring); }
