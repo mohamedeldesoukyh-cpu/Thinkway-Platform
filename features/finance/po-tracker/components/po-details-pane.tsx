@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition, type FormEvent } from "react";
+import { useRef, useState, useTransition, type FormEvent } from "react";
 import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { updateCampaignPoAction, type FinanceActionState } from "@/features/finance/exchange-rates/actions";
@@ -10,15 +10,20 @@ import { formatMoney } from "@/features/campaigns/utils";
 import { PO_STATUS_LABELS } from "@/lib/finance/po/status";
 import type { PoTrackerRow } from "../types";
 
-export function PoDetailsPane({ row, currencies, canEdit, onClose, onDirtyChange, onPendingChange }: {
+export function PoDetailsPane({ row, currencies, canEdit, height, onResize, onClose, onDirtyChange, onPendingChange }: {
   row: PoTrackerRow;
   currencies: { code: string; name: string }[];
   canEdit: boolean;
+  height: number;
+  onResize: (height: number) => void;
   onClose: () => void;
   onDirtyChange: (dirty: boolean) => void;
   onPendingChange: (pending: boolean) => void;
 }) {
   const router = useRouter();
+  const paneRef = useRef<HTMLElement>(null);
+  const dragRef = useRef<{ y: number; height: number; available: number } | null>(null);
+  function resize(value: number) { onResize(Math.max(25, Math.min(65, value))); }
   const [pending, startTransition] = useTransition();
   const [result, setResult] = useState<FinanceActionState>({ ok: false });
   const [values, setValues] = useState({
@@ -53,7 +58,31 @@ export function PoDetailsPane({ row, currencies, canEdit, onClose, onDirtyChange
       }
     });
   }
-  return <section className="po-details-pane" aria-labelledby="po-details-title">
+  return <section ref={paneRef} className="po-details-pane" style={{ height: `${height}%` }} aria-labelledby="po-details-title">
+    <div className="po-pane-resizer" role="separator" tabIndex={0} aria-label="Resize PO details" aria-orientation="horizontal" aria-valuemin={25} aria-valuemax={65} aria-valuenow={Math.round(height)} aria-valuetext={`${Math.round(height)} percent of workspace`} title="Drag up or down to resize. Use arrow keys when focused. Double-click to reset."
+      onPointerDown={event => {
+        if (event.button !== 0) return;
+        const pane = paneRef.current;
+        const available = pane?.parentElement?.clientHeight;
+        if (!pane || !available) return;
+        event.preventDefault();
+        event.currentTarget.focus();
+        event.currentTarget.setPointerCapture(event.pointerId);
+        dragRef.current = { y: event.clientY, height: pane.getBoundingClientRect().height, available };
+      }}
+      onPointerMove={event => {
+        const drag = dragRef.current;
+        if (drag) resize((drag.height + drag.y - event.clientY) / drag.available * 100);
+      }}
+      onPointerUp={event => { dragRef.current = null; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }}
+      onPointerCancel={() => { dragRef.current = null; }}
+      onLostPointerCapture={() => { dragRef.current = null; }}
+      onDoubleClick={() => resize(44)}
+      onKeyDown={event => {
+        if (!["ArrowUp", "ArrowDown", "Home", "End"].includes(event.key)) return;
+        event.preventDefault();
+        resize(event.key === "Home" ? 25 : event.key === "End" ? 65 : height + (event.key === "ArrowUp" ? 5 : -5));
+      }}><span /></div>
     <div className="po-details-heading">
       <div><h2 id="po-details-title">PO details · {row.po_number || "Not assigned"}</h2>
         <p>{row.client_name} · {row.brand_name} · {row.campaign_name}</p></div>

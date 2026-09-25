@@ -165,6 +165,7 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState("");
   const [moreFilters, setMoreFilters] = useState(false);
+  const [paneHeight, setPaneHeight] = useState(44);
   const activeRow = data.rows.find(row => row.campaign_id === selected?.campaign_id) ?? selected;
   function selectPo(row: PoRow | null) {
     if (saving || row?.campaign_id === selected?.campaign_id) return;
@@ -176,6 +177,9 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
     ...column,
     locked: true,
     renderCell: (row: PoRow) => <button type="button" className="po-select-link" aria-label={`Open PO ${row.po_number || "not assigned"} for ${row.campaign_name}`} aria-pressed={row.campaign_id === selected?.campaign_id} onClick={() => selectPo(row)}>{row.po_number || "Add PO details"}</button>,
+  } : column.amountCell ? {
+    ...column,
+    renderCell: (row: PoRow) => <button type="button" className="po-amount-link" aria-label={`Open ${column.label} details for ${row.campaign_name}`} onClick={() => selectPo(row)}>{column.renderCell(row)}</button>,
   } : column);
   const needle = search.trim().toLocaleLowerCase();
   const rows = data.rows.filter(row => [row.po_number, row.campaign_name, row.client_name, row.brand_name, row.campaign_document_number].some(value => value?.toLocaleLowerCase().includes(needle)));
@@ -294,7 +298,7 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
           </div>
         </FinanceSuiteCard>
       </OperationalTableSuiteProvider>
-      {activeRow && <PoDetailsPane key={activeRow.campaign_id} row={activeRow} currencies={data.filter_options.currencies} canEdit={data.can_edit} onClose={() => selectPo(null)} onDirtyChange={setDirty} onPendingChange={setSaving} />}
+      {activeRow && <PoDetailsPane key={activeRow.campaign_id} row={activeRow} currencies={data.filter_options.currencies} canEdit={data.can_edit} height={paneHeight} onResize={setPaneHeight} onClose={() => selectPo(null)} onDirtyChange={setDirty} onPendingChange={setSaving} />}
     </div>
   );
 }
