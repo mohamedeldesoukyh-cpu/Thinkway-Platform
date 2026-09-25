@@ -11,3 +11,15 @@ export function vatMonths(data:VatLedger){
  for(const p of data.payments)get(p.period.slice(0,7),p.country_code,p.currency).paid+=p.amount;
  return [...map.values()].map(r=>{const balance=roundVat(r.vatIn-r.vatOut);const remaining=roundVat(balance-r.paid);return {...r,vatIn:roundVat(r.vatIn),vatOut:roundVat(r.vatOut),paid:roundVat(r.paid),balance,payable:Math.max(0,remaining),credit:Math.max(0,-remaining)};}).sort((a,b)=>b.period.localeCompare(a.period)||a.country.localeCompare(b.country)||a.currency.localeCompare(b.currency));
 }
+
+/** Running unpaid balance by tax country and currency, including prior credits. */
+export function accumulatedVatMonths(data: VatLedger) {
+  const balances = new Map<string, number>();
+  return vatMonths(data).reverse().map(row => {
+    const key = `${row.country}|${row.currency}`;
+    const opening = balances.get(key) ?? 0;
+    const accumulated = roundVat(opening + row.balance - row.paid);
+    balances.set(key, accumulated);
+    return { ...row, opening, accumulated, payable: Math.max(0, accumulated), credit: Math.max(0, -accumulated) };
+  }).reverse();
+}
