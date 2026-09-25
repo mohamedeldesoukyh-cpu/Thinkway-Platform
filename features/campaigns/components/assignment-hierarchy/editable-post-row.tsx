@@ -93,6 +93,7 @@ import {
   formatLiveAdMonth,
 } from "@/lib/campaigns/live-ad-date";
 import { cn } from "@/lib/utils";
+import { useAssignmentCommercialPane } from "./assignment-commercial-pane";
 import {
   useOperationalChildColumnVisibleChecker,
   useOperationalChildVisibleColumnCount,
@@ -201,6 +202,7 @@ export function EditablePostRow({
   gridCols,
   parentTrackIds,
 }: EditablePostRowProps) {
+  const commercialPane = useAssignmentCommercialPane();
   const formatOperationalAmount = (amount: number) => campaignMoney(amount, currency, revenueFxOverride);
   const formatCostAmount = (amount: number) => campaignMoney(amount, currency, costFxOverride);
   const col = useOperationalChildColumnVisibleChecker();
@@ -1226,6 +1228,10 @@ export function EditablePostRow({
     <>
       <AssignmentGridRow
         cols={gridCols ?? ""}
+        tabIndex={0}
+        data-assignment-editor-selected={commercialPane.selected?.postId === post.id ? "true" : undefined}
+        onClick={event => { if (!(event.target as HTMLElement).closest("button,a,input,select,textarea,[role=button]")) commercialPane.open({ lineId: campaignLineId, deliverableId: deliverable.id, postId: post.id }); }}
+        onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); commercialPane.open({ lineId: campaignLineId, deliverableId: deliverable.id, postId: post.id }); } }}
         className={cn(
           "tw-r tw-ad thinkway-campaign-asgn-child text-[11px] font-normal text-[var(--camp-text-2)]",
           !isLastChildRow && "border-b border-[var(--camp-border)]"

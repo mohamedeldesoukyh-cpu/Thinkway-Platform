@@ -27,6 +27,9 @@ const linePatchSchema = z.object({
   usage_rights_amount: z.number().min(0),
   usage_rights_cost: z.number().min(0),
   agency_fee_percent: z.number().min(0).max(100),
+  revenue_vat_percent: z.number().min(0).max(100).optional(),
+  cost_vat_percent: z.number().min(0).max(100).optional(),
+  currency_code: z.string().trim().length(3).optional(),
 });
 
 const inputSchema = z.object({
@@ -258,6 +261,7 @@ export async function updateAssignmentLineCommercialsAction(
       // Unique per save — static keys cause stale commercial-sync idempotency / false success.
       const idempotencyKey = `assignment-cw:${patch.lineId}:${campaignId}:${patch.cost_before_vat}:${patch.revenue_before_vat}:${patch.agency_fee_percent}:${patch.usage_rights_amount}:${patch.usage_rights_cost}:${crypto.randomUUID()}`;
 
+      const currencyChanged = Boolean(patch.currency_code && patch.currency_code !== (row.currency_code ?? meta.currency_code));
       const mutation: UpdateCampaignLineInput = {
         campaign_id: campaignId,
         line_id: patch.lineId,
@@ -278,14 +282,14 @@ export async function updateAssignmentLineCommercialsAction(
         usage_rights_amount: patch.usage_rights_amount,
         usage_rights_cost: patch.usage_rights_cost,
         agency_fee_percent: patch.agency_fee_percent,
-        revenue_vat_percent: Number(meta.revenue_vat_percent ?? 0),
-        cost_vat_percent: Number(meta.cost_vat_percent ?? 0),
-        revenue_vat_exempt: Boolean(meta.revenue_vat_exempt),
-        cost_vat_exempt: meta.cost_vat_exempt ?? true,
-        cost_received: row.cost_received ?? undefined,
-        cost_received_currency: row.cost_received_currency ?? undefined,
-        fx_rate: meta.fx_rate ?? undefined,
-        currency_code: row.currency_code ?? meta.currency_code ?? undefined,
+        revenue_vat_percent: patch.revenue_vat_percent ?? Number(meta.revenue_vat_percent ?? 0),
+        cost_vat_percent: patch.cost_vat_percent ?? Number(meta.cost_vat_percent ?? 0),
+        revenue_vat_exempt: patch.revenue_vat_percent != null ? patch.revenue_vat_percent === 0 : Boolean(meta.revenue_vat_exempt),
+        cost_vat_exempt: patch.cost_vat_percent != null ? patch.cost_vat_percent === 0 : meta.cost_vat_exempt ?? true,
+        cost_received: currencyChanged ? patch.cost_before_vat : row.cost_received ?? undefined,
+        cost_received_currency: currencyChanged ? patch.currency_code : row.cost_received_currency ?? undefined,
+        fx_rate: currencyChanged ? 1 : meta.fx_rate ?? undefined,
+        currency_code: patch.currency_code ?? row.currency_code ?? meta.currency_code ?? undefined,
         start_date: row.start_date,
         end_date: row.end_date,
         assignment_status: row.assignment_status ?? "assigned",
@@ -358,15 +362,15 @@ export async function updateAssignmentLineCommercialsAction(
               proposed: {
                 creator_cost: lockedPatch.cost_before_vat,
                 client_revenue: lockedPatch.revenue_before_vat,
-                cost_currency: currentRow?.currency_code ?? "EGP",
+                cost_currency: lockedPatch.currency_code ?? currentRow?.currency_code ?? "EGP",
                 agency_fee_percent: lockedPatch.agency_fee_percent,
                 usage_rights_amount: lockedPatch.usage_rights_amount,
                 usage_rights_cost: lockedPatch.usage_rights_cost,
-                revenue_vat_percent: Number(currentRow?.revenue_vat_percent ?? 0),
-                cost_vat_percent: Number(currentRow?.cost_vat_percent ?? 0),
-                revenue_vat_exempt: Boolean(currentRow?.revenue_vat_exempt),
-                cost_vat_exempt: currentRow?.cost_vat_exempt ?? true,
-                exchange_rate: currentRow?.fx_rate ?? undefined,
+                revenue_vat_percent: lockedPatch.revenue_vat_percent ?? Number(currentRow?.revenue_vat_percent ?? 0),
+                cost_vat_percent: lockedPatch.cost_vat_percent ?? Number(currentRow?.cost_vat_percent ?? 0),
+                revenue_vat_exempt: lockedPatch.revenue_vat_percent == null ? Boolean(currentRow?.revenue_vat_exempt) : lockedPatch.revenue_vat_percent === 0,
+                cost_vat_exempt: lockedPatch.cost_vat_percent == null ? currentRow?.cost_vat_exempt ?? true : lockedPatch.cost_vat_percent === 0,
+                exchange_rate: lockedPatch.currency_code && lockedPatch.currency_code !== currentRow?.currency_code ? 1 : currentRow?.fx_rate ?? undefined,
               },
             });
           }

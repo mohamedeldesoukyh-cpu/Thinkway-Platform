@@ -53,6 +53,7 @@ const updateDeliverableSchema = createDeliverableSchema.extend({
   deliverable_id: z.string().uuid(),
   billing_status: billingStatusSchema.optional(),
   skip_revalidate: z.boolean().optional(),
+  commercial_only: z.boolean().optional(),
 });
 
 const deleteDeliverableSchema = z.object({

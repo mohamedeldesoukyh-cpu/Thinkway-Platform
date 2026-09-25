@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { syncLineBillingFromDeliverables } from "@/lib/billing/sync-deliverable-billing";
 import { computeClientBilling } from "@/lib/assignments/client-billing-commercial";
 import { buildLineVatPayload } from "@/lib/vat/line-payload";
+import { deliverableVatRollup } from "./deliverable-vat-rollup";
 
 type LineContext = {
   id: string;
@@ -21,6 +22,8 @@ type DeliverableRollupRow = {
   agency_fee_amount: number;
   cost_before_vat: number;
   quantity: number;
+  revenue_vat_amount?: number;
+  cost_vat_amount?: number;
 };
 
 function roundMoney(value: number): number {
@@ -30,7 +33,8 @@ function roundMoney(value: number): number {
 /** Recomputes campaign line commercial totals from assignment_deliverables children. */
 export async function syncLineCommercialRollupsFromDeliverables(
   supabase: SupabaseClient,
-  lineId: string
+  lineId: string,
+  preserveChildVat = false
 ): Promise<void> {
   const { data: line, error: lineError } = await supabase
     .from("campaign_lines")
@@ -55,7 +59,7 @@ export async function syncLineCommercialRollupsFromDeliverables(
 
   const { data: rows, error: rowsError } = await supabase
     .from("assignment_deliverables")
-    .select("revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_amount, agency_fee_percent, cost_before_vat, quantity")
+    .select("revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_amount, agency_fee_percent, cost_before_vat, quantity, revenue_vat_amount, cost_vat_amount")
     .eq("campaign_line_id", lineId)
     .order("sort_order");
 
@@ -107,9 +111,11 @@ export async function syncLineCommercialRollupsFromDeliverables(
 
   const metadata = { ...(lineCtx.metadata ?? {}) };
   const assignment = (metadata.influencer_assignment ?? {}) as Record<string, unknown>;
+  const useChildVat = preserveChildVat || assignment.commercial_vat_source === "deliverables";
   metadata.influencer_assignment = {
     ...assignment,
     pricing_mode: "per_deliverable",
+    ...(useChildVat ? { commercial_vat_source: "deliverables" } : {}),
   };
 
   const billing = computeClientBilling({
@@ -122,10 +128,11 @@ export async function syncLineCommercialRollupsFromDeliverables(
     costBeforeVat: vatPayload.cost_before_vat,
   });
 
-  await supabase
+  const { error: updateError } = await supabase
     .from("campaign_lines")
     .update({
       ...vatPayload,
+      ...(useChildVat ? deliverableVatRollup(deliverables) : {}),
       gp: billing.gp,
       margin_percent: billing.marginPercent,
       deliverable_count: deliverableCount,
@@ -133,6 +140,7 @@ export async function syncLineCommercialRollupsFromDeliverables(
       metadata,
     })
     .eq("id", lineId);
+  if (updateError) throw new Error(updateError.message);
 
   await syncLineBillingFromDeliverables(
     supabase,

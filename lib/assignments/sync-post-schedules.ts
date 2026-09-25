@@ -9,6 +9,7 @@ import {
   resolveClientRemainingAmount,
 } from "@/lib/billing/client-billable-amount";
 import { computeVatLine } from "@/lib/vat/calculations";
+import { distributeAmountByWeights } from "./commercial-calculations";
 
 function roundMoney(value: number): number {
   return Math.round(value * 100) / 100;
@@ -75,10 +76,26 @@ export async function restampDeliverablePostCommercial(
   deliverableId: string,
   unitRevenue: number,
   unitCost: number,
-  line: LineVat
+  line: LineVat,
+  totals?: { revenue: number; cost: number }
 ): Promise<void> {
+  if (totals) {
+    const { data: posts, error: fetchError } = await supabase.from("assignment_post_schedule")
+      .select("id").eq("assignment_deliverable_id", deliverableId).order("sequence_number");
+    if (fetchError) throw new Error(fetchError.message);
+    const rows = posts ?? [];
+    const weights = rows.map(() => 1);
+    const revenue = distributeAmountByWeights(totals.revenue, weights);
+    const cost = distributeAmountByWeights(totals.cost, weights);
+    for (const [index, post] of rows.entries()) {
+      const { error } = await supabase.from("assignment_post_schedule")
+        .update(computePostCommercial(revenue[index], cost[index], line)).eq("id", post.id);
+      if (error) throw new Error(error.message);
+    }
+    return;
+  }
   const commercial = computePostCommercial(unitRevenue, unitCost, line);
-  await supabase
+  const { error } = await supabase
     .from("assignment_post_schedule")
     .update({
       revenue_before_vat: commercial.revenue_before_vat,
@@ -89,6 +106,7 @@ export async function restampDeliverablePostCommercial(
       cost_vat_amount: commercial.cost_vat_amount,
     })
     .eq("assignment_deliverable_id", deliverableId);
+  if (error) throw new Error(error.message);
 }
 
 /** Ensures assignment_post_schedule rows match deliverable quantity with per-post commercial defaults. */

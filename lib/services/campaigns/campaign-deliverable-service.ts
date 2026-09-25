@@ -43,6 +43,7 @@ export type CreateAssignmentDeliverableInput = {
 export type UpdateAssignmentDeliverableInput = CreateAssignmentDeliverableInput & {
   deliverable_id: string;
   billing_status?: string;
+  commercial_only?: boolean;
 };
 
 export type DeleteAssignmentDeliverableInput = {
@@ -525,6 +526,22 @@ export async function updateAssignmentDeliverable(
         existing.billing_status ?? ""
       );
 
+    // Financial editing must never fall through the live-date-only success path.
+    if (input.commercial_only && (invoicedOpenForLiveDate || existing.locked_at || isPackageLine(line))) {
+      return { ok: false, message: isPackageLine(line) ? "This child uses package pricing. Edit the parent package totals." : "This deliverable is invoiced. Use the existing finance revision workflow to change its commercials." };
+    }
+
+    if (input.commercial_only) {
+      const { data: posts, error: postsError } = await supabase
+        .from("assignment_post_schedule")
+        .select("locked_at, invoice_line_item_id, billing_status")
+        .eq("assignment_deliverable_id", input.deliverable_id);
+      if (postsError) return { ok: false, message: postsError.message };
+      if (posts?.some(post => post.locked_at || post.invoice_line_item_id || ["invoiced", "partially_invoiced", "partially_paid", "paid"].includes(post.billing_status ?? ""))) {
+        return { ok: false, message: "This deliverable contains invoiced posts. Use the existing finance revision workflow to change its commercials." };
+      }
+    }
+
     if (
       invoicedOpenForLiveDate &&
       canEditLiveAdDate(existing.live_date, existing.locked_at)
@@ -663,10 +680,10 @@ export async function updateAssignmentDeliverable(
         input.agency_fee_percent ?? Number(existingCommercial.agency_fee_percent ?? 0),
       revenue_vat_percent:
         input.revenue_vat_percent ?? Number(line.revenue_vat_percent ?? 0),
-      revenue_vat_exempt: line.revenue_vat_exempt ?? false,
+      revenue_vat_exempt: input.commercial_only && input.revenue_vat_percent != null ? input.revenue_vat_percent === 0 : line.revenue_vat_exempt ?? false,
       cost_vat_percent:
         input.cost_vat_percent ?? Number(line.cost_vat_percent ?? 0),
-      cost_vat_exempt: line.cost_vat_exempt ?? false,
+      cost_vat_exempt: input.commercial_only && input.cost_vat_percent != null ? input.cost_vat_percent === 0 : line.cost_vat_exempt ?? false,
     });
 
     const invoicedAmount = Number(existing.invoiced_amount ?? 0);
@@ -730,17 +747,24 @@ export async function updateAssignmentDeliverable(
         revenue_vat_amount: commercial.revenue_vat_amount,
         cost_vat_percent: commercial.cost_vat_percent,
         cost_vat_amount: commercial.cost_vat_amount,
-        revenue_vat_exempt: line.revenue_vat_exempt,
-        cost_vat_exempt: line.cost_vat_exempt,
+        revenue_vat_exempt: commercial.revenue_vat_exempt,
+        cost_vat_exempt: commercial.cost_vat_exempt,
         live_date: input.live_date ?? null,
         notes: input.notes ?? null,
         billing_status: input.billing_status ?? existing.billing_status,
         locked_at: existing.locked_at,
       },
-      lineVat
+      input.commercial_only ? { revenue_vat_percent: commercial.revenue_vat_percent, cost_vat_percent: commercial.cost_vat_percent, revenue_vat_exempt: commercial.revenue_vat_exempt, cost_vat_exempt: commercial.cost_vat_exempt } : lineVat
     );
 
-    await syncLineCommercialRollupsFromDeliverables(supabase, line.id);
+    if (input.commercial_only) {
+      await restampDeliverablePostCommercial(supabase, input.deliverable_id,
+        commercial.revenue_before_vat / commercial.quantity,
+        commercial.cost_before_vat / commercial.quantity,
+        { revenue_vat_percent: commercial.revenue_vat_percent, cost_vat_percent: commercial.cost_vat_percent, revenue_vat_exempt: commercial.revenue_vat_exempt, cost_vat_exempt: commercial.cost_vat_exempt },
+        { revenue: commercial.revenue_before_vat, cost: commercial.cost_before_vat });
+    }
+    await syncLineCommercialRollupsFromDeliverables(supabase, line.id, input.commercial_only);
     await redistributePackageLineToDeliverables(supabase, line.id);
     await syncAssignmentLineTitleFromDeliverables(supabase, line.id);
 

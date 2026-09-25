@@ -54,6 +54,7 @@ import {
 import { AssignmentCommercialWorkspaceDialog } from "@/features/campaigns/components/assignment-commercial-workspace-dialog";
 import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
 import { AssignmentSafeGrid } from "@/features/campaigns/components/assignment-hierarchy/assignment-safe-grid";
+import { AssignmentCommercialPaneProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-commercial-pane";
 import { tryBuildAssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import type { AssignmentAudienceView } from "@/lib/campaigns/assignment-audience-view";
 import { useInvoiceConfirmFlow } from "@/features/billing/hooks/use-invoice-confirm-flow";
@@ -209,6 +210,8 @@ export function CampaignLinesTabInner({
 
   return (
     <>
+      <AssignmentGridEditSessionProvider enabled={enableLineSheet && audienceView === "internal"}>
+      <AssignmentCommercialPaneProvider campaignId={workspace.id} hierarchy={assignmentHierarchy} currencies={currencyOptions} enabled={enableLineSheet && audienceView === "internal"}>
       <CampaignWorkspaceFrame
         title="Assignments"
         subtitle="Operational creator assignments, progress, and delivery readiness"
@@ -289,9 +292,6 @@ export function CampaignLinesTabInner({
           childTableId={ASSIGNMENT_GRID_CHILD_TABLE_ID}
           childColumns={ASSIGNMENT_CHILD_GRID_COLUMN_METAS}
         >
-          <AssignmentGridEditSessionProvider
-            enabled={enableLineSheet && audienceView === "internal"}
-          >
           <OperationalTableSection
             wide
             tableOnly
@@ -361,10 +361,11 @@ export function CampaignLinesTabInner({
               </>
             )}
           </OperationalTableSection>
-          </AssignmentGridEditSessionProvider>
         </OperationalTableDualColumnsProvider>
       </CampaignCreatorDiscoveryProvider>
       </CampaignWorkspaceFrame>
+      </AssignmentCommercialPaneProvider>
+      </AssignmentGridEditSessionProvider>
 
       <AssignmentInfluencerDetailSheet
         open={detailLineId != null}

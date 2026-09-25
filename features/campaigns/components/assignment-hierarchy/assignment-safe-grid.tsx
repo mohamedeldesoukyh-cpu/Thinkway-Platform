@@ -100,6 +100,7 @@ import {
 import { formatPercent } from "@/features/campaigns/utils";
 import { resolveAssignmentPrimaryHandle } from "@/lib/campaigns/assignment-detail-presenters";
 import { cn } from "@/lib/utils";
+import { useAssignmentCommercialPane } from "./assignment-commercial-pane";
 import { computeClientBilling, assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
 import {
@@ -156,6 +157,7 @@ export function AssignmentSafeGrid({
   invoicePending = false,
   onCreateAssignment,
 }: AssignmentSafeGridProps) {
+  const commercialPane = useAssignmentCommercialPane();
   const audienceView = useAssignmentAudienceView();
   const gridEdit = useAssignmentGridEditSession();
   const router = useRouter();
@@ -639,6 +641,10 @@ export function AssignmentSafeGrid({
                         )}
                         data-line-id={row.lineId}
                         data-selected={selectedLineIds.has(row.lineId) ? "true" : undefined}
+                        tabIndex={gates.enableEditActions ? 0 : undefined}
+                        data-assignment-editor-selected={commercialPane.selected?.lineId === line.id && !commercialPane.selected.deliverableId ? "true" : undefined}
+                        onClick={event => { if (!(event.target as HTMLElement).closest("button,a,input,select,textarea,[role=button]")) commercialPane.open({ lineId: line.id }); }}
+                        onKeyDown={event => { if (event.target === event.currentTarget && event.key === "Enter") { event.preventDefault(); commercialPane.open({ lineId: line.id }); } }}
                       >
                         {col("select") ? (
                           <AssignmentGridCell columnId="select" className={SAFE_GRID_CONTROL_CELL}>
