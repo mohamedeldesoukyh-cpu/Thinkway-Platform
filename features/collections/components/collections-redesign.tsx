@@ -5,6 +5,7 @@ import { useEffect, useRef, useState, useTransition, type CSSProperties, type Re
 import Link from "next/link";
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { usePaymentSaveShortcut } from "./payment-save-shortcut";
+import { AdvanceReceiptForm } from "./advance-receipt-form";
 import { CollectionPaymentHistory } from "./payment-history";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
@@ -127,11 +128,12 @@ export function CollectionsRedesign({ data }: { data: CollectionsPageData }) {
   const router = useRouter();
   const [tab, setTab] = useState<CollectionsTab>(collectionTab(params.get("tab")));
   const [client, setClient] = useState(params.get("client") ?? "");
-  const currencies = [...new Set(data.invoices.map(r => r.currency))].sort();
+  const currencies = [...new Set([...data.invoices.map(r => r.currency), ...(data.paymentHistory??[]).map(r=>r.currency)])].sort();
   const [currency, setCurrency] = useState(params.get("currency") ?? (currencies.includes("EGP") ? "EGP" : currencies[0] ?? "EGP"));
   const [statementSearch, setStatementSearch] = useState("");
   const [statementAll, setStatementAll] = useState(false);
   const [statementClient, setStatementClient] = useState(params.get("client") ?? "");
+  const [receiptType,setReceiptType]=useState("actual");
   const [preferredInvoice, setPreferredInvoice] = useState("");
   const [bucket, setBucket] = useState("all");
   const [followUp, setFollowUp] = useState<{ kind: "contact" | "due"; id: string; label: string } | null>(null);
@@ -163,7 +165,7 @@ export function CollectionsRedesign({ data }: { data: CollectionsPageData }) {
   const selectedClient = clientList.visible.some(c => c.id === statementClient) ? statementClient : clientList.visible[0]?.id || "";
   const statement = allInvoices.filter(r => r.client_id === selectedClient);
   const concentration = clients.map(c => ({ name: c.name, total: open.filter(r => r.client_id === c.id).reduce((s, r) => s + r.outstanding, 0) })).sort((a, b) => b.total - a.total)[0];
-  function record(id: string) { setPreferredInvoice(id); navigate("record"); }
+  function record(id: string) { setReceiptType("actual"); setPreferredInvoice(id); navigate("record"); }
   function editFollowUp(kind: "contact" | "due", id: string, label: string) { setFollowUp({ kind, id, label }); setFollowDate(data.asOf.slice(0, 10)); setFollowNotes(""); setConfirmed(false); }
   const lastContact = Object.entries(data.contacts).filter(([id]) => allInvoices.some(r => r.id === id)).map(([, date]) => date).sort().at(-1);
   return <div className="collections-suite" style={{ minWidth: 0, maxWidth: "100%", fontFamily: "var(--font-sans, Geist), sans-serif" }}>
@@ -204,7 +206,7 @@ export function CollectionsRedesign({ data }: { data: CollectionsPageData }) {
       const max = Math.max(1, ...weeks.map(w => w.amount));
       return <><div className="tw-fc">{weeks.map((w, i) => <div key={i} className="tw-fc__b"><s style={{ height: `${w.amount / max * 100}%` }} /><b>Wk {i + 1} · {dateLabel(w.start)}</b><em>{w.count ? money(w.amount) : "—"}</em></div>)}</div><div className="tw-note wrn">{overdue.length ? `${currency} ${money(summary.overdue)} is already past due. It is excluded from future receipt dates until a recovery date is agreed.` : "Future receipts use invoice due dates; they are not a prediction of when a client will pay."} No instalments or recovery dates are invented.</div></>;
     })()}</div></section>
-    <section data-p="record" id="panel-record" role="tabpanel" aria-labelledby="tab-record" hidden={tab !== "record"}><div className="tw-note">Select a client by name or code, then select their invoice. Save payment records the receipt; Edit and Delete below correct existing receipts.</div><ReceiptForm invoices={allInvoices} preferred={preferredInvoice} asOf={data.asOf} /><CollectionPaymentHistory payments={(data.paymentHistory ?? []).filter(p=>!client || p.client_id===client)} invoices={data.invoices} /></section>
+    <section data-p="record" id="panel-record" role="tabpanel" aria-labelledby="tab-record" hidden={tab !== "record"}><div className="tw-note">Select a client by name or code, then select their invoice. Save payment records the receipt; Edit and Delete below correct existing receipts.</div><div className="tw-ch"><label className="tw-f">Payment type<select className="tw-in" value={receiptType} onChange={e=>setReceiptType(e.target.value)}><option value="actual">Actual · against invoice</option><option value="advance">Advance · with or without campaign</option></select></label></div>{receiptType==="actual"?<ReceiptForm invoices={allInvoices} preferred={preferredInvoice} asOf={data.asOf} />:<AdvanceReceiptForm data={data} selectedClient={client}/>}<CollectionPaymentHistory payments={(data.paymentHistory ?? []).filter(p=>!client || p.client_id===client)} invoices={data.invoices} clients={data.clients} campaigns={data.campaigns??[]} /></section>
     {followUp && <div ref={followPanel} tabIndex={-1} onKeyDown={e => { if (e.key === "Escape") setFollowUp(null); }} className="tw-c" role="dialog" aria-modal="false" aria-label={followUp.kind === "contact" ? "Log reminder contact" : "Schedule payable"}><Head title={followUp.kind === "contact" ? "Log a reminder already sent" : "Schedule payable due date"} subtitle={followUp.label}><button className="tw-b sm" onClick={() => setFollowUp(null)}>Cancel</button></Head><div className="tw-form"><div className="tw-f"><label className="tw-lbl" htmlFor="follow-date">{followUp.kind === "contact" ? "Contact date" : "Due date"}</label><input className="tw-in" id="follow-date" type="date" value={followDate} max={followUp.kind === "contact" ? data.asOf.slice(0, 10) : undefined} onChange={e => setFollowDate(e.target.value)} /></div><div className="tw-f"><label className="tw-lbl" htmlFor="follow-notes">Notes</label><input className="tw-in" id="follow-notes" value={followNotes} maxLength={1000} onChange={e => setFollowNotes(e.target.value)} /></div></div><div className="tw-ch">{followUp.kind === "contact" && <label><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} /> I confirm this contact occurred. This action only records history.</label>}<span className="tw-sp" /><button className="tw-b pri" disabled={pending || !followDate || (followUp.kind === "contact" && !confirmed)} onClick={() => start(async () => { const result = await saveCollectionFollowUp({ kind: followUp.kind, id: followUp.id, date: followDate, notes: followNotes }); if (!result.ok) toast.error(result.error); else { toast.success("Follow-up saved."); setFollowUp(null); router.refresh(); } })}>{pending ? "Saving…" : "Save"}</button></div></div>}
   </div>;
 }

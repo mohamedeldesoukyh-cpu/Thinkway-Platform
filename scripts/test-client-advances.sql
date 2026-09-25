@@ -1,0 +1,43 @@
+BEGIN;
+DO $$
+DECLARE actor uuid; camp campaign_headers%ROWTYPE; inv invoices%ROWTYPE; inv2 invoices%ROWTYPE; p uuid; p2 uuid; actual uuid; req uuid:=gen_random_uuid(); failed boolean; other_client uuid;
+BEGIN
+ SELECT profiles.id INTO actor FROM profiles JOIN roles ON profiles.role_id=roles.id WHERE roles.slug='super_admin' AND profiles.is_active LIMIT 1;
+ INSERT INTO campaign_headers(document_number,name,group_id,client_id,brand_id,currency_code,created_by) SELECT 'ROLLBACK-'||gen_random_uuid(),'Advance rollback',group_id,client_id,brand_id,'EGP',actor FROM campaign_headers LIMIT 1 RETURNING * INTO camp;
+ PERFORM set_config('request.jwt.claim.sub',actor::text,true);SET LOCAL ROLE authenticated;
+ p:=record_collection_advance(req,camp.client_id,camp.id,150,'EGP',CURRENT_DATE,'bank_transfer','test','rollback');
+ IF (SELECT invoice_id FROM payments WHERE id=p) IS NOT NULL THEN RAISE EXCEPTION 'Pre-invoice receipt not advance'; END IF;
+ IF record_collection_advance(req,camp.client_id,camp.id,150,'EGP',CURRENT_DATE,'bank_transfer','test','rollback')<>p THEN RAISE EXCEPTION 'Retry duplicated advance'; END IF;
+ INSERT INTO invoices(document_number,client_id,campaign_header_id,status,regeneration_status,subtotal,total,currency,issue_date,created_by) VALUES('ROLLBACK-'||gen_random_uuid(),camp.client_id,camp.id,'draft','active',100,100,'EGP',CURRENT_DATE,actor) RETURNING * INTO inv;
+ IF (SELECT amount_paid FROM invoices WHERE id=inv.id)<>100 THEN RAISE EXCEPTION 'Issued campaign invoice did not automatically consume advance'; END IF;
+ IF (SELECT amount FROM payments WHERE id=p)<>50 OR (SELECT invoice_id FROM payments WHERE id=p) IS NOT NULL THEN RAISE EXCEPTION 'Advance remainder incorrect'; END IF;
+ IF (SELECT sum(amount) FROM payments WHERE id=p OR advance_source_id=p)<>150 THEN RAISE EXCEPTION 'Cash doubled on classification'; END IF;
+ INSERT INTO invoices(document_number,client_id,campaign_header_id,status,regeneration_status,subtotal,total,currency,issue_date,created_by) VALUES('ROLLBACK-'||gen_random_uuid(),camp.client_id,camp.id,'draft','active',80,80,'EGP',CURRENT_DATE,actor) RETURNING * INTO inv2;
+ IF (SELECT amount_paid FROM invoices WHERE id=inv2.id)<>50 OR (SELECT invoice_id FROM payments WHERE id=p)<>inv2.id THEN RAISE EXCEPTION 'Remaining advance did not become actual'; END IF;
+ p2:=record_collection_advance(gen_random_uuid(),camp.client_id,NULL,70,'EGP',CURRENT_DATE,'bank_transfer','test','unlinked');
+ IF (SELECT invoice_id FROM payments WHERE id=p2) IS NOT NULL THEN RAISE EXCEPTION 'Unlinked advance auto-settled'; END IF;
+ actual:=settle_collection_advance(p2,inv2.id,30,0);
+ IF (SELECT amount FROM payments WHERE id=p2)<>40 OR (SELECT amount_paid FROM invoices WHERE id=inv2.id)<>80 THEN RAISE EXCEPTION 'Manual settlement failed'; END IF;
+ failed:=false;BEGIN PERFORM settle_collection_advance(p2,inv2.id,1,0);EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Stale request accepted'; END IF;
+ failed:=false;BEGIN PERFORM settle_collection_advance(p2,inv2.id,1,1);EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Settled invoice accepted'; END IF;
+ PERFORM revise_collection_payment(p2,1,45,CURRENT_DATE,'bank_transfer','changed','notes','correct advance');
+ PERFORM delete_collection_payment(p2,2,'delete advance');
+ PERFORM restore_collection_payment(p2,3,'restore advance');
+ IF (SELECT status FROM payments WHERE id=p2)<>'completed' OR (SELECT amount FROM payments WHERE id=p2)<>45 THEN RAISE EXCEPTION 'Advance edit/delete/restore failed'; END IF;
+ INSERT INTO invoices(document_number,client_id,status,subtotal,total,currency,issue_date,created_by) VALUES('ROLLBACK-'||gen_random_uuid(),camp.client_id,'sent',100,100,'USD',CURRENT_DATE,actor) RETURNING * INTO inv;
+ failed:=false;BEGIN PERFORM settle_collection_advance(p2,inv.id,10,4);EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Currency mismatch accepted'; END IF;
+ SELECT id INTO other_client FROM clients WHERE id<>camp.client_id LIMIT 1;
+ IF other_client IS NOT NULL THEN
+  INSERT INTO invoices(document_number,client_id,status,subtotal,total,currency,issue_date,created_by) VALUES('ROLLBACK-'||gen_random_uuid(),other_client,'sent',100,100,'EGP',CURRENT_DATE,actor) RETURNING * INTO inv;
+  failed:=false;BEGIN PERFORM settle_collection_advance(p2,inv.id,10,4);EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Cross-client settlement accepted'; END IF;
+ END IF;
+ p2:=record_collection_advance(gen_random_uuid(),camp.client_id,camp.id,60,'EGP',CURRENT_DATE,'bank_transfer','test','wait for issue');
+ INSERT INTO invoices(document_number,client_id,campaign_header_id,status,regeneration_status,subtotal,total,currency,issue_date,created_by) VALUES('ROLLBACK-'||gen_random_uuid(),camp.client_id,camp.id,'draft','pending_regeneration',60,60,'EGP',CURRENT_DATE,actor) RETURNING * INTO inv;
+ IF (SELECT amount_paid FROM invoices WHERE id=inv.id)<>0 THEN RAISE EXCEPTION 'Pending invoice consumed advance'; END IF;
+ UPDATE invoices SET regeneration_status='active' WHERE id=inv.id;
+ IF (SELECT amount_paid FROM invoices WHERE id=inv.id)<>60 THEN RAISE EXCEPTION 'Activation did not consume advance'; END IF;
+ PERFORM set_config('request.jwt.claim.sub','',true);
+ failed:=false;BEGIN PERFORM settle_collection_advance(p2,inv.id,10,4);EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Anonymous settlement accepted'; END IF;
+ RAISE NOTICE 'PASS: campaign auto settlement, partial remainder, no duplicate cash, manual same-client settlement, retry protection, edit/delete/restore, stale/overpayment/currency/auth guards';
+END $$;
+ROLLBACK;

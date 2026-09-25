@@ -4,6 +4,7 @@ export type CollectionsPageData = {
   asOf: string;
   invoices: CollectionInvoiceRow[];
   clients: { id: string; name: string; document_number?: string | null }[];
+  campaigns?: {id:string;name:string;document_number:string;client_id:string}[];
   paymentHistory?: CollectionPayment[];
   receipts: { client_id: string; currency: string; amount: number; paid_at: string | null }[];
   warnings: string[];
@@ -71,4 +72,4 @@ export function statementClientList(clients: CollectionsPageData["clients"], inv
   return { withBalance: rows.filter(r => r.balance).length, visible: rows.filter(r => (all || r.balance) && r.name.toLowerCase().includes(search.trim().toLowerCase())) };
 }
 
-export type CollectionPayment = {id:string;document_number:string;invoice_id:string;client_id:string;amount:number;currency:string;paid_at:string|null;payment_method:string;reference_number:string|null;notes:string|null;status:string;revision:number;can_restore?:boolean};
+export type CollectionPayment = {id:string;document_number:string;invoice_id:string|null;advance_campaign_id?:string|null;created_at?:string;advance_source_id?:string|null;client_id:string;amount:number;currency:string;paid_at:string|null;payment_method:string;reference_number:string|null;notes:string|null;status:string;revision:number;can_restore?:boolean};
