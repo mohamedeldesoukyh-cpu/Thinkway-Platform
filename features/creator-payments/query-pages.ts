@@ -14,6 +14,12 @@ export async function allPaymentRows<T>(query: PageQuery<T>) {
 export async function paymentRowsByIds<T>(ids: string[], query: (chunk: string[])=>PageQuery<T>) {
   const unique=[...new Set(ids)];const data:T[]=[];
   // Bound URL length as well as response size.
-  for(let start=0;start<unique.length;start+=100) data.push(...(await allPaymentRows(query(unique.slice(start,start+100)))).data);
+  // Fetch up to four independent ID chunks together, preserving result order.
+  for(let start=0;start<unique.length;start+=400) {
+    const chunks=[];
+    for(let offset=start;offset<Math.min(start+400,unique.length);offset+=100)
+      chunks.push(allPaymentRows(query(unique.slice(offset,offset+100))));
+    for(const result of await Promise.all(chunks)) data.push(...result.data);
+  }
   return {data,error:null};
 }

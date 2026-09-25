@@ -4,7 +4,6 @@ import { formatDocumentNumberForDisplay as documentLabel } from "@/lib/documents
 import { useEffect, useRef, useState, useTransition, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { SearchableSelect } from "@/components/forms/searchable-select";
-import { usePaymentSaveShortcut } from "./payment-save-shortcut";
 import { AdvanceReceiptForm } from "./advance-receipt-form";
 import { CollectionPaymentHistory } from "./payment-history";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -123,7 +122,6 @@ function ReceiptForm({ invoices: allInvoices, preferred, asOf }: { invoices: Col
 }
 
 export function CollectionsRedesign({ data }: { data: CollectionsPageData }) {
-  usePaymentSaveShortcut();
   const params = useSearchParams();
   const router = useRouter();
   const [tab, setTab] = useState<CollectionsTab>(collectionTab(params.get("tab")));

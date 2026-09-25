@@ -20,6 +20,7 @@ const CampaignLinesTabInner = dynamic(
 );
 
 type AssignmentsRenderProps = {
+  active?: boolean;
   workspace: CampaignWorkspace;
   po: CampaignPoSummary;
   currencyOptions: { value: string; label: string }[];
@@ -37,6 +38,7 @@ export function AssignmentsRender({
   billingGroups,
   operationalBilling,
   initialFocusLineId = null,
+  active = true,
 }: AssignmentsRenderProps) {
   useEffect(() => {
     logAssignmentsStage("assignments render", {
@@ -47,6 +49,7 @@ export function AssignmentsRender({
 
   return (
     <CampaignLinesTabInner
+      active={active}
       workspace={workspace}
       po={po}
       currencyOptions={currencyOptions}

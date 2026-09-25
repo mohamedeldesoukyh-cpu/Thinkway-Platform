@@ -57,7 +57,7 @@ export function KeyboardHelpDialog({ open, onOpenChange }: KeyboardHelpDialogPro
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>Keyboard shortcuts & help</DialogTitle>
           <DialogDescription>
-            Operate Thinkway with keyboard-first workflows. Press ? anytime to open this guide.
+            Press ? outside text fields to open this guide. On Mac, use Cmd instead of Ctrl. Save targets the open dialog or fixed bar first, then the active form. Existing validation and permissions still apply.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 overflow-y-auto px-6 py-4">

@@ -50,6 +50,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const [height, setHeight] = useState(290);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  useEffect(() => { if (!enabled) setSelected(null); }, [enabled]);
   const router = useRouter();
   const gridEdit = useAssignmentGridEditSession();
   useEffect(() => { setHost(marker.current?.closest<HTMLElement>("[data-campaign-workspace-scroll]")?.parentElement ?? null); }, []);
@@ -119,7 +120,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   }
   const number = (label: string, field: keyof Omit<Draft, "currency">, options?: { disabled?: boolean; max?: number; integer?: boolean }) => <label className="acp-field">{label}<FormattedNumber key={selectedKey + field} value={draft[field]} disabled={readOnly || options?.disabled} integer={options?.integer} max={options?.max} percentage={field === "costVat" || field === "revVat" || field === "af"} onChange={value => change(field, value)} /></label>;
   const total = (label: string, value: number) => <div className="acp-total"><span>{label}</span><output>{value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</output></div>;
-  const editor = enabled && line && selected ? <section ref={pane} className="assignment-commercial-pane" aria-label="Assignment cost and revenue editor" style={{ height }}>
+  const editor = enabled && line && selected ? <section ref={pane} data-shortcut-pane className="assignment-commercial-pane" aria-label="Assignment cost and revenue editor" style={{ height }}>
     <div className="acp-resizer" role="separator" aria-label="Resize assignment editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={Math.max(180, Math.floor((host?.clientHeight ?? 700) * .65))} aria-valuenow={Math.round(height)} tabIndex={0} title="Drag to resize; double-click to reset"
       onPointerDown={event => { if (event.button !== 0) return; event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId); drag.current = { y: event.clientY, height: pane.current?.clientHeight ?? height }; }}
       onPointerMove={event => { if (drag.current) resize(drag.current.height + drag.current.y - event.clientY); }}
@@ -134,7 +135,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
         <div title="Same profit amount as GP, excluding VAT"><span>Margin</span><output>{profitAmount}</output></div>
         <div title="GP ÷ cost including UR Cost, excluding VAT"><span>Margin % (markup)</span><output>{percent(profitCost > 0 ? profit.gp / profitCost * 100 : null)}</output></div>
       </div>
-      <button type="button" className="acp-button" aria-label="Close assignment editor" disabled={pending} onClick={() => setSelected(null)}><X size={16} /></button>
+      <button data-shortcut-close type="button" className="acp-button" aria-label="Close assignment editor" disabled={pending} onClick={() => setSelected(null)}><X size={16} /></button>
     </div>
     <form className="acp-form" onSubmit={event => { event.preventDefault(); void save(); }} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); event.stopPropagation(); event.currentTarget.requestSubmit(); } }}>
       <div className="acp-scroll">

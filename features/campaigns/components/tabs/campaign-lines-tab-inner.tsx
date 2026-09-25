@@ -46,7 +46,6 @@ import {
   CampaignWorkspaceFrame,
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { AssignmentAudienceViewProvider } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-context";
-import { AssignmentAudienceViewToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-audience-view-toggle";
 import {
   AssignmentGridEditSessionProvider,
   AssignmentGridEditSessionToolbar,
@@ -69,6 +68,7 @@ const CreateInvoiceSheet = dynamic(
 
 
 type CampaignLinesTabInnerProps = {
+  active?: boolean;
   workspace: CampaignWorkspace;
   po: CampaignPoSummary;
   currencyOptions: { value: string; label: string }[];
@@ -87,6 +87,7 @@ export function CampaignLinesTabInner({
   billingGroups,
   operationalBilling,
   initialFocusLineId = null,
+  active = true,
 }: CampaignLinesTabInnerProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const uiLayer = getAssignmentsUiLayer();
@@ -105,7 +106,7 @@ export function CampaignLinesTabInner({
   const [sheetOpen, setSheetOpen] = useState(false);
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [editing, setEditing] = useState<CampaignLineWorkspace | null>(null);
-  const [audienceView, setAudienceView] = useState<AssignmentAudienceView>("internal");
+  const audienceView: AssignmentAudienceView = "internal";
   const [detailLineId, setDetailLineId] = useState<string | null>(
     () => initialFocusLineId
   );
@@ -211,7 +212,7 @@ export function CampaignLinesTabInner({
   return (
     <>
       <AssignmentGridEditSessionProvider enabled={enableLineSheet && audienceView === "internal"}>
-      <AssignmentCommercialPaneProvider campaignId={workspace.id} hierarchy={assignmentHierarchy} currencies={currencyOptions} enabled={enableLineSheet && audienceView === "internal"}>
+      <AssignmentCommercialPaneProvider campaignId={workspace.id} hierarchy={assignmentHierarchy} currencies={currencyOptions} enabled={active && enableLineSheet && audienceView === "internal"}>
       <CampaignWorkspaceFrame
         title="Assignments"
         subtitle="Operational creator assignments, progress, and delivery readiness"
@@ -306,10 +307,6 @@ export function CampaignLinesTabInner({
                   <>
                     <div className="thinkway-aurora-tbar-left">
                       <AssignmentGridEditSessionToolbar />
-                      <AssignmentAudienceViewToggle
-                        value={audienceView}
-                        onChange={setAudienceView}
-                      />
                     </div>
                     <span className="tw-sp" aria-hidden />
                     <div className="thinkway-aurora-tbar-right">

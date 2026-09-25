@@ -58,7 +58,7 @@ export function PoDetailsPane({ row, currencies, canEdit, height, onResize, onCl
       }
     });
   }
-  return <section ref={paneRef} className="po-details-pane" style={{ height: `${height}%` }} aria-labelledby="po-details-title">
+  return <section ref={paneRef} data-shortcut-pane className="po-details-pane" style={{ height: `${height}%` }} aria-labelledby="po-details-title">
     <div className="po-pane-resizer" role="separator" tabIndex={0} aria-label="Resize PO details" aria-orientation="horizontal" aria-valuemin={25} aria-valuemax={65} aria-valuenow={Math.round(height)} aria-valuetext={`${Math.round(height)} percent of workspace`} title="Drag up or down to resize. Use arrow keys when focused. Double-click to reset."
       onPointerDown={event => {
         if (event.button !== 0) return;
@@ -87,7 +87,7 @@ export function PoDetailsPane({ row, currencies, canEdit, height, onResize, onCl
       <div><h2 id="po-details-title">PO details · {row.po_number || "Not assigned"}</h2>
         <p>{row.client_name} · {row.brand_name} · {row.campaign_name}</p></div>
       <Link href={`/campaigns/${row.campaign_id}`} className="po-link">Open campaign</Link>
-      <Button type="button" size="icon" variant="ghost" disabled={pending} aria-label="Close PO details" onClick={onClose}><X size={16} /></Button>
+      <Button data-shortcut-close type="button" size="icon" variant="ghost" disabled={pending} aria-label="Close PO details" onClick={onClose}><X size={16} /></Button>
     </div>
     <form onSubmit={save} className="po-details-form">
       <input type="hidden" name="campaign_id" value={row.campaign_id} />

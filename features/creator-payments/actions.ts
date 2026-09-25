@@ -3,7 +3,6 @@ import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import ExcelJS from "exceljs";
 import { z } from "zod";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { revalidatePath } from "next/cache";
@@ -51,15 +50,15 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_supplier_invoices').select('assignment_id,invoice_number,invoice_date,country_code,revision,from_payment_register').in('assignment_id',ids).order('assignment_id')),
     ]);
     const lineIds = assignments.data.map(a=>a.campaign_line_id).filter((id): id is string=>!!id);
-    const [fxLines, currencyRates] = await Promise.all([
+    const batchIds = [...new Set((entries.data ?? []).map(e => e.batch_id).filter((id): id is string=>!!id))];
+    const [fxLines, currencyRates, deliverables, posts, publications, links, batchResult] = await Promise.all([
         paymentRowsByIds(lineIds, ids => db.from("campaign_lines").select("id,cost_fx_override").in("id", ids).order("id")),
         Promise.all([...new Set([...COMMERCIAL_CURRENCIES, ...assignments.data.map(a => a.currency).filter(Boolean)])].map(async currency => [currency, await resolveRateToEgp(db, currency).catch(() => 0)] as const)).then(Object.fromEntries),
-    ]);
-    const [deliverables, posts, publications, links] = await Promise.all([
         paymentRowsByIds(lineIds,ids=>db.from('assignment_deliverables').select('id,campaign_line_id,quantity,sort_order,deliverable_type,created_at').in('campaign_line_id',ids).order('id')),
         paymentRowsByIds(lineIds,ids=>db.from('assignment_post_schedule').select('id,assignment_deliverable_id,sequence_number,status').in('campaign_line_id',ids).order('id')),
         paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('campaign_publications').select('id,assignment_deliverable_id,assignment_post_schedule_id,status').in('campaign_header_id',ids).order('id')),
         paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('deliverable_publication_links').select('id,assignment_deliverable_id,assignment_post_schedule_id,publication_id').in('campaign_header_id',ids).order('id')),
+        paymentRowsByIds(batchIds,ids=>db.from('creator_payment_exports').select('id,created_at,transfer_date').in('id', ids).order('created_at', { ascending: false }).order('id')),
     ]);
     const rows: PaymentRow[] = ios.map(io => {
         const a = assignments.data?.find(a => a.id === io.assignment_id);
@@ -83,19 +82,14 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
             reserved: ledger.filter(e => e.status === 'exported').reduce((s, e) => s + Number(e.original_amount), 0),
             bank: bankDetails(creator?.payment_details ?? {}) };
     });
-    const batchIds = [...new Set((entries.data ?? []).map(e => e.batch_id).filter((id): id is string=>!!id))];
-    let batches: PaymentBatch[] = [];
-    if (batchIds.length) {
-        const result = await paymentRowsByIds(batchIds,ids=>db.from('creator_payment_exports').select('id,created_at,transfer_date').in('id', ids).order('created_at', { ascending: false }).order('id'));
-        batches = (result.data ?? []).map(b => ({ ...b, entries: (entries.data ?? []).filter(e => e.batch_id === b.id) as PaymentEntry[] }));
-    }
+    const batches: PaymentBatch[] = batchResult.data.map(b => ({ ...b, entries: entries.data.filter(e => e.batch_id === b.id) as PaymentEntry[] }));
     return { rows, batches };
 }
 export async function loadCreatorPayments(scope: Scope) {
     try {
         const db = await access();
-        const permission = await requireFinancePermission(db, 'finance.write');
-        return { ok: true as const, canWrite: !('error' in permission), ...await loadRows(db, scope) };
+        const [permission, data] = await Promise.all([requireFinancePermission(db, 'finance.write'), loadRows(db, scope)]);
+        return { ok: true as const, canWrite: !('error' in permission), ...data };
     }
     catch (e) {
         return fail(e);
@@ -313,6 +307,7 @@ export async function exportAaibBeneficiaries(ids: string[], accountId?: string)
             if (account.error) throw new Error('Bank account unavailable.');
             selectedBank = bankDetails(account.data.aaib_details);
         }
+        const { default: ExcelJS } = await import("exceljs");
         const workbook = new ExcelJS.Workbook();
         await workbook.xlsx.readFile(template('beneficiaries.xlsx'));
         const sheet = workbook.getWorksheet('Beneficiary Details');

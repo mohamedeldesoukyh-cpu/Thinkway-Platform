@@ -2,6 +2,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import { closeShortcutPane, focusShortcutSearch, resolveSaveTarget, shortcutDisabled, shortcutOverlay } from "./shortcut-targets";
 
 export type ShortcutAction = {
   id: string;
@@ -101,6 +103,7 @@ export function isNativeEditShortcut(event: KeyboardEvent): boolean {
 }
 
 function matchShortcut(event: KeyboardEvent, keys: string): boolean {
+  if (keys === "?") return event.key === "?" && !event.ctrlKey && !event.metaKey && !event.altKey;
   const parts = keys.toLowerCase().split("+").map((p) => p.trim());
   const needCtrl = parts.includes("ctrl") || parts.includes("control");
   const needAlt = parts.includes("alt");
@@ -201,7 +204,27 @@ export function KeyboardShortcutsProvider({
   }, [register, router, openHelp]);
 
   useEffect(() => {
+    // Capture save once, before legacy page listeners can also submit.
+    function onSaveKey(event: KeyboardEvent) {
+      if (!matchShortcut(event, "ctrl+s") && !matchShortcut(event, "ctrl+enter")) return;
+      if (event.defaultPrevented || event.isComposing) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (event.repeat) return;
+      const target = resolveSaveTarget();
+      if (target.button) {
+        if (!shortcutDisabled(target.button)) target.button.click();
+        else toast.info("Nothing to save yet, or saving is unavailable.", { id: "shortcut-save" });
+        return;
+      }
+      if (!target.scoped && !target.ambiguous) {
+        const saveActions = [...actionsRef.current.values()].filter(action => action.keys.toLowerCase() === "ctrl+s");
+        if (saveActions.length === 1) { saveActions[0].handler(); return; }
+      }
+      toast.info(target.ambiguous ? "Choose the form you want to save first." : "There is no available Save action in this view.", { id: "shortcut-save" });
+    }
     function onKeyDown(event: KeyboardEvent) {
+      if (event.defaultPrevented || event.isComposing || event.repeat) return;
       if (helpOpen && event.key === "Escape") {
         event.preventDefault();
         setHelpOpen(false);
@@ -213,6 +236,20 @@ export function KeyboardShortcutsProvider({
       if (isNativeEditShortcut(event)) return;
 
       const editable = isEditableTarget(event.target);
+
+      if (event.key === "Escape" && closeShortcutPane()) {
+        event.preventDefault();
+        return;
+      }
+      if (shortcutOverlay()) return;
+
+      if (!editable && matchShortcut(event, "/")) {
+        // A workspace's registered search takes precedence below.
+        const search = [...actionsRef.current.values()].find(action => action.keys === "/");
+        event.preventDefault();
+        if (search) search.handler(); else focusShortcutSearch();
+        return;
+      }
 
       for (const action of actionsRef.current.values()) {
         if (action.global && editable && !matchShortcut(event, "ctrl+s") && !matchShortcut(event, "ctrl+enter")) {
@@ -227,15 +264,14 @@ export function KeyboardShortcutsProvider({
         }
       }
 
-      if (matchShortcut(event, "ctrl+s")) {
-        event.preventDefault();
-        const form = document.querySelector<HTMLFormElement>("form[data-shortcut-save]");
-        form?.requestSubmit();
-      }
     }
 
+    window.addEventListener("keydown", onSaveKey, true);
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onSaveKey, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
   }, [helpOpen, setHelpOpen]);
 
   return (
@@ -254,8 +290,11 @@ export const GLOBAL_SHORTCUTS: Omit<ShortcutAction, "handler">[] = [
   { id: "nav-vendors", keys: "V", label: "Open vendors", group: "Navigation" },
   { id: "help-open", keys: "?", label: "Keyboard shortcuts", group: "Help" },
   { id: "save", keys: "Ctrl+S", label: "Save active form", group: "Forms" },
-  { id: "submit", keys: "Ctrl+Enter", label: "Confirm / submit", group: "Forms" },
-  { id: "close", keys: "Esc", label: "Close modal", group: "General" },
+  { id: "submit", keys: "Ctrl+Enter", label: "Save active form (alternative)", group: "Forms" },
+  { id: "close", keys: "Esc", label: "Close dialog or fixed details bar", group: "General" },
+  { id: "search", keys: "/", label: "Focus page search (outside text fields)", group: "General" },
+  { id: "navigation-search", keys: "Ctrl+K", label: "Search navigation", group: "Navigation" },
+  { id: "next-field", keys: "Tab / Shift+Tab", label: "Next / previous field", group: "Forms" },
 ];
 
 export const ASSIGNMENT_SHORTCUTS: Omit<ShortcutAction, "handler">[] = [

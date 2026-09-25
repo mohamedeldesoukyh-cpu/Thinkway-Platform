@@ -574,6 +574,7 @@ export function CampaignWorkspaceView({
                 "lines",
                 <TabErrorBoundary tabName="Assignments">
                   <CampaignAssignmentsTab
+                    active={activeTab === "lines"}
                     workspace={workspace}
                     po={workspace.po}
                     currencyOptions={currencyOptions}

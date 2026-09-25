@@ -59,6 +59,7 @@ class AssignmentsTabBoundary extends Component<
 }
 
 type CampaignAssignmentsTabProps = {
+  active?: boolean;
   workspace: CampaignWorkspace;
   po: CampaignPoSummary;
   currencyOptions: { value: string; label: string }[];
