@@ -217,10 +217,8 @@ export function KeyboardShortcutsProvider({
         else toast.info("Nothing to save yet, or saving is unavailable.", { id: "shortcut-save" });
         return;
       }
-      if (!target.scoped && !target.ambiguous) {
-        const saveActions = [...actionsRef.current.values()].filter(action => action.keys.toLowerCase() === "ctrl+s");
-        if (saveActions.length === 1) { saveActions[0].handler(); return; }
-      }
+      // Mounted-but-hidden workspace tabs may still register callbacks. Saving
+      // requires a visible control, so those callbacks cannot save another tab.
       toast.info(target.ambiguous ? "Choose the form you want to save first." : "There is no available Save action in this view.", { id: "shortcut-save" });
     }
     function onKeyDown(event: KeyboardEvent) {
