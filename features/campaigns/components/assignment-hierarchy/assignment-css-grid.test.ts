@@ -21,11 +21,11 @@ test("every parent track maps to a child field", () => {
   }
 });
 
-test("financial tracks keep revenue VAT and billing before creator costs", () => {
-  const start = ASSIGNMENT_GRID_PARENT_COLUMN_ORDER.indexOf("revenue");
+test("financial tracks keep creator costs before revenue and billing", () => {
+  const start = ASSIGNMENT_GRID_PARENT_COLUMN_ORDER.indexOf("cost");
   assert.deepEqual(ASSIGNMENT_GRID_PARENT_COLUMN_ORDER.slice(start, -1), [
+    "cost", "usageRightsCost", "costVatPercent", "costVat", "costTotal",
     "revenue", "usageRights", "agencyFeePercent", "agencyFee", "revenueVatPercent",
-    "vat", "totalBilling", "cost", "usageRightsCost", "costVatPercent", "costVat",
-    "costTotal", "gp", "margin", "opsStatus", "billing", "payout",
+    "vat", "totalBilling", "gp", "margin", "opsStatus", "billing", "payout",
   ]);
 });
