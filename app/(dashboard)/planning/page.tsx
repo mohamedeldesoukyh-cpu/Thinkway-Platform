@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
-import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
+import { BillingStyleShell } from "@/components/finance/billing-style-shell";
 import { PlanningWorkspaceView } from "@/features/planning/components/planning-workspace-view-lazy";
 import { loadPlanningWorkspace } from "@/features/planning/load-planning-workspace";
 import { parsePlanningSearchParams } from "@/lib/planning/dashboard-filters";
@@ -27,7 +27,7 @@ export default async function PlanningPage({ searchParams }: PageProps) {
     : result.error ?? "Planning workspace could not be loaded.";
 
   return (
-    <FinanceSuiteShell
+    <BillingStyleShell
       title="Planning"
       description="Budgets, forecasts and variance analysis"
     >
@@ -53,6 +53,6 @@ export default async function PlanningPage({ searchParams }: PageProps) {
           Sign in with planning permissions to access this workspace.
         </p>
       )}
-    </FinanceSuiteShell>
+    </BillingStyleShell>
   );
 }

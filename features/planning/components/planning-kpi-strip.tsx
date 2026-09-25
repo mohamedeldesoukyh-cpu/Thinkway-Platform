@@ -1,6 +1,7 @@
 "use client";
 
-import { FinanceSuiteEmpty, FinanceSuiteKpiStrip, type FinanceSuiteKpiTone } from "@/components/finance/suite";
+import { BillingStyleKpis as FinanceSuiteKpiStrip } from "@/components/finance/billing-style-surfaces";
+import { FinanceSuiteEmpty, type FinanceSuiteKpiTone } from "@/components/finance/suite";
 import type { PlanningKpiCard } from "@/lib/planning/queries/load-planning-dashboard";
 import type { AnalyticsCurrencyContext } from "@/lib/analytics/types/metrics";
 

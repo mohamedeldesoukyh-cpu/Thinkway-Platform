@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
+import { BillingStyleShell } from "@/components/finance/billing-style-shell";
 import { ExchangeRatesWorkspace } from "@/features/finance/exchange-rates/components/exchange-rates-workspace";
 import { getExchangeRatesWorkspace } from "@/features/finance/exchange-rates/queries";
 
@@ -14,7 +14,7 @@ export default async function FinanceExchangeRatesPage() {
   }
 
   return (
-    <FinanceSuiteShell
+    <BillingStyleShell
       title="Exchange rates"
       description="Currency master and conversion rates"
     >
@@ -25,6 +25,6 @@ export default async function FinanceExchangeRatesPage() {
       ) : data ? (
         <ExchangeRatesWorkspace data={data} />
       ) : null}
-    </FinanceSuiteShell>
+    </BillingStyleShell>
   );
 }

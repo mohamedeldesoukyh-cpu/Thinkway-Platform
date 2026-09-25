@@ -86,29 +86,13 @@ export function PlanningFilterBar({
       className="sticky top-0 z-20 min-w-0 border-b border-border bg-background/95 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80"
       data-pending={isPending ? "true" : undefined}
     >
+      <nav className="billing-section-tabs" aria-label="Planning sections">
+        {TABS.map((tab) => <button key={tab.value} type="button" aria-current={(state.tab ?? "dashboard") === tab.value ? "page" : undefined} disabled={isPending} onClick={() => update({ tab: tab.value })}>{tab.label}</button>)}
+      </nav>
       <div className="flex flex-wrap items-end gap-3">
         <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <FilterIcon className="size-4" aria-hidden />
           Planning filters
-        </div>
-
-        <div className="grid min-w-[120px] gap-1 sm:max-w-[140px]">
-          <Label className="text-xs">Section</Label>
-          <Select
-            value={state.tab ?? "dashboard"}
-            onValueChange={(tab) => update({ tab })}
-          >
-            <SelectTrigger className="h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TABS.map((t) => (
-                <SelectItem key={t.value} value={t.value}>
-                  {t.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
         </div>
 
         <div className="grid min-w-[100px] gap-1 sm:max-w-[120px]">

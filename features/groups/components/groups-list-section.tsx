@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { BillingCardHeader } from "@/features/billing/components/billing-card-header";
 
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { OperationalTableToolbar } from "@/components/tables/operational-table-toolbar";
@@ -29,15 +30,7 @@ export function GroupsListSection({ groups, meta, errorSlot }: GroupsListSection
         tableOnly
         cardSurface
         leading={
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="min-w-0 space-y-0.5">
-              <h2 className="text-sm font-semibold tracking-tight text-foreground">
-                All groups
-              </h2>
-              <p className="text-[11px] leading-snug text-muted-foreground">{meta}</p>
-            </div>
-            <OperationalTableToolbar contextLabel="Groups" />
-          </div>
+          <BillingCardHeader title="Holding Groups" subtitle={meta} actions={<OperationalTableToolbar contextLabel="Groups" />} />
         }
       >
         {errorSlot}

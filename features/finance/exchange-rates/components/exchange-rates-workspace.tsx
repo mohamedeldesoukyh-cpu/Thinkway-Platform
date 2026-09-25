@@ -29,8 +29,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
-import { FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
+import { BillingCardHeader } from "@/features/billing/components/billing-card-header";
+import { BillingStyleKpis as FinanceSuiteKpiStrip } from "@/components/finance/billing-style-surfaces";
+import { FinanceSuiteEmpty } from "@/components/finance/suite";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   OPERATIONAL_WORKSPACE_TAB_PANEL_CLASS,
@@ -85,7 +86,8 @@ const EXCHANGE_RATE_COLUMNS: OperationalConfigurableColumnDef<ExchangeRateRow>[]
   {
     id: "rate",
     label: "Rate",
-    headerClassName: "text-right",
+    headerClassName: "!text-left",
+    cellClassName: "!text-left whitespace-nowrap",
     amountCell: true,
     renderCell: (r) => r.exchange_rate.toFixed(6),
   },
@@ -191,7 +193,7 @@ export function ExchangeRatesWorkspace({ data }: ExchangeRatesWorkspaceProps) {
             tableOnly
             cardSurface
             leading={
-              <CampaignOperationalSectionHeader
+              <BillingCardHeader
                 title="Currency master"
                 actions={<OperationalTableControlsSlot contextLabel="Finance currencies" />}
               />
@@ -229,7 +231,7 @@ export function ExchangeRatesWorkspace({ data }: ExchangeRatesWorkspaceProps) {
             tableOnly
             cardSurface
             leading={
-              <CampaignOperationalSectionHeader
+              <BillingCardHeader
                 title="Effective-dated rates"
                 actions={<OperationalTableControlsSlot contextLabel="Finance exchange rates" />}
               />

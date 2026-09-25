@@ -1,4 +1,4 @@
-import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { BillingStyleShell } from "@/components/finance/billing-style-shell";
 import { PageAlert } from "@/components/ui/page-alert";
 import { GroupsListSection } from "@/features/groups/components/groups-list-section";
 import { NewGroupDialog } from "@/features/groups/components/new-group-dialog";
@@ -34,13 +34,13 @@ export default async function GroupsPage({ searchParams }: GroupsPageProps) {
     : "";
 
   return (
-    <DashboardShell
-      title="Groups"
+    <BillingStyleShell
+      title="Holding Groups"
       description="Top-level holding groups. Link clients from the group workspace."
       actions={<NewGroupDialog unlinkedClients={unlinkedClients} />}
     >
       {errorMessage ? <PageAlert className="mb-4">{errorMessage}</PageAlert> : null}
       {result ? <GroupsListSection groups={result.groups} meta={meta} /> : null}
-    </DashboardShell>
+    </BillingStyleShell>
   );
 }

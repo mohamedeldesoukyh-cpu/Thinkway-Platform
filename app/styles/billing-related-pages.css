@@ -1,0 +1,21 @@
+.tw-billing-v3.billing-related .bq-hd { flex-wrap: wrap; gap: 16px; }
+.tw-billing-v3.billing-related .billing-related-nav { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--bq-line); }
+.tw-billing-v3.billing-related .billing-related-nav > a { border: 1px solid var(--bq-line); border-radius: 8px; padding: 9px 12px; background: var(--bq-soft); color: var(--bq-ink2); font-size: 13px; font-weight: 500; }
+.tw-billing-v3.billing-related .billing-related-nav > a:hover { background: var(--bq-lav); color: var(--bq-ok); }
+.tw-billing-v3.billing-related .billing-related-nav > a[aria-current="page"] { background: var(--bq-lav); color: var(--bq-ok); border-color: var(--bq-blue); }
+.tw-billing-v3.billing-related .bq-k.ok .bq-k__v { color: var(--bq-ok); }
+.tw-billing-v3.billing-related .bq-k.warn .bq-k__v { color: var(--bq-wrn); }
+.tw-billing-v3.billing-related .bq-kwrap { grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); }
+.tw-billing-v3.billing-related .bq-card__h { flex-wrap: wrap; }
+.tw-billing-v3.billing-related .billing-section-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 16px; }
+.tw-billing-v3.billing-related .billing-section-tabs > button { padding: 10px 14px; border: 1px solid var(--bq-line); border-radius: 8px; font-size: 13px; background: white; }
+.tw-billing-v3.billing-related .billing-section-tabs > button[aria-current="page"] { color: var(--bq-ok); background: var(--bq-lav); border-color: var(--bq-blue); font-weight: 600; }
+.tw-billing-v3.billing-related .billing-section-tabs > button:focus-visible, .tw-billing-v3.billing-related .billing-related-nav > a:focus-visible { outline: 2px solid var(--bq-blue); outline-offset: 3px; }
+.tw-billing-v3.billing-related .tw-pad { padding: 16px; }
+.tw-billing-v3.billing-related .tw-nm { font-size: 13px; font-weight: 600; line-height: 1.5; }
+.tw-billing-v3.billing-related .tw-v { text-align: left; font-size: 13px; font-variant-numeric: tabular-nums; }
+.tw-billing-v3.billing-related .tw-bar { display: block; height: 4px; background: var(--bq-line); border-radius: 4px; overflow: hidden; margin-top: 6px; }
+.tw-billing-v3.billing-related .tw-bar > i { display: block; height: 100%; background: var(--bq-blue); }
+.tw-billing-v3.billing-related .tw-bar > i.r { background: var(--bq-bad); }
+.tw-billing-v3.billing-related .tw-bar > i.y { background: var(--bq-wrn); }
+.tw-billing-v3.billing-related .billing-help { padding: 12px 16px; color: var(--bq-mut); font-size: 12px; line-height: 1.6; border-bottom: 1px solid var(--bq-line); margin: 0; }

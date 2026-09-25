@@ -1,4 +1,4 @@
-import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
+import { BillingStyleShell } from "@/components/finance/billing-style-shell";
 import { PoTrackerWorkspace } from "@/features/finance/po-tracker/components/po-tracker-workspace";
 import { getPoTrackerWorkspace } from "@/features/finance/po-tracker/queries";
 
@@ -19,7 +19,7 @@ export default async function FinancePoTrackerPage({ searchParams }: PageProps) 
   }
 
   return (
-    <FinanceSuiteShell
+    <BillingStyleShell
       title="PO tracker"
       description="Purchase-order consumption and remaining budget by campaign"
     >
@@ -30,6 +30,6 @@ export default async function FinancePoTrackerPage({ searchParams }: PageProps) 
       ) : data ? (
         <PoTrackerWorkspace data={data} />
       ) : null}
-    </FinanceSuiteShell>
+    </BillingStyleShell>
   );
 }

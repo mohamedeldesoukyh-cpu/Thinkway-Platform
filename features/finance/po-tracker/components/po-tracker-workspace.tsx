@@ -11,7 +11,9 @@ import {
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { Badge } from "@/components/ui/badge";
-import { FinanceSuiteCard, FinanceSuiteEmpty, FinanceSuiteKpiStrip } from "@/components/finance/suite";
+import { Button } from "@/components/ui/button";
+import { BillingStyleCard as FinanceSuiteCard, BillingStyleKpis as FinanceSuiteKpiStrip } from "@/components/finance/billing-style-surfaces";
+import { FinanceSuiteEmpty } from "@/components/finance/suite";
 import { cn } from "@/lib/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { Label } from "@/components/ui/label";
@@ -69,7 +71,8 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
   {
     id: "original_po",
     label: "Original PO",
-    headerClassName: "text-right",
+    headerClassName: "!text-left",
+    cellClassName: "!text-left whitespace-nowrap",
     amountCell: true,
     renderCell: (row) =>
       formatMoney(row.po_amount_original, row.po_currency ?? row.campaign_currency),
@@ -77,7 +80,8 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
   {
     id: "converted_po",
     label: "Converted PO",
-    headerClassName: "text-right",
+    headerClassName: "!text-left",
+    cellClassName: "!text-left whitespace-nowrap",
     amountCell: true,
     renderCell: (row) =>
       formatMoney(row.po_amount_campaign_currency, row.campaign_currency),
@@ -85,14 +89,16 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
   {
     id: "consumed",
     label: "Consumed",
-    headerClassName: "text-right",
+    headerClassName: "!text-left",
+    cellClassName: "!text-left whitespace-nowrap",
     amountCell: true,
     renderCell: (row) => formatMoney(row.po_consumed_amount, row.campaign_currency),
   },
   {
     id: "remaining",
     label: "Remaining",
-    headerClassName: "text-right",
+    headerClassName: "!text-left",
+    cellClassName: "!text-left whitespace-nowrap",
     amountCell: true,
     renderCell: (row) => {
       const converted = row.po_amount_campaign_currency;
@@ -126,7 +132,8 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
   {
     id: "remaining_percent",
     label: "Remaining %",
-    headerClassName: "text-right",
+    headerClassName: "!text-left",
+    cellClassName: "!text-left whitespace-nowrap",
     amountCell: true,
     renderCell: (row) =>
       row.po_remaining_percent != null ? `${row.po_remaining_percent.toFixed(1)}%` : "—",
@@ -144,7 +151,8 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
   {
     id: "fx",
     label: "FX",
-    headerClassName: "text-right",
+    headerClassName: "!text-left",
+    cellClassName: "!text-left whitespace-nowrap",
     amountCell: true,
     renderCell: (row) => row.po_exchange_rate?.toFixed(4) ?? "—",
   },
@@ -178,7 +186,7 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
         items={[
           {
             id: "orders",
-            label: "Purchase orders",
+            label: "Campaigns tracked",
             value: String(data.rows.length),
             hint: `across ${currencies.size} currenc${currencies.size === 1 ? "y" : "ies"}`,
           },
@@ -227,8 +235,8 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
       >
         <FinanceSuiteCard
           title="Purchase orders"
-          subtitle="one row per campaign PO · remaining bar shows consumption"
-          actions={<OperationalTableControlsSlot contextLabel="Purchase orders" />}
+          subtitle="Campaign budgets and PO consumption · amounts retain their currencies"
+          actions={<><Button type="button" variant="outline" size="sm" onClick={() => router.push('/finance/po-tracker')}>Reset filters</Button><OperationalTableControlsSlot contextLabel="Purchase orders" /></>}
         >
           <div className="tw-pad" style={{ borderBottom: "1px solid var(--tw-line)", background: "var(--tw-soft)" }}>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
@@ -356,7 +364,7 @@ function FilterSelect({
     <div className="grid gap-2">
       <Label>{label}</Label>
       <Select value={value} onValueChange={onChange}>
-        <SelectTrigger>
+        <SelectTrigger aria-label={label}>
           <SelectValue placeholder={`All ${label.toLowerCase()}`} />
         </SelectTrigger>
         <SelectContent>
