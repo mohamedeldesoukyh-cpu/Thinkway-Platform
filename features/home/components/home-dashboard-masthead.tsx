@@ -72,7 +72,7 @@ export function HomeDashboardMasthead({
             {actions}
             <span style={{ flex: 1 }} />
             <span className="tw-crumb">
-              Thinkway v2.6 · last sync <b>just now</b>
+              Figures loaded from current records
             </span>
           </div>
         </>
@@ -105,7 +105,7 @@ export function HomeDashboardMasthead({
           </span>
           <span style={{ flex: 1 }} />
           <span className="tw-p p-y">
-            <span className="tw-live on" /> Development
+            <span className="tw-live on" /> Workspace
           </span>
           <span className="tw-crumb">
             <b>{userHandle}</b>

@@ -113,7 +113,7 @@ export function HomeDashboardPoRing({ percent }: { percent: number }) {
       </svg>
       <span className="tw-ring__t">
         <span>
-          <b>{clamped}%</b>
+          <b>{Math.max(0, percent)}%</b>
           <i>USED</i>
         </span>
       </span>

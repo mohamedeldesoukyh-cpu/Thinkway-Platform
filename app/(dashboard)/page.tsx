@@ -2,7 +2,7 @@ import {loadVatLedger} from "@/features/finance/vat/ledger-query";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
 import { HomePage } from "@/features/home/components/home-page";
 import { getHomeDashboardSnapshot } from "@/features/home/queries";
-import { loadExecutiveDashboard } from "@/features/analytics/load-executive-dashboard";
+
 
 export default async function DashboardPage() {
   const vat=await loadVatLedger().catch(()=>null);
@@ -13,7 +13,7 @@ export default async function DashboardPage() {
   try {
     const settled = await Promise.allSettled([
       getHomeDashboardSnapshot(),
-      loadExecutiveDashboard({}),
+
     ]);
     if (settled[0].status === "fulfilled") {
       snapshot = settled[0].value;
@@ -23,9 +23,7 @@ export default async function DashboardPage() {
           ? settled[0].reason.message
           : "Failed to load your dashboard summary.";
     }
-    if (settled[1].status === "fulfilled") {
-      executive = settled[1].value;
-    }
+
   } catch (error) {
     bannerError =
       error instanceof Error ? error.message : "Failed to load your dashboard summary.";

@@ -10,7 +10,6 @@ import {
   HomeDashboardPoRing,
   HomeDashboardQuickAccess,
   HomeDashboardRow,
-  HomeDashboardSpark,
   HomeDashboardSuite,
   HomeDashboardTileGo,
   HOME_QUEUE_COLS,
@@ -19,7 +18,6 @@ import {
 } from "@/features/home/components/home-dashboard-pack";
 import {
   collectHomeConflicts,
-  overdueFromExecutive,
 } from "@/features/home/lib/home-dashboard-conflicts";
 import type { HomeDashboardSnapshot } from "@/features/home/queries";
 import { formatPercent } from "@/lib/campaigns/utils";
@@ -68,16 +66,14 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
   const now = new Date();
   const currency = snapshot.currency_code;
   const money = (value: number) => formatMoneyKpi(value, currency);
-  const alerts = executive?.alerts;
+  const alerts = snapshot.alerts;
   const alertCount = alerts?.alerts.length ?? 0;
-  const unbilled = executive?.meta.unbilled_achieved_revenue ?? 0;
-  const overdue = overdueFromExecutive(executive);
+  const unbilled = snapshot.unbilled;
+  const overdue = snapshot.overdue;
   const moneyAtRisk = unbilled + overdue.amount;
-  const liveCampaigns =
-    snapshot.recent_campaigns.filter((campaign) => campaign.status === "active")
-      .length || snapshot.active_campaigns;
+  const liveCampaigns = snapshot.active_campaigns;
   const poHeadroom = Math.max(0, snapshot.po_total - snapshot.po_consumed);
-  const conflicts = collectHomeConflicts({ snapshot, executive });
+  const conflicts: ReturnType<typeof collectHomeConflicts> = [];
   const pendingInvoiceCount = alerts?.by_group.billing.length ?? 0;
 
   const queue = GROUP_ORDER.map((group) => {
@@ -98,23 +94,23 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
     };
   }).filter((row): row is NonNullable<typeof row> => row != null);
 
-  const queueExposure = queue.reduce((sum, row) => sum + (row.exposure ?? 0), 0);
+
 
   const focusMessage =
     unbilled > 0
       ? `${money(unbilled)} is earned but not billed`
       : snapshot.outstanding_revenue > 0
         ? `${money(snapshot.outstanding_revenue)} outstanding`
-        : "Books are current";
+        : "No unbilled or outstanding client balance";
   const focusSub =
     pendingInvoiceCount > 0
       ? `${pendingInvoiceCount} campaign${pendingInvoiceCount === 1 ? "" : "s"} pending invoice${
           overdue.count > 0
-            ? ` · ${overdue.count} invoice${overdue.count === 1 ? "" : "s"} past 60 days`
+            ? ` · ${overdue.count} invoice${overdue.count === 1 ? "" : "s"} past due`
             : ""
         }`
       : overdue.count > 0
-        ? `${overdue.count} invoice${overdue.count === 1 ? "" : "s"} past 60 days`
+        ? `${overdue.count} invoice${overdue.count === 1 ? "" : "s"} past due`
         : `${snapshot.active_campaigns} live campaigns`;
 
   return (
@@ -122,14 +118,14 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
       <HomeDashboardMasthead
         page="home"
         id="HOME"
-        subtitle={`${formatDateLabel(now)} · ${formatPeriodLabel(now)} period · MENA`}
+        subtitle={`${formatDateLabel(now)} · All-time totals · FX converted to ${currency} · MENA`}
         badgeLabel="Live"
         userHandle={snapshot.userHandle}
         metrics={[
           { label: "Needs action", value: alertCount, tone: alertCount > 0 ? "r" : undefined },
           {
             label: "Money at risk",
-            value: money(moneyAtRisk || snapshot.outstanding_revenue),
+            value: money(moneyAtRisk),
             tone: moneyAtRisk > 0 || snapshot.outstanding_revenue > 0 ? "r" : undefined,
           },
           { label: "Revenue", value: money(snapshot.total_revenue) },
@@ -147,7 +143,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
           { label: "Vendors", value: snapshot.active_vendors },
           { label: "Assignments", value: snapshot.assignments_count },
           {
-            label: "PO consumed",
+            label: "PO / budget used",
             value: `${snapshot.po_consumed_percent}%`,
             tone: snapshot.po_consumed_percent >= 90 ? "r" : undefined,
           },
@@ -196,15 +192,11 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
             </button>
             <div className="tw-tl">
               <i>Money at risk</i>
-              <span className="tw-big">{money(moneyAtRisk || snapshot.outstanding_revenue)}</span>
+              <span className="tw-big">{money(moneyAtRisk)}</span>
               <p>
                 Unbilled {money(unbilled)}
                 {overdue.amount > 0 ? ` + overdue ${money(overdue.amount)}` : ""}
               </p>
-              <HomeDashboardSpark
-                values={[18, 24, 31, 40, 52, 66, 81, 100]}
-                highlightFrom={5}
-              />
               <HomeDashboardTileGo>Review billing queue</HomeDashboardTileGo>
             </div>
           </Link>
@@ -216,7 +208,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
               <p>
                 Across {queue.length || 0} alert group
                 {queue.length === 1 ? "" : "s"}
-                {overdue.count > 0 ? ` · oldest past 60 days` : ""}
+                {overdue.count > 0 ? ` · past due invoices` : ""}
               </p>
               <HomeDashboardTileGo>Open dashboard</HomeDashboardTileGo>
             </div>
@@ -224,7 +216,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
 
           <Link className="tw-tile" href="/finance/po-tracker">
             <div className="tw-tl">
-              <i>PO consumption</i>
+              <i>PO / budget consumption</i>
               <div
                 style={{
                   display: "flex",
@@ -239,12 +231,12 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
                   <br />
                   {snapshot.po_consumed_percent >= 90 ? (
                     <>
-                      Only <b>{money(poHeadroom)}</b> headroom — renewal required.
+                      <b>{money(poHeadroom)}</b> remaining on PO and campaign budgets.
                     </>
                   ) : (
-                    <>{money(poHeadroom)} remaining on approved PO.</>
+                    <>{money(poHeadroom)} remaining on PO and campaign budgets.</>
                   )}
-                </p>
+                <span className="block">{snapshot.missing_po} campaigns have no header PO; campaign budgets are used.</span></p>
               </div>
               <HomeDashboardTileGo>Open PO tracker</HomeDashboardTileGo>
             </div>
@@ -258,10 +250,6 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
                 {snapshot.active_campaigns} active · {snapshot.assignments_count}{" "}
                 assignments · {snapshot.active_vendors} vendors
               </p>
-              <HomeDashboardSpark
-                values={[40, 55, 48, 70, 62, 88, 74, 100]}
-                highlightFrom={6}
-              />
               <HomeDashboardTileGo>All campaigns</HomeDashboardTileGo>
             </div>
           </Link>
@@ -272,7 +260,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
             <HomeDashboardCard
               id="needs-action"
               title="Needs you today"
-              subtitle="ranked by exposure, not by date"
+              subtitle={`Grouped by action · converted to ${currency}`}
               right={
                 <>
                   <span className="tw-p p-r">{alertCount} open</span>
@@ -301,7 +289,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
                         {queue.length} group{queue.length === 1 ? "" : "s"} · {alertCount}{" "}
                         signals
                       </span>
-                      <span className="tw-v neg">{money(queueExposure)}</span>
+                      <span className="tw-v neg">Related amounts overlap</span>
                       <span />
                     </>
                   }
@@ -363,14 +351,14 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
             <HomeDashboardCard
               id="position"
               title="Position"
-              subtitle={`${formatPeriodLabel(now)} · ${currency}`}
+              subtitle={`All-time · ${currency} · revenue and GP exclude VAT`}
             >
               <div className="tw-pad">
                 <div className="tw-jr">
                   <div className="tw-jn ok">
                     <i>Revenue</i>
                     <b>{money(snapshot.total_revenue)}</b>
-                    <u>↑ {formatPercent(snapshot.margin_percent)}</u>
+                    <u>{formatPercent(snapshot.margin_percent)} margin</u>
                   </div>
                   <div className="tw-jn ok">
                     <i>Gross profit</i>
@@ -396,14 +384,14 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
                   <div className="tw-jn">
                     <i>Assignments</i>
                     <b>{snapshot.assignments_count}</b>
-                    <u>this period</u>
+                    <u>all campaigns</u>
                   </div>
                   <div
                     className={
                       snapshot.po_consumed_percent >= 90 ? "tw-jn miss" : "tw-jn"
                     }
                   >
-                    <i>PO consumed</i>
+                    <i>PO / budget used</i>
                     <b>{snapshot.po_consumed_percent}%</b>
                     <u>{money(poHeadroom)} left</u>
                   </div>
@@ -458,7 +446,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
             <HomeDashboardCard
               id="vendors"
               title="Top vendors"
-              subtitle="by reach"
+              subtitle="by reach · assigned creators"
               right={
                 <Link className="tw-b sm" href="/vendors">
                   View all
