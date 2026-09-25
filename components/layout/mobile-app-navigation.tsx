@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { usePathname } from "next/navigation";
 import { MenuIcon } from "lucide-react";
-import { NAV_SECTIONS } from "@/components/layout/app-navigation";
+import { SECONDARY_NAV_SECTIONS as NAV_SECTIONS, DAILY_NAV_ITEMS } from "@/components/layout/app-navigation";
+import { DailyWorkNavigation } from "./daily-work-navigation";
 import { AppNavLink } from "@/components/navigation/app-nav-link";
 import { ThinkwayLogo } from "@/components/brand/thinkway-logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -32,17 +33,18 @@ export function MobileAppNavigation({ account }: { account: React.ReactNode }) {
             <input id="mobile-navigation-search" type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Find a workspace…" className="min-h-11 w-full rounded-lg border bg-background px-3 text-base" />
           </div>
           <nav aria-label="Main navigation" className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-6">
+            <DailyWorkNavigation pathname={pathname} query={query} onNavigate={() => setOpen(false)} />
             {NAV_SECTIONS.map((section, index) => {
               const items = section.items.filter((item) => item.label.toLowerCase().includes(query.trim().toLowerCase()));
               if (!items.length) return null;
-              return <section key={index} className="mb-4">
+              return <section key={index} className={`mb-4 ${section.group === "Discovery" ? "tw-discovery-nav" : ""}`}>
                 <h2 className="px-3 py-2 text-xs font-semibold text-muted-foreground">{section.group ?? section.subgroup}</h2>
                 {items.map((item) => <AppNavLink key={item.href} href={item.href} onClick={() => setOpen(false)} aria-current={(item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(`${item.href}/`)) ? "page" : undefined} className="flex min-h-11 items-center gap-3 rounded-lg px-3 py-2 text-sm aria-[current=page]:bg-accent aria-[current=page]:font-semibold">
                   <SidebarSuiteIcon name={item.icon} className="size-[18px] shrink-0" />{item.label}
                 </AppNavLink>)}
               </section>;
             })}
-            {!NAV_SECTIONS.some((section) => section.items.some((item) => item.label.toLowerCase().includes(query.trim().toLowerCase()))) && <p className="p-3 text-sm text-muted-foreground">No matching workspaces.</p>}
+            {!DAILY_NAV_ITEMS.some(item => `${item.label} ${item.description}`.toLowerCase().includes(query.trim().toLowerCase())) && !NAV_SECTIONS.some((section) => section.items.some((item) => item.label.toLowerCase().includes(query.trim().toLowerCase()))) && <p className="p-3 text-sm text-muted-foreground">No matching workspaces.</p>}
           </nav>
         </SheetContent>
       </Sheet>

@@ -19,7 +19,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AppVersion } from "@/components/version/app-version";
 import { signOutAction } from "@/features/auth/actions";
-import { NAV_SECTIONS } from "@/components/layout/app-navigation";
+import { SECONDARY_NAV_SECTIONS as NAV_SECTIONS } from "@/components/layout/app-navigation";
+import { DailyWorkNavigation } from "./daily-work-navigation";
 import {
   APP_SIDEBAR_PEEK_CLOSE_DELAY_MS,
   APP_SIDEBAR_WIDTH_COLLAPSED,
@@ -295,6 +296,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
           </span>
         </div>
 
+        <DailyWorkNavigation pathname={pathname} query={query} />
         <div className="tw-sb2__n">
           {filteredSections.map((section, index) => {
             const key = sectionKey(section);
@@ -303,7 +305,7 @@ export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps)
             const showSub = Boolean(section.subgroup);
 
             return (
-              <div key={`${key}-${index}`}>
+              <div key={`${key}-${index}`} className={section.group === "Discovery" ? "tw-discovery-nav" : undefined}>
                 {showPrimary ? <div className="tw-gsep" /> : null}
                 {showPrimary ? (
                   <button

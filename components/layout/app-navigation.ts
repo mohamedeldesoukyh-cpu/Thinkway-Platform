@@ -166,3 +166,15 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+
+/** Stable, always-visible destinations for the main daily workflow. */
+export const DAILY_NAV_ITEMS = [
+  { href: "/campaigns", label: "Campaigns", description: "Manage campaigns & assignments", icon: "camp", tone: "campaigns" },
+  { href: "/discovery/quotations", label: "Quotations", description: "Prepare client quotations", icon: "quote", tone: "quotations" },
+  { href: "/discovery/shortlists", label: "Shortlists", description: "Select & compare creators", icon: "list", tone: "shortlists" },
+] satisfies (NavLinkDef & { description: string; tone: string })[];
+
+export const SECONDARY_NAV_SECTIONS = NAV_SECTIONS.map(section => ({
+  ...section,
+  items: section.group === "Discovery" ? section.items : section.items.filter(item => !DAILY_NAV_ITEMS.some(daily => daily.href === item.href)),
+})).filter(section => section.items.length > 0);
