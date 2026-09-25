@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 
 import { PwaInstallPrompt } from "@/components/pwa/pwa-install-prompt";
-import { PwaSplash } from "@/components/pwa/pwa-splash";
 import { PwaUpdatePrompt } from "@/components/pwa/pwa-update-prompt";
 import { getReleaseInfo } from "@/lib/release/release-info";
 
@@ -72,7 +71,6 @@ export function PwaProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <>
-      <PwaSplash />
       {children}
       <PwaInstallPrompt />
       <PwaUpdatePrompt />

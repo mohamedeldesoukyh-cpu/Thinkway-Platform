@@ -142,17 +142,6 @@ export default function RootLayout({
         suppressHydrationWarning
         className="flex h-dvh max-h-dvh flex-col overflow-hidden bg-background text-foreground"
       >
-        <div id="pwa-splash" aria-hidden="true">
-          {/* Splash must paint before hydration; next/image is unsuitable here. */}
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/icon-512x512.png"
-            alt=""
-            width={96}
-            height={96}
-            decoding="async"
-          />
-        </div>
         <AppProviders>
           <EnvironmentChrome>
             <div
