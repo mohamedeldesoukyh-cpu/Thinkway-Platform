@@ -71,4 +71,4 @@ export function statementClientList(clients: CollectionsPageData["clients"], inv
   return { withBalance: rows.filter(r => r.balance).length, visible: rows.filter(r => (all || r.balance) && r.name.toLowerCase().includes(search.trim().toLowerCase())) };
 }
 
-export type CollectionPayment = {id:string;document_number:string;invoice_id:string;client_id:string;amount:number;currency:string;paid_at:string|null;payment_method:string;reference_number:string|null;notes:string|null;status:string;revision:number};
+export type CollectionPayment = {id:string;document_number:string;invoice_id:string;client_id:string;amount:number;currency:string;paid_at:string|null;payment_method:string;reference_number:string|null;notes:string|null;status:string;revision:number;can_restore?:boolean};

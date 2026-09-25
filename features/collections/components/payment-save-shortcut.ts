@@ -12,7 +12,7 @@ export function usePaymentSaveShortcut() {
       if (!panel || panel.hidden) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (event.repeat || panel.querySelector('[data-payment-delete]')) return;
+      if (event.repeat || document.querySelector('[data-payment-delete]')) return;
       const form = panel.querySelector<HTMLFormElement>('form[data-payment-edit]') ??
         panel.querySelector<HTMLFormElement>('form[data-payment-create]');
       if (!form || form.getAttribute("aria-busy") === "true") return;

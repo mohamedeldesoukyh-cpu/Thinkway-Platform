@@ -24,3 +24,8 @@ VAT now uses the shared Billing register eligibility and labels. Active generate
 - Searchable client selector supports name and canonical/short client code; code selection filters invoices. All six sections have guidance. Load saved draft explains session-only storage. Document references use the existing display formatter; canonical storage is unchanged.
 - Development and production rollback tests verify cancellation restores invoice balance, clears allocation, retains original receipt and audit, and rejects duplicate/unauthorized requests. No real receipt was saved or deleted.
 - TypeScript and Collections grid CI passed (23 blocks, four track lists).
+
+## Settled invoice visibility and receipt recovery
+- Unsettled is the default receipt invoice filter; Show all invoices includes settled records with zero open balance. Saving against a settled invoice remains blocked.
+- Payment-row actions are labelled icon buttons. Delete and Restore open modal dialogs requiring a note; keyboard save cannot trigger either or submit the background receipt. Preview verified default filter, settled selection, delete note, cancellation and restore dispatch using mocks.
+- Restore RPC preserves original receipt identity, restores allocation and recalculates balances with revision/permission/overpayment guards. Development and production rollback checks cover delete/restore cycles, audit retention, duplicate and unauthorized requests, and an invoice paid by another receipt after deletion.

@@ -20,7 +20,16 @@ BEGIN
  IF (SELECT status FROM payments WHERE id=p)<>'cancelled' THEN RAISE EXCEPTION 'Original receipt not retained as cancelled'; END IF;
  IF NOT EXISTS(SELECT 1 FROM collection_audit_logs WHERE entity_id=p AND action='payment_deleted' AND metadata->'before'->>'amount' IS NOT NULL) THEN RAISE EXCEPTION 'Deletion audit missing'; END IF;
  failed:=false;BEGIN PERFORM delete_collection_payment(p,1,'repeat');EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Duplicate deletion allowed';END IF;
+ PERFORM restore_collection_payment(p,2,'Restore test');
+ IF (SELECT amount_paid FROM invoices WHERE id=inv.id)<>inv.amount_paid+20 THEN RAISE EXCEPTION 'Restored amount not counted'; END IF;
+ IF (SELECT allocated_amount FROM payment_allocations WHERE payment_id=p)<>20 THEN RAISE EXCEPTION 'Restored allocation incorrect'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM collection_audit_logs WHERE entity_id=p AND action='payment_restored') THEN RAISE EXCEPTION 'Restore audit missing'; END IF;
+ failed:=false;BEGIN PERFORM restore_collection_payment(p,2,'repeat');EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Duplicate restore allowed';END IF;
+ PERFORM delete_collection_payment(p,3,'Delete again');
+ INSERT INTO payments(invoice_id,client_id,amount,currency,status,payment_method,paid_at,recorded_by) VALUES(inv.id,inv.client_id,inv.total,inv.currency,'completed','bank_transfer',now(),actor);
+ failed:=false;BEGIN PERFORM restore_collection_payment(p,4,'overpayment');EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Overpayment restore allowed';END IF;
  PERFORM set_config('request.jwt.claim.sub','',true);failed:=false;BEGIN PERFORM delete_collection_payment(p,2,'anonymous');EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Unauthorized deletion allowed';END IF;
- RAISE NOTICE 'PASS: delete restores balance, removes allocation, retains receipt/audit, rejects repeat and unauthorized requests';
+ failed:=false;BEGIN PERFORM restore_collection_payment(p,4,'anonymous');EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Unauthorized restore allowed';END IF;
+ RAISE NOTICE 'PASS: restore reinstates allocation and balance, audit retained, duplicate/overpayment/anonymous restoration rejected;  delete restores balance, removes allocation, retains receipt/audit, rejects repeat and unauthorized requests';
 END $$;
 ROLLBACK;
