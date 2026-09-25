@@ -6,7 +6,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   OperationalConfigurableTable,
   type OperationalConfigurableColumnDef,
-  getOperationalTableColumnMetas,
 } from "@/components/tables/operational-configurable-table";
 import { OperationalTableSuiteProvider } from "@/components/tables/operational-table-suite-provider";
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
@@ -79,7 +78,7 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
   },
   {
     id: "converted_po",
-    label: "Converted PO",
+    label: "PO / campaign budget",
     headerClassName: "!text-left",
     cellClassName: "!text-left whitespace-nowrap",
     amountCell: true,
@@ -157,8 +156,6 @@ const PO_TRACKER_COLUMNS: OperationalConfigurableColumnDef<PoRow>[] = [
     renderCell: (row) => row.po_exchange_rate?.toFixed(4) ?? "—",
   },
 ];
-
-const PO_TRACKER_COLUMN_METAS = getOperationalTableColumnMetas(PO_TRACKER_COLUMNS);
 
 type PoTrackerWorkspaceProps = {
   data: PoTrackerWorkspaceData;
@@ -369,7 +366,7 @@ function FilterSelect({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value={NONE}>All</SelectItem>
-          {options.map((option) => (
+          {options.filter((option) => option.value !== NONE).map((option) => (
             <SelectItem key={option.value} value={option.value}>
               {option.label}
             </SelectItem>
