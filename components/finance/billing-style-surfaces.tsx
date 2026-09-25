@@ -12,12 +12,13 @@ export function BillingStyleCard({ title, subtitle, actions, children, notes }: 
 
 export function BillingStyleKpis({ items, className }: ComponentProps<typeof FinanceSuiteKpiStrip>) {
   if (!items.length) return null;
-  return <div className={cn("collections-suite related-summary-deck", className)}>
-    {items.map((item) => <section key={item.id} className={cn("tw-dc2", item.tone === "bad" && "alert")}>
-      <div className="tw-dc2__h"><b>{item.label}</b></div>
-      <div className="tw-pad"><div className="tw-st"><span><b className={item.tone === "bad" ? "bad" : undefined}>{item.value}</b></span></div>
+  return <div className={cn("collections-suite related-summary-strip", className)}>
+    <div className="tw-ms2">
+      {items.map((item) => <div key={item.id}>
+        <i>{item.label}</i>
+        <b className={item.tone === "bad" ? "r" : undefined}>{item.value}</b>
         {item.hint && <p className="tw-hint">{item.hint}</p>}
-      </div>
-    </section>)}
+      </div>)}
+    </div>
   </div>;
 }
