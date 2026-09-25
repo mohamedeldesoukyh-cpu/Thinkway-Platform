@@ -48,7 +48,7 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_entries').select('*').in('assignment_id', ids).order('created_at', { ascending: false }).order('id')),
         paymentRowsByIds(ios.map(io=>io.campaign_header_id),ids=>db.from('campaign_headers').select('id,name,document_number').in('id', ids).order('id')),
         paymentRowsByIds(assignmentIds,ids=>db.from('creator_payment_plans').select('assignment_id,draft').in('assignment_id', ids).order('assignment_id')),
-        paymentRowsByIds(assignmentIds,ids=>db.from('creator_supplier_invoices').select('assignment_id,invoice_number,invoice_date,country_code,revision').eq('from_payment_register',true).in('assignment_id',ids).order('assignment_id')),
+        paymentRowsByIds(assignmentIds,ids=>db.from('creator_supplier_invoices').select('assignment_id,invoice_number,invoice_date,country_code,revision,from_payment_register').in('assignment_id',ids).order('assignment_id')),
     ]);
     const lineIds = assignments.data.map(a=>a.campaign_line_id).filter((id): id is string=>!!id);
     const [fxLines, currencyRates] = await Promise.all([
@@ -72,7 +72,7 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         const vat = Number(a?.cost_vat_percent ?? term?.vat ?? 0);
         const paid = ledger.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.original_amount), 0);
         const saved = paymentDraftSchema.safeParse(plans.data?.find(p => p.assignment_id === io.assignment_id)?.draft);
-        const invoice=supplierInvoices.data.find(i=>i.assignment_id===io.assignment_id);
+        const invoice=supplierInvoices.data.find(i=>i.assignment_id===io.assignment_id&&i.from_payment_register)??supplierInvoices.data.find(i=>i.assignment_id===io.assignment_id);
         return {creatorCountry:creator?.country_code??'',creatorInvoice:invoice?{number:invoice.invoice_number??'',date:invoice.invoice_date??'',country:invoice.country_code,revision:invoice.revision}:undefined, nextPaymentSequence: Math.max(0, ...ledger.map(e => Number(e.payment_sequence ?? 0))) + 1, history: ledger.filter(e=>e.status === 'paid' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
             campaign: campaign?.name ?? campaign?.document_number ?? 'Campaign',
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
