@@ -3,6 +3,7 @@ import { applyGroupIdColumnFilter } from "@/lib/groups/group-filter";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { formatGroupDisplayName } from "@/lib/groups/group-display";
 import { getMasterDataOptions } from "@/lib/master-data/queries";
+import { requireFinancePermission } from "@/lib/auth/permissions-server";
 
 import type {
   PoTrackerFilters,
@@ -104,7 +105,7 @@ export async function getPoTrackerWorkspace(
   if (filters.date_from) query = query.gte("start_date", filters.date_from);
   if (filters.date_to) query = query.lte("end_date", filters.date_to);
 
-  const [{ data, error }, masterData, groupsRes, clientsRes, brandsRes, campaignsRes, managersRes] =
+  const [{ data, error }, masterData, groupsRes, clientsRes, brandsRes, campaignsRes, managersRes, editAccess] =
     await Promise.all([
       query,
       getMasterDataOptions(),
@@ -116,6 +117,7 @@ export async function getPoTrackerWorkspace(
         .select("id, name, brand_id")
         .order("document_number"),
       supabase.from("profiles").select("id, full_name, email").order("full_name"),
+      requireFinancePermission(supabase, "finance.write"),
     ]);
 
   if (error) throw new Error(error.message);
@@ -191,6 +193,7 @@ export async function getPoTrackerWorkspace(
   };
 
   return {
+    can_edit: !("error" in editAccess),
     rows,
     summary,
     filter_options: {

@@ -205,6 +205,7 @@ export async function updateCampaignPoAction(
 
   revalidatePath(`/campaigns/${parsed.data.campaign_id}`);
   revalidatePath("/finance/po-tracker");
+  revalidatePath("/", "layout");
   return { ok: true, message: "Campaign PO updated." };
 }
 

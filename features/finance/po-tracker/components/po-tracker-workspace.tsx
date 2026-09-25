@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
+import { PoDetailsPane } from "./po-details-pane";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -15,21 +17,15 @@ import { BillingStyleCard as FinanceSuiteCard, BillingStyleKpis as FinanceSuiteK
 import { FinanceSuiteEmpty } from "@/components/finance/suite";
 import { cn } from "@/lib/utils";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
+
 import {
   PO_STATUS_LABELS,
   PO_STATUS_VARIANT,
 } from "@/lib/finance/po/status";
 import { formatMoney } from "@/features/campaigns/utils";
 import type { PoTrackerWorkspaceData } from "@/features/finance/po-tracker/types";
-import { buildGroupFilterSelectOptions } from "@/lib/groups/group-filter";
+import { buildGroupFilterSelectOptions, matchesGroupFilter } from "@/lib/groups/group-filter";
 
 const NONE = "__all__";
 
@@ -164,9 +160,35 @@ type PoTrackerWorkspaceProps = {
 export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const [selected, setSelected] = useState<PoRow | null>(null);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [search, setSearch] = useState("");
+  const [moreFilters, setMoreFilters] = useState(false);
+  const activeRow = data.rows.find(row => row.campaign_id === selected?.campaign_id) ?? selected;
+  function selectPo(row: PoRow | null) {
+    if (saving || row?.campaign_id === selected?.campaign_id) return;
+    if (dirty && !window.confirm("Discard unsaved PO changes?")) return;
+    setDirty(false);
+    setSelected(row);
+  }
+  const columns = PO_TRACKER_COLUMNS.map(column => column.id === "po_number" ? {
+    ...column,
+    locked: true,
+    renderCell: (row: PoRow) => <button type="button" className="po-select-link" aria-label={`Open PO ${row.po_number || "not assigned"} for ${row.campaign_name}`} aria-pressed={row.campaign_id === selected?.campaign_id} onClick={() => selectPo(row)}>{row.po_number || "Add PO details"}</button>,
+  } : column);
+  const needle = search.trim().toLocaleLowerCase();
+  const rows = data.rows.filter(row => [row.po_number, row.campaign_name, row.client_name, row.brand_name, row.campaign_document_number].some(value => value?.toLocaleLowerCase().includes(needle)));
+  const advancedCount = ["campaign_id", "currency", "po_status", "over_consumed", "expiring_soon"].filter(key => searchParams.has(key)).length;
+  const clients = data.filter_options.clients.filter(client => matchesGroupFilter(client.group_id, searchParams.get("group_id")));
+  const clientIds = new Set(clients.map(client => client.id));
+  const brands = data.filter_options.brands.filter(brand => searchParams.get("client_id") ? brand.client_id === searchParams.get("client_id") : clientIds.has(brand.client_id));
 
   function setFilter(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
+    if (key === "group_id") { params.delete("client_id"); params.delete("brand_id"); params.delete("campaign_id"); }
+    if (key === "client_id") { params.delete("brand_id"); params.delete("campaign_id"); }
+    if (key === "brand_id") params.delete("campaign_id");
     if (!value || value === NONE) params.delete(key);
     else params.set(key, value);
     router.push(`/finance/po-tracker?${params.toString()}`);
@@ -178,7 +200,7 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
   );
 
   return (
-    <div className="space-y-4">
+    <div className={cn("po-tracker-workspace", activeRow && "po-has-details")}>
       <FinanceSuiteKpiStrip
         items={[
           {
@@ -212,8 +234,8 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
 
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.financePoTracker}
-        columns={PO_TRACKER_COLUMNS}
-        rows={data.rows}
+        columns={columns}
+        rows={rows}
         filterAccessors={{
           po_number: (row) => row.po_number,
           client: (row) => row.client_name,
@@ -233,105 +255,34 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
         <FinanceSuiteCard
           title="Purchase orders"
           subtitle="Campaign budgets and PO consumption · amounts retain their currencies"
-          actions={<><Button type="button" variant="outline" size="sm" onClick={() => router.push('/finance/po-tracker')}>Reset filters</Button><OperationalTableControlsSlot contextLabel="Purchase orders" /></>}
+          actions={<><Button type="button" variant="outline" size="sm" onClick={() => { setSearch(""); router.push('/finance/po-tracker'); }}>Reset filters</Button><OperationalTableControlsSlot contextLabel="Purchase orders" /></>}
         >
-          <div className="tw-pad" style={{ borderBottom: "1px solid var(--tw-line)", background: "var(--tw-soft)" }}>
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-          <FilterSelect
-            label="Group"
-            value={searchParams.get("group_id") ?? NONE}
-            onChange={(v) => setFilter("group_id", v)}
-            options={buildGroupFilterSelectOptions(data.filter_options.groups).map(
-              (option) => ({
-                value: option.value || NONE,
-                label: option.label,
-              })
-            )}
-          />
-          <FilterSelect
-            label="Client"
-            value={searchParams.get("client_id") ?? NONE}
-            onChange={(v) => setFilter("client_id", v)}
-            options={data.filter_options.clients.map((c) => ({
-              value: c.id,
-              label: c.name,
-            }))}
-          />
-          <FilterSelect
-            label="Brand"
-            value={searchParams.get("brand_id") ?? NONE}
-            onChange={(v) => setFilter("brand_id", v)}
-            options={data.filter_options.brands.map((b) => ({
-              value: b.id,
-              label: b.name,
-            }))}
-          />
-          <FilterSelect
-            label="Campaign"
-            value={searchParams.get("campaign_id") ?? NONE}
-            onChange={(v) => setFilter("campaign_id", v)}
-            options={data.filter_options.campaigns.map((c) => ({
-              value: c.id,
-              label: c.name,
-            }))}
-          />
-          <FilterSelect
-            label="PO currency"
-            value={searchParams.get("currency") ?? NONE}
-            onChange={(v) => setFilter("currency", v)}
-            options={data.filter_options.currencies.map((c) => ({
-              value: c.code,
-              label: c.code,
-            }))}
-          />
-          <FilterSelect
-            label="PO status"
-            value={searchParams.get("po_status") ?? NONE}
-            onChange={(v) => setFilter("po_status", v)}
-            options={Object.entries(PO_STATUS_LABELS).map(([value, label]) => ({
-              value,
-              label,
-            }))}
-          />
-          <div className="grid gap-2">
-            <Label>Over-consumed only</Label>
-            <Select
-              value={searchParams.get("over_consumed") ?? "0"}
-              onValueChange={(v) => setFilter("over_consumed", v === "1" ? "1" : "")}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">All campaigns</SelectItem>
-                <SelectItem value="1">Over-consumed only</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="po-filter-bar">
+            <label className="po-field po-search">Search POs<input className="po-control" type="search" placeholder="PO, client, brand or campaign" value={search} onChange={event => setSearch(event.target.value)} /></label>
+            <FilterSelect label="Group" value={searchParams.get("group_id") ?? NONE} onChange={value => setFilter("group_id", value)} options={buildGroupFilterSelectOptions(data.filter_options.groups).map(option => ({ value: option.value || NONE, label: option.label }))} />
+            <FilterSelect label="Client" value={searchParams.get("client_id") ?? NONE} onChange={value => setFilter("client_id", value)} options={clients.map(client => ({ value: client.id, label: client.name }))} />
+            <FilterSelect label="Brand" value={searchParams.get("brand_id") ?? NONE} onChange={value => setFilter("brand_id", value)} options={brands.map(brand => ({ value: brand.id, label: brand.name }))} />
+            <Button type="button" size="sm" variant="outline" aria-expanded={moreFilters} aria-controls="po-extra-filters" onClick={() => setMoreFilters(!moreFilters)}>More filters{advancedCount > 0 ? ` (${advancedCount})` : ""}</Button>
           </div>
-          <div className="grid gap-2">
-            <Label>Expiring soon</Label>
-            <Select
-              value={searchParams.get("expiring_soon") ?? "0"}
-              onValueChange={(v) => setFilter("expiring_soon", v === "1" ? "1" : "")}
-            >
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="0">Any expiry</SelectItem>
-                <SelectItem value="1">Within 30 days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-            </div>
-          </div>
-        {data.rows.length === 0 ? (
+          {moreFilters && <div className="po-filter-bar po-extra-filters" id="po-extra-filters">
+            <FilterSelect label="Campaign" value={searchParams.get("campaign_id") ?? NONE} onChange={value => setFilter("campaign_id", value)} options={data.filter_options.campaigns.filter(campaign => searchParams.get("brand_id") ? campaign.brand_id === searchParams.get("brand_id") : brands.some(brand => brand.id === campaign.brand_id)).map(campaign => ({ value: campaign.id, label: campaign.name }))} />
+            <FilterSelect label="Currency" value={searchParams.get("currency") ?? NONE} onChange={value => setFilter("currency", value)} options={data.filter_options.currencies.map(currency => ({ value: currency.code, label: currency.code }))} />
+            <FilterSelect label="Status" value={searchParams.get("po_status") ?? NONE} onChange={value => setFilter("po_status", value)} options={Object.entries(PO_STATUS_LABELS).map(([value, label]) => ({ value, label }))} />
+            <label className="po-check"><input type="checkbox" checked={searchParams.get("over_consumed") === "1"} onChange={event => setFilter("over_consumed", event.target.checked ? "1" : "")} />Over-consumed only</label>
+            <label className="po-check"><input type="checkbox" checked={searchParams.get("expiring_soon") === "1"} onChange={event => setFilter("expiring_soon", event.target.checked ? "1" : "")} />Expires within 30 days</label>
+          </div>}
+          <div className="po-list-scroll" aria-label="PO lines">
+          {rows.length === 0 ? (
             <FinanceSuiteEmpty
               title="No PO records match these filters"
               body="Adjust group, client, brand, or status filters to see purchase-order consumption."
             />
           ) : (
             <OperationalConfigurableTable
-              columns={PO_TRACKER_COLUMNS}
-              rows={data.rows}
+              columns={columns}
+              rows={rows}
               rowKey={(row) => row.campaign_id}
-              rowClassName={(row) =>
+              rowClassName={(row) => row.campaign_id === selected?.campaign_id ? "po-selected-row" :
                 row.is_over_consumed
                   ? "fs-row-bad"
                   : row.po_status === "near_limit"
@@ -340,8 +291,10 @@ export function PoTrackerWorkspace({ data }: PoTrackerWorkspaceProps) {
               }
             />
           )}
+          </div>
         </FinanceSuiteCard>
       </OperationalTableSuiteProvider>
+      {activeRow && <PoDetailsPane key={activeRow.campaign_id} row={activeRow} currencies={data.filter_options.currencies} canEdit={data.can_edit} onClose={() => selectPo(null)} onDirtyChange={setDirty} onPendingChange={setSaving} />}
     </div>
   );
 }
@@ -357,22 +310,10 @@ function FilterSelect({
   onChange: (value: string) => void;
   options: { value: string; label: string }[];
 }) {
-  return (
-    <div className="grid gap-2">
-      <Label>{label}</Label>
-      <Select value={value} onValueChange={onChange}>
-        <SelectTrigger aria-label={label}>
-          <SelectValue placeholder={`All ${label.toLowerCase()}`} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem value={NONE}>All</SelectItem>
-          {options.filter((option) => option.value !== NONE).map((option) => (
-            <SelectItem key={option.value} value={option.value}>
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
-  );
+  return <label className="po-field">{label}
+    <select className="po-control" value={value} onChange={event => onChange(event.target.value)}>
+      <option value={NONE}>{label === "Currency" ? "All currencies" : label === "Status" ? "All statuses" : `All ${label.toLowerCase()}s`}</option>
+      {options.filter(option => option.value !== NONE).map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+    </select>
+  </label>;
 }

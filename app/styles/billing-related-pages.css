@@ -90,3 +90,43 @@
   .tw-billing-v3.billing-related .bq-main [data-slot="select-trigger"],
   .tw-billing-v3.billing-related .bq-main [data-slot="input"] { min-height: 44px; }
 }
+
+/* PO tracker: fixed workspace, independently scrolling list and details pane. */
+.tw-billing-v3.billing-related .po-contained-main { padding: 14px 18px; overflow: hidden; }
+.tw-billing-v3.billing-related .po-contained-main > .collections-suite { flex-shrink: 0; }
+.tw-billing-v3.billing-related .po-tracker-workspace { display: flex; flex: 1; flex-direction: column; min-height: 0; gap: 10px; overflow: hidden; }
+.tw-billing-v3.billing-related .po-tracker-workspace > .related-summary-strip { flex-shrink: 0; margin: 0; }
+.tw-billing-v3.billing-related .po-tracker-workspace > .bq-card { display: flex; flex: 1; flex-direction: column; min-height: 100px; margin: 0; overflow: hidden; }
+.tw-billing-v3.billing-related .po-tracker-workspace .bq-card__h { flex-shrink: 0; }
+.tw-billing-v3.billing-related .po-filter-bar { display: flex; align-items: end; flex-wrap: wrap; gap: 8px; padding: 9px 12px; border-bottom: 1px solid var(--tw-line); background: #f6f8fb; flex-shrink: 0; }
+.tw-billing-v3.billing-related .po-field { display: flex; flex: 1 1 130px; flex-direction: column; min-width: 0; gap: 4px; font-size: 9px; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; color: var(--tw-mut); }
+.tw-billing-v3.billing-related .po-search { flex: 2 1 200px; }
+.tw-billing-v3.billing-related .po-control { width: 100%; min-width: 0; height: 30px; border: 1px solid #dce6f4; border-radius: 8px; padding: 0 9px; background: #fff; color: var(--tw-ink); font-size: 12px; font-weight: 400; letter-spacing: normal; text-transform: none; }
+.tw-billing-v3.billing-related .po-control:focus-visible { outline: 2px solid var(--tw-blue); outline-offset: 1px; }
+.tw-billing-v3.billing-related .po-check { display: flex; align-items: center; gap: 6px; font-size: 11.5px; min-height: 30px; color: var(--tw-ink2); }
+.tw-billing-v3.billing-related .po-list-scroll { flex: 1; min-height: 0; overflow: auto; }
+.tw-billing-v3.billing-related .po-list-scroll > [role="region"] { height: 100%; overflow: auto; }
+.tw-billing-v3.billing-related .po-select-link, .tw-billing-v3.billing-related .po-link { color: var(--tw-blue); font-size: 12px; text-align: left; cursor: pointer; }
+.tw-billing-v3.billing-related .po-select-link:hover, .tw-billing-v3.billing-related .po-link:hover { text-decoration: underline; }
+.tw-billing-v3.billing-related .po-select-link:focus-visible { outline: 2px solid var(--tw-blue); outline-offset: 3px; }
+.tw-billing-v3.billing-related .po-selected-row { background: #edf4ff; box-shadow: inset 3px 0 var(--tw-blue); }
+.tw-billing-v3.billing-related .po-details-pane { display: flex; flex-direction: column; flex: 0 0 auto; max-height: 44%; min-height: 170px; border: 1px solid #c6d9ff; border-radius: 12px; background: white; box-shadow: 0 -4px 16px #0057ff0a; overflow: hidden; }
+.tw-billing-v3.billing-related .po-details-heading { display: flex; align-items: center; gap: 12px; padding: 8px 12px; background: #edf3ff; border-bottom: 1px solid #dce6f4; flex-shrink: 0; }
+.tw-billing-v3.billing-related .po-details-heading > div { flex: 1; min-width: 0; }
+.tw-billing-v3.billing-related .po-details-heading h2 { font-size: 13px; font-weight: 600; }
+.tw-billing-v3.billing-related .po-details-heading p { font-size: 11px; color: var(--tw-mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tw-billing-v3.billing-related .po-details-form { display: flex; flex-direction: column; min-height: 0; }
+.tw-billing-v3.billing-related .po-details-scroll { min-height: 0; overflow: auto; padding: 10px 12px; }
+.tw-billing-v3.billing-related .po-edit-fields { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)) minmax(180px,1.5fr); gap: 10px; border: 0; padding: 0; }
+.tw-billing-v3.billing-related .po-details-totals { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 10px; padding-top: 10px; }
+.tw-billing-v3.billing-related .po-details-totals dt { font-size: 9px; color: var(--tw-mut); }
+.tw-billing-v3.billing-related .po-details-totals dd { font-size: 12px; font-variant-numeric: tabular-nums; margin: 2px 0 0; overflow-wrap: anywhere; }
+.tw-billing-v3.billing-related .po-details-footer { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-top: 1px solid #e2e8f0; flex-shrink: 0; font-size: 10.5px; color: var(--tw-mut); }
+.tw-billing-v3.billing-related .po-save-error { color: #c82121; }
+.tw-billing-v3.billing-related .po-save-success { color: #0a7a55; }
+@media (max-width: 800px) {
+  .tw-billing-v3.billing-related .po-contained-main { padding: 8px; }
+  .tw-billing-v3.billing-related .po-edit-fields { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .tw-billing-v3.billing-related .po-details-totals { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .tw-billing-v3.billing-related .po-filter-bar { max-height: 150px; overflow: auto; }
+}

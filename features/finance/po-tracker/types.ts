@@ -60,6 +60,7 @@ export type PoTrackerSummary = {
 };
 
 export type PoTrackerWorkspaceData = {
+  can_edit: boolean;
   rows: PoTrackerRow[];
   summary: PoTrackerSummary;
   filter_options: {

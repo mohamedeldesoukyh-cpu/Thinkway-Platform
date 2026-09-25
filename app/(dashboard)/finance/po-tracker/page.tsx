@@ -20,6 +20,7 @@ export default async function FinancePoTrackerPage({ searchParams }: PageProps) 
 
   return (
     <BillingStyleShell
+      contained
       title="PO tracker"
       description="Purchase-order consumption and remaining budget by campaign"
     >
