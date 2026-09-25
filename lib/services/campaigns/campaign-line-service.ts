@@ -2,7 +2,7 @@ import { isDeepStrictEqual } from "node:util";
 import { readCreatorFx } from "@/lib/commercial/creator-fx";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { assignmentCommercialMastersChanged } from "@/lib/assignments/assignment-commercial-masters";
+import { assignmentCommercialChangeScope, assignmentCommercialMastersChanged } from "@/lib/assignments/assignment-commercial-masters";
 import { syncCampaignInfluencerForLine } from "@/lib/campaigns/campaign-influencer-sync";
 import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
@@ -746,24 +746,13 @@ export async function updateCampaignLine(
     });
   }
 
-  const commercialChanged = costVatChanged || revenueVatChanged || assignmentCommercialMastersChanged(
-    {
-      revenue_before_vat: existingLineMeta.revenue_before_vat,
-      revenue: existingLineMeta.revenue,
-      cost_before_vat: existingLineMeta.cost_before_vat,
-      cost: existingLineMeta.cost,
-      agency_fee_percent: existingLineMeta.agency_fee_percent,
-      usage_rights_amount: existingLineMeta.usage_rights_amount,
-      usage_rights_cost: existingLineMeta.usage_rights_cost,
-    },
-    {
-      revenue_before_vat: revenueBeforeVat,
-      cost_before_vat: costBeforeVat,
-      agency_fee_percent: commercialBilling.agency_fee_percent,
-      usage_rights_amount: commercialBilling.usage_rights_amount,
-      usage_rights_cost: commercialBilling.usage_rights_cost,
-    }
-  );
+  const documentScope = assignmentCommercialChangeScope(existingLineMeta, {
+    ...vatPayload,
+    currency_code: currency,
+    agency_fee_percent: commercialBilling.agency_fee_percent,
+    usage_rights_amount: commercialBilling.usage_rights_amount,
+    usage_rights_cost: commercialBilling.usage_rights_cost,
+  });
 
   const { findVendorIoAmountDriftForCampaign } = await import(
     "@/lib/io/vendor-io-amount-drift"
@@ -812,12 +801,13 @@ export async function updateCampaignLine(
     (existingLineMeta.vendor_io_id &&
       vendorIoRevisionAllowed &&
       (amountDrift ||
-        (commercialChanged &&
+        (documentScope.vendor &&
           (financeOverrideActive || !existingLineMeta.invoice_id)))) ||
-      (hasIssuedClientIo && commercialChanged)
+      (hasIssuedClientIo && documentScope.client)
   );
 
   let markedRevisionRequired = false;
+  let changedDocumentLabels = "";
   if (shouldMarkRevisionRequired) {
     const { applyBusinessChangeImpact } = await import("@/lib/change-impact/apply");
     const costChanged = costVatChanged ||
@@ -844,6 +834,7 @@ export async function updateCampaignLine(
         ? [existingLineMeta.vendor_io_id]
         : undefined,
       campaignLineIds: [parsed.line_id],
+      documentScope: { client: documentScope.client, vendor: Boolean(existingLineMeta.vendor_io_id) && vendorIoRevisionAllowed && (documentScope.vendor || amountDrift) },
       estimatedImpact: {
         amountDelta:
           Number(costBeforeVat) -
@@ -867,6 +858,7 @@ export async function updateCampaignLine(
       };
     }
 
+    changedDocumentLabels = [...new Set(impactResult.assessment.lifecycleReactions.map((reaction) => reaction.documentType === "client_io" ? "Client IO" : "Vendor IO"))].join(" and ");
     markedRevisionRequired =
       impactResult.assessment.lifecycleReactions.length > 0;
     if (markedRevisionRequired) {
@@ -877,7 +869,7 @@ export async function updateCampaignLine(
   return {
     ok: true,
     message: markedRevisionRequired
-      ? "Assignment updated. Issued Client/Vendor IO marked Revision Required — regenerate and resend for commercial re-approval."
+      ? `Assignment updated. ${changedDocumentLabels} requires revision. Review the affected document before sending an update.`
       : "Influencer assignment updated.",
     clientId: header?.client_id as string | undefined,
     reviseVendorIo: markedRevisionRequired,

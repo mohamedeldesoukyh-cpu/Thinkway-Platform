@@ -19,6 +19,7 @@ export type EmitBusinessChangeInput = {
   vendorIoIds?: string[];
   influencerId?: string | null;
   campaignLineIds?: string[];
+  documentScope?: { client: boolean; vendor: boolean };
   estimatedImpact?: {
     amountDelta?: number | null;
     currencyCode?: string | null;
@@ -181,6 +182,7 @@ async function planRevisionRequiredVendorIoReactions(
   supabase: SupabaseClient,
   input: EmitBusinessChangeInput
 ): Promise<PlannedDocumentReaction[]> {
+  if (input.documentScope?.vendor === false) return [];
   const rows = await loadCampaignVendorIos(supabase, input);
   const out: PlannedDocumentReaction[] = [];
 
@@ -227,6 +229,9 @@ async function planRevisionRequiredClientIoReactions(
   supabase: SupabaseClient,
   input: EmitBusinessChangeInput
 ): Promise<PlannedDocumentReaction[]> {
+  if (input.documentScope?.client === false) return [];
+  // Creator pricing is internal unless the caller verified a client-side change too.
+  if (input.eventType === "creator_price_updated" && input.documentScope?.client !== true) return [];
   if (
     input.eventType !== "creator_price_updated" &&
     input.eventType !== "deliverables_changed" &&

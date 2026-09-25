@@ -9,7 +9,35 @@ export type AssignmentCommercialSnapshot = {
   agency_fee_percent?: number | null;
   usage_rights_amount?: number | null;
   usage_rights_cost?: number | null;
+  currency_code?: string | null;
+  revenue_vat_percent?: number | null;
+  revenue_vat_exempt?: boolean | null;
+  cost_vat_percent?: number | null;
+  cost_vat_exempt?: boolean | null;
 };
+
+/** Keep internal creator costs separate from the terms billed to the client. */
+export function assignmentCommercialChangeScope(
+  before: AssignmentCommercialSnapshot,
+  after: AssignmentCommercialSnapshot
+): { client: boolean; vendor: boolean } {
+  const changed = (a: number | null | undefined, b: number | null | undefined) =>
+    Math.abs(Number(a ?? 0) - Number(b ?? 0)) > 0.009;
+  const currencyChanged = before.currency_code !== after.currency_code;
+  return {
+    client: currencyChanged ||
+      changed(before.revenue_before_vat ?? before.revenue, after.revenue_before_vat ?? after.revenue) ||
+      changed(before.usage_rights_amount, after.usage_rights_amount) ||
+      changed(before.agency_fee_percent, after.agency_fee_percent) ||
+      changed(before.revenue_vat_percent, after.revenue_vat_percent) ||
+      Boolean(before.revenue_vat_exempt) !== Boolean(after.revenue_vat_exempt),
+    vendor: currencyChanged ||
+      changed(before.cost_before_vat ?? before.cost, after.cost_before_vat ?? after.cost) ||
+      changed(before.usage_rights_cost, after.usage_rights_cost) ||
+      changed(before.cost_vat_percent, after.cost_vat_percent) ||
+      Boolean(before.cost_vat_exempt) !== Boolean(after.cost_vat_exempt),
+  };
+}
 
 const MONEY_EPS = 0.009;
 const PERCENT_EPS = 0.009;

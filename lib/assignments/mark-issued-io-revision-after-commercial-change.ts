@@ -1,9 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { assignmentCommercialMastersChanged } from "@/lib/assignments/assignment-commercial-masters";
+import { assignmentCommercialChangeScope, type AssignmentCommercialSnapshot } from "@/lib/assignments/assignment-commercial-masters";
 import { hasActiveFinanceOverride } from "@/lib/campaigns/finance-override";
 
-type LineCommercialGateRow = {
+type LineCommercialGateRow = AssignmentCommercialSnapshot & {
   campaign_header_id: string;
   revenue?: number | null;
   cost?: number | null;
@@ -32,7 +32,7 @@ export async function markIssuedIoRevisionAfterAssignmentCommercialChange(
   const { data: afterRaw, error } = await supabase
     .from("campaign_lines")
     .select(
-      "campaign_header_id, revenue, cost, revenue_before_vat, cost_before_vat, agency_fee_percent, usage_rights_amount, usage_rights_cost, vendor_io_id, invoice_id, finance_override_until"
+      "campaign_header_id, revenue, cost, revenue_before_vat, cost_before_vat, agency_fee_percent, usage_rights_amount, usage_rights_cost, vendor_io_id, invoice_id, finance_override_until, currency_code, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt"
     )
     .eq("id", input.lineId)
     .maybeSingle();
@@ -42,7 +42,8 @@ export async function markIssuedIoRevisionAfterAssignmentCommercialChange(
   }
 
   const after = afterRaw as LineCommercialGateRow;
-  const commercialChanged = assignmentCommercialMastersChanged(input.before, after);
+  const documentScope = assignmentCommercialChangeScope(input.before, after);
+  const commercialChanged = documentScope.client || documentScope.vendor;
   if (!commercialChanged) {
     return { marked: false };
   }
@@ -58,10 +59,10 @@ export async function markIssuedIoRevisionAfterAssignmentCommercialChange(
   const hasIssuedClientIo = (issuedClientIos ?? []).length > 0;
   const vendorIoRevisionAllowed = !after.invoice_id || financeOverrideActive;
   const shouldMark = Boolean(
-    (after.vendor_io_id &&
+    (documentScope.vendor && after.vendor_io_id &&
       vendorIoRevisionAllowed &&
       (financeOverrideActive || !after.invoice_id)) ||
-      hasIssuedClientIo
+      (documentScope.client && hasIssuedClientIo)
   );
 
   if (!shouldMark) {
@@ -93,6 +94,7 @@ export async function markIssuedIoRevisionAfterAssignmentCommercialChange(
     actorId: input.actorId ?? undefined,
     vendorIoIds: after.vendor_io_id ? [after.vendor_io_id] : undefined,
     campaignLineIds: [input.lineId],
+    documentScope: { client: documentScope.client, vendor: Boolean(after.vendor_io_id) && documentScope.vendor && vendorIoRevisionAllowed },
     estimatedImpact: {
       amountDelta:
         Number(after.cost_before_vat ?? after.cost ?? 0) -
@@ -115,7 +117,8 @@ export async function markIssuedIoRevisionAfterAssignmentCommercialChange(
       "@/lib/services/campaigns/repositories/campaign-repository"
     );
     await unlockCampaignLineFinanceFields(supabase, input.lineId);
-    return { marked: true };
+    const labels = [...new Set(impactResult.assessment.lifecycleReactions.map((reaction) => reaction.documentType === "client_io" ? "Client IO" : "Vendor IO"))].join(" and ");
+    return { marked: true, message: `${labels} requires revision. Review the affected document before sending an update.` };
   }
 
   return { marked: false };
@@ -128,7 +131,7 @@ export async function loadLineCommercialGateSnapshot(
   const { data } = await supabase
     .from("campaign_lines")
     .select(
-      "campaign_header_id, revenue, cost, revenue_before_vat, cost_before_vat, agency_fee_percent, usage_rights_amount, usage_rights_cost, vendor_io_id, invoice_id, finance_override_until"
+      "campaign_header_id, revenue, cost, revenue_before_vat, cost_before_vat, agency_fee_percent, usage_rights_amount, usage_rights_cost, vendor_io_id, invoice_id, finance_override_until, currency_code, revenue_vat_percent, revenue_vat_exempt, cost_vat_percent, cost_vat_exempt"
     )
     .eq("id", lineId)
     .maybeSingle();

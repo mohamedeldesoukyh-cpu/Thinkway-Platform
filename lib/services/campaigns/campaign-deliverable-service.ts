@@ -659,7 +659,7 @@ export async function updateAssignmentDeliverable(
           return {
             ok: true,
             message:
-              "Deliverable updated. Issued Client/Vendor IO marked Revision Required — regenerate and resend for commercial re-approval.",
+              `Deliverable updated. ${revision.message}`,
           };
         }
       }
@@ -777,7 +777,7 @@ export async function updateAssignmentDeliverable(
         return {
           ok: true,
           message:
-            "Deliverable updated. Issued Client/Vendor IO marked Revision Required — regenerate and resend for commercial re-approval.",
+            `Deliverable updated. ${revision.message}`,
         };
       }
     }
@@ -1023,7 +1023,7 @@ export async function updatePostSchedule(
         return {
           ok: true,
           message:
-            "Post updated. Issued Client/Vendor IO marked Revision Required — regenerate and resend for commercial re-approval.",
+            `Post updated. ${revision.message}`,
         };
       }
     }

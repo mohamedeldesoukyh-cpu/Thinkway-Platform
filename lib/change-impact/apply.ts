@@ -44,6 +44,7 @@ export async function applyBusinessChangeImpact(
       entity_id: input.entityId ?? null,
       payload: {
         ...(input.payload ?? {}),
+        document_scope: input.documentScope ?? null,
         estimated_impact: input.estimatedImpact ?? null,
       },
       actor_id: input.actorId ?? null,

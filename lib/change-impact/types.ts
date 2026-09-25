@@ -141,6 +141,7 @@ export type ChangeImpactDecisionSignal = {
 };
 
 export type ApplyChangeImpactInput = {
+  documentScope?: { client: boolean; vendor: boolean };
   eventType: BusinessChangeEventType;
   reasonCode: DocumentLifecycleReasonCode;
   reasonDetail: string;
