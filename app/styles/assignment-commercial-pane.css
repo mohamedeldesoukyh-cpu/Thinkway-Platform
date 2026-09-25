@@ -48,3 +48,7 @@
 .assignment-commercial-pane .acp-revenue h3 { background:#eaf2ff; color:#174ea6; border-bottom:1px solid #c6d9ff; }
 .assignment-commercial-pane .acp-field input:focus-visible { outline:2px solid #85adff; outline-offset:1px; }
 @media(max-width:1100px) { .assignment-commercial-pane .acp-heading { grid-template-columns:auto minmax(0,1fr) auto; } .assignment-commercial-pane .acp-heading > .acp-button { grid-column:3; grid-row:1; } .assignment-commercial-pane .acp-profit { grid-column:1/-1; justify-content:center; flex-wrap:wrap; gap:8px 20px; } }
+
+.assignment-commercial-pane .acp-number { position:relative; display:block; min-width:0; }
+.assignment-commercial-pane .acp-percentage input { padding-right:24px; }
+.assignment-commercial-pane .acp-percent-suffix { position:absolute; right:9px; top:50%; transform:translateY(-50%); color:#52637c; font-size:12px; pointer-events:none; }

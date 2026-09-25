@@ -21,12 +21,12 @@ const PaneContext = createContext<{ open: (target: Target) => void; selected: Ta
 export const useAssignmentCommercialPane = () => useContext(PaneContext);
 const keyOf = (target: Target) => `${target.lineId}:${target.deliverableId ?? "parent"}`;
 
-function FormattedNumber({ value, onChange, disabled, integer = false, max }: {
-  value: number; onChange: (value: number) => void; disabled?: boolean; integer?: boolean; max?: number;
+function FormattedNumber({ value, onChange, disabled, integer = false, max, percentage = false }: {
+  value: number; onChange: (value: number) => void; disabled?: boolean; integer?: boolean; max?: number; percentage?: boolean;
 }) {
   const [editing, setEditing] = useState<string | null>(null);
   const formatted = value.toLocaleString("en-US", { minimumFractionDigits: integer ? 0 : 2, maximumFractionDigits: integer ? 0 : 2 });
-  return <input type="text" inputMode={integer ? "numeric" : "decimal"} autoComplete="off" disabled={disabled}
+  return <span className={percentage ? "acp-number acp-percentage" : "acp-number"}><input type="text" inputMode={integer ? "numeric" : "decimal"} autoComplete="off" disabled={disabled}
     value={editing ?? formatted} onFocus={() => setEditing(formatted)}
     onChange={event => {
       const next = event.target.value.replace(/,/g, "").trim();
@@ -35,7 +35,7 @@ function FormattedNumber({ value, onChange, disabled, integer = false, max }: {
       if (!Number.isFinite(parsed) || (max !== undefined && parsed > max)) return;
       setEditing(next);
       onChange(integer ? Math.max(1, parsed) : parsed);
-    }} onBlur={() => setEditing(null)} />;
+    }} onBlur={() => setEditing(null)} />{percentage && <span className="acp-percent-suffix" aria-hidden="true">%</span>}</span>;
 }
 
 export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, currencies, enabled, children }: {
@@ -117,7 +117,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
     } catch { setMessage({ ok: false, text: "Unable to save. Your edits have been kept; please try again." }); }
     finally { setPending(false); }
   }
-  const number = (label: string, field: keyof Omit<Draft, "currency">, options?: { disabled?: boolean; max?: number; integer?: boolean }) => <label className="acp-field">{label}<FormattedNumber key={selectedKey + field} value={draft[field]} disabled={readOnly || options?.disabled} integer={options?.integer} max={options?.max} onChange={value => change(field, value)} /></label>;
+  const number = (label: string, field: keyof Omit<Draft, "currency">, options?: { disabled?: boolean; max?: number; integer?: boolean }) => <label className="acp-field">{label}<FormattedNumber key={selectedKey + field} value={draft[field]} disabled={readOnly || options?.disabled} integer={options?.integer} max={options?.max} percentage={field === "costVat" || field === "revVat" || field === "af"} onChange={value => change(field, value)} /></label>;
   const total = (label: string, value: number) => <div className="acp-total"><span>{label}</span><output>{value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</output></div>;
   const editor = enabled && line && selected ? <section ref={pane} className="assignment-commercial-pane" aria-label="Assignment cost and revenue editor" style={{ height }}>
     <div className="acp-resizer" role="separator" aria-label="Resize assignment editor" aria-orientation="horizontal" aria-valuemin={180} aria-valuemax={Math.max(180, Math.floor((host?.clientHeight ?? 700) * .65))} aria-valuenow={Math.round(height)} tabIndex={0} title="Drag to resize; double-click to reset"
