@@ -18,7 +18,6 @@ type Props = {
  * this banner must not restate the same blocker.
  */
 export function CampaignVendorIoLifecycleBanner({
-  lifecycle,
   rows,
   className,
 }: Props) {
@@ -27,7 +26,6 @@ export function CampaignVendorIoLifecycleBanner({
     const generated = rows.filter((row) => {
       const status = (row.status ?? "").toLowerCase();
       return (
-        status === "draft" ||
         status === "generated" ||
         status === "ready" ||
         Boolean(row.document_generated_at)
@@ -35,25 +33,21 @@ export function CampaignVendorIoLifecycleBanner({
     }).length;
     const sent = rows.filter(
       (row) =>
+        Boolean(row.delivered_at) ||
         row.status === "sent" ||
         row.delivery_status === "sent" ||
         row.delivery_status === "completed"
     ).length;
     const approved = rows.filter((row) =>
-      (row.status ?? "").toLowerCase().includes("approv")
+      row.status === "approved"
     ).length;
     return { prepared, generated, sent, approved };
   }, [rows]);
-
-  const waitingClient =
-    lifecycle.businessStageId === "client-io" ||
-    lifecycle.processCue.stageSignals["client-io"] !== "completed";
 
   return (
     <aside
       className={cn(
         "thinkway-lc-vio-banner",
-        waitingClient && "is-attention",
         className
       )}
       aria-label="Vendor IO summary"
@@ -68,22 +62,21 @@ export function CampaignVendorIoLifecycleBanner({
           <strong>{stats.generated}</strong>
         </div>
         <div>
-          <span className="thinkway-bp-label">Sent</span>
-          <strong>{waitingClient ? 0 : stats.sent}</strong>
+          <span className="thinkway-bp-label">Delivered</span>
+          <strong>{stats.sent}</strong>
         </div>
         <div>
           <span className="thinkway-bp-label">
-            {waitingClient ? "Client approval pending" : "Approved"}
+            Creator approvals
           </span>
-          <strong>{waitingClient ? stats.prepared : stats.approved}</strong>
+          <strong>{stats.approved}</strong>
         </div>
       </div>
-      {waitingClient ? (
         <p className="thinkway-lc-vio-banner-note">
-          Operational follow-up: Vendor IO send waits on Client Approval. Campaign
-          progression is owned by Decision Center.
+          Delivered includes email and manual delivery. Creator approvals are
+          separate from Client IO approval. A Client IO revision does not reset
+          recorded deliveries.
         </p>
-      ) : null}
     </aside>
   );
 }

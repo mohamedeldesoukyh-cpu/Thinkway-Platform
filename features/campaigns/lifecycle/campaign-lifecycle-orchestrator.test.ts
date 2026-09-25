@@ -3,6 +3,8 @@ import { describe, it } from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { CampaignWorkspaceGuidance } from "@/features/campaigns/lifecycle/components/campaign-workspace-guidance";
+import { CampaignVendorIoLifecycleBanner } from "@/features/campaigns/lifecycle/components/campaign-vendor-io-lifecycle-banner";
+import type { VendorIoRow } from "@/features/io/types";
 
 import {
   buildWorkspaceGuidance,
@@ -34,6 +36,31 @@ function base(overrides: Partial<CampaignProcessSignals> = {}): CampaignProcessS
 }
 
 describe("campaign lifecycle orchestrator", () => {
+  it("preserves manual deliveries while Client IO approval is pending", () => {
+    const lifecycle = deriveLifecycleForTest(base({ lineCount: 32, hasClientIo: true, clientIoStatus: "under_client_review", vendorIoCount: 32 }));
+    const rows = Array.from({ length: 32 }, (_, index) => ({
+      id: String(index), status: "sent", delivery_method: "manual",
+      delivery_status: "completed", document_generated_at: "2026-09-25",
+    })) as VendorIoRow[];
+    const markup = renderToStaticMarkup(createElement(CampaignVendorIoLifecycleBanner, { lifecycle, rows }));
+    assert.match(markup, /Delivered<\/span><strong>32<\/strong>/);
+    assert.match(markup, /Creator approvals<\/span><strong>0<\/strong>/);
+    assert.doesNotMatch(markup, /Client approval pending|is-attention/);
+  });
+
+  it("explains a Client IO revision without calling delivered Vendor IOs drafts", () => {
+    const lifecycle = deriveLifecycleForTest(base({ lineCount: 32, hasClientIo: true, clientIoStatus: "under_client_review", vendorIoCount: 32 }));
+    const clientIssue = lifecycle.decisionCenter.blockers.find((item) => item.objectKind === "client_io")!;
+    assert.ok(clientIssue);
+    clientIssue.waitingLabel = "Major change impact";
+    clientIssue.objectRef = "CIO-2026-0004";
+    const guidance = buildWorkspaceGuidance(lifecycle, "vendor-io");
+    assert.match(guidance.whatHappened, /CIO-2026-0004 needs revision/);
+    assert.match(guidance.currentSituation, /regenerate it/);
+    assert.match(guidance.currentSituation, /deliveries remain recorded/);
+    assert.equal(guidance.isLocked, false);
+  });
+
   it("shows Assignments with a Finance-owned PO warning before IO generation", () => {
     const lifecycle = deriveLifecycleForTest(base({
       lineCount: 7,

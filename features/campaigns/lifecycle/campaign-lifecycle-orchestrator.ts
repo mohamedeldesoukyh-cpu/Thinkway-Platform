@@ -714,6 +714,22 @@ export function buildWorkspaceGuidance(
   }
 
   if (activeTab === "vendor-io") {
+    const clientRevision = lifecycle.decisionCenter.blockers.find(
+      (blocker) => blocker.objectKind === "client_io" &&
+        /revision|major change|commercial correction/i.test(
+          `${blocker.title} ${blocker.waitingLabel} ${blocker.reason}`
+        )
+    );
+    if (clientRevision) {
+      return guidanceBase(lifecycle, activeTab, "Vendor IO", {
+        whatHappened: `Client IO ${clientRevision.objectRef} needs revision.`,
+        currentSituation: "Commercial details changed. Open the Client IO to regenerate it, then obtain client approval. Existing Vendor IO deliveries remain recorded.",
+        nextAction: clientRevision.primaryAction,
+        owner: clientRevision.owner,
+        unlockHint: `Open ${clientRevision.objectRef}`,
+        outOfBand: true,
+      });
+    }
     if (
       lifecycle.processCue.stageSignals["client-io"] !== "completed" &&
       lifecycle.businessStageId === "client-io"
