@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { updateAssignmentLineCommercialsAction } from "@/features/campaigns/actions/update-assignment-line-commercials";
 import { updateAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
@@ -104,7 +105,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
       onDoubleClick={() => resize(290)} onKeyDown={event => { if (event.key === "ArrowUp" || event.key === "ArrowDown") { event.preventDefault(); resize(height + (event.key === "ArrowUp" ? 20 : -20)); } }}><span /></div>
     <div className="acp-heading">
       <label className="acp-currency">Curr<select aria-label="Assignment editor currency" value={draft.currency} disabled={readOnly || Boolean(child)} onChange={event => change("currency", event.target.value)}>{!currencies.some(entry => entry.value === draft.currency) && <option value={draft.currency}>{draft.currency}</option>}{currencies.map(entry => <option key={entry.value} value={entry.value}>{entry.value}</option>)}</select></label>
-      <div className="acp-identity"><strong>{line.document_number} · {line.assignment?.influencer_name ?? line.name}</strong><span>{child ? `Child · ${selectedPost?.platform ?? child.platform} · ${selectedPost?.deliverable_type_label ?? child.deliverable_type_label} · ${isPackageChild ? "package share" : "deliverable totals"} (${draft.qty} ${draft.qty === 1 ? "unit" : "units"})` : "Parent assignment · package / assignment totals"}</span></div>
+      <div className="acp-identity"><strong>{line.document_number} · {formatCreatorDisplayName(line.assignment?.influencer_name ?? line.name)}</strong><span>{child ? `Child · ${selectedPost?.platform ?? child.platform} · ${selectedPost?.deliverable_type_label ?? child.deliverable_type_label} · ${isPackageChild ? "package share" : "deliverable totals"} (${draft.qty} ${draft.qty === 1 ? "unit" : "units"})` : "Parent assignment · package / assignment totals"}</span></div>
       <button type="button" className="acp-button" aria-label="Close assignment editor" disabled={pending} onClick={() => setSelected(null)}><X size={16} /></button>
     </div>
     <form className="acp-form" onSubmit={event => { event.preventDefault(); void save(); }} onKeyDown={event => { if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") { event.preventDefault(); event.stopPropagation(); event.currentTarget.requestSubmit(); } }}>
