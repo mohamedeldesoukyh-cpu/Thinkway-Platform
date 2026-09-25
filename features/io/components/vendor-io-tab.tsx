@@ -297,7 +297,7 @@ function VendorIoTableBody({
     return (
       <AuroraEmptyState
         title="No Vendor IO documents yet."
-        description="After Client Approval, Operations issues Vendor IO documentation. Campaign may continue — Vendor IO compliance remains operational follow-up."
+        description="Generate Vendor IOs from assignments. Sending before client approval carries commercial risk."
       />
     );
   }

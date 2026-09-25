@@ -1779,6 +1779,20 @@
     padding-top: 12px;
   }
 
+  .thinkway-lc-guidance {
+    padding: 8px 12px;
+    margin-bottom: 8px;
+  }
+
+  .thinkway-lc-guidance-kicker { margin-bottom: 3px; }
+
+  .thinkway-lc-guidance-copy {
+    flex: 1;
+    min-width: 240px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
   .thinkway-lc-guidance-compact {
     display: flex;
     flex-wrap: wrap;
@@ -1816,15 +1830,15 @@
 
   .thinkway-lc-vio-stats {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 10px;
-    margin-bottom: 10px;
+    margin-bottom: 4px;
   }
 
   .thinkway-lc-vio-stats strong {
     display: block;
     margin-top: 2px;
-    font-size: 18px;
+    font-size: 14px;
     font-weight: 750;
     color: var(--camp-text);
   }

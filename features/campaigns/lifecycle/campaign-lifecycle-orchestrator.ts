@@ -698,16 +698,16 @@ export function buildWorkspaceGuidance(
       (pubSignal === "upcoming" || pubSignal === "waiting_internal")
     ) {
       return guidanceBase(lifecycle, activeTab, "Performance", {
-        whatHappened: "Performance metrics unlock after publications go live.",
-        isLocked: true,
+        whatHappened: "Performance is available.",
+        isLocked: false,
         currentSituation: primary
-          ? `${primaryRef} · ${primary.waitingLabel}.`
-          : "Advance delivery so creators can publish.",
+          ? `${primaryRef}: ${primary.waitingLabel}. You can add publications now; metrics require live posts.`
+          : "You can add publications now; metrics require live posts.",
         nextAction: primaryAction,
         owner: lifecycle.owner,
         unlockHint: primary
-          ? `Open ${primary.objectRef} to continue toward Performance.`
-          : "Open Deliverables to continue toward Performance.",
+          ? `Review ${primary.objectRef}`
+          : "Open Deliverables",
         outOfBand: true,
       });
     }
@@ -740,14 +740,10 @@ export function buildWorkspaceGuidance(
       const cioLabel = cioBlocker
         ? `${cioBlocker.objectLabel} ${cioBlocker.objectRef}`
         : "Client IO";
-      // STAB-011: do not claim drafts are ready when zero Vendor IO records exist.
-      const draftsExist = lifecycle.vendorIoCount > 0;
       return guidanceBase(lifecycle, activeTab, "Vendor IO", {
-        isLocked: true,
-        whatHappened: draftsExist
-          ? "Vendor IO drafts are ready."
-          : "Vendor IO will be issued after Client IO approval.",
-        currentSituation: `Sending is disabled until ${cioLabel} is approved.`,
+        isLocked: false,
+        whatHappened: "Client approval pending.",
+        currentSituation: "You can prepare and send Vendor IOs. Sending before client approval carries commercial risk.",
         nextAction: cioBlocker?.primaryAction ?? "Open Client IO",
         owner: "Commercial",
         unlockHint: `Open ${cioLabel}`,
@@ -757,7 +753,7 @@ export function buildWorkspaceGuidance(
   }
 
   if (activeTab === "deliverables") {
-    // Only true business blockers (e.g. Client IO) lock deliverables — never Vendor IO alone.
+    // Approval risk is advisory; operational work remains available.
     const clientPending =
       lifecycle.businessStageId === "client-io" ||
       lifecycle.processCue.lifecycleSignal === "waiting_client";
@@ -766,9 +762,9 @@ export function buildWorkspaceGuidance(
         ? `${primary.objectLabel} ${primary.objectRef}`
         : "Client IO";
       return guidanceBase(lifecycle, activeTab, "Deliverables", {
-        whatHappened: "Deliverables stay locked until commercial approvals finish.",
-        isLocked: true,
-        currentSituation: `Work is disabled until ${lockRef} clears.`,
+        whatHappened: "Client approval pending.",
+        isLocked: false,
+        currentSituation: "You can prepare and upload content. Proceeding before client approval carries commercial risk.",
         nextAction: primaryAction,
         owner: lifecycle.owner,
         unlockHint: `Open ${lockRef}`,

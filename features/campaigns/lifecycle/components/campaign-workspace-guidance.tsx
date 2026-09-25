@@ -32,9 +32,9 @@ export function CampaignWorkspaceGuidance({ guidance, onContinue, action, classN
     >
       <div className="thinkway-lc-guidance-kicker">{locked ? "Locked" : "Follow-up"} · {guidance.workspaceLabel}</div>
       <div className="thinkway-lc-guidance-compact">
-        <div>
-          <p className="mt-0.5">{guidance.whatHappened}</p>
-          <p className="thinkway-lc-unlock mt-1">{guidance.currentSituation}</p>
+        <div className="thinkway-lc-guidance-copy">
+          <strong>{guidance.whatHappened}</strong>{" "}
+          <span>{guidance.currentSituation}</span>
         </div>
         {action ?? (onContinue ? (
           <button type="button" className="thinkway-bp-continue" onClick={onContinue}>

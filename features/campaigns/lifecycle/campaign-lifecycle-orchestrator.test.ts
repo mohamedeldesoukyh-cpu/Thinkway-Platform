@@ -238,7 +238,7 @@ describe("campaign lifecycle orchestrator", () => {
     assert.equal(finance.unlockHint, null);
 
     const performance = buildWorkspaceGuidance(lifecycle, "publications");
-    assert.match(performance.whatHappened, /Performance metrics unlock/i);
+    assert.match(performance.whatHappened, /Performance is available/i);
     assert.equal(performance.outOfBand, true);
   });
 
@@ -252,11 +252,11 @@ describe("campaign lifecycle orchestrator", () => {
     );
     const guidance = buildWorkspaceGuidance(lifecycle, "vendor-io");
     // STAB-011: with 0 Vendor IOs, do not claim drafts are ready.
-    assert.match(guidance.whatHappened, /Vendor IO will be issued after Client IO approval/i);
+    assert.match(guidance.whatHappened, /Client approval pending/i);
     assert.ok(!/drafts are ready/i.test(guidance.whatHappened));
-    assert.match(guidance.currentSituation, /Sending is disabled until/i);
-    assert.equal(guidance.isLocked, true);
-    assert.match(renderToStaticMarkup(createElement(CampaignWorkspaceGuidance, { guidance })), /Locked/);
+    assert.match(guidance.currentSituation, /commercial risk/i);
+    assert.equal(guidance.isLocked, false);
+    assert.match(renderToStaticMarkup(createElement(CampaignWorkspaceGuidance, { guidance })), /Follow-up/);
     assert.match(guidance.nextAction, /Client IO/i);
     assert.equal(guidance.businessStageLabel, "Client IO");
     assert.ok(lifecycle.decisionCenter.blockers.length > 0);
@@ -267,7 +267,7 @@ describe("campaign lifecycle orchestrator", () => {
     );
   });
 
-  it("says Vendor IO drafts are ready when records exist while Client IO pending (STAB-011)", () => {
+  it("keeps pending approval advisory when Vendor IO records exist", () => {
     const lifecycle = deriveLifecycleForTest(
       base({
         lineCount: 2,
@@ -280,8 +280,21 @@ describe("campaign lifecycle orchestrator", () => {
     );
     assert.equal(lifecycle.vendorIoCount, 2);
     const guidance = buildWorkspaceGuidance(lifecycle, "vendor-io");
-    assert.match(guidance.whatHappened, /Vendor IO drafts are ready/i);
-    assert.match(guidance.currentSituation, /Sending is disabled until/i);
+    assert.match(guidance.whatHappened, /Client approval pending/i);
+    assert.match(guidance.currentSituation, /commercial risk/i);
+  });
+
+  it("keeps operational workspaces available during client review", () => {
+    const lifecycle = deriveLifecycleForTest(base({ lineCount: 2, hasClientIo: true, clientIoStatus: "under_client_review" }));
+    for (const tab of ["vendor-io", "deliverables", "publications"] as const) {
+      const guidance = buildWorkspaceGuidance(lifecycle, tab);
+      assert.equal(guidance.isLocked, false);
+      assert.equal(guidance.outOfBand, true);
+      const markup = renderToStaticMarkup(createElement(CampaignWorkspaceGuidance, { guidance }));
+      assert.doesNotMatch(markup, /Locked|disabled|unlock after/i);
+    }
+    assert.equal(lifecycle.businessStageId, "client-io");
+    assert.notEqual(lifecycle.processCue.stageSignals["client-io"], "completed");
   });
 
   it("does not lock Vendor IO after Client IO is approved (TW-2026-0005 contradiction)", () => {
