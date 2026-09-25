@@ -10,7 +10,7 @@ export async function loadCollectionsRedesign(): Promise<CollectionsPageData> {
   const asOf = new Date().toISOString();
   const [invoices, clients, receipts, history, paymentHistory] = await Promise.allSettled([
     loadCollectionInvoices(db),
-    db.from("clients").select("id, name").order("name"),
+    db.from("clients").select("id, name, document_number").order("name"),
     db.from("payments").select("client_id, currency, amount, paid_at").eq("status", "completed").gte("paid_at", `${asOf.slice(0, 7)}-01T00:00:00Z`),
     planningDb(db).from("collection_audit_logs").select("entity_id, action, metadata, created_at").in("action", ["contact_recorded"]).order("created_at", { ascending: false }).limit(5000),
     planningDb(db).from("payments").select("id,document_number,invoice_id,client_id,amount,currency,paid_at,payment_method,reference_number,notes,status,revision").order("paid_at", {ascending:false}).limit(1000),

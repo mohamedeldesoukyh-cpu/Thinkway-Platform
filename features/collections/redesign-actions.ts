@@ -43,3 +43,15 @@ export async function reviseCollectionPayment(input: { id: string; revision: num
  for(const path of ["/collections","/billing","/treasury","/"]) revalidatePath(path);
  return {ok:true};
 }
+
+export async function deleteCollectionPayment(input: {id: string; revision: number; reason: string}) {
+ const db = await createSupabaseServerClient();
+ const auth = await requirePermission(db, "collections.write");
+ if ("error" in auth) return {ok:false,error:auth.error};
+ const parsed = z.object({id:z.string().uuid(),revision:z.number().int().min(0),reason:z.string().trim().min(1).max(500)}).safeParse(input);
+ if (!parsed.success) return {ok:false,error:"Enter a reason for deleting this payment."};
+ const {error} = await planningDb(db).rpc("delete_collection_payment",{p_id:parsed.data.id,p_revision:parsed.data.revision,p_reason:parsed.data.reason});
+ if (error) return {ok:false,error:"Could not delete the payment. Refresh and check your permissions and whether this payment has changed or needs allocation reconciliation."};
+ for (const path of ["/collections","/billing","/treasury","/"]) revalidatePath(path);
+ return {ok:true};
+}

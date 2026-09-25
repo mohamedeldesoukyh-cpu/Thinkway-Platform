@@ -3,7 +3,7 @@ import type { CollectionInvoiceRow } from "@/lib/collections/queries/load-collec
 export type CollectionsPageData = {
   asOf: string;
   invoices: CollectionInvoiceRow[];
-  clients: { id: string; name: string }[];
+  clients: { id: string; name: string; document_number?: string | null }[];
   paymentHistory?: CollectionPayment[];
   receipts: { client_id: string; currency: string; amount: number; paid_at: string | null }[];
   warnings: string[];

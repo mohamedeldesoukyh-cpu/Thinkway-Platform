@@ -32,6 +32,7 @@ type SearchableSelectProps = {
   onValueChange: (value: string) => void;
   options: readonly Option[];
   placeholder?: string;
+  searchPlaceholder?: string;
   disabled?: boolean;
   className?: string;
   /** Optional wider/taller menu surface (e.g. campaign jump with code + name). */
@@ -47,6 +48,7 @@ export function SearchableSelect({
   onValueChange,
   options,
   placeholder = "Select…",
+  searchPlaceholder = "Search camp code or name…",
   disabled,
   className,
   contentClassName,
@@ -144,7 +146,8 @@ export function SearchableSelect({
               ref={searchInputRef}
               type="text"
               className="thinkway-dropdown-search__input"
-              placeholder="Search camp code or name…"
+              placeholder={searchPlaceholder}
+              aria-label={searchPlaceholder}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.stopPropagation()}

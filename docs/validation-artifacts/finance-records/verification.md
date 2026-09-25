@@ -17,3 +17,10 @@
 
 ## Invoice lifecycle correction
 VAT now uses the shared Billing register eligibility and labels. Active generated invoices retain the legacy database draft value but display Issued and count in VAT. Invoice 2 contributes EGP 123,678.45 for August 2026. Regression checks cover this state, superseded/void/pending exclusions and missing dates. No invoice data was modified.
+
+
+## Collections save, search and audited deletion (2026-09-25)
+- Explicit Save payment and Ctrl/Cmd+S share native form validation; corrections take priority; deletion confirmation blocks save shortcuts. Local mocked UI verified invalid save blocked, one receipt action, edit priority, and explicit deletion confirmation.
+- Searchable client selector supports name and canonical/short client code; code selection filters invoices. All six sections have guidance. Load saved draft explains session-only storage. Document references use the existing display formatter; canonical storage is unchanged.
+- Development and production rollback tests verify cancellation restores invoice balance, clears allocation, retains original receipt and audit, and rejects duplicate/unauthorized requests. No real receipt was saved or deleted.
+- TypeScript and Collections grid CI passed (23 blocks, four track lists).
