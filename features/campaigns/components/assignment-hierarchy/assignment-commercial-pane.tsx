@@ -27,7 +27,7 @@ function FormattedNumber({ value, onChange, disabled, integer = false, max }: {
   const [editing, setEditing] = useState<string | null>(null);
   const formatted = value.toLocaleString("en-US", { minimumFractionDigits: integer ? 0 : 2, maximumFractionDigits: integer ? 0 : 2 });
   return <input type="text" inputMode={integer ? "numeric" : "decimal"} autoComplete="off" disabled={disabled}
-    value={editing ?? formatted} onFocus={() => setEditing(String(value))}
+    value={editing ?? formatted} onFocus={() => setEditing(formatted)}
     onChange={event => {
       const next = event.target.value.replace(/,/g, "").trim();
       if (!(integer ? /^\d*$/ : /^\d*(?:\.\d{0,2})?$/).test(next)) return;
