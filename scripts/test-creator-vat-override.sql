@@ -6,8 +6,8 @@ BEGIN
  SELECT ci.* INTO a FROM campaign_influencers ci JOIN campaign_lines l ON l.id=ci.campaign_line_id WHERE l.invoice_id IS NOT NULL AND l.cost_before_vat>0 AND ci.cost_vat_percent=0 AND ci.vendor_payment_status<>'paid' AND EXISTS(SELECT 1 FROM vendor_ios v WHERE v.assignment_id=ci.id AND v.document_generated_at IS NOT NULL AND NOT v.is_superseded) AND NOT EXISTS(SELECT 1 FROM creator_payment_entries e WHERE e.assignment_id=ci.id AND e.status='exported') AND NOT EXISTS(SELECT 1 FROM creator_supplier_invoices i WHERE i.assignment_id=ci.id) LIMIT 1;
  IF a.id IS NULL OR actor IS NULL THEN RAISE EXCEPTION 'Missing paid assignment test fixture'; END IF;
  PERFORM set_config('request.jwt.claim.sub',actor::text,true);
- IF NOT EXISTS(SELECT 1 FROM creator_payment_entries WHERE assignment_id=a.id) THEN
- PERFORM record_creator_payments(gen_random_uuid(),jsonb_build_array(jsonb_build_object('assignmentId',a.id,'creator','Rollback fixture','fee',a.cost_before_vat,'vat',0,'currency',a.currency,'rate',1,'amount',1,'paymentDate',CURRENT_DATE-60)));
+ IF a.cost_before_vat > (SELECT coalesce(sum(original_amount),0) FROM creator_payment_entries WHERE assignment_id=a.id AND status='paid' AND cleared_at IS NULL) THEN
+ PERFORM record_creator_payments(gen_random_uuid(),jsonb_build_array(jsonb_build_object('assignmentId',a.id,'creator','Rollback fixture','fee',a.cost_before_vat,'vat',0,'currency',a.currency,'rate',1,'amount',a.cost_before_vat-(SELECT coalesce(sum(original_amount),0) FROM creator_payment_entries WHERE assignment_id=a.id AND status='paid' AND cleared_at IS NULL),'paymentDate',CURRENT_DATE-60)));
  END IF;
  SELECT count(*),coalesce(sum(original_amount) FILTER(WHERE status='paid' AND cleared_at IS NULL),0) INTO entry_count,total_paid FROM creator_payment_entries WHERE assignment_id=a.id;
  UPDATE campaign_lines SET finance_override_until=NULL,vat_locked=true,cost_locked=true WHERE id=a.campaign_line_id;
@@ -24,6 +24,7 @@ BEGIN
  IF EXISTS(SELECT 1 FROM assignment_post_schedule WHERE campaign_line_id=a.campaign_line_id AND (cost_vat_percent<>14 OR cost_vat_amount<>round(cost_before_vat*.14,2))) THEN RAISE EXCEPTION 'Scheduled posts not synchronized';END IF;
  IF invoice_before IS DISTINCT FROM (SELECT jsonb_agg(to_jsonb(i)) FROM invoices i WHERE i.id=(SELECT invoice_id FROM campaign_lines WHERE id=a.campaign_line_id)) THEN RAISE EXCEPTION 'Client invoice changed';END IF;
  IF payments_before IS DISTINCT FROM (SELECT jsonb_agg(to_jsonb(e) ORDER BY e.id) FROM creator_payment_entries e WHERE assignment_id=a.id) THEN RAISE EXCEPTION 'Payment records changed';END IF;
+ IF NOT EXISTS(SELECT 1 FROM campaign_influencers WHERE id=a.id AND vendor_payment_status='pending' AND cost_after_vat-total_paid=round(cost_before_vat*.14,2)) THEN RAISE EXCEPTION 'Fully paid creator must reopen with exactly VAT remaining';END IF;
  IF NOT EXISTS(SELECT 1 FROM creator_supplier_invoices WHERE assignment_id=a.id AND invoice_number=n AND invoice_date=CURRENT_DATE-50 AND vat_amount=round(a.cost_before_vat*.14,2) AND confirmed) THEN RAISE EXCEPTION 'Historical invoice not stored'; END IF;
  IF (SELECT count(*) FROM creator_payment_entries WHERE assignment_id=a.id)<>entry_count OR (SELECT coalesce(sum(original_amount) FILTER(WHERE status='paid' AND cleared_at IS NULL),0) FROM creator_payment_entries WHERE assignment_id=a.id)<>total_paid THEN RAISE EXCEPTION 'Payment history changed'; END IF;
  failed:=false;BEGIN PERFORM save_creator_payment_invoice(a.id,n,CURRENT_DATE-50,'EG',false,0,0);EXCEPTION WHEN OTHERS THEN failed:=true;END;IF NOT failed THEN RAISE EXCEPTION 'Stale update accepted';END IF;
