@@ -134,6 +134,7 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
 
   const supabase = await createSupabaseServerClient();
   const profile = { full_name: fullName };
+  const assignedCreators=await readAll(supabase.from("campaign_influencers").select("id, influencer_id, campaign_header_id, currency, cost_after_vat, vendor_payment_status").order("id"));
 
   const [
     headersResult,
@@ -154,10 +155,7 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
         "id, billing_status, campaign_header_id, cost_fx_override, revenue_fx_override, revenue, cost, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, currency_code, cost_received, cost_received_currency"
       )
       .order("id")),
-    readAll(supabase
-      .from("campaign_influencers")
-      .select("id, influencer_id, campaign_header_id, currency, cost_after_vat, vendor_payment_status")
-      .order("id")),
+    Promise.resolve(assignedCreators),
     readAll(supabase.from("invoices").select("id, campaign_header_id, total, amount_paid, currency, status, regeneration_status, issue_date, due_date, revenue_before_vat, subtotal").order("id")),
     supabase
       .from("campaign_headers")
@@ -171,6 +169,7 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
         "id, document_number, display_name, country_code, country_codes, influencer_platform_accounts!influencer_platform_accounts_influencer_id_fkey(platform, follower_count, is_primary)"
       )
       .eq("status", "active")
+.in("id", [...new Set(assignedCreators.data.map(a=>a.influencer_id))])
       .order("id")),
     readAll(supabase.from("creator_payment_entries").select("assignment_id,status,cleared_at,original_amount").order("id")),
   ]);
