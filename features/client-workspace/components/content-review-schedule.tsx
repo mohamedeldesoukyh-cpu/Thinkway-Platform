@@ -88,7 +88,7 @@ export function ContentReviewSchedule({
       start_date: startDate ?? null,
       end_date: endDate ?? null,
     });
-  const currentView = view ?? axis.defaultView,
+  const currentView = view ?? "d",
     groups = scheduleGroups(rows);
   const mapped = scriptPost
     ? clientPostDocumentationScriptUnit(scriptPost)
@@ -137,7 +137,7 @@ export function ContentReviewSchedule({
     }
   }
   function square(row: ScheduleRow) {
-    const title = `${row.creator_name} · ${row.content_type} · ${row.ref} · ${row.content ? "Delivered · " : ""}${SCHEDULE_STATES[row.status].label} · Expected ${scheduleDate(row.expected_review_date)}${row.has_script ? " · Script on file" : ""}`;
+    const title = `${row.creator_name} · ${row.content_type} · ${row.ref} · ${row.content ? "Delivered · " : ""}${SCHEDULE_STATES[row.status].label} · ${row.expected_review_date ? "Expected " + scheduleDate(row.expected_review_date) : row.content ? "Delivered " + scheduleDate(row.content.uploadedAt.slice(0, 10)) : "Expected To be confirmed"}${row.has_script ? " · Script on file" : ""}`;
     const className = `u ${SCHEDULE_STATES[row.status].css}${row.has_script ? " has-s" : ""}`;
     return row.content || row.has_script ? (
       <button
@@ -358,7 +358,7 @@ export function ContentReviewSchedule({
           <p className="fine">
             Expected dates are for client review, not publication. A blue corner
             indicates a readable script; it does not mean a decision is needed.
-            {" "}Not scheduled means no expected review date was set; delivered content can still appear there.
+            {" "}Delivered content without an expected review date appears on its delivery date. Not scheduled contains only items without either date.
           </p>
         </>
       )}

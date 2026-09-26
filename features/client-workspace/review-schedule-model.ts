@@ -58,6 +58,11 @@ export function scheduleDate(date: string | null) {
       })
     : "To be confirmed";
 }
+// Use the actual receipt date only when there is no agreed review date.
+// Keep the saved expected date unchanged for reporting and editing.
+export function scheduleCalendarDate(row: Pick<ScheduleRow, "expected_review_date" | "content">) {
+  return row.expected_review_date || row.content?.uploadedAt?.slice(0, 10) || null;
+}
 export function scheduleRows(
   posts: ClientCampaignPostRow[],
   items: ClientContentReviewItem[],
@@ -144,7 +149,7 @@ export function scheduleAxis(
   const dates = [
     data.start_date,
     data.end_date,
-    ...data.rows.map((r) => r.expected_review_date),
+    ...data.rows.map(scheduleCalendarDate),
   ]
     .filter((d): d is string => Boolean(d))
     .sort();
@@ -200,8 +205,8 @@ export function scheduleAxis(
   };
 }
 export function scheduleFinding(rows: ScheduleRow[]) {
-  const missing = rows.filter((r) => !r.expected_review_date).length;
+  const missing = rows.filter((r) => !scheduleCalendarDate(r)).length;
   return missing
-    ? `${missing} of ${rows.length} deliverables have no confirmed review date. They remain in Not scheduled until dates are agreed.`
-    : "All deliverables have a confirmed review date.";
+    ? `${missing} of ${rows.length} deliverables have neither an expected review date nor delivered content. They remain in Not scheduled. Delivered content without an expected date appears on its delivery date.`
+    : "All deliverables appear on their expected review date, or their delivery date when no expected date was set.";
 }

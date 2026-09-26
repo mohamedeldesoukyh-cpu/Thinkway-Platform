@@ -13,6 +13,7 @@ import {
 } from "./campaign-execution";
 import {
   scheduleAxis,
+  scheduleCalendarDate,
   scheduleGroups,
   scheduleNeedsDecision,
   schedulePeriodKey,
@@ -53,6 +54,21 @@ const post: ClientCampaignPostRow = {
   assignmentDeliverableId: "d",
   quantity: 1,
 };
+test("undated delivered content uses receipt date without changing the expected date", () => {
+  const row = { ...scheduleFixture.rows[0], expected_review_date: null, status: "ready_for_approval" as const,
+    content: { uploadedAt: "2026-09-26T14:00:00Z" } as ClientContentReviewItem };
+  assert.equal(scheduleCalendarDate(row), "2026-09-26");
+  assert.equal(scheduleCalendarDate({ ...row, expected_review_date: "2026-09-28" }), "2026-09-28");
+  assert.equal(scheduleCalendarDate({ ...row, content: null }), null);
+  const axis = scheduleAxis({ start_date: "2026-09-28", end_date: "2026-09-30", rows: [row] });
+  assert.equal(axis.start, "2026-09-26");
+  const html = renderToStaticMarkup(<ReviewScheduleGrids rows={[row]} axis={axis} currentView="d" square={r => <i key={r.id} data-delivered="true" />} />);
+  const daily = html.split('data-v="d"')[1].split('class="tbl"')[0];
+  assert.match(daily, /26 Sept/);
+  assert.equal((daily.match(/data-delivered=/g) || []).length, 1);
+  assert.doesNotMatch(daily, /class="pool__u"><i/);
+  assert.equal(row.expected_review_date, null);
+});
 test("daily view keeps exact review dates across month and leap-year boundaries", () => {
   const rows = [{ ...scheduleFixture.rows[0], expected_review_date: "2028-02-29" }];
   const axis = scheduleAxis({ start_date: "2028-02-28", end_date: "2028-03-01", rows });

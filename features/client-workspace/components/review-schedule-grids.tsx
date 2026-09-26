@@ -2,6 +2,7 @@ import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { reviewScheduleToday } from "../content-review-schedule";
 import {
   scheduleAxis,
+  scheduleCalendarDate,
   scheduleGroups,
   scheduleNeedsDecision,
   schedulePeriodKey,
@@ -22,7 +23,7 @@ export function ReviewScheduleGrids({
   const groups = scheduleGroups(rows);
   const today = reviewScheduleToday();
   const dailyScrollRef = useRef<HTMLDivElement>(null);
-  const reviewDates = rows.map(row => row.expected_review_date).filter((date): date is string => Boolean(date)).sort();
+  const reviewDates = rows.map(scheduleCalendarDate).filter((date): date is string => Boolean(date)).sort();
   const focusDate = reviewDates.find(date => date >= today) ?? reviewDates.at(-1) ?? today;
   useEffect(() => {
     if (currentView !== "d") return;
@@ -40,8 +41,8 @@ export function ReviewScheduleGrids({
   ) {
     const matched = groupRows.filter(
       (row) =>
-        row.expected_review_date &&
-        schedulePeriodKey(row.expected_review_date, view) === key,
+        scheduleCalendarDate(row) &&
+        schedulePeriodKey(scheduleCalendarDate(row)!, view) === key,
     );
     return matched.length ? matched.map(square) : <em>—</em>;
   }
@@ -117,12 +118,12 @@ export function ReviewScheduleGrids({
                     <span className="pool">
                       <span className="pool__u">
                         {group.rows
-                          .filter((r) => !r.expected_review_date)
+                          .filter((r) => !scheduleCalendarDate(r))
                           .map(square)}
                       </span>
                       <em>
                         {
-                          group.rows.filter((r) => !r.expected_review_date)
+                          group.rows.filter((r) => !scheduleCalendarDate(r))
                             .length
                         }
                       </em>
@@ -130,19 +131,19 @@ export function ReviewScheduleGrids({
                   </div>
                 ))}
                 <div className="g ft">
-                  <span className="stick">Expected for review</span>
+                  <span className="stick">Expected / delivered</span>
                   {periods.map((p) => (
                     <span key={p.key}>
                       {rows.filter(
                         (r) =>
-                          r.expected_review_date &&
-                          schedulePeriodKey(r.expected_review_date, v) ===
+                          scheduleCalendarDate(r) &&
+                          schedulePeriodKey(scheduleCalendarDate(r)!, v) ===
                             p.key,
                       ).length || "—"}
                     </span>
                   ))}
                   <span className="ns__t">
-                    <b>{rows.filter((r) => !r.expected_review_date).length}</b>{" "}
+                    <b>{rows.filter((r) => !scheduleCalendarDate(r)).length}</b>{" "}
                     of {rows.length} have no date
                   </span>
                 </div>

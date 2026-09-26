@@ -694,7 +694,7 @@
 
 .rvs .ck {color:#0057ff;} @media(max-width:600px){.rvs .tbl {--unscheduled-min:110px;}}
 
-.rvs.card.card { padding:22px 24px; width:100%; max-width:1100px; margin-inline:auto; box-sizing:border-box; line-height:normal; }
+.rvs.card.card { padding:22px 24px; width:100%; max-width:none; margin-inline:0; box-sizing:border-box; line-height:normal; }
 .rvs .g { line-height:normal; }
 .rvs .who__t b { line-height:16px; }
 .rvs .who__t u { line-height:13px; white-space:nowrap; }
