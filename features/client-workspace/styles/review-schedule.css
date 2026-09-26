@@ -626,13 +626,13 @@
   min-width: 100%;
   width: 100%;
 }
-.rvs .tbl:not([data-v="w"]) .tbl__canvas {
+.rvs .tbl:not([data-v="w"]):not([data-v="d"]) .tbl__canvas {
   width: 100%;
 }
-.rvs .tbl:not([data-v="w"]) .tbl__s {
+.rvs .tbl:not([data-v="w"]):not([data-v="d"]) .tbl__s {
   overflow-x: hidden;
 }
-.rvs .tbl:not([data-v="w"]) .mh {
+.rvs .tbl:not([data-v="w"]):not([data-v="d"]) .mh {
   min-width: 0;
   overflow-wrap: anywhere;
   padding-inline: 2px;

@@ -232,6 +232,7 @@ export function ContentReviewSchedule({
           <div className="zoom" aria-label="Schedule period">
             {(
               [
+                ["d", "Days"],
                 ["w", "Weeks"],
                 ["m", "Months"],
                 ["q", "Quarters"],
@@ -322,7 +323,7 @@ export function ContentReviewSchedule({
           <div className="flag">
             {scheduleFinding(rows)}
             <span className="flag__z">
-              Switch to Quarters for longer campaigns or Weeks for detail.
+              Switch to Days for exact dates, Weeks for detail or Quarters for longer campaigns.
             </span>
           </div>
           {list("Needs your decision", rows.filter(scheduleNeedsDecision))}

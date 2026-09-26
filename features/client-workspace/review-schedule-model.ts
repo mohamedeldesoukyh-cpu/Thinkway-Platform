@@ -35,7 +35,7 @@ export type ScheduleData = {
   end_date: string | null;
   rows: ScheduleRow[];
 };
-export type ScheduleView = "w" | "m" | "q";
+export type ScheduleView = "d" | "w" | "m" | "q";
 export type SchedulePeriod = { key: string; label: string; year: string };
 
 export function scheduleNeedsDecision(row: Pick<ScheduleRow, "status">) {
@@ -123,6 +123,7 @@ function day(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 export function schedulePeriodKey(date: string, view: ScheduleView): string {
+  if (view === "d") return date;
   const d = utc(date);
   if (view === "m") return date.slice(0, 7);
   if (view === "q")
@@ -169,7 +170,9 @@ export function scheduleAxis(
         result.push({
           key,
           label:
-            view === "w"
+            view === "d"
+              ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })
+              : view === "w"
               ? key.split("-")[1]
               : view === "q"
                 ? key.split("-")[1]
@@ -190,7 +193,7 @@ export function scheduleAxis(
     end,
     months,
     defaultView: (months <= 3 ? "w" : months <= 12 ? "m" : "q") as ScheduleView,
-    views: { w: periods("w"), m: periods("m"), q: periods("q") },
+    views: { d: periods("d"), w: periods("w"), m: periods("m"), q: periods("q") },
   };
 }
 export function scheduleFinding(rows: ScheduleRow[]) {

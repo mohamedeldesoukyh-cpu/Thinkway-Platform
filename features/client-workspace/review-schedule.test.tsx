@@ -53,6 +53,19 @@ const post: ClientCampaignPostRow = {
   assignmentDeliverableId: "d",
   quantity: 1,
 };
+test("daily view keeps exact review dates across month and leap-year boundaries", () => {
+  const rows = [{ ...scheduleFixture.rows[0], expected_review_date: "2028-02-29" }];
+  const axis = scheduleAxis({ start_date: "2028-02-28", end_date: "2028-03-01", rows });
+  assert.deepEqual(axis.views.d.map(p => p.key), ["2028-02-28", "2028-02-29", "2028-03-01"]);
+  assert.equal(axis.views.d[1].label, "29 Feb");
+  assert.equal(schedulePeriodKey("2028-02-29", "d"), "2028-02-29");
+  const html = renderToStaticMarkup(<ReviewScheduleGrids rows={rows} axis={axis} currentView="d" square={r => <i key={r.id} data-row={r.id} />} />);
+  const daily = html.split('data-v="d"')[1].split('class="tbl"')[0];
+  assert.match(daily, /Daily review schedule/);
+  assert.match(daily, /29 Feb/);
+  assert.equal((daily.match(/data-row=/g) || []).length, 1);
+  assert.match(daily, /min-width:512px/);
+});
 export const scheduleFixture: ScheduleData = {
   campaignId: "fixture",
   name: "Limitless UAE August 2026",

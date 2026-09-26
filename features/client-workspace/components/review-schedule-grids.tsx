@@ -35,9 +35,9 @@ export function ReviewScheduleGrids({
   }
   return (
     <>
-      {(["w", "m", "q"] as const).map((v) => {
+      {(["d", "w", "m", "q"] as const).filter(v => v !== "d" || currentView === "d").map((v) => {
         const periods = axis.views[v],
-          cols = `minmax(110px,176px) repeat(${periods.length},minmax(${v === "w" ? "26px" : `var(--period-min,${v === "m" ? "46px" : "90px"})`},1fr)) minmax(var(--unscheduled-min,180px),${v === "w" ? "1.4" : "2.1"}fr)`;
+          cols = `minmax(110px,176px) repeat(${periods.length},minmax(${v === "d" ? "52px" : v === "w" ? "26px" : `var(--period-min,${v === "m" ? "46px" : "90px"})`},1fr)) minmax(var(--unscheduled-min,180px),${v === "d" || v === "w" ? "1.4" : "2.1"}fr)`;
         return (
           <div
             className="tbl"
@@ -55,13 +55,13 @@ export function ReviewScheduleGrids({
               className="tbl__s"
               tabIndex={0}
               role="region"
-              aria-label={`${v === "w" ? "Weekly" : v === "m" ? "Monthly" : "Quarterly"} review schedule`}
+              aria-label={`${v === "d" ? "Daily" : v === "w" ? "Weekly" : v === "m" ? "Monthly" : "Quarterly"} review schedule`}
             >
               <div
                 className="tbl__canvas"
                 style={
-                  v === "w"
-                    ? { minWidth: 356 + periods.length * 26 }
+                  v === "d" || v === "w"
+                    ? { minWidth: 356 + periods.length * (v === "d" ? 52 : 26) }
                     : undefined
                 }
               >
