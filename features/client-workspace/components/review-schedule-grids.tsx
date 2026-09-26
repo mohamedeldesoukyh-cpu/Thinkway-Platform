@@ -2,6 +2,7 @@ import type { CSSProperties, ReactNode } from "react";
 import { reviewScheduleToday } from "../content-review-schedule";
 import {
   scheduleAxis,
+  scheduleDate,
   scheduleGroups,
   scheduleNeedsDecision,
   schedulePeriodKey,
@@ -89,6 +90,12 @@ export function ReviewScheduleGrids({
                         <u>
                           {group.rows.filter(scheduleNeedsDecision).length} of{" "}
                           {group.rows.length} need you
+                        </u>
+                        <u className="rvs-delivery">
+                          {group.rows.filter(row => row.content).length} delivered
+                          {group.rows.some(row => row.status === "awaiting_content" && row.expected_review_date) && (
+                            <> · Next {scheduleDate(group.rows.filter(row => row.status === "awaiting_content" && row.expected_review_date).map(row => row.expected_review_date!).sort()[0]).replace(/ \d{4}$/, "")}</>
+                          )}
                         </u>
                       </span>
                     </span>

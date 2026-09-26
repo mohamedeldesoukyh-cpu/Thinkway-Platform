@@ -137,7 +137,7 @@ export function ContentReviewSchedule({
     }
   }
   function square(row: ScheduleRow) {
-    const title = `${row.creator_name} · ${row.content_type} · ${row.ref} · ${SCHEDULE_STATES[row.status].label} · ${scheduleDate(row.expected_review_date)}${row.has_script ? " · Script on file" : ""}`;
+    const title = `${row.creator_name} · ${row.content_type} · ${row.ref} · ${row.content ? "Delivered · " : ""}${SCHEDULE_STATES[row.status].label} · Expected ${scheduleDate(row.expected_review_date)}${row.has_script ? " · Script on file" : ""}`;
     const className = `u ${SCHEDULE_STATES[row.status].css}${row.has_script ? " has-s" : ""}`;
     return row.content || row.has_script ? (
       <button
@@ -191,12 +191,16 @@ export function ContentReviewSchedule({
                   </u>
                 </span>
                 <span className="wq__d">
-                  Expected <b>{scheduleDate(row.expected_review_date)}</b>
+                  {row.content && !row.expected_review_date ? (
+                    <>Delivered <b>{scheduleDate(row.content.uploadedAt.slice(0, 10))}</b></>
+                  ) : (
+                    <>Expected <b>{scheduleDate(row.expected_review_date)}</b></>
+                  )}
                 </span>
                 <span
                   className={`tag ${quiet ? "t-scr" : SCHEDULE_STATES[row.status].css}`}
                 >
-                  {quiet ? "Script on file" : SCHEDULE_STATES[row.status].label}
+                  {quiet ? "Script on file" : row.status === "ready_for_approval" && row.content ? "Delivered · awaiting approval" : SCHEDULE_STATES[row.status].label}
                 </span>
                 <span className="wq__go">{row.action_label} →</span>
               </button>
@@ -338,6 +342,7 @@ export function ContentReviewSchedule({
           <p className="fine">
             Expected dates are for client review, not publication. A blue corner
             indicates a readable script; it does not mean a decision is needed.
+            {" "}Not scheduled means no expected review date was set; delivered content can still appear there.
           </p>
         </>
       )}
