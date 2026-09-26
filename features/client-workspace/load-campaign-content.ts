@@ -83,7 +83,8 @@ function logContentLoadError(scope: string, message: string | undefined) {
 
 export async function loadClientCampaignContent(
   supabase: SupabaseClient,
-  campaignHeaderId: string | null | undefined
+  campaignHeaderId: string | null | undefined,
+  strict = false
 ): Promise<ClientCampaignContent> {
   const headerId = campaignHeaderId?.trim();
   if (!headerId) return emptyClientCampaignContent();
@@ -114,6 +115,7 @@ export async function loadClientCampaignContent(
       .eq("campaign_header_id", headerId).order("decided_at", { ascending: false }),
   ]);
 
+  if (strict && [assetsResult, deliverablesResult, linesResult, influencersResult, publicationsResult, decisionsResult].some(result => result.error)) throw new Error("Content records unavailable");
   logContentLoadError("assets", assetsResult.error?.message);
   logContentLoadError("deliverables", deliverablesResult.error?.message);
   logContentLoadError("lines", linesResult.error?.message);
@@ -130,6 +132,7 @@ export async function loadClientCampaignContent(
         "id, asset_id, version_number, storage_bucket, storage_path, external_url, mime_type, file_name, uploaded_at, metadata"
       )
       .in("asset_id", assetIds);
+    if (strict && versionsResult.error) throw new Error("Content versions unavailable");
     logContentLoadError("versions", versionsResult.error?.message);
     versions = (versionsResult.data ?? []) as VersionRow[];
   }

@@ -39,6 +39,9 @@ jobs:
       - name: Creator CRM Phase 2B regression
         run: npm run test:creator-crm-phase2b
 
+      - name: Content review schedule, grids and export formula recalculation
+        run: npx tsx --test features/client-workspace/review-schedule.test.tsx features/client-workspace/review-schedule-formula-ci.test.ts features/client-workspace/content-review-schedule.test.ts lib/services/deliverables/content-review-schedule-service.test.ts
+
       - name: BullMQ producer connection
         run: npm run test:bullmq-connection
 

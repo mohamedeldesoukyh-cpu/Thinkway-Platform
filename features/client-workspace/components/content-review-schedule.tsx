@@ -1,72 +1,368 @@
 "use client";
-
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DocumentationUnitScriptSheet } from "@/features/campaigns/components/script/documentation-unit-script-sheet";
-import { clientPostDocumentationScriptUnit, documentationUnitSummaryForClientPost } from "@/lib/campaign-script/documentation-unit-ui";
+import {
+  clientPostDocumentationScriptUnit,
+  documentationUnitSummaryForClientPost,
+} from "@/lib/campaign-script/documentation-unit-ui";
 import { listClientCampaignScriptPresenceAction } from "../actions/campaign-script-actions";
 import type { ClientCampaignPostRow } from "../campaign-execution";
 import type { ClientContentReviewItem } from "../content-approval";
-import { nextContentExpectation, projectContentReviewSchedule, REVIEW_SCHEDULE_LABELS, reviewScheduleToday, type ContentReviewScheduleRow } from "../content-review-schedule";
-
-function dateLabel(value: string | null) {
-  return value ? new Date(`${value}T12:00:00Z`).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Africa/Cairo" }) : "To be confirmed";
-}
-
-export function ContentReviewSchedule({ posts, items, token, onOpenContent }: {
-  posts: ClientCampaignPostRow[]; items: ClientContentReviewItem[]; token: string;
+import {
+  scheduleAxis,
+  scheduleDate,
+  scheduleFinding,
+  scheduleGroups,
+  scheduleNeedsDecision,
+  scheduleReadableOnly,
+  scheduleRows,
+  SCHEDULE_STATES,
+  type ScheduleRow,
+  type ScheduleView,
+} from "../review-schedule-model";
+import "../styles/review-schedule.css";
+import { ReviewScheduleGrids } from "./review-schedule-grids";
+export function ContentReviewSchedule({
+  posts,
+  items,
+  token,
+  campaignName,
+  startDate,
+  endDate,
+  onOpenContent,
+}: {
+  posts: ClientCampaignPostRow[];
+  items: ClientContentReviewItem[];
+  token: string;
+  campaignName: string;
+  startDate?: string | null;
+  endDate?: string | null;
   onOpenContent: (item: ClientContentReviewItem) => void;
 }) {
-  const [scripts, setScripts] = useState<Set<string>>(new Set());
-  const [scriptsLoaded, setScriptsLoaded] = useState(false);
-  const [scriptError, setScriptError] = useState(false);
-  const [retry, setRetry] = useState(0);
-  const [scriptPost, setScriptPost] = useState<ClientCampaignPostRow | null>(null);
-  const [query, setQuery] = useState("");
-  const [today, setToday] = useState(reviewScheduleToday);
-  useEffect(() => {
-    const timer = window.setInterval(() => setToday(reviewScheduleToday()), 60_000);
-    return () => window.clearInterval(timer);
-  }, []);
+  const [scripts, setScripts] = useState<Set<string>>(new Set()),
+    [loaded, setLoaded] = useState(false),
+    [error, setError] = useState(false),
+    [retry, setRetry] = useState(0);
+  const [scriptPost, setScriptPost] = useState<ClientCampaignPostRow | null>(
+      null,
+    ),
+    [view, setView] = useState<ScheduleView | null>(null);
+  const [menu, setMenu] = useState(false),
+    [downloadError, setDownloadError] = useState(""),
+    [downloading, setDownloading] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let cancelled = false;
-    setScriptsLoaded(false); setScriptError(false);
-    void listClientCampaignScriptPresenceAction({ token }).then(result => {
-      if (cancelled) return;
-      if (result.ok) { setScripts(new Set(result.data.map(item => item.unitKey))); setScriptsLoaded(true); }
-      else setScriptError(true);
-    }).catch(() => { if (!cancelled) setScriptError(true); });
-    return () => { cancelled = true; };
+    void listClientCampaignScriptPresenceAction({ token })
+      .then((result) => {
+        if (cancelled) return;
+        if (result.ok) {
+          setScripts(new Set(result.data.map((i) => i.unitKey)));
+          setLoaded(true);
+        } else setError(true);
+      })
+      .catch(() => {
+        if (!cancelled) setError(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [token, retry]);
-  const all = projectContentReviewSchedule(posts, items, scripts, today);
-  if (!all.length) return null;
-  const next = nextContentExpectation(all, today);
-  const filtered = all.filter(row => `${row.post.creatorName} ${row.post.deliverable} ${row.kind}`.toLowerCase().includes(query.trim().toLowerCase()));
-  const active = filtered.filter(row => row.status !== "approved" && row.status !== "published");
-  const completed = filtered.filter(row => row.status === "approved" || row.status === "published");
-  const mapped = scriptPost ? clientPostDocumentationScriptUnit(scriptPost) : null;
-  const scriptUnit = scriptPost && mapped ? documentationUnitSummaryForClientPost({ ...mapped, sequenceNumber: scriptPost.sequenceNumber,
-    creatorName: scriptPost.creatorName, platform: scriptPost.platform, deliverableLabel: scriptPost.deliverable }) : null;
-  function table(rows: ContentReviewScheduleRow[]) {
-    return <div className="cx-review-schedule__scroll" tabIndex={0} role="region" aria-label="Content review dates"><table>
-      <thead><tr><th scope="col">Creator / content</th><th scope="col">Expected for review</th><th scope="col">Status</th><th scope="col"><span className="sr-only">Action</span></th></tr></thead>
-      <tbody>{rows.map(row => <tr key={row.id}>
-        <td><strong>{row.post.creatorName}</strong><small>{row.kind === "script" ? "Script" : row.post.deliverable}{(row.post.quantity ?? 1) > 1 && row.post.sequenceNumber ? ` · #${row.post.sequenceNumber}` : ""}{row.kind === "draft" ? " · Content draft" : ""}</small></td>
-        <td>{row.expectedDate ? <time dateTime={row.expectedDate}>{dateLabel(row.expectedDate)}</time> : <span className="cx-review-schedule__muted">To be confirmed</span>}</td>
-        <td><span className={`cx-review-schedule__status cx-review-schedule__status--${row.status}`}>{row.kind === "script" && !scriptsLoaded ? scriptError ? "Status unavailable" : "Checking content…" : REVIEW_SCHEDULE_LABELS[row.status]}</span></td>
-        <td>{row.content ? <button type="button" className="btn" onClick={() => onOpenContent(row.content!)}>Open content</button> : row.hasScript ? <button type="button" className="btn" onClick={() => setScriptPost(row.post)}>Open script</button> : <span className="cx-review-schedule__muted">{row.status === "published" ? "Published" : "Awaiting content"}</span>}</td>
-      </tr>)}</tbody>
-    </table></div>;
+  useEffect(() => {
+    function outside(e: PointerEvent) {
+      if (!menuRef.current?.contains(e.target as Node)) setMenu(false);
+    }
+    function escape(e: KeyboardEvent) {
+      if (e.key === "Escape") setMenu(false);
+    }
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
+  const rows = scheduleRows(posts, items, scripts),
+    axis = scheduleAxis({
+      rows,
+      start_date: startDate ?? null,
+      end_date: endDate ?? null,
+    });
+  const currentView = view ?? axis.defaultView,
+    groups = scheduleGroups(rows);
+  const mapped = scriptPost
+    ? clientPostDocumentationScriptUnit(scriptPost)
+    : null;
+  const scriptUnit =
+    scriptPost && mapped
+      ? documentationUnitSummaryForClientPost({
+          ...mapped,
+          sequenceNumber: scriptPost.sequenceNumber,
+          creatorName: scriptPost.creatorName,
+          platform: scriptPost.platform,
+          deliverableLabel: scriptPost.deliverable,
+        })
+      : null;
+  function open(row: ScheduleRow) {
+    if (row.content) onOpenContent(row.content);
+    else if (row.has_script) setScriptPost(row.post);
   }
-  return <section className="card cx-review-schedule" aria-label="Content review schedule">
-    <header><div><h2>Content review schedule</h2><p>{next.date ? <>Next content expected: <strong>{dateLabel(next.date)}</strong> · {next.count} {next.count === 1 ? "item" : "items"}</> : "No upcoming review dates confirmed."}</p></div>
-      <input type="search" aria-label="Search content review schedule" placeholder="Find creator or content" value={query} onChange={event => setQuery(event.target.value)} />
-    </header>
-    {scriptError ? <p role="status" className="cx-review-schedule__note">Script availability could not be checked. <button type="button" className="btn" onClick={() => setRetry(value => value + 1)}>Retry</button></p> : null}
-    {active.length ? table(active) : <p className="cx-review-schedule__note">{query ? "No pending content matches your search." : "All scheduled content has been completed."}</p>}
-    {completed.length ? <details><summary>Approved / published · {completed.length}</summary>{table(completed)}</details> : null}
-    <p className="cx-review-schedule__note">Expected dates are for client review, not publication. Dates without a confirmed schedule remain “To be confirmed.”</p>
-    <DocumentationUnitScriptSheet open={Boolean(scriptUnit)} onOpenChange={open => { if (!open) setScriptPost(null); }} surface="client" token={token} unit={scriptUnit} intent="edit" onPresenceChange={(key, presence) => setScripts(current => {
-      const next = new Set(current); if (presence.hasScript) next.add(key); else next.delete(key); return next;
-    })} />
-  </section>;
+  async function download(format: "pdf" | "xlsx" | "html") {
+    setMenu(false);
+    setDownloading(true);
+    setDownloadError("");
+    try {
+      const response = await fetch(
+        `/api/campaigns/current/review-schedule.${format}`,
+        { headers: { Authorization: `Bearer ${token}` }, cache: "no-store" },
+      );
+      if (!response.ok)
+        throw new Error("Schedule download failed. Please try again.");
+      const url = URL.createObjectURL(await response.blob()),
+        a = document.createElement("a");
+      a.href = url;
+      a.download =
+        response.headers
+          .get("Content-Disposition")
+          ?.match(/filename="([^"]+)"/)?.[1] ??
+        `${campaignName}-review-schedule.${format}`;
+      a.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) {
+      setDownloadError(
+        e instanceof Error ? e.message : "Download unavailable.",
+      );
+    } finally {
+      setDownloading(false);
+    }
+  }
+  function square(row: ScheduleRow) {
+    const title = `${row.creator_name} · ${row.content_type} · ${row.ref} · ${SCHEDULE_STATES[row.status].label} · ${scheduleDate(row.expected_review_date)}${row.has_script ? " · Script on file" : ""}`;
+    const className = `u ${SCHEDULE_STATES[row.status].css}${row.has_script ? " has-s" : ""}`;
+    return row.content || row.has_script ? (
+      <button
+        key={row.id}
+        type="button"
+        className={className}
+        title={title}
+        aria-label={title}
+        onClick={() => open(row)}
+      />
+    ) : (
+      <span
+        key={row.id}
+        className={className}
+        title={title}
+        aria-label={title}
+      />
+    );
+  }
+  function list(title: string, listRows: ScheduleRow[], quiet = false) {
+    return (
+      <>
+        <div className="wq__h">
+          {title}
+          <em>{listRows.length}</em>
+          <span className="sp" />
+          <span className="wq__n">
+            {quiet
+              ? "script on file · no decision needed"
+              : "ready regardless of schedule"}
+          </span>
+        </div>
+        <div className="wq__l">
+          {listRows.length ? (
+            listRows.map((row) => (
+              <button
+                type="button"
+                className={`wq${quiet ? " wq--q" : ""}`}
+                key={row.id}
+                onClick={() => open(row)}
+              >
+                <span
+                  className={`av a${(groups.findIndex((group) => group.name === row.handle) % 3) + 1}`}
+                >
+                  {row.creator_name.replace(/^@/, "").slice(0, 2).toUpperCase()}
+                </span>
+                <span className="wq__t">
+                  <b>{row.creator_name}</b>
+                  <u>
+                    {row.content_type} · {row.ref}
+                  </u>
+                </span>
+                <span className="wq__d">
+                  Expected <b>{scheduleDate(row.expected_review_date)}</b>
+                </span>
+                <span
+                  className={`tag ${quiet ? "t-scr" : SCHEDULE_STATES[row.status].css}`}
+                >
+                  {quiet ? "Script on file" : SCHEDULE_STATES[row.status].label}
+                </span>
+                <span className="wq__go">{row.action_label} →</span>
+              </button>
+            ))
+          ) : (
+            <p className="fine">
+              {quiet
+                ? "No additional scripts to read."
+                : "No decisions needed right now."}
+            </p>
+          )}
+        </div>
+      </>
+    );
+  }
+  if (!rows.length && loaded) return null;
+  return (
+    <section className="card rvs" aria-label="Content review schedule">
+      <div className="rvs__h">
+        <div>
+          <p className="ck">Campaign progress</p>
+          <h2>Content review schedule</h2>
+          <p className="sub">
+            When each deliverable is expected with you for review.
+          </p>
+        </div>
+        <span className="sp" />
+        <div className="tools">
+          <div className="zoom" aria-label="Schedule period">
+            {(
+              [
+                ["w", "Weeks"],
+                ["m", "Months"],
+                ["q", "Quarters"],
+              ] as const
+            ).map(([v, label]) => (
+              <button
+                type="button"
+                data-v={v}
+                key={v}
+                aria-pressed={currentView === v}
+                onClick={() => setView(v)}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <div className="dl" ref={menuRef}>
+            <button
+              type="button"
+              className="dl__b"
+              aria-expanded={menu}
+              onClick={() => setMenu(!menu)}
+              disabled={!loaded || downloading}
+            >
+              {downloading ? "Preparing download…" : "Download schedule"}{" "}
+              <em>▾</em>
+            </button>
+            <div className="dl__m" hidden={!menu}>
+              {(
+                [
+                  ["pdf", "PDF", "Print-ready, all deliverables by creator"],
+                  ["xlsx", "Excel", "Filterable, with a formula summary"],
+                  ["html", "HTML", "Self-contained, opens in a browser"],
+                ] as const
+              ).map(([f, label, detail]) => (
+                <button
+                  type="button"
+                  className="dl__i"
+                  data-f={f}
+                  key={f}
+                  onClick={() => void download(f)}
+                >
+                  <b>{label}</b>
+                  <u>{detail}</u>
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      {!loaded ? (
+        <p className="error" role="status">
+          {error ? (
+            <>
+              Script availability could not be checked.{" "}
+              <button
+                type="button"
+                onClick={() => {
+                  setError(false);
+                  setRetry((r) => r + 1);
+                }}
+              >
+                Retry
+              </button>
+            </>
+          ) : (
+            "Loading review schedule…"
+          )}
+        </p>
+      ) : (
+        <>
+          <p className="rvs__m">
+            {rows.length} deliverables · {groups.length} creators ·{" "}
+            <b>
+              {scheduleDate(startDate ?? null)} →{" "}
+              {scheduleDate(endDate ?? null)}
+            </b>{" "}
+            · {axis.months} months
+          </p>
+
+          <ReviewScheduleGrids
+            rows={rows}
+            axis={axis}
+            currentView={currentView}
+            square={square}
+          />
+          <div className="flag">
+            {scheduleFinding(rows)}
+            <span className="flag__z">
+              Switch to Quarters for longer campaigns or Weeks for detail.
+            </span>
+          </div>
+          {list("Needs your decision", rows.filter(scheduleNeedsDecision))}
+          {list("Readable now", rows.filter(scheduleReadableOnly), true)}
+          <div className="key">
+            {Object.entries(SCHEDULE_STATES).map(([status, info]) => (
+              <span key={status}>
+                <i className={`u ${info.css}`} />
+                {info.label}
+              </span>
+            ))}
+            <span>
+              <i className="u u-tb has-s" />
+              Script on file
+            </span>
+          </div>
+          <p className="fine">
+            Expected dates are for client review, not publication. A blue corner
+            indicates a readable script; it does not mean a decision is needed.
+          </p>
+        </>
+      )}
+      {downloadError ? (
+        <p className="error" role="alert">
+          {downloadError}
+        </p>
+      ) : null}
+      <DocumentationUnitScriptSheet
+        open={Boolean(scriptUnit)}
+        onOpenChange={(open) => {
+          if (!open) setScriptPost(null);
+        }}
+        surface="client"
+        token={token}
+        unit={scriptUnit}
+        intent="edit"
+        onPresenceChange={(key, presence) =>
+          setScripts((current) => {
+            const next = new Set(current);
+            if (presence.hasScript) next.add(key);
+            else next.delete(key);
+            return next;
+          })
+        }
+      />
+    </section>
+  );
 }

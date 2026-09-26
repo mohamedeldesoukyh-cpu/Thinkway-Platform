@@ -65,7 +65,7 @@ export function CampaignDashboard({
   const pendingReview = clientContentToReview(displayedContent);
   const [overdueFocus, setOverdueFocus] = useState(0);
   const [contentFocus, setContentFocus] = useState<{ versionId: string; request: number } | undefined>();
-  const scheduleSection = !historical ? <ContentReviewSchedule posts={agreedPosts} items={displayedContent} token={token} onOpenContent={item => setContentFocus(current => ({ versionId: item.versionId, request: (current?.request ?? 0) + 1 }))} /> : null;
+  const scheduleSection = !historical ? <ContentReviewSchedule key={token} campaignName={campaignName} startDate={campaignStartDate} endDate={campaignEndDate} posts={agreedPosts} items={displayedContent} token={token} onOpenContent={item => setContentFocus(current => ({ versionId: item.versionId, request: (current?.request ?? 0) + 1 }))} /> : null;
   const contentSection = (
     <ContentToReview
       items={displayedContent}

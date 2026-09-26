@@ -82,7 +82,8 @@ function influencerAvatar(row: InfluencerRow): string | null {
 
 export async function loadClientCampaignExecution(
   supabase: SupabaseClient,
-  campaignHeaderId: string | null | undefined
+  campaignHeaderId: string | null | undefined,
+  strict = false
 ): Promise<ClientCampaignExecution> {
   const headerId = campaignHeaderId?.trim();
   if (!headerId) return emptyClientCampaignExecution();
@@ -121,6 +122,7 @@ export async function loadClientCampaignExecution(
         .maybeSingle(),
     ]);
 
+    if (strict && [linesResult, deliverablesResult, publicationsResult, influencersResult, headerResult].some(result => result.error)) throw new Error("Schedule records unavailable");
     const lines = (linesResult.data ?? []) as LineRow[];
     const lineIds = lines.map((line) => line.id);
     let posts: PostRow[] = [];
@@ -130,6 +132,7 @@ export async function loadClientCampaignExecution(
         .select("id, assignment_deliverable_id, campaign_line_id, sequence_number, live_date, status, proof_url")
         .in("campaign_line_id", lineIds)
         .order("sequence_number");
+      if (strict && postsResult.error) throw new Error("Schedule slots unavailable");
       posts = (postsResult.data ?? []) as PostRow[];
     }
 
@@ -208,7 +211,8 @@ export async function loadClientCampaignExecution(
       const dates = readContentReviewDates(deliverable?.metadata, post.sequenceNumber);
       return { ...post, expectedScriptDate: dates.script, expectedDraftDate: dates.draft };
     }) };
-  } catch {
+  } catch (error) {
+    if (strict) throw error;
     return { campaignHeaderId: headerId, posts: [], startDate: null, endDate: null };
   }
 }
