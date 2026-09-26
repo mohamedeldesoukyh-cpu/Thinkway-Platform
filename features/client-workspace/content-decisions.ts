@@ -12,6 +12,7 @@ import { isClientWorkspaceSectionOpen } from "./entitlement";
 import { journeyCanonicalReviewId, pickActiveDecisionReview } from "./journey-state";
 import { loadJourneyReviews, resolveClientReviewByToken } from "./load-client-workspace";
 import type { ClientReviewRecord } from "./types";
+import { hydrateReviewCampaigns } from "./resolve-review-campaign";
 
 function db(): SupabaseClient {
   const service = tryCreateServiceRoleClient().client;
@@ -43,7 +44,7 @@ export async function requireCurrentCampaignContentAccess(token: string): Promis
       message: "This historical version cannot review campaign content.",
     };
   }
-  const current = picked.review ?? resolved.review;
+  const [current] = await hydrateReviewCampaigns(db(), [picked.review ?? resolved.review]);
   const entitlementLoaded = await loadEntitlementForReview(db(), current);
   const entitlementBlock = clientWorkspaceEntitlementBlock(
     entitlementLoaded.clientId,

@@ -175,7 +175,7 @@ export async function loadJourneyReviews(
   supabase: SupabaseClient,
   review: ClientReviewRecord
 ): Promise<ClientReviewRecord[]> {
-  if (!review.journeyId) return hydrateReviewCampaigns(supabase, [review]);
+  if (!review.journeyId) return [review];
   const { data } = await supabase
     .from("campaign_client_reviews" as never)
     .select("*")
@@ -185,7 +185,7 @@ export async function loadJourneyReviews(
   const rows = (data ?? []) as Parameters<typeof mapClientReviewRow>[0][];
   const mapped = rows.map((row) => mapClientReviewRow(row));
   if (!mapped.some((item) => item.id === review.id)) mapped.push(review);
-  return hydrateReviewCampaigns(supabase, mapped);
+  return mapped;
 }
 
 async function markFirstViewed(supabase: SupabaseClient, review: ClientReviewRecord): Promise<ClientReviewRecord> {
@@ -486,9 +486,12 @@ export async function loadClientWorkspace(
 
   const shortlistApproved = latestApprovedReviewForSource(members, "shortlist");
   const quotationLatest = latestReviewForSource(members, "quotation");
+  // Resolve execution separately from the stored commercial review. Attaching a
+  // live campaign must not replace quotation pricing with an older snapshot.
+  const executionMembers = await hydrateReviewCampaigns(db, members);
   const journey = projectClientJourney({
-    members,
-    viewed: activeReview,
+    members: executionMembers,
+    viewed: executionMembers.find((review) => review.id === activeReview.id) ?? activeReview,
     historical: picked.historical,
     canonicalReviewId: journeyCanonicalReviewId(members, resolvedInitial.review.id),
   });
