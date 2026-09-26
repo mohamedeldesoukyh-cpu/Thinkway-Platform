@@ -39,17 +39,14 @@ export function ContentReviewDatesEditor({ unit }: { unit: DocumentationUnitSumm
       });
     }}>
       <p className="mb-1 font-semibold">Content review schedule</p>
-      <p className="mb-2 text-muted-foreground">Dates the client can expect to receive content for review. Separate from publishing dates.</p>
+      <p className="mb-2 text-muted-foreground">When the client should receive this video or content for approval. Scripts are shared references; the publishing date is set separately.</p>
       <div className="flex flex-wrap items-end gap-2">
-        <label className="min-w-36 flex-1 space-y-1">Expected script
-          <Input aria-label="Expected script for review" type="date" className="h-8 text-xs" value={dates.script ?? ""} disabled={!saved || pending} onChange={event => setDates(current => ({ ...current, script: event.target.value || null }))} />
+        <label className="min-w-36 flex-1 space-y-1">Expected content for client review
+          <Input aria-label="Expected content for client review" type="date" className="h-8 text-xs" value={dates.draft ?? ""} disabled={!saved || pending} onChange={event => setDates(current => ({ ...current, draft: event.target.value || null }))} />
         </label>
-        <label className="min-w-36 flex-1 space-y-1">Expected draft
-          <Input aria-label="Expected draft for review" type="date" className="h-8 text-xs" value={dates.draft ?? ""} disabled={!saved || pending} onChange={event => setDates(current => ({ ...current, draft: event.target.value || null }))} />
-        </label>
-        <Button type="submit" size="sm" className="h-8 text-xs" disabled={!dirty || pending}>{pending ? "Saving…" : "Save dates"}</Button>
+        <Button type="submit" size="sm" className="h-8 text-xs" disabled={!dirty || pending}>{pending ? "Saving…" : "Save date"}</Button>
       </div>
-      {error ? <p role="alert" className="mt-2 text-destructive">{error} <button type="button" className="underline" onClick={() => { setSaved(null); setError(null); setReload(value => value + 1); }}>Reload dates</button></p> : !saved ? <p role="status" className="mt-2 text-muted-foreground">Loading review dates…</p> : <p className="mt-2 text-muted-foreground">Blank dates appear as “To be confirmed.” Saving makes these dates visible to the client.</p>}
+      {error ? <p role="alert" className="mt-2 text-destructive">{error} <button type="button" className="underline" onClick={() => { setSaved(null); setError(null); setReload(value => value + 1); }}>Reload date</button></p> : !saved ? <p role="status" className="mt-2 text-muted-foreground">Loading review date…</p> : <p className="mt-2 text-muted-foreground">This date appears in the client’s content review calendar. Leave it blank if it is not confirmed.</p>}
     </form>
   );
 }
