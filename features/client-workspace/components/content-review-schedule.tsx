@@ -302,8 +302,9 @@ export function ContentReviewSchedule({
           <p className="rvs__m">
             {rows.length} deliverables · {groups.length} creators ·{" "}
             <b>
-              {scheduleDate(startDate ?? null)} →{" "}
-              {scheduleDate(endDate ?? null)}
+              {startDate && endDate
+                ? `${scheduleDate(startDate)} → ${scheduleDate(endDate)}`
+                : `Review calendar: ${scheduleDate(axis.start)} → ${scheduleDate(axis.end)}`}
             </b>{" "}
             · {axis.months} {axis.months === 1 ? "month" : "months"}
           </p>
