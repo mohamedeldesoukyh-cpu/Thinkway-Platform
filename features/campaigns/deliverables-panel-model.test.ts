@@ -1,9 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import fixture from '../../tests/fixtures/deliverables-mixed-84.json';
 import { buildPanelRows, filterPanelRows, validatePanelUpload, type PanelSnapshot } from './deliverables-panel-model';
 import type { DocumentationUnitSummary } from '@/lib/services/deliverables/documentation-types';
 const unit = { unitKey: 'd:one', assignmentDeliverableId: 'one', assignmentPostScheduleId: null, quantity: 1, sequenceNumber: null, creatorName: 'Creator', label: 'Reel' } as DocumentationUnitSummary;
 const empty: PanelSnapshot = { assets: [], metadata: {}, scripts: ['d:one'] };
+test('84 mixed deliverables discriminate every filter and omit satisfied creators', () => {
+    const units = fixture.map(r => ({ ...unit, unitKey: `d:${r.id}`, assignmentDeliverableId: r.id, creatorId: r.creatorId, creatorName: r.creator, platform: r.platform }));
+    const assets = fixture.filter(r => r.status !== 'missing').map(r => ({ deliverableId: r.id, postId: null, hasContent: true, type: 'draft_video', uploadedAt: '2026-09-26', releasedAt: r.status === 'uploaded' ? null : '2026-09-26', decision: r.status === 'approved' ? 'approved' : null } as PanelSnapshot['assets'][number]));
+    const rows = buildPanelRows(units, { ...empty, assets });
+    for (const [status, count] of Object.entries({ missing: 30, uploaded: 24, review: 18, approved: 12, all: 84 })) {
+        assert.equal(filterPanelRows(rows, status as 'all' | 'missing' | 'uploaded' | 'review' | 'approved', '').length, count);
+    }
+    assert.equal(filterPanelRows(rows, 'missing', 'Creator 28').length, 0);
+    assert.equal(filterPanelRows(rows, 'all', 'Creator 28').length, 3);
+});
 test('Reference scripts do not count as uploaded or client review work', () => {
     const rows = buildPanelRows([unit], empty);
     assert.equal(rows[0].status, 'missing');
