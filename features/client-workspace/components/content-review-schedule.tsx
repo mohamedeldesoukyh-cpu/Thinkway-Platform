@@ -316,6 +316,16 @@ export function ContentReviewSchedule({
             · {axis.months} {axis.months === 1 ? "month" : "months"}
           </p>
 
+          <div className="key" aria-label="Schedule colour legend">
+            {Object.entries(SCHEDULE_STATES).map(([status, info]) => (
+              <span key={status}>
+                <i className={`u ${info.css}`} />
+                {info.label}
+              </span>
+            ))}
+            <span><i className="u u-tb has-s" />Script on file</span>
+          </div>
+          <p className="legend-note">Each coloured square is one deliverable. Purple means content is still expected; green means delivered and awaiting approval. A blue corner marks an attached reference script.</p>
           <ReviewScheduleGrids
             rows={rows}
             axis={axis}
@@ -344,18 +354,6 @@ export function ContentReviewSchedule({
             <p>Save the script to share it with the assigned creator and Thinkway. No client approval is required for reference scripts.</p>
           </div>
           {list("Script references", rows.filter(row => row.has_script), true)}
-          <div className="key">
-            {Object.entries(SCHEDULE_STATES).map(([status, info]) => (
-              <span key={status}>
-                <i className={`u ${info.css}`} />
-                {info.label}
-              </span>
-            ))}
-            <span>
-              <i className="u u-tb has-s" />
-              Script on file
-            </span>
-          </div>
           <p className="fine">
             Expected dates are for client review, not publication. A blue corner
             indicates a readable script; it does not mean a decision is needed.

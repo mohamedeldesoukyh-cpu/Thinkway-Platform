@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import { reviewScheduleToday } from "../content-review-schedule";
 import {
   scheduleAxis,
@@ -21,6 +21,18 @@ export function ReviewScheduleGrids({
 }) {
   const groups = scheduleGroups(rows);
   const today = reviewScheduleToday();
+  const dailyScrollRef = useRef<HTMLDivElement>(null);
+  const reviewDates = rows.map(row => row.expected_review_date).filter((date): date is string => Boolean(date)).sort();
+  const focusDate = reviewDates.find(date => date >= today) ?? reviewDates.at(-1) ?? today;
+  useEffect(() => {
+    if (currentView !== "d") return;
+    const viewport = dailyScrollRef.current;
+    const target = viewport?.querySelector<HTMLElement>(`[data-period="${focusDate}"]`);
+    const creator = viewport?.querySelector<HTMLElement>(".hd .stick");
+    if (viewport && target && creator) {
+      viewport.scrollLeft += target.getBoundingClientRect().left - viewport.getBoundingClientRect().left - creator.getBoundingClientRect().width - 52;
+    }
+  }, [currentView, focusDate, axis.start, axis.end]);
   function periodContents(
     groupRows: ScheduleRow[],
     key: string,
@@ -53,6 +65,7 @@ export function ReviewScheduleGrids({
           >
             <div
               className="tbl__s"
+              ref={v === "d" ? dailyScrollRef : undefined}
               tabIndex={0}
               role="region"
               aria-label={`${v === "d" ? "Daily" : v === "w" ? "Weekly" : v === "m" ? "Monthly" : "Quarterly"} review schedule`}
@@ -71,6 +84,7 @@ export function ReviewScheduleGrids({
                     <span
                       className={`mh${p.key === schedulePeriodKey(today, v) ? " is-now" : ""}`}
                       key={p.key}
+                      data-period={p.key}
                     >
                       {p.label}
                       <em>{p.year}</em>
