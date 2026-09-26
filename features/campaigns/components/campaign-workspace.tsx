@@ -52,8 +52,7 @@ import { CampaignHeroActions } from "@/features/campaigns/components/aurora/camp
 import "@/app/styles/campaign-detail-suite.css";
 import { DuplicateCampaignDialog } from "@/features/campaigns/components/duplicate-campaign-dialog";
 import { CampaignBillingTab } from "@/features/campaigns/components/tabs/campaign-billing-tab";
-import { CampaignDeliverablesTab } from "@/features/campaigns/components/tabs/campaign-deliverables-tab";
-import { CampaignDeliverablesDocumentationTab } from "@/features/campaigns/components/tabs/campaign-deliverables-documentation-tab";
+import { DeliverablesPanel } from "@/features/campaigns/components/deliverables/deliverables-panel";
 import { CampaignAssignmentsTab } from "@/features/campaigns/components/tabs/campaign-assignments-tab";
 import { CampaignPerformanceCenterTab } from "@/features/campaigns/components/performance/campaign-performance-center-tab";
 import { CampaignOverviewTab } from "@/features/campaigns/components/tabs/campaign-overview-tab";
@@ -194,38 +193,6 @@ export function CampaignWorkspaceView({
     },
     [pathname]
   );
-
-  const openDeliverableDocumentation = useCallback(
-    (focus?: {
-      creatorId?: string | null;
-      deliverableId?: string | null;
-      postScheduleId?: string | null;
-    }) => {
-      setDeliverablesDocsOpen(true);
-      setDeliverablesDocsFocus({
-        creatorId: focus?.creatorId ?? null,
-        deliverableId: focus?.deliverableId ?? null,
-        postScheduleId: focus?.postScheduleId ?? null,
-      });
-    },
-    []
-  );
-
-  const closeDeliverableDocumentation = useCallback(() => {
-    setDeliverablesDocsOpen(false);
-    setDeliverablesDocsFocus({ creatorId: null, deliverableId: null, postScheduleId: null });
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    if (!params.has("docsCreator") && !params.has("deliverable")) return;
-    params.delete("docsCreator");
-    params.delete("deliverable");
-    const query = params.toString();
-    window.history.replaceState(
-      window.history.state,
-      "",
-      query ? `${pathname}?${query}` : pathname
-    );
-  }, [pathname]);
 
   const operationalDeliverableCount = useMemo(() => {
     if (bundleStatuses.publications === "loaded") {
@@ -595,30 +562,14 @@ export function CampaignWorkspaceView({
               renderWithLifecycleGuidance(
                 "deliverables",
                 <TabErrorBoundary tabName="Deliverables">
-                  {/*
-                    STAB-007: tab badge counts operational deliverable units.
-                    Default surface is the operational explorer. Upload for client
-                    review lives in the documentation repository, opened from the
-                    explorer (local state — history.replaceState does not update
-                    Next searchParams).
-                  */}
-                  {deliverablesDocsOpen ? (
-                    <CampaignDeliverablesDocumentationTab
-                      workspace={workspace}
-                      assignmentHierarchy={assignmentHierarchy}
-                      initialCreatorFilter={deliverablesDocsFocus.creatorId}
-                      initialDeliverableId={deliverablesDocsFocus.deliverableId}
-                      initialPostScheduleId={deliverablesDocsFocus.postScheduleId}
-                      onBackToSchedule={closeDeliverableDocumentation}
-                    />
-                  ) : (
-                    <CampaignDeliverablesTab
-                      workspace={workspace}
-                      assignmentHierarchy={assignmentHierarchy}
-                      publications={publications}
-                      onOpenDocumentation={openDeliverableDocumentation}
-                    />
-                  )}
+                  <DeliverablesPanel
+                    workspace={workspace}
+                    assignmentHierarchy={assignmentHierarchy}
+                    active={activeTab === "deliverables"}
+                    initialUpload={deliverablesDocsOpen}
+                    initialDeliverableId={deliverablesDocsFocus.deliverableId}
+                    initialPostScheduleId={deliverablesDocsFocus.postScheduleId}
+                  />
                 </TabErrorBoundary>
               )
             )}

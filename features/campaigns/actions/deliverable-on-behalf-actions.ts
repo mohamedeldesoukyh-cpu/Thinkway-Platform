@@ -185,6 +185,7 @@ export async function completeDeliverableOnBehalfUploadAction(input: {
   versionId: string;
   versionNumber: number;
   storagePath: string;
+  deferRelease?: boolean;
 }): Promise<DocumentationActionResult<{ assetId: string; versionId: string }>> {
   const access = await requireOnBehalfUnit({
     campaignHeaderId: input.campaignHeaderId,
@@ -208,7 +209,7 @@ export async function completeDeliverableOnBehalfUploadAction(input: {
     versionId: input.versionId,
     versionNumber: input.versionNumber,
     storagePath: input.storagePath,
-    releaseToClient: true,
+    releaseToClient: !input.deferRelease,
     onBehalf: {
       ...access.attribution,
       kind: onBehalfKindForVersionNumber(input.versionNumber),
@@ -229,6 +230,7 @@ export async function addDeliverableOnBehalfExternalLinkAction(input: {
   assetType: string;
   label?: string | null;
   externalUrl: string;
+  deferRelease?: boolean;
 }): Promise<DocumentationActionResult<{ assetId: string }>> {
   const access = await requireOnBehalfUnit({
     campaignHeaderId: input.campaignHeaderId,
@@ -247,7 +249,7 @@ export async function addDeliverableOnBehalfExternalLinkAction(input: {
     assetType,
     label: input.label,
     externalUrl: input.externalUrl,
-    releaseToClient: true,
+    releaseToClient: !input.deferRelease,
     onBehalf: { ...access.attribution, kind: "submit" },
   });
   if (!result.ok) return result;

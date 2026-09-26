@@ -1,0 +1,396 @@
+/* Deliverables-only stopgap. Regenerate dependencies with scripts/extract-deliverables-styles.cjs. */
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv {
+ --tw-blue:#0057FF;--tw-b2:#1A6FFF;--tw-bi:#0B52E0;--tw-bdk:#0040CC;--tw-navy:#060810;
+ --tw-ink:#0B0F1A;--tw-ink2:#41495A;--tw-mut:#64748B;--tw-line:#E2E8F0;--tw-hair:#EDF0F5;
+ --tw-bg:#FAFBFC;--tw-soft:#F6F8FB;--tw-lav:#EFF4FF;
+ --tw-ok:#0A7A55;--tw-okb:#E9F7F1;--tw-wrn:#8A5D12;--tw-wrnb:#FFF6E8;
+ --tw-bad:#C82121;--tw-badb:#FEF2F2;--tw-vio:#5B3FD1;--tw-viob:#F1EDFE;
+ --tw-grad:linear-gradient(145deg,#0040CC 0%,#0057FF 40%,#1A6FFF 70%,#0048DD 100%);
+ --tw-ring:0 0 0 1px rgba(0,87,255,.05),0 8px 24px rgba(0,87,255,.06);
+ --tw-ez:cubic-bezier(.23,1,.32,1);color:var(--tw-ink);
+ font:400 15px/1.5 var(--font-geist-sans), 'Geist', sans-serif;
+ -webkit-font-smoothing:antialiased}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-sp{flex:1 1 auto}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b{height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;border:.8px solid #E3E8F2;border-radius:9px;background:#fff;color:var(--tw-ink2);font:600 12.5px 'Geist',sans-serif;cursor:pointer;white-space:nowrap;transition:border-color .15s var(--tw-ez),color .15s}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b:hover{border-color:rgba(0,87,255,.35);color:var(--tw-bi)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b:focus-visible{outline:2px solid var(--tw-blue);outline-offset:2px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b.pri{border-color:rgba(0,87,255,.55);color:var(--tw-bi);font-weight:700;font-size:12px;box-shadow:0 0 0 3px rgba(0,87,255,.08),0 2px 14px -3px rgba(0,87,255,.4)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b.sm{height:27px;padding:0 10px;font-size:11.5px;border-radius:8px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b[disabled]{opacity:.42;cursor:not-allowed;box-shadow:none}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-seg{display:inline-flex;padding:2px;background:var(--tw-soft);border:1px solid var(--tw-hair);border-radius:9px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-seg button{padding:5px 11px;border:0;border-radius:7px;cursor:pointer;font:600 11.5px 'Geist',sans-serif;background:none;color:var(--tw-mut)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-seg button[aria-pressed="true"]{background:#fff;color:var(--tw-bi);box-shadow:0 1px 2px rgba(11,15,26,.08)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv.tw-c{background:#fff;border-radius:12px;box-shadow:var(--tw-ring);overflow:hidden;margin-bottom:14px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ch{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 15px;border-bottom:1px solid var(--tw-line)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ct{font-size:13px;font-weight:600}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-cs{font-size:11px;color:var(--tw-mut)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-sc{overflow-x:auto}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-g{display:grid;grid-template-columns:var(--cols);align-items:center}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-g > *{padding:0 8px;min-width:0}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-hr{position:sticky;top:0;z-index:3;background:var(--tw-soft);border-bottom:1px solid var(--tw-line);padding:9px 8px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-hr > *{font-size:9px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-r{padding:11px 8px;border-bottom:1px solid var(--tw-hair)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-r:hover{background:#FBFCFF}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-r.bad{background:#FFF8F8;box-shadow:inset 3px 0 0 var(--tw-bad)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-r.wrn{background:#FFFCF5;box-shadow:inset 3px 0 0 #E0A93C}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-r.sel{background:var(--tw-lav)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-r.sub{background:var(--tw-soft);padding:9px 8px;border-bottom:1px solid #E6EAF1}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ft{padding:11px 8px;background:#F2F5FA;border-top:2px solid var(--tw-line)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ft > *{font-size:11px;font-weight:600}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-t{font-size:12px;color:var(--tw-ink2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-miss{color:#A9B2C3;font-style:italic;font-size:11.5px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-p{display:inline-block;padding:2px 8px;border-radius:999px;font:600 10px 'Geist',sans-serif;white-space:nowrap}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .p-n{background:var(--tw-soft);color:var(--tw-mut)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .p-g{background:var(--tw-okb);color:var(--tw-ok)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .p-y{background:var(--tw-wrnb);color:var(--tw-wrn)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .p-b{background:var(--tw-lav);color:var(--tw-bi)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ck{width:15px;height:15px;accent-color:var(--tw-blue);cursor:pointer}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-in{width:100%;height:30px;padding:0 9px;border:1px solid var(--tw-line);border-radius:8px;background:#fff;font:500 12.5px 'Geist',sans-serif;color:var(--tw-ink)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-in:focus{outline:none;border-color:var(--tw-blue);box-shadow:0 0 0 3px rgba(0,87,255,.12)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-lbl{display:block;font-size:10px;font-weight:700;letter-spacing:.55px;text-transform:uppercase;color:var(--tw-mut);margin-bottom:5px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv.tw-c{margin-bottom:16px;border-radius:14px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ch{padding:14px 18px;gap:11px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ct{font-size:13.5px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-av{width:26px;height:26px;border-radius:50%;flex:0 0 auto;display:grid;place-items:center;
+ background:var(--tw-grad);color:#fff;font:700 10px 'Geist',sans-serif;overflow:hidden}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-av.k2{background:linear-gradient(150deg,#5B3FD1,#8B6BF0)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-av.k3{background:linear-gradient(150deg,#0A7A55,#1FBF88)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-av.k4{background:linear-gradient(150deg,#C82121,#F06060)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-cr{display:flex;align-items:center;gap:8px;min-width:0}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-cr b{font-size:12.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-cr u{display:block;text-decoration:none;font-size:10px;color:var(--tw-mut);overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-pf{display:flex;gap:3px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-pf span{width:19px;height:19px;border-radius:6px;display:grid;place-items:center;
+ font:700 8.5px 'Geist',sans-serif;color:#fff}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-pf .ig{background:linear-gradient(135deg,#F58529,#DD2A7B,#8134AF)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-pf .tt{background:#0B0F1A}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-pf .yt{background:#E5322D}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-pf .sc{background:#F5D90A;color:#0B0F1A}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2{display:grid;grid-template-columns:repeat(auto-fit,minmax(104px,1fr));gap:0;background:#fff;
+ border-top:1px solid var(--tw-hair)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 > div{padding:9px 14px;border-right:1px solid var(--tw-hair)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 > div:last-child{border-right:0}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 b{display:block;margin-top:3px;font:600 14px 'Geist',sans-serif;letter-spacing:-.35px;white-space:nowrap}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 b.g{color:var(--tw-ok)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 b.r{color:var(--tw-bad)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 b.s{font-size:12.5px;font-weight:600}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv.tw-c{margin-bottom:11px;border-radius:12px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ch{padding:11px 14px;gap:9px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ct{font-size:12.5px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b.edit{border-color:#F0C4C4;color:var(--tw-bad);background:#fff}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b.edit:hover{border-color:var(--tw-bad);background:#FFF7F7}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b.save{border-color:#BFE6D5;color:var(--tw-ok);background:#fff}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b.save:hover{border-color:var(--tw-ok);background:#F4FBF8}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b.on{background:var(--tw-blue);border-color:var(--tw-blue);color:#fff;box-shadow:none}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-b.on:hover{background:var(--tw-bdk);border-color:var(--tw-bdk);color:#fff}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-hint{font-size:10.5px;color:var(--tw-mut);margin-top:6px;line-height:1.5}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-hint code{font-family:'Geist Mono',monospace;font-size:10px;background:var(--tw-soft);padding:1px 4px;
+ border-radius:4px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);z-index:70;
+ display:flex;align-items:center;gap:0;margin:0;padding:0;max-width:calc(100vw - 32px);
+ border-radius:14px;background:rgba(11,15,26,.96);
+ backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+ box-shadow:0 1px 2px rgba(11,15,26,.4),0 18px 44px -12px rgba(11,15,26,.55);
+ animation:tw-rise .26s var(--tw-ez)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .n{display:inline-flex;align-items:center;gap:8px;padding:11px 15px;
+ font:600 12.5px 'Geist',sans-serif;color:#fff;white-space:nowrap}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .n b{display:grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:7px;
+ background:var(--tw-blue);color:#fff;font:700 12px 'Geist Mono',monospace}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .x{width:20px;height:20px;border:0;border-radius:6px;background:rgba(255,255,255,.14);
+ color:rgba(255,255,255,.8);font-size:11px;line-height:1;cursor:pointer}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .x:hover{background:var(--tw-bad);color:#fff}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .sum{display:flex;gap:0;border-left:1px solid rgba(255,255,255,.14)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .sum > span{display:flex;flex-direction:column;gap:2px;padding:9px 15px;white-space:nowrap;
+ border-right:1px solid rgba(255,255,255,.08)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .sum i{font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:rgba(255,255,255,.6)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .sum b{font:600 12.5px 'Geist Mono',monospace;color:#fff}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .sum b.g{color:#5FE0AE}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .acts{display:flex;align-items:center;gap:6px;padding:9px 12px 9px 14px;
+ border-left:1px solid rgba(255,255,255,.14)}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .acts .tw-b{height:28px;background:rgba(255,255,255,.11);border-color:rgba(255,255,255,.2);
+ color:#fff;font-size:11.5px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .acts .tw-b:hover{background:rgba(255,255,255,.2);border-color:rgba(255,255,255,.36);color:#fff}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .acts .tw-b.pri{background:#fff;border-color:#fff;color:var(--tw-bi);box-shadow:none}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .acts .tw-b.edit{background:rgba(232,85,85,.18);border-color:rgba(232,85,85,.45);color:#FFB4B4}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-selbar .acts .tw-b.edit:hover{background:var(--tw-bad);border-color:var(--tw-bad);color:#fff}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 b.s{font-size:12.5px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 > div{padding:7px 13px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 i{font-size:8px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 b{font-size:13px;margin-top:2px}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 > div{min-width:0}
+/* DUPLICATED from vendor-detail-suite.css; consolidate into a shared campaign sheet */
+.dv .tw-ms2 b{white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+
+/* ══════════════════════════════════════════════════════════════════════
+   DELIVERABLES — schedule + "Content & uploads" tab.
+   Scales: creator groups, status filters, search. Colour comes from the
+   platform's own brand marks (.tw-pf) and status tokens — no new palette.
+   Detail opens in a fixed bottom sheet so the list stays on screen.
+   All rules scoped .dv / .sh.
+   ══════════════════════════════════════════════════════════════════════ */
+.dv .dv__tabs{border-top:1px solid var(--tw-hair);background:var(--tw-soft)}
+.dv .tw-seg em{font-style:normal;margin-left:6px;padding:1px 6px;border-radius:999px;
+ background:var(--tw-wrnb);color:var(--tw-wrn);font:700 9.5px 'Geist Mono',monospace}
+.dv .tw-seg button[aria-pressed=true] em{background:#fff}
+
+/* ── filter bar: the answer to 30 creators ─────────────────────────── */
+.dv .bar{display:flex;align-items:center;gap:7px;flex-wrap:wrap;padding:12px 15px;
+ border-bottom:1px solid var(--tw-hair)}
+.dv .dv__lbl{font-size:9px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
+ color:var(--tw-mut)}
+.dv .ch{display:inline-flex;align-items:center;gap:6px;height:29px;padding:0 12px;
+ border-radius:999px;border:1px solid var(--tw-line);background:#fff;cursor:pointer;
+ font:600 11.5px 'Geist',sans-serif;color:var(--tw-ink2);transition:.15s var(--tw-ez)}
+.dv .ch em{font-style:normal;font:700 10px 'Geist Mono',monospace;opacity:.6}
+.dv .ch:hover{border-color:#CBD5E1}
+.dv .ch.on{color:#fff;border-color:transparent}
+.dv .ch.on em{opacity:.85}
+.dv .ch-y.on{background:linear-gradient(135deg,#B8791A,#E0A93C)}
+.dv .ch-b.on{background:var(--tw-grad)}
+.dv .ch-g.on{background:linear-gradient(135deg,#0A7A55,#1FBF88)}
+.dv .ch.on:not([class*=ch-]){background:var(--tw-navy)}
+.dv .bar__n{padding:0 15px 10px;font-size:11px;color:var(--tw-mut)}
+
+/* platform mark: sized for legibility, and never in a column that crops it */
+.dv .tw-pf span,.sh .tw-pf span{width:22px;height:22px;border-radius:7px;
+ font:700 9px 'Geist',sans-serif;letter-spacing:-.2px}
+.dv .nm{display:flex;align-items:center;gap:9px;min-width:0}
+.dv .tw-r > span:last-child,.dv .tw-hr > span:last-child{justify-content:flex-end}
+.dv .nm b{font-size:12.5px;font-weight:700;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+
+/* ── creator group ─────────────────────────────────────────────────── */
+.dv .gp{border-bottom:1px solid var(--tw-hair)}
+.dv .gp__h{display:flex;align-items:center;gap:10px;width:100%;padding:10px 15px;border:0;
+ background:#fff;cursor:pointer;text-align:left;font:inherit}
+.dv .gp__h:hover{background:var(--tw-soft)}
+.dv .gp__h b{font-size:12.5px;font-weight:700}
+.dv .gp__x{width:9px;height:9px;border-right:1.8px solid #8B94A3;border-bottom:1.8px solid #8B94A3;
+ transform:rotate(45deg);margin-right:2px;transition:transform .2s var(--tw-ez);
+ text-decoration:none;flex:none}
+.dv .gp.is-shut .gp__x{transform:rotate(-45deg)}
+.dv .gp.is-shut .gp__b{display:none}
+.dv .gp__d{display:flex;gap:3px}
+.dv .gp__d s{width:7px;height:7px;border-radius:2px;background:var(--tw-line);
+ text-decoration:none}
+.dv .gp__d s.on{background:var(--tw-ok)}
+.dv .gp__c{font-size:10.5px;color:var(--tw-mut)}
+
+/* ── slot cards ────────────────────────────────────────────────────── */
+.dv .slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(296px,1fr));gap:12px;
+ padding:0 15px 15px}
+.dv .sl{border:1px solid var(--tw-line);border-radius:12px;overflow:hidden;background:#fff;
+ display:flex;flex-direction:column;transition:box-shadow .18s var(--tw-ez);
+ border-left-width:3px}
+.dv .sl:hover{box-shadow:var(--tw-ring)}
+.dv .sl.e-wrn{border-left-color:#E0A93C}
+.dv .sl.e-blue{border-left-color:var(--tw-blue)}
+.dv .sl.e-ok{border-left-color:var(--tw-ok)}
+.dv .sl.is-sel{background:var(--tw-lav)}
+.dv .sl__h{display:flex;align-items:center;gap:8px;padding:10px 12px;
+ border-bottom:1px solid var(--tw-hair)}
+.dv .sl__k{flex:0 0 auto;margin-right:1px}
+.dv .sl__t{min-width:0}
+.dv .sl__t b{display:block;font-size:12px;font-weight:700;overflow:hidden;text-overflow:ellipsis;
+ white-space:nowrap}
+.dv .sl__t u{display:block;text-decoration:none;font-size:10px;color:var(--tw-mut)}
+.dv .sl__f{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--tw-hair);
+ border-top:1px solid var(--tw-hair)}
+.dv .fl{background:#fff;padding:8px 10px;min-width:0}
+.dv .fl i{display:block;font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.5px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.dv .fl b{display:block;margin-top:3px;font-size:11px;font-weight:600;color:var(--tw-ok)}
+.dv .fl em{display:block;font-style:normal;margin-top:3px;font-size:11px;color:#B6BECD}
+.dv .fl.is-on{background:#F7FCFA}
+.dv .sl__b{display:flex;align-items:center;gap:8px;padding:9px 12px;
+ border-top:1px solid var(--tw-hair);background:var(--tw-soft)}
+.dv .sl__s{font-size:10px;color:var(--tw-mut)}
+
+/* ── drop zone ─────────────────────────────────────────────────────── */
+.dv .dz{margin:12px;border:1.5px dashed #CBD8EE;border-radius:10px;background:#FBFCFF;
+ padding:14px 12px;text-align:center;cursor:pointer;transition:.18s var(--tw-ez)}
+.dv .dz:hover,.dv .dz.is-over{border-color:var(--tw-blue);background:var(--tw-lav)}
+.dv .dz__i{display:block;width:28px;height:28px;margin:0 auto 8px;border-radius:9px;
+ background:var(--tw-lav);position:relative;text-decoration:none}
+.dv .dz__i::before{content:"";position:absolute;left:50%;top:8px;width:2px;height:12px;
+ background:var(--tw-blue);transform:translateX(-50%);border-radius:2px}
+.dv .dz__i::after{content:"";position:absolute;left:50%;top:8px;width:9px;height:9px;
+ border-left:2px solid var(--tw-blue);border-top:2px solid var(--tw-blue);
+ transform:translate(-50%,0) rotate(45deg)}
+.dv .dz b{display:block;font-size:12px;font-weight:600}
+.dv .dz u{display:block;text-decoration:none;font-size:10px;color:var(--tw-mut);margin-top:4px}
+.dv .lk{color:var(--tw-bi);font-weight:600;cursor:pointer}
+.dv .pv{display:flex;gap:10px;padding:12px}
+.dv .pv__t{position:relative;width:48px;height:76px;flex:0 0 auto;border-radius:7px;
+ background:linear-gradient(160deg,#1A1F2B,#080B13);display:grid;place-items:center}
+.dv .pv__t s{width:0;height:0;border-left:11px solid rgba(255,255,255,.9);
+ border-top:7px solid transparent;border-bottom:7px solid transparent;margin-left:3px;
+ text-decoration:none}
+.dv .pv__t em{position:absolute;right:3px;bottom:3px;font-style:normal;font-size:8px;
+ font-weight:600;color:#fff;background:rgba(0,0,0,.6);padding:1px 4px;border-radius:4px}
+.dv .pv__m{min-width:0;flex:1}
+.dv .pv__m b{display:block;font:600 11.5px 'Geist Mono',monospace;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+.dv .pv__m u{display:block;text-decoration:none;font-size:9.5px;color:var(--tw-mut);margin-top:3px}
+.dv .pv__a{display:flex;gap:4px;margin-top:8px;flex-wrap:wrap}
+
+/* the hidden attribute must beat display:flex, or nothing ever closes */
+.sh[hidden],.dv [hidden]{display:none!important}
+
+/* ── bottom sheet: the list stays on screen ────────────────────────── */
+.sh{position:fixed;left:0;right:0;bottom:0;z-index:70;max-height:52vh;display:flex;
+ flex-direction:column;background:#fff;border-radius:18px 18px 0 0;
+ box-shadow:0 -2px 6px rgba(11,15,26,.06),0 -22px 56px -18px rgba(11,15,26,.34);
+ animation:sh-up .26s cubic-bezier(.23,1,.32,1)}
+@keyframes sh-up{from{transform:translateY(100%)}to{transform:none}}
+.sh.is-min{max-height:none}
+.sh.is-min .sh__b,.sh.is-min .sh__f{display:none}
+.sh__scrim{position:fixed;inset:0;z-index:69;background:rgba(11,15,26,.18)}
+.sh__h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 16px;
+ border-bottom:1px solid var(--tw-hair);position:relative}
+.sh__grip{position:absolute;left:50%;top:4px;width:34px;height:3px;border-radius:3px;
+ background:var(--tw-line);transform:translateX(-50%);text-decoration:none}
+.sh__t{min-width:0}
+.sh__t b{display:block;font-size:12.5px;font-weight:700;line-height:1.25}
+.sh__t u{display:block;text-decoration:none;font-size:10.5px;color:var(--tw-mut)}
+.sh__nav{display:inline-flex;align-items:center;gap:6px}
+.sh__nav em{font-style:normal;font:600 11px 'Geist Mono',monospace;color:var(--tw-mut);
+ min-width:54px;text-align:center}
+.sh .act{display:inline-flex;align-items:center;gap:7px}
+.sh .act i{font-style:normal;font-size:9px;font-weight:700;letter-spacing:.6px;
+ text-transform:uppercase;color:var(--tw-mut)}
+.sh__b{flex:1 1 auto;overflow-y:auto;display:grid;grid-template-columns:1fr 1fr;gap:10px;
+ padding:10px 16px}
+.sh__col{display:grid;gap:10px;align-content:start}
+.sh__f{display:flex;align-items:center;gap:8px;padding:8px 16px;
+ border-top:2px solid var(--tw-line);background:var(--tw-soft)}
+.sh .bl{border:1px solid var(--tw-line);border-radius:11px;overflow:hidden}
+.sh .bl__h{display:flex;align-items:center;gap:7px;padding:6px 11px;background:var(--tw-soft);
+ border-bottom:1px solid var(--tw-hair);font:700 11.5px 'Geist',sans-serif}
+.sh .n{width:17px;height:17px;border-radius:5px;display:grid;place-items:center;flex:none;
+ font:700 9.5px 'Geist Mono',monospace;color:#fff;text-decoration:none}
+.sh .n1{background:var(--tw-grad)}
+.sh .n2{background:linear-gradient(135deg,#5B3FD1,#8B6BF0)}
+.sh .n3{background:linear-gradient(135deg,#B8791A,#E0A93C)}
+.sh .n4{background:linear-gradient(135deg,#0A7A55,#1FBF88)}
+.sh .pad2{padding:10px 11px}
+.sh .fw{min-width:0}
+.sh .ta{height:auto;padding:8px 10px;line-height:1.5;resize:vertical;
+ font-family:'Geist',sans-serif}
+.sh .ok{font-size:11.5px;color:var(--tw-ok);font-weight:600}
+.sh .dz,.sh .pv{margin:10px 11px}
+.sh .lk{color:var(--tw-bi);font-weight:600;cursor:pointer}
+
+@media(max-width:900px){
+ .dv .slots{grid-template-columns:1fr}
+ .sh__b{grid-template-columns:1fr;max-height:none}
+ .sh{max-height:80vh}
+ .sh__nav,.sh .act{width:100%;justify-content:space-between}}
+
+.dv .sl[data-go]{cursor:pointer}
+
+/* Accessibility additions required by §8; scoped to this panel. */
+.dv :is(button,a,input,textarea,[tabindex]):focus-visible{outline:2px solid var(--tw-blue);outline-offset:3px}
+.dv .sh.is-min{min-height:84px}
+.dv .sh__t:focus{outline:2px solid var(--tw-blue);outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.dv .sh{animation:none}.dv .gp__x,.dv .sl,.dv .dz{transition:none}}
+

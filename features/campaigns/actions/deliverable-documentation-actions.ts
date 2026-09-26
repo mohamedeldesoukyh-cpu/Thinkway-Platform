@@ -36,6 +36,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { readContentReviewDates, validReviewDate, type ContentReviewDates } from "@/lib/services/deliverables/content-review-schedule";
 
 import { readScheduleUnit, persistContentReviewDates, type ReviewScheduleUnit } from "@/lib/services/deliverables/content-review-schedule-service";
+import { listAttachedCampaignScriptPresence } from "@/lib/campaign-script/load-master";
+import { releasedToClientAtFromMetadata } from "@/lib/services/deliverables/client-release";
+import { validatePanelUpload, type PanelSnapshot } from "@/features/campaigns/deliverables-panel-model";
+import { completeDeliverableOnBehalfUploadAction } from "./deliverable-on-behalf-actions";
 
 type Supabase = SupabaseClient<Database>;
 
@@ -76,6 +80,61 @@ export async function getContentReviewDatesAction(input: ReviewScheduleUnit): Pr
     const row = await readScheduleUnit(actor.supabase, input);
     return { ok: true, data: readContentReviewDates(row.metadata, row.sequence) };
   } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "Could not load review dates." }; }
+}
+
+/** One batch for the Deliverables panel, rather than one detail request per slot. */
+export async function getDeliverablesPanelSnapshotAction(input: { campaignHeaderId: string }): Promise<DocumentationActionResult<PanelSnapshot>> {
+  const actor = await getReadActor();
+  if (!actor.ok) return actor;
+  try {
+    const db = actor.supabase;
+    const [assetResult, deliverableResult, scripts] = await Promise.all([
+      db.from('deliverable_assets').select('id, assignment_deliverable_id, assignment_post_schedule_id, asset_type, medium, current_version_id').eq('campaign_header_id', input.campaignHeaderId).is('archived_at', null),
+      db.from('assignment_deliverables').select('id, metadata').eq('campaign_header_id', input.campaignHeaderId),
+      listAttachedCampaignScriptPresence(db, input.campaignHeaderId),
+    ]);
+    if (assetResult.error || deliverableResult.error) throw new Error('Could not load deliverables. Please retry.');
+    const assets = assetResult.data ?? [];
+    const assetIds = assets.map(a => a.id);
+    const versions = assetIds.length ? await db.from('deliverable_asset_versions').select('id, asset_id, version_number, file_name, file_size, mime_type, uploaded_at, metadata, storage_path, storage_bucket, external_url, text_body').in('asset_id', assetIds).order('version_number', {ascending:false}) : {data: [], error: null};
+    const ids = (versions.data ?? []).map(v => v.id);
+    const decisions = ids.length ? await db.from('campaign_client_content_decisions').select('version_id, decision, decided_at, id').in('version_id', ids).order('decided_at', {ascending:false}).order('id', {ascending:false}) : {data: [], error: null};
+    if (versions.error || decisions.error) throw new Error('Could not load content status. Please retry.');
+    return {ok:true, data:{
+      metadata: Object.fromEntries((deliverableResult.data ?? []).map(d => [d.id,d.metadata])),
+      scripts: [...scripts.keys()],
+      assets: assets.map(a => {
+        const v = versions.data?.find(v => v.id === a.current_version_id) ?? versions.data?.find(v => v.asset_id === a.id);
+        return {deliverableId:a.assignment_deliverable_id, postId:a.assignment_post_schedule_id, assetId:a.id,
+          type:a.asset_type, medium:a.medium, versionId:v?.id ?? null, version:v?.version_number ?? null,
+          fileName:v?.file_name ?? null, size:v?.file_size ?? null, mime:v?.mime_type ?? null,
+          uploadedAt:v?.uploaded_at ?? null, releasedAt:releasedToClientAtFromMetadata(v?.metadata),
+          hasContent:Boolean(v && ((v.storage_bucket && v.storage_path) || v.external_url)),
+          text:v?.text_body ?? null, decision:decisions.data?.find(d => d.version_id === v?.id)?.decision ?? null};
+      }),
+    }};
+  } catch (error) { return {ok:false, message:error instanceof Error ? error.message : 'Could not load deliverables.'}; }
+}
+
+/** New panel uploads are drafts until the explicit Release action. Existing surfaces retain their behavior. */
+export async function beginDeliverablesPanelUploadAction(input: Parameters<typeof beginDeliverableFileUploadAction>[0]) {
+  const error = validatePanelUpload(input);
+  if (error) return {ok:false as const, message:error};
+  return beginDeliverableFileUploadAction(input);
+}
+
+export async function completeDeliverablesPanelUploadAction(input: Parameters<typeof completeDeliverableFileUploadAction>[0] & { actingAsCreator?: boolean }) {
+  const error = validatePanelUpload(input);
+  if (error) return {ok:false as const, message:error};
+  if (input.actingAsCreator) return completeDeliverableOnBehalfUploadAction({...input, deferRelease:true});
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const assetType = parseAssetType(input.assetType);
+  if (!assetType) return {ok:false as const,message:'Invalid asset type.'};
+  const result = await completeFileAssetUpload(actor.supabase, {...input, assetType, actorId:actor.userId, releaseToClient:false});
+  if (!result.ok) return result;
+  revalidatePath('/campaigns', 'layout');
+  return {ok:true as const,data:{assetId:result.assetId,versionId:result.versionId}};
 }
 
 export async function saveContentReviewDatesAction(input: ReviewScheduleUnit & { dates: ContentReviewDates; previous: ContentReviewDates }): Promise<DocumentationActionResult<ContentReviewDates>> {
@@ -169,6 +228,7 @@ export async function addDeliverableExternalLinkAction(input: {
   assetType: string;
   label?: string | null;
   externalUrl: string;
+  deferRelease?: boolean;
 }): Promise<DocumentationActionResult<{ assetId: string }>> {
   const actor = await getWriteActor();
   if (!actor.ok) return actor;
@@ -183,6 +243,7 @@ export async function addDeliverableExternalLinkAction(input: {
     assetType,
     label: input.label,
     externalUrl: input.externalUrl,
+    releaseToClient: input.deferRelease ? false : undefined,
   });
   if (!result.ok) return result;
   revalidatePath(`/campaigns/${input.campaignHeaderId}`);
