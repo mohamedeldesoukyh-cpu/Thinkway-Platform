@@ -33,6 +33,9 @@ import {
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { readContentReviewDates, validReviewDate, type ContentReviewDates } from "@/lib/services/deliverables/content-review-schedule";
+
+import { readScheduleUnit, persistContentReviewDates, type ReviewScheduleUnit } from "@/lib/services/deliverables/content-review-schedule-service";
 
 type Supabase = SupabaseClient<Database>;
 
@@ -64,6 +67,30 @@ async function getReadActor(): Promise<
     return getWriteActor();
   }
   return { ok: true, supabase, userId: auth.userId };
+}
+
+export async function getContentReviewDatesAction(input: ReviewScheduleUnit): Promise<DocumentationActionResult<ContentReviewDates>> {
+  const actor = await getReadActor();
+  if (!actor.ok) return actor;
+  try {
+    const row = await readScheduleUnit(actor.supabase, input);
+    return { ok: true, data: readContentReviewDates(row.metadata, row.sequence) };
+  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "Could not load review dates." }; }
+}
+
+export async function saveContentReviewDatesAction(input: ReviewScheduleUnit & { dates: ContentReviewDates; previous: ContentReviewDates }): Promise<DocumentationActionResult<ContentReviewDates>> {
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  if (!input.dates || [input.dates.script, input.dates.draft].some(value => value !== null && !validReviewDate(value))) {
+    return { ok: false, message: "Enter valid expected review dates." };
+  }
+  try {
+    const result = await persistContentReviewDates(actor.supabase, actor.userId, input);
+    if (!result.ok) return result;
+    revalidatePath("/campaigns", "layout");
+    revalidatePath("/review", "layout");
+    return result;
+  } catch (error) { return { ok: false, message: error instanceof Error ? error.message : "Could not save review dates." }; }
 }
 
 function parseAssetType(value: string): DeliverableAssetType | null {

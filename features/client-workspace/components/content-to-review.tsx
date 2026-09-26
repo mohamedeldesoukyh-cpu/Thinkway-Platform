@@ -472,11 +472,13 @@ export function ContentToReview({
   note,
   creators = [],
   onDecisionSaved,
+  focusContent,
 }: {
   items: ClientContentReviewItem[];
   token: string;
   note?: string;
   creators?: ClientCreatorCard[];
+  focusContent?: { versionId: string; request: number };
   onDecisionSaved: (ids: string[], status: "approved" | "changes_requested", comment: string | null, decidedAt?: string) => void;
 }) {
   const pending = clientContentToReview(items);
@@ -511,13 +513,30 @@ export function ContentToReview({
   const [selectedKey, setSelectedKey] = useState(() =>
     pending[0] ? reviewItemKey(pending[0]) : ""
   );
+  useEffect(() => {
+    if (!focusContent) return;
+    const item = items.find(entry => entry.versionId === focusContent.versionId);
+    if (!item) return;
+    // The schedule issues an explicit navigation request; select its target before scrolling.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (item.status === "approved") { setApprovedCreator(item.creatorName); setApprovedType("All"); }
+    else { setQueueCreator(""); setSelectedKey(reviewItemKey(item)); }
+    const timer = window.setTimeout(() => {
+      const target = item.status === "approved" ? document.getElementById(`approved-content-${item.versionId}`) : document.getElementById("review");
+      target?.scrollIntoView({ behavior: "smooth", block: "start" });
+      target?.focus({ preventScroll: true });
+    }, 0);
+    return () => window.clearTimeout(timer);
+    // The request counter also supports opening the same content twice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusContent]);
   const selected = pending.find((item) => reviewItemKey(item) === selectedKey) ?? pending[0] ?? null;
   const siblings = selected
     ? pending.filter((item) => item.creatorName.trim() === selected.creatorName.trim())
     : [];
 
   return (
-    <div className="card cx-content-review" id="review">
+    <div className="card cx-content-review" id="review" tabIndex={-1}>
       <p className="ck cx-content-review__eyebrow">Content to review</p>
       <section className="cx-review-panel">
         <header className="cx-content-review__head">
@@ -607,7 +626,7 @@ export function ContentToReview({
           {dateGroups.map(date => <div className="cx-approved-group" key={date}><header><strong>{date === "undated" ? "Published · date not recorded" : new Date(date + "T12:00:00").toLocaleDateString("en-GB", {day:"numeric", month:"long", year:"numeric"})}</strong><span>{filteredApproved.filter(item => (item.approvedAt ? new Date(item.approvedAt).toLocaleDateString("en-CA", {timeZone:"Africa/Cairo"}) : "undated") === date).length} items</span><button className="btn" disabled={downloading} onClick={() => void downloadItems(filteredApproved.filter(item => (item.approvedAt ? new Date(item.approvedAt).toLocaleDateString("en-CA", {timeZone:"Africa/Cairo"}) : "undated") === date))}>Download {filteredApproved.filter(item => (item.approvedAt ? new Date(item.approvedAt).toLocaleDateString("en-CA", {timeZone:"Africa/Cairo"}) : "undated") === date).length}</button></header>
           <div className={"cx-approved__list" + (galleryView === "List" ? " cx-approved__list--rows" : "")}>
             {filteredApproved.filter(item => (item.approvedAt ? new Date(item.approvedAt).toLocaleDateString("en-CA", {timeZone:"Africa/Cairo"}) : "undated") === date).map((item, index) => (
-              <article key={reviewItemKey(item)} className="cx-approved-card">
+              <article key={reviewItemKey(item)} id={`approved-content-${item.versionId}`} tabIndex={-1} className="cx-approved-card">
                 <div className="cx-approved-card__body">
                   <div className="cx-approved-identity">
                     <CreatorAvatar name={item.creatorName} index={index} token={token} creators={creators} className="cx-av" />

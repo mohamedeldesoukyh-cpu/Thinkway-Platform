@@ -73,6 +73,8 @@ export type ClientCampaignPostRow = {
   platformLabel: string;
   deliverable: string;
   scheduledDate: string | null;
+  expectedScriptDate?: string | null;
+  expectedDraftDate?: string | null;
   status: ClientCampaignPostStatus;
   live: boolean;
   publicationDate: string | null;

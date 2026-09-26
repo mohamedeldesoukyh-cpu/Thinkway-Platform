@@ -20,6 +20,7 @@ import {
 import { clientCampaignBarSegments, clientOverdueStrip, clientReviewAttention } from "../campaign-tab-aggregates";
 import { clientContentToReview, type ClientContentReviewItem } from "../content-approval";
 import { ContentToReview } from "./content-to-review";
+import { ContentReviewSchedule } from "./content-review-schedule";
 import { CampaignPublicationPlan } from "./campaign-publication-plan";
 import { CampaignProgressGraph } from "./campaign-progress-graph";
 import { clientWorkspaceVersionPill } from "../journey-state";
@@ -63,12 +64,15 @@ export function CampaignDashboard({
   const displayedContent = contentItems.map(item => ({ ...item, ...savedDecisions[item.versionId] }));
   const pendingReview = clientContentToReview(displayedContent);
   const [overdueFocus, setOverdueFocus] = useState(0);
+  const [contentFocus, setContentFocus] = useState<{ versionId: string; request: number } | undefined>();
+  const scheduleSection = !historical ? <ContentReviewSchedule posts={agreedPosts} items={displayedContent} token={token} onOpenContent={item => setContentFocus(current => ({ versionId: item.versionId, request: (current?.request ?? 0) + 1 }))} /> : null;
   const contentSection = (
     <ContentToReview
       items={displayedContent}
       token={token}
       note={CONTENT_REVIEW_NOTE}
       creators={creators}
+      focusContent={contentFocus}
       onDecisionSaved={(ids, status, comment, decidedAt) => {
         setSavedDecisions(previous => ({ ...previous, ...Object.fromEntries(ids.map(id => [id, {
           status, comment, approvedAt: status === "approved" ? decidedAt : null, approvedBy: "client",
@@ -102,6 +106,7 @@ export function CampaignDashboard({
           <h2>{campaignName}</h2>
           <p className="note">{CAMPAIGN_SETUP_IN_PROGRESS_COPY}</p>
         </div>
+        {scheduleSection}
         {contentSection}
       </>
     );
@@ -178,6 +183,7 @@ export function CampaignDashboard({
         ) : null}
       </section>
 
+      {scheduleSection}
       {contentSection}
 
       <section className="card">

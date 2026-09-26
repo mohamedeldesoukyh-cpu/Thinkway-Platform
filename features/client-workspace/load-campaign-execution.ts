@@ -1,6 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
+import { readContentReviewDates } from "@/lib/services/deliverables/content-review-schedule";
 
 import {
   emptyClientCampaignExecution,
@@ -11,6 +12,7 @@ import {
 
 type LineRow = { id: string; name: string | null; metadata: Record<string, unknown> | null };
 type DeliverableRow = {
+  metadata: Record<string, unknown> | null;
   id: string;
   campaign_line_id: string;
   platform: string | null;
@@ -99,7 +101,7 @@ export async function loadClientCampaignExecution(
         .eq("campaign_header_id", headerId),
       supabase
         .from("assignment_deliverables")
-        .select("id, campaign_line_id, platform, deliverable_type, quantity, live_date")
+        .select("id, campaign_line_id, platform, deliverable_type, quantity, live_date, metadata")
         .eq("campaign_header_id", headerId)
         .order("sort_order"),
       supabase
@@ -199,7 +201,13 @@ export async function loadClientCampaignExecution(
       })),
     };
 
-    return projectClientCampaignExecution(headerId, source);
+    const execution = projectClientCampaignExecution(headerId, source);
+    const deliverableById = new Map(((deliverablesResult.data ?? []) as DeliverableRow[]).map(row => [row.id, row]));
+    return { ...execution, posts: execution.posts.map(post => {
+      const deliverable = deliverableById.get(post.assignmentDeliverableId ?? "");
+      const dates = readContentReviewDates(deliverable?.metadata, post.sequenceNumber);
+      return { ...post, expectedScriptDate: dates.script, expectedDraftDate: dates.draft };
+    }) };
   } catch {
     return { campaignHeaderId: headerId, posts: [], startDate: null, endDate: null };
   }

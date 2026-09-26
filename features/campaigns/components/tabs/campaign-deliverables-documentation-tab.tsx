@@ -57,6 +57,7 @@ import {
   type DeliverableUploadPhase,
 } from "@/features/campaigns/deliverable-asset-upload";
 import { DeliverableAssetPreview } from "@/features/campaigns/components/deliverables/deliverable-asset-preview";
+import { ContentReviewDatesEditor } from "@/features/campaigns/components/deliverables/content-review-dates-editor";
 import { DocumentationAssetActions } from "@/features/campaigns/components/deliverables/documentation-asset-actions";
 import { ContentDecisionControls } from "@/features/campaigns/components/deliverables/content-decision-controls";
 import { ReleaseVersionToClientButton } from "@/features/campaigns/components/deliverables/release-version-to-client-button";
@@ -906,6 +907,8 @@ export function CampaignDeliverablesDocumentationTab({
                       </dl>
                     </div>
                   </div>
+
+                  <ContentReviewDatesEditor key={selected.unitKey} unit={selected} />
 
                   {detailLoading && !boundDetail ? (
                     <p className="text-sm text-muted-foreground">
