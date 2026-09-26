@@ -176,7 +176,8 @@ test("a readable script does not promote its draft to a client decision; complet
     rows.find((r) => r.content_type === "Story")?.status,
     "awaiting_content",
   );
-  assert.equal(rows.filter(scheduleNeedsDecision).length, 1);
+  assert.equal(rows.length, 1);
+  assert.equal(rows.filter(scheduleNeedsDecision).length, 0);
   assert.equal(rows.filter(scheduleReadableOnly).length, 1);
   const asset = {
     assetId: "a",
@@ -187,6 +188,13 @@ test("a readable script does not promote its draft to a client decision; complet
     status: "approved",
     uploadedAt: "2026-09-26",
   } as ClientContentReviewItem;
+  const pending = scheduleRows([post], [{ ...asset, status: "approval_required" }], new Set(["d:d"]));
+  assert.equal(pending.length, 1);
+  assert.equal(pending[0].has_script, true);
+  assert.equal(pending.filter(scheduleNeedsDecision).length, 1);
+  const report = scheduleReportHtml({ ...scheduleFixture, rows }, "2026-09-26");
+  assert.equal((report.match(/<tr><td>/g) || []).length, 1);
+  assert.doesNotMatch(report, /<td>Script<\/td>/);
   assert.equal(scheduleRows([post], [asset], new Set())[0].status, "approved");
   assert.equal(
     scheduleRows(

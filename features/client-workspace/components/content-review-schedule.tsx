@@ -14,7 +14,6 @@ import {
   scheduleFinding,
   scheduleGroups,
   scheduleNeedsDecision,
-  scheduleReadableOnly,
   scheduleRows,
   SCHEDULE_STATES,
   type ScheduleRow,
@@ -50,6 +49,7 @@ export function ContentReviewSchedule({
   const [menu, setMenu] = useState(false),
     [downloadError, setDownloadError] = useState(""),
     [downloading, setDownloading] = useState(false);
+  const [scriptTargetId, setScriptTargetId] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     let cancelled = false;
@@ -166,7 +166,7 @@ export function ContentReviewSchedule({
           <span className="sp" />
           <span className="wq__n">
             {quiet
-              ? "script on file · no decision needed"
+              ? "available to read · no approval required"
               : "ready regardless of schedule"}
           </span>
         </div>
@@ -177,7 +177,7 @@ export function ContentReviewSchedule({
                 type="button"
                 className={`wq${quiet ? " wq--q" : ""}`}
                 key={row.id}
-                onClick={() => open(row)}
+                onClick={() => quiet ? setScriptPost(row.post) : open(row)}
               >
                 <span
                   className={`av a${(groups.findIndex((group) => group.name === row.handle) % 3) + 1}`}
@@ -191,7 +191,9 @@ export function ContentReviewSchedule({
                   </u>
                 </span>
                 <span className="wq__d">
-                  {row.content && !row.expected_review_date ? (
+                  {quiet ? (
+                    <>Reference for this deliverable</>
+                  ) : row.content && !row.expected_review_date ? (
                     <>Delivered <b>{scheduleDate(row.content.uploadedAt.slice(0, 10))}</b></>
                   ) : (
                     <>Expected <b>{scheduleDate(row.expected_review_date)}</b></>
@@ -200,9 +202,9 @@ export function ContentReviewSchedule({
                 <span
                   className={`tag ${quiet ? "t-scr" : SCHEDULE_STATES[row.status].css}`}
                 >
-                  {quiet ? "Script on file" : row.status === "ready_for_approval" && row.content ? "Delivered · awaiting approval" : SCHEDULE_STATES[row.status].label}
+                  {quiet ? "Reference script" : row.status === "ready_for_approval" && row.content ? "Delivered · awaiting approval" : SCHEDULE_STATES[row.status].label}
                 </span>
-                <span className="wq__go">{row.action_label} →</span>
+                <span className="wq__go">{quiet ? "Open script" : row.action_label} →</span>
               </button>
             ))
           ) : (
@@ -327,7 +329,21 @@ export function ContentReviewSchedule({
             </span>
           </div>
           {list("Needs your decision", rows.filter(scheduleNeedsDecision))}
-          {list("Readable now", rows.filter(scheduleReadableOnly), true)}
+          <div className="script-upload">
+            <label>
+              Script for creator / deliverable
+              <select value={scriptTargetId} onChange={event => setScriptTargetId(event.target.value)}>
+                <option value="">Choose a creator and deliverable</option>
+                {rows.map(row => <option key={row.id} value={row.id}>{row.creator_name} · {row.content_type} · {row.ref}{row.has_script ? " · Script on file" : ""}</option>)}
+              </select>
+            </label>
+            <button type="button" className="dl__b" disabled={!rows.some(row => row.id === scriptTargetId)} onClick={() => {
+              const target = rows.find(row => row.id === scriptTargetId);
+              if (target) setScriptPost(target.post);
+            }}>Add / upload script</button>
+            <p>Save the script to share it with the assigned creator and Thinkway. No client approval is required for reference scripts.</p>
+          </div>
+          {list("Script references", rows.filter(row => row.has_script), true)}
           <div className="key">
             {Object.entries(SCHEDULE_STATES).map(([status, info]) => (
               <span key={status}>

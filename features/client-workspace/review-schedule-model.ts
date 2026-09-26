@@ -69,6 +69,9 @@ export function scheduleRows(
     scripts,
     reviewScheduleToday(),
   )
+    // An attached script is reference material for the deliverable. Script
+    // presence alone is not a client review request or an extra deliverable.
+    .filter((row) => row.kind === "draft")
     .map((row): ScheduleRow => {
       const status: ScheduleStatus =
         row.status === "script_ready"

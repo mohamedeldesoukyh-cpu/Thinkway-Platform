@@ -703,3 +703,8 @@
 .rvs .rvs-cell.is-now { background:#f7faff; box-shadow:inset 2px 0 0 #bcd2ff,inset -2px 0 0 #bcd2ff; }
 .rvs button.wq { border:0; border-bottom:1px solid #f2f5f9; border-radius:0; box-shadow:none; min-height:0; }
 .rvs button.wq:last-child { border-bottom:0; }
+.rvs .script-upload { display:flex; flex-wrap:wrap; align-items:flex-end; gap:10px; margin-top:16px; padding:12px; background:#f6f8fb; border:1px solid #eef2f8; border-radius:9px; }
+.rvs .script-upload label { display:grid; gap:5px; flex:1 1 240px; color:#6b7280; font-size:11px; }
+.rvs .script-upload select { width:100%; min-width:0; height:32px; border:1px solid #d7e0f0; border-radius:7px; background:#fff; color:#060810; padding:0 8px; font-size:12px; }
+.rvs .script-upload p { flex-basis:100%; margin:0; font-size:11px; color:#6b7280; }
+.rvs .script-upload button:disabled { opacity:.5; cursor:default; }
