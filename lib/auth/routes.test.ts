@@ -1,7 +1,19 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { sanitizeNextPath } from "./routes";
+import { isPublicPath, sanitizeNextPath } from "./routes";
+import { classifyApiPath } from "../security/workspace-classify";
+
+test("review schedule downloads reach their token guard without a staff session", () => {
+  for (const format of ["pdf", "xlsx", "html"]) {
+    const path = `/api/campaigns/current/review-schedule.${format}`;
+    assert.equal(isPublicPath(path), true);
+    assert.equal(classifyApiPath(path), "public");
+  }
+  for (const path of ["/api/campaigns/current/publications", "/api/campaigns/current/review-schedule.xlsx/extra", "/api/campaigns/current/review-schedule.json"]) {
+    assert.equal(isPublicPath(path), false);
+  }
+});
 
 test("sanitizeNextPath allows relative app paths", () => {
   assert.equal(sanitizeNextPath("/campaigns"), "/campaigns");

@@ -17,6 +17,9 @@ export const PUBLIC_ROUTE_PREFIXES = [
 
 export function isPublicPath(pathname: string): boolean {
   if (pathname === "/robots.txt") return true;
+  // These downloads authenticate the signed review token inside the handler.
+  // Do not require an internal staff session for a client workspace export.
+  if (/^\/api\/campaigns\/[^/]+\/review-schedule\.(pdf|xlsx|html)$/.test(pathname)) return true;
   return PUBLIC_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );

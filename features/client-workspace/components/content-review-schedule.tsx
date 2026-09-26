@@ -305,7 +305,7 @@ export function ContentReviewSchedule({
               {scheduleDate(startDate ?? null)} →{" "}
               {scheduleDate(endDate ?? null)}
             </b>{" "}
-            · {axis.months} months
+            · {axis.months} {axis.months === 1 ? "month" : "months"}
           </p>
 
           <ReviewScheduleGrids

@@ -95,6 +95,9 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/creators/avatar": "internal_workspace",
   "/api/creators/publication-preview": "internal_workspace",
   "/api/review/media": "public",
+  "/api/campaigns/[id]/review-schedule.pdf": "public", // signed review token required
+  "/api/campaigns/[id]/review-schedule.xlsx": "public",
+  "/api/campaigns/[id]/review-schedule.html": "public",
   "/api/review/content": "public",
   "/api/review/quotation": "public",
   "/api/review/brand-logo": "public",
