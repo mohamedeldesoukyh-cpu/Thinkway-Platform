@@ -37,7 +37,7 @@ export function ReviewScheduleGrids({
     <>
       {(["w", "m", "q"] as const).map((v) => {
         const periods = axis.views[v],
-          cols = `minmax(110px,176px) repeat(${periods.length},minmax(${v === "w" ? "26px" : `var(--period-min,${v === "m" ? "46px" : "90px"})`},1fr)) minmax(var(--unscheduled-min,180px),${v === "q" ? "2.1fr" : "1.4fr"})`;
+          cols = `minmax(110px,176px) repeat(${periods.length},minmax(${v === "w" ? "26px" : `var(--period-min,${v === "m" ? "46px" : "90px"})`},1fr)) var(--unscheduled-min,180px)`;
         return (
           <div
             className="tbl"
@@ -94,7 +94,7 @@ export function ReviewScheduleGrids({
                     </span>
                     {periods.map((p) => (
                       <span
-                        className={`mc${p.key === schedulePeriodKey(today, v) ? " is-now" : ""}`}
+                        className={`rvs-cell${p.key === schedulePeriodKey(today, v) ? " is-now" : ""}`}
                         key={p.key}
                       >
                         {periodContents(group.rows, p.key, v)}

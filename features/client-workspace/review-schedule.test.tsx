@@ -29,6 +29,15 @@ import {
 } from "./review-schedule-export";
 import type { ClientContentReviewItem } from "./content-approval";
 
+test("missing campaign boundaries show a complete calendar month without inventing review dates", () => {
+  const rows = [{ expected_review_date: "2026-09-28" }] as ScheduleData["rows"];
+  const axis = scheduleAxis({ start_date: null, end_date: null, rows });
+  assert.equal(axis.start, "2026-09-01");
+  assert.equal(axis.end, "2026-09-30");
+  assert.equal(axis.views.w.length, 5);
+  assert.equal(rows[0].expected_review_date, "2026-09-28");
+});
+
 const post: ClientCampaignPostRow = {
   id: "p",
   creatorName: "Creator",

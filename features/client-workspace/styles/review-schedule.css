@@ -262,7 +262,7 @@
   background: linear-gradient(145deg, #1d9e75, #35c795);
 }
 
-.rvs .mc {
+.rvs .rvs-cell {
   min-height: 42px;
   display: flex;
   align-items: center;
@@ -272,12 +272,12 @@
   padding: 6px 4px;
   border-left: 1px solid #f2f5f9;
 }
-.rvs .mc em {
+.rvs .rvs-cell em {
   font-style: normal;
   font-size: 11px;
   color: #c3cad6;
 }
-.rvs .mc.is-now {
+.rvs .rvs-cell.is-now {
   background: #f7faff;
   box-shadow:
     inset 2px 0 0 #bcd2ff,
@@ -693,3 +693,10 @@
 }
 
 .rvs .ck {color:#0057ff;} @media(max-width:600px){.rvs .tbl {--unscheduled-min:110px;}}
+
+.rvs.card.card { padding:18px 20px; }
+.rvs.card.card .rvs__h h2 { margin:4px 0; font-size:18px; }
+.rvs .rvs-cell { border-radius:0; background:transparent; box-shadow:none; margin:0; }
+.rvs .rvs-cell.is-now { background:#f7faff; box-shadow:inset 2px 0 0 #bcd2ff,inset -2px 0 0 #bcd2ff; }
+.rvs button.wq { border:0; border-bottom:1px solid #f2f5f9; border-radius:0; box-shadow:none; min-height:0; }
+.rvs button.wq:last-child { border-bottom:0; }

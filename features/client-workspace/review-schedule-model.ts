@@ -144,8 +144,14 @@ export function scheduleAxis(
   ]
     .filter((d): d is string => Boolean(d))
     .sort();
-  const start = dates[0] ?? reviewScheduleToday(),
-    end = dates.at(-1) ?? start;
+  // With no campaign boundaries, show whole calendar months around the known
+  // review dates, not a single oversized week. This is a display window only.
+  const first = dates[0] ?? reviewScheduleToday();
+  const last = dates.at(-1) ?? first;
+  const start = data.start_date ? first : `${first.slice(0, 7)}-01`;
+  const monthEnd = utc(last);
+  monthEnd.setUTCMonth(monthEnd.getUTCMonth() + 1, 0);
+  const end = data.end_date ? last : day(monthEnd);
   const months =
     (utc(end).getUTCFullYear() - utc(start).getUTCFullYear()) * 12 +
     utc(end).getUTCMonth() -
