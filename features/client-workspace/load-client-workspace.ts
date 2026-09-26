@@ -8,6 +8,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { type ClientCreatorSelectionState } from "./constants";
 import { emptyClientCommercialSummary } from "./entitlement";
 import { mapClientReviewRow, type ReviewRow } from "./persist-client-review";
+import { hydrateReviewCampaigns } from "./resolve-review-campaign";
 import { hashClientReviewToken } from "./security/review-token";
 import {
   projectClientContent,
@@ -174,7 +175,7 @@ export async function loadJourneyReviews(
   supabase: SupabaseClient,
   review: ClientReviewRecord
 ): Promise<ClientReviewRecord[]> {
-  if (!review.journeyId) return [review];
+  if (!review.journeyId) return hydrateReviewCampaigns(supabase, [review]);
   const { data } = await supabase
     .from("campaign_client_reviews" as never)
     .select("*")
@@ -184,7 +185,7 @@ export async function loadJourneyReviews(
   const rows = (data ?? []) as Parameters<typeof mapClientReviewRow>[0][];
   const mapped = rows.map((row) => mapClientReviewRow(row));
   if (!mapped.some((item) => item.id === review.id)) mapped.push(review);
-  return mapped;
+  return hydrateReviewCampaigns(supabase, mapped);
 }
 
 async function markFirstViewed(supabase: SupabaseClient, review: ClientReviewRecord): Promise<ClientReviewRecord> {
