@@ -1,5 +1,13 @@
 # Deliverables development review
 
+## Release gate (supersedes earlier wiring notes)
+
+Single and bulk Release in this new panel are now unconditionally disabled, with no handler and no release-action import/call. Uploads remain internal. The disabled controls explain that confirmation and retraction are pending. Future enablement requires exact count/client confirmation, single/bulk distinction, and a retract path.
+
+Release was previously wired only; no real release was exercised. Read-only throwaway fixture testing with uploaded content confirmed both buttons disabled. This is a gate test, not a successful backend release test. No real client record was used for release testing. Upload and Save remain wired to existing actions.
+
+The reproducible full-page warning and exact console output are retained in [DELIVERABLES_HYDRATION_ISSUE.md](DELIVERABLES_HYDRATION_ISSUE.md), still open. User has authorized production UI deployment with Release held behind this gate.
+
 Scope: `/campaigns/:slug?tab=deliverables` only. Production remains on `a7e5bb63`.
 
 ## CSS decision

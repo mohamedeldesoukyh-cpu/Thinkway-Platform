@@ -6,7 +6,7 @@ import type { CampaignWorkspace } from '@/features/campaigns/types';
 import type { AssignmentHierarchy } from '@/features/campaigns/types/assignment-hierarchy';
 import { buildDocumentationUnitsFromHierarchy } from '@/lib/services/deliverables/build-documentation-units';
 import { buildPanelRows, filterPanelRows, DELIVERABLE_COLUMNS, PANEL_UPLOAD_ACCEPT, validatePanelUpload, type PanelRow, type PanelStatus, type PanelSnapshot } from '@/features/campaigns/deliverables-panel-model';
-import { getDeliverablesPanelSnapshotAction, beginDeliverablesPanelUploadAction, completeDeliverablesPanelUploadAction, getDeliverableDocumentationDetailAction, getContentReviewDatesAction, saveContentReviewDatesAction, addDeliverableTextAssetAction, addDeliverableExternalLinkAction, releaseDeliverableVersionToClientAction } from '@/features/campaigns/actions/deliverable-documentation-actions';
+import { getDeliverablesPanelSnapshotAction, beginDeliverablesPanelUploadAction, completeDeliverablesPanelUploadAction, getDeliverableDocumentationDetailAction, getContentReviewDatesAction, saveContentReviewDatesAction, addDeliverableTextAssetAction, addDeliverableExternalLinkAction } from '@/features/campaigns/actions/deliverable-documentation-actions';
 import { addDeliverableOnBehalfTextAction, addDeliverableOnBehalfExternalLinkAction, addDeliverableOnBehalfCreatorNoteAction, submitDeliverableOnBehalfPublicationAction } from '@/features/campaigns/actions/deliverable-on-behalf-actions';
 import { putDeliverableAssetToSignedUrl } from '@/features/campaigns/deliverable-asset-upload';
 import { defaultDeliverableAssetType, resolveDeliverableUploadMime, type DocumentationUnitDetail } from '@/lib/services/deliverables/documentation-types';
@@ -165,24 +165,7 @@ export function DeliverablesPanel({ workspace, assignmentHierarchy, active: pane
             setProgress(null);
         }
     }
-    async function release(targets: PanelRow[]) { setBusy(true); try {
-        for (const row of targets) {
-            if (!row.file?.versionId || row.file.releasedAt)
-                continue;
-            const result = await releaseDeliverableVersionToClientAction({ campaignHeaderId: workspace.id, versionId: row.file.versionId });
-            if (!result.ok)
-                throw new Error(result.message);
-        }
-        await refresh();
-        toast.success('Selected content released to the client.');
-    }
-    catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Could not release content.');
-        await refresh();
-    }
-    finally {
-        setBusy(false);
-    } }
+    // Release is intentionally disconnected until confirmation and retraction exist.
     const allClosed = groups.filter(g => g.visible.length).every(g => closed.has(g.id));
     return <div className="tw-c dv" ref={root}>
     <div className="tw-ch"><span className="tw-ct">Deliverables</span><span className="tw-cs">{rows.length} of {rows.length} · synced from assignments</span><span className="tw-sp"/><span className="tw-p p-y">{loaded ? counts.missing : '—'} need a file</span><button className="tw-b sm" aria-pressed={sort} onClick={() => setSort(!sort)}>Sort by creator</button></div>
@@ -236,11 +219,11 @@ export function DeliverablesPanel({ workspace, assignmentHierarchy, active: pane
     }
     finally {
         setBusy(false);
-    } }}>{bulkDate === null ? 'Set review date' : 'Save dates'}</button><button className="tw-b sm pri" disabled={busy || !rows.some(r => selected.has(r.unitKey) && r.status === 'uploaded' && !r.file?.releasedAt)} onClick={() => void release(rows.filter(r => selected.has(r.unitKey) && r.status === 'uploaded'))}>Release to client</button></span></div>
+    } }}>{bulkDate === null ? 'Set review date' : 'Save dates'}</button><button className="tw-b sm pri" disabled title="Client release is unavailable pending confirmation and retraction controls">Release to client</button></span></div>
     <div className="sh__scrim" data-scrim hidden={!active || Boolean(script)} onClick={close}/>
     <div className={`sh ${min ? 'is-min' : ''}`} hidden={!active || Boolean(script)} ref={sheet} role="dialog" aria-modal="true" aria-labelledby="deliverable-sheet-title">
       {active && <><div className="sh__h"><s className="sh__grip" aria-hidden="true"/><button className="tw-b sm" data-back aria-label="Back to deliverables" onClick={close}>← Back</button><Mark platform={active.platform}/><Avatar row={active}/><span className="sh__t" id="deliverable-sheet-title" tabIndex={-1}><b>{active.label}</b><u>{creator(active)} · {active.deliverableType?.replaceAll('_', ' ')}</u></span><Pill status={active.status}/><span className="tw-sp"/><span className="sh__nav"><button className="tw-b sm" aria-label="Previous deliverable" disabled={index <= 0} onClick={() => { setCurrent(rows[index - 1].unitKey); setMin(false); }}>‹</button><em>{index + 1} of {rows.length}</em><button className="tw-b sm" aria-label="Next deliverable" disabled={index >= rows.length - 1} onClick={() => { setCurrent(rows[index + 1].unitKey); setMin(false); }}>›</button></span><span className="act"><i>Acting as</i><span className="tw-seg"><button aria-pressed={!actingAsCreator} onClick={() => setActingAsCreator(false)}>Thinkway</button><button disabled={!active.creatorId} aria-pressed={actingAsCreator} onClick={() => setActingAsCreator(true)}>{creator(active)}</button></span></span><button className="tw-b sm" data-min aria-expanded={!min} onClick={() => setMin(!min)}>{min ? 'Expand' : 'Minimise'}</button><button className="tw-b sm" aria-label="Dismiss deliverable" onClick={close}>✕</button></div>
-      <PanelEditor key={active.unitKey} actingAsCreator={actingAsCreator} row={active} busy={busy} upload={file => void upload(active, file)} onScript={() => setScript(active)} refresh={refresh} release={() => void release([active])}/></>}
+      <PanelEditor key={active.unitKey} actingAsCreator={actingAsCreator} row={active} busy={busy} upload={file => void upload(active, file)} onScript={() => setScript(active)} refresh={refresh}/></>}
     </div>
     <DocumentationUnitScriptSheet open={Boolean(script)} onOpenChange={value => { if (!value)
         setScript(null); }} unit={script} campaignId={workspace.id} intent="edit" onPresenceChange={() => void refresh()}/>
@@ -258,14 +241,13 @@ function DropZone({ onFile, disabled }: {
         onFile(e.dataTransfer.files[0]); }}><s className="dz__i" aria-hidden="true"/><b>Drop the video here</b><u>or <button type="button" className="lk" disabled={disabled} onClick={e => { e.stopPropagation(); input.current?.click(); }}>browse</button> · MP4 MOV WEBM JPG PNG PDF · up to 150 MB</u><input type="file" ref={input} hidden accept={PANEL_UPLOAD_ACCEPT} disabled={disabled} onClick={e => e.stopPropagation()} onChange={e => { const file = e.target.files?.[0]; if (file)
         onFile(file); e.target.value = ''; }}/></div>;
 }
-function PanelEditor({ row, actingAsCreator, busy, upload, onScript, refresh, release }: {
+function PanelEditor({ row, actingAsCreator, busy, upload, onScript, refresh }: {
     row: PanelRow;
     actingAsCreator: boolean;
     busy: boolean;
     upload: (file: File) => void;
     onScript: () => void;
     refresh: () => Promise<void>;
-    release: () => void;
 }) {
     const [detail, setDetail] = useState<DocumentationUnitDetail | null>(null);
     const [dates, setDates] = useState<ContentReviewDates | null>(null);
@@ -337,5 +319,5 @@ function PanelEditor({ row, actingAsCreator, busy, upload, onScript, refresh, re
       <div className="sh__col"><section className="bl"><div className="bl__h"><s className="n n3">3</s>Dates</div><div className="pad2"><div className="fw"><label className="tw-lbl" htmlFor="dv-review">Expected with client for review</label><input className="tw-in" id="dv-review" type="date" value={review} disabled={!dates || saving} onChange={e => setReview(e.target.value)}/><p className="tw-hint">Appears in the client's review calendar.</p></div><div className="fw" style={{ marginTop: 11 }}><label className="tw-lbl" htmlFor="dv-live">Go-live date</label><input className="tw-in" id="dv-live" type="date" value={row.dueDate?.slice(0, 10) ?? ''} readOnly/><p className="tw-hint">Set on the publication plan — shown here so both read together.</p></div></div></section>
       <section className="bl"><div className="bl__h"><s className="n n4">4</s>Links & activity</div><div className="pad2"><label className="tw-lbl" htmlFor="dv-external">External link</label><input className="tw-in" id="dv-external" placeholder="https://drive.google.com/…" value={external} onChange={e => setExternal(e.target.value)}/><div className="fw" style={{ marginTop: 11 }}><label className="tw-lbl" htmlFor="dv-publication">Publication URL</label><input className="tw-in" id="dv-publication" placeholder="https://instagram.com/p/…" value={publication} onChange={e => setPublication(e.target.value)}/></div><div className="fw" style={{ marginTop: 11 }}><label className="tw-lbl" htmlFor="dv-note">Note to creator</label><textarea className="tw-in ta" id="dv-note" rows={2} placeholder="Visible in Creator Workspace…" value={note} onChange={e => setNote(e.target.value)}/></div>{detail?.comments.slice(0, 5).map(c => <p key={c.id}>{c.body}</p>)}</div></section></div></div>
     {error && <p role="alert" style={{ padding: '0 16px' }}>{error} <button className="tw-b sm" onClick={() => setReload(n => n + 1)}>Reload</button></p>}
-    <div className="sh__f"><span className="tw-cs">New files stay internal until you release them.</span><span className="tw-sp"/><button className="tw-b" disabled={busy || saving || !dates} onClick={() => void save()}>{saving ? 'Saving…' : 'Save'}</button><button className="tw-b pri" disabled={busy || saving || !row.file?.versionId || Boolean(row.file.releasedAt)} onClick={release}>{row.file?.releasedAt ? 'Released to client' : 'Release to client'}</button></div></>;
+    <div className="sh__f"><span className="tw-cs">New files stay internal. Client release is temporarily unavailable.</span><span className="tw-sp"/><button className="tw-b" disabled={busy || saving || !dates} onClick={() => void save()}>{saving ? 'Saving…' : 'Save'}</button><button className="tw-b pri" disabled title="Client release is unavailable pending confirmation and retraction controls">{row.file?.releasedAt ? 'Released to client' : 'Release to client'}</button></div></>;
 }
