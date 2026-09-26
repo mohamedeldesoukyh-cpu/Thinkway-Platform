@@ -9,7 +9,7 @@ function ReviewLabel() {
 
 export function ClientReviewCampaignCta({ href }: { href: string }) {
   return (
-    <Link href={href} className="btn primary"
+    <Link href={href} className="btn primary" aria-label="Review campaign"
       style={{ width: "100%", justifyContent: "center", marginTop: 22, minHeight: 44 }}>
       <ReviewLabel />
     </Link>
