@@ -14,17 +14,17 @@ Copied roots: `tw-av tw-b tw-c tw-ch tw-ck tw-cr tw-cs tw-ct tw-ft tw-g tw-hint 
 |---|---|
 | 8 grid blocks × 8 children, one `--cols` | PASS supplied six-deliverable fixture. Runtime template checks header + N rows + footer, eight cells each and one inherited declaration. |
 | Empty final header span | PASS source and grid check. |
-| Fills 1050 / 1450 / 1800px | **Browser verification pending development sign-in.** |
-| Horizontal scrolling below 1030px | Wrapper retained; **browser verification pending**. |
+| Fills 1050 / 1450 / 1800px | PASS browser: real component in isolated fixture harness; grid and scroller measured exactly 1050 / 1450 / 1800px. |
+| Horizontal scrolling below 1030px | PASS browser: 1000px container, 1030px grid/scrollWidth. |
 | Upload inside section, no duplicate | New panel replaces both old conditional surfaces in the campaign workspace. Only its second tab exposes uploads. |
 | Default missing; satisfied creators hidden/collapsed | Implemented; status/search intersection tested. **Real campaign browser verification pending.** |
-| Scrim / Back / Escape / dismiss close routes | Implemented; **all four browser checks pending**. |
-| Checkbox does not open sheet | Explicit propagation/routing guards; **browser check pending**. |
-| Inside sheet does not reopen it | No sheet ancestor open handler; **browser check pending**. |
+| Scrim / Back / Escape / dismiss close routes | PASS all four in browser fixture harness: hidden/display:none and body padding restored. Back, dismiss and Escape also verified focus returned to Open. |
+| Checkbox does not open sheet | PASS browser: selected one missing slot; selection bar showed 1 selected / 1 need a file / 0 ready, sheet stayed hidden. |
+| Inside sheet does not reopen it | PASS browser: caption field edited without navigation/reopening; Minimise measured 84px. No data was saved. |
 | Hidden guard | Exact `.sh[hidden],.dv [hidden]{display:none!important}` retained. |
 | Four platform marks at 22px inline | Fragment rules and existing brand styles retained; **browser check pending**. |
 | No bare global element selectors | All added dependencies scoped under `.dv`; new fragment roots retained. |
-| Count matches each chip | Derived from visible rows; model tests pass. **Manual browser count pending.** |
+| Count matches each chip | PASS browser fixture: missing 4, uploaded 1, with client 1, approved 0, all 6; rendered visible-slot count matched each. |
 
 ## Grid output
 
@@ -52,4 +52,8 @@ TypeScript and the Next.js build passed. Eighteen model/documentation/attributio
 
 ## Real campaign / browser gate
 
-Not yet signed off. Development currently requires sign-in. No claim is made that the 30+ creator default filter, collapse-all, widths, or close routes have passed in a browser. The local standalone preview URL was blocked by browser URL policy; no workaround was attempted.
+Not yet signed off on real campaign data. Development currently requires sign-in. The implemented React component was tested in a separate read-only local browser harness (six deliverables, two creators; all writes disabled). Default missing showed four cards across two creators. Collapse all retained both compact creator headers and removed their cards; Expand all restored them. This does not satisfy the requested real 30+ creator campaign check.
+
+The three specifically requested browser checks (four close routes, checkbox guard, widths/scroll breakpoint) passed in that harness. Real server-action integration, all four platform marks, and real-campaign performance remain unverified in the authenticated development app. The standalone preview file URL was blocked by browser URL policy; it was not served through another route.
+
+Development deployment `dpl_5Ug52jEkAZ41yeQQHY6yJc3rEQ7P` is Ready (Preview) and has the `dev.thinkwaymedia.com` alias. Application revision: `dcdb098c`. Production was not deployed or aliased.
