@@ -316,14 +316,16 @@ export function ContentReviewSchedule({
             · {axis.months} {axis.months === 1 ? "month" : "months"}
           </p>
 
+          {list("Needs your decision", rows.filter(scheduleNeedsDecision))}
+          {rows.some(row => row.status === "changes_requested") && list("Changes requested — with creator", rows.filter(row => row.status === "changes_requested"))}
           <div className="key" aria-label="Schedule colour legend">
             {Object.entries(SCHEDULE_STATES).map(([status, info]) => (
               <span key={status}>
                 <i className={`u ${info.css}`} />
-                {info.label}
+                {info.label} <b>{rows.filter(row => row.status === status).length}</b>
               </span>
             ))}
-            <span><i className="u u-tb has-s" />Script on file</span>
+            <span><i className="u u-tb has-s" />Script on file <b>{rows.filter(row => row.has_script).length}</b></span>
           </div>
           <p className="legend-note">Each coloured square is one deliverable. Purple means content is still expected; green means delivered and awaiting approval. A blue corner marks an attached reference script.</p>
           <ReviewScheduleGrids
@@ -338,7 +340,6 @@ export function ContentReviewSchedule({
               Switch to Days for exact dates, Weeks for detail or Quarters for longer campaigns.
             </span>
           </div>
-          {list("Needs your decision", rows.filter(scheduleNeedsDecision))}
           <div className="script-upload">
             <label>
               Script for creator / deliverable
