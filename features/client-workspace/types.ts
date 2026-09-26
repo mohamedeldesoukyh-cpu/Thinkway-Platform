@@ -486,6 +486,7 @@ export type ClientWorkspaceView = {
   campaignExecution?: import("./campaign-execution").ClientCampaignExecution;
   /** Current-version content review projection. Independent of quotation and live status. */
   campaignContent?: import("./content-approval").ClientCampaignContent;
+  campaignScriptUnitKeys?: string[];
   /** Thinkway-controlled. Clients never see original currency unless this is on. */
   showOriginalCurrency?: boolean;
   /** Thinkway-controlled. Clients see only Total Investment when this is on. */

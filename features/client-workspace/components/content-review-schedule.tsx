@@ -28,6 +28,7 @@ export function ContentReviewSchedule({
   campaignName,
   startDate,
   endDate,
+  initialScriptUnitKeys,
   onOpenContent,
 }: {
   posts: ClientCampaignPostRow[];
@@ -36,10 +37,11 @@ export function ContentReviewSchedule({
   campaignName: string;
   startDate?: string | null;
   endDate?: string | null;
+  initialScriptUnitKeys?: string[];
   onOpenContent: (item: ClientContentReviewItem) => void;
 }) {
-  const [scripts, setScripts] = useState<Set<string>>(new Set()),
-    [loaded, setLoaded] = useState(false),
+  const [scripts, setScripts] = useState<Set<string>>(() => new Set(initialScriptUnitKeys)),
+    [loaded, setLoaded] = useState(initialScriptUnitKeys !== undefined),
     [error, setError] = useState(false),
     [retry, setRetry] = useState(0);
   const [scriptPost, setScriptPost] = useState<ClientCampaignPostRow | null>(
@@ -52,6 +54,7 @@ export function ContentReviewSchedule({
   const [scriptTargetId, setScriptTargetId] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (initialScriptUnitKeys !== undefined) return;
     let cancelled = false;
     void listClientCampaignScriptPresenceAction({ token })
       .then((result) => {
@@ -67,7 +70,7 @@ export function ContentReviewSchedule({
     return () => {
       cancelled = true;
     };
-  }, [token, retry]);
+  }, [token, retry, initialScriptUnitKeys]);
   useEffect(() => {
     function outside(e: PointerEvent) {
       if (!menuRef.current?.contains(e.target as Node)) setMenu(false);

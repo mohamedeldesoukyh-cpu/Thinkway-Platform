@@ -3,6 +3,7 @@ import { CampaignObjectPersistenceService } from "@/features/campaign-intelligen
 import { hydrateSlateCreators } from "@/features/campaign-studio/services/copilot/slate-edit-mutations";
 import { loadClientWorkspaceDisplayFlags } from "@/lib/commercial/client-original-currency-persist";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
+import { listAttachedCampaignScriptPresence } from "@/lib/campaign-script/load-master";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { type ClientCreatorSelectionState } from "./constants";
@@ -712,14 +713,23 @@ export async function loadClientWorkspace(
   }
   const campaignOpen = isClientWorkspaceSectionOpen(entitlementForView.entitlement, "approval");
   const commercialOpen = isClientWorkspaceSectionOpen(entitlementForView.entitlement, "commercial");
-  view.campaignExecution =
-    picked.historical || !campaignOpen
-      ? emptyClientCampaignExecution()
-      : await loadClientCampaignExecution((service ?? db) as never, view.journey.campaignHeaderId);
-  view.campaignContent =
-    picked.historical || !campaignOpen
-      ? emptyClientCampaignContent()
-      : await loadClientCampaignContent((service ?? db) as never, view.journey.campaignHeaderId);
+  if (picked.historical || !campaignOpen) {
+    view.campaignExecution = emptyClientCampaignExecution();
+    view.campaignContent = emptyClientCampaignContent();
+    view.campaignScriptUnitKeys = [];
+  } else {
+    const campaignId = view.journey.campaignHeaderId;
+    // Hydrate the schedule with the workspace, avoiding a second client-side
+    // waterfall each time the Campaign tab mounts. Preserve retry on failure.
+    [view.campaignExecution, view.campaignContent, view.campaignScriptUnitKeys] = await Promise.all([
+      loadClientCampaignExecution((service ?? db) as never, campaignId),
+      loadClientCampaignContent((service ?? db) as never, campaignId),
+      campaignId
+        ? listAttachedCampaignScriptPresence((service ?? db) as never, campaignId)
+            .then(presence => [...presence.keys()]).catch(() => undefined)
+        : Promise.resolve([]),
+    ]);
+  }
   view.clientEmails = commercialOpen
     ? await loadSavedClientEmailsForQuotation(
         (service ?? db) as never,

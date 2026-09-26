@@ -144,6 +144,7 @@ export function ApprovalWorkspace({
         inCampaign={kind === "in_campaign"}
         posts={posts}
         contentItems={contentItems}
+        initialScriptUnitKeys={view.campaignScriptUnitKeys}
         creators={view.creators}
         token={token}
         campaignStartDate={execution.startDate}
