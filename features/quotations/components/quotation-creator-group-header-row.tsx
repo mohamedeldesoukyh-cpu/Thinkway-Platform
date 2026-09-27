@@ -153,6 +153,9 @@ export function QuotationCreatorGroupHeaderRow({
       </div>
 
       <div className="cg-id min-w-0 flex-1 self-center">
+        {linkedPlatforms.length > 0 ? (
+          <CreatorLinkedPlatformIcons platforms={linkedPlatforms} className="mb-1" />
+        ) : null}
         <div className="cg-name">
           <span className="min-w-0 truncate">
             {onOpenCreator ? (
@@ -175,12 +178,6 @@ export function QuotationCreatorGroupHeaderRow({
           {clientSelection ? <QuotationClientReviewStatusBadge state={clientSelection} /> : null}
           {creatorProfileSource.isVerified ? (
             <BadgeCheckIcon className="vf size-3.5 shrink-0 text-[var(--blue)]" aria-label="Verified" />
-          ) : null}
-          {linkedPlatforms.length > 0 ? (
-            <CreatorLinkedPlatformIcons
-              platforms={linkedPlatforms}
-              className="shrink-0"
-            />
           ) : null}
         </div>
         {handleLabel ? <div className="cg-handle truncate">{handleLabel}</div> : null}

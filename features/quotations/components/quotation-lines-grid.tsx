@@ -151,6 +151,7 @@ function QuotationPackLineRow({
   const primary = lineFields.deliverableDrafts[0];
   const allowedCreatorPlatforms = lineFields.platformSelectOptions.map((p) => p.platform);
   const selectedPlatforms = lineFields.deliverableDrafts.flatMap((deliverable) => {
+    if (selectedTypesFromTypeLines(deliverableTypeLines(deliverable)).length === 0) return [];
     const fromTypes = platformsFromSelectedPostTypes(
       selectedTypesFromTypeLines(deliverableTypeLines(deliverable)),
       allowedCreatorPlatforms

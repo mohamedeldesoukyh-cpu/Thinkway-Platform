@@ -526,7 +526,7 @@ export function QuotationCreatorDeliverableRows({
       {displayRows.map((deliverable, index) => {
         const isFirst = index === 0;
         const canRemoveRow = displayRows.length > 1;
-        const displayPlatforms = resolveDeliverableDisplayPlatforms(
+        const displayPlatforms = deliverableTypeValues(deliverable).length === 0 ? [] : resolveDeliverableDisplayPlatforms(
           deliverable,
           allowedCreatorPlatforms,
           item.platform
@@ -584,10 +584,11 @@ export function QuotationCreatorDeliverableRows({
                   stopPropagation
                   className="min-w-0 max-w-full"
                   nameClassName="truncate"
-                  trailing={
+                  aboveName={
                     (creatorProfileSource.linkedPlatforms?.length ?? 0) > 0 ? (
                       <CreatorLinkedPlatformIcons
                         platforms={creatorProfileSource.linkedPlatforms ?? []}
+                        className="mb-1"
                       />
                     ) : null
                   }
@@ -621,7 +622,7 @@ export function QuotationCreatorDeliverableRows({
 
             <span className="co-plat">
               <div className="flex justify-center">
-                {isManualCreator && lineFields.platformSelectOptions.length > 0 ? (
+                {deliverableTypeValues(deliverable).length === 0 ? null : isManualCreator && lineFields.platformSelectOptions.length > 0 ? (
                   <QuotationLinePlatformCell
                     loadingPlatforms={lineFields.loadingPlatforms}
                     platformSelectOptions={lineFields.platformSelectOptions}

@@ -446,7 +446,7 @@ export function QuotationCollapsePackagePricingRow({
       {displayRows.map((deliverable, index) => {
         const isFirst = index === 0;
         const canRemoveRow = displayRows.length > 1;
-        const displayPlatforms = resolveDeliverableDisplayPlatforms(
+        const displayPlatforms = deliverableTypeValues(deliverable).length === 0 ? [] : resolveDeliverableDisplayPlatforms(
           deliverable,
           allowedCreatorPlatforms,
           leader.platform
@@ -511,7 +511,7 @@ export function QuotationCollapsePackagePricingRow({
                 <QuotationDeliverablePlatformIcons
                   allPlatforms={typeLinesIncludeAllPlatforms(deliverable)}
                   platforms={displayPlatforms}
-                  loading={lineFields.loadingPlatforms && displayPlatforms.length === 0}
+                  loading={deliverableTypeValues(deliverable).length > 0 && lineFields.loadingPlatforms && displayPlatforms.length === 0}
                   compact
                 />
               </div>

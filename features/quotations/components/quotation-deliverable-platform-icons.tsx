@@ -65,7 +65,7 @@ export function QuotationDeliverablePlatformIcons({
 
   const ordered = normalizePlatforms(platforms);
   if (ordered.length === 0) {
-    return <span className="text-[11px] text-muted-foreground">—</span>;
+    return null;
   }
 
   if (compact) {

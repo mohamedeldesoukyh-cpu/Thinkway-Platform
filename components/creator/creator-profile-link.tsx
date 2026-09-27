@@ -102,6 +102,7 @@ export type CreatorProfileLinkProps = {
   className?: string;
   nameClassName?: string;
   trailing?: ReactNode;
+  aboveName?: ReactNode;
 };
 
 function formatHandle(handle: string | null | undefined): string | null {
@@ -159,6 +160,7 @@ export function CreatorProfileLink({
   className,
   nameClassName,
   trailing,
+  aboveName,
 }: CreatorProfileLinkProps) {
   const profileUrl = resolveCreatorProfileUrl(source);
   const handleLabel = formatHandle(source.handle);
@@ -286,6 +288,7 @@ export function CreatorProfileLink({
         {avatarBlock}
         {(nameNode || (showHandle && handleLabel)) ? (
           <div className="min-w-0">
+            {aboveName}
             {nameNode}
             {showHandle && handleLabel ? (
               <p className={cn("truncate text-muted-foreground", HANDLE_SIZE_CLASS[size])}>
