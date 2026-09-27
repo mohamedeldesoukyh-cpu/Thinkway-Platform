@@ -59,6 +59,7 @@ export type DiscoverySuiteCreatorCellProps = {
   onOpen?: () => void;
   /** Extra content under name/handle/location. */
   children?: ReactNode;
+  aboveName?: ReactNode;
   className?: string;
   /** When parent row handles click, stop name-button bubbling. */
   stopPropagation?: boolean;
@@ -78,6 +79,7 @@ export function DiscoverySuiteCreatorCell({
   locationLabel,
   onOpen,
   children,
+  aboveName,
   className,
   stopPropagation = false,
 }: DiscoverySuiteCreatorCellProps) {
@@ -125,6 +127,7 @@ export function DiscoverySuiteCreatorCell({
         ) : null}
       </span>
       <span style={{ minWidth: 0 }}>
+        {aboveName}
         {onOpen ? (
           <button
             type="button"

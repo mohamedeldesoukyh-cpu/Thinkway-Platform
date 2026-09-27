@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useTransition } from "react";
+import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
 import {
   CopyIcon,
   PlusIcon,
@@ -264,6 +265,11 @@ function QuotationPackLineRow({
             item.creator_profile_source?.profile_url ?? item.profile_url
           }
           countryCodes={quotationCreatorCountryCodes(item)}
+          aboveName={<CreatorLinkedPlatformIcons
+            platforms={item.creator_profile_source?.linkedPlatforms?.length
+              ? item.creator_profile_source.linkedPlatforms : allowedCreatorPlatforms}
+            className="mb-1"
+          />}
           onOpen={onOpenCreator ? () => onOpenCreator(item) : undefined}
         />
       </DiscoverySuiteCell>
@@ -287,7 +293,7 @@ function QuotationPackLineRow({
         <QuotationDeliverablePlatformIcons
           platforms={selectedPlatforms}
           allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)}
-          loading={lineFields.loadingPlatforms}
+          loading={lineFields.loadingPlatforms && lineFields.deliverableDrafts.some((d) => selectedTypesFromTypeLines(deliverableTypeLines(d)).length > 0)}
         />
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>
