@@ -79,6 +79,7 @@ type Props = {
   onSkipEciLoading?: () => void;
   platforms: DiscoverySuiteCreatorProfilePlatformChip[];
   onSelectPlatform: (id: string) => void;
+  onRemovePlatform?: (id: string) => void;
   onAddPlatform: () => void;
   tierLabel: string | null;
   /** Canonical PR category — stored on influencers.categories. */
@@ -249,6 +250,7 @@ export function DiscoverySuiteCreatorProfile({
   onSkipEciLoading,
   platforms,
   onSelectPlatform,
+  onRemovePlatform,
   onAddPlatform,
   tierLabel,
   countryCode = "",
@@ -338,8 +340,8 @@ export function DiscoverySuiteCreatorProfile({
 
             <div className="tw-chips2">
               {platforms.map((platform) => (
+                <div key={platform.id} className={cn("tw-platform-chip", platform.selected && "on")}>
                 <button
-                  key={platform.id}
                   type="button"
                   className={cn("tw-pchip", platform.selected && "on")}
                   aria-pressed={platform.selected}
@@ -348,6 +350,19 @@ export function DiscoverySuiteCreatorProfile({
                   {platform.label}
                   <em>{AB(platform.followers)}</em>
                 </button>
+                {onRemovePlatform ? (
+                  <button
+                    type="button"
+                    className="tw-platform-chip__remove"
+                    aria-label={`Remove ${platform.label} profile`}
+                    title={platforms.length < 2 ? "Keep at least one platform for this creator" : `Remove ${platform.label} profile`}
+                    disabled={platforms.length < 2}
+                    onClick={() => onRemovePlatform(platform.id)}
+                  >
+                    <span aria-hidden="true">×</span>
+                  </button>
+                ) : null}
+                </div>
               ))}
               <button type="button" className="tw-pchip add" onClick={onAddPlatform}>
                 + Add

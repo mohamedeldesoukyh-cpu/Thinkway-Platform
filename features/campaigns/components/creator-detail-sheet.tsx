@@ -1751,6 +1751,12 @@ export function CreatorDetailSheet({
               selected: platform.id === (selectedPlatform?.id ?? selectedPlatformAccountId),
             }))}
             onSelectPlatform={setSelectedPlatformAccountId}
+            onRemovePlatform={identityCreator.influencer_id ? (id) => {
+              const platform = platforms.find((item) => item.id === id);
+              if (!platform || platforms.length < 2) return;
+              setPlatformToDelete(platform);
+              setDeletePlatformOpen(true);
+            } : undefined}
             onAddPlatform={() => setAddPlatformOpen(true)}
             tierLabel={packTier}
             prChecked={creatorHasPrCategory(identityCreator.categories)}
