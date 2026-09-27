@@ -90,3 +90,6 @@ assert.equal(multiStats[2]?.avgViews, null);
 assert.equal(multiStats[2]?.metricsHint ?? null, null, "dead FB shows — — —, not a collapsed hint");
 
 console.log("resolve-browse-display-metrics.test.ts — all tests passed");
+
+const withVideoPlays = { ...creator, platforms: [{ ...creator.platforms[0], avg_views: 8000, metadata: { avg_reels_plays: 31900 } }] } as UnifiedCreatorResult;
+assert.equal(resolveCreatorBrowsePlatformStats(withVideoPlays)[0]?.avgViews, 31900, "browse uses the same video plays calculation as creator details");

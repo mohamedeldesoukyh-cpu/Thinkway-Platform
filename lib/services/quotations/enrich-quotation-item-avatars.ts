@@ -1,3 +1,4 @@
+import { resolvePlatformBrowseAvgViews } from "@/lib/creators/resolve-browse-display-metrics";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
@@ -345,7 +346,9 @@ export function resolveLineAvatarFields(
     platform: resolvedPlatform,
     followers: resolveLineFollowers(item, platformView),
     engagement_rate: resolveLineEngagementRate(item, platformView),
-    avg_views: resolveLineAvgViews(item, platformView),
+    avg_views: item.avg_views ?? (resolveLinePlatformAccount(item, creator)
+      ? resolvePlatformBrowseAvgViews(creator, resolveLinePlatformAccount(item, creator)!, creator.platforms.findIndex(p => p.id === resolveLinePlatformAccount(item, creator)?.id))
+      : resolveLineAvgViews(item, platformView)),
     country_code:
       creatorProfileSource.countryCode ??
       normalizeCountryCode(item.country_code) ??

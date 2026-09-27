@@ -1,3 +1,4 @@
+import { resolveCreatorEngagementMetricBundle } from "@/lib/creators/creator-metric-definitions";
 /**
  * Browse/search display metrics — never show "—" when data exists at any layer.
  *
@@ -102,6 +103,14 @@ export function resolvePlatformBrowseAvgViews(
   platform: UnifiedCreatorPlatform,
   index: number
 ): number | null {
+  const metadata = platform.metadata as Record<string, unknown> | null;
+  const plays = resolveCreatorEngagementMetricBundle({
+    publications: platform.recent_publications ?? (isPrimaryPlatform(creator, platform, index) ? creator.recent_publications : []),
+    avgLikes: platform.avg_likes,
+    avgComments: platform.avg_comments,
+    reelsViewsAvg: typeof metadata?.avg_reels_plays === "number" ? metadata.avg_reels_plays : null,
+  }).avgReelsPlays;
+  if (plays != null) return plays;
   if (isPositiveNumericMetric(platform.avg_views)) {
     return platform.avg_views;
   }
