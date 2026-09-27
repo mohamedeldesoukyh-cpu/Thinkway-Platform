@@ -127,6 +127,8 @@ import {
 } from "./shortlist-creator-list";
 import { resolveShortlistClientLabel } from "./shortlist-creator-meta-columns";
 import { ShortlistMetricsRefreshBanner } from "./shortlist-metrics-refresh-banner";
+import { useLiveShortlistEnrichment } from "../use-live-shortlist-enrichment";
+import type { getShortlistEnrichmentUpdates } from "../enrichment-live-action";
 import { SubmitShortlistDialog } from "./submit-shortlist-dialog";
 import {
   AssignmentStatusBadge,
@@ -355,6 +357,17 @@ export function ShortlistWorkspace({
         return { ...item, creator };
       }),
     [detail.creators, creatorPatches, enrichmentOverrides]
+  );
+
+  const applyEnrichmentUpdates = useCallback((updates: Awaited<ReturnType<typeof getShortlistEnrichmentUpdates>>) => {
+    setCreatorPatches((previous) => {
+      const next = new Map(previous);
+      for (const update of updates) next.set(update.unifiedId, update.creator);
+      return next;
+    });
+  }, []);
+  const enrichmentConnectionDelayed = useLiveShortlistEnrichment(
+    detail.id, displayCreators, applyEnrichmentUpdates, refreshingMetrics,
   );
 
   /** Handle-only open (pack cr) — shortlist items first, then any patched creators. */
@@ -1006,6 +1019,11 @@ export function ShortlistWorkspace({
               </button>
             </div>
 
+            {enrichmentConnectionDelayed ? (
+              <p role="status" className="px-4 py-2 text-sm text-amber-700">
+                Creator updates are temporarily delayed. Retrying automatically…
+              </p>
+            ) : null}
             {refreshProgress ? (
               <ShortlistMetricsRefreshBanner
                 total={refreshProgress.total}

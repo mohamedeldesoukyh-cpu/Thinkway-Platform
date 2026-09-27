@@ -29,6 +29,7 @@ import { readShortlistDisplayCurrency } from "@/lib/discovery/shortlist-currency
 import { loadClientWorkspaceListLinks } from "@/features/client-workspace/list-client-workspace-links";
 import { clientWorkspaceListLinkForSubject } from "@/features/client-workspace/client-review-selection";
 import { SHORTLIST_PERMISSIONS } from "./constants";
+import { loadShortlistLiveStatuses } from "./enrichment-live-status";
 import type {
   ShortlistBrandOption,
   ShortlistCampaignOption,
@@ -363,6 +364,7 @@ async function loadShortlistCreators(
     unified_id: item.unified_id ?? null,
   }));
 
+  const liveStatuses = await loadShortlistLiveStatuses(supabase, items);
   const [lookup, quotationRefsByItem] = await Promise.all([
     resolveUnifiedCreatorsByRefs(supabase, {
       unifiedIds: items.map((item) => item.unified_id),
@@ -388,7 +390,9 @@ async function loadShortlistCreators(
       profile_id: item.profile_id ?? null,
       influencer_id: item.influencer_id ?? null,
       platform_account_ids: (item.platform_account_ids ?? []).filter(Boolean),
-      creator,
+      creator: creator?.influencer_id && liveStatuses.has(creator.influencer_id)
+        ? { ...creator, enrichment_status: liveStatuses.get(creator.influencer_id)! }
+        : creator,
       quotation_refs: quotationRefsByItem.get(item.id) ?? [],
       ...collapseFieldsFromRow(item as Record<string, unknown>),
     };

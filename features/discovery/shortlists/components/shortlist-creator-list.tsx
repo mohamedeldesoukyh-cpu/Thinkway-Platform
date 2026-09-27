@@ -20,7 +20,7 @@ import {
 } from "@/features/discovery/enrichment/status";
 import { useRefreshMetricsProgressCircle } from "@/features/discovery/enrichment/use-refresh-metrics-progress-circle";
 import { cn } from "@/lib/utils";
-import { ArrowDownIcon, ArrowUpIcon, Link2Icon, UsersIcon } from "lucide-react";
+import { ArrowDownIcon, ArrowUpIcon, Link2Icon, Loader2Icon, UsersIcon } from "lucide-react";
 
 import { SHORTLIST_ITEM_STATUS_LABELS, SHORTLIST_QUOTED_COLUMN_LABEL } from "../constants";
 import {
@@ -218,7 +218,12 @@ function ShortlistCreatorGridRow({
           onOpen={openCreatorDetail}
           stopPropagation
         >
-          {refreshProgress ? (
+          {enriching ? (
+            <span role="status" aria-live="polite" className="mt-1 inline-flex items-center gap-1.5 text-xs text-blue-700" onClick={stopBubble}>
+              <Loader2Icon aria-hidden="true" className="size-3.5 animate-spin motion-reduce:animate-none" />
+              {enrichmentStatus === "queued" ? "Enrichment queued…" : "Enriching creator…"}
+            </span>
+          ) : refreshProgress ? (
             <span className="mt-1 inline-flex" onClick={stopBubble}>
               <RefreshMetricsProgressCircle progress={refreshProgress} />
             </span>

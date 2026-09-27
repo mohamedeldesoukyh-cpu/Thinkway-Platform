@@ -52,10 +52,17 @@ export function ShortlistPasteLinksPanel({
       {error ? (
         <p className="text-xs text-destructive">{error}</p>
       ) : pending ? (
-        <p className="flex items-center gap-2 text-xs text-muted-foreground">
-          <Loader2Icon className="size-3.5 animate-spin" />
-          Resolving links and adding to this shortlist…
-        </p>
+        <div role="status" aria-live="polite" className="text-xs text-muted-foreground">
+          <p>Adding creators… Enrichment progress will appear beside each creator in the shortlist.</p>
+          <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto">
+            {parsed.parsed.slice(0, preview.addableCount).map((profile) => (
+              <li key={profile.normalized_profile_url} className="flex items-center gap-2">
+                <Loader2Icon aria-hidden="true" className="size-3.5 shrink-0 animate-spin motion-reduce:animate-none" />
+                <span>@{profile.normalized_username} · {profile.platform} · Adding…</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : preview.parsedCount > 0 ? (
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs dark:border-emerald-900/60 dark:bg-emerald-950/30">
           <p className="font-semibold text-emerald-700 dark:text-emerald-300">
