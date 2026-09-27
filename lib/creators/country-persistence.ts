@@ -5,6 +5,7 @@
  * backfill) MUST use helpers from this module — do not write country columns directly.
  */
 
+import { CREATOR_COUNTRY_OPTIONS } from "@/lib/creators/country-options";
 import { resolveCountryCode } from "@/lib/creators/country-code";
 
 import {
@@ -68,6 +69,14 @@ export function persistInfluencerCountryFields(
 export function persistCountryFromApifyProfile(
   input: CreatorCountryWriteFromProfileInput & InfluencerCountryWriteInput
 ): InfluencerCountryWrite | null {
+  // Provider country replaces the manual fallback; absent country preserves it.
+  const providerCode = resolveCountryCode(input.audienceCountry);
+  if (CREATOR_COUNTRY_OPTIONS.some(country => country.value === providerCode)) {
+    return buildInfluencerCountryWrite({ incomingCodes: [providerCode] });
+  }
+  if (input.existingCountryCode) {
+    return buildInfluencerCountryWrite({ existingCountryCode: input.existingCountryCode, existingCountryCodes: input.existingCountryCodes });
+  }
   return buildCreatorCountryWriteFromApifyProfile(input);
 }
 

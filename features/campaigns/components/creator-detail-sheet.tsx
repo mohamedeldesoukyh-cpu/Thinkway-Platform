@@ -48,7 +48,7 @@ import { DeleteCreatorPlatformDialog } from "@/features/discovery/delete-platfor
 import { EditCreatorAveragePriceDialog } from "@/features/discovery/components/edit-creator-average-price-dialog";
 import { EditCreatorContactDialog } from "@/features/discovery/components/edit-creator-contact-dialog";
 import { EditCreatorProfileUrlDialog } from "@/features/discovery/components/edit-creator-profile-url-dialog";
-import { updateCreatorPrCategoryAction } from "@/features/discovery/creator-profile/update-creator-commercial-actions";
+import { updateCreatorPrCategoryAction, updateCreatorCountryAction } from "@/features/discovery/creator-profile/update-creator-commercial-actions";
 import {
   CombineCreatorsDialog,
   type CombineCreatorsMergedMeta,
@@ -882,6 +882,7 @@ export function CreatorDetailSheet({
   const [editProfileUrlOpen, setEditProfileUrlOpen] = useState(false);
   const [combineCreatorsOpen, setCombineCreatorsOpen] = useState(false);
   const [prCategoryBusy, setPrCategoryBusy] = useState(false);
+  const [countryBusy, setCountryBusy] = useState(false);
   const [similar, setSimilar] = useState<Array<UnifiedCreatorResult & { similarity_score: number }>>(
     []
   );
@@ -1157,6 +1158,18 @@ export function CreatorDetailSheet({
     onCreatorUpdated?.(next, options);
   }
 
+  async function handleCountryChange(country: string) {
+    if (!identityCreator.influencer_id || countryBusy) return;
+    setCountryBusy(true);
+    try {
+      const result = await updateCreatorCountryAction({ influencerId: identityCreator.influencer_id, unifiedId: identityCreator.unified_id, country });
+      if (!result.ok) { toast.error(result.message); return; }
+      if (result.creator) handleCreatorUpdated(result.creator, { forceListSync: true });
+      toast.success(result.message);
+    } catch { toast.error("Country could not be saved. Please try again."); }
+    finally { setCountryBusy(false); }
+  }
+
   async function handleTogglePrCategory(enabled: boolean) {
     const influencerId = identityCreator.influencer_id;
     if (!influencerId || prCategoryBusy) return;
@@ -1243,7 +1256,7 @@ export function CreatorDetailSheet({
     country_codes: identityCreator.country_codes,
     country_code: identityCreator.country_code,
     estimated_country: identityCreator.estimated_country,
-    platformAudienceCountries: identityCreator.platforms.map((p) => p.audience_country),
+    platformAudienceCountries: identityCreator.country_code ? [] : identityCreator.platforms.map((p) => p.audience_country),
   });
   const followersForTier =
     resolveCreatorFollowersCount(identityCreator) ?? selectedPlatform?.follower_count ?? 0;
@@ -1744,6 +1757,9 @@ export function CreatorDetailSheet({
             prBusy={prCategoryBusy}
             canEditPr={Boolean(identityCreator.influencer_id)}
             onTogglePr={handleTogglePrCategory}
+          countryCode={identityCreator.country_code ?? ""}
+          countryBusy={countryBusy}
+          onCountryChange={handleCountryChange}
             kvRows={[
               { label: "Engagement", value: engagementLabel },
               { label: "Avg plays", value: avgPlaysLabel },

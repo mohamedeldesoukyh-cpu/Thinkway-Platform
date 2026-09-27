@@ -1805,8 +1805,8 @@ async function fetchInternalCreators(
       country_codes: resolveCreatorCountryCodes({
         country_codes: r.country_codes,
         country_code: r.country_code,
-        estimated_country: metricsAccount?.audience_country ?? r.country_code,
-        platformAudienceCountries: platformRows.map((p) => p.audience_country),
+        estimated_country: r.country_code ?? metricsAccount?.audience_country,
+        platformAudienceCountries: r.country_code ? [] : platformRows.map((p) => p.audience_country),
       }),
       estimated_country: metricsAccount?.audience_country ?? r.country_code,
       city: null,

@@ -701,7 +701,7 @@ export async function runCreatorEnrichment(
       handle: username,
     });
     const accountCountryWrite = persistCountryFromApifyProfile({
-      existingCountryCode: creatorRow.country_code,
+      existingCountryCode: rollupCountryCodes[0] ?? creatorRow.country_code,
       existingCountryCodes: rollupCountryCodes,
       audienceCountry: data.audienceCountry,
       platformAudienceCountry: account.audience_country,
@@ -1105,9 +1105,8 @@ export async function runCreatorEnrichment(
     JSON.stringify(creatorRow.categories ?? []);
 
   const countryWrite = persistInfluencerCountryFields({
-    existingCountryCode: creatorRow.country_code,
-    existingCountryCodes: creatorRow.country_codes,
     incomingCodes: [rollupCountryCodes],
+    preferredPrimary: rollupCountryCodes[0],
   });
 
   const resolvedCountryCodes = mergeCountryCodes(

@@ -253,3 +253,6 @@
 .discovery-suite.tw-cp-root .tw-cp__t {
   flex: 0 0 auto;
 }
+
+.discovery-suite .tw-country-edit { display:inline-flex; align-items:center; gap:6px; font-size:12px; }
+.discovery-suite .tw-country-edit select { max-width:155px; padding:3px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#fff; color:#172033; font:inherit; }

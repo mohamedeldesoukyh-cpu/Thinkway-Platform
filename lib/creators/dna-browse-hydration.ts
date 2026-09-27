@@ -261,7 +261,7 @@ function applyDnaDocumentToCreator(
     dnaAvatarUrl: dnaAvatar,
     preferEnrichedDna: enriched && Boolean(dnaAvatar),
   });
-  const country = envelopeValue(document.audience.country) ?? creator.country_code;
+  const country = creator.country_code ?? envelopeValue(document.audience.country);
   const categories = mergeStringArray(creator.categories, envelopeValue(document.audience.categories));
   const interests = mergeStringArray(
     creator.audience_interests,

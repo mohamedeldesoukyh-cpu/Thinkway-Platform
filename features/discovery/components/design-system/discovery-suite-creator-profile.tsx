@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { CREATOR_COUNTRY_OPTIONS as COUNTRY_OPTIONS } from "@/lib/creators/country-options";
 import { createPortal } from "react-dom";
 
 import { formatDistanceToNow } from "date-fns";
@@ -81,6 +82,9 @@ type Props = {
   onAddPlatform: () => void;
   tierLabel: string | null;
   /** Canonical PR category — stored on influencers.categories. */
+  countryCode?: string;
+  countryBusy?: boolean;
+  onCountryChange?: (country: string) => void;
   prChecked?: boolean;
   prBusy?: boolean;
   canEditPr?: boolean;
@@ -247,6 +251,9 @@ export function DiscoverySuiteCreatorProfile({
   onSelectPlatform,
   onAddPlatform,
   tierLabel,
+  countryCode = "",
+  countryBusy = false,
+  onCountryChange,
   prChecked = false,
   prBusy = false,
   canEditPr = false,
@@ -346,6 +353,17 @@ export function DiscoverySuiteCreatorProfile({
                 + Add
               </button>
               {tierLabel ? <span>{tierLabel}</span> : null}
+              {canEditPr && onCountryChange ? (
+                <label className="tw-country-edit">
+                  <span>Country</span>
+                  <select aria-label="Creator country" value={countryCode} disabled={countryBusy} onChange={event => onCountryChange(event.target.value)} title="Provider country data replaces this selection on refresh; otherwise it is kept.">
+                    <option value="" disabled>Choose country</option>
+                    {countryCode && !COUNTRY_OPTIONS.some(option => option.value === countryCode) ? <option value={countryCode}>{countryCode}</option> : null}
+                    {COUNTRY_OPTIONS.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
+                  </select>
+                  {countryBusy ? <span role="status">Saving…</span> : null}
+                </label>
+              ) : null}
               {canEditPr ? (
                 <label className="tw-pr-check" data-busy={prBusy ? "true" : undefined}>
                   <input

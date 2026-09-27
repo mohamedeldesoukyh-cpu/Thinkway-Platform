@@ -1,5 +1,7 @@
 "use server";
 
+import { CREATOR_COUNTRY_OPTIONS as COUNTRY_OPTIONS } from "@/lib/creators/country-options";
+import { persistInfluencerCountryFields, countryWritePayload } from "@/lib/creators/country-persistence";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -294,4 +296,18 @@ export async function updateCreatorPrCategoryAction(input: {
       : `${CREATOR_PR_CATEGORY} category removed.`,
     creator,
   };
+}
+
+/** A manual country is a fallback, not a protected enrichment field. */
+export async function updateCreatorCountryAction(input: { influencerId: string; unifiedId: string; country: string }): Promise<CreatorCommercialActionResult> {
+  const parsed = z.object({ influencerId: z.string().uuid(), unifiedId: z.string().trim().min(1), country: z.string().refine(value => COUNTRY_OPTIONS.some(option => option.value === value), "Choose a country.") }).safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Choose a valid creator and country." };
+  const { supabase, error: authError } = await requireAuthedClient();
+  if (!supabase || authError) return { ok: false, message: "Unauthorized" };
+  const { data, error } = await supabase.from("influencers").update(countryWritePayload(persistInfluencerCountryFields({ incomingCodes: [parsed.data.country] }))).eq("id", parsed.data.influencerId).select("id").maybeSingle();
+  if (error || !data) return { ok: false, message: error?.message ?? "Creator could not be updated." };
+  const creator = await reloadCreator(supabase, "inf:" + parsed.data.influencerId);
+  revalidatePath("/discovery");
+  revalidatePath("/quotations");
+  return { ok: true, message: "Country saved. Provider country data can replace it on refresh.", creator };
 }
