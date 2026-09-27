@@ -20,6 +20,8 @@ export function creatorListRowEquivalent(
 ): boolean {
   if (current.unified_id !== next.unified_id) return false;
   if (current.display_name !== next.display_name) return false;
+  if (current.country_code !== next.country_code || current.estimated_country !== next.estimated_country) return false;
+  if (!stringArraysEqual(current.country_codes, next.country_codes)) return false;
   if (current.enrichment_status !== next.enrichment_status) return false;
   if (current.thinkway_score !== next.thinkway_score) return false;
   if (current.primaryAvatarUrl !== next.primaryAvatarUrl) return false;
