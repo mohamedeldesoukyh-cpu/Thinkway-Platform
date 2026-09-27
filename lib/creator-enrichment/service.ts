@@ -130,6 +130,7 @@ const SCOPE_FIELDS: Record<Exclude<EnrichmentScope, "all">, readonly string[]> =
   avatar: ["profile_picture_url"],
   metrics: [
     ...APIFY_METRIC_FIELDS,
+    "recent_publications",
     "audience_country",
     "interest_categories",
     "audience_interests",
@@ -724,7 +725,9 @@ export async function runCreatorEnrichment(
 
     const mergedPublications = mergeCreatorRecentPublications(
       account.recent_publications,
-      data.recentPublications
+      data.recentPublications,
+      undefined,
+      { refresh: true }
     );
 
     const incoming: IncomingField[] = [

@@ -25,6 +25,7 @@ export function creatorListRowEquivalent(
   if (current.enrichment_status !== next.enrichment_status) return false;
   if (current.thinkway_score !== next.thinkway_score) return false;
   if (current.primaryAvatarUrl !== next.primaryAvatarUrl) return false;
+  if (JSON.stringify(current.recent_publications) !== JSON.stringify(next.recent_publications)) return false;
   if (
     current.default_metrics_platform_account_id !== next.default_metrics_platform_account_id
   ) {
@@ -46,6 +47,9 @@ export function creatorListRowEquivalent(
   for (const left of current.platforms) {
     const right = next.platforms.find((platform) => platform.id === left.id);
     if (!right) return false;
+    // A refresh may change posts, captions, contacts, avatar or likes without
+    // changing followers/views. Do not discard those platform updates.
+    if (JSON.stringify(left) !== JSON.stringify(right)) return false;
     if (
       left.platform !== right.platform ||
       left.handle !== right.handle ||

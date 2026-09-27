@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { sortRecentPublications } from "@/lib/creators/sort-recent-publications";
 
 import { PublicationPreviewImage } from "@/components/creator/publication-preview-image";
 import { PublicationEvidenceDetails } from "@/components/creator/publication-evidence-details";
@@ -203,7 +204,8 @@ function PackPublicationsGrid({
   publications: CreatorRecentPublication[];
   limit?: number;
 }) {
-  const rows = limit != null ? publications.slice(0, limit) : publications;
+  const ordered = sortRecentPublications(publications);
+  const rows = limit != null ? ordered.slice(0, limit) : ordered;
   if (rows.length === 0) {
     return (
       <div className="tw-empty" style={{ padding: "26px 16px" }}>

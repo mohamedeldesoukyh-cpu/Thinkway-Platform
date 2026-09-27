@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { browseUnifiedCreatorsForPickerAction } from "@/features/campaigns/creator-discovery-actions";
+import type { BrowseUnifiedCreatorsActionResult } from "@/features/campaigns/creator-discovery-actions";
 import { filterExactCreatorMatches } from "@/features/discovery/components/creator-search/creator-search-exact-match";
 import { mapDiscoverySearchError } from "@/lib/creators/discovery-search-error";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
@@ -156,13 +156,27 @@ export function useCreatorBrowse({
 }: UseCreatorBrowseOptions = {}) {
   const [state, setState] = useState<CreatorBrowseState>(INITIAL_BROWSE_STATE);
   const reqId = useRef(0);
+  const activeRequest = useRef<AbortController | null>(null);
   const pinnedCreatorsRef = useRef<Map<string, UnifiedCreatorResult>>(new Map());
   const filtersKey = JSON.stringify(filters);
   const debouncedFiltersKey = useDebouncedValue(filtersKey, debounceMs);
 
+  useEffect(() => {
+    // Cancel immediately while the next query is still debouncing, and on close.
+    reqId.current += 1;
+    activeRequest.current?.abort();
+    return () => {
+      reqId.current += 1;
+      activeRequest.current?.abort();
+    };
+  }, [filtersKey, enabled]);
+
   const fetchPage = useCallback(
     async (page: number, append: boolean) => {
       const id = ++reqId.current;
+      activeRequest.current?.abort();
+      const controller = new AbortController();
+      activeRequest.current = controller;
       setState((prev) => ({
         ...prev,
         loading: !append,
@@ -172,15 +186,17 @@ export function useCreatorBrowse({
 
       try {
         const parsedFilters = JSON.parse(debouncedFiltersKey) as CreatorBrowseFilters;
-        const result = await browseUnifiedCreatorsForPickerAction({
-          ...parsedFilters,
-          skipCoverageBackfill: true,
-          page,
-          pageSize,
+        const response = await fetch("/api/discovery/creator-picker", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(30_000)]),
+          body: JSON.stringify({ ...parsedFilters, skipCoverageBackfill: true, page, pageSize }),
         });
+        const result = await response.json() as BrowseUnifiedCreatorsActionResult;
         if (id !== reqId.current) return;
-        if (result.error) {
-          throw new Error(result.error);
+        if (!response.ok || result.error) {
+          throw new Error(result.error || "Could not search creators. Please retry.");
         }
 
         setState((prev) => {

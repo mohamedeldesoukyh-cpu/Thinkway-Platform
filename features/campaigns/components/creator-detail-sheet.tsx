@@ -863,6 +863,7 @@ export function CreatorDetailSheet({
   const isDiscoveryPack = presentation === "discoveryPack";
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
   const [baseCreator, setBaseCreator] = useState<UnifiedCreatorResult | null>(creator);
+  const creatorUpdateRevisionRef = useRef(0);
   const [selectedPlatformAccountId, setSelectedPlatformAccountId] = useState<string | null>(
     creator?.default_metrics_platform_account_id ?? creator?.platforms[0]?.id ?? null
   );
@@ -926,6 +927,7 @@ export function CreatorDetailSheet({
     const unifiedId = creator.unified_id;
     const influencerId = creator.influencer_id;
     const fetchGeneration = detailFetchGenerationRef.current + 1;
+    const updateRevision = creatorUpdateRevisionRef.current;
     detailFetchGenerationRef.current = fetchGeneration;
     let active = true;
     // Instant shell: keep list-row identity; clear only progressive panels.
@@ -956,7 +958,7 @@ export function CreatorDetailSheet({
         if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
 
         const seed = coreCreator ?? creator;
-        setBaseCreator(seed);
+        if (creatorUpdateRevisionRef.current === updateRevision) setBaseCreator(seed);
         setSelectedPlatformAccountId((current) => {
           if (current && seed.platforms.some((p) => p.id === current)) return current;
           return (
@@ -971,7 +973,7 @@ export function CreatorDetailSheet({
             hasScore: withEci?.eci_investment_score != null,
           });
           if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
-          if (withEci) setBaseCreator(withEci);
+          if (withEci && creatorUpdateRevisionRef.current === updateRevision) setBaseCreator(withEci);
           setEciLoading(false);
         });
 
@@ -1142,6 +1144,8 @@ export function CreatorDetailSheet({
     next: UnifiedCreatorResult,
     options?: CreatorDetailSheetUpdateMeta
   ) {
+    // A slower initial detail/ECI request must not overwrite a completed refresh.
+    creatorUpdateRevisionRef.current += 1;
     const previous = baseCreator ?? creator;
     setBaseCreator(next);
     setEnrichmentStatus(resolveCreatorEnrichmentStatus(next.enrichment_status));

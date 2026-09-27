@@ -193,6 +193,28 @@ export async function syncShortlistChangeToQuotation(
   const pair = await loadLinkedPair(supabase, { shortlistId: input.shortlistId });
   if (!pair || !isCommercialSyncEnabled(pair.quotationStatus)) return;
 
+  await syncShortlistItemWithPair(supabase, input, pair);
+}
+
+/** Resolve the linked quotation once for a whole addition, retaining sequential writes. */
+export async function syncShortlistAdditionsToQuotation(
+  supabase: Supabase,
+  input: { shortlistId: string; actorId: string; shortlistItemIds: string[] }
+) {
+  if (!input.shortlistItemIds.length) return;
+  const pair = await loadLinkedPair(supabase, { shortlistId: input.shortlistId });
+  if (!pair || !isCommercialSyncEnabled(pair.quotationStatus)) return;
+  for (const shortlistItemId of input.shortlistItemIds) {
+    await syncShortlistItemWithPair(supabase, { ...input, shortlistItemId }, pair);
+  }
+}
+
+async function syncShortlistItemWithPair(
+  supabase: Supabase,
+  input: { shortlistId: string; actorId: string; shortlistItemId?: string; removedShortlistItemId?: string },
+  pair: LinkedPair
+) {
+
   await withSyncLock(pair.quotationId, pair.shortlistId, async () => {
     if (input.removedShortlistItemId) {
       await supabase

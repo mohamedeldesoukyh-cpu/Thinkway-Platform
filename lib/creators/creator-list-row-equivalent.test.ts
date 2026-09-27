@@ -69,3 +69,11 @@ test("identical category snapshots stay equivalent", () => {
   const next = baseCreator();
   assert.equal(creatorListRowEquivalent(current, next), true);
 });
+
+test("publication and contact updates propagate even when headline metrics are unchanged", () => {
+  const current = baseCreator();
+  for (const patch of [{ contact_email: "updated@example.test" }, { avg_likes: 123 }, { profile_bio: "Updated bio" }, { recent_publications: [] }]) {
+    const next = baseCreator({ platforms: [{ ...current.platforms[0], ...patch }] });
+    assert.equal(creatorListRowEquivalent(current, next), false);
+  }
+});

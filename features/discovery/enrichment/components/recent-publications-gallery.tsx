@@ -5,6 +5,7 @@ import { ExternalLinkIcon, HeartIcon, MessageCircleIcon, PlayIcon } from "lucide
 import { PublicationPreviewImage } from "@/components/creator/publication-preview-image";
 import { PublicationEvidenceDetails } from "@/components/creator/publication-evidence-details";
 import type { CreatorRecentPublication } from "@/lib/creators/types";
+import { sortRecentPublications } from "@/lib/creators/sort-recent-publications";
 import { cn } from "@/lib/utils";
 
 function formatCount(value: number | null | undefined): string {
@@ -147,7 +148,8 @@ export function RecentPublicationsGallery({
   imageHeightClass?: string;
   limit?: number;
 }) {
-  const items = limit != null ? publications.slice(0, limit) : publications;
+  const ordered = sortRecentPublications(publications);
+  const items = limit != null ? ordered.slice(0, limit) : ordered;
 
   if (items.length === 0) {
     return (

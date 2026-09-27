@@ -27,6 +27,15 @@ function publication(postId: string, capturedAt: string): CreatorRecentPublicati
   };
 }
 
+test("new publications lead the feed while older evidence and updated counts are retained", () => {
+  const old = { ...publication("old", "2026-07-01"), posted_at: "2026-07-01", likes: 10 };
+  const recent = { ...publication("new", "2026-09-28"), posted_at: "2026-09-28", likes: 20 };
+  const result = mergeCreatorRecentPublications([old], [recent, { ...old, likes: 30 }], undefined, { refresh: true });
+  assert.deepEqual(result.map(row => row.platformPostId), ["new", "old"]);
+  assert.equal(result[1].likes, 30);
+  assert.equal(old.likes, 10);
+});
+
 test("normalizes rich Apify publication evidence with stable source identity", () => {
   const evidence = normalizeCreatorPublicationEvidence(
     {

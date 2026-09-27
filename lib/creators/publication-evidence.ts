@@ -1,3 +1,4 @@
+import { sortRecentPublications } from "./sort-recent-publications";
 import type {
   CreatorPublicationMedia,
   CreatorPublicationMusic,
@@ -306,7 +307,8 @@ export type PublicationIdentityIssue = { kind: "conflict" | "ambiguous"; publica
 export function mergeCreatorRecentPublications(
   existing: unknown,
   incoming: CreatorRecentPublication[],
-  onIssue?: (issue: PublicationIdentityIssue) => void
+  onIssue?: (issue: PublicationIdentityIssue) => void,
+  options?: { refresh?: boolean }
 ): CreatorRecentPublication[] {
   const base = Array.isArray(existing) ? (existing as CreatorRecentPublication[]) : [];
   const output: CreatorRecentPublication[] = [];
@@ -345,6 +347,16 @@ export function mergeCreatorRecentPublications(
     }
     const index = matches[0]!;
     const current = output[index]!;
+    const currentCaptured = Date.parse(current.source?.capturedAt ?? "");
+    const incomingCaptured = Date.parse(publication.source?.capturedAt ?? "");
+    const refresh = options?.refresh && (!Number.isFinite(currentCaptured) ||
+      !Number.isFinite(incomingCaptured) || incomingCaptured >= currentCaptured);
+    if (refresh) {
+      // Live enrichment refreshes counters, captions and expiring media URLs.
+      // Keep absent fields from the previous snapshot; historical imports stay additive.
+      output[index] = mergeValue(publication, current);
+      return;
+    }
     const merged = Object.fromEntries(
       Object.keys({ ...current, ...publication }).map((key) => [
         key,
@@ -371,5 +383,5 @@ export function mergeCreatorRecentPublications(
 
   for (const publication of base) add(publication, true);
   for (const publication of incoming) add(publication, false);
-  return output;
+  return sortRecentPublications(output);
 }

@@ -16,7 +16,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { quotationDetailPath } from "@/features/quotations/constants";
 import { isCommercialCurrency } from "@/lib/commercial/fx-aggregation";
-import { syncShortlistChangeToQuotation } from "@/lib/commercial-sync/engine";
+import { syncShortlistChangeToQuotation, syncShortlistAdditionsToQuotation } from "@/lib/commercial-sync/engine";
 import { shortlistMetadataWithCurrency } from "@/lib/discovery/shortlist-currency";
 
 import { SHORTLIST_PERMISSIONS } from "./constants";
@@ -988,14 +988,11 @@ export async function addCreatorsToShortlistsV2(
         ),
       ]);
 
-      // Sequential — commercial sync uses a per-quotation lock.
-      for (const item of allInsertedRows) {
-        await syncShortlistChangeToQuotation(actor.supabase, {
-          shortlistId,
-          actorId: actor.userId,
-          shortlistItemId: item.id,
-        });
-      }
+      await syncShortlistAdditionsToQuotation(actor.supabase, {
+        shortlistId,
+        actorId: actor.userId,
+        shortlistItemIds: allInsertedRows.map((item) => item.id),
+      });
 
       const controlSettings = await getDiscoveryControlSettings(actor.supabase);
       if (shouldAutoEnrichForTrigger("shortlist", controlSettings)) {
