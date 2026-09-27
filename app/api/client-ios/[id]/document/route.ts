@@ -5,6 +5,7 @@ import { resolveClientIoDocumentLayout } from "@/lib/io/client-io-document-layou
 import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
 import { createIoDocumentSignedUrl } from "@/lib/io/io-document-storage";
 import { renderLiveClientIoHtml } from "@/lib/io/render-live-client-io-html";
+import { applyClientIoPrintLayout, isClassicClientIoHtml } from "@/lib/io/client-io-print-layout";
 import {
   INSERTION_ORDER_PDF_OPTIONS,
   pdfUnavailableMessage,
@@ -53,6 +54,13 @@ export async function GET(request: Request, context: RouteContext) {
     const baseName = typed.document_number ?? id;
 
     if (format === "pdf") {
+      // Reflow the saved classic document with the corrected print gutter.
+      // In particular, never replace an issued inline document's values with live data.
+      if (!download && layout === "detailed" && isClassicClientIoHtml(typed.terms_html)) {
+        const result = await renderHtmlToPdf(applyClientIoPrintLayout(typed.terms_html), INSERTION_ORDER_PDF_OPTIONS);
+        if (!result.ok) return NextResponse.json({ error: pdfUnavailableMessage(result.error) }, { status: 503 });
+        return createPdfDocumentResponse(result.buffer, baseName, false);
+      }
       // Inline view may use the stored generated PDF for speed.
       // Download always re-renders from live HTML so PDF matches Preview.
       if (typed.generated_pdf_url && !download && layout === "detailed") {

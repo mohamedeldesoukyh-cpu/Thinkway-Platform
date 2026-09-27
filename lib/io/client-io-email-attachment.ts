@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { EmailAttachment } from "@/lib/email/provider";
 import { downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
 import { INSERTION_ORDER_PDF_OPTIONS, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
+import { applyClientIoPrintLayout, isClassicClientIoHtml } from "@/lib/io/client-io-print-layout";
 
 export function approvedClientIoHtml(html: string, approvedAt: string): string {
   const date = new Date(approvedAt);
@@ -22,11 +23,13 @@ export async function prepareClientIoEmailAttachment(
   render: typeof renderHtmlToPdf = renderHtmlToPdf
 ): Promise<{ ok: true; attachment: EmailAttachment } | { ok: false; error: string }> {
   try {
-    let buffer = approvedAt ? null : await downloadIoDocumentBuffer(supabase, "client-io-documents", io.generated_pdf_url);
+    // Classic snapshots can predate the print fix. Render their saved content rather
+    // than mailing the stale PDF or rebuilding an issued IO from live data.
+    let buffer = approvedAt || isClassicClientIoHtml(io.terms_html) ? null : await downloadIoDocumentBuffer(supabase, "client-io-documents", io.generated_pdf_url);
     if (!buffer?.subarray(0, 5).equals(Buffer.from("%PDF-"))) {
       if (!io.terms_html?.trim()) return { ok: false, error: "The saved Client IO document is unavailable. Regenerate it or create an amendment before sending." };
       const html = approvedAt ? approvedClientIoHtml(io.terms_html, approvedAt) : io.terms_html;
-      const result = await render(html, INSERTION_ORDER_PDF_OPTIONS);
+      const result = await render(applyClientIoPrintLayout(html), INSERTION_ORDER_PDF_OPTIONS);
       if (!result.ok) return { ok: false, error: "Could not create the Client IO PDF attachment. Please retry. " + result.error };
       buffer = result.buffer;
     }

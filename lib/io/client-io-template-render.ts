@@ -11,6 +11,7 @@ import type { ClientIoDocumentData } from "@/lib/io/client-io-document-types";
 import { formatClientIoMilestoneTrigger } from "@/lib/io/client-io-milestones";
 import type { ClientIoTerm } from "@/lib/io/client-io-terms";
 import { IO_CLASSIC_DOCUMENT_STYLES } from "@/lib/io/io-classic-document-styles";
+import { applyClientIoPrintLayout } from "@/lib/io/client-io-print-layout";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import { formatMoneyDetail } from "@/lib/finance/currency-format";
 import { applyThinkwayLogoToDocumentHtml } from "@/lib/reports/document/thinkway-report-logo";
@@ -378,5 +379,5 @@ ${foot}
 </body>
 </html>`;
 
-  return applyThinkwayLogoToDocumentHtml(html);
+  return applyClientIoPrintLayout(applyThinkwayLogoToDocumentHtml(html));
 }
