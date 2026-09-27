@@ -74,6 +74,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/ai/campaign-objects/[id]/versions/[version]": "internal_workspace",
 
   "/api/discovery/search": "internal_workspace",
+  "/api/discovery/creator-picker": "internal_workspace",
   "/api/discovery/jobs": "internal_workspace",
   "/api/discovery/jobs/[id]": "internal_workspace",
   "/api/discovery/diagnostics": "admin_only",
