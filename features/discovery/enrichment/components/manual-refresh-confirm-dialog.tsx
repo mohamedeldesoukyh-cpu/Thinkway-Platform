@@ -20,6 +20,8 @@ type ManualRefreshConfirmDialogProps = {
   assessment: ManualRefreshCacheAssessment | null;
   scopeLabel: string;
   isSubmitting?: boolean;
+  description?: string;
+  title?: string;
   onChoose: (dataSource: ManualRefreshDataSource) => void;
 };
 
@@ -34,16 +36,17 @@ export function ManualRefreshConfirmDialog({
   assessment,
   scopeLabel,
   isSubmitting = false,
+  description,
+  title,
   onChoose,
 }: ManualRefreshConfirmDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" showCloseButton={!isSubmitting}>
         <DialogHeader>
-          <DialogTitle>Fresh cached data available</DialogTitle>
+          <DialogTitle>{title ?? "Fresh cached data available"}</DialogTitle>
           <DialogDescription>
-            {scopeLabel} was updated recently. You can reuse the cached IPL snapshot for
-            free, or fetch live data from Apify.
+            {description ?? `${scopeLabel} was updated recently. You can reuse the cached IPL snapshot for free, or fetch live data from Apify.`}
           </DialogDescription>
         </DialogHeader>
 

@@ -29,7 +29,7 @@ export async function getShortlistEnrichmentUpdates(shortlistId: string, itemIds
     unifiedIds: items.map((item) => item.unified_id),
     influencerIds: items.map((item) => item.influencer_id),
     discoveredProfileIds: items.map((item) => item.profile_id),
-  });
+  }, { skipDna: false, omitHeavyFields: false });
   return items.flatMap((item) => {
     const creator = resolveCreatorFromRefLookup(lookup, item);
     const status = creator?.influencer_id ? statuses.get(creator.influencer_id) : null;

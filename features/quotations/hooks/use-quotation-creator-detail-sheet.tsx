@@ -94,12 +94,10 @@ export function useQuotationCreatorDetailSheet(options?: {
   const handleCreatorUpdated = useCallback(
     (next: UnifiedCreatorResult) => {
       remember(next);
-      const nextSignature = creatorPlatformSignature(next);
-      if (nextSignature !== platformSignatureRef.current) {
-        platformSignatureRef.current = nextSignature;
-        invalidateCreatorPlatformCaches(next);
-        onCreatorPlatformsChanged?.();
-      }
+      // Refresh rows after metric/avatar changes, even with unchanged platform IDs.
+      invalidateCreatorPlatformCaches(next);
+      onCreatorPlatformsChanged?.();
+      platformSignatureRef.current = creatorPlatformSignature(next);
     },
     [onCreatorPlatformsChanged, remember]
   );

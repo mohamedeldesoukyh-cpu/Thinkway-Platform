@@ -4,6 +4,7 @@ import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import {
   avatarStorageQualityRank,
   sortPlatformsStable,
+  projectCreatorPlatformView,
 } from "@/lib/creators/creator-centric";
 import { resolveQuotationCreatorDisplayCategories } from "@/lib/quotations/quotation-creator-categories";
 import {
@@ -313,8 +314,8 @@ function resolveLineCreatorCategories(
   });
 }
 
-function resolveLineAvatarFields(
-  item: QuotationItemRow,
+export function resolveLineAvatarFields(
+  item: QuotationItemRow & { avg_views?: number | null },
   creator: NonNullable<ReturnType<typeof resolveCreatorFromRefLookup>>,
   dnaDocument: CreatorDNADocument | undefined
 ): {
@@ -329,6 +330,7 @@ function resolveLineAvatarFields(
   creator_categories: string[];
 } {
   const creatorProfileSource = resolveLineCreatorProfileSource(item, creator, dnaDocument);
+  const platformView = projectCreatorPlatformView(creator, resolveLinePlatformAccount(item, creator)?.id);
   const resolvedPlatform =
     item.platform?.trim() ||
     creatorProfileSource.platform?.trim() ||
@@ -341,9 +343,9 @@ function resolveLineAvatarFields(
       null,
     profile_url: creatorProfileSource.profile_url ?? null,
     platform: resolvedPlatform,
-    followers: resolveLineFollowers(item, creator),
-    engagement_rate: resolveLineEngagementRate(item, creator),
-    avg_views: resolveLineAvgViews(item, creator),
+    followers: resolveLineFollowers(item, platformView),
+    engagement_rate: resolveLineEngagementRate(item, platformView),
+    avg_views: resolveLineAvgViews(item, platformView),
     country_code:
       creatorProfileSource.countryCode ??
       normalizeCountryCode(item.country_code) ??
@@ -562,10 +564,15 @@ export async function enrichQuotationItemsForWorkspace(
     ]),
   ];
 
-  const [influencerMeta, profileScores, dnaByInfluencer] = await Promise.all([
+  const [influencerMeta, profileScores, dnaByInfluencer, canonicalCreators] = await Promise.all([
     loadInfluencerWorkspaceMetaByIds(supabase, influencerIds),
     loadDiscoveredProfileScoresByIds(supabase, profileIds),
     loadCanonicalDnaByInfluencerIds(supabase, influencerIds),
+    resolveUnifiedCreatorsByRefs(supabase, {
+      unifiedIds: items.map((item) => item.unified_id),
+      influencerIds,
+      discoveredProfileIds: profileIds,
+    }, { skipDna: false, omitHeavyFields: false }),
   ]);
 
   const enriched = items.map((item) => {
@@ -657,7 +664,15 @@ export async function enrichQuotationItemsForWorkspace(
   // Background: upload CDN/profile photos into creator-avatars for lines still missing.
   void stabilizeMissingWorkspaceAvatars(supabase, enriched);
 
-  return enriched;
+  // Live profile overlay only: preserve the quotation's stored commercial values.
+  return enriched.map((item) => {
+    const creator = resolveCreatorForQuotationItem(canonicalCreators, item, influencerIdsByHandle);
+    if (!creator) return item;
+    const fields = resolveLineAvatarFields(
+      { ...item, followers: null, engagement_rate: null, avg_views: null }, creator, undefined
+    );
+    return { ...item, ...fields };
+  });
 }
 
 /**

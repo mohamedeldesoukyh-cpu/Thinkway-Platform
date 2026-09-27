@@ -100,7 +100,7 @@ export function DiscoverySuiteCreatorCell({
       >
         {/* Clip photo/initials only — keep `.fl` flag outside overflow so pack overlay shows. */}
         <span className="absolute inset-0 overflow-hidden rounded-full">
-          {avatarUrl ? (
+          {avatarUrl || profileUrl ? (
             <CreatorAvatarImage
               avatarUrl={avatarUrl}
               profileUrl={profileUrl}

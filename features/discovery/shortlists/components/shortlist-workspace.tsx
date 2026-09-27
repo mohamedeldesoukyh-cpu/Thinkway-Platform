@@ -43,12 +43,14 @@ import { cn } from "@/lib/utils";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
 import { stashCompareQueue } from "@/features/discovery/components/creator-search/creator-search-utils";
-import { refreshCreatorsBatchAction } from "@/features/discovery/enrichment/actions";
+import { refreshCreatorAllAction, getUnifiedCreatorAfterRefreshAction } from "@/features/discovery/enrichment/actions";
 import {
   invokeRefreshAction,
   mapManualRefreshError,
   rethrowNextControlFlow,
 } from "@/features/discovery/enrichment/manual-refresh-error";
+import { ManualRefreshConfirmDialog } from "@/features/discovery/enrichment/components/manual-refresh-confirm-dialog";
+import type { ManualRefreshDataSource } from "@/lib/creator-enrichment/manual-refresh-policy";
 import { pollCreatorsAfterBatchRefresh } from "@/features/discovery/enrichment/poll-creator-refresh";
 import {
   isEnrichmentInProgress,
@@ -211,6 +213,8 @@ export function ShortlistWorkspace({
     failed: number;
   } | null>(null);
 
+  const [refreshTargets, setRefreshTargets] = useState<Array<{ unifiedId: string; influencerId: string }>>([]);
+
   const refreshingMetrics = refreshProgress != null && refreshProgress.completed < refreshProgress.total;
 
   useEffect(() => {
@@ -305,9 +309,14 @@ export function ShortlistWorkspace({
     setCreatorPatches((prev) => {
       const map = new Map(prev);
       map.set(next.unified_id, next);
+      for (const item of detail.creators) {
+        if (next.influencer_id && (item.influencer_id ?? item.creator?.influencer_id) === next.influencer_id) {
+          map.set(item.unified_id ?? next.unified_id, next);
+        }
+      }
       return map;
     });
-  }, []);
+  }, [detail.creators]);
 
   const handleOpenCreator = useCallback(
     (creator: UnifiedCreatorResult) => {
@@ -439,105 +448,65 @@ export function ShortlistWorkspace({
   }
 
   function handleRefreshMetrics() {
-    const pool =
-      selectedCount > 0
-        ? selectedItems.filter((item) => {
-            const unifiedId = item.unified_id ?? item.creator?.unified_id;
-            return unifiedId && item.influencer_id;
-          })
-        : detail.creators.filter((item) => {
-            const unifiedId = item.unified_id ?? item.creator?.unified_id;
-            return unifiedId && item.influencer_id;
-          });
-
-    if (pool.length === 0) {
-      toast.error("No creators with linked vendor profiles to refresh.");
-      return;
+    if (refreshingMetrics) return;
+    const pool = selectedCount > 0
+      ? displayCreators.filter((item) => selectedItems.some((selected) => selected.item_id === item.item_id))
+      : displayCreators;
+    const targets = new Map<string, { unifiedId: string; influencerId: string }>();
+    for (const item of pool) {
+      const unifiedId = item.unified_id ?? item.creator?.unified_id;
+      const influencerId = item.influencer_id ?? item.creator?.influencer_id;
+      if (unifiedId && influencerId) targets.set(influencerId, { unifiedId, influencerId });
     }
+    if (!targets.size) { toast.error("No creators with linked vendor profiles to refresh."); return; }
+    setRefreshTargets([...targets.values()]);
+  }
 
-    const targets = pool.map((item) => ({
-      unifiedId: (item.unified_id ?? item.creator!.unified_id)!,
-      influencerId: item.influencer_id!,
-    }));
-    const unifiedIds = targets.map((target) => target.unifiedId);
-
-    console.log(
-      `[manual-refresh-trace] ${JSON.stringify({
-        event: "manual_refresh_trace",
-        step: "ui_click",
-        path: "shortlist_refresh_metrics",
-        count: targets.length,
-        ts: new Date().toISOString(),
-      })}`
-    );
-
+  async function executeSelectedRefresh(dataSource: ManualRefreshDataSource) {
+    const targets = refreshTargets;
+    setRefreshTargets([]);
     setRefreshProgress({ total: targets.length, completed: 0, failed: 0 });
-    setEnrichmentOverrides((prev) => {
-      const next = new Map(prev);
-      for (const target of targets) {
-        next.set(target.unifiedId, "queued");
-      }
-      return next;
-    });
-
-    let failedCount = 0;
-
-    // Event-handler async — not startTransition. Transition + Server Action timeout
-    // blanks Discovery via PlatformErrorBoundary.
-    void (async () => {
-      try {
-        const result = await invokeRefreshAction(() =>
-          refreshCreatorsBatchAction(unifiedIds)
-        );
-        if (!result.queued) {
-          setRefreshProgress(null);
-          setEnrichmentOverrides(new Map());
-          toast.error(result.message);
-          return;
-        }
-        toast.success(result.message);
-        await pollCreatorsAfterBatchRefresh(targets, {
-          onUpdated: patchCreatorInList,
-          onStatusChange: ({ unifiedId, status }) => {
-            setEnrichmentOverrides((prev) => {
-              const next = new Map(prev);
-              next.set(unifiedId, syncStatusToEnrichmentStatus(status));
-              return next;
+    setEnrichmentOverrides(new Map(targets.map((target) => [target.unifiedId, "queued"])));
+    let failed = 0;
+    // Same full-creator action as details, without a platform restriction.
+    // At most three creators active, including completion polling.
+    let cursor = 0;
+    await Promise.all(Array.from({ length: Math.min(3, targets.length) }, async () => {
+      while (cursor < targets.length) {
+        const target = targets[cursor++];
+        let didFail = false;
+        try {
+          const result = await invokeRefreshAction(() => refreshCreatorAllAction(target.influencerId, dataSource));
+          if (!result.ok) {
+            // A multi-platform cached refresh can update one account and miss another.
+            const creator = await getUnifiedCreatorAfterRefreshAction(target.unifiedId);
+            if (creator) patchCreatorInList(creator);
+            throw new Error(result.message);
+          }
+          if (result.queued) {
+            await pollCreatorsAfterBatchRefresh([target], {
+              onUpdated: patchCreatorInList,
+              onStatusChange: ({ unifiedId, status }) => setEnrichmentOverrides((prev) =>
+                new Map(prev).set(unifiedId, syncStatusToEnrichmentStatus(status))),
+              onComplete: ({ status }) => { didFail = status === "failed"; },
             });
-          },
-          onComplete: ({ status }) => {
-            if (status === "failed") failedCount += 1;
-            setRefreshProgress((prev) =>
-              prev
-                ? {
-                    ...prev,
-                    completed: prev.completed + 1,
-                    failed: prev.failed + (status === "failed" ? 1 : 0),
-                  }
-                : null
-            );
-          },
-        });
-        if (failedCount > 0) {
-          toast.error(
-            failedCount === targets.length
-              ? "Creator refresh failed"
-              : `${failedCount} of ${targets.length} creator refreshes failed`
-          );
-        } else {
-          toast.success("Creator metrics updated");
+          } else {
+            const creator = await getUnifiedCreatorAfterRefreshAction(target.unifiedId);
+            if (creator) patchCreatorInList(creator);
+          }
+        } catch (error) {
+          rethrowNextControlFlow(error);
+          didFail = true;
+          toast.error(mapManualRefreshError(error));
+        } finally {
+          if (didFail) failed++;
+          setEnrichmentOverrides((prev) => { const next = new Map(prev); next.delete(target.unifiedId); return next; });
+          setRefreshProgress((prev) => prev ? { ...prev, completed: prev.completed + 1, failed: prev.failed + Number(didFail) } : null);
         }
-        window.setTimeout(() => {
-          setRefreshProgress(null);
-        }, 1200);
-        setEnrichmentOverrides(new Map());
-      } catch (error) {
-        rethrowNextControlFlow(error);
-        setRefreshProgress(null);
-        setEnrichmentOverrides(new Map());
-        toast.error(mapManualRefreshError(error));
       }
-    })();
+    }));
+    if (failed) toast.error(failed + " of " + targets.length + " creator refreshes could not complete.");
+    else toast.success("Creator data updated across linked platforms");
   }
 
   function handleBulkCollapse() {
@@ -848,6 +817,15 @@ export function ShortlistWorkspace({
 
   return (
     <div className="shortlist-detail-workspace discovery-suite flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)]">
+      <ManualRefreshConfirmDialog
+        open={refreshTargets.length > 0}
+        onOpenChange={(open) => { if (!open) setRefreshTargets([]); }}
+        assessment={null}
+        scopeLabel="All creator data"
+        title={"Refresh " + refreshTargets.length + " creators"}
+        description="Refresh all linked platforms, including avatars and metrics. Use cached data for free; platforms without a usable snapshot will be reported. Refresh Live fetches new data and uses Apify credits."
+        onChoose={(source) => { void executeSelectedRefresh(source); }}
+      />
       <DiscoverySuiteMasthead
         title={detail.name}
         id={detail.serial_number}

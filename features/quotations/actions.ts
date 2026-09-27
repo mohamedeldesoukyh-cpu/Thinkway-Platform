@@ -471,7 +471,7 @@ export async function getQuotationCreatorPlatformOptions(input: {
     unifiedIds: input.unified_id ? [input.unified_id] : [],
     influencerIds: input.influencer_id ? [input.influencer_id] : [],
     discoveredProfileIds: input.profile_id ? [input.profile_id] : [],
-  });
+  }, { skipDna: false, omitHeavyFields: false });
 
   const creator = resolveCreatorFromRefLookup(lookup, input);
   if (!creator) {

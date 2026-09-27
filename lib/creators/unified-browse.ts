@@ -2707,7 +2707,7 @@ export async function resolveUnifiedCreatorsByRefs(
     influencerIds?: Array<string | null | undefined>;
     discoveredProfileIds?: Array<string | null | undefined>;
   },
-  options?: { omitHeavyFields?: boolean }
+  options?: { omitHeavyFields?: boolean; skipDna?: boolean }
 ): Promise<UnifiedCreatorRefLookup> {
   const lookup = emptyUnifiedCreatorRefLookup();
 
@@ -2732,7 +2732,7 @@ export async function resolveUnifiedCreatorsByRefs(
   const omitHeavyFields = options?.omitHeavyFields ?? true;
   const refLookupOptions = {
     omitHeavyFields,
-    skipDna: true,
+    skipDna: options?.skipDna ?? true,
     tracePath: "unknown" as const,
   };
 
@@ -2741,12 +2741,29 @@ export async function resolveUnifiedCreatorsByRefs(
       ? fetchInternalCreators(supabase, {}, [...influencerIds], null, refLookupOptions)
       : Promise.resolve([]),
     profileIds.size > 0
-      ? fetchDiscoveryCreators(supabase, {}, [...profileIds], "unknown", { skipDna: true })
+      ? fetchDiscoveryCreators(supabase, {}, [...profileIds], "unknown", { skipDna: options?.skipDna ?? true })
       : Promise.resolve([]),
   ]);
 
-  for (const creator of [...internal, ...discovery]) {
-    indexUnifiedCreator(creator, lookup);
+  // Detail lookup resolves a linked discovery profile to the full internal creator.
+  // Keep that same identity (and all its platform accounts) in full ref hydration.
+  if (options?.skipDna === false) {
+    const loadedIds = new Set(internal.map((creator) => creator.influencer_id));
+    const linkedIds = [...new Set(discovery.map((creator) => creator.influencer_id)
+      .filter((id): id is string => Boolean(id) && !loadedIds.has(id)))];
+    if (linkedIds.length) {
+      internal.push(...await fetchInternalCreators(supabase, {}, linkedIds, null, refLookupOptions));
+    }
+    for (const creator of internal) indexUnifiedCreator(creator, lookup);
+    for (const profile of discovery) {
+      const canonical = profile.influencer_id ? lookup.byInfluencerId.get(profile.influencer_id) : null;
+      if (canonical) {
+        lookup.byUnifiedId.set(profile.unified_id, canonical);
+        if (profile.discovered_profile_id) lookup.byDiscoveryId.set(profile.discovered_profile_id, canonical);
+      } else indexUnifiedCreator(profile, lookup);
+    }
+  } else {
+    for (const creator of [...internal, ...discovery]) indexUnifiedCreator(creator, lookup);
   }
 
   const missingUnified = [...unifiedIds].filter((id) => !lookup.byUnifiedId.has(id));
@@ -2755,7 +2772,7 @@ export async function resolveUnifiedCreatorsByRefs(
   await Promise.all([
     ...missingUnified.map(async (unifiedId) => {
       const creator = await getUnifiedCreatorById(supabase, unifiedId, {
-        skipDna: true,
+        skipDna: options?.skipDna ?? true,
         omitHeavyFields,
       });
       if (creator) indexUnifiedCreator(creator, lookup);
@@ -2764,7 +2781,7 @@ export async function resolveUnifiedCreatorsByRefs(
       .filter((profileId) => !lookup.byDiscoveryId.has(profileId))
       .map(async (profileId) => {
         const creator = await getUnifiedCreatorById(supabase, `dis:${profileId}`, {
-          skipDna: true,
+          skipDna: options?.skipDna ?? true,
           omitHeavyFields,
         });
         if (creator) indexUnifiedCreator(creator, lookup);

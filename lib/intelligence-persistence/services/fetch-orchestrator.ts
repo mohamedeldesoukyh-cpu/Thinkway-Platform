@@ -37,7 +37,10 @@ export async function fetchProfileWithIpl(
   const provider = "apify" as const;
   const adapter = getProviderAdapter(provider);
 
+  const cacheMiss = { ok: false as const, reason: "Cached snapshot unavailable. Choose Refresh Live to fetch new data.", available: true, providerRunId: null };
+
   if (!isIplEnabled() || !adapter) {
+    if (context.cacheOnly) return cacheMiss;
     const legacy = await fetchApifyProfile({
       platform: context.platform,
       username: context.username,
@@ -63,14 +66,14 @@ export async function fetchProfileWithIpl(
 
   // ---- Cache-first lookup --------------------------------------------------
   if (
-    isIplCacheFirstEnabled() &&
-    !context.force &&
+    (isIplCacheFirstEnabled() || context.cacheOnly) &&
+    (!context.force || context.cacheOnly) &&
     context.platformAccountId
   ) {
     const cached = await findLatestFreshSnapshot(supabase, {
       provider,
       platformAccountId: context.platformAccountId,
-      force: context.force,
+      force: context.cacheOnly ? false : context.force,
     });
 
     if (cached) {
@@ -123,6 +126,8 @@ export async function fetchProfileWithIpl(
       };
     }
   }
+
+  if (context.cacheOnly) return cacheMiss;
 
   // ---- External provider fetch ---------------------------------------------
   logManualRefreshTrace("provider_selected", {

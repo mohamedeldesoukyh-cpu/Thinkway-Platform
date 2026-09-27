@@ -77,7 +77,7 @@ export async function attachExportPlatformAccounts(
     unifiedIds: items.map((item) => item.unified_id),
     influencerIds: items.map((item) => item.influencer_id),
     discoveredProfileIds: items.map((item) => item.profile_id),
-  });
+  }, { skipDna: false, omitHeavyFields: false });
 
   return items.map((item) => {
     const creator = resolveCreatorFromRefLookup(lookup, {

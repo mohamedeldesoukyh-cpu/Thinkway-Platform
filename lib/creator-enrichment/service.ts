@@ -545,6 +545,7 @@ export async function runCreatorEnrichment(
     });
 
     const fetched = await fetchProfileWithIpl(supabase, {
+      cacheOnly: preferCachedSnapshot,
       influencerId: payload.influencerId,
       platformAccountId: account.id,
       discoveredProfileId: payload.discoveredProfileId,

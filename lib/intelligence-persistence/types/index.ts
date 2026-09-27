@@ -96,6 +96,8 @@ export type IplProviderRunRecord = {
 };
 
 export type IplFetchContext = {
+  /** Never call a paid provider when the user explicitly chooses cached data. */
+  cacheOnly?: boolean;
   influencerId: string;
   platformAccountId?: string | null;
   discoveredProfileId?: string | null;

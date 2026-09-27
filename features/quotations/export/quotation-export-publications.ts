@@ -219,7 +219,7 @@ export async function loadQuotationCreatorPublicationShots(
     unifiedIds: items.map((item) => item.unified_id),
     influencerIds: items.map((item) => item.influencer_id),
     discoveredProfileIds: items.map((item) => item.profile_id),
-  });
+  }, { skipDna: false, omitHeavyFields: false });
 
   const byCreatorKey = new Map<string, QuotationItemRow>();
   for (const item of items) {

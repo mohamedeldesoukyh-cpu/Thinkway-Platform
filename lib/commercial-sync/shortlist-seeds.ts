@@ -9,8 +9,8 @@ import type { CommercialInputMode, Database } from "@/types/database";
 
 import type { QuotationItemSeed } from "@/lib/domains/commercial/quotation-types";
 
-import { sortPlatformsStable } from "@/lib/creators/creator-centric";
-import { resolveCreatorFollowersCount } from "@/lib/creators/creator-display-utils";
+import { sortPlatformsStable, projectCreatorPlatformView } from "@/lib/creators/creator-centric";
+import { resolveCreatorFollowersCount, resolveCreatorEngagementRate } from "@/lib/creators/creator-display-utils";
 import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { creatorProfileSourceFromUnified } from "@/lib/creators/creator-profile-source";
@@ -100,6 +100,7 @@ export function buildQuotationSeedFromCreator(
 ): QuotationItemSeed {
   const metricsAccount = resolveQuotationSeedPlatformAccount(creator);
   const source = creatorProfileSourceFromUnified(creator);
+  const platformView = projectCreatorPlatformView(creator, metricsAccount?.id);
   const profileUrl =
     resolveCreatorProfileUrl(metricsAccount ?? undefined) ?? source.profile_url ?? null;
   // Prefer durable Thinkway storage over ephemeral IG/TikTok CDN snapshots.
@@ -127,11 +128,11 @@ export function buildQuotationSeedFromCreator(
     platform: resolveQuotationSeedPlatform(creator),
     handle: metricsAccount?.handle ?? null,
     followers:
-      resolveCreatorFollowersCount(creator, metricsAccount?.platform ?? null) ??
+      resolveCreatorFollowersCount(platformView, metricsAccount?.platform ?? null) ??
       metricsAccount?.follower_count ??
       null,
     engagement_rate:
-      creator.metrics.engagement_rate.value ?? metricsAccount?.engagement_rate ?? null,
+      resolveCreatorEngagementRate(platformView, metricsAccount?.platform ?? null) ?? metricsAccount?.engagement_rate ?? null,
     country_code:
       resolveCreatorCountryCodes({
         country_codes: creator.country_codes,
@@ -196,7 +197,7 @@ export async function resolveCreatorsForShortlistItems(
     unifiedIds: items.map((item) => item.unified_id),
     influencerIds: items.map((item) => item.influencer_id),
     discoveredProfileIds: items.map((item) => item.profile_id),
-  });
+  }, { skipDna: false, omitHeavyFields: false });
 
   const resolved = new Map<string, UnifiedCreatorResult>();
   for (const item of items) {
