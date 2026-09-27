@@ -55,6 +55,32 @@ function creatorWithPlatforms(
 }
 
 describe("quotationDeliverablesToPlatforms", () => {
+  it("retains canonical platform accounts and current metrics over stale quotation identity", () => {
+    const creator = creatorWithPlatforms([
+      { platform: "instagram", handle: "current_ig" },
+      { platform: "tiktok", handle: "current_tt" },
+    ]);
+    creator.platforms[0].follower_count = 404300;
+    creator.platforms[1].follower_count = 922300;
+    creator.platforms[1].engagement_rate = 0.3;
+    creator.platforms[1].audience_country = "EG";
+    const item: QuotationItemExecutionRow = {
+      id: "stale-item", influencer_id: creator.influencer_id,
+      unified_id: creator.unified_id, creator_name: "Old name",
+      platform: "instagram,tiktok", handle: "old_handle",
+      deliverables: [{ platform: "instagram,tiktok", types: ["instagram_reel", "mirrored_tt"], quantity: 1 }],
+      cost: 500, revenue: 1000, cost_currency: "EGP", option_number: null,
+    };
+    const [seed] = mapQuotationItemsToExecutionLineSeeds({ items: [item], creators: [creator],
+      influencerIdByCreatorId: new Map(), defaultCurrency: "EGP" });
+    assert.equal(seed.influencerId, creator.influencer_id);
+    assert.deepEqual(seed.platforms.map((p) => [p.account_id, p.handle, p.follower_count]),
+      [["acct-1", "current_ig", 404300], ["acct-2", "current_tt", 922300]]);
+    assert.equal(seed.platforms[1].engagement_rate, 0.3);
+    assert.equal(seed.platforms[1].audience_country, "EG");
+    assert.equal(seed.cost, 500);
+    assert.equal(seed.revenue, 1000);
+  });
   it("places each selected type on its native/mirrored platform only", () => {
     const creator = creatorWithPlatforms([
       { platform: "instagram", handle: "wasafatibyeman" },

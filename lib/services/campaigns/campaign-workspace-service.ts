@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildCampaignApprovalRegister } from "@/lib/campaigns/campaign-approval-register";
 
 import { resolveCountryCode } from "@/lib/creators/country-code";
+import { resolveUnifiedCreatorsByRefs } from "@/lib/creators/unified-browse";
 import { filterUuids, isUuid } from "@/lib/validation/uuid";
 import { traceCampaignRoute, traceCampaignRouteError } from "@/lib/performance/campaign-route-trace";
 import {
@@ -297,6 +298,9 @@ export async function getCampaignWorkspace(
     .filter((id): id is string => Boolean(id));
 
   const influencerIds = filterUuids([...vendorInfluencerIds, ...assignmentInfluencerIds]);
+  const canonicalCreators = await resolveUnifiedCreatorsByRefs(
+    supabase, { influencerIds }, { omitHeavyFields: true, skipDna: false }
+  );
 
   let platformAccounts: {
     influencer_id: string;
@@ -308,12 +312,21 @@ export async function getCampaignWorkspace(
   }[] = [];
 
   if (influencerIds.length > 0) {
-    platformAccounts = await fetchInfluencerPlatformAccounts(supabase, influencerIds);
+    const missingIds = influencerIds.filter((id) => !canonicalCreators.byInfluencerId.has(id));
+    platformAccounts = missingIds.length
+      ? await fetchInfluencerPlatformAccounts(supabase, missingIds)
+      : [];
+    for (const [influencerId, creator] of canonicalCreators.byInfluencerId) {
+      platformAccounts.push(...creator.platforms.map((account) => ({
+        ...account, influencer_id: influencerId,
+      })));
+    }
   }
 
+  const missingAvatarIds = influencerIds.filter((id) => !canonicalCreators.byInfluencerId.has(id));
   const influencerAvatarMeta =
-    influencerIds.length > 0
-      ? await fetchInfluencerAvatarMetaMap(supabase, influencerIds)
+    missingAvatarIds.length > 0
+      ? await fetchInfluencerAvatarMetaMap(supabase, missingAvatarIds)
       : new Map();
 
   const accountsByInfluencer = new Map<string, typeof platformAccounts>();
@@ -493,8 +506,14 @@ export async function getCampaignWorkspace(
       : [];
     const primaryPlatform =
       assignment?.platforms[0]?.platform ?? line.platform ?? null;
+    const canonicalCreator = influencerId ? canonicalCreators.byInfluencerId.get(influencerId) : null;
+    const canonicalAvatar = canonicalCreator?.primaryAvatarUrl ?? canonicalCreator?.profile_image_url ?? null;
     const avatarFields =
-      influencerId != null
+      canonicalCreator ? {
+        creator_profile_image_url: canonicalAvatar,
+        influencer_avatar_url: canonicalAvatar,
+        creator_avatar_url: canonicalAvatar,
+      } : influencerId != null
         ? resolveInfluencerAvatarFieldsFromMeta(
             influencerAvatarMeta,
             influencerId,
@@ -518,7 +537,7 @@ export async function getCampaignWorkspace(
         "draft",
       platform: line.platform,
       influencer_id: assignment?.influencer_id ?? null,
-      influencer_name: assignment?.influencer_name ?? null,
+      influencer_name: canonicalCreator?.display_name ?? assignment?.influencer_name ?? null,
       creator_profile_image_url: avatarFields.creator_profile_image_url,
       influencer_avatar_url: avatarFields.influencer_avatar_url,
       creator_avatar_url: avatarFields.creator_avatar_url,

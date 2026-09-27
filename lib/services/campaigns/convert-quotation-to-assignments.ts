@@ -19,6 +19,7 @@ import {
 } from "@/lib/domains/commercial/quotation-execution-mapper";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 import { fetchInfluencerPlatformAccounts } from "@/lib/services/campaigns/repositories/assignment-repository";
+import { resolveUnifiedCreatorsByRefs } from "@/lib/creators/unified-browse";
 import {
   buildQuotationConvertUnits,
   summarizeQuotationConvertSelection,
@@ -639,10 +640,18 @@ export async function convertQuotationToAssignments(
   }
 
   const influencerIds = [...new Set(resolvedPrimaryByUnit.values())];
+  const canonicalCreators = await resolveUnifiedCreatorsByRefs(
+    supabase, { influencerIds }, { omitHeavyFields: true, skipDna: false }
+  );
   // Prefer direct platform-account hydration over Discovery browse (productionOnly
   // browse can omit vendors that still have influencer_platform_accounts).
   const creators: UnifiedCreatorResult[] = [];
   for (const influencerId of influencerIds) {
+    const canonicalCreator = canonicalCreators.byInfluencerId.get(influencerId);
+    if (canonicalCreator) {
+      creators.push(canonicalCreator);
+      continue;
+    }
     const { data: influencer } = await supabase
       .from("influencers")
       .select("id, display_name, status, country_code")
