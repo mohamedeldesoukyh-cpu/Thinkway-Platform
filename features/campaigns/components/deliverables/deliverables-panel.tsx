@@ -1,6 +1,8 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { toast } from 'sonner';
+import { VersionManager, InlineVersions } from './version-manager';
+import { VERSION_STATUSES, VERSION_STATUS_LABELS, type VersionStatus } from '@/lib/services/deliverables/version-controls';
 import '@/app/styles/deliverables-suite.css';
 import type { CampaignWorkspace } from '@/features/campaigns/types';
 import type { AssignmentHierarchy } from '@/features/campaigns/types/assignment-hierarchy';
@@ -39,7 +41,8 @@ export function DeliverablesPanel({ workspace, assignmentHierarchy, active: pane
     const [loaded, setLoaded] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [tab, setTab] = useState<'sch' | 'up'>(initialUpload ? 'up' : 'sch');
-    const [filter, setFilter] = useState<PanelStatus | 'all'>('missing');
+    const [filter, setFilter] = useState<PanelStatus | 'all'>('all');
+    const [uploadStatus,setUploadStatus] = useState<VersionStatus>('draft');
     const [query, setQuery] = useState('');
     const [closed, setClosed] = useState<Set<string>>(new Set());
     const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -139,7 +142,7 @@ export function DeliverablesPanel({ workspace, assignmentHierarchy, active: pane
             if (row.quantity > 1 && !row.assignmentPostScheduleId)
                 throw new Error('Create individual post slots in Assignments before uploading to this deliverable.');
             const mimeType = resolveDeliverableUploadMime({ browserType: file.type, fileName: file.name, header: new Uint8Array(await file.slice(0, 32).arrayBuffer()) });
-            const input = { campaignHeaderId: workspace.id, assignmentDeliverableId: row.assignmentDeliverableId, assignmentPostScheduleId: row.assignmentPostScheduleId, assetType: defaultDeliverableAssetType(row.deliverableType), fileName: file.name, fileSize: file.size, mimeType, assetId: row.file?.assetId };
+            const input = { campaignHeaderId: workspace.id, assignmentDeliverableId: row.assignmentDeliverableId, assignmentPostScheduleId: row.assignmentPostScheduleId, assetType: defaultDeliverableAssetType(row.deliverableType), fileName: file.name, fileSize: file.size, mimeType, assetId: row.file?.assetId ?? snapshot.assets.find(a=>a.deliverableId === row.assignmentDeliverableId && a.postId === row.assignmentPostScheduleId && a.medium === 'file')?.assetId };
             const validation = validatePanelUpload(input);
             if (validation)
                 throw new Error(validation);
@@ -150,10 +153,10 @@ export function DeliverablesPanel({ workspace, assignmentHierarchy, active: pane
             if (!sent.ok)
                 throw new Error(sent.message);
             setProgress(`Saving ${file.name}…`);
-            const finish = await completeDeliverablesPanelUploadAction({ ...input, ...start.data, actingAsCreator: row.unitKey === current && actingAsCreator });
+            const finish = await completeDeliverablesPanelUploadAction({ ...input, ...start.data, actingAsCreator: row.unitKey === current && actingAsCreator, productionStatus:uploadStatus });
             if (!finish.ok)
                 throw new Error(finish.message);
-            toast.success('File uploaded. Release it when it is ready for the client.');
+            toast.success('Version uploaded and visible to the client.');
             await refresh();
         }
         catch (e) {
@@ -165,7 +168,7 @@ export function DeliverablesPanel({ workspace, assignmentHierarchy, active: pane
             setProgress(null);
         }
     }
-    // Release is intentionally disconnected until confirmation and retraction exist.
+    // Uploads are client-visible; visibility is managed per version.
     const allClosed = groups.filter(g => g.visible.length).every(g => closed.has(g.id));
     return <div className="tw-c dv" ref={root}>
     <div className="tw-ch"><span className="tw-ct">Deliverables</span><span className="tw-cs">{rows.length} of {rows.length} · synced from assignments</span><span className="tw-sp"/><span className="tw-p p-y">{loaded ? counts.missing : '—'} need a file</span><button className="tw-b sm" aria-pressed={sort} onClick={() => setSort(!sort)}>Sort by creator</button></div>
@@ -181,7 +184,7 @@ export function DeliverablesPanel({ workspace, assignmentHierarchy, active: pane
       </div>)}
       <div className="tw-g tw-ft"><span>{rows.length} deliverables</span><span></span><span>{groups.length} creators</span><span></span><span>{loaded ? rows.filter(r => !r.reviewDate).length : '—'} without a date</span><span>{loaded ? counts.missing : '—'} missing</span><span></span><span></span></div>
     </div></div>{!rows.length && <p style={{ padding: 20 }}>No deliverables assigned yet. Add creator deliverables in Assignments to build this schedule.</p>}</section>
-    <section data-p="up" hidden={tab !== 'up'} aria-label="Content and uploads"><div className="bar"><span className="dv__lbl">Show</span>{(['missing', 'uploaded', 'review', 'approved', 'all'] as const).map(f => <button key={f} data-f={f} aria-pressed={filter === f} className={`ch ${f === 'missing' ? 'ch-y' : f === 'approved' ? 'ch-g' : f === 'all' ? '' : 'ch-b'} ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>{f === 'all' ? 'All' : f === 'missing' ? 'Need a file' : STATUS[f]} <em>{loaded ? (f === 'all' ? rows.length : counts[f]) : '—'}</em></button>)}<span className="tw-sp"/><input className="tw-in" id="dvFind" aria-label="Find creator or deliverable" placeholder="Find creator or deliverable" value={query} onChange={e => setQuery(e.target.value)} style={{ width: 210, height: 28 }}/><button className="tw-b sm" id="dvAll" onClick={() => setClosed(allClosed ? new Set() : new Set(groups.filter(g => g.visible.length).map(g => g.id)))}>{allClosed ? 'Expand all' : 'Collapse all'}</button></div>
+    <section data-p="up" hidden={tab !== 'up'} aria-label="Content and uploads"><div className="pad2"><label className="tw-lbl" htmlFor="dv-upload-status">Status for the next upload</label><select className="tw-in" id="dv-upload-status" value={uploadStatus} onChange={e=>setUploadStatus(e.target.value as VersionStatus)}>{VERSION_STATUSES.map(s=><option key={s} value={s}>{VERSION_STATUS_LABELS[s]}</option>)}</select><p className="tw-hint">All uploads, including drafts, are visible to the client. Open Play / versions to rename, change status, hide or remove a version.</p></div><div className="bar"><span className="dv__lbl">Show</span>{(['missing', 'uploaded', 'review', 'approved', 'all'] as const).map(f => <button key={f} data-f={f} aria-pressed={filter === f} className={`ch ${f === 'missing' ? 'ch-y' : f === 'approved' ? 'ch-g' : f === 'all' ? '' : 'ch-b'} ${filter === f ? 'on' : ''}`} onClick={() => setFilter(f)}>{f === 'all' ? 'All' : f === 'missing' ? 'Need a file' : STATUS[f]} <em>{loaded ? (f === 'all' ? rows.length : counts[f]) : '—'}</em></button>)}<span className="tw-sp"/><input className="tw-in" id="dvFind" aria-label="Find creator or deliverable" placeholder="Find creator or deliverable" value={query} onChange={e => setQuery(e.target.value)} style={{ width: 210, height: 28 }}/><button className="tw-b sm" id="dvAll" onClick={() => setClosed(allClosed ? new Set() : new Set(groups.filter(g => g.visible.length).map(g => g.id)))}>{allClosed ? 'Expand all' : 'Collapse all'}</button></div>
       <p className="bar__n" id="dvCount" aria-live="polite">{loaded ? `${visible.length} deliverable${visible.length === 1 ? '' : 's'} across ${groups.filter(g => g.visible.length).length} creator${groups.filter(g => g.visible.length).length === 1 ? '' : 's'}${filter === 'all' ? '' : ' · filtered'}` : 'Loading current content status…'}</p>
       {loaded && groups.map(g => <section className={`gp ${closed.has(g.id) || !g.visible.length ? 'is-shut' : ''}`} hidden={!g.visible.length} data-gp={g.id} data-need={g.rows.filter(r => r.status === 'missing').length} key={g.id}>
         <button className="gp__h" aria-expanded={Boolean(g.visible.length) && !closed.has(g.id)} onClick={() => setClosed(old => { const next = new Set(old); next.has(g.id) ? next.delete(g.id) : next.add(g.id); return next; })}><s className="gp__x" aria-hidden="true"/><Avatar row={g.rows[0]}/><b>{creator(g.rows[0])}</b><span className="gp__d" aria-hidden="true"><s className={g.rows.some(r => r.status === 'missing') ? 'on' : ''}/></span><span className="gp__c">{g.visible.length} visible of {g.rows.length}</span><span className="tw-sp"/><span className="tw-p p-y">{g.rows.filter(r => r.status === 'missing').length} need a file</span></button>
@@ -191,13 +194,13 @@ export function DeliverablesPanel({ workspace, assignmentHierarchy, active: pane
                 open(row, e.currentTarget);
             } }} aria-label={`Open ${creator(row)} ${row.label}`}>
           <div className="sl__h"><input type="checkbox" className="tw-ck sl__k" aria-label={`Select ${creator(row)} ${row.label}`} checked={selected.has(row.unitKey)} onClick={e => e.stopPropagation()} onChange={() => setSelected(old => { const next = new Set(old); next.has(row.unitKey) ? next.delete(row.unitKey) : next.add(row.unitKey); return next; })}/><Mark platform={row.platform}/><span className="sl__t"><b>{row.label}</b><u>{creator(row)}</u></span><span className="tw-sp"/><Pill status={row.status}/></div>
-          {row.file ? <div className="pv"><span className="pv__t" aria-hidden="true"><s /></span><div className="pv__m"><b>{row.file.fileName || 'Content link'}</b><u>v{row.file.version} · {row.file.size ? `${(row.file.size / 1024 / 1024).toFixed(1)} MB · ` : ''}{date(row.file.uploadedAt)}</u><div className="pv__a"><button className="tw-b sm" onClick={e => open(row, e.currentTarget)}>Play / versions</button></div></div></div> : <DropZone disabled={busy} onFile={file => void upload(row, file)}/>}
-          <div className="sl__f">{[['Script', row.hasScript ? 'Yes' : null], ['Caption', row.caption ? 'Yes' : null], ['Review', row.reviewDate ? date(row.reviewDate) : null]].map(([label, value]) => <div className={`fl ${value ? 'is-on' : ''}`} key={label}><i>{label}</i>{value ? <b>{value}</b> : <em>{label === 'Review' ? 'not set' : '—'}</em>}</div>)}</div><div className="sl__b"><span className="sl__s">{row.file?.decision === 'changes_requested' ? 'Changes requested — upload a revision' : row.status === 'missing' ? 'No file yet' : row.status === 'uploaded' ? 'Not sent to the client' : row.status === 'review' ? 'Awaiting client approval' : 'Approved by client'}</span><span className="tw-sp"/><button className="tw-b sm" onClick={e => open(row, e.currentTarget)}>Open</button></div>
+          {row.file ? <div className="pv"><span className="pv__t" aria-hidden="true"><s /></span><div className="pv__m"><b>{row.file.fileName || 'Content link'}</b><u>v{row.file.version} · {row.file.size ? `${(row.file.size / 1024 / 1024).toFixed(1)} MB · ` : ''}{date(row.file.uploadedAt)}</u><div className="pv__a"><button className="tw-b sm" onClick={e => open(row, e.currentTarget)}>Open / add version</button></div></div></div> : <DropZone disabled={busy} onFile={file => void upload(row, file)}/>}
+          <div className="pad2"><InlineVersions row={row} refresh={refresh}/></div><div className="sl__f">{[['Script', row.hasScript ? 'Yes' : null], ['Caption', row.caption ? 'Yes' : null], ['Review', row.reviewDate ? date(row.reviewDate) : null]].map(([label, value]) => <div className={`fl ${value ? 'is-on' : ''}`} key={label}><i>{label}</i>{value ? <b>{value}</b> : <em>{label === 'Review' ? 'not set' : '—'}</em>}</div>)}</div><div className="sl__b"><span className="sl__s">{row.file?.decision === 'changes_requested' ? 'Changes requested — upload a revision' : row.status === 'missing' ? 'No file yet' : row.status === 'uploaded' ? 'Not sent to the client' : row.status === 'review' ? 'Awaiting client approval' : 'Approved by client'}</span><span className="tw-sp"/><button className="tw-b sm" onClick={e => open(row, e.currentTarget)}>Open</button></div>
         </article>)}</div></div>
       </section>)}
       {loaded && !visible.length && <p style={{ padding: 20 }}>No deliverables match this filter. Choose All or clear the search to see other content.</p>}
     </section>
-    <div className="tw-selbar" id="dvBar" hidden={!selected.size || Boolean(active) || tab !== 'up'}><span className="n"><b id="dvN">{selected.size}</b> selected <button className="x" id="dvX" aria-label="Clear selection" onClick={() => setSelected(new Set())}>✕</button></span><span className="sum"><span><i>Need a file</i><b id="dvNeed">{rows.filter(r => selected.has(r.unitKey) && r.status === 'missing').length}</b></span><span><i>Ready to release</i><b className="g" id="dvRdy">{rows.filter(r => selected.has(r.unitKey) && r.status === 'uploaded').length}</b></span></span><span className="acts">{bulkDate !== null && <input type="date" className="tw-in" aria-label="Selected deliverables review date" value={bulkDate} onChange={e => setBulkDate(e.target.value)}/>}<button className="tw-b sm" disabled={busy} onClick={async () => { if (bulkDate === null) {
+    <div className="tw-selbar" id="dvBar" hidden={!selected.size || Boolean(active) || tab !== 'up'}><span className="n"><b id="dvN">{selected.size}</b> selected <button className="x" id="dvX" aria-label="Clear selection" onClick={() => setSelected(new Set())}>✕</button></span><span className="sum"><span><i>Need a file</i><b id="dvNeed">{rows.filter(r => selected.has(r.unitKey) && r.status === 'missing').length}</b></span><span><i>Uploaded / changes requested</i><b className="g" id="dvRdy">{rows.filter(r => selected.has(r.unitKey) && r.status === 'uploaded').length}</b></span></span><span className="acts">{bulkDate !== null && <input type="date" className="tw-in" aria-label="Selected deliverables review date" value={bulkDate} onChange={e => setBulkDate(e.target.value)}/>}<button className="tw-b sm" disabled={busy} onClick={async () => { if (bulkDate === null) {
         setBulkDate('');
         return;
     } setBusy(true); try {
@@ -219,11 +222,11 @@ export function DeliverablesPanel({ workspace, assignmentHierarchy, active: pane
     }
     finally {
         setBusy(false);
-    } }}>{bulkDate === null ? 'Set review date' : 'Save dates'}</button><button className="tw-b sm pri" disabled title="Client release is unavailable pending confirmation and retraction controls">Release to client</button></span></div>
+    } }}>{bulkDate === null ? 'Set review date' : 'Save dates'}</button></span></div>
     <div className="sh__scrim" data-scrim hidden={!active || Boolean(script)} onClick={close}/>
     <div className={`sh ${min ? 'is-min' : ''}`} hidden={!active || Boolean(script)} ref={sheet} role="dialog" aria-modal="true" aria-labelledby="deliverable-sheet-title">
       {active && <><div className="sh__h"><s className="sh__grip" aria-hidden="true"/><button className="tw-b sm" data-back aria-label="Back to deliverables" onClick={close}>← Back</button><Mark platform={active.platform}/><Avatar row={active}/><span className="sh__t" id="deliverable-sheet-title" tabIndex={-1}><b>{active.label}</b><u>{creator(active)} · {active.deliverableType?.replaceAll('_', ' ')}</u></span><Pill status={active.status}/><span className="tw-sp"/><span className="sh__nav"><button className="tw-b sm" aria-label="Previous deliverable" disabled={index <= 0} onClick={() => { setCurrent(rows[index - 1].unitKey); setMin(false); }}>‹</button><em>{index + 1} of {rows.length}</em><button className="tw-b sm" aria-label="Next deliverable" disabled={index >= rows.length - 1} onClick={() => { setCurrent(rows[index + 1].unitKey); setMin(false); }}>›</button></span><span className="act"><i>Acting as</i><span className="tw-seg"><button aria-pressed={!actingAsCreator} onClick={() => setActingAsCreator(false)}>Thinkway</button><button disabled={!active.creatorId} aria-pressed={actingAsCreator} onClick={() => setActingAsCreator(true)}>{creator(active)}</button></span></span><button className="tw-b sm" data-min aria-expanded={!min} onClick={() => setMin(!min)}>{min ? 'Expand' : 'Minimise'}</button><button className="tw-b sm" aria-label="Dismiss deliverable" onClick={close}>✕</button></div>
-      <PanelEditor key={active.unitKey} actingAsCreator={actingAsCreator} row={active} busy={busy} upload={file => void upload(active, file)} onScript={() => setScript(active)} refresh={refresh}/></>}
+      <PanelEditor uploadStatus={uploadStatus} setUploadStatus={setUploadStatus} key={active.unitKey} actingAsCreator={actingAsCreator} row={active} busy={busy} upload={file => void upload(active, file)} onScript={() => setScript(active)} refresh={refresh}/></>}
     </div>
     <DocumentationUnitScriptSheet open={Boolean(script)} onOpenChange={value => { if (!value)
         setScript(null); }} unit={script} campaignId={workspace.id} intent="edit" onPresenceChange={() => void refresh()}/>
@@ -241,7 +244,9 @@ function DropZone({ onFile, disabled }: {
         onFile(e.dataTransfer.files[0]); }}><s className="dz__i" aria-hidden="true"/><b>Drop the video here</b><u>or <button type="button" className="lk" disabled={disabled} onClick={e => { e.stopPropagation(); input.current?.click(); }}>browse</button> · MP4 MOV WEBM JPG PNG PDF · up to 150 MB</u><input type="file" ref={input} hidden accept={PANEL_UPLOAD_ACCEPT} disabled={disabled} onClick={e => e.stopPropagation()} onChange={e => { const file = e.target.files?.[0]; if (file)
         onFile(file); e.target.value = ''; }}/></div>;
 }
-function PanelEditor({ row, actingAsCreator, busy, upload, onScript, refresh }: {
+function PanelEditor({ row, actingAsCreator, busy, upload, onScript, refresh, uploadStatus, setUploadStatus }: {
+    uploadStatus: VersionStatus;
+    setUploadStatus: (status:VersionStatus)=>void;
     row: PanelRow;
     actingAsCreator: boolean;
     busy: boolean;
@@ -284,7 +289,7 @@ function PanelEditor({ row, actingAsCreator, busy, upload, onScript, refresh }: 
                 setCaption('');
             }
             if (external.trim()) {
-                const r = await (actingAsCreator ? addDeliverableOnBehalfExternalLinkAction : addDeliverableExternalLinkAction)({ ...row, assetType: defaultDeliverableAssetType(row.deliverableType), externalUrl: external, deferRelease: true });
+                const r = await (actingAsCreator ? addDeliverableOnBehalfExternalLinkAction : addDeliverableExternalLinkAction)({ ...row, assetType: defaultDeliverableAssetType(row.deliverableType), externalUrl: external, deferRelease: false });
                 if (!r.ok)
                     throw new Error(r.message);
                 setExternal('');
@@ -314,10 +319,10 @@ function PanelEditor({ row, actingAsCreator, busy, upload, onScript, refresh }: 
         }
     }
     return <><div className="sh__b"><div className="sh__col"><section className="bl"><div className="bl__h"><s className="n n1">1</s>The file<span className="tw-sp"/><span className="tw-cs">{row.file?.releasedAt ? 'Shared with client' : 'Not sent to the client'}</span></div>
-      {detail?.assets.filter(a => a.medium === 'file' || a.medium === 'external_link').map(asset => <div className="pad2" key={asset.id}><b>{asset.currentVersion?.fileName || asset.label || 'Content'}</b><DeliverableAssetPreview campaignHeaderId={row.campaignHeaderId} assignmentDeliverableId={row.assignmentDeliverableId} assignmentPostScheduleId={row.assignmentPostScheduleId} asset={asset}/><details><summary>Versions ({asset.versions.length})</summary>{asset.versions.map(v => <p key={v.id}>v{v.versionNumber} · {v.fileName || 'Content link'} · {date(v.uploadedAt)}</p>)}</details></div>)}<DropZone disabled={busy || saving} onFile={upload}/></section>
+      {detail?.assets.filter(a => a.medium === 'file' || a.medium === 'external_link').map(asset => <div key={asset.id}>{asset.versions.map(version => <VersionManager key={version.id + version.fileName + version.status + version.hidden + version.removed} row={row} asset={asset} version={version} onSaved={async()=>{await refresh();setReload(n=>n+1);}}/>)}</div>)}<label className="tw-lbl" htmlFor="dv-sheet-upload-status">New version status</label><select className="tw-in" id="dv-sheet-upload-status" value={uploadStatus} onChange={e=>setUploadStatus(e.target.value as VersionStatus)}>{VERSION_STATUSES.map(s=><option key={s} value={s}>{VERSION_STATUS_LABELS[s]}</option>)}</select><p className="tw-hint">New versions are visible to the client immediately.</p><DropZone disabled={busy || saving} onFile={upload}/></section>
       <section className="bl"><div className="bl__h"><s className="n n2">2</s>Script & caption</div><div className="pad2"><div className="fw"><span className="tw-lbl">Script</span><button className="tw-b sm" onClick={onScript}>{row.hasScript ? 'View / edit script' : 'Add script'}</button></div><div className="fw" style={{ marginTop: 11 }}><label className="tw-lbl" htmlFor="dv-caption">Caption / copy</label>{row.caption && <p>{row.caption}</p>}<textarea className="tw-in ta" id="dv-caption" rows={3} placeholder="Add caption as published…" value={caption} onChange={e => setCaption(e.target.value)}/><p className="tw-hint">A caption alone does not mark the deliverable received — only a file or link does.</p></div></div></section></div>
       <div className="sh__col"><section className="bl"><div className="bl__h"><s className="n n3">3</s>Dates</div><div className="pad2"><div className="fw"><label className="tw-lbl" htmlFor="dv-review">Expected with client for review</label><input className="tw-in" id="dv-review" type="date" value={review} disabled={!dates || saving} onChange={e => setReview(e.target.value)}/><p className="tw-hint">Appears in the client's review calendar.</p></div><div className="fw" style={{ marginTop: 11 }}><label className="tw-lbl" htmlFor="dv-live">Go-live date</label><input className="tw-in" id="dv-live" type="date" value={row.dueDate?.slice(0, 10) ?? ''} readOnly/><p className="tw-hint">Set on the publication plan — shown here so both read together.</p></div></div></section>
       <section className="bl"><div className="bl__h"><s className="n n4">4</s>Links & activity</div><div className="pad2"><label className="tw-lbl" htmlFor="dv-external">External link</label><input className="tw-in" id="dv-external" placeholder="https://drive.google.com/…" value={external} onChange={e => setExternal(e.target.value)}/><div className="fw" style={{ marginTop: 11 }}><label className="tw-lbl" htmlFor="dv-publication">Publication URL</label><input className="tw-in" id="dv-publication" placeholder="https://instagram.com/p/…" value={publication} onChange={e => setPublication(e.target.value)}/></div><div className="fw" style={{ marginTop: 11 }}><label className="tw-lbl" htmlFor="dv-note">Note to creator</label><textarea className="tw-in ta" id="dv-note" rows={2} placeholder="Visible in Creator Workspace…" value={note} onChange={e => setNote(e.target.value)}/></div>{detail?.comments.slice(0, 5).map(c => <p key={c.id}>{c.body}</p>)}</div></section></div></div>
     {error && <p role="alert" style={{ padding: '0 16px' }}>{error} <button className="tw-b sm" onClick={() => setReload(n => n + 1)}>Reload</button></p>}
-    <div className="sh__f"><span className="tw-cs">New files stay internal. Client release is temporarily unavailable.</span><span className="tw-sp"/><button className="tw-b" disabled={busy || saving || !dates} onClick={() => void save()}>{saving ? 'Saving…' : 'Save'}</button><button className="tw-b pri" disabled title="Client release is unavailable pending confirmation and retraction controls">{row.file?.releasedAt ? 'Released to client' : 'Release to client'}</button></div></>;
+    <div className="sh__f"><span className="tw-cs">Uploads are visible to the client. Manage visibility on each version.</span><span className="tw-sp"/><button className="tw-b" disabled={busy || saving || !dates} onClick={() => void save()}>{saving ? 'Saving…' : 'Save'}</button></div></>;
 }

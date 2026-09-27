@@ -108,7 +108,14 @@ export async function recordContentVersionDecisions(input: {
         !["file", "external_link"].includes(asset.medium) || asset.asset_type === "story_screenshot") {
       return { ok: false, message: "That content cannot be reviewed in this campaign." };
     }
-    if (asset.current_version_id !== version.id) return { ok: false, message: "Only the current content version can be reviewed. Refresh to see the latest version." };
+    if (asset.current_version_id !== version.id) {
+      // Hiding/removing the newest version exposes the latest remaining client-visible version.
+      const siblings = await supabase.from('deliverable_asset_versions').select('id, asset_id, version_number, metadata').in('asset_id',[asset.id]);
+      const current = siblings.data?.find(v=>v.id===asset.current_version_id);
+      const latestVisible = siblings.data?.filter(v=>isVersionReleasedToClient(v.metadata)).sort((a,b)=>b.version_number-a.version_number)[0];
+      if (siblings.error || !current || isVersionReleasedToClient(current.metadata) || latestVisible?.id !== version.id)
+        return { ok: false, message: "Only the current content version can be reviewed. Refresh to see the latest version." };
+    }
     if (!isVersionReleasedToClient(version.metadata)) return { ok: false, message: "Release this content to the client before recording a decision." };
     if (asset.medium === "file" ? !(version.storage_bucket && version.storage_path) : !version.external_url) {
       return { ok: false, message: "The content has not finished saving." };

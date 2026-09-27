@@ -1,4 +1,5 @@
 /** Client-visibility contract for documentation versions. Not a new SSOT. */
+import { versionControls } from './version-controls';
 
 export const RELEASED_TO_CLIENT_AT_KEY = "released_to_client_at";
 
@@ -13,6 +14,8 @@ export function releasedToClientAtFromMetadata(
     return null;
   }
   const value = (metadata as Record<string, unknown>)[RELEASED_TO_CLIENT_AT_KEY];
+  const controls = versionControls(metadata);
+  if (controls.hidden || controls.removed) return null;
   if (typeof value !== "string") return null;
   const trimmed = value.trim();
   return trimmed.length > 0 ? trimmed : null;

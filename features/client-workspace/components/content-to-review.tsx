@@ -1,5 +1,6 @@
 "use client";
 
+import { VERSION_STATUS_LABELS } from '@/lib/services/deliverables/version-controls';
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import "../styles/content-review.css";
@@ -334,7 +335,7 @@ function ContentReviewPane({
             </div>
             <div>
               <span>Version</span>
-              <b>v{item.versionNumber}</b>
+              <b>v{item.versionNumber} · {VERSION_STATUS_LABELS[item.productionStatus ?? 'draft']}</b>
             </div>
             <div>
               <span>Submitted</span>
@@ -418,7 +419,8 @@ function ContentReviewPane({
               <ul>
                 {prior.map((version) => (
                   <li key={version.versionId}>
-                    v{version.versionNumber}
+                    v{version.versionNumber} · {version.fileName} · {VERSION_STATUS_LABELS[version.productionStatus ?? 'draft']}
+                    <a href={clientContentAssetUrl({token,versionId:version.versionId,mode:'preview'})} target="_blank" rel="noopener noreferrer"> Open this version</a>
                     {version.status === "uploaded"
                       ? " · Uploaded"
                       : ` · ${CLIENT_CONTENT_STATUS_LABEL[version.status]}`}

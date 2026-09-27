@@ -6698,3 +6698,16 @@ test("unreleased approved versions are not exposed to clients", () => {
   });
   assert.equal(result.items.length, 0);
 });
+
+
+test("revised V2 retains V1 changes requested feedback and production status in history", () => {
+  const result = projectContent({assets:[contentAsset({currentVersionId:'v2'})],
+    versions:[contentVersion({id:'v1',versionNumber:1,fileName:'Original.mp4'}),contentVersion({id:'v2',versionNumber:2,fileName:'Revised.mp4',productionStatus:'internally_approved'})],
+    decisions:[{id:'change-1',versionId:'v1',decision:'changes_requested',comment:'Please shorten',decidedAt:'2026-09-26T10:00:00Z',actorKind:'client'}]});
+  assert.equal(result.items.length,1);
+  assert.equal(result.items[0].versionNumber,2);
+  assert.equal(result.items[0].status,'approval_required');
+  assert.equal(result.items[0].productionStatus,'internally_approved');
+  assert.equal(result.items[0].history.find(v=>v.versionId==='v1')?.comment,'Please shorten');
+  assert.equal(result.items[0].history.find(v=>v.versionId==='v1')?.fileName,'Original.mp4');
+});

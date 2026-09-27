@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import {
   addExternalLinkAsset,
+  editDeliverableVersion,
   addFileAssetVersion,
   addInternalComment,
   addTextAsset,
@@ -38,6 +39,7 @@ import { readContentReviewDates, validReviewDate, type ContentReviewDates } from
 import { readScheduleUnit, persistContentReviewDates, type ReviewScheduleUnit } from "@/lib/services/deliverables/content-review-schedule-service";
 import { listAttachedCampaignScriptPresence } from "@/lib/campaign-script/load-master";
 import { releasedToClientAtFromMetadata } from "@/lib/services/deliverables/client-release";
+import { versionControls, VERSION_STATUSES, type VersionStatus, type VersionEdit } from '@/lib/services/deliverables/version-controls';
 import { validatePanelUpload, type PanelSnapshot } from "@/features/campaigns/deliverables-panel-model";
 import { completeDeliverableOnBehalfUploadAction } from "./deliverable-on-behalf-actions";
 
@@ -104,7 +106,8 @@ export async function getDeliverablesPanelSnapshotAction(input: { campaignHeader
       metadata: Object.fromEntries((deliverableResult.data ?? []).map(d => [d.id,d.metadata])),
       scripts: [...scripts.keys()],
       assets: assets.map(a => {
-        const v = versions.data?.find(v => v.id === a.current_version_id) ?? versions.data?.find(v => v.asset_id === a.id);
+        const available = versions.data?.filter(v => !versionControls(v.metadata).removed);
+        const v = available?.find(v => v.id === a.current_version_id) ?? available?.find(v => v.asset_id === a.id);
         return {deliverableId:a.assignment_deliverable_id, postId:a.assignment_post_schedule_id, assetId:a.id,
           type:a.asset_type, medium:a.medium, versionId:v?.id ?? null, version:v?.version_number ?? null,
           fileName:v?.file_name ?? null, size:v?.file_size ?? null, mime:v?.mime_type ?? null,
@@ -116,25 +119,35 @@ export async function getDeliverablesPanelSnapshotAction(input: { campaignHeader
   } catch (error) { return {ok:false, message:error instanceof Error ? error.message : 'Could not load deliverables.'}; }
 }
 
-/** New panel uploads are drafts until the explicit Release action. Existing surfaces retain their behavior. */
+/** Uploads are visible to the client immediately, including drafts. */
 export async function beginDeliverablesPanelUploadAction(input: Parameters<typeof beginDeliverableFileUploadAction>[0]) {
   const error = validatePanelUpload(input);
   if (error) return {ok:false as const, message:error};
   return beginDeliverableFileUploadAction(input);
 }
 
-export async function completeDeliverablesPanelUploadAction(input: Parameters<typeof completeDeliverableFileUploadAction>[0] & { actingAsCreator?: boolean }) {
+export async function completeDeliverablesPanelUploadAction(input: Parameters<typeof completeDeliverableFileUploadAction>[0] & { actingAsCreator?: boolean; productionStatus?: VersionStatus }) {
   const error = validatePanelUpload(input);
   if (error) return {ok:false as const, message:error};
-  if (input.actingAsCreator) return completeDeliverableOnBehalfUploadAction({...input, deferRelease:true});
+  if (input.productionStatus && !VERSION_STATUSES.includes(input.productionStatus)) return {ok:false as const,message:'Invalid version status.'};
+  if (input.actingAsCreator) return completeDeliverableOnBehalfUploadAction({...input, deferRelease:false});
   const actor = await getWriteActor();
   if (!actor.ok) return actor;
   const assetType = parseAssetType(input.assetType);
   if (!assetType) return {ok:false as const,message:'Invalid asset type.'};
-  const result = await completeFileAssetUpload(actor.supabase, {...input, assetType, actorId:actor.userId, releaseToClient:false});
+  const result = await completeFileAssetUpload(actor.supabase, {...input, assetType, actorId:actor.userId, releaseToClient:true});
   if (!result.ok) return result;
   revalidatePath('/campaigns', 'layout');
+  revalidatePath('/review', 'layout');
   return {ok:true as const,data:{assetId:result.assetId,versionId:result.versionId}};
+}
+
+export async function editDeliverableVersionAction(input: ReviewScheduleUnit & {versionId:string;edit:VersionEdit}) {
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  const result = await editDeliverableVersion(actor.supabase,{...input,actorId:actor.userId});
+  if (result.ok) { revalidatePath('/campaigns','layout'); revalidatePath('/review','layout'); }
+  return result;
 }
 
 export async function saveContentReviewDatesAction(input: ReviewScheduleUnit & { dates: ContentReviewDates; previous: ContentReviewDates }): Promise<DocumentationActionResult<ContentReviewDates>> {

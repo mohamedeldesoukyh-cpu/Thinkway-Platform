@@ -3,6 +3,7 @@
  */
 
 import { randomUUID } from "crypto";
+import { editVersionMetadata, versionControls, type VersionEdit, type VersionStatus } from './version-controls';
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -55,11 +56,13 @@ const CONTENT_MEDIA: DeliverableAssetMedium[] = ["file", "external_link"];
 export { DOCUMENTATION_VERSION_CONFLICT_MESSAGE };
 
 function versionInsertMetadata(input: {
+  productionStatus?: VersionStatus;
   releaseToClient?: boolean;
   onBehalf?: OnBehalfAttribution | null;
 }): Record<string, unknown> {
   const releaseToClient = input.releaseToClient ?? !input.onBehalf;
   return {
+    production_status: input.productionStatus ?? 'draft',
     ...versionReleaseMetadata(releaseToClient),
     ...onBehalfMetadata(input.onBehalf),
   };
@@ -469,6 +472,7 @@ export async function beginFileAssetUpload(
 export async function completeFileAssetUpload(
   supabase: Supabase,
   input: {
+    productionStatus?: VersionStatus;
     actorId: string;
     campaignHeaderId: string;
     assignmentDeliverableId: string;
@@ -668,6 +672,30 @@ export async function reassignFileAsset(
     },
   });
   return { ok: true };
+}
+
+/** Version edits preserve storage, version numbering and all decision records. */
+export async function editDeliverableVersion(supabase: Supabase, input: {
+  actorId: string; campaignHeaderId: string; assignmentDeliverableId: string;
+  assignmentPostScheduleId: string | null; versionId: string; edit: VersionEdit;
+}): Promise<{ok:true} | {ok:false;message:string}> {
+  const {data: version, error} = await supabase.from('deliverable_asset_versions')
+    .select('id, asset_id, metadata, file_name').eq('id', input.versionId).maybeSingle();
+  if (error || !version) return {ok:false,message:'Version not found.'};
+  const owned = await loadOwnedAsset(supabase, {...input, assetId:version.asset_id});
+  if (!owned.ok) return owned;
+  let metadata: Record<string, unknown>;
+  try { metadata = editVersionMetadata(version.metadata, input.edit, input.actorId, new Date().toISOString()); }
+  catch (error) { return {ok:false,message:error instanceof Error ? error.message : 'Invalid edit.'}; }
+  // Compare the original metadata to avoid overwriting a concurrent visibility/status edit.
+  let query = supabase.from('deliverable_asset_versions').update({metadata,
+    ...(input.edit.name !== undefined ? {file_name:input.edit.name.trim()} : {})}).eq('id',version.id);
+  query = version.metadata === null ? query.is('metadata',null) : query.filter('metadata','eq',JSON.stringify(version.metadata));
+  const updated = await query.select('id').maybeSingle();
+  if (updated.error || !updated.data) return {ok:false,message:'Version changed or could not be saved. Reload and retry.'};
+  await logEvent(supabase, {...input, assetId:version.asset_id, actorUserId:input.actorId,
+    eventType:'version_edit',payload:{...input.edit,previous_name:version.file_name}});
+  return {ok:true};
 }
 
 export async function releaseDeliverableAssetVersionToClient(
@@ -1102,12 +1130,13 @@ async function loadAggregates(
     const { data: versions } = await supabase
       .from("deliverable_asset_versions")
       .select(
-        "asset_id, version_number, file_name, uploaded_at, storage_bucket, storage_path, external_url"
+        "asset_id, version_number, file_name, uploaded_at, storage_bucket, storage_path, external_url, metadata"
       )
       .in("asset_id", assetIds)
       .order("version_number", { ascending: false });
 
     for (const version of versions ?? []) {
+      if (versionControls(version.metadata).removed) continue;
       const prev = versionByAsset.get(version.asset_id);
       const playable = versionCountsAsClientContent({
         storageBucket: version.storage_bucket,
@@ -1232,6 +1261,7 @@ async function loadAssetsForUnit(
       uploadedBy: version.uploaded_by,
       uploadedAt: version.uploaded_at,
       releasedToClientAt: releasedToClientAtFromMetadata(version.metadata),
+      ...versionControls(version.metadata),
       onBehalfLabel: creatorFacingOnBehalfLabel(
         onBehalfAttributionFromMetadata(version.metadata)?.kind
       ),
@@ -1244,8 +1274,8 @@ async function loadAssetsForUnit(
   return assets.map((asset) => {
     const versionsForAsset = byAsset.get(asset.id) ?? [];
     const current =
-      versionsForAsset.find((v) => v.id === asset.current_version_id) ??
-      versionsForAsset[0] ??
+      versionsForAsset.find((v) => v.id === asset.current_version_id && !v.removed) ??
+      versionsForAsset.find(v => !v.removed) ??
       null;
     return {
       id: asset.id,

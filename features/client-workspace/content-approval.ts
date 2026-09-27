@@ -46,6 +46,8 @@ export type ClientContentDecisionRecord = {
 };
 
 export type ClientContentVersionHistory = {
+  fileName?: string | null;
+  productionStatus?: import('@/lib/services/deliverables/version-controls').VersionStatus;
   versionId: string;
   versionNumber: number;
   uploadedAt: string;
@@ -54,6 +56,7 @@ export type ClientContentVersionHistory = {
 };
 
 export type ClientContentReviewItem = {
+  productionStatus?: import('@/lib/services/deliverables/version-controls').VersionStatus;
   assetId: string;
   versionId: string;
   versionNumber: number;
@@ -104,6 +107,7 @@ export type ClientPublishedContentUnit = {
 };
 
 export type ClientContentVersionSource = {
+  productionStatus?: import('@/lib/services/deliverables/version-controls').VersionStatus;
   id: string;
   assetId: string;
   versionNumber: number;
@@ -247,6 +251,7 @@ export function projectClientCampaignContent(input: {
         assetId: asset.id,
         versionId: current.id,
         versionNumber: current.versionNumber,
+        productionStatus: current.productionStatus,
         campaignHeaderId: asset.campaignHeaderId,
         assignmentDeliverableId: asset.assignmentDeliverableId,
         assignmentPostScheduleId: asset.assignmentPostScheduleId,
@@ -273,6 +278,8 @@ export function projectClientCampaignContent(input: {
           return {
             versionId: version.id,
             versionNumber: version.versionNumber,
+            fileName: version.fileName,
+            productionStatus: version.productionStatus,
             uploadedAt: version.uploadedAt,
             status: decision
               ? resolveClientContentStatus(decision, versionLive)

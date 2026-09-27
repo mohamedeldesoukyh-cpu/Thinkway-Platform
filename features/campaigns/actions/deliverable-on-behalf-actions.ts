@@ -174,6 +174,7 @@ async function requireOnBehalfUnit(input: {
 }
 
 export async function completeDeliverableOnBehalfUploadAction(input: {
+  productionStatus?: import('@/lib/services/deliverables/version-controls').VersionStatus;
   campaignHeaderId: string;
   assignmentDeliverableId: string;
   assignmentPostScheduleId: string | null;
@@ -210,6 +211,7 @@ export async function completeDeliverableOnBehalfUploadAction(input: {
     versionNumber: input.versionNumber,
     storagePath: input.storagePath,
     releaseToClient: !input.deferRelease,
+    productionStatus: input.productionStatus,
     onBehalf: {
       ...access.attribution,
       kind: onBehalfKindForVersionNumber(input.versionNumber),

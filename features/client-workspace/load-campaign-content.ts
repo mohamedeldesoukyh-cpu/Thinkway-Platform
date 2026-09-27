@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
 import { releasedToClientAtFromMetadata } from "@/lib/services/deliverables/client-release";
+import { versionControls } from '@/lib/services/deliverables/version-controls';
 
 import {
   emptyClientCampaignContent,
@@ -194,6 +195,7 @@ export async function loadClientCampaignContent(
       fileName: version.file_name,
       uploadedAt: version.uploaded_at,
       releasedToClientAt: releasedToClientAtFromMetadata(version.metadata),
+      productionStatus: versionControls(version.metadata).status,
     })),
     decisions: mapDecisions(decisions),
     creatorNameByDeliverableId,

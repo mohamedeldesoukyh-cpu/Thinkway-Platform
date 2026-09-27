@@ -305,6 +305,9 @@ export type DocumentationUnitSummary = DocumentationUnitId & {
 };
 
 export type DeliverableAssetVersionView = {
+  status?: import('./version-controls').VersionStatus;
+  hidden?: boolean;
+  removed?: boolean;
   contentDecision?: { decision: "approved" | "changes_requested"; decidedAt: string; actorKind: string; comment: string | null } | null;
   id: string;
   versionNumber: number;
