@@ -3,6 +3,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveCreatorPrimaryAvatar } from "@/lib/creators/creator-centric";
 
 import {
   calculateDnaCompleteness,
@@ -255,12 +256,21 @@ function applyDnaDocumentToCreator(
   const dnaAvatar = extractDnaAvatarUrl(document);
   const enriched =
     creator.enrichment_status === "enriched" || creator.enrichment_status === "partial";
-  const mergedAvatar = resolveCreatorAvatarWithDnaFallback({
+  const fallbackAvatar = resolveCreatorAvatarWithDnaFallback({
     profileImageUrl: creator.profile_image_url,
     primaryAvatarUrl: creator.primaryAvatarUrl,
     dnaAvatarUrl: dnaAvatar,
     preferEnrichedDna: enriched && Boolean(dnaAvatar),
   });
+  const platforms = resolvePlatformEngagementRates(
+    overlayPlatformMetricsFromDna(creator.platforms, document)
+  );
+  const mergedAvatar = resolveCreatorPrimaryAvatar({
+    accounts: platforms,
+    storedPrimaryAvatarUrl: creator.primaryAvatarUrl,
+    storedPrimaryAvatarSource: creator.primaryAvatarSource,
+    dnaAvatarUrl: fallbackAvatar,
+  }).url;
   const country = creator.country_code ?? envelopeValue(document.audience.country);
   const categories = mergeStringArray(creator.categories, envelopeValue(document.audience.categories));
   const interests = mergeStringArray(
@@ -300,9 +310,7 @@ function applyDnaDocumentToCreator(
     bio: bio ? formatCreatorBio(bio) : creator.bio,
     profile_image_url: mergedAvatar,
     primaryAvatarUrl: mergedAvatar,
-    platforms: resolvePlatformEngagementRates(
-      overlayPlatformMetricsFromDna(creator.platforms, document)
-    ),
+    platforms,
     country_code: country ?? creator.country_code,
     estimated_country: country ?? creator.estimated_country,
     categories,

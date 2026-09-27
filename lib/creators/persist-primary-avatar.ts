@@ -10,6 +10,7 @@ import {
 import { extractDnaAvatarUrl, avatarSourceFromDnaUrl } from "@/lib/creators/dna-avatar";
 import { loadCanonicalDnaByInfluencerIds } from "@/lib/creators/dna-browse-hydration";
 import type { Database } from "@/types/database";
+import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 
 type AnySupabase = SupabaseClient<Database>;
 
@@ -77,8 +78,15 @@ export async function persistCreatorPrimaryIdentity(
     };
   }
 
-  // Never null-out or replace a captured avatar with a worse/empty enrichment result.
-  const merged = resolveNextPrimaryAvatar({
+  // A usable, audience-ranked account photo is intentional, even when the old
+  // smaller platform's photo happens to be stored in a higher-quality location.
+  const rankedAccountWinner = candidates.some((candidate) =>
+    candidate.platform && candidate.url?.trim() === resolved.url &&
+    typeof candidate.followerCount === "number" &&
+    Number.isFinite(candidate.followerCount) && candidate.followerCount >= 0 &&
+    isUsableAvatarUrl(candidate.url)
+  );
+  const merged = rankedAccountWinner ? resolved : resolveNextPrimaryAvatar({
     existingUrl: row.primary_avatar_url,
     existingSource: row.primary_avatar_source,
     incomingUrl: resolved.url,

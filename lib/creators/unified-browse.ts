@@ -1725,6 +1725,7 @@ async function fetchInternalCreators(
         id: p.id,
         platform: p.platform,
         profile_picture_url: p.profile_picture_url,
+        follower_count: p.follower_count,
         avatar_source: (p as { avatar_source?: string | null }).avatar_source,
         metadata: (p.metadata as Record<string, unknown> | null | undefined) ?? null,
       })),

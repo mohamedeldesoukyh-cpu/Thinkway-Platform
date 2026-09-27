@@ -49,11 +49,13 @@ export type AvatarCandidate = {
   url: string | null | undefined;
   source: PrimaryAvatarSource;
   platform?: string | null;
+  followerCount?: number | null;
 };
 
 export type PlatformAccountAvatarInput = {
   id: string;
   platform: string;
+  follower_count?: number | null;
   profile_picture_url?: string | null;
   avatar_source?: string | null;
   metadata?: Record<string, unknown> | null;
@@ -235,6 +237,7 @@ export function collectAvatarCandidates(input: {
       url,
       source: avatarSourceFromAccount(account),
       platform: account.platform,
+      followerCount: account.follower_count,
     });
   }
 
@@ -254,6 +257,27 @@ export function resolvePrimaryAvatar(candidates: AvatarCandidate[]): {
   url: string | null;
   source: PrimaryAvatarSource;
 } {
+  // An explicitly chosen manual portrait remains an operator override. Otherwise
+  // choose the largest linked audience, independently of refresh order or whether
+  // a provider photo was copied to our durable storage.
+  const manual = candidates.find(
+    (candidate) => candidate.source === "manual" && isDisplayableAvatarUrl(candidate.url)
+  );
+  if (manual) return { url: manual.url!.trim(), source: manual.source };
+  const rankedPlatforms = candidates.filter(
+    (candidate) => candidate.platform &&
+      typeof candidate.followerCount === "number" &&
+      Number.isFinite(candidate.followerCount) && candidate.followerCount >= 0 &&
+      isUsableAvatarUrl(candidate.url)
+  ).sort((a, b) =>
+    b.followerCount! - a.followerCount! ||
+    platformSortKey(a.platform!) - platformSortKey(b.platform!) ||
+    (a.url ?? "").localeCompare(b.url ?? "")
+  );
+  if (rankedPlatforms.length) {
+    const winner = rankedPlatforms[0];
+    return { url: winner.url!.trim(), source: winner.source };
+  }
   let best: AvatarCandidate = { url: null, source: "placeholder" };
 
   for (const candidate of candidates) {

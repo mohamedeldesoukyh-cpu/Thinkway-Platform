@@ -96,6 +96,11 @@ function resolveQuotationLineAvatarUrl(
   candidates: Array<string | null | undefined>,
   dnaDocument: CreatorDNADocument | undefined
 ): string | null {
+  // The canonical creator has already selected its largest platform's portrait.
+  // An older quotation snapshot must not override that choice by storage rank.
+  if (creator?.primaryAvatarUrl && isUsableAvatarUrl(creator.primaryAvatarUrl)) {
+    return creator.primaryAvatarUrl;
+  }
   const dnaAvatar = resolveDnaCanonicalAvatarUrl(dnaDocument);
   const enriched =
     creator?.enrichment_status === "enriched" || creator?.enrichment_status === "partial";
