@@ -59,6 +59,10 @@ test("signed campaign cover route is registered for authenticated browser reques
   assert.equal(classifyApiPath("/api/review/share-image?reviewId=test&sign=test&v=2"), "public");
 });
 
+test("Client IO workspace documents use signed-link authorization, not staff login", () => {
+  assert.equal(classifyApiPath("/api/review/client-io?sign=fixture&format=status"), "public");
+});
+
 test("page prefix classification covers isolation zones", () => {
   assert.equal(classifyPagePath("/finance/invoices"), "internal_workspace");
   assert.equal(classifyPagePath("/operations/move"), "internal_workspace");
