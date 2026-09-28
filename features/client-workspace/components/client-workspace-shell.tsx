@@ -78,15 +78,66 @@ export function ClientWorkspaceShell({
     onSectionChange(next);
   }
 
-  const badges = <>
+  return (
+    <div className="tw-review">
+      <title>{`${clientLinkName(view.overview.campaignName)} | Thinkway`}</title>
+      <header className="bar">
+        <div className="wrap cx-campaign-heading"><p>Client workspace</p><h1 dir="auto">{clientLinkName(view.overview.campaignName)}</h1></div>
+        <div className="wrap row">
+          <ClientWorkspaceIdentityMark identityLogo={partnerIdentity} />
+          <div className="sp" />
           <span className={`stpill ${statusTone}`}>{quotationLabel}</span>
           {view.journey?.historical ? <span className="stpill cur">Read only</span> : null}
           {shortlistLabel && !view.journey?.historical ? (
             <span className="stpill cur">Shortlist · {shortlistLabel}</span>
           ) : null}
           <span className="stpill cur">{versionLabel}</span>
-  </>;
-  const tabs = (
+          {view.canDecide ? (
+            <>
+              <button
+                type="button"
+                className="btn sec"
+                onClick={() => openSection("feedback")}
+              >
+                Request changes
+              </button>
+              {showHeaderSelectionNav ? (
+                <button
+                  type="button"
+                  className="btn sec"
+                  onClick={() => openSection(headerCta.section)}
+                >
+                  {headerCta.label}
+                </button>
+              ) : null}
+            </>
+          ) : null}
+        </div>
+      </header>
+      <div className="tw-review-body">
+        <ClientJourneyStrip view={view} />
+        {view.clientUpdate?.items.length ? (
+          <ReviewUpdateBanner
+            reviewId={view.review.id}
+            token={token}
+            updatedAt={view.clientUpdate.updatedAt}
+            items={view.clientUpdate.items}
+          />
+        ) : null}
+
+        {view.entitlement?.preview?.active ? (
+          <div className="wrap">
+            <p className="cx-preview-note">
+              {view.entitlement.preview.endingSoon
+                ? `Your Live Performance preview ends in ${view.entitlement.preview.daysRemaining} day${
+                    view.entitlement.preview.daysRemaining === 1 ? "" : "s"
+                  }. Speak with your Thinkway team to continue access.`
+                : `Live Performance Preview · ${view.entitlement.preview.daysRemaining} day${
+                    view.entitlement.preview.daysRemaining === 1 ? "" : "s"
+                  } remaining. Explore the full Thinkway Client Workspace with live campaign performance and content review.`}
+            </p>
+          </div>
+        ) : null}
         <nav className="tabs" aria-label="Workspace sections">
           <div className="wrap row">
             {view.visibleSections.map((item) => {
@@ -111,69 +162,8 @@ export function ClientWorkspaceShell({
             })}
           </div>
         </nav>
-  );
-  return (
-    <div className={`tw-review${section === "commercial" ? " cm-page" : ""}`}>
-      <title>{`${clientLinkName(view.overview.campaignName)} | Thinkway`}</title>
-      {section === "commercial" ? <div className="wrap cx-campaign-heading"><p>Client workspace</p><h1 dir="auto">{clientLinkName(view.overview.campaignName)}</h1>{section === "commercial" ? <div className="cm-badges">{badges}</div> : null}</div> : null}
-      <header className="bar">
-        {section !== "commercial" ? <div className="wrap cx-campaign-heading"><p>Client workspace</p><h1 dir="auto">{clientLinkName(view.overview.campaignName)}</h1></div> : null}
-        <div className="wrap row">
-          <ClientWorkspaceIdentityMark identityLogo={partnerIdentity} />
-          {section === "commercial" && <span className="cm-campaign-chip" title={clientLinkName(view.overview.campaignName)}>{clientLinkName(view.overview.campaignName)}</span>}
-          <div className="sp" />
-          {section !== "commercial" ? badges : null}
-          {view.canDecide ? (
-            <>
-              <button
-                type="button"
-                className="btn sec"
-                onClick={() => openSection("feedback")}
-              >
-                Request changes
-              </button>
-              {showHeaderSelectionNav ? (
-                <button
-                  type="button"
-                  className="btn sec"
-                  onClick={() => openSection(headerCta.section)}
-                >
-                  {headerCta.label}
-                </button>
-              ) : null}
-            </>
-          ) : null}
-        </div>
-        {section === "commercial" ? tabs : null}
-      </header>
-      <div className="tw-review-body">
-        {section !== "commercial" ? <ClientJourneyStrip view={view} /> : null}
-        {view.clientUpdate?.items.length ? (
-          <ReviewUpdateBanner
-            reviewId={view.review.id}
-            token={token}
-            updatedAt={view.clientUpdate.updatedAt}
-            items={view.clientUpdate.items}
-          />
-        ) : null}
 
-        {view.entitlement?.preview?.active ? (
-          <div className="wrap">
-            <p className="cx-preview-note">
-              {view.entitlement.preview.endingSoon
-                ? `Your Live Performance preview ends in ${view.entitlement.preview.daysRemaining} day${
-                    view.entitlement.preview.daysRemaining === 1 ? "" : "s"
-                  }. Speak with your Thinkway team to continue access.`
-                : `Live Performance Preview · ${view.entitlement.preview.daysRemaining} day${
-                    view.entitlement.preview.daysRemaining === 1 ? "" : "s"
-                  } remaining. Explore the full Thinkway Client Workspace with live campaign performance and content review.`}
-            </p>
-          </div>
-        ) : null}
-        {section !== "commercial" ? tabs : null}
-
-
-        <main className="wrap main">{section === "commercial" ? <ClientJourneyStrip view={view} /> : null}{children}</main>
+        <main className="wrap main">{children}</main>
         <p className="foot">
           Confidential · Thinkway Platform
           {preparedFor ? ` · Prepared for ${preparedFor}` : ""}

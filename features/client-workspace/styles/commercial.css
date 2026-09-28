@@ -1,25 +1,6 @@
 /* Commercial reference tokens are scoped to this tab; other workspaces retain their theme. */
-.tw-review.cm-page{--cm-bg:#fafbfc;--cm-surface:#fff;--cm-surface2:#f1f3f7;--cm-border:#ebeef4;--cm-ink:#12141c;--cm-ink2:#565c72;--cm-ink3:#9aa0ad;--cm-accent:#0057ff;--cm-accentink:#fff;--cm-soft:#e8effe;--cm-softink:#0040cc;--cm-softborder:#cfe0fb;--cm-glow:rgba(0,87,255,.26);--cm-success:#0e9f6e;--cm-successsoft:#e5f6ef;--cm-successborder:#bfe3d3;--cm-shadow:0 1px 2px rgba(18,20,28,.04),0 8px 24px -12px rgba(18,20,28,.12);background:var(--cm-bg);color:var(--cm-ink);font:14px/1.5 'Geist',-apple-system,'Segoe UI',Arial,sans-serif}
-[data-theme="dark"] .tw-review.cm-page,.dark .tw-review.cm-page{--cm-bg:#0b0d15;--cm-surface:#141723;--cm-surface2:#1b1f2e;--cm-border:#262c40;--cm-ink:#f2f3f8;--cm-ink2:#a7acc2;--cm-ink3:#767c92;--cm-accent:#5b8bff;--cm-accentink:#0b0d15;--cm-soft:#182242;--cm-softink:#a9c3ff;--cm-softborder:#2c4482;--cm-glow:rgba(91,139,255,.35);--cm-success:#3fcf9a;--cm-successsoft:#10261e;--cm-successborder:#1f4436}
-.tw-review.cm-page .wrap{max-width:none;width:100%;box-sizing:border-box;padding-inline:24px;margin-inline:auto}
-.tw-review.cm-page .cx-campaign-heading{padding-block:16px 10px}.tw-review.cm-page .cx-campaign-heading h1{font-size:22px;letter-spacing:-.3px;color:var(--cm-ink)}
-.tw-review.cm-page header.bar{position:sticky;top:0;background:var(--cm-surface);border-color:var(--cm-border);z-index:120}
-.tw-review.cm-page header.bar .row{height:auto;min-height:58px;flex-wrap:wrap;gap:8px;padding-block:8px}
-.tw-review.cm-page nav.tabs{position:static;background:var(--cm-surface);border-color:var(--cm-border);overflow:visible}
-.tw-review.cm-page nav.tabs .row{min-height:0;flex-wrap:wrap;padding-block:0;gap:0;overflow:visible}
-.tw-review.cm-page nav.tabs button.tab{padding:11px 13px;font-size:13px;color:var(--cm-ink2)}
-.tw-review.cm-page nav.tabs button.tab.on{color:var(--cm-accent);border-color:var(--cm-accent)}
-.tw-review .cm-campaign-chip{max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid var(--cm-border);border-radius:8px;padding:4px 8px;font-size:11px;color:var(--cm-ink2)}
-.tw-review.cm-page .stpill.rev{background:var(--cm-soft);color:var(--cm-softink)}
-.tw-review.cm-page .main{padding-top:16px}.tw-review.cm-page .tw-review-body{background:var(--cm-bg)}
-.tw-review.cm-page .journey{position:static;background:transparent;border:0;margin:0 0 18px;padding:0}
-.tw-review.cm-page .journey-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:20px;padding:0}
-.tw-review.cm-page .journey-node{background:none;border:0;padding:0;min-width:0;position:relative}
-.tw-review.cm-page .journey-arrow{height:1px;width:18px;position:absolute;left:-19px;top:12px;background:var(--cm-border);border:0;transform:none}
-.tw-review.cm-page .journey-k{color:var(--cm-ink);font-size:12px;letter-spacing:0;text-transform:none;font-weight:700;display:flex;align-items:center;gap:5px}
-.tw-review.cm-page .journey-number{width:21px;height:21px;display:inline-grid;place-items:center;border-radius:50%;background:var(--cm-surface2);color:var(--cm-ink3);flex:none}
-.tw-review.cm-page .journey-v{font-size:13px;color:var(--cm-ink3)}.tw-review.cm-page .journey-h{font-size:11px;color:var(--cm-ink3)}
-.tw-review.cm-page .journey-node.tone-ok .journey-v{color:var(--cm-success)}.tw-review.cm-page .tone-ok .journey-number{color:var(--cm-success);background:var(--cm-successsoft)}
+.tw-review .cm-commercial{--cm-bg:#fafbfc;--cm-surface:#fff;--cm-surface2:#f1f3f7;--cm-border:#ebeef4;--cm-ink:#12141c;--cm-ink2:#565c72;--cm-ink3:#9aa0ad;--cm-accent:#0057ff;--cm-accentink:#fff;--cm-soft:#e8effe;--cm-softink:#0040cc;--cm-softborder:#cfe0fb;--cm-glow:rgba(0,87,255,.26);--cm-success:#0e9f6e;--cm-successsoft:#e5f6ef;--cm-successborder:#bfe3d3;--cm-shadow:0 1px 2px rgba(18,20,28,.04),0 8px 24px -12px rgba(18,20,28,.12);color:var(--cm-ink);font:14px/1.5 'Geist',-apple-system,'Segoe UI',Arial,sans-serif}
+[data-theme="dark"] .tw-review .cm-commercial,.dark .tw-review .cm-commercial{--cm-bg:#0b0d15;--cm-surface:#141723;--cm-surface2:#1b1f2e;--cm-border:#262c40;--cm-ink:#f2f3f8;--cm-ink2:#a7acc2;--cm-ink3:#767c92;--cm-accent:#5b8bff;--cm-accentink:#0b0d15;--cm-soft:#182242;--cm-softink:#a9c3ff;--cm-softborder:#2c4482;--cm-glow:rgba(91,139,255,.35);--cm-success:#3fcf9a;--cm-successsoft:#10261e;--cm-successborder:#1f4436}
 .tw-review .cm-commercial{display:flex;flex-direction:column;gap:10px;font-variant-numeric:tabular-nums}
 .tw-review .cm-hero,.tw-review .cm-list,.tw-review .cm-doc{background:var(--cm-surface);border:1px solid var(--cm-border);box-shadow:var(--cm-shadow);border-radius:16px;min-width:0}
 .tw-review .cm-hero{padding:18px 20px}.tw-review .cm-hero-top{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:flex-start}
@@ -42,20 +23,13 @@
 .tw-review .cm-commercial .btn:hover:not(:disabled){transform:translateY(-1px);background:var(--cm-surface2)}.tw-review .cm-commercial .btn.pri:hover:not(:disabled){background:var(--cm-accent);filter:brightness(1.05)}.tw-review .cm-commercial .btn:active:not(:disabled){transform:scale(.98)}.tw-review .cm-commercial .btn:focus-visible{outline:2px solid var(--cm-accent);outline-offset:2px}.tw-review .cm-commercial .btn:disabled{opacity:.5;cursor:not-allowed}
 .tw-review .cm-commercial .btn.cm-icon{width:30px;height:30px;padding:0;justify-content:center}.tw-review .cm-icon svg{width:14px;height:14px}
 .tw-review .cm-doc input{width:100%;min-width:0;box-sizing:border-box;background:var(--cm-surface);border:1px solid var(--cm-border);border-radius:9px;color:var(--cm-ink);padding:8px;font:inherit}.tw-review .cm-doc .send-row{display:flex;align-items:center;justify-content:space-between;gap:8px;overflow-wrap:anywhere}.tw-review .cm-doc .send-row span{min-width:0}.tw-review .cm-doc .sumbar-msg{color:var(--cm-ink2);font-size:12px}.tw-review .cm-commercial>.card{margin:0;padding:16px;background:var(--cm-surface);color:var(--cm-ink)}
-@media(max-width:680px){.tw-review .cm-doc-grid{grid-template-columns:1fr}.tw-review.cm-page .wrap{padding-inline:16px}.tw-review.cm-page header.bar .sp{display:none}.tw-review.cm-page header.bar .logo-pair{max-width:100%;flex-wrap:wrap}.tw-review.cm-page .cm-campaign-chip{max-width:100%}.tw-review.cm-page .journey-row{padding:0}.tw-review .cm-price{max-width:125px;overflow-wrap:anywhere}}
-@media(max-width:640px){.tw-review.cm-page .journey-row{grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.tw-review.cm-page .journey-arrow{display:none}}
+@media(max-width:680px){.tw-review .cm-doc-grid{grid-template-columns:1fr}.tw-review .cm-price{max-width:125px;overflow-wrap:anywhere}}
 @media(max-width:560px){.tw-review .cm-stats{grid-template-columns:1fr}.tw-review .cm-hero{padding:16px}.tw-review .cm-commercial .asum{grid-template-columns:1fr 1fr}}
 @media(prefers-reduced-motion:reduce){.tw-review .cm-commercial *{animation:none!important;transition:none!important}.tw-review .cm-commercial .btn:hover,.tw-review .cm-commercial .btn:active{transform:none!important}}
-.tw-review.cm-page .cm-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .tw-review .cm-amount .cm-currency{font-size:.42em;font-weight:700;color:var(--cm-ink2);vertical-align:4px;margin-right:6px}
 /* Let the intro scroll away while the brand and tabs remain in the same scroll container. */
-.tw-review.cm-page{display:block;overflow-y:auto;overflow-x:hidden}
-.tw-review.cm-page .tw-review-body{overflow:visible;height:auto;flex:none}
 .tw-review .cm-doc p.cm-meta,.tw-review .cm-doc .l{margin:0}
 .tw-review .cm-doc .l{font-size:11px;color:var(--cm-ink3);font-weight:600;text-transform:uppercase}
 .tw-review .cm-commercial .tbc{color:var(--cm-ink3)}
 .tw-review .cm-commercial .cbadge.pend{color:var(--cm-ink2);background:var(--cm-surface2)}
-.tw-review.cm-page header.bar>.wrap.row{padding-inline:24px}
-.tw-review.cm-page .cm-badges .stpill{display:inline-flex}
-.tw-review.cm-page .journey-h{display:block}
-@media(max-width:680px){.tw-review.cm-page header.bar>.wrap.row,.tw-review.cm-page nav.tabs>.wrap.row{padding-inline:16px}}
+@media(max-width:680px){.tw-review .cm-doc-grid{grid-template-columns:1fr}.tw-review .cm-price{max-width:125px;overflow-wrap:anywhere}}

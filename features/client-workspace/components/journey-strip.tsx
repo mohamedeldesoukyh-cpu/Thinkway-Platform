@@ -77,7 +77,7 @@ export function ClientJourneyStrip({ view }: { view: ClientWorkspaceView }) {
               {index > 0 ? <span className="journey-arrow" aria-hidden="true" /> : null}
               <div>
                 <p className="journey-k">
-                  <span className="journey-number">{index + 1}</span> {node.label}
+                  {index + 1} {node.label}
                 </p>
                 <p className="journey-v">{copy.label}</p>
                 <p className="journey-h">{node.hint}</p>
