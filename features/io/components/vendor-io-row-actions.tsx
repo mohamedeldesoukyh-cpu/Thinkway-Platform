@@ -1,6 +1,7 @@
 "use client";
 
 import { MoreHorizontalIcon } from "lucide-react";
+import { useRef } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -24,6 +25,7 @@ type Props = {
 
 /** Compact Actions cell — primary Send + overflow menu (no horizontal page scroll). */
 export function VendorIoRowActions({ row, onViewDetail }: Props) {
+  const openingDetails = useRef(false);
   const signedUrl = row.attachment_url?.trim() || "";
   const canApprove = canRecordVendorIoManualApproval(row);
 
@@ -48,8 +50,22 @@ export function VendorIoRowActions({ row, onViewDetail }: Props) {
             <MoreHorizontalIcon className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-48">
-          <DropdownMenuItem onSelect={() => onViewDetail(row.id)}>
+        <DropdownMenuContent
+          align="end"
+          className="w-48"
+          onCloseAutoFocus={(event) => {
+            // Keep focus in the newly opened drawer instead of dismissing it
+            // by returning focus to the menu trigger outside the drawer.
+            if (openingDetails.current) {
+              event.preventDefault();
+              openingDetails.current = false;
+            }
+          }}
+        >
+          <DropdownMenuItem onSelect={() => {
+            openingDetails.current = true;
+            onViewDetail(row.id);
+          }}>
             Details
           </DropdownMenuItem>
           <DropdownMenuItem asChild>
