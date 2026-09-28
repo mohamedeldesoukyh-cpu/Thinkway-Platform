@@ -1,0 +1,52 @@
+"use client";
+import { useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+type Io = {id:string;number:string|null;status:string;approved:boolean;canApprove:boolean;available:boolean};
+export function CommercialClientIo({token}:{token:string}) {
+  const router=useRouter();
+  const href=`/api/review/client-io?sign=${encodeURIComponent(token)}`;
+  const [io,setIo]=useState<Io|null>(null);
+  const [loading,setLoading]=useState(true);
+  const [message,setMessage]=useState("");
+  const [error,setError]=useState("");
+  const [confirm,setConfirm]=useState(false);
+  const [email,setEmail]=useState("");
+  const [pending,setPending]=useState(false);
+  const reload=useCallback(async()=>{
+    try {
+      const response=await fetch(`${href}&format=status`,{cache:"no-store"});
+      const data=await response.json();
+      if(!response.ok) throw Error(data.error || "Could not load Client IO.");
+      setIo(data.io);setMessage(data.message);setError("");
+      if(data.io?.approved) setConfirm(false);
+    } catch(e) {setError(e instanceof Error ? e.message : "Could not load Client IO.");}
+    finally {setLoading(false);}
+  },[href]);
+  useEffect(()=>{void reload();const onFocus=()=>{void reload();};window.addEventListener("focus",onFocus);return()=>window.removeEventListener("focus",onFocus);},[reload]);
+  async function approve(event:React.FormEvent) {
+    event.preventDefault();setPending(true);setError("");
+    try {
+      const response=await fetch(href,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({ioId:io?.id,email})});
+      const result=await response.json();
+      if(!response.ok) throw Error(result.error || "Approval failed.");
+      setConfirm(false);await reload();router.refresh();
+    } catch(e) {setError(e instanceof Error ? e.message : "Approval failed.");}
+    finally {setPending(false);}
+  }
+  return <div className="card">
+    <p className="ck">Client IO</p><h2>{io?.number || "Client insertion order"}</h2>
+    <p className="note" role="status">{loading ? "Loading Client IO…" : io ? io.approved ? "Approved — final Client IO" : !io.available ? "Client IO unavailable — please contact Thinkway." : io.canApprove ? "Awaiting your approval. View the Client IO before approving." : "Current Client IO — approval becomes available once sent with an active approval link." : message}</p>
+    <div className="sumbar-cta" style={{marginTop:12}}>
+      {io?.available ? <><a className="btn sec" href={`${href}&ioId=${encodeURIComponent(io.id)}&view=1`} target="_blank" rel="noopener noreferrer">View Client IO</a><a className="btn sec" href={`${href}&ioId=${encodeURIComponent(io.id)}`}>Download Client IO</a></> : <><button className="btn sec" disabled>View Client IO</button><button className="btn sec" disabled>Download Client IO</button></>}
+      {io && <button className="btn pri" disabled={!io.canApprove || io.approved || pending} onClick={()=>setConfirm(true)}>{io.approved ? "Approved" : "Approve Client IO"}</button>}
+    </div>
+    {confirm && <form onSubmit={approve} style={{marginTop:16}}>
+      <p className="note">Confirm approval of {io?.number}. Enter your email to record your approval and receive confirmation.</p>
+      <input className="noteinput" type="email" required aria-label="Approver email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} disabled={pending}/>
+      <button className="btn pri" type="submit" disabled={pending}>{pending ? "Approving…" : "Confirm approval"}</button>
+      <button className="btn sec" type="button" disabled={pending} onClick={()=>setConfirm(false)}>Cancel</button>
+    </form>}
+    {error && <p role="alert" className="sumbar-msg">{error} <button type="button" className="btn sec" onClick={()=>void reload()}>Retry</button></p>}
+  </div>;
+}

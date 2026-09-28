@@ -24,6 +24,7 @@ import { allocationSlices, MIX_BAR_COLORS, rosterHeadline } from "../presentatio
 import type { ClientWorkspaceView } from "../types";
 import { useClientWorkspaceState } from "./client-workspace-state";
 import { CommercialQuotationDelivery } from "./commercial-quotation-delivery";
+import { CommercialClientIo } from "./commercial-client-io";
 import { FinalQuotationApprovalCard } from "./final-quotation-approval-card";
 import { ReviewAvatar } from "./review-avatar";
 import { ReviewPlatformMark } from "./review-platform-mark";
@@ -535,6 +536,7 @@ export function CommercialWorkspace({
         );
       })()}
       {token ? <CommercialQuotationDelivery view={view} token={token} /> : null}
+      {token ? <CommercialClientIo token={token} /> : null}
     </>
   );
 }

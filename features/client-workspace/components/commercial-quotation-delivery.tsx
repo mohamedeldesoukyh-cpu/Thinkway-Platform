@@ -18,7 +18,22 @@ export function CommercialQuotationDelivery({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [downloading, setDownloading] = useState(false);
   const downloadHref = `/api/review/quotation?sign=${encodeURIComponent(token)}`;
+
+  async function download() {
+    setDownloading(true); setError(null);
+    try {
+      const response = await fetch(downloadHref, { cache: "no-store" });
+      if (!response.ok) { const data = await response.json(); throw new Error(data.error || "Download failed."); }
+      const url = URL.createObjectURL(await response.blob());
+      const link = document.createElement("a"); link.href = url;
+      link.download = response.headers.get("content-disposition")?.match(/filename="([^"]+)"/)?.[1] || "Quotation.pdf";
+      document.body.appendChild(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 60000);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not download quotation."); }
+    finally { setDownloading(false); }
+  }
 
   function send(email: string) {
     const normalized = normalizeClientDeliveryEmail(email);
@@ -43,15 +58,16 @@ export function CommercialQuotationDelivery({
   return (
     <div className="card">
       <p className="ck">Quotation</p>
-      <h2>Download or send this quotation</h2>
+      <h2>View, download or send this quotation</h2>
       <p className="note">
         Uses the current Thinkway quotation. Download the PDF, send it to a saved email, or add an
         address.
       </p>
       <div className="sumbar-cta" style={{ marginTop: 12 }}>
-        <a className="btn pri" href={downloadHref}>
-          Download quotation
-        </a>
+        <a className="btn sec" href={`${downloadHref}&view=1`} target="_blank" rel="noopener noreferrer">View quotation</a>
+        <button type="button" className="btn pri" onClick={() => void download()} disabled={downloading}>
+          {downloading ? "Preparing quotation…" : "Download quotation"}
+        </button>
       </div>
       {saved.length > 0 ? (
         <div style={{ marginTop: 16 }}>
