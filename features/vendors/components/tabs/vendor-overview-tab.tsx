@@ -129,7 +129,8 @@ export function VendorOverviewTab({
           <VendorFormSection
             icon={UserIcon}
             title="Profile"
-            description="Core creator identity and contact details."
+            description="Edit creator details below, then save overview to apply your changes."
+            toolbar={<button type="submit" className="tw-b sm" disabled={isPending}>{isPending ? "Saving…" : "Save overview"}</button>}
           >
             <VendorFormGrid>
               <VendorFormField label="Creator name" htmlFor="display_name">
@@ -307,7 +308,8 @@ export function VendorOverviewTab({
           <VendorFormSection
             icon={FileTextIcon}
             title="Vendor IO Default Terms"
-            description="These become the default for all new Vendor IOs with this influencer."
+            description="These become the default for all new Vendor IOs with this influencer. Save overview to apply your changes."
+            toolbar={<button type="submit" className="tw-b sm" disabled={isPending}>{isPending ? "Saving…" : "Save overview"}</button>}
           >
             <div className="mb-3 flex items-center gap-2">
               <span className="text-[11px] text-muted-foreground">Current source</span>
