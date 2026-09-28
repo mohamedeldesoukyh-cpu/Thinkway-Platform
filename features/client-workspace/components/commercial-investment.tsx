@@ -9,12 +9,16 @@ export function commercialPresentation(view: ClientWorkspaceView) {
   const approved = clientQuotationCommercialView(view.creators, view.journey?.clientSelection);
   const ids = new Set([...approved.original.creatorIds, ...approved.extensions.flatMap(x => x.creatorIds)]);
   const creators = new Map(view.creators.map(x => [x.creatorId, x]));
-  const source = view.quotation?.lines.length ? view.quotation.lines : view.commercial.lines.map((line, index) => ({...line, creatorId: view.creators.find(x => x.displayName === line.label)?.creatorId ?? `line-${index}`}));
+  // The quotation snapshot can contain the entire discovery pool. Commercial
+  // lines are the existing client-facing proposal, not that broader snapshot.
+  const source = view.commercial.lines.map((line, index) => ({...line,
+    creatorId: view.quotation?.lines.find(x => x.label === line.label)?.creatorId
+      ?? view.creators.find(x => x.displayName === line.label)?.creatorId ?? `line-${index}`}));
   const rows = source.map(line => {
     const creator = creators.get(line.creatorId);
     return {id: line.creatorId, name: line.label, creator,
       amount: view.hideCostAndFees && creator ? clientFacingCreatorCardAmount(creator) : line.amount,
-      status: ids.has(line.creatorId) ? 'Client approved' : 'Pending your approval'};
+      status: ids.has(line.creatorId) ? 'Client approved' : creator?.selection === 'accepted' ? 'Selected' : 'Pending your approval'};
   });
   for (const id of ids) {
     if (rows.some(row => row.id === id)) continue;
@@ -35,7 +39,7 @@ export function CommercialInvestment({view}: {view: ClientWorkspaceView}) {
     <CommercialReveal className="cm-hero">
       <div className="cm-hero-top"><p className="cm-eyebrow">Campaign investment</p><span className={`cm-pill ${model.approved ? 'success' : 'info'}`}>{model.approved ? 'Approved' : 'Awaiting your approval'}</span></div>
       <h2 className="cm-amount">{model.subtotal > 0 ? <><span className="cm-currency">{currency}</span><CommercialCount value={model.subtotal} format={n => money(n).replace(currency, "").trim()}/></> : 'To be confirmed'}</h2>
-      <p className="cm-caption">Proposed creator {view.hideCostAndFees ? 'investment' : 'cost'} · {model.count} creators{view.quotation ? <> · quotation <bdi>{view.quotation.serialNumber}</bdi>{view.quotation.version ? ` (v${view.quotation.version})` : ''}</> : null}</p>
+      <p className="cm-caption">Proposed creator {view.hideCostAndFees ? 'investment' : 'cost'} · {model.count} creators{view.quotation ? <> · quotation <bdi>{view.quotation.serialNumber}</bdi>{view.quotation.version ? ` (v${view.quotation.version.replace(/^v/i, '')})` : ''}</> : null}</p>
       <p className="cm-helper">{model.approved ? 'Your commercial approval is recorded. View or download the campaign documents below.' : model.total ? 'Review the proposed investment and campaign documents before confirming commercial approval.' : 'Review and approve your creator selection. Agency fees and the final total investment will appear once confirmed.'}</p>
       <div className="cm-stats"><div><span>Proposed creators</span><strong><CommercialCount value={model.count}/></strong></div>{!view.hideCostAndFees && <div><span>Agency fees</span><strong className={model.fees == null ? 'cm-muted' : ''}>{model.fees == null ? 'To be confirmed' : money(model.fees)}</strong></div>}<div><span>Total investment</span><strong className={model.total == null ? 'cm-muted' : ''}>{model.total == null ? 'To be confirmed' : money(model.total)}</strong></div></div>
     </CommercialReveal>
