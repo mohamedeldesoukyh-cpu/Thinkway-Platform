@@ -73,7 +73,7 @@ export function CommercialQuotationDelivery({
         </button>
       </div>
       {saved.length > 0 ? (
-        <div style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 8 }}>
           <p className="l">Saved emails</p>
           <ul style={{ listStyle: "none", padding: 0, margin: "8px 0 0" }}>
             {saved.map((email) => (
@@ -99,7 +99,7 @@ export function CommercialQuotationDelivery({
           No saved client email. Add an address below to send this quotation.
         </p>
       )}
-      <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+      <div style={{ marginTop: 8, display: "flex", gap: 8, flexWrap: "wrap" }}>
         <input
           type="email"
           id="commercial-quotation-email"

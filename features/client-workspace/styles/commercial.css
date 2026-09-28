@@ -48,3 +48,10 @@
 @media(prefers-reduced-motion:reduce){.tw-review .cm-commercial *{animation:none!important;transition:none!important}.tw-review .cm-commercial .btn:hover,.tw-review .cm-commercial .btn:active{transform:none!important}}
 .tw-review.cm-page .cm-badges{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
 .tw-review .cm-amount .cm-currency{font-size:.42em;font-weight:700;color:var(--cm-ink2);vertical-align:4px;margin-right:6px}
+/* Let the intro scroll away while the brand and tabs remain in the same scroll container. */
+.tw-review.cm-page{display:block;overflow-y:auto;overflow-x:hidden}
+.tw-review.cm-page .tw-review-body{overflow:visible;height:auto;flex:none}
+.tw-review .cm-doc p.cm-meta,.tw-review .cm-doc .l{margin:0}
+.tw-review .cm-doc .l{font-size:11px;color:var(--cm-ink3);font-weight:600;text-transform:uppercase}
+.tw-review .cm-commercial .tbc{color:var(--cm-ink3)}
+.tw-review .cm-commercial .cbadge.pend{color:var(--cm-ink2);background:var(--cm-surface2)}
