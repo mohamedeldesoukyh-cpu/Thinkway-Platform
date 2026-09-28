@@ -421,7 +421,7 @@ export async function loadClientWorkspace(
   }
   const quotationTip = latestReviewForSource(members, "quotation");
   const shortlistTip = latestReviewForSource(members, "shortlist");
-  if (service && !picked.historical && !linkExpired) {
+  if (service && !picked.historical && !linkExpired && !(options.documentRequest && (picked.review?.campaignHeaderId || quotationTip?.campaignHeaderId))) {
     try {
       const origin = process.env.NEXT_PUBLIC_APP_URL ?? "https://dev.thinkwaymedia.com";
       const systemUserId = "00000000-0000-0000-0000-000000000000";
@@ -483,7 +483,7 @@ export async function loadClientWorkspace(
   }
 
   let activeReview = picked.review;
-  if (!picked.historical && !linkExpired) {
+  if (!options.documentRequest && !picked.historical && !linkExpired) {
     activeReview = await markFirstViewed(db, activeReview);
     members = members.map((item) => (item.id === activeReview.id ? activeReview : item));
   }
@@ -503,8 +503,8 @@ export async function loadClientWorkspace(
   const sourceByReviewId = Object.fromEntries(members.map((item) => [item.id, item.source]));
   const reviewIds = members.map((item) => item.id);
   const [comments, activity, newer] = await Promise.all([
-    loadComments(db, reviewIds, sourceByReviewId),
-    loadActivity(db, reviewIds),
+    options.documentRequest ? Promise.resolve([]) : loadComments(db, reviewIds, sourceByReviewId),
+    options.documentRequest ? Promise.resolve([]) : loadActivity(db, reviewIds),
     newerReviewNumberFor(db, activeReview),
   ]);
 
@@ -738,7 +738,7 @@ export async function loadClientWorkspace(
         : Promise.resolve([]),
     ]);
   }
-  view.clientEmails = commercialOpen
+  view.clientEmails = !options.documentRequest && commercialOpen
     ? await loadSavedClientEmailsForQuotation(
         (service ?? db) as never,
         view.journey.quotationId
@@ -756,7 +756,7 @@ export async function loadClientWorkspace(
   view.linkExpired = linkExpired;
   view.showOriginalCurrency = false;
   view.hideCostAndFees = false;
-  if (!picked.historical && commercialOpen) {
+  if (!options.documentRequest && !picked.historical && commercialOpen) {
     try {
       const flags = await loadClientWorkspaceDisplayFlags((service ?? db) as never, {
         quotationId: view.journey?.quotationId ?? activeReview.quotationId,
@@ -771,7 +771,7 @@ export async function loadClientWorkspace(
   }
 
   try {
-    const liveLogo = await loadIdentityLogoForReview(service ?? db, {
+    const liveLogo = options.documentRequest ? null : await loadIdentityLogoForReview(service ?? db, {
       quotationId: view.journey?.quotationId ?? activeReview.quotationId,
       shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
       campaignHeaderId: view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId,
