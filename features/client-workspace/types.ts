@@ -451,7 +451,12 @@ export type ClientOverview = {
   commercial?: ClientCommercialSummary;
 };
 
+export type CommercialIoSnapshot = {
+  io: {id:string;number:string|null;status:string;approved:boolean;canApprove:boolean;available:boolean} | null;
+  message: string;
+};
 export type ClientWorkspaceView = {
+  commercialIo?: CommercialIoSnapshot;
   review: ClientReviewRecord;
   newerReviewNumber: number | null;
   overview: ClientOverview;

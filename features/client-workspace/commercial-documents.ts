@@ -6,7 +6,7 @@ import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 /** Resolve the same current journey as the page; never trust a caller's document ID. */
 export async function resolveCommercialDocuments(token: string) {
   if (token.length < 16 || token.length > 512) throw new Error("This review link is not available.");
-  const loaded = await loadClientWorkspace(token);
+  const loaded = await loadClientWorkspace(token, undefined, { documentRequest: true });
   if (!loaded.ok) throw new Error("This review link is not available.");
   const { view } = loaded;
   if (view.linkExpired || !isClientWorkspaceSectionOpen(view.entitlement, "commercial") ||

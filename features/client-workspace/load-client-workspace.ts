@@ -1,3 +1,5 @@
+import { loadCommercialIoSnapshot } from "./load-commercial-io";
+import { canOpenCommercialWorkspace } from "./selection-flow";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { hydrateSlateCreators } from "@/features/campaign-studio/services/copilot/slate-edit-mutations";
@@ -372,7 +374,8 @@ function viewFromSnapshot(
 
 export async function loadClientWorkspace(
   token: string,
-  requestedReviewId?: string
+  requestedReviewId?: string,
+  options: { documentRequest?: boolean } = {}
 ): Promise<
   | { ok: true; view: ClientWorkspaceView; entry: ClientWorkspaceEntry; campaignObject: CampaignObject | null }
   | { ok: false; code: "invalid" | "revoked" | "not_found" | "unavailable" | "workspace_off" | "workspace_unavailable"; message: string }
@@ -713,7 +716,12 @@ export async function loadClientWorkspace(
   }
   const campaignOpen = isClientWorkspaceSectionOpen(entitlementForView.entitlement, "approval");
   const commercialOpen = isClientWorkspaceSectionOpen(entitlementForView.entitlement, "commercial");
-  if (picked.historical || !campaignOpen) {
+  // Begin alongside campaign data. Commercial renders immediately when opened.
+  const commercialIo = !options.documentRequest && !linkExpired && commercialOpen && !picked.historical &&
+    canOpenCommercialWorkspace({selectionConfirmed:view.journey?.selectionConfirmed,historical:picked.historical,quotationStage:view.journey?.quotationStage})
+    ? loadCommercialIoSnapshot((service ?? db) as never, view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId ?? null).catch(()=>undefined)
+    : Promise.resolve(undefined);
+  if (options.documentRequest || picked.historical || !campaignOpen) {
     view.campaignExecution = emptyClientCampaignExecution();
     view.campaignContent = emptyClientCampaignContent();
     view.campaignScriptUnitKeys = [];
@@ -817,6 +825,7 @@ export async function loadClientWorkspace(
   };
 
   view = applyEntitlementToView(view, entitlementForView.entitlement);
+  view.commercialIo = await commercialIo;
   return { ok: true, view, entry, campaignObject };
 }
 

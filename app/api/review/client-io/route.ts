@@ -1,6 +1,7 @@
+import { loadCommercialIo } from "@/features/client-workspace/load-commercial-io";
 import { NextResponse } from "next/server";
 import { resolveCommercialDocuments } from "@/features/client-workspace/commercial-documents";
-import { canViewWorkspaceIo, isCurrentWorkspaceIo, sentIoApprovalToken, type WorkspaceIo } from "@/features/client-workspace/client-io-document-policy";
+import { canViewWorkspaceIo, isCurrentWorkspaceIo } from "@/features/client-workspace/client-io-document-policy";
 import { approvedClientIoHtml } from "@/lib/io/client-io-email-attachment";
 import { applyClientIoPrintLayout } from "@/lib/io/client-io-print-layout";
 import { renderLiveClientIoHtml } from "@/lib/io/render-live-client-io-html";
@@ -13,20 +14,7 @@ const privateHeaders = {"Cache-Control":"private, no-store", "Referrer-Policy":"
 async function load(request: Request) {
   const query = new URL(request.url).searchParams;
   const access = await resolveCommercialDocuments(query.get("sign")?.trim() || "");
-  if (!access.campaignId) return {...access, query, io:null, approvalToken:null};
-  const {data, error} = await access.db.from("client_ios").select("id, document_number, status, approved_at, terms_html, generated_pdf_url, approval_token_hash, approval_token_expires_at")
-    .eq("campaign_header_id",access.campaignId).eq("is_superseded",false).order("revision_number",{ascending:false}).limit(1).maybeSingle();
-  if (error) throw new Error("Client IO unavailable");
-  const io = data as WorkspaceIo | null;
-  let approvalToken: string | null = null;
-  if (io && ["sent","under_client_review"].includes(io.status)) {
-    const {data:notifications,error:notificationError} = await access.db.from("io_notifications").select("payload")
-      .eq("io_type","client").eq("io_id",io.id).eq("event_type","client_io_sent").eq("delivery_status","sent")
-      .order("sent_at",{ascending:false}).limit(30);
-    if (notificationError) throw new Error("Approval unavailable");
-    approvalToken = sentIoApprovalToken(io,(notifications ?? []).map(n=>n.payload));
-  }
-  return {...access,query,io,approvalToken};
+  return {...access,query,...await loadCommercialIo(access.db,access.campaignId)};
 }
 export async function GET(request:Request) {
   try {
@@ -39,7 +27,7 @@ export async function GET(request:Request) {
     if(!canViewWorkspaceIo(io)) return NextResponse.json({error:"This Client IO is no longer available. Please contact Thinkway."},{status:409,headers:privateHeaders});
     // Current preview matches the campaign Client IO tab. The default issued
     // document path remains unchanged and available separately; no records are written.
-    const currentPreview=query.get("source")==="current";
+    const currentPreview=query.get("source")==="current" && io.status!=="approved";
     let html=currentPreview || ["draft","generated"].includes(io.status)
       ? await renderLiveClientIoHtml(db,io.id) : io.terms_html;
     if(!html) return NextResponse.json({error:"The saved Client IO is unavailable. Please contact Thinkway."},{status:409,headers:privateHeaders});
@@ -48,6 +36,10 @@ export async function GET(request:Request) {
       html=approvedClientIoHtml(html,io.approved_at);
     }
     html=applyClientIoPrintLayout(html);
+    // View uses the same HTML as Download without waiting for a browser/PDF job.
+    if(query.get("format")==="html") return new NextResponse(html,{headers:{...privateHeaders,
+      "Content-Type":"text/html; charset=utf-8", "X-Content-Type-Options":"nosniff",
+      "Content-Security-Policy":"sandbox; default-src 'none'; style-src 'unsafe-inline' https:; img-src https: data:; font-src https: data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}});
     const result=await renderHtmlToPdf(html,INSERTION_ORDER_PDF_OPTIONS);
     if(!result.ok) throw new Error("PDF unavailable");
     const name=(io.document_number || "Client-IO").replace(/[^a-zA-Z0-9_-]/g,"-")+(currentPreview ? "-Current" : io.status==="approved" ? "-Approved" : "");

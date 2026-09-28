@@ -156,7 +156,7 @@ export function CommercialWorkspace({
       {token ? <FinalQuotationApprovalCard view={view} token={token} /> : null}
       <div className="cm-doc-grid">
       {token ? <CommercialQuotationDelivery view={view} token={token} /> : null}
-      {token ? <CommercialClientIo token={token} /> : null}
+      {token ? <CommercialClientIo token={token} initial={view.commercialIo} /> : null}
       </div>
     </div>
   );
