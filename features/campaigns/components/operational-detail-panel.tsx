@@ -49,6 +49,8 @@ type OperationalDetailSheetProps = {
   children: ReactNode;
   /** `detail` matches Discovery Creator Details drawer chrome. */
   variant?: "operational" | "detail";
+  /** Keep data-driven drawers open when background controls restore focus. */
+  dismissOnFocusOutside?: boolean;
 };
 
 export function OperationalDetailSheet({
@@ -58,6 +60,7 @@ export function OperationalDetailSheet({
   description,
   children,
   variant = "operational",
+  dismissOnFocusOutside = true,
 }: OperationalDetailSheetProps) {
   const isDetail = variant === "detail";
   return (
@@ -66,6 +69,7 @@ export function OperationalDetailSheet({
         side="right"
         showCloseButton={!isDetail}
         showOverlay={false}
+        onFocusOutside={dismissOnFocusOutside ? undefined : (event) => event.preventDefault()}
         style={isDetail ? OPERATIONAL_DETAIL_SHEET_DETAIL_STYLE : OPERATIONAL_DETAIL_SHEET_STYLE}
         className={isDetail ? OPERATIONAL_DETAIL_SHEET_DETAIL_CLASS : OPERATIONAL_DETAIL_SHEET_CLASS}
       >

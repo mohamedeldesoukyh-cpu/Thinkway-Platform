@@ -71,6 +71,7 @@ export function DeliverableDetailSheet({
     <OperationalDetailSheet
       open={open}
       onOpenChange={onOpenChange}
+      dismissOnFocusOutside={false}
       title={`${title} deliverable details`}
       description={`Deliverable details for ${campaignName}`}
     >
