@@ -1,5 +1,6 @@
 "use client";
 
+import { CommercialReveal, CommercialViewIcon } from "./commercial-motion";
 import { useState, useTransition } from "react";
 
 import { sendClientQuotationAction } from "../actions/client-workspace-actions";
@@ -56,17 +57,19 @@ export function CommercialQuotationDelivery({
   }
 
   return (
-    <div className="card">
+    <CommercialReveal className="cm-doc">
       <p className="ck">Quotation</p>
-      <h2>View, download or send this quotation</h2>
+      <h2>{view.quotation?.serialNumber ?? "Current quotation"}</h2>
+      <p className="cm-meta"><bdi>{view.quotation?.name}</bdi>{view.quotation?.version ? ` · Version ${view.quotation.version}` : ""}</p>
+      <span className="cm-pill info">Current quotation</span>
       <p className="note">
         Uses the current Thinkway quotation. Download the PDF, send it to a saved email, or add an
         address.
       </p>
       <div className="sumbar-cta" style={{ marginTop: 12 }}>
-        <a className="btn sec" href={`${downloadHref}&view=1`} target="_blank" rel="noopener noreferrer">View quotation</a>
+        <a className="btn sec cm-icon" aria-label="View quotation" title="View quotation" href={`${downloadHref}&view=1`} target="_blank" rel="noopener noreferrer"><CommercialViewIcon /></a>
         <button type="button" className="btn pri" onClick={() => void download()} disabled={downloading}>
-          {downloading ? "Preparing quotation…" : "Download quotation"}
+          {downloading ? "Preparing quotation…" : "Download PDF"}
         </button>
       </div>
       {saved.length > 0 ? (
@@ -99,16 +102,17 @@ export function CommercialQuotationDelivery({
       <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
         <input
           type="email"
+          id="commercial-quotation-email"
           className="noteinput"
           value={customEmail}
           placeholder="Add an email address"
           aria-label="Add an email address"
           onChange={(event) => setCustomEmail(event.target.value)}
-          style={{ minWidth: 240, flex: 1 }}
+          style={{ minWidth: 0, flex: 1 }}
         />
         <button
           type="button"
-          className="btn pri"
+          className="btn sec"
           disabled={pending}
           onClick={() => send(customEmail)}
         >
@@ -117,6 +121,6 @@ export function CommercialQuotationDelivery({
       </div>
       {error ? <p className="sumbar-msg">{error}</p> : null}
       {message ? <p className="sumbar-msg">{message}</p> : null}
-    </div>
+    </CommercialReveal>
   );
 }

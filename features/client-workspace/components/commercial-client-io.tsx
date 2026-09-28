@@ -1,5 +1,6 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
+import { CommercialReveal, CommercialViewIcon } from "./commercial-motion";
 import { useRouter } from "next/navigation";
 
 type Io = {id:string;number:string|null;status:string;approved:boolean;canApprove:boolean;available:boolean};
@@ -34,19 +35,20 @@ export function CommercialClientIo({token}:{token:string}) {
     } catch(e) {setError(e instanceof Error ? e.message : "Approval failed.");}
     finally {setPending(false);}
   }
-  return <div className="card">
+  return <CommercialReveal className="cm-doc">
     <p className="ck">Client IO</p><h2>{io?.number || "Client insertion order"}</h2>
-    <p className="note" role="status">{loading ? "Loading Client IO…" : io ? io.approved ? "Approved — final Client IO" : !io.available ? "Client IO unavailable — please contact Thinkway." : io.canApprove ? "Awaiting your approval. View the Client IO before approving." : "Current Client IO — approval becomes available once sent with an active approval link." : message}</p>
+    <span className={`cm-pill ${io?.approved ? "success" : "info"}`} role="status">{loading ? "Loading…" : io?.approved ? "Approved" : io?.canApprove ? "Awaiting your approval" : io ? "Current document" : "Not available yet"}</span>
+    <p className="note">{loading ? "Loading Client IO…" : io ? io.approved ? "Approved — final Client IO" : !io.available ? "Client IO unavailable — please contact Thinkway." : io.canApprove ? "Awaiting your approval. View the Client IO before approving." : "Current Client IO — approval becomes available once sent with an active approval link." : message}</p>
     <div className="sumbar-cta" style={{marginTop:12}}>
-      {io?.available ? <><a className="btn sec" href={`${href}&ioId=${encodeURIComponent(io.id)}&view=1`} target="_blank" rel="noopener noreferrer">View Client IO</a><a className="btn sec" href={`${href}&ioId=${encodeURIComponent(io.id)}`}>Download Client IO</a></> : <><button className="btn sec" disabled>View Client IO</button><button className="btn sec" disabled>Download Client IO</button></>}
-      {io && <button className="btn pri" disabled={!io.canApprove || io.approved || pending} onClick={()=>setConfirm(true)}>{io.approved ? "Approved" : "Approve Client IO"}</button>}
+      {io?.available ? <><a className="btn sec cm-icon" aria-label="View Client IO" title="View Client IO" href={`${href}&ioId=${encodeURIComponent(io.id)}&view=1`} target="_blank" rel="noopener noreferrer"><CommercialViewIcon /></a><a className="btn pri" href={`${href}&ioId=${encodeURIComponent(io.id)}`}>Download PDF</a></> : <><button className="btn sec cm-icon" aria-label="View Client IO" title="View Client IO" disabled><CommercialViewIcon /></button><button className="btn pri" disabled>Download PDF</button></>}
+      {io && <button className="btn sec" disabled={!io.canApprove || io.approved || pending} onClick={()=>setConfirm(true)}>{io.approved ? "Approved" : "Approve Client IO"}</button>}
     </div>
     {confirm && <form onSubmit={approve} style={{marginTop:16}}>
       <p className="note">Confirm approval of {io?.number}. Enter your email to record your approval and receive confirmation.</p>
-      <input className="noteinput" type="email" required aria-label="Approver email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} disabled={pending}/>
+      <input id="commercial-io-approver-email" className="noteinput" type="email" required aria-label="Approver email" autoComplete="email" value={email} onChange={e=>setEmail(e.target.value)} disabled={pending}/>
       <button className="btn pri" type="submit" disabled={pending}>{pending ? "Approving…" : "Confirm approval"}</button>
       <button className="btn sec" type="button" disabled={pending} onClick={()=>setConfirm(false)}>Cancel</button>
     </form>}
     {error && <p role="alert" className="sumbar-msg">{error} <button type="button" className="btn sec" onClick={()=>void reload()}>Retry</button></p>}
-  </div>;
+  </CommercialReveal>;
 }
