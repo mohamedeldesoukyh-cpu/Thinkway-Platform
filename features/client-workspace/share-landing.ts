@@ -43,7 +43,18 @@ export function campaignShareHtml(input: {
 <meta name="twitter:image" content="${image}">
 <meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-</head><body><h1>${title}</h1><p>Opening your campaign…</p>
-<a href="${escapeHtml(destination.href)}">Open campaign</a>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f6f8fc;color:#0a1020;font-family:Arial,sans-serif}
+main{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;text-align:center}
+.logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;letter-spacing:-.4px}.logo span{color:#0057ff}
+.mark{position:relative;width:36px;height:36px;border-radius:9px;background:#0a1020;animation:thinkway-loader-spin 1.1s linear infinite}
+.mark:before{content:"";position:absolute;top:8px;left:8px;width:10px;height:10px;border-radius:50%;background:white}
+.mark:after{content:"";position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-radius:4px;background:#0057ff}
+@keyframes thinkway-loader-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.mark{animation:none}}
+a{color:#0057ff;font-size:14px;text-underline-offset:4px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+</style></head><body><main>
+<div role="status" aria-live="polite" aria-label="Opening your campaign"><div class="logo" aria-hidden="true"><div class="mark"></div><div>THINK<span>WAY</span></div></div><span class="sr-only">Opening your campaign…</span></div>
+<a href="${escapeHtml(destination.href)}">Open campaign</a></main>
 <script>window.location.replace(${redirect});</script></body></html>`;
 }
