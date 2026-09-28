@@ -37,18 +37,20 @@ export async function GET(request:Request) {
     if(!io) return NextResponse.json({error:"Client IO is not available yet."},{status:404,headers:privateHeaders});
     if(!isCurrentWorkspaceIo(io,query.get("ioId"))) return NextResponse.json({error:"The Client IO has changed. Return to the workspace and reload it."},{status:409,headers:privateHeaders});
     if(!canViewWorkspaceIo(io)) return NextResponse.json({error:"This Client IO is no longer available. Please contact Thinkway."},{status:409,headers:privateHeaders});
-    // Issued documents must always use the saved snapshot, including after approval.
-    let html=["draft","generated"].includes(io.status)
+    // Current preview matches the campaign Client IO tab. The default issued
+    // document path remains unchanged and available separately; no records are written.
+    const currentPreview=query.get("source")==="current";
+    let html=currentPreview || ["draft","generated"].includes(io.status)
       ? await renderLiveClientIoHtml(db,io.id) : io.terms_html;
     if(!html) return NextResponse.json({error:"The saved Client IO is unavailable. Please contact Thinkway."},{status:409,headers:privateHeaders});
-    if(io.status==="approved") {
+    if(io.status==="approved" && !currentPreview) {
       if(!io.approved_at) throw new Error("Approval date unavailable");
       html=approvedClientIoHtml(html,io.approved_at);
     }
     html=applyClientIoPrintLayout(html);
     const result=await renderHtmlToPdf(html,INSERTION_ORDER_PDF_OPTIONS);
     if(!result.ok) throw new Error("PDF unavailable");
-    const name=(io.document_number || "Client-IO").replace(/[^a-zA-Z0-9_-]/g,"-")+(io.status==="approved" ? "-Approved" : "");
+    const name=(io.document_number || "Client-IO").replace(/[^a-zA-Z0-9_-]/g,"-")+(currentPreview ? "-Current" : io.status==="approved" ? "-Approved" : "");
     return new NextResponse(result.buffer as unknown as BodyInit,{headers:{...privateHeaders,"Content-Type":"application/pdf",
       "Content-Disposition":`${query.get("view")==="1" ? "inline" : "attachment"}; filename="${name}.pdf"`}});
   } catch { return NextResponse.json({error:"Client IO is unavailable for this link. Please retry or contact Thinkway."},{status:403,headers:privateHeaders}); }
