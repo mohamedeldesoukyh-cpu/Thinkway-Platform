@@ -38,8 +38,8 @@ export async function GET(request:Request) {
     if(!isCurrentWorkspaceIo(io,query.get("ioId"))) return NextResponse.json({error:"The Client IO has changed. Return to the workspace and reload it."},{status:409,headers:privateHeaders});
     if(!canViewWorkspaceIo(io)) return NextResponse.json({error:"This Client IO is no longer available. Please contact Thinkway."},{status:409,headers:privateHeaders});
     // Issued documents must always use the saved snapshot, including after approval.
-    let html=io.terms_html;
-    if(!html && ["draft","generated"].includes(io.status)) html=await renderLiveClientIoHtml(db,io.id);
+    let html=["draft","generated"].includes(io.status)
+      ? await renderLiveClientIoHtml(db,io.id) : io.terms_html;
     if(!html) return NextResponse.json({error:"The saved Client IO is unavailable. Please contact Thinkway."},{status:409,headers:privateHeaders});
     if(io.status==="approved") {
       if(!io.approved_at) throw new Error("Approval date unavailable");

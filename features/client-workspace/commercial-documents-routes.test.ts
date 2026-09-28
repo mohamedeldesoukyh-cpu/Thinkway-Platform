@@ -60,6 +60,15 @@ test("Client IO endpoints: scoped current snapshot, inline/download, approval an
   assert.match(approved.headers.get("content-disposition"),/TEST-CIO-Approved.pdf/);
   assert.match(rendered,/data-io-approval="approved"/); assert.match(rendered,/Saved terms 123/);
   assert.equal((await post("io-current")).status,200); assert.equal(approvals,1);
+  // A generated but unissued IO can have stale saved HTML after edits.
+  io = { ...io, status: "generated", terms_html: "<body>Old draft</body>" };
+  assert.equal((await get("sign=valid&ioId=io-current&view=1")).status,200);
+  assert.match(rendered,/Draft terms/);
+  assert.doesNotMatch(rendered,/Old draft/);
+  assert.equal(liveRenders,1);
+  assert.equal((await get("sign=valid&ioId=io-current")).status,200);
+  assert.match(rendered,/Draft terms/);
+  assert.equal(liveRenders,2);
   assert.ok(scopes.some(s => s[0] === "client_ios" && s[1] === "campaign_header_id" && s[2] === "campaign-allowed"));
   assert.ok(scopes.some(s => s[1] === "is_superseded" && s[2] === false));
   assert.ok(scopes.some(s => s[0] === "io_notifications" && s[1] === "io_id" && s[2] === "io-current"));

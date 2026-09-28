@@ -622,11 +622,14 @@ function exportPlatformDisplayLabel(
   return raw ? platformLabel(raw) : "—";
 }
 
+type ClientRowMoney = (item: QuotationExportItem, field: "revenue" | "af_value") => string;
+
 function buildDocRow(
   item: QuotationExportItem,
   audience: QuotationDocumentAudience,
   gpTargetPct: number | null | undefined,
-  allItems?: readonly QuotationExportItem[]
+  allItems?: readonly QuotationExportItem[],
+  clientMoney?: ClientRowMoney
 ): QuotationDocRow {
   const rowGpColor = gpHealthExportColor({
     gpValueEgp: item.gp_value_egp,
@@ -665,12 +668,12 @@ function buildDocRow(
     isCollapsePackageFollower,
     isCollapsePackageLeader,
     collapseOptionLabel,
-    clientCost: formatDualCurrency({
+    clientCost: clientMoney ? clientMoney(item, "revenue") : formatDualCurrency({
       amount: item.revenue,
       currency: item.cost_currency,
       egpAmount: item.revenue_egp,
     }),
-    af: formatDualCurrency({
+    af: clientMoney ? clientMoney(item, "af_value") : formatDualCurrency({
       amount: item.af_value,
       currency: item.cost_currency,
       egpAmount: item.af_value_egp,
@@ -708,7 +711,8 @@ function buildCreatorGroup(
   audience: QuotationDocumentAudience,
   gpTargetPct: number | null | undefined,
   allItems: QuotationExportItem[],
-  publicationShotsByCreatorKey?: Map<string, QuotationDocPublicationShot[]>
+  publicationShotsByCreatorKey?: Map<string, QuotationDocPublicationShot[]>,
+  clientMoney?: ClientRowMoney
 ): QuotationDocCreatorGroup {
   const headerItem = group.items[0]!;
   const profile = resolveExportCreatorProfile(headerItem);
@@ -764,7 +768,7 @@ function buildCreatorGroup(
     isVerified: Boolean(profileSource.isVerified),
     optionCount: group.items.length,
     publicationShots: publicationShotsByCreatorKey?.get(group.creatorKey) ?? [],
-    rows: group.items.map((item) => buildDocRow(item, audience, gpTargetPct, allItems)),
+    rows: group.items.map((item) => buildDocRow(item, audience, gpTargetPct, allItems, clientMoney)),
   };
 }
 
@@ -794,10 +798,11 @@ function buildCollapsePackage(
   groupItems: QuotationExportItem[],
   allItems: QuotationExportItem[],
   audience: QuotationDocumentAudience,
-  gpTargetPct: number | null | undefined
+  gpTargetPct: number | null | undefined,
+  clientMoney?: ClientRowMoney
 ): QuotationDocCollapsePackage {
   const leader = collapsePackageLeaderItem(groupItems);
-  const leaderRow = buildDocRow(leader as QuotationExportItem, audience, gpTargetPct, allItems);
+  const leaderRow = buildDocRow(leader as QuotationExportItem, audience, gpTargetPct, allItems, clientMoney);
   const leaderPlatformFields = exportItemPlatformIcons(leader as QuotationExportItem);
 
   return {
@@ -818,7 +823,8 @@ function buildCollapsePackage(
 function buildQuotationCollapseContentGroups(
   items: QuotationExportItem[],
   audience: QuotationDocumentAudience,
-  gpTargetPct: number | null | undefined
+  gpTargetPct: number | null | undefined,
+  clientMoney?: ClientRowMoney
 ): QuotationDocCollapseContentGroup[] {
   const byCollapseId = new Map<string, QuotationExportItem[]>();
   for (const item of items) {
@@ -862,7 +868,7 @@ function buildQuotationCollapseContentGroups(
       previewLabel: collapseContentPreviewLabel(label),
       optionCount: sortedGroups.length,
       packages: sortedGroups.map((members) =>
-        buildCollapsePackage(members, items, audience, gpTargetPct)
+        buildCollapsePackage(members, items, audience, gpTargetPct, clientMoney)
       ),
     });
   }
@@ -896,6 +902,8 @@ export function buildQuotationDocument(
     publicationShotsByCreatorKey?: Map<string, QuotationDocPublicationShot[]>;
     /** FX rate for `detail.currency` → EGP (used to format client-facing totals). */
     displayFxRateToEgp?: number;
+    /** Workspace exports use its saved original-currency preference. */
+    showOriginalCurrency?: boolean;
   }
 ): QuotationDocument {
   const audience = options?.audience ?? "client";
@@ -963,19 +971,31 @@ export function buildQuotationDocument(
     campaignHeaderId: detail.campaign_header_id,
   });
 
+  const clientMoney: ClientRowMoney | undefined = audience === "client" && options?.showOriginalCurrency !== undefined
+    ? (item, field) => {
+        const amount = item[field];
+        const converted = item.revenue_fx_override
+          ? creatorFxAmount(amount, { from: item.cost_currency, to: displayCurrency, sourceRateToEgp: item.fx_rate_to_egp, targetRateToEgp: displayFxRateToEgp, override: item.revenue_fx_override })
+          : fromEgp(field === "revenue" ? item.revenue_egp : item.af_value_egp, displayCurrency, displayFxRateToEgp);
+        const display = `${num(converted)} ${displayCurrency}`;
+        return options.showOriginalCurrency && item.cost_currency.toUpperCase() !== displayCurrency
+          ? `${display} / ${num(amount)} ${item.cost_currency}` : display;
+      } : undefined;
   const creatorGroups = groupQuotationExportItems(items).map((group) =>
     buildCreatorGroup(
       group,
       audience,
       detail.gp_target_pct,
       items,
-      publicationShotsByCreatorKey
+      publicationShotsByCreatorKey,
+      clientMoney
     )
   );
   const collapseContentGroups = buildQuotationCollapseContentGroups(
     items,
     audience,
-    detail.gp_target_pct
+    detail.gp_target_pct,
+    clientMoney
   );
   const exportGroups = groupQuotationExportItems(items);
   const uniqueCreatorCount = countUniqueQuotationCreators(items);

@@ -1453,3 +1453,22 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 }
 
 console.log("quotation-document.test.ts passed");
+
+// Client workspace exports use the same saved display choices as the page.
+{
+  const detail = mockDetail({ currency: "EGP", items: [mockItem({cost_currency:"USD", revenue:100, revenue_egp:5000, af_value:10, af_value_egp:500, fx_rate_to_egp:50})] });
+  const hidden = buildQuotationDocument(detail, { showOriginalCurrency:false });
+  assert.equal(hidden.rows[0].clientCost, "5,000 EGP");
+  assert.equal(hidden.rows[0].af, "500 EGP");
+  const shown = buildQuotationDocument(detail, { showOriginalCurrency:true });
+  assert.equal(shown.rows[0].clientCost, "5,000 EGP / 100 USD");
+  assert.equal(shown.rows[0].af, "500 EGP / 10 USD");
+  const nonEgp = buildQuotationDocument({...detail, currency:"AED"}, { showOriginalCurrency:false, displayFxRateToEgp:10 });
+  assert.equal(nonEgp.rows[0].clientCost, "500 AED");
+  const sameCurrency = buildQuotationDocument({...detail, currency:"USD"}, { showOriginalCurrency:true, displayFxRateToEgp:50 });
+  assert.equal(sameCurrency.rows[0].clientCost, "100 USD");
+  const privateDoc = buildQuotationDocument({...detail, hideCostAndFees:true}, { showOriginalCurrency:false });
+  assert.equal(privateDoc.hideCostAndFees,true);
+  const html = buildQuotationHtml(privateDoc);
+  assert.ok(!html.includes("100 USD"));
+}

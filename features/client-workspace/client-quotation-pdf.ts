@@ -1,3 +1,4 @@
+import { loadClientWorkspaceDisplayFlags } from "@/lib/commercial/client-original-currency-persist";
 import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
 import {
   enrichQuotationDetailForExport,
@@ -26,7 +27,8 @@ export async function renderExistingQuotationPdf(input: {
   if (!detail) return { ok: false, message: "Quotation not found." };
   const enriched = await enrichQuotationDetailForExport(input.supabase, detail);
   const displayFxRateToEgp = await resolveRateToEgp(input.supabase, enriched.currency || "EGP");
-  const doc = buildQuotationDocument(enriched, { displayFxRateToEgp });
+  const flags = await loadClientWorkspaceDisplayFlags(input.supabase, { quotationId: input.quotationId, shortlistId: detail.shortlist_id });
+  const doc = buildQuotationDocument({ ...enriched, hideCostAndFees: flags.hideCostAndFees }, { displayFxRateToEgp, showOriginalCurrency: flags.showOriginalCurrency });
   const siteOrigin = resolveQuotationExportSiteOrigin(input.host, input.proto);
   const logoSrcs = resolveThinkwayReportLogoSrcsForExport();
   const html = buildQuotationHtml(doc, { siteOrigin, logoSrcs, forPdf: true });

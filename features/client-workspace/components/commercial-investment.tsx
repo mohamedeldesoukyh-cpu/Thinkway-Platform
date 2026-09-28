@@ -1,7 +1,7 @@
 "use client";
 import { formatMoneyKpi } from '@/lib/finance/currency-format';
 import { clientQuotationCommercialView, clientFacingCreatorCardAmount } from '../selection-flow';
-import { originalInvestmentForDisplay, visibleOriginalCurrencyAmount } from '../quotation-client-facing';
+import { originalInvestmentForDisplay, originalClientFacingCreatorCardAmount, visibleOriginalCurrencyAmount } from '../quotation-client-facing';
 import type { ClientWorkspaceView } from '../types';
 import { CommercialReveal, CommercialCount } from './commercial-motion';
 
@@ -46,7 +46,7 @@ export function CommercialInvestment({view}: {view: ClientWorkspaceView}) {
     <CommercialReveal className="cm-list">
       <div className="cm-list-head"><h2>Proposed creators</h2><span>{model.count} creators · {money(model.subtotal)}</span></div>
       {model.rows.map((row, index) => {
-        const original = row.creator && visibleOriginalCurrencyAmount(originalInvestmentForDisplay(row.creator, currency), Boolean(view.showOriginalCurrency));
+        const original = row.creator && visibleOriginalCurrencyAmount(view.hideCostAndFees ? originalClientFacingCreatorCardAmount(row.creator, currency) : originalInvestmentForDisplay(row.creator, currency), Boolean(view.showOriginalCurrency));
         const segments = row.name.match(/[\u0600-\u06ff]+(?:\s+[\u0600-\u06ff]+)*|[^\u0600-\u06ff]+/g) ?? [row.name];
         return <div className="cm-creator" key={`${row.id}-${index}`}>
           <span className="cm-avatar" aria-hidden="true">{row.name.trim().split(/\s+/).slice(0, 2).map(x => Array.from(x)[0]).join('').toUpperCase()}</span>
