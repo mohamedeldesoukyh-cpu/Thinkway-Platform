@@ -36,7 +36,7 @@ export function buildIoApprovalConfirmationSubject(input: {
     return `Approved quotation ${input.quotationNumber.trim()} – ${input.documentNumber ?? "Client IO"} – Thinkway Media`;
   }
   const doc = input.documentNumber?.trim() || (input.kind === "client" ? "CIO" : "VIO");
-  const label = input.kind === "client" ? "Client IO" : "Vendor IO";
+  const label = input.kind === "client" ? "Client IO" : "Creator IO";
   return `${label} ${doc} – Approval Confirmed – Thinkway Media`;
 }
 
@@ -47,7 +47,7 @@ export function buildIoApprovalConfirmationHtml(input: {
   approvedAt: string | null;
   recipientName?: string | null;
 }): string {
-  const label = input.kind === "client" ? "Client Insertion Order" : "Vendor Insertion Order";
+  const label = input.kind === "client" ? "Client Insertion Order" : "Creator Insertion Order";
   const doc = input.documentNumber?.trim() || label;
   const greeting = input.recipientName?.trim()
     ? `Hello ${escapeEmailHtml(input.recipientName.trim())},`
@@ -81,7 +81,7 @@ export function buildIoApprovalConfirmationPlainText(input: {
   approvedAt: string | null;
   recipientName?: string | null;
 }): string {
-  const label = input.kind === "client" ? "Client Insertion Order" : "Vendor Insertion Order";
+  const label = input.kind === "client" ? "Client Insertion Order" : "Creator Insertion Order";
   const doc = input.documentNumber?.trim() || label;
   return appendThinkwayEmailPlainTextFooter([
     input.recipientName?.trim() ? `Hello ${input.recipientName.trim()},` : "Hello,",
@@ -103,12 +103,12 @@ export function buildIoApprovalInternalHtml(input: {
   approvedByEmail: string | null;
   campaignName: string | null;
 }): string {
-  const label = input.kind === "client" ? "Client IO" : "Vendor IO";
+  const label = input.kind === "client" ? "Client IO" : "Creator IO";
   const doc = input.documentNumber?.trim() || label;
   const bodyHtml = `
     <p style="margin:0 0 16px;">Hello Traffic Operations,</p>
     <p style="margin:0 0 20px;">
-      A <strong>${escapeEmailHtml(label)}</strong> has been approved via the secure email approval link.
+      A <strong>${escapeEmailHtml(label)}</strong> has been approved.
     </p>
     ${renderEmailSummaryTable([
       { label: "Document", value: doc },
@@ -133,125 +133,55 @@ export async function sendIoApprovalConfirmationEmails(input: {
   quotationNumber?: string | null;
   campaignName: string | null;
   approvedAt: string | null;
-  approvedByEmail: string;
+  approvedByEmail: string | null;
   approvedByName?: string | null;
   pdfAttachment: EmailAttachment | null;
-}): Promise<{ approverSent: boolean; internalSent: boolean }> {
-  const subject = buildIoApprovalConfirmationSubject({
-    kind: input.kind,
-    documentNumber: input.documentNumber,
-    quotationNumber: input.quotationNumber,
-  });
-  const html = buildIoApprovalConfirmationHtml({
-    kind: input.kind,
-    documentNumber: input.documentNumber,
-    quotationNumber: input.quotationNumber,
-    approvedAt: input.approvedAt,
-    recipientName: input.approvedByName,
-  });
-  const text = buildIoApprovalConfirmationPlainText({
-    kind: input.kind,
-    documentNumber: input.documentNumber,
-    quotationNumber: input.quotationNumber,
-    approvedAt: input.approvedAt,
-    recipientName: input.approvedByName,
-  });
+}, deliver: typeof sendEmail = sendEmail): Promise<{ approverSent: boolean; internalSent: boolean }> {
+  const subject = buildIoApprovalConfirmationSubject(input);
   const attachments = input.pdfAttachment ? [input.pdfAttachment] : undefined;
-  const sentAt = new Date().toISOString();
-
-  const approverResult = await sendEmail({
-    to: [{ email: input.approvedByEmail, name: input.approvedByName ?? undefined }],
-    subject,
-    html,
-    text,
-    attachments,
-  });
-
-  const approverMeta = buildIoDeliveryNotificationMeta({
-    deliveryMethod: "email",
-    deliveryStatus: approverResult.ok ? "sent" : "failed",
-    recipient: input.approvedByEmail,
-    subject,
-    messageId: approverResult.ok ? approverResult.messageId : null,
-    sentAt,
-  });
-
-  await input.supabase.from("io_notifications").insert({
-    io_type: input.kind,
-    io_id: input.ioId,
-    event_type:
-      input.kind === "client" ? "client_io_approved" : "vendor_io_approved",
-    recipient_email: input.approvedByEmail,
-    recipient_name: input.approvedByName ?? null,
-    sender_email: getEmailFromAddress(),
-    subject,
-    gmail_message_id: approverResult.ok ? approverResult.messageId : null,
-    delivery_status: approverResult.ok ? "sent" : "failed",
-    delivery_error: approverResult.ok ? null : approverResult.error,
-    payload: {
-      notification_kind: "approval_confirmation_approver",
-      document_number: input.documentNumber,
-      ...approverMeta,
-    },
-    sent_at: sentAt,
-  } as never);
-
-  const internalSubject = input.kind === "client" && input.quotationNumber ? subject : `${
-    input.kind === "client" ? "Client IO" : "Vendor IO"
-  } ${input.documentNumber ?? ""} – Approved – Thinkway Media`.replace(/\s+/g, " ").trim();
-  const internalHtml = buildIoApprovalInternalHtml({
-    kind: input.kind,
-    documentNumber: input.documentNumber,
-    quotationNumber: input.quotationNumber,
-    approvedAt: input.approvedAt,
-    approvedByEmail: input.approvedByEmail,
-    campaignName: input.campaignName,
-  });
-  const internalText = appendThinkwayEmailPlainTextFooter([
-    "Hello Traffic Operations,",
-    "",
-    `A ${input.kind === "client" ? "Client IO" : "Vendor IO"} has been approved.`,
-    `Document: ${input.documentNumber ?? "—"}`,
-    `Campaign: ${input.campaignName ?? "—"}`,
-    `Approved By: ${input.approvedByEmail}`,
-    `Approval Date & Time: ${formatApprovalWhen(input.approvedAt)}`,
+  async function sendAndRecord(email: string, name: string | null, internal: boolean): Promise<boolean> {
+    const sentAt = new Date().toISOString();
+    const recipient = { ...input, recipientName: input.approvedByName };
+    const html = internal ? buildIoApprovalInternalHtml(input) : buildIoApprovalConfirmationHtml(recipient);
+    const text = internal ? appendThinkwayEmailPlainTextFooter([
+      "Hello Traffic Operations,",
+      `Document: ${input.documentNumber ?? "—"}`,
+      `Campaign: ${input.campaignName ?? "—"}`,
+      `Approved By: ${input.approvedByEmail ?? input.approvedByName ?? "—"}`,
+      `Approval Date & Time: ${formatApprovalWhen(input.approvedAt)}`,
+      input.pdfAttachment ? "The approved IO is attached." : "The IO is approved. Its PDF could not be prepared; open the campaign to retrieve it.",
+    ]) : buildIoApprovalConfirmationPlainText(recipient);
+    let result: Awaited<ReturnType<typeof sendEmail>>;
+    try {
+      result = await deliver({ to: [{ email, name: name ?? undefined }], subject, html, text, attachments });
+    } catch (error) {
+      result = { ok: false, error: error instanceof Error ? error.message : "Email delivery failed." };
+    }
+    try {
+      const log = await input.supabase.from("io_notifications").insert({
+        io_type: input.kind, io_id: input.ioId,
+        event_type: input.kind === "client" ? "client_io_approved" : "vendor_io_approved",
+        recipient_email: email, recipient_name: name, sender_email: getEmailFromAddress(), subject,
+        gmail_message_id: result.ok ? result.messageId : null,
+        delivery_status: result.ok ? "sent" : "failed", delivery_error: result.ok ? null : result.error,
+        payload: {
+          notification_kind: internal ? "approval_confirmation_internal" : "approval_confirmation_approver",
+          document_number: input.documentNumber,
+          approved_at: input.approvedAt,
+          attachment_included: Boolean(input.pdfAttachment),
+          ...buildIoDeliveryNotificationMeta({ deliveryMethod: "email", deliveryStatus: result.ok ? "sent" : "failed", recipient: email, subject, messageId: result.ok ? result.messageId : null, sentAt }),
+        }, sent_at: sentAt,
+      } as never);
+      if (log.error) console.error("IO approval notification log failed", log.error.message);
+    } catch (error) { console.error("IO approval notification log failed", error); }
+    return result.ok;
+  }
+  // Deliver independently so a missing approver or failed delivery cannot suppress Traffic.
+  const [internalSent, approverSent] = await Promise.all([
+    sendAndRecord(TRAFFIC_OPERATIONS_EMAIL, "Traffic Operations", true),
+    input.approvedByEmail && input.pdfAttachment
+      ? sendAndRecord(input.approvedByEmail, input.approvedByName ?? null, false)
+      : Promise.resolve(false),
   ]);
-
-  const trafficResult = await sendEmail({
-    to: [{ email: TRAFFIC_OPERATIONS_EMAIL, name: "Traffic Operations" }],
-    subject: internalSubject,
-    html: internalHtml,
-    text: internalText,
-    attachments,
-  });
-
-  const trafficMeta = buildIoDeliveryNotificationMeta({
-    deliveryMethod: "email",
-    deliveryStatus: trafficResult.ok ? "sent" : "failed",
-    recipient: TRAFFIC_OPERATIONS_EMAIL,
-    subject: internalSubject,
-    messageId: trafficResult.ok ? trafficResult.messageId : null,
-    sentAt,
-  });
-
-  await input.supabase.from("io_notifications").insert({
-    io_type: input.kind,
-    io_id: input.ioId,
-    event_type:
-      input.kind === "client" ? "client_io_approved" : "vendor_io_approved",
-    recipient_email: TRAFFIC_OPERATIONS_EMAIL,
-    recipient_name: "Traffic Operations",
-    sender_email: getEmailFromAddress(),
-    subject: internalSubject,
-    gmail_message_id: trafficResult.ok ? trafficResult.messageId : null,
-    delivery_status: trafficResult.ok ? "sent" : "failed",
-    delivery_error: trafficResult.ok ? null : trafficResult.error,
-    payload: {
-      notification_kind: "approval_confirmation_internal",
-      document_number: input.documentNumber,
-      ...trafficMeta,
-    },
-    sent_at: sentAt,
-  } as never);
-  return { approverSent: approverResult.ok, internalSent: trafficResult.ok };
+  return { approverSent, internalSent };
 }

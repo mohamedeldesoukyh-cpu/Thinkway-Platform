@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { notifyClientIoApproval } from "@/lib/io/notify-client-io-approval";
+import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 
 import { createSupabaseServerClient, requireRequestUser } from "@/lib/supabase/server";
 import { uploadEntityDocument } from "@/lib/supabase/storage";
@@ -332,6 +334,16 @@ export async function clientApproveAction(
         p_approved_by_name: approvedByName || null,
       });
       if (error || !data) return { ok: false, message: error?.message ?? "Client IO approval failed." };
+
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        // Scope and approve permissions were checked before the approval RPC above.
+        // Service access is required for the frozen document and notification audit log.
+        const db = tryCreateServiceRoleClient().client ?? supabase;
+        await notifyClientIoApproval(db, entityId, auth.user?.email ?? null, approvedByName || null);
+      } catch (error) {
+        console.error("Client portal IO approval notification failed", error);
+      }
 
       const { data: cio } = await supabase
         .from("client_ios")

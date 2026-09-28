@@ -1,7 +1,7 @@
 import { headers } from "next/headers";
 
 import { sendIoApprovalConfirmationEmails } from "@/lib/email/io-approval-emails";
-import { prepareClientIoEmailAttachment } from "@/lib/io/client-io-email-attachment";
+import { notifyClientIoApproval } from "@/lib/io/notify-client-io-approval";
 import { buildVendorIoPdfAttachmentFromBuffer } from "@/lib/email/vendor-io-email";
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
@@ -148,10 +148,6 @@ export async function completeClientIoApprovalByToken(input: {
     };
   }
 
-  const campaign = Array.isArray(typed.campaign)
-    ? typed.campaign[0] ?? null
-    : typed.campaign;
-
   if (approverEmail) {
     await db
       .from("client_ios")
@@ -193,40 +189,11 @@ export async function completeClientIoApprovalByToken(input: {
   }
 
   let confirmationEmailSent = false;
-  // Always attempt confirmation when we have an email (from the approval link).
-  if (approverEmail) {
-    try {
-      if (!typed.approved_at) throw new Error("Recorded approval date is unavailable.");
-      const prepared = await prepareClientIoEmailAttachment(db, typed, typed.approved_at);
-      if (!prepared.ok) throw new Error(prepared.error);
-      const { data: sourceCampaign } = await db.from("campaign_headers")
-        .select("accepted_quotation_id, quotation_id").eq("id", typed.campaign_header_id).maybeSingle();
-      const source = sourceCampaign as { accepted_quotation_id?: string | null; quotation_id?: string | null } | null;
-      const quotationId = source?.accepted_quotation_id || source?.quotation_id;
-      let quotationNumber: string | null = null;
-      if (quotationId) {
-        const { data: quotation } = await db.from("quotations").select("serial_number, version_number").eq("id", quotationId).maybeSingle();
-        const quote = quotation as { serial_number?: string; version_number?: number } | null;
-        if (quote?.serial_number) quotationNumber = /-V\d+$/i.test(quote.serial_number) ? quote.serial_number : quote.serial_number + (quote.version_number ? "-V" + quote.version_number : "");
-      }
-      const delivery = await sendIoApprovalConfirmationEmails({
-        supabase: db,
-        kind: "client",
-        quotationNumber,
-        ioId: typed.id,
-        documentNumber: typed.document_number,
-        campaignName: campaign?.name ?? null,
-        approvedAt: typed.approved_at ?? new Date().toISOString(),
-        approvedByEmail: approverEmail,
-        approvedByName,
-        pdfAttachment: prepared.attachment,
-      });
-      confirmationEmailSent = delivery.approverSent;
-    } catch (emailError) {
-      debugIo("io-approval", "client confirmation email failed", emailError);
-    }
-  } else {
-    debugIo("io-approval", "client confirmation skipped — no approver email on link");
+  try {
+    const delivery = await notifyClientIoApproval(db, typed.id, approverEmail, approvedByName);
+    confirmationEmailSent = delivery.approverSent;
+  } catch (emailError) {
+    debugIo("io-approval", "client confirmation email failed", emailError);
   }
 
   return {

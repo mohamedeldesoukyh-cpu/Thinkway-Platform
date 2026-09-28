@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { AssignmentCreatorCountry } from "./assignment-creator-country";
+import { platformDisplayLabel, resolveCreatorProfileUrl, type ProfileUrlSource } from "@/lib/discovery/profile-url";
 import { CrmAaibBankEditor } from "@/features/creator-payments/bank-editor";
 import { MoreHorizontalIcon, PencilIcon } from "lucide-react";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -46,6 +48,15 @@ import { resolveAssignmentLineCurrency } from "@/lib/campaigns/assignment-line-c
 import { vendorDetailPath } from "@/lib/routing/entity-paths";
 import { cn } from "@/lib/utils";
 import "@/app/styles/campaign-detail-suite.css";
+
+function socialProfileHref(account: ProfileUrlSource): string | null {
+  const value = resolveCreatorProfileUrl(account);
+  if (!value) return null;
+  try {
+    const url = new URL(value);
+    return ["https:", "http:"].includes(url.protocol) ? url.href : null;
+  } catch { return null; }
+}
 
 type AssignmentInfluencerDetailSheetProps = {
   open: boolean;
@@ -292,6 +303,19 @@ function SocialDataTab({ group }: { group: AssignmentHierarchyGroup }) {
 
   return (
     <>
+      <section className="space-y-2 p-5" aria-label="Creator social profiles">
+        <h3 className="text-sm font-semibold">Social profiles</h3>
+        {accounts.map((profile, index) => {
+          const href = socialProfileHref(profile);
+          return (
+            <div key={`${profile.platform}-${profile.handle}-${index}`} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border p-3">
+              <span className="min-w-0 break-words">{platformDisplayLabel(profile.platform)} · {profile.handle || "Profile"}</span>
+              {href ? <a href={href} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-primary underline underline-offset-4">Open profile ↗</a>
+                : <span className="text-xs text-muted-foreground">Profile link unavailable</span>}
+            </div>
+          );
+        })}
+      </section>
       <div className="tw-soc">
         <div>
           <i>Followers</i>
@@ -557,7 +581,9 @@ export function AssignmentInfluencerDetailSheet({
                   ✓
                 </span>
               </h2>
-              {handle ? <div className="hd">@{handle.replace(/^@/, "")}</div> : null}
+              {handle ? <div className="hd">{socialProfileHref(platformAccounts[0] ?? line.assignment?.platforms[0] ?? {}) ? (
+                <a href={socialProfileHref(platformAccounts[0] ?? line.assignment?.platforms[0] ?? {})!} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">@{handle.replace(/^@/, "")} ↗</a>
+              ) : <>@{handle.replace(/^@/, "")}</>}</div> : null}
               <div className="tw-cm__pf">
                 {platformAccounts.map((account) => (
                   <span key={`${account.platform}-${account.handle}`}>{account.platform}</span>
@@ -652,6 +678,7 @@ export function AssignmentInfluencerDetailSheet({
                     />
                   </TabsContent>
                   <TabsContent value="general" className="mt-0 outline-none">
+                    {gates.showInternalFinancials && influencerId && <AssignmentCreatorCountry key={influencerId} creatorId={influencerId} />}
                     <GeneralTab
                       group={group}
                       row={row}
