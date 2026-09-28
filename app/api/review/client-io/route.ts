@@ -39,7 +39,7 @@ export async function GET(request:Request) {
     // View uses the same HTML as Download without waiting for a browser/PDF job.
     if(query.get("format")==="html") return new NextResponse(html,{headers:{...privateHeaders,
       "Content-Type":"text/html; charset=utf-8", "X-Content-Type-Options":"nosniff",
-      "Content-Security-Policy":"sandbox; default-src 'none'; style-src 'unsafe-inline' https:; img-src https: data:; font-src https: data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}});
+      "Content-Security-Policy":"sandbox allow-same-origin; default-src 'none'; style-src 'unsafe-inline' https:; img-src https: data:; font-src https: data:; base-uri 'none'; form-action 'none'; frame-ancestors 'none'"}});
     const result=await renderHtmlToPdf(html,INSERTION_ORDER_PDF_OPTIONS);
     if(!result.ok) throw new Error("PDF unavailable");
     const name=(io.document_number || "Client-IO").replace(/[^a-zA-Z0-9_-]/g,"-")+(currentPreview ? "-Current" : io.status==="approved" ? "-Approved" : "");
