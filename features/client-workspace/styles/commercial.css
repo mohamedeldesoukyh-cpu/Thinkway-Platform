@@ -55,3 +55,7 @@
 .tw-review .cm-doc .l{font-size:11px;color:var(--cm-ink3);font-weight:600;text-transform:uppercase}
 .tw-review .cm-commercial .tbc{color:var(--cm-ink3)}
 .tw-review .cm-commercial .cbadge.pend{color:var(--cm-ink2);background:var(--cm-surface2)}
+.tw-review.cm-page header.bar>.wrap.row{padding-inline:24px}
+.tw-review.cm-page .cm-badges .stpill{display:inline-flex}
+.tw-review.cm-page .journey-h{display:block}
+@media(max-width:680px){.tw-review.cm-page header.bar>.wrap.row,.tw-review.cm-page nav.tabs>.wrap.row{padding-inline:16px}}
