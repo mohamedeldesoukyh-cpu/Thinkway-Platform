@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -49,20 +50,15 @@ export function VendorIoSendButton({
     return null;
   }
 
-  const idleLabel = canResend && !canSend
-    ? "Resend"
-    : canEmail
-      ? "Send by Email"
-      : compact
-        ? "Mark Delivered"
-        : "Mark as Delivered Manually";
-  const pendingLabel = canEmail || canResend ? "Sending…" : "Marking…";
+  const idleLabel = canResend && !canSend ? "Resend" : "Send by Email";
+  const pendingLabel = "Sending…";
 
   return (
-    <form action={action} className="inline-flex">
+    <form action={action} className="inline-flex flex-wrap items-center gap-2">
       <input type="hidden" name="id" value={row.id} />
       <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
-      <Button
+      {!canEmail && <Link href={`/vendors/${row.influencer_id}?tab=overview`} className="text-xs text-amber-700 underline">Email missing — add email</Link>}
+      {canEmail && <Button
         type="submit"
         size={size}
         variant={variant}
@@ -70,7 +66,10 @@ export function VendorIoSendButton({
         className={cn(variant === "link" && "thinkway-campaign-link-btn", className)}
       >
         {pending ? pendingLabel : idleLabel}
-      </Button>
+      </Button>}
+      {canManual && <Button type="submit" name="delivery_method" value="manual" variant="outline" size={size} disabled={pending}>
+        {pending ? "Saving…" : compact ? "Mark Delivered" : "Mark delivered manually"}
+      </Button>}
     </form>
   );
 }

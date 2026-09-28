@@ -43,12 +43,9 @@ export function vendorIoIsManualDeliveryCandidate(row: VendorIoRow): boolean {
   return !hasValidVendorEmail(row.influencer_email);
 }
 
-export function describeVendorIoSendBulkLabel(rows: VendorIoRow[]): string {
-  if (rows.length === 0) return "Send Selected";
-  const manual = rows.filter(vendorIoIsManualDeliveryCandidate).length;
-  if (manual === rows.length) return "Mark Delivered Manually";
-  if (manual === 0) return "Send Selected";
-  return "Send / Mark Delivered";
+export function describeVendorIoSendBulkLabel(_rows: VendorIoRow[]): string {
+  void _rows;
+  return "Send Selected";
 }
 
 export function exportVendorIoRowsCsv(rows: VendorIoRow[]): string {

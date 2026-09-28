@@ -7,6 +7,7 @@
  */
 
 import { appendBulkDeferRevalidate } from "@/components/workspace/bulk-operations/bulk-defer-revalidate";
+import { hasValidVendorEmail } from "@/lib/io/vendor-io-delivery";
 import { sendVendorIoAction } from "@/features/io/actions";
 import { recordVendorIoManualApprovalAction } from "@/features/io/record-vendor-io-manual-approval-action";
 import { updateVendorIoAttachmentUrlAction } from "@/features/io/update-vendor-io-attachment-url-action";
@@ -42,6 +43,7 @@ function bulkFormData(row: VendorIoRow): FormData {
 }
 
 export async function mutateVendorIoSend(row: VendorIoRow) {
+  if (!hasValidVendorEmail(row.influencer_email)) return { ok: true, skipped: true, id: row.id, message: `${row.influencer_name}: not sent — creator email missing or invalid. Add it in the creator record.` };
   const skip = vendorIoBulkSkipReason(
     vendorIoRowToLifecycleSnapshot(row),
     "send"

@@ -50,7 +50,6 @@ import {
 import { prepareClientIoEmailAttachment } from "@/lib/io/client-io-email-attachment";
 import {
   hasValidVendorEmail,
-  VENDOR_IO_MANUAL_DELIVERY_RECIPIENT,
 } from "@/lib/io/vendor-io-delivery";
 import { renderLiveVendorIoHtml } from "@/lib/io/render-live-vendor-io-html";
 import { renderHtmlToPdf, INSERTION_ORDER_PDF_OPTIONS } from "@/lib/io/vendor-io-pdf";
@@ -935,6 +934,7 @@ export async function sendVendorIoAction(
     `
     )
     .eq("id", id)
+    .eq("campaign_header_id", campaignHeaderId)
     .maybeSingle();
 
   type ClientRel = { name: string; legal_name: string | null };
@@ -974,11 +974,14 @@ export async function sendVendorIoAction(
     : campaign?.brands ?? null;
 
   const recipientEmail = influencer?.email?.trim() ?? "";
-  const sendByEmail = hasValidVendorEmail(recipientEmail);
+  const manualDelivery = formData.get("delivery_method") === "manual";
+  const sendByEmail = !manualDelivery && hasValidVendorEmail(recipientEmail);
+  if (!manualDelivery && !sendByEmail) return { ok: false, message: "Creator email missing or invalid. Add the creator email in the system before sending. IO generation is still available." };
 
   // Render before advancing delivery so campaign edits reach the attached IO.
   // Do not call generateVendorIoDocument here: it would reset workflow status.
   let currentPdfBuffer: Buffer | null = null;
+  let sentDocumentHtml = "";
 
   if (sendByEmail) {
     const emailReady = assertOutboundEmailReady();
@@ -987,11 +990,13 @@ export async function sendVendorIoAction(
     }
     try {
       const html = await renderLiveVendorIoHtml(supabase, id);
+      sentDocumentHtml = html;
       const pdf = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
-      if (pdf.ok) currentPdfBuffer = pdf.buffer;
-      else console.warn("[vendor-io] Current PDF unavailable; sending the existing document-link email format.", pdf.error);
+      if (pdf.ok && pdf.buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) currentPdfBuffer = pdf.buffer;
+      else return { ok: false, message: "Could not prepare the Creator IO PDF. Nothing was sent. Please retry." };
     } catch (renderError) {
-      console.warn("[vendor-io] Current PDF unavailable; sending the existing document-link email format.", renderError);
+      console.warn("[vendor-io] PDF preparation failed", renderError);
+      return { ok: false, message: "Could not prepare the Creator IO PDF. Nothing was sent. Please retry." };
     }
   }
 
@@ -1022,11 +1027,11 @@ export async function sendVendorIoAction(
     clientRel?.legal_name?.trim() || clientRel?.name?.trim() || "Client";
   const brandName = brandRel?.name?.trim() || null;
 
-  if (!sendByEmail) {
+  if (manualDelivery) {
     const deliveryMeta = buildIoDeliveryNotificationMeta({
       deliveryMethod: "manual",
       deliveryStatus: "completed",
-      recipient: VENDOR_IO_MANUAL_DELIVERY_RECIPIENT,
+      recipient: "Manual",
       subject: null,
       messageId: null,
       sentAt: deliveredAt,
@@ -1039,7 +1044,7 @@ export async function sendVendorIoAction(
         delivery_status: "completed",
         delivery_error: null,
         delivered_at: deliveredAt,
-        delivery_recipient: VENDOR_IO_MANUAL_DELIVERY_RECIPIENT,
+        delivery_recipient: "Manual",
       } as never)
       .eq("id", id);
 
@@ -1108,6 +1113,7 @@ export async function sendVendorIoAction(
 
   const emailResult = await sendEmail({
     to: [{ email: recipientEmail, name: influencerName }],
+    cc: recipientEmail.toLowerCase() === "traffic@thinkwaymedia.com" ? undefined : [{ email: "traffic@thinkwaymedia.com", name: "Traffic Operations" }],
     subject,
     html,
     text: emailText,
@@ -1127,6 +1133,7 @@ export async function sendVendorIoAction(
   await supabase
     .from("vendor_ios")
     .update({
+      ...(emailResult.ok ? { terms_html: sentDocumentHtml } : {}),
       delivery_method: "email",
       delivery_status: vendorDeliveryStatus,
       delivery_error: emailResult.ok ? null : emailResult.error,

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import { hasValidVendorEmail } from "@/lib/io/vendor-io-delivery";
 
 import { usePlatformBulkOperation } from "@/components/workspace/bulk-operations";
 import {
@@ -137,6 +138,8 @@ export function VendorIoSelectionFlyout({
   );
 
   function sendSelected() {
+    const missing = selectedRows.filter(row => !hasValidVendorEmail(row.influencer_email));
+    if (missing.length) toast.warning(`${missing.length} Creator IO${missing.length === 1 ? "" : "s"} will not be sent: missing or invalid creator email.`, { description: missing.map(row => row.influencer_name).join(", ") });
     runOnRows(sendLabel, selectedRows, mutateVendorIoSend);
   }
 

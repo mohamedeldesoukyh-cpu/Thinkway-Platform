@@ -18,7 +18,7 @@ const TONE_CLASS: Record<
 };
 
 type Props = {
-  kindLabel: "Client IO" | "Vendor IO";
+  kindLabel: "Client IO" | "Vendor IO" | "Creator IO";
   outcome: IoApprovalOutcomeCode;
   documentNumber?: string | null;
   confirmationEmailSent?: boolean;
