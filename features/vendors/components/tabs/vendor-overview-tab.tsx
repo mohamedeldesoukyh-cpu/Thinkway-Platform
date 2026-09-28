@@ -117,8 +117,8 @@ export function VendorOverviewTab({
         saveDisabled={isPending}
         isSaving={isPending}
       >
-        <form id="vendor-overview-form" action={formAction} className="tw-vtwo">
-          <div className="grid gap-[11px]">
+        <div className="tw-vtwo">
+          <form id="vendor-overview-form" action={formAction} className="grid gap-[11px]">
           <input type="hidden" name="influencer_id" value={vendor.id} />
           <input type="hidden" name="status" value={status} />
           <input type="hidden" name="country_code" value={country} />
@@ -130,7 +130,7 @@ export function VendorOverviewTab({
             icon={UserIcon}
             title="Profile"
             description="Edit creator details below, then save overview to apply your changes."
-            toolbar={<button type="submit" className="tw-b sm" disabled={isPending}>{isPending ? "Saving…" : "Save overview"}</button>}
+            toolbar={<button type="submit" className="tw-b sm pri" disabled={isPending}>{isPending ? "Saving…" : "Save overview"}</button>}
           >
             <VendorFormGrid>
               <VendorFormField label="Creator name" htmlFor="display_name">
@@ -309,7 +309,7 @@ export function VendorOverviewTab({
             icon={FileTextIcon}
             title="Vendor IO Default Terms"
             description="These become the default for all new Vendor IOs with this influencer. Save overview to apply your changes."
-            toolbar={<button type="submit" className="tw-b sm" disabled={isPending}>{isPending ? "Saving…" : "Save overview"}</button>}
+            toolbar={<button type="submit" className="tw-b sm pri" disabled={isPending}>{isPending ? "Saving…" : "Save overview"}</button>}
           >
             <div className="mb-3 flex items-center gap-2">
               <span className="text-[11px] text-muted-foreground">Current source</span>
@@ -329,11 +329,11 @@ export function VendorOverviewTab({
               disabled={isPending}
             />
           </VendorFormSection>
-          </div>
+          </form>
           <div className="grid gap-[11px]">
             {portalAccessPanel}
           </div>
-        </form>
+        </div>
       </VendorProfileTabShell>
     </>
   );

@@ -306,10 +306,12 @@ export function PlatformFloatingBarOverflowMenu({
   actions,
   busy,
   className,
+  onCloseAutoFocus,
 }: {
   actions: PlatformFloatingBarAction[];
   busy?: boolean;
   className?: string;
+  onCloseAutoFocus?: (event: Event) => void;
 }) {
   if (actions.length === 0) return null;
 
@@ -332,7 +334,7 @@ export function PlatformFloatingBarOverflowMenu({
             <MoreHorizontalIcon className="size-4" />
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-44">
+        <DropdownMenuContent align="end" className="min-w-44" onCloseAutoFocus={onCloseAutoFocus}>
           {actions.map((action) => {
             const Icon = action.icon;
             return (

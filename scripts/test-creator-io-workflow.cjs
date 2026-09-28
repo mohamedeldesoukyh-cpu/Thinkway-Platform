@@ -43,7 +43,15 @@ const form=(manual=false)=>{const f=new FormData();f.set('id','io');f.set('campa
  console.log('PASS stored creator recipient, Traffic CC, campaign subject, PDF and sent terms snapshot');
  reset('creator@example.invalid');state.pdf=Buffer.from('bad');assert.equal((await send({},form())).ok,false);assert.equal(state.mails.length,0);assert.equal(state.rpcs.length,0);
  console.log('PASS invalid PDF blocks email before delivery mutation');
- const {mutateVendorIoSend:bulk}=await load('features/io/bulk/vendor-io-bulk-mutations.ts',['@/lib/io/vendor-io-delivery']);
+ const {mutateVendorIoSend:bulk,mutateVendorIoMarkDelivered:manualBulk}=await load('features/io/bulk/vendor-io-bulk-mutations.ts',['@/lib/io/vendor-io-delivery']);
  reset();assert.equal((await bulk({id:'io',influencer_name:'Test Creator',influencer_email:null})).skipped,true);assert.equal(state.rpcs.length,0);
  console.log('PASS bulk email skips missing email without manual-delivery side effects');
+ reset();global.creatorIoTest.services.vendorIoNeedsSend=()=>true;
+ global.creatorIoTest.services.sendVendorIoAction=async(prev,fd)=>{state.rpcs.push(Object.fromEntries(fd));return {ok:true}};
+ assert.equal((await manualBulk({id:'io',campaign_header_id:'campaign',influencer_email:null})).ok,true);
+ assert.equal(state.rpcs[0].delivery_method,'manual');assert.equal(state.rpcs[0].id,'io');
+ console.log('PASS bulk manual delivery explicitly selects manual delivery without email');
+ reset();global.creatorIoTest.services.vendorIoBulkSkipReason=()=> 'Approved IO';
+ assert.equal((await manualBulk({id:'io'})).skipped,true);assert.equal(state.rpcs.length,0);
+ console.log('PASS bulk manual delivery preserves lifecycle guard');
 })().catch(error=>{console.error(error);process.exitCode=1});

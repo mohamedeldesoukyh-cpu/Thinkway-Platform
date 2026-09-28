@@ -388,8 +388,11 @@ export function VendorWorkspaceView({
                 </button>
                 {saveFormId ? (
                   <button
-                    type="submit"
-                    form={saveFormId}
+                    type="button"
+                    onClick={() => {
+                      const form = document.getElementById(saveFormId);
+                      if (form instanceof HTMLFormElement) form.requestSubmit();
+                    }}
                     className="tw-b sm pri"
                   >
                     {TAB_SAVE_LABELS[activeTab]}

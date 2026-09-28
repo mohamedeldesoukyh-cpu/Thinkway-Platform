@@ -60,6 +60,16 @@ export async function mutateVendorIoSend(row: VendorIoRow) {
   return { ...result, id: row.id };
 }
 
+export async function mutateVendorIoMarkDelivered(row: VendorIoRow) {
+  const skip = vendorIoBulkSkipReason(vendorIoRowToLifecycleSnapshot(row), "mark_delivered_manually");
+  if (skip || !vendorIoNeedsSend(row)) {
+    return { ok: true, skipped: true, id: row.id, message: skip ?? "Already sent or delivered." };
+  }
+  const formData = bulkFormData(row);
+  formData.set("delivery_method", "manual");
+  return { ...await sendVendorIoAction({ ok: false }, formData), id: row.id };
+}
+
 export async function mutateVendorIoMarkAccepted(row: VendorIoRow) {
   const skip = vendorIoBulkSkipReason(
     vendorIoRowToLifecycleSnapshot(row),
