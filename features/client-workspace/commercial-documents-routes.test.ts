@@ -60,13 +60,15 @@ test("Client IO endpoints: scoped current snapshot, inline/download, approval an
   assert.match(approved.headers.get("content-disposition"),/TEST-CIO-Approved.pdf/);
   assert.match(rendered,/data-io-approval="approved"/); assert.match(rendered,/Saved terms 123/);
   assert.equal((await post("io-current")).status,200); assert.equal(approvals,1);
-  // Even a stale current-preview link must return the saved approved document.
+  // Workspace current links always match the campaign renderer, even after approval.
   for (const suffix of ["&view=1", ""]) {
     const current = await get("sign=valid&ioId=io-current&source=current"+suffix);
     assert.equal(current.status,200);
-    assert.match(current.headers.get("content-disposition"),/TEST-CIO-Approved.pdf/);
-    assert.match(rendered,/Saved terms 123/);
-    assert.match(rendered,/data-io-approval="approved"/);
+    assert.match(current.headers.get("content-disposition"),/TEST-CIO-Current.pdf/);
+    assert.match(rendered,/Draft terms/);
+    assert.doesNotMatch(rendered,/Saved terms 123|data-io-approval/);
+    assert.match(rendered,/data-io-record-status="approved"/);
+    assert.match(rendered,/recorded approval applies to the issued version/);
     assert.equal(io.terms_html,"<body>Saved terms 123</body>");
     assert.equal(approvals,1);
   }
@@ -74,7 +76,8 @@ test("Client IO endpoints: scoped current snapshot, inline/download, approval an
   const htmlView = await get("sign=valid&ioId=io-current&source=current&format=html&view=1");
   assert.match(htmlView.headers.get("content-type"),/text\/html/);
   const html = await htmlView.text();
-  assert.match(html,/Saved terms 123/); assert.match(html,/data-io-approval="approved"/);
+  assert.match(html,/Draft terms/); assert.match(html,/data-io-record-status="approved"/);
+  assert.doesNotMatch(html,/Saved terms 123|data-io-approval/);
   assert.equal(pdfRenders,beforeHtml,"HTML View must not launch a PDF render");
   assert.match(htmlView.headers.get("content-security-policy"),/sandbox/);
   assert.equal(htmlView.headers.get("cache-control"),"private, no-store");
@@ -89,13 +92,13 @@ test("Client IO endpoints: scoped current snapshot, inline/download, approval an
   assert.equal((await get("sign=valid&ioId=io-current&view=1")).status,200);
   assert.match(rendered,/Draft terms/);
   assert.doesNotMatch(rendered,/Old draft/);
-  assert.equal(liveRenders,1);
+  assert.equal(liveRenders,4);
   assert.equal((await get("sign=valid&ioId=io-current")).status,200);
   assert.match(rendered,/Draft terms/);
-  assert.equal(liveRenders,2);
+  assert.equal(liveRenders,5);
   const draftView = await get("sign=valid&ioId=io-current&source=current&format=html");
   const draftHtml = await draftView.text();
-  assert.match(draftHtml,/Draft terms/); assert.doesNotMatch(draftHtml,/data-io-approval/);
+  assert.match(draftHtml,/Draft terms/); assert.doesNotMatch(draftHtml,/data-io-approval|data-io-record-status/);
   assert.ok(scopes.some(s => s[0] === "client_ios" && s[1] === "campaign_header_id" && s[2] === "campaign-allowed"));
   assert.ok(scopes.some(s => s[1] === "is_superseded" && s[2] === false));
   assert.ok(scopes.some(s => s[0] === "io_notifications" && s[1] === "io_id" && s[2] === "io-current"));

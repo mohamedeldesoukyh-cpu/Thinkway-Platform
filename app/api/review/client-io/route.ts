@@ -27,13 +27,19 @@ export async function GET(request:Request) {
     if(!canViewWorkspaceIo(io)) return NextResponse.json({error:"This Client IO is no longer available. Please contact Thinkway."},{status:409,headers:privateHeaders});
     // Current preview matches the campaign Client IO tab. The default issued
     // document path remains unchanged and available separately; no records are written.
-    const currentPreview=query.get("source")==="current" && io.status!=="approved";
+    const currentPreview=query.get("source")==="current";
     let html=currentPreview || ["draft","generated"].includes(io.status)
       ? await renderLiveClientIoHtml(db,io.id) : io.terms_html;
     if(!html) return NextResponse.json({error:"The saved Client IO is unavailable. Please contact Thinkway."},{status:409,headers:privateHeaders});
     if(io.status==="approved" && !currentPreview) {
       if(!io.approved_at) throw new Error("Approval date unavailable");
       html=approvedClientIoHtml(html,io.approved_at);
+    }
+    if(io.status==="approved" && currentPreview) {
+      // This is the campaign renderer, not a newly approved legal snapshot.
+      // Show the record status without stamping changed live values as approved.
+      const status = '<aside data-io-record-status="approved" style="max-width:1100px;margin:16px auto;padding:12px 18px;border:1px solid #a7f3d0;border-radius:8px;background:#ecfdf5;color:#065f46;font:14px/1.5 Arial,sans-serif"><strong>IO status: Approved</strong><br>Current document view. The recorded approval applies to the issued version.</aside>';
+      html=/<body\b[^>]*>/i.test(html) ? html.replace(/<body\b[^>]*>/i,body=>body+status) : status+html;
     }
     html=applyClientIoPrintLayout(html);
     // View uses the same HTML as Download without waiting for a browser/PDF job.
