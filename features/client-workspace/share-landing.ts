@@ -1,5 +1,10 @@
 import { SHARE_DESCRIPTION, shareImagePath } from "./share-preview";
 
+/** A failed social-preview fetch must not pin subsequent copies to that cache key. */
+export function freshCampaignShareUrl(reviewUrl: string, nonce = crypto.randomUUID()): string {
+  return campaignShareUrl(reviewUrl, `copy-${nonce}`);
+}
+
 /** Keep the original signed destination; the share route only supplies crawler metadata. */
 export function campaignShareUrl(reviewUrl: string, version = "3"): string {
   const url = new URL(reviewUrl);
