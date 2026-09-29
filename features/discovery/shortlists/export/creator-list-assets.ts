@@ -186,6 +186,9 @@ footer s{flex:1;height:1px;background:var(--line);text-decoration:none}
 .bk--note b{color:#fff;font-weight:700}
 .bk--note em{font-style:italic;color:var(--dim2)}
 
+.report-total-cost{display:flex;align-items:center;justify-content:space-between;gap:24px;width:100%;max-width:1180px;margin-top:22px;padding:18px 24px;border:1px solid var(--line);border-radius:14px;background:rgba(37,34,95,.8)}
+.report-total-cost span{font-size:16px;color:#fff;font-weight:600}
+.report-total-cost strong{font-size:28px;color:#fff;font-variant-numeric:tabular-nums}
 .end__ft{display:flex;align-items:center;gap:14px;width:100%;max-width:1180px;
  margin:34px 0 0;padding:16px 2px 0;border-top:1px solid var(--line)}
 .end__brand{display:flex;align-items:center;gap:9px}

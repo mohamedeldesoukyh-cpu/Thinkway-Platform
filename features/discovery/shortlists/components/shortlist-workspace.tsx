@@ -123,6 +123,7 @@ import {
 } from "./shortlist-quotation-panel";
 import { ShortlistBulkToolbar } from "./shortlist-bulk-toolbar";
 import { ShortlistHeaderActions } from "./shortlist-header-actions";
+import { CreatorListCostControl } from "./creator-list-cost-control";
 import {
   ShortlistCreatorEmptyState,
   ShortlistCreatorList,
@@ -830,6 +831,7 @@ export function ShortlistWorkspace({
         title={detail.name}
         id={detail.serial_number}
         badge={<ShortlistWorkspaceStatusPill status={detail.status} />}
+        trailing={<CreatorListCostControl key={detail.id} shortlistId={detail.id} value={detail.creatorListCost} disabled={!canEditDetails} />}
         metrics={mastheadMetrics}
         freezeOnScroll={false}
         actions={

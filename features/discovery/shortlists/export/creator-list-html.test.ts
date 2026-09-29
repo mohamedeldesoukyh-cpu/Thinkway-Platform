@@ -3,6 +3,7 @@ import test from "node:test";
 import { buildCreatorListHtml, renderCreatorListReport, creatorListPlatform } from "./creator-list-html";
 import { resolveShortlistTemplate, appendShortlistTemplateParam } from "./shortlist-template";
 import type { ShortlistDocument, ShortlistDocCreatorGroup } from "./shortlist-document";
+import { readCreatorListCost } from "../creator-list-cost";
 
 function document(count: number): ShortlistDocument {
   return { name: "Campaign <one>", serial: "SL-1", generatedDateLabel: "29 Sep 2026", description: "Concept & campaign", brandName: "Brand", creatorGroups: Array.from({ length: count }, (_, i) => ({ creator: `Creator ${i}`, handle: "@creator", country: "Egypt", avatarUrl: null, profileUrl: "javascript:alert(1)", publicationShots: [], notes: "PRIVATE NOTE" } as unknown as ShortlistDocCreatorGroup)) } as ShortlistDocument;
@@ -81,4 +82,21 @@ test("cards show the recorded avatar and categories without countries or tint", 
   assert.match(html, /<h2 dir="auto">Creator 0<\/h2><span class="creator-tier">Mega<\/span>/);
   assert.ok(!html.includes('Egypt'));
   assert.ok(!html.includes('class="shade"'));
+});
+
+test("Total Avg Cost is opt-in, formatted, and confined to the closing page", () => {
+  assert.deepEqual(readCreatorListCost(null), { amount: null, visible: false, currency: "EGP" });
+  assert.equal(readCreatorListCost({ creator_list_cost: { amount: 150000, currency: "USD" } }).visible, false);
+  const doc = document(1);
+  doc.creatorListCost = { amount: 150000, currency: "USD", visible: false };
+  assert.ok(!buildCreatorListHtml(doc).includes("USD 150,000"));
+  doc.creatorListCost.visible = true;
+  const html = buildCreatorListHtml(doc);
+  assert.equal((html.match(/USD 150,000/g) ?? []).length, 1);
+  assert.ok(!html.includes("150,000.00"));
+  assert.ok(html.indexOf("USD 150,000") > html.indexOf('class="page page--end"'));
+  doc.creatorListCost.amount = 0;
+  assert.match(buildCreatorListHtml(doc), /<strong>USD 0<\/strong>/);
+  doc.creatorListCost.amount = null;
+  assert.ok(!buildCreatorListHtml(doc).includes('<div class="report-total-cost">'));
 });

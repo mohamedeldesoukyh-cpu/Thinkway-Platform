@@ -154,6 +154,7 @@ export type ShortlistDocCollapseContentGroup = {
 };
 
 export type ShortlistDocument = {
+  creatorListCost?: import("../creator-list-cost").CreatorListCost;
   clientLogoDataUri?: string | null;
   template: ShortlistTemplateVariant;
   serial: string;
@@ -624,6 +625,7 @@ export function buildShortlistDocument(
   return {
     template,
     serial: detail.serial_number ?? "SL-PENDING",
+    creatorListCost: detail.creatorListCost,
     name: detail.name,
     description: detail.description,
     statusLabel: SHORTLIST_STATUS_LABELS[detail.status],
