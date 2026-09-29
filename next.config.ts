@@ -74,7 +74,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
-    '/*': [
+      '/*': [
+        './public/tw-logo-dark.png',
       './features/creator-payments/templates/**/*',
       // Sharp's native binding dynamically loads libvips. Trace both the app
       // and Next.js copies so Linux deployments retain their matching binaries.

@@ -19,6 +19,7 @@ import {
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
 import { QUOTATION_PDF_OPTIONS } from "@/features/quotations/export/quotation-pdf";
 import { CREATOR_LIST_PDF_OPTIONS } from "@/features/discovery/shortlists/export/creator-list-html";
+import { loadCreatorListClientLogo } from "@/features/discovery/shortlists/export/creator-list-client-logo";
 import { buildShortlistPptxBuffer } from "@/features/discovery/shortlists/export/shortlist-pptx";
 import {
   isCreatorDeckTemplate,
@@ -130,6 +131,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const baseName = shortlistDocumentBaseName(doc);
+    if (template === "creator-list") doc.clientLogoDataUri = await loadCreatorListClientLogo(supabase, detail.client_id);
     const disposition = download ? "attachment" : "inline";
     const suffix = templateSuffix(template);
     const siteOrigin = resolveShortlistExportSiteOrigin(
