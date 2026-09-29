@@ -191,7 +191,7 @@ function InvoiceConfirmDialogSession({
           <fieldset className="space-y-2 rounded-lg border p-3">
             <legend className="px-1 text-sm font-semibold">Client invoice options</legend>
             <label className="flex items-center gap-2 text-sm"><input type="radio" name="invoice-grouping" checked={grouping === "combined"} onChange={() => setGrouping("combined")} />One client invoice for all selected rows</label>
-            <label className="flex items-center gap-2 text-sm"><input type="radio" name="invoice-grouping" checked={grouping === "separate"} onChange={() => setGrouping("separate")} />Separate client invoices — {separateCount} invoices, one per selected assignment</label>
+            <label className="flex items-center gap-2 text-sm"><input type="radio" name="invoice-grouping" checked={grouping === "separate"} onChange={() => setGrouping("separate")} />Separate client invoices â€” {separateCount} invoices, one per selected assignment</label>
             <p className="text-xs text-muted-foreground">New invoices use the current serial sequence. Percentages refer to original billable amounts.</p>
           </fieldset>
         ) : null}
