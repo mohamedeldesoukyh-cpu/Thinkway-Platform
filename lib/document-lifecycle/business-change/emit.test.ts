@@ -5,16 +5,27 @@ import { assignmentCommercialChangeScope } from "@/lib/assignments/assignment-co
 import { planDocumentLifecycleReactions, type EmitBusinessChangeInput } from "./emit";
 
 const before = { revenue_before_vat: 100, cost_before_vat: 70, usage_rights_cost: 0, usage_rights_amount: 0, agency_fee_percent: 0, currency_code: "EGP", cost_vat_percent: 0, revenue_vat_percent: 14 };
-function database() {
+function database(status = "sent") {
   return { from(table: string) {
     const query = {
       select() { return query; }, eq() { return query; }, in() { return query; },
-      then(resolve: (result: unknown) => unknown) { return Promise.resolve(resolve({ data: [{ id: table, status: "sent", sent_at: "2026-09-01", delivery_method: "manual", delivery_status: "completed", is_superseded: false, document_number: table }], error: null })); },
+      then(resolve: (result: unknown) => unknown) { return Promise.resolve(resolve({ data: [{ id: table, status, sent_at: "2026-09-01", delivery_method: "manual", delivery_status: "completed", is_superseded: false, document_number: table }], error: null })); },
     };
     return query;
   } } as unknown as SupabaseClient;
 }
 const input: EmitBusinessChangeInput = { eventType: "creator_price_updated", reasonCode: "creator_price_changed", reasonDetail: "Creator cost changed", campaignHeaderId: "campaign" };
+
+for (const eventType of ["creator_replaced", "creator_removed"] as const) {
+  test(`${eventType} flags the approved Client IO for amendment even without a price change`, async () => {
+    const reactions = await planDocumentLifecycleReactions(database("approved"), { ...input, eventType, reasonCode: eventType, documentScope: { client: true, vendor: false } });
+    assert.equal(reactions.length, 1);
+    assert.equal(reactions[0].documentType, "client_io");
+    assert.equal(reactions[0].fromStatus, "approved");
+    assert.equal(reactions[0].toStatus, "revision_required");
+    assert.equal(reactions[0].reasonCode, eventType);
+  });
+}
 
 for (const [label, patch] of Object.entries({ cost: { cost_before_vat: 80 }, vat: { cost_vat_percent: 14 }, exemption: { cost_vat_exempt: true }, usage: { usage_rights_cost: 10 } })) {
   test(`${label}-only changes revise Vendor IO but preserve issued Client IO`, async () => {

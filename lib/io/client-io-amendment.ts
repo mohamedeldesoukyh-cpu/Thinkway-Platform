@@ -23,6 +23,7 @@ export const CLIENT_IO_AMENDMENT_ALLOWED_STATUSES = new Set([
   "sent",
   "under_client_review",
   "approved",
+  "revision_required",
   "rejected",
 ]);
 
