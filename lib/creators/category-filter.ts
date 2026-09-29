@@ -1,3 +1,4 @@
+import { canonicalCategoryLabel } from "./category-matching";
 import {
   creatorHasPrCategory,
   withPrCategoryToggled,
@@ -143,7 +144,7 @@ function isBeautyBrowseFamilyLabel(value: string): boolean {
 }
 
 function categoryTagMatchesFilter(tag: string, filterCategory: string): boolean {
-  if (tag.trim().toLowerCase() === filterCategory.trim().toLowerCase()) return true;
+  if (canonicalCategoryLabel(tag).toLowerCase() === canonicalCategoryLabel(filterCategory).toLowerCase()) return true;
   // Filter "Beauty" must match real "Beauty & Cosmetics" (and vice versa) after dumps
   // are stripped — exact equality alone left clean beauty creators dependent on junk tags.
   return (

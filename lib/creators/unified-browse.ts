@@ -1,3 +1,4 @@
+import { expandCategoryQueryLabels } from "./category-matching";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
@@ -266,7 +267,7 @@ async function queryInfluencerIdsForCategoryBrowse(
   const fetchLimit = Math.max(pageSize, 0) + 1;
 
   const { data, error } = await supabase.rpc("browse_influencer_ids_for_categories", {
-    p_categories: categories,
+    p_categories: expandCategoryQueryLabels(categories),
     p_country: country,
     p_language: language,
     p_limit: fetchLimit,
