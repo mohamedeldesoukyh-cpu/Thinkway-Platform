@@ -9,7 +9,7 @@ export const CREATOR_LIST_PDF_OPTIONS: HtmlToPdfOptions = {
   viewport: { width: 1600, height: 900, deviceScaleFactor: 1 },
   waitForDocumentAttribute: { name: "data-creator-list-ready", value: "true", timeoutMs: 45_000 },
 };
-export type CreatorListEntry = { name: string; handle: string; profileUrl: string | null; portrait: string | null; markets: string[]; avatar?: string | null; categories?: string[] };
+export type CreatorListEntry = { name: string; handle: string; profileUrl: string | null; portrait: string | null; markets: string[]; avatar?: string | null; categories?: string[]; tier?: string | null };
 export type CreatorListReport = { name: string; reference: string; issuedDate: string; clientLogo?: string | null; creators: CreatorListEntry[] };
 function esc(value: string): string {
   return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -54,7 +54,7 @@ export function renderCreatorListReport(report: CreatorListReport): string {
     if (href) links++;
     const visual = `${src ? `<img src="${src}" alt="${esc(creator.name)}" loading="eager">` : `<div class="placeholder" aria-label="No portrait supplied">${esc(creator.name.slice(0, 1).toUpperCase())}</div>`}<span class="idx" aria-hidden="true">${String(index + 1).padStart(3, "0")}</span>${platform ? `<span class="pb pb--${platform === "Instagram" ? "ig" : "tt"}" title="${platform}" aria-hidden="true">${platform === "Instagram" ? "IG" : "TT"}</span>` : ""}`;
     const avatar = image(creator.avatar);
-    const identity = `<div class="creator-identity">${avatar ? `<img class="creator-avatar" src="${avatar}" alt="" aria-hidden="true" loading="eager">` : `<span class="creator-avatar" aria-hidden="true">${esc(creator.name.slice(0, 1).toUpperCase())}</span>`}<div class="creator-label"><h2 dir="auto">${esc(creator.name)}</h2><p dir="auto">${esc(creator.handle)}</p></div></div>`;
+    const identity = `<div class="creator-identity">${avatar ? `<img class="creator-avatar" src="${avatar}" alt="" aria-hidden="true" loading="eager">` : `<span class="creator-avatar" aria-hidden="true">${esc(creator.name.slice(0, 1).toUpperCase())}</span>`}<div class="creator-label"><h2 dir="auto">${esc(creator.name)}</h2>${creator.tier ? `<span class="creator-tier">${esc(creator.tier)}</span>` : ""}<p dir="auto">${esc(creator.handle)}</p></div></div>`;
     return `<article class="creator-card">${href ? `<a class="portrait" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${esc(creator.name)}">${visual}</a>` : `<div class="portrait">${visual}</div>`}${identity}<div class="creator-categories">${categories.length ? categories.map((category) => `<span class="creator-category">${esc(category)}</span>`).join("") : '<span class="creator-category creator-category--none">Categories not recorded</span>'}</div></article>`;
   });
   for (let i = 0; i < total; i += 6) content.push(`<section class="page"><header class="ph"><div class="ph__l">${brand}</div><div class="ph__c"><b>${name}</b><span>Creator list</span></div><div class="ph__r"><em>${i + 1}–${Math.min(i + 6, total)}</em><span>of ${total}</span></div></header><div class="cards">${cards.slice(i, i + 6).join("")}</div>${footer(i / 6 + 2)}</section>`);
@@ -67,6 +67,6 @@ export function renderCreatorListReport(report: CreatorListReport): string {
 export function buildCreatorListHtml(doc: ShortlistDocument): string {
   return renderCreatorListReport({ name: doc.name, reference: doc.serial, issuedDate: doc.generatedDateLabel, clientLogo: doc.clientLogoDataUri, creators: doc.creatorGroups.map((c) => {
     const shot = c.publicationShots?.[0];
-    return { name: c.creator, handle: c.handle, profileUrl: shot?.postUrl ?? c.profileUrl, portrait: shot?.imageUrl ?? c.avatarUrl, avatar: c.avatarUrl, categories: c.categories ?? [], markets: c.recordedMarkets ?? (c.country && c.country !== "—" ? c.country.split(" · ") : []) };
+    return { name: c.creator, handle: c.handle, profileUrl: shot?.postUrl ?? c.profileUrl, portrait: shot?.imageUrl ?? c.avatarUrl, avatar: c.avatarUrl, categories: c.categories ?? [], tier: c.tier, markets: c.recordedMarkets ?? (c.country && c.country !== "—" ? c.country.split(" · ") : []) };
   }) });
 }

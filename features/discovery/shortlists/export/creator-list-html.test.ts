@@ -73,10 +73,12 @@ test("cards show the recorded avatar and categories without countries or tint", 
   const doc = document(1);
   doc.creatorGroups[0].avatarUrl = 'data:image/png;base64,AAAA';
   doc.creatorGroups[0].categories = ['Parenting', 'Beauty & care'];
+  doc.creatorGroups[0].tier = 'Mega';
   const html = buildCreatorListHtml(doc);
   assert.match(html, /class="creator-avatar" src="data:image\/png;base64,AAAA"/);
   assert.match(html, /class="creator-category">Parenting/);
   assert.match(html, /Beauty &amp; care/);
+  assert.match(html, /<h2 dir="auto">Creator 0<\/h2><span class="creator-tier">Mega<\/span>/);
   assert.ok(!html.includes('Egypt'));
   assert.ok(!html.includes('class="shade"'));
 });

@@ -117,6 +117,7 @@ body{margin:0;background:#050443;color:#fff;
 .creator-label{min-width:0;flex:1}
 .creator-label h2{margin:0;text-align:left;height:auto;max-height:38px;font-size:13px;line-height:17px}
 .creator-label p{text-align:left;font-size:10px;line-height:14px}
+.creator-tier{display:block;font-size:10px;line-height:14px;font-weight:700;color:#6551ad;margin-top:2px}
 .creator-categories{display:flex;flex-wrap:wrap;gap:4px;margin-top:8px}
 .creator-category{font-size:9px;line-height:12px;background:#efedf7;color:#4b4780;
  border-radius:10px;padding:3px 6px;max-width:100%;overflow-wrap:anywhere}
