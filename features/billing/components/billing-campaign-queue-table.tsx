@@ -131,7 +131,7 @@ function BillingCampaignQueueTableHeader() {
       {cols.showInvoiced ? <span title="Already invoiced plus this draft">Invoiced</span> : null}
       {cols.showRemaining ? <span title="Amount still to invoice">Remaining</span> : null}
       {cols.showBillPercent ? (
-        <span title="Share of remaining to bill now. Changing this updates every line.">Bill %</span>
+        <span title="Percentage of original billable amount, capped at remaining balance. Changing this updates every line.">Bill %</span>
       ) : null}
       {cols.showUnachieved ? (
         <span title="Achieved value not yet eligible to invoice">Unachieved</span>

@@ -341,6 +341,9 @@ export function getRowSelectionStatus(
   row: OperationalBillingRow,
   selection: OperationalSelectionState
 ): RowSelectionStatus {
+  // Package selection deliberately stores only the assignment, not its children.
+  if (row.kind === "assignment" && (row.pricing_mode ?? "package") === "package" &&
+      isRowDirectlySelected(row, selection)) return "checked";
   const descendants = getSelectableDescendantRows(row);
   const rowSelectable = isOperationalRowUiSelectable(row);
 

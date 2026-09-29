@@ -73,6 +73,7 @@ import {
 } from "@/lib/billing/consolidated-invoice-queue";
 import {
   createEmptySelection,
+  payloadToSelection,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
 } from "@/lib/billing/operational-selection";
@@ -199,6 +200,8 @@ export function CampaignBillingTab({
     percents: invoiceDraftPercents,
     onComplete: () => {
       setInvoiceDraftPercents({});
+      setDrilldownSelection(createEmptySelection());
+      setSelectedQueueBatchKeys(new Set());
       refreshAfterOperationalMutation();
     },
   });
@@ -309,6 +312,7 @@ export function CampaignBillingTab({
   }
 
   function toggleQueueBatchSelection(batchKey: string) {
+    setDrilldownSelection(createEmptySelection());
     setSelectedQueueBatchKeys((prev) => {
       const next = new Set(prev);
       if (next.has(batchKey)) next.delete(batchKey);
@@ -318,6 +322,7 @@ export function CampaignBillingTab({
   }
 
   function handleQueueSelectAll() {
+    setDrilldownSelection(createEmptySelection());
     const status =
       selectedQueueBatchKeys.size === billingQueueRows.length ? "clear" : "all";
     if (status === "clear") {
@@ -529,6 +534,11 @@ export function CampaignBillingTab({
             selectedBatchKeys={selectedQueueBatchKeys}
             onSelectAll={handleQueueSelectAll}
             onClear={() => setSelectedQueueBatchKeys(new Set())}
+            onReview={() => {
+              setSelectedQueueBatchKeys(new Set());
+              setDrilldownVisible(true);
+              setDrilldownSelection(payloadToSelection(buildConsolidatedQueueInvoiceSelection(operationalBilling.operational_rows)));
+            }}
             onGenerateInvoice={handleQueueGenerateInvoice}
             invoicePending={invoicePending}
           />
@@ -610,7 +620,7 @@ export function CampaignBillingTab({
                 detail={operationalBilling}
                 filter={billingFilter}
                 selection={drilldownSelection}
-                onSelectionChange={setDrilldownSelection}
+                onSelectionChange={(selection) => { setSelectedQueueBatchKeys(new Set()); setDrilldownSelection(selection); }}
                 appearance="campaign"
                 invoicePercents={invoiceDraftPercents}
                 onInvoicePercentsChange={setInvoiceDraftPercents}

@@ -1,10 +1,10 @@
 "use client";
 
 import { originalBillingRows } from "@/lib/billing/billing-currency";
-import { startTransition, useActionState, useEffect, useRef, useState } from "react";
+import { startTransition, useActionState, useEffect, useLayoutEffect, useRef, useState } from "react";
 
 import {
-  createInvoiceFromLinesAction,
+  createSelectedClientInvoicesAction,
   type BillingActionState,
 } from "@/features/billing/actions";
 import type { InvoiceTargetMode } from "@/features/billing/components/invoice-target-choice-dialog";
@@ -51,14 +51,15 @@ export function useOperationalInvoiceCreate(options?: {
   onError?: () => void;
 }) {
   const [state, formAction, pending] = useActionState(
-    createInvoiceFromLinesAction,
+    createSelectedClientInvoicesAction,
     { ok: false } satisfies BillingActionState
   );
   const handledRef = useRef<string | null>(null);
+  const submittingRef = useRef(false);
   const onCompleteRef = useRef(options?.onComplete);
-  onCompleteRef.current = options?.onComplete;
+  useLayoutEffect(() => { onCompleteRef.current = options?.onComplete; }, [options?.onComplete]);
   const onErrorRef = useRef(options?.onError);
-  onErrorRef.current = options?.onError;
+  useLayoutEffect(() => { onErrorRef.current = options?.onError; }, [options?.onError]);
   const [pendingCampaignId, setPendingCampaignId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -67,6 +68,7 @@ export function useOperationalInvoiceCreate(options?: {
     if (handledRef.current === actionKey) return;
     handledRef.current = actionKey;
 
+    submittingRef.current = false;
     setPendingCampaignId(null);
 
     if (state.ok) {
@@ -76,8 +78,9 @@ export function useOperationalInvoiceCreate(options?: {
       return;
     }
     onErrorRef.current?.();
+    if (state.completedCount && state.campaignId) void onCompleteRef.current?.(state.campaignId);
     showErrorToastOnce(state.message, { id: "invoice-generation" });
-  }, [state.message, state.ok, state.invoiceId, state.campaignId]);
+  }, [state]);
 
   function submit(input: {
     campaignId: string;
@@ -86,7 +89,9 @@ export function useOperationalInvoiceCreate(options?: {
     selection: OperationalSelectionPayload;
     mode: InvoiceTargetMode;
     existingInvoiceId?: string;
+    grouping?: "combined" | "separate";
   }): boolean {
+    if (submittingRef.current) return false;
     const resolved =
       countSubmitPayload(input.selection) > 0
         ? selectionToSubmitPayload(payloadToSelection(input.selection), input.rows)
@@ -99,6 +104,7 @@ export function useOperationalInvoiceCreate(options?: {
       return false;
     }
 
+    submittingRef.current = true;
     resetToastOnce("invoice-generation");
     handledRef.current = null;
     setPendingCampaignId(input.campaignId);
@@ -110,6 +116,7 @@ export function useOperationalInvoiceCreate(options?: {
       existingInvoiceId: input.existingInvoiceId,
     });
     startTransition(() => {
+      formData.set("invoice_grouping", input.grouping ?? "combined");
       formAction(formData);
     });
     return true;

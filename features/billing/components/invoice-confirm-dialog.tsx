@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -47,20 +47,26 @@ type InvoiceConfirmDialogProps = {
   campaigns: InvoiceConfirmCampaignPreview[];
   appendableInvoices?: AppendableInvoiceOption[];
   pending?: boolean;
-  onConfirm: (mode: InvoiceTargetMode, existingInvoiceId?: string) => void;
+  onConfirm: (mode: InvoiceTargetMode, existingInvoiceId?: string, grouping?: "combined" | "separate") => void;
+  separateCount?: number;
 };
 
 function lineLabel(line: InvoiceConfirmLinePreview): string {
   return line.influencerName?.trim() || line.label;
 }
 
-export function InvoiceConfirmDialog({
+export function InvoiceConfirmDialog(props: InvoiceConfirmDialogProps) {
+  return <InvoiceConfirmDialogSession key={props.open ? "open" : "closed"} {...props} />;
+}
+
+function InvoiceConfirmDialogSession({
   open,
   onOpenChange,
   campaigns,
   appendableInvoices = [],
   pending = false,
   onConfirm,
+  separateCount = 0,
 }: InvoiceConfirmDialogProps) {
   const bulk = campaigns.length > 1;
   const single = campaigns[0] ?? null;
@@ -71,20 +77,10 @@ export function InvoiceConfirmDialog({
         if (existingInvoiceTargetMode(inv) === "regenerate") return true;
         return !inv.is_locked && isAppendableInvoiceStatus(inv.status);
       });
-  const eligibleKey = eligible.map((inv) => inv.id).join(",");
 
+  const [grouping, setGrouping] = useState<"combined" | "separate">("combined");
   const [mode, setMode] = useState<InvoiceTargetMode>("new");
-  const [existingInvoiceId, setExistingInvoiceId] = useState("");
-
-  useEffect(() => {
-    if (!open) {
-      setMode("new");
-      setExistingInvoiceId("");
-      return;
-    }
-    setMode("new");
-    setExistingInvoiceId(eligible[0]?.id ?? "");
-  }, [open, eligibleKey]);
+  const [existingInvoiceId, setExistingInvoiceId] = useState(eligible[0]?.id ?? "");
 
   const mixedCurrency = new Set(campaigns.map((row) => row.currency)).size > 1;
   const tableLines = campaigns.flatMap((campaign) =>
@@ -93,6 +89,7 @@ export function InvoiceConfirmDialog({
   const showTable = bulk || tableLines.length > 1;
 
   function handleProceed() {
+    if (grouping === "separate") { onConfirm("new", undefined, "separate"); return; }
     if (mode === "append") {
       if (!existingInvoiceId) return;
       onConfirm("append", existingInvoiceId);
@@ -102,7 +99,7 @@ export function InvoiceConfirmDialog({
   }
 
   const proceedDisabled =
-    pending || campaigns.length === 0 || (mode === "append" && !existingInvoiceId);
+    pending || campaigns.length === 0 || (grouping === "combined" && mode === "append" && !existingInvoiceId);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,6 +145,7 @@ export function InvoiceConfirmDialog({
                   {bulk ? <th className="px-2 py-1.5">Campaign</th> : null}
                   <th className="px-2 py-1.5">Line</th>
                   <th className="px-2 py-1.5">Ref</th>
+                  <th className="px-2 py-1.5 text-right">Invoice %</th>
                   <th className="px-2 py-1.5 text-right">This invoice</th>
                   <th className="px-2 py-1.5 text-right">Remaining</th>
                 </tr>
@@ -168,6 +166,9 @@ export function InvoiceConfirmDialog({
                       {formatDocumentNumberForDisplay(line.documentNumber)}
                     </td>
                     <td className="px-2 py-1.5 text-right tabular-nums">
+                      {line.percent}%
+                    </td>
+                    <td className="px-2 py-1.5 text-right tabular-nums">
                       {formatBillingMoney(line.toBeInvoiced, campaign.currency)}
                     </td>
                     <td className="px-2 py-1.5 text-right tabular-nums">
@@ -186,7 +187,15 @@ export function InvoiceConfirmDialog({
           </p>
         ) : null}
 
-        {eligible.length > 0 ? (
+        {separateCount > 1 ? (
+          <fieldset className="space-y-2 rounded-lg border p-3">
+            <legend className="px-1 text-sm font-semibold">Client invoice options</legend>
+            <label className="flex items-center gap-2 text-sm"><input type="radio" name="invoice-grouping" checked={grouping === "combined"} onChange={() => setGrouping("combined")} />One client invoice for all selected rows</label>
+            <label className="flex items-center gap-2 text-sm"><input type="radio" name="invoice-grouping" checked={grouping === "separate"} onChange={() => setGrouping("separate")} />Separate client invoices — {separateCount} invoices, one per selected assignment</label>
+            <p className="text-xs text-muted-foreground">New invoices use the current serial sequence. Percentages refer to original billable amounts.</p>
+          </fieldset>
+        ) : null}
+        {eligible.length > 0 && grouping === "combined" ? (
           <div className="space-y-2 rounded-lg border border-border p-3">
             <Label htmlFor="invoice-confirm-target">New invoice or existing</Label>
             <p className="text-[11px] text-muted-foreground">

@@ -1,6 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { runSeparateInvoices, splitInvoiceSelection } from "@/lib/billing/selected-invoice-batches";
+import { parseInvoiceSliceAllocations } from "@/lib/billing/partial-assignment-invoice";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   approveLineForBilling,
@@ -100,6 +102,41 @@ export async function createInvoiceFromLinesAction(_prev: BillingActionState, fo
   const result = await createInvoiceFromLines(supabase, user.id, parsed.data);
   if (result.ok) revalidateBilling({ campaignId: parsed.data.campaign_id, invoiceId: result.invoiceId });
   return result;
+}
+
+export async function createSelectedClientInvoicesAction(
+  _prev: BillingActionState & { completedCount?: number }, formData: FormData
+): Promise<BillingActionState & { completedCount?: number }> {
+  if (formData.get("invoice_grouping") !== "separate") return createInvoiceFromLinesAction(_prev, formData);
+  const parsed = createInvoiceFromLinesSchema.safeParse(Object.fromEntries(formData.entries()));
+  if (!parsed.success || parsed.data.invoice_mode !== "new") return { ok: false, message: "Separate invoices must use new invoice numbers." };
+  const { supabase, user, error } = await requireAuthUser();
+  if (error || !user) return { ok: false, message: error ?? "Unauthorized" };
+  const detail = await getCampaignOperationalBillingDetail(supabase, parsed.data.campaign_id);
+  if (!detail) return { ok: false, message: "Campaign billing could not be loaded." };
+  const csv = (value?: string) => [...new Set((value ?? "").split(",").map(id => id.trim()).filter(Boolean))];
+  const selection = { line_ids: csv(parsed.data.line_ids), deliverable_ids: csv(parsed.data.deliverable_ids), post_ids: csv(parsed.data.post_ids) };
+  const groups = splitInvoiceSelection(detail.operational_rows, selection);
+  const count = (p: typeof selection) => p.line_ids.length + p.deliverable_ids.length + p.post_ids.length;
+  if (!groups.length || groups.reduce((sum, group) => sum + count(group), 0) !== count(selection)) return { ok: false, message: "Some selected rows are no longer available. Refresh billing and select again." };
+  const allocations = parseInvoiceSliceAllocations(parsed.data.allocations);
+  if (allocations.error) return { ok: false, message: allocations.error };
+  const outcome = await runSeparateInvoices(groups, async group => {
+    const keys = new Set([...group.line_ids.map(id => `assignment:${id}`), ...group.deliverable_ids.map(id => `deliverable:${id}`), ...group.post_ids.map(id => `post:${id}`)]);
+    const result = await createInvoiceFromLines(supabase, user.id, {
+      ...parsed.data, line_ids: group.line_ids.join(","), deliverable_ids: group.deliverable_ids.join(","), post_ids: group.post_ids.join(","),
+      allocations: JSON.stringify(Object.fromEntries([...allocations.allocations].filter(([key]) => keys.has(key)))),
+    });
+    if (result.ok) revalidateBilling({ campaignId: parsed.data.campaign_id, invoiceId: result.invoiceId });
+    return result;
+  });
+  const completedCount = outcome.completed.length;
+  const failure = outcome.failure ? (outcome.failure.message ?? "Invoice generation failed.") : outcome.error;
+  return {
+    ok: !outcome.failure && !outcome.error, completedCount, campaignId: parsed.data.campaign_id,
+    invoiceId: outcome.completed.at(-1)?.invoiceId,
+    message: failure ? `${completedCount} of ${groups.length} client invoices created. Stopped: ${failure} Review the invoice register before retrying.` : `${completedCount} client invoices created using the current invoice number sequence.`,
+  };
 }
 
 export async function recordCollectionPaymentAction(_prev: BillingActionState, formData: FormData): Promise<BillingActionState> {

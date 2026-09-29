@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 
 import {
   InvoiceConfirmDialog,
@@ -19,6 +19,7 @@ import {
   NO_INVOICEABLE_ELIGIBLE_ROWS_MESSAGE,
 } from "@/lib/billing/queue-eligibility";
 import type { OperationalSelectionPayload } from "@/lib/billing/operational-selection";
+import { separateInvoiceCount } from "@/lib/billing/selected-invoice-batches";
 import { toast } from "sonner";
 
 export type InvoiceConfirmFlowMeta = {
@@ -71,18 +72,19 @@ export function useInvoiceConfirmFlow({
   onComplete,
 }: UseInvoiceConfirmFlowOptions) {
   const operationalBillingRef = useRef(operationalBilling);
-  operationalBillingRef.current = operationalBilling;
+  useLayoutEffect(() => { operationalBillingRef.current = operationalBilling; }, [operationalBilling]);
   const percentsRef = useRef(percents);
-  percentsRef.current = percents;
+  useLayoutEffect(() => { percentsRef.current = percents; }, [percents]);
   const metaRef = useRef({ campaignId, campaignName, campaignNo, currency });
-  metaRef.current = { campaignId, campaignName, campaignNo, currency };
+  useLayoutEffect(() => { metaRef.current = { campaignId, campaignName, campaignNo, currency }; }, [campaignId, campaignName, campaignNo, currency]);
   const onCompleteRef = useRef(onComplete);
-  onCompleteRef.current = onComplete;
+  useLayoutEffect(() => { onCompleteRef.current = onComplete; }, [onComplete]);
 
   const { submit, pending } = useOperationalInvoiceCreate({
     onComplete: () => onCompleteRef.current?.(),
   });
 
+  const [separateCount, setSeparateCount] = useState(0);
   const [open, setOpen] = useState(false);
   const [preview, setPreview] = useState<InvoiceConfirmCampaignPreview | null>(null);
   const selectionRef = useRef<OperationalSelectionPayload | undefined>(undefined);
@@ -113,6 +115,7 @@ export function useInvoiceConfirmFlow({
       );
       return false;
     }
+    setSeparateCount(separateInvoiceCount(detail.operational_rows, percentsRef.current, payload));
     selectionRef.current = payload;
     setPreview(nextPreview);
     setOpen(true);
@@ -127,7 +130,7 @@ export function useInvoiceConfirmFlow({
   }, []);
 
   const handleConfirm = useCallback(
-    (mode: InvoiceTargetMode, existingInvoiceId?: string) => {
+    (mode: InvoiceTargetMode, existingInvoiceId?: string, grouping?: "combined" | "separate") => {
       const detail = operationalBillingRef.current;
       const payload = selectionRef.current;
       if (!detail || !payload) return;
@@ -139,6 +142,7 @@ export function useInvoiceConfirmFlow({
         selection: payload,
         mode,
         existingInvoiceId,
+        grouping,
       });
     },
     [submit]
@@ -152,6 +156,7 @@ export function useInvoiceConfirmFlow({
       appendableInvoices={operationalBilling?.appendable_invoices ?? []}
       pending={pending}
       onConfirm={handleConfirm}
+      separateCount={separateCount}
     />
   );
 
