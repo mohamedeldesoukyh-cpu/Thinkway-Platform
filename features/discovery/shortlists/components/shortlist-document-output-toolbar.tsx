@@ -127,7 +127,9 @@ export function ShortlistDocumentOutputToolbar({
         activeTemplateId={exportTemplate}
         onTemplateChange={(id) => onExportTemplateChange(id as ShortlistTemplateVariant)}
         onOpenPreview={() => openSelection({ type: "preview", template: exportTemplate })}
-        formats={SHORTLIST_DOCUMENT_OUTPUT_FORMATS}
+        formats={exportTemplate === "creator-list"
+          ? SHORTLIST_DOCUMENT_OUTPUT_FORMATS.filter((format) => ["html", "pdf"].includes(format.id))
+          : SHORTLIST_DOCUMENT_OUTPUT_FORMATS}
         onExport={(formatId) =>
           openSelection({ type: "export", format: formatId, template: exportTemplate })
         }

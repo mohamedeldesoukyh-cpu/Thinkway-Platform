@@ -333,7 +333,7 @@ export function shortlistDocumentToQuotationDocument(
   return {
     audience: "client",
     source: "shortlist",
-    template: doc.template,
+    template: doc.template === "creator-list" ? "showcase" : doc.template,
     serial: doc.serial,
     name: doc.name,
     currency: "EGP",

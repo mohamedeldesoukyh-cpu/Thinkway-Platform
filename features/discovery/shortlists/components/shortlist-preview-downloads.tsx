@@ -74,6 +74,7 @@ export function ShortlistPreviewDownloads({
           PDF
         </a>
       </Button>
+      {template !== "creator-list" ? <>
       <Button size="sm" variant="outline" asChild>
         <a
           href={buildShortlistExportHref(shortlistId, "word", template, exportOptions)}
@@ -110,6 +111,7 @@ export function ShortlistPreviewDownloads({
           PPTX
         </a>
       </Button>
+      </> : null}
     </div>
   );
 }
