@@ -28,6 +28,11 @@
   --cw-card-shadow: 0 1px 2px rgba(16, 26, 54, 0.04), 0 2px 8px rgba(16, 26, 54, 0.05);
   --cw-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   min-height: 100svh;
+  /* The app shell is a height-constrained flex scroller. Keep this wrapper as
+     tall as its contents so sticky navigation survives past the first screen. */
+  flex: 0 0 auto;
+  width: 100%;
+  min-width: 0;
   background: var(--cw-page-bg);
   color: var(--cw-text);
   font-size: 14px;
@@ -284,8 +289,11 @@
   display: flex;
   gap: 2px;
   overflow-x: auto;
+  overflow-y: hidden;
 }
+.cw .mobile-nav { display: none; }
 .cw .tab {
+  flex: none;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -929,6 +937,8 @@
 }
 
 .cw .main {
+  width: 100%;
+  min-width: 0;
   max-width: 1320px;
   margin: 0 auto;
   padding: 26px 24px 60px;
@@ -1212,6 +1222,7 @@
   border-bottom: 0.8px solid var(--cw-border);
   margin: 18px 0 0;
   overflow-x: auto;
+  overflow-y: hidden;
 }
 .cw .tabs button {
   flex: none;
@@ -1516,6 +1527,47 @@
   }
 }
 @media (max-width: 760px) {
+  .cw .tabsnav__in { display: none; }
+  .cw .mobile-nav {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--cw-text-2);
+  }
+  .cw .mobile-nav select {
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    border: 1px solid var(--cw-border);
+    border-radius: var(--cw-radius-md);
+    padding: 8px 12px;
+    background: #fff;
+    color: var(--cw-text);
+    font-size: 16px;
+  }
+  .cw .tabs {
+    flex-wrap: wrap;
+    overflow: visible;
+    position: sticky;
+    top: 61px;
+    z-index: 19;
+    background: #fff;
+  }
+  .cw .tabs button { min-height: 44px; }
+  .cw .main > *, .cw .tabpane, .cw .wk__body > * { min-width: 0; }
+  .cw .card { padding: 16px; overflow-wrap: anywhere; }
+  .cw .row, .cw .act__row, .cw .wk__hd, .cw .cal__hd { flex-wrap: wrap; }
+  .cw .row__x { max-width: 100%; }
+  .cw .cal__grid, .cw .cal__dow { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+  .cw .cal__c { min-width: 0; padding: 5px 3px; }
+  .cw .cal__dow span { padding: 8px 3px; letter-spacing: 0; }
+  .cw .dl { grid-template-columns: minmax(0, 1fr); }
+  .cw .money { grid-template-columns: repeat(auto-fit, minmax(min(150px, 100%), 1fr)); }
+  .cw .btn { min-height: 44px; white-space: normal; }
+  .cw .reply .inp { min-width: 0; }
   .cw .wk__body {
     grid-template-columns: 1fr;
   }

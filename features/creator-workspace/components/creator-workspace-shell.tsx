@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   CalendarDaysIcon,
@@ -37,6 +37,8 @@ export function CreatorWorkspaceShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const activeHref = navItems.find((item) => isPortalNavActive(pathname, item.href))?.href ?? navItems[0]?.href ?? "";
   const initials = creatorInitials(userLabel);
 
   return (
@@ -81,6 +83,16 @@ export function CreatorWorkspaceShell({
         </div>
       </header>
       <nav className="tabsnav" aria-label="Creator Workspace">
+        <label className="mobile-nav">
+          <span>Workspace section</span>
+          <select value={activeHref} onChange={(event) => router.push(event.target.value)}>
+            {navItems.map((item) => (
+              <option key={item.href} value={item.href}>
+                {item.label}{item.badge ? ` (${item.badge})` : ""}
+              </option>
+            ))}
+          </select>
+        </label>
         <div className="tabsnav__in">
           {navItems.map((item) => {
             const active = isPortalNavActive(pathname, item.href);
