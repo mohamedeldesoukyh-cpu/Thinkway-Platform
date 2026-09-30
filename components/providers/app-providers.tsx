@@ -14,7 +14,7 @@ export function AppProviders({ children }: AppProvidersProps) {
     <ThemeProvider>
       <PwaProvider>
         {/* Flex column fills body under the root layout height lock. */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+        <div data-tw-provider-shell="" className="flex min-h-0 flex-1 flex-col overflow-hidden">
           {children}
         </div>
         <Toaster richColors closeButton position="top-right" />

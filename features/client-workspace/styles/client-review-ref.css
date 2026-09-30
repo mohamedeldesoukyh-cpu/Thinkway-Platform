@@ -42,7 +42,8 @@
     max-height: none !important;
     overflow: visible !important;
   }
-  html[data-tw-cw] [data-tw-app-shell] {
+  html[data-tw-cw] [data-tw-app-shell],
+  html[data-tw-cw] [data-tw-provider-shell] {
     flex: none !important;
     height: auto !important;
     max-height: none !important;
