@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { resolveCreatorPrimaryAvatar } from "./creator-centric";
+import { resolveBrowseCreatorProfileImageUrl } from "../performance/creator-avatar";
 
 const ig = { id: "ig", platform: "instagram", follower_count: 404300,
   profile_picture_url: "https://images.example/ig.jpg", avatar_source: "apify" };
@@ -38,6 +39,13 @@ test("expired higher-audience TikTok avatar falls back to a valid platform image
   assert.equal(resolveCreatorPrimaryAvatar({ accounts: [ig, { ...tt,
     profile_picture_url: "https://p16-sign.tiktokcdn-us.com/avatar.jpg?x-expires=1700000000",
   }] }).url, ig.profile_picture_url);
+});
+
+test("browse hydration preserves expiry before DNA reselects the primary avatar", () => {
+  const expired = "https://p16-sign.tiktokcdn-us.com/avatar.jpg?x-expires=1700000000";
+  const mapped = resolveBrowseCreatorProfileImageUrl({ platform: "tiktok", platformPictureUrl: expired });
+  assert.equal(mapped, expired);
+  assert.equal(resolveCreatorPrimaryAvatar({ accounts: [ig, { ...tt, profile_picture_url: mapped }] }).url, ig.profile_picture_url);
 });
 test("unexpired signed avatar still follows audience priority", () => {
   const url = "https://p16-sign.tiktokcdn-us.com/avatar.jpg?x-expires=4102444800";
