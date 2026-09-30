@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { currentCampaignCreators, type CurrentCampaignLine } from "./current-campaign-roster";
+import { applyLiveCreatorProfile } from "./creator-snapshot";
+import { briefFromSnapshotCreator } from "./creator-brief";
+import { reviewMediaAllowlist, isReviewMediaUrlAllowed } from "./review-media";
+import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
+import type { ClientReviewSourceSnapshot } from "./types";
 
 const line = (id: string, status = "draft", revenue = 55000): CurrentCampaignLine => ({
   id, status, name: id, description: "1× IG Reel + 1× Boosting", platform: "instagram",
@@ -33,4 +38,26 @@ test("empty active roster stays empty and cross currency uses base revenue", () 
   const creators = currentCampaignCreators([], [{ ...line("one"), revenue_base: 50000 }], "USD", 50);
   assert.equal(creators[0].investmentAmount, 1000);
   assert.equal(creators[0].investmentCurrency, "USD");
+});
+
+test("replacement profile details and publications follow the same identity into the review", () => {
+  const [replacement] = currentCampaignCreators([], [line("new")], "EGP", 1);
+  const url = "https://www.instagram.com/new/";
+  const post = "https://www.instagram.com/p/newpost/";
+  const avatar = "https://images.example/new.jpg";
+  const creator = applyLiveCreatorProfile(replacement, {
+    unified_id: "inf:new", influencer_id: "new", display_name: "New creator",
+    bio: "Creator biography", categories: ["Lifestyle"], primaryAvatarUrl: avatar,
+    metrics: Object.fromEntries(["followers", "engagement_rate", "avg_likes", "avg_comments", "avg_views"].map(key => [key, { value: null }])),
+    platforms: [{ id: "ig", platform: "instagram", handle: "new", profile_url: url,
+      recent_publications: [{ url: post, thumbnail_url: "https://images.example/post.jpg" }] }],
+  } as unknown as UnifiedCreatorResult);
+  const brief = briefFromSnapshotCreator(creator);
+  assert.equal(brief.bio, "Creator biography");
+  assert.equal(brief.avatarUrl, avatar);
+  assert.equal(brief.contentFeed[0]?.url, post);
+  assert.equal(creator.investmentAmount, 55000);
+  const allow = reviewMediaAllowlist({ creators: [creator] } as ClientReviewSourceSnapshot);
+  assert.equal(isReviewMediaUrlAllowed(allow, null, post, url), true);
+  assert.equal(isReviewMediaUrlAllowed(allow, "https://unrelated.example/private.jpg", null, null), false);
 });

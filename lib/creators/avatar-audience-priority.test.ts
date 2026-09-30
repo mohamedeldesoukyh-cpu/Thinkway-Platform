@@ -33,3 +33,22 @@ test("manual portrait is preserved and absent counts retain legacy fallback", ()
     { ...tt, follower_count: null }, { ...ig, follower_count: null },
   ] }).url, ig.profile_picture_url);
 });
+
+test("expired higher-audience TikTok avatar falls back to a valid platform image", () => {
+  assert.equal(resolveCreatorPrimaryAvatar({ accounts: [ig, { ...tt,
+    profile_picture_url: "https://p16-sign.tiktokcdn-us.com/avatar.jpg?x-expires=1700000000",
+  }] }).url, ig.profile_picture_url);
+});
+test("unexpired signed avatar still follows audience priority", () => {
+  const url = "https://p16-sign.tiktokcdn-us.com/avatar.jpg?x-expires=4102444800";
+  assert.equal(resolveCreatorPrimaryAvatar({ accounts: [ig, { ...tt, profile_picture_url: url }] }).url, url);
+});
+
+test("expired manual CDN override cannot hide a working stored portrait", () => {
+  const expired = "https://p16-sign.tiktokcdn-us.com/avatar.jpg?x-expires=1700000000";
+  for (const accounts of [[ig, tt], [{ ...ig, follower_count: null }]]) {
+    assert.equal(resolveCreatorPrimaryAvatar({ accounts,
+      storedPrimaryAvatarUrl: expired, storedPrimaryAvatarSource: "manual",
+    }).url, accounts.length === 2 ? tt.profile_picture_url : ig.profile_picture_url);
+  }
+});

@@ -1,8 +1,9 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
-import { hydrateSnapshotCreatorsFromCrm } from "./creator-snapshot";
+import { hydrateSnapshotCreatorsFromUnified } from "./creator-snapshot";
 import { projectCreatorsFromSnapshot } from "./snapshot";
-import type { ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
+import type { ClientReviewRecord, ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
+import { hydrateReviewCampaigns } from "./resolve-review-campaign";
 
 export type CurrentCampaignLine = {
   id: string;
@@ -56,7 +57,7 @@ export function currentCampaignCreators(
   return [...creators.values()];
 }
 
-export async function loadCurrentCampaignRoster(
+export async function loadCurrentCampaignSnapshot(
   db: SupabaseClient,
   campaignId: string,
   snapshot: ClientReviewSourceSnapshot,
@@ -80,8 +81,20 @@ export async function loadCurrentCampaignRoster(
   const rate = lines.some(line => line.status !== "cancelled" && line.currency_code !== currency)
     ? await resolveRateToEgp(db, currency) : 1;
   const creators = currentCampaignCreators(snapshot.creators, lines, currency, rate);
-  const hydrated = await hydrateSnapshotCreatorsFromCrm(db, { ...snapshot, creators });
+  return hydrateSnapshotCreatorsFromUnified(db, { ...snapshot, creators });
+}
+
+export async function loadCurrentCampaignRoster(db: SupabaseClient, campaignId: string, snapshot: ClientReviewSourceSnapshot) {
+  const hydrated = await loadCurrentCampaignSnapshot(db, campaignId, snapshot);
   return projectCreatorsFromSnapshot(hydrated,
-    Object.fromEntries(creators.map(c => [c.creatorId, "accepted" as const])),
+    Object.fromEntries(hydrated.creators.map(c => [c.creatorId, "accepted" as const])),
     { includeCommercial: snapshot.source !== "studio" });
+}
+
+/** Token-gated callers resolve only relationships belonging to their review. */
+export async function loadCurrentCampaignSnapshotForReview(db: SupabaseClient, review: ClientReviewRecord) {
+  if (!review.sourceSnapshot) return null;
+  const [linked] = await hydrateReviewCampaigns(db, [review]);
+  if (!linked.campaignHeaderId) return null;
+  return loadCurrentCampaignSnapshot(db, linked.campaignHeaderId, review.sourceSnapshot);
 }

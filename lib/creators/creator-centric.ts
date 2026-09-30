@@ -261,7 +261,7 @@ export function resolvePrimaryAvatar(candidates: AvatarCandidate[]): {
   // choose the largest linked audience, independently of refresh order or whether
   // a provider photo was copied to our durable storage.
   const manual = candidates.find(
-    (candidate) => candidate.source === "manual" && isDisplayableAvatarUrl(candidate.url)
+    (candidate) => candidate.source === "manual" && isUsableAvatarUrl(candidate.url)
   );
   if (manual) return { url: manual.url!.trim(), source: manual.source };
   const rankedPlatforms = candidates.filter(
@@ -297,7 +297,8 @@ export function resolvePrimaryAvatar(candidates: AvatarCandidate[]): {
     const bestStorage = avatarStorageQualityRank(best.url);
 
     if (
-      candidatePriority < bestPriority ||
+      (candidateUsable && !bestUsable) ||
+      (candidateUsable === bestUsable && candidatePriority < bestPriority) ||
       (candidatePriority === bestPriority && best.source === "placeholder") ||
       (candidatePriority === bestPriority && candidateUsable && !bestUsable) ||
       (candidatePriority === bestPriority &&
