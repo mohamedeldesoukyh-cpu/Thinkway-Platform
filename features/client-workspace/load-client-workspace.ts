@@ -693,6 +693,13 @@ export async function loadClientWorkspace(
     quotationExtensionCount: resolvedForFlags?.extensionWaves.length ?? 0,
   });
   view.journey = { ...journey, ...flags, clientSelection: clientSelectionFreeze };
+  const currentCampaignId = journey.campaignHeaderId ?? activeReview.campaignHeaderId;
+  if (!options.documentRequest && !picked.historical && !linkExpired && activeReview.status === "approved" && currentCampaignId && activeReview.sourceSnapshot) {
+    const { loadCurrentCampaignRoster } = await import("./current-campaign-roster");
+    view.currentCampaignCreators = await loadCurrentCampaignRoster(
+      service ?? db, currentCampaignId, activeReview.sourceSnapshot
+    );
+  }
   view.visibleSections = visibleClientWorkspaceSections(view);
   const entitlementForView = await loadEntitlementForReview(db as never, {
     quotationId: view.journey.quotationId ?? activeReview.quotationId,

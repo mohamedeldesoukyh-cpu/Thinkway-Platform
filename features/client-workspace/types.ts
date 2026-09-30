@@ -456,6 +456,8 @@ export type CommercialIoSnapshot = {
   message: string;
 };
 export type ClientWorkspaceView = {
+  /** Active campaign display; approved quotation/document creators stay immutable. */
+  currentCampaignCreators?: ClientCreatorCard[];
   commercialIo?: CommercialIoSnapshot;
   review: ClientReviewRecord;
   newerReviewNumber: number | null;

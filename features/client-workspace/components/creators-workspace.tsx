@@ -63,7 +63,7 @@ const STATUS_FILTERS: Array<{ id: "all" | "recommended" | "selected" | "pending"
 ];
 
 export function CreatorsWorkspace({
-  view,
+  view: sourceView,
   token,
   intent = "decide",
 }: {
@@ -71,6 +71,10 @@ export function CreatorsWorkspace({
   token: string;
   intent?: "explore" | "decide";
 }) {
+  const currentCampaign = sourceView.currentCampaignCreators !== undefined;
+  const view = currentCampaign
+    ? { ...sourceView, creators: sourceView.currentCampaignCreators!, canDecide: false }
+    : sourceView;
   const router = useRouter();
   const {
     selection: sharedSelection,
@@ -92,13 +96,15 @@ export function CreatorsWorkspace({
   const [note, setNote] = useState("");
   const [detailClosed, setDetailClosed] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const selection = sharedSelection;
+  const selection = currentCampaign
+    ? Object.fromEntries(view.creators.map(c => [c.creatorId, "accepted" as const]))
+    : sharedSelection;
   const explore = intent === "explore";
   const strategicOnly = view.review.source === "studio";
   const pendingIds = new Set(view.journey?.pendingCommercialApprovalCreatorIds ?? []);
   const confirmed = Boolean(view.journey?.selectionConfirmed);
   const canSelectCreator = (creatorId: string) =>
-    shortlistCreatorSelectEnabled({
+    !currentCampaign && shortlistCreatorSelectEnabled({
       canDecide: view.canDecide,
       selectionConfirmed: confirmed,
       pendingCommercialApproval: pendingIds.has(creatorId),
@@ -106,7 +112,7 @@ export function CreatorsWorkspace({
   const canSelect = explore
     ? shortlistCreatorSelectEnabled({ canDecide: view.canDecide, selectionConfirmed: confirmed })
     : view.creators.some((creator) => canSelectCreator(creator.creatorId));
-  const roster = explore
+  const roster = explore || currentCampaign
     ? view.creators
     : yourSelectionRoster(view.creators, selection, {
         selectionConfirmed: confirmed,
@@ -293,7 +299,13 @@ export function CreatorsWorkspace({
 
   return (
     <div className="creators-page" ref={rootRef}>
-      {explore ? (
+      {currentCampaign ? (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <p className="ck">Current campaign creators</p>
+          <h2>Creators in your campaign</h2>
+          <p className="note">This list reflects the current campaign assignments, including additions and removals. The original approved quotation and IO remain in Commercial. Changes to an approved IO require an amendment for approval.</p>
+        </div>
+      ) : explore ? (
         <div className="card" style={{ marginBottom: 16 }}>
           <p className="ck">Creator shortlist</p>
           <h2>What creators does Thinkway recommend?</h2>
@@ -321,8 +333,9 @@ export function CreatorsWorkspace({
         token={token}
         selection={selection}
         variant="bar"
-        showBulkControls={explore && !confirmed}
-        barAction={explore ? "continue" : confirmed ? "none" : "approve"}
+        showBulkControls={!currentCampaign && explore && !confirmed}
+        showActions={!currentCampaign}
+        barAction={currentCampaign ? "none" : explore ? "continue" : confirmed ? "none" : "approve"}
         onSelectAll={() => bulk("accepted")}
         onClear={() => bulk("in_review")}
       />
@@ -351,7 +364,7 @@ export function CreatorsWorkspace({
         </div>
       ) : null}
       <p className="note" style={{ marginBottom: 12 }}>
-        {explore
+        {currentCampaign ? `${view.creators.length} creators currently assigned to this campaign.` : explore
           ? `${rosterHeadline(view.creators.length)}. Select the creators you want, then Continue to Your Selection. This shortlist stays available even after creators are quoted.`
           : confirmed
             ? pendingIds.size > 0
@@ -399,8 +412,8 @@ export function CreatorsWorkspace({
           }}
           onOpenReport={() => setReportOpen(true)}
           cpm={view.mediaPlanSummary.creatorForecasts[selected.creatorId]?.cpm}
-          selectionConfirmed={confirmed}
-          commerciallyApproved={isValidClientCommercialApproval({
+          selectionConfirmed={!currentCampaign && confirmed}
+          commerciallyApproved={!currentCampaign && isValidClientCommercialApproval({
             quotationStage: view.journey?.quotationStage ?? "",
             selectedCount: counts.accepted,
           })}
@@ -510,8 +523,8 @@ export function CreatorsWorkspace({
                   <span className={statusClass(state)}>
                     {clientStatusDisplay({
                       selection: state,
-                      selectionConfirmed: Boolean(view.journey?.selectionConfirmed),
-                      commerciallyApproved: isValidClientCommercialApproval({
+                      selectionConfirmed: !currentCampaign && Boolean(view.journey?.selectionConfirmed),
+                      commerciallyApproved: !currentCampaign && isValidClientCommercialApproval({
                         quotationStage: view.journey?.quotationStage ?? "",
                         selectedCount: counts.accepted,
                       }),
@@ -592,8 +605,8 @@ export function CreatorsWorkspace({
               }}
               onOpenReport={() => setReportOpen(true)}
               cpm={view.mediaPlanSummary.creatorForecasts[selected.creatorId]?.cpm}
-              selectionConfirmed={confirmed}
-              commerciallyApproved={isValidClientCommercialApproval({
+              selectionConfirmed={!currentCampaign && confirmed}
+              commerciallyApproved={!currentCampaign && isValidClientCommercialApproval({
                 quotationStage: view.journey?.quotationStage ?? "",
                 selectedCount: counts.accepted,
               })}
