@@ -76,9 +76,8 @@
     background: var(--page, #f4f6fb);
   }
   .tw-review header.bar {
-    position: sticky;
-    top: 0;
-    z-index: 210;
+    position: static;
+    z-index: auto;
   }
 }
 
@@ -2431,11 +2430,19 @@
     z-index:120;
     background: var(--page, #f4f6fb);
   }
+  /* The campaign header scrolls away so it cannot cover the pinned tabs. */
   .tw-review header.bar{
-    position:sticky;
-    top:0;
-    z-index:130;
+    position:static;
+    z-index:auto;
     background: var(--page, #f4f6fb);
+  }
+  .tw-review nav.tabs .row{
+    flex-wrap:nowrap;
+    overscroll-behavior-x:contain;
+  }
+  .tw-review nav.tabs button.tab{
+    flex-shrink:0;
+    min-height:44px;
   }
   .tw-review .sumbar{
     position: static !important;
