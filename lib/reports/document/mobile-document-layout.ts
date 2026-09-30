@@ -27,6 +27,10 @@ export const MOBILE_DOCUMENT_STYLES = `
   .fees{max-width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
   .fees table{min-width:620px}
   .sc-top{flex-wrap:wrap}
+  .terms-grid{columns:1}
+  .term p,.term h4,.full-term p,.terms-list li,.qcard p,.qack p,.approve-item p{font-size:14px;line-height:1.6}
+  .page-head{flex-direction:column}
+  .page-head .logo{order:-1}
 }
 `;
 
