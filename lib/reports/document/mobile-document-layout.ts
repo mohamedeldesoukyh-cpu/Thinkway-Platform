@@ -31,6 +31,10 @@ export const MOBILE_DOCUMENT_STYLES = `
   .term p,.term h4,.full-term p,.terms-list li,.qcard p,.qack p,.approve-item p{font-size:14px;line-height:1.6}
   .page-head{flex-direction:column}
   .page-head .logo{order:-1}
+  .company{flex-direction:column;align-items:flex-start;gap:16px}
+  .company .addr{text-align:left}
+  .logo{flex-shrink:0}
+  .logo .wm{white-space:nowrap}
 }
 `;
 
