@@ -30,6 +30,7 @@ export async function fetchCampaignLines(supabase: SupabaseClient, campaignId: s
     .from("campaign_lines")
     .select("*")
     .eq("campaign_header_id", campaignId)
+    .neq("status", "cancelled")
     .order("document_number");
 }
 
@@ -47,7 +48,7 @@ export async function fetchCampaignInfluencers(
         line:${REL.campaignInfluencers.campaignLine}(document_number)
       `
     )
-    .eq("campaign_header_id", campaignId);
+    .eq("campaign_header_id", campaignId).neq("status", "cancelled");
 }
 
 export async function fetchCampaignDeliverables(

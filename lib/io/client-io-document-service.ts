@@ -60,12 +60,16 @@ async function captureAssignmentSnapshot(
       "id, document_number, name, description, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, revenue_fx_override, sort_order"
     )
     .eq("campaign_header_id", campaignHeaderId)
+    .neq("status", "cancelled")
     .in("id", selectedCampaignLineIds)
     .order("sort_order", { ascending: true });
 
   if (linesError) {
     throw new Error(linesError.message);
   }
+
+  if (!lines?.length) throw new Error("Select at least one active assignment before generating the Client IO.");
+  if (lines.length !== selectedCampaignLineIds.length) throw new Error("Some selected assignments were removed. Update the assignment selection before generating.");
 
   const typedLines = (lines ?? []) as Array<{
     id: string;

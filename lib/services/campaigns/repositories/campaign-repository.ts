@@ -184,6 +184,7 @@ export async function listCampaignHeaders(
     `,
       { count: "exact" }
     )
+    .neq("lines.status", "cancelled")
     .order("created_at", { ascending: false });
 
   if (params.search) {
@@ -346,10 +347,11 @@ export async function fetchCampaignKpiSourceData(supabase: SupabaseClient) {
       .select(
         "campaign_header_id, revenue, cost, profit, billing_status, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat"
       )
+      .neq("status", "cancelled")
       .limit(5000),
     supabase
       .from("campaign_influencers")
-      .select("id, campaign_header_id")
+      .select("id, campaign_header_id").neq("status", "cancelled")
       .limit(20000),
   ]);
 }
@@ -402,6 +404,7 @@ export async function fetchSourceCampaignLines(
     .from("campaign_lines")
     .select("*")
     .eq("campaign_header_id", sourceId)
+    .neq("status", "cancelled")
     .order("document_number");
 }
 
@@ -433,6 +436,7 @@ export async function fetchCampaignLineById(
       "influencer_id, start_date, end_date, revenue_locked, cost_locked, revenue, cost, revenue_before_vat, cost_before_vat, vat_locked, document_number, finance_override_until, vendor_io_id, vendor_assignment_locked, metadata, operational_status, invoice_id, source_quotation_item_id, agency_fee_percent, agency_fee_amount, usage_rights_amount, usage_rights_cost, currency_code, fx_rate, revenue_vat_percent, cost_vat_percent, revenue_vat_exempt, cost_vat_exempt"
     )
     .eq("id", lineId)
+    .neq("status", "cancelled")
     .eq("campaign_header_id", campaignId)
     .maybeSingle();
 }

@@ -4,6 +4,7 @@ import { test } from "node:test";
 import {
   isClientIoComposerEditable,
   isClientIoRegenerateAllowed,
+  replaceClientIoAssignments,
 } from "./client-io-assignments";
 import {
   buildClientIoAssignmentSnapshot,
@@ -24,6 +25,26 @@ test("regenerate allowed only pre-send", () => {
   assert.equal(isClientIoRegenerateAllowed("generated"), true);
   assert.equal(isClientIoRegenerateAllowed("sent"), false);
   assert.equal(isClientIoRegenerateAllowed("under_client_review"), false);
+});
+
+test("removed assignment cannot be selected into a new Client IO; existing selection survives validation failure", async () => {
+  let writes = 0;
+  const rows = [{ id: "active", status: "active" }, { id: "removed", status: "cancelled" }];
+  const db = { from(table: string) {
+    let selected = rows;
+    const q = {
+      select() { return q; }, eq() { return q; },
+      neq(key: string, value: string) { assert.equal(key, "status"); selected = selected.filter(row => row.status !== value); return q; },
+      in(_key: string, ids: string[]) { selected = selected.filter(row => ids.includes(row.id)); return q; },
+      delete() { writes++; return q; }, insert() { writes++; return q; },
+      then(resolve: (value: unknown) => unknown) { return Promise.resolve({ data: table === "campaign_lines" ? selected : [], error: null }).then(resolve); },
+    };
+    return q;
+  } };
+  await assert.rejects(replaceClientIoAssignments(db as never, { clientIoId: "io", campaignHeaderId: "campaign", campaignLineIds: ["removed"] }));
+  assert.equal(writes, 0);
+  assert.deepEqual(await replaceClientIoAssignments(db as never, { clientIoId: "io", campaignHeaderId: "campaign", campaignLineIds: ["active"] }), ["active"]);
+  assert.equal(writes, 2);
 });
 
 test("filterLinesBySelectedIds returns empty when none selected", () => {

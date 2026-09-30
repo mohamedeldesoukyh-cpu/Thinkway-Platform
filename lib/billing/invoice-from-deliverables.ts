@@ -347,7 +347,7 @@ export async function insertPackageAssignmentLineItems(
     .select(
       `${CAMPAIGN_LINE_INVOICE_COMMERCIAL_SELECT}, billing_status, vendor_io_id`
     )
-    .in("id", lineIds);
+    .in("id", lineIds).neq("status", "cancelled");
 
   if (error) {
     return { error: error.message, inserted: 0 };
