@@ -895,7 +895,7 @@ export function AssignmentSafeGrid({
                           <AssignmentGridCell columnId="actions" className={cn(SAFE_GRID_TD, "text-center")}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="mx-auto size-7" aria-label={`Actions for ${line.name}`}><MoreHorizontalIcon className="size-3.5" /></Button></DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
+                              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
                                 <DropdownMenuItem onSelect={() => onEditLine(line)}>Replace creator / edit</DropdownMenuItem>
                                 <DropdownMenuItem variant="destructive" onSelect={() => setRemovingLine(line)}>Remove from campaign</DropdownMenuItem>
                               </DropdownMenuContent>
