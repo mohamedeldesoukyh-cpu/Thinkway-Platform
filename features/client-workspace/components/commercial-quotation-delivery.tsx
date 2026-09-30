@@ -67,7 +67,7 @@ export function CommercialQuotationDelivery({
         address.
       </p>
       <div className="sumbar-cta" style={{ marginTop: 12 }}>
-        <a className="btn sec cm-icon" aria-label="View quotation" title="View quotation" href={`${downloadHref}&view=1`} target="_blank" rel="noopener noreferrer"><CommercialViewIcon /></a>
+        <a className="btn sec cm-icon" aria-label="View quotation" title="View quotation" href={`${downloadHref}&view=1&format=html`} target="_blank" rel="noopener noreferrer"><CommercialViewIcon /></a>
         <button type="button" className="btn pri" onClick={() => void download()} disabled={downloading}>
           {downloading ? "Preparing quotation…" : "Download PDF"}
         </button>
