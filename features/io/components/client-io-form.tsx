@@ -231,9 +231,9 @@ export function ClientIoForm({
 
   useEffect(() => {
     if (!generateState.message) return;
-    if (generateState.ok) toast.success(generateState.message);
+    if (generateState.ok) { toast.success(generateState.message); router.refresh(); }
     else toast.error(generateState.message);
-  }, [generateState]);
+  }, [generateState, router]);
 
   // Keep hero toolbar Send in sync with live recipient edits (including multi-add).
   useEffect(() => {
@@ -397,9 +397,11 @@ export function ClientIoForm({
             outside client-io-save — nested forms break submit (DEF-R22-01).
           */}
           <ClientIoAssignmentComposer
+            key={row.id}
             clientIoId={row.id}
             campaignHeaderId={row.campaign_header_id}
             status={row.status}
+            isSuperseded={row.is_superseded}
             currencyCode={currencyCode}
             assignments={assignments}
             selectedAssignmentIds={row.selected_assignment_ids ?? []}

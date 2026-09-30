@@ -71,6 +71,7 @@ import type { ClientIoStatus, VendorIoStatus } from "@/features/io/types";
 type IoActionState = {
   ok: boolean;
   message?: string;
+  amendmentId?: string;
 };
 
 async function requireAuthUser() {
@@ -435,7 +436,7 @@ export async function createClientIoAmendmentAction(
     clientIoId: id,
     actorId: user.id,
     reason: reason || null,
-    generateDocument: true,
+    generateDocument: false,
   });
 
   if (!result.ok) {
@@ -462,7 +463,8 @@ export async function createClientIoAmendmentAction(
     ok: true,
     message: result.generated
       ? `Amendment ${result.documentNumber} created and document generated.`
-      : `Amendment ${result.documentNumber} created. Generate the document to continue.`,
+      : `Amendment ${result.documentNumber} created. Select assignments, save the selection, then generate the document.`,
+    amendmentId: result.newClientIoId,
   };
 }
 

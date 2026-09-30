@@ -235,6 +235,7 @@ export function ClientIoTab({
       forceRegisterOpen={Boolean(forceOpenRegister)}
     >
       <ClientIoForm
+        key={io.id}
         row={io}
         recipients={recipients}
         sendHistory={sendHistory}

@@ -99,7 +99,7 @@ export async function loadClientCampaignExecution(
       supabase
         .from("campaign_lines")
         .select("id, name, metadata")
-        .eq("campaign_header_id", headerId),
+        .eq("campaign_header_id", headerId).neq("status", "cancelled"),
       supabase
         .from("assignment_deliverables")
         .select("id, campaign_line_id, platform, deliverable_type, quantity, live_date, metadata")
@@ -125,6 +125,7 @@ export async function loadClientCampaignExecution(
     if (strict && [linesResult, deliverablesResult, publicationsResult, influencersResult, headerResult].some(result => result.error)) throw new Error("Schedule records unavailable");
     const lines = (linesResult.data ?? []) as LineRow[];
     const lineIds = lines.map((line) => line.id);
+    const activeLineIds = new Set(lineIds);
     let posts: PostRow[] = [];
     if (lineIds.length > 0) {
       const postsResult = await supabase
@@ -148,13 +149,13 @@ export async function loadClientCampaignExecution(
         name: line.name?.trim() || "Assignment",
         metadata: line.metadata,
       })),
-      influencers: ((influencersResult.data ?? []) as InfluencerRow[]).map((row) => ({
+      influencers: ((influencersResult.data ?? []) as InfluencerRow[]).filter(row => activeLineIds.has(row.campaign_line_id ?? "")).map((row) => ({
         campaignLineId: row.campaign_line_id,
         influencerId: row.influencer_id,
         displayName: influencerName(row),
         avatarUrl: influencerAvatar(row),
       })),
-      deliverables: ((deliverablesResult.data ?? []) as DeliverableRow[]).map((row) => ({
+      deliverables: ((deliverablesResult.data ?? []) as DeliverableRow[]).filter(row => activeLineIds.has(row.campaign_line_id)).map((row) => ({
         id: row.id,
         campaignLineId: row.campaign_line_id,
         platform: row.platform ?? "",
@@ -205,7 +206,7 @@ export async function loadClientCampaignExecution(
     };
 
     const execution = projectClientCampaignExecution(headerId, source);
-    const deliverableById = new Map(((deliverablesResult.data ?? []) as DeliverableRow[]).map(row => [row.id, row]));
+    const deliverableById = new Map(((deliverablesResult.data ?? []) as DeliverableRow[]).filter(row => activeLineIds.has(row.campaign_line_id)).map(row => [row.id, row]));
     return { ...execution, posts: execution.posts.map(post => {
       const deliverable = deliverableById.get(post.assignmentDeliverableId ?? "");
       const dates = readContentReviewDates(deliverable?.metadata, post.sequenceNumber);

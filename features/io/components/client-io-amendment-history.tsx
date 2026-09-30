@@ -1,13 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useState } from "react";
-import { toast } from "sonner";
-
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-workspace-section";
-import { DETAIL_FORM_INPUT_CLASS } from "@/features/campaigns/components/operational-detail-panel";
-import { createClientIoAmendmentAction } from "@/features/io/actions";
+import { ClientIoCreateAmendment } from "./client-io-create-amendment";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import {
   formatClientIoAmendmentLabel,
@@ -15,30 +9,12 @@ import {
 } from "@/lib/io/client-io-amendment";
 import type { ClientIoRow, ClientIoVersionSummary } from "@/features/io/types";
 
-const INITIAL_STATE = { ok: false } as const;
-
 type Props = {
   tip: ClientIoRow;
   versions: ClientIoVersionSummary[];
 };
 
 export function ClientIoAmendmentHistory({ tip, versions }: Props) {
-  const [reason, setReason] = useState("");
-  const [state, action, pending] = useActionState(
-    createClientIoAmendmentAction,
-    INITIAL_STATE
-  );
-
-  useEffect(() => {
-    if (!state.message) return;
-    if (state.ok) {
-      toast.success(state.message);
-      setReason("");
-    } else {
-      toast.error(state.message);
-    }
-  }, [state]);
-
   const canAmend = isClientIoAmendmentAllowed(tip.status, tip.is_superseded);
   const ordered = [...versions].sort((a, b) => a.revision_number - b.revision_number);
 
@@ -92,26 +68,7 @@ export function ClientIoAmendmentHistory({ tip, versions }: Props) {
         </ul>
 
         {canAmend ? (
-          <form action={action} className="space-y-2 rounded-md border border-border/70 p-3">
-            <input type="hidden" name="id" value={tip.id} />
-            <input type="hidden" name="campaign_header_id" value={tip.campaign_header_id} />
-            <p className="text-xs font-medium text-foreground">Create amendment</p>
-            <p className="text-[11px] text-muted-foreground">
-              Freezes {tip.document_number ?? "this tip"} and creates the next{" "}
-              <span className="font-mono">/A{Math.max(1, tip.revision_number + 1)}</span> tip.
-            </p>
-            <Input
-              name="reason"
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder="Reason (optional)"
-              className={DETAIL_FORM_INPUT_CLASS}
-              disabled={pending}
-            />
-            <Button type="submit" size="sm" variant="outline" disabled={pending}>
-              {pending ? "Creating…" : "Create amendment"}
-            </Button>
-          </form>
+          <ClientIoCreateAmendment clientIoId={tip.id} campaignHeaderId={tip.campaign_header_id} />
         ) : tip.is_superseded ? (
           <p className="text-xs text-amber-800 dark:text-amber-200">
             This version is superseded and immutable. Open the current tip to amend.

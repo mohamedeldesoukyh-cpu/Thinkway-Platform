@@ -4,6 +4,7 @@ import { campaignMoney, CampaignMoneyTotal } from "@/features/campaigns/componen
 import { assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
 
 import { CreatorNameStack } from "@/components/creator/creator-name-stack";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,8 @@ import { DETAIL_FORM_INPUT_CLASS } from "@/features/campaigns/components/operati
 import { updateAssignmentCommercialNotesAction } from "@/features/campaigns/actions";
 import { saveClientIoAssignmentsAction } from "@/features/io/actions";
 import { isClientIoComposerEditable } from "@/lib/io/client-io-assignments";
+import { isClientIoAmendmentAllowed } from "@/lib/io/client-io-amendment";
+import { ClientIoCreateAmendment } from "./client-io-create-amendment";
 import { resolveCreatorIdentity } from "@/lib/text/decode-html-entities";
 import type { ClientIoStatus } from "@/features/io/types";
 
@@ -41,6 +44,7 @@ type Props = {
   clientIoId: string;
   campaignHeaderId: string;
   status: ClientIoStatus;
+  isSuperseded?: boolean;
   currencyCode: string;
   assignments: ClientIoComposerAssignment[];
   selectedAssignmentIds: string[];
@@ -50,11 +54,13 @@ export function ClientIoAssignmentComposer({
   clientIoId,
   campaignHeaderId,
   status,
+  isSuperseded = false,
   currencyCode,
   assignments,
   selectedAssignmentIds,
 }: Props) {
-  const editable = isClientIoComposerEditable(status);
+  const router = useRouter();
+  const editable = !isSuperseded && isClientIoComposerEditable(status);
   const [selected, setSelected] = useState<Set<string>>(
     () => new Set(selectedAssignmentIds)
   );
@@ -99,9 +105,9 @@ export function ClientIoAssignmentComposer({
 
   useEffect(() => {
     if (!saveState.message) return;
-    if (saveState.ok) toast.success(saveState.message);
+    if (saveState.ok) { toast.success(saveState.message); router.refresh(); }
     else toast.error(saveState.message);
-  }, [saveState]);
+  }, [saveState, router]);
 
   const selectedPayload = useMemo(
     () => JSON.stringify([...selected]),
@@ -204,9 +210,11 @@ export function ClientIoAssignmentComposer({
           </div>
         ) : (
           <p className="text-xs text-amber-800 dark:text-amber-200">
-            Selection is locked after send. Amendments (Slice 2.2.B) will create a new version.
+            {isSuperseded ? "This is a previous version. Open the current Client IO to edit its assignments." : "This issued Client IO is locked. Create an amendment to change its assignments."}
           </p>
         )}
+
+        {isClientIoAmendmentAllowed(status, isSuperseded) ? <ClientIoCreateAmendment clientIoId={clientIoId} campaignHeaderId={campaignHeaderId} /> : null}
 
         <ul className="divide-y divide-border/60 rounded-md border border-border/70">
           {assignments.map((row) => {
