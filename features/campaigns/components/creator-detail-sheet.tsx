@@ -168,6 +168,8 @@ type Props = {
    * when the record arrives. Nothing here is invented: it is the identity from
    * the card that was clicked.
    */
+  /** Caller just resolved core DNA; avoid fetching it twice on initial open. */
+  coreDetailLoaded?: boolean;
   pendingIdentity?: {
     displayName: string;
     handle?: string | null;
@@ -875,6 +877,7 @@ export function CreatorDetailSheet({
   contextSlot,
   assignLabel = "Assign to line",
   pendingIdentity = null,
+  coreDetailLoaded = false,
 }: Props) {
   const router = useRouter();
   const [childCreator, setChildCreator] = useState<UnifiedCreatorResult | null>(null);
@@ -976,7 +979,7 @@ export function CreatorDetailSheet({
 
       void (async () => {
         const phase1 = startLoadTimer("creator-detail.sheet.phase1-core");
-        const coreCreator = await getUnifiedCreatorCoreDetailAction(unifiedId);
+        const coreCreator = coreDetailLoaded ? creator : await getUnifiedCreatorCoreDetailAction(unifiedId);
         phase1.end({ ok: Boolean(coreCreator) });
         if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
 

@@ -463,7 +463,7 @@ function QuotationWorkspaceContent({
     const selected = detail.items.filter(item => selectedIds.has(item.id));
     if (selected.length > MAX_CREATOR_COMPARE) { toast.error(`Compare up to ${MAX_CREATOR_COMPARE} creators at a time.`); return; }
     try {
-      const loaded = await Promise.all(selected.map(fetchQuotationItemCreatorDetail));
+      const loaded = await Promise.all(selected.map((item) => fetchQuotationItemCreatorDetail(item)));
       if (loaded.some(creator => !creator)) { toast.error("Could not load all selected creators. Please try again."); return; }
       const unique = [...new Map(loaded.filter(creator => creator !== null).map(creator => [creator.unified_id, creator])).values()];
       if (unique.length < 2) { toast.error("Select at least two different creators to compare."); return; }
