@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode, type CSSProperties } from "react";
 import { CREATOR_COUNTRY_OPTIONS as COUNTRY_OPTIONS } from "@/lib/creators/country-options";
 import { createPortal } from "react-dom";
 
@@ -97,6 +97,8 @@ type Props = {
   body: ReactNode;
   similar: DiscoverySuiteCreatorProfileSimilarItem[];
   similarLoading: boolean;
+  renderSimilarAction?: (id: string, content: ReactNode) => ReactNode;
+  stackDepth?: number;
   onClose: () => void;
   /** When true, scrim / Escape must not dismiss (nested dialogs open). */
   blockDismiss: boolean;
@@ -187,7 +189,9 @@ function InvestmentScoreBlock({
 function SimilarRail({
   similar,
   loading,
+  renderAction,
 }: {
+  renderAction?: (id: string, content: ReactNode) => ReactNode;
   similar: DiscoverySuiteCreatorProfileSimilarItem[];
   loading: boolean;
 }) {
@@ -199,8 +203,8 @@ function SimilarRail({
   }
   return (
     <>
-      {similar.slice(0, 8).map((item) => (
-        <div key={item.unifiedId} className="tw-sim">
+      {similar.slice(0, 8).map((item) => { const content = (
+        <div className="tw-sim">
           {item.avatarUrl ? (
             <CreatorAvatarImage
               avatarUrl={item.avatarUrl}
@@ -222,7 +226,7 @@ function SimilarRail({
           </span>
           <span className="sc">{Math.round(item.score)}</span>
         </div>
-      ))}
+      ); return <div key={item.unifiedId}>{renderAction ? renderAction(item.unifiedId, content) : content}</div>; })}
       <div className="tw-hint">
         Similarity is audience overlap plus category. Each row carries its own refresh date.
       </div>
@@ -267,14 +271,26 @@ export function DiscoverySuiteCreatorProfile({
   body,
   similar,
   similarLoading,
+  renderSimilarAction,
+  stackDepth = 0,
   onClose,
   blockDismiss,
 }: Props) {
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.activeElement as HTMLElement | null;
+    rootRef.current?.querySelector<HTMLButtonElement>('button[aria-label="Close"]')?.focus();
+    return () => { if (previous?.isConnected) previous.focus(); };
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key !== "Escape") return;
-      if (blockDismiss) return;
+      if (blockDismiss || event.defaultPrevented) return;
+      const roots = document.querySelectorAll(".tw-cp-root");
+      if (roots[roots.length - 1] !== rootRef.current) return;
+      if (document.querySelector('[role="menu"][data-state="open"]')) return;
       event.preventDefault();
       onClose();
     }
@@ -289,7 +305,7 @@ export function DiscoverySuiteCreatorProfile({
     normalizeCountryCode(resolveCountryCode(metaLine.split("·")[0]));
 
   return createPortal(
-    <div className="discovery-suite tw-cp-root">
+    <div ref={rootRef} className="discovery-suite tw-cp-root" data-creator-stack-depth={stackDepth} style={{ "--creator-stack-offset": `${Math.min(stackDepth, 5) * 24}px`, zIndex: 92 + stackDepth } as CSSProperties}>
       <div
         className="tw-scrim"
         onClick={() => {
@@ -429,7 +445,7 @@ export function DiscoverySuiteCreatorProfile({
             <div className="tw-lbl" style={{ marginBottom: 8 }}>
               Similar creators
             </div>
-            <SimilarRail similar={similar} loading={similarLoading} />
+            <SimilarRail similar={similar} loading={similarLoading} renderAction={renderSimilarAction} />
           </div>
         </div>
       </div>

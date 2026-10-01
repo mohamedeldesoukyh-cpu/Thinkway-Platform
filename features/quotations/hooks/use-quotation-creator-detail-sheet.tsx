@@ -34,6 +34,8 @@ function invalidateCreatorPlatformCaches(creator: UnifiedCreatorResult): void {
  * a growing dual-pool cache (fetched creators + any shortlist/search pools passed in).
  */
 export function useQuotationCreatorDetailSheet(options?: {
+  quotationId?: string;
+  canAdd?: boolean;
   onCreatorPlatformsChanged?: () => void;
   /** Extra pools (e.g. linked shortlist creators) searched before network fetch. */
   extraPools?: Array<Iterable<UnifiedCreatorResult> | null | undefined>;
@@ -112,6 +114,7 @@ export function useQuotationCreatorDetailSheet(options?: {
 
   const detailSheet = (
     <CreatorDetailSheet
+      similarTarget={options?.quotationId ? {kind: "quotation", id: options.quotationId, canAdd: options.canAdd} : undefined}
       creator={detailCreator}
       open={detailOpen}
       onOpenChange={handleOpenChange}

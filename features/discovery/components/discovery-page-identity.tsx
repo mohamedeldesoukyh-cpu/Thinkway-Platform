@@ -118,6 +118,7 @@ export const DISCOVERY_PAGE_IDENTITY: Record<DiscoveryPageKey, DiscoveryPageIden
 
 export const DISCOVERY_SUB_NAV_PAGES: DiscoveryPageIdentity[] = [
   DISCOVERY_PAGE_IDENTITY.search,
+  DISCOVERY_PAGE_IDENTITY.compare,
   DISCOVERY_PAGE_IDENTITY.intelligence,
   DISCOVERY_PAGE_IDENTITY.shortlists,
   DISCOVERY_PAGE_IDENTITY.quotations,

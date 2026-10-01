@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useEscapeClearSelection } from "@/lib/hooks/use-escape-clear-selection";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
@@ -172,6 +173,7 @@ export function ShortlistWorkspace({
   const [isPending, startTransition] = useTransition();
   const confirmDelete = useConfirmDelete();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  useEscapeClearSelection(selectedIds.size > 0, () => setSelectedIds(new Set()));
   const [moveOpen, setMoveOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<"search" | "paste">("search");
@@ -1177,6 +1179,7 @@ export function ShortlistWorkspace({
       />
 
       <CreatorDetailSheet
+        similarTarget={{kind: "shortlist", id: detail.id, canAdd: editable}}
         creator={detailCreator}
         open={detailOpen}
         onOpenChange={onDetailOpenChange}
