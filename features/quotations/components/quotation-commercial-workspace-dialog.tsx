@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Columns3Icon,
   Loader2Icon,
@@ -253,7 +253,7 @@ export function QuotationCommercialWorkspaceDialog({
   const [history, setHistory] = useState<CommercialDraftHistoryState>(() =>
     createCommercialDraftHistory(drafts)
   );
-  const [saving, startSaveTransition] = useTransition();
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -394,8 +394,10 @@ export function QuotationCommercialWorkspaceDialog({
     toast.message("Workspace drafts reset to last saved quotation values.");
   };
 
-  const handleSave = () => {
-    startSaveTransition(async () => {
+  const handleSave = async () => {
+    if (saving || manualSave.savePending) return;
+    setSaving(true);
+    try {
       const pendingIds = items
         .filter((item) => manualSave.isLinePending(item.id))
         .map((item) => item.id);
@@ -410,7 +412,9 @@ export function QuotationCommercialWorkspaceDialog({
       }
       setHistory(resetCommercialDraftHistory(drafts));
       toast.success("Commercial Workspace saved.");
-    });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Could not finish saving. Your draft is still available.");
+    } finally { setSaving(false); }
   };
 
   const applyBulk = () => {
@@ -693,7 +697,7 @@ export function QuotationCommercialWorkspaceDialog({
                   type="button"
                   size="sm"
                   className="h-8 text-xs"
-                  disabled={selectedIds.size === 0}
+                  disabled={selectedIds.size === 0 || saving || manualSave.savePending}
                   onClick={applyBulk}
                 >
                   Apply to selected
@@ -830,7 +834,7 @@ export function QuotationCommercialWorkspaceDialog({
                   key={row.itemId}
                   row={row}
                   selected={selectedIds.has(row.itemId)}
-                  canManage={canManage}
+                  canManage={canManage && !saving && !manualSave.savePending}
                   show={show}
                   displayCurrency={displayCurrency}
                   displayFxRateToEgp={displayFxRateToEgp}
@@ -863,7 +867,7 @@ export function QuotationCommercialWorkspaceDialog({
               status={
                 saving || manualSave.savePending ? (
                   <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
-                    <Loader2Icon className="size-3 animate-spin" /> Saving via Commercial SSOT…
+                    <Loader2Icon className="size-3 animate-spin" /> Saving quotation…
                   </span>
                 ) : (
                   <span className="max-w-[42rem] text-xs leading-snug text-muted-foreground">

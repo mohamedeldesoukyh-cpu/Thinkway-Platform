@@ -204,7 +204,10 @@ function QuotationWorkspaceContent({
       );
       return next.size === prev.size ? prev : next;
     });
-  }, [detail.items, manualSave.hasUnsavedChanges]);
+    // Only a new server snapshot may rebuild saved values. Clearing dirty state
+    // happens before router.refresh completes and still has the old items here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail.items]);
 
   const visibleItems = useMemo(
     () => detail.items.filter((item) => !optimisticRemovedIds.has(item.id)),
