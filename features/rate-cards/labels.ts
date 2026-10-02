@@ -1,4 +1,5 @@
 export const labels = {
+ enrichmentDeferred:["Enrichment unavailable — retry later. Rates can still be saved.","الإثراء غير متاح — أعد المحاولة لاحقاً. يمكن حفظ الأسعار."],
  period:["Period (months)","المدة بالشهور"],monthly:["Monthly rate","السعر الشهري"],periodTotal:["Period total","إجمالي المدة"],
   profileUrl:["Creator profile URL","رابط حساب المبدع"],addByUrl:["Add by URL","إضافة بالرابط"],profileUrlHelp:["Paste a profile link. We detect the platform, reuse or add the creator, and request updated profile details. Then enter the deliverable and price.","الصق رابط الحساب لتحديد المنصة وإضافة المبدع أو استخدام حسابه الحالي وطلب تحديث بياناته، ثم أدخل نوع المحتوى والسعر."],
   sortOrder:["Sort order","اتجاه الترتيب"],activeOnPage:["Active versions on this page","الإصدارات النشطة في هذه الصفحة"],reportTemplate:["Report template","قالب التقرير"],

@@ -18,6 +18,7 @@ import {
 } from "@/lib/creators/country-persistence";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { refreshCreatorMetrics } from "@/lib/services/creators/creator-enrichment-service";
+import { optionalEnrichment } from "@/lib/creators/optional-enrichment";
 import { requireCreatorBaselineDna } from "@/features/creator-dna/services/baseline-dna-populator";
 import { findDuplicatePlatformAccounts } from "@/lib/social/duplicate-check";
 import { enrichCreatorProfile } from "@/lib/social/enrichment/providers/open-graph";
@@ -50,6 +51,8 @@ export type AddCreatorByProfileUrlInput = {
   returnExisting?: boolean;
   /** When true, skip Open Graph preview so batch adds stay off the timeout path. */
   skipPreviewEnrichment?: boolean;
+  /** Preserve a saved creator when the enrichment queue is unavailable. */
+  tolerateEnrichmentFailure?: boolean;
 };
 
 /**
@@ -249,13 +252,16 @@ export async function addCreatorByProfileUrl(
   // Match Refresh metrics (live Apify): force=true bypasses freshness/IPL soft paths
   // and uses the same producer semantics as manual refresh. force=false caused
   // add-creator polls to false-fail while a later Refresh succeeded.
-  const refresh = await refreshCreatorMetrics(supabase, influencerId, {
+  const requestRefresh = () => refreshCreatorMetrics(supabase, influencerId, {
     force: true,
     trigger: "manual",
     scope: "all",
     requestedBy: input.actorId,
     feature: "add_creator",
   });
+  const refresh = (input.tolerateEnrichmentFailure
+    ? await optionalEnrichment(requestRefresh)
+    : await requestRefresh()) ?? {queued:false, message:"Creator saved — enrichment unavailable. Retry later."};
 
   const unifiedId = `inf:${influencerId}`;
   const creator = await getUnifiedCreatorById(supabase, unifiedId);

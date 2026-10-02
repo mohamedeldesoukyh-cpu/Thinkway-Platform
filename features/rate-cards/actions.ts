@@ -18,6 +18,7 @@ import {probeCommercialLinkByQuotationItem} from "@/lib/services/commercial/prob
 import {Campaign} from "@/lib/finance/campaign-finance-lock";
 import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
 import { addCreatorByProfileUrl } from "@/lib/discovery/add-creator-by-profile-url";
+import { optionalEnrichment } from "@/lib/creators/optional-enrichment";
 import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
 import { parseProfileInput } from "@/lib/social/parse-profile-url";
 import { refreshCreatorMetricsBatchByUnifiedIds } from "@/lib/services/creators/creator-enrichment-service";
@@ -248,14 +249,13 @@ export async function ensureImportCreator(profileUrl:string, permission:"upload"
   if(matches.length>1)throw new Error("unmatched");
   if(matches.length===1){
     const match=matches[0];
-    const refreshResult=await refreshCreatorMetricsBatchByUnifiedIds(typed,[match.creator_ref],{force:true,trigger:"manual",scope:"all",requestedBy:userId,feature:"add_creator"});
-    const refreshed=refreshResult.results[0];
-    if(!refreshed?.ok)throw new Error("enrichment");
+    const refreshResult=await optionalEnrichment(()=>refreshCreatorMetricsBatchByUnifiedIds(typed,[match.creator_ref],{force:true,trigger:"manual",scope:"all",requestedBy:userId,feature:"add_creator"}));
+    const refreshed=refreshResult?.results[0];
     return {id:match.creator_ref,name:match.creator_name,created:false,queued:refreshed?.queued??false,platform:parsed.platform,pollId:refreshed?.influencerId??undefined};
   }
-  let result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:false,returnExisting:true,skipPreviewEnrichment:true});
+  let result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:false,returnExisting:true,skipPreviewEnrichment:true,tolerateEnrichmentFailure:true});
   // A concurrent import may win the unique-account insert; resolve the winner.
-  if(!result.ok)result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:false,returnExisting:true,skipPreviewEnrichment:true});
+  if(!result.ok)result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:false,returnExisting:true,skipPreviewEnrichment:true,tolerateEnrichmentFailure:true});
   if(!result.ok||!result.creator)throw new Error("enrichment");
   return {id:result.creator.unified_id,name:result.creator.display_name,created:result.created,queued:result.enrichmentQueued,platform:parsed.platform,pollId:result.creator.influencer_id??undefined};
 }
