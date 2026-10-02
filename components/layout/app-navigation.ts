@@ -38,7 +38,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: "/groups", label: "Holding Groups", icon: "grp" },
       { href: "/clients", label: "Clients", icon: "client" },
       { href: "/brands", label: "Brands", icon: "brand" },
-      { href: "/rate-cards", label: "Rate Cards / بطاقات الأسعار", icon: "quote" },
+      { href: "/rate-cards", label: "Client Rate Card", icon: "quote" },
       { href: "/ios/client", label: "Client IOs", icon: "doc" },
       {
         href: "/discovery/quotations",

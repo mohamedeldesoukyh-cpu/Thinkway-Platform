@@ -20,6 +20,7 @@ import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-consta
 import { addCreatorByProfileUrl } from "@/lib/discovery/add-creator-by-profile-url";
 import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
 import { parseProfileInput } from "@/lib/social/parse-profile-url";
+import { AVATAR_MAX_BYTES, normalizeRateAvatar, readRateAvatarLink } from "./avatar";
 
 async function actor(permission: string) {
   const db = await createSupabaseServerClient();
@@ -70,7 +71,25 @@ export async function getRateVersion(id: string, page=1, search="", platform="",
   if(search) q=q.ilike("creator_name",`%${search.replace(/[%_]/g,"").slice(0,100)}%`);
   if(platform) q=q.eq("platform",platform); if(currency) q=q.eq("currency",currency);
   const result=await q.order("creator_name").order("id").range((Math.max(1,page)-1)*50,Math.max(1,page)*50-1);
-  return {version,lines:checked(result) as RateLine[],total:result.count??0};
+  const lines=checked(result) as RateLine[];
+  const avatars=lines.length?checked(await db.from("rate_card_creator_avatars").select("creator_ref,avatar_data").eq("card_id",version.card_id).in("creator_ref",[...new Set(lines.map(l=>l.creator_ref))])):[];
+  return {version,lines,total:result.count??0,avatars:Object.fromEntries((avatars??[]).map(a=>[a.creator_ref,a.avatar_data as string]))};
+}
+export async function saveRateAvatar(versionId:string,creatorRef:string,form:FormData) {
+  const {db}=await actor("edit");
+  const version=checked(await db.from("rate_card_versions").select("card_id").eq("id",z.uuid().parse(versionId)).single());
+  if(!version)throw new Error("invalid");
+  checked(await db.from("rate_card_lines").select("id").eq("version_id",versionId).eq("creator_ref",creatorRef).limit(1).single());
+  if(form.get("reset")==="true") {
+    checked(await db.from("rate_card_creator_avatars").delete().eq("card_id",version.card_id).eq("creator_ref",creatorRef));
+  } else {
+    const file=form.get("file"),url=String(form.get("url")??"").trim();
+    if(file instanceof File && file.size>AVATAR_MAX_BYTES)throw new Error("avatarInvalid");
+    const bytes=file instanceof File&&file.size?Buffer.from(await file.arrayBuffer()):await readRateAvatarLink(z.string().url().max(4096).parse(url));
+    const avatar_data=await normalizeRateAvatar(bytes);
+    checked(await db.from("rate_card_creator_avatars").upsert({card_id:version.card_id,creator_ref:creatorRef,avatar_data,updated_at:new Date().toISOString()},{onConflict:"card_id,creator_ref"}));
+  }
+  refresh();
 }
 export async function saveRateVersion(input: unknown, id?: string, copyId?: string, expected?: string) {
   const {db}=await actor(id?"edit":"create"); const header=headerSchema.parse(input);

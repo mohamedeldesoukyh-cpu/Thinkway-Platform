@@ -21,10 +21,14 @@ export async function loadRateCardReport(db:SupabaseClient,id:string):Promise<Ra
   const creators:RateCardReport["creators"]=[];const refs=[...identities];
   for(let start=0;start<refs.length;start+=20){
     const part=refs.slice(start,start+20),resolved=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:part});
+    const avatarResult=await db.from("rate_card_creator_avatars").select("creator_ref,avatar_data").eq("card_id",v.card_id).in("creator_ref",part);
+    if(avatarResult.error)throw avatarResult.error;
+    const avatars=new Map((avatarResult.data??[]).map(a=>[a.creator_ref,a.avatar_data as string]));
     for(const ref of part){
       const creator=resolved.byUnifiedId.get(ref)??(ref.startsWith("dis:")?resolved.byDiscoveryId.get(ref.slice(4)):undefined);if(!creator)throw new Error("unmatched");
       const group=buildCreatorGroup({item_id:ref,item_status:"draft",notes:null,match_score:null,unified_id:ref,influencer_id:creator.influencer_id,profile_id:creator.discovered_profile_id,platform_account_ids:creator.platforms.map(p=>p.id),creator,quotation_refs:[],collapse_group_id:null,collapse_label:null},creators.length+1);
       if(!group)throw new Error("unmatched");
+      if(avatars.has(ref)){group.avatarUrl=avatars.get(ref)!;group.avatarProxyUrl=null;}
       const existing=creators.find(c=>c.group.creatorKey===creator.unified_id);
       if(existing){existing.rates.push(...(prices.get(ref)??[]));continue;}
       group.creatorKey=creator.unified_id;
