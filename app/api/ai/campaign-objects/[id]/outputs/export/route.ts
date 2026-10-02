@@ -9,6 +9,7 @@ import { embedMediaPlanContentAvatars } from "@/features/campaign-outputs/export
 import { mediaPlanExportBaseName } from "@/features/campaign-outputs/export/media-plan-export-utils";
 import { buildMediaPlanExcel } from "@/features/campaign-outputs/export/media-plan-excel";
 import { buildMediaPlanHtml } from "@/features/campaign-outputs/export/media-plan-html";
+import { getReportPlatformIconDataUri } from "@/lib/performance/report/report-platform-icons";
 import { resolveMediaPlanCampaignContext } from "@/features/campaign-outputs/generators/media-plan";
 import { MEDIA_PLAN_PDF_OPTIONS } from "@/features/campaign-outputs/export/media-plan-pdf";
 import { buildMediaPlanPptxBuffer } from "@/features/campaign-outputs/export/media-plan-pptx";
@@ -171,7 +172,11 @@ export async function GET(request: Request, context: RouteContext) {
       logoSrcs,
       contextOverride,
       presentation: exportPresentation,
-    });
+    }).replace(/src="\/platform-icons\/(instagram|tiktok|facebook|youtube|linkedin)\.png"/g,
+      (original, platform: string) => {
+        const uri = getReportPlatformIconDataUri(platform);
+        return uri ? `src="${uri}"` : original;
+      });
 
     if (format === "pdf") {
       return createPdfFromHtmlResponse(html, baseName, download, MEDIA_PLAN_PDF_OPTIONS);
