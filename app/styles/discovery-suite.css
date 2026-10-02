@@ -1334,3 +1334,6 @@
   .discovery-suite .tw-more{margin-top:7px;border:0;background:none;padding:0;cursor:pointer;
  font:600 11px var(--font-sans), var(--font-sans), Geist, sans-serif;color:var(--tw-bi)}
   .discovery-suite .tw-more:hover{text-decoration:underline}
+
+/* A static quotation header must keep Save available on short screens. */
+.quotation-editor-rd4.discovery-suite .tw-frozen--static .tw-mr{display:flex}

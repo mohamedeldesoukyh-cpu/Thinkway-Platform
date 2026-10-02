@@ -18,7 +18,9 @@ export async function normalizeRateAvatar(bytes: Buffer): Promise<string> {
 
 export async function readRateAvatarLink(url: string): Promise<Buffer> {
   try {
-    const response = await fetchWithStrictRedirects(url, { allowlist: SOCIAL_MEDIA_SRC_ALLOWLIST, timeoutMs: 10_000, maxRedirects: 3 });
+    const storageHost=process.env.NEXT_PUBLIC_SUPABASE_URL ? new URL(process.env.NEXT_PUBLIC_SUPABASE_URL).hostname : null;
+    const allowlist={...SOCIAL_MEDIA_SRC_ALLOWLIST,exact:[...SOCIAL_MEDIA_SRC_ALLOWLIST.exact,...(storageHost?[storageHost]:[])]};
+    const response = await fetchWithStrictRedirects(url, { allowlist, timeoutMs: 10_000, maxRedirects: 3 });
     if (!response.ok || !response.body) throw new Error();
     const reader = response.body.getReader();
     const chunks: Uint8Array[] = [];

@@ -13,7 +13,7 @@ export function AvatarEditor({versionId,creatorRef,name,current,onClose,onSaved}
   const [busy,start]=useTransition();
   useEffect(()=>()=>{if(preview.startsWith("blob:"))URL.revokeObjectURL(preview);},[preview]);
   function save(reset=false){start(async()=>{try{const form=new FormData();if(reset)form.set("reset","true");else if(file)form.set("file",file);else form.set("url",url);await saveRateAvatar(versionId,creatorRef,form);toast.success(t("saved"));onSaved();}catch(e){toast.error(t(errorLabel(e)));}});}
-  return <Modal open onClose={()=>!busy&&onClose()} title={`${t("avatar")} · ${name}`} description={t("avatarScope")} lang={lang}>
+  return <Modal open size="form" onClose={()=>!busy&&onClose()} title={`${t("avatar")} · ${name}`} description={t("avatarScope")} lang={lang}>
     <div className="rc-avatar-preview">{preview?<img src={preview} alt={name}/>:<span>{name.slice(0,2)}</span>}</div>
     <Field label={t("avatarBrowse")}><Input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" disabled={busy} onChange={e=>{const selected=e.target.files?.[0]??null;if(selected&&selected.size>750000){toast.error(t("avatarInvalid"));e.target.value="";return;}setFile(selected);setPreview(selected?URL.createObjectURL(selected):current??"");if(selected)setUrl("");}}/></Field>
     <TextField label={t("avatarUrl")} type="url" value={url} disabled={busy} onChange={v=>{setUrl(v);setFile(null);setPreview(current??"");}}/>

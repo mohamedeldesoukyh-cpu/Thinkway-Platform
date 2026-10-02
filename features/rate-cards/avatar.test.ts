@@ -20,3 +20,14 @@ test("avatar links reject local network, credentialed, and unsupported hosts",as
     await assert.rejects(readRateAvatarLink(url),/avatarLinkError/);
   }
 });
+test("supported image links are decoded and oversized streamed responses stop",async()=>{
+  const originalFetch=globalThis.fetch;
+  const png=await sharp({create:{width:20,height:20,channels:3,background:"#fff"}}).png().toBuffer();
+  try {
+    globalThis.fetch=async()=>new Response(new Uint8Array(png),{headers:{"content-type":"image/png"}});
+    const bytes=await readRateAvatarLink("https://i.ytimg.com/avatar.png");
+    assert.match(await normalizeRateAvatar(bytes),/^data:image\/webp;base64,/);
+    globalThis.fetch=async()=>new Response(new Uint8Array(AVATAR_MAX_BYTES+1));
+    await assert.rejects(readRateAvatarLink("https://i.ytimg.com/avatar.png"),/avatarLinkError/);
+  } finally {globalThis.fetch=originalFetch;}
+});
