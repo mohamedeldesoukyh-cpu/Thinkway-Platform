@@ -190,7 +190,7 @@ function addPlatformIconBadges(
           y,
           w: size,
           h: size,
-          rounding: true,
+          rounding: false,
           hyperlink,
         });
         return;
