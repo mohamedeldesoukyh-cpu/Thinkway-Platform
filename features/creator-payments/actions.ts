@@ -29,7 +29,7 @@ type Scope = {
     assignmentIds?: string[];
 };
 async function loadRows(db: SupabaseClient, scope: Scope) {
-    let query = db.from('vendor_ios').select('id,assignment_id,campaign_header_id,influencer_id,document_number,status,amount,currency_code,created_at,is_superseded').not('document_generated_at', 'is', null).order('created_at', { ascending: false });
+    let query = db.from('vendor_ios').select('id,assignment_id,campaign_header_id,influencer_id,document_number,status,amount,currency_code,created_at,is_superseded').or('document_generated_at.not.is.null,sent_at.not.is.null,delivered_at.not.is.null,approved_at.not.is.null').order('created_at', { ascending: false });
     if (scope.campaignId)
         query = query.eq('campaign_header_id', z.string().uuid().parse(scope.campaignId));
     if (scope.creatorId)

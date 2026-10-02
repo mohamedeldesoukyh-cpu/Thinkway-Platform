@@ -20,7 +20,7 @@ BEGIN
       AND special_payment_terms='50% advance, 50% on completion' AND compliance_country_code='AE'
       AND status::text=v_status AND attachment_url IS NOT DISTINCT FROM v_attachment
       AND sent_at IS NOT DISTINCT FROM v_sent
-      AND terms_html IS NULL AND generated_pdf_url IS NULL AND generated_html_url IS NULL AND document_generated_at IS NULL) THEN
+      AND terms_html IS NULL AND generated_pdf_url IS NULL AND generated_html_url IS NULL AND document_generated_at IS NOT NULL) THEN
     RAISE EXCEPTION 'Term edit failed, stale document retained, or workflow/signed attachment changed';
   END IF;
   IF EXISTS(SELECT 1 FROM public.vendor_ios v JOIN io_before b USING(id) WHERE v.id<>v_id AND to_jsonb(v)<>b.data) THEN
