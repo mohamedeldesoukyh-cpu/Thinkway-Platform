@@ -5,11 +5,21 @@ import {resolveUnifiedCreatorsByRefs} from "@/lib/creators/unified-browse";
 import {buildCanonicalProfileUrl,isSocialPlatform} from "@/lib/social/platforms";
 import {parseProfileInput} from "@/lib/social/parse-profile-url";
 import {readRateWorkbook} from "./workbook";
+import {RATE_UPLOAD_BUCKET,RATE_UPLOAD_MAX_BYTES,validRateUploadPath} from "./upload-limits";
 import {rateImportIdentity} from "./import-identity";
 import {validateWorkbookRow,type ImportRow} from "./model";
 function checked<T>(r:{data:T;error:{message:string}|null}):T{if(r.error)throw new Error(r.error.message);return r.data;}
 export async function parseUpload(db:SupabaseClient, form:FormData, progress?:(processed:number,total:number)=>void):Promise<ImportRow[]> {
-  const file=form.get("file"); if(!(file instanceof File)||file.size>4*1024*1024||!file.name.toLowerCase().endsWith(".xlsx")) throw new Error("file");
+  let file=form.get("file");
+  const path=String(form.get("uploadPath")??"");
+  if(path){
+    const auth=await db.auth.getUser();const userId=auth.data.user?.id;
+    if(!userId||!validRateUploadPath(path,userId))throw new Error("file");
+    const uploaded=checked(await db.storage.from(RATE_UPLOAD_BUCKET).download(path));
+    if(!uploaded||uploaded.size>RATE_UPLOAD_MAX_BYTES)throw new Error("file");
+    file=new File([uploaded],"rates.xlsx");
+  }
+  if(!(file instanceof File)||file.size>RATE_UPLOAD_MAX_BYTES||!file.name.toLowerCase().endsWith(".xlsx")) throw new Error("file");
   const uploaded=await readRateWorkbook(await file.arrayBuffer());
   progress?.(0,uploaded.length);
   const currencies=(checked(await db.from("md_currencies").select("code").eq("is_active",true)) ?? []).map(c=>String(c.code));

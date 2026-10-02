@@ -19,6 +19,8 @@ import {Campaign} from "@/lib/finance/campaign-finance-lock";
 import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
 import { addCreatorByProfileUrl } from "@/lib/discovery/add-creator-by-profile-url";
 import { optionalEnrichment } from "@/lib/creators/optional-enrichment";
+import {randomUUID} from "node:crypto";
+import {RATE_UPLOAD_BUCKET,RATE_UPLOAD_MAX_BYTES,validRateUploadPath} from "./upload-limits";
 import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
 import { parseProfileInput } from "@/lib/social/parse-profile-url";
 import { refreshCreatorMetricsBatchByUnifiedIds } from "@/lib/services/creators/creator-enrichment-service";
@@ -69,11 +71,11 @@ export async function listRateCards(filters: { search?: string; client?: string;
 export async function getRateVersion(id: string, page=1, search="", platform="", currency="") {
   const {db}=await actor("read"); z.uuid().parse(id);
   const version=checked(await db.from("rate_card_register").select("*").eq("id",id).single()) as RateVersion;
-  let q=db.from("rate_card_line_metrics").select("*",{count:"exact"}).eq("version_id",id);
+  let q=db.from("rate_card_service_rows").select("*",{count:"exact"}).eq("version_id",id);
   if(search) q=q.ilike("creator_name",`%${search.replace(/[%_]/g,"").slice(0,100)}%`);
-  if(platform) q=q.eq("platform",platform); if(currency) q=q.eq("currency",currency);
-  const result=await q.order("creator_name").order("id").range((Math.max(1,page)-1)*50,Math.max(1,page)*50-1);
-  const lines=checked(result) as RateLine[];
+  if(platform) q=q.eq("platform",platform); if(currency) q=q.contains("currencies",[currency]);
+  const result=await q.order("creator_name").order("creator_ref").order("platform").order("deliverable").range((Math.max(1,page)-1)*25,Math.max(1,page)*25-1);
+  const lines=(checked(result) as {rates:RateLine[]}[]).flatMap(row=>row.rates);
   if(lines.length){
     const current=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[...new Set(lines.map(l=>l.creator_ref))]});
     for(const line of lines){const creator=current.byUnifiedId.get(line.creator_ref)??(line.creator_ref.startsWith("dis:")?current.byDiscoveryId.get(line.creator_ref.slice(4)):undefined);if(creator)line.creator_name=creator.display_name;}
@@ -126,6 +128,19 @@ export async function downloadRateTemplate() {
   return Buffer.from(await buildRateTemplate(currencies)).toString("base64");
 }
 export async function previewRateImport(form:FormData) { const {db}=await actor("upload"); return parseUpload(db,form); }
+export async function prepareRateUpload(file:{name:string;size:number}) {
+  const {db,userId}=await actor("upload");
+  if(!file.name.toLowerCase().endsWith(".xlsx")||!Number.isInteger(file.size)||file.size<=0||file.size>RATE_UPLOAD_MAX_BYTES)throw new Error("file");
+  const path=`${userId}/${Date.now()}-${randomUUID()}.xlsx`;
+  const signed=checked(await db.storage.from(RATE_UPLOAD_BUCKET).createSignedUploadUrl(path));
+  if(!signed)throw new Error("file");
+  return {path,url:signed.signedUrl};
+}
+export async function discardRateUpload(path:string) {
+  const {db,userId}=await actor("upload");
+  if(!validRateUploadPath(path,userId))throw new Error("file");
+  await db.storage.from(RATE_UPLOAD_BUCKET).remove([path]);
+}
 export async function commitRateImport(form:FormData, versionId:string, mode:"new"|"update", versionName:string, expected:string) {
   z.enum(["new","update"]).parse(mode);
   const {db}=await actor("upload"); const rows=await parseUpload(db,form);
@@ -136,6 +151,8 @@ export async function commitRateImport(form:FormData, versionId:string, mode:"ne
   // Identity resolution is repeated on the server after staged creator creation.
   if(rows.some(r=>r.pending_creator))throw new Error("unmatched");
   const result=checked(await db.rpc("save_rate_card",{p_header:mode==="new"?header:null,p_version_id:mode==="update"?versionId:null,p_copy_id:mode==="new"?versionId:null,p_lines:rows.flatMap(r=>(r.rates??[r.rate!]).map(dbLine)),p_expected:expected,p_operation:"upload"}));
+  const uploadPath=String(form.get("uploadPath")??"");
+  if(uploadPath)await db.storage.from(RATE_UPLOAD_BUCKET).remove([uploadPath]);
   refresh(); return String(result);
 }
 
