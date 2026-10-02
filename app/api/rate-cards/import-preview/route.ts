@@ -9,7 +9,7 @@ export async function POST(request:Request){
   if(!assertCsrfRequest(request).ok)return new Response(null,{status:403});
   const db=await createSupabaseServerClient();
   if("error" in await requirePermission(db,"rate_cards.upload"))return new Response(null,{status:403});
-  if(Number(request.headers.get("content-length"))>11*1024*1024)return new Response(null,{status:413});
+  if(Number(request.headers.get("content-length"))>4.25*1024*1024)return new Response(null,{status:413});
   const form=await request.formData();
   const encoder=new TextEncoder();
   const stream=new ReadableStream({async start(controller){

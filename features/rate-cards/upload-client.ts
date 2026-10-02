@@ -1,6 +1,7 @@
 import type {ImportRow} from "./model";
 export type UploadProgress={stage:"uploading"|"validating"|"matching"|"creating"|"importing"|"completed";processed:number;total:number};
 export function uploadForPreview(form:FormData,onProgress:(p:UploadProgress)=>void):Promise<ImportRow[]>{
+  const file=form.get("file");if(!(file instanceof File)||file.size>4*1024*1024)return Promise.reject(new Error("file"));
   return new Promise((resolve,reject)=>{
     const xhr=new XMLHttpRequest();let offset=0,pending="",rows:ImportRow[]|undefined;
     xhr.open("POST","/api/rate-cards/import-preview");

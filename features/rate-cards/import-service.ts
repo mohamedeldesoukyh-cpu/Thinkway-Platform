@@ -9,7 +9,7 @@ import {rateImportIdentity} from "./import-identity";
 import {validateWorkbookRow,type ImportRow} from "./model";
 function checked<T>(r:{data:T;error:{message:string}|null}):T{if(r.error)throw new Error(r.error.message);return r.data;}
 export async function parseUpload(db:SupabaseClient, form:FormData, progress?:(processed:number,total:number)=>void):Promise<ImportRow[]> {
-  const file=form.get("file"); if(!(file instanceof File)||file.size>10*1024*1024||!file.name.toLowerCase().endsWith(".xlsx")) throw new Error("file");
+  const file=form.get("file"); if(!(file instanceof File)||file.size>4*1024*1024||!file.name.toLowerCase().endsWith(".xlsx")) throw new Error("file");
   const uploaded=await readRateWorkbook(await file.arrayBuffer());
   progress?.(0,uploaded.length);
   const currencies=(checked(await db.from("md_currencies").select("code").eq("is_active",true)) ?? []).map(c=>String(c.code));
