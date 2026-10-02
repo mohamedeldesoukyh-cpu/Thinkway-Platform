@@ -1,4 +1,6 @@
 "use client";
+import {CreatorAvatarImage} from "@/components/creator/creator-avatar-image";
+
 import type {RateLine} from "./model";
 import {rateTemplateRows,type RatePair} from "./template-rows";
 import {Button} from "@/components/ui/button";
@@ -21,7 +23,7 @@ export function ServiceRateTable({lines,avatars,editable,selected,onSelect,onEdi
   const differentFees=new Set(fees.map(r=>r.agency_fee_percent)).size>1;
   return <tr key={row.key}>
    <td className={cell}><input type="checkbox" aria-label={`${t("select")} ${row.line.creator_name} ${row.type}`} checked={row.ids.every(id=>selected.has(id))} onChange={()=>onSelect(row.ids)}/></td>
-   <td className={`${cell} rc-client-field`}><div className="rc-creator-cell">{avatars[row.line.creator_ref]&&<img src={avatars[row.line.creator_ref]} alt=""/>}<strong>{row.line.creator_name}</strong></div></td>
+   <td className={`${cell} rc-client-field`}><div className="rc-creator-cell"><CreatorAvatarImage avatarUrl={avatars[row.line.creator_ref]} size="sm" className="!border-0"/><strong>{row.line.creator_name}</strong></div></td>
    <td className={`${cell} rc-client-field`}>{taxonomyLabel(row.line.platform,lang)}</td><td className={`${cell} rc-client-field`}>{taxonomyLabel(row.type,lang)||"—"}</td>
    {price(row.base.cost,"creator_cost",row.type,!!row.type)}<td className={cell}>{row.base.cost?.currency??"—"}</td>
    {price(row.base.client,"client_price",row.type,!!row.type)}<td className={`${cell} rc-client-field`}>{row.base.client?.currency??"—"}</td>
