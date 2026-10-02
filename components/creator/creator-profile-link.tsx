@@ -203,7 +203,7 @@ export function CreatorProfileLink({
           />
         </span>
       ) : badgeMode === "platform" && source.platform ? (
-        <span className="pointer-events-none absolute -right-1 -bottom-1 rounded-full ring-2 ring-card">
+        <span className="pointer-events-none absolute -right-1 -bottom-1">
           <PlatformIcon platform={source.platform} size="xs" className={cn(badgeDim, "rounded-full")} />
         </span>
       ) : null}

@@ -16,17 +16,14 @@ import { InfluencerConceptsSheet } from "./influencer-concepts-sheet";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { deriveMediaPlanWeekPhase } from "../media-plan-strategy-narrative";
 import { weeklyObjectiveCardFlex, weeklyObjectiveWeightBarWidth } from "../media-plan-week-objectives-layout";
-import { SafeSvgHtml } from "@/components/security/safe-html";
 
-import { platformIconSvgHtml, resolvePlatformBarBackground } from "../platform-brand";
+import { resolvePlatformBarBackground } from "../platform-brand";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
 
 function PlatformBarLabel({ platform }: { platform: string }) {
   return (
     <span className="flex items-center gap-1.5">
-      <SafeSvgHtml
-        className="inline-flex shrink-0 leading-none"
-        html={platformIconSvgHtml(platform, 14)}
-      />
+      <PlatformIcon platform={platform} size="xs" className="size-3.5" />
       {platform}
     </span>
   );

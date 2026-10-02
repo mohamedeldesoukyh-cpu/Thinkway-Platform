@@ -272,7 +272,10 @@ const SHOWCASE_STYLES = `
   .platform-link-icon {
     width: 22px;
     height: 22px;
-    border-radius: 50%;
+    border-radius: 0;
+    object-fit: contain;
+    border: 0;
+    background: transparent;
     display: block;
   }
   .platform-link-icon.overlap { margin-left: -6px; }

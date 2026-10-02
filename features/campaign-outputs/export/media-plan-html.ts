@@ -2,6 +2,7 @@
  * Media Plan HTML — client-safe markup builder for in-app preview and HTML download.
  */
 import { initialsFromCreatorName } from "@/lib/performance/creator-avatar";
+import { getReportPlatformIconDataUri } from "@/lib/performance/report/report-platform-icons";
 
 import type { CampaignOutputContent } from "../output-types";
 import type {
@@ -508,7 +509,7 @@ function platformBarsHtml(bars: Array<{ platform: string; percentage: number }>)
     .map((entry, index) => {
       const color = platformBarColor(entry.platform, index);
       const width = Math.round((entry.percentage / maxPct) * 100);
-      const icon = platformIconSvgHtml(entry.platform, 14);
+      const icon = platformIconSvgHtml(entry.platform, 14, getReportPlatformIconDataUri(entry.platform));
       return `<div class="pbar-row">
           <div class="pbar-label"><span class="pbar-icon">${icon}</span>${escapeHtml(entry.platform)}</div>
           <div class="pbar-track"><div class="pbar-fill" style="width:${width}%;background:${color}"></div></div>

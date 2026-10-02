@@ -42,21 +42,11 @@ export function resolvePlatformBarSolidColor(platform: string, fallbackIndex = 0
 }
 
 /** Inline SVG markup for HTML export (small icon before platform name). */
-export function platformIconSvgHtml(platform: string, size = 14): string {
+export function platformIconSvgHtml(platform: string, size = 14, imageUri?: string | null): string {
   const key = normalizePlatformKey(platform);
   const s = size;
-  if (key.includes("instagram")) {
-    return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><defs><linearGradient id="ig" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#F58529"/><stop offset="50%" stop-color="#DD2A7B"/><stop offset="100%" stop-color="#8134AF"/></linearGradient></defs><rect x="2" y="2" width="20" height="20" rx="6" fill="url(#ig)"/><circle cx="12" cy="12" r="4.5" fill="none" stroke="#fff" stroke-width="1.8"/><circle cx="17.2" cy="6.8" r="1.2" fill="#fff"/></svg>`;
-  }
-  if (key.includes("tiktok")) {
-    return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#010101"/><path fill="#25F4EE" d="M16.5 7.5v7.2a3.3 3.3 0 1 1-2.4-3.2V8.9a5.8 5.8 0 0 0 3.2 1.8V7.5h2.4z"/><path fill="#FE2C55" d="M14.1 11.5a3.3 3.3 0 1 0 2.4 3.2V7.5h2.4v3.2a5.8 5.8 0 0 1-4.8-4.2v5z"/></svg>`;
-  }
-  if (key.includes("facebook")) {
-    return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#1877F2"/><path fill="#fff" d="M14.5 8h-2a1 1 0 0 0-1 1v2h3l-.4 3h-2.6v8h-3v-8H8v-3h2V9a4 4 0 0 1 4-4h2.5v3z"/></svg>`;
-  }
-  if (key.includes("youtube")) {
-    return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#FF0000"/><path fill="#fff" d="M10 8.5v7l6-3.5-6-3.5z"/></svg>`;
-  }
+  const supplied = ["instagram", "tiktok", "facebook", "youtube", "linkedin"].find(name => key.includes(name));
+  if (supplied) return `<img src="${imageUri ?? `/platform-icons/${supplied}.png`}" width="${s}" height="${s}" alt="" style="object-fit:contain;border:0;border-radius:0;background:transparent;box-shadow:none" />`;
   if (key.includes("snapchat")) {
     return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" aria-hidden="true"><rect width="24" height="24" rx="5" fill="#FFFC00"/><path fill="#000" d="M12 4c2.8 0 5 2 5 5.2 0 1.4-.5 2.6-1.3 3.5.8.3 1.5.9 1.9 1.7.5.9.4 2-.2 2.8-.6.8-1.6 1-2.5.6-.4 1.1-1.5 1.9-2.9 1.9s-2.5-.8-2.9-1.9c-.9.4-1.9.2-2.5-.6-.6-.8-.7-1.9-.2-2.8.4-.8 1.1-1.4 1.9-1.7-.8-.9-1.3-2.1-1.3-3.5C7 6 9.2 4 12 4z"/></svg>`;
   }
