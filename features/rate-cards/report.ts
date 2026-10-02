@@ -16,7 +16,7 @@ function chunk<T>(items:T[],size:number):T[][]{return Array.from({length:Math.ma
 export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTemplate,lang:Language="en"){
  const t=(key:Parameters<typeof textFor>[1])=>textFor(lang,key),e=escapeHtml,details=template==="creator-list-details";
  const format=(v:number|null)=>v==null?"—":v.toLocaleString(lang,{maximumFractionDigits:2});
- const entries=doc.creators.flatMap(c=>{const rates=chunk(c.rates,3),metrics=chunk(c.performance,4);return Array.from({length:Math.max(rates.length,details?metrics.length:1)},(_,i)=>({...c,rates:rates[i]??[],performance:metrics[i]??[],continued:i>0}));});
+ const entries=doc.creators.flatMap(c=>{const rates=chunk(c.rates,3),metrics=chunk(c.performance,4);return Array.from({length:Math.max(rates.length,details?metrics.length:1)},(_,i)=>({...c,rates:rates[i]??[],performance:metrics[i]??metrics[0]??[],continued:i>0}));});
  const creators=entries.map(c=>({name:c.group.creator,handle:c.group.handle,profileUrl:safeProfileUrl(c.group.profileUrl||c.group.platformLinks[0]?.url||null),portrait:c.group.avatarUrl,avatar:c.group.avatarUrl,categories:c.group.categories,tier:c.group.tier,markets:[c.group.country]}));
  const supplement=(_creator:unknown,index:number)=>{
   const c=entries[index];
