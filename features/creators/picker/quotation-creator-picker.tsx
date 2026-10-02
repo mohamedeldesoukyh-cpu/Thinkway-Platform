@@ -13,6 +13,8 @@ type Props = {
   items: QuotationImportItem[];
   loading?: boolean;
   emptyMessage?: string;
+  loadingMessage?: string;
+  hideToolbar?: boolean;
   selectedIds: Set<string>;
   onSelectedIdsChange: (ids: Set<string>) => void;
 };
@@ -21,6 +23,8 @@ export function QuotationCreatorPicker({
   items,
   loading,
   emptyMessage,
+  loadingMessage,
+  hideToolbar = false,
   selectedIds,
   onSelectedIdsChange,
 }: Props) {
@@ -38,7 +42,7 @@ export function QuotationCreatorPicker({
 
   return (
     <div className="space-y-2">
-      {items.length > 0 ? (
+      {!hideToolbar && items.length > 0 ? (
         <CreatorSelectionToolbar
           selectedCount={selectedIds.size}
           totalVisible={items.length}
@@ -54,6 +58,7 @@ export function QuotationCreatorPicker({
         selectedIds={selectedIds}
         onToggle={toggle}
         loading={loading}
+        loadingMessage={loadingMessage}
         emptyMessage={emptyMessage}
       />
     </div>

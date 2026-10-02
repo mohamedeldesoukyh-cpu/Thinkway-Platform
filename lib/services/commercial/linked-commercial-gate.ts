@@ -36,6 +36,7 @@ import type {
 type Supabase = SupabaseClient<Database>;
 
 export type CommercialSyncGateOptions = {
+  rateCardSnapshot?: import("@/features/rate-cards/model").RateCardWriteSnapshot;
   confirmCommercialSync?: boolean;
   idempotencyKey?: string | null;
   expectedConcurrencyToken?: string | null;
@@ -54,6 +55,7 @@ export type CommercialSyncGateDenied = {
 };
 
 export type CommercialSyncGateApplied = {
+  rateCardSnapshotApplied?: boolean;
   ok: true;
   synced: true;
   probe: CommercialSyncLinkProbe;
@@ -183,7 +185,7 @@ export async function applyQuotationMasterSyncIfLinked(
   }
 
   const svc = createCommercialSynchronizationService(
-    createSupabaseCommercialSyncPorts(supabase)
+    createSupabaseCommercialSyncPorts(supabase, input.options.rateCardSnapshot)
   );
   const result = await svc.applyMasterChange({
     actorId: input.actorId,
@@ -205,6 +207,7 @@ export async function applyQuotationMasterSyncIfLinked(
     synced: true,
     probe,
     concurrencyToken: result.concurrencyToken,
+    rateCardSnapshotApplied: !!input.options.rateCardSnapshot,
   };
 }
 

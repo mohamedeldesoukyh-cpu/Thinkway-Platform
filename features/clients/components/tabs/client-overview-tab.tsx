@@ -62,6 +62,7 @@ import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 import { ClientWorkspaceEntitlementFields } from "@/features/clients/components/client-workspace-entitlement-fields";
+import { ClientRateCardSection } from "@/features/rate-cards/client-section";
 import {
   listClientWorkspaceAccessRequestsAction,
   startClientWorkspaceLivePreviewAction,
@@ -714,6 +715,7 @@ export function ClientOverviewTab({
           </ClientFormField>
         </ClientFormSection>
 
+        <ClientRateCardSection clientId={client.id} />
         <ClientWorkspaceEntitlementFields
           enabled={workspaceEnabled}
           packageId={workspacePackage}

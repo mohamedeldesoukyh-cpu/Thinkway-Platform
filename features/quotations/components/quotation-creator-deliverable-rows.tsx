@@ -39,6 +39,7 @@ import { useQuotationManualSave } from "@/features/quotations/components/quotati
 import { QuotationCreatorOptionSelect } from "@/features/quotations/components/quotation-creator-option-select";
 import { QuotationDeliverableTypeLinesEditor } from "@/features/quotations/components/quotation-deliverable-type-lines";
 import { QuotationDeliverableCostDetails } from "@/features/quotations/components/quotation-deliverable-cost-details";
+import { QuotationLineRateCardButton } from "@/features/rate-cards/quotation-tools";
 import { QuotationDeliverablePlatformIcons } from "@/features/quotations/components/quotation-deliverable-platform-icons";
 import { QuotationLinePlatformCell } from "@/features/quotations/components/quotation-line-scope-cell";
 import {
@@ -714,6 +715,7 @@ export function QuotationCreatorDeliverableRows({
                   />
                 );
               })()}
+              <QuotationLineRateCardButton itemId={item.id} index={index} />
             </span>
 
             {isFirst ? (

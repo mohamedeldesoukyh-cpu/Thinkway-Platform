@@ -29,7 +29,7 @@ export type HtmlParityPptxResult =
   | { ok: true; buffer: Buffer; pageCount: number }
   | { ok: false; error: string };
 
-async function buildPptxFromPageImages(
+export async function buildPptxFromPageImages(
   pages: HtmlPageImage[],
   title: string
 ): Promise<Buffer> {

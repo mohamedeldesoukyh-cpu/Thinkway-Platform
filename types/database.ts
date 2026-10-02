@@ -921,6 +921,7 @@ export type ClientOnboardingStatus =
   | "active";
 
 export type ClientRow = {
+  rate_cards_enabled?: boolean;
   id: string;
   document_number: string;
   slug: string | null;
@@ -1042,6 +1043,7 @@ export type Database = {
           notes?: string | null;
           client_io_terms_text?: string | null;
           client_workspace_enabled?: boolean;
+          rate_cards_enabled?: boolean;
           client_workspace_package?: string | null;
           client_workspace_tab_overrides?: Record<string, unknown> | null;
           client_workspace_grandfathered?: boolean;

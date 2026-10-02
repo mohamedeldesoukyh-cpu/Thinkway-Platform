@@ -55,6 +55,7 @@ import { checkClientNameAvailable } from "@/features/validation/actions";
 import type { AgencyOrDirect } from "@/types/database";
 import { cn } from "@/lib/utils";
 import { ClientWorkspaceEntitlementFields } from "@/features/clients/components/client-workspace-entitlement-fields";
+import { RateCardEnableField } from "@/features/rate-cards/client-section";
 import {
   type ClientWorkspacePackage,
   type ClientWorkspaceTabOverrides,
@@ -430,6 +431,7 @@ export function NewClientDialog({
                 profile after creation.
               </p>
             </ClientFormSection>
+            <RateCardEnableField />
             <ClientWorkspaceEntitlementFields
               enabled={workspaceEnabled}
               packageId={workspacePackage}

@@ -37,6 +37,7 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
   { prefix: "/planning", class: "internal_workspace" },
   { prefix: "/campaigns", class: "internal_workspace" },
   { prefix: "/clients", class: "internal_workspace" },
+  { prefix: "/rate-cards", class: "internal_workspace" },
   { prefix: "/groups", class: "internal_workspace" },
   { prefix: "/brands", class: "internal_workspace" },
   { prefix: "/vendors", class: "internal_workspace" },
@@ -48,6 +49,8 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
 
 /** Exact API path templates (Next dynamic segments kept as [id] style). */
 export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
+  "/api/rate-cards/import-preview": "internal_workspace",
+  "/api/rate-cards/[id]/export": "internal_workspace",
   "/api/health": "public",
   "/api/version": "public",
   "/api/build-info": "public",

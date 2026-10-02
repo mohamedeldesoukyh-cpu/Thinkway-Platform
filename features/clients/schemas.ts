@@ -255,6 +255,7 @@ export const createClientSchema = z
   notes: optionalTrimmedString(2000),
   client_io_terms_text: optionalTrimmedString(50000),
   client_workspace_enabled: optionalBooleanFlag.default(false),
+  rate_cards_enabled: optionalBooleanFlag.default(false),
   client_workspace_package: z.preprocess(
     (value) => (value == null ? "" : String(value).trim()),
     z.union([z.literal(""), z.enum(["planning", "commercial", "live"])])

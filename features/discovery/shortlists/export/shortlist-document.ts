@@ -389,7 +389,7 @@ function resolveShortlistTier(creator: UnifiedCreatorResult): CreatorTierLabel {
   return resolveCreatorTierFromUnified(creator);
 }
 
-function buildCreatorGroup(
+export function buildCreatorGroup(
   item: ShortlistCreatorItem,
   rank: number,
   publicationShotsByCreatorKey?: Map<string, ShortlistDocPublicationShot[]>

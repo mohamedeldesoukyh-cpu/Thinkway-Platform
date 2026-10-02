@@ -171,6 +171,7 @@ export async function createClientAction(
       notes: emptyToNull(parsed.data.notes),
       client_io_terms_text: clientIoTermsText,
       created_by: user.id,
+      rate_cards_enabled: parsed.data.rate_cards_enabled,
       ...persistClientWorkspaceEntitlementFields({
         enabled: parsed.data.client_workspace_enabled,
         packageValue: parsed.data.client_workspace_package,

@@ -79,6 +79,14 @@ export async function updateQuotationItemCommercials(
     confirmCommercialSync?: boolean;
     idempotencyKey?: string;
     expectedConcurrencyToken?: string;
+    /** Internal, explicitly confirmed reference-price copy; never used by ordinary edits. */
+    rateCardApplication?: {
+      sources: Record<string, import("@/features/rate-cards/model").RateSource>;
+      expectedDeliverables: QuotationDeliverable[];
+      expectedCost: number | null;
+      expectedRevenue: number;
+      expectedCurrency: string;
+    };
   }
 ) {
   const { data: quotationMeta } = await supabase
@@ -111,7 +119,7 @@ export async function updateQuotationItemCommercials(
         fxRateToEgp: rate,
       })
     : null;
-  const useRolled = shouldPreferDeliverableRollup({
+  const useRolled = !options?.rateCardApplication && shouldPreferDeliverableRollup({
     rolled,
     masterRevenue: input.revenue,
   });
@@ -148,6 +156,7 @@ export async function updateQuotationItemCommercials(
       confirmCommercialSync: options?.confirmCommercialSync,
       idempotencyKey: options?.idempotencyKey,
       expectedConcurrencyToken: options?.expectedConcurrencyToken,
+      rateCardSnapshot: options?.rateCardApplication && input.deliverables ? {...options.rateCardApplication,quotationItemId:input.item_id,deliverables:input.deliverables} : undefined,
     },
   });
 
@@ -221,12 +230,20 @@ export async function updateQuotationItemCommercials(
   if (input.followers !== undefined) patch.followers = input.followers;
   if (input.engagement_rate !== undefined) patch.engagement_rate = input.engagement_rate;
 
-  if (Object.keys(patch).length > 0) {
-    const { error } = await supabase
+  if (Object.keys(patch).length > 0 && !(gate.synced && gate.rateCardSnapshotApplied)) {
+    if (options?.rateCardApplication) patch.rate_card_sources = options.rateCardApplication.sources;
+    let write = supabase
       .from("quotation_items")
       .update(patch as never)
-      .eq("id", input.item_id);
+      .eq("id", input.item_id).eq("quotation_id", input.quotation_id);
+    if (options?.rateCardApplication) {
+      write = write.eq("deliverables", JSON.stringify(options.rateCardApplication.expectedDeliverables));
+      write = write.eq("revenue", options.rateCardApplication.expectedRevenue).eq("cost_currency", options.rateCardApplication.expectedCurrency);
+      write = options.rateCardApplication.expectedCost == null ? write.is("cost", null) : write.eq("cost", options.rateCardApplication.expectedCost);
+    }
+    const { error, data: written } = await write.select("id");
     if (error) return { ok: false as const, message: error.message };
+    if (options?.rateCardApplication && !written?.length) return { ok: false as const, message: "Quotation changed. Preview again before applying rates." };
   }
 
   // Sync service already recalculates when linked; still recompute unless deferred.

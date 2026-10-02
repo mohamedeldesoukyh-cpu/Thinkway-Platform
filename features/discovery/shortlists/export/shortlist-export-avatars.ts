@@ -14,7 +14,7 @@ async function resolveExportAvatarSupabase() {
   }
 }
 
-async function embedShortlistAvatarDataUri(
+export async function embedShortlistAvatarDataUri(
   src: string | null,
   profileUrl: string | null,
   supabase: Awaited<ReturnType<typeof resolveExportAvatarSupabase>> = null

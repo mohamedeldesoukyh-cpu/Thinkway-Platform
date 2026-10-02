@@ -31,6 +31,7 @@ import { useQuotationWorkspaceShortcuts } from "@/features/quotations/components
 import { QuotationTermsAccordion } from "@/features/quotations/components/quotation-terms-accordion";
 import { QuotationCommercialMetricsBand } from "@/features/quotations/components/quotation-commercial-metrics-band";
 import { QuotationWorkspaceHeader } from "@/features/quotations/components/quotation-workspace-header";
+import { QuotationRateCardTools } from "@/features/rate-cards/quotation-tools";
 import { ConvertQuotationDialog } from "@/features/quotations/components/convert-quotation-dialog";
 import { AppendQuotationCreatorDialog } from "@/features/quotations/components/append-quotation-creator-dialog";
 import { QuotationClientReviewPanel } from "@/features/quotations/components/quotation-client-review-panel";
@@ -111,12 +112,14 @@ export function QuotationWorkspace({
 }) {
   return (
     <QuotationManualSaveProvider quotationId={detail.id} items={detail.items}>
+      <QuotationRateCardTools detail={detail}>
       <QuotationWorkspaceContent
         detail={detail}
         formOptions={formOptions}
         promoteOptions={promoteOptions}
         clientReview={clientReview}
       />
+      </QuotationRateCardTools>
     </QuotationManualSaveProvider>
   );
 }

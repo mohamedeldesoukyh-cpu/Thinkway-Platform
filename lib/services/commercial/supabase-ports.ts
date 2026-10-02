@@ -46,11 +46,13 @@ const idempotentInFlight = new Set<string>();
 const concurrencyTokens = new Map<string, string>();
 
 export function createSupabaseCommercialSyncPorts(
-  supabase: Supabase
+  supabase: Supabase,
+  rateCardSnapshot?: import("@/features/rate-cards/model").RateCardWriteSnapshot
 ): CommercialSyncPorts {
   const writeAudit = createSupabaseAuditWriter(supabase);
 
   const snapQuotes = new Map<string, MasterCommercialValues>();
+  const snapQuoteDetails = new Map<string, {deliverables:unknown;rate_card_sources:unknown}>();
   const snapAssignments = new Map<string, MasterCommercialValues>();
   let capturing = false;
   let restoring = false;
@@ -125,6 +127,11 @@ export function createSupabaseCommercialSyncPorts(
       .eq("id", quotationItemId)
       .maybeSingle();
     if (!existing) throw new Error(`Unknown quotation item ${quotationItemId}`);
+    if(rateCardSnapshot?.quotationItemId===quotationItemId&&!restoring&&!snapQuoteDetails.has(quotationItemId)){
+      const {data,error}=await supabase.from("quotation_items").select("deliverables,rate_card_sources" as "deliverables").eq("id",quotationItemId).single();
+      if(error)throw new Error(error.message);
+      snapQuoteDetails.set(quotationItemId,data as unknown as {deliverables:unknown;rate_card_sources:unknown});
+    }
 
     const mode = String(
       columns.commercial_input_mode ??
@@ -182,12 +189,25 @@ export function createSupabaseCommercialSyncPorts(
       (existing.deliverables as unknown as QuotationDeliverable[] | null) ?? []
     );
     if (cleared) patch.deliverables = cleared;
-
-    const { error } = await supabase
+    const snapshot=rateCardSnapshot?.quotationItemId===quotationItemId?rateCardSnapshot:undefined;
+    if(snapshot){
+      if(restoring)Object.assign(patch,snapQuoteDetails.get(quotationItemId));
+      else Object.assign(patch,{deliverables:snapshot.deliverables,rate_card_sources:snapshot.sources});
+    }
+    let write = supabase
       .from("quotation_items")
       .update(patch as never)
       .eq("id", quotationItemId);
-    if (error) throw new Error(error.message);
+    if(snapshot&&!restoring){
+      write=write.eq("deliverables",JSON.stringify(snapshot.expectedDeliverables)).eq("revenue",snapshot.expectedRevenue).eq("cost_currency",snapshot.expectedCurrency);
+      write=snapshot.expectedCost==null?write.is("cost",null):write.eq("cost",snapshot.expectedCost);
+    }
+    const {error,data:written}=await write.select("id");
+    if(error||snapshot&&!written?.length){
+      // No snapshot was written: do not compensate over a concurrent user's edit.
+      if(snapshot&&!restoring){snapQuotes.delete(quotationItemId);snapQuoteDetails.delete(quotationItemId);}
+      throw new Error(error?.message??"stale");
+    }
   };
 
   const writeAssignmentMaster = async (
@@ -286,6 +306,7 @@ export function createSupabaseCommercialSyncPorts(
     writeAudit,
     runInTransaction: async (work) => {
       snapQuotes.clear();
+      snapQuoteDetails.clear();
       snapAssignments.clear();
       capturing = true;
       restoring = false;
