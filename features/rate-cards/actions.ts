@@ -25,6 +25,8 @@ import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constant
 import { parseProfileInput } from "@/lib/social/parse-profile-url";
 import { refreshCreatorMetricsBatchByUnifiedIds } from "@/lib/services/creators/creator-enrichment-service";
 import { AVATAR_MAX_BYTES, normalizeRateAvatar, readRateAvatarLink } from "./avatar";
+import { creatorProfileSourceFromUnified } from "@/lib/creators/creator-profile-source";
+import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar";
 
 async function actor(permission: string) {
   const db = await createSupabaseServerClient();
@@ -76,12 +78,22 @@ export async function getRateVersion(id: string, page=1, search="", platform="",
   if(platform) q=q.eq("platform",platform); if(currency) q=q.contains("currencies",[currency]);
   const result=await q.order("creator_name").order("creator_ref").order("platform").range((Math.max(1,page)-1)*25,Math.max(1,page)*25-1);
   const lines=(checked(result) as {rates:RateLine[]}[]).flatMap(row=>row.rates);
+  const profileAvatars:Record<string,string>={};
   if(lines.length){
     const current=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[...new Set(lines.map(l=>l.creator_ref))]});
-    for(const line of lines){const creator=current.byUnifiedId.get(line.creator_ref)??(line.creator_ref.startsWith("dis:")?current.byDiscoveryId.get(line.creator_ref.slice(4)):undefined);if(creator)line.creator_name=creator.display_name;}
+    for(const line of lines){
+      const creator=current.byUnifiedId.get(line.creator_ref)??(line.creator_ref.startsWith("dis:")?current.byDiscoveryId.get(line.creator_ref.slice(4)):undefined);
+      if(creator){
+        line.creator_name=creator.display_name;
+        const source=creatorProfileSourceFromUnified(creator);
+        const photo=creatorAvatarBrowserDisplayUrl(source.avatarUrl,source.profile_url);
+        if(photo)profileAvatars[line.creator_ref]=photo;
+      }
+    }
   }
   const avatars=lines.length?checked(await db.from("rate_card_creator_avatars").select("creator_ref,avatar_data").eq("card_id",version.card_id).in("creator_ref",[...new Set(lines.map(l=>l.creator_ref))])):[];
-  return {version,lines,total:result.count??0,avatars:Object.fromEntries((avatars??[]).map(a=>[a.creator_ref,a.avatar_data as string]))};
+  const avatarOverrides=Object.fromEntries((avatars??[]).map(a=>[a.creator_ref,a.avatar_data as string]));
+  return {version,lines,total:result.count??0,avatars:{...profileAvatars,...avatarOverrides},avatarOverrides};
 }
 export async function saveRateAvatar(versionId:string,creatorRef:string,form:FormData) {
   const {db}=await actor("edit");

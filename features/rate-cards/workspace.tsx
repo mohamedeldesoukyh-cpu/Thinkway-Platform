@@ -74,7 +74,7 @@ function VersionDetail({id,options,onClose,onUpload}:{id:string;options:Options;
       {reportOpen&&<Modal open size="wide" title={t("previewExport")} description={t("reportHelp")} lang={lang} onClose={()=>setReportOpen(false)}><ReportControls versionId={id}/></Modal>}<RateCardAudit versionId={id}/>
       {options.permissions.edit&&<Button variant="outline" onClick={()=>setPricing(true)}>{t("pricing")}</Button>}
       {pricing&&<PricingDialog versionId={id} onClose={()=>setPricing(false)} onDone={()=>{setPricing(false);setRevision(x=>x+1);}}/>}
-      {avatar&&<AvatarEditor versionId={id} creatorRef={avatar.creator_ref} name={avatar.creator_name} current={data.avatars[avatar.creator_ref]} onClose={()=>setAvatar(null)} onSaved={()=>{setAvatar(null);setRevision(x=>x+1);}}/>}
+      {avatar&&<AvatarEditor versionId={id} creatorRef={avatar.creator_ref} name={avatar.creator_name} current={data.avatars[avatar.creator_ref]} hasOverride={Boolean(data.avatarOverrides[avatar.creator_ref])} onClose={()=>setAvatar(null)} onSaved={()=>{setAvatar(null);setRevision(x=>x+1);}}/>}
       {edit&&<LineEditor initial={edit} options={options} source={source} onClose={()=>setEdit(null)} onSave={async value=>{await actions.saveRateLine(id,value,edit.id);setEdit(null);setRevision(x=>x+1);}}/>}
       {confirm&&<Modal open onClose={()=>setConfirm(false)} title={t("remove")} description={t("removeConfirm")} lang={lang}><Button disabled={busy} variant="destructive" onClick={()=>start(async()=>{try{await actions.removeRateLines(id,[...selected]);setConfirm(false);setRevision(x=>x+1);}catch(e){toast.error(t(errorLabel(e)));}})}>{t("remove")}</Button></Modal>}
     </>}

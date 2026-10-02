@@ -3,6 +3,7 @@ import {buildCreatorGroup} from "@/features/discovery/shortlists/export/shortlis
 import {embedShortlistAvatarDataUri} from "@/features/discovery/shortlists/export/shortlist-export-avatars";
 import {resolveUnifiedCreatorsByRefs} from "@/lib/creators/unified-browse";
 import type {RateVersion} from "./model";
+import type {Database} from "@/types/database";
 import type {ClientRate,RateCardReport} from "./report";
 
 export async function loadRateCardReport(db:SupabaseClient,id:string):Promise<RateCardReport>{
@@ -36,6 +37,6 @@ export async function loadRateCardReport(db:SupabaseClient,id:string):Promise<Ra
     }
   }
   // Bound image concurrency; reuse the existing protected image fetching pipeline.
-  for(let from=0;from<creators.length;from+=5)await Promise.all(creators.slice(from,from+5).map(async c=>{c.group.avatarUrl=await embedShortlistAvatarDataUri(c.group.avatarUrl,c.group.avatarProfileUrl);c.group.avatarProxyUrl=null;}));
+  for(let from=0;from<creators.length;from+=5)await Promise.all(creators.slice(from,from+5).map(async c=>{c.group.avatarUrl=await embedShortlistAvatarDataUri(c.group.avatarUrl,c.group.avatarProfileUrl,db as SupabaseClient<Database>);c.group.avatarProxyUrl=null;}));
   return {name:v.name,version:v.version,client:v.client_name,brand:v.brand_name,effective:v.effective_date,expiry:v.expiry_date,creators};
 }

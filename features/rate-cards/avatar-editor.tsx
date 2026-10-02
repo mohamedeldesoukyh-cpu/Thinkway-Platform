@@ -7,7 +7,7 @@ import {saveRateAvatar} from "./actions";
 import {errorLabel} from "./labels";
 import {Field,Modal,TextField,useRateLanguage} from "./ui";
 
-export function AvatarEditor({versionId,creatorRef,name,current,onClose,onSaved}:{versionId:string;creatorRef:string;name:string;current?:string;onClose:()=>void;onSaved:()=>void}) {
+export function AvatarEditor({versionId,creatorRef,name,current,hasOverride,onClose,onSaved}:{versionId:string;creatorRef:string;name:string;current?:string;hasOverride:boolean;onClose:()=>void;onSaved:()=>void}) {
   const {lang,t}=useRateLanguage();
   const [file,setFile]=useState<File|null>(null),[url,setUrl]=useState(""),[preview,setPreview]=useState(current??"");
   const [busy,start]=useTransition();
@@ -18,6 +18,6 @@ export function AvatarEditor({versionId,creatorRef,name,current,onClose,onSaved}
     <Field label={t("avatarBrowse")}><Input type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" disabled={busy} onChange={e=>{const selected=e.target.files?.[0]??null;if(selected&&selected.size>750000){toast.error(t("avatarInvalid"));e.target.value="";return;}setFile(selected);setPreview(selected?URL.createObjectURL(selected):current??"");if(selected)setUrl("");}}/></Field>
     <TextField label={t("avatarUrl")} type="url" value={url} disabled={busy} onChange={v=>{setUrl(v);setFile(null);setPreview(current??"");}}/>
     <p className="text-sm text-muted-foreground">{t("avatarHelp")}</p>
-    <div className="flex flex-wrap gap-2"><Button disabled={busy||(!file&&!url.trim())} onClick={()=>save()}>{t(busy?"busy":"save")}</Button>{current&&<Button variant="outline" disabled={busy} onClick={()=>save(true)}>{t("avatarReset")}</Button>}</div>
+    <div className="flex flex-wrap gap-2"><Button disabled={busy||(!file&&!url.trim())} onClick={()=>save()}>{t(busy?"busy":"save")}</Button>{hasOverride&&<Button variant="outline" disabled={busy} onClick={()=>save(true)}>{t("avatarReset")}</Button>}</div>
   </Modal>;
 }
