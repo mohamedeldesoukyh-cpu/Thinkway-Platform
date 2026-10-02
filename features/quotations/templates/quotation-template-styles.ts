@@ -447,7 +447,7 @@ export const QUOTATION_TEMPLATE_STYLES = `
   .collap-creator-meta{display:flex; flex-wrap:wrap; gap:6px; font-size:10.5px; color:var(--muted);}
   .collap-tier-pill{display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; background:var(--pill); color:var(--blue); font-size:9.5px; font-weight:800; letter-spacing:.04em; text-transform:uppercase;}
   .quotation-platform-icons,.collap-platform-icons{display:inline-flex; align-items:center; gap:5px; flex-wrap:wrap;}
-  .quotation-platform-icon{width:18px; height:18px; border-radius:50%; object-fit:cover; display:block; flex:none;}
+  .quotation-platform-icon{width:18px; height:18px; border-radius:0; object-fit:contain; display:block; flex:none; border:0; background:transparent;}
   .quotation-platform-icon-fallback{display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; border-radius:50%; background:var(--surface); color:var(--muted); font-size:8px; font-weight:700; flex:none;}
   .platform-cell{white-space:nowrap;}
   .platform-cell-label{font-size:11px; color:var(--muted); vertical-align:middle;}

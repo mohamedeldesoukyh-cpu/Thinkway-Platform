@@ -11,6 +11,7 @@ const REPORT_PLATFORM_IMAGE_FILES: Record<string, string> = {
   tiktok: "tiktok.png",
   facebook: "facebook.png",
   youtube: "youtube.png",
+  linkedin: "linkedin.png",
 };
 
 const dataUriCache = new Map<string, string>();
@@ -66,5 +67,6 @@ export function getReportPlatformIconTitle(platform: string): string {
   if (key === "tiktok") return "TikTok";
   if (key === "facebook") return "Facebook";
   if (key === "youtube") return "YouTube";
+  if (key === "linkedin") return "LinkedIn";
   return platform;
 }

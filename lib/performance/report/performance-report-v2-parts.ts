@@ -128,7 +128,7 @@ export function renderPlatformIconBox(platform: string): string {
   const uri = getReportPlatformIconDataUri(platform);
   const color = platformColor(platform);
   if (uri) {
-    return `<div class="pi" title="${esc(title)}" style="background:${color}"><img src="${uri}" alt="${esc(title)}" style="width:17px;height:17px;object-fit:contain;filter:brightness(0) invert(1)" /></div>`;
+    return `<div class="pi" title="${esc(title)}" style="background:transparent;border:0;box-shadow:none"><img src="${uri}" alt="${esc(title)}" style="width:17px;height:17px;object-fit:contain;object-fit:contain" /></div>`;
   }
   return `<div class="pi" title="${esc(title)}" style="background:${color}"><span style="font-size:9px;font-weight:800;color:#fff">${esc(title.slice(0, 2).toUpperCase())}</span></div>`;
 }
@@ -137,7 +137,7 @@ export function renderPlatformDot(platform: string): string {
   const uri = getReportPlatformIconDataUri(platform);
   const color = platformColor(platform);
   if (uri) {
-    return `<span class="dot" style="background:${color}"><img src="${uri}" alt="" style="width:10px;height:10px;filter:brightness(0) invert(1)" /></span>`;
+    return `<span class="dot" style="background:transparent;border:0;box-shadow:none"><img src="${uri}" alt="" style="width:10px;height:10px;object-fit:contain" /></span>`;
   }
   return `<span class="dot" style="background:${color}"></span>`;
 }
@@ -195,7 +195,7 @@ export function renderPcard(pub: CampaignPublicationRow): string {
   const color = platformColor(pub.platform);
   const iconUri = getReportPlatformIconDataUri(pub.platform);
   const chipIcon = iconUri
-    ? `<img src="${iconUri}" alt="" style="width:10px;height:10px;filter:brightness(0) invert(1)" />`
+    ? `<img src="${iconUri}" alt="" style="width:10px;height:10px;object-fit:contain" />`
     : "";
 
   const isAdded = resolvePublicationValueScope(pub) === "added_value";

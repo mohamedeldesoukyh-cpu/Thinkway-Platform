@@ -14,7 +14,7 @@ test("Arabic exports and unsafe profile links",()=>{
 test("details show one performance card per creator without continued duplicates",()=>{
  const html=buildRateCardReportHtml(fixture,"creator-list-details");
  assert.ok(!html.includes("Performance data is not available yet"));
- assert.equal((html.match(/120,000/g)||[]).length,8);
+ assert.equal((html.match(/120K/g)||[]).length,8);
 });
 test("monthly report prices show rate, duration and extended total separately",()=>{
  const doc=structuredClone(fixture);doc.creators[0].rates=[{platform:"instagram",deliverable:"usage_right",amount:100,currency:"EGP",agency_fee_percent:10,period_months:2},{platform:"instagram",deliverable:"boosting",amount:50,currency:"EGP",agency_fee_percent:null,period_months:1},{platform:"instagram",deliverable:"event_attendance",amount:300,currency:"EGP",agency_fee_percent:null}];

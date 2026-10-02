@@ -414,9 +414,9 @@ ${
           const pct = Math.round((p.count / totalSplit) * 100);
           const uri = getReportPlatformIconDataUri(p.platform);
           return `<div class="share__r">
-      <div class="share__i" style="background:${platformColor(p.platform)}">${
+      <div class="share__i" style="background:transparent;border:0;box-shadow:none">${
         uri
-          ? `<img src="${uri}" alt="" style="width:13px;height:13px;filter:brightness(0) invert(1)" />`
+          ? `<img src="${uri}" alt="" style="width:13px;height:13px;object-fit:contain" />`
           : ""
       }</div>
       <div class="share__n">${esc(p.label)}</div>

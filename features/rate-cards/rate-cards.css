@@ -76,3 +76,20 @@ section.rate-card-suite{background:#f5f7fb;min-height:100%}
 .rate-card-suite .rc-template-creator small{font-size:9px;color:#635e79}
 .rate-card-suite .rc-template-preview-details .rc-template-creator{max-width:100px}
 .rate-card-suite .rc-template-performance{display:flex;flex:2;flex-direction:column;justify-content:center;gap:12px;padding:12px;background:white;border-radius:6px;font-size:10px}
+
+/* Collections masthead, control dimensions, typography and focus treatment. */
+.rate-card-suite .rc-heading,.rate-card-suite .rc-modal-heading{position:relative;isolation:isolate;overflow:hidden;background:linear-gradient(107deg,#0040CC 0%,#0057FF 42%,#1A6FFF 100%);padding:11px 15px 10px}
+.rate-card-suite .rc-heading::after,.rate-card-suite .rc-modal-heading::after{content:"";position:absolute;z-index:-1;right:-30px;top:-46px;width:104px;height:104px;border-radius:50%;border:17px solid #ffffff21;pointer-events:none}
+.rate-card-suite .rc-heading h1,.rate-card-suite .rc-modal-heading h2{font-size:19px;font-weight:600;letter-spacing:-.5px}
+.rate-card-suite .rc-heading p,.rate-card-suite .rc-modal-heading p{font-size:11.5px;color:#ffffffbd}
+.rate-card-suite [data-slot=button]{height:32px;min-height:32px;padding:0 12px;display:inline-flex;align-items:center;gap:6px;border:.8px solid #E3E8F2;border-radius:9px;background:#fff;color:#334767;font-size:12.5px;font-weight:600;white-space:nowrap;box-shadow:none}
+.rate-card-suite [data-slot=button][data-variant=default]{border-color:#0057ff8c;color:#0040cc;font-weight:700;font-size:12px;box-shadow:0 0 0 3px #0057ff14,0 2px 14px -3px #0057ff66}
+.rate-card-suite [data-slot=button][data-variant=destructive]{color:#c82121;border-color:#efb6b6}
+.rate-card-suite [data-slot=button]:hover{border-color:#0057ff59;color:#0040cc}
+.rate-card-suite [data-slot=button]:disabled{opacity:.42;box-shadow:none}
+.rate-card-suite input:not([type=checkbox]),.rate-card-suite select{height:30px;padding:0 9px;border:1px solid #e3e8f2;border-radius:8px;font-size:12.5px;font-weight:500}
+.rate-card-suite input:focus,.rate-card-suite select:focus{outline:none;border-color:#0057ff;box-shadow:0 0 0 3px #0057ff1f}
+.rate-card-suite label{font-size:10px;font-weight:700;letter-spacing:.55px;text-transform:uppercase}
+.rate-card-suite .rc-detail-filters,.rate-card-suite .rc-filters{padding:14px;background:white;border:1px solid #e3e8f2;border-radius:12px}
+.rate-card-suite .rc-preview-toolbar{display:flex;justify-content:flex-end;padding:9px 15px;background:white;border-bottom:1px solid #e3e8f2;margin:-20px -22px 0}
+@media(max-width:640px){.rate-card-suite .rc-preview-toolbar{margin:-14px -14px 0}.rate-card-suite [data-slot=button]{min-height:36px}}

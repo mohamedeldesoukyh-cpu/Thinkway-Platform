@@ -263,9 +263,7 @@ function normalizePlatformKey(platform: string): string {
 function PlatformMenuIcon({ platform }: { platform: string }) {
   const key = normalizePlatformKey(platform);
 
-  if (key === "instagram") {
-    return <InstagramGlyph />;
-  }
+
 
   const style = PLATFORM_ICON_STYLES[key];
   if (style?.imageUrl) {
@@ -285,16 +283,14 @@ function PlatformMenuIcon({ platform }: { platform: string }) {
 
 function platformMenuIconStyle(platform: string): React.CSSProperties {
   const key = normalizePlatformKey(platform);
-  if (key === "instagram") {
-    return { background: MENU.instagramGradient };
-  }
+  if (PLATFORM_ICON_STYLES[key]?.imageUrl) return { background: "transparent", border: 0, boxShadow: "none" };
   const style = PLATFORM_ICON_STYLES[key];
   return style ? {} : { background: "#f1f5f9" };
 }
 
 function platformMenuIconClassName(platform: string): string {
   const key = normalizePlatformKey(platform);
-  if (key === "instagram") return "";
+  if (PLATFORM_ICON_STYLES[key]?.imageUrl) return "!bg-transparent !border-0 !shadow-none";
   return PLATFORM_ICON_STYLES[key]?.className ?? "bg-[#f1f5f9] dark:bg-white/10";
 }
 

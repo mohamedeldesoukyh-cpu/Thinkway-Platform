@@ -1,3 +1,4 @@
+import {getReportPlatformIconDataUri} from "@/lib/performance/report/report-platform-icons";
 import type { ShortlistDocument } from "./shortlist-document";
 import type { HtmlToPdfOptions } from "@/lib/io/vendor-io-pdf";
 import { getThinkwayLogoDarkDataUri } from "@/lib/reports/document/thinkway-report-logo-embed";
@@ -20,11 +21,14 @@ function image(value: string | null | undefined): string {
 function link(value: string | null): string {
   return value && /^https?:\/\//i.test(value) ? esc(value) : "";
 }
-export function creatorListPlatform(url: string | null): "Instagram" | "TikTok" | null {
+export function creatorListPlatform(url: string | null): "Instagram" | "TikTok" | "Facebook" | "YouTube" | "LinkedIn" | null {
   try {
     const host = new URL(url ?? "").hostname.toLowerCase();
     if (host === "instagram.com" || host.endsWith(".instagram.com")) return "Instagram";
     if (host === "tiktok.com" || host.endsWith(".tiktok.com")) return "TikTok";
+    if (host === "facebook.com" || host.endsWith(".facebook.com")) return "Facebook";
+    if (host === "youtube.com" || host.endsWith(".youtube.com")) return "YouTube";
+    if (host === "linkedin.com" || host.endsWith(".linkedin.com")) return "LinkedIn";
   } catch { /* A missing/invalid URL has no platform badge. */ }
   return null;
 }
@@ -63,7 +67,7 @@ export function renderCreatorListReport(report: CreatorListReport, presentation:
     const src = image(creator.portrait), href = link(creator.profileUrl);
     if (!src) missingPortraits++;
     if (href) links++;
-    const visual = `${src ? `<img src="${src}" alt="${esc(creator.name)}" loading="eager">` : `<div class="placeholder" aria-label="No portrait supplied">${esc(creator.name.slice(0, 1).toUpperCase())}</div>`}<span class="idx" aria-hidden="true">${String(index + 1).padStart(3, "0")}</span>${platform ? `<span class="pb pb--${platform === "Instagram" ? "ig" : "tt"}" title="${platform}" aria-hidden="true">${platform === "Instagram" ? "IG" : "TT"}</span>` : ""}`;
+    const visual = `${src ? `<img src="${src}" alt="${esc(creator.name)}" loading="eager">` : `<div class="placeholder" aria-label="No portrait supplied">${esc(creator.name.slice(0, 1).toUpperCase())}</div>`}<span class="idx" aria-hidden="true">${String(index + 1).padStart(3, "0")}</span>${platform ? `<span class="pb pb--${platform === "Instagram" ? "ig" : "tt"}" title="${platform}" aria-hidden="true"><img src="${getReportPlatformIconDataUri(platform.toLowerCase())}" alt="" /></span>` : ""}`;
     const avatar = image(creator.avatar);
     const identity = `<div class="creator-identity">${avatar ? `<img class="creator-avatar" src="${avatar}" alt="" aria-hidden="true" loading="eager">` : `<span class="creator-avatar" aria-hidden="true">${esc(creator.name.slice(0, 1).toUpperCase())}</span>`}<div class="creator-label"><h2 dir="auto">${esc(creator.name)}</h2>${creator.tier ? `<span class="creator-tier">${esc(creator.tier)}</span>` : ""}<p dir="auto">${esc(creator.handle)}</p></div></div>`;
     const card = `<article class="creator-card">${href ? `<a class="portrait" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${esc(creator.name)}">${visual}</a>` : `<div class="portrait">${visual}</div>`}${identity}${presentation.cardSupplement?.(creator,index)??""}<div class="creator-categories">${categories.length ? categories.map((category) => `<span class="creator-category">${esc(category)}</span>`).join("") : '<span class="creator-category creator-category--none">Categories not recorded</span>'}</div></article>`;

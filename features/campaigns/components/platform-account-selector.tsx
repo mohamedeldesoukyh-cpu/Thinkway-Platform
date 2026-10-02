@@ -1,5 +1,6 @@
 "use client";
 
+import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { ExternalLinkIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -25,29 +26,6 @@ export type PlatformSelectionState = {
   deliverables: string[];
   selected: boolean;
 };
-
-const PLATFORM_BADGE: Record<string, { label: string; className: string }> = {
-  instagram: { label: "IG", className: "bg-pink-500/15 text-pink-700 dark:text-pink-300" },
-  tiktok: { label: "TT", className: "bg-foreground/10 text-foreground" },
-  youtube: { label: "YT", className: "bg-red-500/15 text-red-700 dark:text-red-300" },
-  snapchat: { label: "SC", className: "bg-yellow-500/20 text-yellow-800 dark:text-yellow-200" },
-  twitter: { label: "X", className: "bg-foreground/10 text-foreground" },
-  facebook: { label: "FB", className: "bg-blue-500/15 text-blue-700 dark:text-blue-300" },
-};
-
-function PlatformIcon({ platform }: { platform: string }) {
-  const badge = PLATFORM_BADGE[platform];
-  return (
-    <span
-      className={cn(
-        "flex size-6 shrink-0 items-center justify-center rounded-md text-[10px] font-bold uppercase",
-        badge?.className ?? "bg-muted text-muted-foreground"
-      )}
-    >
-      {badge?.label ?? platform.slice(0, 2)}
-    </span>
-  );
-}
 
 function formatFollowers(count: number | null): string {
   if (count == null) return "N/A";

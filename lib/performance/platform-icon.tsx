@@ -24,7 +24,7 @@ export const PLATFORM_ICON_STYLES: Record<string, PlatformIconStyle> = {
     label: "YT",
     title: "YouTube",
     className: "bg-[#FF0000] text-white",
-    imageUrl: "/platform-icons/youtube.svg",
+    imageUrl: "/platform-icons/youtube.png",
   },
   snapchat: {
     label: "SC",
@@ -36,7 +36,7 @@ export const PLATFORM_ICON_STYLES: Record<string, PlatformIconStyle> = {
     label: "FB",
     title: "Facebook",
     className: "bg-[#1877F2] text-white",
-    imageUrl: "/platform-icons/facebook.svg",
+    imageUrl: "/platform-icons/facebook.png",
   },
   twitter: {
     label: "X",
@@ -47,7 +47,7 @@ export const PLATFORM_ICON_STYLES: Record<string, PlatformIconStyle> = {
     label: "IN",
     title: "LinkedIn",
     className: "bg-[#0A66C2] text-white",
-    imageUrl: "/platform-icons/linkedin.svg",
+    imageUrl: "/platform-icons/linkedin.png",
   },
 };
 
@@ -104,7 +104,8 @@ export function PlatformIcon({
           "shrink-0 object-contain",
           dimension,
           variant === "logo" && LOGO_ICON_CLASS,
-          className
+          className,
+          "!rounded-none !border-0 !ring-0 !shadow-none !bg-transparent !object-contain !p-0"
         )}
       />
     );

@@ -14,9 +14,9 @@ export function ReviewPlatformMark({
 
   if (badge?.imageUrl) {
     return (
-      <span className="plat-mark-wrap">
+      <span className="plat-mark-wrap" style={{background:"transparent",border:0,boxShadow:"none",padding:0}}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img className="plat-mark" src={badge.imageUrl} alt="" title={label} />
+        <img className="plat-mark" style={{background:"transparent",border:0,boxShadow:"none",borderRadius:0,objectFit:"contain"}} src={badge.imageUrl} alt="" title={label} />
       </span>
     );
   }

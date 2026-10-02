@@ -136,6 +136,7 @@ body{margin:0;background:#050443;color:#fff;
  box-shadow:0 2px 6px rgba(8,6,66,.4)}
 .pb--ig{background:linear-gradient(135deg,#F58529,#DD2A7B,#8134AF)}
 .pb--tt{background:#0B0F1A}
+.pb.pb--ig,.pb.pb--tt{background:transparent;border:0;box-shadow:none;border-radius:0;padding:0}.portrait .pb img{position:static;width:100%;height:100%;object-fit:contain;border-radius:0}
 
 h2{font-size:15.5px;line-height:19px;text-align:center;margin:11px 0 0;height:38px;
  overflow:hidden;font-weight:700;letter-spacing:-.35px;color:var(--ink);
@@ -263,7 +264,7 @@ export const CREATOR_LIST_WALL_SCRIPT = String.raw`
   var COLS = 16, ROWS = 9;
 
   var srcs = [];
-  var imgs = document.querySelectorAll('.creator-card .portrait img');
+  var imgs = document.querySelectorAll('.creator-card .portrait > img');
   for (var i = 0; i < imgs.length; i++) {
     if (imgs[i].src) srcs.push(imgs[i].src);
   }
