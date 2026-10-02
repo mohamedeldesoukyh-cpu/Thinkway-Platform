@@ -1,5 +1,6 @@
 "use client";
 
+import {requiresPeriod} from "@/lib/quotations/commercial-period";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { QuotationDeliverableTypeLine } from "@/lib/domains/commercial/quotation-types";
@@ -98,6 +99,7 @@ export function QuotationDeliverableTypeLinesEditor({
           compact={compact}
         />
       </div>
+      {displayLines.filter(line=>requiresPeriod(line.type)).map(line=><label key={line.type} className="mt-1 flex items-center gap-2 text-xs"><span>{quotationPostTypeLabel(line.type)} · months</span><Input type="number" min={1} max={120} step={1} className="h-8 w-20" disabled={disabled} aria-label={`${quotationPostTypeLabel(line.type)} period in months`} value={line.period_months??""} onChange={e=>onChange(displayLines.map(entry=>entry.type===line.type?{...entry,period_months:e.target.value?Number(e.target.value):null}:entry))}/></label>)}
       {showPerTypeQuantity && !compact
         ? selectedTypes.map((type) => {
             const line = displayLines.find((entry) => entry.type === type);

@@ -1,6 +1,7 @@
 /**
  * Post / deliverable types for client quotations (broader than campaign hierarchy taxonomy).
  */
+import { requiresPeriod, periodLabel } from "./commercial-period";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import type { QuotationDeliverableTypeLine } from "@/lib/domains/commercial/quotation-types";
 
@@ -45,7 +46,8 @@ export const QUOTATION_POST_TYPES = [
   { value: "mirrored_sc", label: "Mirrored SC" },
   { value: "instagram_live", label: "IG Live" },
   { value: "ig_collab_post", label: "IG Collab Post" },
-  { value: "usage_right", label: "Usage Right" },
+  { value: "usage_right", label: "Usage Rights (UR)" },
+  { value: "event_attendance", label: "Event Attendance" },
   { value: "boosting", label: "Boosting" },
 ] as const;
 
@@ -88,7 +90,7 @@ export function deliverableTypeLines(
   deliverable: {
     type?: string | null;
     types?: string[] | null;
-    type_lines?: Array<{ type?: string | null; quantity?: number | null }> | null;
+    type_lines?: Array<{ type?: string | null; quantity?: number | null; period_months?: number | null }> | null;
     quantity?: number | null;
   }
 ): QuotationDeliverableTypeLine[] {
@@ -100,6 +102,7 @@ export function deliverableTypeLines(
     .map((line) => ({
       type: normalizeQuotationPostType(line.type),
       quantity: normalizeTypeLineQuantity(line.quantity),
+      ...(requiresPeriod(line.type)?{period_months:line.period_months??null}:{}),
     }));
 
   const filledLines = normalizedLines.filter((line) => line.type);
@@ -138,7 +141,7 @@ export function typeLinesAutoDescription(
   return filled
     .map(
       (line) =>
-        `${normalizeTypeLineQuantity(line.quantity)}× ${quotationPostTypeLabel(line.type)}`
+        `${normalizeTypeLineQuantity(line.quantity)}× ${quotationPostTypeLabel(line.type)}${requiresPeriod(line.type)&&line.period_months?` · ${periodLabel(line.period_months)}`:""}`
     )
     .join(" + ");
 }
@@ -238,7 +241,7 @@ export function typeLinesIncludeAllPlatforms(
   deliverable: {
     type?: string | null;
     types?: string[] | null;
-    type_lines?: Array<{ type?: string | null; quantity?: number | null }> | null;
+    type_lines?: Array<{ type?: string | null; quantity?: number | null; period_months?: number | null }> | null;
   }
 ): boolean {
   return deliverableTypeLines(deliverable).some(
@@ -285,6 +288,7 @@ export function typeLinesFromSelectedTypes(
   return trimmed.map((type) => ({
     type,
     quantity: qtyByType.get(type) ?? 1,
+    ...(requiresPeriod(type)?{period_months:existingLines.find(line=>line.type===type)?.period_months??1}:{}),
   }));
 }
 

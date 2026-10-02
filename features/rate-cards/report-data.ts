@@ -15,7 +15,7 @@ export async function loadRateCardReport(db:SupabaseClient,id:string):Promise<Ra
     for(const row of r.data??[])identities.add(row.creator_ref);if((r.data?.length??0)<1000)break;
   }
   for(let from=0;;from+=1000){
-    const r=await db.from("rate_card_lines").select("creator_ref,platform,deliverable,amount,currency,agency_fee_percent").eq("version_id",id).eq("price_type","client_price").order("id").range(from,from+999);if(r.error)throw r.error;
+    const r=await db.from("rate_card_lines").select("creator_ref,platform,deliverable,amount,currency,agency_fee_percent,period_months").eq("version_id",id).eq("price_type","client_price").order("id").range(from,from+999);if(r.error)throw r.error;
     for(const {creator_ref,...rate} of r.data??[])prices.set(creator_ref,[...(prices.get(creator_ref)??[]),rate as ClientRate]);if((r.data?.length??0)<1000)break;
   }
   const creators:RateCardReport["creators"]=[];const refs=[...identities];

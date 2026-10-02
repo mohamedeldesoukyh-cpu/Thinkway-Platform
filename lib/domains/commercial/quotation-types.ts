@@ -4,6 +4,8 @@ import type { CommercialInputMode } from "@/types/database";
 
 export type QuotationDeliverableTypeLine = {
   type: string;
+  /** Duration for monthly Usage Rights / Boosting prices. */
+  period_months?: number | null;
   /** Deliverable count for this post type (separate from pricing `quantity`). */
   quantity: number;
 };

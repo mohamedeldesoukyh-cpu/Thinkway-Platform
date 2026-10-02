@@ -20,6 +20,7 @@ import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-consta
 import { addCreatorByProfileUrl } from "@/lib/discovery/add-creator-by-profile-url";
 import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
 import { parseProfileInput } from "@/lib/social/parse-profile-url";
+import { refreshCreatorMetricsBatchByUnifiedIds } from "@/lib/services/creators/creator-enrichment-service";
 import { AVATAR_MAX_BYTES, normalizeRateAvatar, readRateAvatarLink } from "./avatar";
 
 async function actor(permission: string) {
@@ -31,7 +32,7 @@ async function actor(permission: string) {
 }
 function checked<T>(r: { data: T; error: { message: string } | null }): T { if (r.error) throw new Error(r.error.message); return r.data; }
 function refresh() { revalidatePath("/rate-cards"); }
-function dbLine(rate: RateInput) { const { creator_ref, ...rest } = rate; const [kind,id] = creator_ref.split(":"); return { ...rest, influencer_id: kind === "inf" ? id : null, profile_id: kind === "dis" ? id : null }; }
+function dbLine(rate: RateInput) { const { creator_ref, ...rest } = rate; const [kind,id] = creator_ref.split(":"); return { ...rest, period_months:rate.period_months??0, influencer_id: kind === "inf" ? id : null, profile_id: kind === "dis" ? id : null }; }
 async function canonicalRate(db: SupabaseClient, raw: unknown): Promise<RateInput> {
   const rate = rateSchema.parse(raw);
   const refs = await resolveUnifiedCreatorsByRefs(db, { unifiedIds: [rate.creator_ref] });
@@ -72,6 +73,10 @@ export async function getRateVersion(id: string, page=1, search="", platform="",
   if(platform) q=q.eq("platform",platform); if(currency) q=q.eq("currency",currency);
   const result=await q.order("creator_name").order("id").range((Math.max(1,page)-1)*50,Math.max(1,page)*50-1);
   const lines=checked(result) as RateLine[];
+  if(lines.length){
+    const current=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[...new Set(lines.map(l=>l.creator_ref))]});
+    for(const line of lines){const creator=current.byUnifiedId.get(line.creator_ref)??(line.creator_ref.startsWith("dis:")?current.byDiscoveryId.get(line.creator_ref.slice(4)):undefined);if(creator)line.creator_name=creator.display_name;}
+  }
   const avatars=lines.length?checked(await db.from("rate_card_creator_avatars").select("creator_ref,avatar_data").eq("card_id",version.card_id).in("creator_ref",[...new Set(lines.map(l=>l.creator_ref))])):[];
   return {version,lines,total:result.count??0,avatars:Object.fromEntries((avatars??[]).map(a=>[a.creator_ref,a.avatar_data as string]))};
 }
@@ -211,7 +216,7 @@ export async function applyQuotationRates(quotationId:string,versionId:string,mo
     const sources={...item.rate_card_sources};
     for(const r of changes){
       const rate=p.rates.find(x=>x.id===r.rate_id)!;
-      sources[String(r.index)+":"+r.price_type]={card_id:p.version.card_id,version_id:versionId,name:p.version.name,version:p.version.version,amount:rate.amount,currency:rate.currency,applied_at:new Date().toISOString(),applied_by:userId,applied_amount:r.apply_amount?r.after!:r.before??0,applied_currency:r.currency!,price_type:r.price_type,application_mode:mode,agency_fee_percent:r.apply_fee?r.after_fee:null};
+      sources[String(r.index)+":"+r.price_type]={card_id:p.version.card_id,version_id:versionId,name:p.version.name,version:p.version.version,amount:r.after??rate.amount,currency:rate.currency,components:r.components,applied_at:new Date().toISOString(),applied_by:userId,applied_amount:r.apply_amount?r.after!:r.before??0,applied_currency:r.currency!,price_type:r.price_type,application_mode:mode,agency_fee_percent:r.apply_fee?r.after_fee:null};
     }
     const result=await updateQuotationItemCommercials(typed as SupabaseClient<Database>,userId,{item_id:item.id,quotation_id:quotationId,mode:"cost_revenue",cost_currency:item.cost_currency,gp_pct:item.gp_pct,gp_value:item.gp_value,...transaction},{confirmCommercialSync:confirmLinked,expectedConcurrencyToken:p.linked.find(l=>l.item_id===item.id)?.concurrencyToken??undefined,idempotencyKey:`rate-card:${fingerprint}:${item.id}`,rateCardApplication:{sources,expectedDeliverables:item.deliverables,expectedCost:item.cost??null,expectedRevenue:item.revenue,expectedCurrency:item.cost_currency}}).catch(()=>({ok:false as const,message:"error"}));
     results.push({item_id:item.id,ok:result.ok,...(!result.ok?{message:result.message}:{})});
@@ -232,13 +237,25 @@ export async function rateCardAudit(versionId:string,page=1) {
   return {rows:checked(result) as {id:string;action:string;actor_id:string;created_at:string;old_data:unknown;new_data:unknown;metadata:Record<string,unknown>}[],total:result.count??0};
 }
 
-export async function ensureImportCreator(profileUrl:string){
-  const {db,typed,userId}=await actor("upload");
-  if(!parseProfileInput(profileUrl))throw new Error("invalid");
+export async function ensureImportCreator(profileUrl:string, permission:"upload"|"edit"="upload"){
+  z.enum(["upload","edit"]).parse(permission);
+  const {db,typed,userId}=await actor(permission);
+  const parsed=parseProfileInput(profileUrl);
+  if(!parsed)throw new Error("invalid");
   if("error" in await requirePermission(db,CREATOR_ENRICHMENT_PERMISSION))throw new Error("permission");
-  let result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:true,returnExisting:true,skipPreviewEnrichment:true});
+  const found=checked(await db.rpc("match_rate_card_handle",{p_platform:parsed.platform,p_handle:parsed.normalized_username})) as {creator_ref:string;creator_name:string}[];
+  const matches=[...new Map(found.map(c=>[c.creator_ref,c])).values()];
+  if(matches.length>1)throw new Error("unmatched");
+  if(matches.length===1){
+    const match=matches[0];
+    const refreshResult=await refreshCreatorMetricsBatchByUnifiedIds(typed,[match.creator_ref],{force:true,trigger:"manual",scope:"all",requestedBy:userId,feature:"add_creator"});
+    const refreshed=refreshResult.results[0];
+    if(!refreshed?.ok)throw new Error("enrichment");
+    return {id:match.creator_ref,name:match.creator_name,created:false,queued:refreshed?.queued??false,platform:parsed.platform,pollId:refreshed?.influencerId??undefined};
+  }
+  let result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:false,returnExisting:true,skipPreviewEnrichment:true});
   // A concurrent import may win the unique-account insert; resolve the winner.
-  if(!result.ok)result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:true,returnExisting:true,skipPreviewEnrichment:true});
+  if(!result.ok)result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:false,returnExisting:true,skipPreviewEnrichment:true});
   if(!result.ok||!result.creator)throw new Error("enrichment");
-  return {id:result.creator.unified_id,name:result.creator.display_name,created:result.created,queued:result.enrichmentQueued};
+  return {id:result.creator.unified_id,name:result.creator.display_name,created:result.created,queued:result.enrichmentQueued,platform:parsed.platform,pollId:result.creator.influencer_id??undefined};
 }

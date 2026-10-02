@@ -21,6 +21,7 @@ export function normalizeDeliverablesForCompare(
     type_lines: d.type_lines?.length
       ? d.type_lines.map((line) => ({
           type: line.type?.trim() || "",
+          period_months: line.period_months ?? null,
           quantity: Math.max(1, Math.floor(Number(line.quantity) || 1)),
         }))
       : undefined,

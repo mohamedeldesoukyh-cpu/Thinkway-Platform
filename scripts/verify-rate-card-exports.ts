@@ -9,6 +9,7 @@ import {CREATOR_LIST_PDF_OPTIONS} from "../features/discovery/shortlists/export/
 import {buildPptxFromPageImages} from "../features/quotations/export/quotation-pptx-from-html";
 
 async function main(){
+ for(const creator of fixture.creators)creator.rates=creator.rates.map((r,i)=>({...r,deliverable:i%3===0?"usage_right":i%3===1?"boosting":"event_attendance",period_months:i%3===0?12:i%3===1?2:0}));
  const dir=".tmp/rate-card-export-qa";await mkdir(dir,{recursive:true});
  const browser=await puppeteer.launch({executablePath:"C:/Program Files/Google/Chrome/Application/chrome.exe",headless:true,args:["--no-sandbox"]});
  try{for(const lang of ["en","ar"] as const)for(const template of ["creator-list","creator-list-details"] as const){

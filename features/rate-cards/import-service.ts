@@ -33,7 +33,9 @@ export async function parseUpload(db:SupabaseClient, form:FormData, progress?:(p
   for(const [rowIndex,{row:n,raw,unsupported}] of uploaded.entries()) {
     if(unsupported){rows.push({row:n,status:"error",issues:["invalid"]});continue;}
     const {key}=identities[rowIndex];
-    const validated=validateWorkbookRow(n,raw,cache.get(key)??null,currencies,seen);
+    const identity=identities[rowIndex];
+    const validated=validateWorkbookRow(n,{...raw,Platform:identity.platform??""},cache.get(key)??null,currencies,seen);
+    if(identity.profile_url)validated.profile_url=identity.profile_url;
     if(pending.has(key)&&validated.status!=="error"&&validated.status!=="unmatched") {validated.pending_creator=pending.get(key);validated.status="warning";validated.issues.push("newCreatorImport");}
     rows.push(validated);
   }
