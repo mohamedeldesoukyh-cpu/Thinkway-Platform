@@ -70,3 +70,9 @@ section.rate-card-suite{background:#f5f7fb;min-height:100%}
 .rate-card-suite .rc-client-legend{font-size:11px;display:flex;gap:8px;align-items:center;margin:0}
 .rate-card-suite .rc-client-legend span{width:14px;height:14px;background:#f0f1f3;border:1px solid #d4d8df;border-radius:3px;flex-shrink:0}
 .rate-card-suite .rc-title-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.rate-card-suite .rc-template-preview{display:flex;gap:10px;padding:12px;background:#080642;border-radius:10px;min-height:156px;direction:ltr}
+.rate-card-suite .rc-template-creator{display:flex;flex:1;flex-direction:column;gap:5px;background:white;padding:8px;border-radius:6px;text-align:center;font-size:10px}
+.rate-card-suite .rc-template-creator>div{height:65px;background:linear-gradient(135deg,#d7dff1,#aabfe5);border-radius:5px}
+.rate-card-suite .rc-template-creator small{font-size:9px;color:#635e79}
+.rate-card-suite .rc-template-preview-details .rc-template-creator{max-width:100px}
+.rate-card-suite .rc-template-performance{display:flex;flex:2;flex-direction:column;justify-content:center;gap:12px;padding:12px;background:white;border-radius:6px;font-size:10px}
