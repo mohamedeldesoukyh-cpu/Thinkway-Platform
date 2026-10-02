@@ -71,10 +71,10 @@ export async function listRateCards(filters: { search?: string; client?: string;
 export async function getRateVersion(id: string, page=1, search="", platform="", currency="") {
   const {db}=await actor("read"); z.uuid().parse(id);
   const version=checked(await db.from("rate_card_register").select("*").eq("id",id).single()) as RateVersion;
-  let q=db.from("rate_card_service_rows").select("*",{count:"exact"}).eq("version_id",id);
+  let q=db.from("rate_card_creator_rows").select("*",{count:"exact"}).eq("version_id",id);
   if(search) q=q.ilike("creator_name",`%${search.replace(/[%_]/g,"").slice(0,100)}%`);
   if(platform) q=q.eq("platform",platform); if(currency) q=q.contains("currencies",[currency]);
-  const result=await q.order("creator_name").order("creator_ref").order("platform").order("deliverable").range((Math.max(1,page)-1)*25,Math.max(1,page)*25-1);
+  const result=await q.order("creator_name").order("creator_ref").order("platform").range((Math.max(1,page)-1)*25,Math.max(1,page)*25-1);
   const lines=(checked(result) as {rates:RateLine[]}[]).flatMap(row=>row.rates);
   if(lines.length){
     const current=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[...new Set(lines.map(l=>l.creator_ref))]});
@@ -113,8 +113,9 @@ export async function saveRateLine(versionId:string, input:unknown, id?:string) 
   checked(await q.select("id").single()); refresh();
 }
 export async function removeRateLines(versionId:string, ids:string[]) {
-  const {db}=await actor("edit"); z.array(z.uuid()).min(1).max(50).parse(ids);
-  checked(await db.from("rate_card_lines").delete().eq("version_id",z.uuid().parse(versionId)).in("id",ids)); refresh();
+  const {db}=await actor("edit"); z.array(z.uuid()).min(1).max(5000).parse(ids);z.uuid().parse(versionId);
+  for(let from=0;from<ids.length;from+=50)checked(await db.from("rate_card_lines").delete().eq("version_id",versionId).in("id",ids.slice(from,from+50)));
+  refresh();
 }
 export async function searchRateCreators(search:string, page=1, source:"all"|"discovery"="all") {
   const {db}=await actor("read");
