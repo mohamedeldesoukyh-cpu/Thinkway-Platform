@@ -282,6 +282,7 @@ export function useQuotationLineFields(
       // Never overwrite staged Master cost/revenue with persisted zeros (Save wipe bug).
       const payload: QuotationLinePendingPayload = rolled
         ? {
+            commercial_source: "deliverables",
             deliverables,
             revenue: rolled.revenue,
             cost: rolled.cost,

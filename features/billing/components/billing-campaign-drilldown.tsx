@@ -1,12 +1,9 @@
 "use client";
 
-import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { memo, useLayoutEffect, useCallback, useMemo, useRef, useState } from "react";
+import { BillingSelectionBar, downloadBillingSelection } from "./billing-selection-bar";
+import { selectedInvoiceRows, splitInvoiceSelection } from "@/lib/billing/selected-invoice-batches";
 import {
-  OperationalFloatingActionBar,
-  PlatformFloatingBarDivider,
-  PlatformFloatingBarPrimaryButton,
-  PlatformFloatingBarSelection,
   operationalFloatingBarContentClass,
 } from "@/components/workspace/operational-floating-action-bar";
 import {
@@ -16,7 +13,6 @@ import {
   BillingQueueMessageRow,
 } from "@/features/billing/components/billing-queue-assignment-row";
 import { OperationalRowTree, OperationalInvoiceDraftCells } from "@/features/billing/components/operational-row-tree";
-import { OperationalSelectionCheckbox } from "@/features/billing/components/operational-selection-checkbox";
 import {
   CampaignOperationalTable,
   CampaignOperationalTableBody,
@@ -43,11 +39,9 @@ import {
 } from "@/lib/billing/operational-row-filters";
 import {
   clearOperationalSelection,
-  countSelection,
+  selectAllOperationalRows,
   createEmptySelection,
-  getGlobalSelectionStatus,
   selectionToSubmitPayload,
-  toggleGlobalOperationalSelection,
   toggleOperationalRowSelection,
   type OperationalSelectionPayload,
   type OperationalSelectionState,
@@ -104,13 +98,14 @@ function BillingCampaignDrilldownInner({
   const percents = controlledPercents ?? internalPercents;
   const rootRows = detail.operational_rows;
   const selectionRef = useRef(selection);
-  selectionRef.current = selection;
+  useLayoutEffect(() => { selectionRef.current = selection; }, [selection]);
 
   const updateSelection = useCallback(
     (updater: (prev: OperationalSelectionState) => OperationalSelectionState) => {
       const prev = selectionRef.current;
       const next = updater(prev);
       if (selectionStateEqual(prev, next)) return;
+      selectionRef.current = next;
       if (onSelectionChange) {
         onSelectionChange(next);
       } else {
@@ -138,12 +133,16 @@ function BillingCampaignDrilldownInner({
     [filteredRows]
   );
 
-  const selectedCount = countSelection(selection);
+  const selectedPayload = selectionToSubmitPayload(selection, rootRows);
+  const selectedRows = selectedInvoiceRows(rootRows, selectedPayload);
+  const selectedCount = splitInvoiceSelection(rootRows, selectedPayload).length;
+  const selectedDraft = computeCampaignInvoiceDraft(selectedRows, percents);
+  const applySelectedPercent = (percent: number) => {
+    let next = percents;
+    for (const row of selectedRows) next = cascadeInvoiceDraftPercent(rootRows, row.id, percent, next);
+    setPercents(next);
+  };
   const rollup = detail.rollup;
-  const globalSelectionStatus = useMemo(
-    () => getGlobalSelectionStatus(filteredRows, selection),
-    [filteredRows, selection]
-  );
   const toggleExpanded = useCallback((id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -159,10 +158,6 @@ function BillingCampaignDrilldownInner({
     },
     [updateSelection, rootRows]
   );
-
-  const handleSelectAllToggle = useCallback(() => {
-    updateSelection((prev) => toggleGlobalOperationalSelection(filteredRows, prev));
-  }, [updateSelection, filteredRows]);
 
   const handleClearSelection = useCallback(() => {
     updateSelection(() => clearOperationalSelection());
@@ -322,10 +317,10 @@ function BillingCampaignDrilldownInner({
               <CampaignOperationalTableHeaderRow>
                 <CampaignOperationalTableHead className="w-10" />
                 <CampaignOperationalTableHead>Line</CampaignOperationalTableHead>
-                <CampaignOperationalTableHead title="Invoice amount remaining on this line">
+                <CampaignOperationalTableHead title="Original billable amount on this line">
                   Invoice amount
                 </CampaignOperationalTableHead>
-                <CampaignOperationalTableHead title="Share of remaining to bill now. Campaign percent updates every line.">
+                <CampaignOperationalTableHead title="Percentage of original billable amount, capped at remaining balance. Campaign percent updates every line.">
                   Invoice %
                 </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead title="Amount to include on this invoice">
@@ -386,50 +381,13 @@ function BillingCampaignDrilldownInner({
         </CampaignOperationalTable>
       )}
 
-      {showBulkSelectionControls ? (
-        <OperationalFloatingActionBar visible={showFloatingBar}>
-          <PlatformFloatingBarSelection
-            selectedCount={selectedCount}
-            selectionLabel="row"
-            onClearSelection={handleClearSelection}
-          />
-
-          <PlatformFloatingBarDivider />
-
-          <div className="flex shrink-0 items-center gap-1.5 px-2">
-            <OperationalSelectionCheckbox
-              status={globalSelectionStatus}
-              onToggle={handleSelectAllToggle}
-              ariaLabel="Select all eligible operational rows"
-            />
-            <Button
-              type="button"
-              size="xs"
-              variant="ghost"
-              className="hidden shrink-0 text-xs text-muted-foreground hover:text-foreground sm:inline-flex"
-              onClick={handleSelectAllToggle}
-            >
-              Select all
-            </Button>
-          </div>
-
-          {onInvoice ? (
-            <>
-              <PlatformFloatingBarDivider className="ml-auto" />
-              <div className="pl-2">
-                <PlatformFloatingBarPrimaryButton
-                  action={{
-                    id: "invoice",
-                    label: invoicePending ? "Generating…" : "Generate invoice",
-                    onClick: handleInvoiceSelected,
-                    disabled: invoicePending,
-                  }}
-                />
-              </div>
-            </>
-          ) : null}
-        </OperationalFloatingActionBar>
-      ) : null}
+      {showBulkSelectionControls && showFloatingBar ? <BillingSelectionBar
+        count={selectedCount} total={rootRows.length} pending={invoicePending}
+        onClear={handleClearSelection} onSelectAll={() => updateSelection(() => selectAllOperationalRows(filteredRows))}
+        onGenerate={onInvoice ? handleInvoiceSelected : undefined} onPercent={applySelectedPercent}
+        summary={{ currency: detail.currency_code, beforeVat: selectedDraft.toBeInvoiced, vat: selectedDraft.vatAmount, total: selectedDraft.totalInvoice, remaining: selectedDraft.remaining }}
+        onExport={() => downloadBillingSelection(selectedRows.map(row => { const draft = computeInvoiceDraftLine(row, percents); return { label: row.label, percent: draft.percent, amount: draft.toBeInvoiced, vat: draft.vatAmount, total: draft.totalInvoice }; }), detail.currency_code)}
+      /> : null}
     </div>
   );
 }

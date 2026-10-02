@@ -1,3 +1,4 @@
+import { applyMobileDocumentLayout } from "@/lib/reports/document/mobile-document-layout";
 /**
  * Enterprise client quotation HTML — cover, commercial grid, summary, terms, signatures.
  * Preview / Word / PDF share this renderer (puppeteer via vendor-io-pdf).
@@ -37,5 +38,5 @@ export function buildQuotationHtml(
   doc: QuotationDocument,
   options?: BuildQuotationHtmlOptions
 ): string {
-  return buildQuotationTemplateHtml(doc, options);
+  return applyMobileDocumentLayout(buildQuotationTemplateHtml(doc, options));
 }

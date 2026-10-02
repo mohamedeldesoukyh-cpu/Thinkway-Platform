@@ -57,6 +57,7 @@ export async function replaceClientIoAssignments(
       .from("campaign_lines")
       .select("id")
       .eq("campaign_header_id", input.campaignHeaderId)
+      .neq("status", "cancelled")
       .in("id", uniqueIds);
 
     if (linesError) {
@@ -117,6 +118,7 @@ export async function ensureClientIoAssignmentsSeeded(
     .from("campaign_lines")
     .select("id")
     .eq("campaign_header_id", input.campaignHeaderId)
+    .neq("status", "cancelled")
     .order("sort_order", { ascending: true });
 
   if (error) {

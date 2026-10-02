@@ -180,6 +180,7 @@ export async function loadCampaignOperationalBilling(
         .from("campaign_lines")
         .select(includeSortOrderColumn ? lineSelectWithSort : lineSelectFallback)
         .eq("campaign_header_id", campaignId)
+        .neq("status", "cancelled")
         .order(orderColumn, { ascending: true });
       return { data: (result.data ?? null) as LineRow[] | null, error: result.error };
     });
@@ -626,7 +627,7 @@ export async function loadBillingCampaignQueue(
   const { data: lineRows } = await supabase
     .from("campaign_lines")
     .select("id, campaign_header_id, billing_status, revenue, currency_code, invoice_id")
-    .in("campaign_header_id", headerIds);
+    .in("campaign_header_id", headerIds).neq("status", "cancelled");
 
   const linesByCampaign = new Map<
     string,

@@ -3,6 +3,7 @@
 import { SendIcon } from "lucide-react";
 import { useCallback, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import { hasValidVendorEmail } from "@/lib/io/vendor-io-delivery";
 
 import { Button } from "@/components/ui/button";
 import { usePlatformBulkOperation } from "@/components/workspace/bulk-operations";
@@ -51,6 +52,8 @@ export function VendorIoHeaderSend({
   }, [refreshAfterOperationalMutation]);
 
   function sendSelected() {
+    const missing = selectedRows.filter(row => !hasValidVendorEmail(row.influencer_email));
+    if (missing.length) toast.warning(`${missing.length} Creator IO${missing.length === 1 ? "" : "s"} will not be sent: missing or invalid creator email.`, { description: missing.map(row => row.influencer_name).join(", ") });
     if (selectedCount === 0) return;
     const snapshot = [...selectedRows];
     const label = describeVendorIoSendBulkLabel(snapshot);

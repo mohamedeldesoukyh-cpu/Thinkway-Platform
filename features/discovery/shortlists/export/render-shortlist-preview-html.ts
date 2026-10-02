@@ -12,6 +12,7 @@ import {
   loadShortlistCreatorPublicationShots,
 } from "@/features/discovery/shortlists/export/shortlist-export-publications";
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
+import { loadCreatorListClientLogo } from "./creator-list-client-logo";
 import {
   isCreatorDeckTemplate,
   resolveShortlistTemplate,
@@ -65,6 +66,7 @@ export async function renderShortlistPreviewHtml(
   });
   doc = await embedShortlistDocumentAvatars(doc);
   doc = await embedShortlistDocumentPublicationShots(doc);
+  if (template === "creator-list") doc.clientLogoDataUri = await loadCreatorListClientLogo(supabase, detail.client_id);
 
   const siteOrigin =
     options?.siteOrigin?.trim() ||

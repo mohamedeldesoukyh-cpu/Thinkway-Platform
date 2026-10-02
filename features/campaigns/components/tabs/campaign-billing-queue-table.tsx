@@ -1,16 +1,7 @@
 "use client";
 
 import { CampaignMoneyTotal, campaignMoney } from "../campaign-money";
-import { FileTextIcon } from "lucide-react";
-
-import { Button } from "@/components/ui/button";
-import {
-  OperationalFloatingActionBar,
-  PlatformFloatingBarDivider,
-  PlatformFloatingBarPrimaryButton,
-  PlatformFloatingBarSelection,
-  operationalFloatingBarContentClass,
-} from "@/components/workspace/operational-floating-action-bar";
+import { BillingSelectionBar } from "@/features/billing/components/billing-selection-bar";
 import {
   CampaignOperationalTable,
   CampaignOperationalTableBody,
@@ -28,7 +19,6 @@ import { OperationalSelectionCheckbox } from "@/features/billing/components/oper
 import { useIsOperationalColumnVisible } from "@/components/tables/operational-table-column-context";
 import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
 import type { ConsolidatedInvoiceQueueRow } from "@/lib/billing/consolidated-invoice-queue";
-import type { RowSelectionStatus } from "@/lib/billing/operational-selection";
 import { cn } from "@/lib/utils";
 
 export const CAMPAIGN_CONSOLIDATED_INVOICE_QUEUE_COLUMN_METAS: OperationalTableColumnMeta[] = [
@@ -49,17 +39,6 @@ type CampaignBillingQueueTableProps = {
   onSelectRow: (row: ConsolidatedInvoiceQueueRow) => void;
   activeBatchKey: string | null;
 };
-
-function queueGlobalStatus(
-  rows: ConsolidatedInvoiceQueueRow[],
-  selected: Set<string>
-): RowSelectionStatus {
-  if (rows.length === 0) return "unchecked";
-  const selectedCount = rows.filter((r) => selected.has(r.batch_key)).length;
-  if (selectedCount === 0) return "unchecked";
-  if (selectedCount === rows.length) return "checked";
-  return "indeterminate";
-}
 
 function CampaignBillingQueueTableHeader() {
   const showSelect = useIsOperationalColumnVisible("select");
@@ -228,6 +207,7 @@ export function CampaignBillingQueueFloatingBar({
   onClear,
   onGenerateInvoice,
   invoicePending = false,
+  onReview,
 }: {
   rows: ConsolidatedInvoiceQueueRow[];
   selectedBatchKeys: Set<string>;
@@ -235,55 +215,10 @@ export function CampaignBillingQueueFloatingBar({
   onClear: () => void;
   onGenerateInvoice: () => void;
   invoicePending?: boolean;
+  onReview?: () => void;
 }) {
-  const globalStatus = queueGlobalStatus(rows, selectedBatchKeys);
-  const selectedCount = selectedBatchKeys.size;
-  const visible = selectedCount > 0;
-
-  if (rows.length === 0) return null;
-
-  return (
-    <OperationalFloatingActionBar visible={visible}>
-      <PlatformFloatingBarSelection
-        selectedCount={selectedCount}
-        selectionLabel="row"
-        onClearSelection={onClear}
-      />
-
-      <PlatformFloatingBarDivider />
-
-      <div className="flex shrink-0 items-center gap-1.5 px-2">
-        <OperationalSelectionCheckbox
-          status={globalStatus}
-          onToggle={onSelectAll}
-          ariaLabel="Select all queue rows"
-        />
-        <Button
-          type="button"
-          size="xs"
-          variant="ghost"
-          className="hidden shrink-0 text-xs text-muted-foreground hover:text-foreground sm:inline-flex"
-          onClick={onSelectAll}
-        >
-          Select all
-        </Button>
-      </div>
-
-      <PlatformFloatingBarDivider className="ml-auto" />
-
-      <div className="pl-2">
-        <PlatformFloatingBarPrimaryButton
-          action={{
-            id: "invoice",
-            label: invoicePending ? "Generating…" : "Generate invoice",
-            icon: FileTextIcon,
-            disabled: invoicePending,
-            onClick: onGenerateInvoice,
-          }}
-        />
-      </div>
-    </OperationalFloatingActionBar>
-  );
+  return <BillingSelectionBar count={rows.filter(row => selectedBatchKeys.has(row.batch_key)).length} total={rows.length}
+    onSelectAll={onSelectAll} onClear={onClear} onGenerate={onGenerateInvoice} pending={invoicePending} onReview={onReview} />;
 }
 
 /** @deprecated Use CampaignBillingQueueFloatingBar — inline toolbar replaced by floating pill. */

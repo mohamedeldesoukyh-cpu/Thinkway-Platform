@@ -15,6 +15,7 @@ export default async function VendorIoApprovalPage({ searchParams }: Props) {
 
   let outcome: IoApprovalOutcomeCode = "invalid";
   let documentNumber: string | null = null;
+  let confirmationEmailSent: boolean | undefined;
 
   if (token) {
     const result = await completeVendorIoApprovalByToken({
@@ -23,13 +24,15 @@ export default async function VendorIoApprovalPage({ searchParams }: Props) {
     });
     outcome = result.outcome;
     documentNumber = result.documentNumber ?? null;
+    confirmationEmailSent = result.ok ? result.confirmationEmailSent : undefined;
   }
 
   return (
     <IoApprovalResultCard
-      kindLabel="Vendor IO"
+      kindLabel="Creator IO"
       outcome={outcome}
       documentNumber={documentNumber}
+      confirmationEmailSent={confirmationEmailSent}
     />
   );
 }

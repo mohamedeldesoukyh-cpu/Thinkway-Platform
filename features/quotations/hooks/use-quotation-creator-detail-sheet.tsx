@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
@@ -34,6 +34,8 @@ function invalidateCreatorPlatformCaches(creator: UnifiedCreatorResult): void {
  * a growing dual-pool cache (fetched creators + any shortlist/search pools passed in).
  */
 export function useQuotationCreatorDetailSheet(options?: {
+  quotationId?: string;
+  canAdd?: boolean;
   onCreatorPlatformsChanged?: () => void;
   /** Extra pools (e.g. linked shortlist creators) searched before network fetch. */
   extraPools?: Array<Iterable<UnifiedCreatorResult> | null | undefined>;
@@ -47,6 +49,10 @@ export function useQuotationCreatorDetailSheet(options?: {
     openCreatorByHandle,
     onOpenChange: onDetailOpenChange,
   } = useCreatorDetailSheetState();
+  const [pendingItem, setPendingItem] = useState<QuotationItemRow | null>(null);
+  const [coreDetailLoaded, setCoreDetailLoaded] = useState(false);
+  const requestRef = useRef(0);
+  useEffect(() => () => { requestRef.current += 1; }, []);
   const platformSignatureRef = useRef("");
   const fetchedPoolRef = useRef<UnifiedCreatorResult[]>([]);
 
@@ -60,6 +66,9 @@ export function useQuotationCreatorDetailSheet(options?: {
 
   const openCreatorFromItem = useCallback(
     async (item: QuotationItemRow) => {
+      const request = ++requestRef.current;
+      setPendingItem(null);
+      setCoreDetailLoaded(false);
       const handleOrId =
         item.handle?.trim() ||
         item.unified_id?.trim() ||
@@ -78,17 +87,28 @@ export function useQuotationCreatorDetailSheet(options?: {
         return;
       }
 
-      const creator = await fetchQuotationItemCreatorDetail(item);
-      if (!creator) {
-        toast.error("Could not load creator details.");
-        return;
+      // Paint the canonical shell before network work, using only row identity.
+      onDetailOpenChange(false);
+      setPendingItem(item);
+      try {
+        const creator = await fetchQuotationItemCreatorDetail(item, { coreOnly: true });
+        if (request !== requestRef.current) return;
+        setPendingItem(null);
+        if (!creator) {
+          toast.error("Could not load creator details. Please try again.");
+          return;
+        }
+        remember(creator);
+        platformSignatureRef.current = creatorPlatformSignature(creator);
+        setCoreDetailLoaded(true);
+        openCreator(creator);
+      } catch {
+        if (request !== requestRef.current) return;
+        setPendingItem(null);
+        toast.error("Could not load creator details. Please try again.");
       }
-
-      remember(creator);
-      platformSignatureRef.current = creatorPlatformSignature(creator);
-      openCreator(creator);
     },
-    [extraPools, openCreator, openCreatorByHandle, remember]
+    [extraPools, openCreator, openCreatorByHandle, onDetailOpenChange, remember]
   );
 
   const handleCreatorUpdated = useCallback(
@@ -105,15 +125,29 @@ export function useQuotationCreatorDetailSheet(options?: {
   const handleOpenChange = useCallback(
     (open: boolean) => {
       onDetailOpenChange(open);
-      if (!open) platformSignatureRef.current = "";
+      if (!open) {
+        requestRef.current += 1;
+        setPendingItem(null);
+        platformSignatureRef.current = "";
+      }
     },
     [onDetailOpenChange]
   );
 
   const detailSheet = (
     <CreatorDetailSheet
-      creator={detailCreator}
-      open={detailOpen}
+      similarTarget={options?.quotationId ? {kind: "quotation", id: options.quotationId, canAdd: options.canAdd} : undefined}
+      key={requestRef.current}
+      creator={pendingItem ? null : detailCreator}
+      coreDetailLoaded={coreDetailLoaded}
+      pendingIdentity={pendingItem ? {
+        displayName: pendingItem.creator_name ?? pendingItem.handle ?? "Creator",
+        handle: pendingItem.handle,
+        avatarUrl: pendingItem.profile_image_url,
+        profileUrl: pendingItem.profile_url,
+        platform: pendingItem.platform,
+      } : null}
+      open={detailOpen || pendingItem !== null}
       onOpenChange={handleOpenChange}
       onCreatorUpdated={handleCreatorUpdated}
       preserveOpenOnCreatorRows={false}

@@ -10,6 +10,7 @@ import {
   Share2Icon,
   SparklesIcon,
   SquareIcon,
+  Trash2Icon,
 } from "lucide-react";
 
 import {
@@ -31,6 +32,7 @@ type Props = {
   onAiMatch: () => void;
   onGenerateQuotation: () => void;
   onRefreshMetrics?: () => void;
+  onRemoveCreator?: () => void;
   onStopRefresh?: () => void;
   stopRefreshDisabled?: boolean;
   busy?: boolean;
@@ -77,6 +79,7 @@ export function CreatorSearchBulkBar({
   onAiMatch,
   onGenerateQuotation,
   onRefreshMetrics,
+  onRemoveCreator,
   onStopRefresh,
   stopRefreshDisabled,
   busy,
@@ -159,6 +162,17 @@ export function CreatorSearchBulkBar({
       icon: SparklesIcon,
       variant: "outline",
       onClick: onAiMatch,
+    },
+    {
+      id: "remove-creator",
+      label: selectedCreators[0]?.influencer_id ? "Delete creator" : "Remove from results",
+      description: selectedCount === 1
+        ? "Review linked records before deleting. Campaign and IO history is protected."
+        : "Select one creator to review removal and linked records.",
+      icon: Trash2Icon,
+      variant: "outline",
+      disabled: busy || selectedCount !== 1 || !onRemoveCreator,
+      onClick: () => onRemoveCreator?.(),
     },
   ];
 

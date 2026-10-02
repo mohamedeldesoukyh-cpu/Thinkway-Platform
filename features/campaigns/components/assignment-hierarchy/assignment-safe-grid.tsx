@@ -3,7 +3,6 @@
 import { campaignMoney, useCampaignCurrency, CampaignLineFinancial } from "../campaign-money";
 import { aggregateCampaignDisplayFinancials } from "@/lib/campaigns/campaign-display-financials";
 import { creatorFxAmount } from "@/lib/commercial/creator-fx";
-import { PencilIcon } from "lucide-react";
 import {
   Fragment,
   useCallback,
@@ -24,6 +23,9 @@ import { AssignmentFullDescriptionCell } from "@/features/campaigns/components/a
 import { AssignmentPlatformPills } from "@/features/campaigns/components/assignment-hierarchy/assignment-platform-pills";
 import { AssignmentExpandToggle } from "@/features/campaigns/components/assignment-hierarchy/assignment-expand-toggle";
 import { AssignmentRowCircleControl } from "@/features/campaigns/components/assignment-hierarchy/assignment-row-circle-control";
+import { RemoveAssignmentDialog } from "@/features/campaigns/components/remove-assignment-dialog";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { MoreHorizontalIcon } from "lucide-react";
 import { createAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import { AssignmentsEmptyState } from "@/features/campaigns/components/assignments-empty-state";
 import {
@@ -157,6 +159,7 @@ export function AssignmentSafeGrid({
   invoicePending = false,
   onCreateAssignment,
 }: AssignmentSafeGridProps) {
+  const [removingLine, setRemovingLine] = useState<CampaignLineWorkspace | null>(null);
   const commercialPane = useAssignmentCommercialPane();
   const audienceView = useAssignmentAudienceView();
   const gridEdit = useAssignmentGridEditSession();
@@ -890,15 +893,13 @@ export function AssignmentSafeGrid({
                         ) : null}
                         {gates.enableEditActions && col("actions") ? (
                           <AssignmentGridCell columnId="actions" className={cn(SAFE_GRID_TD, "text-center")}>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="mx-auto size-7"
-                              onClick={() => onEditLine(line)}
-                            >
-                              <PencilIcon className="size-3.5" />
-                            </Button>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="mx-auto size-7" aria-label={`Actions for ${line.name}`}><MoreHorizontalIcon className="size-3.5" /></Button></DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+                                <DropdownMenuItem onSelect={() => onEditLine(line)}>Replace creator / edit</DropdownMenuItem>
+                                <DropdownMenuItem variant="destructive" onSelect={() => setRemovingLine(line)}>Remove from campaign</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </AssignmentGridCell>
                         ) : null}
                       </AssignmentGridRow>
@@ -931,6 +932,8 @@ export function AssignmentSafeGrid({
         </div>
       </div>
 
+      {removingLine ? <RemoveAssignmentDialog campaignId={campaignId} lineId={removingLine.id} name={removingLine.name} onClose={() => { setRemovingLine(null); setSelectedLineIds(new Set()); }} /> : null}
+
       {gates.enableFooter ? (
         <FloatingSelectionBar
           campaignId={campaignId}
@@ -951,6 +954,14 @@ export function AssignmentSafeGrid({
           onAfterOperationalMutation={() => {
             resetOperationalUiState();
           }}
+          onRemoveCreator={gates.enableEditActions && selectedLineIds.size === 1 ? () => {
+            const group = hierarchy.groups.find(group => selectedLineIds.has(group.line.id));
+            if (group) setRemovingLine(group.line);
+          } : undefined}
+          onReplaceCreator={gates.enableEditActions && selectedLineIds.size === 1 ? () => {
+            const group = hierarchy.groups.find(group => selectedLineIds.has(group.line.id));
+            if (group) onEditLine(group.line);
+          } : undefined}
           onOpenCalculator={() => setCalculatorOpen(true)}
         />
       ) : null}

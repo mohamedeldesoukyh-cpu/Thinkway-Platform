@@ -26,6 +26,8 @@ test("amendment allowed only after send/review/approved and not superseded", () 
   assert.equal(isClientIoAmendmentAllowed("sent"), true);
   assert.equal(isClientIoAmendmentAllowed("under_client_review"), true);
   assert.equal(isClientIoAmendmentAllowed("approved"), true);
+  assert.equal(isClientIoAmendmentAllowed("revision_required"), true);
+  assert.equal(isClientIoAmendmentAllowed("revision_required", true), false);
   assert.equal(isClientIoAmendmentAllowed("rejected"), true);
   assert.equal(isClientIoAmendmentAllowed("approved", true), false);
 });

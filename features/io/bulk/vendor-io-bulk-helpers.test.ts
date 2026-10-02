@@ -75,18 +75,18 @@ describe("vendor IO bulk helpers", () => {
     assert.deepEqual(candidates.filter(vendorIoNeedsMarkAccepted).map((item) => item.id), ["manual", "email"]);
   });
 
-  it("labels all-manual selections as Mark Delivered Manually", () => {
+  it("keeps selections with missing emails in email-send mode", () => {
     const rows = [row(), row({ id: "vio-2", influencer_email: " " })];
-    assert.equal(describeVendorIoSendBulkLabel(rows), "Mark Delivered Manually");
+    assert.equal(describeVendorIoSendBulkLabel(rows), "Send Selected");
     assert.equal(vendorIoIsManualDeliveryCandidate(rows[0]!), true);
   });
 
-  it("labels mixed selections as Send / Mark Delivered", () => {
+  it("does not turn mixed email selections into manual delivery", () => {
     const rows = [
       row({ influencer_email: "a@example.com" }),
       row({ id: "vio-2", influencer_email: null }),
     ];
-    assert.equal(describeVendorIoSendBulkLabel(rows), "Send / Mark Delivered");
+    assert.equal(describeVendorIoSendBulkLabel(rows), "Send Selected");
   });
 
   it("skips approved rows from send eligibility", () => {

@@ -1,4 +1,8 @@
 "use client";
+import { fetchQuotationItemCreatorDetail } from "@/features/quotations/lib/quotation-item-creator-detail";
+import { stashCompareQueue } from "@/features/discovery/components/creator-compare/compare-storage";
+import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
+import { useEscapeClearSelection } from "@/lib/hooks/use-escape-clear-selection";
 
 import {
   useCallback,
@@ -139,6 +143,7 @@ function QuotationWorkspaceContent({
   const manualSave = useQuotationManualSave();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  useEscapeClearSelection(selectedIds.size > 0, () => setSelectedIds(new Set()));
   const [optimisticRemovedIds, setOptimisticRemovedIds] = useState<Set<string>>(
     () => new Set()
   );
@@ -202,7 +207,10 @@ function QuotationWorkspaceContent({
       );
       return next.size === prev.size ? prev : next;
     });
-  }, [detail.items, manualSave.hasUnsavedChanges]);
+    // Only a new server snapshot may rebuild saved values. Clearing dirty state
+    // happens before router.refresh completes and still has the old items here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail.items]);
 
   const visibleItems = useMemo(
     () => detail.items.filter((item) => !optimisticRemovedIds.has(item.id)),
@@ -449,8 +457,23 @@ function QuotationWorkspaceContent({
   }, [focusNewItemId, detail.items]);
 
   const { openCreatorFromItem, detailSheet } = useQuotationCreatorDetailSheet({
+    quotationId: detail.id,
+    canAdd: detail.canManage,
     onCreatorPlatformsChanged: refreshQuotationLines,
   });
+
+  async function compareSelectedCreators() {
+    const selected = detail.items.filter(item => selectedIds.has(item.id));
+    if (selected.length > MAX_CREATOR_COMPARE) { toast.error(`Compare up to ${MAX_CREATOR_COMPARE} creators at a time.`); return; }
+    try {
+      const loaded = await Promise.all(selected.map((item) => fetchQuotationItemCreatorDetail(item)));
+      if (loaded.some(creator => !creator)) { toast.error("Could not load all selected creators. Please try again."); return; }
+      const unique = [...new Map(loaded.filter(creator => creator !== null).map(creator => [creator.unified_id, creator])).values()];
+      if (unique.length < 2) { toast.error("Select at least two different creators to compare."); return; }
+      stashCompareQueue(unique);
+      router.push("/discovery/compare");
+    } catch { toast.error("Could not prepare comparison. Please try again."); }
+  }
 
   const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -867,6 +890,7 @@ function QuotationWorkspaceContent({
       </section>
 
       <QuotationSelectionBar
+        onCompare={() => void compareSelectedCreators()}
         selectedCount={selectedIds.size}
         totalCount={sortedFilteredItems.length}
         baseCost={selectionMoney.baseCost}

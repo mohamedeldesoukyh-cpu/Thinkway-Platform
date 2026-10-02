@@ -68,6 +68,8 @@ type FloatingSelectionBarProps = {
   onGenerateInvoice: () => void;
   onAfterOperationalMutation?: () => void;
   onOpenCalculator?: () => void;
+  onRemoveCreator?: () => void;
+  onReplaceCreator?: () => void;
 };
 
 function buildFormData(
@@ -120,6 +122,8 @@ export function FloatingSelectionBar({
   onGenerateInvoice,
   onAfterOperationalMutation,
   onOpenCalculator,
+  onRemoveCreator,
+  onReplaceCreator,
 }: FloatingSelectionBarProps) {
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const [pending, startTransition] = useTransition();
@@ -276,6 +280,8 @@ export function FloatingSelectionBar({
         </span>
 
         <span className="tw-selbar-acts">
+          {onReplaceCreator ? <button type="button" className="tw-selbar-btn" disabled={pending} onClick={onReplaceCreator}>Replace creator</button> : null}
+          {onRemoveCreator ? <button type="button" className="tw-selbar-btn" disabled={pending} onClick={onRemoveCreator}>Remove creator</button> : null}
           {onOpenCalculator ? (
             <button
               type="button"

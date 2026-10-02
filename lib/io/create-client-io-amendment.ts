@@ -153,7 +153,12 @@ export async function createClientIoAmendment(
   const newId = (inserted as { id: string; document_number: string | null }).id;
 
   try {
-    const selectedIds = await listClientIoAssignmentIds(supabase, tip.id);
+    const previousIds = await listClientIoAssignmentIds(supabase, tip.id);
+    const { data: activeLines, error: activeError } = await supabase.from("campaign_lines")
+      .select("id").eq("campaign_header_id", tip.campaign_header_id).neq("status", "cancelled");
+    if (activeError) throw new Error(activeError.message);
+    const activeIds = new Set((activeLines ?? []).map((line: { id: string }) => line.id));
+    const selectedIds = previousIds.filter(id => activeIds.has(id));
     if (selectedIds.length > 0) {
       const { error: assignError } = await (supabase as any)
         .from("client_io_assignments")

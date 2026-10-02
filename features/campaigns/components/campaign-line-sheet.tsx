@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { useConfirmAction } from "@/components/shared/confirm-action-provider";
-import { InfluencerTypeahead } from "@/components/forms/influencer-typeahead";
+import { AssignmentCreatorPicker } from "@/features/creators/picker/assignment-creator-picker";
+import { replacementPlatformSelections } from "@/features/campaigns/assignment-creator-replacement";
 import { assignmentCommercialMastersChanged } from "@/lib/assignments/assignment-commercial-masters";
 import {
   COMMERCIAL_SYNC_CONFIRMATION_REQUIRED,
@@ -224,7 +225,7 @@ export function CampaignLineSheet({
   );
 
   const creatorAssignmentForPricing = useMemo((): LineInfluencerAssignment | null => {
-    if (line?.assignment) return line.assignment;
+    if (line?.assignment && line.influencer_id === influencerId) return line.assignment;
     if (!profile || !influencerId) return null;
     return {
       influencer_id: influencerId,
@@ -241,7 +242,7 @@ export function CampaignLineSheet({
         deliverables: [],
       })),
     };
-  }, [line?.assignment, profile, influencerId, influencerLabel]);
+  }, [line, profile, influencerId, influencerLabel]);
 
   const creatorPlatformAccountsForPricing = useMemo(
     () =>
@@ -274,11 +275,11 @@ export function CampaignLineSheet({
         platforms: activeSelections.map(({ selected: _s, ...rest }) => rest),
       });
     }
-    if (line?.assignment?.platforms?.length) {
+    if (influencerId === line?.influencer_id && line?.assignment?.platforms?.length) {
       return JSON.stringify({ platforms: line.assignment.platforms });
     }
     return JSON.stringify({ platforms: [] });
-  }, [pricingMode, commercialRows, profile, activeSelections, line?.assignment?.platforms]);
+  }, [pricingMode, commercialRows, profile, activeSelections, influencerId, line]);
 
   const effectiveCommercialRows = useMemo((): CommercialDeliverableRow[] => {
     if (pricingMode !== "per_deliverable") return [];
@@ -597,7 +598,9 @@ export function CampaignLineSheet({
     costVatExempt,
   ]);
 
-  async function loadProfile(id: string, existing?: PlatformSelectionState[]) {
+  const profileRequest = useRef(0);
+  async function loadProfile(id: string, existing?: PlatformSelectionState[], replacement = false) {
+    const requestId = ++profileRequest.current;
     setLoadingProfile(true);
     try {
       const res = await fetch("/api/campaigns/influencers", {
@@ -609,26 +612,34 @@ export function CampaignLineSheet({
         profile?: InfluencerAssignmentProfile;
         error?: string;
       };
+      if (requestId !== profileRequest.current) return false;
       if (!data.profile) {
         toast.error(data.error ?? "Failed to load creator profile.");
-        return;
+        return false;
       }
+      const nextSelections = replacement
+        ? replacementPlatformSelections(data.profile, existing ?? [], pricingMode === "per_deliverable" ? commercialRows.map(row => row.platform) : [])
+        : buildInitialSelections(data.profile, existing);
       setProfile(data.profile);
-      setSelections(buildInitialSelections(data.profile, existing));
-      setCurrency(data.profile.suggested_currency || currencyCode);
-      if (data.profile.vat_registered) {
-        setCostVatPercent(data.profile.suggested_cost_vat_percent);
-        setCostVatExempt(false);
-      } else {
-        setCostVatPercent(0);
-        setCostVatExempt(true);
+      setSelections(nextSelections);
+      if (!isEdit && !replacement) {
+        setCurrency(data.profile.suggested_currency || currencyCode);
+        setCostVatPercent(data.profile.vat_registered ? data.profile.suggested_cost_vat_percent : 0);
+        setCostVatExempt(!data.profile.vat_registered);
       }
+      setInfluencerId(id);
+      setInfluencerLabel(data.profile.display_name);
+      return true;
+    } catch (error) {
+      if (requestId === profileRequest.current) toast.error(error instanceof Error ? error.message : "Failed to load creator profile.");
+      return false;
     } finally {
-      setLoadingProfile(false);
+      if (requestId === profileRequest.current) setLoadingProfile(false);
     }
   }
 
   useEffect(() => {
+    ++profileRequest.current;
     if (!open) return;
     setAssignmentStatus(line?.assignment_status ?? "assigned");
     setCurrency(line?.currency_code ?? currencyCode);
@@ -680,11 +691,10 @@ export function CampaignLineSheet({
     }
   }, [open, line, currencyCode, defaultRevenueVatPercent]);
 
-  function onInfluencerPick(item: InfluencerSearchResult) {
-    setInfluencerId(item.id);
-    setInfluencerLabel(item.display_name);
-    setTitleEdited(false);
-    void loadProfile(item.id);
+  async function onInfluencerPick(item: InfluencerSearchResult) {
+    if (item.id === influencerId) return true;
+    const loaded = await loadProfile(item.id, selections, Boolean(influencerId));
+    return loaded;
   }
 
   const poSnapshot = useMemo(
@@ -741,7 +751,7 @@ export function CampaignLineSheet({
 
   const canSubmit =
     Boolean(influencerId) &&
-    (!loadingProfile || isEdit) &&
+    !loadingProfile &&
     lineTitle.trim().length > 0;
 
   const assignmentFieldsLocked =
@@ -879,13 +889,19 @@ export function CampaignLineSheet({
           <input type="hidden" name="end_date" value={endDate} />
           <input type="hidden" name="pricing_mode" value={pricingMode} />
           <input type="hidden" name="commercial_json" value={commercialJson} />
-          <InfluencerTypeahead
+          <AssignmentCreatorPicker
             value={influencerId}
             selectedLabel={influencerLabel}
             onSelect={onInfluencerPick}
-            disabled={isPending || assignmentFieldsLocked}
+            disabled={isPending || loadingProfile || assignmentFieldsLocked}
           />
           <FieldError messages={state.fieldErrors?.influencer_id} />
+          {isEdit && influencerId !== line?.influencer_id ? (
+            <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              The current pricing is retained. Saving a different creator marks any issued Client IO for revision.
+              Create a Client IO amendment and send the updated version for approval.
+            </p>
+          ) : null}
 
           {profile ? (
             (() => {

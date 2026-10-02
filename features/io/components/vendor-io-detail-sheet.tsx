@@ -28,6 +28,7 @@ import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-butt
 import { VendorIoSignedAttachmentField } from "@/features/io/components/vendor-io-signed-attachment-field";
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { VendorIoCampaignTermsEditor } from "./vendor-io-campaign-terms-editor";
+import { VendorIoConditionsEditor } from "./vendor-io-conditions-editor";
 import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-badge";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
@@ -169,14 +170,7 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
           <div className="mb-2 flex flex-wrap items-center gap-2">
             <IoTermsSourceBadge source={source} />
           </div>
-          <ul className="space-y-2 text-sm text-foreground">
-            {effective.map((term, index) => (
-              <li key={index} className="break-words">
-                <span className="font-medium">{index + 1}. {term.title}</span>{" "}
-                <span className="text-muted-foreground">{term.body}</span>
-              </li>
-            ))}
-          </ul>
+          <VendorIoConditionsEditor key={`${row.id}:${row.updated_at}`} row={row} effective={effective} />
         </div>
         {termsHtml ? (
           <div className="border-t border-border/40 py-3">

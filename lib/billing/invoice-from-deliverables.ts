@@ -1,3 +1,4 @@
+import { invoicePercentageDescription } from "./selected-invoice-batches";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { assignmentStatusFromBilling } from "@/lib/campaigns/line-assignment";
@@ -184,7 +185,7 @@ function deliverableInvoiceLinePayload(
     campaign_header_id: headerId,
     assignment_deliverable_id: deliverable.id,
     sort_order: sortOrder,
-    description: `${line.document_number} — ${line.name} · ${deliverable.label}`,
+    description: invoicePercentageDescription(`${line.document_number} — ${line.name} · ${deliverable.label}`, beforeVat, resolveInvoiceLineBeforeVat(deliverable, { forRegeneration: true })),
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,
@@ -243,7 +244,7 @@ export function packageAssignmentLineItemPayload(
     campaign_line_id: line.id,
     campaign_header_id: headerId,
     sort_order: sortOrder,
-    description: `${line.document_number} — ${line.name}`,
+    description: invoicePercentageDescription(`${line.document_number} — ${line.name}`, beforeVat, taxableBase),
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,
@@ -346,7 +347,7 @@ export async function insertPackageAssignmentLineItems(
     .select(
       `${CAMPAIGN_LINE_INVOICE_COMMERCIAL_SELECT}, billing_status, vendor_io_id`
     )
-    .in("id", lineIds);
+    .in("id", lineIds).neq("status", "cancelled");
 
   if (error) {
     return { error: error.message, inserted: 0 };

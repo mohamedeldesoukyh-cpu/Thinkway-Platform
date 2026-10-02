@@ -57,6 +57,17 @@ export async function GET(request: Request) {
   const postUrl = searchParams.get("postUrl");
   const profileUrl = searchParams.get("profileUrl");
   const allowlist = reviewMediaAllowlist(resolved.review.sourceSnapshot);
+  // Current campaign profiles can contain new creators/media absent from the
+  // immutable approved proposal. Expand only from this review's own campaign.
+  if (!isReviewMediaUrlAllowed(allowlist, src, postUrl, profileUrl)) {
+    try {
+      const { loadCurrentCampaignSnapshotForReview } = await import("@/features/client-workspace/current-campaign-roster");
+      const current = await loadCurrentCampaignSnapshotForReview(service, resolved.review);
+      for (const url of reviewMediaAllowlist(current)) allowlist.add(url);
+    } catch {
+      return NextResponse.json({ error: "Preview temporarily unavailable." }, { status: 503 });
+    }
+  }
   if (!isReviewMediaUrlAllowed(allowlist, src, postUrl, profileUrl)) {
     return NextResponse.json({ error: "Preview unavailable." }, { status: 404 });
   }

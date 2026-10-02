@@ -1,4 +1,5 @@
 import "server-only";
+import { readCreatorListCost } from "./creator-list-cost";
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -632,6 +633,7 @@ export async function getShortlistDetail(
     canApprove: isAdmin || isPrivilegedRole,
     showOriginalCurrency: readShowOriginalCurrency(row.metadata),
     hideCostAndFees: readHideCostAndFees(row.metadata),
+    creatorListCost: readCreatorListCost(row.metadata),
   };
 }
 

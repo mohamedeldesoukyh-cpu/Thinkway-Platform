@@ -1,3 +1,5 @@
+import { isExpiredSignedAvatarUrl } from "./avatar-url-expiry";
+
 /** Avatar origin on influencer_platform_accounts.profile_picture_url */
 export type AvatarSource = "manual" | "apify" | "discovery" | "uploaded";
 
@@ -91,7 +93,8 @@ export function isInstagramCdnUrlExpired(url: string, nowMs = Date.now()): boole
   }
 }
 
-/** Lightweight broken URL heuristics — no network HEAD. */
+export const isSocialAvatarUrlExpired = isExpiredSignedAvatarUrl;
+
 export function isBrokenAvatarUrl(url: string): boolean {
   const trimmed = url.trim();
   if (!trimmed) return true;
@@ -105,7 +108,7 @@ export function isBrokenAvatarUrl(url: string): boolean {
     return true;
   }
 
-  if (isInstagramCdnUrlExpired(trimmed)) return true;
+  if (isSocialAvatarUrlExpired(trimmed)) return true;
 
   return isPlaceholderAvatarUrl(trimmed);
 }

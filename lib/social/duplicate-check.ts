@@ -90,6 +90,36 @@ export async function findDuplicatePlatformAccounts(
     }
   }
 
+  // Older imports can have empty normalized columns. Match their stored identity
+  // too; escape LIKE wildcards so underscores in handles stay literal.
+  if (duplicates.length === 0 && input.normalized_username) {
+    const escaped = input.normalized_username.replace(/[\\%_]/g, "\\$&");
+    for (const column of ["username", "handle"] as const) {
+      for (const prefix of ["", "@"]) {
+        let query = supabase.from("influencer_platform_accounts")
+          .select(DUPLICATE_SELECT)
+          .eq("platform", input.platform)
+          .ilike(column, `${prefix}${escaped}`);
+        if (input.exclude_account_id) query = query.neq("id", input.exclude_account_id);
+        const { data, error } = await query.limit(10);
+        if (error) throw new Error(error.message);
+        for (const account of (data ?? []) as DuplicateQueryRow[]) {
+          if (account.influencer_id === input.exclude_influencer_id ||
+              duplicates.some((item) => item.account_id === account.id)) continue;
+          duplicates.push({
+            account_id: account.id,
+            influencer_id: account.influencer_id,
+            influencer_name: readInfluencerEmbed(account.influencer)?.display_name ?? "Unknown vendor",
+            influencer_document_number: readInfluencerEmbed(account.influencer)?.document_number ?? "",
+            platform: account.platform,
+            username: account.username ?? account.handle,
+            profile_url: account.profile_url,
+          });
+        }
+      }
+    }
+  }
+
   if (duplicates.length > 0 || !input.normalized_profile_url) {
     return duplicates;
   }

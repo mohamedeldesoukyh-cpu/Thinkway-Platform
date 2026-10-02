@@ -37,6 +37,7 @@ function fixture(options: { status?: string; targetBrand?: string; existing?: bo
     isQuotationExpired: () => false,
     resolveCampaignDisplayName: (s: string) => s,
     normalizeCreatorId: (s: string) => s,
+    resolveUnifiedCreatorsByRefs: async () => ({ byInfluencerId: new Map() }),
     resolveQuotationServiceDescription: () => "2 Instagram reels",
     fetchInfluencerPlatformAccounts: async () => ({ data: [] }),
     mapQuotationItemsToExecutionLineSeeds: ({ items }: { items: { cost: number; revenue: number; deliverables: unknown[] }[] }) => [{ influencerId: "creator", displayName: "New creator", platforms: items[0].deliverables, revenue: items[0].revenue, cost: items[0].cost, currencyCode: "EGP", scheduleHints: [] }],

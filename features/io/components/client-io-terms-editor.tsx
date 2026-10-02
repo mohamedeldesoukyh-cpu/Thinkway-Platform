@@ -17,6 +17,7 @@ import type { ClientIoTerm } from "@/lib/io/client-io-terms";
 import { cn } from "@/lib/utils";
 
 type Props = {
+  isTermReadOnly?: (term: ClientIoTerm) => boolean;
   terms: ClientIoTerm[];
   onChange: (terms: ClientIoTerm[]) => void;
   onRecover?: () => void;
@@ -28,6 +29,7 @@ type Props = {
 };
 
 export function ClientIoTermsEditor({
+  isTermReadOnly,
   terms,
   onChange,
   onRecover,
@@ -78,7 +80,7 @@ export function ClientIoTermsEditor({
                     event.preventDefault();
                     void removeTerm(index);
                   }}
-                  disabled={disabled || terms.length <= 1}
+                  disabled={disabled || terms.length <= 1 || isTermReadOnly?.(term)}
                   aria-label={`Remove term ${index + 1}`}
                 >
                   <Trash2Icon className="size-3.5" strokeWidth={2} />
@@ -90,14 +92,14 @@ export function ClientIoTermsEditor({
                 value={term.title}
                 onChange={(e) => updateTerm(index, { title: e.target.value })}
                 placeholder="Term title (e.g. Payment)"
-                disabled={disabled}
+                disabled={disabled || isTermReadOnly?.(term)}
               />
               <Textarea
                 value={term.body}
                 onChange={(e) => updateTerm(index, { body: e.target.value })}
                 placeholder="Describe this term…"
                 rows={3}
-                disabled={disabled}
+                disabled={disabled || isTermReadOnly?.(term)}
               />
             </div>
           </details>
@@ -155,7 +157,7 @@ export function ClientIoTermsEditor({
                 size="icon"
                 className="size-[30px] rounded-lg text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                 onClick={() => void removeTerm(index)}
-                disabled={disabled || terms.length <= 1}
+                disabled={disabled || terms.length <= 1 || isTermReadOnly?.(term)}
                 tooltip={`Remove term ${index + 1}`}
               >
                 <Trash2Icon className="size-4" strokeWidth={1.8} />
@@ -166,7 +168,7 @@ export function ClientIoTermsEditor({
               onChange={(e) => updateTerm(index, { title: e.target.value })}
               placeholder="Term title (e.g. Payment)"
               className={CLIENT_FORM_INPUT_CLASS}
-              disabled={disabled}
+              disabled={disabled || isTermReadOnly?.(term)}
             />
             <Textarea
               value={term.body}
@@ -174,7 +176,7 @@ export function ClientIoTermsEditor({
               placeholder="Describe this term…"
               rows={3}
               className={cn(CLIENT_FORM_TEXTAREA_CLASS, "min-h-[70px]")}
-              disabled={disabled}
+              disabled={disabled || isTermReadOnly?.(term)}
             />
           </div>
         ))}

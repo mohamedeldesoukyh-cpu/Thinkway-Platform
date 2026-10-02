@@ -6,6 +6,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuTrigger,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
@@ -98,30 +99,29 @@ export function DocumentOutputToolbar({
             ),
           })}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[296px] p-0">
-          <div className="tw-menu" style={{ position: "static", width: "100%", boxShadow: "none" }}>
-            <span className="mh">Layout</span>
+        <DropdownMenuContent align="end" className="w-[320px] max-w-[calc(100vw-24px)] p-1">
+          <div className="text-left text-sm">
+            <span className="block px-3 py-2 text-xs font-semibold text-muted-foreground">Layout</span>
             {templates.map((option) => {
               const selected = option.id === activeTemplateId;
               return (
-                <button
+                <DropdownMenuItem
                   key={option.id}
-                  type="button"
-                  className={cn("mi", selected && "on")}
-                  onClick={() => onTemplateChange(option.id)}
+                  className={cn("flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left", selected && "bg-primary/10")}
+                  onSelect={(event) => { event.preventDefault(); onTemplateChange(option.id); }}
                 >
                   <span>
-                    <b>{option.label}</b>
-                    <u>{option.hint}</u>
+                    <b className="block text-sm font-semibold">{option.label}</b>
+                    <span className="mt-0.5 block text-xs text-muted-foreground">{option.hint}</span>
                   </span>
-                  {selected ? <span className="ck">✓</span> : null}
-                </button>
+                  {selected ? <span className="ml-auto text-primary">✓</span> : null}
+                </DropdownMenuItem>
               );
             })}
-            <span className="mf">
+            <span className="block border-t p-2">
               <button
                 type="button"
-                className="tw-b sm pri"
+                className="rounded-lg bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground"
                 style={{ width: "100%" }}
                 disabled={busy}
                 onClick={onOpenPreview}
@@ -145,27 +145,26 @@ export function DocumentOutputToolbar({
             ),
           })}
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-[296px] p-0">
-          <div className="tw-menu" style={{ position: "static", width: "100%", boxShadow: "none" }}>
-            <span className="mh">
+        <DropdownMenuContent align="end" className="w-[320px] max-w-[calc(100vw-24px)] p-1">
+          <div className="text-left text-sm">
+            <span className="block px-3 py-2 text-xs font-semibold text-muted-foreground">
               Download as — {(active?.label ?? "layout").toLowerCase()} layout
             </span>
             {formats.map((format) => (
-              <button
+              <DropdownMenuItem
                 key={format.id}
-                type="button"
-                className="mi"
+                className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left"
                 disabled={busy}
-                onClick={() => onExport(format.id)}
+                onSelect={() => onExport(format.id)}
               >
-                <span className={cn("fm", format.kind)}>{formatBadge(format.label)}</span>
+                <span className={cn("grid size-9 shrink-0 place-items-center rounded-lg text-[10px] font-bold", format.kind === "sheet" ? "bg-emerald-50 text-emerald-700" : format.kind === "web" ? "bg-blue-50 text-blue-700" : "bg-rose-50 text-rose-700")}>{formatBadge(format.label)}</span>
                 <span>
-                  <b>{format.label}</b>
-                  <u>{format.purpose}</u>
+                  <b className="block text-sm font-semibold">{format.label}</b>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{format.purpose}</span>
                 </span>
-              </button>
+              </DropdownMenuItem>
             ))}
-            <span className="mn">
+            <span className="block border-t px-3 py-2 text-xs leading-relaxed text-muted-foreground">
               Exports use the layout above. Change it in <b>Preview</b> first if this is going to a
               client.
             </span>

@@ -322,6 +322,13 @@ export function VendorWorkspaceView({
           className="mt-0 flex min-h-0 flex-1 flex-col gap-0 overflow-hidden"
         >
           <div className="tw-frozen">
+            <nav aria-label="Creator navigation" className="flex flex-wrap items-center gap-2 pb-3">
+              <Link href="/vendors" className="tw-b sm">← Back to creators</Link>
+              <form action="/vendors" method="get" role="search" className="ml-auto flex items-center gap-2">
+                <input type="search" name="q" aria-label="Search creators" placeholder="Search another creator…" className="h-9 min-w-0 rounded-lg border border-border bg-background px-3 text-sm" />
+                <button type="submit" className="tw-b sm">Search creators</button>
+              </form>
+            </nav>
             <div className="tw-mast">
               <div className="tw-mh">
                 <Link href="/vendors" className="tw-hmk" aria-label="Back to vendors">
@@ -381,8 +388,11 @@ export function VendorWorkspaceView({
                 </button>
                 {saveFormId ? (
                   <button
-                    type="submit"
-                    form={saveFormId}
+                    type="button"
+                    onClick={() => {
+                      const form = document.getElementById(saveFormId);
+                      if (form instanceof HTMLFormElement) form.requestSubmit();
+                    }}
                     className="tw-b sm pri"
                   >
                     {TAB_SAVE_LABELS[activeTab]}

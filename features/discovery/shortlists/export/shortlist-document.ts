@@ -65,6 +65,8 @@ export function shortlistCreatorKey(item: ShortlistCreatorItem): string {
 }
 
 export type ShortlistDocCreatorGroup = {
+  /** Stored location values only; never audience geography or a runtime estimate. */
+  recordedMarkets?: string[];
   creatorKey: string;
   rank: number;
   creator: string;
@@ -152,6 +154,8 @@ export type ShortlistDocCollapseContentGroup = {
 };
 
 export type ShortlistDocument = {
+  creatorListCost?: import("../creator-list-cost").CreatorListCost;
+  clientLogoDataUri?: string | null;
   template: ShortlistTemplateVariant;
   serial: string;
   name: string;
@@ -428,6 +432,9 @@ export function buildCreatorGroup(
     engagementRate: row.engagementRate,
     engagementRateNumeric: resolveEngagementRateNumeric(creator),
     country: row.country,
+    // Preserve the existing report's market values verbatim; the template must
+    // neither expand country codes nor fill missing values.
+    recordedMarkets: row.country && row.country !== "—" ? row.country.split(" · ") : [],
     tier: resolveShortlistTier(creator),
     categories,
     isVerified: Boolean(source.isVerified ?? creator.is_platform_verified),
@@ -528,6 +535,10 @@ export function buildShortlistDocument(
     ? detail.creators.filter((item) => itemIdSet.has(item.item_id))
     : detail.creators;
 
+  if (template === "creator-list" && items.some((item) => !item.creator)) {
+    throw new Error("Some selected creator records could not be loaded. Refresh the shortlist and retry; no creators have been omitted from the report.");
+  }
+
   const rows = items
     .map((item, index) => buildRow(item, index + 1))
     .filter((row): row is ShortlistDocRow => row != null);
@@ -614,6 +625,7 @@ export function buildShortlistDocument(
   return {
     template,
     serial: detail.serial_number ?? "SL-PENDING",
+    creatorListCost: detail.creatorListCost,
     name: detail.name,
     description: detail.description,
     statusLabel: SHORTLIST_STATUS_LABELS[detail.status],

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useEscapeClearSelection } from "@/lib/hooks/use-escape-clear-selection";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
@@ -123,6 +124,7 @@ import {
 } from "./shortlist-quotation-panel";
 import { ShortlistBulkToolbar } from "./shortlist-bulk-toolbar";
 import { ShortlistHeaderActions } from "./shortlist-header-actions";
+import { CreatorListCostControl } from "./creator-list-cost-control";
 import {
   ShortlistCreatorEmptyState,
   ShortlistCreatorList,
@@ -171,6 +173,7 @@ export function ShortlistWorkspace({
   const [isPending, startTransition] = useTransition();
   const confirmDelete = useConfirmDelete();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  useEscapeClearSelection(selectedIds.size > 0, () => setSelectedIds(new Set()));
   const [moveOpen, setMoveOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [addMode, setAddMode] = useState<"search" | "paste">("search");
@@ -830,6 +833,7 @@ export function ShortlistWorkspace({
         title={detail.name}
         id={detail.serial_number}
         badge={<ShortlistWorkspaceStatusPill status={detail.status} />}
+        trailing={<CreatorListCostControl key={detail.id} shortlistId={detail.id} value={detail.creatorListCost} disabled={!canEditDetails} />}
         metrics={mastheadMetrics}
         freezeOnScroll={false}
         actions={
@@ -1175,6 +1179,7 @@ export function ShortlistWorkspace({
       />
 
       <CreatorDetailSheet
+        similarTarget={{kind: "shortlist", id: detail.id, canAdd: editable}}
         creator={detailCreator}
         open={detailOpen}
         onOpenChange={onDetailOpenChange}

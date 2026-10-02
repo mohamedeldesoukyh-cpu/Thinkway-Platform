@@ -41,9 +41,9 @@ export function invoiceDraftKey(row: Pick<OperationalBillingRow, "kind" | "id">)
 }
 
 export function defaultInvoiceDraftPercent(
-  row: Pick<OperationalBillingRow, "remaining_amount">
+  row: Pick<OperationalBillingRow, "remaining_amount" | "billable_amount">
 ): number {
-  return Number(row.remaining_amount) > 0.01 ? 100 : 0;
+  return row.remaining_amount > 0.01 ? percentFromAmount(row.billable_amount, row.remaining_amount) : 0;
 }
 
 export function findOperationalRow(
@@ -165,12 +165,15 @@ function computeLeafDraft(
   row: OperationalBillingRow,
   percents: InvoiceDraftPercents
 ): InvoiceDraftLine {
-  const amount = roundMoney(Math.max(0, row.remaining_amount));
+  const amount = roundMoney(Math.max(0, row.billable_amount));
+  const available = roundMoney(Math.max(0, row.remaining_amount));
   const percent = storedPercent(row, percents);
-  const sourceAmount = row.source_money?.amounts.remaining_amount;
-  const toBeInvoiced = sourceAmount != null && row.source_money?.rate != null
+  const sourceAmount = row.source_money?.amounts.billable_amount;
+  const requested = sourceAmount != null && row.source_money?.rate != null
     ? roundMoney(amountFromPercent(Math.max(0, sourceAmount), percent) * row.source_money.rate)
     : amountFromPercent(amount, percent);
+  const hasRequestedPercent = percents[row.id] != null || percents[CAMPAIGN_INVOICE_DRAFT_ID] != null;
+  const toBeInvoiced = hasRequestedPercent ? Math.min(available, requested) : available;
   const vat = computeVatLine({
     beforeVat: toBeInvoiced,
     vatPercent: leafVatContext(row).vatPercent,
@@ -182,7 +185,7 @@ function computeLeafDraft(
     toBeInvoiced,
     vatAmount: vat.vatAmount,
     totalInvoice: vat.afterVat,
-    remaining: roundMoney(amount - toBeInvoiced),
+    remaining: roundMoney(available - toBeInvoiced),
   };
 }
 
@@ -202,7 +205,7 @@ export function computeInvoiceDraftLine(
       childLines.reduce((sum, line) => sum + line.toBeInvoiced, 0)
     );
     const vatAmount = roundMoney(childLines.reduce((sum, line) => sum + line.vatAmount, 0));
-    const remaining = roundMoney(amount - toBeInvoiced);
+    const remaining = roundMoney(childLines.reduce((sum, line) => sum + line.remaining, 0));
     return {
       amount,
       percent: percentFromAmount(amount, toBeInvoiced),
@@ -230,7 +233,7 @@ export function computeCampaignInvoiceDraft(
     toBeInvoiced,
     vatAmount,
     totalInvoice: roundMoney(toBeInvoiced + vatAmount),
-    remaining: roundMoney(amount - toBeInvoiced),
+    remaining: roundMoney(lines.reduce((sum, line) => sum + line.remaining, 0)),
   };
 }
 

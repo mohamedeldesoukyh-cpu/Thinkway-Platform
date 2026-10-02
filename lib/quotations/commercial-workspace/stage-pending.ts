@@ -15,6 +15,7 @@ export function draftToLinePending(
 ): QuotationLinePendingPayload {
   const stripped = deliverablesPatchForLineMasterSave(existingDeliverables);
   return {
+    commercial_source: "master",
     mode: draft.mode,
     cost: draft.cost,
     cost_currency: draft.costCurrency,

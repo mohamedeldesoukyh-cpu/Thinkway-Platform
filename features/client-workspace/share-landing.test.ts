@@ -1,6 +1,22 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { campaignShareHtml, campaignShareUrl } from "./share-landing";
+import { campaignShareHtml, campaignShareUrl, freshCampaignShareUrl } from "./share-landing";
+
+test("copy recovers from an old failed preview without changing review access", () => {
+  const original = "https://app.thinkwaymedia.com/review/example/share/3?sign=signed%26value";
+  const first = new URL(freshCampaignShareUrl(original, "first"));
+  const second = new URL(freshCampaignShareUrl(original, "second"));
+  assert.equal(first.pathname, "/review/example/share/copy-first");
+  assert.notEqual(first.pathname, second.pathname);
+  assert.equal(first.origin, new URL(original).origin);
+  assert.equal(first.searchParams.get("sign"), "signed&value");
+  assert.equal(second.searchParams.get("sign"), "signed&value");
+  const html = campaignShareHtml({ campaignName: "Test campaign", reviewId: "example", token: "signed&value", origin: first.origin, version: "copy-first" });
+  assert.ok(html.includes('/share/copy-first?sign='));
+  assert.ok(html.includes('v=copy-first'));
+  assert.match(html, /window.location.replace\("https:\/\/app.thinkwaymedia.com\/review\/example\?sign=signed%26value"\)/);
+  assert.equal(freshCampaignShareUrl("https://app.thinkwaymedia.com/login", "first"), "https://app.thinkwaymedia.com/login");
+});
 
 test("copied share links preserve access tokens and use a fresh preview URL", () => {
   const original = "https://app.thinkwaymedia.com/review/example?sign=signed%26value";

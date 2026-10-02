@@ -41,7 +41,7 @@ test("Client IO document totals include custom FX for revenue, usage and fees an
         campaign_lines: lines, assignment_deliverables: [], client_io_billing_milestones: [],
       };
       const result = { data: data[table] ?? null, error: null };
-      const q = { select() { return q; }, eq() { return q; }, in() { return q; }, order() { return q; }, single: async () => result, then(resolve: (r: unknown) => unknown) { return Promise.resolve(result).then(resolve); } };
+      const q = { select() { return q; }, eq() { return q; }, neq() { return q; }, in() { return q; }, order() { return q; }, single: async () => result, then(resolve: (r: unknown) => unknown) { return Promise.resolve(result).then(resolve); } };
       return q;
     },
   };

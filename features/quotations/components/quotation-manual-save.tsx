@@ -36,10 +36,12 @@ import type { AutosaveStatus } from "@/lib/hooks/use-debounced-autosave";
 import type { CommercialInputMode, QuotationStatus } from "@/types/database";
 import { linePendingDiffersFromItem } from "@/lib/quotations/quotation-line-pending-diff";
 import { rollupDeliverableCommercials } from "@/lib/quotations/quotation-deliverable-rollup";
-import { shouldPreferDeliverableRollup } from "@/lib/quotations/quotation-line-commercial-ssot";
+import { stripDeliverableCommercialAmounts, shouldPreferDeliverableRollup } from "@/lib/quotations/quotation-line-commercial-ssot";
 import { diffMasterChanges } from "@/lib/services/commercial/field-registry";
 
 export type QuotationLinePendingPayload = {
+  /** Client-only edit authority; never sent to the server action. */
+  commercial_source?: "master" | "deliverables";
   service_description?: string | null;
   deliverables?: QuotationDeliverable[];
   revenue?: number | null;
@@ -140,6 +142,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
   const [hasClientBrandPending, setHasClientBrandPending] = useState(false);
   const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
   const [savePending, setSavePending] = useState(false);
+  const savePendingRef = useRef(false);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionCampaignHeaderId, setRevisionCampaignHeaderId] = useState<
     string | null
@@ -194,6 +197,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       const prevRevenue = Number(prev.revenue ?? item?.revenue ?? 0);
       const incomingRevenue = payload.revenue;
       if (
+        payload.commercial_source !== "master" &&
         prevRevenue > 0 &&
         incomingRevenue != null &&
         Number(incomingRevenue) <= 0 &&
@@ -271,277 +275,279 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
   }, []);
 
   const saveAll = useCallback(async (): Promise<boolean> => {
-    if (
-      !hasUnsavedRef.current &&
-      linePendingRef.current.size === 0 &&
-      !metaPendingRef.current &&
-      !clientBrandPendingRef.current
-    ) {
-      return true;
-    }
-
-    setSavePending(true);
+    if (savePendingRef.current) return false;
     savePendingRef.current = true;
-    setSaveStatus("saving");
+    try {
+      // Flush editor buffers before deciding whether there is anything to save.
+      for (const flush of [...saveFlushHandlersRef.current]) flush();
+      if (
+        !hasUnsavedRef.current &&
+        linePendingRef.current.size === 0 &&
+        !metaPendingRef.current &&
+        !clientBrandPendingRef.current
+      ) {
+        return true;
+      }
 
-    for (const flush of saveFlushHandlersRef.current) {
-      flush();
-    }
+      setSavePending(true);
+      savePendingRef.current = true;
+      setSaveStatus("saving");
 
-    const itemById = itemsByIdRef.current;
-    let firstError: string | undefined;
-    const pendingEntries = [...linePendingRef.current.entries()].filter(([itemId, payload]) => {
-      const item = itemById.get(itemId);
-      return item && linePendingDiffersFromItem(item, payload);
-    });
-
-    const saveLines = async (confirmCommercialSync: boolean) => {
-      const saveOptions = {
-        deferRevalidate: true,
-        skipTotalsRecompute: true,
-        confirmCommercialSync,
-      } as const;
-
-      return Promise.all(
-        pendingEntries.map(async ([itemId, payload]) => {
-          const item = itemById.get(itemId);
-          if (!item) return { ok: true as const };
-
-          const rolled = payload.deliverables?.length
-            ? rollupDeliverableCommercials(payload.deliverables, {
-                lineCurrency: payload.cost_currency || item.cost_currency || "EGP",
-                fxRateToEgp: item.fx_rate_to_egp ?? 1,
-                lineAfPct: payload.af_pct ?? item.af_pct,
-              })
-            : null;
-          const masterRevenue = payload.revenue ?? item.revenue;
-          const useRolled = shouldPreferDeliverableRollup({
-            rolled,
-            masterRevenue,
-          });
-
-          return updateQuotationItemCommercials(
-            {
-              item_id: itemId,
-              quotation_id: quotationId,
-              ...payload,
-              mode: (useRolled
-                ? "cost_revenue"
-                : payload.mode ?? item.commercial_input_mode) as CommercialInputMode,
-              cost: useRolled ? rolled!.cost : (payload.cost ?? item.cost),
-              cost_currency: payload.cost_currency ?? item.cost_currency,
-              gp_pct: useRolled ? rolled!.gpPct : (payload.gp_pct ?? item.gp_pct),
-              revenue: useRolled ? rolled!.revenue : (payload.revenue ?? item.revenue),
-              gp_value: useRolled ? rolled!.gpValue : (payload.gp_value ?? item.gp_value),
-              af_pct: useRolled ? rolled!.afPct : (payload.af_pct ?? item.af_pct),
-            },
-            {
-              ...saveOptions,
-              idempotencyKey: confirmCommercialSync
-                ? `quote-save:${quotationId}:${itemId}:${Date.now()}`
-                : undefined,
-            }
-          );
-        })
-      );
-    };
-
-    let lineResults = await saveLines(false);
-
-    const financeGate = lineResults.find(
-      (res) => !res.ok && "code" in res && res.code === "FINANCE_LOCKED"
-    );
-    if (financeGate && !financeGate.ok) {
-      const copy = financeLockConfirmationCopy();
-      const meta =
-        "commercialSync" in financeGate ? financeGate.commercialSync : null;
-      const accepted = await confirm({
-        title: meta?.confirmationTitle ?? copy.title,
-        description: meta?.confirmationDescription ?? copy.description,
-        confirmLabel: copy.confirmLabel,
+      const savedMeta = metaPendingRef.current;
+      const savedClientBrand = clientBrandPendingRef.current;
+      const itemById = itemsByIdRef.current;
+      let firstError: string | undefined;
+      const stagedEntries = [...linePendingRef.current.entries()];
+      const pendingEntries = stagedEntries.filter(([itemId, payload]) => {
+        const item = itemById.get(itemId);
+        return item && linePendingDiffersFromItem(item, payload);
       });
-      if (accepted) {
-        const campaignHeaderId = meta?.campaignHeaderId ?? null;
-        if (!campaignHeaderId) {
-          toast.error(
-            "Cannot start Commercial Revision — missing Campaign linkage."
-          );
-          setSavePending(false);
-          savePendingRef.current = false;
-          setSaveStatus("pending");
-          return false;
-        } else {
-          const lines: CommercialRevisionDialogLine[] = [];
-          for (const [itemId, payload] of pendingEntries) {
+
+      const saveLines = async (confirmCommercialSync: boolean) => {
+        const saveOptions = {
+          deferRevalidate: true,
+          skipTotalsRecompute: true,
+          confirmCommercialSync,
+        } as const;
+
+        return Promise.all(
+          pendingEntries.map(async ([itemId, payload]) => {
             const item = itemById.get(itemId);
-            if (!item) continue;
+            if (!item) return { ok: true as const };
+
             const rolled = payload.deliverables?.length
               ? rollupDeliverableCommercials(payload.deliverables, {
-                  lineCurrency: item.cost_currency || "EGP",
+                  lineCurrency: payload.cost_currency || item.cost_currency || "EGP",
                   fxRateToEgp: item.fx_rate_to_egp ?? 1,
                   lineAfPct: payload.af_pct ?? item.af_pct,
                 })
               : null;
-            const current = {
-              creator_cost: item.cost,
-              client_revenue: item.revenue,
-              cost_currency: item.cost_currency,
-              exchange_rate: item.fx_rate_to_egp,
-              cost_fx_override: item.cost_fx_override ?? null,
-              revenue_fx_override: item.revenue_fx_override ?? null,
-              agency_fee_percent: item.af_pct,
-              commercial_input_mode: item.commercial_input_mode,
-              gp_pct_input: item.gp_pct,
-              gp_value_input: item.gp_value,
-            };
-            const proposed = {
-              creator_cost: rolled?.cost ?? payload.cost ?? item.cost,
-              client_revenue:
-                rolled?.revenue ?? payload.revenue ?? item.revenue,
-              cost_currency: payload.cost_currency ?? item.cost_currency,
-              exchange_rate: item.fx_rate_to_egp,
-              cost_fx_override: payload.cost_fx_override !== undefined ? payload.cost_fx_override : item.cost_fx_override ?? null,
-              revenue_fx_override: payload.revenue_fx_override !== undefined ? payload.revenue_fx_override : item.revenue_fx_override ?? null,
-              agency_fee_percent:
-                rolled?.afPct ?? payload.af_pct ?? item.af_pct,
-              commercial_input_mode: (rolled
-                ? "cost_revenue"
-                : item.commercial_input_mode) as CommercialInputMode,
-              gp_pct_input: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
-              gp_value_input:
-                rolled?.gpValue ?? payload.gp_value ?? item.gp_value,
-            };
-            const { fieldChanges } = diffMasterChanges(current, proposed);
-            if (fieldChanges.length === 0) continue;
-            lines.push({
-              commercialLineId: itemId,
-              current,
-              proposed,
+            const masterRevenue = payload.revenue ?? item.revenue;
+            const useRolled = payload.commercial_source !== "master" && shouldPreferDeliverableRollup({
+              rolled,
+              masterRevenue,
             });
-          }
-          if (lines.length === 0) {
-            toast.message("No Master commercial changes to revise", {
-              description:
-                "Issue/validity dates and other document fields are not Commercial Revision Masters. Save them without opening a revision — only cost, revenue, GP, fees, and currency require approval after finance lock.",
-            });
-            // Fall through: lines had no Master deltas (e.g. date-only save).
-            // Retry line path is unnecessary; continue to header meta save below.
-            lineResults = pendingEntries.map(() => ({ ok: true as const }));
-          } else {
-            setRevisionCampaignHeaderId(campaignHeaderId);
-            setRevisionLines(lines);
-            setRevisionOpen(true);
-            setSavePending(false);
-            savePendingRef.current = false;
+
+            const { commercial_source: _source, ...commercialPayload } = payload;
+            return updateQuotationItemCommercials(
+              {
+                item_id: itemId,
+                quotation_id: quotationId,
+                ...commercialPayload,
+                ...(payload.commercial_source === "master" && payload.deliverables
+                  ? { deliverables: stripDeliverableCommercialAmounts(payload.deliverables) }
+                  : {}),
+                mode: (useRolled
+                  ? "cost_revenue"
+                  : payload.mode ?? item.commercial_input_mode) as CommercialInputMode,
+                cost: useRolled ? rolled!.cost : (payload.cost ?? item.cost),
+                cost_currency: payload.cost_currency ?? item.cost_currency,
+                gp_pct: useRolled ? rolled!.gpPct : (payload.gp_pct ?? item.gp_pct),
+                revenue: useRolled ? rolled!.revenue : (payload.revenue ?? item.revenue),
+                gp_value: useRolled ? rolled!.gpValue : (payload.gp_value ?? item.gp_value),
+                af_pct: useRolled ? rolled!.afPct : (payload.af_pct ?? item.af_pct),
+              },
+              {
+                ...saveOptions,
+                idempotencyKey: confirmCommercialSync
+                  ? `quote-save:${quotationId}:${itemId}:${Date.now()}`
+                  : undefined,
+              }
+            );
+          })
+        );
+      };
+
+      let lineResults = await saveLines(false);
+
+      const financeGate = lineResults.find(
+        (res) => !res.ok && "code" in res && res.code === "FINANCE_LOCKED"
+      );
+      if (financeGate && !financeGate.ok) {
+        const copy = financeLockConfirmationCopy();
+        const meta =
+          "commercialSync" in financeGate ? financeGate.commercialSync : null;
+        const accepted = await confirm({
+          title: meta?.confirmationTitle ?? copy.title,
+          description: meta?.confirmationDescription ?? copy.description,
+          confirmLabel: copy.confirmLabel,
+        });
+        if (accepted) {
+          const campaignHeaderId = meta?.campaignHeaderId ?? null;
+          if (!campaignHeaderId) {
+            toast.error(
+              "Cannot start Commercial Revision — missing Campaign linkage."
+            );
             setSaveStatus("pending");
             return false;
+          } else {
+            const lines: CommercialRevisionDialogLine[] = [];
+            for (const [itemId, payload] of pendingEntries) {
+              const item = itemById.get(itemId);
+              if (!item) continue;
+              const rolled = payload.commercial_source !== "master" && payload.deliverables?.length
+                ? rollupDeliverableCommercials(payload.deliverables, {
+                    lineCurrency: item.cost_currency || "EGP",
+                    fxRateToEgp: item.fx_rate_to_egp ?? 1,
+                    lineAfPct: payload.af_pct ?? item.af_pct,
+                  })
+                : null;
+              const current = {
+                creator_cost: item.cost,
+                client_revenue: item.revenue,
+                cost_currency: item.cost_currency,
+                exchange_rate: item.fx_rate_to_egp,
+                cost_fx_override: item.cost_fx_override ?? null,
+                revenue_fx_override: item.revenue_fx_override ?? null,
+                agency_fee_percent: item.af_pct,
+                commercial_input_mode: item.commercial_input_mode,
+                gp_pct_input: item.gp_pct,
+                gp_value_input: item.gp_value,
+              };
+              const proposed = {
+                creator_cost: rolled?.cost ?? payload.cost ?? item.cost,
+                client_revenue:
+                  rolled?.revenue ?? payload.revenue ?? item.revenue,
+                cost_currency: payload.cost_currency ?? item.cost_currency,
+                exchange_rate: item.fx_rate_to_egp,
+                cost_fx_override: payload.cost_fx_override !== undefined ? payload.cost_fx_override : item.cost_fx_override ?? null,
+                revenue_fx_override: payload.revenue_fx_override !== undefined ? payload.revenue_fx_override : item.revenue_fx_override ?? null,
+                agency_fee_percent:
+                  rolled?.afPct ?? payload.af_pct ?? item.af_pct,
+                commercial_input_mode: (rolled
+                  ? "cost_revenue"
+                  : item.commercial_input_mode) as CommercialInputMode,
+                gp_pct_input: rolled?.gpPct ?? payload.gp_pct ?? item.gp_pct,
+                gp_value_input:
+                  rolled?.gpValue ?? payload.gp_value ?? item.gp_value,
+              };
+              const { fieldChanges } = diffMasterChanges(current, proposed);
+              if (fieldChanges.length === 0) continue;
+              lines.push({
+                commercialLineId: itemId,
+                current,
+                proposed,
+              });
+            }
+            if (lines.length === 0) {
+              toast.message("No Master commercial changes to revise", {
+                description:
+                  "Issue/validity dates and other document fields are not Commercial Revision Masters. Save them without opening a revision — only cost, revenue, GP, fees, and currency require approval after finance lock.",
+              });
+              // Fall through: lines had no Master deltas (e.g. date-only save).
+              // Retry line path is unnecessary; continue to header meta save below.
+              lineResults = pendingEntries.map(() => ({ ok: true as const }));
+            } else {
+              setRevisionCampaignHeaderId(campaignHeaderId);
+              setRevisionLines(lines);
+              setRevisionOpen(true);
+              setSaveStatus("pending");
+              return false;
+            }
           }
+        } else {
+          setSaveStatus("pending");
+          return false;
         }
-      } else {
-        setSavePending(false);
-        savePendingRef.current = false;
-        setSaveStatus("pending");
-        return false;
       }
-    }
 
-    const syncGate = lineResults.find(
-      (res) =>
-        !res.ok &&
-        "code" in res &&
-        res.code === COMMERCIAL_SYNC_CONFIRMATION_REQUIRED
-    );
-    if (syncGate && !syncGate.ok && "commercialSync" in syncGate) {
-      const meta = syncGate.commercialSync;
-      const accepted = await confirm({
-        title: meta?.confirmationTitle ?? "Update linked Campaign?",
-        description:
-          meta?.confirmationDescription ??
-          "Updating these commercial values will automatically update both the Quotation and the Campaign.",
-        confirmLabel: "Continue",
-      });
-      if (!accepted) {
-        setSavePending(false);
-        savePendingRef.current = false;
-        setSaveStatus("pending");
-        return false;
+      const syncGate = lineResults.find(
+        (res) =>
+          !res.ok &&
+          "code" in res &&
+          res.code === COMMERCIAL_SYNC_CONFIRMATION_REQUIRED
+      );
+      if (syncGate && !syncGate.ok && "commercialSync" in syncGate) {
+        const meta = syncGate.commercialSync;
+        const accepted = await confirm({
+          title: meta?.confirmationTitle ?? "Update linked Campaign?",
+          description:
+            meta?.confirmationDescription ??
+            "Updating these commercial values will automatically update both the Quotation and the Campaign.",
+          confirmLabel: "Continue",
+        });
+        if (!accepted) {
+          setSaveStatus("pending");
+          return false;
+        }
+        lineResults = await saveLines(true);
       }
-      lineResults = await saveLines(true);
-    }
 
-    for (const res of lineResults) {
-      if (!res.ok && !firstError) firstError = res.message;
-    }
+      for (const res of lineResults) {
+        if (!res.ok && !firstError) firstError = res.message;
+      }
 
-    if (!firstError && metaPendingRef.current) {
-      const res = await updateQuotationHeader({
-        id: quotationId,
-        ...metaPendingRef.current,
-      });
-      if (!res.ok) firstError = res.message;
-    }
-
-    if (!firstError && clientBrandPendingRef.current) {
-      const cb = clientBrandPendingRef.current;
-      if (cb.useTemporary) {
-        const res = await updateQuotationClientBrand({
-          quotationId,
-          is_temporary_client: true,
-          temporary_client_name: cb.temporary_client_name,
-          temporary_brand_name: cb.temporary_brand_name,
+      if (!firstError && savedMeta) {
+        const res = await updateQuotationHeader({
+          id: quotationId,
+          ...savedMeta,
         });
         if (!res.ok) firstError = res.message;
-      } else {
-        if (!cb.client_id || !cb.brand_id) {
-          firstError = "Select both legal entity and brand, or use temporary values.";
-        } else {
+      }
+
+      if (!firstError && savedClientBrand) {
+        const cb = savedClientBrand;
+        if (cb.useTemporary) {
           const res = await updateQuotationClientBrand({
             quotationId,
-            client_id: cb.client_id,
-            brand_id: cb.brand_id,
+            is_temporary_client: true,
+            temporary_client_name: cb.temporary_client_name,
+            temporary_brand_name: cb.temporary_brand_name,
           });
           if (!res.ok) firstError = res.message;
-        }
-        if (!firstError) {
-          const res = await updateQuotationHeader({
-            id: quotationId,
-            campaign_header_id: cb.campaign_header_id ?? null,
-          });
-          if (!res.ok) firstError = res.message;
+        } else {
+          if (!cb.client_id || !cb.brand_id) {
+            firstError = "Select both legal entity and brand, or use temporary values.";
+          } else {
+            const res = await updateQuotationClientBrand({
+              quotationId,
+              client_id: cb.client_id,
+              brand_id: cb.brand_id,
+            });
+            if (!res.ok) firstError = res.message;
+          }
+          if (!firstError) {
+            const res = await updateQuotationHeader({
+              id: quotationId,
+              campaign_header_id: cb.campaign_header_id ?? null,
+            });
+            if (!res.ok) firstError = res.message;
+          }
         }
       }
-    }
 
-    if (!firstError && pendingEntries.length > 0) {
-      const totalsRes = await finalizeQuotationSave(quotationId);
-      if (!totalsRes.ok) firstError = totalsRes.message;
-    }
+      if (!firstError && pendingEntries.length > 0) {
+        const totalsRes = await finalizeQuotationSave(quotationId);
+        if (!totalsRes.ok) firstError = totalsRes.message;
+      }
 
-    setSavePending(false);
-    savePendingRef.current = false;
+      if (firstError) {
+        setSaveStatus("error");
+        toast.error(firstError);
+        return false;
+      }
 
-    if (firstError) {
+      // Preserve changes made while this request was in flight.
+      for (const [id, payload] of stagedEntries) {
+        if (linePendingRef.current.get(id) === payload) linePendingRef.current.delete(id);
+      }
+      if (metaPendingRef.current === savedMeta) metaPendingRef.current = null;
+      if (clientBrandPendingRef.current === savedClientBrand) clientBrandPendingRef.current = null;
+      syncPendingState();
+      setSaveStatus(linePendingRef.current.size || metaPendingRef.current || clientBrandPendingRef.current ? "pending" : "saved");
+      startTransition(() => {
+        router.refresh();
+      });
+      return true;
+    } catch (error) {
       setSaveStatus("error");
-      toast.error(firstError);
+      toast.error(error instanceof Error ? error.message : "Could not save quotation. Your changes are still available; please retry.");
       return false;
+    } finally {
+      setSavePending(false);
+      savePendingRef.current = false;
     }
-
-    linePendingRef.current.clear();
-    metaPendingRef.current = null;
-    clientBrandPendingRef.current = null;
-    setPendingLineIds(new Set());
-    setHasMetaPending(false);
-    setHasClientBrandPending(false);
-    setSaveStatus("saved");
-    startTransition(() => {
-      router.refresh();
-    });
-    return true;
-  }, [quotationId, router, confirm]);
-
-  const saveAllRef = useRef(saveAll);
-  saveAllRef.current = saveAll;
-  const savePendingRef = useRef(false);
+  }, [quotationId, router, confirm, syncPendingState]);
 
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
@@ -552,21 +558,6 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
 
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
-  }, []);
-
-  useEffect(() => {
-    const onPageHide = () => {
-      if (!hasUnsavedRef.current || savePendingRef.current) return;
-      for (const flush of saveFlushHandlersRef.current) {
-        flush();
-      }
-      void saveAllRef.current();
-    };
-
-    window.addEventListener("pagehide", onPageHide);
-    return () => {
-      window.removeEventListener("pagehide", onPageHide);
-    };
   }, []);
 
   const value = useMemo(

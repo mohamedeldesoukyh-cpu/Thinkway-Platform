@@ -44,10 +44,10 @@ function summaryRows(io: VendorIoEmailFields) {
 }
 
 export function buildVendorIoEmailSubject(
-  io: Pick<VendorIoEmailFields, "document_number">
+  io: Pick<VendorIoEmailFields, "document_number" | "campaign_name">
 ): string {
   const doc = io.document_number?.trim() || "VIO";
-  return `Vendor IO ${doc} – Approval Required – Thinkway Media`;
+  return `Creator Insertion Order — ${doc} — ${io.campaign_name}`;
 }
 
 export function buildVendorIoEmailPlainText(input: {
@@ -61,12 +61,12 @@ export function buildVendorIoEmailPlainText(input: {
   return appendThinkwayEmailPlainTextFooter([
     `Hello ${input.io.influencer_name},`,
     "",
-    "Please find attached your Vendor Insertion Order from Thinkway Media.",
+    "Please find attached your Creator Insertion Order for your review and approval.",
     "The attached PDF is the official document.",
     "",
     ...rows.map((row) => `${row.label}: ${row.value}`),
     "",
-    input.approvalUrl ? `Approve Vendor IO: ${input.approvalUrl}` : null,
+    input.approvalUrl ? `Approve Creator IO: ${input.approvalUrl}` : null,
   ]);
 }
 
@@ -79,20 +79,20 @@ export function buildVendorIoEmailHtml(input: {
   const bodyHtml = `
     <p style="margin:0 0 16px;">Hello <strong>${escapeEmailHtml(input.io.influencer_name)}</strong>,</p>
     <p style="margin:0 0 20px;">
-      Please find attached your <strong>Vendor Insertion Order</strong> from Thinkway Media.
+      Please find attached your <strong>Creator Insertion Order</strong> from Thinkway Media.
       The attached PDF is the official document.
     </p>
     ${renderEmailSummaryTable(summaryRows(input.io))}
     ${
       input.approvalUrl
-        ? renderEmailApprovalCta(input.approvalUrl, "Approve Vendor IO")
+        ? renderEmailApprovalCta(input.approvalUrl, "Approve Creator IO")
         : ""
     }
   `;
 
   return wrapThinkwayEmailDocument({
-    documentTitle: "Vendor Insertion Order",
-    documentKind: "Vendor Insertion Order notification",
+    documentTitle: "Creator Insertion Order",
+    documentKind: "Creator Insertion Order notification",
     bodyHtml,
   });
 }
@@ -103,7 +103,7 @@ export function buildVendorIoPdfAttachmentFromBuffer(
   if (!buffer?.length) return null;
 
   return {
-    filename: "Vendor-IO.pdf",
+    filename: "Creator-IO.pdf",
     mimeType: "application/pdf",
     content: buffer,
   };

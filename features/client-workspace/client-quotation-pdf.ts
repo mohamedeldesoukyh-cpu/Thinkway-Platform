@@ -14,13 +14,13 @@ import { getQuotationDetail } from "@/lib/services/quotations/quotation-document
 import type { Database } from "@/types/database";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-export async function renderExistingQuotationPdf(input: {
+export async function renderExistingQuotationHtml(input: {
   supabase: SupabaseClient<Database>;
   quotationId: string;
   host?: string | null;
   proto?: string | null;
 }): Promise<
-  | { ok: true; buffer: Buffer; filename: string }
+  | { ok: true; html: string; filename: string }
   | { ok: false; message: string }
 > {
   const detail = await getQuotationDetail(input.supabase, input.quotationId);
@@ -32,8 +32,17 @@ export async function renderExistingQuotationPdf(input: {
   const siteOrigin = resolveQuotationExportSiteOrigin(input.host, input.proto);
   const logoSrcs = resolveThinkwayReportLogoSrcsForExport();
   const html = buildQuotationHtml(doc, { siteOrigin, logoSrcs, forPdf: true });
-  const pdfResult = await renderHtmlToPdf(html, QUOTATION_PDF_OPTIONS);
+  return { ok: true, html, filename: `${doc.serial}-${quotationExportFilenameRevision(detail.updated_at)}.pdf` };
+}
+
+export async function renderExistingQuotationPdf(input: Parameters<typeof renderExistingQuotationHtml>[0]): Promise<
+  | { ok: true; buffer: Buffer; filename: string }
+  | { ok: false; message: string }
+> {
+  const rendered = await renderExistingQuotationHtml(input);
+  if (!rendered.ok) return rendered;
+  const pdfResult = await renderHtmlToPdf(rendered.html, QUOTATION_PDF_OPTIONS);
   if (!pdfResult.ok) return { ok: false, message: pdfUnavailableMessage(pdfResult.error) };
-  const filename = `${doc.serial}-${quotationExportFilenameRevision(detail.updated_at)}.pdf`;
+  const filename = rendered.filename;
   return { ok: true, buffer: pdfResult.buffer, filename };
 }

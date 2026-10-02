@@ -65,6 +65,8 @@ type ExtendedProps = CreatorPickerDialogProps & {
   container?: ContainerVariant;
   footer?: ReactNode;
   onConfirmPending?: boolean;
+  /** Async single-selection callers close only after identity/profile preparation succeeds. */
+  closeOnSingleSelection?: boolean;
   formatConfirmLabel?: (selectedCount: number) => string;
   /** Sheet side when container=sheet */
   sheetSide?: "right" | "left";
@@ -99,6 +101,7 @@ export function CreatorPickerDialog({
   container = "dialog",
   footer,
   onConfirmPending,
+  closeOnSingleSelection = true,
   sheetSide = "right",
   panelLayout = false,
   headerExtra,
@@ -208,7 +211,7 @@ export function CreatorPickerDialog({
     if (isRowDisabled?.(creator)) return;
     if (selectionMode === "single") {
       onConfirm?.([creator]);
-      handleOpenChange(false);
+      if (closeOnSingleSelection) handleOpenChange(false);
       return;
     }
     const willSelect = !selection.selectedIds.has(creator.unified_id);
@@ -240,7 +243,7 @@ export function CreatorPickerDialog({
 
     if (selectionMode === "single") {
       onConfirm?.([creator]);
-      handleOpenChange(false);
+      if (closeOnSingleSelection) handleOpenChange(false);
       return;
     }
 

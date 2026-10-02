@@ -97,11 +97,17 @@ export function DeleteDiscoveryCreatorDialog({
 
     let cancelled = false;
     setChecking(true);
+    setCanDelete(false);
     void getDiscoveryCreatorDeleteEligibilityAction(influencerId).then((result) => {
       if (cancelled) return;
       setCanDelete(result.canDelete);
       setMessage(result.message);
       setBlockers(result.links ?? []);
+      setChecking(false);
+    }).catch((error: unknown) => {
+      if (cancelled) return;
+      setCanDelete(false);
+      setMessage(error instanceof Error ? error.message : "Could not check linked records. Please try again.");
       setChecking(false);
     });
 
@@ -114,7 +120,16 @@ export function DeleteDiscoveryCreatorDialog({
     if (!influencerId) return;
 
     startTransition(async () => {
-      const result = await deleteDiscoveryCreatorAction(influencerId);
+      let result;
+      try {
+        result = await deleteDiscoveryCreatorAction(influencerId);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Could not delete creator. Please try again.";
+        toast.error(message);
+        setMessage(message);
+        setCanDelete(false);
+        return;
+      }
       if (!result.ok) {
         toast.error(result.message);
         setMessage(result.message);

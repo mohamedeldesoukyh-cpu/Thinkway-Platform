@@ -7,7 +7,7 @@ import { resolveDiscoveryCreatorDisplayCategories } from "@/lib/creators/creator
 import { resolveCreatorFromRefLookup, resolveUnifiedCreatorsByRefs } from "@/lib/creators/unified-browse";
 import { isImportedCreatorAvatarUrl } from "@/lib/discovery-import/import-avatar-storage";
 import type { CreatorRecentPublication, UnifiedCreatorResult } from "@/lib/domains/creator/types";
-import { isInstagramCdnUrlExpired } from "@/lib/performance/avatar-sync-policy";
+import { isSocialAvatarUrlExpired } from "@/lib/performance/avatar-sync-policy";
 import { computeEngagementRate } from "@/lib/performance/engagement-rate-engine";
 import { detectSocialPlatformFromContentUrl } from "@/lib/social/platforms";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -196,12 +196,12 @@ export function preferAvatarUrl(current?: string | null, live?: string | null): 
   const existing = current?.trim() || undefined;
   if (!existing) return next;
   if (!next) return existing;
-  if (isInstagramCdnUrlExpired(next) && !isInstagramCdnUrlExpired(existing)) return existing;
+  if (isSocialAvatarUrlExpired(next) && !isSocialAvatarUrlExpired(existing)) return existing;
   if (isImportedCreatorAvatarUrl(next) && !isImportedCreatorAvatarUrl(existing)) return existing;
   if (isImportedCreatorAvatarUrl(existing) && !isImportedCreatorAvatarUrl(next)) return next;
-  if (isInstagramCdnUrlExpired(existing)) return next;
+  if (isSocialAvatarUrlExpired(existing)) return next;
   if (avatarStorageQualityRank(next) > avatarStorageQualityRank(existing)) return next;
-  if (!isImportedCreatorAvatarUrl(next) && !isInstagramCdnUrlExpired(next)) return next;
+  if (!isImportedCreatorAvatarUrl(next) && !isSocialAvatarUrlExpired(next)) return next;
   return existing;
 }
 
@@ -256,7 +256,7 @@ function bestCrmAvatarUrl(
 ): string | undefined {
   const candidates = [primary, ...(accountPictures ?? [])];
   const live = candidates.find(
-    (url) => url?.trim() && !isImportedCreatorAvatarUrl(url) && !isInstagramCdnUrlExpired(url)
+    (url) => url?.trim() && !isImportedCreatorAvatarUrl(url) && !isSocialAvatarUrlExpired(url)
   );
   return live?.trim() || primary?.trim() || undefined;
 }

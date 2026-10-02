@@ -53,7 +53,10 @@ export async function planDocumentLifecycleReactions(
     input.eventType === "creator_removed" ||
     input.eventType === "creator_replaced"
   ) {
-    return planCreatorRemovedVendorIoReactions(supabase, input);
+    return [
+      ...(input.documentScope?.vendor === false ? [] : await planCreatorRemovedVendorIoReactions(supabase, input)),
+      ...(await planRevisionRequiredClientIoReactions(supabase, input)),
+    ];
   }
   return [
     ...(await planRevisionRequiredVendorIoReactions(supabase, input)),
@@ -237,6 +240,8 @@ async function planRevisionRequiredClientIoReactions(
     input.eventType !== "deliverables_changed" &&
     input.eventType !== "payment_terms_changed" &&
     input.eventType !== "campaign_budget_changed" &&
+    input.eventType !== "creator_removed" &&
+    input.eventType !== "creator_replaced" &&
     input.eventType !== "manual_mark_revision_required"
   ) {
     return [];

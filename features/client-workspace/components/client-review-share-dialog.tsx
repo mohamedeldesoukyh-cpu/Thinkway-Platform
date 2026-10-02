@@ -16,7 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { clientLinkName, clientLinkShareText } from '../link-label';
 import { shareImagePath } from '../share-preview';
-import { campaignShareUrl } from '../share-landing';
+import { campaignShareUrl, freshCampaignShareUrl } from '../share-landing';
 import { updateShareCoverAction } from '../actions/update-share-cover-action';
 
 export function ClientReviewShareDialog({
@@ -72,9 +72,12 @@ export function ClientReviewShareDialog({
   const title = reviewNumber != null ? `Client review v${reviewNumber}` : "Client review link";
 
   async function copyLink(withName = false) {
-    if (!shareUrl) return;
+    if (!url) return;
     try {
-      await navigator.clipboard.writeText(withName ? clientLinkShareText(campaignName, shareUrl) : shareUrl);
+      const freshUrl = freshCampaignShareUrl(url);
+      await navigator.clipboard.writeText(withName ? clientLinkShareText(campaignName, freshUrl) : freshUrl);
+      const freshVersion = new URL(freshUrl).pathname.split("/").pop();
+      if (freshVersion) setCoverVersion(freshVersion);
       setCopied(true);
       toast.success(withName ? 'Campaign name and link copied.' : "Review link copied.");
       window.setTimeout(() => setCopied(false), 2000);
@@ -97,7 +100,7 @@ export function ClientReviewShareDialog({
           {campaignName?.trim() && <p className="break-words text-base font-semibold" dir="auto">{clientLinkName(campaignName)}</p>}
           <DialogDescription>
             {linkEnabled
-              ? "Share this signed link with the client, or open it to check the proposal. The URL stays the same when the quotation changes. Use Send to Client to email it."
+              ? "Share this signed link with the client, or open it to check the proposal. Copy refreshes the link preview; existing links continue to open the same review. Use Send to Client to email it."
               : "This client link is off. Its URL is retained so it can be reactivated without issuing a replacement."}
           </DialogDescription>
         </DialogHeader>

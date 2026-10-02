@@ -36,11 +36,14 @@ export function resolveBrowseCreatorProfileImageUrl(
   input: BrowseCreatorProfileImageInput
 ): string | null {
   const platform = input.platform ?? "unknown";
+  // Keep expiry/signature metadata in canonical profile data. Browser/proxy
+  // normalization happens only after avatar selection, otherwise an expired
+  // TikTok URL looks permanent during the later DNA merge.
   return (
-    firstAllowedAvatarUrl(platform, [input.platformPictureUrl]) ??
-    firstAllowedAvatarUrl(platform, [input.platformAvatarUrl]) ??
-    firstGenericAvatarUrl(platform, [input.influencerAvatarUrl]) ??
-    firstGenericAvatarUrl(platform, [input.discoveryProfileImageUrl])
+    firstAllowedAvatarUrl(platform, [input.platformPictureUrl], { normalize: false }) ??
+    firstAllowedAvatarUrl(platform, [input.platformAvatarUrl], { normalize: false }) ??
+    firstGenericAvatarUrl(platform, [input.influencerAvatarUrl], { normalize: false }) ??
+    firstGenericAvatarUrl(platform, [input.discoveryProfileImageUrl], { normalize: false })
   );
 }
 

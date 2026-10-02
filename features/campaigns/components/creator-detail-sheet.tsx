@@ -1,4 +1,12 @@
 "use client";
+import { useRouter } from "next/navigation";
+import { SimilarCreatorActions, type SimilarCreatorTarget } from "@/features/discovery/components/similar-creator-actions";
+import { stashCompareQueue } from "@/features/discovery/components/creator-compare/compare-storage";
+import { AddToShortlistDialog } from "@/features/discovery/shortlists/components/add-to-shortlist-dialog";
+import { addUnifiedCreatorsToShortlists, describeAddOutcome } from "@/features/discovery/shortlists/add-to-shortlist-client";
+import { addItemsToQuotation, listShortlistsForImport } from "@/features/quotations/actions";
+import { buildQuotationSeedFromCreator } from "@/features/quotations/shortlist-seeds";
+
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 
@@ -126,6 +134,8 @@ export type CreatorDetailSheetUpdateMeta = {
 export type CreatorDetailSheetPresentation = "sheet" | "discoveryPack";
 
 type Props = {
+  similarTarget?: SimilarCreatorTarget;
+  stackDepth?: number;
   creator: UnifiedCreatorResult | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -158,6 +168,8 @@ type Props = {
    * when the record arrives. Nothing here is invented: it is the identity from
    * the card that was clicked.
    */
+  /** Caller just resolved core DNA; avoid fetching it twice on initial open. */
+  coreDetailLoaded?: boolean;
   pendingIdentity?: {
     displayName: string;
     handle?: string | null;
@@ -691,7 +703,9 @@ function SimilarCreatorsList({
   loading,
   compact = false,
   className,
+  renderAction,
 }: {
+  renderAction: (item: UnifiedCreatorResult, content: ReactNode) => ReactNode;
   similar: Array<UnifiedCreatorResult & { similarity_score: number }>;
   loading: boolean;
   compact?: boolean;
@@ -744,7 +758,7 @@ function SimilarCreatorsList({
             const handle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
             const secondaryLine = handle ? `@${handle}` : group.label;
 
-            return (
+            return <div key={item.unified_id}>{renderAction(item, (
               <CreatorDetailsSummaryCard
                 key={item.unified_id}
                 displayName={item.display_name}
@@ -755,7 +769,7 @@ function SimilarCreatorsList({
                 statusLabel={formatCreatorRecencyLabel(item.last_enriched_at, item.updated_at)}
                 size={compact ? "rail" : "compact"}
               />
-            );
+            ))}</div>;
           })}
         </div>
       ))}
@@ -766,12 +780,14 @@ function SimilarCreatorsList({
 function SimilarCreatorsMaximizeDialog({
   open,
   onOpenChange,
+  renderAction,
   creatorName,
   similar,
   loading,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  renderAction: (item: UnifiedCreatorResult, content: ReactNode) => ReactNode;
   creatorName: string;
   similar: Array<UnifiedCreatorResult & { similarity_score: number }>;
   loading: boolean;
@@ -814,7 +830,7 @@ function SimilarCreatorsMaximizeDialog({
                     {group.items.map((item) => {
                       const vm = buildDiscoveryCreatorViewModel(item);
                       const handle = item.platforms[0]?.handle?.replace(/^@/, "") ?? null;
-                      return (
+                      return <div key={item.unified_id}>{renderAction(item, (
                         <CreatorDetailsSummaryCard
                           key={item.unified_id}
                           displayName={item.display_name}
@@ -828,7 +844,7 @@ function SimilarCreatorsMaximizeDialog({
                           )}
                           size="compact"
                         />
-                      );
+                      ))}</div>;
                     })}
                   </div>
                 </div>
@@ -850,6 +866,8 @@ type LoadedDetail = {
 export function CreatorDetailSheet({
   creator,
   open,
+  similarTarget,
+  stackDepth = 0,
   onOpenChange,
   onAssign,
   onCreatorUpdated,
@@ -859,7 +877,15 @@ export function CreatorDetailSheet({
   contextSlot,
   assignLabel = "Assign to line",
   pendingIdentity = null,
+  coreDetailLoaded = false,
 }: Props) {
+  const router = useRouter();
+  const [childCreator, setChildCreator] = useState<UnifiedCreatorResult | null>(null);
+  const [similarMenuOpen, setSimilarMenuOpen] = useState(false);
+  const [addSimilarCreator, setAddSimilarCreator] = useState<UnifiedCreatorResult | null>(null);
+  const [similarLists, setSimilarLists] = useState<Array<{id: string; name: string}>>([]);
+  const [addingSimilar, setAddingSimilar] = useState(false);
+  useEffect(() => { if (!open) { setChildCreator(null); setAddSimilarCreator(null); } }, [open]);
   const isDiscoveryPack = presentation === "discoveryPack";
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
   const [baseCreator, setBaseCreator] = useState<UnifiedCreatorResult | null>(creator);
@@ -953,7 +979,7 @@ export function CreatorDetailSheet({
 
       void (async () => {
         const phase1 = startLoadTimer("creator-detail.sheet.phase1-core");
-        const coreCreator = await getUnifiedCreatorCoreDetailAction(unifiedId);
+        const coreCreator = coreDetailLoaded ? creator : await getUnifiedCreatorCoreDetailAction(unifiedId);
         phase1.end({ ok: Boolean(coreCreator) });
         if (!active || detailFetchGenerationRef.current !== fetchGeneration) return;
 
@@ -1217,6 +1243,7 @@ export function CreatorDetailSheet({
   }
 
   const nestedDialogOpen =
+    Boolean(childCreator) || Boolean(addSimilarCreator) || similarMenuOpen ||
     addPlatformOpen ||
     editContactOpen ||
     editAveragePriceOpen ||
@@ -1511,7 +1538,7 @@ export function CreatorDetailSheet({
                     >
                       Similar creators
                     </SectionTitle>
-                    <SimilarCreatorsList similar={similar} loading={similarLoading} />
+                    <SimilarCreatorsList renderAction={renderSimilarAction} similar={similar} loading={similarLoading} />
                   </DetailSection>
 
                   <DetailSection>
@@ -1573,15 +1600,59 @@ export function CreatorDetailSheet({
                 >
                   Similar creators
                 </SectionTitle>
-                <SimilarCreatorsList similar={similar} loading={similarLoading} />
+                <SimilarCreatorsList renderAction={renderSimilarAction} similar={similar} loading={similarLoading} />
               </DetailSection>
             </TabsContent>
     </>
   );
 
+  async function addSimilar(item: UnifiedCreatorResult, shortlistIds?: string[]) {
+    if (addingSimilar) return;
+    if (!similarTarget && !shortlistIds) {
+      setAddSimilarCreator(item);
+      try {
+        const result = await listShortlistsForImport();
+        if (result.ok && result.data) setSimilarLists(result.data.shortlists);
+        else toast.error(result.message || "Could not load shortlists.");
+      } catch { toast.error("Could not load shortlists."); }
+      return;
+    }
+    setAddingSimilar(true);
+    try {
+      if (similarTarget?.kind === "quotation") {
+        const result = await addItemsToQuotation(similarTarget.id, [buildQuotationSeedFromCreator(item)]);
+        if (!result.ok) { toast.error(result.message); return; }
+        toast.success("Creator added to quotation.");
+      } else {
+        const result = await addUnifiedCreatorsToShortlists(shortlistIds ?? [similarTarget!.id], [item]);
+        if (result.failed) { toast.error(result.firstError ?? "Could not add creator."); return; }
+        toast.success(describeAddOutcome(result));
+      }
+      setAddSimilarCreator(null);
+      router.refresh();
+    } catch (error) { toast.error(error instanceof Error ? error.message : "Could not add creator."); }
+    finally { setAddingSimilar(false); }
+  }
+  function renderSimilarAction(item: UnifiedCreatorResult, content: ReactNode) {
+    return <SimilarCreatorActions name={item.display_name} target={similarTarget} onMenuChange={setSimilarMenuOpen}
+      onDetails={() => { setSimilarMaximizedOpen(false); setChildCreator(item); }}
+      onCompare={() => { stashCompareQueue([identityCreator, item]); router.push("/discovery/compare"); }}
+      onAdd={() => void addSimilar(item)}>{content}</SimilarCreatorActions>;
+  }
+
   const detailNestedDialogs = (
     <>
+      {childCreator && <CreatorDetailSheet creator={childCreator} open={open} onOpenChange={(value) => { if (!value) setChildCreator(null); }}
+        presentation="discoveryPack" stackDepth={stackDepth + 1} similarTarget={similarTarget} onCreatorUpdated={(next, options) => {
+          setChildCreator(next);
+          if (next.unified_id === identityCreator.unified_id) onCreatorUpdated?.(next, options);
+          router.refresh();
+        }} />}
+      <AddToShortlistDialog open={Boolean(addSimilarCreator)} onOpenChange={(value) => { if (!value) setAddSimilarCreator(null); }}
+        creators={addSimilarCreator ? [addSimilarCreator] : []} shortlists={similarLists} onShortlistsChange={setSimilarLists}
+        busy={addingSimilar} onConfirm={({shortlistIds}) => { if (addSimilarCreator) void addSimilar(addSimilarCreator, shortlistIds); }} />
       <SimilarCreatorsMaximizeDialog
+        renderAction={renderSimilarAction}
         open={similarMaximizedOpen}
         onOpenChange={setSimilarMaximizedOpen}
         creatorName={identityCreator.display_name}
@@ -1856,6 +1927,8 @@ export function CreatorDetailSheet({
                 profileUrl: vm.profileUrl,
               };
             })}
+            stackDepth={stackDepth}
+            renderSimilarAction={(id, content) => { const item = similar.find((candidate) => candidate.unified_id === id); return item ? renderSimilarAction(item, content) : content; }}
             similarLoading={similarLoading}
             onClose={() => {
               if (!nestedDialogOpen) onOpenChange(false);
@@ -2101,7 +2174,7 @@ export function CreatorDetailSheet({
                   Similar creators
                 </SectionTitle>
                 <div className="creator-detail-sheet-similar-rail__scroll">
-                  <SimilarCreatorsList similar={similar} loading={similarLoading} compact />
+                  <SimilarCreatorsList renderAction={renderSimilarAction} similar={similar} loading={similarLoading} compact />
                 </div>
               </div>
             </aside>

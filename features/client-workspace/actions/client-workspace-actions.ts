@@ -119,6 +119,16 @@ export async function loadCreatorBriefAction(input: {
   if (!service) return { ok: false, message: "Creator detail is temporarily unavailable." };
   const resolved = await resolveClientReviewByToken(service, input.token);
   if (!resolved.ok) return { ok: false, message: "This review link is invalid or has expired." };
+  if (resolved.review.sourceSnapshot) {
+    try {
+      const { loadCurrentCampaignSnapshotForReview } = await import("../current-campaign-roster");
+      const current = await loadCurrentCampaignSnapshotForReview(service, resolved.review);
+      const creator = current?.creators.find(row => row.creatorId === input.creatorId);
+      if (creator) return { ok: true, brief: briefFromSnapshotCreator(creator) };
+    } catch {
+      return { ok: false, message: "Creator detail is temporarily unavailable. Please try again." };
+    }
+  }
   const snapshotCreator = resolved.review.sourceSnapshot?.creators.find(
     (creator) => creator.creatorId === input.creatorId
   );

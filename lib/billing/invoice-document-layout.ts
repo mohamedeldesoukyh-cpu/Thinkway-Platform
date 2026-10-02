@@ -208,6 +208,11 @@ export function applyInvoiceDocumentLayout(
   layout: InvoiceDocumentLayout
 ): InvoiceDocumentData {
   if (layout === "detailed") return data;
+  // Compact layouts must not hide the invoiced percentage when they merge rows.
+  const partialDescriptions = [...new Set(data.lineItems
+    .filter(line => /\d+(?:\.\d+)?% of original billable amount/.test(line.description))
+    .map(line => line.description))];
+  if (partialDescriptions.length) data = { ...data, notes: [data.notes, ...partialDescriptions].filter(Boolean).join("\n") };
   if (layout === "by_creator") {
     return {
       ...data,

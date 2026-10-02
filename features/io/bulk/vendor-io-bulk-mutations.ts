@@ -7,6 +7,7 @@
  */
 
 import { appendBulkDeferRevalidate } from "@/components/workspace/bulk-operations/bulk-defer-revalidate";
+import { hasValidVendorEmail } from "@/lib/io/vendor-io-delivery";
 import { sendVendorIoAction } from "@/features/io/actions";
 import { recordVendorIoManualApprovalAction } from "@/features/io/record-vendor-io-manual-approval-action";
 import { updateVendorIoAttachmentUrlAction } from "@/features/io/update-vendor-io-attachment-url-action";
@@ -42,6 +43,7 @@ function bulkFormData(row: VendorIoRow): FormData {
 }
 
 export async function mutateVendorIoSend(row: VendorIoRow) {
+  if (!hasValidVendorEmail(row.influencer_email)) return { ok: true, skipped: true, id: row.id, message: `${row.influencer_name}: not sent — creator email missing or invalid. Add it in the creator record.` };
   const skip = vendorIoBulkSkipReason(
     vendorIoRowToLifecycleSnapshot(row),
     "send"
@@ -56,6 +58,16 @@ export async function mutateVendorIoSend(row: VendorIoRow) {
   }
   const result = await sendVendorIoAction({ ok: false }, bulkFormData(row));
   return { ...result, id: row.id };
+}
+
+export async function mutateVendorIoMarkDelivered(row: VendorIoRow) {
+  const skip = vendorIoBulkSkipReason(vendorIoRowToLifecycleSnapshot(row), "mark_delivered_manually");
+  if (skip || !vendorIoNeedsSend(row)) {
+    return { ok: true, skipped: true, id: row.id, message: skip ?? "Already sent or delivered." };
+  }
+  const formData = bulkFormData(row);
+  formData.set("delivery_method", "manual");
+  return { ...await sendVendorIoAction({ ok: false }, formData), id: row.id };
 }
 
 export async function mutateVendorIoMarkAccepted(row: VendorIoRow) {

@@ -2410,6 +2410,9 @@ export function CreatorSearchWorkspace({
           onShare={handleBulkShare}
           onGenerateQuotation={handleGenerateQuotation}
           onRefreshMetrics={handleBulkRefreshMetrics}
+          onRemoveCreator={() => {
+            if (selectedCreators.length === 1) handleRejectCreator(selectedCreators[0]);
+          }}
           onStopRefresh={handleBulkStopRefresh}
           stopRefreshDisabled={selectedInFlightCreators.length === 0}
           onSelectAllShown={handleToggleSelectAll}

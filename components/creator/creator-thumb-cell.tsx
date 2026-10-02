@@ -47,10 +47,11 @@ export function CreatorThumbAvatar({
   shape?: "circle" | "rounded";
   className?: string;
 }) {
-  const [imageFailed, setImageFailed] = useState(false);
+  const sourceKey = `${avatarUrl ?? ""}|${profileUrl ?? ""}`;
+  const [failedSource, setFailedSource] = useState<string | null>(null);
   const initials = initialsFromCreatorName(name);
   const gradient = gradientForName(name);
-  const showImage = Boolean(avatarUrl?.trim()) && !imageFailed;
+  const showImage = Boolean(avatarUrl?.trim() || profileUrl?.trim()) && failedSource !== sourceKey;
   const sizeClass = SIZE_CLASS[size];
   const isDesignThumb = size === 28 || size === 38;
   const roundedClass =
@@ -68,7 +69,7 @@ export function CreatorThumbAvatar({
           className
         )}
         className={cn(!isDesignThumb && roundedClass, isDesignThumb && "border-0")}
-        onFailed={() => setImageFailed(true)}
+        onFailed={() => setFailedSource(sourceKey)}
       />
     );
   }

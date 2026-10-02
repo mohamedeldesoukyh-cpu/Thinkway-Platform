@@ -365,6 +365,7 @@ export async function duplicateShortlist(shortlistId: string): Promise<Duplicate
 }
 
 export type UpdateShortlistInput = {
+  creatorListCost?: import("./creator-list-cost").CreatorListCost;
   shortlistId: string;
   name?: string;
   description?: string | null;
@@ -409,6 +410,19 @@ export async function updateShortlistDetails(
     nextDisplayCurrency = code;
     // Store in metadata so prod works before the dedicated currency column exists.
     patch.metadata = shortlistMetadataWithCurrency(row.metadata, code);
+  }
+
+  if (input.creatorListCost !== undefined) {
+    const cost = input.creatorListCost;
+    if (!cost || typeof cost.visible !== "boolean" || typeof cost.currency !== "string" || !isCommercialCurrency(cost.currency) ||
+      (cost.amount !== null && (typeof cost.amount !== "number" || !Number.isFinite(cost.amount) || cost.amount < 0 || cost.amount > 999999999999.99))) {
+      return { ok: false, message: "Enter a valid non-negative Total Avg Cost and currency." };
+    }
+    const existing = patch.metadata ?? row.metadata;
+    patch.metadata = {
+      ...(existing && typeof existing === "object" && !Array.isArray(existing) ? existing : {}),
+      creator_list_cost: { amount: cost.amount === null ? null : Math.round(cost.amount * 100) / 100, visible: cost.visible, currency: cost.currency },
+    };
   }
 
   const commercialChanging =

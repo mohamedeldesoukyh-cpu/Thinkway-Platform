@@ -1,3 +1,4 @@
+import { invoicePercentageDescription } from "./selected-invoice-batches";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { assignmentStatusFromBilling, platformLabel } from "@/lib/campaigns/line-assignment";
@@ -206,11 +207,11 @@ export function buildPostInvoiceLinePayload(
     assignment_deliverable_id: deliverable.id,
     assignment_post_schedule_id: post.id,
     sort_order: sortOrder,
-    description: `${line.document_number} — ${line.name} · ${postDisplayLabel(
+    description: invoicePercentageDescription(`${line.document_number} — ${line.name} · ${postDisplayLabel(
       deliverable.platform,
       deliverable.deliverable_type,
       post.sequence_number
-    )}`,
+    )}`, beforeVat, post.billable_amount),
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,

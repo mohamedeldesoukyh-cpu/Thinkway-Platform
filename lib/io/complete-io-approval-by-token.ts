@@ -2,10 +2,8 @@ import { headers } from "next/headers";
 
 import { sendIoApprovalConfirmationEmails } from "@/lib/email/io-approval-emails";
 import { notifyClientIoApproval } from "@/lib/io/notify-client-io-approval";
-import { buildVendorIoPdfAttachmentFromBuffer } from "@/lib/email/vendor-io-email";
+import { prepareApprovedCreatorIoAttachment } from "@/lib/io/vendor-io-email-attachment";
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
-import { VENDOR_IO_DOCUMENTS_BUCKET } from "@/lib/io/vendor-io-document-service";
-import { downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
 import {
   mapApprovalRpcErrorToOutcome,
   type IoApprovalFailureCode,
@@ -243,7 +241,7 @@ export async function completeVendorIoApprovalByToken(input: {
   const { data: vio, error: vioError } = await db
     .from("vendor_ios")
     .select(
-      "id, campaign_header_id, document_number, revision_number, approved_at, generated_pdf_url, influencer_id, campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(name), influencers:influencers!vendor_ios_influencer_id_fkey(email, display_name)"
+      "id, campaign_header_id, document_number, revision_number, approved_at, terms_html, generated_pdf_url, influencer_id, campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(name), influencers:influencers!vendor_ios_influencer_id_fkey(email, display_name)"
     )
     .eq("id", payload.io_id)
     .maybeSingle();
@@ -258,6 +256,7 @@ export async function completeVendorIoApprovalByToken(input: {
     document_number: string | null;
     revision_number: number | null;
     approved_at: string | null;
+    terms_html: string | null;
     generated_pdf_url: string | null;
     campaign: { name: string } | { name: string }[] | null;
     influencers:
@@ -289,7 +288,7 @@ export async function completeVendorIoApprovalByToken(input: {
     ? typed.influencers[0] ?? null
     : typed.influencers;
   const resolvedEmail =
-    approverEmail || normalizeApproverEmail(influencer?.email) || null;
+    normalizeApproverEmail(influencer?.email) || null;
 
   if (resolvedEmail) {
     await db
@@ -331,32 +330,26 @@ export async function completeVendorIoApprovalByToken(input: {
     debugIo("io-approval", "campaign status sync after vendor approve failed", syncError);
   }
 
-  if (resolvedEmail) {
-    const pdfBuffer = await downloadIoDocumentBuffer(
-      db,
-      VENDOR_IO_DOCUMENTS_BUCKET,
-      typed.generated_pdf_url
-    );
-    try {
-      await sendIoApprovalConfirmationEmails({
-        supabase: db,
-        kind: "vendor",
-        ioId: typed.id,
-        documentNumber: typed.document_number,
-        campaignName: campaign?.name ?? null,
-        approvedAt: typed.approved_at ?? new Date().toISOString(),
-        approvedByEmail: resolvedEmail,
-        approvedByName: influencer?.display_name ?? approvedByName,
-        pdfAttachment: buildVendorIoPdfAttachmentFromBuffer(pdfBuffer),
-      });
-    } catch (emailError) {
-      debugIo("io-approval", "vendor confirmation email failed", emailError);
-    }
+  let confirmationEmailSent = false;
+  try {
+    let pdfAttachment = null;
+    try { pdfAttachment = await prepareApprovedCreatorIoAttachment(typed); }
+    catch (error) { debugIo("io-approval", "creator approved PDF failed", error); }
+    const delivery = await sendIoApprovalConfirmationEmails({
+      supabase: db, kind: "vendor", ioId: typed.id, documentNumber: typed.document_number,
+      campaignName: campaign?.name ?? null, approvedAt: typed.approved_at,
+      approvedByEmail: resolvedEmail, approvedByName: influencer?.display_name ?? approvedByName,
+      pdfAttachment,
+    });
+    confirmationEmailSent = delivery.approverSent;
+  } catch (emailError) {
+    debugIo("io-approval", "creator confirmation email failed", emailError);
   }
 
   return {
     ok: true,
     outcome: "approved",
+    confirmationEmailSent,
     documentNumber: typed.document_number,
   };
 }

@@ -284,3 +284,17 @@
 
 .discovery-suite .tw-country-edit { display:inline-flex; align-items:center; gap:6px; font-size:12px; }
 .discovery-suite .tw-country-edit select { max-width:155px; padding:3px 6px; border-radius:6px; border:1px solid #cbd5e1; background:#fff; color:#172033; font:inherit; }
+
+/* Keep the previous creator visible behind each additional profile. */
+.discovery-suite.tw-cp-root[data-creator-stack-depth]:not([data-creator-stack-depth="0"]) .tw-cp {
+  padding-top:calc(20px + var(--creator-stack-offset));
+  padding-left:calc(20px + var(--creator-stack-offset));
+}
+.discovery-suite.tw-cp-root[data-creator-stack-depth]:not([data-creator-stack-depth="0"]) .tw-cp__w {
+  max-height:calc(100dvh - 40px - var(--creator-stack-offset));
+  width:min(1120px, calc(100% - var(--creator-stack-offset)));
+}
+@media(max-width:700px){
+ .discovery-suite.tw-cp-root[data-creator-stack-depth]:not([data-creator-stack-depth="0"]) .tw-cp {padding:24px 8px 8px}
+ .discovery-suite.tw-cp-root[data-creator-stack-depth]:not([data-creator-stack-depth="0"]) .tw-cp__w {width:100%;max-height:calc(100dvh - 32px)}
+}

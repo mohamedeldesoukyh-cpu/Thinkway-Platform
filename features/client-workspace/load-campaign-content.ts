@@ -102,7 +102,7 @@ export async function loadClientCampaignContent(
       .from("assignment_deliverables")
       .select("id, campaign_line_id, platform, deliverable_type")
       .eq("campaign_header_id", headerId),
-    supabase.from("campaign_lines").select("id, name, metadata").eq("campaign_header_id", headerId),
+    supabase.from("campaign_lines").select("id, name, metadata").eq("campaign_header_id", headerId).neq("status", "cancelled"),
     supabase
       .from("campaign_influencers")
       .select("campaign_line_id, influencer:influencers(display_name)")
@@ -123,7 +123,10 @@ export async function loadClientCampaignContent(
   logContentLoadError("influencers", influencersResult.error?.message);
   logContentLoadError("publications", publicationsResult.error?.message);
 
-  const assets = (assetsResult.data ?? []) as AssetRow[];
+  const activeLineIds = new Set(((linesResult.data ?? []) as LineRow[]).map(row => row.id));
+  const activeDeliverables = ((deliverablesResult.data ?? []) as DeliverableRow[]).filter(row => activeLineIds.has(row.campaign_line_id));
+  const activeDeliverableIds = new Set(activeDeliverables.map(row => row.id));
+  const assets = ((assetsResult.data ?? []) as AssetRow[]).filter(row => activeDeliverableIds.has(row.assignment_deliverable_id));
   const assetIds = assets.map((asset) => asset.id);
   let versions: VersionRow[] = [];
   if (assetIds.length > 0) {
@@ -151,14 +154,14 @@ export async function loadClientCampaignContent(
     creatorByLine.set(line.id, fromMeta || line.name?.trim() || "Creator");
   }
   for (const row of (influencersResult.data ?? []) as InfluencerRow[]) {
-    if (!row.campaign_line_id || !influencerName(row)) continue;
+    if (!row.campaign_line_id || !activeLineIds.has(row.campaign_line_id) || !influencerName(row)) continue;
     creatorByLine.set(row.campaign_line_id, influencerName(row));
   }
 
   const creatorNameByDeliverableId: Record<string, string> = {};
   const platformByDeliverableId: Record<string, string> = {};
   const deliverableTypeByDeliverableId: Record<string, string> = {};
-  for (const deliverable of (deliverablesResult.data ?? []) as DeliverableRow[]) {
+  for (const deliverable of activeDeliverables) {
     creatorNameByDeliverableId[deliverable.id] = creatorByLine.get(deliverable.campaign_line_id) ?? "Creator";
     platformByDeliverableId[deliverable.id] = deliverable.platform ?? "";
     deliverableTypeByDeliverableId[deliverable.id] = deliverable.deliverable_type ?? "other";

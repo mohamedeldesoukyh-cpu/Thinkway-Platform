@@ -407,6 +407,7 @@ export async function updateCampaignLine(
   }
 
   const existingLineMeta = existingLine as {
+    influencer_id?: string | null;
     revenue_locked?: boolean | null;
     cost_locked?: boolean | null;
     revenue?: number | null;
@@ -438,6 +439,11 @@ export async function updateCampaignLine(
   const financeOverrideActive = hasActiveFinanceOverride(
     existingLineMeta.finance_override_until
   );
+
+  const replacingCreator = Boolean(existingLineMeta.influencer_id && existingLineMeta.influencer_id !== parsed.influencer_id);
+  if (replacingCreator && existingLineMeta.vendor_assignment_locked && !financeOverrideActive) {
+    return { ok: false, message: "This creator assignment is locked by its Vendor IO. Use the existing IO revision / finance override process before replacing the creator." };
+  }
 
   const revenueBeforeVat = parsed.revenue_before_vat ?? parsed.revenue;
   const costBeforeVat = parsed.cost_before_vat ?? parsed.cost;
@@ -580,6 +586,12 @@ export async function updateCampaignLine(
   }
 
   const commercial = commercialResolved.value;
+
+  if (replacingCreator && commercial.platforms.some(platform =>
+    !(platformAccounts ?? []).some(account => account.id === platform.account_id && account.platform === platform.platform)
+  )) {
+    return { ok: false, message: "The assignment contains an account that does not belong to the replacement creator. Reload the creator and try again." };
+  }
 
   const { data: header } = await fetchCampaignHeaderContext(supabase, parsed.campaign_id);
 
@@ -803,7 +815,8 @@ export async function updateCampaignLine(
       (amountDrift ||
         (documentScope.vendor &&
           (financeOverrideActive || !existingLineMeta.invoice_id)))) ||
-      (hasIssuedClientIo && documentScope.client)
+      (hasIssuedClientIo && (documentScope.client || replacingCreator)) ||
+      (replacingCreator && existingLineMeta.vendor_io_id && vendorIoRevisionAllowed)
   );
 
   let markedRevisionRequired = false;
@@ -813,15 +826,21 @@ export async function updateCampaignLine(
     const costChanged = costVatChanged ||
       Number(existingLineMeta.cost_before_vat ?? existingLineMeta.cost) !==
       Number(costBeforeVat);
-    const reasonCode = costChanged
+    const reasonCode = replacingCreator
+      ? ("creator_replaced" as const)
+      : costChanged
       ? ("creator_price_changed" as const)
       : ("commercial_correction" as const);
-    const reasonDetail = costChanged
+    const reasonDetail = replacingCreator
+      ? "Creator replaced on the assignment after document issuance. Review the creator and retained commercial terms in an amendment."
+      : costChanged
       ? (costVatChanged ? "Creator cost VAT changed after document issuance." : "Creator price changed after document issuance.")
       : "Commercial correction after invoice un-generate.";
 
     const impactResult = await applyBusinessChangeImpact(supabase, {
-      eventType: costChanged
+      eventType: replacingCreator
+        ? "creator_replaced"
+        : costChanged
         ? "creator_price_updated"
         : "manual_mark_revision_required",
       reasonCode,
@@ -834,7 +853,7 @@ export async function updateCampaignLine(
         ? [existingLineMeta.vendor_io_id]
         : undefined,
       campaignLineIds: [parsed.line_id],
-      documentScope: { client: documentScope.client, vendor: Boolean(existingLineMeta.vendor_io_id) && vendorIoRevisionAllowed && (documentScope.vendor || amountDrift) },
+      documentScope: { client: documentScope.client || replacingCreator, vendor: Boolean(existingLineMeta.vendor_io_id) && vendorIoRevisionAllowed && (documentScope.vendor || amountDrift || replacingCreator) },
       estimatedImpact: {
         amountDelta:
           Number(costBeforeVat) -
@@ -846,6 +865,7 @@ export async function updateCampaignLine(
         line_id: parsed.line_id,
         vendor_io_id: existingLineMeta.vendor_io_id,
         amount_drift: amountDrift,
+        ...(replacingCreator ? { previous_influencer_id: existingLineMeta.influencer_id, influencer_id: influencer.id } : {}),
       },
     });
 
@@ -861,7 +881,7 @@ export async function updateCampaignLine(
     changedDocumentLabels = [...new Set(impactResult.assessment.lifecycleReactions.map((reaction) => reaction.documentType === "client_io" ? "Client IO" : "Vendor IO"))].join(" and ");
     markedRevisionRequired =
       impactResult.assessment.lifecycleReactions.length > 0;
-    if (markedRevisionRequired) {
+    if (markedRevisionRequired && !replacingCreator) {
       await unlockCampaignLineFinanceFields(supabase, parsed.line_id);
     }
   }

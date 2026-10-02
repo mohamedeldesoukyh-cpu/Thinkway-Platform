@@ -8,7 +8,7 @@ import {
   languageLabel,
 } from "@/features/discovery/components/creator-search/creator-search-filter-constants";
 import { isNonContentCategoryLabel } from "@/lib/creators/category-signal-quality";
-import { CREATOR_CATEGORY_LABELS } from "@/lib/creators/category-keywords";
+import { canonicalCategoryLabel } from "@/lib/creators/category-matching";
 import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
 
 export type CreatorSearchCategoryFacet = {
@@ -55,13 +55,7 @@ const CATEGORY_FACET_JUNK = new Set([
  * Prefer canonical Discovery labels (Sports, Beauty, …) when casing differs.
  */
 export function canonicalizeCategoryFacetLabel(raw: string): string {
-  const trimmed = raw.trim().replace(/^#+/, "");
-  if (!trimmed) return "";
-  const key = trimmed.toLowerCase();
-  const canonical = CREATOR_CATEGORY_LABELS.find(
-    (label) => label.toLowerCase() === key
-  );
-  return canonical ?? trimmed;
+  return canonicalCategoryLabel(raw);
 }
 
 /** Drop account-type / spam / empty tags from live category chips. */

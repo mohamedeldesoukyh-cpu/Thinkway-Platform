@@ -9,12 +9,14 @@ import {
   SendIcon,
   WalletCardsIcon,
 } from "lucide-react";
-import { useCallback, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { toast } from "sonner";
+import { hasValidVendorEmail } from "@/lib/io/vendor-io-delivery";
 
 import { usePlatformBulkOperation } from "@/components/workspace/bulk-operations";
 import {
-  PlatformFloatingActionBar,
+  PlatformFloatingBarShell,
+  PlatformFloatingBarOverflowMenu,
   type PlatformFloatingBarAction,
 } from "@/components/shared/navigation/platform-floating-action-bar";
 import {
@@ -22,6 +24,7 @@ import {
   downloadTextFile,
   exportVendorIoRowsCsv,
   mutateVendorIoMarkAccepted,
+  mutateVendorIoMarkDelivered,
   mutateVendorIoPaymentTerms,
   mutateVendorIoSend,
   mutateVendorIoSignedUrl,
@@ -40,6 +43,17 @@ type VendorIoSelectionFlyoutProps = {
   onOpenDetail?: (id: string) => void;
 };
 
+function SelectionAction({ action, primary = false }: { action: PlatformFloatingBarAction; primary?: boolean }) {
+  const Icon = action.icon;
+  return <button type="button" className={`tw-selbar-btn${primary ? " pri" : ""}`} disabled={action.disabled} onClick={action.onClick}>
+    {Icon && <Icon className="size-3.5" aria-hidden />}{action.label}
+  </button>;
+}
+
+function SelectionActions({ actions }: { actions: PlatformFloatingBarAction[] }) {
+  return actions.map(action => <SelectionAction key={action.id} action={action} />);
+}
+
 export function VendorIoSelectionFlyout({
   campaignId,
   selectedRows,
@@ -53,7 +67,8 @@ export function VendorIoSelectionFlyout({
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const selectedCount = selectedRows.length;
   const rowsRef = useRef(selectedRows);
-  rowsRef.current = selectedRows;
+  const openingDetails = useRef(false);
+  useEffect(() => { rowsRef.current = selectedRows; }, [selectedRows]);
 
   const safeRefresh = useCallback(async () => {
     try {
@@ -137,6 +152,8 @@ export function VendorIoSelectionFlyout({
   );
 
   function sendSelected() {
+    const missing = selectedRows.filter(row => !hasValidVendorEmail(row.influencer_email));
+    if (missing.length) toast.warning(`${missing.length} Creator IO${missing.length === 1 ? "" : "s"} will not be sent: missing or invalid creator email.`, { description: missing.map(row => row.influencer_name).join(", ") });
     runOnRows(sendLabel, selectedRows, mutateVendorIoSend);
   }
 
@@ -246,6 +263,43 @@ export function VendorIoSelectionFlyout({
 
   const overflowActions: PlatformFloatingBarAction[] = [
     {
+      id: "manual",
+      label: "Mark delivered manually",
+      disabled: isRunning,
+      onClick: () => {
+        if (window.confirm(`Mark ${selectedCount} selected Vendor IOs as delivered manually? No emails will be sent.`)) {
+          runOnRows("Mark delivered manually", selectedRows, mutateVendorIoMarkDelivered);
+        }
+      },
+    },
+    {
+      id: "details",
+      label: "Details (select one IO)",
+      disabled: isRunning || selectedCount !== 1 || !onOpenDetail,
+      onClick: () => {
+        if (selectedRows[0] && onOpenDetail) {
+          openingDetails.current = true;
+          onOpenDetail(selectedRows[0].id);
+        }
+      },
+    },
+    {
+      id: "pdf",
+      label: "Download PDFs",
+      icon: DownloadIcon,
+      disabled: isRunning,
+      onClick: () => {
+        for (const row of selectedRows) {
+          const link = document.createElement("a");
+          link.href = `/api/vendor-ios/${row.id}/document?format=pdf&download=1`;
+          link.download = "";
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+        }
+      },
+    },
+    {
       id: "export",
       label: "Export Selected",
       icon: DownloadIcon,
@@ -276,17 +330,9 @@ export function VendorIoSelectionFlyout({
   ];
 
   return (
-    <PlatformFloatingActionBar
-      open={selectedCount > 0}
-      selectedCount={selectedCount}
-      selectionLabel="vendor IO"
-      primaryAction={primaryAction}
-      secondaryActions={secondaryActions}
-      overflowActions={overflowActions}
-      onClearSelection={isRunning ? () => undefined : onClearSelection}
-      onSelectAll={onSelectAll}
-      selectableCount={selectableCount}
-      busy={false}
+    <PlatformFloatingBarShell
+      visible={selectedCount > 0}
+      className="tw-selbar"
       messages={
         isRunning && activeJob ? (
           <span className="text-xs font-medium text-muted-foreground">
@@ -294,7 +340,20 @@ export function VendorIoSelectionFlyout({
           </span>
         ) : null
       }
-    />
+    >
+      <span className="tw-selbar-n">
+        <b>{selectedCount}</b> of {selectableCount} vendor IOs selected
+        <button type="button" className="tw-selbar-x" aria-label="Clear selection" disabled={isRunning} onClick={onClearSelection}>✕</button>
+        {selectedCount < selectableCount && <button type="button" className="tw-selbar-all" disabled={isRunning} onClick={onSelectAll}>Select all</button>}
+      </span>
+      <span className="tw-selbar-acts">
+        <SelectionAction action={primaryAction} primary />
+        <SelectionActions actions={secondaryActions} />
+        <PlatformFloatingBarOverflowMenu actions={overflowActions} busy={isRunning} className="tw-selbar-btn" onCloseAutoFocus={(event) => {
+          if (openingDetails.current) { event.preventDefault(); openingDetails.current = false; }
+        }} />
+      </span>
+    </PlatformFloatingBarShell>
   );
 }
 

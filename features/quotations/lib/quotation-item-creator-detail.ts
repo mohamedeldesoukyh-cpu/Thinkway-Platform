@@ -1,5 +1,6 @@
 import {
   getUnifiedCreatorDetailAction,
+  getUnifiedCreatorCoreDetailAction,
   getUnifiedCreatorsBatchAction,
 } from "@/features/campaigns/creator-discovery-actions";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
@@ -20,11 +21,14 @@ export function quotationItemCreatorRefId(item: QuotationCreatorRef): string | n
 
 /** Resolve a quotation line to the same unified creator record Discovery uses. */
 export async function fetchQuotationItemCreatorDetail(
-  item: QuotationCreatorRef
+  item: QuotationCreatorRef,
+  options?: { coreOnly?: boolean }
 ): Promise<UnifiedCreatorResult | null> {
   const unifiedId = item.unified_id?.trim();
   if (unifiedId) {
-    const direct = await getUnifiedCreatorDetailAction(unifiedId);
+    const direct = await (options?.coreOnly
+      ? getUnifiedCreatorCoreDetailAction(unifiedId)
+      : getUnifiedCreatorDetailAction(unifiedId));
     if (direct) return direct;
   }
 

@@ -106,7 +106,7 @@ export function BillingQueueAssignmentHeaderRow() {
       {cols.showCurrency ? <span /> : null}
       {cols.showTotal ? <span className="bq-rr" title="Line invoice amount">Achieved</span> : null}
       {cols.showAchieved ? (
-        <span className="bq-rr" title="Share of remaining to bill now">Bill %</span>
+        <span className="bq-rr" title="Percentage of original billable amount, capped at remaining balance">Bill %</span>
       ) : null}
       {cols.showInvoiced ? (
         <span className="bq-rr" title="Amount to include on this invoice">Bill amount</span>

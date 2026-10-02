@@ -77,6 +77,7 @@ export async function generateVendorIosFromLinesAction(
       "id, campaign_header_id, name, revenue, revenue_before_vat, cost, cost_before_vat, currency_code, metadata, operational_status, vendor_io_id, invoice_id, billing_status"
     )
     .eq("campaign_header_id", campaignId)
+    .neq("status", "cancelled")
     .in("id", lineIds);
 
   if (linesError) {

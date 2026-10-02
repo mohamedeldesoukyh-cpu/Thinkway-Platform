@@ -129,3 +129,13 @@ assert.ok(missingHeaderTax.includes("VAT (14%)"));
 assert.ok(missingHeaderTax.includes("5,250") || missingHeaderTax.includes("5250"));
 
 console.log("invoice-document-layout.test.ts: ok");
+
+// Percentages remain visible in every client-facing document layout.
+const partialSample = { ...sample, notes: "Existing payment terms", lineItems: sample.lineItems.map(line => ({ ...line, description: line.description + " - 50% of original billable amount" })) };
+for (const layout of ["detailed", "by_creator", "package"] as const) {
+  const document = applyInvoiceDocumentLayout(partialSample, layout);
+  const html = buildInvoiceTemplateHtml(document);
+  assert.match(html, /50% of original billable amount/);
+  assert.match(html, /Existing payment terms/);
+  assert.equal(document.total, sample.total);
+}

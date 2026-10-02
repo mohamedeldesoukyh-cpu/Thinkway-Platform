@@ -269,6 +269,7 @@ export async function loadClientIoDocumentData(
             "id, document_number, name, description, metadata, revenue_before_vat, revenue, usage_rights_amount, agency_fee_amount, agency_fee_percent, revenue_vat_percent, revenue_vat_exempt, currency_code, revenue_fx_override, sort_order"
           )
           .eq("campaign_header_id", typedCio.campaign_header_id)
+          .neq("status", "cancelled")
           .order("sort_order", { ascending: true }),
     profilePromise,
   ]);
