@@ -202,7 +202,7 @@ export async function getMergeCreatorsEligibility(
     if(table==="vendor_ios")query=query.eq("is_superseded",false);
     const records=await query;if(records.error)return {...eligibility,canMerge:false,message:records.error.message};
     const keys=new Map<string,string>();
-    for(const row of records.data??[]){const key=JSON.stringify(columns.map(column=>row[column]??null));const owner=keys.get(key);if(owner&&owner!==row.influencer_id)return {...eligibility,canMerge:false,message:`Both creators are used in the same ${table}. Review the overlapping records before replacement; existing jobs and prices are preserved.`};keys.set(key,row.influencer_id);}
+    for(const row of (records.data??[]) as unknown as Record<string,string|null>[]){const key=JSON.stringify(columns.map(column=>row[column]??null));const owner=keys.get(key);if(owner&&owner!==row.influencer_id)return {...eligibility,canMerge:false,message:`Both creators are used in the same ${table}. Review the overlapping records before replacement; existing jobs and prices are preserved.`};keys.set(key,row.influencer_id??"");}
   }
   const rates=await db.from("rate_card_lines").select("version_id,platform,deliverable,price_type,influencer_id").in("influencer_id",[targetInfluencerId,sourceInfluencerId]);
   if(rates.error)return {...eligibility,canMerge:false,message:rates.error.message};
