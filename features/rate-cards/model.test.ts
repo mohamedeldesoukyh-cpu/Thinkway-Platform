@@ -4,6 +4,12 @@ import { previewApplication, validateImportRow, headerSchema, type RateLine, typ
 const ref="inf:00000000-0000-4000-8000-000000000001";
 const rate:RateLine={id:"r1",version_id:"v1",creator_ref:ref,creator_name:"Creator",platform:"instagram",deliverable:"instagram_reel",amount:100000,currency:"EGP",notes:"",price_type:"creator_cost",agency_fee_percent:null};
 const item:MatchItem={id:"i1",unified_id:ref,creator_name:"Creator",deliverables:[{platform:"instagram",type:"instagram_reel",quantity:1,cost:105000,cost_currency:"EGP"}]};
+test("All Platforms generic prices are fallback rates and exact platform rates take priority",()=>{
+ const generic={...rate,id:"all-reel",platform:"all",deliverable:"reel",amount:500};
+ assert.equal(previewApplication([item],[generic],"overwrite")[0].after,500);
+ assert.equal(previewApplication([item],[generic,rate],"overwrite")[0].after,rate.amount);
+ assert.equal(previewApplication([item],[generic,{...generic,id:"ambiguous"}],"overwrite")[0].status,"no_match");
+});
 test("preview is pure, preserves a zero and never matches by name",()=>{
  const before=structuredClone(item);
  assert.equal(previewApplication([item],[rate],"missing")[0].status,"unchanged");

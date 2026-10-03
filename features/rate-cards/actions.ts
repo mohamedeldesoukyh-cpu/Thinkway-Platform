@@ -27,6 +27,8 @@ import { refreshCreatorMetricsBatchByUnifiedIds } from "@/lib/services/creators/
 import { AVATAR_MAX_BYTES, normalizeRateAvatar, readRateAvatarLink } from "./avatar";
 import { creatorProfileSourceFromUnified } from "@/lib/creators/creator-profile-source";
 import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar";
+import {isSocialPlatform} from "@/lib/social/platforms";
+import {addPlatformToCreator} from "@/lib/discovery/add-platform-to-creator";
 
 async function actor(permission: string) {
   const db = await createSupabaseServerClient();
@@ -266,6 +268,43 @@ export async function rateCardAudit(versionId:string,page=1) {
   if(!version)throw new Error("invalid");
   const result=await db.from("audit_logs").select("id,action,actor_id,created_at,old_data,new_data,metadata",{count:"exact"}).eq("metadata->>card_id",version.card_id).order("created_at",{ascending:false}).order("id").range((Math.max(1,page)-1)*25,Math.max(1,page)*25-1);
   return {rows:checked(result) as {id:string;action:string;actor_id:string;created_at:string;old_data:unknown;new_data:unknown;metadata:Record<string,unknown>}[],total:result.count??0};
+}
+
+export async function getRateImportConflictCreator(ref:string){
+ const {db}=await actor("upload");
+ const resolved=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[ref]});
+ return resolved.byUnifiedId.get(ref)??resolved.byDiscoveryId.get(ref.replace(/^dis:/,""))??null;
+}
+
+export async function ensureRateImportProfiles(profileUrls:string[],creatorRef?:string){
+  const urls=z.array(z.string().url().max(4096)).min(1).max(20).parse(profileUrls);
+  const parsed=urls.map(url=>parseProfileInput(url));if(parsed.some(p=>!p))throw new Error("invalid");
+  const {db,typed,userId}=await actor("upload");
+  if("error" in await requirePermission(db,CREATOR_ENRICHMENT_PERMISSION))throw new Error("permission");
+  const owners=new Map<string,string>();
+  for(const p of parsed){
+    const matches=checked(await db.rpc("match_rate_card_handle",{p_platform:p!.platform,p_handle:p!.normalized_username})) as {creator_ref:string}[];
+    for(const match of matches)owners.set(match.creator_ref,p!.profile_url);
+  }
+  if(creatorRef){
+    const resolved=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[creatorRef]});
+    const creator=resolved.byUnifiedId.get(creatorRef)??resolved.byDiscoveryId.get(creatorRef.replace(/^dis:/,""));
+    if(!creator)throw new Error("unmatched");
+    owners.set(creator.unified_id,owners.get(creator.unified_id)??"");
+  }
+  if(owners.size>1)throw new Error("profileConflict");
+  const owner=[...owners.entries()][0];
+  const result=owner&&!owner[1]?{id:owner[0],name:"",created:false,queued:false,platform:parsed[0]!.platform,pollId:undefined as string|undefined}:await ensureImportCreator(owner?.[1]||urls[0]);
+  let resolved=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[result.id]});
+  let creator=resolved.byUnifiedId.get(result.id)??resolved.byDiscoveryId.get(result.id.replace(/^dis:/,""));
+  if(!creator)throw new Error("unmatched");
+  for(const p of parsed){
+    if(creator.platforms.some(account=>{const existing=parseProfileInput(account.profile_url||account.handle,isSocialPlatform(account.platform)?account.platform:undefined);return existing?.platform===p!.platform&&existing?.normalized_username===p!.normalized_username;}))continue;
+    const linked=await addPlatformToCreator(typed,{profileUrl:p!.profile_url,actorId:userId,unifiedId:creator.unified_id,influencerId:creator.influencer_id,discoveredProfileId:creator.discovered_profile_id});
+    if(!linked.ok)throw new Error("profileConflict");
+    creator=linked.creator;result.queued=result.queued||linked.enrichmentQueued;
+  }
+  return {...result,id:creator.unified_id,name:creator.display_name,pollId:creator.influencer_id??undefined};
 }
 
 export async function ensureImportCreator(profileUrl:string, permission:"upload"|"edit"="upload"){

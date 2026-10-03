@@ -1,6 +1,14 @@
 import {test} from "node:test";
 import assert from "node:assert/strict";
 import {rateImportIdentity} from "./import-identity";
+
+test("All Platforms pricing keeps the real profile identity for matching and enrichment",()=>{
+ for(const platform of ["all","All Platforms","all_platforms"]){
+  const identity=rateImportIdentity({Platform:platform,"Profile URL":"https://instagram.com/Creator.Name/"});
+  assert.equal(identity.platform,"instagram");assert.equal(identity.key,"instagram:creator.name");
+  assert.equal(identity.profile_url,"https://www.instagram.com/creator.name/");
+ }
+});
 test("a profile URL alone detects platform and identity without name, ID or handles",()=>{
  for(const [url,key] of [["https://instagram.com/Creator.Name/","instagram:creator.name"],["https://www.tiktok.com/@creator","tiktok:creator"],["https://www.youtube.com/@creator","youtube:creator"]])assert.equal(rateImportIdentity({"Profile URL":url}).key,key);
  assert.equal(rateImportIdentity({"Profile URL":"https://instagram.com/creator/",Platform:"tiktok"}).handle,"");

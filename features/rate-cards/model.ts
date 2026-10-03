@@ -1,3 +1,4 @@
+import {rateDeliverables,normalizeRatePlatform,genericRateDeliverable} from "./platforms";
 import {EXTRA_RATE_TYPES,requiresPeriod,validPeriod,periodLabel} from "@/lib/quotations/commercial-period";
 import {deliverableTypeLines,postTypePlatformKey} from "@/lib/quotations/quotation-deliverable-types";
 import { z } from "zod";
@@ -22,7 +23,7 @@ export const rateSchema = z.object({
   price_type: z.enum(["creator_cost", "client_price"]),
   period_months: z.number().int().min(0).max(120).optional(),
   agency_fee_percent: z.number().finite().min(0).max(100).nullable().default(null),
-}).refine(v => (DELIVERABLE_TYPES_BY_PLATFORM[v.platform]?.some(t => t.value === v.deliverable)||EXTRA_RATE_TYPES.some(t=>t.value===v.deliverable)) && (!requiresPeriod(v.deliverable)||validPeriod(v.period_months)), { message: "taxonomy" });
+}).refine(v => (rateDeliverables(v.platform).some(t => t.value === v.deliverable)||EXTRA_RATE_TYPES.some(t=>t.value===v.deliverable)) && (!requiresPeriod(v.deliverable)||validPeriod(v.period_months)), { message: "taxonomy" });
 export type RateInput = z.infer<typeof rateSchema>;
 export type RateLine = RateInput & { id: string; version_id: string; creator_cost?:number|null; client_price?:number|null; creator_currency?:string|null; client_currency?:string|null; gp_percent?:number|null; markup_percent?:number|null };
 export type RateVersion = HeaderInput & { id: string; card_id: string; created_at: string; updated_at: string; client_name: string; brand_name: string | null; creator_count: number; currencies: string[] };
@@ -46,7 +47,7 @@ export function previewApplication(items: MatchItem[], rates: RateLine[], mode: 
       const components:RateComponent[]=[]; const matched:RateLine[]=[];
       for(const line of scope){
         const platform=scope.length===1?d.platform:postTypePlatformKey(line.type)||d.platform;
-        const matches=index.get(rateKey(creatorRef(item),platform,line.type,price_type))??[];
+        const matches=index.get(rateKey(creatorRef(item),platform,line.type,price_type)) ?? index.get(rateKey(creatorRef(item),"all",line.type,price_type)) ?? index.get(rateKey(creatorRef(item),"all",genericRateDeliverable(line.type),price_type)) ?? [];
         if(matches.length!==1||requiresPeriod(line.type)&&!validPeriod(line.period_months))continue;
         const candidate=matches[0],months=requiresPeriod(line.type)?line.period_months!:1;
         matched.push(candidate);components.push({rate_id:candidate.id,deliverable:line.type,quantity:line.quantity,period_months:requiresPeriod(line.type)?months:0,monthly_amount:candidate.amount,amount:candidate.amount*months*line.quantity});
@@ -71,12 +72,12 @@ export function previewApplication(items: MatchItem[], rates: RateLine[], mode: 
   }));
 }
 
-export type ImportRow = { row: number; status: "ready" | "warning" | "error" | "unmatched"; issues: string[]; rate?: RateInput; rates?:RateInput[]; gp_percent?:number|null; markup_percent?:number|null; profile_url?:string; pending_creator?:{profile_url:string;platform:string;handle:string} };
+export type ImportRow = { conflicts?:{ref:string;name:string}[]; row: number; status: "ready" | "warning" | "error" | "unmatched"; issues: string[]; rate?: RateInput; rates?:RateInput[]; gp_percent?:number|null; markup_percent?:number|null; profile_urls?:string[]; profile_url?:string; pending_creator?:{profile_url:string;platform:string;handle:string} };
 export function validateImportRow(row: number, raw: Record<string, string>, match: { ref: string; name: string } | null, currencies: string[], seen: Set<string>): ImportRow {
   if (!match) return { row, status: "unmatched", issues: ["unmatched"] };
   const amount = raw.Rate?.trim();
   const fee=raw["Agency Fee %"]?.trim();
-  const parsed = rateSchema.safeParse({ creator_ref: match.ref, creator_name: match.name, platform: canonicalPlatformKey(raw.Platform), deliverable: raw["Deliverable Type"], amount: amount && /^\d+(\.\d{1,4})?$/.test(amount) ? Number(amount) : NaN, currency: raw.Currency?.trim().toUpperCase(), notes: raw.Notes ?? "",price_type:raw["Rate Type"]?.trim().toLowerCase(),period_months:requiresPeriod(raw["Deliverable Type"])?Number((raw["Period (Months)"]??"").replace(/\s*months?$/i,"")):0,agency_fee_percent:fee?(/^\d+(\.\d{1,4})?$/.test(fee)?Number(fee):NaN):null });
+  const parsed = rateSchema.safeParse({ creator_ref: match.ref, creator_name: match.name, platform: normalizeRatePlatform(raw.Platform), deliverable: raw["Deliverable Type"], amount: amount && /^\d+(\.\d{1,4})?$/.test(amount) ? Number(amount) : NaN, currency: raw.Currency?.trim().toUpperCase(), notes: raw.Notes ?? "",price_type:raw["Rate Type"]?.trim().toLowerCase(),period_months:requiresPeriod(raw["Deliverable Type"])?Number((raw["Period (Months)"]??"").replace(/\s*months?$/i,"")):0,agency_fee_percent:fee?(/^\d+(\.\d{1,4})?$/.test(fee)?Number(fee):NaN):null });
   if (!parsed.success) return { row, status: "error", issues: ["invalid"] };
   if (!currencies.includes(parsed.data.currency)) return { row, status: "error", issues: ["currency"] };
   const key = rateKey(match.ref, parsed.data.platform, parsed.data.deliverable,parsed.data.price_type);

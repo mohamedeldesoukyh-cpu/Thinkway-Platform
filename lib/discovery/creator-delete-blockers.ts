@@ -10,7 +10,8 @@ export type CreatorDeleteLinkRef = {
     | "deliverable"
     | "vendor_io"
     | "publication"
-    | "invoice";
+    | "invoice"
+    | "rate_card";
   id: string;
   reference: string;
   name: string | null;
@@ -34,6 +35,9 @@ export async function getCreatorDeleteBlockers(
   influencerId: string
 ): Promise<CreatorDeleteBlockersResult> {
   const links: CreatorDeleteLinkRef[] = [];
+  const rates=await supabase.from("rate_card_lines").select("id,version_id,creator_name").eq("influencer_id",influencerId).limit(50);
+  if(rates.error)throw new Error(rates.error.message);
+  for(const rate of rates.data??[])links.push({kind:"rate_card",id:rate.version_id,reference:rate.version_id,name:rate.creator_name});
 
   const [
     assignmentsRes,
@@ -233,4 +237,5 @@ export const CREATOR_DELETE_LINK_LABELS: Record<CreatorDeleteLinkRef["kind"], st
   vendor_io: "Vendor IO",
   publication: "Publication",
   invoice: "Invoice",
+  rate_card: "Rate card",
 };

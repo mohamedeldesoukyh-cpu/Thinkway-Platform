@@ -108,8 +108,8 @@ function buildMergeEligibility(
 
   if (platformConflicts.length > 0) {
     return {
-      canMerge: false,
-      message: `Both creators already have ${conflictLabels.join(", ")} linked. Remove the duplicate platform from one profile first.`,
+      canMerge: true,
+      message: `Keep all existing accounts, including ${conflictLabels.join(", ")}, and transfer the old creator's jobs to this creator.`,
       platformConflicts: conflictLabels,
       platformsToMove,
     };
@@ -117,8 +117,8 @@ function buildMergeEligibility(
 
   if (platformsToMove.length === 0) {
     return {
-      canMerge: false,
-      message: "The selected creator has no new platforms to combine.",
+      canMerge: true,
+      message: "Transfer the old creator's records and history to this creator.",
       platformConflicts: conflictLabels,
       platformsToMove,
     };
@@ -191,7 +191,27 @@ export async function getMergeCreatorsEligibility(
     (row) => row.influencer_id === sourceInfluencerId
   ) as PlatformAccountRow[];
 
-  return buildMergeEligibility(targetPlatforms, sourcePlatforms);
+  const eligibility=buildMergeEligibility(targetPlatforms, sourcePlatforms);
+  if(!eligibility.canMerge)return eligibility;
+  // Preserve rate-card prices: overlapping pricing keys require explicit review,
+  // never the generic merge helper's delete-on-unique-conflict behavior.
+  const db=supabase as AnySupabase;
+  // Never delete a completed job or commercial document to make a unique key fit.
+  for(const [table,columns] of [["discovery_shortlist_items",["shortlist_id","collapse_group_id"]],["campaign_influencers",["campaign_header_id","campaign_line_id"]],["vendor_ios",["campaign_header_id"]]] as const){
+    let query=db.from(table).select(["id","influencer_id",...columns].join(",")).in("influencer_id",[targetInfluencerId,sourceInfluencerId]);
+    if(table==="vendor_ios")query=query.eq("is_superseded",false);
+    const records=await query;if(records.error)return {...eligibility,canMerge:false,message:records.error.message};
+    const keys=new Map<string,string>();
+    for(const row of records.data??[]){const key=JSON.stringify(columns.map(column=>row[column]??null));const owner=keys.get(key);if(owner&&owner!==row.influencer_id)return {...eligibility,canMerge:false,message:`Both creators are used in the same ${table}. Review the overlapping records before replacement; existing jobs and prices are preserved.`};keys.set(key,row.influencer_id);}
+  }
+  const rates=await db.from("rate_card_lines").select("version_id,platform,deliverable,price_type,influencer_id").in("influencer_id",[targetInfluencerId,sourceInfluencerId]);
+  if(rates.error)return {...eligibility,canMerge:false,message:rates.error.message};
+  const rateKeys=new Set<string>();
+  for(const rate of rates.data??[]){const key=JSON.stringify([rate.version_id,rate.platform,rate.deliverable,rate.price_type]);if(rateKeys.has(key))return {...eligibility,canMerge:false,message:"Both creators have prices in the same rate card. Resolve the overlapping prices before replacing the creator; no prices have been removed."};rateKeys.add(key);}
+  const avatars=await db.from("rate_card_creator_avatars").select("card_id").in("creator_ref",[`inf:${targetInfluencerId}`,`inf:${sourceInfluencerId}`]);
+  if(avatars.error)return {...eligibility,canMerge:false,message:avatars.error.message};
+  const cards=new Set<string>();for(const row of avatars.data??[]){if(cards.has(row.card_id))return {...eligibility,canMerge:false,message:"Both creators have a custom photo in the same rate card. Choose one photo before combining."};cards.add(row.card_id);}
+  return eligibility;
 }
 
 async function dedupeShortlistItems(
@@ -368,8 +388,7 @@ async function reassignColumnReferences(
   const kind = classifyMergeReassignError(error.message);
   if (kind === "missing") return;
   if (kind === "unique") {
-    await reassignColumnReferencesRowByRow(db, input);
-    return;
+    throw new Error(`${input.table}: overlapping records prevent replacement. No conflicting record was deleted.`);
   }
   throw new Error(`${input.table}.${input.column}: ${error.message}`);
 }
@@ -401,6 +420,11 @@ async function reassignInfluencerReferences(
     "ipl_provider_runs",
     "ipl_snapshots",
   ] as const;
+
+  const avatarMove=await (supabase as AnySupabase).from("rate_card_creator_avatars").update({creator_ref:`inf:${targetInfluencerId}`}).eq("creator_ref",`inf:${sourceInfluencerId}`);
+  if(avatarMove.error)throw new Error(avatarMove.error.message);
+  const rateMove=await (supabase as AnySupabase).from("rate_card_lines").update({influencer_id:targetInfluencerId}).eq("influencer_id",sourceInfluencerId);
+  if(rateMove.error)throw new Error(rateMove.error.message);
 
   for (const table of influencerIdTables) {
     await reassignColumnReferences(supabase, {
@@ -569,9 +593,8 @@ export async function mergeCreators(
       ).data?.length
     );
 
-    await dedupeShortlistItems(supabase, targetInfluencerId, sourceInfluencerId);
-    await dedupeCampaignAssignments(supabase, targetInfluencerId, sourceInfluencerId);
-    await dedupeVendorIos(supabase, targetInfluencerId, sourceInfluencerId);
+    // Eligibility checks overlap before writes; replacement never deduplicates
+    // operational records by deleting them.
 
     for (const account of sourcePlatformRows) {
       const { error: moveError } = await supabase

@@ -4,6 +4,12 @@ import ExcelJS from "exceljs";
 import { buildRateTemplate, readRateWorkbook } from "./workbook";
 import {rateImportIdentity} from "./import-identity";
 import {validateWorkbookRow} from "./model";
+test("All Platforms is listed and accepts a generic reel price",async()=>{
+ const book=new ExcelJS.Workbook();await book.xlsx.load(await buildRateTemplate(["EGP"]));
+ assert.equal(book.getWorksheet("Lists")!.getCell("A1").value,"all");
+ const row=validateWorkbookRow(2,{Platform:"All Platforms","Deliverable Type":"reel","Client Selling Price":"100","Client Currency":"EGP"},{ref:"inf:00000000-0000-4000-8000-000000000001",name:"Creator"},["EGP"],new Set());
+ assert.equal(row.status,"ready");assert.equal(row.rate?.platform,"all");
+});
 test("URL and prices alone support Excel hyperlinks and inferred platform",async()=>{
  const book=new ExcelJS.Workbook();const sheet=book.addWorksheet("Rates");
  sheet.addRow(["Profile URL","Deliverable Type","Creator Cost","Creator Currency"]);
