@@ -25,5 +25,5 @@ test("All Platforms prices show linked icons without duplicating prices",()=>{
 });
 test("monthly report prices show rate, duration and extended total separately",()=>{
  const doc=structuredClone(fixture);doc.creators[0].rates=[{platform:"instagram",deliverable:"usage_right",amount:100,currency:"EGP",agency_fee_percent:10,period_months:2},{platform:"instagram",deliverable:"boosting",amount:50,currency:"EGP",agency_fee_percent:null,period_months:1},{platform:"instagram",deliverable:"event_attendance",amount:300,currency:"EGP",agency_fee_percent:null}];
- const html=buildRateCardReportHtml(doc,"creator-list");assert.match(html,/EGP 200/);assert.match(html,/100 \/ month × 2 months/);assert.match(html,/EGP 220/);assert.match(html,/Event Attendance/);
+ const html=buildRateCardReportHtml(doc,"creator-list");assert.match(html,/EGP 200/);assert.match(html,/100 \/ month × 2 months/);assert.ok(!html.includes("EGP 220"));assert.match(html,/Agency Fee not included/);assert.match(html,/Event Attendance/);
 });
