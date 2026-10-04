@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { X } from "lucide-react";
+import { CommercialRevisionDialog, type CommercialRevisionDialogLine } from "../commercial-revision-dialog";
 import { formatCreatorDisplayName } from "@/lib/text/decode-html-entities";
 import { updateAssignmentLineCommercialsAction } from "@/features/campaigns/actions/update-assignment-line-commercials";
 import { updateAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
@@ -47,6 +48,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const [host, setHost] = useState<HTMLElement | null>(null);
   const [selected, setSelected] = useState<Target | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<Draft>>>({});
+  const [revision, setRevision] = useState<{ quotationId: string; lines: CommercialRevisionDialogLine[]; draftKey: string } | null>(null);
   const [height, setHeight] = useState(290);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
@@ -110,6 +112,15 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
         usage_rights_amount: draft.urRevenue, usage_rights_cost: draft.urCost, agency_fee_percent: draft.af,
         revenue_vat_percent: draft.revVat, cost_vat_percent: draft.costVat, currency_code: draft.currency,
       }] });
+      if (!result.ok && "code" in result && result.code === "FINANCE_LOCKED") {
+        if ("revisionLines" in result && result.revisionLines?.length && result.quotationId) {
+          setRevision({ quotationId: result.quotationId, lines: result.revisionLines, draftKey: selectedKey });
+          setMessage({ ok: false, text: "A Commercial Revision is required. Review your changes in the dialog; cancelling keeps your edits." });
+        } else {
+          setMessage({ ok: false, text: "A Commercial Revision is required, but this assignment is missing its quotation or commercial-line link. Open Commercial Workspace to review the linkage. Your edits have been kept." });
+        }
+        return;
+      }
       setMessage({ ok: result.ok, text: result.message ?? (result.ok ? "Line saved." : "Unable to save line.") });
       if (result.ok) {
         setDrafts(previous => { const next = { ...previous }; delete next[selectedKey]; return next; });
@@ -157,5 +168,15 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
       <div className="acp-footer"><div><span>{child ? "Currency is inherited from the parent assignment." : "Units come from child deliverables. Currency changes keep the entered amounts."} Calculated totals include VAT; total cost also includes UR Cost.</span>{Object.keys(drafts).length > 0 && <span>Unsaved edits are kept while switching rows in this tab.</span>}{message && <p role={message.ok ? "status" : "alert"} className={message.ok ? "acp-success" : "acp-error"}>{message.text}</p>}</div><button className="acp-button" type="button" disabled={pending || !drafts[selectedKey]} onClick={() => setDrafts(previous => { const next = { ...previous }; delete next[selectedKey]; return next; })}>Reset edits</button><button className="acp-button acp-primary" type="submit" disabled={readOnly || !drafts[selectedKey]}>{pending ? "Saving…" : "Save line"}</button></div>
     </form>
   </section> : null;
-  return <PaneContext.Provider value={{ open, selected: enabled ? selected : null }}>{children}<span ref={marker} hidden />{editor && (host ? createPortal(editor, host) : editor)}</PaneContext.Provider>;
+  return <PaneContext.Provider value={{ open, selected: enabled ? selected : null }}>{children}{revision && <CommercialRevisionDialog
+    open campaignHeaderId={campaignId} quotationId={revision.quotationId} lines={revision.lines}
+    onOpenChange={open => { if (!open) setRevision(null); }}
+    onSubmitted={() => {
+      const submittedKey = revision.draftKey;
+      setDrafts(previous => { const next = { ...previous }; delete next[submittedKey]; return next; });
+      setMessage({ ok: true, text: "Commercial Revision submitted for approval. Existing amounts remain until the revision is approved." });
+      setRevision(null);
+      router.refresh();
+    }}
+  />}<span ref={marker} hidden />{editor && (host ? createPortal(editor, host) : editor)}</PaneContext.Provider>;
 }
