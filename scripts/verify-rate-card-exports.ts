@@ -21,6 +21,10 @@ async function main(){
    c.group.creator=name;c.group.handle="@"+name.toLowerCase();c.group.creatorKey="test-"+name;
    c.rates=[{platform:"all",deliverable:"package",amount:[100000,400000,700000][i],currency:"EGP",agency_fee_percent:null,package_key:"reel-story",package_details:details},{platform:"all",deliverable:"usage_right",amount:[20000,30000,90000][i],currency:"EGP",agency_fee_percent:null,period_months:1,package_key:"reel-story",package_details:details},{platform:"all",deliverable:"boosting",amount:[10000,20000,40000][i],currency:"EGP",agency_fee_percent:null,period_months:1,package_key:"reel-story",package_details:details}];
    c.performance=profiles.map(p=>({...c.performance[0],platform:p.platform,profileUrl:p.profile_url}));
+   if(process.env.RATE_REPORT_TEST_EVENTS){
+    c.rates.push({...c.rates[0],deliverable:"event_attendance",amount:8000,event_days:3});
+    c.rates=c.rates.map(r=>({...r,tu_a_percent:10,tu_b_percent:20,itu_percent:30}));
+   }
   }
  }
  const dir=".tmp/rate-card-export-qa";await mkdir(dir,{recursive:true});

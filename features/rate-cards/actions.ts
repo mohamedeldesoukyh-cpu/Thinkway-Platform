@@ -1,5 +1,6 @@
 "use server";
 
+import {travelSchema} from "./travel";
 import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -328,4 +329,11 @@ export async function ensureImportCreator(profileUrl:string, permission:"upload"
   if(!result.ok)result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:false,returnExisting:true,skipPreviewEnrichment:true,tolerateEnrichmentFailure:true});
   if(!result.ok||!result.creator)throw new Error("enrichment");
   return {id:result.creator.unified_id,name:result.creator.display_name,created:result.created,queued:result.enrichmentQueued,platform:parsed.platform,pollId:result.creator.influencer_id??undefined};
+}
+
+export async function applyRateTravelUplifts(versionId:string,input:unknown,expected:string,scope?:{creator_ref:string;platform:string;package_key:string}) {
+ const {db}=await actor("edit");z.uuid().parse(versionId);const rates=travelSchema.parse(input);
+ if(!Object.keys(rates).length)throw new Error("invalid");
+ if(scope)z.object({creator_ref:z.string().regex(/^(inf|dis):[0-9a-f-]{36}$/i),platform:z.string().min(1).max(30),package_key:z.string().max(50)}).parse(scope);
+ checked(await db.rpc("set_rate_card_travel_uplifts",{p_version_id:versionId,p_values:rates,p_expected:expected,p_scope:scope??null}));refresh();
 }

@@ -18,6 +18,7 @@ export const headerSchema = z.object({
 }).refine(v => !v.effective_date || !v.expiry_date || v.expiry_date >= v.effective_date, { message: "dates" });
 export type HeaderInput = z.infer<typeof headerSchema>;
 export const rateSchema = z.object({
+  event_days: z.number().int().min(1).max(365).optional(),
   creator_ref: z.string().regex(/^(inf|dis):[0-9a-f-]{36}$/i), creator_name: z.string().max(300),
   platform: z.string(), deliverable: z.string(), amount: z.number().finite().min(0).max(999999999999),
   currency: z.string().regex(/^[A-Z]{3}$/), notes: z.string().max(5000).default(""),
@@ -28,7 +29,7 @@ export const rateSchema = z.object({
   agency_fee_percent: z.number().finite().min(0).max(100).nullable().default(null),
 }).refine(v => ((v.deliverable==="package"&&!!v.package_details&&!!v.package_key)||rateDeliverables(v.platform).some(t => t.value === v.deliverable)||EXTRA_RATE_TYPES.some(t=>t.value===v.deliverable)) && (!requiresPeriod(v.deliverable)||validPeriod(v.period_months)), { message: "taxonomy" }).refine(v=>v.package_key ? !!v.package_details&&v.platform==="all"&&["package","usage_right","boosting","event_attendance"].includes(v.deliverable) : !v.package_details&&v.deliverable!=="package",{message:"package"});
 export type RateInput = z.infer<typeof rateSchema>;
-export type RateLine = RateInput & { id: string; version_id: string; creator_cost?:number|null; client_price?:number|null; creator_currency?:string|null; client_currency?:string|null; gp_percent?:number|null; markup_percent?:number|null };
+export type RateLine = RateInput & import("./travel").TravelUplifts & { id: string; version_id: string; creator_cost?:number|null; client_price?:number|null; creator_currency?:string|null; client_currency?:string|null; gp_percent?:number|null; markup_percent?:number|null };
 export type RateVersion = HeaderInput & { id: string; card_id: string; created_at: string; updated_at: string; client_name: string; brand_name: string | null; creator_count: number; currencies: string[] };
 export type RateSource = { card_id: string; version_id: string; name: string; version: string; amount: number; currency: string; applied_at: string; applied_by: string; applied_amount?: number; applied_currency?: string; manual_override?: boolean; price_type: RateType; application_mode?:"missing"|"overwrite"; components?:RateComponent[]; agency_fee_percent?:number|null };
 export type MatchItem = { id: string; influencer_id?: string | null; profile_id?: string | null; unified_id?: string | null; creator_name?: string | null; cost?: number | null; revenue?: number | null; af_pct?: number | null; deliverables: QuotationDeliverable[] };
@@ -80,7 +81,7 @@ export function validateImportRow(row: number, raw: Record<string, string>, matc
   if (!match) return { row, status: "unmatched", issues: ["unmatched"] };
   const amount = raw.Rate?.trim();
   const fee=raw["Agency Fee %"]?.trim();
-  const parsed = rateSchema.safeParse({ ...packageData,creator_ref: match.ref, creator_name: match.name, platform: normalizeRatePlatform(raw.Platform), deliverable: raw["Deliverable Type"], amount: amount && /^\d+(\.\d{1,4})?$/.test(amount) ? Number(amount) : NaN, currency: raw.Currency?.trim().toUpperCase(), notes: raw.Notes ?? "",price_type:raw["Rate Type"]?.trim().toLowerCase(),period_months:requiresPeriod(raw["Deliverable Type"])?Number((raw["Period (Months)"]??"").replace(/\s*months?$/i,"")):0,agency_fee_percent:fee?(/^\d+(\.\d{1,4})?$/.test(fee)?Number(fee):NaN):null });
+  const parsed = rateSchema.safeParse({ ...packageData,creator_ref: match.ref, creator_name: match.name, platform: normalizeRatePlatform(raw.Platform), deliverable: raw["Deliverable Type"], amount: amount && /^\d+(\.\d{1,4})?$/.test(amount) ? Number(amount) : NaN, currency: raw.Currency?.trim().toUpperCase(), notes: raw.Notes ?? "",price_type:raw["Rate Type"]?.trim().toLowerCase(),period_months:requiresPeriod(raw["Deliverable Type"])?Number((raw["Period (Months)"]??"").replace(/\s*months?$/i,"")):0,event_days:raw["Deliverable Type"]==="event_attendance"?Number(raw["Event Days"]?.trim()||1):undefined,agency_fee_percent:fee?(/^\d+(\.\d{1,4})?$/.test(fee)?Number(fee):NaN):null });
   if (!parsed.success) return { row, status: "error", issues: ["invalid"] };
   if (!currencies.includes(parsed.data.currency)) return { row, status: "error", issues: ["currency"] };
   const key = rateKey(match.ref, parsed.data.platform, parsed.data.deliverable,parsed.data.price_type,parsed.data.package_key);
@@ -131,7 +132,7 @@ export function previewPricingRule(lines:RateLine[],raw:PricingRule) {
     const existing=clientRates.get(rateKey(line.creator_ref,line.platform,line.deliverable,"client_price",line.package_key));
     if(existing&&!rule.overwrite&&(rule.mode!=="none"||existing.agency_fee_percent!=null))continue;
     const amount=rule.mode==="none"?line.amount:computeCommercials({mode:rule.mode,cost:line.amount,gpPct:rule.percent}).revenue;
-    const rate:RateInput={package_key:line.package_key,package_details:line.package_details,creator_ref:line.creator_ref,creator_name:line.creator_name,platform:line.platform,deliverable:line.deliverable,price_type:"client_price",amount,currency:line.currency,notes:existing?.notes??line.notes,period_months:line.period_months,agency_fee_percent:rule.agencyFee??existing?.agency_fee_percent??line.agency_fee_percent};
+    const rate:RateInput={event_days:line.event_days,package_key:line.package_key,package_details:line.package_details,creator_ref:line.creator_ref,creator_name:line.creator_name,platform:line.platform,deliverable:line.deliverable,price_type:"client_price",amount,currency:line.currency,notes:existing?.notes??line.notes,period_months:line.period_months,agency_fee_percent:rule.agencyFee??existing?.agency_fee_percent??line.agency_fee_percent};
     const cost=rule.mode==="none"?lines.find(c=>c.price_type==="creator_cost"&&c.creator_ref===line.creator_ref&&c.platform===line.platform&&c.deliverable===line.deliverable&&(c.package_key??"")===(line.package_key??"")&&c.currency===line.currency)?.amount??null:line.amount;
     result.push({rate,before:existing?.amount??null,before_fee:existing?.agency_fee_percent??null,...pricingPercentages(cost,amount)});
   }

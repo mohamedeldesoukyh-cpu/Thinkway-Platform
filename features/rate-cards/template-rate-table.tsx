@@ -1,6 +1,8 @@
 "use client";
 import {CreatorAvatarImage} from "@/components/creator/creator-avatar-image";
 
+import {TravelUpliftCell} from "./travel-editor";
+import {travelFields,type TravelUplifts} from "./travel";
 import {packageDescription} from "./packages";
 import type {RateLine} from "./model";
 import {rateTemplateRows,type RatePair} from "./template-rows";
@@ -8,17 +10,17 @@ import {Button} from "@/components/ui/button";
 import {cell,useRateLanguage} from "./ui";
 import {taxonomyLabel} from "./labels";
 
-export function ServiceRateTable({lines,avatars,editable,selected,onSelect,onEdit,onAvatar}:{
+export function ServiceRateTable({lines,avatars,editable,selected,onSelect,onEdit,onAvatar,onTravel}:{
  lines:RateLine[];avatars:Record<string,string>;editable:boolean;selected:Set<string>;
- onSelect:(ids:string[])=>void;onEdit:(line:Partial<RateLine>)=>void;onAvatar:(line:RateLine)=>void;
+ onTravel:(line:RateLine,values:TravelUplifts)=>Promise<void>;onSelect:(ids:string[])=>void;onEdit:(line:Partial<RateLine>)=>void;onAvatar:(line:RateLine)=>void;
 }){
  const {lang,t}=useRateLanguage();const ar=lang==="ar";
- const headers=[t("select"),t("creator"),t("platform"),t("deliverable"),t("creator_cost"),ar?"عملة المبدع":"Creator Currency",t("client_price"),ar?"عملة العميل":"Client Currency","GP %",ar?"الهامش ٪":"Margin / Markup %",t("agencyFee"),t("notes"),ar?"حقوق الاستخدام · تكلفة شهرية":"Usage Rights Monthly Creator Cost",ar?"حقوق الاستخدام · سعر العميل الشهري":"Usage Rights Monthly Client Price",ar?"مدة حقوق الاستخدام بالشهور":"Usage Rights Period (Months)",ar?"الترويج · تكلفة شهرية":"Boosting Monthly Creator Cost",ar?"الترويج · سعر العميل الشهري":"Boosting Monthly Client Price",ar?"مدة الترويج بالشهور":"Boosting Period (Months)",ar?"حضور الفعالية · تكلفة المبدع":"Event Attendance Creator Cost",ar?"حضور الفعالية · سعر العميل":"Event Attendance Client Price",t("action")];
+ const headers=[t("select"),t("creator"),t("platform"),t("deliverable"),t("creator_cost"),ar?"عملة المبدع":"Creator Currency",t("client_price"),ar?"عملة العميل":"Client Currency","GP %",ar?"الهامش ٪":"Margin / Markup %",t("agencyFee"),t("notes"),ar?"حقوق الاستخدام · تكلفة شهرية":"Usage Rights Monthly Creator Cost",ar?"حقوق الاستخدام · سعر العميل الشهري":"Usage Rights Monthly Client Price",ar?"مدة حقوق الاستخدام بالشهور":"Usage Rights Period (Months)",ar?"الترويج · تكلفة شهرية":"Boosting Monthly Creator Cost",ar?"الترويج · سعر العميل الشهري":"Boosting Monthly Client Price",ar?"مدة الترويج بالشهور":"Boosting Period (Months)",ar?"حضور الفعالية · تكلفة المبدع":"Event Attendance Creator Cost",ar?"حضور الفعالية · سعر العميل":"Event Attendance Client Price","Event Days",...travelFields.map(f=>`${f.short} %`),t("action")];
  const pct=(n:number|null|undefined)=>n==null?"—":Number(n).toFixed(2)+"%";
  const periods=(pair:RatePair)=>pair.cost&&pair.client&&pair.cost.period_months!==pair.client.period_months?`${t("creator_cost")}: ${pair.cost.period_months} / ${t("client_price")}: ${pair.client.period_months}`:pair.client?.period_months??pair.cost?.period_months??"—";
  return <><p className="rc-client-legend"><span/>{ar?"الخلايا الرمادية تعرض بيانات تظهر للعميل في المعاينة والتقارير. التكاليف الداخلية ونسب الربح لا تظهر للعميل.":"Light grey cells identify client-facing report fields. Internal costs, GP and markup remain private."}</p><div className="rc-service-scroll rounded-lg border"><table className="rc-service-table rc-template-table"><thead><tr>{headers.map((h,i)=><th className={cell} key={i}>{h}</th>)}</tr></thead><tbody>
  {rateTemplateRows(lines).map(row=>{
-  const price=(rate:RateLine|undefined,type:"creator_cost"|"client_price",deliverable:string,enabled=true)=> <td className={`${cell} ${type==="client_price"?"rc-client-field":""}`}><div className="whitespace-nowrap font-medium">{rate?`${Number(rate.amount).toLocaleString(lang)} ${rate.currency}`:"—"}</div>{editable&&enabled&&<Button size="sm" variant="ghost" aria-label={`${t(rate?"edit":"add")} ${t(type)} · ${row.line.creator_name} · ${taxonomyLabel(deliverable,lang)}`} onClick={()=>onEdit(rate??{...row.line,id:undefined,deliverable,price_type:type,amount:undefined,period_months:["usage_right","boosting"].includes(deliverable)?1:0})}>{rate?t("edit"):(ar?"إضافة":"Add")}</Button>}</td>;
+  const price=(rate:RateLine|undefined,type:"creator_cost"|"client_price",deliverable:string,enabled=true)=> <td className={`${cell} ${type==="client_price"?"rc-client-field":""}`}><div className="whitespace-nowrap font-medium">{rate?`${Number(rate.amount).toLocaleString(lang)} ${rate.currency}`:"—"}</div>{rate&&deliverable==="event_attendance"&&<small>per day · Total: {(Number(rate.amount)*(rate.event_days??1)).toLocaleString(lang)} {rate.currency}</small>}{editable&&enabled&&<Button size="sm" variant="ghost" aria-label={`${t(rate?"edit":"add")} ${t(type)} · ${row.line.creator_name} · ${taxonomyLabel(deliverable,lang)}`} onClick={()=>onEdit(rate??{...row.line,id:undefined,deliverable,price_type:type,amount:undefined,event_days:1,period_months:["usage_right","boosting"].includes(deliverable)?1:0})}>{rate?t("edit"):(ar?"إضافة":"Add")}</Button>}</td>;
   const all=[row.base.cost,row.base.client,row.usage.cost,row.usage.client,row.boost.cost,row.boost.client,row.event.cost,row.event.client].filter((r):r is RateLine=>!!r);
   const fees=[row.base.client,row.usage.client,row.boost.client,row.event.client].filter((r):r is RateLine=>!!r);
   const differentFees=new Set(fees.map(r=>r.agency_fee_percent)).size>1;
@@ -34,6 +36,8 @@ export function ServiceRateTable({lines,avatars,editable,selected,onSelect,onEdi
    {price(row.usage.cost,"creator_cost","usage_right",row.includeExtras)}{price(row.usage.client,"client_price","usage_right",row.includeExtras)}<td className={`${cell} rc-client-field`}>{periods(row.usage)}</td>
    {price(row.boost.cost,"creator_cost","boosting",row.includeExtras)}{price(row.boost.client,"client_price","boosting",row.includeExtras)}<td className={`${cell} rc-client-field`}>{periods(row.boost)}</td>
    {price(row.event.cost,"creator_cost","event_attendance",row.includeExtras)}{price(row.event.client,"client_price","event_attendance",row.includeExtras)}
+   <td className={`${cell} rc-client-field`}>{row.event.cost&&row.event.client&&row.event.cost.event_days!==row.event.client.event_days?`Cost: ${row.event.cost.event_days??1} / Client: ${row.event.client.event_days??1}`:row.event.client?.event_days??row.event.cost?.event_days??"—"}</td>
+   {travelFields.map(field=><td key={field.key} className={`${cell} rc-client-field`}><TravelUpliftCell field={field} value={row.line[field.key]} editable={editable} onSave={values=>onTravel(row.line,values)}/></td>)}
    <td className={cell}>{editable&&<Button size="sm" variant="outline" onClick={()=>onAvatar(row.line)}>{t("avatar")}</Button>}</td>
   </tr>;
  })}
