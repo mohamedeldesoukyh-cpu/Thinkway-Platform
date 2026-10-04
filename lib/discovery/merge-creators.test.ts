@@ -75,3 +75,11 @@ test("classifyMergeReassignError treats unique and missing-table errors as recov
     "fatal"
   );
 });
+
+test("overlapping empty shortlist drafts can merge but priced drafts cannot",async()=>{
+ for(const cost of [null,0,100]){
+  const db={from(table:string){const data=table==="influencer_platform_accounts"?[{id:"p1",platform:"instagram",influencer_id:"target"},{id:"p2",platform:"tiktok",influencer_id:"source"}]:table==="discovery_shortlist_items"?[{id:"a",influencer_id:"target",shortlist_id:"list",item_status:"draft",deliverables:[]},{id:"b",influencer_id:"source",shortlist_id:"list",item_status:"draft",deliverables:[],cost}]:[];const q={select(){return q;},in(){return q;},eq(){return q;},then(resolve:(value:unknown)=>unknown){return Promise.resolve({data,error:null}).then(resolve);}};return q;}};
+  const result=await getMergeCreatorsEligibility(db as unknown as Parameters<typeof getMergeCreatorsEligibility>[0],{targetInfluencerId:"target",sourceInfluencerId:"source"});
+  assert.equal(result.canMerge,cost===null);
+ }
+});

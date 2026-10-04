@@ -7,6 +7,7 @@ import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { mergeAuthoritative } from "@/lib/discovery-import/merge";
 import { normalizeSocialPlatform } from "@/lib/social/normalize-platform";
 import type { Database } from "@/types/database";
+import { isEmptyMergeDraft } from "./merge-shortlist-drafts";
 
 type AnySupabase = SupabaseClient<any>;
 
@@ -197,7 +198,16 @@ export async function getMergeCreatorsEligibility(
   // never the generic merge helper's delete-on-unique-conflict behavior.
   const db=supabase as AnySupabase;
   // Never delete a completed job or commercial document to make a unique key fit.
-  for(const [table,columns] of [["discovery_shortlist_items",["shortlist_id","collapse_group_id"]],["campaign_influencers",["campaign_header_id","campaign_line_id"]],["vendor_ios",["campaign_header_id"]]] as const){
+  const shortlistRows=await db.from("discovery_shortlist_items").select("*").in("influencer_id",[targetInfluencerId,sourceInfluencerId]);
+  if(shortlistRows.error)return {...eligibility,canMerge:false,message:shortlistRows.error.message};
+  const shortlistKeys=new Map<string,Record<string,unknown>>();
+  for(const row of shortlistRows.data??[]){
+    const key=JSON.stringify([row.shortlist_id,row.collapse_group_id??null]);
+    const previous=shortlistKeys.get(key);
+    if(previous&&previous.influencer_id!==row.influencer_id&&(!isEmptyMergeDraft(previous)||!isEmptyMergeDraft(row)))return {...eligibility,canMerge:false,message:"Both creators have entries in the same shortlist with saved details. Review their prices, notes and deliverables before combining; nothing has been removed."};
+    shortlistKeys.set(key,row);
+  }
+  for(const [table,columns] of [["campaign_influencers",["campaign_header_id","campaign_line_id"]],["vendor_ios",["campaign_header_id"]]] as const){
     let query=db.from(table).select(["id","influencer_id",...columns].join(",")).in("influencer_id",[targetInfluencerId,sourceInfluencerId]);
     if(table==="vendor_ios")query=query.eq("is_superseded",false);
     const records=await query;if(records.error)return {...eligibility,canMerge:false,message:records.error.message};
@@ -595,6 +605,10 @@ export async function mergeCreators(
 
     // Eligibility checks overlap before writes; replacement never deduplicates
     // operational records by deleting them.
+    const {error: shortlistMergeError}=await (supabase as AnySupabase).rpc("consolidate_creator_shortlist_drafts",{
+      p_target:targetInfluencerId,p_source:sourceInfluencerId,p_actor:input.actorId,
+    });
+    if(shortlistMergeError)return {ok:false,message:shortlistMergeError.message};
 
     for (const account of sourcePlatformRows) {
       const { error: moveError } = await supabase

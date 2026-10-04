@@ -59,6 +59,7 @@ export function CombineCreatorsDialog({
   const [pickerOpen, setPickerOpen] = useState(false);
   const [sourceCreator, setSourceCreator] = useState<UnifiedCreatorResult | null>(null);
   const [serverMessage, setServerMessage] = useState<string | null>(null);
+  const [serverCanMerge, setServerCanMerge] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -89,12 +90,15 @@ export function CombineCreatorsDialog({
     }
 
     let active = true;
+    setServerCanMerge(false);
+    setServerMessage(null);
     void getMergeCreatorsEligibilityAction({
       targetInfluencerId,
       sourceInfluencerId: sourceCreator.influencer_id,
     }).then((result) => {
       if (!active) return;
-      setServerMessage(result.canMerge ? result.message : result.message);
+      setServerMessage(result.message);
+      setServerCanMerge(result.canMerge);
     });
 
     return () => {
@@ -107,6 +111,7 @@ export function CombineCreatorsDialog({
       targetInfluencerId &&
         sourceCreator?.influencer_id &&
         localEligibility?.canMerge &&
+        serverCanMerge &&
         !isPending
     );
 
@@ -214,7 +219,7 @@ export function CombineCreatorsDialog({
               <div
                 className={cn(
                   "rounded-xl border px-3.5 py-3 text-xs",
-                  localEligibility.canMerge
+                  localEligibility.canMerge && serverCanMerge
                     ? "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-200"
                     : "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-200"
                 )}
