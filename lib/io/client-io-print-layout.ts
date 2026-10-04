@@ -1,3 +1,4 @@
+import { applyClientIoEndorsement } from "@/lib/io/client-io-endorsement";
 import { applyMobileDocumentLayout } from "@/lib/reports/document/mobile-document-layout";
 /** Keep the HTML's own 52px content gutter; do not add a second side margin. */
 export const CLIENT_IO_PRINT_STYLES = `
@@ -15,6 +16,7 @@ export function isClassicClientIoHtml(html: string | null | undefined): html is 
 /** Presentation-only repair of saved snapshots; never substitute live campaign values. */
 export function applyClientIoPrintLayout(html: string): string {
   if (!isClassicClientIoHtml(html)) return html;
+  html = applyClientIoEndorsement(html);
   html = applyMobileDocumentLayout(html);
   if (!isClassicClientIoHtml(html) || html.includes('data-client-io-print="2"')) return html;
   return html.replace(/<\/head>/i, `<style data-client-io-print="2">${CLIENT_IO_PRINT_STYLES}</style></head>`);
