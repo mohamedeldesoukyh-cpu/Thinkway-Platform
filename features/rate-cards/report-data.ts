@@ -21,6 +21,7 @@ export async function loadRateCardReport(db:SupabaseClient,id:string):Promise<Ra
     for(const {creator_ref,...rate} of r.data??[])prices.set(creator_ref,[...(prices.get(creator_ref)??[]),rate as ClientRate]);if((r.data?.length??0)<1000)break;
   }
   const creators:RateCardReport["creators"]=[];const refs=[...identities];
+  const profilePhotos=new Map<string,{src:string|null;url:string|null}[]>();
   for(let start=0;start<refs.length;start+=20){
     const part=refs.slice(start,start+20),resolved=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:part});
     const avatarResult=await db.from("rate_card_creator_avatars").select("creator_ref,avatar_data").eq("card_id",v.card_id).in("creator_ref",part);
@@ -34,10 +35,20 @@ export async function loadRateCardReport(db:SupabaseClient,id:string):Promise<Ra
       const existing=creators.find(c=>c.group.creatorKey===creator.unified_id);
       if(existing){existing.rates.push(...(prices.get(ref)??[]));existing.packageScopes?.push(...(scopes.get(ref)??[]));continue;}
       group.creatorKey=creator.unified_id;
+      profilePhotos.set(group.creatorKey,creator.platforms.map(p=>({src:p.profile_picture_url??null,url:p.profile_url??null})));
       creators.push({group,packageScopes:scopes.get(ref)??[],rates:prices.get(ref)??[],performance:creator.platforms.map(p=>({platform:p.platform,followers:p.follower_count,engagement:p.engagement_rate,views:p.avg_views??null,likes:p.avg_likes??null,comments:p.avg_comments??null,audienceCountry:p.audience_country,profileUrl:p.profile_url}))});
     }
   }
   // Bound image concurrency; reuse the existing protected image fetching pipeline.
-  for(let from=0;from<creators.length;from+=5)await Promise.all(creators.slice(from,from+5).map(async c=>{c.group.avatarUrl=await embedShortlistAvatarDataUri(c.group.avatarUrl,c.group.avatarProfileUrl,db as SupabaseClient<Database>);c.group.avatarProxyUrl=null;}));
+  for(let from=0;from<creators.length;from+=5)await Promise.all(creators.slice(from,from+5).map(async c=>{
+    const candidates=[{src:c.group.avatarUrl,url:c.group.avatarProfileUrl},...(profilePhotos.get(c.group.creatorKey)??[])];
+    const seen=new Set<string>();let avatar:string|null=null;
+    for(const candidate of candidates){
+      const key=JSON.stringify(candidate);if(seen.has(key))continue;seen.add(key);
+      avatar=await embedShortlistAvatarDataUri(candidate.src,candidate.url,db as SupabaseClient<Database>);
+      if(avatar)break;
+    }
+    c.group.avatarUrl=avatar;c.group.avatarProxyUrl=null;
+  }));
   return {name:v.name,version:v.version,client:v.client_name,brand:v.brand_name,effective:v.effective_date,expiry:v.expiry_date,creators};
 }
