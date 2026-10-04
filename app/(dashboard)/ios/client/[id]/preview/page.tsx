@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { X } from "lucide-react";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -10,7 +12,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type PageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ layout?: string }>;
+  searchParams: Promise<{ layout?: string; returnTo?: string }>;
 };
 
 export default async function ClientIoPreviewPage({ params, searchParams }: PageProps) {
@@ -38,6 +40,9 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
     campaign_header_id: string;
   };
 
+  const returnTo = query.returnTo?.startsWith("/") && !query.returnTo.startsWith("//") && !query.returnTo.includes("\\")
+    ? query.returnTo : `/campaigns/${typed.campaign_header_id}?tab=client-io`;
+
   let html: string;
   let errorMessage: string | null = null;
 
@@ -57,20 +62,12 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
     >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div className="flex flex-wrap items-center gap-2">
-          <PageBackButton
-            fallbackHref={`/ios/client?io=${id}`}
-            label="Back to Client IOs"
-            variant="text"
-          />
-          <PageBackButton
-            fallbackHref={`/campaigns/${typed.campaign_header_id}`}
-            label="Campaign"
-            variant="text"
-          />
+          <Link href={returnTo} className="text-sm font-medium hover:underline">← Back to previous page</Link>
           <Suspense fallback={null}>
             <ClientIoPreviewLayoutToggle clientIoId={id} activeLayout={layout} />
           </Suspense>
         </div>
+        <div className="flex items-center gap-2">
         {!errorMessage ? (
           <div className="flex flex-wrap gap-2">
             <a
@@ -91,6 +88,8 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
             </a>
           </div>
         ) : null}
+        <Link href={returnTo} aria-label="Close Client IO preview" className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"><X className="size-4" /> Close</Link>
+        </div>
       </div>
 
       {errorMessage ? (

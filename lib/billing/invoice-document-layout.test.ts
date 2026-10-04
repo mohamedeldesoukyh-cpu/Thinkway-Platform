@@ -95,10 +95,10 @@ assert.equal(detailed.lineItems.length, 3);
 
 const byCreator = applyInvoiceDocumentLayout(sample, "by_creator");
 assert.equal(byCreator.lineItems.length, 2);
-assert.equal(byCreator.lineItems[0]!.description, "TW-2026-0001-A — Creator A");
+assert.equal(byCreator.lineItems[0]!.description, "Creator A — 1 × Instagram reel + 1 × TikTok video · 100% of original billable amount");
 assert.equal(byCreator.lineItems[0]!.revenueBeforeVat, 25_000);
 assert.equal(byCreator.lineItems[0]!.lineTotal, 28_500);
-assert.equal(byCreator.lineItems[1]!.description, "TW-2026-0001-B — Creator B");
+assert.equal(byCreator.lineItems[1]!.description, "Creator B — 1 × Instagram reel · 100% of original billable amount");
 
 const packaged = applyInvoiceDocumentLayout(sample, "package");
 assert.equal(packaged.lineItems.length, 2);
@@ -149,3 +149,13 @@ for (const percent of [50,60,33.33]) {
 }
 const mixed={...sample,lineItems:sample.lineItems.map((line,index)=>({...line,description:line.description+' · '+(index===0?50:60)+'% of original billable amount'}))};
 assert.match(applyInvoiceDocumentLayout(mixed,'package').lineItems[0].description,/Mixed billing: 50%, 60%/);
+
+// Compact descriptions use saved creator names, summarize posts, and never copy rows into Notes.
+const named = {...partialSample, lineItems:partialSample.lineItems.map(line=>({...line,creatorName:"Actual Creator Name"}))};
+const namedDoc = applyInvoiceDocumentLayout(named,"by_creator");
+assert.match(namedDoc.lineItems[0].description,/^Actual Creator Name — 1 × Instagram reel/);
+assert.equal(namedDoc.notes,"Existing payment terms");
+assert.equal(applyInvoiceDocumentLayout({...named,notes:null},"by_creator").notes,null);
+assert.equal(applyInvoiceDocumentLayout({...named,notes:null},"package").notes,null);
+assert.equal(namedDoc.lineItems.reduce((sum,line)=>sum+line.lineTotal,0),named.lineItems.reduce((sum,line)=>sum+line.lineTotal,0));
+assert.match(applyInvoiceDocumentLayout(mixed,"by_creator").lineItems[0].description,/Instagram reel \(50% billed\).*TikTok video \(60% billed\)/);

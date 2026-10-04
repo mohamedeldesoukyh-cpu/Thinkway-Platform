@@ -51,6 +51,7 @@ export function ClientIoPreviewLayoutToggle({
 
         return (
           <Link
+            replace
             key={option.id}
             href={href}
             role="tab"

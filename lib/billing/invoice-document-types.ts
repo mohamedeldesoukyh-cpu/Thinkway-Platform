@@ -2,6 +2,7 @@ export type InvoiceLineItemRow = {
   id: string;
   description: string;
   subDescription: string | null;
+  creatorName?: string | null;
   quantity: number;
   unitPrice: number;
   lineTotal: number;

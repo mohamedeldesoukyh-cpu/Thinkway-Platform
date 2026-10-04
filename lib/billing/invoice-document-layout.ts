@@ -2,6 +2,7 @@ import type {
   InvoiceDocumentData,
   InvoiceLineItemRow,
 } from "@/lib/billing/invoice-document-types";
+import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { computeVatLine, roundMoney } from "@/lib/vat/calculations";
 
 export type InvoiceDocumentLayout = "detailed" | "by_creator" | "package";
@@ -70,7 +71,7 @@ function buildPackageLineItem(input: {
 /** Strip trailing " · Deliverable #n" from invoice child descriptions. */
 export function stripDeliverableSuffix(description: string): string {
   return description
-    .replace(/\s*·\s*\d+(?:\.\d+)?% of original billable amount$/, "")
+    .replace(/\s*[·-]\s*\d+(?:\.\d+)?% of original billable amount$/, "")
     .replace(/\s*·\s*[^·]+ #\d+$/, "")
     .trim();
 }
@@ -78,6 +79,29 @@ export function stripDeliverableSuffix(description: string): string {
 function creatorGroupKey(line: InvoiceLineItemRow): string {
   if (line.lineDocumentNumber?.trim()) return line.lineDocumentNumber.trim();
   return stripDeliverableSuffix(line.description);
+}
+
+function creatorDescription(lines: InvoiceLineItemRow[]): string {
+  const first = lines[0];
+  const name = first.creatorName || stripDeliverableSuffix(first.description).split(" — ")[1] || stripDeliverableSuffix(first.description);
+  const items = new Map<string, number>();
+  const mixed = new Set(lines.map(line => line.description.match(/(\d+(?:\.\d+)?)% of original billable amount/)?.[1] ?? "100")).size > 1;
+  for (const line of lines) {
+    const raw = line.description.replace(/\s*[·-]\s*\d+(?:\.\d+)?% of original billable amount$/, "").match(/·\s*([^·]+?)\s+#\d+$/)?.[1];
+    if (!raw) continue;
+    const tokens = raw.trim().split(/\s+/);
+    const platform = tokens[0];
+    const code = tokens.slice(1).join("_").toLowerCase();
+    const aliases: Record<string, string> = { ig_reel: "instagram_reel", stories: "instagram_story", story: "instagram_story", reel: "instagram_reel" };
+    const label = deliverableTypeLabel(aliases[code] ?? code);
+    const fullLabel = label.toLowerCase().startsWith(platform.toLowerCase()) ? label : platform + " " + label;
+    const percentage = line.description.match(/(\d+(?:\.\d+)?)% of original billable amount/)?.[1] ?? "100";
+    const key = fullLabel + (mixed ? " (" + percentage + "% billed)" : "");
+    items.set(key, (items.get(key) ?? 0) + Number(line.quantity || 1));
+  }
+  const deliverables = [...items].map(([label, quantity]) => quantity + " × " + label).join(" + ");
+  const description = [name, deliverables].filter(Boolean).join(" — ");
+  return mixed ? description : withBillingPercentage(description, lines) + (billingPercentageLabel(lines) ? "" : " · 100% of original billable amount");
 }
 
 /** Aggregate child invoice rows into one row per creator / campaign line. */
@@ -138,15 +162,8 @@ export function aggregateInvoiceLinesByCreator(
 
   return [...groups.values()].map((group) => ({
     id: group.id,
-    description: withBillingPercentage(group.description, group.sourceLines),
-    subDescription:
-      group.childCount > 1
-        ? `${group.childCount} deliverables${
-            group.lineDocumentNumber ? ` · Line ${group.lineDocumentNumber}` : ""
-          }`
-        : group.lineDocumentNumber
-          ? `Line ${group.lineDocumentNumber}`
-          : null,
+    description: creatorDescription(group.sourceLines),
+    subDescription: null,
     quantity: 1,
     unitPrice: group.revenueBeforeVat,
     revenueBeforeVat: group.revenueBeforeVat,
@@ -223,11 +240,6 @@ export function applyInvoiceDocumentLayout(
   layout: InvoiceDocumentLayout
 ): InvoiceDocumentData {
   if (layout === "detailed") return data;
-  // Compact layouts must not hide the invoiced percentage when they merge rows.
-  const partialDescriptions = [...new Set(data.lineItems
-    .filter(line => /\d+(?:\.\d+)?% of original billable amount/.test(line.description))
-    .map(line => line.description))];
-  if (partialDescriptions.length) data = { ...data, notes: [data.notes, ...partialDescriptions].filter(Boolean).join("\n") };
   if (layout === "by_creator") {
     return {
       ...data,

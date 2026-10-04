@@ -16,7 +16,7 @@ export const CLIENT_IO_DEFAULT_TERMS: ClientIoTerm[] = [
   },
   {
     title: "Payment Terms.",
-    body: "Full payment is due in advance prior to campaign launch. Thinkway reserves the right to suspend any campaign activity in the event of payment delay, without further liability. All amounts are in EGP and include VAT at 14% where applicable.",
+    body: "Payment shall be made in accordance with the schedule and method set out in Part 5 (Payment Terms) of this Client IO. Thinkway reserves the right to suspend any campaign activity in the event of payment delay, without further liability. All amounts are in the IO currency and include applicable VAT where stated.",
   },
   {
     title: "Cancellation & Amendment.",

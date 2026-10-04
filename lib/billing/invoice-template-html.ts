@@ -115,7 +115,7 @@ const INVOICE_STYLES = `
 html,body{font-family:'Inter',sans-serif;color:var(--navy);background:#fff;
 -webkit-print-color-adjust:exact;print-color-adjust:exact;font-size:13px;line-height:1.5}
 .page{width:210mm;min-height:297mm;margin:0 auto;background:#fff;position:relative;overflow:hidden}
-.hdr{position:relative;overflow:hidden;color:#fff;padding:13mm 15mm 11mm;
+.hdr{position:relative;overflow:hidden;color:#fff;padding:11mm 8mm 9mm;
 background:radial-gradient(120% 160% at 100% 0%,#3f7bff 0%,#0057ff 45%,#003bd0 100%)}
 .hdr .c1{position:absolute;right:-24mm;top:-40mm;width:120mm;height:120mm;border-radius:50%;background:rgba(255,255,255,.11)}
 .hdr .c2{position:absolute;right:26mm;bottom:-52mm;width:82mm;height:82mm;border-radius:50%;background:rgba(255,255,255,.07)}
@@ -133,7 +133,7 @@ background:radial-gradient(120% 160% at 100% 0%,#3f7bff 0%,#0057ff 45%,#003bd0 1
 .badge{display:inline-block;margin-top:12px;background:#fff;color:#0057ff;font-size:12px;font-weight:800;padding:5px 16px;border-radius:999px;letter-spacing:.02em}
 .hmeta{margin-top:16px;display:flex;flex-direction:column;gap:5px;align-items:flex-end}
 .hmeta .m{font-size:10.5px;color:#cbdcff}.hmeta .m b{color:#fff;font-weight:600}
-.body{padding:9mm 15mm 12mm}
+.body{padding:7mm 8mm 9mm}
 .section{margin-bottom:6mm}
 .pcard,.fields,.tot-box,.due,.bank,.advgrid,.grid2b>div{page-break-inside:avoid;break-inside:avoid}
 .tbl tr{page-break-inside:avoid;break-inside:avoid}

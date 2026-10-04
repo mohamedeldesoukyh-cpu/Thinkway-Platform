@@ -92,3 +92,9 @@ test("renderClientIoHtml uses Client / Advertiser for direct clients", () => {
   );
   assert.match(html, /Client \/ Advertiser/);
 });
+test("payment clause refers to Part 5 instead of contradicting the selected schedule", () => {
+  const html = renderClientIoHtml({...sample, paymentSchedule: "50% advance and 50% within 45 days of completion", terms: sample.terms.map(term => term.title === "Payment Terms." ? {...term,body:"Full payment is due in advance prior to campaign launch."} : term)}, "detailed");
+  assert.match(html, /Part 5 \(Payment Terms\)/);
+  assert.match(html, /50% advance and 50% within 45 days of completion/);
+  assert.doesNotMatch(html, /Full payment is due in advance prior to campaign launch/);
+});

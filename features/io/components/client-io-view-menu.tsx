@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronDown, FileText, Layers, LayoutList } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,9 @@ export function ClientIoViewMenu({
   buttonClassName,
   showChevron = true,
 }: ClientIoViewMenuProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const returnTo = encodeURIComponent(`${pathname}${searchParams.size ? `?${searchParams.toString()}` : ""}`);
   const base = `/ios/client/${clientIoId}/preview`;
 
   return (
@@ -51,7 +55,7 @@ export function ClientIoViewMenu({
         <DropdownMenuLabel>Client IO layout</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href={`${base}?layout=detailed`} className="flex cursor-pointer items-start gap-2">
+          <Link href={`${base}?layout=detailed&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
             <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
               <span className="block font-medium">Detailed</span>
@@ -62,7 +66,7 @@ export function ClientIoViewMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href={`${base}?layout=package`} className="flex cursor-pointer items-start gap-2">
+          <Link href={`${base}?layout=package&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
             <Layers className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
               <span className="block font-medium">Package</span>
@@ -74,7 +78,7 @@ export function ClientIoViewMenu({
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link
-            href={`${base}?layout=package_main`}
+            href={`${base}?layout=package_main&returnTo=${returnTo}`}
             className="flex cursor-pointer items-start gap-2"
           >
             <LayoutList className="mt-0.5 size-4 shrink-0 text-muted-foreground" />

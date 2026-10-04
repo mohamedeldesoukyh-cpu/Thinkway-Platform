@@ -8,6 +8,7 @@ import type {
   InvoiceDocumentData,
   InvoiceLineItemRow,
 } from "@/lib/billing/invoice-document-types";
+import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
 import { getInvoiceLines } from "@/lib/finance/invoice-line-registry";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
 import { REL } from "@/lib/supabase/relation-hints";
@@ -335,14 +336,38 @@ export async function loadInvoiceDocumentData(
     }
   }
 
+  const creatorNames = new Map<string, string>();
   if (campaignLineIds.length > 0) {
     const { data: commercialLines } = await supabase
       .from("campaign_lines")
       .select(
-        "id, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
+        "id, metadata, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
       )
       .in("id", campaignLineIds);
 
+    const assignments = (commercialLines ?? []).map(row => ({
+      lineId: row.id as string,
+      assignment: parseLineAssignment(row.metadata as Record<string, unknown> | null),
+    }));
+    const creatorIds = [...new Set(assignments.flatMap(row => row.assignment ? [row.assignment.influencer_id] : []))];
+    if (creatorIds.length) {
+      const [creators, accounts] = await Promise.all([
+        supabase.from("influencers").select("id, display_name, legal_name").in("id", creatorIds),
+        supabase.from("influencer_platform_accounts").select("id, influencer_id, username, handle, profile_display_name").in("influencer_id", creatorIds),
+      ]);
+      for (const { lineId, assignment } of assignments) {
+        if (!assignment) continue;
+        const creator = creators.data?.find(row => row.id === assignment.influencer_id);
+        const profiles = (accounts.data ?? []).filter(row => row.influencer_id === assignment.influencer_id);
+        const handles = new Set(profiles.flatMap(row => [row.username, row.handle]).filter(Boolean).map(value => String(value).replace(/^@/, "").toLowerCase()));
+        const isName = (value: string | null | undefined) => value?.trim() && !handles.has(value.trim().replace(/^@/, "").toLowerCase()) && !value.trim().startsWith("@");
+        const name = creator?.legal_name?.trim()
+          || (isName(creator?.display_name) ? creator?.display_name?.trim() : null)
+          || profiles.find(row => isName(row.profile_display_name))?.profile_display_name?.trim()
+          || creator?.display_name?.trim() || assignment.influencer_name;
+        creatorNames.set(lineId, name);
+      }
+    }
     for (const row of commercialLines ?? []) {
       const typed = row as {
         id: string;
@@ -361,6 +386,7 @@ export async function loadInvoiceDocumentData(
   const lineItems: InvoiceLineItemRow[] = lines.map((line) => ({
     id: line.id,
     description: line.description,
+    creatorName: line.campaign_line_id ? creatorNames.get(line.campaign_line_id) ?? null : null,
     subDescription: buildLineSubDescription({
       deliverableLabel: line.deliverable_label,
       lineDocumentNumber: line.line_document_number,
