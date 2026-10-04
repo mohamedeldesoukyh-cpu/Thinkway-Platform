@@ -55,7 +55,7 @@ export function ClientIoViewMenu({
         <DropdownMenuLabel>Client IO layout</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href={`${base}?layout=detailed&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
+          <Link target="_blank" rel="noopener noreferrer" href={`${base}?layout=detailed&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
             <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
               <span className="block font-medium">Detailed</span>
@@ -66,7 +66,7 @@ export function ClientIoViewMenu({
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href={`${base}?layout=package&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
+          <Link target="_blank" rel="noopener noreferrer" href={`${base}?layout=package&returnTo=${returnTo}`} className="flex cursor-pointer items-start gap-2">
             <Layers className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
               <span className="block font-medium">Package</span>
@@ -78,6 +78,8 @@ export function ClientIoViewMenu({
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link
+            target="_blank"
+            rel="noopener noreferrer"
             href={`${base}?layout=package_main&returnTo=${returnTo}`}
             className="flex cursor-pointer items-start gap-2"
           >
