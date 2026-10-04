@@ -3,6 +3,7 @@ import test from "node:test";
 import { convertMoney, projectBillingRows, originalBillingRows } from "./billing-currency";
 import { computeInvoiceDraftLine, buildInvoiceDraftSubmit } from "./operational-invoice-draft";
 import type { OperationalBillingRow } from "./operational-billing-rows";
+import { makeCreatorFx } from "@/lib/commercial/creator-fx";
 
 const rates = { EGP: 1, USD: 52.2151, AED: 14, EUR: 56.75, GBP: 66.09, SAR: 13.924 };
 const row = (currency = "USD", amount = 100): OperationalBillingRow => ({
@@ -50,4 +51,19 @@ test("partial invoice preview converts the native slice once; submission remains
 });
 test("missing rates fail rather than relabeling native amounts", () => {
   assert.throws(() => projectBillingRows([row()], "EUR", { USD: 52 }), /Missing FX/);
+});
+
+test("uninvoiced billing and its VAT preview use the newly saved revenue FX, including child rows", () => {
+  const parent = row("USD", 274);
+  parent.children = [{ ...row("USD", 274), id: "child", currency_code: undefined }];
+  const before = projectBillingRows([parent], "EGP", rates);
+  parent.revenue_fx_override = makeCreatorFx("USD", "EGP", 52.3725, 1);
+  const after = projectBillingRows([parent], "EGP", rates);
+  assert.equal(before[0].remaining_amount, 14306.94);
+  assert.equal(after[0].remaining_amount, 14350.07);
+  assert.equal(after[0].children[0].remaining_amount, 14350.07);
+  const draft = computeInvoiceDraftLine(after[0].children[0], { child: 100 });
+  assert.equal(draft.toBeInvoiced, 14350.07);
+  assert.equal(draft.vatAmount, 2009.01);
+  assert.equal(originalBillingRows(after)[0].remaining_amount, 274);
 });

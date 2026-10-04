@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useAssignmentFx } from "./use-assignment-fx";
+import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { aggregateCampaignDisplayFinancials } from "@/lib/campaigns/campaign-display-financials";
 import { X } from "lucide-react";
 import { CommercialRevisionDialog, type CommercialRevisionDialogLine } from "../commercial-revision-dialog";
@@ -56,6 +57,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => { if (!enabled) setSelected(null); }, [enabled]);
   const router = useRouter();
+  const refreshOperationalBilling = useRefreshCampaignAfterOperationalMutation();
   const gridEdit = useAssignmentGridEditSession();
   useEffect(() => { setHost(marker.current?.closest<HTMLElement>("[data-campaign-workspace-scroll]")?.parentElement ?? null); }, []);
   const group = hierarchy.groups.find(entry => entry.line.id === selected?.lineId);
@@ -104,7 +106,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
     try {
       const result = await fx.save(campaignId);
       setMessage({ ok: result.ok, text: result.message });
-      if (result.ok) { fx.reset(); router.refresh(); }
+      if (result.ok) { fx.reset(); refreshOperationalBilling(); }
     } catch { setMessage({ ok: false, text: "Unable to save FX. Your edits have been kept." }); }
     finally { setPending(false); }
   }

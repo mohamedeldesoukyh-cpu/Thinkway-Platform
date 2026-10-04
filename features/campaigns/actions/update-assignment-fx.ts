@@ -30,7 +30,9 @@ export async function updateAssignmentFxAction(input: z.infer<typeof schema>): P
   if (error) return { ok: false, message: error.message };
   revalidatePath("/campaigns", "layout");
   revalidatePath("/ios/client");
+  revalidatePath("/billing", "layout");
+  revalidatePath("/finance/invoices");
   return { ok: true, message: Number(data) > 0
-    ? "FX saved. The Client IO requires a revised version because its client-facing amount changed. Existing invoices are unchanged."
-    : "FX saved. Client IO revision is not required for this FX change. Existing invoices are unchanged." };
+    ? "FX saved. Uninvoiced billing uses the updated revenue rate. The Client IO requires a revised version because its client-facing amount changed. Existing invoices are unchanged."
+    : "FX saved. Uninvoiced billing uses the updated revenue rate. Client IO revision is not required for this FX change. Existing invoices are unchanged." };
 }
