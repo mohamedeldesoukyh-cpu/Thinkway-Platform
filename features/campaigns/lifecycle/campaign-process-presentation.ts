@@ -1,3 +1,4 @@
+import { isActiveVendorIo } from "@/lib/io/active-vendor-io";
 /**
  * Campaign adapter for Business Process Navigation (Architecture v1.0 Phase 1).
  * Presentation only — no API · DB · workflow · permission · calculation changes.
@@ -211,9 +212,9 @@ export function signalsFromCampaignWorkspace(workspace: CampaignWorkspace): Camp
     lineCount: workspace.lines.length,
     hasClientIo: Boolean(workspace.client_io),
     clientIoStatus: workspace.client_io?.status ?? null,
-    vendorIoCount: workspace.vendor_ios.length,
-    approvedVendorIoCount: workspace.vendor_ios.filter((io) => io.status === "approved").length,
-    sentVendorIoCount: workspace.vendor_ios.filter(
+    vendorIoCount: workspace.vendor_ios.filter(isActiveVendorIo).length,
+    approvedVendorIoCount: workspace.vendor_ios.filter(isActiveVendorIo).filter((io) => io.status === "approved").length,
+    sentVendorIoCount: workspace.vendor_ios.filter(isActiveVendorIo).filter(
       (io) => io.status === "sent" || io.status === "generated"
     ).length,
     deliverableCount,

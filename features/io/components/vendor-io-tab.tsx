@@ -1,4 +1,5 @@
 "use client";
+import { isActiveVendorIo } from "@/lib/io/active-vendor-io";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -440,17 +441,18 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
   );
 
   const summary = useMemo(() => {
-    const emailSent = sorted.filter(
+    const activeRows = sorted.filter(isActiveVendorIo);
+    const emailSent = activeRows.filter(
       (row) =>
         row.delivery_method === "email" &&
         (row.status === "sent" ||
           row.delivery_status === "sent" ||
           row.delivery_status === "completed")
     ).length;
-    const manualDelivery = sorted.filter((row) => row.delivery_method === "manual").length;
-    const approved = sorted.filter((row) => row.status === "approved").length;
-    const outstanding = sorted.filter((row) => row.status !== "approved").length;
-    const sent = sorted.filter(
+    const manualDelivery = activeRows.filter((row) => row.delivery_method === "manual").length;
+    const approved = activeRows.filter((row) => row.status === "approved").length;
+    const outstanding = activeRows.filter((row) => row.status !== "approved").length;
+    const sent = activeRows.filter(
       (row) => row.status === "sent" || row.delivery_status === "sent"
     ).length;
     return {

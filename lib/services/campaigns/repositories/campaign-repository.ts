@@ -1,3 +1,4 @@
+import { isActiveVendorIo } from "@/lib/io/active-vendor-io";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { CAMPAIGNS_PAGE_SIZE } from "@/lib/campaigns/constants";
@@ -275,7 +276,7 @@ export async function enrichCampaignListLifecycleSignals(
       .order("created_at", { ascending: false }),
     supabase
       .from("vendor_ios")
-      .select("campaign_header_id, status")
+      .select("campaign_header_id, status, is_superseded")
       .in("campaign_header_id", ids),
     loadClientWorkspaceListLinks(supabase, {
       campaignHeaderIds: ids,
@@ -305,10 +306,7 @@ export async function enrichCampaignListLifecycleSignals(
     string,
     { total: number; approved: number; sent: number }
   >();
-  for (const row of (vioResult.data ?? []) as Array<{
-    campaign_header_id: string;
-    status: string;
-  }>) {
+  for (const row of (vioResult.data ?? []).filter(isActiveVendorIo)) {
     const cur = vioStats.get(row.campaign_header_id) ?? {
       total: 0,
       approved: 0,

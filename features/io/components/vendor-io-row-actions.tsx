@@ -1,7 +1,7 @@
 "use client";
 
 import { MoreHorizontalIcon } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,6 +18,9 @@ import {
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
 import type { VendorIoRow } from "@/features/io/types";
 
+import { VendorIoCancelTrigger } from "./vendor-io-cancel-dialog";
+import { isActiveVendorIo } from "@/lib/io/active-vendor-io";
+
 type Props = {
   row: VendorIoRow;
   onViewDetail: (ioId: string) => void;
@@ -26,6 +29,7 @@ type Props = {
 /** Compact Actions cell — primary Send + overflow menu (no horizontal page scroll). */
 export function VendorIoRowActions({ row, onViewDetail }: Props) {
   const openingDetails = useRef(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
   const signedUrl = row.attachment_url?.trim() || "";
   const canApprove = canRecordVendorIoManualApproval(row);
 
@@ -105,8 +109,10 @@ export function VendorIoRowActions({ row, onViewDetail }: Props) {
               </div>
             </>
           ) : null}
+          {isActiveVendorIo(row) ? <><DropdownMenuSeparator /><DropdownMenuItem className="text-red-600 focus:text-red-700 focus:bg-red-50" onSelect={() => { openingDetails.current = true; setCancelOpen(true); }}>Cancel IO</DropdownMenuItem></> : null}
         </DropdownMenuContent>
       </DropdownMenu>
+      <VendorIoCancelTrigger row={row} open={cancelOpen} onOpenChange={setCancelOpen} />
     </div>
   );
 }

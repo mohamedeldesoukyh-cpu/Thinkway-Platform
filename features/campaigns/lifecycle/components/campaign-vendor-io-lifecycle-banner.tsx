@@ -1,4 +1,5 @@
 "use client";
+import { isActiveVendorIo } from "@/lib/io/active-vendor-io";
 
 import { useMemo } from "react";
 
@@ -22,8 +23,9 @@ export function CampaignVendorIoLifecycleBanner({
   className,
 }: Props) {
   const stats = useMemo(() => {
-    const prepared = rows.length;
-    const generated = rows.filter((row) => {
+    const activeRows = rows.filter(isActiveVendorIo);
+    const prepared = activeRows.length;
+    const generated = activeRows.filter((row) => {
       const status = (row.status ?? "").toLowerCase();
       return (
         status === "generated" ||
@@ -31,14 +33,14 @@ export function CampaignVendorIoLifecycleBanner({
         Boolean(row.document_generated_at)
       );
     }).length;
-    const sent = rows.filter(
+    const sent = activeRows.filter(
       (row) =>
         Boolean(row.delivered_at) ||
         row.status === "sent" ||
         row.delivery_status === "sent" ||
         row.delivery_status === "completed"
     ).length;
-    const approved = rows.filter((row) =>
+    const approved = activeRows.filter((row) =>
       row.status === "approved"
     ).length;
     return { prepared, generated, sent, approved };
@@ -54,7 +56,7 @@ export function CampaignVendorIoLifecycleBanner({
     >
       <div className="thinkway-lc-vio-stats">
         <div>
-          <span className="thinkway-bp-label">Vendor IOs</span>
+          <span className="thinkway-bp-label">Active Vendor IOs</span>
           <strong>{stats.prepared}</strong>
         </div>
         <div>

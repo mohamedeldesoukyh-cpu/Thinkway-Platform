@@ -1,3 +1,4 @@
+import { isActiveVendorIo } from "@/lib/io/active-vendor-io";
 /**
  * Decision Center — presentation-only operational inbox for Lifecycle OS.
  * Every item references a concrete business object (ID / document number).
@@ -139,6 +140,7 @@ export type DecisionCenterObjects = {
     document_number: string | null;
     status: string;
     influencer_name: string;
+    is_superseded?: boolean | null;
     delivery_method?: string | null;
     attachment_url?: string | null;
   }>;
@@ -855,7 +857,7 @@ export function buildDecisionCenter(input: {
     signals.approvedVendorIoCount < signals.vendorIoCount
   ) {
     const pendingRows = (objects?.vendorIos ?? []).filter(
-      (row) => !isVendorApproved(row.status)
+      (row) => isActiveVendorIo(row) && !isVendorApproved(row.status)
     );
     const pending =
       pendingRows.length > 0
@@ -1423,7 +1425,7 @@ export function decisionObjectsFromWorkspace(workspace: {
           status: workspace.client_io.status,
         }
       : null,
-    vendorIos: (workspace.vendor_ios ?? []).map((row) => ({
+    vendorIos: (workspace.vendor_ios ?? []).filter(isActiveVendorIo).map((row) => ({
       id: row.id,
       document_number: row.document_number,
       status: row.status,
