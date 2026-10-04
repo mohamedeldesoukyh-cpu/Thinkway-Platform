@@ -1,3 +1,4 @@
+import { legacySplitPaymentMilestones } from "./invoice-payment-deadline";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { listClientIoMilestones } from "@/lib/io/client-io-milestones-service";
 import { formatClientIoMilestonesPaymentSchedule, type ClientIoMilestoneDraft } from "@/lib/io/client-io-milestones";
@@ -12,9 +13,13 @@ export async function loadInvoicePaymentContext(db: SupabaseClient, campaignId: 
     (["approved", "sent", "generated", "under_client_review"].includes(row.status ?? "") || Boolean(row.sent_at)));
   if (!io) return null;
   let milestones = await listClientIoMilestones(db, io.id);
+  const originalTerms = formatClientIoMilestonesPaymentSchedule(milestones) || io.billing_terms?.trim() || "";
+  if (milestones.length <= 1) {
+    milestones = legacySplitPaymentMilestones(originalTerms) ?? milestones;
+  }
   // Legacy IOs can have a textual Net schedule without structured milestones.
   const net = /^net[ _]+(\d+)(?:[ _]+days)?$/i.exec(io.billing_terms?.trim() ?? "");
   if (!milestones.length && net) milestones = [{ id: "legacy-net", label: `Net ${net[1]} Days`, percent: 100,
     milestoneKind: "upfront", dueTrigger: "on_approval", dueOffsetDays: Number(net[1]), dueDate: null, notes: null, sortOrder: 1 } satisfies ClientIoMilestoneDraft];
-  return { io, milestones, terms: (formatClientIoMilestonesPaymentSchedule(milestones) || io.billing_terms?.trim() || "").replace(/Client IO approval \/ invoice/gi, "invoice date") || null };
+  return { io, milestones, terms: (originalTerms || formatClientIoMilestonesPaymentSchedule(milestones) || "").replace(/Client IO approval \/ invoice/gi, "invoice date") || null };
 }
