@@ -43,7 +43,7 @@ const TAB_LABELS: Record<AgingWorkspaceTabId, string> = {
 
 const TAB_DESCRIPTIONS: Record<AgingWorkspaceTabId, string> = {
   "client-summary":
-    "Outstanding receivables by legal entity, aged from invoice date.",
+    "Outstanding receivables by legal entity, aged from the agreed payment due date.",
   "client-detailed":
     "Per-client bucket totals with expandable invoice drill-down.",
   "overdue-summary":

@@ -1,3 +1,4 @@
+import { loadInvoicePaymentContext } from "@/lib/billing/invoice-payment-context";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -190,6 +191,7 @@ export async function loadInvoiceDocumentData(
       total,
       currency,
       notes,
+      metadata,
       client:clients(
         id,
         name,
@@ -233,6 +235,7 @@ export async function loadInvoiceDocumentData(
     total: number;
     currency: string;
     notes: string | null;
+    metadata?: { client_io_payment?: { terms?: string | null; client_io_number?: string | null } };
     client:
       | {
           id: string;
@@ -300,39 +303,18 @@ export async function loadInvoiceDocumentData(
   ];
 
   let clientIoReferences: string[] = [];
+  let paymentTerms = formatPaymentTermsLabel(client.payment_terms);
   const commercialByLineId = new Map<string, CampaignLineCommercial>();
 
-  if (campaignRaw?.id) {
-    const { data: clientIos, error: clientIoError } = await supabase
-      .from("client_ios")
-      .select("status, sent_at")
-      .eq("campaign_header_id", campaignRaw.id);
-
-    if (!clientIoError) {
-      const hasGeneratedClientIo = (clientIos ?? []).some((row) => {
-        const typed = row as { status?: string | null; sent_at?: string | null };
-        return (
-          typed.status === "sent" ||
-          typed.status === "approved" ||
-          typed.status === "generated" ||
-          Boolean(typed.sent_at)
-        );
-      });
-
-      if (hasGeneratedClientIo) {
-        const { data: clientIosWithNumber } = await supabase
-          .from("client_ios")
-          .select("document_number")
-          .eq("campaign_header_id", campaignRaw.id);
-
-        clientIoReferences = [
-          ...new Set(
-            (clientIosWithNumber ?? [])
-              .map((row) => (row as { document_number: string | null }).document_number?.trim() ?? null)
-              .filter((value): value is string => Boolean(value))
-          ),
-        ].sort();
-      }
+  const savedPayment = typedInvoice.metadata?.client_io_payment;
+  if (savedPayment?.terms) {
+    paymentTerms = savedPayment.terms;
+    if (savedPayment.client_io_number) clientIoReferences = [savedPayment.client_io_number];
+  } else if (campaignRaw?.id) {
+    const context = await loadInvoicePaymentContext(supabase, campaignRaw.id);
+    if (context) {
+      clientIoReferences = context.io.document_number ? [context.io.document_number] : [];
+      paymentTerms = context.terms || paymentTerms || "Advance — Prior to campaign launch";
     }
   }
 
@@ -449,7 +431,7 @@ export async function loadInvoiceDocumentData(
       cityCountry: address.cityCountry,
       vatNumber: client.vat_number,
       taxId: client.tax_id,
-      paymentTerms: formatPaymentTermsLabel(client.payment_terms),
+      paymentTerms,
     },
     campaign: campaignRaw
       ? {

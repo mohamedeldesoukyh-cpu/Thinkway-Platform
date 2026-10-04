@@ -18,6 +18,7 @@ import {
 
 import { Button } from "@/components/ui/button";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+import { InvoicePaymentFields } from "@/features/billing/components/invoice-payment-fields";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -361,6 +362,10 @@ export function InvoiceGenerationSheet({
       }
     }
 
+    for (const key of ["payment_milestone_id", "payment_event_date"]) {
+      const value = new FormData(event.currentTarget).get(key);
+      if (typeof value === "string") formData.set(key, value);
+    }
     startTransition(() => {
       formAction(formData);
     });
@@ -557,8 +562,7 @@ export function InvoiceGenerationSheet({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label htmlFor="due_date">Due date</Label>
-                  <Input id="due_date" name="due_date" type="date" />
+                  <InvoicePaymentFields campaignId={campaignId} />
                 </div>
               )}
 

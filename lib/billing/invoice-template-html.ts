@@ -247,8 +247,8 @@ export function buildInvoiceTemplateHtml(data: InvoiceDocumentData): string {
   const trn = display(data.client.vatNumber ?? data.client.taxId);
   const accountNumber = display(data.client.documentNumber);
   const paymentTerms = display(
-    data.client.paymentTerms ?? "Net 30 Days",
-    "Net 30 Days"
+    data.client.paymentTerms ?? "Payment terms not specified",
+    "Payment terms not specified"
   );
   const vat = resolveInvoiceDocumentVat(data);
   const vatPill = `VAT ${vat.vatPercent}% Included`;
@@ -347,10 +347,10 @@ export function buildInvoiceTemplateHtml(data: InvoiceDocumentData): string {
       <div class="due">
         <div class="dl">Payment Due Date</div>
         <div class="dd">${dueDateLong}</div>
-        <div class="dn">Payment is due within 30 days of invoice date. Late payments may be subject to applicable charges under Egyptian law.</div>
+        <div class="dn">${paymentTerms}</div>
       </div>
       <div class="pills">
-        <span class="chip"><span class="dot"></span>${paymentTerms}</span>
+
         <span class="chip"><span class="dot"></span>Bank Transfer Only</span>
         <span class="chip"><span class="dot"></span>${esc(vatPill)}</span>
       </div>

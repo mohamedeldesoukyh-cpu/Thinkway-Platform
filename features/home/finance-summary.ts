@@ -22,3 +22,15 @@ export function homeCreatorOutstanding(fee:number,status:string,entries:Array<{s
  // Legacy paid assignments without ledger entries are settled, not a new obligation.
  return Math.max(0,fee-(entries.length===0&&status==='paid'?fee:paid));
 }
+
+export function homeInvoicesDueSoon(invoices: Parameters<typeof homeInvoiceBalances>[0], convert: Parameters<typeof homeInvoiceBalances>[1], today: string) {
+ const end = new Date(today + "T00:00:00Z"); end.setUTCDate(end.getUTCDate() + 7);
+ const through = end.toISOString().slice(0,10);
+ let amount = 0, count = 0;
+ for (const invoice of invoices) {
+  if (!invoice.issue_date || !isActiveInvoiceForFinancialTotals(invoice) || !invoice.due_date || invoice.due_date < today || invoice.due_date > through) continue;
+  const balance = Math.max(0, Number(invoice.total) - Number(invoice.amount_paid));
+  if (balance > 0) { amount += convert(balance, invoice.currency); count++; }
+ }
+ return {amount, count};
+}

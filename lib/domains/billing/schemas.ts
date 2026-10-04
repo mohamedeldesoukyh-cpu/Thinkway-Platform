@@ -50,6 +50,8 @@ export const createInvoiceFromLinesSchema = z
       z.enum(["new", "append"])
     ),
     existing_invoice_id: z.string().uuid().optional().or(z.literal("")),
+    payment_milestone_id: z.string().max(80).optional(),
+    payment_event_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional().or(z.literal("")),
     due_date: z
       .string()
       .trim()

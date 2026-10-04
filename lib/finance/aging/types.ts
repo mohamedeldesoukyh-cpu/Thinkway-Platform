@@ -8,7 +8,7 @@ export type AgingBasis = "invoice_date" | "due_date";
 export type AgingReportMode = "client" | "overdue";
 
 export function agingBasisForMode(mode: AgingReportMode): AgingBasis {
-  return mode === "client" ? "invoice_date" : "due_date";
+  return "due_date";
 }
 
 export const AGING_BASIS_LABELS: Record<AgingBasis, string> = {

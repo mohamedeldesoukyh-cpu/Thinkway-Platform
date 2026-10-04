@@ -1,3 +1,4 @@
+import { homeInvoicesDueSoon } from "./finance-summary";
 import {getCampaignPoFxTotals} from '@/lib/finance/po/fx-totals';
 import {homeInvoiceBalances,homePoSummary,homeCreatorOutstanding} from './finance-summary';
 import {isActiveInvoiceForFinancialTotals} from '@/lib/finance/status/invoice-status';
@@ -351,6 +352,8 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     if(budget<=0)financeAlerts.push({id:`po-${h.id}`,group:'po',severity:'warning',title:'Campaign missing PO budget',description:`${h.name}: no PO amount recorded.`,href:'/finance/po-tracker'});
     else if(consumed/budget>=.85)financeAlerts.push({id:`po-${h.id}`,group:'po',severity:'warning',title:consumed>budget?'PO exceeded':'PO near limit',description:`${h.name}: ${Math.round(consumed/budget*100)}% consumed.`,href:'/finance/po-tracker'});
   }
+  const dueSoon = homeInvoicesDueSoon(invoicesResult.data ?? [], convert, new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" }));
+  if (dueSoon.count) financeAlerts.push({id: "invoices-due-soon", group: "collections", severity: "warning", title: "Invoices due within 7 days", description: dueSoon.count + " open invoice(s) approaching their agreed payment deadline.", href: "/collections", amount: dueSoon.amount});
   if(balances.count)financeAlerts.push({id:'overdue',group:'collections',severity:'warning',title:'Overdue invoices',description:`${balances.count} open invoices past their due dates.`,href:'/collections?tab=overdue',amount:balances.overdue});
   const alerts:FinanceAlertsPayload={alerts:financeAlerts,by_group:{billing:[],collections:[],vendor:[],po:[],profitability:[]}};
   for(const alert of financeAlerts)alerts.by_group[alert.group].push(alert);

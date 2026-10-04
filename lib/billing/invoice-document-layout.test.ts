@@ -159,3 +159,13 @@ assert.equal(applyInvoiceDocumentLayout({...named,notes:null},"by_creator").note
 assert.equal(applyInvoiceDocumentLayout({...named,notes:null},"package").notes,null);
 assert.equal(namedDoc.lineItems.reduce((sum,line)=>sum+line.lineTotal,0),named.lineItems.reduce((sum,line)=>sum+line.lineTotal,0));
 assert.match(applyInvoiceDocumentLayout(mixed,"by_creator").lineItems[0].description,/Instagram reel \(50% billed\).*TikTok video \(60% billed\)/);
+
+// The invoice must show the agreed IO schedule without a conflicting fixed Net 30 clause.
+for (const layout of ["detailed", "by_creator", "summary"] as const) {
+  const terms = "50% advance upon confirmation, remaining 50% within 45 days from campaign completion";
+  const document = { ...sample, client: { ...sample.client, paymentTerms: terms } };
+  const html = buildInvoiceTemplateHtml(applyInvoiceDocumentLayout(document, layout));
+  assert.ok(html.includes(terms));
+  assert.ok(!html.includes("within 30 days"));
+  assert.ok(!html.includes("Net 30 Days"));
+}

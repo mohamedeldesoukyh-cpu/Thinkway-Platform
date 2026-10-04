@@ -1,3 +1,5 @@
+import { loadInvoicePaymentContext } from "@/lib/billing/invoice-payment-context";
+import { invoiceMilestoneDueDate } from "@/lib/billing/invoice-payment-deadline";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { REL } from "@/lib/supabase/relation-hints";
@@ -94,6 +96,32 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
 
   if (headerError || !header) {
     return { ok: false, message: headerError?.message ?? "Campaign not found." };
+  }
+
+  const issueDate = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+  let paymentDueDate = input.due_date;
+  let paymentSnapshot: Record<string, unknown> = {};
+  if (invoiceMode !== "append") {
+    try {
+      const context = await loadInvoicePaymentContext(supabase, header.id);
+      if (context) {
+        const milestone = input.payment_milestone_id
+          ? context.milestones.find(m => m.id === input.payment_milestone_id)
+          : context.milestones.length === 1 ? context.milestones[0] : null;
+        if (context.milestones.length && !milestone) return { ok: false, message: "Choose the Client IO payment milestone for this invoice." };
+        if (milestone) {
+          paymentDueDate = invoiceMilestoneDueDate(milestone, { invoiceDate: issueDate,
+            approvedAt: context.io.approved_at, sentAt: context.io.sent_at, eventDate: input.payment_event_date });
+          if (!paymentDueDate) return { ok: false, message: "Enter the actual payment trigger date before creating this invoice." };
+        }
+        paymentSnapshot = { client_io_id: context.io.id, client_io_number: context.io.document_number,
+          terms: context.terms, milestone: milestone ?? null, event_date: input.payment_event_date ?? null,
+          due_date: paymentDueDate, invoice_date: issueDate };
+      }
+      if (!paymentDueDate) return { ok: false, message: "Set the agreed payment due date before creating this invoice." };
+    } catch (error) {
+      return { ok: false, message: error instanceof Error ? error.message : "Could not resolve Client IO payment terms." };
+    }
   }
 
   await runPreInvoiceCreateRepairPipeline(supabase, input.campaign_id);
@@ -346,7 +374,9 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
         client_id: header.client_id,
         campaign_header_id: header.id,
         status: "draft",
-        due_date: input.due_date,
+        due_date: paymentDueDate,
+        issue_date: issueDate,
+        metadata: { client_io_payment: paymentSnapshot },
         currency: header.currency_code,
         notes: emptyToNull(input.notes),
         billing_country_code: countryCode,
