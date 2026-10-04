@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 import { ThinkwayPageLoader } from "@/components/layout/thinkway-page-loader";
@@ -83,7 +83,9 @@ export function NavigationLoadingProvider({ children }: NavigationLoadingProvide
   return (
     <>
       {children}
-      <NavigationLoadingOverlay />
+      <Suspense fallback={null}>
+        <NavigationLoadingOverlay />
+      </Suspense>
     </>
   );
 }
