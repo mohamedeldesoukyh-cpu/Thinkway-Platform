@@ -1,3 +1,4 @@
+import {packageDetailsSchema,parsePackageRow} from "./packages";
 import {rateDeliverables,normalizeRatePlatform,genericRateDeliverable} from "./platforms";
 import {EXTRA_RATE_TYPES,requiresPeriod,validPeriod,periodLabel} from "@/lib/quotations/commercial-period";
 import {deliverableTypeLines,postTypePlatformKey} from "@/lib/quotations/quotation-deliverable-types";
@@ -21,9 +22,11 @@ export const rateSchema = z.object({
   platform: z.string(), deliverable: z.string(), amount: z.number().finite().min(0).max(999999999999),
   currency: z.string().regex(/^[A-Z]{3}$/), notes: z.string().max(5000).default(""),
   price_type: z.enum(["creator_cost", "client_price"]),
+  package_key:z.string().regex(/^(?:[a-z0-9][a-z0-9_-]{0,49})?$/).optional(),
+  package_details:packageDetailsSchema.nullable().optional(),
   period_months: z.number().int().min(0).max(120).optional(),
   agency_fee_percent: z.number().finite().min(0).max(100).nullable().default(null),
-}).refine(v => (rateDeliverables(v.platform).some(t => t.value === v.deliverable)||EXTRA_RATE_TYPES.some(t=>t.value===v.deliverable)) && (!requiresPeriod(v.deliverable)||validPeriod(v.period_months)), { message: "taxonomy" });
+}).refine(v => ((v.deliverable==="package"&&!!v.package_details&&!!v.package_key)||rateDeliverables(v.platform).some(t => t.value === v.deliverable)||EXTRA_RATE_TYPES.some(t=>t.value===v.deliverable)) && (!requiresPeriod(v.deliverable)||validPeriod(v.period_months)), { message: "taxonomy" }).refine(v=>v.package_key ? !!v.package_details&&v.platform==="all"&&["package","usage_right","boosting","event_attendance"].includes(v.deliverable) : !v.package_details&&v.deliverable!=="package",{message:"package"});
 export type RateInput = z.infer<typeof rateSchema>;
 export type RateLine = RateInput & { id: string; version_id: string; creator_cost?:number|null; client_price?:number|null; creator_currency?:string|null; client_currency?:string|null; gp_percent?:number|null; markup_percent?:number|null };
 export type RateVersion = HeaderInput & { id: string; card_id: string; created_at: string; updated_at: string; client_name: string; brand_name: string | null; creator_count: number; currencies: string[] };
@@ -35,10 +38,10 @@ export type ApplyRow = { item_id: string; index: number; price_type: RateType; c
 export function creatorRef(item: Pick<MatchItem, "influencer_id" | "profile_id" | "unified_id">) {
   return item.influencer_id ? `inf:${item.influencer_id}` : item.profile_id ? `dis:${item.profile_id}` : item.unified_id ?? "";
 }
-export function rateKey(ref: string, platform: string, deliverable: string, priceType:RateType) { return JSON.stringify([ref, canonicalPlatformKey(platform), deliverable, priceType]); }
+export function rateKey(ref: string, platform: string, deliverable: string, priceType:RateType,packageKey="") { return JSON.stringify([ref, canonicalPlatformKey(platform), deliverable, priceType,packageKey]); }
 export function previewApplication(items: MatchItem[], rates: RateLine[], mode: "missing" | "overwrite", only?: { item_id: string; index: number }, target:RateTarget="creator_cost"): ApplyRow[] {
   const index = new Map<string, RateLine[]>();
-  for (const r of rates) { const key = rateKey(r.creator_ref, r.platform, r.deliverable, r.price_type); index.set(key, [...(index.get(key) ?? []), r]); }
+  for (const r of rates.filter(r=>!r.package_key)) { const key = rateKey(r.creator_ref, r.platform, r.deliverable, r.price_type); index.set(key, [...(index.get(key) ?? []), r]); }
   return items.flatMap(item => item.deliverables.flatMap((d, i) => {
     if (only && (only.item_id !== item.id || only.index !== i)) return [];
     const scope=deliverableTypeLines(d);
@@ -73,14 +76,14 @@ export function previewApplication(items: MatchItem[], rates: RateLine[], mode: 
 }
 
 export type ImportRow = { conflicts?:{ref:string;name:string}[]; row: number; status: "ready" | "warning" | "error" | "unmatched"; issues: string[]; rate?: RateInput; rates?:RateInput[]; gp_percent?:number|null; markup_percent?:number|null; profile_urls?:string[]; profile_url?:string; pending_creator?:{profile_url:string;platform:string;handle:string} };
-export function validateImportRow(row: number, raw: Record<string, string>, match: { ref: string; name: string } | null, currencies: string[], seen: Set<string>): ImportRow {
+export function validateImportRow(row: number, raw: Record<string, string>, match: { ref: string; name: string } | null, currencies: string[], seen: Set<string>,packageData?:{package_key:string;package_details:z.infer<typeof packageDetailsSchema>}): ImportRow {
   if (!match) return { row, status: "unmatched", issues: ["unmatched"] };
   const amount = raw.Rate?.trim();
   const fee=raw["Agency Fee %"]?.trim();
-  const parsed = rateSchema.safeParse({ creator_ref: match.ref, creator_name: match.name, platform: normalizeRatePlatform(raw.Platform), deliverable: raw["Deliverable Type"], amount: amount && /^\d+(\.\d{1,4})?$/.test(amount) ? Number(amount) : NaN, currency: raw.Currency?.trim().toUpperCase(), notes: raw.Notes ?? "",price_type:raw["Rate Type"]?.trim().toLowerCase(),period_months:requiresPeriod(raw["Deliverable Type"])?Number((raw["Period (Months)"]??"").replace(/\s*months?$/i,"")):0,agency_fee_percent:fee?(/^\d+(\.\d{1,4})?$/.test(fee)?Number(fee):NaN):null });
+  const parsed = rateSchema.safeParse({ ...packageData,creator_ref: match.ref, creator_name: match.name, platform: normalizeRatePlatform(raw.Platform), deliverable: raw["Deliverable Type"], amount: amount && /^\d+(\.\d{1,4})?$/.test(amount) ? Number(amount) : NaN, currency: raw.Currency?.trim().toUpperCase(), notes: raw.Notes ?? "",price_type:raw["Rate Type"]?.trim().toLowerCase(),period_months:requiresPeriod(raw["Deliverable Type"])?Number((raw["Period (Months)"]??"").replace(/\s*months?$/i,"")):0,agency_fee_percent:fee?(/^\d+(\.\d{1,4})?$/.test(fee)?Number(fee):NaN):null });
   if (!parsed.success) return { row, status: "error", issues: ["invalid"] };
   if (!currencies.includes(parsed.data.currency)) return { row, status: "error", issues: ["currency"] };
-  const key = rateKey(match.ref, parsed.data.platform, parsed.data.deliverable,parsed.data.price_type);
+  const key = rateKey(match.ref, parsed.data.platform, parsed.data.deliverable,parsed.data.price_type,parsed.data.package_key);
   if (seen.has(key)) return { row, status: "error", issues: ["duplicate"] };
   seen.add(key);
   const warning = raw["Creator Name"] && raw["Creator Name"].trim() !== match.name.trim();
@@ -93,15 +96,22 @@ export function pricingPercentages(cost:number|null,price:number|null) {
 export function validateWorkbookRow(row:number,raw:Record<string,string>,match:{ref:string;name:string}|null,currencies:string[],seen:Set<string>):ImportRow {
   if("Rate" in raw||"Rate Type" in raw)return validateImportRow(row,raw,match,currencies,seen);
   if(!match)return {row,status:"unmatched",issues:["unmatched"]};
+  let packageData:{package_key:string;package_details:z.infer<typeof packageDetailsSchema>}|undefined;
+  if("Package Code" in raw||"Package Name" in raw||"Package Client Price" in raw){
+    try{const p=parsePackageRow(raw);packageData={package_key:p.key,package_details:p.details};}
+    catch{return {row,status:"error",issues:["invalidPackage"]};}
+    raw={...raw,Platform:"all","Deliverable Type":"package","Creator Cost":raw["Package Creator Cost"],"Client Selling Price":raw["Package Client Price"]};
+    if(!raw["Creator Cost"]?.trim()&&!raw["Client Selling Price"]?.trim())return {row,status:"error",issues:["invalidPackage"]};
+  }
   const cost=raw["Creator Cost"]?.trim(),price=raw["Client Selling Price"]?.trim();
   const entries:ImportRow[]=[];
-  if(cost)entries.push(validateImportRow(row,{...raw,Rate:cost,Currency:raw["Creator Currency"],"Rate Type":"creator_cost"},match,currencies,seen));
-  if(price)entries.push(validateImportRow(row,{...raw,Rate:price,Currency:raw["Client Currency"],"Rate Type":"client_price"},match,currencies,seen));
+  if(cost)entries.push(validateImportRow(row,{...raw,Rate:cost,Currency:raw["Creator Currency"],"Rate Type":"creator_cost"},match,currencies,seen,packageData));
+  if(price)entries.push(validateImportRow(row,{...raw,Rate:price,Currency:raw["Client Currency"],"Rate Type":"client_price"},match,currencies,seen,packageData));
   for(const [prefix,type] of [["Usage Rights","usage_right"],["Boosting","boosting"],["Event Attendance","event_attendance"]]){
     const monthly=requiresPeriod(type)?"Monthly ":"";
     for(const [suffix,priceType,currency] of [["Creator Cost","creator_cost",raw["Creator Currency"]],["Client Price","client_price",raw["Client Currency"]]]){
       const amount=raw[`${prefix} ${monthly}${suffix}`]?.trim();if(!amount)continue;
-      entries.push(validateImportRow(row,{...raw,"Deliverable Type":type,Rate:amount,Currency:currency,"Rate Type":priceType,"Period (Months)":raw[`${prefix} Period (Months)`]},match,currencies,seen));
+      entries.push(validateImportRow(row,{...raw,"Deliverable Type":type,Rate:amount,Currency:currency,"Rate Type":priceType,"Period (Months)":raw[`${prefix} Period (Months)`]},match,currencies,seen,packageData));
     }
   }
   if(!entries.length)return {row,status:"error",issues:["invalid"]};
@@ -115,14 +125,14 @@ export const pricingRuleSchema=z.object({mode:z.enum(["none","cost_gp_pct","cost
 export type PricingRule=z.infer<typeof pricingRuleSchema>;
 export function previewPricingRule(lines:RateLine[],raw:PricingRule) {
   const rule=pricingRuleSchema.parse(raw);const result:{rate:RateInput;before:number|null;before_fee:number|null;gp_percent:number|null;markup_percent:number|null}[]=[];
-  const clientRates=new Map(lines.filter(l=>l.price_type==="client_price").map(l=>[rateKey(l.creator_ref,l.platform,l.deliverable,"client_price"),l]));
+  const clientRates=new Map(lines.filter(l=>l.price_type==="client_price").map(l=>[rateKey(l.creator_ref,l.platform,l.deliverable,"client_price",l.package_key),l]));
   const candidates=rule.mode==="none"?lines.filter(l=>l.price_type==="client_price"):lines.filter(l=>l.price_type==="creator_cost");
   for(const line of candidates){
-    const existing=clientRates.get(rateKey(line.creator_ref,line.platform,line.deliverable,"client_price"));
+    const existing=clientRates.get(rateKey(line.creator_ref,line.platform,line.deliverable,"client_price",line.package_key));
     if(existing&&!rule.overwrite&&(rule.mode!=="none"||existing.agency_fee_percent!=null))continue;
     const amount=rule.mode==="none"?line.amount:computeCommercials({mode:rule.mode,cost:line.amount,gpPct:rule.percent}).revenue;
-    const rate:RateInput={creator_ref:line.creator_ref,creator_name:line.creator_name,platform:line.platform,deliverable:line.deliverable,price_type:"client_price",amount,currency:line.currency,notes:existing?.notes??line.notes,period_months:line.period_months,agency_fee_percent:rule.agencyFee??existing?.agency_fee_percent??line.agency_fee_percent};
-    const cost=rule.mode==="none"?lines.find(c=>c.price_type==="creator_cost"&&c.creator_ref===line.creator_ref&&c.platform===line.platform&&c.deliverable===line.deliverable&&c.currency===line.currency)?.amount??null:line.amount;
+    const rate:RateInput={package_key:line.package_key,package_details:line.package_details,creator_ref:line.creator_ref,creator_name:line.creator_name,platform:line.platform,deliverable:line.deliverable,price_type:"client_price",amount,currency:line.currency,notes:existing?.notes??line.notes,period_months:line.period_months,agency_fee_percent:rule.agencyFee??existing?.agency_fee_percent??line.agency_fee_percent};
+    const cost=rule.mode==="none"?lines.find(c=>c.price_type==="creator_cost"&&c.creator_ref===line.creator_ref&&c.platform===line.platform&&c.deliverable===line.deliverable&&(c.package_key??"")===(line.package_key??"")&&c.currency===line.currency)?.amount??null:line.amount;
     result.push({rate,before:existing?.amount??null,before_fee:existing?.agency_fee_percent??null,...pricingPercentages(cost,amount)});
   }
   return result;

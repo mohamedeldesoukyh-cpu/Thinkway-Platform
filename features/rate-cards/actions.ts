@@ -8,7 +8,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { browseUnifiedCreators, resolveUnifiedCreatorsByRefs } from "@/lib/creators/unified-browse";
 import { headerSchema, rateSchema, previewApplication, previewPricingRule, pricingRuleSchema, type PricingRule, type RateInput, type RateLine, type RateVersion, type MatchItem, type RateSource, type RateTarget } from "./model";
-import { buildRateTemplate } from "./workbook";
+import { buildRateTemplate,buildPackageTemplate } from "./workbook";
 import { parseUpload } from "./import-service";
 import { updateQuotationItemCommercials } from "@/lib/services/quotations/quotation-commercial-service";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
@@ -39,7 +39,7 @@ async function actor(permission: string) {
 }
 function checked<T>(r: { data: T; error: { message: string } | null }): T { if (r.error) throw new Error(r.error.message); return r.data; }
 function refresh() { revalidatePath("/rate-cards"); }
-function dbLine(rate: RateInput) { const { creator_ref, ...rest } = rate; const [kind,id] = creator_ref.split(":"); return { ...rest, period_months:rate.period_months??0, influencer_id: kind === "inf" ? id : null, profile_id: kind === "dis" ? id : null }; }
+function dbLine(rate: RateInput) { const { creator_ref, ...rest } = rate; const [kind,id] = creator_ref.split(":"); return { ...rest, package_key:rate.package_key??"",package_details:rate.package_details??null,period_months:rate.period_months??0, influencer_id: kind === "inf" ? id : null, profile_id: kind === "dis" ? id : null }; }
 async function canonicalRate(db: SupabaseClient, raw: unknown): Promise<RateInput> {
   const rate = rateSchema.parse(raw);
   const refs = await resolveUnifiedCreatorsByRefs(db, { unifiedIds: [rate.creator_ref] });
@@ -138,9 +138,10 @@ export async function searchRateCreators(search:string, page=1, source:"all"|"di
   return result.creators.map(c=>({id:c.unified_id,label:c.display_name}));
 }
 
-export async function downloadRateTemplate() {
+export async function downloadRateTemplate(kind:"individual"|"package"="individual") {
+  z.enum(["individual","package"]).parse(kind);
   const {currencies}=await rateCardOptions();
-  return Buffer.from(await buildRateTemplate(currencies)).toString("base64");
+  return Buffer.from(await (kind==="package"?buildPackageTemplate(currencies):buildRateTemplate(currencies))).toString("base64");
 }
 export async function previewRateImport(form:FormData) { const {db}=await actor("upload"); return parseUpload(db,form); }
 export async function prepareRateUpload(file:{name:string;size:number}) {

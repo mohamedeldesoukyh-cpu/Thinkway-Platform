@@ -3,7 +3,7 @@ const extras=new Set(["usage_right","boosting","event_attendance"]);
 export type RatePair={cost?:RateLine;client?:RateLine};
 export function rateTemplateRows(lines:RateLine[]){
  const creators=new Map<string,RateLine[]>();
- for(const line of lines){const key=JSON.stringify([line.creator_ref,line.platform]);creators.set(key,[...(creators.get(key)??[]),line]);}
+ for(const line of lines){const key=JSON.stringify([line.creator_ref,line.platform,line.package_key??""]);creators.set(key,[...(creators.get(key)??[]),line]);}
  return [...creators.entries()].flatMap(([key,rates])=>{
    const types=[...new Set(rates.map(r=>r.deliverable).filter(t=>!extras.has(t)))].sort();
    if(!types.length)types.push("");

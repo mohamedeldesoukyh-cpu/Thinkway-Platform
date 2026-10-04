@@ -204,10 +204,10 @@ export async function getMergeCreatorsEligibility(
     const keys=new Map<string,string>();
     for(const row of (records.data??[]) as unknown as Record<string,string|null>[]){const key=JSON.stringify(columns.map(column=>row[column]??null));const owner=keys.get(key);if(owner&&owner!==row.influencer_id)return {...eligibility,canMerge:false,message:`Both creators are used in the same ${table}. Review the overlapping records before replacement; existing jobs and prices are preserved.`};keys.set(key,row.influencer_id??"");}
   }
-  const rates=await db.from("rate_card_lines").select("version_id,platform,deliverable,price_type,influencer_id").in("influencer_id",[targetInfluencerId,sourceInfluencerId]);
+  const rates=await db.from("rate_card_lines").select("version_id,platform,deliverable,price_type,package_key,influencer_id").in("influencer_id",[targetInfluencerId,sourceInfluencerId]);
   if(rates.error)return {...eligibility,canMerge:false,message:rates.error.message};
   const rateKeys=new Set<string>();
-  for(const rate of rates.data??[]){const key=JSON.stringify([rate.version_id,rate.platform,rate.deliverable,rate.price_type]);if(rateKeys.has(key))return {...eligibility,canMerge:false,message:"Both creators have prices in the same rate card. Resolve the overlapping prices before replacing the creator; no prices have been removed."};rateKeys.add(key);}
+  for(const rate of rates.data??[]){const key=JSON.stringify([rate.version_id,rate.platform,rate.deliverable,rate.price_type,rate.package_key??""]);if(rateKeys.has(key))return {...eligibility,canMerge:false,message:"Both creators have prices in the same rate card. Resolve the overlapping prices before replacing the creator; no prices have been removed."};rateKeys.add(key);}
   const avatars=await db.from("rate_card_creator_avatars").select("card_id").in("creator_ref",[`inf:${targetInfluencerId}`,`inf:${sourceInfluencerId}`]);
   if(avatars.error)return {...eligibility,canMerge:false,message:avatars.error.message};
   const cards=new Set<string>();for(const row of avatars.data??[]){if(cards.has(row.card_id))return {...eligibility,canMerge:false,message:"Both creators have a custom photo in the same rate card. Choose one photo before combining."};cards.add(row.card_id);}

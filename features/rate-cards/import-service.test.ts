@@ -2,6 +2,7 @@ import {test} from "node:test";
 import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
 import {parseUpload} from "./import-service";
+import {buildPackageTemplate} from "./workbook";
 const a="inf:00000000-0000-4000-8000-000000000001",b="inf:00000000-0000-4000-8000-000000000002";
 async function fixture(platform="all", urls=["https://instagram.com/creator/","https://tiktok.com/@creator","https://youtube.com/@creator"]){const book=new ExcelJS.Workbook(),sheet=book.addWorksheet("Rates");sheet.addRow(["Profile URL 1","Profile URL 2","Profile URL 3","Platform","Deliverable Type","Client Selling Price","Client Currency"]);sheet.addRow([...urls,platform,platform==="all"?"reel":"tiktok_video",100,"EGP"]);const form=new FormData();form.set("file",new File([await book.xlsx.writeBuffer() as ArrayBuffer],"rates.xlsx"));return form;}
 function database(owners:Record<string,string[]>){return {
@@ -24,4 +25,11 @@ test("price platform can match the second URL and only one link is required",asy
 test("link order does not change owner and repeated links are deduplicated",async()=>{
  const rows=await parseUpload(database({instagram:[a]}),await fixture("all",["https://youtube.com/@creator","https://tiktok.com/@creator","https://instagram.com/creator/"]));assert.equal(rows[0].rate?.creator_ref,a);assert.equal(rows[0].profile_urls?.length,3);
  const dup=await parseUpload(database({instagram:[a]}),await fixture("all",["https://instagram.com/creator/","https://instagram.com/creator/?utm_source=x",""]));assert.equal(dup[0].profile_urls?.length,1);
+});
+test("package upload matches an existing second platform and keeps one package with extras",async()=>{
+ const book=new ExcelJS.Workbook();await book.xlsx.load(await buildPackageTemplate(["EGP"]));
+ book.getWorksheet("Packages")!.getRow(2).values=["https://instagram.com/creator","https://tiktok.com/@creator","","","","launch","Launch Package",1,1,70,"EGP",100,"EGP",10,20,2,5,10,1];
+ const form=new FormData();form.set("file",new File([await book.xlsx.writeBuffer() as ArrayBuffer],"packages.xlsx"));
+ const rows=await parseUpload(database({tiktok:[a]}),form);assert.equal(rows.length,1);assert.equal(rows[0].status,"ready");assert.equal(rows[0].rate!.creator_ref,a);assert.equal(rows[0].rate!.deliverable,"package");assert.equal(rows[0].rates!.length,6);assert.equal(rows[0].profile_urls!.length,2);
+ const conflict=await parseUpload(database({instagram:[a],tiktok:[b]}),form);assert.equal(conflict[0].issues[0],"profileConflict");
 });

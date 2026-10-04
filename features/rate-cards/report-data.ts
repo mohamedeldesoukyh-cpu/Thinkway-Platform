@@ -1,3 +1,4 @@
+import type {PackageDetails} from "./packages";
 import type {SupabaseClient} from "@supabase/supabase-js";
 import {buildCreatorGroup} from "@/features/discovery/shortlists/export/shortlist-document";
 import {embedShortlistAvatarDataUri} from "@/features/discovery/shortlists/export/shortlist-export-avatars";
@@ -10,13 +11,13 @@ export async function loadRateCardReport(db:SupabaseClient,id:string):Promise<Ra
   const versionResult=await db.from("rate_card_register").select("*").eq("id",id).single();
   if(versionResult.error)throw new Error("invalid");const v=versionResult.data as RateVersion;
   // Explicit allowlist: never read internal cost amounts or private pricing notes for reports.
-  const identities=new Set<string>();const prices=new Map<string,ClientRate[]>();
+  const scopes=new Map<string,PackageDetails[]>();const identities=new Set<string>();const prices=new Map<string,ClientRate[]>();
   for(let from=0;;from+=1000){
-    const r=await db.from("rate_card_lines").select("creator_ref").eq("version_id",id).order("id").range(from,from+999);if(r.error)throw r.error;
-    for(const row of r.data??[])identities.add(row.creator_ref);if((r.data?.length??0)<1000)break;
+    const r=await db.from("rate_card_lines").select("creator_ref,package_details").eq("version_id",id).order("id").range(from,from+999);if(r.error)throw r.error;
+    for(const row of r.data??[]){identities.add(row.creator_ref);if(row.package_details)scopes.set(row.creator_ref,[...(scopes.get(row.creator_ref)??[]),row.package_details as PackageDetails]);}if((r.data?.length??0)<1000)break;
   }
   for(let from=0;;from+=1000){
-    const r=await db.from("rate_card_lines").select("creator_ref,platform,deliverable,amount,currency,agency_fee_percent,period_months").eq("version_id",id).eq("price_type","client_price").order("id").range(from,from+999);if(r.error)throw r.error;
+    const r=await db.from("rate_card_lines").select("creator_ref,platform,deliverable,amount,currency,agency_fee_percent,period_months,package_key,package_details").eq("version_id",id).eq("price_type","client_price").order("id").range(from,from+999);if(r.error)throw r.error;
     for(const {creator_ref,...rate} of r.data??[])prices.set(creator_ref,[...(prices.get(creator_ref)??[]),rate as ClientRate]);if((r.data?.length??0)<1000)break;
   }
   const creators:RateCardReport["creators"]=[];const refs=[...identities];
@@ -31,9 +32,9 @@ export async function loadRateCardReport(db:SupabaseClient,id:string):Promise<Ra
       if(!group)throw new Error("unmatched");
       if(avatars.has(ref)){group.avatarUrl=avatars.get(ref)!;group.avatarProxyUrl=null;}
       const existing=creators.find(c=>c.group.creatorKey===creator.unified_id);
-      if(existing){existing.rates.push(...(prices.get(ref)??[]));continue;}
+      if(existing){existing.rates.push(...(prices.get(ref)??[]));existing.packageScopes?.push(...(scopes.get(ref)??[]));continue;}
       group.creatorKey=creator.unified_id;
-      creators.push({group,rates:prices.get(ref)??[],performance:creator.platforms.map(p=>({platform:p.platform,followers:p.follower_count,engagement:p.engagement_rate,views:p.avg_views??null,likes:p.avg_likes??null,comments:p.avg_comments??null,audienceCountry:p.audience_country,profileUrl:p.profile_url}))});
+      creators.push({group,packageScopes:scopes.get(ref)??[],rates:prices.get(ref)??[],performance:creator.platforms.map(p=>({platform:p.platform,followers:p.follower_count,engagement:p.engagement_rate,views:p.avg_views??null,likes:p.avg_likes??null,comments:p.avg_comments??null,audienceCountry:p.audience_country,profileUrl:p.profile_url}))});
     }
   }
   // Bound image concurrency; reuse the existing protected image fetching pipeline.

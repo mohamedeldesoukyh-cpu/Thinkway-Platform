@@ -20,9 +20,9 @@ export type Language = "en" | "ar";
 export function textFor(lang:Language,key:Label) { return labels[key][lang === "ar" ? 1 : 0]; }
 export function errorLabel(error:unknown):Label { const msg=error instanceof Error?error.message:""; if(msg.includes("stale"))return "stale"; if(msg.includes("permission"))return "permission"; if(msg.includes("duplicate")||msg.includes("unique"))return "duplicateError"; if(msg==="currency")return "currencyError"; if(msg in labels)return msg as Label; return "error"; }
 
-const arabicTaxonomy:Record<string,string>={all:"جميع المنصات",usage_right:"حقوق الاستخدام",boosting:"الترويج",event_attendance:"حضور فعالية",instagram:"إنستغرام",tiktok:"تيك توك",snapchat:"سناب شات",youtube:"يوتيوب",facebook:"فيسبوك",twitter:"إكس",linkedin:"لينكدإن",other:"أخرى",ugc_video:"فيديو محتوى المستخدم",post:"منشور",reel:"ريل",story:"قصة",live:"بث مباشر",video:"فيديو",short:"فيديو قصير",dedicated:"فيديو مخصص",spotlight:"سبوت لايت",group_post:"منشور مجموعة"};
+const arabicTaxonomy:Record<string,string>={package:"باقة",all:"جميع المنصات",usage_right:"حقوق الاستخدام",boosting:"الترويج",event_attendance:"حضور فعالية",instagram:"إنستغرام",tiktok:"تيك توك",snapchat:"سناب شات",youtube:"يوتيوب",facebook:"فيسبوك",twitter:"إكس",linkedin:"لينكدإن",other:"أخرى",ugc_video:"فيديو محتوى المستخدم",post:"منشور",reel:"ريل",story:"قصة",live:"بث مباشر",video:"فيديو",short:"فيديو قصير",dedicated:"فيديو مخصص",spotlight:"سبوت لايت",group_post:"منشور مجموعة"};
 export function taxonomyLabel(value:string,lang:Language,fallback?:string){
-  if(lang!=="ar")return value==="all"?"All Platforms":fallback??value.replaceAll("_"," ");
+  if(lang!=="ar")return value==="package"?"Package":value==="all"?"All Platforms":fallback??value.replaceAll("_"," ");
   if(arabicTaxonomy[value])return arabicTaxonomy[value];
   const [platform,...type]=value.split("_");return `${arabicTaxonomy[platform]??platform} ${arabicTaxonomy[type.join("_")]??type.join(" ")}`;
 }

@@ -3,6 +3,34 @@ import ExcelJS from "exceljs";
 import { DELIVERABLE_TYPES_BY_PLATFORM } from "@/lib/campaigns/deliverable-taxonomy";
 
 export const RATE_HEADERS=["Profile URL 1","Profile URL 2","Profile URL 3","Creator Name","Creator ID","Platform","Deliverable Type","Creator Cost","Creator Currency","Client Selling Price","Client Currency","GP %","Margin / Markup %","Agency Fee %","Notes","Period (Months)","Usage Rights Monthly Creator Cost","Usage Rights Monthly Client Price","Usage Rights Period (Months)","Boosting Monthly Creator Cost","Boosting Monthly Client Price","Boosting Period (Months)","Event Attendance Creator Cost","Event Attendance Client Price"];
+export const PACKAGE_HEADERS=["Profile URL 1","Profile URL 2","Profile URL 3","Creator Name","Creator ID","Package Code","Package Name","Reels","Stories","Package Creator Cost","Creator Currency","Package Client Price","Client Currency","Usage Rights Monthly Creator Cost","Usage Rights Monthly Client Price","Usage Rights Period (Months)","Boosting Monthly Creator Cost","Boosting Monthly Client Price","Boosting Period (Months)","Agency Fee %","Notes"];
+export async function buildPackageTemplate(currencies:string[]){
+ if(!currencies.length)throw new Error("currency");
+ const book=new ExcelJS.Workbook(),sheet=book.addWorksheet("Packages"),lists=book.addWorksheet("Lists");
+ sheet.addRow(PACKAGE_HEADERS);sheet.getRow(1).font={bold:true,color:{argb:"FFFFFFFF"}};sheet.getRow(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1248D8"}};
+ sheet.views=[{state:"frozen",ySplit:1}];sheet.columns.forEach(c=>c.width=26);for(const col of [1,2,3])sheet.getColumn(col).width=45;
+ currencies.forEach((c,i)=>lists.getCell(i+1,1).value=c);
+ for(let row=2;row<=5001;row++){
+  for(const col of [11,13])sheet.getCell(row,col).dataValidation={type:"list",allowBlank:true,formulae:[`Lists!$A$1:$A$${currencies.length}`],showErrorMessage:true,error:"Choose a listed currency."};
+  for(const col of [8,9,16,19])sheet.getCell(row,col).dataValidation={type:"whole",operator:"between",formulae:[col<10?0:1,col<10?1000:120],allowBlank:true,showErrorMessage:true,error:col<10?"Enter a whole quantity from 0 to 1000.":"Enter months from 1 to 120."};
+ }
+ const instructions=book.addWorksheet("Instructions");instructions.getColumn(1).width=125;
+ instructions.addRows([
+  ["Creator Packages: one row per creator + package. Use Package Code (letters, numbers, - or _) to identify an offer; a different code creates another package. Keep the code unchanged to update its prices."],
+  ["Paste one to three profile URLs for the SAME creator, in any order. These links define the platforms INCLUDED in this package, even if other accounts exist in the system."],
+  ["Reels is the number of original reels shared/mirrored to every linked platform. Stories is the number of stories on linked Instagram and Facebook accounts only; TikTok is excluded from story delivery. At least one quantity is required."],
+  ["Enter the total Package Creator Cost and/or Package Client Price once. Do not multiply the package price by the number of platforms or deliverables. Choose the matching currencies."],
+  ["Usage Rights and Boosting are separate monthly rates: monthly amount × months. Agency Fee is not included in client reports. Notes and creator costs are internal."],
+  ["Examples is a reference sheet only and will not be imported. Replace sample profile links with actual creator URLs when entering your Packages rows. Individual Rates and older Rate Card templates are also accepted by the same upload button."],
+  ["صف واحد لكل مبدع وباقة. الروابط تحدد منصات الباقة. الريل يُنشر على كل المنصات المرفقة والستوري على إنستغرام وفيسبوك فقط. سعر الباقة يُحتسب مرة واحدة وحقوق الاستخدام والترويج مبالغ شهرية منفصلة."],
+ ]);
+ const examples=book.addWorksheet("Examples");examples.addRow(PACKAGE_HEADERS);examples.columns.forEach(c=>c.width=26);
+ for(const [name,platforms,price,ur,boost] of [["Ahmed",["instagram","tiktok","facebook"],100000,20000,10000],["Mostafa",["instagram","tiktok"],400000,30000,20000],["Sara",["facebook"],700000,90000,40000]] as const){
+  const links=platforms.map(p=>`https://${p}.com/${p==="tiktok"?"@":""}${name.toLowerCase()}-example`);
+  examples.addRow([links[0],links[1]??"",links[2]??"",name,"","reel-story","Reel + Story Package",1,1,"","EGP",price,"EGP","",ur,1,"",boost,1,"",""]);
+ }
+ return book.xlsx.writeBuffer();
+}
 export async function buildRateTemplate(currencies:string[]) {
   if(!currencies.length)throw new Error("currency");
   const book=new ExcelJS.Workbook(); const sheet=book.addWorksheet("Rates");
@@ -29,17 +57,18 @@ export async function buildRateTemplate(currencies:string[]) {
 }
 export async function readRateWorkbook(bytes:ArrayBuffer):Promise<{row:number;raw:Record<string,string>;unsupported:boolean}[]> {
   const book=new ExcelJS.Workbook();await book.xlsx.load(bytes);
-  const sheet=book.getWorksheet("Rates")??book.worksheets[0];if(!sheet||sheet.rowCount>5001)throw new Error("file");
+  const sheet=book.getWorksheet("Packages")??book.getWorksheet("Rates")??book.worksheets[0];if(!sheet||sheet.rowCount>5001)throw new Error("file");
   const headers=sheet.getRow(1).values as unknown[];
   const required=headers.includes("Rate")?["Creator ID","Platform","Deliverable Type","Rate","Currency","Rate Type"]:["Creator ID","Platform","Deliverable Type","Creator Cost","Creator Currency","Client Selling Price","Client Currency"];
-  if(!(["Profile URL","Profile URL 1","Profile URL 2","Profile URL 3"].some(h=>headers.includes(h)) ? headers.includes("Deliverable Type") && ((headers.includes("Creator Cost") && headers.includes("Creator Currency")) || (headers.includes("Client Selling Price") && headers.includes("Client Currency"))) : required.every(h=>headers.includes(h))))throw new Error("file");
+  const packageFile=headers.includes("Package Code");
+  if(packageFile ? !["Profile URL 1","Package Name","Reels","Stories","Package Creator Cost","Creator Currency","Package Client Price","Client Currency"].every(h=>headers.includes(h)) : !(["Profile URL","Profile URL 1","Profile URL 2","Profile URL 3"].some(h=>headers.includes(h)) ? headers.includes("Deliverable Type") && ((headers.includes("Creator Cost") && headers.includes("Creator Currency")) || (headers.includes("Client Selling Price") && headers.includes("Client Currency"))) : required.every(h=>headers.includes(h))))throw new Error("file");
   if(new Set(headers.filter(Boolean)).size!==headers.filter(Boolean).length)throw new Error("file");
   const result:{row:number;raw:Record<string,string>;unsupported:boolean}[]=[];
   for(let n=2;n<=sheet.rowCount;n++) {
     const row=sheet.getRow(n);if(!row.hasValues)continue;
     let unsupported=false;const raw:Record<string,string>={};
     row.eachCell((c,i)=>{if(["GP %","Margin / Markup %"].includes(String(headers[i])))return;if(["Profile URL","Profile URL 1","Profile URL 2","Profile URL 3","Instagram Handle","TikTok Handle","Other Platform Handle"].includes(String(headers[i]))&&typeof c.value==="object"&&c.value!==null&&"hyperlink" in c.value){raw[String(headers[i])]=c.value.hyperlink.trim();return;}if(typeof c.value==="object"&&c.value!==null)unsupported=true;raw[String(headers[i])]=typeof c.value==="object"&&c.value!==null?"":c.text.trim();});
-    if(unsupported||Object.values(raw).some(Boolean))result.push({row:n,raw,unsupported});
+    if(unsupported||Object.values(raw).some(Boolean)){if(packageFile)raw["Package Code"]??="";result.push({row:n,raw,unsupported});}
   }
   if(!result.length)throw new Error("file");return result;
 }
