@@ -46,6 +46,14 @@ const facebookPeople = parseProfileInput("https://www.facebook.com/people/Jane-D
 assert.ok(facebookPeople);
 assert.equal(facebookPeople.normalized_username, "id:987654321");
 
+const facebookNamedPage = parseProfileInput("https://www.facebook.com/p/Jane-Doe-987654321/");
+assert.equal(facebookNamedPage?.normalized_username, "id:987654321");
+assert.equal(facebookNamedPage?.profile_url, "https://www.facebook.com/profile.php?id=987654321");
+assert.equal(parseProfileInput("https://www.facebook.com/p/%D8%A3%D9%85%D9%84-123456789")?.normalized_username, "id:123456789");
+assert.equal(parseProfileInput("https://www.facebook.com/p/"), null);
+assert.equal(parseProfileInput("https://www.facebook.com/p/Name-without-id"), null);
+assert.equal(parseProfileInput("https://www.facebook.com/p/Jane-987654321/posts/123"), null);
+
 assert.equal(parseProfileInput("https://www.facebook.com/watch/?v=123"), null);
 assert.equal(
   parseProfileInput("https://www.facebook.com/search/top?q=menna"),

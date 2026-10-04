@@ -33,3 +33,18 @@ test("package upload matches an existing second platform and keeps one package w
  const rows=await parseUpload(database({tiktok:[a]}),form);assert.equal(rows.length,1);assert.equal(rows[0].status,"ready");assert.equal(rows[0].rate!.creator_ref,a);assert.equal(rows[0].rate!.deliverable,"package");assert.equal(rows[0].rates!.length,6);assert.equal(rows[0].profile_urls!.length,2);
  const conflict=await parseUpload(database({instagram:[a],tiktok:[b]}),form);assert.equal(conflict[0].issues[0],"profileConflict");
 });
+
+test("existing IG anchors new TT and named Facebook page without matching the p shell",async()=>{
+ const db=database({instagram:[a]});
+ const originalRpc=db.rpc.bind(db);
+ db.rpc=(async(name:any,args:any)=>{
+   assert.ok(args.p_candidates.every((c:any)=>c.handle!=="p"));
+   assert.ok(args.p_candidates.some((c:any)=>c.platform==="facebook"&&c.handle==="id:100063562847518"));
+   return originalRpc(name,args);
+ }) as typeof db.rpc;
+ const rows=await parseUpload(db,await fixture("all",["https://instagram.com/aml_abdelhameed","https://tiktok.com/@amlabdelhameed0","https://facebook.com/p/Aml-abdelhameed-100063562847518/"]));
+ assert.equal(rows[0].status,"ready");
+ assert.equal(rows[0].rate?.creator_ref,a);
+ assert.equal(rows[0].pending_creator,undefined);
+ assert.deepEqual(rows[0].profile_urls,["https://www.instagram.com/aml_abdelhameed/","https://www.tiktok.com/@amlabdelhameed0","https://www.facebook.com/profile.php?id=100063562847518"]);
+});

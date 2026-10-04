@@ -3,6 +3,7 @@
  * Shared by profile URL parsing and content-URL handle extraction.
  */
 export const FACEBOOK_RESERVED_PATH_SEGMENTS = new Set([
+  "p",
   "watch",
   "reel",
   "reels",

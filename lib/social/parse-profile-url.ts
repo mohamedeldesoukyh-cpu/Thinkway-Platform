@@ -162,6 +162,13 @@ function extractFacebookUsername(
   segments: string[],
   url?: URL
 ): string | null {
+  // Facebook's /p/Name-NumericID page links identify the page by the final ID,
+  // not by the shared routing segment "p".
+  if (segments[0]?.toLowerCase() === "p") {
+    const id = segments.length === 2 ? segments[1].match(/-(\d+)$/)?.[1] : null;
+    return id ? `id:${id}` : null;
+  }
+
   if (segments[0] === "profile.php") {
     const id = url?.searchParams.get("id")?.trim();
     return id && /^\d+$/.test(id) ? `id:${id}` : null;
