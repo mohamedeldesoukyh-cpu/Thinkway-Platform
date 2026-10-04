@@ -28,6 +28,7 @@ export function isAssignmentGridColumnVisible(
     case "costVatPercent": case "costVat": case "costTotal":
     case "usageRightsCost":
     case "gp":
+    case "fxGainLoss":
     case "margin":
     case "payout":
       return gates.showInternalFinancials && col(columnId);

@@ -40,11 +40,12 @@ export function CampaignMoneyTotal({ amounts, currency, displayAmount }: { amoun
   </span>;
 }
 
-export function CampaignLineFinancial({ line, metric }: { line: CampaignWorkspace["lines"][number]; metric: "cost" | "gp" | "margin_percent" }) {
+export function CampaignLineFinancial({ line, metric }: { line: CampaignWorkspace["lines"][number]; metric: "cost" | "gp" | "margin_percent" | "fx_gain_loss" }) {
   const workspace = useCampaignCurrency();
   const currency = workspace?.currency_code ?? line.currency_code;
   const financials = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: currency,
     rateToEgpByCurrency: new Map(Object.entries(workspace?.currency_rates ?? { [currency]: 1 })) });
+  if (metric === "fx_gain_loss") return <span className={financials.fx_gain_loss_egp < 0 ? "text-red-600" : financials.fx_gain_loss_egp > 0 ? "text-emerald-700" : "text-muted-foreground"}>{formatMoney(financials.fx_gain_loss_egp, "EGP")}</span>;
   if (metric === "margin_percent") return <span>{financials.margin_percent.toFixed(1)}%</span>;
   return <CampaignSummaryMoney amount={financials[metric]} currency={currency} metric={metric} lines={[line]} />;
 }

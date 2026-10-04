@@ -58,7 +58,8 @@ test("campaign totals use separate pairs including the exact negotiated header c
   const result = aggregateCampaignDisplayFinancials({ lines: [{ cost: 1000, revenue: 1500, currency_code: "AED", cost_fx_override: makeCreatorFx("AED", "USD", 0.28, 50), revenue_fx_override: makeCreatorFx("AED", "USD", 0.3, 50) }], displayCurrency: "USD", rateToEgpByCurrency: new Map([["AED", 20], ["USD", 60]]) });
   assert.equal(result.cost, 280);
   assert.equal(result.revenue, 450);
-  assert.equal(result.gp, 170);
+  assert.equal(result.gp, 150);
+  assert.equal(result.fx_gain_loss, 20);
 });
 
 test("billing descendants inherit the negotiated revenue rate", () => {

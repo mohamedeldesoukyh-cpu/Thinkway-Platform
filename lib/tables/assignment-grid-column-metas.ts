@@ -27,6 +27,7 @@ export const ASSIGNMENT_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = [
   { id: "vat", label: "Rev VAT" },
   { id: "totalBilling", label: "Total Billing" },
   { id: "gp", label: "GP" },
+  { id: "fxGainLoss", label: "FX Gain/Loss" },
   { id: "margin", label: "MGN" },
   { id: "opsStatus", label: "OPS" },
   { id: "billing", label: "Billing" },

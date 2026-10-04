@@ -28,6 +28,7 @@ export const ASSIGNMENT_GRID_COLUMN_WIDTH_PX = {
   vat: 140,
   totalBilling: 140,
   gp: 140,
+  fxGainLoss: 150,
   margin: 100,
   opsStatus: 120,
   billing: 120,

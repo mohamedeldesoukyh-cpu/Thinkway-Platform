@@ -161,6 +161,7 @@ export function CampaignDetailChrome({
     displayCurrency,
     displayFxRateToEgp
   );
+  const fxGainLoss = Number(workspace.financials.fx_gain_loss_egp ?? 0);
   const marginPercent =
     revenue > 0
       ? Math.round((gp / revenue) * 10000) / 100
@@ -312,6 +313,10 @@ export function CampaignDetailChrome({
             <b className={gp >= 0 ? "g" : "r"}>
               {<CampaignSummaryMoney amount={gp} currency={displayCurrency} metric="gp" />}
             </b>
+          </div>
+          <div>
+            <i>FX Gain/Loss</i>
+            <b className={fxGainLoss < 0 ? "r" : fxGainLoss > 0 ? "g" : undefined}>EGP {fxGainLoss.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>
           </div>
           <div>
             <i>Margin</i>

@@ -26,6 +26,6 @@ test("financial tracks keep creator costs before revenue and billing", () => {
   assert.deepEqual(ASSIGNMENT_GRID_PARENT_COLUMN_ORDER.slice(start, -1), [
     "cost", "usageRightsCost", "costVatPercent", "costVat", "costTotal",
     "revenue", "usageRights", "agencyFeePercent", "agencyFee", "revenueVatPercent",
-    "vat", "totalBilling", "gp", "margin", "opsStatus", "billing", "payout",
+    "vat", "totalBilling", "gp", "fxGainLoss", "margin", "opsStatus", "billing", "payout",
   ]);
 });

@@ -601,6 +601,7 @@ export function AssignmentSafeGrid({
                   {HIERARCHY_COLUMN_LABELS.gp}
                 </AssignmentGridCell>
               ) : null}
+              {gates.showInternalFinancials && col("fxGainLoss") && <AssignmentGridCell header columnId="fxGainLoss" className={SAFE_GRID_TH}>FX Gain/Loss</AssignmentGridCell>}
               {gates.showInternalFinancials && col("margin") ? (
                 <AssignmentGridCell header columnId="margin" className={cn(SAFE_GRID_TH, ASSIGNMENT_GRID_MONEY_COL)}>
                   {HIERARCHY_COLUMN_LABELS.margin}
@@ -853,6 +854,7 @@ export function AssignmentSafeGrid({
                             {<CampaignLineFinancial line={line} metric="gp" />}
                           </AssignmentGridCell>
                         ) : null}
+                        {gates.showInternalFinancials && col("fxGainLoss") && <AssignmentGridCell columnId="fxGainLoss" className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}><CampaignLineFinancial line={line} metric="fx_gain_loss" /></AssignmentGridCell>}
                         {gates.showInternalFinancials && col("margin") ? (
                           <AssignmentGridCell
                             columnId="margin"

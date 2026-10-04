@@ -4,6 +4,8 @@ import { rollupLineClientCommercial } from "@/lib/assignments/client-billing-com
 import { formatMarginPercent } from "@/lib/domains/billing/types";
 
 export type CampaignLineCommercialFxInput = {
+  /** Frozen cost-currency / revenue-currency cross rate for a mixed-currency FX baseline. */
+  fx_cost_revenue_cross_rate?: number | null;
   cost_fx_override?: string | null;
   revenue_fx_override?: string | null;
   revenue?: number | null;
@@ -59,6 +61,8 @@ export type CampaignDisplayFinancials = {
   revenue: number;
   cost: number;
   gp: number;
+  fx_gain_loss: number;
+  fx_gain_loss_egp: number;
   margin_percent: number;
   revenue_egp: number;
   cost_egp: number;
@@ -88,6 +92,8 @@ export function aggregateCampaignDisplayFinancials(input: {
   let displayRevenue = 0;
   let displayCost = 0;
   let displayUrCost = 0;
+  let fxGainEgp = 0;
+  let fxGainDisplay = 0;
   let nativeBillable = 0;
   let nativeCost = 0;
 
@@ -122,6 +128,13 @@ export function aggregateCampaignDisplayFinancials(input: {
     costEgp += toEgp(costAmount, costRate);
     // UR cost follows client commercial currency (same as revenue / AF).
     urCostEgp += creatorFxAmount(usageRightsCost, { ...revConversion, to: "EGP", targetRateToEgp: 1, override: line.cost_fx_override });
+    // GP values cost at the revenue rate. The difference from actual converted cost is FX.
+    // For different entry currencies, freeze their system cross rate when setting custom FX.
+    const crossRate = costCcy === revCcy ? 1 : (line.fx_cost_revenue_cross_rate ?? costConversion.sourceRateToEgp / revConversion.sourceRateToEgp);
+    const baselineCost = costAmount * crossRate + usageRightsCost;
+    const actualCostEgp = toEgp(costAmount, costRate) + creatorFxAmount(usageRightsCost, { ...revConversion, to: "EGP", targetRateToEgp: 1, override: line.cost_fx_override });
+    fxGainEgp += toEgp(baselineCost, revRate) - actualCostEgp;
+    fxGainDisplay += creatorFxAmount(baselineCost, revConversion) - creatorFxAmount(costAmount, costConversion) - creatorFxAmount(usageRightsCost, { ...revConversion, override: line.cost_fx_override });
     nativeBillable += commercial.billableBase;
     nativeCost += costBeforeVat;
   }
@@ -130,11 +143,11 @@ export function aggregateCampaignDisplayFinancials(input: {
   costEgp = Math.round(costEgp * 100) / 100;
   urCostEgp = Math.round(urCostEgp * 100) / 100;
   // Cost KPI = vendor cost only; GP also deducts UR cost (quotation / line rollup semantics).
-  const gpEgp = Math.round((revenueEgp - costEgp - urCostEgp) * 100) / 100;
+  const gpEgp = Math.round((revenueEgp - costEgp - urCostEgp - fxGainEgp) * 100) / 100;
 
   const revenue = Math.round(displayRevenue * 100) / 100;
   const cost = Math.round(displayCost * 100) / 100;
-  const gp = Math.round((displayRevenue - displayCost - displayUrCost) * 100) / 100;
+  const gp = Math.round((displayRevenue - displayCost - displayUrCost - fxGainDisplay) * 100) / 100;
 
   return {
     currency_code: displayCurrency,
@@ -142,6 +155,8 @@ export function aggregateCampaignDisplayFinancials(input: {
     revenue,
     cost,
     gp,
+    fx_gain_loss: Math.round(fxGainDisplay * 100) / 100,
+    fx_gain_loss_egp: Math.round(fxGainEgp * 100) / 100,
     margin_percent: formatMarginPercent(revenue, gp),
     revenue_egp: revenueEgp,
     cost_egp: costEgp,

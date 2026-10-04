@@ -264,6 +264,7 @@ export type CampaignHeaderRow = {
 };
 
 export type CampaignLineRow = {
+  fx_cost_revenue_cross_rate?: number | null;
   cost_fx_override?: string | null;
   revenue_fx_override?: string | null;
   id: string;
@@ -1374,6 +1375,7 @@ export type Database = {
       campaign_lines: {
         Row: CampaignLineRow;
         Insert: {
+          fx_cost_revenue_cross_rate?: number | null;
           cost_fx_override?: string | null;
           revenue_fx_override?: string | null;
           id?: string;
@@ -3781,6 +3783,10 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      update_assignment_reporting_fx: {
+        Args: { p_campaign_id: string; p_line_id: string; p_cost_override: string | null; p_revenue_override: string | null; p_expected_cost_override: string | null; p_expected_revenue_override: string | null; p_expected_currency: string; p_expected_cost_currency: string };
+        Returns: number;
+      };
       resolve_effective_exchange_rate: {
         Args: {
           p_from_currency: string;

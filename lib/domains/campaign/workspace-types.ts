@@ -98,6 +98,8 @@ export type CampaignFinancialSummary = {
   revenue_egp: number;
   cost_egp: number;
   gp_egp: number;
+  fx_gain_loss?: number;
+  fx_gain_loss_egp?: number;
   /** FX rate for workspace `currency_code` → EGP. */
   display_fx_rate_to_egp: number;
   /** Same as budget — operational PO total in campaign currency. */
@@ -155,6 +157,7 @@ export type CampaignLineWorkspace = {
   revenue_vat_amount: number;
   revenue_after_vat: number;
   revenue_vat_exempt: boolean;
+  fx_cost_revenue_cross_rate?: number | null;
   cost_fx_override?: string | null;
   revenue_fx_override?: string | null;
   cost_received: number;

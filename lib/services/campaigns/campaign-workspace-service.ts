@@ -114,6 +114,7 @@ type LineRow = {
   revenue_vat_amount?: number;
   revenue_after_vat?: number;
   revenue_vat_exempt?: boolean;
+  fx_cost_revenue_cross_rate?: number | null;
   cost_fx_override?: string | null;
   revenue_fx_override?: string | null;
   cost_received?: number | null;
@@ -561,6 +562,7 @@ export async function getCampaignWorkspace(
       revenue_vat_amount: assignmentClientBilling({ ...line, revenue_before_vat: revenueBeforeVat }).vatAmount,
       revenue_after_vat: assignmentClientBilling({ ...line, revenue_before_vat: revenueBeforeVat }).totalBilling,
       revenue_vat_exempt: line.revenue_vat_exempt ?? false,
+      fx_cost_revenue_cross_rate: line.fx_cost_revenue_cross_rate ?? null,
       cost_fx_override: line.cost_fx_override ?? null,
       revenue_fx_override: line.revenue_fx_override ?? null,
       cost_received: Number(line.cost_received ?? line.cost_before_vat ?? cost),
@@ -854,6 +856,8 @@ export async function getCampaignWorkspace(
       revenue_egp: displayFinancials.revenue_egp,
       cost_egp: displayFinancials.cost_egp,
       gp_egp: displayFinancials.gp_egp,
+      fx_gain_loss: displayFinancials.fx_gain_loss,
+      fx_gain_loss_egp: displayFinancials.fx_gain_loss_egp,
       display_fx_rate_to_egp: displayFinancials.display_fx_rate_to_egp,
       po_total: operationalPo.po_amount,
       remaining_po: operationalPo.po_remaining,
