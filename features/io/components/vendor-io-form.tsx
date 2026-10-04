@@ -23,6 +23,7 @@ import { ClientIoTermsEditorField } from "@/features/io/components/client-io-ter
 import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-badge";
 import { VendorIoDocumentActions } from "@/features/io/components/vendor-io-document-actions";
+import { VendorIoCancelTrigger } from "./vendor-io-cancel-dialog";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
 import {
@@ -149,7 +150,8 @@ export function VendorIoForm({ row }: Props) {
             <DetailPill>{row.currency_code}</DetailPill>
             <IoStatusBadge status={row.status} />
             <IoTermsSourceBadge source={termsSource} />
-            <VendorIoUngenerateTrigger
+            <VendorIoCancelTrigger row={row} />
+                <VendorIoUngenerateTrigger
               row={row}
               disabled={!row.ungenerate_eligible}
               title={row.ungenerate_ineligible_reason ?? undefined}

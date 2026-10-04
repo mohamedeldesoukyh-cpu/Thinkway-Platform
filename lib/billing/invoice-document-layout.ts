@@ -16,6 +16,17 @@ export function resolveInvoiceDocumentLayout(
   return isInvoiceDocumentLayout(value) ? value : "detailed";
 }
 
+function billingPercentageLabel(lines: InvoiceLineItemRow[]): string {
+  const matches=lines.map(line=>line.description.match(/(\d+(?:\.\d+)?)% of original billable amount/));
+  if(!matches.some(Boolean))return '';
+  const percentages=[...new Set(matches.map(match=>match?.[1]??'100'))];
+  return percentages.length===1 ? percentages[0]+'% of original billable amount' : 'Mixed billing: '+percentages.map(value=>value+'%').join(', ')+' of respective original item amounts';
+}
+function withBillingPercentage(description: string, lines: InvoiceLineItemRow[]): string {
+  const label=billingPercentageLabel(lines);
+  return label ? description.replace(/\s*[·-]\s*\d+(?:\.\d+)?% of original billable amount/g,'')+' · '+label : description;
+}
+
 function buildPackageSubDescription(data: InvoiceDocumentData): string | null {
   const parts = [
     data.campaign?.brandName,
@@ -58,9 +69,10 @@ function buildPackageLineItem(input: {
 
 /** Strip trailing " · Deliverable #n" from invoice child descriptions. */
 export function stripDeliverableSuffix(description: string): string {
-  const idx = description.lastIndexOf(" · ");
-  if (idx <= 0) return description;
-  return description.slice(0, idx).trim();
+  return description
+    .replace(/\s*·\s*\d+(?:\.\d+)?% of original billable amount$/, "")
+    .replace(/\s*·\s*[^·]+ #\d+$/, "")
+    .trim();
 }
 
 function creatorGroupKey(line: InvoiceLineItemRow): string {
@@ -84,6 +96,7 @@ export function aggregateInvoiceLinesByCreator(
       revenueVatPercent: number;
       revenueVatExempt: boolean;
       childCount: number;
+      sourceLines: InvoiceLineItemRow[];
     }
   >();
 
@@ -101,6 +114,7 @@ export function aggregateInvoiceLinesByCreator(
         revenueVatPercent: line.revenueVatPercent,
         revenueVatExempt: line.revenueVatExempt,
         childCount: 1,
+        sourceLines: [line],
       });
       continue;
     }
@@ -113,6 +127,7 @@ export function aggregateInvoiceLinesByCreator(
     );
     existing.lineTotal = roundMoney(existing.lineTotal + Number(line.lineTotal ?? 0));
     existing.childCount += 1;
+    existing.sourceLines.push(line);
     if (!existing.revenueVatExempt && line.revenueVatExempt) {
       // keep taxable if any child is taxable
     } else if (existing.revenueVatExempt && !line.revenueVatExempt) {
@@ -123,7 +138,7 @@ export function aggregateInvoiceLinesByCreator(
 
   return [...groups.values()].map((group) => ({
     id: group.id,
-    description: group.description,
+    description: withBillingPercentage(group.description, group.sourceLines),
     subDescription:
       group.childCount > 1
         ? `${group.childCount} deliverables${
@@ -156,7 +171,7 @@ function applyPackageLayout(data: InvoiceDocumentData): InvoiceDocumentData {
     packageLines.push(
       buildPackageLineItem({
         id: "package-revenue",
-        description: campaignLabel,
+        description: withBillingPercentage(campaignLabel, data.lineItems),
         subDescription,
         revenueBeforeVat: revenueAmount,
         vatPercent: data.vatPercent,
@@ -169,7 +184,7 @@ function applyPackageLayout(data: InvoiceDocumentData): InvoiceDocumentData {
     packageLines.push(
       buildPackageLineItem({
         id: "package-agency-fee",
-        description: "Agency fees",
+        description: withBillingPercentage("Agency fees", data.lineItems),
         subDescription: null,
         revenueBeforeVat: agencyFeeAmount,
         vatPercent: data.vatPercent,
@@ -182,7 +197,7 @@ function applyPackageLayout(data: InvoiceDocumentData): InvoiceDocumentData {
     packageLines.push(
       buildPackageLineItem({
         id: "package-summary",
-        description: campaignLabel,
+        description: withBillingPercentage(campaignLabel, data.lineItems),
         subDescription,
         revenueBeforeVat: data.subtotal,
         vatPercent: data.vatPercent,

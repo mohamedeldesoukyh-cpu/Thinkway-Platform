@@ -139,3 +139,13 @@ for (const layout of ["detailed", "by_creator", "package"] as const) {
   assert.match(html, /Existing payment terms/);
   assert.equal(document.total, sample.total);
 }
+for (const percent of [50,60,33.33]) {
+ const partial = {...sample,lineItems:sample.lineItems.map(line=>({...line,description:line.description+' · '+percent+'% of original billable amount'}))};
+ for(const layout of ['by_creator','package'] as const){
+  const doc=applyInvoiceDocumentLayout(partial,layout);
+  assert.ok(doc.lineItems.every(line=>line.description.includes(percent+'% of original billable amount')));
+  assert.equal(doc.total,sample.total);
+ }
+}
+const mixed={...sample,lineItems:sample.lineItems.map((line,index)=>({...line,description:line.description+' · '+(index===0?50:60)+'% of original billable amount'}))};
+assert.match(applyInvoiceDocumentLayout(mixed,'package').lineItems[0].description,/Mixed billing: 50%, 60%/);

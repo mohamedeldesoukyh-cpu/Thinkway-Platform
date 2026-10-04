@@ -17,6 +17,7 @@ import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-butt
 import { VendorIoSpecialPaymentTermsCell } from "@/features/io/components/vendor-io-special-payment-terms-cell";
 import { VendorIoCampaignTermsEditor } from "./vendor-io-campaign-terms-editor";
 import { VendorIoRowContextMenu } from "@/features/io/components/vendor-io-row-context-menu";
+import { VendorIoCancelTrigger } from "./vendor-io-cancel-dialog";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
 import { FinanceSuiteEmpty } from "@/components/finance/suite";
@@ -154,7 +155,8 @@ function buildVendorIosColumns(
             Open
           </Button>
           <VendorIoSendButton row={row} variant="outline" />
-          <VendorIoUngenerateTrigger
+          <VendorIoCancelTrigger row={row} />
+                <VendorIoUngenerateTrigger
             row={row}
             disabled={!row.ungenerate_eligible}
             title={row.ungenerate_ineligible_reason ?? undefined}

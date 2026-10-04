@@ -92,7 +92,7 @@ async function ungenerateOneVendorIo(
 ): Promise<{ ok: true; documentNumber: string } | { ok: false; message: string }> {
   const { data: vendorIo, error: vioError } = await supabase
     .from("vendor_ios")
-    .select("id, document_number, campaign_header_id")
+    .select("id, document_number, campaign_header_id, status")
     .eq("id", vendorIoId)
     .eq("campaign_header_id", campaignId)
     .maybeSingle();
@@ -101,6 +101,7 @@ async function ungenerateOneVendorIo(
     return { ok: false, message: vioError?.message ?? "Vendor IO not found." };
   }
 
+  if ((vendorIo as {status?:string}).status !== "draft") return {ok:false,message:"Issued IOs must be cancelled, not deleted. Use Cancel IO to preserve the document and history."};
   const lineSnapshots = await loadLinkedLineSnapshots(supabase, vendorIoId);
   const eligibility = vendorIoUngenerateEligibility(lineSnapshots);
   if (!eligibility.eligible) {

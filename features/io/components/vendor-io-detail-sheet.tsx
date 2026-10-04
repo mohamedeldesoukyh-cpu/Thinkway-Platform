@@ -30,6 +30,7 @@ import { IoStatusBadge } from "@/features/io/components/io-status-badge";
 import { VendorIoCampaignTermsEditor } from "./vendor-io-campaign-terms-editor";
 import { VendorIoConditionsEditor } from "./vendor-io-conditions-editor";
 import { IoTermsSourceBadge } from "@/features/io/components/io-terms-source-badge";
+import { VendorIoCancelTrigger } from "./vendor-io-cancel-dialog";
 import { VendorIoUngenerateTrigger } from "@/features/io/components/vendor-io-ungenerate-dialog";
 import type { VendorIoRow } from "@/features/io/types";
 import { formatVendorIoDeliveryLabel } from "@/lib/io/vendor-io-delivery";
@@ -318,6 +319,7 @@ export function VendorIoDetailSheet({
               <div className="flex flex-wrap items-center gap-2">
                 <VendorIoSendButton row={row} />
                 <VendorIoManualApproveButton row={row} />
+                <VendorIoCancelTrigger row={row} />
                 <VendorIoUngenerateTrigger
                   row={row}
                   disabled={!row.ungenerate_eligible}

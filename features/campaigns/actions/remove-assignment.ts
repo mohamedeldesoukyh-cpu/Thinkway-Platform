@@ -24,6 +24,7 @@ export async function removeCampaignAssignmentAction(input: z.infer<typeof input
   if (error) return { ok: false, message: error.message };
   revalidatePath(`/campaigns/${parsed.data.campaignId}`);
   revalidatePath("/campaigns");
-  revalidatePath("/io");
-  return { ok: true, message: "Assignment removed. Add the new creator, then open Client IO and create an amendment for approval. Previous documents are preserved." };
+  revalidatePath("/ios/vendor");
+  revalidatePath("/billing");
+  return { ok: true, message: "Assignment and pending work cancelled. Related Vendor IOs are preserved as cancelled. Open Client IO to create and approve an amendment. No notification was sent." };
 }

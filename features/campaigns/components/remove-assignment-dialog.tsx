@@ -18,9 +18,10 @@ export function RemoveAssignmentDialog({ campaignId, lineId, name, onClose }: {
   return <Dialog open onOpenChange={(open) => { if (!open && !pending) onClose(); }}>
     <DialogContent>
       <DialogHeader><DialogTitle>Remove creator from assignment</DialogTitle>
-        <DialogDescription>Remove {name} from the active campaign. Their creator profile and assignment history stay in the system. An issued Client IO will require an amendment; its original document and approval remain recorded.</DialogDescription>
+        <DialogDescription>Cancel {name} and their pending deliverables, withdraw uninvoiced billing, and cancel their Vendor IO. Creator profiles, IO documents and approval history are preserved. An issued Client IO is marked for amendment. Invoices, payments, published work or an IO shared with other active assignments will block this action.</DialogDescription>
       </DialogHeader>
       <p className="text-sm text-muted-foreground">If you only selected the wrong creator and want to retain the price and deliverables, cancel and choose “Replace creator / edit” instead.</p>
+      <p className="text-sm text-muted-foreground">Confirm cancellation has been agreed where required. No notification is sent automatically.</p>
       <Label htmlFor="assignment-removal-reason">Reason</Label>
       <Textarea id="assignment-removal-reason" value={reason} onChange={e => setReason(e.target.value)} maxLength={2000} disabled={pending} />
       <DialogFooter><Button variant="outline" disabled={pending} onClick={onClose}>Cancel</Button>
