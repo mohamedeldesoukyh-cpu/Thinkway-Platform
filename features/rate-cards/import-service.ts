@@ -29,7 +29,7 @@ export async function parseUpload(db:SupabaseClient, form:FormData, progress?:(p
   const ambiguous=new Map<string,{ref:string;name:string}[]>();
   const pending=new Map<string,{profile_url:string;platform:string;handle:string}>();
   const profileRows=uploaded.map(({raw})=>{try{return rateImportProfiles(raw);}catch{return null;}});
-  const identities=uploaded.map(({raw},i)=>rateImportIdentity({...raw,"Profile URL":profileRows[i]?.[0]?.profile_url||raw["Profile URL"]||""}));
+  const identities=uploaded.map(({raw},i)=>rateImportIdentity({...raw,"Profile URL":(profileRows[i]?.find(p=>p.platform===normalizeRatePlatform(raw.Platform??""))??profileRows[i]?.[0])?.profile_url||raw["Profile URL"]||""}));
   const related=profileRows.map(profiles=>(profiles??[]).map(p=>rateImportIdentity({"Profile URL":p.profile_url})));
   const explicitIds=uploaded.map(({raw})=>rateImportIdentity({"Creator ID":raw["Creator ID"]??""}));
   const unique=[...new Map([...identities,...related.flat(),...explicitIds.filter(i=>i.id)].map(i=>[i.key,i])).values()];
