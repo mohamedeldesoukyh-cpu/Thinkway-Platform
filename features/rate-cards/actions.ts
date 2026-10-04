@@ -296,17 +296,20 @@ export async function ensureRateImportProfiles(profileUrls:string[],creatorRef?:
   }
   if(owners.size>1)throw new Error("profileConflict");
   const owner=[...owners.entries()][0];
-  const result=owner&&!owner[1]?{id:owner[0],name:"",created:false,queued:false,platform:parsed[0]!.platform,pollId:undefined as string|undefined}:await ensureImportCreator(owner?.[1]||urls[0]);
+  // Reuse matched creators without forcing provider acquisition during pricing imports.
+  const result=owner?{id:owner[0],name:"",created:false,queued:false,platform:parsed[0]!.platform,pollId:undefined as string|undefined}:await ensureImportCreator(urls[0]);
+  let enrichmentRequested=result.created;
   let resolved=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[result.id]});
   let creator=resolved.byUnifiedId.get(result.id)??resolved.byDiscoveryId.get(result.id.replace(/^dis:/,""));
   if(!creator)throw new Error("unmatched");
   for(const p of parsed){
     if(creator.platforms.some(account=>{const existing=parseProfileInput(account.profile_url||account.handle,isSocialPlatform(account.platform)?account.platform:undefined);return existing?.platform===p!.platform&&existing?.normalized_username===p!.normalized_username;}))continue;
+    enrichmentRequested=true;
     const linked=await addPlatformToCreator(typed,{profileUrl:p!.profile_url,actorId:userId,unifiedId:creator.unified_id,influencerId:creator.influencer_id,discoveredProfileId:creator.discovered_profile_id});
     if(!linked.ok)throw new Error("profileConflict");
     creator=linked.creator;result.queued=result.queued||linked.enrichmentQueued;
   }
-  return {...result,id:creator.unified_id,name:creator.display_name,pollId:creator.influencer_id??undefined};
+  return {...result,id:creator.unified_id,name:creator.display_name,pollId:creator.influencer_id??undefined,enrichmentRequested};
 }
 
 export async function ensureImportCreator(profileUrl:string, permission:"upload"|"edit"="upload"){
@@ -320,13 +323,14 @@ export async function ensureImportCreator(profileUrl:string, permission:"upload"
   if(matches.length>1)throw new Error("unmatched");
   if(matches.length===1){
     const match=matches[0];
+    if(permission==="upload")return {id:match.creator_ref,name:match.creator_name,created:false,queued:false,platform:parsed.platform,pollId:undefined as string|undefined};
     const refreshResult=await optionalEnrichment(()=>refreshCreatorMetricsBatchByUnifiedIds(typed,[match.creator_ref],{force:true,trigger:"manual",scope:"all",requestedBy:userId,feature:"add_creator"}));
     const refreshed=refreshResult?.results[0];
     return {id:match.creator_ref,name:match.creator_name,created:false,queued:refreshed?.queued??false,platform:parsed.platform,pollId:refreshed?.influencerId??undefined};
   }
-  let result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:false,returnExisting:true,skipPreviewEnrichment:true,tolerateEnrichmentFailure:true});
+  let result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:permission==="upload",returnExisting:true,skipPreviewEnrichment:true,tolerateEnrichmentFailure:true});
   // A concurrent import may win the unique-account insert; resolve the winner.
-  if(!result.ok)result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:false,returnExisting:true,skipPreviewEnrichment:true,tolerateEnrichmentFailure:true});
+  if(!result.ok)result=await addCreatorByProfileUrl(typed,{profileUrl,actorId:userId,skipIfExists:permission==="upload",returnExisting:true,skipPreviewEnrichment:true,tolerateEnrichmentFailure:true});
   if(!result.ok||!result.creator)throw new Error("enrichment");
   return {id:result.creator.unified_id,name:result.creator.display_name,created:result.created,queued:result.enrichmentQueued,platform:parsed.platform,pollId:result.creator.influencer_id??undefined};
 }
