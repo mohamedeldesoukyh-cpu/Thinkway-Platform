@@ -37,7 +37,7 @@ export function rateReportLayout(doc:RateCardReport,template:ReportTemplate){
 }
 export function rateReportPdfOptions(doc:RateCardReport,template:ReportTemplate){
  const {height}=rateReportLayout(doc,template);
- if(template==="client-list-by-name")return {...CREATOR_LIST_PDF_OPTIONS,height:`${height}px`,viewport:{...CREATOR_LIST_PDF_OPTIONS.viewport,height:Math.ceil(height)}};
+ if(template==="client-list-by-name")return {...CREATOR_LIST_PDF_OPTIONS,height:`${height}px`,viewport:{...CREATOR_LIST_PDF_OPTIONS.viewport,width:1600,height:Math.ceil(height)}};
  return {...CREATOR_LIST_PDF_OPTIONS,width:"297mm",height:"210mm",viewport:{...CREATOR_LIST_PDF_OPTIONS.viewport,width:1600,height:Math.ceil(height)}};
 }
 
