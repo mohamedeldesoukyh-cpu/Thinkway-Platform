@@ -26,7 +26,9 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
     let html=buildRateCardReportHtml(doc,template,lang);const pdfOptions=rateReportPdfOptions(doc,template);
     if(doc.preview)html=addRatePreviewNavigation(html,new URL(request.url),doc.preview,lang);
     const headers={"Cache-Control":"no-store",...EMBEDDABLE_DOCUMENT_FRAME_HEADERS,"Content-Disposition":`${query.get("download")==="1"?"attachment":"inline"}; filename="rate-card-${template}.${format}"`};
-    if(format==="html")return new Response(html,{headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
+    // Complete downloads can exceed a buffered serverless response even after
+    // shrinking images. Stream the HTML while preview stays bounded above.
+    if(format==="html")return new Response(new Blob([html]).stream(),{headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
     if(format==="pdf"){
       const pdf=await renderHtmlToPdf(html,pdfOptions);if(!pdf.ok)throw new Error("error");
       return new Response(new Uint8Array(pdf.buffer),{headers:{...headers,"Content-Type":"application/pdf"}});
