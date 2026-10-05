@@ -17,12 +17,12 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
   try{
     const {id}=await params;if(!z.uuid().safeParse(id).success)return new Response(null,{status:400});
     const db=await createSupabaseServerClient();if("error" in await requirePermission(db,"rate_cards.read"))return new Response(null,{status:403});
-    const template=query.get("template")==="creator-list-details"?"creator-list-details":"creator-list";
+    const template=query.get("template")==="client-list-by-name"?"client-list-by-name":query.get("template")==="creator-list-details"?"creator-list-details":"creator-list";
     const format=query.get("format")??"html";if(!["html","pdf","pptx"].includes(format))return new Response(null,{status:400});
     const preview=format==="html"&&query.get("download")!=="1";
     const page=z.coerce.number().int().min(1).safeParse(query.get("page")??1);
     if(!page.success)return new Response(null,{status:400});
-    const doc=await loadRateCardReport(db,id,preview?page.data:undefined);
+    const doc=await loadRateCardReport(db,id,preview?page.data:undefined,template!=="client-list-by-name");
     let html=buildRateCardReportHtml(doc,template,lang);const pdfOptions=rateReportPdfOptions(doc,template);
     if(doc.preview)html=addRatePreviewNavigation(html,new URL(request.url),doc.preview,lang);
     const headers={"Cache-Control":"no-store",...EMBEDDABLE_DOCUMENT_FRAME_HEADERS,"Content-Disposition":`${query.get("download")==="1"?"attachment":"inline"}; filename="rate-card-${template}.${format}"`};

@@ -29,7 +29,7 @@ async function main(){
  }
  const dir=".tmp/rate-card-export-qa";await mkdir(dir,{recursive:true});
  const browser=await puppeteer.launch({executablePath:"C:/Program Files/Google/Chrome/Application/chrome.exe",headless:true,args:["--no-sandbox"]});
- try{for(const lang of ["en","ar"] as const)for(const template of ["creator-list","creator-list-details"] as const){
+ try{for(const lang of ["en","ar"] as const)for(const template of ["creator-list","creator-list-details","client-list-by-name"] as const){
   const pdfOptions=rateReportPdfOptions(fixture,template);const html=buildRateCardReportHtml(fixture,template,lang),name=`${template}-${lang}`;await writeFile(`${dir}/${name}.html`,html);
   const page=await browser.newPage();await page.setViewport({width:1600,height:900});await page.setContent(html);await page.screenshot({path:`${dir}/${name}.png`});await (await page.$(".page:not(.page--cov):not(.page--end)"))!.screenshot({path:`${dir}/${name}-content.png`});assert.equal(await page.$$eval(".creator-card",els=>els.filter(e=>e.scrollHeight>e.clientHeight+2).length),0,`${name}: card overflow`);
   const overflow=await page.$$eval(".page",elements=>elements.filter(e=>e.scrollHeight>e.clientHeight+2).length);assert.equal(overflow,0,`${name}: page overflow`);

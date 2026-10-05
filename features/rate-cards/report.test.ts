@@ -1,8 +1,36 @@
 import assert from "node:assert/strict";
 import {test} from "node:test";
-import {buildRateCardReportHtml,safeProfileUrl,type RateCardReport} from "./report";
-import type {ShortlistDocCreatorGroup} from "@/features/discovery/shortlists/export/shortlist-document";
+import {buildRateCardReportHtml,safeProfileUrl} from "./report";
 import {fixture} from "./report-test-fixture";
+
+test("Client List by Name preserves creator order and performance without commercial content",()=>{
+ const doc=structuredClone(fixture);
+ doc.creators[0].group.creator="Zara";doc.creators[1].group.creator="Amal";
+ doc.creators[0].rates[0].tu_a_percent=987;
+ for(const lang of ["en","ar"] as const){
+  const html=buildRateCardReportHtml(doc,"client-list-by-name",lang);
+  assert.ok(html.indexOf("Zara")<html.indexOf("Amal"));
+  assert.equal((html.match(/class="creator-card/g)||[]).length,8);
+  assert.match(html,/120K/);assert.match(html,/3.5%|٣٫٥%/);assert.match(html,/3.2K|٣٫٢K/);
+  assert.ok(html.includes('href="https://www.instagram.com/creator/"'));
+  for(const hidden of ['class="price"','rate-list-heading-prices">','class="rate-closing-note"',"EGP","1,234,567.89","Agency Fee not included","Client selling prices only","travel-uplift\"><", "internal private notes"]){
+   assert.ok(!html.includes(hidden),`Must not include ${hidden}`);
+  }
+  assert.ok(html.includes(lang==="en"?"Client List by Name":"قائمة العميل بالأسماء"));
+  assert.ok(html.includes(lang==="en"?"Average views":"متوسط المشاهدات"));
+  assert.ok(html.includes(lang==="en"?"Average comments":"متوسط التعليقات"));
+ }
+});
+
+test("performance-only package reports retain individually selected platform links",()=>{
+ const doc=structuredClone(fixture);doc.creators=doc.creators.slice(0,1);
+ const c=doc.creators[0];c.rates=[];c.platformScopes=["instagram"];
+ c.packageScopes=[{name:"Video package",reels:1,stories:0,profiles:[{platform:"tiktok",profile_url:"https://www.tiktok.com/@creator"}]}];
+ const html=buildRateCardReportHtml(doc,"client-list-by-name");
+ assert.match(html,/href="https:\/\/www.instagram.com\/creator\/"/);
+ assert.match(html,/href="https:\/\/www.tiktok.com\/@creator"/);
+ assert.match(html,/120K/);
+});
 test("creator list shows compact metrics beneath each platform and uses the profile avatar for the portrait",()=>{
  const doc=structuredClone(fixture);doc.creators=doc.creators.slice(0,1);
  const creator=doc.creators[0];creator.group.avatarUrl="data:image/png;base64,aGVsbG8=";

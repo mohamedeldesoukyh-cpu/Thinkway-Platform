@@ -1,4 +1,5 @@
 export const labels = {
+ clientListByName:["Client List by Name","قائمة العميل بالأسماء"],performanceReportHelp:["Creator profiles and performance only. Creator cards and platform links are clickable in HTML, PDF and PPTX.","ملفات المبدعين وأداؤهم فقط. بطاقات المبدعين وروابط المنصات قابلة للنقر في HTML وPDF وPPTX."],
  enrichmentPaused:["Performance refresh runs separately. Status checks resume after the rate-card import finishes.","تحديث الأداء منفصل. يُستأنف فحص الحالة بعد اكتمال استيراد الأسعار."],
  previewExport:["Preview & Export","معاينة وتصدير"],templateLayoutHelp:["Prices follow the upload template: content, Usage Rights, Boosting and Event Attendance in separate columns.","الأسعار بنفس ترتيب قالب الرفع: المحتوى وحقوق الاستخدام والترويج وحضور الفعاليات في أعمدة منفصلة."],
  enrichmentDeferred:["Enrichment unavailable — retry later. Rates can still be saved.","الإثراء غير متاح — أعد المحاولة لاحقاً. يمكن حفظ الأسعار."],

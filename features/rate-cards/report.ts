@@ -9,17 +9,17 @@ import {packageDescription,type PackageDetails} from "./packages";
 import {travelFields,type TravelUplifts} from "./travel";
 export type ClientRate=TravelUplifts & {event_days?:number;package_key?:string;package_details?:PackageDetails|null;period_months?:number;platform:string;deliverable:string;amount:number;currency:string;agency_fee_percent:number|null};
 export type PublicPerformance={platform:string;followers:number|null;engagement:number|null;views:number|null;likes:number|null;comments:number|null;audienceCountry:string|null;profileUrl:string|null};
-export type ReportCreator={packageScopes?:PackageDetails[];group:ShortlistDocCreatorGroup;rates:ClientRate[];performance:PublicPerformance[]};
+export type ReportCreator={platformScopes?:string[];packageScopes?:PackageDetails[];group:ShortlistDocCreatorGroup;rates:ClientRate[];performance:PublicPerformance[]};
 export type RateCardReport={name:string;version:string;client:string;brand:string|null;effective:string|null;expiry:string|null;creators:ReportCreator[]};
-export type ReportTemplate="creator-list"|"creator-list-details";
+export type ReportTemplate="creator-list"|"creator-list-details"|"client-list-by-name";
 export const escapeHtml=(v:unknown)=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
 export function safeProfileUrl(value:string|null){try{const u=new URL(value??"");return ["https:","http:"].includes(u.protocol)?u.href:null;}catch{return null;}}
 /** Package links are the offer scope, not every account ever saved on the creator. */
 export function scopePackageReportCreator(c:ReportCreator):ReportCreator{
  const packages=[...c.rates.flatMap(r=>r.package_details?[r.package_details]:[]),...(c.packageScopes??[])];
- if(!packages.length||c.rates.some(r=>!r.package_details&&r.platform==="all"))return c;
+ if(!packages.length||c.platformScopes?.includes("all")||c.rates.some(r=>!r.package_details&&r.platform==="all"))return c;
  const profiles=[...new Map(packages.flatMap(p=>p.profiles).map(p=>[p.platform,p])).values()];
- const individualPlatforms=new Set(c.rates.filter(r=>!r.package_details).map(r=>r.platform));
+ const individualPlatforms=new Set([...(c.platformScopes??[]),...c.rates.filter(r=>!r.package_details).map(r=>r.platform)]);
  const links=[...profiles.map(p=>({platform:p.platform,url:p.profile_url,label:taxonomyLabel(p.platform,"en")})),...c.group.platformLinks.filter(l=>individualPlatforms.has(l.platform)&&!profiles.some(p=>p.platform===l.platform))];
  const performance=links.map(l=>c.performance.find(p=>p.platform===l.platform)??{platform:l.platform,followers:null,engagement:null,views:null,likes:null,comments:null,audienceCountry:null,profileUrl:l.url});
  return {...c,group:{...c.group,platformLinks:links,profileUrl:links[0]?.url??null,platform:links.map(l=>l.label).join(" · ")},performance};
@@ -40,7 +40,7 @@ export function rateReportPdfOptions(doc:RateCardReport,template:ReportTemplate)
 
 /** The existing Shortlist Creator List template is the single layout source for all formats. */
 export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTemplate,lang:Language="en"){
- const t=(key:Parameters<typeof textFor>[1])=>textFor(lang,key),e=escapeHtml,details=template==="creator-list-details";
+ const t=(key:Parameters<typeof textFor>[1])=>textFor(lang,key),e=escapeHtml,details=template==="creator-list-details",performanceOnly=template==="client-list-by-name";
  const format=(v:number|null)=>v==null?"—":v.toLocaleString(lang,{maximumFractionDigits:2});
  const icon=(platform:string)=>{const src=getReportPlatformIconDataUri(platform);return src?`<img class="rate-platform-icon" src="${src}" alt="" />`:"";};
  const followers=(v:number|null)=>v==null?"—":v>=1e6?format(v/1e6)+"M":v>=1e3?format(v/1e3)+"K":format(v);
@@ -53,13 +53,13 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
   return prices+(uplifts?`<div class="travel-uplifts"><small>Optional travel uplifts · not included in the base price</small>${uplifts}</div>`:"");
  };
  const supplement=(_creator:unknown,index:number)=>{
-  const c=entries[index];const prices=details?"":priceMarkup(c);
-  const links=c.group.platformLinks.map(l=>{const url=safeProfileUrl(l.url);const p=c.performance.find(p=>p.platform===l.platform);const platformLink=url?`<a href="${e(url)}" target="_blank" rel="noopener noreferrer">${icon(l.platform)}${e(l.label)}</a>`:`<span>${icon(l.platform)}${e(l.label)}</span>`;return details?platformLink:`<div class="rate-platform-summary">${platformLink}<small>${e(t("followers"))}: <b>${e(followers(p?.followers??null))}</b> · ER: <b>${p?.engagement==null?"—":e(format(p.engagement))+"%"}</b> · ${lang==="ar"?"متوسط الإعجابات":"Avg Likes"}: <b>${e(followers(p?.likes??null))}</b></small></div>`;}).filter(Boolean).join(details?" · ":"");
+  const c=entries[index];const prices=details||performanceOnly?"":priceMarkup(c);
+  const links=c.group.platformLinks.map(l=>{const url=safeProfileUrl(l.url);const p=c.performance.find(p=>p.platform===l.platform);const platformLink=url?`<a href="${e(url)}" target="_blank" rel="noopener noreferrer">${icon(l.platform)}${e(l.label)}</a>`:`<span>${icon(l.platform)}${e(l.label)}</span>`;return details?platformLink:`<div class="rate-platform-summary">${platformLink}<small>${e(t("followers"))}: <b>${e(followers(p?.followers??null))}</b> · ER: <b>${p?.engagement==null?"—":e(format(p.engagement))+"%"}</b> · ${lang==="ar"?"متوسط الإعجابات":"Avg Likes"}: <b>${e(followers(p?.likes??null))}</b></small>${performanceOnly?`<small>${e(t("avgViews"))}: <b>${e(followers(p?.views??null))}</b> · ${e(t("avgComments"))}: <b>${e(followers(p?.comments??null))}</b></small>`:""}</div>`;}).filter(Boolean).join(details?" · ":"");
   const profile=creators[index].profileUrl;
-  return `${profile?`<a class="rate-card-cover-link" href="${e(profile)}" target="_blank" rel="noopener noreferrer" aria-label="${e(c.group.creator)}"></a>`:""}<div class="rate-prices">${details?"":`<h3 class="rate-list-heading rate-list-heading-prices">${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h3>`}<div class="rate-price-grid">${prices}</div><nav>${details?"":`<h3 class="rate-list-heading">${lang==="ar"?"الأداء":"Performance"}</h3>`}${links}</nav></div>`;
+  return `${profile?`<a class="rate-card-cover-link" href="${e(profile)}" target="_blank" rel="noopener noreferrer" aria-label="${e(c.group.creator)}"></a>`:""}<div class="rate-prices">${details||performanceOnly?"":`<h3 class="rate-list-heading rate-list-heading-prices">${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h3>`}<div class="rate-price-grid">${prices}</div><nav>${details?"":`<h3 class="rate-list-heading">${lang==="ar"?"الأداء":"Performance"}</h3>`}${links}</nav></div>`;
  };
  return renderCreatorListReport({name:`${doc.client}${doc.brand?` · ${doc.brand}`:""}`,reference:`${doc.name} · ${doc.version}`,issuedDate:`${t("effective")}: ${doc.effective??"—"} · ${t("expiry")}: ${doc.expiry??"—"}`,creators},{
-  platformIcon:getReportPlatformIconDataUri,title:t(details?"creatorListDetails":"creatorList"),language:lang,cardsPerPage:layout.cardsPerPage,uniqueCreators:doc.creators.length,cardSupplement:supplement,
+  platformIcon:getReportPlatformIconDataUri,title:t(performanceOnly?"clientListByName":details?"creatorListDetails":"creatorList"),language:lang,cardsPerPage:layout.cardsPerPage,uniqueCreators:doc.creators.length,cardSupplement:supplement,
   wrapCard:(card,_creator,index)=>{
    if(!details)return card;
    const c=entries[index];const metrics=c.performance.map(p=>{
@@ -68,7 +68,7 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
    }).join("")||`<p>${e(t("noPerformance"))}</p>`;
    return `<div class="rate-detail-row">${card}<aside class="rate-performance"><section class="rate-detail-prices"><h2>${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h2><div class="rate-price-grid">${priceMarkup(c)}</div></section><h2>${e(t("performance"))}</h2><p>${e(c.group.country)} · ${e(c.group.tier)} · ${e(c.group.categories.join(" · "))}</p>${metrics}</aside></div>`;
   },
-  closingContent:`<div class="end__hd"><span class="end__eye">${e(doc.name)} · ${e(doc.version)}</span><h1>${doc.creators.length} ${e(t("creators"))}</h1><p>${e(t("reportHelp"))}</p></div><div class="rate-closing-note">${e(t("client_price"))} · ${e(t("feesSeparate"))}</div>`,
+  closingContent:`<div class="end__hd"><span class="end__eye">${e(doc.name)} · ${e(doc.version)}</span><h1>${doc.creators.length} ${e(t("creators"))}</h1><p>${e(t(performanceOnly?"performanceReportHelp":"reportHelp"))}</p></div>${performanceOnly?"":`<div class="rate-closing-note">${e(t("client_price"))} · ${e(t("feesSeparate"))}</div>`}`,
   extraCss:rateReportStyles(details,lang,layout.priceColumns)
  });
 }
