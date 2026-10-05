@@ -38,9 +38,11 @@ export type CreatorListPresentation = {
   cardSupplement?: (creator: CreatorListEntry, index: number) => string;
   wrapCard?: (html: string, creator: CreatorListEntry, index: number) => string;
   extraCss?: string; closingContent?: string;
+  platformIcon?: (platform: string) => string | null;
 };
 export function renderCreatorListReport(report: CreatorListReport, presentation: CreatorListPresentation = {}): string {
   const lang=presentation.language??"en",text=(en:string,ar:string)=>lang==="ar"?ar:en;
+  const platformIcon = presentation.platformIcon ?? getReportPlatformIconDataUri;
   const reportTitle=esc(presentation.title??text("Creator list","قائمة المبدعين"));
   const perPage=presentation.cardsPerPage??6;
   const uniqueCreators=presentation.uniqueCreators??report.creators.length;
@@ -67,7 +69,7 @@ export function renderCreatorListReport(report: CreatorListReport, presentation:
     const src = image(creator.portrait), href = link(creator.profileUrl);
     if (!src) missingPortraits++;
     if (href) links++;
-    const visual = `${src ? `<img src="${src}" alt="${esc(creator.name)}" loading="eager">` : `<div class="placeholder" aria-label="No portrait supplied">${esc(creator.name.slice(0, 1).toUpperCase())}</div>`}<span class="idx" aria-hidden="true">${String(index + 1).padStart(3, "0")}</span>${platform ? `<span class="pb pb--${platform === "Instagram" ? "ig" : "tt"}" title="${platform}" aria-hidden="true"><img src="${getReportPlatformIconDataUri(platform.toLowerCase())}" alt="" /></span>` : ""}`;
+    const visual = `${src ? `<img src="${src}" alt="${esc(creator.name)}" loading="eager">` : `<div class="placeholder" aria-label="No portrait supplied">${esc(creator.name.slice(0, 1).toUpperCase())}</div>`}<span class="idx" aria-hidden="true">${String(index + 1).padStart(3, "0")}</span>${platform ? `<span class="pb pb--${platform === "Instagram" ? "ig" : "tt"}" title="${platform}" aria-hidden="true"><img src="${platformIcon(platform.toLowerCase())}" alt="" /></span>` : ""}`;
     const avatar = image(creator.avatar);
     const identity = `<div class="creator-identity">${avatar ? `<img class="creator-avatar" src="${avatar}" alt="" aria-hidden="true" loading="eager">` : `<span class="creator-avatar" aria-hidden="true">${esc(creator.name.slice(0, 1).toUpperCase())}</span>`}<div class="creator-label"><h2 dir="auto">${esc(creator.name)}</h2>${creator.tier ? `<span class="creator-tier">${esc(creator.tier)}</span>` : ""}<p dir="auto">${esc(creator.handle)}</p></div></div>`;
     const card = `<article class="creator-card">${href ? `<a class="portrait" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${esc(creator.name)}">${visual}</a>` : `<div class="portrait">${visual}</div>`}${identity}${presentation.cardSupplement?.(creator,index)??""}<div class="creator-categories">${categories.length ? categories.map((category) => `<span class="creator-category">${esc(category)}</span>`).join("") : '<span class="creator-category creator-category--none">Categories not recorded</span>'}</div></article>`;

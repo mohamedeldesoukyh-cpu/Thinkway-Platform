@@ -8,6 +8,7 @@ import {renderHtmlPagesToImages,renderHtmlToPdf} from "@/lib/io/vendor-io-pdf";
 
 import {buildPptxFromPageImages} from "@/features/quotations/export/quotation-pptx-from-html";
 import {EMBEDDABLE_DOCUMENT_FRAME_HEADERS} from "@/lib/security/embeddable-document-headers";
+import {addRatePreviewNavigation} from "@/features/rate-cards/report-preview";
 
 export const maxDuration=300;
 export const dynamic="force-dynamic";
@@ -18,7 +19,12 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
     const db=await createSupabaseServerClient();if("error" in await requirePermission(db,"rate_cards.read"))return new Response(null,{status:403});
     const template=query.get("template")==="creator-list-details"?"creator-list-details":"creator-list";
     const format=query.get("format")??"html";if(!["html","pdf","pptx"].includes(format))return new Response(null,{status:400});
-    const doc=await loadRateCardReport(db,id);const html=buildRateCardReportHtml(doc,template,lang);const pdfOptions=rateReportPdfOptions(doc,template);
+    const preview=format==="html"&&query.get("download")!=="1";
+    const page=z.coerce.number().int().min(1).safeParse(query.get("page")??1);
+    if(!page.success)return new Response(null,{status:400});
+    const doc=await loadRateCardReport(db,id,preview?page.data:undefined);
+    let html=buildRateCardReportHtml(doc,template,lang);const pdfOptions=rateReportPdfOptions(doc,template);
+    if(doc.preview)html=addRatePreviewNavigation(html,new URL(request.url),doc.preview,lang);
     const headers={"Cache-Control":"no-store",...EMBEDDABLE_DOCUMENT_FRAME_HEADERS,"Content-Disposition":`${query.get("download")==="1"?"attachment":"inline"}; filename="rate-card-${template}.${format}"`};
     if(format==="html")return new Response(html,{headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
     if(format==="pdf"){
@@ -29,5 +35,5 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
     if(!images.ok)throw new Error("error");
     const buffer=await buildPptxFromPageImages(images.pages,doc.name);
     return new Response(new Uint8Array(buffer),{headers:{...headers,"Content-Type":"application/vnd.openxmlformats-officedocument.presentationml.presentation"}});
-  }catch(e){return Response.json({error:textFor(lang,errorLabel(e))},{status:422});}
+  }catch(e){console.error("rate-card.export.failed",e instanceof Error?e.message:"Report data could not be loaded");return Response.json({error:textFor(lang,errorLabel(e))},{status:422});}
 }

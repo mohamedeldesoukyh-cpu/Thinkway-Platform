@@ -1,4 +1,5 @@
-import {getReportPlatformIconDataUri} from "@/lib/performance/report/report-platform-icons";
+import {rateReportPlatformIcon as getReportPlatformIconDataUri} from "./report-icons";
+import {rateReportStyles,RATE_A4_HEIGHT} from "./report-styles";
 import {EXTRA_RATE_TYPES,requiresPeriod,periodLabel} from "@/lib/quotations/commercial-period";
 import type { ShortlistDocCreatorGroup } from "@/features/discovery/shortlists/export/shortlist-document";
 import {renderCreatorListReport,CREATOR_LIST_PDF_OPTIONS} from "@/features/discovery/shortlists/export/creator-list-html";
@@ -25,20 +26,16 @@ export function scopePackageReportCreator(c:ReportCreator):ReportCreator{
 }
 export function rateReportLayout(doc:RateCardReport,template:ReportTemplate){
  const maxRates=Math.max(0,...doc.creators.map(c=>c.rates.length));
- if(template==="creator-list-details"){
-  const maxPlatforms=Math.max(1,...doc.creators.map(c=>c.performance.length));
-  const cardHeight=Math.max(340,150+Math.ceil(maxRates/3)*120+maxPlatforms*76+Math.max(0,...doc.creators.map(c=>travelFields.filter(f=>c.rates.some(r=>r[f.key]!=null)).length))*30);
-  return {priceColumns:3,cardHeight,height:cardHeight*2+230,cardsPerPage:2};
- }
- const priceColumns=maxRates>4?2:1;
- const cardHeight=Math.max(690,320+Math.ceil(maxRates/priceColumns)*130+Math.max(0,...doc.creators.map(c=>travelFields.filter(f=>c.rates.some(r=>r[f.key]!=null)).length))*65,0);
- const metricHeight=64+Math.max(1,...doc.creators.map(c=>Math.max(c.performance.length,c.group.platformLinks.length)))*46;
- const height=cardHeight+metricHeight+210;
- return {priceColumns,cardHeight:cardHeight+metricHeight,height,cardsPerPage:maxRates>4?3:6};
+ const maxPlatforms=Math.max(1,...doc.creators.map(c=>c.performance.length));
+ const details=template==="creator-list-details";
+ const maxUplifts=Math.max(0,...doc.creators.map(c=>travelFields.filter(f=>c.rates.some(r=>r[f.key]!=null)).length));
+ const packageSpace=doc.creators.some(c=>c.rates.some(r=>r.package_details))?80:0;
+ const detailHeight=100+Math.ceil(maxRates/3)*80+maxPlatforms*70+maxUplifts*35+packageSpace;
+ return {priceColumns:details?3:maxRates>4?2:1,height:RATE_A4_HEIGHT,cardsPerPage:details?(detailHeight>460?1:2):3};
 }
 export function rateReportPdfOptions(doc:RateCardReport,template:ReportTemplate){
  const {height}=rateReportLayout(doc,template);
- return {...CREATOR_LIST_PDF_OPTIONS,height:`${height}px`,viewport:{...CREATOR_LIST_PDF_OPTIONS.viewport,width:1600,height}};
+ return {...CREATOR_LIST_PDF_OPTIONS,width:"297mm",height:"210mm",viewport:{...CREATOR_LIST_PDF_OPTIONS.viewport,width:1600,height:Math.ceil(height)}};
 }
 
 /** The existing Shortlist Creator List template is the single layout source for all formats. */
@@ -62,7 +59,7 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
   return `${profile?`<a class="rate-card-cover-link" href="${e(profile)}" target="_blank" rel="noopener noreferrer" aria-label="${e(c.group.creator)}"></a>`:""}<div class="rate-prices">${details?"":`<h3 class="rate-list-heading rate-list-heading-prices">${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h3>`}<div class="rate-price-grid">${prices}</div><nav>${details?"":`<h3 class="rate-list-heading">${lang==="ar"?"الأداء":"Performance"}</h3>`}${links}</nav></div>`;
  };
  return renderCreatorListReport({name:`${doc.client}${doc.brand?` · ${doc.brand}`:""}`,reference:`${doc.name} · ${doc.version}`,issuedDate:`${t("effective")}: ${doc.effective??"—"} · ${t("expiry")}: ${doc.expiry??"—"}`,creators},{
-  title:t(details?"creatorListDetails":"creatorList"),language:lang,cardsPerPage:layout.cardsPerPage,uniqueCreators:doc.creators.length,cardSupplement:supplement,
+  platformIcon:getReportPlatformIconDataUri,title:t(details?"creatorListDetails":"creatorList"),language:lang,cardsPerPage:layout.cardsPerPage,uniqueCreators:doc.creators.length,cardSupplement:supplement,
   wrapCard:(card,_creator,index)=>{
    if(!details)return card;
    const c=entries[index];const metrics=c.performance.map(p=>{
@@ -72,6 +69,6 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
    return `<div class="rate-detail-row">${card}<aside class="rate-performance"><section class="rate-detail-prices"><h2>${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h2><div class="rate-price-grid">${priceMarkup(c)}</div></section><h2>${e(t("performance"))}</h2><p>${e(c.group.country)} · ${e(c.group.tier)} · ${e(c.group.categories.join(" · "))}</p>${metrics}</aside></div>`;
   },
   closingContent:`<div class="end__hd"><span class="end__eye">${e(doc.name)} · ${e(doc.version)}</span><h1>${doc.creators.length} ${e(t("creators"))}</h1><p>${e(t("reportHelp"))}</p></div><div class="rate-closing-note">${e(t("client_price"))} · ${e(t("feesSeparate"))}</div>`,
-  extraCss:`.rate-list-heading{font-size:14px;line-height:1.4;font-weight:700;color:#080642;border-top:1px solid #d4d0e5;padding-top:8px;margin:10px 0 5px;text-align:start}.rate-list-heading-prices{color:#bf146f}.rate-platform-summary{border-top:1px solid #e5e3ee;padding-top:5px;margin-top:5px}.rate-platform-summary small{display:block;margin-top:3px;font-size:9px;line-height:1.5;color:#666477}.rate-platform-summary b{color:#080642}.travel-uplifts{grid-column:1/-1;border-top:1px solid #e5e3ee;margin-top:8px;padding-top:6px;font-size:11px}.travel-uplift{margin-top:4px}.travel-uplift small{display:block}.package-price-label{color:#bf146f}.rate-platform-icon{display:inline-block;width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-inline-end:5px;border:0;border-radius:0;background:transparent;box-shadow:none}.rate-performance h3 .rate-platform-icon{width:24px;height:24px}@page{size:1600px ${layout.height}px}.page{height:${layout.height}px}.rate-price-grid{display:grid;grid-template-columns:repeat(${layout.priceColumns},minmax(0,1fr));gap:0 12px}.creator-card{height:${layout.cardHeight}px;position:relative}.rate-card-cover-link{position:absolute;inset:0;z-index:1}.rate-prices nav{position:relative;z-index:2}.page footer span:last-child{direction:ltr}.portrait{height:180px}.rate-prices{margin-top:8px;font-size:10px;direction:${lang==="ar"?"rtl":"ltr"}}.rate-prices p{white-space:normal;text-align:start}.price{display:grid;gap:3px;border-top:1px solid #e5e3ee;padding-top:6px;margin-top:6px;overflow-wrap:anywhere}.price strong{font-size:14px}.price small{font-size:9px;line-height:1.4;color:#666477}.rate-prices nav{margin-top:8px;font-size:10px;color:#6551ad}.creator-card>*{flex-shrink:0}.creator-categories{max-height:52px;overflow:hidden}.creator-label h2,.creator-label p{text-align:start}.cards{grid-template-columns:repeat(${layout.cardsPerPage},minmax(0,1fr));min-height:${layout.cardHeight+30}px}.rate-detail-row{display:grid;grid-template-columns:${layout.priceColumns>1?560:300}px minmax(0,1fr);gap:24px;direction:ltr}.rate-detail-row .creator-card,.rate-performance{direction:${lang==="ar"?"rtl":"ltr"}}.rate-performance{padding:25px;background:#fff;border-radius:13px;color:#080642;height:${layout.cardHeight}px}.rate-performance h2{height:auto;text-align:start;font-size:24px;margin:0 0 12px}.rate-performance p{text-align:start;white-space:normal;font-family:inherit;margin-bottom:15px}.rate-performance section{border-top:1px solid #e5e3ee;padding:12px 0}.rate-performance h3{margin:0 0 12px;font-size:16px;color:#6551ad}.rate-performance dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0}.rate-performance dt{font-size:12px;color:#666477}.rate-performance dd{font-size:18px;font-weight:700;margin:4px 0}.rate-closing-note{margin-top:30px;color:#c4c1d6;font-size:18px}.end__hd p{white-space:normal}html[dir=rtl] .creator-identity{direction:rtl}${details?`.cards{grid-template-columns:1fr;gap:18px;min-height:0}.rate-detail-row{grid-template-columns:220px minmax(0,1fr);gap:16px}.rate-detail-row .creator-card{padding:10px}.rate-detail-row .portrait{height:145px}.rate-detail-row .creator-label h2{font-size:15px}.rate-detail-row .creator-label p{font-size:10px}.rate-detail-row .creator-categories{max-height:40px}.rate-performance{padding:16px}.rate-performance h2{font-size:18px;margin:0 0 6px}.rate-performance p{font-size:11px;margin-bottom:8px}.rate-performance section{padding:7px 0}.rate-performance h3{font-size:12px;margin:0 0 5px}.rate-performance h3 .rate-platform-icon{width:18px;height:18px}.rate-performance dl{grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}.rate-performance dt{font-size:10px}.rate-performance dd{font-size:14px;margin:2px 0}.rate-performance .rate-detail-prices{border-top:0;padding-top:0;margin-bottom:12px}.rate-detail-prices .price{margin:0;padding:5px 0}.rate-detail-prices .price>span{font-size:10px}.rate-detail-prices .price strong{font-size:13px}.rate-detail-prices .price small{font-size:9px}.rate-detail-prices h2{font-size:16px;margin:0 0 5px;color:#bf146f}.rate-detail-prices .rate-price-grid{gap:4px 14px}`:""} @media screen and (max-width:900px){.page{height:auto}.cards{grid-template-columns:repeat(2,minmax(0,1fr));min-height:0}.creator-card{height:auto}.portrait{height:280px;aspect-ratio:auto}.rate-detail-row{grid-template-columns:1fr}.rate-performance{height:auto}.rate-performance .rate-price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rate-performance dl{grid-template-columns:repeat(2,minmax(0,1fr))}${details?".cards{grid-template-columns:1fr}":""}}@media screen and (max-width:520px){.cards{grid-template-columns:1fr}}`
+  extraCss:rateReportStyles(details,lang,layout.priceColumns)
  });
 }
