@@ -4,7 +4,8 @@ import {requirePermission} from "@/lib/auth/permissions-server";
 import {loadRateCardReport} from "@/features/rate-cards/report-data";
 import {buildRateCardReportHtml,rateReportPdfOptions} from "@/features/rate-cards/report";
 import {errorLabel,textFor} from "@/features/rate-cards/labels";
-import {renderHtmlPagesToImages,renderHtmlToPdf} from "@/lib/io/vendor-io-pdf";
+import {renderHtmlPagesToImages} from "@/lib/io/vendor-io-pdf";
+import {renderRateCardPdf} from "@/features/rate-cards/report-pdf";
 
 import {buildPptxFromPageImages} from "@/features/quotations/export/quotation-pptx-from-html";
 import {EMBEDDABLE_DOCUMENT_FRAME_HEADERS} from "@/lib/security/embeddable-document-headers";
@@ -30,8 +31,8 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
     // shrinking images. Stream the HTML while preview stays bounded above.
     if(format==="html")return new Response(new Blob([html]).stream(),{headers:{...headers,"Content-Type":"text/html; charset=utf-8"}});
     if(format==="pdf"){
-      const pdf=await renderHtmlToPdf(html,pdfOptions);if(!pdf.ok)throw new Error("error");
-      return new Response(new Uint8Array(pdf.buffer),{headers:{...headers,"Content-Type":"application/pdf"}});
+      const pdf=await renderRateCardPdf(html,pdfOptions);
+      return new Response(new Blob([new Uint8Array(pdf)]).stream(),{headers:{...headers,"Content-Type":"application/pdf"}});
     }
     const images=await renderHtmlPagesToImages(html,{...pdfOptions,pageSelector:".page",imageType:"jpeg",quality:90,deviceScaleFactor:1.5});
     if(!images.ok)throw new Error("error");
