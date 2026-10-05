@@ -1,5 +1,6 @@
 import {rateReportPlatformIcon as getReportPlatformIconDataUri} from "./report-icons";
 import {rateReportStyles,RATE_A4_HEIGHT} from "./report-styles";
+import {clientListPerformanceStyles} from "./client-list-styles";
 import {EXTRA_RATE_TYPES,requiresPeriod,periodLabel} from "@/lib/quotations/commercial-period";
 import type { ShortlistDocCreatorGroup } from "@/features/discovery/shortlists/export/shortlist-document";
 import {renderCreatorListReport,CREATOR_LIST_PDF_OPTIONS} from "@/features/discovery/shortlists/export/creator-list-html";
@@ -27,6 +28,7 @@ export function scopePackageReportCreator(c:ReportCreator):ReportCreator{
 export function rateReportLayout(doc:RateCardReport,template:ReportTemplate){
  const maxRates=Math.max(0,...doc.creators.map(c=>c.rates.length));
  const maxPlatforms=Math.max(1,...doc.creators.map(c=>c.performance.length));
+ if(template==="client-list-by-name")return {priceColumns:1,height:Math.max(900,690+maxPlatforms*110),cardsPerPage:6};
  const details=template==="creator-list-details";
  const maxUplifts=Math.max(0,...doc.creators.map(c=>travelFields.filter(f=>c.rates.some(r=>r[f.key]!=null)).length));
  const packageSpace=doc.creators.some(c=>c.rates.some(r=>r.package_details))?80:0;
@@ -35,6 +37,7 @@ export function rateReportLayout(doc:RateCardReport,template:ReportTemplate){
 }
 export function rateReportPdfOptions(doc:RateCardReport,template:ReportTemplate){
  const {height}=rateReportLayout(doc,template);
+ if(template==="client-list-by-name")return {...CREATOR_LIST_PDF_OPTIONS,height:`${height}px`,viewport:{...CREATOR_LIST_PDF_OPTIONS.viewport,height:Math.ceil(height)}};
  return {...CREATOR_LIST_PDF_OPTIONS,width:"297mm",height:"210mm",viewport:{...CREATOR_LIST_PDF_OPTIONS.viewport,width:1600,height:Math.ceil(height)}};
 }
 
@@ -69,6 +72,6 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
    return `<div class="rate-detail-row">${card}<aside class="rate-performance"><section class="rate-detail-prices"><h2>${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h2><div class="rate-price-grid">${priceMarkup(c)}</div></section><h2>${e(t("performance"))}</h2><p>${e(c.group.country)} · ${e(c.group.tier)} · ${e(c.group.categories.join(" · "))}</p>${metrics}</aside></div>`;
   },
   closingContent:`<div class="end__hd"><span class="end__eye">${e(doc.name)} · ${e(doc.version)}</span><h1>${doc.creators.length} ${e(t("creators"))}</h1><p>${e(t(performanceOnly?"performanceReportHelp":"reportHelp"))}</p></div>${performanceOnly?"":`<div class="rate-closing-note">${e(t("client_price"))} · ${e(t("feesSeparate"))}</div>`}`,
-  extraCss:rateReportStyles(details,lang,layout.priceColumns,performanceOnly)
+  extraCss:performanceOnly?clientListPerformanceStyles(lang,layout.height):rateReportStyles(details,lang,layout.priceColumns)
  });
 }
