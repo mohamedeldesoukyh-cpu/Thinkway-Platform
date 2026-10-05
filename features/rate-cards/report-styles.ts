@@ -10,6 +10,7 @@ export function rateReportStyles(details: boolean, lang: Language, priceColumns:
   .creator-card{height:auto;position:relative;padding:10px;break-inside:avoid}
   .creator-card>*{flex-shrink:0}
   .portrait{height:120px;aspect-ratio:auto}
+  .portrait>img{object-fit:contain}
   .creator-avatar{width:24px;height:24px;flex-basis:24px;font-size:12px}
   .creator-label h2{max-height:none;overflow-wrap:anywhere;font-size:16px;line-height:20px;text-align:start}
   .creator-label p{text-align:start;white-space:normal;overflow-wrap:anywhere}
@@ -45,6 +46,7 @@ export function rateReportStyles(details: boolean, lang: Language, priceColumns:
   .page footer span:last-child{direction:ltr}html[dir=rtl] .creator-identity{direction:rtl}
   ${details?'.cards{grid-template-columns:1fr;gap:16px}':''}
   @media print{.page{zoom:${297 / 25.4 * 96 / 1600}}}
+  @media screen and (min-width:901px) and (max-width:1599px){.page{zoom:calc((100vw - 16px) / 1600px)}}
   @media screen and (max-width:900px){.page{height:auto}.cards{grid-template-columns:repeat(2,minmax(0,1fr));min-height:0}.portrait{height:120px;aspect-ratio:auto}.rate-detail-row{grid-template-columns:1fr}.rate-performance .rate-price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rate-performance dl{grid-template-columns:repeat(2,minmax(0,1fr))}${details?'.cards{grid-template-columns:1fr}':''}}
   @media screen and (max-width:520px){.cards{grid-template-columns:1fr}}
   `;
