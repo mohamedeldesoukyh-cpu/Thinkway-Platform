@@ -2,22 +2,22 @@ import type {Language} from "./labels";
 
 export const RATE_A4_HEIGHT = 1600 * 210 / 297;
 
-export function rateReportStyles(details: boolean, lang: Language, priceColumns: number) {
+export function rateReportStyles(details: boolean, lang: Language, priceColumns: number, fullSizeImages = false) {
   return `
   @page{size:297mm 210mm;margin:0}
   .page{height:${RATE_A4_HEIGHT}px}
   .cards{grid-template-columns:repeat(3,minmax(0,1fr));min-height:0;align-items:start;gap:18px;padding:14px}
   .creator-card{height:auto;position:relative;padding:10px;break-inside:avoid}
   .creator-card>*{flex-shrink:0}
-  .portrait{height:120px;aspect-ratio:auto}
+  .portrait{height:${fullSizeImages?180:120}px;aspect-ratio:auto}
   .portrait>img{object-fit:contain}
-  .creator-avatar{width:24px;height:24px;flex-basis:24px;font-size:12px}
+  .creator-avatar{width:${fullSizeImages?32:24}px;height:${fullSizeImages?32:24}px;flex-basis:${fullSizeImages?32:24}px;font-size:${fullSizeImages?16:12}px}
   .creator-label h2{max-height:none;overflow-wrap:anywhere;font-size:16px;line-height:20px;text-align:start}
   .creator-label p{text-align:start;white-space:normal;overflow-wrap:anywhere}
   .creator-categories{margin-top:6px}
   .rate-card-cover-link{position:absolute;inset:0;z-index:1}
   .rate-prices nav{position:relative;z-index:2;margin-top:6px;font-size:12px;color:#6551ad}
-  .rate-prices{margin-top:6px;font-size:12px;direction:${lang==="ar"?"rtl":"ltr"}}
+  .rate-prices{margin-top:${fullSizeImages?8:6}px;font-size:12px;direction:${lang==="ar"?"rtl":"ltr"}}
   .rate-prices p{white-space:normal;text-align:start}
   .rate-price-grid{display:grid;grid-template-columns:repeat(${priceColumns},minmax(0,1fr));gap:4px 12px}
   .price{display:grid;gap:2px;border-top:1px solid #e5e3ee;padding-top:5px;margin-top:4px;overflow-wrap:anywhere}
@@ -47,7 +47,7 @@ export function rateReportStyles(details: boolean, lang: Language, priceColumns:
   ${details?'.cards{grid-template-columns:1fr;gap:16px}':''}
   @media print{.page{zoom:${297 / 25.4 * 96 / 1600}}}
   @media screen and (min-width:901px) and (max-width:1599px){.page{zoom:calc((100vw - 16px) / 1600px)}}
-  @media screen and (max-width:900px){.page{height:auto}.cards{grid-template-columns:repeat(2,minmax(0,1fr));min-height:0}.portrait{height:120px;aspect-ratio:auto}.rate-detail-row{grid-template-columns:1fr}.rate-performance .rate-price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rate-performance dl{grid-template-columns:repeat(2,minmax(0,1fr))}${details?'.cards{grid-template-columns:1fr}':''}}
+  @media screen and (max-width:900px){.page{height:auto}.cards{grid-template-columns:repeat(2,minmax(0,1fr));min-height:0}.portrait{height:${fullSizeImages?280:120}px;aspect-ratio:auto}.rate-detail-row{grid-template-columns:1fr}.rate-performance .rate-price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rate-performance dl{grid-template-columns:repeat(2,minmax(0,1fr))}${details?'.cards{grid-template-columns:1fr}':''}}
   @media screen and (max-width:520px){.cards{grid-template-columns:1fr}}
   `;
 }

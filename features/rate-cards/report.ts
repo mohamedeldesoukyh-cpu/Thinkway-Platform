@@ -69,6 +69,6 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
    return `<div class="rate-detail-row">${card}<aside class="rate-performance"><section class="rate-detail-prices"><h2>${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h2><div class="rate-price-grid">${priceMarkup(c)}</div></section><h2>${e(t("performance"))}</h2><p>${e(c.group.country)} · ${e(c.group.tier)} · ${e(c.group.categories.join(" · "))}</p>${metrics}</aside></div>`;
   },
   closingContent:`<div class="end__hd"><span class="end__eye">${e(doc.name)} · ${e(doc.version)}</span><h1>${doc.creators.length} ${e(t("creators"))}</h1><p>${e(t(performanceOnly?"performanceReportHelp":"reportHelp"))}</p></div>${performanceOnly?"":`<div class="rate-closing-note">${e(t("client_price"))} · ${e(t("feesSeparate"))}</div>`}`,
-  extraCss:rateReportStyles(details,lang,layout.priceColumns)
+  extraCss:rateReportStyles(details,lang,layout.priceColumns,performanceOnly)
  });
 }
