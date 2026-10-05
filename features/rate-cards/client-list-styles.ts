@@ -5,6 +5,7 @@ export function clientListPerformanceStyles(lang:Language,height:number){
  return `
  @page{size:1600px ${height}px;margin:0}
  .page{height:${height}px}
+ .cards{align-items:stretch}
  .creator-card{height:auto;min-height:508px;position:relative}
  .creator-card>*{flex-shrink:0}
  .creator-label h2{max-height:none;overflow-wrap:anywhere;text-align:start}
