@@ -158,8 +158,9 @@ export function DeleteDiscoveryCreatorDialog({
           <DialogTitle>Delete creator</DialogTitle>
           <DialogDescription>
             Permanently remove <strong>{creator.display_name}</strong> from Thinkway. Deletion is
-            only allowed when the creator is not on a campaign, shortlist, quotation, or other
-            operational record.
+            only allowed when the creator is not on a campaign, active shortlist, quotation, or other
+            operational record. Archived shortlists do not block deletion; their creator entries
+            will be removed when you delete the creator.
           </DialogDescription>
         </DialogHeader>
 

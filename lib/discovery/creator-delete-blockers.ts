@@ -59,9 +59,11 @@ export async function getCreatorDeleteBlockers(
       .from("discovery_shortlist_items")
       .select(
         `id, shortlist_id,
-        shortlist:discovery_shortlists(id, serial_number, name)`
+        shortlist:discovery_shortlists!inner(id, serial_number, name)`
       )
       .eq("influencer_id", influencerId)
+      // Filter before limiting so archived rows cannot hide an older active link.
+      .eq("shortlist.is_archived", false)
       .order("added_at", { ascending: false })
       .limit(50),
     supabase
