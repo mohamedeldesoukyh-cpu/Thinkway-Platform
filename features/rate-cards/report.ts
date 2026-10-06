@@ -72,7 +72,7 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
   return `${profile?`<a class="rate-card-cover-link" href="${e(profile)}" target="_blank" rel="noopener noreferrer" aria-label="${e(c.group.creator)}"></a>`:""}<div class="rate-prices">${details||performanceOnly?"":`<h3 class="rate-list-heading rate-list-heading-prices">${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h3>`}<div class="rate-price-grid">${prices}</div><nav>${details?"":`<h3 class="rate-list-heading">${lang==="ar"?"الأداء":"Performance"}</h3>`}${links}</nav></div>`;
  };
  return renderCreatorListReport({clientLogo:doc.clientLogo,name:doc.brand?.trim()||doc.client,reference:`${doc.name} · ${doc.version}`,issuedDate:`${t("effective")}: ${doc.effective??"—"} · ${t("expiry")}: ${doc.expiry??"—"}`,creators},{
-  showClientLogoInHeader:true,platformIcon:getReportPlatformIconDataUri,title:t(performanceOnly?"clientListByName":details?"creatorListDetails":"creatorList"),language:lang,cardsPerPage:layout.cardsPerPage,uniqueCreators:doc.creators.length,cardSupplement:supplement,
+  hideCoverReference:true,coverLogoOnRight:true,showClientLogoInHeader:true,platformIcon:getReportPlatformIconDataUri,title:t(performanceOnly?"clientListByName":details?"creatorListDetails":"creatorList"),language:lang,cardsPerPage:layout.cardsPerPage,uniqueCreators:doc.creators.length,cardSupplement:supplement,
   wrapCard:(card,_creator,index)=>{
    if(!details)return card;
    const c=entries[index];const metrics=c.performance.map(p=>{

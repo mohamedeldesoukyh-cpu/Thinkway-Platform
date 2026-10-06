@@ -1,8 +1,10 @@
+import {RATE_CARD_LOGO_CSS} from "./report-styles";
 import type {Language} from "./labels";
 
 /** Keep the shortlist's six-column cards, portraits, typography and branding. */
 export function clientListPerformanceStyles(lang:Language,height:number){
  return `
+ ${RATE_CARD_LOGO_CSS}
  @page{size:1600px ${height}px;margin:0}
  .page{height:${height}px}
  .cards{align-items:stretch}

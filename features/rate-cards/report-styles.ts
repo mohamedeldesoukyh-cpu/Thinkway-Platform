@@ -2,10 +2,18 @@ import type {Language} from "./labels";
 
 export const RATE_A4_HEIGHT = 1600 * 210 / 297;
 
+export const RATE_CARD_LOGO_CSS = `
+.cov__client:has(.cover-client-logo){display:flex;align-items:center;justify-content:space-between;gap:64px;direction:ltr}
+.cov__client>.cover-client-logo{display:block;flex:0 0 360px;width:360px;height:360px;max-width:360px;max-height:none;margin:0 36px 0 0;object-fit:contain;filter:url(#report-logo-white-key);background:transparent;padding:0;border:0;border-radius:0}
+.ph .report-client-logo{filter:url(#report-logo-white-key);background:transparent;padding:0;border-radius:0}
+.page--cov:has(.cover-client-logo) .cov{max-width:none}
+@media screen and (max-width:900px){.cov__client:has(.cover-client-logo){gap:20px}.cov__client>.cover-client-logo{flex-basis:26%;width:26%;height:auto;margin:0}.page--cov:has(.cover-client-logo) .cov__client h1{font-size:clamp(24px,5vw,46px);letter-spacing:-1px}}
+`;
+
 export function rateReportStyles(details: boolean, lang: Language, priceColumns: number) {
   return `
   @page{size:297mm 210mm;margin:0}
-  .cov__client>img{max-height:100px;max-width:320px;background:#fff;border-radius:10px;padding:12px;margin-bottom:20px;object-fit:contain}
+  ${RATE_CARD_LOGO_CSS}
   .cov__client h1{font-size:76px;line-height:1.05;max-width:20ch;overflow-wrap:anywhere}
   .cov__strip{max-width:100%;flex-wrap:wrap}
   .rate-cover-fees{display:grid;gap:6px;margin-top:24px;padding:16px 20px;width:fit-content;max-width:100%;border:1px solid rgba(255,255,255,.22);border-radius:14px;background:rgba(37,34,95,.82);font-size:20px;color:#fff}

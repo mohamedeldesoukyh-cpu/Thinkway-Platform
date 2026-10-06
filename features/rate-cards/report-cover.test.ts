@@ -32,7 +32,8 @@ test("fee summaries distinguish zero, varied and missing fees",()=>{
 test("uploaded client logo is embedded on the cover and creator-page headers",()=>{
  const clientLogo="data:image/png;base64,Y2xpZW50LWxvZ28=";
  const html=buildRateCardReportHtml({...fixture,clientLogo},"creator-list");
- assert.match(html,/class="cov__client" data-logo-slot><img/);
+ assert.match(html,/class="cover-client-logo"/);
+ assert.ok(!html.includes('class="cov__client" data-logo-slot><img'));
  assert.equal((html.match(/class="report-client-logo"/g)??[]).length,2);
  assert.equal(html.split(clientLogo).length-1,3);
  const noLogo=buildRateCardReportHtml(fixture,"creator-list");
