@@ -25,6 +25,19 @@ export {
 /** Follower-based creator tier labels — re-exported from influencer-tier SSOT. */
 export type CreatorTierLabel = InfluencerTier | "Unknown";
 
+export type CreatorPlatformTierAccount = {
+  platform: string;
+  followers: number | null;
+  handle?: string | null;
+};
+
+/** Platform tier uses only that account's measured follower count. */
+export function resolvePlatformTier(followers: number | undefined | null): InfluencerTier | null {
+  return followers != null && Number.isFinite(followers) && followers > 0
+    ? getInfluencerTier(followers)
+    : null;
+}
+
 /** Map stored role / import tier text to a display label. */
 export function parseCreatorTierFromRole(role?: string | null): CreatorTierLabel | null {
   const fromRole = normalizeInfluencerTier(role);

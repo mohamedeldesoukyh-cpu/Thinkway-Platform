@@ -1,5 +1,5 @@
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
-import { getInfluencerTier, type InfluencerTier } from "@/lib/creators/creator-tier";
+export { resolvePlatformTier as clientPlatformTier } from "@/lib/creators/creator-tier";
 import type { UnifiedCreatorResult } from "@/lib/domains/creator/types";
 
 import {
@@ -18,12 +18,6 @@ export type ClientPlatformBreakdownRow = ClientCreatorPlatformStats & {
   lines: Array<{ key: string; label: string; quantity: number }>;
 };
 
-/** Client tiers describe the individual account, never a creator-wide override or sum. */
-export function clientPlatformTier(followers: number | undefined | null): InfluencerTier | null {
-  return followers != null && Number.isFinite(followers) && followers > 0
-    ? getInfluencerTier(followers)
-    : null;
-}
 
 function optionalMetric(value: number | string | null | undefined): number | undefined {
   if (value == null || value === "") return undefined;

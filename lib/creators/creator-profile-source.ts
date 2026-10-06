@@ -18,6 +18,7 @@ import {
 } from "@/lib/performance/avatar-sync-policy";
 import type { CreatorEnrichmentStatus } from "@/lib/creator-enrichment/types";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import type { CreatorPlatformTierAccount } from "@/lib/creators/creator-tier";
 
 export type CreatorProfileSource = {
   displayName: string;
@@ -25,6 +26,8 @@ export type CreatorProfileSource = {
   platform?: string | null;
   /** All linked platforms — when length > 1, UI shows multi-platform badges instead of `platform` only. */
   linkedPlatforms?: string[];
+  /** Account-specific metrics for platform tier badges; never copied between platforms. */
+  platformAccounts?: CreatorPlatformTierAccount[];
   handle?: string | null;
   profile_url?: string | null;
   isVerified?: boolean;
@@ -141,6 +144,10 @@ export function creatorProfileSourceFromUnified(
     avatarUrl: primaryAvatarUrl,
     platform: linkedPlatforms.length === 1 ? linkedPlatforms[0]! : null,
     linkedPlatforms,
+    platformAccounts: sortPlatformsStable(creator.platforms).map((account) => ({
+      platform: canonicalPlatformKey(account.platform), handle: account.handle,
+      followers: account.follower_count,
+    })),
     handle: metricsPlatform?.handle ?? null,
     profile_url:
       avatarPlatformAccount?.profile_url ?? metricsPlatform?.profile_url ?? null,

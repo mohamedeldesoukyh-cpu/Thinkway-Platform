@@ -42,7 +42,7 @@ import {
   ShortlistCreatorQuotedCell,
   shortlistCreatorSyncBorderClass,
 } from "./shortlist-creator-meta-columns";
-import { resolveCreatorTierFromUnified } from "@/lib/creators/creator-tier";
+import { CreatorPlatformTiers } from "@/components/creator/creator-platform-tiers";
 
 type ShortlistRowItem = Pick<
   ShortlistCreatorItem,
@@ -185,7 +185,6 @@ function ShortlistCreatorGridRow({
   }
 
   const vm = buildDiscoveryCreatorViewModel(creator);
-  const tier = resolveCreatorTierFromUnified(creator);
   const openCreatorDetail = () => onOpenCreator?.(creator);
 
   return (
@@ -232,11 +231,9 @@ function ShortlistCreatorGridRow({
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
-        {tier === "Unknown" ? (
-          <span className="tw-miss">—</span>
-        ) : (
-          <span className="tw-p p-v">{tier}</span>
-        )}
+        <CreatorPlatformTiers accounts={creator.platforms.map((account) => ({
+          platform: account.platform, handle: account.handle, followers: account.follower_count,
+        }))} />
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>

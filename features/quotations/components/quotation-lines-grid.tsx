@@ -42,7 +42,8 @@ import {
   resolveQuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
 import type { QuotationDeliverable, QuotationItemRow } from "@/features/quotations/types";
-import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
+import { CreatorPlatformTiers } from "@/components/creator/creator-platform-tiers";
+import { quotationPlatformTierAccounts } from "@/lib/quotations/quotation-platform-tiers";
 import { F } from "@/lib/discovery/suite/helpers";
 import {
   deliverableTypeLines,
@@ -105,7 +106,6 @@ function QuotationPackLineRow({
   const computed = computeQuotationRowComputed(resolved);
   const zeroCost = !(Number(resolved.cost) > 0) && !(Number(computed.costEgp) > 0);
   const linePending = manualSave.isLinePending(item.id);
-  const tier = resolveCreatorTierLabel({ followers: item.followers });
   const name =
     item.creator_profile_source?.displayName?.trim() ||
     item.creator_name?.trim() ||
@@ -274,7 +274,7 @@ function QuotationPackLineRow({
         />
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>
-        <span className="tw-p p-v">{tier}</span>
+        <CreatorPlatformTiers accounts={quotationPlatformTierAccounts(item)} />
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>
         <input

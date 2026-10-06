@@ -3,6 +3,30 @@ import test from "node:test";
 import { renderToStaticMarkup } from "react-dom/server";
 import { ReviewPlatformBreakdown } from "./components/review-platform-breakdown";
 import { clientPlatformTier } from "./platform-breakdown";
+import { CreatorPlatformTiers } from "@/components/creator/creator-platform-tiers";
+import { quotationPlatformTierAccounts } from "@/lib/quotations/quotation-platform-tiers";
+
+test("internal rows pair each platform logo with its own tier", () => {
+  const html = renderToStaticMarkup(<CreatorPlatformTiers accounts={[
+    { platform: "instagram", followers: 539_003 },
+    { platform: "tiktok", followers: 451_200 },
+  ]} />);
+  assert.match(html, /Instagram tier: Macro/);
+  assert.match(html, /TikTok tier: Mid/);
+  assert.match(html, /platform-icons\/instagram/);
+  assert.match(html, /platform-icons\/tiktok/);
+});
+
+test("combined quotation counts cannot assign a tier to every platform", () => {
+  const accounts = quotationPlatformTierAccounts({
+    creator_profile_source: null, platform: "instagram,tiktok", handle: "creator", followers: 1_200_000,
+  });
+  assert.deepEqual(accounts.map((account) => account.followers), [null, null]);
+  const single = quotationPlatformTierAccounts({
+    creator_profile_source: null, platform: "instagram", handle: "creator", followers: 45_000,
+  });
+  assert.equal(single[0].followers, 45_000);
+});
 
 test("each account gets its own tier instead of an aggregate creator tier", () => {
   for (const variant of ["list", "detail"] as const) {

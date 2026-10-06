@@ -24,9 +24,9 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
 import { CreatorIdentityCell } from "@/components/creator/creator-profile-link";
-import { CreatorTierBadge } from "@/components/creator/creator-tier-badge";
+import { CreatorPlatformTiers } from "@/components/creator/creator-platform-tiers";
 import { resolveQuotationCreatorProfileSource } from "@/lib/quotations/quotation-creator-source";
-import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
+import { quotationPlatformTierAccounts } from "@/lib/quotations/quotation-platform-tiers";
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
 import {
   addQuotationItemOption,
@@ -276,11 +276,6 @@ export function QuotationCreatorDeliverableRows({
   const allowedCreatorPlatforms = useMemo(
     () => lineFields.platformSelectOptions.map((p) => p.platform),
     [lineFields.platformSelectOptions]
-  );
-
-  const creatorTier = useMemo(
-    () => resolveCreatorTierLabel({ followers: item.followers }),
-    [item.followers]
   );
 
   const creatorProfileSource = useMemo(() => {
@@ -599,11 +594,7 @@ export function QuotationCreatorDeliverableRows({
 
             {isFirst ? (
               <span className="co-tier">
-                {creatorTier === "Unknown" ? (
-                  <span className="text-[11px] text-[var(--text-4)]">—</span>
-                ) : (
-                  <CreatorTierBadge tier={creatorTier} className="tierbadge" />
-                )}
+                <CreatorPlatformTiers accounts={quotationPlatformTierAccounts(item)} />
               </span>
             ) : (
               <FlexColEmpty className="co-tier" />
