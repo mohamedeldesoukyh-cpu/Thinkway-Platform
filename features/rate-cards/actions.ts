@@ -1,6 +1,7 @@
 "use server";
 
 import {travelSchema} from "./travel";
+import {loadRateCardSummary} from "./summary-data";
 import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -72,6 +73,10 @@ export async function listRateCards(filters: { search?: string; client?: string;
   const sort=["name","version","created_at","updated_at","creator_count","client_name"].includes(filters.sort ?? "") ? filters.sort! : "updated_at";
   const result=await q.order(sort,{ascending:filters.ascending ?? false}).order("id").range((page-1)*25,page*25-1);
   return { rows: checked(result) as RateVersion[], total: result.count ?? 0 };
+}
+export async function getRateCardSummary(id:string){
+ const {db}=await actor("read");z.uuid().parse(id);
+ return loadRateCardSummary(db,id);
 }
 export async function getRateVersion(id: string, page=1, search="", platform="", currency="") {
   const {db}=await actor("read"); z.uuid().parse(id);
