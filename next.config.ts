@@ -74,6 +74,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
+    '/api/rate-cards/*/export': ['./public/report-assets/nbe-logo-3d-v1.png'],
       '/*': [
         './public/tw-logo-dark.png',
       './features/creator-payments/templates/**/*',

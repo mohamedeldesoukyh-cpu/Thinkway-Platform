@@ -7,6 +7,7 @@ import type {RateVersion} from "./model";
 import type {Database} from "@/types/database";
 import type {ClientRate,RateCardReport} from "./report";
 import {loadCreatorListClientLogo} from "@/features/discovery/shortlists/export/creator-list-client-logo";
+import {rateCardCoverArtwork} from "./report-client-artwork";
 import {compactReportAvatar} from "./report-avatar";
 
 export const RATE_PREVIEW_SIZE = 12;
@@ -60,5 +61,6 @@ export async function loadRateCardReport(db:SupabaseClient,id:string,previewPage
     }
     c.group.avatarUrl=avatar;c.group.avatarProxyUrl=null;
   }));
-  return {clientLogo:await loadCreatorListClientLogo(db,v.client_id),name:v.name,version:v.version,client:v.client_name,brand:v.brand_name,effective:v.effective_date,expiry:v.expiry_date,creators,...(previewPage===undefined?{}:{preview:{page,pages,total:allRefs.length}})};
+  const clientLogo=await loadCreatorListClientLogo(db,v.client_id);
+  return {clientLogo,clientCoverLogo:rateCardCoverArtwork(clientLogo),name:v.name,version:v.version,client:v.client_name,brand:v.brand_name,effective:v.effective_date,expiry:v.expiry_date,creators,...(previewPage===undefined?{}:{preview:{page,pages,total:allRefs.length}})};
 }

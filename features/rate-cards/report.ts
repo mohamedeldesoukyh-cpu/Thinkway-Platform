@@ -11,7 +11,7 @@ import {travelFields,type TravelUplifts} from "./travel";
 export type ClientRate=TravelUplifts & {event_days?:number;package_key?:string;package_details?:PackageDetails|null;period_months?:number;platform:string;deliverable:string;amount:number;currency:string;agency_fee_percent:number|null};
 export type PublicPerformance={platform:string;followers:number|null;engagement:number|null;views:number|null;likes:number|null;comments:number|null;audienceCountry:string|null;profileUrl:string|null};
 export type ReportCreator={platformScopes?:string[];packageScopes?:PackageDetails[];group:ShortlistDocCreatorGroup;rates:ClientRate[];performance:PublicPerformance[]};
-export type RateCardReport={clientLogo?:string|null;name:string;version:string;client:string;brand:string|null;effective:string|null;expiry:string|null;creators:ReportCreator[]};
+export type RateCardReport={clientLogo?:string|null;clientCoverLogo?:string|null;name:string;version:string;client:string;brand:string|null;effective:string|null;expiry:string|null;creators:ReportCreator[]};
 /** Report saved fees without assuming missing values mean zero. */
 export function rateCardAgencyFeeSummary(doc:RateCardReport,lang:Language="en"):string {
  const fees=doc.creators.flatMap(c=>c.rates.map(r=>r.agency_fee_percent));
@@ -71,7 +71,7 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
   const profile=creators[index].profileUrl;
   return `${profile?`<a class="rate-card-cover-link" href="${e(profile)}" target="_blank" rel="noopener noreferrer" aria-label="${e(c.group.creator)}"></a>`:""}<div class="rate-prices">${details||performanceOnly?"":`<h3 class="rate-list-heading rate-list-heading-prices">${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h3>`}<div class="rate-price-grid">${prices}</div><nav>${details?"":`<h3 class="rate-list-heading">${lang==="ar"?"الأداء":"Performance"}</h3>`}${links}</nav></div>`;
  };
- return renderCreatorListReport({clientLogo:doc.clientLogo,name:doc.brand?.trim()||doc.client,reference:`${doc.name} · ${doc.version}`,issuedDate:`${t("effective")}: ${doc.effective??"—"} · ${t("expiry")}: ${doc.expiry??"—"}`,creators},{
+ return renderCreatorListReport({clientLogo:doc.clientLogo,clientCoverLogo:doc.clientCoverLogo,name:doc.brand?.trim()||doc.client,reference:`${doc.name} · ${doc.version}`,issuedDate:`${t("effective")}: ${doc.effective??"—"} · ${t("expiry")}: ${doc.expiry??"—"}`,creators},{
   hideCoverReference:true,coverLogoOnRight:true,showClientLogoInHeader:true,platformIcon:getReportPlatformIconDataUri,title:t(performanceOnly?"clientListByName":details?"creatorListDetails":"creatorList"),language:lang,cardsPerPage:layout.cardsPerPage,uniqueCreators:doc.creators.length,cardSupplement:supplement,
   wrapCard:(card,_creator,index)=>{
    if(!details)return card;

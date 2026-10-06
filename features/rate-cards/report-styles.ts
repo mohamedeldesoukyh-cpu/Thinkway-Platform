@@ -5,6 +5,7 @@ export const RATE_A4_HEIGHT = 1600 * 210 / 297;
 export const RATE_CARD_LOGO_CSS = `
 .cov__client:has(.cover-client-logo){display:flex;align-items:center;justify-content:space-between;gap:64px;direction:ltr}
 .cov__client>.cover-client-logo{display:block;flex:0 0 360px;width:360px;height:360px;max-width:360px;max-height:none;margin:0 36px 0 0;object-fit:contain;filter:url(#report-logo-white-key);background:transparent;padding:0;border:0;border-radius:0}
+.cov__client>.cover-client-logo--artwork{filter:drop-shadow(0 14px 18px rgba(0,0,0,.3))}
 .ph .report-client-logo{filter:url(#report-logo-white-key);background:transparent;padding:0;border-radius:0}
 .page--cov:has(.cover-client-logo) .cov{max-width:none}
 @media screen and (max-width:900px){.cov__client:has(.cover-client-logo){gap:20px}.cov__client>.cover-client-logo{flex-basis:26%;width:26%;height:auto;margin:0}.page--cov:has(.cover-client-logo) .cov__client h1{font-size:clamp(24px,5vw,46px);letter-spacing:-1px}}
