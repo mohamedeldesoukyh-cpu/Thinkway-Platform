@@ -11,7 +11,17 @@ import {travelFields,type TravelUplifts} from "./travel";
 export type ClientRate=TravelUplifts & {event_days?:number;package_key?:string;package_details?:PackageDetails|null;period_months?:number;platform:string;deliverable:string;amount:number;currency:string;agency_fee_percent:number|null};
 export type PublicPerformance={platform:string;followers:number|null;engagement:number|null;views:number|null;likes:number|null;comments:number|null;audienceCountry:string|null;profileUrl:string|null};
 export type ReportCreator={platformScopes?:string[];packageScopes?:PackageDetails[];group:ShortlistDocCreatorGroup;rates:ClientRate[];performance:PublicPerformance[]};
-export type RateCardReport={name:string;version:string;client:string;brand:string|null;effective:string|null;expiry:string|null;creators:ReportCreator[]};
+export type RateCardReport={clientLogo?:string|null;name:string;version:string;client:string;brand:string|null;effective:string|null;expiry:string|null;creators:ReportCreator[]};
+/** Report saved fees without assuming missing values mean zero. */
+export function rateCardAgencyFeeSummary(doc:RateCardReport,lang:Language="en"):string {
+ const fees=doc.creators.flatMap(c=>c.rates.map(r=>r.agency_fee_percent));
+ const known=[...new Set(fees.filter((fee):fee is number=>fee!=null&&Number.isFinite(fee)))].sort((a,b)=>a-b);
+ if(!known.length)return lang==="ar"?"غير محددة":"Not specified";
+ const value=known.map(fee=>`${fee.toLocaleString(lang,{maximumFractionDigits:2})}%`).join(" / ");
+ const varies=known.length>1?(lang==="ar"?"تختلف حسب البند":"varies by item"):"";
+ const missing=fees.some(fee=>fee==null)?(lang==="ar"?"بعض البنود غير محددة":"some items not specified"):"";
+ return [value,varies,missing].filter(Boolean).join(" · ");
+}
 export type ReportTemplate="creator-list"|"creator-list-details"|"client-list-by-name";
 export const escapeHtml=(v:unknown)=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]!));
 export function safeProfileUrl(value:string|null){try{const u=new URL(value??"");return ["https:","http:"].includes(u.protocol)?u.href:null;}catch{return null;}}
@@ -33,7 +43,7 @@ export function rateReportLayout(doc:RateCardReport,template:ReportTemplate){
  const maxUplifts=Math.max(0,...doc.creators.map(c=>travelFields.filter(f=>c.rates.some(r=>r[f.key]!=null)).length));
  const packageSpace=doc.creators.some(c=>c.rates.some(r=>r.package_details))?80:0;
  const detailHeight=100+Math.ceil(maxRates/3)*80+maxPlatforms*70+maxUplifts*35+packageSpace;
- return {priceColumns:details?3:maxRates>4?2:1,height:RATE_A4_HEIGHT,cardsPerPage:details?(detailHeight>460?1:2):3};
+ return {priceColumns:details?3:maxRates>4?2:1,height:RATE_A4_HEIGHT,cardsPerPage:details?(detailHeight>460?1:2):4};
 }
 export function rateReportPdfOptions(doc:RateCardReport,template:ReportTemplate){
  const {height}=rateReportLayout(doc,template);
@@ -61,8 +71,8 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
   const profile=creators[index].profileUrl;
   return `${profile?`<a class="rate-card-cover-link" href="${e(profile)}" target="_blank" rel="noopener noreferrer" aria-label="${e(c.group.creator)}"></a>`:""}<div class="rate-prices">${details||performanceOnly?"":`<h3 class="rate-list-heading rate-list-heading-prices">${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h3>`}<div class="rate-price-grid">${prices}</div><nav>${details?"":`<h3 class="rate-list-heading">${lang==="ar"?"الأداء":"Performance"}</h3>`}${links}</nav></div>`;
  };
- return renderCreatorListReport({name:`${doc.client}${doc.brand?` · ${doc.brand}`:""}`,reference:`${doc.name} · ${doc.version}`,issuedDate:`${t("effective")}: ${doc.effective??"—"} · ${t("expiry")}: ${doc.expiry??"—"}`,creators},{
-  platformIcon:getReportPlatformIconDataUri,title:t(performanceOnly?"clientListByName":details?"creatorListDetails":"creatorList"),language:lang,cardsPerPage:layout.cardsPerPage,uniqueCreators:doc.creators.length,cardSupplement:supplement,
+ return renderCreatorListReport({clientLogo:doc.clientLogo,name:doc.brand?.trim()||doc.client,reference:`${doc.name} · ${doc.version}`,issuedDate:`${t("effective")}: ${doc.effective??"—"} · ${t("expiry")}: ${doc.expiry??"—"}`,creators},{
+  showClientLogoInHeader:true,platformIcon:getReportPlatformIconDataUri,title:t(performanceOnly?"clientListByName":details?"creatorListDetails":"creatorList"),language:lang,cardsPerPage:layout.cardsPerPage,uniqueCreators:doc.creators.length,cardSupplement:supplement,
   wrapCard:(card,_creator,index)=>{
    if(!details)return card;
    const c=entries[index];const metrics=c.performance.map(p=>{
@@ -71,6 +81,7 @@ export function buildRateCardReportHtml(doc:RateCardReport,template:ReportTempla
    }).join("")||`<p>${e(t("noPerformance"))}</p>`;
    return `<div class="rate-detail-row">${card}<aside class="rate-performance"><section class="rate-detail-prices"><h2>${lang==="ar"?"بطاقة الأسعار":"Rate card"}</h2><div class="rate-price-grid">${priceMarkup(c)}</div></section><h2>${e(t("performance"))}</h2><p>${e(c.group.country)} · ${e(c.group.tier)} · ${e(c.group.categories.join(" · "))}</p>${metrics}</aside></div>`;
   },
+  coverSupplement:performanceOnly?"":`<div class="rate-cover-fees"><strong>${lang==="ar"?"أتعاب وكالة العميل":"Client Agency fees"}</strong><span>${e(rateCardAgencyFeeSummary(doc,lang))}</span><small>${e(t("feesSeparate"))}</small></div>`,
   closingContent:`<div class="end__hd"><span class="end__eye">${e(doc.name)} · ${e(doc.version)}</span><h1>${doc.creators.length} ${e(t("creators"))}</h1><p>${e(t(performanceOnly?"performanceReportHelp":"reportHelp"))}</p></div>${performanceOnly?"":`<div class="rate-closing-note">${e(t("client_price"))} · ${e(t("feesSeparate"))}</div>`}`,
   extraCss:performanceOnly?clientListPerformanceStyles(lang,layout.height):rateReportStyles(details,lang,layout.priceColumns)
  });

@@ -45,7 +45,7 @@ test("creator list shows compact metrics beneath each platform and uses the prof
  assert.ok(!buildRateCardReportHtml(doc,"creator-list-details").includes('class="rate-platform-summary"'));
 });
 test("both reports paginate every creator and every rate without exposing private notes",()=>{
- for(const template of ["creator-list","creator-list-details"] as const){const html=buildRateCardReportHtml(fixture,template);assert.ok(html.includes('href="https://www.instagram.com/creator/"'));assert.ok(html.includes("&lt;script&gt;"));assert.ok(!html.includes("internal private notes"));assert.equal((html.match(/class="creator-card/g)||[]).length,8);assert.ok(!html.includes("Continued"));assert.equal((html.match(/class="price"/g)||[]).length,29);assert.equal((html.match(/class="page(?: page--(?:cov|end))?"/g)||[]).length,template==="creator-list"?5:6);}
+ for(const template of ["creator-list","creator-list-details"] as const){const html=buildRateCardReportHtml(fixture,template);assert.ok(html.includes('href="https://www.instagram.com/creator/"'));assert.ok(html.includes("&lt;script&gt;"));assert.ok(!html.includes("internal private notes"));assert.equal((html.match(/class="creator-card/g)||[]).length,8);assert.ok(!html.includes("Continued"));assert.equal((html.match(/class="price"/g)||[]).length,29);assert.equal((html.match(/class="page(?: page--(?:cov|end))?"/g)||[]).length,template==="creator-list"?4:6);}
 });
 test("Arabic exports and unsafe profile links",()=>{
  assert.ok(buildRateCardReportHtml(fixture,"creator-list-details","ar").includes('dir="rtl"'));

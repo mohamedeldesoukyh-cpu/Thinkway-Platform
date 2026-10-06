@@ -5,16 +5,21 @@ export const RATE_A4_HEIGHT = 1600 * 210 / 297;
 export function rateReportStyles(details: boolean, lang: Language, priceColumns: number) {
   return `
   @page{size:297mm 210mm;margin:0}
+  .cov__client>img{max-height:100px;max-width:320px;background:#fff;border-radius:10px;padding:12px;margin-bottom:20px;object-fit:contain}
+  .cov__client h1{font-size:76px;line-height:1.05;max-width:20ch;overflow-wrap:anywhere}
+  .cov__strip{max-width:100%;flex-wrap:wrap}
+  .rate-cover-fees{display:grid;gap:6px;margin-top:24px;padding:16px 20px;width:fit-content;max-width:100%;border:1px solid rgba(255,255,255,.22);border-radius:14px;background:rgba(37,34,95,.82);font-size:20px;color:#fff}
+  .rate-cover-fees strong{font-size:14px;color:#c4c1d6}.rate-cover-fees small{font-size:12px;color:#c4c1d6}
   .page{height:${RATE_A4_HEIGHT}px}
-  .cards{grid-template-columns:repeat(3,minmax(0,1fr));min-height:0;align-items:start;gap:18px;padding:14px}
-  .creator-card{height:auto;position:relative;padding:10px;break-inside:avoid}
+  .cards{grid-template-columns:repeat(4,minmax(0,1fr));min-height:${RATE_A4_HEIGHT-155}px;align-items:stretch;gap:18px;padding:14px}
+  .creator-card{height:100%;position:relative;padding:10px;break-inside:avoid}
   .creator-card>*{flex-shrink:0}
-  .portrait{height:120px;aspect-ratio:auto}
-  .portrait>img{object-fit:contain}
+  .portrait{height:190px;aspect-ratio:auto}
+  .portrait>img{object-fit:cover;object-position:center 30%}
   .creator-avatar{width:24px;height:24px;flex-basis:24px;font-size:12px}
   .creator-label h2{max-height:none;overflow-wrap:anywhere;font-size:16px;line-height:20px;text-align:start}
   .creator-label p{text-align:start;white-space:normal;overflow-wrap:anywhere}
-  .creator-categories{margin-top:6px}
+  .creator-categories{margin-top:auto;padding-top:8px}
   .rate-card-cover-link{position:absolute;inset:0;z-index:1}
   .rate-prices nav{position:relative;z-index:2;margin-top:6px;font-size:12px;color:#6551ad}
   .rate-prices{margin-top:6px;font-size:12px;direction:${lang==="ar"?"rtl":"ltr"}}
@@ -30,7 +35,7 @@ export function rateReportStyles(details: boolean, lang: Language, priceColumns:
   .rate-platform-summary b{color:#080642}
   .travel-uplifts{grid-column:1/-1;border-top:1px solid #e5e3ee;margin-top:5px;padding-top:5px;font-size:11px}
   .travel-uplift{margin-top:3px}.travel-uplift small{display:block}
-  .rate-detail-row{display:grid;grid-template-columns:210px minmax(0,1fr);gap:16px;direction:ltr;align-items:start;break-inside:avoid}
+  .rate-detail-row{display:grid;grid-template-columns:210px minmax(0,1fr);gap:16px;direction:ltr;align-items:stretch;break-inside:avoid}
   .rate-detail-row .creator-card,.rate-performance{direction:${lang==="ar"?"rtl":"ltr"}}
   .rate-detail-row .portrait{height:115px}
   .rate-performance{padding:14px;background:#fff;border-radius:13px;color:#080642;height:auto}
@@ -47,7 +52,7 @@ export function rateReportStyles(details: boolean, lang: Language, priceColumns:
   ${details?'.cards{grid-template-columns:1fr;gap:16px}':''}
   @media print{.page{zoom:${297 / 25.4 * 96 / 1600}}}
   @media screen and (min-width:901px) and (max-width:1599px){.page{zoom:calc((100vw - 16px) / 1600px)}}
-  @media screen and (max-width:900px){.page{height:auto}.cards{grid-template-columns:repeat(2,minmax(0,1fr));min-height:0}.portrait{height:120px;aspect-ratio:auto}.rate-detail-row{grid-template-columns:1fr}.rate-performance .rate-price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rate-performance dl{grid-template-columns:repeat(2,minmax(0,1fr))}${details?'.cards{grid-template-columns:1fr}':''}}
+  @media screen and (max-width:900px){.page{height:auto}.cards{grid-template-columns:repeat(2,minmax(0,1fr));min-height:0}.portrait{height:190px;aspect-ratio:auto}.rate-detail-row{grid-template-columns:1fr}.rate-performance .rate-price-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.rate-performance dl{grid-template-columns:repeat(2,minmax(0,1fr))}${details?'.cards{grid-template-columns:1fr}':''}}
   @media screen and (max-width:520px){.cards{grid-template-columns:1fr}}
   `;
 }
