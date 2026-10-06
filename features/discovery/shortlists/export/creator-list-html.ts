@@ -10,7 +10,7 @@ export const CREATOR_LIST_PDF_OPTIONS: HtmlToPdfOptions = {
   viewport: { width: 1600, height: 900, deviceScaleFactor: 1 },
   waitForDocumentAttribute: { name: "data-creator-list-ready", value: "true", timeoutMs: 45_000 },
 };
-export type CreatorListEntry = { name: string; handle: string; profileUrl: string | null; portrait: string | null; markets: string[]; avatar?: string | null; categories?: string[]; tier?: string | null };
+export type CreatorListEntry = { platforms?: string[]; name: string; handle: string; profileUrl: string | null; portrait: string | null; markets: string[]; avatar?: string | null; categories?: string[]; tier?: string | null };
 export type CreatorListReport = { name: string; reference: string; issuedDate: string; clientLogo?: string | null; clientCoverLogo?: string | null; creators: CreatorListEntry[]; totalAvgCost?: import("../creator-list-cost").CreatorListCost };
 function esc(value: string): string {
   return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -69,7 +69,8 @@ export function renderCreatorListReport(report: CreatorListReport, presentation:
     const src = image(creator.portrait), href = link(creator.profileUrl);
     if (!src) missingPortraits++;
     if (href) links++;
-    const visual = `${src ? `<img src="${src}" alt="${esc(creator.name)}" loading="eager">` : `<div class="placeholder" aria-label="No portrait supplied">${esc(creator.name.slice(0, 1).toUpperCase())}</div>`}<span class="idx" aria-hidden="true">${String(index + 1).padStart(3, "0")}</span>${platform ? `<span class="pb pb--${platform === "Instagram" ? "ig" : "tt"}" title="${platform}" aria-hidden="true"><img src="${platformIcon(platform.toLowerCase())}" alt="" /></span>` : ""}`;
+    const badges=creator.platforms ? [...new Set(creator.platforms)].map(p=>{const icon=platformIcon(p);return icon?`<span class="pb-stack__item" title="${esc(p)}"><img src="${esc(icon)}" alt="${esc(p)}" /></span>`:"";}).join("") : null;
+    const visual = `${src ? `<img src="${src}" alt="${esc(creator.name)}" loading="eager">` : `<div class="placeholder" aria-label="No portrait supplied">${esc(creator.name.slice(0, 1).toUpperCase())}</div>`}<span class="idx" aria-hidden="true">${String(index + 1).padStart(3, "0")}</span>${badges!==null ? (badges?`<span class="pb-stack" aria-label="Included platforms">${badges}</span>`:"") : platform ? `<span class="pb pb--${platform === "Instagram" ? "ig" : "tt"}" title="${platform}" aria-hidden="true"><img src="${platformIcon(platform.toLowerCase())}" alt="" /></span>` : ""}`;
     const avatar = image(creator.avatar);
     const identity = `<div class="creator-identity">${avatar ? `<img class="creator-avatar" src="${avatar}" alt="" aria-hidden="true" loading="eager">` : `<span class="creator-avatar" aria-hidden="true">${esc(creator.name.slice(0, 1).toUpperCase())}</span>`}<div class="creator-label"><h2 dir="auto">${esc(creator.name)}</h2>${creator.tier ? `<span class="creator-tier">${esc(creator.tier)}</span>` : ""}<p dir="auto">${esc(creator.handle)}</p></div></div>`;
     const card = `<article class="creator-card">${href ? `<a class="portrait" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${esc(creator.name)}">${visual}</a>` : `<div class="portrait">${visual}</div>`}${identity}${presentation.cardSupplement?.(creator,index)??""}<div class="creator-categories">${categories.length ? categories.map((category) => `<span class="creator-category">${esc(category)}</span>`).join("") : '<span class="creator-category creator-category--none">Categories not recorded</span>'}</div></article>`;
