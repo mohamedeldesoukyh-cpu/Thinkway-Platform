@@ -5,7 +5,7 @@ import {
   listPlatformChipMetrics,
 } from "../format";
 import type { ClientPlatformBreakdownRow } from "../platform-breakdown";
-import { profileUrlForPlatform } from "../platform-breakdown";
+import { clientPlatformTier, profileUrlForPlatform } from "../platform-breakdown";
 import { ReviewPlatformMark } from "./review-platform-mark";
 
 function visibleRows(rows: ClientPlatformBreakdownRow[]) {
@@ -28,12 +28,13 @@ export function ReviewPlatformBreakdown({
         {platforms.map((row) => {
           const { followers, engagementRate } = listPlatformChipMetrics(row);
           const label = formatPlatformLabel(row.platform) ?? row.platform;
+          const tier = clientPlatformTier(row.followers);
           return (
             <span
               className="plat-er"
               key={row.platform}
               title={
-                [label, followers ? `${followers} followers` : null, engagementRate]
+                [label, tier, followers ? `${followers} followers` : null, engagementRate]
                   .filter(Boolean)
                   .join(" · ")
               }
@@ -41,7 +42,12 @@ export function ReviewPlatformBreakdown({
               <ReviewPlatformMark platform={row.platform} />
               {followers || engagementRate ? (
                 <span className="plat-er-metrics">
-                  {followers ? <b>{followers}</b> : null}
+                  {followers ? (
+                    <span className="plat-er-heading">
+                      <b>{followers}</b>
+                      {tier ? <span className="platform-tier" aria-label={`${label} tier: ${tier}`}>{tier}</span> : null}
+                    </span>
+                  ) : null}
                   {engagementRate ? <span className="er">{engagementRate}</span> : null}
                 </span>
               ) : null}
@@ -59,6 +65,7 @@ export function ReviewPlatformBreakdown({
         const mark = <ReviewPlatformMark platform={row.platform} />;
         const followers = formatOptionalCompactCount(row.followers);
         const er = formatOptionalEngagementPct(row.engagementRate);
+        const tier = clientPlatformTier(row.followers);
         return (
           <div className="q" key={row.platform}>
             <p className="l">
@@ -72,6 +79,7 @@ export function ReviewPlatformBreakdown({
               {formatPlatformLabel(row.platform)}
             </p>
             {followers ? <p className="v">{followers}</p> : null}
+            {tier ? <span className="platform-tier" aria-label={`${formatPlatformLabel(row.platform) ?? row.platform} tier: ${tier}`}>{tier}</span> : null}
             {er ? <p className="er">{er}</p> : null}
           </div>
         );

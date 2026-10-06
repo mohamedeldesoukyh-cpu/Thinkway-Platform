@@ -275,6 +275,8 @@
   width:18px;height:18px;border-radius:50%;object-fit:cover;background:transparent;
 }
 .tw-review .plat-er-metrics{display:flex;flex-direction:column;line-height:1.15;min-width:0;}
+.tw-review .plat-er-heading{display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.tw-review .platform-tier{display:inline-block;border-radius:5px;padding:2px 5px;background:#eef2ff;color:#3730a3;font-size:10px;font-weight:600;line-height:1.2;white-space:nowrap;}
 .tw-review .plat-er b{font-family:"Geist Mono",ui-monospace,monospace;font-weight:700;}
 .tw-review .plat-er .er{
   font-family:"Geist Mono",ui-monospace,monospace;

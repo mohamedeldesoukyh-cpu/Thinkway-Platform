@@ -123,7 +123,6 @@ export async function updatePlatformProfileUrl(
     platform: parsed.platform,
     normalized_username: parsed.normalized_username,
     normalized_profile_url: parsed.normalized_profile_url,
-    exclude_influencer_id: influencerId,
     exclude_account_id: platformAccountId,
   });
 

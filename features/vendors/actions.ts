@@ -145,6 +145,27 @@ export async function createVendorAction(
     preserveExistingPrimary: false,
   });
 
+  const platform = emptyToNull(parsed.data.platform);
+  const handle = emptyToNull(parsed.data.handle);
+  const profileUrl = emptyToNull(parsed.data.profile_url);
+  const resolved = resolvePlatformAccountFields({
+    profile_url: profileUrl ?? undefined,
+    username: handle ?? undefined,
+    platform: platform ?? undefined,
+  }) ?? null;
+  const accountPlatform = resolved?.platform ?? platform;
+  const accountUsername = resolved?.username ?? handle;
+  if (accountPlatform && accountUsername) {
+    const identity = buildNormalizedPlatformAccount({
+      platform: accountPlatform, username: accountUsername,
+      profile_url: resolved?.profile_url ?? profileUrl,
+    });
+    const duplicates = await findDuplicatePlatformAccounts(supabase, identity);
+    if (duplicates.length > 0) {
+      return { ok: false, message: `This profile is already linked to ${duplicates[0].influencer_name}. Use the existing creator instead.` };
+    }
+  }
+
   const { data: vendor, error } = await supabase
     .from("influencers")
     .insert({
@@ -165,20 +186,6 @@ export async function createVendorAction(
   if (error) {
     return { ok: false, message: error.message };
   }
-
-  const platform = emptyToNull(parsed.data.platform);
-  const handle = emptyToNull(parsed.data.handle);
-  const profileUrl = emptyToNull(parsed.data.profile_url);
-
-  const resolved =
-    resolvePlatformAccountFields({
-      profile_url: profileUrl ?? undefined,
-      username: handle ?? undefined,
-      platform: platform ?? undefined,
-    }) ?? null;
-
-  const accountPlatform = resolved?.platform ?? platform;
-  const accountUsername = resolved?.username ?? handle;
 
   if (accountPlatform && accountUsername) {
     let enrichment = null;
@@ -986,6 +993,23 @@ export async function savePlatformAccountsAction(
   }
 
   const influencerId = parsed.data.influencer_id;
+
+  // Validate the whole submission before deleting or saving any account.
+  const submittedProfiles = new Set<string>();
+  for (const account of accounts) {
+    const identity = buildNormalizedPlatformAccount(account);
+    const key = `${identity.platform}:${identity.normalized_username}`;
+    if (submittedProfiles.has(key)) {
+      return { ok: false, message: `The ${identity.platform} profile @${identity.username} is listed more than once. Keep one entry per profile link.` };
+    }
+    submittedProfiles.add(key);
+    const duplicates = await findDuplicatePlatformAccounts(supabase, {
+      ...identity, exclude_influencer_id: influencerId,
+    });
+    if (duplicates.length > 0) {
+      return { ok: false, message: `This profile is already linked to ${duplicates[0].influencer_name}. Use the existing creator instead.` };
+    }
+  }
 
   const { data: existing, error: fetchError } = await supabase
     .from("influencer_platform_accounts")

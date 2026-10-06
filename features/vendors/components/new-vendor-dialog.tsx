@@ -104,7 +104,7 @@ export function NewVendorDialog({
     setProfileUrl(parsed.profile_url);
     setDuplicateWarning(
       duplicates.length > 0
-        ? `This account is already linked to ${duplicates[0].influencer_name}. You can still create the vendor.`
+        ? `This profile is already linked to ${duplicates[0].influencer_name}. Use the existing creator instead.`
         : ""
     );
 
