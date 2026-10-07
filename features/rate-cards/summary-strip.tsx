@@ -11,7 +11,7 @@ export function RateSummaryStrip({versionId,updatedAt}:{versionId:string;updated
  useEffect(()=>{let live=true;setSummary(null);setFailed(false);getRateCardSummary(versionId).then(value=>{if(live)setSummary(value);}).catch(()=>{if(live)setFailed(true);});return()=>{live=false;};},[versionId,updatedAt]);
  const ar=lang==="ar";
  if(!summary)return <p className="text-xs text-muted-foreground" role="status">{failed?(ar?"تعذر تحميل ملخص بطاقة الأسعار":"Rate-card summary unavailable"):t("loading")}</p>;
- const number=(n:number)=>n.toLocaleString(lang);
+ const number=(n:number)=>n.toLocaleString(lang==="ar"?"ar-EG-u-nu-latn":"en-GB");
  return <div className="flex flex-wrap items-center gap-2 text-sm" role="group" aria-label={ar?"ملخص بطاقة الأسعار بالكامل":"Entire rate-card summary"}>
   <span className="rounded-full border bg-white px-3 py-1"><strong>{number(summary.creators)}</strong> {t("creators")}</span>
   <span className="rounded-full border bg-white px-3 py-1" title={ar?"يُحتسب كل مبدع مرة واحدة لكل منصة":"Each creator is counted once per platform"}><strong>{number(summary.accounts)}</strong> {ar?"حسابات المنصات":"Platform accounts"}</span>
