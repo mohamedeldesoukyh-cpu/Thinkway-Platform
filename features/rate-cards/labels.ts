@@ -1,4 +1,6 @@
 export const labels = {
+ replacementProfiles:["The replacement creator must have exactly one linked account for each platform in this package. Update their profiles first, then retry.","يجب أن يكون للمبدع البديل حساب مرتبط واحد لكل منصة في الباقة. حدّث حساباته أولاً ثم أعد المحاولة."],
+ unlinkedProfile:["This URL is not linked to this creator. Use Add profile URL first. A URL owned by another creator cannot be added here.","هذا الرابط غير مرتبط بالمبدع. استخدم إضافة رابط حساب أولاً. لا يمكن إضافة حساب يخص مبدعاً آخر."],
  rounded:["Rounded automatically; ready to import","تم التقريب تلقائياً؛ جاهز للاستيراد"],
  importTimeout:["The import took too long and was rolled back. No rate lines were saved. Your upload is retained; retry Confirm Import.","استغرق الاستيراد وقتاً أطول من المسموح وتم التراجع عنه. لم تُحفظ أي أسعار. ملفك محفوظ؛ أعد محاولة تأكيد الاستيراد."],
  clientListByName:["Client List by Name","قائمة العميل بالأسماء"],performanceReportHelp:["Creator profiles and performance only. Creator cards and platform links are clickable in HTML, PDF and PPTX.","ملفات المبدعين وأداؤهم فقط. بطاقات المبدعين وروابط المنصات قابلة للنقر في HTML وPDF وPPTX."],
@@ -30,3 +32,874 @@ export function taxonomyLabel(value:string,lang:Language,fallback?:string){
   if(arabicTaxonomy[value])return arabicTaxonomy[value];
   const [platform,...type]=value.split("_");return `${arabicTaxonomy[platform]??platform} ${arabicTaxonomy[type.join("_")]??type.join(" ")}`;
 }
+
+
+/** Supplied redesign dictionary; kept separate from legacy upload labels. */
+export const redesignLabels = {
+  "p1Title": {
+    "en": "Client rate cards",
+    "ar": "قوائم أسعار العملاء"
+  },
+  "p1Sub": {
+    "en": "Reference prices only. Quotation prices change only after you choose and confirm an application.",
+    "ar": "أسعار مرجعية فقط. لا تتغير أسعار عرض السعر إلا بعد اختيار التطبيق وتأكيده."
+  },
+  "create": {
+    "en": "+ Create rate card",
+    "ar": "+ إنشاء قائمة أسعار"
+  },
+  "refresh": {
+    "en": "↻ Refresh",
+    "ar": "↻ تحديث"
+  },
+  "tools": {
+    "en": "Templates & import ▾",
+    "ar": "القوالب والاستيراد ▾"
+  },
+  "mgDownload": {
+    "en": "Download template",
+    "ar": "تنزيل قالب"
+  },
+  "tplInd": {
+    "en": "Individual Rates (.xlsx)",
+    "ar": "الأسعار الفردية (.xlsx)"
+  },
+  "tplPkg": {
+    "en": "Creator Packages (.xlsx)",
+    "ar": "باقات صُنّاع المحتوى (.xlsx)"
+  },
+  "aUpload2": {
+    "en": "Upload rate card…",
+    "ar": "رفع قائمة أسعار…"
+  },
+  "s1a": {
+    "en": "Versions matching filters",
+    "ar": "الإصدارات المطابقة للفلاتر"
+  },
+  "s1aSub": {
+    "en": "across all clients",
+    "ar": "عبر كل العملاء"
+  },
+  "s1b": {
+    "en": "Active on this page",
+    "ar": "المفعّلة في هذه الصفحة"
+  },
+  "s1bEm": {
+    "en": "of 6 shown",
+    "ar": "من 6 معروضة"
+  },
+  "s1bSub": {
+    "en": "page count, not a system total",
+    "ar": "عدد الصفحة وليس إجمالي النظام"
+  },
+  "s1c": {
+    "en": "Scope",
+    "ar": "النطاق"
+  },
+  "s1cVal": {
+    "en": "All clients",
+    "ar": "كل العملاء"
+  },
+  "s1cSub": {
+    "en": "no client filter applied",
+    "ar": "لم يُطبَّق فلتر عميل"
+  },
+  "fSearch": {
+    "en": "Search rate cards…",
+    "ar": "ابحث في قوائم الأسعار…"
+  },
+  "fClient": {
+    "en": "All clients",
+    "ar": "كل العملاء"
+  },
+  "fStatus": {
+    "en": "Any status",
+    "ar": "أي حالة"
+  },
+  "fSort": {
+    "en": "Last updated",
+    "ar": "آخر تحديث"
+  },
+  "fDesc": {
+    "en": "Descending",
+    "ar": "تنازلي"
+  },
+  "fAsc": {
+    "en": "Ascending",
+    "ar": "تصاعدي"
+  },
+  "more": {
+    "en": "+ More filters",
+    "ar": "+ فلاتر إضافية"
+  },
+  "fBrand": {
+    "en": "Brand",
+    "ar": "العلامة"
+  },
+  "fBrandHint": {
+    "en": "Choose a client first",
+    "ar": "اختر عميلاً أولاً"
+  },
+  "fCreator": {
+    "en": "Creator",
+    "ar": "صانع المحتوى"
+  },
+  "fCreatorPh": {
+    "en": "Name or handle",
+    "ar": "الاسم أو المعرّف"
+  },
+  "fVersion": {
+    "en": "Version",
+    "ar": "الإصدار"
+  },
+  "fPlatform": {
+    "en": "Platform",
+    "ar": "المنصة"
+  },
+  "fAny": {
+    "en": "Any",
+    "ar": "الكل"
+  },
+  "fCurrency": {
+    "en": "Currency",
+    "ar": "العملة"
+  },
+  "fAny2": {
+    "en": "Any",
+    "ar": "الكل"
+  },
+  "reset": {
+    "en": "Reset all",
+    "ar": "مسح الكل"
+  },
+  "reset2": {
+    "en": "Reset all filters",
+    "ar": "مسح كل الفلاتر"
+  },
+  "hClient": {
+    "en": "Client",
+    "ar": "العميل"
+  },
+  "hBrand": {
+    "en": "Brand / scope",
+    "ar": "العلامة / النطاق"
+  },
+  "hName": {
+    "en": "Rate card",
+    "ar": "قائمة الأسعار"
+  },
+  "hVer": {
+    "en": "Version",
+    "ar": "الإصدار"
+  },
+  "hStatus": {
+    "en": "Status",
+    "ar": "الحالة"
+  },
+  "hCreated": {
+    "en": "Created",
+    "ar": "أُنشئت"
+  },
+  "hUpdated": {
+    "en": "Last updated ↓",
+    "ar": "آخر تحديث ↓"
+  },
+  "hCreators": {
+    "en": "Creators",
+    "ar": "الصُنّاع"
+  },
+  "hActions": {
+    "en": "Actions",
+    "ar": "الإجراءات"
+  },
+  "hName2": {
+    "en": "Rate card name",
+    "ar": "اسم قائمة الأسعار"
+  },
+  "hVer2": {
+    "en": "Version",
+    "ar": "الإصدار"
+  },
+  "hCreated2": {
+    "en": "Created",
+    "ar": "أُنشئت"
+  },
+  "hCreators2": {
+    "en": "Creator count",
+    "ar": "عدد الصُنّاع"
+  },
+  "hClient2": {
+    "en": "Client",
+    "ar": "العميل"
+  },
+  "clientLevel": {
+    "en": "Client-level rate card",
+    "ar": "قائمة أسعار على مستوى العميل"
+  },
+  "stActive": {
+    "en": "Active",
+    "ar": "مفعّلة"
+  },
+  "stInactive": {
+    "en": "Inactive",
+    "ar": "غير مفعّلة"
+  },
+  "stActive2": {
+    "en": "Active",
+    "ar": "مفعّلة"
+  },
+  "stInactive2": {
+    "en": "Inactive",
+    "ar": "غير مفعّلة"
+  },
+  "stInactive3": {
+    "en": "Inactive",
+    "ar": "غير مفعّلة"
+  },
+  "view": {
+    "en": "View",
+    "ar": "عرض"
+  },
+  "mgManage": {
+    "en": "Manage",
+    "ar": "إدارة"
+  },
+  "mgDanger": {
+    "en": "Destructive",
+    "ar": "إجراءات حذف"
+  },
+  "aEdit": {
+    "en": "Edit version information",
+    "ar": "تعديل بيانات الإصدار"
+  },
+  "aDup": {
+    "en": "Duplicate version",
+    "ar": "نسخ الإصدار"
+  },
+  "aUpload": {
+    "en": "Upload into this version",
+    "ar": "رفع إلى هذا الإصدار"
+  },
+  "aToggle": {
+    "en": "Activate / deactivate",
+    "ar": "تفعيل / إلغاء تفعيل"
+  },
+  "aDelV": {
+    "en": "Delete this version only…",
+    "ar": "حذف هذا الإصدار فقط…"
+  },
+  "aDelC": {
+    "en": "Delete the entire rate card…",
+    "ar": "حذف قائمة الأسعار بالكامل…"
+  },
+  "prev": {
+    "en": "Previous",
+    "ar": "السابق"
+  },
+  "next": {
+    "en": "Next",
+    "ar": "التالي"
+  },
+  "perPage": {
+    "en": "25 per page",
+    "ar": "25 لكل صفحة"
+  },
+  "eTitle": {
+    "en": "No rate cards match these filters",
+    "ar": "لا توجد قوائم أسعار مطابقة"
+  },
+  "eBody": {
+    "en": "Try removing the creator or currency filter — those are the two that most often return nothing.",
+    "ar": "جرّب إزالة فلتر صانع المحتوى أو العملة، فهما الأكثر تسبّبًا في نتائج فارغة."
+  },
+  "backReg": {
+    "en": "Client rate cards",
+    "ar": "قوائم أسعار العملاء"
+  },
+  "crumbCard": {
+    "en": "Pitch 3",
+    "ar": "العرض 3"
+  },
+  "p2Title": {
+    "en": "Pitch 3 · V1",
+    "ar": "العرض 3 · الإصدار 1"
+  },
+  "p2Sub": {
+    "en": "Reference prices. Editing this version does not change any quotation that already copied these prices.",
+    "ar": "أسعار مرجعية. تعديل هذا الإصدار لا يغيّر أي عرض سعر نسخ هذه الأسعار بالفعل."
+  },
+  "audit": {
+    "en": "Audit history",
+    "ar": "سجل التغييرات"
+  },
+  "export": {
+    "en": "Preview & export",
+    "ar": "معاينة وتصدير"
+  },
+  "effective": {
+    "en": "Effective",
+    "ar": "يبدأ"
+  },
+  "expiry": {
+    "en": "Expiry",
+    "ar": "ينتهي"
+  },
+  "cCreators": {
+    "en": "creators",
+    "ar": "صانع محتوى"
+  },
+  "cAccounts": {
+    "en": "platform accounts",
+    "ar": "حساب منصة"
+  },
+  "countScope": {
+    "en": "These counts describe the whole version, not the rows shown below.",
+    "ar": "تصف هذه الأعداد الإصدار بالكامل وليس الصفوف المعروضة أدناه."
+  },
+  "roMsg": {
+    "en": "You have read-only access to this rate card. Pricing actions are disabled.",
+    "ar": "لديك صلاحية قراءة فقط لهذه القائمة. إجراءات التسعير معطّلة."
+  },
+  "addLine": {
+    "en": "+ Add creator / pricing line",
+    "ar": "+ إضافة صانع محتوى / بند سعر"
+  },
+  "addDisc": {
+    "en": "Add from discovery",
+    "ar": "إضافة من الاكتشاف"
+  },
+  "bulk": {
+    "en": "Bulk pricing",
+    "ar": "تسعير جماعي"
+  },
+  "upload2": {
+    "en": "Upload rate card",
+    "ar": "رفع قائمة أسعار"
+  },
+  "tuEdit": {
+    "en": "Edit uplifts",
+    "ar": "تعديل البدلات"
+  },
+  "tuT2": {
+    "en": "Travel uplifts",
+    "ar": "بدلات السفر"
+  },
+  "tuP": {
+    "en": "Optional percentages shown separately from the base price. They may exceed 100%. A blank field keeps the existing rate.",
+    "ar": "نسب اختيارية تُعرض بشكل منفصل عن السعر الأساسي، وقد تتجاوز 100%. الحقل الفارغ يُبقي النسبة الحالية."
+  },
+  "tuA2": {
+    "en": "· Alex / North Coast / Ain Sokhna",
+    "ar": "· الإسكندرية / الساحل / العين السخنة"
+  },
+  "tuB2": {
+    "en": "· Red Sea / Sharm / Upper Egypt",
+    "ar": "· البحر الأحمر / شرم / الصعيد"
+  },
+  "tuI2": {
+    "en": "· International",
+    "ar": "· دولي"
+  },
+  "tuWarnT": {
+    "en": "Apply All changes all 269 creators in this version",
+    "ar": "«تطبيق على الكل» يغيّر كل الـ269 صانع محتوى في هذا الإصدار"
+  },
+  "tuWarnB": {
+    "en": "Including creators on other pages and creators hidden by the current filters. It is not limited to the rows you can see or have selected.",
+    "ar": "بما في ذلك الصُنّاع في صفحات أخرى والمخفيّون بالفلاتر الحالية. لا يقتصر على الصفوف الظاهرة أو المحدّدة."
+  },
+  "applyAll": {
+    "en": "Apply to all 269 creators",
+    "ar": "تطبيق على كل الـ269"
+  },
+  "cancel": {
+    "en": "Cancel",
+    "ar": "إلغاء"
+  },
+  "cancel2": {
+    "en": "Cancel",
+    "ar": "إلغاء"
+  },
+  "cancel3": {
+    "en": "Cancel",
+    "ar": "إلغاء"
+  },
+  "cancel4": {
+    "en": "Cancel",
+    "ar": "إلغاء"
+  },
+  "close2": {
+    "en": "Close",
+    "ar": "إغلاق"
+  },
+  "fSearch2": {
+    "en": "Search creator, handle or package…",
+    "ar": "ابحث باسم الصانع أو المعرّف أو الباقة…"
+  },
+  "fPlatform2": {
+    "en": "All platforms",
+    "ar": "كل المنصات"
+  },
+  "fCurrency2": {
+    "en": "All currencies",
+    "ar": "كل العملات"
+  },
+  "viewAll2": {
+    "en": "All offers",
+    "ar": "كل العروض"
+  },
+  "viewExtras": {
+    "en": "With optional services",
+    "ar": "بخدمات اختيارية"
+  },
+  "viewMissing": {
+    "en": "Missing prices",
+    "ar": "أسعار ناقصة"
+  },
+  "bandPriv": {
+    "en": "Internal · private",
+    "ar": "داخلي · خاص"
+  },
+  "bandPub": {
+    "en": "Client-facing",
+    "ar": "يظهر للعميل"
+  },
+  "hOffer": {
+    "en": "Creator & offer",
+    "ar": "الصانع والعرض"
+  },
+  "hPlat": {
+    "en": "Platforms",
+    "ar": "المنصات"
+  },
+  "hCost": {
+    "en": "Creator cost",
+    "ar": "تكلفة الصانع"
+  },
+  "hPrice": {
+    "en": "Client price",
+    "ar": "سعر العميل"
+  },
+  "hGP": {
+    "en": "GP %",
+    "ar": "نسبة الربح %"
+  },
+  "hMk": {
+    "en": "Markup %",
+    "ar": "الهامش %"
+  },
+  "hFee": {
+    "en": "Fee %",
+    "ar": "العمولة %"
+  },
+  "hExtras": {
+    "en": "Optional services",
+    "ar": "خدمات اختيارية"
+  },
+  "hActions2": {
+    "en": "Actions",
+    "ar": "الإجراءات"
+  },
+  "miss": {
+    "en": "Not set",
+    "ar": "غير محدد"
+  },
+  "miss2": {
+    "en": "Not set",
+    "ar": "غير محدد"
+  },
+  "plines": {
+    "en": "lines",
+    "ar": "بنود"
+  },
+  "xUR": {
+    "en": "Usage rights",
+    "ar": "حقوق الاستخدام"
+  },
+  "xBO": {
+    "en": "Boosting",
+    "ar": "الترويج"
+  },
+  "xEV": {
+    "en": "Event attendance",
+    "ar": "حضور فعالية"
+  },
+  "xAdd": {
+    "en": "Add optional service",
+    "ar": "إضافة خدمة اختيارية"
+  },
+  "edit": {
+    "en": "Edit",
+    "ar": "تعديل"
+  },
+  "edit2": {
+    "en": "Edit",
+    "ar": "تعديل"
+  },
+  "edit3": {
+    "en": "Edit",
+    "ar": "تعديل"
+  },
+  "aPhoto": {
+    "en": "Change photo for this rate card…",
+    "ar": "تغيير الصورة لهذه القائمة…"
+  },
+  "aDupLine": {
+    "en": "Duplicate pricing line",
+    "ar": "نسخ بند السعر"
+  },
+  "aRemoveLine": {
+    "en": "Remove pricing line…",
+    "ar": "حذف بند السعر…"
+  },
+  "urT": {
+    "en": "Usage rights",
+    "ar": "حقوق الاستخدام"
+  },
+  "boT": {
+    "en": "Boosting",
+    "ar": "الترويج"
+  },
+  "evT": {
+    "en": "Event attendance",
+    "ar": "حضور فعالية"
+  },
+  "tuT": {
+    "en": "Travel uplifts",
+    "ar": "بدلات السفر"
+  },
+  "urTHint": {
+    "en": "Optional. Priced separately from the content fee.",
+    "ar": "اختياري، ويُسعّر بشكل منفصل عن سعر المحتوى."
+  },
+  "boTHint": {
+    "en": "Optional. Priced separately from the content fee.",
+    "ar": "اختياري، ويُسعّر بشكل منفصل عن سعر المحتوى."
+  },
+  "evTHint": {
+    "en": "Optional. Priced separately from the content fee.",
+    "ar": "اختياري، ويُسعّر بشكل منفصل عن سعر المحتوى."
+  },
+  "notSet": {
+    "en": "Not set",
+    "ar": "غير محدد"
+  },
+  "addPrice": {
+    "en": "+ Add price",
+    "ar": "+ إضافة سعر"
+  },
+  "months": {
+    "en": "months",
+    "ar": "شهور"
+  },
+  "days": {
+    "en": "days",
+    "ar": "أيام"
+  },
+  "ccMonthly": {
+    "en": "Creator · per unit",
+    "ar": "تكلفة الصانع · للوحدة"
+  },
+  "cpMonthly": {
+    "en": "Client · per unit",
+    "ar": "سعر العميل · للوحدة"
+  },
+  "period": {
+    "en": "Period",
+    "ar": "المدة"
+  },
+  "agencyFee": {
+    "en": "Agency fee",
+    "ar": "عمولة الوكالة"
+  },
+  "totalClient": {
+    "en": "Total client price",
+    "ar": "إجمالي سعر العميل"
+  },
+  "tuA": {
+    "en": "Alex / North Coast / Ain Sokhna",
+    "ar": "الإسكندرية / الساحل / العين السخنة"
+  },
+  "tuB": {
+    "en": "Red Sea / Sharm / Upper Egypt",
+    "ar": "البحر الأحمر / شرم / الصعيد"
+  },
+  "tuI": {
+    "en": "International",
+    "ar": "دولي"
+  },
+  "tuNote": {
+    "en": "Applied on top of the base price, never inside it.",
+    "ar": "تُضاف فوق السعر الأساسي ولا تدخل ضمنه."
+  },
+  "intT": {
+    "en": "Internal only",
+    "ar": "داخلي فقط"
+  },
+  "neverExported": {
+    "en": "Never exported to clients",
+    "ar": "لا يُصدَّر للعملاء"
+  },
+  "intCost": {
+    "en": "Creator cost",
+    "ar": "تكلفة الصانع"
+  },
+  "intFee": {
+    "en": "Content agency fee",
+    "ar": "عمولة المحتوى"
+  },
+  "intNote": {
+    "en": "Creator costs, GP, markup and internal notes are stripped from every client-facing export.",
+    "ar": "تُحذف تكاليف الصُنّاع ونسب الربح والهامش والملاحظات الداخلية من كل تصدير يصل للعميل."
+  },
+  "prev2": {
+    "en": "Previous",
+    "ar": "السابق"
+  },
+  "next2": {
+    "en": "Next",
+    "ar": "التالي"
+  },
+  "offersWord": {
+    "en": "offers",
+    "ar": "عرض"
+  },
+  "linesNote": {
+    "en": "20 pricing lines on this page",
+    "ar": "20 بند تسعير في هذه الصفحة"
+  },
+  "selOffers": {
+    "en": "offers selected",
+    "ar": "عرض محدد"
+  },
+  "selLines": {
+    "en": "underlying pricing lines",
+    "ar": "بند تسعير أساسي"
+  },
+  "selClear": {
+    "en": "Clear",
+    "ar": "مسح"
+  },
+  "selBulk": {
+    "en": "Bulk pricing",
+    "ar": "تسعير جماعي"
+  },
+  "selRemove": {
+    "en": "Remove…",
+    "ar": "حذف…"
+  },
+  "dAddT": {
+    "en": "Add creator / pricing line",
+    "ar": "إضافة صانع محتوى / بند سعر"
+  },
+  "srcDir": {
+    "en": "Creator directory",
+    "ar": "دليل الصُنّاع"
+  },
+  "srcDisc": {
+    "en": "Discovery",
+    "ar": "الاكتشاف"
+  },
+  "srcUrl": {
+    "en": "Profile URL",
+    "ar": "رابط الحساب"
+  },
+  "dCreator": {
+    "en": "Creator",
+    "ar": "صانع المحتوى"
+  },
+  "dCreatorPh": {
+    "en": "Search name or handle…",
+    "ar": "ابحث بالاسم أو المعرّف…"
+  },
+  "dReuse": {
+    "en": "Existing creators and platform accounts are reused. Adding a URL for a platform the creator does not yet have links that account to them.",
+    "ar": "يُعاد استخدام الصُنّاع والحسابات الموجودة. إضافة رابط لمنصة جديدة يربط ذلك الحساب بالصانع."
+  },
+  "dPlat": {
+    "en": "Platform",
+    "ar": "المنصة"
+  },
+  "dDeliv": {
+    "en": "Deliverable",
+    "ar": "المُخرَج"
+  },
+  "dRateType": {
+    "en": "Rate type",
+    "ar": "نوع السعر"
+  },
+  "dRtCost": {
+    "en": "Creator cost",
+    "ar": "تكلفة الصانع"
+  },
+  "dRtPrice": {
+    "en": "Client selling price",
+    "ar": "سعر البيع للعميل"
+  },
+  "dCurrency": {
+    "en": "Currency",
+    "ar": "العملة"
+  },
+  "dAmount": {
+    "en": "Amount",
+    "ar": "المبلغ"
+  },
+  "dFee": {
+    "en": "Agency fee %",
+    "ar": "عمولة الوكالة %"
+  },
+  "dNotes": {
+    "en": "Notes",
+    "ar": "ملاحظات"
+  },
+  "dNotesPh": {
+    "en": "Internal only — never exported",
+    "ar": "داخلي فقط — لا يُصدَّر"
+  },
+  "dIndep": {
+    "en": "Creator cost and client price are saved independently. Entering a cost never generates a selling price.",
+    "ar": "تُحفظ التكلفة وسعر العميل بشكل مستقل. إدخال التكلفة لا يولّد سعر بيع."
+  },
+  "dOpt": {
+    "en": "Optional services",
+    "ar": "خدمات اختيارية"
+  },
+  "dUrM": {
+    "en": "Usage rights · months",
+    "ar": "حقوق الاستخدام · شهور"
+  },
+  "dBoM": {
+    "en": "Boosting · months",
+    "ar": "الترويج · شهور"
+  },
+  "dEvD": {
+    "en": "Event attendance · days",
+    "ar": "حضور فعالية · أيام"
+  },
+  "dSim": {
+    "en": "Simulated — nothing is saved in this prototype",
+    "ar": "محاكاة — لا يُحفظ شيء في هذا النموذج"
+  },
+  "save": {
+    "en": "Save pricing line",
+    "ar": "حفظ بند السعر"
+  },
+  "bT": {
+    "en": "Bulk pricing",
+    "ar": "تسعير جماعي"
+  },
+  "bRule": {
+    "en": "Rule",
+    "ar": "القاعدة"
+  },
+  "bGp": {
+    "en": "Set client price from a target GP %",
+    "ar": "حساب سعر العميل من نسبة ربح مستهدفة"
+  },
+  "bMk": {
+    "en": "Set client price from a markup %",
+    "ar": "حساب سعر العميل من نسبة هامش"
+  },
+  "bFee": {
+    "en": "Adjust agency fee only",
+    "ar": "تعديل عمولة الوكالة فقط"
+  },
+  "bTarget": {
+    "en": "Target %",
+    "ar": "النسبة المستهدفة %"
+  },
+  "bFee2": {
+    "en": "Agency fee % (optional)",
+    "ar": "عمولة الوكالة % (اختياري)"
+  },
+  "bFill": {
+    "en": "Fill missing prices only",
+    "ar": "ملء الأسعار الناقصة فقط"
+  },
+  "bFillB": {
+    "en": "Existing client prices are left untouched.",
+    "ar": "لا تُمَس أسعار العملاء الموجودة."
+  },
+  "bOver": {
+    "en": "Overwrite existing prices",
+    "ar": "استبدال الأسعار الموجودة"
+  },
+  "bOverB": {
+    "en": "Every matching line is recalculated.",
+    "ar": "يُعاد حساب كل بند مطابق."
+  },
+  "bPrev": {
+    "en": "Preview · before and after",
+    "ar": "معاينة · قبل وبعد"
+  },
+  "bStale": {
+    "en": "You changed the rule. This preview is out of date — regenerate it before applying.",
+    "ar": "لقد غيّرت القاعدة. هذه المعاينة قديمة — أعد إنشاءها قبل التطبيق."
+  },
+  "bGen": {
+    "en": "Generate preview",
+    "ar": "إنشاء معاينة"
+  },
+  "bApply": {
+    "en": "Apply to 4 lines",
+    "ar": "تطبيق على 4 بنود"
+  },
+  "xT": {
+    "en": "Preview & export",
+    "ar": "معاينة وتصدير"
+  },
+  "xIntro": {
+    "en": "Choose a report, then a format. Creator costs, GP, markup and internal notes are removed from every one of these.",
+    "ar": "اختر التقرير ثم الصيغة. تُحذف تكاليف الصُنّاع ونسب الربح والهامش والملاحظات الداخلية من جميعها."
+  },
+  "xR1": {
+    "en": "Creator list",
+    "ar": "قائمة الصُنّاع"
+  },
+  "xR1b": {
+    "en": "Creator cards and client prices.",
+    "ar": "بطاقات الصُنّاع وأسعار العميل."
+  },
+  "xR2": {
+    "en": "Creator list with details",
+    "ar": "قائمة الصُنّاع بالتفاصيل"
+  },
+  "xR2b": {
+    "en": "Adds platform performance information.",
+    "ar": "تضيف بيانات أداء المنصات."
+  },
+  "xR3": {
+    "en": "Client list by name",
+    "ar": "قائمة العميل بالأسماء"
+  },
+  "xR3b": {
+    "en": "Creator information and performance, with no rates or fees at all.",
+    "ar": "بيانات الصُنّاع وأداؤهم دون أي أسعار أو عمولات."
+  },
+  "xFormat": {
+    "en": "Format",
+    "ar": "الصيغة"
+  },
+  "xHtmlP": {
+    "en": "HTML preview",
+    "ar": "معاينة HTML"
+  },
+  "xHtml": {
+    "en": "HTML",
+    "ar": "HTML"
+  },
+  "xPdf": {
+    "en": "PDF",
+    "ar": "PDF"
+  },
+  "xPptx": {
+    "en": "PowerPoint",
+    "ar": "PowerPoint"
+  },
+  "demoT": {
+    "en": "Preview only · jump to a state",
+    "ar": "للمعاينة فقط · انتقل إلى حالة"
+  }
+} as const;
+export type RedesignLabel = keyof typeof redesignLabels;
+export function rxText(lang: "en" | "ar", key: RedesignLabel): string { return redesignLabels[key][lang]; }
