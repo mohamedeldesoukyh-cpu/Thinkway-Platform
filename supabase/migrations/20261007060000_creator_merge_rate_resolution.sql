@@ -3,7 +3,7 @@ set local lock_timeout='5s';
 -- Resolve only prices explicitly reviewed by the operator. All choices succeed
 -- together or roll back; changed rows require a fresh comparison.
 create or replace function public.resolve_creator_merge_rates(p_target uuid,p_source uuid,p_actor uuid,p_choices jsonb)
-returns void language plpgsql security invoker set search_path=public as $$
+returns void language plpgsql security definer set search_path=public as $$
 declare choice jsonb; kept public.rate_card_lines%rowtype; removed public.rate_card_lines%rowtype;
 begin
  if p_target is null or p_source is null or p_target=p_source or p_actor is null then raise exception 'Choose two different creators';end if;

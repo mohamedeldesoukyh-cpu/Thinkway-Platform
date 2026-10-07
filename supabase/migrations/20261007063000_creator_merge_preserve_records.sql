@@ -64,7 +64,7 @@ begin
 end $$;
 
 create or replace function public.combine_creator_records(p_target uuid,p_source uuid,p_actor uuid,p_patch jsonb)
-returns integer language plpgsql security invoker set search_path=public as $$
+returns integer language plpgsql security definer set search_path=public as $$
 declare t public.influencers%rowtype; s public.influencers%rowtype; fk record; row_data jsonb; table_name text; moved integer; version_offset integer;
 begin
  if p_target is null or p_source is null or p_target=p_source or p_actor is null then raise exception 'Choose two different creators';end if;
