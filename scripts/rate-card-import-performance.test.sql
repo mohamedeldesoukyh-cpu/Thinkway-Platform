@@ -12,7 +12,7 @@ CREATE TEMP TABLE qa_lines AS
  from (select id from influencers order by id limit 269) i
  cross join unnest(array['package','usage_right','boosting','event_attendance']) d
  cross join unnest(array['creator_cost','client_price']) p;
-CREATE TEMP TABLE qa_versions(id uuid, stamp text, copy_id uuid);
+CREATE TEMP TABLE qa_versions(id uuid, stamp text, copy_id uuid, partial_id uuid);
 GRANT ALL ON qa_lines,qa_versions TO authenticated;
 SET LOCAL ROLE authenticated;
 insert into qa_versions(id) select save_rate_card(jsonb_build_object('client_id',(select client_id from rate_cards limit 1),'name','Rollback bulk QA','version','V1','status','inactive'));
@@ -34,9 +34,17 @@ DO $$ begin
  if exists(select 1 from rate_card_lines where version_id=(select id from qa_versions) and (tu_a_percent is distinct from 10 or tu_b_percent is distinct from 20 or itu_percent is distinct from 30)) then raise exception 'uplifts lost';end if;
 end $$;
 update qa_versions set stamp=(select updated_at::text from rate_card_versions where id=qa_versions.id);
-update qa_versions set copy_id=save_rate_card(jsonb_build_object('version','V2','status','inactive'),null,id,(select payload from qa_lines),stamp,'upload');
+update qa_versions set copy_id=save_rate_card(jsonb_build_object('version','V2','status','inactive'),null,id,(select jsonb_agg(l||'{"amount":1100}'::jsonb) from qa_lines,jsonb_array_elements(payload) l),stamp,'upload');
 DO $$ begin
  if (select count(*) from rate_card_lines where version_id=(select copy_id from qa_versions))<>2152 then raise exception 'copy lost rates';end if;
+ if exists(select 1 from rate_card_lines where version_id=(select copy_id from qa_versions) and (amount<>1100 or tu_a_percent is distinct from 10)) then raise exception 'copy lost incoming values or uplifts';end if;
+end $$;
+update qa_versions set partial_id=save_rate_card(jsonb_build_object('version','V3','status','inactive'),null,id,(select jsonb_build_array((payload->0)||'{"amount":2000}'::jsonb) from qa_lines),stamp,'upload');
+DO $$ begin
+ if (select count(*) from rate_card_lines where version_id=(select partial_id from qa_versions))<>2152 then raise exception 'partial copy lost unmatched prices';end if;
+ if (select count(*) from rate_card_lines where version_id=(select partial_id from qa_versions) and amount=2000)<>1 then raise exception 'partial copy lost new price';end if;
+ if (select count(*) from rate_card_lines where version_id=(select partial_id from qa_versions) and amount=1000)<>2151 then raise exception 'partial copy changed unmatched prices';end if;
+ if exists(select 1 from rate_card_lines where version_id=(select partial_id from qa_versions) and tu_a_percent is distinct from 10) then raise exception 'partial copy lost uplifts';end if;
 end $$;
 -- Force a failure after an earlier valid row: no partial update may survive.
 update qa_versions set stamp=(select updated_at::text from rate_card_versions where id=qa_versions.id);
