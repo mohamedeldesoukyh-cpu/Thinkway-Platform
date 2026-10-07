@@ -250,6 +250,9 @@ function applyDnaDocumentToCreator(
   creator: UnifiedCreatorResult,
   document: CreatorDNADocument
 ): UnifiedCreatorResult {
+  // Old DNA may describe an account explicitly removed as the wrong person.
+  // Keep its history, but do not reapply that identity or its account snapshots.
+  if (creator.identity_linked_accounts_only) return creator;
   const completeness = completenessFromDocument(document);
   const displayName = envelopeValue(document.identity.displayName);
   const bio = envelopeValue(document.identity.bio);

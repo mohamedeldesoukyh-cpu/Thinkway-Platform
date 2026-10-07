@@ -20,7 +20,7 @@ export type UpdatePlatformProfileUrlResult =
       enrichmentQueued: boolean;
       message: string;
     }
-  | { ok: false; message: string };
+  | { ok: false; message: string; conflictingCreator?: UnifiedCreatorResult | null };
 
 /**
  * Replace the profile URL on an existing platform account, re-normalize identity
@@ -131,6 +131,7 @@ export async function updatePlatformProfileUrl(
     return {
       ok: false,
       message: `This profile is already linked to ${other.influencer_name}.`,
+      conflictingCreator: await getUnifiedCreatorById(supabase, `inf:${other.influencer_id}`, { skipDna: true }),
     };
   }
 

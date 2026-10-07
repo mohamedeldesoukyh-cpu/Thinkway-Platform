@@ -395,6 +395,7 @@ export async function duplicateCampaign(
     }
 
     type SourceVendor = {
+      merge_record_key?: string;
       campaign_line_id: string | null;
       influencer_id: string;
       agreed_fee: number;
@@ -414,13 +415,14 @@ export async function duplicateCampaign(
           campaign_header_id: newHeader.id,
           campaign_line_id: newLineId,
           influencer_id: vendor.influencer_id,
+          merge_record_key: vendor.merge_record_key ?? "00000000-0000-0000-0000-000000000000",
           status: "invited",
           agreed_fee: input.copy_pricing ? vendor.agreed_fee : 0,
           currency: vendor.currency,
           deliverable_count: input.copy_deliverables ? vendor.deliverable_count : 0,
           invited_at: new Date().toISOString(),
         },
-        { onConflict: "campaign_header_id,campaign_line_id,influencer_id" }
+        { onConflict: "campaign_header_id,campaign_line_id,influencer_id,merge_record_key" }
       );
     }
   }

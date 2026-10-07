@@ -804,6 +804,7 @@ export async function convertQuotationToAssignments(
           .select("id")
           .eq("campaign_line_id", result.lineId)
           .eq("influencer_id", memberInfluencerId)
+          .limit(1)
           .maybeSingle();
 
         if (existingMember?.id) continue;

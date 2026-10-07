@@ -4211,6 +4211,24 @@
   min-height: 0;
 }
 
+.creator-picker-compact-dialog .creator-picker-card__head .truncate {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (min-width: 640px) {
+  .creator-picker-compact-dialog .creator-picker-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: center;
+    gap: 16px;
+  }
+  .creator-picker-compact-dialog .creator-picker-card__stats {
+    margin-top: 0;
+    padding-left: 0;
+  }
+}
+
 .creator-picker-card {
   border: 1px solid #eaedf4;
   border-radius: 12px;

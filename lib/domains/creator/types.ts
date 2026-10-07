@@ -139,6 +139,8 @@ export type CreatorEnrichmentStatus =
   | "skipped";
 
 export type UnifiedCreatorResult = {
+  /** Identity was explicitly restored after removing an incorrect platform. */
+  identity_linked_accounts_only?: boolean;
   /** Ephemeral normal-search relevance, never persisted into Creator DNA. */
   discovery_relevance?: import("@/lib/discovery/normal-search").SearchRelevance;
   /** Stable composite key: `inf:uuid` or `dis:uuid` */

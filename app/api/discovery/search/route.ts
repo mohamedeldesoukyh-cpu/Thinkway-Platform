@@ -64,3 +64,18 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
+
+import { searchNormalDiscoveryAction } from "@/features/discovery/normal-search-action";
+
+export async function POST(request: Request) {
+  try {
+    const text = await request.text();
+    if (text.length > 800_000) return Response.json({ error: "Search is too large." }, { status: 400 });
+    const body = JSON.parse(text);
+    const result = await searchNormalDiscoveryAction(body.input, body.brief);
+    return Response.json(result, { headers: { "Cache-Control": "private, no-store" } });
+  } catch (error) {
+    const unauthorized = error instanceof Error && error.message === "Unauthorized";
+    return Response.json({ error: unauthorized ? "Please sign in again." : "Could not search creators. Please retry." }, { status: unauthorized ? 401 : 400 });
+  }
+}

@@ -24,7 +24,7 @@ export type AddPlatformToCreatorResult =
       enrichmentQueued: boolean;
       message: string;
     }
-  | { ok: false; message: string };
+  | { ok: false; message: string; conflictingCreator?: UnifiedCreatorResult | null };
 
 async function resolveInfluencerId(
   supabase: SupabaseClient<Database>,
@@ -123,6 +123,7 @@ export async function addPlatformToCreator(
     return {
       ok: false,
       message: `This profile is already linked to ${other.influencer_name}.`,
+      conflictingCreator: await getUnifiedCreatorById(supabase, `inf:${other.influencer_id}`, { skipDna: true }),
     };
   }
 

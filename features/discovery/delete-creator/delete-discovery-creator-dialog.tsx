@@ -3,6 +3,7 @@
 import { Loader2Icon, Trash2Icon } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { InlineCreatorMerge } from "./inline-creator-merge";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -63,7 +64,7 @@ function DeleteBlockersList({ links }: { links: CreatorDeleteLinkRef[] }) {
                 {item.name ? (
                   <span className="text-muted-foreground"> — {item.name}</span>
                 ) : null}
-                <span className="block font-mono text-[10px] text-muted-foreground">{item.id}</span>
+                {item.href && <a href={item.href} target="_blank" rel="noopener noreferrer" className="ml-3 inline-flex min-h-9 items-center font-semibold text-primary underline">Open record ↗</a>}
               </li>
             ))}
           </ul>
@@ -83,6 +84,8 @@ export function DeleteDiscoveryCreatorDialog({
   const [blockers, setBlockers] = useState<CreatorDeleteLinkRef[]>([]);
   const [canDelete, setCanDelete] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const [merging, setMerging] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const influencerId = creator.influencer_id;
@@ -114,7 +117,7 @@ export function DeleteDiscoveryCreatorDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, influencerId]);
+  }, [open, influencerId, revision]);
 
   function handleDelete() {
     if (!influencerId) return;
@@ -149,11 +152,12 @@ export function DeleteDiscoveryCreatorDialog({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
+        if (isPending || merging) return;
         if (!nextOpen) unlockDocumentBodyInteraction();
         onOpenChange(nextOpen);
       }}
     >
-      <DialogContent className="sm:max-w-lg">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Delete creator</DialogTitle>
           <DialogDescription>
@@ -185,15 +189,18 @@ export function DeleteDiscoveryCreatorDialog({
             {!canDelete && blockers.length > 0 ? (
               <DeleteBlockersList links={blockers} />
             ) : null}
+            {!canDelete && <Button variant="outline" disabled={merging || isPending} onClick={() => setRevision(value => value + 1)}>Recheck linked records</Button>}
           </>
         )}
+
+        {open && influencerId && <InlineCreatorMerge key={influencerId} source={creator} onBusyChange={setMerging} onMerged={() => { unlockDocumentBodyInteraction(); onOpenChange(false); onDeleted?.(); }} />}
 
         <DialogFooter className="gap-2 sm:justify-end">
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isPending}
+            disabled={isPending || merging}
           >
             Cancel
           </Button>
@@ -201,7 +208,7 @@ export function DeleteDiscoveryCreatorDialog({
             type="button"
             variant="destructive"
             onClick={handleDelete}
-            disabled={!canDelete || checking || isPending}
+            disabled={!canDelete || checking || isPending || merging}
           >
             {isPending ? <Loader2Icon className="size-4 animate-spin" /> : <Trash2Icon className="size-4" />}
             Delete creator

@@ -2912,6 +2912,7 @@ export type Database = {
       };
       campaign_influencers: {
         Row: {
+          merge_record_key?: string;
           id: string;
           campaign_id: string;
           campaign_header_id: string | null;
@@ -2937,6 +2938,7 @@ export type Database = {
         };
         Insert: {
           campaign_id: string;
+          merge_record_key?: string;
           campaign_header_id?: string | null;
           campaign_line_id?: string | null;
           influencer_id: string;

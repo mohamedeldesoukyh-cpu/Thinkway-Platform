@@ -1608,6 +1608,8 @@ export async function moveShortlistToCampaign(
       .select("id")
       .eq("campaign_header_id", campaignId)
       .eq("influencer_id", influencerId)
+      .eq("source_shortlist_item_id", item.id)
+      .limit(1)
       .maybeSingle();
 
     const assignmentPayload = {

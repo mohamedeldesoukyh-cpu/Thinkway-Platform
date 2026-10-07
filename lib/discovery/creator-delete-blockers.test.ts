@@ -59,3 +59,23 @@ for (const table of ["rate_card_lines", "quotation_items", "campaign_influencers
     assert.deepEqual(deleted, []);
   });
 }
+
+test("rate-card blockers resolve version titles and deduplicate pricing lines", async () => {
+  const client = createClient("https://test.supabase.co", "test-key", {
+    auth: { persistSession: false }, global: { fetch: async input => {
+      const url = new URL(String(input));
+      const table = url.pathname.split("/").at(-1);
+      if (table === "rate_card_lines") return Response.json([
+        { id: "cost", version_id: "version-1" }, { id: "price", version_id: "version-1" },
+      ]);
+      if (table === "rate_card_register") {
+        assert.equal(url.searchParams.get("id"), "in.(version-1)");
+        return Response.json([{ id: "version-1", name: "Pitch 3", version: "V1", client_name: "Client" }]);
+      }
+      return Response.json([]);
+    } },
+  });
+  const result = await getCreatorDeleteBlockers(client, "creator-1");
+  assert.equal(result.canDelete, false);
+  assert.deepEqual(result.links, [{ kind: "rate_card", id: "version-1", reference: "Pitch 3 · V1", name: "Client", href: "/rate-cards?version=version-1" }]);
+});

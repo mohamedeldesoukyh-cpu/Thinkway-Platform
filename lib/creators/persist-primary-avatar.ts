@@ -11,13 +11,15 @@ import { extractDnaAvatarUrl, avatarSourceFromDnaUrl } from "@/lib/creators/dna-
 import { loadCanonicalDnaByInfluencerIds } from "@/lib/creators/dna-browse-hydration";
 import type { Database } from "@/types/database";
 import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
+import { pickCreatorDisplayName } from "@/lib/text/decode-html-entities";
 
 type AnySupabase = SupabaseClient<Database>;
 
 /** Recompute and persist stable creator avatar + default metrics platform on influencers. */
 export async function persistCreatorPrimaryIdentity(
   supabase: AnySupabase,
-  influencerId: string
+  influencerId: string,
+  options: { resetFromLinkedAccounts?: boolean } = {}
 ): Promise<{ primaryAvatarUrl: string | null; defaultMetricsPlatformAccountId: string | null }> {
   const { data: influencer, error: influencerError } = await supabase
     .from("influencers")
@@ -40,12 +42,15 @@ export async function persistCreatorPrimaryIdentity(
     profile_id?: string | null;
   };
 
-  const { data: accountsData } = await supabase
+  const { data: accountsData, error: accountsError } = await supabase
     .from("influencer_platform_accounts")
-    .select("id, platform, profile_picture_url, avatar_source, metadata, follower_count")
+    .select("id, platform, profile_picture_url, avatar_source, metadata, follower_count, profile_display_name, handle")
     .eq("influencer_id", influencerId);
 
   const accounts = (accountsData ?? []) as PlatformAccountAvatarInput[];
+  if (accountsError) throw new Error(accountsError.message);
+  const reset = options.resetFromLinkedAccounts === true;
+  if (reset && accounts.length === 0) throw new Error("No linked accounts are available to restore identity.");
 
   let discoveryProfileImage: string | null = null;
   const { data: linkedDiscovery } = await supabase
@@ -61,17 +66,17 @@ export async function persistCreatorPrimaryIdentity(
   const dnaAvatarUrl = extractDnaAvatarUrl(dnaDocuments.get(influencerId) ?? null);
 
   const candidates = collectAvatarCandidates({
-    storedPrimaryAvatarUrl: row.primary_avatar_url,
-    storedPrimaryAvatarSource: row.primary_avatar_source,
-    influencerMetadata: row.metadata ?? null,
-    discoveryProfileImageUrl: discoveryProfileImage,
-    dnaAvatarUrl,
+    storedPrimaryAvatarUrl: reset ? null : row.primary_avatar_url,
+    storedPrimaryAvatarSource: reset ? null : row.primary_avatar_source,
+    influencerMetadata: reset ? { identity_linked_accounts_only: true } : row.metadata ?? null,
+    discoveryProfileImageUrl: reset ? null : discoveryProfileImage,
+    dnaAvatarUrl: reset ? null : dnaAvatarUrl,
     accounts,
     storedPrimaryMode: "all",
   });
 
   let resolved = resolvePrimaryAvatar(candidates);
-  if ((!resolved.url || resolved.source === "placeholder") && dnaAvatarUrl) {
+  if (!reset && row.metadata?.identity_linked_accounts_only !== true && (!resolved.url || resolved.source === "placeholder") && dnaAvatarUrl) {
     resolved = {
       url: dnaAvatarUrl,
       source: avatarSourceFromDnaUrl(dnaAvatarUrl),
@@ -86,7 +91,7 @@ export async function persistCreatorPrimaryIdentity(
     Number.isFinite(candidate.followerCount) && candidate.followerCount >= 0 &&
     isUsableAvatarUrl(candidate.url)
   );
-  const merged = rankedAccountWinner ? resolved : resolveNextPrimaryAvatar({
+  const merged = reset || rankedAccountWinner ? resolved : resolveNextPrimaryAvatar({
     existingUrl: row.primary_avatar_url,
     existingSource: row.primary_avatar_source,
     incomingUrl: resolved.url,
@@ -99,6 +104,11 @@ export async function persistCreatorPrimaryIdentity(
   );
 
   const patch: Record<string, unknown> = {};
+  if (reset) {
+    const ranked = [...(accountsData ?? [])].sort((a, b) => (b.follower_count ?? 0) - (a.follower_count ?? 0));
+    patch.display_name = pickCreatorDisplayName(ranked.flatMap(account => [account.profile_display_name, account.handle]), ranked[0]?.handle);
+    patch.metadata = { ...(row.metadata ?? {}), identity_linked_accounts_only: true };
+  }
   if (
     merged.url !== row.primary_avatar_url ||
     merged.source !== row.primary_avatar_source
@@ -114,10 +124,11 @@ export async function persistCreatorPrimaryIdentity(
   }
 
   if (Object.keys(patch).length > 0) {
-    await supabase
+    const { error: updateError } = await supabase
       .from("influencers")
       .update(patch as never)
       .eq("id", influencerId);
+    if (updateError) throw new Error(updateError.message);
   }
 
   return {
