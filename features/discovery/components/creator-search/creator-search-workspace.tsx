@@ -2,7 +2,8 @@
 import { CreatorSearchBriefPanel } from "./creator-search-brief-panel";
 import { applyBriefSelections, markManualChanges, type SelectionOwners } from "@/lib/discovery/brief-search";
 import { mapCampaignIntelligenceToDiscoverySearch } from "@/features/campaign-intelligence-profile/services/discovery-search-mapping";
-import { searchNormalDiscoveryAction } from "@/features/discovery/normal-search-action";
+import { BulkDeleteCreatorsDialog } from "@/features/discovery/delete-creator/bulk-delete-creators-dialog";
+import { searchNormalDiscoveryClient } from "@/features/discovery/search-normal-discovery-client";
 import { hasNormalSearchContext, sanitizeNormalFilters, type SearchCompleteness } from "@/lib/discovery/normal-search";
 
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
@@ -292,6 +293,7 @@ export function CreatorSearchWorkspace({
   const [pendingShortlistCreator, setPendingShortlistCreator] = useState<UnifiedCreatorResult | null>(
     null
   );
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [deleteCreatorTarget, setDeleteCreatorTarget] = useState<UnifiedCreatorResult | null>(
     null
   );
@@ -880,7 +882,7 @@ export function CreatorSearchWorkspace({
       if (!append || pageNum === 1) normalContinuationRef.current = undefined;
       try {
         const activeFilters = sanitizeNormalFilters(filterOverride ?? { ...filtersRef.current, search: searchRef.current });
-        const result = await searchNormalDiscoveryAction({ filters: activeFilters, sort: sortRef.current, page: pageNum, pageSize: PAGE_SIZE, continuation: append ? normalContinuationRef.current : undefined }, briefRequestRef.current);
+        const result = await searchNormalDiscoveryClient({ filters: activeFilters, sort: sortRef.current, page: pageNum, pageSize: PAGE_SIZE, continuation: append ? normalContinuationRef.current : undefined }, briefRequestRef.current, controller.signal);
         if (controller.signal.aborted || requestId !== reqIdRef.current) return;
         setCreators(previous => append ? [...new Map([...previous, ...result.creators].map(c => [c.unified_id,c])).values()] : result.creators);
         normalContinuationRef.current = result.continuation;
@@ -2412,6 +2414,7 @@ export function CreatorSearchWorkspace({
           onRefreshMetrics={handleBulkRefreshMetrics}
           onRemoveCreator={() => {
             if (selectedCreators.length === 1) handleRejectCreator(selectedCreators[0]);
+            else if (selectedCreators.length > 1) setBulkDeleteOpen(true);
           }}
           onStopRefresh={handleBulkStopRefresh}
           stopRefreshDisabled={selectedInFlightCreators.length === 0}
@@ -2599,6 +2602,7 @@ export function CreatorSearchWorkspace({
         />
       ) : null}
 
+      {bulkDeleteOpen && <BulkDeleteCreatorsDialog creators={selectedCreators} onClose={() => setBulkDeleteOpen(false)} onDeleted={handleCreatorDeleted} />}
       {deleteCreatorTarget ? (
         <DeleteDiscoveryCreatorDialog
           open

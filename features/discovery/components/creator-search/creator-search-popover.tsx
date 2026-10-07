@@ -29,7 +29,7 @@ import {
 import { shouldPropagateDebouncedSearchDraft } from "./creator-search-popover-sync";
 
 /** Typing is instant; browse/URL update after this pause while the popover is open. */
-const APPLY_SEARCH_DEBOUNCE_MS = 280;
+const APPLY_SEARCH_DEBOUNCE_MS = 600;
 
 function normalizeSearchDraft(value: string): string {
   const normalized = normalizeDiscoverySearchQuery(value);

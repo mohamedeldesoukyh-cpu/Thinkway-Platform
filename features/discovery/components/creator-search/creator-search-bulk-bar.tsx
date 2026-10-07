@@ -165,13 +165,13 @@ export function CreatorSearchBulkBar({
     },
     {
       id: "remove-creator",
-      label: selectedCreators[0]?.influencer_id ? "Delete creator" : "Remove from results",
+      label: selectedCount > 1 ? "Delete selected" : selectedCreators[0]?.influencer_id ? "Delete creator" : "Remove from results",
       description: selectedCount === 1
         ? "Review linked records before deleting. Campaign and IO history is protected."
-        : "Select one creator to review removal and linked records.",
+        : "Review selected creators and delete only those without protected records.",
       icon: Trash2Icon,
       variant: "outline",
-      disabled: busy || selectedCount !== 1 || !onRemoveCreator,
+      disabled: busy || selectedCount === 0 || !onRemoveCreator,
       onClick: () => onRemoveCreator?.(),
     },
   ];

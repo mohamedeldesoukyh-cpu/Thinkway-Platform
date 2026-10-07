@@ -1,5 +1,5 @@
 /** Timer lifecycle shared by the rendered inline field and deterministic timer tests. */
-export function createSearchDebouncer(delayMs = 280) {
+export function createSearchDebouncer(delayMs = 600) {
   let timer: ReturnType<typeof setTimeout> | null = null;
   const cancel = () => { if (timer != null) clearTimeout(timer); timer = null; };
   return {
