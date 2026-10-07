@@ -23,7 +23,7 @@ export const SHORTLIST_TEMPLATE_EXTRA_STYLES = `
 
   .platform-links { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
   .platform-link { display: inline-flex; align-items: center; text-decoration: none; line-height: 0; }
-  .platform-link-icon { width: 22px; height: 22px; border-radius: 50%; display: block; }
+  .platform-link-icon { width: 22px; height: 22px; border-radius: 0; border: 0; background: transparent; box-shadow: none; display: block; }
   .platform-link-badge {
     display: inline-flex; align-items: center; justify-content: center;
     min-width: 28px; height: 22px; padding: 0 6px; border-radius: 999px;
