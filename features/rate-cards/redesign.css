@@ -420,7 +420,7 @@
 
 /* Application port: semantic tables and existing accessible controls. */
 .rx{--rx-zero:#68758a;--rx-faint:#64748b;min-width:0;font-size:13px}
-.rx .rx-ph{margin:0 0 16px;padding:14px 20px;position:relative}
+.rx .rx-ph{margin:0 0 16px;padding:14px 20px;position:sticky}
 .rx .rx-wrap{max-width:1680px;padding:0 20px 32px}
 .rx .rx-scope-name{font:600 14px var(--rx-sans);overflow-wrap:anywhere}
 .rx .rx-formbar{align-items:end;margin-bottom:12px}

@@ -14,12 +14,14 @@ export function PricingDialog({versionId,onClose,onDone}:{versionId:string;onClo
   const [rule,setRule]=useState<PricingRule>({mode:"cost_gp_pct",percent:0,agencyFee:null,overwrite:false});
   const [preview,setPreview]=useState<Awaited<ReturnType<typeof previewRatePricing>>|null>(null);
   const [invalidated,setInvalidated]=useState(false);
+  const [error,setError]=useState<Label|null>(null);
   const displayRule:BulkRule=rule.mode==="none"?{kind:"feeOnly",agencyFeePct:rule.agencyFee??0}:{kind:rule.mode==="cost_gp_pct"?"targetGp":"markup",pct:rule.percent,agencyFeePct:rule.agencyFee};
   const key=previewKey(displayRule,rule.overwrite?"overwrite":"fillMissing");
   const [generatedKey,setGeneratedKey]=useState<string|null>(null);
   const change=(patch:Partial<PricingRule>)=>{setRule(r=>({...r,...patch}));setPreview(null);setInvalidated(true);};
-  const run=(fn:()=>Promise<void>)=>start(async()=>{try{await fn();}catch(e){toast.error(t(errorLabel(e)));}});
+  const run=(fn:()=>Promise<void>)=>start(async()=>{try{setError(null);await fn();}catch(e){const label=errorLabel(e);setError(label);if(label==="stale"){setPreview(null);setInvalidated(true);}toast.error(t(label));}});
   return <RateOverlay busy={busy} onClose={()=>!busy&&onClose()} title={t("pricing")} description={t("pricingHelp")} lang={lang}>
+    {error&&<p className="rx-ro" role="alert">{t(error)}</p>}
     <div className="grid gap-3 sm:grid-cols-2">
       <Choice label={t("pricing")} value={rule.mode} empty={false} disabled={busy} options={[{value:"cost_gp_pct",label:t("gp")},{value:"cost_markup_pct",label:t("markup")},{value:"none",label:t("feeOnly")}]} onChange={mode=>change({mode:mode as PricingRule["mode"]})}/>
       {rule.mode!=="none"&&<TextField label={t("percentage")} type="number" value={String(rule.percent)} disabled={busy} onChange={v=>change({percent:Number(v)})}/>}
