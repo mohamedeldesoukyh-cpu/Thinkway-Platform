@@ -15,6 +15,7 @@ export type CreatorDeleteLinkRef = {
   id: string;
   reference: string;
   name: string | null;
+  href?: string;
 };
 
 export type CreatorDeleteBlockersResult = {
@@ -37,7 +38,15 @@ export async function getCreatorDeleteBlockers(
   const links: CreatorDeleteLinkRef[] = [];
   const rates=await supabase.from("rate_card_lines").select("id,version_id,creator_name").eq("influencer_id",influencerId).limit(50);
   if(rates.error)throw new Error(rates.error.message);
-  for(const rate of rates.data??[])links.push({kind:"rate_card",id:rate.version_id,reference:rate.version_id,name:rate.creator_name});
+  const versionIds = [...new Set((rates.data ?? []).map(rate => rate.version_id))];
+  if (versionIds.length) {
+    const versions = await supabase.from("rate_card_register").select("id,name,version,client_name").in("id", versionIds);
+    if (versions.error) throw new Error(versions.error.message);
+    for (const id of versionIds) {
+      const version = versions.data?.find(row => row.id === id);
+      links.push({ kind: "rate_card", id, reference: version ? `${version.name} · ${version.version}` : "Rate card", name: version?.client_name ?? null, href: `/rate-cards?version=${encodeURIComponent(id)}` });
+    }
+  }
 
   const [
     assignmentsRes,
@@ -222,7 +231,10 @@ export async function getCreatorDeleteBlockers(
   for (const link of links) {
     unique.set(`${link.kind}:${link.id}`, link);
   }
-  const deduped = [...unique.values()];
+  const routes: Partial<Record<CreatorDeleteLinkRef["kind"], string>> = {
+    campaign: "/campaigns/", shortlist: "/discovery/shortlists/", quotation: "/discovery/quotations/", invoice: "/billing/invoices/",
+  };
+  const deduped = [...unique.values()].map(link => ({ ...link, href: link.href ?? (routes[link.kind] ? `${routes[link.kind]}${encodeURIComponent(link.id)}` : undefined) }));
 
   return {
     canDelete: deduped.length === 0,

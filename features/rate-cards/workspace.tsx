@@ -27,12 +27,12 @@ import { Choice, Field, Modal, Pager, TextField, cell, useRateLanguage } from ".
 
 type Options=Awaited<ReturnType<typeof actions.rateCardOptions>>;
 const initialHeader:HeaderInput={client_id:"",brand_id:null,name:"",version:"V1",status:"inactive",effective_date:null,expiry_date:null,notes:""};
-export function RateCardsWorkspace({initialClient=""}:{initialClient?:string}) {
+export function RateCardsWorkspace({initialClient="",initialVersion}:{initialClient?:string;initialVersion?:string}) {
   const {lang,t,change}=useRateLanguage(); const [options,setOptions]=useState<Options|null>(null); const [error,setError]=useState<Label|null>(null);
   const [filters,setFilters]=useState({search:"",client:initialClient,brand:"",creator:"",status:"",version:"",platform:"",currency:"",sort:"updated_at",ascending:false,page:1});
   const [rows,setRows]=useState<RateVersion[]>([]);const [total,setTotal]=useState(0);const [loading,setLoading]=useState(true);const [revision,setRevision]=useState(0);
   const [editor,setEditor]=useState<{header:HeaderInput;id?:string;copyId?:string;expected?:string}|null>(null);
-  const [detail,setDetail]=useState<string|null>(null);const [upload,setUpload]=useState<RateVersion|null>(null);const [confirm,setConfirm]=useState<{row:RateVersion;action:"delete"|"delete_card"}|null>(null);
+  const [detail,setDetail]=useState<string|null>(initialVersion??null);const [upload,setUpload]=useState<RateVersion|null>(null);const [confirm,setConfirm]=useState<{row:RateVersion;action:"delete"|"delete_card"}|null>(null);
   const [busy,start]=useTransition();
   useEffect(()=>{actions.rateCardOptions().then(setOptions).catch(e=>setError(errorLabel(e)));},[]);
   useEffect(()=>{let live=true;const timer=setTimeout(()=>{setLoading(true);actions.listRateCards(filters).then(r=>{if(live){setRows(r.rows);setTotal(r.total);setError(null);}}).catch(e=>live&&setError(errorLabel(e))).finally(()=>live&&setLoading(false));},650);return()=>{live=false;clearTimeout(timer);};},[filters,revision]);

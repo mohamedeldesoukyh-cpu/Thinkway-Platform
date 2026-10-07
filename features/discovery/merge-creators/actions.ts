@@ -49,6 +49,8 @@ export async function mergeCreatorsAction(input: {
     });
 
     if (result.ok) {
+      revalidatePath("/discovery/search");
+      revalidatePath("/rate-cards");
       // One layout invalidation per surface — multiple revalidatePath calls stack
       // client refreshes and make shortlist pages look like they are "re-rendering"
       // with no useful UI change.
