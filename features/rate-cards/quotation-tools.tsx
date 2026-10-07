@@ -10,8 +10,13 @@ import type { RateVersion, RateTarget } from "./model";
 import { errorLabel, taxonomyLabel, type Label } from "./labels";
 import { Choice, Modal, Pager, cell, useRateLanguage } from "./ui";
 
-const RateCardContext=createContext<{available:boolean;launch:(line:{item_id:string;index:number})=>void;sources:Awaited<ReturnType<typeof quotationRateSources>>}|null>(null);
-export function QuotationLineRateCardButton({itemId,index,showButton=true}:{itemId:string;index:number;showButton?:boolean}) {
+const RateCardContext=createContext<{available:boolean;launch:(line?:{item_id:string;index:number})=>void;sources:Awaited<ReturnType<typeof quotationRateSources>>}|null>(null);
+export function QuotationRateCardToolbarButton() {
+  const ctx = useContext(RateCardContext);
+  const {t} = useRateLanguage();
+  if (!ctx) return null;
+  return <button type="button" className="tw-b sm" style={{color: "#e05c68"}} onClick={() => ctx.launch()}>{t("apply")}</button>;
+}export function QuotationLineRateCardButton({itemId,index,showButton=true}:{itemId:string;index:number;showButton?:boolean}) {
   const ctx=useContext(RateCardContext);const {t,lang}=useRateLanguage();
   if(!ctx)return null;
   const sourceMap=ctx.sources.find(s=>s.id===itemId)?.rate_card_sources;
@@ -29,11 +34,9 @@ export function QuotationRateCardTools({detail,children}:{detail:QuotationDetail
   const cards=[...new Map(availableVersions.map(v=>[v.card_id,v])).values()];
   const selected=versions.find(v=>v.id===version);
   const allLines=detail.items.flatMap(item=>item.deliverables.map((d,index)=>({item,d,index})));
-  return <RateCardContext.Provider value={{available:!!availableVersions.length&&!busy,launch,sources}}><div className="flex h-full min-h-0 flex-col"><section dir={lang==="ar"?"rtl":"ltr"} className="mx-4 my-2 shrink-0 rounded-lg border bg-card p-3">
-    <div className="flex flex-wrap items-center gap-3"><Button size="sm" variant="outline" disabled={!availableVersions.length||busy} onClick={()=>launch()}>{t("apply")}</Button><span className="text-xs text-muted-foreground">{t("optional")}</span></div>
-    <details className="mt-2"><summary className="cursor-pointer text-sm">{t("lineActions")}</summary><div className="overflow-x-auto"><table className="w-full"><thead><tr>{["creator","platform","deliverable","source","action"].map(k=><th key={k} className={cell}>{t(k as Label)}</th>)}</tr></thead><tbody>{allLines.slice((linePage-1)*25,linePage*25).map(({item,d,index})=>{return <tr className="border-t" key={`${item.id}:${index}`}><td className={cell}>{item.creator_name}</td><td className={cell}>{taxonomyLabel(d.platform??"",lang)}</td><td className={cell}>{taxonomyLabel(d.type??"",lang)}</td><td className={cell}><QuotationLineRateCardButton itemId={item.id} index={index} showButton={false}/></td><td className={cell}><Button size="sm" variant="outline" disabled={!versions.length||busy} onClick={()=>launch({item_id:item.id,index})}>{t("apply")}</Button></td></tr>;})}</tbody></table></div><Pager page={linePage} size={25} total={allLines.length} onChange={setLinePage} t={t}/></details>
-    <Modal open={open} onClose={()=>{if(!busy)setOpen(false);}} title={t("apply")} description={t("noAuto")} lang={lang}>
+  return <RateCardContext.Provider value={{available:!!availableVersions.length&&!busy,launch,sources}}><div className="flex h-full min-h-0 flex-col">    <Modal open={open} onClose={()=>{if(!busy)setOpen(false);}} title={t("apply")} description={t("noAuto")} lang={lang}>
       <Button className="w-fit" variant="ghost" onClick={()=>change(lang==="ar"?"en":"ar")}>{lang==="ar"?"English":"العربية"}</Button>
+      {!availableVersions.length && <p role="status" className="rounded-lg border bg-muted p-3 text-sm">No matching rate cards are available for this client and brand.</p>}
       <Choice label={t("name")} disabled={busy} value={card} onChange={v=>{setCard(v);setVersion("");setPreview(null);}} options={cards.map(v=>({value:v.card_id,label:`${v.name} · ${v.brand_name??t("clientLevel")}`}))}/>
       <Choice label={t("version")} disabled={busy} value={version} onChange={v=>{setVersion(v);setPreview(null);}} options={versions.filter(v=>v.card_id===card).map(v=>({value:v.id,label:`${v.version} · ${t(v.status)} · ${v.effective_date??"—"} · ${v.creator_count} ${t("creators")}`}))}/>
       {selected&&<p className="text-sm">{t("warningVersion")} {t("effective")}: {selected.effective_date??"—"} · {t("expiry")}: {selected.expiry_date??"—"}</p>}
@@ -46,7 +49,8 @@ export function QuotationRateCardTools({detail,children}:{detail:QuotationDetail
         {!!preview.linked.length&&<div className="rounded-lg border p-3">{preview.linked.some(l=>l.locked)?<p role="alert">{t("financeLocked")}</p>:<label className="flex items-center gap-2"><input type="checkbox" checked={confirmLinked} onChange={e=>setConfirmLinked(e.target.checked)}/>{t("linkedConfirmation")} · {preview.linked.map(l=>l.campaign).filter(Boolean).join(" · ")}</label>}</div>}
         <Button disabled={busy||preview.linked.some(l=>l.locked)||!!preview.linked.length&&!confirmLinked||!preview.rows.some(r=>r.status==="update"||r.status==="fill")} onClick={()=>start(async()=>{if(manual.hasUnsavedChanges){toast.error(t("saveFirst"));return;}try{const result=await applyQuotationRates(detail.id,version,mode,preview.fingerprint,only,target as RateTarget,confirmLinked);setResults(result);if(result.some(r=>!r.ok))toast.error(t("partial"));else toast.success(t("applied"));setPreview(null);router.refresh();}catch(e){toast.error(t(errorLabel(e)));setPreview(null);}})}>{t(busy?"busy":"confirmApply")}</Button>
       </>}
+<details className="mt-2"><summary className="cursor-pointer text-sm">{t("lineActions")}</summary><div className="overflow-x-auto"><table className="w-full"><thead><tr>{["creator","platform","deliverable","source","action"].map(k=><th key={k} className={cell}>{t(k as Label)}</th>)}</tr></thead><tbody>{allLines.slice((linePage-1)*25,linePage*25).map(({item,d,index})=>{return <tr className="border-t" key={`${item.id}:${index}`}><td className={cell}>{item.creator_name}</td><td className={cell}>{taxonomyLabel(d.platform??"",lang)}</td><td className={cell}>{taxonomyLabel(d.type??"",lang)}</td><td className={cell}><QuotationLineRateCardButton itemId={item.id} index={index} showButton={false}/></td><td className={cell}><Button size="sm" variant="outline" disabled={!versions.length||busy} onClick={()=>launch({item_id:item.id,index})}>{t("apply")}</Button></td></tr>;})}</tbody></table></div><Pager page={linePage} size={25} total={allLines.length} onChange={setLinePage} t={t}/></details>
       <Button variant="outline" disabled={busy} onClick={()=>setOpen(false)}>{t("cancel")}</Button>
     </Modal>
-  </section>{children}</div></RateCardContext.Provider>;
+  {children}</div></RateCardContext.Provider>;
 }

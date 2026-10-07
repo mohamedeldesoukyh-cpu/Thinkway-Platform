@@ -12,6 +12,7 @@ import {
   useTransition,
 } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { UserPlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,7 +36,7 @@ import { useQuotationWorkspaceShortcuts } from "@/features/quotations/components
 import { QuotationTermsAccordion } from "@/features/quotations/components/quotation-terms-accordion";
 import { QuotationCommercialMetricsBand } from "@/features/quotations/components/quotation-commercial-metrics-band";
 import { QuotationWorkspaceHeader } from "@/features/quotations/components/quotation-workspace-header";
-import { QuotationRateCardTools } from "@/features/rate-cards/quotation-tools";
+import { QuotationRateCardTools, QuotationRateCardToolbarButton } from "@/features/rate-cards/quotation-tools";
 import { ConvertQuotationDialog } from "@/features/quotations/components/convert-quotation-dialog";
 import { AppendQuotationCreatorDialog } from "@/features/quotations/components/append-quotation-creator-dialog";
 import { QuotationClientReviewPanel } from "@/features/quotations/components/quotation-client-review-panel";
@@ -806,6 +807,8 @@ function QuotationWorkspaceContent({
                 grouped by influencer — duplicated creators are labelled Option 1, 2, 3…
               </span>
               <span className="tw-sp" />
+              <QuotationRateCardToolbarButton />
+              {detail.shortlist_id && <Link className="tw-b sm" href={`/discovery/shortlists/${detail.shortlist_id}`}>Open shortlist</Link>}
               <QuotationCommercialEntry
                 quotationId={detail.id}
                 items={detail.items}

@@ -51,13 +51,7 @@ export function QuotationLifecyclePills({
           {sub ? <span className="sub"> {sub}</span> : null}
         </span>
         <span className="tw-sp" />
-        {detail.shortlist_id ? (
-          <Link href={`/discovery/shortlists/${detail.shortlist_id}`} className="go">
-            Open shortlist
-          </Link>
-        ) : trailing ? (
-          trailing
-        ) : null}
+        {trailing}
       </>
     );
   }
