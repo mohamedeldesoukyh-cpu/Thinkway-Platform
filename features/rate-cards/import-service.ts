@@ -10,6 +10,7 @@ import {readRateWorkbook} from "./workbook";
 import {RATE_UPLOAD_BUCKET,RATE_UPLOAD_MAX_BYTES,validRateUploadPath} from "./upload-limits";
 import {rateImportIdentity} from "./import-identity";
 import {validateWorkbookRow,type ImportRow} from "./model";
+import {importDiagnostic,profileImportDiagnostics} from "./import-diagnostics";
 function checked<T>(r:{data:T;error:{message:string}|null}):T{if(r.error)throw new Error(r.error.message);return r.data;}
 export async function parseUpload(db:SupabaseClient, form:FormData, progress?:(processed:number,total:number)=>void):Promise<ImportRow[]> {
   let file=form.get("file");
@@ -25,7 +26,7 @@ export async function parseUpload(db:SupabaseClient, form:FormData, progress?:(p
   const uploaded=await readRateWorkbook(await file.arrayBuffer());
   progress?.(0,uploaded.length);
   const currencies=(checked(await db.from("md_currencies").select("code").eq("is_active",true)) ?? []).map(c=>String(c.code));
-  const rows:ImportRow[]=[]; const seen=new Set<string>(); const cache=new Map<string,{ref:string;name:string}|null>();
+  const rows:ImportRow[]=[]; const seen=new Map<string,number>(); const cache=new Map<string,{ref:string;name:string}|null>();
   const ambiguous=new Map<string,{ref:string;name:string}[]>();
   const pending=new Map<string,{profile_url:string;platform:string;handle:string}>();
   const profileRows=uploaded.map(({raw})=>{try{return rateImportProfiles(raw);}catch{return null;}});
@@ -46,22 +47,23 @@ export async function parseUpload(db:SupabaseClient, form:FormData, progress?:(p
     }}
     progress?.(Math.min(from+100,unique.length),unique.length);
   }
-  for(const [rowIndex,{row:n,raw,unsupported}] of uploaded.entries()) {
-    if(unsupported){rows.push({row:n,status:"error",issues:["invalid"]});continue;}
+  for(const [rowIndex,{row:n,raw,unsupported,unsupportedCells,cells}] of uploaded.entries()) {
+    const add=(entry:ImportRow)=>rows.push({...entry,diagnostics:entry.diagnostics?.map(d=>({...d,cell:d.cell??cells[d.column]}))});
+    if(unsupported){add({row:n,status:"error",issues:["invalid"],diagnostics:unsupportedCells.map(c=>({...importDiagnostic(c.column,c.value,`This cell contains a ${c.kind}. Replace it with a plain number or text (Paste Special → Values).`,`تحتوي الخلية على صيغة أو قيمة غير مدعومة (${c.kind}). استبدلها برقم أو نص عادي باستخدام لصق القيم فقط.`),cell:c.cell}))});continue;}
     let identity=identities[rowIndex];
-    if(!profileRows[rowIndex]){rows.push({row:n,status:"error",issues:["invalid"]});continue;}
+    if(!profileRows[rowIndex]){add({row:n,status:"error",issues:["invalid"],diagnostics:profileImportDiagnostics(raw)});continue;}
     const candidates=[identity,...related[rowIndex],...(explicitIds[rowIndex].id?[explicitIds[rowIndex]]:[])];
     const ambiguousOwners=candidates.flatMap(i=>ambiguous.get(i.key)??[]);
-    if(ambiguousOwners.length){rows.push({row:n,status:"error",issues:["profileConflict"],conflicts:[...new Map(ambiguousOwners.map(c=>[c.ref,c])).values()]});continue;}
+    if(ambiguousOwners.length){add({row:n,status:"error",issues:["profileConflict"],diagnostics:[importDiagnostic("Profile URL 1 / 2 / 3",(profileRows[rowIndex]??[]).map(p=>p.profile_url).join("; "),`A profile matches multiple creator records: ${[...new Set(ambiguousOwners.map(c=>c.name))].join(", ")}. Review the linked records before importing.`,`أحد الحسابات يطابق أكثر من سجل مبدع: ${[...new Set(ambiguousOwners.map(c=>c.name))].join("، ")}. راجع السجلات المرتبطة قبل الاستيراد.`)],conflicts:[...new Map(ambiguousOwners.map(c=>[c.ref,c])).values()]});continue;}
     const existing=candidates.filter(i=>cache.get(i.key)&&!pending.has(i.key));
-    if(new Set(existing.map(i=>cache.get(i.key)!.ref)).size>1){rows.push({row:n,status:"error",issues:["profileConflict"],conflicts:[...new Map(existing.map(i=>{const c=cache.get(i.key)!;return [c.ref,c];})).values()]});continue;}
+    if(new Set(existing.map(i=>cache.get(i.key)!.ref)).size>1){add({row:n,status:"error",issues:["profileConflict"],diagnostics:[importDiagnostic("Profile URL 1 / 2 / 3",(profileRows[rowIndex]??[]).map(p=>p.profile_url).join("; "),`These links belong to different creators: ${[...new Set(existing.map(i=>cache.get(i.key)!.name))].join(", ")}. Keep only links for the same creator in this row.`,`الروابط تخص مبدعين مختلفين: ${[...new Set(existing.map(i=>cache.get(i.key)!.name))].join("، ")}. احتفظ بروابط نفس المبدع فقط في هذا الصف.`)],conflicts:[...new Map(existing.map(i=>{const c=cache.get(i.key)!;return [c.ref,c];})).values()]});continue;}
     if(existing.length)identity=existing[0];
     const {key}=identity;
     const validated=validateWorkbookRow(n,{...raw,Platform:normalizeRatePlatform(raw.Platform??"")||identities[rowIndex].platform||""},cache.get(key)??null,currencies,seen);
     validated.profile_urls=profileRows[rowIndex]!.map(p=>p.profile_url);
     if(identity.profile_url)validated.profile_url=identity.profile_url;
     if(pending.has(key)&&validated.status!=="error"&&validated.status!=="unmatched") {validated.pending_creator=pending.get(key);validated.status="warning";validated.issues.push("newCreatorImport");}
-    rows.push(validated);
+    add(validated);
   }
   if(!rows.length) throw new Error("file"); return rows;
 }
