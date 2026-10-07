@@ -9,12 +9,12 @@ import { useCreatorBrowse } from "@/features/creators/picker/creator-selection-h
 import { getMergeCreatorsEligibilityAction, mergeCreatorsAction } from "@/features/discovery/merge-creators/actions";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
-export function InlineCreatorMerge({ source, onMerged, onBusyChange }: {
-  source: UnifiedCreatorResult; onMerged: () => void; onBusyChange: (busy: boolean) => void;
+export function InlineCreatorMerge({ source, initialTarget, onMerged, onBusyChange }: {
+  source: UnifiedCreatorResult; initialTarget?: UnifiedCreatorResult; onMerged: (creator: UnifiedCreatorResult) => void; onBusyChange: (busy: boolean) => void;
 }) {
   const router = useRouter();
   const [search, setSearch] = useState(source.display_name.split(/\s+/)[0] ?? "");
-  const [target, setTarget] = useState<UnifiedCreatorResult | null>(null);
+  const [target, setTarget] = useState<UnifiedCreatorResult | null>(initialTarget ?? null);
   const [eligibility, setEligibility] = useState<{ canMerge: boolean; message: string } | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const [pending, start] = useTransition();
@@ -37,7 +37,7 @@ export function InlineCreatorMerge({ source, onMerged, onBusyChange }: {
       try {
         const result = await mergeCreatorsAction({ targetInfluencerId: target.influencer_id!, sourceInfluencerId: source.influencer_id!, targetUnifiedId: target.unified_id });
         if (!result.ok) { setEligibility({ canMerge: false, message: result.message }); toast.error(result.message); return; }
-        toast.success(result.message); router.refresh(); onMerged();
+        toast.success(result.message); router.refresh(); onMerged(result.creator);
       } catch { toast.error("Could not complete the merge. Please retry."); }
       finally { onBusyChange(false); }
     });

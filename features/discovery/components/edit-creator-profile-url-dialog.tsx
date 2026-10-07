@@ -3,6 +3,7 @@
 import { Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { PlatformOwnerConflict } from "./platform-owner-conflict";
 
 import { platformLabel } from "@/features/campaigns/line-assignment";
 import { Button } from "@/components/ui/button";
@@ -56,6 +57,8 @@ export function EditCreatorProfileUrlDialog({
 }: Props) {
   const [profileUrl, setProfileUrl] = useState(platform?.profile_url ?? "");
   const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<UnifiedCreatorResult | null>(null);
+  const [mergeBusy, setMergeBusy] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const parsed = useMemo(() => {
@@ -69,12 +72,12 @@ export function EditCreatorProfileUrlDialog({
   const currentUrl = platform?.profile_url?.trim() ?? "";
   const urlChanged = profileUrl.trim() !== currentUrl;
   const canConfirm =
-    parsed != null && urlChanged && Boolean(influencerId && platformAccountId) && !isPending;
+    parsed != null && urlChanged && Boolean(influencerId && platformAccountId) && !isPending && !mergeBusy && !conflict;
 
   useEffect(() => {
     if (!open) return;
     setProfileUrl(platform?.profile_url ?? "");
-    setError(null);
+    setError(null); setConflict(null);
   }, [open, platform?.id, platform?.profile_url]);
 
   function handleSave() {
@@ -89,7 +92,7 @@ export function EditCreatorProfileUrlDialog({
       return;
     }
 
-    setError(null);
+    setError(null); setConflict(null);
     startTransition(async () => {
       const result = await updatePlatformProfileUrlAction({
         profileUrl: trimmed,
@@ -99,7 +102,7 @@ export function EditCreatorProfileUrlDialog({
       });
 
       if (!result.ok) {
-        setError(result.message);
+        setError(result.message); setConflict(result.conflictingCreator ?? null);
         toast.error(result.message);
         return;
       }
@@ -141,8 +144,8 @@ export function EditCreatorProfileUrlDialog({
   const platformName = platform ? platformLabel(platform.platform) : "platform";
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={DISCOVERY_DIALOG_CONTENT_CLASS}>
+    <Dialog open={open} onOpenChange={next => { if (!mergeBusy) onOpenChange(next); }}>
+      <DialogContent className={cn(DISCOVERY_DIALOG_CONTENT_CLASS, "max-h-[90dvh] overflow-y-auto")}>
         <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
           <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
             <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
@@ -168,14 +171,14 @@ export function EditCreatorProfileUrlDialog({
             value={profileUrl}
             onChange={(event) => {
               setProfileUrl(event.target.value);
-              if (error) setError(null);
+              if (error) setError(null); setConflict(null);
             }}
             type="url"
             inputMode="url"
             autoComplete="off"
             placeholder="https://instagram.com/… or tiktok.com/@…"
             className={DISCOVERY_DIALOG_INPUT_CLASS}
-            disabled={isPending || !influencerId || !platformAccountId}
+            disabled={isPending || mergeBusy || !influencerId || !platformAccountId}
             autoFocus
             onKeyDown={(event) => {
               if (event.key === "Enter" && canConfirm) {
@@ -208,12 +211,13 @@ export function EditCreatorProfileUrlDialog({
           ) : null}
         </div>
 
+        {conflict && <div className="px-6"><PlatformOwnerConflict owner={conflict} currentUnifiedId={creator.unified_id} onBusyChange={setMergeBusy} onMerged={next => { onSaved?.(next); onOpenChange(false); }} /></div>}
         <DialogFooter className={DISCOVERY_DIALOG_FOOTER_CLASS}>
           <Button
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
-            disabled={isPending}
+            disabled={isPending || mergeBusy}
           >
             Cancel
           </Button>

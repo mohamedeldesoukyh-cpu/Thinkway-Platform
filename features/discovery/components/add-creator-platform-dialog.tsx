@@ -3,6 +3,7 @@
 import { Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
+import { PlatformOwnerConflict } from "./platform-owner-conflict";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -64,6 +65,8 @@ export function AddCreatorPlatformDialog({
 }: Props) {
   const [profileUrl, setProfileUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [conflict, setConflict] = useState<UnifiedCreatorResult | null>(null);
+  const [mergeBusy, setMergeBusy] = useState(false);
   const [isPending, startTransition] = useTransition();
   const requestIdRef = useRef(0);
   const openRef = useRef(open);
@@ -74,7 +77,7 @@ export function AddCreatorPlatformDialog({
     return parseProfileInput(trimmed);
   }, [profileUrl]);
 
-  const canConfirm = parsed != null && !isPending;
+  const canConfirm = parsed != null && !isPending && !mergeBusy && !conflict;
 
   const linkedSummary =
     existingPlatforms.length > 0
@@ -85,7 +88,7 @@ export function AddCreatorPlatformDialog({
     openRef.current = open;
     if (!open) {
       setProfileUrl("");
-      setError(null);
+      setError(null); setConflict(null);
     }
   }, [open]);
 
@@ -101,7 +104,7 @@ export function AddCreatorPlatformDialog({
       return;
     }
 
-    setError(null);
+    setError(null); setConflict(null);
     const requestId = ++requestIdRef.current;
     startTransition(async () => {
       try {
@@ -116,7 +119,7 @@ export function AddCreatorPlatformDialog({
 
         if (!result.ok) {
           if (openRef.current) {
-            setError(result.message);
+            setError(result.message); setConflict(result.conflictingCreator ?? null);
           }
           toast.error(result.message);
           return;
@@ -168,8 +171,8 @@ export function AddCreatorPlatformDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className={DISCOVERY_DIALOG_CONTENT_CLASS}>
+    <Dialog open={open} onOpenChange={next => { if (!mergeBusy) handleOpenChange(next); }}>
+      <DialogContent className={cn(DISCOVERY_DIALOG_CONTENT_CLASS, "max-h-[90dvh] overflow-y-auto")}>
         <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
           <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
             <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
@@ -195,14 +198,14 @@ export function AddCreatorPlatformDialog({
             value={profileUrl}
             onChange={(event) => {
               setProfileUrl(event.target.value);
-              if (error) setError(null);
+              if (error) setError(null); setConflict(null);
             }}
             type="url"
             inputMode="url"
             autoComplete="off"
             placeholder="https://instagram.com/… or tiktok.com/@…"
             className={DISCOVERY_DIALOG_INPUT_CLASS}
-            disabled={isPending}
+            disabled={isPending || mergeBusy}
             autoFocus
             onKeyDown={(event) => {
               if (event.key === "Enter" && canConfirm) {
@@ -230,11 +233,12 @@ export function AddCreatorPlatformDialog({
           ) : null}
         </div>
 
+        {conflict && <div className="px-6"><PlatformOwnerConflict owner={conflict} currentUnifiedId={influencerId ? `inf:${influencerId}` : unifiedId} onBusyChange={setMergeBusy} onMerged={next => { onCreatorUpdated?.(next); onOpenChange(false); }} /></div>}
         <DialogFooter className={DISCOVERY_DIALOG_FOOTER_CLASS}>
           <Button
             type="button"
             variant="outline"
-            onClick={() => handleOpenChange(false)}
+            disabled={mergeBusy} onClick={() => handleOpenChange(false)}
           >
             {isPending ? "Close" : "Cancel"}
           </Button>
