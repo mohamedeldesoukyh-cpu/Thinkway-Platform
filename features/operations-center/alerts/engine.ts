@@ -56,9 +56,9 @@ export function evaluateAlerts(ctx: AlertRuleContext): AlertRecord[] {
   } else if (redis && (redis.status === "offline" || redis.status === "critical")) {
     alerts.push(
       alert(
-        "redis-offline",
+        redis.status === "offline" ? "redis-offline" : "redis-latency",
         "critical",
-        "Redis offline",
+        redis.status === "offline" ? "Redis offline" : "Redis latency high",
         redis.message ?? "Redis is unreachable.",
         "redis",
       ),

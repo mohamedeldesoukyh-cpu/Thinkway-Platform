@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
+import { probeCreatorCount } from "./creator-count";
 import { getBuildInfo } from "@/lib/deploy/build-info";
 
 import { getSecurityMetrics } from "../metrics/security-metrics-store";
@@ -118,7 +119,8 @@ export async function collectDiscoveryMetrics(
   supabase: SupabaseClient,
   queues: QueueMonitorRow[],
 ): Promise<DomainMetricCard[]> {
-  const creators = await countTable(supabase, "influencers");
+  const creatorCount = await probeCreatorCount(supabase);
+  const creators = creatorCount.count;
   const dnaCount = await countTable(supabase, "creator_dna");
   const lastEnrichment = await latestTimestamp(
     supabase,
@@ -152,9 +154,6 @@ export async function collectDiscoveryMetrics(
   if (creators != null && creators > 0 && dnaCount != null) {
     dnaCoverage = `${Math.round((dnaCount / creators) * 100)}% (${dnaCount})`;
     dnaStatus = dnaCount / creators < 0.3 ? "warning" : "healthy";
-  } else if (dnaCount != null) {
-    dnaCoverage = dnaCount;
-    dnaStatus = "healthy";
   }
 
   const queueHealth: ComponentStatus =
@@ -170,17 +169,22 @@ export async function collectDiscoveryMetrics(
       {
         reason:
           creators == null
-            ? "Could not query influencers (permissions or connectivity)."
+            ? creatorCount.reason
             : `${creators} creators in influencers.`,
       },
     ),
-    card("dna-count", "DNA count", dnaCount ?? "—", dnaStatus, undefined, {
+    card("dna-count", "DNA count", dnaCount ?? "—", dnaCount == null ? "unknown" : "healthy", undefined, {
       reason:
         dnaCount == null
           ? "Could not query creator_dna."
           : `${dnaCount} Creator DNA rows.`,
     }),
-    card("dna-coverage", "DNA coverage", dnaCoverage, dnaStatus),
+    card("dna-coverage", "DNA coverage", dnaCoverage, dnaStatus, undefined, {
+      reason: creators == null ? "Coverage unavailable: creator count could not be queried."
+        : creators === 0 ? "Coverage is not applicable: no creators were counted."
+        : dnaCount == null ? "Coverage unavailable: DNA count could not be queried."
+        : `${dnaCount} DNA records / ${creators} creators.`,
+    }),
     card(
       "last-enrichment",
       "Last enrichment",

@@ -81,3 +81,9 @@ test("evaluateAlerts treats missing local worker as info, not critical", () => {
   assert.ok(!alerts.some((a) => a.id === "error-spike"));
   assert.ok(alerts.some((a) => a.id === "vercel-local-expected"));
 });
+
+test("successful slow Redis ping is latency, not an outage", () => {
+ const alerts=evaluateAlerts({components:[component({id:"redis",status:"critical",latencyMs:320,message:"Redis PING ok but latency 320 ms"})],queues:[],workerAlive:true,workerStale:false,overallHealthScore:75,runtimeMode:"production"});
+ assert.equal(alerts.find(a=>a.id==="redis-latency")?.title,"Redis latency high");
+ assert.ok(!alerts.some(a=>a.id==="redis-offline"));
+});
