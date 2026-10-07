@@ -103,7 +103,7 @@ export function isPlaceholderCreatorLabel(name: string | null | undefined): bool
     normalized === "unknown" ||
     normalized === "unknown creator" ||
     // Facebook numeric account identifiers are lookup keys, not creator names.
-    /^id\s*:\s*\d+$/i.test(normalized) ||
+    /^id\s*:\s*\p{Nd}+$/iu.test(normalized) ||
     // Facebook shell path mistakenly stored as username/handle
     normalized === "search"
   );
