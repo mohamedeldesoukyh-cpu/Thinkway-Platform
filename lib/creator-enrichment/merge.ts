@@ -65,6 +65,8 @@ export type MergeSourcedFieldsOptions = {
    * source is `apify`. Manual/imported values are always preserved.
    */
   fillMissingOnly?: boolean;
+  /** Explicit refresh may replace imported metrics, never deliberate manual values. */
+  refreshImportedFields?: readonly string[];
   /**
    * @deprecated Discovery refresh no longer bypasses import/manual protection.
    */
@@ -87,6 +89,7 @@ export function mergeSourcedFields(
   const fieldsUpdated: string[] = [];
   const manualProtected: string[] = [];
   const ignoreManual = new Set(options?.ignoreManualProtectionFor ?? []);
+  const refreshImported = new Set(options?.refreshImportedFields ?? []);
   const fillMissingOnly = options?.fillMissingOnly !== false;
   const existingValues = options?.existingValues ?? {};
   const interestOptions: InterestMergeOptions = {
@@ -137,12 +140,15 @@ export function mergeSourcedFields(
     const existingValue = existingValues[item.field];
     const hasExistingValue = !isEmpty(existingValue);
     const protectedSource = isProtectedFieldSource(existingSource);
+    const replacingImport = existingSource === "imported" &&
+      item.source === "apify" && refreshImported.has(item.field);
 
     // MANUAL / IMPORT PROTECTION: operator or CSV-sourced fields stay locked.
     if (
       protectedSource &&
       item.source !== "manual" &&
       item.source !== "imported" &&
+      !replacingImport &&
       !ignoreManual.has(item.field)
     ) {
       manualProtected.push(item.field);
@@ -155,6 +161,7 @@ export function mergeSourcedFields(
       hasExistingValue &&
       existingSource !== "apify" &&
       item.source === "apify" &&
+      !replacingImport &&
       !ignoreManual.has(item.field)
     ) {
       manualProtected.push(item.field);

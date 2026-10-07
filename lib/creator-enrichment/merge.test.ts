@@ -7,6 +7,29 @@ import {
   type IncomingField,
 } from "@/lib/creator-enrichment/merge";
 
+// Explicit refresh repairs imported metrics without unlocking manual or identity fields.
+{
+  const incoming: IncomingField[] = [
+    { field: "follower_count", value: 127752, source: "apify" },
+    { field: "profile_display_name", value: "Provider name", source: "apify" },
+  ];
+  const sources = { follower_count: "imported", profile_display_name: "imported" } as const;
+  const options = { existingValues: { follower_count: 69900 }, fillMissingOnly: false };
+  assert.equal(mergeSourcedFields(sources, incoming, options).updates.follower_count, undefined);
+  const refreshed = mergeSourcedFields(sources, incoming, {
+    ...options, refreshImportedFields: ["follower_count"],
+  });
+  assert.equal(refreshed.updates.follower_count, 127752);
+  assert.equal(refreshed.fieldSources.follower_count, "apify");
+  assert.equal(refreshed.updates.profile_display_name, undefined);
+  assert.equal(mergeSourcedFields({ follower_count: "manual" }, incoming, {
+    ...options, refreshImportedFields: ["follower_count"],
+  }).updates.follower_count, undefined);
+  assert.equal(mergeSourcedFields(sources, [
+    { field: "follower_count", value: null, source: "apify" },
+  ], { ...options, refreshImportedFields: ["follower_count"] }).updates.follower_count, undefined);
+}
+
 // ---------------------------------------------------------------------------
 // Transparency: every written field records its source (spec §11)
 // ---------------------------------------------------------------------------
