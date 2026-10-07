@@ -460,7 +460,7 @@
 .rx .rx-x{min-height:28px;text-align:start}
 .rx .rx-kv{flex-wrap:wrap}.rx .rx-kv>span{min-width:0}
 .rx.rx-dialog{gap:0;padding:0;background:var(--rx-surf);display:flex;flex-direction:column;overflow:hidden;border-radius:16px;max-height:90dvh}
-.rx.rx-drawer{inset-block:0;inset-inline-start:auto;inset-inline-end:0;transform:none;translate:none;width:min(600px,100vw);max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
+.rx.rx-drawer{inset-block:0;inset-inline-start:auto;inset-inline-end:0;transform:none!important;translate:none!important;--tw-translate-x:0px;--tw-translate-y:0px;width:min(600px,100vw);max-width:100vw;height:100dvh;max-height:100dvh;border-radius:0}
 .rx.rx-confirm{width:min(560px,calc(100vw - 32px));max-width:560px}
 .rx.rx-dialog .rx-dr__h{flex-shrink:0}.rx.rx-dialog .rx-dr__h h2{font-size:17px}.rx.rx-dialog .rx-dr__h p{font-size:12px;color:var(--rx-mut);margin-block-start:6px}
 .rx.rx-dialog .rx-dr__b{min-height:0;display:flex;flex-direction:column;gap:14px}
