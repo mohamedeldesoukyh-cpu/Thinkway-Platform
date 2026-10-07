@@ -276,7 +276,6 @@ export function CreatorSearchWorkspace({
     open: detailOpen,
     creator: detailCreator,
     openCreator,
-    openCreatorByHandle,
     onOpenChange: onDetailOpenChange,
     closeIfShowing,
     patchOpenCreator,
@@ -2131,21 +2130,13 @@ export function CreatorSearchWorkspace({
         confidence: searchIntent.confidence,
         creatorUnifiedId: creator.unified_id,
       });
-      // Pack cr(handle): Search results (POOL) first, then recommendations — never CR-only.
-      const handle =
-        creator.platforms.find((p) => p.handle)?.handle?.replace(/^@+/, "") ??
-        creator.unified_id;
-      const recommendationPool = recommendedCreators.map((entry) => entry.creator);
-      if (!openCreatorByHandle(handle, displayCreators, recommendationPool)) {
-        openCreator(creator);
-      }
+      // Handles can belong to separate profiles on different platforms.
+      // A result-row click already identifies the exact creator to open.
+      openCreator(creator);
     },
     [
       debouncedSearch,
-      displayCreators,
       openCreator,
-      openCreatorByHandle,
-      recommendedCreators,
       searchIntent.confidence,
       searchIntent.mode,
     ]
