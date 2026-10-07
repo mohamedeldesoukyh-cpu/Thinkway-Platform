@@ -31,6 +31,7 @@ import { creatorProfileSourceFromUnified } from "@/lib/creators/creator-profile-
 import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar";
 import {isSocialPlatform} from "@/lib/social/platforms";
 import {addPlatformToCreator} from "@/lib/discovery/add-platform-to-creator";
+import {errorLabel} from "./labels";
 
 async function actor(permission: string) {
   const db = await createSupabaseServerClient();
@@ -164,18 +165,31 @@ export async function discardRateUpload(path:string) {
   await db.storage.from(RATE_UPLOAD_BUCKET).remove([path]);
 }
 export async function commitRateImport(form:FormData, versionId:string, mode:"new"|"update", versionName:string, expected:string) {
+  let stage="validation";
+  let importedId:string;
+  try {
   z.enum(["new","update"]).parse(mode);
   const {db}=await actor("upload"); const rows=await parseUpload(db,form);
   if(rows.some(r=>r.status==="error"||r.status==="unmatched")) throw new Error("invalid");
+  stage="version";
   const current=checked(await db.from("rate_card_register").select("*").eq("id",z.uuid().parse(versionId)).single()) as RateVersion;
   const header=headerSchema.parse({...current,version:versionName,status:"inactive"});
   if(current.updated_at!==expected)throw new Error("stale");
   // Identity resolution is repeated on the server after staged creator creation.
   if(rows.some(r=>r.pending_creator))throw new Error("unmatched");
+  stage="save";
   const result=checked(await db.rpc("save_rate_card",{p_header:mode==="new"?header:null,p_version_id:mode==="update"?versionId:null,p_copy_id:mode==="new"?versionId:null,p_lines:rows.flatMap(r=>(r.rates??[r.rate!]).map(dbLine)),p_expected:expected,p_operation:"upload"}));
+  importedId=String(result);
   const uploadPath=String(form.get("uploadPath")??"");
-  if(uploadPath)await db.storage.from(RATE_UPLOAD_BUCKET).remove([uploadPath]);
-  refresh(); return String(result);
+  // Storage cleanup cannot turn a committed import into a reported failure.
+  if(uploadPath)await db.storage.from(RATE_UPLOAD_BUCKET).remove([uploadPath]).catch(()=>undefined);
+  } catch(error) {
+    const reason=errorLabel(error);
+    console.error("[rate-card-import]",{stage,versionId,reason});
+    // Expected errors must be returned: production masks thrown action messages.
+    return {ok:false as const,error:reason};
+  }
+  refresh(); return {ok:true as const,id:importedId};
 }
 
 async function pricingContext(db:SupabaseClient,versionId:string,rule:PricingRule) {

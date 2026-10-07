@@ -1,4 +1,5 @@
 export const labels = {
+ importTimeout:["The import took too long and was rolled back. No rate lines were saved. Your upload is retained; retry Confirm Import.","استغرق الاستيراد وقتاً أطول من المسموح وتم التراجع عنه. لم تُحفظ أي أسعار. ملفك محفوظ؛ أعد محاولة تأكيد الاستيراد."],
  clientListByName:["Client List by Name","قائمة العميل بالأسماء"],performanceReportHelp:["Creator profiles and performance only. Creator cards and platform links are clickable in HTML, PDF and PPTX.","ملفات المبدعين وأداؤهم فقط. بطاقات المبدعين وروابط المنصات قابلة للنقر في HTML وPDF وPPTX."],
  enrichmentPaused:["Performance refresh runs separately. Status checks resume after the rate-card import finishes.","تحديث الأداء منفصل. يُستأنف فحص الحالة بعد اكتمال استيراد الأسعار."],
  previewExport:["Preview & Export","معاينة وتصدير"],templateLayoutHelp:["Prices follow the upload template: content, Usage Rights, Boosting and Event Attendance in separate columns.","الأسعار بنفس ترتيب قالب الرفع: المحتوى وحقوق الاستخدام والترويج وحضور الفعاليات في أعمدة منفصلة."],
@@ -20,7 +21,7 @@ export const labels = {
 export type Label = keyof typeof labels;
 export type Language = "en" | "ar";
 export function textFor(lang:Language,key:Label) { return labels[key][lang === "ar" ? 1 : 0]; }
-export function errorLabel(error:unknown):Label { const msg=error instanceof Error?error.message:""; if(msg.includes("stale"))return "stale"; if(msg.includes("permission"))return "permission"; if(msg.includes("duplicate")||msg.includes("unique"))return "duplicateError"; if(msg==="currency")return "currencyError"; if(msg in labels)return msg as Label; return "error"; }
+export function errorLabel(error:unknown):Label { const msg=error instanceof Error?error.message:""; if(msg.includes("statement timeout"))return "importTimeout"; if(msg.includes("stale"))return "stale"; if(msg.includes("permission"))return "permission"; if(msg.includes("duplicate")||msg.includes("unique"))return "duplicateError"; if(msg==="currency")return "currencyError"; if(msg in labels)return msg as Label; return "error"; }
 
 const arabicTaxonomy:Record<string,string>={package:"باقة",all:"جميع المنصات",usage_right:"حقوق الاستخدام",boosting:"الترويج",event_attendance:"حضور فعالية",instagram:"إنستغرام",tiktok:"تيك توك",snapchat:"سناب شات",youtube:"يوتيوب",facebook:"فيسبوك",twitter:"إكس",linkedin:"لينكدإن",other:"أخرى",ugc_video:"فيديو محتوى المستخدم",post:"منشور",reel:"ريل",story:"قصة",live:"بث مباشر",video:"فيديو",short:"فيديو قصير",dedicated:"فيديو مخصص",spotlight:"سبوت لايت",group_post:"منشور مجموعة"};
 export function taxonomyLabel(value:string,lang:Language,fallback?:string){
