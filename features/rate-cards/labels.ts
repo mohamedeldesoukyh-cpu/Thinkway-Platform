@@ -1,4 +1,6 @@
 export const labels = {
+ replacementProfiles:["The replacement creator must have exactly one linked account for each platform in this package. Update their profiles first, then retry.","يجب أن يكون للمبدع البديل حساب مرتبط واحد لكل منصة في الباقة. حدّث حساباته أولاً ثم أعد المحاولة."],
+ unlinkedProfile:["This URL is not linked to this creator. Use Add profile URL first. A URL owned by another creator cannot be added here.","هذا الرابط غير مرتبط بالمبدع. استخدم إضافة رابط حساب أولاً. لا يمكن إضافة حساب يخص مبدعاً آخر."],
  rounded:["Rounded automatically; ready to import","تم التقريب تلقائياً؛ جاهز للاستيراد"],
  importTimeout:["The import took too long and was rolled back. No rate lines were saved. Your upload is retained; retry Confirm Import.","استغرق الاستيراد وقتاً أطول من المسموح وتم التراجع عنه. لم تُحفظ أي أسعار. ملفك محفوظ؛ أعد محاولة تأكيد الاستيراد."],
  clientListByName:["Client List by Name","قائمة العميل بالأسماء"],performanceReportHelp:["Creator profiles and performance only. Creator cards and platform links are clickable in HTML, PDF and PPTX.","ملفات المبدعين وأداؤهم فقط. بطاقات المبدعين وروابط المنصات قابلة للنقر في HTML وPDF وPPTX."],

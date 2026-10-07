@@ -51,6 +51,7 @@ export const PAGE_PREFIX_CLASSIFICATIONS: Array<{
 export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/rate-cards/import-preview": "internal_workspace",
   "/api/rate-cards/[id]/export": "internal_workspace",
+  "/api/rate-cards/[id]/excel": "internal_workspace",
   "/api/health": "public",
   "/api/version": "public",
   "/api/build-info": "public",
@@ -146,6 +147,7 @@ export const SERVER_ACTION_MODULE_CLASSIFICATIONS: Record<string, WorkspaceClass
   "features/operations": "internal_workspace",
   "features/operations-center": "internal_workspace",
   "features/planning": "internal_workspace",
+  "features/rate-cards": "internal_workspace",
   "features/campaigns": "internal_workspace",
   "features/campaign-studio": "internal_workspace",
   "features/campaign-plan": "internal_workspace",

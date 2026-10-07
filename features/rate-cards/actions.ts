@@ -32,6 +32,8 @@ import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar
 import {isSocialPlatform} from "@/lib/social/platforms";
 import {addPlatformToCreator} from "@/lib/discovery/add-platform-to-creator";
 import {errorLabel} from "./labels";
+import {offerEditSchema,offerScope,deliverableEdit} from "./offer-edit";
+import {packageDetailsSchema} from "./packages";
 
 async function actor(permission: string) {
   const db = await createSupabaseServerClient();
@@ -137,6 +139,41 @@ export async function removeRateLines(versionId:string, ids:string[]) {
   const {db}=await actor("edit"); z.array(z.uuid()).min(1).max(5000).parse(ids);z.uuid().parse(versionId);
   for(let from=0;from<ids.length;from+=50)checked(await db.from("rate_card_lines").delete().eq("version_id",versionId).in("id",ids.slice(from,from+50)));
   refresh();
+}
+export async function getRateCardCreator(ref:string){
+ const {db}=await actor("read");
+ const result=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[ref]});
+ return result.byUnifiedId.get(ref)??result.byDiscoveryId.get(ref.replace(/^dis:/,""))??null;
+}
+/** Every operation updates one offer in one SQL statement; commercial values are untouched. */
+export async function editRateOffer(versionId:string,anchorId:string,input:unknown,expected:string){
+ const {db}=await actor("edit");z.uuid().parse(versionId);z.uuid().parse(anchorId);
+ const edit=offerEditSchema.parse(input);
+ const version=checked(await db.from("rate_card_versions").select("updated_at").eq("id",versionId).single());
+ if(!version||new Date(version.updated_at).getTime()!==new Date(expected).getTime())throw new Error("stale");
+ const anchor=checked(await db.from("rate_card_lines").select("*").eq("version_id",versionId).eq("id",anchorId).single()) as RateLine;
+ const group=checked(await db.from("rate_card_lines").select("*").eq("version_id",versionId).eq("creator_ref",anchor.creator_ref).eq("platform",anchor.platform).eq("package_key",anchor.package_key??"")) as RateLine[];
+ const row=offerScope(group,anchorId);let ids=row.ids;let patch:Record<string,unknown>;
+ const resolved=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[edit.kind==="creator"?edit.creatorRef:anchor.creator_ref]});
+ const ref=edit.kind==="creator"?edit.creatorRef:anchor.creator_ref;
+ const creator=resolved.byUnifiedId.get(ref)??resolved.byDiscoveryId.get(ref.replace(/^dis:/,""));
+ if(!creator)throw new Error("unmatched");
+ if(edit.kind==="creator"){
+  const [kind,id]=creator.unified_id.split(":");patch={influencer_id:kind==="inf"?id:null,profile_id:kind==="dis"?id:null,creator_name:creator.display_name};
+  if(anchor.package_details){
+   const profiles=anchor.package_details.profiles.map(profile=>{
+    const matches=creator.platforms.filter(p=>p.platform===profile.platform&&p.profile_url);
+    if(matches.length!==1)throw new Error("replacementProfiles");
+    return {platform:profile.platform,profile_url:matches[0].profile_url!};
+   });patch.package_details=packageDetailsSchema.parse({...anchor.package_details,profiles});
+  }
+ }else if(edit.kind==="package"){
+  if(!anchor.package_key)throw new Error("invalid");
+  for(const p of edit.details.profiles){const parsed=parseProfileInput(p.profile_url);if(!creator.platforms.some(account=>{const owned=parseProfileInput(account.profile_url||account.handle,isSocialPlatform(account.platform)?account.platform:undefined);return owned?.platform===parsed?.platform&&owned?.normalized_username===parsed?.normalized_username;}))throw new Error("unlinkedProfile");}
+  patch={package_details:edit.details};
+ }else{const result=deliverableEdit(group,anchorId,edit.deliverable);ids=result.ids;patch=result.patch;}
+ // The unique constraint rejects conflicts atomically instead of merging or overwriting prices.
+ checked(await db.from("rate_card_lines").update(patch).eq("version_id",versionId).in("id",ids).select("id"));refresh();
 }
 export async function searchRateCreators(search:string, page=1, source:"all"|"discovery"="all") {
   const {db}=await actor("read");
@@ -297,10 +334,11 @@ export async function getRateImportConflictCreator(ref:string){
  return resolved.byUnifiedId.get(ref)??resolved.byDiscoveryId.get(ref.replace(/^dis:/,""))??null;
 }
 
-export async function ensureRateImportProfiles(profileUrls:string[],creatorRef?:string){
+export async function ensureRateImportProfiles(profileUrls:string[],creatorRef?:string,permission:"upload"|"edit"="upload"){
+  z.enum(["upload","edit"]).parse(permission);
   const urls=z.array(z.string().url().max(4096)).min(1).max(20).parse(profileUrls);
   const parsed=urls.map(url=>parseProfileInput(url));if(parsed.some(p=>!p))throw new Error("invalid");
-  const {db,typed,userId}=await actor("upload");
+  const {db,typed,userId}=await actor(permission);
   if("error" in await requirePermission(db,CREATOR_ENRICHMENT_PERMISSION))throw new Error("permission");
   const owners=new Map<string,string>();
   for(const p of parsed){
@@ -316,9 +354,9 @@ export async function ensureRateImportProfiles(profileUrls:string[],creatorRef?:
   if(owners.size>1)throw new Error("profileConflict");
   const owner=[...owners.entries()][0];
   // Reuse matched creators without forcing provider acquisition during pricing imports.
-  const result=owner?{id:owner[0],name:"",created:false,queued:false,platform:parsed[0]!.platform,pollId:undefined as string|undefined}:await ensureImportCreator(urls[0]);
+  const result=owner?{id:owner[0],name:"",created:false,queued:false,platform:parsed[0]!.platform,pollId:undefined as string|undefined}:await ensureImportCreator(urls[0],permission);
   let enrichmentRequested=result.created;
-  let resolved=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[result.id]});
+  const resolved=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:[result.id]});
   let creator=resolved.byUnifiedId.get(result.id)??resolved.byDiscoveryId.get(result.id.replace(/^dis:/,""));
   if(!creator)throw new Error("unmatched");
   for(const p of parsed){
