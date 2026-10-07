@@ -103,3 +103,12 @@ assert.equal(
 );
 
 console.log("decode-html-entities tests passed");
+assert.equal(pickCreatorDisplayName(["id:61590508504864"], "@bendary.97"), "bendary.97");
+assert.equal(pickCreatorDisplayName(["ID: 61590508504864", "Ahmed Bendary"], "bendary.97"), "Ahmed Bendary");
+assert.equal(pickCreatorDisplayName(["id:61590508504864"], "id:61590508504864"), "Creator");
+assert.equal(pickCreatorDisplayName([], "INF-008286"), "Creator");
+assert.equal(formatCreatorDisplayName("ID:61590508504864"), "");
+assert.equal(formatCreatorDisplayName("ID: Design Studio"), "ID: Design Studio");
+assert.equal(pickCreatorDisplayName(["id:61590508504864", "أحمد البنداري"], "bendary.97"), "أحمد البنداري");
+assert.equal(pickCreatorDisplayName(["\u200Fأحمد البنداري\u200F", "id:61590508504864"], "bendary.97"), "أحمد البنداري");
+assert.equal(pickCreatorDisplayName(["ID: ٦١٥٩٠٥٠٨٥٠٤٨٦٤", "أحمد البنداري"], "bendary.97"), "أحمد البنداري");

@@ -1,7 +1,7 @@
 "use client";
 
 import { UserIcon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ComponentProps } from "react";
 
 import { useMediaProxyImageRecovery } from "@/hooks/use-media-proxy-image-recovery";
 import { creatorAvatarBrowserDisplayUrl } from "@/lib/performance/creator-avatar";
@@ -25,7 +25,7 @@ function isRawHttpAvatarUrl(url: string | null | undefined): url is string {
   return /^https?:\/\//i.test(trimmed);
 }
 
-export function CreatorAvatarImage({
+function CreatorAvatarImageInstance({
   avatarUrl,
   profileUrl,
   size = "md",
@@ -52,7 +52,6 @@ export function CreatorAvatarImage({
   const [useProfileFallback, setUseProfileFallback] = useState(false);
   const [useRawCdnFallback, setUseRawCdnFallback] = useState(false);
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
-  const placeholder = <UserIcon aria-hidden className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />;
 
   const activeBase =
     useProfileFallback && profileOnlySrc && profileOnlySrc !== primarySrc
@@ -63,12 +62,6 @@ export function CreatorAvatarImage({
   const notifiedFail = useRef(false);
 
   useEffect(() => {
-    setUseProfileFallback(false);
-    setUseRawCdnFallback(false);
-    notifiedFail.current = false;
-  }, [primarySrc, profileOnlySrc, rawCdnSrc]);
-
-  useEffect(() => {
     if (!recovery.exhausted) return;
     if (rawCdnSrc && !useRawCdnFallback) return;
     if (notifiedFail.current) return;
@@ -76,54 +69,30 @@ export function CreatorAvatarImage({
     onFailed?.();
   }, [recovery.exhausted, rawCdnSrc, useRawCdnFallback, onFailed]);
 
-  if (recovery.exhausted && rawCdnSrc && !useRawCdnFallback) {
-    return (
-      <div className={cn(AVATAR_CONTAINER_CLASS, "bg-muted", dim, className)}>
-        {placeholder}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={rawCdnSrc}
-          alt=""
-          aria-label={alt || undefined}
-          referrerPolicy="no-referrer"
-          className={cn("relative size-full object-cover object-center", loadedSrc !== rawCdnSrc && "opacity-0")}
-          onLoad={() => setLoadedSrc(rawCdnSrc)}
-          onError={() => setUseRawCdnFallback(true)}
-        />
-      </div>
-    );
-  }
-
-  if (!activeBase || recovery.exhausted) {
-    return (
-      <div
-        className={cn(
-          AVATAR_CONTAINER_CLASS,
-          "flex items-center justify-center bg-muted",
-          dim,
-          className
-        )}
-      >
-        <UserIcon
-          className={cn(size === "xs" ? "size-3" : "size-5", "text-muted-foreground")}
-        />
-      </div>
-    );
-  }
-
+  const rawFallback = recovery.exhausted && rawCdnSrc && !useRawCdnFallback;
+  const src = rawFallback ? rawCdnSrc : activeBase && !recovery.exhausted
+    ? recovery.displaySrc ?? activeBase : null;
+  const loaded = Boolean(src && loadedSrc === src);
   return (
-    <div className={cn(AVATAR_CONTAINER_CLASS, "bg-muted", dim, className)}>
-      {placeholder}
+    <div className={cn(AVATAR_CONTAINER_CLASS, "flex items-center justify-center bg-muted text-muted-foreground", dim, className)}
+      role="img" aria-label={alt || "Creator photo"}>
+      {!loaded && <UserIcon aria-hidden className={size === "xs" ? "size-3" : "size-5"} />}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        key={recovery.displaySrc ?? activeBase}
-        src={recovery.displaySrc ?? activeBase}
+      {src && <img
+        key={src}
+        src={src}
         alt=""
-        aria-label={alt || undefined}
+        aria-hidden
         referrerPolicy="no-referrer"
-        className={cn("relative size-full object-cover object-center", loadedSrc !== (recovery.displaySrc ?? activeBase) && "opacity-0")}
-        onLoad={() => setLoadedSrc(recovery.displaySrc ?? activeBase)}
+        className="absolute inset-0 size-full object-cover object-center"
+        style={{ opacity: loaded ? 1 : 0 }}
+        onLoad={() => setLoadedSrc(src)}
         onError={() => {
+          setLoadedSrc(null);
+          if (rawFallback) {
+            setUseRawCdnFallback(true);
+            return;
+          }
           if (
             !useProfileFallback &&
             profileOnlySrc &&
@@ -134,7 +103,12 @@ export function CreatorAvatarImage({
           }
           recovery.onError();
         }}
-      />
+      />}
     </div>
   );
+}
+
+export function CreatorAvatarImage(props: ComponentProps<typeof CreatorAvatarImageInstance>) {
+  // A changed photo starts a fresh recovery cycle; ordinary row renders do not.
+  return <CreatorAvatarImageInstance key={JSON.stringify([props.avatarUrl ?? null, props.profileUrl ?? null])} {...props} />;
 }

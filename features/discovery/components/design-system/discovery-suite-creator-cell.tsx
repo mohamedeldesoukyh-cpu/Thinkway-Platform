@@ -1,7 +1,6 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { UserIcon } from "lucide-react";
 
 import { CountryFlagBadge } from "@/components/creator/country-flag-badge";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
@@ -72,7 +71,6 @@ export type DiscoverySuiteCreatorCellProps = {
 export function DiscoverySuiteCreatorCell({
   name,
   handleLabel,
-  index = 0,
   avatarUrl,
   profileUrl,
   countryCodes,
@@ -101,7 +99,6 @@ export function DiscoverySuiteCreatorCell({
       >
         {/* Clip photo/initials only — keep `.fl` flag outside overflow so pack overlay shows. */}
         <span className="absolute inset-0 overflow-hidden rounded-full">
-          {avatarUrl || profileUrl ? (
             <CreatorAvatarImage
               avatarUrl={avatarUrl}
               profileUrl={profileUrl}
@@ -109,11 +106,6 @@ export function DiscoverySuiteCreatorCell({
               sizeClassName="size-full"
               className="border-0"
             />
-          ) : (
-            <span className="grid size-full place-items-center">
-              <UserIcon className="size-5" />
-            </span>
-          )}
         </span>
         {flagCode ? (
           <span className="fl" style={{ width: FLAG_PX, height: FLAG_PX }}>

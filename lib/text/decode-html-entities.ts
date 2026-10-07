@@ -102,6 +102,8 @@ export function isPlaceholderCreatorLabel(name: string | null | undefined): bool
     normalized === "creator" ||
     normalized === "unknown" ||
     normalized === "unknown creator" ||
+    // Facebook numeric account identifiers are lookup keys, not creator names.
+    /^id\s*:\s*\p{Nd}+$/iu.test(normalized) ||
     // Facebook shell path mistakenly stored as username/handle
     normalized === "search"
   );
@@ -234,7 +236,7 @@ export function pickCreatorDisplayName(
   // Last resort: first non-document candidate, else plain handle key (never placeholders).
   if (formatted[0]) return formatted[0];
   const handleKey = normalizeCreatorNameKey(handle);
-  if (handleKey && !isPlaceholderCreatorLabel(handleKey)) return handleKey;
+  if (handleKey && !isPlaceholderCreatorLabel(handleKey) && !isCreatorDocumentNumber(handleKey) && !isBarePlatformDisplayName(handleKey)) return handleKey;
   return "Creator";
 }
 

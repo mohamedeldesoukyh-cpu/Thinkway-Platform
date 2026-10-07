@@ -779,6 +779,7 @@ export async function runCreatorEnrichment(
     const merged = mergeSourcedFields(resolveAccountFieldSources(account), scopedIncoming, {
       existingValues: accountExistingValues(account),
       fillMissingOnly: payload.trigger !== "manual",
+      refreshImportedFields: payload.trigger === "manual" ? APIFY_METRIC_FIELDS : [],
       metadata: account.metadata,
       forceInterestReplace,
       enableInterestMerge: true,
