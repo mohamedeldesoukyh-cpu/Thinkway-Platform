@@ -31,6 +31,7 @@ import {
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import { evaluateMergeCreatorsEligibility } from "@/lib/discovery/merge-creators";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
+import { MergeRateConflictResolver } from "@/features/discovery/merge-creators/rate-conflict-resolver";
 import { cn } from "@/lib/utils";
 
 export type CombineCreatorsMergedMeta = {
@@ -60,6 +61,7 @@ export function CombineCreatorsDialog({
   const [sourceCreator, setSourceCreator] = useState<UnifiedCreatorResult | null>(null);
   const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [serverCanMerge, setServerCanMerge] = useState(false);
+  const [checkRevision, setCheckRevision] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -99,12 +101,16 @@ export function CombineCreatorsDialog({
       if (!active) return;
       setServerMessage(result.message);
       setServerCanMerge(result.canMerge);
+    }).catch(() => {
+      if (!active) return;
+      setServerCanMerge(false);
+      setServerMessage("Could not check linked records. Use Recheck linked records to retry.");
     });
 
     return () => {
       active = false;
     };
-  }, [open, sourceCreator?.influencer_id, targetInfluencerId]);
+  }, [open, sourceCreator?.influencer_id, targetInfluencerId, checkRevision]);
 
   const canConfirm =
     Boolean(
@@ -154,7 +160,7 @@ export function CombineCreatorsDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className={cn(DISCOVERY_DIALOG_CONTENT_CLASS, "sm:max-w-lg")}>
+        <DialogContent className={cn(DISCOVERY_DIALOG_CONTENT_CLASS, "sm:max-w-3xl max-h-[90dvh] overflow-y-auto")}>
           <DialogHeader className={DISCOVERY_DIALOG_HEADER_WRAP_CLASS}>
             <div className={DISCOVERY_DIALOG_HEADER_BAR_CLASS}>
               <p className="text-[10px] font-bold uppercase tracking-[0.06em] text-[#64748b] dark:text-muted-foreground">
@@ -166,8 +172,9 @@ export function CombineCreatorsDialog({
               <DialogDescription className={DISCOVERY_DIALOG_DESC_CLASS}>
                 Merge a duplicate creator profile into {targetCreator.display_name}. Platform
                 accounts from the other profile will move here, then the duplicate profile is
-                removed. This cannot be undone — shortlist and quotation lines pointing at the
-                duplicate are re-pointed to the surviving record.
+                removed. Shortlists, quotations, campaigns, rate cards, documents and history
+                transfer to the surviving profile. Separate jobs keep their prices and documents.
+                This cannot be undone.
               </DialogDescription>
             </div>
           </DialogHeader>
@@ -241,6 +248,10 @@ export function CombineCreatorsDialog({
               </div>
             ) : null}
 
+            {serverMessage?.includes("Both creators have prices in the same rate card") && targetInfluencerId && sourceCreator?.influencer_id ? (
+              <MergeRateConflictResolver key={`${targetInfluencerId}:${sourceCreator.influencer_id}`} targetId={targetInfluencerId} sourceId={sourceCreator.influencer_id} targetName={targetCreator.display_name} sourceName={sourceCreator.display_name} onResolved={() => setCheckRevision(value => value + 1)} />
+            ) : null}
+            {sourceCreator && <Button variant="outline" size="sm" disabled={isPending} onClick={() => setCheckRevision(value => value + 1)}>Recheck linked records</Button>}
             {!targetInfluencerId ? (
               <p className="text-xs text-amber-700 dark:text-amber-300">
                 Promote or link this creator to a vendor profile before combining profiles.
@@ -272,6 +283,7 @@ export function CombineCreatorsDialog({
         title="Select duplicate creator"
         description="Pick the other profile for the same person. Their platform accounts will move to the creator you opened."
         selectionMode="single"
+        panelLayout
         confirmLabel="Use this creator"
         productionOnly={false}
         pageSize={16}

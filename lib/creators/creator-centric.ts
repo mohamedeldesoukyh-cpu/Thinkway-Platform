@@ -53,6 +53,7 @@ export type AvatarCandidate = {
 };
 
 export type PlatformAccountAvatarInput = {
+  handle?: string | null;
   id: string;
   platform: string;
   follower_count?: number | null;
@@ -174,6 +175,22 @@ export function collectAvatarCandidates(input: {
   storedPrimaryMode?: StoredPrimaryAvatarMode;
 }): AvatarCandidate[] {
   const candidates: AvatarCandidate[] = [];
+  // A removed account may still exist in old DNA/import snapshots. Once identity
+  // has been reset, those historical portraits must not reappear as fallbacks.
+  if (input.influencerMetadata?.identity_linked_accounts_only === true) {
+    input = { ...input, influencerMetadata: null, discoveryProfileImageUrl: null, dnaAvatarUrl: null,
+      accounts: input.accounts.map(account => {
+        const path = account.profile_picture_url ? parseCreatorAvatarStoragePathFromUrl(account.profile_picture_url) : null;
+        const parts = path?.split("/");
+        const storedPlatform = parts?.at(-2);
+        const storedHandle = parts?.at(-1)?.replace(/\.[^.]+$/, "").toLowerCase();
+        const mismatched = parts && ["imports", "enrichment"].includes(parts[0]) &&
+          (canonicalPlatformKey(storedPlatform ?? "") !== canonicalPlatformKey(account.platform) ||
+            (account.handle && storedHandle !== account.handle.replace(/^@/, "").toLowerCase()));
+        return mismatched ? { ...account, profile_picture_url: null, metadata: null } : account;
+      }),
+    };
+  }
   const storedMode = input.storedPrimaryMode ?? "operator";
   const storedUrl = input.storedPrimaryAvatarUrl?.trim();
   const storedSource = input.storedPrimaryAvatarSource as PrimaryAvatarSource | undefined;

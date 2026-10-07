@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { useCreatorBrowse } from "@/features/creators/picker/creator-selection-hooks";
 import { getMergeCreatorsEligibilityAction, mergeCreatorsAction } from "@/features/discovery/merge-creators/actions";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
+import { MergeRateConflictResolver } from "@/features/discovery/merge-creators/rate-conflict-resolver";
 
 export function InlineCreatorMerge({ source, initialTarget, onMerged, onBusyChange }: {
   source: UnifiedCreatorResult; initialTarget?: UnifiedCreatorResult; onMerged: (creator: UnifiedCreatorResult) => void; onBusyChange: (busy: boolean) => void;
@@ -17,6 +18,7 @@ export function InlineCreatorMerge({ source, initialTarget, onMerged, onBusyChan
   const [target, setTarget] = useState<UnifiedCreatorResult | null>(initialTarget ?? null);
   const [eligibility, setEligibility] = useState<{ canMerge: boolean; message: string } | null>(null);
   const [confirmed, setConfirmed] = useState(false);
+  const [checkRevision, setCheckRevision] = useState(0);
   const [pending, start] = useTransition();
   const browse = useCreatorBrowse({ enabled: !target, filters: { search }, pageSize: 20 });
   useEffect(() => {
@@ -28,7 +30,7 @@ export function InlineCreatorMerge({ source, initialTarget, onMerged, onBusyChan
         .catch(() => { if (active) setEligibility({ canMerge: false, message: "Could not check this merge. Choose the creator again to retry." }); });
     }
     return () => { active = false; };
-  }, [target, source.influencer_id]);
+  }, [target, source.influencer_id, checkRevision]);
 
   function merge() {
     if (!target?.influencer_id || !source.influencer_id || !confirmed || !eligibility?.canMerge || pending) return;
@@ -61,6 +63,7 @@ export function InlineCreatorMerge({ source, initialTarget, onMerged, onBusyChan
       <div className="rounded-lg bg-muted p-3 text-sm"><p><strong>Keep:</strong> {target.display_name} · {target.platforms.map(p => p.handle).filter(Boolean).join(" · ")}</p><p><strong>Remove after transfer:</strong> {source.display_name} · {source.platforms.map(p => p.handle).filter(Boolean).join(" · ")}</p></div>
       <Button variant="outline" disabled={pending} onClick={() => setTarget(null)}>Choose a different creator</Button>
       <p role="status" className="text-sm">{eligibility?.message ?? "Checking linked records and overlapping prices…"}</p>
+      {eligibility?.message.includes("Both creators have prices in the same rate card") && target.influencer_id && source.influencer_id && <MergeRateConflictResolver key={`${target.influencer_id}:${source.influencer_id}`} targetId={target.influencer_id} sourceId={source.influencer_id} targetName={target.display_name} sourceName={source.display_name} onResolved={() => setCheckRevision(value => value + 1)} />}
       {eligibility?.canMerge && <label className="flex items-start gap-2 text-sm"><input type="checkbox" className="mt-1" checked={confirmed} disabled={pending} onChange={event => setConfirmed(event.target.checked)} />These profiles are the same person. Keep {target.display_name} and remove the duplicate. This cannot be undone.</label>}
       <Button disabled={!eligibility?.canMerge || !confirmed || pending} onClick={merge}>{pending ? "Merging…" : "Confirm merge and transfer records"}</Button>
     </>}

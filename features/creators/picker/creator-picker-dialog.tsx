@@ -539,7 +539,7 @@ export function CreatorPickerDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex max-h-[90vh] max-w-xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className={`flex max-h-[90dvh] flex-col gap-0 overflow-hidden p-0 ${panelLayout ? "creator-picker-compact-dialog w-[calc(100vw-2rem)] sm:max-w-3xl" : "max-w-xl"}`}>
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}

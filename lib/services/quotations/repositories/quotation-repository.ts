@@ -902,6 +902,8 @@ export async function findExistingCampaignAssignment(
     .select("id")
     .eq("campaign_header_id", campaignHeaderId)
     .eq("influencer_id", influencerId)
+    .order("id")
+    .limit(1)
     .maybeSingle();
 }
 

@@ -58,7 +58,7 @@ export async function deletePlatformFromCreator(
     return { ok: false, message: deleteError.message };
   }
 
-  await persistCreatorPrimaryIdentity(supabase, influencerId);
+  await persistCreatorPrimaryIdentity(supabase, influencerId, { resetFromLinkedAccounts: true });
 
   const creator = await getUnifiedCreatorById(supabase, unifiedId);
   if (!creator) {

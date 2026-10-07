@@ -73,6 +73,7 @@ export async function syncCampaignInfluencerForLine(
     .from("campaign_influencers")
     .select("id")
     .eq("campaign_line_id", input.lineId)
+    .eq("merge_record_key", "00000000-0000-0000-0000-000000000000")
     .maybeSingle();
 
   if (byLine) {
@@ -104,6 +105,7 @@ export async function syncCampaignInfluencerForLine(
     )
     .eq("influencer_id", input.influencerId)
     .is("campaign_line_id", null)
+    .eq("merge_record_key", "00000000-0000-0000-0000-000000000000")
     .maybeSingle();
 
   if (orphan) {
@@ -130,7 +132,7 @@ export async function syncCampaignInfluencerForLine(
   const { data: upserted, error: upsertError } = await typed
     .from("campaign_influencers")
     .upsert(row, {
-      onConflict: "campaign_header_id,campaign_line_id,influencer_id",
+      onConflict: "campaign_header_id,campaign_line_id,influencer_id,merge_record_key",
     })
     .select("id")
     .single();
@@ -144,6 +146,7 @@ export async function syncCampaignInfluencerForLine(
     .select("id, campaign_line_id")
     .eq("campaign_id", input.campaignId)
     .eq("influencer_id", input.influencerId)
+    .eq("merge_record_key", "00000000-0000-0000-0000-000000000000")
     .maybeSingle();
 
   if (

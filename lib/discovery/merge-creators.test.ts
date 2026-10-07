@@ -3,11 +3,11 @@ import test from "node:test";
 
 import { classifyMergeReassignError, evaluateMergeCreatorsEligibility,getMergeCreatorsEligibility } from "./merge-creators";
 
-test("replacement blocks overlapping completed-job and rate-card keys before writes",async()=>{
+test("replacement preserves overlapping jobs and requests review for overlapping prices",async()=>{
  for(const overlap of ["vendor_ios","rate_card_lines"]){
-  const db={from(table:string){const data=table==="influencer_platform_accounts"?[{id:"p1",platform:"instagram",influencer_id:"target"},{id:"p2",platform:"tiktok",influencer_id:"source"}]:table===overlap?[{id:"a",influencer_id:"target",campaign_header_id:"job",version_id:"version",platform:"all",deliverable:"reel",price_type:"creator_cost"},{id:"b",influencer_id:"source",campaign_header_id:"job",version_id:"version",platform:"all",deliverable:"reel",price_type:"creator_cost"}]:[];const q={select(){return q;},in(){return q;},eq(){return q;},then(resolve:(value:unknown)=>unknown){return Promise.resolve({data,error:null}).then(resolve);}};return q;}};
+  const db={from(table:string){const data=table==="influencer_platform_accounts"?[{id:"p1",platform:"instagram",influencer_id:"target"},{id:"p2",platform:"tiktok",influencer_id:"source"}]:table===overlap?[{id:"a",influencer_id:"target",campaign_header_id:"job",version_id:"version",platform:"all",deliverable:"reel",price_type:"creator_cost"},{id:"b",influencer_id:"source",campaign_header_id:"job",version_id:"version",platform:"all",deliverable:"reel",price_type:"creator_cost"}]:[];const q={select(){return q;},in(){return q;},eq(){return q;},order(){return q;},range(){return q;},then(resolve:(value:unknown)=>unknown){return Promise.resolve({data,error:null}).then(resolve);}};return q;}};
   const result=await getMergeCreatorsEligibility(db as unknown as Parameters<typeof getMergeCreatorsEligibility>[0],{targetInfluencerId:"target",sourceInfluencerId:"source"});
-  assert.equal(result.canMerge,false);assert.match(result.message,/overlapping|same vendor_ios/);
+  assert.equal(result.canMerge,overlap !== "rate_card_lines");if(overlap === "rate_card_lines")assert.match(result.message,/same rate card/);
  }
 });
 
@@ -76,10 +76,10 @@ test("classifyMergeReassignError treats unique and missing-table errors as recov
   );
 });
 
-test("overlapping empty shortlist drafts can merge but priced drafts cannot",async()=>{
+test("overlapping saved shortlist entries do not block a lossless merge",async()=>{
  for(const cost of [null,0,100]){
-  const db={from(table:string){const data=table==="influencer_platform_accounts"?[{id:"p1",platform:"instagram",influencer_id:"target"},{id:"p2",platform:"tiktok",influencer_id:"source"}]:table==="discovery_shortlist_items"?[{id:"a",influencer_id:"target",shortlist_id:"list",item_status:"draft",deliverables:[]},{id:"b",influencer_id:"source",shortlist_id:"list",item_status:"draft",deliverables:[],cost}]:[];const q={select(){return q;},in(){return q;},eq(){return q;},then(resolve:(value:unknown)=>unknown){return Promise.resolve({data,error:null}).then(resolve);}};return q;}};
+  const db={from(table:string){const data=table==="influencer_platform_accounts"?[{id:"p1",platform:"instagram",influencer_id:"target"},{id:"p2",platform:"tiktok",influencer_id:"source"}]:table==="discovery_shortlist_items"?[{id:"a",influencer_id:"target",shortlist_id:"list",item_status:"draft",deliverables:[]},{id:"b",influencer_id:"source",shortlist_id:"list",item_status:"draft",deliverables:[],cost}]:[];const q={select(){return q;},in(){return q;},eq(){return q;},order(){return q;},range(){return q;},then(resolve:(value:unknown)=>unknown){return Promise.resolve({data,error:null}).then(resolve);}};return q;}};
   const result=await getMergeCreatorsEligibility(db as unknown as Parameters<typeof getMergeCreatorsEligibility>[0],{targetInfluencerId:"target",sourceInfluencerId:"source"});
-  assert.equal(result.canMerge,cost===null);
+  assert.equal(result.canMerge,true);
  }
 });

@@ -95,6 +95,7 @@ function resolvePublicationAvatarFallback(creator: UnifiedCreatorResult): string
  * URL (has postUrl scrape fallback) over a dead profile CDN that only silhouettes.
  */
 export function resolveUnifiedCreatorAvatarUrl(creator: UnifiedCreatorResult): string | null {
+  if (creator.identity_linked_accounts_only) return creator.primaryAvatarUrl ?? creator.profile_image_url ?? null;
   const primary = pickBestAvatarCandidate([
     creator.primaryAvatarUrl,
     creator.profile_image_url,

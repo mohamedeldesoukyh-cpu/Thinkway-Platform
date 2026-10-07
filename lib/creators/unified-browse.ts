@@ -1724,6 +1724,7 @@ async function fetchInternalCreators(
       dnaAvatarUrl: extractDnaAvatarUrl(dnaByInfluencer.get(r.id) ?? null),
       accounts: platformRows.map((p) => ({
         id: p.id,
+        handle: p.handle,
         platform: p.platform,
         profile_picture_url: p.profile_picture_url,
         follower_count: p.follower_count,
@@ -1781,6 +1782,7 @@ async function fetchInternalCreators(
 
     results.push({
       unified_id: `inf:${r.id}`,
+      identity_linked_accounts_only: r.metadata?.identity_linked_accounts_only === true,
       source_type: sourceType,
       influencer_id: r.id,
       discovered_profile_id: discoveryByInfluencer.get(r.id) ?? null,

@@ -125,6 +125,8 @@ import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { formatPricing, parseRateCard } from "@/features/vendors/utils";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { RestoreCreatorIdentityButton } from "@/features/discovery/delete-platform/restore-identity-button";
+import { CreatorMergeHistoryButton } from "@/features/discovery/merge-creators/history-button";
 
 export type CreatorDetailSheetUpdateMeta = {
   forceListSync?: boolean;
@@ -1800,6 +1802,8 @@ export function CreatorDetailSheet({
           Combine
         </button>
       ) : null}
+      {identityCreator.influencer_id && <RestoreCreatorIdentityButton key={identityCreator.influencer_id} influencerId={identityCreator.influencer_id} onUpdated={handleCreatorUpdated} />}
+      {identityCreator.influencer_id && <CreatorMergeHistoryButton key={`history:${identityCreator.influencer_id}`} influencerId={identityCreator.influencer_id} />}
     </>
   );
 
