@@ -1,4 +1,5 @@
 "use client";
+import { sameCreatorIdentity } from "@/lib/creators/same-creator-identity";
 import { useRouter } from "next/navigation";
 import { SimilarCreatorActions, type SimilarCreatorTarget } from "@/features/discovery/components/similar-creator-actions";
 import { stashCompareQueue } from "@/features/discovery/components/creator-compare/compare-storage";
@@ -890,6 +891,8 @@ export function CreatorDetailSheet({
   const [detail, setDetail] = useState<LoadedDetail | null>(null);
   const [baseCreator, setBaseCreator] = useState<UnifiedCreatorResult | null>(creator);
   const creatorUpdateRevisionRef = useRef(0);
+  const activeIdentityRef = useRef(creator);
+  activeIdentityRef.current = open ? creator : null;
   const [selectedPlatformAccountId, setSelectedPlatformAccountId] = useState<string | null>(
     creator?.default_metrics_platform_account_id ?? creator?.platforms[0]?.id ?? null
   );
@@ -1170,6 +1173,10 @@ export function CreatorDetailSheet({
     next: UnifiedCreatorResult,
     options?: CreatorDetailSheetUpdateMeta
   ) {
+    if (!sameCreatorIdentity(activeIdentityRef.current, next)) {
+      onCreatorUpdated?.(next, options);
+      return;
+    }
     // A slower initial detail/ECI request must not overwrite a completed refresh.
     creatorUpdateRevisionRef.current += 1;
     const previous = baseCreator ?? creator;
@@ -1644,7 +1651,7 @@ export function CreatorDetailSheet({
     <>
       {childCreator && <CreatorDetailSheet creator={childCreator} open={open} onOpenChange={(value) => { if (!value) setChildCreator(null); }}
         presentation="discoveryPack" stackDepth={stackDepth + 1} similarTarget={similarTarget} onCreatorUpdated={(next, options) => {
-          setChildCreator(next);
+          setChildCreator(current => sameCreatorIdentity(current, next) ? next : current);
           if (next.unified_id === identityCreator.unified_id) onCreatorUpdated?.(next, options);
           router.refresh();
         }} />}
@@ -1661,6 +1668,7 @@ export function CreatorDetailSheet({
       />
 
       <AddCreatorPlatformDialog
+        key={identityCreator.unified_id}
         open={addPlatformOpen}
         onOpenChange={setAddPlatformOpen}
         creatorName={identityCreator.display_name}
@@ -1670,10 +1678,10 @@ export function CreatorDetailSheet({
         existingPlatforms={platforms.map((p) => p.platform)}
         onSuccess={(next, platformAccountId) => {
           handleCreatorUpdated(next);
-          setSelectedPlatformAccountId(platformAccountId);
+          if (sameCreatorIdentity(activeIdentityRef.current, next)) setSelectedPlatformAccountId(platformAccountId);
         }}
-        onEnrichmentStatusChange={(_unifiedId, status) => {
-          setEnrichmentStatus(status);
+        onEnrichmentStatusChange={(unifiedId, status) => {
+          if (activeIdentityRef.current?.unified_id === unifiedId) setEnrichmentStatus(status);
         }}
         onCreatorUpdated={handleCreatorUpdated}
       />
@@ -1686,13 +1694,14 @@ export function CreatorDetailSheet({
       />
 
       <EditCreatorProfileUrlDialog
+        key={identityCreator.unified_id}
         open={editProfileUrlOpen}
         onOpenChange={setEditProfileUrlOpen}
         creator={identityCreator}
         platform={selectedPlatform}
         onSaved={handleCreatorUpdated}
-        onEnrichmentStatusChange={(_unifiedId, status) => {
-          setEnrichmentStatus(status);
+        onEnrichmentStatusChange={(unifiedId, status) => {
+          if (activeIdentityRef.current?.unified_id === unifiedId) setEnrichmentStatus(status);
         }}
       />
 

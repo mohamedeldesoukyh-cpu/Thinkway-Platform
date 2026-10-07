@@ -1,7 +1,7 @@
 "use client";
 
 import { Loader2Icon } from "lucide-react";
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { PlatformOwnerConflict } from "./platform-owner-conflict";
 
@@ -55,6 +55,9 @@ export function EditCreatorProfileUrlDialog({
   onSaved,
   onEnrichmentStatusChange,
 }: Props) {
+  const openRef = useRef(open);
+  openRef.current = open;
+  useEffect(() => () => { openRef.current = false; }, []);
   const [profileUrl, setProfileUrl] = useState(platform?.profile_url ?? "");
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState<UnifiedCreatorResult | null>(null);
@@ -109,7 +112,7 @@ export function EditCreatorProfileUrlDialog({
 
       toast.success(result.message);
       onSaved?.(result.creator);
-      onOpenChange(false);
+      if (openRef.current) onOpenChange(false);
 
       if (result.enrichmentQueued) {
         const resolvedUnifiedId = result.creator.unified_id;

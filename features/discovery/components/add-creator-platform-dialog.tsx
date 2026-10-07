@@ -90,6 +90,7 @@ export function AddCreatorPlatformDialog({
       setProfileUrl("");
       setError(null); setConflict(null);
     }
+    return () => { openRef.current = false; };
   }, [open]);
 
   function handleOpenChange(next: boolean) {
