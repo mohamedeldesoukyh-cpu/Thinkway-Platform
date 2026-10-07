@@ -478,3 +478,30 @@
 
 
 .rx .rx-ph .rx-crumb{color:#fff}.rx .rx-pricing-table{min-width:1133px}.rx .rx-pricing-table th{overflow-wrap:normal}.rx .rx-pricing-table .rx-privacy th{width:auto}
+
+/* Reference proportions, scoped to both rate-card pages. */
+.rx:not(.rx-dialog){width:100%;min-width:0}
+.rx .rx-wrap{width:100%;max-width:none;padding-inline:20px}
+.rx .rx-ph{position:relative;top:auto;margin:0 0 12px;padding:12px 20px;border-radius:14px}
+.rx .rx-ph__in{gap:10px}
+.rx .rx-ph h1{font-size:19px;line-height:1.25}
+.rx .rx-ph p{font-size:11.5px;line-height:1.4;margin-top:3px;max-width:none}
+.rx .rx-crumb{margin-bottom:3px;font-size:11px}
+.rx .rx-crumb button{min-height:20px}
+.rx .rx-b{min-height:32px;padding-block:5px}
+.rx .rx-b--sm{min-height:27px;padding-block:3px}
+.rx .rx-lang button{min-height:30px}
+.rx .rx-formbar input,.rx .rx-formbar select{height:32px}
+.rx .rx-register-table td,.rx .rx-pricing-table td{padding:9px 10px}
+.rx .rx-offer__t .rx-creator-link{color:var(--rx-ink);font-size:12.5px;font-weight:600;text-align:start}
+.rx .rx-offer__t .rx-creator-link:hover{color:var(--rx-blue-i)}
+.rx .rx-exp{align-items:start;grid-template-columns:repeat(auto-fit,minmax(272px,1fr))}
+.rx .rx-inline-price{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.rx .rx-inline-money{font:600 11.5px var(--rx-mono);white-space:nowrap;font-variant-numeric:tabular-nums}
+.rx .rx-inline-price .rx-link{min-height:24px;font-size:10px}
+.rx .rx-sec .rx-kv{align-items:center;flex-wrap:nowrap;gap:8px}
+.rx .rx-sec .rx-kv>span:first-child{flex:1;font-size:11.5px}
+.rx .rx-sec--priv>.rx-p{margin-bottom:8px;white-space:normal}
+.rx .rx-sec .rx-kv .rx-cell-priv{border-radius:4px}
+@media(max-width:720px){.rx .rx-wrap{padding-inline:10px}.rx .rx-ph{padding:12px 10px}.rx .rx-exp{grid-template-columns:minmax(0,1fr)}}
+@media(pointer:coarse){.rx .rx-b,.rx .rx-lang button,.rx .rx-inline-price .rx-link{min-height:44px}}
