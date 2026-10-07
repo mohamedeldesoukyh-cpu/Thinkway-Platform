@@ -1,3 +1,4 @@
+import {measureRedisPing} from "@/lib/redis/measure-ping";
 import { Queue } from "bullmq";
 import IORedis from "ioredis";
 
@@ -59,6 +60,7 @@ export type RedisHealth = {
   connected: boolean;
   latencyMs: number | null;
   urlConfigured: boolean;
+  connectionLatencyMs?: number;
   error?: string;
 };
 
@@ -87,7 +89,6 @@ export async function checkRedisHealth(): Promise<RedisHealth> {
     return { connected: false, latencyMs: null, urlConfigured: false, error: "REDIS_URL not configured" };
   }
 
-  const started = performance.now();
   const redis = new IORedis(url, {
     maxRetriesPerRequest: 1,
     connectTimeout: 5_000,
@@ -97,10 +98,9 @@ export async function checkRedisHealth(): Promise<RedisHealth> {
 
   try {
     redis.on("error", () => {});
-    await redis.connect();
-    const pong = await redis.ping();
-    const latencyMs = Math.round(performance.now() - started);
+    const {pong,latencyMs,connectionLatencyMs} = await measureRedisPing(redis);
     return {
+      connectionLatencyMs,
       connected: pong === "PONG",
       latencyMs,
       urlConfigured: true,

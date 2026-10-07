@@ -412,6 +412,7 @@ export const redisProvider: HealthProvider = {
         thresholds,
         technicalDetails: {
           ...endpoint,
+          connectionLatencyMs: health.connectionLatencyMs,
           connected: true,
           authenticationSucceeded: true,
           pingLatencyMs: health.latencyMs,
