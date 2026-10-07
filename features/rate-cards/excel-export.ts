@@ -4,9 +4,10 @@ import {rateTemplateRows} from "./template-rows";
 import {packageDescription} from "./packages";
 import {grossProfitPct,markupPct} from "./lib/pricing";
 import {lineMoney} from "./offer-adapter";
+import {styleRateWorkbook} from "./excel-style";
 
 export type RateExcelAudience="client"|"internal";
-const blue="FF0057FF",navy="FF0B0F1A",pale="FFEFF4FF";
+const blue="FF0057FF",navy="FF0B0F1A";
 /** Client mode projects an allowlist before making ANY worksheet, including metadata. */
 export async function buildRateExcel(version:RateVersion,input:RateLine[],audience:RateExcelAudience,scope:string,lang:"en"|"ar"="en"){
  const internal=audience==="internal";
@@ -32,7 +33,6 @@ export async function buildRateExcel(version:RateVersion,input:RateLine[],audien
  // The complete source records retain per-service fees, quantities and currencies without blending.
  const detail=book.addWorksheet(internal?"All pricing records":"Client price details");detail.addRow(["Creator","Included platforms","Package","Deliverable",...(internal?["Rate type"]:[]),"Amount","Currency","Months","Event days","Agency fee %","TU A %","TU B %","ITU %",...(internal?["Internal notes","Record ID"]:[])]);
  for(const l of lines)detail.addRow([l.creator_name,l.package_details?.profiles.map(p=>p.platform).join(" · ")??l.platform,l.package_details?.name??"",l.deliverable,...(internal?[l.price_type]:[]),l.amount,l.currency,l.period_months||"Not set",l.deliverable==="event_attendance"?l.event_days??1:"Not applicable",...[l.agency_fee_percent,l.tu_a_percent,l.tu_b_percent,l.itu_percent].map(n=>n==null?"Not set":n/100),...(internal?[l.notes,l.id]:[])]);
- for(const ws of book.worksheets){ws.views=[{state:"frozen",ySplit:1,xSplit:ws===cover?0:1,rightToLeft:lang==="ar"}];ws.eachRow((row,index)=>{row.eachCell(cell=>{if(!(ws===cover&&index===1))cell.font={name:"Arial",size:11,color:{argb:navy},bold:index===1};cell.alignment={...cell.alignment,vertical:"middle",wrapText:true};if(index>1&&index%2===0)cell.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FFF5F8FE"}};});});if(ws===cover)continue;ws.getRow(1).height=46;ws.getRow(1).eachCell(c=>{c.fill={type:"pattern",pattern:"solid",fgColor:{argb:blue}};c.font={name:"Arial",size:11,bold:true,color:{argb:"FFFFFFFF"}};});ws.autoFilter={from:{row:1,column:1},to:{row:Math.max(1,ws.rowCount),column:ws.columnCount}};ws.columns.forEach((c,i)=>{const label=String(ws.getCell(1,i+1).value);c.width=i===0?30:/notes|composition|IDs/.test(label)?48:22;c.numFmt=label.includes("%")?'0.00%;[Red](0.00%);0.00%':/rate|price|cost|Amount|total/i.test(label)&&!/currency|type|ID/.test(label)?'#,##0.####;[Red](#,##0.####);0':'General';});ws.pageSetup={orientation:"landscape",fitToPage:true,fitToWidth:1,fitToHeight:0,printTitlesRow:"1:1"};ws.headerFooter.oddFooter="Thinkway | &P / &N";}
- cover.getColumn(1).fill={type:"pattern",pattern:"solid",fgColor:{argb:pale}};
+ styleRateWorkbook(book,lang);
  return new Uint8Array(await book.xlsx.writeBuffer());
 }

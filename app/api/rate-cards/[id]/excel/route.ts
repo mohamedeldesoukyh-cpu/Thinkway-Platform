@@ -5,6 +5,8 @@ import {requirePermission} from "@/lib/auth/permissions-server";
 import {buildRateExcel} from "@/features/rate-cards/excel-export";
 import type {RateLine,RateVersion} from "@/features/rate-cards/model";
 import {errorLabel,textFor} from "@/features/rate-cards/labels";
+import {resolveUnifiedCreatorsByRefs} from "@/lib/creators/unified-browse";
+import {pickCreatorDisplayName} from "@/lib/text/decode-html-entities";
 export const dynamic="force-dynamic";
 export const maxDuration=300;
 export async function GET(request:Request,{params}:{params:Promise<{id:string}>}){
@@ -17,6 +19,14 @@ export async function GET(request:Request,{params}:{params:Promise<{id:string}>}
   const lines:RateLine[]=[];for(let from=0;;from+=1000){let query=db.from("rate_card_lines").select(audience==="internal"?fields+",notes":fields).eq("version_id",id);if(audience==="client")query=query.eq("price_type","client_price");const r=await query.order("creator_name").order("creator_ref").order("platform").order("id").range(from,from+999);if(r.error)throw r.error;for(const line of (r.data??[]) as unknown as RateLine[])if(!allowed||allowed.has(JSON.stringify([line.creator_ref,line.platform])))lines.push(line);if((r.data?.length??0)<1000)break;}
   // Keep cost-only offers discoverable without fetching their private amounts or notes.
   if(audience==="client"){for(let from=0;;from+=1000){const r=await db.from("rate_card_lines").select("id,version_id,creator_ref,creator_name,platform,deliverable,price_type,package_key,package_details,tu_a_percent,tu_b_percent,itu_percent").eq("version_id",id).eq("price_type","creator_cost").order("id").range(from,from+999);if(r.error)throw r.error;lines.push(...(r.data??[]) as unknown as RateLine[]);if((r.data?.length??0)<1000)break;}}
+  const refs=[...new Set(lines.map(line=>line.creator_ref))];
+  const names=new Map<string,string>();
+  for(let start=0;start<refs.length;start+=100){
+    const batch=refs.slice(start,start+100);
+    const current=await resolveUnifiedCreatorsByRefs(db,{unifiedIds:batch});
+    for(const ref of batch){const creator=current.byUnifiedId.get(ref)??(ref.startsWith("dis:")?current.byDiscoveryId.get(ref.slice(4)):undefined);if(creator)names.set(ref,creator.display_name);}
+  }
+  for(const line of lines)line.creator_name=pickCreatorDisplayName([names.get(line.creator_ref),line.creator_name]);
   lines.sort((a,b)=>a.creator_name.localeCompare(b.creator_name)||a.creator_ref.localeCompare(b.creator_ref)||a.platform.localeCompare(b.platform));
   const scope=audience==="client"?"Entire version · client prices only":search||platform||currency?`All matching pages · Search: ${search||"All"} · Platform: ${platform||"All"} · Currency: ${currency||"All"}`:"Entire version · all pricing details (internal)";
   const bytes=await buildRateExcel(v.data as RateVersion,lines,audience,scope,lang);return new Response(bytes,{headers:{"Content-Type":"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet","Content-Disposition":`attachment; filename="rate-card-${audience}.xlsx"`,"Cache-Control":"private, no-store"}});
