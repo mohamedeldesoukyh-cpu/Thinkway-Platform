@@ -318,17 +318,6 @@ export function CreatorSearchResultList({
           <span className="tw-sp" />
           {headerToolbar}
         </div>
-        <div style={{ minWidth: SEARCH_MIN_W + (showRelevance ? 140 : 0), ...(showRelevance ? relevanceColsStyle : searchColsStyle) }}>
-          <CreatorSearchSuiteHeader
-            showRelevance={showRelevance}
-            relevanceLabel={relevanceLabel}
-            total={visibleCreatorIds.length}
-            allSelected={allSelected}
-            hasCreators={hasCreators}
-            onToggleSelectAll={onToggleSelectAll}
-            countLabel={exactMatchesCountLabel ?? `${totalLabel} creators`}
-          />
-        </div>
         {inFlightCount > 0 && onStopAllRefresh ? (
           <div className="flex justify-end pb-2">
             <Button
@@ -349,6 +338,17 @@ export function CreatorSearchResultList({
         data-discovery-scroll
         className="discovery-search-exact-scroll min-h-0 flex-1 overflow-auto"
       >
+        <div className="sticky top-0 z-10" style={{ minWidth: SEARCH_MIN_W + (showRelevance ? 140 : 0), ...(showRelevance ? relevanceColsStyle : searchColsStyle) }}>
+          <CreatorSearchSuiteHeader
+            showRelevance={showRelevance}
+            relevanceLabel={relevanceLabel}
+            total={visibleCreatorIds.length}
+            allSelected={allSelected}
+            hasCreators={hasCreators}
+            onToggleSelectAll={onToggleSelectAll}
+            countLabel={exactMatchesCountLabel ?? `${totalLabel} creators`}
+          />
+        </div>
         {completeness?.status === "incomplete" && <div role="status" className="p-6 text-sm">Search incomplete: the {completeness.reason === "time_budget" ? "time" : "work"} limit was reached after checking {completeness.examined.toLocaleString()} candidates. At least {completeness.matched.toLocaleString()} qualify. {hasCreators ? "Showing qualified results; more results may be available." : "Narrow the search or retry to load this page."}</div>}
         {completeness?.status === "incomplete" && !hasCreators ? null : error && !hasCreators ? (
           <DiscoveryEmptyState

@@ -833,8 +833,11 @@ export function ShortlistWorkspace({
         title={detail.name}
         id={detail.serial_number}
         badge={<ShortlistWorkspaceStatusPill status={detail.status} />}
-        trailing={<CreatorListCostControl key={detail.id} shortlistId={detail.id} value={detail.creatorListCost} disabled={!canEditDetails} />}
         metrics={mastheadMetrics}
+        metricsSlot={<div className="flex flex-wrap items-center border-t border-border bg-white">
+          <div className="tw-ms2 min-w-0 flex-1" role="group" aria-label="Page metrics">{mastheadMetrics.filter(m => m.value !== "").map(m => <div key={m.label}><i>{m.label}</i><b>{m.value}</b></div>)}</div>
+          <div className="ml-auto p-3"><CreatorListCostControl key={detail.id} shortlistId={detail.id} value={detail.creatorListCost} disabled={!canEditDetails} /></div>
+        </div>}
         freezeOnScroll={false}
         actions={
           <div className="flex items-center gap-2">
@@ -899,7 +902,7 @@ export function ShortlistWorkspace({
           canChangeCurrency={canEditDetails}
           hasLink={hasLink}
           canSendToClient={detail.creators.some((item) => item.item_status !== "cancelled")}
-          canAddCreators={editable}
+          canAddCreators={false}
           busy={isPending}
           onShowLink={handleShowLink}
           onSendToClient={handleSendToClient}
@@ -949,6 +952,7 @@ export function ShortlistWorkspace({
                 <span className="tw-cs">{creatorsCardSubtitle}</span>
               ) : null}
               <span className="tw-sp" />
+              {editable && <button type="button" className="tw-b sm pri" disabled={isPending} onClick={() => { setAddMode("search"); setAddOpen(true); }}>+ Add creators</button>}
               <button
                 type="button"
                 className="tw-b sm"

@@ -43,6 +43,8 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   targetCreator: UnifiedCreatorResult;
+  initialSourceCreator?: UnifiedCreatorResult | null;
+  onSwapCreators?: () => void;
   onMerged?: (creator: UnifiedCreatorResult, meta: CombineCreatorsMergedMeta) => void;
 };
 
@@ -55,10 +57,12 @@ export function CombineCreatorsDialog({
   open,
   onOpenChange,
   targetCreator,
+  initialSourceCreator,
+  onSwapCreators,
   onMerged,
 }: Props) {
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [sourceCreator, setSourceCreator] = useState<UnifiedCreatorResult | null>(null);
+  const [sourceCreator, setSourceCreator] = useState<UnifiedCreatorResult | null>(initialSourceCreator ?? null);
   const [serverMessage, setServerMessage] = useState<string | null>(null);
   const [serverCanMerge, setServerCanMerge] = useState(false);
   const [checkRevision, setCheckRevision] = useState(0);
@@ -185,6 +189,7 @@ export function CombineCreatorsDialog({
                 Keep
               </p>
               <p className="mt-1 text-sm font-medium text-foreground">{targetCreator.display_name}</p>
+              {onSwapCreators && <Button type="button" variant="outline" size="sm" disabled={isPending} onClick={onSwapCreators}>Keep the other creator instead</Button>}
               <p className="mt-1 text-xs text-muted-foreground">{platformSummary(targetCreator)}</p>
             </div>
 

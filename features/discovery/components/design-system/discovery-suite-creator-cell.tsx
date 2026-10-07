@@ -1,12 +1,12 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { UserIcon } from "lucide-react";
 
 import { CountryFlagBadge } from "@/components/creator/country-flag-badge";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { resolveCountryCode } from "@/lib/creators/country-code";
 import { normalizeCountryCode } from "@/lib/creators/creator-display-utils";
-import { ini } from "@/lib/discovery/suite/helpers";
 import { cn } from "@/lib/utils";
 
 /** Search / shortlist / quotation creator photo — larger than pack 46px so the flag overlay reads. */
@@ -86,7 +86,6 @@ export function DiscoverySuiteCreatorCell({
   const flagCode = resolveAvatarCountryCode(countryCodes, locationLabel);
   const showLocation =
     Boolean(locationLabel?.trim()) && locationLabel?.trim() !== "—";
-  const tone = discoverySuiteAvTone(index);
 
   const open = (event?: { stopPropagation: () => void }) => {
     if (stopPropagation) event?.stopPropagation();
@@ -96,8 +95,8 @@ export function DiscoverySuiteCreatorCell({
   return (
     <span className={cn("tw-cw2", className)}>
       <span
-        className={cn("tw-avx relative", tone)}
-        style={{ width: AVATAR_PX, height: AVATAR_PX, fontSize: 20 }}
+        className="tw-avx relative"
+        style={{ width: AVATAR_PX, height: AVATAR_PX, fontSize: 20, background: "var(--muted)", color: "var(--muted-foreground)" }}
         aria-hidden
       >
         {/* Clip photo/initials only — keep `.fl` flag outside overflow so pack overlay shows. */}
@@ -112,7 +111,7 @@ export function DiscoverySuiteCreatorCell({
             />
           ) : (
             <span className="grid size-full place-items-center">
-              {ini(name).slice(0, 2)}
+              <UserIcon className="size-5" />
             </span>
           )}
         </span>

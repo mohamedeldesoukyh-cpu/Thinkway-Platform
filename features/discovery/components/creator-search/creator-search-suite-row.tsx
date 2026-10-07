@@ -1,6 +1,9 @@
 "use client";
 
-import { CheckIcon, XIcon } from "lucide-react";
+import { CheckIcon, MoreHorizontalIcon } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { memo, useCallback, type CSSProperties } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
@@ -150,24 +153,26 @@ export const CreatorSearchSuiteRow = memo(function CreatorSearchSuiteRow({
               <span>{addedToShortlist ? "Added" : "Add to shortlist"}</span>
             </button>
           ) : null}
-          {onReject ? (
-            <button
-              type="button"
-              className="discovery-search-exact-reject"
-              aria-label={`Delete ${vm.displayName}`}
-              onClick={onReject}
-            >
-              <XIcon aria-hidden />
-            </button>
-          ) : null}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild><Button variant="ghost" size="icon-sm" aria-label={`Actions for ${vm.displayName}`}><MoreHorizontalIcon className="size-4" /></Button></DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onSelect={onOpenCreator}>View creator</DropdownMenuItem>
+              <DropdownMenuItem onSelect={onToggleSelect}>{selected ? "Deselect creator" : "Select creator"}</DropdownMenuItem>
+              {onToggleShortlist && <DropdownMenuItem onSelect={onToggleShortlist}>Add to shortlist</DropdownMenuItem>}
+              {onReject && <DropdownMenuItem onSelect={onReject} className="text-destructive">Delete creator</DropdownMenuItem>}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </span>
       </DiscoverySuiteCell>
       {showRelevance ? <DiscoverySuiteCell>
-        <details onClick={stopBubble} className="text-xs">
-          <summary className="cursor-pointer" aria-label={`${relevanceLabel} for ${vm.displayName}`}>{creator.discovery_relevance?.score == null ? "Insufficient data" : `${creator.discovery_relevance.score}%`}</summary>
+        <span onClick={stopBubble}><Popover>
+          <PopoverTrigger asChild><Button variant="outline" size="sm" aria-label={`${relevanceLabel} for ${vm.displayName}`}>{creator.discovery_relevance?.score == null ? "No score" : `${creator.discovery_relevance.score}%`}</Button></PopoverTrigger>
+          <PopoverContent align="end" className="w-72 text-xs">
+          <p className="font-semibold">{relevanceLabel}</p>
           {creator.discovery_relevance?.score == null ? <p className="mt-2">These filters qualify creators but do not provide enough detail to rank their relevance.</p> : null}
           <ul className="mt-2 space-y-1">{creator.discovery_relevance?.reasons.map((r,index) => <li key={index}>{r.dimension}: {r.outcome}{r.detail ? ` — ${r.detail}` : ""}</li>)}</ul>
-        </details>
+          </PopoverContent>
+        </Popover></span>
       </DiscoverySuiteCell> : null}
     </DiscoverySuiteRow>
   );

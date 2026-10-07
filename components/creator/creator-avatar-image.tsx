@@ -51,6 +51,8 @@ export function CreatorAvatarImage({
   const rawCdnSrc = isRawHttpAvatarUrl(avatarUrl) ? avatarUrl.trim() : null;
   const [useProfileFallback, setUseProfileFallback] = useState(false);
   const [useRawCdnFallback, setUseRawCdnFallback] = useState(false);
+  const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const placeholder = <UserIcon aria-hidden className="absolute left-1/2 top-1/2 size-5 -translate-x-1/2 -translate-y-1/2 text-muted-foreground" />;
 
   const activeBase =
     useProfileFallback && profileOnlySrc && profileOnlySrc !== primarySrc
@@ -76,13 +78,16 @@ export function CreatorAvatarImage({
 
   if (recovery.exhausted && rawCdnSrc && !useRawCdnFallback) {
     return (
-      <div className={cn(AVATAR_CONTAINER_CLASS, dim, className)}>
+      <div className={cn(AVATAR_CONTAINER_CLASS, "bg-muted", dim, className)}>
+        {placeholder}
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={rawCdnSrc}
-          alt={alt}
+          alt=""
+          aria-label={alt || undefined}
           referrerPolicy="no-referrer"
-          className="size-full object-cover object-center"
+          className={cn("relative size-full object-cover object-center", loadedSrc !== rawCdnSrc && "opacity-0")}
+          onLoad={() => setLoadedSrc(rawCdnSrc)}
           onError={() => setUseRawCdnFallback(true)}
         />
       </div>
@@ -107,14 +112,17 @@ export function CreatorAvatarImage({
   }
 
   return (
-    <div className={cn(AVATAR_CONTAINER_CLASS, dim, className)}>
+    <div className={cn(AVATAR_CONTAINER_CLASS, "bg-muted", dim, className)}>
+      {placeholder}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         key={recovery.displaySrc ?? activeBase}
         src={recovery.displaySrc ?? activeBase}
-        alt={alt}
+        alt=""
+        aria-label={alt || undefined}
         referrerPolicy="no-referrer"
-        className="size-full object-cover object-center"
+        className={cn("relative size-full object-cover object-center", loadedSrc !== (recovery.displaySrc ?? activeBase) && "opacity-0")}
+        onLoad={() => setLoadedSrc(recovery.displaySrc ?? activeBase)}
         onError={() => {
           if (
             !useProfileFallback &&

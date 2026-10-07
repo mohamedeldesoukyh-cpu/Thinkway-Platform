@@ -2,7 +2,6 @@
 
 import { Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import { flushSync } from "react-dom";
 import { toast } from "sonner";
 import { PlatformOwnerConflict } from "./platform-owner-conflict";
 
@@ -97,7 +96,7 @@ export function AddCreatorPlatformDialog({
   function handleOpenChange(next: boolean) {
     // Always allow dismiss — enrichment continues in the background after link.
     openRef.current = next;
-    flushSync(() => onOpenChange(next));
+    onOpenChange(next);
   }
 
   function handleConfirm() {

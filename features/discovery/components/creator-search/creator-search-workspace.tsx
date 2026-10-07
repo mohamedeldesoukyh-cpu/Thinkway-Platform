@@ -36,6 +36,7 @@ function replaceCreatorSearchUrlShallow(nextUrl: string): void {
   window.history.replaceState(window.history.state, "", nextUrl);
 }
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
+import { CombineCreatorsDialog } from "@/features/discovery/components/combine-creators-dialog";
 import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
 import { browseUnifiedCreatorsAction, browseCreatorsByInfluencerIdsAction, getAcquisitionJobsStatusAction } from "@/features/campaigns/creator-discovery-actions";
 import {
@@ -293,6 +294,7 @@ export function CreatorSearchWorkspace({
     null
   );
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [combineSelection, setCombineSelection] = useState<UnifiedCreatorResult[] | null>(null);
   const [deleteCreatorTarget, setDeleteCreatorTarget] = useState<UnifiedCreatorResult | null>(
     null
   );
@@ -2332,24 +2334,6 @@ export function CreatorSearchWorkspace({
                 variant="outline"
                 size="sm"
                 className="tw-b sm h-7 rounded-[8px] px-2.5 text-[11.5px] font-semibold"
-                onClick={() => setFiltersDrawerOpen(true)}
-              >
-                Filters
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="tw-b sm h-7 rounded-[8px] px-2.5 text-[11.5px] font-semibold"
-                onClick={() => setAddMissingOpen(true)}
-              >
-                + Add missing creator
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="tw-b sm h-7 rounded-[8px] px-2.5 text-[11.5px] font-semibold"
                 onClick={() => setCreateListOpen(true)}
               >
                 Create list
@@ -2403,6 +2387,7 @@ export function CreatorSearchWorkspace({
           onShare={handleBulkShare}
           onGenerateQuotation={handleGenerateQuotation}
           onRefreshMetrics={handleBulkRefreshMetrics}
+          onCombine={() => { if (selectedCreators.length === 2) setCombineSelection([...selectedCreators]); }}
           onRemoveCreator={() => {
             if (selectedCreators.length === 1) handleRejectCreator(selectedCreators[0]);
             else if (selectedCreators.length > 1) setBulkDeleteOpen(true);
@@ -2594,6 +2579,7 @@ export function CreatorSearchWorkspace({
       ) : null}
 
       {bulkDeleteOpen && <BulkDeleteCreatorsDialog creators={selectedCreators} onClose={() => setBulkDeleteOpen(false)} onDeleted={handleCreatorDeleted} />}
+      {combineSelection && <CombineCreatorsDialog key={combineSelection[0].unified_id} open targetCreator={combineSelection[0]} initialSourceCreator={combineSelection[1]} onSwapCreators={() => setCombineSelection([combineSelection[1], combineSelection[0]])} onOpenChange={open => { if (!open) setCombineSelection(null); }} onMerged={(creator) => { handleCreatorDeleted(combineSelection[1]); patchCreatorFromDetailSheet(creator); clearCreatorSelection(); setCombineSelection(null); }} />}
       {deleteCreatorTarget ? (
         <DeleteDiscoveryCreatorDialog
           open

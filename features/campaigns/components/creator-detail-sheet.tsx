@@ -1670,7 +1670,7 @@ export function CreatorDetailSheet({
       />
 
       <AddCreatorPlatformDialog
-        key={identityCreator.unified_id}
+        key={`add-platform:${identityCreator.unified_id}`}
         open={addPlatformOpen}
         onOpenChange={setAddPlatformOpen}
         creatorName={identityCreator.display_name}
@@ -1696,7 +1696,7 @@ export function CreatorDetailSheet({
       />
 
       <EditCreatorProfileUrlDialog
-        key={identityCreator.unified_id}
+        key={`edit-platform:${identityCreator.unified_id}`}
         open={editProfileUrlOpen}
         onOpenChange={setEditProfileUrlOpen}
         creator={identityCreator}

@@ -11,12 +11,13 @@ import {
   SparklesIcon,
   SquareIcon,
   Trash2Icon,
+  GitMergeIcon,
 } from "lucide-react";
 
 import {
-  DiscoverySelectionFlyout,
-  type DiscoverySelectionFlyoutAction,
-} from "@/features/discovery/components/design-system";
+  PlatformFloatingActionBar,
+  type PlatformFloatingBarAction,
+} from "@/components/shared/navigation/platform-floating-action-bar";
 import { AB } from "@/lib/discovery/suite/helpers";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
@@ -33,6 +34,7 @@ type Props = {
   onGenerateQuotation: () => void;
   onRefreshMetrics?: () => void;
   onRemoveCreator?: () => void;
+  onCombine?: () => void;
   onStopRefresh?: () => void;
   stopRefreshDisabled?: boolean;
   busy?: boolean;
@@ -80,6 +82,7 @@ export function CreatorSearchBulkBar({
   onGenerateQuotation,
   onRefreshMetrics,
   onRemoveCreator,
+  onCombine,
   onStopRefresh,
   stopRefreshDisabled,
   busy,
@@ -88,7 +91,7 @@ export function CreatorSearchBulkBar({
 }: Props) {
   const stats = selectionStats(selectedCreators);
 
-  const actions: DiscoverySelectionFlyoutAction[] = [
+  const actions: Array<PlatformFloatingBarAction & { variant?: string; description?: string }> = [
     {
       id: "add",
       label: "Add to list",
@@ -112,6 +115,13 @@ export function CreatorSearchBulkBar({
       variant: "outline",
       disabled: busy || !onRefreshMetrics,
       onClick: () => onRefreshMetrics?.(),
+    },
+    {
+      id: "combine",
+      label: "Combine selected creators",
+      icon: GitMergeIcon,
+      disabled: busy || selectedCount !== 2 || selectedCreators.some(c => !c.influencer_id),
+      onClick: () => onCombine?.(),
     },
     {
       id: "stop-refresh",
@@ -177,30 +187,30 @@ export function CreatorSearchBulkBar({
   ];
 
   return (
-    <DiscoverySelectionFlyout
+    <PlatformFloatingActionBar
       open={selectedCount > 0}
       selectedCount={selectedCount}
-      entityLabel="creator"
-      actions={actions}
+      selectionLabel="creator"
+      primaryAction={actions[0]}
+      overflowActions={actions.slice(1)}
       onClearSelection={onClearSelection}
       onSelectAll={onSelectAllShown}
       selectableCount={selectableCount}
       busy={busy}
-      maxVisibleActions={3}
     >
-      <div className="discovery-suite flex shrink-0 items-center gap-3 pr-1 text-[11px] text-white/80">
+      <div className="flex shrink-0 items-center gap-3 pr-1 text-[11px] text-muted-foreground">
         <span>
-          Reach <b className="font-semibold tabular-nums text-white">{stats.reachLabel}</b>
+          Reach <b className="font-semibold tabular-nums text-foreground">{stats.reachLabel}</b>
         </span>
         <span>
           Platforms{" "}
-          <b className="font-semibold tabular-nums text-white">{stats.platformsLabel}</b>
+          <b className="font-semibold tabular-nums text-foreground">{stats.platformsLabel}</b>
         </span>
         <span>
           Avg engagement{" "}
-          <b className="font-semibold tabular-nums text-white">{stats.avgEngagementLabel}</b>
+          <b className="font-semibold tabular-nums text-foreground">{stats.avgEngagementLabel}</b>
         </span>
       </div>
-    </DiscoverySelectionFlyout>
+    </PlatformFloatingActionBar>
   );
 }
