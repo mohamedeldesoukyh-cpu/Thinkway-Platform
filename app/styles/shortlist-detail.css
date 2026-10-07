@@ -7,3 +7,22 @@
   min-height: auto;
   background: transparent;
 }
+
+/* Keep the same compact identity and card rhythm as quotation rows. */
+.shortlist-detail-workspace .tw-tags > span {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+.shortlist-detail-workspace .tw-cw2 .hd,
+.shortlist-detail-workspace .tw-cw2 .lo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.shortlist-detail-workspace .tw-ch .tw-cs {
+  max-width: 32rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

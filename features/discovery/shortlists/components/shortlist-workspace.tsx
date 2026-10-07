@@ -952,46 +952,20 @@ export function ShortlistWorkspace({
                 <span className="tw-cs">{creatorsCardSubtitle}</span>
               ) : null}
               <span className="tw-sp" />
-              {editable && <button type="button" className="tw-b sm pri" disabled={isPending} onClick={() => { setAddMode("search"); setAddOpen(true); }}>+ Add creators</button>}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="tw-b sm" aria-label="Creator list actions"><MoreHorizontalIcon className="size-4" /></button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem disabled={!editable || selectedCount === 0 || isPending} onSelect={() => runAction(() => bulkSubmitCreatorsForReview(detail.id, selectedItemIdList))}>Submit {selectedCount} selected</DropdownMenuItem>
+                  <DropdownMenuItem disabled={isPending} onSelect={handleCompare}>Compare</DropdownMenuItem>
+                  <DropdownMenuItem disabled={isPending || refreshingMetrics} onSelect={handleRefreshMetrics}>Refresh metrics</DropdownMenuItem>
+                  <DropdownMenuItem disabled={isPending || displayCreators.length === 0} onSelect={handleExportSelected}>Export CSV</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <button
                 type="button"
                 className="tw-b sm"
-                disabled={!editable || selectedCount === 0 || isPending}
-                onClick={() =>
-                  runAction(() =>
-                    bulkSubmitCreatorsForReview(detail.id, selectedItemIdList)
-                  )
-                }
-              >
-                Submit {selectedCount} selected
-              </button>
-              <button
-                type="button"
-                className="tw-b sm"
-                disabled={isPending}
-                onClick={handleCompare}
-              >
-                Compare
-              </button>
-              <button
-                type="button"
-                className="tw-b sm"
-                disabled={isPending || refreshingMetrics}
-                onClick={handleRefreshMetrics}
-              >
-                Refresh metrics
-              </button>
-              <button
-                type="button"
-                className="tw-b sm"
-                disabled={isPending || displayCreators.length === 0}
-                onClick={handleExportSelected}
-              >
-                Export CSV
-              </button>
-              <button
-                type="button"
-                className="tw-b sm pri"
                 disabled={isPending || displayCreators.length === 0}
                 onClick={() => {
                   if (selectedCount > 0) {
@@ -1003,6 +977,7 @@ export function ShortlistWorkspace({
               >
                 Generate quotation
               </button>
+              {editable && <button type="button" className="tw-b sm pri" disabled={isPending} onClick={() => { setAddMode("search"); setAddOpen(true); }}>+ Add creator</button>}
             </div>
 
             {enrichmentConnectionDelayed ? (
