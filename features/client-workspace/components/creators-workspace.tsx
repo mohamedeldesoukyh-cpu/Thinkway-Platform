@@ -418,6 +418,7 @@ export function CreatorsWorkspace({
             selectedCount: counts.accepted,
           })}
           pendingCommercialApproval={pendingIds.has(selected.creatorId)}
+          hideCostAndFees={Boolean(view.hideCostAndFees)}
           showOriginalCurrency={showOriginalCurrency}
         />
       ) : (
@@ -497,11 +498,15 @@ export function CreatorsWorkspace({
                   {!strategicOnly ? (
                   <span className={clientFacingCreatorCardAmount(creator) != null ? "inv" : "inv tbc"}>
                     {(() => {
-                      const amount = clientFacingCreatorCardAmount(creator);
+                      const total = clientFacingCreatorCardAmount(creator);
+                      const amount = total == null ? total : view.hideCostAndFees ? total : total - (creator.agencyFeeAmount ?? 0);
                       return amount != null
                         ? formatMoneyKpi(amount, view.commercial.currency)
                         : PRICE_PENDING_LABEL;
                     })()}
+                    {!view.hideCostAndFees && clientFacingCreatorCardAmount(creator) != null ? (
+                      <span className="inv-orig" title="Agency Fees">AF {formatMoneyKpi(creator.agencyFeeAmount ?? 0, view.commercial.currency)}</span>
+                    ) : null}
                     {(() => {
                       const original = visibleOriginalCurrencyAmount(
                         originalClientFacingCreatorCardAmount(creator, view.commercial.currency),
@@ -611,6 +616,7 @@ export function CreatorsWorkspace({
                 selectedCount: counts.accepted,
               })}
               pendingCommercialApproval={pendingIds.has(selected.creatorId)}
+              hideCostAndFees={Boolean(view.hideCostAndFees)}
               showOriginalCurrency={showOriginalCurrency}
             />
           ) : (
@@ -667,6 +673,7 @@ function CreatorDetailPane({
   commerciallyApproved,
   pendingCommercialApproval,
   showOriginalCurrency,
+  hideCostAndFees,
 }: {
   creator: ClientCreatorCard;
   brief: ClientCreatorBrief | null;
@@ -688,6 +695,7 @@ function CreatorDetailPane({
   commerciallyApproved: boolean;
   pendingCommercialApproval?: boolean;
   showOriginalCurrency: boolean;
+  hideCostAndFees: boolean;
 }) {
   const location = brief?.location || formatLocation(creator.city, creator.country);
   const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
@@ -698,7 +706,8 @@ function CreatorDetailPane({
     originalInvestmentAmount: creator.originalInvestmentAmount,
     originalInvestmentCurrency: creator.originalInvestmentCurrency,
   };
-  const cardAmount = clientFacingCreatorCardAmount(cardAmounts);
+  const combinedAmount = clientFacingCreatorCardAmount(cardAmounts);
+  const cardAmount = combinedAmount == null ? combinedAmount : hideCostAndFees ? combinedAmount : combinedAmount - (creator.agencyFeeAmount ?? 0);
   const investmentCurrency = currency;
   const audience = brief?.audience ?? creator.audience;
   const performance = brief?.performance ?? creator.performance;
@@ -906,12 +915,13 @@ function CreatorDetailPane({
               </p>
             </div>
             <div className="mc">
-              <p className="l">Investment</p>
+              <p className="l">{hideCostAndFees ? "Investment" : "Cost before AF"}</p>
               <p className={cardAmount != null ? "v sm" : "v sm tbc"}>
                 {cardAmount != null
                   ? formatMoneyKpi(cardAmount, investmentCurrency)
                   : PRICE_PENDING_LABEL}
               </p>
+              {!hideCostAndFees && cardAmount != null ? <p className="note" title="Agency Fees">AF {formatMoneyKpi(creator.agencyFeeAmount ?? 0, investmentCurrency)}</p> : null}
               {(() => {
                 const original = visibleOriginalCurrencyAmount(
                   originalClientFacingCreatorCardAmount(cardAmounts, investmentCurrency),

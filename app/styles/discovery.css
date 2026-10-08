@@ -809,6 +809,8 @@
  background:#fff;border:1px solid var(--tw-hair);font-size:11px;color:var(--tw-ink2);cursor:pointer}
 .discovery-suite .tw-chip:hover{border-color:rgba(0,87,255,.34);color:var(--tw-bi)}
 .discovery-suite .tw-calcp__b{flex:1 1 auto;overflow:auto}
+.discovery-suite [data-quotation-selbar]{flex-wrap:wrap;width:max-content}
+.discovery-suite [data-quotation-selbar] .sum{flex-wrap:wrap}
 .discovery-suite .tw-calcp__f{flex:0 0 auto;display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:0;
  border-top:1px solid var(--tw-line);background:var(--tw-soft)}
 .discovery-suite .tw-calcp__f > div{padding:10px 14px;border-right:1px solid var(--tw-hair)}

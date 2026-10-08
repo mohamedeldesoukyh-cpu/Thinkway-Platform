@@ -8,6 +8,7 @@ type Props = {
   totalCount: number;
   baseCost: number;
   clientCost: number;
+  agencyFees: number;
   calculatorOpen: boolean;
   busy?: boolean;
   onClear: () => void;
@@ -27,6 +28,7 @@ export function QuotationSelectionBar({
   totalCount,
   baseCost,
   clientCost,
+  agencyFees,
   calculatorOpen,
   busy,
   onClear,
@@ -69,9 +71,11 @@ export function QuotationSelectionBar({
             <b>{F(baseCost)}</b>
           </span>
           <span>
-            <i>Client cost</i>
+            <i>Before fees</i>
             <b>{F(clientCost)}</b>
           </span>
+          <span><i>Agency Fees</i><b>{F(agencyFees)}</b></span>
+          <span><i>Total investment</i><b>{F(clientCost + agencyFees)}</b></span>
           <span>
             <i>GP</i>
             <b className={gpTone}>{F(gp)}</b>

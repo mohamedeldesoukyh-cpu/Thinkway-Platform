@@ -1,7 +1,6 @@
 "use client";
 
 import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
-import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import type { OriginalCurrencyTotals } from "@/features/quotations/quotation-row-math";
 import { fromEgp } from "@/lib/commercial/fx-aggregation";
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
@@ -203,11 +202,13 @@ export function QuotationCommercialMetricsBand({
         staged={hasDraftEdits}
       />
       <MetricItem
-        label={QUOTATION_CLIENT_LABELS.totalClientCost}
+        label="Total investment"
         value={client.value}
         original={originalLabels(originalTotals, "totalClientCost")}
         staged={hasDraftEdits}
       />
+      <MetricItem label="Agency Fees" value={moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.af).value} staged={hasDraftEdits} />
+      <MetricItem label="Client cost before fees" value={moneyParts(totalRevenueEgp - totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.revenue).value} staged={hasDraftEdits} />
       {stagedVsSavedDisagree && savedClient ? (
         <MetricItem
           label="Saved client cost"

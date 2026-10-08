@@ -9,8 +9,8 @@ export const QUOTATION_CALC_MODES: Record<
   { label: string; formula: string; defaultValue: number }
 > = {
   af: {
-    label: "Cost + AF %",
-    formula: "client = cost × (1 + af%)",
+    label: "Cost + markup %",
+    formula: "client before fees = cost × (1 + markup%)",
     defaultValue: 25,
   },
   gpm: {
@@ -51,6 +51,8 @@ export type QuotationCalcLineInput = {
   optionNumber: number;
   baseCost: number;
   clientNow: number;
+  agencyFeeNow?: number;
+  agencyFeePct?: number;
 };
 
 export type QuotationCalcLinePreview = QuotationCalcLineInput & {
@@ -60,6 +62,8 @@ export type QuotationCalcLinePreview = QuotationCalcLineInput & {
   vat: number;
   delta: number;
   belowCost: boolean;
+  agencyFees: number;
+  totalInvestment: number;
 };
 
 export function buildQuotationCalcPreview(
@@ -74,12 +78,16 @@ export function buildQuotationCalcPreview(
       Math.round(quotationCalcNewClient(line.baseCost, mode, value) * 100) / 100;
     const gp = newClient - line.baseCost;
     const marginPct = newClient ? (gp / newClient) * 100 : 0;
+    const agencyFees = Math.round(newClient * (line.agencyFeePct ?? 0)) / 100;
+    const totalInvestment = newClient + agencyFees;
     return {
       ...line,
       newClient,
       gp,
       marginPct,
-      vat: (newClient * vat) / 100,
+      agencyFees,
+      totalInvestment,
+      vat: (totalInvestment * vat) / 100,
       delta: newClient - line.clientNow,
       belowCost: newClient < line.baseCost,
     };
@@ -92,6 +100,8 @@ export function sumQuotationCalcPreview(rows: QuotationCalcLinePreview[]) {
   const newClient = rows.reduce((a, r) => a + r.newClient, 0);
   const gp = rows.reduce((a, r) => a + r.gp, 0);
   const vat = rows.reduce((a, r) => a + r.vat, 0);
+  const agencyFees = rows.reduce((a, r) => a + r.agencyFees, 0);
+  const totalInvestment = newClient + agencyFees;
   const belowCostCount = rows.filter((r) => r.belowCost).length;
   return {
     baseCost,
@@ -100,8 +110,10 @@ export function sumQuotationCalcPreview(rows: QuotationCalcLinePreview[]) {
     gp,
     marginPct: newClient ? (gp / newClient) * 100 : 0,
     vat,
+    agencyFees,
+    totalInvestment,
     /** Pack footer “Client pays” = new client + VAT. */
-    clientPays: newClient + vat,
+    clientPays: totalInvestment + vat,
     change: newClient - clientNow,
     belowCostCount,
     hasBelowCost: belowCostCount > 0,

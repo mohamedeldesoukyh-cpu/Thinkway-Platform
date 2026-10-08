@@ -52,3 +52,14 @@ assert.equal(totals.hasBelowCost, true);
 assert.equal(totals.clientPays, below[0]!.newClient + below[0]!.vat);
 
 console.log("quotation-pricing-calculator.ts: ok");
+
+const feeRows = buildQuotationCalcPreview([
+  { id: "fee", name: "A", handle: null, optionNumber: 1, baseCost: 75000, clientNow: 95454.55, agencyFeePct: 10 },
+  { id: "zero", name: "B", handle: null, optionNumber: 1, baseCost: 75000, clientNow: 95454.55, agencyFeePct: 0 },
+], "price", 100000, 14);
+assert.equal(feeRows[0].agencyFees, 10000);
+assert.equal(feeRows[0].totalInvestment, 110000);
+assert.equal(feeRows[0].vat, 15400);
+assert.equal(feeRows[0].gp, 25000, "AF does not inflate commercial GP");
+assert.equal(feeRows[1].agencyFees, 0);
+assert.equal(sumQuotationCalcPreview(feeRows).clientPays, 239400);

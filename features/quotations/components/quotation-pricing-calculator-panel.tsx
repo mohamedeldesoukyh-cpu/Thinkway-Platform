@@ -331,9 +331,11 @@ export function QuotationPricingCalculatorPanel({
             <b>{F2(totals.baseCost)}</b>
           </div>
           <div>
-            <i>New client cost</i>
+            <i>New client cost before fees</i>
             <b>{F2(totals.newClient)}</b>
           </div>
+          <div><i>Agency Fees</i><b>{F2(totals.agencyFees)}</b></div>
+          <div><i>Total investment</i><b>{F2(totals.totalInvestment)}</b></div>
           <div>
             <i>Gross profit</i>
             <b className={totals.gp > 0 ? "g" : "r"}>{F2(totals.gp)}</b>

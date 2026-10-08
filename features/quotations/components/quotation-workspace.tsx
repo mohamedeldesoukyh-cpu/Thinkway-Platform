@@ -507,6 +507,8 @@ function QuotationWorkspaceContent({
           optionNumber: item.option_number ?? 1,
           baseCost: computed.costEgp,
           clientNow: computed.revenueEgp,
+          agencyFeeNow: computed.afValueEgp,
+          agencyFeePct: computed.afPct,
         };
       });
   }, [sortedFilteredItems, selectedIds, drafts]);
@@ -516,9 +518,10 @@ function QuotationWorkspaceContent({
       (acc, line) => {
         acc.baseCost += line.baseCost;
         acc.clientCost += line.clientNow;
+        acc.agencyFees += line.agencyFeeNow ?? 0;
         return acc;
       },
-      { baseCost: 0, clientCost: 0 }
+      { baseCost: 0, clientCost: 0, agencyFees: 0 }
     );
   }, [selectedLinesForCalc]);
 
@@ -898,6 +901,7 @@ function QuotationWorkspaceContent({
         totalCount={sortedFilteredItems.length}
         baseCost={selectionMoney.baseCost}
         clientCost={selectionMoney.clientCost}
+        agencyFees={selectionMoney.agencyFees}
         calculatorOpen={calculatorOpen}
         busy={bulkPending}
         onClear={clearSelection}
