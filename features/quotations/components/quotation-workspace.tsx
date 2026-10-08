@@ -1,4 +1,5 @@
 "use client";
+import { QuotationText, QuotationDesignLocaleProvider, useQuotationDesignLocale } from "./quotation-design-locale";
 import { fetchQuotationItemCreatorDetail } from "@/features/quotations/lib/quotation-item-creator-detail";
 import { stashCompareQueue } from "@/features/discovery/components/creator-compare/compare-storage";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
@@ -116,7 +117,7 @@ export function QuotationWorkspace({
   clientReview?: QuotationClientReviewView | null;
 }) {
   return (
-    <QuotationManualSaveProvider quotationId={detail.id} items={detail.items}>
+    <QuotationDesignLocaleProvider><QuotationManualSaveProvider quotationId={detail.id} items={detail.items}>
       <QuotationRateCardTools detail={detail}>
       <QuotationWorkspaceContent
         detail={detail}
@@ -125,7 +126,7 @@ export function QuotationWorkspace({
         clientReview={clientReview}
       />
       </QuotationRateCardTools>
-    </QuotationManualSaveProvider>
+    </QuotationManualSaveProvider></QuotationDesignLocaleProvider>
   );
 }
 
@@ -141,6 +142,7 @@ function QuotationWorkspaceContent({
   clientReview: QuotationClientReviewView | null;
 }) {
   const router = useRouter();
+  const { language } = useQuotationDesignLocale();
   const manualSave = useQuotationManualSave();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -706,7 +708,7 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    <div className="quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
+    <div dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <QuotationWorkspaceHeader
         detail={detail}
@@ -789,7 +791,7 @@ function QuotationWorkspaceContent({
       ) : null}
 
       <section
-        className={cn(discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
+        className={cn("q-wrap q-main", discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
       >
       {visibleItems.length === 0 ? (
         <EmptyState
@@ -800,18 +802,16 @@ function QuotationWorkspaceContent({
           onAddCreatorsOpenChange={setAddCreatorsOpen}
         />
       ) : (
-        <div className="discovery-suite px-[15px] mb-3">
+        <div className="discovery-suite q-lines-container">
           <div className="tw-c">
-            <div className="tw-ch">
+            <div className="tw-ch q-lines__h">
               <span className="tw-ct">
-                Creators · {uniqueCreatorCount} · {visibleItems.length} lines
-              </span>
+                Creators · {uniqueCreatorCount} · {visibleItems.length} <QuotationText>lines</QuotationText></span>
               <span className="tw-cs">
-                grouped by influencer — duplicated creators are labelled Option 1, 2, 3…
-              </span>
+                <QuotationText>Options are alternative quotation lines for the same creator</QuotationText></span>
               <span className="tw-sp" />
               <QuotationRateCardToolbarButton />
-              {detail.shortlist_id && <Link className="tw-b sm" href={`/discovery/shortlists/${detail.shortlist_id}`}>Open shortlist</Link>}
+              {detail.shortlist_id && <Link className="tw-b sm" href={`/discovery/shortlists/${detail.shortlist_id}`}><QuotationText>Open shortlist</QuotationText></Link>}
               <QuotationCommercialEntry
                 quotationId={detail.id}
                 items={detail.items}
@@ -844,6 +844,8 @@ function QuotationWorkspaceContent({
                 description="Metrics above are still valid. Retry or reload."
               >
                 <QuotationLinesGrid
+                  showOriginalCurrency={Boolean(detail.showOriginalCurrency)}
+                  hideCostAndFees={Boolean(detail.hideCostAndFees)}
                   displayCurrency={displayCurrency}
                   displayFxRateToEgp={displayFxRateToEgp}
                   quotationId={detail.id}
@@ -871,14 +873,14 @@ function QuotationWorkspaceContent({
       <section className="sec">
         <div className="cols2">
           <div>
-            <div className="subh">Document details</div>
-            <div className="subp">Version, ownership, and validity.</div>
-            <QuotationDocumentMetaPanel detail={detail} layout="flush" />
+            <div className="subh"><QuotationText>Document details</QuotationText></div>
+            <div className="subp"><QuotationText>Version, ownership, and validity.</QuotationText></div>
+            <fieldset disabled={!detail.canManage}><QuotationDocumentMetaPanel detail={detail} layout="flush" /></fieldset>
           </div>
           <div className="vdiv" aria-hidden />
           <div>
-            <div className="subh">Quotation notes</div>
-            <div className="subp">Internal &amp; client-facing.</div>
+            <div className="subh"><QuotationText>Quotation notes</QuotationText></div>
+            <div className="subp"><QuotationText>Internal &amp; client-facing.</QuotationText></div>
             <HeaderNotes detail={detail} />
           </div>
         </div>
@@ -887,8 +889,8 @@ function QuotationWorkspaceContent({
       <section className="sec">
         <div className="sec-head">
           <div>
-            <h2>Terms &amp; conditions</h2>
-            <p>Applies to this quotation unless amended in writing.</p>
+            <h2><QuotationText>Terms &amp; conditions</QuotationText></h2>
+            <p><QuotationText>Applies to this quotation unless amended in writing.</QuotationText></p>
           </div>
         </div>
         <QuotationTermsAccordion termsText={detail.terms} />
@@ -1002,6 +1004,7 @@ function HeaderNotes({ detail }: { detail: QuotationDetail }) {
       ) : null}
       <Textarea
         id="quotation-notes"
+        readOnly={!detail.canManage}
         rows={9}
         className="notes-ta"
         value={notes}

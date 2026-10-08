@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckIcon, UsersIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -359,12 +358,9 @@ export function DocumentCreatorSelectionDialog({
                         checked ? "bg-primary/8" : "hover:bg-muted/40"
                       )}
                     >
-                      <Checkbox
-                        checked={checked}
-                        onCheckedChange={() => toggleCreator(creator.creatorKey)}
-                        onClick={(event) => event.stopPropagation()}
-                        aria-label={`Select ${creator.name}`}
-                      />
+                      <span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center rounded border", checked ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background")}>
+                        {checked ? <CheckIcon className="size-3" /> : null}
+                      </span>
                       {creator.avatarUrl ? (
                         // eslint-disable-next-line @next/next/no-img-element
                         <img

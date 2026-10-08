@@ -1,4 +1,5 @@
 "use client";
+import { QuotationText, QuotationLanguageSwitcher } from "./quotation-design-locale";
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
@@ -11,6 +12,7 @@ import {
   XCircleIcon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 
 import { createClientReviewFromQuotationAction } from "@/features/client-workspace/actions/create-from-quotation-action";
 import {
@@ -43,11 +45,10 @@ import { GenerateOutputsLauncher } from "@/features/campaign-outputs/components/
 import { OpenCampaignStudioLauncher } from "@/features/campaign-outputs/components/open-campaign-studio-launcher";
 import { seedFromQuotation } from "@/features/campaign-outputs/hydration/seed-adapters";
 import { QuotationLifecycleSheet } from "@/features/quotations/components/quotation-lifecycle-sheet";
-import { QuotationLifecyclePills } from "@/features/quotations/components/quotation-lifecycle-pills";
 import { QuotationDocumentOutputToolbar } from "@/features/quotations/components/quotation-document-output-toolbar";
-import { QuotationWorkspaceStatusPill } from "@/features/quotations/components/quotation-list-status-pill";
-import { QuotationValidityBar } from "@/features/quotations/components/quotation-validity-bar";
-import { DiscoverySuiteMasthead } from "@/features/discovery/components/design-system";
+import { DiscoverySuiteJumpNav } from "@/features/discovery/components/design-system/discovery-suite-jump-nav";
+import { formatDesignDate } from "@/lib/design/format-design-date";
+import { useQuotationManualSave } from "./quotation-manual-save";
 import {
   archiveQuotation,
   setQuotationHideCostAndFees,
@@ -98,6 +99,8 @@ export function QuotationWorkspaceHeader({
   showGpConflict = false,
 }: Props) {
   const router = useRouter();
+  const { confirm } = useConfirmAction();
+  const { saveStatus } = useQuotationManualSave();
   const [pending, startTransition] = useTransition();
   const [linkPending, startLinkTransition] = useTransition();
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
@@ -194,7 +197,8 @@ export function QuotationWorkspaceHeader({
     setSendOpen(true);
   }
 
-  function runStatus(status: "under_review" | "cancelled") {
+  async function runStatus(status: "under_review" | "cancelled") {
+    if (status === "cancelled" && !(await confirm({ title: "Cancel quotation?", description: `Cancel ${detail.serial_number ?? detail.name}?`, confirmLabel: "Cancel quotation", variant: "destructive" }))) return;
     startTransition(async () => {
       const res = await updateQuotationHeader({ id: detail.id, status });
       if (!res.ok) {
@@ -206,7 +210,8 @@ export function QuotationWorkspaceHeader({
     });
   }
 
-  function runArchive() {
+  async function runArchive() {
+    if (!(await confirm({ title: "Archive quotation?", description: `Archive ${detail.serial_number ?? detail.name}? It will be removed from the active quotations list.`, confirmLabel: "Archive quotation", variant: "destructive" }))) return;
     startTransition(async () => {
       const res = await archiveQuotation(detail.id);
       if (!res.ok) {
@@ -224,77 +229,54 @@ export function QuotationWorkspaceHeader({
 
   return (
     <>
-      <div className="discovery-suite quotation-frozen-header shrink-0 px-[15px] pt-2">
-        <DiscoverySuiteMasthead
-          title={detail.name}
-          id={detail.serial_number}
-          badge={<span className="st">{statusLabel}</span>}
-          subtitle={[
-            lineCount != null ? `${lineCount} line${lineCount === 1 ? "" : "s"}` : null,
-            creatorCount != null
-              ? `${creatorCount} creator${creatorCount === 1 ? "" : "s"}`
-              : null,
-            detail.shortlist_serial ? `linked to ${detail.shortlist_serial}` : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-          trailing={
-            showGpConflict ? <span className="st r">GP conflict</span> : null
-          }
-          top={
-            <div className="tw-top">
-              <Link href={QUOTATIONS_LIST_PATH} className="tw-b sm">
-                ← Back
-              </Link>
-              <EntityPrevNext
-                entity="quotations"
-                currentId={detail.id}
-                hrefForId={(id) => quotationDetailPath(id)}
-              />
-              <span className="tw-crumb">
-                Discovery / <b>Client quotations</b>
-                {detail.serial_number ? ` / ${detail.serial_number}` : null}
-              </span>
-              <span className="tw-sp" />
-              <QuotationWorkspaceStatusPill
-                status={detail.status}
-                isExpired={detail.is_expired}
-                className="spill spill-compact"
-              />
-            </div>
-          }
-          band={
-            <QuotationLifecyclePills
-              detail={detail}
-              variant="masthead"
-              trailing={
-                quotationIsMovedToCampaign(detail) ? null : (
-                  <QuotationValidityBar
-                    inline
-                    validityDate={detail.validity_date}
-                    validDaysRemaining={detail.valid_days_remaining}
-                    isExpired={detail.is_expired}
-                  />
-                )
-              }
-            />
-          }
-          metricsSlot={metricsSlot}
-          actions={
-            <div className="flex flex-wrap items-center gap-1.5">
+      <header className="q-head"><div className="q-head__in">
+        <div className="q-head__nav">
+          <Link href={QUOTATIONS_LIST_PATH} className="q-b q-b--sm q-b--ghost"><QuotationText>← Back to quotations</QuotationText></Link>
+          <span className="q-crumb"><Link href="/discovery/search"><QuotationText>Discovery</QuotationText></Link> / <Link href={QUOTATIONS_LIST_PATH}><QuotationText>Client quotations</QuotationText></Link> / <b>{detail.serial_number}</b></span>
+          <span className="q-sp" />
+          <div className="q-nav"><EntityPrevNext entity="quotations" currentId={detail.id} hrefForId={(id) => quotationDetailPath(id)} /></div>
+          <QuotationLanguageSwitcher />
+        </div>
+        <div className="q-head__t">
+          <span className="q-ref">{detail.serial_number}</span><h1>{detail.name}</h1>
+          <span className={`q-p ${detail.is_expired || ["cancelled", "rejected"].includes(detail.status) ? "q-p--bad" : ["approved", "accepted"].includes(detail.status) ? "q-p--ok" : "q-p--wrn"}`}><QuotationText>{statusLabel}</QuotationText></span><span className="q-p q-p--blue">{detail.version}</span>
+          <span className="q-sp" />
+          <button type="button" className="q-b q-b--pri" onClick={runSendToClient} disabled={!detail.canManage || detail.status === "cancelled" || detail.status === "archived" || Boolean(detail.is_archived)}><QuotationText>Send to client</QuotationText></button>
+        </div>
+        <div className="q-head__meta">
+          <b>{creatorCount ?? 0}</b> <QuotationText>creators</QuotationText> <span className="q-dot" /><b>{lineCount ?? 0}</b> <QuotationText>lines</QuotationText> <span className="q-dot" />
+          {detail.shortlist_id ? <Link className="q-link" href={`/discovery/shortlists/${detail.shortlist_id}`}><QuotationText>Shortlist</QuotationText> {detail.shortlist_serial} ↗</Link> : <span><QuotationText>Shortlist</QuotationText>: <QuotationText>Not linked</QuotationText></span>}
+          <span className="q-dot" />
+          {detail.campaign_header_id ? <Link className="q-link" href={`/campaigns/${detail.campaign_header_id}`}><QuotationText>Campaign</QuotationText> {detail.campaign_document_number} ↗</Link> : <span><QuotationText>Campaign</QuotationText>: <span className="q-p"><QuotationText>Not linked</QuotationText></span></span>}
+          <span className="q-dot" /><span className="q-sync"><s aria-hidden /><QuotationText>{detail.sync_enabled ? "Live sync" : "Snapshot locked"}</QuotationText></span>
+          <span className="q-sp" />
+          <span><QuotationText>Valid to</QuotationText> <b>{detail.validity_date ? formatDesignDate(detail.validity_date) : "Not set"}</b></span>
+          {detail.valid_days_remaining != null && <span className="q-p q-p--wrn">{detail.is_expired ? <QuotationText>Expired</QuotationText> : <>{detail.valid_days_remaining} <QuotationText>days left</QuotationText></>}</span>}
+        </div>
+        {metricsSlot}
+      </div></header>
+      <div className="q-wrap q-header-tools">
+        {detail.is_expired && <div className="q-banner q-banner--bad" role="status"><b>This quotation has expired.</b><span>Review its validity date in Document details.</span></div>}
+        {saveStatus === "error" && <div className="q-banner q-banner--bad" role="alert"><span>Save failed. Your pending edits are still available on this page.</span><button type="button" className="q-b q-b--sm" disabled={savePending} onClick={onSave}><QuotationText>Retry save</QuotationText></button></div>}
+        {showGpConflict && <div className="q-banner q-banner--wrn" role="status"><span>GP conflict — review the commercial breakdown before submitting.</span></div>}
+        {!detail.canManage && <div className="q-banner q-banner--info">Read-only — you can view this quotation; editing requires permission.</div>}
+                    <div className="q-actions">
               {detail.canManage ? (
                 <button
                   type="button"
-                  className="tw-b sm"
+                  className="tw-b sm pri"
                   disabled={savePending || !hasUnsavedChanges}
                   onClick={onSave}
                 >
                   {savePending ? (
                     <Loader2Icon className="size-3.5 animate-spin" aria-hidden />
                   ) : null}
-                  Save
-                </button>
+                  <QuotationText>Save</QuotationText></button>
               ) : null}
+              <span role="status" className={`q-save ${savePending ? "is-saving" : saveStatus === "error" ? "is-failed" : hasUnsavedChanges ? "is-dirty" : "is-saved"}`}>
+                <s aria-hidden /><span><QuotationText>{savePending ? "Saving…" : saveStatus === "error" ? "Save failed — retry" : hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}</QuotationText></span>
+              </span>
+              <span className="q-actions__div" aria-hidden />
               <QuotationDocumentOutputToolbar
                 quotationId={detail.id}
                 serialNumber={detail.serial_number}
@@ -343,27 +325,72 @@ export function QuotationWorkspaceHeader({
                       setLifecycleOpen(true);
                     }}
                   >
-                    Links &amp; actions
-                  </DropdownMenuItem>
+                    <QuotationText>Links &amp; actions</QuotationText></DropdownMenuItem>
                   <DropdownMenuItem
                     onSelect={() => {
                       setLifecycleTab("activity");
                       setLifecycleOpen(true);
                     }}
                   >
-                    Activity
-                  </DropdownMenuItem>
+                    <QuotationText>Activity</QuotationText></DropdownMenuItem>
                   {detail.canManage ? (
                     <>
                       <DropdownMenuSeparator />
                       <div
-                        className="px-2 py-2"
+                        className="px-1.5 py-1"
                         onPointerDown={(e) => e.preventDefault()}
                       >
-                        <ClientWorkspaceDisplayToggles
+                        <GenerateOutputsLauncher
+                          seed={campaignSeed}
+                          tab="outputs"
+                          workspace={{ type: "quotation", id: detail.id }}
+                          tone="toolbar"
+                          triggerClassName="tw-b sm w-full justify-start"
+                        />
+                      </div>
+                    </>
+                  ) : null}
+                  {detail.canManage && detail.status === "draft" ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        onSelect={() => runStatus("under_review")}
+                        disabled={pending}
+                      >
+                        <SendIcon className="size-3.5" />
+                        <QuotationText>Submit for review</QuotationText></DropdownMenuItem>
+                    </>
+                  ) : null}
+                  {detail.canManage &&
+                  detail.status !== "cancelled" &&
+                  detail.status !== "archived" ? (
+                    <DropdownMenuItem
+                      onSelect={() => runStatus("cancelled")}
+                      disabled={pending}
+                    >
+                      <XCircleIcon className="size-3.5" />
+                      <QuotationText>Cancel quotation</QuotationText></DropdownMenuItem>
+                  ) : null}
+                  {detail.canManage && !detail.is_archived ? (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem
+                        variant="destructive"
+                        onSelect={runArchive}
+                        disabled={pending}
+                      >
+                        <ArchiveIcon className="size-3.5" />
+                        <QuotationText>Archive</QuotationText></DropdownMenuItem>
+                    </>
+                  ) : null}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+        <div className="q-toggles">
+          <ClientWorkspaceDisplayToggles
                           showOriginalCurrency={showOriginalCurrency}
                           hideCostAndFees={hideCostAndFees}
-                          disabled={pending}
+                          disabled={pending || !detail.canManage}
                           onShowOriginalCurrencyChange={(value) => {
                             startTransition(async () => {
                               setOptimisticShowOriginalCurrency(value);
@@ -393,64 +420,9 @@ export function QuotationWorkspaceHeader({
                             });
                           }}
                         />
-                      </div>
-                      <DropdownMenuSeparator />
-                      <div
-                        className="px-1.5 py-1"
-                        onPointerDown={(e) => e.preventDefault()}
-                      >
-                        <GenerateOutputsLauncher
-                          seed={campaignSeed}
-                          tab="outputs"
-                          workspace={{ type: "quotation", id: detail.id }}
-                          tone="toolbar"
-                          triggerClassName="tw-b sm w-full justify-start"
-                        />
-                      </div>
-                    </>
-                  ) : null}
-                  {detail.canManage && detail.status === "draft" ? (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onSelect={() => runStatus("under_review")}
-                        disabled={pending}
-                      >
-                        <SendIcon className="size-3.5" />
-                        Submit for review
-                      </DropdownMenuItem>
-                    </>
-                  ) : null}
-                  {detail.canManage &&
-                  detail.status !== "cancelled" &&
-                  detail.status !== "archived" ? (
-                    <DropdownMenuItem
-                      onSelect={() => runStatus("cancelled")}
-                      disabled={pending}
-                    >
-                      <XCircleIcon className="size-3.5" />
-                      Cancel quotation
-                    </DropdownMenuItem>
-                  ) : null}
-                  {detail.canManage && !detail.is_archived ? (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        variant="destructive"
-                        onSelect={runArchive}
-                        disabled={pending}
-                      >
-                        <ArchiveIcon className="size-3.5" />
-                        Archive
-                      </DropdownMenuItem>
-                    </>
-                  ) : null}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          }
-          freezeOnScroll={false}
-        />
+          <span className="q-help">AF = agency fees. Client presentation settings apply to linked reviews and outputs.</span>
+        </div>
+        <DiscoverySuiteJumpNav />
       </div>
 
       <QuotationLifecycleSheet

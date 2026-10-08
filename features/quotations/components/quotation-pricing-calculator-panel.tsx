@@ -1,4 +1,5 @@
 "use client";
+import { QuotationText } from "./quotation-design-locale";
 
 import { useMemo, useState } from "react";
 
@@ -74,7 +75,7 @@ export function QuotationPricingCalculatorPanel({
         data-quotation-calculator
       >
         <div className="tw-calcp__h">
-          <b>Pricing calculator</b>
+          <b><QuotationText>Pricing calculator</QuotationText></b>
           <span>
             {lines.length} line{lines.length === 1 ? "" : "s"} selected · EGP
           </span>
@@ -160,7 +161,7 @@ export function QuotationPricingCalculatorPanel({
               </span>
             ) : null}
             <span className="tw-sp" />
-            <span className="tw-cs">Applies to the selected lines only</span>
+            <span className="tw-cs"><QuotationText>Applies to the selected lines only</QuotationText></span>
           </div>
         </div>
 
@@ -171,33 +172,29 @@ export function QuotationPricingCalculatorPanel({
             framed={false}
             header={
               <>
-                <DiscoverySuiteCell>Creator</DiscoverySuiteCell>
+                <DiscoverySuiteCell><QuotationText>Creator</QuotationText></DiscoverySuiteCell>
                 <DiscoverySuiteCell className="tw-rr" align="end">
                   Base cost
                 </DiscoverySuiteCell>
                 <DiscoverySuiteCell className="tw-rr" align="end">
-                  Client now
-                </DiscoverySuiteCell>
+                  <QuotationText>Client now</QuotationText></DiscoverySuiteCell>
                 <DiscoverySuiteCell className="tw-rr" align="end">
-                  New client
-                </DiscoverySuiteCell>
+                  <QuotationText>New client</QuotationText></DiscoverySuiteCell>
                 <DiscoverySuiteCell className="tw-rr" align="end">
                   GP
                 </DiscoverySuiteCell>
                 <DiscoverySuiteCell className="tw-rr" align="end">
-                  Margin
-                </DiscoverySuiteCell>
+                  <QuotationText>Margin</QuotationText></DiscoverySuiteCell>
                 <DiscoverySuiteCell className="tw-rr" align="end">
                   VAT {vatPct}%
                 </DiscoverySuiteCell>
                 <DiscoverySuiteCell className="tw-rr" align="end">
-                  Change
-                </DiscoverySuiteCell>
+                  <QuotationText>Change</QuotationText></DiscoverySuiteCell>
               </>
             }
             footer={
               <>
-                <DiscoverySuiteCell>{rows.length} lines</DiscoverySuiteCell>
+                <DiscoverySuiteCell>{rows.length} <QuotationText>lines</QuotationText></DiscoverySuiteCell>
                 <DiscoverySuiteCell className="tw-v" align="end">
                   {F2(totals.baseCost)}
                 </DiscoverySuiteCell>
@@ -260,7 +257,7 @@ export function QuotationPricingCalculatorPanel({
                           {row.name}
                         </b>
                         <span className="hd" style={{ fontSize: 10 }}>
-                          Option {row.optionNumber}
+                          <QuotationText>Option</QuotationText> {row.optionNumber}
                         </span>
                       </span>
                     </span>
@@ -331,17 +328,17 @@ export function QuotationPricingCalculatorPanel({
             <b>{F2(totals.baseCost)}</b>
           </div>
           <div>
-            <i>New client cost before fees</i>
+            <i><QuotationText>New client cost before fees</QuotationText></i>
             <b>{F2(totals.newClient)}</b>
           </div>
-          <div><i>Agency Fees</i><b>{F2(totals.agencyFees)}</b></div>
-          <div><i>Total investment</i><b>{F2(totals.totalInvestment)}</b></div>
+          <div><i><QuotationText>Agency Fees</QuotationText></i><b>{F2(totals.agencyFees)}</b></div>
+          <div><i><QuotationText>Total investment</QuotationText></i><b>{F2(totals.totalInvestment)}</b></div>
           <div>
-            <i>Gross profit</i>
+            <i><QuotationText>Gross profit</QuotationText></i>
             <b className={totals.gp > 0 ? "g" : "r"}>{F2(totals.gp)}</b>
           </div>
           <div>
-            <i>Margin</i>
+            <i><QuotationText>Margin</QuotationText></i>
             <b className={totals.gp > 0 ? "g" : "r"}>
               {totals.marginPct.toFixed(1)}%
             </b>
@@ -351,11 +348,11 @@ export function QuotationPricingCalculatorPanel({
             <b>{F2(totals.vat)}</b>
           </div>
           <div>
-            <i>Client pays</i>
+            <i><QuotationText>Client pays</QuotationText></i>
             <b>{F2(totals.clientPays)}</b>
           </div>
           <div>
-            <i>Change</i>
+            <i><QuotationText>Change</QuotationText></i>
             <b className={totals.change >= 0 ? "g" : "r"}>
               {totals.change >= 0 ? "+" : ""}
               {F2(totals.change)}
@@ -370,8 +367,7 @@ export function QuotationPricingCalculatorPanel({
           </span>
           <span className="tw-sp" />
           <button type="button" className="tw-b sm" onClick={onClose}>
-            Cancel
-          </button>
+            <QuotationText>Cancel</QuotationText></button>
           <button
             type="button"
             className="tw-b sm pri"

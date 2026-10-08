@@ -1,6 +1,7 @@
 "use client";
+import { QuotationText } from "./quotation-design-locale";
 
-import Link from "next/link";
+
 
 import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import {
@@ -11,7 +12,7 @@ import {
 } from "@/features/quotations/quotation-client-review";
 import type { QuotationDetail, QuotationItemRow } from "@/features/quotations/types";
 import { CLIENT_PROPOSAL_STATUS_LABEL } from "@/features/client-workspace/constants";
-import { formatDesignDate } from "@/lib/design/format-design-date";
+
 import { F } from "@/lib/discovery/suite/helpers";
 import { cn } from "@/lib/utils";
 
@@ -68,69 +69,10 @@ export function QuotationClientReviewPanel({
     { id: "rejected", label: "Rejected", count: counts.rejected },
   ];
 
-  const shortlistLabel = detail.shortlist_id
-    ? `Shortlist ${detail.shortlist_serial ?? detail.shortlist_id} · linked`
-    : "Shortlist · not linked";
-  const campaignLabel = detail.campaign_header_id
-    ? `Campaign ${detail.campaign_document_number ?? ""} · linked`.trim()
-    : "Campaign · not linked";
-  const syncLabel = detail.sync_enabled ? "Live sync enabled" : "Snapshot locked";
-
-  const validityLabel =
-    detail.validity_date != null
-      ? `⚠ Validity ${formatDesignDate(detail.validity_date)}${
-          detail.valid_days_remaining != null
-            ? ` · ${detail.valid_days_remaining} day${
-                detail.valid_days_remaining === 1 ? "" : "s"
-              } remaining`
-            : ""
-        }`
-      : null;
-
   return (
-    <div className="discovery-suite px-[15px] mb-3">
-      <div className="tw-c">
-        <div className="tw-ch">
-          {detail.shortlist_id ? (
-            <Link
-              href={`/discovery/shortlists/${detail.shortlist_id}`}
-              className="tw-p p-b transition-opacity hover:opacity-80"
-            >
-              {shortlistLabel}
-            </Link>
-          ) : (
-            <span className="tw-p p-n">{shortlistLabel}</span>
-          )}
-          {detail.campaign_header_id ? (
-            <Link
-              href={`/campaigns/${detail.campaign_header_id}`}
-              className="tw-p p-n transition-opacity hover:opacity-80"
-            >
-              {campaignLabel}
-            </Link>
-          ) : (
-            <span className="tw-p p-n">{campaignLabel}</span>
-          )}
-          <span className={cn("tw-p", detail.sync_enabled ? "p-g" : "p-n")}>
-            {syncLabel}
-          </span>
-          <span className="tw-sp" />
-          {validityLabel ? (
-            <span
-              style={
-                detail.is_expired ||
-                (detail.valid_days_remaining != null && detail.valid_days_remaining <= 7)
-                  ? { color: "var(--tw-wrn)" }
-                  : undefined
-              }
-              className="tw-cs"
-            >
-              {validityLabel}
-            </span>
-          ) : null}
-        </div>
-
-        <div className="tw-ch" style={{ borderTop: "1px solid var(--tw-hair)" }}>
+    <div className="q-wrap q-review-wrap">
+      <div className="q-card q-rev">
+        <div className="q-rev__t">
           <span className="tw-ct">
             Client review · proposal v{review.reviewNumber} ·{" "}
             {CLIENT_PROPOSAL_STATUS_LABEL[review.status]}
@@ -145,31 +87,28 @@ export function QuotationClientReviewPanel({
             <>
               <button
                 type="button"
-                className="tw-b sm"
+                className="q-b q-b--sm"
                 disabled={pending || counts.accepted === 0}
                 onClick={onSelectApproved}
               >
-                Select approved
-              </button>
+                <QuotationText>Select approved</QuotationText></button>
               <button
                 type="button"
-                className="tw-b sm"
+                className="q-b q-b--sm"
                 disabled={pending || counts.inReview === 0}
                 onClick={onSelectUnderReview}
               >
-                Select under review
-              </button>
+                <QuotationText>Select under review</QuotationText></button>
               <button
                 type="button"
-                className="tw-b sm"
+                className="q-b q-b--sm"
                 disabled={pending || counts.inReview === 0}
                 onClick={onAcceptOnBehalf}
               >
-                Mark approved by Thinkway
-              </button>
+                <QuotationText>Mark approved by Thinkway</QuotationText></button>
               <button
                 type="button"
-                className="tw-b sm pri"
+                className="q-b q-b--sm q-b--pri"
                 disabled={pending || counts.accepted === 0}
                 onClick={onMoveApprovedToCampaign}
                 title={
@@ -178,41 +117,12 @@ export function QuotationClientReviewPanel({
                     : "Approve this quotation first, then convert the approved creators"
                 }
               >
-                Move approved to campaign
-              </button>
+                <QuotationText>Move approved to campaign</QuotationText></button>
             </>
           ) : null}
         </div>
 
-        <div
-          className="tw-ms2"
-          style={{ borderTop: "1px solid var(--tw-hair)" }}
-          aria-label="Approved selection metrics"
-        >
-          <div>
-            <i>Approved creators</i>
-            <b>{approved.creatorCount}</b>
-          </div>
-          <div>
-            <i>Approved base cost</i>
-            <b>{F(approved.costEgp)}</b>
-          </div>
-          <div>
-            <i>{QUOTATION_CLIENT_LABELS.totalClientCost}</i>
-            <b>{F(approved.revenueEgp)}</b>
-          </div>
-          <div>
-            <i>Approved GP</i>
-            <b className="r">{F(approved.gpValueEgp)}</b>
-          </div>
-          <div>
-            <i>Approved GP %</i>
-            <b className="r">{approved.gpPct.toFixed(1)}%</b>
-          </div>
-        </div>
-      </div>
-
-      <div className="tw-fbar">
+      <div className="q-rev__f">
         <div className="tw-fchips">
           {filters.map((item) => {
             const isOn = filter === item.id;
@@ -228,7 +138,7 @@ export function QuotationClientReviewPanel({
                   if (!isZero) onFilter(item.id);
                 }}
               >
-                {item.label}
+                <QuotationText>{item.label}</QuotationText>
                 <em>{item.count}</em>
               </button>
             );
@@ -236,8 +146,34 @@ export function QuotationClientReviewPanel({
         </div>
         <span className="tw-sp" />
         <span className="tw-cs">
-          Selecting rows drives the calculator and the bulk actions below
+          Checkboxes select lines for bulk actions. Client approval is managed separately.
         </span>
+      </div>
+        <div
+          className="q-rev__s"
+          aria-label="Approved selection metrics"
+        >
+          <div>
+            <u><QuotationText>Approved creators</QuotationText></u>
+            <b>{approved.creatorCount}</b>
+          </div>
+          <div>
+            <u><QuotationText>Approved base cost</QuotationText></u>
+            <b>{F(approved.costEgp)}</b>
+          </div>
+          <div>
+            <u>{QUOTATION_CLIENT_LABELS.totalClientCost}</u>
+            <b>{F(approved.revenueEgp)}</b>
+          </div>
+          <div>
+            <u><QuotationText>Approved GP</QuotationText></u>
+            <b className="r">{F(approved.gpValueEgp)}</b>
+          </div>
+          <div>
+            <u>Approved GP %</u>
+            <b className="r">{approved.gpPct.toFixed(1)}%</b>
+          </div>
+        </div>
       </div>
     </div>
   );

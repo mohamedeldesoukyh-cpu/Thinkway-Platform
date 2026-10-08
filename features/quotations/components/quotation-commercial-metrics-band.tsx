@@ -1,4 +1,5 @@
 "use client";
+import { QuotationText, useQuotationLabel } from "./quotation-design-locale";
 
 import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
 import type { OriginalCurrencyTotals } from "@/features/quotations/quotation-row-math";
@@ -14,6 +15,7 @@ type MetricDef = {
   original?: string[];
   /** Uncommitted scratchpad figure — wrn attention (dot + Draft chip). */
   staged?: boolean;
+  internal?: boolean;
 };
 
 function moneyParts(
@@ -41,27 +43,25 @@ function originalLabels(
     .map((row) => formatMoneyKpi(row[field], row.currency));
 }
 
-function MetricItem({ label, value, unit, tone, compact, original, staged }: MetricDef) {
+function MetricItem({ label, value, unit, tone, compact, original, staged, internal }: MetricDef) {
   const toneClass =
     tone === "green" ? "g" : tone === "red" ? "r" : tone === "amber" ? "y" : compact ? "s" : undefined;
   return (
-    <div>
-      <i>
+    <div className={`q-m ${internal ? "q-m--priv" : ""}`}>
+      <u>
         {staged ? (
           <span className="inline-flex items-center gap-1.5">
             <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
-            {label}
+            <QuotationText>{label}</QuotationText>
             <span className="tw-p p-y" style={{ fontSize: 9, padding: "1px 5px" }}>
-              Draft
-            </span>
+              <QuotationText>Draft</QuotationText></span>
           </span>
         ) : (
-          label
+          <QuotationText>{label}</QuotationText>
         )}
-      </i>
-      <b className={toneClass}>
-        {value}
-        {unit ? ` ${unit}` : ""}
+      </u>
+      <b className={value === "0" ? "z" : toneClass}>
+        {unit ? <span className="cur">{unit}</span> : null}{value}
       </b>
       {original?.length ? (
         <span className="orig block text-[10px] text-[var(--tw-mut)]" aria-label={`${label} original currency`}>
@@ -129,21 +129,13 @@ export function QuotationCommercialMetricsBand({
   onOpenCommercialWorkspace,
   embedded = false,
 }: Props) {
+  const translate = useQuotationLabel();
   const gpTone: MetricDef["tone"] =
     totalGpValueEgp < 0 ? "red" : totalGpPct < gpTargetPct ? "amber" : "green";
 
   // Pack: masthead GP margin is yellow, GP % is red when agency-fee GP is the headline figure.
   const agencyFeeGpTone: MetricDef["tone"] = "amber";
   const agencyFeePctTone: MetricDef["tone"] = "red";
-
-  const daysTone: MetricDef["tone"] =
-    validDaysRemaining == null
-      ? "blue"
-      : validDaysRemaining <= 0
-        ? "red"
-        : validDaysRemaining <= 7
-          ? "amber"
-          : "blue";
 
   const base = moneyParts(totalCostEgp, displayCurrency, displayFxRateToEgp, projected?.cost);
   const client = moneyParts(totalRevenueEgp, displayCurrency, displayFxRateToEgp, projected?.clientCost);
@@ -185,68 +177,20 @@ export function QuotationCommercialMetricsBand({
         ) : null}
       </p>
     ) : null}
-    <div className="tw-ms2" aria-label="Quotation commercial metrics">
-      <div className="metric metric--currency flex flex-col justify-center gap-1 py-[9px]">
-        <CommercialCurrencySelect
-          label="Ccy"
-          layout="metric"
-          value={displayCurrency}
-          onChange={onDisplayCurrencyChange ?? (() => undefined)}
-          disabled={currencyDisabled || !onDisplayCurrencyChange}
-        />
-      </div>
-      <MetricItem
-        label="Base cost"
-        value={base.value}
-        original={originalLabels(originalTotals, "totalCost")}
-        staged={hasDraftEdits}
-      />
-      <MetricItem
-        label="Total investment"
-        value={client.value}
-        original={originalLabels(originalTotals, "totalClientCost")}
-        staged={hasDraftEdits}
-      />
-      <MetricItem label="Agency Fees" value={moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.af).value} staged={hasDraftEdits} />
-      <MetricItem label="Client cost before fees" value={moneyParts(totalRevenueEgp - totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.revenue).value} staged={hasDraftEdits} />
-      {stagedVsSavedDisagree && savedClient ? (
-        <MetricItem
-          label="Saved client cost"
-          value={savedClient.value}
-          tone="amber"
-        />
-      ) : null}
-      <MetricItem
-        label="GP margin"
-        value={gp.value}
-        tone={showAgencyFeeConflict ? agencyFeeGpTone : gpTone}
-        original={originalLabels(originalTotals, "totalGpMargin")}
-        staged={hasDraftEdits}
-      />
-      <MetricItem
-        label="GP %"
-        value={`${(projected?.marginPct ?? totalGpPct).toFixed(1)}%`}
-        tone={showAgencyFeeConflict ? agencyFeePctTone : gpTone}
-        staged={hasDraftEdits}
-      />
-      <MetricItem label="FM %" value={`${(projected?.markupPct ?? totalPmPct).toFixed(1)}%`} />
-      <MetricItem label="Version" value={version} compact />
-      <MetricItem label="Creators" value={String(creatorCount)} />
-      {lineCount != null ? (
-        <MetricItem label="Lines" value={String(lineCount)} />
-      ) : null}
-      <MetricItem
-        label="Days left"
-        value={
-          validDaysRemaining == null
-            ? "—"
-            : validDaysRemaining < 0
-              ? "Expired"
-              : String(validDaysRemaining)
-        }
-        tone={daysTone}
-      />
+    <div className="q-fin" aria-label="Quotation commercial metrics">
+      <div className="q-finlbl priv"><s aria-hidden /><QuotationText>Internal — never shown to the client</QuotationText></div>
+      <MetricItem internal label="Base cost (internal creator / vendor cost)" value={base.value} unit={base.unit} original={originalLabels(originalTotals, "totalCost")} staged={hasDraftEdits} />
+      <MetricItem internal label="GP amount" value={gp.value} unit={gp.unit} tone={showAgencyFeeConflict ? agencyFeeGpTone : gpTone} original={originalLabels(originalTotals, "totalGpMargin")} staged={hasDraftEdits} />
+      <MetricItem internal label="GP %" value={`${(projected?.marginPct ?? totalGpPct).toFixed(1)}%`} tone={showAgencyFeeConflict ? agencyFeePctTone : gpTone} staged={hasDraftEdits} />
+      <MetricItem internal label="Markup / FM %" value={`${(projected?.markupPct ?? totalPmPct).toFixed(1)}%`} />
+      <div className="q-finlbl"><s aria-hidden /><QuotationText>Client-facing</QuotationText></div>
+      <div className="q-m q-currency"><CommercialCurrencySelect label={translate("Display currency")} layout="metric" value={displayCurrency} onChange={onDisplayCurrencyChange ?? (() => undefined)} disabled={currencyDisabled || !onDisplayCurrencyChange} /></div>
+      <MetricItem label="Client cost before agency fees" {...moneyParts(totalRevenueEgp - totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.revenue)} staged={hasDraftEdits} />
+      <MetricItem label="Agency fees (AF)" {...moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.af)} staged={hasDraftEdits} />
+      <MetricItem label="Total investment" value={client.value} unit={client.unit} original={originalLabels(originalTotals, "totalClientCost")} staged={hasDraftEdits} />
+      {stagedVsSavedDisagree && savedClient && <MetricItem label="Saved client cost" value={savedClient.value} unit={savedClient.unit} tone="amber" />}
     </div>
+
     {stagedVsSavedDisagree && savedClient ? (
       <p className="tw-note wrn mx-3.5 mb-2">
         Staged Client cost {client.value} {client.unit} vs saved{" "}

@@ -1,4 +1,5 @@
 "use client";
+import { QuotationText, useQuotationDesignLocale } from "./quotation-design-locale";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
@@ -75,6 +76,7 @@ export function AddCreatorsToQuotationModal({
   initialShortlists,
   initialCampaigns,
 }: Props) {
+  const { language } = useQuotationDesignLocale();
   const [pending, startTransition] = useTransition();
   const [shortlists, setShortlists] = useState<ShortlistOption[]>(initialShortlists ?? []);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>(initialCampaigns ?? []);
@@ -177,9 +179,9 @@ export function AddCreatorsToQuotationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="discovery-suite max-h-[90vh] overflow-y-auto sm:max-w-lg">
+      <DialogContent dir={language === "ar" ? "rtl" : "ltr"} className="discovery-suite tq-redesign q-live-dialog max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add creators</DialogTitle>
+          <DialogTitle><QuotationText>Add creators</QuotationText></DialogTitle>
           <DialogDescription>
             Import creators from Discovery selection, a shortlist, a campaign, or add a manual row.
           </DialogDescription>
@@ -187,10 +189,10 @@ export function AddCreatorsToQuotationModal({
 
         <Tabs defaultValue="discovery">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="discovery">Discovery</TabsTrigger>
-            <TabsTrigger value="shortlist">Shortlist</TabsTrigger>
-            <TabsTrigger value="campaign">Campaign</TabsTrigger>
-            <TabsTrigger value="manual">Manual</TabsTrigger>
+            <TabsTrigger value="discovery"><QuotationText>Discovery</QuotationText></TabsTrigger>
+            <TabsTrigger value="shortlist"><QuotationText>Shortlist</QuotationText></TabsTrigger>
+            <TabsTrigger value="campaign"><QuotationText>Campaign</QuotationText></TabsTrigger>
+            <TabsTrigger value="manual"><QuotationText>Manual</QuotationText></TabsTrigger>
           </TabsList>
 
           <TabsContent value="discovery" className="space-y-3 pt-2">
@@ -206,8 +208,7 @@ export function AddCreatorsToQuotationModal({
                 </Link>
                 <div className="mt-3">
                   <button type="button" className="tw-b" disabled>
-                    Import creators
-                  </button>
+                    <QuotationText>Import creators</QuotationText></button>
                 </div>
               </div>
             ) : (
@@ -242,7 +243,7 @@ export function AddCreatorsToQuotationModal({
 
           <TabsContent value="shortlist" className="space-y-3 pt-2">
             <div className="space-y-2">
-              <Label>Shortlist</Label>
+              <Label><QuotationText>Shortlist</QuotationText></Label>
               <Select value={shortlistId} onValueChange={setShortlistId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a shortlist" />
@@ -291,7 +292,7 @@ export function AddCreatorsToQuotationModal({
 
           <TabsContent value="campaign" className="space-y-3 pt-2">
             <div className="space-y-2">
-              <Label>Campaign</Label>
+              <Label><QuotationText>Campaign</QuotationText></Label>
               <Select value={campaignId} onValueChange={setCampaignId}>
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a campaign" />
@@ -339,7 +340,7 @@ export function AddCreatorsToQuotationModal({
 
           <TabsContent value="manual" className="space-y-3 pt-2">
             <div className="space-y-2">
-              <Label htmlFor="manual-creator-name">Creator name</Label>
+              <Label htmlFor="manual-creator-name"><QuotationText>Creator name</QuotationText></Label>
               <Input
                 id="manual-creator-name"
                 value={manualName}
@@ -349,7 +350,7 @@ export function AddCreatorsToQuotationModal({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label>Platform</Label>
+                <Label><QuotationText>Platform</QuotationText></Label>
                 <Select value={manualPlatform} onValueChange={setManualPlatform}>
                   <SelectTrigger aria-label="Platform">
                     <SelectValue />
@@ -364,7 +365,7 @@ export function AddCreatorsToQuotationModal({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Tier</Label>
+                <Label><QuotationText>Tier</QuotationText></Label>
                 <Select value={manualTier} onValueChange={setManualTier}>
                   <SelectTrigger aria-label="Tier">
                     <SelectValue />
@@ -403,15 +404,13 @@ export function AddCreatorsToQuotationModal({
                 )
               }
             >
-              Add manual row
-            </Button>
+              <QuotationText>Add manual row</QuotationText></Button>
           </TabsContent>
         </Tabs>
 
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
-            Close
-          </Button>
+            <QuotationText>Close</QuotationText></Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

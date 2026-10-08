@@ -1,4 +1,5 @@
 "use client";
+import { QuotationText } from "./quotation-design-locale";
 
 import { F } from "@/lib/discovery/suite/helpers";
 import { cn } from "@/lib/utils";
@@ -54,8 +55,7 @@ export function QuotationSelectionBar({
         data-quotation-selbar
       >
         <span className="n">
-          <b>{selectedCount}</b> of {totalCount} lines
-          <button
+          <b>{selectedCount}</b> of {totalCount} <QuotationText>lines</QuotationText><button
             type="button"
             className="x"
             aria-label="Clear selection"
@@ -71,22 +71,22 @@ export function QuotationSelectionBar({
             <b>{F(baseCost)}</b>
           </span>
           <span>
-            <i>Before fees</i>
+            <i><QuotationText>Before fees</QuotationText></i>
             <b>{F(clientCost)}</b>
           </span>
-          <span><i>Agency Fees</i><b>{F(agencyFees)}</b></span>
-          <span><i>Total investment</i><b>{F(clientCost + agencyFees)}</b></span>
+          <span><i><QuotationText>Agency Fees</QuotationText></i><b>{F(agencyFees)}</b></span>
+          <span><i><QuotationText>Total investment</QuotationText></i><b>{F(clientCost + agencyFees)}</b></span>
           <span>
             <i>GP</i>
             <b className={gpTone}>{F(gp)}</b>
           </span>
           <span>
-            <i>GP %</i>
+            <i><QuotationText>GP %</QuotationText></i>
             <b className={gpTone}>{gpPct.toFixed(1)}%</b>
           </span>
         </span>
         <span className="acts">
-          {onCompare && <button type="button" className="tw-b sm" disabled={busy || selectedCount < 2} onClick={onCompare}>Compare</button>}
+          {onCompare && <button type="button" className="tw-b sm" disabled={busy || selectedCount < 2} onClick={onCompare}><QuotationText>Compare</QuotationText></button>}
           {onAddToCampaign && <button type="button" className="tw-b sm pri" disabled={busy || selectedCount !== 1} onClick={onAddToCampaign}>Add to existing campaign</button>}
           <button
             type="button"
@@ -103,15 +103,14 @@ export function QuotationSelectionBar({
             disabled={busy}
             onClick={onDuplicate}
           >
-            Duplicate
-          </button>
+            <QuotationText>Duplicate</QuotationText></button>
           <button
             type="button"
             className="tw-b sm edit"
             disabled={busy}
             onClick={onDelete}
           >
-            Delete {selectedCount}
+            <QuotationText>Delete</QuotationText> {selectedCount}
           </button>
           <button
             type="button"

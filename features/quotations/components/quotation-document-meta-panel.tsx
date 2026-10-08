@@ -1,4 +1,5 @@
 "use client";
+import { QuotationText } from "./quotation-design-locale";
 
 import { useEffect, useState } from "react";
 
@@ -27,13 +28,13 @@ import { cn } from "@/lib/utils";
 
 function SaveIndicator({ status }: { status: AutosaveStatus }) {
   if (status === "pending")
-    return <span className="thinkway-campaign-badge thinkway-campaign-badge-amber">Unsaved</span>;
+    return <span className="thinkway-campaign-badge thinkway-campaign-badge-amber"><QuotationText>Unsaved</QuotationText></span>;
   if (status === "saved")
-    return <span className="thinkway-campaign-badge thinkway-campaign-badge-green">Saved</span>;
+    return <span className="thinkway-campaign-badge thinkway-campaign-badge-green"><QuotationText>Saved</QuotationText></span>;
   if (status === "saving")
-    return <span className="text-[10px] text-[var(--camp-text-3)]">Saving…</span>;
+    return <span className="text-[10px] text-[var(--camp-text-3)]"><QuotationText>Saving…</QuotationText></span>;
   if (status === "error")
-    return <span className="thinkway-campaign-badge thinkway-campaign-badge-red">Save failed</span>;
+    return <span className="thinkway-campaign-badge thinkway-campaign-badge-red"><QuotationText>Save failed</QuotationText></span>;
   return null;
 }
 
@@ -104,7 +105,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
   }
 
   const validityBadge = detail.is_expired ? (
-    <span className="thinkway-campaign-badge thinkway-campaign-badge-red">Expired</span>
+    <span className="thinkway-campaign-badge thinkway-campaign-badge-red"><QuotationText>Expired</QuotationText></span>
   ) : (
     <span className="thinkway-campaign-badge thinkway-campaign-badge-amber">
       {formatConvertedQuotationValidityLabel({
@@ -123,7 +124,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
     <>
       <div className={flush ? "dgrid" : "thinkway-campaign-form-grid"}>
         <div className={flush ? "dfield" : undefined}>
-          <Label>Issue date</Label>
+          <Label><QuotationText>Issue date</QuotationText></Label>
           <Input
             type="date"
             className={inputClass}
@@ -135,7 +136,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
           />
         </div>
         <div className={flush ? "dfield" : undefined}>
-          <Label>Validity date</Label>
+          <Label><QuotationText>Validity date</QuotationText></Label>
           <Input
             type="date"
             className={inputClass}
@@ -147,7 +148,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
           />
         </div>
         <div className={flush ? "dfield" : undefined}>
-          <Label>Status</Label>
+          <Label><QuotationText>Status</QuotationText></Label>
           <Select
             value={status}
             onValueChange={(v) => {
@@ -169,7 +170,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
           </Select>
         </div>
         <div className={flush ? "dfield" : undefined}>
-          <Label>Version</Label>
+          <Label><QuotationText>Version</QuotationText></Label>
           <Select
             value={version}
             onValueChange={(v) => {
@@ -190,7 +191,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
           </Select>
         </div>
         <div className={flush ? "dfield col-span-2" : undefined}>
-          <Label>Department</Label>
+          <Label><QuotationText>Department</QuotationText></Label>
           <Select
             value={department}
             onValueChange={(v) => {
@@ -211,7 +212,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
           </Select>
         </div>
         <div className={flush ? "dfield" : undefined}>
-          <Label>Prepared by</Label>
+          <Label><QuotationText>Prepared by</QuotationText></Label>
           <Input
             className={cn(inputClass, !preparedBy && flush && "muted placeholder:text-[var(--text-4)]")}
             value={preparedBy}
@@ -223,7 +224,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
           />
         </div>
         <div className={flush ? "dfield" : undefined}>
-          <Label>Reviewed by</Label>
+          <Label><QuotationText>Reviewed by</QuotationText></Label>
           <Input
             className={cn(inputClass, !reviewedBy && flush && "placeholder:text-[var(--text-4)]")}
             value={reviewedBy}
@@ -235,7 +236,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
           />
         </div>
         <div className={flush ? "dfield" : undefined}>
-          <Label>Client signatory</Label>
+          <Label><QuotationText>Client signatory</QuotationText></Label>
           <Input
             className={cn(inputClass, !clientSignatory && flush && "placeholder:text-[var(--text-4)]")}
             value={clientSignatory}
@@ -249,7 +250,7 @@ export function QuotationDocumentMetaPanel({ detail, layout = "default" }: Props
       </div>
 
       <div className={flush ? "dfield mb-0" : "px-4 pb-4"}>
-        <Label>Change summary</Label>
+        <Label><QuotationText>Change summary</QuotationText></Label>
         <Textarea
           rows={flush ? 3 : 2}
           className={flush ? "ta text-[13px]" : "text-xs"}
