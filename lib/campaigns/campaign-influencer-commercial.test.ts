@@ -35,6 +35,9 @@ function createCrmAwareSupabase(state: CrmState, ciId = "ci-1") {
           return {
             eq() {
               return {
+                eq() {
+                  return { maybeSingle: async () => ({ data: null, error: null }) };
+                },
                 maybeSingle: async () => ({ data: null, error: null }),
                 is() {
                   return {
@@ -49,6 +52,9 @@ function createCrmAwareSupabase(state: CrmState, ciId = "ci-1") {
                   return {
                     is() {
                       return {
+                        eq() {
+                          return { maybeSingle: async () => ({ data: null, error: null }) };
+                        },
                         maybeSingle: async () => ({ data: null, error: null }),
                       };
                     },
