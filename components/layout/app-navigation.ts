@@ -33,32 +33,11 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    group: "Client workspace",
-    items: [
-      { href: "/groups", label: "Holding Groups", icon: "grp" },
-      { href: "/clients", label: "Clients", icon: "client" },
-      { href: "/brands", label: "Brands", icon: "brand" },
-      { href: "/rate-cards", label: "Client Rate Card", icon: "quote" },
-      { href: "/ios/client", label: "Client IOs", icon: "doc" },
-      {
-        href: "/discovery/quotations",
-        label: "Client Quotations",
-        icon: "quote",
-      },
-    ],
-  },
-  {
-    group: "Vendor workspace",
-    items: [
-      { href: "/vendors", label: "Vendors", icon: "vendor" },
-      { href: "/ios/vendor", label: "Vendor IO register", icon: "doc" },
-    ],
-  },
-  {
     group: "Discovery",
     items: [
       { href: "/discovery/search", label: "Search", icon: "search" },
       { href: "/discovery/shortlists", label: "Shortlists", icon: "list" },
+      { href: "/discovery/quotations", label: "Quotations", icon: "quote" },
       {
         href: "/discovery/campaign-match",
         label: "Campaign Match",
@@ -68,7 +47,24 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    group: "Finance workspace",
+    group: "Clients & brands",
+    items: [
+      { href: "/groups", label: "Holding Groups", icon: "grp" },
+      { href: "/clients", label: "Clients", icon: "client" },
+      { href: "/brands", label: "Brands", icon: "brand" },
+      { href: "/rate-cards", label: "Client Rate Card", icon: "quote" },
+      { href: "/ios/client", label: "Client IOs", icon: "doc" },
+    ],
+  },
+  {
+    group: "Vendors",
+    items: [
+      { href: "/vendors", label: "Vendors", icon: "vendor" },
+      { href: "/ios/vendor", label: "Vendor IO register", icon: "doc" },
+    ],
+  },
+  {
+    group: "Finance",
     subgroup: "Billing & documents",
     items: [
       { href: "/billing", label: "Billing", icon: "bill" },
@@ -114,7 +110,7 @@ export const NAV_SECTIONS: NavSection[] = [
     ],
   },
   {
-    group: "Move from acc to another",
+    group: "Operations",
     items: [
       {
         href: "/operations/move",
@@ -175,7 +171,11 @@ export const DAILY_NAV_ITEMS = [
   { href: "/discovery/shortlists", label: "Shortlists", description: "Select & compare creators", icon: "list", tone: "shortlists" },
 ] satisfies (NavLinkDef & { description: string; tone: string })[];
 
-export const SECONDARY_NAV_SECTIONS = NAV_SECTIONS.map(section => ({
-  ...section,
-  items: section.group === "Discovery" ? section.items : section.items.filter(item => !DAILY_NAV_ITEMS.some(daily => daily.href === item.href)),
-})).filter(section => section.items.length > 0);
+/** Canonical destinations remain in their groups; pins are shortcuts only. */
+export const SECONDARY_NAV_SECTIONS = NAV_SECTIONS;
+
+export function activeNavigationHref(pathname: string): string | undefined {
+  return NAV_SECTIONS.flatMap(section => section.items)
+    .filter(item => item.href === "/" ? pathname === "/" : pathname === item.href || pathname.startsWith(item.href + "/"))
+    .sort((a, b) => b.href.length - a.href.length)[0]?.href;
+}

@@ -1,380 +1,71 @@
-﻿"use client";
-
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+"use client";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { LogOutIcon } from "lucide-react";
-
 import { AppNavLink } from "@/components/navigation/app-nav-link";
-import {
-  SidebarSuiteIcon,
-} from "@/components/layout/sidebar-suite-icons";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { SidebarSuiteIcon } from "./sidebar-suite-icons";
+import { SidebarNavigationContent } from "./sidebar-navigation-content";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { AppVersion } from "@/components/version/app-version";
 import { signOutAction } from "@/features/auth/actions";
-import { SECONDARY_NAV_SECTIONS as NAV_SECTIONS } from "@/components/layout/app-navigation";
-import { DailyWorkNavigation } from "./daily-work-navigation";
-import {
-  APP_SIDEBAR_PEEK_CLOSE_DELAY_MS,
-  APP_SIDEBAR_WIDTH_COLLAPSED,
-  APP_SIDEBAR_WIDTH_CSS_VAR,
-  APP_SIDEBAR_WIDTH_EXPANDED,
-  getAppSidebarLayoutWidth,
-} from "@/lib/layout/app-sidebar-width";
-import { cn } from "@/lib/utils";
-
+import { APP_SIDEBAR_PEEK_CLOSE_DELAY_MS, APP_SIDEBAR_WIDTH_CSS_VAR, getAppSidebarLayoutWidth } from "@/lib/layout/app-sidebar-width";
 const STORAGE_PINNED = "thinkway-sidebar-pinned";
-const STORAGE_COLLAPSED_GROUPS = "thinkway-sidebar-collapsed-groups-v2";
-const DEFAULT_COLLAPSED = new Set(["Administration"]);
-
-function sectionKey(section: (typeof NAV_SECTIONS)[number]): string {
-  return section.group ?? section.subgroup ?? "section";
-}
-
-function isItemActive(pathname: string, href: string): boolean {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(`${href}/`);
-}
-
-function readPinned(): boolean {
-  if (typeof window === "undefined") return true;
-  try {
-    const pinned = localStorage.getItem(STORAGE_PINNED);
-    if (pinned !== null) return pinned === "true";
-    return true;
-  } catch {
-    return true;
-  }
-}
-
-function readCollapsedGroups(): Set<string> {
-  if (typeof window === "undefined") return new Set(DEFAULT_COLLAPSED);
-  try {
-    const raw = localStorage.getItem(STORAGE_COLLAPSED_GROUPS);
-    if (!raw) return new Set(DEFAULT_COLLAPSED);
-    return new Set(JSON.parse(raw) as string[]);
-  } catch {
-    return new Set(DEFAULT_COLLAPSED);
-  }
-}
-
-function initialsFromEmail(email: string | null | undefined): string {
-  if (!email) return "?";
-  const local = email.split("@")[0] ?? email;
-  return local.slice(0, 2).toUpperCase();
-}
-
 function SignOutMenuItem() {
   const { pending } = useFormStatus();
-  return (
-    <DropdownMenuItem asChild disabled={pending}>
-      <button type="submit" className="w-full cursor-pointer">
-        <LogOutIcon />
-        <span>{pending ? "Signing out..." : "Sign out"}</span>
-      </button>
-    </DropdownMenuItem>
-  );
+  return <DropdownMenuItem asChild disabled={pending}><button type="submit" className="w-full cursor-pointer"><LogOutIcon /><span>{pending ? "Signing out…" : "Sign out"}</span></button></DropdownMenuItem>;
 }
-
-type CollapsibleAppSidebarProps = {
-  userEmail?: string | null;
-};
-
-export function CollapsibleAppSidebar({ userEmail }: CollapsibleAppSidebarProps) {
-  const pathname = usePathname();
+export function SidebarBrand() {
+  return <AppNavLink href="/" aria-label="Thinkway home" className="sb__brand-link"><span className="sb__mark" aria-hidden><s className="a" /><s className="b" /></span><span className="sb__word">THINK<em>WAY</em></span></AppNavLink>;
+}
+export function CollapsibleAppSidebar({ userEmail }: { userEmail?: string | null }) {
   const [pinned, setPinned] = useState(true);
-  const [peekOpen, setPeekOpen] = useState(false);
-  const [collapsedGroups, setCollapsedGroups] = useState(
-    () => new Set(DEFAULT_COLLAPSED)
-  );
-  const [query, setQuery] = useState("");
-  const [hydrated, setHydrated] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
-  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const clearCloseTimer = useCallback(() => {
-    if (closeTimerRef.current) {
-      clearTimeout(closeTimerRef.current);
-      closeTimerRef.current = null;
-    }
-  }, []);
-
-  const openPeek = useCallback(() => {
-    clearCloseTimer();
-    setPeekOpen(true);
-  }, [clearCloseTimer]);
-
-  const scheduleClosePeek = useCallback(() => {
-    clearCloseTimer();
-    closeTimerRef.current = setTimeout(() => {
-      setPeekOpen(false);
-      closeTimerRef.current = null;
-    }, APP_SIDEBAR_PEEK_CLOSE_DELAY_MS);
-  }, [clearCloseTimer]);
-
-  const persistPinned = useCallback((next: boolean) => {
-    setPinned(next);
-    if (next) setPeekOpen(false);
-    localStorage.setItem(STORAGE_PINNED, String(next));
-  }, []);
-
+  const [peek, setPeek] = useState(false);
+  const [focusRequest, setFocusRequest] = useState(0);
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const nav = useRef<HTMLElement>(null);
+  const edge = useRef<HTMLButtonElement>(null);
+  const clearTimer = useCallback(() => { if (timer.current) clearTimeout(timer.current); timer.current = null; }, []);
+  function persistPinned(value: boolean) {
+    setPinned(value);
+    try { localStorage.setItem(STORAGE_PINNED, String(value)); } catch { /* Storage is optional. */ }
+  }
+  function close() { clearTimer(); setPeek(false); if (!pinned) edge.current?.focus(); }
   useEffect(() => {
-    setPinned(readPinned());
-    setCollapsedGroups(readCollapsedGroups());
-    setHydrated(true);
-    return () => {
-      if (closeTimerRef.current) clearTimeout(closeTimerRef.current);
-    };
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    document.documentElement.style.setProperty(
-      APP_SIDEBAR_WIDTH_CSS_VAR,
-      getAppSidebarLayoutWidth(pinned)
-    );
-  }, [pinned, hydrated]);
-
+    // Hydrate the persisted browser preference after the server render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    try { setPinned(localStorage.getItem(STORAGE_PINNED) !== "false"); } catch { /* Storage is optional. */ }
+    return clearTimer;
+  }, [clearTimer]);
+  useEffect(() => { document.documentElement.style.setProperty(APP_SIDEBAR_WIDTH_CSS_VAR, getAppSidebarLayoutWidth(pinned)); }, [pinned]);
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
-      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
-        event.preventDefault();
-        if (!pinned) setPeekOpen(true);
-        window.setTimeout(() => searchRef.current?.focus(), 0);
+      if (window.matchMedia("(max-width: 1023px)").matches) return;
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault(); clearTimer(); setPeek(true); setFocusRequest(value => value + 1);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [pinned]);
-
-  const displayOpen = pinned || peekOpen;
-  const layoutPinned = pinned;
-
-  const filteredSections = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    return NAV_SECTIONS.map((section) => {
-      const items = q
-        ? section.items.filter((item) => item.label.toLowerCase().includes(q))
-        : section.items;
-      return { ...section, items };
-    }).filter((section) => section.items.length > 0);
-  }, [query]);
-
-  const toggleGroup = useCallback((key: string) => {
-    setCollapsedGroups((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      localStorage.setItem(STORAGE_COLLAPSED_GROUPS, JSON.stringify([...next]));
-      return next;
-    });
-  }, []);
-
-  const layoutWidth = layoutPinned
-    ? APP_SIDEBAR_WIDTH_EXPANDED
-    : APP_SIDEBAR_WIDTH_COLLAPSED;
-  const panelWidth = displayOpen ? APP_SIDEBAR_WIDTH_EXPANDED : "0px";
-  const showTip = !pinned && !displayOpen;
-
-  const email = userEmail ?? null;
-  const initials = initialsFromEmail(email);
-
-  return (
-    <div
-      data-app-sidebar-root
-      className={cn(
-        "relative hidden shrink-0 self-stretch transition-[width] duration-200 ease-out lg:sticky lg:top-0 lg:block lg:h-full lg:max-h-full",
-        displayOpen ? "z-[70]" : "z-30"
-      )}
-      style={{ width: layoutWidth }}
-    >
-      {/* Edge hit target — mouse to the left edge opens the drawer. */}
-      {!pinned ? (
-        <div
-          className="pointer-events-auto fixed inset-y-0 left-0 z-[65] w-3"
-          aria-hidden
-          onPointerEnter={openPeek}
-        />
-      ) : null}
-
-      {/* Collapsed affordance: thin center pull tip only (no icons). */}
-      {showTip ? (
-        <button
-          type="button"
-          className="thinkway-app-sidebar-tip fixed inset-y-0 left-0 z-[66]"
-          aria-label="Open navigation"
-          onPointerEnter={openPeek}
-          onClick={() => {
-            openPeek();
-            persistPinned(true);
-          }}
-        >
-          <span className="thinkway-app-sidebar-tip-bar" aria-hidden />
-          <span className="thinkway-app-sidebar-tip-nub" aria-hidden>
-            ›
-          </span>
-        </button>
-      ) : null}
-
-      <nav
-        className={cn(
-          "tw-sb2",
-          displayOpen && "open",
-          pinned && "pin",
-          !displayOpen && "tw-sb2--hidden",
-          !pinned && displayOpen
-            ? "fixed inset-y-0 left-0 z-[70]"
-            : pinned
-              ? "absolute inset-y-0 left-0 z-[70]"
-              : "fixed inset-y-0 left-0 z-[70] pointer-events-none"
-        )}
-        style={{ width: panelWidth }}
-        aria-label="Main navigation"
-        aria-hidden={!displayOpen}
-        onPointerEnter={pinned ? undefined : openPeek}
-        onPointerLeave={pinned ? undefined : scheduleClosePeek}
-      >
-        <div className="tw-sb2__b">
-          <span className="tw-logo">
-            <button
-              type="button"
-              className="tw-logo__mk"
-              aria-label={pinned ? "Unpin navigation" : "Pin navigation"}
-              onClick={() => persistPinned(!pinned)}
-            />
-            <AppNavLink href="/" className="tw-logo__tx" title="Thinkway home">
-              THINK<span>WAY</span>
-            </AppNavLink>
-          </span>
-          <span className="tw-sp" />
-          <button
-            type="button"
-            className={cn("tw-ic2", pinned && "on")}
-            aria-label="Pin navigation"
-            aria-pressed={pinned}
-            onClick={() => persistPinned(!pinned)}
-          >
-            <SidebarSuiteIcon name="pin" />
-          </button>
-          <button
-            type="button"
-            className="tw-ic2"
-            aria-label="Collapse navigation"
-            onClick={() => {
-              if (pinned) persistPinned(false);
-              else {
-                clearCloseTimer();
-                setPeekOpen(false);
-              }
-            }}
-          >
-            <SidebarSuiteIcon name="collapse" />
-          </button>
-        </div>
-
-        <div className="tw-sb2__s">
-          <span className="w">
-            <SidebarSuiteIcon name="search" />
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search navigation…"
-              aria-label="Search navigation"
-              onFocus={() => {
-                if (!pinned) openPeek();
-              }}
-            />
-            <span className="kbd">⌘K</span>
-          </span>
-        </div>
-
-        <DailyWorkNavigation pathname={pathname} query={query} />
-        <div className="tw-sb2__n">
-          {filteredSections.map((section, index) => {
-            const key = sectionKey(section);
-            const closed = collapsedGroups.has(key) && !query.trim();
-            const showPrimary = Boolean(section.group);
-            const showSub = Boolean(section.subgroup);
-
-            return (
-              <div key={`${key}-${index}`} className={section.group === "Discovery" ? "tw-discovery-nav" : undefined}>
-                {showPrimary ? <div className="tw-gsep" /> : null}
-                {showPrimary ? (
-                  <button
-                    type="button"
-                    className="tw-grp"
-                    aria-expanded={!closed}
-                    onClick={() => toggleGroup(key)}
-                  >
-                    {section.group}
-                    <span className="ch" aria-hidden>
-                      ▾
-                    </span>
-                  </button>
-                ) : null}
-                {showSub ? (
-                  <button
-                    type="button"
-                    className="tw-grp sub"
-                    aria-expanded={!closed}
-                    onClick={() => toggleGroup(key)}
-                  >
-                    {section.subgroup}
-                    <span className="ch" aria-hidden>
-                      ▾
-                    </span>
-                  </button>
-                ) : null}
-                {closed
-                  ? null
-                  : section.items.map((item) => {
-                      const active = isItemActive(pathname, item.href);
-                      const count =
-                        typeof item.count === "number" && item.count > 0
-                          ? item.count
-                          : null;
-                      return (
-                        <AppNavLink
-                          key={item.href}
-                          href={item.href}
-                          className={cn(
-                            "tw-li",
-                            active && "on",
-                            count != null && "dot"
-                          )}
-                          aria-current={active ? "page" : undefined}
-                          title={item.label}
-                        >
-                          <SidebarSuiteIcon name={item.icon} />
-                          <span className="lb">{item.label}</span>
-                          {count != null ? <em>{count}</em> : null}
-                          <span className="tip">
-                            {item.label}
-                            {count != null ? ` · ${count}` : ""}
-                          </span>
-                        </AppNavLink>
-                      );
-                    })}
-              </div>
-            );
-          })}
-        </div>
-
-        <SidebarAccount email={email} initials={initials} />
-      </nav>
-    </div>
-  );
+  }, [clearTimer]);
+  const open = pinned || peek;
+  return <div data-app-sidebar-root className="tw-sb relative hidden shrink-0 self-stretch lg:sticky lg:top-0 lg:block lg:h-full lg:max-h-full" style={{ width: getAppSidebarLayoutWidth(pinned), zIndex: open ? 70 : 30 }}>
+    {!pinned && <button ref={edge} type="button" className="sb-edge" aria-label="Open navigation" onPointerEnter={() => { clearTimer(); setPeek(true); }} onClick={() => { clearTimer(); setPeek(true); setFocusRequest(value => value + 1); }}><span className="sb-edge__grip" aria-hidden>›</span></button>}
+    <nav ref={nav} aria-label="Main navigation" aria-hidden={!open} inert={!open} className={"sb" + (!open ? " sb--hidden" : "")} style={{ position: pinned ? "absolute" : "fixed", inset: "0 auto 0 0", zIndex: 70, boxShadow: !pinned && open ? "var(--s-e3)" : undefined }}
+      onPointerEnter={clearTimer} onPointerLeave={() => {
+        if (pinned || nav.current?.contains(document.activeElement) || document.querySelector('[data-slot="dropdown-menu-content"]')) return;
+        clearTimer(); timer.current = setTimeout(() => setPeek(false), APP_SIDEBAR_PEEK_CLOSE_DELAY_MS);
+      }} onBlur={event => { if (!pinned && !event.currentTarget.contains(event.relatedTarget) && !document.querySelector('[data-slot="dropdown-menu-content"]')) { clearTimer(); timer.current = setTimeout(() => setPeek(false), APP_SIDEBAR_PEEK_CLOSE_DELAY_MS); } }}>
+      <div className="sb__brand"><SidebarBrand /><span className="sb__ctl">
+        <button type="button" className="sb-ic" aria-label="Keep navigation open" aria-pressed={pinned} onClick={() => { clearTimer(); setPeek(true); persistPinned(!pinned); }}><SidebarSuiteIcon name="pin" /></button>
+        <button type="button" className="sb-ic" aria-label="Close navigation" onClick={() => { clearTimer(); persistPinned(false); setPeek(false); }}><SidebarSuiteIcon name="collapse" /></button>
+      </span></div>
+      <SidebarNavigationContent focusRequest={focusRequest} onNavigate={() => { if (!pinned) setPeek(false); }} onClose={pinned ? undefined : close} />
+      <div className="sb__acct"><SidebarAccount email={userEmail ?? null} initials={userEmail?.split("@")[0].slice(0,2).toUpperCase() ?? "?"} /></div>
+    </nav>
+  </div>;
 }
 
-function SidebarAccount({
+export function SidebarAccount({
   email,
   initials,
 }: {
@@ -384,16 +75,16 @@ function SidebarAccount({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <button type="button" className="tw-sb2__a">
-          <span className="av" aria-hidden>
+        <button type="button" className="sb__acct-b">
+          <span className="sb__av" aria-hidden>
             {initials}
           </span>
-          <span className="m">
-            <b>{email ?? "Signed in"}</b>
-            <u>Account</u>
+          <span className="sb__acct-t">
+            <b>{email?.split("@")[0] ?? "Signed in"}</b>
+            <u>{email ?? "Account"}</u>
           </span>
-          <span className="tw-sp" />
-          <span className="tw-ic2" aria-hidden>
+
+          <span className="sb-ic" aria-hidden>
             <SidebarSuiteIcon name="chevron" />
           </span>
         </button>
@@ -402,7 +93,7 @@ function SidebarAccount({
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-medium">Account</span>
-            <span className="truncate text-xs text-muted-foreground">
+            <span className="break-all text-xs text-muted-foreground">
               {email ?? "Signed in"}
             </span>
           </div>
