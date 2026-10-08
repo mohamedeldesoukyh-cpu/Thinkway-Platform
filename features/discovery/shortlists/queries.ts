@@ -21,10 +21,7 @@ import {
   queryShortlistItemsWithCollapseFallback,
 } from "@/lib/discovery/shortlist-item-collapse-select";
 
-import {
-  readHideCostAndFees,
-  readShowOriginalCurrency,
-} from "@/lib/commercial/client-original-currency";
+import { loadClientWorkspaceDisplayFlags } from "@/lib/commercial/client-original-currency-persist";
 import { readShortlistDisplayCurrency } from "@/lib/discovery/shortlist-currency";
 
 import { loadClientWorkspaceListLinks } from "@/features/client-workspace/list-client-workspace-links";
@@ -631,8 +628,7 @@ export async function getShortlistDetail(
     linkedQuotations,
     canManage: isOwner || isAdmin || isPrivilegedRole,
     canApprove: isAdmin || isPrivilegedRole,
-    showOriginalCurrency: readShowOriginalCurrency(row.metadata),
-    hideCostAndFees: readHideCostAndFees(row.metadata),
+    ...await loadClientWorkspaceDisplayFlags(supabase, { shortlistId }),
     creatorListCost: readCreatorListCost(row.metadata),
   };
 }

@@ -14,49 +14,43 @@ const EMPTY_FLAGS: ClientWorkspaceDisplayFlags = {
   hideCostAndFees: false,
 };
 
-function mergeDisplayFlags(
-  current: ClientWorkspaceDisplayFlags,
-  next: ClientWorkspaceDisplayFlags
-): ClientWorkspaceDisplayFlags {
-  return {
-    showOriginalCurrency: current.showOriginalCurrency || next.showOriginalCurrency,
-    hideCostAndFees: current.hideCostAndFees || next.hideCostAndFees,
-  };
-}
-
 export async function loadClientWorkspaceDisplayFlags(
   supabase: Supabase,
   input: { quotationId?: string | null; shortlistId?: string | null }
 ): Promise<ClientWorkspaceDisplayFlags> {
-  const quotationId = input.quotationId?.trim() || null;
+  let quotationId = input.quotationId?.trim() || null;
   const shortlistId = input.shortlistId?.trim() || null;
-  let flags = EMPTY_FLAGS;
+  let shortlistMetadata: unknown = null;
 
+  if (shortlistId) {
+    const { data, error } = await supabase.from("discovery_shortlists")
+      .select("metadata, quotation_id").eq("id", shortlistId).maybeSingle();
+    if (error) throw new Error(error.message);
+    shortlistMetadata = data?.metadata;
+    quotationId ??= data?.quotation_id ?? null;
+    if (!quotationId) {
+      const { data: linked, error: linkedError } = await supabase.from("quotations")
+        .select("id").eq("shortlist_id", shortlistId).eq("is_archived", false)
+        .neq("status", "archived").order("created_at", { ascending: false })
+        .limit(1).maybeSingle();
+      if (linkedError) throw new Error(linkedError.message);
+      quotationId = linked?.id ?? null;
+    }
+  }
+
+  // The active quotation is authoritative, including OFF/default values.
+  // OR-ing the shortlist's stale flags previously turned OFF back into ON.
   if (quotationId) {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("quotations")
       .select("metadata")
       .eq("id", quotationId)
       .maybeSingle();
-    flags = mergeDisplayFlags(
-      flags,
-      readClientWorkspaceDisplayFlags((data as { metadata?: unknown } | null)?.metadata)
-    );
+    if (error) throw new Error(error.message);
+    if (data) return readClientWorkspaceDisplayFlags(data.metadata);
   }
 
-  if (shortlistId) {
-    const { data } = await supabase
-      .from("discovery_shortlists")
-      .select("metadata")
-      .eq("id", shortlistId)
-      .maybeSingle();
-    flags = mergeDisplayFlags(
-      flags,
-      readClientWorkspaceDisplayFlags((data as { metadata?: unknown } | null)?.metadata)
-    );
-  }
-
-  return flags;
+  return shortlistId ? readClientWorkspaceDisplayFlags(shortlistMetadata) : EMPTY_FLAGS;
 }
 
 export async function loadClientShowOriginalCurrency(
@@ -114,6 +108,18 @@ export async function persistClientWorkspaceDisplayFlags(
     return { ok: false, message: "Select a quotation or shortlist first." };
   }
 
+  // Copy the complete effective settings so changing either toggle repairs any
+  // historical disagreement in the other toggle as well.
+  let synchronizedPatch: ClientWorkspaceDisplayFlags;
+  try {
+    synchronizedPatch = {
+      ...await loadClientWorkspaceDisplayFlags(supabase, { quotationId, shortlistId }),
+      ...input.patch,
+    };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Unable to load display settings." };
+  }
+
   if (quotationId) {
     const { data, error } = await supabase
       .from("quotations")
@@ -126,7 +132,7 @@ export async function persistClientWorkspaceDisplayFlags(
       .update({
         metadata: metadataWithClientWorkspaceDisplayPatch(
           (data as { metadata?: unknown }).metadata,
-          input.patch
+          synchronizedPatch
         ),
       } as never)
       .eq("id", quotationId);
@@ -145,7 +151,7 @@ export async function persistClientWorkspaceDisplayFlags(
       .update({
         metadata: metadataWithClientWorkspaceDisplayPatch(
           (data as { metadata?: unknown }).metadata,
-          input.patch
+          synchronizedPatch
         ),
       } as never)
       .eq("id", shortlistId);
