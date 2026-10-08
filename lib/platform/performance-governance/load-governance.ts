@@ -80,20 +80,21 @@ export type BudgetCheckReport = {
 };
 
 function readJson<T>(rel: string): T | null {
-  const full = join(/* turbopackIgnore: true */ process.cwd(), rel);
+  // Keep deployment tracing inside the report directory instead of the project root.
+  const full = join(process.cwd(), "performance", rel);
   if (!existsSync(full)) return null;
   return JSON.parse(readFileSync(full, "utf8")) as T;
 }
 
 export function loadPerformanceGovernance() {
   return {
-    budgets: readJson<PerformanceBudgets>("performance/budgets.json"),
-    baseline: readJson<PerformanceBaseline>("performance/baseline.json"),
-    report: readJson<PerformanceReport>("performance/reports/latest.json"),
-    check: readJson<BudgetCheckReport>("performance/reports/latest-check.json"),
-    rumSlos: readJson<Record<string, unknown>>("performance/monitoring/rum-slos.json"),
-    apiSlos: readJson<Record<string, unknown>>("performance/monitoring/api-slos.json"),
-    sqlSlos: readJson<Record<string, unknown>>("performance/monitoring/sql-slos.json"),
+    budgets: readJson<PerformanceBudgets>("budgets.json"),
+    baseline: readJson<PerformanceBaseline>("baseline.json"),
+    report: readJson<PerformanceReport>("reports/latest.json"),
+    check: readJson<BudgetCheckReport>("reports/latest-check.json"),
+    rumSlos: readJson<Record<string, unknown>>("monitoring/rum-slos.json"),
+    apiSlos: readJson<Record<string, unknown>>("monitoring/api-slos.json"),
+    sqlSlos: readJson<Record<string, unknown>>("monitoring/sql-slos.json"),
   };
 }
 

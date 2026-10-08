@@ -73,6 +73,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // Each checkout is self-contained, including managed Git worktrees.
+  turbopack: { root: __dirname },
   outputFileTracingIncludes: {
     '/api/rate-cards/*/export': ['./public/report-assets/nbe-logo-3d-v1.png'],
       '/*': [

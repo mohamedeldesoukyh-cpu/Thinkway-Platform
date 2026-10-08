@@ -1,4 +1,10 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+/* Scan runtime UI sources, not design prototypes, reports or local QA artifacts. */
+@source "./";
+@source "../components";
+@source "../features";
+@source "../hooks";
+@source "../lib";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "./thinkway-design-tokens.css";
