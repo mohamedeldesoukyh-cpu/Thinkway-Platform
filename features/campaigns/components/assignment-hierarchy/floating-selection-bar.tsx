@@ -259,23 +259,23 @@ export function FloatingSelectionBar({
           <SelectionMetric
             label="Cost"
             value={money(totals.cost)}
-            className="hidden sm:flex"
+            className="flex"
           />
           <SelectionMetric
             label="GP"
             value={money(totals.gp)}
             tone={mixed ? undefined : "ok"}
-            className="hidden md:flex"
+            className="flex"
           />
           <SelectionMetric
             label="Total billing"
             value={money(totals.totalBilling)}
-            className="hidden lg:flex"
+            className="flex"
           />
           <SelectionMetric
             label="Deliverables"
             value={String(totals.deliverables)}
-            className="hidden md:flex"
+            className="flex"
           />
         </span>
 

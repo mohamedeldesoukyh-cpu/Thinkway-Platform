@@ -65,7 +65,7 @@ export function CreatorSearchSortToolbar({
             onSortChange({ ...sort, direction: value as CreatorSearchSortDirection })
           }
         >
-          <SelectTrigger className="hidden h-8 w-[108px] border-border bg-background text-xs sm:flex">
+          <SelectTrigger aria-label="Sort direction" className="flex h-8 w-[108px] border-border bg-background text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

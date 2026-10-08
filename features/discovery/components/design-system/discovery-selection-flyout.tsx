@@ -169,7 +169,7 @@ export function DiscoverySelectionFlyout({
                 type="button"
                 onClick={onSelectAll}
                 disabled={busy}
-                className="hidden shrink-0 text-[11px] font-medium text-white/80 hover:text-white sm:inline-flex"
+                className="inline-flex shrink-0 text-[11px] font-medium text-white/80 hover:text-white"
               >
                 Select all {selectableCount} shown
               </button>
@@ -249,7 +249,7 @@ function DiscoveryFlyoutSecondaryButton({
         <DropdownMenuTrigger asChild>
           <button type="button" disabled={disabled} className={buttonClass}>
             {Icon ? <Icon className="size-3.5 shrink-0" aria-hidden /> : null}
-            <span className="hidden sm:inline">{action.label}</span>
+            <span>{action.label}</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -284,7 +284,7 @@ function DiscoveryFlyoutSecondaryButton({
       className={buttonClass}
     >
       {Icon ? <Icon className="size-3.5 shrink-0" aria-hidden /> : null}
-      <span className="hidden sm:inline">{action.label}</span>
+      <span>{action.label}</span>
     </button>
   );
 }

@@ -224,7 +224,7 @@ export function PlatformFloatingBarSelection({
           type="button"
           size="xs"
           variant="ghost"
-          className="hidden shrink-0 text-xs text-muted-foreground hover:text-foreground sm:inline-flex"
+          className="inline-flex shrink-0 text-xs text-muted-foreground hover:text-foreground"
           onClick={onSelectAll}
           disabled={busy}
         >

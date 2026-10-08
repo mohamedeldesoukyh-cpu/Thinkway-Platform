@@ -840,7 +840,7 @@ export function ShortlistWorkspace({
         </div>}
         freezeOnScroll={false}
         actions={
-          <div className="flex items-center gap-2">
+          <div className="shortlist-header-actions flex min-w-0 flex-wrap items-center gap-2">
             <EntityPrevNext
               entity="shortlists"
               currentId={detail.id}
@@ -902,7 +902,7 @@ export function ShortlistWorkspace({
           canChangeCurrency={canEditDetails}
           hasLink={hasLink}
           canSendToClient={detail.creators.some((item) => item.item_status !== "cancelled")}
-          canAddCreators={false}
+          canAddCreators={editable && detail.canManage}
           busy={isPending}
           onShowLink={handleShowLink}
           onSendToClient={handleSendToClient}

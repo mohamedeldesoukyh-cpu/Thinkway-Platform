@@ -111,7 +111,7 @@ export function ShortlistHeaderActions({
   const viewCount = `${displayCurrency}${hideCostAndFees ? " · hidden" : ""}`;
 
   return (
-    <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+    <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 md:justify-end">
       <GenerateOutputsLauncher
         seed={seed}
         tab="outputs"

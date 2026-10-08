@@ -1,4 +1,93 @@
 /* Shared viewport rules apply to dashboard, public pages and both portals. */
+/* Mobile workspaces keep the same actions and tables as desktop. Headers must
+   scroll away: a frozen desktop masthead can fill an entire iPhone viewport. */
+@media (max-width: 1023px) {
+  .discovery-suite .tw-frozen[data-discovery-frozen],
+  .quotation-editor-rd4.discovery-suite > .quotation-frozen-header,
+  .campaign-detail-suite.thinkway-campaign-workspace .tw-frozen {
+    position: static;
+    flex-shrink: 0;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .discovery-suite .tw-frozen[data-discovery-frozen] .tw-mr,
+  .campaign-detail-suite.thinkway-campaign-workspace .tw-frozen.is-mini .tw-mr {
+    display: flex;
+    flex-wrap: wrap;
+    min-width: 0;
+  }
+  .discovery-suite .tw-frozen[data-discovery-frozen] .tw-mr > div {
+    min-width: 0;
+    max-width: 100%;
+    flex-wrap: wrap;
+  }
+  .discovery-suite .tw-frozen[data-discovery-frozen] .tw-ms2 i,
+  .campaign-detail-suite.thinkway-campaign-workspace .tw-ms2 i {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+  .discovery-suite .tw-frozen[data-discovery-frozen] .tw-jump {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+  }
+  .discovery-suite .tw-frozen[data-discovery-frozen] .tw-jump a { flex-shrink: 0; }
+  .shortlist-detail-workspace.discovery-suite { min-width: 0; }
+  .discovery-suite .tw-sc { max-width: 100%; touch-action: pan-x pan-y; }
+
+  /* One vertical scrollport on mobile; desktop keeps its pinned chrome. */
+  .campaign-detail-suite.thinkway-campaign-workspace [data-campaign-persistent-shell] > .thinkway-aurora-wrap {
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+  .campaign-detail-suite.thinkway-campaign-workspace [data-campaign-shell="chrome"],
+  .campaign-detail-suite.thinkway-campaign-workspace [data-campaign-shell="content"] {
+    flex: none;
+    min-height: auto;
+  }
+  .campaign-detail-suite.thinkway-campaign-workspace [data-campaign-shell="content"] {
+    overflow: visible;
+    padding-bottom: calc(12rem + env(safe-area-inset-bottom, 0px));
+  }
+  .campaign-detail-suite.thinkway-campaign-workspace .tw-step2 .enterprise-tabs-list {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+  }
+  .campaign-detail-suite.thinkway-campaign-workspace .tw-step2 .enterprise-tab { flex-shrink: 0; }
+
+  /* Custom calculator is not a Radix dialog. Let the whole panel scroll so
+     the totals and Apply/Cancel remain reachable on short Safari viewports. */
+  .discovery-suite .tw-calcp[data-quotation-calculator] {
+    width: calc(100vw - 1rem);
+    max-width: calc(100vw - 1rem);
+    bottom: calc(.5rem + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100dvh - 5rem - env(safe-area-inset-bottom, 0px));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .discovery-suite .tw-calcp[data-quotation-calculator] > * { flex-shrink: 0; }
+  .discovery-suite .tw-calcp[data-quotation-calculator] .tw-calcp__b { flex: none; overflow-x: auto; }
+  .discovery-suite .tw-calcp[data-quotation-calculator] .tw-calcp__a { flex-wrap: wrap; }
+  .discovery-suite .tw-selbar[data-quotation-selbar] {
+    width: calc(100vw - 1rem);
+    max-width: calc(100vw - 1rem);
+    max-height: 38dvh;
+    overflow-y: auto;
+    bottom: calc(.5rem + env(safe-area-inset-bottom, 0px));
+  }
+  .discovery-suite .tw-selbar[data-quotation-selbar] .acts { flex-wrap: wrap; }
+  .quotation-editor-rd4.discovery-suite:has([data-quotation-selbar]) {
+    padding-bottom: calc(40dvh + env(safe-area-inset-bottom, 0px));
+  }
+  .discovery-selection-flyout__bar { scrollbar-width: thin; }
+  .discovery-selection-flyout__bar button,
+  .discovery-suite .tw-b,
+  .discovery-suite .tw-x,
+  .campaign-detail-suite.thinkway-campaign-workspace .tw-selbar-btn { min-height: 44px; }
+  .discovery-suite .tw-x { min-width: 44px; }
+}
+
 @media (max-width: 1023px) {
   /* Keep the virtualized list's own scroller, but let its large header scroll
      offscreen instead of consuming all of the list's available height. */

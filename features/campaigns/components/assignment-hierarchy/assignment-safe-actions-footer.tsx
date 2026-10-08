@@ -234,17 +234,17 @@ export function AssignmentSafeActionsFooter({
           <SelectionMetric
             label="Cost"
             value={formatMoney(totals.cost, displayCurrency)}
-            className="hidden sm:inline"
+            className="inline"
           />
           <SelectionMetric
             label="GP"
             value={formatMoney(totals.gp, displayCurrency)}
-            className="hidden md:inline [&_span:last-child]:text-primary"
+            className="inline [&_span:last-child]:text-primary"
           />
           <SelectionMetric
             label="Total billing"
             value={formatMoney(totals.totalBilling, displayCurrency)}
-            className="hidden lg:inline"
+            className="inline"
           />
           <span className="shrink-0 rounded-md border border-border/60 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
             {currencyLabel}
