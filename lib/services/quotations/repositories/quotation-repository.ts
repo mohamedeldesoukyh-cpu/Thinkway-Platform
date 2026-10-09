@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { shortlistClientConflict } from "@/lib/quotations/shortlist-client-lock";
+import { resolveShortlistClient } from "../resolve-shortlist-client";
 
 import { REPORTING_CURRENCY } from "@/lib/commercial/fx-aggregation";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
@@ -550,11 +551,13 @@ export async function fetchShortlistHeader(
   shortlistId: string
 ) {
   // Prefer metadata over a dedicated currency column (may be missing pre-migration).
-  return supabase
+  const result = await supabase
     .from("discovery_shortlists")
     .select("id, name, client_id, brand_id, campaign_header_id, metadata")
     .eq("id", shortlistId)
     .maybeSingle();
+  if (result.error || !result.data) return result;
+  return resolveShortlistClient(supabase, result.data);
 }
 
 export async function fetchCampaignAssignmentsByIds(

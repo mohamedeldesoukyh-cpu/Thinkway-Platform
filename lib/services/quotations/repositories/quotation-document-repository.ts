@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { resolveShortlistClient } from "../resolve-shortlist-client";
 
 import type { Database } from "@/types/database";
 
@@ -70,11 +71,13 @@ export async function fetchLinkedShortlistSummary(
   supabase: SupabaseClient<Database>,
   shortlistId: string
 ) {
-  return supabase
+  const result = await supabase
     .from("discovery_shortlists")
     .select("id, serial_number, client_id, brand_id")
     .eq("id", shortlistId)
     .maybeSingle();
+  if (result.error || !result.data) return result;
+  return resolveShortlistClient(supabase, result.data);
 }
 
 export async function fetchLinkedCampaignSummary(
