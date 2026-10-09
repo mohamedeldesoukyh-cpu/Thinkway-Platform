@@ -1,6 +1,6 @@
 import { QuotationText } from "./quotation-design-locale";
 
-import { useCallback, useTransition, useState } from "react";
+import { useCallback, useEffect, useTransition, useState } from "react";
 import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
 import {
   CopyIcon,
@@ -104,6 +104,17 @@ function QuotationPackLineRow({
 }: LineRowProps) {
   const [pending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!expanded) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || event.defaultPrevented) return;
+      // Let nested dialogs and menus handle their own Escape key first.
+      if (event.target instanceof Element && event.target.closest('[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')) return;
+      setExpanded(false);
+    };
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [expanded]);
   const confirmDelete = useConfirmDelete();
   const manualSave = useQuotationManualSave();
   const resolved = resolveQuotationRowDraft(item, draft);
@@ -244,7 +255,12 @@ function QuotationPackLineRow({
 
   return (
     <div className={`q-line-group ${selected ? "is-sel" : ""}`}>
-      <div className={`q-row q-live-row ${selected ? "is-sel" : ""}`} role="row">
+      <div className={`q-row q-live-row ${selected ? "is-sel" : ""}`} role="row" onClick={(event) => {
+        if (event.defaultPrevented || !(event.target instanceof Element) || !event.currentTarget.contains(event.target)) return;
+        if (event.target.closest('button, a, input, textarea, select, label, [role="button"], [role="checkbox"], [role="switch"], [role="combobox"], [contenteditable="true"]')) return;
+        if (window.getSelection()?.toString()) return;
+        setExpanded((open) => !open);
+      }}>
         <div className="q-cell-select" role="cell"><input type="checkbox" className="q-ck" checked={selected} onChange={onToggleSelect} aria-label={`Select ${name} ${optionLabel}`} disabled={!canManage} /></div>
         <div className="q-cell-creator" role="cell">
           <DiscoverySuiteCreatorCell name={name} handleLabel={handleLabel} index={index}

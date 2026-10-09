@@ -177,17 +177,21 @@ export function QuotationCommercialMetricsBand({
       </p>
     ) : null}
     <div className="q-fin" aria-label="Quotation commercial metrics">
+      <div className="q-fin-group">
       <div className="q-finlbl priv"><s aria-hidden /><QuotationText>Internal — never shown to the client</QuotationText></div>
       <MetricItem internal label="Base cost (internal creator / vendor cost)" value={base.value} unit={base.unit} original={originalLabels(originalTotals, "totalCost")} staged={hasDraftEdits} />
       <MetricItem internal label="GP amount" value={gp.value} unit={gp.unit} tone={showAgencyFeeConflict ? agencyFeeGpTone : gpTone} original={originalLabels(originalTotals, "totalGpMargin")} staged={hasDraftEdits} />
       <MetricItem internal label="GP %" value={`${(projected?.marginPct ?? totalGpPct).toFixed(1)}%`} tone={showAgencyFeeConflict ? agencyFeePctTone : gpTone} staged={hasDraftEdits} />
       <MetricItem internal label="Markup / FM %" value={`${(projected?.markupPct ?? totalPmPct).toFixed(1)}%`} />
+      </div>
+      <div className="q-fin-group">
       <div className="q-finlbl"><s aria-hidden /><QuotationText>Client-facing</QuotationText></div>
       <div className="q-m q-currency"><CommercialCurrencySelect label={translate("Display currency")} layout="metric" value={displayCurrency} onChange={onDisplayCurrencyChange ?? (() => undefined)} disabled={currencyDisabled || !onDisplayCurrencyChange} /></div>
       <MetricItem label="Client cost before agency fees" {...moneyParts(totalRevenueEgp - totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.revenue)} staged={hasDraftEdits} />
       <MetricItem label="Agency fees (AF)" {...moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.af)} staged={hasDraftEdits} />
       <MetricItem label="Total investment" value={client.value} unit={client.unit} original={originalLabels(originalTotals, "totalClientCost")} staged={hasDraftEdits} />
       {stagedVsSavedDisagree && savedClient && <MetricItem label="Saved client cost" value={savedClient.value} unit={savedClient.unit} tone="amber" />}
+      </div>
     </div>
 
     {stagedVsSavedDisagree && savedClient ? (
