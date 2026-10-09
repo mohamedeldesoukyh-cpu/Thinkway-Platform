@@ -151,10 +151,7 @@ export function ShortlistEditDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn(
-          "overflow-hidden border border-white/70 bg-white/75 shadow-[0_24px_64px_-14px_rgba(15,23,42,0.16)]",
-          "ring-1 ring-black/[0.04] backdrop-blur-2xl backdrop-saturate-150",
-          "dark:border-white/10 dark:bg-[rgba(24,24,27,0.72)] dark:ring-white/[0.06]",
-          "sm:max-w-lg"
+          "sl-redesign sl-dialog sl-form-dialog"
         )}
       >
         <DialogHeader>

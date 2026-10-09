@@ -24,7 +24,7 @@ export function SubmitShortlistDialog({
 }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="sl-redesign sl-dialog sl-form-dialog">
         <DialogHeader>
           <DialogTitle>Submit entire shortlist?</DialogTitle>
           <DialogDescription>

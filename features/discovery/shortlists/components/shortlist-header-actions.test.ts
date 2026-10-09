@@ -25,19 +25,22 @@ const bulk = readFileSync(
 );
 
 describe("shortlist header button layer", () => {
-  it("groups View on the title row and keeps one primary", () => {
+  it("keeps document actions in the header and Add creators in the table toolbar", () => {
     assert.match(workspace, /ShortlistHeaderActions/);
     assert.match(header, /aria-label="View settings"/);
-    assert.match(header, /\+ Add creators/);
+    assert.doesNotMatch(header, /\+ Add creators/);
+    assert.match(workspace, /onAddCreators/);
     assert.match(header, /Complete brief/);
     assert.match(header, /OpenCampaignStudioLauncher/);
     assert.match(header, /GenerateOutputsLauncher/);
     assert.match(header, /tone="toolbar"/);
   });
 
-  it("uses shared Overlay F via shortlist adapter (Preview · Export · Client link · Send)", () => {
+  it("keeps output formats and creator selection in the centered chooser", () => {
     assert.match(header, /ShortlistDocumentOutputToolbar/);
     assert.match(adapter, /DocumentOutputToolbar/);
+    assert.match(adapter, /sl-output-dialog/);
+    assert.match(adapter, /DocumentCreatorSelectionDialog/);
     assert.match(adapter, /SHORTLIST_DOCUMENT_OUTPUT_FORMATS/);
     assert.match(adapter, /id: "csv"/);
     assert.match(shared, /formats: DocumentOutputFormatOption/);
@@ -54,15 +57,10 @@ describe("shortlist header button layer", () => {
     assert.doesNotMatch(workspace, />Send to Client</);
   });
 
-  it("makes Submit the selection primary and keeps the five visible bulk actions", () => {
-    assert.match(bulk, /Submit \$\{selectedCount\} selected/);
-    const compareAt = bulk.indexOf('id: "compare"');
-    const refreshAt = bulk.indexOf('id: "refresh-metrics"');
-    const exportAt = bulk.indexOf('id: "export"');
-    const quoteAt = bulk.indexOf('id: "quotation"');
-    const sendAt = bulk.indexOf('id: "send-client"');
-    assert.ok(compareAt > 0 && refreshAt > compareAt);
-    assert.ok(exportAt > refreshAt && quoteAt > exportAt);
-    assert.ok(sendAt > quoteAt);
+  it("preserves bulk actions and permission gates in the compact selection bar", () => {
+    for (const label of ["Submit selected", "Compare", "Refresh metrics", "Export CSV", "Generate quotation", "Send to client", "Remove from shortlist"]) assert.ok(bulk.includes(label), label);
+    assert.match(bulk, /!p.canManage/);
+    assert.match(bulk, /!a.eligible/);
+    assert.match(bulk, /selectedCount < 2/);
   });
 });

@@ -116,6 +116,7 @@ import type {
   ShortlistCampaignOption,
   ShortlistClientOption,
   ShortlistDetail,
+  ShortlistLinkedQuotation,
 } from "../types";
 import { AddCreatorsDrawer } from "./add-creators-drawer";
 import { GenerateQuotationShortlistDialog } from "./generate-quotation-shortlist-dialog";
@@ -543,6 +544,7 @@ export function ShortlistWorkspace({
       return;
     }
     if (selectedCount > 0) {
+      setQuoteAllOpen(false);
       runQuotation(selectedItemIdList);
       return;
     }
@@ -556,6 +558,7 @@ export function ShortlistWorkspace({
       return;
     }
     if (selectedCount > 0) {
+      setQuoteAllOpen(false);
       handleAddToQuotation(selectedItemIdList);
       return;
     }
@@ -563,8 +566,8 @@ export function ShortlistWorkspace({
     handleAddToQuotation(detail.creators.map((item) => item.item_id));
   }
 
-  function handleGenerateNewVersion() {
-    if (!latestQuotation) {
+  function handleGenerateNewVersion(quotation: ShortlistLinkedQuotation | null = latestQuotation) {
+    if (!quotation) {
       if (selectedCount === 0) {
         setQuoteAllOpen(true);
         return;
@@ -572,9 +575,9 @@ export function ShortlistWorkspace({
       handleGenerateNewQuotation();
       return;
     }
-    if (canGenerateQuotationVersion(latestQuotation.status)) {
+    if (canGenerateQuotationVersion(quotation.status)) {
       startTransition(async () => {
-        const res = await generateQuotationVersion({ quotationId: latestQuotation.id });
+        const res = await generateQuotationVersion({ quotationId: quotation.id });
         if (!res.ok) {
           toast.error(res.message);
           return;
@@ -929,6 +932,7 @@ export function ShortlistWorkspace({
         {hasLinkedQuotation ? (
           <ShortlistQuotationPanel
             quotations={linkedQuotations}
+            creators={detail.creators}
             onGenerateNewVersion={handleGenerateNewVersion}
             busy={isPending}
           />
@@ -957,10 +961,6 @@ export function ShortlistWorkspace({
                 className="tw-b sm"
                 disabled={isPending || displayCreators.length === 0}
                 onClick={() => {
-                  if (selectedCount > 0) {
-                    handleGenerateNewQuotation();
-                    return;
-                  }
                   setQuoteAllOpen(true);
                 }}
               >
@@ -1130,6 +1130,7 @@ export function ShortlistWorkspace({
         open={quoteAllOpen}
         onOpenChange={setQuoteAllOpen}
         creatorCount={detail.creators.length}
+        selectedCount={selectedCount}
         shortlistName={detail.name}
         existingQuotationLabel={existingQuotationLabel}
         onGenerateNew={handleGenerateNewQuotation}
@@ -1175,8 +1176,8 @@ export function ShortlistWorkspace({
         onRefreshMetrics={handleRefreshMetrics}
         onExportSelected={handleExportSelected}
         onMoveSelected={handleBulkMove}
-        onGenerateNewQuotation={handleGenerateNewQuotation}
-        onAddToQuotation={handleAddSelectedToQuotation}
+        onGenerateNewQuotation={() => setQuoteAllOpen(true)}
+        onAddToQuotation={() => setQuoteAllOpen(true)}
         onSendToClient={handleSendToClient}
         existingQuotationLabel={existingQuotationLabel}
         showCollapse={canCollapseSelected}

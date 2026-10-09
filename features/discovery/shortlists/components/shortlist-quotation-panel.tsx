@@ -1,5 +1,6 @@
 
 import Link from "next/link";
+import { useState } from "react";
 import { ChevronDownIcon } from "lucide-react";
 
 import {
@@ -16,6 +17,7 @@ import type { QuotationStatus } from "@/types/database";
 import { cn } from "@/lib/utils";
 
 import type { ShortlistLinkedQuotation } from "../types";
+import type { ShortlistCreatorItem } from "../types";
 
 const ISSUED_STATUSES = new Set<QuotationStatus>([
   "sent",
@@ -25,10 +27,6 @@ const ISSUED_STATUSES = new Set<QuotationStatus>([
 
 function formatDisplayVersion(versionNumber: number): string {
   return `v${versionNumber}`;
-}
-
-function quotationCountLabel(count: number): string {
-  return count === 1 ? "1 quotation linked" : `${count} quotations linked`;
 }
 
 /** Pack status pill — Draft → `.tw-p p-n` (HTML pgShortlist). */
@@ -41,7 +39,8 @@ function PackStatusPill({ status }: { status: QuotationStatus }) {
 
 type Props = {
   quotations: ShortlistLinkedQuotation[];
-  onGenerateNewVersion: () => void;
+  onGenerateNewVersion: (quotation?: ShortlistLinkedQuotation) => void;
+  creators?: ShortlistCreatorItem[];
   busy?: boolean;
   /** When true, render compact action buttons only (creators toolbar). */
   actionsOnly?: boolean;
@@ -56,17 +55,19 @@ export function ShortlistQuotationPanel({
   onGenerateNewVersion,
   busy,
   actionsOnly,
+  creators = [],
 }: Props) {
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   if (quotations.length === 0) return null;
 
-  const latest = quotations[0];
+  const latest = quotations.find(q => q.id === selectedId) ?? quotations[0];
   const issued = ISSUED_STATUSES.has(latest.status);
   const multiple = quotations.length > 1;
   const detailHref = quotationDetailPath(latest.id, latest.serial_number);
   const displayVersion = formatDisplayVersion(latest.version_number);
   const title = issued ? "Quotation issued" : "Quotation linked";
 
-  const openButton = multiple ? (
+  const openButton = multiple && actionsOnly ? (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button type="button" className="tw-b sm pri" disabled={busy}>
@@ -108,7 +109,7 @@ export function ShortlistQuotationPanel({
       <button
         type="button"
         className="tw-b sm"
-        onClick={onGenerateNewVersion}
+        onClick={() => onGenerateNewVersion(latest)}
         disabled={busy}
       >
         Generate new version
@@ -130,10 +131,11 @@ export function ShortlistQuotationPanel({
             </Link>
           ) : null}
           <span className="sl-link__n">
-            {quotationCountLabel(quotations.length)} · latest version {displayVersion}
+            {displayVersion} · {creators.filter(c => c.quotation_refs.some(q => q.quotation_id === latest.id)).length} of {creators.length} creators linked
           </span>
           <PackStatusPill status={latest.status} />
           <span className="tw-sp" />
+          {multiple && <select className="q-sel sl-linked-select" aria-label="Linked quotations" value={latest.id} onChange={event => setSelectedId(event.target.value)}>{quotations.map(q => <option key={q.id} value={q.id}>{q.serial_number ?? q.name} · v{q.version_number} · {q.status.replaceAll("_", " ")}</option>)}</select>}
           {actionButtons}
         </div>
     </div>
