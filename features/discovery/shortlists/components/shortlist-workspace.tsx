@@ -812,7 +812,8 @@ export function ShortlistWorkspace({
   const mastheadMetrics = [
     { label: "Creators", value: detail.creators.length, caption: "" },
     { label: "Quoted", value: quotedCount, caption: "linked to a quotation" },
-    { label: "Under review", value: underReviewCount, caption: "" },
+    { label: "Draft", value: detail.creators.filter(item => item.item_status === "draft").length, caption: "not submitted" },
+    { label: "Internal review", value: underReviewCount, caption: "team review status" },
     { label: "Approved", value: approvedCount, caption: "includes moved to campaign" },
     { label: "Rejected", value: detail.creators.filter(item => item.item_status === "rejected").length, caption: "" },
   ];
@@ -950,7 +951,7 @@ export function ShortlistWorkspace({
                   <button type="button" className="tw-b sm" aria-label="Creator list actions"><MoreHorizontalIcon className="size-4" /></button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem disabled={!editable || selectedCount === 0 || isPending} onSelect={() => runAction(() => bulkSubmitCreatorsForReview(detail.id, selectedItemIdList))}>Submit {selectedCount} selected</DropdownMenuItem>
+                  <DropdownMenuItem disabled={!editable || selectedCount === 0 || isPending} onSelect={() => runAction(() => bulkSubmitCreatorsForReview(detail.id, selectedItemIdList))}>Mark {selectedCount} for internal review</DropdownMenuItem>
                   <DropdownMenuItem disabled={isPending} onSelect={handleCompare}>Compare</DropdownMenuItem>
                   <DropdownMenuItem disabled={isPending || refreshingMetrics} onSelect={handleRefreshMetrics}>Refresh metrics</DropdownMenuItem>
                   <DropdownMenuItem disabled={isPending || displayCreators.length === 0} onSelect={handleExportSelected}>Export CSV</DropdownMenuItem>
@@ -1246,7 +1247,7 @@ function ShortlistWorkspaceOverflowMenu({
     },
     {
       key: "submit-all",
-      label: "Submit for review",
+      label: "Submit for internal review",
       onSelect: onSubmitForReview,
       show: detail.status === "draft" && detail.creators.length > 0,
     },

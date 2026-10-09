@@ -350,7 +350,6 @@ export async function createClientReviewFromShortlist(
     selection,
     snapshot,
     alreadyOpenMessage: "A client review already exists for this shortlist selection.",
-    markShortlistItemIds: frozenItems.map((item) => item.id),
     reuseInteractiveReview: true,
     mintMissingShareToken: input.mintMissingShareToken,
     syncExistingOnly: input.syncExistingOnly,

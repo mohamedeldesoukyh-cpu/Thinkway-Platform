@@ -52,7 +52,7 @@ export function ShortlistBulkToolbar(p: Props) {
     <button className="q-b q-b--sm" onClick={p.onGenerateNewQuotation} disabled={p.busy || !p.canManage}>Generate quotation</button>
     <button className="q-b q-b--sm" onClick={p.onAddToQuotation} disabled={p.busy || !p.canManage} title={p.existingQuotationLabel ?? undefined}>Add to quotation</button>
     <button className="q-b q-b--sm" onClick={p.onCompareSelected} disabled={p.busy || p.selectedCount < 2}>Compare</button>
-    <button className="q-b q-b--sm" onClick={p.onSubmitSelected} disabled={p.busy || !p.showSubmit}>Submit selected</button>
+    <button className="q-b q-b--sm" onClick={p.onSubmitSelected} disabled={p.busy || !p.showSubmit}>Mark for internal review</button>
     <DropdownMenu><DropdownMenuTrigger asChild><button className="q-b q-b--sm q-b--icon" aria-label="More selected creator actions"><MoreHorizontalIcon className="size-4" /></button></DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end" className="sl-bulk-menu">
         {actions.map(a => <DropdownMenuItem key={a.label} disabled={p.busy || !a.eligible || !a.onClick} onSelect={() => a.onClick?.()}><span>{a.label}</span>{!a.eligible && <small>{a.reason}</small>}</DropdownMenuItem>)}

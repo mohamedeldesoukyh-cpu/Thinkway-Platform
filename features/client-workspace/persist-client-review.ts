@@ -483,7 +483,6 @@ export type PersistClientReviewInput = {
   selection: Record<string, ClientCreatorSelectionState>;
   snapshot: ClientReviewSourceSnapshot;
   alreadyOpenMessage: string;
-  markShortlistItemIds?: string[];
   reuseInteractiveReview?: boolean;
   /** Staff Generate/Show may mint a token once for legacy rows. Public refresh must never rotate. */
   mintMissingShareToken?: boolean;
@@ -705,17 +704,7 @@ export async function persistClientReview(
       .in("status", ["awaiting_review", "changes_requested"]);
   }
 
-  if (review.shortlistId && input.source === "shortlist") {
-    let shortlistUpdate = supabase
-      .from("discovery_shortlist_items")
-      .update({ item_status: "under_review" } as never)
-      .eq("shortlist_id", review.shortlistId)
-      .in("item_status", ["draft"]);
-    if (input.markShortlistItemIds?.length) {
-      shortlistUpdate = shortlistUpdate.in("id", input.markShortlistItemIds);
-    }
-    await shortlistUpdate;
-  }
+  // Publishing a client link must not change internal shortlist review statuses.
 
   await supabase.from("campaign_client_review_events" as never).insert({
     review_id: review.id,

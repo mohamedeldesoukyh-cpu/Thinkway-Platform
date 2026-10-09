@@ -58,7 +58,7 @@ describe("shortlist header button layer", () => {
   });
 
   it("preserves bulk actions and permission gates in the compact selection bar", () => {
-    for (const label of ["Submit selected", "Compare", "Refresh metrics", "Export CSV", "Generate quotation", "Send to client", "Remove from shortlist"]) assert.ok(bulk.includes(label), label);
+    for (const label of ["Mark for internal review", "Compare", "Refresh metrics", "Export CSV", "Generate quotation", "Send to client", "Remove from shortlist"]) assert.ok(bulk.includes(label), label);
     assert.match(bulk, /!p.canManage/);
     assert.match(bulk, /!a.eligible/);
     assert.match(bulk, /selectedCount < 2/);

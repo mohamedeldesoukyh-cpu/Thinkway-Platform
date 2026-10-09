@@ -26,11 +26,11 @@ export function SubmitShortlistDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sl-redesign sl-dialog sl-form-dialog">
         <DialogHeader>
-          <DialogTitle>Submit entire shortlist?</DialogTitle>
+          <DialogTitle>Submit shortlist for internal review?</DialogTitle>
           <DialogDescription>
-            No creators are selected. Submit all {creatorCount} creator
-            {creatorCount === 1 ? "" : "s"} for review and move the shortlist to
-            Under Review?
+            No creators are selected. Submit for internal review {creatorCount} creator
+            {creatorCount === 1 ? "" : "s"} for internal review and move the shortlist to
+            Under Review? This notifies the shortlist owner, creator and recorded approver. It does not send anything to the client.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
