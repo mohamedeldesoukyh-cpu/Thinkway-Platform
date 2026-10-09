@@ -19,6 +19,7 @@ export function AddCreatorsDrawer({
 }) {
   return (
     <ShortlistCreatorPicker
+      container="dialog"
       open={open}
       onOpenChange={onOpenChange}
       shortlistId={shortlistId}

@@ -39,6 +39,7 @@ type Props = {
   existingItems: ExistingCreatorKey[];
   onAdded: () => void;
   initialMode?: AddCreatorsMode;
+  container?: "dialog" | "sheet";
 };
 
 export function ShortlistCreatorPicker({
@@ -48,6 +49,7 @@ export function ShortlistCreatorPicker({
   existingItems,
   onAdded,
   initialMode = "search",
+  container = "sheet",
 }: Props) {
   const [isPending, startTransition] = useTransition();
   const [isPasting, startPasteTransition] = useTransition();
@@ -184,7 +186,7 @@ export function ShortlistCreatorPicker({
     <CreatorPickerDialog
       open={open}
       onOpenChange={onOpenChange}
-      container="sheet"
+      container={container}
       panelLayout
       title="Add creators"
       description={

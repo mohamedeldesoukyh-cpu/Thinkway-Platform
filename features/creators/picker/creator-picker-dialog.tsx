@@ -543,6 +543,7 @@ export function CreatorPickerDialog({
         <DialogHeader className="border-b px-6 py-4">
           <DialogTitle>{title}</DialogTitle>
           {description ? <DialogDescription>{description}</DialogDescription> : null}
+          {headerExtra}
         </DialogHeader>
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{body}</div>
         {actionFooter ? (

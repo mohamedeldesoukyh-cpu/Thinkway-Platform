@@ -8,6 +8,7 @@ import type {
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { AB, PFC } from "@/lib/discovery/suite/helpers";
 import { cn } from "@/lib/utils";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
 
 import { buildDiscoveryCreatorViewModel } from "@/features/discovery/view-models/discovery-creator-view-model";
 import { formatEngagementRate } from "./creator-search/creator-search-utils";
@@ -90,11 +91,13 @@ export function DiscoveryCreatorPlatformStatsBox({
   platformFilter,
   isApifyAcquired,
   platformStats: platformStatsProp,
+  brandIcons = false,
 }: {
   creator?: UnifiedCreatorResult;
   platformFilter?: string[];
   isApifyAcquired?: boolean;
   platformStats?: ReturnType<typeof buildDiscoveryCreatorViewModel>["platformStats"];
+  brandIcons?: boolean;
 }) {
   const platformStats =
     platformStatsProp ??
@@ -131,7 +134,7 @@ export function DiscoveryCreatorPlatformStatsBox({
         return (
           <span key={row.key} className="rr">
             <span className="tw-pf">
-              <span className={mark.cls}>{mark.label}</span>
+              {brandIcons && row.platform ? <PlatformIcon platform={row.platform} size="xs" variant="logo" className="!size-[15px]" /> : <span className={mark.cls}>{mark.label}</span>}
             </span>
             {showHint ? (
               <b className="z" style={{ gridColumn: "2 / -1", textAlign: "left" }} title={row.metricsHint ?? undefined}>

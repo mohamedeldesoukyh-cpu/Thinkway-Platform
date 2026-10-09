@@ -31,7 +31,7 @@ export function GenerateQuotationShortlistDialog({
   busy?: boolean;
 }) {
   const countLabel = `${creatorCount} creator${creatorCount === 1 ? "" : "s"}`;
-  const scope = selectedCount > 0 ? `${selectedCount} selected creators` : `all ${countLabel}`;
+  const scope = selectedCount > 0 ? `${selectedCount} selected creator${selectedCount === 1 ? "" : "s"}` : `all ${countLabel}`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

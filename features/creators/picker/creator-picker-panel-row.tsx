@@ -120,7 +120,7 @@ export function CreatorPickerPanelRow({
       </div>
 
       <div className="creator-picker-card__stats">
-        <DiscoveryCreatorPlatformStatsBox platformStats={vm.platformStats} />
+        <DiscoveryCreatorPlatformStatsBox platformStats={vm.platformStats} brandIcons />
       </div>
     </div>
   );

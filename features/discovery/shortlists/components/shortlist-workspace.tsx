@@ -1287,7 +1287,18 @@ function ShortlistWorkspaceOverflowMenu({
       destructive: true,
       show: detail.status !== "archived",
     },
-  ].filter((item) => item.show);
+  ];
+
+  const reasons: Record<string, string> = {
+    edit: "editing unavailable",
+    "submit-all": "needs Draft and creators",
+    approve: "needs review and approval permission",
+    return: "needs review and approval permission",
+    move: "needs Approved and a selection",
+    reopen: "not cancelled",
+    cancel: "already cancelled or archived",
+    archive: "already archived",
+  };
 
   if (items.length === 0) return null;
 
@@ -1303,8 +1314,9 @@ function ShortlistWorkspaceOverflowMenu({
           <MoreHorizontalIcon className="size-4" />
         </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
+      <DropdownMenuContent align="end" className="w-72">
         {items.map((item, index) => {
+          const permitted = item.key === "approve" || item.key === "return" ? detail.canApprove : detail.canManage;
           const showSeparator =
             item.destructive &&
             index > 0 &&
@@ -1314,7 +1326,7 @@ function ShortlistWorkspaceOverflowMenu({
               {showSeparator ? <DropdownMenuSeparator /> : null}
               <DropdownMenuItem
                 variant={item.destructive ? "destructive" : "default"}
-                disabled={isPending}
+                disabled={isPending || !item.show || !permitted}
                 onSelect={(event) => {
                   event.preventDefault();
                   item.onSelect();
@@ -1331,6 +1343,7 @@ function ShortlistWorkspaceOverflowMenu({
                   <SendIcon className="size-3.5" />
                 ) : null}
                 {item.label}
+                {(!item.show || !permitted) && <small className="ms-auto max-w-32 text-[10px] text-muted-foreground">{!permitted ? "read-only access" : reasons[item.key]}</small>}
               </DropdownMenuItem>
             </div>
           );
