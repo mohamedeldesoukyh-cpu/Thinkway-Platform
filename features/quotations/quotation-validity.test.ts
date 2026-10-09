@@ -17,6 +17,10 @@ assert.ok(future != null && future > 0);
 
 assert.equal(isQuotationExpired("2020-01-01", new Date("2026-01-01")), true);
 assert.equal(isQuotationExpired("2099-01-01", new Date("2026-01-01")), false);
+assert.equal(isQuotationExpired("2026-10-09", new Date("2026-10-09T23:59:58Z")), false);
+assert.equal(isQuotationExpired("2026-10-09", new Date("2026-10-10T00:00:00Z")), true);
+assert.equal(validDaysRemaining("2026-10-09", new Date("2026-10-10T12:00:00Z")), -1);
+assert.equal(isQuotationExpired(null, new Date("2026-10-10T12:00:00Z")), false);
 assert.ok(formatValidityLabel("2099-01-01").startsWith("Valid for"));
 
 assert.equal(

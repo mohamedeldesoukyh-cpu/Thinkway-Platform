@@ -49,6 +49,8 @@ const below = buildQuotationCalcPreview(
 assert.equal(below[0]!.belowCost, true);
 const totals = sumQuotationCalcPreview(below);
 assert.equal(totals.hasBelowCost, true);
+const breakEven = buildQuotationCalcPreview([lines[1]], "price", 200_000, 0);
+assert.equal(sumQuotationCalcPreview(breakEven).hasBelowCost, false, "Break-even is allowed by the existing policy");
 assert.equal(totals.clientPays, below[0]!.newClient + below[0]!.vat);
 
 console.log("quotation-pricing-calculator.ts: ok");

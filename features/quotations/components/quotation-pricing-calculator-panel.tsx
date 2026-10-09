@@ -303,9 +303,9 @@ export function QuotationPricingCalculatorPanel({
         {totals.hasBelowCost ? (
           <div className="tw-warnrow">
             ⚠ {totals.belowCostCount} line
-            {totals.belowCostCount === 1 ? "" : "s"} would sit at or below cost —
-            GP is zero or negative. Apply is blocked until every line clears base
-            cost.
+            {totals.belowCostCount === 1 ? "" : "s"} would sit below cost —
+            GP before agency fees is negative. Apply is blocked until every line
+            is at or above base cost.
           </div>
         ) : null}
         {mode === "gpm" && value >= 100 ? (

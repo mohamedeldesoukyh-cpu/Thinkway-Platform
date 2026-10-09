@@ -34,6 +34,9 @@ jobs:
       - name: FX reporting regression
         run: npm run test:fx
 
+      - name: Warning accuracy regression
+        run: npx tsx --test lib/commercial/commercial-engine.test.ts features/quotations/quotation-row-math.test.ts features/quotations/quotation-validity.test.ts lib/quotations/quotation-pricing-calculator.test.ts lib/collections/alerts/collections-alerts.test.ts
+
       - name: Collections grids and data honesty
         run: |
           node scripts/check-collections-grid.cjs

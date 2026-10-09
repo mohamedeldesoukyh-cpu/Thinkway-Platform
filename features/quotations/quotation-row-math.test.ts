@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { computeCommercials } from "@/lib/commercial/commercial-engine";
 import {
   computeLiveQuotationTotals,
+  hasQuotationGpConflict,
   computeQuotationRowComputed,
   draftFromQuotationItem,
   originalCurrencyTotalsForDisplay,
@@ -226,6 +227,18 @@ function mockItem(overrides: Partial<QuotationItemRow> = {}): QuotationItemRow {
   assert.equal(header.headerGpValueEgp, 520);
   assert.ok(Math.abs(header.headerGpPct - 39.3939) < 0.01);
   assert.equal(header.headerPmPct, 65);
+  assert.equal(hasQuotationGpConflict(header), false, "Legitimate AF is not a GP conflict");
+  assert.equal(hasQuotationGpConflict({ ...header, headerGpValueEgp: 520.01 }), true);
+  assert.equal(hasQuotationGpConflict({ ...header, headerGpValueEgp: 519.99 }), true);
+  assert.equal(hasQuotationGpConflict({ ...header, headerGpValueEgp: NaN }), true);
+}
+
+for (const [gp, fee, header, expected] of [
+  [0, 0, 0, false], [400, 0, 400, false], [-100, 10, -90, false],
+  [0.1, 0.2, 0.3, false], [400, 120, 400, true],
+  [1398333.33, 559333.33, 1957666.66, false],
+] as const) {
+  assert.equal(hasQuotationGpConflict({totalGpValueEgp: gp, totalAfValueEgp: fee, headerGpValueEgp: header}), expected);
 }
 
 {

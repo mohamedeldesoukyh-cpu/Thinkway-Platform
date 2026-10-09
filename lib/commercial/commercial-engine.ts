@@ -142,7 +142,7 @@ export function computeCommercials(input: CommercialInput): CommercialResult {
       // GP% = GP Value / Revenue. Undefined when revenue is 0.
       const gpPct = revenue === 0 ? 0 : round4((gpValue / revenue) * 100);
       const warning =
-        revenue > 0 && revenue < cost ? "Revenue is below cost (negative GP)." : null;
+        revenue < cost ? "Revenue is below cost (negative GP)." : null;
       return { cost, revenue, gpPct, gpValue, valid: true, warning };
     }
 

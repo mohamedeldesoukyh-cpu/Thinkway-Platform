@@ -71,6 +71,7 @@ import {
 import { draftToLinePending } from "@/lib/quotations/commercial-workspace/stage-pending";
 import {
   computeLiveQuotationTotals,
+  hasQuotationGpConflict,
   computeQuotationDisplayTotals,
   computeQuotationRowComputed,
   draftFromQuotationItem,
@@ -731,10 +732,7 @@ function QuotationWorkspaceContent({
         clientReview={clientReview}
         lineCount={visibleItems.length}
         creatorCount={uniqueCreatorCount}
-        showGpConflict={
-          Math.abs(totals.headerGpValueEgp - totals.totalGpValueEgp) >= 0.01 ||
-          totals.totalAfValueEgp > 0.01
-        }
+        showGpConflict={hasQuotationGpConflict(totals)}
         metricsSlot={
           <QuotationCommercialMetricsBand
             projected={computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp)}

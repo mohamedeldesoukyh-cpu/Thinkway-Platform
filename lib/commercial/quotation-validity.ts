@@ -14,7 +14,9 @@ export function validDaysRemaining(validityDate: string | null, asOf = new Date(
   if (!validityDate) return null;
   const end = new Date(`${validityDate.slice(0, 10)}T23:59:59Z`);
   const ms = end.getTime() - asOf.getTime();
-  return Math.ceil(ms / (1000 * 60 * 60 * 24));
+  // Rounding a negative fraction up produces -0 and falsely keeps yesterday valid.
+  const days = ms / (1000 * 60 * 60 * 24);
+  return ms < 0 ? Math.floor(days) : Math.ceil(days);
 }
 
 export function isQuotationExpired(

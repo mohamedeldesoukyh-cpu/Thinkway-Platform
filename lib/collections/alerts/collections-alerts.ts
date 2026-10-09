@@ -34,7 +34,7 @@ export function buildCollectionsAlerts(input: {
       severity: input.aging.overdue_amount > 100_000 ? "danger" : "warning",
       group: "overdue",
       title: "Overdue receivables",
-      description: `${input.aging.invoice_count} open invoice(s) with past-due balances.`,
+      description: `${input.aging.buckets.filter((bucket) => bucket.bucket !== "current").reduce((count, bucket) => count + bucket.count, 0)} open invoice(s) with past-due balances.`,
       href: "/collections?tab=overdue",
       amount: input.aging.overdue_amount,
     });

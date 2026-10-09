@@ -13,6 +13,14 @@ import {
   toEgp,
 } from "@/lib/commercial/fx-aggregation";
 
+// Warning boundaries: zero revenue with a real cost is still a loss; break-even is not.
+for (const [cost, revenue, warned] of [[100, 0, true], [100, 99, true], [100, 100, false], [0, 0, false], [100, 101, false]] as const) {
+  const result = computeCommercials({ mode: "cost_revenue", cost, revenue });
+  assert.equal(Boolean(result.warning), warned);
+  assert.equal(result.valid, true);
+  assert.equal(result.gpValue, revenue - cost);
+}
+
 // ---------------------------------------------------------------------------
 // Mode A2: cost + markup% → revenue, GP value
 // ---------------------------------------------------------------------------

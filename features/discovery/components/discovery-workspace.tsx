@@ -354,7 +354,7 @@ export function DiscoveryWorkspace({
                       const rows = await matchCampaignBriefAction({ brief, limit: 10 });
                       setMatches(rows);
                       if (rows.length === 0) {
-                        toast.warning("No matches yet — run a discovery job to seed creators.");
+                        toast.warning("No creators matched this brief. Try adjusting the brief or reviewing the available creators.");
                       } else {
                         toast.success(`Found ${rows.length} matched creator${rows.length === 1 ? "" : "s"}`);
                       }

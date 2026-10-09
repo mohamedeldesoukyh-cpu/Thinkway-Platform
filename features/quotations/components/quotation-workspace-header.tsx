@@ -260,7 +260,7 @@ export function QuotationWorkspaceHeader({
       <div className="q-wrap q-header-tools">
         {detail.is_expired && <div className="q-banner q-banner--bad" role="status"><b>This quotation has expired.</b><span>Review its validity date in Document details.</span></div>}
         {saveStatus === "error" && <div className="q-banner q-banner--bad" role="alert"><span>Save failed. Your pending edits are still available on this page.</span><button type="button" className="q-b q-b--sm" disabled={savePending} onClick={onSave}><QuotationText>Retry save</QuotationText></button></div>}
-        {showGpConflict && <div className="q-banner q-banner--wrn" role="status"><span>GP conflict — review the commercial breakdown before submitting.</span></div>}
+        {showGpConflict && <div className="q-banner q-banner--wrn" role="status"><span><QuotationText>Commercial totals do not reconcile: total margin must equal GP before agency fees plus agency fees. Review Cost detail before submitting.</QuotationText></span></div>}
         {!detail.canManage && <div className="q-banner q-banner--info">Read-only — you can view this quotation; editing requires permission.</div>}
                     <div className="q-actions">
               {detail.canManage ? (

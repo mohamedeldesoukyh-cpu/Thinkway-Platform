@@ -188,6 +188,16 @@ export type QuotationHeaderCommercialTotals = CommercialTotals & {
   headerPmPct: number;
 };
 
+/** Compare like-for-like margins in cents: the header intentionally includes AF. */
+export function hasQuotationGpConflict(totals: Pick<QuotationHeaderCommercialTotals,
+  "headerGpValueEgp" | "totalGpValueEgp" | "totalAfValueEgp"
+>): boolean {
+  const values = [totals.headerGpValueEgp, totals.totalGpValueEgp, totals.totalAfValueEgp];
+  if (!values.every(Number.isFinite)) return true;
+  return Math.round(totals.headerGpValueEgp * 100) !==
+    Math.round((totals.totalGpValueEgp + totals.totalAfValueEgp) * 100);
+}
+
 /** Map stored/live totals to header metrics that include agency fees in client cost. */
 export function resolveQuotationHeaderCommercialTotals(
   totals: CommercialTotals
