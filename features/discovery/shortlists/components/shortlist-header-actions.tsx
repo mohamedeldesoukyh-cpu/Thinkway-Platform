@@ -74,11 +74,9 @@ export function ShortlistHeaderActions({
   canManageView,
   canChangeCurrency,
   canSendToClient,
-  canAddCreators,
   busy,
   onShowLink,
   onSendToClient,
-  onAddCreators,
   overflow,
 }: {
   seed: CampaignSeed;
@@ -111,7 +109,7 @@ export function ShortlistHeaderActions({
   const viewCount = `${displayCurrency}${hideCostAndFees ? " · hidden" : ""}`;
 
   return (
-    <div className="flex min-w-0 flex-wrap items-center justify-start gap-2 md:justify-end">
+    <div className="sl-tools-inner flex min-w-0 flex-wrap items-center gap-[7px]">
       <GenerateOutputsLauncher
         seed={seed}
         tab="outputs"
@@ -209,6 +207,7 @@ export function ShortlistHeaderActions({
           buttonClassName={cn(
             SHORTLIST_TOOLBAR_BUTTON_CLASS,
             SHORTLIST_TOOLBAR_BUTTON_WARN_CLASS
+            , "sl-warn"
           )}
           badge={
             <ShortlistToolbarCount warn>{missingLabels.length}</ShortlistToolbarCount>
@@ -216,11 +215,6 @@ export function ShortlistHeaderActions({
         />
       ) : null}
 
-      {canAddCreators ? (
-        <ShortlistToolbarButton variant="primary" onClick={onAddCreators} disabled={busy}>
-          + Add creators
-        </ShortlistToolbarButton>
-      ) : null}
 
       {overflow}
     </div>

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { useEscapeClearSelection } from "@/lib/hooks/use-escape-clear-selection";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
@@ -37,9 +38,10 @@ import {
 import { CLIENT_REVIEW_LINK_MISSING_MESSAGE } from "@/features/client-workspace/constants";
 import { clientReviewShareHasLink } from "@/features/client-workspace/client-review-selection";
 import "@/app/styles/shortlist-detail.css";
-import { DiscoverySuiteMasthead } from "@/features/discovery/components/design-system/discovery-suite-masthead";
+import "@/app/styles/shortlist-redesign.css";
+import "@/app/styles/shortlist-redesign-integration.css";
 import { discoverySelectionFlyoutContentClass } from "@/features/discovery/components/design-system/discovery-selection-flyout";
-import { shortlistDetailPath } from "@/features/discovery/shortlists/constants";
+import { SHORTLIST_STATUS_LABELS, shortlistDetailPath } from "@/features/discovery/shortlists/constants";
 import { cn } from "@/lib/utils";
 import { CreatorDetailSheet } from "@/features/campaigns/components/creator-detail-sheet-lazy";
 import { useCreatorDetailSheetState } from "@/features/discovery/hooks/use-creator-detail-sheet-state";
@@ -136,7 +138,7 @@ import type { getShortlistEnrichmentUpdates } from "../enrichment-live-action";
 import { SubmitShortlistDialog } from "./submit-shortlist-dialog";
 import {
   AssignmentStatusBadge,
-  ShortlistWorkspaceStatusPill,
+
 } from "./shortlist-badges";
 
 
@@ -805,21 +807,15 @@ export function ShortlistWorkspace({
     (item) => item.item_status === "approved" || item.item_status === "moved_to_campaign"
   ).length;
   const mastheadMetrics = [
-    { label: "Creators", value: detail.creators.length || "" },
-    { label: "Quoted", value: quotedCount || "" },
-    { label: "Under review", value: underReviewCount || "", tone: "y" as const },
-    { label: "Approved", value: approvedCount || "", tone: "g" as const },
-    { label: "Quotation", value: latestQuotation?.serial_number ?? "" },
-    {
-      label: "Version",
-      value: latestQuotation?.version_number
-        ? `v${latestQuotation.version_number}`
-        : "",
-    },
+    { label: "Creators", value: detail.creators.length, caption: "" },
+    { label: "Quoted", value: quotedCount, caption: "linked to a quotation" },
+    { label: "Under review", value: underReviewCount, caption: "" },
+    { label: "Approved", value: approvedCount, caption: "includes moved to campaign" },
+    { label: "Rejected", value: detail.creators.filter(item => item.item_status === "rejected").length, caption: "" },
   ];
 
   return (
-    <div className="shortlist-detail-workspace discovery-suite flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)]">
+    <div className="sl-redesign shortlist-detail-workspace discovery-suite flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
       <ManualRefreshConfirmDialog
         open={refreshTargets.length > 0}
         onOpenChange={(open) => { if (!open) setRefreshTargets([]); }}
@@ -829,34 +825,20 @@ export function ShortlistWorkspace({
         description="Refresh all linked platforms, including avatars and metrics. Use cached data for free; platforms without a usable snapshot will be reported. Refresh Live fetches new data and uses Apify credits."
         onChoose={(source) => { void executeSelectedRefresh(source); }}
       />
-      <DiscoverySuiteMasthead
-        title={detail.name}
-        id={detail.serial_number}
-        badge={<ShortlistWorkspaceStatusPill status={detail.status} />}
-        metrics={mastheadMetrics}
-        metricsSlot={<div className="flex flex-wrap items-center border-t border-border bg-white">
-          <div className="tw-ms2 min-w-0 flex-1" role="group" aria-label="Page metrics">{mastheadMetrics.filter(m => m.value !== "").map(m => <div key={m.label}><i>{m.label}</i><b>{m.value}</b></div>)}</div>
-          <div className="ml-auto p-3"><CreatorListCostControl key={detail.id} shortlistId={detail.id} value={detail.creatorListCost} disabled={!canEditDetails} /></div>
-        </div>}
-        freezeOnScroll={false}
-        actions={
-          <div className="shortlist-header-actions flex min-w-0 flex-wrap items-center gap-2">
-            <EntityPrevNext
-              entity="shortlists"
-              currentId={detail.id}
-              hrefForId={(id) => shortlistDetailPath(id)}
-            />
-            {canEditDetails ? (
-              <button
-                type="button"
-                onClick={() => setEditOpen(true)}
-                disabled={isPending}
-                className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg border border-border bg-background text-muted-foreground transition-colors hover:bg-muted/30 hover:text-[var(--text-2)] disabled:opacity-50"
-                aria-label="Edit shortlist"
-              >
-                <PencilIcon className="size-3.5" />
-              </button>
-            ) : null}
+      <header className="sl-head"><div className="sl-head__in">
+        <div className="sl-head__nav">
+          <Link className="q-b q-b--sm q-b--ghost" href="/discovery/shortlists">← Back to shortlists</Link>
+          <span className="sl-crumb"><Link href="/discovery">Discovery</Link><span>/</span><Link href="/discovery/shortlists">Shortlists</Link><span>/</span><b>{detail.serial_number}</b></span>
+          <span className="q-sp" />
+          <div className="sl-nav"><EntityPrevNext entity="shortlists" currentId={detail.id} hrefForId={(id) => shortlistDetailPath(id)} /></div>
+        </div>
+        <div className="sl-head__t">
+          <span className="sl-ref">{detail.serial_number}</span><h1>{detail.name}</h1>
+          <span className={cn("q-p", detail.status === "approved" ? "q-p--ok" : detail.status === "under_review" ? "q-p--wrn" : "")}><s />{SHORTLIST_STATUS_LABELS[detail.status]}</span>
+          {canEditDetails && <button type="button" className="q-b q-b--sm q-b--icon" aria-label="Edit shortlist" disabled={isPending} onClick={() => setEditOpen(true)}><PencilIcon className="size-3.5" /></button>}
+        </div>
+        <div className="sl-head__ctx"><b>{clientLabel ?? "No client linked"}</b>{detail.brand_name && <><span className="sl-dot" /><span>{detail.brand_name}</span></>}</div>
+        <div className="sl-tools">
             <ShortlistHeaderActions
           seed={seed}
           shortlistId={detail.id}
@@ -927,13 +909,20 @@ export function ShortlistWorkspace({
             />
           }
             />
-          </div>
-        }
-      />
+        </div>
+      </div></header>
+      <div className="sl-wrap">
+        <div className="sl-sum" aria-label="Shortlist summary">
+          {mastheadMetrics.map(m => <div className="sl-m" key={m.label}><u>{m.label}</u><b className={m.value === 0 ? "z" : undefined}>{m.value}</b>{m.caption && <em>{m.caption}</em>}</div>)}
+          <div className="sl-m"><u>Latest quotation</u>{latestQuotation ? <><Link href={quotationDetailPath(latestQuotation.id, latestQuotation.serial_number)}>{latestQuotation.serial_number ?? latestQuotation.name}</Link><em>v{latestQuotation.version_number} · of the quotation</em></> : <b className="z">—</b>}</div>
+          <CreatorListCostControl key={detail.id} shortlistId={detail.id} value={detail.creatorListCost} disabled={!canEditDetails} />
+        </div>
+        {!canEditDetails && <div className="sl-ro" role="status">{detail.is_archived || detail.status === "archived" ? "Archived shortlist" : detail.status === "cancelled" ? "Cancelled shortlist" : "Read-only access"} · editing is unavailable.</div>}
+
 
       <section
         className={cn(
-          "px-[15px] pt-3",
+          "sl-content",
           discoverySelectionFlyoutContentClass(selectedCount > 0)
         )}
       >
@@ -945,8 +934,8 @@ export function ShortlistWorkspace({
           />
         ) : null}
 
-        <div className="tw-c">
-            <div className="tw-ch">
+        <div className="tw-c sl-creator-card">
+            <div className="tw-ch sl-tbl__h">
               <span className="tw-ct">Creators · {displayCreators.length}</span>
               {creatorsCardSubtitle ? (
                 <span className="tw-cs">{creatorsCardSubtitle}</span>
@@ -977,7 +966,7 @@ export function ShortlistWorkspace({
               >
                 Generate quotation
               </button>
-              {editable && <button type="button" className="tw-b sm pri" disabled={isPending} onClick={() => { setAddMode("search"); setAddOpen(true); }}>+ Add creator</button>}
+              {editable && detail.canManage && <button type="button" className="tw-b sm pri" disabled={isPending} onClick={() => { setAddMode("search"); setAddOpen(true); }}>+ Add creator</button>}
             </div>
 
             {enrichmentConnectionDelayed ? (
@@ -995,7 +984,7 @@ export function ShortlistWorkspace({
 
             {displayCreators.length === 0 ? (
               <ShortlistCreatorEmptyState
-                editable={editable}
+                editable={editable && detail.canManage}
                 onAddCreators={() => {
                   setAddMode("search");
                   setAddOpen(true);
@@ -1039,14 +1028,14 @@ export function ShortlistWorkspace({
       </section>
 
       {detail.movedAssignments.length > 0 ? (
-        <section className="px-[15px]">
-          <div className="tw-c">
-            <div className="tw-ch">
-              <span className="tw-ct">Moved to campaigns</span>
+        <section className="sl-secondary">
+          <details className="q-card sl-acc">
+            <summary>
+              <span>Moved to campaigns</span>
               <span className="tw-cs">
                 Creators moved from this shortlist and their current assignment status.
               </span>
-            </div>
+            </summary>
             <div className="tw-pad space-y-2">
               {detail.movedAssignments.map((assignment) => (
                 <div
@@ -1067,16 +1056,16 @@ export function ShortlistWorkspace({
                 </div>
               ))}
             </div>
-          </div>
+          </details>
         </section>
       ) : null}
 
-      <section className="px-[15px] pb-10">
-        <div className="tw-c">
-          <div className="tw-ch">
-            <span className="tw-ct">Movement history</span>
-            <span className="tw-cs">audit trail of every creator movement</span>
-          </div>
+      <section className="sl-secondary">
+        <details className="q-card sl-acc" open>
+          <summary>
+            <span>Movement history</span>
+            <small>audit trail of every creator movement</small>
+          </summary>
           {detail.movements.length === 0 ? (
             <p className="tw-pad tw-miss">No movements recorded yet.</p>
           ) : (
@@ -1102,10 +1091,10 @@ export function ShortlistWorkspace({
               ))}
             </div>
           )}
-        </div>
+        </details>
       </section>
 
-      <div className="h-10 shrink-0" aria-hidden />
+      </div>
 
       <ShortlistEditDialog
         open={editOpen}
@@ -1171,7 +1160,10 @@ export function ShortlistWorkspace({
 
       <ShortlistBulkToolbar
         selectedCount={selectedCount}
-        showSubmit={editable}
+        totalCount={detail.creators.length}
+        onSelectAll={() => setSelectedIds(new Set(visibleItemIds))}
+        canManage={detail.canManage && !isMovementLocked(detail.status)}
+        showSubmit={editable && detail.canManage}
         showStatusActions={detail.status === "under_review" && detail.canApprove}
         showMove={movable}
         busy={isPending || refreshingMetrics}

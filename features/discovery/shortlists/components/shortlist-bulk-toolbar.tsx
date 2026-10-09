@@ -1,24 +1,10 @@
-
-import {
-  CheckIcon,
-  DownloadIcon,
-  FileTextIcon,
-  GitCompareArrowsIcon,
-  Layers2Icon,
-  RefreshCwIcon,
-  SendIcon,
-  Trash2Icon,
-  UnfoldVerticalIcon,
-} from "lucide-react";
-import { useMemo } from "react";
-
-import {
-  DiscoverySelectionFlyout,
-  type DiscoverySelectionFlyoutAction,
-} from "@/features/discovery/components/design-system";
-
+import { MoreHorizontalIcon } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 type Props = {
   selectedCount: number;
+  totalCount: number;
+  onSelectAll: () => void;
+  canManage: boolean;
   showSubmit: boolean;
   showStatusActions: boolean;
   showMove: boolean;
@@ -43,230 +29,35 @@ type Props = {
   onClearSelection: () => void;
 };
 
-export function ShortlistBulkToolbar({
-  selectedCount,
-  showSubmit,
-  showStatusActions,
-  showMove,
-  busy,
-  onSubmitSelected,
-  onRemoveSelected,
-  onCompareSelected,
-  onExportSelected,
-  onRefreshMetrics,
-  onMoveSelected,
-  onGenerateNewQuotation,
-  onAddToQuotation,
-  onSendToClient,
-  existingQuotationLabel,
-  onCollapseSelected,
-  showCollapse,
-  onUncollapseSelected,
-  showUncollapse,
-  onApproveSelected,
-  onRejectSelected,
-  onCancelSelected,
-  onClearSelection,
-}: Props) {
-  const actions = useMemo(() => {
-    const list: DiscoverySelectionFlyoutAction[] = [];
 
-    if (showSubmit) {
-      list.push({
-        id: "submit",
-        label: `Submit ${selectedCount} selected`,
-        icon: SendIcon,
-        variant: "primary",
-        disabled: busy,
-        onClick: onSubmitSelected,
-      });
-    } else if (showStatusActions) {
-      list.push({
-        id: "approve",
-        label: "Approve",
-        icon: CheckIcon,
-        variant: "primary",
-        disabled: busy,
-        onClick: onApproveSelected,
-      });
-    }
-
-    list.push(
-      {
-        id: "compare",
-        label: "Compare",
-        icon: GitCompareArrowsIcon,
-        variant: "outline",
-        disabled: busy,
-        onClick: onCompareSelected,
-      },
-      {
-        id: "refresh-metrics",
-        label: "Refresh metrics",
-        icon: RefreshCwIcon,
-        variant: "outline",
-        disabled: busy || !onRefreshMetrics,
-        onClick: () => onRefreshMetrics?.(),
-      },
-      {
-        id: "export",
-        label: "Export CSV",
-        icon: DownloadIcon,
-        variant: "outline",
-        disabled: busy,
-        onClick: onExportSelected,
-      },
-      {
-        id: "quotation",
-        label: "Generate quotation",
-        icon: FileTextIcon,
-        variant: showSubmit || showStatusActions ? "outline" : "primary",
-        disabled: busy,
-        onClick: onGenerateNewQuotation,
-        items: [
-          {
-            id: "quotation-new",
-            label: "Generate new",
-            description: "Create a new quotation with the selected creators",
-            onClick: onGenerateNewQuotation,
-            disabled: busy,
-          },
-          {
-            id: "quotation-add",
-            label: "Add to quotation",
-            description: existingQuotationLabel
-              ? `Add selected creators to ${existingQuotationLabel}`
-              : "Add to the linked quotation, or create one if none exists",
-            onClick: onAddToQuotation,
-            disabled: busy,
-          },
-        ],
-      }
-    );
-
-    if (showStatusActions && showSubmit) {
-      list.push(
-        {
-          id: "approve",
-          label: "Approve",
-          icon: CheckIcon,
-          variant: "outline",
-          disabled: busy,
-          onClick: onApproveSelected,
-        },
-        {
-          id: "reject",
-          label: "Reject",
-          variant: "outline",
-          disabled: busy,
-          onClick: onRejectSelected,
-        }
-      );
-    } else if (showStatusActions) {
-      list.push({
-        id: "reject",
-        label: "Reject",
-        variant: "outline",
-        disabled: busy,
-        onClick: onRejectSelected,
-      });
-    }
-
-    if (showCollapse) {
-      list.push({
-        id: "collapse",
-        label: "Collapse",
-        icon: Layers2Icon,
-        variant: "outline",
-        disabled: busy || !onCollapseSelected,
-        onClick: () => onCollapseSelected?.(),
-      });
-    }
-
-    if (showUncollapse) {
-      list.push({
-        id: "uncollapse",
-        label: "Uncollapse",
-        icon: UnfoldVerticalIcon,
-        variant: "outline",
-        disabled: busy || !onUncollapseSelected,
-        onClick: () => onUncollapseSelected?.(),
-      });
-    }
-
-    list.push(
-      {
-        id: "send-client",
-        label: "Send to Client",
-        icon: SendIcon,
-        variant: "outline",
-        disabled: busy || !onSendToClient,
-        onClick: () => onSendToClient?.(),
-      },
-      {
-        id: "remove",
-        label: "Remove",
-        icon: Trash2Icon,
-        variant: "outline",
-        destructive: true,
-        disabled: busy,
-        onClick: onRemoveSelected,
-      }
-    );
-
-    if (showMove) {
-      list.push({
-        id: "move",
-        label: "Move to campaign",
-        variant: "outline",
-        disabled: busy,
-        onClick: onMoveSelected,
-      });
-    }
-
-    list.push({
-      id: "cancel",
-      label: "Cancel selected",
-      variant: "outline",
-      disabled: busy,
-      onClick: onCancelSelected,
-    });
-
-    return list;
-  }, [
-    selectedCount,
-    showSubmit,
-    showStatusActions,
-    showMove,
-    busy,
-    onSubmitSelected,
-    onRemoveSelected,
-    onCompareSelected,
-    onExportSelected,
-    onRefreshMetrics,
-    onMoveSelected,
-    onGenerateNewQuotation,
-    onAddToQuotation,
-    onSendToClient,
-    existingQuotationLabel,
-    onCollapseSelected,
-    showCollapse,
-    onUncollapseSelected,
-    showUncollapse,
-    onApproveSelected,
-    onRejectSelected,
-    onCancelSelected,
-  ]);
-
-  return (
-    <DiscoverySelectionFlyout
-      open={selectedCount > 0}
-      selectedCount={selectedCount}
-      entityLabel="creator"
-      actions={actions}
-      onClearSelection={onClearSelection}
-      busy={busy}
-      maxVisibleActions={5}
-    />
-  );
+export function ShortlistBulkToolbar(p: Props) {
+  if (!p.selectedCount) return null;
+  const actions = [
+    { label: "Approve", onClick: p.onApproveSelected, eligible: p.showStatusActions, reason: "needs review and approval permission" },
+    { label: "Reject", onClick: p.onRejectSelected, eligible: p.showStatusActions, reason: "needs review and approval permission" },
+    { label: "Cancel selected", onClick: p.onCancelSelected, eligible: p.canManage, reason: "editing unavailable" },
+    { label: "Collapse", onClick: p.onCollapseSelected, eligible: p.showCollapse, reason: "select eligible creators" },
+    { label: "Uncollapse", onClick: p.onUncollapseSelected, eligible: p.showUncollapse, reason: "select a collapsed group" },
+    { label: "Refresh metrics", onClick: p.onRefreshMetrics, eligible: p.canManage, reason: "editing unavailable" },
+    { label: "Export CSV", onClick: p.onExportSelected, eligible: true },
+    { label: "Send to client", onClick: p.onSendToClient, eligible: p.canManage, reason: "editing unavailable" },
+    { label: "Move to campaign", onClick: p.onMoveSelected, eligible: p.showMove && p.canManage, reason: "needs Approved" },
+    { label: "Remove from shortlist", onClick: p.onRemoveSelected, eligible: p.showSubmit, reason: "needs editable shortlist" },
+  ];
+  return <div className="sl-selbar" role="toolbar" aria-label="Selected creator actions">
+    <div className="sl-selbar__n"><b>{p.selectedCount}</b><span>of {p.totalCount} selected</span></div>
+    <button className="q-b q-b--sm" onClick={p.onClearSelection} disabled={p.busy}>Clear</button>
+    <button className="q-b q-b--sm" onClick={p.onSelectAll} disabled={p.busy || p.selectedCount === p.totalCount}>Select all {p.totalCount}</button>
+    <span className="q-sp" />
+    <button className="q-b q-b--sm" onClick={p.onGenerateNewQuotation} disabled={p.busy || !p.canManage}>Generate quotation</button>
+    <button className="q-b q-b--sm" onClick={p.onAddToQuotation} disabled={p.busy || !p.canManage} title={p.existingQuotationLabel ?? undefined}>Add to quotation</button>
+    <button className="q-b q-b--sm" onClick={p.onCompareSelected} disabled={p.busy || p.selectedCount < 2}>Compare</button>
+    <button className="q-b q-b--sm" onClick={p.onSubmitSelected} disabled={p.busy || !p.showSubmit}>Submit selected</button>
+    <DropdownMenu><DropdownMenuTrigger asChild><button className="q-b q-b--sm q-b--icon" aria-label="More selected creator actions"><MoreHorizontalIcon className="size-4" /></button></DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="end" className="sl-bulk-menu">
+        {actions.map(a => <DropdownMenuItem key={a.label} disabled={p.busy || !a.eligible || !a.onClick} onSelect={() => a.onClick?.()}><span>{a.label}</span>{!a.eligible && <small>{a.reason}</small>}</DropdownMenuItem>)}
+        <p className="px-2 py-2 text-[10px] text-muted-foreground">Remove affects this shortlist only. Collapse groups rows; it does not merge creators.</p>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  </div>;
 }

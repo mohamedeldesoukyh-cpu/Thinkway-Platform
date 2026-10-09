@@ -121,15 +121,15 @@ export function ShortlistQuotationPanel({
   }
 
   return (
-    <div className="tw-c" style={{ marginBottom: 11 }}>
-        <div className="tw-ch">
-          <span className="tw-ct">{title}</span>
+    <div className="q-card sl-linked-card" style={{ marginBottom: 11 }}>
+        <div className="sl-link">
+          <span className="sl-link__k">{title}</span>
           {latest.serial_number ? (
-            <Link href={detailHref} className="tw-id" style={{ color: "var(--tw-bi)" }}>
+            <Link href={detailHref} className="ref" style={{ color: "var(--tw-bi)" }}>
               {latest.serial_number}
             </Link>
           ) : null}
-          <span className="tw-cs">
+          <span className="sl-link__n">
             {quotationCountLabel(quotations.length)} · latest version {displayVersion}
           </span>
           <PackStatusPill status={latest.status} />

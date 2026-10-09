@@ -135,6 +135,8 @@ export const ShortlistToolbarButton = forwardRef<
       ref={ref}
       className={cn(
         SHORTLIST_TOOLBAR_BUTTON_CLASS,
+        (variant === "primary" || variant === "glow") && "sl-primary",
+        variant === "warn" && "sl-warn",
         size === "sm" && "h-[30px] px-[11px] text-[12px]",
         variant === "ghost" &&
           "border-transparent bg-transparent shadow-none hover:border-transparent hover:bg-muted/40",

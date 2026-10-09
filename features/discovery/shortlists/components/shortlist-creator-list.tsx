@@ -9,7 +9,7 @@ import {
 import { DiscoverySuiteCreatorCell } from "@/features/discovery/components/design-system/discovery-suite-creator-cell";
 import {
   DiscoveryCreatorFeedThumbs,
-  DiscoveryCreatorPlatformStatsBox,
+
 } from "@/features/discovery/components/discovery-creator-platform-stats";
 import { buildDiscoveryCreatorViewModel } from "@/features/discovery/view-models/discovery-creator-view-model";
 import { RefreshMetricsProgressCircle } from "@/features/discovery/enrichment/components/refresh-metrics-progress-circle";
@@ -38,9 +38,12 @@ import {
   type ShortlistDisplayBlock,
 } from "../shortlist-collapse-groups";
 import {
-  ShortlistCreatorQuotedCell,
   shortlistCreatorSyncBorderClass,
 } from "./shortlist-creator-meta-columns";
+import { ShortlistPlatformStats } from "./shortlist-platform-stats";
+import Link from "next/link";
+import { quotationDetailPath } from "@/features/quotations/constants";
+import { QUOTATION_STATUS_LABELS } from "@/features/quotations/constants";
 import { CreatorPlatformTiers } from "@/components/creator/creator-platform-tiers";
 
 type ShortlistRowItem = Pick<
@@ -77,7 +80,7 @@ function SortableMetaLabel({
     <button
       type="button"
       onClick={() => onSortChange(applyShortlistHeaderSort(sort, field))}
-      aria-sort={isActive ? (sort.direction === "asc" ? "ascending" : "descending") : "none"}
+      aria-label={`${label}: ${isActive ? (sort.direction === "asc" ? "ascending" : "descending") : "not sorted"}. Change sort`}
       className={cn(
         "inline-flex min-w-0 items-center gap-0.5 text-left transition-colors hover:text-[#41495a]",
         isActive && "text-[#41495a]"
@@ -98,14 +101,14 @@ function SortableMetaLabel({
 function statusPillClass(itemStatus: ShortlistRowItem["item_status"]): string {
   switch (itemStatus) {
     case "approved":
-      return "tw-p p-g";
+      return "q-p q-p--ok";
     case "under_review":
-      return "tw-p p-y";
+      return "q-p q-p--wrn";
     case "rejected":
     case "cancelled":
-      return "tw-p p-r";
+      return "q-p q-p--bad";
     default:
-      return "tw-p p-n";
+      return "q-p";
   }
 }
 
@@ -124,6 +127,7 @@ function ShortlistCreatorGridRow({
   onToggleSelect: () => void;
   onOpenCreator?: (creator: UnifiedCreatorResult) => void;
 }) {
+  const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const creator = item.creator;
   const stopBubble = (event: { stopPropagation: () => void }) =>
     event.stopPropagation();
@@ -173,11 +177,11 @@ function ShortlistCreatorGridRow({
         </DiscoverySuiteCell>
         <DiscoverySuiteCell>
           <span className={statusPillClass(item.item_status)}>
-            {SHORTLIST_ITEM_STATUS_LABELS[item.item_status]}
+            <s aria-hidden />{SHORTLIST_ITEM_STATUS_LABELS[item.item_status]}
           </span>
         </DiscoverySuiteCell>
         <DiscoverySuiteCell>
-          <ShortlistCreatorQuotedCell quotationRefs={item.quotation_refs} />
+          <div className="sl-q">{item.quotation_refs.length ? item.quotation_refs.map(ref => <div key={ref.quotation_id}><Link href={quotationDetailPath(ref.quotation_id, ref.serial_number)}>{ref.serial_number ?? ref.name}</Link><span className="sl-quote-status">{QUOTATION_STATUS_LABELS[ref.status]}</span></div>) : <span className="sl-na">—</span>}</div>
         </DiscoverySuiteCell>
       </DiscoverySuiteRow>
     );
@@ -238,11 +242,11 @@ function ShortlistCreatorGridRow({
       <DiscoverySuiteCell>
         {vm.categories.length > 0 ? (
           <span className="tw-tags">
-            {vm.categories.slice(0, 2).map((cat) => (
+            {(categoriesExpanded ? vm.categories : vm.categories.slice(0, 2)).map((cat) => (
               <span key={cat}>{cat}</span>
             ))}
             {vm.categories.length > 2 ? (
-              <span className="m">+{vm.categories.length - 2}</span>
+              <button type="button" className="sl-cat sl-cat--more" aria-expanded={categoriesExpanded} onClick={() => setCategoriesExpanded(!categoriesExpanded)}>{categoriesExpanded ? "Less" : `+${vm.categories.length - 2}`}</button>
             ) : null}
           </span>
         ) : (
@@ -251,7 +255,7 @@ function ShortlistCreatorGridRow({
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
-        <DiscoveryCreatorPlatformStatsBox platformStats={vm.platformStats} />
+        <ShortlistPlatformStats rows={vm.platformStats} />
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
@@ -265,7 +269,7 @@ function ShortlistCreatorGridRow({
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
-        <ShortlistCreatorQuotedCell quotationRefs={item.quotation_refs} />
+        <div className="sl-q">{item.quotation_refs.length ? item.quotation_refs.map(ref => <div key={ref.quotation_id}><Link href={quotationDetailPath(ref.quotation_id, ref.serial_number)}>{ref.serial_number ?? ref.name}</Link><span className="sl-quote-status">{QUOTATION_STATUS_LABELS[ref.status]}</span></div>) : <span className="sl-na">—</span>}</div>
       </DiscoverySuiteCell>
     </DiscoverySuiteRow>
   );
@@ -288,6 +292,7 @@ function ShortlistDisplayBlockRows({
   onToggleSelectGroup?: (itemIds: string[]) => void;
   onOpenCreator?: (creator: UnifiedCreatorResult) => void;
 }) {
+  const [expanded, setExpanded] = useState(true);
   if (block.kind === "collapse") {
     const memberIds = block.items.map((item) => item.item_id);
     const groupChecked = resolveGroupCheckboxState(memberIds, selectedIds);
@@ -308,13 +313,14 @@ function ShortlistDisplayBlockRows({
               aria-label={`Select group ${block.label}`}
             />
           ) : null}
+          <button type="button" className="sl-grp__btn" aria-expanded={expanded} aria-label={`${expanded ? "Collapse" : "Expand"} ${block.label}`} onClick={() => setExpanded(!expanded)}>{expanded ? "▾" : "▸"}</button>
           {block.label}
           <em>
             {block.items.length} creator{block.items.length === 1 ? "" : "s"}
             {groupSelected ? " · selected" : ""}
           </em>
         </div>
-        {block.items.map((item) => (
+        {expanded && block.items.map((item) => (
           <ShortlistCreatorGridRow
             key={item.item_id}
             item={item}
@@ -406,7 +412,9 @@ export function ShortlistCreatorList({
   return (
     <div>
       <DiscoverySuiteGrid
-        cols="shortlist"
+        cols="34px minmax(210px,1.5fr) 118px minmax(150px,1.1fr) minmax(250px,1.6fr) 152px 110px 124px"
+        minWidth={1180}
+        className="sl-table"
         framed={false}
         header={header}
       >
