@@ -326,6 +326,10 @@
 
 
 /* Adapters keep existing live controls and server actions within the supplied design. */
+.tq-redesign > .q-frozen-summary { position:sticky; top:var(--q-summary-top,0px); z-index:32; background:var(--q-bg); }
+.tq-redesign .q-main .q-lines-container > .tw-c { overflow:visible; }
+.tq-redesign .q-lines__h { position:sticky; top:var(--q-summary-visible,0px); z-index:31; border-start-start-radius:var(--q-r-l); border-start-end-radius:var(--q-r-l); }
+.tq-redesign .q-grid > .q-row.is-head { position:sticky; top:calc(var(--q-summary-visible,0px) + var(--q-lines-tools-height,0px)); z-index:30; }
 .tq-redesign.quotation-editor-rd4 { min-height:0; background:var(--q-bg)!important; font-size:12.5px; padding-bottom:0; }
 .tq-redesign > * { flex-shrink:0; }
 .tq-redesign .q-wrap { width:100%; }

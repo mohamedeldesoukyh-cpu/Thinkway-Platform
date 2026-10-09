@@ -1,5 +1,6 @@
 "use client";
 import { QuotationText, QuotationDesignLocaleProvider, useQuotationDesignLocale } from "./quotation-design-locale";
+import { useQuotationStickyHeaders } from "./use-quotation-sticky-headers";
 import { fetchQuotationItemCreatorDetail } from "@/features/quotations/lib/quotation-item-creator-detail";
 import { stashCompareQueue } from "@/features/discovery/components/creator-compare/compare-storage";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
@@ -143,6 +144,7 @@ function QuotationWorkspaceContent({
 }) {
   const router = useRouter();
   const { language } = useQuotationDesignLocale();
+  const stickyHeadersRef = useQuotationStickyHeaders();
   const manualSave = useQuotationManualSave();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -708,8 +710,9 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    <div dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
+    <div ref={stickyHeadersRef} dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
       <QuotationSetupWizard detail={detail} options={formOptions} />
+      <div className="q-frozen-summary">
       <QuotationWorkspaceHeader
         detail={detail}
         promoteOptions={promoteOptions}
@@ -790,6 +793,7 @@ function QuotationWorkspaceContent({
         />
       ) : null}
 
+      </div>
       <section
         className={cn("q-wrap q-main", discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
       >
