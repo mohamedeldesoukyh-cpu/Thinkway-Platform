@@ -128,6 +128,8 @@ export type QuotationDetail = {
   status: QuotationStatus;
   shortlist_id: string | null;
   shortlist_serial: string | null;
+  shortlist_client_id?: string | null;
+  shortlist_brand_id?: string | null;
   client_id: string | null;
   client_name: string | null;
   client_onboarding_status: import("@/types/database").ClientOnboardingStatus | null;

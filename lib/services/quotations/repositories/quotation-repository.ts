@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { shortlistClientConflict } from "@/lib/quotations/shortlist-client-lock";
 
 import { REPORTING_CURRENCY } from "@/lib/commercial/fx-aggregation";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
@@ -652,6 +653,17 @@ export async function updateQuotationHeaderRecord(
   id: string,
   patch: Record<string, unknown>
 ) {
+  if (["client_id", "brand_id", "is_temporary_client", "is_temporary_brand"].some(key => key in patch)) {
+    const quote = await supabase.from("quotations").select("shortlist_id").eq("id", id).single();
+    if (quote.error) return { error: quote.error };
+    if (quote.data.shortlist_id) {
+      const source = await fetchShortlistHeader(supabase, quote.data.shortlist_id);
+      if (source.error) return { error: source.error };
+      if (!source.data) return { error: { message: "Cannot verify the linked shortlist client. No changes saved." } };
+      const conflict = shortlistClientConflict(source.data, patch);
+      if (conflict) return { error: { message: conflict } };
+    }
+  }
   return supabase.from("quotations").update(patch as never).eq("id", id);
 }
 

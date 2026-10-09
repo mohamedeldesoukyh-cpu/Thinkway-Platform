@@ -33,9 +33,14 @@ export function QuotationSetupWizard({ detail, options }: Props) {
   const [tempClient, setTempClient] = useState(detail.temporary_client_name ?? "");
   const [tempBrand, setTempBrand] = useState(detail.temporary_brand_name ?? "");
 
+  const sourceMismatch = Boolean(detail.shortlist_client_id) && (
+    detail.client_id !== detail.shortlist_client_id || detail.is_temporary_client ||
+    (Boolean(detail.shortlist_brand_id) && (detail.brand_id !== detail.shortlist_brand_id || detail.is_temporary_brand))
+  );
   const needsSetup =
     !detail.canManage
       ? false
+      : sourceMismatch ? true
       : detail.is_temporary_client
         ? !detail.temporary_client_name || !detail.temporary_brand_name
         : !detail.client_id || !detail.brand_id;
@@ -56,9 +61,9 @@ export function QuotationSetupWizard({ detail, options }: Props) {
     detail.temporary_brand_name,
   ]);
 
-  const canContinue = useTemporary
+  const canContinue = !sourceMismatch && (useTemporary
     ? Boolean(tempClient.trim() && tempBrand.trim())
-    : Boolean(detail.client_id && detail.brand_id);
+    : Boolean(detail.client_id && detail.brand_id));
 
   function handleContinue() {
     if (!canContinue) {

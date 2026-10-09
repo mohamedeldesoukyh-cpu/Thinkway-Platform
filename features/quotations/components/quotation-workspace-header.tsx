@@ -70,6 +70,7 @@ type Props = {
   hasUnsavedChanges: boolean;
   savePending: boolean;
   onSave: () => void;
+  onDiscard: () => void;
   exportTemplate: QuotationTemplateVariant;
   onExportTemplateChange: (template: QuotationTemplateVariant) => void;
   selectedItemIds?: string[];
@@ -88,6 +89,7 @@ export function QuotationWorkspaceHeader({
   hasUnsavedChanges,
   savePending,
   onSave,
+  onDiscard,
   exportTemplate,
   onExportTemplateChange,
   selectedItemIds,
@@ -273,6 +275,10 @@ export function QuotationWorkspaceHeader({
                   ) : null}
                   <QuotationText>Save</QuotationText></button>
               ) : null}
+              {detail.canManage && <button type="button" className="tw-b sm"
+                disabled={savePending || !hasUnsavedChanges} onClick={onDiscard}>
+                <QuotationText>Discard changes</QuotationText>
+              </button>}
               <span role="status" className={`q-save ${savePending ? "is-saving" : saveStatus === "error" ? "is-failed" : hasUnsavedChanges ? "is-dirty" : "is-saved"}`}>
                 <s aria-hidden /><span><QuotationText>{savePending ? "Saving…" : saveStatus === "error" ? "Save failed — retry" : hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}</QuotationText></span>
               </span>

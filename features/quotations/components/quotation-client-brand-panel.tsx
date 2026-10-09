@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { useConfirmAction } from "@/components/shared/confirm-action-provider";
+import { updateQuotationClientBrand } from "@/features/quotations/lifecycle-actions";
 
 import { SearchableSelect } from "@/components/forms/searchable-select";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -30,6 +32,13 @@ type Props = {
 
 export function QuotationClientBrandPanel({ detail, options, disabled, wizard }: Props) {
   const router = useRouter();
+  const { confirm } = useConfirmAction();
+  const inheritedClient = Boolean(detail.shortlist_client_id);
+  const inheritedBrand = inheritedClient && Boolean(detail.shortlist_brand_id);
+  const identityMismatch = inheritedClient && (
+    detail.client_id !== detail.shortlist_client_id || detail.is_temporary_client ||
+    (inheritedBrand && (detail.brand_id !== detail.shortlist_brand_id || detail.is_temporary_brand))
+  );
   const manualSave = useQuotationManualSave();
   const [pending, startTransition] = useTransition();
   const [localTemporary, setLocalTemporary] = useState(
@@ -82,12 +91,12 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
       }
       return {
         useTemporary: false as const,
-        client_id: (overrides?.clientId ?? localClientId) || detail.client_id || null,
-        brand_id: (overrides?.brandId ?? localBrandId) || detail.brand_id || null,
+        client_id: (overrides?.clientId ?? localClientId) || null,
+        brand_id: (overrides?.brandId ?? localBrandId) || null,
         campaign_header_id:
           overrides?.campaignId !== undefined
             ? overrides.campaignId || null
-            : localCampaignId || detail.campaign_header_id || null,
+            : localCampaignId || null,
       };
     },
     [
@@ -117,6 +126,7 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
   );
 
   function setUseTemporary(value: boolean) {
+    if (inheritedClient) return;
     if (wizard) wizard.onUseTemporaryChange(value);
     else {
       setLocalTemporary(value);
@@ -140,11 +150,11 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
     }
   }
 
-  const activeClientId = wizard ? detail.client_id : localClientId || detail.client_id;
-  const activeBrandId = wizard ? detail.brand_id : localBrandId || detail.brand_id;
+  const activeClientId = wizard ? detail.client_id : localClientId;
+  const activeBrandId = wizard ? detail.brand_id : localBrandId;
   const activeCampaignId = wizard
     ? detail.campaign_header_id
-    : localCampaignId || detail.campaign_header_id;
+    : localCampaignId;
 
   const clientOptions = useMemo(
     () =>
@@ -188,7 +198,7 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
   }
 
   function handleClientChange(clientId: string) {
-    if (!clientId) return;
+    if (!clientId || inheritedClient) return;
     if (wizard) {
       saveMaster({ client_id: clientId, brand_id: null, campaign_header_id: null });
       return;
@@ -200,7 +210,7 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
   }
 
   function handleBrandChange(brandId: string) {
-    if (!brandId || !activeClientId) return;
+    if (!brandId || !activeClientId || inheritedBrand) return;
     if (wizard) {
       saveMaster({ brand_id: brandId });
       return;
@@ -220,6 +230,26 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
 
   return (
     <div className="cb-panel field-row grid gap-3 md:grid-cols-3">
+      {inheritedClient ? (
+        <div className="md:col-span-3" role={identityMismatch ? "alert" : undefined}>
+          <p>{identityMismatch
+            ? "This quotation does not match its linked shortlist’s client or brand. Restore the source values to correct it without replacing the existing link."
+            : "Client identity is inherited from the linked shortlist and cannot be changed independently here."}</p>
+          {identityMismatch ? <button type="button" className="tw-b sm" disabled={disabled || pending || manualSave.hasUnsavedChanges}
+            onClick={async () => {
+              if (!await confirm({ title: "Restore client from shortlist?", description: "Restore the recorded client and brand from the linked shortlist. The shortlist, quotation and existing review links will be kept.", confirmLabel: "Restore from shortlist" })) return;
+              startTransition(async () => {
+                const result = await updateQuotationClientBrand({ quotationId: detail.id,
+                  client_id: detail.shortlist_client_id,
+                  ...(detail.shortlist_brand_id ? { brand_id: detail.shortlist_brand_id } : {}),
+                });
+                if (!result.ok) { toast.error(result.message); return; }
+                toast.success("Client restored from shortlist.");
+                router.refresh();
+              });
+            }}>Restore from shortlist</button> : null}
+        </div>
+      ) : null}
       <div className="sec-head md:col-span-3 items-center" style={{ marginBottom: 12, alignItems: "center" }}>
         <div>
           <h2>Client &amp; brand</h2>
@@ -230,7 +260,7 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
             id="temp-client-brand"
             checked={useTemporary}
             onCheckedChange={(checked) => setUseTemporary(Boolean(checked))}
-            disabled={disabled || pending}
+            disabled={disabled || pending || inheritedClient}
           />
           <Label htmlFor="temp-client-brand" className="text-xs font-normal">
             Use temporary client &amp; brand{" "}
@@ -283,7 +313,7 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
               options={[{ value: "", label: "Select client…" }, ...clientOptions]}
               value={activeClientId ?? ""}
               onValueChange={handleClientChange}
-              disabled={disabled || pending}
+              disabled={disabled || pending || inheritedClient}
               placeholder="Select client"
             />
           </div>
@@ -295,7 +325,7 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
               options={[{ value: "", label: "Select brand…" }, ...brandOptions]}
               value={activeBrandId ?? ""}
               onValueChange={handleBrandChange}
-              disabled={disabled || pending || !activeClientId}
+              disabled={disabled || pending || !activeClientId || inheritedBrand}
               placeholder={activeClientId ? "Select brand" : "Select client first"}
             />
           </div>

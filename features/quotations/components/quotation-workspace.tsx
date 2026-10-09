@@ -718,6 +718,7 @@ function QuotationWorkspaceContent({
         promoteOptions={promoteOptions}
         hasUnsavedChanges={manualSave.hasUnsavedChanges}
         savePending={manualSave.savePending}
+        onDiscard={() => { void manualSave.discardAll(); }}
         onSave={() => {
           void manualSave.saveAll().then((ok) => {
             if (ok) toast.success("Quotation saved.");

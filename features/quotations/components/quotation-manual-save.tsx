@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Fragment,
   createContext,
   useCallback,
   useContext,
@@ -95,6 +96,7 @@ type QuotationManualSaveContextValue = {
   saveStatus: AutosaveStatus;
   savePending: boolean;
   saveAll: () => Promise<boolean>;
+  discardAll: () => Promise<void>;
 };
 
 const QuotationManualSaveContext = createContext<QuotationManualSaveContextValue | null>(null);
@@ -143,6 +145,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
   const [saveStatus, setSaveStatus] = useState<AutosaveStatus>("idle");
   const [savePending, setSavePending] = useState(false);
   const savePendingRef = useRef(false);
+  const [discardRevision, setDiscardRevision] = useState(0);
   const [revisionOpen, setRevisionOpen] = useState(false);
   const [revisionCampaignHeaderId, setRevisionCampaignHeaderId] = useState<
     string | null
@@ -549,6 +552,25 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
     }
   }, [quotationId, router, confirm, syncPendingState]);
 
+  const discardAll = useCallback(async () => {
+    if (savePendingRef.current || !hasUnsavedRef.current) return;
+    const accepted = await confirm({
+      title: "Discard unsaved changes?",
+      description: "Restore the saved quotation values. This discards pending line, pricing, and document edits only; actions already saved are not undone.",
+      confirmLabel: "Discard changes",
+    });
+    if (!accepted || savePendingRef.current) return;
+    linePendingRef.current.clear();
+    metaPendingRef.current = null;
+    clientBrandPendingRef.current = null;
+    hasUnsavedRef.current = false;
+    syncPendingState();
+    // Remount local editors to reset staged fields and cancel their debounce timers.
+    setDiscardRevision((revision) => revision + 1);
+    router.refresh();
+    toast.success("Unsaved changes discarded.");
+  }, [confirm, router, syncPendingState]);
+
   useEffect(() => {
     const onBeforeUnload = (event: BeforeUnloadEvent) => {
       if (!hasUnsavedRef.current) return;
@@ -573,6 +595,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       saveStatus,
       savePending,
       saveAll,
+      discardAll,
     }),
     [
       registerLinePending,
@@ -586,13 +609,14 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
       saveStatus,
       savePending,
       saveAll,
+      discardAll,
     ]
   );
 
   return (
     <QuotationManualSaveContext.Provider value={value}>
       <QuotationManualSaveShortcuts />
-      {children}
+      <Fragment key={discardRevision}>{children}</Fragment>
       {revisionCampaignHeaderId ? (
         <CommercialRevisionDialog
           open={revisionOpen}

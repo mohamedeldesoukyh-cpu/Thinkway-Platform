@@ -72,7 +72,7 @@ export async function fetchLinkedShortlistSummary(
 ) {
   return supabase
     .from("discovery_shortlists")
-    .select("id, serial_number")
+    .select("id, serial_number, client_id, brand_id")
     .eq("id", shortlistId)
     .maybeSingle();
 }

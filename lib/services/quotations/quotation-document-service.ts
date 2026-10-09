@@ -495,7 +495,7 @@ export async function getQuotationDetail(
     agencyOrDirect === "agency"
       ? clientRow?.legal_name?.trim() || clientRow?.name?.trim() || null
       : null;
-  const shortlistRow = shortlistResult.data as { serial_number: string | null } | null;
+  const shortlistRow = shortlistResult.data as { serial_number: string | null; client_id: string | null; brand_id: string | null } | null;
   const ownerRow = ownerResult.data as { full_name: string | null } | null;
 
   const validityDate = (row.validity_date as string | null) ?? null;
@@ -533,6 +533,8 @@ export async function getQuotationDetail(
     status,
     shortlist_id: (row.shortlist_id as string | null) ?? null,
     shortlist_serial: shortlistRow?.serial_number ?? null,
+    shortlist_client_id: shortlistRow?.client_id ?? null,
+    shortlist_brand_id: shortlistRow?.brand_id ?? null,
     client_id: clientId,
     client_name: isTemporaryClient ? tempClientName : clientRow?.name ?? null,
     client_onboarding_status: isTemporaryClient
