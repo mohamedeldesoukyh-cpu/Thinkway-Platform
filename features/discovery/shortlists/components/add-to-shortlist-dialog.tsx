@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
 import { ClockIcon, Loader2Icon, SearchIcon, XIcon } from "lucide-react";

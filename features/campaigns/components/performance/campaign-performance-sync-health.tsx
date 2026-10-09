@@ -1,4 +1,3 @@
-"use client";
 
 import type { CampaignMetricsSyncHealth } from "@/lib/performance/metrics-collector/types";
 import { cn } from "@/lib/utils";

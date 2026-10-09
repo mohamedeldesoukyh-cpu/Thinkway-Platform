@@ -1,4 +1,3 @@
-"use client";
 
 import type { CampaignPerformanceCharts } from "@/features/campaigns/queries/publications";
 import { formatCompactCount } from "@/lib/campaigns/performance-calculations";

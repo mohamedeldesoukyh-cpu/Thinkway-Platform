@@ -1,4 +1,3 @@
-"use client";
 
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import { cn } from "@/lib/utils";

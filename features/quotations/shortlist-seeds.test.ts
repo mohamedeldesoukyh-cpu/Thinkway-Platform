@@ -198,7 +198,7 @@ function mockCreator(overrides?: Partial<UnifiedCreatorResult>): UnifiedCreatorR
   assert.ok(plan.every((entry) => entry.detachSourceLink));
 }
 
-// Multi-platform creator seeds null line platform + metrics-account handle
+// The line snapshot uses the metrics account consistently for platform and handle.
 {
   const seed = buildQuotationSeedFromCreator(
     mockCreator({
@@ -233,7 +233,7 @@ function mockCreator(overrides?: Partial<UnifiedCreatorResult>): UnifiedCreatorR
       },
     })
   );
-  assert.equal(seed.platform, null);
+  assert.equal(seed.platform, "tiktok");
   assert.equal(seed.handle, "amir.tt");
   assert.equal(seed.followers, 500000);
   assert.equal(seed.engagement_rate, 5.1);

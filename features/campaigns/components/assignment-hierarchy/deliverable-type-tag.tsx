@@ -1,4 +1,3 @@
-"use client";
 
 import { deliverableTypeShortLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { platformBadgeClass } from "@/features/campaigns/components/assignment-hierarchy/platform-deliverable-selects";

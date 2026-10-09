@@ -1,4 +1,3 @@
-"use client";
 
 import { QuotationSortHeaderIndicator } from "@/features/quotations/components/quotation-sort-header-indicator";
 import {

@@ -1,4 +1,3 @@
-"use client";
 
 import { useMemo, useState, useTransition } from "react";
 import { createPortal } from "react-dom";

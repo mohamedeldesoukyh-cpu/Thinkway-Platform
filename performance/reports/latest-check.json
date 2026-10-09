@@ -1,129 +1,129 @@
 {
-  "capturedAt": "2026-08-04T02:18:26.394Z",
+  "capturedAt": "2026-10-09T16:06:43.027Z",
   "metrics": {
-    "capturedAt": "2026-08-04T02:18:26.394Z",
+    "capturedAt": "2026-10-09T16:06:43.027Z",
     "bundle": {
-      "largestJsKb": 568.6,
-      "largestCssKb": 337.5,
-      "totalJsKb": 14195,
-      "totalCssKb": 699,
-      "assetsOver100kb": 26,
-      "jsFileCount": 290,
-      "cssFileCount": 10,
+      "largestJsKb": 337.6,
+      "largestCssKb": 341.1,
+      "totalJsKb": 13282.9,
+      "totalCssKb": 1300.4,
+      "assetsOver100kb": 18,
+      "jsFileCount": 388,
+      "cssFileCount": 38,
       "largestJs": [
         {
-          "file": ".next/static/chunks/0cd7lp2e2g9ze.js",
-          "bytes": 582253,
-          "kb": 568.6
+          "file": ".next/static/chunks/023r33osfk4op.js",
+          "bytes": 345747,
+          "kb": 337.6
         },
         {
-          "file": ".next/static/chunks/1wc1e5y8xvxss.js",
-          "bytes": 582253,
-          "kb": 568.6
+          "file": ".next/static/chunks/22qijaj6jnvr5.js",
+          "bytes": 345732,
+          "kb": 337.6
         },
         {
-          "file": ".next/static/chunks/12o8o-o-9x1x6.js",
-          "bytes": 486681,
-          "kb": 475.3
+          "file": ".next/static/chunks/31wytz_jsob8r.js",
+          "bytes": 243404,
+          "kb": 237.7
         },
         {
-          "file": ".next/static/chunks/2if2tb5cqlhtz.js",
-          "bytes": 317108,
-          "kb": 309.7
+          "file": ".next/static/chunks/0gkuv263jogyr.js",
+          "bytes": 234947,
+          "kb": 229.4
         },
         {
-          "file": ".next/static/chunks/367xbj6_12vhd.js",
-          "bytes": 227426,
-          "kb": 222.1
+          "file": ".next/static/chunks/2ts269cvaamhl.js",
+          "bytes": 226154,
+          "kb": 220.9
         },
         {
-          "file": ".next/static/chunks/0pbr2auzk_jl3.js",
-          "bytes": 208798,
-          "kb": 203.9
+          "file": ".next/static/chunks/0i15ul8y8yg32.js",
+          "bytes": 224486,
+          "kb": 219.2
         },
         {
-          "file": ".next/static/chunks/0r2fu_s6n60zl.js",
-          "bytes": 171535,
-          "kb": 167.5
+          "file": ".next/static/chunks/0lkwxpyeei23-.js",
+          "bytes": 150479,
+          "kb": 147
         },
         {
-          "file": ".next/static/chunks/0g3zhfgt9zp1y.js",
-          "bytes": 162704,
-          "kb": 158.9
+          "file": ".next/static/chunks/3wkbuozoqhunz.js",
+          "bytes": 147385,
+          "kb": 143.9
         },
         {
-          "file": ".next/static/chunks/03y04vil09fa6.js",
-          "bytes": 149144,
-          "kb": 145.6
+          "file": ".next/static/chunks/1i7pvoi0h7njj.js",
+          "bytes": 131267,
+          "kb": 128.2
         },
         {
-          "file": ".next/static/chunks/26mx1uwdjl-12.js",
-          "bytes": 143057,
-          "kb": 139.7
+          "file": ".next/static/chunks/0gaqpl43th77m.js",
+          "bytes": 116719,
+          "kb": 114
         }
       ],
       "largestCss": [
         {
-          "file": ".next/static/chunks/1zmslg2xoi_aq.css",
-          "bytes": 345630,
-          "kb": 337.5
+          "file": ".next/static/chunks/3jqbkadnf8n7c.css",
+          "bytes": 349301,
+          "kb": 341.1
         },
         {
-          "file": ".next/static/chunks/43au_x0_gi-8k.css",
-          "bytes": 115972,
-          "kb": 113.3
+          "file": ".next/static/chunks/3ucvs8y1joj5d.css",
+          "bytes": 112334,
+          "kb": 109.7
         },
         {
-          "file": ".next/static/chunks/41zggdatksinw.css",
-          "bytes": 115274,
-          "kb": 112.6
+          "file": ".next/static/chunks/0t6sozj72sv-v.css",
+          "bytes": 107366,
+          "kb": 104.8
         },
         {
-          "file": ".next/static/chunks/26fqncsyc4q51.css",
-          "bytes": 37797,
-          "kb": 36.9
+          "file": ".next/static/chunks/1ofveo_aigfcq.css",
+          "bytes": 102067,
+          "kb": 99.7
         },
         {
-          "file": ".next/static/chunks/21ojy-tjekred.css",
-          "bytes": 33222,
-          "kb": 32.4
+          "file": ".next/static/chunks/0tagmkjls8w_6.css",
+          "bytes": 60685,
+          "kb": 59.3
         },
         {
-          "file": ".next/static/chunks/1w5ug4p7qrbi3.css",
-          "bytes": 28695,
-          "kb": 28
+          "file": ".next/static/chunks/3zfp66cm4h3bq.css",
+          "bytes": 53580,
+          "kb": 52.3
         },
         {
-          "file": ".next/static/chunks/0qgi_90s_j60k.css",
-          "bytes": 15352,
-          "kb": 15
+          "file": ".next/static/chunks/0salqkzk8ehjg.css",
+          "bytes": 53264,
+          "kb": 52
         },
         {
-          "file": ".next/static/chunks/1fx9-pm5gw0vh.css",
-          "bytes": 11721,
-          "kb": 11.4
+          "file": ".next/static/chunks/2j-073rgkhnb3.css",
+          "bytes": 52135,
+          "kb": 50.9
         },
         {
-          "file": ".next/static/chunks/0uiw0udynfa99.css",
-          "bytes": 8394,
-          "kb": 8.2
+          "file": ".next/static/chunks/2aynr60ir6by3.css",
+          "bytes": 51753,
+          "kb": 50.5
         },
         {
-          "file": ".next/static/chunks/34t5bntvffilg.css",
-          "bytes": 3705,
-          "kb": 3.6
+          "file": ".next/static/chunks/1aimpgvjvg77l.css",
+          "bytes": 45300,
+          "kb": 44.2
         }
       ]
     },
     "source": {
-      "rootGlobalCssKb": 30.8,
-      "clientModuleCount": 807,
-      "largestClientSourceKb": 77.4,
+      "rootGlobalCssKb": 30.1,
+      "clientModuleCount": 870,
+      "largestClientSourceKb": 101,
       "largestClientSourceFile": "features/discovery/components/creator-search/creator-search-workspace.tsx",
       "clientSummary": {
-        "must_remain_client": 414,
-        "can_dynamically_import": 157,
-        "can_become_server": 236
+        "must_remain_client": 487,
+        "can_dynamically_import": 173,
+        "can_become_server": 210
       }
     }
   },
@@ -137,92 +137,92 @@
     "fails": [],
     "warns": [
       {
-        "name": "bundle.largestJsKb",
-        "value": 568.6,
-        "soft": 560,
-        "hard": 620,
-        "status": "warn"
-      },
-      {
         "name": "bundle.totalJsKb",
-        "value": 14195,
+        "value": 13282.9,
         "soft": 13000,
         "hard": 15000,
         "status": "warn"
       },
       {
-        "name": "bundle.assetsOver100kb",
-        "value": 26,
-        "soft": 20,
-        "hard": 28,
+        "name": "bundle.totalCssKb",
+        "value": 1300.4,
+        "soft": 700,
+        "hard": 1400,
+        "status": "warn"
+      },
+      {
+        "name": "bundle.jsFileCount",
+        "value": 388,
+        "soft": 320,
+        "hard": 400,
         "status": "warn"
       },
       {
         "name": "source.clientModuleCount",
-        "value": 807,
+        "value": 870,
         "soft": 780,
         "hard": 900,
+        "status": "warn"
+      },
+      {
+        "name": "source.largestClientSourceKb",
+        "value": 101,
+        "soft": 85,
+        "hard": 120,
         "status": "warn"
       }
     ],
     "passes": [
       {
+        "name": "bundle.largestJsKb",
+        "value": 337.6,
+        "soft": 560,
+        "hard": 620,
+        "status": "pass"
+      },
+      {
         "name": "bundle.largestCssKb",
-        "value": 337.5,
+        "value": 341.1,
         "soft": 350,
         "hard": 400,
         "status": "pass"
       },
       {
-        "name": "bundle.totalCssKb",
-        "value": 699,
-        "soft": 700,
-        "hard": 850,
-        "status": "pass"
-      },
-      {
-        "name": "bundle.jsFileCount",
-        "value": 290,
-        "soft": 320,
-        "hard": 400,
+        "name": "bundle.assetsOver100kb",
+        "value": 18,
+        "soft": 20,
+        "hard": 28,
         "status": "pass"
       },
       {
         "name": "source.rootGlobalCssKb",
-        "value": 30.8,
+        "value": 30.1,
         "soft": 40,
         "hard": 60,
         "status": "pass"
       },
       {
-        "name": "source.largestClientSourceKb",
-        "value": 77.4,
-        "soft": 85,
-        "hard": 120,
-        "status": "pass"
-      },
-      {
         "name": "regression.largestJsKbGrowthPct",
-        "value": 0,
+        "value": -40.6,
         "soft": 5,
         "hard": 12,
         "status": "pass"
       },
       {
         "name": "regression.largestCssKbGrowthPct",
-        "value": 0,
+        "value": 1.1,
         "soft": 5,
         "hard": 12,
         "status": "pass"
       },
       {
         "name": "regression.totalJsKbGrowthPct",
-        "value": 0,
+        "value": -6.4,
         "soft": 8,
         "hard": 15,
         "status": "pass"
       }
     ]
   },
-  "score": 87
+  "score": 83
 }

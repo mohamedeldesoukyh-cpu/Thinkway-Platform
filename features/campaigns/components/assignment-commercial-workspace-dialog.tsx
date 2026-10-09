@@ -1,4 +1,3 @@
-"use client";
 
 import "@/app/commercial-workspace.css";
 

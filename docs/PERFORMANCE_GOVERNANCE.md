@@ -28,6 +28,18 @@ Frozen comparison baseline: [`performance/baseline.json`](../performance/baselin
 
 **Soft** = warn in CI / dashboard. **Hard** = fail the build.
 
+### Owner-approved total CSS budget revision — 2026-10-09
+
+The owner approved raising only `bundle.totalCssKb.hard` from 850 to
+1,400 KB (1,433,600 bytes at 1,024 bytes per KB). This is a budget policy
+revision, not CSS optimization or measured performance improvement.
+The existing collector still counts all emitted CSS under `.next/static`,
+using its unchanged byte-to-KB conversion and rounding. The 700 KB soft
+warning, every other limit, and the frozen baseline remain unchanged.
+Outstanding route-performance, browser and access validation stays in the
+existing handoffs as separate follow-up work; this approval does not mark
+that coverage passed or authorize deployment.
+
 ---
 
 ## 2. CI validation

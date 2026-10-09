@@ -1,4 +1,3 @@
-"use client";
 
 import { ClientWorkspaceListLinkCell } from "@/features/client-workspace/components/client-workspace-list-link-cell";
 import type { CampaignClientWorkspaceLink } from "@/features/client-workspace/client-review-selection";

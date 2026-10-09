@@ -20,7 +20,6 @@
 .tw-review #review .cx-stage-nav .btn{padding:0;width:30px;height:26px;min-height:26px}
 .tw-review #review .cx-pane.cx-review__detail{padding:0;max-height:none;overflow:visible}
 .tw-review #review .cx-detail-block{margin:0;padding:10px 16px;background:#f6f8fb;border-bottom:1px solid #eef2f8}
-.tw-review #review .cx-review__detail .cx-rev__head{margin:0;padding:10px 16px}
 .tw-review #review .cx-review__detail .cx-rev{margin:0;display:block}
 .tw-review #review .cx-review__detail .cx-rev__meta{margin:0!important;padding:0!important;grid-template-columns:repeat(5,minmax(0,1fr));border-top:0}
 .tw-review #review .cx-rev__meta div span{font-size:9.5px;font-weight:700}
@@ -79,11 +78,6 @@
 .tw-review #review .cx-approved-dateline .cx-badge{font-size:9px;padding:2px 6px}
 .tw-review #review .cx-approved-footnote{margin:7px 0 0;font-size:9.5px;line-height:1.4;color:#64748b}
 .tw-review #review .cx-film-filename{position:absolute;bottom:0;left:0;right:0;pointer-events:none;padding:18px 10px 8px;background:linear-gradient(0deg,rgba(0,0,0,.78),transparent);color:white;font:500 9.5px ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tw-review #review .cx-approved-card .cx-rev__name{font-size:11.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tw-review #review .cx-approved-card .cx-rev__file{font:500 10.5px ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tw-review #review .cx-approved-card__status{font-size:9.5px;gap:5px;margin:9px 0}
-.tw-review #review .cx-approved-card__date{font-size:9.5px;padding:9px 0 0;margin-top:0}
-.tw-review #review .cx-approved-card__date time{font-size:9.5px;font-weight:400}
 .tw-review #review .cx-approved-card__hover-actions{z-index:4;pointer-events:none!important;bottom:36px;padding:12px}
 .tw-review #review .cx-approved-card__hover-actions .btn{pointer-events:auto;font-size:10px;padding:5px 9px}
 .tw-review #review .cx-approved-card__media:not(:hover):not(:focus-within) .cx-approved-card__hover-actions .btn{pointer-events:none}

@@ -1,4 +1,3 @@
-"use client";
 
 import { CreatorThumbAvatar } from "@/components/creator/creator-thumb-cell";
 import { sanitizeAssignmentCreatorName } from "@/lib/campaigns/assignment-line-naming";

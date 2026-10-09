@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { exportAaibBeneficiaries } from './actions';
 import { BENEFICIARY_FILENAME } from './aaib';
-import { downloadFile } from './bank-editor';
+import { downloadFile } from './download-file';
 export function BeneficiaryExport({ creators }: {
     creators: {
         id: string;

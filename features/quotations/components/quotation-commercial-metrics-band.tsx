@@ -1,4 +1,3 @@
-"use client";
 import { QuotationText, useQuotationLabel } from "./quotation-design-locale";
 
 import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";

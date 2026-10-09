@@ -52,6 +52,8 @@ function CreatorAvatarImageInstance({
   const [useProfileFallback, setUseProfileFallback] = useState(false);
   const [useRawCdnFallback, setUseRawCdnFallback] = useState(false);
   const [loadedSrc, setLoadedSrc] = useState<string | null>(null);
+  const failedImages = useRef(new WeakSet<HTMLImageElement>());
+  const imageRef = useRef<HTMLImageElement>(null);
 
   const activeBase =
     useProfileFallback && profileOnlySrc && profileOnlySrc !== primarySrc
@@ -73,6 +75,32 @@ function CreatorAvatarImageInstance({
   const src = rawFallback ? rawCdnSrc : activeBase && !recovery.exhausted
     ? recovery.displaySrc ?? activeBase : null;
   const loaded = Boolean(src && loadedSrc === src);
+  const handleImageFailure = (image: HTMLImageElement) => {
+    // Hydration and the native error event can both observe the same failure.
+    if (failedImages.current.has(image)) return;
+    failedImages.current.add(image);
+    setLoadedSrc(null);
+    if (rawFallback) {
+      setUseRawCdnFallback(true);
+      return;
+    }
+    if (!useProfileFallback && profileOnlySrc && profileOnlySrc !== primarySrc) {
+      setUseProfileFallback(true);
+      return;
+    }
+    recovery.onError();
+  };
+  useEffect(() => {
+    // A cached response can finish before hydration attaches native handlers.
+    // Run after the recovery hook initializes, and only reconcile unsettled state.
+    const image = imageRef.current;
+    if (!src || !image?.complete) return;
+    if (image.naturalWidth > 0) {
+      if (loadedSrc !== src) setLoadedSrc(src);
+    } else {
+      handleImageFailure(image);
+    }
+  });
   return (
     <div className={cn(AVATAR_CONTAINER_CLASS, "flex items-center justify-center bg-muted text-muted-foreground", dim, className)}
       role="img" aria-label={alt || "Creator photo"}>
@@ -80,6 +108,7 @@ function CreatorAvatarImageInstance({
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {src && <img
         key={src}
+        ref={imageRef}
         src={src}
         alt=""
         aria-hidden
@@ -87,22 +116,7 @@ function CreatorAvatarImageInstance({
         className="absolute inset-0 size-full object-cover object-center"
         style={{ opacity: loaded ? 1 : 0 }}
         onLoad={() => setLoadedSrc(src)}
-        onError={() => {
-          setLoadedSrc(null);
-          if (rawFallback) {
-            setUseRawCdnFallback(true);
-            return;
-          }
-          if (
-            !useProfileFallback &&
-            profileOnlySrc &&
-            profileOnlySrc !== primarySrc
-          ) {
-            setUseProfileFallback(true);
-            return;
-          }
-          recovery.onError();
-        }}
+        onError={(event) => handleImageFailure(event.currentTarget)}
       />}
     </div>
   );

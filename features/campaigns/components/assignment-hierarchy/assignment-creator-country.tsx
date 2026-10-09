@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useId, useState } from "react";
 import { SearchableSelect } from "@/components/forms/searchable-select";

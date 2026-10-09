@@ -1,4 +1,3 @@
-"use client";
 
 import { QuotationCreatorFxFields } from "./quotation-creator-fx-fields";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";

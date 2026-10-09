@@ -87,13 +87,6 @@
     border-color 0.14s;
 }
 
-.quotation-editor-rd4 .q-wtop-acts > button:hover,
-.quotation-editor-rd4 .q-wtop-acts > a:hover,
-.quotation-editor-rd4 .q-wtop-acts > div > button:hover {
-  background: var(--hover);
-  border-color: #d2d9e8;
-}
-
 .quotation-editor-rd4 .btn.sm,
 .quotation-editor-rd4 .q-sec-tools button,
 .quotation-editor-rd4 .q-sec-tools a {
@@ -113,31 +106,6 @@
   box-shadow:
     0 1px 2px rgba(0, 87, 255, 0.35),
     0 6px 16px -6px rgba(0, 87, 255, 0.5) !important;
-}
-
-.quotation-editor-rd4 .btn-glow,
-.quotation-editor-rd4 .q-wtop-acts button.btn-glow {
-  background: var(--white) !important;
-  border: 1.5px solid rgba(0, 87, 255, 0.55) !important;
-  color: var(--blue-text) !important;
-  font-weight: 700 !important;
-  box-shadow:
-    0 0 0 3px rgba(0, 87, 255, 0.08),
-    0 2px 14px -3px rgba(0, 87, 255, 0.4) !important;
-}
-
-.quotation-editor-rd4 .btn-glow:hover:not(:disabled) {
-  border-color: var(--blue) !important;
-  background: var(--blue-soft) !important;
-}
-
-.quotation-editor-rd4 .btn-ghost {
-  border-color: transparent !important;
-  background: transparent !important;
-}
-
-.quotation-editor-rd4 .btn-ghost:hover {
-  background: var(--surface) !important;
 }
 
 .quotation-editor-rd4 .ibtn {
@@ -197,11 +165,6 @@
   background: #94a0b8;
 }
 
-.quotation-editor-rd4 .spill.spill-compact {
-  height: 20px;
-  padding: 0 7px;
-}
-
 .quotation-editor-rd4 .gen-trigger {
   display: inline-flex;
   align-items: center;
@@ -250,49 +213,7 @@
   opacity: 0.85;
 }
 
-.quotation-editor-rd4 .wtop-acts > div > button.gen-trigger,
-.quotation-editor-rd4 .wtop-acts > button.btn,
-.quotation-editor-rd4 .wtop-acts > div > button.btn {
-  flex-shrink: 0;
-}
-
 /* —— Sticky top —— */
-.quotation-editor-rd4 .wtop {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  width: 100%;
-  max-width: none;
-  padding: 12px var(--gut);
-  border-bottom: 1px solid var(--line);
-  background: var(--white);
-  position: sticky;
-  top: 0;
-  z-index: 20;
-}
-
-.quotation-editor-rd4 .wtop-left {
-  min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.quotation-editor-rd4 .wtop-left .qmeta {
-  margin-top: 0;
-  flex-wrap: nowrap;
-  overflow: hidden;
-}
-
-.quotation-editor-rd4 .wtop-left .qmeta > span {
-  white-space: nowrap;
-}
-
-.quotation-editor-rd4 .wtop-left .qtitle h1 {
-  font-size: 18px;
-}
 
 /* Nested .discovery-suite is token scope only (layout root already wraps the
    page). Legacy discovery-suite.css sets min-height:100% on every
@@ -324,14 +245,6 @@
   background: transparent;
 }
 
-.quotation-editor-rd4 .tw-frozen .tw-top {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-wrap: wrap;
-  padding: 0 0 8px;
-}
-
 /* Quotation body bands — document flow only. The editor root scrolls
    (shortlist single-scrollport). Never flex:1 / min-height:0 here. */
 .quotation-editor-rd4 .quotation-body,
@@ -348,110 +261,11 @@
   background: var(--white);
 }
 
-.quotation-editor-rd4 .wtop-acts {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  flex-shrink: 0;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-}
-
-.quotation-editor-rd4 .qtitle {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-}
-
-.quotation-editor-rd4 .qtitle .serial {
-  font-size: 10.5px;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-4);
-  padding-right: 11px;
-  border-right: 1px solid var(--line-2);
-  flex-shrink: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-.quotation-editor-rd4 .qtitle h1 {
-  font-size: 18px;
-  font-weight: 700;
-  letter-spacing: -0.022em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text);
-  margin: 0;
-  min-width: 0;
-}
-
-.quotation-editor-rd4 .qmeta {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: 12px;
-  overflow: hidden;
-  font-size: 12px;
-  color: var(--text-3);
-}
-
-.quotation-editor-rd4 .qmeta > span {
-  white-space: nowrap;
-}
-
-.quotation-editor-rd4 .qmeta .k {
-  color: var(--text-4);
-}
-
-.quotation-editor-rd4 .qmeta .v {
-  color: var(--text);
-  font-weight: 600;
-}
-
-.quotation-editor-rd4 .qmeta .mdot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: var(--text-4);
-  opacity: 0.5;
-  flex-shrink: 0;
-}
-
-.quotation-editor-rd4 .qmeta a {
-  color: var(--blue-text);
-  font-weight: 600;
-  text-decoration: none;
-}
-
-.quotation-editor-rd4 .qmeta a:hover {
-  text-decoration: underline;
-}
-
 /* —— Metrics —— */
-.quotation-editor-rd4 .metricsband {
-  display: grid;
-  grid-template-columns: repeat(9, minmax(0, 1fr));
-  border-bottom: 1px solid var(--line);
-  background: var(--white);
-}
 
 .quotation-editor-rd4 .metric {
   padding: 14px 18px;
   min-width: 0;
-}
-
-.quotation-editor-rd4 .metric--currency {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  min-width: 0;
-}
-
-.quotation-editor-rd4 .metric--currency .l {
-  margin-bottom: 2px;
 }
 
 .quotation-editor-rd4 .metric + .metric {
@@ -520,24 +334,6 @@
 }
 
 /* —— Lifecycle —— */
-.quotation-editor-rd4 .lcband {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-  padding: 13px var(--gut);
-  border-bottom: 1px solid var(--line);
-  background: var(--white);
-}
-
-.quotation-editor-rd4 .lclabel {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--text-4);
-  margin-right: 2px;
-}
 
 .quotation-editor-rd4 .chip {
   display: inline-flex;
@@ -660,12 +456,6 @@
   color: var(--text-3);
 }
 
-.quotation-editor-rd4 .sec-tools {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .quotation-editor-rd4 .cb-toggle {
   display: flex;
   align-items: center;
@@ -725,38 +515,6 @@
   background: transparent !important;
 }
 
-.quotation-editor-rd4 .searchbox {
-  flex: 0 0 300px;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  height: 36px;
-  padding: 0 12px;
-  border: 1px solid var(--line-2);
-  border-radius: 10px;
-  background: var(--surface);
-  color: var(--text-3);
-  max-width: 100%;
-}
-
-.quotation-editor-rd4 .searchbox svg {
-  width: 15px;
-  height: 15px;
-  flex-shrink: 0;
-}
-
-.quotation-editor-rd4 .searchbox input {
-  border: none !important;
-  background: transparent !important;
-  outline: none !important;
-  box-shadow: none !important;
-  font-size: 13px;
-  width: 100%;
-  height: auto !important;
-  padding: 0 !important;
-  color: var(--text);
-}
-
 .quotation-editor-rd4 .selpill,
 .quotation-editor-rd4 .ctools [data-slot="select-trigger"] {
   display: inline-flex !important;
@@ -799,93 +557,6 @@
   box-shadow: none !important;
   background: transparent !important;
   border: none !important;
-}
-
-.quotation-editor-rd4 .creators-list .clist-head {
-  display: flex;
-  align-items: center;
-  width: 100%;
-  max-width: none;
-  padding: 11px var(--gut, 32px) 12px;
-  margin-bottom: 10px;
-  border-bottom: 1px solid var(--line);
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  color: var(--text-4);
-  background: var(--white);
-  z-index: 20;
-}
-
-.quotation-editor-rd4 .creators-list .co-chk {
-  width: 34px;
-  flex-shrink: 0;
-}
-
-.quotation-editor-rd4 .creators-list .co-opt {
-  width: 150px;
-  flex-shrink: 0;
-}
-
-.quotation-editor-rd4 .creators-list .co-tier {
-  width: 78px;
-  flex-shrink: 0;
-}
-
-.quotation-editor-rd4 .creators-list .co-svc {
-  flex: 1;
-  min-width: 0;
-  padding-right: 12px;
-}
-
-.quotation-editor-rd4 .creators-list .co-plat {
-  width: 70px;
-  flex-shrink: 0;
-  text-align: center;
-}
-
-.quotation-editor-rd4 .creators-list .co-type {
-  width: 150px;
-  flex-shrink: 0;
-  padding-right: 12px;
-}
-
-.quotation-editor-rd4 .creators-list .co-price {
-  width: 120px;
-  flex-shrink: 0;
-  text-align: right;
-}
-
-.quotation-editor-rd4 .creators-list .co-status {
-  width: 96px;
-  flex-shrink: 0;
-  text-align: center;
-}
-
-.quotation-editor-rd4 .creators-list .co-act {
-  width: 96px;
-  flex-shrink: 0;
-}
-
-.quotation-editor-rd4 .creators-list .co-empty.co-chk {
-  width: 34px;
-}
-
-.quotation-editor-rd4 .creators-list .co-empty.co-opt {
-  width: 150px;
-}
-
-.quotation-editor-rd4 .creators-list .co-empty.co-tier {
-  width: 78px;
-}
-
-.quotation-editor-rd4 .creators-list .co-empty.co-status {
-  width: 96px;
-}
-
-.quotation-editor-rd4 .creators-list .co-empty.co-act {
-  width: 96px;
 }
 
 /*
@@ -1007,21 +678,6 @@
   border-bottom: none;
 }
 
-.quotation-editor-rd4 .creators-list .cg-head {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 14px var(--gut, 32px) 12px;
-  background: linear-gradient(180deg, #f8faff 0%, var(--white) 100%);
-  border-top: none !important;
-  border-bottom: 1px solid var(--line);
-}
-
-.quotation-editor-rd4 .creators-list .cgroup .cg-head + .cg-head,
-.quotation-editor-rd4 .creators-list .cgroup .oline + .cg-head {
-  border-top: 1px solid var(--line);
-}
-
 .quotation-editor-rd4 .creators-list .oline {
   display: flex;
   align-items: flex-start;
@@ -1030,17 +686,6 @@
   padding: 11px var(--gut, 32px);
   background: var(--surface);
   border-top: 1px solid rgba(15, 23, 42, 0.06);
-}
-
-.quotation-editor-rd4 .creators-list .cgroup .cg-head + .oline {
-  border-top: none;
-}
-
-.quotation-editor-rd4 .creators-list .oline-act {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
 }
 
 .quotation-editor-rd4 .creators-list .price-cell {
@@ -1095,14 +740,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.quotation-editor-rd4 .creators-list .cgroup .collapse-content-header {
-  padding-left: var(--gut, 32px);
-}
-
-.quotation-editor-rd4 .creators-list .collapse-content-frame.quotation-collapse-content-block {
-  background: var(--white);
-}
-
 /* —— Creator table (legacy) —— */
 .quotation-editor-rd4 .creators-table {
   width: 100%;
@@ -1117,60 +754,6 @@
   table-layout: fixed;
 }
 
-.quotation-editor-rd4 .creators-table col.q-col-chk {
-  width: 34px;
-}
-
-.quotation-editor-rd4 .creators-table col.q-col-opt {
-  width: 150px;
-}
-
-.quotation-editor-rd4 .creators-table col.q-col-followers {
-  width: 0;
-}
-
-.quotation-editor-rd4 .creators-table col.q-col-tier {
-  width: 78px;
-}
-
-.quotation-editor-rd4 .creators-table col.q-col-svc {
-  width: auto;
-}
-
-.quotation-editor-rd4 .creators-table col.q-col-plat {
-  width: 70px;
-}
-
-.quotation-editor-rd4 .creators-table col.q-col-type {
-  width: 150px;
-}
-
-.quotation-editor-rd4 .creators-table col.q-col-price {
-  width: 120px;
-}
-
-.quotation-editor-rd4 .creators-table col.q-col-status {
-  width: 96px;
-}
-
-.quotation-editor-rd4 .creators-table col.q-col-act {
-  width: 96px;
-}
-
-.quotation-editor-rd4 .creators-table .q-col-followers,
-.quotation-editor-rd4 .creators-table th.q-col-followers,
-.quotation-editor-rd4 .creators-table td.q-col-followers {
-  display: none !important;
-  width: 0 !important;
-  padding: 0 !important;
-  border: none !important;
-  overflow: hidden;
-}
-
-.quotation-editor-rd4 .creators-table thead.clist-head {
-  background: var(--white) !important;
-}
-
 .quotation-editor-rd4 .creators-table tbody tr,
 .quotation-editor-rd4 .creators-table tbody tr:nth-child(even),
 .quotation-editor-rd4 .creators-table tbody tr:hover,
@@ -1179,36 +762,8 @@
   border-color: var(--line) !important;
 }
 
-.quotation-editor-rd4 .creators-table tbody tr.cg-head-row,
-.quotation-editor-rd4 .creators-table tbody tr.cg-head-row td,
-.quotation-editor-rd4 .creators-table tbody tr.cg-head-row:hover td {
-  background: var(--white) !important;
-  border-bottom: none !important;
-}
-
 .quotation-editor-rd4 .creators-table tbody tr.oline {
   background: transparent !important;
-}
-
-.quotation-editor-rd4 .creators-table tbody.collapse-content-frame.quotation-collapse-content-block,
-.quotation-editor-rd4
-  .creators-table
-  tbody.collapse-content-frame.quotation-collapse-content-block
-  > tr,
-.quotation-editor-rd4
-  .creators-table
-  tbody.collapse-content-frame.quotation-collapse-content-block
-  > tr
-  > td {
-  background: transparent !important;
-  box-shadow: none !important;
-}
-
-.quotation-editor-rd4
-  .creators-table
-  tbody.collapse-content-frame.quotation-collapse-content-block
-  + tbody {
-  border-top: none !important;
 }
 
 .quotation-editor-rd4 .creators-table tbody.cgroup {
@@ -1264,117 +819,9 @@
   border-bottom: 1px solid var(--line);
 }
 
-.quotation-editor-rd4 .cg-head-cell {
-  padding: 13px var(--gut) !important;
-  background: var(--white) !important;
-  border: none !important;
-}
-
-.quotation-editor-rd4 .cg-head {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  min-height: 0;
-  width: 100%;
-}
-
-.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block {
-  width: auto;
-  min-width: 0;
-  flex-shrink: 0;
-}
-
-.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap {
-  position: relative;
-  flex-shrink: 0;
-  /* Room for ★ score badge (bottom: -6px) so it is not clipped by the row. */
-  padding-bottom: 10px;
-  overflow: visible;
-}
-
 /* Clip the photo itself — wrap stays overflow:visible for flag/star badges. */
-.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap > a,
-.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap > div.overflow-hidden {
-  display: block;
-  width: 84px;
-  height: 84px;
-  overflow: hidden;
-  border-radius: 50%;
-}
-
-.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-star {
-  z-index: 3;
-}
 
 /* Sync glow outside overflow:hidden avatar (same ::before pattern as shortlist). */
-.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  width: 84px;
-  height: 84px;
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 0;
-  box-shadow: 0 4px 12px -3px rgba(16, 24, 40, 0.2);
-  transition: box-shadow 0.25s ease;
-}
-
-.quotation-editor-rd4
-  .cg-head
-  .quotation-cg-avatar-block.shortlist-creator-row-sync--updated
-  .discovery-search-exact-photo-wrap::before {
-  box-shadow:
-    0 4px 12px -3px rgba(16, 24, 40, 0.2),
-    0 0 0 3px rgba(15, 157, 107, 0.22),
-    0 0 16px rgba(15, 157, 107, 0.42),
-    0 0 32px rgba(15, 157, 107, 0.16);
-}
-
-.quotation-editor-rd4
-  .cg-head
-  .quotation-cg-avatar-block.shortlist-creator-row-sync--failed
-  .discovery-search-exact-photo-wrap::before {
-  box-shadow:
-    0 4px 12px -3px rgba(16, 24, 40, 0.2),
-    0 0 0 3px rgba(220, 38, 38, 0.2),
-    0 0 16px rgba(220, 38, 38, 0.38),
-    0 0 32px rgba(220, 38, 38, 0.14);
-}
-
-.quotation-editor-rd4
-  .cg-head
-  .quotation-cg-avatar-block.shortlist-creator-row-sync--partial
-  .discovery-search-exact-photo-wrap::before {
-  box-shadow:
-    0 4px 12px -3px rgba(16, 24, 40, 0.2),
-    0 0 0 3px rgba(234, 88, 12, 0.2),
-    0 0 16px rgba(234, 88, 12, 0.38),
-    0 0 32px rgba(234, 88, 12, 0.14);
-}
-
-.quotation-editor-rd4
-  .cg-head
-  .quotation-cg-avatar-block.shortlist-creator-row-sync--syncing
-  .discovery-search-exact-photo-wrap::before {
-  animation: shortlist-avatar-sync-pulse 1.6s ease-in-out infinite;
-  box-shadow:
-    0 4px 12px -3px rgba(16, 24, 40, 0.2),
-    0 0 0 3px rgba(37, 99, 235, 0.24),
-    0 0 16px rgba(37, 99, 235, 0.45),
-    0 0 32px rgba(37, 99, 235, 0.18);
-}
-
-.quotation-editor-rd4
-  .cg-head
-  .quotation-cg-avatar-block.shortlist-creator-row-sync--never
-  .discovery-search-exact-photo-wrap::before {
-  box-shadow:
-    0 4px 12px -3px rgba(16, 24, 40, 0.2),
-    0 0 0 2px rgba(148, 163, 184, 0.12),
-    0 0 12px rgba(148, 163, 184, 0.16);
-}
 
 .quotation-editor-rd4 .cg-id {
   min-width: 0;
@@ -1418,15 +865,6 @@
   border: 1px solid var(--line-2);
 }
 
-.quotation-editor-rd4 .cg-head .cg-name,
-.quotation-editor-rd4 .cg-head [class*="font-semibold"],
-.quotation-editor-rd4 .cg-head [class*="font-bold"] {
-  font-size: 13.5px !important;
-  font-weight: 700 !important;
-  color: var(--text) !important;
-  letter-spacing: -0.01em;
-}
-
 .quotation-editor-rd4 .cg-head [class*="text-muted"],
 .quotation-editor-rd4 .cg-handle {
   font-size: 11.5px !important;
@@ -1453,22 +891,6 @@
   color: var(--text-2) !important;
 }
 
-.quotation-editor-rd4 .cg-foll {
-  flex-shrink: 0;
-  text-align: right;
-  font-size: 11.5px;
-  color: var(--text-3);
-  font-weight: 500;
-}
-
-.quotation-editor-rd4 .cg-foll b {
-  display: block;
-  color: var(--text);
-  font-size: 12.5px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
 .quotation-editor-rd4 .oline td,
 .quotation-editor-rd4 .creators-table tr.oline [data-slot="table-cell"] {
   padding: 8px 8px !important;
@@ -1478,10 +900,6 @@
   vertical-align: middle !important;
   white-space: nowrap !important;
   line-height: 1.2;
-}
-
-.quotation-editor-rd4 .oline td.oline-act {
-  padding-right: var(--gut) !important;
 }
 
 .quotation-editor-rd4 .oline td.price-cell {
@@ -1503,18 +921,6 @@
   line-height: 1.2 !important;
 }
 
-.quotation-editor-rd4 td.oline-act .oline-act-inner {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 2px;
-}
-
-.quotation-editor-rd4 .oline .q-remove-type {
-  flex-shrink: 0;
-}
-
 .quotation-editor-rd4 .oline .type-sel,
 .quotation-editor-rd4 .oline .type-sel-trigger,
 .quotation-editor-rd4 .oline .type-sel-trigger.type-sel {
@@ -1526,24 +932,6 @@
   background: var(--white) !important;
   font-size: 12.5px !important;
   box-shadow: none !important;
-}
-
-.quotation-editor-rd4 .oline .svc-input {
-  height: 34px !important;
-  min-height: 34px !important;
-  max-height: 34px !important;
-}
-
-.quotation-editor-rd4 .oline .svc-input.svc-input--wrap {
-  height: auto !important;
-  min-height: 34px !important;
-  max-height: none !important;
-  field-sizing: content;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  word-break: break-word;
-  padding-top: 7px !important;
-  padding-bottom: 7px !important;
 }
 
 .quotation-editor-rd4 .oline [data-slot="checkbox"] {
@@ -1560,15 +948,6 @@
 }
 
 /* Multi-type rows: keep overlapping platform badges stacked (do not expand the cell). */
-.quotation-editor-rd4 .oline .co-plat .inline-flex {
-  flex-wrap: nowrap;
-}
-
-.quotation-editor-rd4 .spill.spill-row-status {
-  height: 22px;
-  padding: 0 8px;
-  font-size: 11px;
-}
 
 .quotation-editor-rd4 .oline td:first-child {
   padding-left: var(--gut) !important;
@@ -1753,18 +1132,6 @@
   color: var(--text-4);
 }
 
-.quotation-editor-rd4 .svc-input {
-  width: 100%;
-  border: 1px solid var(--line-2) !important;
-  border-radius: 8px !important;
-  background: var(--white) !important;
-  box-shadow: none !important;
-}
-
-.quotation-editor-rd4 .svc-input::placeholder {
-  color: var(--text-4);
-}
-
 .quotation-editor-rd4 .cols2 .thinkway-campaign-section-card,
 .quotation-editor-rd4 .cols2 .thinkway-campaign-info-card {
   border: none !important;
@@ -1869,9 +1236,6 @@
 }
 
 /* Kill leftover campaign-card chrome inside the redesign */
-.quotation-editor-rd4 .thinkway-campaign-data-table {
-  --camp-border: var(--line);
-}
 
 .quotation-editor-rd4 .rounded-xl.border.bg-card {
   border: none !important;
@@ -1882,9 +1246,6 @@
 }
 
 @media (max-width: 1100px) {
-  .quotation-editor-rd4 .metricsband {
-    grid-template-columns: repeat(4, 1fr);
-  }
 
   .quotation-editor-rd4 .metric:nth-child(4n + 1) {
     border-left: none;
@@ -1908,10 +1269,6 @@
 
   .quotation-editor-rd4 .vdiv {
     display: none;
-  }
-
-  .quotation-editor-rd4 .qmeta {
-    flex-wrap: wrap;
   }
 }
 
@@ -2048,12 +1405,6 @@
   object-fit: cover !important;
   object-position: center !important;
   display: block;
-}
-
-.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap > a img,
-.quotation-editor-rd4 .cg-head .quotation-cg-avatar-block .discovery-search-exact-photo-wrap > div.overflow-hidden img {
-  object-fit: cover;
-  object-position: center;
 }
 
 .commercial-workspace-dialog .cw-card-row--dimmed {

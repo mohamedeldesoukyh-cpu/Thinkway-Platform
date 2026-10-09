@@ -1,4 +1,3 @@
-"use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";

@@ -164,7 +164,7 @@
     "test:campaign-script": "npx tsx --test lib/campaign-script/campaign-script.test.ts lib/campaign-script/campaign-script-translation.test.ts lib/campaign-script/campaign-script-assignment.test.ts lib/campaign-script/campaign-script-unit.test.ts lib/campaign-script/original-document.test.ts lib/campaign-script/documentation-unit-script-ui.test.ts",
     "test:quotation-engine": "npx tsx features/quotations/quotation-engine.test.ts",
     "test:quotation-serial": "npx tsx features/quotations/serial.test.ts",
-    "test:quotations": "npx tsx lib/commercial/commercial-engine.test.ts && npx tsx lib/commercial-sync/rules.test.ts && npx tsx lib/commercial-sync/audit.test.ts && npx tsx features/quotations/commercial-lifecycle.test.ts && npx tsx --test lib/services/quotations/approved-quotation-immutability.test.ts && npx tsx features/quotations/promote-master-data.test.ts && npx tsx features/quotations/duplicate-search.test.ts && npx tsx features/quotations/quotation-engine.test.ts && npx tsx features/quotations/quotation-row-math.test.ts && npx tsx features/quotations/serial.test.ts && npx tsx features/quotations/shortlist-seeds.test.ts && npx tsx features/quotations/quotation-gp-health.test.ts && npx tsx features/quotations/quotation-validity.test.ts && npx tsx features/quotations/quotation-default-terms.test.ts && npx tsx features/quotations/export/quotation-document.test.ts && npx tsx features/quotations/components/quotation-preview-downloads.test.ts && npx tsx features/quotations/export/quotation-export-publications.test.ts && npx tsx lib/io/compress-export-image.test.ts",
+    "test:quotations": "npx tsx lib/commercial/commercial-engine.test.ts && npx tsx lib/commercial-sync/rules.test.ts && npx tsx lib/commercial-sync/audit.test.ts && npx tsx features/quotations/commercial-lifecycle.test.ts && node --conditions=react-server --import tsx --test lib/services/quotations/approved-quotation-immutability.test.ts && npx tsx features/quotations/promote-master-data.test.ts && npx tsx features/quotations/duplicate-search.test.ts && npx tsx features/quotations/quotation-engine.test.ts && npx tsx features/quotations/quotation-row-math.test.ts && npx tsx features/quotations/serial.test.ts && npx tsx features/quotations/shortlist-seeds.test.ts && npx tsx features/quotations/quotation-gp-health.test.ts && npx tsx features/quotations/quotation-validity.test.ts && npx tsx features/quotations/quotation-default-terms.test.ts && npx tsx features/quotations/export/quotation-document.test.ts && npx tsx features/quotations/components/quotation-preview-downloads.test.ts && npx tsx features/quotations/export/quotation-export-publications.test.ts && npx tsx lib/io/compress-export-image.test.ts",
     "test:services": "npx tsx lib/services/campaigns/campaign-service-layer.test.ts && npx tsx lib/services/billing/billing-service-layer.test.ts && npx tsx lib/services/quotations/quotation-service-layer.test.ts",
     "test:campaign-group-policy": "npx tsx lib/campaigns/campaign-group-policy.test.ts",
     "test:creator-enrichment-policy": "npx tsx lib/creator-enrichment/policy.test.ts",
@@ -231,7 +231,7 @@
     "jszip": "^3.10.1",
     "lucide-react": "^1.17.0",
     "mammoth": "^1.12.0",
-    "next": "^16.2.11",
+    "next": "16.4.0",
     "next-themes": "^0.4.6",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^2.4.5",
@@ -244,6 +244,7 @@
     "react-dropzone": "^14.4.1",
     "react-hook-form": "^7.76.1",
     "sanitize-html": "^2.17.6",
+    "server-only": "0.0.1",
     "shadcn": "^4.8.3",
     "sharp": "^0.35.3",
     "sonner": "^2.0.7",
@@ -255,7 +256,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@next/bundle-analyzer": "^16.2.10",
+    "@next/bundle-analyzer": "16.4.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/qrcode": "^1.5.6",
@@ -263,8 +264,9 @@
     "@types/react-dom": "^19",
     "@types/sanitize-html": "^2.16.1",
     "eslint": "^9",
-    "eslint-config-next": "^16.2.11",
+    "eslint-config-next": "16.4.0",
     "fake-indexeddb": "^6.2.5",
+    "postcss-csso": "6.0.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

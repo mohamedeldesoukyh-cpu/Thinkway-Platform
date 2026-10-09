@@ -1,4 +1,3 @@
-"use client";
 import type { ReactNode } from "react";
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 

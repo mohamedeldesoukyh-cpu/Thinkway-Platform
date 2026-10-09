@@ -1,4 +1,3 @@
-"use client";
 
 import { GitMergeIcon, Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useState, useTransition } from "react";

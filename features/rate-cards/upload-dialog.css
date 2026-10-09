@@ -10,10 +10,6 @@
 
 .ru{position:fixed;inset:0;z-index:90;display:grid;place-items:center;padding:20px;
  font-family:var(--font-sans),system-ui,sans-serif}
-.ru__scrim{position:fixed;inset:0;background:rgba(6,8,16,.5);backdrop-filter:blur(3px)}
-.ru__w{position:relative;width:min(1180px,100%);height:min(820px,94vh);
- display:flex;flex-direction:column;background:#fff;border-radius:18px;overflow:hidden;
- box-shadow:0 40px 90px -30px rgba(6,8,16,.6),0 0 0 1px rgba(11,15,26,.07)}
 
 /* ================= header ================= */
 .ru__h{position:relative;background:var(--tw-grad);color:#fff;padding:13px 18px 0;
@@ -168,19 +164,6 @@ details.ru__acc>summary:hover{background:var(--tw-soft)}
 .ru__ch:disabled{opacity:.45;cursor:not-allowed}
 
 /* conflicts */
-.ru__cf{display:flex;flex-direction:column;gap:8px}
-.ru__cfi{display:flex;gap:11px;align-items:flex-start;background:#fff;
- border:1px solid #F6CFCF;border-radius:12px;padding:11px 13px;flex-wrap:wrap}
-.ru__cfr{flex:0 0 auto;font:600 10px var(--font-geist-mono),monospace;color:var(--tw-bad);
- background:var(--tw-badb);border-radius:6px;padding:3px 7px}
-.ru__cfd{flex:1 1 230px;min-width:0}
-.ru__cfd b{display:block;font:700 12.5px var(--font-sans),sans-serif;color:var(--tw-ink)}
-.ru__cfd u{display:block;text-decoration:none;font-size:11.5px;line-height:1.5;
- color:var(--tw-mut);margin-top:3px}
-.ru__cfd .vs{display:inline-flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap}
-.ru__cfd .vs span{font:600 11px var(--font-sans),sans-serif;background:var(--tw-soft);
- border:1px solid var(--tw-hair);border-radius:7px;padding:3px 8px;color:var(--tw-ink2)}
-.ru__cfa{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
 
 /* ================= review table ================= */
 .ru__tbl{background:#fff;border:1px solid var(--tw-hair);border-radius:13px;overflow:hidden}
@@ -204,18 +187,9 @@ details.ru__acc>summary:hover{background:var(--tw-soft)}
 .ru__empty b{display:block;font:700 13px var(--font-sans),sans-serif;color:var(--tw-ink);margin-bottom:5px}
 .ru__empty u{display:block;text-decoration:none;font-size:11.5px;color:var(--tw-mut);
  max-width:48ch;margin:0 auto 11px}
-.ru__skel{padding:13px;display:flex;flex-direction:column;gap:8px}
-.ru__skel s{display:block;height:13px;border-radius:5px;text-decoration:none;
- background:linear-gradient(90deg,#EFF2F7 25%,#F7F9FC 50%,#EFF2F7 75%);
- background-size:300% 100%;animation:rush 1.3s linear infinite}
 @keyframes rush{to{background-position:-300% 0}}
 
 /* ================= enrichment ================= */
-.ru__enr{display:flex;flex-direction:column;gap:7px}
-.ru__er{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:7px 0;
- border-bottom:1px solid var(--tw-hair)}
-.ru__er:last-child{border-bottom:0}
-.ru__er .nm{font:600 12px var(--font-sans),sans-serif;color:var(--tw-ink);flex:1;min-width:120px}
 
 /* ================= step 3 : confirm ================= */
 .ru__opt{display:flex;gap:11px;align-items:flex-start;background:#fff;
@@ -288,9 +262,6 @@ details.ru__acc>summary:hover{background:var(--tw-soft)}
 .ru__sg .cnt{margin-inline-start:auto;font:500 10.5px var(--font-geist-mono),monospace;
  color:var(--tw-mut);font-variant-numeric:tabular-nums}
 @keyframes rupul{0%,100%{opacity:1}50%{opacity:.45}}
-.ru__keep{display:inline-flex;align-items:center;gap:7px;margin:16px 0 0;padding:7px 13px;
- background:var(--tw-wrnb);border-radius:999px;font-size:11px;color:var(--tw-wrn);
- font-weight:600}
 
 /* ================= result ================= */
 .ru__done{display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -322,7 +293,6 @@ details.ru__acc>summary:hover{background:var(--tw-soft)}
 /* ================= responsive ================= */
 @media (max-width:860px){
  .ru{padding:0;place-items:stretch}
- .ru__w{width:100%;height:100vh;max-height:none;border-radius:0}
  .ru__st span{display:none}
  .ru__st{flex:0 0 auto;justify-content:center;padding:9px 13px 10px}
  .ru__st[aria-current="step"]{flex:1}
@@ -354,7 +324,6 @@ details.ru__acc>summary:hover{background:var(--tw-soft)}
 .ru .ru__scroll td{padding:10px 8px;border-bottom:1px solid var(--tw-hair);vertical-align:top;overflow-wrap:anywhere}
 .ru .ru__scroll td.num{text-align:end}.ru .amt+.amt{margin-top:7px}.ru .amt u{font-size:10px}
 .ru .ru__scroll tbody tr:hover{background:var(--tw-soft)}
-.ru .ru-platform{display:block;font-size:11px;color:var(--tw-bi);margin-bottom:4px}
 .ru .ru-status{display:inline-block;border-radius:6px;padding:3px 7px;font-size:11px;font-weight:600;margin-bottom:5px;background:var(--tw-okb);color:var(--tw-ok)}
 .ru .ru-status.warning{background:var(--tw-wrnb);color:var(--tw-wrn)}.ru .ru-status.error,.ru .ru-status.unmatched{background:var(--tw-badb);color:var(--tw-bad)}
 .ru .ru__pg p{font-size:11px;max-width:44ch;color:var(--tw-mut);margin:0}

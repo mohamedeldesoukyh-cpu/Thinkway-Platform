@@ -1,4 +1,3 @@
-"use client";
 
 import { FileTextIcon, PencilIcon } from "lucide-react";
 

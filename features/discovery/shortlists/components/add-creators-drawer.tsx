@@ -1,4 +1,3 @@
-"use client";
 
 import { ShortlistCreatorPicker } from "@/features/creators/picker/shortlist-creator-picker";
 import type { ExistingCreatorKey } from "@/features/creators/picker/creator-selection-types";

@@ -1,4 +1,3 @@
-"use client";
 
 import { StatusBadge } from "@/components/shared/status/status-badge";
 import { resolveStatusTone } from "@/components/shared/status/status-utils";

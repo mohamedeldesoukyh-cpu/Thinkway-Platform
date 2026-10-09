@@ -37,11 +37,6 @@
   line-height: 1.5;
 }
 
-.studio-chat-ref .sc-mono {
-  font-family: "Geist Mono", var(--font-geist-mono), "SF Mono", Consolas, monospace;
-  font-variant-numeric: tabular-nums;
-}
-
 /* —— App shell —— */
 .studio-chat-ref.sc-app {
   display: flex;

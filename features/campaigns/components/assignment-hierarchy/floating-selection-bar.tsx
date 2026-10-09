@@ -1,4 +1,3 @@
-"use client";
 
 import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon, CalculatorIcon } from "lucide-react";
 import { useState, useTransition } from "react";

@@ -1,4 +1,3 @@
-"use client";
 
 import { batchRefreshProgress } from "@/features/discovery/enrichment/refresh-metrics-progress";
 import { RefreshMetricsProgressCircle } from "@/features/discovery/enrichment/components/refresh-metrics-progress-circle";

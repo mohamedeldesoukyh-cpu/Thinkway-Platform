@@ -1,4 +1,3 @@
-"use client";
 
 type AssignmentsTabErrorFallbackProps = {
   errorMessage?: string;

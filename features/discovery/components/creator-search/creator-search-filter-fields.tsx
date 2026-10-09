@@ -1,4 +1,3 @@
-"use client";
 import { cleanDiscoveryCategories } from "@/lib/discovery/normal-search";
 
 import { PlusIcon } from "lucide-react";

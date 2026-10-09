@@ -41,11 +41,6 @@
   line-height: 1.5;
 }
 
-.outputs-center-ref .oc-mono {
-  font-family: "Geist Mono", var(--font-geist-mono), "SF Mono", Consolas, monospace;
-  font-variant-numeric: tabular-nums;
-}
-
 .outputs-center-ref .oc-content {
   max-width: 100%;
   margin: 0;

@@ -1,4 +1,3 @@
-"use client";
 import { QuotationText } from "./quotation-design-locale";
 
 

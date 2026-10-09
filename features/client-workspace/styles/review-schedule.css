@@ -252,15 +252,6 @@
   color: #fff;
   background: var(--navy, #060810);
 }
-.rvs .av.a1 {
-  background: linear-gradient(145deg, #0040cc, #1a6fff);
-}
-.rvs .av.a2 {
-  background: linear-gradient(145deg, #a038fb, #c77bff);
-}
-.rvs .av.a3 {
-  background: linear-gradient(145deg, #1d9e75, #35c795);
-}
 
 .rvs .rvs-cell {
   min-height: 42px;

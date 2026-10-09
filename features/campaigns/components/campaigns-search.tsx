@@ -1,4 +1,3 @@
-"use client";
 
 import { OperationalTableSearch } from "@/components/tables/operational-table-search";
 

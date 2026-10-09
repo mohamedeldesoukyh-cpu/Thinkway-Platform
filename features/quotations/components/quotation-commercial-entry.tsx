@@ -1,4 +1,3 @@
-"use client";
 
 import { isQuotationCommercialWorkspaceEnabled } from "@/lib/quotations/commercial-workspace/feature-flag";
 

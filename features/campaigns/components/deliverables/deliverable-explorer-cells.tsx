@@ -1,4 +1,3 @@
-"use client";
 
 import { labelForDeliverableBillingStatus } from "@/features/billing/constants";
 import type { AssignmentDeliverableBillingStatus } from "@/features/billing/types";

@@ -1,4 +1,3 @@
-"use client";
 
 import { CalendarIcon, HashIcon, Link2Icon, StickyNoteIcon, PlusIcon, Trash2Icon } from "lucide-react";
 import { useEffect, useMemo, useState, type FormEvent } from "react";

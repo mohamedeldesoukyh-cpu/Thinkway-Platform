@@ -1,4 +1,3 @@
-"use client";
 
 import { CheckIcon, MoreHorizontalIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";

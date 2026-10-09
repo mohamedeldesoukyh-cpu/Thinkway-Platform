@@ -129,8 +129,6 @@
 .finance-suite .tw-bar i.r{background:var(--tw-bad)}
 .finance-suite .tw-bar i.y{background:#E0A93C}
 .finance-suite .tw-ck{width:15px;height:15px;accent-color:var(--tw-blue);cursor:pointer}
-.finance-suite .tw-x{width:21px;height:21px;border:1px solid var(--tw-hair);border-radius:6px;background:#fff;color:var(--tw-mut);font-size:9px;line-height:1;cursor:pointer}
-.finance-suite .tw-x:hover{border-color:var(--tw-blue);color:var(--tw-bi);background:var(--tw-lav)}
 .finance-suite .tw-in{width:100%;height:30px;padding:0 9px;border:1px solid var(--tw-line);border-radius:8px;background:#fff;font:500 12.5px 'Geist',sans-serif;color:var(--tw-ink)}
 .finance-suite .tw-in:focus{outline:none;border-color:var(--tw-blue);box-shadow:0 0 0 3px rgba(0,87,255,.12)}
 .finance-suite .tw-lbl{display:block;font-size:10px;font-weight:700;letter-spacing:.55px;text-transform:uppercase;color:var(--tw-mut);margin-bottom:5px}
@@ -142,7 +140,6 @@
 .finance-suite .tw-empty svg{width:34px;height:34px;stroke:#C3CBD8;fill:none;stroke-width:1.4;margin:0 auto 10px}
 .finance-suite .tw-empty b{display:block;font-size:13px;font-weight:600;margin-bottom:4px;overflow-wrap:anywhere}
 .finance-suite .tw-empty p{font-size:12px;color:var(--tw-mut);max-width:400px;margin:0 auto 12px;overflow-wrap:anywhere;word-break:break-word}
-.finance-suite .tw-two{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:14px}
 .finance-suite .tw-st{display:flex;gap:26px;flex-wrap:wrap}
 .finance-suite .tw-st span{display:flex;flex-direction:column;gap:2px}
 .finance-suite .tw-st i{font-style:normal;font-size:9.5px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--tw-mut)}
@@ -159,11 +156,6 @@
   .finance-suite .tw-b {
     min-height: 44px;
   }
-}
-
-
-@media(max-width:1100px){
-.finance-suite .tw-two{grid-template-columns:1fr}
 }
 
 .finance-suite .tw-deck{display:grid;grid-template-columns:repeat(auto-fill,minmax(232px,1fr));gap:12px}
@@ -227,34 +219,6 @@
 }
 
 /* ---------- aliases (fs-* = tw-*) ---------- */
-.finance-suite .fs-kpi { display: grid; grid-template-columns: repeat(auto-fit, minmax(178px, 1fr)); gap: 10px; margin-bottom: 13px; }
-.finance-suite .fs-k { padding: 13px 15px; background: #fff; border-radius: 11px; box-shadow: var(--tw-ring); }
-.finance-suite .fs-k__l { display: block; font-style: normal; font-size: 9.5px; font-weight: 700; letter-spacing: 0.62px; text-transform: uppercase; color: var(--tw-mut); overflow-wrap: anywhere; word-break: break-word; }
-.finance-suite .fs-k__v { display: block; margin: 6px 0 2px; font-size: 22px; font-weight: 600; letter-spacing: -0.7px; line-height: 1.15; overflow-wrap: anywhere; word-break: break-word; font-variant-numeric: tabular-nums; }
-.finance-suite .fs-k__s { display: block; text-decoration: none; font-size: 10.5px; color: var(--tw-mut); }
-.finance-suite .fs-k.bad { box-shadow: 0 0 0 1px #efb6b6, 0 8px 24px rgba(200, 33, 33, 0.07); }
-.finance-suite .fs-k.bad .fs-k__v,
-.finance-suite .fs-k.bad .fs-k__s { color: var(--tw-bad); }
-.finance-suite .fs-k.ok .fs-k__v { color: var(--tw-ok); }
-.finance-suite .fs-k.warn { box-shadow: 0 0 0 1px #f0d6a4, 0 8px 24px rgba(138, 93, 18, 0.07); }
-.finance-suite .fs-c { background: #fff; border-radius: 12px; box-shadow: var(--tw-ring); overflow: hidden; margin-bottom: 14px; }
-.finance-suite .fs-ch { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 15px; border-bottom: 1px solid var(--tw-line); }
-.finance-suite .fs-ct { font-size: 13px; font-weight: 600; }
-.finance-suite .fs-cs { font-size: 11px; color: var(--tw-mut); }
-.finance-suite .fs-pad { padding: 14px 15px; }
-.finance-suite .fs-seg { display: inline-flex; padding: 2px; background: var(--tw-soft); border: 1px solid var(--tw-hair); border-radius: 9px; }
-.finance-suite .fs-seg button { padding: 5px 11px; border: 0; border-radius: 7px; cursor: pointer; font-size: 11.5px; font-weight: 600; background: none; color: var(--tw-mut); }
-.finance-suite .fs-seg button[aria-pressed="true"] { background: #fff; color: var(--tw-bi); box-shadow: 0 1px 2px rgba(11, 15, 26, 0.08); }
-.finance-suite .fs-empty { padding: 44px 20px; text-align: center; }
-.finance-suite .fs-empty svg { width: 34px; height: 34px; stroke: #c3cbd8; fill: none; stroke-width: 1.4; margin: 0 auto 10px; }
-.finance-suite .fs-empty b { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
-.finance-suite .fs-empty p { font-size: 12px; color: var(--tw-mut); max-width: 400px; margin: 0 auto 12px; }
-.finance-suite .fs-deck { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 12px; }
-.finance-suite .fs-tile { position: relative; isolation: isolate; overflow: hidden; padding: 15px 16px 14px; border-radius: 16px; background: var(--tw-grad); color: #fff; cursor: pointer; min-height: 132px; display: flex; flex-direction: column; text-align: left; border: 0; width: 100%; box-shadow: 0 1px 2px rgba(0, 64, 204, 0.3), 0 10px 26px -8px rgba(0, 87, 255, 0.42); transition: transform 0.32s var(--tw-ez), box-shadow 0.32s var(--tw-ez); }
-.finance-suite .fs-note { margin: 13px 15px; padding: 11px 13px; border-radius: 9px; background: var(--tw-soft); font-size: 11.5px; color: var(--tw-ink2); line-height: 1.55; }
-.finance-suite .fs-grp { font-size: 9.5px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--tw-mut); margin: 6px 0 9px; }
-.finance-suite .tw-grp { font-size: 9.5px; font-weight: 700; letter-spacing: 0.6px; text-transform: uppercase; color: var(--tw-mut); margin: 6px 0 9px; }
-.finance-suite .fs-star { position: absolute; top: 12px; right: 12px; width: 22px; height: 22px; border: 0; border-radius: 7px; cursor: pointer; background: rgba(255, 255, 255, 0.14); color: #fff; font-size: 11px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; z-index: 1; }
 .finance-suite .fs-link-preview { margin-top: 14px; padding: 12px 14px; border-radius: 10px; background: var(--tw-navy); color: #fff; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 .finance-suite .fs-link-preview code { font-family: var(--font-geist-mono), "Geist Mono", ui-monospace, monospace; font-size: 12px; font-weight: 500; color: #9fc0ff; word-break: break-all; flex: 1 1 300px; }
 .finance-suite .fs-link-preview code b { color: #fff; font-weight: 600; }
@@ -489,23 +453,9 @@
 .finance-suite a.tw-b {
   text-decoration: none;
 }
-
-.finance-suite .fs-id { font: 600 12px "Geist Mono", monospace; letter-spacing: -0.3px; color: var(--tw-ink2); }
 .finance-suite .fs-nm,
 .finance-suite .tw-nm { font-size: 13px; font-weight: 600; letter-spacing: -0.1px; }
-.finance-suite .fs-t { font-size: 12px; color: var(--tw-ink2); }
 .finance-suite .fs-br { font-size: 12px; font-weight: 500; color: var(--tw-vio); }
-.finance-suite .fs-s { display: block; font-size: 10.5px; color: var(--tw-mut); margin-top: 2px; }
-.finance-suite .fs-v { font: 600 12.5px "Geist Mono", monospace; font-variant-numeric: tabular-nums; letter-spacing: -0.3px; }
-.finance-suite .fs-v.z { color: #b6becd; font-weight: 500; }
-.finance-suite .fs-v.neg { color: var(--tw-bad); }
-.finance-suite .fs-v.pos { color: var(--tw-ok); }
-.finance-suite .fs-miss { color: #a9b2c3; font-style: italic; font-size: 11.5px; }
-.finance-suite .fs-cc { display: inline-block; padding: 1px 6px; border-radius: 5px; background: var(--tw-soft); border: 1px solid var(--tw-hair); font: 700 9.5px "Geist Mono", monospace; letter-spacing: 0.3px; color: var(--tw-mut); }
-.finance-suite .fs-bar { display: block; height: 4px; border-radius: 999px; background: var(--tw-hair); overflow: hidden; margin-top: 5px; }
-.finance-suite .fs-bar i { display: block; height: 100%; background: var(--tw-blue); }
-.finance-suite .fs-bar i.r { background: var(--tw-bad); }
-.finance-suite .fs-bar i.y { background: #e0a93c; }
 .finance-suite .tw-bar { margin-top: 5px; }
 .finance-suite .thinkway-campaign-op-table-row.fs-row-bad,
 .finance-suite [data-slot="table-row"].fs-row-bad {

@@ -7,20 +7,12 @@ import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { saveAaibBank, exportAaibBeneficiaries, loadCreatorBankAccounts, setCreatorDefaultBank, checkCreatorBankDuplicates, deleteCreatorBankAccount } from './actions';
-import { BENEFICIARY_FILENAME, PAYMENT_FILENAME, paymentFileBytes, validateBank } from './aaib';
+import { BENEFICIARY_FILENAME, validateBank } from './aaib';
+import { downloadFile } from './download-file';
 import { bankDetails, ioBadge, money, paymentStatus, type PaymentRow, type BankDetails } from './model';
 import { isEmptyBank, duplicateFieldLabels, draftKey, readBankDrafts, type BankDuplicate } from './bank-form-state';
 import { notifyCreatorBankSaved } from './bank-sync';
 import { changeIban, fillFromIban, inspectIban } from './iban';
-export function downloadFile(data: string, name: string, type: string, base64 = false) {
-    const bytes = base64 ? Uint8Array.from(atob(data), c => c.charCodeAt(0)) : name === PAYMENT_FILENAME ? paymentFileBytes(data) : data;
-    const url = URL.createObjectURL(new Blob([bytes], { type }));
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = name;
-    link.click();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
 export function AaibBankEditor({ creatorId, initial, onSaved, row, creatorName }: {
     creatorId: string; initial: BankDetails; onSaved?: () => void; row?: PaymentRow; creatorName?: string;
 }) {

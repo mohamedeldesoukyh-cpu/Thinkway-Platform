@@ -1,4 +1,3 @@
-"use client";
 
 import { CampaignSummaryMoney } from "@/features/campaigns/components/campaign-money";
 import { useEffect, useState, useTransition, type ReactNode } from "react";

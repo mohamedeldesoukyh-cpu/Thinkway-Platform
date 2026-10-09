@@ -1,4 +1,3 @@
-"use client";
 
 import { Loader2Icon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";

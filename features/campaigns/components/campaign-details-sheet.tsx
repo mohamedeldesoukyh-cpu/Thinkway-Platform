@@ -1,4 +1,3 @@
-"use client";
 
 import Link from "next/link";
 import { BadgeCheckIcon, MoreHorizontalIcon, PencilIcon } from "lucide-react";

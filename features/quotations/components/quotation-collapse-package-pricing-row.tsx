@@ -1,4 +1,3 @@
-"use client";
 
 import { useCallback, useEffect, useMemo, useRef, useTransition } from "react";
 import { MoreHorizontalIcon, PlusIcon, Trash2Icon } from "lucide-react";

@@ -853,40 +853,6 @@
   font-weight: 600;
 }
 
-.campaign-detail-suite .thinkway-aurora-tblwrap {
-  overflow-x: auto;
-  background: #fff;
-  border-radius: 12px;
-  box-shadow: var(--tw-ring);
-}
-
-.campaign-detail-suite .thinkway-aurora-tblwrap table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.campaign-detail-suite .thinkway-aurora-tblwrap th {
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--tw-mut);
-  text-align: left;
-  padding: 9px 8px;
-  background: var(--tw-soft);
-  border-bottom: 1px solid var(--tw-line);
-}
-
-.campaign-detail-suite .thinkway-aurora-tblwrap td {
-  padding: 9px 8px;
-  border-bottom: 1px solid var(--tw-hair);
-  font-size: 11.5px;
-}
-
-.campaign-detail-suite .thinkway-aurora-tblwrap tr:hover td {
-  background: #fbfcff;
-}
-
 .campaign-detail-suite .thinkway-lc-details,
 .campaign-detail-suite .thinkway-aurora-disclose {
   background: #fff;
@@ -1201,35 +1167,6 @@
   filter: none !important;
 }
 
-.campaign-detail-suite .thinkway-campaign-view-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.campaign-detail-suite .thinkway-campaign-view-label {
-  font-size: 11px;
-  color: var(--tw-mut);
-  font-weight: 500;
-}
-
-.campaign-detail-suite .thinkway-campaign-view-btn {
-  height: 27px;
-  padding: 0 10px;
-  border: 0.8px solid #e3e8f2;
-  border-radius: 8px;
-  background: #fff;
-  color: var(--tw-ink2);
-  font: 600 11.5px Geist, sans-serif;
-}
-
-.campaign-detail-suite .thinkway-campaign-view-btn-active,
-.campaign-detail-suite .thinkway-campaign-view-btn[aria-pressed="true"] {
-  background: var(--tw-blue);
-  border-color: var(--tw-blue);
-  color: #fff;
-}
-
 .campaign-detail-suite .thinkway-campaign-asgn-wrap {
   border: 0;
   border-radius: 0;
@@ -1391,13 +1328,6 @@
 }
 
 /* Design money cells — plain mono values, no tint chips on parent rows */
-.campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-cell-highlight-rev,
-.campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-cell-highlight-cost,
-.campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-cell-highlight-billing {
-  background: transparent !important;
-  border-radius: 0 !important;
-  padding: 0 !important;
-}
 
 .campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-cell-rev,
 .campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-cell-billing-total,
@@ -2137,20 +2067,6 @@
 .campaign-detail-suite .thinkway-campaign-tab-panel table tbody td {
   font-size: 12.5px;
   padding: 11px 8px;
-  border-bottom: 1px solid var(--tw-hair);
-}
-
-.campaign-detail-suite .tw-kv,
-.campaign-detail-suite .thinkway-campaign-kv {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 0;
-}
-
-.campaign-detail-suite .tw-kv > div,
-.campaign-detail-suite .thinkway-campaign-kv > div {
-  padding: 10px 14px;
-  border-right: 1px solid var(--tw-hair);
   border-bottom: 1px solid var(--tw-hair);
 }
 

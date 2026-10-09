@@ -1,4 +1,3 @@
-"use client";
 
 import {
   ENGAGEMENT_RATE_METHOD_LABELS,

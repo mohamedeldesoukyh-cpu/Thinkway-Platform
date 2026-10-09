@@ -1,4 +1,3 @@
-"use client";
 
 import { CreatorIdentityCell, creatorProfileSourceFromAccounts } from "@/components/creator/creator-profile-link";
 import { TableCell, TableRow } from "@/components/ui/table";

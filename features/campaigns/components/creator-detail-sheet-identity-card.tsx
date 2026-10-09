@@ -1,4 +1,3 @@
-"use client";
 
 import { DiscoveryCreatorProfileSummary } from "@/features/discovery/components/discovery-creator-profile-summary";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";

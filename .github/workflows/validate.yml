@@ -25,6 +25,9 @@ jobs:
       - name: Discovery UI contract
         run: npm run validate:discovery-ui-contract
 
+      - name: Inherited client boundaries
+        run: node scripts/check-inherited-client-boundaries.mjs
+
       - name: Service layer tests
         run: npm run test:services
 

@@ -1,4 +1,3 @@
-"use client";
 
 import { MinusIcon, PlusIcon } from "lucide-react";
 

@@ -1,4 +1,3 @@
-"use client";
 
 import { SparklesIcon } from "lucide-react";
 

@@ -169,9 +169,6 @@
 .sb__label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
 .sb__badge{font:700 9.5px var(--s-mono);background:var(--s-soft);color:var(--s-ink2);
  border-radius:99px;padding:1px 6px;flex:0 0 auto}
-.sb__flag{font:700 8px var(--s-sans);letter-spacing:.4px;text-transform:uppercase;
- background:var(--s-wrn-b);color:var(--s-wrn);border-radius:4px;padding:1px 4px;
- flex:0 0 auto}
 
 /* active — bar + weight + tint, never colour alone */
 .sb__row[aria-current="page"]{background:var(--s-lav);color:var(--s-blue-i);font-weight:700}
@@ -226,25 +223,6 @@
 .sb__acct-t u{display:block;text-decoration:none;font:500 10.5px var(--s-sans);
  color:var(--s-mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
  direction:ltr}
-.sb__chev{color:var(--s-faint);font-size:9px;flex:0 0 auto}
-
-.sb__menu{position:absolute;inset-block-end:calc(100% + 6px);inset-inline:10px;
- z-index:70;background:var(--s-surf);border:1px solid var(--s-line);
- border-radius:var(--s-r-l);box-shadow:var(--s-e3);padding:5px;
- display:flex;flex-direction:column;gap:1px}
-.sb__menu-id{padding:9px 10px 8px;border-bottom:1px solid var(--s-hair);margin-bottom:4px}
-.sb__menu-id b{display:block;font:700 12.5px var(--s-sans)}
-.sb__menu-id u{display:block;text-decoration:none;font:500 11px var(--s-sans);
- color:var(--s-mut);word-break:break-all;line-height:1.4;margin-top:2px;direction:ltr}
-.sb__menu button{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;
- padding:6px 10px;border:0;background:transparent;border-radius:var(--s-r-s);
- cursor:pointer;text-align:start;font:600 12px var(--s-sans);color:var(--s-ink2)}
-.sb__menu button:hover:not(:disabled){background:var(--s-soft);color:var(--s-ink)}
-.sb__menu button:disabled{opacity:.5;cursor:not-allowed}
-.sb__menu button.is-danger{color:var(--s-bad)}
-.sb__menu button.is-danger:hover:not(:disabled){background:var(--s-bad-b)}
-.sb__menu-v{padding:7px 10px 4px;font:500 10px var(--s-mono);color:var(--s-faint);
- border-top:1px solid var(--s-hair);margin-top:4px}
 
 /* ==================================================================
    VISUAL LAYER

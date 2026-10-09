@@ -1,4 +1,3 @@
-"use client";
 
 import { readCreatorFx } from "@/lib/commercial/creator-fx";
 

@@ -1,4 +1,3 @@
-"use client";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 
 import Link from "next/link";

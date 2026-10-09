@@ -1,4 +1,3 @@
-"use client";
 
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import { BUSINESS_PROCESS_STAGES } from "@/features/campaigns/lifecycle/campaign-stage-policy";

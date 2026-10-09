@@ -1,4 +1,3 @@
-"use client";
 
 import { CheckIcon } from "lucide-react";
 import { type ButtonHTMLAttributes, type ReactNode, forwardRef } from "react";

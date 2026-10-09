@@ -1,4 +1,3 @@
-"use client";
 
 import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
 import { cn } from "@/lib/utils";

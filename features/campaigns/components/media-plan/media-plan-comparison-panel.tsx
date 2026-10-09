@@ -1,4 +1,3 @@
-"use client";
 
 import type { MediaPlanDiffEntry } from "@/lib/media-plan";
 import { cn } from "@/lib/utils";

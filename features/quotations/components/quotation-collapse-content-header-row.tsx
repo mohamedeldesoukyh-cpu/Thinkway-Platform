@@ -1,4 +1,3 @@
-"use client";
 
 import { Layers2Icon } from "lucide-react";
 

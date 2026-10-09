@@ -1,32 +1,17 @@
 /* Collections visual language, scoped to Rate Card screens and their portal dialogs. */
 .rate-card-suite{--rc-line:#e3e8f2;--rc-ink:#17243e;--rc-muted:#68758c;color:var(--rc-ink);font-family:var(--font-sans),sans-serif;font-size:12px;line-height:1.5}
 section.rate-card-suite{background:#f5f7fb;min-height:100%}
-.rate-card-suite .rc-masthead{overflow:hidden;border-radius:14px;background:white;border:1px solid var(--rc-line);box-shadow:0 3px 12px #13295406}
-.rate-card-suite .rc-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:18px 20px;color:white;background:linear-gradient(107deg,#0b3dbf 0%,#0f55e8 34%,#3d82ff 62%,#8fb6ff 100%)}
-.rate-card-suite .rc-heading h1{font-size:20px;font-weight:600;letter-spacing:-.4px}
-.rate-card-suite .rc-heading p{font-size:12px;line-height:1.6;color:#ffffffcf;max-width:730px}
-.rate-card-suite .rc-toolbar{display:flex;flex-wrap:wrap;gap:8px;padding:12px 16px}
-.rate-card-suite .rc-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border-top:1px solid var(--rc-line)}
-.rate-card-suite .rc-metrics>div{padding:10px 16px;border-inline-end:1px solid var(--rc-line);min-width:0}
-.rate-card-suite .rc-metrics span{display:block;font-size:9px;letter-spacing:.6px;text-transform:uppercase;color:var(--rc-muted);font-weight:600}
-.rate-card-suite .rc-metrics strong{display:block;margin-top:3px;font-size:16px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rate-card-suite [data-slot=button]{min-height:32px;height:auto;padding:7px 12px;border-radius:9px;font-size:12px;line-height:1.25;font-weight:600;box-shadow:none;white-space:normal}
 .rate-card-suite [data-slot=button][data-variant=outline]{border-color:var(--rc-line);background:white;color:#334767}
 .rate-card-suite [data-slot=button]:focus-visible,.rate-card-suite input:focus-visible,.rate-card-suite select:focus-visible{outline:2px solid #2563eb;outline-offset:2px}
 .rate-card-suite input:not([type=checkbox]),.rate-card-suite select{height:36px;border:1px solid var(--rc-line);border-radius:8px;font-size:12px;background:white;color:var(--rc-ink);box-shadow:none}
 .rate-card-suite label{font-size:11px;font-weight:600;color:#53637c;gap:6px}
-.rate-card-suite .rc-filters{border-color:var(--rc-line);box-shadow:0 2px 8px #13295404}
 .rate-card-suite table{border-collapse:collapse;background:white;font-variant-numeric:tabular-nums}
 .rate-card-suite th{background:linear-gradient(110deg,#e9f0ff,#f7faff);border-bottom:1px solid #dde7fa;color:#536681;font-size:10px;font-weight:700;letter-spacing:.2px;padding:10px 12px;vertical-align:middle;min-width:70px}
 .rate-card-suite td{padding:11px 12px;border-color:#edf0f6;vertical-align:middle;font-size:12px;line-height:1.5}
 .rate-card-suite tbody tr:hover{background:#f8faff}
 .rate-card-suite td:first-child,.rate-card-suite td:nth-child(3){font-weight:500}
 .rate-card-suite td button.underline{text-decoration:none;color:#155bd6}
-.rate-card-suite .rc-register{border-color:var(--rc-line);background:white}
-.rate-card-suite .rc-row-actions{display:flex;align-items:center;gap:6px;white-space:nowrap}
-.rate-card-suite .rc-row-actions button{white-space:nowrap}
-.rate-card-suite .rc-status{display:inline-flex;border-radius:999px;padding:3px 9px;font-size:10px;font-weight:600;background:#f0f2f6;color:#66758a}
-.rate-card-suite .rc-status.active{background:#e8f6ef;color:#17804e}
 .rate-card-suite.rc-modal{display:flex;flex-direction:column;gap:0;padding:0;border-radius:14px;border:1px solid var(--rc-line);overflow:hidden;background:#f7f9fc;box-shadow:0 24px 80px #13295430}
 .rate-card-suite .rc-modal-heading{flex-shrink:0;padding:18px 22px;text-align:start;background:linear-gradient(110deg,#e9f0ff,#f7faff);border-bottom:1px solid #dde7fa}
 .rate-card-suite .rc-modal-heading h2{color:#183562;font-size:18px;font-weight:600}
@@ -41,11 +26,9 @@ section.rate-card-suite{background:#f5f7fb;min-height:100%}
 .rate-card-suite .rc-creator-cell{display:flex;align-items:center;gap:9px;min-width:150px;max-width:230px}
 .rate-card-suite .rc-creator-cell>div{min-width:0}
 .rate-card-suite .rc-creator-cell img{width:36px;height:36px;object-fit:cover;border-radius:9px;flex-shrink:0}
-.rate-card-suite .rc-creator-name{display:block;font-weight:600;color:#253956}
-.rate-card-suite .rc-creator-id{display:block;max-width:155px;white-space:nowrap;text-overflow:ellipsis;overflow:hidden;color:#8692a6;font-size:9px;margin-top:2px}
 .rate-card-suite .rc-avatar-preview{width:96px;height:96px;border-radius:16px;overflow:hidden;background:#e8effc;display:grid;place-items:center;font-size:26px;color:#3565a7}
 .rate-card-suite .rc-avatar-preview img{width:100%;height:100%;object-fit:cover}
-@media(max-width:640px){.rate-card-suite .rc-heading{padding:16px}.rate-card-suite .rc-metrics>div{padding:10px}.rate-card-suite .rc-metrics strong{font-size:13px}.rate-card-suite .rc-modal-body{padding:14px}.rate-card-suite .rc-modal-heading{padding:16px}.rate-card-suite [data-slot=button]{min-height:40px}.rate-card-suite input:not([type=checkbox]),.rate-card-suite select{height:40px}.rate-card-suite .rc-heading h1{font-size:18px}}
+@media(max-width:640px){.rate-card-suite .rc-modal-body{padding:14px}.rate-card-suite .rc-modal-heading{padding:16px}.rate-card-suite [data-slot=button]{min-height:40px}.rate-card-suite input:not([type=checkbox]),.rate-card-suite select{height:40px}}
 
 .rate-card-suite .rc-modal-body>*{flex-shrink:0}
 .rate-card-suite.rc-modal-form{max-width:720px}
@@ -90,6 +73,4 @@ section.rate-card-suite{background:#f5f7fb;min-height:100%}
 .rate-card-suite input:not([type=checkbox]),.rate-card-suite select{height:30px;padding:0 9px;border:1px solid #e3e8f2;border-radius:8px;font-size:12.5px;font-weight:500}
 .rate-card-suite input:focus,.rate-card-suite select:focus{outline:none;border-color:#0057ff;box-shadow:0 0 0 3px #0057ff1f}
 .rate-card-suite label{font-size:10px;font-weight:700;letter-spacing:.55px;text-transform:uppercase}
-.rate-card-suite .rc-detail-filters,.rate-card-suite .rc-filters{padding:14px;background:white;border:1px solid #e3e8f2;border-radius:12px}
-.rate-card-suite .rc-preview-toolbar{display:flex;justify-content:flex-end;padding:9px 15px;background:white;border-bottom:1px solid #e3e8f2;margin:-20px -22px 0}
-@media(max-width:640px){.rate-card-suite .rc-preview-toolbar{margin:-14px -14px 0}.rate-card-suite [data-slot=button]{min-height:36px}}
+@media(max-width:640px){.rate-card-suite [data-slot=button]{min-height:36px}}

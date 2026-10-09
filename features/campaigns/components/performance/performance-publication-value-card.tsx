@@ -1,4 +1,3 @@
-"use client";
 
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
 import { CampaignPerformanceGrid } from "@/features/campaigns/components/performance/campaign-performance-grid";

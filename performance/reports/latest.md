@@ -1,37 +1,37 @@
 # Thinkway performance report
 
-Captured: 2026-08-04T02:18:25.527Z
+Captured: 2026-10-09T13:55:45.944Z
 
 ## Bundle
 
 | Metric | Value | Δ vs previous-report |
 |---|---:|---:|
-| Largest JS (KB) | 568.6 | +13.7 KB (+2.5%) |
-| Largest CSS (KB) | 337.5 | +8.7 KB (+2.6%) |
-| Total JS (KB) | 14195 | +2178.4 KB (+18.1%) |
-| Total CSS (KB) | 699 | — |
-| Assets ≥100KB | 26 | — |
+| Largest JS (KB) | 337.6 | 0 KB (0%) |
+| Largest CSS (KB) | 341.1 | 0 KB (0%) |
+| Total JS (KB) | 13294.2 | 0 KB (0%) |
+| Total CSS (KB) | 1300.4 | — |
+| Assets ≥100KB | 18 | — |
 
 ## Source
 
-- Root globals CSS chain: **30.8 KB**
-- Client modules: **807**
-- Largest client source: **77.4 KB** (`features/discovery/components/creator-search/creator-search-workspace.tsx`)
+- Root globals CSS chain: **30.1 KB**
+- Client modules: **870**
+- Largest client source: **101 KB** (`features/discovery/components/creator-search/creator-search-workspace.tsx`)
 
 ## Top JS
 
-- 568.6 KB — `.next/static/chunks/0cd7lp2e2g9ze.js`
-- 568.6 KB — `.next/static/chunks/1wc1e5y8xvxss.js`
-- 475.3 KB — `.next/static/chunks/12o8o-o-9x1x6.js`
-- 309.7 KB — `.next/static/chunks/2if2tb5cqlhtz.js`
-- 222.1 KB — `.next/static/chunks/367xbj6_12vhd.js`
+- 337.6 KB — `.next/static/chunks/023r33osfk4op.js`
+- 337.6 KB — `.next/static/chunks/22qijaj6jnvr5.js`
+- 237.7 KB — `.next/static/chunks/31wytz_jsob8r.js`
+- 229.4 KB — `.next/static/chunks/0gkuv263jogyr.js`
+- 220.9 KB — `.next/static/chunks/2ts269cvaamhl.js`
 
 ## Top CSS
 
-- 337.5 KB — `.next/static/chunks/1zmslg2xoi_aq.css`
-- 113.3 KB — `.next/static/chunks/43au_x0_gi-8k.css`
-- 112.6 KB — `.next/static/chunks/41zggdatksinw.css`
-- 36.9 KB — `.next/static/chunks/26fqncsyc4q51.css`
-- 32.4 KB — `.next/static/chunks/21ojy-tjekred.css`
+- 341.1 KB — `.next/static/chunks/3jqbkadnf8n7c.css`
+- 109.7 KB — `.next/static/chunks/3ucvs8y1joj5d.css`
+- 104.8 KB — `.next/static/chunks/0t6sozj72sv-v.css`
+- 99.7 KB — `.next/static/chunks/1ofveo_aigfcq.css`
+- 59.3 KB — `.next/static/chunks/0tagmkjls8w_6.css`
 
 See `docs/PERFORMANCE_GOVERNANCE.md`.

@@ -1,4 +1,3 @@
-"use client";
 
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 

@@ -1,0 +1,1015 @@
+[
+  {
+    "file": "features/campaigns/components/assignment-commercial-workspace-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-lines-tab-inner.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-audience-view-context.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx",
+      "features/campaigns/components/tabs/campaign-lines-tab-inner.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-campaign-badge.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-status-badges.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-commercial-pane.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx",
+      "features/campaigns/components/assignment-hierarchy/editable-post-row.tsx",
+      "features/campaigns/components/tabs/campaign-lines-tab-inner.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-creator-cell.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-creator-country.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-deliverable-rows.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-hierarchy-table.tsx",
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-deliverable-rows.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-expand-toggle.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-parent-row.tsx",
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-full-description-cell.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-minimal-row.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-hierarchy-table.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-platform-pills.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-parent-row.tsx",
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-pricing-calculator.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-row-circle-control.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx",
+      "features/campaigns/components/assignment-hierarchy/editable-post-row.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/assignment-row-error-boundary.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-hierarchy-table.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/deliverable-type-tag.tsx",
+    "parents": [
+      "features/campaigns/components/deliverable-pricing-editor.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/deliverable-workflow-badge.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/editable-post-row.tsx",
+      "features/campaigns/components/detail-sheets/deliverable-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/floating-selection-bar.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-hierarchy/hierarchy-billing-status-badge.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-parent-row.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-io-revision-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-line-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-multi-currency-cost-fields.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-line-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-operational-actions-footer.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-hierarchy-table.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-operational-status-badge.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-parent-row.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignment-sticky-footer.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-line-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/assignments-empty-state.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx",
+      "features/campaigns/components/tabs/campaign-lines-tab-inner.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/aurora/campaign-client-review-link-button.tsx",
+    "parents": [
+      "features/campaigns/components/aurora/campaign-hero-actions.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/aurora/campaign-command-center.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-overview-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/aurora/campaign-workspace-frame.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-center-tab.tsx",
+      "features/campaigns/components/script/campaign-script-register.tsx",
+      "features/campaigns/components/script/creator-script-sheet.tsx",
+      "features/campaigns/components/script/documentation-unit-script-sheet.tsx",
+      "features/campaigns/components/tabs/campaign-billing-tab.tsx",
+      "features/campaigns/components/tabs/campaign-deliverables-documentation-tab.tsx",
+      "features/campaigns/components/tabs/campaign-lines-tab-inner.tsx",
+      "features/campaigns/components/tabs/campaign-timeline-tab.tsx",
+      "features/campaigns/components/tabs/campaign-workflow-tab.tsx",
+      "features/creator-payments/workspace.tsx",
+      "features/io/components/client-io-tab.tsx",
+      "features/io/components/vendor-io-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-commercial-summary-card.tsx",
+    "parents": [
+      "features/campaigns/components/new-campaign-dialog.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-creator-discovery-panel.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-lines-tab-inner.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-detail-chrome.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-details-sheet.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-line-po-panel.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-line-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-list-client-link-cell.tsx",
+    "parents": [
+      "features/campaigns/components/campaigns-table.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-mark-stories-live-sheet.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-center-tab.tsx",
+      "features/campaigns/components/tabs/campaign-publications-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-operational-section-header.tsx",
+    "parents": [
+      "components/workspace/operational-workspace-ui.tsx",
+      "features/billing/components/billing-lines-table.tsx",
+      "features/campaigns/components/tabs/campaign-billing-tab.tsx",
+      "features/campaigns/components/tabs/campaign-deliverables-tab.tsx",
+      "features/campaigns/components/tabs/campaign-lines-tab-inner.tsx",
+      "features/campaigns/components/tabs/campaign-publications-tab.tsx",
+      "features/campaigns/components/tabs/campaign-timeline-tab.tsx",
+      "features/campaigns/components/tabs/campaign-workflow-tab.tsx",
+      "features/documents/document-table.tsx",
+      "features/finance/aging/components/aging-detail-table.tsx",
+      "features/finance/aging/components/aging-summary-table.tsx",
+      "features/finance/components/period-management-workspace.tsx",
+      "features/finance/posting-center/components/posting-center-workspace.tsx",
+      "features/finance/vat/components/vat-workspace.tsx",
+      "features/groups/components/tabs/group-activity-tab.tsx",
+      "features/groups/components/tabs/group-brands-tab.tsx",
+      "features/groups/components/tabs/group-legal-entities-tab.tsx",
+      "features/io/components/vendor-io-tab.tsx",
+      "features/operations/components/move-between-accounts-workspace.tsx",
+      "features/operations/components/reassignment-center.tsx",
+      "features/operations/components/vendor-movement-workspace.tsx",
+      "features/planning/components/forecast-section.tsx",
+      "features/planning/components/variance-tables.tsx",
+      "features/vendors/components/tabs/vendor-assignments-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-po-edit-sheet.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-po-section.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-publication-sheet.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-center-tab.tsx",
+      "features/campaigns/components/tabs/campaign-publications-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-workspace-tab-loading.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaign-workspace-tabs.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaigns-list-nav-sync.tsx",
+    "parents": [
+      "features/campaigns/components/campaigns-list-section.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaigns-pagination.tsx",
+    "parents": [
+      "features/campaigns/components/campaigns-list-section.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/campaigns-search.tsx",
+    "parents": [
+      "features/campaigns/components/campaigns-list-section.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/commercial-version-history-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-commercial-approvals.tsx",
+      "features/campaigns/components/campaign-overview-details.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/creator-detail-sheet-identity-card.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/credit-limit-exceeded-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/new-campaign-dialog.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/deliverables/content-decision-controls.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-deliverables-documentation-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/deliverables/content-review-dates-editor.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-deliverables-documentation-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/deliverables/deliverable-asset-preview.tsx",
+    "parents": [
+      "features/campaigns/components/deliverables/deliverables-panel.tsx",
+      "features/campaigns/components/deliverables/version-manager.tsx",
+      "features/campaigns/components/detail-sheets/deliverable-detail-sheet.tsx",
+      "features/campaigns/components/tabs/campaign-deliverables-documentation-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/deliverables/deliverable-explorer-cells.tsx",
+    "parents": [
+      "features/campaigns/components/deliverables/documentation-repository-list.tsx",
+      "features/campaigns/components/performance/campaign-performance-grid.tsx",
+      "features/campaigns/components/tabs/campaign-deliverables-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/deliverables/documentation-asset-actions.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-deliverables-documentation-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/deliverables/release-version-to-client-button.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-deliverables-documentation-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/detail-sheets/activity-detail-sheet.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-timeline-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/detail-sheets/approval-detail-sheet.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-workflow-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/detail-sheets/detail-clickable-label.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-billing-tab.tsx",
+      "features/campaigns/components/tabs/campaign-publications-tab.tsx",
+      "features/campaigns/components/tabs/campaign-timeline-tab.tsx",
+      "features/campaigns/components/tabs/campaign-workflow-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/detail-sheets/finance-audit-detail-sheet.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-timeline-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/detail-sheets/payment-detail-sheet.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-billing-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/detail-sheets/publication-detail-sheet.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-publications-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/duplicate-campaign-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/media-plan/media-plan-approval-toolbar.tsx",
+    "parents": [
+      "features/campaigns/components/media-plan/campaign-media-plan-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/media-plan/media-plan-comparison-panel.tsx",
+    "parents": [
+      "features/campaigns/components/media-plan/campaign-media-plan-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/media-plan/media-plan-history-panel.tsx",
+    "parents": [
+      "features/campaigns/components/media-plan/campaign-media-plan-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/campaign-performance-charts.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-center-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/campaign-performance-sync-health.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-center-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/engagement-rate-display.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-grid.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/impressions-display.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-detail-drawer.tsx",
+      "features/campaigns/components/performance/campaign-performance-grid.tsx",
+      "features/campaigns/components/performance/publication-workspace/publication-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/metrics-enrichment-progress.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-center-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/performance-explorer-cells.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-grid.tsx",
+      "features/campaigns/components/tabs/campaign-publications-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/performance-publication-value-card.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-center-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/performance-selection-flyout.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-center-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/publication-workspace/engagement-rate-display.tsx",
+    "parents": [
+      "features/campaigns/components/performance/publication-workspace/publication-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/performance/reach-display.tsx",
+    "parents": [
+      "features/campaigns/components/performance/campaign-performance-detail-drawer.tsx",
+      "features/campaigns/components/performance/campaign-performance-grid.tsx",
+      "features/campaigns/components/performance/publication-workspace/publication-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/remove-assignment-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/assignment-hierarchy/assignment-safe-grid.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/script/campaign-script-fields.tsx",
+    "parents": [
+      "features/campaigns/components/script/campaign-script-register.tsx",
+      "features/campaigns/components/script/creator-script-sheet.tsx",
+      "features/campaigns/components/script/documentation-unit-script-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/script/documentation-unit-original-document-button.tsx",
+    "parents": [
+      "features/campaigns/components/script/documentation-unit-script-actions.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/tabs/assignments-render.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-assignments-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/components/tabs/assignments-tab-error-fallback.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-assignments-tab.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/lifecycle/components/campaign-blocker-resolver-drawer.tsx",
+    "parents": [
+      "features/campaigns/components/campaign-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/lifecycle/components/campaign-business-timeline.tsx",
+    "parents": [
+      "features/campaigns/components/tabs/campaign-timeline-tab.tsx",
+      "features/campaigns/lifecycle/components/campaign-lifecycle-details.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/lifecycle/components/campaign-health-strip.tsx",
+    "parents": [
+      "features/campaigns/lifecycle/components/campaign-lifecycle-details.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/lifecycle/components/campaign-next-action-card.tsx",
+    "parents": [
+      "features/campaigns/components/aurora/campaign-hero.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/lifecycle/components/campaign-process-rail.tsx",
+    "parents": [
+      "features/campaigns/lifecycle/components/campaign-lifecycle-details.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/lifecycle/components/campaign-readiness-strip.tsx",
+    "parents": [
+      "features/campaigns/lifecycle/components/campaign-lifecycle-details.tsx"
+    ]
+  },
+  {
+    "file": "features/campaigns/lifecycle/components/campaign-requirements-panel.tsx",
+    "parents": [
+      "features/campaigns/lifecycle/components/campaign-lifecycle-details.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/add-creator-platform-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/add-missing-creator-dialog.tsx",
+    "parents": [
+      "features/creators/picker/creator-selection-table.tsx",
+      "features/discovery/components/creator-search/creator-search-exact-empty-state.tsx",
+      "features/discovery/components/creator-search/creator-search-result-list.tsx",
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/combine-creators-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx",
+      "features/discovery/components/creator-search/creator-search-workspace.tsx",
+      "features/discovery/components/discovery-creator-actions-menu.tsx",
+      "features/rate-cards/import-conflicts.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-compare/creator-compare-matrix.tsx",
+    "parents": [
+      "features/discovery/components/creator-compare/creator-compare-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-details-summary-card.tsx",
+    "parents": [
+      "features/campaign-studio/components/sections/studio-planning-creator-detail.tsx",
+      "features/campaigns/components/creator-detail-sheet.tsx",
+      "features/discovery/components/discovery-creator-profile-summary.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/create-list-dialog.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-lazy-panels.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-avatar-hover-trigger.tsx",
+    "parents": [
+      "features/discovery/components/discovery-creator-exact-row.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-active-filters.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-ai-extracting-state.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-brief-panel.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-bulk-bar.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-campaign-requirements-panel.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-lazy-panels.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-filter-bar.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-campaign-brief-bar.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-filter-fields.tsx",
+    "parents": [
+      "features/campaign-intelligence-profile/components/campaign-requirements-form.tsx",
+      "features/discovery/components/creator-search/creator-search-filter-panel.tsx",
+      "features/discovery/components/creator-search/creator-search-toolbar-popovers.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-hybrid-sections.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-result-list.tsx",
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-inline-field.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-top-bar.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-popover.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-campaign-brief-bar.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-recommended-section.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-result-list.tsx",
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-sort-toolbar.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-campaign-brief-bar.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/creator-search/creator-search-suite-row.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-result-list.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/discovery-job-panel.tsx",
+    "parents": [
+      "features/discovery/components/discovery-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/discovery-profile-card.tsx",
+    "parents": [
+      "features/discovery/components/discovery-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/edit-creator-average-price-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/edit-creator-contact-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/edit-creator-profile-url-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/components/similar-creator-actions.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/delete-creator/bulk-delete-creators-dialog.tsx",
+    "parents": [
+      "features/discovery/components/creator-search/creator-search-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/delete-creator/inline-creator-merge.tsx",
+    "parents": [
+      "features/discovery/components/platform-owner-conflict.tsx",
+      "features/discovery/delete-creator/delete-discovery-creator-dialog.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/delete-platform/delete-creator-platform-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/delete-platform/restore-identity-button.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/document-preview/document-creator-selection-dialog.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-document-output-toolbar.tsx",
+      "features/quotations/components/quotation-document-output-toolbar.tsx",
+      "features/quotations/components/quotation-preview-toolbar-actions.tsx",
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/document-preview/document-preview-shell.tsx",
+    "parents": [
+      "features/discovery/document-preview/document-preview-client.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/merge-creators/history-button.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/add-creators-drawer.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/add-to-shortlist-dialog.tsx",
+    "parents": [
+      "features/campaigns/components/creator-detail-sheet.tsx",
+      "features/discovery/components/creator-compare/creator-compare-workspace.tsx",
+      "features/discovery/components/creator-search/creator-search-lazy-panels.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/create-shortlist-dialog.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlists-list-header.tsx",
+      "features/discovery/shortlists/components/shortlists-list.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/creator-list-cost-control.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/generate-quotation-shortlist-dialog.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/move-to-campaign-dialog.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/shortlist-bulk-toolbar.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/shortlist-creator-list.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/shortlist-detail-primitives.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-document-output-toolbar.tsx",
+      "features/discovery/shortlists/components/shortlist-header-actions.tsx",
+      "features/quotations/components/quotation-detail-primitives.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/shortlist-edit-dialog.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/shortlist-list-filter-bar.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlists-list-header.tsx",
+      "features/discovery/shortlists/components/shortlists-list.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/shortlist-metrics-refresh-banner.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/shortlist-quotation-panel.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/shortlist-selection-flyout.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlists-list.tsx"
+    ]
+  },
+  {
+    "file": "features/discovery/shortlists/components/submit-shortlist-dialog.tsx",
+    "parents": [
+      "features/discovery/shortlists/components/shortlist-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/add-creators-to-quotation-modal.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx",
+      "scripts/recovered/quotation-workspace.tsx",
+      "scripts/recovered/workspace-fb3-only.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/append-quotation-creator-dialog.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/convert-quotation-dialog.tsx",
+    "parents": [
+      "features/quotations/components/quotation-lifecycle-panel.tsx",
+      "features/quotations/components/quotation-lifecycle-sheet.tsx",
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/duplicate-suggestion-panel.tsx",
+    "parents": [
+      "features/quotations/components/promote-master-data-wizard.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-client-brand-panel.tsx",
+    "parents": [
+      "features/quotations/components/quotation-setup-wizard.tsx",
+      "scripts/recovered/quotation-workspace.tsx",
+      "scripts/recovered/workspace-fb3-only.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-client-review-panel.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-collapse-content-header-row.tsx",
+    "parents": [
+      "features/quotations/components/quotation-collapse-content-group-rows.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-collapse-package-pricing-row.tsx",
+    "parents": [
+      "features/quotations/components/quotation-collapse-content-group-rows.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-commercial-entry.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-commercial-metrics-band.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-commercial-summary-sort-header.tsx",
+    "parents": [
+      "features/quotations/components/quotation-commercial-summary-dialog.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-commercial-workspace-row-card.tsx",
+    "parents": [
+      "features/quotations/components/quotation-commercial-workspace-dialog.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-creator-deliverable-rows.tsx",
+    "parents": [
+      "features/quotations/components/quotation-creator-group-rows.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-document-meta-panel.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx",
+      "scripts/recovered/quotation-workspace.tsx",
+      "scripts/recovered/workspace-fb3-only.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-lines-grid.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-list-filter-bar.tsx",
+    "parents": [
+      "features/quotations/components/quotations-list-header.tsx",
+      "features/quotations/components/quotations-list.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-post-type-multi-select.tsx",
+    "parents": [
+      "features/quotations/components/quotation-deliverable-type-lines.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-pricing-calculator-panel.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-selection-bar.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-selection-flyout.tsx",
+    "parents": [
+      "features/quotations/components/quotations-list.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/components/quotation-terms-accordion.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx",
+      "scripts/recovered/quotation-workspace.tsx",
+      "scripts/recovered/workspace-fb3-only.tsx"
+    ]
+  },
+  {
+    "file": "features/quotations/hooks/use-quotation-creator-detail-sheet.tsx",
+    "parents": [
+      "features/quotations/components/quotation-workspace.tsx"
+    ]
+  }
+]

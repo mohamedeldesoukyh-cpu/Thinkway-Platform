@@ -1,4 +1,3 @@
-"use client";
 import { QuotationText, useQuotationDesignLocale } from "./quotation-design-locale";
 
 import { useEffect, useMemo, useState, useTransition } from "react";

@@ -38,7 +38,33 @@ const reference = fs.readFileSync(path.join(root, 'docs/validation-artifacts/col
 const result = validate(reference);
 assert.deepEqual(result, { blocks: 23, trackLists: 4 });
 const manifest = JSON.parse(fs.readFileSync(path.join(root, 'docs/validation-artifacts/collections-redesign/extraction-manifest.json'), 'utf8'));
-for (const rule of manifest) assert.ok(fs.readFileSync(path.join(root, rule.source), 'utf8').replace(/\r\n/g, '\n').includes(rule.body.replace(/\r\n/g, '\n')), `Declaration changed at ${rule.source}:${rule.line}`);
+// The extraction manifest is the frozen declaration contract. Validate the
+// shipped collections copy, not the now-independent vendor source location.
+function declarationContract(text) {
+  const rules = [];
+  postcss.parse(text).walkRules(rule => {
+    const parents = [];
+    for (let parent = rule.parent; parent?.type === 'atrule'; parent = parent.parent)
+      parents.unshift('@' + parent.name + ' ' + parent.params);
+    rules.push({ selectors: rule.selectors, parents,
+      declarations: rule.nodes.filter(node => node.type !== 'comment').map(node =>
+        node.type === 'decl' ? [node.prop, node.value, Boolean(node.important)] : node.toString()) });
+  });
+  return rules;
+}
+const expectedCss = manifest.map(rule => {
+  let css = rule.selectors.map(selector => '.collections-suite ' + selector).join(',') + rule.body;
+  for (const parent of [...rule.parents].reverse()) css = parent + '{' + css + '}';
+  return css;
+}).join('\n');
+const expectedContract = declarationContract(expectedCss);
+const shippedCss = fs.readFileSync(path.join(root, 'app/styles/collections-platform-shared.css'), 'utf8');
+assert.deepEqual(declarationContract(shippedCss), expectedContract,
+  'Shipped collections selectors, declarations, order or conditional scope changed');
+// Negative controls: this guard must detect changes to values, scope and order.
+assert.notDeepEqual(declarationContract(shippedCss.replace('flex:1 1 auto', 'flex:0 0 auto')), expectedContract);
+assert.notDeepEqual(declarationContract(shippedCss.replace('.collections-suite .tw-sp', '.tw-sp')), expectedContract);
+assert.notDeepEqual([...expectedContract].reverse(), expectedContract);
 for (const file of ['collections-platform-shared.css', 'collections-fragment.css']) {
   const css = postcss.parse(fs.readFileSync(path.join(root, 'app/styles', file), 'utf8'));
   css.walkRules(rule => { for (const selector of rule.selectors) {

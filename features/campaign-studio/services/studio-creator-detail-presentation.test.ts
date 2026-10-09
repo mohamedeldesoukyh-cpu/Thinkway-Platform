@@ -76,7 +76,7 @@ test("the pack portal root carries the scope class itself", () => {
   const source = read(PACK_COMPONENT);
   assert.match(
     source,
-    /createPortal\(\s*<div className="discovery-suite tw-cp-root">/,
+    /createPortal\(\s*<div\b[^>]*\bclassName="discovery-suite tw-cp-root"/,
     "the pack must scope itself — it cannot rely on a route wrapper"
   );
 });

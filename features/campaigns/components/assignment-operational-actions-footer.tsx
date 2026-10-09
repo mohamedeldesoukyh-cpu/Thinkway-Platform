@@ -1,4 +1,3 @@
-"use client";
 
 import { FileStackIcon, FileTextIcon, GitBranchIcon, Undo2Icon } from "lucide-react";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
