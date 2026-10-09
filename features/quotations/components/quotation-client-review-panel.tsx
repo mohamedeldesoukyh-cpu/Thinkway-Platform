@@ -72,16 +72,12 @@ export function QuotationClientReviewPanel({
     <div className="q-wrap q-review-wrap">
       <div className="q-card q-rev">
         <div className="q-rev__t">
-          <span className="tw-ct">
-            Client review · proposal v{review.reviewNumber} ·{" "}
+          <h2><QuotationText>Client review</QuotationText></h2>
+          <span className="q-p q-p--blue">proposal v{review.reviewNumber}</span>
+          <span className={cn("q-p", review.status === "approved" ? "q-p--ok" : review.status === "rejected" ? "q-p--bad" : "q-p--wrn")}>
             {CLIENT_PROPOSAL_STATUS_LABEL[review.status]}
           </span>
-          <span className="tw-cs">
-            {counts.accepted} approved · {counts.inReview} under review ·{" "}
-            {counts.rejected} rejected
-            {review.changeRequestSummary ? ` · ${review.changeRequestSummary}` : ""}
-          </span>
-          <span className="tw-sp" />
+          <span className="q-sp" />
           {canManage ? (
             <>
               <button
@@ -130,7 +126,7 @@ export function QuotationClientReviewPanel({
               <button
                 key={item.id}
                 type="button"
-                className={cn("tw-fchip", isOn && "on", isZero && "z")}
+                className={cn("q-chip", item.id === "accepted" && "ok", item.id === "in_review" && "wr", item.id === "rejected" && "bd")}
                 aria-pressed={isOn}
                 disabled={isZero}
                 onClick={() => {
@@ -143,11 +139,12 @@ export function QuotationClientReviewPanel({
             );
           })}
         </div>
-        <span className="tw-sp" />
-        <span className="tw-cs">
-          Checkboxes select lines for bulk actions. Client approval is managed separately.
+        <span className="q-sp" />
+        <span className="q-review-note">
+          Client approval is the client's decision. The checkboxes below are for your own bulk actions and change nothing for the client.
         </span>
       </div>
+        {review.changeRequestSummary && <p className="q-review-note">{review.changeRequestSummary}</p>}
         <div
           className="q-rev__s"
           aria-label="Approved selection metrics"

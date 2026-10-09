@@ -1,12 +1,12 @@
 {
-  "capturedAt": "2026-10-09T17:21:56.512Z",
+  "capturedAt": "2026-10-09T18:28:41.083Z",
   "metrics": {
-    "capturedAt": "2026-10-09T17:21:56.512Z",
+    "capturedAt": "2026-10-09T18:28:41.083Z",
     "bundle": {
       "largestJsKb": 337.6,
       "largestCssKb": 341.1,
-      "totalJsKb": 13284.4,
-      "totalCssKb": 1301.4,
+      "totalJsKb": 13285.7,
+      "totalCssKb": 1304.7,
       "assetsOver100kb": 18,
       "jsFileCount": 388,
       "cssFileCount": 38,
@@ -22,9 +22,9 @@
           "kb": 337.6
         },
         {
-          "file": ".next/static/chunks/14gfsy1zh24g3.js",
-          "bytes": 244882,
-          "kb": 239.1
+          "file": ".next/static/chunks/03lpjw_kfri20.js",
+          "bytes": 246236,
+          "kb": 240.5
         },
         {
           "file": ".next/static/chunks/0gkuv263jogyr.js",
@@ -89,6 +89,11 @@
           "kb": 59.3
         },
         {
+          "file": ".next/static/chunks/42ox-hspyjwhb.css",
+          "bytes": 56593,
+          "kb": 55.3
+        },
+        {
           "file": ".next/static/chunks/3zfp66cm4h3bq.css",
           "bytes": 53580,
           "kb": 52.3
@@ -96,11 +101,6 @@
         {
           "file": ".next/static/chunks/0salqkzk8ehjg.css",
           "bytes": 53264,
-          "kb": 52
-        },
-        {
-          "file": ".next/static/chunks/1ye-4406vu1sx.css",
-          "bytes": 53212,
           "kb": 52
         },
         {
@@ -138,14 +138,14 @@
     "warns": [
       {
         "name": "bundle.totalJsKb",
-        "value": 13284.4,
+        "value": 13285.7,
         "soft": 13000,
         "hard": 15000,
         "status": "warn"
       },
       {
         "name": "bundle.totalCssKb",
-        "value": 1301.4,
+        "value": 1304.7,
         "soft": 700,
         "hard": 1400,
         "status": "warn"

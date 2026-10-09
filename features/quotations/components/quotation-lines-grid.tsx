@@ -318,6 +318,7 @@ function QuotationPackLineRow({
       <div id={`quotation-line-${item.id}`} className="q-exp" hidden={!expanded}>
         <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
+              workspaceDetails
               key={deliverable.key}
               lines={deliverableTypeLines(deliverable)}
               allowedPlatforms={allowedCreatorPlatforms}
@@ -349,17 +350,17 @@ function QuotationPackLineRow({
                 });
               }}
             />
-          ))}</section>
+          ))}<p className="q-help">Duration controls appear only for services that use one.</p></section>
         <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Platforms in this line</QuotationText></b></div>
           <div className="q-kv"><span><QuotationText>Connected accounts</QuotationText></span><CreatorLinkedPlatformIcons platforms={item.creator_profile_source?.linkedPlatforms?.length ? item.creator_profile_source.linkedPlatforms : allowedCreatorPlatforms} /></div>
           <div className="q-kv"><span><QuotationText>Platforms in this line</QuotationText></span><QuotationDeliverablePlatformIcons platforms={selectedPlatforms} allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)} /></div>
           <p className="q-help"><QuotationText>A creator may have accounts that are not part of this quoted package.</QuotationText></p>
         </section>
-        <section className="q-sec q-sec--priv"><div className="q-sec__h"><b><QuotationText>Cost detail</QuotationText></b><span className="q-sp" /><span className="q-p q-p--wrn"><QuotationText>Internal</QuotationText></span></div>
-          <div className="q-kv"><span>Base cost</span><b>{F(projected.cost)} {rowCurrency}</b></div>
-          <div className="q-kv"><span><QuotationText>Client cost before agency fees</QuotationText></span><b>{F(projected.revenue)} {rowCurrency}</b></div>
-          <div className="q-kv"><span><QuotationText>Agency fees (AF)</QuotationText></span><b>{F(projected.af)} {rowCurrency}</b></div>
-          <div className="q-kv"><span><QuotationText>GP amount</QuotationText></span><b>{F(projected.margin)} {rowCurrency}</b></div>
+        <section className="q-sec q-sec--priv"><div className="q-sec__h"><b><QuotationText>Cost detail</QuotationText></b><span className="q-sp" /><span className="q-p q-p--wrn"><QuotationText>Internal — never shown to the client</QuotationText></span></div>
+          <div className="q-kv"><span>Base cost (internal creator / vendor cost)</span><b>{rowCurrency} {F(projected.cost)}</b></div>
+          <div className="q-kv"><span><QuotationText>Client cost before agency fees</QuotationText></span><b>{rowCurrency} {F(projected.revenue)}</b></div>
+          <div className="q-kv"><span><QuotationText>Agency fees (AF)</QuotationText></span><b>{rowCurrency} {F(projected.af)}</b></div>
+          <div className="q-kv"><span><QuotationText>GP amount</QuotationText></span><b>{rowCurrency} {F(projected.margin)}</b></div>
                   {primary ? (
           <span className="inline-flex items-center gap-1.5">
             {linePending ? (

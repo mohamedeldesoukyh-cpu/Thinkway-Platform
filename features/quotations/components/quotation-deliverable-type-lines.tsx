@@ -32,6 +32,8 @@ type Props = {
   defaultOpen?: boolean;
   /** Flush quotation row — single-line 34px trigger. */
   compact?: boolean;
+  /** Quantity rows in the quotation's expanded design cards. */
+  workspaceDetails?: boolean;
 };
 
 export function QuotationDeliverableTypeLinesEditor({
@@ -41,6 +43,7 @@ export function QuotationDeliverableTypeLinesEditor({
   disabled,
   defaultOpen,
   compact = false,
+  workspaceDetails = false,
 }: Props) {
   const displayLines = lines.length > 0 ? lines : [{ type: "", quantity: 1 }];
   const selectedTypes = selectedTypesFromTypeLines(displayLines);
@@ -63,6 +66,33 @@ export function QuotationDeliverableTypeLinesEditor({
       )
     );
   }
+
+  if (workspaceDetails) return (
+    <div className="q-quantity-editor">
+      {selectedTypes.map((type) => {
+        const line = displayLines.find((entry) => entry.type === type);
+        return <div className="q-kv" key={type}>
+          <span>{quotationPostTypeLabel(type)}</span>
+          <span className="q-qty">
+            <Input className="q-in" inputMode="numeric" min={1} step={1} disabled={disabled}
+              value={String(normalizeTypeLineQuantity(line?.quantity))}
+              onChange={(event) => updateTypeQuantity(type, parseTypeLineQuantity(event.target.value))}
+              aria-label={`Units for ${quotationPostTypeLabel(type)}`} />
+            {requiresPeriod(type) && <label className="q-period">
+              <Input className="q-in" type="number" min={1} max={120} step={1} disabled={disabled}
+                aria-label={`${quotationPostTypeLabel(type)} period in months`} value={line?.period_months ?? ""}
+                onChange={e => onChange(displayLines.map(entry => entry.type === type ? {...entry, period_months:e.target.value ? Number(e.target.value) : null} : entry))} />
+              <span>months</span>
+            </label>}
+          </span>
+        </div>;
+      })}
+      <div className="q-type-picker">
+        <QuotationPostTypeMultiSelect value={selectedTypes} onChange={handleTypesChange}
+          allowedPlatforms={allowedPlatforms} disabled={disabled} summaryLabel={summaryLabel} defaultOpen={defaultOpen} />
+      </div>
+    </div>
+  );
 
   return (
     <div className={compact ? "type-lines-editor min-w-0 flex-1" : "space-y-1.5"}>
