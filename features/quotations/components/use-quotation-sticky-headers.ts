@@ -14,9 +14,10 @@ export function useQuotationStickyHeaders() {
     const measure = () => {
       const headerHeight = header.offsetHeight;
       const toolsHeight = tools?.offsetHeight ?? 0;
+      const availableHeight = Math.min(root.clientHeight, window.innerHeight - Math.max(0, root.getBoundingClientRect().top));
       // On short/mobile viewports let the upper summary scroll out, leaving
       // room to work with rows. Every summary control remains reachable above.
-      const top = Math.max(-headerHeight, Math.min(0, root.clientHeight - headerHeight - toolsHeight - 240));
+      const top = Math.max(-headerHeight, Math.min(0, availableHeight - headerHeight - toolsHeight - 240));
       root.style.setProperty("--q-summary-top", `${top}px`);
       root.style.setProperty("--q-summary-visible", `${headerHeight + top}px`);
       root.style.setProperty("--q-lines-tools-height", `${toolsHeight}px`);
@@ -25,8 +26,12 @@ export function useQuotationStickyHeaders() {
     observer.observe(root);
     observer.observe(header);
     if (tools) observer.observe(tools);
+    window.addEventListener("resize", measure);
     measure();
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+    };
   });
   return ref;
 }
