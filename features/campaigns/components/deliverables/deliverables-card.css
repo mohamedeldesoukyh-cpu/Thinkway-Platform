@@ -3,7 +3,7 @@
 .dv .sl, .dv .pv__m { min-width: 0; }
 .dv .dv-creator-avatar { width: 32px; height: 32px; flex-shrink: 0; }
 .dv .dv-platform-logo { width: 24px; height: 24px; flex-shrink: 0; object-fit: contain; }
-.dv .pv__m b { font-family: inherit; font-size: 13px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
+.dv .sl .pv__m b { font-family: inherit; font-size: 13px; line-height: 1.45; white-space: normal; overflow-wrap: anywhere; }
 .dv .dv-inline-versions { padding: 0 12px 12px; font: inherit; font-size: 13px; line-height: 1.5; }
 .dv .dv-version { padding: 12px 0; min-width: 0; overflow-wrap: anywhere; }
 .dv .dv-version > strong { font-size: 13px; font-weight: 600; }
@@ -13,3 +13,4 @@
 .dv .sl .dv-inline-media { margin-block: 10px; border-radius: 8px; overflow: hidden; background: #0b1020; }
 .dv .sl .dv-inline-media > video, .dv .sl .dv-inline-media > img, .dv .sl .dv-inline-media > iframe, .dv .sl .dv-inline-drive { display: block; width: 100%; height: 260px; max-height: 260px; object-fit: contain; }
 @media (max-width: 640px) { .dv .slots { grid-template-columns: minmax(0, 1fr); } }
+
