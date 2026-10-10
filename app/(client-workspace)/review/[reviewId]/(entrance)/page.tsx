@@ -21,7 +21,7 @@ export default async function ClientReviewEntryPage({ params, searchParams }: Pr
     if (!token) {
         return <InvalidReviewLink />;
     }
-    const loaded = await loadClientWorkspace(token, reviewId);
+    const loaded = await loadClientWorkspace(token, reviewId, { entranceOnly: true });
     if (!loaded.ok) {
         if (loaded.code === "workspace_off") {
             return <EntranceGate title="This workspace is unavailable"><p>Please contact your Thinkway team for access.</p></EntranceGate>;

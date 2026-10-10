@@ -12,6 +12,6 @@ export function ClientReviewCampaignCta({ href, label = 'Review campaign', entra
     label?: string;
     entrance?: boolean;
 }) {
-    return <Link href={href} className={entrance ? 'tw-cta' : 'btn primary'} aria-label={label} data-client-entrance-cta={entrance || undefined} style={entrance ? undefined : { width: '100%', justifyContent: 'center', marginTop: 22, minHeight: 44 }}><ReviewLabel label={label} entrance={entrance}/></Link>;
+    return <Link href={href} prefetch={entrance ? true : undefined} className={entrance ? 'tw-cta' : 'btn primary'} aria-label={label} data-client-entrance-cta={entrance || undefined} style={entrance ? undefined : { width: '100%', justifyContent: 'center', marginTop: 22, minHeight: 44 }}><ReviewLabel label={label} entrance={entrance}/></Link>;
 }
 

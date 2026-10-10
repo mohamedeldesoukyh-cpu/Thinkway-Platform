@@ -527,11 +527,11 @@
  color:var(--e-text);font:700 15px var(--e-sans);letter-spacing:-.3px}
 
 /* the three contexts set their size through custom properties only */
-.tw-entry .tw-cobrand{--pl-h:40px;--pl-p:16px;--pl-i:21px;--pl-w:170px}
+.tw-entry .tw-cobrand{--pl-h:58px;--pl-p:10px;--pl-i:44px;--pl-w:170px}
 .tw-entry .tw-lock{--pl-h:30px;--pl-p:11px;--pl-i:15px;--pl-w:124px}
 .tw-entry .tw-lock .tw-partner--text{font-size:13.5px}
 @media (max-width:640px){
- .tw-entry .tw-cobrand{--pl-h:34px;--pl-p:13px;--pl-i:18px;--pl-w:146px}
+ .tw-entry .tw-cobrand{--pl-h:54px;--pl-p:8px;--pl-i:40px;--pl-w:132px}
 }
 
 

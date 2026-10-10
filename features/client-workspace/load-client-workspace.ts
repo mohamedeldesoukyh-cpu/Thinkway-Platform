@@ -376,7 +376,7 @@ function viewFromSnapshot(
 export async function loadClientWorkspace(
   token: string,
   requestedReviewId?: string,
-  options: { documentRequest?: boolean } = {}
+  options: { documentRequest?: boolean; entranceOnly?: boolean } = {}
 ): Promise<
   | { ok: true; view: ClientWorkspaceView; entry: ClientWorkspaceEntry; campaignObject: CampaignObject | null }
   | { ok: false; code: "invalid" | "revoked" | "not_found" | "unavailable" | "workspace_off" | "workspace_unavailable"; message: string }
@@ -504,8 +504,8 @@ export async function loadClientWorkspace(
   const sourceByReviewId = Object.fromEntries(members.map((item) => [item.id, item.source]));
   const reviewIds = members.map((item) => item.id);
   const [comments, activity, newer] = await Promise.all([
-    options.documentRequest ? Promise.resolve([]) : loadComments(db, reviewIds, sourceByReviewId),
-    options.documentRequest ? Promise.resolve([]) : loadActivity(db, reviewIds),
+    options.documentRequest || options.entranceOnly ? Promise.resolve([]) : loadComments(db, reviewIds, sourceByReviewId),
+    options.documentRequest || options.entranceOnly ? Promise.resolve([]) : loadActivity(db, reviewIds),
     newerReviewNumberFor(db, activeReview),
   ]);
 
@@ -695,7 +695,7 @@ export async function loadClientWorkspace(
   });
   view.journey = { ...journey, ...flags, clientSelection: clientSelectionFreeze };
   const currentCampaignId = journey.campaignHeaderId ?? activeReview.campaignHeaderId;
-  if (!options.documentRequest && !picked.historical && !linkExpired && currentCampaignId && activeReview.sourceSnapshot) {
+  if (!options.documentRequest && !options.entranceOnly && !picked.historical && !linkExpired && currentCampaignId && activeReview.sourceSnapshot) {
     const { loadCurrentCampaignRoster } = await import("./current-campaign-roster");
     view.currentCampaignCreators = await loadCurrentCampaignRoster(
       service ?? db, currentCampaignId, {
@@ -728,11 +728,11 @@ export async function loadClientWorkspace(
   const campaignOpen = isClientWorkspaceSectionOpen(entitlementForView.entitlement, "approval");
   const commercialOpen = isClientWorkspaceSectionOpen(entitlementForView.entitlement, "commercial");
   // Begin alongside campaign data. Commercial renders immediately when opened.
-  const commercialIo = !options.documentRequest && !linkExpired && commercialOpen && !picked.historical &&
+  const commercialIo = !options.documentRequest && !options.entranceOnly && !linkExpired && commercialOpen && !picked.historical &&
     canOpenCommercialWorkspace({selectionConfirmed:view.journey?.selectionConfirmed,historical:picked.historical,quotationStage:view.journey?.quotationStage})
     ? loadCommercialIoSnapshot((service ?? db) as never, view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId ?? null).catch(()=>undefined)
     : Promise.resolve(undefined);
-  if (options.documentRequest || picked.historical || !campaignOpen) {
+  if (options.documentRequest || options.entranceOnly || picked.historical || !campaignOpen) {
     view.campaignExecution = emptyClientCampaignExecution();
     view.campaignContent = emptyClientCampaignContent();
     view.campaignScriptUnitKeys = [];
@@ -749,7 +749,7 @@ export async function loadClientWorkspace(
         : Promise.resolve([]),
     ]);
   }
-  view.clientEmails = !options.documentRequest && commercialOpen
+  view.clientEmails = !options.documentRequest && !options.entranceOnly && commercialOpen
     ? await loadSavedClientEmailsForQuotation(
         (service ?? db) as never,
         view.journey.quotationId
