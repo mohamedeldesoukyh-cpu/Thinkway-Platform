@@ -200,12 +200,22 @@ export async function loadLegalEntityIdsForReview(
   let brandId: string | null = null;
   let headerId = input.campaignHeaderId?.trim() || null;
 
+  // Run independent reads together; consume in the original precedence order.
+  const [quotation, shortlist, namedClients] = await Promise.all([
+    input.quotationId?.trim()
+      ? supabase.from("quotations").select("client_id, brand_id, campaign_header_id")
+          .eq("id", input.quotationId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    input.shortlistId?.trim()
+      ? supabase.from("discovery_shortlists").select("client_id, brand_id, campaign_header_id")
+          .eq("id", input.shortlistId).maybeSingle()
+      : Promise.resolve({ data: null }),
+    Promise.all(identityClientLabelCandidates([input.brandName, input.campaignName])
+      .map(label => loadClientIdsForBrandName(supabase, label))),
+  ]);
+
   if (input.quotationId?.trim()) {
-    const { data } = await supabase
-      .from("quotations")
-      .select("client_id, brand_id, campaign_header_id")
-      .eq("id", input.quotationId)
-      .maybeSingle();
+    const { data } = quotation;
     const row = data as {
       client_id?: string | null;
       brand_id?: string | null;
@@ -217,11 +227,7 @@ export async function loadLegalEntityIdsForReview(
   }
 
   if (input.shortlistId?.trim()) {
-    const { data } = await supabase
-      .from("discovery_shortlists")
-      .select("client_id, brand_id, campaign_header_id")
-      .eq("id", input.shortlistId)
-      .maybeSingle();
+    const { data } = shortlist;
     const row = data as {
       client_id?: string | null;
       brand_id?: string | null;
@@ -252,9 +258,7 @@ export async function loadLegalEntityIdsForReview(
     candidateIds.push((data as { client_id?: string | null } | null)?.client_id ?? null);
   }
 
-  for (const brandName of identityClientLabelCandidates([input.brandName, input.campaignName])) {
-    candidateIds.push(...(await loadClientIdsForBrandName(supabase, brandName)));
-  }
+  for (const ids of namedClients) candidateIds.push(...ids);
 
   return uniqueIdentityClientIds(candidateIds);
 }

@@ -5,7 +5,7 @@ function ReviewLabel({ label, entrance }: {
     entrance: boolean;
 }) {
     const { pending } = useLinkStatus();
-    return <><span role="status" aria-live="polite" aria-busy={pending}>{entrance ? label : pending ? 'Opening campaign…' : label}</span>{entrance && (pending ? <span className="tw-cta__spin" aria-hidden/> : <i aria-hidden>→</i>)}</>;
+    return <><span role="status" aria-live="polite" aria-busy={pending}>{pending ? 'Opening campaign…' : label}</span>{entrance && (pending ? <span className="tw-cta__spin" aria-hidden/> : <i aria-hidden>→</i>)}</>;
 }
 export function ClientReviewCampaignCta({ href, label = 'Review campaign', entrance = false }: {
     href: string;
