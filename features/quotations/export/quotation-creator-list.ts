@@ -27,11 +27,12 @@ export function quotationListPdfOptions(doc: QuotationDocument) {
 /** Client-safe projection: internal document fields never enter either report. */
 export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
   const { performanceOnly, height } = layout(doc);
-  // Keep original order within a tier and keep each creator’s prices/metrics together.
+  // Rank within each tier by strongest platform audience; exact ties retain source order.
   const tierRank: Record<string, number> = { Celebrity: 0, Mega: 0, Macro: 1, Mid: 2, Micro: 3, Nano: 4 };
   const groups = [...doc.creatorGroups].sort((a, b) =>
     (tierRank[a.highestPlatformTier ?? a.rows[0]?.tier] ?? 5) -
-    (tierRank[b.highestPlatformTier ?? b.rows[0]?.tier] ?? 5));
+    (tierRank[b.highestPlatformTier ?? b.rows[0]?.tier] ?? 5) ||
+    (b.highestPlatformFollowers ?? 0) - (a.highestPlatformFollowers ?? 0));
   const creators = groups.map(g => ({
     name: g.creator, handle: g.handle, profileUrl: safeProfileUrl(g.profileUrl),
     portrait: g.avatarUrl, avatar: g.avatarUrl, categories: g.categories,

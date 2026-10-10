@@ -1544,12 +1544,14 @@ console.log("quotation-document.test.ts passed");
   const html=buildQuotationHtml(doc);
   assert.ok(!html.includes('.cards{grid-template-columns:repeat(2,minmax(0,1fr))'));
   assert.ok(html.includes('zoom:calc(100vw / 1600px)'));
-  assert.ok(html.indexOf('Tier Mega') < html.indexOf('Tier Second Mega'));
+  assert.equal(doc.creatorGroups.find(g=>g.creator==='Tier Mega')?.highestPlatformFollowers,1200000);
+  assert.ok(html.indexOf('Tier Second Mega') < html.indexOf('Tier Mega'));
   assert.ok(html.indexOf('Tier Second Mega') < html.indexOf('Tier Macro'));
   assert.ok(html.indexOf('Tier Macro') < html.indexOf('Tier Micro'));
   assert.deepEqual(doc.creatorGroups.map(g=>g.creator),original);
   if(template==='creator-list') {
-   assert.ok(html.indexOf('MEGA_DELIVERABLE') < html.indexOf('Tier Second Mega'));
+   assert.ok(html.indexOf('MEGA_DELIVERABLE') > html.indexOf('Tier Mega'));
+   assert.ok(html.indexOf('MEGA_DELIVERABLE') < html.indexOf('Tier Macro'));
    assert.ok(html.indexOf('MICRO_DELIVERABLE') > html.indexOf('Tier Micro'));
   }
  }
