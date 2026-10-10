@@ -124,7 +124,9 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
     }
   }
 
-  await runPreInvoiceCreateRepairPipeline(supabase, input.campaign_id);
+  await runPreInvoiceCreateRepairPipeline(supabase, input.campaign_id, {
+    repairAppend: invoiceMode === "append",
+  });
 
   const { deliverableIds, postIds, error: resolveError } =
     await resolveOperationalInvoiceTargets(
