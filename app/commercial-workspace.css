@@ -199,14 +199,3 @@
   line-height: 1.2;
 }
 
-/* Small screens use one scroll surface: tall totals must not squeeze creator rows to zero. */
-@media (max-width: 767px) {
-  .commercial-workspace-dialog[data-slot="dialog-content"] {
-    display: block; height: 92dvh; max-height: 92dvh; overflow-y: auto; overflow-x: hidden;
-    overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
-  }
-  .commercial-workspace-dialog > .flex.min-h-0 { overflow: visible; display: block; }
-  .commercial-workspace-dialog .cw-card-list { overflow: visible; flex: none; }
-  .commercial-workspace-dialog .cw-card-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .commercial-workspace-dialog input, .commercial-workspace-dialog [role="combobox"] { max-width: 100%; min-width: 0; }
-}
