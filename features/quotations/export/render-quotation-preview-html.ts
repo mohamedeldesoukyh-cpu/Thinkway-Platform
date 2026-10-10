@@ -1,3 +1,5 @@
+import { loadCreatorListClientLogo } from "@/features/discovery/shortlists/export/creator-list-client-logo";
+import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
@@ -60,6 +62,7 @@ export async function renderQuotationPreviewHtml(
     publicationShotsByCreatorKey,
     displayFxRateToEgp,
   });
+  if (isQuotationListTemplate(template)) doc.clientLogo = await loadCreatorListClientLogo(supabase, enriched.client_id);
   doc = await embedQuotationDocumentAvatars(doc);
   doc = await embedQuotationDocumentPublicationShots(doc);
 

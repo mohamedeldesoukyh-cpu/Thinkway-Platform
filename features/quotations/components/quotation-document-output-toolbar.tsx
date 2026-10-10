@@ -1,5 +1,5 @@
 "use client";
-
+import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import {
@@ -180,7 +180,7 @@ export function QuotationDocumentOutputToolbar({
         activeTemplateId={exportTemplate}
         onTemplateChange={(id) => onExportTemplateChange(id as QuotationTemplateVariant)}
         onOpenPreview={() => openSelection({ type: "preview", template: exportTemplate })}
-        formats={QUOTATION_EXPORT_FORMATS}
+        formats={QUOTATION_EXPORT_FORMATS.filter(f => !isQuotationListTemplate(exportTemplate) || f.id !== "excel")}
         onExport={(formatId) =>
           openSelection({ type: "export", format: formatId, template: exportTemplate })
         }

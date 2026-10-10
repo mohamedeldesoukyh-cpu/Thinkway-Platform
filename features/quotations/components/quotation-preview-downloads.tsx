@@ -1,3 +1,4 @@
+import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import {
   DownloadIcon,
   FileCodeIcon,
@@ -84,7 +85,7 @@ export function QuotationPreviewDownloads({
           PDF
         </a>
       </Button>
-      <Button size="sm" variant="outline" asChild>
+      {!isQuotationListTemplate(template) && <Button size="sm" variant="outline" asChild>
         <a
           href={buildExportHref(quotationId, "excel", template, exportOptions)}
           download
@@ -92,7 +93,7 @@ export function QuotationPreviewDownloads({
           <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
           Excel
         </a>
-      </Button>
+      </Button>}
       <Button size="sm" variant="outline" asChild>
         <a
           href={buildExportHref(quotationId, "pptx", template, exportOptions)}

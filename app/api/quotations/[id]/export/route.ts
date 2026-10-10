@@ -1,3 +1,7 @@
+import { quotationListPdfOptions } from "@/features/quotations/export/quotation-creator-list";
+import { renderRateCardPdf } from "@/features/rate-cards/report-pdf";
+import { loadCreatorListClientLogo } from "@/features/discovery/shortlists/export/creator-list-client-logo";
+import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import { NextResponse } from "next/server";
 
 import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
@@ -59,6 +63,7 @@ export async function GET(request: Request, context: RouteContext) {
   const format = searchParams.get("format") ?? "preview";
   const download = searchParams.get("download") === "1";
   const template = resolveQuotationTemplate(searchParams.get("template"));
+  if (isQuotationListTemplate(template) && format === "excel") return NextResponse.json({ error: "Use HTML, PDF or PowerPoint for creator-list reports." }, { status: 400 });
   const itemIds = searchParams.get("items")
     ? searchParams
         .get("items")!
@@ -107,7 +112,8 @@ export async function GET(request: Request, context: RouteContext) {
       displayFxRateToEgp,
     });
     if (format !== "excel") {
-      doc = await embedQuotationDocumentAvatars(doc);
+      if (isQuotationListTemplate(template)) doc.clientLogo = await loadCreatorListClientLogo(supabase, enriched.client_id);
+  doc = await embedQuotationDocumentAvatars(doc);
       doc = await embedQuotationDocumentPublicationShots(doc);
     }
     const baseName = doc.serial;
@@ -147,7 +153,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (format === "pdf") {
       const pdfHtml = buildQuotationHtml(doc, { siteOrigin, logoSrcs, forPdf: true });
-      const pdfResult = await renderHtmlToPdf(pdfHtml, QUOTATION_PDF_OPTIONS);
+      const pdfResult = isQuotationListTemplate(template) ? { ok: true as const, buffer: await renderRateCardPdf(pdfHtml, quotationListPdfOptions(doc)) } : await renderHtmlToPdf(pdfHtml, QUOTATION_PDF_OPTIONS);
       if (!pdfResult.ok) {
         return NextResponse.json(
           { error: pdfUnavailableMessage(pdfResult.error) },

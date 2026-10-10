@@ -187,6 +187,8 @@ export type QuotationDocRow = {
   unitCost?: string;
   /** Client cost (revenue). */
   clientCost: string;
+  /** Client price including agency fees. */
+  totalInvestment?: string;
   /** Internal only. */
   gp?: string;
   gpPct?: string;
@@ -245,6 +247,7 @@ export type QuotationDocumentFullTierBreakdown = {
 };
 
 export type QuotationDocument = {
+  clientLogo?: string | null;
   audience: QuotationDocumentAudience;
   /** Discovery shortlists reuse quotation templates without commercial pricing. */
   source?: "quotation" | "shortlist";
@@ -679,6 +682,11 @@ function buildDocRow(
       egpAmount: item.af_value_egp,
     }),
     afPct: `${num(item.af_pct)}%`,
+    totalInvestment: clientMoney ? clientMoney({ ...item, revenue: item.revenue + item.af_value, revenue_egp: item.revenue_egp + item.af_value_egp }, "revenue") : formatDualCurrency({
+      amount: item.revenue + item.af_value,
+      currency: item.cost_currency,
+      egpAmount: item.revenue_egp + item.af_value_egp,
+    }),
     currency: item.cost_currency,
   };
 

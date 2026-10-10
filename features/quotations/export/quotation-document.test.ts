@@ -1472,3 +1472,32 @@ console.log("quotation-document.test.ts passed");
   const html = buildQuotationHtml(privateDoc);
   assert.ok(!html.includes("100 USD"));
 }
+
+// Quotation versions of the rate-card reports share layouts and never expose internal prices.
+{
+  for (const template of ["creator-list", "client-list-by-name"] as const) {
+    assert.equal(resolveQuotationTemplate(template), template);
+    const doc = buildQuotationDocument(mockDetail({ items: [mockItem({creator_name:"List Creator", service_description:"Reel package"})] }), { template, audience:"internal" });
+    doc.creatorGroups[0].rows[0].unitCost = "PRIVATE_COST_SENTINEL";
+    doc.creatorGroups[0].rows[0].gp = "PRIVATE_GP_SENTINEL";
+    const html = buildQuotationHtml(doc);
+    assert.ok(html.includes("List Creator"));
+    assert.ok(html.includes('class="creator-card"'));
+    assert.ok(!html.includes("PRIVATE_COST_SENTINEL"));
+    assert.ok(!html.includes("PRIVATE_GP_SENTINEL"));
+    if (template === "client-list-by-name") {
+      assert.ok(html.includes("Client List by Name"));
+      assert.ok(!html.includes("Reel package"));
+      assert.ok(!html.includes(doc.rows[0].clientCost));
+      assert.ok(!html.includes("Agency fees (AF)"));
+    } else {
+      assert.ok(html.includes("Reel package"));
+      assert.ok(html.includes("Agency fees (AF)"));
+      const hidden = buildQuotationHtml({...doc, hideCostAndFees:true});
+      assert.ok(hidden.includes(doc.rows[0].totalInvestment!));
+      assert.ok(!hidden.includes("Agency fees (AF)"));
+    }
+    const selected = buildQuotationDocument(mockDetail({items:[mockItem(), mockItem({id:"item-2",creator_name:"Excluded Creator",handle:"@other"})]}), {template,itemIds:["item-1"]});
+    assert.ok(!buildQuotationHtml(selected).includes("Excluded Creator"));
+  }
+}

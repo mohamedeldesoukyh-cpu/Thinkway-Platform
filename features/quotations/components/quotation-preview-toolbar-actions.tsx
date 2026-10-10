@@ -1,5 +1,5 @@
 "use client";
-
+import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CheckIcon,
@@ -238,7 +238,7 @@ export function QuotationPreviewToolbarActions({
           <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
             Download as — {activeTemplate.label.toLowerCase()} layout
           </DropdownMenuLabel>
-          {EXPORT_FORMATS.map(({ format, label, icon: Icon }) => (
+          {EXPORT_FORMATS.filter(f => !isQuotationListTemplate(exportTemplate) || f.format !== "excel").map(({ format, label, icon: Icon }) => (
             <DropdownMenuItem
               key={format}
               onSelect={(event) => {

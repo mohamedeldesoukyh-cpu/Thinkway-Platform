@@ -48,6 +48,8 @@ function quotationTemplateLabel(
   template: ReturnType<typeof resolveQuotationTemplate>
 ): string {
   switch (template) {
+    case "creator-list": return "Creator List";
+    case "client-list-by-name": return "Client List by Name";
     case "lump-sum":
       return "Lump sum";
     case "showcase":

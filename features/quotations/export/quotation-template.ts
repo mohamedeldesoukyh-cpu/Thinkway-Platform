@@ -1,4 +1,6 @@
 export type QuotationTemplateVariant =
+  | "creator-list"
+  | "client-list-by-name"
   | "detailed"
   | "lump-sum"
   | "showcase"
@@ -9,6 +11,7 @@ export type QuotationTemplateVariant =
 export function resolveQuotationTemplate(
   raw: string | null | undefined
 ): QuotationTemplateVariant {
+  if (raw === "creator-list" || raw === "client-list-by-name") return raw;
   if (raw === "lump-sum") return "lump-sum";
   if (raw === "showcase") return "showcase";
   if (raw === "showcase-lump-sum") return "showcase-lump-sum";
@@ -56,6 +59,8 @@ export const QUOTATION_TEMPLATE_OPTIONS: Array<{
   label: string;
   hint: string;
 }> = [
+  { id: "creator-list", label: "Creator List", hint: "Creator cards · client prices" },
+  { id: "client-list-by-name", label: "Client List by Name", hint: "Profiles and performance · no prices" },
   { id: "pitch", label: "Pitch presentation", hint: "Large avatars · deck" },
   {
     id: "pitch-lump-sum",
@@ -71,6 +76,10 @@ export const QUOTATION_TEMPLATE_OPTIONS: Array<{
     hint: "Deck + total",
   },
 ];
+
+export function isQuotationListTemplate(template: QuotationTemplateVariant): boolean {
+  return template === "creator-list" || template === "client-list-by-name";
+}
 
 /** Append `template` query param when not the default detailed variant. */
 export function appendQuotationTemplateParam(

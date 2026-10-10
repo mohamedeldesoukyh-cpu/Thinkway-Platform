@@ -1,3 +1,5 @@
+import { buildQuotationCreatorListHtml } from "./quotation-creator-list";
+import { isQuotationListTemplate } from "./quotation-template";
 import { applyMobileDocumentLayout } from "@/lib/reports/document/mobile-document-layout";
 /**
  * Enterprise client quotation HTML — cover, commercial grid, summary, terms, signatures.
@@ -38,5 +40,5 @@ export function buildQuotationHtml(
   doc: QuotationDocument,
   options?: BuildQuotationHtmlOptions
 ): string {
-  return applyMobileDocumentLayout(buildQuotationTemplateHtml(doc, options));
+  return applyMobileDocumentLayout(isQuotationListTemplate(doc.template) ? buildQuotationCreatorListHtml(doc) : buildQuotationTemplateHtml(doc, options));
 }

@@ -1,3 +1,4 @@
+import { isQuotationListTemplate } from "./quotation-template";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -3243,6 +3244,17 @@ export async function buildQuotationPptxBuffer(
     logoSrcs?: import("@/lib/reports/document/thinkway-report-logo").ThinkwayReportLogoSrcs;
   }
 ): Promise<Buffer> {
+  if (isQuotationListTemplate(doc.template)) {
+    const { buildQuotationHtml } = await import("./quotation-html");
+    const { quotationListPdfOptions } = await import("./quotation-creator-list");
+    const { renderHtmlPagesToImages } = await import("@/lib/io/vendor-io-pdf");
+    const { buildPptxFromPageImages } = await import("./quotation-pptx-from-html");
+    const images = await renderHtmlPagesToImages(buildQuotationHtml(doc, { ...options, forPdf: true }), {
+      ...quotationListPdfOptions(doc), pageSelector: ".page", imageType: "jpeg", quality: 90, deviceScaleFactor: 1.5,
+    });
+    if (!images.ok) throw new Error(images.error);
+    return buildPptxFromPageImages(images.pages, doc.name);
+  }
   // Creator decks (Showcase / Pitch / lump-sum variants): pixel-parity with Preview + PDF.
   // Rebuild slides from the same HTML pages so PPTX cannot drift from the redesign.
   if (isCreatorDeckTemplate(doc.template)) {
