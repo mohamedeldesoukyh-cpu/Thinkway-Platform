@@ -6183,3 +6183,14 @@
 .thinkway-platform-v6 .campaigns-module-register [data-slot="table-container"] {
   overflow-x: visible;
 }
+
+/* Keep cost editing reachable with the mobile browser chrome and keyboard open. */
+.quotation-cost-detail-panel__inner {
+  max-height: 88dvh; overflow-y: auto; overflow-x: hidden; min-width: 0;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+}
+.quotation-cost-detail-panel__grid > * { min-width: 0; }
+@media (max-width: 639px) {
+  .quotation-cost-detail-panel__grid { grid-template-columns: minmax(0, 1fr); }
+  .quotation-cost-detail-panel__grid input, .quotation-cost-detail-panel__grid [role="combobox"] { width: 100%; min-width: 0; }
+}
