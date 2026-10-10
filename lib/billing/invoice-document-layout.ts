@@ -163,6 +163,7 @@ export function aggregateInvoiceLinesByCreator(
   return [...groups.values()].map((group) => ({
     id: group.id,
     description: creatorDescription(group.sourceLines),
+    installmentLabel: [...new Set(group.sourceLines.map(line => line.installmentLabel).filter(Boolean))].join(" · ") || null,
     subDescription: null,
     quantity: 1,
     unitPrice: group.revenueBeforeVat,
@@ -225,7 +226,9 @@ function applyPackageLayout(data: InvoiceDocumentData): InvoiceDocumentData {
 
   return {
     ...data,
-    lineItems: packageLines,
+    lineItems: packageLines.map(line => ({ ...line, installmentLabel: [...new Set(data.lineItems
+      .filter(source => source.installmentLabel)
+      .map(source => `${source.creatorName || source.lineDocumentNumber || "Assignment"}: ${source.installmentLabel}`))].join(" · ") || null })),
   };
 }
 

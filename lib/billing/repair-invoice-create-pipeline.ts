@@ -712,12 +712,16 @@ export async function repairStaleLiveDraftInvoicePostLinks(
 /** Full repair pipeline invoked immediately before invoice create validation. */
 export async function runPreInvoiceCreateRepairPipeline(
   supabase: SupabaseClient,
-  campaignHeaderId: string
+  campaignHeaderId: string,
+  options: { repairAppend?: boolean } = {}
 ): Promise<void> {
   await repairOrphanedInvoicedOperationalRows(supabase, campaignHeaderId);
   await prepareCampaignCommercialForInvoice(supabase, campaignHeaderId);
   await repairStaleLiveDraftInvoicePostLinks(supabase, campaignHeaderId);
   await repairStalePendingRegenerationInvoices(supabase, campaignHeaderId);
   await repairIncorrectlyFinanceLockedDraftInvoices(supabase, campaignHeaderId);
-  await repairAppendMissingInvoiceLineItems(supabase, campaignHeaderId);
+  // New installments must not consume the balance into an older invoice.
+  if (options.repairAppend !== false) {
+    await repairAppendMissingInvoiceLineItems(supabase, campaignHeaderId);
+  }
 }

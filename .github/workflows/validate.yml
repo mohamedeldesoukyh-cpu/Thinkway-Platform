@@ -31,6 +31,9 @@ jobs:
       - name: Service layer tests
         run: npm run test:services
 
+      - name: Partial invoice and installment regression
+        run: npm run test:partial-assignment-invoice
+
       - name: FX reporting regression
         run: npm run test:fx
 
