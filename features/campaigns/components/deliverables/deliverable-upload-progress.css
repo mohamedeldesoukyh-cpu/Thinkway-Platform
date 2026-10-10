@@ -1,0 +1,18 @@
+.dv .dv-upload-progress { display:flex; align-items:center; gap:12px; padding:16px; margin:12px; background:#f1f5ff; border:1px solid #d5e2ff; border-radius:12px; }
+.dv .dv-upload-progress__circle { position:relative; flex:0 0 52px; width:52px; height:52px; color:#0057ff; }
+.dv .dv-upload-progress__circle svg { width:100%; height:100%; transform:rotate(-90deg); fill:none; stroke-width:3; }
+.dv .dv-upload-progress__track { stroke:#dce6ff; }
+.dv .dv-upload-progress__value { stroke:currentColor; stroke-linecap:round; }
+.dv .dv-upload-progress__circle > span { position:absolute; inset:0; display:grid; place-items:center; font-size:12px; font-weight:700; }
+.dv .dv-upload-progress__circle.is-pending svg { animation:dv-upload-spin 1.2s linear infinite; }
+.dv .dv-upload-progress__text { min-width:0; display:grid; gap:4px; font-size:13px; }
+.dv .dv-upload-progress__text > span { overflow-wrap:anywhere; color:#52627a; }
+.dv .dv-upload-progress__text small { color:#52627a; }
+@keyframes dv-upload-spin { to { transform:rotate(270deg); } }
+@media (prefers-reduced-motion:reduce) { .dv .dv-upload-progress__circle.is-pending svg { animation:none; } }
+.dv .dv-reuse-video { padding:12px 16px; }
+.dv .dv-reuse-video__choices { display:grid; gap:10px; margin-top:10px; min-width:0; }
+.dv .dv-reuse-video__choices label { display:grid; gap:6px; font-size:12px; }
+.dv .dv-reuse-video__choices select { width:100%; min-width:0; }
+.dv .dv-reuse-video__choices p { margin:0; color:#52627a; font-size:12px; line-height:1.5; }
+.dv .dv-reuse-video__choices button { justify-self:start; }

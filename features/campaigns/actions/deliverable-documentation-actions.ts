@@ -1,5 +1,6 @@
 "use server";
 
+import { reuseDeliverableVideo } from "@/lib/services/deliverables/reuse-video-service";
 import { recordContentVersionDecisions } from "@/features/client-workspace/content-decisions";
 import { revalidatePath } from "next/cache";
 
@@ -526,4 +527,15 @@ export async function decideDeliverableContentAction(input: {
   const { data: campaign, error } = await actor.supabase.from("campaign_headers").select("id").eq("id", input.campaignHeaderId).maybeSingle();
   if (error || !campaign) return { ok: false, message: "Campaign access denied." };
   return recordContentVersionDecisions({ ...input, versionIds: [input.versionId], actorKind: "internal", actorUserId: actor.userId, actorLabel: "Thinkway team" });
+}
+
+export async function reuseDeliverablesPanelVideoAction(input: { campaignHeaderId: string; targetUnitKey: string; sourceVersionId: string }) {
+  const actor = await getWriteActor();
+  if (!actor.ok) return actor;
+  try {
+    const units = await listDocumentationUnits(actor.supabase, input.campaignHeaderId);
+    const result = await reuseDeliverableVideo(actor.supabase, { ...input, actorId: actor.userId }, units);
+    if (result.ok) { revalidatePath('/campaigns', 'layout'); revalidatePath('/review', 'layout'); }
+    return result;
+  } catch { return { ok: false as const, message: 'Could not link the video. Reload and try again.' }; }
 }

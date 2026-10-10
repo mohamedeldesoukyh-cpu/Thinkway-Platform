@@ -289,6 +289,7 @@ export type DocumentationUnitSummary = DocumentationUnitId & {
   label: string;
   creatorId: string | null;
   creatorName: string | null;
+  creatorAvatarUrl?: string | null;
   assignmentLineId: string;
   assignmentName: string;
   platform: string | null;

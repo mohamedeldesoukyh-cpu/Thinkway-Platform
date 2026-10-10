@@ -181,7 +181,7 @@ export function DeliverableAssetPreview({
   return (
     <>
       {inline ? (
-        <div className="mt-2 overflow-hidden rounded-md border bg-black/80">
+        <div className="dv-inline-media mt-2 overflow-hidden rounded-md border bg-black/80">
           <AssetMedia
             kind={inline.kind}
             url={inline.url}
@@ -198,7 +198,7 @@ export function DeliverableAssetPreview({
         <iframe
           title={version?.fileName || asset.label || "Google Drive file"}
           src={drivePreview}
-          className="mt-2 h-[360px] w-full rounded-md border"
+          className="dv-inline-drive mt-2 h-[360px] w-full rounded-md border"
           allow="autoplay"
         />
       ) : null}

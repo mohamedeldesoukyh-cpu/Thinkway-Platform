@@ -332,3 +332,19 @@ describe("Documentation repository grouping", () => {
     assert.equal(defaultDeliverableAssetType("instagram_post"), "feed_image");
   });
 });
+
+it('carries creator photos to single deliverables and numbered slots with existing source precedence', () => {
+  const hierarchy = hierarchyFixture();
+  const line = hierarchy.groups[0].line;
+  line.creator_avatar_url = '/creator.jpg';
+  line.influencer_avatar_url = '/influencer.jpg';
+  line.creator_profile_image_url = '/profile.jpg';
+  for (const expected of ['/creator.jpg', '/influencer.jpg', '/profile.jpg', null]) {
+    const rows = buildDocumentationUnitsFromHierarchy(hierarchy, 'campaign-1', new Map());
+    assert.ok(rows.length > 1);
+    assert.ok(rows.every(row => row.creatorAvatarUrl === expected));
+    if (expected === '/creator.jpg') line.creator_avatar_url = null;
+    if (expected === '/influencer.jpg') line.influencer_avatar_url = null;
+    if (expected === '/profile.jpg') line.creator_profile_image_url = null;
+  }
+});

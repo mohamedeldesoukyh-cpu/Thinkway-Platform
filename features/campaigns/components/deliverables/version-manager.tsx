@@ -21,7 +21,7 @@ export function InlineVersions({row,refresh}:{row:PanelRow;refresh:()=>Promise<v
     }).catch(()=>{if(!cancelled)setError('Could not load versions. Close and retry.');}).finally(()=>{if(!cancelled)setLoading(false);});
     return ()=>{cancelled=true;};
   },[open,row.unitKey,row.file?.versionId,revision]);
-  return <div onClick={e=>e.stopPropagation()}>
+  return <div className="dv-inline-versions" onClick={e=>e.stopPropagation()}>
     <button className="tw-b sm" aria-expanded={open} onClick={()=>setOpen(!open)}>{open?'Close versions':'Videos & versions'}</button>
     {open && <div>{loading && <p role="status">Loading versions…</p>}{error && <p role="alert">{error}</p>}{assets.map(asset=>asset.versions.map(version=><VersionManager key={version.id + version.fileName + version.status + version.hidden + version.removed} row={row} asset={asset} version={version} onSaved={async()=>{await refresh();setRevision(n=>n+1);}}/>))}</div>}
   </div>;
@@ -41,7 +41,7 @@ export function VersionManager({row,asset,version,onSaved}:{row:PanelRow;asset:D
     } catch (e) { setError(e instanceof Error ? e.message : 'Could not save version.'); }
     finally { setBusy(false); }
   }
-  return <article className="pad2" aria-label={`Version ${version.versionNumber}`} style={{borderBottom:'1px solid #dce4f2'}}>
+  return <article className="pad2 dv-version" aria-label={`Version ${version.versionNumber}`} style={{borderBottom:'1px solid #dce4f2'}}>
     <strong>V{version.versionNumber} · {VERSION_STATUS_LABELS[version.status ?? 'draft']}</strong>
     <p>{version.removed ? 'Removed — recoverable' : version.releasedToClientAt ? 'Visible to client' : 'Hidden from client'}</p>
     {!version.removed && <DeliverableAssetPreview {...row} asset={{...asset,currentVersion:version}}/>}
