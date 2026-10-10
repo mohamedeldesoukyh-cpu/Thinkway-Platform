@@ -184,15 +184,13 @@ async function loadInvoiceLineItemsByCampaignLinkage(
 
   const { data, error } = await supabase
     .from("invoice_line_items")
-    .select("id, invoice_id, revenue_before_vat, metadata")
+    .select("id, invoice_id, revenue_before_vat")
     .in("invoice_id", invoiceIds);
 
   if (error) {
     return { rows: [], error: error.message };
   }
 
-  const snapshots = (data ?? []).map(row => row.metadata?.billing_fx as { source_currency: string } | undefined).filter(Boolean);
-  Object.assign(rates, await loadCurrencyRates(supabase, snapshots.map(s => s!.source_currency)));
   const lineItems: LinkedInvoiceLineItemForRollup[] = (data ?? []).map((row) => {
     const typed = row as {
       id: string;
@@ -202,10 +200,9 @@ async function loadInvoiceLineItemsByCampaignLinkage(
     return {
       id: typed.id,
       invoice_id: typed.invoice_id,
-      revenue_before_vat: row.metadata?.billing_fx
-        ? convertMoney(Number(row.metadata.billing_fx.source_amount), row.metadata.billing_fx.source_currency,
-            currencies.get(linkedInvoices.find(i => i.id === typed.invoice_id)!.campaignHeaderId)!, rates)
-        : invoiceConversion.get(typed.invoice_id)!(Number(typed.revenue_before_vat ?? 0)),
+      // An issued line is denominated in its invoice currency. Revaluing its
+      // original assignment snapshot would change what the client was billed.
+      revenue_before_vat: invoiceConversion.get(typed.invoice_id)!(Number(typed.revenue_before_vat ?? 0)),
     };
   });
 
@@ -227,7 +224,7 @@ async function loadInvoiceLineItemsByLineCampaignId(
   const { data, error } = await supabase
     .from("invoice_line_items")
     .select(
-      "id, campaign_header_id, revenue_before_vat, metadata, invoice:invoices!inner(status, regeneration_status, currency)"
+      "id, campaign_header_id, revenue_before_vat, invoice:invoices!inner(status, regeneration_status, currency)"
     )
     .in("campaign_header_id", campaignHeaderIds);
 
@@ -239,7 +236,7 @@ async function loadInvoiceLineItemsByLineCampaignId(
   if (headerError) return { rows: [], error: headerError.message };
   const currencies = new Map((headers ?? []).map(h => [h.id, h.currency_code as string]));
   const invoiceCurrency = (row: unknown) => (row as { invoice: { currency: string } }).invoice.currency;
-  const rates = await loadCurrencyRates(supabase, [...currencies.values(), ...(data ?? []).map(invoiceCurrency), ...(data ?? []).flatMap(row => row.metadata?.billing_fx?.source_currency ? [row.metadata.billing_fx.source_currency as string] : [])]);
+  const rates = await loadCurrencyRates(supabase, [...currencies.values(), ...(data ?? []).map(invoiceCurrency)]);
   const rows: Array<{ id: string; campaignHeaderId: string; revenue_before_vat: number }> = [];
 
   for (const row of data ?? []) {
@@ -262,7 +259,7 @@ async function loadInvoiceLineItemsByLineCampaignId(
     rows.push({
       id: typed.id,
       campaignHeaderId: typed.campaign_header_id,
-      revenue_before_vat: convertMoney(Number(row.metadata?.billing_fx?.source_amount ?? typed.revenue_before_vat ?? 0), row.metadata?.billing_fx?.source_currency ?? invoiceCurrency(row), currencies.get(typed.campaign_header_id)!, rates),
+      revenue_before_vat: convertMoney(Number(typed.revenue_before_vat ?? 0), invoiceCurrency(row), currencies.get(typed.campaign_header_id)!, rates),
     });
   }
 

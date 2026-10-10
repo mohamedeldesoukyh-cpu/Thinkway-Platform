@@ -9,6 +9,7 @@ const old = '00000000-0000-0000-0000-000000000001';
 const fresh = '00000000-0000-0000-0000-000000000002';
 await db.exec(`CREATE TABLE invoices (id uuid PRIMARY KEY, status text, issue_date date,
  subtotal numeric, tax_amount numeric, total numeric, amount_paid numeric DEFAULT 0,
+ revenue_before_vat numeric, revenue_vat_amount numeric, revenue_after_vat numeric,
  currency text, document_number text, client_id uuid, campaign_header_id uuid,
  billing_country_code text, regeneration_status text);
  CREATE TABLE invoice_line_items (id int PRIMARY KEY, invoice_id uuid REFERENCES invoices(id), revenue_before_vat numeric);
@@ -16,6 +17,7 @@ await db.exec(`CREATE TABLE invoices (id uuid PRIMARY KEY, status text, issue_da
  ('${old}','draft','2026-10-04',525586.15,73582.15,599168.30);
  INSERT INTO invoice_line_items VALUES(1,'${old}',525586.15);`);
 await db.exec(await readFile(new URL('../supabase/migrations/20261011010000_protect_issued_invoice_amounts.sql', import.meta.url),'utf8'));
+await db.exec(await readFile(new URL('../supabase/migrations/20261011020000_protect_invoice_financial_aliases.sql', import.meta.url),'utf8'));
 let checks = 0;
 async function blocked(sql) {
  await assert.rejects(db.exec(sql), /Issued invoice/); checks++;
@@ -23,6 +25,9 @@ async function blocked(sql) {
 await blocked(`UPDATE invoices SET subtotal=183561.99 WHERE id='${old}'`);
 await blocked(`UPDATE invoices SET tax_amount=25698.68 WHERE id='${old}'`);
 await blocked(`UPDATE invoices SET total=209260.67 WHERE id='${old}'`);
+for (const alias of ['revenue_before_vat','revenue_vat_amount','revenue_after_vat']) {
+ await blocked(`UPDATE invoices SET ${alias}=1 WHERE id='${old}'`);
+}
 await blocked(`UPDATE invoices SET currency='USD' WHERE id='${old}'`);
 await blocked(`UPDATE invoices SET amounts_finalized_at=NULL WHERE id='${old}'`);
 await blocked(`DELETE FROM invoices WHERE id='${old}'`);
