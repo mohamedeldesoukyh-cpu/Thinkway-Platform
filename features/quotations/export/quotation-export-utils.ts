@@ -15,6 +15,8 @@ import { buildQuotationCreatorProfileSource } from "@/lib/quotations/quotation-c
 import { isUsableAvatarUrl } from "@/lib/performance/avatar-sync-policy";
 import {
   deliverableTypeValues,
+  deliverableTypeLines as selectedDeliverableTypeLines,
+  selectedTypesFromTypeLines,
   platformsFromSelectedPostTypes,
   quotationPostTypeLabel,
   typeLinesIncludeAllPlatforms,
@@ -238,6 +240,18 @@ export function exportItemServiceDescription(item: QuotationExportItem): string 
 export function exportItemTierLabel(item: QuotationExportItem): string {
   const tier = resolveCreatorTierLabel({ followers: item.followers });
   return tier === "Unknown" ? "—" : tier;
+}
+
+/** Same selected-type mapping as Quantity & Duration; connected accounts alone are not quoted. */
+export function exportQuotedPlatforms(item: QuotationExportItem): string[] {
+  const allowed = exportItemPlatformIcons(item).platformIcons;
+  return [...new Set((item.deliverables ?? []).flatMap(deliverable => {
+    const types = selectedTypesFromTypeLines(selectedDeliverableTypeLines(deliverable));
+    if (!types.length) return [];
+    if (typeLinesIncludeAllPlatforms(deliverable)) return allowed;
+    const selected = platformsFromSelectedPostTypes(types, allowed);
+    return selected.length ? selected : (deliverable.platform || item.platform || "").split(",").map(p => p.trim()).filter(Boolean);
+  }).map(canonicalPlatformKey))];
 }
 
 export function exportItemPlatformIcons(item: QuotationExportItem): {

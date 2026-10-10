@@ -1504,6 +1504,20 @@ console.log("quotation-document.test.ts passed");
 
 // Single choices have no option label; alternative offers remain distinguishable.
 {
+  const item = mockItem({deliverables:[{platform:"instagram",type:"instagram_reel",quantity:1,type_lines:[{type:"instagram_reel",quantity:1},{type:"mirrored_tt",quantity:1}]}]});
+  const doc = buildQuotationDocument(mockDetail({items:[item]}), {template:"creator-list"});
+  assert.deepEqual(doc.rows[0].quotedPlatforms, ["instagram", "tiktok"]);
+  doc.creatorGroups[0].platformMetrics = ["instagram","tiktok","facebook"].map(platform => ({platform,followers:"10K",engagement:"2%",views:"5K",profileUrl:null,avatarUrl:null}));
+  const html = buildQuotationHtml(doc);
+  assert.ok(html.includes('class="rate-list-heading">Deliverables</h3>'));
+  assert.ok(html.includes('Total price inc. AF'));
+  assert.ok(html.includes('Agency fees (AF)'));
+  assert.ok(!html.includes('>facebook<small>'));
+  assert.ok(html.includes('>tiktok<small>'));
+  assert.ok(!buildQuotationHtml({...doc,hideCostAndFees:true}).includes('Agency fees (AF)'));
+}
+
+{
  const single=buildQuotationDocument(mockDetail(),{template:"creator-list"});
  assert.ok(!buildQuotationHtml(single).includes("Option 1"));
  const multiple=buildQuotationDocument(mockDetail({items:[mockItem(),mockItem({id:"alternative",option_number:2})]}),{template:"creator-list"});

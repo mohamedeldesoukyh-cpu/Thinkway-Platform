@@ -3,12 +3,17 @@ import { clientListPerformanceStyles } from "@/features/rate-cards/client-list-s
 import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
 import { escapeHtml as e, safeProfileUrl } from "@/features/rate-cards/report";
 import type { QuotationDocument } from "./quotation-document";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+
+function quotedPlatforms(group: QuotationDocument["creatorGroups"][number]) {
+  return new Set(group.rows.flatMap(row => row.quotedPlatforms ?? []).map(canonicalPlatformKey));
+}
 
 function layout(doc: QuotationDocument) {
   const performanceOnly = doc.template === "client-list-by-name";
   const platforms = Math.max(1, ...doc.creatorGroups.map(g => g.platformMetrics.length));
   // Both lists use the same six-column profile cards; pricing only adds vertical space.
-  const pricingHeight = performanceOnly ? 0 : Math.max(1, ...doc.creatorGroups.map(g => g.rows.length)) * 160 + 30;
+  const pricingHeight = performanceOnly ? 0 : Math.max(1, ...doc.creatorGroups.map(g => g.rows.length)) * 240 + 30;
   return { performanceOnly, height: Math.max(900, 690 + platforms * 110) + pricingHeight };
 }
 
@@ -25,7 +30,7 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
   const creators = doc.creatorGroups.map(g => ({
     name: g.creator, handle: g.handle, profileUrl: safeProfileUrl(g.profileUrl),
     portrait: g.avatarUrl, avatar: g.avatarUrl, categories: g.categories,
-    tier: g.rows[0]?.tier, markets: [g.country], platforms: g.platformIcons,
+    tier: g.rows[0]?.tier, markets: [g.country], platforms: [...quotedPlatforms(g)],
   }));
   return renderCreatorListReport({
     name: doc.brandName || doc.clientName || doc.name, reference: doc.serial,
@@ -37,14 +42,15 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
     platformIcon: rateReportPlatformIcon,
     cardSupplement: (_creator, index) => {
       const group = doc.creatorGroups[index];
-      const prices = performanceOnly ? "" : `<h3 class="rate-list-heading">Quotation</h3>${group.rows.map(row =>
-        `<div class="price">${group.optionCount > 1 ? `<strong>${e(row.collapseOptionLabel || row.option)}</strong>` : ""}<small>Deliverables</small><p>${e(row.serviceDescription || row.deliverables)}</p>${row.isCollapsePackageFollower
+      const prices = performanceOnly ? "" : `${group.rows.map(row =>
+        `<div class="price">${group.optionCount > 1 ? `<strong>${e(row.collapseOptionLabel || row.option)}</strong>` : ""}<h3 class="rate-list-heading">Deliverables</h3><p>${e(row.serviceDescription || row.deliverables)}</p>${row.isCollapsePackageFollower
           ? `<p>Included in shared package</p>`
           : doc.hideCostAndFees
-            ? `<b>${e(row.totalInvestment ?? row.clientCost)}</b><small>AF included</small>`
-            : `<b>${e(row.clientCost)}</b><small>Agency fees (AF): ${e(row.af)} · ${e(row.afPct)}</small><small>Total: ${e(row.totalInvestment ?? row.clientCost)}</small>`}</div>`
+            ? `<div class="quote-money"><span>Total price inc. AF</span><b>${e(row.totalInvestment ?? row.clientCost)}</b></div>`
+            : `<div class="quote-money"><span>Price before AF</span><b>${e(row.clientCost)}</b></div><div class="quote-money"><span>Agency fees (AF) · ${e(row.afPct)}</span><b>${e(row.af)}</b></div><div class="quote-money quote-money--total"><span>Total price inc. AF</span><b>${e(row.totalInvestment ?? row.clientCost)}</b></div>`}</div>`
       ).join("")}`;
-      const metrics = group.platformMetrics.map(metric => {
+      const included = quotedPlatforms(group);
+      const metrics = group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform))).map(metric => {
         const url = safeProfileUrl(metric.profileUrl);
         const icon = rateReportPlatformIcon(metric.platform);
         const label = `${icon ? `<img class="rate-platform-icon" src="${icon}" alt="" />` : ""}${e(metric.platform)}`;
@@ -57,6 +63,15 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
       .price{display:grid;gap:3px;border-top:1px solid #e5e3ee;padding-top:5px;margin-top:5px;overflow-wrap:anywhere;font-size:12px}
       .price p{white-space:normal;text-align:start;font-size:11px;line-height:1.5;margin:0}
       .price small{font-size:10px;line-height:1.5;color:#666477}
+      .price .rate-list-heading{font-size:15px;margin:0 0 5px}
+      .price p{font-family:inherit;font-size:12px}
+      .quote-money{display:grid;gap:3px;padding-top:7px}
+      .quote-money span{font-size:11px;color:#666477}
+      .quote-money b{font-size:14px;color:#080642}
+      .quote-money--total{border-top:1px solid #d4d0e5;margin-top:5px}
+      .ph .report-client-logo{max-width:180px;width:150px;height:64px;filter:url(#report-logo-white-key) drop-shadow(0 3px 1px rgba(0,0,0,.25)) drop-shadow(0 8px 8px rgba(0,0,0,.3))}
+      .cov__client>.cover-client-logo{flex-basis:420px;width:420px;max-width:420px;height:420px;filter:url(#report-logo-white-key) drop-shadow(0 4px 1px rgba(0,0,0,.25)) drop-shadow(0 18px 18px rgba(0,0,0,.3))}
+      @media screen and (max-width:900px){.cov__client>.cover-client-logo{flex-basis:30%;width:30%;height:auto}.ph .report-client-logo{width:100px;height:48px}}
     `,
   });
 }

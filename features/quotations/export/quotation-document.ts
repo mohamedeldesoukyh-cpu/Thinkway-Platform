@@ -53,6 +53,7 @@ import {
 import {
   countUniqueQuotationCreators,
   exportItemPlatformIcons,
+  exportQuotedPlatforms,
   exportItemServiceDescription,
   exportItemTierLabel,
   exportItemTypeLabel,
@@ -167,6 +168,7 @@ export type QuotationDocCollapseContentGroup = {
 };
 
 export type QuotationDocRow = {
+  quotedPlatforms?: string[];
   creator: string;
   option: string;
   platform: string;
@@ -656,6 +658,7 @@ function buildDocRow(
       : null;
 
   const row: QuotationDocRow = {
+    quotedPlatforms: exportQuotedPlatforms(item),
     creator: item.creator_name ?? item.handle ?? "Creator",
     option: optionNumberLabel(item.option_number),
     platform: exportPlatformDisplayLabel(item, platformFields),
