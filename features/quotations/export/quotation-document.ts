@@ -109,6 +109,8 @@ export type QuotationDocPlatformMetric = {
 };
 
 export type QuotationDocCreatorGroup = {
+  /** Highest tier across all linked accounts, before report platform filtering. */
+  highestPlatformTier?: CreatorTierLabel;
   creatorKey: string;
   creator: string;
   handle: string;
@@ -757,6 +759,10 @@ function buildCreatorGroup(
     null;
 
   return {
+    highestPlatformTier: (() => {
+      const counts = group.items.flatMap(item => (item.export_platforms ?? []).map(account => account.followers)).filter((value): value is number => value != null && value > 0);
+      return counts.length ? resolveCreatorTierLabel({ followers: Math.max(...counts) }) : resolveCreatorTierLabel({ role: exportItemTierLabel(headerItem) });
+    })(),
     creatorKey: group.creatorKey,
     creator: profile.creator,
     handle: profile.handle,

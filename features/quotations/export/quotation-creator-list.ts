@@ -27,10 +27,15 @@ export function quotationListPdfOptions(doc: QuotationDocument) {
 /** Client-safe projection: internal document fields never enter either report. */
 export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
   const { performanceOnly, height } = layout(doc);
-  const creators = doc.creatorGroups.map(g => ({
+  // Keep original order within a tier and keep each creator’s prices/metrics together.
+  const tierRank: Record<string, number> = { Celebrity: 0, Mega: 0, Macro: 1, Mid: 2, Micro: 3, Nano: 4 };
+  const groups = [...doc.creatorGroups].sort((a, b) =>
+    (tierRank[a.highestPlatformTier ?? a.rows[0]?.tier] ?? 5) -
+    (tierRank[b.highestPlatformTier ?? b.rows[0]?.tier] ?? 5));
+  const creators = groups.map(g => ({
     name: g.creator, handle: g.handle, profileUrl: safeProfileUrl(g.profileUrl),
     portrait: g.avatarUrl, avatar: g.avatarUrl, categories: g.categories,
-    tier: g.rows[0]?.tier, markets: [g.country], platforms: [...quotedPlatforms(g)],
+    tier: g.highestPlatformTier ?? g.rows[0]?.tier, markets: [g.country], platforms: [...quotedPlatforms(g)],
   }));
   return renderCreatorListReport({
     name: doc.brandName || doc.clientName || doc.name, reference: doc.serial,
@@ -41,7 +46,7 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
     showClientLogoInHeader: true, coverLogoOnRight: true, hideCoverReference: true,
     platformIcon: rateReportPlatformIcon,
     cardSupplement: (_creator, index) => {
-      const group = doc.creatorGroups[index];
+      const group = groups[index];
       const prices = performanceOnly ? "" : `${group.rows.map(row =>
         `<div class="price">${group.optionCount > 1 ? `<strong>${e(row.collapseOptionLabel || row.option)}</strong>` : ""}<h3 class="rate-list-heading">Deliverables</h3><p>${e(row.serviceDescription || row.deliverables)}</p>${row.isCollapsePackageFollower
           ? `<p>Included in shared package</p>`
