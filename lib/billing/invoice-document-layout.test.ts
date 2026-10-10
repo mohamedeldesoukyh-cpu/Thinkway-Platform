@@ -91,6 +91,14 @@ const sample: InvoiceDocumentData = {
 };
 
 const detailed = applyInvoiceDocumentLayout(sample, "detailed");
+const installmentSample = { ...sample, lineItems: sample.lineItems.map(line => ({ ...line,
+  installmentLabel: line.lineDocumentNumber?.endsWith("-A") ? "2nd installment — 50%" : "1st installment — 50%",
+})) };
+for (const layout of ["detailed", "by_creator", "package"] as const) {
+  const rendered = buildInvoiceTemplateHtml(applyInvoiceDocumentLayout(installmentSample, layout));
+  assert.ok(rendered.includes("2nd installment — 50%"), `${layout} retains the second installment`);
+  assert.ok(rendered.includes("1st installment — 50%"), `${layout} retains separate assignment numbering`);
+}
 assert.equal(detailed.lineItems.length, 3);
 
 const byCreator = applyInvoiceDocumentLayout(sample, "by_creator");

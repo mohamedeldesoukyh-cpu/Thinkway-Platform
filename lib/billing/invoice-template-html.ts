@@ -222,7 +222,7 @@ function renderLineRows(lines: InvoiceLineItemRow[], currency: string): string {
         ? `<span class="dsub">${display(line.subDescription)}</span>`
         : "";
       return `<tr>
-        <td><span class="dmain">${display(line.description)}</span>${sub}</td>
+        <td><span class="dmain">${display(line.description)}</span>${line.installmentLabel ? `<span class="dsub"><strong>${display(line.installmentLabel)}</strong></span>` : ""}${sub}</td>
         <td class="r">${line.quantity.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td class="r">${formatMoneyAmount(line.revenueBeforeVat)}</td>
         <td class="r mut">${esc(formatTaxLabel(line))}</td>

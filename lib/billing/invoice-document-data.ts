@@ -1,4 +1,5 @@
 import { loadInvoicePaymentContext } from "@/lib/billing/invoice-payment-context";
+import { invoiceInstallmentLabel, loadAssignmentInstallmentNumbers } from "@/lib/billing/invoice-installments";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -364,10 +365,13 @@ export async function loadInvoiceDocumentData(
   }
 
   const commercialBreakdown = computeInvoiceCommercialBreakdown(lines, commercialByLineId);
+  const installments = await loadAssignmentInstallmentNumbers(supabase, invoiceId,
+    [...new Set(lines.map(line => line.campaign_line_id).filter((id): id is string => Boolean(id)))]);
 
   const lineItems: InvoiceLineItemRow[] = lines.map((line) => ({
     id: line.id,
     description: line.description,
+    installmentLabel: invoiceInstallmentLabel(line.campaign_line_id ? installments.get(line.campaign_line_id) : undefined, line.description),
     creatorName: line.campaign_line_id ? creatorNames.get(line.campaign_line_id) ?? null : null,
     subDescription: buildLineSubDescription({
       deliverableLabel: line.deliverable_label,
