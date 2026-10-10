@@ -1,14 +1,18 @@
 "use client";
 
+import dynamic from "next/dynamic";
+
 import type { ClientWorkspaceSectionId } from "../constants";
 import { isClientWorkspaceSectionOpen, navSectionForWorkspaceSection } from "../entitlement";
 import type { ClientWorkspaceView } from "../types";
-import { ApprovalWorkspace } from "./approval-workspace";
-import { CommercialWorkspace } from "./commercial-workspace";
 import { CreatorsWorkspace } from "./creators-workspace";
 import { ClientWorkspaceEntitlementPanel } from "./entitlement-panel";
-import { FeedbackWorkspace } from "./feedback-workspace";
-import { OverviewWorkspace } from "./overview-workspace";
+
+// Keep unvisited tab code out of the initial Shortlist hydration.
+const ApprovalWorkspace = dynamic(() => import("./approval-workspace").then(module => module.ApprovalWorkspace), { loading: () => <p role="status">Loading section…</p> });
+const CommercialWorkspace = dynamic(() => import("./commercial-workspace").then(module => module.CommercialWorkspace), { loading: () => <p role="status">Loading section…</p> });
+const FeedbackWorkspace = dynamic(() => import("./feedback-workspace").then(module => module.FeedbackWorkspace), { loading: () => <p role="status">Loading section…</p> });
+const OverviewWorkspace = dynamic(() => import("./overview-workspace").then(module => module.OverviewWorkspace), { loading: () => <p role="status">Loading section…</p> });
 
 export function ClientWorkspaceSectionView({
   section,

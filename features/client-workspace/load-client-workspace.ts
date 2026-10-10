@@ -732,29 +732,44 @@ export async function loadClientWorkspace(
     canOpenCommercialWorkspace({selectionConfirmed:view.journey?.selectionConfirmed,historical:picked.historical,quotationStage:view.journey?.quotationStage})
     ? loadCommercialIoSnapshot((service ?? db) as never, view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId ?? null).catch(()=>undefined)
     : Promise.resolve(undefined);
-  if (options.documentRequest || options.entranceOnly || picked.historical || !campaignOpen) {
-    view.campaignExecution = emptyClientCampaignExecution();
-    view.campaignContent = emptyClientCampaignContent();
-    view.campaignScriptUnitKeys = [];
-  } else {
-    const campaignId = view.journey.campaignHeaderId;
-    // Hydrate the schedule with the workspace, avoiding a second client-side
-    // waterfall each time the Campaign tab mounts. Preserve retry on failure.
-    [view.campaignExecution, view.campaignContent, view.campaignScriptUnitKeys] = await Promise.all([
-      loadClientCampaignExecution((service ?? db) as never, campaignId),
-      loadClientCampaignContent((service ?? db) as never, campaignId),
-      campaignId
-        ? listAttachedCampaignScriptPresence((service ?? db) as never, campaignId)
-            .then(presence => [...presence.keys()]).catch(() => undefined)
-        : Promise.resolve([]),
-    ]);
-  }
-  view.clientEmails = !options.documentRequest && !options.entranceOnly && commercialOpen
-    ? await loadSavedClientEmailsForQuotation(
-        (service ?? db) as never,
-        view.journey.quotationId
-      )
-    : [];
+  // These reads depend on the authorized view, not on each other. Start them
+  // together so logo/email/display lookups do not extend the campaign waterfall.
+  const campaignId = view.journey.campaignHeaderId;
+  const [campaignData, clientEmails, displayFlags, liveLogo, commercialSnapshot] = await Promise.all([
+    options.documentRequest || options.entranceOnly || picked.historical || !campaignOpen
+      ? Promise.resolve([emptyClientCampaignExecution(), emptyClientCampaignContent(), [] as string[]] as const)
+      : Promise.all([
+          loadClientCampaignExecution((service ?? db) as never, campaignId),
+          loadClientCampaignContent((service ?? db) as never, campaignId),
+          campaignId
+            ? listAttachedCampaignScriptPresence((service ?? db) as never, campaignId)
+                .then(presence => [...presence.keys()]).catch(() => undefined)
+            : Promise.resolve([] as string[]),
+        ]),
+    !options.documentRequest && !options.entranceOnly && commercialOpen
+      ? loadSavedClientEmailsForQuotation((service ?? db) as never, view.journey.quotationId)
+      : Promise.resolve([]),
+    !options.documentRequest && !picked.historical && commercialOpen
+      ? loadClientWorkspaceDisplayFlags((service ?? db) as never, {
+          quotationId: view.journey?.quotationId ?? activeReview.quotationId,
+          shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
+        }).catch(() => ({ showOriginalCurrency: false, hideCostAndFees: false }))
+      : Promise.resolve({ showOriginalCurrency: false, hideCostAndFees: false }),
+    options.documentRequest ? Promise.resolve(null) : loadIdentityLogoForReview(service ?? db, {
+      quotationId: view.journey?.quotationId ?? activeReview.quotationId,
+      shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
+      campaignHeaderId: view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId,
+      clientLabel: view.overview.clientLabel || activeReview.clientLabel || activeReview.sourceSnapshot?.clientLabel,
+      brandName: view.overview.brandName,
+      campaignName: view.overview.campaignName,
+    }).catch(() => null),
+    commercialIo,
+  ]);
+  [view.campaignExecution, view.campaignContent, view.campaignScriptUnitKeys] = campaignData;
+  view.clientEmails = clientEmails;
+  view.showOriginalCurrency = displayFlags.showOriginalCurrency;
+  view.hideCostAndFees = displayFlags.hideCostAndFees;
+  view.identityLogo = liveLogo ?? view.identityLogo ?? null;
   view.stageDiff =
     picked.historical || shortlistApproved?.status !== "approved"
       ? null
@@ -765,38 +780,6 @@ export async function loadClientWorkspace(
     !newer &&
     (journey.canApproveShortlist || journey.canApproveQuotation || pendingIds.length > 0);
   view.linkExpired = linkExpired;
-  view.showOriginalCurrency = false;
-  view.hideCostAndFees = false;
-  if (!options.documentRequest && !picked.historical && commercialOpen) {
-    try {
-      const flags = await loadClientWorkspaceDisplayFlags((service ?? db) as never, {
-        quotationId: view.journey?.quotationId ?? activeReview.quotationId,
-        shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
-      });
-      view.showOriginalCurrency = flags.showOriginalCurrency;
-      view.hideCostAndFees = flags.hideCostAndFees;
-    } catch {
-      view.showOriginalCurrency = false;
-      view.hideCostAndFees = false;
-    }
-  }
-
-  try {
-    const liveLogo = options.documentRequest ? null : await loadIdentityLogoForReview(service ?? db, {
-      quotationId: view.journey?.quotationId ?? activeReview.quotationId,
-      shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
-      campaignHeaderId: view.journey?.campaignHeaderId ?? activeReview.campaignHeaderId,
-      clientLabel:
-        view.overview.clientLabel ||
-        activeReview.clientLabel ||
-        activeReview.sourceSnapshot?.clientLabel,
-      brandName: view.overview.brandName,
-      campaignName: view.overview.campaignName,
-    });
-    view.identityLogo = liveLogo ?? view.identityLogo ?? null;
-  } catch {
-    /* keep frozen snapshot logo if live identity lookup fails */
-  }
   view.identityLogo = headerPartnerIdentity({
     identityLogo: view.identityLogo,
     clientLabel:
@@ -838,7 +821,7 @@ export async function loadClientWorkspace(
   };
 
   view = applyEntitlementToView(view, entitlementForView.entitlement);
-  view.commercialIo = await commercialIo;
+  view.commercialIo = commercialSnapshot;
   return { ok: true, view, entry, campaignObject };
 }
 
