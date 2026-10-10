@@ -23,6 +23,7 @@ import {
 } from "@/lib/billing/invoice-from-posts";
 import { repairDesyncedUngeneratedInvoiceHeaders } from "@/lib/billing/repair-orphaned-invoice-state";
 import { runPreInvoiceCreateRepairPipeline } from "@/lib/billing/repair-invoice-create-pipeline";
+import { invoiceAmountMutationError } from "@/lib/billing/invoice-amount-protection";
 import {
   resolveOperationalInvoiceTargets,
   validateAppendableInvoice,
@@ -124,6 +125,10 @@ export async function createInvoiceFromLines(supabase: SupabaseClient, userId: s
     }
   }
 
+  if (invoiceMode === "append") {
+    const protectionError = await invoiceAmountMutationError(supabase, input.existing_invoice_id ?? "");
+    if (protectionError) return { ok: false, message: protectionError };
+  }
   await runPreInvoiceCreateRepairPipeline(supabase, input.campaign_id, {
     repairAppend: invoiceMode === "append",
   });
@@ -658,6 +663,9 @@ export async function ungenerateInvoice(supabase: SupabaseClient, userId: string
     return { ok: false, message: auth.error };
   }
 
+  const protectionError = await invoiceAmountMutationError(supabase, input.invoice_id);
+  if (protectionError) return { ok: false, message: protectionError };
+
   const { data: invoice, error: invError } = await supabase
     .from("invoices")
     .select(
@@ -755,6 +763,9 @@ export async function regenerateInvoice(supabase: SupabaseClient, userId: string
   if ("error" in auth) {
     return { ok: false, message: auth.error };
   }
+
+  const protectionError = await invoiceAmountMutationError(supabase, input.invoice_id);
+  if (protectionError) return { ok: false, message: protectionError };
 
   const { data: invoice, error: invError } = await supabase
     .from("invoices")

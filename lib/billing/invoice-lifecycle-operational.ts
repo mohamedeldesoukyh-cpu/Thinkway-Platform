@@ -455,6 +455,13 @@ export async function relockInvoiceOperationalScope(
     if (invoiceError) {
       return { lineIds: scope.lineIds, error: invoiceError.message };
     }
+    // Seal once. Re-reading/relocking the same invoice must not replace its seal.
+    const { error: sealError } = await supabase
+      .from("invoices")
+      .update({ amounts_finalized_at: now } as never)
+      .eq("id", invoiceId)
+      .is("amounts_finalized_at", null);
+    if (sealError) return { lineIds: scope.lineIds, error: sealError.message };
   }
 
   if (process.env.NODE_ENV === "development") {

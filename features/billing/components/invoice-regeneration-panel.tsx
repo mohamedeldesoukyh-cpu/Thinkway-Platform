@@ -25,6 +25,7 @@ import {
 } from "@/features/billing/actions";
 import { InvoiceRegenerateCoveragePanel } from "@/features/billing/components/invoice-regenerate-coverage-panel";
 import type { InvoiceWorkspace } from "@/features/billing/types";
+import { hasProtectedInvoiceAmounts } from "@/lib/billing/invoice-amount-protection";
 
 type InvoiceRegenerationPanelProps = {
   invoice: InvoiceWorkspace;
@@ -93,6 +94,7 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
           : "p-g";
 
   const coverage = invoice.regeneration_coverage ?? null;
+  const amountsProtected = hasProtectedInvoiceAmounts(invoice);
   const regenerateBlocked = coverage?.case === "blocked";
 
   return (
@@ -103,17 +105,17 @@ export function InvoiceRegenerationPanel({ invoice }: InvoiceRegenerationPanelPr
             Finance governance
           </div>
           <div className="tw-gov-hint">
-            Un-generate to unlock invoiced lines for corrections. The same invoice
-            number is always preserved.
+            Issued invoice amounts are protected. Use a new invoice for remaining
+            work, or a credit/debit note for a correction.
           </div>
         </div>
         <span className={`tw-p ${statusPill}`}>{statusLabel}</span>
-        {invoice.status !== "void" && invoice.regeneration_status === "active" ? (
+        {!amountsProtected && invoice.status !== "void" && invoice.regeneration_status === "active" ? (
           <button type="button" className="tw-b sm" onClick={() => setMode("ungenerate")}>
             ↺ Un-generate invoice
           </button>
         ) : null}
-        {invoice.status !== "void" && invoice.regeneration_status === "pending_regeneration" ? (
+        {!amountsProtected && invoice.status !== "void" && invoice.regeneration_status === "pending_regeneration" ? (
           <button type="button" className="tw-b sm pri" onClick={() => setMode("regenerate")}>
             ↺ Regenerate invoice
           </button>

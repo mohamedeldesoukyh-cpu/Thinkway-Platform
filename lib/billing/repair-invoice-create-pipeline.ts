@@ -13,12 +13,6 @@ import {
 import { distributeEqual } from "@/lib/billing/operational-financial-sync";
 import { recalculateInvoiceTotals } from "@/lib/billing/invoice-from-deliverables";
 import { loadActiveInvoiceLineItemIds } from "@/lib/billing/invoice-validation-context";
-import {
-  repairAppendMissingInvoiceLineItems,
-  repairIncorrectlyFinanceLockedDraftInvoices,
-  repairOrphanedInvoicedOperationalRows,
-  repairStalePendingRegenerationInvoices,
-} from "@/lib/billing/repair-orphaned-invoice-state";
 import { devLog } from "@/lib/dev-log";
 
 type DeliverableCommercialRow = {
@@ -709,19 +703,11 @@ export async function repairStaleLiveDraftInvoicePostLinks(
   return { unlinkedPosts, removedLineItems, voidedDraftInvoices };
 }
 
-/** Full repair pipeline invoked immediately before invoice create validation. */
+/** Prepare operational amounts only. Never repair existing invoices while creating another. */
 export async function runPreInvoiceCreateRepairPipeline(
   supabase: SupabaseClient,
   campaignHeaderId: string,
-  options: { repairAppend?: boolean } = {}
+  _options: { repairAppend?: boolean } = {}
 ): Promise<void> {
-  await repairOrphanedInvoicedOperationalRows(supabase, campaignHeaderId);
   await prepareCampaignCommercialForInvoice(supabase, campaignHeaderId);
-  await repairStaleLiveDraftInvoicePostLinks(supabase, campaignHeaderId);
-  await repairStalePendingRegenerationInvoices(supabase, campaignHeaderId);
-  await repairIncorrectlyFinanceLockedDraftInvoices(supabase, campaignHeaderId);
-  // New installments must not consume the balance into an older invoice.
-  if (options.repairAppend !== false) {
-    await repairAppendMissingInvoiceLineItems(supabase, campaignHeaderId);
-  }
 }

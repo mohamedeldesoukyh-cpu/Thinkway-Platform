@@ -252,9 +252,8 @@ function InvoiceLinesTab({
         </div>
       </div>
       <div className="tw-note">
-        Lines are pulled from the campaign and locked on invoicing, so the only way to
-        correct one is <b>Un-generate</b> — which is why that control sits at the top
-        rather than inside a menu.
+        Issued invoice lines and amounts are protected. Invoice remaining work with
+        a new number. Use a credit/debit note for a correction.
       </div>
     </>
   );

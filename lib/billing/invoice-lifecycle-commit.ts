@@ -13,6 +13,7 @@ import { recalculateInvoiceTotals } from "@/lib/billing/invoice-from-deliverable
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { ensureInvoiceFinanceDocument } from "@/lib/finance/finance-document-registry";
 import { devLog } from "@/lib/dev-log";
+import { invoiceAmountMutationError } from "@/lib/billing/invoice-amount-protection";
 
 export type InvoiceLifecycleMutation =
   | "create"
@@ -53,6 +54,10 @@ export async function commitInvoiceLifecycleMutation(
   supabase: SupabaseClient,
   input: InvoiceLifecycleCommitInput
 ): Promise<InvoiceLifecycleCommitResult> {
+  if (input.mutation !== "create") {
+    const protectionError = await invoiceAmountMutationError(supabase, input.invoiceId);
+    if (protectionError) return { error: protectionError, lineIds: [] };
+  }
   const phaseStart = `${input.mutation}:commit:start`;
   const phaseEnd = `${input.mutation}:commit:complete`;
 

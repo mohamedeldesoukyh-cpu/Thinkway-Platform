@@ -32,7 +32,10 @@ async function main() {
   const append = await queriesFor(true);
   assert(newInvoice.length > 0, "normal preparation still runs");
   assert(!newInvoice.includes("campaign_headers:client_id"), "new invoice must not inspect an append target");
-  assert(append.includes("campaign_headers:client_id"), "explicit append retains existing repair behavior");
+  assert(!append.includes("campaign_headers:client_id"), "append must not repair other invoices either");
+  for (const queries of [newInvoice, append]) {
+    assert(!queries.some(query => query.startsWith("invoices:") || query.startsWith("invoice_line_items")), "preparation must not inspect or rewrite historical invoice lines");
+  }
   console.log("Invoice creation repair isolation passed");
 }
 void main();
