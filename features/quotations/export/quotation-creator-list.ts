@@ -42,7 +42,7 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
     issuedDate: doc.issueDateLabel, clientLogo: doc.clientLogo, creators,
   }, {
     title: performanceOnly ? "Client List by Name" : "Creator List",
-    cardsPerPage: 6, uniqueCreators: creators.length,
+    desktopLayout: true, cardsPerPage: 6, uniqueCreators: creators.length,
     showClientLogoInHeader: true, coverLogoOnRight: true, hideCoverReference: true,
     platformIcon: rateReportPlatformIcon,
     cardSupplement: (_creator, index) => {
@@ -64,7 +64,7 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
       return `<div class="rate-prices">${prices}<h3 class="rate-list-heading">Performance</h3>${metrics || "<p>Performance not available</p>"}</div>`;
     },
     closingContent: `<div class="end__hd"><span class="end__eye">${e(doc.name)}</span><h1>${creators.length} creators</h1><p>${performanceOnly ? "Creator profiles and performance" : "Client quotation"}</p></div>`,
-    extraCss: clientListPerformanceStyles("en", height) + `
+    extraCss: clientListPerformanceStyles("en", height, true) + `
       .price{display:grid;gap:3px;border-top:1px solid #e5e3ee;padding-top:5px;margin-top:5px;overflow-wrap:anywhere;font-size:12px}
       .price p{white-space:normal;text-align:start;font-size:11px;line-height:1.5;margin:0}
       .price small{font-size:10px;line-height:1.5;color:#666477}
@@ -76,7 +76,6 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
       .quote-money--total{border-top:1px solid #d4d0e5;margin-top:5px}
       .ph .report-client-logo{max-width:180px;width:150px;height:64px;filter:url(#report-logo-white-key) drop-shadow(0 3px 1px rgba(0,0,0,.25)) drop-shadow(0 8px 8px rgba(0,0,0,.3))}
       .cov__client>.cover-client-logo{flex-basis:420px;width:420px;max-width:420px;height:420px;filter:url(#report-logo-white-key) drop-shadow(0 4px 1px rgba(0,0,0,.25)) drop-shadow(0 18px 18px rgba(0,0,0,.3))}
-      @media screen and (max-width:900px){.cov__client>.cover-client-logo{flex-basis:30%;width:30%;height:auto}.ph .report-client-logo{width:100px;height:48px}}
     `,
   });
 }

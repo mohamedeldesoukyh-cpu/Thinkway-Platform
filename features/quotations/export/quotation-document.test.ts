@@ -1542,6 +1542,8 @@ console.log("quotation-document.test.ts passed");
   assert.equal(doc.creatorGroups.find(g=>g.creator==='Tier Mega')?.highestPlatformTier,'Mega');
   const original=doc.creatorGroups.map(g=>g.creator);
   const html=buildQuotationHtml(doc);
+  assert.ok(!html.includes('.cards{grid-template-columns:repeat(2,minmax(0,1fr))'));
+  assert.ok(html.includes('zoom:calc(100vw / 1600px)'));
   assert.ok(html.indexOf('Tier Mega') < html.indexOf('Tier Second Mega'));
   assert.ok(html.indexOf('Tier Second Mega') < html.indexOf('Tier Macro'));
   assert.ok(html.indexOf('Tier Macro') < html.indexOf('Tier Micro'));
@@ -1552,3 +1554,4 @@ console.log("quotation-document.test.ts passed");
   }
  }
 }
+
