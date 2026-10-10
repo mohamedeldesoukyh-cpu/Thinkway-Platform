@@ -698,7 +698,10 @@ export async function loadClientWorkspace(
   if (!options.documentRequest && !picked.historical && !linkExpired && currentCampaignId && activeReview.sourceSnapshot) {
     const { loadCurrentCampaignRoster } = await import("./current-campaign-roster");
     view.currentCampaignCreators = await loadCurrentCampaignRoster(
-      service ?? db, currentCampaignId, activeReview.sourceSnapshot
+      service ?? db, currentCampaignId, {
+        ...activeReview.sourceSnapshot,
+        commercial: { ...activeReview.sourceSnapshot.commercial, currency: view.commercial.currency },
+      }
     );
   }
   view.visibleSections = visibleClientWorkspaceSections(view);
