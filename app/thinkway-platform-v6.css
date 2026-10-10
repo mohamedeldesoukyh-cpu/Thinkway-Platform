@@ -6206,3 +6206,11 @@
   .commercial-workspace-dialog .cw-card-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .commercial-workspace-dialog input, .commercial-workspace-dialog [role="combobox"] { max-width: 100%; min-width: 0; }
 }
+@media (max-width: 767px) {
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-card-row { flex-wrap: wrap; align-items: flex-start; }
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cg-id { flex: 1; min-width: 0; max-width: none; }
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-card-fields { display: grid; grid-template-columns: minmax(0, 1fr); flex: 0 0 100%; width: 100%; gap: 12px; }
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-field { min-width: 0; width: 100%; }
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-field input,
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-field select { width: 100%; max-width: 100%; }
+}
