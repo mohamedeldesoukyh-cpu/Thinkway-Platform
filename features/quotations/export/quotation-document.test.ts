@@ -1501,3 +1501,16 @@ console.log("quotation-document.test.ts passed");
     assert.ok(!buildQuotationHtml(selected).includes("Excluded Creator"));
   }
 }
+
+// Single choices have no option label; alternative offers remain distinguishable.
+{
+ const single=buildQuotationDocument(mockDetail(),{template:"creator-list"});
+ assert.ok(!buildQuotationHtml(single).includes("Option 1"));
+ const multiple=buildQuotationDocument(mockDetail({items:[mockItem(),mockItem({id:"alternative",option_number:2})]}),{template:"creator-list"});
+ const html=buildQuotationHtml(multiple);
+ assert.ok(html.includes("Option 1"));
+ assert.ok(html.includes("Option 2"));
+ const profiles=buildQuotationHtml({...multiple,template:"client-list-by-name"});
+ assert.ok(!profiles.includes("Option 1"));
+ assert.ok(!profiles.includes("Option 2"));
+}

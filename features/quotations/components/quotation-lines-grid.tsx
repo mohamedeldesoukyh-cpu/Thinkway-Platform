@@ -261,7 +261,7 @@ function QuotationPackLineRow({
         if (window.getSelection()?.toString()) return;
         setExpanded((open) => !open);
       }}>
-        <div className="q-cell-select" role="cell"><input type="checkbox" className="q-ck" checked={selected} onChange={onToggleSelect} aria-label={`Select ${name} ${optionLabel}`} disabled={!canManage} /></div>
+        <div className="q-cell-select" role="cell"><input type="checkbox" className="q-ck" checked={selected} onChange={onToggleSelect} aria-label={`Select ${name}${optionCount > 1 ? ` ${optionLabel}` : ""}`} disabled={!canManage} /></div>
         <div className="q-cell-creator" role="cell">
           <DiscoverySuiteCreatorCell name={name} handleLabel={handleLabel} index={index}
             avatarUrl={item.creator_profile_source?.avatarUrl ?? item.profile_image_url}

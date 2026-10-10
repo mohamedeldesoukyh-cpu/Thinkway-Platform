@@ -37,7 +37,7 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
     cardSupplement: (_creator, index) => {
       const group = doc.creatorGroups[index];
       const prices = performanceOnly ? "" : `<h3 class="rate-list-heading">Quotation</h3>${group.rows.map(row =>
-        `<div class="price"><strong>${e(row.collapseOptionLabel || row.option)}</strong><p>${e(row.serviceDescription || row.deliverables)}</p>${row.isCollapsePackageFollower
+        `<div class="price">${group.optionCount > 1 ? `<strong>${e(row.collapseOptionLabel || row.option)}</strong>` : ""}<p>${e(row.serviceDescription || row.deliverables)}</p>${row.isCollapsePackageFollower
           ? `<p>Included in shared package</p>`
           : doc.hideCostAndFees
             ? `<b>${e(row.totalInvestment ?? row.clientCost)}</b><small>AF included</small>`
