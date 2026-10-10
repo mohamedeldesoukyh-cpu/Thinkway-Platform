@@ -1,12 +1,14 @@
 import { resolveIoPublicAppOrigin } from "@/lib/io/io-public-app-url";
 import { loadSharePreview } from "@/features/client-workspace/share-preview-server";
-import { campaignShareHtml } from "@/features/client-workspace/share-landing";
+import { campaignShareHtml, campaignShareBrowserRedirect } from "@/features/client-workspace/share-landing";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request, context: { params: Promise<{ reviewId: string }> }) {
   const { reviewId } = await context.params;
+  const browserRedirect = campaignShareBrowserRedirect(request, reviewId);
+  if (browserRedirect) return browserRedirect;
   const query = new URL(request.url).searchParams;
   const token = query.get("sign")?.trim() ?? "";
   const headers = {
@@ -27,3 +29,4 @@ export async function GET(request: Request, context: { params: Promise<{ reviewI
     return new Response("Could not load this client link. Please try again.", { status: 503, headers });
   }
 }
+

@@ -10,7 +10,7 @@ function Identity({ entry, card = false }: {
 }) {
     const partner = entry.identityLogo;
     const hasPartner = Boolean(partner?.url || partner?.alt);
-    return <div className={card ? 'tw-cobrand' : 'tw-lock'}>{card && <span className="tw-cobrand__k">{hasPartner ? 'Presented by Thinkway with' : 'Presented by'}</span>}<EntranceMark /><span className="tw-word">THINK<em>WAY</em></span>{hasPartner && <><span className={card ? 'tw-cobrand__rule' : 'tw-lock__sep'}/><span>{partner?.url ? <span className="tw-partner">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={partner.url} alt={partner.alt}/></span> : <span className="tw-partner tw-partner--text">{partner?.alt}</span>}</span></>}</div>;
+    return <div className={card ? 'tw-cobrand' : 'tw-lock'}>{card && <span className="tw-cobrand__k">{hasPartner ? 'Presented by Thinkway with' : 'Presented by'}</span>}<EntranceMark /><span className="tw-word">THINK<em>WAY</em></span>{hasPartner && <><span className={card ? 'tw-cobrand__rule' : 'tw-lock__sep'}/><span>{partner?.url ? <span className="tw-partner">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={partner.url} alt={partner.alt} loading="eager" fetchPriority="high"/></span> : <span className="tw-partner tw-partner--text">{partner?.alt}</span>}</span></>}</div>;
 }
 export function ClientReviewEntry({ entry, reviewId, token, landingSection = 'shortlist' }: {
     entry: ClientWorkspaceEntry;

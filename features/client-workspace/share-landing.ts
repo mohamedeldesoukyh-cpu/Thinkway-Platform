@@ -1,5 +1,18 @@
 import { SHARE_DESCRIPTION, shareImagePath } from "./share-preview";
 
+/** Browser navigations go straight to the entrance; crawlers retain their preview HTML. */
+export function campaignShareBrowserRedirect(request: Request, reviewId: string): Response | null {
+  if (request.headers.get("sec-fetch-dest") !== "document" || request.headers.get("sec-fetch-mode") !== "navigate") return null;
+  const source = new URL(request.url);
+  const destination = new URL(`/review/${encodeURIComponent(reviewId)}`, source.origin);
+  const token = source.searchParams.get("sign");
+  if (token) destination.searchParams.set("sign", token);
+  return new Response(null, { status: 307, headers: {
+    Location: destination.href, "Cache-Control": "private, no-store",
+    Vary: "Sec-Fetch-Dest, Sec-Fetch-Mode", "Referrer-Policy": "no-referrer",
+  } });
+}
+
 /** A failed social-preview fetch must not pin subsequent copies to that cache key. */
 export function freshCampaignShareUrl(reviewUrl: string, nonce = crypto.randomUUID()): string {
   return campaignShareUrl(reviewUrl, `copy-${nonce}`);
@@ -49,17 +62,14 @@ export function campaignShareHtml(input: {
 <meta name="robots" content="noindex,nofollow"><meta name="referrer" content="no-referrer">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
-*{box-sizing:border-box}body{margin:0;background:#f6f8fc;color:#0a1020;font-family:Arial,sans-serif}
-main{min-height:100vh;min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;text-align:center}
-.logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800;letter-spacing:-.4px}.logo span{color:#0057ff}
-.mark{position:relative;width:36px;height:36px;border-radius:9px;background:#0a1020;animation:thinkway-loader-spin 1.1s linear infinite}
-.mark:before{content:"";position:absolute;top:8px;left:8px;width:10px;height:10px;border-radius:50%;background:white}
-.mark:after{content:"";position:absolute;right:6px;bottom:6px;width:14px;height:14px;border-radius:4px;background:#0057ff}
-@keyframes thinkway-loader-spin{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){.mark{animation:none}}
-a{color:#0057ff;font-size:14px;text-underline-offset:4px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+*{box-sizing:border-box}body{margin:0;background:#070B1A;color:#F7F9FF;font-family:system-ui,sans-serif}
+main{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:24px;text-align:center;background:radial-gradient(ellipse at 15% 0%,#103b87,transparent 60%)}
+.logo{display:flex;align-items:center;gap:10px;font-size:16px;font-weight:800}.logo span{color:#73A5FF}
+.mark{width:36px;height:36px;background:url('/icon-192x192.png') center/contain no-repeat}
+a{color:#73A5FF;font-size:14px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 </style></head><body><main>
 <div role="status" aria-live="polite" aria-label="Opening your campaign"><div class="logo" aria-hidden="true"><div class="mark"></div><div>THINK<span>WAY</span></div></div><span class="sr-only">Opening your campaign…</span></div>
 <a href="${escapeHtml(destination.href)}">Open campaign</a></main>
 <script>window.location.replace(${redirect});</script></body></html>`;
 }
+

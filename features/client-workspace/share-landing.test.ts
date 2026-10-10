@@ -1,6 +1,18 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { campaignShareHtml, campaignShareUrl, freshCampaignShareUrl } from "./share-landing";
+import { campaignShareBrowserRedirect, campaignShareHtml, campaignShareUrl, freshCampaignShareUrl } from "./share-landing";
+
+test("desktop and mobile browser share navigation skips the intermediate page without changing access", async () => {
+  const url = "https://dev.thinkwaymedia.com/review/example/share/copy-1?sign=signed%26value";
+  const response = campaignShareBrowserRedirect(new Request(url, { headers: {
+    "sec-fetch-dest": "document", "sec-fetch-mode": "navigate",
+  } }), "example");
+  assert.equal(response?.status, 307);
+  assert.equal(response?.headers.get("location"), "https://dev.thinkwaymedia.com/review/example?sign=signed%26value");
+  assert.equal(await response?.text(), "");
+  assert.equal(campaignShareBrowserRedirect(new Request(url), "example"), null);
+  assert.equal(campaignShareBrowserRedirect(new Request(url, { headers: { "sec-fetch-dest": "image" } }), "example"), null);
+});
 
 test("copy recovers from an old failed preview without changing review access", () => {
   const original = "https://app.thinkwaymedia.com/review/example/share/3?sign=signed%26value";
@@ -46,3 +58,4 @@ test("campaign text and tokens cannot inject markup into the share response", ()
   assert.ok(html.includes("&lt;/title&gt;"));
   assert.doesNotMatch(html, /<script>alert/);
 });
+
