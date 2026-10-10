@@ -155,22 +155,21 @@ export function QuotationCommercialMetricsBand({
     <div className={embedded ? undefined : "discovery-suite px-4 pt-1"}>
     {hasDraftEdits ? (
       <p className="tw-note wrn mx-3.5 mb-2" role="status">
-        <span className="tw-live" style={{ display: "inline-block", marginRight: 8, verticalAlign: "middle" }} />
-        <b>Draft edits pending</b> — masthead and Creators grid show uncommitted scratchpad values.
-        Last-saved Client cost stays{" "}
-        {savedClient ? (
-          <b>
-            {savedClient.value} {savedClient.unit}
-          </b>
-        ) : (
-          "unchanged"
-        )}{" "}
-        until Save.
+        <b><QuotationText>Unsaved pricing changes</QuotationText></b>{" — "}
+        <QuotationText>The figures shown include your unsaved edits.</QuotationText>{" "}
+        {stagedVsSavedDisagree && savedClient ? (
+          <>
+            <QuotationText>Total investment including agency fees:</QuotationText>{" "}
+            <QuotationText>saved</QuotationText>{" "}<b>{savedClient.value} {savedClient.unit}</b>
+            {"; "}<QuotationText>after edits</QuotationText>{" "}<b>{client.value} {client.unit}</b>.{" "}
+          </>
+        ) : null}
+        <QuotationText>Save to keep these edits, or Discard changes to restore the saved pricing.</QuotationText>
         {onOpenCommercialWorkspace ? (
           <>
             {" "}
             <button type="button" className="tw-b sm" onClick={onOpenCommercialWorkspace}>
-              Open Commercial Workspace
+              <QuotationText>Open Commercial Workspace</QuotationText>
             </button>
           </>
         ) : null}
@@ -190,17 +189,10 @@ export function QuotationCommercialMetricsBand({
       <MetricItem label="Client cost before agency fees" {...moneyParts(totalRevenueEgp - totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.revenue)} staged={hasDraftEdits} />
       <MetricItem label="Agency fees (AF)" {...moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.af)} staged={hasDraftEdits} />
       <MetricItem label="Total investment" value={client.value} unit={client.unit} original={originalLabels(originalTotals, "totalClientCost")} staged={hasDraftEdits} />
-      {stagedVsSavedDisagree && savedClient && <MetricItem label="Saved client cost" value={savedClient.value} unit={savedClient.unit} tone="amber" />}
+      {stagedVsSavedDisagree && savedClient && <MetricItem label="Saved total investment" value={savedClient.value} unit={savedClient.unit} tone="amber" />}
       </div>
     </div>
 
-    {stagedVsSavedDisagree && savedClient ? (
-      <p className="tw-note wrn mx-3.5 mb-2">
-        Staged Client cost {client.value} {client.unit} vs saved{" "}
-        {savedClient.value} {savedClient.unit}. Both figures are shown — Save commits the staged
-        scratchpad; Discard restores saved line masters.
-      </p>
-    ) : null}
     </div>
   );
 }

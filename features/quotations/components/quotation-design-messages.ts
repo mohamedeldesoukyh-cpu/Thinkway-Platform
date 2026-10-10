@@ -222,5 +222,13 @@ export const quotationDesignMessages: Record<string, string> = {
   "Add manual row": "إضافة بند يدوي",
   "Delete": "حذف",
   "Select all lines": "تحديد جميع البنود",
+  "Unsaved pricing changes": "تغييرات أسعار غير محفوظة",
+  "Open Commercial Workspace": "فتح مساحة العمل التجارية",
+  "The figures shown include your unsaved edits.": "تشمل الأرقام المعروضة تعديلاتك غير المحفوظة.",
+  "Total investment including agency fees:": "إجمالي الاستثمار شاملاً رسوم الوكالة:",
+  "saved": "المحفوظ",
+  "after edits": "بعد التعديل",
+  "Save to keep these edits, or Discard changes to restore the saved pricing.": "اضغط حفظ للاحتفاظ بهذه التعديلات، أو تجاهل التغييرات لاستعادة الأسعار المحفوظة.",
+  "Saved total investment": "إجمالي الاستثمار المحفوظ",
   "AF included": "رسوم الوكالة مشمولة"
 };

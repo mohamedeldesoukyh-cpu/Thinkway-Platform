@@ -1,5 +1,4 @@
 import { renderCreatorListReport, CREATOR_LIST_PDF_OPTIONS } from "@/features/discovery/shortlists/export/creator-list-html";
-import { rateReportStyles, RATE_A4_HEIGHT } from "@/features/rate-cards/report-styles";
 import { clientListPerformanceStyles } from "@/features/rate-cards/client-list-styles";
 import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
 import { escapeHtml as e, safeProfileUrl } from "@/features/rate-cards/report";
@@ -8,13 +7,15 @@ import type { QuotationDocument } from "./quotation-document";
 function layout(doc: QuotationDocument) {
   const performanceOnly = doc.template === "client-list-by-name";
   const platforms = Math.max(1, ...doc.creatorGroups.map(g => g.platformMetrics.length));
-  return { performanceOnly, height: performanceOnly ? Math.max(900, 690 + platforms * 110) : RATE_A4_HEIGHT };
+  // Both lists use the same six-column profile cards; pricing only adds vertical space.
+  const pricingHeight = performanceOnly ? 0 : Math.max(1, ...doc.creatorGroups.map(g => g.rows.length)) * 160 + 30;
+  return { performanceOnly, height: Math.max(900, 690 + platforms * 110) + pricingHeight };
 }
 
 export function quotationListPdfOptions(doc: QuotationDocument) {
-  const { performanceOnly, height } = layout(doc);
+  const { height } = layout(doc);
   return { ...CREATOR_LIST_PDF_OPTIONS,
-    width: performanceOnly ? "1600px" : "297mm", height: performanceOnly ? `${height}px` : "210mm",
+    width: "1600px", height: `${height}px`,
     viewport: { ...CREATOR_LIST_PDF_OPTIONS.viewport, width: 1600, height: Math.ceil(height) } };
 }
 
@@ -31,13 +32,13 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
     issuedDate: doc.issueDateLabel, clientLogo: doc.clientLogo, creators,
   }, {
     title: performanceOnly ? "Client List by Name" : "Creator List",
-    cardsPerPage: performanceOnly ? 6 : 4, uniqueCreators: creators.length,
+    cardsPerPage: 6, uniqueCreators: creators.length,
     showClientLogoInHeader: true, coverLogoOnRight: true, hideCoverReference: true,
     platformIcon: rateReportPlatformIcon,
     cardSupplement: (_creator, index) => {
       const group = doc.creatorGroups[index];
       const prices = performanceOnly ? "" : `<h3 class="rate-list-heading">Quotation</h3>${group.rows.map(row =>
-        `<div class="price">${group.optionCount > 1 ? `<strong>${e(row.collapseOptionLabel || row.option)}</strong>` : ""}<p>${e(row.serviceDescription || row.deliverables)}</p>${row.isCollapsePackageFollower
+        `<div class="price">${group.optionCount > 1 ? `<strong>${e(row.collapseOptionLabel || row.option)}</strong>` : ""}<small>Deliverables</small><p>${e(row.serviceDescription || row.deliverables)}</p>${row.isCollapsePackageFollower
           ? `<p>Included in shared package</p>`
           : doc.hideCostAndFees
             ? `<b>${e(row.totalInvestment ?? row.clientCost)}</b><small>AF included</small>`
@@ -52,6 +53,10 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
       return `<div class="rate-prices">${prices}<h3 class="rate-list-heading">Performance</h3>${metrics || "<p>Performance not available</p>"}</div>`;
     },
     closingContent: `<div class="end__hd"><span class="end__eye">${e(doc.name)}</span><h1>${creators.length} creators</h1><p>${performanceOnly ? "Creator profiles and performance" : "Client quotation"}</p></div>`,
-    extraCss: performanceOnly ? clientListPerformanceStyles("en", height) : rateReportStyles(false, "en", 1),
+    extraCss: clientListPerformanceStyles("en", height) + `
+      .price{display:grid;gap:3px;border-top:1px solid #e5e3ee;padding-top:5px;margin-top:5px;overflow-wrap:anywhere;font-size:12px}
+      .price p{white-space:normal;text-align:start;font-size:11px;line-height:1.5;margin:0}
+      .price small{font-size:10px;line-height:1.5;color:#666477}
+    `,
   });
 }
