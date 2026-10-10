@@ -27,21 +27,27 @@ export function quotationListPdfOptions(doc: QuotationDocument) {
 /** Client-safe projection: internal document fields never enter either report. */
 export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
   const { performanceOnly, height } = layout(doc);
-  const creators = doc.creatorGroups.map(g => ({
+  // Rank within each tier by strongest platform audience; exact ties retain source order.
+  const tierRank: Record<string, number> = { Celebrity: 0, Mega: 0, Macro: 1, Mid: 2, Micro: 3, Nano: 4 };
+  const groups = [...doc.creatorGroups].sort((a, b) =>
+    (tierRank[a.highestPlatformTier ?? a.rows[0]?.tier] ?? 5) -
+    (tierRank[b.highestPlatformTier ?? b.rows[0]?.tier] ?? 5) ||
+    (b.highestPlatformFollowers ?? 0) - (a.highestPlatformFollowers ?? 0));
+  const creators = groups.map(g => ({
     name: g.creator, handle: g.handle, profileUrl: safeProfileUrl(g.profileUrl),
     portrait: g.avatarUrl, avatar: g.avatarUrl, categories: g.categories,
-    tier: g.rows[0]?.tier, markets: [g.country], platforms: [...quotedPlatforms(g)],
+    tier: g.highestPlatformTier ?? g.rows[0]?.tier, markets: [g.country], platforms: [...quotedPlatforms(g)],
   }));
   return renderCreatorListReport({
     name: doc.brandName || doc.clientName || doc.name, reference: doc.serial,
     issuedDate: doc.issueDateLabel, clientLogo: doc.clientLogo, creators,
   }, {
     title: performanceOnly ? "Client List by Name" : "Creator List",
-    cardsPerPage: 6, uniqueCreators: creators.length,
+    desktopLayout: true, cardsPerPage: 6, uniqueCreators: creators.length,
     showClientLogoInHeader: true, coverLogoOnRight: true, hideCoverReference: true,
     platformIcon: rateReportPlatformIcon,
     cardSupplement: (_creator, index) => {
-      const group = doc.creatorGroups[index];
+      const group = groups[index];
       const prices = performanceOnly ? "" : `${group.rows.map(row =>
         `<div class="price">${group.optionCount > 1 ? `<strong>${e(row.collapseOptionLabel || row.option)}</strong>` : ""}<h3 class="rate-list-heading">Deliverables</h3><p>${e(row.serviceDescription || row.deliverables)}</p>${row.isCollapsePackageFollower
           ? `<p>Included in shared package</p>`
@@ -59,7 +65,7 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
       return `<div class="rate-prices">${prices}<h3 class="rate-list-heading">Performance</h3>${metrics || "<p>Performance not available</p>"}</div>`;
     },
     closingContent: `<div class="end__hd"><span class="end__eye">${e(doc.name)}</span><h1>${creators.length} creators</h1><p>${performanceOnly ? "Creator profiles and performance" : "Client quotation"}</p></div>`,
-    extraCss: clientListPerformanceStyles("en", height) + `
+    extraCss: clientListPerformanceStyles("en", height, true) + `
       .price{display:grid;gap:3px;border-top:1px solid #e5e3ee;padding-top:5px;margin-top:5px;overflow-wrap:anywhere;font-size:12px}
       .price p{white-space:normal;text-align:start;font-size:11px;line-height:1.5;margin:0}
       .price small{font-size:10px;line-height:1.5;color:#666477}
@@ -71,7 +77,6 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
       .quote-money--total{border-top:1px solid #d4d0e5;margin-top:5px}
       .ph .report-client-logo{max-width:180px;width:150px;height:64px;filter:url(#report-logo-white-key) drop-shadow(0 3px 1px rgba(0,0,0,.25)) drop-shadow(0 8px 8px rgba(0,0,0,.3))}
       .cov__client>.cover-client-logo{flex-basis:420px;width:420px;max-width:420px;height:420px;filter:url(#report-logo-white-key) drop-shadow(0 4px 1px rgba(0,0,0,.25)) drop-shadow(0 18px 18px rgba(0,0,0,.3))}
-      @media screen and (max-width:900px){.cov__client>.cover-client-logo{flex-basis:30%;width:30%;height:auto}.ph .report-client-logo{width:100px;height:48px}}
     `,
   });
 }

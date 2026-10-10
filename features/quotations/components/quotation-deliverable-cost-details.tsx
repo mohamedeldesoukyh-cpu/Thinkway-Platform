@@ -525,7 +525,7 @@ export function QuotationDeliverableCostDetails({
       >
         <label
           data-cost-nav-field
-          className="col-span-3 flex items-start gap-2.5 rounded-[10px] border border-[#d7e3ff] bg-[#f8faff] px-2.5 py-2"
+          className="col-span-full flex items-start gap-2.5 rounded-[10px] border border-[#d7e3ff] bg-[#f8faff] px-2.5 py-2"
         >
           <Checkbox
             checked={freeForClient}
@@ -690,7 +690,7 @@ export function QuotationDeliverableCostDetails({
           </Field>
         ) : null}
         {!freeForClient ? (
-          <div className="col-span-3 rounded-[10px] border border-[#d7e3ff] bg-[#f8faff] px-3 py-2">
+          <div className="col-span-full rounded-[10px] border border-[#d7e3ff] bg-[#f8faff] px-3 py-2">
             <div className="flex items-center justify-between gap-3">
               <span className="text-[11px] font-semibold text-[#64748b]">Client pays</span>
               <span className="text-xs font-bold tabular-nums text-[#1e3a8a]">

@@ -1528,3 +1528,32 @@ console.log("quotation-document.test.ts passed");
  assert.ok(!profiles.includes("Option 1"));
  assert.ok(!profiles.includes("Option 2"));
 }
+
+// List reports rank by the strongest linked platform, preserving prices and stable ties.
+{
+ const items = [
+  { ...mockItem({id:'micro', creator_name:'Tier Micro',handle:'@tiermicro',followers:20000,service_description:'MICRO_DELIVERABLE'}), export_platforms:[{platform:'instagram',followers:20000}] },
+  { ...mockItem({id:'mega', creator_name:'Tier Mega',handle:'@tiermega',followers:20000,service_description:'MEGA_DELIVERABLE'}), export_platforms:[{platform:'instagram',followers:20000},{platform:'tiktok',followers:1200000}] },
+  { ...mockItem({id:'macro',creator_name:'Tier Macro',handle:'@tiermacro',followers:600000}), export_platforms:[{platform:'instagram',followers:600000}] },
+  { ...mockItem({id:'mega2',creator_name:'Tier Second Mega',handle:'@tiermega2',followers:2000000}), export_platforms:[{platform:'instagram',followers:2000000}] },
+ ];
+ for (const template of ['creator-list','client-list-by-name'] as const) {
+  const doc=buildQuotationDocument(mockDetail({items}),{template});
+  assert.equal(doc.creatorGroups.find(g=>g.creator==='Tier Mega')?.highestPlatformTier,'Mega');
+  const original=doc.creatorGroups.map(g=>g.creator);
+  const html=buildQuotationHtml(doc);
+  assert.ok(!html.includes('.cards{grid-template-columns:repeat(2,minmax(0,1fr))'));
+  assert.ok(html.includes('zoom:calc(100vw / 1600px)'));
+  assert.equal(doc.creatorGroups.find(g=>g.creator==='Tier Mega')?.highestPlatformFollowers,1200000);
+  assert.ok(html.indexOf('Tier Second Mega') < html.indexOf('Tier Mega'));
+  assert.ok(html.indexOf('Tier Second Mega') < html.indexOf('Tier Macro'));
+  assert.ok(html.indexOf('Tier Macro') < html.indexOf('Tier Micro'));
+  assert.deepEqual(doc.creatorGroups.map(g=>g.creator),original);
+  if(template==='creator-list') {
+   assert.ok(html.indexOf('MEGA_DELIVERABLE') > html.indexOf('Tier Mega'));
+   assert.ok(html.indexOf('MEGA_DELIVERABLE') < html.indexOf('Tier Macro'));
+   assert.ok(html.indexOf('MICRO_DELIVERABLE') > html.indexOf('Tier Micro'));
+  }
+ }
+}
+

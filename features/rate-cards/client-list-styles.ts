@@ -2,7 +2,7 @@ import {RATE_CARD_LOGO_CSS} from "./report-styles";
 import type {Language} from "./labels";
 
 /** Keep the shortlist's six-column cards, portraits, typography and branding. */
-export function clientListPerformanceStyles(lang:Language,height:number){
+export function clientListPerformanceStyles(lang:Language,height:number,desktopLayout=false){
  return `
  ${RATE_CARD_LOGO_CSS}
  @page{size:1600px ${height}px;margin:0}
@@ -23,7 +23,6 @@ export function clientListPerformanceStyles(lang:Language,height:number){
  .end__hd p{white-space:normal}
  .page footer span:last-child{direction:ltr}
  html[dir=rtl] .creator-identity{direction:rtl}
- @media screen and (min-width:901px) and (max-width:1599px){.page{zoom:calc((100vw - 16px) / 1600px)}}
- @media screen and (max-width:900px){.page{height:auto}.creator-card{min-height:0}}
+ ${desktopLayout ? "@media screen and (max-width:1599px){.page{zoom:calc(100vw / 1600px)}}" : "@media screen and (min-width:901px) and (max-width:1599px){.page{zoom:calc((100vw - 16px) / 1600px)}} @media screen and (max-width:900px){.page{height:auto}.creator-card{min-height:0}}"}
  `;
 }

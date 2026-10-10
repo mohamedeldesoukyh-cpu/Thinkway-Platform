@@ -6183,3 +6183,34 @@
 .thinkway-platform-v6 .campaigns-module-register [data-slot="table-container"] {
   overflow-x: visible;
 }
+
+/* Keep cost editing reachable with the mobile browser chrome and keyboard open. */
+.quotation-cost-detail-panel__inner {
+  max-height: 88dvh; overflow-y: auto; overflow-x: hidden; min-width: 0;
+  overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+}
+.quotation-cost-detail-panel__grid > * { min-width: 0; }
+@media (max-width: 639px) {
+  .quotation-cost-detail-panel__grid { grid-template-columns: minmax(0, 1fr); }
+  .quotation-cost-detail-panel__grid input, .quotation-cost-detail-panel__grid [role="combobox"] { width: 100%; min-width: 0; }
+}
+
+/* Small screens use one scroll surface: tall totals must not squeeze creator rows to zero. */
+@media (max-width: 767px) {
+  .commercial-workspace-dialog[data-slot="dialog-content"] {
+    display: block; height: 92dvh; max-height: 92dvh; overflow-y: auto; overflow-x: hidden;
+    overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  }
+  .commercial-workspace-dialog > .flex.min-h-0 { overflow: visible; display: block; }
+  .commercial-workspace-dialog .cw-card-list { overflow: visible; flex: none; }
+  .commercial-workspace-dialog .cw-card-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .commercial-workspace-dialog input, .commercial-workspace-dialog [role="combobox"] { max-width: 100%; min-width: 0; }
+}
+@media (max-width: 767px) {
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-card-row { flex-wrap: wrap; align-items: flex-start; }
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cg-id { flex: 1; min-width: 0; max-width: none; }
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-card-fields { display: grid; grid-template-columns: minmax(0, 1fr); flex: 0 0 100%; width: 100%; gap: 12px; }
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-field { min-width: 0; width: 100%; }
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-field input,
+  .commercial-workspace-dialog[data-slot="dialog-content"] .cw-field select { width: 100%; max-width: 100%; }
+}
