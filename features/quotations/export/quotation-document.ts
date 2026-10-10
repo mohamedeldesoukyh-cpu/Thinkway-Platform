@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 /**
  * Pure quotation document model (no DB, no rendering deps).
@@ -1122,7 +1123,7 @@ export function buildQuotationDocument(
     source: "quotation",
     template,
     hideCostAndFees,
-    serial: detail.serial_number ?? "QT-PENDING",
+    serial: formatDocumentNumberForDisplay(detail.serial_number ?? "QT-PENDING"),
     name: detail.name,
     currency: displayCurrency,
     status: detail.status,

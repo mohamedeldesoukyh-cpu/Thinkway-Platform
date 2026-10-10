@@ -172,7 +172,7 @@ export const BillingQueueAssignmentRow = memo(function BillingQueueAssignmentRow
       ) : null}
       {cols.showExpand ? <span /> : null}
       {cols.showCampaignNo ? (
-        <span className="bq-kid">{row.document_number ?? "—"}</span>
+        <span className="bq-kid">{formatDocumentNumberForDisplay(row.document_number ?? "—")}</span>
       ) : null}
       {lineSpan > 0 ? (
         <span className="bq-kn" style={{ gridColumn: `span ${lineSpan}` }} title={row.label}>

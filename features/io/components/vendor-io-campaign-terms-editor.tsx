@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -105,7 +107,7 @@ export function VendorIoCampaignTermsEditor({ row, field = "payment" }: { row: V
     <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
       <DialogHeader>
         <DialogTitle>Campaign IO terms</DialogTitle>
-        <DialogDescription>{row.influencer_name} · {row.document_number}. Changes apply only to this IO in {row.campaign_name}.</DialogDescription>
+        <DialogDescription>{row.influencer_name} · {formatDocumentNumberForDisplay(row.document_number)}. Changes apply only to this IO in {row.campaign_name}.</DialogDescription>
       </DialogHeader>
       {open && <CampaignTermsForm key={`${row.id}:${row.updated_at}`} row={row} field={field} onSaved={() => setOpen(false)} />}
     </DialogContent>

@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import { campaignMoney, CampaignMoneyTotal } from "@/features/campaigns/components/campaign-money";
 import { assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
@@ -251,7 +253,7 @@ export function ClientIoAssignmentComposer({
                       </p>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
-                      {row.document_number}
+                      {formatDocumentNumberForDisplay(row.document_number)}
                       <span className="mx-1.5 text-border">·</span>
                       <span className="font-mono text-[10px]">{row.id.slice(0, 8)}</span>
                     </p>

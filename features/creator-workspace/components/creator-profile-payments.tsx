@@ -1,3 +1,5 @@
+
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import Link from "next/link";
 
 import { CreatorEmpty, CreatorKpis, CreatorMoneyStrip } from "@/features/creator-workspace/components/creator-workspace-ui";
@@ -79,7 +81,7 @@ export function CreatorProfilePayments({
                   </Link>
                 </h2>
                 <p className="note" style={{ marginTop: 2 }}>
-                  {campaign?.campaign_document_number ?? ""}
+                  {formatDocumentNumberForDisplay(campaign?.campaign_document_number ?? "")}
                   {campaign?.campaign_document_number ? " · " : ""}
                   {creatorPaymentExplanationForRow(row, {
                     vendorIoStatus: io?.status ?? campaign?.vendor_io_status,

@@ -1,4 +1,6 @@
 
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import Link from "next/link";
 import { useState } from "react";
 import { ChevronDownIcon } from "lucide-react";
@@ -85,7 +87,7 @@ export function ShortlistQuotationPanel({
               className="flex cursor-pointer items-center justify-between gap-2"
             >
               <span className="min-w-0 truncate font-mono text-xs">
-                {q.serial_number ?? q.name}
+                {formatDocumentNumberForDisplay(q.serial_number ?? q.name)}
               </span>
               <QuotationListStatusPill status={q.status} />
             </Link>
@@ -127,7 +129,7 @@ export function ShortlistQuotationPanel({
           <span className="sl-link__k">{title}</span>
           {latest.serial_number ? (
             <Link href={detailHref} className="ref" style={{ color: "var(--tw-bi)" }}>
-              {latest.serial_number}
+              {formatDocumentNumberForDisplay(latest.serial_number)}
             </Link>
           ) : null}
           <span className="sl-link__n">
@@ -135,7 +137,7 @@ export function ShortlistQuotationPanel({
           </span>
           <PackStatusPill status={latest.status} />
           <span className="tw-sp" />
-          {multiple && <select className="q-sel sl-linked-select" aria-label="Linked quotations" value={latest.id} onChange={event => setSelectedId(event.target.value)}>{quotations.map(q => <option key={q.id} value={q.id}>{q.serial_number ?? q.name} · v{q.version_number} · {q.status.replaceAll("_", " ")}</option>)}</select>}
+          {multiple && <select className="q-sel sl-linked-select" aria-label="Linked quotations" value={latest.id} onChange={event => setSelectedId(event.target.value)}>{quotations.map(q => <option key={q.id} value={q.id}>{formatDocumentNumberForDisplay(q.serial_number ?? q.name)} · v{q.version_number} · {q.status.replaceAll("_", " ")}</option>)}</select>}
           {actionButtons}
         </div>
     </div>

@@ -1,5 +1,8 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
+
+import "./quotations-list.css";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
@@ -383,7 +386,7 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
               footer={footer}
             >
               {filteredQuotations.map((row, index) => {
-                const serial = row.serial_number ?? row.id;
+                const serial = formatDocumentNumberForDisplay(row.serial_number ?? row.id);
                 const isSelected = effectiveSelectedIds.has(row.id);
                 const brand = row.brand_name?.trim() ?? "";
                 const client = row.client_name?.trim() ?? "";
@@ -417,7 +420,7 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
                       {brand || "not set"}
                     </DiscoverySuiteCell>
                     <DiscoverySuiteCell>
-                      <span className="tw-t" title={client || undefined}>
+                      <span className="tw-t quotation-register-client" title={client || undefined}>
                         {client || "—"}
                       </span>
                     </DiscoverySuiteCell>

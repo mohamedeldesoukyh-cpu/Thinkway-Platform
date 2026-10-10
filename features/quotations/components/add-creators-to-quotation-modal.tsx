@@ -1,3 +1,5 @@
+
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { QuotationText, useQuotationDesignLocale } from "./quotation-design-locale";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -299,7 +301,7 @@ export function AddCreatorsToQuotationModal({
                 <SelectContent>
                   {campaigns.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.document_number ?? c.name}
+                      {formatDocumentNumberForDisplay(c.document_number ?? c.name)}
                     </SelectItem>
                   ))}
                 </SelectContent>

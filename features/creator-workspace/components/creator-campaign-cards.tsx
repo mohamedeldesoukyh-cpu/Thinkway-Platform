@@ -1,3 +1,5 @@
+
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import Link from "next/link";
 
 import {
@@ -49,7 +51,7 @@ export function CreatorCampaignRow({ row }: { row: CreatorCampaignRow }) {
       <span className="row__b">
         <span className="row__t">{row.campaign_name}</span>
         <span className="row__m">
-          {row.campaign_document_number} · {formatPortalDate(row.start_date)} →{" "}
+          {formatDocumentNumberForDisplay(row.campaign_document_number)} · {formatPortalDate(row.start_date)} →{" "}
           {formatPortalDate(row.end_date)}
           {delivered}
         </span>

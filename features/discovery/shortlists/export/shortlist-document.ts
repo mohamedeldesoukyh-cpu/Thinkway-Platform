@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { creatorProfileSourceFromUnified } from "@/lib/creators/creator-profile-source";
 import {
   brandSafetyMeta,
@@ -624,7 +625,7 @@ export function buildShortlistDocument(
 
   return {
     template,
-    serial: detail.serial_number ?? "SL-PENDING",
+    serial: formatDocumentNumberForDisplay(detail.serial_number ?? "SL-PENDING"),
     creatorListCost: detail.creatorListCost,
     name: detail.name,
     description: detail.description,

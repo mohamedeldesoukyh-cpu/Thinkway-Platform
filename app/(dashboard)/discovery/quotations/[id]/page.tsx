@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!summary) return { title: "Quotation" };
 
   return {
-    title: metadataTitleForEntity(summary, summary.serial_number),
+    title: metadataTitleForEntity(summary, formatDocumentNumberForDisplay(summary.serial_number)),
   };
 }
 

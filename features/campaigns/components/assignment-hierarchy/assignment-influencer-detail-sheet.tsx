@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import Link from "next/link";
 import { AssignmentCreatorCountry } from "./assignment-creator-country";
@@ -266,7 +268,7 @@ function GeneralTab({
           </DetailField>
           {line.vendor_io_document_number ? (
             <DetailField label="Vendor IO">
-              <span className="tw-id">{line.vendor_io_document_number}</span>
+              <span className="tw-id">{formatDocumentNumberForDisplay(line.vendor_io_document_number)}</span>
             </DetailField>
           ) : null}
         </>
@@ -553,7 +555,7 @@ export function AssignmentInfluencerDetailSheet({
 
             <div className="tw-cm__l">
               <div className="cr">
-                {campaignName} / {line.document_number || handle}
+                {campaignName} / {formatDocumentNumberForDisplay(line.document_number || handle)}
               </div>
               <div className="tw-cm__av">
                 {creatorAvatarUrl && !avatarFailed ? (
@@ -620,7 +622,7 @@ export function AssignmentInfluencerDetailSheet({
                 </div>
                 <div>
                   <i>Vendor IO</i>
-                  <b>{line.vendor_io_document_number || "—"}</b>
+                  <b>{formatDocumentNumberForDisplay(line.vendor_io_document_number || "—")}</b>
                 </div>
               </div>
             </div>

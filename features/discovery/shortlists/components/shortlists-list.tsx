@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -368,7 +370,7 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
               footer={footer}
             >
               {filteredShortlists.map((row, index) => {
-                const serial = row.serial_number ?? row.id;
+                const serial = formatDocumentNumberForDisplay(row.serial_number ?? row.id);
                 const isSelected = effectiveSelectedIds.has(row.id);
                 const brand = row.brand_name?.trim() ?? "";
                 const ownerLabel = row.owner_name ?? "—";

@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import { useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
 import { useEscapeClearSelection } from "@/lib/hooks/use-escape-clear-selection";
@@ -534,7 +536,7 @@ export function ShortlistWorkspace({
   }
 
   const existingQuotationLabel =
-    latestQuotation?.serial_number?.trim() ||
+    formatDocumentNumberForDisplay(latestQuotation?.serial_number) ||
     latestQuotation?.name?.trim() ||
     null;
 
@@ -832,12 +834,12 @@ export function ShortlistWorkspace({
       <header className="sl-head"><div className="sl-head__in">
         <div className="sl-head__nav">
           <Link className="q-b q-b--sm q-b--ghost" href="/discovery/shortlists">← Back to shortlists</Link>
-          <span className="sl-crumb"><Link href="/discovery">Discovery</Link><span>/</span><Link href="/discovery/shortlists">Shortlists</Link><span>/</span><b>{detail.serial_number}</b></span>
+          <span className="sl-crumb"><Link href="/discovery">Discovery</Link><span>/</span><Link href="/discovery/shortlists">Shortlists</Link><span>/</span><b>{formatDocumentNumberForDisplay(detail.serial_number)}</b></span>
           <span className="q-sp" />
           <div className="sl-nav"><EntityPrevNext entity="shortlists" currentId={detail.id} hrefForId={(id) => shortlistDetailPath(id)} /></div>
         </div>
         <div className="sl-head__t">
-          <span className="sl-ref">{detail.serial_number}</span><h1>{detail.name}</h1>
+          <span className="sl-ref">{formatDocumentNumberForDisplay(detail.serial_number)}</span><h1>{detail.name}</h1>
           <span className={cn("q-p", detail.status === "approved" ? "q-p--ok" : detail.status === "under_review" ? "q-p--wrn" : "")}><s />{SHORTLIST_STATUS_LABELS[detail.status]}</span>
           {canEditDetails && <button type="button" className="q-b q-b--sm q-b--icon" aria-label="Edit shortlist" disabled={isPending} onClick={() => setEditOpen(true)}><PencilIcon className="size-3.5" /></button>}
         </div>
@@ -918,7 +920,7 @@ export function ShortlistWorkspace({
       <div className="sl-wrap">
         <div className="sl-sum" aria-label="Shortlist summary">
           {mastheadMetrics.map(m => <div className="sl-m" key={m.label}><u>{m.label}</u><b className={m.value === 0 ? "z" : undefined}>{m.value}</b>{m.caption && <em>{m.caption}</em>}</div>)}
-          <div className="sl-m"><u>Latest quotation</u>{latestQuotation ? <><Link href={quotationDetailPath(latestQuotation.id, latestQuotation.serial_number)}>{latestQuotation.serial_number ?? latestQuotation.name}</Link><em>v{latestQuotation.version_number} · of the quotation</em></> : <b className="z">—</b>}</div>
+          <div className="sl-m"><u>Latest quotation</u>{latestQuotation ? <><Link href={quotationDetailPath(latestQuotation.id, latestQuotation.serial_number)}>{formatDocumentNumberForDisplay(latestQuotation.serial_number ?? latestQuotation.name)}</Link><em>v{latestQuotation.version_number} · of the quotation</em></> : <b className="z">—</b>}</div>
           <CreatorListCostControl key={detail.id} shortlistId={detail.id} value={detail.creatorListCost} disabled={!canEditDetails} />
         </div>
         {!canEditDetails && <div className="sl-ro" role="status">{detail.is_archived || detail.status === "archived" ? "Archived shortlist" : detail.status === "cancelled" ? "Cancelled shortlist" : "Read-only access"} · editing is unavailable.</div>}
@@ -1198,7 +1200,7 @@ export function ShortlistWorkspace({
         reviewNumber={shareReviewNumber}
         status={detail.status}
         version={shareReviewNumber != null ? `v${shareReviewNumber}` : null}
-        documentLabel={detail.serial_number ?? detail.name}
+        documentLabel={formatDocumentNumberForDisplay(detail.serial_number ?? detail.name)}
         linkEnabled={hasLink}
       />
     </div>

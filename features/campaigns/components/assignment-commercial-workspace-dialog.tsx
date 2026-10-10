@@ -1,4 +1,6 @@
 
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import "@/app/commercial-workspace.css";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
@@ -588,7 +590,7 @@ export function AssignmentCommercialWorkspaceDialog({
                         </div>
                         <div className="cg-handle truncate">
                           {identity.handle ? `@${identity.handle} · ` : ""}
-                          {line.document_number}
+                          {formatDocumentNumberForDisplay(line.document_number)}
                           {line.assignment?.pricing_mode === "per_deliverable"
                             ? " · Per deliverable"
                             : " · Package"}

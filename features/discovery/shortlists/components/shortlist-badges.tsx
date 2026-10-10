@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import Link from "next/link";
 
 import { StatusBadge } from "@/components/shared/status/status-badge";
@@ -143,7 +144,7 @@ export function isShortlistCreatorQuoted(
 }
 
 function quotationBadgeLabel(ref: ShortlistCreatorQuotationRef): string {
-  if (ref.serial_number?.trim()) return ref.serial_number.trim();
+  if (ref.serial_number?.trim()) return formatDocumentNumberForDisplay(ref.serial_number);
   return ref.name.trim() || "Quotation";
 }
 

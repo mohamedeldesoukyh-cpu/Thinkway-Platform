@@ -180,7 +180,7 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
 
 {
   const doc = buildQuotationDocument(mockDetail());
-  assert.equal(doc.serial, "QT-2026-0001");
+  assert.equal(doc.serial, "QT-26-1");
   assert.equal(doc.template, "detailed");
   assert.ok(doc.preparedForLine.includes("Acme Corp"));
   assert.ok(doc.termsSections.length >= 5);

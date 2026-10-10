@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import { PlusIcon, TagIcon } from "lucide-react";
 import { useActionState, useCallback, useEffect, useMemo, useState } from "react";
@@ -89,7 +91,7 @@ function buildClientBrandsColumns(
               : "font-mono text-[#0057FF] hover:underline"
           )}
         >
-          {brand.document_number}
+          {formatDocumentNumberForDisplay(brand.document_number)}
         </button>
       ),
     },

@@ -2,7 +2,7 @@
  * Display-only formatting for Thinkway document numbers.
  * Storage / search / sequencing keep zero-padded canonical values (e.g. TW-2026-0001).
  *
- * Campaign headers/lines: UI shows Camp#YYYY-N (and Camp#YYYY-N-A) so “TW” is not
+ * Campaign headers/lines: UI shows Camp#YY-N (and Camp#YY-N-A) so “TW” is not
  * confused with Thinkway product branding. DB still stores TW-YYYY-NNNN.
  */
 
@@ -16,8 +16,7 @@ function formatNumericToken(token: string): string {
   if (!NUMERIC_SEGMENT.test(token)) {
     return token;
   }
-  const parsed = Number.parseInt(token, 10);
-  return Number.isFinite(parsed) ? String(parsed) : token;
+  return token.replace(/^0+(?=\d)/, "");
 }
 
 /** Strip leading zeros from numeric parts; supports VIO revision suffixes (0006/2). */
@@ -33,13 +32,13 @@ function stripDisplayZeros(value: string): string {
 }
 
 /**
- * TW-2026-0001 → Camp#2026-1 · TW-2026-0001-A → Camp#2026-1-A
+ * TW-2026-0001 → Camp#26-1 · TW-2026-0001-A → Camp#26-1-A
  * Non-campaign docs keep their own prefixes (VIO-, INF-, CIO-, …).
  */
 function toCampaignDisplayForm(trimmed: string): string | null {
   const match = trimmed.match(/^TW-(\d{4})-(.+)$/i);
   if (!match) return null;
-  const year = match[1]!;
+  const year = match[1]!.slice(-2);
   const rest = stripDisplayZeros(match[2]!);
   return `${CAMPAIGN_DISPLAY_PREFIX}${year}-${rest}`;
 }
@@ -48,15 +47,16 @@ function toCampaignDisplayForm(trimmed: string): string | null {
  * Camp#2026-1 / Camp#2026-1-A → TW-2026-1 / TW-2026-1-A (unpadded) for lookup.
  */
 function fromCampaignDisplayForm(trimmed: string): string | null {
-  const match = trimmed.match(/^Camp#(\d{4})-(.+)$/i);
+  const match = trimmed.match(/^Camp#(\d{2}|\d{4})-(.+)$/i);
   if (!match) return null;
-  return `${CAMPAIGN_STORAGE_PREFIX}-${match[1]}-${match[2]}`;
+  const year = match[1]!.length === 2 ? `20${match[1]}` : match[1];
+  return `${CAMPAIGN_STORAGE_PREFIX}-${year}-${match[2]}`;
 }
 
 /**
  * Strip leading zeros from numeric hyphen segments; leave text segments unchanged.
- * Campaign: TW-2026-0001 → Camp#2026-1 · line TW-2026-0001-A → Camp#2026-1-A
- * Other: VIO-2026-0006/2 → VIO-2026-6/2 · INF-000002 → INF-2
+ * Campaign: TW-2026-0001 → Camp#26-1 · line TW-2026-0001-A → Camp#26-1-A
+ * Other: VIO-2026-0006/2 → VIO-26-6/2 · INF-000002 → INF-2
  */
 export function formatDocumentNumberForDisplay(
   value: string | null | undefined
@@ -68,7 +68,10 @@ export function formatDocumentNumberForDisplay(
   const campaignDisplay = toCampaignDisplayForm(trimmed);
   if (campaignDisplay) return campaignDisplay;
 
-  return stripDisplayZeros(trimmed);
+  // Only a year immediately following a document prefix is abbreviated.
+  // Dates and numeric identifiers without a document prefix are not years here.
+  const compactYear = trimmed.replace(/^([A-Za-z][A-Za-z#]*)-(20\d{2})-/, (_, prefix: string, year: string) => `${prefix}-${year.slice(-2)}-`);
+  return stripDisplayZeros(compactYear);
 }
 
 /** True when display form differs from stored value (use for native tooltips). */
@@ -84,13 +87,13 @@ export function documentNumberDisplayTitle(
 
 /**
  * Lookup candidates for route/document resolution.
- * Display forms (INF-10483, Camp#2026-1) also try common zero-padded storage forms.
+ * Display forms (INF-10483, Camp#26-1) also try common zero-padded storage forms.
  */
 export function documentNumberLookupCandidates(value: string): string[] {
   const trimmed = value.trim();
   if (!trimmed) return [];
 
-  const asStorage = fromCampaignDisplayForm(trimmed) ?? trimmed;
+  const asStorage = fromCampaignDisplayForm(trimmed) ?? trimmed.replace(/^([A-Za-z]+)-(\d{2})-(\d+)(.*)$/, "$1-20$2-$3$4");
   const candidates = [trimmed];
   if (asStorage !== trimmed) {
     candidates.push(asStorage);
@@ -105,7 +108,7 @@ export function documentNumberLookupCandidates(value: string): string[] {
   if (!revisionMatch) {
     // Line suffix form TW-2026-1-A — pad the serial segment (index 2).
     if (
-      segments[0]?.toUpperCase() === CAMPAIGN_STORAGE_PREFIX &&
+      /^(TW|QT|SL)$/i.test(segments[0] ?? "") &&
       segments.length >= 3 &&
       NUMERIC_SEGMENT.test(segments[2]!)
     ) {

@@ -1,4 +1,6 @@
 
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import { format } from "date-fns";
 
 import { Badge } from "@/components/ui/badge";
@@ -109,7 +111,7 @@ export function ApprovalDetailSheet({
                   {campaignId && row.source_tab && row.source_id ? (
                     <DetailField label="Source document">
                       <a className="text-primary underline" href={`/campaigns/${encodeURIComponent(campaignId)}?tab=${row.source_tab}&io=${encodeURIComponent(row.source_id)}`}>
-                        Open {row.entity_type} {row.document_number}
+                        Open {row.entity_type} {formatDocumentNumberForDisplay(row.document_number)}
                       </a>
                     </DetailField>
                   ) : null}

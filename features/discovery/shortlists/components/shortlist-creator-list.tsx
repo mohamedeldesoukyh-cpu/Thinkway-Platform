@@ -1,4 +1,6 @@
 
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import { useMemo, useState } from "react";
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 import {
@@ -181,7 +183,7 @@ function ShortlistCreatorGridRow({
           </span>
         </DiscoverySuiteCell>
         <DiscoverySuiteCell>
-          <div className="sl-q">{item.quotation_refs.length ? item.quotation_refs.map(ref => <div key={ref.quotation_id}><Link href={quotationDetailPath(ref.quotation_id, ref.serial_number)}>{ref.serial_number ?? ref.name}</Link><span className="sl-quote-status">{QUOTATION_STATUS_LABELS[ref.status]}</span></div>) : <span className="sl-na">—</span>}</div>
+          <div className="sl-q">{item.quotation_refs.length ? item.quotation_refs.map(ref => <div key={ref.quotation_id}><Link href={quotationDetailPath(ref.quotation_id, ref.serial_number)}>{formatDocumentNumberForDisplay(ref.serial_number ?? ref.name)}</Link><span className="sl-quote-status">{QUOTATION_STATUS_LABELS[ref.status]}</span></div>) : <span className="sl-na">—</span>}</div>
         </DiscoverySuiteCell>
       </DiscoverySuiteRow>
     );
@@ -269,7 +271,7 @@ function ShortlistCreatorGridRow({
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>
-        <div className="sl-q">{item.quotation_refs.length ? item.quotation_refs.map(ref => <div key={ref.quotation_id}><Link href={quotationDetailPath(ref.quotation_id, ref.serial_number)}>{ref.serial_number ?? ref.name}</Link><span className="sl-quote-status">{QUOTATION_STATUS_LABELS[ref.status]}</span></div>) : <span className="sl-na">—</span>}</div>
+        <div className="sl-q">{item.quotation_refs.length ? item.quotation_refs.map(ref => <div key={ref.quotation_id}><Link href={quotationDetailPath(ref.quotation_id, ref.serial_number)}>{formatDocumentNumberForDisplay(ref.serial_number ?? ref.name)}</Link><span className="sl-quote-status">{QUOTATION_STATUS_LABELS[ref.status]}</span></div>) : <span className="sl-na">—</span>}</div>
       </DiscoverySuiteCell>
     </DiscoverySuiteRow>
   );

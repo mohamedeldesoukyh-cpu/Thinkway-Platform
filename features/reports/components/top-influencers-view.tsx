@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import Link from "next/link";
 
@@ -107,7 +109,7 @@ export function TopInfluencersView({ report }: Props) {
                         </div>
                       </td>
                       <td className="px-4 py-2.5 tabular-nums text-muted-foreground">
-                        {row.document_number || "—"}
+                        {formatDocumentNumberForDisplay(row.document_number || "—")}
                       </td>
                       <td className="px-4 py-2.5 text-right tabular-nums font-medium">
                         {row.spending === 0 ? "—" : formatAmount(row.spending)}

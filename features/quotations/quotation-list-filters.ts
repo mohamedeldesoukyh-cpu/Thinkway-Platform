@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import type { QuotationStatus } from "@/types/database";
 
 import type { QuotationListRow } from "./types";
@@ -39,6 +40,7 @@ export function filterQuotationRows(
     const haystack = [
       row.name,
       row.serial_number ?? "",
+      formatDocumentNumberForDisplay(row.serial_number),
       row.brand_name ?? "",
       row.client_name ?? "",
       row.campaign_name ?? "",

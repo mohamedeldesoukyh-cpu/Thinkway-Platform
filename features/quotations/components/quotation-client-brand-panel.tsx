@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 import { useCallback, useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -177,7 +178,7 @@ export function QuotationClientBrandPanel({ detail, options, disabled, wizard }:
     () =>
       options.campaigns.map((c) => ({
         value: c.id,
-        label: c.document_number ? `${c.name} (${c.document_number})` : c.name,
+        label: c.document_number ? `${c.name} (${formatDocumentNumberForDisplay(c.document_number)})` : c.name,
       })),
     [options.campaigns]
   );

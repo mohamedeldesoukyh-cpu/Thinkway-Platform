@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import { QuotationText, QuotationLanguageSwitcher } from "./quotation-design-locale";
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition, type ReactNode } from "react";
@@ -200,7 +202,7 @@ export function QuotationWorkspaceHeader({
   }
 
   async function runStatus(status: "under_review" | "cancelled") {
-    if (status === "cancelled" && !(await confirm({ title: "Cancel quotation?", description: `Cancel ${detail.serial_number ?? detail.name}?`, confirmLabel: "Cancel quotation", variant: "destructive" }))) return;
+    if (status === "cancelled" && !(await confirm({ title: "Cancel quotation?", description: `Cancel ${formatDocumentNumberForDisplay(detail.serial_number ?? detail.name)}?`, confirmLabel: "Cancel quotation", variant: "destructive" }))) return;
     startTransition(async () => {
       const res = await updateQuotationHeader({ id: detail.id, status });
       if (!res.ok) {
@@ -213,7 +215,7 @@ export function QuotationWorkspaceHeader({
   }
 
   async function runArchive() {
-    if (!(await confirm({ title: "Archive quotation?", description: `Archive ${detail.serial_number ?? detail.name}? It will be removed from the active quotations list.`, confirmLabel: "Archive quotation", variant: "destructive" }))) return;
+    if (!(await confirm({ title: "Archive quotation?", description: `Archive ${formatDocumentNumberForDisplay(detail.serial_number ?? detail.name)}? It will be removed from the active quotations list.`, confirmLabel: "Archive quotation", variant: "destructive" }))) return;
     startTransition(async () => {
       const res = await archiveQuotation(detail.id);
       if (!res.ok) {
@@ -234,22 +236,22 @@ export function QuotationWorkspaceHeader({
       <header className="q-head"><div className="q-head__in">
         <div className="q-head__nav">
           <Link href={QUOTATIONS_LIST_PATH} className="q-b q-b--sm q-b--ghost"><QuotationText>← Back to quotations</QuotationText></Link>
-          <span className="q-crumb"><Link href="/discovery/search"><QuotationText>Discovery</QuotationText></Link> / <Link href={QUOTATIONS_LIST_PATH}><QuotationText>Client quotations</QuotationText></Link> / <b>{detail.serial_number}</b></span>
+          <span className="q-crumb"><Link href="/discovery/search"><QuotationText>Discovery</QuotationText></Link> / <Link href={QUOTATIONS_LIST_PATH}><QuotationText>Client quotations</QuotationText></Link> / <b>{formatDocumentNumberForDisplay(detail.serial_number)}</b></span>
           <span className="q-sp" />
           <div className="q-nav"><EntityPrevNext entity="quotations" currentId={detail.id} hrefForId={(id) => quotationDetailPath(id)} /></div>
           <QuotationLanguageSwitcher />
         </div>
         <div className="q-head__t">
-          <span className="q-ref">{detail.serial_number}</span><h1>{detail.name}</h1>
+          <span className="q-ref">{formatDocumentNumberForDisplay(detail.serial_number)}</span><h1>{detail.name}</h1>
           <span className={`q-p ${detail.is_expired || ["cancelled", "rejected"].includes(detail.status) ? "q-p--bad" : ["approved", "accepted"].includes(detail.status) ? "q-p--ok" : "q-p--wrn"}`}><QuotationText>{statusLabel}</QuotationText></span><span className="q-p q-p--blue">{detail.version}</span>
           <span className="q-sp" />
           <button type="button" className="q-b q-b--pri" onClick={runSendToClient} disabled={!detail.canManage || detail.status === "cancelled" || detail.status === "archived" || Boolean(detail.is_archived)}><QuotationText>Send to client</QuotationText></button>
         </div>
         <div className="q-head__meta">
           <b>{creatorCount ?? 0}</b> <QuotationText>creators</QuotationText> <span className="q-dot" /><b>{lineCount ?? 0}</b> <QuotationText>lines</QuotationText> <span className="q-dot" />
-          {detail.shortlist_id ? <Link className="q-link" href={`/discovery/shortlists/${detail.shortlist_id}`}><QuotationText>Shortlist</QuotationText> {detail.shortlist_serial} ↗</Link> : <span><QuotationText>Shortlist</QuotationText>: <QuotationText>Not linked</QuotationText></span>}
+          {detail.shortlist_id ? <Link className="q-link" href={`/discovery/shortlists/${detail.shortlist_id}`}><QuotationText>Shortlist</QuotationText> {formatDocumentNumberForDisplay(detail.shortlist_serial)} ↗</Link> : <span><QuotationText>Shortlist</QuotationText>: <QuotationText>Not linked</QuotationText></span>}
           <span className="q-dot" />
-          {detail.campaign_header_id ? <Link className="q-link" href={`/campaigns/${detail.campaign_header_id}`}><QuotationText>Campaign</QuotationText> {detail.campaign_document_number} ↗</Link> : <span><QuotationText>Campaign</QuotationText>: <span className="q-p"><QuotationText>Not linked</QuotationText></span></span>}
+          {detail.campaign_header_id ? <Link className="q-link" href={`/campaigns/${detail.campaign_header_id}`}><QuotationText>Campaign</QuotationText> {formatDocumentNumberForDisplay(detail.campaign_document_number)} ↗</Link> : <span><QuotationText>Campaign</QuotationText>: <span className="q-p"><QuotationText>Not linked</QuotationText></span></span>}
           <span className="q-dot" /><span className="q-sync"><s aria-hidden /><QuotationText>{detail.sync_enabled ? "Live sync" : "Snapshot locked"}</QuotationText></span>
           <span className="q-sp" />
           <span><QuotationText>Valid to</QuotationText> <b>{detail.validity_date ? formatDesignDate(detail.validity_date) : "Not set"}</b></span>
@@ -446,7 +448,7 @@ export function QuotationWorkspaceHeader({
         reviewNumber={shareReviewNumber}
         status={clientReview?.status ?? detail.status}
         version={detail.version}
-        documentLabel={detail.serial_number ?? detail.name}
+        documentLabel={formatDocumentNumberForDisplay(detail.serial_number ?? detail.name)}
         linkEnabled={hasLink}
       />
       <ClientReviewSendDialog

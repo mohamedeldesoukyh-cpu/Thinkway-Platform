@@ -1,3 +1,5 @@
+
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import Link from "next/link";
 import {HomeVatCard} from "./home-vat-card";
 import type {VatLedger} from "@/features/finance/vat/ledger-model";
@@ -427,7 +429,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
                     <span style={{ minWidth: 0 }}>
                       <span className="tw-nm">{campaign.name}</span>
                       <span className="tw-d">
-                        {campaign.document_number} · {campaign.status_label}
+                        {formatDocumentNumberForDisplay(campaign.document_number)} · {campaign.status_label}
                       </span>
                     </span>
                     <span className="tw-lv">
@@ -466,7 +468,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
                     <span style={{ minWidth: 0 }}>
                       <span className="tw-nm">{vendor.display_name}</span>
                       <span className="tw-d">
-                        {vendor.document_number} · {vendor.platform}
+                        {formatDocumentNumberForDisplay(vendor.document_number)} · {vendor.platform}
                         {vendor.country_label ? ` · ${vendor.country_label}` : ""}
                       </span>
                     </span>

@@ -1,4 +1,6 @@
 
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
@@ -54,7 +56,7 @@ export function AppendQuotationCreatorDialog({ quotationId, itemId, linkedCampai
       <label htmlFor="quotation-target-campaign" className="text-sm font-medium">Campaign</label>
       <select id="quotation-target-campaign" className="min-h-11 w-full rounded-md border bg-background p-2 text-base" value={campaignId} disabled={pending} onChange={e => { setCampaignId(e.target.value); setResult(null); }}>
         <option value="">Select a campaign</option>
-        {targets.map(c => <option key={c.id} value={c.id}>{c.document_number} · {c.name}</option>)}
+        {targets.map(c => <option key={c.id} value={c.id}>{formatDocumentNumberForDisplay(c.document_number)} · {c.name}</option>)}
       </select>
       {loadError && <p role="alert" className="text-sm text-destructive">{loadError}</p>}
       {result && (!result.ok || result.alreadyExists) && <p role="alert" className="text-sm">{result.ok ? "This creator is already in the selected campaign. No duplicate will be added." : result.message}</p>}

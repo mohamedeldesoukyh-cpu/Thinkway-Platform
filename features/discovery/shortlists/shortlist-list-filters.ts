@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import type { ShortlistStatus, ShortlistVisibilityV2 } from "@/types/database";
 
 import type { ShortlistListRow } from "./types";
@@ -45,6 +46,7 @@ export function filterShortlistRows(
     const haystack = [
       row.name,
       row.serial_number ?? "",
+      formatDocumentNumberForDisplay(row.serial_number),
       row.brand_name ?? "",
       row.client_name ?? "",
     ]

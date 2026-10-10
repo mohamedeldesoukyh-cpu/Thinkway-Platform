@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
@@ -35,7 +36,7 @@ export async function generateMetadata({
   if (!summary) return { title: "Shortlist" };
 
   return {
-    title: metadataTitleForEntity(summary, summary.serial_number),
+    title: metadataTitleForEntity(summary, formatDocumentNumberForDisplay(summary.serial_number)),
   };
 }
 

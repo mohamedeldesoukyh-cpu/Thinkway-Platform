@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import { useActionState, useEffect, useState } from "react";
 import { format } from "date-fns";
@@ -133,7 +135,7 @@ export function VendorPaymentOpsSection({
                         {row.campaign_name ?? "Campaign"}
                       </p>
                       <p className="text-[11px] text-muted-foreground">
-                        {row.campaign_document_number ?? "—"}
+                        {formatDocumentNumberForDisplay(row.campaign_document_number ?? "—")}
                       </p>
                     </td>
                     <td className="px-2 py-2.5 text-muted-foreground">
@@ -332,7 +334,7 @@ function PaymentOpsDetail({
             {payout.io ? (
               <div className="mt-1 space-y-1">
                 <p className="font-medium">
-                  Generated · {payout.io.document_number ?? payout.io.id.slice(0, 8)}
+                  Generated · {formatDocumentNumberForDisplay(payout.io.document_number ?? payout.io.id.slice(0, 8))}
                 </p>
                 <p className="text-muted-foreground">
                   Version {payout.io.revision_number}

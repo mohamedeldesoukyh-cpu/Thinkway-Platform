@@ -1,5 +1,7 @@
 "use client";
 
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import type { ReactNode } from "react";
 import Link from "next/link";
 
@@ -22,11 +24,11 @@ export function QuotationLifecyclePills({
   variant = "pills",
 }: Props) {
   const shortlistLabel = detail.shortlist_id
-    ? `Shortlist ${detail.shortlist_serial ?? detail.shortlist_id} · linked`
+    ? `Shortlist ${formatDocumentNumberForDisplay(detail.shortlist_serial ?? detail.shortlist_id)} · linked`
     : "Shortlist · not linked";
 
   const campaignLabel = detail.campaign_header_id
-    ? `Campaign ${detail.campaign_document_number ?? ""} · linked`.trim()
+    ? `Campaign ${formatDocumentNumberForDisplay(detail.campaign_document_number)} · linked`.trim()
     : "Campaign · not linked";
 
   const syncLabel = detail.sync_enabled ? "Live sync enabled" : "Snapshot locked";

@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-workspace-section";
 import { ClientIoCreateAmendment } from "./client-io-create-amendment";
@@ -33,7 +35,7 @@ export function ClientIoAmendmentHistory({ tip, versions }: Props) {
         <ul className="divide-y divide-border/60 rounded-md border border-border/70">
           {ordered.length === 0 ? (
             <li className="px-3 py-2.5 text-sm text-muted-foreground">
-              {tip.document_number ?? "Current tip"} ·{" "}
+              {formatDocumentNumberForDisplay(tip.document_number ?? "Current tip")} ·{" "}
               {formatClientIoAmendmentLabel(tip.revision_number)}
               {!tip.is_superseded ? " (current)" : null}
             </li>
@@ -47,7 +49,7 @@ export function ClientIoAmendmentHistory({ tip, versions }: Props) {
                 >
                   <div className="min-w-0">
                     <p className="text-sm font-medium text-foreground">
-                      {version.document_number ?? "—"}
+                      {formatDocumentNumberForDisplay(version.document_number ?? "—")}
                       <span className="ml-2 text-xs font-normal text-muted-foreground">
                         {formatClientIoAmendmentLabel(version.revision_number)}
                         {current ? " · current" : version.is_superseded ? " · superseded" : null}

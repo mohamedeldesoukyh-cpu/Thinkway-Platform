@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import { useMemo } from "react";
 
@@ -109,7 +111,7 @@ export function UnsettledDetailView({ report }: Props) {
                       className="border-b border-border/50 last:border-0"
                     >
                       <td className="px-4 py-2.5 tabular-nums">{formatDate(line.date)}</td>
-                      <td className="px-4 py-2.5 font-medium">{line.document_number}</td>
+                      <td className="px-4 py-2.5 font-medium">{formatDocumentNumberForDisplay(line.document_number)}</td>
                       <td className="px-4 py-2.5 text-muted-foreground">
                         {line.campaign_name ?? "—"}
                       </td>

@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -127,7 +129,7 @@ export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
                 {detail.shortlist_id ? (
                   <p className="ql-card-value">
                     <Link href={`/discovery/shortlists/${detail.shortlist_id}`}>
-                      {detail.shortlist_serial ?? detail.shortlist_id}
+                      {formatDocumentNumberForDisplay(detail.shortlist_serial ?? detail.shortlist_id)}
                     </Link>
                   </p>
                 ) : (
@@ -148,7 +150,7 @@ export function QuotationLifecyclePanel({ detail, promoteOptions }: Props) {
                 {detail.campaign_header_id ? (
                   <p className="ql-card-value">
                     <Link href={`/campaigns/${detail.campaign_header_id}`}>
-                      {detail.campaign_document_number ?? detail.campaign_header_id}
+                      {formatDocumentNumberForDisplay(detail.campaign_document_number ?? detail.campaign_header_id)}
                     </Link>
                   </p>
                 ) : (

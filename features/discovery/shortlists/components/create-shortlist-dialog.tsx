@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -131,7 +132,7 @@ export function CreateShortlistDialog({
           brandId: brandId === NO_BRAND ? null : brandId,
         });
         toast.success(
-          `Shortlist ${created.serial_number ?? ""} "${created.name}" created`.trim()
+          `Shortlist ${formatDocumentNumberForDisplay(created.serial_number)} "${created.name}" created`.trim()
         );
         setOpen(false);
         reset();

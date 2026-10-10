@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import { isActiveVendorIo } from "@/lib/io/active-vendor-io";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -114,7 +116,7 @@ function buildCampaignVendorIoColumns(
           onClick={() => onViewDetail(row.id)}
           title={`View ${row.document_number ?? "vendor IO"} details`}
         >
-          {row.document_number ?? "—"}
+          {formatDocumentNumberForDisplay(row.document_number ?? "—")}
         </button>
       ),
     },
@@ -126,7 +128,7 @@ function buildCampaignVendorIoColumns(
       cellClassName: "truncate",
       renderCell: (row) => (
         <span className="thinkway-campaign-link block max-w-full cursor-default truncate">
-          {row.assignment_document_number ?? "—"}
+          {formatDocumentNumberForDisplay(row.assignment_document_number ?? "—")}
         </span>
       ),
     },

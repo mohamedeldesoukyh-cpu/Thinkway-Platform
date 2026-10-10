@@ -1,4 +1,6 @@
 "use client";
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 
 import { isClientIoGenerated } from "@/lib/campaigns/sync-campaign-header-status";
 
@@ -181,7 +183,7 @@ export function ClientIoTab({
             <div className="thinkway-aurora-doc-row">
               <span className="dk">CIO number</span>
               <span className="dv text-[var(--camp-blue-text)]">
-                {io.document_number ?? "—"}
+                {formatDocumentNumberForDisplay(io.document_number ?? "—")}
               </span>
             </div>
             <div className="thinkway-aurora-doc-row">

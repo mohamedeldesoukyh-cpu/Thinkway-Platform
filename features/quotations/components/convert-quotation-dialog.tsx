@@ -1,4 +1,6 @@
 
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
@@ -108,7 +110,7 @@ export function ConvertQuotationDialog({ detail, open, onOpenChange, itemIds }: 
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="secondary">Accepted quotation</Badge>
             <span className="font-mono text-xs">
-              {detail.serial_number ?? detail.id.slice(0, 8)}
+              {formatDocumentNumberForDisplay(detail.serial_number ?? detail.id.slice(0, 8))}
             </span>
             <Badge variant="outline">V{detail.version_number}</Badge>
             <Badge variant="outline">{detail.status}</Badge>

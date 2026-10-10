@@ -1,4 +1,6 @@
 
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
@@ -164,7 +166,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
       onDoubleClick={() => resize(360)} onKeyDown={event => { if (event.key === "ArrowUp" || event.key === "ArrowDown") { event.preventDefault(); resize(height + (event.key === "ArrowUp" ? 20 : -20)); } }}><span /></div>
     <div className="acp-heading">
       <label className="acp-currency">Curr<select aria-label="Assignment editor currency" value={draft.currency} disabled={readOnly || fx.dirty || Boolean(child)} onChange={event => change("currency", event.target.value)}>{!currencies.some(entry => entry.value === draft.currency) && <option value={draft.currency}>{draft.currency}</option>}{currencies.map(entry => <option key={entry.value} value={entry.value}>{entry.value}</option>)}</select></label>
-      <div className="acp-identity"><strong>{line.document_number} · {formatCreatorDisplayName(line.assignment?.influencer_name ?? line.name)}</strong><span>{child ? `Child · ${selectedPost?.platform ?? child.platform} · ${selectedPost?.deliverable_type_label ?? child.deliverable_type_label} · ${isPackageChild ? "package share" : "deliverable totals"} (${draft.qty} ${draft.qty === 1 ? "unit" : "units"})` : "Parent assignment · package / assignment totals"}</span></div>
+      <div className="acp-identity"><strong>{formatDocumentNumberForDisplay(line.document_number)} · {formatCreatorDisplayName(line.assignment?.influencer_name ?? line.name)}</strong><span>{child ? `Child · ${selectedPost?.platform ?? child.platform} · ${selectedPost?.deliverable_type_label ?? child.deliverable_type_label} · ${isPackageChild ? "package share" : "deliverable totals"} (${draft.qty} ${draft.qty === 1 ? "unit" : "units"})` : "Parent assignment · package / assignment totals"}</span></div>
       <div className="acp-profit" data-health={health} aria-label="Live profitability" title="Margin health: green ≥20%, amber 10–20%, red <10% or a loss. Based on GP divided by revenue, excluding VAT.">
         <div title="Revenue + UR Rev + AF − Cost − UR Cost; excludes VAT"><span>GP</span><output>{profitAmount}</output>{fxFinancials && fx.valid && <small className="acp-equivalent">≈ EGP {fxFinancials.gp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>}</div>
         <div title="GP ÷ revenue including UR Rev and AF, excluding VAT"><span>GP %</span><output>{percent(profit.billableBase > 0 ? profit.marginPercent : null)}</output></div>
