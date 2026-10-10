@@ -1,3 +1,4 @@
+import { entranceState } from "./entrance-presentation";
 import { loadCommercialIoSnapshot } from "./load-commercial-io";
 import { canOpenCommercialWorkspace } from "./selection-flow";
 import type { CampaignObject } from "@/features/campaign-intelligence";
@@ -804,6 +805,8 @@ export async function loadClientWorkspace(
   });
 
   const entry: ClientWorkspaceEntry = {
+    entranceState: entranceState({...view.journey, selectedCount: calc.selectedCount}, activeReview.status),
+    entranceBanner: view.journey.historical ? "historical" : view.journey.quotationStage === "updated" ? "updated" : undefined,
     brandName: view.overview.brandName,
     campaignName: view.overview.campaignName,
     clientLabel: view.overview.clientLabel,

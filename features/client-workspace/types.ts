@@ -505,6 +505,8 @@ export type ClientWorkspaceView = {
 };
 
 export type ClientWorkspaceEntry = {
+  entranceState?: import("./entrance-presentation").EntranceState;
+  entranceBanner?: "historical" | "updated";
   brandName: string;
   campaignName: string;
   clientLabel: string;

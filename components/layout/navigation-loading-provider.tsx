@@ -16,6 +16,8 @@ function isModifiedClick(event: MouseEvent): boolean {
 
 function shouldStartNavigation(event: MouseEvent, pathname: string): boolean {
   if (event.defaultPrevented || isModifiedClick(event)) return false;
+  // The client entrance provides its own pending presentation.
+  if (event.target instanceof Element && event.target.closest("[data-client-entrance-cta]")) return false;
 
   const target = event.target;
   if (!(target instanceof Element)) return false;
