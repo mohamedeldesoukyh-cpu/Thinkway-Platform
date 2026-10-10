@@ -564,6 +564,3 @@
  .tw-entry .tw-card{backdrop-filter:none;-webkit-backdrop-filter:none}
  .tw-entry .tw-orb3d{transform:rotateX(68deg)}
 }
-.tw-workspace-loading{min-height:100dvh;padding:48px 24px;background:#f7f9fc;color:#101a33;font-family:var(--font-sans),system-ui,sans-serif}
-.tw-workspace-loading h1{font-size:24px;line-height:1.3;margin:0 0 12px}
-.tw-workspace-loading p{font-size:16px;line-height:1.5;margin:0;color:#52617a}
