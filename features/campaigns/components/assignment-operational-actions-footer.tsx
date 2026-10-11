@@ -45,6 +45,7 @@ type AssignmentOperationalActionsFooterProps = {
   vioLineIds: string[];
   reviseVioLineIds: string[];
   ungenerateIoLineIds: string[];
+  ungenerateBlockedReason?: string | null;
   invoiceLineIds: string[];
   invoiceTotal: number;
   onGenerateInvoice: (lineIds: string[]) => void;
@@ -62,6 +63,7 @@ export function AssignmentOperationalActionsFooter({
   vioLineIds,
   reviseVioLineIds,
   ungenerateIoLineIds,
+  ungenerateBlockedReason,
   invoiceLineIds,
   invoiceTotal,
   onGenerateInvoice,
@@ -166,13 +168,13 @@ export function AssignmentOperationalActionsFooter({
               }}
             />
           ) : null}
-          {ungenerateIoLineIds.length > 0 ? (
+          {ungenerateIoLineIds.length > 0 || ungenerateBlockedReason ? (
             <PlatformFloatingBarSecondaryLink
               action={{
                 id: "ungenerate",
                 label: "Ungenerate IO",
                 icon: Undo2Icon,
-                onClick: () => setUngenerateOpen(true),
+                onClick: () => ungenerateBlockedReason ? toast.error(ungenerateBlockedReason) : setUngenerateOpen(true),
               }}
             />
           ) : null}
