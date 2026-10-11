@@ -1,3 +1,4 @@
+import { loadVendorIoReopenEligibility } from "@/lib/io/vendor-io-query-helpers";
 import { fromEgp, toEgp } from "@/lib/commercial/fx-aggregation";
 import { getCampaignPoFxTotals, resolveFxPoSummary } from "@/lib/finance/po/fx-totals";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -286,9 +287,10 @@ export async function getCampaignWorkspace(
   const lineVendorIoIds = lines
     .map((l) => l.vendor_io_id)
     .filter((id): id is string => Boolean(id));
-  const [activeVendorIoDocMap, activeVendorIoLinkMap] = await Promise.all([
+  const [activeVendorIoDocMap, activeVendorIoLinkMap, vendorIoReopenChecks] = await Promise.all([
     buildActiveVendorIoDocumentMap(supabase, lineVendorIoIds),
     buildActiveVendorIoLinkMap(supabase, lineVendorIoIds),
+    loadVendorIoReopenEligibility(supabase, lineVendorIoIds),
   ]);
 
   const vendorInfluencerIds = (vendorsResult.data ?? []).map(
@@ -586,6 +588,8 @@ export async function getCampaignWorkspace(
       operational_status:
         (line.operational_status as CampaignLineWorkspace["operational_status"]) ?? "draft",
       vendor_io_id: line.vendor_io_id ?? null,
+      vendor_io_reopen_eligible: vendorIoReopenChecks.get(line.vendor_io_id ?? "")?.eligible ?? false,
+      vendor_io_reopen_reason: vendorIoReopenChecks.get(line.vendor_io_id ?? "")?.reason ?? null,
       active_vendor_io_id: line.vendor_io_id
         ? (activeVendorIoLinkMap.get(line.vendor_io_id) ?? null)
         : null,

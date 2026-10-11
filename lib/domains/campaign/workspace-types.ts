@@ -177,6 +177,8 @@ export type CampaignLineWorkspace = {
   vendor_io_id: string | null;
   /** Active (non-superseded) Vendor IO — null when pointer is orphan or superseded-only. */
   active_vendor_io_id?: string | null;
+  vendor_io_reopen_eligible?: boolean;
+  vendor_io_reopen_reason?: string | null;
   vendor_io_document_number: string | null;
   revenue_locked: boolean;
   cost_locked: boolean;

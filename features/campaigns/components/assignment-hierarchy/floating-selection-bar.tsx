@@ -59,6 +59,7 @@ type FloatingSelectionBarProps = {
   vioLineIds: string[];
   reviseVioLineIds: string[];
   ungenerateIoLineIds: string[];
+  ungenerateBlockedReason?: string | null;
   invoiceLineIds: string[];
   hasInvoiceSelection?: boolean;
   invoiceActionLabel?: "generate" | "regenerate" | null;
@@ -113,6 +114,7 @@ export function FloatingSelectionBar({
   vioLineIds,
   reviseVioLineIds,
   ungenerateIoLineIds,
+  ungenerateBlockedReason,
   invoiceLineIds,
   hasInvoiceSelection = invoiceLineIds.length > 0,
   invoiceActionLabel = "generate",
@@ -313,11 +315,11 @@ export function FloatingSelectionBar({
               Revise Vendor IO
             </button>
           ) : null}
-          {ungenerateIoLineIds.length > 0 ? (
+          {ungenerateIoLineIds.length > 0 || ungenerateBlockedReason ? (
             <button
               type="button"
               className="tw-selbar-btn"
-              onClick={() => setUngenerateOpen(true)}
+              onClick={() => ungenerateBlockedReason ? showErrorToastOnce(ungenerateBlockedReason) : setUngenerateOpen(true)}
             >
               <Undo2Icon className="size-3.5" aria-hidden />
               Ungenerate IO
@@ -378,7 +380,7 @@ export function FloatingSelectionBar({
           <DialogHeader>
             <DialogTitle>Un-generate Vendor IO</DialogTitle>
             <DialogDescription>
-              Return {ungenerateIoLineIds.length} line(s) to draft (not allowed when invoiced).
+              Reopen the entire Vendor IO for the selected assignments. Edit and save the amount and currency, then generate a new revision. Previous documents are preserved. Recorded payments must be edited and cleared first; issued client invoices remain protected.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">

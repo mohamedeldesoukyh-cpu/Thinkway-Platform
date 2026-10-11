@@ -5,9 +5,7 @@ import type { IoCoverageAnalysis } from "@/lib/operations/io-coverage";
 import {
   canRegenerateInvoice,
   enrichRegenerationEligibilityInput,
-  hasInvoiceLinkage,
   isAssignmentInvoiceSelectable,
-  isInvoiceLifecycleReopenable,
   resolveInvoiceActionForSelection,
   type RegenerationEligibilityInput,
 } from "@/lib/billing/regeneration-eligibility";
@@ -228,12 +226,7 @@ export function resolveSelectionActions(input: {
       reviseVioLineIds.push(row.lineId);
     }
 
-    if (
-      !invoiceable &&
-      meta?.ungenerateIoEligible &&
-      !hasInvoiceLinkage(rowEligibilityInput(row, billingContext)) &&
-      !isInvoiceLifecycleReopenable(rowEligibilityInput(row, billingContext))
-    ) {
+    if (meta?.ungenerateIoEligible) {
       ungenerateIoLineIds.push(row.lineId);
     }
   }

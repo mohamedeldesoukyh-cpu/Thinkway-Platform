@@ -55,6 +55,7 @@ type AssignmentSafeActionsFooterProps = {
   vioLineIds: string[];
   reviseVioLineIds: string[];
   ungenerateIoLineIds: string[];
+  ungenerateBlockedReason?: string | null;
   invoiceLineIds: string[];
   hasInvoiceSelection?: boolean;
   invoiceActionLabel?: "generate" | "regenerate" | null;
@@ -106,6 +107,7 @@ export function AssignmentSafeActionsFooter({
   vioLineIds,
   reviseVioLineIds,
   ungenerateIoLineIds,
+  ungenerateBlockedReason,
   invoiceLineIds,
   hasInvoiceSelection = invoiceLineIds.length > 0,
   invoiceActionLabel = "generate",
@@ -289,13 +291,13 @@ export function AssignmentSafeActionsFooter({
               }}
             />
           ) : null}
-          {ungenerateIoLineIds.length > 0 ? (
+          {ungenerateIoLineIds.length > 0 || ungenerateBlockedReason ? (
             <PlatformFloatingBarSecondaryLink
               action={{
                 id: "ungenerate",
                 label: "Ungenerate IO",
                 icon: Undo2Icon,
-                onClick: () => setUngenerateOpen(true),
+                onClick: () => ungenerateBlockedReason ? showErrorToastOnce(ungenerateBlockedReason) : setUngenerateOpen(true),
               }}
             />
           ) : null}
@@ -372,7 +374,7 @@ export function AssignmentSafeActionsFooter({
           <DialogHeader>
             <DialogTitle>Un-generate Vendor IO</DialogTitle>
             <DialogDescription>
-              Return {ungenerateIoLineIds.length} line(s) to draft (not allowed when invoiced).
+              Reopen the entire Vendor IO for the selected assignments. Edit and save the amount and currency, then generate a new revision. Previous documents are preserved. Recorded payments must be edited and cleared first; issued client invoices remain protected.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">

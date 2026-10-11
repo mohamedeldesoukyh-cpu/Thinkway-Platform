@@ -453,6 +453,7 @@ export function AssignmentHierarchyTable({
             vioLineIds={vioLineIds}
             reviseVioLineIds={reviseVioLineIds}
             ungenerateIoLineIds={ungenerateIoLineIds}
+            ungenerateBlockedReason={preparedRows.find(row => selectedLineIds.has(row.lineId) && row.group.line.vendor_io_reopen_reason)?.group.line.vendor_io_reopen_reason}
             invoiceLineIds={invoiceLineIds}
             invoiceTotal={invoiceTotal}
             onGenerateInvoice={(lineIds) => onInvoiceLines?.(lineIds)}

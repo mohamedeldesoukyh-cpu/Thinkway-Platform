@@ -2,15 +2,16 @@ export type VendorIoLineBillingSnapshot = {
   operational_status: string;
   invoice_id: string | null;
   billing_status: string;
+  invoice_unlocked?: boolean;
 };
 
 export function isLineBlockingVendorIoUngenerate(
   line: VendorIoLineBillingSnapshot
 ): boolean {
-  if (line.invoice_id) return true;
+  if (line.invoice_id && !line.invoice_unlocked) return true;
   if (line.operational_status === "invoiced") return true;
   if (line.operational_status === "partially_invoiced") return true;
-  return ["invoiced", "paid", "closed"].includes(line.billing_status);
+  return ["invoiced", "partially_paid", "paid", "closed"].includes(line.billing_status);
 }
 
 export function isLineUngenerateIoEligible(

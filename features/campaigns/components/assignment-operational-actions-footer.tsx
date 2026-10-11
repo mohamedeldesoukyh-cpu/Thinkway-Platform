@@ -234,9 +234,7 @@ export function AssignmentOperationalActionsFooter({
           <DialogHeader>
             <DialogTitle>Un-generate Vendor IO</DialogTitle>
             <DialogDescription>
-              Remove Vendor IO from {ungenerateIoLineIds.length} selected assignment
-              {ungenerateIoLineIds.length === 1 ? "" : "s"} and return them to draft. Not
-              allowed when a line is already invoiced.
+              Reopen the entire Vendor IO for the selected assignments. Edit and save the amount and currency, then generate a new revision. Previous documents are preserved. Recorded payments must be edited and cleared first; issued client invoices remain protected.
             </DialogDescription>
           </DialogHeader>
           <form action={ungenerateAction} className="grid gap-3">

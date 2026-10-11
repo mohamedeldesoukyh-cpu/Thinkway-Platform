@@ -156,7 +156,8 @@ export function deriveAssignmentLineMeta(
     remaining <= 0 &&
     hasExistingIoCoverage(currentIoSnapshot) &&
     requiresIoRevision(ioBaseline, currentIoSnapshot);
-  const ungenerateIoEligible = isLineUngenerateIoEligible({
+  const ungenerateIoEligible = line.vendor_io_reopen_eligible ?? isLineUngenerateIoEligible({
+    invoice_unlocked: !line.revenue_locked && !line.cost_locked && line.billing_status === "moved_to_billing",
     vendor_io_id: line.active_vendor_io_id ?? line.vendor_io_id,
     operational_status: line.operational_status ?? "draft",
     invoice_id: line.invoice_id ?? null,

@@ -65,8 +65,7 @@ export function VendorIoUngenerateDialog({
         <DialogHeader>
           <DialogTitle>Un-generate Vendor IO</DialogTitle>
           <DialogDescription>
-            Remove {label} for {row.influencer_name} and return linked assignment lines to
-            draft. Only allowed when no linked line has been invoiced.
+            Reopen {label} for {row.influencer_name} and all its linked assignments. Edit and save the amount and currency, then generate a new revision. Previous documents are preserved. Recorded payments must be edited and cleared first; issued client invoices remain protected.
           </DialogDescription>
         </DialogHeader>
         <form action={action} className="grid gap-3">

@@ -104,7 +104,9 @@ export async function generateVendorIosFromLinesAction(
     billing_status: string;
   };
 
-  const typedLines = lines as unknown as LineRow[];
+  const allLines = lines as unknown as LineRow[];
+  const pendingIds = [...new Set(allLines.map(line => line.metadata?.pending_vendor_io_id).filter((id): id is string => typeof id === "string"))];
+  const typedLines = allLines.filter(line => !line.metadata?.pending_vendor_io_id);
 
   for (const line of typedLines) {
     const activeVendorIoId = await resolveActiveVendorIoId(supabase, line.vendor_io_id);
@@ -154,7 +156,25 @@ export async function generateVendorIosFromLinesAction(
     groups.set(key, bucket);
   }
 
-  let created = 0;
+  if (pendingIds.length) {
+    const { data: pendingIos, error } = await supabase.from("vendor_ios")
+      .select("id").eq("campaign_header_id", campaignId).in("id", pendingIds);
+    if (error || pendingIos?.length !== pendingIds.length) {
+      return { ok: false, message: "Could not verify the IOs awaiting regeneration. Refresh and try again." };
+    }
+  }
+
+  // Reopened IOs regenerate their complete original assignment scope atomically.
+  let regenerated = 0;
+  for (const previousId of pendingIds) {
+    const {data, error} = await supabase.rpc("regenerate_reopened_vendor_io" as never, {p_io: previousId} as never);
+    if (error || !data) return {ok:false,message:error?.message ?? "Could not regenerate Vendor IO."};
+    try { await generateVendorIoDocument(supabase, String(data), user.id); }
+    catch { revalidatePath('/campaigns/'+campaignId); revalidatePath('/ios/vendor'); return {ok:false,message:"IO revision saved, but PDF generation failed. Open Vendor IO and regenerate its document."}; }
+    regenerated++;
+  }
+
+  let created = regenerated;
 
   for (const group of groups.values()) {
     const primaryLine = group.lines[0]!;
@@ -317,7 +337,7 @@ export async function generateVendorIosFromLinesAction(
   const docNumbers = created === 1 ? "Vendor IO" : `${created} Vendor IOs`;
   return {
     ok: true,
-    message: `${docNumbers} generated for ${typedLines.length} assignment line(s). Lines are now invoice-eligible.`,
+    message: `${docNumbers} generated for ${allLines.length} selected assignment line(s). Lines are now invoice-eligible.`,
     created,
   };
 }

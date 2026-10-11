@@ -3,11 +3,6 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
-import {
-  isLineUngenerateIoEligible,
-  vendorIoUngenerateEligibility,
-  type VendorIoLineBillingSnapshot,
-} from "@/lib/io/vendor-io-ungenerate-eligibility";
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -48,110 +43,9 @@ async function requireAuth() {
   return { supabase, user, error: null };
 }
 
-async function loadLinkedLineSnapshots(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  vendorIoId: string
-): Promise<VendorIoLineBillingSnapshot[]> {
-  const snapshots: VendorIoLineBillingSnapshot[] = [];
-  const seen = new Set<string>();
-
-  const { data: directLines } = await supabase
-    .from("campaign_lines")
-    .select("id, operational_status, invoice_id, billing_status")
-    .eq("vendor_io_id", vendorIoId);
-
-  for (const row of directLines ?? []) {
-    const line = row as VendorIoLineBillingSnapshot & { id: string };
-    if (seen.has(line.id)) continue;
-    seen.add(line.id);
-    snapshots.push(line);
-  }
-
-  const { data: joinRows } = await supabase
-    .from("vendor_io_lines")
-    .select(
-      "campaign_line:campaign_lines(id, operational_status, invoice_id, billing_status)"
-    )
-    .eq("vendor_io_id", vendorIoId);
-
-  for (const join of joinRows ?? []) {
-    const line = (join as { campaign_line: VendorIoLineBillingSnapshot & { id: string } | null })
-      .campaign_line;
-    if (!line || seen.has(line.id)) continue;
-    seen.add(line.id);
-    snapshots.push(line);
-  }
-
-  return snapshots;
-}
-
-async function ungenerateOneVendorIo(
-  supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>,
-  vendorIoId: string,
-  campaignId: string
-): Promise<{ ok: true; documentNumber: string } | { ok: false; message: string }> {
-  const { data: vendorIo, error: vioError } = await supabase
-    .from("vendor_ios")
-    .select("id, document_number, campaign_header_id, status")
-    .eq("id", vendorIoId)
-    .eq("campaign_header_id", campaignId)
-    .maybeSingle();
-
-  if (vioError || !vendorIo) {
-    return { ok: false, message: vioError?.message ?? "Vendor IO not found." };
-  }
-
-  if ((vendorIo as {status?:string}).status !== "draft") return {ok:false,message:"Issued IOs must be cancelled, not deleted. Use Cancel IO to preserve the document and history."};
-  const lineSnapshots = await loadLinkedLineSnapshots(supabase, vendorIoId);
-  const eligibility = vendorIoUngenerateEligibility(lineSnapshots);
-  if (!eligibility.eligible) {
-    return { ok: false, message: eligibility.reason ?? "Not eligible to un-generate." };
-  }
-
-  const lineIds = new Set<string>();
-  const { data: directIds } = await supabase
-    .from("campaign_lines")
-    .select("id")
-    .eq("vendor_io_id", vendorIoId);
-  for (const row of directIds ?? []) {
-    lineIds.add((row as { id: string }).id);
-  }
-
-  const { data: joinIds } = await supabase
-    .from("vendor_io_lines")
-    .select("campaign_line_id")
-    .eq("vendor_io_id", vendorIoId);
-  for (const row of joinIds ?? []) {
-    lineIds.add((row as { campaign_line_id: string }).campaign_line_id);
-  }
-
-  if (lineIds.size > 0) {
-    const { error: lineResetError } = await supabase
-      .from("campaign_lines")
-      .update({
-        vendor_io_id: null,
-        operational_status: "draft",
-      } as never)
-      .in("id", [...lineIds]);
-
-    if (lineResetError) {
-      return { ok: false, message: lineResetError.message };
-    }
-  }
-
-  const { error: deleteError } = await supabase
-    .from("vendor_ios")
-    .delete()
-    .eq("id", vendorIoId);
-
-  if (deleteError) {
-    return { ok: false, message: deleteError.message };
-  }
-
-  const documentNumber =
-    (vendorIo as { document_number?: string | null }).document_number ?? "Vendor IO";
-
-  return { ok: true, documentNumber };
+async function reopenVendorIos(supabase: Awaited<ReturnType<typeof createSupabaseServerClient>>, campaignId: string, ioIds: string[], reason: string) {
+  const { error } = await supabase.rpc("reopen_vendor_ios_for_edit" as never, {p_campaign: campaignId, p_ios: ioIds, p_reason: reason} as never);
+  return error ? {ok:false as const,message:error.message} : {ok:true as const};
 }
 
 export async function ungenerateVendorIoAction(
@@ -178,7 +72,7 @@ export async function ungenerateVendorIoAction(
 
   const { vendor_io_id: vendorIoId, campaign_header_id: campaignId } = parsed.data;
 
-  const result = await ungenerateOneVendorIo(supabase, vendorIoId, campaignId);
+  const result = await reopenVendorIos(supabase, campaignId, [vendorIoId], parsed.data.reason);
   if (!result.ok) {
     return { ok: false, message: result.message };
   }
@@ -191,7 +85,7 @@ export async function ungenerateVendorIoAction(
 
   return {
     ok: true,
-    message: `${result.documentNumber} un-generated. Linked assignment lines are draft again and can receive a new Vendor IO.`,
+    message: "Vendor IO reopened. Edit and save the amount and currency, then Generate Vendor IO. The previous document is preserved.",
   };
 }
 
@@ -229,38 +123,12 @@ export async function ungenerateVendorIosFromLinesAction(
     return { ok: false, message: linesError.message };
   }
 
-  const vendorIoIds = new Set<string>();
-  for (const row of lines ?? []) {
-    const line = row as VendorIoLineBillingSnapshot & {
-      id: string;
-      vendor_io_id: string | null;
-    };
-    if (!isLineUngenerateIoEligible(line)) {
-      return {
-        ok: false,
-        message: "Selected lines include invoiced assignments — un-generate IO is not allowed.",
-      };
-    }
-    if (line.vendor_io_id) {
-      vendorIoIds.add(line.vendor_io_id);
-    }
-  }
+  if ((lines ?? []).length !== new Set(lineIds).size) return {ok:false,message:"Some selected assignments are unavailable. Refresh and try again."};
 
-  if (vendorIoIds.size === 0) {
-    return {
-      ok: false,
-      message: "Selected lines have no Vendor IO to un-generate.",
-    };
-  }
-
-  const docNumbers: string[] = [];
-  for (const vendorIoId of vendorIoIds) {
-    const result = await ungenerateOneVendorIo(supabase, vendorIoId, campaignId);
-    if (!result.ok) {
-      return { ok: false, message: result.message };
-    }
-    docNumbers.push(result.documentNumber);
-  }
+  const vendorIoIds = [...new Set((lines ?? []).map(line => line.vendor_io_id).filter((id): id is string => Boolean(id)))];
+  if (vendorIoIds.length === 0) return {ok:false,message:"Selected assignments have no Vendor IO."};
+  const result = await reopenVendorIos(supabase, campaignId, vendorIoIds, parsed.data.reason);
+  if (!result.ok) return result;
 
   await syncCampaignHeaderStatus(supabase, campaignId);
 
@@ -268,13 +136,5 @@ export async function ungenerateVendorIosFromLinesAction(
   revalidatePath("/campaigns");
   revalidatePath("/ios/vendor");
 
-  const label =
-    docNumbers.length === 1
-      ? docNumbers[0]
-      : `${docNumbers.length} Vendor IOs (${docNumbers.join(", ")})`;
-
-  return {
-    ok: true,
-    message: `${label} un-generated. Assignment lines are draft again.`,
-  };
+  return {ok:true,message:"Vendor IO reopened. Edit and save the amount and currency, then Generate Vendor IO. Previous documents are preserved."};
 }
