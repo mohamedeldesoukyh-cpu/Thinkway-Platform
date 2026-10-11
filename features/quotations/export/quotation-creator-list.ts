@@ -4,6 +4,7 @@ import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
 import { escapeHtml as e, safeProfileUrl } from "@/features/rate-cards/report";
 import type { QuotationDocument } from "./quotation-document";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { compareClientListCreators } from "@/lib/creators/client-list-order";
 
 function quotedPlatforms(group: QuotationDocument["creatorGroups"][number]) {
   return new Set(group.rows.flatMap(row => row.quotedPlatforms ?? []).map(canonicalPlatformKey));
@@ -28,11 +29,10 @@ export function quotationListPdfOptions(doc: QuotationDocument) {
 export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
   const { performanceOnly, height } = layout(doc);
   // Rank within each tier by strongest platform audience; exact ties retain source order.
-  const tierRank: Record<string, number> = { Celebrity: 0, Mega: 0, Macro: 1, Mid: 2, Micro: 3, Nano: 4 };
   const groups = [...doc.creatorGroups].sort((a, b) =>
-    (tierRank[a.highestPlatformTier ?? a.rows[0]?.tier] ?? 5) -
-    (tierRank[b.highestPlatformTier ?? b.rows[0]?.tier] ?? 5) ||
-    (b.highestPlatformFollowers ?? 0) - (a.highestPlatformFollowers ?? 0));
+    compareClientListCreators(
+      { tier: a.highestPlatformTier ?? a.rows[0]?.tier, followers: a.highestPlatformFollowers },
+      { tier: b.highestPlatformTier ?? b.rows[0]?.tier, followers: b.highestPlatformFollowers }));
   const creators = groups.map(g => ({
     name: g.creator, handle: g.handle, profileUrl: safeProfileUrl(g.profileUrl),
     portrait: g.avatarUrl, avatar: g.avatarUrl, categories: g.categories,

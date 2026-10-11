@@ -58,6 +58,7 @@ import { loadClientCampaignExecution } from "./load-campaign-execution";
 import { loadIdentityLogoForReview, headerPartnerIdentity } from "./identity-logo";
 import { applyEntitlementToView, clientWorkspaceEntitlementBlock, isClientWorkspaceSectionOpen } from "./entitlement";
 import { loadEntitlementForReview } from "./load-entitlement";
+import { orderWorkspaceCreators } from "./creator-order";
 import {
   isSelectionConfirmed,
   mergeSnapshotsForClientView,
@@ -822,6 +823,7 @@ export async function loadClientWorkspace(
 
   view = applyEntitlementToView(view, entitlementForView.entitlement);
   view.commercialIo = commercialSnapshot;
+  view.creators = orderWorkspaceCreators(view.creators);
   return { ok: true, view, entry, campaignObject };
 }
 
