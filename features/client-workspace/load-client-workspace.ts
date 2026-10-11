@@ -824,6 +824,9 @@ export async function loadClientWorkspace(
   view = applyEntitlementToView(view, entitlementForView.entitlement);
   view.commercialIo = commercialSnapshot;
   view.creators = orderWorkspaceCreators(view.creators);
+  if (view.currentCampaignCreators) {
+    view.currentCampaignCreators = orderWorkspaceCreators(view.currentCampaignCreators);
+  }
   return { ok: true, view, entry, campaignObject };
 }
 
