@@ -129,6 +129,7 @@ export function FloatingSelectionBar({
   const refreshAfterOperationalMutation = useRefreshCampaignAfterOperationalMutation();
   const [pending, startTransition] = useTransition();
   const [ungenerateOpen, setUngenerateOpen] = useState(false);
+  const [blockedOpen, setBlockedOpen] = useState(false);
   const [reviseOpen, setReviseOpen] = useState(false);
   const [ungenerateReason, setUngenerateReason] = useState("");
   const [reviseReason, setReviseReason] = useState("");
@@ -319,7 +320,7 @@ export function FloatingSelectionBar({
             <button
               type="button"
               className="tw-selbar-btn"
-              onClick={() => ungenerateBlockedReason ? showErrorToastOnce(ungenerateBlockedReason) : setUngenerateOpen(true)}
+              onClick={() => ungenerateBlockedReason ? setBlockedOpen(true) : setUngenerateOpen(true)}
             >
               <Undo2Icon className="size-3.5" aria-hidden />
               Ungenerate IO
@@ -338,6 +339,22 @@ export function FloatingSelectionBar({
           ) : null}
         </span>
       </OperationalFloatingActionBar>
+
+      <Dialog open={blockedOpen} onOpenChange={setBlockedOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resolve finance records first</DialogTitle>
+            <DialogDescription>{ungenerateBlockedReason}</DialogDescription>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Review the linked invoice or payment in Finance. After the correction is saved, return here to reopen the Vendor IO. Opening Finance does not change any records.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBlockedOpen(false)}>Close</Button>
+            <Button asChild><a href={`/campaigns/${campaignId}?tab=billing`}>Open campaign finance</a></Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={reviseOpen} onOpenChange={setReviseOpen}>
         <DialogContent>

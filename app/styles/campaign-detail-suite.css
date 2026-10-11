@@ -2459,3 +2459,71 @@
   background: #edf2fa !important;
   box-shadow: none !important;
 }
+
+/* Compact assignment selection toolbar; wrap groups instead of clipping actions. */
+.campaign-detail-suite .tw-selbar > div {
+  width: max-content !important;
+  max-width: min(1440px, calc(100vw - 32px)) !important;
+}
+.campaign-detail-suite .tw-selbar .platform-floating-bar {
+  flex-wrap: wrap;
+  justify-content: center;
+  overflow: visible;
+  padding: 6px !important;
+  gap: 4px !important;
+}
+.campaign-detail-suite .tw-selbar .tw-selbar-n {
+  font-size: 12px !important;
+  gap: 6px;
+  padding: 6px 8px;
+}
+.campaign-detail-suite .tw-selbar .tw-selbar-all {
+  font-size: 12px !important;
+  color: #d1d5db;
+}
+.campaign-detail-suite .tw-selbar .tw-selbar-sum {
+  flex-wrap: wrap;
+  justify-content: center;
+  min-width: 0;
+}
+.campaign-detail-suite .tw-selbar .tw-selbar-metric {
+  padding: 5px 10px;
+}
+.campaign-detail-suite .tw-selbar .tw-selbar-metric i {
+  font-size: 10px !important;
+  line-height: 14px;
+  color: #b8bec9;
+}
+.campaign-detail-suite .tw-selbar .tw-selbar-metric b {
+  font-size: 12px !important;
+  line-height: 18px;
+}
+.campaign-detail-suite .tw-selbar .tw-selbar-acts {
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 4px 6px;
+  margin-left: 0;
+  min-width: 0;
+}
+.campaign-detail-suite .tw-selbar .tw-selbar-btn {
+  height: 34px !important;
+  min-height: 34px !important;
+  font-size: 12px !important;
+  line-height: 18px !important;
+  padding: 0 10px !important;
+}
+@media (max-width: 767px) {
+  .campaign-detail-suite .tw-selbar .tw-selbar-sum,
+  .campaign-detail-suite .tw-selbar .tw-selbar-acts {
+    width: 100%;
+    border-left: 0;
+  }
+  .campaign-detail-suite .tw-selbar .tw-selbar-acts { gap: 8px; }
+  .campaign-detail-suite .tw-selbar .tw-selbar-btn,
+  .campaign-detail-suite .tw-selbar .tw-selbar-x,
+  .campaign-detail-suite .tw-selbar .tw-selbar-all {
+    min-height: 44px !important;
+    min-width: 44px;
+  }
+}
