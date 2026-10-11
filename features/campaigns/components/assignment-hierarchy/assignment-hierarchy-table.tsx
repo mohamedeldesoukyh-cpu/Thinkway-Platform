@@ -119,12 +119,7 @@ export function AssignmentHierarchyTable({
     if (!enableOperationalActions) return [];
     const ids: string[] = [];
     for (const [lineId, meta] of lineMeta) {
-      if (
-        meta.vioEligible ||
-        meta.invoiceEligible ||
-        meta.reviseVioEligible ||
-        meta.ungenerateIoEligible
-      ) {
+      if (meta.rowSelectable) {
         ids.push(lineId);
       }
     }
@@ -143,12 +138,7 @@ export function AssignmentHierarchyTable({
   const toggleParentSelect = useCallback(
     (lineId: string) => {
       const meta = lineMeta.get(lineId);
-      if (
-        !meta?.vioEligible &&
-        !meta?.invoiceEligible &&
-        !meta?.reviseVioEligible &&
-        !meta?.ungenerateIoEligible
-      ) {
+      if (!meta?.rowSelectable) {
         return;
       }
       toggleLine(lineId);

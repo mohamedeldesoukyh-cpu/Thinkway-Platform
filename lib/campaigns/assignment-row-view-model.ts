@@ -170,7 +170,7 @@ export function deriveAssignmentLineMeta(
     reviseVioEligible,
     ungenerateIoEligible,
     rowSelectable:
-      vioEligible || invoiceEligible || reviseVioEligible || ungenerateIoEligible,
+      vioEligible || invoiceEligible || reviseVioEligible || ungenerateIoEligible || Boolean(line.vendor_io_reopen_reason),
     remaining,
   };
 }
