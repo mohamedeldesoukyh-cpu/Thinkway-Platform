@@ -761,7 +761,7 @@ export function CampaignLineSheet({
     isPending || (!financeOverrideActive && locked);
 
   const costCommercialLocked =
-    isEdit && commercialFieldsLocked(Boolean(line?.cost_locked || line?.vat_locked));
+    isEdit && commercialFieldsLocked(Boolean(line?.cost_locked || (line?.vat_locked && !line?.vendor_io_pending_regeneration)));
 
   const costLockHint = costCommercialLocked
     ? line?.cost_locked
@@ -1194,9 +1194,7 @@ export function CampaignLineSheet({
                   onChange={(event) =>
                     setUsageRightsCost(Number(event.target.value) || 0)
                   }
-                  disabled={commercialFieldsLocked(
-                    Boolean(line?.cost_locked || line?.vat_locked)
-                  )}
+                  disabled={costCommercialLocked}
                   className={DETAIL_FORM_INPUT_CLASS}
                 />
                 <p className="text-[11px] text-muted-foreground">

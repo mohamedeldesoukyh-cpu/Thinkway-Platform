@@ -452,6 +452,24 @@ export async function updateCampaignLine(
   const revenueVatChanged = Number(existingLineMeta.revenue_vat_percent ?? 0) !== Number(parsed.revenue_vat_percent)
     || Boolean(existingLineMeta.revenue_vat_exempt) !== Boolean(parsed.revenue_vat_exempt);
 
+  if (existingLineMeta.invoice_id && existingLineMeta.metadata?.pending_vendor_io_id) {
+    const clientChanged = revenueBeforeVat !== Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue)
+      || Number(parsed.agency_fee_percent) !== Number(existingLineMeta.agency_fee_percent ?? 0)
+      || Number(parsed.usage_rights_amount) !== Number(existingLineMeta.usage_rights_amount ?? 0)
+      || revenueVatChanged || replacingCreator
+      || (parsed.currency_code != null && parsed.currency_code !== existingLineMeta.currency_code)
+      || (parsed.fx_rate != null && Number(parsed.fx_rate) !== Number(existingLineMeta.fx_rate ?? 1));
+    if (clientChanged || costVatChanged) {
+      return { ok: false, message: "This correction edits vendor cost only. Keep the invoice currency, revenue, fees and VAT unchanged." };
+    }
+    const { error } = await supabase.rpc("update_reopened_vendor_cost" as never, {
+      p_line: parsed.line_id, p_cost: costBeforeVat, p_usage_cost: parsed.usage_rights_cost,
+    } as never);
+    return error ? { ok: false, message: error.message } : {
+      ok: true, reviseVendorIo: false, message: "Vendor cost and payment balance updated. GP and margins recalculated; client invoice preserved. Generate the Vendor IO revision to finish.",
+    };
+  }
+
 
   {
     const masterChanges: MasterCommercialValues = {

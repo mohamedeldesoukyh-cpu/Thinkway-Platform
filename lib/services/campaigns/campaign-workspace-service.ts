@@ -589,6 +589,7 @@ export async function getCampaignWorkspace(
         (line.operational_status as CampaignLineWorkspace["operational_status"]) ?? "draft",
       vendor_io_id: line.vendor_io_id ?? null,
       vendor_io_reopen_eligible: vendorIoReopenChecks.get(line.vendor_io_id ?? "")?.eligible ?? false,
+      vendor_io_pending_regeneration: Boolean((line.metadata as Record<string, unknown> | null)?.pending_vendor_io_id),
       vendor_io_reopen_reason: vendorIoReopenChecks.get(line.vendor_io_id ?? "")?.reason ?? null,
       active_vendor_io_id: line.vendor_io_id
         ? (activeVendorIoLinkMap.get(line.vendor_io_id) ?? null)

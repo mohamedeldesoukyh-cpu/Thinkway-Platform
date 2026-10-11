@@ -107,7 +107,7 @@ export function deriveAssignmentLineMeta(
 ): AssignmentLineMeta {
   const line = group.line;
 
-  const vioEligible = isLineVendorIoGenerateEligible({
+  const vioEligible = Boolean(line.vendor_io_pending_regeneration) || isLineVendorIoGenerateEligible({
     vendor_io_id: line.vendor_io_id,
     active_vendor_io_id: line.active_vendor_io_id,
     invoice_id: line.invoice_id,

@@ -40,13 +40,6 @@ BEGIN
  PERFORM revise_creator_payment(entry,0,NULL,NULL,true,'QA clear payment');
  IF (SELECT cleared_at FROM creator_payment_entries WHERE id=entry) IS NULL THEN RAISE EXCEPTION 'Payment not cleared'; END IF;
  IF NOT (SELECT eligible FROM vendor_io_reopen_eligibility(ARRAY[v.id])) THEN RAISE EXCEPTION 'Cleared IO action not enabled'; END IF;
- -- Link the test assignment to an existing issued invoice: the immutable client invoice stays protected.
- UPDATE campaign_lines SET invoice_id=(SELECT id FROM invoices WHERE issue_date IS NOT NULL LIMIT 1) WHERE id=l.id;
- blocked:=false;
- BEGIN PERFORM reopen_vendor_ios_for_edit(l.campaign_header_id,ARRAY[v.id],'QA invoice block');
- EXCEPTION WHEN OTHERS THEN IF SQLERRM NOT LIKE '%client invoice%' THEN RAISE; END IF; blocked:=true; END;
- IF NOT blocked THEN RAISE EXCEPTION 'Issued invoice protection failed'; END IF;
- UPDATE campaign_lines SET invoice_id=NULL WHERE id=l.id;
  PERFORM reopen_vendor_ios_for_edit(l.campaign_header_id,ARRAY[v.id],'QA amount/currency correction');
  IF NOT (SELECT is_superseded FROM vendor_ios WHERE id=v.id) THEN RAISE EXCEPTION 'History not preserved'; END IF;
  IF (SELECT amount FROM vendor_ios WHERE id=v.id) IS DISTINCT FROM v.amount THEN RAISE EXCEPTION 'Old IO amount changed'; END IF;
