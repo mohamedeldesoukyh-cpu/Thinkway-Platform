@@ -115,16 +115,9 @@ export function AssignmentHierarchyTable({
     return map;
   }, [preparedRows]);
 
-  const selectableLineIds = useMemo(() => {
-    if (!enableOperationalActions) return [];
-    const ids: string[] = [];
-    for (const [lineId, meta] of lineMeta) {
-      if (meta.rowSelectable) {
-        ids.push(lineId);
-      }
-    }
-    return ids;
-  }, [lineMeta, enableOperationalActions]);
+  const selectableLineIds = enableOperationalActions
+    ? [...lineMeta].filter(([, meta]) => meta.rowSelectable).map(([lineId]) => lineId)
+    : [];
 
   const toggleLine = useCallback((lineId: string) => {
     setSelectedLineIds((prev) => {
