@@ -1,5 +1,7 @@
 "use client";
 
+import { DocumentWindowLink } from "@/components/navigation/document-window-link";
+
 import { format } from "date-fns";
 
 import { InvoiceStatusBadge } from "@/components/finance/invoice-status-badge";
@@ -145,7 +147,7 @@ export function InvoiceDetailSheet({ open, onOpenChange, row }: InvoiceDetailShe
             <div className="flex flex-wrap justify-end gap-2">
               <InvoiceViewMenu invoiceId={row.id} />
               <Button size="sm" variant="outline" asChild>
-                <a href={`/billing/invoices/${row.id}`}>Open full invoice</a>
+                <DocumentWindowLink href={`/billing/invoices/${row.id}`}>Open full invoice</DocumentWindowLink>
               </Button>
             </div>
           </div>

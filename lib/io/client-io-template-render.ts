@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -241,7 +242,7 @@ export function renderClientIoHtml(
   layout: ClientIoDocumentLayout = "detailed"
 ): string {
   const agency = THINKWAY_AGENCY_DEFAULTS;
-  const docNum = escapeHtml(data.documentNumber);
+  const docNum = escapeHtml(formatDocumentNumberForDisplay(data.documentNumber));
   const currency = data.currencyCode;
   const clientName = display(data.client.legalName ?? data.client.name);
   const { pricingRows } = applyClientIoDocumentLayout(data, layout);

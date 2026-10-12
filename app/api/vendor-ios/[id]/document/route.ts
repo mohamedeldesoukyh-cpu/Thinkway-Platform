@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { NextResponse } from "next/server";
 
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
@@ -43,7 +44,7 @@ export async function GET(request: Request, context: RouteContext) {
     };
 
     const disposition = download ? "attachment" : "inline";
-    const baseName = typed.document_number ?? id;
+    const baseName = typed.document_number ? formatDocumentNumberForDisplay(typed.document_number) : id;
 
     if (format === "pdf") {
       // Both inline and download reflect campaign overrides and platform clause updates.

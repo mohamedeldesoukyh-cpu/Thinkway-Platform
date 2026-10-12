@@ -98,3 +98,9 @@ test("payment clause refers to Part 5 instead of contradicting the selected sche
   assert.match(html, /50% advance and 50% within 45 days of completion/);
   assert.doesNotMatch(html, /Full payment is due in advance prior to campaign launch/);
 });
+
+test('export uses the same compact document number as the app', () => {
+ const html=renderClientIoHtml(sample, 'detailed');
+ assert.match(html,/CIO-26-2/);
+ assert.doesNotMatch(html,/CIO-2026-0002/);
+});

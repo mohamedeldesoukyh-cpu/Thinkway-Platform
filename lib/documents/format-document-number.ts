@@ -12,6 +12,12 @@ const CAMPAIGN_STORAGE_PREFIX = "TW";
 /** User-facing campaign prefix (replaces TW- on display only). */
 const CAMPAIGN_DISPLAY_PREFIX = "Camp#";
 
+/** Format internal references embedded in document text; never alter bank, tax or PO IDs. */
+export function formatDocumentReferences(value: string): string {
+  return value.replace(/\b(?:TW|INV|INF|CIO|VIO|QT|SL|CL)-\d+(?:-\d+)*(?:-[A-Z])?(?:\/\d+)?\b/g,
+    reference => formatDocumentNumberForDisplay(reference));
+}
+
 function formatNumericToken(token: string): string {
   if (!NUMERIC_SEGMENT.test(token)) {
     return token;

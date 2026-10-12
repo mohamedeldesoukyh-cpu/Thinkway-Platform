@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { NextResponse } from "next/server";
 
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
@@ -51,7 +52,7 @@ export async function GET(request: Request, context: RouteContext) {
     };
 
     const disposition = download ? "attachment" : "inline";
-    const baseName = typed.document_number ?? id;
+    const baseName = typed.document_number ? formatDocumentNumberForDisplay(typed.document_number) : id;
 
     if (format === "pdf") {
       // Reflow the saved classic document with the corrected print gutter.

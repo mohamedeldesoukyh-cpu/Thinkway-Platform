@@ -121,7 +121,7 @@ assert.equal(vat.vatLabel, "VAT (14%)");
 
 const html = buildInvoiceTemplateHtml(sample);
 assert.ok(html.includes("Campaign No."));
-assert.ok(html.includes("TW-2026-0001"));
+assert.ok(html.includes("Camp#26-1"));
 assert.ok(html.includes("Subtotal (excl. VAT)"));
 assert.ok(html.includes("VAT (14%)"));
 assert.ok(html.includes("EGP 72,100.00") || html.includes("72,100"));
@@ -176,4 +176,16 @@ for (const layout of ["detailed", "by_creator", "summary"] as const) {
   assert.ok(html.includes(terms));
   assert.ok(!html.includes("within 30 days"));
   assert.ok(!html.includes("Net 30 Days"));
+}
+
+// Export identifiers match the app; bank and tax identifiers retain significant zeros.
+const numbered = {...sample, documentNumber: 'INV-2026-0006', client: {...sample.client, documentNumber: 'CL-0007', vatNumber: '001234567'}};
+for (const layout of ['detailed','by_creator','summary'] as const) {
+ const html = buildInvoiceTemplateHtml(applyInvoiceDocumentLayout(numbered, layout));
+ assert.ok(html.includes('INV-26-6'));
+ assert.ok(html.includes('CL-7'));
+ assert.ok(html.includes('CIO-26-1'));
+ assert.ok(html.includes('001234567'));
+ assert.ok(!html.includes('INV-2026-0006'));
+ assert.ok(!html.includes('TW-2026-0001'));
 }

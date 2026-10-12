@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { DocumentWindowLink } from "@/components/navigation/document-window-link";
 import { ChevronDown, FileText, Layers, Users } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,7 +49,7 @@ export function InvoiceViewMenu({
         <DropdownMenuLabel>Invoice layout</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link href={`${base}?layout=detailed`} className="flex cursor-pointer items-start gap-2">
+          <DocumentWindowLink href={`${base}?layout=detailed`} className="flex cursor-pointer items-start gap-2">
             <FileText className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
               <span className="block font-medium">Detailed</span>
@@ -57,10 +57,10 @@ export function InvoiceViewMenu({
                 One line per deliverable / post
               </span>
             </span>
-          </Link>
+          </DocumentWindowLink>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href={`${base}?layout=by_creator`} className="flex cursor-pointer items-start gap-2">
+          <DocumentWindowLink href={`${base}?layout=by_creator`} className="flex cursor-pointer items-start gap-2">
             <Users className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
               <span className="block font-medium">By creator</span>
@@ -68,10 +68,10 @@ export function InvoiceViewMenu({
                 Amounts rolled up by campaign line
               </span>
             </span>
-          </Link>
+          </DocumentWindowLink>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
-          <Link href={`${base}?layout=package`} className="flex cursor-pointer items-start gap-2">
+          <DocumentWindowLink href={`${base}?layout=package`} className="flex cursor-pointer items-start gap-2">
             <Layers className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
             <span>
               <span className="block font-medium">Summary</span>
@@ -79,7 +79,7 @@ export function InvoiceViewMenu({
                 Lump-sum campaign + agency fees
               </span>
             </span>
-          </Link>
+          </DocumentWindowLink>
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

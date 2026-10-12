@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { NextResponse } from "next/server";
 
 import { resolveInvoiceDocumentLayout } from "@/lib/billing/invoice-document-layout";
@@ -38,7 +39,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     const typed = invoice as { document_number: string | null };
     const html = await renderLiveInvoiceHtml(supabase, id, layout);
-    const baseName = typed.document_number ?? id;
+    const baseName = typed.document_number ? formatDocumentNumberForDisplay(typed.document_number) : id;
     const disposition = download ? "attachment" : "inline";
 
     if (format === "pdf") {

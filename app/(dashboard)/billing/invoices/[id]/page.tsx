@@ -1,3 +1,4 @@
+import { documentReturnPath } from "@/lib/navigation/document-return";
 import { notFound } from "next/navigation";
 
 import { FinanceSuiteRoot } from "@/components/finance/suite";
@@ -9,10 +10,12 @@ import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-
 
 type InvoicePageProps = {
   params: Promise<{ id: string }>;
+  searchParams: Promise<{ returnTo?: string }>;
 };
 
-export default async function InvoicePage({ params }: InvoicePageProps) {
+export default async function InvoicePage({ params, searchParams }: InvoicePageProps) {
   const { id } = await params;
+  const query = await searchParams;
 
   let invoice;
   let errorMessage: string | null = null;
@@ -44,7 +47,7 @@ export default async function InvoicePage({ params }: InvoicePageProps) {
           </div>
         ) : invoice ? (
           <PlatformErrorBoundary surface="invoices">
-            <InvoiceWorkspaceView invoice={invoice} />
+            <InvoiceWorkspaceView invoice={invoice} returnTo={documentReturnPath(query.returnTo, "/finance/invoices")} />
           </PlatformErrorBoundary>
         ) : null}
       </FinanceSuiteShell>

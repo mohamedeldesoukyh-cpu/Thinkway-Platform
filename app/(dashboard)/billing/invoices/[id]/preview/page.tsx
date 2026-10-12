@@ -1,3 +1,4 @@
+import { documentReturnPath } from "@/lib/navigation/document-return";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -10,7 +11,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 type InvoicePreviewPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ layout?: string }>;
+  searchParams: Promise<{ layout?: string; returnTo?: string }>;
 };
 
 export default async function InvoicePreviewPage({
@@ -54,8 +55,8 @@ export default async function InvoicePreviewPage({
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
         <div className="flex flex-wrap items-center gap-2">
           <PageBackButton
-            fallbackHref={`/billing/invoices/${id}`}
-            label="Back to invoice workspace"
+            fallbackHref={documentReturnPath(query.returnTo, `/billing/invoices/${id}`)}
+            label={query.returnTo ? "Back to previous page" : "Back to invoice workspace"}
             variant="text"
           />
           <Suspense fallback={null}>

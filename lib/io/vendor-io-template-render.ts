@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -97,7 +98,7 @@ export function loadVendorIoTemplate(): string {
 
 export function renderVendorIoHtml(data: VendorIoDocumentData): string {
   const agency = THINKWAY_AGENCY_DEFAULTS;
-  const docNum = escapeHtml(data.documentNumber);
+  const docNum = escapeHtml(formatDocumentNumberForDisplay(data.documentNumber));
   const currency = data.currencyCode;
   const influencerName = display(
     data.influencer.legalName ?? data.influencer.displayName

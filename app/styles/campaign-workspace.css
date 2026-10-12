@@ -4876,6 +4876,49 @@
   border-radius: 4px;
 }
 
+/* Finance draft controls must match the surrounding operational table, rather
+   than inheriting the larger generic Input/Badge typography. */
+.thinkway-campaign-workspace .thinkway-campaign-billing-typography {
+  font-family: var(--font-geist-sans), Geist, Inter, "Segoe UI", sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-billing-typography :is(p, input, strong, [data-slot="badge"]) {
+  font-family: inherit;
+  line-height: 1.5;
+  letter-spacing: normal;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-billing-typography p,
+.thinkway-campaign-workspace .thinkway-campaign-billing-typography > div:first-child > div {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-billing-typography strong {
+  font-weight: 600;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-billing-typography :is(small, [data-slot="badge"]) {
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.thinkway-campaign-workspace .thinkway-campaign-billing-typography input[data-slot="input"] {
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Preserve readable editing and avoid Safari zoom when focusing on phones. */
+@media (max-width: 767px) {
+  .thinkway-campaign-workspace .thinkway-campaign-billing-typography input[data-slot="input"] {
+    font-size: 16px;
+  }
+}
+
 .thinkway-campaign-workspace .thinkway-campaign-content [data-slot="table"],
 .thinkway-campaign-workspace .thinkway-campaign-content .thinkway-campaign-data-table {
   font-size: inherit !important;

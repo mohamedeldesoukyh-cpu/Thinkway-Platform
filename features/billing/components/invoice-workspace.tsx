@@ -120,9 +120,10 @@ function chainStatus(
 
 type InvoiceWorkspaceViewProps = {
   invoice: InvoiceWorkspace;
+  returnTo?: string;
 };
 
-export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
+export function InvoiceWorkspaceView({ invoice, returnTo = "/finance/invoices" }: InvoiceWorkspaceViewProps) {
   const router = useRouter();
   const [tab, setTab] = useState<InvoiceDetailTab>("lines");
   const campaignNo = invoice.campaign
@@ -146,9 +147,9 @@ export function InvoiceWorkspaceView({ invoice }: InvoiceWorkspaceViewProps) {
           <button
             type="button"
             className="tw-b sm"
-            onClick={() => navigateBack(router, "/billing")}
+            onClick={() => navigateBack(router, returnTo)}
           >
-            ← Back to billing
+            ← Back
           </button>
           <DocumentNumber value={invoice.document_number} className="tw-inv-no" />
           <span className={`tw-p ${collectionPillClass(invoice.collection_status)}`}>

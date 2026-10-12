@@ -247,6 +247,7 @@ function BillingCampaignDrilldownInner({
     <div
       className={cn(
         OPERATIONAL_TABLE_FONT,
+        campaign && "thinkway-campaign-billing-typography",
         embedded
           ? "bg-muted/50 px-3 py-2"
           : cn(

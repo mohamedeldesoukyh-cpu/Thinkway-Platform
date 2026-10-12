@@ -1,6 +1,6 @@
 import type { InvoiceDocumentData, InvoiceLineItemRow } from "@/lib/billing/invoice-document-types";
 import { THINKWAY_AGENCY_DEFAULTS } from "@/lib/io/thinkway-agency-defaults";
-import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+import { formatDocumentNumberForDisplay, formatDocumentReferences } from "@/lib/documents/format-document-number";
 import { formatMoneyDetail } from "@/lib/finance/currency-format";
 import { applyThinkwayLogoToDocumentHtml } from "@/lib/reports/document/thinkway-report-logo";
 import { roundMoney } from "@/lib/vat/calculations";
@@ -222,7 +222,7 @@ function renderLineRows(lines: InvoiceLineItemRow[], currency: string): string {
         ? `<span class="dsub">${display(line.subDescription)}</span>`
         : "";
       return `<tr>
-        <td><span class="dmain">${display(line.description)}</span>${line.installmentLabel ? `<span class="dsub"><strong>${display(line.installmentLabel)}</strong></span>` : ""}${sub}</td>
+        <td><span class="dmain">${display(formatDocumentReferences(line.description))}</span>${line.installmentLabel ? `<span class="dsub"><strong>${display(line.installmentLabel)}</strong></span>` : ""}${sub}</td>
         <td class="r">${line.quantity.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
         <td class="r">${formatMoneyAmount(line.revenueBeforeVat)}</td>
         <td class="r mut">${esc(formatTaxLabel(line))}</td>
@@ -235,17 +235,17 @@ function renderLineRows(lines: InvoiceLineItemRow[], currency: string): string {
 export function buildInvoiceTemplateHtml(data: InvoiceDocumentData): string {
   const agency = THINKWAY_AGENCY_DEFAULTS;
   const currency = data.currencyCode;
-  const docNum = display(data.documentNumber, "INV-PENDING");
+  const docNum = displayDoc(data.documentNumber, "INV-PENDING");
   const issueDate = formatShortDate(data.issueDate);
   const dueDateShort = formatShortDate(data.dueDate);
   const dueDateLong = formatLongDueDate(data.dueDate);
-  const ioRef = display(data.campaign?.clientIoReferenceDisplay);
+  const ioRef = display(formatDocumentReferences(data.campaign?.clientIoReferenceDisplay ?? ""));
   const poRef = display(data.campaign?.poReferenceDisplay);
   const internalRef = displayDoc(data.campaign?.internalReference);
   const clientName = display(data.client.billingName);
   const clientLegalName = display(data.client.legalName ?? data.client.name);
   const trn = display(data.client.vatNumber ?? data.client.taxId);
-  const accountNumber = display(data.client.documentNumber);
+  const accountNumber = displayDoc(data.client.documentNumber);
   const paymentTerms = display(
     data.client.paymentTerms ?? "Payment terms not specified",
     "Payment terms not specified"
