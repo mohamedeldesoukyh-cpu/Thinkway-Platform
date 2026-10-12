@@ -1,4 +1,4 @@
-import { videoCounters } from './reported-metrics';
+import { reportedValue, videoCounters } from './reported-metrics';
 import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
 import {
   formatCompactCount,
@@ -208,10 +208,12 @@ export function renderPcard(pub: CampaignPublicationRow): string {
   const postUrl = pub.content_url?.trim() || null;
   const urlLabel = shortUrl(postUrl);
 
-  const reachSource = pub.reach != null && pub.reach_source
+  const reach = reportedValue(pub, "reach");
+  const impressions = reportedValue(pub, "impressions");
+  const reachSource = reach != null && pub.reach_source
     ? REACH_SOURCE_LABELS[(pub.reach_source as ReachSource) ?? "actual"] ?? pub.reach_source
     : null;
-  const impressionsSource = pub.impressions != null && pub.impressions_source
+  const impressionsSource = impressions != null && pub.impressions_source
     ? IMPRESSIONS_SOURCE_LABELS[(pub.impressions_source as ImpressionsSource) ?? "actual"] ??
       pub.impressions_source
     : null;
@@ -243,12 +245,12 @@ export function renderPcard(pub: CampaignPublicationRow): string {
     <div class="pcard__foot">
       <div class="pcard__k">
         ${(["plays", "views"] as const).map(key => videoCounters(pub)[key] != null ? `<div class="k"><span>${key === "plays" ? "Video Play Count" : "Views"}</span><strong>${esc(formatCompactCount(videoCounters(pub)[key]))}</strong></div>` : "").join("")}
-        ${pub.reach != null ? `<div class="k"><span>${pub.reach_source === "forecast" ? "Est. reach" : "Reach"}</span><strong>${esc(formatCompactCount(pub.reach))}</strong></div>` : ""}
+        ${reach != null ? `<div class="k"><span>Reach</span><strong>${esc(formatCompactCount(reach))}</strong></div>` : ""}
         <div class="k"><span>Engag.</span><strong>${esc(formatCompactCount(pub.total_engagements))}</strong></div>
         <div class="k k--er"><span>ER</span><strong>${esc(formatPercent(pub.engagement_rate, 1))}</strong></div>
       </div>
       <div class="pcard__k2">
-        ${pub.impressions != null ? `<div class="k"><span>${pub.impressions_source === "forecast" ? "Est. impr." : "Impr."}</span><strong>${esc(formatCompactCount(pub.impressions))}</strong></div>` : ""}
+        ${impressions != null ? `<div class="k"><span>Impr.</span><strong>${esc(formatCompactCount(impressions))}</strong></div>` : ""}
         ${pub.likes != null ? `<div class="k"><span>Likes</span><strong>${esc(formatCompactCount(pub.likes))}</strong></div>` : ""}
         ${pub.comments != null ? `<div class="k"><span>Comm.</span><strong>${esc(formatCompactCount(pub.comments))}</strong></div>` : ""}
         ${pub.shares != null ? `<div class="k"><span>Shares</span><strong>${esc(formatCompactCount(pub.shares))}</strong></div>` : ""}
@@ -322,4 +324,5 @@ export function renderClosing(footLeft: string, pageLbl: string): string {
   </div>
 </section>`;
 }
+
 

@@ -150,3 +150,14 @@ test('publication captions and tags are labeled and escaped',()=>{
  assert.match(html,/>Caption</);assert.match(html,/Campaign &lt;story&gt;/);assert.match(html,/Tags &amp; mentions/);assert.match(html,/#ArabBank @client/);
 });
 
+test('client cards exclude follower forecasts and show independent actual video counters',()=>{
+ const row=pub({reach:415100,reach_source:'forecast',impressions:2800,impressions_source:'forecast',report_video_counters:{plays:2600,views:3200}});
+ const html=renderPcard(row);
+ assert.match(html,/<span>Video Play Count<\/span><strong>2.6K<\/strong>/);
+ assert.match(html,/<span>Views<\/span><strong>3.2K<\/strong>/);
+ assert.doesNotMatch(html,/415.1K|2.8K|Est\. reach|Est\. impr\.|Forecast/i);
+ const actual=renderPcard({...row,reach:1200,reach_source:'actual',impressions:2400,impressions_source:'manual'});
+ assert.match(actual,/<span>Reach<\/span><strong>1.2K<\/strong>/);
+ assert.match(actual,/<span>Impr.<\/span><strong>2.4K<\/strong>/);
+});
+
