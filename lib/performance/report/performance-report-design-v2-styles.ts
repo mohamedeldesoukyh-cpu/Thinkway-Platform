@@ -297,7 +297,7 @@ strong{font-weight:600}
 .pcard .grow{display:none}
 .pcard__media{position:relative;width:100%;flex:1 1 0;min-height:72px;height:auto;padding-top:0;
   background:#EDF0F6;overflow:hidden}
-.pcard__media img{position:absolute;top:0;left:0;right:0;bottom:0;
+.pcard__media > img{position:absolute;top:0;left:0;right:0;bottom:0;
   width:100%;height:100%;object-fit:cover;display:block}
 .pcard__ph{position:absolute;top:0;left:0;right:0;bottom:0;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
@@ -308,6 +308,7 @@ strong{font-weight:600}
   padding:4px 9px 4px 6px;border-radius:999px;background:rgba(7,12,27,.82);color:#fff;
   font-size:8px;font-weight:700;letter-spacing:.9px;text-transform:uppercase}
 .pcard__chip svg{width:10px;height:10px;fill:#fff}
+.pcard__platform-icon{position:static;width:14px;height:14px;object-fit:contain;flex:none;display:block}
 .pcard__av{position:absolute;right:9px;bottom:9px;padding:3px 8px;border-radius:999px;
   background:var(--green);color:#fff;font-size:7.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
 .pcard__b{padding:8px 11px 9px;display:flex;flex-direction:column;gap:4px;flex:none;min-height:0;overflow:hidden}

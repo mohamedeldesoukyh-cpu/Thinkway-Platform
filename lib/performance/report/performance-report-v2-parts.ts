@@ -191,11 +191,12 @@ export function renderPcard(pub: CampaignPublicationRow): string {
     ? `<img src="${esc(imageUrl)}" alt=""/>`
     : `<div class="pcard__ph"><svg viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zm1 2v10h14V7H5zm3 2.5a1.5 1.5 0 110 3 1.5 1.5 0 010-3zM6 16l3.2-3.2a1 1 0 011.4 0L13 15l2.3-2.3a1 1 0 011.4 0L19 15v1H6z"/></svg><span>No preview</span></div>`;
 
-  const chipLabel = pub.publication_type_label || getReportPlatformIconTitle(pub.platform);
+  const typeLabel = pub.publication_type_label || getReportPlatformIconTitle(pub.platform);
   const color = platformColor(pub.platform);
   const iconUri = getReportPlatformIconDataUri(pub.platform);
+  const chipLabel = iconUri ? typeLabel.replace(/^(?:IG|TT|FB|YT|Instagram|TikTok|Facebook|YouTube|LinkedIn)\s+/i, "") : typeLabel;
   const chipIcon = iconUri
-    ? `<img src="${iconUri}" alt="" style="width:10px;height:10px;object-fit:contain" />`
+    ? `<img src="${iconUri}" alt="${esc(getReportPlatformIconTitle(pub.platform))}" class="pcard__platform-icon" />`
     : "";
 
   const isAdded = resolvePublicationValueScope(pub) === "added_value";

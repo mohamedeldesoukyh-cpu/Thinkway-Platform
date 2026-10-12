@@ -112,6 +112,14 @@ test("publication cards show No preview only when no still is available", () => 
   assert.match(html, /No preview/);
 });
 
+test("publication badge uses platform logo beside content type without positioning overlap", () => {
+  const html = renderPcard(pub({ publication_type_label: "TT Video" }));
+  assert.match(html, /class="pcard__platform-icon" \/>Video<\/span>/);
+  assert.doesNotMatch(html, />TT Video/);
+  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard__media > img\{position:absolute/);
+  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard__platform-icon\{position:static/);
+});
+
 test("report sheets clip body overflow so metrics cannot paint over the footer", () => {
   assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.sheet__body\{[^}]*overflow:hidden/);
   assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pgrid\{[^}]*minmax\(0,1fr\)/);

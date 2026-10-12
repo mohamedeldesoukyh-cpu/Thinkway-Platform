@@ -40,6 +40,7 @@ import {
   resolvePublicationValueScope,
 } from "@/lib/performance/publication-value-scope";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { attachStoryPublicationPreviews } from "@/lib/performance/story-publication-previews";
 
 import {
   fetchCampaignPublicationRows,
@@ -592,7 +593,7 @@ export async function getCampaignPerformanceBundle(
     campaignHeaderId
   );
   const publications = applyPublicationValueScopes(
-    publicationsSigned,
+    await attachStoryPublicationPreviews(supabase, campaignHeaderId, publicationsSigned),
     agreedPlatformIndex
   );
 
