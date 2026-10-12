@@ -162,10 +162,24 @@ export function syncServiceDescriptionWithTypeLines(
   const current = (currentDescription ?? "").trimEnd();
 
   if (!current) return nextAuto;
-  if (current === prevAuto) return nextAuto;
+  if (current === prevAuto || current === nextAuto) return nextAuto;
 
   if (prevAuto && current.startsWith(prevAuto)) {
-    const suffix = current.slice(prevAuto.length);
+    let suffix = current.slice(prevAuto.length);
+    // A legacy/stale previous selection can match only the beginning of a
+    // complete generated package. Do not preserve its remaining type fragments
+    // as custom notes and append them again on every edit.
+    const fragments = [...new Set([...previousLines, ...nextLines]
+      .map((line) => typeLinesAutoDescription([line])).filter(Boolean))]
+      .sort((a, b) => b.length - a.length);
+    while (true) {
+      const tail = suffix.replace(/^\s*\+\s*/, "");
+      if (tail === suffix) break;
+      const fragment = fragments.find((value) => tail.startsWith(value) &&
+        (!tail.slice(value.length).trim() || /^\s*[+·|,—–\-]/.test(tail.slice(value.length))));
+      if (!fragment) break;
+      suffix = tail.slice(fragment.length);
+    }
     if (!nextAuto) {
       return suffix.replace(/^\s*[·+|,—\-–]+\s*/, "").trim();
     }
@@ -180,7 +194,7 @@ export function syncServiceDescriptionWithTypeLines(
     if (!type || prevTypes.has(type)) continue;
     const label = quotationPostTypeLabel(type);
     if (result.toLowerCase().includes(label.toLowerCase())) continue;
-    const fragment = `${normalizeTypeLineQuantity(line.quantity)}× ${label}`;
+    const fragment = typeLinesAutoDescription([line]);
     result = `${result} + ${fragment}`;
   }
   return result;

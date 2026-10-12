@@ -222,4 +222,19 @@ assert.equal(
   assert.equal(appendToCustom, "Hero package + 1× IG Reel");
 }
 
+{
+  const lines = [{ type: "instagram_reel", quantity: 1 }, { type: "instagram_story", quantity: 1 }, { type: "mirrored_tt", quantity: 1 }, { type: "boosting", quantity: 1, period_months: 1 }];
+  const clean = formatTypeLinesSummary(lines);
+  const repeated = clean + " + 1× Boosting · 1 month + 1× IG Story + 1× Mirrored TT + 1× Boosting · 1 month + 1× IG Story + 1× Mirrored TT";
+  assert.equal(syncServiceDescriptionWithTypeLines(clean, lines.slice(0, 1), lines), clean);
+  assert.equal(syncServiceDescriptionWithTypeLines(repeated, lines, lines), clean);
+  assert.equal(syncServiceDescriptionWithTypeLines(repeated + " · exclusivity 30 days", lines, lines), clean + " · exclusivity 30 days");
+  let description = clean;
+  for (let i = 0; i < 5; i++) description = syncServiceDescriptionWithTypeLines(description, lines.slice(0, 1), lines);
+  assert.equal(description, clean);
+  const next = lines.map(line => line.type === "boosting" ? { ...line, period_months: 2 } : line);
+  assert.equal(syncServiceDescriptionWithTypeLines(repeated, lines, next), formatTypeLinesSummary(next));
+  assert.equal(syncServiceDescriptionWithTypeLines(clean + " + custom on-site service", lines, lines), clean + " + custom on-site service");
+  assert.equal(syncServiceDescriptionWithTypeLines("Hero package", [], [lines[3]]), "Hero package + 1× Boosting · 1 month");
+}
 console.log("quotation-deliverable-types.test.ts — all tests passed");
