@@ -1,3 +1,5 @@
+import { isRefreshDue } from '@/lib/performance/metrics-collector/schedule-next-refresh';
+import { publicationHasInflightMetricsJob } from '@/lib/performance/metrics-collector/queue';
 import { Queue, Worker } from "bullmq";
 
 import { CAMPAIGN_PERFORMANCE_JOB_OPTIONS } from "@/lib/performance/campaign-performance-queue-options";
@@ -32,16 +34,13 @@ export function startPublicationMetricsScheduler(): Worker {
 
       if (error) throw new Error(error.message);
 
-      const now = Date.now();
+
       let enqueued = 0;
 
       for (const row of data ?? []) {
-        const due =
-          row.metrics_refresh_status === "queued" ||
-          !row.metrics_next_refresh_at ||
-          Date.parse(row.metrics_next_refresh_at) <= now;
-
-        if (!due) continue;
+        if (!isRefreshDue(row.metrics_next_refresh_at, row.metrics_refresh_status)) continue;
+        // An hourly scan must not duplicate work already waiting or running.
+        if (await publicationHasInflightMetricsJob(row.id)) continue;
 
         await supabase
           .from("campaign_publications")
