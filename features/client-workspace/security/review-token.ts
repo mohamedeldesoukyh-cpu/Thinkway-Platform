@@ -34,4 +34,4 @@ export function buildReviewCookieValue(reviewId: string, token: string): string 
   return `${reviewId}:${token.trim()}`;
 }
 
-export { buildClientReviewPath } from "./review-path";
+export { buildClientReviewPath } from "../journey-state";

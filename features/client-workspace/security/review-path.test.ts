@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { buildClientReviewPath } from './review-path';
+import { buildClientReviewPath } from '../journey-state';
 import { buildClientReviewPath as legacyPath, hashClientReviewToken } from './review-token';
 test('browser-safe review paths preserve existing encoding and destinations',()=>{
 for(const section of [undefined,'creators','feedback']){
