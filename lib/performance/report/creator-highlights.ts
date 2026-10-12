@@ -1,4 +1,4 @@
-import { reportedTotal, coverageLabel, metricCoverage } from './reported-metrics';
+import { playTotalLabel, reportedTotal, coverageLabel, metricCoverage } from './reported-metrics';
 import type { PerformanceReportDocumentData, InfluencerReportSection } from './performance-report-types';
 import { formatCompactCount, formatPercent } from '@/lib/campaigns/performance-calculations';
 import { chunk, esc } from './performance-report-v2-parts';
@@ -16,7 +16,7 @@ export function renderCreatorHighlights(data: PerformanceReportDocumentData, cre
   const maxEr = Math.max(0, ...pubs.map(p => p.engagement_rate ?? 0));
   return `<div class="creator-highlights">${creators.map(c => {
     const best = [...c.publications].filter(p => p.engagement_rate != null).sort((a,b) => (b.engagement_rate ?? 0) - (a.engagement_rate ?? 0))[0];
-    const badges = [c.summary.engagements > 0 && c.summary.engagements === maxEngagements ? 'Top engagements' : '', c.publications.some(p => (p.views ?? 0) > 0 && p.views === maxViews) ? 'Most-viewed post' : '', best && maxEr > 0 && best.engagement_rate === maxEr ? 'Highest post ER' : ''].filter(Boolean);
+    const badges = [c.summary.engagements > 0 && c.summary.engagements === maxEngagements ? 'Top engagements' : '', c.publications.some(p => (p.views ?? 0) > 0 && p.views === maxViews) ? 'Top plays / views' : '', best && maxEr > 0 && best.engagement_rate === maxEr ? 'Highest post ER' : ''].filter(Boolean);
     const method = best?.engagement_rate_method;
     const denominator = method === 'views' ? best?.views : method === 'reach' ? best?.reach : method === 'followers' ? best?.platform_follower_count : null;
     const basis = method === 'followers' ? 'followers (estimate)' : method;
@@ -25,7 +25,7 @@ export function renderCreatorHighlights(data: PerformanceReportDocumentData, cre
       <h3 class="bidi">${esc(c.name)}</h3>
       <div class="creator-highlight__badges">${badges.map(b => `<span>${b}</span>`).join('')}</div>
       <p class="note">${c.summary.agreedPublications} agreed · ${c.summary.addedValuePublications} added-value publications</p>
-      <div class="creator-highlight__metrics">${metricCoverage(c.publications, "views").available ? `<div>Collected views<strong>${esc(reportedTotal(c.publications, 'views'))}</strong><small>${esc(coverageLabel(c.publications, 'views'))}</small></div>` : ""}<div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
+      <div class="creator-highlight__metrics">${metricCoverage(c.publications, "views").available ? `<div>${esc(playTotalLabel(c.publications))}<strong>${esc(reportedTotal(c.publications, 'views'))}</strong><small>${esc(coverageLabel(c.publications, 'views'))}</small></div>` : ""}<div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
       <div class="creator-highlight__best"><b>Best post ER: ${esc(formatPercent(best?.engagement_rate ?? null, 1))}</b><div>${esc(best?.platform_label ?? '')}</div><div>${esc(context)}</div></div>
     </article>`;
   }).join('') || '<p>No creator performance is available yet.</p>'}</div>

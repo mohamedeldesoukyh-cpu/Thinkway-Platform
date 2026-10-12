@@ -21,3 +21,10 @@ export function forecastTotal(rows: CampaignPublicationRow[], metric: 'reach'|'i
  const values=rows.filter(r=>r[`${metric}_source`]==='forecast' && r[metric]!=null).map(r=>r[metric]!);
  return values.length ? formatCompactCount(values.reduce((a,b)=>a+b,0)) : 'Unavailable';
 }
+export function playMetricLabel(row: Pick<CampaignPublicationRow, 'platform'>): string {
+ return ['instagram', 'tiktok'].includes((row.platform ?? "").toLowerCase()) ? 'Video Play Count' : 'Views';
+}
+export function playTotalLabel(rows: CampaignPublicationRow[]): string {
+ const labels = new Set(rows.filter(row => row.views != null).map(playMetricLabel));
+ return labels.size === 1 ? [...labels][0] : 'Video Plays & Views';
+}

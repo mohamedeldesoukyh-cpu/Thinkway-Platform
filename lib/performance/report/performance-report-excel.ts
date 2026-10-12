@@ -1,4 +1,4 @@
-import { reportedTotal, coverageLabel } from './reported-metrics';
+import { playTotalLabel, reportedTotal, coverageLabel } from './reported-metrics';
 import {
   formatCompactCount,
   formatMoneyValue,
@@ -46,7 +46,7 @@ export function buildPerformanceReportExcelBuffer(
     "Caption",
     "Hashtags",
     "Mentions",
-    "Views",
+    playTotalLabel(data.bundle.publications),
     "Reach",
     "Reach Source",
     "Impressions",
@@ -156,7 +156,7 @@ export function buildPerformanceReportExcelBuffer(
         { label: "AV posts", value: String(data.bundle.summary.added_value_publications) },
         { label: "Reported reach (not deduplicated)", value: reportedTotal(data.bundle.publications, 'reach') },
         { label: "Reported impressions", value: reportedTotal(data.bundle.publications, 'impressions') },
-        { label: "Collected views", value: `${reportedTotal(data.bundle.publications, 'views')} · ${coverageLabel(data.bundle.publications, 'views')}` },
+        { label: playTotalLabel(data.bundle.publications), value: `${reportedTotal(data.bundle.publications, 'views')} · ${coverageLabel(data.bundle.publications, 'views')}` },
         { label: "Avg ER", value: formatPercent(data.bundle.summary.average_engagement_rate) },
         ...data.platformBenchmarks.map((b) => ({
           label: `Avg ER · ${b.label}`,

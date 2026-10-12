@@ -1,3 +1,4 @@
+import { playMetricLabel } from './reported-metrics';
 import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
 import {
   formatCompactCount,
@@ -240,7 +241,7 @@ export function renderPcard(pub: CampaignPublicationRow): string {
     <div class="grow"></div>
     <div class="pcard__foot">
       <div class="pcard__k">
-        ${pub.views != null ? `<div class="k"><span>Views</span><strong>${esc(formatCompactCount(pub.views))}</strong></div>` : ""}
+        ${pub.views != null ? `<div class="k"><span>${esc(playMetricLabel(pub))}</span><strong>${esc(formatCompactCount(pub.views))}</strong></div>` : ""}
         ${pub.reach != null ? `<div class="k"><span>${pub.reach_source === "forecast" ? "Est. reach" : "Reach"}</span><strong>${esc(formatCompactCount(pub.reach))}</strong></div>` : ""}
         <div class="k"><span>Engag.</span><strong>${esc(formatCompactCount(pub.total_engagements))}</strong></div>
         <div class="k k--er"><span>ER</span><strong>${esc(formatPercent(pub.engagement_rate, 1))}</strong></div>

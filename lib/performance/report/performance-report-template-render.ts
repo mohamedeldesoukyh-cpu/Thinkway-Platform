@@ -1,4 +1,4 @@
-import { reportedTotal, coverageLabel, metricCoverage } from './reported-metrics';
+import { playTotalLabel, reportedTotal, coverageLabel, metricCoverage } from './reported-metrics';
 import { creatorHighlightPages, renderCreatorHighlights } from './creator-highlights';
 import {
   formatCompactCount,
@@ -19,6 +19,7 @@ import {
   formatGeneratedDate,
   pageLabel,
   platformKey,
+  renderDividerPage,
   renderPcard,
   renderPlatformDot,
   renderPlatformIconBox,
@@ -182,7 +183,7 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
       ? Math.max(1, Math.ceil(addedValue.length / CARDS_PER_PAGE))
       : 0;
   const highlightPages = creatorHighlightPages(data);
-  const totalPages = 2 + highlightPages.length + pubPages + addedPages;
+  const totalPages = 2 + highlightPages.length + pubPages + addedPages + (addedValue.length ? 1 : 0);
   const sheets: string[] = [renderCover(data)];
   let page = 2;
 
@@ -201,7 +202,7 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
 <div class="hero">
   ${metricCoverage(data.bundle.publications, 'reach').available ? `<div class="h"><div class="hk">Reported reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Sum of reported post reach; audiences may overlap</div></div>` : ""}
   ${metricCoverage(data.bundle.publications, 'impressions').available ? `<div class="h"><div class="hk">Reported impressions</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'impressions'))}</div><div class="hs">Reported impressions only; forecasts excluded</div></div>` : ""}
-  ${metricCoverage(data.bundle.publications, 'views').available ? `<div class="h"><div class="hk">Collected views</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>` : ""}
+  ${metricCoverage(data.bundle.publications, 'views').available ? `<div class="h"><div class="hk">${esc(playTotalLabel(data.bundle.publications))}</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>` : ""}
 </div>
 <div class="stats">
   <div class="s"><div class="sk">Creators</div><div class="sv num">${data.uniqueCreatorCount}</div><div class="ss">Activated</div></div>
@@ -278,6 +279,16 @@ ${
   page += agreedSheets.length;
 
   if (addedValue.length > 0) {
+    sheets.push(renderDividerPage({
+      id: "section-added-value-divider",
+      kicker: "Section 04",
+      title: "Added Value",
+      count: `${addedValue.length} added-value publication${addedValue.length === 1 ? "" : "s"}`,
+      text: "Extra publications delivered on platforms outside the contracted assignment mix — additional value delivered to the client.",
+      footLeft: foot,
+      pageLabel: pageLabel(page, totalPages),
+    }));
+    page += 1;
     const addedSheets = renderPublicationPages(addedValue, {
       sectionNum: "04",
       sectionTitle: "Added Value",
@@ -316,7 +327,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
       body: `${renderSectionHeader("01", "Executive Summary", "Campaign roll-up for the influencer report pack.")}
 <div class="hero">
   ${metricCoverage(data.bundle.publications, 'reach').available ? `<div class="h"><div class="hk">Reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Reported post reach; not deduplicated</div></div>` : ""}
-  ${metricCoverage(data.bundle.publications, 'views').available ? `<div class="h"><div class="hk">Collected views</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>` : ""}
+  ${metricCoverage(data.bundle.publications, 'views').available ? `<div class="h"><div class="hk">${esc(playTotalLabel(data.bundle.publications))}</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>` : ""}
   <div class="h"><div class="hk">Engagements</div><div class="hv">${esc(formatCompactCount(summary.total_engagements))}</div><div class="hs">Avg ER ${esc(formatPercent(summary.average_engagement_rate))}</div></div>
 </div>
 <div class="stats">
@@ -348,7 +359,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
               `${section.summary.publications} publications · ${esc(formatCompactCount(section.summary.engagements))} engagements · ER ${esc(formatPercent(section.summary.averageEr, 1))}`
             )}
 <div class="stats" style="margin-bottom:5mm">
-  ${metricCoverage(section.publications, 'views').available ? `<div class="s"><div class="sk">Views</div><div class="sv num">${esc(reportedTotal(section.publications, 'views'))}</div><div class="ss">Total</div></div>` : ""}
+  ${metricCoverage(section.publications, 'views').available ? `<div class="s"><div class="sk">${esc(playTotalLabel(section.publications))}</div><div class="sv num">${esc(reportedTotal(section.publications, 'views'))}</div><div class="ss">Total</div></div>` : ""}
   ${metricCoverage(section.publications, 'reach').available ? `<div class="s"><div class="sk">Reach</div><div class="sv num">${esc(reportedTotal(section.publications, 'reach'))}</div><div class="ss">Total</div></div>` : ""}
   <div class="s"><div class="sk">Engagements</div><div class="sv num">${esc(formatCompactCount(section.summary.engagements))}</div><div class="ss">Total</div></div>
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(section.summary.averageEr, 1))}</div><div class="ss">All posts ÷ agreed</div></div>
