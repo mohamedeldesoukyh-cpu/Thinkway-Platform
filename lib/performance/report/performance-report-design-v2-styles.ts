@@ -302,7 +302,7 @@ strong{font-weight:600}
 .pcard__media{position:relative;width:100%;flex:0 0 38%;min-height:72px;height:auto;padding-top:0;border-radius:9px;
   background:#EDF0F6;overflow:hidden}
 .pcard__media > img{position:absolute;top:0;left:0;right:0;bottom:0;
-  width:100%;height:100%;object-fit:cover;display:block}
+  width:100%;height:100%;object-fit:contain;object-position:center;display:block}
 .pcard__ph{position:absolute;top:0;left:0;right:0;bottom:0;
   display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
   background:linear-gradient(135deg,#F2F5FA,#E4EAF5)}
