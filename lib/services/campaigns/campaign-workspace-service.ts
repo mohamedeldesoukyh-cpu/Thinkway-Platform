@@ -276,6 +276,9 @@ export async function getCampaignWorkspace(
   const lines = (linesResult.data ?? []) as unknown as LineRow[];
   await hydrateMissingLineDescriptionsFromQuotation(supabase, lines);
   const lineIds = new Set(lines.map((l) => l.id));
+  const { data: documentLocks, error: documentLockError } = await supabase.rpc("assignment_commercial_locks" as never, { p_lines: [...lineIds] } as never);
+  if (documentLockError) console.error("[campaign-workspace] Cannot verify document commercial locks", documentLockError.message);
+  const documentLockMap = new Map(((documentLocks ?? []) as { line_id: string; cost_locked: boolean; client_locked: boolean }[]).map(lock => [lock.line_id, lock]));
   const lineDocMap = new Map(lines.map((l) => [l.id, l.document_number]));
   const vendorIoDocById = new Map(
     (vendorIos ?? []).map((vio) => {
@@ -600,6 +603,8 @@ export async function getCampaignWorkspace(
           null)
         : null,
       revenue_locked: line.revenue_locked ?? false,
+      commercial_client_locked: documentLockMap.get(line.id)?.client_locked ?? true,
+      commercial_cost_locked: documentLockMap.get(line.id)?.cost_locked ?? true,
       cost_locked: line.cost_locked ?? false,
       vendor_assignment_locked: line.vendor_assignment_locked ?? false,
       finance_override_until: line.finance_override_until ?? null,

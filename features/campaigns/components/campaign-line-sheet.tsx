@@ -760,12 +760,14 @@ export function CampaignLineSheet({
   const commercialFieldsLocked = (locked: boolean) =>
     isPending || (!financeOverrideActive && locked);
 
+  const clientDocumentLocked = Boolean(line?.commercial_client_locked);
+  const vendorDocumentLocked = Boolean(line?.commercial_cost_locked);
   const costCommercialLocked =
-    isEdit && commercialFieldsLocked(Boolean(line?.cost_locked || (line?.vat_locked && !line?.vendor_io_pending_regeneration)));
+    vendorDocumentLocked || (isEdit && commercialFieldsLocked(Boolean(line?.cost_locked || (line?.vat_locked && !line?.vendor_io_pending_regeneration))));
 
   const costLockHint = costCommercialLocked
-    ? line?.cost_locked
-      ? "Cost and cost currency are locked because this assignment has been invoiced. Request a finance override from Billing to edit."
+    ? vendorDocumentLocked || line?.cost_locked
+      ? "Ungenerate the Vendor IO before editing cost amounts, currency, VAT or FX."
       : "Cost fields are locked while VAT is finalized on this assignment."
     : null;
 
@@ -1071,7 +1073,7 @@ export function CampaignLineSheet({
                 modal={false}
                 value={currency}
                 onValueChange={setCurrency}
-                disabled={isPending}
+                disabled={isPending || clientDocumentLocked || vendorDocumentLocked}
               >
                 <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                   <SelectValue />
@@ -1109,7 +1111,7 @@ export function CampaignLineSheet({
               vatPercent={revenueVatPercent}
               exempt={revenueVatExempt}
               currency={currency}
-              disabled={commercialFieldsLocked(
+              disabled={clientDocumentLocked || commercialFieldsLocked(
                 Boolean(line?.revenue_locked || line?.vat_locked)
               )}
               onBeforeVatChange={setRevenue}
@@ -1139,7 +1141,7 @@ export function CampaignLineSheet({
                   onChange={(event) =>
                     setUsageRightsAmount(Number(event.target.value) || 0)
                   }
-                  disabled={commercialFieldsLocked(
+                  disabled={clientDocumentLocked || commercialFieldsLocked(
                     Boolean(line?.revenue_locked || line?.vat_locked)
                   )}
                   className={DETAIL_FORM_INPUT_CLASS}
@@ -1158,7 +1160,7 @@ export function CampaignLineSheet({
                   onChange={(event) =>
                     setAgencyFeePercent(Number(event.target.value) || 0)
                   }
-                  disabled={commercialFieldsLocked(
+                  disabled={clientDocumentLocked || commercialFieldsLocked(
                     Boolean(line?.revenue_locked || line?.vat_locked)
                   )}
                   className={DETAIL_FORM_INPUT_CLASS}
@@ -1224,7 +1226,7 @@ export function CampaignLineSheet({
               vatPercent={costVatPercent}
               exempt={costVatExempt}
               currency={currency}
-              disabled={commercialFieldsLocked(
+              disabled={vendorDocumentLocked || commercialFieldsLocked(
                 Boolean(line?.cost_locked || line?.vat_locked)
               )}
               amountDisabled

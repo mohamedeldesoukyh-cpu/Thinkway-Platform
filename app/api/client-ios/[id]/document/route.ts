@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
 import { resolveClientIoDocumentLayout } from "@/lib/io/client-io-document-layout";
 import { CLIENT_IO_DOCUMENTS_BUCKET } from "@/lib/io/client-io-document-service";
-import { createIoDocumentSignedUrl } from "@/lib/io/io-document-storage";
+import { createIoDocumentSignedUrl, downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
 import { renderLiveClientIoHtml } from "@/lib/io/render-live-client-io-html";
 import { applyClientIoPrintLayout, isClassicClientIoHtml } from "@/lib/io/client-io-print-layout";
 import {
@@ -53,6 +53,39 @@ export async function GET(request: Request, context: RouteContext) {
 
     const disposition = download ? "attachment" : "inline";
     const baseName = typed.document_number ? formatDocumentNumberForDisplay(typed.document_number) : id;
+
+    if (searchParams.get("saved") === "1") {
+      // Historical views must never fall back to current campaign values.
+      if (format === "html" && typed.terms_html) {
+        return new NextResponse(typed.terms_html, { headers: {
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Disposition": `${disposition}; filename="${baseName}.html"`,
+          "Cache-Control": "private, no-store",
+          "Content-Security-Policy": "sandbox allow-same-origin",
+        } });
+      }
+      const path = format === "pdf" ? typed.generated_pdf_url : typed.generated_html_url;
+      if (path && download) {
+        const buffer = await downloadIoDocumentBuffer(supabase, CLIENT_IO_DOCUMENTS_BUCKET, path);
+        if (buffer) {
+          if (format === "pdf") return createPdfDocumentResponse(buffer, baseName, true);
+          return new NextResponse(buffer.toString("utf8"), { headers: {
+            "Content-Type": "text/html; charset=utf-8",
+            "Content-Disposition": `attachment; filename="${baseName}.html"`,
+          } });
+        }
+      }
+      if (path) {
+        const url = await createIoDocumentSignedUrl(supabase, CLIENT_IO_DOCUMENTS_BUCKET, path);
+        if (url) return NextResponse.redirect(url);
+      }
+      if (format === "pdf" && typed.terms_html) {
+        const result = await renderHtmlToPdf(typed.terms_html, INSERTION_ORDER_PDF_OPTIONS);
+        if (!result.ok) return NextResponse.json({ error: pdfUnavailableMessage(result.error) }, { status: 503 });
+        return createPdfDocumentResponse(result.buffer, baseName, download);
+      }
+      return NextResponse.json({ error: "No saved document exists for this version." }, { status: 404 });
+    }
 
     if (format === "pdf") {
       // Reflow the saved classic document with the corrected print gutter.

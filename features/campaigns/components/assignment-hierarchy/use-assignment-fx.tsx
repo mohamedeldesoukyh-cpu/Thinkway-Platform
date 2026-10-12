@@ -12,8 +12,13 @@ type FxDraft = Partial<Record<Side, string | null>>;
 export function useAssignmentFx(line: CampaignLineWorkspace | undefined, currency: string, editable: boolean, vendorCurrency?: string) {
   const workspace = useCampaignCurrency();
   const [drafts, setDrafts] = useState<Record<string, FxDraft>>({});
+  const costLocked = Boolean(line?.commercial_cost_locked ?? (line?.active_vendor_io_id || line?.vendor_io_id));
+  const clientLocked = Boolean(line?.commercial_client_locked ?? (line?.revenue_locked || line?.invoice_id));
+  const sideLocked = (side: Side) => side === "cost" ? costLocked : clientLocked || Boolean(vendorCurrency);
   const id = (line?.id ?? "") + ":" + (vendorCurrency ?? currency);
-  const draft = drafts[id] ?? {};
+  const draft: FxDraft = { ...drafts[id] };
+  if (costLocked) delete draft.cost;
+  if (clientLocked || vendorCurrency) delete draft.revenue;
   const rates = workspace?.currency_rates ?? {};
   const costCurrency = vendorCurrency ?? (currency === line?.currency_code ? line?.cost_received_currency || currency : currency);
   const saved = { cost: line?.cost_fx_override ?? null, revenue: line?.revenue_fx_override ?? null };
@@ -38,10 +43,10 @@ export function useAssignmentFx(line: CampaignLineWorkspace | undefined, currenc
   };
   const controls = (side: Side) => <span className="acp-fx-controls">
     <label>1 {currencies[side]} = <input key={id + side + currency} aria-label={`${side === "cost" ? "Cost" : "Revenue"} FX rate to EGP`} type="number" inputMode="decimal" min="0.000001" max="1000000000" step="0.000001"
-      value={draft[side] ?? rate(side) ?? ""} disabled={!editable || currencies[side] === "EGP" || Boolean(vendorCurrency && side === "revenue")}
+      value={draft[side] ?? rate(side) ?? ""} disabled={!editable || currencies[side] === "EGP" || sideLocked(side)}
       onChange={event => setDrafts(previous => ({ ...previous, [id]: { ...previous[id], [side]: event.target.value } }))} /> EGP</label>
     <small>{draft[side] !== undefined ? draft[side] === null ? "System" : "Custom" : readCreatorFx(saved[side])?.from === currencies[side] ? "Custom" : "System"}</small>
-    {currencies[side] !== "EGP" && <button type="button" disabled={!editable || Boolean(vendorCurrency && side === "revenue")} onClick={() => setDrafts(previous => ({ ...previous, [id]: { ...previous[id], [side]: null } }))}>Use system</button>}
+    {currencies[side] !== "EGP" && <button type="button" disabled={!editable || sideLocked(side)} onClick={() => setDrafts(previous => ({ ...previous, [id]: { ...previous[id], [side]: null } }))}>Use system</button>}
   </span>;
   const reset = () => setDrafts(previous => { const next = { ...previous }; delete next[id]; return next; });
   return {

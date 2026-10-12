@@ -182,6 +182,8 @@ export type CampaignLineWorkspace = {
   vendor_io_reopen_reason?: string | null;
   vendor_io_document_number: string | null;
   revenue_locked: boolean;
+  commercial_client_locked?: boolean;
+  commercial_cost_locked?: boolean;
   cost_locked: boolean;
   vendor_assignment_locked: boolean;
   /** Active after invoice ungenerate — allows commercial edits before regeneration. */

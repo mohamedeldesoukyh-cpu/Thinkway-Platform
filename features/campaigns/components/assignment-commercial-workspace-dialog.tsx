@@ -262,6 +262,17 @@ export function AssignmentCommercialWorkspaceDialog({
     filtered.length > 0 && filtered.every((row) => selected.has(row.line.id));
 
   function patchDraft(lineId: string, patch: Partial<CommercialDraft>) {
+    const line = lines.find((entry) => entry.id === lineId);
+    patch = { ...patch };
+    if (line?.commercial_client_locked ?? line?.revenue_locked) {
+      delete patch.revenue_before_vat;
+      delete patch.usage_rights_amount;
+      delete patch.agency_fee_percent;
+    }
+    if (line?.commercial_cost_locked ?? line?.cost_locked) {
+      delete patch.cost_before_vat;
+      delete patch.usage_rights_cost;
+    }
     setDrafts((prev) => {
       const current = prev[lineId] ?? baseline[lineId];
       if (!current) return prev;
@@ -539,7 +550,9 @@ export function AssignmentCommercialWorkspaceDialog({
             ) : (
               filtered.map(({ line, draft, gp, gpPct, band }) => {
                 const identity = resolveAssignmentCreatorIdentity(line);
-                const locked = line.revenue_locked || line.cost_locked;
+                const clientLocked = line.commercial_client_locked ?? line.revenue_locked;
+                const costLocked = line.commercial_cost_locked ?? line.cost_locked;
+                const locked = clientLocked || costLocked;
                 const isSelected = selected.has(line.id);
                 const avatarUrl =
                   line.creator_avatar_url ??
@@ -612,7 +625,7 @@ export function AssignmentCommercialWorkspaceDialog({
                             step="0.01"
                             className="h-8 w-[120px] text-right text-xs tabular-nums"
                             value={draft.cost_before_vat}
-                            disabled={!canManage || line.cost_locked || pending}
+                            disabled={!canManage || costLocked || pending}
                             onChange={(e) => {
                               const next = Number(e.target.value);
                               patchDraft(line.id, {
@@ -630,7 +643,7 @@ export function AssignmentCommercialWorkspaceDialog({
                             step="0.01"
                             className="h-8 w-[120px] text-right text-xs tabular-nums"
                             value={draft.revenue_before_vat}
-                            disabled={!canManage || line.revenue_locked || pending}
+                            disabled={!canManage || clientLocked || pending}
                             onChange={(e) => {
                               const next = Number(e.target.value);
                               patchDraft(line.id, {
@@ -649,7 +662,7 @@ export function AssignmentCommercialWorkspaceDialog({
                             step="0.01"
                             className="h-8 w-[72px] text-right text-xs"
                             value={draft.agency_fee_percent}
-                            disabled={!canManage || pending}
+                            disabled={!canManage || clientLocked || pending}
                             onChange={(e) => {
                               const next = Number(e.target.value);
                               patchDraft(line.id, {
@@ -667,7 +680,7 @@ export function AssignmentCommercialWorkspaceDialog({
                             step="0.01"
                             className="h-8 w-[100px] text-right text-xs tabular-nums"
                             value={draft.usage_rights_amount}
-                            disabled={!canManage || pending}
+                            disabled={!canManage || clientLocked || pending}
                             onChange={(e) => {
                               const next = Number(e.target.value);
                               patchDraft(line.id, {
@@ -685,7 +698,7 @@ export function AssignmentCommercialWorkspaceDialog({
                             step="0.01"
                             className="h-8 w-[100px] text-right text-xs tabular-nums"
                             value={draft.usage_rights_cost}
-                            disabled={!canManage || pending}
+                            disabled={!canManage || costLocked || pending}
                             onChange={(e) => {
                               const next = Number(e.target.value);
                               patchDraft(line.id, {
