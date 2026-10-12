@@ -15,7 +15,8 @@ export const PERFORMANCE_REPORT_DESIGN_V2_STYLES = `
   --rule:#E4E8F0;      --rule-2:#EFF2F7;     --paper:#FFFFFF;  --shell:#B9C4DA;
   --green:#04785A;     --green-tint:#E8F7F1;
   --ig:#D62976; --tt:#111111; --fb:#1877F2; --yt:#EF1B24;
-  --pw:210mm; --ph:297mm; --pad:15mm;
+  --pw:1600px; --ph:1100px; --pad:52px;
+  --page-background:radial-gradient(120% 90% at 108% -8%,rgba(0,87,255,.55) 0%,rgba(0,87,255,0) 58%),radial-gradient(90% 70% at -14% 108%,rgba(35,74,190,.42) 0%,rgba(35,74,190,0) 62%),var(--navy);
 }
 
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -39,7 +40,7 @@ strong{font-weight:600}
 /* ============================================================
    Page shell
    ============================================================ */
-@page{size:A4;margin:0}
+@page{size:1600px 1100px;margin:0}
 .sheet{
   position:relative; width:var(--pw); height:var(--ph);
   margin:22px auto; background:var(--paper);
@@ -293,15 +294,15 @@ strong{font-weight:600}
 .cover__brands{display:flex;align-items:center;gap:24px}
 .cover__client-logo{width:150px;height:66px;background:#fff;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:center}
 .cover__client-logo img{max-width:100%;max-height:100%;object-fit:contain}
-.sheet--publications{width:1600px;height:1100px;background:#050443;color:#fff;page:publications}
-@page publications{size:1600px 1100px;margin:0}
+.sheet--publications{background:#050443;color:#fff}
+
 .sheet--publications .sheet__head{height:90px;border-color:#ffffff24}
 .sheet--publications .sheet__head .hm{color:#c4c1d6;font-size:11px}
 .sheet--publications .sheet__body{padding:24px 52px 30px}
-.sheet--publications .sheet__foot{background:#050443;border-color:#ffffff24;color:#c4c1d6;height:60px}
+.sheet--publications .sheet__foot{background:transparent;border-color:#ffffff24;color:#c4c1d6;height:60px}
 .sheet--publications .sheet__foot .pg{color:#fff}
 .pgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:1fr;
-  background:linear-gradient(168deg,#262263,#211e5c 62%);border:1px solid #ffffff12;border-radius:20px;padding:15px 17px 18px;
+  background:rgba(19,32,74,.45);border:1px solid #ffffff12;border-radius:20px;padding:15px 17px 18px;
   gap:13px;align-content:stretch;flex:1 1 auto;min-height:0}
 .pcard{border:1px solid var(--rule);border-radius:13px;overflow:hidden;background:#fff;color:#080642;padding:10px 10px 12px;box-shadow:0 3px 12px #1729570a;
   display:flex;flex-direction:column;min-height:0;height:100%;
@@ -387,6 +388,7 @@ strong{font-weight:600}
 /* ============================================================
    Screen affordances / print
    ============================================================ */
+.cover,.divider,.close,.sheet--dark,.sheet--publications{background:var(--page-background)}
 @media print{
   body{background:#fff}
   .sheet{margin:0;box-shadow:none;border-radius:0}
@@ -406,4 +408,5 @@ strong{font-weight:600}
 .creator-highlight__best{border-top:1px solid #E3E9F3;padding-top:10px;font-size:10px;line-height:1.6;color:#63738E}
 .creator-highlight__best b{color:#15233D}
 `;
+
 

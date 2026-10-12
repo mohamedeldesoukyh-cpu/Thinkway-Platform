@@ -26,7 +26,7 @@ export const INSERTION_ORDER_PDF_OPTIONS: HtmlToPdfOptions = {
   margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
 };
 
-/** A4 portrait with CSS @page margins (performance reports). */
+/** Performance reports use the shared landscape dimensions declared by CSS @page. */
 export const PERFORMANCE_REPORT_PDF_OPTIONS = {
   format: "A4" as const,
   printBackground: true,
@@ -587,3 +587,4 @@ export function pdfUnavailableMessage(detail: string): string {
 
   return "PDF generation unavailable. Download HTML instead or try again shortly.";
 }
+
