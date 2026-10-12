@@ -231,6 +231,10 @@ export async function updateBrandAction(
     return { ok: false, message: brandError?.message ?? "Brand not found." };
   }
 
+  if (brand.client_id !== parsed.data.client_id) {
+    return { ok: false, message: "Use Change client in the Brands register so linked records are checked before moving the brand." };
+  }
+
   const clientResult = await fetchClientBrandContext(supabase, parsed.data.client_id);
   if (!clientResult.ok) {
     return { ok: false, message: clientResult.message };

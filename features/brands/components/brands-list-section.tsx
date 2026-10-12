@@ -1,5 +1,6 @@
 "use client";
 
+import type { BrandClientOption } from "./brand-management";
 import { Suspense, type ReactNode } from "react";
 
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
@@ -15,6 +16,7 @@ import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
 type BrandsListSectionProps = {
   brands: BrandsListResult["brands"];
+  clients: BrandClientOption[];
   meta: string;
   hasSearch: boolean;
   hasClients: boolean;
@@ -26,6 +28,7 @@ type BrandsListSectionProps = {
 
 export function BrandsListSection({
   brands,
+  clients,
   meta,
   hasSearch,
   hasClients,
@@ -67,7 +70,7 @@ export function BrandsListSection({
           <BrandsEmptyState hasSearch={hasSearch} hasClients={hasClients} />
         ) : (
           <>
-            <BrandsTable brands={brands} />
+            <BrandsTable brands={brands} clients={clients} />
             <div className="border-t border-border/40 px-4 py-3 md:px-5">
               <BrandsPagination page={page} totalPages={totalPages} search={search} />
             </div>

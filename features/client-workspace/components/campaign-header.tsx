@@ -12,7 +12,7 @@ import { formatPlatformLabel } from "../format";
 import { proposalSubtitle, rosterHeadline, rosterSourceLine } from "../presentation";
 import { clientWorkspacePathReviewId } from "../journey-state";
 import { headerSelectionNavigation } from "../selection-flow";
-import { buildClientReviewPath } from "../security/review-token";
+import { buildClientReviewPath } from "../security/review-path";
 import type { ClientWorkspaceView } from "../types";
 import { StatusPill } from "./media-plan-ui";
 

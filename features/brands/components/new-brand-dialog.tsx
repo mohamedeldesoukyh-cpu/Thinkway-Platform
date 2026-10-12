@@ -53,7 +53,7 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const hasClients = clients.length > 0;
   const [open, setOpen] = useState(false);
-  const [clientId, setClientId] = useState(clients[0]?.id ?? "");
+  const [clientId, setClientId] = useState("");
   const [brandName, setBrandName] = useState("");
   const [vrRateId, setVrRateId] = useState("");
   const [currency, setCurrency] = useState(DEFAULT_PLATFORM_CURRENCY);
@@ -95,7 +95,7 @@ export function NewBrandDialog({ clients, masterData }: NewBrandDialogProps) {
 
   useEffect(() => {
     if (!open) return;
-    const nextClientId = clients[0]?.id ?? "";
+    const nextClientId = "";
     const nextClient = clients.find((client) => client.id === nextClientId);
     setClientId(nextClientId);
     setBrandName("");

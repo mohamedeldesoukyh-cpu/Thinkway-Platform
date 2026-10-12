@@ -1,5 +1,5 @@
 import { CLIENT_STATUS_LABEL, type ClientWorkspaceSectionId } from "../constants";
-import { buildClientReviewPath } from "../security/review-token";
+import { buildClientReviewPath } from "../security/review-path";
 import type { ClientWorkspaceEntry } from "../types";
 import { ENTRANCE_COPY, distinctNextStep } from "../entrance-presentation";
 import { ClientReviewCampaignCta } from "./client-review-campaign-cta";

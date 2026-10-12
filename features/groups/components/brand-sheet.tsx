@@ -65,7 +65,7 @@ export function BrandSheet({
 }: BrandSheetProps) {
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
   const isEdit = brand !== null;
-  const defaultClientId = brand?.client_id ?? legalEntities[0]?.id ?? "";
+  const defaultClientId = brand?.client_id ?? "";
 
   const [clientId, setClientId] = useState(defaultClientId);
   const [brandName, setBrandName] = useState(brand?.name ?? "");
@@ -119,7 +119,7 @@ export function BrandSheet({
 
   useEffect(() => {
     if (!open) return;
-    const nextClientId = brand?.client_id ?? legalEntities[0]?.id ?? "";
+    const nextClientId = brand?.client_id ?? "";
     const nextClient = legalEntities.find((entity) => entity.id === nextClientId);
     setClientId(nextClientId);
     setBrandName(brand?.name ?? "");
@@ -192,14 +192,15 @@ export function BrandSheet({
           </div>
 
           <div className="grid gap-2">
-            <Label>Legal entity</Label>
+            <Label>Client (required)</Label>
             <SearchableSelect
               value={clientId}
               onValueChange={setClientId}
               options={clientOptions}
-              disabled={isPending}
-              placeholder="Select legal entity"
+              disabled={isPending || isEdit}
+              placeholder="Select client"
             />
+            {isEdit && <p className="text-xs text-muted-foreground">To change the client, use Change client in the Brands register. Linked records are checked before moving.</p>}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

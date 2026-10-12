@@ -73,6 +73,7 @@ export default async function BrandsPage({ searchParams }: BrandsPageProps) {
     >
       <BrandsListSection
         brands={brands}
+        clients={clients}
         meta={meta}
         hasSearch={hasSearch}
         hasClients={activeClients.length > 0}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { DeleteEntityDialog } from "./delete-entity-dialog";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { MoreHorizontalIcon } from "lucide-react";
@@ -145,6 +146,7 @@ export function ClientProfile({
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [clientRecord, setClientRecord] = useState(client);
   const currencyOptions = buildCurrencyOptions(masterData.currencies);
 
@@ -354,6 +356,7 @@ export function ClientProfile({
                     </button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
+                    <DropdownMenuItem variant="destructive" onClick={() => setDeleteOpen(true)}>Delete client</DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleTabChange("client-ios")}>
                       Open IO register
                     </DropdownMenuItem>
@@ -365,6 +368,7 @@ export function ClientProfile({
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <DeleteEntityDialog kind="client" id={client.id} name={client.name} open={deleteOpen} onOpenChange={setDeleteOpen} />
                 <button type="button" className="tw-b sm" onClick={handleCancel}>
                   Cancel
                 </button>

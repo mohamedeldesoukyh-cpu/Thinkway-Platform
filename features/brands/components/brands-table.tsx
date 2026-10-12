@@ -1,6 +1,12 @@
 "use client";
 
 import Link from "next/link";
+import { createContext, useContext } from "react";
+import { BrandManagement, type BrandClientOption } from "./brand-management";
+const BrandClientsContext = createContext<BrandClientOption[]>([]);
+function BrandActions({ brand }: { brand: BrandRow }) {
+  return <BrandManagement brand={brand} clients={useContext(BrandClientsContext)} />;
+}
 
 import { DocumentNumber } from "@/components/ui/document-number";
 import {
@@ -13,6 +19,7 @@ import type { BrandsListResult } from "@/features/brands/queries";
 
 type BrandsTableProps = {
   brands: BrandsListResult["brands"];
+  clients: BrandClientOption[];
 };
 
 type BrandRow = BrandsListResult["brands"][number];
@@ -66,16 +73,17 @@ export const BRANDS_TABLE_COLUMNS: OperationalConfigurableColumnDef<BrandRow>[] 
     cellClassName: "text-right",
     renderCell: (brand) => brand.active_campaigns,
   },
+  { id: "actions", label: "Actions", renderCell: (brand) => <BrandActions brand={brand} /> },
 ];
 
 export const BRANDS_TABLE_COLUMN_METAS = getOperationalTableColumnMetas(BRANDS_TABLE_COLUMNS);
 
-export function BrandsTable({ brands }: BrandsTableProps) {
+export function BrandsTable({ brands, clients }: BrandsTableProps) {
   return (
-    <OperationalConfigurableTable
+    <BrandClientsContext.Provider value={clients}><OperationalConfigurableTable
       columns={BRANDS_TABLE_COLUMNS}
       rows={brands}
       rowKey={(brand) => brand.id}
-    />
+    /></BrandClientsContext.Provider>
   );
 }

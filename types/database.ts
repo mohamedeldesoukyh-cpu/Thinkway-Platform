@@ -3867,6 +3867,14 @@ export type Database = {
         };
         Returns: number;
       };
+      delete_unused_client_entity: {
+        Args: { p_kind: string; p_id: string; p_confirmation: string };
+        Returns: boolean;
+      };
+      move_unused_brand_client: {
+        Args: { p_id: string; p_previous_client_id: string; p_client_id: string };
+        Returns: boolean;
+      };
       vendor_list_total_count: {
         Args: {
           p_search?: string | null;
