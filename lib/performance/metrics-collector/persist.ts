@@ -872,6 +872,8 @@ export async function persistCollectedMetrics(
     publicationId: string;
     campaignHeaderId: string;
     metrics: Partial<CollectedMetrics>;
+    /** Explicit manual counters; legacy views remains the calculation denominator. */
+    videoCounters?: { views: number | null; plays: number | null };
     status: MetricsRefreshStatus;
     source: MetricsProviderId | null;
     confidence: number | null;
@@ -920,7 +922,9 @@ export async function persistCollectedMetrics(
       ? input.metrics.engagement_rate
       : null;
 
-  const merged = mergeCollectedMetrics(existing, input.metrics, {
+  const incoming = input.videoCounters ? { ...input.metrics, views: input.videoCounters.plays ?? input.videoCounters.views, plays: input.videoCounters.plays } : input.metrics;
+  const baseMetrics = input.videoCounters ? { ...existing, views: null, plays: null } : existing;
+  const merged = mergeCollectedMetrics(baseMetrics, incoming, {
     platform: engagementContext.platform,
     publication_type: engagementContext.publication_type,
     followers: engagementContext.followers,
@@ -1051,6 +1055,17 @@ export async function persistCollectedMetrics(
     .eq("campaign_header_id", input.campaignHeaderId);
 
   if (error) throw new Error(error.message);
+
+  if (input.videoCounters && input.source === "manual") {
+    await writeSyncLog(supabase, {
+      publicationId: input.publicationId,
+      campaignHeaderId: input.campaignHeaderId,
+      provider: "manual", attemptOrder: 1, status: "completed", completed: true,
+      triggeredBy: "manual", metricsSnapshot: sanitized,
+      responseSummary: { metrics_found: true, videoCounters: input.videoCounters },
+      message: "Manual views and video play count saved separately.",
+    });
+  }
 
   if (input.publicationDate) {
     try {

@@ -15,6 +15,7 @@ export function schedulePublicationWorkspaceOpen(
 export function shouldPreventSheetOutsideDismiss(target: EventTarget | null): boolean {
   if (typeof Element === "undefined" || !(target instanceof Element)) return false;
   return Boolean(
+    target.closest('[data-publication-row]') ||
     target.closest('[data-slot="dropdown-menu-content"]') ||
       target.closest('[data-slot="dropdown-menu-trigger"]') ||
       target.closest('[role="menu"]') ||

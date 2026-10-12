@@ -460,6 +460,7 @@ const { data, error } = await fetchPublicationMetricSyncLogs(supabase, input.cam
 }
 
 const manualMetricsSchema = z.object({
+  plays: optionalMetricNumberSchema,
   views: optionalMetricNumberSchema,
   reach: optionalMetricNumberSchema,
   impressions: optionalMetricNumberSchema,
@@ -551,6 +552,7 @@ const parsed = manualMetricsSchema.safeParse(input.metrics);
     publicationId: input.publicationId,
     campaignHeaderId: input.campaignId,
     metrics,
+    videoCounters: { views: parsed.data.views ?? null, plays: parsed.data.plays ?? null },
     status: "partial",
     source: "manual",
     confidence: 100,

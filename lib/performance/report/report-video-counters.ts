@@ -8,7 +8,7 @@ export async function attachReportVideoCounters(supabase: SupabaseClient, rows: 
     const { data, error } = await supabase.from("publication_metric_sync_logs")
       .select("response_summary,metrics_snapshot")
       .eq("campaign_header_id", row.campaign_header_id).eq("publication_id", row.id)
-      .eq("provider", "apify").eq("response_summary->>metrics_found", "true")
+      .eq("provider", row.metrics_provider === "manual" ? "manual" : "apify").eq("response_summary->>metrics_found", "true")
       .order("created_at", { ascending: false }).limit(1).maybeSingle();
     const counters = data?.response_summary?.videoCounters;
     if (error || !counters || data?.metrics_snapshot?.views !== row.views) return row;

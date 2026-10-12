@@ -48,6 +48,8 @@ import {
   formatMoneyValue,
   formatPercent,
 } from "@/lib/campaigns/performance-calculations";
+import { videoCounters, reportedValue } from "@/lib/performance/report/reported-metrics";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
 import { coerceOptionalMetricNumber } from "@/lib/performance/manual-metric-number";
 import { countStorageTags } from "@/lib/performance/content-normalizer";
 import { formatAssignmentDetailDate } from "@/lib/campaigns/assignment-detail-presenters";
@@ -291,6 +293,7 @@ export function PublicationWorkspace({
   const [logsLoading, setLogsLoading] = useState(false);
   const [manualMetrics, setManualMetrics] = useState({
     views: "",
+    plays: "",
     reach: "",
     impressions: "",
     likes: "",
@@ -307,9 +310,10 @@ export function PublicationWorkspace({
     if (!open || !row) return;
 
     setManualMetrics({
-      views: row.views != null ? String(row.views) : "",
-      reach: row.reach != null ? String(row.reach) : "",
-      impressions: row.impressions != null ? String(row.impressions) : "",
+      views: videoCounters(row).views != null ? String(videoCounters(row).views) : "",
+      plays: videoCounters(row).plays != null ? String(videoCounters(row).plays) : "",
+      reach: reportedValue(row, "reach") != null ? String(row.reach) : "",
+      impressions: reportedValue(row, "impressions") != null ? String(row.impressions) : "",
       likes: row.likes != null ? String(row.likes) : "",
       comments: row.comments != null ? String(row.comments) : "",
       shares: row.shares != null ? String(row.shares) : "",
@@ -365,7 +369,8 @@ export function PublicationWorkspace({
   });
 
   const kpiCards = [
-    ["Views", formatCompactCount(row.views)],
+    ["Views", formatCompactCount(videoCounters(row).views)],
+    ["Video Play Count", formatCompactCount(videoCounters(row).plays)],
     ["Reach", null],
     ["Impressions", null],
     ["Likes", igHiddenLikes ? "Hidden" : formatCompactCount(row.likes)],
@@ -404,6 +409,7 @@ export function PublicationWorkspace({
         publicationId: publicationRow.id,
         metrics: {
           views: coerceOptionalMetricNumber(manualMetrics.views),
+          plays: coerceOptionalMetricNumber(manualMetrics.plays),
           reach: coerceOptionalMetricNumber(manualMetrics.reach),
           impressions: coerceOptionalMetricNumber(manualMetrics.impressions),
           likes: coerceOptionalMetricNumber(manualMetrics.likes),
@@ -467,6 +473,7 @@ export function PublicationWorkspace({
                     {row.influencer_name ?? "Creator"}
                   </h2>
                   <Badge variant="outline" className="text-[10px] capitalize">
+                    <PlatformIcon platform={row.platform} size="xs" className="!size-4" />
                     {row.platform_label}
                   </Badge>
                 </div>
@@ -865,12 +872,13 @@ export function PublicationWorkspace({
               <div className="space-y-3 border-t border-border pt-4">
               <p className="text-xs text-muted-foreground">
                 Override provider metrics for client reporting. Saves with provider <strong>manual</strong> and
-                writes an audit log entry.
+                writes an audit log entry. Enter Views and Video Play Count separately as reported by the platform. Estimated reach and impressions are not prefilled.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {(
                   [
                     ["views", "Views"],
+                    ["plays", "Video Play Count"],
                     ["reach", "Reach"],
                     ["impressions", "Impressions"],
                     ["likes", "Likes"],
@@ -880,10 +888,11 @@ export function PublicationWorkspace({
                   ] as const
                 ).map(([key, label]) => (
                   <div key={key} className="space-y-1">
-                    <label className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                    <label htmlFor={`manual-metric-${key}`} className="text-[11px] font-semibold text-muted-foreground">
                       {label}
                     </label>
                     <Input
+                      id={`manual-metric-${key}`}
                       value={manualMetrics[key]}
                       onChange={(e) =>
                         setManualMetrics((prev) => ({ ...prev, [key]: e.target.value }))

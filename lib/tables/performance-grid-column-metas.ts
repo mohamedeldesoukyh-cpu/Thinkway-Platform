@@ -13,6 +13,7 @@ export const PERFORMANCE_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = [
   { id: "published", label: "Published" },
   { id: "lastUpdated", label: "Last update" },
   { id: "views", label: "Views" },
+  { id: "plays", label: "Video Play Count" },
   { id: "reach", label: "Reach" },
   { id: "impressions", label: "Impr." },
   { id: "likes", label: "Likes" },

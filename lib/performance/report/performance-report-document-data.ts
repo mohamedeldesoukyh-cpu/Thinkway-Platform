@@ -1,5 +1,5 @@
 import { loadIdentityLogoForClientId } from "@/features/client-workspace/identity-logo";
-import { attachReportVideoCounters } from './report-video-counters';
+
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
@@ -465,7 +465,7 @@ export async function loadPerformanceReportDocumentData(
     }
   }
 
-  bundle = {...bundle, publications: await attachReportVideoCounters(supabase, bundle.publications)};
+
   const influencerSections = await buildInfluencerSections(supabase, bundle);
   const uniqueCreatorCount = new Set(
     bundle.publications

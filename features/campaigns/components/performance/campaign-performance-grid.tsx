@@ -24,7 +24,8 @@ import {
   useOperationalColumnVisibleChecker,
   useOperationalTableColumnsContext,
 } from "@/components/tables/operational-table-column-context";
-import { DeliverableExplorerPlatformPill } from "@/features/campaigns/components/deliverables/deliverable-explorer-cells";
+import { PlatformIcon } from "@/lib/performance/platform-icon";
+import { videoCounters } from "@/lib/performance/report/reported-metrics";
 import { EngagementRateDisplay } from "@/features/campaigns/components/performance/engagement-rate-display";
 import {
   PerformanceExplorerCreatorCell,
@@ -64,6 +65,7 @@ type SortKey =
   | "influencer_name"
   | "publication_date"
   | "views"
+  | "plays"
   | "reach"
   | "impressions"
   | "engagement_rate"
@@ -74,6 +76,7 @@ const SORT_KEY_BY_COLUMN: Partial<Record<PerformanceGridColumnId, SortKey>> = {
   creator: "influencer_name",
   published: "publication_date",
   views: "views",
+  plays: "plays",
   reach: "reach",
   impressions: "impressions",
   engagementRate: "engagement_rate",
@@ -90,6 +93,7 @@ const HEADER_LABELS: Partial<Record<PerformanceGridColumnId, string>> = {
   published: "Published",
   lastUpdated: "Last update",
   views: "Views",
+  plays: "Video Play Count",
   reach: "Reach",
   impressions: "Impr.",
   likes: "Likes",
@@ -117,6 +121,8 @@ type Props = {
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
   onOpenDetail: (id: string) => void;
+  onToggleDetail: (id: string) => void;
+  onOpenCreator: (row: CampaignPublicationRow) => void;
   onRemovePublication: (id: string) => void;
   onRefreshMetrics: (id: string) => void;
   sortKey: SortKey;
@@ -173,8 +179,8 @@ function sortRows(
 ): CampaignPublicationRow[] {
   const factor = dir === "asc" ? 1 : -1;
   return [...rows].sort((a, b) => {
-    const av = key === "status" ? a.metrics_refresh_status : a[key];
-    const bv = key === "status" ? b.metrics_refresh_status : b[key];
+    const av = key === "status" ? a.metrics_refresh_status : key === "plays" || key === "views" ? videoCounters(a)[key] : a[key];
+    const bv = key === "status" ? b.metrics_refresh_status : key === "plays" || key === "views" ? videoCounters(b)[key] : b[key];
     if (av == null && bv == null) return 0;
     if (av == null) return 1;
     if (bv == null) return -1;
@@ -191,6 +197,8 @@ export function CampaignPerformanceGrid({
   onToggleSelect,
   onToggleSelectAll,
   onOpenDetail,
+  onToggleDetail,
+  onOpenCreator,
   onRemovePublication,
   onRefreshMetrics,
   sortKey,
@@ -299,14 +307,14 @@ export function CampaignPerformanceGrid({
               avatarUrl={resolvePublicationRowCreatorAvatar(row)}
               profileUrl={row.influencer_profile_url}
               influencerId={row.influencer_id}
-              onOpenPublication={() => schedulePublicationWorkspaceOpen(row.id, onOpenDetail)}
+              onOpenCreator={() => onOpenCreator(row)}
             />
           </div>
         );
       case "platform":
         return (
           <div key={columnId} className="flex items-center justify-center px-2">
-            <DeliverableExplorerPlatformPill platform={row.platform} />
+            <PlatformIcon platform={row.platform} size="xs" className="!size-5" />
           </div>
         );
       case "type": {
@@ -316,7 +324,7 @@ export function CampaignPerformanceGrid({
           (Boolean(normalized) && duplicateUrlKeys.has(normalized!));
         return (
           <div key={columnId} className="flex min-w-0 items-center gap-1 px-2">
-            <span className="truncate text-[10px] text-[var(--camp-text-3)]">
+            <span className="truncate text-[12px] text-[var(--camp-text-3)]">
               {row.publication_type_label}
             </span>
             {showDuplicate ? <PublicationDuplicateBadge className="shrink-0" /> : null}
@@ -325,7 +333,7 @@ export function CampaignPerformanceGrid({
       }
       case "published":
         return (
-          <div key={columnId} className="px-2 text-[11px] text-[var(--camp-text-3)]">
+          <div key={columnId} className="px-2 text-[12px] text-[var(--camp-text-3)]">
             {safeDate(row.publication_date)}
           </div>
         );
@@ -333,16 +341,17 @@ export function CampaignPerformanceGrid({
         return (
           <div
             key={columnId}
-            className="px-2 text-[11px] tabular-nums text-[var(--camp-text-3)]"
+            className="px-2 text-[12px] tabular-nums text-[var(--camp-text-3)]"
             title={publicationLastUpdatedAt(row) ?? undefined}
           >
             {safeDateTime(publicationLastUpdatedAt(row))}
           </div>
         );
+      case "plays":
       case "views":
         return (
           <div key={columnId} className="px-2 text-right tabular-nums text-[12px]">
-            {formatCompactCount(row.views)}
+            {formatCompactCount(videoCounters(row)[columnId as "plays" | "views"])}
           </div>
         );
       case "reach":
@@ -494,7 +503,7 @@ export function CampaignPerformanceGrid({
 
   return (
     <TooltipProvider delayDuration={200}>
-      <div className="thinkway-campaign-perf-grid-shell flex min-h-0 flex-col">
+      <div className="thinkway-campaign-perf-grid-shell font-sans text-[12px] leading-5 flex min-h-0 flex-col">
         <div className="thinkway-campaign-table-scroll min-h-0 flex-1">
           <div className="min-w-[960px]">
             <div
@@ -525,8 +534,20 @@ export function CampaignPerformanceGrid({
               pageRows.map((row) => (
                 <div
                   key={row.id}
+                  data-publication-row={row.id}
+                  tabIndex={0}
+                  aria-label={`Open publication for ${row.influencer_name ?? "creator"}`}
+                  onClick={(event) => {
+                    if ((event.target as Element).closest("button,a,input,select,textarea,[role=checkbox]")) return;
+                    onToggleDetail(row.id);
+                  }}
+                  onKeyDown={(event) => {
+                    if (event.target !== event.currentTarget || !["Enter", " "].includes(event.key)) return;
+                    event.preventDefault();
+                    onToggleDetail(row.id);
+                  }}
                   className={cn(
-                    "thinkway-campaign-perf-grid-row grid items-center",
+                    "thinkway-campaign-perf-grid-row grid items-center cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary",
                     selectedIds.has(row.id) && "thinkway-campaign-perf-grid-row--selected"
                   )}
                   style={{ gridTemplateColumns: gridTemplate }}

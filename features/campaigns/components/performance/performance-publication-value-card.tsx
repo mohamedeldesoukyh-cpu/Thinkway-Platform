@@ -9,6 +9,7 @@ type SortKey =
   | "influencer_name"
   | "publication_date"
   | "views"
+  | "plays"
   | "reach"
   | "impressions"
   | "engagement_rate"
@@ -27,6 +28,8 @@ type Props = {
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: (ids: string[]) => void;
   onOpenDetail: (id: string) => void;
+  onToggleDetail: (id: string) => void;
+  onOpenCreator: (row: CampaignPublicationRow) => void;
   onRemovePublication: (id: string) => void;
   onRefreshMetrics: (id: string) => void;
   sortKey: SortKey;
@@ -47,6 +50,8 @@ export function PerformancePublicationValueCard({
   onToggleSelect,
   onToggleSelectAll,
   onOpenDetail,
+  onToggleDetail,
+  onOpenCreator,
   onRemovePublication,
   onRefreshMetrics,
   sortKey,
@@ -70,6 +75,8 @@ export function PerformancePublicationValueCard({
         onToggleSelect={onToggleSelect}
         onToggleSelectAll={onToggleSelectAll}
         onOpenDetail={onOpenDetail}
+        onToggleDetail={onToggleDetail}
+        onOpenCreator={onOpenCreator}
         onRemovePublication={onRemovePublication}
         onRefreshMetrics={onRefreshMetrics}
         sortKey={sortKey}

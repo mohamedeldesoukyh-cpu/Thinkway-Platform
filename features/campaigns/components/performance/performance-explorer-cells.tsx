@@ -27,7 +27,7 @@ type PerformanceExplorerCreatorCellProps = {
   avatarUrl?: string | null;
   profileUrl?: string | null;
   influencerId?: string | null;
-  onOpenPublication?: () => void;
+  onOpenCreator?: () => void;
   className?: string;
 };
 
@@ -97,7 +97,7 @@ export function PerformanceExplorerCreatorCell({
   avatarUrl,
   profileUrl,
   influencerId,
-  onOpenPublication,
+  onOpenCreator,
   className,
 }: PerformanceExplorerCreatorCellProps) {
   const identity = resolveCreatorIdentity(name, handle);
@@ -135,26 +135,26 @@ export function PerformanceExplorerCreatorCell({
           {badgePlatform ? <PlatformThumbBadge platform={badgePlatform} /> : null}
         </div>
       )}
-      {onOpenPublication ? (
+      {onOpenCreator ? (
         <button
           type="button"
-          onClick={onOpenPublication}
+          onClick={(event) => { event.stopPropagation(); onOpenCreator(); }}
           className="min-w-0 truncate text-left transition-colors hover:text-primary focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-primary focus-visible:outline-none"
-          title={`View ${displayName} publication details`}
+          title={`View ${displayName} creator details`}
         >
           <CreatorNameStack
             name={identity.name}
             handle={identity.handle}
-            nameClassName="thinkway-campaign-cr-name text-[11px]"
-            handleClassName="text-[10px] text-[var(--camp-text-3)]"
+            nameClassName="thinkway-campaign-cr-name text-[12px]"
+            handleClassName="text-[11px] text-[var(--camp-text-3)]"
           />
         </button>
       ) : (
         <CreatorNameStack
           name={identity.name}
           handle={identity.handle}
-          nameClassName="thinkway-campaign-cr-name text-[11px]"
-          handleClassName="text-[10px] text-[var(--camp-text-3)]"
+          nameClassName="thinkway-campaign-cr-name text-[12px]"
+          handleClassName="text-[11px] text-[var(--camp-text-3)]"
         />
       )}
     </div>

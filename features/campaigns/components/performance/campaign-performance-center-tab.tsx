@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { AssignmentInfluencerDetailSheet } from "@/features/campaigns/components/assignment-hierarchy/assignment-influencer-detail-sheet";
+import { tryBuildAssignmentRowViewModel } from "@/lib/campaigns/assignment-row-view-model";
 import { SearchIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -108,6 +110,25 @@ export function CampaignPerformanceCenterTab({
     }
   }, [initialDetailPublicationId, publications]);
 
+  const [creatorLineId, setCreatorLineId] = useState<string | null>(null);
+  const creatorTarget = useMemo(() => {
+    const group = assignmentHierarchy?.groups.find(g => g.line.id === creatorLineId);
+    if (!group) return null;
+    const row = tryBuildAssignmentRowViewModel(group, { campaignId: workspace.id, billingContext: assignmentHierarchy?.billing_context });
+    return row ? { group, row } : null;
+  }, [creatorLineId, assignmentHierarchy, workspace.id]);
+  function openPublicationCreator(publication: CampaignPublicationRow) {
+    const group = assignmentHierarchy?.groups.find(g => g.line.id === publication.campaign_line_id)
+      ?? assignmentHierarchy?.groups.find(g => publication.influencer_id && g.line.influencer_id === publication.influencer_id);
+    if (!group) { toast.error("No campaign assignment is linked to this creator."); return; }
+    setDetailId(null);
+    setCreatorLineId(group.line.id);
+  }
+  function togglePublication(id: string) {
+    setCreatorLineId(null);
+    setDetailId(current => current === id ? null : id);
+  }
+
   const [sheetOpen, setSheetOpen] = useState(false);
   const [storiesSheetOpen, setStoriesSheetOpen] = useState(false);
   const [chartsOpen, setChartsOpen] = useState(false);
@@ -115,6 +136,7 @@ export function CampaignPerformanceCenterTab({
     | "influencer_name"
     | "publication_date"
     | "views"
+    | "plays"
     | "reach"
     | "impressions"
     | "engagement_rate"
@@ -709,6 +731,8 @@ export function CampaignPerformanceCenterTab({
             onToggleSelect={toggleSelect}
             onToggleSelectAll={toggleSelectAll}
             onOpenDetail={setDetailId}
+            onToggleDetail={togglePublication}
+            onOpenCreator={openPublicationCreator}
             onRemovePublication={handleRemovePublication}
             onRefreshMetrics={handleRefreshPublication}
             sortKey={sortKey}
@@ -728,6 +752,8 @@ export function CampaignPerformanceCenterTab({
             onToggleSelect={toggleSelect}
             onToggleSelectAll={toggleSelectAll}
             onOpenDetail={setDetailId}
+            onToggleDetail={togglePublication}
+            onOpenCreator={openPublicationCreator}
             onRemovePublication={handleRemovePublication}
             onRefreshMetrics={handleRefreshPublication}
             sortKey={sortKey}
@@ -775,6 +801,16 @@ export function CampaignPerformanceCenterTab({
         onOpenChange={setStoriesSheetOpen}
       />
 
+      <AssignmentInfluencerDetailSheet
+        open={creatorTarget != null}
+        onOpenChange={open => { if (!open) setCreatorLineId(null); }}
+        campaignName={workspace.name}
+        accountManager={workspace.account_manager}
+        clientIoStatus={workspace.client_io?.status ?? null}
+        group={creatorTarget?.group ?? null}
+        row={creatorTarget?.row ?? null}
+        audienceView="internal"
+      />
       <PublicationWorkspace
         open={detailId != null}
         onOpenChange={(open) => {

@@ -256,6 +256,7 @@ export async function loadPublicationSyncLogsAction(input: {
 }
 
 const manualMetricsSchema = z.object({
+  plays: optionalMetricNumberSchema,
   views: optionalMetricNumberSchema,
   reach: optionalMetricNumberSchema,
   impressions: optionalMetricNumberSchema,

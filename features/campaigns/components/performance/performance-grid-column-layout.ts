@@ -16,6 +16,7 @@ const PERFORMANCE_GRID_COLUMN_WIDTHS: Record<PerformanceGridColumnId, string> = 
   published: "88px",
   lastUpdated: "108px",
   views: "70px",
+  plays: "105px",
   reach: "68px",
   impressions: "68px",
   likes: "55px",
@@ -33,6 +34,7 @@ const PERFORMANCE_GRID_COLUMN_WIDTHS: Record<PerformanceGridColumnId, string> = 
 
 const RIGHT_ALIGNED_COLUMNS = new Set<PerformanceGridColumnId>([
   "views",
+  "plays",
   "reach",
   "impressions",
   "likes",

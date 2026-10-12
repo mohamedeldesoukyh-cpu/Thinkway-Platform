@@ -1,3 +1,4 @@
+import { attachReportVideoCounters } from "@/lib/performance/report/report-video-counters";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { deliverableTypeShortLabel, getPlatformOptionLabel, canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
@@ -592,11 +593,12 @@ export async function getCampaignPerformanceBundle(
     supabase,
     campaignHeaderId
   );
-  const publications = applyPublicationValueScopes(
+  const scopedPublications = applyPublicationValueScopes(
     await attachStoryPublicationPreviews(supabase, campaignHeaderId, publicationsSigned),
     agreedPlatformIndex
   );
 
+  const publications = await attachReportVideoCounters(supabase, scopedPublications);
   traceCampaignRoute("performance:bundle:ok", {
     campaignHeaderId,
     publicationCount: publications.length,
