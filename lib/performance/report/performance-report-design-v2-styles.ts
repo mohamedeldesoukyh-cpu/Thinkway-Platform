@@ -160,9 +160,10 @@ strong{font-weight:600}
    ============================================================ */
 /* NB: decorative gradients live on the element's own background — a ::before on a
    grid/flex container becomes a box in the layout in some print engines. */
-.hero{border-radius:10px;padding:22px 24px;display:grid;grid-template-columns:repeat(3,1fr);
+.hero{border-radius:10px;padding:22px 24px;display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
   overflow:hidden;
   background:radial-gradient(120% 140% at 100% 0%,rgba(0,87,255,.42),rgba(0,87,255,0) 62%),var(--navy)}
+.hero:not(:has(.h)){display:none}
 .hero .h{padding:0 20px}
 .hero .h:first-child{padding-left:0}
 .hero .h+.h{border-left:1px solid rgba(255,255,255,.14)}

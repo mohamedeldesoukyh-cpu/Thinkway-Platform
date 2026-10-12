@@ -1,4 +1,4 @@
-import { reportedTotal, coverageLabel, forecastTotal } from './reported-metrics';
+import { reportedTotal, coverageLabel } from './reported-metrics';
 import {
   formatCompactCount,
   formatMoneyValue,
@@ -9,9 +9,8 @@ import {
   resolveDisplayableCostMetricColumns,
   type CostMetricColumnKey,
 } from "@/lib/performance/report/performance-report-cost-metrics";
-import { REACH_FORECAST_DISCLAIMER, REACH_SOURCE_LABELS, type ReachSource } from "@/lib/performance/reach-forecast-engine";
+import { REACH_SOURCE_LABELS, type ReachSource } from "@/lib/performance/reach-forecast-engine";
 import {
-  IMPRESSIONS_FORECAST_DISCLAIMER,
   IMPRESSIONS_SOURCE_LABELS,
   type ImpressionsSource,
 } from "@/lib/performance/impressions-forecast-engine";
@@ -83,12 +82,12 @@ export function buildPerformanceReportExcelBuffer(
       p.caption ?? "",
       p.hashtags ?? "",
       p.mentions ?? "",
-      p.views ?? "Unavailable",
-      p.reach ?? "Unavailable",
+      p.views ?? "",
+      p.reach ?? "",
       p.reach_source
         ? REACH_SOURCE_LABELS[(p.reach_source as ReachSource) ?? "actual"] ?? p.reach_source
         : "—",
-      p.impressions ?? "Unavailable",
+      p.impressions ?? "",
       p.impressions_source
         ? IMPRESSIONS_SOURCE_LABELS[(p.impressions_source as ImpressionsSource) ?? "actual"] ??
           p.impressions_source
@@ -163,7 +162,7 @@ export function buildPerformanceReportExcelBuffer(
           label: `Avg ER · ${b.label}`,
           value: `${b.publicationCount} agreed · ${formatPercent(b.averageEr)}`,
         })),
-      ],
+      ].filter(row => !String(row.value).startsWith("Unavailable")),
       generatedAt: data.generatedAt,
     },
     columnHeaders: [["Metric", "Value"]],
@@ -178,21 +177,7 @@ export function buildPerformanceReportExcelBuffer(
       },
       { values: ["AV posts", String(data.bundle.summary.added_value_publications)] },
       { values: ["Reported reach (not deduplicated)", reportedTotal(data.bundle.publications, 'reach')] },
-      {
-        values: [
-          "Reach breakdown",
-          `${coverageLabel(data.bundle.publications, 'reach')} · Separate forecast: ${forecastTotal(data.bundle.publications, 'reach')}`,
-        ],
-      },
-      { values: ["Reach disclaimer", REACH_FORECAST_DISCLAIMER] },
       { values: ["Reported impressions", reportedTotal(data.bundle.publications, 'impressions')] },
-      {
-        values: [
-          "Impressions breakdown",
-          `${coverageLabel(data.bundle.publications, 'impressions')} · Separate forecast: ${forecastTotal(data.bundle.publications, 'impressions')}`,
-        ],
-      },
-      { values: ["Impressions disclaimer", IMPRESSIONS_FORECAST_DISCLAIMER] },
       { values: ["Total engagements", formatCompactCount(data.bundle.summary.total_engagements)] },
       { values: ["Avg ER", formatPercent(data.bundle.summary.average_engagement_rate)] },
       ...data.platformBenchmarks.map((b) => ({
@@ -202,7 +187,7 @@ export function buildPerformanceReportExcelBuffer(
         ],
       })),
       ...optionalSummaryCostRows,
-    ],
+    ].filter(row => !String(row.values[1]).startsWith("Unavailable")),
     columnFormats: ["text", "text"],
   };
 

@@ -15,7 +15,7 @@ export function reportedTotal(rows: CampaignPublicationRow[], metric: ReportMetr
  const m=metricCoverage(rows,metric);return m.total == null ? 'Unavailable' : formatCompactCount(m.total);
 }
 export function coverageLabel(rows: CampaignPublicationRow[], metric: ReportMetric): string {
- const m=metricCoverage(rows,metric);return `${m.available} of ${rows.length} publications reported${m.missing ? ` · ${m.missing} unavailable` : ''}`;
+ const m=metricCoverage(rows,metric);return m.available ? `Based on ${m.available} of ${rows.length} publications` : "";
 }
 export function forecastTotal(rows: CampaignPublicationRow[], metric: 'reach'|'impressions'): string {
  const values=rows.filter(r=>r[`${metric}_source`]==='forecast' && r[metric]!=null).map(r=>r[metric]!);

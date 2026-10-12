@@ -137,3 +137,10 @@ test("report document data embeds avatars via fetchCreatorAvatarImage, not a nai
   assert.match(source, /preview \?\? row\.screenshot_url/);
   assert.doesNotMatch(source, /embedReportImageDataUri\(resolvedAvatar\)/);
 });
+
+test('client publication metrics omit missing values but retain actual zero counts', () => {
+ const html = renderPcard(pub({views:0,reach:null,impressions:null,shares:null,saves:null}));
+ assert.match(html, /<span>Views<\/span><strong>0<\/strong>/);
+ assert.doesNotMatch(html, /<span>(Reach|Est\. reach|Impr\.|Est\. impr\.|Shares|Saves)<\/span>/);
+ assert.doesNotMatch(html, /Unavailable/i);
+});

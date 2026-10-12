@@ -240,17 +240,17 @@ export function renderPcard(pub: CampaignPublicationRow): string {
     <div class="grow"></div>
     <div class="pcard__foot">
       <div class="pcard__k">
-        <div class="k"><span>Views</span><strong>${esc(formatCompactCount(pub.views))}</strong></div>
-        <div class="k"><span>${pub.reach_source === "forecast" ? "Est. reach" : "Reach"}</span><strong>${esc(formatCompactCount(pub.reach))}</strong></div>
+        ${pub.views != null ? `<div class="k"><span>Views</span><strong>${esc(formatCompactCount(pub.views))}</strong></div>` : ""}
+        ${pub.reach != null ? `<div class="k"><span>${pub.reach_source === "forecast" ? "Est. reach" : "Reach"}</span><strong>${esc(formatCompactCount(pub.reach))}</strong></div>` : ""}
         <div class="k"><span>Engag.</span><strong>${esc(formatCompactCount(pub.total_engagements))}</strong></div>
         <div class="k k--er"><span>ER</span><strong>${esc(formatPercent(pub.engagement_rate, 1))}</strong></div>
       </div>
       <div class="pcard__k2">
-        <div class="k"><span>${pub.impressions_source === "forecast" ? "Est. impr." : "Impr."}</span><strong>${esc(formatCompactCount(pub.impressions))}</strong></div>
-        <div class="k"><span>Likes</span><strong>${esc(formatCompactCount(pub.likes))}</strong></div>
-        <div class="k"><span>Comm.</span><strong>${esc(formatCompactCount(pub.comments))}</strong></div>
-        <div class="k"><span>Shares</span><strong>${esc(formatCompactCount(pub.shares))}</strong></div>
-        <div class="k"><span>Saves</span><strong>${esc(formatCompactCount(pub.saves))}</strong></div>
+        ${pub.impressions != null ? `<div class="k"><span>${pub.impressions_source === "forecast" ? "Est. impr." : "Impr."}</span><strong>${esc(formatCompactCount(pub.impressions))}</strong></div>` : ""}
+        ${pub.likes != null ? `<div class="k"><span>Likes</span><strong>${esc(formatCompactCount(pub.likes))}</strong></div>` : ""}
+        ${pub.comments != null ? `<div class="k"><span>Comm.</span><strong>${esc(formatCompactCount(pub.comments))}</strong></div>` : ""}
+        ${pub.shares != null ? `<div class="k"><span>Shares</span><strong>${esc(formatCompactCount(pub.shares))}</strong></div>` : ""}
+        ${pub.saves != null ? `<div class="k"><span>Saves</span><strong>${esc(formatCompactCount(pub.saves))}</strong></div>` : ""}
       </div>
       ${sourceBits.length ? `<div class="pcard__src">${esc(sourceBits.join(" · "))}</div>` : ""}
     </div>

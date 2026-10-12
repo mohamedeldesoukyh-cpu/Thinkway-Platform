@@ -1,4 +1,4 @@
-import { reportedTotal, coverageLabel, forecastTotal } from './reported-metrics';
+import { reportedTotal, coverageLabel, metricCoverage } from './reported-metrics';
 import {
   formatCompactCount,
   formatMoneyValue,
@@ -111,15 +111,7 @@ export async function buildPerformanceReportPptxBuffer(
     ],
     ["AV posts", String(data.bundle.summary.added_value_publications)],
     ["Reported reach (not deduplicated)", reportedTotal(data.bundle.publications, 'reach')],
-    [
-      "Reach breakdown",
-      `${coverageLabel(data.bundle.publications, 'reach')} · Separate forecast: ${forecastTotal(data.bundle.publications, 'reach')}`,
-    ],
     ["Impressions", reportedTotal(data.bundle.publications, 'impressions')],
-    [
-      "Impressions breakdown",
-      `${coverageLabel(data.bundle.publications, 'impressions')} · Separate forecast: ${forecastTotal(data.bundle.publications, 'impressions')}`,
-    ],
     ["Collected views", `${reportedTotal(data.bundle.publications, 'views')} · ${coverageLabel(data.bundle.publications, 'views')}`],
     ["Engagements", formatCompactCount(data.bundle.summary.total_engagements)],
     ["Avg ER", formatPercent(data.bundle.summary.average_engagement_rate)],
@@ -151,7 +143,7 @@ export async function buildPerformanceReportPptxBuffer(
         { text: "Metric", options: { bold: true, fill: { color: NAVY }, color: "FFFFFF" } },
         { text: "Value", options: { bold: true, fill: { color: NAVY }, color: "FFFFFF" } },
       ],
-      ...summaryRows.map(([label, value]) => [
+      ...summaryRows.filter(([,value]) => !value.startsWith("Unavailable")).map(([label, value]) => [
         { text: label, options: { bold: false } },
         { text: value, options: { bold: false } },
       ]),
@@ -341,7 +333,7 @@ export async function buildPerformanceReportPptxBuffer(
         color: NAVY,
       });
       slide.addText(
-        `${section.summary.agreedPublications} agreed · ${section.summary.addedValuePublications} added value · ${reportedTotal(section.publications, 'views')} views · ${reportedTotal(section.publications, 'reach')} reach · ${reportedTotal(section.publications, 'impressions')} impressions · ${formatCompactCount(section.summary.engagements)} engagements · Avg ER ${formatPercent(section.summary.averageEr)}`,
+        `${section.summary.agreedPublications} agreed · ${section.summary.addedValuePublications} added value · ${metricCoverage(section.publications, "views").available ? `${reportedTotal(section.publications, "views")} views · ` : ""}${metricCoverage(section.publications, "reach").available ? `${reportedTotal(section.publications, "reach")} reach · ` : ""}${metricCoverage(section.publications, "impressions").available ? `${reportedTotal(section.publications, "impressions")} impressions · ` : ""}${formatCompactCount(section.summary.engagements)} engagements · Avg ER ${formatPercent(section.summary.averageEr)}`,
         { x: 0.5, y: 1.0, w: 9, h: 0.4, fontSize: 12, color: "6B7280" }
       );
       const gallery = section.publications.slice(0, 4);

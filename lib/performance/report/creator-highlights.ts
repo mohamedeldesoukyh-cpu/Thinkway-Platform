@@ -1,4 +1,4 @@
-import { reportedTotal, coverageLabel } from './reported-metrics';
+import { reportedTotal, coverageLabel, metricCoverage } from './reported-metrics';
 import type { PerformanceReportDocumentData, InfluencerReportSection } from './performance-report-types';
 import { formatCompactCount, formatPercent } from '@/lib/campaigns/performance-calculations';
 import { chunk, esc } from './performance-report-v2-parts';
@@ -20,12 +20,12 @@ export function renderCreatorHighlights(data: PerformanceReportDocumentData, cre
     const method = best?.engagement_rate_method;
     const denominator = method === 'views' ? best?.views : method === 'reach' ? best?.reach : method === 'followers' ? best?.platform_follower_count : null;
     const basis = method === 'followers' ? 'followers (estimate)' : method;
-    const context = best ? `${best.total_engagements.toLocaleString('en-US')} interactions${denominator != null ? ` / ${denominator.toLocaleString('en-US')} ${basis}` : ` · ${method === 'manual' ? 'Manually entered rate' : 'Rate basis unavailable'}`}` : 'No engagement rate available';
+    const context = best ? `${best.total_engagements.toLocaleString('en-US')} interactions${denominator != null ? ` / ${denominator.toLocaleString('en-US')} ${basis}` : (method === 'manual' ? ' · Manually entered rate' : '')}` : 'No engagement rate available';
     return `<article class="creator-highlight">
       <h3 class="bidi">${esc(c.name)}</h3>
       <div class="creator-highlight__badges">${badges.map(b => `<span>${b}</span>`).join('')}</div>
       <p class="note">${c.summary.agreedPublications} agreed · ${c.summary.addedValuePublications} added-value publications</p>
-      <div class="creator-highlight__metrics"><div>Collected views<strong>${esc(reportedTotal(c.publications, 'views'))}</strong><small>${esc(coverageLabel(c.publications, 'views'))}</small></div><div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
+      <div class="creator-highlight__metrics">${metricCoverage(c.publications, "views").available ? `<div>Collected views<strong>${esc(reportedTotal(c.publications, 'views'))}</strong><small>${esc(coverageLabel(c.publications, 'views'))}</small></div>` : ""}<div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
       <div class="creator-highlight__best"><b>Best post ER: ${esc(formatPercent(best?.engagement_rate ?? null, 1))}</b><div>${esc(best?.platform_label ?? '')}</div><div>${esc(context)}</div></div>
     </article>`;
   }).join('') || '<p>No creator performance is available yet.</p>'}</div>

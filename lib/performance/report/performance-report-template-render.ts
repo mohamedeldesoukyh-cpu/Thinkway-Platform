@@ -1,4 +1,4 @@
-import { reportedTotal, coverageLabel, forecastTotal } from './reported-metrics';
+import { reportedTotal, coverageLabel, metricCoverage } from './reported-metrics';
 import { creatorHighlightPages, renderCreatorHighlights } from './creator-highlights';
 import {
   formatCompactCount,
@@ -199,11 +199,10 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
       headRight: shortName,
       body: `${renderSectionHeader("01", "Executive Summary", "Aggregate delivery across the full campaign — agreed assignment and added value combined.")}
 <div class="hero">
-  <div class="h"><div class="hk">Reported reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Sum of reported post reach; audiences may overlap</div></div>
-  <div class="h"><div class="hk">Reported impressions</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'impressions'))}</div><div class="hs">Reported impressions only; forecasts excluded</div></div>
-  <div class="h"><div class="hk">Collected views</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>
+  ${metricCoverage(data.bundle.publications, 'reach').available ? `<div class="h"><div class="hk">Reported reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Sum of reported post reach; audiences may overlap</div></div>` : ""}
+  ${metricCoverage(data.bundle.publications, 'impressions').available ? `<div class="h"><div class="hk">Reported impressions</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'impressions'))}</div><div class="hs">Reported impressions only; forecasts excluded</div></div>` : ""}
+  ${metricCoverage(data.bundle.publications, 'views').available ? `<div class="h"><div class="hk">Collected views</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>` : ""}
 </div>
-<p class="note" style="margin:3mm 0">Views are the latest stored collector or manually entered counts; they may differ from current in-app Insights. Reach: ${esc(coverageLabel(data.bundle.publications, 'reach'))}. Impressions: ${esc(coverageLabel(data.bundle.publications, 'impressions'))}. Separate forecasts: reach ${esc(forecastTotal(data.bundle.publications, 'reach'))}; impressions ${esc(forecastTotal(data.bundle.publications, 'impressions'))}. Forecasts use independent assumptions and are not measured results.</p>
 <div class="stats">
   <div class="s"><div class="sk">Creators</div><div class="sv num">${data.uniqueCreatorCount}</div><div class="ss">Activated</div></div>
   <div class="s"><div class="sk">Agreed posts</div><div class="sv num">${summary.agreed_publications}</div><div class="ss">Contracted scope</div></div>
@@ -248,10 +247,7 @@ ${
   </tr></tfoot>
 </table>
 <div class="grow"></div>
-<div class="notes">
-  <p class="note"><strong>Reach methodology.</strong> Reported totals exclude forecasts. Post reach is not deduplicated across creators or platforms. Reported reach: ${esc(reportedTotal(data.bundle.publications, 'reach'))} · Forecasted: ${esc(formatCompactCount(summary.total_forecast_reach))}.</p>
-  <p class="note"><strong>Impressions methodology.</strong> Reported totals exclude forecasts. Separate forecasts are estimates, not observed delivery. Reported impressions: ${esc(reportedTotal(data.bundle.publications, 'impressions'))} · Forecasted: ${esc(formatCompactCount(summary.total_forecast_impressions))}.</p>
-</div>`,
+`,
       footLeft: foot,
       pageLabel: pageLabel(page, totalPages),
     })
@@ -319,8 +315,8 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
       headLeft: "01 · Executive Summary",
       body: `${renderSectionHeader("01", "Executive Summary", "Campaign roll-up for the influencer report pack.")}
 <div class="hero">
-  <div class="h"><div class="hk">Reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Reported post reach; not deduplicated</div></div>
-  <div class="h"><div class="hk">Collected views</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>
+  ${metricCoverage(data.bundle.publications, 'reach').available ? `<div class="h"><div class="hk">Reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Reported post reach; not deduplicated</div></div>` : ""}
+  ${metricCoverage(data.bundle.publications, 'views').available ? `<div class="h"><div class="hk">Collected views</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>` : ""}
   <div class="h"><div class="hk">Engagements</div><div class="hv">${esc(formatCompactCount(summary.total_engagements))}</div><div class="hs">Avg ER ${esc(formatPercent(summary.average_engagement_rate))}</div></div>
 </div>
 <div class="stats">
@@ -328,7 +324,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
   <div class="s"><div class="sk">Publications</div><div class="sv num">${summary.total_publications}</div><div class="ss">All scopes</div></div>
   <div class="s s--green"><div class="sk">AV creators</div><div class="sv num">${data.addedValueCreatorCount}</div><div class="ss">No deliverables</div></div>
   <div class="s s--green"><div class="sk">AV posts</div><div class="sv num">${summary.added_value_publications}</div><div class="ss">Beyond scope</div></div>
-  <div class="s"><div class="sk">Impressions</div><div class="sv num">${esc(reportedTotal(data.bundle.publications, 'impressions'))}</div><div class="ss">Served</div></div>
+  ${metricCoverage(data.bundle.publications, 'impressions').available ? `<div class="s"><div class="sk">Impressions</div><div class="sv num">${esc(reportedTotal(data.bundle.publications, 'impressions'))}</div><div class="ss">Served</div></div>` : ""}
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">All posts ÷ agreed</div></div>
 </div>`,
       footLeft: foot,
@@ -352,8 +348,8 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
               `${section.summary.publications} publications · ${esc(formatCompactCount(section.summary.engagements))} engagements · ER ${esc(formatPercent(section.summary.averageEr, 1))}`
             )}
 <div class="stats" style="margin-bottom:5mm">
-  <div class="s"><div class="sk">Views</div><div class="sv num">${esc(reportedTotal(section.publications, 'views'))}</div><div class="ss">Total</div></div>
-  <div class="s"><div class="sk">Reach</div><div class="sv num">${esc(reportedTotal(section.publications, 'reach'))}</div><div class="ss">Total</div></div>
+  ${metricCoverage(section.publications, 'views').available ? `<div class="s"><div class="sk">Views</div><div class="sv num">${esc(reportedTotal(section.publications, 'views'))}</div><div class="ss">Total</div></div>` : ""}
+  ${metricCoverage(section.publications, 'reach').available ? `<div class="s"><div class="sk">Reach</div><div class="sv num">${esc(reportedTotal(section.publications, 'reach'))}</div><div class="ss">Total</div></div>` : ""}
   <div class="s"><div class="sk">Engagements</div><div class="sv num">${esc(formatCompactCount(section.summary.engagements))}</div><div class="ss">Total</div></div>
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(section.summary.averageEr, 1))}</div><div class="ss">All posts ÷ agreed</div></div>
   <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${section.summary.addedValuePublications}</div><div class="ss">Posts</div></div>
