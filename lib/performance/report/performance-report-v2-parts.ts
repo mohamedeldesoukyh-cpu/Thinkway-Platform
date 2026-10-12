@@ -299,7 +299,7 @@ export function renderDividerPage(opts: {
     <div class="divider__c">${esc(opts.count)}</div>
     <div class="divider__x">${esc(opts.text)}</div>
   </div>
-  <div class="sheet__foot" style="border-color:rgba(255,255,255,.14);color:rgba(255,255,255,.5);position:absolute;left:0;right:0;bottom:0">
+  <div class="sheet__foot" style="background:transparent;border-color:rgba(255,255,255,.14);color:#B7C6E8;position:absolute;left:0;right:0;bottom:0">
     <span>${esc(opts.footLeft)}</span>
     <span class="pg" style="color:#fff">${esc(opts.pageLabel)}</span>
   </div>
