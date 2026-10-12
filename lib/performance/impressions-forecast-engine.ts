@@ -146,6 +146,7 @@ export type ImpressionsSnapshot = {
 };
 
 export type ResolveImpressionsInput = {
+  clearManual?: boolean;
   providerImpressions?: number | null;
   manualImpressions?: number | null;
   storedImpressions?: number | null;
@@ -176,6 +177,7 @@ export function resolveImpressionsSnapshot(input: ResolveImpressionsInput): Impr
     effectiveReach: input.effectiveReach,
   });
 
+  if (input.clearManual) return {impressions:null, impressions_source:'manual', actual_impressions:null, forecast_impressions:null, forecast_method:null, forecast_formula:null};
   if (input.isManualSource && manualImpressions != null) {
     return {
       impressions: manualImpressions,
@@ -203,7 +205,7 @@ export function resolveImpressionsSnapshot(input: ResolveImpressionsInput): Impr
     };
   }
 
-  if (input.storedImpressionsSource === "manual" && positiveMetric(input.storedImpressions) != null) {
+  if (input.storedImpressionsSource === "manual") {
     return {
       impressions: positiveMetric(input.storedImpressions),
       impressions_source: "manual",

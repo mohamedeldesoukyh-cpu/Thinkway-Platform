@@ -22,15 +22,19 @@ export function forecastTotal(rows: CampaignPublicationRow[], metric: 'reach'|'i
  return values.length ? formatCompactCount(values.reduce((a,b)=>a+b,0)) : 'Unavailable';
 }
 export function playMetricLabel(row: Pick<CampaignPublicationRow, 'platform'>): string {
- return ['instagram', 'tiktok'].includes((row.platform ?? "").toLowerCase()) ? 'Video Play Count' : 'Views';
+ return (row.platform ?? "").toLowerCase() === 'instagram' ? 'Video Play Count' : 'Views';
 }
 export function playTotalLabel(rows: CampaignPublicationRow[]): string {
  const labels = new Set(rows.filter(row => row.views != null).map(playMetricLabel));
  return labels.size === 1 ? [...labels][0] : 'Video Plays & Views';
 }
 export function videoCounters(row: CampaignPublicationRow) {
+ if ((row.platform ?? '').toLowerCase() === 'tiktok') {
+  const pair = row.report_video_counters;
+  return {plays:null, views:pair ? pair.views ?? pair.plays : row.views ?? row.plays ?? null};
+ }
  if (row.report_video_counters) return row.report_video_counters;
- // Legacy Instagram/TikTok imports stored the play counter in views.
+ // Legacy Instagram imports stored the play counter in views.
  if (playMetricLabel(row) === 'Video Play Count') return {plays:row.plays ?? row.views, views:null};
  return {plays:row.plays ?? null, views:row.views};
 }

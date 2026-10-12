@@ -12,7 +12,8 @@ test('forecasts never inflate reported delivery; unavailable is distinct from ze
 test('play counts and view counts have distinct client labels', async () => {
  const {playTotalLabel,playMetricLabel} = await import('./reported-metrics');
  const rows = [{platform:'instagram',views:18259},{platform:'tiktok',views:1027}] as CampaignPublicationRow[];
- assert.equal(playTotalLabel(rows),'Video Play Count');
+ assert.equal(playTotalLabel(rows),'Video Plays & Views');
+ assert.equal(playMetricLabel({platform:'tiktok'}),'Views');
  assert.equal(playMetricLabel({platform:'youtube'}),'Views');
  assert.equal(playTotalLabel([...rows,{platform:'youtube',views:141} as CampaignPublicationRow]),'Video Plays & Views');
 });
@@ -25,5 +26,5 @@ test('reports preserve independent source counters without adding them together'
  const row={platform:'instagram',views:18000,report_video_counters:pair} as CampaignPublicationRow;
  assert.deepEqual(videoCounters(row),pair);
  assert.deepEqual(videoMetricTotals([row]).map(m=>m.label),['Video Play Count','Views']);
- assert.deepEqual(extractVideoCounters('tiktok',{playCount:0}),{plays:0,views:null});
+ assert.deepEqual(extractVideoCounters('tiktok',{playCount:0}),{plays:null,views:0});
 });

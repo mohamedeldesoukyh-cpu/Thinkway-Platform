@@ -140,7 +140,7 @@ test("report document data embeds avatars via fetchCreatorAvatarImage, not a nai
 
 test('client publication metrics omit missing values but retain actual zero counts', () => {
  const html = renderPcard(pub({views:0,reach:null,impressions:null,shares:null,saves:null}));
- assert.match(html, /<span>Video Play Count<\/span><strong>0<\/strong>/);
+ assert.match(html, /<span>Views<\/span><strong>0<\/strong>/);
  assert.doesNotMatch(html, /<span>(Reach|Est\. reach|Impr\.|Est\. impr\.|Shares|Saves)<\/span>/);
  assert.doesNotMatch(html, /Unavailable/i);
 });
@@ -151,11 +151,11 @@ test('publication captions and tags are labeled and escaped',()=>{
 });
 
 test('client cards exclude follower forecasts and show independent actual video counters',()=>{
- const row=pub({reach:415100,reach_source:'forecast',impressions:2800,impressions_source:'forecast',report_video_counters:{plays:2600,views:3200}});
+ const row=pub({platform:'instagram',reach:415100,reach_source:'forecast',impressions:2800,impressions_source:'forecast',report_video_counters:{plays:2600,views:3200}});
  const html=renderPcard(row);
  assert.match(html,/<span>Video Play Count<\/span><strong>2.6K<\/strong>/);
  assert.match(html,/<span>Views<\/span><strong>3.2K<\/strong>/);
- assert.doesNotMatch(html,/415.1K|2.8K|Est\. reach|Est\. impr\.|Forecast/i);
+ assert.doesNotMatch(html.replace(/data:image[^" ]+/g, ""),/415\.1K|2\.8K|Est\. reach|Est\. impr\.|Forecast/i);
  const actual=renderPcard({...row,reach:1200,reach_source:'actual',impressions:2400,impressions_source:'manual'});
  assert.match(actual,/<span>Reach<\/span><strong>1.2K<\/strong>/);
  assert.match(actual,/<span>Impr.<\/span><strong>2.4K<\/strong>/);

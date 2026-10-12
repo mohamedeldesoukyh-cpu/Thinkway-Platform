@@ -1,6 +1,6 @@
 /**
  * Reach forecasting for Campaign Performance.
- * When provider reach is unavailable, estimate from creator followers × content-type multiplier.
+ * When provider reach is unavailable, use a labelled low-confidence delivery heuristic.
  */
 
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
@@ -9,7 +9,7 @@ export type ReachSource = "actual" | "forecast" | "manual";
 
 export type ReachForecastConfidence = "low" | "medium" | "high";
 
-export type ReachForecastMethod = "followers_estimate";
+export type ReachForecastMethod = "followers_estimate" | "delivery_estimate";
 
 export type ReachForecastResult = {
   forecastReach: number | null;
@@ -18,7 +18,7 @@ export type ReachForecastResult = {
 };
 
 export const REACH_FORECAST_DISCLAIMER =
-  "Reach totals include actual provider data and forecasted estimates where provider reach was unavailable. Forecasted reach is calculated from creator follower count and content type. Reach source is shown per publication.";
+  "Reach totals include actual provider data and forecasted estimates where provider reach was unavailable. Estimated reach assumes 80% of views/plays, bounded by likes and the view/play count. This is not measured unique reach. Stories are not estimated. Reach source is shown per publication.";
 
 export const REACH_SOURCE_LABELS: Record<ReachSource, string> = {
   actual: "Actual",
@@ -75,20 +75,16 @@ export function computeReachForecast(input: {
   platform?: string | null;
   publication_type?: string | null;
   content_type?: string | null;
+  views?: number | null;
+  likes?: number | null;
 }): ReachForecastResult {
-  const followers = positiveFollowers(input.followers);
-  const publicationType = input.publication_type ?? input.content_type ?? null;
-  const multiplier = reachMultiplierForContentType(input.platform, publicationType);
-
-  if (followers == null || multiplier == null) {
-    return { forecastReach: null, confidence: "low", method: "followers_estimate" };
-  }
-
-  const forecastReach = Math.round(followers * multiplier);
-  const confidence: ReachForecastConfidence =
-    followers >= 10_000 ? "high" : followers >= 1_000 ? "medium" : "low";
-
-  return { forecastReach, confidence, method: "followers_estimate" };
+  const type = (input.publication_type ?? input.content_type ?? '').toLowerCase();
+  const views = positiveReach(input.views);
+  const likes = positiveReach(input.likes) ?? 0;
+  // Product heuristic, not a calibrated measurement of unique viewers.
+  const forecastReach = type.includes('story') || views == null || views <= 0 || likes > views
+    ? null : Math.min(Math.floor(views), Math.max(Math.round(views * 0.8), Math.ceil(likes)));
+  return {forecastReach, confidence:'low', method:'delivery_estimate'};
 }
 
 export type ReachSnapshot = {
@@ -101,6 +97,7 @@ export type ReachSnapshot = {
 };
 
 export type ResolveReachInput = {
+  clearManual?: boolean;
   /** Reach from metrics provider in this sync/import. */
   providerReach?: number | null;
   /** Explicit manual reach from user import/edit. */
@@ -113,6 +110,8 @@ export type ResolveReachInput = {
   followers?: number | null;
   platform?: string | null;
   publication_type?: string | null;
+  views?: number | null;
+  likes?: number | null;
   /** True when metrics source is manual or manual_import. */
   isManualSource?: boolean;
 };
@@ -134,10 +133,13 @@ export function resolveReachSnapshot(input: ResolveReachInput): ReachSnapshot {
 
   const forecast = computeReachForecast({
     followers: input.followers,
+    views: input.views,
+    likes: input.likes,
     platform: input.platform,
     publication_type: input.publication_type,
   });
 
+  if (input.clearManual) return {reach:null, reach_source:'manual', actual_reach:null, forecast_reach:null, forecast_confidence:null, forecast_method:null};
   if (input.isManualSource && manualReach != null) {
     return {
       reach: manualReach,
@@ -164,7 +166,7 @@ export function resolveReachSnapshot(input: ResolveReachInput): ReachSnapshot {
   }
 
   // Provider sync without reach — keep manual if already manual
-  if (input.storedReachSource === "manual" && positiveReach(input.storedReach) != null) {
+  if (input.storedReachSource === "manual") {
     return {
       reach: positiveReach(input.storedReach),
       reach_source: "manual",
@@ -216,7 +218,7 @@ export function reachSourceTooltip(source: ReachSource | null | undefined): stri
     case "actual":
       return "Reach reported by the metrics provider.";
     case "forecast":
-      return "Reach estimated from creator follower count and content type because provider data was unavailable.";
+      return "Estimated reach: 80% of views/plays, bounded by likes and views/plays. Low-confidence heuristic, not measured unique viewers. Stories are not estimated.";
     case "manual":
       return "Reach was manually entered or imported.";
     default:

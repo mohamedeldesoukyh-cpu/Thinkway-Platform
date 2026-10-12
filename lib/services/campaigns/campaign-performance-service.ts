@@ -540,13 +540,7 @@ const parsed = manualMetricsSchema.safeParse(input.metrics);
     return { ok: false, message: parsed.error.issues[0]?.message ?? "Invalid metrics." };
   }
 
-  const metrics = Object.fromEntries(
-    Object.entries(parsed.data).filter(([, value]) => value != null)
-  ) as Record<string, number>;
-
-  if (Object.keys(metrics).length === 0) {
-    return { ok: false, message: "Enter at least one metric value." };
-  }
+  const metrics = parsed.data;
 
   await persistCollectedMetrics(supabase, {
     publicationId: input.publicationId,
