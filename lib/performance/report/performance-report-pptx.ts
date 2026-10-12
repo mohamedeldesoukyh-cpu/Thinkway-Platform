@@ -1,3 +1,4 @@
+import { reportedTotal, coverageLabel, forecastTotal } from './reported-metrics';
 import {
   formatCompactCount,
   formatMoneyValue,
@@ -109,17 +110,17 @@ export async function buildPerformanceReportPptxBuffer(
       data.addedValueCreators.map((c) => c.name).join(", ") || "—",
     ],
     ["AV posts", String(data.bundle.summary.added_value_publications)],
-    ["Reach", formatCompactCount(data.bundle.summary.total_reach)],
+    ["Reported reach (not deduplicated)", reportedTotal(data.bundle.publications, 'reach')],
     [
       "Reach breakdown",
-      `Actual ${formatCompactCount(data.bundle.summary.total_actual_reach)} · Forecast ${formatCompactCount(data.bundle.summary.total_forecast_reach)}`,
+      `${coverageLabel(data.bundle.publications, 'reach')} · Separate forecast: ${forecastTotal(data.bundle.publications, 'reach')}`,
     ],
-    ["Impressions", formatCompactCount(data.bundle.summary.total_impressions)],
+    ["Impressions", reportedTotal(data.bundle.publications, 'impressions')],
     [
       "Impressions breakdown",
-      `Actual ${formatCompactCount(data.bundle.summary.total_actual_impressions)} · Forecast ${formatCompactCount(data.bundle.summary.total_forecast_impressions)}`,
+      `${coverageLabel(data.bundle.publications, 'impressions')} · Separate forecast: ${forecastTotal(data.bundle.publications, 'impressions')}`,
     ],
-    ["Views", formatCompactCount(data.bundle.summary.total_views)],
+    ["Collected views", `${reportedTotal(data.bundle.publications, 'views')} · ${coverageLabel(data.bundle.publications, 'views')}`],
     ["Engagements", formatCompactCount(data.bundle.summary.total_engagements)],
     ["Avg ER", formatPercent(data.bundle.summary.average_engagement_rate)],
     ...data.platformBenchmarks.map((b) => [
@@ -340,7 +341,7 @@ export async function buildPerformanceReportPptxBuffer(
         color: NAVY,
       });
       slide.addText(
-        `${section.summary.agreedPublications} agreed · ${section.summary.addedValuePublications} added value · ${formatCompactCount(section.summary.views)} views · ${formatCompactCount(section.summary.reach)} reach · ${formatCompactCount(section.summary.impressions)} impressions · ${formatCompactCount(section.summary.engagements)} engagements · Avg ER ${formatPercent(section.summary.averageEr)}`,
+        `${section.summary.agreedPublications} agreed · ${section.summary.addedValuePublications} added value · ${reportedTotal(section.publications, 'views')} views · ${reportedTotal(section.publications, 'reach')} reach · ${reportedTotal(section.publications, 'impressions')} impressions · ${formatCompactCount(section.summary.engagements)} engagements · Avg ER ${formatPercent(section.summary.averageEr)}`,
         { x: 0.5, y: 1.0, w: 9, h: 0.4, fontSize: 12, color: "6B7280" }
       );
       const gallery = section.publications.slice(0, 4);

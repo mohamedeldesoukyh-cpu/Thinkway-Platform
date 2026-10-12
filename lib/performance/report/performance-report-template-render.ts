@@ -1,3 +1,4 @@
+import { reportedTotal, coverageLabel, forecastTotal } from './reported-metrics';
 import { creatorHighlightPages, renderCreatorHighlights } from './creator-highlights';
 import {
   formatCompactCount,
@@ -7,29 +8,17 @@ import { formatDateRange } from "@/lib/performance/report/performance-report-doc
 import { PERFORMANCE_REPORT_DESIGN_V2_STYLES } from "@/lib/performance/report/performance-report-design-v2-styles";
 import type { PerformanceReportDocumentData } from "@/lib/performance/report/performance-report-types";
 import {
-  getReportPlatformIconDataUri,
   getReportPlatformIconTitle,
 } from "@/lib/performance/report/report-platform-icons";
 import { buildQrCodeImageUrl } from "@/lib/performance/report/qr-code";
-import {
-  REACH_FORECAST_DISCLAIMER,
-} from "@/lib/performance/reach-forecast-engine";
-import {
-  IMPRESSIONS_FORECAST_DISCLAIMER,
-} from "@/lib/performance/impressions-forecast-engine";
 import { partitionPublicationsByValueScope, resolvePublicationValueScope, addedValueCreatorPercent } from "@/lib/performance/publication-value-scope";
 import {
   CARDS_PER_PAGE,
   chunk,
   esc,
-  flightDays,
   formatGeneratedDate,
   pageLabel,
-  platformColor,
   platformKey,
-  renderBars,
-  renderClosing,
-  renderDividerPage,
   renderPcard,
   renderPlatformDot,
   renderPlatformIconBox,
@@ -179,13 +168,13 @@ function renderPublicationPages(
 function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
   const foot = campaignFootLabel(data);
   const shortName = campaignShortName(data);
-  const { summary, charts } = data.bundle;
+  const { summary } = data.bundle;
   const { agreed, addedValue } = partitionPublicationsByValueScope(
     data.bundle.publications
   );
   const scopeRows = buildPlatformScopeRows(data);
-  const days = flightDays(data.campaign.startDate, data.campaign.endDate);
-  const platforms = data.highlights.platforms;
+
+
 
   const pubPages = Math.max(1, Math.ceil(Math.max(agreed.length, 1) / CARDS_PER_PAGE));
   const addedPages =
@@ -193,65 +182,9 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
       ? Math.max(1, Math.ceil(addedValue.length / CARDS_PER_PAGE))
       : 0;
   const highlightPages = creatorHighlightPages(data);
-  const extraHighlights = highlightPages.length - 1;
-  const totalPages =
-    extraHighlights + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + pubPages + (addedValue.length > 0 ? 1 + addedPages : 0) + 1;
-
-  const sheets: string[] = [];
-  let page = 1;
-
-  sheets.push(renderCover(data));
-  page = 2;
-
-  const tocEntries = [
-    { num: "01", label: "Executive Summary", page: 3 },
-    { num: "02", label: "Campaign Highlights", page: 4 },
-    { num: "03", label: "Benchmark & Key Insights", page: 5 + extraHighlights },
-    { num: "04", label: "Platform Breakdown", page: 6 + extraHighlights },
-    { num: "05", label: "Performance Charts", page: 7 + extraHighlights },
-    { num: "06", label: "Campaign Publications", page: 8 + extraHighlights },
-  ];
-  if (addedValue.length > 0) {
-    tocEntries.push({ num: "07", label: "Added Value", page: 8 + pubPages + 1 + extraHighlights });
-  }
-  tocEntries.push({ num: "—", label: "Thank You", page: totalPages });
-
-  sheets.push(
-    renderSheet({
-      headLeft: "Contents",
-      body: `<div class="toc__hd">
-  <div class="ml ml--blue">Campaign performance report</div>
-  <h2 class="toc__title" style="margin-top:8px">Contents</h2>
-  <p class="toc__sub">Performance of ${esc(data.campaign.name)} across the agreed creator assignment${
-    addedValue.length > 0
-      ? " and the added-value publications delivered beyond scope"
-      : ""
-  }.</p>
-</div>
-<ol class="toc__list">${tocEntries
-        .map(
-          (e) => `<li class="toc__row">
-  <span class="toc__n">${esc(e.num)}</span>
-  <span class="toc__t">${esc(e.label)}</span>
-  <span class="toc__d"></span>
-  <span class="toc__p">${e.page}</span>
-</li>`
-        )
-        .join("")}</ol>
-<div class="grow"></div>
-<div class="ml" style="margin-bottom:10px">Report at a glance</div>
-<div class="strip">
-  <div class="t"><div class="tk">Creators</div><div class="tv num">${data.uniqueCreatorCount}</div><div class="ts">Activated</div></div>
-  <div class="t"><div class="tk">Publications</div><div class="tv num">${summary.total_publications}</div><div class="ts">${summary.agreed_publications} agreed${summary.added_value_publications ? ` · ${summary.added_value_publications} added value` : ""}</div></div>
-  <div class="t"><div class="tk">Flight</div><div class="tv num">${days ?? "—"}</div><div class="ts">${days ? `days · ${esc(formatDateRange(data.campaign.startDate, data.campaign.endDate))}` : esc(formatDateRange(data.campaign.startDate, data.campaign.endDate))}</div></div>
-  <div class="t"><div class="tk">Platforms</div><div class="tv num">${platforms.length || scopeRows.length}</div><div class="ts">${esc((platforms.length ? platforms : scopeRows.map((r) => r.platform)).map(getReportPlatformIconTitle).join(" · ") || "—")}</div></div>
-</div>
-<div class="toc__note"><strong>A note on measurement.</strong> Reach and impressions blend actual provider data with forecasted estimates where the platform did not expose a figure. The source is labelled on every publication card. Campaign Avg ER sums all publication ERs (including added value) and divides by agreed publications only.</div>`,
-      footLeft: foot,
-      pageLabel: pageLabel(page, totalPages),
-    })
-  );
-  page += 1;
+  const totalPages = 2 + highlightPages.length + pubPages + addedPages;
+  const sheets: string[] = [renderCover(data)];
+  let page = 2;
 
   const addedCreators = data.addedValueCreatorCount;
   const creatorRoster = data.assignedCreatorCount || data.uniqueCreatorCount;
@@ -266,10 +199,11 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
       headRight: shortName,
       body: `${renderSectionHeader("01", "Executive Summary", "Aggregate delivery across the full campaign — agreed assignment and added value combined.")}
 <div class="hero">
-  <div class="h"><div class="hk">Total reach</div><div class="hv">${esc(formatCompactCount(summary.total_reach))}</div><div class="hs">Unique accounts reached across activated platforms</div></div>
-  <div class="h"><div class="hk">Impressions</div><div class="hv">${esc(formatCompactCount(summary.total_impressions))}</div><div class="hs">Total content served, including repeat views</div></div>
-  <div class="h"><div class="hk">Views</div><div class="hv">${esc(formatCompactCount(summary.total_views))}</div><div class="hs">Video and reel plays across ${summary.total_publications} publications</div></div>
+  <div class="h"><div class="hk">Reported reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Sum of reported post reach; audiences may overlap</div></div>
+  <div class="h"><div class="hk">Reported impressions</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'impressions'))}</div><div class="hs">Reported impressions only; forecasts excluded</div></div>
+  <div class="h"><div class="hk">Collected views</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>
 </div>
+<p class="note" style="margin:3mm 0">Views are the latest stored collector or manually entered counts; they may differ from current in-app Insights. Reach: ${esc(coverageLabel(data.bundle.publications, 'reach'))}. Impressions: ${esc(coverageLabel(data.bundle.publications, 'impressions'))}. Separate forecasts: reach ${esc(forecastTotal(data.bundle.publications, 'reach'))}; impressions ${esc(forecastTotal(data.bundle.publications, 'impressions'))}. Forecasts use independent assumptions and are not measured results.</p>
 <div class="stats">
   <div class="s"><div class="sk">Creators</div><div class="sv num">${data.uniqueCreatorCount}</div><div class="ss">Activated</div></div>
   <div class="s"><div class="sk">Agreed posts</div><div class="sv num">${summary.agreed_publications}</div><div class="ss">Contracted scope</div></div>
@@ -315,8 +249,8 @@ ${
 </table>
 <div class="grow"></div>
 <div class="notes">
-  <p class="note"><strong>Reach methodology.</strong> ${esc(REACH_FORECAST_DISCLAIMER)} Actual reach: ${esc(formatCompactCount(summary.total_actual_reach))} · Forecasted: ${esc(formatCompactCount(summary.total_forecast_reach))}.</p>
-  <p class="note"><strong>Impressions methodology.</strong> ${esc(IMPRESSIONS_FORECAST_DISCLAIMER)} Actual impressions: ${esc(formatCompactCount(summary.total_actual_impressions))} · Forecasted: ${esc(formatCompactCount(summary.total_forecast_impressions))}.</p>
+  <p class="note"><strong>Reach methodology.</strong> Reported totals exclude forecasts. Post reach is not deduplicated across creators or platforms. Reported reach: ${esc(reportedTotal(data.bundle.publications, 'reach'))} · Forecasted: ${esc(formatCompactCount(summary.total_forecast_reach))}.</p>
+  <p class="note"><strong>Impressions methodology.</strong> Reported totals exclude forecasts. Separate forecasts are estimates, not observed delivery. Reported impressions: ${esc(reportedTotal(data.bundle.publications, 'impressions'))} · Forecasted: ${esc(formatCompactCount(summary.total_forecast_impressions))}.</p>
 </div>`,
       footLeft: foot,
       pageLabel: pageLabel(page, totalPages),
@@ -336,117 +270,8 @@ ${
     page += 1;
   }
 
-  sheets.push(
-    renderSheet({
-      id: "section-benchmark",
-      headLeft: "03 · Benchmark & Key Insights",
-      headRight: shortName,
-      body: `${renderSectionHeader("03", "Benchmark & Key Insights", "Platform engagement rates and recommended actions for the next cycle.")}
-<table class="tbl">
-  <thead><tr><th>Platform</th><th class="r">Agreed posts</th><th class="r">Avg ER</th></tr></thead>
-  <tbody>${data.platformBenchmarks
-    .map(
-      (b) =>
-        `<tr><td><span class="pl">${renderPlatformDot(b.platform)}${esc(b.label)}</span></td><td class="r num">${b.publicationCount}</td><td class="r num">${esc(formatPercent(b.averageEr, 2))}</td></tr>`
-    )
-    .join("")}</tbody>
-</table>
-${
-  data.bestCreatorErName
-    ? `<div class="callout" style="margin-top:5mm"><div><div class="ck">Best creator ER</div><div class="cv">${esc(data.bestCreatorErName)}</div></div><div class="cn">${esc(formatPercent(data.bestCreatorEr, 2))}</div></div>`
-    : ""
-}
-<div class="ins" style="margin-top:6mm">${data.recommendations
-        .map(
-          (r, i) =>
-            `<div class="ins__i"><div class="ins__n">${i + 1}</div><div class="ins__x">${esc(r)}</div></div>`
-        )
-        .join("")}</div>`,
-      footLeft: foot,
-      pageLabel: pageLabel(page, totalPages),
-    })
-  );
-  page += 1;
-
-  const totalSplit = charts.platform_split.reduce((s, p) => s + p.count, 0) || 1;
-  sheets.push(
-    renderSheet({
-      id: "section-platform-breakdown",
-      headLeft: "04 · Platform Breakdown",
-      headRight: shortName,
-      body: `${renderSectionHeader("04", "Platform Breakdown", "How publications and engagements distribute across channels.")}
-<div class="share">${charts.platform_split
-        .map((p) => {
-          const pct = Math.round((p.count / totalSplit) * 100);
-          const uri = getReportPlatformIconDataUri(p.platform);
-          return `<div class="share__r">
-      <div class="share__i" style="background:transparent;border:0;box-shadow:none">${
-        uri
-          ? `<img src="${uri}" alt="" style="width:13px;height:13px;object-fit:contain" />`
-          : ""
-      }</div>
-      <div class="share__n">${esc(p.label)}</div>
-      <div class="share__t"><i class="share__f" style="width:${pct}%;background:${platformColor(p.platform)}"></i></div>
-      <div class="share__v num">${p.count} <em>${pct}%</em></div>
-    </div>`;
-        })
-        .join("")}</div>
-<table class="tbl" style="margin-top:7mm">
-  <thead><tr><th>Platform</th><th class="r">Posts</th><th class="r">Engagements</th></tr></thead>
-  <tbody>${charts.platform_split
-    .map(
-      (p) =>
-        `<tr><td><span class="pl">${renderPlatformDot(p.platform)}${esc(p.label)}</span></td><td class="r num">${p.count}</td><td class="r num">${esc(formatCompactCount(p.engagements))}</td></tr>`
-    )
-    .join("")}</tbody>
-</table>`,
-      footLeft: foot,
-      pageLabel: pageLabel(page, totalPages),
-    })
-  );
-  page += 1;
-
-  const viewsItems = charts.views_by_publication.slice(0, 10).map((p) => ({
-    label: p.label.length > 28 ? `${p.label.slice(0, 28)}…` : p.label,
-    value: p.views,
-  }));
-  const creatorItems = charts.top_creators_by_engagement.slice(0, 8).map((c) => ({
-    label: c.name.length > 28 ? `${c.name.slice(0, 28)}…` : c.name,
-    value: c.engagements,
-  }));
-  sheets.push(
-    renderSheet({
-      id: "section-performance-charts",
-      headLeft: "05 · Performance Charts",
-      headRight: "Views & creators",
-      body: `${renderSectionHeader("05", "Performance Charts", "Relative delivery across top publications and creators.")}
-<div class="chart"><div class="chart__h"><span class="chart__t">Views by publication</span><span class="chart__u">Top ${viewsItems.length}</span></div>${renderBars(viewsItems)}</div>
-<div class="chart"><div class="chart__h"><span class="chart__t">Top creators by engagement</span><span class="chart__u">Campaign</span></div>${renderBars(creatorItems)}</div>`,
-      footLeft: foot,
-      pageLabel: pageLabel(page, totalPages),
-    })
-  );
-  page += 1;
-
-  sheets.push(
-    renderDividerPage({
-      id: "section-publications",
-      kicker: "Section 06",
-      title: "Campaign Publications",
-      count: `${agreed.length} agreed publication${agreed.length === 1 ? "" : "s"}`,
-      text: `Every post delivered against the contracted assignment mix${
-        data.campaign.startDate || data.campaign.endDate
-          ? ` between ${formatDateRange(data.campaign.startDate, data.campaign.endDate)}`
-          : ""
-      }, with full platform metrics and the reach/impression source labelled per publication.`,
-      footLeft: foot,
-      pageLabel: pageLabel(page, totalPages),
-    })
-  );
-  page += 1;
-
   const agreedSheets = renderPublicationPages(agreed, {
-    sectionNum: "06",
+    sectionNum: "03",
     sectionTitle: "Campaign Publications",
     headRightPrefix: "Agreed assignment",
     footLeft: foot,
@@ -457,21 +282,8 @@ ${
   page += agreedSheets.length;
 
   if (addedValue.length > 0) {
-    sheets.push(
-      renderDividerPage({
-        id: "section-added-value-divider",
-        kicker: "Section 07",
-        title: "Added Value",
-        count: `${addedValue.length} added-value publication${addedValue.length === 1 ? "" : "s"}`,
-        text: "Extra publications delivered on platforms outside the contracted assignment mix — additional value delivered to the client.",
-        footLeft: foot,
-        pageLabel: pageLabel(page, totalPages),
-      })
-    );
-    page += 1;
-
     const addedSheets = renderPublicationPages(addedValue, {
-      sectionNum: "07",
+      sectionNum: "04",
       sectionTitle: "Added Value",
       headRightPrefix: "Beyond scope",
       footLeft: foot,
@@ -483,7 +295,7 @@ ${
     page += addedSheets.length;
   }
 
-  sheets.push(renderClosing(foot, pageLabel(page, totalPages)));
+
   return sheets;
 }
 
@@ -495,37 +307,11 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
   const influencerPageEstimate = data.influencerSections.reduce((sum, section) => {
     return sum + Math.max(1, Math.ceil(section.publications.length / CARDS_PER_PAGE));
   }, 0);
-  const totalPages = 1 + 1 + 1 + influencerPageEstimate + 1;
+  const totalPages = 2 + influencerPageEstimate;
   let page = 1;
 
   sheets.push(renderCover(data));
   page = 2;
-
-  const tocRows = [
-    { num: "01", label: "Executive Summary", page: 3 },
-    ...data.influencerSections.map((s, i) => ({
-      num: String(i + 2).padStart(2, "0"),
-      label: s.name,
-      page: 4 + i,
-    })),
-    { num: "—", label: "Thank You", page: totalPages },
-  ];
-
-  sheets.push(
-    renderSheet({
-      headLeft: "Contents",
-      body: `<div class="toc__hd"><div class="ml ml--blue">Influencer performance report</div><h2 class="toc__title" style="margin-top:8px">Contents</h2></div>
-<ol class="toc__list">${tocRows
-        .map(
-          (e) =>
-            `<li class="toc__row"><span class="toc__n">${esc(e.num)}</span><span class="toc__t">${esc(e.label)}</span><span class="toc__d"></span><span class="toc__p">${e.page}</span></li>`
-        )
-        .join("")}</ol>`,
-      footLeft: foot,
-      pageLabel: pageLabel(page, totalPages),
-    })
-  );
-  page += 1;
 
   sheets.push(
     renderSheet({
@@ -533,8 +319,8 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
       headLeft: "01 · Executive Summary",
       body: `${renderSectionHeader("01", "Executive Summary", "Campaign roll-up for the influencer report pack.")}
 <div class="hero">
-  <div class="h"><div class="hk">Reach</div><div class="hv">${esc(formatCompactCount(summary.total_reach))}</div><div class="hs">Across all creators in this pack</div></div>
-  <div class="h"><div class="hk">Views</div><div class="hv">${esc(formatCompactCount(summary.total_views))}</div><div class="hs">Video and reel plays</div></div>
+  <div class="h"><div class="hk">Reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Reported post reach; not deduplicated</div></div>
+  <div class="h"><div class="hk">Collected views</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>
   <div class="h"><div class="hk">Engagements</div><div class="hv">${esc(formatCompactCount(summary.total_engagements))}</div><div class="hs">Avg ER ${esc(formatPercent(summary.average_engagement_rate))}</div></div>
 </div>
 <div class="stats">
@@ -542,7 +328,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
   <div class="s"><div class="sk">Publications</div><div class="sv num">${summary.total_publications}</div><div class="ss">All scopes</div></div>
   <div class="s s--green"><div class="sk">AV creators</div><div class="sv num">${data.addedValueCreatorCount}</div><div class="ss">No deliverables</div></div>
   <div class="s s--green"><div class="sk">AV posts</div><div class="sv num">${summary.added_value_publications}</div><div class="ss">Beyond scope</div></div>
-  <div class="s"><div class="sk">Impressions</div><div class="sv num">${esc(formatCompactCount(summary.total_impressions))}</div><div class="ss">Served</div></div>
+  <div class="s"><div class="sk">Impressions</div><div class="sv num">${esc(reportedTotal(data.bundle.publications, 'impressions'))}</div><div class="ss">Served</div></div>
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(summary.average_engagement_rate))}</div><div class="ss">All posts ÷ agreed</div></div>
 </div>`,
       footLeft: foot,
@@ -566,8 +352,8 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
               `${section.summary.publications} publications · ${esc(formatCompactCount(section.summary.engagements))} engagements · ER ${esc(formatPercent(section.summary.averageEr, 1))}`
             )}
 <div class="stats" style="margin-bottom:5mm">
-  <div class="s"><div class="sk">Views</div><div class="sv num">${esc(formatCompactCount(section.summary.views))}</div><div class="ss">Total</div></div>
-  <div class="s"><div class="sk">Reach</div><div class="sv num">${esc(formatCompactCount(section.summary.reach))}</div><div class="ss">Total</div></div>
+  <div class="s"><div class="sk">Views</div><div class="sv num">${esc(reportedTotal(section.publications, 'views'))}</div><div class="ss">Total</div></div>
+  <div class="s"><div class="sk">Reach</div><div class="sv num">${esc(reportedTotal(section.publications, 'reach'))}</div><div class="ss">Total</div></div>
   <div class="s"><div class="sk">Engagements</div><div class="sv num">${esc(formatCompactCount(section.summary.engagements))}</div><div class="ss">Total</div></div>
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(section.summary.averageEr, 1))}</div><div class="ss">All posts ÷ agreed</div></div>
   <div class="s s--green"><div class="sk">Added value</div><div class="sv num">${section.summary.addedValuePublications}</div><div class="ss">Posts</div></div>
@@ -589,7 +375,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
     });
   });
 
-  sheets.push(renderClosing(foot, pageLabel(page, totalPages)));
+
   return sheets;
 }
 

@@ -1,3 +1,4 @@
+import { reportedTotal, coverageLabel, forecastTotal } from './reported-metrics';
 import {
   formatCompactCount,
   formatMoneyValue,
@@ -82,12 +83,12 @@ export function buildPerformanceReportExcelBuffer(
       p.caption ?? "",
       p.hashtags ?? "",
       p.mentions ?? "",
-      p.views ?? 0,
-      p.reach ?? 0,
+      p.views ?? "Unavailable",
+      p.reach ?? "Unavailable",
       p.reach_source
         ? REACH_SOURCE_LABELS[(p.reach_source as ReachSource) ?? "actual"] ?? p.reach_source
         : "—",
-      p.impressions ?? 0,
+      p.impressions ?? "Unavailable",
       p.impressions_source
         ? IMPRESSIONS_SOURCE_LABELS[(p.impressions_source as ImpressionsSource) ?? "actual"] ??
           p.impressions_source
@@ -154,9 +155,9 @@ export function buildPerformanceReportExcelBuffer(
           value: data.addedValueCreators.map((c) => c.name).join(", ") || "—",
         },
         { label: "AV posts", value: String(data.bundle.summary.added_value_publications) },
-        { label: "Total reach", value: formatCompactCount(data.bundle.summary.total_reach) },
-        { label: "Total impressions", value: formatCompactCount(data.bundle.summary.total_impressions) },
-        { label: "Total views", value: formatCompactCount(data.bundle.summary.total_views) },
+        { label: "Reported reach (not deduplicated)", value: reportedTotal(data.bundle.publications, 'reach') },
+        { label: "Reported impressions", value: reportedTotal(data.bundle.publications, 'impressions') },
+        { label: "Collected views", value: `${reportedTotal(data.bundle.publications, 'views')} · ${coverageLabel(data.bundle.publications, 'views')}` },
         { label: "Avg ER", value: formatPercent(data.bundle.summary.average_engagement_rate) },
         ...data.platformBenchmarks.map((b) => ({
           label: `Avg ER · ${b.label}`,
@@ -176,19 +177,19 @@ export function buildPerformanceReportExcelBuffer(
         ],
       },
       { values: ["AV posts", String(data.bundle.summary.added_value_publications)] },
-      { values: ["Total reach", formatCompactCount(data.bundle.summary.total_reach)] },
+      { values: ["Reported reach (not deduplicated)", reportedTotal(data.bundle.publications, 'reach')] },
       {
         values: [
           "Reach breakdown",
-          `Actual ${formatCompactCount(data.bundle.summary.total_actual_reach)} · Forecast ${formatCompactCount(data.bundle.summary.total_forecast_reach)}`,
+          `${coverageLabel(data.bundle.publications, 'reach')} · Separate forecast: ${forecastTotal(data.bundle.publications, 'reach')}`,
         ],
       },
       { values: ["Reach disclaimer", REACH_FORECAST_DISCLAIMER] },
-      { values: ["Total impressions", formatCompactCount(data.bundle.summary.total_impressions)] },
+      { values: ["Reported impressions", reportedTotal(data.bundle.publications, 'impressions')] },
       {
         values: [
           "Impressions breakdown",
-          `Actual ${formatCompactCount(data.bundle.summary.total_actual_impressions)} · Forecast ${formatCompactCount(data.bundle.summary.total_forecast_impressions)}`,
+          `${coverageLabel(data.bundle.publications, 'impressions')} · Separate forecast: ${forecastTotal(data.bundle.publications, 'impressions')}`,
         ],
       },
       { values: ["Impressions disclaimer", IMPRESSIONS_FORECAST_DISCLAIMER] },

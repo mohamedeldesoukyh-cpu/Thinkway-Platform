@@ -1,3 +1,4 @@
+import { reportedTotal, coverageLabel } from './reported-metrics';
 import type { PerformanceReportDocumentData, InfluencerReportSection } from './performance-report-types';
 import { formatCompactCount, formatPercent } from '@/lib/campaigns/performance-calculations';
 import { chunk, esc } from './performance-report-v2-parts';
@@ -24,7 +25,7 @@ export function renderCreatorHighlights(data: PerformanceReportDocumentData, cre
       <h3 class="bidi">${esc(c.name)}</h3>
       <div class="creator-highlight__badges">${badges.map(b => `<span>${b}</span>`).join('')}</div>
       <p class="note">${c.summary.agreedPublications} agreed · ${c.summary.addedValuePublications} added-value publications</p>
-      <div class="creator-highlight__metrics"><div>Views<strong>${esc(formatCompactCount(c.summary.views))}</strong></div><div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
+      <div class="creator-highlight__metrics"><div>Collected views<strong>${esc(reportedTotal(c.publications, 'views'))}</strong><small>${esc(coverageLabel(c.publications, 'views'))}</small></div><div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
       <div class="creator-highlight__best"><b>Best post ER: ${esc(formatPercent(best?.engagement_rate ?? null, 1))}</b><div>${esc(best?.platform_label ?? '')}</div><div>${esc(context)}</div></div>
     </article>`;
   }).join('') || '<p>No creator performance is available yet.</p>'}</div>

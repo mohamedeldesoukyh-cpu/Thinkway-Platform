@@ -167,7 +167,7 @@ strong{font-weight:600}
 .hero .h:first-child{padding-left:0}
 .hero .h+.h{border-left:1px solid rgba(255,255,255,.14)}
 .hero .hk{font-size:8.5px;letter-spacing:1.7px;text-transform:uppercase;color:rgba(255,255,255,.5);font-weight:600}
-.hero .hv{font-size:42px;font-weight:800;letter-spacing:-1.8px;color:#fff;line-height:1.05;margin-top:11px;font-variant-numeric:tabular-nums}
+.hero .hv{font-size:32px;overflow-wrap:anywhere;font-weight:800;letter-spacing:-1.8px;color:#fff;line-height:1.05;margin-top:11px;font-variant-numeric:tabular-nums}
 .hero .hs{font-size:9.5px;color:#9FB2DA;margin-top:9px;line-height:1.5}
 
 /* stat grid */
