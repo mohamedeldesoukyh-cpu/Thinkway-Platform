@@ -159,6 +159,7 @@ export type CampaignPublicationRow = {
   forecast_reach: number | null;
   views: number | null;
   unique_views: number | null;
+  report_video_counters?: { plays: number | null; views: number | null };
   likes: number | null;
   comments: number | null;
   shares: number | null;

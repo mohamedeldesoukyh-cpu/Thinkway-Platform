@@ -1,4 +1,4 @@
-import { playTotalLabel, reportedTotal, coverageLabel } from './reported-metrics';
+import { videoMetricTotals, videoCounters, reportedTotal } from './reported-metrics';
 import {
   formatCompactCount,
   formatMoneyValue,
@@ -46,7 +46,8 @@ export function buildPerformanceReportExcelBuffer(
     "Caption",
     "Hashtags",
     "Mentions",
-    playTotalLabel(data.bundle.publications),
+    "Video Play Count",
+    "Views",
     "Reach",
     "Reach Source",
     "Impressions",
@@ -82,7 +83,8 @@ export function buildPerformanceReportExcelBuffer(
       p.caption ?? "",
       p.hashtags ?? "",
       p.mentions ?? "",
-      p.views ?? "",
+      videoCounters(p).plays ?? "",
+      videoCounters(p).views ?? "",
       p.reach ?? "",
       p.reach_source
         ? REACH_SOURCE_LABELS[(p.reach_source as ReachSource) ?? "actual"] ?? p.reach_source
@@ -156,7 +158,7 @@ export function buildPerformanceReportExcelBuffer(
         { label: "AV posts", value: String(data.bundle.summary.added_value_publications) },
         { label: "Reported reach (not deduplicated)", value: reportedTotal(data.bundle.publications, 'reach') },
         { label: "Reported impressions", value: reportedTotal(data.bundle.publications, 'impressions') },
-        { label: playTotalLabel(data.bundle.publications), value: `${reportedTotal(data.bundle.publications, 'views')} · ${coverageLabel(data.bundle.publications, 'views')}` },
+        ...videoMetricTotals(data.bundle.publications).map(m=>({label:m.label,value:`${m.value} · ${m.coverage}`})),
         { label: "Avg ER", value: formatPercent(data.bundle.summary.average_engagement_rate) },
         ...data.platformBenchmarks.map((b) => ({
           label: `Avg ER · ${b.label}`,

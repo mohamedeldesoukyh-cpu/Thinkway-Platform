@@ -1,4 +1,4 @@
-import { playMetricLabel } from './reported-metrics';
+import { videoCounters } from './reported-metrics';
 import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
 import {
   formatCompactCount,
@@ -153,7 +153,7 @@ function shortUrl(url: string | null | undefined): string {
   }
 }
 
-function captionExcerpt(caption: string | null, max = 160): string {
+function captionExcerpt(caption: string | null, max = 320): string {
   const text = caption?.trim();
   if (!text) return "";
   return text.length > max ? `${text.slice(0, max)}…` : text;
@@ -231,8 +231,8 @@ export function renderPcard(pub: CampaignPublicationRow): string {
   <div class="pcard__b">
     <div class="pcard__hd">${renderCreatorAvatar(pub)}<span class="pcard__nm bidi">${esc(pub.influencer_name ?? "Creator")}</span></div>
     <div class="pcard__mt">${esc(pub.platform_label)} · ${esc(formatShortDate(pub.publication_date))}</div>
-    ${excerpt ? `<p class="pcard__cap bidi">${esc(excerpt)}</p>` : ""}
-    ${tags ? `<p class="pcard__tg bidi">${esc(tags)}</p>` : ""}
+    ${excerpt ? `<div class="pcard__copy"><span class="pcard__label">Caption</span><p class="pcard__cap bidi" dir="auto">${esc(excerpt)}</p></div>` : ""}
+    ${tags ? `<div class="pcard__copy"><span class="pcard__label">Tags &amp; mentions</span><p class="pcard__tg bidi" dir="auto">${esc(tags)}</p></div>` : ""}
     ${
       postUrl
         ? `<div class="pcard__url"><a href="${esc(postUrl)}" target="_blank" rel="noopener noreferrer">Open post · ${esc(urlLabel || postUrl)}</a></div>`
@@ -241,7 +241,7 @@ export function renderPcard(pub: CampaignPublicationRow): string {
     <div class="grow"></div>
     <div class="pcard__foot">
       <div class="pcard__k">
-        ${pub.views != null ? `<div class="k"><span>${esc(playMetricLabel(pub))}</span><strong>${esc(formatCompactCount(pub.views))}</strong></div>` : ""}
+        ${(["plays", "views"] as const).map(key => videoCounters(pub)[key] != null ? `<div class="k"><span>${key === "plays" ? "Video Play Count" : "Views"}</span><strong>${esc(formatCompactCount(videoCounters(pub)[key]))}</strong></div>` : "").join("")}
         ${pub.reach != null ? `<div class="k"><span>${pub.reach_source === "forecast" ? "Est. reach" : "Reach"}</span><strong>${esc(formatCompactCount(pub.reach))}</strong></div>` : ""}
         <div class="k"><span>Engag.</span><strong>${esc(formatCompactCount(pub.total_engagements))}</strong></div>
         <div class="k k--er"><span>ER</span><strong>${esc(formatPercent(pub.engagement_rate, 1))}</strong></div>

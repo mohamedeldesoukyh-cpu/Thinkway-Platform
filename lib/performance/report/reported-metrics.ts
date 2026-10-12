@@ -28,3 +28,15 @@ export function playTotalLabel(rows: CampaignPublicationRow[]): string {
  const labels = new Set(rows.filter(row => row.views != null).map(playMetricLabel));
  return labels.size === 1 ? [...labels][0] : 'Video Plays & Views';
 }
+export function videoCounters(row: CampaignPublicationRow) {
+ if (row.report_video_counters) return row.report_video_counters;
+ // Legacy Instagram/TikTok imports stored the play counter in views.
+ if (playMetricLabel(row) === 'Video Play Count') return {plays:row.plays ?? row.views, views:null};
+ return {plays:row.plays ?? null, views:row.views};
+}
+export function videoMetricTotals(rows: CampaignPublicationRow[]) {
+ return (['plays','views'] as const).flatMap(key=>{
+  const values=rows.map(row=>videoCounters(row)[key]).filter((n):n is number=>n!=null && Number.isFinite(n) && n>=0);
+  return values.length ? [{label:key==='plays'?'Video Play Count':'Views',value:formatCompactCount(values.reduce((a,b)=>a+b,0)),coverage:`Based on ${values.length} of ${rows.length} publications`}] : [];
+ });
+}

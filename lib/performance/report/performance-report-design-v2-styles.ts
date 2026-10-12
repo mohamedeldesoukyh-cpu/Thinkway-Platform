@@ -290,13 +290,16 @@ strong{font-weight:600}
 /* ============================================================
    Publication cards
    ============================================================ */
+.cover__brands{display:flex;align-items:center;gap:24px}
+.cover__client-logo{width:150px;height:66px;background:#fff;border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:center}
+.cover__client-logo img{max-width:100%;max-height:100%;object-fit:contain}
 .pgrid{display:grid;grid-template-columns:repeat(2,1fr);grid-template-rows:repeat(2,minmax(0,1fr));
   gap:10px;align-content:stretch;flex:1 1 auto;min-height:0}
-.pcard{border:1px solid var(--rule);border-radius:10px;overflow:hidden;background:#fff;
+.pcard{border:1px solid var(--rule);border-radius:13px;overflow:hidden;background:#fff;padding:8px;box-shadow:0 3px 12px #1729570a;
   display:flex;flex-direction:column;min-height:0;height:100%;
   break-inside:avoid;page-break-inside:avoid}
 .pcard .grow{display:none}
-.pcard__media{position:relative;width:100%;flex:1 1 0;min-height:72px;height:auto;padding-top:0;
+.pcard__media{position:relative;width:100%;flex:0 0 38%;min-height:72px;height:auto;padding-top:0;border-radius:9px;
   background:#EDF0F6;overflow:hidden}
 .pcard__media > img{position:absolute;top:0;left:0;right:0;bottom:0;
   width:100%;height:100%;object-fit:cover;display:block}
@@ -312,7 +315,7 @@ strong{font-weight:600}
 .pcard__platform-icon{position:static;width:14px;height:14px;object-fit:contain;flex:none;display:block}
 .pcard__av{position:absolute;right:9px;bottom:9px;padding:3px 8px;border-radius:999px;
   background:var(--green);color:#fff;font-size:7.5px;font-weight:800;letter-spacing:1px;text-transform:uppercase}
-.pcard__b{padding:8px 11px 9px;display:flex;flex-direction:column;gap:4px;flex:none;min-height:0;overflow:hidden}
+.pcard__b{padding:8px 3px 0;display:flex;flex-direction:column;gap:4px;flex:1;min-height:0;overflow:hidden}
 .pcard__hd{display:flex;align-items:center;gap:9px;min-width:0}
 .pcard__ava{width:26px;height:26px;border-radius:50%;flex:none;position:relative;overflow:hidden;
   background:var(--navy-3);color:#fff;display:flex;align-items:center;justify-content:center;
@@ -321,20 +324,22 @@ strong{font-weight:600}
 .pcard__nm{font-size:11.5px;font-weight:700;letter-spacing:-.1px;line-height:1.25;min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
 .pcard__mt{font-size:8.5px;color:var(--muted);letter-spacing:.3px}
+.pcard__label{display:block;font-size:7px;font-weight:600;color:var(--muted);margin-bottom:2px}
+.pcard__copy{min-width:0}
 .pcard__cap{font-size:9px;line-height:1.45;color:var(--ink-2);unicode-bidi:plaintext;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-height:26px}
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;max-height:39px}
 .pcard__tg{font-size:8px;line-height:1.4;color:var(--blue);unicode-bidi:plaintext;
-  display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden;max-height:12px;word-break:break-word}
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;max-height:23px;word-break:break-word}
 .pcard__tg .mn{color:var(--muted)}
 .pcard__url{font-size:8.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .pcard__url a{color:var(--blue);text-decoration:underline;font-weight:600}
 .pcard__media--link{display:block;color:inherit;text-decoration:none;cursor:pointer}
 .pcard__media--link:hover img{opacity:.92}
-.pcard__foot{margin-top:2px}
+.pcard__foot{margin-top:auto;padding-top:4px}
 .pcard__k{padding-top:8px;border-top:1px solid var(--rule-2);
-  display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
-.pcard__k .k span{display:block;font-size:7px;letter-spacing:1.1px;text-transform:uppercase;
-  color:var(--muted);font-weight:600;white-space:nowrap;overflow:hidden}
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(48px,1fr));gap:6px}
+.pcard__k .k span{display:block;font-size:7px;letter-spacing:.3px;text-transform:uppercase;
+  color:var(--muted);font-weight:600;white-space:normal;min-height:18px;line-height:1.25}
 .pcard__k .k strong{display:block;font-size:12.5px;font-weight:700;letter-spacing:-.3px;margin-top:3px;font-variant-numeric:tabular-nums}
 .pcard__k .k--er strong{color:var(--blue)}
 .pcard__k2{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding-top:6px;margin-top:6px;border-top:1px dashed var(--rule)}

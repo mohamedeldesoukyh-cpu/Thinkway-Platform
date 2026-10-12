@@ -1,4 +1,4 @@
-import { playTotalLabel, reportedTotal, coverageLabel, metricCoverage } from './reported-metrics';
+import { videoMetricTotals, reportedTotal, metricCoverage } from './reported-metrics';
 import { creatorHighlightPages, renderCreatorHighlights } from './creator-highlights';
 import {
   formatCompactCount,
@@ -102,7 +102,7 @@ function renderCover(data: PerformanceReportDocumentData): string {
   return `<section class="sheet cover">
   <div class="cover__in">
     <div class="cover__top">
-      ${wordmark("md", "light")}
+      <div class="cover__brands">${wordmark("md", "light")}${campaign.clientLogoDataUri ? `<div class="cover__client-logo"><img src="${esc(campaign.clientLogoDataUri)}" alt="${esc(campaign.clientLogoAlt || campaign.clientName)}" /></div>` : ""}</div>
       <div class="cover__badge">Confidential</div>
     </div>
     <div class="cover__mid">
@@ -202,7 +202,7 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
 <div class="hero">
   ${metricCoverage(data.bundle.publications, 'reach').available ? `<div class="h"><div class="hk">Reported reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Sum of reported post reach; audiences may overlap</div></div>` : ""}
   ${metricCoverage(data.bundle.publications, 'impressions').available ? `<div class="h"><div class="hk">Reported impressions</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'impressions'))}</div><div class="hs">Reported impressions only; forecasts excluded</div></div>` : ""}
-  ${metricCoverage(data.bundle.publications, 'views').available ? `<div class="h"><div class="hk">${esc(playTotalLabel(data.bundle.publications))}</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>` : ""}
+  ${videoMetricTotals(data.bundle.publications).map(metric => `<div class="h"><div class="hk">${esc(metric.label)}</div><div class="hv">${esc(metric.value)}</div><div class="hs">${esc(metric.coverage)}</div></div>`).join("")}
 </div>
 <div class="stats">
   <div class="s"><div class="sk">Creators</div><div class="sv num">${data.uniqueCreatorCount}</div><div class="ss">Activated</div></div>
@@ -327,7 +327,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
       body: `${renderSectionHeader("01", "Executive Summary", "Campaign roll-up for the influencer report pack.")}
 <div class="hero">
   ${metricCoverage(data.bundle.publications, 'reach').available ? `<div class="h"><div class="hk">Reach</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'reach'))}</div><div class="hs">Reported post reach; not deduplicated</div></div>` : ""}
-  ${metricCoverage(data.bundle.publications, 'views').available ? `<div class="h"><div class="hk">${esc(playTotalLabel(data.bundle.publications))}</div><div class="hv">${esc(reportedTotal(data.bundle.publications, 'views'))}</div><div class="hs">${esc(coverageLabel(data.bundle.publications, 'views'))}</div></div>` : ""}
+  ${videoMetricTotals(data.bundle.publications).map(metric => `<div class="h"><div class="hk">${esc(metric.label)}</div><div class="hv">${esc(metric.value)}</div><div class="hs">${esc(metric.coverage)}</div></div>`).join("")}
   <div class="h"><div class="hk">Engagements</div><div class="hv">${esc(formatCompactCount(summary.total_engagements))}</div><div class="hs">Avg ER ${esc(formatPercent(summary.average_engagement_rate))}</div></div>
 </div>
 <div class="stats">
@@ -359,7 +359,7 @@ function renderInfluencerSheets(data: PerformanceReportDocumentData): string[] {
               `${section.summary.publications} publications · ${esc(formatCompactCount(section.summary.engagements))} engagements · ER ${esc(formatPercent(section.summary.averageEr, 1))}`
             )}
 <div class="stats" style="margin-bottom:5mm">
-  ${metricCoverage(section.publications, 'views').available ? `<div class="s"><div class="sk">${esc(playTotalLabel(section.publications))}</div><div class="sv num">${esc(reportedTotal(section.publications, 'views'))}</div><div class="ss">Total</div></div>` : ""}
+  ${videoMetricTotals(section.publications).map(metric => `<div class="s"><div class="sk">${esc(metric.label)}</div><div class="sv num">${esc(metric.value)}</div><div class="ss">${esc(metric.coverage)}</div></div>`).join("")}
   ${metricCoverage(section.publications, 'reach').available ? `<div class="s"><div class="sk">Reach</div><div class="sv num">${esc(reportedTotal(section.publications, 'reach'))}</div><div class="ss">Total</div></div>` : ""}
   <div class="s"><div class="sk">Engagements</div><div class="sv num">${esc(formatCompactCount(section.summary.engagements))}</div><div class="ss">Total</div></div>
   <div class="s s--accent"><div class="sk">Avg. ER</div><div class="sv num">${esc(formatPercent(section.summary.averageEr, 1))}</div><div class="ss">All posts ÷ agreed</div></div>

@@ -1,3 +1,4 @@
+import { extractVideoCounters } from '../video-counters';
 import type { MetricsCollectorEnv } from "@/lib/performance/metrics-collector/config";
 import { pickApifyAuthorAvatarUrl } from "@/lib/performance/apify-author-avatar";
 import { pickApifyAuthorFollowerCount } from "@/lib/performance/apify-author-followers";
@@ -229,6 +230,7 @@ export async function tryApifyProvider(ctx: Ctx): Promise<ProviderAttemptResult>
       run_status: meta.runStatus,
       metrics_found: true,
       itemCount: items.length,
+      videoCounters: extractVideoCounters(ctx.platform, row),
       previewImageUrl,
       authorAvatarUrl,
       authorFollowerCount,

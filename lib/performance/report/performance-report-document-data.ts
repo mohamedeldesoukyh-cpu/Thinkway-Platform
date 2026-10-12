@@ -1,3 +1,5 @@
+import { loadIdentityLogoForClientId } from "@/features/client-workspace/identity-logo";
+import { attachReportVideoCounters } from './report-video-counters';
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type {
@@ -425,7 +427,7 @@ export async function loadPerformanceReportDocumentData(
     supabase
       .from("campaign_headers")
       .select(
-        "id, document_number, name, description, brief, start_date, end_date, objectives, currency_code, metadata, brands:brand_id(name, metadata), clients:client_id(name, legal_name, country)"
+        "id, client_id, document_number, name, description, brief, start_date, end_date, objectives, currency_code, metadata, brands:brand_id(name, metadata), clients:client_id(name, legal_name, country)"
       )
       .eq("id", campaignHeaderId)
       .maybeSingle(),
@@ -463,6 +465,7 @@ export async function loadPerformanceReportDocumentData(
     }
   }
 
+  bundle = {...bundle, publications: await attachReportVideoCounters(supabase, bundle.publications)};
   const influencerSections = await buildInfluencerSections(supabase, bundle);
   const uniqueCreatorCount = new Set(
     bundle.publications
@@ -495,6 +498,7 @@ export async function loadPerformanceReportDocumentData(
     );
 
   const typed = campaign as {
+    client_id: string | null;
     id: string;
     document_number: string;
     name: string;
@@ -510,6 +514,8 @@ export async function loadPerformanceReportDocumentData(
   const brandMetadata = (brand as { metadata?: Record<string, unknown> } | null)?.metadata ?? null;
   const coverImageUrl = resolveCoverImage(typed.metadata, brandMetadata, bundle.publications);
   const brandLogoUrl = resolveBrandLogo(brandMetadata);
+  const identityLogo = await loadIdentityLogoForClientId(supabase, typed.client_id);
+  const clientLogoDataUri = identityLogo?.url ? await embedReportImageDataUri(identityLogo.url) : null;
   const dashboardUrl = `${appUrl.replace(/\/$/, "")}/campaigns/${typed.id}`;
   const qrCodeImageUrl =
     (await buildQrCodeDataUri(dashboardUrl, 160)) ??
@@ -554,6 +560,8 @@ export async function loadPerformanceReportDocumentData(
       clientName: client?.legal_name ?? client?.name ?? "Client",
       brandName: brand?.name ?? null,
       brandLogoUrl,
+      clientLogoDataUri,
+      clientLogoAlt: identityLogo?.alt ?? null,
       coverImageUrl,
       qrCodeImageUrl,
       currency: typed.currency_code ?? bundle.summary.currency,

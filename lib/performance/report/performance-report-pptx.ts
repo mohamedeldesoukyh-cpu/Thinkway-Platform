@@ -1,4 +1,4 @@
-import { playMetricLabel, playTotalLabel, reportedTotal, coverageLabel, metricCoverage } from './reported-metrics';
+import { videoMetricTotals, reportedTotal, metricCoverage } from './reported-metrics';
 import {
   formatCompactCount,
   formatMoneyValue,
@@ -56,6 +56,18 @@ export async function buildPerformanceReportPptxBuffer(
     bold: true,
     color: "FFFFFF",
   });
+  const clientLogo = pptxPublicationImageSpec(data.campaign.clientLogoDataUri);
+  if (clientLogo) {
+    const sharp = (await import("sharp")).default;
+    const raw = data.campaign.clientLogoDataUri?.match(/^data:image\/[^;]+;base64,([\s\S]+)$/)?.[1];
+    if (raw) {
+      const metadata = await sharp(Buffer.from(raw, "base64")).metadata();
+      const scale = Math.min(1.8 / (metadata.width || 1), 0.65 / (metadata.height || 1));
+      cover.addShape(pptx.ShapeType.rect, {x:7.3,y:0.45,w:2.1,h:0.85,fill:{color:"FFFFFF"},line:{color:"FFFFFF"}});
+      const w=(metadata.width || 1)*scale,h=(metadata.height || 1)*scale;
+      cover.addImage({...clientLogo,x:7.3+(2.1-w)/2,y:0.45+(0.85-h)/2,w,h});
+    }
+  }
   cover.addText("Campaign Performance Report", {
     x: 0.6,
     y: 1.2,
@@ -112,7 +124,7 @@ export async function buildPerformanceReportPptxBuffer(
     ["AV posts", String(data.bundle.summary.added_value_publications)],
     ["Reported reach (not deduplicated)", reportedTotal(data.bundle.publications, 'reach')],
     ["Impressions", reportedTotal(data.bundle.publications, 'impressions')],
-    [playTotalLabel(data.bundle.publications), `${reportedTotal(data.bundle.publications, 'views')} · ${coverageLabel(data.bundle.publications, 'views')}`],
+    ...videoMetricTotals(data.bundle.publications).map(m=>[m.label, `${m.value} · ${m.coverage}`]),
     ["Engagements", formatCompactCount(data.bundle.summary.total_engagements)],
     ["Avg ER", formatPercent(data.bundle.summary.average_engagement_rate)],
     ...data.platformBenchmarks.map((b) => [
@@ -252,7 +264,7 @@ export async function buildPerformanceReportPptxBuffer(
     }
     slide.addTable(
       [
-        [playMetricLabel(pub), formatCompactCount(pub.views)],
+        ...videoMetricTotals([pub]).map(m=>[m.label,m.value]),
         ["Reach", formatCompactCount(pub.reach)],
         [
           "Reach source",
@@ -333,7 +345,7 @@ export async function buildPerformanceReportPptxBuffer(
         color: NAVY,
       });
       slide.addText(
-        `${section.summary.agreedPublications} agreed · ${section.summary.addedValuePublications} added value · ${metricCoverage(section.publications, "views").available ? `${reportedTotal(section.publications, "views")} ${playTotalLabel(section.publications)} · ` : ""}${metricCoverage(section.publications, "reach").available ? `${reportedTotal(section.publications, "reach")} reach · ` : ""}${metricCoverage(section.publications, "impressions").available ? `${reportedTotal(section.publications, "impressions")} impressions · ` : ""}${formatCompactCount(section.summary.engagements)} engagements · Avg ER ${formatPercent(section.summary.averageEr)}`,
+        `${section.summary.agreedPublications} agreed · ${section.summary.addedValuePublications} added value · ${videoMetricTotals(section.publications).map(m=>`${m.value} ${m.label}`).join(" · ")} · ${metricCoverage(section.publications, "reach").available ? `${reportedTotal(section.publications, "reach")} reach · ` : ""}${metricCoverage(section.publications, "impressions").available ? `${reportedTotal(section.publications, "impressions")} impressions · ` : ""}${formatCompactCount(section.summary.engagements)} engagements · Avg ER ${formatPercent(section.summary.averageEr)}`,
         { x: 0.5, y: 1.0, w: 9, h: 0.4, fontSize: 12, color: "6B7280" }
       );
       const gallery = section.publications.slice(0, 4);
