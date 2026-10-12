@@ -31,7 +31,7 @@ export const COLLECTED_METRIC_KEYS = [
 
 /** Apify and some platforms use -1 when a metric is hidden or unavailable. */
 export function sanitizeMetricValue(value: unknown): number | null {
-  if (value == null) return null;
+  if (value == null || (typeof value === "string" && value.trim() === "")) return null;
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) return null;
   return n;
@@ -218,8 +218,9 @@ export function mergeCollectedMetrics(
   const merged: Partial<CollectedMetrics> = {};
   for (const key of COLLECTED_METRIC_KEYS) {
     if (key === "reach" || key === "impressions") continue;
-    merged[key] =
-      sanitizeMetricValue(incoming[key]) ?? sanitizeMetricValue(base[key]);
+    const manualClear = (context?.metrics_source === 'manual' || context?.metrics_source === 'manual_import')
+      && Object.hasOwn(incoming, key) && incoming[key] === null;
+    merged[key] = manualClear ? null : sanitizeMetricValue(incoming[key]) ?? sanitizeMetricValue(base[key]);
   }
 
   const storedMethod = context?.engagement_rate_method;
@@ -232,6 +233,9 @@ export function mergeCollectedMetrics(
     context?.metrics_source === "manual" || context?.metrics_source === "manual_import";
   const incomingReach = sanitizeMetricValue(incoming.reach);
   const reachSnapshot = resolveReachSnapshot({
+    views: merged.views,
+    likes: merged.likes,
+    clearManual: isManualSource && Object.hasOwn(incoming, "reach") && incoming.reach === null,
     providerReach: isManualSource ? null : incomingReach,
     manualReach: isManualSource ? incomingReach : null,
     storedReach: context?.stored_reach ?? sanitizeMetricValue(base.reach),
@@ -248,6 +252,7 @@ export function mergeCollectedMetrics(
 
   const incomingImpressions = sanitizeMetricValue(incoming.impressions);
   const impressionsSnapshot = resolveImpressionsSnapshot({
+    clearManual: isManualSource && Object.hasOwn(incoming, "impressions") && incoming.impressions === null,
     providerImpressions: isManualSource ? null : incomingImpressions,
     manualImpressions: isManualSource ? incomingImpressions : null,
     storedImpressions: context?.stored_impressions ?? sanitizeMetricValue(base.impressions),

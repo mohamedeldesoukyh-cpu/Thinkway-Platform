@@ -1,3 +1,6 @@
+import { attachReportVideoCounters } from '@/lib/performance/report/report-video-counters';
+import { videoCounters } from '@/lib/performance/report/reported-metrics';
+import type { CampaignPublicationRow } from '@/lib/domains/campaign/types';
 import { shouldStopProviderChain } from './provider-chain-policy';
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -22,8 +25,6 @@ import {
   hasAnyMetric,
   mergeCollectedMetrics,
   storedMetricsFromPublication,
-  stripReachFromCollectedMetrics,
-  stripImpressionsFromCollectedMetrics,
 } from "@/lib/performance/metrics-collector/merge-metrics";
 import {
   loadPublicationEngagementContext,
@@ -287,6 +288,8 @@ export async function metricsCollector(
     campaignHeaderId: publication.campaign_header_id,
   });
 
+  const [priorCounterRow] = await attachReportVideoCounters(supabase, [{...publication, metrics_provider:engagementContext.metrics_provider} as unknown as CampaignPublicationRow]);
+  const existingVideoCounters = videoCounters(priorCounterRow);
   const mergeContext = {
     platform: publication.platform,
     publication_type: publication.publication_type,
@@ -298,6 +301,8 @@ export async function metricsCollector(
     options.triggeredBy === "manual_restore_automatic"
       ? {}
       : storedMetricsFromPublication(publication as Record<string, unknown>);
+  const freshMetrics: Partial<CollectedMetrics> = {};
+  let freshVideoCounters: {plays:number|null;views:number|null} | undefined;
   const attempts: ProviderAttemptResult[] = [];
   let winningSource: MetricsProviderId | null = null;
   let winningConfidence: number | null = null;
@@ -402,13 +407,20 @@ export async function metricsCollector(
     }
 
     if (attempt.metrics && hasAnyMetric(attempt.metrics)) {
-      merged = mergeCollectedMetrics(merged, attempt.metrics, mergeContext);
+      const canReplace = engagementContext.metrics_provider !== 'manual' || providerId === 'apify';
+      if (canReplace) {
+        for (const [key, value] of Object.entries(attempt.metrics)) {
+          if (typeof value === 'number' && Number.isFinite(value) && value >= 0) Object.assign(freshMetrics, {[key]:value});
+        }
+        if (providerId === 'apify') freshVideoCounters = attempt.responseSummary?.videoCounters as typeof freshVideoCounters;
+        merged = mergeCollectedMetrics(merged, attempt.metrics, mergeContext);
       winningSource = pickWinningProvider(
         winningSource,
         winningConfidence,
         providerId
       );
       winningConfidence = confidenceForProvider(winningSource);
+      }
     }
 
     if (providerId === "apify") {
@@ -432,7 +444,7 @@ export async function metricsCollector(
       }
     }
 
-    if (shouldStopProviderChain(attempt)) break;
+    if ((engagementContext.metrics_provider !== 'manual' || providerId === 'apify') && shouldStopProviderChain(attempt)) break;
   }
 
   const outcome = outcomeFromAttempts(
@@ -444,19 +456,19 @@ export async function metricsCollector(
     mergeContext
   );
 
-  if (hasAnyMetric(merged)) {
+  if (hasAnyMetric(freshMetrics)) {
     await persistCollectedMetrics(supabase, {
       publicationId: publication.id,
       campaignHeaderId: publication.campaign_header_id,
-      metrics: stripImpressionsFromCollectedMetrics(
-        stripReachFromCollectedMetrics(merged)
-      ),
+      metrics: freshMetrics,
+      videoCounters: freshVideoCounters,
+      existingVideoCounters,
       status: outcome.status,
       source: winningSource,
       confidence: outcome.confidence,
       publication,
       previewImageUrl: apifyPreviewImageUrl,
-      replaceExisting: options.triggeredBy === "manual_restore_automatic",
+      replaceExisting: false,
       triggeredBy: options.triggeredBy,
       publicationDate: resolvedPublicationDate,
       publicationContent: resolvedPublicationContent,

@@ -1,3 +1,5 @@
+import { computeReachForecast } from '@/lib/performance/reach-forecast-engine';
+import { videoCounters } from './reported-metrics';
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
 import { sanitizeMetricValue } from "@/lib/performance/metrics-collector/merge-metrics";
@@ -15,5 +17,15 @@ export async function attachReportVideoCounters(supabase: SupabaseClient, rows: 
     return { ...row, report_video_counters: {
       plays: sanitizeMetricValue(counters.plays), views: sanitizeMetricValue(counters.views),
     } };
+  })).then(rows => rows.map(row => {
+    if (row.publication_type?.toLowerCase().includes('story') && row.impressions_source === 'forecast') {
+      row = {...row, impressions:null, forecast_impressions:null, impressions_source:null};
+    }
+    if (row.reach_source !== 'forecast') return row;
+    const counters = videoCounters(row);
+    const forecast = computeReachForecast({publication_type:row.publication_type, platform:row.platform,
+      views:counters.views ?? counters.plays, likes:row.likes});
+    return {...row, reach:forecast.forecastReach, forecast_reach:forecast.forecastReach,
+      reach_source:forecast.forecastReach == null ? null : 'forecast' as const};
   }));
 }

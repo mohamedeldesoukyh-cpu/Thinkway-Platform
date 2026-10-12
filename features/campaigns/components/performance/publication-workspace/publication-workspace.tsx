@@ -872,7 +872,7 @@ export function PublicationWorkspace({
               <div className="space-y-3 border-t border-border pt-4">
               <p className="text-xs text-muted-foreground">
                 Override provider metrics for client reporting. Saves with provider <strong>manual</strong> and
-                writes an audit log entry. Enter Views and Video Play Count separately as reported by the platform. Estimated reach and impressions are not prefilled.
+                writes an audit log entry. Manual values stay until Apify returns an actual value for the same metric. TikTok play count is shown as Views. Estimated reach and impressions are not prefilled.
               </p>
               <div className="grid gap-3 sm:grid-cols-2">
                 {(
@@ -886,7 +886,7 @@ export function PublicationWorkspace({
                     ["shares", "Shares"],
                     ["saves", "Saves"],
                   ] as const
-                ).map(([key, label]) => (
+                ).filter(([key]) => key !== 'plays' || row.platform?.toLowerCase() !== 'tiktok').map(([key, label]) => (
                   <div key={key} className="space-y-1">
                     <label htmlFor={`manual-metric-${key}`} className="text-[11px] font-semibold text-muted-foreground">
                       {label}

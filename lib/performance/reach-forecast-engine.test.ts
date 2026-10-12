@@ -23,11 +23,11 @@ assert.equal(reachMultiplierForContentType("instagram", "carousel"), 0.28);
   const result = computeReachForecast({
     followers: 100_000,
     platform: "instagram",
-    publication_type: "instagram_post",
+    publication_type: "instagram_post", views:40_000, likes:1000,
   });
-  assert.equal(result.forecastReach, 30_000);
-  assert.equal(result.method, "followers_estimate");
-  assert.equal(result.confidence, "high");
+  assert.equal(result.forecastReach, 32_000);
+  assert.equal(result.method, "delivery_estimate");
+  assert.equal(result.confidence, "low");
 }
 
 // No followers → null forecast
@@ -63,11 +63,11 @@ assert.equal(reachMultiplierForContentType("instagram", "carousel"), 0.28);
     providerReach: null,
     followers: 50_000,
     platform: "instagram",
-    publication_type: "instagram_reel",
+    publication_type: "instagram_reel", views:25_000, likes:100,
   });
   assert.equal(snap.reach_source, "forecast");
-  assert.equal(snap.reach, 22_500);
-  assert.equal(snap.forecast_reach, 22_500);
+  assert.equal(snap.reach, 20_000);
+  assert.equal(snap.forecast_reach, 20_000);
 }
 
 // Manual import
@@ -87,7 +87,7 @@ assert.equal(reachMultiplierForContentType("instagram", "carousel"), 0.28);
 {
   const forecasted = mergeCollectedMetrics(
     {},
-    { likes: 100, comments: 10 },
+    { views:37500, likes: 100, comments: 10 },
     {
       followers: 100_000,
       platform: "instagram",
@@ -150,7 +150,7 @@ assert.equal(reachMultiplierForContentType("instagram", "carousel"), 0.28);
   );
   assert.equal(persistMerged.reach_source, "forecast");
   assert.equal(persistMerged.actual_reach, null);
-  assert.equal(persistMerged.forecast_reach, 21_502);
+  assert.equal(persistMerged.forecast_reach, 445_939);
 }
 
 console.log("reach-forecast-engine tests passed");

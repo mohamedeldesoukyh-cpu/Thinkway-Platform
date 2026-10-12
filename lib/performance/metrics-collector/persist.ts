@@ -1,3 +1,6 @@
+import { attachReportVideoCounters } from '@/lib/performance/report/report-video-counters';
+import { videoCounters as publicationVideoCounters } from '@/lib/performance/report/reported-metrics';
+import type { CampaignPublicationRow } from '@/lib/domains/campaign/types';
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
@@ -874,6 +877,7 @@ export async function persistCollectedMetrics(
     metrics: Partial<CollectedMetrics>;
     /** Explicit manual counters; legacy views remains the calculation denominator. */
     videoCounters?: { views: number | null; plays: number | null };
+    existingVideoCounters?: {views:number|null;plays:number|null};
     status: MetricsRefreshStatus;
     source: MetricsProviderId | null;
     confidence: number | null;
@@ -922,6 +926,21 @@ export async function persistCollectedMetrics(
       ? input.metrics.engagement_rate
       : null;
 
+  if (input.videoCounters) {
+    const [storedRow] = await attachReportVideoCounters(supabase, [{
+      ...storedBeforePersist, id: input.publicationId, campaign_header_id: input.campaignHeaderId,
+      platform: engagementContext.platform, metrics_provider: engagementContext.metrics_provider,
+    } as CampaignPublicationRow]);
+    const previous = input.existingVideoCounters ?? publicationVideoCounters(storedRow);
+    // Refresh fills only counters actually returned; manual saves may explicitly clear a counter.
+    if (input.source !== 'manual') input.videoCounters = {
+      plays: sanitizeMetricValue(input.videoCounters.plays) ?? previous.plays,
+      views: sanitizeMetricValue(input.videoCounters.views) ?? previous.views,
+    };
+    if (engagementContext.platform === 'tiktok') input.videoCounters = {
+      plays: null, views: input.videoCounters.views ?? input.videoCounters.plays,
+    };
+  }
   const incoming = input.videoCounters ? { ...input.metrics, views: input.videoCounters.plays ?? input.videoCounters.views, plays: input.videoCounters.plays } : input.metrics;
   const baseMetrics = input.videoCounters ? { ...existing, views: null, plays: null } : existing;
   const merged = mergeCollectedMetrics(baseMetrics, incoming, {
@@ -1056,14 +1075,14 @@ export async function persistCollectedMetrics(
 
   if (error) throw new Error(error.message);
 
-  if (input.videoCounters && input.source === "manual") {
+  if (input.videoCounters && (input.source === "manual" || input.source === "apify")) {
     await writeSyncLog(supabase, {
       publicationId: input.publicationId,
       campaignHeaderId: input.campaignHeaderId,
-      provider: "manual", attemptOrder: 1, status: "completed", completed: true,
-      triggeredBy: "manual", metricsSnapshot: sanitized,
+      provider: input.source, attemptOrder: 1, status: "completed", completed: true,
+      triggeredBy: input.triggeredBy ?? "manual", metricsSnapshot: sanitized,
       responseSummary: { metrics_found: true, videoCounters: input.videoCounters },
-      message: "Manual views and video play count saved separately.",
+      message: "Effective views and video play count saved separately; missing provider counters preserved.",
     });
   }
 
