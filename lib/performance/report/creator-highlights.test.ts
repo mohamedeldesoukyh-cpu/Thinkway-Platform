@@ -20,3 +20,15 @@ test('missing rate does not invent a winner or denominator',()=>{
  const c=creator('<Creator>',0,0,0);c.publications=[];const html=renderCreatorHighlights(data([c]),[c]);
  assert.match(html,/&lt;Creator&gt;/);assert.match(html,/No engagement rate available/);assert.doesNotMatch(html,/Highest post ER/);
 });
+
+test('each counter shows its own platform sources without mixing views and plays',()=>{
+ const c=creator('Mixed',10,0,1);
+ c.publications=[
+  {...c.publications[0],platform:'instagram',report_video_counters:{plays:100,views:200}},
+  {...c.publications[0],platform:'tiktok',report_video_counters:{plays:50,views:null}},
+ ];
+ const html=renderCreatorHighlights(data([c]),[c]);
+ assert.match(html,/Instagram · 100/);assert.match(html,/TikTok · 50/);
+ assert.match(html,/Instagram · 200/);assert.match(html,/alt="TikTok"/);
+ assert.equal((html.match(/TikTok · 50/g)||[]).length,1);
+});

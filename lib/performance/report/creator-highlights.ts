@@ -1,7 +1,23 @@
-import { videoMetricTotals } from './reported-metrics';
+import { videoCounters, videoMetricTotals } from './reported-metrics';
 import type { PerformanceReportDocumentData, InfluencerReportSection } from './performance-report-types';
 import { formatCompactCount, formatPercent } from '@/lib/campaigns/performance-calculations';
+import { getReportPlatformIconDataUri, getReportPlatformIconTitle } from './report-platform-icons';
 import { chunk, esc } from './performance-report-v2-parts';
+
+function platformMetricSources(c: InfluencerReportSection, label: string): string {
+ const key = label === 'Views' ? 'views' : 'plays';
+ const groups = new Map<string, number>();
+ for (const publication of c.publications) {
+  const value = videoCounters(publication)[key];
+  if (value == null || !Number.isFinite(value) || value < 0) continue;
+  const platform = getReportPlatformIconTitle(publication.platform || publication.platform_label || 'Unknown platform');
+  groups.set(platform, (groups.get(platform) ?? 0) + value);
+ }
+ return [...groups].map(([platform, count]) => {
+  const icon = getReportPlatformIconDataUri(platform);
+  return `<span class="creator-highlight__source">${icon ? `<img src="${icon}" alt="${esc(platform)}" />` : ''}<span>${esc(platform)} · ${esc(formatCompactCount(count))}</span></span>`;
+ }).join('');
+}
 
 export function creatorHighlightPages(data: PerformanceReportDocumentData): InfluencerReportSection[][] {
   const creators = [...data.influencerSections].sort((a, b) => b.summary.engagements - a.summary.engagements || a.name.localeCompare(b.name));
@@ -25,7 +41,7 @@ export function renderCreatorHighlights(data: PerformanceReportDocumentData, cre
       <h3 class="bidi">${esc(c.name)}</h3>
       <div class="creator-highlight__badges">${badges.map(b => `<span>${b}</span>`).join('')}</div>
       <p class="note">${c.summary.agreedPublications} agreed · ${c.summary.addedValuePublications} added-value publications</p>
-      <div class="creator-highlight__metrics">${videoMetricTotals(c.publications).map(metric=>`<div>${esc(metric.label)}<strong>${esc(metric.value)}</strong><small>${esc(metric.coverage)}</small></div>`).join("")}<div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
+      <div class="creator-highlight__metrics">${videoMetricTotals(c.publications).map(metric=>`<div>${esc(metric.label)}<strong>${esc(metric.value)}</strong><small>${esc(metric.coverage)}</small>${platformMetricSources(c, metric.label)}</div>`).join("")}<div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
       <div class="creator-highlight__best"><b>Best post ER: ${esc(formatPercent(best?.engagement_rate ?? null, 1))}</b><div>${esc(best?.platform_label ?? '')}</div><div>${esc(context)}</div></div>
     </article>`;
   }).join('') || '<p>No creator performance is available yet.</p>'}</div>

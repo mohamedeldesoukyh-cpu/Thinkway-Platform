@@ -1,3 +1,4 @@
+import { shouldStopProviderChain } from './provider-chain-policy';
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -19,7 +20,6 @@ import {
 import { resolvePublicationEffectivePlatform } from "@/lib/performance/creator-avatar";
 import {
   hasAnyMetric,
-  isCompleteMetrics,
   mergeCollectedMetrics,
   storedMetricsFromPublication,
   stripReachFromCollectedMetrics,
@@ -432,12 +432,7 @@ export async function metricsCollector(
       }
     }
 
-    // Stop immediately when Apify returns metrics — do not fall through to later providers.
-    if (providerId === "apify" && attempt.metrics && hasAnyMetric(attempt.metrics)) {
-      break;
-    }
-
-    if (isCompleteMetrics(merged)) break;
+    if (shouldStopProviderChain(attempt)) break;
   }
 
   const outcome = outcomeFromAttempts(

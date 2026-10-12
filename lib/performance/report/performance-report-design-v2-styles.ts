@@ -405,6 +405,8 @@ strong{font-weight:600}
 .creator-highlight__badges span{background:#EDF3FF;color:#0057FF;font-size:8px;font-weight:700;padding:4px 6px;border-radius:5px}
 .creator-highlight__metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;margin:12px 0;font-size:9px;color:#63738E}
 .creator-highlight__metrics strong{display:block;font-size:18px;color:#0057FF;margin-top:5px}
+.creator-highlight__source{display:flex;align-items:center;gap:4px;margin-top:5px;font-size:9px;line-height:1.3;color:#63738E}
+.creator-highlight__source img{width:14px;height:14px;object-fit:contain;flex-shrink:0}
 .creator-highlight__best{border-top:1px solid #E3E9F3;padding-top:10px;font-size:10px;line-height:1.6;color:#63738E}
 .creator-highlight__best b{color:#15233D}
 `;
