@@ -1,3 +1,4 @@
+import { creatorHighlightPages, renderCreatorHighlights } from './creator-highlights';
 import {
   formatCompactCount,
   formatPercent,
@@ -175,15 +176,6 @@ function renderPublicationPages(
   );
 }
 
-function hlAccent(labelText: string): string {
-  const lower = labelText.toLowerCase();
-  if (lower.includes("tiktok")) return "hl__c--tt";
-  if (lower.includes("facebook") || lower.includes(" fb")) return "hl__c--fb";
-  if (lower.includes("youtube")) return "hl__c--yt";
-  if (lower.includes("instagram") || lower.includes(" ig")) return "hl__c--ig";
-  return "";
-}
-
 function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
   const foot = campaignFootLabel(data);
   const shortName = campaignShortName(data);
@@ -200,8 +192,10 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
     addedValue.length > 0
       ? Math.max(1, Math.ceil(addedValue.length / CARDS_PER_PAGE))
       : 0;
+  const highlightPages = creatorHighlightPages(data);
+  const extraHighlights = highlightPages.length - 1;
   const totalPages =
-    1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + pubPages + (addedValue.length > 0 ? 1 + addedPages : 0) + 1;
+    extraHighlights + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + pubPages + (addedValue.length > 0 ? 1 + addedPages : 0) + 1;
 
   const sheets: string[] = [];
   let page = 1;
@@ -212,13 +206,13 @@ function renderCombinedSheets(data: PerformanceReportDocumentData): string[] {
   const tocEntries = [
     { num: "01", label: "Executive Summary", page: 3 },
     { num: "02", label: "Campaign Highlights", page: 4 },
-    { num: "03", label: "Benchmark & Key Insights", page: 5 },
-    { num: "04", label: "Platform Breakdown", page: 6 },
-    { num: "05", label: "Performance Charts", page: 7 },
-    { num: "06", label: "Campaign Publications", page: 8 },
+    { num: "03", label: "Benchmark & Key Insights", page: 5 + extraHighlights },
+    { num: "04", label: "Platform Breakdown", page: 6 + extraHighlights },
+    { num: "05", label: "Performance Charts", page: 7 + extraHighlights },
+    { num: "06", label: "Campaign Publications", page: 8 + extraHighlights },
   ];
   if (addedValue.length > 0) {
-    tocEntries.push({ num: "07", label: "Added Value", page: 8 + pubPages + 1 });
+    tocEntries.push({ num: "07", label: "Added Value", page: 8 + pubPages + 1 + extraHighlights });
   }
   tocEntries.push({ num: "—", label: "Thank You", page: totalPages });
 
@@ -330,45 +324,17 @@ ${
   );
   page += 1;
 
-  sheets.push(
-    renderSheet({
-      id: "section-highlights",
+  for (const [index, creators] of highlightPages.entries()) {
+    sheets.push(renderSheet({
+      id: index === 0 ? "section-highlights" : undefined,
       headLeft: "02 · Campaign Highlights",
       headRight: shortName,
-      body: `${renderSectionHeader("02", "Campaign Highlights", "The standout performers of the campaign, by total engagement, reach and efficiency.")}
-<div class="hl">
-  <div class="hl__c ${hlAccent(data.highlights.topCreatorName ?? "")}">
-    <div class="hl__k"><span class="hl__t">Top creator by engagement</span></div>
-    <div class="hl__n bidi">${esc(data.highlights.topCreatorName ?? "—")}</div>
-    <div class="hl__v num">${esc(formatCompactCount(data.highlights.topCreatorEngagements))}</div>
-    <div class="hl__s">Highest total engagements across all of their publications in this campaign.</div>
-  </div>
-  <div class="hl__c ${hlAccent(data.highlights.bestPostLabel ?? "")}">
-    <div class="hl__k"><span class="hl__t">Best post by views</span></div>
-    <div class="hl__n bidi">${esc(data.highlights.bestPostLabel ?? "—")}</div>
-    <div class="hl__v num">${esc(formatCompactCount(data.highlights.bestPostViews))}</div>
-    <div class="hl__s">Single highest-performing publication of the campaign by video views.</div>
-  </div>
-  <div class="hl__c ${hlAccent(data.highlights.highestErLabel ?? "")}">
-    <div class="hl__k"><span class="hl__t">Highest engagement rate</span></div>
-    <div class="hl__n bidi">${esc(data.highlights.highestErLabel ?? "—")}</div>
-    <div class="hl__v num">${esc(formatPercent(data.highlights.highestEr, 1))}</div>
-    <div class="hl__s">Strongest engagement rate against reach among campaign publications.</div>
-  </div>
-  <div class="hl__c hl__c--wide">
-    <div>
-      <div class="hl__k"><span class="hl__t">Total engagements</span></div>
-      <div class="hl__n">Campaign-wide interactions</div>
-      <div class="hl__s">Across ${summary.agreed_publications} agreed and ${summary.added_value_publications} added-value publication(s).</div>
-    </div>
-    <div class="hl__v num">${esc(formatCompactCount(data.highlights.totalEngagements))}</div>
-  </div>
-</div>`,
+      body: renderSectionHeader("02", "Campaign Highlights", "Every creator’s contribution, with campaign leaders identified by metric.") + renderCreatorHighlights(data, creators),
       footLeft: foot,
       pageLabel: pageLabel(page, totalPages),
-    })
-  );
-  page += 1;
+    }));
+    page += 1;
+  }
 
   sheets.push(
     renderSheet({
