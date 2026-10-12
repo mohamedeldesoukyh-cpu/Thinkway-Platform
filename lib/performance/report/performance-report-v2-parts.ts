@@ -33,7 +33,7 @@ export const PLATFORM_COLOR: Record<string, string> = {
   x: "#111827",
 };
 
-export const CARDS_PER_PAGE = 6;
+export const CARDS_PER_PAGE = 3;
 
 export function esc(value: string): string {
   return value
@@ -322,3 +322,4 @@ export function renderClosing(footLeft: string, pageLbl: string): string {
   </div>
 </section>`;
 }
+

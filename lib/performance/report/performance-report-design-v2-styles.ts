@@ -15,7 +15,7 @@ export const PERFORMANCE_REPORT_DESIGN_V2_STYLES = `
   --rule:#E4E8F0;      --rule-2:#EFF2F7;     --paper:#FFFFFF;  --shell:#B9C4DA;
   --green:#04785A;     --green-tint:#E8F7F1;
   --ig:#D62976; --tt:#111111; --fb:#1877F2; --yt:#EF1B24;
-  --pw:1600px; --ph:1100px; --pad:52px;
+  --pw:210mm; --ph:297mm; --pad:15mm;
   --page-background:radial-gradient(120% 90% at 108% -8%,rgba(0,87,255,.55) 0%,rgba(0,87,255,0) 58%),radial-gradient(90% 70% at -14% 108%,rgba(35,74,190,.42) 0%,rgba(35,74,190,0) 62%),var(--navy);
 }
 
@@ -40,7 +40,7 @@ strong{font-weight:600}
 /* ============================================================
    Page shell
    ============================================================ */
-@page{size:1600px 1100px;margin:0}
+@page{size:A4 portrait;margin:0}
 .sheet{
   position:relative; width:var(--pw); height:var(--ph);
   margin:22px auto; background:var(--paper);
@@ -298,10 +298,10 @@ strong{font-weight:600}
 
 .sheet--publications .sheet__head{height:90px;border-color:#ffffff24}
 .sheet--publications .sheet__head .hm{color:#c4c1d6;font-size:11px}
-.sheet--publications .sheet__body{padding:24px 52px 30px}
+.sheet--publications .sheet__body{padding:24px 24px 30px}
 .sheet--publications .sheet__foot{background:transparent;border-color:#ffffff24;color:#c4c1d6;height:60px}
 .sheet--publications .sheet__foot .pg{color:#fff}
-.pgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));grid-template-rows:1fr;
+.pgrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:1fr;
   background:rgba(19,32,74,.45);border:1px solid #ffffff12;border-radius:20px;padding:15px 17px 18px;
   gap:13px;align-content:stretch;flex:1 1 auto;min-height:0}
 .pcard{border:1px solid var(--rule);border-radius:13px;overflow:hidden;background:#fff;color:#080642;padding:10px 10px 12px;box-shadow:0 3px 12px #1729570a;
@@ -408,5 +408,6 @@ strong{font-weight:600}
 .creator-highlight__best{border-top:1px solid #E3E9F3;padding-top:10px;font-size:10px;line-height:1.6;color:#63738E}
 .creator-highlight__best b{color:#15233D}
 `;
+
 
 
