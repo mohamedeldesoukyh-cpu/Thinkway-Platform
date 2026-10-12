@@ -124,7 +124,7 @@ test("report sheets clip body overflow so metrics cannot paint over the footer",
   assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.sheet__body\{[^}]*overflow:hidden/);
   assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pgrid\{[^}]*minmax\(0,1fr\)/);
   assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard\{[^}]*min-height:0/);
-  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard__media\{[^}]*flex:0 0 38%/);
+  assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.pcard__media\{[^}]*flex:0 0 368px/);
   assert.match(PERFORMANCE_REPORT_DESIGN_V2_STYLES, /\.sheet__foot\{[^}]*z-index:2/);
 });
 
@@ -149,3 +149,4 @@ test('publication captions and tags are labeled and escaped',()=>{
  const html=renderPcard(pub({caption:'Campaign <story>',hashtags:'#ArabBank',mentions:'@client'}));
  assert.match(html,/>Caption</);assert.match(html,/Campaign &lt;story&gt;/);assert.match(html,/Tags &amp; mentions/);assert.match(html,/#ArabBank @client/);
 });
+

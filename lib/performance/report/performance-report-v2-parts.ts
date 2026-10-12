@@ -33,7 +33,7 @@ export const PLATFORM_COLOR: Record<string, string> = {
   x: "#111827",
 };
 
-export const CARDS_PER_PAGE = 4;
+export const CARDS_PER_PAGE = 6;
 
 export function esc(value: string): string {
   return value
@@ -99,8 +99,9 @@ export function renderSheet(opts: {
   footLeft: string;
   pageLabel: string;
   id?: string;
+  publicationPage?: boolean;
 }): string {
-  return `<section class="sheet"${opts.id ? ` id="${esc(opts.id)}"` : ""}>
+  return `<section class="sheet${opts.publicationPage ? " sheet--publications" : ""}"${opts.id ? ` id="${esc(opts.id)}"` : ""}>
   <div class="sheet__head">
     <span class="hm">${esc(opts.headLeft)}</span>
     <span class="hm">${esc(opts.headRight ?? "")}</span>

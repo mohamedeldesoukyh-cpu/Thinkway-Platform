@@ -153,6 +153,7 @@ function renderPublicationPages(
   const pages = chunk(publications, CARDS_PER_PAGE);
   return pages.map((group, index) =>
     renderSheet({
+      publicationPage: true,
       headLeft: `${opts.sectionNum} · ${opts.sectionTitle}`,
       headRight: `${opts.headRightPrefix} · ${index + 1} of ${pages.length}`,
       body: `<div class="pgrid">${
