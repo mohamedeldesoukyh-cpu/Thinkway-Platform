@@ -7,15 +7,15 @@ import type { CampaignLineBillingStatus } from "@/lib/domains/campaign/types";
 
 export const METRIC_DEFINITIONS = {
   revenue:
-    "Planned billable revenue (Rev + UR Rev + AF) from assignment line commercial rollup.",
+    "Recognized live-ad revenue (Rev + UR Rev + AF), excluding VAT, converted to EGP.",
   achieved_revenue:
-    "Billable revenue in approved, billing-ready, or invoiced line states.",
+    "Revenue recognized on confirmed ad live dates; approval or billing alone does not qualify.",
   unachieved_revenue: "Planned billable revenue not yet achieved operationally.",
   invoiced_revenue:
     "Revenue linked to invoice line items (invoice_line_items.revenue_before_vat).",
   collected_revenue: "Cash collected against client invoices (amount_paid).",
   outstanding_revenue: "Invoiced revenue minus collected (open AR).",
-  gp: "Gross profit = billable revenue − cost − UR cost.",
+  gp: "Recognized gross profit = live-ad revenue − matching vendor cost − matching UR cost.",
   margin_percent: "GP ÷ billable revenue × 100 when revenue > 0.",
   vendor_payable: "Unpaid vendor / influencer obligations.",
   remaining_to_invoice: "Achieved revenue not yet invoiced.",
@@ -26,7 +26,7 @@ export const METRIC_DEFINITIONS = {
   planning_variance: "Actual revenue − planning revenue budget.",
 } as const;
 
-/** Line statuses treated as operationally achieved. */
+/** Legacy operational achievement; not the financial revenue-recognition rule. */
 export const ACHIEVED_LINE_STATUSES = new Set<CampaignLineBillingStatus>([
   "approved",
   "moved_to_billing",

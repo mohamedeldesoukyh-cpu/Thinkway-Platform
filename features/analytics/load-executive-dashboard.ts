@@ -26,14 +26,17 @@ import type {
 } from "@/lib/analytics";
 import type { AnalyticsRollupNode } from "@/lib/analytics/types/metrics";
 import { devLog } from "@/lib/dev-log";
+import { isActiveCampaignStatus } from "@/lib/domains/groups/types";
 
 export type ExecutiveDashboardMeta = {
+  currency_count?: number;
   active_campaigns: number;
   po_remaining: number;
   unbilled_achieved_revenue: number;
 };
 
 export type ExecutiveDashboardPayload = {
+  period_label?: string;
   executive: ExecutiveAnalyticsOutput;
   revenue: RevenueAnalyticsOutput;
   profitability: ProfitabilityAnalyticsOutput;
@@ -115,10 +118,9 @@ export async function loadExecutiveDashboard(
     safeLoadAnalyticsFacts(supabase, filters),
   ]);
 
-  const snapshot =
-    settled[5].status === "fulfilled"
-      ? settled[5].value
-      : { facts: [], invoices: [], loaded_at: new Date().toISOString() };
+  if (settled[5].status === "rejected") throw settled[5].reason;
+  const snapshot = settled[5].value;
+  const activeCampaigns = snapshot.facts.filter(f => isActiveCampaignStatus(f.campaign_status ?? "")).length;
 
   if (settled.some((r, i) => i < 5 && r.status === "rejected")) {
     if (process.env.NODE_ENV === "development") {
@@ -164,6 +166,9 @@ export async function loadExecutiveDashboard(
   const currencies = snapshot.facts.map((f) => f.currency_code);
 
   const executive_kpis = buildKpiStripFromMetrics(global.metrics, currencies, [
+    { id: "invoiced_gross_current", label: "Current gross invoiced", pick: () => snapshot.invoices.reduce((sum, i) => sum + i.total, 0) },
+    { id: "planned", label: "Planned revenue", pick: m => m.planned_revenue ?? 0 },
+    { id: "recognized_cost", label: "Recognized cost", pick: m => m.cost },
     { id: "revenue", label: "Revenue", pick: (m) => m.revenue },
     { id: "gp", label: "GP", pick: (m) => m.gp },
     { id: "margin", label: "Margin %", pick: (m) => m.margin_percent, decimals: 1 },
@@ -184,7 +189,7 @@ export async function loadExecutiveDashboard(
     {
       id: "active_campaigns",
       label: "Active campaigns",
-      pick: (_m) => snapshot.facts.length,
+      pick: () => activeCampaigns,
       decimals: 0,
     },
   ]);
@@ -200,6 +205,8 @@ export async function loadExecutiveDashboard(
   const topClient = clientNodes[0] ?? null;
 
   const payload: ExecutiveDashboardPayload = {
+    period_label: filters.dateRange?.from || filters.dateRange?.to
+      ? `${filters.dateRange?.from ?? "Beginning"} – ${filters.dateRange?.to ?? "Today"}` : "All time",
     executive,
     revenue,
     profitability,
@@ -216,7 +223,8 @@ export async function loadExecutiveDashboard(
       alertCount: alerts.alerts.length,
     }),
     meta: {
-      active_campaigns: snapshot.facts.length,
+      currency_count: snapshot.source_currencies?.length ?? currencies.length,
+      active_campaigns: activeCampaigns,
       po_remaining: Math.max(0, global.metrics.budget_variance),
       unbilled_achieved_revenue: global.metrics.remaining_to_invoice,
     },
@@ -231,7 +239,7 @@ export async function loadExecutiveDashboard(
         0,
         15
       ),
-      brand_profitability: rollupFacts(snapshot.facts, "brand", filters).slice(0, 15),
+      brand_profitability: rollupFacts(snapshot.facts, "brand", filters),
     },
   };
 
@@ -272,7 +280,7 @@ export async function loadDashboardFilterOptions(): Promise<DashboardFilterOptio
     ),
   ].sort();
   const currencies = [
-    ...new Set(snapshot.facts.map((f) => f.currency_code)),
+    ...new Set(snapshot.facts.map((f) => f.source_currency_code ?? f.currency_code)),
   ].sort();
 
   return {

@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { rollupFacts, rollupGlobal } from "@/lib/analytics/aggregations/rollup-engine";
 import {
   buildAnalyticsCacheKey,
+  analyticsRequestKey,
   withAnalyticsCache,
 } from "@/lib/analytics/aggregations/memo";
 import { computeAgingBucket } from "@/lib/domains/billing/types";
@@ -42,7 +43,7 @@ function buildTimeSeries(
         },
       };
     bucket.metrics.invoiced_revenue = roundMoney(
-      bucket.metrics.invoiced_revenue + Number(inv.total)
+      bucket.metrics.invoiced_revenue + Number(inv.revenue_before_vat ?? inv.total)
     );
     bucket.metrics.collected_revenue = roundMoney(
       bucket.metrics.collected_revenue + Number(inv.amount_paid)
@@ -109,6 +110,7 @@ export async function getExecutiveKpis(
   filters: AnalyticsQueryFilters = {}
 ): Promise<ExecutiveAnalyticsOutput> {
   const cacheKey = buildAnalyticsCacheKey("executive", {
+    request: analyticsRequestKey(supabase, filters),
     billing: filters.billingFilter ?? "all",
     operational: filters.operationalFilter ?? "all",
     from: filters.dateRange?.from,

@@ -2,6 +2,8 @@ import type { AnalyticsRollupLevel } from "@/lib/analytics/types/filters";
 
 /** Standard financial metrics (amounts in native currency unless noted). */
 export type FinancialMetrics = {
+  planned_revenue?: number;
+  planned_gp?: number;
   revenue: number;
   cost: number;
   gp: number;
@@ -46,6 +48,8 @@ export type AnalyticsCurrencyContext = {
 };
 
 export type CampaignAnalyticsFact = {
+  source_currency_code?: string;
+  campaign_status?: string;
   campaign_header_id: string;
   campaign_document_number: string;
   campaign_name: string;

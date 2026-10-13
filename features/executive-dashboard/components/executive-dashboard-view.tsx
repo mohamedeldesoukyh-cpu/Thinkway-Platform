@@ -24,7 +24,7 @@ import type { AnalyticsRollupNode } from "@/lib/analytics/types/metrics";
 import type { DashboardTrendPoint } from "@/lib/analytics/queries/dashboard-charts";
 import type { FinanceAlert } from "@/lib/analytics/queries/dashboard-alerts";
 import { formatPercent } from "@/lib/campaigns/utils";
-import { formatMoneyKpi } from "@/lib/finance/currency-format";
+import { formatMoneyKpi, formatMoneyDetail } from "@/lib/finance/currency-format";
 
 type ExecutiveDashboardViewProps = {
   data: ExecutiveDashboardPayload;
@@ -74,10 +74,6 @@ function formatAmount(
 function MixMark({ mixed }: { mixed: boolean }) {
   if (!mixed) return null;
   return <span className="tw-mx"> MIX</span>;
-}
-
-function periodLabel(): string {
-  return new Date().toLocaleDateString("en-US", { month: "short", year: "numeric" });
 }
 
 function ProfitRow({
@@ -201,21 +197,22 @@ export function ExecutiveDashboardView({
   const zeroGpCampaign = data.profitability_tables.top_campaigns.find(
     (node) => node.metrics.revenue > 0 && node.metrics.gp === 0
   );
+  const grossInvoiced = card(data, "invoiced_gross_current")?.value ?? 0;
   const collectedExceeds =
-    (collected?.value ?? 0) > (invoiced?.value ?? 0) * 1.05 &&
-    (invoiced?.value ?? 0) > 0;
+    (collected?.value ?? 0) > grossInvoiced * 1.05 &&
+    grossInvoiced > 0;
   const mixCodes = currency.currencies.join(", ");
-  const period = periodLabel();
+  const period = data.period_label ?? "All time";
   const money = (value: number) => formatAmount(value, mixed, ccy);
 
   const pendingInvoiceCount = data.alerts.by_group.billing.length;
   const focusMessage = collectedExceeds
     ? `Collected exceeds invoiced by ${formatCompactMillions(
-        (collected?.value ?? 0) - (invoiced?.value ?? 0)
+        (collected?.value ?? 0) - grossInvoiced
       )}`
     : (unbilled?.value ?? 0) > 0
       ? `${money(unbilled?.value ?? 0)} earned but not billed`
-      : "Books are current in this window";
+      : "No recognized revenue pending invoice";
   const focusSub = mixed
     ? `totals mix ${mixCodes} without FX conversion`
     : `${period} · ${ccy ?? "book"}`;
@@ -232,7 +229,7 @@ export function ExecutiveDashboardView({
         badgeTone={mixed ? "r" : ""}
         userHandle={userHandle}
         metrics={[
-          { label: "Revenue", value: money(revenue?.value ?? 0) },
+          { label: "Recognized revenue", value: money(revenue?.value ?? 0) },
           { label: "GP", value: money(gp?.value ?? 0) },
           {
             label: "Margin",
@@ -267,7 +264,7 @@ export function ExecutiveDashboardView({
           },
           {
             label: "Currencies",
-            value: currency.currencies.length || 1,
+            value: data.meta.currency_count ?? currency.currencies.length,
             tone: mixed ? "s" : undefined,
           },
         ]}
@@ -301,7 +298,7 @@ export function ExecutiveDashboardView({
       <div className="tw-main">
         <HomeDashboardCard
           title="Filters"
-          subtitle="country, client, brand, currency, status"
+          subtitle="Live-date revenue and GP · invoice issue dates · current balances"
           right={
             <Link className="tw-b sm" href="/dashboard">
               Reset
@@ -314,7 +311,15 @@ export function ExecutiveDashboardView({
                 mixed-unit sum. Pick {currency.currencies.join(", ")} to get a
                 figure you can report.
               </div>
-            ) : null
+            ) : (
+              <div className="tw-note">
+                Revenue and matching costs are recognized when ads are confirmed live, excluding VAT.
+                Planned revenue: {money(card(data, "planned")?.value ?? 0)}.
+                Recognized cost: {money(card(data, "recognized_cost")?.value ?? 0)}.
+                Date filters apply to ad live dates and invoice issue dates. Collections, outstanding,
+                unbilled and vendor payable show current balances; collections and payables include applicable VAT.
+              </div>
+            )
           }
         >
           <div className="tw-pad">
@@ -331,7 +336,7 @@ export function ExecutiveDashboardView({
         <div className="tw-tiles" style={{ marginBottom: 14 }}>
           <a className="tw-tile" href="#clients">
             <div className="tw-tl">
-              <i>Revenue · {period}</i>
+              <i>Recognized revenue · {period}</i>
               <span className="tw-big">{money(revenue?.value ?? 0)}</span>
               <p>
                 {mixed
@@ -359,12 +364,10 @@ export function ExecutiveDashboardView({
           </a>
           <a className="tw-tile alt" href="#alerts">
             <div className="tw-tl">
-              <i>Unbilled achieved revenue</i>
+              <i>Unbilled recognized revenue</i>
               <span className="tw-big">{money(unbilled?.value ?? 0)}</span>
               <p>
-                {(invoiced?.value ?? 0) > 0
-                  ? `${(((unbilled?.value ?? 0) / (invoiced?.value ?? 1))).toFixed(1)}× what has actually been invoiced (${money(invoiced?.value ?? 0)})`
-                  : "No invoices in this window"}
+                Current live-ad revenue pending invoice, excluding VAT
               </p>
               <HomeDashboardTileGo>
                 {pendingInvoiceCount > 0
@@ -418,7 +421,7 @@ export function ExecutiveDashboardView({
           <div className="tw-pad">
             <div className="tw-jr">
               <div className="tw-jn">
-                <i>Revenue</i>
+                <i>Recognized revenue</i>
                 <b>{money(revenue?.value ?? 0)}</b>
                 <u>{mixed ? "MIX" : ccy}</u>
               </div>
@@ -453,7 +456,7 @@ export function ExecutiveDashboardView({
                 <u>{mixed ? "MIX" : ccy}</u>
               </div>
               <div className={(unbilled?.value ?? 0) > 0 ? "tw-jn miss" : "tw-jn"}>
-                <i>Unbilled achieved</i>
+                <i>Unbilled recognized</i>
                 <b>{money(unbilled?.value ?? 0)}</b>
                 <u>{mixed ? "MIX" : ccy}</u>
               </div>
@@ -483,14 +486,14 @@ export function ExecutiveDashboardView({
               }}
             >
               <TrendBars
-                title="Revenue"
-                hint="planned by campaign start month"
+                title="Recognized revenue"
+                hint="recognized by ad live month"
                 tone=""
                 series={data.charts.revenue_trend}
               />
               <TrendBars
                 title="Gross profit"
-                hint="by campaign start month"
+                hint="recognized by ad live month"
                 tone="v"
                 series={data.charts.gp_trend}
               />
@@ -502,7 +505,7 @@ export function ExecutiveDashboardView({
               />
               <TrendBars
                 title="Collections"
-                hint="cash collected by payment month"
+                hint="collected to date, grouped by invoice month"
                 tone="c"
                 series={data.charts.collections_trend}
               />
@@ -513,7 +516,7 @@ export function ExecutiveDashboardView({
                 series={data.charts.po_consumption_trend}
               />
               <BillingVsCollections
-                invoiced={invoiced?.value ?? 0}
+                invoiced={grossInvoiced}
                 collected={collected?.value ?? 0}
                 unbilled={unbilled?.value ?? 0}
                 money={money}
@@ -680,7 +683,7 @@ export function ExecutiveDashboardView({
                             <p>{alert.description}</p>
                             {alert.amount != null ? (
                               <b>
-                                {formatAmount(alert.amount, mixed, ccy)}
+                                {mixed ? formatAmount(alert.amount, mixed, ccy) : formatMoneyDetail(alert.amount, ccy)}
                                 {mixed ? (
                                   <span className="tw-mx"> currency label unreliable</span>
                                 ) : null}
@@ -738,16 +741,16 @@ function BillingVsCollections({
 }) {
   const max = Math.max(1, invoiced, collected, unbilled);
   const rows: [string, number, string][] = [
-    ["Invoiced", invoiced, "var(--tw-blue)"],
-    ["Collected", collected, "var(--tw-ok)"],
-    ["Unbilled", unbilled, "#B4780A"],
+    ["Invoiced incl. VAT", invoiced, "var(--tw-blue)"],
+    ["Collected incl. VAT", collected, "var(--tw-ok)"],
+    ["Unbilled excl. VAT", unbilled, "#B4780A"],
   ];
   return (
     <div>
       <div className="tw-ct" style={{ fontSize: 12 }}>
         Billing vs collections
       </div>
-      <div className="tw-cs">invoiced, collected, unbilled</div>
+      <div className="tw-cs">Current balances · all dates for selected campaigns</div>
       <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
         {rows.map(([label, value, color], index) => (
           <div key={label}>

@@ -40,14 +40,24 @@ export function buildExecutiveDashboardCharts(
   const collectionsMap = new Map<string, DashboardTrendPoint>();
   const poMap = new Map<string, DashboardTrendPoint>();
 
+  for (const event of snapshot.recognition_events ?? []) {
+    const period = event.date.slice(0, 7);
+    const revenue = ensureBucket(revenueMap, period);
+    revenue.value = roundMoney(revenue.value + event.revenue);
+    const gp = ensureBucket(gpMap, period);
+    gp.value = roundMoney(gp.value + event.gp);
+  }
+
   for (const fact of snapshot.facts) {
     const period = fact.period_month ?? "unscheduled";
+    if (!snapshot.recognition_events) {
     const revenueBucket = ensureBucket(revenueMap, period);
     revenueBucket.value = roundMoney(
       revenueBucket.value + fact.metrics.revenue
     );
     const gpBucket = ensureBucket(gpMap, period);
     gpBucket.value = roundMoney(gpBucket.value + fact.metrics.gp);
+    }
     const poBucket = ensureBucket(poMap, period);
     poBucket.value = roundMoney(
       poBucket.value + fact.metrics.actual_amount
@@ -56,10 +66,12 @@ export function buildExecutiveDashboardCharts(
 
   for (const inv of snapshot.invoices) {
     if (!inv.issue_date) continue;
+    if (snapshot.date_range?.from && inv.issue_date < snapshot.date_range.from) continue;
+    if (snapshot.date_range?.to && inv.issue_date > snapshot.date_range.to) continue;
     const period = monthKey(inv.issue_date);
     const billingBucket = ensureBucket(billingMap, period);
     billingBucket.value = roundMoney(
-      billingBucket.value + Number(inv.total)
+      billingBucket.value + Number(inv.revenue_before_vat ?? inv.total)
     );
     const collectionsBucket = ensureBucket(collectionsMap, period);
     collectionsBucket.value = roundMoney(

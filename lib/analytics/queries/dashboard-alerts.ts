@@ -63,13 +63,13 @@ export function buildFinanceAlerts(input: {
       });
     }
 
-    if (m.remaining_to_invoice > 0 && m.achieved_revenue > 0) {
+    if (m.remaining_to_invoice > 0) {
       alerts.push({
         id: `unbilled-${node.key}`,
         severity: "warning",
         group: "billing",
-        title: "Unbilled achieved revenue",
-        description: `${node.label} has achieved revenue pending invoice.`,
+        title: "Unbilled recognized revenue",
+        description: `${node.label} has live-ad revenue pending invoice (excluding VAT).`,
         href: `/billing`,
         amount: m.remaining_to_invoice,
       });
