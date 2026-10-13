@@ -9,6 +9,7 @@ import { OperationalFloatingActionBar } from '@/components/workspace/operational
 import { DecimalInput } from './decimal-input';
 import { paymentAllocation } from './allocations';
 import { PaymentRegister } from './payment-register';
+import { PaymentLedger } from './payment-ledger';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
@@ -105,7 +106,7 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
     const [error, setError] = useState('');
     const [busy, setBusy] = useState(false);
     const [bankRow, setBankRow] = useState<PaymentRow | null>(null);
-    const [activeTab, setActiveTab] = useState('payments');
+    const [activeTab, setActiveTab] = useState(campaignId ? 'records' : 'payments');
     const [calculatorOpen, setCalculatorOpen] = useState(false);
     const [template, setTemplate] = useState('aaib-bulk-advice');
     const [exportOpen, setExportOpen] = useState(false);
@@ -182,11 +183,13 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
         return;
     } downloadFile(r.csv, PAYMENT_FILENAME, 'text/csv;charset=windows-1252'); setExportOpen(false); requestId.current = null; toast.success('Export saved. Confirm results after the bank processes it.'); await reload(); router.refresh(); }
     return <section className={`thinkway-creator-payments space-y-3 ${chosen.length ? "creator-payments-has-selection" : ""}`} aria-label="Creator payments">
-    {!loading && <Totals rows={rows} drafts={{}} tools={<Button className="thinkway-campaign-btn" variant="outline" onClick={() => void reload(true)}>Refresh</Button>}/>}
+    {!loading && <details className="cp-totals-details" open={activeTab !== 'records'}><summary>Payment balances and totals</summary><Totals rows={rows} drafts={{}} tools={<Button className="thinkway-campaign-btn" variant="outline" onClick={() => void reload(true)}>Refresh</Button>}/></details>}
     {error && <p role="alert" className="text-sm text-red-700">{error}</p>}{loading ? <PaymentLoading/> : <>
     {!rows.length && !error && <p className="text-sm text-muted-foreground">No issued creator IOs were found for this view. Generated, sent, manually delivered, and approved IOs appear here. If an IO was just issued, use Refresh.</p>}
     {!['advance','paid'].includes(registerFilter) && !!dirtyRows.length && <div className="cp-save-bar" role="status"><span><b>{dirtyRows.length} payments ready to record</b> · Save records money already paid. For a bank upload, use Export instead.</span><div><Button variant="outline" disabled={busy} onClick={() => { paymentRequest.current=null; setDrafts({}); }}>Discard</Button><Button disabled={busy || !canWrite} onClick={() => void savePlans()}>{busy ? 'Saving…' : 'Save payments'}</Button></div></div>}
-    <Tabs value={activeTab} onValueChange={setActiveTab} className="campaign-finance-workspace"><TabsList aria-label="Creator payment sections" className="campaign-finance-tabs"><TabsTrigger value="payments">Payments</TabsTrigger><TabsTrigger value="export">Export</TabsTrigger></TabsList><TabsContent value="payments">
+    <Tabs value={activeTab} onValueChange={setActiveTab} className="campaign-finance-workspace"><TabsList aria-label="Creator payment sections" className="campaign-finance-tabs"><TabsTrigger value="records">Payment records</TabsTrigger><TabsTrigger value="payments">Payment planning</TabsTrigger><TabsTrigger value="export">Export</TabsTrigger></TabsList><TabsContent value="records">
+    <PaymentLedger rows={visibleRows} batches={batches} canWrite={canWrite && !busy} onExport={() => setActiveTab('export')} onSaved={async savedRow => { if (savedRow) { setRows(current => current.map(row => row.assignmentId === savedRow.assignmentId ? savedRow : row)); setDrafts(current=>{const next={...current};delete next[savedRow.assignmentId];return next;}); paymentRequest.current=null;requestId.current=null; } await reload(true); }}/>
+    </TabsContent><TabsContent value="payments">
     {!!rows.length && <PaymentRegister filter={registerFilter} onFilterChange={setRegisterFilter} onSaved={async savedRow => { if (savedRow) { setRows(current => current.map(row => row.assignmentId === savedRow.assignmentId ? savedRow : row)); setDrafts(current=>{const next={...current};delete next[savedRow.assignmentId];return next;}); paymentRequest.current=null;requestId.current=null; } await reload(true); }} rows={visibleRows} drafts={drafts} selected={selected} canWrite={canWrite && !busy} showCampaign={!campaignId} onPatch={patch} onBank={setBankRow} onSelect={(id, checked) => { requestId.current = null; setSelected(current => { const next = new Set(current); if (checked) next.add(id); else next.delete(id); return next; }); }} onSelectAll={(ids, checked) => { requestId.current = null; setSelected(current => { const next = new Set(current); ids.forEach(id => checked ? next.add(id) : next.delete(id)); return next; }); }} onExport={() => setActiveTab('export')} onReview={() => { requestId.current = null; setExportOpen(true); }} canReview={canWrite && chosen.length > 0 && oneCampaign} filters={<><Input aria-label="Filter creators" placeholder="Find creator…" value={search} onChange={e => setSearch(e.target.value)}/>{!campaignId && <select className={inputClass} aria-label="Filter campaigns" value={campaignFilter} onChange={e => setCampaignFilter(e.target.value)}><option value="">All campaigns</option>{[...new Map(rows.map(r => [r.campaignId, r.campaign])).entries()].map(([id, name]) => <option key={id} value={id}>{name}</option>)}</select>}</>}/>}
 
     {!['advance','paid'].includes(registerFilter) && !!dirtyRows.length && !chosen.length && <div className="cp-save-bar cp-save-bottom"><span>Record payments already made, with their payment dates.</span><div><Button variant="outline" disabled={busy} onClick={() => { paymentRequest.current=null; setDrafts({}); }}>Discard</Button><Button disabled={busy || !canWrite} onClick={() => void savePlans()}>{busy ? 'Saving…' : 'Save payments'}</Button></div></div>}

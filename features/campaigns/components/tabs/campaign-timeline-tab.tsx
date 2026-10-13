@@ -1,7 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import {
   OperationalConfigurableTable,
@@ -42,6 +42,16 @@ type CampaignTimelineTabProps = {
 };
 
 type VendorRow = CampaignWorkspace["vendors"][number];
+
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
+// Preserve browser-local dates without differing from the server during hydration.
+function TimelineLocalDate({ value, pattern }: { value: string; pattern: string }) {
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
+  return hydrated ? format(new Date(value), pattern) : "…";
+}
 
 function buildTimelineVendorColumns(
   onOpenLine: (lineId: string) => void
@@ -90,7 +100,7 @@ function buildTimelineVendorColumns(
       label: "Confirmed",
       cellClassName: "text-[var(--camp-text-3)]",
       renderCell: (v) =>
-        v.confirmed_at ? format(new Date(v.confirmed_at), "MMM d, yyyy") : "—",
+        v.confirmed_at ? <TimelineLocalDate value={v.confirmed_at} pattern="MMM d, yyyy" /> : "—",
     },
   ];
 }
@@ -150,8 +160,6 @@ export function CampaignTimelineTab({
     workspace.id,
   ]);
 
-  const recentActivity = workspace.activity.slice(0, 5);
-  const recentAudit = financeAudit.slice(0, 5);
   const lifecycle = useMemo(
     () => campaignLifecycleFromWorkspace(workspace),
     [workspace]
@@ -161,8 +169,9 @@ export function CampaignTimelineTab({
   return (
     <>
       <CampaignWorkspaceFrame
-        title="Business Timeline"
-        subtitle="Campaign journey milestones — system activity remains secondary"
+        title="Timeline & audit"
+        subtitle="Read-only event history · campaign journey milestones"
+        tools={<span className="wr-secondary">{workspace.activity.length + financeAudit.length} events · read-only</span>}
         collapseRegister
         registerCount={workspace.vendors.length}
         registerStorageKey={`timeline-${workspace.id}`}
@@ -199,86 +208,31 @@ export function CampaignTimelineTab({
         ]}
         banner={
           <div className="mb-4 space-y-3">
-            <CampaignBusinessTimeline lifecycle={lifecycle} />
-            <details className="thinkway-lc-timeline-secondary">
-              <summary>
-                Secondary records · System activity & finance audit ({workspace.activity.length + financeAudit.length})
-              </summary>
-              <div className="thinkway-lc-timeline-secondary-body grid grid-cols-1 gap-3 xl:grid-cols-2">
-                <div className="thinkway-aurora-doc-panel">
-                  <div className="eyebrow">System activity</div>
-                  {recentActivity.length === 0 ? (
-                    <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
-                      Technical database events stay here — the business story is above.
-                    </p>
-                  ) : (
-                    <div className="thinkway-aurora-tl-feed">
-                      {recentActivity.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="thinkway-aurora-tl-row w-full text-left"
-                          onClick={() => setDetailActivityId(item.id)}
-                        >
-                          <span className="thinkway-aurora-tl-ic" aria-hidden>
-                            ↻
-                          </span>
-                          <div className="min-w-0">
-                            <div className="thinkway-aurora-tl-t1 truncate capitalize">
-                              {item.summary}
-                            </div>
-                            <div className="thinkway-aurora-tl-t2 truncate">
-                              {item.actor?.full_name ?? item.actor?.email ?? "System"}
-                            </div>
-                          </div>
-                          <time className="thinkway-aurora-tl-when">
-                            {format(new Date(item.created_at), "MMM d · HH:mm")}
-                          </time>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="thinkway-aurora-doc-panel">
-                  <div className="eyebrow">Finance audit</div>
-                  {financeAuditPending && financeAudit.length === 0 ? (
-                    <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
-                      Loading finance audit…
-                    </p>
-                  ) : recentAudit.length === 0 ? (
-                    <p className="py-6 text-center text-[13px] text-[var(--camp-text-4)]">
-                      No finance audit yet — invoice and payment events will appear here.
-                    </p>
-                  ) : (
-                    <div className="thinkway-aurora-tl-feed">
-                      {recentAudit.map((entry) => (
-                        <button
-                          key={entry.id}
-                          type="button"
-                          className="thinkway-aurora-tl-row w-full text-left"
-                          onClick={() => setDetailAuditId(entry.id)}
-                        >
-                          <span className="thinkway-aurora-tl-ic" aria-hidden>
-                            $
-                          </span>
-                          <div className="min-w-0">
-                            <div className="thinkway-aurora-tl-t1 truncate">{entry.label}</div>
-                            <div className="thinkway-aurora-tl-t2 truncate">
-                              {entry.actor_name ?? "System"}
-                              {entry.payload.document_number
-                                ? ` · ${String(entry.payload.document_number)}`
-                                : ""}
-                            </div>
-                          </div>
-                          <time className="thinkway-aurora-tl-when">
-                            {format(new Date(entry.created_at), "MMM d · HH:mm")}
-                          </time>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+            <section className="wr-audit-register" aria-label="Timeline and audit register">
+              <div className="wr-audit-scroll"><table>
+                <colgroup><col style={{ width: 148 }} /><col style={{ width: 108 }} /><col /><col style={{ width: 150 }} /><col style={{ width: 160 }} /><col style={{ width: 180 }} /></colgroup>
+                <thead><tr><th scope="col">When</th><th scope="col">Kind</th><th scope="col">Event</th><th scope="col">Entity</th><th scope="col">Actor</th><th scope="col">Event code</th></tr></thead>
+                <tbody>
+                  {workspace.activity.map(item => <tr key={`activity-${item.id}`}>
+                    <td className="wr-audit-time"><TimelineLocalDate value={item.created_at} pattern="MMM d, yyyy · HH:mm" /></td>
+                    <td><AuroraStatusPill tone="mut">System</AuroraStatusPill></td>
+                    <td><button type="button" onClick={() => setDetailActivityId(item.id)}>{item.summary}</button></td>
+                    <td>{item.entity_type}</td><td>{item.actor?.full_name ?? item.actor?.email ?? "System"}</td><td className="wr-audit-time">{item.action}</td>
+                  </tr>)}
+                  {financeAudit.map(entry => <tr key={`audit-${entry.id}`}>
+                    <td className="wr-audit-time"><TimelineLocalDate value={entry.created_at} pattern="MMM d, yyyy · HH:mm" /></td>
+                    <td><AuroraStatusPill tone="blue">Finance</AuroraStatusPill></td>
+                    <td><button type="button" onClick={() => setDetailAuditId(entry.id)}>{entry.label}</button>{entry.payload.document_number ? <span className="wr-secondary">{String(entry.payload.document_number)}</span> : null}</td>
+                    <td>{entry.entity_type}</td><td>{entry.actor_name ?? "System"}</td><td className="wr-audit-time">{entry.event}</td>
+                  </tr>)}
+                  {workspace.activity.length + financeAudit.length === 0 ? <tr><td colSpan={6}>{financeAuditPending ? "Loading finance audit…" : "No audit events recorded yet."}</td></tr> : null}
+                </tbody>
+              </table></div>
+              {financeAuditPending && workspace.activity.length > 0 ? <p className="px-4 py-2 text-xs text-muted-foreground">Loading finance audit…</p> : null}
+            </section>
+            <details className="wr-timeline-milestones" open>
+              <summary>Business milestones · {occurredCount}/{lifecycle.timeline.length}</summary>
+              <CampaignBusinessTimeline lifecycle={lifecycle} />
             </details>
           </div>
         }

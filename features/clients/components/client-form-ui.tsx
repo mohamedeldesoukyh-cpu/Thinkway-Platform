@@ -324,7 +324,7 @@ export function ClientFormSection({
         toolbar={toolbar}
         bodyClassName={bodyClassName}
         footer={footer}
-        className={className}
+        className={cn("wr-client-section", className)}
       >
         {children}
       </PlatformV6WideFormBlock>
@@ -335,6 +335,7 @@ export function ClientFormSection({
     <section
       className={cn(
         "rounded-2xl border border-border bg-card shadow-[var(--card-shadow)]",
+        "wr-client-section",
         compact ? "overflow-visible" : "overflow-hidden",
         className
       )}

@@ -1,5 +1,5 @@
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { ChevronDownIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -9,10 +9,14 @@ export type WorkspaceSummaryStat = {
   label: string;
   value: ReactNode;
   tone?: "default" | "blue" | "pos" | "amber" | "mut";
+  band?: string;
+  internal?: boolean;
 };
 
 type CampaignWorkspaceFrameProps = {
   title: string;
+  /** The register may own its sole heading and action bar. */
+  showHeading?: boolean;
   subtitle?: string;
   status?: ReactNode;
   /** Primary actions — always top-right */
@@ -26,6 +30,7 @@ type CampaignWorkspaceFrameProps = {
    */
   details?: ReactNode;
   detailsLabel?: string;
+  detailsLayout?: "disclosure" | "cards";
   children?: ReactNode;
   className?: string;
   /** Quiet label above operational content */
@@ -60,6 +65,25 @@ function registerSessionKey(storageKey: string): string {
   return `thinkway:ws-register:${storageKey}`;
 }
 
+export function WorkspaceSummary({ title, stats }: { title: string; stats: WorkspaceSummaryStat[] }) {
+  const bands = stats.reduce<Array<{ label: string; internal: boolean; stats: WorkspaceSummaryStat[] }>>((groups, stat) => {
+    const label = stat.band ?? `${title} summary`;
+    const internal = stat.internal ?? false;
+    const last = groups.at(-1);
+    if (last?.label === label && last.internal === internal) last.stats.push(stat);
+    else groups.push({ label, internal, stats: [stat] });
+    return groups;
+  }, []);
+  return <div className="wr-body-kpis" role="group" aria-label={`${title} summary`}>
+    {bands.map((band, index) => <section className="wr-body-kpi-zone" style={{ "--wr-zone-count": band.stats.length } as CSSProperties} data-internal={band.internal} key={`${band.label}-${index}`}>
+      <div className="wr-body-kpi-band">{band.label}</div>
+      <div className="wr-body-kpi-values">{band.stats.map(stat => <div className="wr-body-kpi" key={stat.key}>
+        <span>{stat.label}</span><strong className={toneClass(stat.tone)}>{stat.value}</strong>
+      </div>)}</div>
+    </section>)}
+  </div>;
+}
+
 function readRegisterOpen(storageKey: string, fallback: boolean): boolean {
   if (typeof window === "undefined") return fallback;
   try {
@@ -78,6 +102,7 @@ function readRegisterOpen(storageKey: string, fallback: boolean): boolean {
  */
 export function CampaignWorkspaceFrame({
   title,
+  showHeading = true,
   subtitle,
   status,
   tools,
@@ -85,6 +110,7 @@ export function CampaignWorkspaceFrame({
   banner,
   details,
   detailsLabel = "More details",
+  detailsLayout = "disclosure",
   children,
   className,
   registerLabel,
@@ -158,7 +184,8 @@ export function CampaignWorkspaceFrame({
 
   return (
     <div className={cn("thinkway-aurora-ws", className)}>
-      <header className="thinkway-aurora-ws-head">
+      {stats && stats.length > 0 ? <WorkspaceSummary title={title} stats={stats} /> : null}
+      {showHeading ? <header className="thinkway-aurora-ws-head">
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="thinkway-aurora-ws-title">{title}</h2>
@@ -171,34 +198,11 @@ export function CampaignWorkspaceFrame({
             {tools}
           </div>
         ) : null}
-      </header>
-
-      {stats && stats.length > 0 ? (
-        <div
-          className={cn(
-            "thinkway-aurora-statrow",
-            stats.length >= 7 && "c7",
-            stats.length === 6 && "c6",
-            stats.length === 5 && "c5",
-            stats.length === 4 && "c4"
-          )}
-          role="group"
-          aria-label={`${title} summary`}
-        >
-          {stats.map((stat) => (
-            <div key={stat.key} className="thinkway-aurora-scard">
-              <div className="thinkway-aurora-scard-k">{stat.label}</div>
-              <div className={cn("thinkway-aurora-scard-v tabular-nums", toneClass(stat.tone))}>
-                {stat.value}
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : null}
+      </header> : null}
 
       {banner}
 
-      {details ? (
+      {details && detailsLayout === "cards" ? <div className="wr-body-detail-cards">{details}</div> : details ? (
         <div className="thinkway-aurora-ws-details">
           <button
             type="button"

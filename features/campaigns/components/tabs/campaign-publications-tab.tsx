@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceSummary } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 
 import { format, isValid, parseISO } from "date-fns";
 import { DownloadIcon, FilterIcon, ImagesIcon, PlusIcon, SearchIcon } from "lucide-react";
@@ -227,6 +228,13 @@ export function CampaignPublicationsTab({
 
   return (
     <>
+      <WorkspaceSummary title="Publications" stats={[
+        { key: "publications", label: "Publications", value: rows.length },
+        { key: "published", label: "Published", value: rows.filter(row => row.status === "published").length, tone: "pos" },
+        { key: "verified", label: "Verified", value: rows.filter(row => row.status === "verified").length, tone: "blue" },
+        { key: "scheduled", label: "Scheduled", value: rows.filter(row => row.status === "scheduled").length },
+        { key: "shown", label: "Matching filters", value: filtered.length },
+      ]} />
       <OperationalTableSuiteProvider
         tableId={OPERATIONAL_TABLE_IDS.campaignPublications}
         columns={columns}

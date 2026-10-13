@@ -375,8 +375,8 @@ export function ClientIoForm({
         </div>
       }
     >
-      <div className="px-6 py-4">
-        <div className="space-y-3">
+      <div className="wr-io-body px-6 py-4">
+        <div className="wr-io-sections space-y-3">
           <CollapsibleWorkspaceSection
             title="Document details"
             summary={`${row.document_number ?? "Draft"} · ${row.status} · ${row.client_name ?? "Client"}`}
@@ -428,7 +428,7 @@ export function ClientIoForm({
             <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
             <input type="hidden" name="send_recipients" value={sendRecipientsPayload} />
           </form>
-          <form id="client-io-save" action={saveAction} className="flex flex-col">
+          <form id="client-io-save" action={saveAction} className="wr-io-edit-sections flex flex-col">
             <input type="hidden" name="id" value={row.id} />
             <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
             <input type="hidden" name="status" value={row.status} />

@@ -10,7 +10,7 @@ export function assignmentCssGridTrack(
 ): string {
   if (columnId === "expand") return "0px";
   if (columnId === "select") return "30px";
-  if (columnId === "assignment") return "180px";
+  if (columnId === "assignment") return `${ASSIGNMENT_GRID_COLUMN_WIDTH_PX.assignment}px`;
   if (columnId === "creator") return "180px";
   if (columnId === "fullDescription") return "220px";
   const px =

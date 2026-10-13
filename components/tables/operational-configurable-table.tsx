@@ -143,7 +143,7 @@ function OperationalConfigurableTableView<T>({
 
   return (
     <div className="min-w-0 max-w-full overflow-x-auto overscroll-x-contain" tabIndex={0} role="region" aria-label="Scrollable data table">
-    <CampaignOperationalTable className={cn("table-fixed w-full", className)} style={{ minWidth: minimumWidth }}>
+    <CampaignOperationalTable className={cn("wr-responsive-table table-fixed w-full", className)} style={{ minWidth: minimumWidth }}>
       <colgroup>
         {columns.map((column, index) => (
           <col key={column.id} style={{ width: columnWidths[index] }} />
@@ -183,6 +183,7 @@ function OperationalConfigurableTableView<T>({
                   return (
                     <CampaignOperationalTableCellAmount
                       key={column.id}
+                      data-label={column.label}
                       className={cn(amountClassName, sharedCellClassName)}
                       title={cellTitle}
                     >
@@ -194,6 +195,7 @@ function OperationalConfigurableTableView<T>({
                   return (
                     <CampaignOperationalTableCellMono
                       key={column.id}
+                      data-label={column.label}
                       className={sharedCellClassName}
                       title={cellTitle}
                     >
@@ -204,6 +206,7 @@ function OperationalConfigurableTableView<T>({
                 return (
                   <CampaignOperationalTableCell
                     key={column.id}
+                    data-label={column.label}
                     className={sharedCellClassName}
                     title={cellTitle}
                   >

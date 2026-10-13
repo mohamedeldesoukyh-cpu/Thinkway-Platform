@@ -12,6 +12,8 @@ import { CampaignOperationalReadinessChecklist } from "@/features/campaigns/comp
 import { CampaignHeaderInlineEditor } from "@/features/campaigns/components/campaign-header-inline-editor";
 import { CampaignCommercialApprovals } from "@/features/campaigns/components/campaign-commercial-approvals";
 import { CampaignOverviewDetails } from "@/features/campaigns/components/campaign-overview-details";
+import { CampaignOverviewReferenceDetails } from "./campaign-overview-reference-details";
+import { signalsFromCampaignWorkspace } from "@/features/campaigns/lifecycle/campaign-process-presentation";
 import { CampaignPoSection } from "@/features/campaigns/components/campaign-po-section";
 import { CampaignIntelligenceReference } from "@/features/campaigns/components/campaign-intelligence-reference";
 import { CampaignFlatSection } from "@/features/campaigns/components/campaign-flat-section";
@@ -22,7 +24,8 @@ import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
 import { formatMoneyCompact, formatPercent } from "@/features/campaigns/utils";
 import { evaluateCampaignOperationalReadiness } from "@/lib/domains/commercial/campaign-operational-readiness";
-import type { CampaignPerformanceSummary } from "@/lib/domains/campaign/types";
+import type { CampaignPerformanceSummary, CampaignPublicationRow } from "@/lib/domains/campaign/types";
+import { publicationOverviewMetrics } from "@/features/campaigns/utils/publication-overview-metrics";
 import { cn } from "@/lib/utils";
 
 const WORKFLOW_STAGES = [
@@ -49,6 +52,7 @@ type CampaignCommandCenterProps = {
   accountManagers: { id: string; full_name: string | null; email: string }[];
   currencyOptions: { value: string; label: string }[];
   performanceSummary?: CampaignPerformanceSummary | null;
+  performancePublications?: CampaignPublicationRow[];
   performanceLoaded?: boolean;
   onNavigateToTab: (tab: CampaignWorkspaceTabId) => void;
   onOpenDetails?: () => void;
@@ -90,6 +94,7 @@ export function CampaignCommandCenter({
   accountManagers,
   currencyOptions,
   performanceSummary,
+  performancePublications = [],
   performanceLoaded = false,
   onNavigateToTab,
   onOpenDetails,
@@ -174,10 +179,11 @@ export function CampaignCommandCenter({
   );
 
   const recentActivity = (workspace.activity ?? []).slice(0, 5);
+  const overviewSignals = signalsFromCampaignWorkspace(workspace);
+  const additionalPerformance = publicationOverviewMetrics(performancePublications);
 
   return (
     <div className="thinkway-aurora-command">
-      <CampaignCommercialApprovals key={workspace.id} campaignHeaderId={workspace.id} refreshKey={workspace} />
       {lifecycle ? null : (
         <>
           <CampaignOperationalReadinessChecklist readiness={readiness} />
@@ -206,7 +212,7 @@ export function CampaignCommandCenter({
         </>
       )}
 
-      <div className="thinkway-aurora-ops-grid">
+      <div className="thinkway-aurora-ops-grid wr-reference-hub">
         <CampaignOpsCard
           title="Health"
           subtitle="Operational readiness"
@@ -224,6 +230,11 @@ export function CampaignCommandCenter({
             tone={readiness.status === "operational_ready" ? "pos" : "amber"}
           />
           <CampaignOpsStat
+            label="Overdue deliverables" value={String(overviewSignals.overdueDeliverableCount)} tone={overviewSignals.overdueDeliverableCount > 0 ? "amber" : "mut"}
+          />
+          <CampaignOpsStat label="Unassigned creators" value={String(Math.max(0,assignmentStats.total-assignmentStats.withVendor))} />
+          <details className="wr-hub-extra"><summary>Readiness counts</summary>
+          <CampaignOpsStat
             label="Blockers"
             value={String(workspace.blockers.length)}
             tone={workspace.blockers.length > 0 ? "amber" : "mut"}
@@ -233,6 +244,7 @@ export function CampaignCommandCenter({
             value={String(readiness.mandatoryMissing.length)}
             tone={readiness.mandatoryMissing.length > 0 ? "amber" : "mut"}
           />
+          </details>
         </CampaignOpsCard>
 
         <CampaignOpsCard
@@ -248,6 +260,9 @@ export function CampaignCommandCenter({
           onAction={() => onNavigateToTab("lines")}
         >
           <CampaignOpsStat label="Creators" value={String(assignmentStats.withVendor)} tone="blue" />
+          <CampaignOpsStat label="Deliverables" value={String(deliverableStats.total)} />
+          <CampaignOpsStat label="Revenue not set" value={String(workspace.lines.filter(line => !(line.revenue > 0)).length)} />
+          <details className="wr-hub-extra"><summary>Assignment status counts</summary>
           <CampaignOpsStat label="Confirmed+" value={String(assignmentStats.confirmed)} />
           <CampaignOpsStat
             label="Unassigned"
@@ -256,6 +271,7 @@ export function CampaignCommandCenter({
               assignmentStats.total - assignmentStats.withVendor > 0 ? "amber" : "mut"
             }
           />
+          </details>
         </CampaignOpsCard>
 
         <CampaignOpsCard
@@ -272,6 +288,10 @@ export function CampaignCommandCenter({
           actionLabel="Client IO"
           onAction={() => onNavigateToTab("client-io")}
         >
+          <CampaignOpsStat label="Current version" value={workspace.client_io ? `v${workspace.client_io.revision_number}` : "—"} />
+          <CampaignOpsStat label="Versions" value={String(workspace.client_io_versions.length)} />
+          <CampaignOpsStat label="Pending approvals" value={String(workspace.client_io_versions.filter(version => !version.is_superseded && !["approved", "rejected"].includes(version.status)).length)} />
+          <details className="wr-hub-extra"><summary>Document status counts</summary>
           <CampaignOpsStat
             label="Documents"
             value={workspace.client_io ? "1" : "0"}
@@ -296,6 +316,7 @@ export function CampaignCommandCenter({
                 : "mut"
             }
           />
+          </details>
         </CampaignOpsCard>
 
         <CampaignOpsCard
@@ -314,6 +335,10 @@ export function CampaignCommandCenter({
           actionLabel="Vendor IO"
           onAction={() => onNavigateToTab("vendor-io")}
         >
+          <CampaignOpsStat label="Generated" value={String((workspace.vendor_ios ?? []).filter(row => Boolean(row.document_generated_at)).length)} />
+          <CampaignOpsStat label="Not generated" value={String((workspace.vendor_ios ?? []).filter(row => !row.document_generated_at).length)} />
+          <CampaignOpsStat label="Blocked from reopening" value={<span title="Reopening eligibility is checked per document in Vendor IO; no campaign-level count is provided">—</span>} />
+          <details className="wr-hub-extra"><summary>Order status counts</summary>
           <CampaignOpsStat label="Total" value={String(vendorIoStats.total)} />
           <CampaignOpsStat label="Sent" value={String(vendorIoStats.sent)} tone="blue" />
           <CampaignOpsStat
@@ -321,6 +346,7 @@ export function CampaignCommandCenter({
             value={String(vendorIoStats.approved)}
             tone="pos"
           />
+          </details>
         </CampaignOpsCard>
 
         <CampaignOpsCard
@@ -339,13 +365,17 @@ export function CampaignCommandCenter({
           actionLabel="Deliverables"
           onAction={() => onNavigateToTab("deliverables")}
         >
-          <CampaignOpsStat label="Total" value={String(deliverableStats.total)} />
           <CampaignOpsStat label="Posted" value={String(deliverableStats.posted)} tone="pos" />
+          <CampaignOpsStat label="In review" value={String(workspace.deliverables.filter(row => row.display_status === "submitted").length)} />
+          <CampaignOpsStat label="Overdue" value={String(overviewSignals.overdueDeliverableCount)} />
+          <details className="wr-hub-extra"><summary>Delivery counts</summary>
+          <CampaignOpsStat label="Total" value={String(deliverableStats.total)} />
           <CampaignOpsStat
             label="Pending"
             value={String(deliverableStats.pending)}
             tone={deliverableStats.pending > 0 ? "amber" : "mut"}
           />
+          </details>
         </CampaignOpsCard>
 
         <CampaignOpsCard
@@ -371,7 +401,7 @@ export function CampaignCommandCenter({
           actionLabel="Performance"
           onAction={() => onNavigateToTab("publications")}
         >
-          <CampaignOpsStat
+          <details className="wr-hub-extra"><summary>Reach & engagement</summary><CampaignOpsStat
             label="Reach"
             value={
               performanceLoaded
@@ -379,6 +409,8 @@ export function CampaignCommandCenter({
                 : "—"
             }
           />
+          <CampaignOpsStat label="Avg ER" value={performanceLoaded && performanceSummary?.average_engagement_rate != null ? formatPercent(performanceSummary.average_engagement_rate) : "—"} tone="mut" />
+          </details>
           <CampaignOpsStat
             label="Views"
             value={
@@ -387,15 +419,8 @@ export function CampaignCommandCenter({
                 : "—"
             }
           />
-          <CampaignOpsStat
-            label="Avg ER"
-            value={
-              performanceLoaded && performanceSummary?.average_engagement_rate != null
-                ? formatPercent(performanceSummary.average_engagement_rate)
-                : "—"
-            }
-            tone="mut"
-          />
+          <CampaignOpsStat label="Plays (actual)" value={performanceLoaded && additionalPerformance.plays != null ? additionalPerformance.plays.toLocaleString("en-US") : "—"} />
+          <CampaignOpsStat label="Rows with no metrics" value={performanceLoaded ? String(additionalPerformance.missingMetrics) : "—"} />
         </CampaignOpsCard>
 
         <CampaignOpsCard
@@ -458,7 +483,11 @@ export function CampaignCommandCenter({
         </CampaignOpsCard>
       </div>
 
-      {/* Campaign details & PO — before Lifecycle Details; ops-card chrome */}
+      <CampaignOverviewReferenceDetails workspace={workspace} lifecycle={lifecycle} currencyOptions={currencyOptions} onOpenDetails={onOpenDetails} onEditHeader={openHeaderEditor} onOpenResolver={onOpenResolver} onContinueLifecycle={onContinueLifecycle} />
+      <CampaignCommercialApprovals key={workspace.id} campaignHeaderId={workspace.id} refreshKey={workspace} />
+      <details className="wr-overview-additional" open={inlineEditing || undefined}>
+      <summary>Additional campaign details, commercial history & PO controls</summary>
+      {/* Preserve all existing detail panels and editing controls. */}
       <div className="mt-3 space-y-3">
         <div className="thinkway-aurora-sechead">
           <div className="thinkway-aurora-sechead-tt">Campaign details & PO governance</div>
@@ -532,6 +561,7 @@ export function CampaignCommandCenter({
           onSelectStage={onNavigateToTab}
         />
       ) : null}
+      </details>
     </div>
   );
 }

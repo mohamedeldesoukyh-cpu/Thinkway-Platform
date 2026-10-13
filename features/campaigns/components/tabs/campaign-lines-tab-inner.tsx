@@ -252,12 +252,16 @@ export function CampaignLinesTabInner({
           },
           {
             key: "blocked",
+            band: "Internal — never shown to the client",
+            internal: true,
             label: "Blocked",
             value: String(blockedCount),
             tone: blockedCount > 0 ? "amber" : "mut",
           },
           {
             key: "ready",
+            band: "Internal — never shown to the client",
+            internal: true,
             label: "Ready",
             value: String(readyCount),
             tone: readyCount > 0 ? "blue" : "mut",

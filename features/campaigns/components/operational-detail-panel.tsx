@@ -71,7 +71,7 @@ export function OperationalDetailSheet({
         showOverlay={false}
         onFocusOutside={dismissOnFocusOutside ? undefined : (event) => event.preventDefault()}
         style={isDetail ? OPERATIONAL_DETAIL_SHEET_DETAIL_STYLE : OPERATIONAL_DETAIL_SHEET_STYLE}
-        className={isDetail ? OPERATIONAL_DETAIL_SHEET_DETAIL_CLASS : OPERATIONAL_DETAIL_SHEET_CLASS}
+        className={cn("wr-operational-drawer", isDetail ? OPERATIONAL_DETAIL_SHEET_DETAIL_CLASS : OPERATIONAL_DETAIL_SHEET_CLASS)}
       >
         <SheetTitle className="sr-only">{title}</SheetTitle>
         {description ? (
@@ -219,7 +219,7 @@ export function DetailField({
   onLabelClick?: () => void;
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-border/40 py-3 last:border-b-0 sm:gap-6">
+    <div className="wr-detail-field flex items-start justify-between gap-4 border-b border-border/40 py-3 last:border-b-0 sm:gap-6">
       {onLabelClick ? (
         <button
           type="button"
@@ -349,7 +349,7 @@ export function ClientApprovalPill({ status }: { status: string | null }) {
 
 export function DetailTabList({ children }: { children: ReactNode }) {
   return (
-    <div className="shrink-0 border-b border-border/60 px-6">{children}</div>
+    <div className="wr-detail-tabs shrink-0 border-b border-border/60 px-6">{children}</div>
   );
 }
 
@@ -420,7 +420,7 @@ export function DetailSheetFooter({
   children: ReactNode;
 }) {
   return (
-    <div className="shrink-0 border-t border-border/60 px-6 py-4">
+    <div className="wr-detail-footer shrink-0 border-t border-border/60 px-6 py-4">
       {hint ? (
         <p className="mb-3 text-[11px] leading-relaxed text-muted-foreground">{hint}</p>
       ) : null}
@@ -473,7 +473,7 @@ export function DetailFormScrollBody({
   className?: string;
 }) {
   return (
-    <div className={cn("min-h-0 flex-1 overflow-y-auto px-6 py-4", className)}>
+    <div className={cn("wr-detail-form-body min-h-0 flex-1 overflow-y-auto px-6 py-4", className)}>
       <div className="space-y-5">{children}</div>
     </div>
   );
@@ -492,7 +492,7 @@ export function DetailFormSection({
   className?: string;
 }) {
   return (
-    <div className={cn("space-y-2", className)}>
+    <div className={cn("wr-detail-form-section space-y-2", className)}>
       <p className={DETAIL_FIELD_LABEL_CLASS}>{label}</p>
       {children}
       {hint ? (
@@ -536,7 +536,7 @@ export function DetailPanelHeader({
   );
 
   return (
-    <div className="shrink-0 border-b border-border/60 px-6 pb-4 pt-5">
+    <div className="wr-detail-header shrink-0 border-b border-border/60 px-6 pb-4 pt-5">
       <div className="flex items-start justify-between gap-3 pr-10">
         <p className="text-xs text-muted-foreground">{breadcrumb}</p>
         {actions}

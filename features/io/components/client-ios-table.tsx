@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 import {
   OperationalConfigurableTable,
@@ -31,6 +31,16 @@ type Props = {
   showClientColumn?: boolean;
   platformV6?: boolean;
 };
+
+const subscribeToLocalDate = () => () => {};
+const localDateReady = () => true;
+const serverDateReady = () => false;
+
+function ClientIoLocalDate({ value }: { value: string | null }) {
+  const ready = useSyncExternalStore(subscribeToLocalDate, localDateReady, serverDateReady);
+  if (!value) return <>—</>;
+  return <time dateTime={value}>{ready ? new Date(value).toLocaleString() : "…"}</time>;
+}
 
 function renderClientIoStatusBadge(
   status: ClientIoRow["status"],
@@ -95,15 +105,13 @@ function buildClientIosColumns(
       id: "sent",
       label: "Sent",
       cellClassName: platformV6 ? "text-[var(--tw-text-3)]" : "text-muted-foreground",
-      renderCell: (row) =>
-        row.sent_at ? new Date(row.sent_at).toLocaleString() : "—",
+      renderCell: (row) => <ClientIoLocalDate value={row.sent_at} />,
     },
     {
       id: "approved",
       label: "Approved",
       cellClassName: platformV6 ? "text-[var(--tw-text-3)]" : "text-muted-foreground",
-      renderCell: (row) =>
-        row.approved_at ? new Date(row.approved_at).toLocaleString() : "—",
+      renderCell: (row) => <ClientIoLocalDate value={row.approved_at} />,
     },
     {
       id: "actions",

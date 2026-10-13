@@ -165,6 +165,7 @@ function ParticipationDetailsTab({
 
   return (
     <>
+      <div className="wr-detail-group">Assignment scope</div>
       <DetailField label="Platform">
         {platformLabels.length > 0 ? platformLabels.join(", ") : <Miss>not set</Miss>}
       </DetailField>
@@ -177,6 +178,7 @@ function ParticipationDetailsTab({
       <DetailField label="Vendor">
         {textOrMiss(line.influencer_name, "not assigned")}
       </DetailField>
+      <div className={showInternalFinancials ? "wr-detail-group wr-detail-group--internal" : "wr-detail-group"}>{showInternalFinancials ? "Commercial — internal, never shown to the client" : "Commercial"}</div>
       {showInternalFinancials ? (
         <DetailField label="Inf cost" valueClassName="m">
           {<CampaignLineFinancial line={line} metric="cost" />}
@@ -195,6 +197,8 @@ function ParticipationDetailsTab({
           </DetailField>
         </>
       ) : null}
+      <div className="wr-detail-group">Documents &amp; status</div>
+      <DetailField label="Vendor IO"><DocumentNumber value={line.vendor_io_document_number} /></DetailField>
       <DetailField label="Client approval">
         <ClientApprovalPill status={clientIoStatus} />
       </DetailField>
@@ -631,7 +635,7 @@ export function AssignmentInfluencerDetailSheet({
               <Tabs defaultValue="participation" className="flex min-h-0 flex-1 flex-col">
                 <div className="tw-cm__h">
                   <TabsList className="tw-cdt h-auto flex-1 justify-start gap-0.5 rounded-none bg-transparent p-0">
-                    <TabsTrigger value="participation">Participation details</TabsTrigger>
+                    <TabsTrigger value="participation">Participation</TabsTrigger>
                     <TabsTrigger value="general">General</TabsTrigger>
                     {gates.showInternalFinancials && influencerId && <TabsTrigger value="bank">Bank details</TabsTrigger>}
                     <TabsTrigger value="social">Social data</TabsTrigger>

@@ -7,6 +7,8 @@ import {
 import {
   assignmentChildColDataAttr,
   assignmentParentColDataAttr,
+  HIERARCHY_COLUMN_LABELS,
+  CHILD_COLUMN_LABELS,
 } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { cn } from "@/lib/utils";
 
@@ -53,6 +55,9 @@ export function AssignmentGridCell({
   return (
     <div
       role={header ? "columnheader" : "gridcell"}
+      data-label={childColumnId
+        ? CHILD_COLUMN_LABELS[childColumnId as keyof typeof CHILD_COLUMN_LABELS] ?? childColumnId.replace(/([A-Z])/g, " $1")
+        : columnId ? HIERARCHY_COLUMN_LABELS[columnId as keyof typeof HIERARCHY_COLUMN_LABELS] : undefined}
       {...(columnId ? assignmentParentColDataAttr(columnId) : {})}
       {...(childColumnId ? assignmentChildColDataAttr(childColumnId) : {})}
       className={cn(header ? SAFE_GRID_TH : SAFE_GRID_TD, className)}

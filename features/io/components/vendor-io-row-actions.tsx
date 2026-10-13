@@ -4,6 +4,7 @@ import { MoreHorizontalIcon } from "lucide-react";
 import { useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,24 +25,36 @@ import { isActiveVendorIo } from "@/lib/io/active-vendor-io";
 type Props = {
   row: VendorIoRow;
   onViewDetail: (ioId: string) => void;
+  compact?: boolean;
 };
 
-/** Compact Actions cell — primary Send + overflow menu (no horizontal page scroll). */
-export function VendorIoRowActions({ row, onViewDetail }: Props) {
+/** Primary delivery action and the existing overflow options. */
+export function VendorIoRowActions({ row, onViewDetail, compact = false }: Props) {
   const openingDetails = useRef(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const signedUrl = row.attachment_url?.trim() || "";
   const canApprove = canRecordVendorIoManualApproval(row);
 
+  if (compact) {
+    return (
+      <div className="wr-vio-reference-actions">
+        <Button size="sm" variant="outline" onClick={() => onViewDetail(row.id)}>Open</Button>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button size="icon" variant="ghost" aria-label="Vendor IO delivery and more actions"><MoreHorizontalIcon className="size-3.5" /></Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-72 p-3" align="end">
+            <p className="mb-2 text-xs font-semibold">Delivery and document actions</p>
+            <VendorIoRowActions row={row} onViewDetail={onViewDetail} />
+          </PopoverContent>
+        </Popover>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-w-0 items-center justify-end gap-1">
-      <VendorIoSendButton
-        row={row}
-        variant="default"
-        size="sm"
-        compact
-        className="h-7 shrink-0 whitespace-nowrap px-2.5 text-[11px] font-semibold"
-      />
+      <VendorIoSendButton row={row} variant="default" size="sm" compact className="h-7 shrink-0 whitespace-nowrap px-2.5 text-[11px] font-semibold" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button

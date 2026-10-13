@@ -10,10 +10,10 @@ export const ASSIGNMENT_GRID_COLUMN_WIDTH_PX = {
   /** Chevron lives in assignment cell — reserve no column width. */
   expand: 0,
   select: 24,
-  assignment: 180,
+  assignment: 250,
   creator: 180,
   platforms: 72,
-  deliverables: 56,
+  deliverables: 220,
   fullDescription: 220,
   postingDates: 84,
   costCurrency: 56,

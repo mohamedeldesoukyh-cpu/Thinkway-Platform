@@ -485,6 +485,7 @@ export function CampaignWorkspaceView({
               onOpenResolver={() => setResolverOpen(true)}
               onContinueLifecycle={continueToNextAction}
               performanceSummary={performanceSummary}
+              performancePublications={publications}
               performanceLoaded={bundleStatuses.publications === "loaded"}
             />
           </CampaignWorkspaceTabPanel>

@@ -15,6 +15,7 @@ import { OperationalTableSuiteProvider } from "@/components/tables/operational-t
 import { OperationalTableControlsSlot } from "@/components/tables/operational-data-table";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { formatOperationalAmount } from "@/features/campaigns/components/assignment-hierarchy/operational-amount";
 import { VendorIoDetailSheet } from "@/features/io/components/vendor-io-detail-sheet";
@@ -101,9 +102,10 @@ function buildVendorIoSelectColumn(
 }
 
 function buildCampaignVendorIoColumns(
-  onViewDetail: (ioId: string) => void
+  onViewDetail: (ioId: string) => void,
+  referenceView = false
 ): OperationalConfigurableColumnDef<VendorIoRow>[] {
-  return [
+  const columns: OperationalConfigurableColumnDef<VendorIoRow>[] = [
     {
       id: "io_number",
       label: "IO #",
@@ -134,7 +136,7 @@ function buildCampaignVendorIoColumns(
     },
     {
       id: "influencer",
-      label: "Influencer",
+      label: "Creator",
       colWidth: "16%",
       cellClassName: "min-w-0",
       renderCell: (row) => (
@@ -151,7 +153,7 @@ function buildCampaignVendorIoColumns(
       headerClassName: "text-right",
       cellClassName: "text-right tabular-nums",
       renderCell: (row) => (
-        <span className="thinkway-campaign-num">{formatOperationalAmount(row.amount)}</span>
+        <span className="thinkway-campaign-num">{row.currency_code} {formatOperationalAmount(row.amount)}</span>
       ),
     },
     {
@@ -221,6 +223,13 @@ function buildCampaignVendorIoColumns(
       ),
     },
     {
+      id: "ungeneration_eligibility",
+      label: "Ungeneration eligibility",
+      defaultVisible: false,
+      colWidth: "22%",
+      renderCell: (row) => <span className={row.ungenerate_eligible ? "wr-eligibility" : "wr-eligibility wr-eligibility--blocked"}>{row.ungenerate_eligible ? "Eligible" : row.ungenerate_ineligible_reason || "Not eligible"}</span>,
+    },
+    {
       id: "actions",
       label: "Actions",
       locked: true,
@@ -228,10 +237,25 @@ function buildCampaignVendorIoColumns(
       headerClassName: "text-right",
       cellClassName: "text-right align-middle",
       renderCell: (row) => (
-        <VendorIoRowActions row={row} onViewDetail={onViewDetail} />
+        <VendorIoRowActions row={row} onViewDetail={onViewDetail} compact={referenceView} />
       ),
     },
   ];
+  if (!referenceView) return columns;
+  const widths: Record<string, string> = {
+    io_number: "134px", influencer: "220px", amount: "128px", status: "112px",
+    sent: "112px", ungeneration_eligibility: "270px", actions: "112px",
+  };
+  const primaryIds = Object.keys(widths);
+  return [
+    ...primaryIds.map(id => columns.find(column => column.id === id)!),
+    ...columns.filter(column => !primaryIds.includes(column.id)),
+  ].map(column => ({
+    ...column,
+    defaultVisible: primaryIds.includes(column.id),
+    colWidth: widths[column.id] ?? "180px",
+    cellClassName: cn(column.cellClassName, "wr-vio-reference-cell"),
+  }));
 }
 
 const CAMPAIGN_VENDOR_IO_BASE_COLUMNS = buildCampaignVendorIoColumns(() => {});
@@ -251,6 +275,7 @@ export const CAMPAIGN_VENDOR_IO_TABLE_COLUMN_METAS = getOperationalTableColumnMe
 );
 
 type VendorIoTableBodyProps = {
+  referenceView: boolean;
   campaignId: string;
   sorted: VendorIoRow[];
   selectedIds: Set<string>;
@@ -264,6 +289,7 @@ type VendorIoTableBodyProps = {
 };
 
 function VendorIoTableBody({
+  referenceView,
   campaignId,
   sorted,
   selectedIds,
@@ -291,9 +317,9 @@ function VendorIoTableBody({
         onToggleSelect,
         onToggleSelectAll,
       }),
-      ...buildCampaignVendorIoColumns(setDetailIoId),
+      ...buildCampaignVendorIoColumns(setDetailIoId, referenceView),
     ],
-    [selectedIds, visibleIds, onToggleSelect, onToggleSelectAll, setDetailIoId]
+    [selectedIds, visibleIds, onToggleSelect, onToggleSelectAll, setDetailIoId, referenceView]
   );
 
   if (sorted.length === 0) {
@@ -347,6 +373,7 @@ function readStoredSelection(campaignId: string): Set<string> {
 }
 
 export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Props) {
+  const [referenceView, setReferenceView] = useState(true);
   const [detailIoId, setDetailIoId] = useState<string | null>(
     () => initialSelectedId
   );
@@ -399,7 +426,9 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
     [detailIoId, sorted]
   );
 
-  const providerColumns = useMemo(() => CAMPAIGN_VENDOR_IO_TABLE_COLUMNS, []);
+  const providerColumns = useMemo(() => referenceView
+    ? [CAMPAIGN_VENDOR_IO_TABLE_COLUMNS[0], ...buildCampaignVendorIoColumns(() => {}, true)]
+    : CAMPAIGN_VENDOR_IO_TABLE_COLUMNS, [referenceView]);
 
   const onToggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
@@ -470,6 +499,7 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
     <>
       <CampaignWorkspaceFrame
         title="Vendor IO"
+        showHeading={!referenceView}
         subtitle="Creator insertion orders — send, track delivery, and record approvals"
         status={
           <AuroraStatusPill
@@ -480,7 +510,7 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
             {summary.sent} sent · {summary.approved} approved
           </AuroraStatusPill>
         }
-        tools={
+        tools={!referenceView ?
           <>
             <VendorIoHeaderSend
               selectedRows={selectedRows}
@@ -488,9 +518,11 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
               onRetainIds={onRetainIds}
             />
           </>
-        }
+        : undefined}
         stats={[
           { key: "total", label: "Orders", value: String(sorted.length) },
+          { key: "generated", label: "Generated", value: String(sorted.filter(row => Boolean(row.document_number)).length), tone: "blue" },
+          { key: "blocked", label: "Blocked from ungeneration", value: String(sorted.filter(row => !row.ungenerate_eligible).length), tone: "amber" },
           {
             key: "email",
             label: "Email Sent",
@@ -521,13 +553,14 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
             tone: selectedCount > 0 ? "amber" : "mut",
           },
         ]}
-        registerLabel="Orders"
+        registerLabel={referenceView ? undefined : "Orders"}
         registerCount={sorted.length}
         registerStorageKey={`vendor-io-${campaignId}`}
         forceRegisterOpen={Boolean(initialSelectedId)}
       >
       <OperationalTableSuiteProvider
-        tableId={OPERATIONAL_TABLE_IDS.campaignVendorIos}
+        key={referenceView ? "reference" : "full"}
+        tableId={referenceView ? `${OPERATIONAL_TABLE_IDS.campaignVendorIos}-reference` : OPERATIONAL_TABLE_IDS.campaignVendorIos}
         columns={providerColumns}
         rows={sorted}
         filterAccessors={{
@@ -543,6 +576,7 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
         <div
           className={cn(
             "thinkway-campaign-vendor-io-fill",
+            referenceView && "wr-vio-reference-register",
             vendorIoFloatingBarContentClass(selectedCount > 0)
           )}
         >
@@ -552,13 +586,17 @@ export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Prop
             cardSurface
             leading={
               <CampaignOperationalSectionHeader
-                title="Orders"
-                actionsOnly
-                actions={<OperationalTableControlsSlot contextLabel="Vendor IO" />}
+                title="Vendor IO register"
+                actions={<>
+                  {referenceView ? <VendorIoHeaderSend selectedRows={selectedRows} onClearSelection={onClearSelection} onRetainIds={onRetainIds} /> : null}
+                  <Button size="sm" variant="outline" onClick={() => setReferenceView(view => !view)}>{referenceView ? "All fields & terms" : "Compact register"}</Button>
+                  <OperationalTableControlsSlot contextLabel="Vendor IO" />
+                </>}
               />
             }
           >
             <VendorIoTableBody
+              referenceView={referenceView}
               campaignId={campaignId}
               sorted={sorted}
               selectedIds={selectedIds}
