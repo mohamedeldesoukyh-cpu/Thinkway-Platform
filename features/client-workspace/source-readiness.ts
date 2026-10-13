@@ -1,16 +1,21 @@
 import type { QuotationDetail, QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import { shouldIncludeItemInLiveTotals } from "@/lib/quotations/quotation-collapse-package";
 
+import { quotationItemClientCreatorId } from "./quotation-item-creator-id";
+
 import { quotationIsMovedToCampaign } from "./client-review-selection";
 
 const BLOCKED_QUOTATION_STATUSES = new Set(["cancelled", "archived", "rejected"]);
 
 export function quotationItemsForClient(items: QuotationItemRow[]): QuotationItemRow[] {
-  return items.filter(
-    (item) =>
-      (item.option_number == null || item.option_number === 1) &&
-      shouldIncludeItemInLiveTotals(item, items)
-  );
+  const seen = new Set<string>();
+  return [...items].sort((a, b) => a.sort_order - b.sort_order).filter(item => {
+    if (!shouldIncludeItemInLiveTotals(item, items)) return false;
+    const key = quotationItemClientCreatorId(item);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }
 
 export function shortlistReviewBlockers(input: {

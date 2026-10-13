@@ -1,3 +1,4 @@
+import { chosenQuotationItemIds } from "@/features/client-workspace/quotation-options";
 import type { ClientCreatorSelectionState, ClientReviewStatus } from "@/features/client-workspace/constants";
 import { quotationItemClientCreatorId } from "@/features/client-workspace/quotation-item-creator-id";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
@@ -29,7 +30,7 @@ export function clientSelectionForItem(
   selection: Record<string, ClientCreatorSelectionState> | undefined
 ): ClientCreatorSelectionState {
   if (!selection) return "in_review";
-  return selection[quotationItemClientCreatorId(item)] ?? "in_review";
+  return selection[`quotation-item:${item.id}`] ?? selection[quotationItemClientCreatorId(item)] ?? "in_review";
 }
 
 export function clientSelectionForItems(
@@ -70,10 +71,18 @@ export function countQuotationClientSelections(
   items: QuotationItemRow[],
   selection: Record<string, ClientCreatorSelectionState> | undefined
 ): { accepted: number; inReview: number; rejected: number; total: number } {
-  const accepted = uniqueCreatorIdsForSelection(items, selection, "accepted").length;
-  const inReview = uniqueCreatorIdsForSelection(items, selection, "in_review").length;
-  const rejected = uniqueCreatorIdsForSelection(items, selection, "rejected").length;
-  return { accepted, inReview, rejected, total: accepted + inReview + rejected };
+  const groups = new Map<string, QuotationItemRow[]>();
+  for (const item of items) {
+    const key = quotationCreatorDuplicateKey(item);
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  const states = [...groups.values()].map(group => clientSelectionForItems(group, selection));
+  return {
+    accepted: states.filter(state => state === "accepted").length,
+    inReview: states.filter(state => state === "in_review").length,
+    rejected: states.filter(state => state === "rejected").length,
+    total: groups.size,
+  };
 }
 
 export function itemIdsForClientSelection(
@@ -104,4 +113,21 @@ export function totalsForClientSelection(
     gpPct,
     creatorCount: uniqueCreatorIdsForSelection(items, selection, state).length,
   };
+}
+
+/** Internal row actions must use exact chosen lines, rather than every option for an accepted creator. */
+export function quotationOptionSelectionState(review: import('../client-workspace/types').ClientReviewRecord): Record<string, ClientCreatorSelectionState> {
+  const selection = { ...review.selectionState };
+  for (const creator of review.sourceSnapshot?.creators ?? []) {
+    if (!creator.quotationOptions?.length) continue;
+    const selectedIds = chosenQuotationItemIds(creator);
+    for (const option of creator.quotationOptions ?? []) {
+      for (const itemId of option.memberItemIds ?? [option.itemId]) {
+      selection['quotation-item:' + itemId] = selection[creator.creatorId] === 'accepted'
+        ? selectedIds.includes(option.itemId) ? 'accepted' : 'in_review'
+        : selection[creator.creatorId] ?? 'in_review';
+      }
+    }
+  }
+  return selection;
 }

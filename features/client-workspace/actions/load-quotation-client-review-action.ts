@@ -5,7 +5,7 @@ import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
 import { loadLatestInternalReviewForQuotation } from "../load-client-workspace";
-import type { QuotationClientReviewView } from "@/features/quotations/quotation-client-review";
+import { quotationOptionSelectionState, type QuotationClientReviewView } from "@/features/quotations/quotation-client-review";
 
 export async function loadQuotationClientReviewAction(
   quotationId: string
@@ -24,7 +24,7 @@ export async function loadQuotationClientReviewAction(
       id: review.id,
       reviewNumber: review.reviewNumber,
       status: review.status,
-      selectionState: review.selectionState,
+      selectionState: quotationOptionSelectionState(review),
       approvedCreatorIds: review.approvedCreatorIds,
       changeRequestSummary: review.changeRequestSummary,
       updatedAt: review.updatedAt,

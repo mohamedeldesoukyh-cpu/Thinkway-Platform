@@ -213,6 +213,17 @@ function parseMediaPlanSummary(value: unknown): ClientMediaPlanSummary | undefin
 export function parseSnapshotCreator(row: Record<string, unknown>): ClientReviewSourceSnapshotCreator {
   const identity = resolveCreatorIdentity(asString(row.displayName), asString(row.handle));
   return {
+    selectedQuotationItemIds: Array.isArray(row.selectedQuotationItemIds) ? asStringArray(row.selectedQuotationItemIds) : undefined,
+    quotationOptions: Array.isArray(row.quotationOptions) ? row.quotationOptions.filter(isRecord).filter((option) => asString(option.itemId)).map((option) => ({
+      itemId: asString(option.itemId)!,
+      memberItemIds: Array.isArray(option.memberItemIds) ? asStringArray(option.memberItemIds) : undefined,
+      optionNumber: asNumber(option.optionNumber) ?? 1,
+      deliverables: asString(option.deliverables),
+      serviceDescription: asString(option.serviceDescription),
+      investmentAmount: asNumber(option.investmentAmount),
+      investmentCurrency: asString(option.investmentCurrency),
+      agencyFeeAmount: asNumber(option.agencyFeeAmount),
+    })) : undefined,
     creatorId: asString(row.creatorId) || "",
     displayName: pickCreatorDisplayName([asString(row.displayName)], identity.handle) || identity.name || "Creator",
     handle: identity.handle ? `@${identity.handle}` : asString(row.handle),
@@ -470,6 +481,8 @@ export function projectCreatorsFromSnapshot(
       if (options.includeCommercial === false) {
         return {
           ...card,
+          quotationOptions: undefined,
+          selectedQuotationItemIds: undefined,
           investmentAmount: undefined,
           investmentCurrency: undefined,
           agencyFeeAmount: undefined,
@@ -517,22 +530,22 @@ export function fingerprintFromSnapshotCreators(
   const revenues = Object.fromEntries(
     [...creators]
       .sort((a, b) => a.creatorId.localeCompare(b.creatorId))
-      .map((creator) => [creator.creatorId, creator.investmentAmount ?? 0])
+      .map((creator) => [creator.creatorId, creator.quotationOptions?.[0]?.investmentAmount ?? creator.investmentAmount ?? 0])
   );
   const deliverables = Object.fromEntries(
     [...creators]
       .sort((a, b) => a.creatorId.localeCompare(b.creatorId))
-      .map((creator) => [creator.creatorId, creator.deliverables ?? ""])
+      .map((creator) => [creator.creatorId, creator.quotationOptions?.[0]?.deliverables ?? creator.deliverables ?? ""])
   );
   const originals = Object.fromEntries(
     [...creators]
       .sort((a, b) => a.creatorId.localeCompare(b.creatorId))
       .map((creator) => [
         creator.creatorId,
-        creator.originalInvestmentAmount != null
+        !creator.quotationOptions?.length && creator.originalInvestmentAmount != null
           ? `${creator.originalInvestmentCurrency ?? ""}:${creator.originalInvestmentAmount}`
           : "",
       ])
   );
-  return { creatorIds: ids, revenues, deliverables, originals, ...extra };
+  return { creatorIds: ids, revenues, deliverables, originals, quotationOptions: Object.fromEntries(creators.map((creator) => [creator.creatorId, creator.quotationOptions ?? []])), ...extra };
 }

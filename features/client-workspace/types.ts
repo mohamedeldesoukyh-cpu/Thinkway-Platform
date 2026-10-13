@@ -111,6 +111,17 @@ export type ClientCreatorPlatformStats = {
   profileUrl?: string;
 };
 
+export type ClientQuotationOption = {
+  itemId: string;
+  memberItemIds?: string[];
+  optionNumber: number;
+  deliverables?: string;
+  serviceDescription?: string;
+  investmentAmount?: number;
+  investmentCurrency?: string;
+  agencyFeeAmount?: number;
+};
+
 export type ClientReviewSourceSnapshotCreator = {
   creatorId: string;
   displayName: string;
@@ -164,6 +175,8 @@ export type ClientReviewSourceSnapshotCreator = {
   briefBackfillDone?: boolean;
   thinkwayStatus?: import("./selection-flow").ClientThinkwayStatus;
   quotationEligible?: boolean;
+  quotationOptions?: ClientQuotationOption[];
+  selectedQuotationItemIds?: string[];
 };
 
 export type ClientReviewSourceSnapshot = {
@@ -285,6 +298,8 @@ export type ClientCreatorCard = {
   briefFrozenAt?: string;
   thinkwayStatus?: import("./selection-flow").ClientThinkwayStatus;
   quotationEligible?: boolean;
+  quotationOptions?: ClientQuotationOption[];
+  selectedQuotationItemIds?: string[];
   influencerId?: string;
   shortlistItemId?: string;
   profileId?: string;

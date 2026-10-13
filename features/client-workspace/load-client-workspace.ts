@@ -603,7 +603,7 @@ export async function loadClientWorkspace(
         await service
           .from("campaign_client_reviews" as never)
           .update({ source_snapshot: mergedSnapshot, updated_at: new Date().toISOString() } as never)
-          .eq("id", activeReview.id);
+          .eq("id", activeReview.id).eq("updated_at", activeReview.updatedAt);
       }
     }
     selection = hydrateClientSelection(

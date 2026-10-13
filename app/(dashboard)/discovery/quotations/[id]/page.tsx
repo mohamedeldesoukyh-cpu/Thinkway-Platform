@@ -17,7 +17,7 @@ import {
 } from "@/lib/routing/entity-route-queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { loadLatestInternalReviewForQuotation } from "@/features/client-workspace/load-client-workspace";
-import type { QuotationClientReviewView } from "@/features/quotations/quotation-client-review";
+import { quotationOptionSelectionState, type QuotationClientReviewView } from "@/features/quotations/quotation-client-review";
 
 export const dynamic = "force-dynamic";
 
@@ -89,7 +89,7 @@ export default async function QuotationDetailPage({ params }: PageProps) {
                 id: review.id,
                 reviewNumber: review.reviewNumber,
                 status: review.status,
-                selectionState: review.selectionState,
+                selectionState: quotationOptionSelectionState(review),
                 approvedCreatorIds: review.approvedCreatorIds,
                 changeRequestSummary: review.changeRequestSummary,
                 updatedAt: review.updatedAt,

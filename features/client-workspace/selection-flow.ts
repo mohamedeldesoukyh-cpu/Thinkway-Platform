@@ -1,3 +1,4 @@
+import { applyCreatorQuotationOptions } from "./quotation-options";
 import type { ClientCreatorSelectionState, ClientReviewSource } from "./constants";
 import { isSelectedForCalculator } from "./status";
 import type {
@@ -597,10 +598,12 @@ function overlayQuotedCreator(
   const deliverableItems = quoted.deliverableItems?.length ? quoted.deliverableItems : undefined;
   const liveAccounts = quoted.platformAccounts?.length ? quoted.platformAccounts : undefined;
   const primary = liveAccounts?.find((row) => row.platform === "instagram") ?? liveAccounts?.[0];
-  return applyQuotationCurrency(
+  return applyCreatorQuotationOptions(applyQuotationCurrency(
     {
       ...creator,
       quotationEligible: true,
+      selectedQuotationItemIds: creator.selectedQuotationItemIds ?? quoted.selectedQuotationItemIds,
+      quotationOptions: quoted.quotationOptions,
       deliverables,
       deliverableItems,
       serviceDescription: quoted.serviceDescription?.trim() || undefined,
@@ -634,7 +637,7 @@ function overlayQuotedCreator(
         : {}),
     },
     currency || quoted.investmentCurrency
-  );
+  ));
 }
 
 /** Keep the shortlist pool; layer quotation client-facing price/deliverables onto matching cards. */
@@ -653,6 +656,7 @@ export function overlayQuotationOnShortlistCreators(
         {
           ...creator,
           quotationEligible: false,
+          quotationOptions: undefined,
           investmentAmount: undefined,
           agencyFeeAmount: undefined,
           usageRightsAmount: undefined,

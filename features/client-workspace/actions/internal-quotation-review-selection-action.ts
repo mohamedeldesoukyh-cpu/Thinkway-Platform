@@ -48,7 +48,7 @@ export async function setQuotationReviewCreatorsOnBehalfAction(input: {
   const { error } = await supabase
     .from("campaign_client_reviews" as never)
     .update(patch as never)
-    .eq("id", review.id);
+    .eq("id", review.id).eq("updated_at", review.updatedAt).select("id").single();
   if (error) return { ok: false, message: error.message };
 
   if (review.shortlistId) {

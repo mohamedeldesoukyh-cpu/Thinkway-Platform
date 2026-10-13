@@ -12,6 +12,7 @@ type ClientWorkspaceState = {
   view: ClientWorkspaceView;
   token: string;
   selection: Record<string, ClientCreatorSelectionState>;
+  setOptionCreator: (creator: ClientWorkspaceView["creators"][number]) => void;
   setCreatorState: (creatorId: string, state: ClientCreatorSelectionState) => void;
   setCreatorStates: (next: Record<string, ClientCreatorSelectionState>) => void;
   goToSection: (section: ClientWorkspaceSectionId) => void;
@@ -23,7 +24,7 @@ type ClientWorkspaceState = {
 const ClientWorkspaceStateContext = createContext<ClientWorkspaceState | null>(null);
 
 export function ClientWorkspaceStateProvider({
-  view,
+  view: sourceView,
   token,
   onSectionChange,
   children,
@@ -33,6 +34,9 @@ export function ClientWorkspaceStateProvider({
   onSectionChange: (section: ClientWorkspaceSectionId) => void;
   children: ReactNode;
 }) {
+  const [optionCreators, setOptionCreators] = useState<{ source: ClientWorkspaceView; creators: Record<string, ClientWorkspaceView["creators"][number]> }>({ source: sourceView, creators: {} });
+  const view = useMemo(() => ({ ...sourceView, creators: sourceView.creators.map(creator => (optionCreators.source === sourceView ? optionCreators.creators[creator.creatorId] : undefined) ?? creator) }), [sourceView, optionCreators]);
+  const setOptionCreator = useCallback((creator: ClientWorkspaceView["creators"][number]) => setOptionCreators(current => ({ source: sourceView, creators: { ...(current.source === sourceView ? current.creators : {}), [creator.creatorId]: creator } })), [sourceView]);
   const pendingIds = view.journey?.pendingCommercialApprovalCreatorIds ?? [];
   const lockedIds = (view.journey?.clientApprovedCreatorIds ?? []).filter(
     (id) => !pendingIds.includes(id)
@@ -79,6 +83,7 @@ export function ClientWorkspaceStateProvider({
       view,
       token,
       selection: effectiveSelection,
+      setOptionCreator,
       setCreatorState,
       setCreatorStates,
       goToSection: onSectionChange,
@@ -89,6 +94,7 @@ export function ClientWorkspaceStateProvider({
   }, [
     onSectionChange,
     selection,
+    setOptionCreator,
     setCreatorState,
     setCreatorStates,
     token,
