@@ -10,8 +10,8 @@ import { ClientWorkspaceEntitlementPanel } from "./entitlement-panel";
 
 // Keep unvisited tab code out of the initial Shortlist hydration.
 const ApprovalWorkspace = dynamic(() => import("./approval-workspace").then(module => module.ApprovalWorkspace), { loading: () => <p role="status">Loading section…</p> });
-const CommercialWorkspace = dynamic(() => import("./commercial-workspace").then(module => module.CommercialWorkspace), { loading: () => <p role="status">Loading section…</p> });
-const FeedbackWorkspace = dynamic(() => import("./feedback-workspace").then(module => module.FeedbackWorkspace), { loading: () => <p role="status">Loading section…</p> });
+const CommercialWorkspace = dynamic(() => import("./commercial-feedback-sections").then(module => module.CommercialWorkspace), { loading: () => <p role="status">Loading section…</p> });
+const FeedbackWorkspace = dynamic(() => import("./commercial-feedback-sections").then(module => module.FeedbackWorkspace), { loading: () => <p role="status">Loading section…</p> });
 const OverviewWorkspace = dynamic(() => import("./overview-workspace").then(module => module.OverviewWorkspace), { loading: () => <p role="status">Loading section…</p> });
 
 export function ClientWorkspaceSectionView({
