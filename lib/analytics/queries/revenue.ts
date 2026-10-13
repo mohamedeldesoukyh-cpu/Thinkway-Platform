@@ -6,6 +6,7 @@ import {
 } from "@/lib/analytics/aggregations/rollup-engine";
 import {
   buildAnalyticsCacheKey,
+  analyticsRequestKey,
   withAnalyticsCache,
 } from "@/lib/analytics/aggregations/memo";
 import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
@@ -21,6 +22,7 @@ export async function getRevenueAnalytics(
   filters: AnalyticsQueryFilters = {}
 ): Promise<RevenueAnalyticsOutput> {
   const cacheKey = buildAnalyticsCacheKey("revenue", {
+    request: analyticsRequestKey(supabase, filters),
     billing: filters.billingFilter ?? "all",
     from: filters.dateRange?.from,
   });

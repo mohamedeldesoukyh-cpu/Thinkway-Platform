@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { rollupFacts, rollupGlobal } from "@/lib/analytics/aggregations/rollup-engine";
 import {
   buildAnalyticsCacheKey,
+  analyticsRequestKey,
   withAnalyticsCache,
 } from "@/lib/analytics/aggregations/memo";
 import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
@@ -15,6 +16,7 @@ export async function getOperationalAnalytics(
   filters: AnalyticsQueryFilters = {}
 ): Promise<OperationalAnalyticsOutput> {
   const cacheKey = buildAnalyticsCacheKey("operational", {
+    request: analyticsRequestKey(supabase, filters),
     operational: filters.operationalFilter ?? "all",
   });
 

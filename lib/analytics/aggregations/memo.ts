@@ -4,6 +4,15 @@ type CacheEntry<T> = {
 };
 
 const analyticsCache = new Map<string, CacheEntry<unknown>>();
+const inFlight = new Map<string, Promise<unknown>>();
+const requestIds = new WeakMap<object, number>();
+let nextRequestId = 0;
+
+/** Scope financial results to the RLS client and every filter, never another user. */
+export function analyticsRequestKey(client: object, filters: object): string {
+  if (!requestIds.has(client)) requestIds.set(client, ++nextRequestId);
+  return `${requestIds.get(client)}:${JSON.stringify(filters)}`;
+}
 
 const DEFAULT_TTL_MS = 60_000;
 
@@ -31,9 +40,20 @@ export async function withAnalyticsCache<T>(
     return hit.value;
   }
 
-  const value = await factory();
-  analyticsCache.set(key, { expiresAt: now + ttlMs, value });
-  return value;
+  const pending = inFlight.get(key) as Promise<T> | undefined;
+  if (pending) return pending;
+  const work = factory();
+  inFlight.set(key, work);
+  try {
+    const value = await work;
+    for (const [entryKey, entry] of analyticsCache) {
+      if (entry.expiresAt <= now) analyticsCache.delete(entryKey);
+    }
+    analyticsCache.set(key, { expiresAt: now + ttlMs, value });
+    return value;
+  } finally {
+    inFlight.delete(key);
+  }
 }
 
 export function invalidateAnalyticsCache(namespace?: string): void {

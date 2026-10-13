@@ -1,8 +1,8 @@
 import { homeInvoicesDueSoon } from "./finance-summary";
+import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
 import {getCampaignPoFxTotals} from '@/lib/finance/po/fx-totals';
 import {homeInvoiceBalances,homePoSummary,homeCreatorOutstanding} from './finance-summary';
 import {isActiveInvoiceForFinancialTotals} from '@/lib/finance/status/invoice-status';
-import {ACHIEVED_LINE_STATUSES} from '@/lib/analytics/metrics/definitions';
 import type {FinanceAlertsPayload,FinanceAlert} from '@/lib/analytics/queries/dashboard-alerts';
 import {
   isActiveCampaignStatus,
@@ -135,6 +135,8 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
 
   const supabase = await createSupabaseServerClient();
   const profile = { full_name: fullName };
+  const recognition = await loadAnalyticsFacts(supabase);
+  const recognizedByHeader = new Map(recognition.facts.map(f => [f.campaign_header_id, f.metrics]));
   const assignedCreators=await readAll(supabase.from("campaign_influencers").select("id, influencer_id, campaign_header_id, currency, cost_after_vat, vendor_payment_status").order("id"));
 
   const [
@@ -281,8 +283,9 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     })
   );
 
-  let totalRevenue = 0;
-  let grossProfit = 0;
+  const reportingRate = rateToEgpByCurrency.get(currency_code) ?? 1;
+  const totalRevenue = recognition.facts.reduce((sum, f) => sum + f.metrics.revenue, 0) / reportingRate;
+  const grossProfit = recognition.facts.reduce((sum, f) => sum + f.metrics.gp, 0) / reportingRate;
   const displayByHeader = new Map<
     string,
     { revenue: number; gp: number; currency_code: string; margin_percent: number }
@@ -297,20 +300,13 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
       rateToEgpByCurrency,
     });
     displayByHeader.set(header.id, {
-      revenue: headerDisplay.revenue,
-      gp: headerDisplay.gp,
+      revenue: (recognizedByHeader.get(header.id)?.revenue ?? 0) / (rateToEgpByCurrency.get(displayCurrency) ?? 1),
+      gp: (recognizedByHeader.get(header.id)?.gp ?? 0) / (rateToEgpByCurrency.get(displayCurrency) ?? 1),
       currency_code: headerDisplay.currency_code,
-      margin_percent: headerDisplay.margin_percent,
+      margin_percent: recognizedByHeader.get(header.id)?.margin_percent ?? 0,
     });
 
-    // Dashboard KPI strip uses majority currency (status bar); convert via EGP pivot.
-    const majorityDisplay = aggregateCampaignDisplayFinancials({
-      lines,
-      displayCurrency: currency_code,
-      rateToEgpByCurrency,
-    });
-    totalRevenue += majorityDisplay.revenue;
-    grossProfit += majorityDisplay.gp;
+
   }
 
   const vendorIds = new Set<string>();
@@ -339,11 +335,10 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
   const financeAlerts:FinanceAlert[]=[];
   let unbilled=0;
   for(const h of operationalHeaders){
-    const allLines=linesResult.data?.filter(l=>l.campaign_header_id===h.id)??[];
-    const earned=aggregateCampaignDisplayFinancials({lines:allLines.filter(l=>[...ACHIEVED_LINE_STATUSES].some(status=>status===l.billing_status)),displayCurrency:currency_code,rateToEgpByCurrency}).revenue;
+    const earned=(recognizedByHeader.get(h.id)?.revenue ?? 0) / reportingRate;
     const billed=(invoicesResult.data??[]).filter(i=>i.campaign_header_id===h.id&&!!i.issue_date&&isActiveInvoiceForFinancialTotals(i)).reduce((sum,i)=>sum+convert(Number(i.revenue_before_vat??i.subtotal??0),i.currency),0);
     const remaining=Math.max(0,earned-billed);unbilled+=remaining;
-    if(remaining>0)financeAlerts.push({id:`billing-${h.id}`,group:'billing',severity:'warning',title:'Unbilled achieved revenue',description:`${h.name}: achieved revenue less active invoices, excluding VAT.`,href:'/billing',amount:remaining});
+    if(remaining>0)financeAlerts.push({id:`billing-${h.id}`,group:'billing',severity:'warning',title:'Unbilled recognized revenue',description:`${h.name}: live-ad revenue less active invoices, excluding VAT.`,href:'/billing',amount:remaining});
     const payable=(vendorsResult.data??[]).filter(a=>a.campaign_header_id===h.id).reduce((sum,a)=>sum+convert(homeCreatorOutstanding(Number(a.cost_after_vat??0),a.vendor_payment_status,((paymentEntriesResult.data??[]) as Array<{assignment_id:string;status:string;cleared_at:string|null;original_amount:number}>).filter(e=>e.assignment_id===a.id)),a.currency),0);
     if(payable>0)financeAlerts.push({id:`vendor-${h.id}`,group:'vendor',severity:'warning',title:'Creator balance remaining',description:`${h.name}: total fees including VAT less recorded payments.`,href:`/campaigns/${h.id}?tab=finance`,amount:payable});
     const metrics=displayByHeader.get(h.id)!;

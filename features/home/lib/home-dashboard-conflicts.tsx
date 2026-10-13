@@ -134,10 +134,9 @@ export function collectExecutiveConflicts(
   const conflicts: HomeDashboardConflict[] = [];
   const currency = data.executive_kpis.currency;
   const collected = kpiValue(data, "collected") ?? 0;
-  const invoiced = kpiValue(data, "invoiced") ?? 0;
+  const invoiced = kpiValue(data, "invoiced_gross_current") ?? kpiValue(data, "invoiced") ?? 0;
   const outstanding = kpiValue(data, "outstanding") ?? 0;
-  const overdue = data.collections.aging
-    .filter((row) => row.bucket === "61_90" || row.bucket === "90_plus")
+  const agedBalance = data.collections.aging
     .reduce((sum, row) => sum + row.amount, 0);
 
   if (currency.is_mixed_currency && currency.currencies.length > 1) {
@@ -167,14 +166,14 @@ export function collectExecutiveConflicts(
     });
   }
 
-  if (outstanding > 0 && overdue > 0 && outstanding - overdue > outstanding * 0.15) {
+  if (Math.abs(outstanding - agedBalance) > 0.01) {
     conflicts.push({
       id: "outstanding-vs-overdue",
       body: (
         <>
           Outstanding is <b>{formatPlain(outstanding)}</b> but only{" "}
-          <b>{formatPlain(overdue)}</b> appears as an overdue invoice —{" "}
-          <b>{formatPlain(Math.round(outstanding - overdue))}</b> is missing
+          <b>{formatPlain(agedBalance)}</b> appears in the ageing —{" "}
+          <b>{formatPlain(Math.round(outstanding - agedBalance))}</b> differs
           from the ageing.
         </>
       ),

@@ -86,7 +86,15 @@ export function rollupFacts(
         campaignIds: new Set<string>(),
       };
 
-    bucket.metrics = mergeFinancialMetrics(bucket.metrics, fact.metrics);
+    const previous = bucket.metrics;
+    bucket.metrics = {
+      ...mergeFinancialMetrics(previous, fact.metrics),
+      // A billed campaign must not erase another campaign's unbilled balance.
+      remaining_to_invoice: Math.round((previous.remaining_to_invoice + fact.metrics.remaining_to_invoice) * 100) / 100,
+      unachieved_revenue: Math.round((previous.unachieved_revenue + fact.metrics.unachieved_revenue) * 100) / 100,
+      planned_revenue: (previous.planned_revenue ?? 0) + (fact.metrics.planned_revenue ?? 0),
+      planned_gp: (previous.planned_gp ?? 0) + (fact.metrics.planned_gp ?? 0),
+    };
     bucket.currencies.push(fact.currency_code);
     bucket.campaignIds.add(fact.campaign_header_id);
     groups.set(meta.key, bucket);
@@ -128,7 +136,7 @@ export function rollupGlobal(facts: CampaignAnalyticsFact[]): AnalyticsRollupNod
   );
 }
 
-function applyFactFilters(
+export function applyFactFilters(
   facts: CampaignAnalyticsFact[],
   filters?: AnalyticsQueryFilters
 ): CampaignAnalyticsFact[] {
@@ -138,17 +146,16 @@ function applyFactFilters(
     if (filters.clientIds?.length && !filters.clientIds.includes(fact.client_id)) {
       return false;
     }
-    if (filters.brandIds?.length && fact.brand_id && !filters.brandIds.includes(fact.brand_id)) {
+    if (filters.brandIds?.length && (!fact.brand_id || !filters.brandIds.includes(fact.brand_id))) {
       return false;
     }
     if (
       filters.countryCodes?.length &&
-      fact.country_code &&
-      !filters.countryCodes.includes(fact.country_code)
+      (!fact.country_code || !filters.countryCodes.includes(fact.country_code))
     ) {
       return false;
     }
-    if (filters.teamIds?.length && fact.team_id && !filters.teamIds.includes(fact.team_id)) {
+    if (filters.teamIds?.length && (!fact.team_id || !filters.teamIds.includes(fact.team_id))) {
       return false;
     }
     if (
@@ -157,7 +164,7 @@ function applyFactFilters(
     ) {
       return false;
     }
-    if (filters.currencyCode && fact.currency_code !== filters.currencyCode) {
+    if (filters.currencyCode && (fact.source_currency_code ?? fact.currency_code) !== filters.currencyCode) {
       return false;
     }
 

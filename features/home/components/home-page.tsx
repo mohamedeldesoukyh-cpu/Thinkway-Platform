@@ -130,7 +130,7 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
             value: money(moneyAtRisk),
             tone: moneyAtRisk > 0 || snapshot.outstanding_revenue > 0 ? "r" : undefined,
           },
-          { label: "Revenue", value: money(snapshot.total_revenue) },
+          { label: "Recognized revenue", value: money(snapshot.total_revenue) },
           { label: "Gross profit", value: money(snapshot.gross_profit) },
           {
             label: "Margin",
@@ -353,12 +353,12 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
             <HomeDashboardCard
               id="position"
               title="Position"
-              subtitle={`All-time · ${currency} · revenue and GP exclude VAT`}
+              subtitle={`All-time · ${currency} · live-ad revenue and matching costs · excluding VAT`}
             >
               <div className="tw-pad">
                 <div className="tw-jr">
                   <div className="tw-jn ok">
-                    <i>Revenue</i>
+                    <i>Recognized revenue</i>
                     <b>{money(snapshot.total_revenue)}</b>
                     <u>{formatPercent(snapshot.margin_percent)} margin</u>
                   </div>
