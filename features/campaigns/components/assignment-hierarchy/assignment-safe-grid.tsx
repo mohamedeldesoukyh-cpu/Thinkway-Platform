@@ -160,6 +160,7 @@ export function AssignmentSafeGrid({
   onCreateAssignment,
 }: AssignmentSafeGridProps) {
   const [removingLine, setRemovingLine] = useState<CampaignLineWorkspace | null>(null);
+  const openingAssignmentEditor = useRef(false);
   const commercialPane = useAssignmentCommercialPane();
   const audienceView = useAssignmentAudienceView();
   const gridEdit = useAssignmentGridEditSession();
@@ -899,8 +900,11 @@ export function AssignmentSafeGrid({
                           <AssignmentGridCell columnId="actions" className={cn(SAFE_GRID_TD, "text-center")}>
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild><Button type="button" variant="ghost" size="icon" className="mx-auto size-7" aria-label={`Actions for ${line.name}`}><MoreHorizontalIcon className="size-3.5" /></Button></DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-                                <DropdownMenuItem onSelect={() => onEditLine(line)}>Replace creator / edit</DropdownMenuItem>
+                              <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()} onCloseAutoFocus={(event) => {
+                                // The editor owns focus after opening; restoring it to this trigger dismisses the sheet.
+                                if (openingAssignmentEditor.current) { event.preventDefault(); openingAssignmentEditor.current = false; }
+                              }}>
+                                <DropdownMenuItem onSelect={() => { openingAssignmentEditor.current = true; onEditLine(line); }}>Replace creator / edit</DropdownMenuItem>
                                 <DropdownMenuItem variant="destructive" onSelect={() => setRemovingLine(line)}>Remove from campaign</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
