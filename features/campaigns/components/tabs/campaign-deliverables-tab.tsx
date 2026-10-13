@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceSummary } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 
 import { format, isValid, parseISO } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
@@ -39,7 +40,7 @@ import { getPlatformOptionLabel } from "@/lib/campaigns/deliverable-taxonomy";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
 import { listDeliverableDocumentationAggregatesAction } from "@/features/campaigns/actions/deliverable-documentation-actions";
-import { documentationRowHasUploadedContent } from "@/lib/services/deliverables/documentation-types";
+import { documentationRowHasUploadedContent, documentationUnitKey } from "@/lib/services/deliverables/documentation-types";
 
 const ALL = "all";
 
@@ -72,7 +73,8 @@ function uniqueSorted(values: string[]): string[] {
 function buildDeliverablesColumns(
   onOpenDetail: (id: string) => void,
   onOpenDocumentation?: CampaignDeliverablesTabProps["onOpenDocumentation"],
-  receivedKeys: ReadonlySet<string> = new Set()
+  receivedKeys: ReadonlySet<string> = new Set(),
+  versions: Readonly<Record<string, string | null>> = {}
 ): OperationalConfigurableColumnDef<OperationalDeliverableExplorerRow>[] {
   return [
     {
@@ -103,10 +105,10 @@ function buildDeliverablesColumns(
       id: "creator",
       label: "Creator",
       renderCell: (row) => (
-        <DeliverableExplorerCreatorCell
+        <div><DeliverableExplorerCreatorCell
           name={row.creator_name}
           avatarUrl={row.creator_avatar_url}
-        />
+        /><span className="wr-secondary">{row.assignment_title}</span></div>
       ),
     },
     {
@@ -172,6 +174,17 @@ function buildDeliverablesColumns(
       label: "Billing",
       renderCell: (row) => <DeliverableExplorerBillingBadge status={row.billing_status} />,
     },
+    {
+      id: "version",
+      label: "Version",
+      renderCell: (row) => <span className="font-mono text-xs">{versions[documentationUnitKey(row.assignment_deliverable_id, row.assignment_post_schedule_id)] ?? versions[documentationUnitKey(row.assignment_deliverable_id, null)] ?? "—"}</span>,
+    },
+    {
+      id: "details",
+      label: "Details",
+      locked: true,
+      renderCell: (row) => <Button type="button" size="sm" variant="outline" onClick={() => onOpenDetail(row.id)}>Open</Button>,
+    },
     ...(onOpenDocumentation
       ? [
           {
@@ -193,7 +206,7 @@ function buildDeliverablesColumns(
                     postScheduleId: row.assignment_post_schedule_id,
                   })
                 }
-                className="text-[11px] font-semibold text-[var(--camp-blue)] hover:underline"
+                className="thinkway-campaign-btn"
               >
                 {received ? "View" : "Upload"}
               </button>
@@ -219,6 +232,7 @@ export function CampaignDeliverablesTab({
   const [publicationFilter, setPublicationFilter] = useState(ALL);
   const [detailDeliverableId, setDetailDeliverableId] = useState<string | null>(null);
   const [receivedKeys, setReceivedKeys] = useState<ReadonlySet<string>>(new Set());
+  const [versions, setVersions] = useState<Readonly<Record<string, string | null>>>({});
 
   const { rows, stats } = useMemo(
     () =>
@@ -240,6 +254,7 @@ export function CampaignDeliverablesTab({
         if (agg.contentAssetCount > 0) next.add(key);
       }
       setReceivedKeys(next);
+      setVersions(Object.fromEntries(Object.entries(result.data).map(([key, aggregate]) => [key, aggregate.latestVersionLabel])));
     });
   }, [workspace.id]);
 
@@ -294,15 +309,27 @@ export function CampaignDeliverablesTab({
     publicationFilter,
   ]);
 
+  const [referenceView, setReferenceView] = useState(true);
   const columns = useMemo(
     () =>
       buildDeliverablesColumns(
         setDetailDeliverableId,
         onOpenDocumentation,
-        receivedKeys
-      ),
-    [onOpenDocumentation, receivedKeys]
+        receivedKeys,
+        versions
+      ).sort((a, b) => ["creator", "deliverable", "platform", "due", "status", "version", "client_review", "details", "type", "content", "billing"].indexOf(a.id) - ["creator", "deliverable", "platform", "due", "status", "version", "client_review", "details", "type", "content", "billing"].indexOf(b.id)),
+    [onOpenDocumentation, receivedKeys, versions]
   );
+  const presentationColumns = useMemo(() => {
+    if (!referenceView) return columns;
+    const widths: Record<string, string> = { creator: "260px", deliverable: "260px", platform: "80px", due: "112px", status: "118px", version: "92px" };
+    const review = columns.find(column => column.id === "client_review");
+    const details = columns.find(column => column.id === "details")!;
+    return [
+      ...columns.filter(column => !["details", "client_review"].includes(column.id)).map(column => ({ ...column, defaultVisible: column.id in widths, colWidth: widths[column.id] ?? "180px" })),
+      { id: "actions", label: "Actions", locked: true, colWidth: "170px", renderCell: (row: OperationalDeliverableExplorerRow) => <div className="wr-deliverable-reference-actions">{review?.renderCell(row)}{details.renderCell(row)}</div> },
+    ];
+  }, [columns, referenceView]);
   const columnMetas = useMemo(() => getOperationalTableColumnMetas(columns), [columns]);
 
   const detailRow = useMemo(
@@ -320,9 +347,15 @@ export function CampaignDeliverablesTab({
 
   return (
     <>
+      <WorkspaceSummary title="Deliverables" stats={[
+        { key: "units", label: "Contracted units", value: rows.length, band: "Deliverable status" },
+        { key: "shown", label: "Matching filters", value: filtered.length, band: "Deliverable status", tone: "blue" },
+        ...uniqueSorted(rows.map(row => row.workflow_status)).map(status => ({ key: status, label: status.replaceAll("_", " "), value: rows.filter(row => row.workflow_status === status).length, band: "Deliverable status" })),
+      ]} />
       <OperationalTableSuiteProvider
-        tableId={OPERATIONAL_TABLE_IDS.campaignDeliverables}
-        columns={columns}
+        key={referenceView ? "reference" : "full"}
+        tableId={referenceView ? `${OPERATIONAL_TABLE_IDS.campaignDeliverables}-reference` : OPERATIONAL_TABLE_IDS.campaignDeliverables}
+        columns={presentationColumns}
         rows={filtered}
         filterAccessors={{
           deliverable: (row) => row.label,
@@ -347,6 +380,9 @@ export function CampaignDeliverablesTab({
               description="Operational explorer — synced from assignment deliverables and post schedules. Upload content here for client review."
               actions={
                 <div className="flex flex-wrap items-center justify-end gap-2">
+                  <FilterSelect label="Creator" value={creatorFilter} onValueChange={setCreatorFilter} options={creatorOptions.map(c => ({ value: c, label: c }))} />
+                  <FilterSelect label="Workflow" value={workflowFilter} onValueChange={setWorkflowFilter} options={SCHEDULE_STATUS_OPTIONS.map(o => ({ value: o.value, label: o.label }))} />
+                  <Button size="sm" variant="outline" onClick={() => setReferenceView(view => !view)}>{referenceView ? "All fields" : "Compact register"}</Button>
                   {onOpenDocumentation ? (
                     <Button
                       type="button"
@@ -371,7 +407,9 @@ export function CampaignDeliverablesTab({
                   Hierarchy loaded with warnings: {stats.hierarchy_load_error}
                 </div>
               ) : null}
-              <div className="space-y-2.5">
+              <details className="wr-deliverable-filters" open={Boolean(search || platformFilter !== ALL || workflowFilter !== ALL || billingFilter !== ALL || creatorFilter !== ALL || publicationFilter !== ALL)}>
+                <summary>Search and all filters</summary>
+              <div className="space-y-2.5 p-3">
                 <div className="thinkway-campaign-search-box !max-w-[400px]">
                   <SearchIcon className="thinkway-campaign-search-ico size-3" aria-hidden />
                   <input
@@ -393,15 +431,6 @@ export function CampaignDeliverablesTab({
                     }))}
                   />
                   <FilterSelect
-                    label="Workflow"
-                    value={workflowFilter}
-                    onValueChange={setWorkflowFilter}
-                    options={SCHEDULE_STATUS_OPTIONS.map((o) => ({
-                      value: o.value,
-                      label: o.label,
-                    }))}
-                  />
-                  <FilterSelect
                     label="Billing"
                     value={billingFilter}
                     onValueChange={setBillingFilter}
@@ -409,12 +438,6 @@ export function CampaignDeliverablesTab({
                       value: b,
                       label: b.replace(/_/g, " "),
                     }))}
-                  />
-                  <FilterSelect
-                    label="Creator"
-                    value={creatorFilter}
-                    onValueChange={setCreatorFilter}
-                    options={creatorOptions.map((c) => ({ value: c, label: c }))}
                   />
                   <FilterSelect
                     label="Publication"
@@ -430,6 +453,7 @@ export function CampaignDeliverablesTab({
                   />
                 </div>
               </div>
+              </details>
             </>
           }
         >
@@ -439,7 +463,7 @@ export function CampaignDeliverablesTab({
             </div>
           ) : (
             <OperationalConfigurableTable
-              columns={columns}
+              columns={presentationColumns}
               rows={filtered}
               rowKey={(row) => row.id}
             />

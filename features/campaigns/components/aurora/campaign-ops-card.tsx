@@ -42,9 +42,10 @@ export function CampaignOpsCard({
               variant="outline"
               size="sm"
               className="thinkway-campaign-btn h-[30px] px-2.5 text-[11.5px]"
+              aria-label={actionLabel === "Open" ? `Open ${title}` : actionLabel}
               onClick={onAction}
             >
-              {actionLabel}
+              <span className="wr-ops-action-original">{actionLabel}</span><span className="wr-ops-action-reference" aria-hidden>Open</span>
             </Button>
           ) : null}
         </div>

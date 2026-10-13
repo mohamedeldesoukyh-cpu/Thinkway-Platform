@@ -379,12 +379,17 @@ export function ClientProfile({
                 )}
               </div>
 
-              <div className="tw-ms2" aria-label="Legal entity metrics">
-                {kpiItems.map(([label, value, tone]) => (
-                  <div key={label}>
-                    <i>{label}</i>
-                    <b className={tone || undefined}>{value}</b>
-                  </div>
+              <div className="wr-metrics" aria-label="Legal entity metrics">
+                {[{ title: "Internal — credit & readiness", private: true, labels: ["Credit limit", "VR% set", "Onboarding", "Portal users"] },
+                  { title: "Client-facing", private: false, labels: ["Brands", "Campaigns", "Client IOs", "Accepted", "Currency", "Terms"] }].map((zone) => (
+                  <section key={zone.title} className={cn("wr-metrics-zone", zone.private && "wr-metrics-private")}>
+                    <div className="wr-metrics-band">{zone.title}</div>
+                    <div className="wr-metrics-cells">
+                      {kpiItems.filter(([label]) => zone.labels.includes(label)).map(([label, value, tone]) => (
+                        <div key={label}><i>{label}</i><b className={tone || undefined}>{value}</b></div>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             </div>

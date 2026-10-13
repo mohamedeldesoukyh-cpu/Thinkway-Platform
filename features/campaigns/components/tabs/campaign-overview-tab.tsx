@@ -5,7 +5,7 @@ import type { CampaignWorkspaceTabId } from "@/features/campaigns/constants/camp
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
-import type { CampaignPerformanceSummary } from "@/lib/domains/campaign/types";
+import type { CampaignPerformanceSummary, CampaignPublicationRow } from "@/lib/domains/campaign/types";
 
 type CampaignOverviewTabProps = {
   workspace: CampaignWorkspace;
@@ -22,6 +22,7 @@ type CampaignOverviewTabProps = {
   onOpenResolver?: () => void;
   onContinueLifecycle?: () => void;
   performanceSummary?: CampaignPerformanceSummary | null;
+  performancePublications?: CampaignPublicationRow[];
   performanceLoaded?: boolean;
 };
 
@@ -40,6 +41,7 @@ export function CampaignOverviewTab({
   onOpenResolver,
   onContinueLifecycle,
   performanceSummary,
+  performancePublications,
   performanceLoaded,
 }: CampaignOverviewTabProps) {
   return (
@@ -49,6 +51,7 @@ export function CampaignOverviewTab({
       accountManagers={accountManagers}
       currencyOptions={currencyOptions}
       performanceSummary={performanceSummary}
+      performancePublications={performancePublications}
       performanceLoaded={performanceLoaded}
       onNavigateToTab={onNavigateToTab}
       onOpenDetails={onOpenDetails}

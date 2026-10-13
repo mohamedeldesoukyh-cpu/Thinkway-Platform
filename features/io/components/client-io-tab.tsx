@@ -170,37 +170,41 @@ export function ClientIoTab({
         },
         {
           key: "amount",
+          band: "Internal — document snapshot",
+          internal: true,
           label: io.generated_total ? `Generated total · ${io.generated_total.assignmentCount} assignments · incl. VAT` : "Selected total · incl. fees & VAT",
           value: io.generated_total ? formatMoney(io.generated_total.amount, io.generated_total.currency) : <CampaignMoneyTotal currency={currencyCode} amounts={assignments.filter(row => io.selected_assignment_ids.includes(row.id)).map(row => ({ amount: assignmentClientBilling(row).totalBilling, currency: row.currency_code || currencyCode, override: row.revenue_fx_override }))} />,
           tone: "blue",
         },
       ]}
       detailsLabel="Document & delivery details"
+      detailsLayout="cards"
       details={
         <div className="thinkway-aurora-doc-meta">
           <div className="thinkway-aurora-doc-panel">
-            <div className="eyebrow">Document</div>
+            <div className="eyebrow">Terms & recipients</div>
             <div className="thinkway-aurora-doc-row">
-              <span className="dk">CIO number</span>
+              <span className="dk">Document currency</span>
               <span className="dv text-[var(--camp-blue-text)]">
-                {formatDocumentNumberForDisplay(io.document_number ?? "—")}
+                {currencyCode}
               </span>
             </div>
             <div className="thinkway-aurora-doc-row">
-              <span className="dk">Brand</span>
-              <span className="dv">{io.brand_name ?? "—"}</span>
+              <span className="dk">Payment terms</span>
+              <span className="dv">{io.billing_terms || "Not set"}</span>
             </div>
             <div className="thinkway-aurora-doc-row">
-              <span className="dk">PDF</span>
+              <span className="dk">Recipients</span>
               <span className="dv">
-                {io.generated_pdf_url || io.document_generated_at
-                  ? "Attached"
-                  : "Not generated"}
+                {recipients.filter(recipient => recipient.email.trim()).map(recipient => recipient.email).join(", ") || "Not set"}
               </span>
             </div>
           </div>
           <div className="thinkway-aurora-doc-panel">
-            <div className="eyebrow">Approval</div>
+            <div className="eyebrow">Billing milestones</div>
+            {milestones.length ? milestones.map((milestone, index) => <div className="thinkway-aurora-doc-row" key={milestone.id ?? index}>
+              <span className="dk">{milestone.label}</span><span className="dv">{milestone.percent}% · {milestone.dueTrigger.replaceAll("_", " ")}</span>
+            </div>) : <p className="wr-body-empty-note">No billing milestones set. Use the milestone editor below to configure them.</p>}
             <div className="thinkway-aurora-doc-row">
               <span className="dk">Approved at</span>
               <span className="dv">
@@ -215,7 +219,13 @@ export function ClientIoTab({
             </div>
           </div>
           <div className="thinkway-aurora-doc-panel">
-            <div className="eyebrow">Delivery</div>
+            <div className="eyebrow">Document & version history</div>
+            <div className="thinkway-aurora-doc-row"><span className="dk">CIO number</span><span className="dv">{io.document_number ?? "—"}</span></div>
+            <div className="thinkway-aurora-doc-row"><span className="dk">Brand</span><span className="dv">{io.brand_name ?? "—"}</span></div>
+            <div className="thinkway-aurora-doc-row"><span className="dk">PDF</span><span className="dv">{io.generated_pdf_url || io.document_generated_at ? "Attached" : "Not generated"}</span></div>
+            {(versions.length ? versions : [io]).map(version => <div className="thinkway-aurora-doc-row" key={version.id}>
+              <span className="dk">{version.document_number ?? "Draft"}</span><span className="dv">{version.status.replaceAll("_", " ")}</span>
+            </div>)}
             <div className="thinkway-aurora-doc-row">
               <span className="dk">Last recipient</span>
               <span className="dv">

@@ -39,7 +39,7 @@ export function PublicationWorkspaceSheet({ open, onOpenChange, title, descripti
         showCloseButton
         showOverlay={false}
         style={PUBLICATION_WORKSPACE_SHEET_STYLE}
-        className={PUBLICATION_WORKSPACE_SHEET_CLASS}
+        className={cn("wr-publication-workspace", PUBLICATION_WORKSPACE_SHEET_CLASS)}
         onInteractOutside={(event) => {
           if (shouldPreventSheetOutsideDismiss(event.target)) {
             event.preventDefault();

@@ -526,7 +526,7 @@ export function AssignmentSafeGrid({
               ) : null}
               {col("assignment") ? (
                 <AssignmentGridCell header columnId="assignment" className={cn(SAFE_GRID_TH, "min-w-[160px]")}>
-                  {HIERARCHY_COLUMN_LABELS.assignment}
+                  {col("creator") ? HIERARCHY_COLUMN_LABELS.assignment : "Creator / assignment"}
                 </AssignmentGridCell>
               ) : null}
               {col("creator") ? (
@@ -692,6 +692,7 @@ export function AssignmentSafeGrid({
                               />
                             ) : null}
                             <div className="min-w-0 flex-1 text-left">
+                              {!col("creator") && <AssignmentCreatorCell name={line.influencer_name ?? row.displayName} avatarUrl={line.creator_avatar_url ?? line.influencer_avatar_url ?? line.creator_profile_image_url} handle={resolveAssignmentPrimaryHandle(line)} onClick={onOpenInfluencerDetail ? () => onOpenInfluencerDetail(row.group, row) : undefined} />}
                               <p className="tw-id">
                                 <DocumentNumber value={line.document_number} />
                               </p>
@@ -749,7 +750,8 @@ export function AssignmentSafeGrid({
                         ) : null}
                         {col("deliverables") ? (
                           <AssignmentGridCell columnId="deliverables" className={cn(SAFE_GRID_TD, SAFE_GRID_AMOUNT)}>
-                            {row.rollups.deliverable_count}
+                            {!col("fullDescription") && <AssignmentFullDescriptionCell campaignId={campaignId} lineId={line.id} value={line.description} readOnly={!gates.enableEditActions} />}
+                            <span className="wr-secondary">{row.rollups.deliverable_count} contracted units</span>
                           </AssignmentGridCell>
                         ) : null}
                         {col("fullDescription") ? (

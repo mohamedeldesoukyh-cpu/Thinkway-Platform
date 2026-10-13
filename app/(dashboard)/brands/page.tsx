@@ -1,5 +1,6 @@
 import { PageAlert } from "@/components/ui/page-alert";
 import { DashboardShell } from "@/components/layout/dashboard-shell";
+import { WorkspaceContextHeader } from "@/components/workspace/workspace-redesign";
 import { BrandsListSection } from "@/features/brands/components/brands-list-section";
 import { NewBrandDialog } from "@/features/brands/components/new-brand-dialog";
 import { getBrandsList } from "@/features/brands/queries";
@@ -64,13 +65,15 @@ export default async function BrandsPage({ searchParams }: BrandsPageProps) {
   return (
     <DashboardShell
       title="Brands"
-      description="Commercial brands linked to clients. Campaigns are created brand-first from this hierarchy."
-      actions={
-        masterData ? (
-          <NewBrandDialog clients={activeClients} masterData={masterData} />
-        ) : null
-      }
+      hidePageHeader
+      hideDesktopHeader
+      mainClassName="wr-register"
     >
+      <WorkspaceContextHeader
+        title="Brands"
+        description="Commercial brands linked to clients. Campaigns are created brand-first from this hierarchy."
+        actions={masterData ? <NewBrandDialog clients={activeClients} masterData={masterData} /> : null}
+      />
       <BrandsListSection
         brands={brands}
         meta={meta}

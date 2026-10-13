@@ -30,6 +30,7 @@ export function CollapsibleWorkspaceSection({
 
   return (
     <section
+      data-workspace-section="collapsible"
       className={cn(
         "overflow-hidden rounded-xl border border-border/70 bg-card shadow-[0_1px_2px_rgba(16,24,40,0.04)]",
         className

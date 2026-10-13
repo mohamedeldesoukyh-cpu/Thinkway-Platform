@@ -22,7 +22,6 @@ import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatPercent } from "@/features/campaigns/utils";
 import { fromEgp } from "@/lib/commercial/fx-aggregation";
 import { campaignDetailPath } from "@/lib/routing/entity-paths";
-import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { cn } from "@/lib/utils";
 
 type CampaignDetailChromeProps = {
@@ -100,10 +99,11 @@ export function CampaignDetailChrome({
 
     let upwardIntent = false;
     let touchY = 0;
-    let miniState = scroller.scrollTop > 96;
+    const headerHeight = () => chrome.querySelector<HTMLElement>(".tw-mast")?.offsetHeight ?? 300;
+    let miniState = scroller.scrollTop > headerHeight() - 8;
     let armTimer: number | null = null;
     setMini(miniState);
-    setTopArmed(!miniState);
+    setTopArmed(true);
 
     const disarmTopBriefly = () => {
       setTopArmed(false);
@@ -122,12 +122,12 @@ export function CampaignDetailChrome({
     const onScroll = () => {
       const y = scroller.scrollTop;
       // Hysteresis avoids mini on/off chatter near the threshold.
-      const nextMini = miniState ? !(upwardIntent && y <= 40) : y > 96;
+      const nextMini = miniState ? !(upwardIntent && y < headerHeight() - 56) : y > headerHeight() - 8;
       if (nextMini === miniState) return;
       miniState = nextMini;
       setMini(nextMini);
       if (!nextMini) disarmTopBriefly();
-      else setTopArmed(false);
+      else setTopArmed(true);
     };
 
     scroller.addEventListener("scroll", onScroll, { passive: true });
@@ -187,6 +187,16 @@ export function CampaignDetailChrome({
 
   return (
     <div className={cn("tw-frozen", mini && "is-mini")}>
+      <div className={cn("wr-campaign-minibar", mini && "is-visible")} aria-hidden="true">
+        <div className="wr-campaign-minibar-inner">
+          <div className="wr-campaign-minibar-title"><span><DocumentNumber value={workspace.document_number} /></span><b>{workspace.name}</b><span>{lifecycle.businessStateLabel}</span></div>
+          <div className="wr-campaign-minibar-figures">
+            <span className="wr-mini-internal"><i>Internal</i><span>Base cost <b><CampaignSummaryMoney amount={cost} currency={displayCurrency} metric="cost" /></b></span><span>GP <b><CampaignSummaryMoney amount={gp} currency={displayCurrency} metric="gp" /></b></span><span>GP % <b>{formatPercent(marginPercent)}</b></span></span>
+            <span><i>Client-facing</i><span>Total investment <b><CampaignSummaryMoney amount={revenue} currency={displayCurrency} metric="revenue" /></b></span><span>Creators <b>{String(workspace.lines.length)}</b></span></span>
+          </div>
+        </div>
+      </div>
+      <div className="tw-mast">
       <div
         className={cn("tw-top", !topArmed && "tw-top-disarmed")}
         data-top-armed={topArmed ? "true" : "false"}
@@ -230,7 +240,6 @@ export function CampaignDetailChrome({
         <EnvironmentBadgeSlot />
       </div>
 
-      <div className="tw-mast">
         <div className="tw-mh">
           <span className="id">
             <DocumentNumber value={workspace.document_number} />
@@ -244,12 +253,38 @@ export function CampaignDetailChrome({
             <h1>{workspace.name}</h1>
           </button>
           <span className="st">{lifecycle.businessStateLabel}</span>
-          {identityMeta ? <span className="sub">{identityMeta}</span> : null}
           <span className="tw-sp" />
           {blocked ? <span className="st r">Blocked</span> : null}
+          <button type="button" className="tw-b pri" onClick={onOpenDetails}>Campaign details</button>
         </div>
 
-        <div className="tw-mb">
+        {identityMeta ? <div className="wr-campaign-context">{identityMeta}</div> : null}
+
+        <div className="tw-mr">{actions}<span className="wr-tools-divider" /><button type="button" className="tw-b" onClick={() => onSelectStage("lines")}>Commercial Workspace</button></div>
+
+        <div className="wr-metrics" role="group" aria-label="Campaign metrics">
+          <section className="wr-metrics-zone wr-metrics-private" aria-label="Internal financial metrics">
+            <div className="wr-metrics-band">Internal — never shown to the client</div>
+            <div className="wr-metrics-cells">
+              <div><i>Base cost</i><b><CampaignSummaryMoney amount={cost} currency={displayCurrency} metric="cost" /></b></div>
+              <div><i>GP amount</i><b className={gp >= 0 ? "g" : "r"}><CampaignSummaryMoney amount={gp} currency={displayCurrency} metric="gp" /></b></div>
+              <div><i>GP %</i><b className={marginPercent >= 20 ? "g" : undefined}>{formatPercent(marginPercent)}</b><em>GP ÷ revenue</em></div>
+              <div><i>FX gain / loss</i><b>EGP {fxGainLoss.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+            </div>
+          </section>
+          <section className="wr-metrics-zone" aria-label="Client-facing metrics">
+            <div className="wr-metrics-band">Client-facing</div>
+            <div className="wr-metrics-cells">
+              <div><i>Display currency</i><CommercialCurrencySelect label={null} layout="inline" value={displayCurrency} onChange={handleCurrencyChange} disabled={currencyPending} /></div>
+              <div><i>Total investment</i><b><CampaignSummaryMoney amount={revenue} currency={displayCurrency} metric="revenue" /></b></div>
+              <div><i>Creators</i><b>{String(workspace.lines.length)}</b></div>
+              <div><i>Stage</i><b className="s">{lifecycle.businessStageLabel}</b><em>Workspace · {workspaceLabelForTab(activeTab)}</em></div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+        <div className={cn("tw-mb wr-decision", blocked ? "wr-decision-blocked" : "wr-decision-ready")}>
           <button
             type="button"
             className="lb"
@@ -266,6 +301,7 @@ export function CampaignDetailChrome({
               {narrative.waitingSince ? ` · ${narrative.waitingSince}` : ""}
             </span>
           </span>
+          <span className="wr-decision-meta"><span><i>State</i>{lifecycle.businessStateLabel}</span><span><i>Waiting for</i>{intel.waitingFor}</span><span><i>Waiting</i>{intel.daysWaitingLabel || "—"}</span><span><i>Risk</i>{intel.riskLabel}</span></span>
           <span className="tw-sp" />
           <button type="button" className="go" onClick={onContinue}>
             {dc.primaryAction}
@@ -284,89 +320,10 @@ export function CampaignDetailChrome({
           </div>
         ) : null}
 
-        <div className="tw-mr">{actions}</div>
-
-        <div className="tw-ms2" role="group" aria-label="Campaign metrics">
-          <div className="tw-ccy">
-            <i>Ccy</i>
-            <b className="s">
-              <CommercialCurrencySelect
-                label={null}
-                layout="inline"
-                value={displayCurrency}
-                onChange={handleCurrencyChange}
-                disabled={currencyPending}
-              />
-            </b>
-          </div>
-          <div>
-            <i>Revenue</i>
-            <b>{<CampaignSummaryMoney amount={revenue} currency={displayCurrency} metric="revenue" />}</b>
-          </div>
-          <div>
-            <i>Cost</i>
-            <b>{<CampaignSummaryMoney amount={cost} currency={displayCurrency} metric="cost" />}</b>
-          </div>
-          <div>
-            <i>Gross profit</i>
-            <b className={gp >= 0 ? "g" : "r"}>
-              {<CampaignSummaryMoney amount={gp} currency={displayCurrency} metric="gp" />}
-            </b>
-          </div>
-          <div>
-            <i>FX Gain/Loss</i>
-            <b className={fxGainLoss < 0 ? "r" : fxGainLoss > 0 ? "g" : undefined}>EGP {fxGainLoss.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b>
-          </div>
-          <div>
-            <i>Margin</i>
-            <b className={marginPercent >= 20 ? "g" : undefined}>
-              {formatPercent(marginPercent)}
-            </b>
-          </div>
-          <div>
-            <i>Stage</i>
-            <b className="s">{lifecycle.businessStageLabel}</b>
-          </div>
-          <div>
-            <i>State</i>
-            <b className="s">{lifecycle.businessStateLabel}</b>
-          </div>
-          <div>
-            <i>Waiting for</i>
-            <b className="s">{intel.waitingFor}</b>
-          </div>
-          <div>
-            <i>Days waiting</i>
-            <b className="s">{intel.daysWaitingLabel || "—"}</b>
-          </div>
-          <div>
-            <i>Risk</i>
-            <b className="s">{intel.riskLabel}</b>
-          </div>
-          <div>
-            <i>Creators</i>
-            <b className="s">{String(workspace.lines.length)}</b>
-          </div>
-          <div>
-            <i>Workspace</i>
-            <b className="s">{workspaceLabelForTab(activeTab)}</b>
-          </div>
-        </div>
-      </div>
 
       {stepper}
 
-      <div className="tw-jump">
-        <button type="button" onClick={() => onSelectStage("lines")}>
-          Commercial Workspace
-        </button>
-        <button type="button" onClick={onOpenDetails}>
-          Settings
-        </button>
-        <span className="sr-only">
-          {formatDocumentNumberForDisplay(workspace.document_number)}
-        </span>
-      </div>
+
     </div>
   );
 }

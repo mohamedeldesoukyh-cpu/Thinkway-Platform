@@ -17,6 +17,7 @@ import { FieldError } from "@/components/forms/field-error";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SheetClose } from "@/components/ui/sheet";
 import {
   Select,
   SelectContent,
@@ -30,7 +31,6 @@ import {
   DetailFormScrollBody,
   DetailFormSection,
   DETAIL_SHEET_SELECT_CONTENT_PROPS,
-  OperationalDetailCommandBar,
   OperationalDetailFooter,
   OperationalDetailSheet,
 } from "@/features/campaigns/components/operational-detail-panel";
@@ -824,7 +824,7 @@ export function CampaignLineSheet({
         ref={formRef}
         action={formAction}
         data-shortcut-save
-        className="flex min-h-0 flex-1 flex-col"
+        className="wr-assignment-form flex min-h-0 flex-1 flex-col"
         onSubmit={(event) => {
             if (submitLockRef.current || isPending) {
               event.preventDefault();
@@ -843,26 +843,13 @@ export function CampaignLineSheet({
             ioRevisionAckRef.current = false;
           }}
       >
-        <OperationalDetailCommandBar
-          contextLabel="Assignment"
-          contextHandle={
-            influencerLabel
-              ? selectedIdentity.handle
-                ? `@${selectedIdentity.handle}`
-                : "Selected"
-              : "New"
-          }
-          title={
-            influencerLabel ? selectedIdentity.name : sheetTitle
-          }
-          subtitle={
-            influencerLabel
-              ? selectedIdentity.handle
-                ? `@${selectedIdentity.handle} · platforms and commercial terms can be added later`
-                : "Platforms and commercial terms can be added later"
-              : "Select a creator. Platforms and commercial terms can be added later."
-          }
-        />
+        <header className="wr-assignment-heading">
+          <div>
+            <h3>Assignment · {influencerLabel ? selectedIdentity.name : "New"}</h3>
+            <p>{lineTitle || "Select a creator. Platforms and commercial terms can be added later."}</p>
+          </div>
+          <SheetClose asChild><Button type="button" variant="outline" size="icon-sm" aria-label="Close assignment editor">×</Button></SheetClose>
+        </header>
 
         <DetailFormScrollBody className="bg-[#f8fafc] px-4">
           <input type="hidden" name="campaign_id" value={campaignId} />
@@ -891,6 +878,7 @@ export function CampaignLineSheet({
           <input type="hidden" name="end_date" value={endDate} />
           <input type="hidden" name="pricing_mode" value={pricingMode} />
           <input type="hidden" name="commercial_json" value={commercialJson} />
+          <section className="wr-assignment-scope"><h3>Scope</h3>
           <AssignmentCreatorPicker
             value={influencerId}
             selectedLabel={influencerLabel}
@@ -1089,7 +1077,8 @@ export function CampaignLineSheet({
             </DetailFormSection>
           </div>
 
-          <CampaignLinePoPanel
+          </section>
+          <div className="wr-assignment-po"><CampaignLinePoPanel
             currency={currencyCode}
             poAmount={po.po_amount_campaign_currency}
             consumed={po.po_consumed_amount}
@@ -1098,10 +1087,74 @@ export function CampaignLineSheet({
             poCurrency={po.po_currency}
             exchangeRate={po.po_exchange_rate}
             fxSnapshotAt={po.fx_snapshot_at}
-          />
+          /></div>
 
           <div className="grid gap-4">
             <input type="hidden" name="po_amount" value={poAmount} />
+            <section className="wr-assignment-cost"><h3>Cost side</h3>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="grid gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">
+                  UR Cost
+                </label>
+                <Input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={usageRightsCost}
+                  onChange={(event) =>
+                    setUsageRightsCost(Number(event.target.value) || 0)
+                  }
+                  disabled={commercialFieldsLocked(
+                    Boolean(line?.cost_locked || line?.vat_locked)
+                  )}
+                  className={DETAIL_FORM_INPUT_CLASS}
+                />
+                <p className="text-[11px] text-muted-foreground">
+                  Creator usage rights cost — deducted from GP, not client billing.
+                </p>
+              </div>
+            </div>
+
+            <AssignmentMultiCurrencyCostFields
+              campaignCurrency={currency}
+              costReceived={costReceived}
+              costReceivedCurrency={costReceivedCurrency}
+              costInLc={cost}
+              currencyOptions={currencyOptions}
+              disabled={costCommercialLocked}
+              lockHint={costLockHint}
+              onCostReceivedChange={setCostReceived}
+              onCostReceivedCurrencyChange={setCostReceivedCurrency}
+              onCostInLcChange={setCost}
+              onFxRateChange={() => {}}
+            />
+
+            <VatAmountSection
+              title="Creator cost VAT"
+              amountLabel="Cost in LC (ex-VAT)"
+              beforeVat={cost}
+              vatPercent={costVatPercent}
+              exempt={costVatExempt}
+              currency={currency}
+              disabled={commercialFieldsLocked(
+                Boolean(line?.cost_locked || line?.vat_locked)
+              )}
+              amountDisabled
+              onBeforeVatChange={() => {}}
+              onVatPercentChange={setCostVatPercent}
+              onExemptChange={setCostVatExempt}
+              badge={
+                profile?.vat_registered ? (
+                  <Badge variant="secondary">VAT Registered</Badge>
+                ) : (
+                  <Badge variant="outline">Non-VAT creator</Badge>
+                )
+              }
+            />
+
+            </section>
+            <section className="wr-assignment-revenue"><h3>Revenue side</h3>
             <VatAmountSection
               title="Client revenue"
               amountLabel="Revenue (ex-VAT)"
@@ -1183,65 +1236,7 @@ export function CampaignLineSheet({
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="grid gap-1.5">
-                <label className="text-xs font-medium text-muted-foreground">
-                  UR Cost
-                </label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="0.01"
-                  value={usageRightsCost}
-                  onChange={(event) =>
-                    setUsageRightsCost(Number(event.target.value) || 0)
-                  }
-                  disabled={costCommercialLocked}
-                  className={DETAIL_FORM_INPUT_CLASS}
-                />
-                <p className="text-[11px] text-muted-foreground">
-                  Creator usage rights cost — deducted from GP, not client billing.
-                </p>
-              </div>
-            </div>
-
-            <AssignmentMultiCurrencyCostFields
-              campaignCurrency={currency}
-              costReceived={costReceived}
-              costReceivedCurrency={costReceivedCurrency}
-              costInLc={cost}
-              currencyOptions={currencyOptions}
-              disabled={costCommercialLocked}
-              lockHint={costLockHint}
-              onCostReceivedChange={setCostReceived}
-              onCostReceivedCurrencyChange={setCostReceivedCurrency}
-              onCostInLcChange={setCost}
-              onFxRateChange={() => {}}
-            />
-
-            <VatAmountSection
-              title="Creator cost VAT"
-              amountLabel="Cost in LC (ex-VAT)"
-              beforeVat={cost}
-              vatPercent={costVatPercent}
-              exempt={costVatExempt}
-              currency={currency}
-              disabled={vendorDocumentLocked || commercialFieldsLocked(
-                Boolean(line?.cost_locked || line?.vat_locked)
-              )}
-              amountDisabled
-              onBeforeVatChange={() => {}}
-              onVatPercentChange={setCostVatPercent}
-              onExemptChange={setCostVatExempt}
-              badge={
-                profile?.vat_registered ? (
-                  <Badge variant="secondary">VAT Registered</Badge>
-                ) : (
-                  <Badge variant="outline">Non-VAT creator</Badge>
-                )
-              }
-            />
-
+            </section>
             <input type="hidden" name="revenue" value={revenue} />
             <input type="hidden" name="cost" value={cost} />
             <input type="hidden" name="revenue_before_vat" value={revenue} />
@@ -1267,16 +1262,20 @@ export function CampaignLineSheet({
               · Margin {gpPreview.marginPercent}%
             </p>
           </div>
-        </DetailFormScrollBody>
-
-        <AssignmentStickyFooter
+        <section className="wr-assignment-derived">
+          <h3>Derived</h3>
+          <AssignmentStickyFooter
+          className="wr-assignment-derived-values"
           currency={currency}
           summary={footerSummary}
           revenueVatAmount={revenueVatAmount}
           costVatAmount={costVatAmount}
         />
+        </section>
+        </DetailFormScrollBody>
 
         <OperationalDetailFooter>
+          <SheetClose asChild><Button type="button" size="sm" variant="outline" disabled={isPending}>Cancel</Button></SheetClose>
           <Button
             size="sm"
             type="submit"

@@ -154,6 +154,7 @@ export function CampaignWorkflowTab({
         subtitle="Derived from assignment status & billing"
         status={<AuroraStatusPill tone="blue">{currentLabel}</AuroraStatusPill>}
         stats={[
+          { key: "approved", label: "Approved", value: String(workspace.approvals.filter(row => row.status === "approved").length), tone: "pos", band: "Approval status" },
           {
             key: "blockers",
             label: "Open issues",
