@@ -2414,3 +2414,7 @@
   .tw-review .cx-approved-card__hover-actions{position:static;opacity:1;pointer-events:auto;background:#f6f8fb;padding:8px}
   .tw-review .cx-approved-card .cx-rev__acts .btn{padding:7px;font-size:10.5px}
 }
+
+.tw-review .cc-options{flex:0 0 100%;box-sizing:border-box;margin:0;padding:16px;border:0;border-top:1px solid #dce4f2;min-width:0}.cc-options legend{font-weight:600;padding:0 4px}.cc-options>p{font-size:13px;margin:0 0 10px}.cc-option{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #dce4f2;font:inherit;cursor:pointer}.cc-option:last-child{border-bottom:0}.cc-option input{flex:none;margin-top:4px}.cc-option>span{min-width:0;overflow-wrap:anywhere}.cc-option strong,.cc-option-description{display:block}.cc-option-description{font-size:13px;margin:4px 0}.cc-options:disabled .cc-option{cursor:default}
+
+.tw-review .cc-with-options > .cc-main{flex:1 1 100%}

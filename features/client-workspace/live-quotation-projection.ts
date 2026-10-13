@@ -49,7 +49,7 @@ export async function projectCurrentQuotationOntoSnapshot(
   const quotationFxRateToEgp = await resolveRateToEgp(supabase, detail.currency, detail.issue_date);
   const creators =
     items.length > 0
-      ? overlayQuotationDetailOnCreators(snapshot.creators, items, detail.currency, quotationFxRateToEgp)
+      ? overlayQuotationDetailOnCreators(snapshot.creators, items, detail.currency, quotationFxRateToEgp, detail.items)
       : snapshot.creators.map((creator) => ({
           ...creator,
           investmentCurrency: detail.currency,
@@ -99,7 +99,7 @@ export function quotationProjectionFingerprint(snapshot: ClientReviewSourceSnaps
 
 export async function persistInteractiveReviewProjection(input: {
   supabase: SupabaseClient;
-  review: Pick<ClientReviewRecord, "id" | "status" | "quotationId">;
+  review: Pick<ClientReviewRecord, "id" | "status" | "quotationId" | "updatedAt">;
   snapshot: ClientReviewSourceSnapshot;
   previousFingerprint?: Record<string, unknown> | null;
   quotationId?: string | null;
@@ -119,10 +119,11 @@ export async function persistInteractiveReviewProjection(input: {
     updated_at: now,
   };
   if (input.quotationId && !input.review.quotationId) patch.quotation_id = input.quotationId;
-  const { error } = await input.supabase
+  const { data, error } = await input.supabase
     .from("campaign_client_reviews" as never)
     .update(patch as never)
     .eq("id", input.review.id)
-    .in("status", ["awaiting_review", "changes_requested"]);
-  return !error;
+    .eq("updated_at", input.review.updatedAt)
+    .in("status", ["awaiting_review", "changes_requested"]).select("id").maybeSingle();
+  return !error && Boolean(data);
 }

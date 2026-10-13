@@ -433,7 +433,7 @@ export async function freezeCreatorBriefIfNeeded(
         source_snapshot: nextSnapshot,
         updated_at: new Date().toISOString(),
       } as never)
-      .eq("id", review.id);
+      .eq("id", review.id).eq("updated_at", review.updatedAt);
   };
 
   if (!liveProfileAllowed) {
@@ -458,7 +458,7 @@ export async function freezeCreatorBriefIfNeeded(
       source_snapshot: nextSnapshot,
       updated_at: new Date().toISOString(),
     } as never)
-    .eq("id", review.id);
+    .eq("id", review.id).eq("updated_at", review.updatedAt);
 
   return briefFromSnapshotCreator(frozen);
 }

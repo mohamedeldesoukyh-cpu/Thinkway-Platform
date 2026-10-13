@@ -1,4 +1,5 @@
 "use client";
+import { chosenQuotationItemIds } from "../quotation-options";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
@@ -10,6 +11,7 @@ import {
   bulkSelectCreatorsAction,
   loadCreatorBriefAction,
   selectCreatorAction,
+  selectQuotationOptionsAction,
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import {
@@ -71,6 +73,9 @@ export function CreatorsWorkspace({
   token: string;
   intent?: "explore" | "decide";
 }) {
+  const workspaceState = useClientWorkspaceState();
+  sourceView = { ...sourceView, creators: workspaceState.view.creators };
+  const [optionError, setOptionError] = useState<{ creatorId: string; message: string } | null>(null);
   const currentCampaign = sourceView.currentCampaignCreators !== undefined;
   const view = currentCampaign
     ? { ...sourceView, creators: sourceView.currentCampaignCreators!, canDecide: false }
@@ -436,7 +441,7 @@ export function CreatorsWorkspace({
             return (
             <div
               key={creator.creatorId}
-              className={creator.creatorId === activeId ? "cc sel" : "cc"}
+              className={`${creator.creatorId === activeId ? "cc sel" : "cc"}${!currentCampaign && !strategicOnly && ((creator.quotationOptions?.length ?? 0) > 1 || Boolean(creator.quotationOptions?.length && creator.selectedQuotationItemIds)) ? " cc-with-options" : ""}`}
             >
               {canSelectCreator(creator.creatorId) ? (
                 <label className="pick-hit">
@@ -549,6 +554,33 @@ export function CreatorsWorkspace({
                 </div>
               ) : null}
               </button>
+              {!currentCampaign && !strategicOnly && ((creator.quotationOptions?.length ?? 0) > 1 || Boolean(creator.quotationOptions?.length && creator.selectedQuotationItemIds)) ? (
+                <fieldset className="cc-options" disabled={pending || !canSelectCreator(creator.creatorId) || confirmed}>
+                  <legend>Quotation options</legend>
+                  <p>Choose one or more options.</p>
+                  {creator.quotationOptions!.map(option => <label className="cc-option" key={option.itemId}>
+                    <input type="checkbox" checked={state === 'accepted' && chosenQuotationItemIds(creator).includes(option.itemId)}
+                      onChange={event => {
+                        const current = state === 'accepted' ? chosenQuotationItemIds(creator) : [];
+                        const itemIds = event.currentTarget.checked ? [...current, option.itemId] : current.filter(id => id !== option.itemId);
+                        setOptionError(null);
+                        startTransition(async () => {
+                          try {
+                            const result = await selectQuotationOptionsAction({ token, creatorId: creator.creatorId, itemIds });
+                            if (!result.ok || !('creator' in result) || !result.creator) { setOptionError({ creatorId: creator.creatorId, message: result.message }); return; }
+                            workspaceState.setOptionCreator({ ...creator, ...result.creator });
+                            if (result.selection) setCreatorStates(result.selection);
+                          } catch { setOptionError({ creatorId: creator.creatorId, message: 'Options could not be saved. Please try again.' }); }
+                        });
+                      }} />
+                    <span><strong>{creator.quotationOptions!.length > 1 ? `Option ${option.optionNumber}` : "Deliverables"}</strong><span className="cc-option-description">{option.serviceDescription || option.deliverables || TO_BE_CONFIRMED}</span>
+                      <span>{option.investmentAmount != null ? formatMoneyKpi(option.investmentAmount + (view.hideCostAndFees ? option.agencyFeeAmount ?? 0 : 0), option.investmentCurrency || view.commercial.currency) : PRICE_PENDING_LABEL}</span>
+                      {!view.hideCostAndFees && option.investmentAmount != null ? <span className="cc-option-description">Agency fees: {formatMoneyKpi(option.agencyFeeAmount ?? 0, option.investmentCurrency || view.commercial.currency)} · Total: {formatMoneyKpi(option.investmentAmount + (option.agencyFeeAmount ?? 0), option.investmentCurrency || view.commercial.currency)}</span> : null}
+                    </span>
+                  </label>)}
+                </fieldset>
+              ) : null}
+              {optionError?.creatorId === creator.creatorId ? <p role="alert">{optionError.message}</p> : null}
               {!explore && canSelectCreator(creator.creatorId) ? (
                 <div className="cc-remove">
                   <button
@@ -698,7 +730,7 @@ function CreatorDetailPane({
   hideCostAndFees: boolean;
 }) {
   const location = brief?.location || formatLocation(creator.city, creator.country);
-  const investmentAmount = brief?.investmentAmount ?? creator.investmentAmount;
+  const investmentAmount = creator.selectedQuotationItemIds !== undefined ? creator.investmentAmount : brief?.investmentAmount ?? creator.investmentAmount;
   const cardAmounts = {
     investmentAmount,
     agencyFeeAmount: creator.agencyFeeAmount,

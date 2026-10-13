@@ -1,3 +1,5 @@
+import { applyCreatorQuotationOptions, validateQuotationOptionChoice, reconcileQuotationOptionTotals } from './quotation-options';
+import { projectCurrentQuotationOntoSnapshot } from './live-quotation-projection';
 import { notifyShortlistEvent } from "@/features/discovery/shortlists/notifications";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
@@ -210,7 +212,7 @@ export async function setCreatorSelection(input: {
       selection_state: selection,
       updated_at: new Date().toISOString(),
     } as never)
-    .eq("id", gate.review.id);
+    .eq("id", gate.review.id).eq("updated_at", gate.review.updatedAt).select("id").single();
   if (error) return { ok: false, message: error.message };
 
   await db().from("campaign_client_review_events" as never).insert({
@@ -298,7 +300,7 @@ export async function setBulkCreatorSelection(input: {
   const { error } = await db()
     .from("campaign_client_reviews" as never)
     .update({ selection_state: selection, updated_at: new Date().toISOString() } as never)
-    .eq("id", gate.review.id);
+    .eq("id", gate.review.id).eq("updated_at", gate.review.updatedAt).select("id").single();
   if (error) return { ok: false, message: error.message };
 
   await notifyOpsOfClientReviewChange({
@@ -367,7 +369,7 @@ export async function requestClientChanges(input: {
   const { error } = await db()
     .from("campaign_client_reviews" as never)
     .update(patch as never)
-    .eq("id", gate.review.id);
+    .eq("id", gate.review.id).eq("updated_at", gate.review.updatedAt).select("id").single();
   if (error) return { ok: false, message: error.message };
   await db().from("campaign_client_review_events" as never).insert({
     review_id: gate.review.id,
@@ -448,7 +450,8 @@ export async function confirmClientCreators(input: {
       updated_at: now,
     } as never)
     .eq("id", gate.review.id)
-    .in("status", statuses);
+    .eq("updated_at", gate.review.updatedAt)
+    .in("status", statuses).select("id").single();
   if (error) return { ok: false, message: error.message };
   await db().from("campaign_client_review_events" as never).insert({
     review_id: gate.review.id,
@@ -456,6 +459,7 @@ export async function confirmClientCreators(input: {
     actor_kind: "client",
     actor_label: gate.review.clientLabel ?? "Client",
     payload: {
+      quotationOptions: Object.fromEntries(snapshot.creators.filter(creator => creator.selectedQuotationItemIds !== undefined).map(creator => [creator.creatorId, creator.selectedQuotationItemIds])),
       creatorIds: nextFreeze.creatorIds,
       commerciallyIncludedCreatorIds: nextFreeze.commerciallyIncludedCreatorIds,
       extensions: nextFreeze.extensions,
@@ -491,7 +495,7 @@ export async function removeUnpricedSelectedCreators(input: {
       selection_state: selection,
       updated_at: new Date().toISOString(),
     } as never)
-    .eq("id", gate.review.id);
+    .eq("id", gate.review.id).eq("updated_at", gate.review.updatedAt).select("id").single();
   if (error) return { ok: false, message: error.message };
   return {
     ok: true,
@@ -592,7 +596,8 @@ export async function decideClientReview(input: {
       updated_at: now,
     } as never)
     .eq("id", gate.review.id)
-    .in("status", ["awaiting_review", "changes_requested"]);
+    .eq("updated_at", gate.review.updatedAt)
+    .in("status", ["awaiting_review", "changes_requested"]).select("id").single();
   if (error) return { ok: false, message: error.message };
 
   await db().from("campaign_client_review_events" as never).insert({
@@ -609,6 +614,7 @@ export async function decideClientReview(input: {
       version: gate.review.reviewNumber,
       frozen_version: gate.review.frozenVersion,
       selected_creators: selectedIds,
+      quotationOptions: Object.fromEntries((snapshot?.creators ?? []).filter(creator => selectedIds.includes(creator.creatorId) && creator.selectedQuotationItemIds !== undefined).map(creator => [creator.creatorId, creator.selectedQuotationItemIds])),
       commercial: effects.lockCommercial ? commercial : null,
       reason: input.reason?.trim() || undefined,
     },
@@ -741,6 +747,7 @@ export async function acknowledgeClientUpdate(input: { token: string }): Promise
       },
     } as never)
     .eq("id", open.id)
+    .eq("updated_at", open.updatedAt)
     .in("status", ["awaiting_review", "changes_requested"]);
   return { ok: !error };
 }
@@ -817,4 +824,30 @@ export async function sendClientQuotationEmail(input: {
     /* send already succeeded */
   }
   return { ok: true, message: `Quotation sent to ${email}.` };
+}
+
+export async function setQuotationOptions(input: { token: string; creatorId: string; itemIds: string[] }) {
+  const gate = await requireInteractiveReview(input.token, 'quotation');
+  if (!gate.ok) return gate;
+  const review = gate.review;
+  if (!review.sourceSnapshot || !review.quotationId || isSelectionConfirmed(review.sourceSnapshot)) {
+    return { ok: false, message: 'Option choices are closed for this review.' };
+  }
+  const snapshot = await projectCurrentQuotationOntoSnapshot(db(), review.sourceSnapshot, review.quotationId);
+  const creator = snapshot?.creators.find(row => row.creatorId === input.creatorId);
+  if (!snapshot || !creator || !validateQuotationOptionChoice(creator, input.itemIds)) {
+    return { ok: false, message: 'These options are no longer available for this creator. Refresh and try again.' };
+  }
+  const nextCreator = applyCreatorQuotationOptions({ ...creator, selectedQuotationItemIds: input.itemIds });
+  const nextSnapshot = reconcileQuotationOptionTotals({ ...snapshot, creators: snapshot.creators.map(row => row.creatorId === creator.creatorId ? nextCreator : row) });
+  const selection = { ...review.selectionState, [creator.creatorId]: input.itemIds.length ? 'accepted' as const : 'in_review' as const };
+  const { data, error } = await db().from('campaign_client_reviews' as never).update({
+    source_snapshot: nextSnapshot, selection_state: selection, updated_at: new Date().toISOString(),
+  } as never).eq('id', review.id).eq('updated_at', review.updatedAt).in('status', ['awaiting_review','changes_requested']).select('id').maybeSingle();
+  if (error || !data) return { ok: false, message: 'The quotation changed while saving. Refresh and try again.' };
+  await db().from('campaign_client_review_events' as never).insert({ review_id: review.id,
+    event_type: 'creator_selected', actor_kind: 'client', actor_label: review.clientLabel ?? 'Client',
+    payload: { creatorId: creator.creatorId, quotationItemIds: input.itemIds },
+  } as never);
+  return { ok: true, message: 'Options saved.', creator: nextCreator, selection };
 }

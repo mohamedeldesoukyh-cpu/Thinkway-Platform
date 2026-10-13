@@ -22,13 +22,14 @@ import { FinalQuotationApprovalCard } from "./final-quotation-approval-card";
 import { ReviewAvatar } from "./review-avatar";
 
 export function CommercialWorkspace({
-  view,
+  view: sourceView,
   token,
 }: {
   view: ClientWorkspaceView;
   token?: string;
 }) {
-  const { goToSection } = useClientWorkspaceState();
+  const { goToSection, view: currentView } = useClientWorkspaceState();
+  const view = { ...sourceView, creators: currentView.creators };
   const commercialOpen = canOpenCommercialWorkspace({
     selectionConfirmed: view.journey?.selectionConfirmed,
     historical: view.journey?.historical,

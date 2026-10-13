@@ -34,8 +34,4 @@ export function buildReviewCookieValue(reviewId: string, token: string): string 
   return `${reviewId}:${token.trim()}`;
 }
 
-export function buildClientReviewPath(reviewId: string, token: string, section?: string): string {
-  const base = section ? `/review/${reviewId}/${section}` : `/review/${reviewId}`;
-  const params = new URLSearchParams({ sign: token });
-  return `${base}?${params.toString()}`;
-}
+export { buildClientReviewPath } from "../journey-state";

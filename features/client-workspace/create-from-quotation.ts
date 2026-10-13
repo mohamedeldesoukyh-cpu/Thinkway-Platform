@@ -100,7 +100,7 @@ export async function createClientReviewFromQuotation(
     lookup = null;
   }
   const snapshotCreators = items.map((item) => {
-    const base = quotationItemSnapshotCreator(item, detail.currency, quotationFxRateToEgp);
+    const base = quotationItemSnapshotCreator(item, detail.currency, quotationFxRateToEgp, detail.items);
     const unified = lookup
       ? resolveCreatorFromRefLookup(lookup, {
           unified_id: item.unified_id,

@@ -53,7 +53,8 @@ function isDisplaySelectedOption(
  * Skips alternative options and collapse followers as separate units.
  */
 export function buildQuotationConvertUnits(
-  items: QuotationItemRow[]
+  items: QuotationItemRow[],
+  options: { explicitSelection?: boolean } = {}
 ): QuotationConvertUnit[] {
   const units: QuotationConvertUnit[] = [];
   const seenPackageIds = new Set<string>();
@@ -66,14 +67,14 @@ export function buildQuotationConvertUnits(
   const optionContext = buildQuotationItemOptionContext(ordered);
 
   for (const item of ordered) {
-    if (!isDisplaySelectedOption(item.id, optionContext)) continue;
+    if (!options.explicitSelection && !isDisplaySelectedOption(item.id, optionContext)) continue;
 
     if (item.collapse_group_id) {
       const groupId = item.collapse_group_id;
       if (seenPackageIds.has(groupId)) continue;
 
       const groupItems = collapsePackageGroupItems(ordered, groupId).filter((row) =>
-        isDisplaySelectedOption(row.id, optionContext)
+        options.explicitSelection || isDisplaySelectedOption(row.id, optionContext)
       );
       if (groupItems.length === 0) continue;
 
@@ -92,7 +93,7 @@ export function buildQuotationConvertUnits(
 
     const creatorKey = quotationCreatorDuplicateKey(item);
     // One selected non-package line per creator key (first in sort order).
-    if (seenCreatorKeys.has(creatorKey)) continue;
+    if (!options.explicitSelection && seenCreatorKeys.has(creatorKey)) continue;
     seenCreatorKeys.add(creatorKey);
 
     units.push({
@@ -113,15 +114,16 @@ export type QuotationConvertSelectionSummary = {
 };
 
 export function summarizeQuotationConvertSelection(
-  items: QuotationItemRow[]
+  items: QuotationItemRow[],
+  options: { explicitSelection?: boolean } = {}
 ): QuotationConvertSelectionSummary {
   const ordered = [...items].sort(
     (a, b) => a.sort_order - b.sort_order || a.id.localeCompare(b.id)
   );
   const optionContext = buildQuotationItemOptionContext(ordered);
-  const units = buildQuotationConvertUnits(items);
+  const units = buildQuotationConvertUnits(items, options);
   const skippedAlternativeCount = ordered.filter(
-    (item) => !isDisplaySelectedOption(item.id, optionContext)
+    (item) => !options.explicitSelection && !isDisplaySelectedOption(item.id, optionContext)
   ).length;
 
   return {

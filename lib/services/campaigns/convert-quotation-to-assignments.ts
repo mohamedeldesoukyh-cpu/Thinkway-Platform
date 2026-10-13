@@ -420,8 +420,9 @@ export async function convertQuotationToAssignments(
   if (input.itemIds && input.itemIds.length > 0 && scopedItems.length === 0) {
     return { ok: false, message: "None of the selected creators are available to convert." };
   }
-  const selection = summarizeQuotationConvertSelection(scopedItems);
-  let units = buildQuotationConvertUnits(scopedItems);
+  const selectionOptions = { explicitSelection: Boolean(input.itemIds?.length) };
+  const selection = summarizeQuotationConvertSelection(scopedItems, selectionOptions);
+  let units = buildQuotationConvertUnits(scopedItems, selectionOptions);
   if (appendTarget) {
     const selected = selectQuotationAppendUnit(items, input.itemIds ?? []);
     if (selected.error) return { ok: false, message: selected.error };

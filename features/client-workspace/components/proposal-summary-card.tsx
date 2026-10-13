@@ -13,8 +13,7 @@ import {
 import type { ClientCreatorSelectionState } from "../constants";
 import { formatCompactCount, formatEngagementPct, TO_BE_CONFIRMED } from "../format";
 import { projectSelectionSummaryFromCards } from "../media-plan-summary";
-import { clientWorkspacePathReviewId } from "../journey-state";
-import { buildClientReviewPath } from "../security/review-token";
+import { buildClientReviewPath, clientWorkspacePathReviewId } from "../journey-state";
 import {
   APPROVE_SELECTED_CREATORS_LABEL,
   CONFIRM_CREATORS_SUPPORTING_TEXT,

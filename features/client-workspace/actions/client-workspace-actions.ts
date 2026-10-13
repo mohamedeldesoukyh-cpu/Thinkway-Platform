@@ -23,6 +23,7 @@ import {
   sendClientQuotationEmail,
   setBulkCreatorSelection,
   setCreatorSelection,
+  setQuotationOptions,
   acknowledgeClientUpdate,
 } from "../review-mutations";
 import type { ClientCreatorBrief } from "../types";
@@ -141,3 +142,5 @@ export async function loadCreatorBriefAction(input: {
     return { ok: true, brief: briefFromSnapshotCreator(snapshotCreator) };
   }
 }
+
+export async function selectQuotationOptionsAction(input: { token: string; creatorId: string; itemIds: string[] }) { return setQuotationOptions(input); }

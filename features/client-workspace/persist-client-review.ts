@@ -1,3 +1,4 @@
+import { applyCreatorQuotationOptions, reconcileQuotationOptionTotals } from "./quotation-options";
 ﻿import { logAuditEvent } from "@/lib/audit/log-audit-event";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
@@ -154,6 +155,7 @@ function fingerprintsEqual(a: Record<string, unknown>, b: Record<string, unknown
 
 type ExistingReviewTip = {
   id: string;
+  updated_at: string;
   review_number: number;
   status: ClientReviewStatus;
   package_fingerprint: Record<string, unknown> | null;
@@ -410,6 +412,12 @@ async function updateExistingClientReview(
   const mintMissing = input.mintMissingShareToken !== false;
   const token = existingToken || (mintMissing ? randomBytes(16).toString("hex") : "");
   let snapshot = previous ? retainCreatorBriefs(previous, input.snapshot) : input.snapshot;
+  if (previous) {
+    snapshot = { ...snapshot, creators: snapshot.creators.map(creator => applyCreatorQuotationOptions({ ...creator,
+      selectedQuotationItemIds: previous.creators.find(old => old.creatorId === creator.creatorId)?.selectedQuotationItemIds,
+    })) };
+  }
+  snapshot = reconcileQuotationOptionTotals(snapshot);
   if (resolvedFreeze) {
     snapshot = { ...snapshot, clientSelection: resolvedFreeze.freeze };
   } else if (previous?.clientSelection) {
@@ -441,6 +449,7 @@ async function updateExistingClientReview(
     .from("campaign_client_reviews" as never)
     .update(patch as never)
     .eq("id", currentTip.id)
+    .eq("updated_at", currentTip.updated_at)
     .select("*")
     .single();
   if (error || !updated) {
@@ -500,7 +509,7 @@ export async function persistClientReview(
   let existingQuery = supabase
     .from("campaign_client_reviews" as never)
     .select(
-      "id, review_number, status, package_fingerprint, source_snapshot, selection_state, share_token, token_hash, journey_id"
+      "id, review_number, status, package_fingerprint, source_snapshot, selection_state, share_token, token_hash, journey_id, updated_at"
     )
     .eq("source", input.source);
   existingQuery = applyReviewScope(existingQuery, input.scope);

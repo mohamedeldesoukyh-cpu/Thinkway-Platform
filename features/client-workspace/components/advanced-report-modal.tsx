@@ -236,7 +236,7 @@ function OverviewSection({
       ? (followers / latest.following).toFixed(2)
       : undefined;
   const cardAmount = clientFacingCreatorCardAmount({
-    investmentAmount: view?.investmentAmount ?? creator.investmentAmount,
+    investmentAmount: creator.selectedQuotationItemIds !== undefined ? creator.investmentAmount : view?.investmentAmount ?? creator.investmentAmount,
     agencyFeeAmount: creator.agencyFeeAmount,
     usageRightsAmount: creator.usageRightsAmount,
   });
