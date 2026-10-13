@@ -39,11 +39,11 @@ export function CampaignsListMasthead({
           <b>{kpis.total_campaigns}</b>
         </div>
         <div>
-          <i>Revenue</i>
+          <i>Recognized revenue</i>
           <b>{formatMoneyCompact(kpis.total_revenue, kpis.currency_code)}</b>
         </div>
         <div>
-          <i>Avg margin</i>
+          <i>Recognized margin</i>
           <b className={marginTone}>{kpis.avg_margin.toFixed(1)}%</b>
         </div>
         <div>
