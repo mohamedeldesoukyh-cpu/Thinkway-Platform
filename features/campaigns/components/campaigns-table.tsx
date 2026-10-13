@@ -351,8 +351,8 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
   },
   {
     id: "po_total",
-    label: "PO total",
-    renderHeader: () => <>PO&nbsp;total</>,
+    label: "PO / budget",
+    renderHeader: () => <>PO&nbsp;/&nbsp;budget</>,
     renderCell: (campaign) => {
       const budget = campaignPoBudget(campaign);
       if (!(budget > 0)) {

@@ -1,3 +1,7 @@
+import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
+import { readReportingRows } from "@/lib/analytics/queries/load-reporting-snapshot";
+import { getCampaignPoFxTotals, resolveFxPoSummary } from "@/lib/finance/po/fx-totals";
+import { aggregateRecognizedCampaignKpis } from "./campaign-portfolio-kpis";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -22,13 +26,12 @@ import type { AgencyOrDirect } from "@/types/database";
 import type { CampaignListItem } from "@/types/database";
 import { isUuid } from "@/lib/validation/uuid";
 
-import { aggregateCampaignKpis, emptyToNull, type CampaignKpiLineInput } from "./campaign-commercial";
+import { emptyToNull } from "./campaign-commercial";
 import {
   deleteCampaignHeader,
   fetchBrandForCampaignCreate,
   fetchCampaignFormOptionsData,
   fetchCampaignInfluencersForDuplicate,
-  fetchCampaignKpiSourceData,
   fetchGroupNamesByIds,
   fetchSourceCampaign,
   fetchSourceCampaignLines,
@@ -482,6 +485,15 @@ export async function getCampaignsList(
   }
 
   const campaigns = (data ?? []) as unknown as CampaignListItem[];
+  const poTotals = await getCampaignPoFxTotals(supabase, campaigns.map(c => c.id));
+  for (const campaign of campaigns) {
+    const totals = poTotals.get(campaign.id);
+    if (!totals) throw new Error(`PO totals unavailable for campaign ${campaign.id}`);
+    const po = resolveFxPoSummary(totals, campaign);
+    campaign.po_amount_campaign_currency = po.po_amount;
+    campaign.po_consumed_amount = po.po_consumed;
+    campaign.po_status = po.po_status;
+  }
   await syncListCampaignStatuses(supabase, campaigns);
   let enriched = campaigns;
   try {
@@ -535,21 +547,13 @@ export type CampaignsKpis = {
 };
 
 export async function getCampaignsKpis(supabase: SupabaseClient): Promise<CampaignsKpis> {
-  const [headersResult, linesResult, assignmentsResult] =
-    await fetchCampaignKpiSourceData(supabase);
-
-  const headers = (headersResult.data ?? []) as {
-    id: string;
-    status: string;
-    currency_code: string | null;
-  }[];
-  const lines = (linesResult.data ?? []) as CampaignKpiLineInput[];
-  const assignments = (assignmentsResult.data ?? []) as {
-    id: string;
-    campaign_header_id: string | null;
-  }[];
-
-  return aggregateCampaignKpis(headers, lines, assignments);
+  const [snapshot, assignments] = await Promise.all([
+    loadAnalyticsFacts(supabase),
+    readReportingRows<{ id: string; campaign_header_id: string | null; influencer_id: string | null }>(
+      supabase.from("campaign_influencers").select("id, campaign_header_id, influencer_id").order("id")
+    ),
+  ]);
+  return aggregateRecognizedCampaignKpis(snapshot.facts, assignments);
 }
 
 export type CampaignFormOptions = {
