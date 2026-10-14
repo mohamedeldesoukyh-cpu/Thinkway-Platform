@@ -1154,7 +1154,7 @@ export function EditablePostRow({
             <div className="flex min-w-0 flex-col items-end gap-1">
               {!isVirtualPost && !deliverable.is_synthetic && postId ? (
                 <RecordLiveDateButton campaignId={campaignId} scheduleId={postId} liveDate={post.live_date}
-                  label={`${meta.platform} ${meta.deliverable_type} · ad ${post.sequence_number}`} />
+                  label={`${meta.platform} ${meta.deliverable_type} - ad ${post.sequence_number}`} />
               ) : null}
               {col("workflow") ? (
                 canEdit && fieldsActive ? (

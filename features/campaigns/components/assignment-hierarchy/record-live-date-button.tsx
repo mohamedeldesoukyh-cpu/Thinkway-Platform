@@ -38,7 +38,7 @@ export function RecordLiveDateButton({ campaignId, scheduleId, liveDate, label }
           <p className="text-xs text-muted-foreground">Saving marks this ad as Posted. Use the assignment dates for future plans.</p>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-            <Button type="submit" disabled={!date || pending}>{pending ? "Saving…" : "Confirm ad live"}</Button></div>
+            <Button type="submit" disabled={!date || pending}>{pending ? "Saving..." : "Confirm ad live"}</Button></div>
         </form>
       </DialogContent>
     </Dialog>
