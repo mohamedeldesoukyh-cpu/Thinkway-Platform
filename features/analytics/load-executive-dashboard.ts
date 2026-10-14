@@ -206,6 +206,7 @@ export async function loadExecutiveDashboard(
   const topClient = clientNodes[0] ?? null;
 
   const payload: ExecutiveDashboardPayload = {
+    pipeline: (snapshot.pipeline ?? []).map(p => ({ ...p, campaign_name: snapshot.facts.find(f => f.campaign_header_id === p.campaign_header_id)?.campaign_name ?? "", client_name: snapshot.facts.find(f => f.campaign_header_id === p.campaign_header_id)?.client_name ?? "" })),
     period_label: filters.dateRange?.from || filters.dateRange?.to
       ? `${filters.dateRange?.from ?? "Beginning"} – ${filters.dateRange?.to ?? "Today"}` : "All time",
     executive,
@@ -285,7 +286,7 @@ export async function loadDashboardFilterOptions(): Promise<DashboardFilterOptio
   ].sort();
 
   return {
-    pipeline: (snapshot.pipeline ?? []).map(p => ({ ...p, campaign_name: snapshot.facts.find(f => f.campaign_header_id === p.campaign_header_id)?.campaign_name ?? "", client_name: snapshot.facts.find(f => f.campaign_header_id === p.campaign_header_id)?.client_name ?? "" })),
+
     clients: (clientsResult.data ?? []) as { id: string; name: string }[],
     brands: (brandsResult.data ?? []) as { id: string; name: string }[],
     countries,
