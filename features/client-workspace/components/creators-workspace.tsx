@@ -4,6 +4,7 @@ import { chosenQuotationItemIds } from "../quotation-options";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { WorkspaceMoney } from "./workspace-money";
 import { CreatorInvestment } from "./creator-investment";
 import { matchesWorkspaceCreatorSearch } from "../creator-search";
 
@@ -37,7 +38,6 @@ import {
 } from "../selection-flow";
 import { originalClientFacingCreatorCardAmount, clientFacingCreatorCardAmount, visibleOriginalCurrencyAmount } from "../quotation-client-facing";
 import {
-  flagFromCountry,
   MIX_BAR_COLORS,
   qualityBadge,
   qualityGaugePercent,
@@ -106,6 +106,7 @@ export function CreatorsWorkspace({
   });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const returnFocusId = useRef<string | null>(null);
   const [viewport, setViewport] = useState<"unknown" | "mobile" | "desktop">(() => {
     if (typeof window === "undefined") return "unknown";
     return window.matchMedia("(max-width: 980px)").matches ? "mobile" : "desktop";
@@ -284,7 +285,25 @@ export function CreatorsWorkspace({
     }
   }
 
+  useEffect(() => {
+    if (viewport !== "mobile") return;
+    const frame = requestAnimationFrame(() => {
+      if (sheetOpen) {
+        rootRef.current?.querySelector<HTMLButtonElement>(".dt-back")?.focus({ preventScroll: true });
+        rootRef.current?.querySelector<HTMLElement>(".detail.show")?.scrollIntoView({ block: "start", behavior: "instant" });
+      }
+      else if (returnFocusId.current) {
+        rootRef.current?.querySelector<HTMLButtonElement>(`[data-creator-profile="${CSS.escape(returnFocusId.current)}"]`)?.focus();
+        returnFocusId.current = null;
+      }
+    });
+    const onKey = (event: KeyboardEvent) => { if (sheetOpen && event.key === "Escape") closeSheet(); };
+    window.addEventListener("keydown", onKey);
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("keydown", onKey); };
+  }, [sheetOpen, viewport]);
+
   function closeSheet() {
+    returnFocusId.current = selected?.creatorId ?? null;
     cwDebugLog("closeSheet", { viewport, selectedId });
     setSheetOpen(false);
     setReportOpen(false);
@@ -484,8 +503,8 @@ export function CreatorsWorkspace({
                         });
                       }} />
                     <span className="cw-option-description"><strong>{hasMultipleOptions ? `Option ${option.optionNumber}` : state === "accepted" ? "Selected" : "Add to your selection"}</strong><span className="cc-option-description" dir="auto">{option.serviceDescription || option.deliverables || TO_BE_CONFIRMED}</span>
-                      </span><span className="cw-option-money"><span className="cc-option-price">{option.investmentAmount != null ? formatMoneyKpi(option.investmentAmount + (view.hideCostAndFees ? option.agencyFeeAmount ?? 0 : 0), option.investmentCurrency || view.commercial.currency) : PRICE_PENDING_LABEL}</span>
-                      {!view.hideCostAndFees && option.investmentAmount != null ? <span className="cc-option-fees">Agency fees: {formatMoneyKpi(option.agencyFeeAmount ?? 0, option.investmentCurrency || view.commercial.currency)} · Total: {formatMoneyKpi(option.investmentAmount + (option.agencyFeeAmount ?? 0), option.investmentCurrency || view.commercial.currency)}</span> : null}
+                      </span><span className="cw-option-money"><span className="cc-option-price">{option.investmentAmount != null ? <WorkspaceMoney value={formatMoneyKpi(option.investmentAmount + (option.agencyFeeAmount ?? 0), option.investmentCurrency || view.commercial.currency)} /> : PRICE_PENDING_LABEL}</span>
+                      {!view.hideCostAndFees && option.investmentAmount != null ? <span className="cc-option-fees">{formatMoneyKpi(option.investmentAmount, option.investmentCurrency || view.commercial.currency)} + {formatMoneyKpi(option.agencyFeeAmount ?? 0, option.investmentCurrency || view.commercial.currency)} fees</span> : null}
                     </span>
                   </label>)}
                 </fieldset>) : null;
@@ -536,7 +555,7 @@ export function CreatorsWorkspace({
                   <div className="cw-row-deliverables"><span className="cw-field-label">Deliverables</span>
                   {hasOptions && !hasMultipleOptions ? optionFields : <span className="deliv">
                     {(() => {
-                      if (hasMultipleOptions) return state === "accepted" ? `${chosenQuotationItemIds(creator).length} options selected` : "Not selected";
+                      if (hasMultipleOptions) return state === "accepted" ? `${chosenQuotationItemIds(creator).length} ${chosenQuotationItemIds(creator).length === 1 ? "option selected" : "options combined"}` : "Not selected";
                       const label = deliverablesLabel(creator.deliverableItems, creator.deliverables);
                       return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
                     })()}
@@ -544,7 +563,7 @@ export function CreatorsWorkspace({
                   {hasMultipleOptions ? <button type="button" className="cw-options-toggle"
                     aria-expanded={!optionsClosed} aria-controls={`creator-options-${creator.creatorId}`}
                     onClick={() => setClosedOptions(current => ({ ...current, [creator.creatorId]: !current[creator.creatorId] }))}>
-                    {optionsClosed ? "Show" : "Hide"} {creator.quotationOptions!.length} options
+                    {optionsClosed ? "Show" : "Hide"} {creator.quotationOptions!.length} options <svg className="cw-chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
                   </button> : null}
                   </div>
                   {!strategicOnly ? (
@@ -579,7 +598,7 @@ export function CreatorsWorkspace({
                   <p>{description}</p>
                 </div>
               ) : null}
-              <button type="button" className="cw-profile-open" aria-label={`View ${identity.name} profile`}
+              <button type="button" className="cw-profile-open" data-creator-profile={creator.creatorId} aria-label={`View ${identity.name} profile`}
                 aria-expanded={creator.creatorId === activeId && showDetail} aria-controls="client-creator-detail"
                 onClick={() => openCreator(creator.creatorId)}><span aria-hidden="true">→</span></button>
               </div>
@@ -745,6 +764,7 @@ function CreatorDetailPane({
   const combinedAmount = clientFacingCreatorCardAmount(cardAmounts);
   const cardAmount = combinedAmount == null ? combinedAmount : hideCostAndFees ? combinedAmount : combinedAmount - (creator.agencyFeeAmount ?? 0);
   const investmentCurrency = currency;
+  const bio = brief?.bio || creator.bio;
   const audience = brief?.audience ?? creator.audience;
   const performance = brief?.performance ?? creator.performance;
   const categoryFallback = brief?.categories.length
@@ -846,16 +866,9 @@ function CreatorDetailPane({
           ) : null}
           {handleLabel && location ? " · " : null}
           {location}
+          {contentCategoriesForDisplay(contentCategories, categoryFallback).slice(0, 2).map((category, i) => `${i > 0 || handleLabel || location ? " · " : ""}${category.label}`).join("")}
         </p>
         <div className="dtags">
-          {creator.country ? <span className="tag g">{flagFromCountry(creator.country)}</span> : null}
-          {contentCategoriesForDisplay(contentCategories, categoryFallback)
-            .slice(0, 2)
-            .map((category) => (
-              <span className="tag" key={category.label}>
-                {category.label}
-              </span>
-            ))}
           <span className={`tag g ${statusClass(creator.selection)}`}>
             {clientStatusDisplay({
               selection: creator.selection,
@@ -872,63 +885,9 @@ function CreatorDetailPane({
           ) : null}
         </div>
         </div>
-        {canDecide ? (
-          <div className="dacts">
-            <button
-              type="button"
-              className={creator.selection === "accepted" ? "btn pri" : "btn ok"}
-              disabled={pending}
-              onClick={onAccept}
-            >
-              {creator.selection === "accepted" ? (
-                <>
-                  <IconCheck />
-                  Selected
-                </>
-              ) : (
-                <>
-                  <IconCheck />
-                  Select
-                </>
-              )}
-            </button>
-            <button type="button" className="btn no" disabled={pending} onClick={onReject}>
-              <IconClose />
-              Reject
-            </button>
-            <button type="button" className="btn sec" disabled={pending || !note.trim()} onClick={onRequestChanges}>
-              Request changes
-            </button>
-          </div>
-        ) : null}
       </div>
       <div className="dbody">
-        {canDecide ? (
-          <div className="sec">
-            <p className="st">Notes and status updates</p>
-            <textarea
-              className="noteinput"
-              value={note}
-              onChange={(event) => onNoteChange(event.target.value)}
-              placeholder="Create note…"
-              disabled={!canDecide}
-            />
-          </div>
-        ) : null}
-        {profileLinks.length > 0 ? (
-          <div className="sec">
-            <p className="st">Creator profile URL</p>
-            <ReviewCreatorProfileLinks links={profileLinks} />
-          </div>
-        ) : null}
-        <div className="sec">
-          <p className="st">Recent publications</p>
-          {!brief && posts.length === 0 ? (
-            <p className="unavailable">Loading content…</p>
-          ) : (
-            <ContentFeatureGrid posts={posts} token={token} deliverableItems={creator.deliverableItems} />
-          )}
-        </div>
+        {bio ? <div className="sec"><p className="st">About</p><p className="desc">{bio}</p></div> : null}
         <div className="sec">
           <p className="st">Content categories</p>
           <ContentCategoryGrid items={contentCategories} fallback={categoryFallback} />
@@ -937,6 +896,21 @@ function CreatorDetailPane({
           <p className="st">Platform audience</p>
           <ReviewPlatformBreakdown rows={platformRows} variant="detail" />
         </div>
+
+        <div className="sec">
+          <p className="st">Recent publications</p>
+          {!brief && posts.length === 0 ? (
+            <p className="unavailable">Loading content…</p>
+          ) : (
+            <ContentFeatureGrid posts={posts} token={token} deliverableItems={creator.deliverableItems} />
+          )}
+        </div>
+        {profileLinks.length > 0 ? (
+          <div className="sec">
+            <p className="st">Creator profile URL</p>
+            <ReviewCreatorProfileLinks links={profileLinks} />
+          </div>
+        ) : null}
         <div className="sec">
           <p className="st">Expected costs</p>
           <div className="duo">
@@ -1046,6 +1020,50 @@ function CreatorDetailPane({
         </div>
         <EstimatedReachCard reach={reach} followers={creator.followers} />
         <BrandMentionsCard mentions={brands} token={token} />
+        {canDecide ? <section className="sec cw-profile-decisions" aria-label="Creator selection and feedback">
+        {canDecide ? (
+          <div className="sec">
+            <p className="st">Notes and status updates</p>
+            <textarea
+              className="noteinput"
+              value={note}
+              onChange={(event) => onNoteChange(event.target.value)}
+              placeholder="Create note…"
+              disabled={!canDecide}
+            />
+          </div>
+        ) : null}
+        {canDecide ? (
+          <div className="dacts">
+            <button
+              type="button"
+              className={creator.selection === "accepted" ? "btn pri" : "btn ok"}
+              disabled={pending}
+              onClick={onAccept}
+            >
+              {creator.selection === "accepted" ? (
+                <>
+                  <IconCheck />
+                  Selected
+                </>
+              ) : (
+                <>
+                  <IconCheck />
+                  Select
+                </>
+              )}
+            </button>
+            <button type="button" className="btn no" disabled={pending} onClick={onReject}>
+              <IconClose />
+              Reject
+            </button>
+            <button type="button" className="btn sec" disabled={pending || !note.trim()} onClick={onRequestChanges}>
+              Request changes
+            </button>
+          </div>
+        ) : null}
+
+</section> : null}
         <button type="button" className="btn sec" onClick={onOpenReport} style={{ width: "100%", justifyContent: "center", marginTop: 14 }}>
           <IconChart />
           View advanced report
