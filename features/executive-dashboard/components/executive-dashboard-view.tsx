@@ -525,6 +525,25 @@ export function ExecutiveDashboardView({
           </div>
         </HomeDashboardCard>
 
+        <HomeDashboardCard id="pipeline" title="Pipeline revenue" subtitle="Current approved client IOs · ads not yet live · excluding VAT">
+          <div className="tw-pad">
+            <strong className="tw-big">{money((data.pipeline ?? []).reduce((sum, row) => sum + row.pipeline_revenue, 0))}</strong>
+            <p>Remaining approved work, including campaigns that have not started. This is a current balance for the selected campaigns and is separate from recognized revenue and invoicing.</p>
+            {(data.pipeline ?? []).length ? (
+              <div style={{ overflowX: "auto" }}><table style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
+                <thead><tr>{["Campaign / client", "Approved IO", "Approved revenue", "Already live", "Pipeline"].map(label => <th key={label} style={{ padding: 12 }}>{label}</th>)}</tr></thead>
+                <tbody>{(data.pipeline ?? []).map(row => <tr key={row.io_id}>
+                  <td style={{ padding: 12 }}><a href={"/campaigns/" + row.campaign_header_id}>{row.campaign_name}</a><div>{row.client_name}</div></td>
+                  <td style={{ padding: 12 }}><a href={"/ios/client/" + row.io_id + "/preview"}>{row.io_number}</a></td>
+                  <td style={{ padding: 12 }}>{money(row.approved_revenue)}</td>
+                  <td style={{ padding: 12 }}>{money(row.recognized_revenue)}</td>
+                  <td style={{ padding: 12 }}>{money(row.pipeline_revenue)}</td>
+                </tr>)}</tbody>
+              </table></div>
+            ) : <p>No approved client IO revenue awaiting go-live.</p>}
+          </div>
+        </HomeDashboardCard>
+
         <div className="tw-two">
           <div>
             <HomeDashboardCard

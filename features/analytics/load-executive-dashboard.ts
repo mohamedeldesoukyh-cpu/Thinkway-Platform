@@ -36,6 +36,7 @@ export type ExecutiveDashboardMeta = {
 };
 
 export type ExecutiveDashboardPayload = {
+  pipeline?: (import("@/lib/analytics/queries/pipeline-revenue").PipelineDetail & { campaign_name: string; client_name: string })[];
   period_label?: string;
   executive: ExecutiveAnalyticsOutput;
   revenue: RevenueAnalyticsOutput;
@@ -284,6 +285,7 @@ export async function loadDashboardFilterOptions(): Promise<DashboardFilterOptio
   ].sort();
 
   return {
+    pipeline: (snapshot.pipeline ?? []).map(p => ({ ...p, campaign_name: snapshot.facts.find(f => f.campaign_header_id === p.campaign_header_id)?.campaign_name ?? "", client_name: snapshot.facts.find(f => f.campaign_header_id === p.campaign_header_id)?.client_name ?? "" })),
     clients: (clientsResult.data ?? []) as { id: string; name: string }[],
     brands: (brandsResult.data ?? []) as { id: string; name: string }[],
     countries,
