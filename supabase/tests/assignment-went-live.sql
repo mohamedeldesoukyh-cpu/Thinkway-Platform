@@ -1,9 +1,9 @@
 -- Run against development; all fixture mutations roll back.
 BEGIN;
-DO $$ DECLARE l uuid; c uuid; p uuid; d uuid; pub uuid; before_money jsonb; after_money jsonb; BEGIN
+DO $$ DECLARE l uuid; c uuid; p uuid; d uuid; pub uuid; before_money jsonb; after_money jsonb; line_money jsonb; BEGIN
  SELECT s.campaign_line_id INTO l FROM assignment_post_schedule s GROUP BY s.campaign_line_id HAVING count(*)>=3 LIMIT 1;
  IF l IS NULL THEN RAISE EXCEPTION 'Need a package fixture'; END IF;
- SELECT campaign_header_id INTO c FROM campaign_lines WHERE id=l;
+ SELECT campaign_header_id,to_jsonb(campaign_lines)-ARRAY['metadata','updated_at'] INTO c,line_money FROM campaign_lines WHERE id=l;
  SELECT id,assignment_deliverable_id INTO p,d FROM assignment_post_schedule WHERE campaign_line_id=l ORDER BY sequence_number,id LIMIT 1;
  SELECT jsonb_agg(to_jsonb(s)-ARRAY['live_date','status','metadata','updated_at']) INTO before_money FROM assignment_post_schedule s WHERE campaign_line_id=l;
  PERFORM set_config('app.assignment_live_sync','on',true);
@@ -30,6 +30,7 @@ DO $$ DECLARE l uuid; c uuid; p uuid; d uuid; pub uuid; before_money jsonb; afte
  PERFORM set_config('app.assignment_live_sync','',true);
  UPDATE campaign_publications SET publication_date='2026-08-07 12:00:00+00' WHERE id=pub;
  IF EXISTS(SELECT 1 FROM assignment_post_schedule WHERE campaign_line_id=l AND (status::text<>'posted' OR live_date IS DISTINCT FROM '2026-08-07'::date)) THEN RAISE EXCEPTION 'Draft publication did not mark package live'; END IF;
+ IF line_money IS DISTINCT FROM (SELECT to_jsonb(cl)-ARRAY['metadata','updated_at'] FROM campaign_lines cl WHERE id=l) THEN RAISE EXCEPTION 'Line financial fields changed'; END IF;
  -- Unauthorized RPC must fail, not silently mutate data.
  BEGIN
   PERFORM record_assignment_went_live(c,p,'2026-08-01');
