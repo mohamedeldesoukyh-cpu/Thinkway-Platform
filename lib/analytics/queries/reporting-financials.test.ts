@@ -80,3 +80,16 @@ test("analytics cache isolates users and every filter", () => {
   assert.notEqual(analyticsRequestKey(a, {}), analyticsRequestKey(b, {}));
   assert.notEqual(analyticsRequestKey(a, {}), analyticsRequestKey(a, { brandIds: ["b"] }));
 });
+
+
+test("legacy assignment/platform publications recognize contracted ads once, without added-value platforms", () => {
+  const legacyInput = { ...input, deliverables: [{...child, platform: "instagram", deliverable_type: "instagram_reel"}],
+    posts: posts.map(p => ({...p, status: "draft"})), publications: [
+      {id: "old", campaign_line_id: "l", platform: "instagram", publication_type: "instagram_reel", content_url: "https://instagram.com/p/one", status: "published", publication_date: "2026-09-10", assignment_deliverable_id: null, assignment_post_schedule_id: null},
+      {id: "duplicate", campaign_line_id: "l", platform: "instagram", publication_type: "instagram_reel", content_url: "https://instagram.com/p/one", status: "published", publication_date: "2026-09-10", assignment_deliverable_id: null, assignment_post_schedule_id: null},
+      {id: "extra", campaign_line_id: "l", platform: "youtube", status: "published", publication_date: "2026-09-10", assignment_deliverable_id: null, assignment_post_schedule_id: null},
+    ] };
+  const events = buildRecognitionEvents(legacyInput);
+  assert.equal(events.length, 1);
+  assert.equal(events[0].revenue, 4235);
+});

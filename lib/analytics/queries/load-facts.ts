@@ -18,6 +18,7 @@ type InvoiceRow = {
 
 
 export type AnalyticsFactsSnapshot = {
+  pipeline?: import("./pipeline-revenue").PipelineDetail[];
   facts: CampaignAnalyticsFact[]; invoices: InvoiceRow[]; loaded_at: string;
   recognition_events?: RecognitionEvent[]; date_range?: AnalyticsQueryFilters["dateRange"];
   source_currencies?: string[];

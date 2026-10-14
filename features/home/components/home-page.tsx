@@ -257,6 +257,15 @@ export function HomePage({ snapshot, executive = null, vat }: HomePageProps) {
           </Link>
         </div>
 
+        <Link className="tw-tile soft" href="/dashboard#pipeline" style={{ display: "block", marginBottom: 16 }}>
+          <div className="tw-tl">
+            <i>Pipeline revenue</i>
+            <span className="tw-big">{money(snapshot.pipeline_revenue)}</span>
+            <p>Approved client IOs · ads not yet live · excluding VAT · {snapshot.pipeline_campaigns} campaigns</p>
+            <HomeDashboardTileGo>View pipeline details</HomeDashboardTileGo>
+          </div>
+        </Link>
+
         <div className="tw-two">
           <div>
             <HomeDashboardCard

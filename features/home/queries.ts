@@ -62,6 +62,8 @@ export type HomeDashboardSnapshot = {
   margin_percent: number;
   outstanding_revenue: number;
   assignments_count: number;
+  pipeline_revenue: number;
+  pipeline_campaigns: number;
   po_total: number;
   po_consumed: number;
   po_consumed_percent: number;
@@ -435,6 +437,8 @@ export async function getHomeDashboardSnapshot(): Promise<HomeDashboardSnapshot>
     margin_percent: marginPercent,
     outstanding_revenue: outstandingRevenue,
     assignments_count: assignmentsCount,
+    pipeline_revenue: (recognition.pipeline ?? []).reduce((sum, p) => sum + p.pipeline_revenue, 0) / reportingRate,
+    pipeline_campaigns: new Set((recognition.pipeline ?? []).map(p => p.campaign_header_id)).size,
     po_total: poTotal,
     po_consumed: poConsumed,
     po_consumed_percent: poConsumedPercent,
