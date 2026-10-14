@@ -574,8 +574,8 @@ export function CreatorsWorkspace({
                         });
                       }} />
                     <span><strong>{creator.quotationOptions!.length > 1 ? `Option ${option.optionNumber}` : "Deliverables"}</strong><span className="cc-option-description">{option.serviceDescription || option.deliverables || TO_BE_CONFIRMED}</span>
-                      <span>{option.investmentAmount != null ? formatMoneyKpi(option.investmentAmount + (view.hideCostAndFees ? option.agencyFeeAmount ?? 0 : 0), option.investmentCurrency || view.commercial.currency) : PRICE_PENDING_LABEL}</span>
-                      {!view.hideCostAndFees && option.investmentAmount != null ? <span className="cc-option-description">Agency fees: {formatMoneyKpi(option.agencyFeeAmount ?? 0, option.investmentCurrency || view.commercial.currency)} · Total: {formatMoneyKpi(option.investmentAmount + (option.agencyFeeAmount ?? 0), option.investmentCurrency || view.commercial.currency)}</span> : null}
+                      <span className="cc-option-price">{option.investmentAmount != null ? formatMoneyKpi(option.investmentAmount + (view.hideCostAndFees ? option.agencyFeeAmount ?? 0 : 0), option.investmentCurrency || view.commercial.currency) : PRICE_PENDING_LABEL}</span>
+                      {!view.hideCostAndFees && option.investmentAmount != null ? <span className="cc-option-fees">Agency fees: {formatMoneyKpi(option.agencyFeeAmount ?? 0, option.investmentCurrency || view.commercial.currency)} · Total: {formatMoneyKpi(option.investmentAmount + (option.agencyFeeAmount ?? 0), option.investmentCurrency || view.commercial.currency)}</span> : null}
                     </span>
                   </label>)}
                 </fieldset>
