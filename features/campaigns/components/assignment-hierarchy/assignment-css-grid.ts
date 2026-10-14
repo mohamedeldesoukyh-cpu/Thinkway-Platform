@@ -63,3 +63,11 @@ export const PARENT_TRACK_TO_CHILD_FIELD: Record<string, string> = {
   payout: "payout",
   actions: "actions",
 };
+
+/** Expanded ads use their own column settings, independently of creator financial columns. */
+export function visibleAdTracks(visible: (field: string) => boolean): string[] {
+  return Object.entries(PARENT_TRACK_TO_CHILD_FIELD).filter(([track, field]) =>
+    field !== "fullDescriptionSpacer" && (track === "actions" ||
+      (track === "billing" && visible("collection")) || visible(field))
+  ).map(([track]) => track);
+}
