@@ -15,7 +15,6 @@ import {
   bulkSelectCreatorsAction,
   loadCreatorBriefAction,
   selectCreatorAction,
-  selectQuotationOptionsAction,
 } from "../actions/client-workspace-actions";
 import type { ClientCreatorSelectionState } from "../constants";
 import {
@@ -63,8 +62,8 @@ const STATUS_FILTERS: Array<{ id: "all" | "recommended" | "selected" | "pending"
   { id: "all", label: "All" },
   { id: "recommended", label: "Thinkway" },
   { id: "selected", label: "Selected" },
-  { id: "pending", label: "Pricing required" },
   { id: "rejected", label: "Not selected" },
+  { id: "pending", label: "Pricing required" },
 ];
 
 export function CreatorsWorkspace({
@@ -78,7 +77,7 @@ export function CreatorsWorkspace({
 }) {
   const workspaceState = useClientWorkspaceState();
   sourceView = { ...sourceView, creators: workspaceState.view.creators };
-  const [optionError, setOptionError] = useState<{ creatorId: string; message: string } | null>(null);
+
   const currentCampaign = sourceView.currentCampaignCreators !== undefined;
   const view = currentCampaign
     ? { ...sourceView, creators: sourceView.currentCampaignCreators!, canDecide: false }
@@ -97,13 +96,6 @@ export function CreatorsWorkspace({
   const [closedOptions, setClosedOptions] = useState<Record<string, boolean>>({});
   const listRef = useRef<HTMLDivElement>(null);
   const [stackedRows, setStackedRows] = useState(true);
-  useEffect(() => {
-    const list = listRef.current;
-    if (!list) return;
-    const observer = new ResizeObserver(([entry]) => setStackedRows(entry.contentRect.width <= 860));
-    observer.observe(list);
-    return () => observer.disconnect();
-  });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const returnFocusId = useRef<string | null>(null);
@@ -235,6 +227,14 @@ export function CreatorsWorkspace({
     ? view.creators.findIndex((creator) => creator.creatorId === selected.creatorId)
     : 0;
   const showDetail = Boolean(selected) && (sheetOpen || viewport === "desktop");
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const observer = new ResizeObserver(([entry]) => setStackedRows(entry.contentRect.width <= 860));
+    observer.observe(list);
+    return () => observer.disconnect();
+  }, [viewport, showDetail]);
+
   // On mobile/narrow, detail is sheet-only (sheetOpen). Desktop keeps the side panel.
 
   cwDebugLiveState.sheetOpen = sheetOpen;
@@ -312,6 +312,7 @@ export function CreatorsWorkspace({
   }
 
   function decide(creator: ClientCreatorCard, state: ClientCreatorSelectionState, reason?: string) {
+    if (workspaceState.optionsSaving) return;
     setCreatorState(creator.creatorId, state);
     startTransition(async () => {
       await selectCreatorAction({
@@ -325,6 +326,7 @@ export function CreatorsWorkspace({
   }
 
   function bulk(state: ClientCreatorSelectionState, creatorIds?: string[]) {
+    if (workspaceState.optionsSaving) return;
     const ids = creatorIds?.length ? creatorIds : view.creators.map((creator) => creator.creatorId);
     setCreatorStates(Object.fromEntries(ids.map((id) => [id, state])));
     startTransition(async () => {
@@ -338,6 +340,17 @@ export function CreatorsWorkspace({
 
   return (
     <div className="creators-page" ref={rootRef}>
+      <ProposalSummaryCard
+        view={view}
+        token={token}
+        selection={selection}
+        variant="bar"
+        showBulkControls={!currentCampaign && explore && !confirmed}
+        showActions={!currentCampaign}
+        barAction={currentCampaign ? "none" : explore ? "continue" : confirmed ? "none" : "approve"}
+        onSelectAll={() => bulk("accepted")}
+        onClear={() => bulk("in_review")}
+      />
       {currentCampaign ? (
         <div className="card" style={{ marginBottom: 16 }}>
           <p className="ck">Current campaign creators</p>
@@ -347,11 +360,9 @@ export function CreatorsWorkspace({
       ) : explore ? (
         <div className="card" style={{ marginBottom: 16 }}>
           <p className="ck">Creator shortlist</p>
-          <h2>What creators does Thinkway recommend?</h2>
+          <h2>Creators Thinkway recommends</h2>
           <p className="note">
-            This is the creator pool for your campaign. Select the creators you want here, including
-            those still waiting on pricing. Continue to Your Selection to review them, then approve
-            them for the quotation.
+            Choose the creators and options you want. Selecting is not approval — you confirm everything on <strong>Your Selection</strong> before anything is final.
           </p>
         </div>
       ) : (
@@ -367,17 +378,7 @@ export function CreatorsWorkspace({
           </p>
         </div>
       )}
-      <ProposalSummaryCard
-        view={view}
-        token={token}
-        selection={selection}
-        variant="bar"
-        showBulkControls={!currentCampaign && explore && !confirmed}
-        showActions={!currentCampaign}
-        barAction={currentCampaign ? "none" : explore ? "continue" : confirmed ? "none" : "approve"}
-        onSelectAll={() => bulk("accepted")}
-        onClear={() => bulk("in_review")}
-      />
+
       {explore || confirmed ? null : (
         <div className="sumbar-cta" style={{ marginBottom: 12 }}>
           <button type="button" className="btn sec" onClick={() => goToSection("shortlist")}>
@@ -392,7 +393,7 @@ export function CreatorsWorkspace({
             <input type="search" value={search} onChange={event => setSearch(event.currentTarget.value)} placeholder="Search names, handles or deliverables" />
           </label>
           <div className="segs">
-            {filters.map((item) => (
+            {filters.filter(item => item.id !== "recommended" || filterCounts.recommended > 0).map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -406,7 +407,7 @@ export function CreatorsWorkspace({
           </div>
         </div>
       ) : null}
-      <p className="note" style={{ marginBottom: 12 }}>
+      {!explore ? <p className="note" style={{ marginBottom: 12 }}>
         {currentCampaign ? `${view.creators.length} creators currently assigned to this campaign.` : explore
           ? `${rosterHeadline(view.creators.length)}. Select the creators you want, then Continue to Your Selection. This shortlist stays available even after creators are quoted.`
           : confirmed
@@ -416,7 +417,7 @@ export function CreatorsWorkspace({
             : roster.length > 0
               ? `${rosterHeadline(roster.length)} selected. Approve Selected Creators includes them in the quotation.`
               : "Select creators on Shortlist, then Continue to Your Selection."}
-      </p>
+      </p> : null}
 
       {/* Mobile: in-flow detail replaces the roster (no fixed/portal overlay — WhatsApp
           WebView paints a navy/black void over cards 2+ when sticky+fixed layers stack). */}
@@ -431,7 +432,7 @@ export function CreatorsWorkspace({
           token={token}
           currency={view.commercial.currency}
           canDecide={canSelectCreator(selected.creatorId)}
-          pending={pending}
+          pending={pending || workspaceState.optionsSaving}
           note={note}
           onNoteChange={setNote}
           show
@@ -492,15 +493,7 @@ export function CreatorsWorkspace({
                       onChange={event => {
                         const current = state === 'accepted' ? chosenQuotationItemIds(creator) : [];
                         const itemIds = event.currentTarget.checked ? [...current, option.itemId] : current.filter(id => id !== option.itemId);
-                        setOptionError(null);
-                        startTransition(async () => {
-                          try {
-                            const result = await selectQuotationOptionsAction({ token, creatorId: creator.creatorId, itemIds });
-                            if (!result.ok || !('creator' in result) || !result.creator) { setOptionError({ creatorId: creator.creatorId, message: result.message }); return; }
-                            workspaceState.setOptionCreator({ ...creator, ...result.creator });
-                            if (result.selection) setCreatorStates(result.selection);
-                          } catch { setOptionError({ creatorId: creator.creatorId, message: 'Options could not be saved. Please try again.' }); }
-                        });
+                        workspaceState.saveOptions({ ...creator, selection: state }, itemIds);
                       }} />
                     <span className="cw-option-description"><strong>{hasMultipleOptions ? `Option ${option.optionNumber}` : state === "accepted" ? "Selected" : "Add to your selection"}</strong><span className="cc-option-description" dir="auto">{option.serviceDescription || option.deliverables || TO_BE_CONFIRMED}</span>
                       </span><span className="cw-option-money"><span className="cc-option-price">{option.investmentAmount != null ? <WorkspaceMoney value={formatMoneyKpi(option.investmentAmount + (option.agencyFeeAmount ?? 0), option.investmentCurrency || view.commercial.currency)} /> : PRICE_PENDING_LABEL}</span>
@@ -521,6 +514,7 @@ export function CreatorsWorkspace({
                   <input
                     type="checkbox"
                     className="pick"
+                    disabled={pending || workspaceState.optionsSaving}
                     checked={state === "accepted"}
                     onChange={(event) => toggleChecked(creator, event.currentTarget.checked)}
                     aria-label={`Select ${creator.displayName}`}
@@ -603,7 +597,7 @@ export function CreatorsWorkspace({
                 onClick={() => openCreator(creator.creatorId)}><span aria-hidden="true">→</span></button>
               </div>
               {hasMultipleOptions ? optionFields : null}
-              {optionError?.creatorId === creator.creatorId ? <p role="alert">{optionError.message}</p> : null}
+              {workspaceState.optionErrors[creator.creatorId] ? <p className="cw-option-error" role="alert">{workspaceState.optionErrors[creator.creatorId]}</p> : null}
               {!explore && canSelectCreator(creator.creatorId) ? (
                 <div className="cc-remove">
                   <button
@@ -641,7 +635,7 @@ export function CreatorsWorkspace({
               token={token}
               currency={view.commercial.currency}
               canDecide={canSelectCreator(selected.creatorId)}
-              pending={pending}
+              pending={pending || workspaceState.optionsSaving}
               note={note}
               onNoteChange={setNote}
               show

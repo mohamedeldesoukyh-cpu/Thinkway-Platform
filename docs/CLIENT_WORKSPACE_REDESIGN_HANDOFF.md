@@ -1,3 +1,54 @@
+# Current checkpoint: typography, immediate options, and shortlist exports
+
+Date: 2026-10-15. Isolated checkout `client-workspace-redesign/thinkway-platform`, branch `codex/client-workspace-redesign-release`, base HEAD `078d96f7d826000e424bd8105bcf9ea1714f39f7`.
+
+The owner approved commit, dev push, and production release on 2026-10-15. Release sequence: deploy and verify dev first, then release the identical patch to production. Final commit/deployment IDs and remote verification results are recorded separately after deployment. This checkpoint supersedes the older release status below. No database records were created or modified, no notifications were sent, and the existing authorized synthetic dev fixture cleanup IDs remain unchanged.
+
+## Confirmed causes and changes
+
+- **Typography:** the Claude HTML uses a local font stack with no embedded font definitions. Next registers its downloaded font under the literal `Geist` name, so the same stack resolved differently inside the application. `features/client-workspace/styles/workspace-redesign.css` now uses local-only font aliases before the reference fallbacks, isolates the review section from the inherited global font, and explicitly resets creator/profile heading font properties. Existing staff typography is unaffected.
+- **Layout:** the shell header now scrolls in normal flow, followed by journey and navigation. The compact investment summary precedes the reference-style shortlist introduction; the search control remains available with an accessible hidden label. Empty Thinkway filters and duplicate introductory copy are removed. Existing card geometry, portrait proportions, default-open options, pricing and responsive behavior remain in place.
+- **Delayed option feedback:** the old handler waited for the server response before updating the selected option and totals. `client-workspace-state.tsx` now immediately applies the existing quotation-option calculator, saves through the unchanged server action, serializes writes across creators to respect the review concurrency guard, and coalesces superseded queued choices. A failed latest save restores the last confirmed choice and exposes an error. Approval/bulk selection waits for saves. The queue is implemented and tested in `features/client-workspace/option-save-queue{,.test}.ts`. No server authorization, pricing formula, FX conversion or approval rules changed.
+- **Shortlist reports:** the shared renderer's fixed-height photo/card combination squeezed long text, the heading was oversized, the client-list adapter omitted the logo, and six-card pagination created an unnecessary extra creator slide. Shortlist-only CSS now normalizes branding, wraps text and keeps card content at its natural height. Both shortlist list templates carry the client name/logo and use seven cards per creator slide. Eight creators continue on another slide. Shortlist client-list performance uses the available platforms; actual quotation platform filtering remains unchanged. PDF page dimensions follow the shortlist client-list renderer. Ratecard/quotation default pagination remains six.
+
+## Final checks
+
+- Client-workspace suite: **352 passed, 0 failed** (including two new serialized-save tests).
+- Shortlist and quotation export suites: **12 passed, 0 failed**.
+- `npx tsc --noEmit`: **PASS**.
+- Production `npm run build`: **PASS**, after the final CSS changes.
+- Performance budget: **7 pass / 5 existing soft warnings / 0 failures**.
+- All emitted CSS: **1,515,827 bytes / 1024 = 1,480.3 KB**, below the unchanged **1,500 KB** hard limit. Headroom: **20,173 bytes**. No budget or check was disabled.
+- `git diff --check`: **PASS** (line-ending notices only).
+- Ignored local logs: `.tmp-cw-visual/workspace-final-tests.log`, `export-final-tests.log`, `typecheck-final.log`, `final-build.log`, `final-budget.log`.
+- `performance/reports/latest-check.json` was already dirty and was refreshed by the checker; treat it separately from the intentional source changes.
+
+## Authorized browser verification
+
+The built candidate on `http://127.0.0.1:3188` opens the existing approved synthetic dev review anonymously. Its full signed link stays in local setup records and is not added to this tracked document. Client `228a7ed3-ca38-4c5a-ba25-ab1579ab66c3`, brand `a6e9cc35-99d6-4101-b312-a64f694ce961`, quotation `187b8241-fc1e-45b8-b566-02c30fff8599`, review `99aff87a-5afb-47e3-961d-3362d42e5f1c`. No cleanup IDs added.
+
+Built candidate: desktop 1600x1000 and mobile 390x844, no document horizontal overflow; correct local font aliases; search works; selected/locked controls remain disabled; Commercial navigation retains EGP 1,500 + EGP 150 AF = EGP 1,650. No approvals were submitted.
+
+Loopback-only component harness at port 3189 renders the actual production components with dummy portrait images and in-memory action stubs. It contains no credentials. A synthetic five-second save delay produced visible option/totals feedback in approximately 292 ms including automation overhead (not a formal INP result). Rapid subsequent edits retained the latest choice; an injected save failure restored the previous confirmed totals and displayed an error. Show/Hide preserved options and focus. Long English/Arabic names wrapped; mobile card portrait rail measured 150px, profile portrait 72x90px; Back restored focus to the profile-opening control. Approval controls remained unavailable during pending saves.
+
+Report previews at port 3190 used the seven supplied HTML creator entries with synthetic client branding/metrics. Both list exports have three pages: cover, all seven creators on one creator slide, and closing. No overlapping text was observed. These preview screenshots are layout evidence, not business documents with verified client pricing or branding.
+
+## Fresh screenshots
+
+- [Desktop cards, options, and profile (synthetic component fixture)](redesign-evidence/workspace-options-desktop.png)
+- [Mobile card/options (synthetic component fixture)](redesign-evidence/workspace-options-mobile.png)
+- [Mobile long-name profile](redesign-evidence/workspace-profile-mobile.png)
+- [Final built candidate desktop (approved dev fixture)](redesign-evidence/workspace-built-desktop-final.png)
+- [Final built candidate mobile (approved dev fixture)](redesign-evidence/workspace-built-mobile-final.png)
+- [Shortlist Creator List: seven cards](redesign-evidence/shortlist-creator-list-seven.png)
+- [Shortlist Client List by Name: seven cards and branding](redesign-evidence/shortlist-client-list-seven.png)
+
+## Verification limits
+
+The authoritative Claude HTML source and the user's rendered screenshots were compared. Browser policy still blocks rendering the local reference file directly; no alternate hosting or bypass was attempted. Do not claim certified pixel-for-pixel reference parity. The approved backend fixture is already confirmed and has no multiple options, so full server multi-option persistence was not mutated in this pass; the actual component save/error/rapid-choice flow was tested using stubs, and the automated security/selection suite passed. Real iPhone hardware responsiveness, final legal/quotation approval, and live expired/revoked/cross-client scenarios were not exercised. Existing authorization implementation is untouched. No production data or credentials were used.
+
+---
+
 # Client workspace redesign — screenshot mismatch correction
 
 Date: 2026-10-15. Isolated checkout: `client-workspace-redesign/thinkway-platform`, branch `codex/client-workspace-redesign-release`, base HEAD `f915be7f0c8cef34aabf744d1f04dded3bfe744a`.

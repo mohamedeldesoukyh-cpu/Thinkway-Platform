@@ -81,6 +81,7 @@ export function ClientWorkspaceShell({
   return (
     <div className="tw-review cw-redesign">
       <title>{`${clientLinkName(view.overview.campaignName)} | Thinkway`}</title>
+      <div className="tw-review-body">
       <header className="bar">
         <div className="wrap cx-campaign-heading"><p>Client workspace</p><h1 dir="auto">{clientLinkName(view.overview.campaignName)}</h1></div>
         <div className="wrap row">
@@ -114,7 +115,6 @@ export function ClientWorkspaceShell({
           ) : null}
         </div>
       </header>
-      <div className="tw-review-body">
         <ClientJourneyStrip view={view} />
         {view.clientUpdate?.items.length ? (
           <ReviewUpdateBanner

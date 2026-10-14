@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from "react";
 
 import type { ClientCreatorSelectionState, ClientWorkspaceSectionId } from "../constants";
 import { projectSelectionSummaryFromCards } from "../media-plan-summary";
@@ -8,10 +8,17 @@ import { isPricedClientInvestment, hydrateClientSelection, selectionCalculator }
 import { acceptedCreators, selectionMapFromView } from "../selection-view";
 import type { ClientCommercialSummary, ClientMediaPlanSummary, ClientWorkspaceView } from "../types";
 
+import { applyCreatorQuotationOptions, validateQuotationOptionChoice } from "../quotation-options";
+import { createOptionSaveQueue } from "../option-save-queue";
+import { selectQuotationOptionsAction } from "../actions/client-workspace-actions";
+
 type ClientWorkspaceState = {
   view: ClientWorkspaceView;
   token: string;
   selection: Record<string, ClientCreatorSelectionState>;
+  optionsSaving: boolean;
+  optionErrors: Record<string, string | undefined>;
+  saveOptions: (creator: ClientWorkspaceView["creators"][number], itemIds: string[]) => void;
   setOptionCreator: (creator: ClientWorkspaceView["creators"][number]) => void;
   setCreatorState: (creatorId: string, state: ClientCreatorSelectionState) => void;
   setCreatorStates: (next: Record<string, ClientCreatorSelectionState>) => void;
@@ -50,6 +57,42 @@ export function ClientWorkspaceStateProvider({
   const setCreatorStates = useCallback((next: Record<string, ClientCreatorSelectionState>) => {
     setSelection((current) => ({ ...current, ...next }));
   }, []);
+  const [saveQueue] = useState(createOptionSaveQueue);
+  const [optionSaveCount, setOptionSaveCount] = useState(0);
+  const [optionErrors, setOptionErrors] = useState<Record<string, string | undefined>>({});
+  const savedOptions = useRef(new Map<string, ClientWorkspaceView["creators"][number]>());
+  const saveOptions = useCallback((creator: ClientWorkspaceView["creators"][number], itemIds: string[]) => {
+    if (!validateQuotationOptionChoice(creator, itemIds)) return;
+    const key = creator.creatorId;
+    if (!savedOptions.current.has(key)) savedOptions.current.set(key, creator);
+    const state: ClientCreatorSelectionState = itemIds.length ? "accepted" : "in_review";
+    setOptionCreator(applyCreatorQuotationOptions({ ...creator, selectedQuotationItemIds: itemIds, selection: state }));
+    setCreatorState(key, state);
+    setOptionErrors(errors => ({ ...errors, [key]: undefined }));
+    setOptionSaveCount(count => count + 1);
+    void saveQueue.enqueue(key, async isLatest => {
+      try {
+        const result = await selectQuotationOptionsAction({ token, creatorId: key, itemIds });
+        if (!result.ok || !("creator" in result) || !result.creator) throw new Error(result.message);
+        const saved = { ...creator, ...result.creator, selection: state };
+        savedOptions.current.set(key, saved);
+        if (isLatest()) {
+          setOptionCreator(saved);
+          // Other creators may have newer optimistic choices: never overwrite them.
+          setCreatorState(key, state);
+        }
+      } catch (error) {
+        if (isLatest()) {
+          const saved = savedOptions.current.get(key)!;
+          setOptionCreator(saved);
+          setCreatorState(key, saved.selection);
+          setOptionErrors(errors => ({ ...errors, [key]: error instanceof Error ? error.message : "Options could not be saved. Please try again." }));
+        }
+      } finally {
+        if (isLatest()) savedOptions.current.delete(key);
+      }
+    }).finally(() => setOptionSaveCount(count => count - 1));
+  }, [token, saveQueue, setOptionCreator, setCreatorState]);
   const value = useMemo((): ClientWorkspaceState => {
     const pendingIds = view.journey?.pendingCommercialApprovalCreatorIds ?? [];
     const lockedIds = (view.journey?.clientApprovedCreatorIds ?? []).filter(
@@ -84,6 +127,9 @@ export function ClientWorkspaceStateProvider({
       token,
       selection: effectiveSelection,
       setOptionCreator,
+      optionsSaving: optionSaveCount > 0,
+      optionErrors,
+      saveOptions,
       setCreatorState,
       setCreatorStates,
       goToSection: onSectionChange,
@@ -93,6 +139,9 @@ export function ClientWorkspaceStateProvider({
     };
   }, [
     onSectionChange,
+    optionSaveCount,
+    optionErrors,
+    saveOptions,
     selection,
     setOptionCreator,
     setCreatorState,

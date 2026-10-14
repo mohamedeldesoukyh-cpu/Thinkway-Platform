@@ -100,8 +100,9 @@ export function ProposalSummaryCard({
   onClear?: () => void;
 }) {
   const router = useRouter();
-  const { goToSection } = useClientWorkspaceState();
-  const [pending, startTransition] = useTransition();
+  const { goToSection, optionsSaving } = useClientWorkspaceState();
+  const [transitionPending, startTransition] = useTransition();
+  const pending = transitionPending || optionsSaving;
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -181,6 +182,7 @@ export function ProposalSummaryCard({
   }
 
   function runConfirmCreators() {
+    if (pending) return;
     startTransition(async () => {
       const result = await confirmCreatorsAction({ token });
       if (!result.ok) {
@@ -194,6 +196,7 @@ export function ProposalSummaryCard({
   }
 
   function runPrimary() {
+    if (pending) return;
     if (variant === "bar" || primary.kind === "confirm") {
       setError(null);
       setConfirmOpen(true);
@@ -239,6 +242,7 @@ export function ProposalSummaryCard({
         /> : null}
         <div className="sp" />
         <div className="sumbar-cta">
+            {optionsSaving ? <span className="cw-save-status" role="status">Saving selection…</span> : null}
             <button type="button" className="btn ghost cw-summary-toggle" aria-expanded={detailsOpen} aria-controls={detailsId} onClick={() => setDetailsOpen(open => !open)}>Details</button>
             {confirmed ? (
               <span className="sc ok">Client Approved</span>

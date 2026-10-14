@@ -1,3 +1,8 @@
+/* The standalone reference has no downloaded fonts. Alias local faces so
+   Next's global @font-face named Geist cannot silently replace its fallback. */
+@font-face { font-family:'CW Local Geist'; src:local('Geist'); font-style:normal; font-weight:100 900; font-display:swap; }
+@font-face { font-family:'CW Local Inter'; src:local('Inter'); font-style:normal; font-weight:100 900; font-display:swap; }
+@font-face { font-family:'CW Local Mono'; src:local('Geist Mono'); font-style:normal; font-weight:100 900; font-display:swap; }
 /* Adapted from the supplied client workspace prototype. Presentation only.
    Scope excludes staff screens and portalled document/approval dialogs. Keep the
    existing mobile document-scroll contract and all server authorization intact. */
@@ -9,15 +14,16 @@
   --shadow:0 1px 2px #0b17330d; --sh:0 1px 2px #0b17330d;
   --cw-gutter:28px;
   /* Use the prototype's named, offline font stack, not Next's bundled alias. */
-  --font-sans:'Geist',Inter,'Segoe UI',system-ui,-apple-system,sans-serif;
-  --font-mono:'Geist Mono',ui-monospace,'Cascadia Mono','Segoe UI Mono',Consolas,'SF Mono',Menlo,monospace;
+  --font-sans:'CW Local Geist','CW Local Inter','Segoe UI',system-ui,-apple-system,sans-serif;
+  --font-mono:'CW Local Mono',ui-monospace,'Cascadia Mono','Segoe UI Mono',Consolas,'SF Mono',Menlo,monospace;
   --cw-ink2:#38425c; --cw-soft:#f4f7fc; --cw-soft2:#edf2f9;
   --danger:#c12121; --bad:#c12121; --bad-bg:#fdf1f1;
   font-family:var(--font-sans);
   font-size:14px; line-height:1.55; color:var(--ink); background:var(--page);
 }
+.tw-review.cw-redesign #review { font-family:var(--font-sans); }
 .tw-review.cw-redesign .wrap { padding-inline:var(--cw-gutter); max-width:1680px; margin-inline:auto; }
-.tw-review.cw-redesign header.bar { border-top:0; background:linear-gradient(180deg,#fff,#f4f7fc); }
+.tw-review.cw-redesign header.bar { position:static; flex-shrink:0; border-top:0; background:linear-gradient(180deg,#fff,#f4f7fc); }
 .tw-review.cw-redesign header.bar .cx-campaign-heading { padding-block:14px 0; }
 .tw-review.cw-redesign .cx-campaign-heading p { font:600 12px var(--font-sans); color:var(--muted); margin:0 0 8px; }
 .tw-review.cw-redesign .cx-campaign-heading h1 { font:800 21px var(--font-sans); letter-spacing:-.5px; overflow-wrap:anywhere; margin:0; background:linear-gradient(100deg,var(--ink),#0040cc 78%); background-clip:text; -webkit-background-clip:text; color:transparent; }
@@ -133,7 +139,7 @@
 .tw-review.cw-redesign .cc .photo { grid-column:1; grid-row:1 / span 2; position:relative; width:auto; height:auto; min-width:0; min-height:84px; border-radius:0; align-self:stretch; overflow:hidden; }
 .tw-review.cw-redesign .cc .photo img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; border-radius:0; }
 .tw-review.cw-redesign .cw-row-identity { grid-column:2; min-width:0; align-self:center; padding-block:12px; }
-.tw-review.cw-redesign .cc .nm { font-size:15px; font-weight:700; line-height:1.25; letter-spacing:-.2px; white-space:normal; overflow-wrap:anywhere; color:var(--ink); margin:0; }
+.tw-review.cw-redesign .cc .nm { font:700 15px/1.25 var(--font-sans); letter-spacing:-.2px; white-space:normal; overflow-wrap:anywhere; color:var(--ink); margin:0; }
 .tw-review.cw-redesign .cc .sub { display:block; margin-top:2px; font:500 12px/1.45 var(--font-sans),'Segoe UI',sans-serif; color:var(--muted); white-space:normal; overflow-wrap:anywhere; }
 .tw-review.cw-redesign .cw-row-reach { grid-column:3; align-self:center; padding-block:12px; min-width:0; }
 .tw-review.cw-redesign .cw-row-reach b { display:block; font:700 15px var(--font-mono),ui-monospace,Consolas,monospace; letter-spacing:-.3px; }
@@ -182,7 +188,7 @@
 .tw-review.cw-redesign .dhead .t { display:none; }
 .tw-review.cw-redesign .dhero { position:static; display:grid; grid-template-columns:96px minmax(0,1fr); gap:18px; align-items:center; padding:0 0 18px; margin-bottom:18px; text-align:start; background:linear-gradient(110deg,#eff4ff,#f8faff); border-bottom:1px solid var(--hair); }
 .tw-review.cw-redesign .dhero .ava { width:96px; height:120px; margin:0; border:0; box-shadow:none; border-radius:12px; }
-.tw-review.cw-redesign .dhero .nm { display:block; margin:0; font-size:24px; font-weight:800; line-height:1.15; letter-spacing:-.8px; color:var(--ink); overflow-wrap:anywhere; }
+.tw-review.cw-redesign .dhero .nm { display:block; margin:0; font:800 24px/1.15 var(--font-sans); letter-spacing:-.8px; color:var(--ink); overflow-wrap:anywhere; }
 .tw-review.cw-redesign .cw-profile-identity { min-width:0; }
 .tw-review.cw-redesign .dhero .dtags { justify-content:flex-start; margin-top:8px; }
 .tw-review.cw-redesign .dhero .dacts { grid-column:1 / -1; display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-start; }
@@ -220,7 +226,8 @@
 .tw-review.cw-redesign :is(.stpill.bad,.sc.bad) { color:var(--bad); background:var(--bad-bg); border-color:#f2cccc; }
 .tw-review.cw-redesign :is(.stpill.cur,.tag:not(.sc)) { color:#0b52e0; background:var(--lav); border-color:#0057ff2e; }
 .tw-review.cw-redesign :is(.tag.g:not(.sc),.sc.no) { color:var(--cw-ink2); background:var(--cw-soft2); }
-.tw-review.cw-redesign .card .ck,.tw-review.cw-redesign .dhead .t { color:var(--muted); }
+.tw-review.cw-redesign .card .ck { color:var(--blue); }
+.tw-review.cw-redesign .dhead .t { color:var(--muted); }
 .tw-review.cw-redesign :is(.card,.detail,.mc,.kpi,.cx-kpi,.cx-act,.fstat) { background:var(--white); border-color:var(--hair); box-shadow:var(--shadow); }
 .tw-review.cw-redesign :is(.mc,.kpi,.cx-kpi) .v,.tw-review.cw-redesign .kpi .kv { font-family:var(--font-mono); color:var(--ink); }
 .tw-review.cw-redesign .cm-commercial { --cm-bg:var(--page); --cm-surface:var(--white); --cm-surface2:var(--cw-soft); --cm-border:var(--hair); --cm-ink:var(--ink); --cm-ink2:var(--cw-ink2); --cm-ink3:var(--muted); --cm-accent:var(--blue); --cm-soft:var(--lav); --cm-softink:#0b52e0; --cm-softborder:#0057ff2e; --cm-success:var(--ok); --cm-successsoft:var(--ok-bg); --cm-successborder:#c9ebdd; --cm-shadow:var(--shadow); font-family:var(--font-sans); }
@@ -286,6 +293,11 @@
 @media(max-width:980px) { .tw-review.cw-redesign .detail.show { scroll-margin-top:56px; } }
 
 .tw-review.cw-redesign .creators-page { gap:0; }
+.tw-review.cw-redesign .creators-page>.card { margin-top:18px; padding:16px 18px; }
+.tw-review.cw-redesign .creators-page>.card .ck { margin:0 0 6px; letter-spacing:.8px; }
+.tw-review.cw-redesign .creators-page>.card h2 { margin:0; }
+.tw-review.cw-redesign .creators-page>.card .note { margin:4px 0 0; font-size:13px; line-height:1.5; }
+.tw-review.cw-redesign .cw-search>span { position:absolute; width:1px; height:1px; padding:0; overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
 .tw-review.cw-redesign .creators-page>.note { margin:0 0 16px; }
 .tw-review.cw-redesign .toolbar .segs { order:1; }
 .tw-review.cw-redesign .toolbar .cw-search { order:2; margin-inline-start:auto; }
@@ -293,3 +305,6 @@
 .tw-review.cw-redesign .cc .pick { appearance:none; position:relative; width:20px; height:20px; margin:0; border:1px solid var(--line); border-radius:50%; background:#fff; cursor:pointer; }
 .tw-review.cw-redesign .cc .pick:checked { background:var(--ok); border:2px solid #fff; }
 .tw-review.cw-redesign .cc .pick:checked::after { content:""; position:absolute; left:5px; top:2px; width:5px; height:9px; border:solid #fff; border-width:0 2px 2px 0; transform:rotate(45deg); }
+
+.tw-review.cw-redesign .cw-save-status { font-size:12px; color:var(--muted); }
+.tw-review.cw-redesign .cw-option-error { margin:0; padding:10px 16px; color:var(--bad); background:var(--bad-bg); font-size:13px; }
