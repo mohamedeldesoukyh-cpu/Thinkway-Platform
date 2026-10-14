@@ -721,7 +721,21 @@ export async function updateCampaignLine(
       usage_rights_cost: commercialBilling.usage_rights_cost,
     });
   // Cost VAT is propagated in-place by the database; never rebuild live deliverables for a tax correction.
-  if (canSyncAssignment && !vatOnlyChange) {
+  const assignmentScopeChanged = replacingCreator || !isDeepStrictEqual(
+    (previousAssignment?.platforms ?? []).map(({ platform, deliverables }) => ({ platform, deliverables })),
+    platforms.map(({ platform, deliverables }) => ({ platform, deliverables }))
+  ) || (previousAssignment?.pricing_mode ?? "package") !== commercial.pricing_mode
+    || (commercial.pricing_mode === "per_deliverable" &&
+      !isDeepStrictEqual(previousAssignment?.commercial_rows ?? [], commercial.commercial_rows));
+  const commercialScope = assignmentCommercialChangeScope(existingLineMeta, {
+    ...vatPayload, currency_code: currency,
+    agency_fee_percent: commercialBilling.agency_fee_percent,
+    usage_rights_amount: commercialBilling.usage_rights_amount,
+    usage_rights_cost: commercialBilling.usage_rights_cost,
+  });
+  // Dates, names and operational status must not redistribute already-invoiced ads.
+  if (canSyncAssignment && !vatOnlyChange &&
+      (assignmentScopeChanged || commercialScope.client || commercialScope.vendor)) {
     const vendorVatPayload = buildVendorCostVatPayload({
       cost_before_vat: vatPayload.cost_before_vat,
       cost_vat_percent: vatPayload.cost_vat_percent,
