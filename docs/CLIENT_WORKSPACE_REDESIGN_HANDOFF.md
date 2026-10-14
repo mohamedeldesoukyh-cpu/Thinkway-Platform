@@ -1,3 +1,57 @@
+# Client workspace redesign — screenshot mismatch correction
+
+Date: 2026-10-15. Isolated checkout: `client-workspace-redesign/thinkway-platform`, branch `codex/client-workspace-redesign-release`, base HEAD `f915be7f0c8cef34aabf744d1f04dded3bfe744a`.
+
+This checkpoint supersedes the older status below. The prior redesign was released (dev f915be7f, production f3d0cb81). On 2026-10-15 the owner explicitly approved committing and pushing these corrections to dev and production. Release sequence: dev deployment and verification first, then the identical presentation patch on main and an approved production deployment. No database changes or notifications. Final deployment IDs and verification results are recorded separately after deployment.
+
+## Cause and presentation corrections
+
+The owner's screenshots correctly showed remaining legacy presentation. The existing creator-avatar link still imposed its circle/border/shadow; card content lacked the reference's inset spacing; the old profile actions and note form displaced the reference's About/category/audience sections; the main summary exposed extra legacy metrics; and option rows emphasized base price instead of total including AF. Existing option margins and inherited layout rules also inflated spacing.
+
+- `features/client-workspace/components/creators-workspace.tsx`: inset creator-row structure and option summary styling; options remain default-open with accessible Show/Hide and chevron; prominent option amount uses the already-computed price plus agency fee; profile shows real About text when available, category tiles and platform audience before the existing feedback controls. Mobile profile opening scrolls into view, focuses Back, Escape closes and restores the originating button's focus. Long bilingual names wrap. No fabricated biography is inserted.
+- `features/client-workspace/components/proposal-summary-card.tsx`: compact Selected / Before fees / Agency fees / Total investment bar; existing priced counts and bulk selection controls remain under accessible Details. Errors and required-pricing notices remain visible. Review selection uses the existing navigation and permission rules.
+- `features/client-workspace/components/creator-investment.tsx` and new `workspace-money.tsx`: smaller currency code around the existing canonical formatted value; no calculation changes.
+- `features/client-workspace/components/review-platform-breakdown.tsx`: reference-style platform audience metadata; existing data and honest missing-value labels retained.
+- `features/client-workspace/styles/workspace-redesign.css`: scoped layout, typography, selected-state color, portrait shape, spacing and money corrections. Stacked creator portrait rail stays 150px. Profile is 96x120 desktop / 72x90 mobile. Removed legacy circular link styling and redundant option margins. Added bounded intermediate grid tracks and circular creator selection markers; option checkboxes remain square.
+
+Existing pricing, currency conversion, selected-option totals, action handlers, approval locks and server access checks are preserved. The prototype's zero-before-selection calculation was not introduced.
+
+## Final validation
+
+- Client-workspace tests: **350 passed, 0 failed**.
+- TypeScript: **PASS**.
+- Production build: **PASS** after final code/CSS edits.
+- `git diff --check`: **PASS** (line-ending notices only).
+- Existing all-emitted-CSS measurement: **1,514,735 bytes = 1,479.2 KB**, approved hard limit **1,536,000 bytes = 1,500 KB**; headroom **21,265 bytes = 20.8 KB**.
+- Performance check: **7 pass / 5 soft warnings / 0 failures**. Existing soft thresholds for total JS/CSS, JS file count, client module count and largest client source still warn; no checks disabled or limits changed.
+- Logs: `redesign-correction-{tests,types,build,budget}.log` (ignored local artifacts).
+
+## Authorized browser evidence
+
+Built candidate at `http://127.0.0.1:3188` uses the existing approved synthetic development review. Full signed URL remains local and is not committed here. Client ID `228a7ed3-ca38-4c5a-ba25-ab1579ab66c3`; brand `a6e9cc35-99d6-4101-b312-a64f694ce961`; quotation `187b8241-fc1e-45b8-b566-02c30fff8599`; review `99aff87a-5afb-47e3-961d-3362d42e5f1c`. Cleanup IDs unchanged; no records created/modified this pass.
+
+Built candidate: anonymous authorized link opens; EGP 1,500 + 150 fees = 1,650 retained across sections; existing approved/locked selections remain disabled; Your Selection, Commercial and Overview load; Campaign retains existing entitlement gating. An invalid signature is rejected. No final approval submitted. Desktop 1440 and mobile 390 inspected.
+
+Because the dev manual-creator fixture has no portrait/options, a loopback-only component harness at `http://127.0.0.1:3189` renders the actual production components with dummy profile data, a synthetic portrait image and in-memory action stubs. This is UI/interaction evidence, NOT proof of backend option persistence. Harness files are ignored in `.tmp-cw-visual`; it has no credentials and sends no data or notifications.
+
+Harness checks: desktop 1440/1536, intermediate 1000, narrow 390/360; actual img portraits; single/multiple/unpriced options; long bilingual names; no document horizontal overflow. Collapsing and reopening retains options 1 and 3; adding option 2 changes totals correctly from 120,000 + 12,000 = 132,000 to 150,000 + 15,000 = 165,000. Search works. Mobile profile opens into view with Back focused; Escape returns focus to the originating profile button. These selections were local memory only.
+
+Fresh screenshots:
+- [Desktop portrait/options/profile, synthetic component harness](redesign-evidence/cw-corrected-desktop.png)
+- [Mobile card/options, synthetic component harness](redesign-evidence/cw-corrected-mobile-cards.png)
+- [Mobile long-name profile, synthetic component harness](redesign-evidence/cw-corrected-mobile-profile.png)
+- [Built candidate desktop, approved dev fixture](redesign-evidence/cw-built-desktop.png)
+- [Built candidate mobile, approved dev fixture](redesign-evidence/cw-built-mobile.png)
+
+## Practical limits
+
+The authoritative Claude HTML source and the owner's rendered reference screenshots were used. Browser URL policy still blocks opening the file reference; no alternate hosting or browser-policy bypass was attempted. Therefore do not claim certified pixel-for-pixel rendered reference parity. Actual profile content, available metadata, permission-controlled feedback and missing-price messages intentionally remain data-dependent. Real iPhone hardware, final terms approval, full server multi-option persistence and live revoked/expired/cross-client checks were not exercised in this presentation-only pass. The existing automated security/selection suite passes; no security implementation changed.
+
+The generated `performance/reports/latest-check.json` was already dirty before this pass and was refreshed by the checker; treat it separately from intentional source changes. Keep unrelated primary-checkout work untouched.
+
+---
+
+## Historical checkpoints (older statuses below)
 # Client workspace redesign — implementation checkpoint
 
 Date: 2026-10-14. Base: develop `8e72597fe582c55044180f7b917d6280178ea224`.

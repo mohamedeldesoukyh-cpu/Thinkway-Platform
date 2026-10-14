@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useRouter } from "next/navigation";
 
@@ -30,6 +30,7 @@ import type { ClientWorkspaceView } from "../types";
 import { postCreatorApprovalSection } from "../visible-sections";
 import { clientShowsCostAndFees } from "../quotation-client-facing";
 import { useClientWorkspaceState } from "./client-workspace-state";
+import { WorkspaceMoney } from "./workspace-money";
 import { IconCheck } from "./review-icons";
 
 function money(value: number | undefined, currency: string): string {
@@ -55,7 +56,7 @@ function Row({
         {label}
         {hint ? <span className="hint">{hint}</span> : null}
       </span>
-      <span className={missing ? "v tbc" : "v"}>{value}</span>
+      <span className={missing ? "v tbc" : "v"}><WorkspaceMoney value={value} /></span>
     </div>
   );
 }
@@ -72,7 +73,7 @@ function Metric({
   return (
     <div className="sumbar-m">
       <span className="l">{label}</span>
-      <span className={missing ? "v tbc" : "v"}>{value}</span>
+      <span className={missing ? "v tbc" : "v"}><WorkspaceMoney value={value} /></span>
     </div>
   );
 }
@@ -103,6 +104,8 @@ export function ProposalSummaryCard({
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const detailsId = useId();
   const pendingIds = view.journey?.pendingCommercialApprovalCreatorIds ?? [];
   const lockedIds = (view.journey?.clientApprovedCreatorIds ?? []).filter(
     (id) => !pendingIds.includes(id)
@@ -214,17 +217,11 @@ export function ProposalSummaryCard({
     return (
       <>
       <div className="summary sumbar">
-        <Metric label="Selected" value={`${calc.selectedCount} / ${view.creators.length}`} />
-        {!strategicOnly ? <Metric label="Priced" value={String(calc.pricedSelectedCount)} /> : null}
-        {!strategicOnly ? <Metric
-          label="Pricing required"
-          value={String(calc.unpricedSelectedCount)}
-          missing={calc.unpricedSelectedCount > 0}
-        /> : null}
+        <Metric label="Selected" value={`${calc.selectedCount} of ${view.creators.length}`} />
         {!strategicOnly && showCostAndFees ? (
           <>
         <Metric
-          label="Cost"
+          label="Before fees"
           value={hasPricedTotals ? formatMoneyKpi(clientCost, currency) : TO_BE_CONFIRMED}
           missing={!hasPricedTotals}
         />
@@ -241,8 +238,33 @@ export function ProposalSummaryCard({
           missing={!hasPricedTotals}
         /> : null}
         <div className="sp" />
-        {showBulkControls || showContinueToSelection || showApproveSelected || confirmed ? (
-          <div className="sumbar-cta">
+        <div className="sumbar-cta">
+            <button type="button" className="btn ghost cw-summary-toggle" aria-expanded={detailsOpen} aria-controls={detailsId} onClick={() => setDetailsOpen(open => !open)}>Details</button>
+            {confirmed ? (
+              <span className="sc ok">Client Approved</span>
+            ) : showContinueToSelection ? (
+              <button
+                type="button"
+                className="btn pri"
+                disabled={!canContinueToSelection}
+                onClick={() => goToSection(shortlistContinueToYourSelection().section)}
+              >
+                Review selection
+              </button>
+            ) : showApproveSelected ? (
+              <button type="button" className="btn pri" disabled={!canAct} onClick={runPrimary}>
+                <IconCheck />
+                {APPROVE_SELECTED_CREATORS_LABEL}
+              </button>
+            ) : null}
+          </div>
+        <div id={detailsId} className="cw-summary-details" hidden={!detailsOpen}>
+        {!strategicOnly ? <Metric label="Priced" value={String(calc.pricedSelectedCount)} /> : null}
+        {!strategicOnly ? <Metric
+          label="Pricing required"
+          value={String(calc.unpricedSelectedCount)}
+          missing={calc.unpricedSelectedCount > 0}
+        /> : null}
             {showBulkControls ? (
               <>
                 <button
@@ -263,26 +285,10 @@ export function ProposalSummaryCard({
                 </button>
               </>
             ) : null}
-            {confirmed ? (
-              <span className="sc ok">Client Approved</span>
-            ) : showContinueToSelection ? (
-              <button
-                type="button"
-                className="btn pri"
-                disabled={!canContinueToSelection}
-                onClick={() => goToSection(shortlistContinueToYourSelection().section)}
-              >
-                {CONTINUE_TO_YOUR_SELECTION_LABEL}
-              </button>
-            ) : showApproveSelected ? (
-              <button type="button" className="btn pri" disabled={!canAct} onClick={runPrimary}>
-                <IconCheck />
-                {APPROVE_SELECTED_CREATORS_LABEL}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-        {error ? <p className="sumbar-msg">{error}</p> : emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
+
+{emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
+</div>
+{error ? <p className="sumbar-msg" role="alert">{error}</p> : calc.unpricedSelectedCount > 0 && emptyHint ? <p className="sumbar-msg">{emptyHint}</p> : null}
       </div>
       {confirmOpen ? (
         <Dialog open={confirmOpen} onOpenChange={(open) => { if (!pending) setConfirmOpen(open); }}>

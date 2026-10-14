@@ -79,8 +79,8 @@ export function ReviewPlatformBreakdown({
               {formatPlatformLabel(row.platform)}
             </p>
             {followers ? <p className="v">{followers}</p> : null}
-            {tier ? <span className="platform-tier" aria-label={`${formatPlatformLabel(row.platform) ?? row.platform} tier: ${tier}`}>{tier}</span> : null}
-            {er ? <p className="er">{er}</p> : null}
+            <div className="cw-platform-footer">{tier ? <span className="platform-tier" aria-label={`${formatPlatformLabel(row.platform) ?? row.platform} tier: ${tier}`}>{tier}</span> : null}
+            {er ? <p className="er">{er} engagement</p> : <p className="er">Engagement not available</p>}</div>
           </div>
         );
       })}
