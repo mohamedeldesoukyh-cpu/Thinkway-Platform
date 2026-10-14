@@ -1557,3 +1557,19 @@ console.log("quotation-document.test.ts passed");
  }
 }
 
+
+// Campaign title must survive brand/client projection in both list reports.
+{
+  for (const template of ["creator-list", "client-list-by-name"] as const) {
+    const doc = buildQuotationDocument(mockDetail(), { template });
+    doc.name = "Fresh CookerPro Puls X Washing Machine Influencers Campaign";
+    doc.brandName = "Fresh";
+    doc.clientName = "Fresh Electric & Home Appliances";
+    const html = buildQuotationHtml(doc);
+    assert.match(html, /<h1[^>]*>Fresh CookerPro Puls X Washing Machine Influencers Campaign<\/h1>/);
+    assert.ok(html.includes("<b>Fresh CookerPro Puls X Washing Machine Influencers Campaign</b>"));
+    assert.match(html, /Fresh Electric &amp; Home Appliances/);
+    assert.match(html, /.cov .cov__client h1\{font-size:52px/);
+    assert.match(html, /.ph__c b\{font-size:16px/);
+  }
+}

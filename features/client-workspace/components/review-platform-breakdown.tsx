@@ -17,10 +17,25 @@ export function ReviewPlatformBreakdown({
   variant,
 }: {
   rows: ClientPlatformBreakdownRow[];
-  variant: "list" | "detail";
+  variant: "list" | "detail" | "followers";
 }) {
   const platforms = visibleRows(rows);
   if (platforms.length === 0) return null;
+
+  if (variant === "followers") {
+    return <div className="cw-platform-followers">
+      {platforms.map(row => {
+        const label = formatPlatformLabel(row.platform) ?? row.platform;
+        const tier = clientPlatformTier(row.followers);
+        return <span className="cw-platform-followers-item" key={row.platform} aria-label={label}>
+          <ReviewPlatformMark platform={row.platform} />
+          <span className="cw-platform-followers-name">{label}</span>
+          <b>{formatOptionalCompactCount(row.followers) ?? "Not available"}</b>
+          {tier ? <span className="platform-tier" aria-label={label + " tier: " + tier}>{tier}</span> : null}
+        </span>;
+      })}
+    </div>;
+  }
 
   if (variant === "list") {
     return (

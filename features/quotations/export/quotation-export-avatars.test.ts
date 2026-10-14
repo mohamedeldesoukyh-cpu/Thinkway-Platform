@@ -346,3 +346,15 @@ assertOriginalByteAvatarEmbedPreservesDimensions()
     process.exitCode = 1;
   });
 
+
+async function assertListThumbnailFallback() {
+  const sharp = (await import("sharp")).default;
+  const { quotationAvatarDataUri } = await import("./quotation-export-avatars");
+  const jpeg = await sharp({create:{width:150,height:150,channels:3,background:{r:50,g:90,b:100}}}).jpeg().toBuffer();
+  assert.equal(await quotationAvatarDataUri(jpeg, "image/jpeg", true), "data:image/jpeg;base64," + jpeg.toString("base64"), "list retains the original valid 150px portrait bytes");
+  assert.equal(await quotationAvatarDataUri(jpeg, "image/jpeg", false), null, "other decks retain the 160px quality floor");
+  assert.equal(await quotationAvatarDataUri(jpeg.subarray(0, 50), "image/jpeg", true), null, "truncated images stay rejected");
+  const tiny = await sharp({create:{width:40,height:40,channels:3,background:{r:50,g:90,b:100}}}).png().toBuffer();
+  assert.equal(await quotationAvatarDataUri(tiny, "image/png", true), null, "tiny icons cannot replace portraits");
+}
+assertListThumbnailFallback().catch(error => { console.error(error); process.exitCode = 1; });

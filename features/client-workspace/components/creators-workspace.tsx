@@ -468,7 +468,7 @@ export function CreatorsWorkspace({
       ) : (
       <div className="layout">
         <div ref={listRef} className={`clist${stackedRows ? " cw-stacked" : ""}`}>
-          <div className="cw-column-head" aria-hidden="true"><span /><span>Creator</span><span>Reach</span><span>Deliverables</span><span>Investment</span><span>Agency fees</span><span>Total investment</span><span /></div>
+          <div className="cw-column-head" aria-hidden="true"><span /><span>Creator</span><span>Followers</span><span>Deliverables</span><span>Investment</span><span>Agency fees</span><span>Total investment</span><span /></div>
           {filtered.map((creator, index) => {
             const identity = clientCreatorIdentity(creator.displayName, creator.handle);
             const categories = listCreatorCategoryStickers(
@@ -477,8 +477,6 @@ export function CreatorsWorkspace({
             const location = formatLocation(creator.city, creator.country);
             const sub = [formatHandleLabel(identity.handle), location, ...categories].filter(Boolean).join(" · ");
             const platformRows = breakdownForCreator(creator, brief?.creatorId === creator.creatorId ? brief : null);
-            const knownReach = platformRows.filter(row => row.followers != null);
-            const reach = knownReach.reduce((sum, row) => sum + (row.followers ?? 0), 0);
             const state = selection[creator.creatorId] ?? creator.selection;
             const description = clientCreatorCardDescription(creator);
             const summaryLabel = deliverablesLabel(creator.deliverableItems, creator.deliverables);
@@ -542,8 +540,8 @@ export function CreatorsWorkspace({
                   <div className="nm" dir="auto">{identity.name}</div>
                   {sub ? <div className="sub">{sub}</div> : null}
                 </div>
-                <div className="cw-row-reach"><span className="cw-field-label">Reach</span>
-                  {knownReach.length ? <><b>{formatCompactCount(reach)}</b><span>{platformRows.length} {platformRows.length === 1 ? "platform" : "platforms"}</span></> : <span className="tbc">{NOT_AVAILABLE}</span>}
+                <div className="cw-row-reach"><span className="cw-field-label">Followers</span>
+                  {platformRows.length ? <ReviewPlatformBreakdown rows={platformRows} variant="followers" /> : <span className="tbc">{NOT_AVAILABLE}</span>}
                 </div>
                 <div className="ccfoot cw-commercial-row">
                   <div className="cw-row-deliverables"><span className="cw-field-label">Deliverables</span>

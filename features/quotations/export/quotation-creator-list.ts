@@ -42,7 +42,7 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
     tier: g.highestPlatformTier ?? g.rows[0]?.tier, markets: [g.country], platforms: [...quotedPlatforms(g, shortlist)],
   }));
   return renderCreatorListReport({
-    name: doc.brandName || doc.clientName || doc.name, clientName: shortlist ? doc.clientName : undefined, reference: doc.serial,
+    name: doc.name || doc.brandName || doc.clientName, clientName: doc.clientName, reference: doc.serial,
     issuedDate: doc.issueDateLabel, clientLogo: doc.clientLogo, creators,
   }, {
     title: performanceOnly ? "Client List by Name" : "Creator List",
@@ -69,6 +69,14 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
     },
     closingContent: `<div class="end__hd"><span class="end__eye">${e(doc.name)}</span><h1>${creators.length} creators</h1><p>${performanceOnly ? "Creator profiles and performance" : "Client quotation"}</p></div>`,
     extraCss: clientListPerformanceStyles("en", height, true) + `
+      .cov .cov__client h1{font-size:52px;letter-spacing:-1px;line-height:1.1;max-width:28ch;overflow-wrap:anywhere}
+      .cov__recipient{font-family:inherit;color:#fff;font-size:22px;line-height:1.35;margin:22px 0 12px;max-width:52ch;overflow-wrap:anywhere}
+      .cov__count{margin-top:32px}
+      .ph{height:auto;min-height:64px}
+      .ph__c{min-width:0;flex-wrap:wrap;gap:8px 12px}
+      .ph__c b{font-size:16px;line-height:1.35;white-space:normal;overflow-wrap:anywhere}
+      .ph__c .report-heading{display:grid;gap:4px;min-width:0;flex:0 1 780px}
+      .ph__c .report-client-name{font-size:12px;line-height:1.4;letter-spacing:.3px;text-transform:none;white-space:normal;overflow-wrap:anywhere}
       .price{display:grid;gap:3px;border-top:1px solid #e5e3ee;padding-top:5px;margin-top:5px;overflow-wrap:anywhere;font-size:12px}
       .price p{white-space:normal;text-align:start;font-size:11px;line-height:1.5;margin:0}
       .price small{font-size:10px;line-height:1.5;color:#666477}

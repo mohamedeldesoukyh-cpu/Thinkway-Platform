@@ -29,7 +29,7 @@ import {
   resolveExportGroupFollowers,
   resolveExportGroupPlatform,
 } from "./quotation-export-utils";
-import { isCreatorDeckTemplate } from "./quotation-template";
+import { isCreatorDeckTemplate, isQuotationListTemplate } from "./quotation-template";
 
 /**
  * Best quotation-preview avatar from already-stored platform sources.
@@ -179,10 +179,19 @@ async function resolveExportAvatarSupabase() {
   }
 }
 
+/** Keep standard 150px platform portraits in list reports after the resolver tries sharper sources.
+ * Other decks retain their existing quality floor; malformed/truncated images remain rejected. */
+export async function quotationAvatarDataUri(buffer: Buffer, contentType: string, listReport = false): Promise<string | null> {
+  const minEdge = listReport ? 150 : MIN_DISPLAYABLE_AVATAR_EDGE;
+  if (!(await exportImageBufferMeetsMinEdge(buffer, minEdge))) return null;
+  return toUnprocessedImageDataUri(buffer, contentType);
+}
+
 async function embedAvatarDataUri(
   src: string | null,
   profileUrl: string | null,
-  supabase: Awaited<ReturnType<typeof resolveExportAvatarSupabase>> = null
+  supabase: Awaited<ReturnType<typeof resolveExportAvatarSupabase>> = null,
+  listReport = false
 ): Promise<string | null> {
   const trimmedSrc = src?.trim() || null;
   const trimmedProfile = profileUrl?.trim() || null;
@@ -199,11 +208,8 @@ async function embedAvatarDataUri(
 
   if (result.ok) {
     const buffer = Buffer.from(result.buffer);
-    if (!(await exportImageBufferMeetsMinEdge(buffer, MIN_DISPLAYABLE_AVATAR_EDGE))) {
-      return null;
-    }
     const contentType = result.contentType || detectImageContentType(buffer);
-    return toUnprocessedImageDataUri(buffer, contentType);
+    return quotationAvatarDataUri(buffer, contentType, listReport);
   }
 
   if (trimmedSrc) {
@@ -229,7 +235,8 @@ export async function embedQuotationDocumentAvatars(
       const embedded = await embedAvatarDataUri(
         group.avatarUrl,
         group.profileUrl,
-        supabase
+        supabase,
+        isQuotationListTemplate(doc.template)
       );
       if (embedded?.startsWith("data:")) {
         return {
