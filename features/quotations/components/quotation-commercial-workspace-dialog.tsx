@@ -1,4 +1,5 @@
 "use client";
+import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -314,7 +315,7 @@ export function QuotationCommercialWorkspaceDialog({
           draftToLinePending(resolved, itemsById.get(id)?.deliverables)
         );
       };
-      if (prevCurrency !== nextCurrency) {
+      if (prevCurrency !== nextCurrency || needsQuotationSystemFx(nextCurrency, next.fxRateToEgp)) {
         void withResolvedFx(next).then(apply);
         return;
       }
@@ -331,7 +332,7 @@ export function QuotationCommercialWorkspaceDialog({
             const prevCurrency = (drafts[id]?.costCurrency || itemsById.get(id)?.cost_currency || "EGP").toUpperCase();
             const nextCurrency = (draft.costCurrency || "EGP").toUpperCase();
             const hasRealFx =
-              nextCurrency === "EGP" || (draft.fxRateToEgp ?? 0) > 0;
+              !needsQuotationSystemFx(nextCurrency, draft.fxRateToEgp);
             if (prevCurrency === nextCurrency && hasRealFx) {
               return [id, draft] as const;
             }
