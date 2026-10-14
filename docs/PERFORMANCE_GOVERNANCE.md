@@ -147,3 +147,7 @@ Data sources: committed budgets/baseline + last CI/local report JSON.
 - Bundle report generated on every production build in CI  
 - Engineers have a single checklist before merge  
 - Further gains are incremental under budgets — not ad-hoc “optimization seasons”
+
+### Owner-approved total CSS budget revision — 2026-10-14
+
+The owner approved raising only `bundle.totalCssKb.hard` from 1,400 to 1,500 KB (1,536,000 bytes). This supersedes the earlier hard limit and is a policy revision, not CSS optimization. The existing 1,024-byte units, all emitted CSS files, soft threshold, measurement method and all other limits/checks remain unchanged. Browser and visual release validation remain separate requirements.
