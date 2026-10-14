@@ -90,3 +90,11 @@ test("reporting reads assignment state rather than interpreting publication stat
  assert.equal(events.reduce((n,e)=>n+e.revenue,0),16940);
  assert.deepEqual(events,buildRecognitionEvents({...base,publications:[]}));
 });
+
+test("historical live creator lines without deliverable rows recognize their full matching commercials",()=> {
+ const events=buildRecognitionEvents({...input,lines:[{...line,metadata:{went_live:true,went_live_date:"2026-08-07"}}],deliverables:[],posts:[]});
+ const totals=aggregateCampaignDisplayFinancials({lines:[line],displayCurrency:"EGP",rateToEgpByCurrency:rates});
+ assert.equal(events.length,1); assert.equal(events[0].revenue,totals.revenue); assert.equal(events[0].gp,totals.gp);
+ assert.equal(events[0].date,"2026-08-07");
+ assert.deepEqual(buildRecognitionEvents({...input,deliverables:[],posts:[]}),[]);
+});
