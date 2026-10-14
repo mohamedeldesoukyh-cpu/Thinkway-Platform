@@ -21,7 +21,7 @@ export function buildPipelineRevenue(input: Parameters<typeof buildRecognitionEv
       const frozen = snapshot?.lines.find(l => l.id === current.id);
       if (snapshot && !frozen) continue;
       seen.add(current.id);
-      const line = frozen ? { ...current, ...frozen, campaign_header_id: current.campaign_header_id } : current;
+      const line = frozen ? { ...current, ...frozen, metadata: current.metadata, campaign_header_id: current.campaign_header_id } : current;
       const total = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: "EGP", rateToEgpByCurrency: input.rates }).revenue;
       const live = buildRecognitionEvents({ ...input, lines: [line] }).reduce((sum, e) => sum + e.revenue, 0);
       approvedRevenue += total; recognizedRevenue += live; pipelineRevenue += Math.max(0, total - live);
