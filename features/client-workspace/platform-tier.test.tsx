@@ -55,3 +55,19 @@ test("platform tiers use the shared classification boundaries", () => {
   assert.equal(clientPlatformTier(539_003), "Macro");
   assert.equal(clientPlatformTier(451_200), "Mid");
 });
+
+test("creator-card followers show platform icons, separate counts and matching tiers", () => {
+  const html = renderToStaticMarkup(<ReviewPlatformBreakdown variant="followers" rows={[
+    {platform:"instagram", followers:1_200_000, lines:[]},
+    {platform:"tiktok", followers:45_000, lines:[]},
+    {platform:"youtube", followers:undefined, lines:[]},
+  ]} />);
+  assert.match(html, /Instagram tier: Mega/);
+  assert.match(html, /TikTok tier: Micro/);
+  assert.match(html, /platform-icons\/instagram/);
+  assert.match(html, /platform-icons\/tiktok/);
+  assert.match(html, /1\.2M/);
+  assert.match(html, /45\.0K/);
+  assert.match(html, /Not available/);
+  assert.doesNotMatch(html, /YouTube tier:|Reach|1\.245M/);
+});

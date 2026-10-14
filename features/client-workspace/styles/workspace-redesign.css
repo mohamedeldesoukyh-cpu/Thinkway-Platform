@@ -308,3 +308,11 @@
 
 .tw-review.cw-redesign .cw-save-status { font-size:12px; color:var(--muted); }
 .tw-review.cw-redesign .cw-option-error { margin:0; padding:10px 16px; color:var(--bad); background:var(--bad-bg); font-size:13px; }
+
+/* Per-platform followers on creator cards; never present an audience sum as reach. */
+.tw-review.cw-redesign .cw-platform-followers{display:flex;flex-wrap:wrap;gap:6px 12px;min-width:0}
+.tw-review.cw-redesign .cw-platform-followers-item{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0;font-size:12px}
+.tw-review.cw-redesign .cw-platform-followers-item .plat-mark-wrap{width:18px;height:18px;flex:none}
+.tw-review.cw-redesign .cw-platform-followers-item .plat-mark{width:18px;height:18px}
+.tw-review.cw-redesign .cw-platform-followers-name{color:var(--muted);font-size:11px}
+.tw-review.cw-redesign .cw-row-reach .cw-platform-followers-item b{font-size:13px}
