@@ -14,12 +14,22 @@ export type RecognitionPost = {
   revenue_before_vat: number; cost_before_vat: number;
 };
 export type RecognitionPublication = {
+  views?: number | null; plays?: number | null; likes?: number | null; comments?: number | null; shares?: number | null; engagement_views?: number | null;
   id?: string; campaign_line_id?: string | null; platform?: string; publication_type?: string; content_url?: string | null;
   assignment_deliverable_id: string | null; assignment_post_schedule_id: string | null;
   publication_date: string | null; status: string;
 };
 export type RecognitionEvent = { campaign_line_id?: string; campaign_header_id: string; date: string; revenue: number; cost: number; gp: number };
-const LIVE = new Set(["posted", "published", "live"]);
+const LIVE = new Set(["posted", "published", "live", "verified"]);
+
+function hasPublicationEvidence(publication: RecognitionPublication): boolean {
+  if (LIVE.has(publication.status)) return true;
+  // Historical imports can retain Draft even after performance was collected.
+  // A dated live URL plus observed engagement is evidence; forecasts are excluded.
+  return !!publication.content_url?.trim() && ["draft", "scheduled", "archived"].includes(publication.status) &&
+    [publication.views, publication.plays, publication.likes, publication.comments, publication.shares, publication.engagement_views]
+      .some(value => Number(value ?? 0) > 0);
+}
 
 /** A planned date, commercial approval, invoice, or payment is not proof of going live. */
 export function buildRecognitionEvents(input: {
@@ -53,7 +63,7 @@ export function buildRecognitionEvents(input: {
     const legacyByChild = new Map<string, RecognitionPublication[]>();
     const seenPublications = new Set<string>();
     for (const publication of input.publications) {
-      if (!LIVE.has(publication.status) || !dateOnly(publication.publication_date) || publication.assignment_post_schedule_id) continue;
+      if (!hasPublicationEvidence(publication) || !dateOnly(publication.publication_date) || publication.assignment_post_schedule_id) continue;
       let candidates = publication.assignment_deliverable_id
         ? children.filter(d => d.id === publication.assignment_deliverable_id)
         : publication.campaign_line_id === line.id && publication.platform
@@ -85,7 +95,7 @@ export function buildRecognitionEvents(input: {
       const urCost = distributeAmountByWeights(urCosts[i], unitWeights("cost_before_vat"));
       const af = distributeAmountByWeights(fees[i], revWeights);
       const dates = units.map(unit => {
-        const linked = input.publications.filter(p => LIVE.has(p.status) && p.assignment_post_schedule_id === unit.id)
+        const linked = input.publications.filter(p => hasPublicationEvidence(p) && p.assignment_post_schedule_id === unit.id)
           .map(p => dateOnly(p.publication_date)).filter((d): d is string => !!d).sort();
         return linked[0] ?? (LIVE.has(unit.status) ? dateOnly(unit.live_date) : null);
       });
