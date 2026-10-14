@@ -65,9 +65,17 @@ export const PARENT_TRACK_TO_CHILD_FIELD: Record<string, string> = {
 };
 
 /** Expanded ads use their own column settings, independently of creator financial columns. */
-export function visibleAdTracks(visible: (field: string) => boolean): string[] {
-  return Object.entries(PARENT_TRACK_TO_CHILD_FIELD).filter(([track, field]) =>
+export function visibleAdTracks(visible: (field: string) => boolean, order?: readonly string[]): string[] {
+  const tracks = Object.entries(PARENT_TRACK_TO_CHILD_FIELD).filter(([track, field]) =>
     field !== "fullDescriptionSpacer" && (track === "actions" ||
       (track === "billing" && visible("collection")) || visible(field))
   ).map(([track]) => track);
+  return order ? tracks.sort((a, b) => {
+    const rank = (track: string) => order.indexOf(PARENT_TRACK_TO_CHILD_FIELD[track]);
+    return rank(a) - rank(b);
+  }) : tracks;
+}
+
+export function buildAdCssGridCols(tracks: readonly string[]): string {
+  return tracks.map(track => track === "gp" ? "200px" : track === "actions" ? "100px" : assignmentCssGridTrack(track)).join(" ");
 }
