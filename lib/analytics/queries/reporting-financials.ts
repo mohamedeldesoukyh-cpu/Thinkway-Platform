@@ -1,4 +1,3 @@
-import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { aggregateCampaignDisplayFinancials, resolveLineCostAmount, type CampaignLineCommercialFxInput } from "@/lib/campaigns/campaign-display-financials";
 import { distributeAmountByWeights } from "@/lib/assignments/commercial-calculations";
 import { resolveClientTaxableBase } from "@/lib/assignments/client-billing-commercial";
@@ -21,15 +20,6 @@ export type RecognitionPublication = {
 };
 export type RecognitionEvent = { campaign_line_id?: string; campaign_header_id: string; date: string; revenue: number; cost: number; gp: number };
 const LIVE = new Set(["posted", "published", "live", "verified"]);
-
-function hasPublicationEvidence(publication: RecognitionPublication): boolean {
-  if (LIVE.has(publication.status)) return true;
-  // Historical imports can retain Draft even after performance was collected.
-  // A dated live URL plus observed engagement is evidence; forecasts are excluded.
-  return !!publication.content_url?.trim() && ["draft", "scheduled", "archived"].includes(publication.status) &&
-    [publication.views, publication.plays, publication.likes, publication.comments, publication.shares, publication.engagement_views]
-      .some(value => Number(value ?? 0) > 0);
-}
 
 /** A planned date, commercial approval, invoice, or payment is not proof of going live. */
 export function buildRecognitionEvents(input: {
@@ -60,25 +50,6 @@ export function buildRecognitionEvents(input: {
     const urs = distributeAmountByWeights(ur, weights(d => d.usage_rights_amount));
     const urCosts = distributeAmountByWeights(Number(line.usage_rights_cost ?? 0), weights(d => d.usage_rights_cost));
     const fees = distributeAmountByWeights(fee, weights(d => d.agency_fee_amount));
-    const legacyByChild = new Map<string, RecognitionPublication[]>();
-    const seenPublications = new Set<string>();
-    for (const publication of input.publications) {
-      if (!hasPublicationEvidence(publication) || !dateOnly(publication.publication_date) || publication.assignment_post_schedule_id) continue;
-      let candidates = publication.assignment_deliverable_id
-        ? children.filter(d => d.id === publication.assignment_deliverable_id)
-        : publication.campaign_line_id === line.id && publication.platform
-          ? children.filter(d => d.platform && canonicalPlatformKey(d.platform) === canonicalPlatformKey(publication.platform!)) : [];
-      const exact = candidates.filter(d => d.deliverable_type === publication.publication_type);
-      if (exact.length) candidates = exact;
-      // Older publications used assignment + platform instead of a post foreign key.
-      // Only unambiguous contracted matches can earn revenue; added-value posts cannot.
-      if (candidates.length !== 1) continue;
-      const key = publication.content_url || publication.id;
-      if (key && seenPublications.has(key)) continue;
-      if (key) seenPublications.add(key);
-      const list = legacyByChild.get(candidates[0].id) ?? [];
-      list.push(publication); legacyByChild.set(candidates[0].id, list);
-    }
     children.forEach((child, i) => {
       const posts = input.posts.filter(p => p.assignment_deliverable_id === child.id).sort((a, b) => a.id.localeCompare(b.id));
       const units = posts.length ? posts : Array.from({ length: Math.max(1, child.quantity || 1) }, (_, index) => ({ id: `${child.id}:${index}`, assignment_deliverable_id: child.id,
@@ -94,19 +65,8 @@ export function buildRecognitionEvents(input: {
       const urRev = distributeAmountByWeights(urs[i], revWeights);
       const urCost = distributeAmountByWeights(urCosts[i], unitWeights("cost_before_vat"));
       const af = distributeAmountByWeights(fees[i], revWeights);
-      const dates = units.map(unit => {
-        const linked = input.publications.filter(p => hasPublicationEvidence(p) && p.assignment_post_schedule_id === unit.id)
-          .map(p => dateOnly(p.publication_date)).filter((d): d is string => !!d).sort();
-        return linked[0] ?? (LIVE.has(unit.status) ? dateOnly(unit.live_date) : null);
-      });
-      const occupied = new Set<number>();
-      for (const publication of (legacyByChild.get(child.id) ?? []).sort((a,b) => (a.publication_date ?? "").localeCompare(b.publication_date ?? ""))) {
-        const date = dateOnly(publication.publication_date)!;
-        let index = dates.findIndex((d, i) => d === date && !occupied.has(i));
-        if (index < 0) index = dates.findIndex((d, i) => !d && !occupied.has(i));
-        if (index < 0) continue;
-        dates[index] = date; occupied.add(index);
-      }
+      // Manual dates and Performance publications synchronize this persisted state atomically.
+      const dates = units.map(unit => LIVE.has(unit.status) ? dateOnly(unit.live_date) : null);
       units.forEach((unit, j) => {
         const date = dates[j];
         const financials = aggregateCampaignDisplayFinancials({ displayCurrency: "EGP", rateToEgpByCurrency: input.rates,

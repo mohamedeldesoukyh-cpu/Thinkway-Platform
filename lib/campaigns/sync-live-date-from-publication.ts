@@ -1,6 +1,6 @@
 /**
- * Sync Assignment Live ad date from campaign publications (per platform).
- * Manual overwrites are preserved until the user resets to the publication default.
+ * Publication writes synchronize the entire creator package through database triggers.
+ * Actual publication dates take priority over copied manual dates.
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -88,123 +88,10 @@ export async function syncLiveDateFromPublication(
   supabase: SupabaseClient<Database>,
   input: SyncLiveDateFromPublicationInput
 ): Promise<SyncLiveDateFromPublicationResult> {
-  const liveDate = normalizeDateOnly(input.publicationDate);
-  const lineId = input.campaignLineId?.trim() || null;
-  const platform = canonicalPlatformKey(input.platform);
-  if (!liveDate || !lineId || !platform) {
-    return { updatedDeliverables: 0, updatedPosts: 0, skippedManual: 0 };
-  }
-
-  const { data: deliverables, error } = await supabase
-    .from("assignment_deliverables")
-    .select("id, platform, live_date, metadata, locked_at")
-    .eq("campaign_line_id", lineId);
-
-  if (error || !deliverables?.length) {
-    return { updatedDeliverables: 0, updatedPosts: 0, skippedManual: 0 };
-  }
-
-  const matching = deliverables.filter(
-    (row) => canonicalPlatformKey(row.platform) === platform
-  );
-
-  let updatedDeliverables = 0;
-  let updatedPosts = 0;
-  let skippedManual = 0;
-
-  for (const deliverable of matching) {
-    if (deliverable.locked_at) continue;
-
-    const { data: posts } = await supabase
-      .from("assignment_post_schedule")
-      .select("id, live_date, metadata, locked_at")
-      .eq("assignment_deliverable_id", deliverable.id);
-
-    const deliverableMeta = readLiveDateMetadata(
-      (deliverable.metadata as Record<string, unknown> | null) ?? null
-    );
-
-    const applyToDeliverable =
-      input.force || deliverableMeta.live_date_source !== "manual";
-
-    if (!applyToDeliverable) {
-      skippedManual += 1;
-      // Keep publication default available for reset without overwriting the manual date.
-      const nextMeta = mergeLiveDateMetadata(
-        (deliverable.metadata as Record<string, unknown> | null) ?? null,
-        {
-          publication_live_date: liveDate,
-          publication_id: input.publicationId ?? null,
-        }
-      );
-      await supabase
-        .from("assignment_deliverables")
-        .update({ metadata: nextMeta as never })
-        .eq("id", deliverable.id);
-    } else {
-      const nextMeta = mergeLiveDateMetadata(
-        (deliverable.metadata as Record<string, unknown> | null) ?? null,
-        {
-          live_date_source: "publication",
-          publication_live_date: liveDate,
-          publication_id: input.publicationId ?? null,
-        }
-      );
-      const { error: deliverableError } = await supabase
-        .from("assignment_deliverables")
-        .update({
-          live_date: liveDate,
-          metadata: nextMeta as never,
-        })
-        .eq("id", deliverable.id);
-      if (!deliverableError) updatedDeliverables += 1;
-    }
-
-    for (const post of posts ?? []) {
-      if (post.locked_at) continue;
-      const postRawMeta =
-        (post.metadata as Record<string, unknown> | null) ?? null;
-      const postPlatform = canonicalPlatformKey(
-        typeof postRawMeta?.platform === "string"
-          ? postRawMeta.platform
-          : deliverable.platform
-      );
-      if (postPlatform && postPlatform !== platform) continue;
-
-      const postMeta = readLiveDateMetadata(postRawMeta);
-      const applyToPost =
-        input.force || postMeta.live_date_source !== "manual";
-
-      if (!applyToPost) {
-        skippedManual += 1;
-        const nextMeta = mergeLiveDateMetadata(postRawMeta, {
-          publication_live_date: liveDate,
-          publication_id: input.publicationId ?? null,
-        });
-        await supabase
-          .from("assignment_post_schedule")
-          .update({ metadata: nextMeta as never })
-          .eq("id", post.id);
-        continue;
-      }
-
-      const nextMeta = mergeLiveDateMetadata(postRawMeta, {
-        live_date_source: "publication",
-        publication_live_date: liveDate,
-        publication_id: input.publicationId ?? null,
-      });
-      const { error: postError } = await supabase
-        .from("assignment_post_schedule")
-        .update({
-          live_date: liveDate,
-          metadata: nextMeta as never,
-        })
-        .eq("id", post.id);
-      if (!postError) updatedPosts += 1;
-    }
-  }
-
-  return { updatedDeliverables, updatedPosts, skippedManual };
+  // Publication INSERT/UPDATE atomically reconciles the entire assignment in the database.
+  // Retained for callers that also refresh their UI after saving a publication.
+  void supabase; void input;
+  return { updatedDeliverables: 0, updatedPosts: 0, skippedManual: 0 };
 }
 
 /** Latest publication date for a campaign line + platform (YYYY-MM-DD). */
