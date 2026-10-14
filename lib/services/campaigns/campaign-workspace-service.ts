@@ -534,6 +534,7 @@ export async function getCampaignWorkspace(
     return {
       id: line.id,
       document_number: line.document_number,
+      went_live_date: typeof (line.metadata as Record<string, unknown>)?.went_live_date === "string" ? String((line.metadata as Record<string, unknown>).went_live_date) : null,
       name: line.name,
       description: line.description?.trim() || null,
       usage_period: readAssignmentUsagePeriod(line.metadata),

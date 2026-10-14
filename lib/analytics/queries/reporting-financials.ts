@@ -2,7 +2,7 @@ import { aggregateCampaignDisplayFinancials, resolveLineCostAmount, type Campaig
 import { distributeAmountByWeights } from "@/lib/assignments/commercial-calculations";
 import { resolveClientTaxableBase } from "@/lib/assignments/client-billing-commercial";
 
-export type RecognitionLine = CampaignLineCommercialFxInput & { id: string; campaign_header_id: string };
+export type RecognitionLine = CampaignLineCommercialFxInput & { id: string; campaign_header_id: string; metadata?: Record<string, unknown> | null };
 export type RecognitionDeliverable = {
   platform?: string; deliverable_type?: string; id: string; campaign_line_id: string; quantity: number; live_date: string | null;
   revenue_before_vat: number; cost_before_vat: number; usage_rights_amount: number;
@@ -35,7 +35,14 @@ export function buildRecognitionEvents(input: {
   for (const line of input.lines) {
     const lineEvents: RecognitionEvent[] = [];
     const children = input.deliverables.filter(d => d.campaign_line_id === line.id).sort((a, b) => a.id.localeCompare(b.id));
-    if (!children.length) continue;
+    if (!children.length) {
+      const date = dateOnly(typeof line.metadata?.went_live_date === "string" ? line.metadata.went_live_date : null);
+      if (date && line.metadata?.went_live === true) {
+        const f = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: "EGP", rateToEgpByCurrency: input.rates });
+        events.push({ campaign_line_id: line.id, campaign_header_id: line.campaign_header_id, date, revenue: f.revenue, cost: Math.round((f.revenue-f.gp)*100)/100, gp: f.gp });
+      }
+      continue;
+    }
     const weights = (pick: (d: RecognitionDeliverable) => number) => {
       const values = children.map(d => Math.max(0, Number(pick(d)) || 0));
       return values.some(v => v > 0) ? values : children.map(d => Math.max(1, d.quantity));
