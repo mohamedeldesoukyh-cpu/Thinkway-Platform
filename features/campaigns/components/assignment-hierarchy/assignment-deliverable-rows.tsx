@@ -1,5 +1,5 @@
 
-import { useOperationalChildColumnVisibleChecker } from "@/components/tables/operational-table-column-context";
+import { useOperationalChildColumnVisibleChecker, useOperationalTableChildColumnsContextOptional } from "@/components/tables/operational-table-column-context";
 import { PlusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { memo, useEffect, useTransition } from "react";
@@ -7,7 +7,7 @@ import { memo, useEffect, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { createAssignmentDeliverableAction } from "@/features/campaigns/actions/assignment-deliverable-actions";
 import type { AssignmentGridColumnId } from "@/features/campaigns/components/assignment-hierarchy/assignment-grid-column-layout";
-import { buildAssignmentCssGridCols, visibleAdTracks } from "@/features/campaigns/components/assignment-hierarchy/assignment-css-grid";
+import { buildAdCssGridCols, visibleAdTracks } from "@/features/campaigns/components/assignment-hierarchy/assignment-css-grid";
 import { DeliverableGroupRow } from "@/features/campaigns/components/assignment-hierarchy/deliverable-group-row";
 import { assignmentChildLeadingParentColumnIds } from "@/features/campaigns/components/assignment-hierarchy/hierarchy-utils";
 import { OperationalGridHeader } from "@/features/campaigns/components/assignment-hierarchy/editable-post-row";
@@ -49,8 +49,9 @@ export const AssignmentDeliverableRows = memo(function AssignmentDeliverableRows
   const leadingParentColumnIds =
     leadingParentColumnIdsProp ?? assignmentChildLeadingParentColumnIds(showExpandColumn);
   const childColumnVisible = useOperationalChildColumnVisibleChecker();
-  const parentTrackIds = visibleAdTracks(childColumnVisible);
-  const gridCols = buildAssignmentCssGridCols(parentTrackIds);
+  const childSettings = useOperationalTableChildColumnsContextOptional();
+  const parentTrackIds = visibleAdTracks(childColumnVisible, childSettings?.state.order);
+  const gridCols = buildAdCssGridCols(parentTrackIds);
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const locked = line.vendor_assignment_locked ?? false;

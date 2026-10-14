@@ -809,6 +809,10 @@ export function EditablePostRow({
                   </span>
                 </>
               )}
+              {!isVirtualPost && !deliverable.is_synthetic && postId ? (
+                <RecordLiveDateButton campaignId={campaignId} scheduleId={postId} liveDate={post.live_date}
+                  label={`${meta.platform} ${meta.deliverable_type} - ad ${post.sequence_number}`} />
+              ) : null}
             </div>
           </AssignmentGridCell>
         );
@@ -1152,10 +1156,7 @@ export function EditablePostRow({
         return (
           <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.actions}>
             <div className="flex min-w-0 flex-col items-end gap-1">
-              {!isVirtualPost && !deliverable.is_synthetic && postId ? (
-                <RecordLiveDateButton campaignId={campaignId} scheduleId={postId} liveDate={post.live_date}
-                  label={`${meta.platform} ${meta.deliverable_type} - ad ${post.sequence_number}`} />
-              ) : null}
+
               {col("workflow") ? (
                 canEdit && fieldsActive ? (
                   <Select
