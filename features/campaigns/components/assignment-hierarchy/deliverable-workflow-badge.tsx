@@ -7,7 +7,7 @@ const WORKFLOW_LABELS: Record<string, string> = {
   scheduled: "Scheduled",
   awaiting_approval: "Awaiting approval",
   approved: "Approved",
-  posted: "Posted",
+  posted: "Went live",
   verified: "Verified",
   cancelled: "Cancelled",
   assigned: "Assigned",

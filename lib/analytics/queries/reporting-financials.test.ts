@@ -35,9 +35,9 @@ test("approval, past schedule dates, and future live dates do not recognize reve
   assert.deepEqual(buildRecognitionEvents({ ...input, posts: posts.map(p => ({ ...p, status: "posted", live_date: "2027-01-01" })) }), []);
 });
 
-test("a linked publication recognizes once, without recognizing sibling ads", () => {
+test("a synchronized package recognizes every ad once using its assignment live date", () => {
   const publication = { assignment_deliverable_id: "d", assignment_post_schedule_id: "p2", status: "published", publication_date: "2026-10-01" };
-  const events = buildRecognitionEvents({ ...input, publications: [publication, publication] });
+  const events = buildRecognitionEvents({ ...input, posts: posts.map(p => ({...p,status:"posted",live_date:"2026-10-01"})), publications: [publication, publication] });
   assert.equal(events.length, 2);
   assert.equal(events[1].date, "2026-10-01");
   const total = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: "EGP", rateToEgpByCurrency: rates });
@@ -82,25 +82,11 @@ test("analytics cache isolates users and every filter", () => {
 });
 
 
-test("legacy assignment/platform publications recognize contracted ads once, without added-value platforms", () => {
-  const legacyInput = { ...input, deliverables: [{...child, platform: "instagram", deliverable_type: "instagram_reel"}],
-    posts: posts.map(p => ({...p, status: "draft"})), publications: [
-      {id: "old", campaign_line_id: "l", platform: "instagram", publication_type: "instagram_reel", content_url: "https://instagram.com/p/one", status: "published", publication_date: "2026-09-10", assignment_deliverable_id: null, assignment_post_schedule_id: null},
-      {id: "duplicate", campaign_line_id: "l", platform: "instagram", publication_type: "instagram_reel", content_url: "https://instagram.com/p/one", status: "published", publication_date: "2026-09-10", assignment_deliverable_id: null, assignment_post_schedule_id: null},
-      {id: "extra", campaign_line_id: "l", platform: "youtube", status: "published", publication_date: "2026-09-10", assignment_deliverable_id: null, assignment_post_schedule_id: null},
-    ] };
-  const events = buildRecognitionEvents(legacyInput);
-  assert.equal(events.length, 1);
-  assert.equal(events[0].revenue, 4235);
-});
-
-
-test("historical Draft publications need a dated live URL and observed performance; Verified also qualifies", () => {
- const publication = {id:"historical", assignment_deliverable_id:"d",assignment_post_schedule_id:"p2",publication_date:"2026-09-10",status:"draft",content_url:"https://instagram.com/p/live",views:100};
- const base={...input,posts:posts.map(p=>({...p,status:"draft"}))};
- assert.equal(buildRecognitionEvents({...base,publications:[publication]}).length,1);
- assert.equal(buildRecognitionEvents({...base,publications:[{...publication,views:0}]}).length,0);
- assert.equal(buildRecognitionEvents({...base,publications:[{...publication,content_url:null}]}).length,0);
- assert.equal(buildRecognitionEvents({...base,publications:[{...publication,publication_date:"2027-01-01"}]}).length,0);
- assert.equal(buildRecognitionEvents({...base,publications:[{...publication,status:"verified",views:0}]}).length,1);
+test("reporting reads assignment state rather than interpreting publication statuses independently", () => {
+ const publication = {assignment_deliverable_id:"d",assignment_post_schedule_id:"p2",publication_date:"2026-09-10",status:"draft"};
+ const base={...input,posts:posts.map(p=>({...p,status:"posted",live_date:"2026-09-10"}))};
+ const events=buildRecognitionEvents({...base,publications:[publication]});
+ assert.equal(events.length,2);
+ assert.equal(events.reduce((n,e)=>n+e.revenue,0),16940);
+ assert.deepEqual(events,buildRecognitionEvents({...base,publications:[]}));
 });

@@ -111,9 +111,12 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const revenueTax = computeVatLine({ beforeVat: draft.revenue + draft.urRevenue + afAmount, vatPercent: draft.revVat });
   const profit = rollupLineClientCommercial({ revenueBeforeVat: draft.revenue, usageRightsAmount: draft.urRevenue, usageRightsCost: urCostInRevenue, agencyFeePercent: draft.af, costBeforeVat: costInRevenue });
   const profitCost = roundMoney(costInRevenue + urCostInRevenue);
-  const health = profit.gp < 0 ? "weak" : profit.billableBase <= 0 ? "neutral" : profit.marginPercent >= 20 ? "healthy" : profit.marginPercent < 10 ? "weak" : "watch";
+  const displayedGp = fxFinancials && fx.valid ? fxFinancials.gp : profit.gp;
+  const displayedRevenue = fxFinancials && fx.valid ? fxFinancials.revenue : profit.billableBase;
+  const displayedMargin = fxFinancials && fx.valid ? fxFinancials.margin_percent : profit.marginPercent;
+  const health = displayedGp < 0 ? "weak" : displayedRevenue <= 0 ? "neutral" : displayedMargin >= 20 ? "healthy" : displayedMargin < 10 ? "weak" : "watch";
   const percent = (value: number | null) => value === null ? "—" : value.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + "%";
-  const profitAmount = revenueCurrency + " " + profit.gp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const profitAmount = (fxFinancials && fx.valid ? "EGP" : revenueCurrency) + " " + (fxFinancials && fx.valid ? fxFinancials.gp : profit.gp).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   async function saveFx() {
     if (pending || !fx.dirty || !fx.valid || drafts[selectedKey]) return;
     setPending(true); setMessage(null);
@@ -182,11 +185,11 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
       <label className="acp-currency">{vendorCorrection ? "Cost currency" : "Curr"}<select aria-label="Assignment editor currency" value={draft.currency} disabled={readOnly || (!vendorCorrection && fx.dirty) || Boolean(child) || costLocked || (!vendorCorrection && clientLocked)} onChange={event => change("currency", event.target.value)}>{!currencies.some(entry => entry.value === draft.currency) && <option value={draft.currency}>{draft.currency}</option>}{currencies.map(entry => <option key={entry.value} value={entry.value}>{entry.value}</option>)}</select></label>
       <div className="acp-identity"><strong>{formatDocumentNumberForDisplay(line.document_number)} · {formatCreatorDisplayName(line.assignment?.influencer_name ?? line.name)}</strong><span>{child ? `Child · ${selectedPost?.platform ?? child.platform} · ${selectedPost?.deliverable_type_label ?? child.deliverable_type_label} · ${isPackageChild ? "package share" : "deliverable totals"} (${draft.qty} ${draft.qty === 1 ? "unit" : "units"})` : "Parent assignment · package / assignment totals"}</span></div>
       <div className="acp-profit" data-health={health} aria-label="Live profitability" title="Margin health: green ≥20%, amber 10–20%, red <10% or a loss. Based on GP divided by revenue, excluding VAT.">
-        <div title="Revenue + UR Rev + AF − Cost − UR Cost; excludes VAT"><span>GP</span><output>{profitAmount}</output>{fxFinancials && fx.valid && <small className="acp-equivalent">≈ EGP {fxFinancials.gp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>}</div>
-        <div title="GP ÷ revenue including UR Rev and AF, excluding VAT"><span>GP %</span><output>{percent(profit.billableBase > 0 ? profit.marginPercent : null)}</output></div>
-        <div title="Same profit amount as GP, excluding VAT"><span>Margin</span><output>{profitAmount}</output>{fxFinancials && fx.valid && <small className="acp-equivalent">≈ EGP {fxFinancials.gp.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</small>}</div>
-        <div title="GP ÷ cost including UR Cost, excluding VAT"><span>Margin % (markup)</span><output>{percent(profitCost > 0 ? profit.gp / profitCost * 100 : null)}</output></div>
-        <div title="FX gain/loss is separate from GP; cost valued at the revenue FX baseline, excluding VAT."><span>FX Gain/Loss</span><output style={{ color: (fxFinancials?.fx_gain_loss ?? 0) < 0 ? "#b91c1c" : (fxFinancials?.fx_gain_loss ?? 0) > 0 ? "#087443" : "#52637c" }}>{fxFinancials && fx.valid ? "EGP " + fxFinancials.fx_gain_loss.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}</output></div>
+        <div title="Revenue + UR Rev + AF − Cost − UR Cost; excludes VAT"><span>GP</span><output>{profitAmount}</output></div>
+        <div title="GP ÷ revenue including UR Rev and AF, excluding VAT"><span>GP %</span><output>{percent(fxFinancials && fx.valid ? fxFinancials.margin_percent : profit.billableBase > 0 ? profit.marginPercent : null)}</output></div>
+        <div title="Same profit amount as GP, excluding VAT"><span>Margin</span><output>{profitAmount}</output></div>
+        <div title="GP ÷ cost including UR Cost, excluding VAT"><span>Margin % (markup)</span><output>{percent(fxFinancials && fx.valid ? ((fxFinancials.revenue - fxFinancials.gp) > 0 ? fxFinancials.gp / (fxFinancials.revenue - fxFinancials.gp) * 100 : null) : profitCost > 0 ? profit.gp / profitCost * 100 : null)}</output></div>
+        <div title="FX gain/loss is already included in GP and margins, excluding VAT."><span>FX Gain/Loss</span><output style={{ color: (fxFinancials?.fx_gain_loss ?? 0) < 0 ? "#b91c1c" : (fxFinancials?.fx_gain_loss ?? 0) > 0 ? "#087443" : "#52637c" }}>{fxFinancials && fx.valid ? "EGP " + fxFinancials.fx_gain_loss.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}</output></div>
       </div>
       <button data-shortcut-close type="button" className="acp-button" aria-label="Close assignment editor" disabled={pending} onClick={() => setSelected(null)}><X size={16} /></button>
     </div>

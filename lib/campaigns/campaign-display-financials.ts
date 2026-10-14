@@ -128,7 +128,7 @@ export function aggregateCampaignDisplayFinancials(input: {
     costEgp += toEgp(costAmount, costRate);
     // UR cost follows client commercial currency (same as revenue / AF).
     urCostEgp += creatorFxAmount(usageRightsCost, { ...revConversion, to: "EGP", targetRateToEgp: 1, override: line.cost_fx_override });
-    // GP values cost at the revenue rate. The difference from actual converted cost is FX.
+    // FX is an informational breakdown of GP, already included in actual converted revenue minus cost.
     // For different entry currencies, freeze their system cross rate when setting custom FX.
     const crossRate = costCcy === revCcy ? 1 : (line.fx_cost_revenue_cross_rate ?? costConversion.sourceRateToEgp / revConversion.sourceRateToEgp);
     const baselineCost = costAmount * crossRate + usageRightsCost;
@@ -143,11 +143,11 @@ export function aggregateCampaignDisplayFinancials(input: {
   costEgp = Math.round(costEgp * 100) / 100;
   urCostEgp = Math.round(urCostEgp * 100) / 100;
   // Cost KPI = vendor cost only; GP also deducts UR cost (quotation / line rollup semantics).
-  const gpEgp = Math.round((revenueEgp - costEgp - urCostEgp - fxGainEgp) * 100) / 100;
+  const gpEgp = Math.round((revenueEgp - costEgp - urCostEgp) * 100) / 100;
 
   const revenue = Math.round(displayRevenue * 100) / 100;
   const cost = Math.round(displayCost * 100) / 100;
-  const gp = Math.round((displayRevenue - displayCost - displayUrCost - fxGainDisplay) * 100) / 100;
+  const gp = Math.round((displayRevenue - displayCost - displayUrCost) * 100) / 100;
 
   return {
     currency_code: displayCurrency,

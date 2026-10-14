@@ -21,7 +21,7 @@ export function RecordLiveDateButton({ campaignId, scheduleId, liveDate, label }
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>Record actual live date</DialogTitle>
-          <DialogDescription>{label}. Confirm when this individual ad actually went live. Its revenue and matching cost will be recognized on this date.</DialogDescription>
+          <DialogDescription>{label}. Confirm when this creator package went live. All deliverables will be tagged Went live and use this date until their own actual publication date is recorded.</DialogDescription>
         </DialogHeader>
         <form onSubmit={event => { event.preventDefault(); startTransition(async () => {
           try {
@@ -35,10 +35,10 @@ export function RecordLiveDateButton({ campaignId, scheduleId, liveDate, label }
               max={new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" })}
               onChange={event => setDate(event.target.value)} disabled={pending}/>
           </label>
-          <p className="text-xs text-muted-foreground">Saving marks this ad as Posted. Use the assignment dates for future plans.</p>
+          <p className="text-xs text-muted-foreground">Saving recognizes the full creator line and matching cost. Actual Performance publication dates take priority.</p>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <div className="flex justify-end gap-2"><Button type="button" variant="outline" onClick={() => setOpen(false)} disabled={pending}>Cancel</Button>
-            <Button type="submit" disabled={!date || pending}>{pending ? "Saving..." : "Confirm ad live"}</Button></div>
+            <Button type="submit" disabled={!date || pending}>{pending ? "Saving..." : "Confirm package live"}</Button></div>
         </form>
       </DialogContent>
     </Dialog>
