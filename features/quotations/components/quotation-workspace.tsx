@@ -1,4 +1,5 @@
 "use client";
+import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
 import { QuotationText, QuotationDesignLocaleProvider, useQuotationDesignLocale } from "./quotation-design-locale";
 import { useQuotationStickyHeaders } from "./use-quotation-sticky-headers";
 import { fetchQuotationItemCreatorDetail } from "@/features/quotations/lib/quotation-item-creator-detail";
@@ -385,7 +386,7 @@ function QuotationWorkspaceContent({
     const stale = detail.items.filter((item) => {
       const currency = (item.cost_currency || "EGP").toUpperCase();
       const fx = item.fx_rate_to_egp ?? 1;
-      return currency !== "EGP" && !(fx > 1);
+      return needsQuotationSystemFx(currency, fx);
     });
     if (stale.length === 0) return;
 
@@ -398,7 +399,7 @@ function QuotationWorkspaceContent({
         let rate = rateByCurrency.get(currency);
         if (rate == null) {
           const res = await resolveCommercialRateToEgp(currency, detail.issue_date);
-          if (!res.ok || !res.data || !(res.data.rate > 1)) continue;
+          if (!res.ok || !res.data || !(res.data.rate > 0)) continue;
           rate = res.data.rate;
           rateByCurrency.set(currency, rate);
         }

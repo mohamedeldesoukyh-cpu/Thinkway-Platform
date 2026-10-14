@@ -189,8 +189,8 @@ export function QuotationCollapsePackagePricingRow({
       const next = (currency || "EGP").toUpperCase();
       const current = (draft?.costCurrency || leader.cost_currency || "EGP").toUpperCase();
       const liveFx = draft?.fxRateToEgp ?? leader.fx_rate_to_egp ?? 0;
-      // Positive rates, including rates below one, are valid system conversions.
-      const hasRealFx = next === "EGP" || liveFx > 0;
+      // Foreign identity values are unresolved EGP placeholders, not an FX quote.
+      const hasRealFx = !needsQuotationSystemFx(next, liveFx);
       if (next === current && hasRealFx) {
         return;
       }
