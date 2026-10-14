@@ -20,3 +20,9 @@ test("approved snapshots retain their prices and overlapping IOs do not double c
  const rows=buildPipelineRevenue(input,[frozen,{...io,id:"other"}],[...selections,{client_io_id:"other",campaign_line_id:"l"}]);
  assert.equal(rows.length,1);assert.equal(rows[0].pipeline_revenue,5600);
 });
+
+test("frozen IO metadata cannot put a live legacy creator line back into pipeline",()=> {
+ const frozen={...io,assignment_snapshot:{version:1,capturedAt:"2026-08-01",selectedCampaignLineIds:["l"],lines:[{...line,metadata:null,revenue_before_vat:800}],deliverables:[]}};
+ const live={...input,lines:[{...line,metadata:{went_live:true,went_live_date:"2026-09-01"}}],deliverables:[],posts:[]};
+ assert.deepEqual(buildPipelineRevenue(live,[frozen],selections),[]);
+});
