@@ -2415,6 +2415,23 @@
   .tw-review .cx-approved-card .cx-rev__acts .btn{padding:7px;font-size:10.5px}
 }
 
-.tw-review .cc-options{flex:0 0 100%;box-sizing:border-box;margin:0;padding:16px;border:0;border-top:1px solid #dce4f2;min-width:0}.cc-options legend{font-weight:600;padding:0 4px}.cc-options>p{font-size:13px;margin:0 0 10px}.cc-option{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid #dce4f2;font:inherit;cursor:pointer}.cc-option:last-child{border-bottom:0}.cc-option input{flex:none;margin-top:4px}.cc-option>span{min-width:0;overflow-wrap:anywhere}.cc-option strong,.cc-option-description{display:block}.cc-option-description{font-size:13px;margin:4px 0}.cc-options:disabled .cc-option{cursor:default}
+/* Client quotation options share the workspace typography and selection states. */
+.tw-review {font-family:var(--font-sans),Arial,sans-serif;}
+.tw-review :is(button,input,select,textarea){font-family:inherit;}
+.tw-review :is(.plat-n,.plat-er b,.plat-followers,.profile-link .h,.rp-kpi .v,.rp-big .n,.tbl td.r,.glabels b,.fstat .v){font-family:inherit;font-variant-numeric:tabular-nums;}
+.tw-review .cc-options{flex:0 0 100%;box-sizing:border-box;min-inline-size:0;width:100%;margin:0;padding:16px;border:0;border-top:1px solid var(--hair);font-size:13px;line-height:1.5;color:var(--ink);background:var(--white,#fff);}
+.tw-review .cc-options legend{float:left;width:100%;padding:0;margin:0 0 4px;font-size:14px;font-weight:600;line-height:1.5;color:var(--navy);}
+.tw-review .cc-options>p{clear:both;margin:0 0 12px;font-size:13px;line-height:1.5;color:var(--muted);}
+.tw-review .cc-option{display:flex;align-items:flex-start;gap:10px;margin:0 0 8px;padding:12px;border:1px solid var(--hair);border-radius:10px;background:var(--white,#fff);font:inherit;cursor:pointer;min-height:44px;}
+.tw-review .cc-option:last-child{margin-bottom:0;}
+.tw-review .cc-option:has(input:checked){border-color:var(--blue);background:var(--blue-soft,#edf3ff);}
+.tw-review .cc-option:focus-within{outline:2px solid var(--blue);outline-offset:2px;}
+.tw-review .cc-option input{flex:none;width:16px;height:16px;margin:2px 0 0;accent-color:var(--blue);}
+.tw-review .cc-option>span{display:grid;gap:5px;min-width:0;flex:1;overflow-wrap:anywhere;}
+.tw-review .cc-option strong{display:block;font-size:13px;font-weight:600;line-height:1.5;color:var(--navy);}
+.tw-review .cc-option-description{display:block;margin:0;font-size:13px;line-height:1.5;color:var(--muted);}
+.tw-review .cc-option-price{display:block;font-size:14px;font-weight:600;line-height:1.5;font-variant-numeric:tabular-nums;color:var(--navy);}
+.tw-review .cc-option-fees{display:block;font-size:12px;line-height:1.5;font-variant-numeric:tabular-nums;color:var(--muted);}
+.tw-review .cc-options:disabled .cc-option{cursor:default;}
 
 .tw-review .cc-with-options > .cc-main{flex:1 1 100%}
