@@ -229,6 +229,7 @@ export async function updateCampaignLineAction(
     return { ok: false, message: authError ?? "Unauthorized" };
   }
 
+  try {
   const result = await updateCampaignLine(supabase, user.id, parsed.data);
   if (!result.ok) {
     return {
@@ -246,6 +247,9 @@ export async function updateCampaignLineAction(
   // Also refresh linked quotation when commercials synced.
   revalidatePath("/quotations");
   return { ok: true, message: result.message };
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Could not save the assignment. Please try again." };
+  }
 }
 
 export async function updateAssignmentCommercialNotesAction(input: {

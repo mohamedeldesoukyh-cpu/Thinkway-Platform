@@ -304,3 +304,23 @@ export async function resetLiveDateToPublicationAction(
 
 export type CreateDeliverableInput = z.infer<typeof createDeliverableSchema>;
 export type UpdateDeliverableInput = z.infer<typeof updateDeliverableSchema>;
+
+export async function recordAdLiveDateAction(input: { campaignId: string; scheduleId: string; liveDate: string }): Promise<FormActionState> {
+  const parsed = z.object({ campaignId: z.string().uuid(), scheduleId: z.string().uuid(), liveDate: z.string() }).safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Invalid ad or date." };
+  try {
+    const supabase = await requireAuth();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { ok: false, message: "Please sign in again." };
+    const { recordAdLiveDate } = await import("@/lib/services/campaigns/record-ad-live-date");
+    const result = await recordAdLiveDate(supabase, { ...parsed.data, actorId: user.id });
+    if (result.ok) {
+      revalidateCampaign(parsed.data.campaignId);
+      revalidatePath("/");
+      revalidatePath("/dashboard");
+    }
+    return result;
+  } catch (error) {
+    return { ok: false, message: error instanceof Error ? error.message : "Could not save the live date." };
+  }
+}
