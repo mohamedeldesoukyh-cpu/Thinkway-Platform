@@ -4,6 +4,9 @@ import { chosenQuotationItemIds } from "../quotation-options";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
+import { CreatorInvestment } from "./creator-investment";
+import { matchesWorkspaceCreatorSearch } from "../creator-search";
+
 import { formatMoneyKpi } from "@/lib/finance/currency-format";
 
 import {
@@ -90,6 +93,17 @@ export function CreatorsWorkspace({
   const showOriginalCurrency = Boolean(view.showOriginalCurrency);
   const [pending, startTransition] = useTransition();
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
+  const [search, setSearch] = useState("");
+  const [closedOptions, setClosedOptions] = useState<Record<string, boolean>>({});
+  const listRef = useRef<HTMLDivElement>(null);
+  const [stackedRows, setStackedRows] = useState(true);
+  useEffect(() => {
+    const list = listRef.current;
+    if (!list) return;
+    const observer = new ResizeObserver(([entry]) => setStackedRows(entry.contentRect.width <= 860));
+    observer.observe(list);
+    return () => observer.disconnect();
+  });
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [viewport, setViewport] = useState<"unknown" | "mobile" | "desktop">(() => {
@@ -132,6 +146,7 @@ export function CreatorsWorkspace({
   const filtered = useMemo(
     () =>
       roster.filter((creator) => {
+        if (explore && !matchesWorkspaceCreatorSearch(creator, search)) return false;
         const state = selection[creator.creatorId] ?? creator.selection;
         if (statusFilter === "recommended") {
           return creator.thinkwayStatus === "recommended" || creator.thinkwayStatus === "approved" || creator.thinkwayStatus === "finalized";
@@ -141,7 +156,7 @@ export function CreatorsWorkspace({
         if (statusFilter === "rejected") return state !== "accepted";
         return true;
       }),
-    [statusFilter, roster, selection]
+    [statusFilter, roster, selection, search, explore]
   );
 
   const filterCounts = {
@@ -353,6 +368,10 @@ export function CreatorsWorkspace({
       )}
       {explore ? (
         <div className="toolbar">
+          <label className="cw-search">
+            <span>Find a creator</span>
+            <input type="search" value={search} onChange={event => setSearch(event.currentTarget.value)} placeholder="Search names, handles or deliverables" />
+          </label>
           <div className="segs">
             {filters.map((item) => (
               <button
@@ -428,22 +447,57 @@ export function CreatorsWorkspace({
         />
       ) : (
       <div className="layout">
-        <div className="clist">
+        <div ref={listRef} className={`clist${stackedRows ? " cw-stacked" : ""}`}>
+          <div className="cw-column-head" aria-hidden="true"><span /><span>Creator</span><span>Reach</span><span>Deliverables</span><span>Investment</span><span>Agency fees</span><span>Total investment</span><span /></div>
           {filtered.map((creator, index) => {
             const identity = clientCreatorIdentity(creator.displayName, creator.handle);
             const categories = listCreatorCategoryStickers(
               brief?.creatorId === creator.creatorId ? { ...creator, ...brief } : creator
             );
             const location = formatLocation(creator.city, creator.country);
-            const sub = [formatHandleLabel(identity.handle), location].filter(Boolean).join(" · ");
+            const sub = [formatHandleLabel(identity.handle), location, ...categories].filter(Boolean).join(" · ");
+            const platformRows = breakdownForCreator(creator, brief?.creatorId === creator.creatorId ? brief : null);
+            const knownReach = platformRows.filter(row => row.followers != null);
+            const reach = knownReach.reduce((sum, row) => sum + (row.followers ?? 0), 0);
             const state = selection[creator.creatorId] ?? creator.selection;
             const description = clientCreatorCardDescription(creator);
+            const summaryLabel = deliverablesLabel(creator.deliverableItems, creator.deliverables);
+            const hasOptions = !currentCampaign && !strategicOnly && Boolean(creator.quotationOptions?.length);
+            const hasMultipleOptions = hasOptions && creator.quotationOptions!.length > 1;
+            const optionsClosed = Boolean(closedOptions[creator.creatorId]);
+            const optionFields = hasOptions ? (<fieldset id={`creator-options-${creator.creatorId}`} hidden={hasMultipleOptions && optionsClosed} className={hasMultipleOptions ? "cc-options" : "cc-options cw-single-option"} disabled={pending || !canSelectCreator(creator.creatorId) || confirmed}>
+                  <legend>{hasMultipleOptions ? "Quotation options" : "Deliverables"}</legend>
+                  {hasMultipleOptions ? <p>Choose one or more — they combine</p> : null}
+                  {creator.quotationOptions!.map(option => <label className="cc-option" key={option.itemId}>
+                    <input type="checkbox" checked={state === 'accepted' && chosenQuotationItemIds(creator).includes(option.itemId)}
+                      onChange={event => {
+                        const current = state === 'accepted' ? chosenQuotationItemIds(creator) : [];
+                        const itemIds = event.currentTarget.checked ? [...current, option.itemId] : current.filter(id => id !== option.itemId);
+                        setOptionError(null);
+                        startTransition(async () => {
+                          try {
+                            const result = await selectQuotationOptionsAction({ token, creatorId: creator.creatorId, itemIds });
+                            if (!result.ok || !('creator' in result) || !result.creator) { setOptionError({ creatorId: creator.creatorId, message: result.message }); return; }
+                            workspaceState.setOptionCreator({ ...creator, ...result.creator });
+                            if (result.selection) setCreatorStates(result.selection);
+                          } catch { setOptionError({ creatorId: creator.creatorId, message: 'Options could not be saved. Please try again.' }); }
+                        });
+                      }} />
+                    <span className="cw-option-description"><strong>{hasMultipleOptions ? `Option ${option.optionNumber}` : state === "accepted" ? "Selected" : "Add to your selection"}</strong><span className="cc-option-description" dir="auto">{option.serviceDescription || option.deliverables || TO_BE_CONFIRMED}</span>
+                      </span><span className="cw-option-money"><span className="cc-option-price">{option.investmentAmount != null ? formatMoneyKpi(option.investmentAmount + (view.hideCostAndFees ? option.agencyFeeAmount ?? 0 : 0), option.investmentCurrency || view.commercial.currency) : PRICE_PENDING_LABEL}</span>
+                      {!view.hideCostAndFees && option.investmentAmount != null ? <span className="cc-option-fees">Agency fees: {formatMoneyKpi(option.agencyFeeAmount ?? 0, option.investmentCurrency || view.commercial.currency)} · Total: {formatMoneyKpi(option.investmentAmount + (option.agencyFeeAmount ?? 0), option.investmentCurrency || view.commercial.currency)}</span> : null}
+                    </span>
+                  </label>)}
+                </fieldset>) : null;
+            const normalizedDescription = description?.trim().replace(/\s+/g, " ");
+            const repeatsDeliverables = normalizedDescription === summaryLabel.trim().replace(/\s+/g, " ") ||
+              (hasOptions && creator.quotationOptions!.some(option => normalizedDescription === (option.serviceDescription || option.deliverables || "").trim().replace(/\s+/g, " ")));
             return (
             <div
               key={creator.creatorId}
-              className={`${creator.creatorId === activeId ? "cc sel" : "cc"}${!currentCampaign && !strategicOnly && ((creator.quotationOptions?.length ?? 0) > 1 || Boolean(creator.quotationOptions?.length && creator.selectedQuotationItemIds)) ? " cc-with-options" : ""}`}
+              className={`${creator.creatorId === activeId ? "cc sel" : "cc"}${state === "accepted" ? " cw-chosen" : ""}${!currentCampaign && !strategicOnly && ((creator.quotationOptions?.length ?? 0) > 1 || Boolean(creator.quotationOptions?.length && creator.selectedQuotationItemIds)) ? " cc-with-options" : ""}`}
             >
-              {canSelectCreator(creator.creatorId) ? (
+              {canSelectCreator(creator.creatorId) && !(hasOptions && !hasMultipleOptions) ? (
                 <label className="pick-hit">
                   <input
                     type="checkbox"
@@ -454,11 +508,9 @@ export function CreatorsWorkspace({
                   />
                 </label>
               ) : null}
-              <button
-                type="button"
-                className="cc-main"
-                onClick={() => openCreator(creator.creatorId)}
-              >
+              <div className="cc-main" onClick={(event) => {
+                if (!(event.target as HTMLElement).closest("button,input,label,fieldset,a")) openCreator(creator.creatorId);
+              }}>
               <div className="cc-top">
               <ReviewAvatar
                 className="photo"
@@ -473,60 +525,34 @@ export function CreatorsWorkspace({
                 token={token}
               />
               <div className="body">
-                <div className="nmrow">
-                  <div className="nm">{identity.name}</div>
-                  {categories.length > 0 ? (
-                    <div className="ctags">
-                      {categories.map((label) => (
-                        <span className="tag" key={label}>
-                          {label}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+                <div className="cw-row-identity">
+                  <div className="nm" dir="auto">{identity.name}</div>
+                  {sub ? <div className="sub">{sub}</div> : null}
                 </div>
-                {sub ? <div className="sub">{sub}</div> : null}
-                <ReviewPlatformBreakdown
-                  rows={breakdownForCreator(
-                    creator,
-                    brief?.creatorId === creator.creatorId ? brief : null
-                  )}
-                  variant="list"
-                />
-                <div className="ccfoot">
-                  <span className="deliv">
+                <div className="cw-row-reach"><span className="cw-field-label">Reach</span>
+                  {knownReach.length ? <><b>{formatCompactCount(reach)}</b><span>{platformRows.length} {platformRows.length === 1 ? "platform" : "platforms"}</span></> : <span className="tbc">{NOT_AVAILABLE}</span>}
+                </div>
+                <div className="ccfoot cw-commercial-row">
+                  <div className="cw-row-deliverables"><span className="cw-field-label">Deliverables</span>
+                  {hasOptions && !hasMultipleOptions ? optionFields : <span className="deliv">
                     {(() => {
+                      if (hasMultipleOptions) return state === "accepted" ? `${chosenQuotationItemIds(creator).length} options selected` : "Not selected";
                       const label = deliverablesLabel(creator.deliverableItems, creator.deliverables);
                       return label === DELIVERABLES_TO_BE_CONFIRMED ? TO_BE_CONFIRMED : label;
                     })()}
-                  </span>
+                  </span>}
+                  {hasMultipleOptions ? <button type="button" className="cw-options-toggle"
+                    aria-expanded={!optionsClosed} aria-controls={`creator-options-${creator.creatorId}`}
+                    onClick={() => setClosedOptions(current => ({ ...current, [creator.creatorId]: !current[creator.creatorId] }))}>
+                    {optionsClosed ? "Show" : "Hide"} {creator.quotationOptions!.length} options
+                  </button> : null}
+                  </div>
                   {!strategicOnly ? (
-                  <span className={clientFacingCreatorCardAmount(creator) != null ? "inv" : "inv tbc"}>
-                    {(() => {
-                      const total = clientFacingCreatorCardAmount(creator);
-                      const amount = total == null ? total : view.hideCostAndFees ? total : total - (creator.agencyFeeAmount ?? 0);
-                      return amount != null
-                        ? formatMoneyKpi(amount, view.commercial.currency)
-                        : PRICE_PENDING_LABEL;
-                    })()}
-                    {!view.hideCostAndFees && clientFacingCreatorCardAmount(creator) != null ? (
-                      <span className="inv-orig" title="Agency Fees">AF {formatMoneyKpi(creator.agencyFeeAmount ?? 0, view.commercial.currency)}</span>
-                    ) : null}
-                    {(() => {
-                      const original = visibleOriginalCurrencyAmount(
-                        originalClientFacingCreatorCardAmount(creator, view.commercial.currency),
-                        showOriginalCurrency
-                      );
-                      return original ? (
-                        <span className="inv-orig">
-                          Original: {formatMoneyKpi(original.amount, original.currency)}
-                        </span>
-                      ) : null;
-                    })()}
-                  </span>
+                  <CreatorInvestment creator={creator} currency={view.commercial.currency}
+                    hideCostAndFees={Boolean(view.hideCostAndFees)} showOriginalCurrency={showOriginalCurrency} />
                   ) : null}
                 </div>
-                <div className="ccfoot">
+                <div className="ccfoot cw-row-status">
                   {thinkwayStatusLabel(creator.thinkwayStatus) ? (
                     <span className="sc ok">{thinkwayStatusLabel(creator.thinkwayStatus)}</span>
                   ) : null}
@@ -547,39 +573,17 @@ export function CreatorsWorkspace({
                 </div>
               </div>
               </div>
-              {description ? (
+              {description && !repeatsDeliverables ? (
                 <div className="cc-desc">
-                  <p className="ck">Description</p>
+                  <p className="ck">Deliverables</p>
                   <p>{description}</p>
                 </div>
               ) : null}
-              </button>
-              {!currentCampaign && !strategicOnly && ((creator.quotationOptions?.length ?? 0) > 1 || Boolean(creator.quotationOptions?.length && creator.selectedQuotationItemIds)) ? (
-                <fieldset className="cc-options" disabled={pending || !canSelectCreator(creator.creatorId) || confirmed}>
-                  <legend>Quotation options</legend>
-                  <p>Choose one or more options.</p>
-                  {creator.quotationOptions!.map(option => <label className="cc-option" key={option.itemId}>
-                    <input type="checkbox" checked={state === 'accepted' && chosenQuotationItemIds(creator).includes(option.itemId)}
-                      onChange={event => {
-                        const current = state === 'accepted' ? chosenQuotationItemIds(creator) : [];
-                        const itemIds = event.currentTarget.checked ? [...current, option.itemId] : current.filter(id => id !== option.itemId);
-                        setOptionError(null);
-                        startTransition(async () => {
-                          try {
-                            const result = await selectQuotationOptionsAction({ token, creatorId: creator.creatorId, itemIds });
-                            if (!result.ok || !('creator' in result) || !result.creator) { setOptionError({ creatorId: creator.creatorId, message: result.message }); return; }
-                            workspaceState.setOptionCreator({ ...creator, ...result.creator });
-                            if (result.selection) setCreatorStates(result.selection);
-                          } catch { setOptionError({ creatorId: creator.creatorId, message: 'Options could not be saved. Please try again.' }); }
-                        });
-                      }} />
-                    <span><strong>{creator.quotationOptions!.length > 1 ? `Option ${option.optionNumber}` : "Deliverables"}</strong><span className="cc-option-description">{option.serviceDescription || option.deliverables || TO_BE_CONFIRMED}</span>
-                      <span className="cc-option-price">{option.investmentAmount != null ? formatMoneyKpi(option.investmentAmount + (view.hideCostAndFees ? option.agencyFeeAmount ?? 0 : 0), option.investmentCurrency || view.commercial.currency) : PRICE_PENDING_LABEL}</span>
-                      {!view.hideCostAndFees && option.investmentAmount != null ? <span className="cc-option-fees">Agency fees: {formatMoneyKpi(option.agencyFeeAmount ?? 0, option.investmentCurrency || view.commercial.currency)} · Total: {formatMoneyKpi(option.investmentAmount + (option.agencyFeeAmount ?? 0), option.investmentCurrency || view.commercial.currency)}</span> : null}
-                    </span>
-                  </label>)}
-                </fieldset>
-              ) : null}
+              <button type="button" className="cw-profile-open" aria-label={`View ${identity.name} profile`}
+                aria-expanded={creator.creatorId === activeId && showDetail} aria-controls="client-creator-detail"
+                onClick={() => openCreator(creator.creatorId)}><span aria-hidden="true">→</span></button>
+              </div>
+              {hasMultipleOptions ? optionFields : null}
               {optionError?.creatorId === creator.creatorId ? <p role="alert">{optionError.message}</p> : null}
               {!explore && canSelectCreator(creator.creatorId) ? (
                 <div className="cc-remove">
@@ -783,7 +787,7 @@ function CreatorDetailPane({
     (match ? `Campaign match ${match}` : TO_BE_CONFIRMED);
 
   return (
-    <aside className={show ? "detail show" : "detail"}>
+    <aside id="client-creator-detail" className={show ? "detail show" : "detail"}>
       <div className="dhead">
         <button type="button" className="dt-back" onClick={onBack} aria-label="Back to creators">
           <IconBack />
@@ -824,6 +828,7 @@ function CreatorDetailPane({
             token={token}
           />
         )}
+        <div className="cw-profile-identity">
         {primaryProfileUrl ? (
           <a className="nm" href={primaryProfileUrl} target="_blank" rel="noopener noreferrer">
             {name}
@@ -865,6 +870,7 @@ function CreatorDetailPane({
           {creator.selection === "accepted" && !isPricedClientInvestment(investmentAmount) ? (
             <span className="tag g sc warn">Pricing required</span>
           ) : null}
+        </div>
         </div>
         {canDecide ? (
           <div className="dacts">

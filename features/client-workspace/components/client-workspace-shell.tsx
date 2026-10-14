@@ -79,7 +79,7 @@ export function ClientWorkspaceShell({
   }
 
   return (
-    <div className="tw-review">
+    <div className="tw-review cw-redesign">
       <title>{`${clientLinkName(view.overview.campaignName)} | Thinkway`}</title>
       <header className="bar">
         <div className="wrap cx-campaign-heading"><p>Client workspace</p><h1 dir="auto">{clientLinkName(view.overview.campaignName)}</h1></div>
@@ -152,6 +152,9 @@ export function ClientWorkspaceShell({
                   onClick={() => openSection(item)}
                 >
                   {CLIENT_WORKSPACE_SECTION_LABEL[item]}
+                  {item === "shortlist" || item === "creators" ? (
+                    <span className="cw-tab-count">{item === "shortlist" ? view.creators.length : calc.selectedCount}</span>
+                  ) : null}
                   {locked ? (
                     <svg className="cx-tab-lock" viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M17 8V7a5 5 0 00-10 0v1H5v14h14V8h-2zm-8 0V7a3 3 0 016 0v1H9z" />
@@ -163,7 +166,7 @@ export function ClientWorkspaceShell({
           </div>
         </nav>
 
-        <main className="wrap main">{children}</main>
+        <main className="wrap main" id="client-workspace-content">{children}</main>
         <p className="foot">
           Confidential · Thinkway Platform
           {preparedFor ? ` · Prepared for ${preparedFor}` : ""}

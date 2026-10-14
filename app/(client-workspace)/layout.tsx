@@ -2,6 +2,7 @@ import "@/features/client-workspace/styles/client-entrance.css";
 import { ClientEntranceFrame } from "@/features/client-workspace/components/client-entrance-frame";
 import "@/features/client-workspace/styles/client-review-ref.css";
 import "@/features/client-workspace/styles/commercial.css";
+import "@/features/client-workspace/styles/workspace-redesign.css";
 import { ClientWorkspaceDocScroll } from "@/features/client-workspace/components/client-workspace-doc-scroll";
 
 export default function ClientWorkspaceRootLayout({

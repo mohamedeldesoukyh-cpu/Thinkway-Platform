@@ -24,7 +24,14 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
   assert.equal(css.includes(".segs{display:flex;flex-wrap:nowrap"), true);
   assert.equal(css.includes(".cc-remove{"), true);
   assert.equal(css.includes(".send-row{"), true);
-  assert.equal(css.includes(".cm-total{font-size:24px}"), true);
+  // CommercialInvestment replaced cm-total with a fluid cm-amount heading.
+  // Keep coverage of the rendered selector and narrow-screen commercial layout.
+  const commercial = readFileSync(resolve("features/client-workspace/styles/commercial.css"), "utf8");
+  const investment = readFileSync(resolve("features/client-workspace/components/commercial-investment.tsx"), "utf8");
+  assert.match(investment, /<h2 className="cm-amount">/);
+  assert.match(commercial, /\.cm-amount\{font-size:clamp\(26px,4\.5vw,34px\)/);
+  assert.match(commercial, /@media\(max-width:560px\)\{\.tw-review \.cm-stats\{grid-template-columns:1fr\}/);
+  assert.match(commercial, /\.cm-price\{max-width:125px;overflow-wrap:anywhere\}/);
   assert.equal(css.includes(".dacts .btn,"), true);
 
   assert.equal(creators.includes('className="cc-remove"'), true);
@@ -36,7 +43,12 @@ test("Client Workspace mobile CSS stacks Overview, Shortlist, Commercial, and ch
   assert.equal(publicationPlan.includes("PublicationPlanMobileMetrics"), true);
   assert.equal(css.includes("#ed4956"), true);
   assert.equal(css.includes(".cx-pane{display:flex;flex-direction:column"), true);
-  assert.equal(css.includes(".cx-rev__head{order:1"), true);
+  const contentReview = readFileSync(resolve("features/client-workspace/components/content-to-review.tsx"), "utf8");
+  const previewIndex = contentReview.indexOf('className="cx-review__stage"');
+  const detailsIndex = contentReview.indexOf('className="cx-pane cx-review__detail"');
+  assert.ok(previewIndex >= 0 && detailsIndex > previewIndex, "Preview precedes review details");
+  assert.match(css, /@media\(max-width:780px\)\{\s*\.tw-review \.cx-review\{grid-template-columns:1fr\}/);
+  assert.match(css, /\.cx-pane\.cx-review__detail\{max-height:none;overflow:visible\}/);
   assert.equal(css.includes(".cx-rev__media{order:1"), true);
   assert.equal(css.includes("overflow-wrap:anywhere"), true);
   assert.equal(css.includes(".detail:not(.show)"), true);
