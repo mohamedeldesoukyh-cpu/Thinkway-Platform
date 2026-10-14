@@ -342,6 +342,7 @@ export function shortlistDocumentToQuotationDocument(
     isExpired: false,
     validityLabel: "—",
     clientName: doc.clientName,
+    clientLogo: doc.clientLogoDataUri,
     brandName: doc.brandName,
     campaignName: doc.name,
     issueDateLabel: doc.generatedDateLabel,

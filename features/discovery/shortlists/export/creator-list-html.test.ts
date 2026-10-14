@@ -1,3 +1,5 @@
+import { buildQuotationCreatorListHtml, quotationListPdfOptions } from "@/features/quotations/export/quotation-creator-list";
+import type { QuotationDocument } from "@/features/quotations/export/quotation-document";
 import assert from "node:assert/strict";
 import test from "node:test";
 import { buildCreatorListHtml, renderCreatorListReport, creatorListPlatform } from "./creator-list-html";
@@ -14,9 +16,9 @@ test("creator list is a distinct shortlist option and retains its URL parameter"
   appendShortlistTemplateParam(params, "creator-list");
   assert.equal(params.get("template"), "creator-list");
 });
-test("seven creators produce six aligned cards then one on the next page", () => {
+test("seven creators fit one readable shortlist slide", () => {
   const html = buildCreatorListHtml(document(7));
-  assert.equal((html.match(/<section class="page/g) ?? []).length, 4);
+  assert.equal((html.match(/<section class="page/g) ?? []).length, 3);
   assert.equal((html.match(/class="creator-card"/g) ?? []).length, 7);
   assert.ok(html.includes("Campaign &lt;one&gt;"));
   assert.ok(!html.includes("javascript:"));
@@ -99,4 +101,24 @@ test("Total Avg Cost is opt-in, formatted, and confined to the closing page", ()
   assert.match(buildCreatorListHtml(doc), /<strong>USD 0<\/strong>/);
   doc.creatorListCost.amount = null;
   assert.ok(!buildCreatorListHtml(doc).includes('<div class="report-total-cost">'));
+});
+
+ test("eight creators continue to the next slide; client identity is escaped and repeated", () => {
+   const doc = document(8); doc.clientName = "Acme <Client>"; doc.clientLogoDataUri = "data:image/png;base64,AAAA";
+   const html = buildCreatorListHtml(doc);
+   assert.equal((html.match(/<section class="page/g) ?? []).length, 4);
+   assert.match(html, /cov__recipient[^>]*>Acme &lt;Client&gt;/);
+   assert.equal((html.match(/class="report-client-logo"/g) ?? []).length, 2);
+   assert.match(html, /report-client-name[^>]*>Acme &lt;Client&gt;/);
+ });
+
+test("shortlist client list preserves branding and available platform metrics without quotation lines", () => {
+ const doc = { source: "shortlist", template: "client-list-by-name", name: "QA campaign", brandName: "QA brand", clientName: "QA client", serial: "SL-1", issueDateLabel: "Today", clientLogo: "data:image/png;base64,AAAA", creatorGroups: Array.from({length:7},(_,i)=>({creator:`Creator ${i}`,handle:"@qa",country:"EG",rows:[],platformMetrics:[{platform:"instagram",followers:"100K",engagement:"4%",views:"20K",profileUrl:null}],categories:[]})) } as unknown as QuotationDocument;
+ const html = buildQuotationCreatorListHtml(doc);
+ assert.equal((html.match(/<section class="page/g) ?? []).length,3);
+ assert.match(html,/report-client-name[^>]*>QA client/);
+ assert.match(html,/class="report-client-logo"/);
+ assert.equal((html.match(/Followers: <b>100K/g) ?? []).length,7);
+ assert.ok(!html.includes("Performance not available"));
+ assert.equal(quotationListPdfOptions(doc).height,"900px");
 });

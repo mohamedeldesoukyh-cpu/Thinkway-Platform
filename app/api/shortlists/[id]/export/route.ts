@@ -18,6 +18,8 @@ import {
 } from "@/features/discovery/shortlists/export/shortlist-export-publications";
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
 import { QUOTATION_PDF_OPTIONS } from "@/features/quotations/export/quotation-pdf";
+import { quotationListPdfOptions } from "@/features/quotations/export/quotation-creator-list";
+import { shortlistDocumentToQuotationDocument } from "@/features/discovery/shortlists/export/shortlist-as-quotation-document";
 import { CREATOR_LIST_PDF_OPTIONS } from "@/features/discovery/shortlists/export/creator-list-html";
 import { loadCreatorListClientLogo } from "@/features/discovery/shortlists/export/creator-list-client-logo";
 import { buildShortlistPptxBuffer } from "@/features/discovery/shortlists/export/shortlist-pptx";
@@ -131,7 +133,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const baseName = shortlistDocumentBaseName(doc);
-    if (template === "creator-list") doc.clientLogoDataUri = await loadCreatorListClientLogo(supabase, detail.client_id);
+    if (template === "creator-list" || template === "client-list-by-name") doc.clientLogoDataUri = await loadCreatorListClientLogo(supabase, detail.client_id);
     const disposition = download ? "attachment" : "inline";
     const suffix = templateSuffix(template);
     const siteOrigin = resolveShortlistExportSiteOrigin(
@@ -183,7 +185,7 @@ export async function GET(request: Request, context: RouteContext) {
 
     if (format === "pdf") {
       const pdfHtml = buildShortlistHtml(doc, { siteOrigin, forPdf: true });
-      const pdfResult = await renderHtmlToPdf(pdfHtml, template === "creator-list" ? CREATOR_LIST_PDF_OPTIONS : QUOTATION_PDF_OPTIONS);
+      const pdfResult = await renderHtmlToPdf(pdfHtml, template === "creator-list" ? CREATOR_LIST_PDF_OPTIONS : template === "client-list-by-name" ? quotationListPdfOptions(shortlistDocumentToQuotationDocument(doc)) : QUOTATION_PDF_OPTIONS);
       if (!pdfResult.ok) {
         return NextResponse.json(
           { error: pdfUnavailableMessage(pdfResult.error) },

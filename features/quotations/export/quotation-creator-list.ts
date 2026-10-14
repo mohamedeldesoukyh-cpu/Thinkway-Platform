@@ -1,3 +1,4 @@
+import { SHORTLIST_LIST_CSS } from "@/features/discovery/shortlists/export/shortlist-list-styles";
 import { renderCreatorListReport, CREATOR_LIST_PDF_OPTIONS } from "@/features/discovery/shortlists/export/creator-list-html";
 import { clientListPerformanceStyles } from "@/features/rate-cards/client-list-styles";
 import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
@@ -6,7 +7,8 @@ import type { QuotationDocument } from "./quotation-document";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { compareClientListCreators } from "@/lib/creators/client-list-order";
 
-function quotedPlatforms(group: QuotationDocument["creatorGroups"][number]) {
+function quotedPlatforms(group: QuotationDocument["creatorGroups"][number], shortlist = false) {
+  if (shortlist) return new Set(group.platformMetrics.map(metric => canonicalPlatformKey(metric.platform)));
   return new Set(group.rows.flatMap(row => row.quotedPlatforms ?? []).map(canonicalPlatformKey));
 }
 
@@ -15,7 +17,7 @@ function layout(doc: QuotationDocument) {
   const platforms = Math.max(1, ...doc.creatorGroups.map(g => g.platformMetrics.length));
   // Both lists use the same six-column profile cards; pricing only adds vertical space.
   const pricingHeight = performanceOnly ? 0 : Math.max(1, ...doc.creatorGroups.map(g => g.rows.length)) * 240 + 30;
-  return { performanceOnly, height: Math.max(900, 690 + platforms * 110) + pricingHeight };
+  return { performanceOnly, height: Math.max(900, (doc.source === "shortlist" ? 620 + platforms * 88 : 690 + platforms * 110)) + pricingHeight };
 }
 
 export function quotationListPdfOptions(doc: QuotationDocument) {
@@ -28,6 +30,7 @@ export function quotationListPdfOptions(doc: QuotationDocument) {
 /** Client-safe projection: internal document fields never enter either report. */
 export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
   const { performanceOnly, height } = layout(doc);
+  const shortlist = doc.source === "shortlist";
   // Rank within each tier by strongest platform audience; exact ties retain source order.
   const groups = [...doc.creatorGroups].sort((a, b) =>
     compareClientListCreators(
@@ -36,14 +39,14 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
   const creators = groups.map(g => ({
     name: g.creator, handle: g.handle, profileUrl: safeProfileUrl(g.profileUrl),
     portrait: g.avatarUrl, avatar: g.avatarUrl, categories: g.categories,
-    tier: g.highestPlatformTier ?? g.rows[0]?.tier, markets: [g.country], platforms: [...quotedPlatforms(g)],
+    tier: g.highestPlatformTier ?? g.rows[0]?.tier, markets: [g.country], platforms: [...quotedPlatforms(g, shortlist)],
   }));
   return renderCreatorListReport({
-    name: doc.brandName || doc.clientName || doc.name, reference: doc.serial,
+    name: doc.brandName || doc.clientName || doc.name, clientName: shortlist ? doc.clientName : undefined, reference: doc.serial,
     issuedDate: doc.issueDateLabel, clientLogo: doc.clientLogo, creators,
   }, {
     title: performanceOnly ? "Client List by Name" : "Creator List",
-    desktopLayout: true, cardsPerPage: 6, uniqueCreators: creators.length,
+    desktopLayout: true, cardsPerPage: shortlist ? 7 : 6, uniqueCreators: creators.length,
     showClientLogoInHeader: true, coverLogoOnRight: true, hideCoverReference: true,
     platformIcon: rateReportPlatformIcon,
     cardSupplement: (_creator, index) => {
@@ -55,7 +58,7 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
             ? `<div class="quote-money"><span>Total price inc. AF</span><b>${e(row.totalInvestment ?? row.clientCost)}</b></div>`
             : `<div class="quote-money"><span>Price before AF</span><b>${e(row.clientCost)}</b></div><div class="quote-money"><span>Agency fees (AF) · ${e(row.afPct)}</span><b>${e(row.af)}</b></div><div class="quote-money quote-money--total"><span>Total price inc. AF</span><b>${e(row.totalInvestment ?? row.clientCost)}</b></div>`}</div>`
       ).join("")}`;
-      const included = quotedPlatforms(group);
+      const included = quotedPlatforms(group, shortlist);
       const metrics = group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform))).map(metric => {
         const url = safeProfileUrl(metric.profileUrl);
         const icon = rateReportPlatformIcon(metric.platform);
@@ -77,6 +80,6 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
       .quote-money--total{border-top:1px solid #d4d0e5;margin-top:5px}
       .ph .report-client-logo{max-width:180px;width:150px;height:64px;filter:url(#report-logo-white-key) drop-shadow(0 3px 1px rgba(0,0,0,.25)) drop-shadow(0 8px 8px rgba(0,0,0,.3))}
       .cov__client>.cover-client-logo{flex-basis:420px;width:420px;max-width:420px;height:420px;filter:url(#report-logo-white-key) drop-shadow(0 4px 1px rgba(0,0,0,.25)) drop-shadow(0 18px 18px rgba(0,0,0,.3))}
-    `,
+    ` + (shortlist ? SHORTLIST_LIST_CSS : ""),
   });
 }
