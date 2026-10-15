@@ -98,7 +98,7 @@ export function appendQuotationTemplateParam(
  * Preview HTML is always live; PDF/PPTX URLs previously only changed with
  * quotation `updated_at`, so browsers often reopened an older Downloads file.
  */
-export const QUOTATION_EXPORT_LAYOUT_VERSION = "r6-creator-list-base-pricing-20261015";
+export const QUOTATION_EXPORT_LAYOUT_VERSION = "r7-creator-list-fee-order-20261015";
 
 function deployExportStamp(): string {
   const deployment = process.env.NEXT_PUBLIC_VERCEL_DEPLOYMENT_ID?.trim();
