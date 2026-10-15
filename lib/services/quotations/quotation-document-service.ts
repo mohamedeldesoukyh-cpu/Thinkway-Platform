@@ -1,3 +1,4 @@
+import { readQuotationTemplatePhotos } from "@/lib/quotations/quotation-template-photos";
 import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -619,6 +620,7 @@ export async function getQuotationDetail(
     estimated_reach: 0,
     estimated_engagement_rate: null as number | null,
     creatorListOrder: readCreatorListOrder(row.metadata),
+    templateCreatorPhotos: readQuotationTemplatePhotos(row.metadata),
     showOriginalCurrency: readShowOriginalCurrency(row.metadata),
     hideCostAndFees: readHideCostAndFees(row.metadata),
   };

@@ -195,6 +195,8 @@ export type QuotationDetail = {
   estimated_engagement_rate: number | null;
   /** Thinkway-controlled. Client Workspace shows original currency only when this is on. */
   creatorListOrder?: string[];
+  /** Report-only portraits. Never applied to the creator master or client workspace. */
+  templateCreatorPhotos?: Record<string, string>;
   showOriginalCurrency?: boolean;
   /** Thinkway-controlled. Client Workspace hides Cost and Agency Fees when this is on. */
   hideCostAndFees?: boolean;

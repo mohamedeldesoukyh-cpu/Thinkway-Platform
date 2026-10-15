@@ -340,6 +340,18 @@ export async function updateQuotationHeader(input: {
   return result;
 }
 
+export async function setQuotationTemplatePhoto(quotationId: string, itemId: string, form: FormData) {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const file = form.get("file");
+  const reset = form.get("reset") === "true";
+  if (!reset && !(file instanceof File)) return { ok: false as const, message: "Choose a photo first." };
+  const { saveQuotationTemplatePhoto } = await import("@/lib/services/quotations/quotation-template-photo-service");
+  const result = await saveQuotationTemplatePhoto(actor.supabase, quotationId, itemId, reset ? null : file as File);
+  if (result.ok) revalidate(quotationId);
+  return result;
+}
+
 export async function setQuotationCreatorOrder(input: { quotationId: string; itemIds: string[] }): Promise<ActionResult> {
   const actor = await getActor();
   if (!actor.ok) return actor;

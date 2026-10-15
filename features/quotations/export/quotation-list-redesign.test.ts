@@ -40,7 +40,7 @@ assert.equal(creatorListWholeMoney("25,854.59 USD"), "25,855 USD");
  assert.ok(changed.includes('>Option 1</span>'));
  assert.ok(changed.includes('>Option 3</span>'));
  assert.ok(!changed.includes('>Option 2</span>'));
- assert.equal(changed.replaceAll("Creator List Additions","Creator List").replaceAll(">Additions<",">Option 2<").replaceAll(">Option 2<",">Opt 2<").replaceAll(">Option 1<",">Opt 1<").replaceAll(">Option 3<",">Opt 3<"), original.replaceAll(">Option 2<",">Opt 2<").replaceAll(">Option 1<",">Opt 1<").replaceAll(">Option 3<",">Opt 3<"), "All layout, content, pricing and fees remain identical except report/Option 2 labels");
+ assert.equal(changed.replace(' class="report--additions"', "").replaceAll("Creator List Additions","Creator List").replaceAll(">Additions<",">Option 2<").replaceAll(">Option 2<",">Opt 2<").replaceAll(">Option 1<",">Opt 1<").replaceAll(">Option 3<",">Opt 3<"), original.replaceAll(">Option 2<",">Opt 2<").replaceAll(">Option 1<",">Opt 1<").replaceAll(">Option 3<",">Opt 3<"), "All layout, content, pricing and fees remain identical except labels and the scoped Additions palette");
  const single={...additions,creatorGroups:[{...group,rows:[{...row,option:"Option 2",serviceDescription:"Option 2 mentioned in description",clientCost:"100 EGP",totalInvestment:"115 EGP",af:"15 EGP"}]}]};
  const singleHtml=buildRedesignedQuotationCreatorList(single);
  assert.ok(singleHtml.includes('>Package</span>'),"Single-option presentation is unchanged");
@@ -49,3 +49,6 @@ assert.equal(creatorListWholeMoney("25,854.59 USD"), "25,855 USD");
 
 assert.ok(!SHORTLIST_TEMPLATE_OPTIONS.some(option => option.id === 'creator-list-additions'), 'Quotation additions must not leak into the separate shortlist export flow');
 assert.equal(resolveShortlistTemplate('creator-list-additions'),'detailed');
+
+assert.ok(buildRedesignedQuotationCreatorList({...many, template:"creator-list-additions"}).includes('class="report--additions"'));
+assert.ok(!buildRedesignedQuotationCreatorList({...many, template:"creator-list"}).includes('class="report--additions"'));

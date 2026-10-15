@@ -1,3 +1,4 @@
+import { applyQuotationTemplatePhotos } from "@/lib/quotations/quotation-template-photos";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 /**
@@ -956,11 +957,11 @@ export function buildQuotationDocument(
       )
     : null;
   // Platform selection filters icons/metrics only — never drops commercial lines.
-  const items = (
+  const items = applyQuotationTemplatePhotos((
     itemIdSet
       ? detail.items.filter((item) => itemIdSet.has(item.id))
       : detail.items
-  ) as QuotationExportItem[];
+  ) as QuotationExportItem[], detail.templateCreatorPhotos);
   const hasCustomFx = items.some(item => item.cost_fx_override || item.revenue_fx_override);
   const projected = hasCustomFx ? items.reduce((sum, item) => {
     const conversion = { from: item.cost_currency, to: displayCurrency, sourceRateToEgp: item.fx_rate_to_egp, targetRateToEgp: displayFxRateToEgp };
