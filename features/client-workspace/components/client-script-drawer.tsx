@@ -151,7 +151,7 @@ export function ClientScriptDrawer({
   if (!mounted || !open) return null;
 
   return createPortal(
-    <div className="tw-review">
+    <div className="tw-review cw-redesign">
       <div className="cx-scrim" data-open="true" onClick={onClose} />
       <aside
         className="cx-dw"

@@ -482,3 +482,51 @@ Candidate URL: http://127.0.0.1:3188 . Final production server started with Next
 - Visual parity, real iPhone, history restoration, role-specific access and interactive selection/approval checks remain OPEN. **Not release-ready.**
 
 No commit, push, deployment, remote configuration change or shared-record mutation. Unrelated work preserved.
+
+## Authoritative DESIGN-SPEC presentation alignment — 15 October 2026
+
+This section supersedes the old CSS/preview blockers above for this candidate. Used the supplied `thinkway-client-workspace.html` and `DESIGN-SPEC.md` from the user's Thinkway output directory. No commit, push, deployment, credential changes, notifications, or shared-record writes occurred in this pass.
+
+### Retained behavior and approved exceptions
+
+- Per-platform Followers, official platform icons, platform-specific tier tags, and creator categories remain as revised. The prototype's aggregate Reach block was deliberately not copied.
+- Pricing, exchange rates, selected-option totals, selection/save handlers, approvals and authorization logic remain unchanged. The prototype's zero-before-selection calculation was deliberately not copied.
+- Formatted real zero amounts receive a muted presentation class; their formatted text and values are unchanged. Unknown amounts retain the existing application semantics.
+- Existing supported list-width ResizeObserver remains, switching at 860px of list width. Native CSS container-query syntax was tried, but the current postcss-csso adapter rejects it. That experiment was reverted; no minifier/check/configuration changes were retained.
+
+### Presentation corrections
+
+- Reference muted text #5C6B82, scaled mono figures (0.94), 10.5px micro-labels, 13px/500 descriptions, 0.78em currency prefixes, scoped Arabic font fallback, focus outlines, SVG profile arrow, selected/open-profile edge marks, and 44px hit areas.
+- Exact rendered reference row padding (8px 12px), 150px stacked portrait rail, 96x120 desktop and 72x90 mobile profile portraits; matching wide-header/row insets. Profile close control remains within its panel at tablet widths.
+- Removed inherited journey-description width restriction, matched journey line placement, removed doubled gaps between summary, intro and filters, and aligned mobile gutters.
+- Client approval dialog and script drawer now receive the same scoped font/color tokens. No staff dialogs were changed.
+- Awaiting quotation/IO approval badges use amber; approved stays green and informational document badges remain blue. Only presentation classes changed.
+
+### Validation and evidence
+
+- 353 client-workspace tests passed, zero failures/skips.
+- TypeScript `npx tsc --noEmit`: PASS.
+- Final `npm run build`: PASS.
+- Unchanged performance measurement and approved hard CSS budget: **1,483.0 KB / 1,500 KB — PASS**. Five existing soft-budget warning categories remain (total JS, total CSS, JS count, client-module count, largest client source); no hard failures. The pre-existing dirty `performance/reports/latest-check.json` was preserved byte-for-byte around measurements.
+- 36/36 reference text/surface contrast pairs pass 4.5:1; minimum 4.7531.
+- Authorized in-app browser: desktop 1440x1000, tablet 1024x900, mobile 390x844. Wide table header/row widths both 928px at the 1024 viewport. Stacked portrait 150px; mobile profile 72x90; desktop profile 96x120. Long Latin/Arabic names, category cards and followers inspected.
+- Local synthetic component checks: default-open options; collapse/expand preserves options and totals and retains focus on the disclosure; search; profile opening/back; selection-page navigation; immediate optimistic response with a simulated 5-second save (120,000 + 12,000 -> 150,000 + 15,000); simulated failure restores all previous options and EGP 165,000 with an explicit error. Approval dialog opens with matching font tokens, scrollTop 0, focus on Back / Review Selection, and dismisses without approving.
+- Actual rebuilt Next application: existing authorized synthetic dev link opens anonymously; Shortlist, Your Selection, Commercial and Overview remain accessible as allowed; approved selection remains locked and Campaign shows the existing Live Performance service-entitlement gate (no access request sent). Commercial EGP 1,500 + EGP 150 = EGP 1,650 matches the shortlist/overview. No approval submitted and no real-client links used.
+- Data/fixture limitation: the dev record is already selection-approved and has no active campaign/IO. Editable multiple-option, portrait-image and failure checks used the isolated synthetic component fixture. Active-campaign script/IO states were not end-to-end exercised in the database; the script drawer change is a root class only. Physical iPhone hardware was not tested.
+
+Screenshots are in ignored `.tmp-cw-visual/design-spec-verification/` and also `C:/thinkway-platform/.tmp/design-spec-verification/`: desktop-creators.png, tablet-creators.png, mobile-options.png, mobile-profile.png, approval-dialog.png, application-desktop.png, application-mobile.png, application-mobile-profile.png, application-commercial.png, reference-desktop.png.
+
+Final logs: `.tmp-cw-visual/design-spec-tests.log`, `design-spec-types.log`, `design-spec-build.log`, `design-spec-budget.log`, `design-spec-budget-report.json`. Local candidate remains on http://127.0.0.1:3188 with the existing approved synthetic dev review route. No synthetic database records were created or modified this pass, so there are no additional cleanup IDs.
+
+## Release verification on current develop — 15 October 2026
+
+Fast-forwarded this isolated branch from 6b679731 to the current develop baseline d768604e before preparing the release. The six newer creator-category commits are preserved and none of their files overlap the presentation patch.
+
+- Client-workspace regression suite: 353 passed, zero failed/skipped.
+- TypeScript: PASS. Production build: PASS.
+- Total emitted CSS: 1,485.0 KB, below the unchanged 1,500 KB hard limit.
+- Overall performance gate: FAIL solely on JavaScript file count, 402 versus the unchanged hard limit of 400. This is a pre-existing baseline failure: GitHub Validate run 38662688375 on unmodified d768604e reports the same 402-file failure before this presentation patch. The prior baseline had 400 files. No limit or check was changed.
+- Release evidence: .tmp-cw-visual/release-design-spec-tests.log, release-design-spec-types.log, release-design-spec-build.log, release-design-spec-budget.log, release-design-spec-budget-report.json.
+- The unrelated dirty performance/reports/latest-check.json remains preserved and is excluded from this commit.
+
+Development deployment and anonymous synthetic-link smoke checks are the next release step. Production promotion remains gated on resolution of the existing JavaScript asset-count failure; this section does not claim release readiness.

@@ -296,7 +296,7 @@ export function ProposalSummaryCard({
       </div>
       {confirmOpen ? (
         <Dialog open={confirmOpen} onOpenChange={(open) => { if (!pending) setConfirmOpen(open); }}>
-        <DialogContent className="tw-review creator-approval-dialog" overlayClassName="!z-[300]" showCloseButton={false}>
+        <DialogContent className="tw-review cw-redesign creator-approval-dialog" overlayClassName="!z-[300]" showCloseButton={false}>
           <div className="card confirm-panel">
             <p className="ck">Confirm selection</p>
             <DialogTitle asChild><h2 id="approve-creators-title">{APPROVE_SELECTED_CREATORS_LABEL}</h2></DialogTitle>
