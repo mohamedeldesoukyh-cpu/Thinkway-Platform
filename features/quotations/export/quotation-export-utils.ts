@@ -179,6 +179,7 @@ export function quotationCreatorCategoriesFromUnified(
 
 /** Resolve display categories for an export line (same pipeline as enrichment). */
 export function resolveExportItemCreatorCategories(item: QuotationExportItem): string[] {
+  if (item.creator_categories_manual) return item.creator_categories ?? [];
   return resolveQuotationCreatorDisplayCategories({
     itemCategories: item.creator_categories,
     creatorName: item.creator_name,

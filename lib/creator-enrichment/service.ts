@@ -1,3 +1,4 @@
+import { refreshedManualCategories } from "@/lib/creators/manual-categories";
 /**
  * Creator enrichment service — the merge engine that the worker executes.
  *
@@ -470,6 +471,7 @@ export async function runCreatorEnrichment(
   let topFollowers = 0;
   let lastApifyRunId: string | null = null;
   const errors: string[] = [];
+  const freshProviderCategories: string[] = [];
   let rollupInfluencerCategories = [...(creatorRow.categories ?? [])];
   let rollupCountryCodes = mergeCountryCodes(
     creatorRow.country_codes,
@@ -870,6 +872,7 @@ export async function runCreatorEnrichment(
       anySuccess = true;
     }
 
+    if (!preferCachedSnapshot && !fetched.cacheHit && scopeAllowsField(scope, "categories") && data.categories.length > 0) freshProviderCategories.push(...data.categories);
     if (inferredCategories.length > 0) {
       rollupInfluencerCategories = mergeInferredCategories(
         rollupInfluencerCategories,
@@ -1104,6 +1107,9 @@ export async function runCreatorEnrichment(
   executionTrace.completedAt = completedAt;
   executionTrace.durationMs = Date.now() - startedMs;
 
+  const manualCategoryRefresh = creatorRow.metadata?.categories_manual === true;
+  if (manualCategoryRefresh) rollupInfluencerCategories = refreshedManualCategories(creatorRow.categories ?? [], freshProviderCategories);
+
   const influencerCategoriesChanged =
     JSON.stringify(rollupInfluencerCategories) !==
     JSON.stringify(creatorRow.categories ?? []);
@@ -1174,6 +1180,7 @@ export async function runCreatorEnrichment(
 
   const nextMetadata = {
     ...(creatorRow.metadata ?? {}),
+    categories_manual: manualCategoryRefresh && refreshedManualCategories([], freshProviderCategories).length === 0,
     country_availability: countryAvailability,
     last_manual_refresh: {
       refreshId,

@@ -44,6 +44,7 @@ export type QuotationItemRow = {
   /** Resolved server-side from unified creator — same path as Discovery shortlist avatars. */
   creator_profile_source?: CreatorProfileSource | null;
   /** Stored influencer categories (from unified creator DNA). */
+  creator_categories_manual?: boolean;
   creator_categories?: string[] | null;
   option_number: number | null;
   service_description: string | null;

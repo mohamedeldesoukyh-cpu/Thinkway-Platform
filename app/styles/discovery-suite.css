@@ -781,3 +781,15 @@
 
 /* A static quotation header must keep Save available on short screens. */
 .quotation-editor-rd4.discovery-suite .tw-frozen--static .tw-mr{display:flex}
+
+.tw-category-editor{padding:16px 0;color:#fff;font-size:13px;min-width:0;}
+.tw-category-editor>strong{display:block;margin-bottom:8px;font-size:12px;}
+.tw-category-editor__chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;}
+.tw-category-editor__chip{display:inline-flex;align-items:center;gap:8px;padding:5px 10px;border:1px solid #ffffff55;border-radius:16px;background:#ffffff22;max-width:100%;overflow-wrap:anywhere;}
+.tw-category-editor__chip button{background:transparent;border:0;color:inherit;cursor:pointer;min-width:24px;min-height:24px;font:inherit;}
+.tw-category-editor select{width:100%;max-width:100%;border:1px solid #ffffff55;border-radius:8px;background:#fff;color:#17213a;padding:8px;font:inherit;}
+.tw-category-editor small{display:block;line-height:1.5;margin-top:6px;color:#e4edff;}
+
+.tw-category-editor--plain{color:#17213a;}
+.tw-category-editor--plain .tw-category-editor__chip{background:#edf3ff;border-color:#cad7ed;}
+.tw-category-editor--plain small{color:#52627a;}

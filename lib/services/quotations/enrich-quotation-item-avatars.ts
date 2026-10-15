@@ -334,6 +334,7 @@ export function resolveLineAvatarFields(
   country_code: string | null;
   creator_profile_source: CreatorProfileSource;
   creator_categories: string[];
+  creator_categories_manual?: boolean;
 } {
   const creatorProfileSource = resolveLineCreatorProfileSource(item, creator, dnaDocument);
   const platformView = projectCreatorPlatformView(creator, resolveLinePlatformAccount(item, creator)?.id);
@@ -366,6 +367,7 @@ export function resolveLineAvatarFields(
         null,
     },
     creator_categories: resolveLineCreatorCategories(item, creator),
+    creator_categories_manual: creator.categories_manual === true,
   };
 }
 
@@ -761,7 +763,8 @@ async function stabilizeMissingWorkspaceAvatars(
 
 export async function enrichQuotationItemsWithCreatorAvatars(
   supabase: SupabaseClient<Database>,
-  items: QuotationItemRow[]
+  items: QuotationItemRow[],
+  refreshCategories = false
 ): Promise<QuotationItemRow[]> {
   if (items.length === 0) return items;
 
@@ -780,7 +783,7 @@ export async function enrichQuotationItemsWithCreatorAvatars(
       hasCountry
     );
   });
-  if (allDisplayReady) return items;
+  if (allDisplayReady && !refreshCategories) return items;
 
   const influencerIdsByHandle = await resolveInfluencerIdsByHandles(
     supabase,
