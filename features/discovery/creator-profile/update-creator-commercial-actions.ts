@@ -321,8 +321,10 @@ export async function updateCreatorCategoriesAction(input: { influencerId: strin
   if (!supabase || authError) return { ok: false, message: "Unauthorized" };
   const { data: existing, error: readError } = await supabase.from("influencers").select("categories,metadata").eq("id", parsed.data.influencerId).maybeSingle();
   if (readError || !existing) return { ok: false, message: readError?.message ?? "Creator not found." };
+  const currentCreator = await reloadCreator(supabase, "inf:" + parsed.data.influencerId);
+  const existingCategories = new Set([...(existing.categories ?? []), ...(currentCreator?.browse_category_tags ?? currentCreator?.categories ?? [])]);
   const categories = [...new Set(parsed.data.categories)];
-  if (categories.some(value => !CANONICAL_CREATOR_CATEGORIES.includes(value) && !(existing.categories ?? []).includes(value))) return { ok: false, message: "Choose a category from the list." };
+  if (categories.some(value => !CANONICAL_CREATOR_CATEGORIES.includes(value) && !existingCategories.has(value))) return { ok: false, message: "Choose a category from the list." };
   const metadata = { ...((existing.metadata as Record<string, unknown>) ?? {}), categories_manual: true };
   const { error } = await supabase.from("influencers").update({ categories, metadata } as never).eq("id", parsed.data.influencerId);
   if (error) return { ok: false, message: error.message };
