@@ -802,3 +802,7 @@
 .tw-category-editor__options input { flex:0 0 auto; width:16px; height:16px; }
 .tw-category-editor__picker small { color:#52627c; }
 .tw-category-editor button:disabled { opacity:.55; cursor:default; }
+
+.tw-category-editor__pending { display:flex; flex-wrap:wrap; align-items:center; gap:8px; }
+.tw-category-editor__pending small { flex-basis:100%; }
+.tw-category-editor__pending button { border:1px solid #dce4f5; border-radius:8px; padding:9px 14px; background:#fff; color:#153a7a; font:inherit; }
