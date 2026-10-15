@@ -1,3 +1,5 @@
+import { readQuotationTemplatePhotos } from "@/lib/quotations/quotation-template-photos";
+import { quotationWorkspacePhotoAliases } from "@/lib/quotations/quotation-workspace-photos";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -16,7 +18,7 @@ const EMPTY_FLAGS: ClientWorkspaceDisplayFlags = {
 
 export async function loadClientWorkspaceDisplayFlags(
   supabase: Supabase,
-  input: { quotationId?: string | null; shortlistId?: string | null }
+  input: { quotationId?: string | null; shortlistId?: string | null; includeCreatorPhotos?: boolean }
 ): Promise<ClientWorkspaceDisplayFlags> {
   let quotationId = input.quotationId?.trim() || null;
   const shortlistId = input.shortlistId?.trim() || null;
@@ -47,7 +49,17 @@ export async function loadClientWorkspaceDisplayFlags(
       .eq("id", quotationId)
       .maybeSingle();
     if (error) throw new Error(error.message);
-    if (data) return readClientWorkspaceDisplayFlags(data.metadata);
+    if (data) {
+      const flags = readClientWorkspaceDisplayFlags(data.metadata);
+      const photos = input.includeCreatorPhotos ? readQuotationTemplatePhotos(data.metadata) : {};
+      if (!Object.keys(photos).length) return flags;
+      const { data: items, error: itemsError } = await supabase.from("quotation_items")
+        .select("id, unified_id, influencer_id, profile_id, creator_name, handle, source_shortlist_item_id")
+        .eq("quotation_id", quotationId);
+      // An unavailable portrait must not reset the quotation's currency or hide-prices settings.
+      if (itemsError) return flags;
+      return { ...flags, creatorPhotoOverrides: quotationWorkspacePhotoAliases(items ?? [], photos) };
+    }
   }
 
   return shortlistId ? readClientWorkspaceDisplayFlags(shortlistMetadata) : EMPTY_FLAGS;

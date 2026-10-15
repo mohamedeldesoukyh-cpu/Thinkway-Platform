@@ -1,3 +1,4 @@
+import { isQuotationTemplatePhoto } from "@/lib/quotations/quotation-template-photos";
 import { shouldProxyPublicationMediaUrl } from "@/lib/creators/recent-publication-thumb";
 import { SOCIAL_MEDIA_SRC_ALLOWLIST, isUrlAllowedByHostlist } from "@/lib/security/ssrf";
 import { decodeHtmlEntities } from "@/lib/text/decode-html-entities";
@@ -121,6 +122,9 @@ export function clientReviewAvatarUrl(
   src?: string | null,
   profileUrl?: string | null
 ): string | undefined {
+  // Already normalized server-side and delivered inside the authorized workspace payload.
+  // Avoid proxying inline pixels with the original social profile URL.
+  if (isQuotationTemplatePhoto(src)) return src;
   return clientReviewMediaPath(token, { kind: "avatar", src, profileUrl });
 }
 

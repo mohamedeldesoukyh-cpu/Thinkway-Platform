@@ -6,13 +6,17 @@ export const TEMPLATE_PHOTO_MAX_BYTES = 750_000;
 export const TEMPLATE_PHOTO_DATA_MAX_LENGTH = 180_000;
 export type QuotationTemplatePhotos = Record<string, string>;
 
+export function isQuotationTemplatePhoto(photo: unknown): photo is string {
+  return typeof photo === "string" && photo.length <= TEMPLATE_PHOTO_DATA_MAX_LENGTH
+    && /^data:image\/webp;base64,[A-Za-z0-9+/]+=*$/.test(photo);
+}
+
 /** Only normalized raster data is accepted. This map is never a creator profile update. */
 export function readQuotationTemplatePhotos(metadata: unknown): QuotationTemplatePhotos {
   const value = metadata && typeof metadata === "object" && !Array.isArray(metadata)
     ? (metadata as Record<string, unknown>)[TEMPLATE_PHOTOS_KEY] : null;
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return Object.fromEntries(Object.entries(value).filter(([key, photo]) => key.length <= 512 && typeof photo === "string"
-    && photo.length <= TEMPLATE_PHOTO_DATA_MAX_LENGTH && /^data:image\/webp;base64,[A-Za-z0-9+/]+=*$/.test(photo)));
+  return Object.fromEntries(Object.entries(value).filter(([key, photo]) => key.length <= 512 && isQuotationTemplatePhoto(photo)));
 }
 
 /** Clone only for document rendering; staff rows and shared client profiles retain their originals. */

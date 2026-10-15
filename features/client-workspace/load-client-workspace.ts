@@ -1,3 +1,4 @@
+import { applyQuotationWorkspacePhotos } from "@/lib/quotations/quotation-workspace-photos";
 import { entranceState } from "./entrance-presentation";
 import { loadCommercialIoSnapshot } from "./load-commercial-io";
 import { canOpenCommercialWorkspace } from "./selection-flow";
@@ -753,6 +754,7 @@ export async function loadClientWorkspace(
       : Promise.resolve([]),
     !options.documentRequest && !picked.historical && (commercialOpen || !options.entranceOnly)
       ? loadClientWorkspaceDisplayFlags((service ?? db) as never, {
+          includeCreatorPhotos: !options.entranceOnly,
           quotationId: view.journey?.quotationId ?? activeReview.quotationId,
           shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
         }).catch(() => ({ showOriginalCurrency: false, hideCostAndFees: false }))
@@ -824,9 +826,10 @@ export async function loadClientWorkspace(
 
   view = applyEntitlementToView(view, entitlementForView.entitlement);
   view.commercialIo = commercialSnapshot;
-  view.creators = orderWorkspaceCreators(view.creators, (displayFlags as ClientWorkspaceDisplayFlags).creatorListOrder);
+  const creatorPhotos = (displayFlags as ClientWorkspaceDisplayFlags).creatorPhotoOverrides;
+  view.creators = applyQuotationWorkspacePhotos(orderWorkspaceCreators(view.creators, (displayFlags as ClientWorkspaceDisplayFlags).creatorListOrder), creatorPhotos);
   if (view.currentCampaignCreators) {
-    view.currentCampaignCreators = orderWorkspaceCreators(view.currentCampaignCreators);
+    view.currentCampaignCreators = applyQuotationWorkspacePhotos(orderWorkspaceCreators(view.currentCampaignCreators), creatorPhotos);
   }
   return { ok: true, view, entry, campaignObject };
 }

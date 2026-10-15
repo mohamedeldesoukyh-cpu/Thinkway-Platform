@@ -348,7 +348,10 @@ export async function setQuotationTemplatePhoto(quotationId: string, itemId: str
   if (!reset && !(file instanceof File)) return { ok: false as const, message: "Choose a photo first." };
   const { saveQuotationTemplatePhoto } = await import("@/lib/services/quotations/quotation-template-photo-service");
   const result = await saveQuotationTemplatePhoto(actor.supabase, quotationId, itemId, reset ? null : file as File);
-  if (result.ok) revalidate(quotationId);
+  if (result.ok) {
+    revalidate(quotationId);
+    revalidatePath("/review/[reviewId]", "layout");
+  }
   return result;
 }
 

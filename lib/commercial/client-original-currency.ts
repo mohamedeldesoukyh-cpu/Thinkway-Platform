@@ -10,6 +10,8 @@ export const HIDE_COST_AND_FEES_META_KEY = "hideCostAndFees";
 
 export type ClientWorkspaceDisplayFlags = {
   creatorListOrder?: string[];
+  /** Loaded only for the authorized workspace presentation; never a persisted display toggle. */
+  creatorPhotoOverrides?: Record<string, string>;
   showOriginalCurrency: boolean;
   hideCostAndFees: boolean;
 };
