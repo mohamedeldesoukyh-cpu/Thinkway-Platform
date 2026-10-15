@@ -1,19 +1,22 @@
-import { useEffect, useRef, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { CheckIcon, EyeIcon } from "lucide-react";
 import { setQuotationTemplatePhoto } from "@/features/quotations/actions";
 import { TEMPLATE_PHOTO_MAX_BYTES } from "@/lib/quotations/quotation-template-photos";
+import styles from "@/features/discovery/document-preview/creator-dialog.module.css";
 
-/** Inherits the ordering dialog's client boundary. Changes apply explicitly, independently of ordering. */
-export function QuotationTemplatePhotoEditor({ quotationId, itemId, name, original, current, disabled, onBusy, onApplied }: {
-  quotationId: string; itemId: string; name: string; original: string | null; current?: string;
-  disabled: boolean; onBusy: (busy: boolean) => void; onApplied: (photo: string | null) => void;
+/** Inherits the ordering dialog's client boundary. Photo saves remain explicit and independent of ordering. */
+export function QuotationTemplatePhotoEditor({ quotationId, itemId, name, optionCount, original, current, disabled, onBusy, onApplied, controls }: {
+  quotationId: string; itemId: string; name: string; optionCount: number; original: string | null; current?: string;
+  disabled: boolean; onBusy: (busy: boolean) => void; onApplied: (photo: string | null) => void; controls: ReactNode;
 }) {
   const input = useRef<HTMLInputElement>(null);
+  const uploadButton = useRef<HTMLButtonElement>(null);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   useEffect(() => {
     if (!file) { setPreview(null); return; }
     const url = URL.createObjectURL(file); setPreview(url);
@@ -21,6 +24,7 @@ export function QuotationTemplatePhotoEditor({ quotationId, itemId, name, origin
   }, [file]);
   const src = preview || current || original;
   function discard() { setFile(null); if (input.current) input.current.value = ""; }
+  function focusUpload() { requestAnimationFrame(() => uploadButton.current?.focus()); }
   async function apply(reset = false) {
     if (busy || disabled) return;
     setError(""); setStatus(""); setBusy(true); onBusy(true);
@@ -30,34 +34,39 @@ export function QuotationTemplatePhotoEditor({ quotationId, itemId, name, origin
       const result = await setQuotationTemplatePhoto(quotationId, itemId, form);
       if (!result.ok) { setError(result.message); return; }
       onApplied(result.photo); discard();
-      setStatus(reset ? "Profile photo restored for templates and the linked workspace." : "Photo applied to this quotation’s templates and linked workspace.");
+      setStatus(reset ? "Profile photo restored for templates and the linked workspace." : "Photo applied to this quotation's templates and linked workspace.");
     } catch { setError("Could not apply this photo. Please try again."); }
-    finally { setBusy(false); onBusy(false); requestAnimationFrame(() => input.current?.focus()); }
+    finally { setBusy(false); onBusy(false); focusUpload(); }
   }
-  return <div className="w-full min-w-0 border-t pt-3">
-    <div className="flex items-start gap-3">
-      <div className="h-24 w-16 shrink-0 overflow-hidden rounded-lg bg-muted">
-        {src ? <img key={src} src={src} alt={`${name} template photo`} className="h-full w-full object-cover" /> : <span className="flex h-full items-center justify-center text-xs text-muted-foreground">No photo</span>}
-      </div>
-      <div className="min-w-0 flex-1">
-        <label className="block text-sm font-medium" htmlFor={`template-photo-${itemId}`}>Quotation photo</label>
-        <input ref={input} id={`template-photo-${itemId}`} aria-label={`Upload template photo for ${name}`} className="mt-1 block min-h-11 w-full min-w-0 max-w-full text-xs file:mr-2 file:min-h-11 file:rounded-md file:border file:bg-background file:px-2 file:text-foreground" type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled || busy} onChange={event => {
-          const chosen = event.target.files?.[0] ?? null;
-          setError(""); setStatus("");
-          if (chosen && (chosen.size > TEMPLATE_PHOTO_MAX_BYTES || !["image/jpeg", "image/png", "image/webp"].includes(chosen.type))) {
-            setError("Choose a JPG, PNG or WebP photo up to 750 KB."); discard(); return;
-          }
-          setFile(chosen);
-        }} />
-        {file ? <p className="mt-1 break-all text-xs text-muted-foreground">{file.name}</p> : null}
-        <div className="mt-2 flex flex-wrap gap-2">
-          {file ? <><Button type="button" className="min-h-11" size="sm" disabled={disabled || busy} onClick={() => void apply()}> {busy ? "Applying…" : "Apply photo"}</Button><Button type="button" className="min-h-11" variant="outline" size="sm" disabled={disabled || busy} onClick={discard}>Discard photo</Button></> : null}
-          {current && !file ? <Button type="button" className="min-h-11" variant="outline" size="sm" disabled={disabled || busy} onClick={() => void apply(true)}>{busy ? "Restoring…" : "Use profile photo"}</Button> : null}
-        </div>
-        <p className="mt-1 text-xs text-muted-foreground">{file ? "Preview only — choose Apply photo to save." : current ? "Custom quotation photo" : "Current profile photo"}</p>
-      </div>
+  return <>
+    <div className={styles.thumbnail}>
+      {src && src !== failedSrc ? <img src={src} alt={`${name} quotation photo`} onError={() => setFailedSrc(src)} /> : <span className={styles.initials}>{name.trim().slice(0, 2).toUpperCase()}</span>}
+      {file || current ? <span className={styles.photoBadge} title={file ? "Photo preview" : "Custom quotation photo"}>{file ? <EyeIcon size={12} aria-hidden="true" /> : <CheckIcon size={12} aria-hidden="true" />}</span> : null}
     </div>
-    {error ? <p role="alert" className="mt-2 text-sm text-destructive">{error}</p> : null}
-    <p role="status" className="mt-1 text-xs text-muted-foreground">{status}</p>
-  </div>;
+    <div className={styles.identity}>
+      <strong dir="auto">{name}</strong>
+      <span>{optionCount} {optionCount === 1 ? "option" : "options"} &middot; {current ? "custom quotation photo" : "profile photo"}</span>
+    </div>
+    <div className={styles.photoActions}>
+      <button ref={uploadButton} type="button" className={`${styles.button} ${styles.small}`} disabled={disabled || busy} aria-label={`${current ? "Replace" : "Upload"} photo for ${name}`} onClick={() => input.current?.click()}>{current ? "Replace photo" : "Upload photo"}</button>
+      <input ref={input} id={`template-photo-${itemId}`} aria-label={`Upload template photo for ${name}`} hidden type="file" accept="image/jpeg,image/png,image/webp" disabled={disabled || busy} onChange={event => {
+        const chosen = event.target.files?.[0] ?? null;
+        if (!chosen) return;
+        setError(""); setStatus("");
+        if (chosen.size > TEMPLATE_PHOTO_MAX_BYTES || !["image/jpeg", "image/png", "image/webp"].includes(chosen.type)) {
+          setError(chosen.size > TEMPLATE_PHOTO_MAX_BYTES ? `That photo is ${Math.ceil(chosen.size / 1000)} KB. The limit is 750 KB.` : `That file is a ${chosen.type || "unsupported format"}. Use JPG, PNG or WebP.`); discard(); focusUpload(); return;
+        }
+        setFile(chosen);
+      }} />
+      {current && !file ? <button type="button" className={`${styles.button} ${styles.small} ${styles.ghost}`} disabled={disabled || busy} aria-label={`Reset photo for ${name}`} onClick={() => void apply(true)}>{busy ? "Restoring..." : "Reset"}</button> : null}
+    </div>
+    {controls}
+    {file ? <div className={styles.pendingPhoto}>
+      <span>{file.name}<small>Preview only. Apply photo to save.</small></span>
+      <button type="button" className={`${styles.button} ${styles.small} ${styles.primary}`} disabled={disabled || busy} onClick={() => void apply()}>{busy ? "Applying..." : "Apply photo"}</button>
+      <button type="button" className={`${styles.button} ${styles.small}`} disabled={disabled || busy} onClick={() => { discard(); focusUpload(); }}>Discard photo</button>
+    </div> : null}
+    {error ? <p role="alert" className={styles.error}>{error}</p> : null}
+    <span role="status" className="sr-only">{status}</span>
+  </>;
 }
