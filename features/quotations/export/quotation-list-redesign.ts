@@ -97,7 +97,7 @@ export function buildRedesignedQuotationCreatorList(doc: QuotationDocument) {
   const groups = [...doc.creatorGroups].sort((a,b) => compareClientListCreators({tier:a.highestPlatformTier ?? a.rows[0]?.tier, followers:a.highestPlatformFollowers},{tier:b.highestPlatformTier ?? b.rows[0]?.tier, followers:b.highestPlatformFollowers}));
   const creators: Creator[] = groups.map((group,index) => {
     const included = new Set(group.rows.flatMap(row => row.quotedPlatforms ?? []).map(canonicalPlatformKey));
-    return { group, index:index+1, tier:group.highestPlatformTier ?? group.rows[0]?.tier ?? "Mid", offers:offersFor(group), metrics:group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform))) };
+    return { group, index:index+1, tier:group.highestPlatformTier ?? group.rows[0]?.tier ?? "Mid", offers:offersFor(group), metrics:group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform)) && [metric.followers,metric.engagement,metric.views].some(value => /\d/.test(value))) };
   });
   // Additional alternatives continue on another card; every card still has exactly two slots.
   const cards = creators.flatMap(creator => (creator.offers.length ? chunks(creator.offers,2) : [[]]).map(offers => ({creator,offers})));
