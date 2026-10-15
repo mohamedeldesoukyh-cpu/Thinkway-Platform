@@ -4,6 +4,7 @@ import { canOpenCommercialWorkspace } from "./selection-flow";
 import type { CampaignObject } from "@/features/campaign-intelligence";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { hydrateSlateCreators } from "@/features/campaign-studio/services/copilot/slate-edit-mutations";
+import type { ClientWorkspaceDisplayFlags } from "@/lib/commercial/client-original-currency";
 import { loadClientWorkspaceDisplayFlags } from "@/lib/commercial/client-original-currency-persist";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import { listAttachedCampaignScriptPresence } from "@/lib/campaign-script/load-master";
@@ -750,7 +751,7 @@ export async function loadClientWorkspace(
     !options.documentRequest && !options.entranceOnly && commercialOpen
       ? loadSavedClientEmailsForQuotation((service ?? db) as never, view.journey.quotationId)
       : Promise.resolve([]),
-    !options.documentRequest && !picked.historical && commercialOpen
+    !options.documentRequest && !picked.historical && (commercialOpen || !options.entranceOnly)
       ? loadClientWorkspaceDisplayFlags((service ?? db) as never, {
           quotationId: view.journey?.quotationId ?? activeReview.quotationId,
           shortlistId: view.journey?.shortlistId ?? activeReview.shortlistId,
@@ -823,7 +824,7 @@ export async function loadClientWorkspace(
 
   view = applyEntitlementToView(view, entitlementForView.entitlement);
   view.commercialIo = commercialSnapshot;
-  view.creators = orderWorkspaceCreators(view.creators);
+  view.creators = orderWorkspaceCreators(view.creators, (displayFlags as ClientWorkspaceDisplayFlags).creatorListOrder);
   if (view.currentCampaignCreators) {
     view.currentCampaignCreators = orderWorkspaceCreators(view.currentCampaignCreators);
   }

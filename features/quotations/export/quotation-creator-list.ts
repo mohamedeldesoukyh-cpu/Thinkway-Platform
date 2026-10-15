@@ -6,6 +6,7 @@ import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
 import { escapeHtml as e, safeProfileUrl } from "@/features/rate-cards/report";
 import type { QuotationDocument } from "./quotation-document";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { orderCreatorGroups } from "@/lib/quotations/quotation-creator-order";
 import { compareClientListCreators } from "@/lib/creators/client-list-order";
 
 function quotedPlatforms(group: QuotationDocument["creatorGroups"][number], shortlist = false) {
@@ -35,10 +36,10 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
   const { performanceOnly, height } = layout(doc);
   const shortlist = doc.source === "shortlist";
   // Rank within each tier by strongest platform audience; exact ties retain source order.
-  const groups = [...doc.creatorGroups].sort((a, b) =>
+  const groups = orderCreatorGroups([...doc.creatorGroups].sort((a, b) =>
     compareClientListCreators(
       { tier: a.highestPlatformTier ?? a.rows[0]?.tier, followers: a.highestPlatformFollowers },
-      { tier: b.highestPlatformTier ?? b.rows[0]?.tier, followers: b.highestPlatformFollowers }));
+      { tier: b.highestPlatformTier ?? b.rows[0]?.tier, followers: b.highestPlatformFollowers })), doc.creatorListOrder, group => group.itemIds ?? []);
   const creators = groups.map(g => ({
     name: g.creator, handle: g.handle, profileUrl: safeProfileUrl(g.profileUrl),
     portrait: g.avatarUrl, avatar: g.avatarUrl, categories: g.categories,

@@ -340,6 +340,18 @@ export async function updateQuotationHeader(input: {
   return result;
 }
 
+export async function setQuotationCreatorOrder(input: { quotationId: string; itemIds: string[] }): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const { saveQuotationCreatorOrder } = await import("@/lib/services/quotations/quotation-creator-order-service");
+  const result = await saveQuotationCreatorOrder(actor.supabase, input.quotationId, input.itemIds);
+  if (result.ok) {
+    revalidate(input.quotationId);
+    revalidatePath("/review/[reviewId]", "layout");
+  }
+  return result;
+}
+
 export async function setQuotationShowOriginalCurrency(input: {
   quotationId: string;
   value: boolean;

@@ -16,3 +16,13 @@ test('platform audience overrides stored tier, exact ties retain source order',(
  assert.deepEqual(orderWorkspaceCreators(rows).map(c=>c.creatorId),['first','second','third']);
  assert.deepEqual(orderWorkspaceCreators([]),[]);
 });
+
+test('saved quotation order overrides ranking using any option member without changing selection or totals',()=>{
+ const first=card('mega','Mega',2000000), second=card('micro','Micro',10000), fresh=card('new','Mid',70000);
+ first.quotationOptions=[{itemId:'a1',memberItemIds:['a1','a2']}] as ClientCreatorCard['quotationOptions'];
+ second.quotationOptions=[{itemId:'b1'}] as ClientCreatorCard['quotationOptions'];
+ const rows=[first,second,fresh], before=structuredClone(rows);
+ assert.deepEqual(orderWorkspaceCreators(rows,['b1','a2']).map(c=>c.creatorId),['micro','mega','new']);
+ assert.deepEqual(orderWorkspaceCreators(rows,[]).map(c=>c.creatorId),['mega','new','micro']);
+ assert.deepEqual(rows,before);
+});

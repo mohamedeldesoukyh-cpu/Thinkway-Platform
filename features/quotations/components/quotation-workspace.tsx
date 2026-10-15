@@ -1,4 +1,6 @@
 "use client";
+import { QuotationCreatorOrderDialog } from "./quotation-creator-order-dialog";
+import { orderQuotationItems } from "@/lib/quotations/quotation-creator-order";
 import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
 import { QuotationText, QuotationDesignLocaleProvider, useQuotationDesignLocale } from "./quotation-design-locale";
 import { useQuotationStickyHeaders } from "./use-quotation-sticky-headers";
@@ -168,6 +170,8 @@ function QuotationWorkspaceContent({
   const [addCreatorsOpen, setAddCreatorsOpen] = useState(false);
   const [commercialWorkspaceOpen, setCommercialWorkspaceOpen] = useState(false);
   const [focusNewItemId, setFocusNewItemId] = useState<string | null>(null);
+  const [creatorOrder, setCreatorOrder] = useState(detail.creatorListOrder);
+  useEffect(() => setCreatorOrder(detail.creatorListOrder), [detail.creatorListOrder]);
   const [tableSort, setTableSort] = useState<QuotationWorkspaceSortState | null>(null);
   const [bulkPending, startBulkTransition] = useTransition();
   const [calculatorOpen, setCalculatorOpen] = useState(false);
@@ -284,11 +288,11 @@ function QuotationWorkspaceContent({
 
   const sortedFilteredItems = useMemo(
     () =>
-      sortQuotationWorkspaceItems(filteredItems, tableSort, {
+      orderQuotationItems(sortQuotationWorkspaceItems(filteredItems, tableSort, {
         drafts,
         pendingItemIds,
-      }),
-    [filteredItems, tableSort, drafts, pendingItemIds]
+      }), tableSort ? undefined : creatorOrder),
+    [filteredItems, tableSort, drafts, pendingItemIds, creatorOrder]
   );
 
   const uniqueCreatorCount = useMemo(
@@ -816,6 +820,7 @@ function QuotationWorkspaceContent({
               <span className="tw-cs">
                 <QuotationText>Options are alternative quotation lines for the same creator</QuotationText></span>
               <span className="tw-sp" />
+              {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && uniqueCreatorCount > 1 ? <QuotationCreatorOrderDialog quotationId={detail.id} items={visibleItems} savedOrder={creatorOrder} onSaved={order => { setCreatorOrder(order); setTableSort(null); }} /> : null}
               <QuotationRateCardToolbarButton />
               {detail.shortlist_id && <Link className="tw-b sm" href={`/discovery/shortlists/${detail.shortlist_id}`}><QuotationText>Open shortlist</QuotationText></Link>}
               <QuotationCommercialEntry

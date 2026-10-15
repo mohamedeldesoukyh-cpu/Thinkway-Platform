@@ -3,6 +3,7 @@ import { getThinkwayLogoDarkDataUri } from "@/lib/reports/document/thinkway-repo
 import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
 import { escapeHtml as e, safeProfileUrl } from "@/features/rate-cards/report";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { orderCreatorGroups } from "@/lib/quotations/quotation-creator-order";
 import { compareClientListCreators } from "@/lib/creators/client-list-order";
 import type { QuotationDocument, QuotationDocCreatorGroup, QuotationDocRow } from "./quotation-document";
 
@@ -89,7 +90,7 @@ function renderCard(creator: Creator, offers: Offer[], hideFees: boolean) {
 const LEGEND = `<div class="legend"><div class="legend__grp"><span class="legend__k">Tier</span>${["Mega","Macro","Mid","Micro","Nano"].map(tierLabel).join("")}</div><span class="legend__sep"></span><div class="legend__grp"><span class="legend__k">Offer</span><span class="offer-tag offer-tag--1">Option 1</span><span class="offer-tag offer-tag--2">Option 2</span><span class="offer-tag offer-tag--pkg">Package</span><span>= single offer</span></div><span class="legend__sep"></span><div class="legend__grp"><span class="legend__k">Deliverables</span><span class="chip chip--ig">Instagram</span><span class="chip chip--tt">TikTok</span><span class="chip chip--ex">Event · rights · boost</span></div><span class="legend__sep"></span><span>Totals incl. agency fee (AF) · ER = engagement rate</span></div>`;
 /** Client-only presentation of the existing calculated quotation document. */
 export function buildRedesignedQuotationCreatorList(doc: QuotationDocument) {
-  const groups = [...doc.creatorGroups].sort((a,b) => compareClientListCreators({tier:a.highestPlatformTier ?? a.rows[0]?.tier, followers:a.highestPlatformFollowers},{tier:b.highestPlatformTier ?? b.rows[0]?.tier, followers:b.highestPlatformFollowers}));
+  const groups = orderCreatorGroups([...doc.creatorGroups].sort((a,b) => compareClientListCreators({tier:a.highestPlatformTier ?? a.rows[0]?.tier, followers:a.highestPlatformFollowers},{tier:b.highestPlatformTier ?? b.rows[0]?.tier, followers:b.highestPlatformFollowers})), doc.creatorListOrder, group => group.itemIds ?? []);
   const creators: Creator[] = groups.map((group,index) => {
     const included = new Set(group.rows.flatMap(row => row.quotedPlatforms ?? []).map(canonicalPlatformKey));
     return { group, index:index+1, tier:group.highestPlatformTier ?? group.rows[0]?.tier ?? "Mid", offers:offersFor(group), metrics:group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform)) && [metric.followers,metric.engagement,metric.views].some(value => /\d/.test(value))) };

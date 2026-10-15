@@ -1,3 +1,5 @@
+import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
+
 export const SHOW_ORIGINAL_CURRENCY_DEFAULT = false;
 export const SHOW_ORIGINAL_CURRENCY_LABEL = "Show original currency";
 export const SHOW_ORIGINAL_CURRENCY_META_KEY = "showOriginalCurrency";
@@ -7,6 +9,7 @@ export const HIDE_COST_AND_FEES_LABEL = "Hide cost and fees";
 export const HIDE_COST_AND_FEES_META_KEY = "hideCostAndFees";
 
 export type ClientWorkspaceDisplayFlags = {
+  creatorListOrder?: string[];
   showOriginalCurrency: boolean;
   hideCostAndFees: boolean;
 };
@@ -27,7 +30,9 @@ export function readHideCostAndFees(metadata: unknown): boolean {
 }
 
 export function readClientWorkspaceDisplayFlags(metadata: unknown): ClientWorkspaceDisplayFlags {
+  const order = readCreatorListOrder(metadata);
   return {
+    ...(order.length ? { creatorListOrder: order } : {}),
     showOriginalCurrency: readShowOriginalCurrency(metadata),
     hideCostAndFees: readHideCostAndFees(metadata),
   };

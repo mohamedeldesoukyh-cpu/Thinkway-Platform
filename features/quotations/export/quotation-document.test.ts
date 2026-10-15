@@ -1570,3 +1570,21 @@ console.log("quotation-document.test.ts passed");
     else { assert.ok(html.includes("At a glance")); assert.ok(html.includes("data:font/woff2;base64,")); }
   }
 }
+
+// Saved presentation order overrides automatic report ranking in both client-safe lists.
+{
+ const items=[mockItem({id:"order-a1",unified_id:"a",creator_name:"Order Alpha",handle:"@orderalpha",followers:2000000,sort_order:0}), mockItem({id:"order-b1",unified_id:"b",creator_name:"Order Beta",handle:"@orderbeta",followers:10000,sort_order:1}), mockItem({id:"order-a2",unified_id:"a",creator_name:"Order Alpha",handle:"@orderalpha",followers:2000000,sort_order:2,option_number:2})];
+ const detail=mockDetail({items});
+ for(const template of ["creator-list","client-list-by-name"] as const){
+   const original=buildQuotationDocument(detail,{template});
+   const doc=buildQuotationDocument({...detail,creatorListOrder:["order-b1","order-a1","order-a2"]},{template});
+   assert.deepEqual(doc.creatorGroups.map(g=>g.creator),["Order Beta","Order Alpha"]);
+   assert.deepEqual(doc.creatorGroups[1].itemIds,["order-a1","order-a2"]);
+   assert.deepEqual(doc.rows,original.rows,"Presentation ordering must not change line calculations or option numbering");
+   const html=buildQuotationHtml(doc), autoHtml=buildQuotationHtml(original);
+   assert.ok(html.indexOf("Order Beta")<html.indexOf("Order Alpha"),template+" respects custom order");
+   assert.ok(autoHtml.indexOf("Order Alpha")<autoHtml.indexOf("Order Beta"),template+" keeps automatic fallback");
+   const selected=buildQuotationDocument({...detail,creatorListOrder:["order-b1","order-a1","order-a2"]},{template,itemIds:["order-a2","order-b1"]});
+   assert.deepEqual(selected.creatorGroups.map(g=>g.creator),["Order Beta","Order Alpha"]);
+ }
+}

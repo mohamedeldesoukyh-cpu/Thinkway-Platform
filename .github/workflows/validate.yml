@@ -31,6 +31,9 @@ jobs:
       - name: Service layer tests
         run: npm run test:services
 
+      - name: Quotation creator order regression
+        run: npm run test:quotation-order
+
       - name: Partial invoice and installment regression
         run: npm run test:partial-assignment-invoice
 
