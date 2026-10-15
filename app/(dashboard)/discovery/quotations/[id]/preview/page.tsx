@@ -49,6 +49,7 @@ function quotationTemplateLabel(
 ): string {
   switch (template) {
     case "creator-list": return "Creator List";
+    case "creator-list-additions": return "Creator List Additions";
     case "client-list-by-name": return "Client List by Name";
     case "lump-sum":
       return "Lump sum";
