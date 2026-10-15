@@ -62,7 +62,7 @@ export async function renderQuotationPreviewHtml(
     publicationShotsByCreatorKey,
     displayFxRateToEgp,
   });
-  if (isQuotationListTemplate(template)) doc.clientLogo = await loadCreatorListClientLogo(supabase, enriched.client_id);
+  if (isQuotationListTemplate(template)) doc.clientLogo = await loadCreatorListClientLogo(supabase, enriched.client_id, template === "creator-list");
   doc = await embedQuotationDocumentAvatars(doc);
   doc = await embedQuotationDocumentPublicationShots(doc);
 

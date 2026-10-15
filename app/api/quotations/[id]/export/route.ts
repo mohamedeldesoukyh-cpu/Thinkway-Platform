@@ -112,7 +112,7 @@ export async function GET(request: Request, context: RouteContext) {
       displayFxRateToEgp,
     });
     if (format !== "excel") {
-      if (isQuotationListTemplate(template)) doc.clientLogo = await loadCreatorListClientLogo(supabase, enriched.client_id);
+      if (isQuotationListTemplate(template)) doc.clientLogo = await loadCreatorListClientLogo(supabase, enriched.client_id, template === "creator-list");
   doc = await embedQuotationDocumentAvatars(doc);
       doc = await embedQuotationDocumentPublicationShots(doc);
     }
