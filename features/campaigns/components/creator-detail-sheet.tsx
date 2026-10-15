@@ -1,4 +1,5 @@
 "use client";
+import { CreatorCategoryEditor } from "@/features/discovery/components/creator-category-editor";
 import { sameCreatorIdentity } from "@/lib/creators/same-creator-identity";
 import { useRouter } from "next/navigation";
 import { SimilarCreatorActions, type SimilarCreatorTarget } from "@/features/discovery/components/similar-creator-actions";
@@ -57,7 +58,7 @@ import { DeleteCreatorPlatformDialog } from "@/features/discovery/delete-platfor
 import { EditCreatorAveragePriceDialog } from "@/features/discovery/components/edit-creator-average-price-dialog";
 import { EditCreatorContactDialog } from "@/features/discovery/components/edit-creator-contact-dialog";
 import { EditCreatorProfileUrlDialog } from "@/features/discovery/components/edit-creator-profile-url-dialog";
-import { updateCreatorPrCategoryAction, updateCreatorCountryAction } from "@/features/discovery/creator-profile/update-creator-commercial-actions";
+import { updateCreatorPrCategoryAction, updateCreatorCountryAction, updateCreatorCategoriesAction } from "@/features/discovery/creator-profile/update-creator-commercial-actions";
 import {
   CombineCreatorsDialog,
   type CombineCreatorsMergedMeta,
@@ -914,6 +915,7 @@ export function CreatorDetailSheet({
   const [editProfileUrlOpen, setEditProfileUrlOpen] = useState(false);
   const [combineCreatorsOpen, setCombineCreatorsOpen] = useState(false);
   const [prCategoryBusy, setPrCategoryBusy] = useState(false);
+  const [categoriesBusy, setCategoriesBusy] = useState(false);
   const [countryBusy, setCountryBusy] = useState(false);
   const [similar, setSimilar] = useState<Array<UnifiedCreatorResult & { similarity_score: number }>>(
     []
@@ -1195,6 +1197,18 @@ export function CreatorDetailSheet({
     }
 
     onCreatorUpdated?.(next, options);
+  }
+
+  async function handleCategoriesChange(categories: string[]) {
+    if (!identityCreator.influencer_id || categoriesBusy) return;
+    setCategoriesBusy(true);
+    try {
+      const result = await updateCreatorCategoriesAction({ influencerId: identityCreator.influencer_id, unifiedId: identityCreator.unified_id, categories });
+      if (!result.ok) { toast.error(result.message); return; }
+      if (result.creator) handleCreatorUpdated(result.creator, { forceListSync: true });
+      toast.success(result.message);
+    } catch { toast.error("Categories could not be saved. Please try again."); }
+    finally { setCategoriesBusy(false); }
   }
 
   async function handleCountryChange(country: string) {
@@ -1852,6 +1866,9 @@ export function CreatorDetailSheet({
             canEditPr={Boolean(identityCreator.influencer_id)}
             onTogglePr={handleTogglePrCategory}
           countryCode={identityCreator.country_code ?? ""}
+          categories={identityCreator.browse_category_tags ?? identityCreator.categories ?? []}
+          categoriesBusy={categoriesBusy}
+          onCategoriesChange={identityCreator.influencer_id ? handleCategoriesChange : undefined}
           countryBusy={countryBusy}
           onCountryChange={handleCountryChange}
             kvRows={[
@@ -2071,6 +2088,8 @@ export function CreatorDetailSheet({
                 creator={identityCreator}
                 profileUrl={profileUrl}
               />
+
+              <CreatorCategoryEditor plain categories={identityCreator.browse_category_tags ?? identityCreator.categories ?? []} categoriesBusy={categoriesBusy} onCategoriesChange={identityCreator.influencer_id ? handleCategoriesChange : undefined} />
 
               {platforms.length > 0 ? (
                 <div className="creator-detail-sheet-platform-scope">

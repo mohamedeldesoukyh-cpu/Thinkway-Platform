@@ -153,15 +153,8 @@ export async function enrichQuotationDetailForExport(
     "./quotation-export-platforms"
   );
 
-  let items: QuotationExportItem[];
-  if (quotationItemsFullyEnrichedForExport(detail.items)) {
-    items = detail.items as QuotationExportItem[];
-  } else {
-    items = (await enrichQuotationItemsWithCreatorAvatars(
-      supabase,
-      detail.items
-    )) as QuotationExportItem[];
-  }
+  // Categories are editable master data; never reuse stale inferred line labels.
+  let items = (await enrichQuotationItemsWithCreatorAvatars(supabase, detail.items, true)) as QuotationExportItem[];
 
   // Always attach multi-platform account metrics so mix/roster/creator slides
   // show Instagram + TikTok + … not only the deliverable line platform.

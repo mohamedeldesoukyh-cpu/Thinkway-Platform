@@ -1002,13 +1002,13 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
   });
   const doc = buildQuotationDocument(detail, { template: "detailed" });
   assert.ok(
-    !doc.summary.categoryBreakdown.some((row) => row.label === "Uncategorized"),
-    "Handle/name-only creators should not appear as Uncategorized"
+    doc.summary.categoryBreakdown.some((row) => row.label === "Uncategorized"),
+    "Missing categories must not become Lifestyle"
   );
   assert.deepEqual(
     doc.summary.categoryBreakdown.map((row) => row.label),
-    ["Lifestyle"],
-    "Thin-profile MENA creators should fall back to Lifestyle"
+    ["Uncategorized"],
+    "Missing categories remain uncategorized"
   );
 }
 
@@ -1039,18 +1039,15 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     doc.summary.categoryBreakdown
       .map((row) => [row.label, row.count] as const)
       .sort((a, b) => String(a[0]).localeCompare(String(b[0]))),
-    [
-      ["Food", 1],
-      ["Lifestyle", 1],
-    ],
-    "Merged option categories should roll up in summary"
+    [["Food", 1]],
+    "Merged option categories should roll up without an invented Lifestyle tag"
   );
   const tierRow = doc.summary.fullTierBreakdown.sections
     .flatMap((section) => section.creators)
     .find((row) => row.category.includes("Food"));
   assert.equal(
     tierRow?.category,
-    "Food, Lifestyle",
+    "Food",
     "Tier row merges categories across options like category summary"
   );
 }

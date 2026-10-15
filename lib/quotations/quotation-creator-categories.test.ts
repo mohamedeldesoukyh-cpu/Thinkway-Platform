@@ -231,7 +231,7 @@ assert.deepEqual(
     handle: "noura.eg",
     linePlatform: "instagram",
   }),
-  ["Lifestyle"],
+  [],
   "Stale non-mapping line tags should fall through to identity fallback"
 );
 
@@ -243,8 +243,8 @@ assert.deepEqual(
     followers: 120_000,
     countryCode: "EG",
   }),
-  ["Lifestyle"],
-  "MENA creator with followers should get Lifestyle when no other signals"
+  [],
+  "MENA creator with followers should stay uncategorized without evidence"
 );
 
 assert.equal(
@@ -253,8 +253,8 @@ assert.equal(
     handle: "randomcreator",
     linePlatform: "instagram",
   }),
-  "Lifestyle",
-  "Name + handle alone should never stay uncategorized"
+  null,
+  "Name and handle alone do not establish a niche"
 );
 
 assert.deepEqual(
@@ -266,8 +266,8 @@ assert.deepEqual(
     totalCreators: 2,
     formatSharePct: (count, total) => `${((count / total) * 100).toFixed(1)}%`,
   }).map((row) => row.label),
-  ["Lifestyle"],
-  "Fallback-assigned creators should not appear as Uncategorized"
+  ["Uncategorized"],
+  "Unknown creators stay Uncategorized"
 );
 
 assert.deepEqual(
@@ -309,3 +309,7 @@ assert.deepEqual(
 );
 
 console.log("quotation-creator-categories.test.ts passed");
+
+const foodCreator = { browse_category_tags: ["Food"], categories: ["Food"], ai_category: null, ai_niche: null, audience_interests: [], bio: null, hashtags: [], mentions: [], platforms: [], display_name: "Creator" };
+assert.deepEqual(resolveQuotationCreatorDisplayCategories({ itemCategories: ["Lifestyle"], creator: foodCreator }), ["Food"]);
+assert.deepEqual(resolveQuotationCreatorDisplayCategories({ creator: { ...foodCreator, categories_manual: true, categories: [], browse_category_tags: [], display_name: "Chef" } }), []);

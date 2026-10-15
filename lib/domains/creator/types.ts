@@ -156,6 +156,7 @@ export type UnifiedCreatorResult = {
   country_codes?: string[] | null;
   estimated_country: string | null;
   city: string | null;
+  categories_manual?: boolean;
   categories: string[];
   /** Stored category tags for browse filters (influencers.categories / category_tags). */
   browse_category_tags?: string[];

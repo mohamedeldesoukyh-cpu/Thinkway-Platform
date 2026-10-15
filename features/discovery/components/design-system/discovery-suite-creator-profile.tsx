@@ -1,5 +1,6 @@
 "use client";
 
+import { CreatorCategoryEditor } from "../creator-category-editor";
 import { useEffect, useRef, type ReactNode, type CSSProperties } from "react";
 import { CREATOR_COUNTRY_OPTIONS as COUNTRY_OPTIONS } from "@/lib/creators/country-options";
 import { createPortal } from "react-dom";
@@ -83,6 +84,9 @@ type Props = {
   onAddPlatform: () => void;
   tierLabel: string | null;
   /** Canonical PR category — stored on influencers.categories. */
+  categories?: string[];
+  categoriesBusy?: boolean;
+  onCategoriesChange?: (categories: string[]) => void;
   countryCode?: string;
   countryBusy?: boolean;
   onCountryChange?: (country: string) => void;
@@ -258,6 +262,9 @@ export function DiscoverySuiteCreatorProfile({
   onAddPlatform,
   tierLabel,
   countryCode = "",
+  categories = [],
+  categoriesBusy = false,
+  onCategoriesChange,
   countryBusy = false,
   onCountryChange,
   prChecked = false,
@@ -410,6 +417,8 @@ export function DiscoverySuiteCreatorProfile({
                 <span className="tw-pr-tag">PR</span>
               ) : null}
             </div>
+
+            <CreatorCategoryEditor categories={categories} categoriesBusy={categoriesBusy} onCategoriesChange={onCategoriesChange} />
 
             <div className="tw-cp__kv">
               {kvRows.map((row) => (

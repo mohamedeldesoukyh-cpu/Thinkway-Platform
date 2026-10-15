@@ -192,6 +192,7 @@ export function quotationCreatorCategorySignals(
     | "ai_niche"
     | "audience_interests"
     | "categories"
+    | "categories_manual"
     | "browse_category_tags"
     | "bio"
     | "hashtags"
@@ -374,15 +375,6 @@ export function inferNearestMainCategoryFallback(input: {
     if (mapped.length > 0) return mapped[0]!;
   }
 
-  const country = input.countryCode?.trim().toLowerCase();
-  const hasFollowers = input.followers != null && input.followers > 0;
-  if (hasFollowers && country && MENA_COUNTRY_CODES.has(country)) {
-    return "Lifestyle";
-  }
-
-  if (hasAnyCategoryInferenceSignal({ profileIdentity, profileBio, linePlatform: input.linePlatform, followers: input.followers })) {
-    return "Lifestyle";
-  }
 
   return null;
 }
@@ -402,6 +394,7 @@ export function resolveQuotationCreatorDisplayCategories(input: {
   itemCategories?: string[] | null;
   creator?: Pick<
     UnifiedCreatorResult,
+    | "categories_manual"
     | "browse_category_tags"
     | "categories"
     | "ai_category"
@@ -429,10 +422,14 @@ export function resolveQuotationCreatorDisplayCategories(input: {
     extraBio: input.extraBio,
   });
 
+  // Live creator categories outrank previously inferred quotation snapshots.
+  if (input.creator?.categories_manual) {
+    return [...(input.creator.browse_category_tags ?? input.creator.categories ?? [])];
+  }
   const fromItem = translateQuotationCategoryLabels(
     normalizedQuotationCategoryLabels(input.itemCategories)
   );
-  if (fromItem.length > 0 && storedCategoriesMapToMain(fromItem)) {
+  if (!input.creator && fromItem.length > 0 && storedCategoriesMapToMain(fromItem)) {
     return fromItem.slice(0, 5);
   }
 

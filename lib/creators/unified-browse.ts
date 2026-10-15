@@ -1712,7 +1712,7 @@ async function fetchInternalCreators(
       influencerCategories: [],
       accounts: platformRows,
     });
-    const categories = mergeImportedStringArrays(storedCategoryTags, importTags);
+    const categories = r.metadata?.categories_manual === true ? storedCategoryTags : mergeImportedStringArrays(storedCategoryTags, importTags);
     const discoveryProfileImage =
       discoveryImageByInfluencer.get(r.id) ??
       (r.profile_id ? (discoveryImageByProfileId.get(r.profile_id) ?? null) : null);
@@ -1816,6 +1816,7 @@ async function fetchInternalCreators(
       city: null,
       categories,
       browse_category_tags: storedCategoryTags,
+      categories_manual: r.metadata?.categories_manual === true,
       audience_interests: audienceInterests,
       audience_demographics: audienceDemographicsFromInfluencer({
         audience_age_13_17: r.audience_age_13_17,

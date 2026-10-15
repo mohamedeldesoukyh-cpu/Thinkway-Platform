@@ -2,6 +2,7 @@
 
 import { CREATOR_COUNTRY_OPTIONS as COUNTRY_OPTIONS } from "@/lib/creators/country-options";
 import { persistInfluencerCountryFields, countryWritePayload } from "@/lib/creators/country-persistence";
+import { CANONICAL_CREATOR_CATEGORIES } from "@/lib/creator-intelligence/taxonomy";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
@@ -310,4 +311,24 @@ export async function updateCreatorCountryAction(input: { influencerId: string; 
   revalidatePath("/discovery");
   revalidatePath("/quotations");
   return { ok: true, message: "Country saved. Provider country data can replace it on refresh.", creator };
+}
+
+/** Manual category choices remain until a successful refresh provides category data. */
+export async function updateCreatorCategoriesAction(input: { influencerId: string; unifiedId: string; categories: string[] }): Promise<CreatorCommercialActionResult> {
+  const parsed = z.object({ influencerId: z.string().uuid(), unifiedId: z.string().min(1), categories: z.array(z.string().trim().min(1).max(100)).max(30) }).safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Choose valid creator categories." };
+  const { supabase, error: authError } = await requireAuthedClient();
+  if (!supabase || authError) return { ok: false, message: "Unauthorized" };
+  const { data: existing, error: readError } = await supabase.from("influencers").select("categories,metadata").eq("id", parsed.data.influencerId).maybeSingle();
+  if (readError || !existing) return { ok: false, message: readError?.message ?? "Creator not found." };
+  const categories = [...new Set(parsed.data.categories)];
+  if (categories.some(value => !CANONICAL_CREATOR_CATEGORIES.includes(value) && !(existing.categories ?? []).includes(value))) return { ok: false, message: "Choose a category from the list." };
+  const metadata = { ...((existing.metadata as Record<string, unknown>) ?? {}), categories_manual: true };
+  const { error } = await supabase.from("influencers").update({ categories, metadata } as never).eq("id", parsed.data.influencerId);
+  if (error) return { ok: false, message: error.message };
+  const creator = await reloadCreator(supabase, "inf:" + parsed.data.influencerId);
+  revalidatePath("/discovery");
+  revalidatePath("/discovery/quotations");
+  revalidatePath(`/vendors/${parsed.data.influencerId}`);
+  return { ok: true, message: "Categories saved.", creator };
 }
