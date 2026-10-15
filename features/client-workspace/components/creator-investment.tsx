@@ -5,12 +5,21 @@ import { clientFacingCreatorCardAmount, originalClientFacingCreatorCardAmount, v
 import type { ClientCreatorCard } from '../types';
 
 /** Presentation of existing client-facing amounts; never accepts internal cost fields. */
-export function CreatorInvestment({ creator, currency, hideCostAndFees, showOriginalCurrency }: {
+export function CreatorInvestment({ creator, currency, hideCostAndFees, showOriginalCurrency, isSelected }: {
   creator: ClientCreatorCard;
+  isSelected: boolean;
   currency: string;
   hideCostAndFees: boolean;
   showOriginalCurrency: boolean;
 }) {
+  // Quoted options remain available separately; this is the selection summary.
+  if (!isSelected) {
+    return <span className="inv tbc">
+      <span className="cw-money-row cw-money-investment"><span>{hideCostAndFees ? 'Total investment' : 'Investment'}</span>
+        <strong>Nothing selected</strong>
+      </span>
+    </span>;
+  }
   const total = clientFacingCreatorCardAmount(creator);
   const fees = creator.agencyFeeAmount ?? 0;
   const investment = total == null ? total : hideCostAndFees ? total : total - fees;

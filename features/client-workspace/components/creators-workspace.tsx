@@ -483,7 +483,7 @@ export function CreatorsWorkspace({
             const hasOptions = !currentCampaign && !strategicOnly && Boolean(creator.quotationOptions?.length);
             const hasMultipleOptions = hasOptions && creator.quotationOptions!.length > 1;
             const optionsClosed = Boolean(closedOptions[creator.creatorId]);
-            const optionFields = hasOptions ? (<fieldset id={`creator-options-${creator.creatorId}`} hidden={hasMultipleOptions && optionsClosed} className={hasMultipleOptions ? "cc-options" : "cc-options cw-single-option"} disabled={pending || !canSelectCreator(creator.creatorId) || confirmed}>
+            const optionFields = hasOptions ? (<fieldset id={`creator-options-${creator.creatorId}`} hidden={hasMultipleOptions && optionsClosed} className={hasMultipleOptions ? "cc-options" : `cc-options cw-single-option${state !== "accepted" ? " cw-option-unselected" : ""}`} disabled={pending || !canSelectCreator(creator.creatorId) || confirmed}>
                   <legend>{hasMultipleOptions ? "Quotation options" : "Deliverables"}</legend>
                   {hasMultipleOptions ? <p>Choose one or more — they combine</p> : null}
                   {creator.quotationOptions!.map(option => <label className="cc-option" key={option.itemId}>
@@ -557,9 +557,12 @@ export function CreatorsWorkspace({
                     onClick={() => setClosedOptions(current => ({ ...current, [creator.creatorId]: !current[creator.creatorId] }))}>
                     {optionsClosed ? "Show" : "Hide"} {creator.quotationOptions!.length} options <svg className="cw-chevron" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="m4 6 4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" /></svg>
                   </button> : null}
+                  {!currentCampaign && !hasOptions && !strategicOnly && state !== "accepted" && clientFacingCreatorCardAmount(creator) != null ? (
+                    <span className="cc-option-price"><span className="cw-currency">Quoted total </span><WorkspaceMoney value={formatMoneyKpi(clientFacingCreatorCardAmount(creator)!, view.commercial.currency)} /></span>
+                  ) : null}
                   </div>
                   {!strategicOnly ? (
-                  <CreatorInvestment creator={creator} currency={view.commercial.currency}
+                  <CreatorInvestment creator={creator} currency={view.commercial.currency} isSelected={currentCampaign || state === "accepted"}
                     hideCostAndFees={Boolean(view.hideCostAndFees)} showOriginalCurrency={showOriginalCurrency} />
                   ) : null}
                 </div>
