@@ -1,3 +1,4 @@
+import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -617,6 +618,7 @@ export async function getQuotationDetail(
     audience_size: 0,
     estimated_reach: 0,
     estimated_engagement_rate: null as number | null,
+    creatorListOrder: readCreatorListOrder(row.metadata),
     showOriginalCurrency: readShowOriginalCurrency(row.metadata),
     hideCostAndFees: readHideCostAndFees(row.metadata),
   };

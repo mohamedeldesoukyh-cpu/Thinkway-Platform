@@ -25,6 +25,7 @@ import {
   isQuotationOfferExpired,
 } from "@/features/quotations/quotation-validity";
 import type { QuotationDetail, QuotationItemRow } from "../types";
+import { orderCreatorGroups } from "@/lib/quotations/quotation-creator-order";
 import type { CreatorTierLabel } from "@/lib/creators/creator-tier";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
@@ -109,6 +110,7 @@ export type QuotationDocPlatformMetric = {
 };
 
 export type QuotationDocCreatorGroup = {
+  itemIds?: string[];
   /** Highest tier across all linked accounts, before report platform filtering. */
   highestPlatformTier?: CreatorTierLabel;
   highestPlatformFollowers?: number;
@@ -253,6 +255,7 @@ export type QuotationDocumentFullTierBreakdown = {
 };
 
 export type QuotationDocument = {
+  creatorListOrder?: string[];
   clientLogo?: string | null;
   audience: QuotationDocumentAudience;
   /** Discovery shortlists reuse quotation templates without commercial pricing. */
@@ -769,6 +772,7 @@ function buildCreatorGroup(
       const counts = group.items.flatMap(item => (item.export_platforms ?? []).map(account => account.followers)).filter((value): value is number => value != null && value > 0);
       return counts.length ? resolveCreatorTierLabel({ followers: Math.max(...counts) }) : resolveCreatorTierLabel({ role: exportItemTierLabel(headerItem) });
     })(),
+    itemIds: group.items.map(item => item.id),
     creatorKey: group.creatorKey,
     creator: profile.creator,
     handle: profile.handle,
@@ -1133,6 +1137,7 @@ export function buildQuotationDocument(
   return {
     audience,
     source: "quotation",
+    creatorListOrder: detail.creatorListOrder,
     template,
     hideCostAndFees,
     serial: formatDocumentNumberForDisplay(detail.serial_number ?? "QT-PENDING"),
@@ -1163,7 +1168,7 @@ export function buildQuotationDocument(
       : "Prepared exclusively for the named Client",
     dateLabel: formatDateLabel(detail.issue_date),
     rows: filteredCreatorGroups.flatMap((group) => group.rows),
-    creatorGroups: filteredCreatorGroups,
+    creatorGroups: orderCreatorGroups(filteredCreatorGroups, detail.creatorListOrder, group => group.itemIds ?? []),
     collapseContentGroups,
     commercialKpis: audience === "internal" ? internalKpis : clientKpis,
     summary: {

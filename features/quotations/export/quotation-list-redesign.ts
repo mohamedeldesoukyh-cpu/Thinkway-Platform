@@ -3,6 +3,7 @@ import { getThinkwayLogoDarkDataUri } from "@/lib/reports/document/thinkway-repo
 import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
 import { escapeHtml as e, safeProfileUrl } from "@/features/rate-cards/report";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { orderCreatorGroups } from "@/lib/quotations/quotation-creator-order";
 import { compareClientListCreators } from "@/lib/creators/client-list-order";
 import type { QuotationDocument, QuotationDocCreatorGroup, QuotationDocRow } from "./quotation-document";
 
@@ -94,7 +95,7 @@ function notes(creators: Creator[], hideFees: boolean) {
 
 /** Client-only presentation of the existing calculated quotation document. */
 export function buildRedesignedQuotationCreatorList(doc: QuotationDocument) {
-  const groups = [...doc.creatorGroups].sort((a,b) => compareClientListCreators({tier:a.highestPlatformTier ?? a.rows[0]?.tier, followers:a.highestPlatformFollowers},{tier:b.highestPlatformTier ?? b.rows[0]?.tier, followers:b.highestPlatformFollowers}));
+  const groups = orderCreatorGroups([...doc.creatorGroups].sort((a,b) => compareClientListCreators({tier:a.highestPlatformTier ?? a.rows[0]?.tier, followers:a.highestPlatformFollowers},{tier:b.highestPlatformTier ?? b.rows[0]?.tier, followers:b.highestPlatformFollowers})), doc.creatorListOrder, group => group.itemIds ?? []);
   const creators: Creator[] = groups.map((group,index) => {
     const included = new Set(group.rows.flatMap(row => row.quotedPlatforms ?? []).map(canonicalPlatformKey));
     return { group, index:index+1, tier:group.highestPlatformTier ?? group.rows[0]?.tier ?? "Mid", offers:offersFor(group), metrics:group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform)) && [metric.followers,metric.engagement,metric.views].some(value => /\d/.test(value))) };
