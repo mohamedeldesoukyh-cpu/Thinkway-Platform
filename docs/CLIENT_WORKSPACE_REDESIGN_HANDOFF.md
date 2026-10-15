@@ -530,3 +530,11 @@ Fast-forwarded this isolated branch from 6b679731 to the current develop baselin
 - The unrelated dirty performance/reports/latest-check.json remains preserved and is excluded from this commit.
 
 Development deployment and anonymous synthetic-link smoke checks are the next release step. Production promotion remains gated on resolution of the existing JavaScript asset-count failure; this section does not claim release readiness.
+
+### Development deployment result and remaining release gate
+
+Committed the presentation corrections as a0ad81eb and pushed to develop. Vercel deployment dpl_53deznGkEzNRtXdP89GDc8CJf7Pr reached READY and owns dev.thinkwaymedia.com. The approved synthetic review link was checked through the authorized browser at desktop and mobile sizes: new muted color #5c6b82, mono scale .94 and SVG profile control are present; long Arabic/Latin name wraps; Followers, platform icon and Mid tier remain; approved creator selection stays locked; Shortlist and Commercial agree on EGP 1,500 + EGP 150 = EGP 1,650. No approval or client data mutation was submitted. Screenshots: C:/thinkway-platform/.tmp/design-spec-verification/dev-release-desktop.png and dev-release-mobile-profile.png.
+
+GitHub Validate run 38663204890 confirms every preceding job step passed and Performance budgets alone failed at 402 JavaScript files (hard limit 400), matching unchanged-baseline run 38662688375. A bounded experiment removed the new category editor's redundant client entry boundary, with both client parents checked by the existing boundary guard. Production build passed but still emitted 402 files; the experiment and its manifest addition were fully reverted. No unrelated category behavior or styling was changed, and no check or budget was relaxed.
+
+The dev smoke checks pass, but production was not pushed or deployed because the hard release gate remains failing. The remaining work is to reduce the baseline's emitted JavaScript asset count by at least two while preserving behavior, then rerun the unchanged gate and verify dev before live. A browser API-version navigation separately returned ERR_BLOCKED_BY_CLIENT; it was not bypassed. The client workspace route itself was available and verified, and deployment identity was independently confirmed through Vercel's authenticated metadata.
