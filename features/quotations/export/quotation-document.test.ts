@@ -1575,7 +1575,7 @@ console.log("quotation-document.test.ts passed");
 {
  const items=[mockItem({id:"order-a1",unified_id:"a",creator_name:"Order Alpha",handle:"@orderalpha",followers:2000000,sort_order:0}), mockItem({id:"order-b1",unified_id:"b",creator_name:"Order Beta",handle:"@orderbeta",followers:10000,sort_order:1}), mockItem({id:"order-a2",unified_id:"a",creator_name:"Order Alpha",handle:"@orderalpha",followers:2000000,sort_order:2,option_number:2})];
  const detail=mockDetail({items});
- for(const template of ["creator-list","client-list-by-name"] as const){
+ for(const template of ["creator-list","creator-list-additions","client-list-by-name"] as const){
    const original=buildQuotationDocument(detail,{template});
    const doc=buildQuotationDocument({...detail,creatorListOrder:["order-b1","order-a1","order-a2"]},{template});
    assert.deepEqual(doc.creatorGroups.map(g=>g.creator),["Order Beta","Order Alpha"]);
@@ -1587,4 +1587,15 @@ console.log("quotation-document.test.ts passed");
    const selected=buildQuotationDocument({...detail,creatorListOrder:["order-b1","order-a1","order-a2"]},{template,itemIds:["order-a2","order-b1"]});
    assert.deepEqual(selected.creatorGroups.map(g=>g.creator),["Order Beta","Order Alpha"]);
  }
+}
+
+{
+  assert.equal(resolveQuotationTemplate("creator-list-additions"), "creator-list-additions");
+  const detail=mockDetail({items:[mockItem(),mockItem({id:"option-two",option_number:2,service_description:"Additional stories"})]});
+  const original=buildQuotationDocument(detail,{template:"creator-list"});
+  const additions=buildQuotationDocument(detail,{template:"creator-list-additions"});
+  assert.deepEqual(additions.rows,original.rows);
+  assert.deepEqual(additions.creatorGroups,original.creatorGroups);
+  assert.ok(buildQuotationHtml(additions).includes('>Additions</span>'));
+  assert.ok(buildQuotationHtml(original).includes('>Option 2</span>'));
 }

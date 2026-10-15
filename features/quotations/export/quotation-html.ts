@@ -1,3 +1,4 @@
+import { isPricedCreatorListTemplate } from "./quotation-template";
 import { buildQuotationCreatorListHtml } from "./quotation-creator-list";
 import { isQuotationListTemplate } from "./quotation-template";
 import { applyMobileDocumentLayout } from "@/lib/reports/document/mobile-document-layout";
@@ -40,6 +41,6 @@ export function buildQuotationHtml(
   doc: QuotationDocument,
   options?: BuildQuotationHtmlOptions
 ): string {
-  if (doc.template === "creator-list" && doc.source !== "shortlist") return buildQuotationCreatorListHtml(doc);
+  if (isPricedCreatorListTemplate(doc.template) && doc.source !== "shortlist") return buildQuotationCreatorListHtml(doc);
   return applyMobileDocumentLayout(isQuotationListTemplate(doc.template) ? buildQuotationCreatorListHtml(doc) : buildQuotationTemplateHtml(doc, options));
 }
