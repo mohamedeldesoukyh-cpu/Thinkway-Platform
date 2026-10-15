@@ -29,9 +29,11 @@ REVOKE ALL ON FUNCTION public.relabel_brand_client_json(jsonb,jsonb,jsonb,text) 
 
 -- The existing deletion guard remains intact. Reparenting is validated and cascaded
 -- by one transaction; direct brand updates receive the same checks as the UI.
-DROP TRIGGER protect_brand_dependencies ON public.brands;
+DROP TRIGGER IF EXISTS protect_brand_dependencies ON public.brands;
+DO $guard$ BEGIN
+IF to_regprocedure('public.guard_client_entity_dependencies()') IS NOT NULL THEN
 CREATE TRIGGER protect_brand_dependencies BEFORE DELETE ON public.brands
-FOR EACH ROW EXECUTE FUNCTION public.guard_client_entity_dependencies();
+FOR EACH ROW EXECUTE FUNCTION public.guard_client_entity_dependencies(); END IF; END $guard$;
 
 CREATE OR REPLACE FUNCTION public.reassign_brand_client_records() RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog,public AS $$
