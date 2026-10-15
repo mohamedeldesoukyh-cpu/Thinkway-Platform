@@ -56,6 +56,7 @@ function revalidateBrandPaths(clientId: string, groupId: string | null) {
   }
   revalidatePath("/campaigns");
   revalidatePath("/reports/pnl");
+  revalidatePath("/", "layout");
 }
 
 type ClientBrandContext = {
@@ -230,6 +231,7 @@ export async function updateBrandAction(
   if (brandError || !brand) {
     return { ok: false, message: brandError?.message ?? "Brand not found." };
   }
+
 
   const clientResult = await fetchClientBrandContext(supabase, parsed.data.client_id);
   if (!clientResult.ok) {
@@ -406,4 +408,16 @@ export async function updateBrandStatusAction(
         ? "Brand marked active."
         : "Brand marked inactive.",
   };
+}
+
+export async function listBrandLegalEntities() {
+  const { supabase } = await requireRequestUser();
+  const rows: {id:string;name:string;document_number:string;vr_rate_id:string|null;vr_rate_percent:number|null}[] = [];
+  for (let offset = 0; ; offset += 500) {
+    const {data,error} = await supabase.from("clients").select("id,name,document_number,vr_rate_id,vr_rate:md_vr_rates(rate_percent)").order("name").order("id").range(offset,offset+499);
+    if (error) throw new Error(error.message);
+    rows.push(...(data ?? []).map(row => ({id:row.id,name:row.name,document_number:row.document_number,vr_rate_id:row.vr_rate_id,vr_rate_percent:(Array.isArray(row.vr_rate)?row.vr_rate[0]:row.vr_rate)?.rate_percent ?? null})));
+    if (!data || data.length < 500) break;
+  }
+  return rows;
 }

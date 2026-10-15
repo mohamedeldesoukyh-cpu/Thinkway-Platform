@@ -24,7 +24,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { createBrandAction, updateBrandAction } from "@/features/brands/actions";
+import { createBrandAction, updateBrandAction, listBrandLegalEntities } from "@/features/brands/actions";
 import { EntityLogoField } from "@/features/entity-logos/components/entity-logo-field";
 import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import type { GroupBrandRow, GroupLegalEntityRow } from "@/features/groups/types";
@@ -75,9 +75,17 @@ export function BrandSheet({
   );
   const [status, setStatus] = useState<ClientStatus>(brand?.status ?? "active");
 
+  const [allClients, setAllClients] = useState<Pick<GroupLegalEntityRow, "id" | "name" | "vr_rate_id" | "vr_rate_percent">[]>(legalEntities);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    listBrandLegalEntities().then(rows => { if (!cancelled) setAllClients(rows); }).catch(() => toast.error("Could not load all clients. Close and try again."));
+    return () => { cancelled = true; };
+  }, [open]);
+
   const selectedClient = useMemo(
-    () => legalEntities.find((entity) => entity.id === clientId),
-    [legalEntities, clientId]
+    () => allClients.find((entity) => entity.id === clientId),
+    [allClients, clientId]
   );
   const clientVrRateId = selectedClient?.vr_rate_id ?? null;
   const brandHasOverride = Boolean(vrRateId) && vrRateId !== (clientVrRateId ?? "");
@@ -133,7 +141,7 @@ export function BrandSheet({
     setVrRateId(clientVrRateId ?? "");
   }, [open, isEdit, clientVrRateId]);
 
-  const clientOptions = legalEntities.map((le) => ({
+  const clientOptions = allClients.map((le) => ({
     value: le.id,
     label: le.name,
   }));
@@ -198,8 +206,9 @@ export function BrandSheet({
               onValueChange={setClientId}
               options={clientOptions}
               disabled={isPending}
-              placeholder="Select legal entity"
+              placeholder="Select client"
             />
+            {isEdit && <p className="text-xs text-muted-foreground">Changing the legal entity updates linked shortlists, quotations, campaigns and financial documents when you save.</p>}
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">

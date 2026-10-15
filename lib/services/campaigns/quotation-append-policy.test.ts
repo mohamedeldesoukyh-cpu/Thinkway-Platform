@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { quotationAppendLineId, quotationAppendTargetError, selectQuotationAppendUnit } from "./quotation-append-policy";
+import { quotationAppendLineId, quotationAppendTargetError, selectQuotationAppendUnit, selectQuotationAppendUnits } from "./quotation-append-policy";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
 const creator = { id: "first", influencer_id: "creator", sort_order: 0, option_number: 1, source_shortlist_item_id: "shortlist-origin" } as QuotationItemRow;
@@ -25,4 +25,11 @@ test("retry identity survives quotation revisions and separates campaigns and cr
   assert.notEqual(first, quotationAppendLineId("other-campaign", creator));
   assert.notEqual(first, quotationAppendLineId("campaign", { id: "different", source_shortlist_item_id: null }));
   assert.match(first, /^[\da-f]{8}-[\da-f]{4}-5[\da-f]{3}-a[\da-f]{3}-[\da-f]{12}$/);
+});
+
+test("bulk append validates every selected line before returning units", () => {
+ const other = {...creator,id:"other",influencer_id:"other-creator",sort_order:2};
+ assert.equal(selectQuotationAppendUnits([creator,other],[creator.id,other.id]).units?.length,2);
+ assert.ok(selectQuotationAppendUnits([creator,other],[creator.id,"missing"]).error);
+ assert.equal(selectQuotationAppendUnits([creator],[creator.id,creator.id]).units?.length,1);
 });

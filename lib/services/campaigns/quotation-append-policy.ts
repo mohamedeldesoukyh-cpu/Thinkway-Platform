@@ -33,3 +33,14 @@ export function quotationAppendLineId(campaignId: string, item: Pick<QuotationIt
   const hex = createHash("sha256").update(`quotation-append:${campaignId}:${item.source_shortlist_item_id || item.id}`).digest("hex");
   return `${hex.slice(0,8)}-${hex.slice(8,12)}-5${hex.slice(13,16)}-a${hex.slice(17,20)}-${hex.slice(20,32)}`;
 }
+
+export function selectQuotationAppendUnits(items: QuotationItemRow[], itemIds: string[]) {
+  if (!itemIds.length) return { error: "Select at least one creator line." } as const;
+  const units = [];
+  for (const id of [...new Set(itemIds)]) {
+    const result = selectQuotationAppendUnit(items, [id]);
+    if (result.error) return { error: result.error } as const;
+    units.push(result.unit);
+  }
+  return { units } as const;
+}
