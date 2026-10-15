@@ -162,7 +162,8 @@ function QuotationWorkspaceContent({
   const [clientSelectionFilter, setClientSelectionFilter] =
     useState<QuotationClientSelectionFilter>("all");
   const [convertApprovedOpen, setConvertApprovedOpen] = useState(false);
-  const [appendCreatorId, setAppendCreatorId] = useState<string | null>(null);
+  const [appendCreatorIds, setAppendCreatorIds] = useState<string[]>([]);
+  const [convertSelectedIds, setConvertSelectedIds] = useState<string[] | undefined>();
   const [exportTemplate, setExportTemplate] = useState<QuotationTemplateVariant>("detailed");
   const [addCreatorsOpen, setAddCreatorsOpen] = useState(false);
   const [commercialWorkspaceOpen, setCommercialWorkspaceOpen] = useState(false);
@@ -787,6 +788,7 @@ function QuotationWorkspaceContent({
               toast.error("Approve this quotation first, then move the approved creators to the campaign.");
               return;
             }
+            setConvertSelectedIds(approvedItemIds);
             setConvertApprovedOpen(true);
           }}
           pending={bulkPending}
@@ -914,11 +916,16 @@ function QuotationWorkspaceContent({
         onToggleCalculator={() => setCalculatorOpen((open) => !open)}
         onDuplicate={handleDuplicateSelected}
         onDelete={() => void handleRemoveSelected()}
+        onMoveToCampaign={detail.canManage ? () => {
+          if (manualSave.hasUnsavedChanges) { toast.error("Save your quotation changes first."); return; }
+          if (detail.status !== "approved") { toast.error("Approve this quotation version before moving creators to a campaign."); return; }
+          setConvertSelectedIds([...selectedIds]);
+          setConvertApprovedOpen(true);
+        } : undefined}
         onAddToCampaign={detail.canManage ? () => {
           if (manualSave.hasUnsavedChanges) { toast.error("Save your quotation changes first."); return; }
           if (detail.status !== "approved") { toast.error("Approve this quotation version before adding its creator to a campaign."); return; }
-          const itemId = [...selectedIds][0];
-          if (selectedIds.size === 1 && itemId) setAppendCreatorId(itemId);
+          if (selectedIds.size > 0) setAppendCreatorIds([...selectedIds]);
         } : undefined}
       />
       <QuotationPricingCalculatorPanel
@@ -945,9 +952,9 @@ function QuotationWorkspaceContent({
         detail={detail}
         open={convertApprovedOpen}
         onOpenChange={setConvertApprovedOpen}
-        itemIds={approvedItemIds}
+        itemIds={convertSelectedIds}
       />
-      {appendCreatorId && <AppendQuotationCreatorDialog quotationId={detail.id} itemId={appendCreatorId} linkedCampaignId={detail.campaign_header_id} onClose={() => setAppendCreatorId(null)} />}
+      {appendCreatorIds.length > 0 && <AppendQuotationCreatorDialog quotationId={detail.id} itemIds={appendCreatorIds} linkedCampaignId={detail.campaign_header_id} onClose={() => setAppendCreatorIds([])} />}
     </div>
   );
 }

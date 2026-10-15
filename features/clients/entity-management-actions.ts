@@ -12,6 +12,7 @@ function message(error: { code?: string; message: string }) {
   return "The change could not be completed. Refresh and check your permissions.";
 }
 function refreshEntities() {
+  revalidatePath("/", "layout");
   revalidatePath("/brands");
   revalidatePath("/clients", "layout");
   revalidatePath("/groups", "layout");
