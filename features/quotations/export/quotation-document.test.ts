@@ -1599,3 +1599,17 @@ console.log("quotation-document.test.ts passed");
   assert.ok(buildQuotationHtml(additions).includes('>Additions</span>'));
   assert.ok(buildQuotationHtml(original).includes('>Option 2</span>'));
 }
+
+// Quotation template photos override every option's report portrait without mutating source rows or amounts.
+{
+  const photo = "data:image/webp;base64,UklGRg==";
+  const item = mockItem({ unified_id: "template-photo-qa", profile_image_url: "https://example.com/original.jpg" });
+  const detail = mockDetail({ items: [item, { ...item, id: "item-2", option_number: 2, sort_order: 1 }] });
+  const before = structuredClone(detail);
+  const original = buildQuotationDocument(detail, {template: "creator-list"});
+  const customized = buildQuotationDocument({...detail, templateCreatorPhotos: {"u:template-photo-qa": photo}}, {template: "creator-list-additions"});
+  assert.equal(customized.creatorGroups[0].avatarUrl, photo);
+  assert.deepEqual(customized.creatorGroups[0].rows, original.creatorGroups[0].rows);
+  assert.deepEqual(detail, before);
+  assert.notEqual(buildQuotationDocument(detail).creatorGroups[0].avatarUrl, photo);
+}

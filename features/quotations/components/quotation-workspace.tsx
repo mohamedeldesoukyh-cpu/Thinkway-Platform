@@ -820,7 +820,7 @@ function QuotationWorkspaceContent({
               <span className="tw-cs">
                 <QuotationText>Options are alternative quotation lines for the same creator</QuotationText></span>
               <span className="tw-sp" />
-              {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && uniqueCreatorCount > 1 ? <QuotationCreatorOrderDialog quotationId={detail.id} items={visibleItems} savedOrder={creatorOrder} onSaved={order => { setCreatorOrder(order); setTableSort(null); }} /> : null}
+              {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && uniqueCreatorCount > 0 ? <QuotationCreatorOrderDialog quotationId={detail.id} items={visibleItems} savedOrder={creatorOrder} savedPhotos={detail.templateCreatorPhotos} onSaved={order => { setCreatorOrder(order); setTableSort(null); }} /> : null}
               <QuotationRateCardToolbarButton />
               {detail.shortlist_id && <Link className="tw-b sm" href={`/discovery/shortlists/${detail.shortlist_id}`}><QuotationText>Open shortlist</QuotationText></Link>}
               <QuotationCommercialEntry
