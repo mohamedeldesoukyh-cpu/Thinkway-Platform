@@ -37,7 +37,7 @@ export function CommercialInvestment({view}: {view: ClientWorkspaceView}) {
   const money = (n: number) => formatMoneyKpi(n, currency);
   return <>
     <CommercialReveal className="cm-hero">
-      <div className="cm-hero-top"><p className="cm-eyebrow">Campaign investment</p><span className={`cm-pill ${model.approved ? 'success' : 'info'}`}>{model.approved ? 'Approved' : 'Awaiting your approval'}</span></div>
+      <div className="cm-hero-top"><p className="cm-eyebrow">Campaign investment</p><span className={`cm-pill ${model.approved ? 'success' : 'warn'}`}>{model.approved ? 'Approved' : 'Awaiting your approval'}</span></div>
       <h2 className="cm-amount">{model.subtotal > 0 ? <><span className="cm-currency">{currency}</span><CommercialCount value={model.subtotal} format={n => money(n).replace(currency, "").trim()}/></> : 'To be confirmed'}</h2>
       <p className="cm-caption">Proposed creator {view.hideCostAndFees ? 'investment' : 'cost'} · {model.count} creators{view.quotation ? <> · quotation <bdi>{view.quotation.serialNumber}</bdi>{view.quotation.version ? ` (v${view.quotation.version.replace(/^v/i, '')})` : ''}</> : null}</p>
       <p className="cm-helper">{model.approved ? 'Your commercial approval is recorded. View or download the campaign documents below.' : model.total ? 'Review the proposed investment and campaign documents before confirming commercial approval.' : 'Review and approve your creator selection. Agency fees and the final total investment will appear once confirmed.'}</p>

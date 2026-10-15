@@ -590,9 +590,9 @@ export function CreatorsWorkspace({
                   <p>{description}</p>
                 </div>
               ) : null}
-              <button type="button" className="cw-profile-open" data-creator-profile={creator.creatorId} aria-label={`View ${identity.name} profile`}
+              <button type="button" className="cw-profile-open" data-creator-profile={creator.creatorId} aria-label={`View ${identity.name}'s full profile`}
                 aria-expanded={creator.creatorId === activeId && showDetail} aria-controls="client-creator-detail"
-                onClick={() => openCreator(creator.creatorId)}><span aria-hidden="true">→</span></button>
+                onClick={() => openCreator(creator.creatorId)}><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 12h14m-6-6 6 6-6 6" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" /></svg></button>
               </div>
               {hasMultipleOptions ? optionFields : null}
               {workspaceState.optionErrors[creator.creatorId] ? <p className="cw-option-error" role="alert">{workspaceState.optionErrors[creator.creatorId]}</p> : null}
