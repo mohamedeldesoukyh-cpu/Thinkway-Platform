@@ -104,6 +104,8 @@ const nextConfig: NextConfig = {
   ],
   // Tree-shake barrel imports on critical client paths (sidebar, discovery, sheets).
   experimental: {
+    // Merge small production fragments while retaining on-demand feature chunks.
+    turbopackChunking: { minChunkSize: 60000 },
     optimizePackageImports: [
       "lucide-react",
       "date-fns",

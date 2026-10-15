@@ -538,3 +538,20 @@ Committed the presentation corrections as a0ad81eb and pushed to develop. Vercel
 GitHub Validate run 38663204890 confirms every preceding job step passed and Performance budgets alone failed at 402 JavaScript files (hard limit 400), matching unchanged-baseline run 38662688375. A bounded experiment removed the new category editor's redundant client entry boundary, with both client parents checked by the existing boundary guard. Production build passed but still emitted 402 files; the experiment and its manifest addition were fully reverted. No unrelated category behavior or styling was changed, and no check or budget was relaxed.
 
 The dev smoke checks pass, but production was not pushed or deployed because the hard release gate remains failing. The remaining work is to reduce the baseline's emitted JavaScript asset count by at least two while preserving behavior, then rerun the unchanged gate and verify dev before live. A browser API-version navigation separately returned ERR_BLOCKED_BY_CLIENT; it was not bypassed. The client workspace route itself was available and verified, and deployment identity was independently confirmed through Vercel's authenticated metadata.
+
+## JavaScript asset-count remediation — 15 October 2026
+
+The 402-file failure is a bundle-fragmentation limit reached after the newer creator-category additions, not a regression introduced by the presentation patch. Removing a redundant client directive did not reduce emitted assets and remains reverted. The retained fix uses the installed Next 16.4 documented production chunker: `experimental.turbopackChunking.minChunkSize = 60000` (default 50000 uncompressed/unminified bytes). No component imports, lazy-loading boundaries, styling, calculations, permissions or authentication code is changed. The 400-file hard limit, 1,500 KB CSS limit, collector, and all other checks are unchanged.
+
+Measured identical-source builds:
+
+| Raw merge floor | Emitted JS files | Total emitted JS KB | Result |
+| --- | ---: | ---: | --- |
+| Default 50,000 | 402 | 13,571.2 | Hard file-count failure |
+| 52,000 (rejected) | 404 | 13,885.9 | Hard file-count failure |
+| 55,000 (rejected) | 401 | 14,126.2 | Hard file-count failure |
+| 60,000 (retained) | 373 | 14,370.4 | All hard bundle gates pass |
+
+The tradeoff is 799.1 KB more total emitted JS across the entire application (5.9%) because merged groups duplicate some shared code. This is not an initial page payload increase: all 195 client-reference manifests have unchanged or slightly smaller summed JS bytes. Client workspace section assets go from 21 / 490.1 KB to 18 / 489.7 KB; Discovery search 27 / 829.1 KB to 20 / 828.2 KB; campaign detail 35 / 2,054.9 KB to 31 / 2,054.3 KB; login 8 / 158.4 KB to 7 / 158.3 KB. These are manifest comparisons, not physical-device timing measurements. Largest JS remains 354.6 KB and CSS remains 1,485.0 KB.
+
+Evidence in ignored `.tmp-cw-visual/`: js-chunks-baseline.json, js-chunks-60000.json, js-comparison-60000.json, js-final-build.log, js-final-types.log, js-final-budget.log, js-final-budget-report.json. The 353 client-workspace tests and existing auth-P1 command passed. The unrelated generated performance report is preserved and excluded from commits. Dev deployment and complete CI must be verified before the authorized production release.
