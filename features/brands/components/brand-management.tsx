@@ -19,7 +19,7 @@ export function BrandManagement({ brand, clients }: { brand: { id: string; name:
     <Button size="sm" variant="outline" onClick={() => setDeleteOpen(true)}>Delete brand</Button>
     <Dialog open={moveOpen} onOpenChange={(v) => { if (!pending) setMoveOpen(v); }}><DialogContent>
       <DialogHeader><DialogTitle>Change client for {brand.name}</DialogTitle>
-        <DialogDescription>Current client: {brand.client_name}. Only brands with no linked records can be moved here. Campaigns and financial history are never moved automatically.</DialogDescription></DialogHeader>
+        <DialogDescription>Current client: {brand.client_name}. Changing the client updates linked shortlists, quotations, campaigns and financial documents together.</DialogDescription></DialogHeader>
       <SearchableSelect value={clientId} onValueChange={setClientId} disabled={pending} placeholder="Select new client" options={clients.filter((c) => c.id !== brand.client_id).map((c) => ({value: c.id, label: c.name + " · " + c.document_number}))} />
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <DialogFooter><Button variant="outline" disabled={pending} onClick={() => setMoveOpen(false)}>Cancel</Button>

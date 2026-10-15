@@ -1491,7 +1491,7 @@ console.log("quotation-document.test.ts passed");
       assert.ok(html.includes("Reel package"));
       assert.ok(html.includes("Agency fees (AF)"));
       const hidden = buildQuotationHtml({...doc, hideCostAndFees:true});
-      assert.ok(hidden.includes(doc.rows[0].totalInvestment!.replace(/\s+EGP$/, "")));
+      assert.ok(hidden.includes(Number(doc.rows[0].totalInvestment!.replace(/[^\d.-]/g, "")).toLocaleString("en-US", {maximumFractionDigits:0})));
       assert.ok(!hidden.includes("Agency fees (AF)"));
     }
     const selected = buildQuotationDocument(mockDetail({items:[mockItem(), mockItem({id:"item-2",creator_name:"Excluded Creator",handle:"@other"})]}), {template,itemIds:["item-1"]});

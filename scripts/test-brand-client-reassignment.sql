@@ -1,0 +1,20 @@
+BEGIN;
+SELECT set_config('request.jwt.claims','{"sub":"cbeee142-8091-4057-bef8-2f62964e115b","role":"authenticated","aal":"aal2"}',true);
+DO $$ DECLARE old_id uuid; new_id uuid; brand uuid; campaign uuid; invoice uuid; BEGIN
+ INSERT INTO clients(name,status) VALUES('QA reassignment source','active') RETURNING id INTO old_id;
+ INSERT INTO clients(name,status) VALUES('QA reassignment destination','active') RETURNING id INTO new_id;
+ INSERT INTO brands(client_id,name) VALUES(old_id,'QA reassignment brand') RETURNING id INTO brand;
+ INSERT INTO campaign_headers(client_id,brand_id,name) VALUES(old_id,brand,'QA reassignment campaign') RETURNING id INTO campaign;
+ INSERT INTO invoices(client_id,campaign_header_id,subtotal,total,amounts_finalized_at) VALUES(old_id,campaign,100,100,now()) RETURNING id INTO invoice;
+ UPDATE brands SET client_id=new_id WHERE id=brand;
+ IF (SELECT client_id FROM campaign_headers WHERE id=campaign)<>new_id OR (SELECT client_id FROM invoices WHERE id=invoice)<>new_id THEN RAISE EXCEPTION 'Linked records not moved'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM brand_client_reassignments WHERE brand_id=brand AND client_id=new_id) THEN RAISE EXCEPTION 'Missing audit'; END IF;
+ BEGIN UPDATE invoices SET subtotal=101 WHERE id=invoice; RAISE EXCEPTION 'Amounts protection failed'; EXCEPTION WHEN raise_exception THEN IF SQLERRM='Amounts protection failed' THEN RAISE; END IF; END;
+ BEGIN UPDATE invoices SET client_id=old_id WHERE id=invoice; RAISE EXCEPTION 'Direct client protection failed'; EXCEPTION WHEN raise_exception THEN IF SQLERRM='Direct client protection failed' THEN RAISE; END IF; END;
+ IF public.relabel_brand_client_json('{"clientName":"Old","client":{"name":"Old","legalName":"Old Legal"},"amount":100}'::jsonb,'{"name":"Old","legal_name":"Old Legal","id":"a"}'::jsonb,'{"name":"New","legal_name":"New Legal","id":"b"}'::jsonb)->>'clientName' <> 'New' THEN RAISE EXCEPTION 'Snapshot label not updated'; END IF;
+ PERFORM set_config('request.jwt.claims','{"role":"anon"}',true);
+ BEGIN UPDATE brands SET client_id=old_id WHERE id=brand; RAISE EXCEPTION 'Permission guard failed'; EXCEPTION WHEN insufficient_privilege THEN NULL; END;
+ IF (SELECT client_id FROM brands WHERE id=brand)<>new_id THEN RAISE EXCEPTION 'Unauthorized change persisted'; END IF;
+ RAISE NOTICE 'Brand cascade, invoice identity exception, amount protection and direct-edit protection passed';
+END $$;
+ROLLBACK;

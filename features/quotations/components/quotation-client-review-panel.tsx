@@ -141,7 +141,7 @@ export function QuotationClientReviewPanel({
         </div>
         <span className="q-sp" />
         <span className="q-review-note">
-          Client approval is the client's decision. The checkboxes below are for your own bulk actions and change nothing for the client.
+          Client approval is the client's decision. To move your checked lines from an approved quotation, use Move selected to campaign below. Move approved uses only client-approved creators.
         </span>
       </div>
         {review.changeRequestSummary && <p className="q-review-note">{review.changeRequestSummary}</p>}

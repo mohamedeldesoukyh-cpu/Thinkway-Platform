@@ -39,7 +39,7 @@ import { resolveLinePoBillableBase } from "@/lib/finance/po/billable-base";
 
 import { applyInheritedTentativeScheduleToLine } from "./apply-inherited-tentative-schedule";
 import { createCampaignLine } from "./campaign-line-service";
-import { quotationAppendLineId, quotationAppendTargetError, selectQuotationAppendUnit } from "./quotation-append-policy";
+import { quotationAppendLineId, quotationAppendTargetError, selectQuotationAppendUnits } from "./quotation-append-policy";
 import { maybeActivateCommercialCreatorForAssignment } from "@/lib/campaigns/campaign-influencer-commercial";
 
 import {
@@ -424,9 +424,9 @@ export async function convertQuotationToAssignments(
   const selection = summarizeQuotationConvertSelection(scopedItems, selectionOptions);
   let units = buildQuotationConvertUnits(scopedItems, selectionOptions);
   if (appendTarget) {
-    const selected = selectQuotationAppendUnit(items, input.itemIds ?? []);
+    const selected = selectQuotationAppendUnits(items, input.itemIds ?? []);
     if (selected.error) return { ok: false, message: selected.error };
-    units = [selected.unit];
+    units = selected.units;
   }
 
   if (units.length === 0) {

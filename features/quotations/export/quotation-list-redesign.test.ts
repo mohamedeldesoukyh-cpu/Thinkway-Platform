@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {creatorListMoney,creatorListViews,creatorListDeliverableChips,buildRedesignedQuotationCreatorList} from './quotation-list-redesign';
+import {creatorListWholeMoney,creatorListMoney,creatorListViews,creatorListDeliverableChips,buildRedesignedQuotationCreatorList} from './quotation-list-redesign';
 import type {QuotationDocument} from './quotation-document';
 assert.deepEqual(creatorListMoney('29,732.78 USD / 1,552,500.08 EGP'),{currency:'EGP',amount:'1,552,500.08',original:'29,732.78 USD'});
 assert.equal(creatorListViews('783,981'),'784K');
@@ -22,3 +22,7 @@ assert.equal((more.match(/<article class="creator-card">/g)||[]).length,2,'Addit
 assert.ok(more.includes('Unique deliverable 3'));
 assert.ok(!more.includes('SECRET_INTERNAL_COST'));
 console.log('quotation-list-redesign tests passed');
+
+assert.equal(creatorListWholeMoney("749,999.94"), "750,000");
+assert.equal(creatorListWholeMoney("112,500.04"), "112,500");
+assert.equal(creatorListWholeMoney("25,854.59 USD"), "25,855 USD");

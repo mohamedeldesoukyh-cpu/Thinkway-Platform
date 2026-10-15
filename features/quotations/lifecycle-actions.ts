@@ -44,7 +44,8 @@ const SHORTLIST_LIST = "/discovery/shortlists";
 const appendCreatorSchema = z.object({
   quotationId: z.string().uuid(),
   campaignId: z.string().uuid(),
-  itemId: z.string().uuid(),
+  itemId: z.string().uuid().optional(),
+  itemIds: z.array(z.string().uuid()).min(1).optional(),
   dryRun: z.boolean(),
 });
 
@@ -70,7 +71,7 @@ export async function listQuotationCampaignTargets(quotationId: string) {
 /** Explicit additive flow, independent of the legacy full-quotation conversion flag. */
 export async function appendQuotationCreatorToCampaign(input: z.infer<typeof appendCreatorSchema>) {
   const parsed = appendCreatorSchema.safeParse(input);
-  if (!parsed.success) return { ok: false as const, message: "Select one quotation creator and a campaign." };
+  if (!parsed.success) return { ok: false as const, message: "Select quotation creators and a campaign." };
   const actor = await getActor();
   if (!actor.ok) return actor;
   const auth = await requirePermission(actor.supabase, "campaigns.write");
@@ -79,7 +80,7 @@ export async function appendQuotationCreatorToCampaign(input: z.infer<typeof app
   const result = await convertQuotationToAssignments(actor.supabase, actor.userId, {
     quotationId: parsed.data.quotationId,
     appendToCampaignId: parsed.data.campaignId,
-    itemIds: [parsed.data.itemId],
+    itemIds: parsed.data.itemIds ?? (parsed.data.itemId ? [parsed.data.itemId] : []),
     dryRun: parsed.data.dryRun,
   });
   if (result.ok && !parsed.data.dryRun) {
@@ -329,7 +330,7 @@ export async function previewConvertQuotationToCampaign(input: {
 
   // When the R2.0 flag is off, convert falls back to legacy header create.
   // Preview must not hard-fail — match that fallback so Convert stays usable.
-  if (!isRelease20AssignmentConvertEnabled()) {
+  if (!isRelease20AssignmentConvertEnabled() && !input.itemIds?.length) {
     const { loadQuotationRow } = await import(
       "@/lib/services/quotations/repositories/quotation-repository"
     );
@@ -459,7 +460,7 @@ export async function convertQuotationToCampaign(input: {
     "@/lib/release/release-2-0-feature-flag"
   );
 
-  if (!isRelease20AssignmentConvertEnabled()) {
+  if (!isRelease20AssignmentConvertEnabled() && !input.itemIds?.length) {
     // Fall back to legacy create when flag off.
     const legacy = await createCampaignFromQuotation(input);
     if (!legacy.ok || !legacy.data) {
