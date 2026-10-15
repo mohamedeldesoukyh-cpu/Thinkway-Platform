@@ -1,0 +1,130 @@
+import { QUOTATION_LIST_REDESIGN_CSS } from "./quotation-list-redesign-styles";
+import { getThinkwayLogoDarkDataUri } from "@/lib/reports/document/thinkway-report-logo-embed";
+import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
+import { escapeHtml as e, safeProfileUrl } from "@/features/rate-cards/report";
+import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { compareClientListCreators } from "@/lib/creators/client-list-order";
+import type { QuotationDocument, QuotationDocCreatorGroup, QuotationDocRow } from "./quotation-document";
+
+type Offer = { kind: string; tag: string; total: string; currency: string; original: string; base: string; af: string; pct: string; description: string; shared: boolean };
+type Creator = { group: QuotationDocCreatorGroup; index: number; tier: string; offers: Offer[]; metrics: QuotationDocCreatorGroup["platformMetrics"] };
+const platforms = ["instagram", "tiktok"];
+const chunks = <T,>(items: T[], size: number): T[][] => Array.from({length: Math.ceil(items.length / size)}, (_, i) => items.slice(i * size, (i + 1) * size));
+const image = (value: string | null | undefined) => value && /^(data:image\/(?:png|jpe?g|webp|gif);base64,|https?:\/\/)/i.test(value) ? e(value) : "";
+const icon = (platform: string) => image(rateReportPlatformIcon(platform));
+const url = (value: string | null) => e(safeProfileUrl(value) ?? "");
+const number = (value: string) => Number(value.replace(/[^\d.-]/g, ""));
+
+/** Use the already-calculated reporting amount, preserving its displayed precision. */
+export function creatorListMoney(value: string, fallback = "EGP") {
+  const parts = value.split(/\s*\/\s*/);
+  const parse = (part: string) => {
+    const currency = part.match(/\b[A-Z]{3}\b/)?.[0] ?? fallback;
+    const amount = part.replace(/\b[A-Z]{3}\b/g, "").trim();
+    return { currency, amount };
+  };
+  const amounts = parts.map(parse);
+  const main = amounts.find(part => part.currency === "EGP") ?? amounts[amounts.length - 1];
+  const original = amounts.find(part => part.currency !== main.currency);
+  return { ...main, original: original ? `${original.amount} ${original.currency}` : "" };
+}
+export function creatorListViews(value: string) {
+  if (!/^\d[\d,]*(?:\.\d+)?$/.test(value.trim())) return value || "—";
+  const n = number(value);
+  return n >= 1e6 ? `${(n / 1e6).toFixed(1).replace(/\.0$/, "")}M` : n >= 1e3 ? `${Math.round(n / 1e3)}K` : value;
+}
+export function creatorListDeliverableChips(description: string) {
+  return description.split(/\s+\+\s+/).filter(Boolean).map(raw => {
+    let label = raw.replace(/IG Set of stories/gi, "IG Story set").replace(/1[×x]\s*Usage Rights \(UR\)/gi, "Usage rights").replace(/1[×x]\s*Boosting/gi, "Boosting").replace(/1[×x]\s*Event Attendance in hour/gi, "Event attendance · 1 hr").replace(/1[×x]\s*Event Attendance/gi, "Event attendance").replace(/1[×x]\s*Event Coverage/gi, "Event coverage").replace(/1 month/gi, "1 mo");
+    const kind = raw.length > 100 ? "ex" : /\bTT\b|tiktok/i.test(raw) ? "tt" : /\bIG\b|instagram|reel|stor/i.test(raw) ? "ig" : "ex";
+    return `<span class="chip chip--${kind}">${e(label)}</span>`;
+  }).join("");
+}
+function offersFor(group: QuotationDocCreatorGroup): Offer[] {
+  const rows = group.rows.filter(row => {
+    const description = (row.serviceDescription || row.deliverables || "").trim();
+    return row.isCollapsePackageFollower || !(!description || description === "—") || number(creatorListMoney(row.totalInvestment ?? row.clientCost, row.currency).amount) > 0;
+  });
+  return rows.map((row: QuotationDocRow, index) => {
+    const money = creatorListMoney(row.totalInvestment ?? row.clientCost, row.currency);
+    return { kind: rows.length === 1 ? "pkg" : String(index === 0 ? 1 : 2), tag: rows.length === 1 ? "Package" : row.collapseOptionLabel || row.option || `Option ${index + 1}`,
+      total: money.amount, currency: money.currency, original: money.original,
+      base: creatorListMoney(row.clientCost, row.currency).amount, af: creatorListMoney(row.af, row.currency).amount, pct: row.afPct,
+      description: row.serviceDescription || row.deliverables, shared: Boolean(row.isCollapsePackageFollower) };
+  });
+}
+function tierLabel(tier: string) {
+  const cls = ["mega", "macro", "mid", "micro", "nano"].includes(tier.toLowerCase()) ? tier.toLowerCase() : "mid";
+  return `<span class="creator-tier creator-tier--${cls}">${e(tier)}</span>`;
+}
+function renderOffer(offer: Offer | undefined, single: boolean, hideFees: boolean, first: boolean) {
+  if (!offer) return `<div class="offer offer--empty"><span>${first ? "Rates pending" : single ? "Single package offered" : "—"}</span></div>`;
+  if (offer.shared) return `<div class="offer offer--${offer.kind}"><span class="offer-tag offer-tag--${offer.kind}">${e(offer.tag)}</span><div class="chips">${creatorListDeliverableChips(offer.description)}</div><span>Included in shared package</span></div>`;
+  const pending = !Number.isFinite(number(offer.total)) || number(offer.total) <= 0;
+  return `<div class="offer offer--${offer.kind}"><div class="offer-top"><span class="offer-tag offer-tag--${offer.kind}">${e(offer.tag)}</span><span class="offer-total">${pending ? "Rates pending" : `${e(offer.total)}<small>${e(offer.currency)}</small>`}</span></div>${offer.original && !pending ? `<div class="offer-usd">≈ ${e(offer.original)}</div>` : ""}<div class="chips">${creatorListDeliverableChips(offer.description)}</div>${hideFees || pending ? "" : `<div class="offer-breakdown" aria-label="Agency fees (AF)"><span>Base ${e(offer.base)}</span><span>AF ${e(offer.pct)} · ${e(offer.af)}</span></div>`}</div>`;
+}
+function audience(creator: Creator) {
+  const rows = platforms.map(platform => {
+    const metric = creator.metrics.find(row => canonicalPlatformKey(row.platform) === platform);
+    return `<div class="aud-row${metric ? "" : " aud-row--off"}"><img src="${icon(platform)}" alt="${platform}${metric ? "" : " (not included)"}"><span class="aud-f">${e(metric?.followers ?? "—")}</span><span class="aud-e">${e(metric?.engagement ?? "—")}</span><span class="aud-v">${e(creatorListViews(metric?.views ?? "—"))}</span></div>`;
+  });
+  // Keep other quoted platforms visible instead of silently dropping their metrics.
+  for (const metric of creator.metrics.filter(row => !platforms.includes(canonicalPlatformKey(row.platform)))) rows.push(`<div class="aud-row"><span>${e(metric.platform)}</span><span class="aud-f">${e(metric.followers)}</span><span>${e(metric.engagement)}</span><span>${e(creatorListViews(metric.views))}</span></div>`);
+  return `<div class="aud"><div class="aud-row aud-row--head"><span></span><span>Followers</span><span>ER</span><span>Avg views</span></div>${rows.join("")}</div>`;
+}
+function renderCard(creator: Creator, offers: Offer[], hideFees: boolean) {
+  const g = creator.group, href = url(g.profileUrl), portrait = image(g.avatarUrl);
+  const badges = platforms.filter(platform => creator.metrics.some(m => canonicalPlatformKey(m.platform) === platform)).map(p => `<img src="${icon(p)}" alt="${p}">`).join("");
+  const visual = `${portrait ? `<img src="${portrait}" alt="${e(g.creator)}">` : `<div class="portrait-placeholder">${e(g.creator.slice(0, 1))}</div>`}<span class="idx" aria-hidden="true">${String(creator.index).padStart(3,"0")}</span><span class="pb-stack">${badges}</span>`;
+  return `<article class="creator-card">${href ? `<a class="portrait" href="${href}" target="_blank" rel="noopener noreferrer" aria-label="${e(g.creator)} — open profile">${visual}</a>` : `<div class="portrait">${visual}</div>`}<div class="creator-identity"><h2 class="creator-name" dir="auto" title="${e(g.creator)}">${e(g.creator)}</h2><div class="creator-meta"><span class="creator-handle">${e(g.handle)}</span>${tierLabel(creator.tier)}</div></div>${audience(creator)}${renderOffer(offers[0], creator.offers.length === 1, hideFees, true)}${renderOffer(offers[1], creator.offers.length === 1, hideFees, false)}<div class="creator-categories">${g.categories.map(category => `<span class="creator-category">${e(category)}</span>`).join("") || '<span class="creator-category">Categories not recorded</span>'}</div></article>`;
+}
+const LEGEND = `<div class="legend"><div class="legend__grp"><span class="legend__k">Tier</span>${["Mega","Macro","Mid","Micro","Nano"].map(tierLabel).join("")}</div><span class="legend__sep"></span><div class="legend__grp"><span class="legend__k">Offer</span><span class="offer-tag offer-tag--1">Option 1</span><span class="offer-tag offer-tag--2">Option 2</span><span class="offer-tag offer-tag--pkg">Package</span><span>= single offer</span></div><span class="legend__sep"></span><div class="legend__grp"><span class="legend__k">Deliverables</span><span class="chip chip--ig">Instagram</span><span class="chip chip--tt">TikTok</span><span class="chip chip--ex">Event · rights · boost</span></div><span class="legend__sep"></span><span>Totals incl. agency fee (AF) · ER = engagement rate</span></div>`;
+function notes(creators: Creator[], hideFees: boolean) {
+  const entries: [string,string][] = [];
+  const zeroFees = creators.flatMap(c => c.offers.filter(o => !o.shared && number(o.pct) === 0).map(o => `${c.group.creator} (${o.tag})`));
+  if (zeroFees.length && !hideFees) entries.push(["Agency fee", `0% on: ${zeroFees.join(", ")}.`]);
+  const foreign = creators.filter(c => c.offers.some(o => o.original)).map(c => c.group.creator);
+  if (foreign.length) entries.push(["Currency", `${foreign.join(", ")} quoted in another currency; the card shows the quoted reporting conversion.`]);
+  const pending = creators.filter(c => !c.offers.length || c.offers.every(o => number(o.total) <= 0)).map(c => c.group.creator);
+  if (pending.length) entries.push(["Pending", `Rates pending for ${pending.join(", ")}.`]);
+  const flags = creators.filter(c => c.metrics.some(m => number(m.engagement) > 100 || (number(m.followers) === 0 && number(m.views) > 0))).map(c => c.group.creator);
+  if (flags.length) entries.push(["Check before sign-off", `Reported statistics need review: ${flags.join(", ")}.`]);
+  return entries.length ? `<aside class="notes"><span class="notes__k">Notes on this list</span>${entries.map(([label,text]) => `<div class="note"><b>${e(label)}</b><span>${e(text)}</span></div>`).join("")}</aside>` : "";
+}
+
+/** Client-only presentation of the existing calculated quotation document. */
+export function buildRedesignedQuotationCreatorList(doc: QuotationDocument) {
+  const groups = [...doc.creatorGroups].sort((a,b) => compareClientListCreators({tier:a.highestPlatformTier ?? a.rows[0]?.tier, followers:a.highestPlatformFollowers},{tier:b.highestPlatformTier ?? b.rows[0]?.tier, followers:b.highestPlatformFollowers}));
+  const creators: Creator[] = groups.map((group,index) => {
+    const included = new Set(group.rows.flatMap(row => row.quotedPlatforms ?? []).map(canonicalPlatformKey));
+    return { group, index:index+1, tier:group.highestPlatformTier ?? group.rows[0]?.tier ?? "Mid", offers:offersFor(group), metrics:group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform))) };
+  });
+  // Additional alternatives continue on another card; every card still has exactly two slots.
+  const cards = creators.flatMap(creator => (creator.offers.length ? chunks(creator.offers,2) : [[]]).map(offers => ({creator,offers})));
+  const pages = chunks(cards,6), overview = chunks(creators,16);
+  const total = 2 + pages.length + overview.length;
+  const currencies = [...new Set(creators.flatMap(c => c.offers.map(o => o.currency)))];
+  const currencyLabel = currencies.length === 1 ? currencies[0] : currencies.length ? currencies.join(" / ") : "EGP";
+  const logo = image(getThinkwayLogoDarkDataUri()), client = image(doc.clientLogo);
+  const brand = `<img class="ph__brand" src="${logo}" alt="Thinkway">`;
+  const clientLogo = (cls: string) => client ? `<img class="${cls}" src="${client}" alt="${e(doc.clientName)}">` : "";
+  const footer = (page:number) => `<footer><span>${e(doc.serial)}</span><s></s><span>${page} / ${total}</span></footer>`;
+  const header = (range:string, sub:string) => `<header class="ph">${brand}<div class="ph__c">${clientLogo("ph__client-logo")}<div class="ph__titles"><span class="ph__client" dir="auto">${e(doc.clientName)}</span><b class="ph__title" dir="auto">${e(doc.name)}</b></div><span class="ph__kind">Creator List</span></div><div class="ph__r"><em>${e(range)}</em><span>${e(sub)}</span></div></header>`;
+  const portraits = creators.map(c => image(c.group.avatarUrl)).filter(Boolean);
+  const mosaic = `<div class="mosaic" aria-hidden="true">${[...portraits,...portraits.slice().reverse()].map(src => `<img src="${src}" alt="">`).join("")}</div>`;
+  const tiers = new Map<string,number>(); creators.forEach(c => tiers.set(c.tier,(tiers.get(c.tier)??0)+1));
+  const pills = [...tiers].map(([tier,count]) => tierLabel(tier).replace(`>${e(tier)}<`,`>${count} ${e(tier)}<`)).join("");
+  const cover = `<section class="page page--cov">${mosaic}<div class="veil"></div><div class="cov"><div class="cov__main"><div class="cov__brand">${brand}<span class="cov__rule"></span><span class="cov__for">Prepared for</span></div><p class="cov__recipient" dir="auto">${e(doc.clientName)}</p><h1 dir="auto">${e(doc.name)}</h1><div class="cov__strip"><b>Creator List</b><i></i><span>${e(doc.serial)}</span><i></i><span>${e(doc.issueDateLabel)}</span></div><div class="cov__count"><b>${creators.length}</b><div class="cov__count-txt"><div><u>creators</u><small>shortlisted for review</small></div><div class="cov__tiers">${pills}</div></div></div></div>${clientLogo("cov__client-logo")}</div>${footer(1)}</section>`;
+  const content = pages.map((page,index) => `<section class="page">${header(`${page[0].creator.index}–${page[page.length-1].creator.index}`,`of ${creators.length}`)}${LEGEND.replace("Totals incl.", `Totals in ${e(currencyLabel)} incl.`)}<div class="cards">${page.map(c => renderCard(c.creator,c.offers,Boolean(doc.hideCostAndFees))).join("")}${index === pages.length-1 && page.length <= 4 ? notes(creators,Boolean(doc.hideCostAndFees)) : ""}</div>${footer(index+2)}</section>`).join("");
+  const glance = overview.map((batch,index) => {
+    const rows = batch.map(c => {
+      const metrics = platforms.map(p => { const m=c.metrics.find(m=>canonicalPlatformKey(m.platform)===p); return [m?.followers??"—",m?.engagement??"—",creatorListViews(m?.views??"—")].map((v,i)=>`<span class="r gl-${p==="instagram"?"ig":"tt"}${m?"":" gl-off"}">${i===0?`<span class="gl-f">${e(v)}</span>`:e(v)}</span>`).join(""); }).join("");
+      const money = [c.offers.slice(0,1),c.offers.slice(1)].map((offers,i) => `<span class="r">${offers.length ? offers.map(o=>`<span class="gl-money"><span class="offer-tag offer-tag--${o.kind}">${e(o.kind==="pkg"?"Pkg":o.tag.replace("Option","Opt"))}</span><b>${o.shared ? "Shared package" : number(o.total)>0 ? e(o.total) : "Rates pending"}</b></span>`).join("") : `<span class="gl-off">${i===0?"Rates pending":"—"}</span>`}</span>`).join("");
+      return `<div class="gl-tr gl-row"><span class="gl-n">${String(c.index).padStart(3,"0")}</span><a class="gl-who" ${url(c.group.profileUrl)?`href="${url(c.group.profileUrl)}" target="_blank" rel="noopener noreferrer"`:""}>${image(c.group.avatarUrl)?`<img src="${image(c.group.avatarUrl)}" alt="">`:""}<div><b dir="auto">${e(c.group.creator)}</b><span>${e(c.group.handle)}</span></div></a><span>${tierLabel(c.tier)}</span>${metrics}${money}</div>`;
+    }).join("");
+    return `<section class="page">${header("Overview",`${index*16+1}–${index*16+batch.length} of ${creators.length}`)}<div class="glance-hd"><div><span class="glance-hd__eye">At a glance</span><h1>Every creator, side by side</h1></div><p>Totals in ${e(currencyLabel)} incl. agency fee · ER = engagement rate · avg views rounded</p></div><div class="glance"><div class="gl-tr gl-groups"><span></span><span></span><span></span><span class="gl-grp gl-grp--ig"><img src="${icon("instagram")}" alt="">Instagram</span><span class="gl-grp gl-grp--tt"><img src="${icon("tiktok")}" alt="">TikTok</span><span class="gl-grp gl-grp--offer">Offer totals</span></div><div class="gl-tr gl-head"><span>#</span><span>Creator</span><span>Tier</span><span class="r">Followers</span><span class="r">ER</span><span class="r">Avg views</span><span class="r">Followers</span><span class="r">ER</span><span class="r">Avg views</span><span class="r">Option 1 / Package</span><span class="r">Option 2</span></div>${rows}</div>${footer(2+pages.length+index)}</section>`;
+  }).join("");
+  const stat = (count:number,label:string) => `<div class="st"><b>${count}</b><span>${e(label)}</span></div>`;
+  const closing = `<section class="page page--end">${mosaic}<div class="veil veil--end"></div><div class="end"><span class="end__eye">${e(doc.name)}</span><h1>${creators.length} creators</h1><p>Client quotation · ${e(doc.serial)} · ${e(doc.issueDateLabel)}</p><div class="end__g"><div class="bk"><span class="bk__k">By tier</span><div class="bk__b">${[...tiers].map(([t,n])=>stat(n,t)).join("")}</div></div><div class="bk"><span class="bk__k">Platform coverage</span><div class="bk__b">${platforms.map(p=>stat(creators.filter(c=>c.metrics.some(m=>canonicalPlatformKey(m.platform)===p)).length,`on ${p==="instagram"?"Instagram":"TikTok"}`)).join("")}</div></div><div class="bk"><span class="bk__k">Offers</span><div class="bk__b">${stat(creators.filter(c=>c.offers.length>=2).length,"with 2+ options")}${stat(creators.filter(c=>c.offers.length===1).length,"single package")}${stat(creators.filter(c=>!c.offers.length).length,"pending")}</div></div></div><div class="end__ft">${brand}<span></span>${clientLogo("ph__client-logo")}</div></div>${footer(total)}</section>`;
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${e(doc.name)} — Creator List</title><style>${QUOTATION_LIST_REDESIGN_CSS}\n.creator-tier--micro{background:var(--mid-bg);color:var(--mid-fg)}.portrait-placeholder{display:grid;place-items:center;height:100%;font-size:64px;background:var(--offer1-bg);color:var(--ink)}.ph__client-logo,.cov__client-logo{object-fit:contain;max-width:420px;filter:drop-shadow(0 3px 8px rgba(0,0,0,.25))}.ph__client-logo{max-width:150px}.gl-money{flex-wrap:nowrap;gap:5px;font-size:12px}.offer-total{overflow-wrap:anywhere}.gl-row{min-height:44px;height:auto}.creator-card{min-width:0}</style></head><body>${cover}${content}${glance}${closing}<script>Promise.all([document.fonts.ready,...Array.from(document.images).map(im=>im.decode?im.decode().catch(()=>{}):Promise.resolve())]).then(()=>{document.documentElement.setAttribute('data-creator-list-ready','true')});</script></body></html>`;
+}

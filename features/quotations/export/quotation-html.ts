@@ -40,5 +40,6 @@ export function buildQuotationHtml(
   doc: QuotationDocument,
   options?: BuildQuotationHtmlOptions
 ): string {
+  if (doc.template === "creator-list" && doc.source !== "shortlist") return buildQuotationCreatorListHtml(doc);
   return applyMobileDocumentLayout(isQuotationListTemplate(doc.template) ? buildQuotationCreatorListHtml(doc) : buildQuotationTemplateHtml(doc, options));
 }

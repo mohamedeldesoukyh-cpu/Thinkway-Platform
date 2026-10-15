@@ -1491,7 +1491,7 @@ console.log("quotation-document.test.ts passed");
       assert.ok(html.includes("Reel package"));
       assert.ok(html.includes("Agency fees (AF)"));
       const hidden = buildQuotationHtml({...doc, hideCostAndFees:true});
-      assert.ok(hidden.includes(doc.rows[0].totalInvestment!));
+      assert.ok(hidden.includes(doc.rows[0].totalInvestment!.replace(/\s+EGP$/, "")));
       assert.ok(!hidden.includes("Agency fees (AF)"));
     }
     const selected = buildQuotationDocument(mockDetail({items:[mockItem(), mockItem({id:"item-2",creator_name:"Excluded Creator",handle:"@other"})]}), {template,itemIds:["item-1"]});
@@ -1506,17 +1506,17 @@ console.log("quotation-document.test.ts passed");
   assert.deepEqual(doc.rows[0].quotedPlatforms, ["instagram", "tiktok"]);
   doc.creatorGroups[0].platformMetrics = ["instagram","tiktok","facebook"].map(platform => ({platform,followers:"10K",engagement:"2%",views:"5K",profileUrl:null,avatarUrl:null}));
   const html = buildQuotationHtml(doc);
-  assert.ok(html.includes('class="rate-list-heading">Deliverables</h3>'));
-  assert.ok(html.includes('Total price inc. AF'));
+  assert.ok(html.includes('class="chips"'));
+  assert.ok(html.includes('incl. agency fee')); 
   assert.ok(html.includes('Agency fees (AF)'));
   assert.ok(!html.includes('>facebook<small>'));
-  assert.ok(html.includes('>tiktok<small>'));
+  assert.ok(html.includes('alt="tiktok"')); 
   assert.ok(!buildQuotationHtml({...doc,hideCostAndFees:true}).includes('Agency fees (AF)'));
 }
 
 {
  const single=buildQuotationDocument(mockDetail(),{template:"creator-list"});
- assert.ok(!buildQuotationHtml(single).includes("Option 1"));
+ assert.ok(buildQuotationHtml(single).includes("Single package offered"));
  const multiple=buildQuotationDocument(mockDetail({items:[mockItem(),mockItem({id:"alternative",option_number:2})]}),{template:"creator-list"});
  const html=buildQuotationHtml(multiple);
  assert.ok(html.includes("Option 1"));
@@ -1564,9 +1564,9 @@ console.log("quotation-document.test.ts passed");
     doc.clientName = "Fresh Electric & Home Appliances";
     const html = buildQuotationHtml(doc);
     assert.match(html, /<h1[^>]*>Fresh CookerPro Puls X Washing Machine Influencers Campaign<\/h1>/);
-    assert.ok(html.includes("<b>Fresh CookerPro Puls X Washing Machine Influencers Campaign</b>"));
+    assert.match(html, /<b[^>]*>Fresh CookerPro Puls X Washing Machine Influencers Campaign<\/b>/);
     assert.match(html, /Fresh Electric &amp; Home Appliances/);
-    assert.match(html, /.cov .cov__client h1\{font-size:52px/);
-    assert.match(html, /.ph__c b\{font-size:16px/);
+    if (template === "client-list-by-name") { assert.match(html, /.cov .cov__client h1\{font-size:52px/); assert.match(html, /.ph__c b\{font-size:16px/); }
+    else { assert.ok(html.includes("At a glance")); assert.ok(html.includes("data:font/woff2;base64,")); }
   }
 }

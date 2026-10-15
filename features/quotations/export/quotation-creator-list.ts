@@ -1,3 +1,4 @@
+import { buildRedesignedQuotationCreatorList } from "./quotation-list-redesign";
 import { SHORTLIST_LIST_CSS } from "@/features/discovery/shortlists/export/shortlist-list-styles";
 import { renderCreatorListReport, CREATOR_LIST_PDF_OPTIONS } from "@/features/discovery/shortlists/export/creator-list-html";
 import { clientListPerformanceStyles } from "@/features/rate-cards/client-list-styles";
@@ -21,6 +22,7 @@ function layout(doc: QuotationDocument) {
 }
 
 export function quotationListPdfOptions(doc: QuotationDocument) {
+  if (doc.template === "creator-list" && doc.source !== "shortlist") return { ...CREATOR_LIST_PDF_OPTIONS, width: "1600px", height: "1080px", viewport: {width:1600,height:1080,deviceScaleFactor:1} };
   const { height } = layout(doc);
   return { ...CREATOR_LIST_PDF_OPTIONS,
     width: "1600px", height: `${height}px`,
@@ -29,6 +31,7 @@ export function quotationListPdfOptions(doc: QuotationDocument) {
 
 /** Client-safe projection: internal document fields never enter either report. */
 export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
+  if (doc.template === "creator-list" && doc.source !== "shortlist") return buildRedesignedQuotationCreatorList(doc);
   const { performanceOnly, height } = layout(doc);
   const shortlist = doc.source === "shortlist";
   // Rank within each tier by strongest platform audience; exact ties retain source order.
