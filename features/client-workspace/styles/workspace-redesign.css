@@ -177,6 +177,8 @@
 .tw-review.cw-redesign .cw-single-option { padding:0; border:0; background:none; }
 .tw-review.cw-redesign .cw-single-option .cc-option,.tw-review.cw-redesign .cw-single-option .cc-option:has(input:checked) { border:0; box-shadow:none; padding:0; min-height:0; background:none; }
 .tw-review.cw-redesign .cw-single-option .cw-option-money { display:none; }
+.tw-review.cw-redesign .cw-single-option.cw-option-unselected .cc-option { flex-wrap:wrap; }
+.tw-review.cw-redesign .cw-single-option.cw-option-unselected .cw-option-money { display:block; flex:1 1 100%; text-align:start; padding-inline-start:34px; }
 .tw-review.cw-redesign .cw-single-option .cc-option-description { font-size:12px; }
 .tw-review.cw-redesign .cc-desc { padding:10px 16px; background:#f8f9fc; font-size:12px; }
 .tw-review.cw-redesign .pick-hit { min-width:44px; min-height:44px; display:flex; align-items:center; justify-content:center; }
