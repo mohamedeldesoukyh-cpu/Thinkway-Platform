@@ -1507,10 +1507,10 @@ console.log("quotation-document.test.ts passed");
   doc.creatorGroups[0].platformMetrics = ["instagram","tiktok","facebook"].map(platform => ({platform,followers:"10K",engagement:"2%",views:"5K",profileUrl:null,avatarUrl:null}));
   const html = buildQuotationHtml(doc);
   assert.ok(html.includes('class="chips"'));
-  assert.ok(html.includes('incl. agency fee')); 
+  assert.ok(html.includes('incl. agency fee'));
   assert.ok(html.includes('Agency fees (AF)'));
   assert.ok(!html.includes('>facebook<small>'));
-  assert.ok(html.includes('alt="tiktok"')); 
+  assert.ok(html.includes('alt="tiktok"'));
   assert.ok(!buildQuotationHtml({...doc,hideCostAndFees:true}).includes('Agency fees (AF)'));
 }
 
