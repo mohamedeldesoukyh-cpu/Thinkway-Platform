@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {creatorListWholeMoney,creatorListMoney,creatorListViews,creatorListDeliverableChips,buildRedesignedQuotationCreatorList} from './quotation-list-redesign';
 import type {QuotationDocument} from './quotation-document';
 import {quotationListPdfOptions} from './quotation-creator-list';
+import {SHORTLIST_TEMPLATE_OPTIONS,resolveShortlistTemplate} from '@/features/discovery/shortlists/export/shortlist-template';
 assert.deepEqual(creatorListMoney('29,732.78 USD / 1,552,500.08 EGP'),{currency:'EGP',amount:'1,552,500.08',original:'29,732.78 USD'});
 assert.equal(creatorListViews('783,981'),'784K');
 assert.equal(creatorListViews('3,627,477'),'3.6M');
@@ -45,3 +46,6 @@ assert.equal(creatorListWholeMoney("25,854.59 USD"), "25,855 USD");
  assert.ok(singleHtml.includes('>Package</span>'),"Single-option presentation is unchanged");
  assert.ok(singleHtml.includes('Option 2 mentioned in description'),"Deliverable descriptions must not be renamed");
 }
+
+assert.ok(!SHORTLIST_TEMPLATE_OPTIONS.some(option => option.id === 'creator-list-additions'), 'Quotation additions must not leak into the separate shortlist export flow');
+assert.equal(resolveShortlistTemplate('creator-list-additions'),'detailed');

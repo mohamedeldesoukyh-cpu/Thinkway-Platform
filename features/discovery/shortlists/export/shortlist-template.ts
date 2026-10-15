@@ -19,6 +19,8 @@ export function resolveShortlistTemplate(
   // Pre-parity bookmarks used `summary` for the client roster (quotation lump-sum).
   if (raw === "summary") return "lump-sum";
   if (raw === "creator-list") return "creator-list";
+  // Additions is a priced quotation variant, not a shortlist report.
+  if (raw === "creator-list-additions") return "detailed";
   return resolveQuotationTemplate(raw);
 }
 
@@ -45,7 +47,7 @@ export function isLumpSumPricingTemplate(
 }
 
 export const SHORTLIST_TEMPLATE_OPTIONS: Array<{ id: ShortlistTemplateVariant; label: string; hint: string }> = [
-  ...QUOTATION_TEMPLATE_OPTIONS,
+  ...QUOTATION_TEMPLATE_OPTIONS.filter(option => option.id !== "creator-list-additions"),
   { id: "creator-list", label: "Creator list", hint: "Portrait cards · HTML / PDF" },
 ];
 
