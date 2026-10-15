@@ -246,7 +246,7 @@ function metricsFromDna(document: CreatorDNADocument, fallback: UnifiedCreatorMe
   return metrics;
 }
 
-function applyDnaDocumentToCreator(
+export function applyDnaDocumentToCreator(
   creator: UnifiedCreatorResult,
   document: CreatorDNADocument
 ): UnifiedCreatorResult {
@@ -275,7 +275,9 @@ function applyDnaDocumentToCreator(
     dnaAvatarUrl: fallbackAvatar,
   }).url;
   const country = creator.country_code ?? envelopeValue(document.audience.country);
-  const categories = mergeStringArray(creator.categories, envelopeValue(document.audience.categories));
+  const categories = creator.categories_manual === true
+    ? (creator.browse_category_tags ?? creator.categories ?? [])
+    : mergeStringArray(creator.categories, envelopeValue(document.audience.categories));
   const interests = mergeStringArray(
     creator.audience_interests,
     envelopeValue(document.audience.interests)
@@ -317,7 +319,7 @@ function applyDnaDocumentToCreator(
     country_code: country ?? creator.country_code,
     estimated_country: country ?? creator.estimated_country,
     categories,
-    browse_category_tags: categories.length > 0 ? categories : creator.browse_category_tags,
+    browse_category_tags: creator.categories_manual === true ? categories : categories.length > 0 ? categories : creator.browse_category_tags,
     audience_interests: interests,
     language_codes: languages,
     hashtags,

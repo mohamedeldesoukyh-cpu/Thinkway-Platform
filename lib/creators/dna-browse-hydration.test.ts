@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 
 import { createEmptyCreatorDNADocument } from "@/features/creator-dna/services/document-factory";
 import { wrapValue } from "@/features/creator-dna/services/field-envelope";
-import { overlayPlatformMetricsFromDna } from "@/lib/creators/dna-browse-hydration";
+import { applyDnaDocumentToCreator, overlayPlatformMetricsFromDna } from "@/lib/creators/dna-browse-hydration";
 import { resolveCreatorBrowsePlatformStats } from "@/lib/creators/resolve-browse-display-metrics";
 import type { UnifiedCreatorPlatform, UnifiedCreatorResult } from "@/lib/creators/types";
 
@@ -114,3 +114,11 @@ assert.equal(
 );
 
 console.log("dna-browse-hydration.test.ts: all assertions passed");
+
+const staleCategoriesDocument = createEmptyCreatorDNADocument();
+staleCategoriesDocument.audience.categories = wrapValue(["Lifestyle"], "ipl", 0.9);
+for (const categories of [["Food"], []]) {
+  const manual = applyDnaDocumentToCreator({ ...creatorStub, categories, browse_category_tags: categories, categories_manual: true }, staleCategoriesDocument);
+  assert.deepEqual(manual.categories, categories, "Cached DNA must not reintroduce removed manual categories");
+  assert.deepEqual(manual.browse_category_tags, categories);
+}
