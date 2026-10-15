@@ -9,11 +9,11 @@ import {
 import type { ShortlistCreatorItem } from "@/features/discovery/shortlists/types";
 import type { QuotationItemRow } from "@/features/quotations/types";
 import { countUniqueQuotationCreators } from "@/lib/quotations/quotation-creator-options";
-import { buildShortlistCreatorOptions, buildQuotationCreatorOptions } from "./build-creator-options";
 
 export type DocumentSelectionSummaryMetric = {
   label: string;
   value: string;
+  scope?: "client" | "internal";
 };
 
 export type DocumentSelectionSummary = {
@@ -31,18 +31,13 @@ export function summarizeShortlistSelection(
   creators: ShortlistCreatorItem[],
   selectedItemIds: string[]
 ): DocumentSelectionSummary {
-  const options = buildShortlistCreatorOptions(creators);
-  const totalCreatorCount = options.length;
+  const totalCreatorCount = creators.length;
   const selectedSet = new Set(selectedItemIds);
   const selectedCreators =
-    selectedItemIds.length > 0
-      ? creators.filter((item) => selectedSet.has(item.item_id))
-      : creators;
+    creators.filter((item) => selectedSet.has(item.item_id));
 
   const selectedCreatorCount =
-    selectedItemIds.length > 0
-      ? options.filter((option) => option.itemIds.some((id) => selectedSet.has(id))).length
-      : totalCreatorCount;
+    selectedCreators.length;
 
   const groups = selectedCreators
     .map((item) => {
@@ -89,22 +84,18 @@ export function summarizeQuotationSelection(
   selectedItemIds: string[],
   currency = "EGP"
 ): DocumentSelectionSummary {
-  const options = buildQuotationCreatorOptions(items);
-  const totalCreatorCount = options.length;
+  const totalCreatorCount = countUniqueQuotationCreators(items);
   const selectedSet = new Set(selectedItemIds);
   const selectedItems =
-    selectedItemIds.length > 0
-      ? items.filter((item) => selectedSet.has(item.id))
-      : items;
+    items.filter((item) => selectedSet.has(item.id));
 
   const selectedCreatorCount =
-    selectedItemIds.length > 0
-      ? countUniqueQuotationCreators(selectedItems)
-      : totalCreatorCount;
+    countUniqueQuotationCreators(selectedItems);
 
   const revenueEgp = selectedItems.reduce((sum, item) => sum + (Number(item.revenue_egp) || 0), 0);
   const afEgp = selectedItems.reduce((sum, item) => sum + (Number(item.af_value_egp) || 0), 0);
   const costEgp = selectedItems.reduce((sum, item) => sum + (Number(item.cost_egp) || 0), 0);
+  const gpEgp = selectedItems.reduce((sum, item) => sum + (Number(item.gp_value_egp) || 0), 0);
   const displayCurrency = (currency || "EGP").toUpperCase();
 
   const forecast = computeCampaignForecastFromProfiles(
@@ -114,18 +105,22 @@ export function summarizeQuotationSelection(
   const metrics: DocumentSelectionSummaryMetric[] = [
     {
       label: "Client cost",
+      scope: "client",
       value: formatMoneyKpi(revenueEgp, displayCurrency),
     },
     {
       label: "Agency fee",
+      scope: "client",
       value: formatMoneyKpi(afEgp, displayCurrency),
     },
     {
       label: "Total incl. AF",
+      scope: "client",
       value: formatMoneyKpi(revenueEgp + afEgp, displayCurrency),
     },
     {
       label: "Creator cost",
+      scope: "internal",
       value: formatMoneyKpi(costEgp, displayCurrency),
     },
     {
@@ -133,6 +128,8 @@ export function summarizeQuotationSelection(
       value: formatCreatorCount(forecast.estimatedReach > 0 ? forecast.estimatedReach : null) || "—",
     },
   ];
+  metrics.push({label: "Gross profit", value: formatMoneyKpi(gpEgp, displayCurrency), scope: "internal"},
+    {label: "Margin", value: `${(revenueEgp > 0 ? gpEgp / revenueEgp * 100 : 0).toFixed(1)}%`, scope: "internal"});
   const er = formatEr(forecast.averageEngagementRate);
   if (er) metrics.push({ label: "Avg ER", value: er });
 

@@ -1,14 +1,12 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckIcon, UsersIcon } from "lucide-react";
+import { CheckIcon, UsersIcon, XIcon, SearchIcon, LockKeyholeIcon } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
+import styles from "./creator-dialog.module.css";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { platformLabel } from "@/features/campaigns/line-assignment";
@@ -18,7 +16,6 @@ import {
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { sortPlatformsStable } from "@/lib/creators/creator-centric";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
-import { cn } from "@/lib/utils";
 import type { DocumentSelectionSummary } from "./document-selection-summary";
 
 export type DocumentCreatorOption = {
@@ -120,7 +117,7 @@ export function DocumentCreatorSelectionDialog({
   onWorkspaceSelectionChange,
   summarizeSelection,
   title = "Select creators for preview",
-  description = "Preview and exports include only the creators and platforms you select. Totals and numbering update automatically.",
+  description = "Only the creators and platforms selected here appear in the preview and the exports. Totals and numbering update as you change the selection.",
   confirmLabel = "Open preview",
   confirmDisabled = false,
   onConfirm,
@@ -130,12 +127,16 @@ export function DocumentCreatorSelectionDialog({
     () => new Set()
   );
   const platformsTouchedRef = useRef(false);
+  const returnFocus = useRef<HTMLElement | null>(null);
+  const [query, setQuery] = useState("");
+  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(() => new Set());
 
   useEffect(() => {
     if (!open) {
       platformsTouchedRef.current = false;
       return;
     }
+    setQuery("");
     // Workspace selection is the only seed — never sessionStorage.
     const nextKeys = creatorKeysFromItemIds(creators, workspaceItemIds);
     setSelectedKeys(nextKeys);
@@ -218,7 +219,7 @@ export function DocumentCreatorSelectionDialog({
   }
 
   function handleConfirm() {
-    if (noneSelected || noPlatformsSelected) return;
+    if (confirmDisabled || noneSelected || noPlatformsSelected) return;
     onWorkspaceSelectionChange?.(selectedItemIds);
     const platforms =
       allPlatformsSelected || availablePlatforms.length === 0
@@ -228,189 +229,70 @@ export function DocumentCreatorSelectionDialog({
     onOpenChange(false);
   }
 
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="flex max-h-[min(820px,92vh)] w-full max-w-lg flex-col gap-0 overflow-hidden p-0 sm:max-w-xl">
-        <DialogHeader className="shrink-0 border-b border-border px-5 py-4 text-left">
-          <DialogTitle className="flex items-center gap-2 text-[15px]">
-            <UsersIcon className="size-4 text-muted-foreground" />
-            {title}
-          </DialogTitle>
-          <DialogDescription className="text-[12.5px] leading-relaxed">
-            {description}
-          </DialogDescription>
-        </DialogHeader>
+  const creatorSummaries = useMemo(() => new Map(creators.map(creator => [creator.creatorKey, summarizeSelection(creator.itemIds)])), [creators, summarizeSelection]);
+  const normalizedQuery = query.trim().toLocaleLowerCase();
+  const visibleCreators = creators.filter(creator => `${creator.name} ${creator.handle} ${creator.meta ?? ""}`.toLocaleLowerCase().includes(normalizedQuery));
+  const clientMetrics = summary.metrics.filter(metric => metric.scope === "client");
+  const internalMetrics = summary.metrics.filter(metric => metric.scope === "internal");
+  const audienceMetrics = summary.metrics.filter(metric => !metric.scope);
+  const figure = (value: string) => { const match = /^([A-Z]{3})\s+(.+)$/.exec(value); return match ? <><span className={styles.currency}>{match[1]}</span>{match[2]}</> : value; };
+  const metricList = (metrics: DocumentSelectionSummary["metrics"]) => <dl className={styles.figures}>{metrics.map(metric => <div key={metric.label} className={metric.label === "Total incl. AF" ? styles.totalFigure : undefined}><dt>{metric.label}</dt><dd>{figure(metric.value)}</dd></div>)}</dl>;
 
-        <div className="shrink-0 border-b border-border/70 bg-muted/25 px-5 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-[12.5px] font-semibold text-foreground">
-              {summary.selectedCreatorCount} of {summary.totalCreatorCount} creator
-              {summary.totalCreatorCount === 1 ? "" : "s"} selected
-            </p>
-            <div className="flex items-center gap-1.5">
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-[12px]"
-                onClick={selectAll}
-                disabled={allSelected || creators.length === 0}
-              >
-                Select all
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-[12px]"
-                onClick={selectNone}
-                disabled={noneSelected}
-              >
-                Select none
-              </Button>
-            </div>
-          </div>
-          {summary.metrics.length > 0 ? (
-            <dl className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 sm:grid-cols-3">
-              {summary.metrics.map((metric) => (
-                <div key={metric.label} className="min-w-0">
-                  <dt className="text-[10px] font-bold uppercase tracking-[0.06em] text-muted-foreground">
-                    {metric.label}
-                  </dt>
-                  <dd className="truncate text-[12.5px] font-semibold tabular-nums text-foreground">
-                    {metric.value}
-                  </dd>
-                </div>
-              ))}
-            </dl>
-          ) : null}
+  return <Dialog open={open} onOpenChange={onOpenChange}>
+    <DialogContent className={`${styles.dialog} ${styles.selectionDialog}`} overlayClassName={styles.overlay} showCloseButton={false}
+      onOpenAutoFocus={() => { returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null; }}
+      onCloseAutoFocus={event => { if (returnFocus.current?.isConnected) { event.preventDefault(); returnFocus.current.focus(); } }}>
+      <header className={styles.header}>
+        <div className={styles.heading}><div>
+          <DialogTitle className={styles.title}><UsersIcon size={18} aria-hidden="true" />{title}</DialogTitle>
+          <DialogDescription className={styles.subtitle}>{description}</DialogDescription>
+        </div><button type="button" className={styles.close} aria-label="Close creator selection" onClick={() => onOpenChange(false)}><XIcon size={16} aria-hidden="true" /></button></div>
+      </header>
+      <div className={styles.selectionBody}>
+        {clientMetrics.length || internalMetrics.length ? <div className={styles.zones}>
+          {clientMetrics.length ? <section className={`${styles.zone} ${styles.clientZone}`} aria-label="Client-facing totals"><h3>Client-facing &middot; quotation prices</h3>{metricList(clientMetrics)}</section> : null}
+          {internalMetrics.length ? <section className={`${styles.zone} ${styles.internalZone}`} aria-label="Internal totals"><h3><LockKeyholeIcon size={12} aria-hidden="true" />Internal &middot; never in client exports</h3>{metricList(internalMetrics)}</section> : null}
+        </div> : null}
+        <div className={styles.selectionBar}>
+          <span className={styles.selectionCount} aria-live="polite">{selectedCount} <span>of {creators.length} creators selected</span></span>
+          <div className={styles.search}><SearchIcon size={14} aria-hidden="true" /><input type="search" aria-label="Search creators" placeholder="Search creators" value={query} onChange={event => setQuery(event.target.value)} /></div>
+          <button type="button" className={`${styles.button} ${styles.small}`} onClick={selectAll} disabled={allSelected || creators.length === 0}>Select all</button>
+          <button type="button" className={`${styles.button} ${styles.small} ${styles.ghost}`} onClick={selectNone} disabled={noneSelected}>Select none</button>
+          {audienceMetrics.length ? <p className={styles.audienceSummary}>{audienceMetrics.map(metric => `${metric.value} ${metric.label.toLowerCase()}`).join(" · ")}</p> : null}
         </div>
-
-        {availablePlatforms.length > 0 ? (
-          <div className="shrink-0 border-b border-border/70 px-5 py-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-[12.5px] font-semibold text-foreground">
-                Platforms to include
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                variant="ghost"
-                className="h-7 px-2 text-[12px]"
-                onClick={selectAllPlatforms}
-                disabled={allPlatformsSelected}
-              >
-                All platforms
-              </Button>
-            </div>
-            <div className="mt-2.5 flex flex-wrap gap-1.5">
-              {availablePlatforms.map((platform) => {
-                const checked = selectedPlatforms.has(platform);
-                return (
-                  <button
-                    key={platform}
-                    type="button"
-                    onClick={() => togglePlatform(platform)}
-                    className={cn(
-                      "inline-flex h-8 items-center gap-1.5 rounded-full border px-2.5 text-[11.5px] font-semibold transition-colors",
-                      checked
-                        ? "border-primary/40 bg-primary/10 text-foreground"
-                        : "border-border bg-background text-muted-foreground hover:bg-muted/40"
-                    )}
-                    aria-pressed={checked}
-                  >
-                    <PlatformIcon
-                      platform={platform}
-                      size="xs"
-                      variant="logo"
-                      className="size-4 shrink-0"
-                    />
-                    {platformLabel(platform)}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-2 text-[11px] text-muted-foreground">
-              Default includes every linked platform on the selected creators.
-            </p>
-          </div>
-        ) : null}
-
-        <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-          {creators.length === 0 ? (
-            <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-              No creators available for this document.
-            </p>
-          ) : (
-            <ul className="space-y-0.5" role="listbox" aria-multiselectable="true">
-              {creators.map((creator) => {
-                const checked = selectedKeys.has(creator.creatorKey);
-                return (
-                  <li key={creator.creatorKey}>
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={checked}
-                      onClick={() => toggleCreator(creator.creatorKey)}
-                      className={cn(
-                        "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors",
-                        checked ? "bg-primary/8" : "hover:bg-muted/40"
-                      )}
-                    >
-                      <span aria-hidden="true" className={cn("flex size-4 shrink-0 items-center justify-center rounded border", checked ? "border-primary bg-primary text-primary-foreground" : "border-border bg-background")}>
-                        {checked ? <CheckIcon className="size-3" /> : null}
-                      </span>
-                      {creator.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={creator.avatarUrl}
-                          alt=""
-                          className="size-9 shrink-0 rounded-full object-cover"
-                        />
-                      ) : (
-                        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-muted text-[11px] font-bold text-muted-foreground">
-                          {initials(creator.name, creator.handle)}
-                        </span>
-                      )}
-                      <span className="min-w-0 flex-1">
-                        <span className="block truncate text-[13px] font-semibold text-foreground">
-                          {creator.name}
-                        </span>
-                        <span className="block truncate text-[11.5px] text-muted-foreground">
-                          {creator.handle}
-                          {creator.meta ? ` · ${creator.meta}` : ""}
-                        </span>
-                      </span>
-                      {checked ? (
-                        <CheckIcon className="size-3.5 shrink-0 text-primary" />
-                      ) : null}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
+        {availablePlatforms.length > 0 ? <div className={styles.selectionBar}>
+          <span className={styles.platformLabel}>Platforms to include</span>
+          <div className={styles.platforms}>{availablePlatforms.map(platform => <button key={platform} type="button" className={styles.platformToggle} aria-pressed={selectedPlatforms.has(platform)} onClick={() => togglePlatform(platform)}>
+            <CheckIcon size={12} aria-hidden="true" className={styles.platformTick} /><PlatformIcon platform={platform} size="xs" variant="logo" />{platformLabel(platform)}<span>{creators.filter(creator => selectedKeys.has(creator.creatorKey) && creator.platforms?.some(value => canonicalPlatformKey(value) === platform)).length}</span>
+          </button>)}<button type="button" className={`${styles.button} ${styles.small} ${styles.ghost}`} disabled={allPlatformsSelected} onClick={selectAllPlatforms}>All platforms</button></div>
+          <p className={styles.platformHelp}>Platform filters apply to displayed accounts and metrics. Selected quotation lines and prices stay included.</p>
+        </div> : null}
+        <div className={styles.selectionList}>
+        {noPlatformsSelected ? <p role="status" className={styles.selectionWarning}>No platform is included. Select at least one platform to continue.</p> : null}
+        <ul className={styles.selectionRows} aria-label="Creators to include">
+          {visibleCreators.map(creator => {
+            const checked = selectedKeys.has(creator.creatorKey);
+            const metrics = creatorSummaries.get(creator.creatorKey)?.metrics ?? [];
+            const rowMetrics = metrics.filter(metric => metric.label === "Client cost" || metric.label === "Est. reach");
+            return <li key={creator.creatorKey}><label className={`${styles.selectionRow} ${checked ? styles.selectedRow : ""}`}>
+              <input type="checkbox" checked={checked} onChange={() => toggleCreator(creator.creatorKey)} aria-label={`Include ${creator.name}`} />
+              <span className={styles.avatar}>{creator.avatarUrl && !failedAvatars.has(creator.avatarUrl) ? <img src={creator.avatarUrl} alt="" onError={() => setFailedAvatars(current => new Set(current).add(creator.avatarUrl!))} /> : initials(creator.name, creator.handle)}</span>
+              <span className={styles.selectionIdentity}><strong dir="auto">{creator.name}</strong>
+                {creator.handle !== "—" && creator.name.replace(/^@/, "") !== creator.handle.replace(/^@/, "") ? <small>{creator.handle}</small> : null}
+                <span className={styles.rowPlatforms}>{(creator.platforms ?? []).map(platform => <span key={platform} data-included={selectedPlatforms.has(canonicalPlatformKey(platform))}>{platformLabel(platform)}</span>)}{!creator.platforms?.length && creator.meta ? creator.meta : null}</span>
+              </span>
+              {rowMetrics.map(metric => <span key={metric.label} className={styles.rowFigure}><small>{metric.label}</small><b>{figure(metric.value)}</b></span>)}
+            </label></li>;
+          })}
+        </ul>
+        {visibleCreators.length === 0 ? <p className={styles.empty}>{creators.length === 0 ? "No creators available for this document." : `No creator matches “${query}”. Clear the search to see all ${creators.length}.`}</p> : null}
         </div>
-
-        <DialogFooter className="shrink-0 border-t border-border px-5 py-3 sm:justify-between">
-          <p className="hidden text-[11.5px] text-muted-foreground sm:block">
-            Same selection for Preview, PDF, PPTX, Excel, and Word
-          </p>
-          <div className="flex w-full justify-end gap-2 sm:w-auto">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={handleConfirm}
-              disabled={confirmDisabled || noneSelected || noPlatformsSelected}
-            >
-              {confirmDisabled ? "Loading platforms…" : confirmLabel}
-              {!confirmDisabled && selectedCount > 0 ? ` (${selectedCount})` : ""}
-            </Button>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
+      </div>
+      <footer className={`${styles.footer} ${styles.selectionFooter}`}>
+        <small>One selection drives the preview, PDF, PowerPoint, Excel and Word.</small>
+        <button type="button" className={styles.button} onClick={() => onOpenChange(false)}>Cancel</button>
+        <button type="button" className={`${styles.button} ${styles.primary}`} onClick={handleConfirm} disabled={confirmDisabled || noneSelected || noPlatformsSelected}>{confirmDisabled ? "Loading platforms…" : confirmLabel}{!confirmDisabled && selectedCount > 0 ? ` (${selectedCount})` : ""}</button>
+      </footer>
+    </DialogContent>
+  </Dialog>;
 }
