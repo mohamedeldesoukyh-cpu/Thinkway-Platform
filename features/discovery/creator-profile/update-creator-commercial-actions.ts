@@ -2,6 +2,7 @@
 
 import { CREATOR_COUNTRY_OPTIONS as COUNTRY_OPTIONS } from "@/lib/creators/country-options";
 import { persistInfluencerCountryFields, countryWritePayload } from "@/lib/creators/country-persistence";
+import { normalizeCreatorCategoryChoices } from "@/lib/creators/category-choices";
 import { CANONICAL_CREATOR_CATEGORIES } from "@/lib/creator-intelligence/taxonomy";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -321,10 +322,7 @@ export async function updateCreatorCategoriesAction(input: { influencerId: strin
   if (!supabase || authError) return { ok: false, message: "Unauthorized" };
   const { data: existing, error: readError } = await supabase.from("influencers").select("categories,metadata").eq("id", parsed.data.influencerId).maybeSingle();
   if (readError || !existing) return { ok: false, message: readError?.message ?? "Creator not found." };
-  const currentCreator = await reloadCreator(supabase, "inf:" + parsed.data.influencerId);
-  const existingCategories = new Set([...(existing.categories ?? []), ...(currentCreator?.browse_category_tags ?? []), ...(currentCreator?.categories ?? [])]);
-  const categories = [...new Set(parsed.data.categories)];
-  if (categories.some(value => !CANONICAL_CREATOR_CATEGORIES.includes(value) && !existingCategories.has(value))) return { ok: false, message: "Choose a category from the list." };
+  const categories = normalizeCreatorCategoryChoices(parsed.data.categories);
   const metadata = { ...((existing.metadata as Record<string, unknown>) ?? {}), categories_manual: true };
   const { error } = await supabase.from("influencers").update({ categories, metadata } as never).eq("id", parsed.data.influencerId);
   if (error) return { ok: false, message: error.message };
@@ -333,4 +331,18 @@ export async function updateCreatorCategoriesAction(input: { influencerId: strin
   revalidatePath("/discovery/quotations");
   revalidatePath(`/vendors/${parsed.data.influencerId}`);
   return { ok: true, message: "Categories saved.", creator };
+}
+
+/** Category choices include labels already used by any saved creator. */
+export async function loadCreatorCategoryOptionsAction(): Promise<string[]> {
+  const { supabase, error } = await requireAuthedClient();
+  if (!supabase || error) throw new Error("Unauthorized");
+  const labels: string[] = [...CANONICAL_CREATOR_CATEGORIES, "Chef"];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error: readError } = await supabase.from("influencers").select("categories").order("id").range(offset, offset + 999);
+    if (readError) throw new Error(readError.message);
+    for (const row of data ?? []) labels.push(...(row.categories ?? []));
+    if (!data || data.length < 1000) break;
+  }
+  return normalizeCreatorCategoryChoices(labels).sort((a,b) => a.localeCompare(b));
 }

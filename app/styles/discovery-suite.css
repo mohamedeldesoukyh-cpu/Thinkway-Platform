@@ -793,3 +793,12 @@
 .tw-category-editor--plain{color:#17213a;}
 .tw-category-editor--plain .tw-category-editor__chip{background:#edf3ff;border-color:#cad7ed;}
 .tw-category-editor--plain small{color:#52627a;}
+
+.tw-category-editor__toggle,.tw-category-editor__picker button { border:1px solid #dce4f5; border-radius:8px; background:#fff; color:#153a7a; padding:9px 12px; font:inherit; text-align:left; }
+.tw-category-editor__picker { display:grid; gap:8px; padding:10px; border-radius:10px; background:#fff; color:#172b4d; }
+.tw-category-editor__picker > input { min-width:0; width:100%; padding:9px; border:1px solid #cdd8eb; border-radius:7px; color:#172b4d; background:#fff; font:inherit; }
+.tw-category-editor__options { max-height:190px; overflow-y:auto; display:grid; gap:3px; }
+.tw-category-editor__options label { display:flex; align-items:center; gap:8px; padding:7px 3px; font:inherit; cursor:pointer; }
+.tw-category-editor__options input { flex:0 0 auto; width:16px; height:16px; }
+.tw-category-editor__picker small { color:#52627c; }
+.tw-category-editor button:disabled { opacity:.55; cursor:default; }
