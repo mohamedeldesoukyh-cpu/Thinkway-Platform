@@ -10,11 +10,14 @@ export function CreatorCategoryEditor({ categories = [], categoriesBusy = false,
  const [open, setOpen] = useState(false);
  const [query, setQuery] = useState("");
  const [selected, setSelected] = useState<string[]>([]);
+ const [removed, setRemoved] = useState<string[]>([]);
  const [options, setOptions] = useState<string[]>([...CANONICAL_CREATOR_CATEGORIES, "Chef"]);
  const [loading, setLoading] = useState(false);
  const [loadError, setLoadError] = useState(false);
  const choices = normalizeCreatorCategoryChoices([...options, ...categories, ...selected]).sort((a,b) => a.localeCompare(b));
- const existing = new Set(categories.map(value => value.toLowerCase()));
+ const remaining = categories.filter(value => !removed.includes(value));
+ const existing = new Set(remaining.map(value => value.toLowerCase()));
+ const pending = selected.length > 0 || removed.length > 0;
  const search = query.trim().replace(/\s+/g, " ");
  const visible = choices.filter(value => !existing.has(value.toLowerCase()) && value.toLowerCase().includes(search.toLowerCase()));
  const canCreate = search.length > 0 && !choices.some(value => value.toLowerCase() === search.toLowerCase());
@@ -29,10 +32,10 @@ export function CreatorCategoryEditor({ categories = [], categoriesBusy = false,
  return (<section className={plain ? "tw-category-editor tw-category-editor--plain" : "tw-category-editor"} aria-label="Creator categories">
    <strong>Categories</strong>
    <div className="tw-category-editor__chips">
-     {categories.map(category => <span className="tw-category-editor__chip" key={category}>{category}
-       {onCategoriesChange ? <button type="button" aria-label={`Remove category ${category}`} disabled={categoriesBusy} onClick={() => onCategoriesChange(categories.filter(value => value !== category))}>&times;</button> : null}
+     {remaining.map(category => <span className="tw-category-editor__chip" key={category}>{category}
+       {onCategoriesChange ? <button type="button" aria-label={`Remove category ${category}`} disabled={categoriesBusy} onClick={() => setRemoved(previous => [...previous, category])}>&times;</button> : null}
      </span>)}
-     {!categories.length ? <span>No categories set</span> : null}
+     {!remaining.length ? <span>No categories set</span> : null}
    </div>
    {onCategoriesChange ? <>
      <button type="button" className="tw-category-editor__toggle" aria-expanded={open} disabled={categoriesBusy} onClick={showPicker}>+ Add categories</button>
@@ -45,7 +48,12 @@ export function CreatorCategoryEditor({ categories = [], categoriesBusy = false,
          {!visible.length && !loading ? <small>No matching categories.</small> : null}
        </div>
        {canCreate ? <button type="button" disabled={categoriesBusy} onClick={() => { setSelected(previous => normalizeCreatorCategoryChoices([...previous, search])); setQuery(""); }}>+ New: {search}</button> : null}
-       <button type="button" disabled={categoriesBusy || !selected.length} onClick={async () => { await onCategoriesChange(normalizeCreatorCategoryChoices([...categories, ...selected])); setSelected([]); setQuery(""); setOpen(false); }}>Add selected ({selected.length})</button>
+       <small>{selected.length} selected to add</small>
+     </div> : null}
+     {pending ? <div className="tw-category-editor__pending">
+       <small>{removed.length} to remove · {selected.length} to add</small>
+       <button type="button" disabled={categoriesBusy} onClick={async () => { await onCategoriesChange(normalizeCreatorCategoryChoices([...remaining, ...selected])); setRemoved([]); setSelected([]); setQuery(""); setOpen(false); }}>Apply</button>
+       <button type="button" disabled={categoriesBusy} onClick={() => { setRemoved([]); setSelected([]); setQuery(""); setOpen(false); }}>Cancel</button>
      </div> : null}
    </> : null}
    <small role="status">{categoriesBusy ? "Saving categories..." : "Kept until refresh returns new category data."}</small>
