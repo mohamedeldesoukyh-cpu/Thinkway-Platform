@@ -64,7 +64,7 @@ BEGIN
  RAISE EXCEPTION 'A shared invoice includes another brand. Separate that invoice before changing the legal entity.';
  END IF;
  SELECT coalesce(array_agg(DISTINCT p.id),ARRAY[]::uuid[]) INTO payment_ids FROM public.payments p WHERE p.invoice_id=ANY(invoice_ids) OR p.advance_campaign_id=ANY(campaign_ids) OR EXISTS(SELECT 1 FROM public.payment_allocations a WHERE a.payment_id=p.id AND a.invoice_id=ANY(invoice_ids));
- IF EXISTS(SELECT 1 FROM public.payment_allocations WHERE payment_id=ANY(payment_ids) AND NOT invoice_id=ANY(invoice_ids)) THEN RAISE EXCEPTION 'A shared payment covers another brand. Separate its allocations before changing the legal entity.'; END IF;
+ IF EXISTS(SELECT 1 FROM public.payments WHERE id=ANY(payment_ids) AND ((invoice_id IS NOT NULL AND NOT invoice_id=ANY(invoice_ids)) OR (advance_campaign_id IS NOT NULL AND NOT advance_campaign_id=ANY(campaign_ids)))) OR EXISTS(SELECT 1 FROM public.payment_allocations WHERE payment_id=ANY(payment_ids) AND NOT invoice_id=ANY(invoice_ids)) THEN RAISE EXCEPTION 'A shared payment covers another brand. Separate its allocations before changing the legal entity.'; END IF;
  INSERT INTO public.brand_client_reassignments(brand_id,previous_client_id,client_id,actor_id) VALUES(NEW.id,OLD.client_id,NEW.client_id,auth.uid());
  SELECT coalesce(array_agg(DISTINCT campaign_id),ARRAY[]::uuid[]) INTO legacy_ids FROM public.invoices WHERE id=ANY(invoice_ids) AND campaign_id IS NOT NULL;
  IF EXISTS(SELECT 1 FROM public.invoices WHERE campaign_id=ANY(legacy_ids) AND NOT id=ANY(invoice_ids)) THEN RAISE EXCEPTION 'A legacy campaign has invoices outside this brand. Reassign it separately first.'; END IF;
@@ -81,7 +81,7 @@ BEGIN
  UPDATE public.client_ios SET client_id=NEW.client_id,generated_html_url=NULL,generated_pdf_url=NULL,document_generated_at=NULL WHERE campaign_header_id=ANY(campaign_ids);
  UPDATE public.client_credit_notes SET client_id=NEW.client_id WHERE campaign_header_id=ANY(campaign_ids) OR invoice_id=ANY(invoice_ids);
  UPDATE public.client_debit_notes SET client_id=NEW.client_id WHERE campaign_header_id=ANY(campaign_ids) OR invoice_id=ANY(invoice_ids);
- UPDATE public.finance_documents SET client_id=NEW.client_id WHERE campaign_header_id=ANY(campaign_ids) OR (source_table='invoices' AND source_id=ANY(invoice_ids));
+ UPDATE public.finance_documents SET client_id=NEW.client_id WHERE campaign_header_id=ANY(campaign_ids) OR (source_table='invoices' AND source_id=ANY(invoice_ids)) OR (source_table='client_credit_notes' AND source_id IN(SELECT id FROM public.client_credit_notes WHERE campaign_header_id=ANY(campaign_ids) OR invoice_id=ANY(invoice_ids))) OR (source_table='client_debit_notes' AND source_id IN(SELECT id FROM public.client_debit_notes WHERE campaign_header_id=ANY(campaign_ids) OR invoice_id=ANY(invoice_ids)));
  UPDATE public.payments SET client_id=NEW.client_id WHERE id=ANY(payment_ids);
  UPDATE public.campaign_client_reviews SET client_label=new_client.name WHERE campaign_header_id=ANY(campaign_ids)
  OR quotation_id IN(SELECT id FROM public.quotations WHERE brand_id=NEW.id)
