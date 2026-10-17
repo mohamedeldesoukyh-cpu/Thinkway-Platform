@@ -13,6 +13,17 @@ function fact(patch: Partial<PnlLineFact>): PnlLineFact {
   };
 }
 
+test("multiple live posts across months count their assignment once in client and brand totals", () => {
+  const report = buildPnLComparisonReport([
+    fact({ line_id: "line", period_month: "2026-09" }),
+    fact({ line_id: "line", period_month: "2026-10" }),
+  ], 2026, 2025, "fy", "EGP", ["EGP"]);
+  const client = report.client_breakdowns["2026:rev:total"][0];
+  assert.equal(client.revenue, 200);
+  assert.equal(client.line_count, 1);
+  assert.equal(client.brands?.[0].line_count, 1);
+});
+
 test("brand subtotals reconcile and remain scoped to client, month, year and selected period", () => {
   const report = buildPnLComparisonReport([
     fact({}), fact({}), fact({ brand_id: "brand-b", brand_name: "Brand B" }),

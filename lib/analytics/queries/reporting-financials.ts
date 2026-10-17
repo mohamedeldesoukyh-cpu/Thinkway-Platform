@@ -1,8 +1,9 @@
 import { aggregateCampaignDisplayFinancials, resolveLineCostAmount, type CampaignLineCommercialFxInput } from "@/lib/campaigns/campaign-display-financials";
 import { distributeAmountByWeights } from "@/lib/assignments/commercial-calculations";
 import { resolveClientTaxableBase } from "@/lib/assignments/client-billing-commercial";
+import { resolveReportCommercial } from "./report-commercial";
 
-export type RecognitionLine = CampaignLineCommercialFxInput & { id: string; campaign_header_id: string; metadata?: Record<string, unknown> | null };
+export type RecognitionLine = CampaignLineCommercialFxInput & { id: string; campaign_header_id: string; status?: string; metadata?: Record<string, unknown> | null };
 export type RecognitionDeliverable = {
   platform?: string; deliverable_type?: string; id: string; campaign_line_id: string; quantity: number; live_date: string | null;
   revenue_before_vat: number; cost_before_vat: number; usage_rights_amount: number;
@@ -18,7 +19,7 @@ export type RecognitionPublication = {
   assignment_deliverable_id: string | null; assignment_post_schedule_id: string | null;
   publication_date: string | null; status: string;
 };
-export type RecognitionEvent = { campaign_line_id?: string; campaign_header_id: string; date: string; revenue: number; cost: number; gp: number };
+export type RecognitionEvent = { campaign_line_id?: string; campaign_header_id: string; date: string; revenue: number; cost: number; gp: number; base_revenue?: number; ur_rev?: number; agency_fees?: number };
 const LIVE = new Set(["posted", "published", "live", "verified"]);
 
 /** A planned date, commercial approval, invoice, or payment is not proof of going live. */
@@ -33,13 +34,16 @@ export function buildRecognitionEvents(input: {
     return value && /^\d{4}-\d{2}-\d{2}$/.test(value) && value <= input.today ? value : null;
   };
   for (const line of input.lines) {
+    if (line.status === "cancelled") continue;
     const lineEvents: RecognitionEvent[] = [];
     const children = input.deliverables.filter(d => d.campaign_line_id === line.id).sort((a, b) => a.id.localeCompare(b.id));
     if (!children.length) {
       const date = dateOnly(typeof line.metadata?.went_live_date === "string" ? line.metadata.went_live_date : null);
       if (date && line.metadata?.went_live === true) {
-        const f = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: "EGP", rateToEgpByCurrency: input.rates });
-        events.push({ campaign_line_id: line.id, campaign_header_id: line.campaign_header_id, date, revenue: f.revenue, cost: Math.round((f.revenue-f.gp)*100)/100, gp: f.gp });
+        const f = resolveReportCommercial(line, input.rates, input.campaignCurrencies.get(line.campaign_header_id));
+        events.push({ campaign_line_id: line.id, campaign_header_id: line.campaign_header_id, date,
+          revenue: Math.round((f.revenue + f.ur_rev + f.agency_fees) * 100) / 100,
+          base_revenue: f.revenue, ur_rev: f.ur_rev, agency_fees: f.agency_fees, cost: f.cost, gp: f.gp });
       }
       continue;
     }
@@ -76,12 +80,13 @@ export function buildRecognitionEvents(input: {
       const dates = units.map(unit => LIVE.has(unit.status) ? dateOnly(unit.live_date) : null);
       units.forEach((unit, j) => {
         const date = dates[j];
-        const financials = aggregateCampaignDisplayFinancials({ displayCurrency: "EGP", rateToEgpByCurrency: input.rates,
-          lines: [{ ...line, currency_code: line.currency_code || input.campaignCurrencies.get(line.campaign_header_id) || "EGP",
+        const financials = resolveReportCommercial({ ...line, currency_code: line.currency_code || input.campaignCurrencies.get(line.campaign_header_id) || "EGP",
             revenue_before_vat: rev[j], usage_rights_amount: urRev[j], agency_fee_amount: af[j], agency_fee_percent: 0,
-            cost_received: cost[j], cost_before_vat: cost[j], usage_rights_cost: urCost[j] }] });
+            cost_received: cost[j], cost_before_vat: cost[j], usage_rights_cost: urCost[j] }, input.rates);
         lineEvents.push({ campaign_line_id: line.id, campaign_header_id: line.campaign_header_id, date: date ?? "",
-          revenue: financials.revenue, gp: financials.gp, cost: Math.round((financials.revenue - financials.gp) * 100) / 100 });
+          revenue: Math.round((financials.revenue + financials.ur_rev + financials.agency_fees) * 100) / 100,
+          base_revenue: financials.revenue, ur_rev: financials.ur_rev, agency_fees: financials.agency_fees,
+          gp: financials.gp, cost: financials.cost });
       });
     });
     // Converting each allocated post separately can create phantom cents. Keep
@@ -95,6 +100,11 @@ export function buildRecognitionEvents(input: {
       last.revenue = cents(last.revenue + total.revenue - lineEvents.reduce((n, e) => n + e.revenue, 0));
       last.cost = cents(last.cost + total.revenue - total.gp - lineEvents.reduce((n, e) => n + e.cost, 0));
       last.gp = cents(last.revenue - last.cost);
+      const components = resolveReportCommercial(line, input.rates, input.campaignCurrencies.get(line.campaign_header_id));
+      for (const key of ["ur_rev", "agency_fees"] as const) {
+        last[key] = cents((last[key] ?? 0) + components[key] - lineEvents.reduce((n, event) => n + (event[key] ?? 0), 0));
+      }
+      last.base_revenue = cents(last.revenue - (last.ur_rev ?? 0) - (last.agency_fees ?? 0));
     }
     events.push(...lineEvents.filter(e => !!e.date));
   }

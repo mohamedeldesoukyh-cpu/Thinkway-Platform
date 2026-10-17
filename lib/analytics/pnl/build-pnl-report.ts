@@ -50,7 +50,11 @@ function buildClientBreakdown(
   >();
 
   const factsByClient = new Map<string, PnlLineFact[]>();
+  const clientLineIds = new Map<string, Set<string | PnlLineFact>>();
   for (const fact of filtered) {
+    const lineIds = clientLineIds.get(fact.client_id) ?? new Set<string | PnlLineFact>();
+    lineIds.add(fact.line_id ?? fact);
+    clientLineIds.set(fact.client_id, lineIds);
     const clientFacts = factsByClient.get(fact.client_id) ?? [];
     clientFacts.push(fact);
     factsByClient.set(fact.client_id, clientFacts);
@@ -74,15 +78,19 @@ function buildClientBreakdown(
     bucket.gp = roundMoney(bucket.gp + fact.gp);
     bucket.vr_refund = roundMoney(bucket.vr_refund + fact.vr_refund);
     bucket.gp_after_vr = roundMoney(bucket.gp_after_vr + fact.gp_after_vr);
-    bucket.line_count += 1;
+    bucket.line_count = lineIds.size;
     byClient.set(fact.client_id, bucket);
   }
 
   const rows: PnlClientRow[] = [...byClient.entries()].map(([client_id, row]) => {
     const billableBase = roundMoney(row.revenue + row.ur_rev + row.agency_fees);
     const byBrand = new Map<string | null, PnlBrandRow>();
+    const brandLineIds = new Map<string | null, Set<string | PnlLineFact>>();
     for (const fact of factsByClient.get(client_id) ?? []) {
       const brandId = fact.brand_id ?? null;
+      const lineIds = brandLineIds.get(brandId) ?? new Set<string | PnlLineFact>();
+      lineIds.add(fact.line_id ?? fact);
+      brandLineIds.set(brandId, lineIds);
       const brand = byBrand.get(brandId) ?? {
         brand_id: brandId,
         brand_name: fact.brand_name ?? "Unassigned brand",
@@ -93,7 +101,7 @@ function buildClientBreakdown(
       for (const key of ["revenue", "ur_rev", "agency_fees", "cost", "gp", "vr_refund"] as const) {
         brand[key] = roundMoney(brand[key] + fact[key]);
       }
-      brand.line_count += 1;
+      brand.line_count = lineIds.size;
       brand.billable_revenue = roundMoney(brand.revenue + brand.ur_rev + brand.agency_fees);
       brand.gp_after_vr = computeGpAfterVr(brand.gp, brand.vr_refund);
       brand.margin_percent = computeMarginPercent(brand.billable_revenue, brand.gp_after_vr);
@@ -281,9 +289,9 @@ export function buildPnLComparisonReport(
     currency: buildCurrencyContext([displayCurrency]),
     client_breakdowns,
     period_note:
-      `All amounts shown in ${displayCurrency} using effective exchange rates. Grouped by campaign start month. Click any figure for client breakdown.`,
+      `All amounts shown in ${displayCurrency}, including negotiated FX where set. Grouped by actual went-live month. Click any figure for client and brand breakdown.`,
     data_scope_note:
-      "Includes active, paused, and completed campaigns only. Cancelled campaigns and lines are excluded. Total revenue includes deliverable revenue, UR, and agency fees. Total COGS includes vendor cost, UR cost, and VR refund. Total GP is before VR; GP after VR deducts the VR refund. VR% uses the brand's current rate. Months use campaign start date, or created date when start is unset.",
+      "Includes only deliverables that went live, with an actual live date through today, in active, paused, or completed campaigns. Planned work and cancelled campaigns or lines are excluded. Revenue and matching costs use their respective currencies and FX rates. Total revenue includes deliverable revenue, UR, and agency fees. Total COGS includes vendor cost, UR cost, and VR refund. Total GP is before VR; GP after VR deducts the VR refund.",
   };
 }
 
