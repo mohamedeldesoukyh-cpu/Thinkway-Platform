@@ -9,6 +9,7 @@ export type PnlMetricKey =
   | "total_revenue"
   | "cost"
   | "gp"
+  | "revenue_share"
   | "vr_refund"
   | "gp_after_vr";
 
@@ -19,6 +20,7 @@ export type PnlRevenueBreakdown = {
 };
 
 export type PnlClientRow = {
+  revenue_share: number;
   client_id: string;
   client_name: string;
   brands?: PnlBrandRow[];
@@ -78,6 +80,8 @@ export type PnlComparisonReportData = {
 };
 
 export type PnlLineFact = {
+  campaign_id?: string;
+  revenue_share?: number;
   line_id?: string;
   brand_id?: string | null;
   brand_name?: string | null;

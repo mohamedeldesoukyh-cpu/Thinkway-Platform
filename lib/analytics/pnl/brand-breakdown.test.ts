@@ -53,3 +53,21 @@ test("brand amounts use converted currency and margins are recomputed from total
   assert.equal(client.brands?.[0].brand_id, "brand-a");
   assert.equal(client.brands?.[0].margin_percent, client.margin_percent);
 });
+
+test("P&L deducts VR and RS once and reconciles client, brand and converted totals", async () => {
+  const facts = await convertPnlFactsToDisplayCurrency([
+    fact({ revenue_share: 10, currency_code: "USD" }),
+    fact({ revenue_share: 20, currency_code: "USD", brand_id: "brand-b" }),
+  ], "EGP", async () => 50);
+  const report = buildPnLComparisonReport(facts, 2026, 2025, "fy", "EGP", ["EGP"]);
+  const row = (key: string) => report.metric_rows.find(r => r.key === key)!;
+  assert.equal(row("revenue_share").total.current, 1500);
+  assert.equal(row("gp").total.current, 7500);
+  assert.equal(row("gp_after_vr").total.current, 5500);
+  assert.equal(row("gp_after_vr").label, "GP after VR and RS");
+  const client = report.client_breakdowns["2026:revenue_share:total"][0];
+  assert.equal(client.revenue_share, 1500);
+  assert.equal(client.gp_after_vr, 5500);
+  assert.equal(client.brands!.reduce((s, b) => s + b.revenue_share, 0), 1500);
+  assert.equal(client.brands!.reduce((s, b) => s + b.gp_after_vr, 0), 5500);
+});

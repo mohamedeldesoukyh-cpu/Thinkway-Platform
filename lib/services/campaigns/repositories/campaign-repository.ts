@@ -181,7 +181,7 @@ export async function listCampaignHeaders(
       client:clients(id, name, document_number, legal_name),
       group:groups(id, name),
       account_manager:profiles!campaign_headers_account_manager_id_fkey(id, full_name, email),
-      lines:campaign_lines(id, document_number, name, po_amount, revenue, cost, profit, billing_status, invoice_id)
+      lines:campaign_lines(id, document_number, name, po_amount, revenue, cost, profit, billing_status, invoice_id, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, currency_code, cost_received, cost_received_currency, cost_fx_override, revenue_fx_override)
     `,
       { count: "exact" }
     )

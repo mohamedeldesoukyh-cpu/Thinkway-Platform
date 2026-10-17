@@ -62,6 +62,12 @@ test("P&L recognizes only live portions in live month; other reports retain book
   assert.equal(booked[0].revenue, 15000);
   assert.equal(booked[0].gp, 10000);
   assert.equal(booked[0].period_month, "2026-01");
+  tables.campaign_headers[0].metadata = { revenue_share: { mode: "percent", value: 10, currency: "AED" } };
+  assert.equal((await loadPnLLineFacts(db, { liveOnly: true }))[0].revenue_share, 750);
+  assert.equal((await loadPnLLineFacts(db))[0].revenue_share, 1500);
+  tables.campaign_headers[0].metadata = { revenue_share: { mode: "amount", value: 100, currency: "USD" } };
+  // Fixed USD amount is converted once, then only half recognized; cancelled line is excluded.
+  assert.equal((await loadPnLLineFacts(db, { liveOnly: true }))[0].revenue_share, 2550);
   tables.assignment_post_schedule[0].live_date = "2099-01-01";
   assert.deepEqual(await loadPnLLineFacts(db, { liveOnly: true }), []);
 });

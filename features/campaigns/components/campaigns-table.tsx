@@ -2,6 +2,9 @@
 
 import { useMemo, useState, type CSSProperties } from "react";
 import Link from "next/link";
+import { CampaignRevenueShare } from "./campaign-revenue-share";
+import { formatMoney } from "../utils";
+import { readRevenueShare } from "@/lib/campaigns/revenue-share";
 
 import { useOperationalTableColumnsContext } from "@/components/tables/operational-table-column-context";
 import { useOperationalTableDataContextOptional } from "@/components/tables/operational-table-data-context";
@@ -41,6 +44,7 @@ const CAMPAIGNS_LIST_TRACKS: Record<string, string> = {
   status: "128px",
   client_link: "96px",
   po_total: "150px",
+  revenue_share: "140px",
   dates: "108px",
 };
 
@@ -348,6 +352,11 @@ export const CAMPAIGNS_TABLE_COLUMNS: OperationalConfigurableColumnDef<CampaignL
         />
       </span>
     ),
+  },
+  {
+    id: "revenue_share",
+    label: "Revenue share",
+    renderCell: (campaign) => <CampaignRevenueShare campaignId={campaign.id} share={readRevenueShare(campaign.metadata)} amountLabel={campaign.revenue_share_amount != null ? formatMoney(campaign.revenue_share_amount, campaign.currency_code) : undefined} />,
   },
   {
     id: "po_total",

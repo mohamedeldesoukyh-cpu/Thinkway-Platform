@@ -60,6 +60,7 @@ export async function convertPnlFactsToDisplayCurrency(
       agency_fees: roundMoney(fact.agency_fees * rate),
       cost: roundMoney(fact.cost * rate),
       gp: roundMoney(fact.gp * rate),
+      revenue_share: roundMoney((fact.revenue_share ?? 0) * rate),
       vr_refund: roundMoney(fact.vr_refund * rate),
       gp_after_vr: roundMoney(fact.gp_after_vr * rate),
       currency_code: target,

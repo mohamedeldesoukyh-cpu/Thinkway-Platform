@@ -34,8 +34,9 @@ const METRIC_LABELS: Record<PnlMetricKey, string> = {
   total_revenue: "Total revenue",
   cost: "Cost",
   gp: "Gross profit",
+  revenue_share: "Revenue share",
   vr_refund: "VR refund",
-  gp_after_vr: "GP after VR",
+  gp_after_vr: "GP after VR and RS",
 };
 
 function isEmphasisRow(key: PnlMetricKey): boolean {
@@ -549,7 +550,8 @@ export function PnlReportView({ report }: Props) {
                         <th className="py-2 pr-3 text-right font-medium">Cost</th>
                         <th className="py-2 pr-3 text-right font-medium">GP</th>
                         <th className="py-2 pr-3 text-right font-medium">VR Refund</th>
-                        <th className="py-2 pr-3 text-right font-medium">GP after VR</th>
+                        <th className="py-2 pr-3 text-right font-medium">Revenue share</th>
+                        <th className="py-2 pr-3 text-right font-medium">GP after VR and RS</th>
                         <th className="py-2 text-right font-medium">Margin</th>
                       </tr>
                     </thead>
@@ -789,6 +791,7 @@ function ClientDrilldownRow({
       >
         {formatPnlAmount(client.vr_refund)}
       </td>
+      <td className="py-2.5 pr-3 text-right tabular-nums">{formatPnlAmount(client.revenue_share)}</td>
       <td
         className={cn(
           "py-2.5 pr-3 text-right tabular-nums",

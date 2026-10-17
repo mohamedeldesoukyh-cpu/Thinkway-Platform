@@ -416,6 +416,7 @@ export type CampaignObjectVersionRow = {
 };
 
 export type CampaignListItem = CampaignHeaderRow & {
+  revenue_share_amount?: number;
   brand: { id: string; name: string } | null;
   client: { id: string; name: string; document_number: string; legal_name: string | null } | null;
   group: { id: string; name: string } | null;
@@ -424,7 +425,7 @@ export type CampaignListItem = CampaignHeaderRow & {
     full_name: string | null;
     email: string;
   } | null;
-  lines: Pick<CampaignLineRow, "id" | "document_number" | "name" | "po_amount" | "revenue" | "cost" | "profit">[];
+  lines: (Pick<CampaignLineRow, "id" | "document_number" | "name" | "po_amount" | "revenue" | "cost" | "profit"> & Partial<CampaignLineRow>)[];
   /** Latest Client IO status for portfolio lifecycle (enriched on list load). */
   client_io_status?: string | null;
   has_client_io?: boolean;
