@@ -87,6 +87,8 @@ export type CampaignPoSummary = {
 };
 
 export type CampaignFinancialSummary = {
+  client_cost_before_agency_fees?: number;
+  agency_fees?: number;
   /** Operational PO budget (po_amount_campaign_currency or legacy fallback). */
   budget: number;
   /** Invoice / view currency KPIs (converted from line entry currencies via FX). */

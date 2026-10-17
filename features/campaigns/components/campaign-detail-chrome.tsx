@@ -20,7 +20,7 @@ import { portfolioIntelFromLifecycle } from "@/features/campaigns/lifecycle/camp
 import type { DecisionFocusQuery } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatPercent } from "@/features/campaigns/utils";
-import { fromEgp } from "@/lib/commercial/fx-aggregation";
+import styles from "./campaign-commercial-header.module.css";
 import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import { cn } from "@/lib/utils";
 
@@ -78,7 +78,6 @@ export function CampaignDetailChrome({
   const [topArmed, setTopArmed] = useState(true);
   const [dcOpen, setDcOpen] = useState(false);
   const displayCurrency = (workspace.currency_code || "EGP").toUpperCase();
-  const displayFxRateToEgp = Number(workspace.financials.display_fx_rate_to_egp) || 1;
   const [currencyPending, startCurrencyTransition] = useTransition();
 
   const refreshWorkspace = () => {
@@ -145,26 +144,13 @@ export function CampaignDetailChrome({
     };
   }, []);
 
-  const revenue = fromEgp(
-    Number(workspace.financials.revenue_egp ?? workspace.financials.revenue ?? 0),
-    displayCurrency,
-    displayFxRateToEgp
-  );
-  const cost = fromEgp(
-    Number(workspace.financials.cost_egp ?? workspace.financials.cost ?? 0),
-    displayCurrency,
-    displayFxRateToEgp
-  );
-  const gp = fromEgp(
-    Number(workspace.financials.gp_egp ?? workspace.financials.gp ?? 0),
-    displayCurrency,
-    displayFxRateToEgp
-  );
-  const fxGainLoss = Number(workspace.financials.fx_gain_loss_egp ?? 0);
-  const marginPercent =
-    revenue > 0
-      ? Math.round((gp / revenue) * 10000) / 100
-      : workspace.financials.margin_percent;
+  const { revenue, cost, gp } = workspace.financials;
+  const agencyFees = workspace.financials.agency_fees ?? 0;
+  const clientCost = workspace.financials.client_cost_before_agency_fees ?? revenue - agencyFees;
+  const fxGainLoss = workspace.financials.fx_gain_loss_egp;
+  const marginPercent = revenue > 0 ? gp / revenue * 100 : 0;
+  const markupPercent = cost > 0 ? gp / cost * 100 : null;
+  const headerMoney = (amount: number) => <><span className={styles.currency}>{displayCurrency}</span>{amount.toLocaleString("en-US", { maximumFractionDigits: 0 })}</>;
 
   const handleCurrencyChange = (currency: string) => {
     const next = currency.toUpperCase();
@@ -262,23 +248,30 @@ export function CampaignDetailChrome({
 
         <div className="tw-mr">{actions}<span className="wr-tools-divider" /><button type="button" className="tw-b" onClick={() => onSelectStage("lines")}>Commercial Workspace</button></div>
 
-        <div className="wr-metrics" role="group" aria-label="Campaign metrics">
-          <section className="wr-metrics-zone wr-metrics-private" aria-label="Internal financial metrics">
-            <div className="wr-metrics-band">Internal — never shown to the client</div>
-            <div className="wr-metrics-cells">
-              <div><i>Base cost</i><b><CampaignSummaryMoney amount={cost} currency={displayCurrency} metric="cost" /></b></div>
-              <div><i>GP amount</i><b className={gp >= 0 ? "g" : "r"}><CampaignSummaryMoney amount={gp} currency={displayCurrency} metric="gp" /></b></div>
-              <div><i>GP %</i><b className={marginPercent >= 20 ? "g" : undefined}>{formatPercent(marginPercent)}</b><em>GP ÷ revenue</em></div>
-              <div><i>FX gain / loss</i><b>EGP {fxGainLoss.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</b></div>
+        <div className={styles.context}>
+          <span><b>{workspace.lines.length}</b> creator line(s)</span>
+          <span>Stage: <b>{lifecycle.businessStageLabel}</b></span>
+          <span>Workspace: <b>{workspaceLabelForTab(activeTab)}</b></span>
+          <span className={styles.fx}>Internal FX gain / loss: <b>{fxGainLoss == null ? "Not available" : `EGP ${fxGainLoss.toLocaleString("en-US", { maximumFractionDigits: 2 })}`}</b></span>
+        </div>
+        <div className={styles.metrics} role="group" aria-label="Campaign commercial metrics">
+          <section className={styles.private} aria-label="Internal financial metrics">
+            <div className={styles.band}>Internal — never shown to the client</div>
+            <div className={styles.cells}>
+              <div><span className={styles.label}>Base cost (internal creator / vendor cost)</span><b>{headerMoney(cost)}</b></div>
+              <div><span className={styles.label}>GP amount</span><b className={gp < 0 ? styles.negative : agencyFees > 0 ? styles.amber : styles.positive}>{headerMoney(gp)}</b></div>
+              <div title="Revenue + agency fees + FX − cost. Negotiated FX is included once in the converted totals."><span className={styles.label}>Margin amount</span><b className={gp < 0 ? styles.negative : styles.amber}>{headerMoney(gp)}</b></div>
+              <div><span className={styles.label}>GP %</span><b className={gp < 0 ? styles.negative : agencyFees > 0 ? styles.amber : styles.positive}>{marginPercent.toFixed(1)}%</b></div>
+              <div><span className={styles.label}>Markup / FM %</span><b title="GP divided by base cost">{markupPercent == null ? "—" : `${markupPercent.toFixed(1)}%`}</b></div>
             </div>
           </section>
-          <section className="wr-metrics-zone" aria-label="Client-facing metrics">
-            <div className="wr-metrics-band">Client-facing</div>
-            <div className="wr-metrics-cells">
-              <div><i>Display currency</i><CommercialCurrencySelect label={null} layout="inline" value={displayCurrency} onChange={handleCurrencyChange} disabled={currencyPending} /></div>
-              <div><i>Total investment</i><b><CampaignSummaryMoney amount={revenue} currency={displayCurrency} metric="revenue" /></b></div>
-              <div><i>Creators</i><b>{String(workspace.lines.length)}</b></div>
-              <div><i>Stage</i><b className="s">{lifecycle.businessStageLabel}</b><em>Workspace · {workspaceLabelForTab(activeTab)}</em></div>
+          <section aria-label="Client-facing metrics">
+            <div className={styles.band}>Client-facing</div>
+            <div className={styles.cells}>
+              <div><span className={styles.label}>Display currency</span><CommercialCurrencySelect label={null} layout="inline" value={displayCurrency} onChange={handleCurrencyChange} disabled={currencyPending} /></div>
+              <div><span className={styles.label}>Client cost before agency fees</span><b>{headerMoney(clientCost)}</b></div>
+              <div><span className={styles.label}>Agency fees (AF)</span><b>{headerMoney(agencyFees)}</b></div>
+              <div><span className={styles.label}>Total investment</span><b>{headerMoney(revenue)}</b></div>
             </div>
           </section>
         </div>

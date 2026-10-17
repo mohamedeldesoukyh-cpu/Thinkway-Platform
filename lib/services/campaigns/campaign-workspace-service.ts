@@ -859,6 +859,8 @@ export async function getCampaignWorkspace(
       health: operationalPo.health,
     },
     financials: {
+      client_cost_before_agency_fees: displayFinancials.client_cost_before_agency_fees,
+      agency_fees: displayFinancials.agency_fees,
       budget: operationalPo.po_amount,
       revenue,
       cost,
