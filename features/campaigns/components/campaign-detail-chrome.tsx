@@ -260,7 +260,6 @@ export function CampaignDetailChrome({
             <div className={styles.cells}>
               <div><span className={styles.label}>Base cost (internal creator / vendor cost)</span><b>{headerMoney(cost)}</b></div>
               <div><span className={styles.label}>GP amount</span><b className={gp < 0 ? styles.negative : agencyFees > 0 ? styles.amber : styles.positive}>{headerMoney(gp)}</b></div>
-              <div title="Revenue + agency fees + FX − cost. Negotiated FX is included once in the converted totals."><span className={styles.label}>Margin amount</span><b className={gp < 0 ? styles.negative : styles.amber}>{headerMoney(gp)}</b></div>
               <div><span className={styles.label}>GP %</span><b className={gp < 0 ? styles.negative : agencyFees > 0 ? styles.amber : styles.positive}>{marginPercent.toFixed(1)}%</b></div>
               <div><span className={styles.label}>Markup / FM %</span><b title="GP divided by base cost">{markupPercent == null ? "—" : `${markupPercent.toFixed(1)}%`}</b></div>
             </div>

@@ -56,7 +56,6 @@ export const quotationDesignMessages: Record<string, string> = {
   "Agency fees (AF)": "رسوم الوكالة (AF)",
   "Total investment": "إجمالي الاستثمار",
   "GP amount": "قيمة الربح الإجمالي",
-  "Margin amount": "قيمة الهامش",
   "GP %": "نسبة الربح %",
   "Markup / FM %": "نسبة الزيادة على التكلفة",
   "AF = agency fees. Shown in full here; abbreviated only in compact areas.": "AF = عمولة الوكالة. تظهر كاملة هنا ويُختصر الاسم في المساحات الضيقة فقط.",
