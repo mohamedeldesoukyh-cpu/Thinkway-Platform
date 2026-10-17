@@ -1,8 +1,10 @@
+import { analyticsRequestKey } from "@/lib/analytics/aggregations/memo";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { safeLoadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";
 import { devLog } from "@/lib/dev-log";
+import { filterBudgetLines } from "@/lib/planning/budgets/monthly-budget";
 import {
   budgetLineToRollupInput,
   rollupBudgetGlobal,
@@ -28,14 +30,14 @@ export async function loadBudgetRollups(
   level: PlanningRollupLevel = "global",
   analyticsFilters?: AnalyticsQueryFilters
 ): Promise<BudgetRollupsResult> {
-  const cacheKey = buildPlanningCacheKey("rollups", {
+  const cacheKey = buildPlanningCacheKey("rollups", { scope: analyticsRequestKey(supabase, {}),
     versionId: budgetVersionId,
     level,
-    billing: analyticsFilters?.billingFilter,
+    filters: JSON.stringify(analyticsFilters ?? {}),
   });
 
   return withPlanningCache(cacheKey, async () => {
-    const lines = await loadBudgetLines(supabase, budgetVersionId);
+    const lines = filterBudgetLines(await loadBudgetLines(supabase, budgetVersionId), analyticsFilters);
 
     const snapshot = await safeLoadAnalyticsFacts(supabase, analyticsFilters ?? {});
     const labelByClient = new Map(

@@ -1,3 +1,4 @@
+import { analyticsRequestKey } from "@/lib/analytics/aggregations/memo";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { devLog } from "@/lib/dev-log";
@@ -72,7 +73,7 @@ export async function loadForecastRollups(
   forecastVersionId: string,
   level: PlanningRollupLevel = "global"
 ): Promise<ForecastRollupsResult> {
-  const cacheKey = buildPlanningCacheKey("forecast-rollups", {
+  const cacheKey = buildPlanningCacheKey("forecast-rollups", { scope: analyticsRequestKey(supabase, {}),
     versionId: forecastVersionId,
     level,
   });

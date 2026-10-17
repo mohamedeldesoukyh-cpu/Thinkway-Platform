@@ -1,4 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { buildMonthlyBudgetRows, filterBudgetLines, type MonthlyBudgetRow } from "@/lib/planning/budgets/monthly-budget";
+import { loadPlanningActuals } from "@/lib/planning/queries/load-planning-actuals";
 
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";
 import { formatAnalyticsAmount, buildCurrencyContext } from "@/lib/analytics/currency/engine";
@@ -10,7 +12,6 @@ import { loadBudgetPeriods } from "@/lib/planning/queries/load-budget-periods";
 import { loadForecastRollups, loadForecastVersions } from "@/lib/planning/queries/load-forecast-rollups";
 import {
   buildBudgetMetricTrend,
-  buildVarianceTrendFromPeriods,
   sortVariancesByMetric,
 } from "@/lib/planning/queries/variance-series";
 import type { BudgetRollupNode } from "@/lib/planning/budgets/budget-rollups";
@@ -37,6 +38,8 @@ export type PlanningDashboardCharts = {
 };
 
 export type PlanningDashboardPayload = {
+  monthly: MonthlyBudgetRow[];
+  unallocatedLineCount: number;
   kpis: PlanningKpiCard[];
   charts: PlanningDashboardCharts;
   global_variance: VarianceAnalysis | null;
@@ -61,6 +64,8 @@ export async function loadPlanningDashboard(
 ): Promise<PlanningDashboardPayload> {
   const emptyCurrency = buildCurrencyContext([]);
   const empty: PlanningDashboardPayload = {
+    monthly: [],
+    unallocatedLineCount: 0,
     kpis: [],
     charts: {
       variance_trend: [],
@@ -103,6 +108,12 @@ export async function loadPlanningDashboard(
 
   const global = varianceResult.global;
   const currency = global.currency;
+  const snapshot = await loadPlanningActuals(supabase, versionId, input.analyticsFilters ?? {});
+  const scopedLines = filterBudgetLines(lines, input.analyticsFilters);
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  const monthly = buildMonthlyBudgetRows(snapshot.year, periods, scopedLines, snapshot.recognition_events ?? [], snapshot.rate, today);
+  const monthlyIds = new Set(periods.filter(p => p.period_type === "monthly").map(p => p.id));
+  const unallocatedLineCount = scopedLines.filter(l => !l.budget_period_id || !monthlyIds.has(l.budget_period_id)).length;
 
   let forecast_global: BudgetRollupNode | null = null;
   if (input.forecastVersionId) {
@@ -190,29 +201,14 @@ export async function loadPlanningDashboard(
   ];
 
   const charts: PlanningDashboardCharts = {
-    variance_trend: buildVarianceTrendFromPeriods(
-      periods,
-      lines,
-      (v) => v.variance_amount.revenue,
-      global
-    ),
-    gp_variance_trend: buildVarianceTrendFromPeriods(
-      periods,
-      lines,
-      (v) => v.variance_amount.gp,
-      global
-    ),
-    collections_variance_trend: buildVarianceTrendFromPeriods(
-      periods,
-      lines,
-      (v) => v.variance_amount.collections,
-      global
-    ),
-    budget_trend: buildBudgetMetricTrend(periods, lines, "revenue_budget"),
+    variance_trend: monthly.filter(r => r.status !== "Upcoming" && r.hasBudget).map(r => ({ period: r.key, label: r.label, value: r.actualRevenue - r.budgetRevenue })),
+    gp_variance_trend: monthly.filter(r => r.status !== "Upcoming" && r.hasBudget).map(r => ({ period: r.key, label: r.label, value: r.actualGp - r.budgetGp })),
+    collections_variance_trend: [],
+    budget_trend: buildBudgetMetricTrend(periods, scopedLines, "revenue_budget"),
     forecast_trend: forecast_global
       ? [{ period: "FY", label: String(input.fiscalYear), value: forecast_global.metrics.revenue_budget }]
       : [],
-    margin_trend: buildBudgetMetricTrend(periods, lines, "gp_budget"),
+    margin_trend: buildBudgetMetricTrend(periods, scopedLines, "gp_budget"),
   };
 
   const sorted = sortVariancesByMetric(clientVar.variances, "revenue");
@@ -225,6 +221,8 @@ export async function loadPlanningDashboard(
   }
 
   return {
+    monthly,
+    unallocatedLineCount,
     kpis,
     charts,
     global_variance: global,

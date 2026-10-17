@@ -14,6 +14,7 @@ import { budgetVersionAllowsLineWrite } from "@/lib/planning/budgets/budget-stat
 import { invalidatePlanningCache } from "@/lib/planning/queries/planning-cache";
 import type { BudgetPeriodType, BudgetVersionStatus } from "@/lib/planning/types/budget";
 import { devLog } from "@/lib/platform/logger";
+import { budgetAmounts } from "@/lib/planning/budgets/monthly-budget";
 
 const PLANNING_PATH = "/planning";
 
@@ -316,6 +317,8 @@ export async function duplicateBudgetVersionAction(
 }
 
 export async function createBudgetLineAction(input: {
+  lineId?: string;
+  budgetPeriodId: string;
   budgetVersionId: string;
   versionStatus: BudgetVersionStatus;
   currencyCode: string;
@@ -338,15 +341,23 @@ export async function createBudgetLineAction(input: {
   const auth = await requirePermission(supabase, "planning.write");
   if ("error" in auth) return { ok: false, error: auth.error };
 
-  if (!budgetVersionAllowsLineWrite(input.versionStatus)) {
+  const { data: version, error: versionError } = await planningDb(supabase)
+    .from("budget_versions").select("status, currency_code").eq("id", input.budgetVersionId).single();
+  if (versionError || !version) return { ok: false, error: "Budget version unavailable." };
+  if (!budgetVersionAllowsLineWrite(version.status as BudgetVersionStatus)) {
     return { ok: false, error: "This budget version is read-only." };
   }
-
-  const { error } = await planningDb(supabase)
-    .from("budget_lines")
-    .insert({
+  const { data: period, error: periodError } = await planningDb(supabase)
+    .from("budget_periods").select("id").eq("id", input.budgetPeriodId)
+    .eq("budget_version_id", input.budgetVersionId).single();
+  if (periodError || !period) return { ok: false, error: "Choose a period belonging to this budget version." };
+  let amounts;
+  try { amounts = budgetAmounts(input.revenueBudget, input.costBudget); }
+  catch (error) { return { ok: false, error: error instanceof Error ? error.message : "Invalid amounts." }; }
+  const values = {
       budget_version_id: input.budgetVersionId,
-      currency_code: input.currencyCode,
+      budget_period_id: period.id,
+      currency_code: version.currency_code,
       country_code: input.countryCode ?? null,
       client_id: input.clientId ?? null,
       brand_id: input.brandId ?? null,
@@ -354,16 +365,19 @@ export async function createBudgetLineAction(input: {
       team_id: input.teamId ?? null,
       business_unit_id: input.businessUnitId ?? null,
       line_label: input.lineLabel?.trim() ?? null,
-      revenue_budget: input.revenueBudget,
-      cost_budget: input.costBudget,
-      gp_budget: input.gpBudget,
-      margin_budget: input.marginBudget,
-      collections_budget: input.collectionsBudget,
-      vendor_cost_budget: input.vendorCostBudget,
-      po_budget: input.poBudget,
-    } as never);
+      ...amounts,
+      collections_budget: amounts.revenue_budget,
+      vendor_cost_budget: amounts.cost_budget,
+      po_budget: 0,
+    };
+  const table = planningDb(supabase).from("budget_lines");
+  const mutation = input.lineId
+    ? table.update(values as never).eq("id", input.lineId).eq("budget_version_id", input.budgetVersionId)
+    : table.insert(values as never);
+  const { data: saved, error } = await mutation.select("id").single();
 
   if (error) return { ok: false, error: error.message };
+  if (!saved) return { ok: false, error: "Budget line was not saved. Refresh and try again." };
 
   await logPlanningAudit(supabase, {
     action: PLANNING_AUDIT_ACTIONS.line_updated,

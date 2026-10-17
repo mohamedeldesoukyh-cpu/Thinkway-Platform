@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -27,7 +28,7 @@ import {
   createBudgetVersionAction,
 } from "@/features/planning/actions";
 import type { DashboardFilterOptions } from "@/features/analytics/load-executive-dashboard";
-import type { BudgetVersion } from "@/lib/planning/types/budget";
+import type { BudgetVersion, BudgetPeriod, BudgetLine } from "@/lib/planning/types/budget";
 import type { BudgetPeriodType } from "@/lib/planning/types/budget";
 
 type BudgetCreateSheetProps = {
@@ -37,6 +38,8 @@ type BudgetCreateSheetProps = {
   fiscalYear: number;
   filterOptions: DashboardFilterOptions;
   version?: BudgetVersion | null;
+  periods: BudgetPeriod[];
+  line?: BudgetLine | null;
 };
 
 const CURRENCIES = ["USD", "AED", "SAR", "EGP", "EUR", "GBP"] as const;
@@ -48,17 +51,22 @@ export function BudgetCreateSheet({
   fiscalYear,
   filterOptions,
   version,
+  periods,
+  line,
 }: BudgetCreateSheetProps) {
+  const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [name, setName] = useState("");
+  const [name, setName] = useState(line?.line_label ?? "");
   const [periodType, setPeriodType] = useState<BudgetPeriodType>("monthly");
-  const [currency, setCurrency] = useState<string>("USD");
+  const [currency, setCurrency] = useState<string>("EGP");
   const [notes, setNotes] = useState("");
-  const [revenue, setRevenue] = useState("0");
-  const [cost, setCost] = useState("0");
-  const [clientId, setClientId] = useState<string>("");
-  const [brandId, setBrandId] = useState<string>("");
-  const [country, setCountry] = useState<string>("");
+  const [revenue, setRevenue] = useState(String(line?.revenue_budget ?? ""));
+  const [cost, setCost] = useState(String(line?.cost_budget ?? ""));
+  const [clientId, setClientId] = useState(line?.client_id ?? "");
+  const [brandId, setBrandId] = useState(line?.brand_id ?? "");
+  const [country, setCountry] = useState(line?.country_code ?? "");
+  const [periodId, setPeriodId] = useState(line?.budget_period_id ?? "");
+  const [error, setError] = useState("");
 
   const reset = () => {
     setName("");
@@ -84,6 +92,7 @@ export function BudgetCreateSheet({
         return;
       }
       toast.success("Budget version created.");
+      if (result.versionId) router.push(`/planning?fy=${fiscalYear}&tab=versions&version=${result.versionId}`);
       reset();
       onOpenChange(false);
     });
@@ -91,18 +100,28 @@ export function BudgetCreateSheet({
 
   const submitLine = () => {
     if (!version) return;
-    const rev = Number.parseFloat(revenue) || 0;
-    const cst = Number.parseFloat(cost) || 0;
-    const gp = Math.max(0, rev - cst);
+    const rev = Number(revenue);
+    const cst = Number(cost);
+    if (!periodId || !revenue.trim() || !cost.trim() || ![rev, cst].every(n => Number.isFinite(n) && n >= 0)) {
+      setError("Choose a period and enter valid revenue and cost amounts (zero is allowed).");
+      return;
+    }
+    setError("");
+    const gp = rev - cst;
     const margin = rev > 0 ? (gp / rev) * 100 : 0;
 
     startTransition(async () => {
       const result = await createBudgetLineAction({
+        lineId: line?.id,
+        budgetPeriodId: periodId,
         budgetVersionId: version.id,
         versionStatus: version.status,
         currencyCode: version.currency_code,
         clientId: clientId || undefined,
         brandId: brandId || undefined,
+        campaignHeaderId: line?.campaign_header_id ?? undefined,
+        teamId: line?.team_id ?? undefined,
+        businessUnitId: line?.business_unit_id ?? undefined,
         countryCode: country || undefined,
         revenueBudget: rev,
         costBudget: cst,
@@ -114,10 +133,11 @@ export function BudgetCreateSheet({
         lineLabel: name || undefined,
       });
       if (!result.ok) {
+        setError(result.error);
         toast.error(result.error);
         return;
       }
-      toast.success("Budget line added.");
+      toast.success(line ? "Budget line updated." : "Budget line added.");
       reset();
       onOpenChange(false);
     });
@@ -128,12 +148,12 @@ export function BudgetCreateSheet({
       <SheetContent className="overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>
-            {mode === "version" ? "Create budget version" : "Add budget line"}
+            {mode === "version" ? "Create budget version" : line ? "Edit budget line" : "Add budget line"}
           </SheetTitle>
           <SheetDescription>
             {mode === "version"
               ? "Define fiscal year, period granularity, and base currency."
-              : "Allocate revenue and cost across planning dimensions."}
+              : `Enter revenue and direct campaign cost in ${version?.currency_code ?? "the budget currency"}. Add one line per month; leave dimensions empty for a company-wide budget.`}
           </SheetDescription>
         </SheetHeader>
 
@@ -183,6 +203,14 @@ export function BudgetCreateSheet({
             </>
           ) : (
             <>
+              <div className="grid gap-2">
+                <Label htmlFor="budget-period">Budget period</Label>
+                <Select value={periodId} onValueChange={setPeriodId}>
+                  <SelectTrigger id="budget-period"><SelectValue placeholder="Choose a month / period" /></SelectTrigger>
+                  <SelectContent>{periods.map(p => <SelectItem key={p.id} value={p.id}>{p.period_key}</SelectItem>)}</SelectContent>
+                </Select>
+                {periods.length === 0 ? <p role="alert" className="text-sm text-destructive">No periods available. Create a monthly budget version first.</p> : null}
+              </div>
               <div className="grid gap-2">
                 <Label>Country</Label>
                 <Select value={country || "__none__"} onValueChange={(v) => setCountry(v === "__none__" ? "" : v)}>
@@ -235,6 +263,8 @@ export function BudgetCreateSheet({
                 <div className="grid gap-2">
                   <Label>Revenue</Label>
                   <Input
+                    aria-label="Budget revenue"
+                    step="0.01"
                     type="number"
                     min={0}
                     value={revenue}
@@ -244,6 +274,8 @@ export function BudgetCreateSheet({
                 <div className="grid gap-2">
                   <Label>Cost</Label>
                   <Input
+                    aria-label="Budget cost"
+                    step="0.01"
                     type="number"
                     min={0}
                     value={cost}
@@ -256,12 +288,13 @@ export function BudgetCreateSheet({
         </div>
 
         <SheetFooter className="mt-6">
+          {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
           <Button
             type="button"
-            disabled={isPending}
+            disabled={isPending || (mode === "line" && periods.length === 0)}
             onClick={mode === "version" ? submitVersion : submitLine}
           >
-            {isPending ? "Saving…" : mode === "version" ? "Create version" : "Add line"}
+            {isPending ? "Saving…" : mode === "version" ? "Create version" : line ? "Save changes" : "Add line"}
           </Button>
         </SheetFooter>
       </SheetContent>

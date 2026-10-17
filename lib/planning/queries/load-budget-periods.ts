@@ -1,3 +1,4 @@
+import { analyticsRequestKey } from "@/lib/analytics/aggregations/memo";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { devLog } from "@/lib/dev-log";
@@ -11,7 +12,7 @@ export async function loadBudgetPeriods(
   supabase: SupabaseClient,
   budgetVersionId: string
 ): Promise<BudgetPeriod[]> {
-  const cacheKey = buildPlanningCacheKey("periods", { versionId: budgetVersionId });
+  const cacheKey = buildPlanningCacheKey("periods", { scope: analyticsRequestKey(supabase, {}), versionId: budgetVersionId });
 
   return withPlanningCache(cacheKey, async () => {
     const { data, error } = await supabase

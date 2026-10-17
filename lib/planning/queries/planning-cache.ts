@@ -30,6 +30,9 @@ export async function withPlanningCache<T>(
     return hit.value;
   }
   const value = await factory();
+  for (const [entryKey, entry] of planningCache) {
+    if (entry.expiresAt <= now) planningCache.delete(entryKey);
+  }
   planningCache.set(key, { expiresAt: now + ttlMs, value });
   return value;
 }

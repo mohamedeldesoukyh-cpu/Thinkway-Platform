@@ -1,7 +1,8 @@
+import { analyticsRequestKey } from "@/lib/analytics/aggregations/memo";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { rollupFacts } from "@/lib/analytics/aggregations/rollup-engine";
-import { safeLoadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
+import { loadPlanningActuals } from "@/lib/planning/queries/load-planning-actuals";
 import type { AnalyticsQueryFilters } from "@/lib/analytics/types/filters";
 import type { AnalyticsRollupLevel } from "@/lib/analytics/types/filters";
 import { countryCodeForRollup } from "@/lib/analytics/schema-safe";
@@ -47,16 +48,16 @@ export async function loadBudgetVariance(
   level: PlanningRollupLevel = "client",
   analyticsFilters: AnalyticsQueryFilters = {}
 ): Promise<BudgetVarianceResult> {
-  const cacheKey = buildPlanningCacheKey("variance", {
+  const cacheKey = buildPlanningCacheKey("variance", { scope: analyticsRequestKey(supabase, {}),
     versionId: budgetVersionId,
     level,
-    billing: analyticsFilters.billingFilter,
+    filters: JSON.stringify(analyticsFilters),
   });
 
   return withPlanningCache(cacheKey, async () => {
     const [budgetRollups, snapshot] = await Promise.all([
       loadBudgetRollups(supabase, budgetVersionId, level, analyticsFilters),
-      safeLoadAnalyticsFacts(supabase, analyticsFilters),
+      loadPlanningActuals(supabase, budgetVersionId, analyticsFilters),
     ]);
 
     rollupFacts(snapshot.facts, analyticsLevelForPlanning(level), analyticsFilters);

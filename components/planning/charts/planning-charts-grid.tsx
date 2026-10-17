@@ -48,7 +48,7 @@ export function PlanningChartsGrid({ charts, mode = "dashboard" }: PlanningChart
         log: "forecast-dashboard",
       },
       {
-        title: "Margin trend",
+        title: "Budget gross profit trend",
         data: charts.margin_trend,
         stroke: "stroke-violet-500",
         log: "planning-dashboard",
@@ -70,7 +70,7 @@ export function PlanningChartsGrid({ charts, mode = "dashboard" }: PlanningChart
 
   return (
     <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {items.map((item) => (
+      {items.filter(item => item.data.length > 0).map((item) => (
         <PlanningTrendChart
           key={item.title}
           title={item.title}
