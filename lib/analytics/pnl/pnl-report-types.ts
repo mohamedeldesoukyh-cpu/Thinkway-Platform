@@ -78,6 +78,7 @@ export type PnlComparisonReportData = {
 };
 
 export type PnlLineFact = {
+  line_id?: string;
   brand_id?: string | null;
   brand_name?: string | null;
   client_id: string;

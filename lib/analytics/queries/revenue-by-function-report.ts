@@ -1,10 +1,6 @@
+import { loadReportRates, resolveReportCommercial } from "./report-commercial";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import {
-  computeAgencyFeeAmount,
-  rollupLineClientCommercial,
-} from "@/lib/assignments/client-billing-commercial";
-import { roundMoney } from "@/lib/analytics/aggregations/round";
 import {
   clientTypeFilterLabel,
   loadClientAgencyOrDirectMap,
@@ -39,53 +35,6 @@ import type { BusinessFunction, CampaignStatus } from "@/types/database";
 const PNL_ACTUAL_CAMPAIGN_STATUSES: CampaignStatus[] = ["active", "paused", "completed"];
 const PNL_EXCLUDED_LINE_STATUSES: CampaignStatus[] = ["cancelled"];
 
-function resolveLineCommercial(line: {
-  revenue: number;
-  cost: number;
-  profit: number;
-  revenue_before_vat?: number | null;
-  usage_rights_amount?: number | null;
-  usage_rights_cost?: number | null;
-  agency_fee_percent?: number | null;
-  agency_fee_amount?: number | null;
-  cost_before_vat?: number | null;
-}): {
-  revenue: number;
-  ur_rev: number;
-  agency_fees: number;
-  cost: number;
-  gp: number;
-} {
-  const revenueBeforeVat = Number(line.revenue_before_vat ?? line.revenue ?? 0);
-  const usageRightsAmount = Number(line.usage_rights_amount ?? 0);
-  const usageRightsCost = Number(line.usage_rights_cost ?? 0);
-  const costBeforeVat = Number(line.cost_before_vat ?? line.cost ?? 0);
-  const commercial = rollupLineClientCommercial({
-    revenueBeforeVat,
-    usageRightsAmount,
-    usageRightsCost,
-    agencyFeePercent: Number(line.agency_fee_percent ?? 0),
-    agencyFeeAmount: line.agency_fee_amount,
-    costBeforeVat,
-  });
-  const agencyFees =
-    line.agency_fee_amount != null && Number(line.agency_fee_amount) > 0
-      ? roundMoney(Number(line.agency_fee_amount))
-      : computeAgencyFeeAmount(
-          revenueBeforeVat,
-          usageRightsAmount,
-          Number(line.agency_fee_percent ?? 0)
-        );
-
-  return {
-    revenue: commercial.revenueBeforeVat,
-    ur_rev: usageRightsAmount,
-    agency_fees: agencyFees,
-    cost: roundMoney(costBeforeVat + usageRightsCost),
-    gp: commercial.gp,
-  };
-}
-
 function resolvePeriodMonth(header: {
   start_date: string | null;
   created_at?: string | null;
@@ -106,14 +55,14 @@ export async function loadRevenueByFunctionLineFacts(
     supabase
       .from("campaign_lines")
       .select(
-        "id, campaign_header_id, status, revenue, cost, profit, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, currency_code"
+        "id, campaign_header_id, status, cost_received, cost_received_currency, cost_fx_override, revenue_fx_override, revenue, cost, profit, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, currency_code"
       )
       .limit(10000),
     supabase
       .from("campaign_headers")
       .select(
         `
-        id, start_date, created_at, status, account_manager_id,
+        id, currency_code, start_date, created_at, status, account_manager_id,
         vr_rate:md_vr_rates(rate_percent),
         brand:brands(
           vr_rate_id,
@@ -141,6 +90,7 @@ export async function loadRevenueByFunctionLineFacts(
   if (headersResult.error) throw new Error(headersResult.error.message);
 
   type HeaderRow = {
+    currency_code: string | null;
     id: string;
     start_date: string | null;
     created_at?: string | null;
@@ -188,6 +138,10 @@ export async function loadRevenueByFunctionLineFacts(
   };
 
   type LineRow = {
+    cost_received?: number | null;
+    cost_received_currency?: string | null;
+    cost_fx_override?: string | null;
+    revenue_fx_override?: string | null;
     id: string;
     campaign_header_id: string;
     status?: CampaignStatus;
@@ -208,6 +162,8 @@ export async function loadRevenueByFunctionLineFacts(
     headerMap.set(header.id, header);
   }
 
+  const rates = await loadReportRates(supabase, (linesResult.data ?? []) as unknown as LineRow[], [...headerMap.values()]);
+
   const facts: RevenueByFunctionLineFact[] = [];
 
   for (const line of (linesResult.data ?? []) as unknown as LineRow[]) {
@@ -225,7 +181,7 @@ export async function loadRevenueByFunctionLineFacts(
       ? header.account_manager[0]
       : header.account_manager;
 
-    const commercial = resolveLineCommercial(line);
+    const commercial = resolveReportCommercial(line, rates, header.currency_code ?? "EGP");
     const brand = Array.isArray(header.brand) ? header.brand[0] : header.brand;
     const vrRatePercent = resolveCampaignVrRatePercent({
       headerVrRate: header.vr_rate,
@@ -247,7 +203,7 @@ export async function loadRevenueByFunctionLineFacts(
       ur_rev: commercial.ur_rev,
       agency_fees: commercial.agency_fees,
       gp_after_vr: vrAdjusted.gp_after_vr,
-      currency_code: line.currency_code ?? "USD",
+      currency_code: "EGP",
       account_manager_id: header.account_manager_id,
       account_manager_name:
         accountManager?.full_name ?? accountManager?.email ?? null,
