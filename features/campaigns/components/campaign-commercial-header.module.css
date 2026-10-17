@@ -39,7 +39,8 @@
 .cells b.positive { color: #8ff0cb; }
 .cells b.negative { color: #ffc2c2; }
 .cells b.amber { color: #ffe2ae; }
-.cells [data-slot="select-trigger"] { min-width: 76px; max-width: 100%; min-height: 36px; color: #111827; background: #fff; }
+.cells [data-slot="select-trigger"] { width: 90px !important; min-width: 90px !important; max-width: 100%; min-height: 36px; padding: 4px 8px !important; white-space: nowrap !important; color: #111827; background: #fff; }
+.cells [data-slot="select-value"] { white-space: nowrap !important; overflow-wrap: normal; }
 .context { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 0 16px 8px; color: rgb(255 255 255 / 85%); font-size: 11px; }
 .context b { font-weight: 600; }
 .fx { margin-inline-start: auto; color: #ffe2ae; }
