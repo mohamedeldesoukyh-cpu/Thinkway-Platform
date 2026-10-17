@@ -21,6 +21,7 @@ export type PnlRevenueBreakdown = {
 export type PnlClientRow = {
   client_id: string;
   client_name: string;
+  brands?: PnlBrandRow[];
   revenue: number;
   ur_rev: number;
   agency_fees: number;
@@ -31,6 +32,11 @@ export type PnlClientRow = {
   gp_after_vr: number;
   margin_percent: number;
   line_count: number;
+};
+
+export type PnlBrandRow = Omit<PnlClientRow, "client_id" | "client_name" | "brands"> & {
+  brand_id: string | null;
+  brand_name: string;
 };
 
 export type PnlPeriodColumn = {
@@ -72,6 +78,8 @@ export type PnlComparisonReportData = {
 };
 
 export type PnlLineFact = {
+  brand_id?: string | null;
+  brand_name?: string | null;
   client_id: string;
   client_name: string;
   group_id: string | null;

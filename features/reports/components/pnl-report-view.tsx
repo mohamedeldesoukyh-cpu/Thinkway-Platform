@@ -520,8 +520,7 @@ export function PnlReportView({ report }: Props) {
                     {METRIC_LABELS[drilldown.metric]} by client — {drilldown.periodLabel}
                   </h3>
                   <p className="text-[11px] text-muted-foreground">
-                    Client breakdown for {drilldown.metricLabel.toLowerCase()}. Select a legal
-                    entity to open its workspace.
+                    Expand a client to see its brands. Select a client name to open its workspace.
                   </p>
                 </div>
                 <Button
@@ -542,7 +541,7 @@ export function PnlReportView({ report }: Props) {
                   <table className="w-full min-w-[640px] text-left text-sm">
                     <thead className="border-b border-border/60 text-[11px] uppercase tracking-wide text-muted-foreground">
                       <tr>
-                        <th className="py-2 pr-3 font-medium">Client</th>
+                        <th className="py-2 pr-3 font-medium">Client / brand</th>
                         <th className="py-2 pr-3 text-right font-medium">Rev</th>
                         <th className="py-2 pr-3 text-right font-medium">UR Rev</th>
                         <th className="py-2 pr-3 text-right font-medium">AF</th>
@@ -557,7 +556,7 @@ export function PnlReportView({ report }: Props) {
                     <tbody>
                       {drilldownRows.map((client) => (
                         <ClientDrilldownRow
-                          key={client.client_id}
+                          key={`${drilldown.year}:${drilldown.periodKey}:${drilldown.metric}:${client.client_id}`}
                           client={client}
                           highlight={drilldown.metric}
                         />
@@ -697,20 +696,42 @@ function ComparisonCells({
 function ClientDrilldownRow({
   client,
   highlight,
+  brandRow = false,
 }: {
   client: PnlClientRow;
   highlight: PnlMetricKey;
+  brandRow?: boolean;
 }) {
+  const [expanded, setExpanded] = useState(false);
+  const brands = client.brands ?? [];
   return (
-    <tr className="border-b border-border/40 last:border-0">
+    <>
+    <tr className={cn("border-b border-border/40 last:border-0", brandRow && "bg-muted/20")}>
       <td className="py-2.5 pr-3">
+        <div className={cn("flex items-center gap-2", brandRow && "pl-10")}>
+        {!brandRow && brands.length > 0 ? (
+          <button
+            type="button"
+            className="inline-flex size-8 shrink-0 items-center justify-center rounded border border-border hover:bg-muted focus-visible:outline-2 focus-visible:outline-ring"
+            aria-label={`${expanded ? "Collapse" : "Expand"} brands for ${client.client_name}`}
+            aria-expanded={expanded}
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? <MinusIcon className="size-4" aria-hidden /> : <PlusIcon className="size-4" aria-hidden />}
+          </button>
+        ) : null}
+        <div>
+        {brandRow ? <span className="font-medium">{client.client_name}</span> : (
         <Link
           href={`/clients/${client.client_id}`}
           className="font-medium text-foreground underline-offset-2 hover:text-brand-blue hover:underline"
         >
           {client.client_name}
         </Link>
+        )}
         <div className="text-xs text-muted-foreground">{client.line_count} line(s)</div>
+        </div>
+        </div>
       </td>
       <td
         className={cn(
@@ -780,5 +801,14 @@ function ClientDrilldownRow({
         {client.margin_percent.toFixed(1)}%
       </td>
     </tr>
+    {expanded ? brands.map((brand) => (
+      <ClientDrilldownRow
+        key={brand.brand_id ?? "unassigned"}
+        client={{ ...brand, client_id: brand.brand_id ?? "unassigned", client_name: brand.brand_name }}
+        highlight={highlight}
+        brandRow
+      />
+    )) : null}
+    </>
   );
 }
