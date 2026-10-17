@@ -13,6 +13,7 @@ import type {
   PnlMetricKey,
 } from "@/lib/analytics/pnl/pnl-report-types";
 import { cn } from "@/lib/utils";
+import styles from "./pnl-report-view.module.css";
 
 type DrilldownState = {
   metric: PnlMetricKey;
@@ -279,8 +280,13 @@ export function PnlReportView({ report }: Props) {
             </div>
           ) : null}
 
-          <div className="overflow-x-auto rounded-lg border border-border/70">
-            <table className="min-w-[1100px] w-full border-collapse text-sm">
+          <div
+            className={cn(styles.scroll, "rounded-lg border border-border/70")}
+            role="region"
+            aria-label="P&L comparison — scroll horizontally to view all months and totals"
+            tabIndex={0}
+          >
+            <table className={cn(styles.comparison, "border-collapse text-sm")}>
               <thead>
                 <tr className="border-b border-border/70 bg-muted/25">
                   <th
@@ -343,6 +349,7 @@ export function PnlReportView({ report }: Props) {
                   const isVrSectionStart = row.section === "vr" && row.key === "vr_refund";
                   return (
                   <tr
+                    data-emphasis={isGpRow || undefined}
                     key={row.key}
                     className={cn(
                       "border-b border-border/50 last:border-0",

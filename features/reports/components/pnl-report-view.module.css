@@ -1,0 +1,47 @@
+.scroll {
+  max-width: 100%;
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.scroll:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* Keep this financial matrix readable despite the finance suite's generic
+   wrap-anywhere cell rules. Extra specificity is intentional. */
+.comparison.comparison {
+  width: max-content;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.comparison.comparison :is(th, td) {
+  min-width: 6.5rem;
+  white-space: nowrap !important;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+.comparison.comparison thead tr:first-child > th:first-child,
+.comparison.comparison tbody tr > td:first-child {
+  min-width: 13rem;
+}
+
+.comparison.comparison thead tr:first-child > th:first-child {
+  background: var(--card);
+}
+
+.comparison.comparison :is(th, td)[aria-hidden] {
+  width: 0.75rem;
+  min-width: 0.75rem;
+  max-width: 0.75rem;
+  padding: 0 !important;
+}
+
+/* Generic finance cell colours otherwise make profit labels unreadable
+   against the report's dark emphasis bands. */
+.comparison.comparison tr[data-emphasis] > td {
+  color: white;
+}
