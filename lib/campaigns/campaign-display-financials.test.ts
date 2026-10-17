@@ -9,6 +9,19 @@ import {
 } from "./campaign-display-financials";
 
 describe("campaign-display-financials", () => {
+  it("reconciles client cost and agency fees with investment under negotiated FX", () => {
+    const result = aggregateCampaignDisplayFinancials({
+      displayCurrency: "USD", rateToEgpByCurrency: new Map([["USD", 60], ["AED", 20]]),
+      lines: [{ currency_code: "AED", revenue_before_vat: 1000, usage_rights_amount: 100,
+        agency_fee_percent: 10, cost_received: 500, cost_received_currency: "AED",
+        revenue_fx_override: JSON.stringify({ from: "AED", to: "USD", rate: 0.3, targetRateToEgp: 50 }) }],
+    });
+    assert.equal(result.client_cost_before_agency_fees, 330);
+    assert.equal(result.agency_fees, 33);
+    assert.equal(result.revenue, 363);
+    assert.equal(result.client_cost_before_agency_fees + result.agency_fees, result.revenue);
+  });
+
   it("resolves entry currencies independently of display CCY", () => {
     assert.equal(
       resolveLineRevenueCurrency({ currency_code: "USD" }, "EGP"),

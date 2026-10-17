@@ -59,6 +59,8 @@ export type CampaignDisplayFinancials = {
   /** FX rate for display currency → EGP. */
   display_fx_rate_to_egp: number;
   revenue: number;
+  client_cost_before_agency_fees: number;
+  agency_fees: number;
   cost: number;
   gp: number;
   fx_gain_loss: number;
@@ -90,6 +92,7 @@ export function aggregateCampaignDisplayFinancials(input: {
   let costEgp = 0;
   let urCostEgp = 0;
   let displayRevenue = 0;
+  let displayAgencyFees = 0;
   let displayCost = 0;
   let displayUrCost = 0;
   let fxGainEgp = 0;
@@ -121,6 +124,7 @@ export function aggregateCampaignDisplayFinancials(input: {
     const revRate = creatorFxRate({ ...revConversion, to: "EGP", targetRateToEgp: 1 });
     const costRate = creatorFxRate({ ...costConversion, to: "EGP", targetRateToEgp: 1 });
     displayRevenue += creatorFxAmount(commercial.billableBase, revConversion);
+    displayAgencyFees += creatorFxAmount(commercial.billableBase - commercial.revenueBeforeVat - usageRightsAmount, revConversion);
     displayCost += creatorFxAmount(costAmount, costConversion);
     displayUrCost += creatorFxAmount(usageRightsCost, { ...revConversion, override: line.cost_fx_override });
 
@@ -153,6 +157,8 @@ export function aggregateCampaignDisplayFinancials(input: {
     currency_code: displayCurrency,
     display_fx_rate_to_egp: displayRate,
     revenue,
+    client_cost_before_agency_fees: Math.round((revenue - displayAgencyFees) * 100) / 100,
+    agency_fees: Math.round(displayAgencyFees * 100) / 100,
     cost,
     gp,
     fx_gain_loss: Math.round(fxGainDisplay * 100) / 100,

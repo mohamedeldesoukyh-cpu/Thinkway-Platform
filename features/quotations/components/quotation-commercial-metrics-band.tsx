@@ -180,6 +180,7 @@ export function QuotationCommercialMetricsBand({
       <div className="q-finlbl priv"><s aria-hidden /><QuotationText>Internal — never shown to the client</QuotationText></div>
       <MetricItem internal label="Base cost (internal creator / vendor cost)" value={base.value} unit={base.unit} original={originalLabels(originalTotals, "totalCost")} staged={hasDraftEdits} />
       <MetricItem internal label="GP amount" value={gp.value} unit={gp.unit} tone={showAgencyFeeConflict ? agencyFeeGpTone : gpTone} original={originalLabels(originalTotals, "totalGpMargin")} staged={hasDraftEdits} />
+      <MetricItem internal label="Margin amount" value={gp.value} unit={gp.unit} tone="amber" staged={hasDraftEdits} />
       <MetricItem internal label="GP %" value={`${(projected?.marginPct ?? totalGpPct).toFixed(1)}%`} tone={showAgencyFeeConflict ? agencyFeePctTone : gpTone} staged={hasDraftEdits} />
       <MetricItem internal label="Markup / FM %" value={`${(projected?.markupPct ?? totalPmPct).toFixed(1)}%`} />
       </div>
