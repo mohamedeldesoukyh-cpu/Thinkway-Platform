@@ -1,3 +1,4 @@
+import { analyticsRequestKey } from "@/lib/analytics/aggregations/memo";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { devLog } from "@/lib/dev-log";
@@ -17,7 +18,7 @@ export async function loadBudgetVersions(
   supabase: SupabaseClient,
   options: LoadBudgetVersionsOptions = {}
 ): Promise<BudgetVersion[]> {
-  const cacheKey = buildPlanningCacheKey("versions", {
+  const cacheKey = buildPlanningCacheKey("versions", { scope: analyticsRequestKey(supabase, {}),
     year: options.fiscalYear,
     status: Array.isArray(options.status)
       ? options.status.join(",")

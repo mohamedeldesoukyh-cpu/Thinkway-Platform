@@ -99,7 +99,7 @@ export function PlanningFilterBar({
           <Label className="text-xs">Fiscal year</Label>
           <Select
             value={state.fiscalYear ?? String(fiscalYear)}
-            onValueChange={(fy) => update({ fiscalYear: fy })}
+            onValueChange={(fy) => update({ fiscalYear: fy, versionId: undefined, forecastId: undefined })}
           >
             <SelectTrigger className="h-9">
               <SelectValue />

@@ -42,6 +42,10 @@ export function planningFiltersToAnalytics(
   state: PlanningFilterState
 ): AnalyticsQueryFilters {
   const filters: AnalyticsQueryFilters = { ...DEFAULT_ANALYTICS_FILTERS };
+  const year = Number(state.fiscalYear ?? new Date().getFullYear());
+  if (Number.isInteger(year) && year >= 2000 && year <= 2100) {
+    filters.dateRange = { from: `${year}-01-01`, to: `${year}-12-31` };
+  }
 
   if (state.country) filters.countryCodes = [state.country];
   if (state.clientId) filters.clientIds = [state.clientId];

@@ -26,6 +26,9 @@ import type { ForecastRollupsResult } from "@/lib/planning/queries/load-forecast
 import type { BudgetRollupsResult } from "@/lib/planning/queries/load-budget-rollups";
 import { devLog } from "@/lib/platform/logger";
 import { safePlanningQuery } from "@/lib/platform/safe-query";
+import { loadBudgetPeriods } from "@/lib/planning/queries/load-budget-periods";
+import { loadBudgetLines } from "@/lib/planning/queries/load-budget-lines";
+import type { BudgetPeriod, BudgetLine } from "@/lib/planning/types/budget";
 
 export type PlanningPermissions = {
   canRead: boolean;
@@ -35,6 +38,8 @@ export type PlanningPermissions = {
 };
 
 export type PlanningWorkspacePayload = {
+  periodsByVersion: Record<string, BudgetPeriod[]>;
+  lines: BudgetLine[];
   fiscalYear: number;
   filterState: PlanningFilterState;
   versions: BudgetVersion[];
@@ -52,6 +57,8 @@ export type PlanningWorkspacePayload = {
 };
 
 const EMPTY_DASHBOARD: PlanningDashboardPayload = {
+  monthly: [],
+  unallocatedLineCount: 0,
   kpis: [],
   charts: {
     variance_trend: [],
@@ -139,7 +146,16 @@ export async function loadPlanningWorkspace(
   const forecasts = forecastsResult.data;
 
   const selectedVersionId =
-    filterState.versionId ?? versions.find((v) => v.status === "approved")?.id ?? versions[0]?.id ?? null;
+    versions.find(v => v.id === filterState.versionId)?.id ?? versions.find((v) => v.status === "approved")?.id ?? versions[0]?.id ?? null;
+  const periodEntries = await Promise.all(versions.map(async version => {
+    const result = await safePlanningQuery("budget-periods", () => loadBudgetPeriods(supabase, version.id), [] as BudgetPeriod[]);
+    if (!result.ok) queryWarnings.push(result.error ?? "Periods unavailable");
+    return [version.id, result.data] as const;
+  }));
+  const linesResult = selectedVersionId
+    ? await safePlanningQuery("budget-lines", () => loadBudgetLines(supabase, selectedVersionId), [] as BudgetLine[])
+    : { ok: true, data: [] as BudgetLine[], error: undefined };
+  if (!linesResult.ok) queryWarnings.push(linesResult.error ?? "Budget lines unavailable");
   const selectedForecastId =
     filterState.forecastId ?? forecasts[0]?.id ?? null;
 
@@ -210,6 +226,8 @@ export async function loadPlanningWorkspace(
   }
 
   return {
+    periodsByVersion: Object.fromEntries(periodEntries),
+    lines: linesResult.data,
     fiscalYear,
     filterState,
     versions,
