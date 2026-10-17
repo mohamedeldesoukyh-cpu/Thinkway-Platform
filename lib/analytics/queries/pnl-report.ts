@@ -112,6 +112,7 @@ export async function loadPnLLineFacts(supabase: SupabaseClient): Promise<PnlLin
         id, start_date, created_at, status,
         vr_rate:md_vr_rates(rate_percent),
         brand:brands(
+          id, name,
           vr_rate_id,
           vr_rate:md_vr_rates(rate_percent)
         ),
@@ -140,10 +141,14 @@ export async function loadPnLLineFacts(supabase: SupabaseClient): Promise<PnlLin
     vr_rate: { rate_percent: number } | { rate_percent: number }[] | null;
     brand:
       | {
+          id: string;
+          name: string;
           vr_rate_id: string | null;
           vr_rate: { rate_percent: number } | { rate_percent: number }[] | null;
         }
       | {
+          id: string;
+          name: string;
           vr_rate_id: string | null;
           vr_rate: { rate_percent: number } | { rate_percent: number }[] | null;
         }[]
@@ -225,6 +230,8 @@ export async function loadPnLLineFacts(supabase: SupabaseClient): Promise<PnlLin
     });
 
     facts.push({
+      brand_id: brand?.id ?? null,
+      brand_name: brand?.name ?? null,
       client_id: client.id,
       client_name: client.name,
       group_id: client.group_id ?? null,

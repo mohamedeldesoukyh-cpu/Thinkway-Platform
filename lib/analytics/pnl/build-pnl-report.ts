@@ -9,6 +9,7 @@ import {
   type PnlPeriodScope,
 } from "@/lib/analytics/pnl/pnl-periods";
 import type {
+  PnlBrandRow,
   PnlClientRow,
   PnlComparisonCell,
   PnlComparisonMetricRow,
@@ -48,7 +49,11 @@ function buildClientBreakdown(
     }
   >();
 
+  const factsByClient = new Map<string, PnlLineFact[]>();
   for (const fact of filtered) {
+    const clientFacts = factsByClient.get(fact.client_id) ?? [];
+    clientFacts.push(fact);
+    factsByClient.set(fact.client_id, clientFacts);
     const bucket =
       byClient.get(fact.client_id) ??
       {
@@ -75,9 +80,29 @@ function buildClientBreakdown(
 
   const rows: PnlClientRow[] = [...byClient.entries()].map(([client_id, row]) => {
     const billableBase = roundMoney(row.revenue + row.ur_rev + row.agency_fees);
+    const byBrand = new Map<string | null, PnlBrandRow>();
+    for (const fact of factsByClient.get(client_id) ?? []) {
+      const brandId = fact.brand_id ?? null;
+      const brand = byBrand.get(brandId) ?? {
+        brand_id: brandId,
+        brand_name: fact.brand_name ?? "Unassigned brand",
+        revenue: 0, ur_rev: 0, agency_fees: 0, billable_revenue: 0,
+        cost: 0, gp: 0, vr_refund: 0, gp_after_vr: 0,
+        margin_percent: 0, line_count: 0,
+      };
+      for (const key of ["revenue", "ur_rev", "agency_fees", "cost", "gp", "vr_refund"] as const) {
+        brand[key] = roundMoney(brand[key] + fact[key]);
+      }
+      brand.line_count += 1;
+      brand.billable_revenue = roundMoney(brand.revenue + brand.ur_rev + brand.agency_fees);
+      brand.gp_after_vr = computeGpAfterVr(brand.gp, brand.vr_refund);
+      brand.margin_percent = computeMarginPercent(brand.billable_revenue, brand.gp_after_vr);
+      byBrand.set(brandId, brand);
+    }
     return {
       client_id,
       client_name: row.client_name,
+      brands: [...byBrand.values()].sort((a, b) => b.billable_revenue - a.billable_revenue || a.brand_name.localeCompare(b.brand_name)),
       revenue: row.revenue,
       ur_rev: row.ur_rev,
       agency_fees: row.agency_fees,
