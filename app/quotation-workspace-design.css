@@ -324,12 +324,11 @@
 .tq-redesign .q-head .q-fin{display:grid;grid-template-columns:minmax(0,1fr)}
 .tq-redesign .q-head .q-fin::after{display:none}
 .tq-redesign .q-head .q-fin-group{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));min-width:0}
-.tq-redesign .q-head .q-fin-group:first-child{grid-template-columns:repeat(5,minmax(0,1fr))}
 .tq-redesign .q-head .q-finlbl{grid-column:1/-1;padding:4px 10px}
 .tq-redesign .q-head .q-m{min-width:0;padding:6px 10px}
 .tq-redesign .q-head .q-m b{font-size:16px;overflow-wrap:anywhere}
 @media(min-width:1200px){
- .tq-redesign .q-head .q-fin{grid-template-columns:minmax(0,5fr) minmax(0,4fr)}
+ .tq-redesign .q-head .q-fin{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @media(max-width:600px){
  .tq-redesign .q-head .q-fin-group,.tq-redesign .q-head .q-fin-group:first-child{grid-template-columns:repeat(2,minmax(0,1fr))}

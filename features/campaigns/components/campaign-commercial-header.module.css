@@ -21,7 +21,6 @@
 .band::before { content: ""; width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
 .private .band { color: #ffe2ae; background: rgb(0 0 0 / 14%); }
 .cells { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
-.private .cells { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .cells > div { min-width: 0; padding: 6px 10px; border-inline-end: 1px solid rgb(255 255 255 / 14%); }
 .label {
   display: block;
@@ -44,7 +43,7 @@
 .context { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; padding: 0 16px 8px; color: rgb(255 255 255 / 85%); font-size: 11px; }
 .context b { font-weight: 600; }
 .fx { margin-inline-start: auto; color: #ffe2ae; }
-@media (min-width: 1200px) { .metrics { grid-template-columns: minmax(0, 5fr) minmax(0, 4fr); } }
+@media (min-width: 1200px) { .metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 600px) {
   .cells, .private .cells { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .cells > div { border-bottom: 1px solid rgb(255 255 255 / 14%); }
