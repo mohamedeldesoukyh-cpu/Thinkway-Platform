@@ -85,6 +85,7 @@ function renderClientBreakdownTable(report: PnlComparisonReportData): string | n
         <td class="num">${formatReportAmount(client.cost)}</td>
         <td class="num">${formatReportAmount(client.gp)}</td>
         <td class="num">${formatReportAmount(client.vr_refund)}</td>
+        <td class="num">${formatReportAmount(client.revenue_share)}</td>
         <td class="num">${formatReportAmount(client.gp_after_vr)}</td>
         <td class="num">${client.margin_percent.toFixed(1)}%</td>
       </tr>`
@@ -103,7 +104,8 @@ function renderClientBreakdownTable(report: PnlComparisonReportData): string | n
           <th class="num">Cost</th>
           <th class="num">GP</th>
           <th class="num">VR Refund</th>
-          <th class="num">GP after VR</th>
+          <th class="num">Revenue share</th>
+          <th class="num">GP after VR and RS</th>
           <th class="num">Margin</th>
         </tr>
       </thead>
@@ -126,7 +128,7 @@ function buildPnlTableSections(report: PnlComparisonReportData): ReportTableSect
     sections.push({
       number: 2,
       title: "Client Breakdown",
-      notes: [`Full-year ${report.current_year} client totals (GP after VR).`],
+      notes: [`Full-year ${report.current_year} client totals (GP after VR and RS).`],
       tableHtml: clientTable,
     });
   }
@@ -241,6 +243,7 @@ function buildPnlClientBreakdownSheet(
       client.cost,
       client.gp,
       client.vr_refund,
+      client.revenue_share,
       client.gp_after_vr,
       client.margin_percent,
     ],
@@ -255,7 +258,7 @@ function buildPnlClientBreakdownSheet(
         { label: "Currency", value: report.display_currency },
       ],
       generatedAt: new Date(),
-      notes: [`Full-year ${report.current_year} client totals (GP after VR).`],
+      notes: [`Full-year ${report.current_year} client totals (GP after VR and RS).`],
     },
     columnHeaders: [
       [
@@ -267,12 +270,13 @@ function buildPnlClientBreakdownSheet(
         "Cost",
         "GP",
         "VR Refund",
-        "GP after VR",
+        "Revenue share",
+        "GP after VR and RS",
         "Margin %",
       ],
     ],
     rows,
-    columnFormats: ["text", "money", "money", "money", "money", "money", "money", "money", "money", "percent"],
+    columnFormats: ["text", "money", "money", "money", "money", "money", "money", "money", "money", "money", "percent"],
   };
 }
 

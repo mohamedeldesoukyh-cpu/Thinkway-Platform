@@ -43,6 +43,7 @@ function buildClientBreakdown(
       agency_fees: number;
       cost: number;
       gp: number;
+      revenue_share: number;
       vr_refund: number;
       gp_after_vr: number;
       line_count: number;
@@ -67,6 +68,7 @@ function buildClientBreakdown(
         agency_fees: 0,
         cost: 0,
         gp: 0,
+        revenue_share: 0,
         vr_refund: 0,
         gp_after_vr: 0,
         line_count: 0,
@@ -76,6 +78,7 @@ function buildClientBreakdown(
     bucket.agency_fees = roundMoney(bucket.agency_fees + fact.agency_fees);
     bucket.cost = roundMoney(bucket.cost + fact.cost);
     bucket.gp = roundMoney(bucket.gp + fact.gp);
+    bucket.revenue_share = roundMoney(bucket.revenue_share + (fact.revenue_share ?? 0));
     bucket.vr_refund = roundMoney(bucket.vr_refund + fact.vr_refund);
     bucket.gp_after_vr = roundMoney(bucket.gp_after_vr + fact.gp_after_vr);
     bucket.line_count = lineIds.size;
@@ -95,15 +98,16 @@ function buildClientBreakdown(
         brand_id: brandId,
         brand_name: fact.brand_name ?? "Unassigned brand",
         revenue: 0, ur_rev: 0, agency_fees: 0, billable_revenue: 0,
-        cost: 0, gp: 0, vr_refund: 0, gp_after_vr: 0,
+        cost: 0, gp: 0, vr_refund: 0, revenue_share: 0, gp_after_vr: 0,
         margin_percent: 0, line_count: 0,
       };
       for (const key of ["revenue", "ur_rev", "agency_fees", "cost", "gp", "vr_refund"] as const) {
         brand[key] = roundMoney(brand[key] + fact[key]);
       }
+      brand.revenue_share = roundMoney(brand.revenue_share + (fact.revenue_share ?? 0));
       brand.line_count = lineIds.size;
       brand.billable_revenue = roundMoney(brand.revenue + brand.ur_rev + brand.agency_fees);
-      brand.gp_after_vr = computeGpAfterVr(brand.gp, brand.vr_refund);
+      brand.gp_after_vr = computeGpAfterVr(brand.gp, brand.vr_refund + brand.revenue_share);
       brand.margin_percent = computeMarginPercent(brand.billable_revenue, brand.gp_after_vr);
       byBrand.set(brandId, brand);
     }
@@ -117,15 +121,16 @@ function buildClientBreakdown(
       billable_revenue: billableBase,
       cost: row.cost,
       gp: row.gp,
+      revenue_share: row.revenue_share,
       vr_refund: row.vr_refund,
-      gp_after_vr: computeGpAfterVr(row.gp, row.vr_refund),
-      margin_percent: computeMarginPercent(billableBase, computeGpAfterVr(row.gp, row.vr_refund)),
+      gp_after_vr: computeGpAfterVr(row.gp, row.vr_refund + row.revenue_share),
+      margin_percent: computeMarginPercent(billableBase, computeGpAfterVr(row.gp, row.vr_refund + row.revenue_share)),
       line_count: row.line_count,
     };
   });
 
   const sortKey =
-    metric === "rev"
+    metric === "revenue_share" ? "revenue_share" : metric === "rev"
       ? "revenue"
       : metric === "ur_rev"
         ? "ur_rev"
@@ -155,7 +160,8 @@ function metricValue(fact: PnlLineFact, metric: PnlMetricKey): number {
   if (metric === "total_revenue") return billableRevenue(fact);
   if (metric === "cost") return fact.cost;
   if (metric === "vr_refund") return fact.vr_refund;
-  if (metric === "gp_after_vr") return fact.gp_after_vr;
+  if (metric === "revenue_share") return fact.revenue_share ?? 0;
+  if (metric === "gp_after_vr") return roundMoney(fact.gp_after_vr - (fact.revenue_share ?? 0));
   return fact.gp;
 }
 
@@ -224,7 +230,8 @@ export function buildPnLComparisonReport(
     { key: "cost", label: "Total COGS" },
     { key: "gp", label: "Total Gross Profit" },
     { key: "vr_refund", label: "VR Refund", section: "vr" },
-    { key: "gp_after_vr", label: "GP after VR", section: "vr" },
+    { key: "revenue_share", label: "Revenue share", section: "vr" },
+    { key: "gp_after_vr", label: "GP after VR and RS", section: "vr" },
   ];
 
   const metric_rows: PnlComparisonMetricRow[] = metricDefs.map((def) => {
@@ -291,7 +298,7 @@ export function buildPnLComparisonReport(
     period_note:
       `All amounts shown in ${displayCurrency}, including negotiated FX where set. Grouped by actual went-live month. Click any figure for client and brand breakdown.`,
     data_scope_note:
-      "Includes only deliverables that went live, with an actual live date through today, in active, paused, or completed campaigns. Planned work and cancelled campaigns or lines are excluded. Revenue and matching costs use their respective currencies and FX rates. Total revenue includes deliverable revenue, UR, and agency fees. Total COGS includes vendor cost, UR cost, and VR refund. Total GP is before VR; GP after VR deducts the VR refund.",
+      "Includes only deliverables that went live, with an actual live date through today, in active, paused, or completed campaigns. Planned work and cancelled campaigns or lines are excluded. Revenue and matching costs use their respective currencies and FX rates. Total revenue includes deliverable revenue, UR, and agency fees. Total COGS includes vendor cost, UR cost, and VR refund. Total GP is before VR and revenue share. GP after VR and RS deducts both. Revenue share is allocated proportionally to revenue as it goes live.",
   };
 }
 

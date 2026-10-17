@@ -1,3 +1,5 @@
+import { readRevenueShare, revenueShareAmount, allocateRevenueShare } from "@/lib/campaigns/revenue-share";
+import { roundMoney } from "@/lib/analytics/aggregations/round";
 import { readReportingRows } from "./load-reporting-snapshot";
 import { buildRecognitionEvents, type RecognitionDeliverable, type RecognitionPost } from "./reporting-financials";
 import { loadReportRates, resolveReportCommercial } from "./report-commercial";
@@ -60,7 +62,7 @@ export async function loadPnLLineFacts(supabase: SupabaseClient, options: { live
       .from("campaign_headers")
       .select(
         `
-        id, currency_code, start_date, created_at, status,
+        id, currency_code, start_date, created_at, status, metadata,
         vr_rate:md_vr_rates(rate_percent),
         brand:brands(
           id, name,
@@ -83,6 +85,7 @@ export async function loadPnLLineFacts(supabase: SupabaseClient, options: { live
 
 
   type HeaderRow = {
+    metadata?: Record<string, unknown>;
     currency_code: string | null;
     id: string;
     start_date: string | null;
@@ -155,7 +158,7 @@ export async function loadPnLLineFacts(supabase: SupabaseClient, options: { live
     headerMap.set(header.id, header);
   }
 
-  const rates = await loadReportRates(supabase, linesResult as unknown as LineRow[], [...headerMap.values()]);
+  const rates = await loadReportRates(supabase, linesResult as unknown as LineRow[], [...headerMap.values(), ...[...headerMap.values()].map(h => ({ currency_code: readRevenueShare(h.metadata)?.currency }))]);
 
   const lines = linesResult as unknown as LineRow[];
   const eligible = lines.filter(line => headerMap.has(line.campaign_header_id) && line.status !== "cancelled");
@@ -207,6 +210,7 @@ export async function loadPnLLineFacts(supabase: SupabaseClient, options: { live
       });
 
       facts.push({
+        campaign_id: header.id,
         line_id: line.id,
         brand_id: brand?.id ?? null,
         brand_name: brand?.name ?? null,
@@ -226,6 +230,19 @@ export async function loadPnLLineFacts(supabase: SupabaseClient, options: { live
         currency_code: "EGP",
       });
     }
+  }
+  for (const header of headerMap.values()) {
+    const share = readRevenueShare(header.metadata);
+    if (!share) continue;
+    const fullRevenue = roundMoney(eligible.filter(line => line.campaign_header_id === header.id).reduce((sum, line) => {
+      const c = resolveReportCommercial(line, rates, header.currency_code ?? "EGP");
+      return sum + c.revenue + c.ur_rev + c.agency_fees;
+    }, 0));
+    const amount = revenueShareAmount(share, fullRevenue, "EGP", rates);
+    const campaignFacts = facts.filter(f => f.campaign_id === header.id).sort((a, b) =>
+      (a.period_month ?? "").localeCompare(b.period_month ?? "") || (a.line_id ?? "").localeCompare(b.line_id ?? ""));
+    const allocations = allocateRevenueShare(amount, fullRevenue, campaignFacts.map(f => f.revenue + f.ur_rev + f.agency_fees));
+    campaignFacts.forEach((fact, index) => { fact.revenue_share = allocations[index]; });
   }
   return facts;
 }

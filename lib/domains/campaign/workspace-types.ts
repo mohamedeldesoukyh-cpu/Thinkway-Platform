@@ -87,6 +87,9 @@ export type CampaignPoSummary = {
 };
 
 export type CampaignFinancialSummary = {
+  revenue_share?: number;
+  revenue_share_egp?: number;
+  gp_before_revenue_share?: number;
   client_cost_before_agency_fees?: number;
   agency_fees?: number;
   /** Operational PO budget (po_amount_campaign_currency or legacy fallback). */

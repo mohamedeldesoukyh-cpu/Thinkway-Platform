@@ -1,3 +1,4 @@
+import { readRevenueShare, revenueShareAmount } from "@/lib/campaigns/revenue-share";
 import { loadVendorIoReopenEligibility } from "@/lib/io/vendor-io-query-helpers";
 import { fromEgp, toEgp } from "@/lib/commercial/fx-aggregation";
 import { getCampaignPoFxTotals, resolveFxPoSummary } from "@/lib/finance/po/fx-totals";
@@ -449,7 +450,9 @@ export async function getCampaignWorkspace(
     headerCurrency.brand?.currency_code?.trim().toUpperCase() ||
     "EGP";
 
+  const revenueShare = readRevenueShare(headerCurrency.metadata);
   const currenciesNeeded = new Set<string>([workspaceCurrency]);
+  if (revenueShare) currenciesNeeded.add(revenueShare.currency);
   for (const line of lines) {
     const lineCcy = (line.currency_code || workspaceCurrency).trim().toUpperCase();
     currenciesNeeded.add(lineCcy || workspaceCurrency);
@@ -621,7 +624,9 @@ export async function getCampaignWorkspace(
 
   const revenue = displayFinancials.revenue;
   const cost = displayFinancials.cost;
-  const gp = displayFinancials.gp;
+  const revenueShareValue = revenueShareAmount(revenueShare, revenue, workspaceCurrency, rateToEgpByCurrency);
+  const revenueShareEgp = revenueShareAmount(revenueShare, displayFinancials.revenue_egp, "EGP", rateToEgpByCurrency);
+  const gp = Math.round((displayFinancials.gp - revenueShareValue) * 100) / 100;
   const invoiceDisplayAmount = (amount: number, currency: string) => fromEgp(
     toEgp(amount, rateToEgpByCurrency.get(currency.trim().toUpperCase())), workspaceCurrency,
     displayFinancials.display_fx_rate_to_egp,
@@ -859,16 +864,19 @@ export async function getCampaignWorkspace(
       health: operationalPo.health,
     },
     financials: {
+      revenue_share: revenueShareValue,
+      revenue_share_egp: revenueShareEgp,
+      gp_before_revenue_share: displayFinancials.gp,
       client_cost_before_agency_fees: displayFinancials.client_cost_before_agency_fees,
       agency_fees: displayFinancials.agency_fees,
       budget: operationalPo.po_amount,
       revenue,
       cost,
       gp,
-      margin_percent: displayFinancials.margin_percent,
+      margin_percent: revenue > 0 ? gp / revenue * 100 : 0,
       revenue_egp: displayFinancials.revenue_egp,
       cost_egp: displayFinancials.cost_egp,
-      gp_egp: displayFinancials.gp_egp,
+      gp_egp: Math.round((displayFinancials.gp_egp - revenueShareEgp) * 100) / 100,
       fx_gain_loss: displayFinancials.fx_gain_loss,
       fx_gain_loss_egp: displayFinancials.fx_gain_loss_egp,
       display_fx_rate_to_egp: displayFinancials.display_fx_rate_to_egp,

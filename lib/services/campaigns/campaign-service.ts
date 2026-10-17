@@ -1,3 +1,6 @@
+import { readRevenueShare, revenueShareAmount } from "@/lib/campaigns/revenue-share";
+import { aggregateCampaignDisplayFinancials } from "@/lib/campaigns/campaign-display-financials";
+import { loadReportRates } from "@/lib/analytics/queries/report-commercial";
 import { loadAnalyticsFacts } from "@/lib/analytics/queries/load-facts";
 import { readReportingRows } from "@/lib/analytics/queries/load-reporting-snapshot";
 import { getCampaignPoFxTotals, resolveFxPoSummary } from "@/lib/finance/po/fx-totals";
@@ -485,6 +488,15 @@ export async function getCampaignsList(
   }
 
   const campaigns = (data ?? []) as unknown as CampaignListItem[];
+  const sharedCampaigns = campaigns.filter(c => readRevenueShare(c.metadata));
+  if (sharedCampaigns.length) {
+    const rates = await loadReportRates(supabase, sharedCampaigns.flatMap(c => c.lines),
+      [...sharedCampaigns, ...sharedCampaigns.map(c => ({ currency_code: readRevenueShare(c.metadata)!.currency }))]);
+    for (const campaign of sharedCampaigns) {
+      const totals = aggregateCampaignDisplayFinancials({ lines: campaign.lines, displayCurrency: campaign.currency_code, rateToEgpByCurrency: rates });
+      campaign.revenue_share_amount = revenueShareAmount(readRevenueShare(campaign.metadata), totals.revenue, campaign.currency_code, rates);
+    }
+  }
   const poTotals = await getCampaignPoFxTotals(supabase, campaigns.map(c => c.id));
   for (const campaign of campaigns) {
     const totals = poTotals.get(campaign.id);
