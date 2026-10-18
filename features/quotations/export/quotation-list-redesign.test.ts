@@ -78,3 +78,15 @@ assert.ok(!buildRedesignedQuotationCreatorList({...many, template:"creator-list"
  assert.ok(metrics.includes('class="aud-e">1.30%'));
  assert.deepEqual(quotationListPdfOptions(shortlist),quotationListPdfOptions({...shortlist,source:"quotation"}));
 }
+
+// Recommendation labels are explicit and separate from the creator name.
+{
+ const recommended = {...doc,source:'shortlist',template:'creator-list',creatorGroups:[{...group,creator:'★ 2 · Creator Alpha'}]} as QuotationDocument;
+ for (const template of ['creator-list','client-list-by-name'] as const) {
+  const html=buildQuotationCreatorListHtml({...recommended,template});
+  assert.ok(html.includes('class="creator-recommendation">★ Recommended · 2</span>'));
+  assert.ok(html.includes('title="Creator Alpha">Creator Alpha</h2>'));
+  const unstarred=buildQuotationCreatorListHtml({...recommended,template,creatorGroups:[{...group,creator:'Creator Alpha'}]});
+  assert.ok(!unstarred.includes('class="creator-recommendation"'));
+ }
+}
