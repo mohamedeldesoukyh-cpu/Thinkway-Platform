@@ -54,6 +54,8 @@ import { computeCommercials } from "@/lib/commercial/commercial-engine";
 import { cn } from "@/lib/utils";
 
 function stopShortcutBubble(event: React.KeyboardEvent) {
+  // Let the dialog focus scope handle Tab and Shift+Tab normally.
+  if (event.key === "Tab") return;
   event.stopPropagation();
 }
 
@@ -155,6 +157,9 @@ function handleCostFieldArrowNav(
   }
 
   const target = event.target as HTMLElement;
+  // Horizontal arrows edit the number, including selection and Ctrl+Arrow.
+  if ((directionKey === "ArrowLeft" || directionKey === "ArrowRight") &&
+      (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return false;
   if (target.closest('[data-slot="select-content"]')) return false;
   if (target.closest('[role="listbox"]')) return false;
   if (!container) return false;
