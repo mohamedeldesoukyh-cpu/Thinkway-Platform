@@ -328,6 +328,7 @@
 }
 
 /* Client profile: full-width content with a single page scroll on small screens. */
+.workspace-redesign .client-profile-page .tw-frozen { margin-inline: 0; width: 100%; }
 .workspace-redesign .client-profile-page .tw-mh { padding: 14px 20px; gap: 10px; }
 .workspace-redesign .client-profile-page .tw-mh h1 { min-width: 0; overflow-wrap: anywhere; }
 .workspace-redesign .client-profile-page .tw-main { max-width: none; margin: 0; padding: 0 20px 32px; }
