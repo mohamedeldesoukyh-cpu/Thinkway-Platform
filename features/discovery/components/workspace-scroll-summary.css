@@ -1,0 +1,16 @@
+/* Keep geometry stable: the full header scrolls normally, the summary overlays it. */
+.discovery-workspace-minibar { position: sticky; top: 0; z-index: 74; height: 0; flex-shrink: 0; pointer-events: none; }
+.discovery-workspace-minibar-inner { height: 71px; background: linear-gradient(135deg,#0040cc,#0057ff 45%,#1a6fff); color: white; visibility: hidden; transform: translateY(-110%); contain: layout paint; }
+.discovery-workspace-minibar[data-compact="true"] .discovery-workspace-minibar-inner { visibility: visible; transform: none; }
+.discovery-workspace-minibar-title { display: flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; font-size: 10px; overflow: hidden; }
+.discovery-workspace-minibar-title > span { flex-shrink: 0; }
+.discovery-workspace-minibar-title > b { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.discovery-workspace-minibar-metrics { display: flex; align-items: center; gap: 20px; height: 31px; padding: 0 14px; font-size: 10px; white-space: nowrap; overflow: hidden; }
+.discovery-workspace-minibar-metrics b { margin-inline-start: 5px; font-size: 12.5px; }
+.tq-redesign > .q-frozen-summary { position: static; }
+.sl-redesign .sl-creator-card { overflow: visible; }
+.sl-redesign .sl-tbl__h { position: sticky; top: var(--workspace-summary-height,0px); z-index: 31; background: var(--q-surf,#fff); border-radius: 13px 13px 0 0; }
+@media(max-width:720px) {
+  .discovery-workspace-minibar-inner { height: 40px; }
+  .discovery-workspace-minibar-metrics { display: none; }
+}

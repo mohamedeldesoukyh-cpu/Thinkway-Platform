@@ -1,4 +1,5 @@
 "use client";
+import { WorkspaceScrollSummary } from "@/features/discovery/components/workspace-scroll-summary";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 
@@ -821,7 +822,7 @@ export function ShortlistWorkspace({
   ];
 
   return (
-    <div className="sl-redesign shortlist-detail-workspace discovery-suite flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
+    <div data-discovery-workspace-scroll className="sl-redesign shortlist-detail-workspace discovery-suite flex h-full min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
       <ManualRefreshConfirmDialog
         open={refreshTargets.length > 0}
         onOpenChange={(open) => { if (!open) setRefreshTargets([]); }}
@@ -831,7 +832,13 @@ export function ShortlistWorkspace({
         description="Refresh all linked platforms, including avatars and metrics. Use cached data for free; platforms without a usable snapshot will be reported. Refresh Live fetches new data and uses Apify credits."
         onChoose={(source) => { void executeSelectedRefresh(source); }}
       />
-      <header className="sl-head"><div className="sl-head__in">
+      <WorkspaceScrollSummary serial={detail.serial_number} name={detail.name} status={SHORTLIST_STATUS_LABELS[detail.status]}
+        metrics={[
+          { label: "Creators", value: detail.creators.length },
+          { label: "Quoted", value: quotedCount },
+          { label: "Approved", value: approvedCount },
+        ]} />
+      <header className="sl-head" data-workspace-full-header><div className="sl-head__in">
         <div className="sl-head__nav">
           <Link className="q-b q-b--sm q-b--ghost" href="/discovery/shortlists">← Back to shortlists</Link>
           <span className="sl-crumb"><Link href="/discovery">Discovery</Link><span>/</span><Link href="/discovery/shortlists">Shortlists</Link><span>/</span><b>{formatDocumentNumberForDisplay(detail.serial_number)}</b></span>
