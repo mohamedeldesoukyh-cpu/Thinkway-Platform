@@ -4,6 +4,7 @@ import type { ReactNode } from "react";
 import { useEffect } from "react";
 
 import { DiscoverySuiteJumpNav } from "@/features/discovery/components/design-system/discovery-suite-jump-nav";
+import styles from "./discovery-suite-masthead.module.css";
 import { cn } from "@/lib/utils";
 
 export type DiscoverySuiteMetricTone = "g" | "r" | "y" | "s" | undefined;
@@ -12,10 +13,12 @@ export type DiscoverySuiteMetric = {
   label: string;
   value: string | number;
   tone?: DiscoverySuiteMetricTone;
+  details?: { label: string; value: string | number; tone?: DiscoverySuiteMetricTone }[];
 };
 
 type DiscoverySuiteMastheadProps = {
   title: string;
+  appearance?: "campaign";
   /** Serial / id chip */
   id?: string | null;
   /** Optional subtitle under title (HTML `.tw-mh .sub`). */
@@ -77,6 +80,7 @@ const TONE_CLASS: Record<Exclude<DiscoverySuiteMetricTone, undefined>, string> =
  */
 export function DiscoverySuiteMasthead({
   title,
+  appearance,
   id,
   subtitle,
   badge,
@@ -121,7 +125,7 @@ export function DiscoverySuiteMasthead({
   return (
     <div
       id="discovery-suite-frozen"
-      className={cn("tw-frozen", !freezeOnScroll && "tw-frozen--static", className)}
+      className={cn("tw-frozen", !freezeOnScroll && "tw-frozen--static", className, appearance === "campaign" && styles.campaign)}
       data-discovery-frozen
     >
       {top}
@@ -156,6 +160,7 @@ export function DiscoverySuiteMasthead({
               <div key={m.label}>
                 <i>{m.label}</i>
                 <b className={m.tone ? TONE_CLASS[m.tone] : undefined}>{m.value}</b>
+                {m.details?.map(detail => <small key={detail.label} className={styles.detail} data-tone={detail.tone}>{detail.label}: {detail.value}</small>)}
               </div>
             ))}
           </div>
