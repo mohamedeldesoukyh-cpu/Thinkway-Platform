@@ -477,7 +477,7 @@ function buildRow(item: ShortlistCreatorItem, rank: number): ShortlistDocRow | n
 
   return {
     rank,
-    creator: source.displayName,
+    creator: item.recommendationRank ? `★ ${item.recommendationRank} · ${source.displayName}` : source.displayName,
     handle,
     avatarUrl: source.avatarUrl?.trim() || null,
     avatarProfileUrl,

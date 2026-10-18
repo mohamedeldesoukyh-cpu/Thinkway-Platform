@@ -1,3 +1,4 @@
+import { ShortlistRecommendationButton } from "./shortlist-recommendation-button";
 
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
@@ -50,7 +51,7 @@ import { CreatorPlatformTiers } from "@/components/creator/creator-platform-tier
 
 type ShortlistRowItem = Pick<
   ShortlistCreatorItem,
-  "item_id" | "item_status" | "creator" | "quotation_refs"
+  "item_id" | "item_status" | "creator" | "quotation_refs" | "recommendationRank"
 >;
 
 type Props = {
@@ -63,6 +64,8 @@ type Props = {
   onToggleSelectGroup?: (itemIds: string[]) => void;
   onToggleSelectAll: () => void;
   onOpenCreator?: (creator: UnifiedCreatorResult) => void;
+  shortlistId: string;
+  canRecommend: boolean;
 };
 
 function SortableMetaLabel({
@@ -121,6 +124,8 @@ function ShortlistCreatorGridRow({
   selectable,
   onToggleSelect,
   onOpenCreator,
+  shortlistId,
+  canRecommend,
 }: {
   item: ShortlistRowItem;
   index: number;
@@ -128,6 +133,8 @@ function ShortlistCreatorGridRow({
   selectable: boolean;
   onToggleSelect: () => void;
   onOpenCreator?: (creator: UnifiedCreatorResult) => void;
+  shortlistId: string;
+  canRecommend: boolean;
 }) {
   const [categoriesExpanded, setCategoriesExpanded] = useState(false);
   const creator = item.creator;
@@ -222,6 +229,7 @@ function ShortlistCreatorGridRow({
           onOpen={openCreatorDetail}
           stopPropagation
         >
+          <ShortlistRecommendationButton shortlistId={shortlistId} itemId={item.item_id} rank={item.recommendationRank} name={vm.displayName} disabled={!canRecommend} />
           {enriching ? (
             <span role="status" aria-live="polite" className="mt-1 inline-flex items-center gap-1.5 text-xs text-blue-700" onClick={stopBubble}>
               <Loader2Icon aria-hidden="true" className="size-3.5 animate-spin motion-reduce:animate-none" />
@@ -285,6 +293,8 @@ function ShortlistDisplayBlockRows({
   onToggleSelect,
   onToggleSelectGroup,
   onOpenCreator,
+  shortlistId,
+  canRecommend,
 }: {
   block: ShortlistDisplayBlock;
   indexById: Map<string, number>;
@@ -293,6 +303,8 @@ function ShortlistDisplayBlockRows({
   onToggleSelect: (itemId: string) => void;
   onToggleSelectGroup?: (itemIds: string[]) => void;
   onOpenCreator?: (creator: UnifiedCreatorResult) => void;
+  shortlistId: string;
+  canRecommend: boolean;
 }) {
   const [expanded, setExpanded] = useState(true);
   if (block.kind === "collapse") {
@@ -331,6 +343,8 @@ function ShortlistDisplayBlockRows({
             selectable={false}
             onToggleSelect={() => onToggleSelect(item.item_id)}
             onOpenCreator={onOpenCreator}
+            shortlistId={shortlistId}
+            canRecommend={canRecommend}
           />
         ))}
       </>
@@ -346,6 +360,8 @@ function ShortlistDisplayBlockRows({
       selectable={selectable}
       onToggleSelect={() => onToggleSelect(item.item_id)}
       onOpenCreator={onOpenCreator}
+            shortlistId={shortlistId}
+            canRecommend={canRecommend}
     />
   );
 }
@@ -360,6 +376,8 @@ export function ShortlistCreatorList({
   onToggleSelectGroup,
   onToggleSelectAll,
   onOpenCreator,
+  shortlistId,
+  canRecommend,
 }: Props) {
   const [sort, setSort] = useState<ShortlistCreatorSortState | null>(null);
   const sortedItems = useMemo(() => sortShortlistCreators(items, sort), [items, sort]);
@@ -434,6 +452,8 @@ export function ShortlistCreatorList({
             onToggleSelect={onToggleSelect}
             onToggleSelectGroup={onToggleSelectGroup}
             onOpenCreator={onOpenCreator}
+            shortlistId={shortlistId}
+            canRecommend={canRecommend}
           />
         ))}
       </DiscoverySuiteGrid>

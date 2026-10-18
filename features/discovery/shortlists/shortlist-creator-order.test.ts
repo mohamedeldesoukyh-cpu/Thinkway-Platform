@@ -7,3 +7,8 @@ assert.deepEqual(orderShortlistCreators(items,[]),items);
 assert.deepEqual(orderShortlistCreators(items,["deleted","b"]).map(item=>item.item_id),["b","a","new"]);
 assert.deepEqual(tierOrderShortlistCreators(items),items,"Unknown tiers retain stable order");
 console.log("shortlist creator order tests passed");
+
+const starred = items.map((item,index) => ({...item,recommendationRank:index===2?1:index===0?2:undefined}));
+assert.deepEqual(orderShortlistCreators(starred).map(item=>item.item_id),["new","a","b"]);
+assert.deepEqual(orderShortlistCreators(starred,["b","a","new"]).map(item=>item.item_id),["b","a","new"]);
+assert.equal(orderShortlistCreators(starred,["b","a","new"])[2].recommendationRank,1,"Manual order keeps stars");

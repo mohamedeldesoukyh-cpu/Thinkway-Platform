@@ -1,3 +1,5 @@
+import { recommendationRank } from "@/lib/creators/shortlist-recommendations";
+import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
 import { readShortlistDisplayCurrency } from "@/lib/discovery/shortlist-currency";
 import { queryShortlistSeedItemsWithCollapseFallback } from "@/lib/discovery/shortlist-item-collapse-select";
 import {
@@ -91,7 +93,8 @@ function contentFromDeliverables(
 function cardFromCreator(
   item: ShortlistSeedItem,
   creator: UnifiedCreatorResult | undefined,
-  currency: string
+  currency: string,
+  metadata?: unknown
 ): ClientReviewSourceSnapshotCreator {
   const platform = creator?.platforms[0];
   const handle = platform?.handle
@@ -111,6 +114,8 @@ function cardFromCreator(
     investmentCurrency: item.cost_currency || currency,
     influencerId: item.influencer_id ?? undefined,
     shortlistItemId: item.id,
+    recommendationRank: recommendationRank(metadata, item.id),
+    shortlistOrderIndex: readCreatorListOrder(metadata).includes(item.id) ? readCreatorListOrder(metadata).indexOf(item.id) : undefined,
     profileId: item.profile_id ?? undefined,
     unifiedId: item.unified_id ?? undefined,
     thinkwayStatus: thinkwayStatusFromInternal(item.item_status),
@@ -164,7 +169,7 @@ export async function loadShortlistPoolCreators(
     cardFromCreator(
       item,
       lookup ? resolveCreatorFromRefLookup(lookup, item) ?? undefined : undefined,
-      currency
+      currency, header.metadata
     )
   );
 }
@@ -258,7 +263,7 @@ export async function createClientReviewFromShortlist(
     cardFromCreator(
       item,
       lookup ? resolveCreatorFromRefLookup(lookup, item) ?? undefined : undefined,
-      currency
+      currency, header.metadata
     )
   );
   const content = frozenItems.flatMap((item, index) =>

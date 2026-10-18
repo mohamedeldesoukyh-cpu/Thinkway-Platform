@@ -26,3 +26,9 @@ test('saved quotation order overrides ranking using any option member without ch
  assert.deepEqual(orderWorkspaceCreators(rows,[]).map(c=>c.creatorId),['mega','new','micro']);
  assert.deepEqual(rows,before);
 });
+
+const recommended = [card('mega','Mega',1000000), {...card('nano','Nano',1000),recommendationRank:1}, {...card('micro','Micro',10000),recommendationRank:2}];
+assert.deepEqual(orderWorkspaceCreators(recommended).map(c=>c.creatorId),['nano','micro','mega']);
+const manual = recommended.map((c,shortlistOrderIndex)=>({...c,shortlistOrderIndex}));
+assert.deepEqual(orderWorkspaceCreators(manual).map(c=>c.creatorId),['mega','nano','micro']);
+assert.equal(orderWorkspaceCreators(manual)[1].recommendationRank,1);

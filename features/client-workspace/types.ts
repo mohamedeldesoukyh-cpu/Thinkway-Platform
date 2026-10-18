@@ -123,6 +123,8 @@ export type ClientQuotationOption = {
 };
 
 export type ClientReviewSourceSnapshotCreator = {
+  recommendationRank?: number;
+  shortlistOrderIndex?: number;
   creatorId: string;
   displayName: string;
   handle?: string;
@@ -249,6 +251,8 @@ export type ClientReviewRecord = {
 };
 
 export type ClientCreatorCard = {
+  recommendationRank?: number;
+  shortlistOrderIndex?: number;
   creatorId: string;
   displayName: string;
   handle?: string;
