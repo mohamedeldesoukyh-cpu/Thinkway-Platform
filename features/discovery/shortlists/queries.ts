@@ -1,3 +1,4 @@
+import { readQuotationTemplatePhotos } from "@/lib/quotations/quotation-template-photos";
 import { recommendationRank } from "@/lib/creators/shortlist-recommendations";
 import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
 import { orderShortlistCreators } from "./shortlist-creator-order";
@@ -592,6 +593,7 @@ export async function getShortlistDetail(
   );
   const brandNames = await nameMap(supabase, "brands", [row.brand_id], "name");
 
+  const templatePhotos = readQuotationTemplatePhotos(row.metadata);
   const isOwner = auth.userId === row.owner_id;
   const isPrivilegedRole =
     auth.roleSlug === "super_admin" || auth.roleSlug === "admin";
@@ -625,7 +627,7 @@ export async function getShortlistDetail(
     is_archived: row.is_archived,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    creators: orderShortlistCreators(creators.map(item => ({ ...item, recommendationRank: recommendationRank(row.metadata, item.item_id) })), readCreatorListOrder(row.metadata)),
+    creators: orderShortlistCreators(creators.map(item => ({ ...item, templatePhoto: templatePhotos[item.item_id], recommendationRank: recommendationRank(row.metadata, item.item_id) })), readCreatorListOrder(row.metadata)),
     creatorOrder: readCreatorListOrder(row.metadata),
     movements,
     movedAssignments,

@@ -1886,3 +1886,39 @@ export async function setShortlistCreatorRecommendation(id: string, itemId: stri
   revalidatePath("/discovery/shortlists/[id]", "layout");
   return { ok: true };
 }
+
+/** Shortlist-only presentation photo; never changes the shared creator profile. */
+export async function setShortlistTemplatePhoto(id: string, itemId: string, form: FormData) {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const row = await loadShortlistRow(actor.supabase, id);
+  if (!row) return { ok: false as const, message: "Shortlist not found." };
+  const access = await assertCanManageShortlist(actor.supabase, row, actor.userId);
+  if (!access.ok) return access;
+  if (row.is_archived || !canEditCreators(row.status)) return { ok: false as const, message: "This shortlist is locked for editing." };
+  const { data: item, error: itemError } = await actor.supabase.from("discovery_shortlist_items").select("id").eq("shortlist_id", id).eq("id", itemId).maybeSingle();
+  if (itemError || !item) return { ok: false as const, message: "Creator not found in this shortlist." };
+  const { readQuotationTemplatePhotos, TEMPLATE_PHOTOS_KEY, TEMPLATE_PHOTO_MAX_BYTES } = await import("@/lib/quotations/quotation-template-photos");
+  let photo: string | null = null;
+  if (form.get("reset") !== "true") {
+    const file = form.get("file");
+    if (!(file instanceof File) || file.size > TEMPLATE_PHOTO_MAX_BYTES || !["image/jpeg", "image/png", "image/webp"].includes(file.type)) return { ok: false as const, message: "Choose a JPG, PNG or WebP photo up to 750 KB." };
+    const { normalizeQuotationTemplatePhoto } = await import("@/lib/services/quotations/quotation-template-photo-service");
+    try { photo = await normalizeQuotationTemplatePhoto(Buffer.from(await file.arrayBuffer())); }
+    catch (error) { return { ok: false as const, message: error instanceof Error ? error.message : "Could not read this photo." }; }
+  }
+  const metadata = { ...row.metadata };
+  const photos = readQuotationTemplatePhotos(metadata);
+  if (photo) photos[itemId] = photo; else delete photos[itemId];
+  if (JSON.stringify(photos).length > 2_000_000) return { ok: false as const, message: "Template photos exceed 2 MB in total. Use smaller photos or reset an existing photo." };
+  if (Object.keys(photos).length) metadata[TEMPLATE_PHOTOS_KEY] = photos; else delete metadata[TEMPLATE_PHOTOS_KEY];
+  const { data, error } = await actor.supabase.from("discovery_shortlists")
+    .update({ metadata: metadata as Database["public"]["Tables"]["discovery_shortlists"]["Update"]["metadata"] })
+    .eq("id", id).eq("updated_at", row.updated_at).eq("status", row.status).eq("is_archived", false).select("id").maybeSingle();
+  if (error) return { ok: false as const, message: "Could not save the photo. Please try again." };
+  if (!data) return { ok: false as const, message: "The shortlist changed. Refresh and try again." };
+  revalidateShortlist(id);
+  revalidatePath("/discovery/shortlists/[id]", "layout");
+  revalidatePath("/review/[reviewId]", "layout");
+  return { ok: true as const, photo };
+}
