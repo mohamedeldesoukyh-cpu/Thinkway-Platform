@@ -14,6 +14,7 @@ import type { ImportCreatorOption, QuotationItemSeed, QuotationMutationResult } 
 import {
   appendQuotationRevision,
   archiveQuotationRecord,
+  restoreQuotationRecord,
   duplicateQuotationItemRows,
   fetchCampaignAssignmentsByIds,
   fetchCampaignImportCreators,
@@ -836,3 +837,12 @@ export async function importCampaignAssignmentsToQuotation(
 }
 
 export type { QuotationItemSeed, ImportCreatorOption };
+
+export async function restoreQuotation(
+  supabase: SupabaseClient<Database>, id: string
+): Promise<QuotationMutationResult> {
+  const { data, error } = await restoreQuotationRecord(supabase, id);
+  if (error) return { ok: false, message: error.message };
+  if (!data) return { ok: false, message: "Archived quotation not found or already restored." };
+  return { ok: true, message: "Quotation restored as draft." };
+}

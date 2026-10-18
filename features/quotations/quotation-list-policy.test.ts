@@ -7,6 +7,7 @@ import {
 import {
   DEFAULT_QUOTATION_LIST_FILTERS,
   filterQuotationRows,
+  isArchivedQuotation,
   hasActiveQuotationListFilters,
 } from "./quotation-list-filters";
 import type { QuotationListRow } from "./types";
@@ -81,3 +82,11 @@ const baseRow = (overrides: Partial<QuotationListRow> = {}): QuotationListRow =>
 }
 
 console.log("quotation-list-policy.test.ts passed");
+
+{
+  const rows = [baseRow(), baseRow({ id: "flag", is_archived: true }), baseRow({ id: "status", status: "archived" })];
+  assert.deepEqual(rows.filter(isArchivedQuotation).map(row => row.id), ["flag", "status"]);
+  assert.deepEqual(rows.filter(row => !isArchivedQuotation(row)).map(row => row.id), ["q1"]);
+  const restored = { ...rows[2], is_archived: false, status: "draft" as const };
+  assert.equal(isArchivedQuotation(restored), false);
+}

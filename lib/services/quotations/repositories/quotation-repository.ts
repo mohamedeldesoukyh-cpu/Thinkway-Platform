@@ -1026,3 +1026,12 @@ export async function insertVersionedQuotation(
     .select("id, serial_number")
     .single();
 }
+
+export async function restoreQuotationRecord(supabase: SupabaseClient<Database>, id: string) {
+  return supabase.from("quotations")
+    .update({ is_archived: false, status: "draft" } as never)
+    .eq("id", id)
+    .or("is_archived.eq.true,status.eq.archived")
+    .select("id")
+    .maybeSingle();
+}
