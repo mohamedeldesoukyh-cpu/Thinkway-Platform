@@ -208,5 +208,5 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
 /* One readable text size throughout the campaign register. */
 .workspace-redesign .campaigns-list-suite .campaigns-module-register :is(.tw-r, .tw-hr, .tw-toolbar, .tw-pag),
 .workspace-redesign .campaigns-list-suite .campaigns-module-register :is(.tw-r, .tw-hr, .tw-toolbar, .tw-pag) :is(div, span, a, button, p, b, strong, small, input, u, em, i, label) {
-  font-size: 13px !important;
+  font-size: 11px !important;
 }
