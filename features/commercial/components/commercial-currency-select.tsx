@@ -30,6 +30,7 @@ type Props = {
 };
 
 export function CommercialCurrencySelect({
+  appearance = "default",
   value,
   onChange,
   disabled,
