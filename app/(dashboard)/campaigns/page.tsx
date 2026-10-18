@@ -67,7 +67,7 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
       : `${total} campaigns` + (hasSearch ? ` matching "${search}"` : "");
 
   return (
-    <DashboardShell title="Campaigns" platformV6>
+    <DashboardShell title="Campaigns" platformV6 mainClassName="!p-0">
       <div className="campaigns-list-suite">
         {kpis ? (
           <CampaignsListMasthead
@@ -88,6 +88,7 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
           </div>
         )}
 
+        <div className="px-4 pb-6">
         <CampaignsListSection
           campaigns={campaigns}
           meta={meta}
