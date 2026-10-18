@@ -3,7 +3,7 @@ import { QuotationCreatorOrderDialog } from "./quotation-creator-order-dialog";
 import { orderQuotationItems } from "@/lib/quotations/quotation-creator-order";
 import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
 import { QuotationText, QuotationDesignLocaleProvider, useQuotationDesignLocale } from "./quotation-design-locale";
-import { useQuotationStickyHeaders } from "./use-quotation-sticky-headers";
+import { WorkspaceScrollSummary } from "@/features/discovery/components/workspace-scroll-summary";
 import { fetchQuotationItemCreatorDetail } from "@/features/quotations/lib/quotation-item-creator-detail";
 import { stashCompareQueue } from "@/features/discovery/components/creator-compare/compare-storage";
 import { MAX_CREATOR_COMPARE } from "@/lib/creators/creator-compare-bundle";
@@ -148,7 +148,6 @@ function QuotationWorkspaceContent({
 }) {
   const router = useRouter();
   const { language } = useQuotationDesignLocale();
-  const stickyHeadersRef = useQuotationStickyHeaders();
   const manualSave = useQuotationManualSave();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
@@ -717,8 +716,14 @@ function QuotationWorkspaceContent({
   });
 
   return (
-    <div ref={stickyHeadersRef} dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
+    <div data-discovery-workspace-scroll dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
       <QuotationSetupWizard detail={detail} options={formOptions} />
+      <WorkspaceScrollSummary serial={detail.serial_number} name={detail.name} status={detail.status.replaceAll("_", " ")}
+        metrics={[
+          { label: "Creators", value: uniqueCreatorCount },
+          { label: "Total Revenue", value: `${displayCurrency} ${computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp).clientCost.toLocaleString("en-US", { maximumFractionDigits: 0 })}` },
+          { label: "GP %", value: `${totals.headerGpPct.toFixed(1)}%` },
+        ]} />
       <div className="q-frozen-summary">
       <QuotationWorkspaceHeader
         detail={detail}

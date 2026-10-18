@@ -1,0 +1,10 @@
+import assert from "node:assert/strict";
+import { quotationListCreatorKey, countQuotationListCreators } from "./quotation-list-creators";
+const item = { id: "line1", unified_id: "creator1", influencer_id: null, profile_id: null, creator_name: "Same Name", handle: "@name" };
+assert.equal(quotationListCreatorKey(item), quotationListCreatorKey({ ...item, id: "option2", handle: "another-platform" }));
+assert.notEqual(quotationListCreatorKey(item), quotationListCreatorKey({ ...item, unified_id: "creator2" }));
+assert.equal(quotationListCreatorKey({ ...item, unified_id: null }), quotationListCreatorKey({ ...item, id: "option2", unified_id: null, handle: "NAME" }));
+const keys = Array.from({ length: 1005 }, (_, i) => `u:${i}`);
+assert.equal(countQuotationListCreators([{ creator_keys: keys }, { creator_keys: ["u:0", "u:1"] }]), 1005);
+assert.equal(countQuotationListCreators([]), 0);
+console.log("Quotation unique creator tests passed.");

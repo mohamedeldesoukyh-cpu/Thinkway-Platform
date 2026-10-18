@@ -233,7 +233,7 @@ export function QuotationWorkspaceHeader({
 
   return (
     <>
-      <header className="q-head"><div className="q-head__in">
+      <header className="q-head" data-workspace-full-header><div className="q-head__in">
         <div className="q-head__nav">
           <Link href={QUOTATIONS_LIST_PATH} className="q-b q-b--sm q-b--ghost"><QuotationText>← Back to quotations</QuotationText></Link>
           <span className="q-crumb"><Link href="/discovery/search"><QuotationText>Discovery</QuotationText></Link> / <Link href={QUOTATIONS_LIST_PATH}><QuotationText>Client quotations</QuotationText></Link> / <b>{formatDocumentNumberForDisplay(detail.serial_number)}</b></span>

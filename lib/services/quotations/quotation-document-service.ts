@@ -1,3 +1,4 @@
+import { quotationListCreatorKey } from "@/features/quotations/quotation-list-creators";
 import { readQuotationTemplatePhotos } from "@/lib/quotations/quotation-template-photos";
 import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -254,7 +255,8 @@ export async function getQuotationsList(
 
   return rows.map((row) => ({
     ...row,
-    creator_previews: creatorPreviews.get(row.id) ?? [],
+    creator_previews: creatorPreviews.previews.get(row.id) ?? [],
+    creator_keys: creatorPreviews.creatorKeys.get(row.id) ?? [],
     client_workspace_link: clientWorkspaceListLinkForSubject(linkIndex, {
       quotationId: row.id,
       shortlistId: row.shortlist_id,
@@ -265,25 +267,36 @@ export async function getQuotationsList(
 async function loadQuotationCreatorPreviews(
   supabase: SupabaseClient<Database>,
   quotationIds: string[]
-): Promise<Map<string, QuotationCreatorPreview[]>> {
+): Promise<{ previews: Map<string, QuotationCreatorPreview[]>; creatorKeys: Map<string, string[]> }> {
   const previews = new Map<string, QuotationCreatorPreview[]>();
-  if (quotationIds.length === 0) return previews;
+  const creatorKeys = new Map<string, string[]>();
+  if (quotationIds.length === 0) return { previews, creatorKeys };
 
-  const { data } = await supabase
-    .from("quotation_items")
-    .select(
-      "quotation_id, creator_name, influencer_id, profile_id, unified_id, sort_order"
-    )
-    .in("quotation_id", quotationIds)
-    .order("sort_order", { ascending: true });
-
-  const items = (data ?? []) as Array<{
-    quotation_id: string;
-    creator_name: string | null;
-    influencer_id: string | null;
-    profile_id: string | null;
-    unified_id: string | null;
-  }>;
+  type ListItem = {
+    id: string; quotation_id: string; creator_name: string | null;
+    handle: string | null; influencer_id: string | null;
+    profile_id: string | null; unified_id: string | null;
+  };
+  const items: ListItem[] = [];
+  // Fetch all entries: PostgREST's default row limit must not truncate counts.
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabase.from("quotation_items")
+      .select("id, quotation_id, creator_name, handle, influencer_id, profile_id, unified_id, sort_order")
+      .in("quotation_id", quotationIds)
+      .order("sort_order", { ascending: true }).order("id", { ascending: true })
+      .range(offset, offset + 999);
+    if (error) throw new Error(error.message);
+    const page = (data ?? []) as ListItem[];
+    items.push(...page);
+    if (page.length < 1000) break;
+  }
+  const keySets = new Map<string, Set<string>>();
+  for (const item of items) {
+    const keys = keySets.get(item.quotation_id) ?? new Set<string>();
+    keys.add(quotationListCreatorKey(item));
+    keySets.set(item.quotation_id, keys);
+  }
+  for (const [id, keys] of keySets) creatorKeys.set(id, [...keys]);
 
   const cappedByQuotation = new Map<string, typeof items>();
   for (const item of items) {
@@ -292,7 +305,7 @@ async function loadQuotationCreatorPreviews(
     cappedByQuotation.set(item.quotation_id, bucket);
   }
 
-  if (cappedByQuotation.size === 0) return previews;
+  if (cappedByQuotation.size === 0) return { previews, creatorKeys };
 
   const previewItems = [...cappedByQuotation.values()].flat();
   const lookup = await resolveUnifiedCreatorsByRefs(supabase, {
@@ -317,7 +330,7 @@ async function loadQuotationCreatorPreviews(
     previews.set(quotationId, rowPreviews);
   }
 
-  return previews;
+  return { previews, creatorKeys };
 }
 
 /** Resolve a route key (UUID, serial, slug, or slug-shortId). */

@@ -103,6 +103,8 @@ export type QuotationListRow = {
   total_gp_pct: number;
   item_count: number;
   creator_previews: QuotationCreatorPreview[];
+  /** Complete deduplicated creator identities, not the capped preview. */
+  creator_keys?: string[];
   client_workspace_link?: ClientWorkspaceListLink;
   is_archived: boolean;
   issue_date: string | null;

@@ -48,6 +48,7 @@ import {
   isArchivedQuotation,
   type QuotationListFilterState,
 } from "../quotation-list-filters";
+import { countQuotationListCreators } from "../quotation-list-creators";
 import { quotationListClientCost } from "../quotation-list-commercial";
 import type { QuotationFormOptions, QuotationListRow } from "../types";
 import {
@@ -84,16 +85,6 @@ function ownerTone(index: number): "k1" | "k2" | "k3" | "k4" {
   return "k4";
 }
 
-function uniqueCreatorCount(rows: QuotationListRow[]): number {
-  const names = new Set<string>();
-  for (const row of rows) {
-    for (const preview of row.creator_previews) {
-      const key = preview.display_name.trim().toLowerCase();
-      if (key) names.add(key);
-    }
-  }
-  return names.size;
-}
 
 export function QuotationsList({ quotations: allQuotations, brands = [], formOptions }: Props) {
   const quotations = useMemo(() => allQuotations.filter((row) => !isArchivedQuotation(row)), [allQuotations]);
@@ -135,7 +126,6 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
     const approvedCount = quotations.filter(
       (row) => row.status === "approved"
     ).length;
-    const lineCount = quotations.reduce((sum, row) => sum + row.item_count, 0);
     const clientCost = quotations.reduce(
       (sum, row) => sum + quotationListClientCost(row),
       0
@@ -149,7 +139,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
         ? quotations.reduce((sum, row) => sum + row.total_gp_pct, 0) /
           quotations.length
         : 0;
-    const creators = uniqueCreatorCount(quotations);
+    const creators = countQuotationListCreators(quotations);
 
     return [
       quotations.length > 0
@@ -159,10 +149,9 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
       approvedCount > 0
         ? { label: "Approved", value: approvedCount, tone: "g" as const }
         : null,
-      lineCount > 0 ? { label: "Lines", value: lineCount } : null,
       { label: "Ccy", value: "EGP", tone: "s" as const },
       clientCost > 0
-        ? { label: "Client cost", value: AB(clientCost), tone: "s" as const }
+        ? { label: "Total Revenue", value: AB(clientCost), tone: "s" as const }
         : null,
       baseCost > 0
         ? { label: "Base cost", value: AB(baseCost), tone: "s" as const }
@@ -178,8 +167,8 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
     ].filter((metric): metric is NonNullable<typeof metric> => metric !== null);
   }, [quotations]);
 
-  const filteredLineCount = useMemo(
-    () => filteredQuotations.reduce((sum, row) => sum + row.item_count, 0),
+  const filteredCreatorCount = useMemo(
+    () => countQuotationListCreators(filteredQuotations),
     [filteredQuotations]
   );
 
@@ -302,10 +291,10 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
       <DiscoverySuiteCell>Client link</DiscoverySuiteCell>
       <DiscoverySuiteCell>Owner</DiscoverySuiteCell>
       <DiscoverySuiteCell className="tw-rr" align="end">
-        Lines
+        Creators
       </DiscoverySuiteCell>
       <DiscoverySuiteCell className="tw-rr" align="end">
-        Client cost
+        Total Revenue
       </DiscoverySuiteCell>
       <DiscoverySuiteCell className="tw-rr" align="end">
         Act
@@ -327,7 +316,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
       <DiscoverySuiteCell />
       <DiscoverySuiteCell />
       <DiscoverySuiteCell className="tw-v" align="end">
-        {filteredLineCount}
+        {filteredCreatorCount}
       </DiscoverySuiteCell>
       <DiscoverySuiteCell className="tw-v" align="end">
         {F(filteredClientCost)}
@@ -420,7 +409,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
             </span>
           </DiscoverySuiteCell>
           <DiscoverySuiteCell className="tw-v" align="end">
-            {row.item_count}
+            {row.creator_keys?.length ?? 0}
           </DiscoverySuiteCell>
           <DiscoverySuiteCell className="tw-v" align="end">
             {F(quotationListClientCost(row))}
