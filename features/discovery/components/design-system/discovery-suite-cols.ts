@@ -9,7 +9,7 @@ export const DISCOVERY_COLS = {
   shortlist:
     "30px minmax(240px,1.25fr) 84px minmax(140px,.8fr) minmax(296px,1.2fr) minmax(166px,.7fr) 126px 96px",
   quotations:
-    "30px 116px minmax(190px,1.4fr) 120px minmax(150px,1fr) 92px 92px 150px 66px 116px 74px",
+    "30px 116px minmax(190px,1.4fr) 120px minmax(150px,1fr) 92px 116px 92px 150px 66px 116px 74px",
   quotation:
     "30px 74px minmax(190px,1.2fr) 66px minmax(230px,1.4fr) 74px 150px 128px 84px 92px",
   search: "34px minmax(210px,1.5fr) 150px 296px 166px 210px",
@@ -28,7 +28,7 @@ export type DiscoveryColsKey = keyof typeof DISCOVERY_COLS;
 export const DISCOVERY_GRID_MIN_W: Partial<Record<DiscoveryColsKey, number>> = {
   shortlists: 1250,
   shortlist: 1240,
-  quotations: 1300,
+  quotations: 1420,
   quotation: 1400,
   search: 1260,
   intel: 1080,

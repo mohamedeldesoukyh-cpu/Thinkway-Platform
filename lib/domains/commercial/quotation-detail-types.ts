@@ -91,6 +91,7 @@ export type QuotationListRow = {
   brand_id: string | null;
   brand_name: string | null;
   campaign_name: string | null;
+  campaign_header_id?: string | null;
   shortlist_id: string | null;
   owner_id: string | null;
   owner_name: string | null;
