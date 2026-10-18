@@ -48,7 +48,6 @@ export function isLumpSumPricingTemplate(
 
 export const SHORTLIST_TEMPLATE_OPTIONS: Array<{ id: ShortlistTemplateVariant; label: string; hint: string }> = [
   ...QUOTATION_TEMPLATE_OPTIONS.filter(option => option.id !== "creator-list-additions"),
-  { id: "creator-list", label: "Creator list", hint: "Portrait cards · HTML / PDF" },
 ];
 
 /** Append `template` query param when not the default detailed variant. */

@@ -122,6 +122,9 @@ function toQuotationCreatorGroup(
   const icons = platformIconsFromGroup(group);
   return {
     creatorKey: group.creatorKey,
+    itemIds: group.itemIds ?? [group.creatorKey],
+    highestPlatformTier: group.tier,
+    highestPlatformFollowers: group.followersNumeric ?? undefined,
     creator: group.creator,
     handle: group.handle,
     profileUrl: group.profileUrl,
@@ -333,7 +336,9 @@ export function shortlistDocumentToQuotationDocument(
   return {
     audience: "client",
     source: "shortlist",
-    template: doc.template === "creator-list" ? "showcase" : doc.template,
+    template: doc.template,
+    creatorListOrder: creatorGroups.flatMap(group => group.itemIds ?? []),
+    shortlistCreatorListCost: doc.creatorListCost,
     serial: doc.serial,
     name: doc.name,
     currency: "EGP",

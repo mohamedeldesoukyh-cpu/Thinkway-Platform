@@ -256,6 +256,7 @@ export type QuotationDocumentFullTierBreakdown = {
 };
 
 export type QuotationDocument = {
+  shortlistCreatorListCost?: import("@/features/discovery/shortlists/creator-list-cost").CreatorListCost;
   creatorListOrder?: string[];
   clientLogo?: string | null;
   audience: QuotationDocumentAudience;

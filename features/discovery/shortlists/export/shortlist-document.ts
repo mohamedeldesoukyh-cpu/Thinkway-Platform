@@ -68,6 +68,7 @@ export function shortlistCreatorKey(item: ShortlistCreatorItem): string {
 export type ShortlistDocCreatorGroup = {
   /** Stored location values only; never audience geography or a runtime estimate. */
   recordedMarkets?: string[];
+  itemIds?: string[];
   creatorKey: string;
   rank: number;
   creator: string;
@@ -418,6 +419,7 @@ export function buildCreatorGroup(
 
   return {
     creatorKey,
+    itemIds: [item.item_id],
     rank: row.rank,
     creator: row.creator,
     handle: row.handle,
