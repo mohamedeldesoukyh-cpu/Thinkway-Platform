@@ -30,8 +30,9 @@ export function CampaignRevenueShare({ campaignId, share, amountLabel }: {
   }
   return <>
     <button type="button" className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
+      style={share ? { color: "#dc2626" } : undefined}
       aria-label="Edit campaign revenue share" onClick={load}>
-      {amountLabel ?? (share ? share.mode === "percent" ? `${share.value}%` : formatMoney(share.value, share.currency) : "Add share")}
+      {share && share.value > 0 ? "−" : ""}{amountLabel ?? (share ? share.mode === "percent" ? `${share.value}%` : formatMoney(share.value, share.currency) : "Add share")}
     </button>
     <OperationalDetailSheet open={open} onOpenChange={setOpen} title="Revenue share" description="Campaign revenue share and profit" variant="detail" dismissOnFocusOutside={false}>
       <OperationalDetailCommandBar contextLabel="Revenue share" contextHandle={data?.document_number}
@@ -77,7 +78,7 @@ function RevenueShareForm({ data, onSaved }: { data: Loaded; onSaved: () => void
         <h3 className="font-semibold">Revenue share</h3>
         <p className="text-sm text-muted-foreground">Edit either field. The last field edited determines whether the share stays a fixed amount or follows revenue as a percentage.</p>
         <label className="block space-y-2 text-sm font-medium">Amount ({data.currency})
-          <Input type="number" min="0" step="0.01" disabled={pending} value={mode === "amount" ? value : amount}
+          <Input type="number" min="0" step="0.01" className="!text-red-600" disabled={pending} value={mode === "amount" ? value : amount}
             onChange={e => { setMode("amount"); setValue(e.target.value); }} />
         </label>
         <label className="block space-y-2 text-sm font-medium">Percentage of revenue (%)
@@ -87,7 +88,7 @@ function RevenueShareForm({ data, onSaved }: { data: Loaded; onSaved: () => void
         <p className="text-xs text-muted-foreground">Saving as {mode === "percent" ? "a percentage of revenue" : `a fixed ${data.currency} amount`}. Enter 0 to remove the deduction.</p>
       </section>
       <section className="rounded-2xl border border-blue-200 bg-blue-50 p-4" aria-live="polite">
-        <DetailField label="Revenue share deduction">{money(amount)}</DetailField>
+        <DetailField label="Revenue share deduction"><span className="font-semibold text-red-600">{amount > 0 ? "−" : ""}{money(amount)}</span></DetailField>
         <DetailField label="GP after revenue share">{money(gp)}</DetailField>
         <DetailField label="GP margin after revenue share">{margin.toFixed(2)}%</DetailField>
         <DetailField label="Markup / FM after revenue share">{data.cost > 0 ? `${(gp / data.cost * 100).toFixed(2)}%` : "—"}</DetailField>

@@ -603,6 +603,7 @@ function ColumnSubHeaders({
 }
 
 function amountColorClass(metricKey: PnlMetricKey, side: "current" | "prior"): string {
+  if (metricKey === "revenue_share") return "text-red-600 hover:text-red-700 dark:text-red-400";
   if (metricKey === "rev") {
     return side === "current"
       ? "text-brand-blue hover:text-brand-blue/80"
@@ -791,7 +792,7 @@ function ClientDrilldownRow({
       >
         {formatPnlAmount(client.vr_refund)}
       </td>
-      <td className="py-2.5 pr-3 text-right tabular-nums">{formatPnlAmount(client.revenue_share)}</td>
+      <td className="py-2.5 pr-3 text-right tabular-nums text-red-600 dark:text-red-400">{formatPnlAmount(client.revenue_share)}</td>
       <td
         className={cn(
           "py-2.5 pr-3 text-right tabular-nums",

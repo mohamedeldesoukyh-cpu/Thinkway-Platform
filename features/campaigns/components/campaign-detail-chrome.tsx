@@ -262,7 +262,7 @@ export function CampaignDetailChrome({
               <div><span className={styles.label}>Base cost (internal creator / vendor cost)</span><b>{headerMoney(cost)}</b></div>
               <div><span className={styles.label}>GP amount · after RS</span><b className={gp < 0 ? styles.negative : agencyFees > 0 ? styles.amber : styles.positive}>{headerMoney(gp)}</b></div>
               <div><span className={styles.label}>GP % · after RS</span><b className={gp < 0 ? styles.negative : agencyFees > 0 ? styles.amber : styles.positive}>{marginPercent.toFixed(1)}%</b></div>
-              <div><span className={styles.label}>Revenue share</span><b>{headerMoney(workspace.financials.revenue_share ?? 0)}</b><CampaignRevenueShare campaignId={workspace.id} amountLabel="Edit revenue share" /></div>
+              <div><span className={styles.label}>Revenue share</span><b className={styles.negative}>{(workspace.financials.revenue_share ?? 0) > 0 ? "−" : ""}{headerMoney(workspace.financials.revenue_share ?? 0)}</b><CampaignRevenueShare campaignId={workspace.id} amountLabel="Edit revenue share" /></div>
               <div><span className={styles.label}>Markup / FM %</span><b title="GP divided by base cost">{markupPercent == null ? "—" : `${markupPercent.toFixed(1)}%`}</b></div>
             </div>
           </section>
