@@ -29,8 +29,8 @@ export function CampaignRevenueShare({ campaignId, share, amountLabel }: {
     });
   }
   return <>
-    <button type="button" className="text-sm font-semibold text-primary underline-offset-4 hover:underline"
-      style={share ? { color: "#dc2626" } : undefined}
+    <button type="button" className="text-inherit underline-offset-4 hover:underline"
+      style={{ fontSize: "inherit", fontWeight: "inherit", ...(share ? { color: "#dc2626" } : {}) }}
       aria-label="Edit campaign revenue share" onClick={load}>
       {share && share.value > 0 ? "−" : ""}{amountLabel ?? (share ? share.mode === "percent" ? `${share.value}%` : formatMoney(share.value, share.currency) : "Add share")}
     </button>
