@@ -104,6 +104,7 @@ export default async function CampaignsPage({ searchParams }: CampaignsPageProps
             ) : null
           }
         />
+        </div>
       </div>
     </DashboardShell>
   );
