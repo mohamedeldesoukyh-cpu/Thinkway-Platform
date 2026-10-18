@@ -46,6 +46,7 @@ import {
   filterQuotationRows,
   type QuotationListFilterState,
 } from "../quotation-list-filters";
+import { quotationListClientCost } from "../quotation-list-commercial";
 import type { QuotationFormOptions, QuotationListRow } from "../types";
 import {
   QuotationSelectionFlyout,
@@ -113,7 +114,7 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
     ).length;
     const lineCount = quotations.reduce((sum, row) => sum + row.item_count, 0);
     const clientCost = quotations.reduce(
-      (sum, row) => sum + row.total_revenue_egp,
+      (sum, row) => sum + quotationListClientCost(row),
       0
     );
     const baseCost = quotations.reduce(
@@ -161,7 +162,7 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
 
   const filteredClientCost = useMemo(
     () =>
-      filteredQuotations.reduce((sum, row) => sum + row.total_revenue_egp, 0),
+      filteredQuotations.reduce((sum, row) => sum + quotationListClientCost(row), 0),
     [filteredQuotations]
   );
 
@@ -412,7 +413,7 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
                     </DiscoverySuiteCell>
                     <DiscoverySuiteCell className="tw-id">{serial}</DiscoverySuiteCell>
                     <DiscoverySuiteCell>
-                      <Link href={quotationDetailPath(row)} className="tw-nm">
+                      <Link href={quotationDetailPath(row)} className="tw-nm quotation-register-name">
                         {row.name}
                       </Link>
                     </DiscoverySuiteCell>
@@ -457,7 +458,7 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
                       {row.item_count}
                     </DiscoverySuiteCell>
                     <DiscoverySuiteCell className="tw-v" align="end">
-                      {F(row.total_revenue_egp)}
+                      {F(quotationListClientCost(row))}
                     </DiscoverySuiteCell>
                     <DiscoverySuiteCell className="tw-act" align="end">
                       <Link href={quotationDetailPath(row)} className="tw-b sm">

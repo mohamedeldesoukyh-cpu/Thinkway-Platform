@@ -1,5 +1,6 @@
 /* Keep full client names within their quotation register column. */
-.discovery-suite .tw-t.quotation-register-client {
+.discovery-suite .tw-t.quotation-register-client,
+.discovery-suite .tw-nm.quotation-register-name {
   display: block;
   min-width: 0;
   max-width: 100%;
