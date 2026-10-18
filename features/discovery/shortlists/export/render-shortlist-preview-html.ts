@@ -64,13 +64,19 @@ export async function renderShortlistPreviewHtml(
     platforms: options?.platforms,
     publicationShotsByCreatorKey,
   });
-  doc = await embedShortlistDocumentAvatars(doc);
+  const siteOrigin = options?.siteOrigin?.trim() || resolveShortlistExportSiteOrigin(undefined, undefined);
+  if (template === "creator-list") {
+    // Interactive previews can load portraits in the browser. Offline exports still embed them.
+    doc = { ...doc, creatorGroups: doc.creatorGroups.map(group => ({
+      ...group,
+      avatarUrl: group.avatarProxyUrl ? new URL(group.avatarProxyUrl, siteOrigin).toString() : group.avatarUrl,
+    })) };
+  } else {
+    doc = await embedShortlistDocumentAvatars(doc);
+  }
   doc = await embedShortlistDocumentPublicationShots(doc);
   if (template === "creator-list" || template === "client-list-by-name") doc.clientLogoDataUri = await loadCreatorListClientLogo(supabase, detail.client_id);
 
-  const siteOrigin =
-    options?.siteOrigin?.trim() ||
-    resolveShortlistExportSiteOrigin(undefined, undefined);
   const html = buildShortlistHtml(doc, { siteOrigin });
 
   return {
