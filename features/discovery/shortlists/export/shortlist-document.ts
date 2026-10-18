@@ -479,7 +479,7 @@ function buildRow(item: ShortlistCreatorItem, rank: number): ShortlistDocRow | n
     rank,
     creator: item.recommendationRank ? `★ ${item.recommendationRank} · ${source.displayName}` : source.displayName,
     handle,
-    avatarUrl: source.avatarUrl?.trim() || null,
+    avatarUrl: item.templatePhoto || source.avatarUrl?.trim() || null,
     avatarProfileUrl,
     platformLinks,
     platform: resolvePlatformLabel(creator),

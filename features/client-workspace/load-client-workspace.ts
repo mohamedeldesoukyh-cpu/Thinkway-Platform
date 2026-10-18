@@ -1,3 +1,4 @@
+import { readQuotationTemplatePhotos } from "@/lib/quotations/quotation-template-photos";
 import { recommendationRank } from "@/lib/creators/shortlist-recommendations";
 import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
 import { applyQuotationWorkspacePhotos } from "@/lib/quotations/quotation-workspace-photos";
@@ -833,7 +834,9 @@ export async function loadClientWorkspace(
     const { data: recommendationHeader } = await service.from("discovery_shortlists").select("metadata").eq("id", recommendationShortlistId).maybeSingle();
     if (recommendationHeader) {
       const order = readCreatorListOrder(recommendationHeader.metadata);
+      const shortlistPhotos = readQuotationTemplatePhotos(recommendationHeader.metadata);
       view.creators = view.creators.map(creator => ({ ...creator,
+        avatarUrl: creator.shortlistItemId ? shortlistPhotos[creator.shortlistItemId] ?? creator.avatarUrl : creator.avatarUrl,
         recommendationRank: creator.shortlistItemId ? recommendationRank(recommendationHeader.metadata, creator.shortlistItemId) : creator.recommendationRank,
         shortlistOrderIndex: creator.shortlistItemId && order.includes(creator.shortlistItemId) ? order.indexOf(creator.shortlistItemId) : undefined,
       }));

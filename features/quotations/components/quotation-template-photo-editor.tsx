@@ -5,7 +5,8 @@ import { TEMPLATE_PHOTO_MAX_BYTES } from "@/lib/quotations/quotation-template-ph
 import styles from "@/features/discovery/document-preview/creator-dialog.module.css";
 
 /** Inherits the ordering dialog's client boundary. Photo saves remain explicit and independent of ordering. */
-export function QuotationTemplatePhotoEditor({ quotationId, itemId, name, optionCount, original, current, disabled, onBusy, onApplied, controls }: {
+export function QuotationTemplatePhotoEditor({ quotationId, itemId, name, optionCount, original, current, disabled, onBusy, onApplied, controls, savePhoto = setQuotationTemplatePhoto, documentLabel = "quotation", detailLabel }: {
+  savePhoto?: typeof setQuotationTemplatePhoto; documentLabel?: string; detailLabel?: string;
   quotationId: string; itemId: string; name: string; optionCount: number; original: string | null; current?: string;
   disabled: boolean; onBusy: (busy: boolean) => void; onApplied: (photo: string | null) => void; controls: ReactNode;
 }) {
@@ -31,21 +32,21 @@ export function QuotationTemplatePhotoEditor({ quotationId, itemId, name, option
     try {
       const form = new FormData();
       if (reset) form.set("reset", "true"); else if (file) form.set("file", file); else return;
-      const result = await setQuotationTemplatePhoto(quotationId, itemId, form);
+      const result = await savePhoto(quotationId, itemId, form);
       if (!result.ok) { setError(result.message); return; }
       onApplied(result.photo); discard();
-      setStatus(reset ? "Profile photo restored for templates and the linked workspace." : "Photo applied to this quotation's templates and linked workspace.");
+      setStatus(reset ? "Profile photo restored for templates and the linked workspace." : `Photo applied to this ${documentLabel}'s templates and linked workspace.`);
     } catch { setError("Could not apply this photo. Please try again."); }
     finally { setBusy(false); onBusy(false); focusUpload(); }
   }
   return <>
     <div className={styles.thumbnail}>
-      {src && src !== failedSrc ? <img src={src} alt={`${name} quotation photo`} onError={() => setFailedSrc(src)} /> : <span className={styles.initials}>{name.trim().slice(0, 2).toUpperCase()}</span>}
-      {file || current ? <span className={styles.photoBadge} title={file ? "Photo preview" : "Custom quotation photo"}>{file ? <EyeIcon size={12} aria-hidden="true" /> : <CheckIcon size={12} aria-hidden="true" />}</span> : null}
+      {src && src !== failedSrc ? <img src={src} alt={`${name} ${documentLabel} photo`} onError={() => setFailedSrc(src)} /> : <span className={styles.initials}>{name.trim().slice(0, 2).toUpperCase()}</span>}
+      {file || current ? <span className={styles.photoBadge} title={file ? "Photo preview" : `Custom ${documentLabel} photo`}>{file ? <EyeIcon size={12} aria-hidden="true" /> : <CheckIcon size={12} aria-hidden="true" />}</span> : null}
     </div>
     <div className={styles.identity}>
       <strong dir="auto">{name}</strong>
-      <span>{optionCount} {optionCount === 1 ? "option" : "options"} &middot; {current ? "custom quotation photo" : "profile photo"}</span>
+      <span>{detailLabel ?? `${optionCount} ${optionCount === 1 ? "option" : "options"}`} &middot; {current ? `custom ${documentLabel} photo` : "profile photo"}</span>
     </div>
     <div className={styles.photoActions}>
       <button ref={uploadButton} type="button" className={`${styles.button} ${styles.small}`} disabled={disabled || busy} aria-label={`${current ? "Replace" : "Upload"} photo for ${name}`} onClick={() => input.current?.click()}>{current ? "Replace photo" : "Upload photo"}</button>
