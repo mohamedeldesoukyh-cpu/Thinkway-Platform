@@ -331,7 +331,7 @@ function resolvePlatformMetrics(
     platform: account.platform,
     followers: formatCreatorCount(account.follower_count ?? null),
     engagement: formatEngagementRate(account.engagement_rate ?? null),
-    views: "—",
+    views: formatCreatorCount(account.avg_views ?? null),
     profileUrl: resolveCreatorProfileUrl({
       platform: account.platform,
       handle: account.handle,
