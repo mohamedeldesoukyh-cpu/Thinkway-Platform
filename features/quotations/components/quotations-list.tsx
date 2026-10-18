@@ -49,7 +49,7 @@ import {
   type QuotationListFilterState,
 } from "../quotation-list-filters";
 import { countQuotationListCreators } from "../quotation-list-creators";
-import { quotationListClientCost } from "../quotation-list-commercial";
+import { quotationListClientCost, quotationListStatusTotals } from "../quotation-list-commercial";
 import type { QuotationFormOptions, QuotationListRow } from "../types";
 import {
   QuotationSelectionFlyout,
@@ -122,49 +122,20 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
   };
 
   const mastheadMetrics = useMemo(() => {
-    const draftCount = quotations.filter((row) => row.status === "draft").length;
-    const approvedCount = quotations.filter(
-      (row) => row.status === "approved"
-    ).length;
-    const clientCost = quotations.reduce(
-      (sum, row) => sum + quotationListClientCost(row),
-      0
-    );
-    const baseCost = quotations.reduce(
-      (sum, row) => sum + row.total_cost_egp,
-      0
-    );
-    const avgGp =
-      quotations.length > 0
-        ? quotations.reduce((sum, row) => sum + row.total_gp_pct, 0) /
-          quotations.length
-        : 0;
-    const creators = countQuotationListCreators(quotations);
-
+    const totals = quotationListStatusTotals(quotations);
+    const approved = totals.approved;
+    const detail = (field: "revenue" | "cost") => [
+      { label: "Under review", value: AB(totals.under_review[field]), tone: "y" as const },
+      { label: "Draft", value: AB(totals.draft[field]), tone: "s" as const },
+    ];
     return [
-      quotations.length > 0
-        ? { label: "Quotations", value: quotations.length }
-        : null,
-      draftCount > 0 ? { label: "Draft", value: draftCount } : null,
-      approvedCount > 0
-        ? { label: "Approved", value: approvedCount, tone: "g" as const }
-        : null,
-      { label: "Ccy", value: "EGP", tone: "s" as const },
-      clientCost > 0
-        ? { label: "Total Revenue", value: AB(clientCost), tone: "s" as const }
-        : null,
-      baseCost > 0
-        ? { label: "Base cost", value: AB(baseCost), tone: "s" as const }
-        : null,
-      quotations.length > 0
-        ? {
-            label: "Avg GP %",
-            value: `${avgGp.toFixed(1)}%`,
-            tone: "r" as const,
-          }
-        : null,
-      creators > 0 ? { label: "Creators", value: creators } : null,
-    ].filter((metric): metric is NonNullable<typeof metric> => metric !== null);
+      { label: "Quotations", value: quotations.length },
+      { label: "Approved", value: approved.count, tone: "g" as const },
+      { label: "Approved revenue · EGP", value: AB(approved.revenue), tone: "g" as const, details: detail("revenue") },
+      { label: "Approved cost · EGP", value: AB(approved.cost), details: detail("cost") },
+      { label: "Approved GP %", value: approved.revenue > 0 ? ((approved.revenue - approved.cost) / approved.revenue * 100).toFixed(1) + "%" : "—", tone: "g" as const },
+      { label: "Creators", value: countQuotationListCreators(quotations) },
+    ];
   }, [quotations]);
 
   const filteredCreatorCount = useMemo(
@@ -430,9 +401,10 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
 
   return (
     <div className="discovery-suite flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--tw-bg)]">
-      <div className="shrink-0 px-[22px] pt-[18px]">
+      <div className="shrink-0">
         <DiscoverySuiteMasthead
           title="Client quotations"
+          appearance="campaign"
           subtitle="Build, price and export influencer proposals for clients"
           metrics={mastheadMetrics}
           freezeOnScroll={false}

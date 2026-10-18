@@ -1,0 +1,17 @@
+
+.campaign.campaign { padding: 0; margin: 0; }
+.campaign.campaign :global(.tw-mast) { isolation: isolate; background: var(--wr-gradient, linear-gradient(135deg,#0040cc,#0057ff 45%,#1a6fff)); color: #fff; border: 0; border-radius: 0; box-shadow: none; }
+.campaign.campaign :global(.tw-mast)::before { display: none; }
+.campaign.campaign :global(.tw-mast)::after { content: ""; position: absolute; inset-inline-start: auto; inset-inline-end: -80px; top: -120px; width: 280px; height: 280px; border: 46px solid rgb(255 255 255 / 7%); border-radius: 50%; background: none; z-index: -1; pointer-events: none; }
+.campaign.campaign :global(.tw-mh) { padding: 16px; background: transparent; }
+.campaign.campaign :global(.tw-mh) h1 { color: #fff; font-size: 20px; }
+.campaign.campaign :global(.sub) { color: rgb(255 255 255 / 80%); }
+.campaign.campaign :global(.tw-ms2) { background: transparent; border-top: 1px solid rgb(255 255 255 / 16%); grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); }
+.campaign.campaign :global(.tw-ms2) > div { border-color: rgb(255 255 255 / 16%); padding: 10px 16px; }
+.campaign.campaign :global(.tw-ms2) i { color: #c9d8ff; }
+.campaign.campaign :global(.tw-ms2) b { color: #fff; font-size: 16px; }
+.campaign.campaign :global(.tw-ms2) b:global(.g) { color: #8ff0cb; }
+.campaign.campaign :global(.tw-jump) { padding-inline: 16px; }
+.detail { display: block; margin-top: 5px; font-size: 11px; line-height: 1.4; color: #d6e3ff; }
+.detail[data-tone="y"] { color: #ffe2ae; }
+@media(max-width:600px) { .campaign.campaign :global(.tw-ms2) { grid-template-columns: repeat(2,minmax(0,1fr)); } }

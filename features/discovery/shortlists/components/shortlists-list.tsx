@@ -295,8 +295,9 @@ export function ShortlistsList({ shortlists, brands = [] }: Props) {
 
   return (
     <div className="discovery-suite flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--tw-bg)]">
-      <div className="shrink-0 px-[22px] pt-[18px]">
+      <div className="shrink-0">
         <DiscoverySuiteMasthead
+          appearance="campaign"
           title="Shortlists"
           subtitle="Build, review, approve and move creators into campaigns"
           metrics={mastheadMetrics}
