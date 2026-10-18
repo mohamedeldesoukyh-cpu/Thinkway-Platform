@@ -2,7 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 
 /** Called after shortlist ownership and edit-lock checks, using the authenticated RLS client. */
-export async function saveShortlistTemplatePhoto(supabase: SupabaseClient<Database>, id: string, itemId: string, form: FormData, row: {metadata: Record<string, unknown>; updated_at: string; status: Database["public"]["Tables"]["discovery_shortlists"]["Row"]["status"]}) {
+export async function saveShortlistTemplatePhoto(supabase: SupabaseClient<Database>, id: string, itemId: string, form: FormData, row: {metadata: Record<string, unknown> | null; updated_at: string; status: Database["public"]["Tables"]["discovery_shortlists"]["Row"]["status"]}) {
   const { data: item, error: itemError } = await supabase.from("discovery_shortlist_items").select("id").eq("shortlist_id", id).eq("id", itemId).maybeSingle();
   if (itemError || !item) return { ok: false as const, message: "Creator not found in this shortlist." };
   const { readQuotationTemplatePhotos, TEMPLATE_PHOTOS_KEY, TEMPLATE_PHOTO_MAX_BYTES } = await import("@/lib/quotations/quotation-template-photos");
