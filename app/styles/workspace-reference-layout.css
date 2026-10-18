@@ -200,7 +200,7 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
   /* Identity and description need a full row in the mobile assignment cards. */
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="creator"],
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="assignment"],
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="description"] { flex-basis: 100%; max-width: 100%; width: 100%; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="fullDescription"] { flex-basis: 100%; max-width: 100%; width: 100%; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] { position: static; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] button { min-height: 44px; }
 }
