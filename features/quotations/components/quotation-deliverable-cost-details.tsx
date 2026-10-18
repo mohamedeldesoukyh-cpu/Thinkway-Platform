@@ -518,7 +518,7 @@ export function QuotationDeliverableCostDetails({
       <DialogDescription className="quotation-cost-detail-panel__hint">
         Values stay when you close this panel. Click Save on the quotation to persist.
       </DialogDescription>
-      {onFxChange && <QuotationCreatorFxFields draft={resolveQuotationRowDraft(item, draft)} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} onChange={onFxChange} />}
+      {onFxChange && <QuotationCreatorFxFields compact draft={resolveQuotationRowDraft(item, draft)} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} onChange={onFxChange} />}
       <div
         ref={fieldsGridRef}
         className="quotation-cost-detail-panel__grid grid grid-cols-1 gap-x-3 gap-y-2.5 sm:grid-cols-3"
