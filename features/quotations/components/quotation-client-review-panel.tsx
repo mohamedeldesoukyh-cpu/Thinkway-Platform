@@ -1,3 +1,4 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { QuotationText } from "./quotation-design-locale";
 
 
@@ -101,18 +102,16 @@ export function QuotationClientReviewPanel({
                 onClick={onAcceptOnBehalf}
               >
                 <QuotationText>Mark approved by Thinkway</QuotationText></button>
-              <button
+              <Tooltip><TooltipTrigger asChild><button
                 type="button"
                 className="q-b q-b--sm q-b--pri"
                 disabled={pending || counts.accepted === 0}
                 onClick={onMoveApprovedToCampaign}
-                title={
-                  quotationApproved
-                    ? "Convert approved creators to the campaign"
-                    : "Approve this quotation first, then convert the approved creators"
-                }
+
               >
-                <QuotationText>Move approved to campaign</QuotationText></button>
+                <QuotationText>Move approved to campaign</QuotationText></button></TooltipTrigger><TooltipContent>
+                  {quotationApproved ? "Move approved uses only client-approved creators. To move your checked lines, use Move selected to campaign below." : "Approve this quotation first, then move the client-approved creators to the campaign."}
+                </TooltipContent></Tooltip>
             </>
           ) : null}
         </div>
@@ -139,10 +138,7 @@ export function QuotationClientReviewPanel({
             );
           })}
         </div>
-        <span className="q-sp" />
-        <span className="q-review-note">
-          Client approval is the client's decision. To move your checked lines from an approved quotation, use Move selected to campaign below. Move approved uses only client-approved creators.
-        </span>
+
       </div>
         {review.changeRequestSummary && <p className="q-review-note">{review.changeRequestSummary}</p>}
         <div

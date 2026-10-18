@@ -185,7 +185,7 @@ export function QuotationCommercialMetricsBand({
       </div>
       <div className="q-fin-group">
       <div className="q-finlbl"><s aria-hidden /><QuotationText>Client-facing</QuotationText></div>
-      <div className="q-m q-currency"><CommercialCurrencySelect label={translate("Display currency")} layout="metric" value={displayCurrency} onChange={onDisplayCurrencyChange ?? (() => undefined)} disabled={currencyDisabled || !onDisplayCurrencyChange} /></div>
+      <div className="q-m q-currency"><CommercialCurrencySelect appearance="header" label={translate("Display currency")} layout="metric" value={displayCurrency} onChange={onDisplayCurrencyChange ?? (() => undefined)} disabled={currencyDisabled || !onDisplayCurrencyChange} /></div>
       <MetricItem label="Client cost before agency fees" {...moneyParts(totalRevenueEgp - totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.revenue)} staged={hasDraftEdits} />
       <MetricItem label="Agency fees (AF)" {...moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.af)} staged={hasDraftEdits} />
       <MetricItem label="Total investment" value={client.value} unit={client.unit} original={originalLabels(originalTotals, "totalClientCost")} staged={hasDraftEdits} />
