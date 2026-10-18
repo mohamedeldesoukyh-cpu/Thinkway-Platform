@@ -34,7 +34,7 @@ import {
 } from "@/features/discovery/components/design-system";
 import { DISCOVERY_GRID_MIN_W } from "@/features/discovery/components/design-system/discovery-suite-cols";
 
-import { archiveQuotation } from "../actions";
+import { archiveQuotation, restoreQuotation } from "../actions";
 import { quotationDetailPath, QUOTATION_STATUS_LABELS } from "../constants";
 import {
   resolveBulkQuotationActions,
@@ -44,6 +44,7 @@ import {
 import {
   DEFAULT_QUOTATION_LIST_FILTERS,
   filterQuotationRows,
+  isArchivedQuotation,
   type QuotationListFilterState,
 } from "../quotation-list-filters";
 import { quotationListClientCost } from "../quotation-list-commercial";
@@ -93,7 +94,10 @@ function uniqueCreatorCount(rows: QuotationListRow[]): number {
   return names.size;
 }
 
-export function QuotationsList({ quotations, brands = [], formOptions }: Props) {
+export function QuotationsList({ quotations: allQuotations, brands = [], formOptions }: Props) {
+  const quotations = useMemo(() => allQuotations.filter((row) => !isArchivedQuotation(row)), [allQuotations]);
+  const archivedQuotations = useMemo(() => allQuotations.filter(isArchivedQuotation), [allQuotations]);
+  const [archivesOpen, setArchivesOpen] = useState(true);
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [filters, setFilters] = useState<QuotationListFilterState>(
@@ -106,6 +110,24 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
     () => filterQuotationRows(quotations, filters),
     [quotations, filters]
   );
+
+  const filteredArchives = useMemo(
+    () => filterQuotationRows(archivedQuotations, filters),
+    [archivedQuotations, filters]
+  );
+
+  const restoreRow = (id: string) => {
+    startTransition(async () => {
+      try {
+        const result = await restoreQuotation(id);
+        if (!result.ok) { toast.error(result.message ?? "Could not restore quotation."); return; }
+        toast.success("Quotation restored as draft.");
+        router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Could not restore quotation.");
+      }
+    });
+  };
 
   const mastheadMetrics = useMemo(() => {
     const draftCount = quotations.filter((row) => row.status === "draft").length;
@@ -230,6 +252,7 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
               (skipped > 0 ? ` ${skipped} skipped.` : "")
           );
           setSelectedIds(new Set());
+          setArchivesOpen(true);
           router.refresh();
         } else {
           toast.error(lastError ?? "No quotations were updated.");
@@ -250,10 +273,10 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
   const showFloatingBar = selectedCount > 0;
   const cardSubtitle = `${quotations.length} total · newest first`;
 
-  const header = (
+  const renderHeader = (archived = false) => (
     <>
       <DiscoverySuiteCell>
-        <input
+        {!archived && <input
           type="checkbox"
           className="tw-ck"
           checked={allSelected}
@@ -267,7 +290,7 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
           }
           aria-label="Select all quotations"
           disabled={isPending}
-        />
+        />}
       </DiscoverySuiteCell>
       <DiscoverySuiteCell>Serial</DiscoverySuiteCell>
       <DiscoverySuiteCell>Quotation</DiscoverySuiteCell>
@@ -309,6 +332,95 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
       <DiscoverySuiteCell />
     </>
   );
+
+  const renderRows = (rows: QuotationListRow[], archived = false) =>
+    rows.map((row, index) => {
+      const serial = formatDocumentNumberForDisplay(row.serial_number ?? row.id);
+      const isSelected = effectiveSelectedIds.has(row.id);
+      const brand = row.brand_name?.trim() ?? "";
+      const client = row.client_name?.trim() ?? "";
+      const ownerLabel = row.owner_name ?? "—";
+      const statusLabel =
+        archived ? "Archived" : (QUOTATION_STATUS_LABELS[row.status] ?? row.status);
+
+      return (
+        <DiscoverySuiteRow key={row.id} selected={isSelected}>
+          <DiscoverySuiteCell>
+            {!archived && <input
+              type="checkbox"
+              className="tw-ck"
+              checked={isSelected}
+              onChange={(event) =>
+                setSelectedIds((prev) =>
+                  toggleItemSelection(prev, row.id, event.target.checked)
+                )
+              }
+              aria-label={`Select ${serial}`}
+              disabled={isPending}
+            />}
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell className="tw-id">{serial}</DiscoverySuiteCell>
+          <DiscoverySuiteCell>
+            <Link href={quotationDetailPath(row)} className="tw-nm quotation-register-name">
+              {row.name}
+            </Link>
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell className={brand ? "tw-br" : "tw-miss"}>
+            {brand || "not set"}
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell>
+            <span className="tw-t quotation-register-client" title={client || undefined}>
+              {client || "—"}
+            </span>
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell>
+            <span
+              className={cn(
+                "tw-p",
+                row.status === "approved" ? "p-g" : "p-n"
+              )}
+            >
+              {statusLabel}
+            </span>
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell>
+            <ClientWorkspaceListLinkCell
+              campaignName={row.name}
+              source="quotation"
+              id={row.id}
+              link={row.client_workspace_link}
+            />
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell>
+            <span className="tw-cw2" style={{ gap: 7 }}>
+              <span
+                className={cn("tw-av", ownerTone(index))}
+                style={{ width: 22, height: 22, fontSize: 9 }}
+              >
+                {ini(ownerLabel).slice(0, 1)}
+              </span>
+              <span className="tw-t">{ownerLabel}</span>
+            </span>
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell className="tw-v" align="end">
+            {row.item_count}
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell className="tw-v" align="end">
+            {F(quotationListClientCost(row))}
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell className="tw-act quotation-register-actions" align="end">
+            {archived ? (
+              <button type="button" className="tw-b sm" disabled={isPending}
+                aria-label={`Restore ${serial}`} title="Restore quotation as draft"
+                onClick={() => restoreRow(row.id)}>Restore</button>
+            ) : null}
+            <Link href={quotationDetailPath(row)} className="tw-b sm">
+              Open
+            </Link>
+          </DiscoverySuiteCell>
+        </DiscoverySuiteRow>
+      );
+    });
 
   return (
     <div className="discovery-suite flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--tw-bg)]">
@@ -383,94 +495,35 @@ export function QuotationsList({ quotations, brands = [], formOptions }: Props) 
               cols="quotations"
               minWidth={QUOTATIONS_MIN_W}
               framed={false}
-              header={header}
+              header={renderHeader()}
               footer={footer}
             >
-              {filteredQuotations.map((row, index) => {
-                const serial = formatDocumentNumberForDisplay(row.serial_number ?? row.id);
-                const isSelected = effectiveSelectedIds.has(row.id);
-                const brand = row.brand_name?.trim() ?? "";
-                const client = row.client_name?.trim() ?? "";
-                const ownerLabel = row.owner_name ?? "—";
-                const statusLabel =
-                  QUOTATION_STATUS_LABELS[row.status] ?? row.status;
-
-                return (
-                  <DiscoverySuiteRow key={row.id} selected={isSelected}>
-                    <DiscoverySuiteCell>
-                      <input
-                        type="checkbox"
-                        className="tw-ck"
-                        checked={isSelected}
-                        onChange={(event) =>
-                          setSelectedIds((prev) =>
-                            toggleItemSelection(prev, row.id, event.target.checked)
-                          )
-                        }
-                        aria-label={`Select ${serial}`}
-                        disabled={isPending}
-                      />
-                    </DiscoverySuiteCell>
-                    <DiscoverySuiteCell className="tw-id">{serial}</DiscoverySuiteCell>
-                    <DiscoverySuiteCell>
-                      <Link href={quotationDetailPath(row)} className="tw-nm quotation-register-name">
-                        {row.name}
-                      </Link>
-                    </DiscoverySuiteCell>
-                    <DiscoverySuiteCell className={brand ? "tw-br" : "tw-miss"}>
-                      {brand || "not set"}
-                    </DiscoverySuiteCell>
-                    <DiscoverySuiteCell>
-                      <span className="tw-t quotation-register-client" title={client || undefined}>
-                        {client || "—"}
-                      </span>
-                    </DiscoverySuiteCell>
-                    <DiscoverySuiteCell>
-                      <span
-                        className={cn(
-                          "tw-p",
-                          row.status === "approved" ? "p-g" : "p-n"
-                        )}
-                      >
-                        {statusLabel}
-                      </span>
-                    </DiscoverySuiteCell>
-                    <DiscoverySuiteCell>
-                      <ClientWorkspaceListLinkCell
-                        campaignName={row.name}
-                        source="quotation"
-                        id={row.id}
-                        link={row.client_workspace_link}
-                      />
-                    </DiscoverySuiteCell>
-                    <DiscoverySuiteCell>
-                      <span className="tw-cw2" style={{ gap: 7 }}>
-                        <span
-                          className={cn("tw-av", ownerTone(index))}
-                          style={{ width: 22, height: 22, fontSize: 9 }}
-                        >
-                          {ini(ownerLabel).slice(0, 1)}
-                        </span>
-                        <span className="tw-t">{ownerLabel}</span>
-                      </span>
-                    </DiscoverySuiteCell>
-                    <DiscoverySuiteCell className="tw-v" align="end">
-                      {row.item_count}
-                    </DiscoverySuiteCell>
-                    <DiscoverySuiteCell className="tw-v" align="end">
-                      {F(quotationListClientCost(row))}
-                    </DiscoverySuiteCell>
-                    <DiscoverySuiteCell className="tw-act" align="end">
-                      <Link href={quotationDetailPath(row)} className="tw-b sm">
-                        Open
-                      </Link>
-                    </DiscoverySuiteCell>
-                  </DiscoverySuiteRow>
-                );
-              })}
+              {renderRows(filteredQuotations)}
             </DiscoverySuiteGrid>
           )}
         </div>
+        <section className="tw-c mt-5" aria-label="Archived quotations">
+          <button type="button" className="tw-ch w-full text-left"
+            aria-expanded={archivesOpen} aria-controls="quotation-archives"
+            onClick={() => setArchivesOpen((open) => !open)}>
+            <span className="tw-ct">Archives</span>
+            <span className="tw-cs">{filteredArchives.length} of {archivedQuotations.length} quotations</span>
+            <span className="tw-sp" />
+            <span aria-hidden="true">{archivesOpen ? "▾" : "▸"}</span>
+          </button>
+          <div id="quotation-archives" hidden={!archivesOpen}>
+            {filteredArchives.length === 0 ? (
+              <p className="p-4 text-sm text-muted-foreground">
+                {archivedQuotations.length === 0 ? "Archived quotations will appear here. Restore a quotation to return it to the active list as a draft." : "No archived quotations match your filters."}
+              </p>
+            ) : (
+              <DiscoverySuiteGrid cols="quotations" minWidth={QUOTATIONS_MIN_W}
+                framed={false} header={renderHeader(true)}>
+                {renderRows(filteredArchives, true)}
+              </DiscoverySuiteGrid>
+            )}
+          </div>
+        </section>
       </div>
 
       <QuotationSelectionFlyout

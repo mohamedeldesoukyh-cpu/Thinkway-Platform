@@ -20,6 +20,7 @@ import {
   addManualQuotationItem as addManualQuotationItemService,
   addShortlistCreatorsToQuotation as addShortlistCreatorsToQuotationService,
   archiveQuotation as archiveQuotationService,
+  restoreQuotation as restoreQuotationService,
   createBlankQuotation as createBlankQuotationService,
   createQuotationFromSelection as createQuotationFromSelectionService,
   createQuotationFromShortlist as createQuotationFromShortlistService,
@@ -592,4 +593,12 @@ export async function getInfluencerQuotationPriceReferenceAction(
   );
   const reference = await getQuotationPriceReferenceForInfluencer(actor.supabase, influencerId);
   return { ok: true, data: { reference } };
+}
+
+export async function restoreQuotation(id: string): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const result = await restoreQuotationService(actor.supabase, id);
+  if (result.ok) revalidate(id);
+  return result;
 }

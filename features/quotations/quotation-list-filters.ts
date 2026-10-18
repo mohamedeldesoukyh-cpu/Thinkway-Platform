@@ -51,3 +51,8 @@ export function filterQuotationRows(
     return haystack.includes(query);
   });
 }
+
+/** Both historical archive representations belong in Archives. */
+export function isArchivedQuotation(row: Pick<QuotationListRow, "is_archived" | "status">): boolean {
+  return row.is_archived || row.status === "archived";
+}

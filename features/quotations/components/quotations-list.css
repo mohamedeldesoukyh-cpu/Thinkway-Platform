@@ -8,3 +8,8 @@
   overflow-wrap: anywhere;
   text-overflow: clip;
 }
+
+.discovery-suite .quotation-register-actions {
+  flex-wrap: wrap;
+  gap: 4px;
+}
