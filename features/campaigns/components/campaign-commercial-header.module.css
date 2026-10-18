@@ -39,6 +39,7 @@
 .currency { font-size: 10.5px; font-weight: 600; color: rgb(255 255 255 / 78%); margin-inline-end: 3px; }
 .cells b.positive { color: #8ff0cb; }
 .cells b.negative { color: #ffc2c2; }
+.cells b.negative .currency { color: inherit; }
 .cells b.amber { color: #ffe2ae; }
 .cells [data-slot="select-trigger"] { width: 90px !important; min-width: 90px !important; max-width: 100%; min-height: 36px; padding: 4px 8px !important; white-space: nowrap !important; color: #111827; background: #fff; }
 .cells [data-slot="select-value"] { white-space: nowrap !important; overflow-wrap: normal; }
