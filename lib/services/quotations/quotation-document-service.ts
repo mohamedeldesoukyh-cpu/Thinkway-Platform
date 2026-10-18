@@ -191,7 +191,7 @@ export async function getQuotationsList(
     .from("quotations")
     .select(
       `id, serial_number, name, status, shortlist_id, is_archived,
-       owner_id, client_id, brand_id,
+       owner_id, client_id, brand_id, campaign_header_id,
        total_cost_egp, total_revenue_egp, total_gp_value_egp, total_gp_pct,
        total_af_egp, issue_date, validity_date, version,
        created_at, updated_at,
@@ -217,6 +217,7 @@ export async function getQuotationsList(
       client_name: unwrap(row.clients as { name: string } | null)?.name ?? null,
       brand_id: (row.brand_id as string | null) ?? null,
       brand_name: unwrap(row.brands as { name: string } | null)?.name ?? null,
+      campaign_header_id: (row.campaign_header_id as string | null) ?? null,
       campaign_name:
         unwrap(row.campaign_headers as { name: string } | null)?.name ?? null,
       shortlist_id: (row.shortlist_id as string | null) ?? null,

@@ -13,6 +13,7 @@ import {
   writeListNavContext,
 } from "@/lib/navigation/list-nav-context";
 import { cn } from "@/lib/utils";
+import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import { AB, F, ini } from "@/lib/discovery/suite/helpers";
 
 import {
@@ -55,7 +56,7 @@ import {
 } from "./quotation-selection-flyout";
 import { QuotationListFilterBar } from "./quotation-list-filter-bar";
 
-/** Pack min-width — 03-quotations.md `grid(C, 1300, …)`. */
+/** Keep the register readable with its campaign conversion column. */
 const QUOTATIONS_MIN_W = DISCOVERY_GRID_MIN_W.quotations ?? 1300;
 
 const LIST_ACTION_RUNNERS: Record<
@@ -297,6 +298,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
       <DiscoverySuiteCell>Brand</DiscoverySuiteCell>
       <DiscoverySuiteCell>Client</DiscoverySuiteCell>
       <DiscoverySuiteCell>Status</DiscoverySuiteCell>
+      <DiscoverySuiteCell>Campaign</DiscoverySuiteCell>
       <DiscoverySuiteCell>Client link</DiscoverySuiteCell>
       <DiscoverySuiteCell>Owner</DiscoverySuiteCell>
       <DiscoverySuiteCell className="tw-rr" align="end">
@@ -318,6 +320,7 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
       <DiscoverySuiteCell>
         {filteredQuotations.length} of {quotations.length} shown
       </DiscoverySuiteCell>
+      <DiscoverySuiteCell />
       <DiscoverySuiteCell />
       <DiscoverySuiteCell />
       <DiscoverySuiteCell />
@@ -382,6 +385,20 @@ export function QuotationsList({ quotations: allQuotations, brands = [], formOpt
             >
               {statusLabel}
             </span>
+          </DiscoverySuiteCell>
+          <DiscoverySuiteCell>
+            {row.campaign_header_id ? (
+              <Link
+                href={campaignDetailPath(row.campaign_header_id)}
+                className="tw-p p-g"
+                title={row.campaign_name ? `Open campaign: ${row.campaign_name}` : "Open linked campaign"}
+                aria-label={`Moved to campaign: ${row.campaign_name || row.name}`}
+              >
+                Moved ↗
+              </Link>
+            ) : (
+              <span className="tw-p p-n">Not moved</span>
+            )}
           </DiscoverySuiteCell>
           <DiscoverySuiteCell>
             <ClientWorkspaceListLinkCell
