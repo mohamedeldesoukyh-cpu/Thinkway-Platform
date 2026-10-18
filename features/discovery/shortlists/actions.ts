@@ -1,5 +1,6 @@
 "use server";
 
+import { readRecommendationIds } from "@/lib/creators/shortlist-recommendations";
 import { revalidatePath } from "next/cache";
 
 import { getAuthContext, requirePermission } from "@/lib/auth/permissions-server";
@@ -1849,6 +1850,33 @@ export async function setShortlistCreatorOrder(id: string, order: string[]): Pro
   const metadata = { ...row.metadata };
   if (order.length) metadata.creatorListOrder = order;
   else delete metadata.creatorListOrder;
+  const { data, error } = await actor.supabase.from("discovery_shortlists")
+    .update({ metadata: metadata as Database["public"]["Tables"]["discovery_shortlists"]["Update"]["metadata"] })
+    .eq("id", id).eq("updated_at", row.updated_at).eq("status", row.status).eq("is_archived", false).select("id").maybeSingle();
+  if (error) return { ok: false, message: error.message };
+  if (!data) return { ok: false, message: "The shortlist changed. Refresh and try again." };
+  revalidateShortlist(id);
+  revalidatePath("/discovery/shortlists/[id]", "layout");
+  return { ok: true };
+}
+
+/** Recommendation rank is shortlist presentation metadata, never client approval. */
+export async function setShortlistCreatorRecommendation(id: string, itemId: string, starred: boolean): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  if (typeof itemId !== "string" || typeof starred !== "boolean") return { ok: false, message: "Invalid recommendation." };
+  const row = await loadShortlistRow(actor.supabase, id);
+  if (!row) return { ok: false, message: "Shortlist not found." };
+  const access = await assertCanManageShortlist(actor.supabase, row, actor.userId);
+  if (!access.ok) return access;
+  if (row.is_archived || !canEditCreators(row.status)) return { ok: false, message: "This shortlist is locked for editing." };
+  const { data: items, error: itemsError } = await actor.supabase.from("discovery_shortlist_items").select("id").eq("shortlist_id", id);
+  if (itemsError) return { ok: false, message: itemsError.message };
+  const ids = new Set((items ?? []).map(item => item.id));
+  if (!ids.has(itemId)) return { ok: false, message: "Creator not found in this shortlist." };
+  const recommendations = readRecommendationIds(row.metadata).filter(item => ids.has(item));
+  const next = starred ? [...new Set([...recommendations, itemId])] : recommendations.filter(item => item !== itemId);
+  const metadata = { ...row.metadata, recommendedCreatorIds: next };
   const { data, error } = await actor.supabase.from("discovery_shortlists")
     .update({ metadata: metadata as Database["public"]["Tables"]["discovery_shortlists"]["Update"]["metadata"] })
     .eq("id", id).eq("updated_at", row.updated_at).eq("status", row.status).eq("is_archived", false).select("id").maybeSingle();

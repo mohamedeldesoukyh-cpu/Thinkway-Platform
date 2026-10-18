@@ -45,6 +45,7 @@ export type ShortlistCreatorQuotationRef = {
 };
 
 export type ShortlistCreatorItem = {
+  recommendationRank?: number;
   item_id: string;
   item_status: ShortlistItemStatus;
   notes: string | null;

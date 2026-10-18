@@ -1,3 +1,4 @@
+import { compareRecommendations } from "@/lib/creators/shortlist-recommendations";
 import { orderCreatorGroups } from "@/lib/quotations/quotation-creator-order";
 import { compareClientListCreators } from "@/lib/creators/client-list-order";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
@@ -12,6 +13,9 @@ export function orderWorkspaceCreators(creators: ClientCreatorCard[], customOrde
       ? resolveCreatorTierLabel({ followers: Math.max(...counts) })
       : resolveCreatorTierLabel({ role: creator.tier }),
     followers: Math.max(0, primary, ...counts) };
-  }).sort(compareClientListCreators).map(({ creator }) => creator);
+  }).sort((a, b) => {
+    const manual = (a.creator.shortlistOrderIndex ?? Number.MAX_SAFE_INTEGER) - (b.creator.shortlistOrderIndex ?? Number.MAX_SAFE_INTEGER);
+    return manual || compareRecommendations(a.creator, b.creator) || compareClientListCreators(a, b);
+  }).map(({ creator }) => creator);
   return orderCreatorGroups(automatic, customOrder, creator => (creator.quotationOptions ?? []).flatMap(option => [option.itemId, ...(option.memberItemIds ?? [])]));
 }

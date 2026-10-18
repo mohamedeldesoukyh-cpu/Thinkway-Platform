@@ -1008,6 +1008,8 @@ export function ShortlistWorkspace({
               />
             ) : (
               <ShortlistCreatorList
+                shortlistId={detail.id}
+                canRecommend={selectable}
                 key={detail.creatorOrder?.join(",")}
                 items={displayCreators}
                 selectedIds={effectiveSelectedIds}

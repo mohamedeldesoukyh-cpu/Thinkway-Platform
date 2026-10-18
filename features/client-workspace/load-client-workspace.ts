@@ -1,3 +1,5 @@
+import { recommendationRank } from "@/lib/creators/shortlist-recommendations";
+import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
 import { applyQuotationWorkspacePhotos } from "@/lib/quotations/quotation-workspace-photos";
 import { entranceState } from "./entrance-presentation";
 import { loadCommercialIoSnapshot } from "./load-commercial-io";
@@ -826,6 +828,17 @@ export async function loadClientWorkspace(
 
   view = applyEntitlementToView(view, entitlementForView.entitlement);
   view.commercialIo = commercialSnapshot;
+  const recommendationShortlistId = view.journey?.shortlistId ?? activeReview.shortlistId;
+  if (!picked.historical && service && recommendationShortlistId) {
+    const { data: recommendationHeader } = await service.from("discovery_shortlists").select("metadata").eq("id", recommendationShortlistId).maybeSingle();
+    if (recommendationHeader) {
+      const order = readCreatorListOrder(recommendationHeader.metadata);
+      view.creators = view.creators.map(creator => ({ ...creator,
+        recommendationRank: creator.shortlistItemId ? recommendationRank(recommendationHeader.metadata, creator.shortlistItemId) : creator.recommendationRank,
+        shortlistOrderIndex: creator.shortlistItemId && order.includes(creator.shortlistItemId) ? order.indexOf(creator.shortlistItemId) : undefined,
+      }));
+    }
+  }
   const creatorPhotos = (displayFlags as ClientWorkspaceDisplayFlags).creatorPhotoOverrides;
   view.creators = applyQuotationWorkspacePhotos(orderWorkspaceCreators(view.creators, (displayFlags as ClientWorkspaceDisplayFlags).creatorListOrder), creatorPhotos);
   if (view.currentCampaignCreators) {

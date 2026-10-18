@@ -1,3 +1,4 @@
+import { compareRecommendations } from "@/lib/creators/shortlist-recommendations";
 import type { ShortlistCreatorItem } from "./types";
 import { compareClientListCreators } from "@/lib/creators/client-list-order";
 import { resolveCreatorTierFromUnified } from "@/lib/creators/creator-tier";
@@ -5,7 +6,7 @@ import { resolveSortFollowers } from "@/features/discovery/components/creator-se
 import { orderCreatorGroups } from "@/lib/quotations/quotation-creator-order";
 
 export function orderShortlistCreators(items: ShortlistCreatorItem[], order: string[] = []) {
-  return orderCreatorGroups(items, order, item => [item.item_id]);
+  return orderCreatorGroups([...items].sort(compareRecommendations), order, item => [item.item_id]);
 }
 export function tierOrderShortlistCreators(items: ShortlistCreatorItem[]) {
   return [...items].sort((a, b) => compareClientListCreators(

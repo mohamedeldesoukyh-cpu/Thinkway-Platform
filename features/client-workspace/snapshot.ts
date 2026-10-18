@@ -270,6 +270,8 @@ export function parseSnapshotCreator(row: Record<string, unknown>): ClientReview
     historical: parseHistorical(row.historical),
     influencerId: asString(row.influencerId),
     shortlistItemId: asString(row.shortlistItemId),
+    recommendationRank: typeof row.recommendationRank === "number" && row.recommendationRank > 0 ? row.recommendationRank : undefined,
+    shortlistOrderIndex: typeof row.shortlistOrderIndex === "number" && row.shortlistOrderIndex >= 0 ? row.shortlistOrderIndex : undefined,
     profileId: asString(row.profileId),
     unifiedId: asString(row.unifiedId),
     briefFrozenAt: asString(row.briefFrozenAt),

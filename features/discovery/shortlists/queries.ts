@@ -1,3 +1,4 @@
+import { recommendationRank } from "@/lib/creators/shortlist-recommendations";
 import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
 import { orderShortlistCreators } from "./shortlist-creator-order";
 import "server-only";
@@ -624,7 +625,7 @@ export async function getShortlistDetail(
     is_archived: row.is_archived,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    creators: orderShortlistCreators(creators, readCreatorListOrder(row.metadata)),
+    creators: orderShortlistCreators(creators.map(item => ({ ...item, recommendationRank: recommendationRank(row.metadata, item.item_id) })), readCreatorListOrder(row.metadata)),
     creatorOrder: readCreatorListOrder(row.metadata),
     movements,
     movedAssignments,

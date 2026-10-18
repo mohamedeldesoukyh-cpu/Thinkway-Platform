@@ -538,6 +538,7 @@ export function CreatorsWorkspace({
               <div className="body">
                 <div className="cw-row-identity">
                   <div className="nm" dir="auto">{identity.name}</div>
+                  {creator.recommendationRank ? <span className="text-xs font-semibold text-amber-700" title="Highly recommended">★ {creator.recommendationRank} · Recommended</span> : null}
                   {sub ? <div className="sub">{sub}</div> : null}
                 </div>
                 <div className="cw-row-reach"><span className="cw-field-label">Followers</span>
