@@ -313,7 +313,7 @@ export function ClientProfile({
 
   return (
     <ClientProfilePlatformProvider platformV6>
-      <div className="client-detail-suite">
+      <div className="client-detail-suite client-profile-page">
         <Tabs
           value={activeTab}
           onValueChange={handleTabChange}
@@ -322,14 +322,9 @@ export function ClientProfile({
           <div className="tw-frozen">
             <div className="tw-mast">
               <div className="tw-mh">
-                <Link href="/clients" className="tw-hmk" aria-label="Back to clients">
-                  <i />
-                  <u />
+                <Link href="/clients" className="tw-b sm client-back">
+                  ← Back to clients
                 </Link>
-                <span className="tw-hwd">
-                  THINK<em>WAY</em>
-                </span>
-                <span className="tw-hdv" />
                 <span className="id">
                   <DocumentNumber value={clientRecord.document_number} />
                 </span>

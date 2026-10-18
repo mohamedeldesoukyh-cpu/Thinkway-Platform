@@ -326,3 +326,25 @@
   box-shadow:0 0 0 3px rgba(0,87,255,.08),0 2px 14px -3px rgba(0,87,255,.4);
   background:#fff;
 }
+
+/* Client profile: full-width content with a single page scroll on small screens. */
+.workspace-redesign .client-profile-page .tw-mh { padding: 14px 20px; gap: 10px; }
+.workspace-redesign .client-profile-page .tw-mh h1 { min-width: 0; overflow-wrap: anywhere; }
+.workspace-redesign .client-profile-page .tw-main { max-width: none; margin: 0; padding: 0 20px 32px; }
+.workspace-redesign .client-profile-page .tw-step2 { margin: 0 20px 12px; width: auto; overflow-x: auto; }
+.workspace-redesign .client-profile-page .tw-sb { flex-shrink: 0; }
+.workspace-redesign .client-profile-page .wr-metrics-band { padding-inline: 20px; }
+.workspace-redesign .client-profile-page .wr-metrics-cells > div { padding: 10px 20px; }
+.workspace-redesign .client-profile-page .client-back { text-decoration: none; }
+@media (max-width: 767px) {
+  .workspace-redesign .client-profile-page { overflow-y: auto; overflow-x: hidden; }
+  .workspace-redesign .client-profile-page > [data-slot="tabs"] { flex: none; overflow: visible; }
+  .workspace-redesign .client-profile-page .tw-frozen { position: static; display: block; max-height: none; overflow: visible; flex: none; }
+  .workspace-redesign .client-profile-page .tw-frozen > .tw-mast { overflow: hidden; flex: none; }
+  .workspace-redesign .client-profile-page .tw-mh { padding: 12px 16px; }
+  .workspace-redesign .client-profile-page .tw-mh .sub { flex-basis: 100%; }
+  .workspace-redesign .client-profile-page .tw-main { flex: none; overflow: visible; padding: 0 16px 24px; }
+  .workspace-redesign .client-profile-page .tw-step2 { margin-inline: 16px; }
+  .workspace-redesign .client-profile-page .wr-metrics-cells > div { flex: 1 1 33%; min-width: 0; padding: 8px 12px; }
+  .workspace-redesign .client-profile-page .wr-metrics-private .wr-metrics-cells > div { flex-basis: 50%; }
+}
