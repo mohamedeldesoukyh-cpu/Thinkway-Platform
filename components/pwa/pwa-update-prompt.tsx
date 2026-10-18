@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { readWaitingWorkerBuild } from "@/lib/release/waiting-worker-build";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,7 +44,7 @@ function isClientReviewPath(pathname: string): boolean {
 export function PwaUpdatePrompt() {
   const [open, setOpen] = useState(false);
   const registrationRef = useRef<ServiceWorkerRegistration | null>(null);
-  const waitingBuildRef = useRef<string>("waiting");
+  const waitingBuildRef = useRef<string | null>(null);
   const reloadingRef = useRef(false);
 
   useEffect(() => {
@@ -56,6 +57,8 @@ export function PwaUpdatePrompt() {
     }
 
     let cancelled = false;
+    let removeUpdateListener = () => {};
+    const watched = new WeakSet<ServiceWorker>();
 
     const onControllerChange = () => {
       let userRequested = false;
@@ -77,27 +80,30 @@ export function PwaUpdatePrompt() {
       onControllerChange,
     );
 
-    const promptIfWaiting = (registration: ServiceWorkerRegistration) => {
+    const promptIfWaiting = async (registration: ServiceWorkerRegistration) => {
       const waiting = registration.waiting;
       if (!waiting) return;
-      const buildKey = waiting.scriptURL || "waiting";
-      waitingBuildRef.current = buildKey;
-      if (readDismissedBuild() === buildKey) return;
+
       if (!navigator.serviceWorker.controller) {
         // First install — activate quietly, no modal, no reload.
         waiting.postMessage({ type: "SKIP_WAITING" });
         return;
       }
+      const buildKey = await readWaitingWorkerBuild(waiting);
+      if (cancelled || registration.waiting !== waiting) return;
+      waitingBuildRef.current = buildKey;
+      if (buildKey && readDismissedBuild() === buildKey) return;
       registrationRef.current = registration;
-      if (!cancelled) setOpen(true);
+      setOpen(true);
     };
 
     const watchInstalling = (registration: ServiceWorkerRegistration) => {
       const installing = registration.installing;
-      if (!installing) return;
+      if (!installing || watched.has(installing)) return;
+      watched.add(installing);
       installing.addEventListener("statechange", () => {
         if (installing.state === "installed") {
-          promptIfWaiting(registration);
+          void promptIfWaiting(registration);
         }
       });
     };
@@ -105,25 +111,30 @@ export function PwaUpdatePrompt() {
     void navigator.serviceWorker.ready.then((registration) => {
       if (cancelled) return;
       registrationRef.current = registration;
-      promptIfWaiting(registration);
-      registration.addEventListener("updatefound", () => {
-        watchInstalling(registration);
-      });
+      void promptIfWaiting(registration);
+      watchInstalling(registration);
+      const onUpdateFound = () => watchInstalling(registration);
+      registration.addEventListener("updatefound", onUpdateFound);
+      removeUpdateListener = () => registration.removeEventListener("updatefound", onUpdateFound);
+      void registration.update().catch(() => {});
     });
 
     const checkUpdate = () => {
-      void registrationRef.current?.update().catch(() => {});
+      if (document.visibilityState !== "visible") return;
+      const registration = registrationRef.current;
+      if (!registration) return;
+      void registration.update().then(() => promptIfWaiting(registration)).catch(() => {});
     };
-    const interval = window.setInterval(checkUpdate, 15 * 60 * 1000);
+    const interval = window.setInterval(checkUpdate, 60 * 1000);
     window.addEventListener("focus", checkUpdate);
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible") checkUpdate();
-    });
+    document.addEventListener("visibilitychange", checkUpdate);
 
     return () => {
       cancelled = true;
       window.clearInterval(interval);
       window.removeEventListener("focus", checkUpdate);
+      document.removeEventListener("visibilitychange", checkUpdate);
+      removeUpdateListener();
       navigator.serviceWorker.removeEventListener(
         "controllerchange",
         onControllerChange,
@@ -132,14 +143,15 @@ export function PwaUpdatePrompt() {
   }, []);
 
   const handleLater = () => {
-    writeDismissedBuild(waitingBuildRef.current);
+    if (waitingBuildRef.current) writeDismissedBuild(waitingBuildRef.current);
     setOpen(false);
   };
 
   const handleUpdateNow = () => {
     const waiting = registrationRef.current?.waiting;
     if (!waiting) {
-      setOpen(false);
+      // Another tab may already have activated the release. This click still requests it.
+      window.location.reload();
       return;
     }
     try {
