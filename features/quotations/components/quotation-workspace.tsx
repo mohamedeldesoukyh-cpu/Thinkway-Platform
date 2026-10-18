@@ -886,7 +886,7 @@ function QuotationWorkspaceContent({
         </div>
       )}
 
-      <section className="sec">
+      <section className="sec q-document-details">
         <div className="cols2">
           <div>
             <div className="subh"><QuotationText>Document details</QuotationText></div>
@@ -1026,7 +1026,7 @@ function HeaderNotes({ detail }: { detail: QuotationDetail }) {
       <Textarea
         id="quotation-notes"
         readOnly={!detail.canManage}
-        rows={9}
+        rows={3}
         className="notes-ta"
         value={notes}
         onChange={(e) => {
