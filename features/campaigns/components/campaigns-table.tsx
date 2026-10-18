@@ -169,7 +169,8 @@ function datesCell(campaign: CampaignListItem) {
     start && end && start !== end ? `${start}–${end}` : start || end;
   return (
     <span className="tw-d" title={label}>
-      {label}
+      <span>{start || end}</span>
+      {start && end && start !== end ? <span>– {end}</span> : null}
     </span>
   );
 }

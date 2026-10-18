@@ -205,7 +205,7 @@ export function ClientWorkspaceListLinkCell({ source, id, link, campaignName }: 
           role="status"
           aria-label={statusLabel}
           title={statusLabel}
-        />
+        >{source === "campaign" ? (isActive ? "Active" : isNone ? "Not set" : "Off") : null}</span>
       </span>
       <ClientReviewShareDialog
         campaignName={campaignName}
