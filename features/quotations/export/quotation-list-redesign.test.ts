@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {creatorListWholeMoney,creatorListMoney,creatorListViews,creatorListDeliverableChips,buildRedesignedQuotationCreatorList} from './quotation-list-redesign';
 import type {QuotationDocument} from './quotation-document';
-import {quotationListPdfOptions} from './quotation-creator-list';
+import {buildQuotationCreatorListHtml,quotationListPdfOptions} from './quotation-creator-list';
 import {SHORTLIST_TEMPLATE_OPTIONS,resolveShortlistTemplate} from '@/features/discovery/shortlists/export/shortlist-template';
 assert.deepEqual(creatorListMoney('29,732.78 USD / 1,552,500.08 EGP'),{currency:'EGP',amount:'1,552,500.08',original:'29,732.78 USD'});
 assert.equal(creatorListViews('783,981'),'784K');
@@ -62,10 +62,19 @@ assert.ok(!buildRedesignedQuotationCreatorList({...many, template:"creator-list"
     {...group, creator:"Creator Beta", itemIds:["b"], highestPlatformTier:"Micro", platformMetrics:[]},
    ]} as unknown as QuotationDocument;
  const output=buildRedesignedQuotationCreatorList(shortlist);
- assert.ok(output.includes('class="report--shortlist"'));
+ assert.ok(output.includes('class="report--additions report--shortlist"'));
  assert.ok(output.indexOf('title="Creator Beta"') < output.indexOf('title="Creator Alpha"'), "Saved order overrides automatic tier order");
  assert.ok(output.includes('999K'), "Shortlist platform metrics survive without quoted deliverables");
  assert.ok(!output.includes('Rates pending'), "Do not invent quotation prices for shortlists");
- assert.ok(output.includes('Total average cost · EGP 12,345'));
+ assert.ok(!output.includes('Total average cost · EGP 12,345'));
+ assert.ok(output.includes('grid-row:span 4;grid-template-rows:subgrid'));
+ const named = {...shortlist,template:'client-list-by-name'} as QuotationDocument;
+ assert.ok(buildQuotationCreatorListHtml(named).includes('class="report--additions report--shortlist"'));
+ assert.deepEqual(quotationListPdfOptions(named),quotationListPdfOptions(shortlist));
+ const multi = {...shortlist,creatorGroups:[{...shortlist.creatorGroups[0],platformMetrics:[{platform:'youtube',followers:'58.1K',engagement:'1.30%',views:'21.7K'},{platform:'facebook',followers:'544.5K',engagement:'1.67%',views:'903.8K'}]}]} as QuotationDocument;
+ const metrics = buildQuotationCreatorListHtml(multi);
+ assert.ok(!metrics.includes('<span>youtube</span>'));
+ assert.ok(!metrics.includes('<span>facebook</span>'));
+ assert.ok(metrics.includes('class="aud-e">1.30%'));
  assert.deepEqual(quotationListPdfOptions(shortlist),quotationListPdfOptions({...shortlist,source:"quotation"}));
 }
