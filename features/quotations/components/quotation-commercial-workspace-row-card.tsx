@@ -164,7 +164,7 @@ export function QuotationCommercialWorkspaceRowCard({
         </div>
 
         <div className="cw-card-fields">
-          <div className="w-full min-w-0"><QuotationCreatorFxFields draft={row.draft} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} disabled={!canManage} onChange={patch => onStageDraft({ ...row.draft, ...patch })} /></div>
+          <div className="w-full min-w-0"><QuotationCreatorFxFields compact draft={row.draft} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} disabled={!canManage} onChange={patch => onStageDraft({ ...row.draft, ...patch })} /></div>
           {show("mode") ? (
             <div className="cw-field min-w-[128px]">
               <span className="cw-field-label">Mode</span>
