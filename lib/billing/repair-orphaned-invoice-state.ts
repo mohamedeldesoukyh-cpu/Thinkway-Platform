@@ -1,3 +1,4 @@
+import { loadClientAcceptedLineIds } from "./client-acceptance";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -502,6 +503,7 @@ export async function repairLinesBillingWithoutVendorIo(
       "partially_paid",
     ]);
 
+  const accepted = await loadClientAcceptedLineIds(supabase, (lines ?? []).map(line => ({ id: line.id, campaign_header_id: campaignHeaderId })));
   const repairedLineIds: string[] = [];
 
   for (const row of lines ?? []) {
@@ -511,7 +513,7 @@ export async function repairLinesBillingWithoutVendorIo(
       invoice_id: string | null;
     };
 
-    if (line.invoice_id) continue;
+    if (line.invoice_id || accepted.has(line.id)) continue;
 
     const { data: deliverables } = await supabase
       .from("assignment_deliverables")

@@ -17,8 +17,8 @@ export type InvoiceableDeliverableRef = {
   remaining_amount: number;
 };
 
-function rowHasVendorIo(row: Pick<OperationalBillingRow, "vendor_io_id" | "kind">): boolean {
-  return Boolean(row.vendor_io_id);
+function rowHasBillingApproval(row: Pick<OperationalBillingRow, "vendor_io_id" | "kind" | "client_io_approved">): boolean {
+  return Boolean(row.vendor_io_id) || row.client_io_approved === true;
 }
 
 function isRowOnPendingRegenerationInvoice(
@@ -105,7 +105,7 @@ export function hasRemainingInvoiceableRevenue(
 
 /** Shown when Invoice / Create invoice cannot proceed because no VIO-eligible remaining rows exist. */
 export const NO_INVOICEABLE_ELIGIBLE_ROWS_MESSAGE =
-  "There are no invoiceable eligible rows. Remaining billable assignments need an approved Vendor IO.";
+  "There are no invoiceable eligible rows. Remaining billable assignments need client acceptance before advance invoicing.";
 
 export function getRemainingInvoiceableDeliverables(
   rows: OperationalBillingRow[]
@@ -118,7 +118,7 @@ export function getRemainingInvoiceableDeliverables(
     const pricingMode = row.pricing_mode ?? "package";
     if (pricingMode !== "package") continue;
     if (rowBlockedForQueue(row)) continue;
-    if (!rowHasVendorIo(row)) continue;
+    if (!rowHasBillingApproval(row)) continue;
     if (!hasRemainingInvoiceableRevenue(row)) continue;
 
     results.push({
@@ -136,7 +136,7 @@ export function getRemainingInvoiceableDeliverables(
     if (pricingMode === "package" && row.kind !== "assignment") continue;
     if (rowBlockedForQueue(row)) continue;
     if (!hasRemainingInvoiceableRevenue(row)) continue;
-    if (row.kind === "assignment" && !rowHasVendorIo(row)) continue;
+    if (row.kind === "assignment" && !rowHasBillingApproval(row)) continue;
     if (seen.has(row.id)) continue;
 
     results.push({
@@ -153,7 +153,7 @@ export function getRemainingInvoiceableDeliverables(
 export function isAssignmentBillingEligible(row: OperationalBillingRow): boolean {
   if (row.kind !== "assignment") return false;
   if (rowBlockedForQueue(row)) return false;
-  if (!rowHasVendorIo(row)) return false;
+  if (!rowHasBillingApproval(row)) return false;
 
   const children = row.children ?? [];
   if (children.length > 0) {
@@ -177,11 +177,11 @@ export function sumRemainingInvoiceableRevenue(rows: OperationalBillingRow[]): n
   );
 }
 
-/** Billable assignment revenue only after Vendor IO exists (billing ops gate). */
+/** Client-accepted billable revenue, including advance billing before Vendor IO. */
 export function sumIoGatedAssignmentBillable(rows: OperationalBillingRow[]): number {
   return rows.reduce((sum, row) => {
     if (row.kind !== "assignment") return sum;
-    if (!rowHasVendorIo(row)) return sum;
+    if (!rowHasBillingApproval(row)) return sum;
     return sum + Number(row.billable_amount ?? 0);
   }, 0);
 }

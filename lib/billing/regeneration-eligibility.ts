@@ -8,6 +8,7 @@ import { hasExistingIoCoverage } from "@/lib/operations/io-coverage";
 const TERMINAL_BILLING = new Set(["void", "cancelled", "closed"]);
 
 export type RegenerationEligibilityInput = {
+  client_io_approved?: boolean;
   billing_status?: string | null;
   operational_status?: string | null;
   vendor_io_id?: string | null;
@@ -62,7 +63,7 @@ export function isLineFirstTimeInvoiceEligible(
     active_vendor_io_id: input.active_vendor_io_id,
     vendor_io_document_number: input.vendor_io_document_number,
   });
-  if (!hasIo) return false;
+  if (!hasIo && !input.client_io_approved) return false;
 
   return hasRegeneratableRevenue(input);
 }
@@ -172,7 +173,7 @@ export function isInvoiceLifecycleReopenable(
       vendor_io_id: input.vendor_io_id,
       active_vendor_io_id: input.active_vendor_io_id,
       vendor_io_document_number: input.vendor_io_document_number,
-    })
+    }) && !input.client_io_approved
   ) {
     return false;
   }
@@ -220,7 +221,7 @@ export function isAssignmentInvoiceSelectable(
     return canRegenerateInvoice(input);
   }
 
-  if (!hasIo) return false;
+  if (!hasIo && !input.client_io_approved) return false;
 
   if (!hasLineEverBeenInvoiced(input)) {
     return isLineFirstTimeInvoiceEligible(input);
@@ -249,7 +250,7 @@ export function canRegenerateInvoice(input: RegenerationEligibilityInput): boole
     vendor_io_document_number: input.vendor_io_document_number,
   });
 
-  if (!hasIo && !hasInvoiceLinkage(input)) return false;
+  if (!hasIo && !input.client_io_approved && !hasInvoiceLinkage(input)) return false;
 
   if (hasRegeneratableRevenue(input)) return true;
 

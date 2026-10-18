@@ -90,6 +90,7 @@ export function useOperationalInvoiceCreate(options?: {
     mode: InvoiceTargetMode;
     existingInvoiceId?: string;
     grouping?: "combined" | "separate";
+    payment?: Record<string, string>;
   }): boolean {
     if (submittingRef.current) return false;
     const resolved =
@@ -115,6 +116,9 @@ export function useOperationalInvoiceCreate(options?: {
       invoiceMode: input.mode,
       existingInvoiceId: input.existingInvoiceId,
     });
+    for (const key of ["due_date", "payment_milestone_id", "payment_event_date"]) {
+      if (input.payment?.[key]) formData.set(key, input.payment[key]);
+    }
     startTransition(() => {
       formData.set("invoice_grouping", input.grouping ?? "combined");
       formAction(formData);

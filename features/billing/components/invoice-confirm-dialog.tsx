@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
+import { InvoicePaymentFields } from "./invoice-payment-fields";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -47,7 +48,7 @@ type InvoiceConfirmDialogProps = {
   campaigns: InvoiceConfirmCampaignPreview[];
   appendableInvoices?: AppendableInvoiceOption[];
   pending?: boolean;
-  onConfirm: (mode: InvoiceTargetMode, existingInvoiceId?: string, grouping?: "combined" | "separate") => void;
+  onConfirm: (mode: InvoiceTargetMode, existingInvoiceId?: string, grouping?: "combined" | "separate", payments?: Record<string, Record<string, string>>) => void;
   separateCount?: number;
 };
 
@@ -68,6 +69,7 @@ function InvoiceConfirmDialogSession({
   onConfirm,
   separateCount = 0,
 }: InvoiceConfirmDialogProps) {
+  const paymentForms = useRef<Record<string, HTMLFormElement | null>>({});
   const bulk = campaigns.length > 1;
   const single = campaigns[0] ?? null;
   const eligible = bulk
@@ -89,13 +91,21 @@ function InvoiceConfirmDialogSession({
   const showTable = bulk || tableLines.length > 1;
 
   function handleProceed() {
-    if (grouping === "separate") { onConfirm("new", undefined, "separate"); return; }
+    const payments: Record<string, Record<string, string>> = {};
+    if (mode !== "append" || grouping === "separate") {
+      for (const campaign of campaigns) {
+        const form = paymentForms.current[campaign.campaignId];
+        if (!form || !form.reportValidity()) return;
+        payments[campaign.campaignId] = Object.fromEntries(new FormData(form)) as Record<string, string>;
+      }
+    }
+    if (grouping === "separate") { onConfirm("new", undefined, "separate", payments); return; }
     if (mode === "append") {
       if (!existingInvoiceId) return;
       onConfirm("append", existingInvoiceId);
       return;
     }
-    onConfirm("new");
+    onConfirm("new", undefined, "combined", payments);
   }
 
   const proceedDisabled =
@@ -103,7 +113,7 @@ function InvoiceConfirmDialogSession({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>{bulk ? "Confirm bulk invoice" : "Confirm invoice"}</DialogTitle>
           <DialogDescription>
@@ -232,6 +242,12 @@ function InvoiceConfirmDialogSession({
           </div>
         ) : null}
 
+        {open && (mode !== "append" || grouping === "separate") ? campaigns.map(campaign => (
+          <form key={campaign.campaignId} ref={node => { paymentForms.current[campaign.campaignId] = node; }} onSubmit={event => { event.preventDefault(); handleProceed(); }} className="rounded-lg border p-3">
+            {bulk ? <p className="mb-2 text-sm font-semibold">{campaign.campaignName}</p> : null}
+            <InvoicePaymentFields campaignId={campaign.campaignId} />
+          </form>
+        )) : null}
         <DialogFooter>
           <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={pending}>
             Cancel

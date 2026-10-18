@@ -35,6 +35,7 @@ function resolveLineInvoiceEligible(input: InvoiceActionRowInput): boolean {
   });
 
   return isLineInvoiceEligible({
+    client_io_approved: line.client_io_approved,
     operational_status: line.operational_status,
     vendor_io_id: line.vendor_io_id,
     billing_status: line.billing_status,

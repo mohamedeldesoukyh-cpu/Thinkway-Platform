@@ -1,3 +1,4 @@
+import { loadClientAcceptedLineIds } from "@/lib/billing/client-acceptance";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import type { InvoiceWorkspace } from "@/lib/domains/billing/types";
@@ -73,11 +74,13 @@ export async function buildIoLineSnapshotsFromDb(
   const { data: lines, error } = await supabase
     .from("campaign_lines")
     .select(
-      "id, document_number, name, influencer_id, revenue_before_vat, revenue, cost_before_vat, cost, vendor_io_id"
+      "id, campaign_header_id, document_number, name, influencer_id, revenue_before_vat, revenue, cost_before_vat, cost, vendor_io_id"
     )
     .in("id", lineIds);
 
   if (error || !lines?.length) return [];
+
+  const clientAccepted = await loadClientAcceptedLineIds(supabase, lines);
 
   const { data: rawDeliverables } = await supabase
     .from("assignment_deliverables")
@@ -227,6 +230,7 @@ export async function buildIoLineSnapshotsFromDb(
     const revenue = scopedDeliverables.reduce((s, d) => s + d.revenue_before_vat, 0);
 
     return {
+      client_io_approved: clientAccepted.has(lineId),
       line_id: lineId,
       line_name: String(line.document_number ?? line.name ?? lineId),
       vendor_io_id: vendorIoId,

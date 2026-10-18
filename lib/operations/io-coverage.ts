@@ -15,6 +15,7 @@ export type IoDeliverableSnapshot = {
 };
 
 export type IoLineSnapshot = {
+  client_io_approved?: boolean;
   line_id: string;
   line_name?: string;
   vendor_io_id?: string | null;
@@ -170,6 +171,10 @@ export function classifyIoCoverageLine(
   const vioDoc =
     current.vendor_io_document_number ??
     (current.active_vendor_io_id || current.vendor_io_id ? "linked" : null);
+
+  if (current.client_io_approved) {
+    return { line_id: current.line_id, line_name: lineName, category: "unchanged", vendor_io_document_number: vioDoc, change_summary: null };
+  }
 
   if (requiresNewIoGeneration(current, baseline)) {
     return {

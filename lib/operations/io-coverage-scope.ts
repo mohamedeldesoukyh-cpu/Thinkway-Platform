@@ -73,6 +73,7 @@ export function buildScopedLineSnapshotFromHierarchy(
   );
 
   return {
+    client_io_approved: line.client_io_approved,
     line_id: line.id,
     line_name: line.document_number ?? line.name,
     vendor_io_id: line.vendor_io_id,

@@ -1,3 +1,4 @@
+import { loadClientAcceptedLineIds } from "./client-acceptance";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
@@ -5,7 +6,7 @@ import {
   resolveInvoiceDeliverableIds,
 } from "@/lib/billing/invoice-from-deliverables";
 
-/** Regeneration / invoice repair must never include assignments without Vendor IO. */
+/** Keep client-accepted advance billing and existing invoices independent of Vendor IO. */
 export async function filterIoGatedCampaignLineIds(
   supabase: SupabaseClient,
   lineIds: string[]
@@ -14,13 +15,14 @@ export async function filterIoGatedCampaignLineIds(
 
   const { data, error } = await supabase
     .from("campaign_lines")
-    .select("id, vendor_io_id")
+    .select("id, campaign_header_id, vendor_io_id, invoice_id")
     .in("id", lineIds);
 
-  if (error) return [];
+  if (error) throw new Error(error.message);
+  const accepted = await loadClientAcceptedLineIds(supabase, data ?? []);
 
   return (data ?? [])
-    .filter((row) => Boolean((row as { vendor_io_id: string | null }).vendor_io_id))
+    .filter((row) => Boolean(row.vendor_io_id || row.invoice_id) || accepted.has(row.id))
     .map((row) => (row as { id: string }).id);
 }
 

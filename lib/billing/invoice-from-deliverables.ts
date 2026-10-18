@@ -1,3 +1,4 @@
+import { loadClientAcceptedLineIds } from "./client-acceptance";
 import { invoicePercentageDescription } from "./selected-invoice-batches";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -359,6 +360,7 @@ export async function insertPackageAssignmentLineItems(
     .eq("invoice_id", invoiceId)
     .in("campaign_line_id", lineIds);
 
+  const clientAccepted = await loadClientAcceptedLineIds(supabase, (lines ?? []).map(line => ({ id: line.id, campaign_header_id: headerId })));
   const defaultVatRate = options?.defaultVatRate ?? 0;
   const forRegeneration = options?.forRegeneration ?? false;
   const billedByLineId = options?.billedByLineId;
@@ -380,7 +382,7 @@ export async function insertPackageAssignmentLineItems(
       billing_status: string;
       vendor_io_id: string | null;
     };
-    if (!line.vendor_io_id) continue;
+    if (!line.vendor_io_id && !clientAccepted.has(line.id)) continue;
 
     const expectedBillable = resolveClientTaxableBase({
       revenueBeforeVat: Number(line.revenue_before_vat ?? line.revenue ?? 0),

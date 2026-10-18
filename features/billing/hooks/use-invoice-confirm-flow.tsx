@@ -130,7 +130,7 @@ export function useInvoiceConfirmFlow({
   }, []);
 
   const handleConfirm = useCallback(
-    (mode: InvoiceTargetMode, existingInvoiceId?: string, grouping?: "combined" | "separate") => {
+    (mode: InvoiceTargetMode, existingInvoiceId?: string, grouping?: "combined" | "separate", payments?: Record<string, Record<string, string>>) => {
       const detail = operationalBillingRef.current;
       const payload = selectionRef.current;
       if (!detail || !payload) return;
@@ -143,6 +143,7 @@ export function useInvoiceConfirmFlow({
         mode,
         existingInvoiceId,
         grouping,
+        payment: payments?.[metaRef.current.campaignId],
       });
     },
     [submit]

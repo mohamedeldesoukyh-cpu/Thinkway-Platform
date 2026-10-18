@@ -58,3 +58,6 @@ function testSumIoGatedAssignmentBillable() {
 
 testSumIoGatedAssignmentBillable();
 console.log("queue-eligibility-io-gate.test.ts: ok");
+
+const advance = {...assignmentRow("advance", 4000, null), client_io_approved: true};
+assert(sumIoGatedAssignmentBillable([advance]) === 4000, "includes accepted advance billing without Vendor IO");
