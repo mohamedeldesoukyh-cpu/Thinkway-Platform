@@ -96,6 +96,8 @@ export type QuotationListRow = {
   owner_name: string | null;
   total_cost_egp: number;
   total_revenue_egp: number;
+  /** Stored agency fees, already converted to EGP. */
+  total_af_egp?: number;
   total_gp_value_egp: number;
   total_gp_pct: number;
   item_count: number;
