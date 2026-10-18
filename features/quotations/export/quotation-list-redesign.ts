@@ -89,7 +89,7 @@ function audience(creator: Creator) {
 }
 function renderCard(creator: Creator, offers: Offer[], hideFees: boolean, shortlist = false) {
   const g = creator.group, href = url(g.profileUrl), portrait = image(g.avatarUrl);
-  const recommendation = shortlist ? g.creator.match(/^★\s*(\d+)\s*·\s*(.*)$/s) : null;
+  const recommendation = shortlist ? g.creator.match(/^★\s*(\d+)\s*·\s*([\s\S]*)$/) : null;
   const displayName = recommendation ? recommendation[2].trim() || g.handle || "Creator" : g.creator;
   const recommendationTag = recommendation ? `<span class="creator-recommendation">★ Recommended · ${e(recommendation[1])}</span>` : "";
   const badges = platforms.filter(platform => creator.metrics.some(m => canonicalPlatformKey(m.platform) === platform)).map(p => `<img src="${icon(p)}" alt="${p}">`).join("");
