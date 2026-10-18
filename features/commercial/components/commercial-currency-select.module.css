@@ -1,5 +1,5 @@
 .trigger.trigger.trigger { width: 6rem !important; min-width: 6rem !important; max-width: none !important; flex-shrink: 0; gap: .5rem; padding: .375rem .625rem !important; white-space: nowrap; }
 .trigger.trigger.trigger [data-slot="select-value"] { flex-shrink: 0; overflow: visible; line-clamp: unset; -webkit-line-clamp: unset; }
-.trigger.header.header { background: transparent !important; color: #8ff0cb !important; border-color: rgb(255 255 255 / 35%); box-shadow: none; font-size: 16px; font-weight: 700; }
+.trigger.header.header { background: transparent !important; color: #8ff0cb !important; border-color: rgb(255 255 255 / 35%); box-shadow: none; font-size: 16px !important; font-weight: 700 !important; }
 .trigger.header.header svg { color: inherit; opacity: 1; }
 .trigger.header.header:focus-visible { outline: 2px solid #8ff0cb; outline-offset: 2px; }
