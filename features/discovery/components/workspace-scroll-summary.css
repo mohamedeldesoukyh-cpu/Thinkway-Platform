@@ -8,7 +8,7 @@
 .discovery-workspace-minibar-metrics { display: flex; align-items: center; gap: 20px; height: 31px; padding: 0 14px; font-size: 10px; white-space: nowrap; overflow: hidden; }
 .discovery-workspace-minibar-metrics b { margin-inline-start: 5px; font-size: 12.5px; }
 .tq-redesign > .q-frozen-summary { position: static; }
-.sl-redesign .sl-creator-card { overflow: visible; }
+.sl-redesign.shortlist-detail-workspace .tw-c.sl-creator-card { overflow: visible; }
 .sl-redesign .sl-tbl__h { position: sticky; top: var(--workspace-summary-height,0px); z-index: 31; background: var(--q-surf,#fff); border-radius: 13px 13px 0 0; }
 @media(max-width:720px) {
   .discovery-workspace-minibar-inner { height: 40px; }
