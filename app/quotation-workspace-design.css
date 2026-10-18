@@ -502,9 +502,9 @@
 .tq-redesign .q-document-details .subp { margin: 2px 0 8px; }
 .tq-redesign .q-document-details .dgrid { gap: 8px 12px; }
 .tq-redesign .q-document-details .dfield { margin-bottom: 8px; }
-.tq-redesign .q-document-details .inp { height: 32px; min-height: 32px; padding: 4px 8px; font-size: 12px; }
-.tq-redesign .q-main .q-document-details textarea { height: 76px; min-height: 76px !important; padding: 8px 10px !important; resize: vertical; font-size: 12px; }
+.tq-redesign .q-document-details .inp { height: 32px !important; min-height: 32px; padding: 4px 8px !important; font-size: 12px !important; }
+.tq-redesign .q-main .q-document-details textarea { height: 76px; min-height: 76px !important; padding: 8px 10px !important; resize: vertical; font-size: 12px !important; }
 .tq-redesign .q-document-details .revline { margin-top: 8px; padding-top: 6px; font-size: 11px; }
 @media (max-width: 640px) {
- .tq-redesign .q-document-details .inp, .tq-redesign .q-main .q-document-details textarea { font-size: 16px; }
+ .tq-redesign .q-document-details .inp, .tq-redesign .q-main .q-document-details textarea { font-size: 16px !important; }
 }
