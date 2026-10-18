@@ -28,7 +28,7 @@ export function resolveShortlistTemplate(
 export function isCreatorDeckTemplate(
   template: ShortlistTemplateVariant
 ): boolean {
-  return template === "creator-list" || isQuotationCreatorDeckTemplate(template);
+  return isQuotationCreatorDeckTemplate(template);
 }
 
 export function isPitchTemplate(template: ShortlistTemplateVariant): boolean {
