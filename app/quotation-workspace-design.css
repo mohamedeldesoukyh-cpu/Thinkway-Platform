@@ -485,3 +485,8 @@
 @media(max-width:900px) { .tq-redesign .q-exp .q-in { min-height:44px; font-size:16px; } }
 .tq-redesign.discovery-suite .tw-selbar .acts .tw-b.pri { background:rgba(255,255,255,.12); border-color:rgba(255,255,255,.22); color:#fff; box-shadow:none; }
 .tq-redesign.discovery-suite .tw-selbar .acts .tw-b.pri:hover:not(:disabled) { background:rgba(255,255,255,.24); color:#fff; }
+
+/* Leave room for the fixed main-navigation grip beside the creator table. */
+@media (min-width: 1024px) {
+  .tq-redesign.quotation-editor-rd4 .q-wrap.q-main { padding-left: 34px; }
+}
