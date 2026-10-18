@@ -180,3 +180,27 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h .tw-cdt { flex-wrap: wrap; }
  .workspace-redesign .wr-audit-register table { min-width: 700px; }
 }
+
+/* Match the quotation's full-width masthead; keep gutters on the work below. */
+.workspace-redesign .campaign-detail-suite .thinkway-aurora-wrap { padding-inline: 0; }
+.workspace-redesign .campaign-detail-suite .tw-mast { border-radius: 0 !important; }
+.workspace-redesign .campaign-detail-suite .thinkway-aurora-panel-body { padding-inline: 16px; }
+.workspace-redesign .campaign-detail-suite .tw-frozen :is(.wr-decision, .tw-step2) { margin-inline: 16px; }
+@media (min-width: 1024px) {
+  /* The navigation grip extends 30px into the page. */
+  .workspace-redesign .campaign-detail-suite .tw-frozen .tw-step2 { margin-inline-start: 34px; }
+}
+@media (max-width: 1023px) {
+  .workspace-redesign .campaign-detail-suite .wr-campaign-minibar { display: none; }
+  .workspace-redesign .campaign-detail-suite .tw-frozen .tw-step2 { position: static !important; top: auto; }
+  .workspace-redesign .campaign-detail-suite .tw-frozen .wr-decision { max-height: none; overflow: visible; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-table-root { max-width: 100%; touch-action: pan-x pan-y; }
+}
+@media (max-width: 860px) {
+  /* Identity and description need a full row in the mobile assignment cards. */
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="creator"],
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="assignment"],
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="description"] { flex-basis: 100%; max-width: 100%; width: 100%; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] { position: static; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] button { min-height: 44px; }
+}
