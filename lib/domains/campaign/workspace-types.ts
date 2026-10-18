@@ -131,6 +131,7 @@ export type CreatorPlatformAccountSummary = {
 };
 
 export type CampaignLineWorkspace = {
+  client_io_approved?: boolean;
   went_live_date?: string | null;
   id: string;
   document_number: string;

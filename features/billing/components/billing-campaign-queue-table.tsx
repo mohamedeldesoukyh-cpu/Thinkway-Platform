@@ -175,6 +175,7 @@ export function BillingCampaignQueueTable({
   invoiceDraftPercentsRef.current = invoiceDraftPercentsByCampaign;
   const confirmJobsRef = useRef(confirmJobs);
   confirmJobsRef.current = confirmJobs;
+  const paymentByCampaignRef = useRef<Record<string, Record<string, string>>>({});
   const bulkRemainingRef = useRef<
     Array<{ campaignId: string; selection: OperationalSelectionPayload }>
   >([]);
@@ -186,6 +187,7 @@ export function BillingCampaignQueueTable({
         selection: OperationalSelectionPayload;
         mode: InvoiceTargetMode;
         existingInvoiceId?: string;
+        payment?: Record<string, string>;
       }) => boolean)
     | null
   >(null);
@@ -352,6 +354,7 @@ export function BillingCampaignQueueTable({
           percents: invoiceDraftPercentsRef.current[next.campaignId] ?? {},
           selection: next.selection,
           mode: "new",
+          payment: paymentByCampaignRef.current[next.campaignId],
         });
         return;
       }
@@ -400,6 +403,7 @@ export function BillingCampaignQueueTable({
         selection: resolveInvoiceSelection(campaignId, selection),
         mode,
         existingInvoiceId,
+        payment: paymentByCampaignRef.current[campaignId],
       });
     },
     [ensureDetailLoaded, resolveInvoiceSelection, submitInvoiceDraft]
@@ -800,7 +804,8 @@ export function BillingCampaignQueueTable({
         campaigns={confirmCampaigns}
         appendableInvoices={confirmAppendableInvoices}
         pending={invoicePending}
-        onConfirm={(mode, existingInvoiceId) => {
+        onConfirm={(mode, existingInvoiceId, _grouping, payments) => {
+          paymentByCampaignRef.current = payments ?? {};
           const jobs = confirmJobsRef.current;
           if (jobs.length === 0) return;
           setInvoiceChoiceOpen(false);

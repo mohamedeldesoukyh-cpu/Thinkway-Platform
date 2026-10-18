@@ -174,8 +174,8 @@ export function CampaignBillingQueueTable({
     return (
       <div className="thinkway-campaign-empty-state">
         <p>
-          No consolidated invoice candidates. Generate Vendor IO on eligible assignment lines in
-          Assignments, then return here.
+          No invoice candidates. Client-accepted assignments with an unbilled balance can be invoiced
+          in advance; Vendor IOs are not required.
         </p>
       </div>
     );

@@ -41,6 +41,7 @@ function hasRemainingInvoiceableRevenue(
 export type OperationalBillingRowKind = "assignment" | "deliverable_group" | "post";
 
 export type OperationalBillingRow = {
+  client_io_approved?: boolean;
   revenue_fx_override?: string | null;
   currency_code?: string;
   source_money?: import("./billing-currency").BillingSourceMoney;
@@ -202,6 +203,7 @@ export function isOperationalRowInvoiceEligible(
     | "line_billing_status"
     | "is_invoice_eligible"
     | "operational_status"
+    | "client_io_approved"
     | "vendor_io_id"
     | "pricing_mode"
     | "line_pricing_mode"
@@ -248,6 +250,8 @@ export function isOperationalRowInvoiceEligible(
   if (pricingMode === "per_deliverable" && row.kind === "assignment" && !row.is_legacy_synthetic) {
     return false;
   }
+
+  if (row.client_io_approved && hasRemainingInvoiceableRevenue(row)) return true;
 
   const operational = effectiveLineOperationalStatus({
     operational_status: row.operational_status,
@@ -300,6 +304,7 @@ export function isOperationalRowUiSelectable(
     | "billing_status"
     | "line_billing_status"
     | "operational_status"
+    | "client_io_approved"
     | "vendor_io_id"
     | "pricing_mode"
     | "line_pricing_mode"
@@ -322,6 +327,8 @@ export function isOperationalRowUiSelectable(
   ) {
     return false;
   }
+
+  if (row.client_io_approved && hasRemainingInvoiceableRevenue(row)) return true;
 
   const operational = effectiveLineOperationalStatus({
     operational_status: row.operational_status,

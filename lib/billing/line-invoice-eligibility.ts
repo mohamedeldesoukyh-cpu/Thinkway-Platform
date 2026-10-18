@@ -3,6 +3,7 @@ import { canRegenerateInvoice } from "@/lib/billing/regeneration-eligibility";
 import { hasExistingIoCoverage } from "@/lib/operations/io-coverage";
 
 export type LineInvoiceEligibilityInput = {
+  client_io_approved?: boolean;
   operational_status?: CampaignLineOperationalStatus | string | null;
   vendor_io_id?: string | null;
   active_vendor_io_id?: string | null;
@@ -17,6 +18,7 @@ export type LineInvoiceEligibilityInput = {
 
 export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolean {
   return canRegenerateInvoice({
+    client_io_approved: line.client_io_approved,
     billing_status: line.billing_status,
     operational_status: line.operational_status,
     vendor_io_id: line.vendor_io_id,
@@ -30,7 +32,7 @@ export function isLineInvoiceEligible(line: LineInvoiceEligibilityInput): boolea
 }
 
 export function blockInvoiceWithoutVendorIoMessage(): string {
-  return "Generate Vendor IO for new assignments or deliverables before invoicing.";
+  return "Client acceptance is required to invoice assignments in advance without Vendor IO.";
 }
 
 export function lineNeverHadVendorIo(line: LineInvoiceEligibilityInput): boolean {

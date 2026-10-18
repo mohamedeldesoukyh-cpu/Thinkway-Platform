@@ -131,6 +131,7 @@ export function deriveAssignmentLineMeta(
       : isAssignmentInvoiceSelectable(
           enrichRegenerationEligibilityInput(
             {
+              client_io_approved: line.client_io_approved,
               operational_status: line.operational_status,
               vendor_io_id: line.vendor_io_id,
               active_vendor_io_id: line.active_vendor_io_id,

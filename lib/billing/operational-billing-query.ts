@@ -1,3 +1,4 @@
+import { loadClientAcceptedLineIds } from "./client-acceptance";
 import { projectBillingRows, convertMoney } from "./billing-currency";
 import { loadCurrencyRates } from "./billing-currency-server";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -189,6 +190,7 @@ export async function loadCampaignOperationalBilling(
     return { groups: [], operational_rows: [], error: linesError };
   }
 
+  const clientAccepted = await loadClientAcceptedLineIds(supabase, lines);
   const lineIds = lines.map((l) => l.id);
   if (lineIds.length === 0) {
     return { groups: [], operational_rows: [] };
@@ -554,7 +556,11 @@ export async function loadCampaignOperationalBilling(
     });
   }
 
-  return { groups, operational_rows: linked_rows };
+  const applyAcceptance = (rows: OperationalBillingRow[]): OperationalBillingRow[] => rows.map(row => ({
+    ...row, client_io_approved: clientAccepted.has(row.campaign_line_id),
+    children: applyAcceptance(row.children),
+  }));
+  return { groups, operational_rows: applyAcceptance(linked_rows) };
 }
 
 export async function loadBillingCampaignQueue(

@@ -420,7 +420,7 @@ export function InvoiceGenerationSheet({
               <div className="space-y-2">
                 {invoiceSheetLeaves.length === 0 ? (
                   <p className="text-sm text-muted-foreground">
-                    No billable rows selected. Generate Vendor IO on assignments, then select
+                    No billable rows selected. Confirm client acceptance on the campaign, then select
                     deliverables with remaining revenue.
                   </p>
                 ) : (

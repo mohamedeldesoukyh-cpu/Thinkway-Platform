@@ -1,3 +1,4 @@
+import { loadClientAcceptedLineIds } from "@/lib/billing/client-acceptance";
 import { requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
 import {
@@ -39,6 +40,9 @@ import type { CampaignLineWorkspace } from "@/features/campaigns/types";
 
 function lineAllowsDeliverableInvoice(line: CampaignLineWorkspace): boolean {
   return isLineInvoiceEligible({
+    client_io_approved: line.client_io_approved,
+    billing_status: line.billing_status,
+    billable_amount: Number(line.revenue_before_vat ?? line.revenue ?? 0),
     operational_status: line.operational_status,
     vendor_io_id: line.vendor_io_id,
   });
@@ -225,7 +229,9 @@ async function loadCampaignAssignmentHierarchy(
   }
   const { supabase } = await requireRequestUser();
 
-  const lineIds = workspace.lines.map((l) => l.id);
+  const acceptedLines = await loadClientAcceptedLineIds(supabase, workspace.lines.map(line => ({ id: line.id, campaign_header_id: campaignId })));
+  const billingLines = workspace.lines.map(line => ({ ...line, client_io_approved: acceptedLines.has(line.id) }));
+  const lineIds = billingLines.map((l) => l.id);
   if (lineIds.length === 0) {
     return { groups: [], currency_code: workspace.currency_code };
   }
@@ -437,7 +443,7 @@ async function loadCampaignAssignmentHierarchy(
       quantity: row.quantity,
     });
 
-    const line = workspace.lines.find((l) => l.id === row.campaign_line_id);
+    const line = billingLines.find((l) => l.id === row.campaign_line_id);
     const qty = Math.max(1, row.quantity);
     const unitRevenue = Number(row.revenue_before_vat) / qty;
     const unitCost = Number(row.unit_cost ?? 0);
@@ -595,7 +601,7 @@ async function loadCampaignAssignmentHierarchy(
 
   const groups: AssignmentHierarchyGroup[] = [];
 
-  for (const line of workspace.lines) {
+  for (const line of billingLines) {
     const lineId = line.id;
     try {
       const rawDeliverables = deliverablesByLine.get(lineId) ?? [];

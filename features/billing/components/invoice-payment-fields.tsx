@@ -24,6 +24,7 @@ export function InvoicePaymentFields({ campaignId }: { campaignId: string }) {
     approvedAt: context?.io.approved_at, sentAt: context?.io.sent_at, eventDate,
   }) : null;
   return <div className="space-y-2">
+    {(!loaded || error) ? <input aria-label="Payment terms loading" value="" required readOnly className="sr-only" /> : null}
     <div className="text-sm font-medium">Client IO payment terms</div>
     {!loaded ? <p className="text-sm text-muted-foreground">Loading payment terms…</p> : null}
     {error ? <p role="alert" className="text-sm text-destructive">{error}</p> : null}
