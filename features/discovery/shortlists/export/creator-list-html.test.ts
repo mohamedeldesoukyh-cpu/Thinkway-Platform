@@ -115,7 +115,7 @@ test("Total Avg Cost is opt-in, formatted, and confined to the closing page", ()
 test("shortlist client list preserves branding and available platform metrics without quotation lines", () => {
  const doc = { source: "shortlist", template: "client-list-by-name", name: "QA campaign", brandName: "QA brand", clientName: "QA client", serial: "SL-1", issueDateLabel: "Today", clientLogo: "data:image/png;base64,AAAA", creatorGroups: Array.from({length:7},(_,i)=>({creator:`Creator ${i}`,handle:"@qa",country:"EG",rows:[],platformMetrics:[{platform:"instagram",followers:"100K",engagement:"4%",views:"20K",profileUrl:null}],categories:[]})) } as unknown as QuotationDocument;
  const html = buildQuotationCreatorListHtml(doc);
- assert.equal((html.match(/<section class="page/g) ?? []).length,3);
+ assert.equal((html.match(/<section class="page/g) ?? []).length,4, "Six cards per page matches the quotation layout");
  assert.match(html,/report-client-name[^>]*>QA client/);
  assert.match(html,/class="report-client-logo"/);
  assert.equal((html.match(/Followers: <b>100K/g) ?? []).length,7);
