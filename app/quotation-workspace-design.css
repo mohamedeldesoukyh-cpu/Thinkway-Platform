@@ -490,3 +490,9 @@
 @media (min-width: 1024px) {
   .tq-redesign.quotation-editor-rd4 .q-wrap.q-main { padding-left: 34px; }
 }
+
+/* Keep client review controls and totals compact. */
+.tq-redesign .q-rev { padding: 8px 12px; }
+.tq-redesign .q-rev__t { gap: 6px; margin-bottom: 6px; }
+.tq-redesign .q-rev .q-chip { min-height: 26px; padding: 3px 9px; font-size: 11px; }
+.tq-redesign .q-rev__s { margin-top: 6px; padding-top: 6px; gap: 8px 16px; }

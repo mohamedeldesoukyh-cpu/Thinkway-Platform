@@ -10,7 +10,10 @@ import {
 import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
 import { cn } from "@/lib/utils";
 
+import styles from "./commercial-currency-select.module.css";
+
 type Props = {
+  appearance?: "default" | "header";
   value: string;
   onChange: (currency: string) => void;
   disabled?: boolean;
@@ -42,9 +45,11 @@ export function CommercialCurrencySelect({
     <Select value={normalized} onValueChange={onChange} disabled={disabled}>
       <SelectTrigger
         className={cn(
+          styles.trigger,
+          appearance === "header" && styles.header,
           "font-semibold tabular-nums",
-          size === "sm" ? "h-7 w-[4.25rem] px-2 text-[12px]" : "h-9 w-[5.5rem]",
-          layout === "metric" && "mt-0.5 w-full max-w-[4.5rem]"
+          size === "sm" ? "h-7 px-2 text-[12px]" : "h-9",
+          layout === "metric" && "mt-0.5"
         )}
         aria-label={label || "Currency"}
       >

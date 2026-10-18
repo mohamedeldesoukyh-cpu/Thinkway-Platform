@@ -269,7 +269,7 @@ export function CampaignDetailChrome({
           <section aria-label="Client-facing metrics">
             <div className={styles.band}>Client-facing</div>
             <div className={styles.cells}>
-              <div><span className={styles.label}>Display currency</span><CommercialCurrencySelect label={null} layout="inline" value={displayCurrency} onChange={handleCurrencyChange} disabled={currencyPending} /></div>
+              <div><span className={styles.label}>Display currency</span><CommercialCurrencySelect appearance="header" label={null} layout="inline" value={displayCurrency} onChange={handleCurrencyChange} disabled={currencyPending} /></div>
               <div><span className={styles.label}>Client cost before agency fees</span><b>{headerMoney(clientCost)}</b></div>
               <div><span className={styles.label}>Agency fees (AF)</span><b>{headerMoney(agencyFees)}</b></div>
               <div><span className={styles.label}>Total investment</span><b>{headerMoney(revenue)}</b></div>

@@ -12,13 +12,35 @@ type SelectProps = React.ComponentProps<typeof SelectPrimitive.Root> & {
   modal?: boolean
 }
 
-function Select({ modal, ...props }: SelectProps) {
+const SelectKeyboardContext = React.createContext<{ closeForTab: (direction: number) => void; setTrigger: (node: HTMLButtonElement | null) => void; finishTab: (event: Event) => void } | null>(null)
+
+function Select({ modal, open, defaultOpen, onOpenChange, ...props }: SelectProps) {
+  const [localOpen, setLocalOpen] = React.useState(defaultOpen ?? false)
+  const trigger = React.useRef<HTMLButtonElement>(null)
+  const direction = React.useRef(0)
+  const changeOpen = (next: boolean) => { setLocalOpen(next); onOpenChange?.(next) }
+  const finishTab = (event: Event) => {
+          const step = direction.current
+          if (!step) return
+          direction.current = 0
+          if (event.defaultPrevented) return
+          event.preventDefault()
+          const triggerElement = trigger.current
+          requestAnimationFrame(() => {
+            if (!triggerElement?.isConnected) return
+            const scope = triggerElement.closest('[role="dialog"], [role="alertdialog"]') ?? document.body
+            const fields = Array.from(scope.querySelectorAll<HTMLElement>('a[href], button, input, select, textarea, [tabindex], [contenteditable="true"]')).filter(el => el.tabIndex >= 0 && !el.matches(':disabled') && !el.closest('[inert], [aria-hidden="true"]') && el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden')
+            const index = fields.indexOf(triggerElement)
+            const next = fields[index + step] ?? (scope !== document.body ? fields[step > 0 ? 0 : fields.length - 1] : triggerElement)
+            next?.focus()
+          })
+  }
   const rootProps = {
     ...props,
     ...(modal !== undefined ? { modal } : {}),
   } as React.ComponentProps<typeof SelectPrimitive.Root>
 
-  return <SelectPrimitive.Root data-slot="select" {...rootProps} />
+  return <SelectKeyboardContext.Provider value={{ closeForTab: (step) => { direction.current = step; changeOpen(false) }, setTrigger: (node) => { trigger.current = node }, finishTab }}><SelectPrimitive.Root data-slot="select" {...rootProps} open={open ?? localOpen} onOpenChange={changeOpen} /></SelectKeyboardContext.Provider>
 }
 
 function SelectGroup({
@@ -43,13 +65,16 @@ function SelectValue({
 function SelectTrigger({
   className,
   size = "default",
+  ref,
   children,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Trigger> & {
   size?: "sm" | "default"
 }) {
+  const keyboard = React.useContext(SelectKeyboardContext)
   return (
     <SelectPrimitive.Trigger
+      ref={(node) => { keyboard?.setTrigger(node); if (typeof ref === "function") return ref(node); else if (ref) ref.current = node }}
       data-slot="select-trigger"
       data-size={size}
       className={cn(
@@ -73,15 +98,29 @@ function SelectContent({
   position = "item-aligned",
   align = "center",
   container,
+  onKeyDown,
+  onCloseAutoFocus,
   ...props
 }: React.ComponentProps<typeof SelectPrimitive.Content> & {
   container?: HTMLElement | null
 }) {
+  const keyboard = React.useContext(SelectKeyboardContext)
   const fullscreenContainer = useFullscreenPortalContainer()
 
   return (
     <SelectPrimitive.Portal container={container ?? fullscreenContainer}>
       <SelectPrimitive.Content
+        onKeyDown={(event) => {
+          onKeyDown?.(event)
+          if (event.key === "Tab" && !event.defaultPrevented && keyboard) {
+            event.preventDefault()
+            keyboard.closeForTab(event.shiftKey ? -1 : 1)
+          }
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event)
+          keyboard?.finishTab(event)
+        }}
         data-slot="select-content"
         data-align-trigger={position === "item-aligned"}
         className={cn(
