@@ -1,4 +1,5 @@
 "use client";
+import { ShortlistCreatorOrderDialog } from "./shortlist-creator-order-dialog";
 import { WorkspaceScrollSummary } from "@/features/discovery/components/workspace-scroll-summary";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
@@ -955,6 +956,7 @@ export function ShortlistWorkspace({
                 <span className="tw-cs">{creatorsCardSubtitle}</span>
               ) : null}
               <span className="tw-sp" />
+              {editable && detail.canManage && displayCreators.length > 0 && <ShortlistCreatorOrderDialog shortlistId={detail.id} items={displayCreators} />}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button type="button" className="tw-b sm" aria-label="Creator list actions"><MoreHorizontalIcon className="size-4" /></button>
@@ -1006,6 +1008,7 @@ export function ShortlistWorkspace({
               />
             ) : (
               <ShortlistCreatorList
+                key={detail.creatorOrder?.join(",")}
                 items={displayCreators}
                 selectedIds={effectiveSelectedIds}
                 selectable={selectable}

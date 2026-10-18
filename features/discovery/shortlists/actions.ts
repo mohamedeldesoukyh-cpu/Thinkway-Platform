@@ -108,7 +108,7 @@ async function loadShortlistRow(supabase: Supabase, id: string) {
   const { data, error } = await supabase
     .from("discovery_shortlists")
     .select(
-      "id, name, status, visibility, owner_id, created_by, approved_by, is_archived, client_id, brand_id, metadata"
+      "id, name, status, visibility, owner_id, created_by, approved_by, is_archived, client_id, brand_id, metadata, updated_at"
     )
     .eq("id", id)
     .maybeSingle();
@@ -126,6 +126,7 @@ async function loadShortlistRow(supabase: Supabase, id: string) {
         client_id: string | null;
         brand_id: string | null;
         metadata: Record<string, unknown> | null;
+        updated_at: string;
       }
     | null;
 }
@@ -1829,4 +1830,31 @@ export async function removeAssignmentPermanently(
     revalidatePath(`/campaigns/${assignment.campaign_header_id}`);
   }
   return { ok: true, message: "Creator removed permanently." };
+}
+
+/** Presentation order only; preserve commercial values and approval state. */
+export async function setShortlistCreatorOrder(id: string, order: string[]): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  if (!Array.isArray(order) || order.length > 10000 || order.some(value => typeof value !== "string") || new Set(order).size !== order.length) return { ok: false, message: "Invalid creator order." };
+  const row = await loadShortlistRow(actor.supabase, id);
+  if (!row) return { ok: false, message: "Shortlist not found." };
+  const access = await assertCanManageShortlist(actor.supabase, row, actor.userId);
+  if (!access.ok) return access;
+  if (row.is_archived || !canEditCreators(row.status)) return { ok: false, message: "This shortlist is locked for editing." };
+  const { data: items, error: itemsError } = await actor.supabase.from("discovery_shortlist_items").select("id").eq("shortlist_id", id);
+  if (itemsError) return { ok: false, message: itemsError.message };
+  const ids = new Set((items ?? []).map(item => item.id));
+  if (order.length && (order.length !== ids.size || order.some(item => !ids.has(item)))) return { ok: false, message: "The creator list changed. Refresh and try again." };
+  const metadata = { ...row.metadata };
+  if (order.length) metadata.creatorListOrder = order;
+  else delete metadata.creatorListOrder;
+  const { data, error } = await actor.supabase.from("discovery_shortlists")
+    .update({ metadata: metadata as Database["public"]["Tables"]["discovery_shortlists"]["Update"]["metadata"] })
+    .eq("id", id).eq("updated_at", row.updated_at).eq("status", row.status).eq("is_archived", false).select("id").maybeSingle();
+  if (error) return { ok: false, message: error.message };
+  if (!data) return { ok: false, message: "The shortlist changed. Refresh and try again." };
+  revalidateShortlist(id);
+  revalidatePath("/discovery/shortlists/[id]", "layout");
+  return { ok: true };
 }

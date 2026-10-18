@@ -1,3 +1,5 @@
+import { ShortlistCreatorOrderDialog } from "@/features/discovery/shortlists/components/shortlist-creator-order-dialog";
+import { canEditCreators } from "@/features/discovery/shortlists/transitions";
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
@@ -187,6 +189,8 @@ export default async function ShortlistPreviewPage({
             </>
           }
           toolbarRight={
+            <>
+            {detail.canManage && !detail.is_archived && canEditCreators(detail.status) && <ShortlistCreatorOrderDialog shortlistId={detail.id} items={detail.creators} />}
             <ShortlistPreviewDownloads
               shortlistId={shortlistId}
               template={template}
@@ -194,6 +198,7 @@ export default async function ShortlistPreviewPage({
               platforms={platforms}
               exportRevision={detail.updated_at}
             />
+            </>
           }
         />
       )}

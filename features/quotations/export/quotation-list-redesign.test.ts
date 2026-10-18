@@ -52,3 +52,20 @@ assert.equal(resolveShortlistTemplate('creator-list-additions'),'detailed');
 
 assert.ok(buildRedesignedQuotationCreatorList({...many, template:"creator-list-additions"}).includes('class="report--additions"'));
 assert.ok(!buildRedesignedQuotationCreatorList({...many, template:"creator-list"}).includes('class="report--additions"'));
+
+// Shortlists use the same design and page size without invented commercial offers.
+{
+ const shortlist = {...doc, source: "shortlist", template: "creator-list", creatorListOrder:["b","a"],
+   shortlistCreatorListCost: {amount:12345, currency:"EGP",visible:true},
+   creatorGroups: [
+    {...group, creator:"Creator Alpha", itemIds:["a"], highestPlatformTier:"Macro", platformMetrics:[{platform:"instagram",followers:"999K",engagement:"2%",views:"50K"}]},
+    {...group, creator:"Creator Beta", itemIds:["b"], highestPlatformTier:"Micro", platformMetrics:[]},
+   ]} as unknown as QuotationDocument;
+ const output=buildRedesignedQuotationCreatorList(shortlist);
+ assert.ok(output.includes('class="report--shortlist"'));
+ assert.ok(output.indexOf('title="Creator Beta"') < output.indexOf('title="Creator Alpha"'), "Saved order overrides automatic tier order");
+ assert.ok(output.includes('999K'), "Shortlist platform metrics survive without quoted deliverables");
+ assert.ok(!output.includes('Rates pending'), "Do not invent quotation prices for shortlists");
+ assert.ok(output.includes('Total average cost · EGP 12,345'));
+ assert.deepEqual(quotationListPdfOptions(shortlist),quotationListPdfOptions({...shortlist,source:"quotation"}));
+}

@@ -95,6 +95,7 @@ export type ShortlistMovedAssignment = {
 };
 
 export type ShortlistDetail = {
+  creatorOrder?: string[];
   creatorListCost?: import("./creator-list-cost").CreatorListCost;
   id: string;
   serial_number: string | null;
