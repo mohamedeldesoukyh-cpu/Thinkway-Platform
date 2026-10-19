@@ -272,8 +272,8 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st b { color:#334155; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st > div:first-child b { color:#0057ff; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st b.g { color:#008568; }
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent { grid-template-columns:minmax(0,1fr); position:relative; }
-  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [role="gridcell"][data-assignment-col] { grid-column:1 / -1; display:flex; flex-direction:row; align-items:center; justify-content:space-between; gap:12px; text-align:right !important; border-bottom:1px solid #e2e8f0; background:#fff; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent { display:grid !important; grid-template-columns:minmax(0,1fr) !important; position:relative; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [role="gridcell"][data-assignment-col] { grid-column:1 / -1; flex-basis:auto !important; width:100% !important; display:flex; flex-direction:row !important; align-items:center !important; justify-content:space-between !important; gap:12px; text-align:right !important; border-bottom:1px solid #e2e8f0; background:#fff; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [role="gridcell"][data-assignment-col]::before { flex:0 0 90px; margin:0; text-align:left; color:#64748b; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="select"] { position:absolute; top:3px; right:0; width:40px; padding:6px !important; border:0 !important; background:transparent !important; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="assignment"] { padding-right:44px !important; }
