@@ -15,3 +15,17 @@
 .detail { display: block; margin-top: 5px; font-size: 11px; line-height: 1.4; color: #d6e3ff; }
 .detail[data-tone="y"] { color: #ffe2ae; }
 @media(max-width:600px) { .campaign.campaign :global(.tw-ms2) { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+
+@media (max-width: 600px) {
+  .campaign.campaign { width: 100%; max-width: 100%; position: static; }
+  .campaign.campaign :global(.tw-mast) { width: 100%; margin: 0; }
+  .campaign.campaign :global(.tw-mh) { padding: 10px 12px; }
+  .campaign.campaign :global(.tw-mh) h1 { font-size: 18px; }
+  .campaign.campaign :global(.sub) { font-size: 11px; line-height: 1.4; }
+  .campaign.campaign :global(.tw-ms2) { grid-template-columns: repeat(3,minmax(0,1fr)); }
+  .campaign.campaign :global(.tw-ms2) > div { min-width: 0; padding: 8px 10px; }
+  .campaign.campaign :global(.tw-ms2) i { font-size: 8px; letter-spacing: .2px; white-space: normal; }
+  .campaign.campaign :global(.tw-ms2) b { font-size: 14px; }
+  .campaign.campaign .detail { font-size: 10px; margin-top: 3px; }
+  .campaign.campaign :global(.tw-jump) { padding: 6px 8px; max-width: 100%; overflow-x: auto; flex-wrap: nowrap; }
+}
