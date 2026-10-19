@@ -557,6 +557,7 @@ export function AssignmentInfluencerDetailSheet({
               Assignment participation and activity details for {handle}
             </SheetDescription>
 
+            <div className="assignment-detail-mobile-bar"><span>Creator details</span><button type="button" onClick={() => onOpenChange(false)} aria-label="Close creator details">Close ×</button></div>
             <div className="tw-cm__l">
               <div className="cr">
                 {campaignName} / {formatDocumentNumberForDisplay(line.document_number || handle)}
