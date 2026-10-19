@@ -263,7 +263,7 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
 /* Mobile details use a visible close bar and a flat, readable metric table. */
 .assignment-detail-mobile-bar { display: none; }
 @media (max-width: 860px) {
-  body:has(.workspace-redesign) .campaign-detail-creator-modal .assignment-detail-mobile-bar { display:flex; flex:0 0 auto; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:10; padding:6px 12px; background:#fff; color:#1e293b; border-bottom:1px solid #e2e8f0; font-size:13px; font-weight:600; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .assignment-detail-mobile-bar { display:flex; flex:0 0 auto; align-items:center; justify-content:space-between; position:fixed; top:8px; left:8px; right:8px; z-index:10; border-radius:18px 18px 0 0; padding:6px 12px; background:#fff; color:#1e293b; border-bottom:1px solid #e2e8f0; font-size:13px; font-weight:600; }
   .assignment-detail-mobile-bar button { min-height:44px; padding:8px 12px; color:#0057ff; border:1px solid #dbe4f0; border-radius:8px; background:#fff; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h { top:57px; }
   body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st { background:#f8fafc; border:1px solid #e2e8f0; border-radius:0; gap:0; margin:12px -14px -14px; position:relative; z-index:1; }
@@ -282,3 +282,5 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="gp"] { color:#008568; }
   .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="actions"] { border:0; padding:0 10px !important; }
 }
+
+@media (max-width:860px) { body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__w { padding-top:57px; scroll-padding-top:57px; } }
