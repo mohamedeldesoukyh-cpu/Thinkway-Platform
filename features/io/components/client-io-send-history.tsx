@@ -60,7 +60,7 @@ export function ClientIoSendHistory({ history }: Props) {
             No Client IO emails sent yet for this campaign.
           </p>
         ) : (
-          <div className="overflow-x-auto rounded-md border border-border/60">
+          <div className="client-io-send-history overflow-x-auto rounded-md border border-border/60">
             <table className="w-full min-w-[720px] text-left text-sm">
               <thead className="border-b border-border/60 bg-muted/20 text-[11px] uppercase tracking-wide text-muted-foreground">
                 <tr>
