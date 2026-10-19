@@ -210,3 +210,43 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
 .workspace-redesign .campaigns-list-suite .campaigns-module-register :is(.tw-r, .tw-hr, .tw-toolbar, .tw-pag) :is(div, span, a, button, p, b, strong, small, input, u, em, i, label) {
   font-size: 11px !important;
 }
+
+/* Mobile assignment cards and creator details share one natural scroll flow. */
+@media (max-width: 860px) {
+  body:has(.workspace-redesign) .campaign-detail-creator-modal[data-slot="sheet-content"] { padding: 8px !important; height: 100dvh !important; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__w { display: flex; flex-direction: column; width: 100%; height: calc(100dvh - 16px); max-height: calc(100dvh - 16px); overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__l { flex: 0 0 auto; max-height: none; overflow: hidden; padding: 14px; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__av { width: 60px; height: 60px; margin-bottom: 10px; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__l h2 { font-size: 18px; overflow-wrap: anywhere; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); margin-top: 12px; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st > div { display: flex; flex-direction: column; gap: 4px; padding: 8px; min-width: 0; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st i { flex: none; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__st b { text-align: start; font-size: 12px; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__r { flex: 0 0 auto; overflow: visible; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__b { overflow: visible; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h { position: sticky; top: 0; z-index: 2; background: #fff; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__h .tw-cdt { flex-wrap: nowrap; overflow-x: auto; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-dr__x { flex-shrink: 0; min-width: 40px; min-height: 40px; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-dl { gap: 10px; padding: 10px 12px; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-dl > span { flex: 0 0 100px; }
+  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-dl > b { min-width: 0; overflow-wrap: anywhere; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-table .thinkway-campaign-asgn-parent { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); padding: 0; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"] { width: auto; min-width: 0; max-width: 100%; display: block; text-align: left !important; padding: 8px 10px !important; min-height: 0; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [role="gridcell"]::before { text-align: left; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="creator"],
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="assignment"],
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent [data-assignment-col="fullDescription"] { grid-column: 1 / -1; }
+}
+
+@media (max-width: 860px) {
+  .workspace-redesign .campaign-detail-suite .thinkway-aurora-ws-head { flex-direction: column; align-items: stretch; gap: 12px; }
+  .workspace-redesign .campaign-detail-suite .thinkway-aurora-ws-tools { display: flex; flex-wrap: wrap; justify-content: flex-start; max-width: 100%; }
+  .workspace-redesign .campaign-detail-suite .wr-body-kpi-values { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .workspace-redesign .campaign-detail-suite .wr-body-kpi { padding: 10px; }
+  .workspace-redesign .campaign-detail-suite .wr-body-kpi > strong { font-size: 13px; overflow-wrap: normal; white-space: nowrap; }
+  .workspace-redesign .campaign-detail-suite .campaign-billing-queue-table { min-width: 900px !important; table-layout: auto !important; }
+  .workspace-redesign .campaign-detail-suite .campaign-billing-queue-table :is(th,td) { white-space: nowrap !important; overflow-wrap: normal !important; word-break: normal !important; }
+  .workspace-redesign .client-io-send-history { max-width: 100%; min-width: 0; overflow-x: auto; }
+  .workspace-redesign .client-io-send-history table { min-width: 1000px !important; table-layout: auto !important; }
+  .workspace-redesign .client-io-send-history :is(th,td,button) { white-space: nowrap !important; overflow-wrap: normal !important; word-break: normal !important; }
+}

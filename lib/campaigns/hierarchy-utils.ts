@@ -74,6 +74,7 @@ export const HIERARCHY_COLUMN_LABELS = {
   vat: "Rev VAT",
   totalBilling: "Total billing",
   gp: "GP",
+  fxGainLoss: "FX gain / loss",
   margin: "MGN",
   opsStatus: "OPS",
   billing: "Billing",

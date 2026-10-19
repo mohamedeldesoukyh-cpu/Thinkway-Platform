@@ -182,7 +182,7 @@ export function CampaignBillingQueueTable({
   }
 
   return (
-    <CampaignOperationalTable>
+    <CampaignOperationalTable className="campaign-billing-queue-table">
       <CampaignBillingQueueTableHeader />
       <CampaignOperationalTableBody>
         {rows.map((row) => (
