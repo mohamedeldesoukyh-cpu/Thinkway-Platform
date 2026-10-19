@@ -216,6 +216,7 @@ export function AssignmentSafeGrid({
   const [selectedDeliverableIds, setSelectedDeliverableIds] = useState<Set<string>>(
     new Set()
   );
+  const [mobileDetailIds, setMobileDetailIds] = useState<Set<string>>(new Set());
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [calculatorOpen, setCalculatorOpen] = useState(false);
 
@@ -644,6 +645,7 @@ export function AssignmentSafeGrid({
                           selectedLineIds.has(row.lineId) && "sel",
                           expanded && SAFE_GRID_PARENT_ROW_EXPANDED
                         )}
+                        data-mobile-details={mobileDetailIds.has(row.lineId) || gridEdit.isEditing ? "open" : "closed"}
                         data-line-id={row.lineId}
                         data-selected={selectedLineIds.has(row.lineId) ? "true" : undefined}
                         tabIndex={gates.enableEditActions ? 0 : undefined}
@@ -911,6 +913,14 @@ export function AssignmentSafeGrid({
                             </DropdownMenu>
                           </AssignmentGridCell>
                         ) : null}
+                        <div role="gridcell" className="assignment-mobile-details-toggle">
+                          <button type="button" aria-expanded={mobileDetailIds.has(row.lineId) || gridEdit.isEditing}
+                            disabled={gridEdit.isEditing}
+                            aria-label={(mobileDetailIds.has(row.lineId) ? "Hide" : "Show") + " details for " + row.displayName}
+                            onClick={() => setMobileDetailIds(previous => { const next = new Set(previous); if (next.has(row.lineId)) next.delete(row.lineId); else next.add(row.lineId); return next; })}>
+                            {mobileDetailIds.has(row.lineId) || gridEdit.isEditing ? "Hide details" : "Show details"}
+                          </button>
+                        </div>
                       </AssignmentGridRow>
                     ))}
                     {expanded && gates.enableDeliverableChildren ? (

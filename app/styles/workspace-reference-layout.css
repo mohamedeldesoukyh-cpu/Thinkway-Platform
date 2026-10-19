@@ -250,3 +250,12 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
   .workspace-redesign .client-io-send-history table { min-width: 1000px !important; table-layout: auto !important; }
   .workspace-redesign .client-io-send-history :is(th,td,button) { white-space: nowrap !important; overflow-wrap: normal !important; word-break: normal !important; }
 }
+
+.assignment-mobile-details-toggle { display: none !important; }
+@media (max-width: 860px) {
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent[data-mobile-details="closed"] > [data-assignment-col]:not([data-assignment-col="select"]):not([data-assignment-col="assignment"]):not([data-assignment-col="creator"]):not([data-assignment-col="cost"]):not([data-assignment-col="revenue"]):not([data-assignment-col="gp"]):not([data-assignment-col="opsStatus"]):not([data-assignment-col="actions"]) { display: none !important; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="assignment"] { grid-row: 1; padding-right: 44px !important; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="select"] { grid-row: 1; grid-column: 2; justify-self: end; align-self: center; z-index: 1; border: 0; }
+  .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent .assignment-mobile-details-toggle { display: block !important; grid-column: 1 / -1; padding: 0 10px !important; }
+  .assignment-mobile-details-toggle button { width: 100%; color: #0057ff; font-size: 12px; font-weight: 600; text-align: left; min-height: 40px; }
+}
