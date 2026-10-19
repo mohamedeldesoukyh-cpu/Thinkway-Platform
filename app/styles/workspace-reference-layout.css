@@ -284,3 +284,11 @@ body:has(.workspace-redesign) .wr-operational-drawer .wr-detail-tabs [data-state
 }
 
 @media (max-width:860px) { body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__w { padding-top:57px; scroll-padding-top:57px; } }
+
+@media (max-width:860px) {
+ .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="assignment"] > div { flex:1; max-width:none !important; justify-content:flex-start; }
+ .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="assignment"] p { overflow:visible; text-overflow:clip; white-space:normal; }
+ .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="revenue"] :is(span,b,strong) { color:#0057ff !important; }
+ .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="gp"] :is(span,b,strong) { color:#008568 !important; }
+ .workspace-redesign .campaign-detail-suite .thinkway-campaign-asgn-parent > [data-assignment-col="actions"] { justify-content:flex-end !important; }
+}
