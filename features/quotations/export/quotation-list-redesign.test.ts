@@ -90,3 +90,13 @@ assert.ok(!buildRedesignedQuotationCreatorList({...many, template:"creator-list"
   assert.ok(!unstarred.includes('class="creator-recommendation"'));
  }
 }
+
+// Only shortlist Client List by Name uses twelve cards (two rows) per page.
+{
+ const groups = Array.from({length:25},(_,i)=>({...group,creator:'Creator '+i,itemIds:['id-'+i]}));
+ const output = buildRedesignedQuotationCreatorList({...doc,source:'shortlist',template:'client-list-by-name',creatorGroups:groups} as QuotationDocument);
+ const cardPages = output.split('<section class="page">').slice(1).map(page=>(page.match(/<article class="creator-card">/g)||[]).length).filter(Boolean);
+ assert.deepEqual(cardPages,[12,12,1]);
+ const original = buildRedesignedQuotationCreatorList({...doc,source:'shortlist',template:'creator-list',creatorGroups:groups} as QuotationDocument);
+ assert.deepEqual(original.split('<section class="page">').slice(1).map(page=>(page.match(/<article class="creator-card">/g)||[]).length).filter(Boolean),[6,6,6,6,1]);
+}
