@@ -2,6 +2,8 @@ import { QuotationText } from "./quotation-design-locale";
 
 import { F } from "@/lib/discovery/suite/helpers";
 import { cn } from "@/lib/utils";
+import { resolveQuotationHeaderCommercialTotals } from "@/features/quotations/quotation-row-math";
+import { computeQuotationTotals } from "@/lib/commercial/quotation-engine";
 
 type Props = {
   selectedCount: number;
@@ -43,8 +45,16 @@ export function QuotationSelectionBar({
 }: Props) {
   if (selectedCount <= 0) return null;
 
-  const gp = clientCost - baseCost;
-  const gpPct = clientCost ? (gp / clientCost) * 100 : 0;
+  // Selection amounts already include each line's negotiated cost/revenue FX.
+  // Use the header formula so agency fees contribute to GP and its denominator.
+  const totals = resolveQuotationHeaderCommercialTotals(computeQuotationTotals([{
+    cost_egp: baseCost,
+    revenue_egp: clientCost,
+    af_value_egp: agencyFees,
+    gp_value_egp: clientCost - baseCost,
+  }]));
+  const gp = totals.headerGpValueEgp;
+  const gpPct = totals.headerGpPct;
   const gpTone = gp > 0 ? "g" : undefined;
 
   return (
@@ -76,7 +86,7 @@ export function QuotationSelectionBar({
             <b>{F(clientCost)}</b>
           </span>
           <span><i><QuotationText>Agency Fees</QuotationText></i><b>{F(agencyFees)}</b></span>
-          <span><i><QuotationText>Total investment</QuotationText></i><b>{F(clientCost + agencyFees)}</b></span>
+          <span><i><QuotationText>Total investment</QuotationText></i><b>{F(totals.totalClientCostEgp)}</b></span>
           <span>
             <i>GP</i>
             <b className={gpTone}>{F(gp)}</b>

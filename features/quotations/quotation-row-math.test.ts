@@ -296,4 +296,23 @@ for (const [gp, fee, header, expected] of [
   assert.equal(mixed[0]?.totalCost, 10000);
 }
 
+// QT-26-37 selected seven lines: fees are profit and part of the GP denominator.
+{
+  const selected = computeLiveQuotationTotals([{
+    id: "selected",
+    mode: "cost_revenue",
+    cost: 1835000,
+    revenue: 2140000,
+    costCurrency: "EGP",
+    gpPct: 0,
+    gpValue: 0,
+    afPct: 15,
+    fxRateToEgp: 1,
+  }]);
+  const totals = resolveQuotationHeaderCommercialTotals(selected);
+  assert.equal(totals.totalClientCostEgp, 2461000);
+  assert.equal(totals.headerGpValueEgp, 626000);
+  assert.equal(totals.headerGpPct.toFixed(1), "25.4");
+}
+
 console.log("quotation-row-math.test.ts: all assertions passed");
