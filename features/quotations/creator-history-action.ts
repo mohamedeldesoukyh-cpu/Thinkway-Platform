@@ -39,7 +39,7 @@ export async function getCreatorQuotationHistory(influencerId: string): Promise<
         id, quotation_id, cost, cost_currency, created_at,
         quotations!inner(serial_number, name, status, is_archived,
           temporary_client_name, temporary_brand_name,
-          client:clients(name), brand:brands(name), campaign:campaign_headers(name))
+          client:clients!client_id(name), brand:brands!brand_id(name), campaign:campaign_headers!campaign_header_id(name))
       `).eq("influencer_id", influencerId)
         .order("created_at", { ascending: false }).order("id")
         .range(offset, offset + 499);
