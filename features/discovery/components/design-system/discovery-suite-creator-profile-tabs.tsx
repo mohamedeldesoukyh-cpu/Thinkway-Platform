@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { CreatorQuotationHistory } from "./creator-quotation-history";
 import { sortRecentPublications } from "@/lib/creators/sort-recent-publications";
 
 import { PublicationPreviewImage } from "@/components/creator/publication-preview-image";
@@ -381,6 +382,7 @@ export function DiscoverySuiteCreatorProfileTabs({
               value={quoteCount > 0 && quotationPriceReference ? `${quoteLabel} avg` : quoteLabel}
             />
             <OutRow label="Quotes behind it" value={String(quoteCount)} />
+            <CreatorQuotationHistory key={identityCreator.influencer_id} influencerId={identityCreator.influencer_id} />
             <OutRow label="Studio reference" value={studioLabel} total />
           </div>
           <div className="tw-hint" style={{ marginTop: 7 }}>
