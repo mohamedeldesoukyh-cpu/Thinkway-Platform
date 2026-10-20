@@ -361,6 +361,7 @@ function QuotationPackLineRow({
           <div className="q-kv"><span><QuotationText>Client cost before agency fees</QuotationText></span><b>{rowCurrency} {F(projected.revenue)}</b></div>
           <div className="q-kv"><span><QuotationText>Agency fees (AF)</QuotationText></span><b>{rowCurrency} {F(projected.af)}</b></div>
           <div className="q-kv"><span><QuotationText>GP amount</QuotationText></span><b>{rowCurrency} {F(projected.margin)}</b></div>
+          <div className="q-kv"><span><QuotationText>GP %</QuotationText></span><b>{projected.marginPct.toFixed(1)}%</b></div>
                   {primary ? (
           <span className="inline-flex items-center gap-1.5">
             {linePending ? (
@@ -409,6 +410,7 @@ function QuotationPackLineRow({
             </span>
           </span>
         )}
+          <div className="q-kv"><span><QuotationText>Margin %</QuotationText></span><b>{projected.marginPct.toFixed(1)}%</b></div>
         </section>
       </div>
     </div>
