@@ -617,7 +617,7 @@ export async function duplicateQuotationItems(
 
 export async function addQuotationItemOption(
   supabase: SupabaseClient<Database>,
-  input: { quotation_id: string; item_id: string; service_type?: string }
+  input: { quotation_id: string; item_id: string; service_type?: string; blank_service?: boolean }
 ): Promise<QuotationMutationResult<{ id: string }>> {
   const locked = await rejectIfApprovedQuotation(supabase, input.quotation_id);
   if (locked) return locked;
@@ -677,13 +677,13 @@ export async function addQuotationItemOption(
         quotation_id: input.quotation_id,
         option_number: nextOption,
         source_shortlist_item_id: null,
-        ...(service ? {
-          platform: syncDeliverableFromTypeLines([{ type: service.value, quantity: 1 }], [], String(row.platform || "")).platform,
+        ...(service || input.blank_service ? {
+          platform: syncDeliverableFromTypeLines([{ type: service?.value || "", quantity: 1 }], [], String(row.platform || "")).platform,
           collapse_group_id: null,
           collapse_label: null,
-          service_description: `1× ${service.label}`,
+          service_description: service ? `1× ${service.label}` : "",
           deliverables: [{
-            ...syncDeliverableFromTypeLines([{ type: service.value, quantity: 1 }], [], String(row.platform || "")),
+            ...syncDeliverableFromTypeLines([{ type: service?.value || "", quantity: 1 }], [], String(row.platform || "")),
             quantity: 1,
             cost: 0,
             revenue: 0,

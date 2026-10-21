@@ -9,7 +9,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -55,7 +54,7 @@ import { cn } from "@/lib/utils";
 
 function stopShortcutBubble(event: React.KeyboardEvent) {
   // Let the dialog focus scope handle Tab and Shift+Tab normally.
-  if (event.key === "Tab") return;
+  if (event.key === "Tab" || event.key === "Escape") return;
   event.stopPropagation();
 }
 
@@ -331,6 +330,7 @@ type Props = {
   defaultOpen?: boolean;
   /** Stacked mock layout: price dash above + Cost detail link. */
   priceLayout?: "inline" | "stacked";
+  embedded?: boolean;
 };
 
 export function QuotationDeliverableCostDetails({
@@ -347,6 +347,7 @@ export function QuotationDeliverableCostDetails({
   gpPctLabel,
   defaultOpen,
   priceLayout = "inline",
+  embedded = false,
 }: Props) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const didAutoOpenRef = useRef(false);
@@ -434,7 +435,7 @@ export function QuotationDeliverableCostDetails({
     const next = withDeliverableCommercialPatch(localDeliverableRef.current, partial, fxRate);
     localDeliverableRef.current = next;
     setLocalDeliverable(next);
-    if (open) {
+    if (open || embedded) {
       queueMicrotask(() => onLiveChange?.(next));
     }
   }
@@ -519,10 +520,10 @@ export function QuotationDeliverableCostDetails({
 
   const panel = (
     <div className="quotation-cost-detail-panel__inner quotation-cost-detail-panel__inner--landscape">
-      <DialogTitle className="quotation-cost-detail-panel__title">Cost details</DialogTitle>
-      <DialogDescription className="quotation-cost-detail-panel__hint">
+      <h3 className="quotation-cost-detail-panel__title">Cost details</h3>
+      <p className="quotation-cost-detail-panel__hint">
         Values stay when you close this panel. Click Save on the quotation to persist.
-      </DialogDescription>
+      </p>
       {onFxChange && <QuotationCreatorFxFields compact draft={resolveQuotationRowDraft(item, draft)} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} onChange={onFxChange} />}
       <div
         ref={fieldsGridRef}
@@ -727,7 +728,7 @@ export function QuotationDeliverableCostDetails({
           </div>
         ) : null}
       </div>
-      <div className="mt-3 flex justify-end">
+      <div className="mt-3 flex justify-end" hidden={embedded}>
         <Button
           type="button"
           size="sm"
@@ -739,6 +740,8 @@ export function QuotationDeliverableCostDetails({
       </div>
     </div>
   );
+
+  if (embedded) return <div onKeyDown={stopShortcutBubble}>{panel}</div>;
 
   return (
     <>
@@ -808,6 +811,7 @@ export function QuotationDeliverableCostDetails({
           onKeyDown={stopShortcutBubble}
           onKeyDownCapture={handlePanelKeyDownCapture}
         >
+          <DialogTitle className="sr-only">Cost details</DialogTitle>
           {panel}
         </DialogContent>
       </Dialog>

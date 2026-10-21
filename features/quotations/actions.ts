@@ -473,6 +473,7 @@ export async function addQuotationItemOption(input: {
   quotation_id: string;
   item_id: string;
   service_type?: string;
+  blank_service?: boolean;
 }): Promise<ActionResult<{ id: string }>> {
   const actor = await getActor();
   if (!actor.ok) return actor;
