@@ -40,6 +40,8 @@ import {
 } from "@/features/quotations/quotation-row-math";
 import type { QuotationDeliverable, QuotationItemRow } from "@/features/quotations/types";
 import { CreatorPlatformTiers } from "@/components/creator/creator-platform-tiers";
+import { Badge } from "@/components/ui/badge";
+import { hasUgcCategory } from "@/lib/creators/ugc-category";
 import { quotationPlatformTierAccounts } from "@/lib/quotations/quotation-platform-tiers";
 import { quotationCreatorDuplicateKey } from "@/lib/quotations/quotation-creator-options";
 import { F } from "@/lib/discovery/suite/helpers";
@@ -278,7 +280,12 @@ function QuotationPackLineRow({
             profileUrl={item.creator_profile_source?.profile_url ?? item.profile_url}
             countryCodes={quotationCreatorCountryCodes(item)}
             onOpen={onOpenCreator ? () => onOpenCreator(item) : undefined}>
-            <div className="q-conn" title="Connected accounts"><CreatorPlatformTiers accounts={quotationPlatformTierAccounts(item)} /></div>
+            <div className="q-conn" title="Connected accounts">
+              <CreatorPlatformTiers accounts={quotationPlatformTierAccounts(item)} />
+              {hasUgcCategory(item.creator_categories) ? (
+                <Badge variant="outline" className="h-5 whitespace-nowrap border-violet-200 bg-violet-50 px-2 text-[9px] font-semibold text-violet-700" title="User-generated content creator">UGC</Badge>
+              ) : null}
+            </div>
           </DiscoverySuiteCreatorCell>}
           {canManage && showCreator ? <button type="button" className="q-b q-b--sm mt-2" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>+ Add service</button> : null}
         </div>
