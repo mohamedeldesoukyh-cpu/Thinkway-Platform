@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
-import { EntityPrevNext } from "@/components/navigation/entity-prev-next";
+import { CampaignSerialNavigation } from "./campaign-serial-navigation";
 import { PageBackButton } from "@/components/navigation/page-back-button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { EnvironmentBadgeSlot } from "@/components/environment/environment-badge-slot";
@@ -22,7 +22,6 @@ import type { DecisionFocusQuery } from "@/features/campaigns/lifecycle/campaign
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatPercent } from "@/features/campaigns/utils";
 import styles from "./campaign-commercial-header.module.css";
-import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import { cn } from "@/lib/utils";
 
 type CampaignDetailChromeProps = {
@@ -194,11 +193,9 @@ export function CampaignDetailChrome({
           variant="text"
           className="tw-b sm"
         />
-        <EntityPrevNext
-          entity="campaigns"
+        <CampaignSerialNavigation
           currentId={workspace.id}
-          hrefForId={(id) => campaignDetailPath(id)}
-          className="shrink-0"
+          activeTab={activeTab}
         />
         <CampaignWorkspaceJumpSelect
           currentId={workspace.id}
