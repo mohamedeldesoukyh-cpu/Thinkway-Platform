@@ -8,7 +8,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { createPortal } from "react-dom";
 
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import {
@@ -45,7 +45,6 @@ import { quotationCreatorDuplicateKey } from "@/lib/quotations/quotation-creator
 import { F } from "@/lib/discovery/suite/helpers";
 import {
   deliverableTypeLines,
-  QUOTATION_POST_TYPES,
   formatTypeLinesSummary,
   optionNumberLabel,
   platformsFromSelectedPostTypes,
@@ -73,6 +72,9 @@ type LineRowProps = {
   draft: QuotationRowDraft | undefined;
   index: number;
   optionCount: number;
+  showCreator: boolean;
+  expanded: boolean;
+  onActivate: (id: string | null) => void;
   selected: boolean;
   onToggleSelect: () => void;
   onDraftChange: (id: string, patch: Partial<QuotationRowDraft>) => void;
@@ -92,6 +94,9 @@ function QuotationPackLineRow({
   draft,
   index,
   optionCount,
+  showCreator,
+  expanded,
+  onActivate,
   selected,
   onToggleSelect,
   onDraftChange,
@@ -105,9 +110,7 @@ function QuotationPackLineRow({
   displayFxRateToEgp,
 }: LineRowProps) {
   const [pending, startTransition] = useTransition();
-  const [expanded, setExpanded] = useState(false);
-  const [addingService, setAddingService] = useState(false);
-  const [serviceType, setServiceType] = useState("tiktok_video");
+  const setExpanded = (open: boolean) => onActivate(open ? item.id : null);
   useEffect(() => {
     if (!expanded) return;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -118,7 +121,7 @@ function QuotationPackLineRow({
     };
     window.addEventListener("keydown", closeOnEscape);
     return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [expanded]);
+  }, [expanded, onActivate]);
   const confirmDelete = useConfirmDelete();
   const manualSave = useQuotationManualSave();
   const resolved = resolveQuotationRowDraft(item, draft);
@@ -243,69 +246,53 @@ function QuotationPackLineRow({
   }
 
   function handleAddOption() {
-    setAddingService(true);
-  }
-
-  function createServiceLine() {
     startTransition(async () => {
       if (manualSave.hasUnsavedChanges && !(await manualSave.saveAll())) return;
       const res = await addQuotationItemOption({
         quotation_id: quotationId,
         item_id: item.id,
-        service_type: serviceType,
+        blank_service: true,
       });
       if (!res.ok) {
         toast.error(res.message);
         return;
       }
-      toast.success("Service line added. Open Cost detail to set its price.");
-      setAddingService(false);
+      toast.success("Service added. Set deliverables and cost below.");
+      if (res.data?.id) onActivate(res.data.id);
       onLineChanged();
     });
   }
 
   return (
     <div className={`q-line-group ${selected ? "is-sel" : ""}`}>
-      <Dialog open={addingService} onOpenChange={setAddingService}>
-        <DialogContent>
-          <DialogHeader><DialogTitle>Add service line · {name}</DialogTitle>
-            <DialogDescription>Each line has its own price. The client can select one, several, or all service lines.</DialogDescription></DialogHeader>
-          <label className="grid gap-2">Service
-            <select className="rounded-lg border p-2" value={serviceType} onChange={event => setServiceType(event.target.value)} disabled={pending}>
-              {QUOTATION_POST_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
-            </select>
-          </label>
-          <button type="button" className="q-b" onClick={createServiceLine} disabled={pending}>{pending ? "Adding…" : "Add service line"}</button>
-        </DialogContent>
-      </Dialog>
       <div className={`q-row q-live-row ${selected ? "is-sel" : ""}`} role="row" onClick={(event) => {
         if (event.defaultPrevented || !(event.target instanceof Element) || !event.currentTarget.contains(event.target)) return;
         if (event.target.closest('button, a, input, textarea, select, label, [role="button"], [role="checkbox"], [role="switch"], [role="combobox"], [contenteditable="true"]')) return;
         if (window.getSelection()?.toString()) return;
-        setExpanded((open) => !open);
+        setExpanded(true);
       }}>
         <div className="q-cell-select" role="cell"><input type="checkbox" className="q-ck" checked={selected} onChange={onToggleSelect} aria-label={`Select ${name}${optionCount > 1 ? ` ${optionLabel}` : ""}`} disabled={!canManage} /></div>
         <div className="q-cell-creator" role="cell">
-          <DiscoverySuiteCreatorCell name={name} handleLabel={handleLabel} index={index}
+          {showCreator && <DiscoverySuiteCreatorCell name={name} handleLabel={handleLabel} index={index}
             avatarUrl={item.creator_profile_source?.avatarUrl ?? item.profile_image_url}
             profileUrl={item.creator_profile_source?.profile_url ?? item.profile_url}
             countryCodes={quotationCreatorCountryCodes(item)}
             onOpen={onOpenCreator ? () => onOpenCreator(item) : undefined}>
             <div className="q-conn" title="Connected accounts"><CreatorPlatformTiers accounts={quotationPlatformTierAccounts(item)} /></div>
-          </DiscoverySuiteCreatorCell>
-          {canManage ? <button type="button" className="q-b q-b--sm mt-2" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>+ Add service line</button> : null}
+          </DiscoverySuiteCreatorCell>}
+          {canManage && showCreator ? <button type="button" className="q-b q-b--sm mt-2" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>+ Add service</button> : null}
         </div>
         <div className="q-cell-platform" role="cell"><span className="q-mobile-label"><QuotationText>Quoted on</QuotationText></span><QuotationDeliverablePlatformIcons platforms={selectedPlatforms} allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)} loading={lineFields.loadingPlatforms} /></div>
         <div className="q-cell-service" role="cell">
           <span className="q-mobile-label"><QuotationText>Service</QuotationText></span>
-          <textarea rows={1} className="q-desc" value={lineFields.serviceDescription} readOnly={!canManage} aria-label="Service description" onChange={(event) => { if (canManage) updateServiceDescription(event.target.value); }} />
+          <textarea rows={1} className="q-desc" value={lineFields.serviceDescription} readOnly={!canManage} placeholder="Click to add deliverables and cost" onFocus={() => setExpanded(true)} aria-label="Service description" onChange={(event) => { if (canManage) updateServiceDescription(event.target.value); }} />
           <div className="q-dels">{lineFields.deliverableDrafts.flatMap(deliverableTypeLines).filter(line => line.type.trim()).map((line,index) => <span className={`q-del ${/boost/i.test(line.type) ? "q-del--bo" : /usage/i.test(line.type) ? "q-del--ur" : /event/i.test(line.type) ? "q-del--ev" : ""}`} key={`${line.type}:${index}`}>{formatTypeLinesSummary([line])}</span>)}</div>
         </div>
         <div className="q-cell-option" role="cell">{optionCount > 1 && <span className="q-opt">{optionLabel}/{optionCount}</span>}</div>
-        <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue)} + {F(projected.af)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}<button type="button" onClick={() => setExpanded(!expanded)} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`}><QuotationText>Cost detail</QuotationText></button>{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
+        <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue)} + {F(projected.af)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}<button type="button" onClick={() => setExpanded(true)} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`}><QuotationText>Add cost</QuotationText></button>{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
         <div className="q-cell-status" role="cell"><span className="q-p"><QuotationText>Draft</QuotationText></span></div>
         <div className="q-cell-actions q-acts" role="cell">
-          <button type="button" className="q-b q-b--sm" aria-label={`${expanded ? "Collapse" : "Expand"} line for ${name}`} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`} onClick={() => setExpanded(!expanded)}>⋯</button>
+          <button type="button" className="q-b q-b--sm" aria-label={`${expanded ? "Collapse" : "Expand"} line for ${name}`} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`} onClick={() => setExpanded(true)}>⋯</button>
                   <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
@@ -339,7 +326,8 @@ function QuotationPackLineRow({
           <button type="button" className="q-b q-b--sm q-b--danger q-mobile-action" aria-label="Remove line" onClick={handleRemove} disabled={!canManage || pending}><QuotationText>Delete</QuotationText></button>
         </div>
       </div>
-      <div id={`quotation-line-${item.id}`} className="q-exp" hidden={!expanded}>
+      {expanded && createPortal(<div className="tq-redesign" style={{ minHeight: 0 }}><section id={`quotation-line-${item.id}`} className="q-bottom-editor" aria-label={`Edit service for ${name}`}>
+        <header className="q-bottom-editor__header"><div><b>{name}</b><span> · {lineFields.serviceDescription || "New service"}</span><small>Changes stay in your draft. Save the quotation to keep them.</small></div><button type="button" className="q-b" onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
         <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
               workspaceDetails
@@ -386,7 +374,7 @@ function QuotationPackLineRow({
           <div className="q-kv"><span><QuotationText>Agency fees (AF)</QuotationText></span><b>{rowCurrency} {F(projected.af)}</b></div>
           <div className="q-kv"><span><QuotationText>GP amount</QuotationText></span><b>{rowCurrency} {F(projected.margin)}</b></div>
                   {primary ? (
-          <span className="inline-flex items-center gap-1.5">
+          <div className="q-inline-cost-editor">
             {linePending ? (
               <>
                 <span className="tw-dot warn" aria-hidden style={{ width: 8, height: 8, margin: 0 }} />
@@ -395,6 +383,7 @@ function QuotationPackLineRow({
               </>
             ) : null}
             {canManage && <QuotationDeliverableCostDetails
+              embedded
                     displayCurrency={displayCurrency}
                     displayFxRateToEgp={displayFxRateToEgp}
                     onFxChange={patch => {
@@ -417,7 +406,7 @@ function QuotationPackLineRow({
               onLiveChange={(next) => applyDeliverable(primary.key, next)}
               priceLayout="stacked"
             />}
-          </span>
+          </div>
         ) : (
           <span className="tw-v inline-flex items-center gap-1.5">
             {linePending ? (
@@ -434,7 +423,7 @@ function QuotationPackLineRow({
           </span>
         )}
         </section>
-      </div>
+      </div></section></div>, document.body)}
     </div>
   );
 }
@@ -482,17 +471,20 @@ export function QuotationLinesGrid({
   displayCurrency,
   displayFxRateToEgp,
 }: Props) {
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const groups = new Map<string, QuotationItemRow[]>();
+  for (const item of items) { const key = quotationCreatorDuplicateKey(item); groups.set(key, [...(groups.get(key) ?? []), item]); }
   const optionCounts = new Map<string, number>();
   for (const item of items) { const key = quotationCreatorDuplicateKey(item); optionCounts.set(key, (optionCounts.get(key) ?? 0) + 1); }
   return (
-    <div className="q-grid" role="table" aria-label="Quotation creator lines">
+    <div className="q-grid" style={{ paddingBottom: activeId ? "55vh" : undefined }} role="table" aria-label="Quotation creator lines">
       <div className="q-row is-head" role="row">
         <span role="columnheader"><input type="checkbox" className="q-ck" checked={allSelected} ref={el => {if(el) el.indeterminate = indeterminate && !allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} aria-label="Select all lines" disabled={!canManage || items.length === 0} /></span>
         <span role="columnheader"><QuotationText>Creator</QuotationText></span><span role="columnheader"><QuotationText>Quoted on</QuotationText></span><span role="columnheader"><QuotationText>Service</QuotationText></span><span role="columnheader"><QuotationText>Option</QuotationText></span><span role="columnheader" className="q-price"><QuotationText>Client price</QuotationText></span><span role="columnheader"><QuotationText>Status</QuotationText></span><span role="columnheader" className="q-price"><QuotationText>Actions</QuotationText></span>
       </div>
       <label className="q-mobile-select"><input type="checkbox" className="q-ck" checked={allSelected} ref={el=>{if(el)el.indeterminate=indeterminate&&!allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} disabled={!canManage || items.length === 0} /><QuotationText>Select all lines</QuotationText></label>
       {items.length === 0 && <div className="q-empty" role="status"><b>No lines match this filter</b><p>Choose another client-review filter to see quotation lines.</p></div>}
-      {items.map((item,index) => <QuotationPackLineRow key={item.id} quotationId={quotationId} item={item} draft={drafts[item.id]} index={index} optionCount={optionCounts.get(quotationCreatorDuplicateKey(item)) ?? 1} selected={selectedIds.has(item.id)} onToggleSelect={() => onToggleSelect(item.id)} onDraftChange={onDraftChange} onRemoved={onRemoved} onLineChanged={onLineChanged} onOpenCreator={onOpenCreator} showOriginalCurrency={showOriginalCurrency} hideCostAndFees={hideCostAndFees} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} canManage={canManage} />)}
+      {Array.from(groups.entries()).map(([key, group], index) => <div key={key} className="q-creator-service-group" role="rowgroup">{group.map((item, serviceIndex) => <QuotationPackLineRow showCreator={serviceIndex === 0} expanded={activeId === item.id} onActivate={setActiveId} key={item.id} quotationId={quotationId} item={item} draft={drafts[item.id]} index={index} optionCount={optionCounts.get(quotationCreatorDuplicateKey(item)) ?? 1} selected={selectedIds.has(item.id)} onToggleSelect={() => onToggleSelect(item.id)} onDraftChange={onDraftChange} onRemoved={onRemoved} onLineChanged={onLineChanged} onOpenCreator={onOpenCreator} showOriginalCurrency={showOriginalCurrency} hideCostAndFees={hideCostAndFees} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} canManage={canManage} />)}</div>)}
       <div className="q-grid-total">Quotation totals · {uniqueCreatorCount} creators · {items.length} <QuotationText>option lines</QuotationText> <b>{F(totalClientCostEgp)} EGP</b></div>
     </div>
   );
