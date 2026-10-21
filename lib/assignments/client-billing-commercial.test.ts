@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import {
+  assignmentClientBilling,
   computeAgencyFeeAmount,
   computeClientBilling,
   resolveClientTaxableBase,
@@ -8,6 +9,14 @@ import {
 } from "@/lib/assignments/client-billing-commercial";
 
 assert.equal(computeAgencyFeeAmount(100_000, 10_000, 5), 5_500);
+
+// Assignment details must separate VAT from revenue and profit.
+assert.deepEqual(assignmentClientBilling({ revenue_before_vat: 40000, revenue_vat_percent: 14 }), {
+  subtotal: 40000, vatAmount: 5600, totalBilling: 45600,
+});
+const assignmentProfit = rollupLineClientCommercial({ revenueBeforeVat: 40000, costBeforeVat: 16000 });
+assert.equal(assignmentProfit.gp, 24000);
+assert.equal(assignmentProfit.marginPercent, 60);
 
 const billing = computeClientBilling({
   revenueBeforeVat: 100_000,
