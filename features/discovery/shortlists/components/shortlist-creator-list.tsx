@@ -1,4 +1,5 @@
 import { ShortlistRecommendationButton } from "./shortlist-recommendation-button";
+import { hasUgcCategory } from "@/lib/creators/ugc-category";
 
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
@@ -247,6 +248,7 @@ function ShortlistCreatorGridRow({
         <CreatorPlatformTiers accounts={creator.platforms.map((account) => ({
           platform: account.platform, handle: account.handle, followers: account.follower_count,
         }))} />
+        {hasUgcCategory(creator.categories) ? <span className="mt-1 inline-flex rounded-full bg-violet-100 px-2 py-0.5 text-xs font-semibold text-violet-800" title="User-generated content creator">UGC</span> : null}
       </DiscoverySuiteCell>
 
       <DiscoverySuiteCell>

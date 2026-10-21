@@ -9,3 +9,7 @@ test("empty or non-category refresh preserves manual categories", () => {
 test("real provider categories replace manual choices, preserving PR", () => {
  assert.deepEqual(refreshedManualCategories(["Fashion", "PR"], ["Food", "food"]), ["Food", "PR"]);
 });
+
+test("provider refresh preserves manual UGC and PR classifications", () => {
+ assert.deepEqual(refreshedManualCategories(["UGC", "PR", "Fashion"], ["Food"]), ["Food", "UGC", "PR"]);
+});

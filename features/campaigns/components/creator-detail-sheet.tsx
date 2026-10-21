@@ -1862,12 +1862,12 @@ export function CreatorDetailSheet({
             onAddPlatform={() => setAddPlatformOpen(true)}
             tierLabel={packTier}
             prChecked={creatorHasPrCategory(identityCreator.categories)}
-            prBusy={prCategoryBusy}
+            prBusy={prCategoryBusy || categoriesBusy}
             canEditPr={Boolean(identityCreator.influencer_id)}
             onTogglePr={handleTogglePrCategory}
           countryCode={identityCreator.country_code ?? ""}
           categories={identityCreator.browse_category_tags ?? identityCreator.categories ?? []}
-          categoriesBusy={categoriesBusy}
+          categoriesBusy={categoriesBusy || prCategoryBusy}
           onCategoriesChange={identityCreator.influencer_id ? handleCategoriesChange : undefined}
           countryBusy={countryBusy}
           onCountryChange={handleCountryChange}

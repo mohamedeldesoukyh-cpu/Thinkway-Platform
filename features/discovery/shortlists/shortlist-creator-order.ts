@@ -1,4 +1,5 @@
 import { compareRecommendations } from "@/lib/creators/shortlist-recommendations";
+import { hasUgcCategory } from "@/lib/creators/ugc-category";
 import type { ShortlistCreatorItem } from "./types";
 import { compareClientListCreators } from "@/lib/creators/client-list-order";
 import { resolveCreatorTierFromUnified } from "@/lib/creators/creator-tier";
@@ -6,10 +7,12 @@ import { resolveSortFollowers } from "@/features/discovery/components/creator-se
 import { orderCreatorGroups } from "@/lib/quotations/quotation-creator-order";
 
 export function orderShortlistCreators(items: ShortlistCreatorItem[], order: string[] = []) {
-  return orderCreatorGroups([...items].sort(compareRecommendations), order, item => [item.item_id]);
+  return orderCreatorGroups([...items].sort((a, b) =>
+    Number(hasUgcCategory(a.creator?.categories)) - Number(hasUgcCategory(b.creator?.categories)) || compareRecommendations(a, b)
+  ), order, item => [item.item_id]);
 }
 export function tierOrderShortlistCreators(items: ShortlistCreatorItem[]) {
-  return [...items].sort((a, b) => compareClientListCreators(
+  return [...items].sort((a, b) => Number(hasUgcCategory(a.creator?.categories)) - Number(hasUgcCategory(b.creator?.categories)) || compareClientListCreators(
     { tier: a.creator ? resolveCreatorTierFromUnified(a.creator) : "Unknown", followers: a.creator ? resolveSortFollowers(a.creator) ?? 0 : 0 },
     { tier: b.creator ? resolveCreatorTierFromUnified(b.creator) : "Unknown", followers: b.creator ? resolveSortFollowers(b.creator) ?? 0 : 0 },
   ));

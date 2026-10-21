@@ -1,6 +1,7 @@
 "use client";
 
 import { CreatorCategoryEditor } from "../creator-category-editor";
+import { hasUgcCategory, toggleUgcCategory } from "@/lib/creators/ugc-category";
 import { useEffect, useRef, type ReactNode, type CSSProperties } from "react";
 import { CREATOR_COUNTRY_OPTIONS as COUNTRY_OPTIONS } from "@/lib/creators/country-options";
 import { createPortal } from "react-dom";
@@ -416,6 +417,14 @@ export function DiscoverySuiteCreatorProfile({
               ) : prChecked ? (
                 <span className="tw-pr-tag">PR</span>
               ) : null}
+              {canEditPr && onCategoriesChange ? (
+                <label className="tw-pr-check" title="User-generated content creator">
+                  <input type="checkbox" aria-label="Mark as UGC creator"
+                    checked={hasUgcCategory(categories)} disabled={categoriesBusy || prBusy}
+                    onChange={(event) => onCategoriesChange(toggleUgcCategory(categories, event.target.checked))} />
+                  UGC
+                </label>
+              ) : hasUgcCategory(categories) ? <span className="tw-pr-tag">UGC</span> : null}
             </div>
 
             <CreatorCategoryEditor categories={categories} categoriesBusy={categoriesBusy} onCategoriesChange={onCategoriesChange} />
