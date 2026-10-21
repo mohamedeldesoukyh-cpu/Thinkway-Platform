@@ -331,6 +331,7 @@ type Props = {
   /** Stacked mock layout: price dash above + Cost detail link. */
   priceLayout?: "inline" | "stacked";
   embedded?: boolean;
+  triggerLabel?: string;
 };
 
 export function QuotationDeliverableCostDetails({
@@ -348,6 +349,7 @@ export function QuotationDeliverableCostDetails({
   defaultOpen,
   priceLayout = "inline",
   embedded = false,
+  triggerLabel = "+ Cost detail",
 }: Props) {
   const [open, setOpen] = useState(defaultOpen ?? false);
   const didAutoOpenRef = useRef(false);
@@ -514,7 +516,7 @@ export function QuotationDeliverableCostDetails({
       className="h-auto min-h-6 shrink-0 px-0 py-0.5 text-[11px] font-semibold whitespace-nowrap text-[var(--blue-text,#0b52e0)] no-underline hover:underline"
       onClick={() => handleOpenChange(true)}
     >
-      + Cost detail
+      {triggerLabel}
     </Button>
   );
 
