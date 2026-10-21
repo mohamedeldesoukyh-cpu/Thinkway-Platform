@@ -11,6 +11,7 @@ import { resolveCreatorCountryCodes } from "@/lib/creators/country-inference";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { filterPlatformsForDisplay, sortPlatformsStable } from "@/lib/creators/creator-centric";
 import { creatorStoredCategoriesForDisplay } from "@/lib/creators/category-filter";
+import { hasUgcCategory, toggleUgcCategory } from "@/lib/creators/ugc-category";
 import {
   resolveCreatorTierFromUnified,
   type CreatorTierLabel,
@@ -410,7 +411,7 @@ export function buildCreatorGroup(
     (profileSource ? resolveCreatorProfileUrl(profileSource) : null) ??
     row.platformLinks[0]?.url ??
     null;
-  const categories = creatorStoredCategoriesForDisplay(creator).slice(0, 5);
+  const categories = toggleUgcCategory(creatorStoredCategoriesForDisplay(creator), hasUgcCategory(creator.categories)).slice(0, 5);
   const creatorKey = shortlistCreatorKey(item);
   const avatarProxyUrl =
     row.avatarUrl && row.avatarProfileUrl

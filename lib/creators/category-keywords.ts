@@ -90,6 +90,8 @@ export const CREATOR_CATEGORY_KEYWORDS: Readonly<Record<string, string>> = {
   "stay at home mom": "Parenting",
   "stay at home mum": "Parenting",
   pr: "PR",
+  ugc: "UGC",
+  "ugc creator": "UGC",
   "pr page": "PR",
   "public relations": "PR",
 };
@@ -113,6 +115,7 @@ export const CREATOR_CATEGORY_LABELS = [
   "Health & Wellness",
   "Entertainment",
   "PR",
+  "UGC",
 ] as const;
 
 export type CreatorCategoryLabel = (typeof CREATOR_CATEGORY_LABELS)[number];

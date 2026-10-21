@@ -12,3 +12,10 @@ const starred = items.map((item,index) => ({...item,recommendationRank:index===2
 assert.deepEqual(orderShortlistCreators(starred).map(item=>item.item_id),["new","a","b"]);
 assert.deepEqual(orderShortlistCreators(starred,["b","a","new"]).map(item=>item.item_id),["b","a","new"]);
 assert.equal(orderShortlistCreators(starred,["b","a","new"])[2].recommendationRank,1,"Manual order keeps stars");
+
+const ugcItems = [
+  { item_id: "ugc", recommendationRank: 1, creator: { categories: ["UGC"], platforms: [] } },
+  { item_id: "regular", creator: { categories: ["Beauty"], platforms: [] } },
+] as unknown as ShortlistCreatorItem[];
+assert.deepEqual(orderShortlistCreators(ugcItems).map(item => item.item_id), ["regular", "ugc"], "UGC goes last even when recommended");
+assert.deepEqual(orderShortlistCreators(ugcItems, ["ugc", "regular"]).map(item => item.item_id), ["ugc", "regular"], "Explicit order wins over UGC default");
