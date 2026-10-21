@@ -62,7 +62,8 @@ export async function commitInvoiceLifecycleMutation(
   const phaseEnd = `${input.mutation}:commit:complete`;
 
   const before =
-    input.mutation === "append" || input.mutation === "regenerate"
+    process.env.NODE_ENV === "development" &&
+    (input.mutation === "append" || input.mutation === "regenerate")
       ? await captureInvoiceLifecycleSnapshot(
           supabase,
           input.invoiceId,
@@ -131,11 +132,12 @@ export async function commitInvoiceLifecycleMutation(
     return { error: relock.error, lineIds: relock.lineIds };
   }
 
-  const after = await captureInvoiceLifecycleSnapshot(
+  // These snapshots are only consumed by development logging, never validation.
+  const after = process.env.NODE_ENV === "development" ? await captureInvoiceLifecycleSnapshot(
     supabase,
     input.invoiceId,
     touchedLineIds.length > 0 ? touchedLineIds : relock.lineIds
-  );
+  ) : null;
 
   logInvoiceLifecycleTransition({
     flow:
@@ -161,7 +163,7 @@ export async function commitInvoiceLifecycleMutation(
       invoiceId: input.invoiceId,
       lineIds: relock.lineIds,
       hasDuplicateLineItems:
-        after.duplicatePostLinks.length > 0 || after.duplicateDeliverableLinks.length > 0,
+        (after?.duplicatePostLinks.length ?? 0) > 0 || (after?.duplicateDeliverableLinks.length ?? 0) > 0,
     });
   }
 

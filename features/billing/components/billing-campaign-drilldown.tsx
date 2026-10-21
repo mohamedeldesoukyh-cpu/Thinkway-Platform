@@ -2,6 +2,7 @@
 
 import { memo, useLayoutEffect, useCallback, useMemo, useRef, useState } from "react";
 import { BillingSelectionBar, downloadBillingSelection } from "./billing-selection-bar";
+import { OperationalSelectionCheckbox } from "./operational-selection-checkbox";
 import { selectedInvoiceRows, splitInvoiceSelection } from "@/lib/billing/selected-invoice-batches";
 import {
   operationalFloatingBarContentClass,
@@ -39,6 +40,9 @@ import {
 } from "@/lib/billing/operational-row-filters";
 import {
   clearOperationalSelection,
+  countSelection,
+  getGlobalSelectionStatus,
+  toggleGlobalOperationalSelection,
   selectAllOperationalRows,
   createEmptySelection,
   selectionToSubmitPayload,
@@ -134,6 +138,8 @@ function BillingCampaignDrilldownInner({
   );
 
   const selectedPayload = selectionToSubmitPayload(selection, rootRows);
+  const globalSelectionStatus = getGlobalSelectionStatus(assignmentRows, selection);
+  const hasSelectableRows = countSelection(selectAllOperationalRows(assignmentRows)) > 0;
   const selectedRows = selectedInvoiceRows(rootRows, selectedPayload);
   const selectedCount = splitInvoiceSelection(rootRows, selectedPayload).length;
   const selectedDraft = computeCampaignInvoiceDraft(selectedRows, percents);
@@ -316,7 +322,14 @@ function BillingCampaignDrilldownInner({
           {embedded ? null : (
             <CampaignOperationalTableHeader>
               <CampaignOperationalTableHeaderRow>
-                <CampaignOperationalTableHead className="w-10" />
+                <CampaignOperationalTableHead className="w-10">
+                  <OperationalSelectionCheckbox
+                    status={globalSelectionStatus}
+                    disabled={!hasSelectableRows || invoicePending}
+                    onToggle={() => updateSelection((prev) => toggleGlobalOperationalSelection(assignmentRows, prev))}
+                    ariaLabel="Select all visible billing lines"
+                  />
+                </CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>Line</CampaignOperationalTableHead>
                 <CampaignOperationalTableHead title="Original billable amount on this line">
                   Invoice amount
