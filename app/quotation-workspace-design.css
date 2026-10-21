@@ -510,12 +510,12 @@
 }
 
 .tq-redesign .q-creator-service-group { border-bottom:2px solid var(--q-hair); }
-.tq-redesign .q-bottom-editor { position:fixed; inset:auto 12px 0; z-index:110; max-height:55dvh; overflow:auto; background:var(--q-surf,#fff); border:1px solid var(--q-line,#dce3ef); border-radius:16px 16px 0 0; box-shadow:0 -8px 32px #16264b26; padding-bottom:env(safe-area-inset-bottom); }
-.tq-redesign .q-bottom-editor__header { position:sticky; top:0; z-index:2; background:var(--q-surf,#fff); display:flex; align-items:center; justify-content:space-between; gap:12px; padding:12px 16px; border-bottom:1px solid var(--q-hair); }
+.tq-redesign .q-bottom-editor { position:fixed; inset:auto 12px 0; z-index:110; max-height:min(320px,35dvh); overflow:auto; background:var(--q-surf,#fff); border:1px solid var(--q-line,#dce3ef); border-radius:16px 16px 0 0; box-shadow:0 -8px 32px #16264b26; padding-bottom:env(safe-area-inset-bottom); }
+.tq-redesign .q-bottom-editor__header { position:sticky; top:0; z-index:2; background:var(--q-surf,#fff); display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 14px; border-bottom:1px solid var(--q-hair); }
 .tq-redesign .q-bottom-editor__header small { display:block; color:var(--q-muted,#64748b); margin-top:4px; }
-.tq-redesign .q-bottom-editor .q-exp { display:grid; grid-template-columns:minmax(220px,1fr) minmax(180px,.65fr) minmax(360px,1.4fr); margin:0; }
+.tq-redesign .q-bottom-editor .q-exp { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); margin:0; }
 @media(max-width:900px) {
- .tq-redesign .q-bottom-editor { inset:auto 0 0; max-height:60dvh; }
+ .tq-redesign .q-bottom-editor { inset:auto 0 0; max-height:45dvh; }
  .tq-redesign .q-bottom-editor .q-exp { grid-template-columns:1fr; }
  .tq-redesign .q-creator-service-group .q-line-group { margin-bottom:0; border-radius:0; }
  .tq-redesign .q-cell-creator:empty { display:none; }
@@ -523,3 +523,8 @@
 
 .tq-redesign .q-bottom-editor .quotation-cost-detail-panel__inner--landscape { min-width:0; width:100%; box-shadow:none; }
 .tq-redesign .q-bottom-editor .q-inline-cost-editor { display:block; min-width:0; }
+
+.tq-redesign .q-bottom-editor .q-exp { padding:8px; gap:8px; }
+.tq-redesign .q-bottom-editor .q-sec { padding:8px 10px; }
+.tq-redesign .q-bottom-editor .q-sec__h { margin-bottom:5px; }
+.tq-redesign .q-bottom-editor .q-kv { padding:3px 0; }

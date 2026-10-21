@@ -327,7 +327,7 @@ function QuotationPackLineRow({
         </div>
       </div>
       {expanded && createPortal(<div className="tq-redesign" style={{ minHeight: 0 }}><section id={`quotation-line-${item.id}`} className="q-bottom-editor" aria-label={`Edit service for ${name}`}>
-        <header className="q-bottom-editor__header"><div><b>{name}</b><span> · {lineFields.serviceDescription || "New service"}</span><small>Changes stay in your draft. Save the quotation to keep them.</small></div><button type="button" className="q-b" onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
+        <header className="q-bottom-editor__header"><div><b>{name}</b><span> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b" onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
         <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
               workspaceDetails
@@ -383,7 +383,7 @@ function QuotationPackLineRow({
               </>
             ) : null}
             {canManage && <QuotationDeliverableCostDetails
-              embedded
+              triggerLabel="+ Add cost"
                     displayCurrency={displayCurrency}
                     displayFxRateToEgp={displayFxRateToEgp}
                     onFxChange={patch => {
@@ -477,7 +477,7 @@ export function QuotationLinesGrid({
   const optionCounts = new Map<string, number>();
   for (const item of items) { const key = quotationCreatorDuplicateKey(item); optionCounts.set(key, (optionCounts.get(key) ?? 0) + 1); }
   return (
-    <div className="q-grid" style={{ paddingBottom: activeId ? "55vh" : undefined }} role="table" aria-label="Quotation creator lines">
+    <div className="q-grid" style={{ paddingBottom: activeId ? "min(320px, 35vh)" : undefined }} role="table" aria-label="Quotation creator lines">
       <div className="q-row is-head" role="row">
         <span role="columnheader"><input type="checkbox" className="q-ck" checked={allSelected} ref={el => {if(el) el.indeterminate = indeterminate && !allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} aria-label="Select all lines" disabled={!canManage || items.length === 0} /></span>
         <span role="columnheader"><QuotationText>Creator</QuotationText></span><span role="columnheader"><QuotationText>Quoted on</QuotationText></span><span role="columnheader"><QuotationText>Service</QuotationText></span><span role="columnheader"><QuotationText>Option</QuotationText></span><span role="columnheader" className="q-price"><QuotationText>Client price</QuotationText></span><span role="columnheader"><QuotationText>Status</QuotationText></span><span role="columnheader" className="q-price"><QuotationText>Actions</QuotationText></span>
