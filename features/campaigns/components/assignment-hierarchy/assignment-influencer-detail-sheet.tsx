@@ -1,5 +1,6 @@
 "use client";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
+import { assignmentClientBilling } from "@/lib/assignments/client-billing-commercial";
 
 
 import Link from "next/link";
@@ -162,6 +163,7 @@ function ParticipationDetailsTab({
   const deliverableLabels = resolveAssignmentDeliverableLabels(group);
   const liveDate = resolveAssignmentFirstLiveDate(group);
   const liveDateOverdue = isAssignmentLiveDateOverdue(liveDate, line.assignment_status);
+  const billing = assignmentClientBilling(line);
 
   return (
     <>
@@ -185,15 +187,24 @@ function ParticipationDetailsTab({
         </DetailField>
       ) : null}
       <DetailField label="Revenue" valueClassName="m">
-        {formatMoney(line.revenue_after_vat ?? line.revenue_before_vat, currency, line.revenue_fx_override)}
+        {formatMoney(billing.subtotal, currency, line.revenue_fx_override)}
+      </DetailField>
+      <DetailField label="VAT amount" valueClassName="m">
+        {formatMoney(billing.vatAmount, currency, line.revenue_fx_override)}
+      </DetailField>
+      <DetailField label="Rev. Inc VAT" valueClassName="m">
+        {formatMoney(billing.totalBilling, currency, line.revenue_fx_override)}
       </DetailField>
       {showInternalFinancials ? (
         <>
           <DetailField label="Profit" valueClassName="m g">
             {<CampaignLineFinancial line={line} metric="gp" />}
           </DetailField>
-          <DetailField label="Creator profit %" valueClassName="m">
+          <DetailField label="GP%" valueClassName="m">
             {<CampaignLineFinancial line={line} metric="margin_percent" />}
+          </DetailField>
+          <DetailField label="Margin %" valueClassName="m">
+            <CampaignLineFinancial line={line} metric="margin_percent" />
           </DetailField>
         </>
       ) : null}
@@ -509,9 +520,8 @@ export function AssignmentInfluencerDetailSheet({
       ? `${formatPercent(primaryAccount.engagement_rate)} ER`
       : null;
   const creatorName = line?.influencer_name ?? row?.displayName ?? "Creator";
-  const revenue = line
-    ? Number(line.revenue_after_vat ?? line.revenue_before_vat ?? row?.rollups.revenue ?? 0)
-    : 0;
+  const billing = line ? assignmentClientBilling(line) : { subtotal: 0, vatAmount: 0, totalBilling: 0 };
+  const revenue = billing.subtotal;
   const cost = line ? Number(line.cost_before_vat ?? line.cost ?? 0) : 0;
   const gp = row?.rollups.gp ?? revenue - cost;
   const margin = row?.rollups.margin_percent ?? (revenue > 0 ? (gp / revenue) * 100 : 0);
@@ -603,6 +613,14 @@ export function AssignmentInfluencerDetailSheet({
                   <i>Revenue</i>
                   <b>{formatMoneyCompact(revenue, currency, line?.revenue_fx_override)}</b>
                 </div>
+                <div>
+                  <i>VAT amount</i>
+                  <b>{formatMoneyCompact(billing.vatAmount, currency, line.revenue_fx_override)}</b>
+                </div>
+                <div>
+                  <i>Rev. Inc VAT</i>
+                  <b>{formatMoneyCompact(billing.totalBilling, currency, line.revenue_fx_override)}</b>
+                </div>
                 {gates.showInternalFinancials ? (
                   <div>
                     <i>Cost</i>
@@ -617,8 +635,14 @@ export function AssignmentInfluencerDetailSheet({
                 ) : null}
                 {gates.showInternalFinancials ? (
                   <div>
-                    <i>Margin</i>
+                    <i>GP%</i>
                     <b className={margin >= 20 ? "g" : undefined}>{line ? <CampaignLineFinancial line={line} metric="margin_percent" /> : formatPercent(margin)}</b>
+                  </div>
+                ) : null}
+                {gates.showInternalFinancials ? (
+                  <div>
+                    <i>Margin %</i>
+                    <b><CampaignLineFinancial line={line} metric="margin_percent" /></b>
                   </div>
                 ) : null}
                 <div>
