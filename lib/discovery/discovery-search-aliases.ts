@@ -63,6 +63,7 @@ const CATEGORY_CORE_ENGLISH: Readonly<Record<CreatorCategoryLabel, readonly stri
   "Health & Wellness": ["health", "wellness"],
   Entertainment: ["entertainment", "comedy"],
   PR: ["pr"],
+  UGC: ["ugc", "ugc creator", "user generated content"],
 };
 
 /** Primary Arabic forms exposed when expanding from English niches. */
