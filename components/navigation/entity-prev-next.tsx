@@ -18,6 +18,7 @@ type EntityPrevNextProps = {
   /** Optional — when provided, neighbors hide if filter fingerprint drifted. */
   expectedFilterKey?: string | null;
   className?: string;
+  orderedIds?: string[];
 };
 
 /**
@@ -37,14 +38,24 @@ export function EntityPrevNext({
   hrefForId,
   expectedFilterKey,
   className,
+  orderedIds,
 }: EntityPrevNextProps) {
   // sessionStorage is client-only — reading it in useState init causes React #418
   // (SSR null vs client "1/29") and can blank the rest of the quotation body.
   const [neighbors, setNeighbors] = useState(EMPTY_NEIGHBORS);
 
   useEffect(() => {
-    setNeighbors(resolveListNavNeighbors(entity, currentId, expectedFilterKey));
-  }, [currentId, entity, expectedFilterKey]);
+    if (orderedIds) {
+      const index = orderedIds.indexOf(currentId);
+      setNeighbors({
+        prevId: index > 0 ? orderedIds[index - 1] : null,
+        nextId: index >= 0 ? orderedIds[index + 1] ?? null : null,
+        index, total: orderedIds.length, filterKey: null,
+      });
+    } else {
+      setNeighbors(resolveListNavNeighbors(entity, currentId, expectedFilterKey));
+    }
+  }, [currentId, entity, expectedFilterKey, orderedIds]);
 
   if (neighbors.total < 2 || neighbors.index < 0) return null;
 

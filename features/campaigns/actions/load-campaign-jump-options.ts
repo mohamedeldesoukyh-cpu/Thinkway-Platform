@@ -2,6 +2,7 @@
 
 import { requirePermission } from "@/lib/auth/permissions-server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { sortCampaignsBySerial } from "@/lib/navigation/campaign-serial-order";
 
 export type CampaignJumpOption = {
   id: string;
@@ -61,7 +62,7 @@ export async function loadCampaignJumpOptionsAction(input?: {
       name: row.name?.trim() || "Untitled campaign",
     }));
 
-    return { ok: true, options };
+    return { ok: true, options: sortCampaignsBySerial(options) };
   } catch (error) {
     return {
       ok: false,

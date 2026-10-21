@@ -21,6 +21,7 @@ import {
   type CampaignJumpOption,
 } from "@/features/campaigns/actions/load-campaign-jump-options";
 import { readListNavContext } from "@/lib/navigation/list-nav-context";
+import { sortCampaignsBySerial } from "@/lib/navigation/campaign-serial-order";
 import { campaignDetailPath } from "@/lib/routing/entity-paths";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,7 @@ function mergeOptions(
     if (!option.id) continue;
     byId.set(option.id, option);
   }
-  return [...byId.values()];
+  return sortCampaignsBySerial([...byId.values()]);
 }
 
 /**
