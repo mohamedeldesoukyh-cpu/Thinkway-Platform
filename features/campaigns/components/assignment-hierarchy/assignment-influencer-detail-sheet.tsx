@@ -609,10 +609,24 @@ export function AssignmentInfluencerDetailSheet({
                 {erLabel ? <span>{erLabel}</span> : null}
               </div>
               <div className="tw-cm__st">
+                {gates.showInternalFinancials ? (
+                  <div>
+                    <i>Cost</i>
+                    <b>{line ? <CampaignLineFinancial line={line} metric="cost" /> : formatMoneyCompact(cost, currency)}</b>
+                  </div>
+                ) : null}
                 <div>
                   <i>Revenue</i>
-                  <b>{formatMoneyCompact(revenue, currency, line?.revenue_fx_override)}</b>
+                  <b>{formatMoneyCompact(revenue, currency, line.revenue_fx_override)}</b>
                 </div>
+                {gates.showInternalFinancials ? (
+                  <div>
+                    <i>Gross profit</i>
+                    <b className={gp >= 0 ? "g" : undefined}>{line ? <CampaignLineFinancial line={line} metric="gp" /> : formatMoneyCompact(gp, currency)}</b>
+                  </div>
+                ) : null}
+              </div>
+              <div className="tw-cm__st" style={{ marginTop: 16 }}>
                 <div>
                   <i>VAT amount</i>
                   <b>{formatMoneyCompact(billing.vatAmount, currency, line.revenue_fx_override)}</b>
@@ -621,18 +635,8 @@ export function AssignmentInfluencerDetailSheet({
                   <i>Rev. Inc VAT</i>
                   <b>{formatMoneyCompact(billing.totalBilling, currency, line.revenue_fx_override)}</b>
                 </div>
-                {gates.showInternalFinancials ? (
-                  <div>
-                    <i>Cost</i>
-                    <b>{line ? <CampaignLineFinancial line={line} metric="cost" /> : formatMoneyCompact(cost, currency)}</b>
-                  </div>
-                ) : null}
-                {gates.showInternalFinancials ? (
-                  <div>
-                    <i>Gross profit</i>
-                    <b className={gp >= 0 ? "g" : undefined}>{line ? <CampaignLineFinancial line={line} metric="gp" /> : formatMoneyCompact(gp, currency)}</b>
-                  </div>
-                ) : null}
+              </div>
+              {gates.showInternalFinancials ? <div className="tw-cm__st" style={{ marginTop: 16 }}>
                 {gates.showInternalFinancials ? (
                   <div>
                     <i>GP%</i>
@@ -645,6 +649,8 @@ export function AssignmentInfluencerDetailSheet({
                     <b><CampaignLineFinancial line={line} metric="margin_percent" /></b>
                   </div>
                 ) : null}
+              </div> : null}
+              <div className="tw-cm__st" style={{ marginTop: 16 }}>
                 <div>
                   <i>Deliverables</i>
                   <b>{String(row.rollups.deliverable_count)}</b>
