@@ -3,6 +3,17 @@ import { test } from "node:test";
 import type { QuotationItemRow } from "@/features/quotations/types";
 import { moveCreator, orderCreatorGroups, orderQuotationItems, quotationOrderCreators, readCreatorListOrder } from "./quotation-creator-order";
 const item = (id: string, creator: string, rank: number, followers: number) => ({ id, unified_id: creator, creator_name: creator, sort_order: rank, followers, revenue: 1200, af_value: 120 } as QuotationItemRow);
+test("default order uses largest platform tier, keeps services together and puts UGC last", () => {
+  const nano = item("n", "Nano", 0, 2000);
+  const mega = { ...item("m", "Mega", 1, 2000), creator_profile_source: { platformAccounts: [{ platform: "tiktok", followers: 2000000 }] } } as QuotationItemRow;
+  const ugc = { ...item("u", "UGC", 2, 3000000), creator_categories: ["UGC"] };
+  const macro = item("a", "Macro", 3, 600000);
+  const megaService = { ...mega, id: "m2", sort_order: 4 };
+  const rows = [nano, mega, ugc, macro, megaService];
+  assert.deepEqual(quotationOrderCreators(rows).flatMap(g => g.items.map(i => i.id)), ["m", "m2", "a", "n", "u"]);
+  assert.deepEqual(quotationOrderCreators(rows, ["u", "n", "a", "m"]).map(g => g.name), ["UGC", "Nano", "Macro", "Mega"]);
+  assert.deepEqual(rows.map(i => i.id), ["n", "m", "u", "a", "m2"]);
+});
 test("custom creator order keeps options and money intact, including new creators", () => {
   const rows = [item("a1", "Alpha", 0, 2000000), item("b1", "Beta", 1, 15000), item("a2", "Alpha", 2, 2000000), item("c1", "Gamma", 3, 500)];
   const before = structuredClone(rows);

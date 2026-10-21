@@ -1,6 +1,7 @@
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import { compareClientListCreators } from "@/lib/creators/client-list-order";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
+import { hasUgcCategory } from "@/lib/creators/ugc-category";
 import { quotationCreatorDuplicateKey } from "./quotation-creator-options";
 
 /** Presentation only: saved quotation line IDs, grouped by creator. Never changes line values. */
@@ -37,7 +38,11 @@ export function quotationOrderCreators(items: QuotationItemRow[], order?: string
       .map(account => account.followers).filter((count): count is number => count != null && Number.isFinite(count) && count > 0);
     group.tier = resolveCreatorTierLabel({ followers: platforms.length ? Math.max(...platforms) : group.items[0].followers });
   }
-  return orderCreatorGroups([...byCreator.values()].sort(compareClientListCreators), order, group => group.items.map(item => item.id));
+  return orderCreatorGroups([...byCreator.values()].sort((a, b) =>
+    Number(a.items.some(item => hasUgcCategory(item.creator_categories))) -
+      Number(b.items.some(item => hasUgcCategory(item.creator_categories))) ||
+    compareClientListCreators(a, b)
+  ), order, group => group.items.map(item => item.id));
 }
 
 export function orderQuotationItems(items: QuotationItemRow[], order?: string[]): QuotationItemRow[] {
