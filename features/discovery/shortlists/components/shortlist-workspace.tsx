@@ -4,7 +4,7 @@ import { WorkspaceScrollSummary } from "@/features/discovery/components/workspac
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 
-import { useCallback, useEffect, useMemo, useOptimistic, useState, useTransition } from "react";
+import { useCallback, useEffect, useMemo, useOptimistic, useRef, useState, useTransition } from "react";
 import { useEscapeClearSelection } from "@/lib/hooks/use-escape-clear-selection";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -180,6 +180,9 @@ export function ShortlistWorkspace({
   const [isPending, startTransition] = useTransition();
   const confirmDelete = useConfirmDelete();
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [creatorSearch, setCreatorSearch] = useState("");
+  const creatorSearchRef = useRef<HTMLInputElement>(null);
+  const focusCreatorSearch = () => creatorSearchRef.current?.focus({ preventScroll: true });
   useEscapeClearSelection(selectedIds.size > 0, () => setSelectedIds(new Set()));
   const [moveOpen, setMoveOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -269,14 +272,23 @@ export function ShortlistWorkspace({
   const hasLinkedQuotation = linkedQuotations.length > 0;
   const latestQuotation = linkedQuotations[0] ?? null;
 
-  const visibleItemIds = useMemo(
+  const allItemIds = useMemo(
     () => detail.creators.map((item) => item.item_id),
     [detail.creators]
   );
+  const visibleItemIds = useMemo(() => {
+    const query = creatorSearch.trim().replace(/^@+/, "").toLocaleLowerCase();
+    if (!query) return allItemIds;
+    return detail.creators.filter((item) => {
+      const creator = creatorPatches.get(item.unified_id ?? item.creator?.unified_id ?? "") ?? item.creator;
+      return [creator?.display_name, ...(creator?.platforms.map((platform) => platform.handle) ?? [])]
+        .some((value) => value?.toLocaleLowerCase().includes(query));
+    }).map((item) => item.item_id);
+  }, [allItemIds, detail.creators, creatorPatches, creatorSearch]);
 
   const effectiveSelectedIds = useMemo(
-    () => pruneSelection(selectedIds, visibleItemIds),
-    [selectedIds, visibleItemIds]
+    () => pruneSelection(selectedIds, allItemIds),
+    [selectedIds, allItemIds]
   );
 
   const selectedCount = countSelected(effectiveSelectedIds);
@@ -951,7 +963,23 @@ export function ShortlistWorkspace({
 
         <div className="tw-c sl-creator-card">
             <div className="tw-ch sl-tbl__h">
-              <span className="tw-ct">Creators · {displayCreators.length}</span>
+              <input
+                ref={creatorSearchRef}
+                type="search"
+                aria-label="Search shortlist creators"
+                placeholder="Search creators…"
+                className="h-9 w-56 max-w-full rounded-md border border-border bg-background px-3 text-sm"
+                value={creatorSearch}
+                onChange={(event) => setCreatorSearch(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setCreatorSearch("");
+                  }
+                }}
+              />
+              <span className="tw-ct" aria-live="polite">Creators · {creatorSearch.trim() ? `${visibleItemIds.length} of ${displayCreators.length}` : displayCreators.length}</span>
               {creatorsCardSubtitle ? (
                 <span className="tw-cs">{creatorsCardSubtitle}</span>
               ) : null}
@@ -1006,29 +1034,33 @@ export function ShortlistWorkspace({
                   setAddOpen(true);
                 }}
               />
+            ) : visibleItemIds.length === 0 ? (
+              <p role="status" className="p-4 text-sm text-muted-foreground">No creators match this search. Press Escape in the search field to show all creators.</p>
             ) : (
               <ShortlistCreatorList
                 shortlistId={detail.id}
                 canRecommend={editable && detail.canManage}
                 key={detail.creatorOrder?.join(",")}
-                items={displayCreators}
+                items={displayCreators.filter((item) => visibleItemIds.includes(item.item_id))}
                 selectedIds={effectiveSelectedIds}
                 selectable={selectable}
                 allSelected={allSelected}
                 indeterminate={indeterminate}
-                onToggleSelect={(itemId) =>
+                onToggleSelect={(itemId) => {
                   setSelectedIds(
                     toggleItemSelection(
                       effectiveSelectedIds,
                       itemId,
                       !effectiveSelectedIds.has(itemId)
                     )
-                  )
-                }
-                onToggleSelectGroup={(itemIds) =>
-                  setSelectedIds(toggleGroupSelection(itemIds, effectiveSelectedIds))
-                }
-                onToggleSelectAll={handleToggleSelectAll}
+                  );
+                  focusCreatorSearch();
+                }}
+                onToggleSelectGroup={(itemIds) => {
+                  setSelectedIds(toggleGroupSelection(itemIds, effectiveSelectedIds));
+                  focusCreatorSearch();
+                }}
+                onToggleSelectAll={() => { handleToggleSelectAll(); focusCreatorSearch(); }}
                 onOpenCreator={(creator) => {
                   const handle =
                     creator.platforms.find((p) => p.handle)?.handle?.replace(/^@+/, "") ??
@@ -1177,7 +1209,7 @@ export function ShortlistWorkspace({
       <ShortlistBulkToolbar
         selectedCount={selectedCount}
         totalCount={detail.creators.length}
-        onSelectAll={() => setSelectedIds(new Set(visibleItemIds))}
+        onSelectAll={() => { setSelectedIds(new Set(allItemIds)); focusCreatorSearch(); }}
         canManage={detail.canManage && !isMovementLocked(detail.status)}
         showSubmit={editable && detail.canManage}
         showStatusActions={detail.status === "under_review" && detail.canApprove}
