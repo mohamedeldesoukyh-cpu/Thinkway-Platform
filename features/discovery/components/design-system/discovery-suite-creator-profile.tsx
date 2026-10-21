@@ -392,6 +392,7 @@ export function DiscoverySuiteCreatorProfile({
                 + Add
               </button>
               {tierLabel ? <span>{tierLabel}</span> : null}
+              {hasUgcCategory(categories) ? <span title="User-generated content creator">UGC</span> : null}
               {canEditPr && onCountryChange ? (
                 <label className="tw-country-edit">
                   <span>Country</span>
