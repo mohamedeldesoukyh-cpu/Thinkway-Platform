@@ -8,6 +8,7 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { toast } from "sonner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 import { useConfirmDelete } from "@/components/shared/confirm-action-provider";
 import {
@@ -44,6 +45,7 @@ import { quotationCreatorDuplicateKey } from "@/lib/quotations/quotation-creator
 import { F } from "@/lib/discovery/suite/helpers";
 import {
   deliverableTypeLines,
+  QUOTATION_POST_TYPES,
   formatTypeLinesSummary,
   optionNumberLabel,
   platformsFromSelectedPostTypes,
@@ -104,6 +106,8 @@ function QuotationPackLineRow({
 }: LineRowProps) {
   const [pending, startTransition] = useTransition();
   const [expanded, setExpanded] = useState(false);
+  const [addingService, setAddingService] = useState(false);
+  const [serviceType, setServiceType] = useState("tiktok_video");
   useEffect(() => {
     if (!expanded) return;
     const closeOnEscape = (event: KeyboardEvent) => {
@@ -239,22 +243,41 @@ function QuotationPackLineRow({
   }
 
   function handleAddOption() {
+    setAddingService(true);
+  }
+
+  function createServiceLine() {
     startTransition(async () => {
+      if (manualSave.hasUnsavedChanges && !(await manualSave.saveAll())) return;
       const res = await addQuotationItemOption({
         quotation_id: quotationId,
         item_id: item.id,
+        service_type: serviceType,
       });
       if (!res.ok) {
         toast.error(res.message);
         return;
       }
-      toast.success("Option added.");
+      toast.success("Service line added. Open Cost detail to set its price.");
+      setAddingService(false);
       onLineChanged();
     });
   }
 
   return (
     <div className={`q-line-group ${selected ? "is-sel" : ""}`}>
+      <Dialog open={addingService} onOpenChange={setAddingService}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add service line · {name}</DialogTitle>
+            <DialogDescription>Each line has its own price. The client can select one, several, or all service lines.</DialogDescription></DialogHeader>
+          <label className="grid gap-2">Service
+            <select className="rounded-lg border p-2" value={serviceType} onChange={event => setServiceType(event.target.value)} disabled={pending}>
+              {QUOTATION_POST_TYPES.map(type => <option key={type.value} value={type.value}>{type.label}</option>)}
+            </select>
+          </label>
+          <button type="button" className="q-b" onClick={createServiceLine} disabled={pending}>{pending ? "Adding…" : "Add service line"}</button>
+        </DialogContent>
+      </Dialog>
       <div className={`q-row q-live-row ${selected ? "is-sel" : ""}`} role="row" onClick={(event) => {
         if (event.defaultPrevented || !(event.target instanceof Element) || !event.currentTarget.contains(event.target)) return;
         if (event.target.closest('button, a, input, textarea, select, label, [role="button"], [role="checkbox"], [role="switch"], [role="combobox"], [contenteditable="true"]')) return;
@@ -270,6 +293,7 @@ function QuotationPackLineRow({
             onOpen={onOpenCreator ? () => onOpenCreator(item) : undefined}>
             <div className="q-conn" title="Connected accounts"><CreatorPlatformTiers accounts={quotationPlatformTierAccounts(item)} /></div>
           </DiscoverySuiteCreatorCell>
+          {canManage ? <button type="button" className="q-b q-b--sm mt-2" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>+ Add service line</button> : null}
         </div>
         <div className="q-cell-platform" role="cell"><span className="q-mobile-label"><QuotationText>Quoted on</QuotationText></span><QuotationDeliverablePlatformIcons platforms={selectedPlatforms} allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)} loading={lineFields.loadingPlatforms} /></div>
         <div className="q-cell-service" role="cell">
@@ -300,7 +324,7 @@ function QuotationPackLineRow({
               <QuotationText>Duplicate line</QuotationText></DropdownMenuItem>
             <DropdownMenuItem onClick={handleAddOption}>
               <PlusIcon className="mr-2 size-3.5" />
-              <QuotationText>Add option</QuotationText></DropdownMenuItem>
+              <QuotationText>Add service line</QuotationText></DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"

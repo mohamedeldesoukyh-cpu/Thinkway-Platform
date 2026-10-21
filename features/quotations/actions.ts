@@ -472,6 +472,7 @@ export async function duplicateQuotationItems(input: {
 export async function addQuotationItemOption(input: {
   quotation_id: string;
   item_id: string;
+  service_type?: string;
 }): Promise<ActionResult<{ id: string }>> {
   const actor = await getActor();
   if (!actor.ok) return actor;

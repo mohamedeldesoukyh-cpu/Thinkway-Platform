@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { QUOTATION_POST_TYPES, syncDeliverableFromTypeLines } from "@/lib/quotations/quotation-deliverable-types";
 
 import {
   buildSeedsForShortlistQuotationImport,
@@ -616,10 +617,13 @@ export async function duplicateQuotationItems(
 
 export async function addQuotationItemOption(
   supabase: SupabaseClient<Database>,
-  input: { quotation_id: string; item_id: string }
+  input: { quotation_id: string; item_id: string; service_type?: string }
 ): Promise<QuotationMutationResult<{ id: string }>> {
   const locked = await rejectIfApprovedQuotation(supabase, input.quotation_id);
   if (locked) return locked;
+
+  const service = input.service_type ? QUOTATION_POST_TYPES.find(type => type.value === input.service_type) : undefined;
+  if (input.service_type && !service) return { ok: false, message: "Choose a valid service." };
 
   const { data: existing, error: loadError } = await fetchQuotationItemsByIds(
     supabase,
@@ -673,6 +677,25 @@ export async function addQuotationItemOption(
         quotation_id: input.quotation_id,
         option_number: nextOption,
         source_shortlist_item_id: null,
+        ...(service ? {
+          platform: syncDeliverableFromTypeLines([{ type: service.value, quantity: 1 }], [], String(row.platform || "")).platform,
+          collapse_group_id: null,
+          collapse_label: null,
+          service_description: `1× ${service.label}`,
+          deliverables: [{
+            ...syncDeliverableFromTypeLines([{ type: service.value, quantity: 1 }], [], String(row.platform || "")),
+            quantity: 1,
+            cost: 0,
+            revenue: 0,
+            gp_pct: 0,
+            gp_value: 0,
+            af_pct: 0,
+            cost_currency: row.cost_currency || "EGP",
+            commercial_input_mode: "cost_revenue",
+          }],
+          commercial_input_mode: "cost_revenue",
+          af_pct: 0,
+        } : {}),
         cost: 0,
         revenue: 0,
         gp_value: 0,

@@ -823,7 +823,7 @@ function QuotationWorkspaceContent({
               <span className="tw-ct">
                 Creators · {uniqueCreatorCount} · {visibleItems.length} <QuotationText>lines</QuotationText></span>
               <span className="tw-cs">
-                <QuotationText>Options are alternative quotation lines for the same creator</QuotationText></span>
+                <QuotationText>Each service has its own price. Clients can choose one or more lines per creator.</QuotationText></span>
               <span className="tw-sp" />
               {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && uniqueCreatorCount > 0 ? <QuotationCreatorOrderDialog quotationId={detail.id} items={visibleItems} savedOrder={creatorOrder} savedPhotos={detail.templateCreatorPhotos} onSaved={order => { setCreatorOrder(order); setTableSort(null); }} /> : null}
               <QuotationRateCardToolbarButton />
