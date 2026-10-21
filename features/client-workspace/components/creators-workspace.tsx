@@ -484,8 +484,8 @@ export function CreatorsWorkspace({
             const hasMultipleOptions = hasOptions && creator.quotationOptions!.length > 1;
             const optionsClosed = Boolean(closedOptions[creator.creatorId]);
             const optionFields = hasOptions ? (<fieldset id={`creator-options-${creator.creatorId}`} hidden={hasMultipleOptions && optionsClosed} className={hasMultipleOptions ? "cc-options" : `cc-options cw-single-option${state !== "accepted" ? " cw-option-unselected" : ""}`} disabled={pending || !canSelectCreator(creator.creatorId) || confirmed}>
-                  <legend>{hasMultipleOptions ? "Quotation options" : "Deliverables"}</legend>
-                  {hasMultipleOptions ? <p>Choose one or more — they combine</p> : null}
+                  <legend>{hasMultipleOptions ? "Service options" : "Deliverables"}</legend>
+                  {hasMultipleOptions ? <p>Choose any combination of service lines. Your total includes only the lines you select.</p> : null}
                   {creator.quotationOptions!.map(option => <label className="cc-option" key={option.itemId}>
                     <input type="checkbox" checked={state === 'accepted' && chosenQuotationItemIds(creator).includes(option.itemId)}
                       onChange={event => {

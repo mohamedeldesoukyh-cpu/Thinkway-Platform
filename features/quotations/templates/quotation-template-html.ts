@@ -585,7 +585,11 @@ function renderShowcaseCreatorPages(
   const pitchPageClass = pitch ? " pitch-creator-page" : "";
 
   return payload.showcaseCreators
-    .map((creator, index) => {
+    .flatMap((creator, index) => {
+      const pages = creator.deliverables.length > 1 ? chunkArray(creator.deliverables, 4, 4) : [creator.deliverables];
+      return pages.map((lines, page) => ({ creator, index, lines, page }));
+    })
+    .map(({ creator, index, lines, page }) => {
       const group = doc.creatorGroups[index];
       const avatarHtml = group
         ? renderQuotationTemplateAvatarHtml(group, siteOrigin, avatarVariant)
@@ -636,7 +640,7 @@ function renderShowcaseCreatorPages(
   <div class="cwrap pad showcase-creator-sheet">
     <div class="page-head">
       <div class="page-head-copy sc-hero">
-        <p class="sc-kicker">Creator ${creator.index} of ${esc(payload.totals.creatorCount)}</p>
+        <p class="sc-kicker">Creator ${creator.index} of ${esc(payload.totals.creatorCount)}${page ? " · Service options continued" : ""}</p>
         <h2 class="sc-title">${esc(displayName)}</h2>
         <p class="sc-title-handle">${esc(creator.handle)}</p>
       </div>
@@ -656,7 +660,7 @@ function renderShowcaseCreatorPages(
     ${pubsHtml}
     ${
       showDeliverableBar
-        ? `<div class="sc-deliverable-bar">
+        ? creator.deliverables.length > 1 ? `<div class="sc-service-options"><p class="dl">Service options · Choose one or more in your client workspace</p><table style="width:100%;border-collapse:collapse;font-size:12px"><thead><tr><th style="text-align:left;padding:6px 8px">Option</th><th style="text-align:left;padding:6px 8px">Service</th>${payload.flags.showFees ? `<th style="text-align:right;padding:6px 8px">Client price (${esc(doc.currency)})</th>` : ""}</tr></thead><tbody>${lines.map(line => `<tr><td style="padding:6px 8px;border-bottom:1px solid #ddd;white-space:nowrap">${esc(line.option)}</td><td style="padding:6px 8px;border-bottom:1px solid #ddd">${esc(line.service || line.type)}</td>${payload.flags.showFees ? `<td style="padding:6px 8px;border-bottom:1px solid #ddd;text-align:right;white-space:nowrap">${esc(line.grossFee || "—")}</td>` : ""}</tr>`).join("")}</tbody></table></div>` : `<div class="sc-deliverable-bar">
       <div>
         <p class="dl">Proposed deliverable</p>
         <p class="dv">${esc(summary)}</p>

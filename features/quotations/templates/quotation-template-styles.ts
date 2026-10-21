@@ -386,6 +386,10 @@ export const QUOTATION_TEMPLATE_STYLES = `
     background:var(--tint); border:1px solid var(--border); border-radius:14px; padding:14px 18px;
     margin-top:auto; flex:none;
   }
+  .sc-service-options{margin-top:auto;flex:none;background:var(--tint);border:1px solid var(--border);border-radius:14px;padding:12px 18px;color:var(--navy)}
+  .sc-service-options .dl{font-size:10px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);margin:0 0 8px}
+  .sc-service-options td:first-child{width:80px;font-weight:700;color:var(--blue)}
+  .sc-service-options td:last-child{font-variant-numeric:tabular-nums}
   .sc-deliverable-bar .dl{font-size:10px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:var(--muted); margin:0 0 4px;}
   .sc-deliverable-bar .dv{font-size:13px; font-weight:600; color:var(--navy); margin:0; line-height:1.4;}
   .sc-fee-pill{

@@ -9,6 +9,7 @@ import {
   SHOWCASE_PUBLICATION_SHOT_LIMIT,
 } from "@/features/quotations/export/quotation-export-publications";
 import { resolveQuotationTemplate } from "@/features/quotations/export/quotation-template";
+import { QUOTATION_TEMPLATE_OPTIONS } from "@/features/quotations/export/quotation-template";
 import type { QuotationDetail, QuotationItemRow } from "@/features/quotations/types";
 import {
   computeLiveQuotationTotals,
@@ -1612,4 +1613,22 @@ console.log("quotation-document.test.ts passed");
   assert.deepEqual(customized.creatorGroups[0].rows, original.creatorGroups[0].rows);
   assert.deepEqual(detail, before);
   assert.notEqual(buildQuotationDocument(detail).creatorGroups[0].avatarUrl, photo);
+}
+
+// Multiple service options must remain grouped and fully represented in every template.
+{
+  const items = Array.from({length: 7}, (_, i) => mockItem({
+    id: `service-${i}`, unified_id: "one-creator", sort_order: i,
+    option_number: i + 1, service_description: `Distinct service ${i + 1}`,
+  }));
+  for (const {id: template} of QUOTATION_TEMPLATE_OPTIONS) {
+    const doc = buildQuotationDocument(mockDetail({items}), {template});
+    assert.equal(doc.creatorGroups.length, 1, template);
+    assert.equal(doc.creatorGroups[0].rows.length, 7, template);
+    const html = buildQuotationHtml(doc);
+    if (["pitch", "pitch-lump-sum", "showcase", "showcase-lump-sum", "creator-list", "creator-list-additions"].includes(template)) {
+      for (let n = 1; n <= 7; n++) assert.ok(html.includes(`Distinct service ${n}`), `${template} retains service ${n}`);
+    }
+    if (["pitch", "showcase"].includes(template)) assert.ok(html.includes("Service options continued"));
+  }
 }
