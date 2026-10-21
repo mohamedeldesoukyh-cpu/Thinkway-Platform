@@ -1,6 +1,6 @@
 "use client";
 import { QuotationCreatorOrderDialog } from "./quotation-creator-order-dialog";
-import { orderQuotationItems } from "@/lib/quotations/quotation-creator-order";
+import { quotationOrderCreators } from "@/lib/quotations/quotation-creator-order";
 import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
 import { QuotationText, QuotationDesignLocaleProvider, useQuotationDesignLocale } from "./quotation-design-locale";
 import { WorkspaceScrollSummary } from "@/features/discovery/components/workspace-scroll-summary";
@@ -287,10 +287,10 @@ function QuotationWorkspaceContent({
 
   const sortedFilteredItems = useMemo(
     () =>
-      orderQuotationItems(sortQuotationWorkspaceItems(filteredItems, tableSort, {
+      tableSort ? sortQuotationWorkspaceItems(filteredItems, tableSort, {
         drafts,
         pendingItemIds,
-      }), tableSort ? undefined : creatorOrder),
+      }) : quotationOrderCreators(filteredItems, creatorOrder).flatMap(group => group.items),
     [filteredItems, tableSort, drafts, pendingItemIds, creatorOrder]
   );
 
