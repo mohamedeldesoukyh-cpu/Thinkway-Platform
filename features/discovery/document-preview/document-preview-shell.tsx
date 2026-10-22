@@ -15,10 +15,13 @@ import {
   RotateCcwIcon,
 } from "lucide-react";
 
+import "./document-preview-shell.css";
+
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Props = {
+  contained?: boolean;
   html: string;
   title: string;
   creatorCount: number;
@@ -48,6 +51,7 @@ function nearestZoomIndex(zoom: number): number {
 
 export function DocumentPreviewShell({
   html,
+  contained = false,
   title,
   creatorCount,
   toolbarLeft,
@@ -172,7 +176,9 @@ export function DocumentPreviewShell({
       const pages = Array.from(doc.querySelectorAll<HTMLElement>(PAGE_SELECTOR));
       const target = pages[page - 1];
       if (!target) return;
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      // Scroll only the document frame; scrollIntoView also moves its parent page.
+      const frame = iframeRef.current?.contentWindow;
+      frame?.scrollTo({ top: target.getBoundingClientRect().top + frame.scrollY, behavior: "smooth" });
       setActivePage(page);
     },
     []
@@ -189,6 +195,28 @@ export function DocumentPreviewShell({
     if (!ready) return;
     applyZoom(zoom);
   }, [ready, zoom, applyZoom]);
+
+  useEffect(() => {
+    if (!ready) return;
+    const frame = iframeRef.current?.contentWindow;
+    const doc = iframeRef.current?.contentDocument;
+    if (!frame || !doc) return;
+    let scheduled = 0;
+    const trackPage = () => {
+      if (scheduled) return;
+      scheduled = window.requestAnimationFrame(() => {
+        scheduled = 0;
+        const pages = Array.from(doc.querySelectorAll<HTMLElement>(PAGE_SELECTOR));
+        let current = 1;
+        pages.forEach((page, index) => {
+          if (page.getBoundingClientRect().top <= frame.innerHeight * 0.35) current = index + 1;
+        });
+        setActivePage(current);
+      });
+    };
+    frame.addEventListener("scroll", trackPage, { passive: true });
+    return () => { frame.removeEventListener("scroll", trackPage); window.cancelAnimationFrame(scheduled); };
+  }, [ready, html]);
 
   function zoomIn() {
     const index = nearestZoomIndex(zoom);
@@ -207,9 +235,9 @@ export function DocumentPreviewShell({
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-8rem)] flex-col gap-3">
-      <div className="sticky top-0 z-20 -mx-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8 print:hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className={cn("flex flex-col", contained ? "h-full min-h-0 min-w-0 flex-1 overflow-hidden" : "min-h-[calc(100vh-8rem)] gap-3")}>
+      <div className={cn("z-20 shrink-0 border-b border-border print:hidden", contained ? "quotation-preview-toolbar px-3 py-1.5" : "sticky top-0 -mx-4 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8")}>
+        <div className="flex flex-wrap items-center justify-between gap-1.5">
           <div className="flex flex-wrap items-center gap-2">{toolbarLeft}</div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="mr-1 hidden items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-1.5 text-[12px] font-medium text-muted-foreground sm:flex">
@@ -285,8 +313,8 @@ export function DocumentPreviewShell({
         </div>
       </div>
 
-      <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[168px_minmax(0,1fr)]">
-        <aside className="print:hidden hidden max-h-[calc(100vh-10rem)] overflow-y-auto rounded-xl border border-border bg-muted/15 p-2 lg:block">
+      <div className={cn("grid min-h-0 min-w-0 flex-1", contained ? "gap-2 overflow-hidden p-2 sm:grid-cols-[144px_minmax(0,1fr)]" : "gap-3 lg:grid-cols-[168px_minmax(0,1fr)]")}>
+        <aside aria-label="Document pages" className={cn("print:hidden hidden overflow-y-auto overscroll-contain rounded-lg border border-border bg-muted/15 p-1.5", contained ? "h-full min-h-0 sm:block" : "max-h-[calc(100vh-10rem)] lg:block")}>
           <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             Pages
           </p>
@@ -304,8 +332,11 @@ export function DocumentPreviewShell({
                     key={`thumb-${page}`}
                     type="button"
                     onClick={() => scrollToPage(page)}
+                    aria-current={active ? "page" : undefined}
+                    title={`Page ${page}: ${label}`}
                     className={cn(
-                      "flex w-full flex-col gap-1 rounded-lg border px-2 py-2 text-left transition-colors",
+                      "flex w-full rounded-md border text-left transition-colors",
+                      contained ? "items-center gap-2 px-1.5 py-1.5" : "flex-col gap-1 px-2 py-2",
                       active
                         ? "border-primary/40 bg-primary/8"
                         : "border-border/70 bg-background hover:bg-muted/40"
@@ -313,7 +344,8 @@ export function DocumentPreviewShell({
                   >
                     <span
                       className={cn(
-                        "flex h-16 items-center justify-center rounded-md border text-[18px] font-semibold tabular-nums",
+                        "flex shrink-0 items-center justify-center rounded border font-semibold tabular-nums",
+                        contained ? "size-7 text-xs" : "h-16 text-[18px]",
                         active
                           ? "border-primary/30 bg-primary/10 text-primary"
                           : "border-border bg-muted/30 text-muted-foreground"
@@ -321,7 +353,7 @@ export function DocumentPreviewShell({
                     >
                       {page}
                     </span>
-                    <span className="truncate text-[10.5px] font-medium text-muted-foreground">
+                    <span className="min-w-0 truncate text-[10.5px] font-medium text-muted-foreground">
                       {label}
                     </span>
                   </button>
@@ -335,7 +367,7 @@ export function DocumentPreviewShell({
           ref={iframeRef}
           title={title}
           srcDoc={html}
-          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
+          className={cn("w-full min-w-0 rounded-lg border border-border bg-card", contained ? "h-full min-h-0" : "min-h-[1200px]")}
         />
       </div>
     </div>

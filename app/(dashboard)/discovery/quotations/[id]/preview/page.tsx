@@ -157,6 +157,8 @@ export default async function QuotationPreviewPage({
     <DashboardShell
       title="Quotation preview"
       description={`${serial} — ${templateLabel.toLowerCase()} client quotation`}
+      containedMain
+      headerClassName="!py-1.5"
       hidePageHeader
     >
       {errorMessage ? (
@@ -178,6 +180,7 @@ export default async function QuotationPreviewPage({
         </div>
       ) : (
         <DocumentPreviewClient
+          contained
           html={html}
           title={`${templateLabel} quotation ${serial}`}
           creatorCount={creatorCount}
@@ -194,6 +197,7 @@ export default async function QuotationPreviewPage({
               />
               <Suspense fallback={null}>
                 <QuotationPreviewTemplateToggle
+                  compact
                   quotationId={detail.id}
                   serialNumber={detail.serial_number}
                   activeTemplate={template}

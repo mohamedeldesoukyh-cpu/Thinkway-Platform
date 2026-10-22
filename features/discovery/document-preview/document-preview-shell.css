@@ -1,0 +1,15 @@
+.quotation-preview-toolbar {
+  background: linear-gradient(135deg, #0040cc 0%, #0057ff 45%, #1a6fff 100%);
+  color: #fff;
+}
+.quotation-preview-toolbar button,
+.quotation-preview-toolbar a,
+.quotation-preview-toolbar select,
+.quotation-preview-toolbar .text-foreground { color: #fff; }
+.quotation-preview-toolbar .text-muted-foreground { color: rgba(255,255,255,.85); }
+.quotation-preview-toolbar .text-border { color: rgba(255,255,255,.35); }
+.quotation-preview-toolbar .border { border-color: rgba(255,255,255,.25); background: rgba(255,255,255,.1); }
+.quotation-preview-toolbar button:hover:not(:disabled),
+.quotation-preview-toolbar a:hover { background: rgba(255,255,255,.2); color: #fff; }
+.quotation-preview-toolbar select option { background: #fff; color: #172554; }
+.quotation-preview-toolbar button, .quotation-preview-toolbar a { min-height: 30px; }

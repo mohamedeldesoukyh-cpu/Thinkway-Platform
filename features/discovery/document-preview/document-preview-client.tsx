@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { DocumentPreviewShell } from "./document-preview-shell";
 
 type Props = {
+  contained?: boolean;
   html: string;
   title: string;
   creatorCount: number;
