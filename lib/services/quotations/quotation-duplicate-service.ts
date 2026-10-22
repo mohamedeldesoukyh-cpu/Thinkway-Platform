@@ -33,11 +33,14 @@ export function quotationCopyItems(items: Record<string, unknown>[], quotationId
   });
 }
 
-export async function duplicateQuotationDocument(supabase: SupabaseClient<Database>, userId: string, quotationId: string) {
+export async function duplicateQuotationDocument(supabase: SupabaseClient<Database>, userId: string, quotationId: string, selectedItemIds?: string[]) {
+  if (selectedItemIds !== undefined && (!Array.isArray(selectedItemIds) || !selectedItemIds.length)) {
+    return { ok: false as const, message: "Select at least one creator or option." };
+  }
   const source = await supabase.from("quotations").select("*").eq("id", quotationId).single();
   if (source.error || !source.data) return { ok: false as const, message: source.error?.message ?? "Quotation not found." };
   // Read every page before creating the copy; large quotations must never be truncated.
-  const items: Record<string, unknown>[] = [];
+  let items: Record<string, unknown>[] = [];
   for (let offset = 0; ; offset += 1000) {
     const page = await supabase.from("quotation_items").select("*").eq("quotation_id", quotationId)
       .order("sort_order").order("id").range(offset, offset + 999);
@@ -45,11 +48,22 @@ export async function duplicateQuotationDocument(supabase: SupabaseClient<Databa
     items.push(...(page.data ?? []));
     if ((page.data?.length ?? 0) < 1000) break;
   }
+  if (selectedItemIds !== undefined) {
+    const selected = new Set(selectedItemIds);
+    const picked = items.filter(item => selected.has(String(item.id)));
+    if (picked.length !== selected.size) return { ok: false as const, message: "Some selected creators are no longer in this quotation. Refresh and select them again." };
+    const groups = new Set(picked.map(item => item.collapse_group_id).filter(Boolean));
+    if (items.some(item => groups.has(item.collapse_group_id) && !selected.has(String(item.id)))) {
+      return { ok: false as const, message: "Select all creators in a combined package to copy its shared price." };
+    }
+    items = picked;
+  }
   const ids = new Map(items.map(item => [String(item.id), crypto.randomUUID()]));
   const totals = computeQuotationTotals(items.map(item => ({ cost_egp: Number(item.cost_egp ?? 0),
     revenue_egp: Number(item.revenue_egp ?? 0), gp_value_egp: Number(item.gp_value_egp ?? 0), af_value_egp: Number(item.af_value_egp ?? 0) })));
   const created = await insertQuotationHeaderRecord(supabase, userId, {
     ...quotationCopyHeader(source.data, ids), status: "draft",
+    ...(selectedItemIds !== undefined ? { name: `${source.data.name} (New option)` } : {}),
     total_cost_egp: totals.totalCostEgp, total_revenue_egp: totals.totalRevenueEgp,
     total_gp_value_egp: totals.totalGpValueEgp, total_gp_pct: totals.totalGpPct,
     total_af_egp: totals.totalAfValueEgp, total_agency_margin_egp: totals.totalAgencyMarginEgp,
@@ -68,5 +82,5 @@ export async function duplicateQuotationDocument(supabase: SupabaseClient<Databa
       ? `Copy incomplete (${id}). Please archive it before retrying.`
       : `Could not copy creators: ${error instanceof Error ? error.message : "Please retry."}` };
   }
-  return { ok: true as const, data: { id }, message: "Quotation duplicated as a new draft." };
+  return { ok: true as const, data: { id }, message: selectedItemIds !== undefined ? "New quotation option created from your selection." : "Quotation duplicated as a new draft." };
 }

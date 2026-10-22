@@ -468,6 +468,15 @@ export async function duplicateQuotation(quotationId: string): Promise<ActionRes
   return result;
 }
 
+export async function createQuotationOption(input: { quotation_id: string; item_ids: string[] }): Promise<ActionResult<{ id: string }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  if (!Array.isArray(input.item_ids) || !input.item_ids.length) return { ok: false, message: "Select at least one creator or option." };
+  const result = await duplicateQuotationDocument(actor.supabase, actor.userId, input.quotation_id, input.item_ids);
+  if (result.ok) revalidate(result.data.id);
+  return result;
+}
+
 export async function duplicateQuotationItems(input: {
   quotation_id: string;
   item_ids: string[];
