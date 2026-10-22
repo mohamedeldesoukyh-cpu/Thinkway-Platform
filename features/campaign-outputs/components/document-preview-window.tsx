@@ -1,5 +1,7 @@
 "use client";
 
+import "@/features/discovery/document-preview/document-preview-shell.css";
+
 import {
   useEffect,
   useRef,
@@ -289,10 +291,7 @@ export function DocumentPreviewWindow({
         <header
           data-drag-handle={draggable && isNormal ? "" : undefined}
           className={cn(
-            "flex shrink-0 items-center justify-between gap-3 border-b px-3 py-2.5 backdrop-blur sm:px-4 sm:py-3",
-            isMediaPlan
-              ? "border-[#1D9E75]/20 bg-gradient-to-r from-[#1D9E75]/[0.06] via-background to-background"
-              : "border-border bg-background/95",
+            "quotation-preview-toolbar flex shrink-0 items-center justify-between gap-2 border-b px-3 py-1.5",
             draggable &&
               isNormal &&
               "cursor-grab touch-none select-none active:cursor-grabbing"

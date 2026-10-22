@@ -1,9 +1,7 @@
 "use client";
 
-import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 
-import { cn } from "@/lib/utils";
 import {
   SHORTLIST_TEMPLATE_OPTIONS,
   appendShortlistTemplateParam,
@@ -23,49 +21,16 @@ export function ShortlistPreviewTemplateToggle({
   itemIds,
   basePath,
 }: ShortlistPreviewTemplateToggleProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const resolvedBasePath =
     basePath ?? pathname ?? `/discovery/shortlists/${shortlistId}/preview`;
 
-  return (
-    <div
-      className="inline-flex rounded-lg border border-border bg-muted/30 p-0.5 print:hidden"
-      role="tablist"
-      aria-label="Shortlist template"
-    >
-      {SHORTLIST_TEMPLATE_OPTIONS.map((option) => {
-        const params = new URLSearchParams(searchParams?.toString() ?? "");
-        appendShortlistTemplateParam(params, option.id);
-        if (itemIds?.length) {
-          params.set("items", itemIds.join(","));
-        } else {
-          params.delete("items");
-        }
-        const query = params.toString();
-        const href = query ? `${resolvedBasePath}?${query}` : resolvedBasePath;
-        const active = activeTemplate === option.id;
-
-        return (
-          <Link
-            key={option.id}
-            href={href}
-            role="tab"
-            aria-selected={active}
-            className={cn(
-              "rounded-md px-3 py-1.5 text-xs font-medium transition-colors",
-              active
-                ? "bg-background text-foreground shadow-sm"
-                : "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            {option.label}
-            <span className="ml-1.5 hidden text-[10px] font-normal text-muted-foreground sm:inline">
-              · {option.hint}
-            </span>
-          </Link>
-        );
-      })}
-    </div>
-  );
+  return <select aria-label="Shortlist template" value={activeTemplate} className="h-8 max-w-48 rounded-md border px-2" onChange={event => {
+    const params = new URLSearchParams(searchParams?.toString() ?? "");
+    appendShortlistTemplateParam(params, event.target.value as ShortlistTemplateVariant);
+    if (itemIds?.length) params.set("items", itemIds.join(",")); else params.delete("items");
+    router.push(`${resolvedBasePath}?${params.toString()}`);
+  }}>{SHORTLIST_TEMPLATE_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}</select>;
 }

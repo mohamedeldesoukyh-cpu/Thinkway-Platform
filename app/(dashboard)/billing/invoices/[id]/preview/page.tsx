@@ -1,3 +1,4 @@
+import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
 import { documentReturnPath } from "@/lib/navigation/document-return";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -48,11 +49,19 @@ export default async function InvoicePreviewPage({
 
   return (
     <DashboardShell
+      containedMain hideDesktopHeader
       title="Invoice preview"
       description={`${typed.document_number ?? id} — client-facing tax invoice`}
       hidePageHeader
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+      {errorMessage ? (
+        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {errorMessage}
+        </div>
+      ) : (
+        <DocumentPreviewClient
+          contained
+          toolbarLeft={<div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <PageBackButton
             fallbackHref={documentReturnPath(query.returnTo, `/billing/invoices/${id}`)}
@@ -83,17 +92,9 @@ export default async function InvoicePreviewPage({
             </a>
           </div>
         ) : null}
-      </div>
-
-      {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : (
-        <iframe
+      </div>}
           title={`Invoice ${typed.document_number ?? id}`}
-          srcDoc={html}
-          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
+          html={html}
         />
       )}
     </DashboardShell>

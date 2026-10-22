@@ -1,3 +1,4 @@
+import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
 
@@ -88,11 +89,19 @@ export default async function CampaignPerformancePreviewPage({
 
   return (
     <DashboardShell
+      containedMain hideDesktopHeader
       title="Performance report preview"
       description={`${typed.document_number ?? typed.name} — ${variantLabel.toLowerCase()} client report`}
       hidePageHeader
     >
-      <div className="sticky top-0 z-20 -mx-4 mb-4 border-b border-border bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8 print:hidden">
+      {errorMessage ? (
+        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {errorMessage}
+        </div>
+      ) : (
+        <DocumentPreviewClient
+          contained
+          toolbarLeft={<div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
             <PageBackButton
@@ -112,17 +121,9 @@ export default async function CampaignPerformancePreviewPage({
             />
           ) : null}
         </div>
-      </div>
-
-      {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : (
-        <iframe
+      </div>}
           title={`${variantLabel} performance report ${typed.document_number ?? id}`}
-          srcDoc={html}
-          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
+          html={html}
         />
       )}
     </DashboardShell>

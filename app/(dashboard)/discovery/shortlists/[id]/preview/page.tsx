@@ -142,7 +142,7 @@ export default async function ShortlistPreviewPage({
     <DashboardShell
       title="Shortlist preview"
       description={`${serial} — ${templateLabel.toLowerCase()} creator roster`}
-      hidePageHeader
+      containedMain hideDesktopHeader hidePageHeader
     >
       {errorMessage ? (
         <div className="space-y-4">
