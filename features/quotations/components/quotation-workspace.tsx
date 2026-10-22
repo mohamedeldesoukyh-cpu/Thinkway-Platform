@@ -13,6 +13,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from "react";
@@ -151,6 +152,8 @@ function QuotationWorkspaceContent({
   const manualSave = useQuotationManualSave();
   const [drafts, setDrafts] = useState(() => draftsFromItems(detail.items));
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
+  const [creatorSearch, setCreatorSearch] = useState("");
+  const creatorSearchRef = useRef<HTMLInputElement>(null);
   useEscapeClearSelection(selectedIds.size > 0, () => setSelectedIds(new Set()));
   const [optimisticRemovedIds, setOptimisticRemovedIds] = useState<Set<string>>(
     () => new Set()
@@ -242,8 +245,15 @@ function QuotationWorkspaceContent({
         visibleItems,
         clientReview?.selectionState,
         clientReview ? clientSelectionFilter : "all"
-      ),
-    [visibleItems, clientReview, clientSelectionFilter]
+      ).filter(item => {
+        const query = creatorSearch.trim().replace(/^@+/, "").toLocaleLowerCase();
+        if (!query) return true;
+        return [item.creator_name, item.handle, item.creator_profile_source?.displayName,
+          item.creator_profile_source?.handle,
+          ...(item.creator_profile_source?.platformAccounts ?? []).map(account => account.handle)]
+          .some(value => value?.toLocaleLowerCase().includes(query));
+      }),
+    [visibleItems, clientReview, clientSelectionFilter, creatorSearch]
   );
 
   const pendingItemIds = useMemo(() => {
@@ -505,7 +515,7 @@ function QuotationWorkspaceContent({
   }, []);
 
   const selectedLinesForCalc = useMemo((): QuotationCalcLineInput[] => {
-    return sortedFilteredItems
+    return visibleItems
       .filter((item) => selectedIds.has(item.id))
       .map((item) => {
         const draft = resolveQuotationRowDraft(item, drafts[item.id]);
@@ -521,7 +531,7 @@ function QuotationWorkspaceContent({
           agencyFeePct: computed.afPct,
         };
       });
-  }, [sortedFilteredItems, selectedIds, drafts]);
+  }, [visibleItems, selectedIds, drafts]);
 
   const selectionMoney = useMemo(() => {
     return selectedLinesForCalc.reduce(
@@ -820,8 +830,19 @@ function QuotationWorkspaceContent({
         <div className="discovery-suite q-lines-container">
           <div className="tw-c">
             <div className="tw-ch q-lines__h">
-              <span className="tw-ct">
-                Creators · {uniqueCreatorCount} · {visibleItems.length} <QuotationText>lines</QuotationText></span>
+              <input ref={creatorSearchRef} type="search" aria-label="Search quotation creators"
+                placeholder="Search creators…"
+                className="h-9 w-56 max-w-full rounded-md border border-border bg-background px-3 text-sm"
+                value={creatorSearch} onChange={event => setCreatorSearch(event.target.value)}
+                onKeyDown={event => {
+                  if (event.key === "Escape") {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    setCreatorSearch("");
+                  }
+                }} />
+              <span className="tw-ct" aria-live="polite">
+                Creators · {creatorSearch.trim() ? `${countUniqueQuotationCreators(filteredItems)} of ${uniqueCreatorCount}` : uniqueCreatorCount} · {visibleItems.length} <QuotationText>lines</QuotationText></span>
               <span className="tw-cs">
                 <QuotationText>Each service has its own price. Clients can choose one or more lines per creator.</QuotationText></span>
               <span className="tw-sp" />
@@ -870,8 +891,8 @@ function QuotationWorkspaceContent({
                   selectedIds={selectedIds}
                   allSelected={allVisibleSelected}
                   indeterminate={selectionIndeterminate}
-                  onToggleSelect={toggleSelect}
-                  onToggleSelectAll={setSelectAllVisible}
+                  onToggleSelect={id => { toggleSelect(id); creatorSearchRef.current?.focus({ preventScroll: true }); }}
+                  onToggleSelectAll={checked => { setSelectAllVisible(checked); creatorSearchRef.current?.focus({ preventScroll: true }); }}
                   onDraftChange={updateDraft}
                   onRemoved={() => router.refresh()}
                   onLineChanged={refreshQuotationLines}
@@ -916,7 +937,7 @@ function QuotationWorkspaceContent({
       <QuotationSelectionBar
         onCompare={() => void compareSelectedCreators()}
         selectedCount={selectedIds.size}
-        totalCount={sortedFilteredItems.length}
+        totalCount={visibleItems.length}
         baseCost={selectionMoney.baseCost}
         clientCost={selectionMoney.clientCost}
         agencyFees={selectionMoney.agencyFees}
