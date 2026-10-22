@@ -115,7 +115,7 @@ export function QuotationSelectionBar({
             disabled={busy}
             onClick={onDuplicate}
           >
-            <QuotationText>Duplicate</QuotationText></button>
+            <QuotationText>Create new option</QuotationText></button>
           <button
             type="button"
             className="tw-b sm edit"

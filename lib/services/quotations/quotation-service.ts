@@ -611,7 +611,7 @@ export async function duplicateQuotationItems(
     data: { duplicated: result.inserts.length },
     message: isCollapsePackage
       ? `Option ${optionNumber ?? 2} added for Collap package.`
-      : `Duplicated ${result.inserts.length} creator${result.inserts.length === 1 ? "" : "s"}.`,
+      : `Created ${result.inserts.length} new option${result.inserts.length === 1 ? "" : "s"}.`,
   };
 }
 

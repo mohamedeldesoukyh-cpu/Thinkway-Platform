@@ -1,5 +1,7 @@
 // UI labels from the supplied design. Quotation content and prices are never translated.
 export const quotationDesignMessages: Record<string, string> = {
+  "Duplicate quotation": "نسخ عرض السعر",
+  "Create new option": "إنشاء خيار جديد",
   "Commercial totals do not reconcile: total margin must equal GP before agency fees plus agency fees. Review Cost detail before submitting.": "الإجماليات التجارية غير متطابقة: يجب أن يساوي إجمالي الهامش الربح قبل رسوم الوكالة مضافاً إليه رسوم الوكالة. راجع تفاصيل التكلفة قبل الإرسال.",
   "Back to quotations": "العودة لعروض الأسعار",
   "Discovery": "الاكتشاف",
