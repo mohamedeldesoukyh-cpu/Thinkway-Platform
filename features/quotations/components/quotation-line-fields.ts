@@ -195,7 +195,6 @@ export function useQuotationLineFields(
     item.deliverables,
     item.platform,
     platformSelectKey,
-    hasPendingChanges,
   ]);
 
   const lineCurrency = (
