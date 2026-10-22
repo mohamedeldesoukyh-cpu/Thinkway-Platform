@@ -13,3 +13,9 @@
 .quotation-preview-toolbar a:hover { background: rgba(255,255,255,.2); color: #fff; }
 .quotation-preview-toolbar select option { background: #fff; color: #172554; }
 .quotation-preview-toolbar button, .quotation-preview-toolbar a { min-height: 30px; }
+.quotation-preview-toolbar { font-size:12px; font-weight:500; line-height:1.25; }
+.quotation-preview-toolbar button,
+.quotation-preview-toolbar a,
+.quotation-preview-toolbar select { font-family:inherit; font-size:12px; font-weight:500; line-height:1.25; height:32px; border-radius:6px; }
+.quotation-preview-toolbar a { display:inline-flex; align-items:center; gap:6px; }
+.quotation-preview-toolbar svg { width:14px; height:14px; flex-shrink:0; }
