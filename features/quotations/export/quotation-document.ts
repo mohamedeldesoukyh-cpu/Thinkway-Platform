@@ -1,3 +1,4 @@
+import { isQuotationListTemplate as supportsProposalOptions } from "./quotation-template";
 import { applyQuotationTemplatePhotos } from "@/lib/quotations/quotation-template-photos";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { creatorFxAmount } from "@/lib/commercial/creator-fx";
@@ -256,6 +257,7 @@ export type QuotationDocumentFullTierBreakdown = {
 };
 
 export type QuotationDocument = {
+  proposalOptions?: { recommended: boolean; document: QuotationDocument }[];
   shortlistCreatorListCost?: import("@/features/discovery/shortlists/creator-list-cost").CreatorListCost;
   creatorListOrder?: string[];
   clientLogo?: string | null;
@@ -922,6 +924,7 @@ function buildQuotationCollapseContentGroups(
 export function buildQuotationDocument(
   detail: QuotationDetail,
   options?: {
+    proposalOptions?: import("./proposal-options").ProposalOption[];
     audience?: QuotationDocumentAudience;
     template?: QuotationTemplateVariant;
     /** Filter to specific quotation item IDs (Preview / PDF / PPTX share this selection). */
@@ -936,6 +939,15 @@ export function buildQuotationDocument(
     showOriginalCurrency?: boolean;
   }
 ): QuotationDocument {
+  const proposals = options?.proposalOptions;
+  if (proposals?.length) {
+    if (!supportsProposalOptions(options?.template ?? "detailed")) throw new Error("Proposal options require a Creator List template.");
+    const allowed = new Set(detail.items.map(item => item.id));
+    if (proposals.some(option => !option.itemIds.length || option.itemIds.some(id => !allowed.has(id)))) throw new Error("An option contains unavailable quotation lines. Reopen the creator selector to update it.");
+    const base = buildQuotationDocument(detail, { ...options, proposalOptions: undefined, itemIds: [...new Set(proposals.flatMap(option => option.itemIds))] });
+    base.proposalOptions = proposals.map(option => ({ recommended: option.recommended, document: buildQuotationDocument(detail, { ...options, proposalOptions: undefined, itemIds: option.itemIds }) }));
+    return base;
+  }
   const audience = options?.audience ?? "client";
   const template = options?.template ?? "detailed";
   const hideCostAndFees = Boolean(detail.hideCostAndFees);

@@ -1,3 +1,4 @@
+import { parseProposalOptions } from "@/features/quotations/export/proposal-options";
 import { quotationListPdfOptions } from "@/features/quotations/export/quotation-creator-list";
 import { renderRateCardPdf } from "@/features/rate-cards/report-pdf";
 import { loadCreatorListClientLogo } from "@/features/discovery/shortlists/export/creator-list-client-logo";
@@ -107,6 +108,7 @@ export async function GET(request: Request, context: RouteContext) {
     let doc = buildQuotationDocument(enriched, {
       template,
       itemIds,
+      proposalOptions: parseProposalOptions(searchParams.get("proposals")),
       platforms,
       publicationShotsByCreatorKey,
       displayFxRateToEgp,

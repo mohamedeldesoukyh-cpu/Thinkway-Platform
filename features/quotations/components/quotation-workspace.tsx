@@ -1,4 +1,6 @@
 "use client";
+import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
+import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import { QuotationCreatorOrderDialog } from "./quotation-creator-order-dialog";
 import { quotationOrderCreators } from "@/lib/quotations/quotation-creator-order";
 import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
@@ -704,10 +706,11 @@ function QuotationWorkspaceContent({
   );
 
   const handlePreviewSelectionConfirm = useCallback(
-    (selection: { itemIds: string[]; platforms?: string[] | null }) => {
+    (selection: { itemIds: string[]; platforms?: string[] | null; proposalOptions?: ProposalOption[] }) => {
       setSelectedIds(new Set(selection.itemIds));
       const params = new URLSearchParams();
       appendQuotationTemplateParam(params, exportTemplate);
+      appendProposalOptions(params, selection.proposalOptions);
       appendQuotationExportRevision(params, detail.updated_at);
       if (selection.itemIds.length) params.set("items", selection.itemIds.join(","));
       if (selection.platforms?.length) {
@@ -987,6 +990,7 @@ function QuotationWorkspaceContent({
         workspaceItemIds={[...selectedIds]}
         onWorkspaceSelectionChange={(itemIds) => setSelectedIds(new Set(itemIds))}
         summarizeSelection={summarizePreviewSelection}
+        proposalStorageKey={isQuotationListTemplate(exportTemplate) ? detail.id : undefined}
         title="Select creators for quotation"
         confirmLabel="Open preview"
         confirmDisabled={previewPlatformsLoading}

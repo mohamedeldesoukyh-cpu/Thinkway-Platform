@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { quotationPreviewPath } from "@/features/quotations/constants";
 import {
   QUOTATION_TEMPLATE_OPTIONS,
+  isQuotationListTemplate,
   appendQuotationTemplateParam,
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
@@ -30,6 +31,7 @@ export function QuotationPreviewTemplateToggle({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const availableTemplates = searchParams?.get("proposals") ? QUOTATION_TEMPLATE_OPTIONS.filter(option => isQuotationListTemplate(option.id)) : QUOTATION_TEMPLATE_OPTIONS;
   const resolvedBasePath =
     basePath ?? pathname ?? quotationPreviewPath(quotationId, serialNumber);
 
@@ -41,7 +43,7 @@ export function QuotationPreviewTemplateToggle({
         appendQuotationTemplateParam(params, event.target.value as QuotationTemplateVariant);
         router.push(`${resolvedBasePath}${params.size ? `?${params}` : ""}`);
       }}>
-      {QUOTATION_TEMPLATE_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+      {availableTemplates.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
     </select>
   );
 
@@ -51,7 +53,7 @@ export function QuotationPreviewTemplateToggle({
       role="tablist"
       aria-label="Quotation template"
     >
-      {QUOTATION_TEMPLATE_OPTIONS.map((option) => {
+      {availableTemplates.map((option) => {
         const params = new URLSearchParams(searchParams?.toString() ?? "");
         appendQuotationTemplateParam(params, option.id);
         const query = params.toString();
