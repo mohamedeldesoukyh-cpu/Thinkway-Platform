@@ -58,3 +58,14 @@
 }
 .document-preview-pages button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .document-preview-frame { border: 3px solid #0057ff; }
+
+.document-preview-surround { background: #0057ff; }
+.document-preview-surround .document-preview-pages {
+  margin: 8px;
+  height: calc(100% - 16px);
+}
+.document-preview-surround .document-preview-frame {
+  border: 0;
+  border-radius: 0;
+  background: #0057ff;
+}

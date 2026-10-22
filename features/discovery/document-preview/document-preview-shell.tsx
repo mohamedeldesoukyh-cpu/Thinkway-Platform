@@ -198,6 +198,9 @@ export function DocumentPreviewShell({
     const doc = iframeRef.current?.contentDocument;
     if (!doc?.body) return;
     doc.body.style.zoom = String(nextZoom);
+    // Theme only the live preview scrollbars; exported document styles stay intact.
+    doc.documentElement.style.scrollbarColor = "rgba(255,255,255,.65) #0057ff";
+    doc.body.style.scrollbarColor = "rgba(255,255,255,.65) #0057ff";
   }, []);
 
   useEffect(() => {
@@ -322,7 +325,7 @@ export function DocumentPreviewShell({
         </div>
       </div>
 
-      <div className={cn("grid min-h-0 min-w-0 flex-1", contained ? "gap-2 overflow-hidden p-2 sm:grid-cols-[144px_minmax(0,1fr)]" : "gap-3 lg:grid-cols-[168px_minmax(0,1fr)]")}>
+      <div className={cn("grid min-h-0 min-w-0 flex-1", contained ? "document-preview-surround gap-0 overflow-hidden p-0 sm:grid-cols-[152px_minmax(0,1fr)]" : "gap-3 lg:grid-cols-[168px_minmax(0,1fr)]")}>
         <aside aria-label="Document pages" className={cn("document-preview-pages print:hidden hidden overflow-y-auto overscroll-contain rounded-lg border border-border bg-muted/15 p-1.5", contained ? "h-full min-h-0 sm:block" : "max-h-[calc(100vh-10rem)] lg:block")}>
           <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             Pages
