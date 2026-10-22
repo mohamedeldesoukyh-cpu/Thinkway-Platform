@@ -199,8 +199,8 @@ export function DocumentPreviewShell({
     if (!doc?.body) return;
     doc.body.style.zoom = String(nextZoom);
     // Theme only the live preview scrollbars; exported document styles stay intact.
-    doc.documentElement.style.scrollbarColor = "rgba(255,255,255,.65) #0057ff";
-    doc.body.style.scrollbarColor = "rgba(255,255,255,.65) #0057ff";
+    doc.documentElement.style.scrollbarColor = "rgba(255,255,255,.65) #0b0847";
+    doc.body.style.scrollbarColor = "rgba(255,255,255,.65) #0b0847";
   }, []);
 
   useEffect(() => {
