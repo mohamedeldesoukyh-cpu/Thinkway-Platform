@@ -6,8 +6,7 @@ import { getThinkwayLogoDarkDataUri } from "@/lib/reports/document/thinkway-repo
 import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
 import { escapeHtml as e, safeProfileUrl } from "@/features/rate-cards/report";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
-import { orderCreatorGroups } from "@/lib/quotations/quotation-creator-order";
-import { compareClientListCreators } from "@/lib/creators/client-list-order";
+import { orderedQuotationReportCreators } from "./quotation-report-order";
 import type { QuotationDocument, QuotationDocCreatorGroup, QuotationDocRow } from "./quotation-document";
 
 type Offer = { kind: string; tag: string; total: string; currency: string; original: string; baseOriginal: string; base: string; af: string; pct: string; description: string; shared: boolean };
@@ -111,7 +110,7 @@ export function buildRedesignedQuotationCreatorList(doc: QuotationDocument): str
   const additions = doc.template === "creator-list-additions";
   const reportTitle = doc.template === "client-list-by-name" ? "Client List by Name" : packageOnly ? "Creator List Package" : additions ? "Creator List Additions" : "Creator List";
   const secondOptionLabel = additions ? "Additions" : "Option 2";
-  const groups = orderCreatorGroups([...doc.creatorGroups].sort((a,b) => compareClientListCreators({tier:a.highestPlatformTier ?? a.rows[0]?.tier, followers:a.highestPlatformFollowers},{tier:b.highestPlatformTier ?? b.rows[0]?.tier, followers:b.highestPlatformFollowers})), doc.creatorListOrder, group => group.itemIds ?? []);
+  const groups = orderedQuotationReportCreators(doc);
   const creators: Creator[] = groups.map((group,index) => {
     const included = new Set((doc.source === "shortlist" ? group.platformMetrics.map(metric => metric.platform) : group.rows.flatMap(row => row.quotedPlatforms ?? [])).map(canonicalPlatformKey));
     return { group, index:index+1, tier:group.highestPlatformTier ?? group.rows[0]?.tier ?? "Mid", offers:offersFor(group, additions), metrics:group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform)) && [metric.followers,metric.engagement,metric.views].some(value => /\d/.test(value))) };
