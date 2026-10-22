@@ -158,7 +158,7 @@ export default async function QuotationPreviewPage({
       title="Quotation preview"
       description={`${serial} — ${templateLabel.toLowerCase()} client quotation`}
       containedMain
-      headerClassName="!py-1.5"
+      hideDesktopHeader
       hidePageHeader
     >
       {errorMessage ? (
