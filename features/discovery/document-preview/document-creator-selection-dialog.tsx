@@ -143,6 +143,7 @@ export function DocumentCreatorSelectionDialog({
   const [query, setQuery] = useState("");
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(() => new Set());
 
+  const workspaceSelectionKey = JSON.stringify(workspaceItemIds ?? []);
   useEffect(() => {
     if (!open) {
       platformsTouchedRef.current = false;
@@ -181,7 +182,7 @@ export function DocumentCreatorSelectionDialog({
         .finally(()=>{if(!cancelled) setOptionsLoading(false);});
     }
     return () => {cancelled=true;};
-  }, [open, workspaceItemIds]);
+  }, [open, workspaceSelectionKey, proposalStorageKey]);
 
   const selectedCount = selectedKeys.size;
   const allSelected = creators.length > 0 && selectedCount === creators.length;
