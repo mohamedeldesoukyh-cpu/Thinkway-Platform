@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   ArchiveIcon,
+  CopyIcon,
   Loader2Icon,
   MoreHorizontalIcon,
   SendIcon,
@@ -53,6 +54,7 @@ import { formatDesignDate } from "@/lib/design/format-design-date";
 import { useQuotationManualSave } from "./quotation-manual-save";
 import {
   archiveQuotation,
+  duplicateQuotation,
   setQuotationHideCostAndFees,
   setQuotationShowOriginalCurrency,
   updateQuotationHeader,
@@ -214,6 +216,16 @@ export function QuotationWorkspaceHeader({
     });
   }
 
+  function runDuplicateQuotation() {
+    if (hasUnsavedChanges || savePending) { toast.error("Save your quotation changes first."); return; }
+    startTransition(async () => {
+      const result = await duplicateQuotation(detail.id);
+      if (!result.ok || !result.data) { toast.error(result.message); return; }
+      toast.success(result.message);
+      router.push(quotationDetailPath(result.data.id));
+    });
+  }
+
   async function runArchive() {
     if (!(await confirm({ title: "Archive quotation?", description: `Archive ${formatDocumentNumberForDisplay(detail.serial_number ?? detail.name)}? It will be removed from the active quotations list.`, confirmLabel: "Archive quotation", variant: "destructive" }))) return;
     startTransition(async () => {
@@ -358,6 +370,10 @@ export function QuotationWorkspaceHeader({
                       </div>
                     </>
                   ) : null}
+                  {detail.canManage && <DropdownMenuItem onSelect={runDuplicateQuotation} disabled={pending || savePending}>
+                    <CopyIcon className="size-3.5" />
+                    <QuotationText>Duplicate quotation</QuotationText>
+                  </DropdownMenuItem>}
                   {detail.canManage && detail.status === "draft" ? (
                     <>
                       <DropdownMenuSeparator />

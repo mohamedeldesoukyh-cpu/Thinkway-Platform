@@ -1,5 +1,7 @@
 "use server";
 
+import { duplicateQuotationDocument } from "@/lib/services/quotations/quotation-duplicate-service";
+
 import { revalidatePath } from "next/cache";
 
 import { requirePermission } from "@/lib/auth/permissions-server";
@@ -456,6 +458,14 @@ export async function removeQuotationItem(input: {
   return result.ok
     ? { ok: true, message: "Creator removed." }
     : { ok: false, message: result.message };
+}
+
+export async function duplicateQuotation(quotationId: string): Promise<ActionResult<{ id: string }>> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const result = await duplicateQuotationDocument(actor.supabase, actor.userId, quotationId);
+  if (result.ok) revalidate(result.data.id);
+  return result;
 }
 
 export async function duplicateQuotationItems(input: {

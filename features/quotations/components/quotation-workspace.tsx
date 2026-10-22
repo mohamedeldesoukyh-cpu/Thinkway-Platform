@@ -593,6 +593,7 @@ function QuotationWorkspaceContent({
   );
 
   const handleDuplicateSelected = useCallback(() => {
+    if (manualSave.hasUnsavedChanges) { toast.error("Save your quotation changes first."); return; }
     startBulkTransition(async () => {
       const res = await duplicateQuotationItems({
         quotation_id: detail.id,
@@ -602,10 +603,11 @@ function QuotationWorkspaceContent({
         toast.error(res.message);
         return;
       }
-      toast.success(res.message ?? "Duplicated.");
+      toast.success(res.message ?? "New options created.");
+      setSelectedIds(new Set());
       router.refresh();
     });
-  }, [detail.id, selectedIds, router]);
+  }, [detail.id, selectedIds, router, manualSave.hasUnsavedChanges]);
 
   const handleRemoveSelected = useCallback(async () => {
     if (selectedIds.size === 0) return;
