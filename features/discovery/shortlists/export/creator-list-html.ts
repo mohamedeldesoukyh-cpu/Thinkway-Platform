@@ -1,4 +1,5 @@
 import { withArabicReportFont } from "@/lib/reports/document/arabic-report-font";
+import { reportCreatorName } from "@/lib/reports/document/report-creator-name";
 import { SHORTLIST_LIST_CSS } from "./shortlist-list-styles";
 import {getReportPlatformIconDataUri} from "@/lib/performance/report/report-platform-icons";
 import type { ShortlistDocument } from "./shortlist-document";
@@ -67,7 +68,8 @@ export function renderCreatorListReport(report: CreatorListReport, presentation:
   const platformCounts = new Map<string, number>();
   const categoryCounts = new Map<string, number>();
   let recorded = 0, missingPortraits = 0, links = 0;
-  const cards = report.creators.map((creator, index) => {
+  const cards = report.creators.map((entry, index) => {
+    const creator = { ...entry, name: reportCreatorName(entry.name, entry.handle) };
     const platform = creatorListPlatform(creator.profileUrl);
     if (platform) platformCounts.set(platform, (platformCounts.get(platform) ?? 0) + 1);
     const categories = [...new Set((creator.categories ?? []).map((v) => v.trim()).filter(Boolean))];

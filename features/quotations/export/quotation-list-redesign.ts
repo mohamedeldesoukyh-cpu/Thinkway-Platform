@@ -1,4 +1,5 @@
 import { withArabicReportFont } from "@/lib/reports/document/arabic-report-font";
+import { reportCreatorName } from "@/lib/reports/document/report-creator-name";
 import { QUOTATION_LIST_REDESIGN_CSS } from "./quotation-list-redesign-styles";
 import { getThinkwayLogoDarkDataUri } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { rateReportPlatformIcon } from "@/features/rate-cards/report-icons";
@@ -91,7 +92,7 @@ function audience(creator: Creator) {
 function renderCard(creator: Creator, offers: Offer[], hideFees: boolean, shortlist = false) {
   const g = creator.group, href = url(g.profileUrl), portrait = image(g.avatarUrl);
   const recommendation = shortlist ? g.creator.match(/^★\s*(\d+)\s*·\s*([\s\S]*)$/) : null;
-  const displayName = recommendation ? recommendation[2].trim() || g.handle || "Creator" : g.creator;
+  const displayName = reportCreatorName(recommendation ? recommendation[2] : g.creator, g.handle);
   const recommendationTag = recommendation ? `<span class="creator-recommendation">★ Recommended · ${e(recommendation[1])}</span>` : "";
   const badges = platforms.filter(platform => creator.metrics.some(m => canonicalPlatformKey(m.platform) === platform)).map(p => `<img src="${icon(p)}" alt="${p}">`).join("");
   const visual = `${portrait ? `<img src="${portrait}" alt="${e(g.creator)}">` : `<div class="portrait-placeholder">${e(g.creator.slice(0, 1))}</div>`}<span class="idx" aria-hidden="true">${String(creator.index).padStart(3,"0")}</span><span class="pb-stack">${badges}</span>`;
@@ -132,7 +133,7 @@ export function buildRedesignedQuotationCreatorList(doc: QuotationDocument) {
     const rows = batch.map(c => {
       const metrics = platforms.map(p => { const m=c.metrics.find(m=>canonicalPlatformKey(m.platform)===p); return [m?.followers??"—",m?.engagement??"—"].map((v,i)=>`<span class="r gl-${p==="instagram"?"ig":"tt"}${m?"":" gl-off"}">${i===0?`<span class="gl-f">${e(v)}</span>`:e(v)}</span>`).join(""); }).join("");
       const money = [c.offers.slice(0,1),c.offers.slice(1)].map((offers,i) => `<span class="gl-offer-cell">${offers.length ? offers.map(o=>`<span class="gl-money"><span class="offer-tag offer-tag--${o.kind}">${e(o.kind==="pkg"?"Pkg":o.tag.replace("Option","Opt"))}</span><b>${o.shared ? "Shared package" : number(o.total)>0 ? e(creatorListWholeMoney(o.total)) : "Rates pending"}</b></span>`).join("") : `<span class="gl-off">${i===0?"Rates pending":"—"}</span>`}</span>`).join("");
-      return `<div class="gl-tr gl-row"><span class="gl-n">${String(c.index).padStart(3,"0")}</span><a class="gl-who" ${url(c.group.profileUrl)?`href="${url(c.group.profileUrl)}" target="_blank" rel="noopener noreferrer"`:""}>${image(c.group.avatarUrl)?`<img src="${image(c.group.avatarUrl)}" alt="">`:""}<div><b dir="auto">${e(c.group.creator)}</b><span>${e(c.group.handle)}</span></div></a><span>${tierLabel(c.tier)}</span>${metrics}${shortlist ? "" : money}</div>`;
+      return `<div class="gl-tr gl-row"><span class="gl-n">${String(c.index).padStart(3,"0")}</span><a class="gl-who" ${url(c.group.profileUrl)?`href="${url(c.group.profileUrl)}" target="_blank" rel="noopener noreferrer"`:""}>${image(c.group.avatarUrl)?`<img src="${image(c.group.avatarUrl)}" alt="">`:""}<div><b dir="auto">${e(reportCreatorName(c.group.creator, c.group.handle))}</b><span>${e(c.group.handle)}</span></div></a><span>${tierLabel(c.tier)}</span>${metrics}${shortlist ? "" : money}</div>`;
     }).join("");
     return `<section class="page">${header("Overview",`${index*16+1}–${index*16+batch.length} of ${creators.length}`)}<div class="glance-hd"><div><span class="glance-hd__eye">At a glance</span><h1>Every creator, side by side</h1></div><p>${shortlist ? "Creator profiles and performance · ER = engagement rate" : `Totals in ${e(currencyLabel)} incl. agency fee · ER = engagement rate`}</p></div><div class="glance"><div class="gl-tr gl-groups"><span></span><span></span><span></span><span class="gl-grp gl-grp--ig"><img src="${icon("instagram")}" alt="">Instagram</span><span class="gl-grp gl-grp--tt"><img src="${icon("tiktok")}" alt="">TikTok</span><span class="gl-grp gl-grp--offer">Offer totals</span></div><div class="gl-tr gl-head"><span>#</span><span>Creator</span><span>Tier</span><span class="r">Followers</span><span class="r">ER</span><span class="r">Followers</span><span class="r">ER</span><span class="gl-offer-cell">Option 1 / Package</span><span class="gl-offer-cell">${secondOptionLabel}</span></div>${rows}</div>${footer(2+pages.length+index)}</section>`;
   }).join("");

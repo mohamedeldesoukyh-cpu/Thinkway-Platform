@@ -105,7 +105,7 @@ export function appendQuotationTemplateParam(
  * Preview HTML is always live; PDF/PPTX URLs previously only changed with
  * quotation `updated_at`, so browsers often reopened an older Downloads file.
  */
-export const QUOTATION_EXPORT_LAYOUT_VERSION = "r13-arabic-fonts-20261022";
+export const QUOTATION_EXPORT_LAYOUT_VERSION = "r14-readable-names-20261022";
 
 function deployExportStamp(): string {
   const deployment = process.env.NEXT_PUBLIC_VERCEL_DEPLOYMENT_ID?.trim();
