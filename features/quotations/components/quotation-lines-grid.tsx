@@ -304,13 +304,13 @@ function QuotationPackLineRow({
         </div>
         <div className="q-cell-repeat" role="cell">
           <span className="q-mobile-label">Repeat</span>
-          <input type="number" min={1} step={1} key={repeat ?? "mixed"} defaultValue={repeat ?? ""}
+          <span className="q-repeat-control"><span aria-hidden="true">×</span><input type="number" min={1} step={1} key={repeat ?? "mixed"} defaultValue={repeat ?? ""}
             placeholder="Mixed" aria-label={`Repeat package for ${name}`} disabled={!canManage || pending || !primary}
             onBlur={(event) => {
               const value = Number(event.currentTarget.value);
               if (!Number.isSafeInteger(value) || value < 1) { event.currentTarget.value = repeat == null ? "" : String(repeat); return; }
               if (value !== repeat) lineFields.saveDeliverables(repeatQuotationPackage(lineFields.deliverableDrafts, value, { ...resolved, revenue: computeQuotationRowComputed(resolved).revenue }));
-            }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
+            }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span>
         </div>
         <div className="q-cell-option" role="cell">{optionCount > 1 && <span className="q-opt">{optionLabel}/{optionCount}</span>}</div>
         <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{priceUnits > 1 && <span className="q-repeat-price">×{priceUnits} · Total {F(projected.clientCost)} {rowCurrency}</span>}{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue / priceUnits)} + {F(projected.af / priceUnits)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}<button type="button" onClick={() => setExpanded(true)} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`}><QuotationText>Add cost</QuotationText></button>{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>

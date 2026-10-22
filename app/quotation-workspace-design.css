@@ -531,5 +531,8 @@
 .tq-redesign .q-bottom-editor .q-sec__h { margin-bottom:5px; }
 .tq-redesign .q-bottom-editor .q-kv { padding:3px 0; }
 
-.tq-redesign .q-cell-repeat input { width:60px; padding:7px 5px; border:1px solid #d6e0f3; border-radius:7px; background:white; }
+.tq-redesign .q-repeat-control { display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
+.tq-redesign .q-cell-repeat input { box-sizing:border-box; width:36px; min-width:0; height:32px; padding:4px 2px; text-align:center; font-variant-numeric:tabular-nums; appearance:textfield; -moz-appearance:textfield; border:1px solid #d6e0f3; border-radius:7px; background:white; }
+.tq-redesign .q-cell-repeat input::-webkit-inner-spin-button,
+.tq-redesign .q-cell-repeat input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 .tq-redesign .q-repeat-price { display:block; font-size:11px; color:#2455bd; margin-top:3px; }
