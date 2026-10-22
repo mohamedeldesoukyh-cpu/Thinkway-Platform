@@ -1,3 +1,4 @@
+import { loadQuotationProposalOptions, saveQuotationProposalOptions } from "@/features/quotations/actions";
 import { parseProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -126,6 +127,11 @@ export function DocumentCreatorSelectionDialog({
   onConfirm,
 }: Props) {
   const [proposalOptions, setProposalOptions] = useState<ProposalOption[]>([]);
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [optionsSaving, setOptionsSaving] = useState(false);
+  const [optionsMessage, setOptionsMessage] = useState("");
+  const optionsRevision = useRef<string | null>(null);
+  const savedOptions = useRef("[]");
   const [activeOption, setActiveOption] = useState(0);
   const [selectionError, setSelectionError] = useState("");
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
@@ -144,19 +150,37 @@ export function DocumentCreatorSelectionDialog({
     }
     setQuery("");
     setSelectionError("");
-    let saved: ProposalOption[] = [];
-    if (proposalStorageKey) {
-      try { saved = parseProposalOptions(localStorage.getItem(`quotation-proposals:${proposalStorageKey}`)); } catch { /* Start without invalid local preferences. */ }
+    setOptionsMessage("");
+    setOptionsSaving(false);
+    optionsRevision.current = null;
+    let cancelled = false;
+    function applyOptions(saved: ProposalOption[]) {
       const allowed = new Set(creators.flatMap(creator => creator.itemIds));
-      saved = saved.map(option => ({ ...option, itemIds: option.itemIds.filter(id => allowed.has(id)) })).filter(option => option.itemIds.length);
+      const available = saved.map(option => ({...option,itemIds:option.itemIds.filter(id=>allowed.has(id))})).filter(option=>option.itemIds.length);
+      setProposalOptions(available);
+      setActiveOption(0);
+      const nextKeys = creatorKeysFromItemIds(creators, available[0]?.itemIds ?? workspaceItemIds);
+      setSelectedKeys(nextKeys);
+      setSelectedPlatforms(new Set(platformsForCreators(creators,nextKeys)));
+      platformsTouchedRef.current = false;
     }
-    setProposalOptions(saved);
-    setActiveOption(0);
-    // Workspace selection is the only seed — never sessionStorage.
-    const nextKeys = creatorKeysFromItemIds(creators, saved[0]?.itemIds ?? workspaceItemIds);
-    setSelectedKeys(nextKeys);
-    setSelectedPlatforms(new Set(platformsForCreators(creators, nextKeys)));
-    platformsTouchedRef.current = false;
+    applyOptions([]);
+    setOptionsLoading(Boolean(proposalStorageKey));
+    if (proposalStorageKey) {
+      loadQuotationProposalOptions(proposalStorageKey).then(result => {
+        if (cancelled) return;
+        if (!result.ok) {setSelectionError(result.message); return;}
+        optionsRevision.current = result.revision;
+        savedOptions.current = JSON.stringify(result.options ?? []);
+        let saved = result.options;
+        if (saved === null) {
+          try {saved = parseProposalOptions(localStorage.getItem(`quotation-proposals:${proposalStorageKey}`));} catch {saved=[];}
+        }
+        applyOptions(saved ?? []);
+      }).catch(()=>{if(!cancelled) setSelectionError("Could not load saved options. Close and reopen the selector to retry.");})
+        .finally(()=>{if(!cancelled) setOptionsLoading(false);});
+    }
+    return () => {cancelled=true;};
   }, [open, workspaceItemIds]);
 
   const selectedCount = selectedKeys.size;
@@ -260,13 +284,35 @@ export function DocumentCreatorSelectionDialog({
     setSelectedPlatforms(new Set(availablePlatforms));
   }
 
-  function handleConfirm() {
-    if (confirmDisabled || noneSelected || noPlatformsSelected || invalidOptions) return;
+  async function persistOptions(proposals: ProposalOption[], force = false) {
+    if (!proposalStorageKey) return true;
+    if (optionsLoading || optionsSaving || !optionsRevision.current) return false;
+    if (!force && JSON.stringify(proposals) === savedOptions.current) return true;
+    setOptionsSaving(true);
+    setSelectionError("");
+    setOptionsMessage("");
+    try {
+      const result = await saveQuotationProposalOptions(proposalStorageKey, proposals, optionsRevision.current);
+      if (!result.ok) {setSelectionError(result.message);return false;}
+      optionsRevision.current = result.revision;
+      savedOptions.current = JSON.stringify(proposals);
+      try {localStorage.removeItem(`quotation-proposals:${proposalStorageKey}`);} catch { /* Server is authoritative. */ }
+      setOptionsMessage(proposals.length ? "Options saved to this quotation." : "Saved options cleared.");
+      return true;
+    } catch {setSelectionError("Could not save options. Please try again.");return false;}
+    finally {setOptionsSaving(false);}
+  }
+  async function clearOptions() {
+    if (!await persistOptions([], true)) return;
+    setProposalOptions([]);
+    setActiveOption(0);
+    setSelectedKeys(creatorKeysFromItemIds(creators, workspaceItemIds));
+  }
+  async function handleConfirm() {
+    if (confirmDisabled || noneSelected || noPlatformsSelected || invalidOptions || optionsLoading || optionsSaving) return;
     const proposals = proposalStorageKey ? currentOptions : [];
     const confirmedIds = proposals.length ? [...new Set(proposals.flatMap(option => option.itemIds))] : selectedItemIds;
-    if (proposalStorageKey) {
-      try { localStorage.setItem(`quotation-proposals:${proposalStorageKey}`, JSON.stringify(proposals)); } catch { /* Preview remains available when storage is disabled. */ }
-    }
+    if (!await persistOptions(proposals)) return;
     onWorkspaceSelectionChange?.(confirmedIds);
     const platforms =
       allPlatformsSelected || availablePlatforms.length === 0
@@ -295,14 +341,17 @@ export function DocumentCreatorSelectionDialog({
           <DialogDescription className={styles.subtitle}>{description}</DialogDescription>
         </div><button type="button" className={styles.close} aria-label="Close creator selection" onClick={() => onOpenChange(false)}><XIcon size={16} aria-hidden="true" /></button></div>
       </header>
-      <div className={styles.selectionBody}>
+      <fieldset className={styles.selectionBody} disabled={optionsLoading || optionsSaving} style={{border:0,padding:0,margin:0,minWidth:0}}>
         {proposalStorageKey && <section className={styles.proposalOptions} aria-label="Proposal options">
           <div className={styles.proposalHeading}><div><strong>Proposal options</strong><p>{proposalOptions.length ? "Choose creators for each option. The same creator can appear in multiple options." : "Keep one creator list, or add options for the client to compare."}</p></div><button type="button" className={styles.button} disabled={proposalOptions.length >= 12} onClick={addOption}>+ Add Options</button></div>
+          {optionsLoading && <p role="status">Loading saved options…</p>}
+          {optionsMessage && <p role="status">{optionsMessage}</p>}
           {proposalOptions.length > 0 && <>
             <div className={styles.optionTabs} role="tablist" aria-label="Choose proposal option">{currentOptions.map((option, index) => <button type="button" role="tab" key={index} aria-selected={activeOption === index} className={`${styles.button} ${activeOption === index ? styles.primary : ""}`} onClick={() => switchOption(index)}>Option {index + 1}{option.recommended ? " ★" : ""}</button>)}</div>
             <div className={styles.proposalHeading}><strong>Option {activeOption + 1} · {selectedCount} creators</strong><button type="button" className={styles.button} aria-pressed={currentOptions[activeOption]?.recommended ?? false} onClick={() => setProposalOptions(currentOptions.map((option, index) => index === activeOption ? { ...option, recommended: !option.recommended } : option))}>{currentOptions[activeOption]?.recommended ? "★ Recommended" : "☆ Mark recommended"}</button><button type="button" className={styles.button} onClick={() => removeOption(activeOption)}>Remove option</button></div>
             {invalidOptions && <p className={styles.selectionWarning}>Select at least one creator in every option before continuing.</p>}
-            <p className={styles.platformHelp}>Options are remembered in this browser for this quotation. Removing all options restores the standard report.</p>
+            <p className={styles.platformHelp}>Options are saved with this quotation when you save or open the preview. Clear options restores the standard report.</p>
+            <div className={styles.optionTabs}><button type="button" className={styles.button} disabled={invalidOptions || !optionsRevision.current} onClick={()=>void persistOptions(currentOptions)}>Save options</button><button type="button" className={styles.button} disabled={!optionsRevision.current} onClick={()=>void clearOptions()}>Clear options</button></div>
           </>}
         </section>}
         {selectionError && <p role="alert">{selectionError}</p>}
@@ -344,11 +393,11 @@ export function DocumentCreatorSelectionDialog({
         </ul>
         {visibleCreators.length === 0 ? <p className={styles.empty}>{creators.length === 0 ? "No creators available for this document." : `No creator matches “${query}”. Clear the search to see all ${creators.length}.`}</p> : null}
         </div>
-      </div>
+      </fieldset>
       <footer className={`${styles.footer} ${styles.selectionFooter}`}>
         <small>One selection drives the preview, PDF, PowerPoint, Excel and Word.</small>
         <button type="button" className={styles.button} onClick={() => onOpenChange(false)}>Cancel</button>
-        <button type="button" className={`${styles.button} ${styles.primary}`} onClick={handleConfirm} disabled={confirmDisabled || noneSelected || noPlatformsSelected || invalidOptions}>{confirmDisabled ? "Loading platforms…" : confirmLabel}{!confirmDisabled && selectedCount > 0 ? ` (${selectedCount})` : ""}</button>
+        <button type="button" className={`${styles.button} ${styles.primary}`} onClick={handleConfirm} disabled={confirmDisabled || noneSelected || noPlatformsSelected || invalidOptions || optionsLoading || optionsSaving || Boolean(proposalStorageKey && !optionsRevision.current)}>{optionsSaving ? "Saving options…" : optionsLoading ? "Loading options…" : confirmDisabled ? "Loading platforms…" : confirmLabel}{!confirmDisabled && selectedCount > 0 ? ` (${selectedCount})` : ""}</button>
       </footer>
     </DialogContent>
   </Dialog>;

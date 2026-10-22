@@ -1708,3 +1708,16 @@ console.log("quotation-document.test.ts passed");
   assert.throws(()=>buildQuotationDocument(detail,{template,proposalOptions:[{itemIds:["foreign"],recommended:false}]}));
   assert.throws(()=>buildQuotationDocument(detail,{template,proposalOptions:[{itemIds:[],recommended:false}]}));
 }
+
+// Comparison avatars and creator numbering follow the same saved order as cards.
+{
+  const detail=mockDetail({items:[mockItem({id:"ordered-a",unified_id:"a",creator_name:"Alpha",profile_image_url:"https://example.com/a.jpg"}),mockItem({id:"ordered-b",unified_id:"b",creator_name:"Beta",profile_image_url:"https://example.com/b.jpg"})]});
+  const doc=buildQuotationDocument(detail,{template:"creator-list-package",proposalOptions:[{itemIds:["ordered-a","ordered-b"],recommended:false}]});
+  doc.creatorListOrder=["ordered-b","ordered-a"];
+  doc.proposalOptions![0].document.creatorListOrder=doc.creatorListOrder;
+  const html=buildQuotationHtml(doc);
+  const summary=html.match(/<section class="page proposal-summary">[\s\S]*?<\/section>/)![0];
+  assert.ok(summary.indexOf("Beta")<summary.indexOf("Alpha"));
+  assert.ok(summary.includes('width="28" height="28"'));
+  assert.ok(summary.includes('class="proposal-creator-number">1</span>'));
+}

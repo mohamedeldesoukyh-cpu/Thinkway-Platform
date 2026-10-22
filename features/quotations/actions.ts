@@ -623,3 +623,26 @@ export async function restoreQuotation(id: string): Promise<ActionResult> {
   if (result.ok) revalidate(id);
   return result;
 }
+
+
+export async function loadQuotationProposalOptions(quotationId: string) {
+  const supabase = (await createSupabaseServerClient()) as Supabase;
+  const auth = await requirePermission(supabase, QUOTATION_PERMISSIONS.read);
+  if ("error" in auth) return { ok: false as const, message: auth.error };
+  const { data, error } = await supabase.from("quotations").select("metadata, updated_at").eq("id", quotationId).maybeSingle();
+  if (error || !data) return { ok: false as const, message: "Could not load saved options. Close and reopen the selector to retry." };
+  const metadata = data.metadata as Record<string, unknown> | null;
+  const { parseProposalOptions } = await import("./export/proposal-options");
+  try {
+    return { ok: true as const, options: metadata?.proposalOptions === undefined ? null : parseProposalOptions(JSON.stringify(metadata.proposalOptions)), revision: data.updated_at };
+  } catch { return { ok: false as const, message: "Saved options could not be read. Please contact support." }; }
+}
+
+export async function saveQuotationProposalOptions(quotationId: string, input: unknown, revision: string) {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const { persistQuotationProposalOptions } = await import("@/lib/services/quotations/quotation-proposal-options-service");
+  const result = await persistQuotationProposalOptions(actor.supabase, quotationId, input, revision);
+  if (result.ok) revalidate(quotationId);
+  return result;
+}
