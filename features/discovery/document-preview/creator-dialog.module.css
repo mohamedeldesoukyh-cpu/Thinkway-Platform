@@ -140,3 +140,9 @@
  .selectionBody { display:flex; flex-direction:column; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
  .selectionList { overflow:visible; flex:none; }
 }
+
+.proposalOptions { padding: 16px 24px; border-bottom: 1px solid #e3e8f0; background: #f6f7fc; }
+.proposalHeading { display:flex; align-items:center; flex-wrap:wrap; gap:12px; }
+.proposalHeading > div:first-child { flex:1; }
+.proposalHeading p { margin:4px 0 0; color:#586982; font-size:12px; }
+.optionTabs { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }

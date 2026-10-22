@@ -1,3 +1,4 @@
+import { parseProposalOptions } from "@/features/quotations/export/proposal-options";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Suspense } from "react";
@@ -26,7 +27,7 @@ export const dynamic = "force-dynamic";
 
 type QuotationPreviewPageProps = {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ template?: string; items?: string; platforms?: string }>;
+  searchParams: Promise<{ template?: string; items?: string; platforms?: string; proposals?: string }>;
 };
 
 export async function generateMetadata({
@@ -93,6 +94,7 @@ export default async function QuotationPreviewPage({
 
   const routeSummary = await fetchQuotationRouteSummary(quotationId);
   const previewParams = new URLSearchParams();
+  if (query.proposals) previewParams.set("proposals", query.proposals);
   if (template !== "detailed") previewParams.set("template", template);
   if (itemIds?.length) previewParams.set("items", itemIds.join(","));
   if (platforms?.length) previewParams.set("platforms", platforms.join(","));
@@ -122,6 +124,7 @@ export default async function QuotationPreviewPage({
       },
       undefined,
       {
+        ...(query.proposals ? { proposals: query.proposals } : {}),
         ...(template !== "detailed" ? { template } : {}),
         ...(itemIds?.length ? { items: itemIds.join(",") } : {}),
         ...(platforms?.length ? { platforms: platforms.join(",") } : {}),
@@ -144,6 +147,7 @@ export default async function QuotationPreviewPage({
     const rendered = await renderQuotationPreviewHtml(supabase, detail.id, {
       template,
       itemIds,
+      proposalOptions: parseProposalOptions(query.proposals),
       platforms,
     });
     html = rendered.html;
@@ -210,6 +214,7 @@ export default async function QuotationPreviewPage({
               quotationId={detail.id}
               template={template}
               itemIds={itemIds}
+              proposalOptions={parseProposalOptions(query.proposals)}
               platforms={platforms}
               exportRevision={detail.updated_at}
             />

@@ -4,6 +4,7 @@ import { sortPlatformsStable } from "@/lib/creators/creator-centric";
 /** Confirmed Preview / Export selection from DocumentCreatorSelectionDialog. */
 export type DocumentExportSelection = {
   itemIds: string[];
+  proposalOptions?: import("@/features/quotations/export/proposal-options").ProposalOption[];
   /**
    * Platforms to include. `null` / omitted / empty means all platforms on the
    * selected creators (default).

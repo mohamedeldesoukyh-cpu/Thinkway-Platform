@@ -1682,3 +1682,29 @@ console.log("quotation-document.test.ts passed");
   assert.equal(selected.summary.grandTotal, buildQuotationDocument(detail, {template:"creator-list",itemIds:["package-a"]}).summary.grandTotal);
   assert.notEqual(selected.summary.grandTotal, packaged.summary.grandTotal);
 }
+
+// Proposal alternatives retain independent totals and repeat overlapping creators.
+{
+  const detail = mockDetail({items:[mockItem({id:"option-a",unified_id:"alpha",creator_name:"Alpha $&",handle:"alpha"}),mockItem({id:"option-b",unified_id:"beta",creator_name:"Beta",handle:"beta",revenue:2000,revenue_egp:2000})]});
+  const template = "creator-list-package";
+  const proposalOptions = [{itemIds:["option-a","option-b"],recommended:true},{itemIds:["option-a"],recommended:false}];
+  const doc=buildQuotationDocument(detail,{template,proposalOptions});
+  assert.equal(doc.summary.creatorCount,2);
+  assert.equal(doc.proposalOptions?.[0].document.summary.creatorCount,2);
+  assert.equal(doc.proposalOptions?.[1].document.summary.creatorCount,1);
+  assert.equal(doc.proposalOptions?.[1].document.summary.grandTotal,buildQuotationDocument(detail,{template,itemIds:["option-a"]}).summary.grandTotal);
+  const html=buildQuotationHtml(doc);
+  const pages=html.match(/<section class="page[^"]*">[\s\S]*?<\/section>/g)!;
+  assert.ok(pages[1].includes("Compare your options"));
+  assert.ok(pages[1].includes("Number of creators") && pages[1].includes("Total price"));
+  assert.ok(html.includes("Alpha $&amp;"));
+  assert.ok(html.includes('Option 1 <span class="proposal-badge">&#9733; Recommended'));
+  assert.ok(!html.includes('Option 2 <span class="proposal-badge">'));
+  assert.ok(!pages[0].includes(doc.summary.grandTotal));
+  assert.ok(pages.every((page,index)=>page.includes(`${index+1} / ${pages.length}`)));
+  assert.ok(!buildQuotationHtml(buildQuotationDocument(detail,{template})).includes("Compare your options"));
+  const noPrice=buildQuotationHtml(buildQuotationDocument(detail,{template:"client-list-by-name",proposalOptions}));
+  assert.ok(!noPrice.includes("<th>Total price</th>"));
+  assert.throws(()=>buildQuotationDocument(detail,{template,proposalOptions:[{itemIds:["foreign"],recommended:false}]}));
+  assert.throws(()=>buildQuotationDocument(detail,{template,proposalOptions:[{itemIds:[],recommended:false}]}));
+}

@@ -1,3 +1,4 @@
+import { parseProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { CheckIcon, UsersIcon, XIcon, SearchIcon, LockKeyholeIcon } from "lucide-react";
@@ -32,6 +33,7 @@ export type DocumentCreatorOption = {
 };
 
 type Props = {
+  proposalStorageKey?: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   creators: DocumentCreatorOption[];
@@ -111,6 +113,7 @@ function initials(name: string, handle: string): string {
 
 export function DocumentCreatorSelectionDialog({
   open,
+  proposalStorageKey,
   onOpenChange,
   creators,
   workspaceItemIds,
@@ -122,6 +125,9 @@ export function DocumentCreatorSelectionDialog({
   confirmDisabled = false,
   onConfirm,
 }: Props) {
+  const [proposalOptions, setProposalOptions] = useState<ProposalOption[]>([]);
+  const [activeOption, setActiveOption] = useState(0);
+  const [selectionError, setSelectionError] = useState("");
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
     () => new Set()
@@ -137,8 +143,17 @@ export function DocumentCreatorSelectionDialog({
       return;
     }
     setQuery("");
+    setSelectionError("");
+    let saved: ProposalOption[] = [];
+    if (proposalStorageKey) {
+      try { saved = parseProposalOptions(localStorage.getItem(`quotation-proposals:${proposalStorageKey}`)); } catch { /* Start without invalid local preferences. */ }
+      const allowed = new Set(creators.flatMap(creator => creator.itemIds));
+      saved = saved.map(option => ({ ...option, itemIds: option.itemIds.filter(id => allowed.has(id)) })).filter(option => option.itemIds.length);
+    }
+    setProposalOptions(saved);
+    setActiveOption(0);
     // Workspace selection is the only seed — never sessionStorage.
-    const nextKeys = creatorKeysFromItemIds(creators, workspaceItemIds);
+    const nextKeys = creatorKeysFromItemIds(creators, saved[0]?.itemIds ?? workspaceItemIds);
     setSelectedKeys(nextKeys);
     setSelectedPlatforms(new Set(platformsForCreators(creators, nextKeys)));
     platformsTouchedRef.current = false;
@@ -153,9 +168,36 @@ export function DocumentCreatorSelectionDialog({
     [creators, selectedKeys]
   );
 
+  const currentOptions = proposalOptions.map((option, index) => index === activeOption ? { ...option, itemIds: selectedItemIds } : option);
+  const invalidOptions = currentOptions.some(option => !option.itemIds.length);
+  function switchOption(index: number) {
+    setProposalOptions(currentOptions);
+    setActiveOption(index);
+    const ids = currentOptions[index]?.itemIds ?? [];
+    setSelectedKeys(ids.length ? creatorKeysFromItemIds(creators, ids) : new Set());
+    setQuery("");
+  }
+  function addOption() {
+    if (!currentOptions.length) {
+      setProposalOptions([{ itemIds: selectedItemIds, recommended: false }]);
+      setActiveOption(0);
+    } else {
+      setProposalOptions([...currentOptions, { itemIds: [], recommended: false }]);
+      setActiveOption(currentOptions.length);
+      setSelectedKeys(new Set());
+    }
+    setQuery("");
+  }
+  function removeOption(index: number) {
+    const next = currentOptions.filter((_, i) => i !== index);
+    setProposalOptions(next);
+    setActiveOption(0);
+    setSelectedKeys(next.length ? (next[0]!.itemIds.length ? creatorKeysFromItemIds(creators, next[0]!.itemIds) : new Set()) : creatorKeysFromItemIds(creators, workspaceItemIds));
+  }
+
   const availablePlatforms = useMemo(
-    () => platformsForCreators(creators, selectedKeys),
-    [creators, selectedKeys]
+    () => platformsForCreators(creators, proposalOptions.length ? new Set(creators.filter(creator => currentOptions.some(option => creator.itemIds.some(id => option.itemIds.includes(id)))).map(creator => creator.creatorKey)) : selectedKeys),
+    [creators, selectedKeys, proposalOptions]
   );
 
   useEffect(() => {
@@ -219,13 +261,18 @@ export function DocumentCreatorSelectionDialog({
   }
 
   function handleConfirm() {
-    if (confirmDisabled || noneSelected || noPlatformsSelected) return;
-    onWorkspaceSelectionChange?.(selectedItemIds);
+    if (confirmDisabled || noneSelected || noPlatformsSelected || invalidOptions) return;
+    const proposals = proposalStorageKey ? currentOptions : [];
+    const confirmedIds = proposals.length ? [...new Set(proposals.flatMap(option => option.itemIds))] : selectedItemIds;
+    if (proposalStorageKey) {
+      try { localStorage.setItem(`quotation-proposals:${proposalStorageKey}`, JSON.stringify(proposals)); } catch { /* Preview remains available when storage is disabled. */ }
+    }
+    onWorkspaceSelectionChange?.(confirmedIds);
     const platforms =
       allPlatformsSelected || availablePlatforms.length === 0
         ? null
         : [...selectedPlatforms];
-    onConfirm({ itemIds: selectedItemIds, platforms });
+    onConfirm({ itemIds: confirmedIds, platforms, proposalOptions: proposals.length ? proposals : undefined });
     onOpenChange(false);
   }
 
@@ -249,6 +296,16 @@ export function DocumentCreatorSelectionDialog({
         </div><button type="button" className={styles.close} aria-label="Close creator selection" onClick={() => onOpenChange(false)}><XIcon size={16} aria-hidden="true" /></button></div>
       </header>
       <div className={styles.selectionBody}>
+        {proposalStorageKey && <section className={styles.proposalOptions} aria-label="Proposal options">
+          <div className={styles.proposalHeading}><div><strong>Proposal options</strong><p>{proposalOptions.length ? "Choose creators for each option. The same creator can appear in multiple options." : "Keep one creator list, or add options for the client to compare."}</p></div><button type="button" className={styles.button} disabled={proposalOptions.length >= 12} onClick={addOption}>+ Add Options</button></div>
+          {proposalOptions.length > 0 && <>
+            <div className={styles.optionTabs} role="tablist" aria-label="Choose proposal option">{currentOptions.map((option, index) => <button type="button" role="tab" key={index} aria-selected={activeOption === index} className={`${styles.button} ${activeOption === index ? styles.primary : ""}`} onClick={() => switchOption(index)}>Option {index + 1}{option.recommended ? " ★" : ""}</button>)}</div>
+            <div className={styles.proposalHeading}><strong>Option {activeOption + 1} · {selectedCount} creators</strong><button type="button" className={styles.button} aria-pressed={currentOptions[activeOption]?.recommended ?? false} onClick={() => setProposalOptions(currentOptions.map((option, index) => index === activeOption ? { ...option, recommended: !option.recommended } : option))}>{currentOptions[activeOption]?.recommended ? "★ Recommended" : "☆ Mark recommended"}</button><button type="button" className={styles.button} onClick={() => removeOption(activeOption)}>Remove option</button></div>
+            {invalidOptions && <p className={styles.selectionWarning}>Select at least one creator in every option before continuing.</p>}
+            <p className={styles.platformHelp}>Options are remembered in this browser for this quotation. Removing all options restores the standard report.</p>
+          </>}
+        </section>}
+        {selectionError && <p role="alert">{selectionError}</p>}
         {clientMetrics.length || internalMetrics.length ? <div className={styles.zones}>
           {clientMetrics.length ? <section className={`${styles.zone} ${styles.clientZone}`} aria-label="Client-facing totals"><h3>Client-facing &middot; quotation prices</h3>{metricList(clientMetrics)}</section> : null}
           {internalMetrics.length ? <section className={`${styles.zone} ${styles.internalZone}`} aria-label="Internal totals"><h3><LockKeyholeIcon size={12} aria-hidden="true" />Internal &middot; never in client exports</h3>{metricList(internalMetrics)}</section> : null}
@@ -291,7 +348,7 @@ export function DocumentCreatorSelectionDialog({
       <footer className={`${styles.footer} ${styles.selectionFooter}`}>
         <small>One selection drives the preview, PDF, PowerPoint, Excel and Word.</small>
         <button type="button" className={styles.button} onClick={() => onOpenChange(false)}>Cancel</button>
-        <button type="button" className={`${styles.button} ${styles.primary}`} onClick={handleConfirm} disabled={confirmDisabled || noneSelected || noPlatformsSelected}>{confirmDisabled ? "Loading platforms…" : confirmLabel}{!confirmDisabled && selectedCount > 0 ? ` (${selectedCount})` : ""}</button>
+        <button type="button" className={`${styles.button} ${styles.primary}`} onClick={handleConfirm} disabled={confirmDisabled || noneSelected || noPlatformsSelected || invalidOptions}>{confirmDisabled ? "Loading platforms…" : confirmLabel}{!confirmDisabled && selectedCount > 0 ? ` (${selectedCount})` : ""}</button>
       </footer>
     </DialogContent>
   </Dialog>;

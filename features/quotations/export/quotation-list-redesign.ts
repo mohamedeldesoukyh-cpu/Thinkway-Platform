@@ -1,3 +1,4 @@
+import { buildQuotationProposalReport } from "./quotation-proposal-report";
 import { withArabicReportFont } from "@/lib/reports/document/arabic-report-font";
 import { reportCreatorName } from "@/lib/reports/document/report-creator-name";
 import { QUOTATION_LIST_REDESIGN_CSS } from "./quotation-list-redesign-styles";
@@ -101,7 +102,8 @@ function renderCard(creator: Creator, offers: Offer[], hideFees: boolean, shortl
 }
 const LEGEND = `<div class="legend"><div class="legend__grp"><span class="legend__k">Tier</span>${["Mega","Macro","Mid","Micro","Nano"].map(tierLabel).join("")}</div><span class="legend__sep"></span><div class="legend__grp"><span class="legend__k">Offer</span><span class="offer-tag offer-tag--1">Option 1</span><span class="offer-tag offer-tag--2">Option 2</span><span class="offer-tag offer-tag--pkg">Package</span><span>= single offer</span></div><span class="legend__sep"></span><div class="legend__grp"><span class="legend__k">Deliverables</span><span class="chip chip--ig">Instagram</span><span class="chip chip--tt">TikTok</span><span class="chip chip--ex">Event · rights · boost</span></div><span class="legend__sep"></span><span>Totals incl. agency fee (AF) · ER = engagement rate</span></div>`;
 /** Client-only presentation of the existing calculated quotation document. */
-export function buildRedesignedQuotationCreatorList(doc: QuotationDocument) {
+export function buildRedesignedQuotationCreatorList(doc: QuotationDocument): string {
+  if (doc.proposalOptions?.length) return buildQuotationProposalReport(doc, buildRedesignedQuotationCreatorList);
   const shortlist = doc.source === "shortlist";
 
   const packageOnly = doc.template === "creator-list-package";

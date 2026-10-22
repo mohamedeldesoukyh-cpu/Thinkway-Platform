@@ -1,3 +1,4 @@
+import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import {
   DownloadIcon,
@@ -20,6 +21,7 @@ type QuotationPreviewDownloadsProps = {
   template: QuotationTemplateVariant;
   itemIds?: string[];
   platforms?: string[] | null;
+  proposalOptions?: ProposalOption[];
   exportRevision?: string | null;
 };
 
@@ -32,6 +34,7 @@ export function buildExportHref(
     exportRevision?: string | null;
     itemIds?: string[];
     platforms?: string[] | null;
+    proposalOptions?: ProposalOption[];
   }
 ) {
   const params = new URLSearchParams({ format });
@@ -44,6 +47,7 @@ export function buildExportHref(
     params.set("items", options.itemIds.join(","));
   }
   appendPlatformsQueryParam(params, options?.platforms);
+  appendProposalOptions(params, options?.proposalOptions);
   return `/api/quotations/${quotationId}/export?${params.toString()}`;
 }
 
@@ -53,8 +57,9 @@ export function QuotationPreviewDownloads({
   itemIds,
   platforms,
   exportRevision,
+  proposalOptions,
 }: QuotationPreviewDownloadsProps) {
-  const exportOptions = { itemIds, platforms, exportRevision };
+  const exportOptions = { itemIds, platforms, exportRevision, proposalOptions };
 
   return (
     <div className="flex flex-wrap items-center gap-2">

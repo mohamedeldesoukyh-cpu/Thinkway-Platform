@@ -34,6 +34,7 @@ export async function renderQuotationPreviewHtml(
   quotationId: string,
   options?: {
     template?: QuotationTemplateVariant | string | null;
+    proposalOptions?: import("./proposal-options").ProposalOption[];
     itemIds?: string[];
     platforms?: string[] | null;
     siteOrigin?: string;
@@ -58,6 +59,7 @@ export async function renderQuotationPreviewHtml(
   let doc = buildQuotationDocument(enriched, {
     template,
     itemIds: options?.itemIds,
+    proposalOptions: options?.proposalOptions,
     platforms: options?.platforms,
     publicationShotsByCreatorKey,
     displayFxRateToEgp,

@@ -1,4 +1,6 @@
 "use client";
+import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
+
 import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -72,6 +74,7 @@ function quotationPreviewHref(
     exportRevision?: string | null;
     itemIds?: string[];
     platforms?: string[] | null;
+    proposalOptions?: ProposalOption[];
   }
 ): string {
   const params = new URLSearchParams();
@@ -81,6 +84,7 @@ function quotationPreviewHref(
     params.set("items", options.itemIds.join(","));
   }
   appendPlatformsQueryParam(params, options?.platforms);
+  appendProposalOptions(params, options?.proposalOptions);
   const query = params.toString();
   return quotationPreviewPath(quotationId, serialNumber, query || undefined);
 }
@@ -159,6 +163,7 @@ export function QuotationDocumentOutputToolbar({
         exportRevision,
         itemIds: ids,
         platforms,
+        proposalOptions: selection.proposalOptions,
       });
       window.open(href, "_blank", "noopener,noreferrer");
       return;
@@ -169,6 +174,7 @@ export function QuotationDocumentOutputToolbar({
       exportRevision,
       itemIds: ids,
       platforms,
+      proposalOptions: selection.proposalOptions,
     });
     triggerBrowserDownload(href);
   }
@@ -209,6 +215,7 @@ export function QuotationDocumentOutputToolbar({
         workspaceItemIds={selectedItemIds}
         onWorkspaceSelectionChange={onSelectedItemIdsChange}
         summarizeSelection={summarizeSelection}
+        proposalStorageKey={isQuotationListTemplate(pending?.template ?? exportTemplate) ? quotationId : undefined}
         title="Select creators for quotation"
         confirmLabel={pending?.type === "export" ? "Export" : "Open preview"}
         confirmDisabled={platformsLoading}
