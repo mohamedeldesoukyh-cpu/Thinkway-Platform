@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 
 import { cn } from "@/lib/utils";
 import { quotationPreviewPath } from "@/features/quotations/constants";
@@ -12,6 +12,7 @@ import {
 } from "@/features/quotations/export/quotation-template";
 
 type QuotationPreviewTemplateToggleProps = {
+  compact?: boolean;
   quotationId: string;
   serialNumber?: string | null;
   activeTemplate: QuotationTemplateVariant;
@@ -20,15 +21,29 @@ type QuotationPreviewTemplateToggleProps = {
 };
 
 export function QuotationPreviewTemplateToggle({
+  compact = false,
   quotationId,
   serialNumber,
   activeTemplate,
   basePath,
 }: QuotationPreviewTemplateToggleProps) {
+  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const resolvedBasePath =
     basePath ?? pathname ?? quotationPreviewPath(quotationId, serialNumber);
+
+  if (compact) return (
+    <select aria-label="Quotation template" value={activeTemplate}
+      className="h-8 w-48 max-w-full rounded-md border border-border bg-background px-2 text-xs font-medium"
+      onChange={(event) => {
+        const params = new URLSearchParams(searchParams?.toString() ?? "");
+        appendQuotationTemplateParam(params, event.target.value as QuotationTemplateVariant);
+        router.push(`${resolvedBasePath}${params.size ? `?${params}` : ""}`);
+      }}>
+      {QUOTATION_TEMPLATE_OPTIONS.map(option => <option key={option.id} value={option.id}>{option.label}</option>)}
+    </select>
+  );
 
   return (
     <div
