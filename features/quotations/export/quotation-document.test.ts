@@ -1632,3 +1632,14 @@ console.log("quotation-document.test.ts passed");
     if (["pitch", "showcase"].includes(template)) assert.ok(html.includes("Service options continued"));
   }
 }
+
+// Both creator-list renderers must carry their Arabic font into offline PDF export.
+{
+  for (const template of ["creator-list", "client-list-by-name"] as const) {
+    const doc = buildQuotationDocument(mockDetail({ items: [mockItem({ creator_name: "Dina Samir | دينا سمير" })] }), { template });
+    const html = buildQuotationHtml(doc);
+    assert.ok(html.includes("دينا سمير"));
+    assert.ok(html.includes("data:font/ttf;base64,"), "Embed Arabic glyphs instead of relying on server fonts");
+    assert.ok(html.includes("font-family:'Report Arabic',"));
+  }
+}
