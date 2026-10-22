@@ -1643,3 +1643,13 @@ console.log("quotation-document.test.ts passed");
     assert.ok(html.includes("font-family:'Report Arabic',"));
   }
 }
+
+// Decorative social-profile alphabets render as ordinary letters in reports.
+{
+  for (const template of ["creator-list", "client-list-by-name"] as const) {
+    const detail = mockDetail({ items: [mockItem({ creator_name: "𝐴𝑠𝑚𝑎𝑎ℎ𝑎𝑚𝑧𝑎☾𓁹" })] });
+    const html = buildQuotationHtml(buildQuotationDocument(detail, { template }));
+    assert.match(html, /<h2[^>]*>Asmaahamza<\/h2>/);
+    assert.equal(detail.items[0].creator_name, "𝐴𝑠𝑚𝑎𝑎ℎ𝑎𝑚𝑧𝑎☾𓁹", "Report formatting must not alter profile data");
+  }
+}
