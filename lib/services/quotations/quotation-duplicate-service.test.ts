@@ -64,3 +64,19 @@ test("failed source read creates nothing",async()=>{
   const m=mockCopyClient(false,true); const result=await duplicateQuotationDocument(m.client,"user","source");
   assert.equal(result.ok,false); assert.equal(m.writes.length,0);
 });
+
+test("selected options create a separate quotation with only selected prices and no source writes", async()=>{
+  const m=mockCopyClient(); const result=await duplicateQuotationDocument(m.client,"user","source",["line2","line1000","line2"]);
+  assert.equal(result.ok,true);
+  const rows=m.writes.find(w=>w.table==="quotation_items")!.value;
+  assert.equal(rows.length,2); assert.ok(rows.every((r:any)=>r.quotation_id==="copy"));
+  const header=m.writes.find(w=>w.table==="quotations")!.value;
+  assert.equal(header.name,"Example (New option)"); assert.equal(header.total_revenue_egp,40); assert.equal(header.total_af_egp,4);
+  assert.ok(m.writes.every(w=>w.op==="insert"));
+});
+test("empty or foreign selections cannot silently copy the whole quotation", async()=>{
+  for (const selection of [[],["foreign"],["line1","foreign"]]) {
+    const m=mockCopyClient(); const result=await duplicateQuotationDocument(m.client,"user","source",selection);
+    assert.equal(result.ok,false); assert.equal(m.writes.length,0);
+  }
+});

@@ -68,6 +68,7 @@ import {
 } from "@/features/quotations/components/quotation-manual-save";
 import {
   duplicateQuotationItems,
+  createQuotationOption,
   removeQuotationItem,
   resolveCommercialRateToEgp,
   updateQuotationHeader,
@@ -592,6 +593,16 @@ function QuotationWorkspaceContent({
     [sortedFilteredItems]
   );
 
+  const handleCreateQuotationOption = useCallback(() => {
+    if (manualSave.hasUnsavedChanges) { toast.error("Save your quotation changes first."); return; }
+    startBulkTransition(async () => {
+      const result = await createQuotationOption({ quotation_id: detail.id, item_ids: [...selectedIds] });
+      if (!result.ok || !result.data) { toast.error(result.message); return; }
+      toast.success(result.message);
+      router.push(`/discovery/quotations/${result.data.id}`);
+    });
+  }, [detail.id, selectedIds, router, manualSave.hasUnsavedChanges]);
+
   const handleDuplicateSelected = useCallback(() => {
     if (manualSave.hasUnsavedChanges) { toast.error("Save your quotation changes first."); return; }
     startBulkTransition(async () => {
@@ -947,7 +958,7 @@ function QuotationWorkspaceContent({
         busy={bulkPending}
         onClear={clearSelection}
         onToggleCalculator={() => setCalculatorOpen((open) => !open)}
-        onDuplicate={handleDuplicateSelected}
+        onDuplicate={handleCreateQuotationOption}
         onDelete={() => void handleRemoveSelected()}
         onMoveToCampaign={detail.canManage ? () => {
           if (manualSave.hasUnsavedChanges) { toast.error("Save your quotation changes first."); return; }

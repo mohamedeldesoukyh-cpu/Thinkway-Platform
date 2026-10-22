@@ -114,6 +114,7 @@ export function QuotationSelectionBar({
             className="tw-b sm"
             disabled={busy}
             onClick={onDuplicate}
+            title="Create a separate draft quotation from the selected creators and options"
           >
             <QuotationText>Create new option</QuotationText></button>
           <button
