@@ -1,6 +1,7 @@
 export type QuotationTemplateVariant =
   | "creator-list"
   | "creator-list-additions"
+  | "creator-list-package"
   | "client-list-by-name"
   | "detailed"
   | "lump-sum"
@@ -12,7 +13,7 @@ export type QuotationTemplateVariant =
 export function resolveQuotationTemplate(
   raw: string | null | undefined
 ): QuotationTemplateVariant {
-  if (raw === "creator-list" || raw === "creator-list-additions" || raw === "client-list-by-name") return raw;
+  if (raw === "creator-list" || raw === "creator-list-additions" || raw === "creator-list-package" || raw === "client-list-by-name") return raw;
   if (raw === "lump-sum") return "lump-sum";
   if (raw === "showcase") return "showcase";
   if (raw === "showcase-lump-sum") return "showcase-lump-sum";
@@ -61,6 +62,7 @@ export const QUOTATION_TEMPLATE_OPTIONS: Array<{
   hint: string;
 }> = [
   { id: "creator-list", label: "Creator List", hint: "Creator cards · client prices" },
+  { id: "creator-list-package", label: "Creator List Package", hint: "Creator cards · package total only" },
   { id: "creator-list-additions", label: "Creator List Additions", hint: "Creator cards · Option 2 as Additions" },
   { id: "client-list-by-name", label: "Client List by Name", hint: "Profiles and performance · no prices" },
   { id: "pitch", label: "Pitch presentation", hint: "Large avatars · deck" },
@@ -85,7 +87,7 @@ export function isQuotationListTemplate(template: QuotationTemplateVariant): boo
 
 /** The two priced lists share one renderer, dimensions, branding and export pipeline. */
 export function isPricedCreatorListTemplate(template: QuotationTemplateVariant): boolean {
-  return template === "creator-list" || template === "creator-list-additions";
+  return template === "creator-list" || template === "creator-list-additions" || template === "creator-list-package";
 }
 
 /** Append `template` query param when not the default detailed variant. */
@@ -105,7 +107,7 @@ export function appendQuotationTemplateParam(
  * Preview HTML is always live; PDF/PPTX URLs previously only changed with
  * quotation `updated_at`, so browsers often reopened an older Downloads file.
  */
-export const QUOTATION_EXPORT_LAYOUT_VERSION = "r14-readable-names-20261022";
+export const QUOTATION_EXPORT_LAYOUT_VERSION = "r15-creator-list-package-20261022";
 
 function deployExportStamp(): string {
   const deployment = process.env.NEXT_PUBLIC_VERCEL_DEPLOYMENT_ID?.trim();

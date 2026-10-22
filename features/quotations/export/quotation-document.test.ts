@@ -1653,3 +1653,32 @@ console.log("quotation-document.test.ts passed");
     assert.equal(detail.items[0].creator_name, "𝐴𝑠𝑚𝑎𝑎ℎ𝑎𝑚𝑧𝑎☾𓁹", "Report formatting must not alter profile data");
   }
 }
+
+// Package Creator List shares cards and scope, but exposes money only on the cover and closing page.
+{
+  assert.equal(resolveQuotationTemplate("creator-list-package"), "creator-list-package");
+  assert.ok(QUOTATION_TEMPLATE_OPTIONS.some(option => option.id === "creator-list-package" && option.label === "Creator List Package"));
+  const detail = mockDetail({items: [
+    mockItem({id:"package-a", revenue:123456, revenue_egp:123456, af_pct:10, af_value:12345.6, af_value_egp:12345.6, service_description:"Package scope Alpha"}),
+    mockItem({id:"package-b", unified_id:"another-creator", revenue:234567, revenue_egp:234567, af_pct:0, af_value:0, af_value_egp:0, service_description:"Package scope Beta"}),
+  ]});
+  const regular = buildQuotationDocument(detail, {template:"creator-list"});
+  const packaged = buildQuotationDocument(detail, {template:"creator-list-package"});
+  assert.deepEqual(packaged.rows, regular.rows);
+  assert.equal(packaged.summary.grandTotal, regular.summary.grandTotal);
+  const html = buildQuotationHtml(packaged);
+  const pages = html.split(/<section class="page[^"]*">/).slice(1);
+  assert.ok(pages.length >= 4);
+  assert.equal((html.match(/class="package-total"/g) ?? []).length, 2);
+  assert.ok(pages[0].includes('class="package-total"'));
+  assert.ok(pages.at(-1)!.includes('class="package-total"'));
+  assert.ok(pages.slice(1,-1).every(page => !page.includes('class="package-total"')));
+  assert.ok(!html.includes('class="offer-price"'));
+  assert.ok(!html.includes('class="offer-breakdown"'));
+  assert.ok(!html.includes('123,456'));
+  assert.ok(!html.includes('234,567'));
+  assert.ok(html.includes("Package scope Alpha") && html.includes("Package scope Beta"));
+  const selected = buildQuotationDocument(detail, {template:"creator-list-package",itemIds:["package-a"]});
+  assert.equal(selected.summary.grandTotal, buildQuotationDocument(detail, {template:"creator-list",itemIds:["package-a"]}).summary.grandTotal);
+  assert.notEqual(selected.summary.grandTotal, packaged.summary.grandTotal);
+}

@@ -15,7 +15,7 @@ assert.equal((html.match(/Every creator, side by side/g)||[]).length,2,'Overview
 assert.equal((html.match(/<article class="creator-card">/g)||[]).length,17);
 assert.ok(html.includes('Rates pending'));
 assert.ok(!html.includes('javascript:'));
-assert.ok(html.includes('&lt;Test&gt;'));
+assert.ok(html.includes('title="Test"'), 'Report name normalization removes decorative symbols before HTML escaping');
 assert.ok(!html.includes('>0<small>EGP'));
 assert.ok(html.includes('7 / 7'));
 const many={...doc,creatorGroups:[{...group,rows:[1,2,3].map(n=>({...row,option:`Option ${n}`,serviceDescription:`Unique deliverable ${n}`,clientCost:'100 EGP',totalInvestment:'115 EGP',af:'15 EGP',afPct:'15%',unitCost:'SECRET_INTERNAL_COST'}))}]} as unknown as QuotationDocument;
