@@ -1,9 +1,12 @@
+import { withArabicReportFont } from "@/lib/reports/document/arabic-report-font";
 import { SHORTLIST_LIST_CSS } from "./shortlist-list-styles";
 import {getReportPlatformIconDataUri} from "@/lib/performance/report/report-platform-icons";
 import type { ShortlistDocument } from "./shortlist-document";
 import type { HtmlToPdfOptions } from "@/lib/io/vendor-io-pdf";
 import { getThinkwayLogoDarkDataUri } from "@/lib/reports/document/thinkway-report-logo-embed";
-import { CREATOR_LIST_CSS, CREATOR_LIST_WALL_SCRIPT } from "./creator-list-assets";
+import { CREATOR_LIST_CSS as BASE_CREATOR_LIST_CSS, CREATOR_LIST_WALL_SCRIPT } from "./creator-list-assets";
+
+const CREATOR_LIST_CSS = withArabicReportFont(BASE_CREATOR_LIST_CSS);
 
 export const CREATOR_LIST_PDF_OPTIONS: HtmlToPdfOptions = {
   width: "1600px", height: "900px", printBackground: true, preferCSSPageSize: true,
