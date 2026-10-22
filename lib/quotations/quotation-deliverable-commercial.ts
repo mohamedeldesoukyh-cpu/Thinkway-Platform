@@ -132,6 +132,10 @@ export function withDeliverableCommercialPatch(
   fxRateToEgp: number
 ): QuotationDeliverable {
   const merged: QuotationDeliverable = { ...deliverable, ...patch };
+  // Fixed-price revenue is stored as a row total; preserve its unit price when repeating.
+  if (patch.quantity != null && patch.revenue === undefined && merged.commercial_input_mode === "cost_revenue") {
+    merged.revenue = (Number(deliverable.revenue) || 0) / deliverableQuantity(deliverable) * deliverableQuantity(merged);
+  }
   const freeForClient = isDeliverableFreeForClient(merged);
   const revenue = computeDeliverableClientPrice(merged, fxRateToEgp);
   return {

@@ -2,6 +2,7 @@
  * Export-only helpers — grouping, labels, and field mapping for quotation templates.
  * Does not affect the quotation workspace UI.
  */
+import { quotationPackageRepeat } from "@/lib/quotations/quotation-package-repeat";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { quotationServiceDescription } from "@/lib/quotations/service-description";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
@@ -235,7 +236,9 @@ export function exportItemTypeLabel(item: QuotationExportItem): string {
 }
 
 export function exportItemServiceDescription(item: QuotationExportItem): string {
-  return quotationServiceDescription(item) ?? "—";
+  const description = quotationServiceDescription(item) ?? "—";
+  const repeat = quotationPackageRepeat(item.deliverables ?? []);
+  return repeat && repeat > 1 ? `${description} (×${repeat} packages)` : description;
 }
 
 export function exportItemTierLabel(item: QuotationExportItem): string {
