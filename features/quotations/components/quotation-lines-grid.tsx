@@ -36,6 +36,7 @@ import type { QuotationRowDraft } from "@/features/quotations/quotation-row-math
 import {
   computeQuotationDisplayTotals,
   computeQuotationRowClientCommercials,
+  computeQuotationRowComputed,
   resolveQuotationRowDraft,
 } from "@/features/quotations/quotation-row-math";
 import type { QuotationDeliverable, QuotationItemRow } from "@/features/quotations/types";
@@ -55,6 +56,7 @@ import {
   syncServiceDescriptionWithTypeLines,
   typeLinesIncludeAllPlatforms,
 } from "@/lib/quotations/quotation-deliverable-types";
+import { quotationPackageRepeat, repeatQuotationPackage } from "@/lib/quotations/quotation-package-repeat";
 import { formatDeliverableGpPct } from "@/lib/quotations/quotation-deliverable-commercial";
 
 
@@ -146,8 +148,11 @@ function QuotationPackLineRow({
       gpPct: number;
       gpValue: number;
       costCurrency: string;
+      afPct: number;
     }) => {
       onDraftChange(item.id, {
+        mode: "cost_revenue",
+        afPct: roll.afPct,
         cost: roll.cost,
         revenue: roll.revenue,
         gpPct: roll.gpPct,
@@ -188,10 +193,12 @@ function QuotationPackLineRow({
   const clientCommercials = computeQuotationRowClientCommercials(resolved);
   const rowCurrency = displayCurrency || "EGP";
   const projected = computeQuotationDisplayTotals([resolved], rowCurrency, displayFxRateToEgp ?? 1);
-  const clientPrice = projected.clientCost;
+  const repeat = quotationPackageRepeat(lineFields.deliverableDrafts);
+  const priceUnits = repeat ?? 1;
+  const clientPrice = projected.clientCost / priceUnits;
   const originalCurrency = (resolved.costCurrency || "EGP").trim().toUpperCase();
   const originalPrice = showOriginalCurrency && originalCurrency !== rowCurrency
-    ? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(clientCommercials.clientCost)} ${originalCurrency}`
+    ? `${new Intl.NumberFormat("en-US", { maximumFractionDigits: 2 }).format(clientCommercials.clientCost / priceUnits)} ${originalCurrency}`
     : null;
 
   function updateServiceDescription(description: string) {
@@ -295,8 +302,18 @@ function QuotationPackLineRow({
           <textarea rows={1} className="q-desc" value={lineFields.serviceDescription} readOnly={!canManage} placeholder="Click to add deliverables and cost" onFocus={() => setExpanded(true)} aria-label="Service description" onChange={(event) => { if (canManage) updateServiceDescription(event.target.value); }} />
           <div className="q-dels">{lineFields.deliverableDrafts.flatMap(deliverableTypeLines).filter(line => line.type.trim()).map((line,index) => <span className={`q-del ${/boost/i.test(line.type) ? "q-del--bo" : /usage/i.test(line.type) ? "q-del--ur" : /event/i.test(line.type) ? "q-del--ev" : ""}`} key={`${line.type}:${index}`}>{formatTypeLinesSummary([line])}</span>)}</div>
         </div>
+        <div className="q-cell-repeat" role="cell">
+          <span className="q-mobile-label">Repeat</span>
+          <input type="number" min={1} step={1} key={repeat ?? "mixed"} defaultValue={repeat ?? ""}
+            placeholder="Mixed" aria-label={`Repeat package for ${name}`} disabled={!canManage || pending || !primary}
+            onBlur={(event) => {
+              const value = Number(event.currentTarget.value);
+              if (!Number.isSafeInteger(value) || value < 1) { event.currentTarget.value = repeat == null ? "" : String(repeat); return; }
+              if (value !== repeat) lineFields.saveDeliverables(repeatQuotationPackage(lineFields.deliverableDrafts, value, { ...resolved, revenue: computeQuotationRowComputed(resolved).revenue }));
+            }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} />
+        </div>
         <div className="q-cell-option" role="cell">{optionCount > 1 && <span className="q-opt">{optionLabel}/{optionCount}</span>}</div>
-        <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue)} + {F(projected.af)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}<button type="button" onClick={() => setExpanded(true)} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`}><QuotationText>Add cost</QuotationText></button>{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
+        <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{priceUnits > 1 && <span className="q-repeat-price">×{priceUnits} · Total {F(projected.clientCost)} {rowCurrency}</span>}{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue / priceUnits)} + {F(projected.af / priceUnits)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}<button type="button" onClick={() => setExpanded(true)} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`}><QuotationText>Add cost</QuotationText></button>{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
         <div className="q-cell-status" role="cell"><span className="q-p"><QuotationText>Draft</QuotationText></span></div>
         <div className="q-cell-actions q-acts" role="cell">
           <button type="button" className="q-b q-b--sm" aria-label={`${expanded ? "Collapse" : "Expand"} line for ${name}`} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`} onClick={() => setExpanded(true)}>⋯</button>
@@ -487,7 +504,7 @@ export function QuotationLinesGrid({
     <div className="q-grid" style={{ paddingBottom: activeId ? "min(320px, 35vh)" : undefined }} role="table" aria-label="Quotation creator lines">
       <div className="q-row is-head" role="row">
         <span role="columnheader"><input type="checkbox" className="q-ck" checked={allSelected} ref={el => {if(el) el.indeterminate = indeterminate && !allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} aria-label="Select all lines" disabled={!canManage || items.length === 0} /></span>
-        <span role="columnheader"><QuotationText>Creator</QuotationText></span><span role="columnheader"><QuotationText>Quoted on</QuotationText></span><span role="columnheader"><QuotationText>Service</QuotationText></span><span role="columnheader"><QuotationText>Option</QuotationText></span><span role="columnheader" className="q-price"><QuotationText>Client price</QuotationText></span><span role="columnheader"><QuotationText>Status</QuotationText></span><span role="columnheader" className="q-price"><QuotationText>Actions</QuotationText></span>
+        <span role="columnheader"><QuotationText>Creator</QuotationText></span><span role="columnheader"><QuotationText>Quoted on</QuotationText></span><span role="columnheader"><QuotationText>Service</QuotationText></span><span role="columnheader">Repeat</span><span role="columnheader"><QuotationText>Option</QuotationText></span><span role="columnheader" className="q-price"><QuotationText>Client price</QuotationText></span><span role="columnheader"><QuotationText>Status</QuotationText></span><span role="columnheader" className="q-price"><QuotationText>Actions</QuotationText></span>
       </div>
       <label className="q-mobile-select"><input type="checkbox" className="q-ck" checked={allSelected} ref={el=>{if(el)el.indeterminate=indeterminate&&!allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} disabled={!canManage || items.length === 0} /><QuotationText>Select all lines</QuotationText></label>
       {items.length === 0 && <div className="q-empty" role="status"><b>No lines match this filter</b><p>Try another creator name or username, or clear the search and filters.</p></div>}

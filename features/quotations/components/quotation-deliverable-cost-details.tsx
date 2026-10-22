@@ -591,7 +591,7 @@ export function QuotationDeliverableCostDetails({
             </SelectContent>
           </Select>
         </Field>
-        <Field label="Pricing units" navField>
+        <Field label="Repeat" navField>
           <DraftUnitsInput
             className={INPUT_CLASS}
             inputMode="numeric"
@@ -617,14 +617,14 @@ export function QuotationDeliverableCostDetails({
             <p className="pt-1 text-xs font-semibold text-[#1e3a8a]">Free</p>
           </Field>
         ) : mode === "cost_revenue" ? (
-          <Field label={QUOTATION_CLIENT_LABELS.clientCost} navField>
+          <Field label="Unit client price before agency fees" navField>
             <DraftDecimalInput
               className={INPUT_CLASS}
               inputMode="decimal"
               blankWhenZero
               placeholder="00.0"
-              value={localDeliverable.revenue ?? defaults.revenue ?? 0}
-              onCommit={(next) => patchLocal({ revenue: next })}
+              value={(localDeliverable.revenue ?? defaults.revenue ?? 0) / units}
+              onCommit={(next) => patchLocal({ revenue: next * units })}
             />
           </Field>
         ) : (

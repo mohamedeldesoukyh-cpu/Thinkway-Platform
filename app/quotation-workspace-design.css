@@ -163,7 +163,7 @@
 
 .tq-redesign .q-row{display:grid;gap:10px;align-items:center;padding:10px 13px;
  border-bottom:1px solid var(--q-hair);background:var(--q-surf);
- grid-template-columns:20px minmax(190px,1.5fr) 72px minmax(220px,2fr) 92px 112px 84px 92px}
+ grid-template-columns:20px minmax(190px,1.5fr) 72px minmax(220px,2fr) 64px 92px 112px 84px 92px}
 .tq-redesign .q-row:hover{background:#FCFDFF}
 .tq-redesign .q-row.is-sel{background:var(--q-lav)}
 .tq-redesign .q-row.is-head{background:var(--q-soft);border-bottom:1px solid var(--q-hair);
@@ -234,7 +234,7 @@
 
 /* ---------------- responsive ---------------- */
 @media (max-width:1180px){
- .tq-redesign .q-row{grid-template-columns:20px minmax(170px,1.4fr) 64px minmax(180px,1.7fr) 86px 104px 76px 84px}
+ .tq-redesign .q-row{grid-template-columns:20px minmax(170px,1.4fr) 64px minmax(180px,1.7fr) 60px 86px 104px 76px 84px}
 }
 @media (max-width:900px){
  .tq-redesign .q-wrap{padding:0 11px 150px}
@@ -415,7 +415,8 @@
  .tq-redesign .q-cell-service { grid-column:1/-1; grid-row:2; }
  .tq-redesign .q-cell-platform { grid-column:1/3; grid-row:3; }
  .tq-redesign .q-cell-price { grid-column:3; grid-row:3; }
- .tq-redesign .q-cell-option { grid-column:1/-1; grid-row:4; }
+ .tq-redesign .q-cell-repeat { grid-column:1/3; grid-row:4; }
+ .tq-redesign .q-cell-option { grid-column:3; grid-row:4; }
  .tq-redesign .q-cell-option:empty { display:none; }
  .tq-redesign .q-cell-actions { grid-column:1/-1; justify-content:flex-start; flex-wrap:wrap; border-top:1px solid var(--q-hair); padding-top:9px; }
  .tq-redesign .q-b,.tq-redesign .tw-b,.tq-redesign .q-head .q-nav button { min-height:44px; }
@@ -529,3 +530,6 @@
 .tq-redesign .q-bottom-editor .q-sec { padding:8px 10px; }
 .tq-redesign .q-bottom-editor .q-sec__h { margin-bottom:5px; }
 .tq-redesign .q-bottom-editor .q-kv { padding:3px 0; }
+
+.tq-redesign .q-cell-repeat input { width:60px; padding:7px 5px; border:1px solid #d6e0f3; border-radius:7px; background:white; }
+.tq-redesign .q-repeat-price { display:block; font-size:11px; color:#2455bd; margin-top:3px; }
