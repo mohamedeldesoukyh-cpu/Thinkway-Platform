@@ -19,3 +19,42 @@
 .quotation-preview-toolbar select { font-family:inherit; font-size:12px; font-weight:500; line-height:1.25; height:32px; border-radius:6px; }
 .quotation-preview-toolbar a { display:inline-flex; align-items:center; gap:6px; }
 .quotation-preview-toolbar svg { width:14px; height:14px; flex-shrink:0; }
+
+/* Keep report navigation and its frame in the same visual family as the masthead. */
+.quotation-preview-toolbar,
+.document-preview-pages {
+  background-color: #0057ff;
+  background-image:
+    radial-gradient(circle at 92% 8%, transparent 0 64px, rgba(255,255,255,.09) 65px 89px, transparent 90px),
+    radial-gradient(circle at 12% 94%, rgba(255,255,255,.07) 0 105px, transparent 106px),
+    linear-gradient(135deg, #0040cc 0%, #0057ff 45%, #1a6fff 100%);
+}
+.document-preview-pages {
+  color: #fff;
+  border-color: #0040cc;
+  scrollbar-color: rgba(255,255,255,.45) transparent;
+}
+.document-preview-pages .text-muted-foreground { color: rgba(255,255,255,.9); }
+.document-preview-pages button {
+  color: #fff;
+  border-color: rgba(255,255,255,.25);
+  background: rgba(255,255,255,.08);
+}
+.document-preview-pages button > span:first-child {
+  color: #fff;
+  border-color: rgba(255,255,255,.3);
+  background: rgba(255,255,255,.12);
+}
+.document-preview-pages button:hover { background: rgba(255,255,255,.2); }
+.document-preview-pages button[aria-current="page"] {
+  background: #fff;
+  border-color: #fff;
+  box-shadow: 0 2px 8px rgba(0,40,128,.16);
+}
+.document-preview-pages button[aria-current="page"] > span { color: #0040cc; }
+.document-preview-pages button[aria-current="page"] > span:first-child {
+  background: #e9f0ff;
+  border-color: #c7d8ff;
+}
+.document-preview-pages button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.document-preview-frame { border: 3px solid #0057ff; }
