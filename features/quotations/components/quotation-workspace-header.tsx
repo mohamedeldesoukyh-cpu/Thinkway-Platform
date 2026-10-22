@@ -1,6 +1,8 @@
 "use client";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
+import { RenameQuotationDialog } from "./rename-quotation-dialog";
+
 import { QuotationText, QuotationLanguageSwitcher } from "./quotation-design-locale";
 
 import { useEffect, useMemo, useOptimistic, useState, useTransition, type ReactNode } from "react";
@@ -255,6 +257,7 @@ export function QuotationWorkspaceHeader({
         </div>
         <div className="q-head__t">
           <span className="q-ref">{formatDocumentNumberForDisplay(detail.serial_number)}</span><h1>{detail.name}</h1>
+          {detail.canManage && !detail.is_archived && detail.status !== "archived" && <RenameQuotationDialog key={detail.id} id={detail.id} name={detail.name} disabled={savePending || pending} />}
           <span className={`q-p ${detail.is_expired || ["cancelled", "rejected"].includes(detail.status) ? "q-p--bad" : ["approved", "accepted"].includes(detail.status) ? "q-p--ok" : "q-p--wrn"}`}><QuotationText>{statusLabel}</QuotationText></span><span className="q-p q-p--blue">{detail.version}</span>
           <span className="q-sp" />
           <button type="button" className="q-b q-b--pri" onClick={runSendToClient} disabled={!detail.canManage || detail.status === "cancelled" || detail.status === "archived" || Boolean(detail.is_archived)}><QuotationText>Send to client</QuotationText></button>
