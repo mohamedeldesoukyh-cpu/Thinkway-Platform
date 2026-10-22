@@ -1,3 +1,4 @@
+import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
 import { notFound } from "next/navigation";
 
 import { PageBackButton } from "@/components/navigation/page-back-button";
@@ -34,10 +35,13 @@ export default async function VendorIoPreviewPage({ params }: PageProps) {
 
   return (
     <DashboardShell
+      containedMain hideDesktopHeader hidePageHeader
       title="Vendor IO Preview"
       description={`${typed.document_number ?? id} — branded insertion order`}
     >
-      <div className="mb-4 flex flex-wrap gap-2 print:hidden">
+      <DocumentPreviewClient
+          contained
+          toolbarLeft={<div className="flex flex-wrap items-center gap-2">
         <PageBackButton
           fallbackHref={`/ios/vendor?io=${id}`}
           label="Back to Vendor IOs"
@@ -60,11 +64,9 @@ export default async function VendorIoPreviewPage({ params }: PageProps) {
         >
           Download PDF
         </a>
-      </div>
-      <iframe
+      </div>}
         title={`Vendor IO ${typed.document_number ?? id}`}
-        srcDoc={html}
-        className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
+        html={html}
       />
     </DashboardShell>
   );

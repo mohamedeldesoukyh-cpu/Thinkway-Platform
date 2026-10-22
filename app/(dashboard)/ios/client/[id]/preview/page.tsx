@@ -1,3 +1,4 @@
+import { DocumentPreviewClient } from "@/features/discovery/document-preview/document-preview-client";
 import Link from "next/link";
 import { X } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -60,11 +61,19 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
 
   return (
     <DashboardShell
+      containedMain hideDesktopHeader
       title="Client IO Preview"
       description={`${typed.document_number ?? id} — client-facing insertion order`}
       hidePageHeader
     >
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 print:hidden">
+      {errorMessage ? (
+        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          {errorMessage}
+        </div>
+      ) : (
+        <DocumentPreviewClient
+          contained
+          toolbarLeft={<div className="flex flex-wrap items-center gap-2">
         <div className="flex flex-wrap items-center gap-2">
           <Link href={returnTo} className="text-sm font-medium hover:underline">← Back to previous page</Link>
           {!saved ? <Suspense fallback={null}>
@@ -94,19 +103,11 @@ export default async function ClientIoPreviewPage({ params, searchParams }: Page
         ) : null}
         <Link href={returnTo} aria-label="Close Client IO preview" className="inline-flex h-8 items-center gap-1 rounded-lg border border-border px-3 text-xs font-medium hover:bg-muted/40"><X className="size-4" /> Close</Link>
         </div>
-      </div>
-
-      {errorMessage ? (
-        <div className="rounded-3xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-          {errorMessage}
-        </div>
-      ) : (
-        <iframe
+      </div>}
           title={`Client IO ${typed.document_number ?? id}`}
-          srcDoc={saved ? undefined : html}
+          html={saved ? undefined : html}
           src={saved ? `/api/client-ios/${id}/document?format=html&saved=1` : undefined}
           sandbox="allow-same-origin allow-downloads"
-          className="min-h-[1200px] w-full rounded-xl border border-border bg-card"
         />
       )}
     </DashboardShell>

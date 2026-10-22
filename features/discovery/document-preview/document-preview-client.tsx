@@ -6,9 +6,11 @@ import { DocumentPreviewShell } from "./document-preview-shell";
 
 type Props = {
   contained?: boolean;
-  html: string;
+  html?: string;
+  src?: string;
+  sandbox?: string;
   title: string;
-  creatorCount: number;
+  creatorCount?: number;
   toolbarLeft?: ReactNode;
   toolbarRight?: ReactNode;
   paginationReadyAttr?: string;
