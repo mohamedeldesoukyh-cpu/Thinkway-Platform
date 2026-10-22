@@ -1,5 +1,5 @@
 .quotation-preview-toolbar {
-  background: linear-gradient(135deg, #0040cc 0%, #0057ff 45%, #1a6fff 100%);
+  background: linear-gradient(135deg, #08063f 0%, #0b0847 45%, #25215f 100%);
   color: #fff;
 }
 .quotation-preview-toolbar button,
@@ -23,15 +23,15 @@
 /* Keep report navigation and its frame in the same visual family as the masthead. */
 .quotation-preview-toolbar,
 .document-preview-pages {
-  background-color: #0057ff;
+  background-color: #0b0847;
   background-image:
     radial-gradient(circle at 92% 8%, transparent 0 64px, rgba(255,255,255,.09) 65px 89px, transparent 90px),
     radial-gradient(circle at 12% 94%, rgba(255,255,255,.07) 0 105px, transparent 106px),
-    linear-gradient(135deg, #0040cc 0%, #0057ff 45%, #1a6fff 100%);
+    linear-gradient(135deg, #08063f 0%, #0b0847 45%, #25215f 100%);
 }
 .document-preview-pages {
   color: #fff;
-  border-color: #0040cc;
+  border-color: #08063f;
   scrollbar-color: rgba(255,255,255,.45) transparent;
 }
 .document-preview-pages .text-muted-foreground { color: rgba(255,255,255,.9); }
@@ -51,15 +51,15 @@
   border-color: #fff;
   box-shadow: 0 2px 8px rgba(0,40,128,.16);
 }
-.document-preview-pages button[aria-current="page"] > span { color: #0040cc; }
+.document-preview-pages button[aria-current="page"] > span { color: #08063f; }
 .document-preview-pages button[aria-current="page"] > span:first-child {
-  background: #e9f0ff;
-  border-color: #c7d8ff;
+  background: #eeedf8;
+  border-color: #d3d0ea;
 }
 .document-preview-pages button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-.document-preview-frame { border: 3px solid #0057ff; }
+.document-preview-frame { border: 3px solid #0b0847; }
 
-.document-preview-surround { background: #0057ff; }
+.document-preview-surround { background: #0b0847; }
 .document-preview-surround .document-preview-pages {
   margin: 8px;
   height: calc(100% - 16px);
@@ -67,5 +67,5 @@
 .document-preview-surround .document-preview-frame {
   border: 0;
   border-radius: 0;
-  background: #0057ff;
+  background: #0b0847;
 }
