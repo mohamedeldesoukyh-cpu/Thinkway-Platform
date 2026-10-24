@@ -164,12 +164,12 @@ body:has(.workspace-redesign) [role="dialog"] .creator-detail-sheet-footer__acti
 
 /* Keep live-status badges green despite the generic outline control skin. */
 .workspace-redesign [data-slot="badge"].campaign-went-live-badge {
-  color: #047857;
-  background: #ecfdf5;
-  border-color: #a7f3d0;
+  color: #047857 !important;
+  background: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
 }
 .dark .workspace-redesign [data-slot="badge"].campaign-went-live-badge {
-  color: #6ee7b7;
-  background: #022c22;
-  border-color: #065f46;
+  color: #6ee7b7 !important;
+  background: #022c22 !important;
+  border-color: #065f46 !important;
 }
