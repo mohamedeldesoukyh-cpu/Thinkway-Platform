@@ -161,3 +161,15 @@ body:has(.workspace-redesign) [role="dialog"] .creator-detail-sheet-footer__acti
   :is(.workspace-redesign, body:has(.workspace-redesign) [role="dialog"]) :is([data-slot="button"], .tw-b, .acp-button) { min-height: 40px; }
   :is(.workspace-redesign, body:has(.workspace-redesign) [role="dialog"]) :is([data-slot="input"], [data-slot="textarea"], [data-slot="select-trigger"]) { font-size: 16px; }
 }
+
+/* Keep live-status badges green despite the generic outline control skin. */
+.workspace-redesign [data-slot="badge"].campaign-went-live-badge {
+  color: #047857;
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+}
+.dark .workspace-redesign [data-slot="badge"].campaign-went-live-badge {
+  color: #6ee7b7;
+  background: #022c22;
+  border-color: #065f46;
+}
