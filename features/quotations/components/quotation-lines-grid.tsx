@@ -1,6 +1,6 @@
 import { QuotationText } from "./quotation-design-locale";
 
-import { useCallback, useEffect, useTransition, useState } from "react";
+import { useCallback, useTransition, useState } from "react";
 import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
 import {
   CopyIcon,
@@ -115,17 +115,6 @@ function QuotationPackLineRow({
 }: LineRowProps) {
   const [pending, startTransition] = useTransition();
   const setExpanded = (open: boolean) => onActivate(open ? item.id : null);
-  useEffect(() => {
-    if (!expanded) return;
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape" || event.defaultPrevented) return;
-      // Let nested dialogs and menus handle their own Escape key first.
-      if (event.target instanceof Element && event.target.closest('[role="dialog"], [role="alertdialog"], [role="menu"], [role="listbox"]')) return;
-      setExpanded(false);
-    };
-    window.addEventListener("keydown", closeOnEscape);
-    return () => window.removeEventListener("keydown", closeOnEscape);
-  }, [expanded, onActivate]);
   const confirmDelete = useConfirmDelete();
   const manualSave = useQuotationManualSave();
   const resolved = resolveQuotationRowDraft(item, draft);
@@ -272,6 +261,33 @@ function QuotationPackLineRow({
     });
   }
 
+  const renderCostDetails = (showPrice: boolean) => canManage && primary ? (
+<QuotationDeliverableCostDetails
+              triggerLabel="+ Add cost"
+                    displayCurrency={displayCurrency}
+                    displayFxRateToEgp={displayFxRateToEgp}
+                    onFxChange={patch => {
+                      onDraftChange(item.id, patch);
+                      manualSave.registerLinePending(item.id, {
+                        ...(patch.costFxOverride !== undefined ? { cost_fx_override: patch.costFxOverride } : {}),
+                        ...(patch.revenueFxOverride !== undefined ? { revenue_fx_override: patch.revenueFxOverride } : {}),
+                      });
+                    }}
+              deliverable={primary}
+              item={item}
+              draft={draft}
+              priceLabel={showPrice ? `${F(clientPrice)} ${rowCurrency}` : undefined}
+              priceSecondaryLabel={originalPrice}
+              gpPctLabel={formatDeliverableGpPct(
+                primary,
+                draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1
+              )}
+              onApply={(next) => applyDeliverable(primary.key, next)}
+              onLiveChange={(next) => applyDeliverable(primary.key, next)}
+              priceLayout="stacked"
+            />
+  ) : null;
+
   return (
     <div className={`q-line-group ${selected ? "is-sel" : ""}`}>
       <div className={`q-row q-live-row ${selected ? "is-sel" : ""}`} role="row" onClick={(event) => {
@@ -313,7 +329,7 @@ function QuotationPackLineRow({
             }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span>
         </div>
         <div className="q-cell-option" role="cell">{optionCount > 1 && <span className="q-opt">{optionLabel}/{optionCount}</span>}</div>
-        <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{priceUnits > 1 && <span className="q-repeat-price">×{priceUnits} · Total {F(projected.clientCost)} {rowCurrency}</span>}{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue / priceUnits)} + {F(projected.af / priceUnits)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}<button type="button" onClick={() => setExpanded(true)} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`}><QuotationText>Add cost</QuotationText></button>{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
+        <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{priceUnits > 1 && <span className="q-repeat-price">×{priceUnits} · Total {F(projected.clientCost)} {rowCurrency}</span>}{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue / priceUnits)} + {F(projected.af / priceUnits)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}{renderCostDetails(false)}{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
         <div className="q-cell-status" role="cell"><span className="q-p"><QuotationText>Draft</QuotationText></span></div>
         <div className="q-cell-actions q-acts" role="cell">
           <button type="button" className="q-b q-b--sm" aria-label={`${expanded ? "Collapse" : "Expand"} line for ${name}`} aria-expanded={expanded} aria-controls={`quotation-line-${item.id}`} onClick={() => setExpanded(true)}>⋯</button>
@@ -350,8 +366,8 @@ function QuotationPackLineRow({
           <button type="button" className="q-b q-b--sm q-b--danger q-mobile-action" aria-label="Remove line" onClick={handleRemove} disabled={!canManage || pending}><QuotationText>Delete</QuotationText></button>
         </div>
       </div>
-      {expanded && createPortal(<div className="tq-redesign" style={{ minHeight: 0 }}><section id={`quotation-line-${item.id}`} className="q-bottom-editor" aria-label={`Edit service for ${name}`}>
-        <header className="q-bottom-editor__header"><div className="q-bottom-editor__title"><b title={name}>{name}</b><span title={lineFields.serviceDescription || "New service"}> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b q-b--sm" onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
+      {expanded && createPortal(<div className="tq-redesign" style={{ minHeight: 0 }}><section id={`quotation-line-${item.id}`} className="q-bottom-editor" data-shortcut-pane aria-label={`Edit service for ${name}`}>
+        <header className="q-bottom-editor__header"><div className="q-bottom-editor__title"><b title={name}>{name}</b><span title={lineFields.serviceDescription || "New service"}> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b q-b--sm" data-shortcut-close onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
         <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
               workspaceDetails
@@ -406,30 +422,7 @@ function QuotationPackLineRow({
                   <QuotationText>Draft</QuotationText></span>
               </>
             ) : null}
-            {canManage && <QuotationDeliverableCostDetails
-              triggerLabel="+ Add cost"
-                    displayCurrency={displayCurrency}
-                    displayFxRateToEgp={displayFxRateToEgp}
-                    onFxChange={patch => {
-                      onDraftChange(item.id, patch);
-                      manualSave.registerLinePending(item.id, {
-                        ...(patch.costFxOverride !== undefined ? { cost_fx_override: patch.costFxOverride } : {}),
-                        ...(patch.revenueFxOverride !== undefined ? { revenue_fx_override: patch.revenueFxOverride } : {}),
-                      });
-                    }}
-              deliverable={primary}
-              item={item}
-              draft={draft}
-              priceLabel={`${F(clientPrice)} ${rowCurrency}`}
-              priceSecondaryLabel={originalPrice}
-              gpPctLabel={formatDeliverableGpPct(
-                primary,
-                draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1
-              )}
-              onApply={(next) => applyDeliverable(primary.key, next)}
-              onLiveChange={(next) => applyDeliverable(primary.key, next)}
-              priceLayout="stacked"
-            />}
+            {renderCostDetails(true)}
           </div>
         ) : (
           <span className="tw-v inline-flex items-center gap-1.5">
