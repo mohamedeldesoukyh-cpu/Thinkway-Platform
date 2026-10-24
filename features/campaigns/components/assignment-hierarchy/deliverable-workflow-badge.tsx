@@ -23,7 +23,7 @@ const WORKFLOW_TONE: Record<string, string> = {
   scheduled: "bg-cyan-500/10 text-cyan-700 dark:text-cyan-300",
   awaiting_approval: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
   approved: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-  posted: "bg-indigo-500/10 text-indigo-700 dark:text-indigo-300",
+  posted: "campaign-went-live-badge bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300",
   verified: "bg-teal-500/10 text-teal-700 dark:text-teal-300",
   cancelled: "bg-slate-500/10 text-slate-600 dark:text-slate-300",
 };
