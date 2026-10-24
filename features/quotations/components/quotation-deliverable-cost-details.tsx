@@ -810,6 +810,11 @@ export function QuotationDeliverableCostDetails({
             event.preventDefault();
             focusUnitCostInput();
           }}
+          onEscapeKeyDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            handleOpenChange(false);
+          }}
           onKeyDown={stopShortcutBubble}
           onKeyDownCapture={handlePanelKeyDownCapture}
         >
