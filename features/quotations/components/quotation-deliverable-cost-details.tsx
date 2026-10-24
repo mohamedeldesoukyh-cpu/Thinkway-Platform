@@ -617,7 +617,7 @@ export function QuotationDeliverableCostDetails({
             <p className="pt-1 text-xs font-semibold text-[#1e3a8a]">Free</p>
           </Field>
         ) : mode === "cost_revenue" ? (
-          <Field label="Unit client price before agency fees" navField>
+          <Field label="Unit client price" navField>
             <DraftDecimalInput
               className={INPUT_CLASS}
               inputMode="decimal"

@@ -351,7 +351,7 @@ function QuotationPackLineRow({
         </div>
       </div>
       {expanded && createPortal(<div className="tq-redesign" style={{ minHeight: 0 }}><section id={`quotation-line-${item.id}`} className="q-bottom-editor" aria-label={`Edit service for ${name}`}>
-        <header className="q-bottom-editor__header"><div><b>{name}</b><span> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b" onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
+        <header className="q-bottom-editor__header"><div className="q-bottom-editor__title"><b title={name}>{name}</b><span title={lineFields.serviceDescription || "New service"}> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b q-b--sm" onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
         <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
               workspaceDetails

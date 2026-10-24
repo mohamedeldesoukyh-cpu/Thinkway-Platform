@@ -536,3 +536,10 @@
 .tq-redesign .q-cell-repeat input::-webkit-inner-spin-button,
 .tq-redesign .q-cell-repeat input::-webkit-outer-spin-button { -webkit-appearance:none; margin:0; }
 .tq-redesign .q-repeat-price { display:block; font-size:11px; color:#2455bd; margin-top:3px; }
+
+/* Compact fixed service editor heading, with full text available on hover. */
+.tq-redesign .q-bottom-editor__header { gap:10px; padding:6px 12px; min-height:40px; font-size:13px; line-height:20px; }
+.tq-redesign .q-bottom-editor__title { display:flex; align-items:center; flex:1; min-width:0; gap:4px; }
+.tq-redesign .q-bottom-editor__title b { flex-shrink:0; max-width:40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:600; }
+.tq-redesign .q-bottom-editor__title span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:400; color:var(--q-muted,#64748b); }
+.tq-redesign .q-bottom-editor__header > button { flex-shrink:0; min-height:28px; padding:3px 10px; font-size:12px; line-height:20px; }
