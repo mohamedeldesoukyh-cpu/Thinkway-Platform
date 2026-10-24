@@ -15,6 +15,7 @@ export const QUOTATION_POST_TYPES = [
   /** Platform-agnostic — available under any creator platform. */
   { value: "event_coverage", label: "Event Coverage" },
   { value: "instagram_post", label: "IG Post" },
+  { value: "instagram_carousel_post", label: "IG Carousel Post" },
   { value: "instagram_story", label: "IG Story" },
   { value: "ig_story_set", label: "IG Set of stories" },
   { value: "instagram_reel", label: "IG Reel" },

@@ -249,3 +249,8 @@ console.log("quotation-deliverable-types.test.ts — all tests passed");
   assert.equal(isPostTypeAllowedForCreator("exclusivity", ["instagram"]), true);
   assert.equal(typeLinesFromSelectedTypes(["exclusivity", "instagram_reel"], saved)[0].period_months, 3);
 }
+
+assert.equal(quotationPostTypeLabel("instagram_carousel_post"), "IG Carousel Post");
+assert.equal(isPostTypeAllowedForCreator("instagram_carousel_post", ["instagram"]), true);
+assert.equal(isPostTypeAllowedForCreator("instagram_carousel_post", ["tiktok"]), false);
+assert.deepEqual(platformsFromSelectedPostTypes(["instagram_carousel_post"]), ["instagram"]);
