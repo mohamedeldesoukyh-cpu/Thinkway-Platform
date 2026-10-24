@@ -49,6 +49,7 @@ export const QUOTATION_POST_TYPES = [
   { value: "usage_right", label: "Usage Rights (UR)" },
   { value: "event_attendance", label: "Event Attendance" },
   { value: "boosting", label: "Boosting" },
+  { value: "exclusivity", label: "Exclusivity" },
 ] as const;
 
 export type QuotationPostType = (typeof QUOTATION_POST_TYPES)[number]["value"];
