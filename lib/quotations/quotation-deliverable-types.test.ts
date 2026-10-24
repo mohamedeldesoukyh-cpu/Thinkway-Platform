@@ -238,3 +238,14 @@ assert.equal(
   assert.equal(syncServiceDescriptionWithTypeLines("Hero package", [], [lines[3]]), "Hero package + 1× Boosting · 1 month");
 }
 console.log("quotation-deliverable-types.test.ts — all tests passed");
+
+// Monthly exclusivity survives selection, save normalization and report summaries.
+{
+  const initial = typeLinesFromSelectedTypes(["exclusivity"]);
+  assert.equal(initial[0].period_months, 1);
+  const saved = deliverableTypeLines({ type_lines: [{ ...initial[0], period_months: 3 }] });
+  assert.equal(saved[0].period_months, 3);
+  assert.equal(formatTypeLinesSummary(saved), "1× Exclusivity · 3 months");
+  assert.equal(isPostTypeAllowedForCreator("exclusivity", ["instagram"]), true);
+  assert.equal(typeLinesFromSelectedTypes(["exclusivity", "instagram_reel"], saved)[0].period_months, 3);
+}

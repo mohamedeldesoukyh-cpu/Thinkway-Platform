@@ -1,4 +1,4 @@
-export const PERIOD_TYPES = ["usage_right", "boosting"] as const;
+export const PERIOD_TYPES = ["usage_right", "boosting", "exclusivity"] as const;
 export const EXTRA_RATE_TYPES = [
   {value:"usage_right",label:"Usage Rights (UR)"},
   {value:"boosting",label:"Boosting"},
