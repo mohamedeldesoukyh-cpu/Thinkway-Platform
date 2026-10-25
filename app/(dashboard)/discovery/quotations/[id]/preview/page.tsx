@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { parseProposalOptions } from "@/features/quotations/export/proposal-options";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
@@ -144,8 +145,12 @@ export default async function QuotationPreviewPage({
   let creatorCount = 0;
   let errorMessage: string | null = null;
   try {
+    const requestHeaders = await headers();
+    const host = requestHeaders.get("x-forwarded-host") || requestHeaders.get("host");
+    const protocol = requestHeaders.get("x-forwarded-proto") || "https";
     const rendered = await renderQuotationPreviewHtml(supabase, detail.id, {
       template,
+      siteOrigin: host ? `${protocol}://${host}` : undefined,
       itemIds,
       proposalOptions: parseProposalOptions(query.proposals),
       platforms,
