@@ -96,6 +96,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/campaigns/[id]/client-link": "internal_workspace",
   "/api/client-workspace/link": "internal_workspace",
 
+  "/api/brands/legal-entities": "internal_workspace",
   "/api/clients/[clientId]/documents": "internal_workspace",
   "/api/creators/avatar": "internal_workspace",
   "/api/creators/publication-preview": "internal_workspace",
