@@ -990,8 +990,8 @@ export function EditablePostRow({
         return (
           <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.postDate}>
             <div className="flex flex-col gap-1 text-[10px]">
-            <span>Planned: {deliverable.planned_posting_date ?? "not set"}</span>
-            <span>Went live:</span>
+            <span>Planned date: {deliverable.planned_posting_date ?? "not set"}</span>
+            <span>Went live date:</span>
             <span className="whitespace-nowrap text-[11px] text-muted-foreground">
               {["posted", "published", "live", "verified"].includes(post.workflow_status) ? post.live_date ?? "not set" : "not confirmed"}
             </span>
