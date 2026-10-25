@@ -1,23 +1,13 @@
 import ExcelJS from "exceljs";
-import { REVIEW_REPORT_CSS } from "./review-schedule-report-style";
+import { renderScheduleReport } from "./review-schedule-report";
 import {
   scheduleDate,
-  scheduleFinding,
   scheduleGroups,
   scheduleNeedsDecision,
   SCHEDULE_STATES,
   type ScheduleData,
 } from "./review-schedule-model";
 
-function esc(value: string) {
-  return value.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ]!,
-  );
-}
 export function scheduleFilename(
   data: ScheduleData,
   extension: string,
@@ -31,30 +21,7 @@ export function scheduleFilename(
       .toLowerCase() || "campaign";
   return `${slug}-review-schedule-${date}.${extension}`;
 }
-export function scheduleReportHtml(data: ScheduleData, date: string) {
-  const groups = scheduleGroups(data.rows),
-    decisions = data.rows.filter(scheduleNeedsDecision).length;
-  const sums = [
-    ["Needs your decision", decisions, "review or approve"],
-    ["With creators", data.rows.length - decisions, "includes completed work"],
-    [
-      "Total deliverables",
-      data.rows.length,
-      `across ${groups.length} creators`,
-    ],
-    [
-      "Confirmed dates",
-      data.rows.filter((r) => r.expected_review_date).length,
-      `of ${data.rows.length}`,
-    ],
-  ];
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(data.name)} — Content review schedule</title><style>${REVIEW_REPORT_CSS}
-  body{font-family:Arial,sans-serif} .t-ch{background:#fffbeb;color:#92400e}.t-ok{background:#ecf5ef;color:#47775e} .subtotal td{font-weight:bold;background:#f6f8fb} .sum{break-inside:avoid} td{overflow-wrap:anywhere} @media print{thead{display:table-header-group} tr{break-inside:avoid;page-break-inside:avoid} tr.grp{break-after:avoid;page-break-after:avoid}}
-  </style></head><body><main class="pg"><div class="hd"><div><h1>Content review schedule</h1><p>${esc(data.name)} · ${esc(data.client_name)}<br>Campaign ${scheduleDate(data.start_date)} → ${scheduleDate(data.end_date)} · report generated ${scheduleDate(date)}</p></div><div class="brand"><b>THINKWAY</b>Creator content review<br>Client copy</div></div>
-  <div class="sum">${sums.map(([label, note, detail]) => `<div><i>${label}</i><b>${note}</b><u>${detail}</u></div>`).join("")}</div><div class="flag">${scheduleFinding(data.rows)}</div>
-  <table><thead><tr>${["Content type", "Ref", "Status", "Expected for review", "With", "Script", "Action"].map((h) => `<th>${h}</th>`).join("")}</tr></thead><tbody>${groups.map((group) => `<tr class="grp"><td colspan="7">${esc(group.name)} <b>${group.rows.length} deliverables</b></td></tr>${group.rows.map((row) => `<tr><td>${esc(row.content_type)}</td><td>${esc(row.ref)}</td><td><span class="t ${SCHEDULE_STATES[row.status].css.replace("u-", "t-")}">${SCHEDULE_STATES[row.status].label}</span></td><td class="c4">${scheduleDate(row.expected_review_date)}</td><td>${row.owner === "client" ? "Client" : "Creator"}</td><td>${row.has_script ? "Yes" : "No"}</td><td>${esc(row.action_label)}</td></tr>`).join("")}<tr class="subtotal"><td colspan="7">${group.rows.length} deliverables · ${group.rows.filter(scheduleNeedsDecision).length} need your decision · ${group.rows.filter((r) => r.has_script).length} scripts on file</td></tr>`).join("")}</tbody></table>
-  <footer class="ft">Expected dates are for client review, not publication. Script availability is independent of status: a script on file does not necessarily need a decision. All statuses, including Approved and Changes requested, are included. “With” assigns pending decisions to Client and other rows to Creator; Approved is completed work.<br>Open the client workspace to view scripts and content. This report is a snapshot of the schedule on ${scheduleDate(date)}.</footer></main></body></html>`;
-}
+export const scheduleReportHtml = renderScheduleReport;
 
 export async function scheduleWorkbook(data: ScheduleData, date: string) {
   const book = new ExcelJS.Workbook();

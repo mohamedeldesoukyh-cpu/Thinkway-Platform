@@ -28,6 +28,7 @@ export type ScheduleRow = {
   content: ClientContentReviewItem | null;
 };
 export type ScheduleData = {
+  identityLogo?: { url: string; alt: string; source: "group" | "client" } | null;
   campaignId: string;
   name: string;
   client_name: string;

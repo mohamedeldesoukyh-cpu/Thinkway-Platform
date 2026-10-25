@@ -146,3 +146,37 @@
 .proposalHeading > div:first-child { flex:1; }
 .proposalHeading p { margin:4px 0 0; color:#586982; font-size:12px; }
 .optionTabs { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+
+/* Keep selection controls compact so the creator list owns the available height. */
+.selectionDialog .header { padding:12px 20px 10px; }
+.selectionDialog .title { font-size:16px; font-weight:700; }
+.selectionDialog .subtitle { margin-top:3px; font-size:12px; }
+.selectionDialog .close { width:30px; height:30px; }
+.selectionDialog .button { min-height:32px; padding-inline:10px; font-size:12px; }
+.selectionDialog .proposalOptions { display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:10px 20px; flex:none; }
+.selectionDialog .proposalHeading { flex-basis:100%; gap:10px; }
+.optionsHint { flex:1; color:var(--oc-muted); font-size:11px; }
+.selectionDialog .proposalHeading strong { font-size:12px; }
+.selectionDialog .optionTabs { flex-basis:100%; gap:5px; margin:0; max-height:72px; overflow-y:auto; }
+.optionActions,.optionSaveActions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.optionActions strong { font-size:12px; margin-inline-end:4px; }
+.optionSaveActions { margin-inline-start:auto; }
+.selectionDialog .zones { padding:8px 20px; gap:8px; }
+.selectionDialog .zone { padding:7px 10px; border-radius:8px; }
+.selectionDialog .zone h3 { margin-bottom:4px; font-size:10px; letter-spacing:.3px; }
+.selectionDialog .figures { gap:4px 14px; }
+.selectionDialog .figures dd { font-size:14px; }
+.selectionDialog .figures .totalFigure dd { font-size:16px; }
+.selectionDialog .selectionBar { padding:6px 20px; gap:4px 8px; }
+.selectionDialog .search input { min-height:32px; padding-block:4px; font-size:12px; }
+.selectionDialog .selectionCount,.selectionDialog .platformLabel { font-size:12px; }
+.selectionDialog .audienceSummary { font-size:11px; }
+.selectionDialog .platformToggle { min-height:30px; padding-inline:9px; font-size:11px; gap:5px; }
+.selectionDialog .selectionFooter { padding:8px 20px; gap:8px; }
+.selectionDialog .selectionFooter>small { font-size:11px; }
+@media(max-width:620px) {
+ .optionsHint { display:none; }
+ .selectionDialog .proposalHeading { justify-content:space-between; }
+ .selectionDialog .proposalOptions { padding:8px 12px; }
+ .optionSaveActions { margin-inline-start:0; }
+}

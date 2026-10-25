@@ -339,20 +339,20 @@ export function DocumentCreatorSelectionDialog({
       <header className={styles.header}>
         <div className={styles.heading}><div>
           <DialogTitle className={styles.title}><UsersIcon size={18} aria-hidden="true" />{title}</DialogTitle>
-          <DialogDescription className={styles.subtitle}>{description}</DialogDescription>
+          <DialogDescription className={styles.subtitle} title={description}>Choose creators and platforms for your preview and exports.</DialogDescription>
         </div><button type="button" className={styles.close} aria-label="Close creator selection" onClick={() => onOpenChange(false)}><XIcon size={16} aria-hidden="true" /></button></div>
       </header>
       <fieldset className={styles.selectionBody} disabled={optionsLoading || optionsSaving} style={{border:0,padding:0,margin:0,minWidth:0}}>
         {proposalStorageKey && <section className={styles.proposalOptions} aria-label="Proposal options">
-          <div className={styles.proposalHeading}><div><strong>Proposal options</strong><p>{proposalOptions.length ? "Choose creators for each option. The same creator can appear in multiple options." : "Keep one creator list, or add options for the client to compare."}</p></div><button type="button" className={styles.button} disabled={proposalOptions.length >= 12} onClick={addOption}>+ Add Options</button></div>
+          <div className={styles.proposalHeading}><strong>Proposal options</strong><span className={styles.optionsHint}>Creators can appear in multiple options.</span><button type="button" className={styles.button} disabled={proposalOptions.length >= 12} onClick={addOption}>+ Add Options</button></div>
           {optionsLoading && <p role="status">Loading saved options…</p>}
           {optionsMessage && <p role="status">{optionsMessage}</p>}
           {proposalOptions.length > 0 && <>
             <div className={styles.optionTabs} role="tablist" aria-label="Choose proposal option">{currentOptions.map((option, index) => <button type="button" role="tab" key={index} aria-selected={activeOption === index} className={`${styles.button} ${activeOption === index ? styles.primary : ""}`} onClick={() => switchOption(index)}>Option {index + 1}{option.recommended ? " ★" : ""}</button>)}</div>
-            <div className={styles.proposalHeading}><strong>Option {activeOption + 1} · {selectedCount} creators</strong><button type="button" className={styles.button} aria-pressed={currentOptions[activeOption]?.recommended ?? false} onClick={() => setProposalOptions(currentOptions.map((option, index) => index === activeOption ? { ...option, recommended: !option.recommended } : option))}>{currentOptions[activeOption]?.recommended ? "★ Recommended" : "☆ Mark recommended"}</button><button type="button" className={styles.button} onClick={() => removeOption(activeOption)}>Remove option</button></div>
+            <div className={styles.optionActions}><strong>{selectedCount} creators</strong><button type="button" className={styles.button} aria-pressed={currentOptions[activeOption]?.recommended ?? false} onClick={() => setProposalOptions(currentOptions.map((option, index) => index === activeOption ? { ...option, recommended: !option.recommended } : option))}>{currentOptions[activeOption]?.recommended ? "★ Recommended" : "☆ Mark recommended"}</button><button type="button" className={styles.button} onClick={() => removeOption(activeOption)}>Remove option</button></div>
             {invalidOptions && <p className={styles.selectionWarning}>Select at least one creator in every option before continuing.</p>}
-            <p className={styles.platformHelp}>Options are saved with this quotation when you save or open the preview. Clear options restores the standard report.</p>
-            <div className={styles.optionTabs}><button type="button" className={styles.button} disabled={invalidOptions || !optionsRevision.current} onClick={()=>void persistOptions(currentOptions)}>Save options</button><button type="button" className={styles.button} disabled={!optionsRevision.current} onClick={()=>void clearOptions()}>Clear options</button></div>
+
+            <div className={styles.optionSaveActions}><button type="button" className={styles.button} disabled={invalidOptions || !optionsRevision.current} onClick={()=>void persistOptions(currentOptions)}>Save options</button><button type="button" className={styles.button} disabled={!optionsRevision.current} onClick={()=>void clearOptions()}>Clear options</button></div>
           </>}
         </section>}
         {selectionError && <p role="alert">{selectionError}</p>}
@@ -368,11 +368,11 @@ export function DocumentCreatorSelectionDialog({
           {audienceMetrics.length ? <p className={styles.audienceSummary}>{audienceMetrics.map(metric => `${metric.value} ${metric.label.toLowerCase()}`).join(" · ")}</p> : null}
         </div>
         {availablePlatforms.length > 0 ? <div className={styles.selectionBar}>
-          <span className={styles.platformLabel}>Platforms to include</span>
+          <span className={styles.platformLabel} title="Filters displayed accounts and metrics; selected lines and prices remain included.">Platforms</span>
           <div className={styles.platforms}>{availablePlatforms.map(platform => <button key={platform} type="button" className={styles.platformToggle} aria-pressed={selectedPlatforms.has(platform)} onClick={() => togglePlatform(platform)}>
             <CheckIcon size={12} aria-hidden="true" className={styles.platformTick} /><PlatformIcon platform={platform} size="xs" variant="logo" />{platformLabel(platform)}<span>{creators.filter(creator => selectedKeys.has(creator.creatorKey) && creator.platforms?.some(value => canonicalPlatformKey(value) === platform)).length}</span>
           </button>)}<button type="button" className={`${styles.button} ${styles.small} ${styles.ghost}`} disabled={allPlatformsSelected} onClick={selectAllPlatforms}>All platforms</button></div>
-          <p className={styles.platformHelp}>Platform filters apply to displayed accounts and metrics. Selected quotation lines and prices stay included.</p>
+
         </div> : null}
         <div className={styles.selectionList}>
         {noPlatformsSelected ? <p role="status" className={styles.selectionWarning}>No platform is included. Select at least one platform to continue.</p> : null}

@@ -1,0 +1,17 @@
+{
+  "campaign": {
+    "name": "Hardee's Tenders Festival",
+    "client": "Mind Share Egypt LTD",
+    "agency": "WPP Media",
+    "start": "2026-10-20",
+    "end": "2026-10-31",
+    "snapshot": "2026-10-25",
+    "copy_label": "Client copy"
+  },
+  "deliverables": [
+    {"creator": "@abdelrahmaanshoukryy", "type": "Package", "items": "1× mirrored tt + 1× mirrored fb + 1× mirrored yt + 1× IG Story + 1× IG Reel + 1× usage right + 1× boosting", "ref": null, "status": "awaiting_content", "expected_review": "2026-10-31", "delivery": null, "script_on_file": false, "action": null},
+    {"creator": "@jooeats", "type": "Package", "items": "1× IG Reel + 1× IG Story + 1× boosting + 1× mirrored tt", "ref": null, "status": "awaiting_content", "expected_review": "2026-10-30", "delivery": null, "script_on_file": false, "action": null},
+    {"creator": "sensawyy", "type": "Package", "items": "1× IG Reel + 1× IG Story + 1× boosting + 1× mirrored tt", "ref": null, "status": "awaiting_content", "expected_review": "2026-10-27", "delivery": null, "script_on_file": false, "action": null},
+    {"creator": "Walid Allam", "type": "Package", "items": "1× IG Reel + 1× IG Story + 1× boosting + 1× mirrored tt", "ref": null, "status": "awaiting_content", "expected_review": "2026-10-28", "delivery": null, "script_on_file": false, "action": null}
+  ]
+}
