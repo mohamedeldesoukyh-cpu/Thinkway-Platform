@@ -348,6 +348,7 @@ export function shortlistDocumentToQuotationDocument(
     validityLabel: "—",
     clientName: doc.clientName,
     clientLogo: doc.clientLogoDataUri,
+    reportPartnerName: doc.reportPartnerName,
     brandName: doc.brandName,
     campaignName: doc.name,
     issueDateLabel: doc.generatedDateLabel,

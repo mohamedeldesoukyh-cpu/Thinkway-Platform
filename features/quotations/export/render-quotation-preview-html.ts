@@ -1,4 +1,4 @@
-import { loadCreatorListClientLogo } from "@/features/discovery/shortlists/export/creator-list-client-logo";
+import { loadCreatorListClientIdentity } from "@/features/discovery/shortlists/export/creator-list-client-logo";
 import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -64,7 +64,11 @@ export async function renderQuotationPreviewHtml(
     publicationShotsByCreatorKey,
     displayFxRateToEgp,
   });
-  if (isQuotationListTemplate(template)) doc.clientLogo = await loadCreatorListClientLogo(supabase, enriched.client_id, template !== "client-list-by-name");
+  if (isQuotationListTemplate(template)) {
+    const identity = await loadCreatorListClientIdentity(supabase, enriched.client_id, template !== "client-list-by-name");
+    doc.clientLogo = identity?.logo ?? null;
+    doc.reportPartnerName = identity?.name || doc.clientName;
+  }
   const siteOrigin = options?.siteOrigin?.trim() || resolveQuotationExportSiteOrigin(undefined, undefined);
   if (isQuotationListTemplate(template)) {
     // Render the report immediately; portraits resolve independently through the

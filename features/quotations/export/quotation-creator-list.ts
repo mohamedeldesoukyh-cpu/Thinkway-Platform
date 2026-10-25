@@ -33,6 +33,13 @@ export function quotationListPdfOptions(doc: QuotationDocument) {
 
 /** Client-safe projection: internal document fields never enter either report. */
 export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
+  // Chromium flattens a filtered portrait wall into a huge 300-dpi PNG.
+  // Keep the original photo pixels and vector text; only omit the decorative
+  // desaturation in print. No page, portrait, link or data is removed.
+  return buildCreatorListHtml(doc).replace("</head>", "<style>@media print{.mosaic{filter:none!important}}</style></head>");
+}
+
+function buildCreatorListHtml(doc: QuotationDocument): string {
   if (isPricedCreatorListTemplate(doc.template) || (doc.source === "shortlist" && doc.template === "client-list-by-name")) return buildRedesignedQuotationCreatorList(doc);
   const { performanceOnly, height } = layout(doc);
   const shortlist = doc.source === "shortlist";
@@ -47,7 +54,7 @@ export function buildQuotationCreatorListHtml(doc: QuotationDocument): string {
     tier: g.highestPlatformTier ?? g.rows[0]?.tier, markets: [g.country], platforms: [...quotedPlatforms(g, shortlist)],
   }));
   return renderCreatorListReport({
-    name: doc.name || doc.brandName || doc.clientName, clientName: doc.clientName, reference: doc.serial,
+    name: doc.name || doc.brandName || doc.clientName, clientName: doc.clientName, partnerName: doc.reportPartnerName || doc.clientName, reference: doc.serial,
     issuedDate: doc.issueDateLabel, clientLogo: doc.clientLogo, creators,
   }, {
     title: performanceOnly ? "Client List by Name" : "Creator List",

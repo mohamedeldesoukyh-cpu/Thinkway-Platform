@@ -11,7 +11,7 @@ export function buildQuotationProposalReport(doc: QuotationDocument, render: (do
   const basePages = sections(plain);
   if (!options.length || !basePages.length) return plain;
   const badge = (index: number, recommended: boolean) => `Option ${index + 1}${recommended ? ' <span class="proposal-badge"><svg class="proposal-star" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true"><path fill="currentColor" d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01Z"/></svg> Recommended</span>' : ""}`;
-  const optionDocuments = options.map(option => ({ ...option.document, proposalOptions: undefined, clientLogo: doc.clientLogo,
+  const optionDocuments = options.map(option => ({ ...option.document, proposalOptions: undefined, clientLogo: doc.clientLogo, reportPartnerName: doc.reportPartnerName,
     creatorGroups: option.document.creatorGroups.map(group => {
       const source = doc.creatorGroups.find(candidate => candidate.itemIds?.some(id => group.itemIds?.includes(id)));
       return source ? { ...group, avatarUrl: source.avatarUrl, avatarProxyUrl: source.avatarProxyUrl } : group;

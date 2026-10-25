@@ -12,7 +12,7 @@ import {
   loadShortlistCreatorPublicationShots,
 } from "@/features/discovery/shortlists/export/shortlist-export-publications";
 import { buildShortlistHtml } from "@/features/discovery/shortlists/export/shortlist-html";
-import { loadCreatorListClientLogo } from "./creator-list-client-logo";
+import { loadCreatorListClientIdentity } from "./creator-list-client-logo";
 import {
   isCreatorDeckTemplate,
   resolveShortlistTemplate,
@@ -75,7 +75,11 @@ export async function renderShortlistPreviewHtml(
     doc = await embedShortlistDocumentAvatars(doc);
   }
   doc = await embedShortlistDocumentPublicationShots(doc);
-  if (template === "creator-list" || template === "client-list-by-name") doc.clientLogoDataUri = await loadCreatorListClientLogo(supabase, detail.client_id);
+  if (template === "creator-list" || template === "client-list-by-name") {
+    const identity = await loadCreatorListClientIdentity(supabase, detail.client_id);
+    doc.clientLogoDataUri = identity?.logo ?? null;
+    doc.reportPartnerName = identity?.name || doc.clientName;
+  }
 
   const html = buildShortlistHtml(doc, { siteOrigin });
 

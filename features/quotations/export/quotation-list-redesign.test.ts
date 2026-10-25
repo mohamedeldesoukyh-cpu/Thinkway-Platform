@@ -115,3 +115,9 @@ assert.ok(!buildRedesignedQuotationCreatorList({...many, template:"creator-list"
  assert.ok(!output.includes('&#9733;'));
  assert.ok(output.includes('<svg class="proposal-star"'));
 }
+
+const groupIdentityReport = buildQuotationCreatorListHtml({...doc, template:'creator-list', reportPartnerName:'WPP & Group'});
+assert.match(groupIdentityReport, /alt="Thinkway"><span class="report-partner-name" dir="auto">WPP &amp; Group<\/span>/);
+assert.match(buildQuotationCreatorListHtml({...doc, template:'creator-list'}), /report-partner-name" dir="auto">Client<\/span>/);
+assert.ok(groupIdentityReport.includes('@media print{.mosaic{filter:none!important}}'));
+assert.equal((groupIdentityReport.match(/<article class="creator-card">/g)||[]).length,17);
