@@ -1,3 +1,4 @@
+import { omitReportPages } from "@/features/discovery/document-preview/report-page-selection";
 import { isPricedCreatorListTemplate } from "./quotation-template";
 import { buildQuotationCreatorListHtml } from "./quotation-creator-list";
 import { isQuotationListTemplate } from "./quotation-template";
@@ -15,6 +16,7 @@ import type { ThinkwayReportLogoSrcs } from "@/lib/reports/document/thinkway-rep
 
 export type BuildQuotationHtmlOptions = BuildQuotationTemplateHtmlOptions & {
   logoSrcs?: ThinkwayReportLogoSrcs;
+  excludedPages?: number[];
 };
 
 function esc(value: string | null | undefined): string {
@@ -41,6 +43,9 @@ export function buildQuotationHtml(
   doc: QuotationDocument,
   options?: BuildQuotationHtmlOptions
 ): string {
-  if (isPricedCreatorListTemplate(doc.template)) return buildQuotationCreatorListHtml(doc);
+  if (isQuotationListTemplate(doc.template)) {
+    const html = omitReportPages(buildQuotationCreatorListHtml(doc), options?.excludedPages ?? []);
+    return isPricedCreatorListTemplate(doc.template) ? html : applyMobileDocumentLayout(html);
+  }
   return applyMobileDocumentLayout(isQuotationListTemplate(doc.template) ? buildQuotationCreatorListHtml(doc) : buildQuotationTemplateHtml(doc, options));
 }

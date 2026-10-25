@@ -99,3 +99,9 @@ import {
 }
 
 console.log("quotation-preview-downloads.test.ts: ok");
+
+for (const format of ["html", "word", "pdf", "pptx"]) {
+ const href = buildExportHref("q-1", format, "creator-list", { excludedPages: [1,3] });
+ const query = new URL(href, "https://example.test").searchParams;
+ assert.equal(query.get("excludePages"), "1,3");
+}

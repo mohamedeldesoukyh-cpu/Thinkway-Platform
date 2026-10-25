@@ -3241,6 +3241,7 @@ export async function buildQuotationPptxBuffer(
   doc: QuotationDocument,
   options?: {
     siteOrigin?: string;
+    excludedPages?: number[];
     logoSrcs?: import("@/lib/reports/document/thinkway-report-logo").ThinkwayReportLogoSrcs;
   }
 ): Promise<Buffer> {
