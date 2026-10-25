@@ -17,7 +17,7 @@ export function RecordLiveDateButton({ campaignId, scheduleId, liveDate, label }
   const router = useRouter();
   return <>
     <Button type="button" variant="outline" size="sm" className="h-7 px-2 text-[10px]"
-      onClick={() => { setDate(liveDate ?? ""); setError(null); setOpen(true); }}>Live date</Button>
+      onClick={() => { setDate(liveDate ?? ""); setError(null); setOpen(true); }}>Went live date</Button>
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader><DialogTitle>Record actual live date</DialogTitle>

@@ -7,7 +7,6 @@ import {
 } from "@/lib/campaigns/execution-schedule-metadata";
 import {
   resolveHintForDeliverable,
-  resolveOperationalLiveDate,
   type ExecutionDeliverableScheduleHint,
 } from "@/lib/domains/commercial/campaign-execution-schedule-inheritance";
 
@@ -79,14 +78,12 @@ export async function applyInheritedTentativeScheduleToLine(
       continue;
     }
 
-    const liveDate = resolveOperationalLiveDate(hint, input.fallbackLiveDate ?? null);
     const scheduleMeta = buildTentativeExecutionMetadata(hint);
     const metadata = mergeExecutionScheduleMetadata(row.metadata, scheduleMeta);
 
     const { error: updateError } = await supabase
       .from("assignment_deliverables")
       .update({
-        live_date: liveDate,
         metadata,
       })
       .eq("id", row.id);
@@ -97,7 +94,6 @@ export async function applyInheritedTentativeScheduleToLine(
 
     const deliverableContext: DeliverableRow = {
       ...row,
-      live_date: liveDate,
       metadata,
     };
 
@@ -110,23 +106,18 @@ export async function applyInheritedTentativeScheduleToLine(
 
     const { data: posts } = await supabase
       .from("assignment_post_schedule")
-      .select("id")
+      .select("id, metadata")
       .eq("assignment_deliverable_id", row.id);
 
-    if (posts?.length) {
-      await supabase
+    for (const post of posts ?? []) {
+      const { error: postError } = await supabase
         .from("assignment_post_schedule")
         .update({
-          live_date: liveDate,
-          metadata: mergeExecutionScheduleMetadata(
-            {},
-            scheduleMeta
-          ),
+          metadata: mergeExecutionScheduleMetadata(post.metadata, scheduleMeta),
         })
-        .eq("assignment_deliverable_id", row.id)
+        .eq("id", post.id)
         .is("locked_at", null);
-
-      updatedPosts += posts.length;
+      if (!postError) updatedPosts += 1;
     }
   }
 

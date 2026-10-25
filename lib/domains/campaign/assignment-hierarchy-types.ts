@@ -40,6 +40,7 @@ export type AssignmentPostOperationalRow = {
 
 /** Level 2 — deliverable rollup row (assignment_deliverables). */
 export type AssignmentDeliverableHierarchyRow = {
+  planned_posting_date?: string | null;
   id: string;
   campaign_line_id: string;
   sort_order: number;
