@@ -43,7 +43,16 @@ export function projectContentReviewSchedule(posts: ClientCampaignPostRow[], con
     rows.push({ id: `${key}:draft`, post, kind: "draft", expectedDate: post.expectedDraftDate ?? null,
       status: asset ? (asset.status === "approved" ? "approved" : asset.status === "changes_requested" ? "changes_requested" : "ready") : post.live ? "published" : expectedStatus(post.expectedDraftDate ?? null, today), content: asset, hasScript });
   }
-  return rows.sort((a, b) => priority[a.status] - priority[b.status] || (a.expectedDate ?? "9999").localeCompare(b.expectedDate ?? "9999") || a.post.creatorName.localeCompare(b.post.creatorName));
+  const groups = new Map<string, ContentReviewScheduleRow[]>();
+  for (const row of rows) { const key = row.post.reviewGroupKey ? `${row.post.reviewGroupKey}:${row.kind}` : row.id; groups.set(key, [...(groups.get(key) ?? []), row]); }
+  const grouped = [...groups.values()].map(members => {
+    if (!members[0].post.reviewGroupKey) return members[0];
+    const representative = [...members].sort((a,b) => Number(Boolean(b.content))-Number(Boolean(a.content)) || (b.content?.uploadedAt ?? "").localeCompare(a.content?.uploadedAt ?? "") || Number(b.hasScript)-Number(a.hasScript))[0];
+    const dated = [...members].sort((a,b) => (b.post.reviewDateUpdatedAt ?? "").localeCompare(a.post.reviewDateUpdatedAt ?? ""));
+    const expectedDate = dated[0].post.reviewDateUpdatedAt ? dated[0].expectedDate : members.find(row => row.expectedDate)?.expectedDate ?? null;
+    return { ...representative, post: { ...representative.post, deliverable: representative.post.reviewGroupLabel ?? representative.post.deliverable }, expectedDate, status: representative.content || representative.post.live || representative.kind === "script" && representative.hasScript ? representative.status : expectedStatus(expectedDate, today), hasScript: members.some(row => row.hasScript) };
+  });
+  return grouped.sort((a, b) => priority[a.status] - priority[b.status] || (a.expectedDate ?? "9999").localeCompare(b.expectedDate ?? "9999") || a.post.creatorName.localeCompare(b.post.creatorName));
 }
 
 export function nextContentExpectation(rows: ContentReviewScheduleRow[], today: string) {

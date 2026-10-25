@@ -67,6 +67,8 @@ export type ClientCampaignPerformance = {
 
 export type ClientCampaignPostRow = {
   id: string;
+  reviewGroupKey?: string;
+  reviewGroupLabel?: string;
   creatorName: string;
   avatarUrl?: string | null;
   platform: string;
@@ -75,6 +77,7 @@ export type ClientCampaignPostRow = {
   scheduledDate: string | null;
   expectedScriptDate?: string | null;
   expectedDraftDate?: string | null;
+  reviewDateUpdatedAt?: string;
   status: ClientCampaignPostStatus;
   live: boolean;
   publicationDate: string | null;
@@ -846,6 +849,8 @@ export function overlayCampaignPostAvatars(
 
 function buildPostRow(input: {
   id: string;
+  reviewGroupKey?: string;
+  reviewGroupLabel?: string;
   creatorName: string;
   avatarUrl?: string | null;
   platform: string;

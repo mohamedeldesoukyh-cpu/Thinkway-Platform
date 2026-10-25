@@ -1,5 +1,7 @@
 import { renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
-import { loadReviewSchedule } from "./load-review-schedule";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requirePermission } from "@/lib/auth/permissions-server";
+import { loadReviewSchedule, loadCampaignReviewSchedule } from "./load-review-schedule";
 import {
   scheduleFilename,
   scheduleReportHtml,
@@ -20,10 +22,17 @@ export async function reviewScheduleResponse(
   const token = request.headers
     .get("authorization")
     ?.match(/^Bearer (.+)$/)?.[1];
-  if (!token)
-    return new Response("Review access required", { status: 401, headers });
   try {
-    const data = await loadReviewSchedule(token, id);
+    let data;
+    if (token) {
+      data = await loadReviewSchedule(token, id);
+    } else {
+      const db = await createSupabaseServerClient();
+      const access = await requirePermission(db, "campaigns.read");
+      if ("error" in access) return new Response("Campaign access required", { status: 403, headers });
+      // Session client preserves row-level access. Never use the service role here.
+      data = await loadCampaignReviewSchedule(db, id);
+    }
     if (!data)
       return new Response("Review access unavailable", {
         status: 403,

@@ -1,4 +1,5 @@
 "use client";
+import { buildDocumentationUnitsFromHierarchy } from "@/lib/services/deliverables/build-documentation-units";
 
 import { isClientIoGenerated } from "@/lib/campaigns/sync-campaign-header-status";
 
@@ -63,7 +64,6 @@ import { ClientIoTab } from "@/features/io/components/client-io-tab";
 import { VendorIoTab } from "@/features/io/components/vendor-io-tab";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import type { AssignmentHierarchy } from "@/features/campaigns/types/assignment-hierarchy";
-import { flattenOperationalDeliverables } from "@/lib/campaigns/flatten-operational-deliverables";
 import {
   buildConsolidatedInvoiceQueueRows,
   campaignRollupSuppressesConsolidatedBillingQueue,
@@ -195,19 +195,9 @@ export function CampaignWorkspaceView({
   );
 
   const operationalDeliverableCount = useMemo(() => {
-    if (bundleStatuses.publications === "loaded") {
-      return flattenOperationalDeliverables(
-        assignmentHierarchy,
-        publications,
-        workspace.deliverables ?? []
-      ).rows.length;
-    }
     if (assignmentHierarchy.groups.length > 0) {
-      return flattenOperationalDeliverables(
-        assignmentHierarchy,
-        [],
-        workspace.deliverables ?? []
-      ).rows.length;
+      const units = buildDocumentationUnitsFromHierarchy(assignmentHierarchy, workspace.id, new Map());
+      return new Set(units.map(unit => unit.reviewGroupKey ?? unit.unitKey)).size;
     }
     return workspace.deliverables?.length ?? 0;
   }, [

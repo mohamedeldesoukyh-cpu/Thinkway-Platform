@@ -286,6 +286,9 @@ export type DocumentationUnitId = {
 
 export type DocumentationUnitSummary = DocumentationUnitId & {
   unitKey: string;
+  reviewGroupKey?: string;
+  reviewGroupLabel?: string;
+  plannedDate?: string | null;
   label: string;
   creatorId: string | null;
   creatorName: string | null;

@@ -1,7 +1,9 @@
+import { packageReviewGroups } from "@/lib/services/deliverables/package-review-groups";
+import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { createPublicationMediaSignedUrl } from "@/lib/performance/screenshot-capture/storage";
-import { readContentReviewDates } from "@/lib/services/deliverables/content-review-schedule";
+import { readContentReviewDates, contentReviewDateUpdatedAt } from "@/lib/services/deliverables/content-review-schedule";
 
 import {
   emptyClientCampaignExecution,
@@ -207,10 +209,16 @@ export async function loadClientCampaignExecution(
 
     const execution = projectClientCampaignExecution(headerId, source);
     const deliverableById = new Map(((deliverablesResult.data ?? []) as DeliverableRow[]).filter(row => activeLineIds.has(row.campaign_line_id)).map(row => [row.id, row]));
+    const lineMap = new Map(lines.map(line => [line.id, line]));
+    const reviewGroups = packageReviewGroups(execution.posts.filter(post => post.valueScope !== "added_value").map(post => {
+      const d = deliverableById.get(post.assignmentDeliverableId ?? "");
+      return { key: post.id, lineId: d?.campaign_line_id ?? post.id, type: d?.deliverable_type ?? "", label: post.deliverable, quantity: d?.quantity ?? 1, sequence: post.sequenceNumber ?? null, package: (parseLineAssignment(lineMap.get(d?.campaign_line_id ?? "")?.metadata)?.pricing_mode ?? "package") === "package" };
+    }));
     return { ...execution, posts: execution.posts.map(post => {
       const deliverable = deliverableById.get(post.assignmentDeliverableId ?? "");
-      const dates = readContentReviewDates(deliverable?.metadata, post.sequenceNumber);
-      return { ...post, expectedScriptDate: dates.script, expectedDraftDate: dates.draft };
+      const sequence = (deliverable?.quantity ?? 1) > 1 ? post.sequenceNumber : null;
+      const dates = readContentReviewDates(deliverable?.metadata, sequence);
+      return { ...post, ...reviewGroups.get(post.id), reviewDateUpdatedAt: contentReviewDateUpdatedAt(deliverable?.metadata, sequence), expectedScriptDate: dates.script, expectedDraftDate: dates.draft };
     }) };
   } catch (error) {
     if (strict) throw error;
