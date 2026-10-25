@@ -42,5 +42,35 @@ test("each selected child column remains visible and hidden child financials sta
     assert.ok(visibleAdTracks(candidate=>candidate===field).some(track=>PARENT_TRACK_TO_CHILD_FIELD[track]===field));
   }
   assert.deepEqual(visibleAdTracks(()=>false),["actions"]);
-  assert.ok(visibleAdTracks(field=>field==="collection").includes("billing"));
+  assert.ok(visibleAdTracks(field=>field==="collection").includes("collection"));
+});
+
+import { ASSIGNMENT_CHILD_GRID_COLUMN_METAS, ASSIGNMENT_GRID_COLUMN_METAS } from "@/lib/tables/assignment-grid-column-metas";
+import { normalizeTableColumnState } from "@/lib/tables/operational-table-column-settings";
+import { buildAdCssGridCols } from "./assignment-css-grid";
+
+test("every configurable child field has exactly one track, including workflow and collection", () => {
+  for (const {id} of ASSIGNMENT_CHILD_GRID_COLUMN_METAS.filter(c => c.id !== "expand")) {
+    const tracks = visibleAdTracks(field => field === id);
+    assert.equal(tracks.filter(track => PARENT_TRACK_TO_CHILD_FIELD[track] === id).length, 1, id);
+  }
+});
+test("saved layouts gain planned dates without losing visibility preferences or order", () => {
+  for (const columns of [ASSIGNMENT_GRID_COLUMN_METAS, ASSIGNMENT_CHILD_GRID_COLUMN_METAS]) {
+    const date = columns === ASSIGNMENT_GRID_COLUMN_METAS ? "postingDates" : "postDate";
+    const oldOrder = columns.filter(c => c.id !== "plannedDate").map(c => c.id).reverse();
+    const state = normalizeTableColumnState({order: oldOrder, visible: {[date]: false, cost: false}}, columns);
+    assert.equal(state.visible.plannedDate, true);
+    assert.equal(state.visible[date], false);
+    assert.equal(state.visible.cost, false);
+    assert.deepEqual(state.order.filter(id => id !== "plannedDate"), oldOrder);
+  }
+});
+test("reordered child headers and rows retain one equal-width track per field", () => {
+  const order = ASSIGNMENT_CHILD_GRID_COLUMN_METAS.map(c => c.id).reverse();
+  const tracks = visibleAdTracks(() => true, order);
+  assert.deepEqual(tracks.map(t => PARENT_TRACK_TO_CHILD_FIELD[t]), order.filter(id => id !== "expand"));
+  assert.equal(countCssGridTracks(buildAdCssGridCols(tracks)), tracks.length);
+  assert.ok(!visibleAdTracks(f => f === "plannedDate").includes("gp"));
+  assert.ok(!visibleAdTracks(f => f === "postDate").includes("plannedDate"));
 });

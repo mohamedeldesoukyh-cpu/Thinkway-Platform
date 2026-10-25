@@ -1,5 +1,6 @@
 "use client";
 
+import { ASSIGNMENT_CHILD_GRID_COLUMN_METAS } from "@/lib/tables/assignment-grid-column-metas";
 import { RecordLiveDateButton } from "./record-live-date-button";
 import { PlannedPostingDateButton } from "./planned-posting-date-button";
 import { campaignMoney } from "../campaign-money";
@@ -626,7 +627,7 @@ export function EditablePostRow({
     if (!childColumnId) {
       return (
         <AssignmentGridCell
-          key={parentColumnId} columnId={parentColumnId}
+          key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
           className={GRID_CELL.leadingRev}
           aria-hidden
         />
@@ -662,7 +663,7 @@ export function EditablePostRow({
     ) {
       return (
         <AssignmentGridCell
-          key={parentColumnId} columnId={parentColumnId}
+          key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
           {...(childColumnId === "fullDescriptionSpacer"
             ? {}
             : assignmentChildColDataAttr(childColumnId))}
@@ -676,7 +677,7 @@ export function EditablePostRow({
       case "type":
         return (
           <AssignmentGridCell
-            key={parentColumnId} columnId={parentColumnId}
+            key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cellClass}
           >
@@ -738,28 +739,15 @@ export function EditablePostRow({
                   </span>
                 </>
               )}
-              {!isVirtualPost && !deliverable.is_synthetic && postId ? (
-                <><PlannedPostingDateButton campaignId={campaignId} deliverableId={deliverable.id}
-                  plannedDate={deliverable.planned_posting_date ?? null} disabled={readOnly} />
-                <RecordLiveDateButton campaignId={campaignId} scheduleId={postId} liveDate={post.live_date}
-                  label={`${meta.platform} ${meta.deliverable_type} - ad ${post.sequence_number}`} /></>
-              ) : null}
+
             </div>
           </AssignmentGridCell>
         );
       case "platform":
-        // Alignment slot under parent Creator — platform avatar lives beside Type.
-        return (
-          <AssignmentGridCell
-            key={parentColumnId} columnId={parentColumnId}
-            {...assignmentChildColDataAttr(childColumnId)}
-            className={cellClass}
-            aria-hidden
-          />
-        );
+        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId="platform" className={cellClass}><PlatformIcon platform={post.platform} size="xs" variant="logo" /></AssignmentGridCell>;
       case "qty":
         return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalQtyField
                 value={commercial.draft.qty}
@@ -775,7 +763,7 @@ export function EditablePostRow({
         );
       case "revPerAd":
         return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalAmountField
                 currency={currency}
@@ -794,7 +782,7 @@ export function EditablePostRow({
         );
       case "costPerAd":
         return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalAmountField
                 currency={currency}
@@ -813,13 +801,13 @@ export function EditablePostRow({
         );
       case "ccy":
         return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {currency}
           </AssignmentGridCell>
         );
       case "rev":
         return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
             {showDeliverableCommercial ? (
               <OperationalAmountField
                 currency={currency}
@@ -838,7 +826,7 @@ export function EditablePostRow({
       default:
         return (
           <AssignmentGridCell
-            key={parentColumnId} columnId={parentColumnId}
+            key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
             {...assignmentChildColDataAttr(childColumnId)}
             className={cellClass}
             aria-hidden
@@ -849,7 +837,7 @@ export function EditablePostRow({
 
   function emptyTrack(parentColumnId: string) {
     return (
-      <AssignmentGridCell key={parentColumnId} columnId={parentColumnId}>
+      <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}>
         <span />
       </AssignmentGridCell>
     );
@@ -857,11 +845,16 @@ export function EditablePostRow({
 
   function renderChildTrackCell(parentColumnId: string) {
     switch (parentColumnId) {
+      case "plannedDate":
+        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} className="px-1.5 py-1.5 text-center text-[11px] text-muted-foreground">
+          <span>{deliverable.planned_posting_date ?? "not set"}</span>
+          {!isVirtualPost && !deliverable.is_synthetic && postId ? <PlannedPostingDateButton campaignId={campaignId} deliverableId={deliverable.id} plannedDate={deliverable.planned_posting_date ?? null} disabled={readOnly} /> : null}
+        </AssignmentGridCell>;
       case "usageRights":
         return (
           <AssignmentGridCell
             key={parentColumnId}
-            columnId={parentColumnId}
+            columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
             className={cn(GRID_CELL.usageRights, OPERATIONAL_AMOUNT_CLASS)}
           >
             {col("usageRights") && showDeliverableCommercial
@@ -877,7 +870,7 @@ export function EditablePostRow({
         return (
           <AssignmentGridCell
             key={parentColumnId}
-            columnId={parentColumnId}
+            columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
             className={cn(GRID_CELL.agencyFeePercent, OPERATIONAL_AMOUNT_CLASS, "text-muted-foreground")}
           >
             {col("agencyFeePercent") && showDeliverableCommercial
@@ -891,7 +884,7 @@ export function EditablePostRow({
         return (
           <AssignmentGridCell
             key={parentColumnId}
-            columnId={parentColumnId}
+            columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
             className={cn(GRID_CELL.agencyFee, OPERATIONAL_AMOUNT_CLASS)}
           >
             {col("agencyFee") && showDeliverableCommercial
@@ -905,7 +898,7 @@ export function EditablePostRow({
         return (
           <AssignmentGridCell
             key={parentColumnId}
-            columnId={parentColumnId}
+            columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
             className={cn(GRID_HIGHLIGHT_COST, GRID_CELL.money)}
           >
             {col("cost") && showDeliverableCommercial ? (
@@ -931,7 +924,7 @@ export function EditablePostRow({
         const rate = costVatPercent;
         const cost = Number(commercial.draft.cost ?? 0);
         const vat = Math.round(cost * rate) / 100;
-        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={cn(GRID_CELL.money, OPERATIONAL_AMOUNT_CLASS)}>
+        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} className={cn(GRID_CELL.money, OPERATIONAL_AMOUNT_CLASS)}>
           {col(parentColumnId) && showDeliverableCommercial
             ? parentColumnId === "costVatPercent" ? rate.toFixed(1) + "%" : formatCostAmount(parentColumnId === "costVat" ? vat : cost + vat)
             : "—"}
@@ -941,7 +934,7 @@ export function EditablePostRow({
         return (
           <AssignmentGridCell
             key={parentColumnId}
-            columnId={parentColumnId}
+            columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
             className={cn(GRID_CELL.usageRightsCost, OPERATIONAL_AMOUNT_CLASS)}
           >
             {col("usageRightsCost") && showDeliverableCommercial
@@ -954,10 +947,10 @@ export function EditablePostRow({
           </AssignmentGridCell>
         );
       case "revenueVatPercent":
-        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.agencyFeePercent}>{col("revenueVatPercent") && showDeliverableCommercial ? fieldsActive && !revenueVatExempt ? <Input type="number" min={0} max={100} step="0.1" value={meta.revenue_vat_percent} onChange={e=>setMeta(m=>({...m,revenue_vat_percent:Number(e.target.value)||0}))} disabled={gridEdit.saving}/> : Number(revenueVatExempt ? 0 : meta.revenue_vat_percent).toFixed(1)+"%" : "—"}</AssignmentGridCell>;
+        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} className={GRID_CELL.agencyFeePercent}>{col("revenueVatPercent") && showDeliverableCommercial ? fieldsActive && !revenueVatExempt ? <Input type="number" min={0} max={100} step="0.1" value={meta.revenue_vat_percent} onChange={e=>setMeta(m=>({...m,revenue_vat_percent:Number(e.target.value)||0}))} disabled={gridEdit.saving}/> : Number(revenueVatExempt ? 0 : meta.revenue_vat_percent).toFixed(1)+"%" : "—"}</AssignmentGridCell>;
       case "vat":
         return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.vat}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} className={GRID_CELL.vat}>
             {!col("vat") ? (
               <span />
             ) : !showDeliverableCommercial ? (
@@ -975,7 +968,7 @@ export function EditablePostRow({
         return (
           <AssignmentGridCell
             key={parentColumnId}
-            columnId={parentColumnId}
+            columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
             className={cn(GRID_HIGHLIGHT_TOTAL_BILLING)}
           >
             {col("totalBilling") && showDeliverableCommercial
@@ -988,13 +981,12 @@ export function EditablePostRow({
       case "gp":
         if (!col("postDate")) return emptyTrack(parentColumnId);
         return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.postDate}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} className={GRID_CELL.postDate}>
             <div className="flex flex-col gap-1 text-[10px]">
-            <span>Planned date: {deliverable.planned_posting_date ?? "not set"}</span>
-            <span>Went live date:</span>
             <span className="whitespace-nowrap text-[11px] text-muted-foreground">
               {["posted", "published", "live", "verified"].includes(post.workflow_status) ? post.live_date ?? "not set" : "not confirmed"}
             </span>
+            {!isVirtualPost && !deliverable.is_synthetic && postId ? <RecordLiveDateButton campaignId={campaignId} scheduleId={postId} liveDate={post.live_date} label={`${meta.platform} ${meta.deliverable_type} - ad ${post.sequence_number}`} /> : null}
             </div>
           </AssignmentGridCell>
         );
@@ -1003,7 +995,7 @@ export function EditablePostRow({
         return (
           <AssignmentGridCell
             key={parentColumnId}
-            columnId={parentColumnId}
+            columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]}
             className={cn(GRID_CELL.month, "text-[10px] text-muted-foreground")}
           >
             {["posted", "published", "live", "verified"].includes(post.workflow_status) ? formatLiveAdMonth(post.live_date) : "not set"}
@@ -1012,7 +1004,7 @@ export function EditablePostRow({
       case "opsStatus":
         if (!col("invoice")) return emptyTrack(parentColumnId);
         return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.invoice}>
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} className={GRID_CELL.invoice}>
             {post.invoice_document_number ? (
               <Link href={`/billing/invoices/${post.invoice_id}`} className="text-[9px] hover:underline">
                 <DocumentNumber value={post.invoice_document_number} showCanonicalTitle={false} />
@@ -1023,38 +1015,11 @@ export function EditablePostRow({
           </AssignmentGridCell>
         );
       case "billing":
-        return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.status}>
-            <div className="flex min-w-0 flex-col items-start gap-0.5">
-              {col("billing") ? (
-                <AssignmentDeliverableBillingBadge billingStatus={post.billing_status} />
-              ) : null}
-              {col("collection") ? (
-                <span className="text-[10px] text-muted-foreground">{collectionLabel}</span>
-              ) : null}
-              {!col("billing") && !col("collection") ? <span /> : null}
-            </div>
-          </AssignmentGridCell>
-        );
-      case "payout":
-        if (!col("payout")) return emptyTrack(parentColumnId);
-        return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.payout}>
-            {post.payout_status ? (
-              <Badge variant="secondary" className="text-[9px] font-normal">
-                {post.payout_status.replace(/_/g, " ")}
-              </Badge>
-            ) : (
-              "—"
-            )}
-          </AssignmentGridCell>
-        );
-      case "actions":
-        return (
-          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.actions}>
-            <div className="flex min-w-0 flex-col items-end gap-1">
-
-              {col("workflow") ? (
+        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId="billing"><AssignmentDeliverableBillingBadge billingStatus={post.billing_status} /></AssignmentGridCell>;
+      case "collection":
+        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId="collection">{collectionLabel}</AssignmentGridCell>;
+      case "workflow":
+        return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId="workflow">{col("workflow") ? (
                 canEdit && fieldsActive ? (
                   <Select
                     value={meta.workflow_status}
@@ -1075,7 +1040,25 @@ export function EditablePostRow({
                 ) : (
                   <DeliverableWorkflowBadge status={post.workflow_status} />
                 )
-              ) : null}
+              ) : null}</AssignmentGridCell>;
+      case "payout":
+        if (!col("payout")) return emptyTrack(parentColumnId);
+        return (
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} className={GRID_CELL.payout}>
+            {post.payout_status ? (
+              <Badge variant="secondary" className="text-[9px] font-normal">
+                {post.payout_status.replace(/_/g, " ")}
+              </Badge>
+            ) : (
+              "—"
+            )}
+          </AssignmentGridCell>
+        );
+      case "actions":
+        return (
+          <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} className={GRID_CELL.actions}>
+            <div className="flex min-w-0 flex-col items-end gap-1">
+
               {!canEdit ? (
                 <span className="text-muted-foreground">—</span>
               ) : gridEdit.hasSession ? (
@@ -1210,160 +1193,13 @@ export function OperationalGridHeader({
   const leadingParentColumnIds =
     leadingParentColumnIdsProp ?? assignmentChildLeadingParentColumnIds(showExpandColumn);
 
-  function renderLeadingHeaderCell(parentColumnId: string) {
-    const childColumnId = assignmentParentToChildLeadingColumnId(parentColumnId);
-    if (!childColumnId) {
-      return (
-        <AssignmentGridCell header
-          key={parentColumnId} columnId={parentColumnId}
-          className={cn(GRID_CELL.leadingRev, OPERATIONAL_TABLE_HEADER_CELL)}
-          aria-hidden
-        />
-      );
-    }
-
-    const cellClass = cn(childLeadingHeaderClass(childColumnId), OPERATIONAL_TABLE_HEADER_CELL);
-
-    if (
-      childColumnId === "fullDescriptionSpacer" ||
-      !col(childColumnId) ||
-      childColumnId === "expand" ||
-      childColumnId === "select"
-    ) {
-      return (
-        <AssignmentGridCell header
-          key={parentColumnId} columnId={parentColumnId}
-          {...(childColumnId === "fullDescriptionSpacer"
-            ? {}
-            : assignmentChildColDataAttr(childColumnId))}
-          className={cellClass}
-          aria-hidden
-        />
-      );
-    }
-
-    switch (childColumnId) {
-      case "type":
-        return (
-          <AssignmentGridCell header key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
-            {OPERATIONAL_GRID_LABELS.type}
-          </AssignmentGridCell>
-        );
-      case "platform":
-        return (
-          <AssignmentGridCell header
-            key={parentColumnId} columnId={parentColumnId}
-            {...assignmentChildColDataAttr(childColumnId)}
-            className={cellClass}
-            aria-hidden
-          />
-        );
-      case "qty":
-        return (
-          <AssignmentGridCell header key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
-            {OPERATIONAL_GRID_LABELS.qty}
-          </AssignmentGridCell>
-        );
-      case "revPerAd":
-        return (
-          <AssignmentGridCell header
-            key={parentColumnId} columnId={parentColumnId}
-            {...assignmentChildColDataAttr(childColumnId)}
-            className={cn(cellClass, "whitespace-nowrap px-1.5")}
-          >
-            {OPERATIONAL_GRID_LABELS.revPerAd}
-          </AssignmentGridCell>
-        );
-      case "costPerAd":
-        return (
-          <AssignmentGridCell header
-            key={parentColumnId} columnId={parentColumnId}
-            {...assignmentChildColDataAttr(childColumnId)}
-            className={cn(cellClass, "whitespace-nowrap px-1.5")}
-          >
-            {OPERATIONAL_GRID_LABELS.costPerAd}
-          </AssignmentGridCell>
-        );
-      case "ccy":
-        return (
-          <AssignmentGridCell header key={parentColumnId} columnId={parentColumnId} {...assignmentChildColDataAttr(childColumnId)} className={cellClass}>
-            {OPERATIONAL_GRID_LABELS.ccy}
-          </AssignmentGridCell>
-        );
-      case "rev":
-        return (
-          <AssignmentGridCell header
-            key={parentColumnId} columnId={parentColumnId}
-            {...assignmentChildColDataAttr(childColumnId)}
-            className={cn(
-              cellClass,
-              OPERATIONAL_TABLE_HEADER_SURFACE,
-              "py-1.5"
-            )}
-          >
-            {OPERATIONAL_GRID_LABELS.rev}
-          </AssignmentGridCell>
-        );
-      default:
-        return (
-          <AssignmentGridCell header
-            key={parentColumnId} columnId={parentColumnId}
-            {...assignmentChildColDataAttr(childColumnId)}
-            className={cellClass}
-            aria-hidden
-          />
-        );
-    }
-  }
-
-  function renderHeaderTrack(parentColumnId: string) {
-    if (
-      assignmentParentToChildLeadingColumnId(parentColumnId) != null ||
-      parentColumnId === "select"
-    ) {
-      return renderLeadingHeaderCell(parentColumnId);
-    }
-    const labels: Record<string, string> = {
-      usageRights: OPERATIONAL_GRID_LABELS.usageRights,
-      agencyFeePercent: OPERATIONAL_GRID_LABELS.agencyFeePercent,
-      agencyFee: OPERATIONAL_GRID_LABELS.agencyFee,
-      cost: OPERATIONAL_GRID_LABELS.cost,
-      costVatPercent: OPERATIONAL_GRID_LABELS.costVatPercent,
-      costVat: OPERATIONAL_GRID_LABELS.costVat,
-      costTotal: OPERATIONAL_GRID_LABELS.costTotal,
-      revenueVatPercent: OPERATIONAL_GRID_LABELS.revenueVatPercent,
-      usageRightsCost: OPERATIONAL_GRID_LABELS.usageRightsCost,
-      vat: OPERATIONAL_GRID_LABELS.vat,
-      totalBilling: OPERATIONAL_GRID_LABELS.totalBilling,
-      gp: OPERATIONAL_GRID_LABELS.postDate,
-      margin: OPERATIONAL_GRID_LABELS.liveAdMonth,
-      opsStatus: OPERATIONAL_GRID_LABELS.invoice,
-      billing: OPERATIONAL_GRID_LABELS.billing,
-      payout: OPERATIONAL_GRID_LABELS.payout,
-      actions: "",
-    };
-    const childField = PARENT_TRACK_TO_CHILD_FIELD[parentColumnId];
-    const show =
-      parentColumnId === "actions" ||
-      parentColumnId === "billing" ||
-      (childField ? col(childField) : false) ||
-      (parentColumnId === "gp" && col("postDate")) ||
-      (parentColumnId === "margin" && col("liveAdMonth")) ||
-      (parentColumnId === "opsStatus" && col("invoice"));
-    return (
-      <AssignmentGridCell
-        header
-        key={parentColumnId}
-        columnId={parentColumnId}
-        className={cn(OPERATIONAL_TABLE_HEADER_CELL, OPERATIONAL_TABLE_HEADER_SURFACE, "py-1.5")}
-      >
-        {parentColumnId === "actions"
-          ? actions
-          : show
-            ? labels[parentColumnId] ?? ""
-            : <span />}
-      </AssignmentGridCell>
-    );
+  function renderHeaderTrack(track: string) {
+    const field = PARENT_TRACK_TO_CHILD_FIELD[track];
+    const label = ASSIGNMENT_CHILD_GRID_COLUMN_METAS.find(column => column.id === field)?.label ?? "";
+    return <AssignmentGridCell header key={track} columnId={track} childColumnId={field}
+      className={cn(OPERATIONAL_TABLE_HEADER_CELL, OPERATIONAL_TABLE_HEADER_SURFACE, "py-1.5")}>
+      {field === "select" ? null : field === "actions" ? <><span>{label}</span>{actions}</> : label}
+    </AssignmentGridCell>;
   }
 
   return (

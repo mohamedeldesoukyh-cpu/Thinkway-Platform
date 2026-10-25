@@ -55,11 +55,14 @@ export const PARENT_TRACK_TO_CHILD_FIELD: Record<string, string> = {
   revenueVatPercent: "revenueVatPercent",
   vat: "vat",
   totalBilling: "totalBilling",
+  plannedDate: "plannedDate",
   gp: "postDate",
   fxGainLoss: "fullDescriptionSpacer",
   margin: "liveAdMonth",
   opsStatus: "invoice",
   billing: "billing",
+  collection: "collection",
+  workflow: "workflow",
   payout: "payout",
   actions: "actions",
 };
@@ -68,7 +71,7 @@ export const PARENT_TRACK_TO_CHILD_FIELD: Record<string, string> = {
 export function visibleAdTracks(visible: (field: string) => boolean, order?: readonly string[]): string[] {
   const tracks = Object.entries(PARENT_TRACK_TO_CHILD_FIELD).filter(([track, field]) =>
     field !== "fullDescriptionSpacer" && (track === "actions" ||
-      (track === "billing" && visible("collection")) || visible(field))
+      visible(field))
   ).map(([track]) => track);
   return order ? tracks.sort((a, b) => {
     const rank = (track: string) => order.indexOf(PARENT_TRACK_TO_CHILD_FIELD[track]);
@@ -77,5 +80,6 @@ export function visibleAdTracks(visible: (field: string) => boolean, order?: rea
 }
 
 export function buildAdCssGridCols(tracks: readonly string[]): string {
-  return tracks.map(track => track === "gp" ? "200px" : track === "actions" ? "100px" : assignmentCssGridTrack(track)).join(" ");
+  const widths: Record<string, number> = { assignment: 220, creator: 80, platforms: 70, plannedDate: 160, gp: 160, margin: 130, collection: 120, workflow: 140, actions: 100 };
+  return tracks.map(track => widths[track] ? `${widths[track]}px` : assignmentCssGridTrack(track)).join(" ");
 }

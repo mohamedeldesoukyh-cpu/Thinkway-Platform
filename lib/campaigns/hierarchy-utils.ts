@@ -1,3 +1,4 @@
+import { ASSIGNMENT_DATE_LABELS } from "@/lib/tables/assignment-date-labels";
 import {
   deliverableTypeLabel,
   deliverableTypeShortLabel,
@@ -61,7 +62,8 @@ export const HIERARCHY_COLUMN_LABELS = {
   platforms: "Platforms",
   deliverables: "Deliv.",
   fullDescription: "Full Description",
-  postingDates: "Went live date",
+  plannedDate: ASSIGNMENT_DATE_LABELS.plannedDate,
+  postingDates: ASSIGNMENT_DATE_LABELS.wentLiveDate,
   costCurrency: "CCY",
   revenue: "Rev",
   usageRights: "UR Rev",
@@ -86,7 +88,10 @@ export const CHILD_COLUMN_LABELS = {
   select: "",
   tag: "Type",
   platform: "Platform",
-  postingDate: "Post date",
+  plannedDate: ASSIGNMENT_DATE_LABELS.plannedDate,
+  postingDate: ASSIGNMENT_DATE_LABELS.wentLiveDate,
+  postDate: ASSIGNMENT_DATE_LABELS.wentLiveDate,
+  liveAdMonth: ASSIGNMENT_DATE_LABELS.wentLiveMonth,
   qty: "Qty",
   unitRevenue: "Unit rev",
   unitCost: "Unit cost",

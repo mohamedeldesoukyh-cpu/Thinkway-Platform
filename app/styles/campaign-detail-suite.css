@@ -2527,3 +2527,17 @@
     min-width: 44px;
   }
 }
+
+/* Child headers and values use the same tracks and origin. */
+.campaign-detail-suite .thinkway-campaign-asgn-table :is(.tw-adh, .tw-ad.tw-r) {
+  border-left: 0 !important;
+  box-shadow: inset 3px 0 0 var(--tw-blue);
+}
+.campaign-detail-suite .thinkway-campaign-asgn-table :is(.tw-adh, .tw-ad.tw-r) > [data-child-col] {
+  padding: 8px !important;
+  text-align: center !important;
+  justify-content: center !important;
+}
+.campaign-detail-suite .thinkway-campaign-asgn-table :is(.tw-adh, .tw-ad.tw-r) > [data-child-col="type"] {
+  text-align: left !important;
+}

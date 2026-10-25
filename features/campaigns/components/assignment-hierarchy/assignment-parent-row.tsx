@@ -78,6 +78,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
     childBillingStatus,
     platforms,
     postingSummary,
+    plannedPostingSummary,
     opsStatusLabel,
     billingStatusLabel,
   } = viewModel;
@@ -167,6 +168,7 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       <TableCell {...assignmentParentColDataAttr("deliverables")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {rollups.deliverable_count}
       </TableCell>
+      <TableCell {...assignmentParentColDataAttr("plannedDate")} className="px-1.5 py-1.5 text-muted-foreground">{plannedPostingSummary}</TableCell>
       <TableCell
         {...assignmentParentColDataAttr("postingDates")}
         className="px-1.5 py-1.5 text-muted-foreground"
@@ -203,7 +205,20 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
       <TableCell {...assignmentParentColDataAttr("totalBilling")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
         {formatOperationalAmount(line.revenue_after_vat)}
       </TableCell>
-      <TableCell {...assignmentParentColDataAttr("revenueVatPercent")} className={OPERATIONAL_AMOUNT_CLASS}>{Number(line.revenue_vat_exempt ? 0 : line.revenue_vat_percent ?? 0).toFixed(1)}%</TableCell>
+      <TableCell
+        {...assignmentParentColDataAttr("cost")}
+        className={cn(
+          "px-1.5 py-1.5 text-right",
+          OPERATIONAL_COST_AMOUNT_CLASS,
+          "bg-amber-500/10 font-semibold dark:bg-amber-500/15"
+        )}
+      >
+        {formatOperationalAmount(line.cost_before_vat)}
+      </TableCell>
+      <TableCell {...assignmentParentColDataAttr("usageRightsCost")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
+        {formatOperationalAmount(line.usage_rights_cost)}
+      </TableCell>
+      {(["costVatPercent", "costVat", "costTotal"] as const).map(id => <TableCell key={id} {...assignmentParentColDataAttr(id)} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>{id === "costVatPercent" ? Number(line.cost_vat_exempt ? 0 : line.cost_vat_percent ?? 0).toFixed(1) + "%" : formatOperationalAmount(id === "costVat" ? line.cost_vat_amount : line.cost_after_vat)}</TableCell>)}
       <TableCell
         {...assignmentParentColDataAttr("gp")}
         className={cn("px-1.5 py-1.5 text-right", operationalGpAmountClass(rollups.gp))}
@@ -218,20 +233,6 @@ export const AssignmentParentRow = memo(function AssignmentParentRow({
         )}
       >
         {formatPercent(rollups.margin_percent)}
-      </TableCell>
-      <TableCell
-        {...assignmentParentColDataAttr("cost")}
-        className={cn(
-          "px-1.5 py-1.5 text-right",
-          OPERATIONAL_COST_AMOUNT_CLASS,
-          "bg-amber-500/10 font-semibold dark:bg-amber-500/15"
-        )}
-      >
-        {formatOperationalAmount(line.cost_before_vat)}
-      </TableCell>
-      {(["costVatPercent", "costVat", "costTotal"] as const).map(id => <TableCell key={id} {...assignmentParentColDataAttr(id)} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>{id === "costVatPercent" ? Number(line.cost_vat_exempt ? 0 : line.cost_vat_percent ?? 0).toFixed(1) + "%" : formatOperationalAmount(id === "costVat" ? line.cost_vat_amount : line.cost_after_vat)}</TableCell>)}
-      <TableCell {...assignmentParentColDataAttr("usageRightsCost")} className={cn("px-1.5 py-1.5 text-right", OPERATIONAL_AMOUNT_CLASS)}>
-        {formatOperationalAmount(line.usage_rights_cost)}
       </TableCell>
       <TableCell {...assignmentParentColDataAttr("opsStatus")} className="px-1.5 py-1.5">
         {enableBillingPills ? (

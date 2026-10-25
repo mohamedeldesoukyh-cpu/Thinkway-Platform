@@ -1,3 +1,4 @@
+import { ASSIGNMENT_DATE_LABELS } from "@/lib/tables/assignment-date-labels";
 import { cn } from "@/lib/utils";
 
 import {
@@ -16,8 +17,9 @@ export const OPERATIONAL_GRID_LABELS = {
   select: "",
   type: "TYPE",
   platform: "PLAT",
-  postDate: "Planned date / Went live date",
-  liveAdMonth: "Went live month",
+  plannedDate: ASSIGNMENT_DATE_LABELS.plannedDate,
+  postDate: ASSIGNMENT_DATE_LABELS.wentLiveDate,
+  liveAdMonth: ASSIGNMENT_DATE_LABELS.wentLiveMonth,
   ccy: "CCY",
   qty: "QTY",
   revPerAd: "Rev/Ad",

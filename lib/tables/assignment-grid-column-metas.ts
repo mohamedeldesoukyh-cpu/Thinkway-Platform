@@ -1,3 +1,4 @@
+import { ASSIGNMENT_DATE_LABELS } from "./assignment-date-labels";
 import type { OperationalTableColumnMeta } from "@/lib/tables/operational-table-column-settings";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 
@@ -12,7 +13,8 @@ export const ASSIGNMENT_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = [
   { id: "platforms", label: "Platforms" },
   { id: "deliverables", label: "Deliverables" },
   { id: "fullDescription", label: "Full Description" },
-  { id: "postingDates", label: "Dates" },
+  { id: "plannedDate", label: ASSIGNMENT_DATE_LABELS.plannedDate },
+  { id: "postingDates", label: ASSIGNMENT_DATE_LABELS.wentLiveDate },
   { id: "costCurrency", label: "CCY" },
   { id: "cost", label: "Cost" },
   { id: "usageRightsCost", label: "UR Cost" },
@@ -58,8 +60,9 @@ export const ASSIGNMENT_CHILD_GRID_COLUMN_METAS: OperationalTableColumnMeta[] = 
   { id: "revenueVatPercent", label: "Rev VAT %" },
   { id: "vat", label: "Rev VAT" },
   { id: "totalBilling", label: "Total Billing" },
-  { id: "postDate", label: "Live ad date" },
-  { id: "liveAdMonth", label: "Month" },
+  { id: "plannedDate", label: ASSIGNMENT_DATE_LABELS.plannedDate },
+  { id: "postDate", label: ASSIGNMENT_DATE_LABELS.wentLiveDate },
+  { id: "liveAdMonth", label: ASSIGNMENT_DATE_LABELS.wentLiveMonth },
   { id: "invoice", label: "Invoice" },
   { id: "billing", label: "Billing" },
   { id: "collection", label: "Collection" },

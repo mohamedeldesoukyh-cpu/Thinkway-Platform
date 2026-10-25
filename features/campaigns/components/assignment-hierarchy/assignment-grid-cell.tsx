@@ -1,4 +1,5 @@
-import type { ComponentProps, ReactNode } from "react";
+import { ASSIGNMENT_CHILD_GRID_COLUMN_METAS } from "@/lib/tables/assignment-grid-column-metas";
+import { Children, isValidElement, type ComponentProps, type ReactNode } from "react";
 
 import {
   SAFE_GRID_TD,
@@ -14,12 +15,14 @@ import { cn } from "@/lib/utils";
 
 type AssignmentGridRowProps = {
   cols: string;
+  columnOrder?: readonly string[];
   className?: string;
   children: ReactNode;
 } & Omit<ComponentProps<"div">, "className" | "children">;
 
 export function AssignmentGridRow({
   cols,
+  columnOrder,
   className,
   children,
   style,
@@ -32,7 +35,10 @@ export function AssignmentGridRow({
       style={{ ["--cols" as string]: cols, ...style }}
       {...rest}
     >
-      {children}
+      {columnOrder ? Children.toArray(children).sort((a, b) => {
+        const rank = (node: ReactNode) => isValidElement<{ columnId?: string }>(node) ? columnOrder.indexOf(node.props.columnId ?? "") : -1;
+        return rank(a) - rank(b);
+      }) : children}
     </div>
   );
 }
@@ -56,7 +62,7 @@ export function AssignmentGridCell({
     <div
       role={header ? "columnheader" : "gridcell"}
       data-label={childColumnId
-        ? CHILD_COLUMN_LABELS[childColumnId as keyof typeof CHILD_COLUMN_LABELS] ?? childColumnId.replace(/([A-Z])/g, " $1")
+        ? ASSIGNMENT_CHILD_GRID_COLUMN_METAS.find(column => column.id === childColumnId)?.label ?? CHILD_COLUMN_LABELS[childColumnId as keyof typeof CHILD_COLUMN_LABELS] ?? childColumnId
         : columnId ? HIERARCHY_COLUMN_LABELS[columnId as keyof typeof HIERARCHY_COLUMN_LABELS] : undefined}
       {...(columnId ? assignmentParentColDataAttr(columnId) : {})}
       {...(childColumnId ? assignmentChildColDataAttr(childColumnId) : {})}
