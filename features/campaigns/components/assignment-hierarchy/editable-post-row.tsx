@@ -848,7 +848,7 @@ export function EditablePostRow({
       case "plannedDate":
         return <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} childColumnId={PARENT_TRACK_TO_CHILD_FIELD[parentColumnId]} className="px-1.5 py-1.5 text-center text-[11px] text-muted-foreground">
           <span>{deliverable.planned_posting_date ?? "not set"}</span>
-          {!isVirtualPost && !deliverable.is_synthetic && postId ? <PlannedPostingDateButton campaignId={campaignId} deliverableId={deliverable.id} plannedDate={deliverable.planned_posting_date ?? null} disabled={readOnly} /> : null}
+          {!isVirtualPost && !deliverable.is_synthetic && postId ? <PlannedPostingDateButton campaignId={campaignId} deliverableId={deliverable.id} plannedDate={deliverable.planned_posting_date ?? null} /> : null}
         </AssignmentGridCell>;
       case "usageRights":
         return (

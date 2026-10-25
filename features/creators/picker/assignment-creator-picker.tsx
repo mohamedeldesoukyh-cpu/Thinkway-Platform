@@ -44,14 +44,12 @@ export function AssignmentCreatorPicker({ value, selectedLabel, disabled, onSele
   }
 
   return <div className="space-y-2">
-    <p className="text-sm font-medium">Influencer / creator</p>
-    {value && <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900">
-      <strong>{selectedLabel || "Selected creator"}</strong>
-      <p>Replacing the creator keeps the current pricing and deliverables.</p>
-    </div>}
-    <Button type="button" variant="outline" className="min-h-11 w-full justify-start" disabled={disabled || pending} onClick={() => { setMode("search"); setRaw(""); setError(null); setOpen(true); }}>
-      <SearchIcon className="size-4" />{value ? "Search or replace creator" : "Search or add creator"}
-    </Button>
+    <div className="assignment-creator-choice">
+      <div><span className="text-xs text-muted-foreground">Creator</span><strong>{selectedLabel || "Choose a creator"}</strong></div>
+      <Button type="button" variant="outline" size="sm" disabled={disabled || pending} onClick={() => { setMode("search"); setRaw(""); setError(null); setOpen(true); }}>
+        <SearchIcon className="size-3.5" />{value ? "Replace" : "Select"}
+      </Button>
+    </div>
     <CreatorPickerDialog open={open} onOpenChange={(next) => { if (!pending) setOpen(next); }}
       container="sheet" panelLayout title={value ? "Replace creator" : "Add creator"}
       description="Search internal, imported, and discovered creators, or paste a profile link. Select one creator for this assignment."
