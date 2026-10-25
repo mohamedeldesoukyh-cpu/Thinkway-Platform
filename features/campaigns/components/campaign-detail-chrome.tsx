@@ -164,7 +164,9 @@ export function CampaignDetailChrome({
     });
   };
 
-  const stageCannotAdvance = `${narrative.currentStageLabel} cannot advance`;
+  const stageCannotAdvance = narrative.dependencyDetail?.includes("awaiting client approval")
+    ? "Client approval pending"
+    : `${narrative.currentStageLabel} needs attention`;
   const decisionMsg = narrative.progressionAllowed
     ? narrative.currentStageComplete
       ? "May continue"
@@ -289,10 +291,10 @@ export function CampaignDetailChrome({
             <span className="sub">
               {narrative.dependencyDetail}
               {narrative.ownerLabel ? ` · owner ${narrative.ownerLabel}` : ""}
-              {narrative.waitingSince ? ` · ${narrative.waitingSince}` : ""}
+              {narrative.waitingSince && narrative.waitingSince !== "—" ? ` · ${narrative.waitingSince}` : ""}
             </span>
           </span>
-          <span className="wr-decision-meta"><span><i>State</i>{lifecycle.businessStateLabel}</span><span><i>Waiting for</i>{intel.waitingFor}</span><span><i>Waiting</i>{intel.daysWaitingLabel || "—"}</span><span><i>Risk</i>{intel.riskLabel}</span></span>
+          <span className="wr-decision-meta"><span><i>Campaign</i>{lifecycle.businessStateLabel}</span>{intel.waitingFor && intel.waitingFor !== "—" && <span><i>Waiting for</i>{intel.waitingFor}</span>}{intel.daysWaitingLabel && intel.daysWaitingLabel !== "—" && <span><i>Waiting</i>{intel.daysWaitingLabel}</span>}<span><i>Risk</i>{intel.riskLabel}</span></span>
           <span className="tw-sp" />
           <button type="button" className="go" onClick={onContinue}>
             {dc.primaryAction}

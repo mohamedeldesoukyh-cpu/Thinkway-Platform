@@ -1,4 +1,4 @@
-.assignment-commercial-pane { position:absolute; inset:auto 0 0; z-index:45; display:flex; flex-direction:column; flex-shrink:0; min-height:180px; max-height:65%; margin:0 12px 8px; border:1px solid #c6d9ff; border-radius:12px; background:#fff; overflow:hidden; color:#17243b; font-size:12px; }
+.assignment-commercial-pane { position:absolute; inset:auto 0 0; z-index:45; display:flex; flex-direction:column; flex-shrink:0; min-height:260px; max-height:65%; margin:0 12px 8px; border:1px solid #c6d9ff; border-radius:12px; background:#fff; overflow:hidden; color:#17243b; font-size:12px; }
 .assignment-commercial-pane .acp-resizer { height:12px; flex-shrink:0; display:flex; align-items:center; justify-content:center; cursor:ns-resize; touch-action:none; user-select:none; background:#edf3ff; }
 .assignment-commercial-pane .acp-resizer > span { width:44px; height:3px; border-radius:3px; background:#90b4f5; }
 .assignment-commercial-pane .acp-resizer:focus-visible { outline:2px solid #0057ff; outline-offset:-2px; }
@@ -60,3 +60,13 @@
 
 .assignment-commercial-pane .acp-resizer { height:8px; }
 .assignment-commercial-pane .acp-heading { padding:4px 10px; gap:10px; }
+
+/* Keep the totals/actions outside the independently scrolling fields at every size. */
+.workspace-redesign .assignment-commercial-pane .acp-heading { padding:4px 10px !important; gap:8px; }
+.workspace-redesign .assignment-commercial-pane .acp-form { display:grid; grid-template-rows:minmax(0,1fr) auto; overflow:hidden; }
+.workspace-redesign .assignment-commercial-pane .acp-scroll { overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; }
+.workspace-redesign .assignment-commercial-pane .acp-footer { padding:5px 10px; gap:8px; }
+.workspace-redesign .assignment-commercial-pane .acp-footer > div { max-width:none; }
+.assignment-commercial-pane .acp-pinned-totals { display:flex; flex-wrap:wrap; gap:4px 18px; }
+.assignment-commercial-pane .acp-pinned-totals strong { display:block; color:#17243b; font-size:12px; font-variant-numeric:tabular-nums; }
+.assignment-commercial-pane .acp-lock { display:inline-flex; border:1px solid #d8e0ee; border-radius:5px; padding:1px 5px; margin-inline:5px; color:#64748b; font-size:10px; font-weight:500; cursor:help; }
