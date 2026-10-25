@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 type Props = {
+  pageActions?: { remove: (index: number) => void; undo: () => void; restore: () => void; removedCount: number };
   contained?: boolean;
   html?: string;
   src?: string;
@@ -60,6 +61,7 @@ function nearestZoomIndex(zoom: number): number {
 
 export function DocumentPreviewShell({
   html,
+  pageActions,
   src,
   sandbox,
   contained = true,
@@ -359,6 +361,11 @@ export function DocumentPreviewShell({
           <p className="mb-2 px-1 text-[10px] font-bold uppercase tracking-[0.08em] text-muted-foreground">
             Pages
           </p>
+          {pageActions && <div className="mb-2 flex flex-wrap gap-1">
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" disabled={!pageActions.removedCount} onClick={pageActions.undo}>Undo</Button>
+            <Button size="sm" variant="outline" className="h-7 px-2 text-[10px]" disabled={!pageActions.removedCount} onClick={pageActions.restore}>Restore default</Button>
+            <span className="sr-only" role="status">{pageActions.removedCount} pages removed</span>
+          </div>}
           <div className="space-y-1.5">
             {thumbnails.length === 0 ? (
               <p className="px-1 py-4 text-[11px] text-muted-foreground">
@@ -369,14 +376,17 @@ export function DocumentPreviewShell({
                 const page = index + 1;
                 const active = page === activePage;
                 return (
+                  <div key={`thumb-${page}`} className="flex items-center gap-1">
+                  {pageActions && <button type="button" className="flex size-5 shrink-0 items-center justify-center rounded hover:bg-white/20 disabled:opacity-30"
+                    disabled={pageCount <= 1 || !ready} onClick={() => pageActions.remove(index)}
+                    aria-label={`Remove page ${page}`} title={pageCount <= 1 ? "Keep at least one page" : `Remove page ${page}`}><XIcon className="size-3" /></button>}
                   <button
-                    key={`thumb-${page}`}
                     type="button"
                     onClick={() => scrollToPage(page)}
                     aria-current={active ? "page" : undefined}
                     title={`Page ${page}: ${label}`}
                     className={cn(
-                      "flex w-full rounded-md border text-left transition-colors",
+                      "flex min-w-0 flex-1 rounded-md border text-left transition-colors",
                       contained ? "items-center gap-2 px-1.5 py-1.5" : "flex-col gap-1 px-2 py-2",
                       active
                         ? "border-primary/40 bg-primary/8"
@@ -398,6 +408,7 @@ export function DocumentPreviewShell({
                       {label}
                     </span>
                   </button>
+                  </div>
                 );
               })
             )}

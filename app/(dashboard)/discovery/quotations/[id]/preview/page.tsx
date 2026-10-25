@@ -14,7 +14,7 @@ import {
   quotationDetailPath,
   quotationPreviewPath,
 } from "@/features/quotations/constants";
-import { resolveQuotationTemplate } from "@/features/quotations/export/quotation-template";
+import { isQuotationListTemplate, resolveQuotationTemplate } from "@/features/quotations/export/quotation-template";
 import { renderQuotationPreviewHtml } from "@/features/quotations/export/render-quotation-preview-html";
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -189,6 +189,7 @@ export default async function QuotationPreviewPage({
         </div>
       ) : (
         <DocumentPreviewClient
+          allowPageRemoval={isQuotationListTemplate(template)}
           contained
           html={html}
           title={`${templateLabel} quotation ${serial}`}

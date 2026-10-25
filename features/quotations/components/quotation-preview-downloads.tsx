@@ -1,3 +1,5 @@
+"use client";
+import { useRemovedReportPages } from "@/features/discovery/document-preview/report-page-selection-context";
 import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import {
@@ -30,6 +32,7 @@ export function buildExportHref(
   format: string,
   template: QuotationTemplateVariant,
   options?: {
+    excludedPages?: number[];
     download?: boolean;
     exportRevision?: string | null;
     itemIds?: string[];
@@ -41,6 +44,7 @@ export function buildExportHref(
   if (options?.download !== false) {
     params.set("download", "1");
   }
+  if (options?.excludedPages?.length) params.set("excludePages", options.excludedPages.join(","));
   appendQuotationTemplateParam(params, template);
   appendQuotationExportRevision(params, options?.exportRevision);
   if (options?.itemIds?.length) {
@@ -59,7 +63,8 @@ export function QuotationPreviewDownloads({
   exportRevision,
   proposalOptions,
 }: QuotationPreviewDownloadsProps) {
-  const exportOptions = { itemIds, platforms, exportRevision, proposalOptions };
+  const excludedPages = useRemovedReportPages();
+  const exportOptions = { itemIds, platforms, exportRevision, proposalOptions, excludedPages };
 
   return (
     <div className="flex flex-wrap items-center gap-2">

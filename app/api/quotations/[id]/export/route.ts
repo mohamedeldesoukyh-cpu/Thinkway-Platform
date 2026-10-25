@@ -61,6 +61,7 @@ type RouteContext = {
 export async function GET(request: Request, context: RouteContext) {
   const { id } = await context.params;
   const { searchParams } = new URL(request.url);
+  const excludedPages = (searchParams.get("excludePages") ?? "").split(",").map(Number).filter(n => Number.isSafeInteger(n) && n > 0);
   const format = searchParams.get("format") ?? "preview";
   const download = searchParams.get("download") === "1";
   const template = resolveQuotationTemplate(searchParams.get("template"));
@@ -145,7 +146,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     const logoSrcs = format === "pdf" ? resolveThinkwayReportLogoSrcsForExport() : undefined;
-    const html = buildQuotationHtml(doc, { siteOrigin, logoSrcs });
+    const html = buildQuotationHtml(doc, { siteOrigin, logoSrcs, excludedPages });
 
     if (format === "word") {
       // Word opens HTML content saved as .doc with full fidelity (no extra deps).
@@ -158,7 +159,7 @@ export async function GET(request: Request, context: RouteContext) {
     }
 
     if (format === "pdf") {
-      const pdfHtml = buildQuotationHtml(doc, { siteOrigin, logoSrcs, forPdf: true });
+      const pdfHtml = buildQuotationHtml(doc, { siteOrigin, logoSrcs, excludedPages, forPdf: true });
       const pdfResult = isQuotationListTemplate(template) ? { ok: true as const, buffer: await renderRateCardPdf(pdfHtml, quotationListPdfOptions(doc)) } : await renderHtmlToPdf(pdfHtml, QUOTATION_PDF_OPTIONS);
       if (!pdfResult.ok) {
         return NextResponse.json(
@@ -179,7 +180,7 @@ export async function GET(request: Request, context: RouteContext) {
         "@/features/quotations/export/quotation-pptx"
       );
       try {
-        const buffer = await buildQuotationPptxBuffer(doc, { siteOrigin, logoSrcs });
+        const buffer = await buildQuotationPptxBuffer(doc, { siteOrigin, logoSrcs, excludedPages });
         return new NextResponse(buffer as unknown as BodyInit, {
           headers: withExportCacheHeaders({
             "Content-Type":
