@@ -130,7 +130,7 @@ function TrendBars({
     <p>{hint} · up to 12 periods</p>
     {points.length ? <>
       <div className="ed-chart-readout" aria-live="polite">{selected ? `${selected.label} · ${selected.value.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "Hover or focus a bar for its value"}</div>
-      <svg viewBox="0 0 380 190" role="img" aria-label={`${title}: ${points.map(p => `${p.label}: ${p.value}`).join(", ")}`}>
+      <svg viewBox="0 0 380 190" role="group" aria-label={`${title}: ${points.map(p => `${p.label}: ${p.value}`).join(", ")}`}>
         {[low, (high + low) / 2, high].map((value, i) => <g key={i}><line x1="52" x2="370" y1={y(value)} y2={y(value)} stroke="#e5ebf4" /><text x="46" y={y(value) + 4} textAnchor="end">{formatCompactMillions(value)}</text></g>)}
         <line x1="52" x2="370" y1={y(0)} y2={y(0)} stroke="#aab8cd" />
         {points.map((point, i) => <g key={`${point.period}-${i}`} tabIndex={0} role="button" aria-label={`${point.label}: ${point.value.toLocaleString("en-US")}`} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)} onFocus={() => setActive(i)} onBlur={() => setActive(null)} onClick={() => setActive(i)}>

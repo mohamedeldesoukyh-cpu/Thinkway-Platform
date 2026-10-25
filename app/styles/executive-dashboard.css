@@ -57,3 +57,5 @@
 
 .home-dashboard-suite.executive-redesign .tw-mast .tw-mr { display:flex; }
 .home-dashboard-suite.executive-redesign .ed-basis summary { cursor:pointer; color:#52637c; font-weight:500; }
+
+@media(max-width:1200px) { .home-dashboard-suite.executive-redesign .tw-two { grid-template-columns:minmax(0,1fr); } }
