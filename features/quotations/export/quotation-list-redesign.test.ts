@@ -100,3 +100,18 @@ assert.ok(!buildRedesignedQuotationCreatorList({...many, template:"creator-list"
  const original = buildRedesignedQuotationCreatorList({...doc,source:'shortlist',template:'creator-list',creatorGroups:groups} as QuotationDocument);
  assert.deepEqual(original.split('<section class="page">').slice(1).map(page=>(page.match(/<article class="creator-card">/g)||[]).length).filter(Boolean),[6,6,6,6,1]);
 }
+
+// Proposal summaries must use the same readable names as creator cards.
+{
+ const names = ['𝗘𝗟 𝗦𝗨𝗣𝗘𝗥 𝗠𝗔𝗠𝗔 — 𝗟𝗜𝗡𝗔𝗛 𝗔𝗧𝗧𝗜𝗔', '𝙍𝘼𝙉𝘼 𝙉𝙊𝙐𝙈𝘼𝙉', 'مارك بحورى'];
+ const optionDoc = {...doc, template:'creator-list', summary:{creatorCount:3,grandTotal:'100 EGP'}, creatorGroups:names.map((creator,i)=>({...group,creator,itemIds:[String(i)]}))} as unknown as QuotationDocument;
+ const proposal = {...optionDoc,proposalOptions:[{recommended:true,document:optionDoc}]} as QuotationDocument;
+ const output=buildRedesignedQuotationCreatorList(proposal);
+ assert.ok(output.includes('EL SUPER MAMA — LINAH ATTIA'));
+ assert.ok(output.includes('RANA NOUMAN'));
+ assert.ok(output.includes('مارك بحورى'));
+ assert.ok(!output.includes('𝗘𝗟'));
+ assert.ok(!output.includes('𝙍𝘼𝙉𝘼'));
+ assert.ok(!output.includes('&#9733;'));
+ assert.ok(output.includes('<svg class="proposal-star"'));
+}
