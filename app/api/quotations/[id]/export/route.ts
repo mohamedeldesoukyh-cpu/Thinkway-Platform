@@ -1,7 +1,7 @@
 import { parseProposalOptions } from "@/features/quotations/export/proposal-options";
 import { quotationListPdfOptions } from "@/features/quotations/export/quotation-creator-list";
 import { renderRateCardPdf } from "@/features/rate-cards/report-pdf";
-import { loadCreatorListClientLogo } from "@/features/discovery/shortlists/export/creator-list-client-logo";
+import { loadCreatorListClientIdentity } from "@/features/discovery/shortlists/export/creator-list-client-logo";
 import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import { NextResponse } from "next/server";
 
@@ -114,8 +114,12 @@ export async function GET(request: Request, context: RouteContext) {
       displayFxRateToEgp,
     });
     if (format !== "excel") {
-      if (isQuotationListTemplate(template)) doc.clientLogo = await loadCreatorListClientLogo(supabase, enriched.client_id, template !== "client-list-by-name");
-  doc = await embedQuotationDocumentAvatars(doc);
+      if (isQuotationListTemplate(template)) {
+        const identity = await loadCreatorListClientIdentity(supabase, enriched.client_id, template !== "client-list-by-name");
+        doc.clientLogo = identity?.logo ?? null;
+        doc.reportPartnerName = identity?.name || doc.clientName;
+      }
+      doc = await embedQuotationDocumentAvatars(doc);
       doc = await embedQuotationDocumentPublicationShots(doc);
     }
     const baseName = doc.serial;

@@ -261,6 +261,8 @@ export type QuotationDocument = {
   shortlistCreatorListCost?: import("@/features/discovery/shortlists/creator-list-cost").CreatorListCost;
   creatorListOrder?: string[];
   clientLogo?: string | null;
+  /** Group-first display identity; legal clientName remains unchanged. */
+  reportPartnerName?: string;
   audience: QuotationDocumentAudience;
   /** Discovery shortlists reuse quotation templates without commercial pricing. */
   source?: "quotation" | "shortlist";

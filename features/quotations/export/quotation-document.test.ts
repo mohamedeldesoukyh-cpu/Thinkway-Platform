@@ -1698,7 +1698,7 @@ console.log("quotation-document.test.ts passed");
   assert.ok(pages[1].includes("Compare your options"));
   assert.ok(pages[1].includes("Number of creators") && pages[1].includes("Total price"));
   assert.ok(html.includes("Alpha $&amp;"));
-  assert.ok(html.includes('Option 1 <span class="proposal-badge">&#9733; Recommended'));
+  assert.ok(html.includes('Option 1 <span class="proposal-badge"><svg class="proposal-star"'));
   assert.ok(!html.includes('Option 2 <span class="proposal-badge">'));
   assert.ok(!pages[0].includes(doc.summary.grandTotal));
   assert.ok(pages.every((page,index)=>page.includes(`${index+1} / ${pages.length}`)));

@@ -159,6 +159,7 @@ export type ShortlistDocCollapseContentGroup = {
 export type ShortlistDocument = {
   creatorListCost?: import("../creator-list-cost").CreatorListCost;
   clientLogoDataUri?: string | null;
+  reportPartnerName?: string;
   template: ShortlistTemplateVariant;
   serial: string;
   name: string;
