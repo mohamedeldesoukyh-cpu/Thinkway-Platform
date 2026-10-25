@@ -1,3 +1,4 @@
+import { plannedPostingDate } from "@/lib/campaigns/planned-posting-date";
 import { loadClientAcceptedLineIds } from "@/lib/billing/client-acceptance";
 import { requireRequestUser, type RequestUser } from "@/lib/supabase/server";
 import { DEFAULT_PLATFORM_CURRENCY } from "@/lib/master-data/default-currency";
@@ -522,6 +523,7 @@ async function loadCampaignAssignmentHierarchy(
     const resolvedLiveDate = row.live_date ?? posts[0]?.live_date ?? null;
 
     const mapped: AssignmentDeliverableHierarchyRow = {
+      planned_posting_date: plannedPostingDate(row.metadata as Record<string, unknown> | null),
       id: row.id,
       campaign_line_id: row.campaign_line_id,
       sort_order: row.sort_order,

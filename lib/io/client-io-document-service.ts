@@ -1,3 +1,4 @@
+import { plannedPostingDate } from "@/lib/campaigns/planned-posting-date";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientIoFxRates } from "@/lib/io/client-io-fx";
 
@@ -93,7 +94,7 @@ async function captureAssignmentSnapshot(
     ? await supabase
         .from("assignment_deliverables")
         .select(
-          "platform, deliverable_type, quantity, live_date, campaign_line_id, sort_order"
+          "platform, deliverable_type, quantity, live_date, campaign_line_id, sort_order, metadata"
         )
         .in("campaign_line_id", selectedCampaignLineIds)
         .order("sort_order", { ascending: true })
@@ -135,6 +136,7 @@ async function captureAssignmentSnapshot(
       deliverable_type: string;
       quantity: number;
       live_date: string | null;
+      metadata?: Record<string, unknown> | null;
       campaign_line_id: string;
       sort_order: number | null;
     }>).map((row) => ({
@@ -142,6 +144,7 @@ async function captureAssignmentSnapshot(
       deliverable_type: row.deliverable_type,
       quantity: row.quantity,
       live_date: row.live_date,
+      planned_posting_date: plannedPostingDate(row.metadata),
       campaign_line_id: row.campaign_line_id,
       sort_order: row.sort_order,
     })),

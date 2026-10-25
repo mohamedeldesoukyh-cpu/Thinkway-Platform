@@ -98,6 +98,7 @@ function sanitizeDeliverable(
       unit_cost: finiteNumber(row.unit_cost),
       unit_revenue: finiteNumber(row.unit_revenue),
       live_date: row.live_date ?? null,
+      planned_posting_date: row.planned_posting_date ?? null,
       notes: row.notes ?? null,
       revenue_before_vat: revenue,
       usage_rights_amount: finiteNumber(

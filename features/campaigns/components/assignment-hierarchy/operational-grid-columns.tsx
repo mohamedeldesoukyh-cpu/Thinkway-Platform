@@ -16,7 +16,7 @@ export const OPERATIONAL_GRID_LABELS = {
   select: "",
   type: "TYPE",
   platform: "PLAT",
-  postDate: "Live ad date",
+  postDate: "Planned / Went live",
   liveAdMonth: "Month",
   ccy: "CCY",
   qty: "QTY",

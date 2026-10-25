@@ -98,3 +98,11 @@ test("historical live creator lines without deliverable rows recognize their ful
  assert.equal(events[0].date,"2026-08-07");
  assert.deepEqual(buildRecognitionEvents({...input,deliverables:[],posts:[]}),[]);
 });
+
+test("planned metadata cannot recognize revenue; confirmed delivery on the same date can", () => {
+  const planned = { ...input, deliverables: [{ ...child, metadata: { planned_posting_date: "2026-09-10" } }], posts: posts.map(p => ({ ...p, status: "draft", live_date: "2026-09-10" })) };
+  assert.deepEqual(buildRecognitionEvents(planned), []);
+  const confirmed = buildRecognitionEvents({ ...planned, posts: planned.posts.map(p => ({ ...p, status: "posted" })) });
+  assert.equal(confirmed.length, 2);
+  assert.equal(confirmed.every(event => event.date === "2026-09-10"), true);
+});

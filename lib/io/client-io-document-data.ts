@@ -1,3 +1,4 @@
+import { plannedPostingDate, formatPlannedPostingDates } from "@/lib/campaigns/planned-posting-date";
 import { parseSendRecipientsJson, clientIoDocumentRecipients } from "@/lib/io/client-io-send-recipients";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientIoFxRates } from "@/lib/io/client-io-fx";
@@ -337,6 +338,8 @@ export async function loadClientIoDocumentData(
   };
 
   type DeliverableRow = {
+    planned_posting_date?: string | null;
+    metadata?: Record<string, unknown> | null;
     platform: string;
     deliverable_type: string;
     quantity: number;
@@ -371,6 +374,7 @@ export async function loadClientIoDocumentData(
         deliverable_type: row.deliverable_type,
         quantity: row.quantity,
         live_date: row.live_date,
+        planned_posting_date: Object.prototype.hasOwnProperty.call(row, "planned_posting_date") ? row.planned_posting_date : row.live_date,
         campaign_line_id: row.campaign_line_id,
         sort_order: row.sort_order,
       })
@@ -386,12 +390,12 @@ export async function loadClientIoDocumentData(
       ? await supabase
           .from("assignment_deliverables")
           .select(
-            "platform, deliverable_type, quantity, live_date, campaign_line_id, sort_order"
+            "platform, deliverable_type, quantity, live_date, campaign_line_id, sort_order, metadata"
           )
           .in("campaign_line_id", lineIds)
           .order("sort_order", { ascending: true })
       : { data: [] };
-    deliverables = (liveDeliverables ?? []) as DeliverableRow[];
+    deliverables = ((liveDeliverables ?? []) as DeliverableRow[]).map(row => ({ ...row, planned_posting_date: plannedPostingDate(row.metadata) }));
   }
 
   const lineContext = new Map<
@@ -416,6 +420,10 @@ export async function loadClientIoDocumentData(
     });
   }
 
+  // Preserve the date presentation on already-issued legacy snapshots.
+  const formatClientSchedule = useSnapshot && snapshot && snapshot.deliverables.every(row => !("planned_posting_date" in row))
+    ? formatScheduleMonthYearRange : formatPlannedPostingDates;
+
   const deliverableRows: ClientIoDeliverableRow[] = deliverables.map((row) => {
     const typed = row as {
       platform: string;
@@ -436,7 +444,7 @@ export async function loadClientIoDocumentData(
       deliverableType: deliverableLabel(typed.deliverable_type),
       quantity: typed.quantity,
       handle,
-      scheduledDates: formatScheduleMonthYearRange([typed.live_date]),
+      scheduledDates: formatClientSchedule([row.planned_posting_date]),
     };
   });
 
@@ -450,12 +458,12 @@ export async function loadClientIoDocumentData(
     const assignment = parseLineAssignment(line.metadata);
     const platforms = assignment?.platforms ?? [];
     const childRows = deliverables.filter((row) => row.campaign_line_id === line.id);
-    const liveDates = childRows
-      .map((row) => (row as { live_date: string | null }).live_date)
+    const plannedDates = childRows
+      .map((row) => row.planned_posting_date)
       .filter((value): value is string => Boolean(value))
       .sort();
 
-    const scheduledDates = formatScheduleMonthYearRange(liveDates);
+    const scheduledDates = formatClientSchedule(plannedDates);
 
     const platformsLabel =
       platforms.length > 1

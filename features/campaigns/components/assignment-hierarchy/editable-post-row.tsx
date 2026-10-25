@@ -1,13 +1,13 @@
 "use client";
 
 import { RecordLiveDateButton } from "./record-live-date-button";
+import { PlannedPostingDateButton } from "./planned-posting-date-button";
 import { campaignMoney } from "../campaign-money";
 import Link from "next/link";
 import {
   CheckIcon,
   PencilIcon,
   PlusIcon,
-  RotateCcwIcon,
   Trash2Icon,
   XIcon,
 } from "lucide-react";
@@ -29,7 +29,6 @@ import {
 import {
   addPostToDeliverableAction,
   deleteAssignmentDeliverableAction,
-  resetLiveDateToPublicationAction,
   updateAssignmentDeliverableAction,
   updatePostScheduleAction,
 } from "@/features/campaigns/actions/assignment-deliverable-actions";
@@ -90,7 +89,6 @@ import type { CampaignLineOperationalStatus } from "@/features/campaigns/types/o
 import { getDeliverableTypeCodesForPlatform } from "@/lib/campaigns/deliverable-taxonomy";
 import { computeVatLine } from "@/lib/vat/calculations";
 import {
-  canEditLiveAdDate,
   formatLiveAdMonth,
 } from "@/lib/campaigns/live-ad-date";
 import { cn } from "@/lib/utils";
@@ -295,10 +293,6 @@ export function EditablePostRow({
 
   const postId = typeof post.id === "string" ? post.id : "";
   const isVirtualPost = postId.startsWith("virtual-");
-  const canEditLiveDateField = canEditLiveAdDate(
-    post.live_date,
-    post.is_locked ? (deliverable.locked_at ?? "locked") : deliverable.locked_at
-  );
   const canEditDeliverableScope =
     !readOnly && deliverableScoped && postId.length > 0 && !deliverable.is_locked;
   const canEditPostSchedule =
@@ -459,71 +453,6 @@ export function EditablePostRow({
     packageLine,
     postId,
   ]);
-
-  function persistLiveDate(nextLiveDate: string) {
-    if (!canEditLiveDateField) return;
-    startTransition(async () => {
-      if (deliverableScoped) {
-        const result = await updateAssignmentDeliverableAction({
-          campaign_id: campaignId,
-          campaign_line_id: campaignLineId,
-          deliverable_id: deliverable.id,
-          platform: meta.platform,
-          deliverable_type: meta.deliverable_type,
-          quantity: commercial.draft.qty,
-          unit_revenue: commercial.draft.revPerAd,
-          unit_cost: commercial.draft.costPerAd,
-          revenue_vat_percent: meta.revenue_vat_percent,
-          live_date: nextLiveDate || null,
-          notes: meta.notes || null,
-          billing_status: meta.billing_status as typeof post.billing_status,
-        });
-        if (!result.ok) {
-          setError(result.message ?? "Failed to save live ad date.");
-          return;
-        }
-      } else if (!isVirtualPost && postId) {
-        const result = await updatePostScheduleAction({
-          campaign_id: campaignId,
-          schedule_id: postId,
-          live_date: nextLiveDate || null,
-          status: meta.workflow_status,
-          revenue_per_post: commercial.draft.revPerAd,
-          cost_per_post: commercial.draft.costPerAd,
-          revenue_vat_percent: meta.revenue_vat_percent,
-          notes: meta.notes || null,
-          billing_status: meta.billing_status as typeof post.billing_status,
-          platform: meta.platform,
-          deliverable_type: meta.deliverable_type,
-        });
-        if (!result.ok) {
-          setError(result.message ?? "Failed to save live ad date.");
-          return;
-        }
-      } else {
-        return;
-      }
-      setError(null);
-      router.refresh();
-    });
-  }
-
-  function resetLiveDateToPublication() {
-    if (!canEditLiveDateField) return;
-    startTransition(async () => {
-      const result = await resetLiveDateToPublicationAction({
-        campaign_id: campaignId,
-        campaign_line_id: campaignLineId,
-        platform: meta.platform,
-      });
-      if (!result.ok) {
-        setError(result.message ?? "Failed to reset live ad date.");
-        return;
-      }
-      setError(null);
-      router.refresh();
-    });
-  }
 
   function persistCommercial() {
     if (packageLine) {
@@ -810,8 +739,10 @@ export function EditablePostRow({
                 </>
               )}
               {!isVirtualPost && !deliverable.is_synthetic && postId ? (
+                <><PlannedPostingDateButton campaignId={campaignId} deliverableId={deliverable.id}
+                  plannedDate={deliverable.planned_posting_date ?? null} disabled={readOnly} />
                 <RecordLiveDateButton campaignId={campaignId} scheduleId={postId} liveDate={post.live_date}
-                  label={`${meta.platform} ${meta.deliverable_type} - ad ${post.sequence_number}`} />
+                  label={`${meta.platform} ${meta.deliverable_type} - ad ${post.sequence_number}`} /></>
               ) : null}
             </div>
           </AssignmentGridCell>
@@ -1058,47 +989,13 @@ export function EditablePostRow({
         if (!col("postDate")) return emptyTrack(parentColumnId);
         return (
           <AssignmentGridCell key={parentColumnId} columnId={parentColumnId} className={GRID_CELL.postDate}>
-            {canEditLiveDateField && (!gridEdit.hasSession || gridEdit.isEditing) ? (
-              <div className="flex min-w-0 items-center justify-center gap-0.5 px-0.5">
-                <Input
-                  type="date"
-                  value={meta.live_date}
-                  onChange={(e) => setMeta((m) => ({ ...m, live_date: e.target.value }))}
-                  onBlur={
-                    gridEdit.hasSession
-                      ? undefined
-                      : (e) => persistLiveDate(e.target.value)
-                  }
-                  disabled={pending || gridEdit.saving}
-                  className="h-7 min-w-0 flex-1 px-1 text-[11px] leading-none"
-                  aria-label="Live ad date"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="size-7 shrink-0"
-                  disabled={pending || gridEdit.saving}
-                  title="Reset to publication date"
-                  onClick={() => {
-                    if (gridEdit.hasSession) {
-                      setMeta((m) => ({
-                        ...m,
-                        live_date: post.publication_live_date ?? "",
-                      }));
-                      return;
-                    }
-                    resetLiveDateToPublication();
-                  }}
-                >
-                  <RotateCcwIcon className="size-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <span className="whitespace-nowrap text-[11px] text-muted-foreground">
-                {post.live_date ?? "not set"}
-              </span>
-            )}
+            <div className="flex flex-col gap-1 text-[10px]">
+            <span>Planned: {deliverable.planned_posting_date ?? "not set"}</span>
+            <span>Went live:</span>
+            <span className="whitespace-nowrap text-[11px] text-muted-foreground">
+              {["posted", "published", "live", "verified"].includes(post.workflow_status) ? post.live_date ?? "not set" : "not confirmed"}
+            </span>
+            </div>
           </AssignmentGridCell>
         );
       case "margin":
@@ -1109,7 +1006,7 @@ export function EditablePostRow({
             columnId={parentColumnId}
             className={cn(GRID_CELL.month, "text-[10px] text-muted-foreground")}
           >
-            {formatLiveAdMonth(meta.live_date || post.live_date)}
+            {["posted", "published", "live", "verified"].includes(post.workflow_status) ? formatLiveAdMonth(post.live_date) : "not set"}
           </AssignmentGridCell>
         );
       case "opsStatus":

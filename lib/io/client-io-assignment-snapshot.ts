@@ -17,6 +17,7 @@ export type ClientIoAssignmentSnapshotLine = {
 };
 
 export type ClientIoAssignmentSnapshotDeliverable = {
+  planned_posting_date?: string | null;
   platform: string;
   deliverable_type: string;
   quantity: number;
