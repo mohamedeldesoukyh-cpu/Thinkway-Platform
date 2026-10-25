@@ -20,6 +20,7 @@ import {
   type ScheduleView,
 } from "../review-schedule-model";
 import "../styles/review-schedule.css";
+import { ReviewSchedulePreview } from "./review-schedule-preview";
 import { ReviewScheduleGrids } from "./review-schedule-grids";
 export function ContentReviewSchedule({
   posts,
@@ -254,6 +255,7 @@ export function ContentReviewSchedule({
               </button>
             ))}
           </div>
+          <ReviewSchedulePreview campaignId="current" token={token} onDownload={download} downloading={downloading} />
           <div className="dl" ref={menuRef}>
             <button
               type="button"
