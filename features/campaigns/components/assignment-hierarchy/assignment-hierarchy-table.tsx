@@ -58,7 +58,7 @@ import { logAssignmentsStage } from "@/lib/campaigns/assignments-render-log";
 import { operationalFloatingBarContentClass } from "@/components/workspace/operational-floating-action-bar";
 import { cn } from "@/lib/utils";
 
-const PARENT_COLUMN_COUNT = 18;
+const PARENT_BASE_COLUMN_COUNT = 25;
 
 type AssignmentHierarchyTableProps = {
   campaignId: string;
@@ -83,6 +83,7 @@ export function AssignmentHierarchyTable({
   const enableExpansion = assignmentsLayerAtLeast(uiLayer, "expansion");
   const enableBillingPills = assignmentsLayerAtLeast(uiLayer, "billing_pills");
   const enableOperationalActions = assignmentsLayerAtLeast(uiLayer, "operational_actions");
+  const parentColumnCount = PARENT_BASE_COLUMN_COUNT + Number(enableExpansion) + Number(enableOperationalActions);
   const isMinimal = uiLayer === "minimal";
 
   const sanitized = useMemo(
@@ -300,6 +301,7 @@ export function AssignmentHierarchyTable({
                 <CampaignOperationalTableHead>
                   {HIERARCHY_COLUMN_LABELS.deliverables}
                 </CampaignOperationalTableHead>
+                <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.plannedDate}</CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>{HIERARCHY_COLUMN_LABELS.postingDates}</CampaignOperationalTableHead>
                 <CampaignOperationalTableHead>
                   {HIERARCHY_COLUMN_LABELS.costCurrency}
@@ -356,7 +358,7 @@ export function AssignmentHierarchyTable({
               ? row.group.deliverables
               : [];
             const lineCurrency = resolveAssignmentLineCurrency(row.group.line);
-            const colSpan = isMinimal ? 4 : PARENT_COLUMN_COUNT;
+            const colSpan = isMinimal ? 4 : parentColumnCount;
 
             return (
               <AssignmentRowErrorBoundary key={lineId} lineId={lineId} colSpan={colSpan}>
@@ -398,7 +400,7 @@ export function AssignmentHierarchyTable({
                         selectedIds={new Set()}
                         onToggleDeliverable={() => {}}
                         showSelection={false}
-                        parentColSpan={PARENT_COLUMN_COUNT}
+                        parentColSpan={parentColumnCount}
                         showExpandColumn={enableExpansion}
                         leadingParentColumnIds={assignmentChildLeadingParentColumnIds(
                           enableExpansion

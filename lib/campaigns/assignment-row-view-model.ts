@@ -49,6 +49,7 @@ export type AssignmentRowViewModel = {
   platformSummary: string;
   platforms: string[];
   postingSummary: string;
+  plannedPostingSummary: string;
   opsStatusLabel: string;
   billingStatusLabel: string;
   rollups: ReturnType<typeof coalesceAssignmentRollups>;
@@ -95,9 +96,9 @@ function collectLiveDates(group: AssignmentHierarchyGroup): Array<string | null 
   return deliverables.flatMap((d) => {
     const posts = Array.isArray(d.posts) ? d.posts : [];
     if (posts.length > 0) {
-      return posts.map((p) => p.live_date);
+      return posts.filter(p => ["posted", "published", "live", "verified"].includes(p.workflow_status)).map((p) => p.live_date);
     }
-    return [d.live_date];
+    return ["posted", "published", "live", "verified"].includes(d.workflow_status) ? [d.live_date] : [];
   });
 }
 
@@ -219,6 +220,7 @@ export function buildAssignmentRowViewModel(
     platformSummary: summarizePlatforms(group),
     platforms: collectPlatforms(group),
     postingSummary: safeSummarizePostingDates(collectLiveDates(group)),
+    plannedPostingSummary: safeSummarizePostingDates((group.deliverables ?? []).map(d => d.planned_posting_date)),
     opsStatusLabel: LINE_OPERATIONAL_STATUS_LABELS[operationalStatus] ?? operationalStatus,
     lineBillingStatus,
     billingStatusLabel: labelForBillingStatus(lineBillingStatus),

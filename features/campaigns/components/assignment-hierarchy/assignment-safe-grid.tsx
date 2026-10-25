@@ -109,6 +109,7 @@ import {
   useOperationalChildColumnVisibleChecker,
   useOperationalColumnVisibleChecker,
   useOperationalVisibleColumnCount,
+  useOperationalTableColumnsContext,
 } from "@/components/tables/operational-table-column-context";
 import {
   getCreatorConnectedPlatformOptions,
@@ -170,10 +171,11 @@ export function AssignmentSafeGrid({
   const col = useOperationalColumnVisibleChecker();
   const childCol = useOperationalChildColumnVisibleChecker();
   const parentColSpan = useOperationalVisibleColumnCount();
+  const { state: parentColumnState } = useOperationalTableColumnsContext();
 
   const visibleParentColumns = useMemo(
-    () => getVisibleAssignmentGridColumns(col, gates),
-    [col, gates]
+    () => getVisibleAssignmentGridColumns(col, gates).sort((a, b) => parentColumnState.order.indexOf(a) - parentColumnState.order.indexOf(b)),
+    [col, gates, parentColumnState.order]
   );
   const gridCols = useMemo(
     () => buildAssignmentCssGridCols(visibleParentColumns),
@@ -506,7 +508,7 @@ export function AssignmentSafeGrid({
             ["--cols" as string]: gridCols,
           }}
         >
-          <AssignmentGridRow cols={gridCols} className={cn("tw-hr", SAFE_GRID_HEAD)}>
+          <AssignmentGridRow columnOrder={visibleParentColumns} cols={gridCols} className={cn("tw-hr", SAFE_GRID_HEAD)}>
               {col("select") ? (
                 <AssignmentGridCell header columnId="select" className={cn(SAFE_GRID_TH, SAFE_GRID_CONTROL_CELL)}>
                   {gates.enableCheckboxes ? (
@@ -549,6 +551,9 @@ export function AssignmentSafeGrid({
                 >
                   {HIERARCHY_COLUMN_LABELS.fullDescription}
                 </AssignmentGridCell>
+              ) : null}
+              {col("plannedDate") ? (
+                <AssignmentGridCell header columnId="plannedDate" className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.plannedDate}</AssignmentGridCell>
               ) : null}
               {col("postingDates") ? (
                 <AssignmentGridCell header columnId="postingDates" className={SAFE_GRID_TH}>{HIERARCHY_COLUMN_LABELS.postingDates}</AssignmentGridCell>
@@ -639,6 +644,7 @@ export function AssignmentSafeGrid({
                     {tryRenderRowCells(row.lineId, parentColSpan, () => (
                       <AssignmentGridRow
                         cols={gridCols}
+                        columnOrder={visibleParentColumns}
                         className={cn(
                           "tw-r",
                           SAFE_GRID_PARENT_ROW,
@@ -769,6 +775,11 @@ export function AssignmentSafeGrid({
                               value={line.description}
                               readOnly={!gates.enableEditActions}
                             />
+                          </AssignmentGridCell>
+                        ) : null}
+                        {col("plannedDate") ? (
+                          <AssignmentGridCell columnId="plannedDate" className={cn(SAFE_GRID_TD, "text-center text-muted-foreground")} suppressHydrationWarning>
+                            {row.plannedPostingSummary}
                           </AssignmentGridCell>
                         ) : null}
                         {col("postingDates") ? (
