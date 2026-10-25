@@ -250,16 +250,6 @@ export function ExecutiveDashboardView({
             value: money(unbilled?.value ?? 0),
             tone: (unbilled?.value ?? 0) > 0 ? "r" : undefined,
           },
-          {
-            label: "Alerts",
-            value: alertCount,
-            tone: alertCount > 0 ? "r" : undefined,
-          },
-          {
-            label: "Currencies",
-            value: data.meta.currency_count ?? currency.currencies.length,
-            tone: mixed ? "s" : undefined,
-          },
         ]}
         bandMessage={focusMessage}
         bandSub={focusSub}
@@ -306,13 +296,13 @@ export function ExecutiveDashboardView({
                 figure you can report.
               </div>
             ) : (
-              <div className="tw-note">
+              <details className="tw-note ed-basis"><summary>How figures are calculated · live dates, invoice dates and current balances</summary>
                 Revenue and matching costs are recognized when ads are confirmed live, excluding VAT.
                 Planned revenue: {money(card(data, "planned")?.value ?? 0)}.
                 Recognized cost: {money(card(data, "recognized_cost")?.value ?? 0)}.
                 Date filters apply to ad live dates and invoice issue dates. Collections, outstanding,
                 unbilled and vendor payable show current balances; collections and payables include applicable VAT.
-              </div>
+              </details>
             )
           }
         >

@@ -1,56 +1,59 @@
 /* Executive-only hierarchy: one summary, readable charts, consistent tables. */
 .home-dashboard-suite.executive-redesign { background:#f5f7fb; color:#17243b; font-size:13px; padding:16px 22px; }
 .home-dashboard-suite.executive-redesign > .tw-frozen { position:static !important; top:auto !important; margin:0 0 16px; padding:0; background:transparent; }
-.executive-redesign .tw-idbar,.executive-redesign .tw-top { display:none; }
-.executive-redesign .tw-mast { border-radius:16px; box-shadow:none; overflow:hidden; }
-.executive-redesign .tw-mh { padding:16px 20px; }
-.executive-redesign .tw-mh .sub { font-size:12px; }
-.executive-redesign .tw-mb { padding:10px 20px; font-size:12px; }
-.home-dashboard-suite.executive-redesign .tw-ms2 { grid-template-columns:repeat(5,minmax(0,1fr)); background:white; }
-.executive-redesign .tw-ms2 > div { padding:14px 18px; border-bottom:1px solid #edf1f7; }
-.executive-redesign .tw-ms2 i { font-size:10px; letter-spacing:.45px; color:#64748b; }
-.executive-redesign .tw-ms2 b { font-size:19px; letter-spacing:-.5px; margin-top:6px; }
-.executive-redesign .tw-mr { padding:8px 16px; }
-.executive-redesign .tw-jump { padding:12px 0 0; }
+.home-dashboard-suite.executive-redesign .tw-idbar,.home-dashboard-suite.executive-redesign .tw-top { display:none; }
+.home-dashboard-suite.executive-redesign .tw-mast { border-radius:16px; box-shadow:none; overflow:hidden; }
+.home-dashboard-suite.executive-redesign .tw-mh { padding:16px 20px; }
+.home-dashboard-suite.executive-redesign .tw-mh .sub { font-size:12px; }
+.home-dashboard-suite.executive-redesign .tw-mb { padding:10px 20px; font-size:12px; }
+.home-dashboard-suite.executive-redesign .tw-ms2 { grid-template-columns:repeat(4,minmax(0,1fr)); background:white; }
+.home-dashboard-suite.executive-redesign .tw-ms2 > div { padding:14px 18px; border-bottom:1px solid #edf1f7; }
+.home-dashboard-suite.executive-redesign .tw-ms2 i { font-size:10px; letter-spacing:.45px; color:#64748b; }
+.home-dashboard-suite.executive-redesign .tw-ms2 b { font-size:19px; letter-spacing:-.5px; margin-top:6px; }
+.home-dashboard-suite.executive-redesign .tw-mr { padding:8px 16px; }
+.home-dashboard-suite.executive-redesign .tw-jump { padding:12px 0 0; }
 .home-dashboard-suite.executive-redesign .tw-main { max-width:none; }
-.executive-redesign .tw-c { border:1px solid #e1e7f0; border-radius:12px; box-shadow:none; margin-bottom:18px; overflow:hidden; scroll-margin-top:16px; }
-.executive-redesign .tw-ch { padding:14px 18px; background:#fff; border-bottom:1px solid #edf1f7; gap:10px; }
-.executive-redesign .tw-ct { font-size:14px; font-weight:650; }
-.executive-redesign .tw-cs { font-size:12px; color:#718096; line-height:1.5; }
-.executive-redesign .tw-pad { padding:18px; }
-.executive-redesign .tw-note { font-size:11px; line-height:1.65; padding:10px 18px; }
-.executive-redesign .ed-charts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
-.executive-redesign .ed-chart { min-width:0; border:1px solid #e6ebf3; border-radius:10px; padding:16px; background:#fff; }
-.executive-redesign .ed-chart-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; }
-.executive-redesign .ed-chart h3 { margin:0; font-size:13px; font-weight:650; }
-.executive-redesign .ed-chart-key { width:8px; height:8px; border-radius:50%; }
-.executive-redesign .ed-chart p { font-size:11px; color:#718096; margin:5px 0 8px; line-height:1.5; min-height:32px; }
-.executive-redesign .ed-chart-readout { font-size:11px; color:#52637c; min-height:18px; font-variant-numeric:tabular-nums; }
-.executive-redesign .ed-chart svg { display:block; width:100%; overflow:visible; }
-.executive-redesign .ed-chart svg text { font:10px var(--font-geist-sans),Arial,sans-serif; fill:#64748b; }
-.executive-redesign .ed-chart svg g[tabindex]:focus { outline:2px solid #94baff; }
-.executive-redesign .ed-chart-data { border-top:1px solid #edf1f7; padding-top:8px; font-size:11px; }
-.executive-redesign .ed-chart-data summary { color:#42628b; cursor:pointer; }
-.executive-redesign .ed-chart-data table { width:100%; font-size:11px; border-collapse:collapse; }
-.executive-redesign .ed-chart-data td,.executive-redesign .ed-chart-data th { padding:6px 0; text-align:left; }
-.executive-redesign .ed-chart-data td:last-child,.executive-redesign .ed-chart-data th:last-child { text-align:right; }
-.executive-redesign .ed-chart-empty { height:180px; display:grid; place-items:center; font-size:12px; color:#718096; }
-.executive-redesign .ed-balances { background:#f8faff; }
-.executive-redesign .ed-pipeline-note { font-size:12px; color:#718096; margin:4px 0 16px; }
-.executive-redesign #pipeline .tw-big { font-size:24px; letter-spacing:-.7px; }
-.executive-redesign .ed-pipeline-table { width:100%; min-width:760px; border-collapse:collapse; text-align:left; font-size:13px; }
-.executive-redesign .ed-pipeline-table th { font-size:10px; text-transform:uppercase; letter-spacing:.45px; color:#64748b; background:#f6f8fc; font-weight:600; }
-.executive-redesign .ed-pipeline-table td { border-bottom:1px solid #edf1f7; line-height:1.6; }
-.executive-redesign .ed-pipeline-table td:first-child { width:36%; font-weight:550; }
-.executive-redesign .ed-pipeline-table td:first-child div { font-size:11px; font-weight:400; color:#718096; }
-.executive-redesign .ed-pipeline-table th:nth-child(n+3),.executive-redesign .ed-pipeline-table td:nth-child(n+3) { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
-.executive-redesign .ed-pipeline-table tbody tr:hover { background:#f8faff; }
-.executive-redesign .ed-pipeline-bar { display:block; height:4px; background:#e9eff9; margin-top:5px; border-radius:4px; overflow:hidden; }
-.executive-redesign .ed-pipeline-bar > span { display:block; height:100%; background:#145cf5; border-radius:4px; }
+.home-dashboard-suite.executive-redesign .tw-c { border:1px solid #e1e7f0; border-radius:12px; box-shadow:none; margin-bottom:18px; overflow:hidden; scroll-margin-top:16px; }
+.home-dashboard-suite.executive-redesign .tw-ch { padding:14px 18px; background:#fff; border-bottom:1px solid #edf1f7; gap:10px; }
+.home-dashboard-suite.executive-redesign .tw-ct { font-size:14px; font-weight:650; }
+.home-dashboard-suite.executive-redesign .tw-cs { font-size:12px; color:#718096; line-height:1.5; }
+.home-dashboard-suite.executive-redesign .tw-pad { padding:18px; }
+.home-dashboard-suite.executive-redesign .tw-note { font-size:11px; line-height:1.65; padding:10px 18px; }
+.home-dashboard-suite.executive-redesign .ed-charts { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:20px; }
+.home-dashboard-suite.executive-redesign .ed-chart { min-width:0; border:1px solid #e6ebf3; border-radius:10px; padding:16px; background:#fff; }
+.home-dashboard-suite.executive-redesign .ed-chart-heading { display:flex; justify-content:space-between; align-items:center; gap:8px; }
+.home-dashboard-suite.executive-redesign .ed-chart h3 { margin:0; font-size:13px; font-weight:650; }
+.home-dashboard-suite.executive-redesign .ed-chart-key { width:8px; height:8px; border-radius:50%; }
+.home-dashboard-suite.executive-redesign .ed-chart p { font-size:11px; color:#718096; margin:5px 0 8px; line-height:1.5; min-height:32px; }
+.home-dashboard-suite.executive-redesign .ed-chart-readout { font-size:11px; color:#52637c; min-height:18px; font-variant-numeric:tabular-nums; }
+.home-dashboard-suite.executive-redesign .ed-chart svg { display:block; width:100%; overflow:visible; }
+.home-dashboard-suite.executive-redesign .ed-chart svg text { font:10px var(--font-geist-sans),Arial,sans-serif; fill:#64748b; }
+.home-dashboard-suite.executive-redesign .ed-chart svg g[tabindex]:focus { outline:2px solid #94baff; }
+.home-dashboard-suite.executive-redesign .ed-chart-data { border-top:1px solid #edf1f7; padding-top:8px; font-size:11px; }
+.home-dashboard-suite.executive-redesign .ed-chart-data summary { color:#42628b; cursor:pointer; }
+.home-dashboard-suite.executive-redesign .ed-chart-data table { width:100%; font-size:11px; border-collapse:collapse; }
+.home-dashboard-suite.executive-redesign .ed-chart-data td,.home-dashboard-suite.executive-redesign .ed-chart-data th { padding:6px 0; text-align:left; }
+.home-dashboard-suite.executive-redesign .ed-chart-data td:last-child,.home-dashboard-suite.executive-redesign .ed-chart-data th:last-child { text-align:right; }
+.home-dashboard-suite.executive-redesign .ed-chart-empty { height:180px; display:grid; place-items:center; font-size:12px; color:#718096; }
+.home-dashboard-suite.executive-redesign .ed-balances { background:#f8faff; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-note { font-size:12px; color:#718096; margin:4px 0 16px; }
+.home-dashboard-suite.executive-redesign #pipeline .tw-big { font-size:24px; letter-spacing:-.7px; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-table { width:100%; min-width:760px; border-collapse:collapse; text-align:left; font-size:13px; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-table th { font-size:10px; text-transform:uppercase; letter-spacing:.45px; color:#64748b; background:#f6f8fc; font-weight:600; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-table td { border-bottom:1px solid #edf1f7; line-height:1.6; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-table td:first-child { width:36%; font-weight:550; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-table td:first-child div { font-size:11px; font-weight:400; color:#718096; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-table th:nth-child(n+3),.home-dashboard-suite.executive-redesign .ed-pipeline-table td:nth-child(n+3) { text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-table tbody tr:hover { background:#f8faff; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-bar { display:block; height:4px; background:#e9eff9; margin-top:5px; border-radius:4px; overflow:hidden; }
+.home-dashboard-suite.executive-redesign .ed-pipeline-bar > span { display:block; height:100%; background:#145cf5; border-radius:4px; }
 .home-dashboard-suite.executive-redesign .tw-two { grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
-.executive-redesign .tw-r { padding:12px 18px; font-size:12px; }
-.executive-redesign .tw-r .tw-v { font-size:12px; font-variant-numeric:tabular-nums; }
-@media(min-width:1600px) { .executive-redesign .ed-chart svg { max-height:230px; } }
-@media(max-width:1100px) { .executive-redesign .ed-charts { grid-template-columns:repeat(2,minmax(0,1fr)); } .home-dashboard-suite.executive-redesign .tw-ms2 { grid-template-columns:repeat(3,minmax(0,1fr)); } }
-@media(max-width:760px) { .home-dashboard-suite.executive-redesign { padding:10px; } .executive-redesign .ed-charts,.home-dashboard-suite.executive-redesign .tw-two { grid-template-columns:minmax(0,1fr); } .home-dashboard-suite.executive-redesign .tw-ms2 { grid-template-columns:repeat(2,minmax(0,1fr)); } .executive-redesign .tw-ms2 b { font-size:16px; } .executive-redesign .tw-ch { flex-wrap:wrap; } }
-@media(prefers-reduced-motion:reduce) { .executive-redesign * { animation:none !important; transition:none !important; } }
+.home-dashboard-suite.executive-redesign .tw-r { padding:12px 18px; font-size:12px; }
+.home-dashboard-suite.executive-redesign .tw-r .tw-v { font-size:12px; font-variant-numeric:tabular-nums; }
+@media(min-width:1600px) { .home-dashboard-suite.executive-redesign .ed-chart svg { max-height:230px; } }
+@media(max-width:1100px) { .home-dashboard-suite.executive-redesign .ed-charts { grid-template-columns:repeat(2,minmax(0,1fr)); } .home-dashboard-suite.executive-redesign .tw-ms2 { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media(max-width:760px) { .home-dashboard-suite.executive-redesign { padding:10px; } .home-dashboard-suite.executive-redesign .ed-charts,.home-dashboard-suite.executive-redesign .tw-two { grid-template-columns:minmax(0,1fr); } .home-dashboard-suite.executive-redesign .tw-ms2 { grid-template-columns:repeat(2,minmax(0,1fr)); } .home-dashboard-suite.executive-redesign .tw-ms2 b { font-size:16px; } .home-dashboard-suite.executive-redesign .tw-ch { flex-wrap:wrap; } }
+@media(prefers-reduced-motion:reduce) { .home-dashboard-suite.executive-redesign * { animation:none !important; transition:none !important; } }
+
+.home-dashboard-suite.executive-redesign .tw-mast .tw-mr { display:flex; }
+.home-dashboard-suite.executive-redesign .ed-basis summary { cursor:pointer; color:#52637c; font-weight:500; }
