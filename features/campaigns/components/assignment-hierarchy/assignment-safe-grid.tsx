@@ -16,7 +16,6 @@ import {
 import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
-import { assignmentHasGoneLive } from "@/lib/campaigns/assignment-live-status";
 import { Button } from "@/components/ui/button";
 import { DocumentNumber } from "@/components/ui/document-number";
 import { AssignmentCreatorCell } from "@/features/campaigns/components/assignment-hierarchy/assignment-creator-cell";
@@ -699,7 +698,7 @@ export function AssignmentSafeGrid({
                               {!col("creator") && <AssignmentCreatorCell name={line.influencer_name ?? row.displayName} avatarUrl={line.creator_avatar_url ?? line.influencer_avatar_url ?? line.creator_profile_image_url} handle={resolveAssignmentPrimaryHandle(line)} onClick={onOpenInfluencerDetail ? () => onOpenInfluencerDetail(row.group, row) : undefined} />}
                               <p className="tw-id">
                                 <DocumentNumber value={line.document_number} />
-                                {assignmentHasGoneLive(line, row.group.deliverables) && <Badge variant="outline" className="ml-2 campaign-went-live-badge">Went live</Badge>}
+                                {(line.went_live_date || row.group.deliverables.some(d => d.workflow_status === "posted" || d.posts.some(p => p.workflow_status === "posted"))) && <Badge variant="outline" className="ml-2 campaign-went-live-badge">Went live</Badge>}
                               </p>
                               {gates.showInternalFinancials &&
                               (campaignPoExceeded || line.po_over_consumed) ? (
