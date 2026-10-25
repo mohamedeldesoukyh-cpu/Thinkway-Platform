@@ -24,7 +24,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { createBrandAction, updateBrandAction, listBrandLegalEntities } from "@/features/brands/actions";
+import { createBrandAction, updateBrandAction } from "@/features/brands/actions";
 import { EntityLogoField } from "@/features/entity-logos/components/entity-logo-field";
 import { CLIENT_STATUS_OPTIONS } from "@/features/clients/constants";
 import type { GroupBrandRow, GroupLegalEntityRow } from "@/features/groups/types";
@@ -76,12 +76,26 @@ export function BrandSheet({
   const [status, setStatus] = useState<ClientStatus>(brand?.status ?? "active");
 
   const [allClients, setAllClients] = useState<Pick<GroupLegalEntityRow, "id" | "name" | "vr_rate_id" | "vr_rate_percent">[]>(legalEntities);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientsError, setClientsError] = useState(false);
+  const [clientsRetry, setClientsRetry] = useState(0);
   useEffect(() => {
     if (!open) return;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
     let cancelled = false;
-    listBrandLegalEntities().then(rows => { if (!cancelled) setAllClients(rows); }).catch(() => toast.error("Could not load all clients. Close and try again."));
-    return () => { cancelled = true; };
-  }, [open]);
+    setClientsLoading(true);
+    setClientsError(false);
+    fetch("/api/brands/legal-entities", { cache: "no-store", signal: controller.signal })
+      .then(async response => {
+        if (!response.ok) throw new Error("Could not load clients");
+        return response.json();
+      })
+      .then(rows => { if (!cancelled) setAllClients(rows); })
+      .catch(() => { if (!cancelled) setClientsError(true); })
+      .finally(() => { clearTimeout(timeout); if (!cancelled) setClientsLoading(false); });
+    return () => { cancelled = true; clearTimeout(timeout); controller.abort(); };
+  }, [open, clientsRetry]);
 
   const selectedClient = useMemo(
     () => allClients.find((entity) => entity.id === clientId),
@@ -200,14 +214,17 @@ export function BrandSheet({
           </div>
 
           <div className="grid gap-2">
-            <Label>Client (required)</Label>
+            <Label>Legal entity (required)</Label>
             <SearchableSelect
               value={clientId}
               onValueChange={setClientId}
               options={clientOptions}
+              searchPlaceholder="Search legal entities..."
               disabled={isPending}
               placeholder="Select client"
             />
+            {clientsLoading && <p role="status" className="text-xs text-muted-foreground">Loading legal entities…</p>}
+            {clientsError && <p role="alert" className="text-xs text-destructive">Could not load legal entities. <button type="button" className="underline" onClick={() => setClientsRetry(value => value + 1)}>Retry</button></p>}
             {isEdit && <p className="text-xs text-muted-foreground">Changing the legal entity updates linked shortlists, quotations, campaigns and financial documents when you save.</p>}
           </div>
 

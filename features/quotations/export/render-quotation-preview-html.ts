@@ -65,12 +65,19 @@ export async function renderQuotationPreviewHtml(
     displayFxRateToEgp,
   });
   if (isQuotationListTemplate(template)) doc.clientLogo = await loadCreatorListClientLogo(supabase, enriched.client_id, template !== "client-list-by-name");
-  doc = await embedQuotationDocumentAvatars(doc);
+  const siteOrigin = options?.siteOrigin?.trim() || resolveQuotationExportSiteOrigin(undefined, undefined);
+  if (isQuotationListTemplate(template)) {
+    // Render the report immediately; portraits resolve independently through the
+    // existing same-origin image proxy. Offline exports still embed all images.
+    doc = { ...doc, creatorGroups: doc.creatorGroups.map(group => ({
+      ...group,
+      avatarUrl: group.avatarProxyUrl ? new URL(group.avatarProxyUrl, siteOrigin).toString() : group.avatarUrl,
+    })) };
+  } else {
+    doc = await embedQuotationDocumentAvatars(doc);
+  }
   doc = await embedQuotationDocumentPublicationShots(doc);
 
-  const siteOrigin =
-    options?.siteOrigin?.trim() ||
-    resolveQuotationExportSiteOrigin(undefined, undefined);
   const html = buildQuotationHtml(doc, { siteOrigin });
 
   return {
