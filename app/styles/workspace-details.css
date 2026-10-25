@@ -114,3 +114,7 @@ body:has(.workspace-redesign) .wr-assignment-form .assignment-platform label { f
 body:has(.workspace-redesign) .wr-assignment-form .assignment-service-choice { min-height:28px; padding:4px 7px; border-radius:6px; }
 body:has(.workspace-redesign) .wr-assignment-form .assignment-platform [data-slot="badge"] { padding:0; border:0; background:transparent; font-size:10px; font-weight:400; }
 .wr-assignment-commercial { display:grid; gap:12px; }
+
+body:has(.workspace-redesign) .wr-assignment-form .assignment-platform .assignment-service-choice { padding:4px 7px!important; min-height:28px!important; font-size:11px!important; text-transform:none!important; letter-spacing:0!important; font-weight:500!important; }
+body:has(.workspace-redesign) .wr-assignment-form .assignment-platform .assignment-service-choice input { min-height:0!important; width:13px; height:13px; }
+.wr-assignment-po summary { padding:10px 12px; border:1px solid #e7ecf4; border-radius:8px; background:white; cursor:pointer; font-size:12px; font-weight:500; }

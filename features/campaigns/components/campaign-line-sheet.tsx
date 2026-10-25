@@ -1057,20 +1057,25 @@ export function CampaignLineSheet({
 
           </section>
           <div className="wr-assignment-commercial" hidden={editorSection !== "commercial"}>
-          <div className="wr-assignment-po"><CampaignLinePoPanel
-            currency={currencyCode}
-            poAmount={po.po_amount_campaign_currency}
-            consumed={po.po_consumed_amount}
-            currentLineRevenue={revenue}
-            excludeLineRevenue={line?.revenue_before_vat ?? 0}
-            poCurrency={po.po_currency}
-            exchangeRate={po.po_exchange_rate}
-            fxSnapshotAt={po.fx_snapshot_at}
-          /></div>
+
 
           <div className="grid gap-4">
             <input type="hidden" name="po_amount" value={poAmount} />
             <section className="wr-assignment-cost"><h3>Cost side</h3>
+            <AssignmentMultiCurrencyCostFields
+              campaignCurrency={currency}
+              costReceived={costReceived}
+              costReceivedCurrency={costReceivedCurrency}
+              costInLc={cost}
+              currencyOptions={currencyOptions}
+              disabled={costCommercialLocked}
+              lockHint={costLockHint}
+              onCostReceivedChange={setCostReceived}
+              onCostReceivedCurrencyChange={setCostReceivedCurrency}
+              onCostInLcChange={setCost}
+              onFxRateChange={() => {}}
+            />
+
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="grid gap-1.5">
                 <label className="text-xs font-medium text-muted-foreground">
@@ -1094,20 +1099,6 @@ export function CampaignLineSheet({
                 </p>
               </div>
             </div>
-
-            <AssignmentMultiCurrencyCostFields
-              campaignCurrency={currency}
-              costReceived={costReceived}
-              costReceivedCurrency={costReceivedCurrency}
-              costInLc={cost}
-              currencyOptions={currencyOptions}
-              disabled={costCommercialLocked}
-              lockHint={costLockHint}
-              onCostReceivedChange={setCostReceived}
-              onCostReceivedCurrencyChange={setCostReceivedCurrency}
-              onCostInLcChange={setCost}
-              onFxRateChange={() => {}}
-            />
 
             <VatAmountSection
               title="Creator cost VAT"
@@ -1241,6 +1232,16 @@ export function CampaignLineSheet({
               · Margin {gpPreview.marginPercent}%
             </p>
           </div>
+          <details className="wr-assignment-po"><summary>Purchase order utilization</summary><CampaignLinePoPanel
+            currency={currencyCode}
+            poAmount={po.po_amount_campaign_currency}
+            consumed={po.po_consumed_amount}
+            currentLineRevenue={revenue}
+            excludeLineRevenue={line?.revenue_before_vat ?? 0}
+            poCurrency={po.po_currency}
+            exchangeRate={po.po_exchange_rate}
+            fxSnapshotAt={po.fx_snapshot_at}
+          /></details>
         <section className="wr-assignment-derived">
           <h3>Totals</h3>
           <AssignmentStickyFooter
