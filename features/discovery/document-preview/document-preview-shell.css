@@ -69,3 +69,12 @@
   border-radius: 0;
   background: #0b0847;
 }
+
+.document-preview-search{display:flex;align-items:center;gap:5px;border:1px solid rgba(255,255,255,.25);border-radius:8px;padding:4px 8px;color:inherit;min-height:32px;background:rgba(255,255,255,.08)}
+.document-preview-search input{width:140px;min-width:0;border:0;background:transparent;color:inherit;font:inherit;font-size:12px;outline:none}
+.document-preview-search:focus-within{outline:2px solid #8cb4ff;outline-offset:1px}
+.document-preview-search input::placeholder{color:inherit;opacity:.7}
+.document-preview-search span{font-size:11px;white-space:nowrap}
+.document-preview-search button{display:grid;place-items:center;width:25px;height:25px;border:0;border-radius:4px;background:transparent;color:inherit;cursor:pointer}
+.document-preview-search button:disabled{opacity:.4;cursor:default}
+.document-preview-search button:hover:not(:disabled){background:rgba(255,255,255,.15)}

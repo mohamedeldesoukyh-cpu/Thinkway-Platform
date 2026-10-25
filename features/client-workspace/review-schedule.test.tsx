@@ -209,7 +209,7 @@ test("a readable script does not promote its draft to a client decision; complet
   assert.equal(pending[0].has_script, true);
   assert.equal(pending.filter(scheduleNeedsDecision).length, 1);
   const report = scheduleReportHtml({ ...scheduleFixture, rows }, "2026-09-26");
-  assert.equal((report.match(/<tr><td>/g) || []).length, 1);
+  assert.equal((report.match(/data-review-row=/g) || []).length, 1);
   assert.doesNotMatch(report, /<td>Script<\/td>/);
   assert.equal(scheduleRows([post], [asset], new Set())[0].status, "approved");
   assert.equal(
@@ -227,10 +227,10 @@ test("a readable script does not promote its draft to a client decision; complet
 });
 test("HTML contains all rows, escaped text, and required print pagination", () => {
   const html = scheduleReportHtml(scheduleFixture, "2026-09-26");
-  assert.equal((html.match(/<tr><td>/g) || []).length, 49);
-  assert.match(html, /thead\{display:table-header-group\}/);
-  assert.match(html, /page-break-inside:avoid/);
-  assert.match(html, /page-break-after:avoid/);
+  assert.equal((html.match(/data-review-row=/g) || []).length, 49);
+  assert.match(html, /class="tr th"/);
+  assert.match(html, /break-inside:avoid/);
+  assert.match(html, /break-after:page/);
   assert.match(
     scheduleReportHtml(
       { ...scheduleFixture, name: "<script>alert(1)</script>" },

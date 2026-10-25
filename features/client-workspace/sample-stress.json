@@ -1,0 +1,25 @@
+{
+  "campaign": {
+    "name": "Stress test — mixed statuses",
+    "client": "Example Client LLC",
+    "agency": "WPP Media",
+    "start": "2026-10-20",
+    "end": "2026-11-08",
+    "snapshot": "2026-10-25",
+    "copy_label": "Client copy"
+  },
+  "deliverables": [
+    {"creator": "@creator.one", "type": "Package", "items": "1× IG Reel + 1× IG Story + 1× mirrored tt", "ref": "D-101", "status": "approved", "expected_review": "2026-10-22", "delivery": null, "script_on_file": true, "action": null},
+    {"creator": "@creator.two", "type": "Reel", "items": "1× IG Reel", "ref": "D-102", "status": "changes_requested", "expected_review": "2026-10-24", "delivery": null, "script_on_file": true, "action": "Re-review"},
+    {"creator": "@creator.three", "type": "Package", "items": "1× IG Reel + 1× IG Story + 1× boosting + 1× mirrored tt + 1× mirrored fb + 1× mirrored yt + 1× usage right", "ref": "D-103", "status": "needs_decision", "expected_review": "2026-10-25", "delivery": null, "script_on_file": true, "action": "Approve"},
+    {"creator": "@creator.three", "type": "Story", "items": "1× IG Story", "ref": "D-104", "status": "needs_decision", "expected_review": "2026-10-26", "delivery": null, "script_on_file": false, "action": "Review"},
+    {"creator": "Long Creator Name With Several Words", "type": "Package", "items": "1× IG Reel + 1× IG Story + 1× boosting", "ref": "D-105", "status": "awaiting_content", "expected_review": null, "delivery": "2026-10-29", "script_on_file": false, "action": null},
+    {"creator": "@creator.five", "type": "Package", "items": "1× TikTok video + 1× IG Reel", "ref": "D-106", "status": "awaiting_content", "expected_review": "2026-10-29", "delivery": null, "script_on_file": false, "action": null},
+    {"creator": "@creator.six", "type": "Package", "items": "1× IG Reel + 1× IG Story + 1× mirrored tt + 1× boosting", "ref": "D-107", "status": "awaiting_content", "expected_review": "2026-11-02", "delivery": null, "script_on_file": false, "action": null},
+    {"creator": "@creator.seven", "type": "Package", "items": "1× IG Reel + 1× IG Story", "ref": "D-108", "status": "awaiting_content", "expected_review": "2026-11-03", "delivery": null, "script_on_file": false, "action": null},
+    {"creator": "@creator.eight", "type": "Package", "items": "1× IG Reel + 1× IG Story + 1× usage right", "ref": "D-109", "status": "awaiting_content", "expected_review": "2026-11-05", "delivery": null, "script_on_file": false, "action": null},
+    {"creator": "@creator.nine", "type": "Package", "items": "1× IG Reel + 1× mirrored tt", "ref": "D-110", "status": "awaiting_content", "expected_review": "2026-11-06", "delivery": null, "script_on_file": false, "action": null},
+    {"creator": "@creator.ten", "type": "Package", "items": "1× IG Reel + 1× IG Story + 1× boosting + 1× mirrored tt", "ref": "D-111", "status": "awaiting_content", "expected_review": "2026-11-08", "delivery": null, "script_on_file": false, "action": null},
+    {"creator": "@creator.eleven", "type": "Package", "items": "1× IG Reel", "ref": "D-112", "status": "awaiting_content", "expected_review": null, "delivery": null, "script_on_file": false, "action": null}
+  ]
+}

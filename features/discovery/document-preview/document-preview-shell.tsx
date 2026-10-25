@@ -13,6 +13,8 @@ import {
   MinusIcon,
   PlusIcon,
   RotateCcwIcon,
+  SearchIcon,
+  XIcon,
 } from "lucide-react";
 
 import "./document-preview-shell.css";
@@ -74,6 +76,13 @@ export function DocumentPreviewShell({
   const [zoom, setZoom] = useState(1);
   const [thumbnails, setThumbnails] = useState<string[]>([]);
   const [ready, setReady] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [pageTexts, setPageTexts] = useState<string[]>([]);
+  const [searchIndex, setSearchIndex] = useState(0);
+  const matchingPages = useMemo(() => {
+    const query = searchQuery.trim().toLocaleLowerCase();
+    return query ? pageTexts.flatMap((text, index) => text.includes(query) ? [index + 1] : []) : [];
+  }, [searchQuery, pageTexts]);
 
   const zoomLabel = useMemo(() => `${Math.round(zoom * 100)}%`, [zoom]);
 
@@ -82,6 +91,7 @@ export function DocumentPreviewShell({
     if (!doc) return;
     const pages = documentPages(doc);
     setPageCount(pages.length);
+    setPageTexts(pages.map(page => (page.innerText || page.textContent || "").toLocaleLowerCase()));
     setActivePage((prev) => Math.min(Math.max(1, prev), Math.max(1, pages.length)));
 
     const thumbs: string[] = [];
@@ -105,6 +115,8 @@ export function DocumentPreviewShell({
     setPageCount(0);
     setActivePage(1);
     setThumbnails([]);
+    setPageTexts([]);
+    setSearchIndex(0);
   }, [html, src]);
 
   useEffect(() => {
@@ -193,6 +205,17 @@ export function DocumentPreviewShell({
     []
   );
 
+  useEffect(() => {
+    setSearchIndex(0);
+    if (matchingPages.length) scrollToPage(matchingPages[0]!);
+  }, [matchingPages, scrollToPage]);
+  function moveSearch(direction: number) {
+    if (!matchingPages.length) return;
+    const index = (searchIndex + direction + matchingPages.length) % matchingPages.length;
+    setSearchIndex(index);
+    scrollToPage(matchingPages[index]!);
+  }
+
   const applyZoom = useCallback((nextZoom: number) => {
     setZoom(nextZoom);
     const doc = iframeRef.current?.contentDocument;
@@ -250,7 +273,13 @@ export function DocumentPreviewShell({
     <div className={cn("flex flex-col", contained ? "h-full min-h-0 min-w-0 flex-1 overflow-hidden" : "min-h-[calc(100vh-8rem)] gap-3")}>
       <div className={cn("z-20 shrink-0 border-b border-border print:hidden", contained ? "quotation-preview-toolbar px-3 py-1.5" : "sticky top-0 -mx-4 bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 md:-mx-8 md:px-8")}>
         <div className="flex flex-wrap items-center justify-between gap-1.5">
-          <div className="flex flex-wrap items-center gap-2">{toolbarLeft}</div>
+          <div className="flex flex-wrap items-center gap-2">{toolbarLeft}
+            <form className="document-preview-search" role="search" onSubmit={event => { event.preventDefault(); moveSearch(1); }}>
+              <SearchIcon size={14} aria-hidden="true" />
+              <input type="search" aria-label="Search creators in preview" placeholder="Search creators…" value={searchQuery} onChange={event => setSearchQuery(event.target.value)} onKeyDown={event => { if (event.key === "Escape") { event.stopPropagation(); setSearchQuery(""); } }} disabled={!ready} />
+              {searchQuery && <><span role="status" aria-live="polite">{matchingPages.length ? `${searchIndex + 1}/${matchingPages.length}` : "No matches"}</span><button type="button" aria-label="Previous search result" disabled={!matchingPages.length} onClick={() => moveSearch(-1)}><ChevronLeftIcon size={14}/></button><button type="submit" aria-label="Next search result" disabled={!matchingPages.length}><ChevronRightIcon size={14}/></button><button type="button" aria-label="Clear preview search" onClick={() => setSearchQuery("")}><XIcon size={14}/></button></>}
+            </form>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="mr-1 hidden items-center gap-3 rounded-lg border border-border bg-muted/20 px-3 py-1.5 text-[12px] font-medium text-muted-foreground sm:flex">
               {creatorCount != null && <><span>

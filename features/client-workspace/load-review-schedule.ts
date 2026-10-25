@@ -1,3 +1,4 @@
+import { loadIdentityLogoForClientId } from "./identity-logo";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { listAttachedCampaignScriptPresence } from "@/lib/campaign-script/load-master";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
@@ -23,17 +24,18 @@ export async function loadReviewSchedule(
 
 /** Both exports read current campaign identity, never a frozen quotation/review label. */
 export async function loadCampaignReviewSchedule(db: SupabaseClient, campaignId: string): Promise<ScheduleData | null> {
-  const { data: header, error } = await db.from("campaign_headers").select("id, name, client:clients(name)").eq("id", campaignId).maybeSingle();
+  const { data: header, error } = await db.from("campaign_headers").select("id, name, client_id, client:clients(name)").eq("id", campaignId).maybeSingle();
   if (error) throw new Error("Campaign unavailable");
   if (!header) return null;
-  const [execution, content, scripts] = await Promise.all([
+  const [execution, content, scripts, identityLogo] = await Promise.all([
     loadClientCampaignExecution(db, campaignId, true),
     loadClientCampaignContent(db, campaignId, true),
     listAttachedCampaignScriptPresence(db, campaignId),
+    loadIdentityLogoForClientId(db, header.client_id),
   ]);
   const client = Array.isArray(header.client) ? header.client[0] : header.client;
   return {
-    campaignId, name: header.name || "Campaign", client_name: client?.name || "",
+    identityLogo, campaignId, name: header.name || "Campaign", client_name: client?.name || "",
     start_date: execution.startDate, end_date: execution.endDate,
     rows: scheduleRows(execution.posts, content.items, new Set(scripts.keys())),
   };

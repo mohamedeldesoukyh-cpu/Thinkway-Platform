@@ -1,3 +1,4 @@
+import { inlineRemoteImagesInHtml } from "@/lib/io/pdf-inline-remote-images";
 import { renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { requirePermission } from "@/lib/auth/permissions-server";
@@ -49,18 +50,18 @@ export async function reviewScheduleResponse(
         headers,
       });
     }
-    const html = scheduleReportHtml(data, date);
+    const html = await inlineRemoteImagesInHtml(scheduleReportHtml(data, date));
     if (format === "html") {
       headers["Content-Type"] = "text/html; charset=utf-8";
       headers["Content-Security-Policy"] =
-        "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'";
+        "default-src 'none'; style-src 'unsafe-inline'; img-src data: https:; font-src data:; base-uri 'none'";
       return new Response(html, { headers });
     }
     const pdf = await renderHtmlToPdf(html, {
       format: "A4",
       printBackground: true,
       preferCSSPageSize: true,
-      margin: { top: "14mm", bottom: "14mm", left: "12mm", right: "12mm" },
+      margin: { top: "0", bottom: "0", left: "0", right: "0" },
     });
     if (!pdf.ok)
       return new Response("PDF could not be prepared. Please try again.", {
