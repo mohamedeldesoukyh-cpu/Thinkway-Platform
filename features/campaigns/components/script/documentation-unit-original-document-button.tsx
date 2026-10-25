@@ -56,6 +56,7 @@ type Props = {
   fileName: string;
   mimeType?: string | null;
   disabled?: boolean;
+  showFileName?: boolean;
 };
 
 export function DocumentationUnitOriginalDocumentButton({
@@ -67,6 +68,7 @@ export function DocumentationUnitOriginalDocumentButton({
   fileName,
   mimeType,
   disabled,
+  showFileName = false,
 }: Props) {
   const [pending, setPending] = useState(false);
   const [preview, setPreview] = useState<{ url: string; title: string } | null>(null);
@@ -122,12 +124,13 @@ export function DocumentationUnitOriginalDocumentButton({
       type="button"
       size="sm"
       variant="outline"
-      className={cn("thinkway-campaign-btn h-8 w-8 min-h-8 p-0 px-0 shadow-none")}
+      className={cn("thinkway-campaign-btn h-8 min-h-8 shadow-none", showFileName ? "max-w-full gap-2 px-2" : "w-8 p-0 px-0")}
       disabled={disabled || pending}
       title={`${documentKindLabel}: ${fileName}`}
       aria-label={`Original ${documentKindLabel} document ${fileName}`}
     >
       {avatar}
+      {showFileName && <span className="min-w-0 truncate text-xs">{fileName}</span>}
     </Button>
   );
 

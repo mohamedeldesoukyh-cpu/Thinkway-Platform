@@ -106,6 +106,7 @@ export async function getDeliverablesPanelSnapshotAction(input: { campaignHeader
     return {ok:true, data:{
       metadata: Object.fromEntries((deliverableResult.data ?? []).map(d => [d.id,d.metadata])),
       scripts: [...scripts.keys()],
+      scriptDocuments: Object.fromEntries([...scripts].map(([key, value]) => [key, { originalFileName: value.originalFileName, originalMimeType: value.originalMimeType, hasOriginalDocument: value.hasOriginalDocument }])),
       assets: assets.map(a => {
         const available = versions.data?.filter(v => !versionControls(v.metadata).removed);
         const v = available?.find(v => v.id === a.current_version_id) ?? available?.find(v => v.asset_id === a.id);

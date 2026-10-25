@@ -51,3 +51,13 @@ test('package uses one uploaded review item and retains child script and newest 
  assert.equal(rows.length,1); assert.equal(rows[0].status,'approved'); assert.equal(rows[0].reviewDate,null);
  assert.equal(rows[0].scriptSource?.assignmentDeliverableId,'story'); assert.equal(rows[0].assignmentDeliverableId,'reel');
 });
+
+test('package retains original script attachment from its component without marking content uploaded', () => {
+ const units = ['reel', 'story'].map(id => ({...unit,unitKey:`d:${id}`,assignmentDeliverableId:id,reviewGroupKey:'package:line:1'}));
+ const document = {originalFileName:'Creator script.docx', originalMimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',hasOriginalDocument:true};
+ const rows = buildPanelRows(units,{assets:[],metadata:{},scripts:['d:reel','d:story'],scriptDocuments:{'d:story':document}});
+ assert.equal(rows[0].status, 'missing');
+ assert.equal(rows[0].hasScript, true);
+ assert.deepEqual(rows[0].scriptDocument, document);
+ assert.equal(rows[0].scriptSource?.assignmentDeliverableId,'story');
+});

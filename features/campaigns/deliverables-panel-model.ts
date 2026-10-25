@@ -23,10 +23,12 @@ export type PanelSnapshot = {
     assets: PanelAsset[];
     metadata: Record<string, unknown>;
     scripts: string[];
+    scriptDocuments?: Record<string, { originalFileName: string | null; originalMimeType: string | null; hasOriginalDocument: boolean }>;
 };
 export type PanelRow = DocumentationUnitSummary & {
     status: PanelStatus;
     hasScript: boolean;
+    scriptDocument?: NonNullable<PanelSnapshot["scriptDocuments"]>[string];
     caption: string | null;
     reviewDate: string | null;
     reviewDateUpdatedAt?: string;
@@ -45,6 +47,7 @@ export function buildPanelRows(units: DocumentationUnitSummary[], snapshot: Pane
             file.releasedAt && file.decision !== 'changes_requested' ? 'review' : 'uploaded';
         return { ...unit, status, file,
             hasScript: snapshot.scripts.includes(unit.unitKey),
+            scriptDocument: snapshot.scriptDocuments?.[unit.unitKey],
             caption: assets.find(a => a.type === 'caption')?.text ?? null,
             reviewDateUpdatedAt: contentReviewDateUpdatedAt(snapshot.metadata[unit.assignmentDeliverableId], unit.quantity > 1 ? unit.sequenceNumber : null),
             reviewDate: readContentReviewDates(snapshot.metadata[unit.assignmentDeliverableId] as Record<string, unknown> | null | undefined, unit.quantity > 1 ? unit.sequenceNumber : null).draft,
@@ -58,7 +61,7 @@ export function buildPanelRows(units: DocumentationUnitSummary[], snapshot: Pane
         const row = [...members].sort((a,b) => (b.file?.uploadedAt ?? '').localeCompare(a.file?.uploadedAt ?? ''))[0];
         const dated = [...members].sort((a,b) => (b.reviewDateUpdatedAt ?? '').localeCompare(a.reviewDateUpdatedAt ?? ''));
         const reviewDate = dated[0].reviewDateUpdatedAt ? dated[0].reviewDate : members.find(item => item.reviewDate)?.reviewDate ?? null;
-        return { ...row, label: row.reviewGroupLabel ?? row.label, hasScript: members.some(item => item.hasScript), scriptSource: members.find(item => item.hasScript), packagePlatforms: [...new Set(members.map(item => item.platform).filter(Boolean))].join(" + "), caption: row.caption ?? members.find(item => item.caption)?.caption ?? null, reviewDate };
+        return { ...row, label: row.reviewGroupLabel ?? row.label, hasScript: members.some(item => item.hasScript), scriptSource: members.find(item => item.scriptDocument?.hasOriginalDocument) ?? members.find(item => item.hasScript), scriptDocument: members.find(item => item.scriptDocument?.hasOriginalDocument)?.scriptDocument ?? members.find(item => item.hasScript)?.scriptDocument, packagePlatforms: [...new Set(members.map(item => item.platform).filter(Boolean))].join(" + "), caption: row.caption ?? members.find(item => item.caption)?.caption ?? null, reviewDate };
     });
 }
 export function filterPanelRows(rows: PanelRow[], filter: PanelStatus | 'all', search: string) {
