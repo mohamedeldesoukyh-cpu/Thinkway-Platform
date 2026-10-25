@@ -89,6 +89,17 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const clientLocked = Boolean(line?.commercial_client_locked ?? (line?.revenue_locked || line?.invoice_id));
   const costLocked = Boolean(line?.commercial_cost_locked ?? (line?.active_vendor_io_id || line?.vendor_io_id));
   const selectedKey = selected ? keyOf(selected) : "";
+  useEffect(() => {
+    if (!host || !selected) return;
+    const frame = requestAnimationFrame(() => {
+      const scroller = host.querySelector<HTMLElement>("[data-campaign-workspace-scroll]");
+      const row = host.querySelector<HTMLElement>('[data-assignment-editor-selected="true"]');
+      if (!scroller || !row || !pane.current) return;
+      const overlap = row.getBoundingClientRect().bottom - pane.current.getBoundingClientRect().top + 12;
+      if (overlap > 0) scroller.scrollTop += overlap;
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [host, selectedKey]);
   const units = packageShare?.qty ?? child?.quantity ?? group?.deliverables.reduce((sum, entry) => sum + entry.quantity, 0) ?? 1;
   const cost = Number(packageShare?.cost ?? child?.cost_before_vat ?? line?.cost_before_vat ?? 0);
   const initial: Draft = {
