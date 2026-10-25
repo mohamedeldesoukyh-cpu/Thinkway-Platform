@@ -2,6 +2,7 @@
  * Build documentation units from Assignment hierarchy (D1 granularity).
  */
 
+import { packageReviewGroups } from "./package-review-groups";
 import type { AssignmentHierarchy } from "@/lib/domains/campaign/assignment-hierarchy-types";
 
 import {
@@ -83,6 +84,7 @@ export function buildDocumentationUnitsFromHierarchy(
           assignmentName,
           platform,
           deliverableType: deliverable.deliverable_type ?? null,
+          plannedDate: deliverable.planned_posting_date ?? null,
           dueDate: deliverable.live_date ?? posts[0]?.live_date ?? null,
           quantity: qty,
           received: agg.contentAssetCount > 0,
@@ -112,6 +114,7 @@ export function buildDocumentationUnitsFromHierarchy(
           assignmentName,
           platform,
           deliverableType: deliverable.deliverable_type ?? null,
+          plannedDate: deliverable.planned_posting_date ?? null,
           dueDate: post?.live_date ?? deliverable.live_date ?? null,
           quantity: qty,
           received: agg.contentAssetCount > 0,
@@ -121,5 +124,7 @@ export function buildDocumentationUnitsFromHierarchy(
     }
   }
 
-  return units;
+  const modes = new Map(hierarchy.groups.map(group => [group.line.id, group.line.assignment?.pricing_mode ?? "package"]));
+  const groups = packageReviewGroups(units.map(unit => ({ key: unit.unitKey, lineId: unit.assignmentLineId, type: unit.deliverableType ?? "", label: unit.label, quantity: unit.quantity, sequence: unit.sequenceNumber, package: modes.get(unit.assignmentLineId) === "package" })));
+  return units.map(unit => ({ ...unit, ...groups.get(unit.unitKey) }));
 }

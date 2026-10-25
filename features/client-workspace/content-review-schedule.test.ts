@@ -64,3 +64,23 @@ test("changes requested remain visible and published posts do not become late su
 test("today is the Cairo calendar date, including around UTC midnight", () => {
   assert.equal(reviewScheduleToday(new Date("2026-09-25T22:00:00Z")), "2026-09-26");
 });
+
+
+test("one package review covers components, retains a story date and approval, and leaves publications unchanged", () => {
+  const posts = [post({ reviewGroupKey: "package:1", reviewGroupLabel: "Package · IG Reel + Story + Mirrored TT + Boosting" }), post({ id: "story", assignmentDeliverableId: "story", reviewGroupKey: "package:1", expectedDraftDate: "2026-10-31" })];
+  const rows = projectContentReviewSchedule(posts, [asset({ status: "approved" })], new Set(), today);
+  assert.equal(rows.length, 1); assert.equal(rows[0].status, "approved"); assert.equal(rows[0].expectedDate, "2026-10-31");
+  assert.ok(rows[0].post.deliverable.startsWith("Package")); assert.equal(posts[0].live, false);
+});
+test("package two remains pending after package one is uploaded, and clearing dates beats legacy component dates", () => {
+  const posts = [post({ reviewGroupKey: "package:1", expectedDraftDate: null, reviewDateUpdatedAt: "2026-10-25" }), post({ id: "story", assignmentDeliverableId: "story", reviewGroupKey: "package:1", expectedDraftDate: "2026-10-31", reviewDateUpdatedAt: "2026-10-24" }), post({ id: "second", assignmentDeliverableId: "second", reviewGroupKey: "package:2" })];
+  const rows = projectContentReviewSchedule(posts, [asset()], new Set(), today);
+  assert.equal(rows.length, 2); assert.equal(rows[0].status, "ready"); assert.equal(rows[0].expectedDate, null); assert.equal(rows[1].status, "unconfirmed");
+});
+
+
+test("grouped reference scripts remain available and do not create extra draft deliverables", () => {
+ const rows = projectContentReviewSchedule([post({reviewGroupKey:"package:1"}),post({id:"story",assignmentDeliverableId:"story",reviewGroupKey:"package:1"})],[],new Set(["d:story"]),today);
+ assert.equal(rows.filter(row=>row.kind==="draft").length,1);
+ assert.equal(rows.find(row=>row.kind==="script")?.status,"script_ready");
+});

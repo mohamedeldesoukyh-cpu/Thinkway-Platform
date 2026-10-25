@@ -18,6 +18,11 @@ export function readContentReviewDates(metadata: Record<string, unknown> | null 
   return { script: validReviewDate(slot?.script) ? slot.script : null, draft: validReviewDate(slot?.draft) ? slot.draft : null };
 }
 
+export function contentReviewDateUpdatedAt(metadata: unknown, sequence?: number | null): string {
+  const schedule = (metadata as { content_review_schedule?: Record<string, { updated_at?: string }> } | null)?.content_review_schedule;
+  return schedule?.[reviewSlotKey(sequence)]?.updated_at ?? "";
+}
+
 export function mergeContentReviewDates(metadata: Record<string, unknown>, sequence: number | null, dates: ContentReviewDates, actor: string) {
   return { ...metadata, content_review_schedule: {
     ...(metadata.content_review_schedule as Record<string, unknown> ?? {}),

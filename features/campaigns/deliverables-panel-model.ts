@@ -1,5 +1,5 @@
 import type { DocumentationUnitSummary } from '@/lib/services/deliverables/documentation-types';
-import { readContentReviewDates } from '@/lib/services/deliverables/content-review-schedule';
+import { readContentReviewDates, contentReviewDateUpdatedAt } from '@/lib/services/deliverables/content-review-schedule';
 export const DELIVERABLE_COLUMNS = 'minmax(190px,.75fr) minmax(84px,.85fr) minmax(128px,1.1fr) minmax(86px,.85fr) minmax(100px,1fr) minmax(108px,1.05fr) 56px minmax(118px,1.4fr)';
 export type PanelStatus = 'missing' | 'uploaded' | 'review' | 'approved';
 export type PanelAsset = {
@@ -29,10 +29,13 @@ export type PanelRow = DocumentationUnitSummary & {
     hasScript: boolean;
     caption: string | null;
     reviewDate: string | null;
+    reviewDateUpdatedAt?: string;
+    scriptSource?: DocumentationUnitSummary;
+    packagePlatforms?: string;
     file: PanelAsset | null;
 };
 export function buildPanelRows(units: DocumentationUnitSummary[], snapshot: PanelSnapshot): PanelRow[] {
-    return units.map(unit => {
+    const individual = units.map(unit => {
         const assets = snapshot.assets.filter(a => !(unit.quantity > 1 && !unit.assignmentPostScheduleId) && a.deliverableId === unit.assignmentDeliverableId &&
             (a.postId === unit.assignmentPostScheduleId || (unit.quantity === 1 && a.postId === null)));
         const content = assets.filter(a => a.hasContent && a.type !== 'caption' && a.type !== 'brief')
@@ -43,8 +46,19 @@ export function buildPanelRows(units: DocumentationUnitSummary[], snapshot: Pane
         return { ...unit, status, file,
             hasScript: snapshot.scripts.includes(unit.unitKey),
             caption: assets.find(a => a.type === 'caption')?.text ?? null,
+            reviewDateUpdatedAt: contentReviewDateUpdatedAt(snapshot.metadata[unit.assignmentDeliverableId], unit.quantity > 1 ? unit.sequenceNumber : null),
             reviewDate: readContentReviewDates(snapshot.metadata[unit.assignmentDeliverableId] as Record<string, unknown> | null | undefined, unit.quantity > 1 ? unit.sequenceNumber : null).draft,
         };
+    });
+    const groups = new Map<string, PanelRow[]>();
+    for (const row of individual) { const key = row.reviewGroupKey ?? row.unitKey; groups.set(key, [...(groups.get(key) ?? []), row]); }
+    return [...groups.values()].map(members => {
+        if (!members[0].reviewGroupKey) return members[0];
+        // Keep existing uploads editable, including content previously saved on a component.
+        const row = [...members].sort((a,b) => (b.file?.uploadedAt ?? '').localeCompare(a.file?.uploadedAt ?? ''))[0];
+        const dated = [...members].sort((a,b) => (b.reviewDateUpdatedAt ?? '').localeCompare(a.reviewDateUpdatedAt ?? ''));
+        const reviewDate = dated[0].reviewDateUpdatedAt ? dated[0].reviewDate : members.find(item => item.reviewDate)?.reviewDate ?? null;
+        return { ...row, label: row.reviewGroupLabel ?? row.label, hasScript: members.some(item => item.hasScript), scriptSource: members.find(item => item.hasScript), packagePlatforms: [...new Set(members.map(item => item.platform).filter(Boolean))].join(" + "), caption: row.caption ?? members.find(item => item.caption)?.caption ?? null, reviewDate };
     });
 }
 export function filterPanelRows(rows: PanelRow[], filter: PanelStatus | 'all', search: string) {

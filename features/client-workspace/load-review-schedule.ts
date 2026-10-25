@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { listAttachedCampaignScriptPresence } from "@/lib/campaign-script/load-master";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import { requireCurrentCampaignContentAccess } from "./content-decisions";
@@ -17,17 +18,23 @@ export async function loadReviewSchedule(
     return null;
   const db = tryCreateServiceRoleClient().client;
   if (!db) throw new Error("Schedule unavailable");
+  return loadCampaignReviewSchedule(db, access.campaignHeaderId);
+}
+
+/** Both exports read current campaign identity, never a frozen quotation/review label. */
+export async function loadCampaignReviewSchedule(db: SupabaseClient, campaignId: string): Promise<ScheduleData | null> {
+  const { data: header, error } = await db.from("campaign_headers").select("id, name, client:clients(name)").eq("id", campaignId).maybeSingle();
+  if (error) throw new Error("Campaign unavailable");
+  if (!header) return null;
   const [execution, content, scripts] = await Promise.all([
-    loadClientCampaignExecution(db, access.campaignHeaderId, true),
-    loadClientCampaignContent(db, access.campaignHeaderId, true),
-    listAttachedCampaignScriptPresence(db, access.campaignHeaderId),
+    loadClientCampaignExecution(db, campaignId, true),
+    loadClientCampaignContent(db, campaignId, true),
+    listAttachedCampaignScriptPresence(db, campaignId),
   ]);
+  const client = Array.isArray(header.client) ? header.client[0] : header.client;
   return {
-    campaignId: access.campaignHeaderId,
-    name: access.review.campaignName || "Campaign",
-    client_name: access.review.clientLabel || "",
-    start_date: execution.startDate,
-    end_date: execution.endDate,
+    campaignId, name: header.name || "Campaign", client_name: client?.name || "",
+    start_date: execution.startDate, end_date: execution.endDate,
     rows: scheduleRows(execution.posts, content.items, new Set(scripts.keys())),
   };
 }

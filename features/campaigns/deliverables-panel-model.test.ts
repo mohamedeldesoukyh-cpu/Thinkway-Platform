@@ -42,3 +42,12 @@ test('Upload limits enforce extension, MIME and the 150 MB boundary', () => {
     assert.ok(validatePanelUpload({ fileName: 'program.exe', mimeType: 'video/mp4', fileSize: 1024 }));
     assert.ok(validatePanelUpload({ fileName: 'clip.mp4', mimeType: 'application/octet-stream', fileSize: 1024 }));
 });
+
+
+test('package uses one uploaded review item and retains child script and newest date including clears', () => {
+ const units = ['reel','story','mirror','boost'].map(id => ({...unit,unitKey:`d:${id}`,assignmentDeliverableId:id,reviewGroupKey:'package:line:1',reviewGroupLabel:'Package · Reel + Story + Mirror + Boost'}));
+ const assets = [{deliverableId:'reel',postId:null,hasContent:true,type:'draft_video',uploadedAt:'2026-10-25',decision:'approved'} as PanelSnapshot['assets'][number]];
+ const rows = buildPanelRows(units,{assets,scripts:['d:story'],metadata:{story:{content_review_schedule:{single:{draft:'2026-10-28',updated_at:'2026-10-24'}}},reel:{content_review_schedule:{single:{draft:null,updated_at:'2026-10-25'}}}}});
+ assert.equal(rows.length,1); assert.equal(rows[0].status,'approved'); assert.equal(rows[0].reviewDate,null);
+ assert.equal(rows[0].scriptSource?.assignmentDeliverableId,'story'); assert.equal(rows[0].assignmentDeliverableId,'reel');
+});
