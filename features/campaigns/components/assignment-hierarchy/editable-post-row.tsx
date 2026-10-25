@@ -680,7 +680,7 @@ export function EditablePostRow({
             {...assignmentChildColDataAttr(childColumnId)}
             className={cellClass}
           >
-            <div className="flex min-w-0 items-center gap-1.5">
+            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
               {gridEdit.hasSession &&
               gridEdit.isEditing &&
               isFirstPost &&
@@ -727,7 +727,7 @@ export function EditablePostRow({
                     variant="logo"
                     className="size-4 rounded-full"
                   />
-                  <span className="min-w-0 truncate">
+                  <span className="min-w-0 shrink-0 whitespace-nowrap">
                     {assignmentChildTypeLabelBesidePlatform(
                       post.deliverable_type,
                       post.deliverable_type_label
