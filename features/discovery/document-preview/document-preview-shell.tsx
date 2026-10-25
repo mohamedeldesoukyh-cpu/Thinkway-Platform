@@ -199,7 +199,7 @@ export function DocumentPreviewShell({
       if (!target) return;
       // Scroll only the document frame; scrollIntoView also moves its parent page.
       const frame = iframeRef.current?.contentWindow;
-      frame?.scrollTo({ top: target.getBoundingClientRect().top + frame.scrollY, behavior: "smooth" });
+      frame?.scrollTo({ top: target.getBoundingClientRect().top + frame.scrollY, behavior: "instant" });
       setActivePage(page);
     },
     []
@@ -249,8 +249,8 @@ export function DocumentPreviewShell({
         setActivePage(current);
       });
     };
-    frame.addEventListener("scroll", trackPage, { passive: true });
-    return () => { frame.removeEventListener("scroll", trackPage); window.cancelAnimationFrame(scheduled); };
+    doc.addEventListener("scroll", trackPage, { passive: true, capture: true });
+    return () => { doc.removeEventListener("scroll", trackPage, true); window.cancelAnimationFrame(scheduled); };
   }, [ready, html, src]);
 
   function zoomIn() {
