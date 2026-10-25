@@ -167,6 +167,7 @@ export function CampaignLineSheet({
   const [commercialRows, setCommercialRows] = useState<CommercialDeliverableRow[]>(
     line?.assignment?.commercial_rows ?? []
   );
+  const [editorSection, setEditorSection] = useState<"scope" | "commercial">("scope");
   const formRef = useRef<HTMLFormElement>(null);
   const submitLockRef = useRef(false);
   const poExceededOnSaveRef = useRef(false);
@@ -823,6 +824,7 @@ export function CampaignLineSheet({
       <form
         ref={formRef}
         action={formAction}
+        onInvalidCapture={() => setEditorSection("scope")}
         data-shortcut-save
         className="wr-assignment-form flex min-h-0 flex-1 flex-col"
         onSubmit={(event) => {
@@ -846,11 +848,15 @@ export function CampaignLineSheet({
         <header className="wr-assignment-heading">
           <div>
             <h3>Assignment · {influencerLabel ? selectedIdentity.name : "New"}</h3>
-            <p>{lineTitle || "Select a creator. Platforms and commercial terms can be added later."}</p>
+
           </div>
           <SheetClose asChild><Button type="button" variant="outline" size="icon-sm" aria-label="Close assignment editor">×</Button></SheetClose>
         </header>
 
+        <nav className="wr-assignment-tabs" aria-label="Assignment editor sections">
+          <Button type="button" variant="ghost" aria-pressed={editorSection === "scope"} onClick={() => setEditorSection("scope")}>Creator & scope</Button>
+          <Button type="button" variant="ghost" aria-pressed={editorSection === "commercial"} onClick={() => setEditorSection("commercial")}>Pricing & totals</Button>
+        </nav>
         <DetailFormScrollBody className="bg-[#f8fafc] px-4">
           <input type="hidden" name="campaign_id" value={campaignId} />
           {isEdit ? <input type="hidden" name="line_id" value={line.id} /> : null}
@@ -878,7 +884,7 @@ export function CampaignLineSheet({
           <input type="hidden" name="end_date" value={endDate} />
           <input type="hidden" name="pricing_mode" value={pricingMode} />
           <input type="hidden" name="commercial_json" value={commercialJson} />
-          <section className="wr-assignment-scope"><h3>Scope</h3>
+          <section className="wr-assignment-scope" hidden={editorSection !== "scope"}><h3>Creator & scope</h3>
           <AssignmentCreatorPicker
             value={influencerId}
             selectedLabel={influencerLabel}
@@ -893,37 +899,9 @@ export function CampaignLineSheet({
             </p>
           ) : null}
 
-          {profile ? (
-            (() => {
-              const profileIdentity = resolveCreatorIdentity(profile.display_name, null);
-              return (
-                <div className="rounded-[12px] border border-[#eaedf4] bg-white p-3 text-sm">
-                  <p className="text-[13px] font-semibold text-[#0f172a]">{profileIdentity.name}</p>
-                  <p className="text-[11px] text-[#64748b]">
-                    {profileIdentity.handle ? `@${profileIdentity.handle} · ` : ""}
-                    {profile.country_code ?? "—"}
-                    {profile.vat_registered ? " · VAT registered" : " · Non-VAT creator"}
-                  </p>
-                  <div className="mt-2 flex flex-wrap gap-1.5">
-                    {profile.platforms.map((p) => (
-                      <span
-                        key={p.id}
-                        className="creator-detail-sheet-platform-pill creator-detail-sheet-platform-pill--active"
-                      >
-                        <span className="creator-detail-sheet-platform-pill__select">
-                          {p.platform} · {p.follower_count?.toLocaleString() ?? "—"}
-                        </span>
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()
-          ) : null}
-
           <DetailFormSection
             label="Pricing structure"
-            hint="Alt+M to switch mode · Package = single creator cost · Per deliverable = row-level commercial planning"
+
           >
             <Select
               modal={false}
@@ -1078,6 +1056,7 @@ export function CampaignLineSheet({
           </div>
 
           </section>
+          <div className="wr-assignment-commercial" hidden={editorSection !== "commercial"}>
           <div className="wr-assignment-po"><CampaignLinePoPanel
             currency={currencyCode}
             poAmount={po.po_amount_campaign_currency}
@@ -1263,7 +1242,7 @@ export function CampaignLineSheet({
             </p>
           </div>
         <section className="wr-assignment-derived">
-          <h3>Derived</h3>
+          <h3>Totals</h3>
           <AssignmentStickyFooter
           className="wr-assignment-derived-values"
           currency={currency}
@@ -1272,6 +1251,7 @@ export function CampaignLineSheet({
           costVatAmount={costVatAmount}
         />
         </section>
+        </div>
         </DetailFormScrollBody>
 
         <OperationalDetailFooter>

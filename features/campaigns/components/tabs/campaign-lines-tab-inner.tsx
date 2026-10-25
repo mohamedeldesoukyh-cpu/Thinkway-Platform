@@ -215,7 +215,7 @@ export function CampaignLinesTabInner({
       <AssignmentCommercialPaneProvider campaignId={workspace.id} hierarchy={assignmentHierarchy} currencies={currencyOptions} enabled={active && enableLineSheet && audienceView === "internal"}>
       <CampaignWorkspaceFrame
         title="Assignments"
-        subtitle="Operational creator assignments, progress, and delivery readiness"
+
         status={
           <AuroraStatusPill tone={assignedCount > 0 ? "green" : "mut"}>
             {assignedCount}/{workspace.lines.length} assigned

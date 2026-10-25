@@ -76,7 +76,7 @@ export function PlatformAccountSelector({
   }
 
   return (
-    <div className="space-y-3">
+    <div className="assignment-platforms space-y-2">
       <p className="text-sm font-medium">Platform accounts & deliverables</p>
       {selections.map((sel) => {
         const availableDeliverables =
@@ -87,21 +87,22 @@ export function PlatformAccountSelector({
           <div
             key={sel.account_id}
             className={cn(
-              "rounded-2xl border p-3 transition-colors",
+              "assignment-platform rounded-lg border p-2 transition-colors",
               sel.selected ? "border-primary/40 bg-primary/5" : "border-border"
             )}
           >
-            <label className="flex cursor-pointer items-start gap-3">
+            <div className="flex items-start gap-2">
               <input
                 type="checkbox"
+                aria-label={`Include ${platformLabel(sel.platform)} @${sel.handle}`}
                 className="mt-1 size-4 rounded border"
                 checked={sel.selected}
                 onChange={(e) => toggleAccount(sel.account_id, e.target.checked)}
                 disabled={disabled}
               />
-              <div className="min-w-0 flex-1 space-y-2">
+              <div className="min-w-0 flex-1 space-y-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <PlatformIcon platform={sel.platform} />
+                  <PlatformIcon platform={sel.platform} size="xs" />
                   <span className="font-medium">{platformLabel(sel.platform)}</span>
                   <span className="text-sm text-muted-foreground">@{sel.handle}</span>
                   {sel.profile_url ? (
@@ -128,11 +129,11 @@ export function PlatformAccountSelector({
                   ) : null}
                 </div>
                 {sel.selected ? (
-                  <div className="flex flex-wrap gap-2 pt-1">
+                  <div className="flex flex-wrap gap-1.5 pt-1">
                     {availableDeliverables.map((d) => (
                       <label
                         key={d}
-                        className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-border bg-background px-2 py-1 text-xs"
+                        className="assignment-service-choice flex cursor-pointer items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-xs"
                       >
                         <input
                           type="checkbox"
@@ -149,7 +150,7 @@ export function PlatformAccountSelector({
                   </div>
                 ) : null}
               </div>
-            </label>
+            </div>
           </div>
         );
       })}

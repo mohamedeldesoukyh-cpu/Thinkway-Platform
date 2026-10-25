@@ -55,7 +55,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const [selected, setSelected] = useState<Target | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Partial<Draft>>>({});
   const [revision, setRevision] = useState<{ quotationId: string; lines: CommercialRevisionDialogLine[]; draftKey: string } | null>(null);
-  const [height, setHeight] = useState(360);
+  const [height, setHeight] = useState(280);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   useEffect(() => { if (!enabled) setSelected(null); }, [enabled]);
@@ -63,6 +63,22 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const refreshOperationalBilling = useRefreshCampaignAfterOperationalMutation();
   const gridEdit = useAssignmentGridEditSession();
   useEffect(() => { setHost(marker.current?.closest<HTMLElement>("[data-campaign-workspace-scroll]")?.parentElement ?? null); }, []);
+  // Reserve a stable scroll tail while open. Resizing the overlay never resizes
+  // the workspace viewport or clamps its scroll position.
+  useEffect(() => {
+    if (!host || !selected || !enabled) return;
+    const scroller = host.querySelector<HTMLElement>("[data-campaign-workspace-scroll]");
+    if (!scroller) return;
+    const oldPadding = scroller.style.paddingBottom;
+    const oldPosition = host.style.position;
+    const basePadding = parseFloat(getComputedStyle(scroller).paddingBottom) || 0;
+    host.style.position = "relative";
+    const reserve = () => { scroller.style.paddingBottom = `${basePadding + Math.max(180, host.clientHeight * .65) + 16}px`; };
+    reserve();
+    const observer = new ResizeObserver(reserve);
+    observer.observe(host);
+    return () => { observer.disconnect(); scroller.style.paddingBottom = oldPadding; host.style.position = oldPosition; };
+  }, [host, Boolean(selected), enabled]);
   const group = hierarchy.groups.find(entry => entry.line.id === selected?.lineId);
   const line = group?.line;
   const child = group?.deliverables.find(entry => entry.id === selected?.deliverableId);
@@ -180,14 +196,14 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
       onPointerDown={event => { if (event.button !== 0) return; event.preventDefault(); event.currentTarget.focus(); event.currentTarget.setPointerCapture(event.pointerId); drag.current = { y: event.clientY, height: pane.current?.clientHeight ?? height }; }}
       onPointerMove={event => { if (drag.current) resize(drag.current.height + drag.current.y - event.clientY); }}
       onPointerUp={event => { drag.current = null; if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId); }} onPointerCancel={() => { drag.current = null; }} onLostPointerCapture={() => { drag.current = null; }}
-      onDoubleClick={() => resize(360)} onKeyDown={event => { if (event.key === "ArrowUp" || event.key === "ArrowDown") { event.preventDefault(); resize(height + (event.key === "ArrowUp" ? 20 : -20)); } }}><span /></div>
+      onDoubleClick={() => resize(280)} onKeyDown={event => { if (event.key === "ArrowUp" || event.key === "ArrowDown") { event.preventDefault(); resize(height + (event.key === "ArrowUp" ? 20 : -20)); } }}><span /></div>
     <div className="acp-heading">
       <label className="acp-currency">{vendorCorrection ? "Cost currency" : "Curr"}<select aria-label="Assignment editor currency" value={draft.currency} disabled={readOnly || (!vendorCorrection && fx.dirty) || Boolean(child) || costLocked || (!vendorCorrection && clientLocked)} onChange={event => change("currency", event.target.value)}>{!currencies.some(entry => entry.value === draft.currency) && <option value={draft.currency}>{draft.currency}</option>}{currencies.map(entry => <option key={entry.value} value={entry.value}>{entry.value}</option>)}</select></label>
-      <div className="acp-identity"><strong>{formatDocumentNumberForDisplay(line.document_number)} · {formatCreatorDisplayName(line.assignment?.influencer_name ?? line.name)}</strong><span>{child ? `Child · ${selectedPost?.platform ?? child.platform} · ${selectedPost?.deliverable_type_label ?? child.deliverable_type_label} · ${isPackageChild ? "package share" : "deliverable totals"} (${draft.qty} ${draft.qty === 1 ? "unit" : "units"})` : "Parent assignment · package / assignment totals"}</span></div>
+      <div className="acp-identity"><strong>{formatDocumentNumberForDisplay(line.document_number)} · {formatCreatorDisplayName(line.assignment?.influencer_name ?? line.name)}</strong></div>
       <div className="acp-profit" data-health={health} aria-label="Live profitability" title="Margin health: green ≥20%, amber 10–20%, red <10% or a loss. Based on GP divided by revenue, excluding VAT.">
         <div title="Revenue + UR Rev + AF − Cost − UR Cost; excludes VAT"><span>GP</span><output>{profitAmount}</output></div>
         <div title="GP ÷ revenue including UR Rev and AF, excluding VAT"><span>GP %</span><output>{percent(fxFinancials && fx.valid ? fxFinancials.margin_percent : profit.billableBase > 0 ? profit.marginPercent : null)}</output></div>
-        <div title="Same profit amount as GP, excluding VAT"><span>Margin</span><output>{profitAmount}</output></div>
+
         <div title="GP ÷ cost including UR Cost, excluding VAT"><span>Margin % (markup)</span><output>{percent(fxFinancials && fx.valid ? ((fxFinancials.revenue - fxFinancials.gp) > 0 ? fxFinancials.gp / (fxFinancials.revenue - fxFinancials.gp) * 100 : null) : profitCost > 0 ? profit.gp / profitCost * 100 : null)}</output></div>
         <div title="FX gain/loss is already included in GP and margins, excluding VAT."><span>FX Gain/Loss</span><output style={{ color: (fxFinancials?.fx_gain_loss ?? 0) < 0 ? "#b91c1c" : (fxFinancials?.fx_gain_loss ?? 0) > 0 ? "#087443" : "#52637c" }}>{fxFinancials && fx.valid ? "EGP " + fxFinancials.fx_gain_loss.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "—"}</output></div>
       </div>
@@ -212,7 +228,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
           </div></section>
         </div>
       </div>
-      <div className="acp-footer"><div>{fx.dirty && !vendorCorrection && <span>Custom FX is pinned. Save or reset FX before changing native amounts.</span>}<span>{vendorCorrection ? "Edit cost currency, amount, VAT and FX together. Client invoice and revenue stay unchanged." : child ? "Currency is inherited from the parent assignment." : "Units come from child deliverables. Currency changes keep the entered amounts."} Calculated totals include VAT; total cost also includes UR Cost.</span>{Object.keys(drafts).length > 0 && <span>Unsaved edits are kept while switching rows in this tab.</span>}{message && <p role={message.ok ? "status" : "alert"} className={message.ok ? "acp-success" : "acp-error"}>{message.text}</p>}</div>{fx.dirty && !vendorCorrection && <><button type="button" className="acp-button" disabled={pending} onClick={fx.reset}>Reset FX edits</button><button type="button" className="acp-button acp-primary" disabled={pending || !fx.valid || Boolean(drafts[selectedKey])} onClick={() => void saveFx()}>Save FX rates</button></>}<button className="acp-button" type="button" disabled={pending || (!drafts[selectedKey] && !fx.dirty)} onClick={() => { if (vendorCorrection) fx.reset(); setDrafts(previous => { const next = { ...previous }; delete next[selectedKey]; return next; }); }}>Reset edits</button><button className="acp-button acp-primary" type="submit" disabled={readOnly || !fx.valid || (!vendorCorrection && fx.dirty) || (!drafts[selectedKey] && !fx.dirty)}>{pending ? "Saving…" : vendorCorrection ? "Save cost side" : "Save line"}</button></div>
+      <div className="acp-footer"><div>{fx.dirty && !vendorCorrection && <span>Custom FX is pinned. Save or reset FX before changing native amounts.</span>}{Object.keys(drafts).length > 0 && <span>Unsaved edits are kept while switching rows in this tab.</span>}{message && <p role={message.ok ? "status" : "alert"} className={message.ok ? "acp-success" : "acp-error"}>{message.text}</p>}</div>{fx.dirty && !vendorCorrection && <><button type="button" className="acp-button" disabled={pending} onClick={fx.reset}>Reset FX edits</button><button type="button" className="acp-button acp-primary" disabled={pending || !fx.valid || Boolean(drafts[selectedKey])} onClick={() => void saveFx()}>Save FX rates</button></>}<button className="acp-button" type="button" disabled={pending || (!drafts[selectedKey] && !fx.dirty)} onClick={() => { if (vendorCorrection) fx.reset(); setDrafts(previous => { const next = { ...previous }; delete next[selectedKey]; return next; }); }}>Reset edits</button><button className="acp-button acp-primary" type="submit" disabled={readOnly || !fx.valid || (!vendorCorrection && fx.dirty) || (!drafts[selectedKey] && !fx.dirty)}>{pending ? "Saving…" : vendorCorrection ? "Save cost side" : "Save line"}</button></div>
     </form>
   </section> : null;
   return <PaneContext.Provider value={{ open, selected: enabled ? selected : null }}>{children}{revision && <CommercialRevisionDialog

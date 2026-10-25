@@ -98,3 +98,19 @@ body:has(.workspace-redesign) .wr-publication-workspace .sticky > div:first-chil
  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-cm__b { overflow: visible; }
  body:has(.workspace-redesign) .campaign-detail-creator-modal .tw-dl > span { flex-basis: 120px; }
 }
+
+/* Compact assignment editor: one identity, ordered sections, restrained controls. */
+body:has(.workspace-redesign) .wr-operational-drawer:has(.wr-assignment-form),
+body:has(.workspace-redesign) [data-slot="sheet-content"]:has(.wr-assignment-form) { width:min(600px,100vw)!important; max-width:600px!important; }
+body:has(.workspace-redesign) .wr-assignment-form [hidden] { display:none!important; }
+.wr-assignment-tabs { display:flex; gap:4px; padding:6px 14px; border-bottom:1px solid #e7ecf4; flex-shrink:0; background:white; }
+.wr-assignment-tabs button { height:32px; font-size:12px; }
+.wr-assignment-tabs button[aria-pressed="true"] { color:#0057ff; background:#edf3ff; }
+.assignment-creator-choice { display:flex; align-items:center; gap:12px; padding:10px; border:1px solid #dce6f4; border-radius:8px; }
+.assignment-creator-choice > div { flex:1; min-width:0; display:flex; flex-direction:column; gap:3px; }
+.assignment-creator-choice strong { font-size:13px; overflow-wrap:anywhere; }
+body:has(.workspace-redesign) .wr-assignment-form .assignment-platform { padding:10px; }
+body:has(.workspace-redesign) .wr-assignment-form .assignment-platform label { font-size:11px; letter-spacing:0; text-transform:none; font-weight:400; }
+body:has(.workspace-redesign) .wr-assignment-form .assignment-service-choice { min-height:28px; padding:4px 7px; border-radius:6px; }
+body:has(.workspace-redesign) .wr-assignment-form .assignment-platform [data-slot="badge"] { padding:0; border:0; background:transparent; font-size:10px; font-weight:400; }
+.wr-assignment-commercial { display:grid; gap:12px; }
