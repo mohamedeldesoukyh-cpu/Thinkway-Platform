@@ -61,7 +61,7 @@ export const HIERARCHY_COLUMN_LABELS = {
   platforms: "Platforms",
   deliverables: "Deliv.",
   fullDescription: "Full Description",
-  postingDates: "Dates",
+  postingDates: "Went live date",
   costCurrency: "CCY",
   revenue: "Rev",
   usageRights: "UR Rev",
