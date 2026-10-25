@@ -1,6 +1,7 @@
 "use client";
 
-import { Suspense } from "react";
+import { Suspense, useState } from "react";
+import "@/app/styles/executive-dashboard.css";
 import Link from "next/link";
 
 import type {
@@ -14,9 +15,7 @@ import {
   HomeDashboardCard,
   HomeDashboardGrid,
   HomeDashboardRow,
-  HomeDashboardSpark,
   HomeDashboardSuite,
-  HomeDashboardTileGo,
 } from "@/features/home/components/home-dashboard-pack";
 import { collectExecutiveConflicts } from "@/features/home/lib/home-dashboard-conflicts";
 import type { AnalyticsKpiCard } from "@/lib/analytics/types/outputs";
@@ -118,37 +117,32 @@ function TrendBars({
   tone: "" | "v" | "g" | "y" | "c";
   series: DashboardTrendPoint[];
 }) {
-  const points = series.slice(-8);
-  const max = Math.max(1, ...points.map((point) => point.value));
-  const first = points[0]?.label ?? "";
-  const mid = points[Math.floor(points.length / 2)]?.label ?? "";
-  const last = points[points.length - 1]?.label ?? "";
-  return (
-    <div>
-      <div className="tw-ct" style={{ fontSize: 12 }}>
-        {title}
-      </div>
-      <div className="tw-cs">{hint}</div>
-      <div className="tw-bars">
-        {points.map((point, index) => (
-          <span
-            key={`${point.period}-${index}`}
-            className={tone ? `tw-bar ${tone}` : "tw-bar"}
-            data-v={formatCompactMillions(point.value)}
-            style={{
-              height: `${Math.max(3, (point.value / max) * 100)}%`,
-              animationDelay: `${240 + index * 60}ms`,
-            }}
-          />
-        ))}
-      </div>
-      <div className="tw-ax">
-        <span>{first}</span>
-        <span>{mid}</span>
-        <span>{last}</span>
-      </div>
-    </div>
-  );
+  const [active, setActive] = useState<number | null>(null);
+  const points = series.slice(-12);
+  const high = Math.max(1, ...points.map(p => p.value));
+  const low = Math.min(0, ...points.map(p => p.value));
+  const y = (value: number) => 154 - ((value - low) / (high - low)) * 132;
+  const step = 316 / Math.max(1, points.length);
+  const colors = { "": "#145cf5", v: "#7960ca", g: "#12866e", y: "#b67b16", c: "#16849b" };
+  const selected = active == null ? null : points[active];
+  return <section className="ed-chart" aria-label={title}>
+    <div className="ed-chart-heading"><h3>{title}</h3><span className="ed-chart-key" style={{ background: colors[tone] }} /></div>
+    <p>{hint} · up to 12 periods</p>
+    {points.length ? <>
+      <div className="ed-chart-readout" aria-live="polite">{selected ? `${selected.label} · ${selected.value.toLocaleString("en-US", { maximumFractionDigits: 2 })}` : "Hover or focus a bar for its value"}</div>
+      <svg viewBox="0 0 380 190" role="img" aria-label={`${title}: ${points.map(p => `${p.label}: ${p.value}`).join(", ")}`}>
+        {[low, (high + low) / 2, high].map((value, i) => <g key={i}><line x1="52" x2="370" y1={y(value)} y2={y(value)} stroke="#e5ebf4" /><text x="46" y={y(value) + 4} textAnchor="end">{formatCompactMillions(value)}</text></g>)}
+        <line x1="52" x2="370" y1={y(0)} y2={y(0)} stroke="#aab8cd" />
+        {points.map((point, i) => <g key={`${point.period}-${i}`} tabIndex={0} role="button" aria-label={`${point.label}: ${point.value.toLocaleString("en-US")}`} onMouseEnter={() => setActive(i)} onMouseLeave={() => setActive(null)} onFocus={() => setActive(i)} onBlur={() => setActive(null)} onClick={() => setActive(i)}>
+          <title>{point.label}: {point.value.toLocaleString("en-US")}</title>
+          <rect x={54 + i * step} y="18" width={Math.max(2, step - 4)} height="140" fill="transparent" />
+          <rect x={54 + i * step} y={Math.min(y(0), y(point.value))} width={Math.max(2, step - 5)} height={Math.abs(y(point.value) - y(0))} rx="2" fill={colors[tone]} opacity={active == null || active === i ? 1 : .45} />
+          {(points.length <= 6 || i % 2 === 0 || i === points.length - 1) && <text x={54 + i * step + (step - 5) / 2} y="177" textAnchor="middle">{/^\d{4}-\d{2}$/.test(point.label) ? new Date(`${point.label}-01T12:00:00Z`).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "UTC" }) : point.label === "unscheduled" ? "No date" : point.label}</text>}
+        </g>)}
+      </svg>
+      <details className="ed-chart-data"><summary>View data</summary><table><thead><tr><th>Period</th><th>Amount</th></tr></thead><tbody>{points.map((p, i) => <tr key={i}><td>{p.label}</td><td>{p.value.toLocaleString("en-US", { maximumFractionDigits: 2 })}</td></tr>)}</tbody></table></details>
+    </> : <div className="ed-chart-empty">No activity in the selected period</div>}
+  </section>;
 }
 
 function formatCompactMillions(value: number): string {
@@ -205,7 +199,6 @@ export function ExecutiveDashboardView({
   const period = data.period_label ?? "All time";
   const money = (value: number) => formatAmount(value, mixed, ccy);
 
-  const pendingInvoiceCount = data.alerts.by_group.billing.length;
   const focusMessage = collectedExceeds
     ? `Collected exceeds invoiced by ${formatCompactMillions(
         (collected?.value ?? 0) - grossInvoiced
@@ -218,11 +211,11 @@ export function ExecutiveDashboardView({
     : `${period} · ${ccy ?? "book"}`;
 
   return (
-    <HomeDashboardSuite>
+    <HomeDashboardSuite className="executive-redesign">
       <HomeDashboardMasthead
         page="dash"
         id={`FIN-${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}`}
-        subtitle={`CFO-grade finance monitoring · ${period}${
+        subtitle={`Financial overview · ${period}${
           mixed ? " · all currencies" : ccy ? ` · ${ccy}` : ""
         }`}
         badgeLabel={mixed ? "Mixed" : "Live"}
@@ -286,8 +279,9 @@ export function ExecutiveDashboardView({
           </>
         }
         jumps={[
-          { href: "#conflicts", label: "Conflicts", count: conflicts.length },
-          { href: "#trends", label: "Trends" },
+          { href: "#trends", label: "Overview" },
+          { href: "#pipeline", label: "Pipeline" },
+          { href: "#conflicts", label: "Data checks", count: conflicts.length },
           { href: "#clients", label: "Clients" },
           { href: "#campaigns", label: "Campaigns" },
           { href: "#markets", label: "Markets" },
@@ -333,72 +327,11 @@ export function ExecutiveDashboardView({
           </div>
         </HomeDashboardCard>
 
-        <div className="tw-tiles" style={{ marginBottom: 14 }}>
-          <a className="tw-tile" href="#clients">
-            <div className="tw-tl">
-              <i>Recognized revenue · {period}</i>
-              <span className="tw-big">{money(revenue?.value ?? 0)}</span>
-              <p>
-                {mixed
-                  ? `Mixed ${mixCodes} · not FX-converted`
-                  : `${ccy ?? "Book"} · this window`}
-              </p>
-              <HomeDashboardSpark
-                values={sparkFromSeries(data.charts.revenue_trend)}
-                highlightFrom={0}
-              />
-              <HomeDashboardTileGo>
-                {mixed ? "Set a single currency" : "Top clients"}
-              </HomeDashboardTileGo>
-            </div>
-          </a>
-          <a className="tw-tile soft" href="#clients">
-            <div className="tw-tl">
-              <i>Margin</i>
-              <span className="tw-big">{formatPercent(margin?.value ?? 0)}</span>
-              <p>
-                {money(gp?.value ?? 0)} gross profit on {money(revenue?.value ?? 0)}
-              </p>
-              <HomeDashboardTileGo>Profitability breakdown</HomeDashboardTileGo>
-            </div>
-          </a>
-          <a className="tw-tile alt" href="#alerts">
-            <div className="tw-tl">
-              <i>Unbilled recognized revenue</i>
-              <span className="tw-big">{money(unbilled?.value ?? 0)}</span>
-              <p>
-                Current live-ad revenue pending invoice, excluding VAT
-              </p>
-              <HomeDashboardTileGo>
-                {pendingInvoiceCount > 0
-                  ? `${pendingInvoiceCount} campaigns pending`
-                  : "Review billing"}
-              </HomeDashboardTileGo>
-            </div>
-          </a>
-          <a className="tw-tile" href="#clients">
-            <div className="tw-tl">
-              <i>Client concentration</i>
-              <span className="tw-big">{concentration}%</span>
-              <p>
-                {topClient
-                  ? `${topClient.label} · ${money(topClient.metrics.revenue)} of the book`
-                  : "No client rollup in this window"}
-              </p>
-              <HomeDashboardSpark
-                values={concentrationSpark(data.profitability_tables.top_clients)}
-                highlightFrom={0}
-              />
-              <HomeDashboardTileGo>Top clients</HomeDashboardTileGo>
-            </div>
-          </a>
-        </div>
-
         {conflicts.length > 0 ? (
           <HomeDashboardCard
             id="conflicts"
-            title="Read this before quoting any total"
-            subtitle="figures on this page contradict each other"
+            title="Data checks"
+            subtitle="Review these differences before reporting"
             right={<span className="tw-p p-r">{conflicts.length} conflicts</span>}
           >
             <div className="tw-pad" style={{ background: "var(--tw-badb)" }}>
@@ -415,59 +348,9 @@ export function ExecutiveDashboardView({
         )}
 
         <HomeDashboardCard
-          title="Position"
-          subtitle={mixed ? `all currencies · ${period}` : `${ccy} · ${period}`}
-        >
-          <div className="tw-pad">
-            <div className="tw-jr">
-              <div className="tw-jn">
-                <i>Recognized revenue</i>
-                <b>{money(revenue?.value ?? 0)}</b>
-                <u>{mixed ? "MIX" : ccy}</u>
-              </div>
-              <div className="tw-jn">
-                <i>GP</i>
-                <b>{money(gp?.value ?? 0)}</b>
-                <u>{mixed ? "MIX" : ccy}</u>
-              </div>
-              <div className={(margin?.value ?? 0) >= 20 ? "tw-jn ok" : "tw-jn"}>
-                <i>Margin</i>
-                <b>{formatPercent(margin?.value ?? 0)}</b>
-                <u>{(margin?.value ?? 0) >= 20 ? "healthy" : "watch"}</u>
-              </div>
-              <div className="tw-jn">
-                <i>Total invoiced</i>
-                <b>{money(invoiced?.value ?? 0)}</b>
-                <u>{mixed ? "MIX" : ccy}</u>
-              </div>
-              <div className={collectedExceeds ? "tw-jn miss" : "tw-jn"}>
-                <i>Collected</i>
-                <b>{money(collected?.value ?? 0)}</b>
-                <u>{collectedExceeds ? "exceeds invoiced" : mixed ? "MIX" : ccy}</u>
-              </div>
-              <div className={(outstanding?.value ?? 0) > 0 ? "tw-jn miss" : "tw-jn"}>
-                <i>Outstanding</i>
-                <b>{money(outstanding?.value ?? 0)}</b>
-                <u>{mixed ? "MIX" : ccy}</u>
-              </div>
-              <div className={(vendor?.value ?? 0) > 0 ? "tw-jn miss" : "tw-jn"}>
-                <i>Vendor payable</i>
-                <b>{money(vendor?.value ?? 0)}</b>
-                <u>{mixed ? "MIX" : ccy}</u>
-              </div>
-              <div className={(unbilled?.value ?? 0) > 0 ? "tw-jn miss" : "tw-jn"}>
-                <i>Unbilled recognized</i>
-                <b>{money(unbilled?.value ?? 0)}</b>
-                <u>{mixed ? "MIX" : ccy}</u>
-              </div>
-            </div>
-          </div>
-        </HomeDashboardCard>
-
-        <HomeDashboardCard
           id="trends"
           title="Performance trends"
-          subtitle="revenue, GP, billing, collections and PO by period"
+          subtitle={`${mixed ? "Mixed currencies · select one currency for comparison" : ccy ?? "Book currency"} · each chart uses its own scale`}
           note={
             collectedExceeds ? (
               <div className="tw-note bad">
@@ -478,13 +361,7 @@ export function ExecutiveDashboardView({
           }
         >
           <div className="tw-pad">
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit,minmax(210px,1fr))",
-                gap: 13,
-              }}
-            >
+            <div className="ed-charts">
               <TrendBars
                 title="Recognized revenue"
                 hint="recognized by ad live month"
@@ -528,16 +405,16 @@ export function ExecutiveDashboardView({
         <HomeDashboardCard id="pipeline" title="Pipeline revenue" subtitle="Current approved client IOs · ads not yet live · excluding VAT">
           <div className="tw-pad">
             <strong className="tw-big">{money((data.pipeline ?? []).reduce((sum, row) => sum + row.pipeline_revenue, 0))}</strong>
-            <p>Remaining approved work, including campaigns that have not started. This is a current balance for the selected campaigns and is separate from recognized revenue and invoicing.</p>
+            <p className="ed-pipeline-note">Approved work awaiting go-live. Current balance, excluding recognized revenue.</p>
             {(data.pipeline ?? []).length ? (
-              <div style={{ overflowX: "auto" }}><table style={{ width: "100%", textAlign: "left", borderCollapse: "collapse" }}>
+              <div style={{ overflowX: "auto" }}><table className="ed-pipeline-table">
                 <thead><tr>{["Campaign / client", "Approved IO", "Approved revenue", "Already live", "Pipeline"].map(label => <th key={label} style={{ padding: 12 }}>{label}</th>)}</tr></thead>
-                <tbody>{(data.pipeline ?? []).map(row => <tr key={row.io_id}>
+                <tbody>{[...(data.pipeline ?? [])].sort((a, b) => b.pipeline_revenue - a.pipeline_revenue).map(row => <tr key={row.io_id}>
                   <td style={{ padding: 12 }}><a href={"/campaigns/" + row.campaign_header_id}>{row.campaign_name}</a><div>{row.client_name}</div></td>
                   <td style={{ padding: 12 }}><a href={"/ios/client/" + row.io_id + "/preview"}>{row.io_number}</a></td>
                   <td style={{ padding: 12 }}>{money(row.approved_revenue)}</td>
                   <td style={{ padding: 12 }}>{money(row.recognized_revenue)}</td>
-                  <td style={{ padding: 12 }}>{money(row.pipeline_revenue)}</td>
+                  <td style={{ padding: 12 }}><strong>{money(row.pipeline_revenue)}</strong><span className="ed-pipeline-bar" aria-hidden="true"><span style={{ width: `${Math.max(0, row.pipeline_revenue) / Math.max(1, ...(data.pipeline ?? []).map(p => p.pipeline_revenue)) * 100}%` }} /></span></td>
                 </tr>)}</tbody>
               </table></div>
             ) : <p>No approved client IO revenue awaiting go-live.</p>}
@@ -619,7 +496,7 @@ export function ExecutiveDashboardView({
           <div>
             <HomeDashboardCard
               title="Lowest margin clients"
-              subtitle="same book, reversed"
+              subtitle="Clients ordered by lowest margin"
             >
               <HomeDashboardGrid
                 cols={DASH_TABLE_COLS}
@@ -728,25 +605,6 @@ export function ExecutiveDashboardView({
   );
 }
 
-function sparkFromSeries(series: DashboardTrendPoint[]): number[] {
-  const points = series.slice(-8);
-  if (points.length === 0) return [20, 28, 24, 36, 40, 48, 44, 60];
-  const max = Math.max(1, ...points.map((point) => point.value));
-  const values = points.map((point) => Math.max(4, Math.round((point.value / max) * 100)));
-  while (values.length < 8) values.unshift(values[0] ?? 8);
-  return values.slice(-8);
-}
-
-function concentrationSpark(clients: AnalyticsRollupNode[]): number[] {
-  const top = clients.slice(0, 8);
-  const max = Math.max(1, ...top.map((node) => node.metrics.revenue));
-  const values = top.map((node) =>
-    Math.max(4, Math.round((node.metrics.revenue / max) * 100))
-  );
-  while (values.length < 8) values.push(4);
-  return values;
-}
-
 function BillingVsCollections({
   invoiced,
   collected,
@@ -765,12 +623,12 @@ function BillingVsCollections({
     ["Unbilled excl. VAT", unbilled, "#B4780A"],
   ];
   return (
-    <div>
+    <div className="ed-chart ed-balances">
       <div className="tw-ct" style={{ fontSize: 12 }}>
-        Billing vs collections
+        Billing & collection position
       </div>
       <div className="tw-cs">Current balances · all dates for selected campaigns</div>
-      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 24 }}>
         {rows.map(([label, value, color], index) => (
           <div key={label}>
             <div
@@ -788,7 +646,7 @@ function BillingVsCollections({
             </div>
             <div
               style={{
-                height: 7,
+                height: 10,
                 borderRadius: 4,
                 background: "var(--tw-hair)",
                 overflow: "hidden",
