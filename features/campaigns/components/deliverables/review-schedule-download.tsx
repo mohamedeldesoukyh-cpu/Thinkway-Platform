@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { ReviewSchedulePreview } from "@/features/client-workspace/components/review-schedule-preview";
 import { toast } from "sonner";
 export function ReviewScheduleDownload({ campaignId }: { campaignId: string }) {
   const [busy, setBusy] = useState(false);
@@ -15,5 +16,5 @@ export function ReviewScheduleDownload({ campaignId }: { campaignId: string }) {
     } catch (error) { toast.error(error instanceof Error ? error.message : "Download unavailable."); }
     finally { setBusy(false); }
   }
-  return <select className="tw-b sm" aria-label="Download review schedule" value="" disabled={busy} onChange={e => { if(e.target.value) void download(e.target.value); }}><option value="">{busy ? "Preparing…" : "Download schedule"}</option><option value="pdf">PDF</option><option value="xlsx">Excel</option><option value="html">HTML</option></select>;
+  return <><ReviewSchedulePreview campaignId={campaignId} onDownload={download} downloading={busy} /><select className="tw-b sm" aria-label="Download review schedule" value="" disabled={busy} onChange={e => { if(e.target.value) void download(e.target.value); }}><option value="">{busy ? "Preparing…" : "Download schedule"}</option><option value="pdf">PDF</option><option value="xlsx">Excel</option><option value="html">HTML</option></select></>;
 }
