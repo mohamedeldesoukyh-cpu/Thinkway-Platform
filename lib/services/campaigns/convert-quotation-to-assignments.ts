@@ -4,6 +4,7 @@
  */
 
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { withQuotationConversionLock } from "./quotation-conversion-lock";
 
 import { resolveCampaignDisplayName } from "@/lib/campaigns/campaign-display-name";
 import { resolveQuotationServiceDescription } from "@/lib/campaigns/quotation-service-description";
@@ -371,6 +372,19 @@ export async function convertQuotationToAssignments(
   userId: string,
   input: ConvertQuotationToAssignmentsInput
 ): Promise<ConvertQuotationToAssignmentsResult> {
+  if (input.dryRun) return convertQuotationToAssignmentsUnlocked(supabase, userId, input);
+  return withQuotationConversionLock(
+    supabase as unknown as Parameters<typeof withQuotationConversionLock>[0],
+    input.quotationId,
+    () => convertQuotationToAssignmentsUnlocked(supabase, userId, input),
+  );
+}
+
+async function convertQuotationToAssignmentsUnlocked(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  input: ConvertQuotationToAssignmentsInput,
+): Promise<ConvertQuotationToAssignmentsResult> {
   const row = await loadQuotationRow(supabase, input.quotationId);
   if (!row) return { ok: false, message: "Quotation not found." };
 
@@ -447,11 +461,20 @@ export async function convertQuotationToAssignments(
   });
 
   // Idempotency: existing Assignments for this quote pin / header.
-  const existingHeaderId =
+  let existingHeaderId =
     appendTarget?.id ||
     input.reuseHeaderId?.trim() ||
     (row.campaign_header_id as string | null) ||
     null;
+
+  // Recover a header if a previous request ended before linking the quotation.
+  if (!existingHeaderId) {
+    const { data: previous, error } = await supabase.from("campaign_headers")
+      .select("id").eq("quotation_id", input.quotationId)
+      .order("created_at", { ascending: true }).limit(1).maybeSingle();
+    if (error) return { ok: false, message: error.message };
+    existingHeaderId = previous?.id ?? null;
+  }
 
   // Partial convert resume: skip units that already have a line for this quote item.
   let existingSourceItemIds = new Set<string>();
@@ -598,6 +621,14 @@ export async function convertQuotationToAssignments(
       };
     }
     documentNumber = (header as { document_number: string }).document_number;
+  }
+
+  // Link before the slow assignment/CRM work so retries resume the same campaign.
+  if (!appendTarget) {
+    const linked = await linkQuotationToCampaign(supabase, input.quotationId, campaignId);
+    if (linked.error) return { ok: false, message: linked.error.message };
+    const shortlistLinked = await linkShortlistToCampaign(supabase, shortlistResult.shortlistId!, campaignId);
+    if (shortlistLinked.error) return { ok: false, message: shortlistLinked.error.message };
   }
 
   // Do not duplicate commercial snapshot when resuming a partial convert.
@@ -894,11 +925,6 @@ export async function convertQuotationToAssignments(
         warnings[0] ??
         "No Assignments were created. Quotation items need a resolvable influencer (influencer_id, inf: unified_id, or profile_id).",
     };
-  }
-
-  if (!appendTarget) {
-    await linkQuotationToCampaign(supabase, input.quotationId, campaignId);
-    await linkShortlistToCampaign(supabase, shortlistResult.shortlistId!, campaignId);
   }
 
   await logQuotationLifecycleEvent(supabase, {

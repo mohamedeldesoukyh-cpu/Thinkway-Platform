@@ -12,6 +12,7 @@ import {
   canCreateCampaignFromQuotation,
 } from "@/lib/commercial-sync/rules";
 import { convertQuotationToAssignments } from "@/lib/services/campaigns/convert-quotation-to-assignments";
+import { withQuotationConversionLock } from "@/lib/services/campaigns/quotation-conversion-lock";
 import { isRelease20AssignmentConvertEnabled } from "@/lib/release/release-2-0-feature-flag";
 import type { Database } from "@/types/database";
 
@@ -234,6 +235,18 @@ export async function createCampaignFromQuotation(
     };
   }
 
+  return withQuotationConversionLock(
+    supabase as unknown as Parameters<typeof withQuotationConversionLock>[0],
+    input.quotationId,
+    () => createLegacyCampaignFromQuotation(supabase, userId, input),
+  );
+}
+
+async function createLegacyCampaignFromQuotation(
+  supabase: SupabaseClient<Database>,
+  userId: string,
+  input: { quotationId: string; campaignName?: string | null },
+): Promise<QuotationMutationResult<{ campaignId: string; documentNumber: string; shortlistId: string }>> {
   const row = await loadQuotationRow(supabase, input.quotationId);
   if (!row) return { ok: false, message: "Quotation not found." };
 
@@ -263,7 +276,13 @@ export async function createCampaignFromQuotation(
     `Campaign — ${row.name ?? row.serial_number ?? "Quotation"}`;
 
   // Legacy Path A (flag off): header + vendor links only. Do not require R2.0 columns.
-  const created = await createCampaignHeaderFromBrand(supabase, userId, {
+  const previousQuery = supabase.from("campaign_headers").select("id, document_number");
+  const { data: previous, error: previousError } = await (row.campaign_header_id
+    ? previousQuery.eq("id", row.campaign_header_id)
+    : previousQuery.eq("quotation_id", input.quotationId).order("created_at", { ascending: true }).limit(1)
+  ).maybeSingle();
+  if (previousError) return { ok: false, message: previousError.message };
+  const created = previous ? { ok: true as const, ...previous } : await createCampaignHeaderFromBrand(supabase, userId, {
     name: campaignName,
     brandId: row.brand_id as string,
     quotationId: input.quotationId,
@@ -272,6 +291,11 @@ export async function createCampaignFromQuotation(
   });
 
   if (!created.ok) return created;
+
+  const linked = await linkQuotationToCampaign(supabase, input.quotationId, created.id);
+  if (linked.error) return { ok: false, message: linked.error.message };
+  const shortlistLinked = await linkShortlistToCampaign(supabase, shortlistId, created.id);
+  if (shortlistLinked.error) return { ok: false, message: shortlistLinked.error.message };
 
   const { data: items } = await supabase
     .from("quotation_items")
@@ -343,9 +367,6 @@ export async function createCampaignFromQuotation(
 
     assigned += 1;
   }
-
-  await linkQuotationToCampaign(supabase, input.quotationId, created.id);
-  await linkShortlistToCampaign(supabase, shortlistId, created.id);
 
   await logQuotationLifecycleEvent(supabase, {
     quotationId: input.quotationId,
