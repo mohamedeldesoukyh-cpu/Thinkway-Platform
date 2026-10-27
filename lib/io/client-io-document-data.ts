@@ -1,4 +1,5 @@
 import { plannedPostingDate, formatPlannedPostingDates } from "@/lib/campaigns/planned-posting-date";
+import { isOtherServiceAssignment } from "@/lib/commercial/other-service";
 import { parseSendRecipientsJson, clientIoDocumentRecipients } from "@/lib/io/client-io-send-recipients";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { clientIoFxRates } from "@/lib/io/client-io-fx";
@@ -398,10 +399,15 @@ export async function loadClientIoDocumentData(
     deliverables = ((liveDeliverables ?? []) as DeliverableRow[]).map(row => ({ ...row, planned_posting_date: plannedPostingDate(row.metadata) }));
   }
 
+  const originalPrimaryLine = typedLines[0];
+  const serviceIds = new Set(typedLines.filter(line => isOtherServiceAssignment(parseLineAssignment(line.metadata))).map(line => line.id));
+  typedLines.sort((a, b) => Number(serviceIds.has(a.id)) - Number(serviceIds.has(b.id)));
   const lineContext = new Map<
     string,
     {
       influencerName: string;
+      description: string;
+      otherService: boolean;
       handleByPlatform: Map<string, string>;
     }
   >();
@@ -415,7 +421,9 @@ export async function loadClientIoDocumentData(
       ])
     );
     lineContext.set(line.id, {
-      influencerName: assignment?.influencer_name ?? line.name,
+      influencerName: serviceIds.has(line.id) ? "Other Services" : assignment?.influencer_name ?? line.name,
+      description: line.description?.trim() || line.name,
+      otherService: serviceIds.has(line.id),
       handleByPlatform,
     });
   }
@@ -440,15 +448,17 @@ export async function loadClientIoDocumentData(
 
     return {
       influencerName: context?.influencerName ?? "—",
-      platform: typed.platform,
-      deliverableType: deliverableLabel(typed.deliverable_type),
+      platform: context?.otherService ? "—" : typed.platform,
+      deliverableType: context?.otherService ? context.description : deliverableLabel(typed.deliverable_type),
       quantity: typed.quantity,
-      handle,
+      handle: context?.otherService ? "—" : handle,
       scheduledDates: formatClientSchedule([row.planned_posting_date]),
     };
   });
 
   deliverableRows.sort((a, b) => {
+    const serviceOrder = Number(a.influencerName === "Other Services") - Number(b.influencerName === "Other Services");
+    if (serviceOrder) return serviceOrder;
     const byName = a.influencerName.localeCompare(b.influencerName);
     if (byName !== 0) return byName;
     return a.platform.localeCompare(b.platform);
@@ -483,11 +493,11 @@ export async function loadClientIoDocumentData(
         : line.name;
 
     return {
-      influencerName: assignment?.influencer_name ?? line.name,
-      platform: platformsLabel,
-      deliverableType: packageLabel,
+      influencerName: serviceIds.has(line.id) ? "Other Services" : assignment?.influencer_name ?? line.name,
+      platform: serviceIds.has(line.id) ? "—" : platformsLabel,
+      deliverableType: serviceIds.has(line.id) ? line.description?.trim() || line.name : packageLabel,
       quantity: 1,
-      handle: primaryHandle,
+      handle: serviceIds.has(line.id) ? "—" : primaryHandle,
       scheduledDates,
     };
   });
@@ -495,8 +505,9 @@ export async function loadClientIoDocumentData(
   const influencerNotes: ClientIoInfluencerNoteRow[] = typedLines.map((line) => {
     const assignment = parseLineAssignment(line.metadata);
     return {
-      influencerName: assignment?.influencer_name ?? line.name,
-      fullDescription: line.description?.trim() || null,
+      influencerName: serviceIds.has(line.id) ? "Other Services" : assignment?.influencer_name ?? line.name,
+      handle: serviceIds.has(line.id) ? null : [...new Set((assignment?.platforms ?? []).map(p => p.handle?.replace(/^@/, "")).filter(Boolean))].map(h => `@${h}`).join(" · "),
+      fullDescription: line.description?.trim() || (serviceIds.has(line.id) ? line.name : null),
       usagePeriod: readAssignmentUsagePeriod(line.metadata),
     };
   });
@@ -526,14 +537,14 @@ export async function loadClientIoDocumentData(
       lineId: line.id,
       lineDocumentNumber: line.document_number,
       lineName: line.name,
-      influencerName: assignment?.influencer_name ?? line.name,
+      influencerName: serviceIds.has(line.id) ? `Other Services — ${line.description?.trim() || line.name}` : assignment?.influencer_name ?? line.name,
       revenueBeforeVat: roundMoney(revenueBeforeVat * (fxRates?.[line.id] ?? 1)),
       usageRightsAmount: roundMoney(usageRightsAmount * (fxRates?.[line.id] ?? 1)),
       agencyFeeAmount: roundMoney(agencyFeeAmount * (fxRates?.[line.id] ?? 1)),
     };
   });
 
-  const primaryLine = typedLines[0];
+  const primaryLine = originalPrimaryLine;
   const vatPercent =
     Number(primaryLine?.revenue_vat_percent ?? THINKWAY_AGENCY_DEFAULTS.defaultVatPercent);
   const vatExempt = Boolean(primaryLine?.revenue_vat_exempt);

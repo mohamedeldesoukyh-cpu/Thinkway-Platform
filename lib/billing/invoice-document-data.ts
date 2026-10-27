@@ -1,4 +1,5 @@
 import { loadInvoicePaymentContext } from "@/lib/billing/invoice-payment-context";
+import { isOtherServiceAssignment } from "@/lib/commercial/other-service";
 import { invoiceInstallmentLabel, loadAssignmentInstallmentNumbers } from "@/lib/billing/invoice-installments";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
@@ -320,11 +321,13 @@ export async function loadInvoiceDocumentData(
   }
 
   const creatorNames = new Map<string, string>();
+  const creatorHandles = new Map<string, string>();
+  const serviceDescriptions = new Map<string, string>();
   if (campaignLineIds.length > 0) {
     const { data: commercialLines } = await supabase
       .from("campaign_lines")
       .select(
-        "id, metadata, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
+        "id, name, description, metadata, revenue, revenue_before_vat, usage_rights_amount, agency_fee_amount, agency_fee_percent"
       )
       .in("id", campaignLineIds);
 
@@ -332,6 +335,11 @@ export async function loadInvoiceDocumentData(
       lineId: row.id as string,
       assignment: parseLineAssignment(row.metadata as Record<string, unknown> | null),
     }));
+    for (const row of commercialLines ?? []) {
+      const assignment = parseLineAssignment(row.metadata as Record<string, unknown> | null);
+      if (isOtherServiceAssignment(assignment)) serviceDescriptions.set(row.id, row.description?.trim() || row.name);
+      else creatorHandles.set(row.id, [...new Set((assignment?.platforms ?? []).map(p => p.handle?.replace(/^@/, "")).filter(Boolean))].map(h => `@${h}`).join(" · "));
+    }
     const creatorIds = [...new Set(assignments.flatMap(row => row.assignment ? [row.assignment.influencer_id] : []))];
     if (creatorIds.length) {
       const [creators, accounts] = await Promise.all([
@@ -370,9 +378,14 @@ export async function loadInvoiceDocumentData(
 
   const lineItems: InvoiceLineItemRow[] = lines.map((line) => ({
     id: line.id,
-    description: line.description,
+    description: line.campaign_line_id && serviceDescriptions.has(line.campaign_line_id) ? "Other Services" : line.description,
+    otherService: Boolean(line.campaign_line_id && serviceDescriptions.has(line.campaign_line_id)),
+    serviceDescription: line.campaign_line_id ? serviceDescriptions.get(line.campaign_line_id) : null,
+    serviceAgencyFee: line.campaign_line_id && serviceDescriptions.has(line.campaign_line_id) && commercialByLineId.has(line.campaign_line_id)
+      ? splitInvoicedCommercial(Number(line.revenue_before_vat), commercialByLineId.get(line.campaign_line_id)!).agencyFeeAmount : 0,
+    creatorHandle: line.campaign_line_id ? creatorHandles.get(line.campaign_line_id) : null,
     installmentLabel: invoiceInstallmentLabel(line.campaign_line_id ? installments.get(line.campaign_line_id) : undefined, line.description),
-    creatorName: line.campaign_line_id ? creatorNames.get(line.campaign_line_id) ?? null : null,
+    creatorName: line.campaign_line_id && !serviceDescriptions.has(line.campaign_line_id) ? creatorNames.get(line.campaign_line_id) ?? null : null,
     subDescription: buildLineSubDescription({
       deliverableLabel: line.deliverable_label,
       lineDocumentNumber: line.line_document_number,
@@ -386,7 +399,7 @@ export async function loadInvoiceDocumentData(
     revenueVatAmount: line.revenue_vat_amount,
     revenueVatExempt: line.revenue_vat_exempt,
     lineDocumentNumber: line.line_document_number,
-  }));
+  })).sort((a, b) => Number(a.otherService) - Number(b.otherService));
 
   const address = formatClientAddress({
     legalAddress: client.legal_address ?? {},

@@ -161,6 +161,10 @@ export function aggregateInvoiceLinesByCreator(
   }
 
   return [...groups.values()].map((group) => ({
+    otherService: group.sourceLines[0].otherService,
+    serviceDescription: group.sourceLines[0].serviceDescription,
+    creatorName: group.sourceLines[0].creatorName,
+    creatorHandle: group.sourceLines[0].creatorHandle,
     id: group.id,
     description: creatorDescription(group.sourceLines),
     installmentLabel: [...new Set(group.sourceLines.map(line => line.installmentLabel).filter(Boolean))].join(" · ") || null,
@@ -242,12 +246,27 @@ export function applyInvoiceDocumentLayout(
   data: InvoiceDocumentData,
   layout: InvoiceDocumentLayout
 ): InvoiceDocumentData {
+  data = { ...data, lineItems: [...data.lineItems].sort((a, b) => Number(Boolean(a.otherService)) - Number(Boolean(b.otherService))) };
   if (layout === "detailed") return data;
   if (layout === "by_creator") {
     return {
       ...data,
       lineItems: aggregateInvoiceLinesByCreator(data.lineItems),
     };
+  }
+  const services = data.lineItems.filter(line => line.otherService);
+  if (services.length) {
+    const serviceBase = services.reduce((sum, line) => sum + line.revenueBeforeVat, 0);
+    const serviceFees = services.reduce((sum, line) => sum + (line.serviceAgencyFee ?? 0), 0);
+    const creatorLines = data.lineItems.filter(line => !line.otherService);
+    const base = creatorLines.length ? applyPackageLayout({ ...data, lineItems: creatorLines,
+      subtotal: roundMoney(data.subtotal - serviceBase),
+      commercialBreakdown: {
+        revenueAmount: roundMoney(data.commercialBreakdown.revenueAmount - serviceBase + serviceFees),
+        agencyFeeAmount: roundMoney(data.commercialBreakdown.agencyFeeAmount - serviceFees),
+      },
+    }).lineItems : [];
+    return { ...data, lineItems: [...base, ...aggregateInvoiceLinesByCreator(services)] };
   }
   return applyPackageLayout(data);
 }

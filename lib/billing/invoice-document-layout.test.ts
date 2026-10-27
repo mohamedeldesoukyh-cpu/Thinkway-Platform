@@ -91,6 +91,27 @@ const sample: InvoiceDocumentData = {
 };
 
 const detailed = applyInvoiceDocumentLayout(sample, "detailed");
+const serviceDocument = { ...sample, subtotal: 25000, taxAmount: 3500, total: 28500,
+  commercialBreakdown: { revenueAmount: 24000, agencyFeeAmount: 1000 },
+  lineItems: [
+    { ...sample.lineItems[0], id: "service", lineDocumentNumber: "TW-2026-0001-S", otherService: true,
+      description: "Hidden Supplier Name", creatorName: "Hidden Supplier Name", creatorHandle: "@privatevendor",
+      serviceDescription: "Videographer — one filming day", serviceAgencyFee: 1000 },
+    { ...sample.lineItems[2], creatorName: "Creator B", creatorHandle: "@creator_b" },
+  ],
+};
+for (const layout of ["detailed", "by_creator", "package"] as const) {
+  const document = applyInvoiceDocumentLayout(serviceDocument, layout);
+  assert.equal(document.lineItems.at(-1)?.otherService, true);
+  assert.equal(document.lineItems.reduce((sum, line) => sum + line.revenueBeforeVat, 0), 25000);
+  assert.equal(document.lineItems.reduce((sum, line) => sum + line.lineTotal, 0), 28500);
+  const html = buildInvoiceTemplateHtml(document);
+  assert.ok(html.includes("Other Services"));
+  assert.ok(html.includes("Videographer — one filming day"));
+  assert.ok(!html.includes("Hidden Supplier Name"));
+  assert.ok(!html.includes("@privatevendor"));
+  if (layout !== "package") assert.ok(html.includes("@creator_b"));
+}
 const installmentSample = { ...sample, lineItems: sample.lineItems.map(line => ({ ...line,
   installmentLabel: line.lineDocumentNumber?.endsWith("-A") ? "2nd installment — 50%" : "1st installment — 50%",
 })) };

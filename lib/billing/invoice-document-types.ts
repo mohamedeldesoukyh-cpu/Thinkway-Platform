@@ -3,6 +3,10 @@ export type InvoiceLineItemRow = {
   description: string;
   subDescription: string | null;
   creatorName?: string | null;
+  creatorHandle?: string | null;
+  otherService?: boolean;
+  serviceDescription?: string | null;
+  serviceAgencyFee?: number;
   installmentLabel?: string | null;
   quantity: number;
   unitPrice: number;
