@@ -3,7 +3,7 @@ import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,6 +35,7 @@ type Props = {
 
 export function ConvertQuotationDialog({ detail, open, onOpenChange, itemIds }: Props) {
   const router = useRouter();
+  const submitting = useRef(false);
   const [pending, startTransition] = useTransition();
   const [preview, setPreview] = useState<PreviewData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -67,7 +68,10 @@ export function ConvertQuotationDialog({ detail, open, onOpenChange, itemIds }: 
   }, [open, detail.id, itemIds]);
 
   function execute() {
+    if (submitting.current) return;
+    submitting.current = true;
     startTransition(async () => {
+      try {
       const res = await convertQuotationToCampaign({
         quotationId: detail.id,
         itemIds,
@@ -89,6 +93,11 @@ export function ConvertQuotationDialog({ detail, open, onOpenChange, itemIds }: 
       onOpenChange(false);
       router.push(`/campaigns/${res.data.campaignId}`);
       router.refresh();
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : "Conversion failed. Please try again.");
+      } finally {
+        submitting.current = false;
+      }
     });
   }
 
