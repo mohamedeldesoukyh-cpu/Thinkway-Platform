@@ -95,7 +95,7 @@ function renderDeliverableRows(
     .map(
       (row) => `
           <tr>
-            <td class="hh">${display(row.influencerName)}</td>
+            <td class="hh">${display(row.influencerName)}${row.handle && row.handle !== "—" ? `<div class="muted" style="font-size:11px;font-weight:400;margin-top:4px">${display(row.handle)}</div>` : ""}</td>
             <td>${display(platformLabel(row.platform))}</td>
             <td>${display(row.deliverableType)}</td>
             <td class="r">${row.quantity}</td>
@@ -121,7 +121,7 @@ function renderDeliverableScope(data: ClientIoDocumentData): string {
       const usage = row.usagePeriod?.trim()
         ? `<li>Usage period: ${escapeHtml(row.usagePeriod)}</li>`
         : "";
-      return `<div class="dlv-item"><h4>${display(row.influencerName)}<span></span></h4><ul>${bullets}${usage}</ul></div>`;
+      return `<div class="dlv-item"><h4>${display(row.influencerName)}</h4>${row.handle ? `<div class="muted" style="font-size:11px;margin-top:4px">${display(row.handle)}</div>` : ""}<ul>${bullets}${usage}</ul></div>`;
     })
     .join("");
 }

@@ -18,6 +18,7 @@ export type ClientIoDeliverableRow = {
 
 /** Per-influencer commercial notes shown below the roster table. */
 export type ClientIoInfluencerNoteRow = {
+  handle?: string | null;
   influencerName: string;
   fullDescription: string | null;
   usagePeriod: string | null;

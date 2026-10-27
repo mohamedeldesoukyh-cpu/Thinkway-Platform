@@ -3,6 +3,10 @@ import type { LinePlatformSelection } from "@/lib/campaigns/line-assignment";
 
 export const OTHER_SERVICE_TYPE = "other_service";
 
+export function isOtherServiceAssignment(assignment: { platforms?: LinePlatformSelection[] } | null | undefined): boolean {
+  return Boolean(assignment?.platforms?.some(platform => platform.deliverables?.includes(OTHER_SERVICE_TYPE)));
+}
+
 export function isOtherService(item: { deliverables?: unknown; platform?: string | null }): boolean {
   return Array.isArray(item.deliverables) && item.deliverables.some((entry: QuotationDeliverable) =>
     entry?.type === OTHER_SERVICE_TYPE || entry?.type_lines?.some(line => line?.type === OTHER_SERVICE_TYPE));
