@@ -1,3 +1,4 @@
+import { diffMasterChanges } from "./field-registry";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -508,4 +509,32 @@ it("approved revision persists VAT exemptions and usage rights on both linked ma
     assert.equal(commercial.quotationItems.get("CML-001")?.values[key], value);
     assert.equal(commercial.assignments.get("asg-A")?.values[key], value);
   }
+});
+
+
+it("cost-only editor changes exclude unchanged client VAT defaults before quote comparison", async () => {
+  const commercial = createInMemoryCommercialStore();
+  seedLinkedCommercial(commercial);
+  commercial.financeLock = { locked: true, reasons: ["invoice"] };
+  const assignment = commercial.assignments.get("asg-A")!;
+  assignment.values = { ...assignment.values, revenue_vat_percent: 14, revenue_vat_exempt: false,
+    cost_vat_percent: 0, cost_vat_exempt: true, usage_rights_amount: 0, usage_rights_cost: 0 };
+  const before = { ...assignment.values };
+  const proposed = diffMasterChanges(before, { ...before, creator_cost: 1500 }).dirty;
+  assert.deepEqual(proposed, { creator_cost: 1500 });
+  const sync = createInMemoryCommercialSyncPorts(commercial);
+  const store = createInMemoryRevisionPorts({ loadConcurrencyToken: id => sync.loadConcurrencyToken(id) });
+  const svc = createCommercialRevisionService(store, sync);
+  const created = await svc.createRevision({ actorId: "requester", campaignHeaderId: "ch1", quotationId: "q1",
+    reason: "Vendor cost correction", concurrencyTokens: { "CML-001": "token-v1" },
+    lines: buildRevisionLinesFromProposals([{ commercialLineId: "CML-001", assignmentIds: ["asg-A"],
+      current: commercial.quotationItems.get("CML-001")!.values, proposed }]) });
+  assert.equal(created.ok, true);
+  if (!created.ok) return;
+  assert.deepEqual(created.data.lines[0].changedFields, ["creator_cost"]);
+  assert.equal((await svc.submitRevision(created.data.id, "requester")).ok, true);
+  const applied = await svc.approveAndApplyRevision(created.data.id, "approver", "OK");
+  assert.equal(applied.ok, true);
+  assert.deepEqual(commercial.assignments.get("asg-A")!.values, { ...before, creator_cost: 1500 });
+  assert.equal(commercial.quotationItems.get("CML-001")!.values.revenue_vat_percent, undefined);
 });
