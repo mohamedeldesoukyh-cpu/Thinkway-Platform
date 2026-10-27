@@ -12,6 +12,7 @@ import { loadClientIoDocumentData } from "@/lib/io/client-io-document-data";
 import { renderHtmlToPdf, INSERTION_ORDER_PDF_OPTIONS } from "@/lib/io/vendor-io-pdf";
 import { renderClientIoHtml } from "@/lib/io/client-io-template-render";
 import type { ClientIoDocumentLayout } from "@/lib/io/client-io-document-layout";
+import { savedClientIoDocumentLayout } from "@/lib/io/client-io-document-layout";
 import { emitEnterpriseTimelineEvent } from "@/lib/timeline/emit-enterprise-timeline-event";
 
 export const CLIENT_IO_DOCUMENTS_BUCKET = "client-io-documents";
@@ -155,11 +156,11 @@ export async function generateClientIoDocument(
   supabase: SupabaseClient,
   clientIoId: string,
   actorId?: string,
-  layout: ClientIoDocumentLayout = "detailed"
+  layout?: ClientIoDocumentLayout
 ): Promise<ClientIoDocumentResult> {
   const { data: existing, error: existingError } = await supabase
     .from("client_ios")
-    .select("document_number, status, campaign_header_id, is_superseded")
+    .select("document_number, status, campaign_header_id, is_superseded, terms_html")
     .eq("id", clientIoId)
     .maybeSingle();
 
@@ -175,7 +176,9 @@ export async function generateClientIoDocument(
     status: string;
     campaign_header_id: string;
     is_superseded?: boolean | null;
+    terms_html?: string | null;
   };
+  layout ??= savedClientIoDocumentLayout(typedExisting.terms_html);
 
   if (typedExisting.is_superseded) {
     throw new Error("Superseded Client IO versions are immutable.");
