@@ -20,6 +20,8 @@ BEGIN
  d.id:=gen_random_uuid(); INSERT INTO assignment_deliverables SELECT d.*;
  d.id:=gen_random_uuid(); INSERT INTO assignment_deliverables SELECT d.*;
  d.id:=gen_random_uuid(); INSERT INTO assignment_deliverables SELECT d.*;
+ INSERT INTO assignment_post_schedule(assignment_deliverable_id,campaign_line_id,sequence_number,cost_before_vat,revenue_before_vat)
+ SELECT id,l.id,n,12500,15000 FROM assignment_deliverables CROSS JOIN generate_series(1,2) n WHERE campaign_line_id=l.id;
  SELECT id,to_jsonb(i) INTO invoice_key,invoice_before FROM invoices i WHERE issue_date IS NOT NULL LIMIT 1;
  UPDATE campaign_lines SET invoice_id=invoice_key,vat_locked=true,revenue_locked=true WHERE id=l.id;
  SELECT revenue_before_vat INTO base_revenue FROM campaign_lines WHERE id=l.id;
@@ -30,6 +32,7 @@ BEGIN
  IF (SELECT fee FROM creator_payment_terms WHERE assignment_id=a.id)<>70000 THEN RAISE EXCEPTION 'Payment terms stale'; END IF;
  IF (SELECT sum(cost_before_vat) FROM assignment_deliverables WHERE campaign_line_id=l.id)<>70000 OR EXISTS(SELECT 1 FROM assignment_deliverables WHERE campaign_line_id=l.id AND unit_cost<>17500) THEN RAISE EXCEPTION 'Children stale'; END IF;
  IF (SELECT jsonb_agg(to_jsonb(x)-ARRAY['cost_before_vat','total_cost','unit_cost','usage_rights_cost','cost_vat_percent','cost_vat_exempt','cost_vat_amount','cost_after_vat','updated_at'] ORDER BY id) FROM assignment_deliverables x WHERE campaign_line_id=l.id) IS DISTINCT FROM child_before THEN RAISE EXCEPTION 'Child revenue, IDs or operational data changed'; END IF;
+ IF (SELECT sum(cost_before_vat) FROM assignment_post_schedule WHERE campaign_line_id=l.id)<>70000 OR EXISTS(SELECT 1 FROM assignment_post_schedule WHERE campaign_line_id=l.id AND (cost_before_vat<>8750 OR revenue_before_vat<>15000)) THEN RAISE EXCEPTION 'Posting schedule costs or revenue wrong'; END IF;
  IF (SELECT to_jsonb(i) FROM invoices i WHERE id=invoice_key) IS DISTINCT FROM invoice_before THEN RAISE EXCEPTION 'Client invoice changed'; END IF;
  blocked:=false;
  BEGIN PERFORM apply_assignment_commercial_cost(l.id,jsonb_build_object('cost_before_vat',60000,'revenue_before_vat',base_revenue+100)); EXCEPTION WHEN check_violation THEN blocked:=true; END;
