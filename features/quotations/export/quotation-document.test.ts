@@ -1721,3 +1721,20 @@ console.log("quotation-document.test.ts passed");
   assert.ok(summary.includes('width="28" height="28"'));
   assert.ok(summary.includes('class="proposal-creator-number">1</span>'));
 }
+
+// VAT presentation is opt-in and restricted to the package report, including selected lines.
+{
+  const item = mockItem({ revenue: 250000, revenue_egp: 250000, af_value: 37500, af_value_egp: 37500 });
+  const detail = mockDetail({ showPackageVat: true, items: [item], total_revenue_egp: 2100000, total_af_egp: 315000 });
+  const doc = buildQuotationDocument(detail, { template: "creator-list-package" });
+  assert.equal(doc.summary.packageVatAmount, "338,100 EGP");
+  assert.equal(doc.summary.packageTotalAfterVat, "2,753,100 EGP");
+  const html = buildQuotationHtml(doc);
+  assert.equal((html.match(/VAT amount \(14%\)/g) ?? []).length, 2);
+  assert.equal((html.match(/Total after VAT/g) ?? []).length, 2);
+  assert.ok(!buildQuotationHtml({ ...doc, showPackageVat: false }).includes("VAT amount (14%)"));
+  assert.ok(!buildQuotationHtml({ ...doc, template: "creator-list" }).includes("VAT amount (14%)"));
+  const selected = buildQuotationDocument(detail, { template: "creator-list-package", itemIds: [item.id] });
+  assert.equal(selected.summary.packageVatAmount, "40,250 EGP");
+  assert.equal(selected.summary.packageTotalAfterVat, "327,750 EGP");
+}

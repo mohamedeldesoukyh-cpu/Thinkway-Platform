@@ -14,6 +14,7 @@ export type ClientWorkspaceDisplayFlags = {
   creatorPhotoOverrides?: Record<string, string>;
   showOriginalCurrency: boolean;
   hideCostAndFees: boolean;
+  showPackageVat?: boolean;
 };
 
 export function asMetadataRecord(metadata: unknown): Record<string, unknown> {
@@ -37,6 +38,7 @@ export function readClientWorkspaceDisplayFlags(metadata: unknown): ClientWorksp
     ...(order.length ? { creatorListOrder: order } : {}),
     showOriginalCurrency: readShowOriginalCurrency(metadata),
     hideCostAndFees: readHideCostAndFees(metadata),
+    ...(asMetadataRecord(metadata).showPackageVat === true ? { showPackageVat: true } : {}),
   };
 }
 
@@ -52,6 +54,10 @@ export function metadataWithClientWorkspaceDisplayPatch(
   if (patch.hideCostAndFees !== undefined) {
     if (patch.hideCostAndFees) next[HIDE_COST_AND_FEES_META_KEY] = true;
     else delete next[HIDE_COST_AND_FEES_META_KEY];
+  }
+  if (patch.showPackageVat !== undefined) {
+    if (patch.showPackageVat) next.showPackageVat = true;
+    else delete next.showPackageVat;
   }
   return next;
 }

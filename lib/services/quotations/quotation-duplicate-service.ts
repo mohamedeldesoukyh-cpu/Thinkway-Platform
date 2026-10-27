@@ -14,6 +14,7 @@ export function quotationCopyHeader(source: Record<string, unknown>, itemIds: Ma
   patch.metadata = {
     showOriginalCurrency: meta.showOriginalCurrency === true,
     hideCostAndFees: meta.hideCostAndFees === true,
+    ...(meta.showPackageVat === true ? { showPackageVat: true } : {}),
     creatorListOrder: Array.isArray(meta.creatorListOrder) ? meta.creatorListOrder.flatMap(id => itemIds.get(String(id)) ?? []) : [],
     templateCreatorPhotos: meta.templateCreatorPhotos ?? {},
   };

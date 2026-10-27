@@ -58,6 +58,7 @@ import {
   archiveQuotation,
   duplicateQuotation,
   setQuotationHideCostAndFees,
+  setQuotationShowPackageVat,
   setQuotationShowOriginalCurrency,
   updateQuotationHeader,
 } from "@/features/quotations/actions";
@@ -124,6 +125,7 @@ export function QuotationWorkspaceHeader({
   const [showOriginalCurrency, setOptimisticShowOriginalCurrency] = useOptimistic(
     Boolean(detail.showOriginalCurrency)
   );
+  const [showPackageVat, setOptimisticShowPackageVat] = useOptimistic(Boolean(detail.showPackageVat));
   const [hideCostAndFees, setOptimisticHideCostAndFees] = useOptimistic(
     Boolean(detail.hideCostAndFees)
   );
@@ -417,6 +419,15 @@ export function QuotationWorkspaceHeader({
           <ClientWorkspaceDisplayToggles
                           showOriginalCurrency={showOriginalCurrency}
                           hideCostAndFees={hideCostAndFees}
+                          showPackageVat={showPackageVat}
+                          onShowPackageVatChange={(value) => {
+                            startTransition(async () => {
+                              setOptimisticShowPackageVat(value);
+                              const result = await setQuotationShowPackageVat({ quotationId: detail.id, value });
+                              if (!result.ok) { toast.error(result.message); return; }
+                              router.refresh();
+                            });
+                          }}
                           disabled={pending || !detail.canManage}
                           onShowOriginalCurrencyChange={(value) => {
                             startTransition(async () => {

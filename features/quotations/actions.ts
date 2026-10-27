@@ -406,6 +406,24 @@ export async function setQuotationHideCostAndFees(input: {
   return { ok: true };
 }
 
+export async function setQuotationShowPackageVat(input: {
+  quotationId: string;
+  value: boolean;
+}): Promise<ActionResult> {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const { persistClientWorkspaceDisplayFlags } = await import(
+    "@/lib/commercial/client-original-currency-persist"
+  );
+  const result = await persistClientWorkspaceDisplayFlags(actor.supabase, {
+    quotationId: input.quotationId,
+    patch: { showPackageVat: input.value },
+  });
+  if (!result.ok) return result;
+  revalidate(result.quotationId ?? input.quotationId, result.shortlistId ?? undefined);
+  return { ok: true };
+}
+
 /** Resolve currency → EGP rate from md_exchange_rates for live header display. */
 export async function resolveCommercialRateToEgp(
   currency: string,
