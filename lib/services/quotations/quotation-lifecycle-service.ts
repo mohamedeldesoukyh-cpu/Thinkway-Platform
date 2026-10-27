@@ -278,7 +278,7 @@ async function createLegacyCampaignFromQuotation(
   // Legacy Path A (flag off): header + vendor links only. Do not require R2.0 columns.
   const previousQuery = supabase.from("campaign_headers").select("id, document_number");
   const { data: previous, error: previousError } = await (row.campaign_header_id
-    ? previousQuery.eq("id", row.campaign_header_id)
+    ? previousQuery.eq("id", String(row.campaign_header_id))
     : previousQuery.eq("quotation_id", input.quotationId).order("created_at", { ascending: true }).limit(1)
   ).maybeSingle();
   if (previousError) return { ok: false, message: previousError.message };
