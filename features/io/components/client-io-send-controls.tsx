@@ -9,6 +9,7 @@ import { OPERATIONAL_CHROME_LABEL } from "@/features/campaigns/components/assign
 import type { ClientIoRow } from "@/features/io/types";
 import { parseSendRecipientsField, clientIoDocumentRecipients } from "@/lib/io/client-io-send-recipients";
 import { cn } from "@/lib/utils";
+import { savedClientIoDocumentLayout, type ClientIoDocumentLayout } from "@/lib/io/client-io-document-layout";
 
 const INITIAL_STATE = { ok: false } as const;
 
@@ -22,6 +23,7 @@ type ClientIoSendControlsProps = {
   buttonVariant?: "default" | "outline";
   /** Recipients are available (e.g. from contacts) but not yet saved on the IO. */
   recipientsNeedSave?: boolean;
+  layout?: ClientIoDocumentLayout;
 };
 
 export function ClientIoSendControls({
@@ -33,6 +35,7 @@ export function ClientIoSendControls({
   compact = false,
   buttonVariant = "default",
   recipientsNeedSave = false,
+  layout,
 }: ClientIoSendControlsProps) {
   const [sendState, sendAction, sending] = useActionState(sendClientIoAction, INITIAL_STATE);
 
@@ -61,13 +64,16 @@ export function ClientIoSendControls({
   const hasTo = recipients.some(r => !r.role || r.role === "to");
   const mainRecipients = clientIoDocumentRecipients(recipients);
   const recipientSummary = recipients.map(r => `${(r.role ?? "to").toUpperCase()}${mainRecipients.includes(r) ? " · Main" : ""}: ${r.name ? r.name + " " : ""}${r.email}`).join(" · ");
-  const disabled = sending || !hasTo || !hasDocument;
+  const selectedLayout = layout ?? savedClientIoDocumentLayout(io.terms_html);
+  const formatChanged = selectedLayout !== savedClientIoDocumentLayout(io.terms_html);
+  const disabled = sending || !hasTo || !hasDocument || formatChanged;
 
   return (
     <form action={sendAction} className="flex flex-wrap items-center gap-2">
       <input type="hidden" name="id" value={io.id} />
       <input type="hidden" name="campaign_header_id" value={campaignId} />
       <input type="hidden" name="send_recipients" value={sendRecipientsJson} />
+      <input type="hidden" name="layout" value={selectedLayout} />
       <Button
         type="submit"
         size="sm"
@@ -83,7 +89,7 @@ export function ClientIoSendControls({
       >
         {sending ? "Sending…" : sendLabel}
       </Button>
-      {!hasDocument ? (
+      {formatChanged ? <span className="text-xs text-amber-700">Generate the selected format before sending.</span> : !hasDocument ? (
         <span className="text-[11px] text-muted-foreground">Generate document first</span>
       ) : recipientCount === 0 ? (
         <span className="text-[11px] text-muted-foreground">

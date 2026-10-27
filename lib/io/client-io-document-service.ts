@@ -223,7 +223,7 @@ export async function generateClientIoDocument(
   const data = await loadClientIoDocumentData(supabase, clientIoId, actorId, {
     assignmentSnapshot: snapshot,
   });
-  const html = renderClientIoHtml(data, layout);
+  const html = `<!-- client-io-layout:${layout} -->\n${renderClientIoHtml(data, layout)}`;
 
   let htmlUrl: string | null = null;
   let pdfUrl: string | null = null;
