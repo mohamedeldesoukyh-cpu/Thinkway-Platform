@@ -53,3 +53,13 @@ test("display flags keep original-currency and hide-cost keys independent", () =
   assert.equal("hideCostAndFees" in feesOnly, false);
   assert.equal(feesOnly.currency, "SAR");
 });
+
+test("package VAT defaults off and toggles independently", () => {
+  assert.equal(Boolean(readClientWorkspaceDisplayFlags({}).showPackageVat), false);
+  const enabled = metadataWithClientWorkspaceDisplayPatch({ currency: "EGP", hideCostAndFees: true }, { showPackageVat: true });
+  assert.equal(readClientWorkspaceDisplayFlags(enabled).showPackageVat, true);
+  const disabled = metadataWithClientWorkspaceDisplayPatch(enabled, { showPackageVat: false });
+  assert.equal(Boolean(readClientWorkspaceDisplayFlags(disabled).showPackageVat), false);
+  assert.equal(disabled.hideCostAndFees, true);
+  assert.equal(disabled.currency, "EGP");
+});

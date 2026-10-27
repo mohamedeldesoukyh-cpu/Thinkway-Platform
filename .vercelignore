@@ -20,3 +20,4 @@ production-backup*
 backup_contents.txt
 schema.sql
 tmp-preview/
+artifacts/

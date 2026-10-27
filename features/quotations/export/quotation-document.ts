@@ -269,6 +269,7 @@ export type QuotationDocument = {
   template: QuotationTemplateVariant;
   /** Client-facing decks hide Cost / Agency Fees and keep Total Investment only. */
   hideCostAndFees?: boolean;
+  showPackageVat?: boolean;
   serial: string;
   name: string;
   /** Header display currency (amounts in summary are formatted in this currency). */
@@ -301,6 +302,8 @@ export type QuotationDocument = {
     gpColor?: string;
     totalAf: string;
     grandTotal: string;
+    packageVatAmount?: string;
+    packageTotalAfterVat?: string;
     totalAgencyMargin: string;
     creatorCount: number;
     audienceSize: string;
@@ -1156,6 +1159,7 @@ export function buildQuotationDocument(
     creatorListOrder: detail.creatorListOrder,
     template,
     hideCostAndFees,
+    showPackageVat: Boolean(detail.showPackageVat),
     serial: formatDocumentNumberForDisplay(detail.serial_number ?? "QT-PENDING"),
     name: detail.name,
     currency: displayCurrency,
@@ -1199,6 +1203,8 @@ export function buildQuotationDocument(
       totalClientCost,
       totalAf,
       grandTotal,
+      packageVatAmount: formatDisplayMoney(Math.round((selectedRevenueEgp + selectedAfEgp) * 14) / 100, projected ? Math.round((projected.revenue + projected.af) * 14) / 100 : undefined),
+      packageTotalAfterVat: formatDisplayMoney(selectedRevenueEgp + selectedAfEgp + Math.round((selectedRevenueEgp + selectedAfEgp) * 14) / 100, projected ? projected.revenue + projected.af + Math.round((projected.revenue + projected.af) * 14) / 100 : undefined),
       totalAgencyMargin,
       creatorCount: uniqueCreatorCount,
       audienceSize: num(rosterForecast.audienceSize),
