@@ -226,7 +226,7 @@ export function CreatorsWorkspace({
   const selectedIndex = selected
     ? view.creators.findIndex((creator) => creator.creatorId === selected.creatorId)
     : 0;
-  const showDetail = Boolean(selected) && (sheetOpen || viewport === "desktop");
+  const showDetail = Boolean(selected) && !selected?.creatorId.startsWith("service:") && (sheetOpen || viewport === "desktop");
   useEffect(() => {
     const list = listRef.current;
     if (!list) return;
