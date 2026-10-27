@@ -254,10 +254,11 @@ export function createSupabaseCommercialSyncPorts(
       });
     }
 
-    const { error } = await supabase
-      .from("campaign_lines")
-      .update(columns as never)
-      .eq("id", assignmentId);
+    // Cost mirrors, vendor payables and child allocations must commit together.
+    const changesCost = ["cost_before_vat", "usage_rights_cost", "cost_vat_percent", "cost_vat_exempt"].some(key => key in columns);
+    const { error } = changesCost
+      ? await supabase.rpc("apply_assignment_commercial_cost" as never, { p_line: assignmentId, p_patch: columns } as never)
+      : await supabase.from("campaign_lines").update(columns as never).eq("id", assignmentId);
     if (error) throw new Error(error.message);
   };
 
