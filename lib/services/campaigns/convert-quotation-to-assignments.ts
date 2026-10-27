@@ -5,6 +5,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { withQuotationConversionLock } from "./quotation-conversion-lock";
+import { isOtherService } from "@/lib/commercial/other-service";
 
 import { resolveCampaignDisplayName } from "@/lib/campaigns/campaign-display-name";
 import { resolveQuotationServiceDescription } from "@/lib/campaigns/quotation-service-description";
@@ -782,7 +783,8 @@ async function convertQuotationToAssignmentsUnlocked(
       influencer_id: seed.influencerId,
       assignment_json: JSON.stringify({ platforms: seed.platforms }),
       pricing_mode: "package",
-      name: seed.displayName,
+      name: isOtherService(unit.primaryItem) ? serviceDescription || "Other service" : seed.displayName,
+      title_user_edited: isOtherService(unit.primaryItem),
       description: serviceDescription,
       // PO consumption includes Revenue + UR Rev + agency fee. Seed the same
       // commercial base here so a newly converted quotation cannot be marked
@@ -800,7 +802,7 @@ async function convertQuotationToAssignmentsUnlocked(
       usage_rights_cost: 0,
       agency_fee_percent: Number(unit.primaryItem.af_pct ?? 0),
       revenue_vat_percent: 0,
-      cost_vat_percent: 0,
+      cost_vat_percent: isOtherService(unit.primaryItem) ? -1 : 0,
       currency_code: seed.currencyCode,
       cost_fx_override: unit.primaryItem.cost_fx_override ?? null,
       revenue_fx_override: unit.primaryItem.revenue_fx_override ?? null,

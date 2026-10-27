@@ -1,4 +1,5 @@
 import { sanitizeAssignmentCreatorName } from "@/lib/campaigns/assignment-line-naming";
+import { isOtherService, otherServicePlatforms } from "@/lib/commercial/other-service";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import type { LinePlatformSelection } from "@/lib/campaigns/line-assignment";
 import {
@@ -84,6 +85,8 @@ export function quotationDeliverablesToPlatforms(
   creator: UnifiedCreatorResult | null,
   item: QuotationItemExecutionRow
 ): LinePlatformSelection[] {
+  if (isOtherService({ deliverables })) return otherServicePlatforms(item.creator_name || creator?.display_name || "Vendor",
+    deliverables.flatMap(deliverableTypeLines).reduce((sum, line) => sum + Math.max(1, line.quantity), 0));
   const grouped = new Map<string, string[]>();
 
   for (const deliverable of deliverables) {
@@ -176,8 +179,9 @@ export function mapQuotationItemsToExecutionLineSeeds(input: {
 
     if (platforms.length === 0) continue;
 
-    const revenue = Math.round(item.revenue > 0 ? item.revenue : item.cost);
-    const cost = Math.round(item.cost > 0 ? item.cost : revenue);
+    const service = isOtherService(item);
+    const revenue = service ? item.revenue : Math.round(item.revenue > 0 ? item.revenue : item.cost);
+    const cost = service ? item.cost : Math.round(item.cost > 0 ? item.cost : revenue);
     const optionLabel =
       item.option_number != null && item.option_number > 0
         ? ` · Option ${item.option_number}`

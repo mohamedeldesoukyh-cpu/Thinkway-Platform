@@ -17,5 +17,6 @@ export function orderWorkspaceCreators(creators: ClientCreatorCard[], customOrde
     const manual = (a.creator.shortlistOrderIndex ?? Number.MAX_SAFE_INTEGER) - (b.creator.shortlistOrderIndex ?? Number.MAX_SAFE_INTEGER);
     return manual || compareRecommendations(a.creator, b.creator) || compareClientListCreators(a, b);
   }).map(({ creator }) => creator);
-  return orderCreatorGroups(automatic, customOrder, creator => (creator.quotationOptions ?? []).flatMap(option => [option.itemId, ...(option.memberItemIds ?? [])]));
+  return orderCreatorGroups(automatic, customOrder, creator => (creator.quotationOptions ?? []).flatMap(option => [option.itemId, ...(option.memberItemIds ?? [])]))
+    .sort((a, b) => Number(a.creatorId.startsWith("service:")) - Number(b.creatorId.startsWith("service:")));
 }

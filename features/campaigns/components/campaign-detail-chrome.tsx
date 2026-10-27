@@ -180,7 +180,7 @@ export function CampaignDetailChrome({
           <div className="wr-campaign-minibar-title"><span><DocumentNumber value={workspace.document_number} /></span><b>{workspace.name}</b><span>{lifecycle.businessStateLabel}</span></div>
           <div className="wr-campaign-minibar-figures">
             <span className="wr-mini-internal"><i>Internal</i><span>Base cost <b><CampaignSummaryMoney amount={cost} currency={displayCurrency} metric="cost" /></b></span><span>GP <b><CampaignSummaryMoney amount={gp} currency={displayCurrency} metric="gp" /></b></span><span>GP % <b>{formatPercent(marginPercent)}</b></span></span>
-            <span><i>Client-facing</i><span>Total investment <b><CampaignSummaryMoney amount={revenue} currency={displayCurrency} metric="revenue" /></b></span><span>Creators <b>{String(workspace.lines.length)}</b></span></span>
+            <span><i>Client-facing</i><span>Total investment <b><CampaignSummaryMoney amount={revenue} currency={displayCurrency} metric="revenue" /></b></span><span>Assignments <b>{String(workspace.lines.length)}</b></span></span>
           </div>
         </div>
       </div>
@@ -249,7 +249,7 @@ export function CampaignDetailChrome({
         <div className="tw-mr">{actions}<span className="wr-tools-divider" /><button type="button" className="tw-b" onClick={() => onSelectStage("lines")}>Commercial Workspace</button></div>
 
         <div className={styles.context}>
-          <span><b>{workspace.lines.length}</b> creator line(s)</span>
+          <span><b>{workspace.lines.length}</b> assignment(s)</span>
           <span>Stage: <b>{lifecycle.businessStageLabel}</b></span>
           <span>Workspace: <b>{workspaceLabelForTab(activeTab)}</b></span>
           <span className={styles.fx}>Internal FX gain / loss: <b>{fxGainLoss == null ? "Not available" : `EGP ${fxGainLoss.toLocaleString("en-US", { maximumFractionDigits: 2 })}`}</b></span>

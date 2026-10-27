@@ -309,10 +309,11 @@ export async function loadCampaignOperationalBilling(
 
   for (const line of lines) {
     const assignment = parseLineAssignment(line.metadata);
+    const otherService = assignment?.platforms.some(platform => platform.deliverables.includes("other_service"));
     const deliverables = deliverablesByLine.get(line.id) ?? [];
     const rollups = rollupAssignmentBilling(deliverables);
     const title =
-      assignment?.influencer_name != null
+      !otherService && assignment?.influencer_name != null
         ? `${assignment.influencer_name} — ${assignment.pricing_mode === "package" ? "Package" : "Per deliverable"}`
         : line.name;
 
@@ -320,7 +321,7 @@ export async function loadCampaignOperationalBilling(
       line_id: line.id,
       document_number: line.document_number,
       name: line.name,
-      influencer_name: assignment?.influencer_name ?? null,
+      influencer_name: otherService ? null : assignment?.influencer_name ?? null,
       platform_summary: assignment
         ? assignment.platforms.map((p) => platformLabel(p.platform)).join(", ")
         : null,
@@ -420,7 +421,7 @@ export async function loadCampaignOperationalBilling(
         campaign_line_id: line.id,
         assignment_deliverable_id: deliverable.id,
         parent_id: line.id,
-        label: deliverable.label,
+        label: otherService ? line.name : deliverable.label,
         document_number: null,
         influencer_name: assignment?.influencer_name ?? null,
         platform: deliverable.platform,

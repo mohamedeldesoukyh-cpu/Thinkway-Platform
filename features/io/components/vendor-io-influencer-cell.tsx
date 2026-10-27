@@ -26,7 +26,7 @@ export function VendorIoInfluencerCell({
   name,
   handle,
   avatarUrl,
-  platform = "instagram",
+  platform = null,
   className,
 }: Props) {
   const identity = resolveCreatorIdentity(name, handle);

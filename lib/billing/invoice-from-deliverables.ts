@@ -186,7 +186,7 @@ function deliverableInvoiceLinePayload(
     campaign_header_id: headerId,
     assignment_deliverable_id: deliverable.id,
     sort_order: sortOrder,
-    description: invoicePercentageDescription(`${line.document_number} — ${line.name} · ${deliverable.label}`, beforeVat, resolveInvoiceLineBeforeVat(deliverable, { forRegeneration: true })),
+    description: invoicePercentageDescription(`${line.document_number} — ${line.name}${deliverable.deliverable_type === "other_service" ? "" : ` · ${deliverable.label}`}`, beforeVat, resolveInvoiceLineBeforeVat(deliverable, { forRegeneration: true })),
     quantity: 1,
     unit_price: beforeVat,
     revenue_before_vat: beforeVat,

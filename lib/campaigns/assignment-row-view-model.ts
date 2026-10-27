@@ -201,7 +201,8 @@ export function buildAssignmentRowViewModel(
   const creatorLabel = sanitizeAssignmentCreatorName(
     line.influencer_name ?? line.name.split(" — ")[0] ?? line.name
   );
-  const displayName =
+  const otherService = line.assignment?.platforms.some(p => p.platform === "other" && p.deliverables.includes("other_service"));
+  const displayName = otherService ? line.name :
     buildAssignmentDisplayName(creatorLabel, [
       ...deliverables.map((d) => ({
         platform: d.platform,

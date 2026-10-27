@@ -510,6 +510,7 @@ export function AssignmentInfluencerDetailSheet({
 
   const platformAccounts = group?.line.creator_platform_accounts ?? [];
   const line = group?.line;
+  const otherService = line?.assignment?.platforms.some(p => p.platform === "other" && p.deliverables.includes("other_service")) ?? false;
   const hasDetail = Boolean(group && row && line);
   const currency = line ? resolveAssignmentLineCurrency(line) : "EGP";
   const vendorIoId = line?.active_vendor_io_id ?? line?.vendor_io_id ?? null;
@@ -567,7 +568,7 @@ export function AssignmentInfluencerDetailSheet({
               Assignment participation and activity details for {handle}
             </SheetDescription>
 
-            <div className="assignment-detail-mobile-bar"><span>Creator details</span><button type="button" onClick={() => onOpenChange(false)} aria-label="Close creator details">Close ×</button></div>
+            <div className="assignment-detail-mobile-bar"><span>{otherService ? "Service details" : "Creator details"}</span><button type="button" onClick={() => onOpenChange(false)} aria-label="Close details">Close ×</button></div>
             <div className="tw-cm__l">
               <div className="cr">
                 {campaignName} / {formatDocumentNumberForDisplay(line.document_number || handle)}
@@ -598,10 +599,11 @@ export function AssignmentInfluencerDetailSheet({
                   ✓
                 </span>
               </h2>
-              {handle ? <div className="hd">{socialProfileHref(platformAccounts[0] ?? line.assignment?.platforms[0] ?? {}) ? (
+              {otherService && <div className="hd">Others · {line.name}</div>}
+              {handle && !otherService ? <div className="hd">{socialProfileHref(platformAccounts[0] ?? line.assignment?.platforms[0] ?? {}) ? (
                 <a href={socialProfileHref(platformAccounts[0] ?? line.assignment?.platforms[0] ?? {})!} target="_blank" rel="noopener noreferrer" className="underline underline-offset-4">@{handle.replace(/^@/, "")} ↗</a>
               ) : <>@{handle.replace(/^@/, "")}</>}</div> : null}
-              <div className="tw-cm__pf">
+              <div className="tw-cm__pf" hidden={otherService}>
                 {platformAccounts.map((account) => (
                   <span key={`${account.platform}-${account.handle}`}>{account.platform}</span>
                 ))}
@@ -669,9 +671,9 @@ export function AssignmentInfluencerDetailSheet({
                     <TabsTrigger value="participation">Participation</TabsTrigger>
                     <TabsTrigger value="general">General</TabsTrigger>
                     {gates.showInternalFinancials && influencerId && <TabsTrigger value="bank">Bank details</TabsTrigger>}
-                    <TabsTrigger value="social">Social data</TabsTrigger>
+                    {!otherService && <TabsTrigger value="social">Social data</TabsTrigger>}
                     <TabsTrigger value="activity">Activity</TabsTrigger>
-                    <TabsTrigger value="performance">Performance</TabsTrigger>
+                    {!otherService && <TabsTrigger value="performance">Performance</TabsTrigger>}
                   </TabsList>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -689,7 +691,7 @@ export function AssignmentInfluencerDetailSheet({
                       ) : null}
                       {vendorProfileHref ? (
                         <DropdownMenuItem asChild>
-                          <Link href={vendorProfileHref}>Creator profile</Link>
+                          <Link href={vendorProfileHref}>{otherService ? "Vendor profile" : "Creator profile"}</Link>
                         </DropdownMenuItem>
                       ) : null}
                     </DropdownMenuContent>
@@ -751,7 +753,7 @@ export function AssignmentInfluencerDetailSheet({
                 )}
                 {vendorProfileHref ? (
                   <Button asChild variant="outline" size="sm" className="tw-b sm">
-                    <Link href={vendorProfileHref}>Creator profile</Link>
+                    <Link href={vendorProfileHref}>{otherService ? "Vendor profile" : "Creator profile"}</Link>
                   </Button>
                 ) : null}
                 <span className="tw-sp" />

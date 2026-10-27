@@ -3,6 +3,7 @@
  * Does not affect the quotation workspace UI.
  */
 import { quotationPackageRepeat } from "@/lib/quotations/quotation-package-repeat";
+import { isOtherService } from "@/lib/commercial/other-service";
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { quotationServiceDescription } from "@/lib/quotations/service-description";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
@@ -85,8 +86,9 @@ export function quotationCreatorDuplicateKey(
   item: Pick<
     QuotationItemRow,
     "id" | "unified_id" | "influencer_id" | "profile_id" | "creator_name" | "handle"
-  >
+  > & { deliverables?: unknown }
 ): string {
+  if (isOtherService(item)) return `service:${item.id}`;
   if (item.unified_id) return `u:${item.unified_id}`;
   if (item.influencer_id) return `i:${item.influencer_id}`;
   if (item.profile_id) return `p:${item.profile_id}`;
@@ -97,7 +99,7 @@ export function quotationCreatorDuplicateKey(
 }
 
 export function countUniqueQuotationCreators(items: QuotationItemRow[]): number {
-  return new Set(items.map((item) => quotationCreatorDuplicateKey(item))).size;
+  return new Set(items.filter(item => !isOtherService(item)).map((item) => quotationCreatorDuplicateKey(item))).size;
 }
 
 export type QuotationExportCreatorGroup = {
@@ -242,6 +244,7 @@ export function exportItemServiceDescription(item: QuotationExportItem): string 
 }
 
 export function exportItemTierLabel(item: QuotationExportItem): string {
+  if (isOtherService(item)) return "Others";
   const tier = resolveCreatorTierLabel({ followers: item.followers });
   return tier === "Unknown" ? "—" : tier;
 }

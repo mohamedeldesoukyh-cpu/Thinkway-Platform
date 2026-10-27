@@ -63,7 +63,7 @@ export function clientIoSnapshotTotal(value: unknown) {
   });
   const currency = value.documentCurrency ?? first?.currency_code ?? "EGP";
   const pricing = buildCampaignPricing(lines, currency,
-    Number(first?.revenue_vat_percent ?? 0) || THINKWAY_AGENCY_DEFAULTS.defaultVatPercent, Boolean(first?.revenue_vat_exempt));
+    Number(first?.revenue_vat_percent ?? THINKWAY_AGENCY_DEFAULTS.defaultVatPercent), Boolean(first?.revenue_vat_exempt));
   return { amount: pricing.total, currency, assignmentCount: value.lines.length };
 }
 
@@ -535,7 +535,7 @@ export async function loadClientIoDocumentData(
 
   const primaryLine = typedLines[0];
   const vatPercent =
-    Number(primaryLine?.revenue_vat_percent ?? 0) || THINKWAY_AGENCY_DEFAULTS.defaultVatPercent;
+    Number(primaryLine?.revenue_vat_percent ?? THINKWAY_AGENCY_DEFAULTS.defaultVatPercent);
   const vatExempt = Boolean(primaryLine?.revenue_vat_exempt);
 
   const pricing = buildCampaignPricing(

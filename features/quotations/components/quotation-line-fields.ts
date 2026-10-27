@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { isOtherService } from "@/lib/commercial/other-service";
 
 import {
   type QuotationCreatorPlatformOption,
@@ -55,7 +56,8 @@ export function useQuotationLineFields(
   /** Live line FX from shared draft (Cost Detail may change currency before remount). */
   liveLineFx?: { costCurrency?: string; fxRateToEgp?: number }
 ) {
-  const cacheKey = quotationCreatorPlatformCacheKey(item);
+  const otherService = isOtherService(item);
+  const cacheKey = otherService ? null : quotationCreatorPlatformCacheKey(item);
   const linkedPlatformsKey = (item.creator_profile_source?.linkedPlatforms ?? []).join(",");
   const linkedPlatformHandle =
     item.creator_profile_source?.handle ?? item.handle ?? "";
@@ -70,6 +72,7 @@ export function useQuotationLineFields(
   );
 
   useEffect(() => {
+    if (otherService) return;
     let cancelled = false;
     const bootstrap = bootstrapPlatformOptionsFromItem(item);
 
@@ -118,6 +121,7 @@ export function useQuotationLineFields(
       cancelled = true;
     };
   }, [
+    otherService,
     cacheKey,
     item.unified_id,
     item.influencer_id,
@@ -136,6 +140,7 @@ export function useQuotationLineFields(
   });
 
   const platformSelectOptions = useMemo(() => {
+    if (otherService) return [{ platform: "other", handle: item.creator_name ?? "Vendor", followers: null, engagement_rate: null }];
     const fromLinked = linkedPlatformsKey
       ? linkedPlatformsKey.split(",").map((platform) => ({
           platform,
@@ -168,6 +173,7 @@ export function useQuotationLineFields(
       fromLinePlatform
     );
   }, [
+    otherService,
     platformOptions,
     item.platform,
     item.handle,

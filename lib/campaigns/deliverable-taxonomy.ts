@@ -40,7 +40,7 @@ const PLATFORM_SPECIFIC_DELIVERABLE_TYPES: Record<
     { value: "facebook_live", label: "Facebook live", shortLabel: "FB Live" },
     { value: "facebook_group_post", label: "Facebook group post", shortLabel: "FB Group" },
   ],
-  other: [{ value: "other", label: "Other", shortLabel: "Other" }],
+  other: [{ value: "other_service", label: "Other service", shortLabel: "Other service" }, { value: "other", label: "Other", shortLabel: "Other" }],
 };
 
 /** Platform-neutral production type, available alongside each platform's formats. */

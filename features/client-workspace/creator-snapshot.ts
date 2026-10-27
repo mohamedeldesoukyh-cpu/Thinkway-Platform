@@ -418,6 +418,7 @@ export function enrichSnapshotCreatorFromUnified(
   base: ClientReviewSourceSnapshotCreator,
   creator: UnifiedCreatorResult | undefined
 ): ClientReviewSourceSnapshotCreator {
+  if (base.creatorId.startsWith("service:")) return base;
   if (!creator) {
     return {
       ...base,
