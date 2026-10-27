@@ -4,9 +4,17 @@ import {
   applyClientIoDocumentLayout,
   buildClientIoPricingRows,
   resolveClientIoDeliverableRows,
+  savedClientIoDocumentLayout,
 } from "@/lib/io/client-io-document-layout";
 import type { ClientIoDocumentData } from "@/lib/io/client-io-document-types";
 import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
+
+assert.equal(savedClientIoDocumentLayout(null), "detailed");
+assert.equal(savedClientIoDocumentLayout("<html>Legacy document</html>"), "detailed");
+for (const layout of ["detailed", "package", "package_main"] as const) {
+  assert.equal(savedClientIoDocumentLayout(`<!-- client-io-layout:${layout} -->\n<html>Saved snapshot</html>`), layout);
+}
+assert.equal(savedClientIoDocumentLayout("<!-- client-io-layout:invalid -->"), "detailed");
 
 const sample: ClientIoDocumentData = {
   clientIoId: "cio-1",

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { savedClientIoDocumentLayout } from "@/lib/io/client-io-document-layout";
 
 import { formDataDefersRevalidate } from "@/components/workspace/bulk-operations/bulk-defer-revalidate";
 import { requirePermission } from "@/lib/auth/permissions-server";
@@ -595,6 +596,10 @@ export async function sendClientIoAction(
   }
 
   // Prepare the required PDF before any send lifecycle transition.
+  const requestedLayout = formData.get("layout");
+  if (requestedLayout != null && requestedLayout !== savedClientIoDocumentLayout(clientIo.terms_html)) {
+    return { ok: false, message: "Generate the selected Client IO format before sending." };
+  }
   const prepared = await prepareClientIoEmailAttachment(supabase, clientIo);
   if (!prepared.ok) return { ok: false, message: prepared.error };
   const pdfAttachment = prepared.attachment;

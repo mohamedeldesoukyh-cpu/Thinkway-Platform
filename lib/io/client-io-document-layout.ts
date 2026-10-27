@@ -5,6 +5,11 @@ import type {
 
 export type ClientIoDocumentLayout = "detailed" | "package" | "package_main";
 
+export function savedClientIoDocumentLayout(html?: string | null): ClientIoDocumentLayout {
+  const value = html?.match(/<!-- client-io-layout:(detailed|package|package_main) -->/)?.[1];
+  return resolveClientIoDocumentLayout(value);
+}
+
 export type ClientIoPricingRow = {
   label: string;
   amount: number | null;

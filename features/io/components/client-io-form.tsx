@@ -5,6 +5,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { savedClientIoDocumentLayout, resolveClientIoDocumentLayout } from "@/lib/io/client-io-document-layout";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { CollapsibleWorkspaceSection } from "@/components/workspace/collapsible-workspace-section";
 import {
@@ -244,6 +245,7 @@ export function ClientIoForm({
     row.document_generated_at || row.generated_html_url || row.terms_html
   );
   const canRegenerate = isClientIoRegenerateAllowed(row.status);
+  const [documentLayout, setDocumentLayout] = useState(() => savedClientIoDocumentLayout(row.terms_html));
   const selectedCount = row.selected_assignment_ids?.length ?? 0;
 
   const sendRecipientsPayload = useMemo(
@@ -562,6 +564,7 @@ export function ClientIoForm({
       </div>
 
       <form id="client-io-generate" action={generateAction} className="hidden">
+        <input type="hidden" name="layout" value={documentLayout} />
         <input type="hidden" name="id" value={row.id} />
         <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
       </form>
@@ -569,6 +572,19 @@ export function ClientIoForm({
       <DetailSheetFooter>
         <div className="flex w-full flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              Client IO format
+              <select aria-label="Client IO format" value={documentLayout}
+                disabled={generating || !canRegenerate}
+                onChange={event => setDocumentLayout(resolveClientIoDocumentLayout(event.target.value))}
+                className="h-9 rounded-md border bg-background px-3">
+                <option value="detailed">Detailed — pricing per assignment</option>
+                <option value="package">Package — single campaign total</option>
+                <option value="package_main">Package main — main assignments only</option>
+              </select>
+            </label>
+            <a className="text-sm text-primary underline underline-offset-4" target="_blank" rel="noopener noreferrer"
+              href={`/ios/client/${row.id}/preview?layout=${documentLayout}`}>Preview selected format</a>
             <Button
               form="client-io-generate"
               type="submit"
@@ -590,6 +606,7 @@ export function ClientIoForm({
                   : "Generate document"}
             </Button>
             <ClientIoSendControls
+              layout={documentLayout}
               io={row}
               campaignId={row.campaign_header_id}
               sendRecipientsJson={sendRecipientsPayload}
