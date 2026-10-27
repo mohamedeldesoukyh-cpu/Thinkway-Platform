@@ -112,6 +112,7 @@ export function QuotationWorkspaceHeader({
   const { saveStatus } = useQuotationManualSave();
   const [pending, startTransition] = useTransition();
   const [linkPending, startLinkTransition] = useTransition();
+  const [displayPending, startDisplayTransition] = useTransition();
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
   const [lifecycleTab, setLifecycleTab] = useState<"links" | "activity">("links");
   const [shareOpen, setShareOpen] = useState(false);
@@ -421,14 +422,19 @@ export function QuotationWorkspaceHeader({
                           hideCostAndFees={hideCostAndFees}
                           showPackageVat={showPackageVat}
                           onShowPackageVatChange={(value) => {
-                            startTransition(async () => {
+                            startDisplayTransition(async () => {
                               setOptimisticShowPackageVat(value);
-                              const result = await setQuotationShowPackageVat({ quotationId: detail.id, value });
-                              if (!result.ok) { toast.error(result.message); return; }
-                              router.refresh();
+                              try {
+                                const result = await setQuotationShowPackageVat({ quotationId: detail.id, value });
+                                if (!result.ok) toast.error(result.message);
+                                // The action revalidates this page. A second router refresh
+                                // needlessly remounts quotation controls during the transition.
+                              } catch {
+                                toast.error("Unable to save VAT setting. Please try again.");
+                              }
                             });
                           }}
-                          disabled={pending || !detail.canManage}
+                          disabled={pending || displayPending || !detail.canManage}
                           onShowOriginalCurrencyChange={(value) => {
                             startTransition(async () => {
                               setOptimisticShowOriginalCurrency(value);
