@@ -98,9 +98,9 @@ export function CommercialRevisionDialog({
         lines: lines.map((line) => ({
           commercialLineId: line.commercialLineId,
           assignmentIds: line.assignmentIds,
-          proposed: line.proposed,
+          proposed: diffMasterChanges(line.current, line.proposed).dirty,
           concurrencyToken: line.concurrencyToken,
-        })),
+        })).filter((line) => Object.keys(line.proposed).length > 0),
       });
 
       if (!result.ok) {

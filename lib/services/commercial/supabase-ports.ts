@@ -232,7 +232,7 @@ export function createSupabaseCommercialSyncPorts(
           : 0;
     }
 
-    // AF amount is derived — always refresh from % × (Rev + UR) when masters write.
+    // Cost-only revisions must not rewrite client billing amounts.
     const current = await loadAssignmentMaster(assignmentId);
     const nextRevenue =
       numberOrUndef(columns.revenue_before_vat ?? columns.revenue) ??
@@ -243,7 +243,7 @@ export function createSupabaseCommercialSyncPorts(
     const nextAfPercent =
       numberOrUndef(columns.agency_fee_percent) ??
       numberOrUndef(current?.agency_fee_percent);
-    if (nextRevenue != null && nextAfPercent != null) {
+    if (("client_revenue" in values || "usage_rights_amount" in values || "agency_fee_percent" in values) && nextRevenue != null && nextAfPercent != null) {
       const { recomputeAgencyFeeAmount } = await import(
         "@/lib/assignments/assignment-commercial-masters"
       );
