@@ -724,7 +724,7 @@ export function AssignmentSafeGrid({
                           columnId="creator"
                           className={cn(SAFE_GRID_TD, "w-[108px] max-w-[120px]")}
                         >
-                          {line.influencer_name || row.displayName ? (
+                          {line.assignment?.platforms.some(p => p.platform === "other" && p.deliverables.includes("other_service")) ? <div className="space-y-1"><span className="rounded bg-muted px-2 py-1 text-xs font-semibold">Others</span><button type="button" className="block text-left text-sm font-medium text-primary" onClick={() => onOpenInfluencerDetail?.(row.group, row)}>{line.influencer_name ?? row.displayName}</button></div> : line.influencer_name || row.displayName ? (
                             <AssignmentCreatorCell
                               name={line.influencer_name ?? row.displayName}
                               avatarUrl={

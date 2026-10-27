@@ -606,6 +606,7 @@ export async function updateCampaignLine(
   const commercial = commercialResolved.value;
 
   if (replacingCreator && commercial.platforms.some(platform =>
+    !(platform.platform === "other" && platform.account_id === "" && platform.deliverables.every(type => type === "other_service")) &&
     !(platformAccounts ?? []).some(account => account.id === platform.account_id && account.platform === platform.platform)
   )) {
     return { ok: false, message: "The assignment contains an account that does not belong to the replacement creator. Reload the creator and try again." };
@@ -677,6 +678,7 @@ export async function updateCampaignLine(
 
   const { error } = await updateCampaignLineRow(supabase, parsed.line_id, parsed.campaign_id, {
     name: lineTitle,
+    ...(parsed.description !== undefined ? { description: emptyToNull(parsed.description ?? undefined) } : {}),
     assignment_status: parsed.assignment_status,
     platform: platformField,
     po_amount: parsed.po_amount,

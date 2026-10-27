@@ -108,6 +108,7 @@ export const createCampaignLineSchema = z.object({
   campaign_id: z.string().uuid(),
   influencer_id: z.string().uuid("Select an influencer"),
   name: z.string().trim().max(200).optional().or(z.literal("")),
+  description: z.string().trim().max(2000).optional().or(z.literal("")),
   title_user_edited: z
     .enum(["0", "1", "true", "false"])
     .optional()

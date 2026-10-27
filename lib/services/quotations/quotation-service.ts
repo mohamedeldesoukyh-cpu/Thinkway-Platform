@@ -45,6 +45,7 @@ import {
 import { rejectIfApprovedQuotation, rejectIfApprovedQuotationHeaderPatch } from "./approved-quotation-guard";
 import { generateQuotationVersion } from "./quotation-version-service";
 import { ensureDiscoveryCreatorsBrowsable, ensureDiscoverySeedsBrowsable } from "@/lib/creators/discovery-browse-eligibility";
+import { isOtherService } from "@/lib/commercial/other-service";
 
 async function insertQuotationHeader(
   supabase: SupabaseClient<Database>,
@@ -94,7 +95,7 @@ async function insertQuotationSeeds(
   const rows = await buildItemInsertRows(supabase, quotationId, seeds, startSort);
   const { data, error } = await insertQuotationItems(supabase, rows);
   if (error) return { ok: false, message: error.message };
-  await ensureDiscoverySeedsBrowsable(supabase, seeds);
+  await ensureDiscoverySeedsBrowsable(supabase, seeds.filter(seed => !isOtherService(seed)));
   await syncCollapsePackageOptionNumbers(supabase, quotationId);
   await recomputeQuotationTotals(supabase, quotationId);
   const itemIds = ((data ?? []) as Array<{ id: string }>).map((row) => row.id);

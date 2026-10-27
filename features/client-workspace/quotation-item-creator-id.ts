@@ -1,9 +1,11 @@
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
+import { isOtherService } from "@/lib/commercial/other-service";
 
 /** Same creator id written into `campaign_client_reviews.selection_state` for quotation reviews. */
 export function quotationItemClientCreatorId(
-  item: Pick<QuotationItemRow, "id" | "unified_id" | "influencer_id" | "profile_id">
+  item: Pick<QuotationItemRow, "id" | "unified_id" | "influencer_id" | "profile_id"> & { deliverables?: unknown }
 ): string {
+  if (isOtherService(item)) return `service:${item.id}`;
   if (item.unified_id?.trim()) return item.unified_id.trim();
   if (item.influencer_id?.trim()) return `inf:${item.influencer_id.trim()}`;
   if (item.profile_id?.trim()) return `dis:${item.profile_id.trim()}`;

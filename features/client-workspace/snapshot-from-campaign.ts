@@ -11,7 +11,8 @@ export function snapshotCreatorsFromAssignmentHierarchy(
   for (const group of hierarchy.groups ?? []) {
     const influencerId = group.line.influencer_id?.trim();
     if (!influencerId) continue;
-    const creatorId = `inf:${influencerId}`;
+    const otherService = group.line.assignment?.platforms.some(p => p.deliverables.includes("other_service")) ?? false;
+    const creatorId = otherService ? `service:${group.line.id}` : `inf:${influencerId}`;
     const deliverableLabels = (group.deliverables ?? [])
       .filter((row) => !row.is_synthetic)
       .map((row) => row.deliverable_type_label || row.deliverable_type?.replace(/_/g, " ") || "Deliverable")
@@ -26,8 +27,10 @@ export function snapshotCreatorsFromAssignmentHierarchy(
     }
     byCreator.set(creatorId, {
       creatorId,
-      displayName: group.line.influencer_name?.trim() || "Creator",
-      influencerId,
+      displayName: otherService ? group.line.name : group.line.influencer_name?.trim() || "Creator",
+      influencerId: otherService ? undefined : influencerId,
+      categories: otherService ? ["Others"] : undefined,
+      serviceDescription: otherService ? group.line.description ?? group.line.name : undefined,
       platform: group.deliverables?.[0]?.platform ?? undefined,
       deliverables: deliverableLabels.join(", ") || undefined,
     });

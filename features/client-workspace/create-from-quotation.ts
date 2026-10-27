@@ -1,4 +1,5 @@
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
+import { isOtherService } from "@/lib/commercial/other-service";
 import { isQuotationExpired } from "@/lib/commercial/quotation-validity";
 import { getQuotationDetail } from "@/lib/services/quotations/quotation-document-service";
 import { clearQuotationValidityAfterCampaign } from "@/lib/services/quotations/repositories/quotation-repository";
@@ -101,6 +102,7 @@ export async function createClientReviewFromQuotation(
   }
   const snapshotCreators = items.map((item) => {
     const base = quotationItemSnapshotCreator(item, detail.currency, quotationFxRateToEgp, detail.items);
+    if (isOtherService(item)) return base;
     const unified = lookup
       ? resolveCreatorFromRefLookup(lookup, {
           unified_id: item.unified_id,

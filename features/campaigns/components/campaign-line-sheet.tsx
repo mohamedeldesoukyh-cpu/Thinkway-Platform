@@ -6,6 +6,8 @@ import { toast } from "sonner";
 
 import { useConfirmAction } from "@/components/shared/confirm-action-provider";
 import { AssignmentCreatorPicker } from "@/features/creators/picker/assignment-creator-picker";
+import { OtherServiceVendorPicker } from "@/features/other-services/other-service-button";
+import { otherServicePlatforms } from "@/lib/commercial/other-service";
 import { replacementPlatformSelections } from "@/features/campaigns/assignment-creator-replacement";
 import { assignmentCommercialMastersChanged } from "@/lib/assignments/assignment-commercial-masters";
 import {
@@ -137,6 +139,7 @@ export function CampaignLineSheet({
   const [profile, setProfile] = useState<InfluencerAssignmentProfile | null>(null);
   const [selections, setSelections] = useState<PlatformSelectionState[]>([]);
   const [lineTitle, setLineTitle] = useState(line?.name ?? "");
+  const otherService = line?.assignment?.platforms.some(p => p.platform === "other" && p.deliverables.includes("other_service")) ?? false;
   const [titleEdited, setTitleEdited] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(false);
   const [cost, setCost] = useState(line?.cost_before_vat ?? line?.cost ?? 0);
@@ -618,7 +621,7 @@ export function CampaignLineSheet({
         toast.error(data.error ?? "Failed to load creator profile.");
         return false;
       }
-      const nextSelections = replacement
+      const nextSelections = otherService ? otherServicePlatforms(data.profile.display_name, (existing ?? []).reduce((n,p) => n + p.deliverables.length, 0)).map(p => ({ ...p, selected: true })) : replacement
         ? replacementPlatformSelections(data.profile, existing ?? [], pricingMode === "per_deliverable" ? commercialRows.map(row => row.platform) : [])
         : buildInitialSelections(data.profile, existing);
       setProfile(data.profile);
@@ -647,7 +650,7 @@ export function CampaignLineSheet({
     setInfluencerId(line?.influencer_id ?? "");
     setInfluencerLabel(line?.influencer_name ?? null);
     setLineTitle(line?.name ?? "");
-    setTitleEdited(line?.assignment?.title_user_edited ?? false);
+    setTitleEdited(otherService || (line?.assignment?.title_user_edited ?? false));
     setCost(line?.cost_before_vat ?? line?.cost ?? 0);
     setCostReceived(line?.cost_received ?? line?.cost_before_vat ?? line?.cost ?? 0);
     setCostReceivedCurrency(
@@ -806,7 +809,7 @@ export function CampaignLineSheet({
     storedDeliverableUnits,
   ]);
 
-  const sheetTitle = isEdit ? "Edit influencer assignment" : "Assign influencer";
+  const sheetTitle = otherService ? "Edit service assignment" : isEdit ? "Edit influencer assignment" : "Assign influencer";
   const selectedIdentity = resolveCreatorIdentity(influencerLabel, null);
 
   return (
@@ -818,7 +821,7 @@ export function CampaignLineSheet({
         onOpenChange(next);
       }}
       title={sheetTitle}
-      description="Influencer assignment commercial planning"
+      description={otherService ? "Service scope, vendor, and commercial planning" : "Influencer assignment commercial planning"}
       variant="detail"
     >
       <form
@@ -854,7 +857,7 @@ export function CampaignLineSheet({
         </header>
 
         <nav className="wr-assignment-tabs" aria-label="Assignment editor sections">
-          <Button type="button" variant="ghost" aria-pressed={editorSection === "scope"} onClick={() => setEditorSection("scope")}>Creator & scope</Button>
+          <Button type="button" variant="ghost" aria-pressed={editorSection === "scope"} onClick={() => setEditorSection("scope")}>{otherService ? "Vendor & service" : "Creator & scope"}</Button>
           <Button type="button" variant="ghost" aria-pressed={editorSection === "commercial"} onClick={() => setEditorSection("commercial")}>Pricing & totals</Button>
         </nav>
         <DetailFormScrollBody className="bg-[#f8fafc] px-4">
@@ -884,13 +887,13 @@ export function CampaignLineSheet({
           <input type="hidden" name="end_date" value={endDate} />
           <input type="hidden" name="pricing_mode" value={pricingMode} />
           <input type="hidden" name="commercial_json" value={commercialJson} />
-          <section className="wr-assignment-scope" hidden={editorSection !== "scope"}><h3>Creator & scope</h3>
-          <AssignmentCreatorPicker
+          <section className="wr-assignment-scope" hidden={editorSection !== "scope"}><h3>{otherService ? "Vendor & service" : "Creator & scope"}</h3>
+          {otherService ? <fieldset disabled={isPending || loadingProfile || assignmentFieldsLocked}><OtherServiceVendorPicker scope="campaign" value={influencerId ? { id: influencerId, display_name: influencerLabel ?? "Vendor" } : null} onChange={vendor => { void loadProfile(vendor.id, selections, true); }} /></fieldset> : <AssignmentCreatorPicker
             value={influencerId}
             selectedLabel={influencerLabel}
             onSelect={onInfluencerPick}
             disabled={isPending || loadingProfile || assignmentFieldsLocked}
-          />
+          />}
           <FieldError messages={state.fieldErrors?.influencer_id} />
           {isEdit && influencerId !== line?.influencer_id ? (
             <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
@@ -937,7 +940,7 @@ export function CampaignLineSheet({
                 }
                 setPricingMode(next);
               }}
-              disabled={isPending}
+              disabled={isPending || otherService}
             >
               <SelectTrigger className={DETAIL_FORM_SELECT_TRIGGER_CLASS}>
                 <SelectValue />
@@ -949,7 +952,7 @@ export function CampaignLineSheet({
             </Select>
           </DetailFormSection>
 
-          {loadingProfile ? (
+          {otherService ? <p className="text-sm text-muted-foreground">Others · Service assignment</p> : loadingProfile ? (
             <p className="text-sm text-muted-foreground">Loading creator profile…</p>
           ) : profile && pricingMode === "package" ? (
             <PlatformAccountSelector
@@ -991,6 +994,7 @@ export function CampaignLineSheet({
             />
             <FieldError messages={state.fieldErrors?.name} />
           </DetailFormSection>
+          {otherService && <label className="block text-sm">Service description<textarea name="description" className="mt-1 w-full rounded border bg-background p-2" rows={3} maxLength={2000} defaultValue={line?.description ?? ""} disabled={isPending || assignmentFieldsLocked} /></label>}
 
           <div className="grid gap-4 sm:grid-cols-2">
             <DetailFormSection label="Posting start">

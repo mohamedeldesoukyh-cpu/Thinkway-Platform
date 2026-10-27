@@ -1,6 +1,7 @@
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 import { shouldIncludeItemInLiveTotals } from "@/lib/quotations/quotation-collapse-package";
 import { quotationServiceDescription } from "@/lib/quotations/service-description";
+import { isOtherService } from "@/lib/commercial/other-service";
 
 import { formatDeliverableItems, parseDeliverableItems } from "./deliverables";
 import { clientFacingAgencyFeeFromLine, clientFacingQuotationPrice } from "./quotation-client-facing";
@@ -27,6 +28,7 @@ export function quotationItemSnapshotCreator(
   quotationFxRateToEgp = 1,
   allItems?: QuotationItemRow[]
 ): ClientReviewSourceSnapshotCreator {
+  const otherService = isOtherService(item);
   const deliverableItems = parseDeliverableItems(item.deliverables);
   const price = clientFacingQuotationPrice({
     revenue: item.revenue,
@@ -60,14 +62,14 @@ export function quotationItemSnapshotCreator(
         };
       }),
     creatorId: quotationItemClientCreatorId(item),
-    displayName: item.creator_name?.trim() || handle || "Creator",
-    handle,
+    displayName: otherService ? (clientServiceDescriptionFromQuotationItem(item) || "Other service") : item.creator_name?.trim() || handle || "Creator",
+    handle: otherService ? undefined : handle,
     platform: item.platform ?? undefined,
-    followers: item.followers ?? undefined,
-    engagementRate: item.engagement_rate ?? undefined,
+    followers: otherService ? undefined : item.followers ?? undefined,
+    engagementRate: otherService ? undefined : item.engagement_rate ?? undefined,
     country: item.country_code ?? undefined,
-    category: item.creator_categories?.[0] ?? undefined,
-    categories: item.creator_categories?.filter(Boolean) ?? undefined,
+    category: otherService ? "Others" : item.creator_categories?.[0] ?? undefined,
+    categories: otherService ? ["Others"] : item.creator_categories?.filter(Boolean) ?? undefined,
     deliverables: formatQuotationItemDeliverables(item),
     deliverableItems: deliverableItems.length > 0 ? deliverableItems : undefined,
     serviceDescription: clientServiceDescriptionFromQuotationItem(item),
@@ -88,11 +90,11 @@ export function quotationItemSnapshotCreator(
       : undefined,
     originalInvestmentAmount: price.originalAmount,
     originalInvestmentCurrency: price.originalCurrency,
-    avatarUrl: item.profile_image_url ?? item.creator_profile_source?.avatarUrl ?? undefined,
-    influencerId: item.influencer_id ?? undefined,
+    avatarUrl: otherService ? undefined : item.profile_image_url ?? item.creator_profile_source?.avatarUrl ?? undefined,
+    influencerId: otherService ? undefined : item.influencer_id ?? undefined,
     shortlistItemId: item.source_shortlist_item_id ?? undefined,
-    profileId: item.profile_id ?? undefined,
-    unifiedId: item.unified_id ?? undefined,
+    profileId: otherService ? undefined : item.profile_id ?? undefined,
+    unifiedId: otherService ? undefined : item.unified_id ?? undefined,
   };
 }
 

@@ -39,6 +39,7 @@ import {
 } from "@/features/discovery/document-preview/build-creator-options";
 import { summarizeQuotationSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
+import { OtherServiceButton } from "@/features/other-services/other-service-button";
 import type { QuotationCreatorsAddedResult } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import { useQuotationWorkspaceShortcuts } from "@/features/quotations/components/use-quotation-workspace-shortcuts";
 import { QuotationTermsAccordion } from "@/features/quotations/components/quotation-terms-accordion";
@@ -91,6 +92,7 @@ import {
 import { resolveLiveTotalsDraft } from "@/features/quotations/quotation-pending-live-totals";
 import { resolveCreatorTierLabel } from "@/lib/creators/creator-tier";
 import { countUniqueQuotationCreators } from "@/lib/quotations/quotation-creator-options";
+import { isOtherService } from "@/lib/commercial/other-service";
 import {
   sortQuotationWorkspaceItems,
   type QuotationWorkspaceSortState,
@@ -835,6 +837,8 @@ function QuotationWorkspaceContent({
         className={cn("q-wrap q-main", discoverySelectionFlyoutContentClass(selectedIds.size > 0))}
       >
       {visibleItems.length === 0 ? (
+        <>
+        {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && <OtherServiceButton scope="quotation" documentId={detail.id} currency={displayCurrency} onAdded={refreshQuotationLines} />}
         <EmptyState
           quotationId={detail.id}
           canManage={detail.canManage}
@@ -842,6 +846,7 @@ function QuotationWorkspaceContent({
           addCreatorsOpen={addCreatorsOpen}
           onAddCreatorsOpenChange={setAddCreatorsOpen}
         />
+        </>
       ) : (
         <div className="discovery-suite q-lines-container">
           <div className="tw-c">
@@ -858,12 +863,13 @@ function QuotationWorkspaceContent({
                   }
                 }} />
               <span className="tw-ct" aria-live="polite">
-                Creators · {creatorSearch.trim() ? `${countUniqueQuotationCreators(filteredItems)} of ${uniqueCreatorCount}` : uniqueCreatorCount} · {visibleItems.length} <QuotationText>lines</QuotationText></span>
+                Creators · {creatorSearch.trim() ? `${countUniqueQuotationCreators(filteredItems)} of ${uniqueCreatorCount}` : uniqueCreatorCount} · Others · {visibleItems.filter(isOtherService).length} · {visibleItems.length} <QuotationText>lines</QuotationText></span>
               <span className="tw-cs">
                 <QuotationText>Each service has its own price. Clients can choose one or more lines per creator.</QuotationText></span>
               <span className="tw-sp" />
               {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && uniqueCreatorCount > 0 ? <QuotationCreatorOrderDialog quotationId={detail.id} items={visibleItems} savedOrder={creatorOrder} savedPhotos={detail.templateCreatorPhotos} onSaved={order => { setCreatorOrder(order); setTableSort(null); }} /> : null}
               <QuotationRateCardToolbarButton />
+              {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && <OtherServiceButton scope="quotation" documentId={detail.id} currency={displayCurrency} onAdded={refreshQuotationLines} />}
               {detail.shortlist_id && <Link className="tw-b sm" href={`/discovery/shortlists/${detail.shortlist_id}`}><QuotationText>Open shortlist</QuotationText></Link>}
               <QuotationCommercialEntry
                 quotationId={detail.id}

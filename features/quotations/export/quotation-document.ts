@@ -6,6 +6,7 @@ import { creatorFxAmount } from "@/lib/commercial/creator-fx";
  * Pure quotation document model (no DB, no rendering deps).
  */
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
+import { isOtherService } from "@/lib/commercial/other-service";
 import {
   formatDualCurrency,
   fromEgp,
@@ -292,6 +293,7 @@ export type QuotationDocument = {
   dateLabel: string;
   rows: QuotationDocRow[];
   creatorGroups: QuotationDocCreatorGroup[];
+  otherServiceRows?: QuotationDocRow[];
   collapseContentGroups: QuotationDocCollapseContentGroup[];
   commercialKpis: QuotationDocumentKpi[];
   summary: {
@@ -1028,7 +1030,8 @@ export function buildQuotationDocument(
         return options.showOriginalCurrency && item.cost_currency.toUpperCase() !== displayCurrency
           ? `${display} / ${num(amount)} ${item.cost_currency}` : display;
       } : undefined;
-  const creatorGroups = groupQuotationExportItems(items).map((group) =>
+  const otherServiceRows = items.filter(isOtherService).map(item => buildDocRow(item, audience, detail.gp_target_pct, items, clientMoney));
+  const creatorGroups = groupQuotationExportItems(items.filter(item => !isOtherService(item))).map((group) =>
     buildCreatorGroup(
       group,
       audience,
@@ -1044,7 +1047,7 @@ export function buildQuotationDocument(
     detail.gp_target_pct,
     clientMoney
   );
-  const exportGroups = groupQuotationExportItems(items);
+  const exportGroups = groupQuotationExportItems(items.filter(item => !isOtherService(item)));
   const uniqueCreatorCount = countUniqueQuotationCreators(items);
   const formatSharePct = (count: number, total: number) =>
     total > 0 ? `${num((count / total) * 100)}%` : "0%";
@@ -1073,7 +1076,7 @@ export function buildQuotationDocument(
     preferDisplayCategories: isPitchTemplate(template),
   });
   const rosterForecast = computeCampaignForecastFromProfiles(
-    quotationItemsToForecastProfiles(items as QuotationItemRow[])
+    quotationItemsToForecastProfiles(items.filter(item => !isOtherService(item)) as QuotationItemRow[])
   );
   const optimization = optimizeQuotationCampaign(items as QuotationItemRow[], {
     budgetAmount: selectedRevenueEgp + selectedAfEgp,
@@ -1187,7 +1190,8 @@ export function buildQuotationDocument(
       ? `Prepared exclusively for ${detail.client_name}`
       : "Prepared exclusively for the named Client",
     dateLabel: formatDateLabel(detail.issue_date),
-    rows: filteredCreatorGroups.flatMap((group) => group.rows),
+    rows: [...filteredCreatorGroups.flatMap((group) => group.rows), ...otherServiceRows],
+    otherServiceRows,
     creatorGroups: orderCreatorGroups(filteredCreatorGroups, detail.creatorListOrder, group => group.itemIds ?? []),
     collapseContentGroups,
     commercialKpis: audience === "internal" ? internalKpis : clientKpis,

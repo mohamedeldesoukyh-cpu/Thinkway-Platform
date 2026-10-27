@@ -1,4 +1,5 @@
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
+import { isOtherService } from "@/lib/commercial/other-service";
 
 import { isManualQuotationCreator } from "./quotation-creator-platform-utils";
 
@@ -23,8 +24,9 @@ export function quotationCreatorDuplicateKey(
   item: Pick<
     QuotationItemRow,
     "id" | "unified_id" | "influencer_id" | "profile_id" | "creator_name" | "handle"
-  >
+  > & { deliverables?: unknown }
 ): string {
+  if (isOtherService(item)) return `service:${item.id}`;
   if (item.unified_id) return `u:${item.unified_id}`;
   if (item.influencer_id) return `i:${item.influencer_id}`;
   if (item.profile_id) return `p:${item.profile_id}`;
@@ -219,7 +221,7 @@ export function groupQuotationItemsByCreator(
 
 /** Unique influencer count (options/lines grouped by creator). */
 export function countUniqueQuotationCreators(items: QuotationItemRow[]): number {
-  return groupQuotationItemsByCreator(items).length;
+  return groupQuotationItemsByCreator(items.filter(item => !isOtherService(item))).length;
 }
 
 /** Creator groups limited to items visible in the current filter. */
