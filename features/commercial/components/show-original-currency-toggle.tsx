@@ -32,9 +32,13 @@ export function ClientWorkspaceDisplayToggles({
   disabled,
   onShowOriginalCurrencyChange,
   onHideCostAndFeesChange,
+  showPackageVat,
+  onShowPackageVatChange,
 }: {
   showOriginalCurrency: boolean;
   hideCostAndFees: boolean;
+  showPackageVat?: boolean;
+  onShowPackageVatChange?: (next: boolean) => void;
   disabled?: boolean;
   onShowOriginalCurrencyChange: (next: boolean) => void;
   onHideCostAndFeesChange: (next: boolean) => void;
@@ -53,6 +57,7 @@ export function ClientWorkspaceDisplayToggles({
         disabled={disabled}
         onChange={onHideCostAndFeesChange}
       />
+      {onShowPackageVatChange && <DisplayToggleRow label="VAT (14%)" checked={Boolean(showPackageVat)} disabled={disabled} onChange={onShowPackageVatChange} />}
     </div>
   );
 }

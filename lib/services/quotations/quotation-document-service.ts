@@ -24,6 +24,7 @@ import {
 import { isCommercialSyncEnabled, stripQuotationVersionSuffix } from "@/lib/commercial-sync/rules";
 import {
   readHideCostAndFees,
+  asMetadataRecord,
   readShowOriginalCurrency,
 } from "@/lib/commercial/client-original-currency";
 import { QUOTATION_PERMISSIONS } from "@/lib/domains/commercial/quotation-constants";
@@ -638,6 +639,7 @@ export async function getQuotationDetail(
     templateCreatorPhotos: readQuotationTemplatePhotos(row.metadata),
     showOriginalCurrency: readShowOriginalCurrency(row.metadata),
     hideCostAndFees: readHideCostAndFees(row.metadata),
+    showPackageVat: asMetadataRecord(row.metadata).showPackageVat === true,
   };
 
   try {

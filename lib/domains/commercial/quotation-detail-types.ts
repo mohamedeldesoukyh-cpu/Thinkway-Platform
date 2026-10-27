@@ -205,6 +205,7 @@ export type QuotationDetail = {
   showOriginalCurrency?: boolean;
   /** Thinkway-controlled. Client Workspace hides Cost and Agency Fees when this is on. */
   hideCostAndFees?: boolean;
+  showPackageVat?: boolean;
 };
 
 export type QuotationFormOptions = {

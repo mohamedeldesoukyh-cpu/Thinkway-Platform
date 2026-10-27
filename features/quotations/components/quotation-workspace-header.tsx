@@ -58,6 +58,7 @@ import {
   archiveQuotation,
   duplicateQuotation,
   setQuotationHideCostAndFees,
+  setQuotationShowPackageVat,
   setQuotationShowOriginalCurrency,
   updateQuotationHeader,
 } from "@/features/quotations/actions";
@@ -111,6 +112,7 @@ export function QuotationWorkspaceHeader({
   const { saveStatus } = useQuotationManualSave();
   const [pending, startTransition] = useTransition();
   const [linkPending, startLinkTransition] = useTransition();
+  const [displayPending, startDisplayTransition] = useTransition();
   const [lifecycleOpen, setLifecycleOpen] = useState(false);
   const [lifecycleTab, setLifecycleTab] = useState<"links" | "activity">("links");
   const [shareOpen, setShareOpen] = useState(false);
@@ -124,6 +126,7 @@ export function QuotationWorkspaceHeader({
   const [showOriginalCurrency, setOptimisticShowOriginalCurrency] = useOptimistic(
     Boolean(detail.showOriginalCurrency)
   );
+  const [showPackageVat, setOptimisticShowPackageVat] = useOptimistic(Boolean(detail.showPackageVat));
   const [hideCostAndFees, setOptimisticHideCostAndFees] = useOptimistic(
     Boolean(detail.hideCostAndFees)
   );
@@ -417,7 +420,21 @@ export function QuotationWorkspaceHeader({
           <ClientWorkspaceDisplayToggles
                           showOriginalCurrency={showOriginalCurrency}
                           hideCostAndFees={hideCostAndFees}
-                          disabled={pending || !detail.canManage}
+                          showPackageVat={showPackageVat}
+                          onShowPackageVatChange={(value) => {
+                            startDisplayTransition(async () => {
+                              setOptimisticShowPackageVat(value);
+                              try {
+                                const result = await setQuotationShowPackageVat({ quotationId: detail.id, value });
+                                if (!result.ok) toast.error(result.message);
+                                // The action revalidates this page. A second router refresh
+                                // needlessly remounts quotation controls during the transition.
+                              } catch {
+                                toast.error("Unable to save VAT setting. Please try again.");
+                              }
+                            });
+                          }}
+                          disabled={pending || displayPending || !detail.canManage}
                           onShowOriginalCurrencyChange={(value) => {
                             startTransition(async () => {
                               setOptimisticShowOriginalCurrency(value);
