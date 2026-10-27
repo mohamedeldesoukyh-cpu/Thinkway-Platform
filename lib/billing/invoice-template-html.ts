@@ -97,7 +97,7 @@ export function resolveInvoiceDocumentVat(data: InvoiceDocumentData): {
     data.vatPercent > 0
       ? data.vatPercent
       : data.lineItems.find((l) => !l.revenueVatExempt && l.revenueVatPercent > 0)
-          ?.revenueVatPercent ?? THINKWAY_AGENCY_DEFAULTS.defaultVatPercent;
+          ?.revenueVatPercent ?? (taxAmount > 0 ? THINKWAY_AGENCY_DEFAULTS.defaultVatPercent : 0);
 
   const vatLabel =
     taxAmount <= 0 && data.lineItems.every((l) => l.revenueVatExempt)

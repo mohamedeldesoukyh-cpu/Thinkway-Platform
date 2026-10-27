@@ -1,4 +1,5 @@
 import { QuotationText } from "./quotation-design-locale";
+import { isOtherService } from "@/lib/commercial/other-service";
 
 import { useCallback, useTransition, useState } from "react";
 import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
@@ -118,6 +119,7 @@ function QuotationPackLineRow({
   const confirmDelete = useConfirmDelete();
   const manualSave = useQuotationManualSave();
   const resolved = resolveQuotationRowDraft(item, draft);
+  const otherService = isOtherService(item);
   const linePending = manualSave.isLinePending(item.id);
   const name =
     item.creator_profile_source?.displayName?.trim() ||
@@ -298,7 +300,8 @@ function QuotationPackLineRow({
       }}>
         <div className="q-cell-select" role="cell"><input type="checkbox" className="q-ck" checked={selected} onChange={onToggleSelect} aria-label={`Select ${name}${optionCount > 1 ? ` ${optionLabel}` : ""}`} disabled={!canManage} /></div>
         <div className="q-cell-creator" role="cell">
-          {showCreator && <DiscoverySuiteCreatorCell name={name} handleLabel={handleLabel} index={index}
+          {showCreator && otherService && <div className="space-y-1"><Badge variant="outline">Others</Badge><div className="font-medium">{name}</div><a className="text-xs text-primary" href={`/vendors/${item.influencer_id}`}>View vendor</a></div>}
+          {showCreator && !otherService && <DiscoverySuiteCreatorCell name={name} handleLabel={handleLabel} index={index}
             avatarUrl={item.creator_profile_source?.avatarUrl ?? item.profile_image_url}
             profileUrl={item.creator_profile_source?.profile_url ?? item.profile_url}
             countryCodes={quotationCreatorCountryCodes(item)}
@@ -310,7 +313,7 @@ function QuotationPackLineRow({
               ) : null}
             </div>
           </DiscoverySuiteCreatorCell>}
-          {canManage && showCreator ? <button type="button" className="q-b q-b--sm mt-2" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>+ Add service</button> : null}
+          {canManage && showCreator && !otherService ? <button type="button" className="q-b q-b--sm mt-2" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>+ Add service</button> : null}
         </div>
         <div className="q-cell-platform" role="cell"><span className="q-mobile-label"><QuotationText>Quoted on</QuotationText></span><QuotationDeliverablePlatformIcons platforms={selectedPlatforms} allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)} loading={lineFields.loadingPlatforms} /></div>
         <div className="q-cell-service" role="cell">
@@ -345,13 +348,13 @@ function QuotationPackLineRow({
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => onOpenCreator?.(item)}><QuotationText>View creator profile</QuotationText></DropdownMenuItem>
+            {!otherService && <DropdownMenuItem onClick={() => onOpenCreator?.(item)}><QuotationText>View creator profile</QuotationText></DropdownMenuItem>}
             <DropdownMenuItem onClick={handleDuplicate}>
               <CopyIcon className="mr-2 size-3.5" />
               <QuotationText>Duplicate line</QuotationText></DropdownMenuItem>
-            <DropdownMenuItem onClick={handleAddOption}>
+            {!otherService && <DropdownMenuItem onClick={handleAddOption}>
               <PlusIcon className="mr-2 size-3.5" />
-              <QuotationText>Add service line</QuotationText></DropdownMenuItem>
+              <QuotationText>Add service line</QuotationText></DropdownMenuItem>}
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
@@ -361,14 +364,14 @@ function QuotationPackLineRow({
               <QuotationText>Remove</QuotationText></DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-          <button type="button" className="q-b q-b--sm q-mobile-action" onClick={() => onOpenCreator?.(item)}><QuotationText>Profile</QuotationText></button>
+          {!otherService && <button type="button" className="q-b q-b--sm q-mobile-action" onClick={() => onOpenCreator?.(item)}><QuotationText>Profile</QuotationText></button>}
           <button type="button" className="q-b q-b--sm q-mobile-action" onClick={handleDuplicate} disabled={!canManage || pending}><QuotationText>Duplicate</QuotationText></button>
           <button type="button" className="q-b q-b--sm q-b--danger q-mobile-action" aria-label="Remove line" onClick={handleRemove} disabled={!canManage || pending}><QuotationText>Delete</QuotationText></button>
         </div>
       </div>
       {expanded && createPortal(<div className="tq-redesign" style={{ minHeight: 0 }}><section id={`quotation-line-${item.id}`} className="q-bottom-editor" data-shortcut-pane aria-label={`Edit service for ${name}`}>
         <header className="q-bottom-editor__header"><div className="q-bottom-editor__title"><b title={name}>{name}</b><span title={lineFields.serviceDescription || "New service"}> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b q-b--sm" data-shortcut-close onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
-        <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
+        {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Service description</b></div><textarea aria-label="Other service description" className="w-full rounded border p-2" rows={3} value={lineFields.serviceDescription} readOnly={!canManage} onChange={e => updateServiceDescription(e.target.value)} /><p className="q-help">Use Repeat on the row for multiple units.</p></section> : <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
               workspaceDetails
               key={deliverable.key}
@@ -402,12 +405,12 @@ function QuotationPackLineRow({
                 });
               }}
             />
-          ))}<p className="q-help">Duration controls appear only for services that use one.</p></section>
-        <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Platforms in this line</QuotationText></b></div>
+          ))}<p className="q-help">Duration controls appear only for services that use one.</p></section>}
+        {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Vendor</b></div><div>{name}</div><p className="q-help">Other service · Included in quotation totals and campaign assignments.</p></section> : <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Platforms in this line</QuotationText></b></div>
           <div className="q-kv"><span><QuotationText>Connected accounts</QuotationText></span><CreatorLinkedPlatformIcons platforms={item.creator_profile_source?.linkedPlatforms?.length ? item.creator_profile_source.linkedPlatforms : allowedCreatorPlatforms} /></div>
           <div className="q-kv"><span><QuotationText>Platforms in this line</QuotationText></span><QuotationDeliverablePlatformIcons platforms={selectedPlatforms} allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)} /></div>
           <p className="q-help"><QuotationText>A creator may have accounts that are not part of this quoted package.</QuotationText></p>
-        </section>
+        </section>}
         <section className="q-sec q-sec--priv"><div className="q-sec__h"><b><QuotationText>Cost detail</QuotationText></b><span className="q-sp" /><span className="q-p q-p--wrn"><QuotationText>Internal — never shown to the client</QuotationText></span></div>
           <div className="q-kv"><span>Base cost (internal creator / vendor cost)</span><b>{rowCurrency} {F(projected.cost)}</b></div>
           <div className="q-kv"><span><QuotationText>Client cost before agency fees</QuotationText></span><b>{rowCurrency} {F(projected.revenue)}</b></div>
@@ -503,7 +506,7 @@ export function QuotationLinesGrid({
       </div>
       <label className="q-mobile-select"><input type="checkbox" className="q-ck" checked={allSelected} ref={el=>{if(el)el.indeterminate=indeterminate&&!allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} disabled={!canManage || items.length === 0} /><QuotationText>Select all lines</QuotationText></label>
       {items.length === 0 && <div className="q-empty" role="status"><b>No lines match this filter</b><p>Try another creator name or username, or clear the search and filters.</p></div>}
-      {Array.from(groups.entries()).map(([key, group], index) => <div key={key} className="q-creator-service-group" role="rowgroup">{group.map((item, serviceIndex) => <QuotationPackLineRow showCreator={serviceIndex === 0} expanded={activeId === item.id} onActivate={setActiveId} key={item.id} quotationId={quotationId} item={item} draft={drafts[item.id]} index={index} optionCount={optionCounts.get(quotationCreatorDuplicateKey(item)) ?? 1} selected={selectedIds.has(item.id)} onToggleSelect={() => onToggleSelect(item.id)} onDraftChange={onDraftChange} onRemoved={onRemoved} onLineChanged={onLineChanged} onOpenCreator={onOpenCreator} showOriginalCurrency={showOriginalCurrency} hideCostAndFees={hideCostAndFees} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} canManage={canManage} />)}</div>)}
+      {Array.from(groups.entries()).sort((a,b) => Number(isOtherService(a[1][0])) - Number(isOtherService(b[1][0]))).map(([key, group], index) => <div key={key} className="q-creator-service-group" role="rowgroup">{isOtherService(group[0]) && <div className="border-b bg-muted px-4 py-2 text-sm font-semibold">Others</div>}{group.map((item, serviceIndex) => <QuotationPackLineRow showCreator={serviceIndex === 0} expanded={activeId === item.id} onActivate={setActiveId} key={item.id} quotationId={quotationId} item={item} draft={drafts[item.id]} index={index} optionCount={optionCounts.get(quotationCreatorDuplicateKey(item)) ?? 1} selected={selectedIds.has(item.id)} onToggleSelect={() => onToggleSelect(item.id)} onDraftChange={onDraftChange} onRemoved={onRemoved} onLineChanged={onLineChanged} onOpenCreator={onOpenCreator} showOriginalCurrency={showOriginalCurrency} hideCostAndFees={hideCostAndFees} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} canManage={canManage} />)}</div>)}
       <div className="q-grid-total">Quotation totals · {uniqueCreatorCount} creators · {items.length} <QuotationText>option lines</QuotationText> <b>{F(totalClientCostEgp)} EGP</b></div>
     </div>
   );

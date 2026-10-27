@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import { computeAgencyFee } from "@/lib/commercial/commercial-engine";
+import { otherServiceSeed } from "@/lib/commercial/other-service";
 import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import { buildQuotationDocument } from "@/features/quotations/export/quotation-document";
 import { buildQuotationHtml, renderMoney } from "@/features/quotations/export/quotation-html";
@@ -125,6 +126,23 @@ function mockDetail(overrides: Partial<QuotationDetail> = {}): QuotationDetail {
     estimated_engagement_rate: 3,
     ...overrides,
   };
+}
+
+// Supplier services survive every report without appearing as social creators or exposing cost.
+{
+  const service = mockItem({ ...otherServiceSeed({ vendorId: "11111111-1111-4111-8111-111111111111", title: "Videography QA", description: "Shoot & editing <scope>", cost: 8123, revenue: 12000, currency: "EGP", agencyFeePercent: 10 }, "Private supplier"),
+    id: "service-qa", cost_egp: 8123, revenue_egp: 12000, af_value: 1200, af_value_egp: 1200 });
+  for (const option of QUOTATION_TEMPLATE_OPTIONS) {
+    const doc = buildQuotationDocument(mockDetail({ items: [service], total_revenue_egp: 12000, total_af_egp: 1200 }), { template: option.value });
+    assert.equal(doc.creatorGroups.length, 0);
+    assert.equal(doc.otherServiceRows?.length, 1);
+    const html = buildQuotationHtml(doc);
+    assert.ok(html.includes("other-services-page"), option.value);
+    assert.ok(html.includes("Videography QA"), option.value);
+    assert.ok(html.includes("&lt;scope&gt;"), option.value);
+    assert.ok(!html.includes("Private supplier"), option.value);
+    assert.ok(!html.includes("8,123"), option.value);
+  }
 }
 
 // Template resolver

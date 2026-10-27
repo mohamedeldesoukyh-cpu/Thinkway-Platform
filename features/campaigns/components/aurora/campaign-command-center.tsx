@@ -232,7 +232,7 @@ export function CampaignCommandCenter({
           <CampaignOpsStat
             label="Overdue deliverables" value={String(overviewSignals.overdueDeliverableCount)} tone={overviewSignals.overdueDeliverableCount > 0 ? "amber" : "mut"}
           />
-          <CampaignOpsStat label="Unassigned creators" value={String(Math.max(0,assignmentStats.total-assignmentStats.withVendor))} />
+          <CampaignOpsStat label="Unassigned lines" value={String(Math.max(0,assignmentStats.total-assignmentStats.withVendor))} />
           <details className="wr-hub-extra"><summary>Readiness counts</summary>
           <CampaignOpsStat
             label="Blockers"
@@ -259,7 +259,7 @@ export function CampaignCommandCenter({
           actionLabel="Assignments"
           onAction={() => onNavigateToTab("lines")}
         >
-          <CampaignOpsStat label="Creators" value={String(assignmentStats.withVendor)} tone="blue" />
+          <CampaignOpsStat label="Assigned lines" value={String(assignmentStats.withVendor)} tone="blue" />
           <CampaignOpsStat label="Deliverables" value={String(deliverableStats.total)} />
           <CampaignOpsStat label="Revenue not set" value={String(workspace.lines.filter(line => !(line.revenue > 0)).length)} />
           <details className="wr-hub-extra"><summary>Assignment status counts</summary>

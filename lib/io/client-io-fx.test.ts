@@ -63,4 +63,10 @@ test("Client IO document totals include custom FX for revenue, usage and fees an
   });
   assert.equal(sumClientIoComposerAgreedAmount(lines, [], "EGP"), null);
   assert.equal(sumClientIoComposerAgreedAmount(lines, ["aed"], "EGP"), null);
+  // A configured zero VAT rate is a real rate, not a missing default.
+  const zeroVatSnapshot = buildClientIoAssignmentSnapshot({ documentCurrency: "EGP", assignmentFxRates: { usd: 55, aed: 15.5 }, selectedCampaignLineIds: ["usd", "aed"], lines: lines.map(line => ({ ...line, revenue_vat_percent: 0 })), deliverables: [] });
+  const zeroVatDoc = await loadClientIoDocumentData(db as never, "io", null, { assignmentSnapshot: zeroVatSnapshot });
+  assert.equal(zeroVatDoc.pricing.vatAmount, 0);
+  assert.equal(zeroVatDoc.pricing.total, 53350);
+  assert.equal(clientIoSnapshotTotal(zeroVatSnapshot)?.amount, 53350);
 });

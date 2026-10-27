@@ -502,6 +502,18 @@ export function CreatorsWorkspace({
             const normalizedDescription = description?.trim().replace(/\s+/g, " ");
             const repeatsDeliverables = normalizedDescription === summaryLabel.trim().replace(/\s+/g, " ") ||
               (hasOptions && creator.quotationOptions!.some(option => normalizedDescription === (option.serviceDescription || option.deliverables || "").trim().replace(/\s+/g, " ")));
+            if (creator.creatorId.startsWith("service:")) return (
+              <section key={creator.creatorId} className={`cc p-4 ${state === "accepted" ? "cw-chosen" : ""}`} aria-label={creator.displayName}>
+                <div className="w-full min-w-0">
+                  <p className="ck">Others</p>
+                  <h3 className="nm" dir="auto">{creator.displayName}</h3>
+                  {optionFields}
+                  {!hasOptions ? <CreatorInvestment creator={creator} currency={view.commercial.currency} isSelected={currentCampaign || state === "accepted"} hideCostAndFees={Boolean(view.hideCostAndFees)} showOriginalCurrency={showOriginalCurrency} /> : null}
+                  <span className={statusClass(state)}>{state === "accepted" ? "Selected" : state === "rejected" ? "Rejected" : "Under review"}</span>
+                  {workspaceState.optionErrors[creator.creatorId] ? <p role="alert">{workspaceState.optionErrors[creator.creatorId]}</p> : null}
+                </div>
+              </section>
+            );
             return (
             <div
               key={creator.creatorId}

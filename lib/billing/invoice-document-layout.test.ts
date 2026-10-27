@@ -118,6 +118,10 @@ assert.equal(packaged.lineItems[1]!.revenueBeforeVat, 25_000);
 const vat = resolveInvoiceDocumentVat(sample);
 assert.equal(vat.taxAmount, 72_100);
 assert.equal(vat.vatLabel, "VAT (14%)");
+const zeroVat = resolveInvoiceDocumentVat({ ...sample, vatPercent: 0, taxAmount: 0,
+  lineItems: sample.lineItems.map(line => ({ ...line, revenueVatPercent: 0, revenueVatAmount: 0, revenueVatExempt: false })) });
+assert.equal(zeroVat.vatLabel, "VAT (0%)");
+assert.equal(zeroVat.taxAmount, 0);
 
 const html = buildInvoiceTemplateHtml(sample);
 assert.ok(html.includes("Campaign No."));

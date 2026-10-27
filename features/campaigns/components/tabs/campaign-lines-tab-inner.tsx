@@ -7,6 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRefreshCampaignAfterOperationalMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 
 import { Button } from "@/components/ui/button";
+import { OtherServiceButton } from "@/features/other-services/other-service-button";
 import { CampaignOperationalSectionHeader } from "@/features/campaigns/components/campaign-operational-section-header";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { OperationalTableDualColumnsProvider } from "@/components/tables/operational-table-column-context";
@@ -229,7 +230,7 @@ export function CampaignLinesTabInner({
           },
           {
             key: "creators",
-            label: "Creators",
+            label: "Creators / vendors",
             value: String(assignedCount),
             tone: "blue",
           },
@@ -267,13 +268,15 @@ export function CampaignLinesTabInner({
             tone: readyCount > 0 ? "blue" : "mut",
           },
         ]}
-        registerLabel="Creators"
+        registerLabel="Creators & other services"
         defaultRegisterOpen
         registerCount={workspace.lines.length}
         registerStorageKey={`assignments-${workspace.id}`}
         forceRegisterOpen={Boolean(initialFocusLineId)}
         tools={
           enableLineSheet && audienceView === "internal" ? (
+            <div className="flex flex-wrap gap-2">
+            <OtherServiceButton scope="campaign" documentId={workspace.id} currency={workspace.currency_code ?? "EGP"} onAdded={refreshAfterOperationalMutation} />
             <Button
               size="sm"
               onClick={openCreate}
@@ -283,6 +286,7 @@ export function CampaignLinesTabInner({
               <PlusIcon data-icon="inline-start" className="size-3.5" />
               Create assignment
             </Button>
+            </div>
           ) : undefined
         }
       >

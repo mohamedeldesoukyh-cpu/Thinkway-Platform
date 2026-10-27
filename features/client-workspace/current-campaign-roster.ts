@@ -7,6 +7,7 @@ import { hydrateSnapshotCreatorsFromUnified } from "./creator-snapshot";
 import { projectCreatorsFromSnapshot } from "./snapshot";
 import type { ClientReviewRecord, ClientReviewSourceSnapshot, ClientReviewSourceSnapshotCreator } from "./types";
 import { hydrateReviewCampaigns } from "./resolve-review-campaign";
+import { parseLineAssignment } from "@/lib/campaigns/line-assignment";
 
 export type CurrentCampaignLine = CampaignLineCommercialFxInput & {
   id: string;
@@ -19,6 +20,7 @@ export type CurrentCampaignLine = CampaignLineCommercialFxInput & {
   currency_code: string;
   influencerId: string;
   displayName: string;
+  otherService?: boolean;
 };
 
 /** Display projection only. Never write campaign changes into an approved proposal. */
@@ -33,8 +35,9 @@ export function currentCampaignCreators(
   const creators = new Map<string, ClientReviewSourceSnapshotCreator>();
   for (const line of lines) {
     if (line.status === "cancelled" || !line.influencerId) continue;
-    const existing = creators.get(line.influencerId);
-    const original = previous.find(c => c.influencerId === line.influencerId || c.creatorId === `inf:${line.influencerId}`);
+    const key = line.otherService ? `service:${line.id}` : line.influencerId;
+    const existing = creators.get(key);
+    const original = previous.find(c => line.otherService ? c.creatorId === key : c.influencerId === line.influencerId || c.creatorId === `inf:${line.influencerId}`);
     // Legacy revenue_base is revenue / fx_rate, not an EGP snapshot.
     // Match the campaign financials' commercial masters and negotiated FX.
     const sourceCurrency = resolveLineRevenueCurrency(line, currency);
@@ -49,11 +52,12 @@ export function currentCampaignCreators(
     const usageAmount = creatorFxAmount(usage, conversion);
     const feeAmount = creatorFxAmount(billable, conversion) - amount - usageAmount;
     const description = [existing?.serviceDescription, line.description].filter(Boolean).join(" · ");
-    creators.set(line.influencerId, {
+    creators.set(key, {
       ...original,
-      creatorId: original?.creatorId ?? `inf:${line.influencerId}`,
-      influencerId: line.influencerId,
-      displayName: original?.displayName ?? line.displayName,
+      creatorId: line.otherService ? key : original?.creatorId ?? `inf:${line.influencerId}`,
+      influencerId: line.otherService ? undefined : line.influencerId,
+      displayName: line.otherService ? line.name : original?.displayName ?? line.displayName,
+      categories: line.otherService ? ["Others"] : original?.categories,
       platform: original?.platform ?? line.platform ?? undefined,
       serviceDescription: description,
       deliverables: description,
@@ -79,7 +83,7 @@ export async function loadCurrentCampaignSnapshot(
 ) {
   const [linesResult, membersResult] = await Promise.all([
     db.from("campaign_lines")
-      .select("id,status,name,description,platform,revenue,revenue_base,currency_code,revenue_before_vat,usage_rights_amount,agency_fee_amount,agency_fee_percent,revenue_fx_override")
+      .select("id,status,name,description,platform,metadata,revenue,revenue_base,currency_code,revenue_before_vat,usage_rights_amount,agency_fee_amount,agency_fee_percent,revenue_fx_override")
       .eq("campaign_header_id", campaignId).order("sort_order").order("created_at"),
     db.from("campaign_influencers")
       .select("campaign_line_id,influencer_id,influencer:influencers(display_name)")
@@ -90,7 +94,9 @@ export async function loadCurrentCampaignSnapshot(
   const lines: CurrentCampaignLine[] = (linesResult.data ?? []).map(line => {
     const member = members.find(row => row.campaign_line_id === line.id);
     const profile = Array.isArray(member?.influencer) ? member.influencer[0] : member?.influencer;
-    return { ...line, influencerId: member?.influencer_id ?? "", displayName: profile?.display_name ?? line.name };
+    const assignment = parseLineAssignment(line.metadata);
+    const otherService = assignment?.platforms.some(p => p.deliverables.includes("other_service")) ?? false;
+    return { ...line, otherService, influencerId: member?.influencer_id ?? "", displayName: profile?.display_name ?? line.name };
   });
   const currency = snapshot.commercial.currency;
   const currencies = new Set([currency.trim().toUpperCase(), ...lines

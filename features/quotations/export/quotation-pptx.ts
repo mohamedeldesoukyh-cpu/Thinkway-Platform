@@ -3258,7 +3258,7 @@ export async function buildQuotationPptxBuffer(
   }
   // Creator decks (Showcase / Pitch / lump-sum variants): pixel-parity with Preview + PDF.
   // Rebuild slides from the same HTML pages so PPTX cannot drift from the redesign.
-  if (isCreatorDeckTemplate(doc.template)) {
+  if (isCreatorDeckTemplate(doc.template) || (doc.otherServiceRows?.length ?? 0) > 0) {
     const { buildQuotationHtmlParityPptxBuffer } = await import(
       "@/features/quotations/export/quotation-pptx-from-html"
     );

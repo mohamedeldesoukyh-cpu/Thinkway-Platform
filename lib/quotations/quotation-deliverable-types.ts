@@ -8,6 +8,7 @@ import type { QuotationDeliverableTypeLine } from "@/lib/domains/commercial/quot
 export type { QuotationDeliverableTypeLine };
 
 export const QUOTATION_POST_TYPES = [
+  { value: "other_service", label: "Other service" },
   { value: "video", label: "Video" },
   { value: "stories", label: "Stories" },
   /** Platform-agnostic — available under any creator platform. */
