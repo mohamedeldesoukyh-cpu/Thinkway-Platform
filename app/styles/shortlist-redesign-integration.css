@@ -21,7 +21,8 @@
 .sl-redesign .tw-cs { font:400 11.5px var(--q-sans);color:var(--q-mut); }
 .sl-redesign .tw-b { display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:34px;height:auto;padding:0 12px;border:1px solid var(--q-line);border-radius:7px;background:var(--q-surf);color:var(--q-ink2);font:600 12.5px var(--q-sans);box-shadow:none; }
 .sl-redesign .tw-b.sm { min-height:30px;padding:0 9px;font-size:11.5px; }
-.sl-redesign .tw-b.pri { background:var(--q-blue);color:white;border-color:var(--q-blue);box-shadow:var(--q-ring); }
+.sl-redesign.discovery-suite .tw-b.pri { background:var(--q-blue);color:#fff;border-color:var(--q-blue);box-shadow:var(--q-ring); }
+.sl-redesign.discovery-suite .tw-b.pri:hover:not(:disabled) { color:#fff; }
 .sl-redesign .tw-b:disabled { opacity:.42;cursor:not-allowed; }
 .sl-redesign .tw-b:hover:not(:disabled) { border-color:var(--q-blue); }
 .sl-redesign .sl-link { margin-bottom:0; }
