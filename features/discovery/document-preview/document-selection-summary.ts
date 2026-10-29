@@ -82,7 +82,8 @@ export function summarizeShortlistSelection(
 export function summarizeQuotationSelection(
   items: QuotationItemRow[],
   selectedItemIds: string[],
-  currency = "EGP"
+  currency = "EGP",
+  options: { showOriginalCurrency?: boolean; displayFxRateToEgp?: number } = {}
 ): DocumentSelectionSummary {
   const totalCreatorCount = countUniqueQuotationCreators(items);
   const selectedSet = new Set(selectedItemIds);
@@ -95,8 +96,22 @@ export function summarizeQuotationSelection(
   const revenueEgp = selectedItems.reduce((sum, item) => sum + (Number(item.revenue_egp) || 0), 0);
   const afEgp = selectedItems.reduce((sum, item) => sum + (Number(item.af_value_egp) || 0), 0);
   const costEgp = selectedItems.reduce((sum, item) => sum + (Number(item.cost_egp) || 0), 0);
-  const gpEgp = selectedItems.reduce((sum, item) => sum + (Number(item.gp_value_egp) || 0), 0);
-  const displayCurrency = (currency || "EGP").toUpperCase();
+  const gpEgp = revenueEgp + afEgp - costEgp;
+  const requestedCurrency = (currency || "EGP").toUpperCase();
+  const native = options.showOriginalCurrency || requestedCurrency === "FOREIGN";
+  const rate = requestedCurrency === "EGP" ? 1 : options.displayFxRateToEgp;
+  // Never relabel EGP as another currency when its conversion rate is unavailable.
+  const displayCurrency = rate && rate > 0 ? requestedCurrency : "EGP";
+  const money = (egp: number, field: "revenue" | "af_value" | "cost" | "gp_value" | "total") => {
+    if (!native) return formatMoneyKpi(egp / (rate && rate > 0 ? rate : 1), displayCurrency);
+    const grouped = new Map<string, number>();
+    for (const item of selectedItems) {
+      const code = (item.cost_currency || "EGP").toUpperCase();
+      const value = field === "total" ? (Number(item.revenue) || 0) + (Number(item.af_value) || 0) : field === "gp_value" ? (Number(item.revenue) || 0) + (Number(item.af_value) || 0) - (Number(item.cost) || 0) : Number(item[field]) || 0;
+      grouped.set(code, (grouped.get(code) || 0) + value);
+    }
+    return grouped.size ? [...grouped].sort(([a], [b]) => a.localeCompare(b)).map(([code, value]) => formatMoneyKpi(value, code)).join(" · ") : "—";
+  };
 
   const forecast = computeCampaignForecastFromProfiles(
     quotationItemsToForecastProfiles(selectedItems)
@@ -106,30 +121,30 @@ export function summarizeQuotationSelection(
     {
       label: "Client cost",
       scope: "client",
-      value: formatMoneyKpi(revenueEgp, displayCurrency),
+      value: money(revenueEgp, "revenue"),
     },
     {
       label: "Agency fee",
       scope: "client",
-      value: formatMoneyKpi(afEgp, displayCurrency),
+      value: money(afEgp, "af_value"),
     },
     {
       label: "Total incl. AF",
       scope: "client",
-      value: formatMoneyKpi(revenueEgp + afEgp, displayCurrency),
+      value: money(revenueEgp + afEgp, "total"),
     },
     {
       label: "Creator cost",
       scope: "internal",
-      value: formatMoneyKpi(costEgp, displayCurrency),
+      value: money(costEgp, "cost"),
     },
     {
       label: "Est. reach",
       value: formatCreatorCount(forecast.estimatedReach > 0 ? forecast.estimatedReach : null) || "—",
     },
   ];
-  metrics.push({label: "Gross profit", value: formatMoneyKpi(gpEgp, displayCurrency), scope: "internal"},
-    {label: "Margin", value: `${(revenueEgp > 0 ? gpEgp / revenueEgp * 100 : 0).toFixed(1)}%`, scope: "internal"});
+  metrics.push({label: "Gross profit", value: money(gpEgp, "gp_value"), scope: "internal"},
+    {label: "Margin", value: `${(revenueEgp + afEgp > 0 ? gpEgp / (revenueEgp + afEgp) * 100 : 0).toFixed(1)}%`, scope: "internal"});
   const er = formatEr(forecast.averageEngagementRate);
   if (er) metrics.push({ label: "Avg ER", value: er });
 

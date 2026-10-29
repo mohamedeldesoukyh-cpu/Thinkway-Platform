@@ -706,8 +706,8 @@ function QuotationWorkspaceContent({
 
   const summarizePreviewSelection = useCallback(
     (itemIds: string[]) =>
-      summarizeQuotationSelection(detail.items, itemIds, detail.currency ?? "EGP"),
-    [detail.items, detail.currency]
+      summarizeQuotationSelection(detail.items, itemIds, displayCurrency, { showOriginalCurrency: foreignDisplay || Boolean(detail.showOriginalCurrency), displayFxRateToEgp }),
+    [detail.items, displayCurrency, foreignDisplay, detail.showOriginalCurrency, displayFxRateToEgp]
   );
 
   const handlePreviewSelectionConfirm = useCallback(
@@ -757,6 +757,9 @@ function QuotationWorkspaceContent({
         ]} />
       <div className="q-frozen-summary">
       <QuotationWorkspaceHeader
+        displayCurrency={displayCurrency}
+        displayFxRateToEgp={displayFxRateToEgp}
+        foreignDisplay={foreignDisplay}
         detail={detail}
         promoteOptions={promoteOptions}
         hasUnsavedChanges={manualSave.hasUnsavedChanges}
