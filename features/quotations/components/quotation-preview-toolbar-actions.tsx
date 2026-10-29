@@ -50,6 +50,8 @@ type Props = {
   serialNumber?: string | null;
   items: QuotationItemRow[];
   currency?: string | null;
+  showOriginalCurrency?: boolean;
+  displayFxRateToEgp?: number;
   exportTemplate: QuotationTemplateVariant;
   onExportTemplateChange: (template: QuotationTemplateVariant) => void;
   selectedItemIds?: string[];
@@ -98,6 +100,8 @@ export function QuotationPreviewToolbarActions({
   serialNumber,
   items,
   currency,
+  showOriginalCurrency,
+  displayFxRateToEgp,
   exportTemplate,
   onExportTemplateChange,
   selectedItemIds,
@@ -139,8 +143,8 @@ export function QuotationPreviewToolbarActions({
   }, [selectionOpen, items, baseCreatorOptions]);
 
   const summarizeSelection = useCallback(
-    (itemIds: string[]) => summarizeQuotationSelection(items, itemIds, currency ?? "EGP"),
-    [items, currency]
+    (itemIds: string[]) => summarizeQuotationSelection(items, itemIds, currency ?? "EGP", { showOriginalCurrency, displayFxRateToEgp }),
+    [items, currency, showOriginalCurrency, displayFxRateToEgp]
   );
 
   const activeTemplate =

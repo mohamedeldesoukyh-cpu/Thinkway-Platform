@@ -73,6 +73,9 @@ import type { QuotationClientReviewView } from "@/features/quotations/quotation-
 
 type Props = {
   detail: QuotationDetail;
+  displayCurrency?: string;
+  displayFxRateToEgp?: number;
+  foreignDisplay?: boolean;
   promoteOptions: PromoteWizardOptions;
   hasUnsavedChanges: boolean;
   savePending: boolean;
@@ -92,6 +95,9 @@ type Props = {
 
 export function QuotationWorkspaceHeader({
   detail,
+  displayCurrency,
+  displayFxRateToEgp,
+  foreignDisplay,
   promoteOptions,
   hasUnsavedChanges,
   savePending,
@@ -307,7 +313,9 @@ export function QuotationWorkspaceHeader({
                 quotationId={detail.id}
                 serialNumber={detail.serial_number}
                 items={detail.items}
-                currency={detail.currency}
+                currency={displayCurrency ?? detail.currency}
+                displayFxRateToEgp={displayFxRateToEgp}
+                showOriginalCurrency={foreignDisplay || showOriginalCurrency}
                 exportTemplate={exportTemplate}
                 onExportTemplateChange={onExportTemplateChange}
                 selectedItemIds={selectedItemIds}
