@@ -4,6 +4,7 @@ import { persistClientReviewChange } from "./review-change-persistence";
 import { reopenSelectionAllowed, selectionConfirmationFromSnapshots, withoutSelectionConfirmation } from "./reopen-selection";
 import { selectionChangeAllowed, isSelectionConfirmed } from "./selection-flow";
 import type { ClientReviewSourceSnapshot } from "./types";
+import { retainCreatorBriefs } from "./snapshot-diff";
 
 const snapshot = {
   creators: [{ creatorId: "creator", investmentAmount: 100 }],
@@ -79,4 +80,7 @@ test("reopening cannot resurrect a confirmation from an older shortlist", () => 
   const reopened = withoutSelectionConfirmation(snapshot);
   assert.equal(selectionConfirmationFromSnapshots(reopened, snapshot), undefined);
   assert.equal(selectionConfirmationFromSnapshots(snapshot, reopened), snapshot.clientSelection);
+  const refreshed = retainCreatorBriefs(reopened, snapshot);
+  assert.equal(refreshed.selectionReopenedAt, reopened.selectionReopenedAt);
+  assert.equal(selectionConfirmationFromSnapshots(refreshed, snapshot), undefined);
 });

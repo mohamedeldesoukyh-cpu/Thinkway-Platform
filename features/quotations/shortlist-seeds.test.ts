@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import { test } from "node:test";
+import { queryShortlistSeedItemsWithCollapseFallback } from "@/lib/discovery/shortlist-item-collapse-select";
 
 import type { UnifiedCreatorResult } from "@/lib/creators/types";
 
@@ -9,6 +11,27 @@ import {
   filterNewShortlistImportItems,
   planShortlistItemsForQuotationImport,
 } from "@/features/quotations/shortlist-seeds";
+
+test("import from another shortlist reads and carries custom and legacy descriptions", async () => {
+  const rows = [
+    { id: "custom", influencer_id: null, profile_id: null, unified_id: null, service_description: "Custom scope\nوصف الخدمة", deliverables: [{ service_description: "Old child text" }] },
+    { id: "legacy", influencer_id: null, profile_id: null, unified_id: null, service_description: null, deliverables: [{ service_description: "1× Reel" }, { service_description: "1× Story" }] },
+  ];
+  const before = structuredClone(rows);
+  for (const fallback of [false, true]) {
+    const result = await queryShortlistSeedItemsWithCollapseFallback(async select => {
+      if (fallback && select.includes("collapse_group_id")) return { data: null, error: { message: "column collapse_group_id does not exist" } };
+      // Simulate the database projection: omitted columns cannot reach the seed builder.
+      const fields = new Set(select.split(",").map(field => field.trim()));
+      return { data: rows.map(row => Object.fromEntries(Object.entries(row).filter(([key]) => fields.has(key)))), error: null };
+    });
+    const plan = planShortlistItemsForQuotationImport(result.data as typeof rows, []);
+    const seeds = buildQuotationSeedsFromImportPlan(plan, new Map());
+    assert.deepEqual(seeds.map(seed => seed.service_description), ["Custom scope\nوصف الخدمة", "1× Reel · 1× Story"]);
+    assert.deepEqual(seeds.map(seed => seed.deliverables), rows.map(row => row.deliverables));
+  }
+  assert.deepEqual(rows, before);
+});
 
 function mockCreator(overrides?: Partial<UnifiedCreatorResult>): UnifiedCreatorResult {
   return {

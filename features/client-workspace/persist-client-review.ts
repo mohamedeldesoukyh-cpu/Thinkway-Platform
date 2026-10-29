@@ -4,6 +4,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { randomBytes } from "node:crypto";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 
+import { selectionConfirmationFromSnapshots } from "./reopen-selection";
 import {
   CLIENT_REVIEW_LINK_MISSING_MESSAGE,
   type ClientCreatorSelectionState,
@@ -372,7 +373,7 @@ async function updateExistingClientReview(
   const previous = parseSourceSnapshot(currentTip.source_snapshot);
   const previousSelection = currentTip.selection_state ?? {};
   const creatorIds = input.snapshot.creators.map((creator) => creator.creatorId);
-  const freezeSource = previous?.clientSelection ?? input.snapshot.clientSelection;
+  const freezeSource = selectionConfirmationFromSnapshots(previous, input.snapshot);
   const resolvedFreeze = resolveClientSelectionFreeze(freezeSource, input.snapshot.creators);
   const remappedPrevious = hydrateClientSelection(
     input.snapshot.creators,
