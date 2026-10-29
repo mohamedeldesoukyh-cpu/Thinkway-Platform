@@ -15,7 +15,9 @@ import {
   bulkSelectCreatorsAction,
   loadCreatorBriefAction,
   selectCreatorAction,
+  reopenSelectionAction,
 } from "../actions/client-workspace-actions";
+import { reopenSelectionAllowed } from "../reopen-selection";
 import type { ClientCreatorSelectionState } from "../constants";
 import {
   captureClientWorkspaceDomProbe,
@@ -91,6 +93,7 @@ export function CreatorsWorkspace({
   } = useClientWorkspaceState();
   const showOriginalCurrency = Boolean(view.showOriginalCurrency);
   const [pending, startTransition] = useTransition();
+  const [selectionError, setSelectionError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState<(typeof STATUS_FILTERS)[number]["id"]>("all");
   const [search, setSearch] = useState("");
   const [closedOptions, setClosedOptions] = useState<Record<string, boolean>>({});
@@ -115,6 +118,12 @@ export function CreatorsWorkspace({
   const strategicOnly = view.review.source === "studio";
   const pendingIds = new Set(view.journey?.pendingCommercialApprovalCreatorIds ?? []);
   const confirmed = Boolean(view.journey?.selectionConfirmed);
+  const canReopenSelection = confirmed && reopenSelectionAllowed({
+    interactive: view.canDecide,
+    historical: Boolean(view.journey?.historical),
+    commerciallyApproved: view.journey?.quotationStage === "approved",
+    inCampaign: currentCampaign || Boolean(view.review.campaignHeaderId),
+  });
   const canSelectCreator = (creatorId: string) =>
     !currentCampaign && shortlistCreatorSelectEnabled({
       canDecide: view.canDecide,
@@ -312,16 +321,24 @@ export function CreatorsWorkspace({
   }
 
   function decide(creator: ClientCreatorCard, state: ClientCreatorSelectionState, reason?: string) {
-    if (workspaceState.optionsSaving) return;
+    if (workspaceState.optionsSaving || pending) return;
+    const previous = selection[creator.creatorId] ?? creator.selection;
+    setSelectionError(null);
     setCreatorState(creator.creatorId, state);
     startTransition(async () => {
-      await selectCreatorAction({
+      try {
+      const result = await selectCreatorAction({
         token,
         creatorId: creator.creatorId,
         state,
         creatorName: creator.displayName,
         reason,
       });
+      if (!result.ok) throw new Error(result.message);
+      } catch (error) {
+        setCreatorState(creator.creatorId, previous);
+        setSelectionError(error instanceof Error ? error.message : "Could not save your selection. Please retry.");
+      }
     });
   }
 
@@ -368,7 +385,7 @@ export function CreatorsWorkspace({
       ) : (
         <div className="card" style={{ marginBottom: 16 }}>
           <p className="ck">Your Selection</p>
-          <h2>{confirmed ? "Client Approved creators" : "Your Selection"}</h2>
+          <h2>{confirmed ? "Confirmed selection" : "Your Selection"}</h2>
           <p className="note">
             {confirmed
               ? Boolean(view.hideCostAndFees)
@@ -376,8 +393,21 @@ export function CreatorsWorkspace({
                 : "These Client Approved creators are included in the current quotation. Review Cost, Agency Fees, and Total Investment on Commercial. This is not final quotation approval."
               : "Review the creators you selected on Shortlist. Approve Selected Creators includes this roster in the current quotation and opens Commercial."}
           </p>
+          {canReopenSelection ? <button type="button" className="btn sec" disabled={pending || workspaceState.optionsSaving}
+            onClick={() => startTransition(async () => {
+              setSelectionError(null);
+              try {
+                const result = await reopenSelectionAction({ token });
+                if (!result.ok) { setSelectionError(result.message); return; }
+                router.refresh();
+              } catch {
+                setSelectionError("Could not reopen your selection. Please retry.");
+              }
+            })}>Edit selection</button> : null}
+          {canReopenSelection ? <p className="note">Reopen your selection to move creators back to Shortlist. Confirm your selection again when you finish.</p> : null}
         </div>
       )}
+      {selectionError ? <p role="alert" className="cw-option-error">{selectionError}</p> : null}
 
       {explore || confirmed ? null : (
         <div className="sumbar-cta" style={{ marginBottom: 12 }}>
@@ -617,6 +647,7 @@ export function CreatorsWorkspace({
                   <button
                     type="button"
                     className="btn sec"
+                    disabled={pending || workspaceState.optionsSaving}
                     onClick={() => toggleChecked(creator, false)}
                   >
                     {REMOVE_FROM_SELECTION_LABEL}

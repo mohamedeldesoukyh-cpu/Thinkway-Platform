@@ -5,6 +5,9 @@ import type { Database } from "@/types/database";
 type Supabase = SupabaseClient<Database>;
 
 export type ShortlistNotificationEvent =
+  | "client_selection_updated"
+  | "client_changes_requested"
+  | "client_quotation_approved"
   | "created"
   | "submitted_for_review"
   | "approved"
@@ -14,6 +17,9 @@ export type ShortlistNotificationEvent =
   | "returned_from_campaign";
 
 const EVENT_TITLES: Record<ShortlistNotificationEvent, string> = {
+  client_selection_updated: "Client selection updated",
+  client_changes_requested: "Client requested changes",
+  client_quotation_approved: "Client approved quotation",
   created: "Shortlist created",
   submitted_for_review: "Shortlist submitted for review",
   approved: "Shortlist approved",

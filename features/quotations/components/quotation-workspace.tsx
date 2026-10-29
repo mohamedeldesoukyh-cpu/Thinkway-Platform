@@ -825,11 +825,11 @@ function QuotationWorkspaceContent({
           onAcceptOnBehalf={acceptUnderReviewOnBehalf}
           onMoveApprovedToCampaign={() => {
             if (approvedItemIds.length === 0) {
-              toast.error("No approved creators to move.");
+              toast.error("No client-selected creators to move.");
               return;
             }
             if (detail.status !== "approved") {
-              toast.error("Approve this quotation first, then move the approved creators to the campaign.");
+              toast.error("Approve this quotation first, then move the client-selected creators to the campaign.");
               return;
             }
             setConvertSelectedIds(approvedItemIds);

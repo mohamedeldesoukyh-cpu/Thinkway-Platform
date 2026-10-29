@@ -1,5 +1,13 @@
 // UI labels from the supplied design. Quotation content and prices are never translated.
 export const quotationDesignMessages: Record<string, string> = {
+  "Selected": "محدد",
+  "Select client selection": "تحديد اختيارات العميل",
+  "Move client selection to campaign": "نقل اختيارات العميل للحملة",
+  "Selected creators": "صُنّاع مختارون",
+  "Selected base cost": "التكلفة الأساسية للاختيارات",
+  "Selected GP": "ربح الاختيارات",
+  "Selected GP %": "نسبة ربح الاختيارات %",
+  "Client selection is not quotation approval.": "اختيار العميل لا يعني اعتماد عرض السعر.",
   "Duplicate quotation": "نسخ عرض السعر",
   "Create new option": "إنشاء خيار جديد",
   "Commercial totals do not reconcile: total margin must equal GP before agency fees plus agency fees. Review Cost detail before submitting.": "الإجماليات التجارية غير متطابقة: يجب أن يساوي إجمالي الهامش الربح قبل رسوم الوكالة مضافاً إليه رسوم الوكالة. راجع تفاصيل التكلفة قبل الإرسال.",

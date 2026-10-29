@@ -1,6 +1,8 @@
 import { applyCreatorQuotationOptions, validateQuotationOptionChoice, reconcileQuotationOptionTotals } from './quotation-options';
+import { reopenSelectionAllowed } from './reopen-selection';
+import { persistClientReviewChange } from './review-change-persistence';
 import { projectCurrentQuotationOntoSnapshot } from './live-quotation-projection';
-import { notifyShortlistEvent } from "@/features/discovery/shortlists/notifications";
+import { notifyShortlistEvent, type ShortlistNotificationEvent } from "@/features/discovery/shortlists/notifications";
 import { CampaignObjectPersistenceService } from "@/features/campaign-intelligence/services/campaign-object-persistence";
 import { tryCreateServiceRoleClient } from "@/lib/supabase/service-role-client";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -135,6 +137,7 @@ async function notifyOpsOfClientReviewChange(input: {
   quotationId?: string | null;
   shortlistId?: string | null;
   body: string;
+  event?: ShortlistNotificationEvent;
 }) {
   try {
     const { data: quote } = input.quotationId
@@ -155,7 +158,7 @@ async function notifyOpsOfClientReviewChange(input: {
     const createdBy = (reviewRow as { created_by?: string } | null)?.created_by;
     await notifyShortlistEvent(db() as never, {
       shortlistId,
-      event: "approved",
+      event: input.event ?? "client_selection_updated",
       body: input.body,
       actorId: createdBy || quoteRow?.owner_id || "",
       recipientIds: [quoteRow?.owner_id, createdBy],
@@ -348,37 +351,34 @@ export async function requestClientChanges(input: {
   token: string;
   summary: string;
   areas: ClientChangeArea[];
+  targetType?: ClientCommentTargetType;
+  targetId?: string | null;
   stage?: ClientReviewDecisionStage;
 }): Promise<{ ok: boolean; message: string }> {
   const gate = await requireInteractiveReview(input.token, input.stage);
   if (!gate.ok) return gate;
   const summary = input.summary.trim();
   if (!summary) return { ok: false, message: "Describe the change you need." };
-  const areas = input.areas.length > 0 ? input.areas : (["campaign"] as ClientChangeArea[]);
-  const patch: Record<string, unknown> = {
-    status: "changes_requested",
-    change_request_summary: summary,
-    change_request_areas: areas,
-    updated_at: new Date().toISOString(),
-  };
-  if (gate.review.sourceSnapshot?.clientSelection) {
-    const nextSnapshot = { ...gate.review.sourceSnapshot };
-    delete nextSnapshot.clientSelection;
-    patch.source_snapshot = nextSnapshot;
-  }
-  const { error } = await db()
-    .from("campaign_client_reviews" as never)
-    .update(patch as never)
-    .eq("id", gate.review.id).eq("updated_at", gate.review.updatedAt).select("id").single();
-  if (error) return { ok: false, message: error.message };
-  await db().from("campaign_client_review_events" as never).insert({
-    review_id: gate.review.id,
-    event_type: "changes_requested",
-    actor_kind: "client",
-    actor_label: gate.review.clientLabel ?? "Client",
-    payload: { summary, areas },
-  } as never);
-  return { ok: true, message: "Change request sent to Thinkway." };
+  const saved = await persistClientReviewChange(db(), gate.review, { kind: 'request', summary, areas: input.areas, targetType: input.targetType, targetId: input.targetId });
+  if (!saved.ok) return saved;
+  await notifyOpsOfClientReviewChange({
+    reviewId: gate.review.id, quotationId: gate.review.quotationId,
+    shortlistId: gate.review.shortlistId, event: "client_changes_requested",
+    body: `Client requested changes: ${summary}`,
+  });
+  return saved;
+}
+
+export async function reopenClientSelection(input: { token: string }): Promise<{ ok: boolean; message: string }> {
+  const gate = await requireInteractiveReview(input.token);
+  if (!gate.ok) return gate;
+  if (!reopenSelectionAllowed({
+    interactive: isInteractiveClientReview(gate.review.status),
+    historical: false, // requireInteractiveReview rejects superseded/older reviews.
+    commerciallyApproved: commerciallyApproved(gate.review),
+    inCampaign: Boolean(gate.review.campaignHeaderId),
+  })) return { ok: false, message: "This quotation can no longer be edited." };
+  return persistClientReviewChange(db(), gate.review, { kind: 'reopen' });
 }
 
 export async function confirmClientCreators(input: {
@@ -473,9 +473,9 @@ export async function confirmClientCreators(input: {
     shortlistId: gate.review.shortlistId,
     body: commerciallyApproved(gate.review)
       ? `Client approved a quotation extension with ${nextFreeze.extensions?.at(-1)?.creatorIds.length ?? 0} creator(s). This is not a new quotation.`
-      : `Client approved ${nextFreeze.creatorIds.length} creator${nextFreeze.creatorIds.length === 1 ? "" : "s"} for the quotation. This is not quotation approval.`,
+      : `Client confirmed their selection of ${nextFreeze.creatorIds.length} creator${nextFreeze.creatorIds.length === 1 ? "" : "s"}. Quotation approval is still separate.`,
   });
-  return { ok: true, message: "Creators approved. This is not quotation approval." };
+  return { ok: true, message: "Selection confirmed. This is not quotation approval." };
 }
 
 export async function removeUnpricedSelectedCreators(input: {
@@ -629,6 +629,7 @@ export async function decideClientReview(input: {
       reviewId: gate.review.id,
       shortlistId: gate.review.shortlistId,
       body: "Client approved the creator shortlist for consideration. This is not commercial approval.",
+      event: "approved",
     });
     return { ok: true, message: "Shortlist approved for consideration." };
   }
@@ -664,6 +665,7 @@ export async function decideClientReview(input: {
       quotationId: gate.review.quotationId,
       shortlistId: gate.review.shortlistId,
       body: `Client approved the quotation (${selectedIds.length} creator${selectedIds.length === 1 ? "" : "s"}).`,
+      event: "client_quotation_approved",
     });
     return {
       ok: true,

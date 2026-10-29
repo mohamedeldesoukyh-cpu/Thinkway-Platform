@@ -1,4 +1,5 @@
 import { applyCreatorQuotationOptions } from "./quotation-options";
+import { selectionConfirmationFromSnapshots } from "./reopen-selection";
 import type { ClientCreatorSelectionState, ClientReviewSource } from "./constants";
 import { isSelectedForCalculator } from "./status";
 import type {
@@ -40,7 +41,7 @@ export const CAMPAIGN_SETTING_UP_COPY =
 /** Header CTA only — navigates to Your Selection. Never freezes or approves. */
 export const REVIEW_YOUR_SELECTION_LABEL = "Review Your Selection";
 export const ADD_FROM_SHORTLIST_LABEL = "Add from Shortlist";
-export const REMOVE_FROM_SELECTION_LABEL = "Remove";
+export const REMOVE_FROM_SELECTION_LABEL = "Move back to Shortlist";
 export const CONTINUE_TO_YOUR_SELECTION_LABEL = "Continue to Your Selection";
 /** Shortlist continue is navigation only — it does not freeze or approve the quotation. */
 export const AFTER_SHORTLIST_CONTINUE_SECTION = "creators" as const;
@@ -198,7 +199,7 @@ export function withClientSelectionFreeze(
   snapshot: ClientReviewSourceSnapshot,
   freeze: ClientSelectionFreeze
 ): ClientReviewSourceSnapshot {
-  return { ...snapshot, clientSelection: freeze };
+  return { ...snapshot, selectionReopenedAt: undefined, clientSelection: freeze };
 }
 
 export type PricedIdentityCreator = ClientCreatorIdentityFields & {
@@ -783,10 +784,7 @@ export function mergeSnapshotsForClientView(input: {
       input.active.identityLogo ??
       quotationSnap?.identityLogo ??
       input.shortlist.identityLogo,
-    clientSelection:
-      input.active.clientSelection ??
-      quotationSnap?.clientSelection ??
-      input.shortlist?.clientSelection,
+    clientSelection: selectionConfirmationFromSnapshots(input.active, quotationSnap, input.shortlist),
   };
 }
 

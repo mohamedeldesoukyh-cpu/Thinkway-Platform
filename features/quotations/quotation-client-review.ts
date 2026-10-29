@@ -9,7 +9,7 @@ export const QUOTATION_CLIENT_SELECTION_FILTERS = ["all", "accepted", "in_review
 export type QuotationClientSelectionFilter = (typeof QUOTATION_CLIENT_SELECTION_FILTERS)[number];
 
 export const QUOTATION_CLIENT_SELECTION_LABEL: Record<ClientCreatorSelectionState, string> = {
-  accepted: "Approved",
+  accepted: "Selected",
   in_review: "Under review",
   rejected: "Rejected",
 };

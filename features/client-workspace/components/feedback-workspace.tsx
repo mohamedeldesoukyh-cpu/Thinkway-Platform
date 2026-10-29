@@ -3,7 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
-import { addReviewCommentAction } from "../actions/client-workspace-actions";
+import { requestReviewChangesAction } from "../actions/client-workspace-actions";
 import type { ClientCommentTargetType } from "../constants";
 import type { ClientWorkspaceView } from "../types";
 
@@ -17,6 +17,8 @@ export function FeedbackWorkspace({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [message, setMessage] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [targetType, setTargetType] = useState<ClientCommentTargetType>("campaign");
   const [feedbackStage, setFeedbackStage] = useState<"shortlist" | "quotation">(
     view.journey?.canRequestQuotationChanges ? "quotation" : "shortlist"
@@ -96,6 +98,7 @@ export function FeedbackWorkspace({
           <label className="fl">Request</label>
           <textarea
             className="f"
+            aria-label="Change request"
             value={message}
             onChange={(event) => setMessage(event.target.value)}
             placeholder="Describe the change you would like Thinkway to make."
@@ -107,21 +110,32 @@ export function FeedbackWorkspace({
               disabled={pending || !message.trim()}
               onClick={() =>
                 startTransition(async () => {
-                  await addReviewCommentAction({
+                  setError(null);
+                  setSuccess(null);
+                  try {
+                  const result = await requestReviewChangesAction({
                     token,
                     targetType,
                     targetId: targetType === "creator" ? creatorId : undefined,
-                    message,
+                    summary: message,
+                    areas: [targetType],
                     stage: feedbackStage,
                   });
+                  if (!result.ok) { setError(result.message); return; }
+                  setSuccess(result.message);
                   setMessage("");
                   router.refresh();
+                  } catch {
+                    setError("Could not send your change request. Please retry.");
+                  }
                 })
               }
             >
               Send request
             </button>
           </div>
+          {error ? <p role="alert">{error}</p> : null}
+          {success ? <p role="status">{success}</p> : null}
         </div>
       ) : null}
 
