@@ -182,7 +182,7 @@ function QuotationPackLineRow({
       .filter(Boolean);
   });
   const clientCommercials = computeQuotationRowClientCommercials(resolved);
-  const rowCurrency = displayCurrency || "EGP";
+  const rowCurrency = displayCurrency === "FOREIGN" ? resolved.costCurrency : displayCurrency || "EGP";
   const projected = computeQuotationDisplayTotals([resolved], rowCurrency, displayFxRateToEgp ?? 1);
   const repeat = quotationPackageRepeat(lineFields.deliverableDrafts);
   const priceUnits = repeat ?? 1;
@@ -266,8 +266,8 @@ function QuotationPackLineRow({
   const renderCostDetails = (showPrice: boolean) => canManage && primary ? (
 <QuotationDeliverableCostDetails
               triggerLabel="+ Add cost"
-                    displayCurrency={displayCurrency}
-                    displayFxRateToEgp={displayFxRateToEgp}
+                    displayCurrency={rowCurrency}
+                    displayFxRateToEgp={displayCurrency === "FOREIGN" ? resolved.fxRateToEgp : displayFxRateToEgp}
                     onFxChange={patch => {
                       onDraftChange(item.id, patch);
                       manualSave.registerLinePending(item.id, {
@@ -463,6 +463,7 @@ type Props = {
   onOpenCreator?: (item: QuotationItemRow) => void;
   uniqueCreatorCount: number;
   totalClientCostEgp: number;
+  foreignTotalsLabel?: string;
   canManage: boolean;
   showOriginalCurrency?: boolean;
   hideCostAndFees?: boolean;
@@ -485,6 +486,7 @@ export function QuotationLinesGrid({
   onOpenCreator,
   uniqueCreatorCount,
   totalClientCostEgp,
+  foreignTotalsLabel,
   canManage,
   showOriginalCurrency = false,
   hideCostAndFees = false,
@@ -505,7 +507,7 @@ export function QuotationLinesGrid({
       <label className="q-mobile-select"><input type="checkbox" className="q-ck" checked={allSelected} ref={el=>{if(el)el.indeterminate=indeterminate&&!allSelected;}} onChange={event => onToggleSelectAll(event.target.checked)} disabled={!canManage || items.length === 0} /><QuotationText>Select all lines</QuotationText></label>
       {items.length === 0 && <div className="q-empty" role="status"><b>No lines match this filter</b><p>Try another creator name or username, or clear the search and filters.</p></div>}
       {Array.from(groups.entries()).sort((a,b) => Number(isOtherService(a[1][0])) - Number(isOtherService(b[1][0]))).map(([key, group], index) => <div key={key} className="q-creator-service-group" role="rowgroup">{isOtherService(group[0]) && <div className="border-b bg-muted px-4 py-2 text-sm font-semibold">Others</div>}{group.map((item, serviceIndex) => <QuotationPackLineRow showCreator={serviceIndex === 0} expanded={activeId === item.id} onActivate={setActiveId} key={item.id} quotationId={quotationId} item={item} draft={drafts[item.id]} index={index} optionCount={optionCounts.get(quotationCreatorDuplicateKey(item)) ?? 1} selected={selectedIds.has(item.id)} onToggleSelect={() => onToggleSelect(item.id)} onDraftChange={onDraftChange} onRemoved={onRemoved} onLineChanged={onLineChanged} onOpenCreator={onOpenCreator} showOriginalCurrency={showOriginalCurrency} hideCostAndFees={hideCostAndFees} displayCurrency={displayCurrency} displayFxRateToEgp={displayFxRateToEgp} canManage={canManage} />)}</div>)}
-      <div className="q-grid-total">Quotation totals · {uniqueCreatorCount} creators · {items.length} <QuotationText>option lines</QuotationText> <b>{F(totalClientCostEgp)} EGP</b></div>
+      <div className="q-grid-total">Quotation totals · {uniqueCreatorCount} creators · {items.length} <QuotationText>option lines</QuotationText> <b>{foreignTotalsLabel ?? `${F(totalClientCostEgp)} EGP`}</b></div>
     </div>
   );
 }

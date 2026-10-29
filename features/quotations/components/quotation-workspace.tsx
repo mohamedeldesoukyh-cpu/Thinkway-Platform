@@ -166,6 +166,7 @@ function QuotationWorkspaceContent({
   const [displayCurrency, setDisplayCurrency] = useState(
     () => (detail.currency || "EGP").toUpperCase()
   );
+  const [foreignDisplay, setForeignDisplay] = useState(false);
   const [displayFxRateToEgp, setDisplayFxRateToEgp] = useState(1);
   const [currencyPending, startCurrencyTransition] = useTransition();
   const [clientSelectionFilter, setClientSelectionFilter] =
@@ -296,8 +297,8 @@ function QuotationWorkspaceContent({
   }, [visibleItems]);
 
   const originalTotals = useMemo(
-    () => originalCurrencyTotalsForDisplay(totalsDraftList, displayCurrency),
-    [totalsDraftList, displayCurrency]
+    () => originalCurrencyTotalsForDisplay(totalsDraftList, foreignDisplay ? "FOREIGN" : displayCurrency),
+    [totalsDraftList, displayCurrency, foreignDisplay]
   );
 
   const sortedFilteredItems = useMemo(
@@ -363,6 +364,8 @@ function QuotationWorkspaceContent({
   const handleDisplayCurrencyChange = useCallback(
     (currency: string) => {
       const next = currency.toUpperCase();
+      setForeignDisplay(next === "FOREIGN");
+      if (next === "FOREIGN") return;
       setDisplayCurrency(next);
       startCurrencyTransition(async () => {
         const [rateRes, saveRes] = await Promise.all([
@@ -749,7 +752,7 @@ function QuotationWorkspaceContent({
       <WorkspaceScrollSummary serial={detail.serial_number} name={detail.name} status={detail.status.replaceAll("_", " ")}
         metrics={[
           { label: "Creators", value: uniqueCreatorCount },
-          { label: "Total Revenue", value: `${displayCurrency} ${computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp).clientCost.toLocaleString("en-US", { maximumFractionDigits: 0 })}` },
+          { label: "Total Revenue", value: foreignDisplay ? originalTotals.map(row => `${row.currency} ${row.totalClientCost.toLocaleString("en-US", { maximumFractionDigits: 2 })}`).join(" · ") : `${displayCurrency} ${computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp).clientCost.toLocaleString("en-US", { maximumFractionDigits: 0 })}` },
           { label: "GP %", value: `${totals.headerGpPct.toFixed(1)}%` },
         ]} />
       <div className="q-frozen-summary">
@@ -790,6 +793,7 @@ function QuotationWorkspaceContent({
             validDaysRemaining={detail.valid_days_remaining}
             displayCurrency={displayCurrency}
             displayFxRateToEgp={displayFxRateToEgp}
+            foreignDisplay={foreignDisplay}
             originalTotals={originalTotals}
             onDisplayCurrencyChange={
               detail.canManage ? handleDisplayCurrencyChange : undefined
@@ -905,7 +909,7 @@ function QuotationWorkspaceContent({
                 <QuotationLinesGrid
                   showOriginalCurrency={Boolean(detail.showOriginalCurrency)}
                   hideCostAndFees={Boolean(detail.hideCostAndFees)}
-                  displayCurrency={displayCurrency}
+                  displayCurrency={foreignDisplay ? "FOREIGN" : displayCurrency}
                   displayFxRateToEgp={displayFxRateToEgp}
                   quotationId={detail.id}
                   items={sortedFilteredItems}
@@ -920,6 +924,7 @@ function QuotationWorkspaceContent({
                   onLineChanged={refreshQuotationLines}
                   onOpenCreator={openCreatorFromItem}
                   uniqueCreatorCount={uniqueCreatorCount}
+                  foreignTotalsLabel={foreignDisplay ? originalTotals.map(row => `${row.currency} ${row.totalClientCost.toLocaleString("en-US", { maximumFractionDigits: 2 })}`).join(" · ") : undefined}
                   totalClientCostEgp={totals.totalClientCostEgp}
                   canManage={detail.canManage}
                 />

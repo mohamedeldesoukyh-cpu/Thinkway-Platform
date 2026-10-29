@@ -76,6 +76,7 @@ function MetricItem({ label, value, unit, tone, compact, original, staged, inter
 }
 
 type Props = {
+  foreignDisplay?: boolean;
   projected?: ReturnType<typeof import("@/features/quotations/quotation-row-math").computeQuotationDisplayTotals>;
   totalCostEgp: number;
   totalRevenueEgp: number;
@@ -106,6 +107,7 @@ type Props = {
 
 export function QuotationCommercialMetricsBand({
   projected,
+  foreignDisplay = false,
   totalCostEgp,
   totalRevenueEgp,
   totalCommercialGpEgp,
@@ -136,9 +138,10 @@ export function QuotationCommercialMetricsBand({
   const agencyFeeGpTone: MetricDef["tone"] = "amber";
   const agencyFeePctTone: MetricDef["tone"] = "red";
 
-  const base = moneyParts(totalCostEgp, displayCurrency, displayFxRateToEgp, projected?.cost);
-  const client = moneyParts(totalRevenueEgp, displayCurrency, displayFxRateToEgp, projected?.clientCost);
-  const gp = moneyParts(totalGpValueEgp, displayCurrency, displayFxRateToEgp, projected?.margin);
+  const foreignMoney = (field: "totalCost" | "totalClientCost" | "totalGpMargin") => ({ value: originalLabels(originalTotals, field).join(" · ") || "0", unit: "" });
+  const base = foreignDisplay ? foreignMoney("totalCost") : moneyParts(totalCostEgp, displayCurrency, displayFxRateToEgp, projected?.cost);
+  const client = foreignDisplay ? foreignMoney("totalClientCost") : moneyParts(totalRevenueEgp, displayCurrency, displayFxRateToEgp, projected?.clientCost);
+  const gp = foreignDisplay ? foreignMoney("totalGpMargin") : moneyParts(totalGpValueEgp, displayCurrency, displayFxRateToEgp, projected?.margin);
   const gpValuesDisagree = Math.abs(totalGpValueEgp - totalCommercialGpEgp) >= 0.01;
   const showAgencyFeeConflict = gpValuesDisagree || totalAgencyFeeEgp > 0.01;
 
@@ -147,7 +150,7 @@ export function QuotationCommercialMetricsBand({
       ? moneyParts(savedClientCostEgp, displayCurrency, displayFxRateToEgp)
       : null;
   const stagedVsSavedDisagree =
-    hasDraftEdits &&
+    !foreignDisplay && hasDraftEdits &&
     savedClientCostEgp != null &&
     Math.abs(totalRevenueEgp - savedClientCostEgp) >= 0.01;
 
@@ -178,17 +181,17 @@ export function QuotationCommercialMetricsBand({
     <div className="q-fin" aria-label="Quotation commercial metrics">
       <div className="q-fin-group">
       <div className="q-finlbl priv"><s aria-hidden /><QuotationText>Internal — never shown to the client</QuotationText></div>
-      <MetricItem internal label="Base cost (internal creator / vendor cost)" value={base.value} unit={base.unit} original={originalLabels(originalTotals, "totalCost")} staged={hasDraftEdits} />
-      <MetricItem internal label="GP amount" value={gp.value} unit={gp.unit} tone={showAgencyFeeConflict ? agencyFeeGpTone : gpTone} original={originalLabels(originalTotals, "totalGpMargin")} staged={hasDraftEdits} />
+      <MetricItem internal label="Base cost (internal creator / vendor cost)" value={base.value} unit={base.unit} original={foreignDisplay ? undefined : originalLabels(originalTotals, "totalCost")} staged={hasDraftEdits} />
+      <MetricItem internal label="GP amount" value={gp.value} unit={gp.unit} tone={showAgencyFeeConflict ? agencyFeeGpTone : gpTone} original={foreignDisplay ? undefined : originalLabels(originalTotals, "totalGpMargin")} staged={hasDraftEdits} />
       <MetricItem internal label="GP %" value={`${(projected?.marginPct ?? totalGpPct).toFixed(1)}%`} tone={showAgencyFeeConflict ? agencyFeePctTone : gpTone} staged={hasDraftEdits} />
       <MetricItem internal label="Markup / FM %" value={`${(projected?.markupPct ?? totalPmPct).toFixed(1)}%`} />
       </div>
       <div className="q-fin-group">
       <div className="q-finlbl"><s aria-hidden /><QuotationText>Client-facing</QuotationText></div>
-      <div className="q-m q-currency"><CommercialCurrencySelect appearance="header" label={translate("Display currency")} layout="metric" value={displayCurrency} onChange={onDisplayCurrencyChange ?? (() => undefined)} disabled={currencyDisabled || !onDisplayCurrencyChange} /></div>
-      <MetricItem label="Client cost before agency fees" {...moneyParts(totalRevenueEgp - totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.revenue)} staged={hasDraftEdits} />
-      <MetricItem label="Agency fees (AF)" {...moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.af)} staged={hasDraftEdits} />
-      <MetricItem label="Total investment" value={client.value} unit={client.unit} original={originalLabels(originalTotals, "totalClientCost")} staged={hasDraftEdits} />
+      <div className="q-m q-currency"><CommercialCurrencySelect allowForeign appearance="header" label={translate("Display currency")} layout="metric" value={foreignDisplay ? "FOREIGN" : displayCurrency} onChange={onDisplayCurrencyChange ?? (() => undefined)} disabled={currencyDisabled || !onDisplayCurrencyChange} /></div>
+      {!foreignDisplay && <MetricItem label="Client cost before agency fees" {...moneyParts(totalRevenueEgp - totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.revenue)} staged={hasDraftEdits} />}
+      {!foreignDisplay && <MetricItem label="Agency fees (AF)" {...moneyParts(totalAgencyFeeEgp, displayCurrency, displayFxRateToEgp, projected?.af)} staged={hasDraftEdits} />}
+      <MetricItem label="Total investment" value={client.value} unit={client.unit} original={foreignDisplay ? undefined : originalLabels(originalTotals, "totalClientCost")} staged={hasDraftEdits} />
       {stagedVsSavedDisagree && savedClient && <MetricItem label="Saved total investment" value={savedClient.value} unit={savedClient.unit} tone="amber" />}
       </div>
     </div>
