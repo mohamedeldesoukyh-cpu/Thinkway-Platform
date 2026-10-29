@@ -372,6 +372,14 @@ export async function requestClientChanges(input: {
 export async function reopenClientSelection(input: { token: string }): Promise<{ ok: boolean; message: string }> {
   const gate = await requireInteractiveReview(input.token);
   if (!gate.ok) return gate;
+  if (gate.review.quotationId) {
+    const quotation = await db().from("quotations").select("status, is_archived, campaign_header_id")
+      .eq("id", gate.review.quotationId).single();
+    if (quotation.error || !quotation.data) return { ok: false, message: "Could not verify the quotation. Refresh and try again." };
+    if (quotation.data.is_archived || ["approved", "archived", "cancelled"].includes(quotation.data.status) || quotation.data.campaign_header_id) {
+      return { ok: false, message: "This quotation can no longer be edited. Ask Thinkway for a new version." };
+    }
+  }
   if (!reopenSelectionAllowed({
     interactive: isInteractiveClientReview(gate.review.status),
     historical: false, // requireInteractiveReview rejects superseded/older reviews.
