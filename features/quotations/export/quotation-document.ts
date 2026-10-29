@@ -1020,15 +1020,16 @@ export function buildQuotationDocument(
     campaignHeaderId: detail.campaign_header_id,
   });
 
-  const clientMoney: ClientRowMoney | undefined = audience === "client" && options?.showOriginalCurrency !== undefined
+  const originalCurrency = audience === "client" && (options?.showOriginalCurrency ?? detail.showOriginalCurrency) === true;
+  const clientMoney: ClientRowMoney | undefined = audience === "client" && (originalCurrency || options?.showOriginalCurrency !== undefined)
     ? (item, field) => {
         const amount = item[field];
+        if (originalCurrency) return `${num(amount)} ${item.cost_currency.toUpperCase()}`;
         const converted = item.revenue_fx_override
           ? creatorFxAmount(amount, { from: item.cost_currency, to: displayCurrency, sourceRateToEgp: item.fx_rate_to_egp, targetRateToEgp: displayFxRateToEgp, override: item.revenue_fx_override })
           : fromEgp(field === "revenue" ? item.revenue_egp : item.af_value_egp, displayCurrency, displayFxRateToEgp);
         const display = `${num(converted)} ${displayCurrency}`;
-        return options.showOriginalCurrency && item.cost_currency.toUpperCase() !== displayCurrency
-          ? `${display} / ${num(amount)} ${item.cost_currency}` : display;
+        return display;
       } : undefined;
   const otherServiceRows = items.filter(isOtherService).map(item => buildDocRow(item, audience, detail.gp_target_pct, items, clientMoney));
   const creatorGroups = groupQuotationExportItems(items.filter(item => !isOtherService(item))).map((group) =>
@@ -1103,10 +1104,19 @@ export function buildQuotationDocument(
         ? exportEngagementRateLabel(rosterForecast.averageEngagementRate)
         : "—";
 
-  const totalClientCost = formatDisplayMoney(selectedRevenueEgp, projected?.revenue);
-  const totalAf = formatDisplayMoney(selectedAfEgp, projected?.af);
+  const nativeTotal = (field: "revenue" | "af_value" | "total", multiplier = 1) => {
+    const totals = new Map<string, number>();
+    for (const item of items) {
+      const currency = item.cost_currency.toUpperCase();
+      const amount = field === "total" ? item.revenue + item.af_value : item[field];
+      totals.set(currency, (totals.get(currency) ?? 0) + amount);
+    }
+    return [...totals].sort(([a], [b]) => a.localeCompare(b)).map(([currency, amount]) => `${num(Math.round(amount * multiplier * 100) / 100)} ${currency}`).join(" · ");
+  };
+  const totalClientCost = originalCurrency ? nativeTotal("revenue") : formatDisplayMoney(selectedRevenueEgp, projected?.revenue);
+  const totalAf = originalCurrency ? nativeTotal("af_value") : formatDisplayMoney(selectedAfEgp, projected?.af);
   const totalAgencyMargin = formatDisplayMoney(selectedAgencyMarginEgp);
-  const grandTotal = formatDisplayMoney(selectedRevenueEgp + selectedAfEgp, projected ? projected.revenue + projected.af : undefined);
+  const grandTotal = originalCurrency ? nativeTotal("total") : formatDisplayMoney(selectedRevenueEgp + selectedAfEgp, projected ? projected.revenue + projected.af : undefined);
   const insightBullets = buildSummaryInsightBullets({
     creatorCount: uniqueCreatorCount,
     categoryBreakdown,
@@ -1207,8 +1217,8 @@ export function buildQuotationDocument(
       totalClientCost,
       totalAf,
       grandTotal,
-      packageVatAmount: formatDisplayMoney(Math.round((selectedRevenueEgp + selectedAfEgp) * 14) / 100, projected ? Math.round((projected.revenue + projected.af) * 14) / 100 : undefined),
-      packageTotalAfterVat: formatDisplayMoney(selectedRevenueEgp + selectedAfEgp + Math.round((selectedRevenueEgp + selectedAfEgp) * 14) / 100, projected ? projected.revenue + projected.af + Math.round((projected.revenue + projected.af) * 14) / 100 : undefined),
+      packageVatAmount: originalCurrency ? nativeTotal("total", 0.14) : formatDisplayMoney(Math.round((selectedRevenueEgp + selectedAfEgp) * 14) / 100, projected ? Math.round((projected.revenue + projected.af) * 14) / 100 : undefined),
+      packageTotalAfterVat: originalCurrency ? nativeTotal("total", 1.14) : formatDisplayMoney(selectedRevenueEgp + selectedAfEgp + Math.round((selectedRevenueEgp + selectedAfEgp) * 14) / 100, projected ? projected.revenue + projected.af + Math.round((projected.revenue + projected.af) * 14) / 100 : undefined),
       totalAgencyMargin,
       creatorCount: uniqueCreatorCount,
       audienceSize: num(rosterForecast.audienceSize),

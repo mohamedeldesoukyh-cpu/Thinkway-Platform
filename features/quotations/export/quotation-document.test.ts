@@ -1477,8 +1477,8 @@ console.log("quotation-document.test.ts passed");
   assert.equal(hidden.rows[0].clientCost, "5,000 EGP");
   assert.equal(hidden.rows[0].af, "500 EGP");
   const shown = buildQuotationDocument(detail, { showOriginalCurrency:true });
-  assert.equal(shown.rows[0].clientCost, "5,000 EGP / 100 USD");
-  assert.equal(shown.rows[0].af, "500 EGP / 10 USD");
+  assert.equal(shown.rows[0].clientCost, "100 USD");
+  assert.equal(shown.rows[0].af, "10 USD");
   const nonEgp = buildQuotationDocument({...detail, currency:"AED"}, { showOriginalCurrency:false, displayFxRateToEgp:10 });
   assert.equal(nonEgp.rows[0].clientCost, "500 AED");
   const sameCurrency = buildQuotationDocument({...detail, currency:"USD"}, { showOriginalCurrency:true, displayFxRateToEgp:50 });
@@ -1755,4 +1755,25 @@ console.log("quotation-document.test.ts passed");
   const selected = buildQuotationDocument(detail, { template: "creator-list-package", itemIds: [item.id] });
   assert.equal(selected.summary.packageVatAmount, "40,250 EGP");
   assert.equal(selected.summary.packageTotalAfterVat, "327,750 EGP");
+}
+
+// Saved original-currency preference applies to template prices, AF and mixed totals.
+{
+  const detail = mockDetail({ showOriginalCurrency: true, showPackageVat: true, items: [
+    mockItem({ id: "usd-native", cost_currency: "USD", revenue: 6500, revenue_egp: 325000, af_value: 650, af_value_egp: 32500, fx_rate_to_egp: 50 }),
+    mockItem({ id: "aed-native", influencer_id: "second", cost_currency: "AED", revenue: 4000, revenue_egp: 62000, af_value: 0, af_value_egp: 0, fx_rate_to_egp: 15.5 }),
+  ] });
+  const doc = buildQuotationDocument(detail, { template: "creator-list" });
+  assert.equal(doc.rows[0].clientCost, "6,500 USD");
+  assert.equal(doc.rows[0].af, "650 USD");
+  assert.equal(doc.rows[0].totalInvestment, "7,150 USD");
+  assert.equal(doc.summary.grandTotal, "4,000 AED · 7,150 USD");
+  assert.equal(doc.summary.packageVatAmount, "560 AED · 1,001 USD");
+  assert.equal(doc.summary.packageTotalAfterVat, "4,560 AED · 8,151 USD");
+  const html = buildQuotationHtml(doc);
+  assert.ok(html.includes("6,500<small>USD</small>"));
+  assert.ok(html.includes("4,000<small>AED</small>"));
+  assert.ok(!html.includes("325,000<small>EGP</small>"));
+  const off = buildQuotationDocument(detail, { showOriginalCurrency: false });
+  assert.equal(off.rows[0].clientCost, "325,000 EGP");
 }
