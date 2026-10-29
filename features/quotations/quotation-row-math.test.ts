@@ -316,3 +316,11 @@ for (const [gp, fee, header, expected] of [
 }
 
 console.log("quotation-row-math.test.ts: all assertions passed");
+
+// Foreign display preserves each currency; AED display converts USD through both system rates.
+{
+  const usd = draftFromQuotationItem(mockItem({ cost_currency: "USD", cost: 5500, revenue: 6500, commercial_input_mode: "cost_revenue", fx_rate_to_egp: 52 }));
+  const aed = { ...usd, id: "aed", costCurrency: "AED", cost: 1000, revenue: 1500, fxRateToEgp: 52 / 3.6725 };
+  const native = originalCurrencyTotalsForDisplay([usd, aed], "FOREIGN");
+  assert.deepEqual(native.map((r) => [r.currency, r.totalClientCost]), [["AED", 1500], ["USD", 6500]]);
+}

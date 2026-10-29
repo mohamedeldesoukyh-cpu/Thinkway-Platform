@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import styles from "./commercial-currency-select.module.css";
 
 type Props = {
+  allowForeign?: boolean;
   appearance?: "default" | "header";
   value: string;
   onChange: (currency: string) => void;
@@ -30,6 +31,7 @@ type Props = {
 };
 
 export function CommercialCurrencySelect({
+  allowForeign = false,
   appearance = "default",
   value,
   onChange,
@@ -57,6 +59,7 @@ export function CommercialCurrencySelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
+        {allowForeign && <SelectItem value="FOREIGN">Foreign</SelectItem>}
         {COMMERCIAL_CURRENCIES.map((code) => (
           <SelectItem key={code} value={code}>
             {code}

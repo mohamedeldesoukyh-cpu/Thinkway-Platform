@@ -1,6 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
+import { toast } from "sonner";
+import { creatorFxAmount } from "@/lib/commercial/creator-fx";
+import { resolveCommercialRateToEgp } from "@/features/quotations/actions";
 
 import { QuotationCreatorFxFields } from "./quotation-creator-fx-fields";
 import { resolveQuotationRowDraft } from "@/features/quotations/quotation-row-math";
@@ -23,7 +26,6 @@ import {
 import { type CommercialInputMode } from "@/lib/commercial/commercial-engine";
 import {
   COMMERCIAL_CURRENCIES,
-  formatDualCurrency,
 } from "@/lib/commercial/fx-aggregation";
 import {
   DISCOVERY_DIALOG_INPUT_CLASS,
@@ -358,6 +360,27 @@ export function QuotationDeliverableCostDetails({
   const localDeliverableRef = useRef(deliverable);
   const openSnapshotRef = useRef<string | null>(null);
   const fxRate = draft?.fxRateToEgp ?? item.fx_rate_to_egp ?? 1;
+  const [currencyPending, setCurrencyPending] = useState(false);
+
+  async function changeEntryCurrency(currency: string) {
+    setCurrencyPending(true);
+    try {
+      const result = await resolveCommercialRateToEgp(currency);
+      if (!result.ok || !result.data) {
+        toast.error(result.message || "Unable to resolve exchange rate. Currency was not changed.");
+        return;
+      }
+      onFxChange?.({ costCurrency: currency, fxRateToEgp: result.data.rate, costFxOverride: null, revenueFxOverride: null });
+      const next = withDeliverableCommercialPatch(localDeliverableRef.current, { cost_currency: currency }, result.data.rate);
+      localDeliverableRef.current = next;
+      setLocalDeliverable(next);
+      onLiveChange?.(next);
+    } catch {
+      toast.error("Unable to resolve exchange rate. Currency was not changed.");
+    } finally {
+      setCurrencyPending(false);
+    }
+  }
 
   useEffect(() => {
     localDeliverableRef.current = localDeliverable;
@@ -423,6 +446,14 @@ export function QuotationDeliverableCostDetails({
     () => computeDeliverableTotalClientCost(localDeliverable, fxRate, defaults.af_pct),
     [localDeliverable, fxRate, defaults.af_pct]
   );
+
+  const paymentCurrency = displayCurrency || "EGP";
+  const paymentAmount = creatorFxAmount(computedTotalClientCost, {
+    from: costCurrency, to: paymentCurrency, sourceRateToEgp: fxRate,
+    targetRateToEgp: displayFxRateToEgp ?? 1, override: draft?.revenueFxOverride,
+  });
+  const formatAmount = (amount: number, currency: string) => amount.toLocaleString("en-US", { maximumFractionDigits: 2 }) + " " + currency;
+  const paymentLabel = formatAmount(computedTotalClientCost, costCurrency) + (costCurrency === paymentCurrency ? "" : " / " + formatAmount(paymentAmount, paymentCurrency));
 
   const computedGp = useMemo(() => {
     const lineCost = deliverableLineCost(localDeliverable);
@@ -578,7 +609,7 @@ export function QuotationDeliverableCostDetails({
           </Field>
         ) : null}
         <Field label="Currency" navField>
-          <Select value={costCurrency} onValueChange={(v) => patchLocal({ cost_currency: v })}>
+          <Select value={costCurrency} disabled={currencyPending} onValueChange={(v) => { void changeEntryCurrency(v); }}>
             <SelectTrigger className={DISCOVERY_DIALOG_INPUT_CLASS}>
               <SelectValue />
             </SelectTrigger>
@@ -630,12 +661,7 @@ export function QuotationDeliverableCostDetails({
         ) : (
           <Field label={QUOTATION_CLIENT_LABELS.clientCost}>
             <p className="pt-1 text-xs font-semibold tabular-nums text-[#1e3a8a]">
-              {formatDualCurrency({
-                amount: computedTotalClientCost,
-                currency: costCurrency,
-                egpAmount:
-                  costCurrency === "EGP" ? computedTotalClientCost : computedTotalClientCost * fxRate,
-              })}
+              {paymentLabel}
             </p>
             {afPct > 0 && computedRevenue > 0 ? (
               <p className="text-[10px] text-muted-foreground">
@@ -702,14 +728,7 @@ export function QuotationDeliverableCostDetails({
             <div className="flex items-center justify-between gap-3">
               <span className="text-[11px] font-semibold text-[#64748b]">Client pays</span>
               <span className="text-xs font-bold tabular-nums text-[#1e3a8a]">
-                {formatDualCurrency({
-                  amount: computedTotalClientCost,
-                  currency: costCurrency,
-                  egpAmount:
-                    costCurrency === "EGP"
-                      ? computedTotalClientCost
-                      : computedTotalClientCost * fxRate,
-                })}
+                {paymentLabel}
               </span>
             </div>
             <p className="mt-0.5 text-[10px] text-[#64748b]">
