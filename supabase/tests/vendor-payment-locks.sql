@@ -38,6 +38,7 @@ BEGIN
  IF (SELECT cost_locked FROM assignment_document_locks(l.id)) THEN RAISE EXCEPTION 'Zero payment did not unlock cost'; END IF;
  PERFORM update_unpaid_vendor_cost(l.id,l.cost_before_vat+3,0,0);
  IF (SELECT to_jsonb(i) FROM invoices i WHERE id=l.invoice_id) IS DISTINCT FROM invoice_before THEN RAISE EXCEPTION 'Invoice changed after correction'; END IF;
+ PERFORM apply_assignment_commercial_cost(l.id,jsonb_build_object('cost_before_vat',l.cost_before_vat+4));
  RAISE NOTICE 'PASS: invoice preserved; unpaid edit/reopen/regenerate; partial payment blocks; zero unlocks';
 END $$;
 
