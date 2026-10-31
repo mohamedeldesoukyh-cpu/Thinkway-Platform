@@ -213,6 +213,7 @@ export type ClientReviewSourceSnapshot = {
   creatorIds: string[];
   identityLogo?: IdentityLogo;
   clientSelection?: import("./selection-flow").ClientSelectionFreeze;
+  selectionReopenedAt?: string;
   clientUpdate?: {
     updatedAt: string;
     items: string[];

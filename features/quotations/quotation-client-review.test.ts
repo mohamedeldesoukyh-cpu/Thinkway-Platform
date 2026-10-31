@@ -4,12 +4,23 @@ import { test } from "node:test";
 import type { QuotationItemRow } from "@/lib/domains/commercial/quotation-detail-types";
 
 import {
+  QUOTATION_CLIENT_SELECTION_LABEL,
   clientSelectionForItem,
   countQuotationClientSelections,
   filterItemsByClientSelection,
   itemIdsForClientSelection,
   totalsForClientSelection,
 } from "./quotation-client-review";
+import { CLIENT_PROPOSAL_STATUS_LABEL } from "@/features/client-workspace/constants";
+import { eventSummary } from "@/features/client-workspace/review-event-summary";
+
+test("client selection and confirmation do not present as quotation approval", () => {
+  assert.equal(QUOTATION_CLIENT_SELECTION_LABEL.accepted, "Selected");
+  assert.equal(eventSummary("creators_confirmed", null), "Client selection confirmed");
+  assert.equal(CLIENT_PROPOSAL_STATUS_LABEL.awaiting_review, "In Review");
+  assert.equal(eventSummary("quotation_approved", null), "Quotation approved");
+  assert.equal(CLIENT_PROPOSAL_STATUS_LABEL.approved, "Approved");
+});
 
 function item(partial: Partial<QuotationItemRow> & { id: string }): QuotationItemRow {
   return {

@@ -168,6 +168,8 @@ function CampaignChangeActions({
   const [rejectReason, setRejectReason] = useState("");
   const [areas, setAreas] = useState<ClientChangeArea[]>(["campaign"]);
   const [error, setError] = useState<string | null>(null);
+  const [requestError, setRequestError] = useState<string | null>(null);
+  const [requestSuccess, setRequestSuccess] = useState<string | null>(null);
   const journey = view.journey;
   if (!journey?.canRequestQuotationChanges && !journey?.canRejectQuotation) return null;
 
@@ -197,6 +199,7 @@ function CampaignChangeActions({
           </div>
           <textarea
             className="f"
+            aria-label="Requested changes"
             value={summary}
             onChange={(event) => setSummary(event.target.value)}
             placeholder="What needs to change?"
@@ -208,18 +211,29 @@ function CampaignChangeActions({
             disabled={pending || !summary.trim()}
             onClick={() =>
               startTransition(async () => {
-                await requestReviewChangesAction({
+                setRequestError(null);
+                setRequestSuccess(null);
+                try {
+                const result = await requestReviewChangesAction({
                   token,
                   summary,
                   areas,
                   stage: "quotation",
                 });
+                if (!result.ok) { setRequestError(result.message); return; }
+                setRequestSuccess(result.message);
+                setSummary("");
                 router.refresh();
+                } catch {
+                  setRequestError("Could not send your change request. Please retry.");
+                }
               })
             }
           >
             Send request
           </button>
+          {requestError ? <p role="alert">{requestError}</p> : null}
+          {requestSuccess ? <p role="status">{requestSuccess}</p> : null}
         </div>
       ) : null}
       {journey?.canRejectQuotation ? (

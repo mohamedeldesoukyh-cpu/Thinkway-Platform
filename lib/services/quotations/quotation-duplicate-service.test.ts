@@ -26,6 +26,22 @@ test("copies all option prices and fees with new item/package identities", () =>
   for (const key of ["cost", "revenue", "af_pct", "af_value", "cost_fx_override", "deliverables", "option_number"]) assert.deepEqual(copied[0][key as keyof typeof copied[0]], rows[0][key as keyof typeof rows[0]]);
 });
 
+test("copied service rows retain custom descriptions and recover legacy deliverable descriptions", () => {
+  const rows = [
+    { id: "custom", service_description: "Custom scope\nحقوق الاستخدام", deliverables: [{ service_description: "Stale child text" }] },
+    { id: "legacy", service_description: null, deliverables: [{ service_description: "1× IG Reel" }, { service_description: "1× IG Reel" }, { service_description: "1× Mirrored TT" }] },
+    { id: "blank", service_description: "  ", deliverables: [{ service_description: "Event coverage" }] },
+    { id: "empty", service_description: null, deliverables: [] },
+  ];
+  const before = structuredClone(rows);
+  const copied = quotationCopyItems(rows, "copy", new Map(rows.map(row => [row.id, `new-${row.id}`])));
+  assert.deepEqual(copied.map(row => row.service_description), [
+    "Custom scope\nحقوق الاستخدام", "1× IG Reel · 1× Mirrored TT", "Event coverage", null,
+  ]);
+  assert.deepEqual(rows, before, "copying must never modify source descriptions");
+  assert.deepEqual(copied.map(row => row.deliverables), rows.map(row => row.deliverables));
+});
+
 function mockCopyClient(failItems = false, failRead = false) {
   const writes: {table:string; op:string; value:any}[] = [];
   let itemPages = 0;
@@ -41,7 +57,9 @@ function mockCopyClient(failItems = false, failRead = false) {
       if (op === "insert") return table === "quotations" ? {data:{id:"copy"},error:null} : {data:null,error:failItems ? {message:"insert failed"}:null};
       if (table === "quotations") return {data:{id:"source",name:"Example",status:"draft"},error:null};
       itemPages++;
-      return {data:failRead ? null : Array.from({length:offset === 0 ? 1000 : 1},(_,i)=>({id:`line${offset+i}`,cost_egp:10,revenue_egp:20,af_value_egp:2})),error:failRead?{message:"read failed"}:null};
+      return {data:failRead ? null : Array.from({length:offset === 0 ? 1000 : 1},(_,i)=>({id:`line${offset+i}`,cost_egp:10,revenue_egp:20,af_value_egp:2,
+        service_description: offset+i === 2 ? "Custom creator scope" : null,
+        deliverables: [{service_description:"Legacy creator scope"}]})),error:failRead?{message:"read failed"}:null};
     };
     q.single = async()=>result(); q.then = (resolve:any)=>Promise.resolve(result()).then(resolve);
     return q;
@@ -53,6 +71,9 @@ test("full copy paginates beyond 1000 items and computes fees-inclusive source a
   const m=mockCopyClient(); const result=await duplicateQuotationDocument(m.client,"user","source");
   assert.equal(result.ok,true); assert.equal(m.pages(),2);
   assert.equal(m.writes.find(w=>w.table==="quotation_items")?.value.length,1001);
+  const copied = m.writes.find(w=>w.table==="quotation_items")!.value;
+  assert.equal(copied[2].service_description,"Custom creator scope");
+  assert.equal(copied[1000].service_description,"Legacy creator scope");
   const header=m.writes.find(w=>w.table==="quotations")!.value;
   assert.equal(header.total_revenue_egp,20020); assert.equal(header.total_af_egp,2002);
 });
@@ -70,6 +91,7 @@ test("selected options create a separate quotation with only selected prices and
   assert.equal(result.ok,true);
   const rows=m.writes.find(w=>w.table==="quotation_items")!.value;
   assert.equal(rows.length,2); assert.ok(rows.every((r:any)=>r.quotation_id==="copy"));
+  assert.deepEqual(rows.map((r:any)=>r.service_description),["Custom creator scope","Legacy creator scope"]);
   const header=m.writes.find(w=>w.table==="quotations")!.value;
   assert.equal(header.name,"Example (New option)"); assert.equal(header.total_revenue_egp,40); assert.equal(header.total_af_egp,4);
   assert.ok(m.writes.every(w=>w.op==="insert"));

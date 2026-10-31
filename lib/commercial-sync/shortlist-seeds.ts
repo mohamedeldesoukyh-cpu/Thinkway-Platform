@@ -1,4 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { quotationServiceDescription } from "@/lib/quotations/service-description";
 
 import {
   resolveCreatorFromRefLookup,
@@ -174,6 +175,9 @@ export function buildQuotationSeedFromShortlistItem(
   return {
     ...base,
     source_shortlist_item_id: item.id,
+    service_description: item.service_description?.trim()
+      ? item.service_description
+      : quotationServiceDescription({ deliverables }) ?? null,
     deliverables: deliverables as QuotationItemSeed["deliverables"],
     commercial_input_mode: item.commercial_input_mode ?? "cost_gp_pct",
     cost: item.cost ?? null,
