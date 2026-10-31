@@ -12,7 +12,7 @@ type FxDraft = Partial<Record<Side, string | null>>;
 export function useAssignmentFx(line: CampaignLineWorkspace | undefined, currency: string, editable: boolean, vendorCurrency?: string) {
   const workspace = useCampaignCurrency();
   const [drafts, setDrafts] = useState<Record<string, FxDraft>>({});
-  const costLocked = Boolean(line?.commercial_cost_locked ?? (line?.active_vendor_io_id || line?.vendor_io_id));
+  const costLocked = Boolean(line?.commercial_cost_locked ?? true);
   const clientLocked = Boolean(line?.commercial_client_locked ?? (line?.revenue_locked || line?.invoice_id));
   const sideLocked = (side: Side) => side === "cost" ? costLocked : clientLocked || Boolean(vendorCurrency);
   const id = (line?.id ?? "") + ":" + (vendorCurrency ?? currency);

@@ -436,6 +436,11 @@ export async function updateCampaignLine(
     cost_vat_exempt?: boolean | null;
   };
 
+  const { data: vendorLocks, error: vendorLockError } = await supabase.rpc("assignment_commercial_locks" as never, { p_lines: [parsed.line_id] } as never);
+  const vendorLock = (vendorLocks as {line_id: string; cost_locked: boolean}[] | null)?.find(row => row.line_id === parsed.line_id);
+  if (vendorLockError || !vendorLock) return { ok: false, message: "Cannot verify vendor payments. Refresh before editing costs." };
+  existingLineMeta.cost_locked = vendorLock.cost_locked;
+
   const financeOverrideActive = hasActiveFinanceOverride(
     existingLineMeta.finance_override_until
   );
@@ -452,22 +457,22 @@ export async function updateCampaignLine(
   const revenueVatChanged = Number(existingLineMeta.revenue_vat_percent ?? 0) !== Number(parsed.revenue_vat_percent)
     || Boolean(existingLineMeta.revenue_vat_exempt) !== Boolean(parsed.revenue_vat_exempt);
 
-  if (existingLineMeta.invoice_id && existingLineMeta.metadata?.pending_vendor_io_id) {
+  if (existingLineMeta.invoice_id || existingLineMeta.vendor_io_id || existingLineMeta.metadata?.pending_vendor_io_id) {
     const clientChanged = revenueBeforeVat !== Number(existingLineMeta.revenue_before_vat ?? existingLineMeta.revenue)
       || Number(parsed.agency_fee_percent) !== Number(existingLineMeta.agency_fee_percent ?? 0)
       || Number(parsed.usage_rights_amount) !== Number(existingLineMeta.usage_rights_amount ?? 0)
       || revenueVatChanged || replacingCreator
       || (parsed.currency_code != null && parsed.currency_code !== existingLineMeta.currency_code)
       || (parsed.fx_rate != null && Number(parsed.fx_rate) !== Number(existingLineMeta.fx_rate ?? 1));
-    if (clientChanged || costVatChanged) {
-      return { ok: false, message: "This correction edits vendor cost only. Keep the invoice currency, revenue, fees and VAT unchanged." };
-    }
-    const { error } = await supabase.rpc("update_reopened_vendor_cost" as never, {
+    if (!clientChanged) {
+    const { error } = await supabase.rpc("update_unpaid_vendor_cost" as never, {
       p_line: parsed.line_id, p_cost: costBeforeVat, p_usage_cost: parsed.usage_rights_cost,
+      p_vat: parsed.cost_vat_exempt ? 0 : parsed.cost_vat_percent,
     } as never);
     return error ? { ok: false, message: error.message } : {
       ok: true, reviseVendorIo: false, message: "Vendor cost and payment balance updated. GP and margins recalculated; client invoice preserved. Generate the Vendor IO revision to finish.",
     };
+    }
   }
 
 
@@ -529,7 +534,7 @@ export async function updateCampaignLine(
   }
 
   // Let the linked finance gate return revision context before enforcing row locks.
-  if (costVatChanged && (existingLineMeta.cost_locked || existingLineMeta.vat_locked || existingLineMeta.vendor_assignment_locked) && !financeOverrideActive) {
+  if (costVatChanged && existingLineMeta.cost_locked && !financeOverrideActive) {
     return {ok:false,message:'Cost VAT is locked. Use the existing finance override / IO revision process before changing it.'};
   }
 

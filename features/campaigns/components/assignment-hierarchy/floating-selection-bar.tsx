@@ -347,7 +347,7 @@ export function FloatingSelectionBar({
             <DialogDescription>{ungenerateBlockedReason}</DialogDescription>
           </DialogHeader>
           <p className="text-sm text-muted-foreground">
-            Review the linked invoice or payment in Finance. After the correction is saved, return here to reopen the Vendor IO. Opening Finance does not change any records.
+            Review the vendor payment in Finance. After the correction is saved, return here to reopen the Vendor IO. Opening Finance does not change any records.
           </p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setBlockedOpen(false)}>Close</Button>
@@ -397,7 +397,7 @@ export function FloatingSelectionBar({
           <DialogHeader>
             <DialogTitle>Un-generate Vendor IO</DialogTitle>
             <DialogDescription>
-              Reopen the entire Vendor IO for the selected assignments. Edit and save the amount and currency, then generate a new revision. Previous documents are preserved. Recorded payments must be edited and cleared first; issued client invoices remain protected.
+              Reopen the entire Vendor IO for the selected assignments. Edit and save the amount and currency, then generate a new revision. Previous documents are preserved. Set recorded vendor payments to zero first. Client invoices are preserved.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">

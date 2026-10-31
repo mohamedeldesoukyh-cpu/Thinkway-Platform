@@ -105,6 +105,11 @@ export async function generateVendorIosFromLinesAction(
   };
 
   const allLines = lines as unknown as LineRow[];
+  const { data: locks, error: lockError } = await supabase.rpc("assignment_commercial_locks" as never, { p_lines: lineIds } as never);
+  const paymentLocks = new Map(((locks ?? []) as {line_id: string; cost_locked: boolean}[]).map(row => [row.line_id, row.cost_locked]));
+  if (lockError || allLines.some(line => paymentLocks.get(line.id) !== false)) {
+    return { ok: false, message: lockError?.message ?? "Vendor payment is recorded or could not be verified. Set the payment to zero before generating Vendor IOs." };
+  }
   const pendingIds = [...new Set(allLines.map(line => line.metadata?.pending_vendor_io_id).filter((id): id is string => typeof id === "string"))];
   const typedLines = allLines.filter(line => !line.metadata?.pending_vendor_io_id);
 
@@ -286,8 +291,8 @@ export async function generateVendorIosFromLinesAction(
         .from("campaign_lines")
         .update({
           vendor_io_id: vendorIoId,
-          operational_status: "io_generated",
-          billing_status: "moved_to_billing",
+          operational_status: line.invoice_id ? line.operational_status : "io_generated",
+          billing_status: line.invoice_id ? line.billing_status : "moved_to_billing",
         } as never)
         .eq("id", line.id);
 

@@ -609,7 +609,7 @@ export async function getCampaignWorkspace(
       revenue_locked: line.revenue_locked ?? false,
       commercial_client_locked: documentLockMap.get(line.id)?.client_locked ?? true,
       commercial_cost_locked: documentLockMap.get(line.id)?.cost_locked ?? true,
-      cost_locked: line.cost_locked ?? false,
+      cost_locked: documentLockMap.get(line.id)?.cost_locked ?? true,
       vendor_assignment_locked: line.vendor_assignment_locked ?? false,
       finance_override_until: line.finance_override_until ?? null,
       invoice_id: line.invoice_id ?? null,

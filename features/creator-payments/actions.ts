@@ -200,7 +200,7 @@ export async function reviseCreatorPayment(input: {id:string; revision:number; a
     try {
         const db=await access(true);
         const item=z.object({id:z.string().uuid(),revision:z.number().int().nonnegative(),amount:z.number().finite().nonnegative(),date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),clear:z.boolean(),reason:z.string().trim().min(1).max(250)}).parse(input);
-        const {error}=await db.rpc('revise_creator_payment',{p_entry:item.id,p_revision:item.revision,p_amount:item.amount,p_date:item.date,p_clear:item.clear,p_reason:item.reason});
+        const {error}=await db.rpc('revise_creator_payment',{p_entry:item.id,p_revision:item.revision,p_amount:item.amount,p_date:item.date,p_clear:item.clear || item.amount === 0,p_reason:item.reason});
         if(error) throw new Error(error.message);
         revalidatePath('/campaigns','layout'); revalidatePath('/vendors','layout'); revalidatePath('/billing');
         return {ok:true as const};

@@ -85,9 +85,9 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
   const isPackageChild = Boolean(child && (line?.assignment?.pricing_mode ?? "package") === "package");
   const selectedPost = child?.posts.find(post => post.id === selected?.postId);
   const packageShare = isPackageChild && child && selectedPost && line ? resolveAssignmentTypeCommercial({ posts: child.posts, post: selectedPost, deliverable: child, line: { revenueBeforeVat: line.revenue_before_vat, costBeforeVat: line.cost_before_vat, usageRightsAmount: line.usage_rights_amount, usageRightsCost: line.usage_rights_cost, agencyFeePercent: line.agency_fee_percent } }) : null;
-  const vendorCorrection = Boolean(line?.vendor_io_pending_regeneration && !child);
+  const vendorCorrection = Boolean((line?.vendor_io_pending_regeneration || line?.commercial_client_locked || line?.active_vendor_io_id || line?.vendor_io_id) && !child);
   const clientLocked = Boolean(line?.commercial_client_locked ?? (line?.revenue_locked || line?.invoice_id));
-  const costLocked = Boolean(line?.commercial_cost_locked ?? (line?.active_vendor_io_id || line?.vendor_io_id));
+  const costLocked = Boolean(line?.commercial_cost_locked ?? true);
   const selectedKey = selected ? keyOf(selected) : "";
   useEffect(() => {
     if (!host || !selected) return;
@@ -226,7 +226,7 @@ export function AssignmentCommercialPaneProvider({ campaignId, hierarchy, curren
         {isPackageChild && <div className="acp-notice">This child is a calculated share of the package. <button type="button" onClick={() => open({ lineId: line.id })}>Edit package totals</button></div>}
         {!isPackageChild && child?.is_locked && <div className="acp-notice">This child is invoiced. Financial changes use the existing finance revision workflow.</div>}
         <div className="acp-sections">
-          <section className="acp-section acp-cost" aria-label="Cost"><h3>Cost {costLocked && <span className="acp-lock" tabIndex={0} title="Linked Vendor IO protects costs, currency, VAT and FX. Use the finance revision workflow to change them.">Locked</span>} {fx.controls("cost")}</h3><div className="acp-fields">
+          <section className="acp-section acp-cost" aria-label="Cost"><h3>Cost {costLocked && <span className="acp-lock" tabIndex={0} title="Vendor payment locks costs. Set the recorded payment to zero in Payments to edit.">Locked</span>} {fx.controls("cost")}</h3><div className="acp-fields">
             {number("Unit", "qty", { integer: true, max: 999, disabled: !child })}
             <label className="acp-field">Unit cost<FormattedNumber key={selectedKey + "unitCost"} disabled={readOnly || costLocked || (!vendorCorrection && fx.dirty)} value={roundMoney(draft.cost / draft.qty)} onChange={value => change("cost", roundMoney(value * draft.qty))} />{fx.equivalent(roundMoney(draft.cost / draft.qty), "cost", vendorCorrection ? draft.currency : revenueCurrency)}</label>
             {number("Cost amount", "cost")}{number("UR Cost", "urCost")}{number("Cost VAT %", "costVat", { max: 100 })}

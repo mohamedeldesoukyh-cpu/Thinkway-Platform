@@ -1,17 +1,5 @@
-const BLOCKED_BILLING_FOR_VIO = new Set([
-  "invoiced",
-  "partially_paid",
-  "paid",
-  "closed",
-]);
-
-const BLOCKED_OPERATIONAL_FOR_VIO = new Set([
-  "invoiced",
-  "partially_invoiced",
-  "closed",
-]);
-
 export type VendorIoGenerateLineSnapshot = {
+  vendor_payment_locked?: boolean;
   vendor_io_id?: string | null;
   /** Resolved active Vendor IO — null means no active link (orphan/superseded-only). */
   active_vendor_io_id?: string | null;
@@ -46,30 +34,8 @@ export function explainVendorIoGenerateEligibility(
     return { eligible: false, reason: "An active Vendor IO is already linked." };
   }
 
-  if (line.invoice_id) {
-    return { eligible: false, reason: "Assignment is linked to a client invoice." };
-  }
-
-  const billing = line.billing_status ?? "draft";
-  if (billing === "closed") {
-    return { eligible: false, reason: "Assignment billing is closed." };
-  }
-  if (BLOCKED_BILLING_FOR_VIO.has(billing)) {
-    return {
-      eligible: false,
-      reason: `Billing status "${billing}" blocks Vendor IO generation.`,
-    };
-  }
-
-  const operational = line.operational_status ?? "draft";
-  if (operational === "closed") {
-    return { eligible: false, reason: "Assignment operational status is closed." };
-  }
-  if (BLOCKED_OPERATIONAL_FOR_VIO.has(operational)) {
-    return {
-      eligible: false,
-      reason: `Operational status "${operational}" blocks Vendor IO generation.`,
-    };
+  if (line.vendor_payment_locked) {
+    return { eligible: false, reason: "Vendor payment is recorded. Set the payment to zero before changing Vendor IOs." };
   }
 
   return { eligible: true, reason: "eligible" };
