@@ -5,6 +5,7 @@ import { QuotationText } from "./quotation-design-locale";
 
 import { QUOTATION_CLIENT_LABELS } from "@/features/quotations/constants";
 import {
+  QUOTATION_CLIENT_SELECTION_LABEL,
   countQuotationClientSelections,
   totalsForClientSelection,
   type QuotationClientReviewView,
@@ -57,14 +58,14 @@ export function QuotationClientReviewPanel({
   detail,
 }: Props) {
   const counts = countQuotationClientSelections(items, review.selectionState);
-  const approved = totalsForClientSelection(items, review.selectionState, "accepted");
+  const selected = totalsForClientSelection(items, review.selectionState, "accepted");
   const filters: Array<{
     id: QuotationClientSelectionFilter;
     label: string;
     count: number;
   }> = [
     { id: "all", label: "All", count: counts.total },
-    { id: "accepted", label: "Approved", count: counts.accepted },
+    { id: "accepted", label: QUOTATION_CLIENT_SELECTION_LABEL.accepted, count: counts.accepted },
     { id: "in_review", label: "Under review", count: counts.inReview },
     { id: "rejected", label: "Rejected", count: counts.rejected },
   ];
@@ -87,7 +88,7 @@ export function QuotationClientReviewPanel({
                 disabled={pending || counts.accepted === 0}
                 onClick={onSelectApproved}
               >
-                <QuotationText>Select approved</QuotationText></button>
+                <QuotationText>Select client selection</QuotationText></button>
               <button
                 type="button"
                 className="q-b q-b--sm"
@@ -105,12 +106,12 @@ export function QuotationClientReviewPanel({
               <Tooltip><TooltipTrigger asChild><button
                 type="button"
                 className="q-b q-b--sm q-b--pri"
-                disabled={pending || counts.accepted === 0}
+                disabled={pending || !quotationApproved || counts.accepted === 0}
                 onClick={onMoveApprovedToCampaign}
 
               >
-                <QuotationText>Move approved to campaign</QuotationText></button></TooltipTrigger><TooltipContent>
-                  {quotationApproved ? "Move approved uses only client-approved creators. To move your checked lines, use Move selected to campaign below." : "Approve this quotation first, then move the client-approved creators to the campaign."}
+                <QuotationText>Move client selection to campaign</QuotationText></button></TooltipTrigger><TooltipContent>
+                  {quotationApproved ? "Move client selection uses only client-selected creators. To move your checked lines, use Move selected to campaign below." : "Approve this quotation first, then move the client-selected creators to the campaign."}
                 </TooltipContent></Tooltip>
             </>
           ) : null}
@@ -140,30 +141,31 @@ export function QuotationClientReviewPanel({
         </div>
 
       </div>
+        <p className="q-review-note"><QuotationText>Client selection is not quotation approval.</QuotationText></p>
         {review.changeRequestSummary && <p className="q-review-note">{review.changeRequestSummary}</p>}
         <div
           className="q-rev__s"
-          aria-label="Approved selection metrics"
+          aria-label="Client selection metrics"
         >
           <div>
-            <u><QuotationText>Approved creators</QuotationText></u>
-            <b>{approved.creatorCount}</b>
+            <u><QuotationText>Selected creators</QuotationText></u>
+            <b>{selected.creatorCount}</b>
           </div>
           <div>
-            <u><QuotationText>Approved base cost</QuotationText></u>
-            <b>{F(approved.costEgp)}</b>
+            <u><QuotationText>Selected base cost</QuotationText></u>
+            <b>{F(selected.costEgp)}</b>
           </div>
           <div>
             <u>{QUOTATION_CLIENT_LABELS.totalClientCost}</u>
-            <b>{F(approved.revenueEgp)}</b>
+            <b>{F(selected.revenueEgp)}</b>
           </div>
           <div>
-            <u><QuotationText>Approved GP</QuotationText></u>
-            <b className="r">{F(approved.gpValueEgp)}</b>
+            <u><QuotationText>Selected GP</QuotationText></u>
+            <b className="r">{F(selected.gpValueEgp)}</b>
           </div>
           <div>
-            <u>Approved GP %</u>
-            <b className="r">{approved.gpPct.toFixed(1)}%</b>
+            <u><QuotationText>Selected GP %</QuotationText></u>
+            <b className="r">{selected.gpPct.toFixed(1)}%</b>
           </div>
         </div>
       </div>

@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/types/database";
 import { insertQuotationHeaderRecord } from "./repositories/quotation-repository";
 import { computeQuotationTotals } from "@/lib/commercial/quotation-engine";
+import { quotationServiceDescription } from "@/lib/quotations/service-description";
 
 /** Copy only commercial content. Identity, signatures, sharing and campaign links start fresh. */
 export function quotationCopyHeader(source: Record<string, unknown>, itemIds: Map<string, string>) {
@@ -29,7 +30,15 @@ export function quotationCopyItems(items: Record<string, unknown>[], quotationId
       source_shortlist_item_id: _source, ...content } = row;
     const group = row.collapse_group_id as string | null;
     if (group && !groups.has(group)) groups.set(group, crypto.randomUUID());
+    // Older quotations keep their description only on deliverables. Materialize it
+    // on the copied row so the service editor retains the same description as exports.
+    const description = typeof row.service_description === "string" && row.service_description.trim()
+      ? row.service_description
+      : quotationServiceDescription({
+          deliverables: Array.isArray(row.deliverables) ? row.deliverables : [],
+        }) ?? null;
     return { ...content, id: itemIds.get(String(id)), quotation_id: quotationId,
+      service_description: description,
       source_shortlist_item_id: null, ...(group ? { collapse_group_id: groups.get(group) } : {}) };
   });
 }

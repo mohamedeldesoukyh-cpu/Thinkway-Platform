@@ -20,6 +20,7 @@ import {
   decideClientReview,
   removeUnpricedSelectedCreators,
   requestClientChanges,
+  reopenClientSelection,
   sendClientQuotationEmail,
   setBulkCreatorSelection,
   setCreatorSelection,
@@ -27,6 +28,10 @@ import {
   acknowledgeClientUpdate,
 } from "../review-mutations";
 import type { ClientCreatorBrief } from "../types";
+
+export async function reopenSelectionAction(input: { token: string }) {
+  return reopenClientSelection(input);
+}
 
 export async function selectCreatorAction(input: {
   token: string;
@@ -60,6 +65,8 @@ export async function requestReviewChangesAction(input: {
   token: string;
   summary: string;
   areas: ClientChangeArea[];
+  targetType?: ClientCommentTargetType;
+  targetId?: string | null;
   stage?: ClientReviewDecisionStage;
 }) {
   return requestClientChanges(input);

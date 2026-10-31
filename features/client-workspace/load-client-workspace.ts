@@ -1,3 +1,5 @@
+import { eventSummary } from "./review-event-summary";
+import { selectionConfirmationFromSnapshots } from "./reopen-selection";
 import { readQuotationTemplatePhotos } from "@/lib/quotations/quotation-template-photos";
 import { recommendationRank } from "@/lib/creators/shortlist-recommendations";
 import { readCreatorListOrder } from "@/lib/quotations/quotation-creator-order";
@@ -272,45 +274,6 @@ async function loadActivity(
   }));
 }
 
-function eventSummary(type: string, payload: Record<string, unknown> | null): string {
-  switch (type) {
-    case "campaign_sent_for_review":
-      return "Campaign sent for review";
-    case "creator_selected":
-      return `Creator selected${payload?.name ? `: ${payload.name}` : ""}`;
-    case "creator_rejected":
-      return `Creator rejected${payload?.name ? `: ${payload.name}` : ""}`;
-    case "comment_added":
-      return "Comment added";
-    case "changes_requested":
-      return "Changes requested";
-    case "version_published":
-      return `Version ${payload?.review_number ?? ""} published`.trim();
-    case "client_approved":
-      return "Client approved";
-    case "client_rejected":
-      return "Client rejected";
-    case "shortlist_approved":
-      return "Shortlist approved";
-    case "quotation_approved":
-      return "Quotation approved";
-    case "creators_confirmed":
-      return "Creators approved";
-    case "quotation_revision_published":
-      return "Updated quotation sent for approval";
-    case "review_viewed":
-      return "Client opened this review";
-    case "link_revoked":
-      return "Client Workspace link stopped";
-    case "link_restored":
-      return "Client Workspace link turned on again";
-    case "access_requested":
-      return "Client requested access to an expired workspace link";
-    default:
-      return type.replaceAll("_", " ");
-  }
-}
-
 export async function newerReviewNumberFor(
   supabase: SupabaseClient,
   review: ClientReviewRecord
@@ -520,9 +483,7 @@ export async function loadClientWorkspace(
   let view: ClientWorkspaceView | null = null;
   let campaignObject: CampaignObject | null = null;
   let selection = activeReview.selectionState as Record<string, ClientCreatorSelectionState>;
-  let clientSelectionFreeze = activeReview.sourceSnapshot?.clientSelection
-    ?? quotationSnapshot?.clientSelection
-    ?? shortlistSnapshot?.clientSelection;
+  let clientSelectionFreeze = selectionConfirmationFromSnapshots(activeReview.sourceSnapshot, quotationSnapshot, shortlistSnapshot);
 
   if (activeReview.sourceSnapshot) {
     let mergedSnapshot = mergeSnapshotsForClientView({

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { QuotationText } from "./quotation-design-locale";
 
 import {
   QUOTATION_CLIENT_SELECTION_LABEL,
@@ -19,7 +20,7 @@ export function QuotationClientReviewStatusBadge({
         state === "in_review" && "bg-amber-100 text-amber-800"
       )}
     >
-      {QUOTATION_CLIENT_SELECTION_LABEL[state]}
+      <QuotationText>{QUOTATION_CLIENT_SELECTION_LABEL[state]}</QuotationText>
     </span>
   );
 }

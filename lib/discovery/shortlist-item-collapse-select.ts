@@ -6,7 +6,7 @@ export const SHORTLIST_ITEM_DETAIL_SELECT_BASE =
 export const SHORTLIST_ITEM_DETAIL_SELECT_WITH_COLLAPSE = `${SHORTLIST_ITEM_DETAIL_SELECT_BASE}, collapse_group_id, collapse_label`;
 
 export const SHORTLIST_ITEM_SEED_SELECT_BASE =
-  "id, influencer_id, profile_id, unified_id, commercial_input_mode, cost, cost_currency, gp_pct, revenue, gp_value, deliverables, sort_order";
+  "id, influencer_id, profile_id, unified_id, commercial_input_mode, cost, cost_currency, gp_pct, revenue, gp_value, deliverables, service_description, sort_order";
 
 export const SHORTLIST_ITEM_SEED_SELECT_WITH_COLLAPSE = `${SHORTLIST_ITEM_SEED_SELECT_BASE}, collapse_group_id, collapse_label`;
 

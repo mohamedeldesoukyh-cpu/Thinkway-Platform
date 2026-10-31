@@ -373,6 +373,7 @@ export function parseSourceSnapshot(raw: unknown): ClientReviewSourceSnapshot | 
     creatorIds,
     identityLogo: parseIdentityLogo(raw.identityLogo),
     clientSelection: parseClientSelectionFreeze(raw.clientSelection),
+    selectionReopenedAt: typeof raw.selectionReopenedAt === "string" ? raw.selectionReopenedAt : undefined,
     clientUpdate: parseClientUpdate(raw.clientUpdate),
   };
 }
