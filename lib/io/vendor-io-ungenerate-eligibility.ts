@@ -1,4 +1,5 @@
 export type VendorIoLineBillingSnapshot = {
+  vendor_payment_locked?: boolean;
   operational_status: string;
   invoice_id: string | null;
   billing_status: string;
@@ -8,10 +9,7 @@ export type VendorIoLineBillingSnapshot = {
 export function isLineBlockingVendorIoUngenerate(
   line: VendorIoLineBillingSnapshot
 ): boolean {
-  if (line.invoice_id && !line.invoice_unlocked) return true;
-  if (line.operational_status === "invoiced") return true;
-  if (line.operational_status === "partially_invoiced") return true;
-  return ["invoiced", "partially_paid", "paid", "closed"].includes(line.billing_status);
+  return line.vendor_payment_locked === true;
 }
 
 export function isLineUngenerateIoEligible(
@@ -30,7 +28,7 @@ export function vendorIoUngenerateEligibility(
   if (lines.some(isLineBlockingVendorIoUngenerate)) {
     return {
       eligible: false,
-      reason: "Cannot un-generate: one or more linked lines are already invoiced.",
+      reason: "Cannot un-generate: a vendor payment is recorded. Set the payment to zero first.",
     };
   }
   return { eligible: true, reason: null };

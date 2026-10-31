@@ -5,7 +5,13 @@
 
 > **Status transitions:** Never manually update `campaign_lines.operational_status` or `billing_status`. Use only lifecycle actions in `docs/CLEAN_RESET_EXECUTION_PLAN.md`.
 
-## Lifecycle (strict order)
+## Vendor payment locking (October 2026)
+
+Client invoice creation, issuance, collection and regeneration do not lock vendor costs or Vendor IO generation/reopening. A positive recorded vendor payment locks the vendor side; clear each payment (or revise its amount to zero) in Payments to unlock it. Partial payments also lock it. Clearing keeps the audit history and does not reverse a bank transfer.
+
+Unpaid cost corrections preserve client invoice amounts and links. Editing costs reopens the active Vendor IO for a new revision, retaining its historical document. The database checks current payment records, not stale invoice-derived cost flags.
+
+## Original invoice flow (vendor-side locks superseded above)
 
 ```
 Assignment line (draft)

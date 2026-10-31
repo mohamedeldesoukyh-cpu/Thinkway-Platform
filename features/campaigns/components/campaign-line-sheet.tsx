@@ -767,11 +767,11 @@ export function CampaignLineSheet({
   const clientDocumentLocked = Boolean(line?.commercial_client_locked);
   const vendorDocumentLocked = Boolean(line?.commercial_cost_locked);
   const costCommercialLocked =
-    vendorDocumentLocked || (isEdit && commercialFieldsLocked(Boolean(line?.cost_locked || (line?.vat_locked && !line?.vendor_io_pending_regeneration))));
+    isPending || (isEdit && (line?.commercial_cost_locked ?? true));
 
   const costLockHint = costCommercialLocked
     ? vendorDocumentLocked || line?.cost_locked
-      ? "Ungenerate the Vendor IO before editing cost amounts, currency, VAT or FX."
+      ? "Set the recorded vendor payment to zero in Payments before editing costs."
       : "Cost fields are locked while VAT is finalized on this assignment."
     : null;
 
@@ -1094,7 +1094,7 @@ export function CampaignLineSheet({
                     setUsageRightsCost(Number(event.target.value) || 0)
                   }
                   disabled={commercialFieldsLocked(
-                    Boolean(line?.cost_locked || line?.vat_locked)
+                    Boolean(line?.commercial_cost_locked ?? true)
                   )}
                   className={DETAIL_FORM_INPUT_CLASS}
                 />
