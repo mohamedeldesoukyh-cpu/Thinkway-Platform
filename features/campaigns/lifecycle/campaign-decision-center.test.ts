@@ -58,17 +58,18 @@ describe("campaign decision center", () => {
     const dc = buildDecisionCenter({
       stageId: 'billing', stageLabel: 'Finance', businessState: 'waiting', enforcement: 'soft',
       owner: 'Finance', waitingFor: 'Finance', nextAction: 'Open Finance', nextActionTab: 'billing',
-      expectedResult: 'Collect payment', missing: [], hardBlockers: [], workspaceBlockers: [],
+      expectedResult: 'Collect payment', missing: [], hardBlockers: [], workspaceBlockers: ['Outstanding client billing'],
       signals: signals({ clientIoStatus: 'approved', vendorIoCount: 1, approvedVendorIoCount: 1,
         sentVendorIoCount: 1, deliverableCount: 1, invoiceCount: 2, billingOutstanding: 300, overdueDeliverableCount: 1 }),
       daysWaiting: null,
       objects: objects({ invoices: [
-        { id: 'one', document_number: 'INV-1', outstanding: 100, status: 'issued' },
+        { id: 'one', document_number: 'INV-1', outstanding: 100, status: 'draft' },
         { id: 'two', document_number: 'INV-2', outstanding: 200, status: 'issued' },
         { id: 'void', document_number: 'INV-3', outstanding: 100, status: 'void' },
       ] }),
     });
     assert.equal(dc.blockers.filter(item => item.objectKind === 'invoice').length, 2);
+    assert.ok(!dc.blockers.some(item => item.reason === 'Outstanding client billing'));
     assert.ok(dc.blockers.some(item => item.objectKind === 'deliverable'));
     assert.equal(dc.blockers[0].waitingFor, 'Client');
     assert.equal(dc.blockers[0].sinceLabel, '—');

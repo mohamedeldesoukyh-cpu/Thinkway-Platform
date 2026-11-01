@@ -348,7 +348,7 @@ function actionTabFromLabel(
   stageId: CampaignWorkspaceTabId
 ): CampaignWorkspaceTabId {
   const lower = label.toLowerCase();
-  if (lower.includes("payout") || lower.includes("payment")) return "billing";
+  if (lower.includes("payout") || lower.includes("payment") || lower.includes("billing") || lower.includes("invoice") || lower.includes("finance")) return "billing";
   if (lower.includes("client")) return "client-io";
   if (lower.includes("vendor")) return "vendor-io";
   if (lower.includes("assignment")) return "lines";
@@ -1052,7 +1052,8 @@ export function buildDecisionCenter(input: {
   }
 
   if (stageId === "billing" && signals.billingOutstanding > 0) {
-    const openInvoices = (objects?.invoices ?? []).filter((inv) => inv.outstanding > 0 && !['void', 'voided', 'cancelled', 'canceled', 'draft'].includes(inv.status.toLowerCase()));
+    // Stored draft status can remain on an issued invoice; outstanding is supplied by the billing model.
+    const openInvoices = (objects?.invoices ?? []).filter((inv) => inv.outstanding > 0 && !['void', 'voided', 'cancelled', 'canceled'].includes(inv.status.toLowerCase()));
     for (const openInvoice of openInvoices.length ? openInvoices : [undefined]) {
     const invRef = openInvoice
       ? hashRef(openInvoice.document_number, "Invoice")
@@ -1098,7 +1099,7 @@ export function buildDecisionCenter(input: {
           (lower.includes("vendor") && b.objectKind === "vendor_io") ||
           (mentionsPurchaseOrder(lower) && b.objectKind === "po") ||
           (lower.includes("deliverable") && b.objectKind === "deliverable") ||
-          (lower.includes("invoice") && b.objectKind === "invoice")
+          ((lower.includes("invoice") || lower.includes("billing")) && b.objectKind === "invoice" && !/payout/i.test(b.reason))
       )
     ) {
       continue;
@@ -1331,7 +1332,7 @@ function specificActionFromLabel(
   stageId: CampaignWorkspaceTabId
 ): string {
   const lower = label.toLowerCase();
-  if (lower.includes("payout") || lower.includes("billing outstanding")) {
+  if (lower.includes("payout") || lower.includes("billing")) {
     return "Open Finance";
   }
   if (lower.includes("client approval") || lower.includes("client io approved")) {
