@@ -55,6 +55,12 @@ test('beneficiary validation preserves account leading zeros and validates IBAN 
     assert.ok(validateBank({ ...bank, swift: 'CIBEAECX' }).some(e => e.includes('country')));
     assert.ok(validateBank({ ...bank, currency: 'USD' }).some(e => e.includes('Domestic') || e.includes('domestic')));
 });
+
+test('filled fields over the bank limit are not reported as missing', () => {
+    const errors = validateBank({ ...bank, beneficiary_address: 'A'.repeat(61) });
+    assert.deepEqual(errors, ['Beneficiary address must be at most 60 characters (currently 61).']);
+    assert.deepEqual(validateBank({ ...bank, beneficiary_address: '' }), ['Beneficiary address is required.']);
+});
 test('payment file preserves bank header and exact TRF/INV layout', async () => {
     const bytes = await readFile('features/creator-payments/templates/payments.csv');
     const header = bytes.toString('latin1').split(/\r?\n/)[0];

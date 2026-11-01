@@ -20,9 +20,10 @@ export function validateBank(bank: BankDetails): string[] {
         ["Beneficiary nickname", bank.nickname, 35], ["Beneficiary name", bank.beneficiary_name, 60],
         ["Account / IBAN", bank.iban || bank.account_number, 34], ["Beneficiary address", bank.beneficiary_address, 60],
     ];
-    for (const [label, value, max] of required)
-        if (!value.trim() || value.length > max)
-            errors.push(`${label} is required (maximum ${max} characters).`);
+    for (const [label, value, max] of required) {
+        if (!value.trim()) errors.push(`${label} is required.`);
+        else if (value.length > max) errors.push(`${label} must be at most ${max} characters (currently ${value.length}).`);
+    }
     if (!['B', 'D', 'I'].includes(bank.payment_type))
         errors.push("Choose AAIB, domestic, or international transfer.");
     if (!/^[A-Z]{3}$/.test(bank.currency))
@@ -44,8 +45,8 @@ export function validateBank(bank: BankDetails): string[] {
         if (!rule || bank.clearing_code.length !== rule[1])
             errors.push("Provide SWIFT or a valid country-specific clearing identifier/code.");
         for (const key of ['bank_name', 'bank_address', 'bank_branch'] as const)
-            if (!bank[key] || bank[key].length > 60)
-                errors.push(`${key.replaceAll('_', ' ')} is required (maximum 60 characters) with clearing details.`);
+            if (!bank[key].trim())
+                errors.push(`${key.replaceAll('_', ' ')} is required with clearing details.`);
     }
     if (bank.email && (bank.email.length > 50 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(bank.email)))
         errors.push("Enter a valid beneficiary email (maximum 50 characters).");

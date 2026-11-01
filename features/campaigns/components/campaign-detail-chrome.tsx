@@ -18,7 +18,7 @@ import { workspaceLabelForTab } from "@/features/campaigns/lifecycle/campaign-li
 import type { CampaignLifecycleView } from "@/features/campaigns/lifecycle/campaign-lifecycle-orchestrator";
 import { CampaignDecisionCenterPanel } from "@/features/campaigns/lifecycle/components/campaign-decision-center-panel";
 import { portfolioIntelFromLifecycle } from "@/features/campaigns/lifecycle/campaign-portfolio-intelligence";
-import type { DecisionFocusQuery } from "@/features/campaigns/lifecycle/campaign-decision-center";
+import { decisionCenterStatus, type DecisionFocusQuery } from "@/features/campaigns/lifecycle/campaign-decision-center";
 import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { formatPercent } from "@/features/campaigns/utils";
 import styles from "./campaign-commercial-header.module.css";
@@ -62,7 +62,7 @@ export function CampaignDetailChrome({
   const dc = lifecycle.decisionCenter;
   const narrative = dc.narrative;
   const intel = portfolioIntelFromLifecycle(lifecycle, {
-    updatedAt: workspace.activity[0]?.created_at ?? workspace.start_date,
+    updatedAt: null,
     endDate: workspace.end_date,
   });
   const blocked = !narrative.progressionAllowed;
@@ -164,14 +164,8 @@ export function CampaignDetailChrome({
     });
   };
 
-  const stageCannotAdvance = narrative.dependencyDetail?.includes("awaiting client approval")
-    ? "Client approval pending"
-    : `${narrative.currentStageLabel} needs attention`;
-  const decisionMsg = narrative.progressionAllowed
-    ? narrative.currentStageComplete
-      ? "May continue"
-      : narrative.progressionLabel ?? "In progress"
-    : stageCannotAdvance;
+  const decisionStatus = decisionCenterStatus(dc);
+  const decisionMsg = decisionStatus.label;
 
   return (
     <div className={cn("tw-frozen", mini && "is-mini")}>
@@ -277,7 +271,7 @@ export function CampaignDetailChrome({
         </div>
       </div>
 
-        <div className={cn("tw-mb wr-decision", blocked ? "wr-decision-blocked" : "wr-decision-ready")}>
+        <div className={cn("tw-mb wr-decision", `wr-decision-${decisionStatus.tone}`)}>
           <button
             type="button"
             className="lb"
@@ -294,7 +288,7 @@ export function CampaignDetailChrome({
               {narrative.waitingSince && narrative.waitingSince !== "—" ? ` · ${narrative.waitingSince}` : ""}
             </span>
           </span>
-          <span className="wr-decision-meta"><span><i>Campaign</i>{lifecycle.businessStateLabel}</span>{intel.waitingFor && intel.waitingFor !== "—" && <span><i>Waiting for</i>{intel.waitingFor}</span>}{intel.daysWaitingLabel && intel.daysWaitingLabel !== "—" && <span><i>Waiting</i>{intel.daysWaitingLabel}</span>}<span><i>Risk</i>{intel.riskLabel}</span></span>
+          <span className="wr-decision-meta"><span><i>Campaign</i>{lifecycle.businessStateLabel}</span><span><i>Waiting for</i>{dc.blockers[0]?.waitingFor ?? intel.waitingFor}</span><span><i>Risk</i>{intel.riskLabel}</span></span>
           <span className="tw-sp" />
           <button type="button" className="go" onClick={onContinue}>
             {dc.primaryAction}

@@ -2,6 +2,7 @@
 
 import { paymentCurrencyRate } from "./payment-plan";
 import { Fragment, useState, type ReactNode } from 'react';
+import { Pencil } from 'lucide-react';
 import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { defaultPaymentDraft as initialDraft, changedPaymentPlans } from './payment-plan';
 import { paymentAllocation, matchesPaymentFilter } from './allocations';
@@ -62,7 +63,7 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
           return <Fragment key={row.assignmentId}>
             <tr className={`${missing ? 'bank-warning' : ''} ${selected.has(row.assignmentId) ? 'selected' : ''}`}>
               <td><input type="checkbox" aria-label={`Select ${row.creator}`} disabled={!canWrite || row.payable === false} checked={selected.has(row.assignmentId)} onChange={e => onSelect(row.assignmentId, e.target.checked)}/></td>
-              <td><div className="cp-creator"><span className="cp-avatar" aria-hidden>{row.creator.replace(/^@/,'').split(/\s+/).slice(0,2).map(word => word[0]).join('').toUpperCase()}</span><div><strong>{row.creator}</strong>{row.username && <small>@{row.username.replace(/^@/,'')}</small>}{showCampaign && <small>{row.campaign}</small>}</div></div><button className={`cp-bank ${missing ? 'warning' : 'ready'}`} onClick={() => onBank(row)}>{missing ? 'Complete bank details' : row.bank.registered ? 'Bank details complete ✓' : 'Confirm bank registration'}</button></td>
+              <td><div className="cp-creator"><span className="cp-avatar" aria-hidden>{row.creator.replace(/^@/,'').split(/\s+/).slice(0,2).map(word => word[0]).join('').toUpperCase()}</span><div><strong>{row.creator}</strong>{row.username && <small>@{row.username.replace(/^@/,'')}</small>}{showCampaign && <small>{row.campaign}</small>}</div></div><button type="button" aria-haspopup="dialog" title={`Edit bank details for ${row.creator}`} className={`cp-bank ${missing ? 'warning' : 'ready'}`} onClick={() => onBank(row)}><Pencil size={13} aria-hidden="true"/>{missing ? 'Complete bank details' : row.bank.registered ? 'Bank details complete ✓' : 'Confirm bank registration'}</button></td>
               <td className="cp-code">{row.ioNumber}<small>Creator Inv# {row.creatorInvoice?.number||'Not added'}</small></td>
               <td><div className="cp-status"><span className={`cp-pill ${badge.className}`}>{badge.label}</span><span className={`cp-pill ${status.className}`}>{status.label}</span></div><button className="cp-detail-toggle" aria-expanded={open} aria-controls={`payment-details-${row.assignmentId}`} onClick={() => setExpanded(current => { const next = new Set(current); if (open) next.delete(row.assignmentId); else next.add(row.assignmentId); return next; })}>{open ? 'Hide details' : 'Balance details'}</button></td>
               <td className="numeric" title="Agreed fee from the campaign agreement — read-only"><b>{number(row.fee)}</b><small>{row.currency} · agreed</small></td>

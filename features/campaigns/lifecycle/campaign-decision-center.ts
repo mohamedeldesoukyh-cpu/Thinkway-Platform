@@ -119,7 +119,7 @@ export type CampaignDecisionCenter = {
   remainingBlockerLabels: string[];
   unlockHeadline: string;
   unlocks: UnlockPreview[];
-  /** Story-filtered issues (highest severity tier / one dependency family). */
+  /** All open issues, with the primary dependency family first. */
   blockers: DecisionBlocker[];
   primaryAction: string;
   primaryActionTab: CampaignWorkspaceTabId;
@@ -127,6 +127,14 @@ export type CampaignDecisionCenter = {
   openResolver: boolean;
   clearPathMessage: string;
 };
+
+export function decisionCenterStatus(dc: CampaignDecisionCenter): { label: string; tone: 'blocked' | 'attention' | 'ready' } {
+  if (dc.severityMode === 'business_blocker' || !dc.narrative.progressionAllowed) return { label: 'Action required to advance', tone: 'blocked' };
+  if (dc.blockers.length || dc.severityMode === 'operational_attention' || dc.severityMode === 'waiting') {
+    return { label: dc.blockers[0]?.title ?? 'Follow-up needed', tone: 'attention' };
+  }
+  return { label: dc.severityMode === 'clear' ? 'No open issues' : 'In progress', tone: 'ready' };
+}
 
 /** Lightweight object snapshot — presentation only (from CampaignWorkspace). */
 export type DecisionCenterObjects = {
@@ -454,7 +462,7 @@ export function buildDecisionNarrative(input: {
   if (!primary) {
     return {
       currentStageLabel: input.stageLabel,
-      currentStageComplete: true,
+      currentStageComplete: signals.status === 'completed',
       nextStageLabel: null,
       dependencyKind: "None",
       dependencyDetail: "No open business dependency.",
@@ -508,7 +516,7 @@ export function buildDecisionNarrative(input: {
 
   return {
     currentStageLabel: input.stageLabel,
-    currentStageComplete: !isBlocker,
+    currentStageComplete: false,
     nextStageLabel:
       primary.objectKind === "vendor_io"
         ? "Deliverables"
@@ -1044,7 +1052,8 @@ export function buildDecisionCenter(input: {
   }
 
   if (stageId === "billing" && signals.billingOutstanding > 0) {
-    const openInvoice = (objects?.invoices ?? []).find((inv) => inv.outstanding > 0);
+    const openInvoices = (objects?.invoices ?? []).filter((inv) => inv.outstanding > 0 && !['void', 'voided', 'cancelled', 'canceled', 'draft'].includes(inv.status.toLowerCase()));
+    for (const openInvoice of openInvoices.length ? openInvoices : [undefined]) {
     const invRef = openInvoice
       ? hashRef(openInvoice.document_number, "Invoice")
       : "Invoice";
@@ -1059,8 +1068,8 @@ export function buildDecisionCenter(input: {
         title: "Waiting for Payment",
         severity: "operational_attention",
         owner: "Finance",
-        waitingFor: "Finance",
-        waitingLabel: "Payment",
+        waitingFor: "Client",
+        waitingLabel: "Client payment",
         sinceLabel: since,
         reason: openInvoice
           ? `${invRef} has an outstanding balance.`
@@ -1075,6 +1084,7 @@ export function buildDecisionCenter(input: {
         expectedResult: "Collections progress toward close-out.",
       })
     );
+    }
   }
 
   for (const [index, text] of workspaceBlockers.entries()) {
@@ -1224,6 +1234,8 @@ export function buildDecisionCenter(input: {
   }
 
   const storyBlockers = selectStoryBlockers(blockers, stageId);
+  const storyIds = new Set(storyBlockers.map(item => item.id));
+  const allIssues = [...storyBlockers, ...blockers.filter(item => !storyIds.has(item.id))];
   const blockerItems = storyBlockers.filter((b) => b.severity === "business_blocker");
   const attentionItems = storyBlockers.filter(
     (b) => b.severity === "operational_attention"
@@ -1300,12 +1312,12 @@ export function buildDecisionCenter(input: {
     severityMode,
     narrative,
     continueReason,
-    remainingBlockerLabels: storyBlockers.map(
+    remainingBlockerLabels: allIssues.map(
       (b) => `${b.objectLabel} ${b.objectRef} · ${b.waitingLabel}`
     ),
     unlockHeadline,
     unlocks,
-    blockers: storyBlockers,
+    blockers: allIssues,
     primaryAction: primary.primaryAction,
     primaryActionTab: primary.actionTab,
     primaryFocusQuery: primary.focusQuery,

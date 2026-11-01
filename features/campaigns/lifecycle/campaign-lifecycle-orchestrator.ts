@@ -920,23 +920,8 @@ function deriveLifecycleFromSignals(
     vendorIoCount: signals.vendorIoCount,
   };
 
-  // Days waiting uses latest activity as a movement proxy (presentation only).
-  const activityAt = workspace?.activity?.[0]?.created_at ?? null;
-  let daysWaiting: number | null = null;
-  if (
-    activityAt &&
-    (businessState === "waiting" ||
-      businessState === "needs_attention" ||
-      businessState === "blocked")
-  ) {
-    const from = new Date(activityAt);
-    if (!Number.isNaN(from.getTime())) {
-      daysWaiting = Math.max(
-        0,
-        Math.floor((Date.now() - from.getTime()) / (1000 * 60 * 60 * 24))
-      );
-    }
-  }
+  // General activity does not establish when a specific issue began.
+  const daysWaiting: number | null = null;
 
   const decisionCenter = buildDecisionCenter({
     stageId: processCue.entryStageId,

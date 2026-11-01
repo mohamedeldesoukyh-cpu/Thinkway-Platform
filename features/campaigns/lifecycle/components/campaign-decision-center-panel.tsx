@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 import {
   DECISION_SEVERITY_LABEL,
+  decisionCenterStatus,
   type DecisionFocusQuery,
   type DecisionSeverity,
 } from "@/features/campaigns/lifecycle/campaign-decision-center";
@@ -80,6 +81,7 @@ export function CampaignDecisionCenterPanel({
 }: Props) {
   const dc = lifecycle.decisionCenter;
   const narrative = dc.narrative;
+  const status = decisionCenterStatus(dc);
   const searchParams = useSearchParams();
   const hasDeepLink = FOCUS_PARAM_KEYS.some((key) => Boolean(searchParams.get(key)));
   const [open, setOpen] = useState(false);
@@ -152,10 +154,10 @@ export function CampaignDecisionCenterPanel({
           <span
             className={cn(
               "thinkway-lc-decision-collapse-progression",
-              narrative.progressionAllowed ? "is-ok" : "is-blocked"
+              status.tone === 'ready' ? "is-ok" : status.tone === 'blocked' ? "is-blocked" : "is-attention"
             )}
           >
-            {narrative.progressionAllowed ? "May continue" : "Cannot advance"}
+            {status.label}
           </span>
           <span className="thinkway-lc-decision-collapse-sep" aria-hidden>
             ·
@@ -189,7 +191,7 @@ export function CampaignDecisionCenterPanel({
           <div className="thinkway-lc-decision-top">
             <div className="min-w-0">
               <div className="thinkway-lc-decision-headline">
-                {narrative.progressionLabel}
+                {status.label}
               </div>
               <div className="thinkway-lc-decision-subhead">
                 {hasBlockers
@@ -279,6 +281,7 @@ export function CampaignDecisionCenterPanel({
                     <span aria-hidden> · </span>
                     {blocker.sinceLabel}
                   </div>
+                  <p>{blocker.reason}</p>
                   {onNavigateToTab ? (
                     <button
                       type="button"

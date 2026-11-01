@@ -4,6 +4,7 @@ import { describe, it } from "node:test";
 import {
   applyDecisionFocusToSearch,
   buildDecisionCenter,
+  decisionCenterStatus,
   DECISION_CLEAR_PATH_MESSAGE,
   refineGenericAction,
   unlocksForStage,
@@ -53,6 +54,29 @@ function objects(overrides: Partial<DecisionCenterObjects> = {}): DecisionCenter
 }
 
 describe("campaign decision center", () => {
+  it("shows every outstanding invoice and other follow-ups without a green all-clear", () => {
+    const dc = buildDecisionCenter({
+      stageId: 'billing', stageLabel: 'Finance', businessState: 'waiting', enforcement: 'soft',
+      owner: 'Finance', waitingFor: 'Finance', nextAction: 'Open Finance', nextActionTab: 'billing',
+      expectedResult: 'Collect payment', missing: [], hardBlockers: [], workspaceBlockers: [],
+      signals: signals({ clientIoStatus: 'approved', vendorIoCount: 1, approvedVendorIoCount: 1,
+        sentVendorIoCount: 1, deliverableCount: 1, invoiceCount: 2, billingOutstanding: 300, overdueDeliverableCount: 1 }),
+      daysWaiting: null,
+      objects: objects({ invoices: [
+        { id: 'one', document_number: 'INV-1', outstanding: 100, status: 'issued' },
+        { id: 'two', document_number: 'INV-2', outstanding: 200, status: 'issued' },
+        { id: 'void', document_number: 'INV-3', outstanding: 100, status: 'void' },
+      ] }),
+    });
+    assert.equal(dc.blockers.filter(item => item.objectKind === 'invoice').length, 2);
+    assert.ok(dc.blockers.some(item => item.objectKind === 'deliverable'));
+    assert.equal(dc.blockers[0].waitingFor, 'Client');
+    assert.equal(dc.blockers[0].sinceLabel, '—');
+    assert.equal(dc.narrative.currentStageComplete, false);
+    assert.equal(decisionCenterStatus(dc).tone, 'attention');
+    assert.equal(decisionCenterStatus(dc).label, 'Waiting for Payment');
+    assert.deepEqual(dc.primaryFocusQuery, { key: 'invoice', value: 'one' });
+  });
   it("never surfaces generic Resolve blockers as the primary CTA", () => {
     const refined = refineGenericAction(
       "Resolve blockers",
