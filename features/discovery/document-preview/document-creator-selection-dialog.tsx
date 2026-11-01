@@ -2,7 +2,8 @@ import { loadQuotationProposalOptions, saveQuotationProposalOptions } from "@/fe
 import { parseProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CheckIcon, UsersIcon, XIcon, SearchIcon, LockKeyholeIcon } from "lucide-react";
+import { ChevronDownIcon, CheckIcon, UsersIcon, XIcon, SearchIcon, LockKeyholeIcon } from "lucide-react";
+import { normalizeCreatorItemSelection, seedCreatorItemSelection, toggleCreatorItems } from "./creator-item-selection";
 
 import styles from "./creator-dialog.module.css";
 import {
@@ -25,6 +26,7 @@ export type DocumentCreatorOption = {
   creatorKey: string;
   /** All document item IDs belonging to this creator. */
   itemIds: string[];
+  lineOptions?: Array<{ key: string; label: string; description: string; itemIds: string[]; packageLabel?: string }>;
   name: string;
   handle: string;
   avatarUrl?: string | null;
@@ -54,37 +56,6 @@ type Props = {
   confirmDisabled?: boolean;
   onConfirm: (selection: DocumentExportSelection) => void;
 };
-
-function itemIdsForCreators(
-  creators: DocumentCreatorOption[],
-  selectedCreatorKeys: Set<string>
-): string[] {
-  const ids: string[] = [];
-  for (const creator of creators) {
-    if (!selectedCreatorKeys.has(creator.creatorKey)) continue;
-    for (const id of creator.itemIds) {
-      if (!ids.includes(id)) ids.push(id);
-    }
-  }
-  return ids;
-}
-
-function creatorKeysFromItemIds(
-  creators: DocumentCreatorOption[],
-  itemIds: string[] | null | undefined
-): Set<string> {
-  if (!itemIds?.length) {
-    return new Set(creators.map((creator) => creator.creatorKey));
-  }
-  const wanted = new Set(itemIds);
-  const keys = new Set<string>();
-  for (const creator of creators) {
-    if (creator.itemIds.some((id) => wanted.has(id))) {
-      keys.add(creator.creatorKey);
-    }
-  }
-  return keys.size > 0 ? keys : new Set(creators.map((c) => c.creatorKey));
-}
 
 function platformsForCreators(
   creators: DocumentCreatorOption[],
@@ -134,12 +105,13 @@ export function DocumentCreatorSelectionDialog({
   const savedOptions = useRef("[]");
   const [activeOption, setActiveOption] = useState(0);
   const [selectionError, setSelectionError] = useState("");
-  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(() => new Set());
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(() => new Set());
   const [selectedPlatforms, setSelectedPlatforms] = useState<Set<string>>(
     () => new Set()
   );
   const platformsTouchedRef = useRef(false);
   const returnFocus = useRef<HTMLElement | null>(null);
+  const [expandedCreators, setExpandedCreators] = useState<Set<string>>(() => new Set());
   const [query, setQuery] = useState("");
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(() => new Set());
 
@@ -150,6 +122,7 @@ export function DocumentCreatorSelectionDialog({
       return;
     }
     setQuery("");
+    setExpandedCreators(new Set());
     setSelectionError("");
     setOptionsMessage("");
     setOptionsSaving(false);
@@ -160,8 +133,9 @@ export function DocumentCreatorSelectionDialog({
       const available = saved.map(option => ({...option,itemIds:option.itemIds.filter(id=>allowed.has(id))})).filter(option=>option.itemIds.length);
       setProposalOptions(available);
       setActiveOption(0);
-      const nextKeys = creatorKeysFromItemIds(creators, available[0]?.itemIds ?? workspaceItemIds);
-      setSelectedKeys(nextKeys);
+      const nextIds = seedCreatorItemSelection(creators, available[0]?.itemIds ?? workspaceItemIds);
+      const nextKeys = new Set(creators.filter(creator => creator.itemIds.some(id => nextIds.has(id))).map(creator => creator.creatorKey));
+      setSelectedIds(nextIds);
       setSelectedPlatforms(new Set(platformsForCreators(creators,nextKeys)));
       platformsTouchedRef.current = false;
     }
@@ -184,13 +158,14 @@ export function DocumentCreatorSelectionDialog({
     return () => {cancelled=true;};
   }, [open, workspaceSelectionKey, proposalStorageKey]);
 
+  const selectedKeys = useMemo(() => new Set(creators.filter(creator => creator.itemIds.some(id => selectedIds.has(id))).map(creator => creator.creatorKey)), [creators, selectedIds]);
   const selectedCount = selectedKeys.size;
-  const allSelected = creators.length > 0 && selectedCount === creators.length;
+  const allSelected = creators.length > 0 && creators.every(creator => creator.itemIds.every(id => selectedIds.has(id)));
   const noneSelected = selectedCount === 0;
 
   const selectedItemIds = useMemo(
-    () => itemIdsForCreators(creators, selectedKeys),
-    [creators, selectedKeys]
+    () => [...new Set(creators.flatMap(creator => creator.itemIds))].filter(id => selectedIds.has(id)),
+    [creators, selectedIds]
   );
 
   const currentOptions = proposalOptions.map((option, index) => index === activeOption ? { ...option, itemIds: selectedItemIds } : option);
@@ -199,7 +174,7 @@ export function DocumentCreatorSelectionDialog({
     setProposalOptions(currentOptions);
     setActiveOption(index);
     const ids = currentOptions[index]?.itemIds ?? [];
-    setSelectedKeys(ids.length ? creatorKeysFromItemIds(creators, ids) : new Set());
+    setSelectedIds(normalizeCreatorItemSelection(creators, ids));
     setQuery("");
   }
   function addOption() {
@@ -209,7 +184,7 @@ export function DocumentCreatorSelectionDialog({
     } else {
       setProposalOptions([...currentOptions, { itemIds: [], recommended: false }]);
       setActiveOption(currentOptions.length);
-      setSelectedKeys(new Set());
+      setSelectedIds(new Set());
     }
     setQuery("");
   }
@@ -217,7 +192,7 @@ export function DocumentCreatorSelectionDialog({
     const next = currentOptions.filter((_, i) => i !== index);
     setProposalOptions(next);
     setActiveOption(0);
-    setSelectedKeys(next.length ? (next[0]!.itemIds.length ? creatorKeysFromItemIds(creators, next[0]!.itemIds) : new Set()) : creatorKeysFromItemIds(creators, workspaceItemIds));
+    setSelectedIds(next.length ? normalizeCreatorItemSelection(creators, next[0]!.itemIds) : seedCreatorItemSelection(creators, workspaceItemIds));
   }
 
   const availablePlatforms = useMemo(
@@ -253,13 +228,12 @@ export function DocumentCreatorSelectionDialog({
   const noPlatformsSelected =
     availablePlatforms.length > 0 && selectedPlatforms.size === 0;
 
-  function toggleCreator(creatorKey: string) {
-    setSelectedKeys((prev) => {
-      const next = new Set(prev);
-      if (next.has(creatorKey)) next.delete(creatorKey);
-      else next.add(creatorKey);
-      return next;
-    });
+  function toggleItems(ids: string[]) {
+    setSelectedIds(prev => toggleCreatorItems(prev, ids));
+  }
+
+  function toggleCreator(creator: DocumentCreatorOption) {
+    toggleItems([...new Set(creator.lineOptions?.flatMap(option => option.itemIds) ?? creator.itemIds)]);
   }
 
   function togglePlatform(platform: string) {
@@ -273,11 +247,11 @@ export function DocumentCreatorSelectionDialog({
   }
 
   function selectAll() {
-    setSelectedKeys(new Set(creators.map((creator) => creator.creatorKey)));
+    setSelectedIds(seedCreatorItemSelection(creators));
   }
 
   function selectNone() {
-    setSelectedKeys(new Set());
+    setSelectedIds(new Set());
   }
 
   function selectAllPlatforms() {
@@ -307,7 +281,7 @@ export function DocumentCreatorSelectionDialog({
     if (!await persistOptions([], true)) return;
     setProposalOptions([]);
     setActiveOption(0);
-    setSelectedKeys(creatorKeysFromItemIds(creators, workspaceItemIds));
+    setSelectedIds(seedCreatorItemSelection(creators, workspaceItemIds));
   }
   async function handleConfirm() {
     if (confirmDisabled || noneSelected || noPlatformsSelected || invalidOptions || optionsLoading || optionsSaving) return;
@@ -323,7 +297,7 @@ export function DocumentCreatorSelectionDialog({
     onOpenChange(false);
   }
 
-  const creatorSummaries = useMemo(() => new Map(creators.map(creator => [creator.creatorKey, summarizeSelection(creator.itemIds)])), [creators, summarizeSelection]);
+  const creatorSummaries = useMemo(() => new Map(creators.map(creator => [creator.creatorKey, summarizeSelection(creator.itemIds.some(id => selectedIds.has(id)) ? creator.itemIds.filter(id => selectedIds.has(id)) : creator.itemIds)])), [creators, summarizeSelection, selectedIds]);
   const normalizedQuery = query.trim().toLocaleLowerCase();
   const visibleCreators = creators.filter(creator => `${creator.name} ${creator.handle} ${creator.meta ?? ""}`.toLocaleLowerCase().includes(normalizedQuery));
   const clientMetrics = summary.metrics.filter(metric => metric.scope === "client");
@@ -378,18 +352,34 @@ export function DocumentCreatorSelectionDialog({
         {noPlatformsSelected ? <p role="status" className={styles.selectionWarning}>No platform is included. Select at least one platform to continue.</p> : null}
         <ul className={styles.selectionRows} aria-label="Creators to include">
           {visibleCreators.map(creator => {
-            const checked = selectedKeys.has(creator.creatorKey);
+            const checked = creator.itemIds.every(id => selectedIds.has(id));
+            const partial = !checked && creator.itemIds.some(id => selectedIds.has(id));
+            const options = creator.lineOptions ?? [];
+            const expandable = options.length > 1;
+            const expanded = expandedCreators.has(creator.creatorKey);
+            const selectedOptions = options.filter(option => option.itemIds.every(id => selectedIds.has(id))).length;
             const metrics = creatorSummaries.get(creator.creatorKey)?.metrics ?? [];
             const rowMetrics = metrics.filter(metric => metric.label === "Client cost" || metric.label === "Est. reach");
-            return <li key={creator.creatorKey}><label className={`${styles.selectionRow} ${checked ? styles.selectedRow : ""}`}>
-              <input type="checkbox" checked={checked} onChange={() => toggleCreator(creator.creatorKey)} aria-label={`Include ${creator.name}`} />
+            return <li key={creator.creatorKey}><div className={styles.creatorChoiceHeader}><label className={`${styles.selectionRow} ${checked || partial ? styles.selectedRow : ""}`}>
+              <input type="checkbox" checked={checked} ref={element => { if (element) element.indeterminate = partial; }} onChange={() => toggleCreator(creator)} aria-label={`Include ${creator.name}`} />
               <span className={styles.avatar}>{creator.avatarUrl && !failedAvatars.has(creator.avatarUrl) ? <img src={creator.avatarUrl} alt="" onError={() => setFailedAvatars(current => new Set(current).add(creator.avatarUrl!))} /> : initials(creator.name, creator.handle)}</span>
               <span className={styles.selectionIdentity}><strong dir="auto">{creator.name}</strong>
                 {creator.handle !== "—" && creator.name.replace(/^@/, "") !== creator.handle.replace(/^@/, "") ? <small>{creator.handle}</small> : null}
                 <span className={styles.rowPlatforms}>{(creator.platforms ?? []).map(platform => <span key={platform} data-included={selectedPlatforms.has(canonicalPlatformKey(platform))}>{platformLabel(platform)}</span>)}{!creator.platforms?.length && creator.meta ? creator.meta : null}</span>
+                {expandable && <small className={styles.optionSelectionCount}>{selectedOptions} of {options.length} options selected</small>}
               </span>
               {rowMetrics.map(metric => <span key={metric.label} className={styles.rowFigure}><small>{metric.label}</small><b>{figure(metric.value)}</b></span>)}
-            </label></li>;
+            </label>{expandable && <button type="button" className={styles.expandOptions} aria-label={`${expanded ? "Hide" : "Show"} options for ${creator.name}`} aria-expanded={expanded} onClick={() => setExpandedCreators(current => { const next = new Set(current); if (next.has(creator.creatorKey)) next.delete(creator.creatorKey); else next.add(creator.creatorKey); return next; })}><ChevronDownIcon size={16} aria-hidden="true" /><span>{expanded ? "Hide options" : "Choose options"}</span></button>}</div>
+              {expandable && expanded && <ul className={styles.lineOptions} aria-label={`Options for ${creator.name}`}>{options.map(option => {
+                const included = option.itemIds.every(id => selectedIds.has(id));
+                const price = summarizeSelection(option.itemIds).metrics.find(metric => metric.label === "Client cost");
+                return <li key={option.key}><label className={`${styles.lineOption} ${included ? styles.includedOption : ""}`}>
+                  <input type="checkbox" checked={included} onChange={() => toggleItems(option.itemIds)} aria-label={`Include ${option.label} for ${creator.name}`} />
+                  <span><strong>{option.label}</strong><small>{option.description || "No deliverables specified"}</small>{option.packageLabel && <small>Package: {option.packageLabel} · selected together</small>}</span>
+                  {price && <span className={styles.rowFigure}><small>Client cost</small><b>{figure(price.value)}</b></span>}
+                </label></li>;
+              })}</ul>}
+            </li>;
           })}
         </ul>
         {visibleCreators.length === 0 ? <p className={styles.empty}>{creators.length === 0 ? "No creators available for this document." : `No creator matches “${query}”. Clear the search to see all ${creators.length}.`}</p> : null}

@@ -10,6 +10,7 @@ import {
   unionQuotationCreatorGroupPlatforms,
 } from "@/lib/quotations/quotation-creator-platform-options";
 import type { DocumentCreatorOption } from "./document-creator-selection-dialog";
+import { quotationLineOptions } from "./quotation-line-options";
 
 function normalizePlatformList(platforms: Array<string | null | undefined>): string[] {
   const keys = new Set<string>();
@@ -58,6 +59,7 @@ export function buildQuotationCreatorOptions(
 ): DocumentCreatorOption[] {
   const byKey = new Map<string, DocumentCreatorOption>();
   const itemsByKey = new Map<string, QuotationItemRow[]>();
+  const lineOptions = quotationLineOptions(items);
 
   for (const item of items) {
     const key = quotationCreatorDuplicateKey(item);
@@ -77,6 +79,10 @@ export function buildQuotationCreatorOptions(
     byKey.set(key, {
       creatorKey: key,
       itemIds: groupItems.map((row) => row.id),
+      lineOptions: [...new Map([...groupItems].sort((a, b) => a.sort_order - b.sort_order).map(row => {
+        const option = lineOptions.get(row.id)!;
+        return [option.key, option];
+      })).values()],
       name: item.creator_name?.trim() || handle,
       handle,
       avatarUrl: item.profile_image_url ?? null,

@@ -1777,3 +1777,22 @@ console.log("quotation-document.test.ts passed");
   const off = buildQuotationDocument(detail, { showOriginalCurrency: false });
   assert.equal(off.rows[0].clientCost, "325,000 EGP");
 }
+// A creator can contribute a different quotation line to each proposal option.
+{
+  const detail = mockDetail({items:[
+    mockItem({id:"same-creator-reel",unified_id:"same-creator",creator_name:"Same Creator",service_description:"Reel only",revenue:1000,revenue_egp:1000}),
+    mockItem({id:"same-creator-story",unified_id:"same-creator",creator_name:"Same Creator",service_description:"Story only",revenue:2000,revenue_egp:2000}),
+  ]});
+  const doc = buildQuotationDocument(detail,{template:"creator-list-package",proposalOptions:[
+    {itemIds:["same-creator-reel"],recommended:true},
+    {itemIds:["same-creator-story"],recommended:false},
+  ]});
+  assert.equal(doc.summary.creatorCount,1);
+  for (const [index,id] of ["same-creator-reel","same-creator-story"].entries()) {
+    const option = doc.proposalOptions![index].document;
+    assert.equal(option.summary.creatorCount,1);
+    assert.deepEqual(option.creatorGroups.flatMap(group=>group.itemIds),[id]);
+    assert.equal(option.summary.grandTotal,buildQuotationDocument(detail,{template:"creator-list-package",itemIds:[id]}).summary.grandTotal);
+  }
+  assert.notEqual(doc.proposalOptions![0].document.summary.grandTotal,doc.proposalOptions![1].document.summary.grandTotal);
+}
