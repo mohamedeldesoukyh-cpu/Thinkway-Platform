@@ -142,6 +142,10 @@ export function summarizeQuotationSelection(
       value: money(costEgp, "cost"),
     },
     {
+      label: "Followers",
+      value: formatCreatorCount(forecast.audienceSize > 0 ? forecast.audienceSize : null) || "—",
+    },
+    {
       label: "Est. reach",
       value: formatCreatorCount(forecast.estimatedReach > 0 ? forecast.estimatedReach : null) || "—",
     },

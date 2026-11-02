@@ -318,7 +318,7 @@ export function DocumentCreatorSelectionDialog({
   const visibleCreators = creators.filter(creator => `${creator.name} ${creator.handle} ${creator.meta ?? ""}`.toLocaleLowerCase().includes(normalizedQuery));
   const clientMetrics = summary.metrics.filter(metric => metric.scope === "client");
   const internalMetrics = summary.metrics.filter(metric => metric.scope === "internal");
-  const audienceMetrics = summary.metrics.filter(metric => !metric.scope);
+  const audienceMetrics = summary.metrics.filter(metric => !metric.scope && metric.label !== "Followers");
   const figure = (value: string) => { const match = /^([A-Z]{3})\s+(.+)$/.exec(value); return match ? <><span className={styles.currency}>{match[1]}</span>{match[2]}</> : value; };
   const metricList = (metrics: DocumentSelectionSummary["metrics"]) => <dl className={styles.figures}>{metrics.map(metric => <div key={metric.label} className={metric.label === "Total incl. AF" ? styles.totalFigure : undefined}><dt>{metric.label}</dt><dd>{metric.value.split(" · ").map(value => <span className={styles.moneyLine} key={value}>{value}</span>)}</dd></div>)}</dl>;
 
@@ -378,6 +378,7 @@ export function DocumentCreatorSelectionDialog({
             const expanded = expandedCreators.has(creator.creatorKey);
             const selectedOptions = options.filter(option => option.itemIds.every(id => selectedIds.has(id))).length;
             const metrics = creatorSummaries.get(creator.creatorKey)?.metrics ?? [];
+            const followers = metrics.find(metric => metric.label === "Followers" || metric.label === "Audience")?.value ?? "—";
             const rowMetrics = metrics.filter(metric => (!rateCardActive && metric.label === "Client cost") || metric.label === "Est. reach");
             return <li key={creator.creatorKey}><div className={styles.creatorChoiceHeader}><label className={`${styles.selectionRow} ${checked || partial ? styles.selectedRow : ""}`}>
               <input type="checkbox" checked={checked} ref={element => { if (element) element.indeterminate = partial; }} onChange={() => toggleCreator(creator)} aria-label={`Include ${creator.name}`} />
@@ -387,6 +388,7 @@ export function DocumentCreatorSelectionDialog({
                 <span className={styles.rowPlatforms}>{(creator.platforms ?? []).map(platform => <span key={platform} data-included={selectedPlatforms.has(canonicalPlatformKey(platform))}>{platformLabel(platform)}</span>)}{!creator.platforms?.length && creator.meta ? creator.meta : null}</span>
                 {expandable && <small className={styles.optionSelectionCount}>{rateCardActive ? "All options included when selected" : `${selectedOptions} of ${options.length} options selected`}</small>}
               </span>
+              <span className={`${styles.rowFigure} ${styles.rowFollowers}`}><small>Followers</small><b>{followers}</b></span>
               {rowMetrics.map(metric => <span key={metric.label} className={styles.rowFigure}><small>{metric.label}</small><b>{figure(metric.value)}</b></span>)}
             </label>{expandable && <button type="button" className={styles.expandOptions} aria-label={`${expanded ? "Hide" : "Show"} options for ${creator.name}`} aria-expanded={expanded} onClick={() => setExpandedCreators(current => { const next = new Set(current); if (next.has(creator.creatorKey)) next.delete(creator.creatorKey); else next.add(creator.creatorKey); return next; })}><ChevronDownIcon size={16} aria-hidden="true" /><span>{expanded ? "Hide options" : rateCardActive ? "View options" : "Choose options"}</span></button>}</div>
               {expandable && expanded && <ul className={styles.lineOptions} aria-label={`Options for ${creator.name}`}>{options.map(option => {
