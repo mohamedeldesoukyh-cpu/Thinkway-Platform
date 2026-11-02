@@ -37,7 +37,7 @@ export function QuotationConvertedTotal({ source, itemIds }: { source: Quotation
 
   return <section className={styles.convertedZone} aria-label="Selected total in chosen currency">
     <div className={styles.convertedHeading}>
-      <div><h3>Selected total · converted currency</h3><p>Total for the selected lines, including agency fee.</p></div>
+      <h3>Selected total · converted currency</h3>
       <label>Currency<select aria-label="Total currency" value={currency} onChange={event => setCurrency(event.target.value)}>{currencies.map(code => <option key={code} value={code}>{code}{code === source.currency.toUpperCase() ? " · Quotation currency" : ""}</option>)}</select></label>
     </div>
     <div aria-live="polite" aria-busy={!rate && !current?.error}>
