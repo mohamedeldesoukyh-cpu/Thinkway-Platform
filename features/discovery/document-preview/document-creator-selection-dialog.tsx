@@ -307,7 +307,7 @@ export function DocumentCreatorSelectionDialog({
   const internalMetrics = summary.metrics.filter(metric => metric.scope === "internal");
   const audienceMetrics = summary.metrics.filter(metric => !metric.scope);
   const figure = (value: string) => { const match = /^([A-Z]{3})\s+(.+)$/.exec(value); return match ? <><span className={styles.currency}>{match[1]}</span>{match[2]}</> : value; };
-  const metricList = (metrics: DocumentSelectionSummary["metrics"]) => <dl className={styles.figures}>{metrics.map(metric => <div key={metric.label} className={metric.label === "Total incl. AF" ? styles.totalFigure : undefined}><dt>{metric.label}</dt><dd>{figure(metric.value)}</dd></div>)}</dl>;
+  const metricList = (metrics: DocumentSelectionSummary["metrics"]) => <dl className={styles.figures}>{metrics.map(metric => <div key={metric.label} className={metric.label === "Total incl. AF" ? styles.totalFigure : undefined}><dt>{metric.label}</dt><dd>{metric.value.split(" · ").map(value => <span className={styles.moneyLine} key={value}>{value}</span>)}</dd></div>)}</dl>;
 
   return <Dialog open={open} onOpenChange={onOpenChange}>
     <DialogContent className={`${styles.dialog} ${styles.selectionDialog}`} overlayClassName={styles.overlay} showCloseButton={false}
