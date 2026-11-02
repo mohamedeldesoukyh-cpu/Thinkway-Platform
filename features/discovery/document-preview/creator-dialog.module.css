@@ -158,6 +158,8 @@
 .optionsHint { flex:1; color:var(--oc-muted); font-size:11px; }
 .selectionDialog .proposalHeading strong { font-size:12px; }
 .selectionDialog .optionTabs { flex-basis:100%; gap:5px; margin:0; max-height:72px; overflow-y:auto; }
+.selectionDialog .optionTabs .button[data-recommended="true"] { border-color:#c99524 !important; box-shadow:inset 0 0 0 1px #c99524; }
+.selectionDialog .optionTabs .button[data-recommended="true"]:hover { border-color:#b58116 !important; box-shadow:inset 0 0 0 1px #b58116; }
 .optionActions,.optionSaveActions { display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
 .optionActions strong { font-size:12px; margin-inline-end:4px; }
 .optionSaveActions { margin-inline-start:auto; }
@@ -209,3 +211,4 @@
  .selectionDialog .proposalOptions { padding:8px 12px; }
  .optionSaveActions { margin-inline-start:0; }
 }
+
