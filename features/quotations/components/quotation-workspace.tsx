@@ -37,6 +37,7 @@ import {
   buildQuotationCreatorOptions,
   enrichQuotationCreatorOptionsWithLinkedPlatforms,
 } from "@/features/discovery/document-preview/build-creator-options";
+import { loadQuotationDisplayRate } from "@/features/discovery/document-preview/quotation-display-rate";
 import { summarizeQuotationSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import { OtherServiceButton } from "@/features/other-services/other-service-button";
@@ -191,10 +192,10 @@ function QuotationWorkspaceContent({
 
   useEffect(() => {
     let cancelled = false;
-    void resolveCommercialRateToEgp(displayCurrency, detail.issue_date).then((res) => {
-      if (cancelled || !res.ok || !res.data) return;
-      setDisplayFxRateToEgp(res.data.rate);
-    });
+    void loadQuotationDisplayRate(displayCurrency, detail.issue_date).then((res) => {
+      if (cancelled) return;
+      setDisplayFxRateToEgp(res.rate);
+    }).catch(() => { /* The selector shows its own retryable rate error. */ });
     return () => {
       cancelled = true;
     };

@@ -11,6 +11,34 @@ import type { OperationalBillingRow } from "@/lib/billing/operational-billing-ro
 const draft: QuotationRowDraft = { id: "creator", mode: "cost_revenue", cost: 1000, revenue: 1500, costCurrency: "USD", gpPct: 0, gpValue: 500, afPct: 10, fxRateToEgp: 50 };
 const conversion = { from: "USD", to: "EGP", sourceRateToEgp: 50, targetRateToEgp: 1 };
 
+test("all six currencies preserve identity and reciprocal cross-currency conversions", () => {
+  const rates = { EGP: 1, USD: 58, AED: 15.5, SAR: 15.46666667, EUR: 63.04347826, GBP: 73.41772152 };
+  for (const [from, source] of Object.entries(rates)) {
+    for (const [to, target] of Object.entries(rates)) {
+      const forward = creatorFxRate({ from, to, sourceRateToEgp: source, targetRateToEgp: target });
+      const reverse = creatorFxRate({ from: to, to: from, sourceRateToEgp: target, targetRateToEgp: source });
+      assert.ok(Math.abs(forward * reverse - 1) < 1e-12, `${from}/${to} round trip`);
+      if (from === to) assert.equal(forward, 1);
+      const rows = [{ ...draft, costCurrency: from, fxRateToEgp: source, cost: 100, revenue: 200 }];
+      const total = computeQuotationDisplayTotals(rows, to, target);
+      assert.equal(total.revenue, Math.round((200 * forward + Number.EPSILON) * 100) / 100);
+      assert.equal(total.af, Math.round((20 * forward + Number.EPSILON) * 100) / 100);
+    }
+  }
+});
+
+test("mixed-currency totals preserve native amounts despite historical rate differences", () => {
+  const rows = [
+    { ...draft, costCurrency: "AED", fxRateToEgp: 14, revenue: 1000, cost: 500 },
+    { ...draft, costCurrency: "USD", fxRateToEgp: 50, revenue: 500, cost: 300 },
+  ];
+  const aed = computeQuotationDisplayTotals(rows, "AED", 15.5);
+  assert.equal(aed.revenue, 2612.9);
+  assert.equal(aed.af, 261.29);
+  assert.equal(aed.clientCost, 2874.19);
+  assert.equal(computeQuotationDisplayTotals([], "GBP", 73.4).clientCost, 0);
+});
+
 test("new creators use the system rate until a side is overridden", () => {
   assert.equal(creatorFxAmount(1000, conversion), 50000);
   assert.equal(creatorFxAmount(1000, { ...conversion, sourceRateToEgp: 55 }), 55000);
