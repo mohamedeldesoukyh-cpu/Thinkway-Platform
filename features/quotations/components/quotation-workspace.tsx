@@ -890,30 +890,32 @@ function QuotationWorkspaceContent({
               <QuotationRateCardToolbarButton />
               {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && <OtherServiceButton scope="quotation" documentId={detail.id} currency={displayCurrency} onAdded={refreshQuotationLines} />}
               {detail.shortlist_id && <Link className="tw-b sm" href={`/discovery/shortlists/${detail.shortlist_id}`}><QuotationText>Open shortlist</QuotationText></Link>}
-              <QuotationCommercialEntry
-                quotationId={detail.id}
-                items={detail.items}
-                drafts={drafts}
-                onDraftChange={updateDraft}
-                onDraftsMerge={mergeDrafts}
-                canManage={detail.canManage}
-                triggerClassName="tw-b sm"
-                displayCurrency={displayCurrency}
-                displayFxRateToEgp={displayFxRateToEgp}
-                issueDate={detail.issue_date}
-                open={commercialWorkspaceOpen}
-                onOpenChange={setCommercialWorkspaceOpen}
-              />
-              {detail.canManage ? (
-                <AddCreatorsToQuotationButton
+              <div className="q-lines__actions">
+                {detail.canManage ? (
+                  <AddCreatorsToQuotationButton
+                    quotationId={detail.id}
+                    onAdded={handleCreatorsAdded}
+                    label="+ Add creator"
+                    open={addCreatorsOpen}
+                    onOpenChange={setAddCreatorsOpen}
+                    triggerClassName="tw-b sm pri"
+                  />
+                ) : null}
+                <QuotationCommercialEntry
                   quotationId={detail.id}
-                  onAdded={handleCreatorsAdded}
-                  label="+ Add creator"
-                  open={addCreatorsOpen}
-                  onOpenChange={setAddCreatorsOpen}
-                  triggerClassName="tw-b sm pri"
+                  items={detail.items}
+                  drafts={drafts}
+                  onDraftChange={updateDraft}
+                  onDraftsMerge={mergeDrafts}
+                  canManage={detail.canManage}
+                  triggerClassName="tw-b sm q-commercial-trigger"
+                  displayCurrency={displayCurrency}
+                  displayFxRateToEgp={displayFxRateToEgp}
+                  issueDate={detail.issue_date}
+                  open={commercialWorkspaceOpen}
+                  onOpenChange={setCommercialWorkspaceOpen}
                 />
-              ) : null}
+              </div>
             </div>
             <div className="creators-list">
               <PlatformErrorBoundary

@@ -543,3 +543,9 @@
 .tq-redesign .q-bottom-editor__title b { flex-shrink:0; max-width:40%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:13px; font-weight:600; }
 .tq-redesign .q-bottom-editor__title span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:12px; font-weight:400; color:var(--q-muted,#64748b); }
 .tq-redesign .q-bottom-editor__header > button { flex-shrink:0; min-height:28px; padding:3px 10px; font-size:12px; line-height:20px; }
+/* Keep the commercial entry visible at the right edge of the creator table. */
+.tq-redesign .q-lines__actions { display:flex; align-items:center; flex-wrap:wrap; gap:10px; width:100%; }
+.tq-redesign.discovery-suite .q-lines__h .tw-b.q-commercial-trigger { margin-inline-start:auto; min-height:36px; padding:0 14px; border:2px solid #be123c; border-radius:8px; background:#fff; color:#9f1239; font-weight:600; box-shadow:none; }
+.tq-redesign.discovery-suite .q-lines__h .tw-b.q-commercial-trigger:hover { background:#f8fafc; border-color:#9f1239; color:#881337; }
+.tq-redesign.discovery-suite .q-lines__h .tw-b.q-commercial-trigger:focus-visible { outline:2px solid #be123c; outline-offset:3px; }
+@media(max-width:900px) { .tq-redesign.discovery-suite .q-lines__h .tw-b.q-commercial-trigger { min-height:44px; } }
