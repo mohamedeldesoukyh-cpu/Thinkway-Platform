@@ -312,6 +312,7 @@ export function QuotationWorkspaceHeader({
               <QuotationDocumentOutputToolbar
                 quotationId={detail.id}
                 serialNumber={detail.serial_number}
+                issueDate={detail.issue_date}
                 items={detail.items}
                 currency={displayCurrency ?? detail.currency}
                 displayFxRateToEgp={displayFxRateToEgp}

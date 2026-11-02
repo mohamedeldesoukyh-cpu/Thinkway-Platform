@@ -1,0 +1,49 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { resolveCommercialRateToEgp } from "@/features/quotations/actions";
+import type { QuotationItemRow } from "@/features/quotations/types";
+import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
+import { summarizeQuotationSelection } from "./document-selection-summary";
+import styles from "./creator-dialog.module.css";
+
+export type QuotationTotalSource = {
+  items: QuotationItemRow[];
+  currency: string;
+  issueDate?: string | null;
+};
+
+export function QuotationConvertedTotal({ source, itemIds }: { source: QuotationTotalSource; itemIds: string[] }) {
+  const [currency, setCurrency] = useState(() => (source.currency || "EGP").toUpperCase());
+  const [resolved, setResolved] = useState<{ currency: string; date?: string | null; rate?: number; error?: string } | null>(null);
+  const [attempt, setAttempt] = useState(0);
+  useEffect(() => {
+    if (currency === "EGP") return;
+    let cancelled = false;
+    resolveCommercialRateToEgp(currency, source.issueDate).then(result => {
+      if (cancelled) return;
+      const rate = result.ok ? result.data?.rate : undefined;
+      setResolved({ currency, date: source.issueDate, ...(rate && Number.isFinite(rate) && rate > 0 ? {rate} : {error: `No exchange rate available for ${currency}.`}) });
+    }).catch(() => {
+      if (!cancelled) setResolved({ currency, date: source.issueDate, error: `Could not load the ${currency} exchange rate.` });
+    });
+    return () => { cancelled = true; };
+  }, [currency, source.issueDate, attempt]);
+
+  const current = resolved?.currency === currency && resolved.date === source.issueDate ? resolved : null;
+  const rate = currency === "EGP" ? 1 : current?.rate;
+  const metrics = rate ? summarizeQuotationSelection(source.items, itemIds, currency, { displayFxRateToEgp: rate }).metrics.filter(metric => metric.scope === "client") : [];
+  const currencies = [...new Set([...COMMERCIAL_CURRENCIES, (source.currency || "EGP").toUpperCase()])];
+
+  return <section className={styles.convertedZone} aria-label="Selected total in chosen currency">
+    <div className={styles.convertedHeading}>
+      <div><h3>Selected total · converted currency</h3><p>Total for the selected lines, including agency fee.</p></div>
+      <label>Currency<select aria-label="Total currency" value={currency} onChange={event => setCurrency(event.target.value)}>{currencies.map(code => <option key={code} value={code}>{code}{code === source.currency.toUpperCase() ? " · Quotation currency" : ""}</option>)}</select></label>
+    </div>
+    <div aria-live="polite" aria-busy={!rate && !current?.error}>
+      {rate ? <dl className={styles.convertedFigures}>{metrics.map(metric => <div key={metric.label} className={metric.label === "Total incl. AF" ? styles.convertedGrandTotal : undefined}><dt>{metric.label}</dt><dd>{metric.value}</dd></div>)}</dl>
+        : current?.error ? <p role="status">{current.error} <button type="button" className={styles.button} onClick={() => {setResolved(null); setAttempt(value => value + 1);}}>Retry</button></p>
+        : <p role="status">Loading {currency} total…</p>}
+    </div>
+  </section>;
+}

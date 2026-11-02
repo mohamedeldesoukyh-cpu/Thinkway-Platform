@@ -50,6 +50,7 @@ type Props = {
   serialNumber?: string | null;
   items: QuotationItemRow[];
   currency?: string | null;
+  issueDate?: string | null;
   showOriginalCurrency?: boolean;
   displayFxRateToEgp?: number;
   exportTemplate: QuotationTemplateVariant;
@@ -100,6 +101,7 @@ export function QuotationPreviewToolbarActions({
   serialNumber,
   items,
   currency,
+  issueDate,
   showOriginalCurrency,
   displayFxRateToEgp,
   exportTemplate,
@@ -271,6 +273,7 @@ export function QuotationPreviewToolbarActions({
         workspaceItemIds={selectedItemIds}
         onWorkspaceSelectionChange={onSelectedItemIdsChange}
         summarizeSelection={summarizeSelection}
+        quotationTotalSource={{items, currency: currency || "EGP", issueDate}}
         proposalStorageKey={isQuotationListTemplate(pending?.template ?? exportTemplate) ? quotationId : undefined}
         title="Select creators for quotation"
         confirmLabel={pending?.type === "export" ? "Export" : "Open preview"}

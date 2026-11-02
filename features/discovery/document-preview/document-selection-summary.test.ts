@@ -45,3 +45,17 @@ test("selector preserves native currencies and converts EGP before applying a cu
  assert.equal(metrics(["aed"],false)["Client cost"],"EGP 62,000");
  assert.equal(metrics(["usd"],true)["Client cost"],"USD 6,500");
 });
+
+test("converted selection total combines mixed currencies and follows the selected lines", () => {
+ const rows = [
+  {id:"aed",unified_id:"a",cost_currency:"AED",revenue:1000,af_value:100,revenue_egp:14000,af_value_egp:1400,cost_egp:7000},
+  {id:"usd",unified_id:"b",cost_currency:"USD",revenue:500,af_value:50,revenue_egp:25000,af_value_egp:2500,cost_egp:15000},
+ ] as QuotationItemRow[];
+ const values=(ids:string[],currency:string,rate:number)=>Object.fromEntries(summarizeQuotationSelection(rows,ids,currency,{displayFxRateToEgp:rate}).metrics.map(metric=>[metric.label,metric.value]));
+ assert.equal(values(["aed","usd"],"EGP",1)["Total incl. AF"],"EGP 42,900");
+ assert.equal(values(["aed","usd"],"USD",50)["Client cost"],"USD 780");
+ assert.equal(values(["aed","usd"],"USD",50)["Agency fee"],"USD 78");
+ assert.equal(values(["aed","usd"],"USD",50)["Total incl. AF"],"USD 858");
+ assert.equal(values(["aed"],"USD",50)["Total incl. AF"],"USD 308");
+ assert.equal(values([],"AED",14)["Total incl. AF"],"AED 0");
+});

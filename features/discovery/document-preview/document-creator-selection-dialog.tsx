@@ -20,6 +20,7 @@ import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { sortPlatformsStable } from "@/lib/creators/creator-centric";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
 import type { DocumentSelectionSummary } from "./document-selection-summary";
+import { QuotationConvertedTotal, type QuotationTotalSource } from "./quotation-converted-total";
 
 export type DocumentCreatorOption = {
   /** Stable creator key used for UI selection. */
@@ -49,6 +50,7 @@ type Props = {
   onWorkspaceSelectionChange?: (itemIds: string[]) => void;
   /** Live summary derived from the current dialog selection. */
   summarizeSelection: (itemIds: string[]) => DocumentSelectionSummary;
+  quotationTotalSource?: QuotationTotalSource;
   title?: string;
   description?: string;
   confirmLabel?: string;
@@ -91,6 +93,7 @@ export function DocumentCreatorSelectionDialog({
   workspaceItemIds,
   onWorkspaceSelectionChange,
   summarizeSelection,
+  quotationTotalSource,
   title = "Select creators for preview",
   description = "Only the creators and platforms selected here appear in the preview and the exports. Totals and numbering update as you change the selection.",
   confirmLabel = "Open preview",
@@ -333,6 +336,7 @@ export function DocumentCreatorSelectionDialog({
         {clientMetrics.length || internalMetrics.length ? <div className={styles.zones}>
           {clientMetrics.length ? <section className={`${styles.zone} ${styles.clientZone}`} aria-label="Client-facing totals"><h3>Client-facing &middot; quotation prices</h3>{metricList(clientMetrics)}</section> : null}
           {internalMetrics.length ? <section className={`${styles.zone} ${styles.internalZone}`} aria-label="Internal totals"><h3><LockKeyholeIcon size={12} aria-hidden="true" />Internal &middot; never in client exports</h3>{metricList(internalMetrics)}</section> : null}
+          {open && quotationTotalSource && <QuotationConvertedTotal key={quotationTotalSource.currency} source={quotationTotalSource} itemIds={selectedItemIds} />}
         </div> : null}
         <div className={styles.selectionBar}>
           <span className={styles.selectionCount} aria-live="polite">{selectedCount} <span>of {creators.length} creators selected</span></span>

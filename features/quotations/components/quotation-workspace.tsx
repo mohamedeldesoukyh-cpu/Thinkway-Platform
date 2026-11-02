@@ -1004,6 +1004,7 @@ function QuotationWorkspaceContent({
         workspaceItemIds={[...selectedIds]}
         onWorkspaceSelectionChange={(itemIds) => setSelectedIds(new Set(itemIds))}
         summarizeSelection={summarizePreviewSelection}
+        quotationTotalSource={{items: detail.items, currency: detail.currency || "EGP", issueDate: detail.issue_date}}
         proposalStorageKey={isQuotationListTemplate(exportTemplate) ? detail.id : undefined}
         title="Select creators for quotation"
         confirmLabel="Open preview"
