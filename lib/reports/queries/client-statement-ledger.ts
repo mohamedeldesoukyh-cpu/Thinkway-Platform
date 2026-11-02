@@ -3,7 +3,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { loadCollectionInvoices } from "@/lib/collections/queries/load-collection-invoices";
 import {
   applyRunningBalance,
-  filterLinesByDateRange,
   sortLedgerLines,
   summarizeLedger,
   type RawLedgerLine,
@@ -14,8 +13,11 @@ export type ClientStatementLedgerResult = {
   entity_name: string;
   entity_code: string | null;
   group_name: string | null;
+  entity_address: string | null;
+  entity_tax_id: string | null;
   currency: string;
   lines: StatementLedgerLine[];
+  history_lines: StatementLedgerLine[];
   totals: ReturnType<typeof summarizeLedger>;
 };
 
@@ -36,7 +38,7 @@ export async function loadClientStatementLedger(
 ): Promise<ClientStatementLedgerResult | null> {
   const { data: client, error: clientError } = await supabase
     .from("clients")
-    .select("id, name, document_number, group:groups(name)")
+    .select("id, name, document_number, billing_address, tax_id, group:groups(name)")
     .eq("id", clientId)
     .maybeSingle();
 
@@ -69,6 +71,7 @@ export async function loadClientStatementLedger(
       date,
       document_number: invoice.document_number ?? invoice.id,
       campaign_name: invoice.campaign_name ?? null,
+      due_date: invoice.due_date,
       debit: invoice.total,
       credit: 0,
       currency: invoice.currency,
@@ -118,15 +121,13 @@ export async function loadClientStatementLedger(
     "USD";
 
   const sorted = sortLedgerLines(rawLines);
-  const filtered = filterLinesByDateRange(
-    sorted,
-    options.fromDate ?? null,
-    options.toDate ?? null
-  );
-  const lines = applyRunningBalance(filtered, "ar");
+  const history_lines = applyRunningBalance(sorted, "ar");
+  const lines = history_lines.filter(line => (!options.fromDate || line.date >= options.fromDate) && (!options.toDate || line.date <= options.toDate));
 
   const clientRow = client as {
     name: string;
+    billing_address?: Record<string, unknown> | string | null;
+    tax_id?: string | null;
     document_number: string | null;
     group?: { name: string } | { name: string }[] | null;
   };
@@ -139,8 +140,11 @@ export async function loadClientStatementLedger(
     entity_name: clientRow.name,
     entity_code: clientRow.document_number,
     group_name,
+    entity_address: typeof clientRow.billing_address === "string" ? clientRow.billing_address : clientRow.billing_address ? ["line1", "line2", "city", "state", "postal_code", "country"].map(key => clientRow.billing_address && typeof clientRow.billing_address === "object" ? clientRow.billing_address[key] : null).filter(value => typeof value === "string" && value.trim()).join(", ") || null : null,
+    entity_tax_id: clientRow.tax_id ?? null,
     currency,
     lines,
-    totals: summarizeLedger(lines),
+    history_lines,
+    totals: { ...summarizeLedger(lines), closing_balance: history_lines.filter(line => !options.toDate || line.date <= options.toDate).at(-1)?.balance ?? 0 },
   };
 }

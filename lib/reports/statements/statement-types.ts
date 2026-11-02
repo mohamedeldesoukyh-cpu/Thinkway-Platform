@@ -4,6 +4,8 @@ import type { ClientTypeFilter } from "@/lib/analytics/filters/client-type-filte
 export type StatementType = "client" | "vendor";
 
 export type StatementLedgerLineKind =
+  | "credit_note"
+  | "debit_note"
   | "invoice"
   | "payment"
   | "vendor_io"
@@ -11,6 +13,7 @@ export type StatementLedgerLineKind =
 
 export type StatementLedgerLine = {
   date: string;
+  due_date?: string | null;
   document_number: string;
   campaign_name: string | null;
   debit: number;
@@ -56,11 +59,14 @@ export type StatementsReportData = {
   entity_name: string | null;
   entity_code: string | null;
   group_name: string | null;
+  entity_address?: string | null;
+  entity_tax_id?: string | null;
   from_date: string | null;
   to_date: string | null;
   currency: string;
   currency_context: AnalyticsCurrencyContext;
   lines: StatementLedgerLine[];
+  history_lines?: StatementLedgerLine[];
   totals: {
     total_debit: number;
     total_credit: number;

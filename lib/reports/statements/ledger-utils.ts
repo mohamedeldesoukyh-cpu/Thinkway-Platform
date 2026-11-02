@@ -6,9 +6,11 @@ export type RawLedgerLine = Omit<StatementLedgerLine, "balance">;
 
 const KIND_SORT_ORDER: Record<StatementLedgerLineKind, number> = {
   invoice: 0,
+  debit_note: 1,
+  credit_note: 2,
   vendor_io: 0,
-  payment: 1,
-  vendor_payment: 1,
+  payment: 3,
+  vendor_payment: 3,
 };
 
 export function sortLedgerLines(lines: RawLedgerLine[]): RawLedgerLine[] {

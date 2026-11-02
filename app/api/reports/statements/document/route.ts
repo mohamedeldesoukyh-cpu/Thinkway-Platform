@@ -6,6 +6,7 @@ import {
   buildStatementsReportHtml,
 } from "@/lib/reports/document/statements-report-document";
 import {
+  THINKWAY_REPORT_PDF_OPTIONS,
   createHtmlDocumentResponse,
   createPdfFromHtmlResponse,
   createXlsxDocumentResponse,
@@ -65,7 +66,10 @@ export async function GET(request: Request) {
     }
 
     const html = buildStatementsReportHtml(report);
-    return createPdfFromHtmlResponse(html, baseName, download);
+    return createPdfFromHtmlResponse(html, baseName, download, {
+      ...THINKWAY_REPORT_PDF_OPTIONS,
+      waitForDocumentAttribute: { name: "data-statement-ready", value: "true" },
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to export statement report";

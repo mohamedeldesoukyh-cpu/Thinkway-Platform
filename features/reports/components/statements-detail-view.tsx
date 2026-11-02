@@ -143,6 +143,7 @@ export function StatementsDetailView({ report }: Props) {
           </div>
 
           <ReportExportActions
+            statementActions
             apiPath="/api/reports/statements/document"
             fixedParams={exportFixedParams}
             disabled={!report.entity_id}

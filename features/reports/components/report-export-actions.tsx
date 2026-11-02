@@ -13,6 +13,7 @@ type Props = {
   /** When true, export buttons are disabled (e.g. no entity selected). */
   disabled?: boolean;
   disabledReason?: string;
+  statementActions?: boolean;
 };
 
 function buildExportUrl(
@@ -45,16 +46,17 @@ export function ReportExportActions({
   fixedParams = {},
   disabled = false,
   disabledReason,
+  statementActions = false,
 }: Props) {
   const searchParams = useSearchParams();
 
   const urls = useMemo(
     () => ({
       html: buildExportUrl(apiPath, searchParams, fixedParams, "html", false),
-      pdf: buildExportUrl(apiPath, searchParams, fixedParams, "pdf", false),
+      pdf: buildExportUrl(apiPath, searchParams, fixedParams, "pdf", statementActions),
       xlsx: buildExportUrl(apiPath, searchParams, fixedParams, "xlsx", true),
     }),
-    [apiPath, fixedParams, searchParams]
+    [apiPath, fixedParams, searchParams, statementActions]
   );
 
   return (
@@ -66,10 +68,10 @@ export function ReportExportActions({
         <>
           <Button size="sm" variant="outline" disabled title={disabledReason}>
             <FileTextIcon data-icon="inline-start" className="size-3.5" />
-            Preview HTML
+            {statementActions ? "Preview" : "Preview HTML"}
           </Button>
           <Button size="sm" variant="outline" disabled title={disabledReason}>
-            PDF
+            {statementActions ? "Download PDF" : "PDF"}
           </Button>
           <Button size="sm" variant="outline" disabled title={disabledReason}>
             <FileSpreadsheetIcon data-icon="inline-start" className="size-3.5" />
@@ -81,12 +83,12 @@ export function ReportExportActions({
           <Button size="sm" variant="outline" asChild>
             <a href={urls.html} target="_blank" rel="noopener noreferrer">
               <FileTextIcon data-icon="inline-start" className="size-3.5" />
-              Preview HTML
+              {statementActions ? "Preview" : "Preview HTML"}
             </a>
           </Button>
           <Button size="sm" variant="outline" asChild>
             <a href={urls.pdf} target="_blank" rel="noopener noreferrer">
-              PDF
+              {statementActions ? "Download PDF" : "PDF"}
             </a>
           </Button>
           <Button size="sm" variant="outline" asChild>

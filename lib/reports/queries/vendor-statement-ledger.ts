@@ -2,7 +2,6 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import {
   applyRunningBalance,
-  filterLinesByDateRange,
   sortLedgerLines,
   summarizeLedger,
   type RawLedgerLine,
@@ -16,6 +15,7 @@ export type VendorStatementLedgerResult = {
   entity_code: string | null;
   currency: string;
   lines: StatementLedgerLine[];
+  history_lines: StatementLedgerLine[];
   totals: ReturnType<typeof summarizeLedger>;
 };
 
@@ -152,12 +152,8 @@ export async function loadVendorStatementLedger(
     "USD";
 
   const sorted = sortLedgerLines(rawLines);
-  const filtered = filterLinesByDateRange(
-    sorted,
-    options.fromDate ?? null,
-    options.toDate ?? null
-  );
-  const lines = applyRunningBalance(filtered, "ap");
+  const history_lines = applyRunningBalance(sorted, "ap");
+  const lines = history_lines.filter(line => (!options.fromDate || line.date >= options.fromDate) && (!options.toDate || line.date <= options.toDate));
 
   return {
     entity_name:
@@ -165,6 +161,7 @@ export async function loadVendorStatementLedger(
     entity_code: typedVendor.document_number,
     currency,
     lines,
-    totals: summarizeLedger(lines),
+    history_lines,
+    totals: { ...summarizeLedger(lines), closing_balance: history_lines.filter(line => !options.toDate || line.date <= options.toDate).at(-1)?.balance ?? 0 },
   };
 }

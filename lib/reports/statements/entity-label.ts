@@ -1,3 +1,4 @@
+import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 export function formatGroupClientLabel(
   groupName: string | null | undefined,
   clientName: string | null | undefined
@@ -14,7 +15,7 @@ export function formatEntityScopeLine(
   entityName: string | null | undefined
 ): string {
   const label = formatGroupClientLabel(groupName, entityName) ?? entityName?.trim() ?? "Not selected";
-  const trimmedCode = code?.trim();
+  const trimmedCode = formatDocumentNumberForDisplay(code);
   if (trimmedCode) return `${trimmedCode} — ${label}`;
   return label;
 }
