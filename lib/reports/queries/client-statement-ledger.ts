@@ -1,3 +1,4 @@
+import { loadStatementCampaignLabels } from "@/lib/reports/statements/campaign-label";
 import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { loadCollectionInvoices } from "@/lib/collections/queries/load-collection-invoices";
@@ -62,6 +63,7 @@ export async function loadClientStatementLedger(
 
   if (paymentsError) throw new Error(paymentsError.message);
 
+  const campaignLabels = await loadStatementCampaignLabels(supabase, invoices);
   const rawLines: RawLedgerLine[] = [];
 
   for (const invoice of invoices) {
@@ -70,7 +72,7 @@ export async function loadClientStatementLedger(
     rawLines.push({
       date,
       document_number: invoice.document_number ?? invoice.id,
-      campaign_name: invoice.campaign_name ?? null,
+      campaign_name: campaignLabels.get(invoice.id) ?? invoice.campaign_name ?? null,
       due_date: invoice.due_date,
       debit: invoice.total,
       credit: 0,
@@ -107,7 +109,7 @@ export async function loadClientStatementLedger(
     rawLines.push({
       date,
       document_number: row.document_number || row.id,
-      campaign_name: campaign?.name ?? null,
+      campaign_name: (row.invoice_id ? campaignLabels.get(row.invoice_id) : null) ?? campaign?.name ?? null,
       debit: 0,
       credit: Number(row.amount),
       currency: row.currency,
