@@ -46,10 +46,10 @@ export async function loadCreatorPlatformOptions(
   }
 
   const cached = platformOptionsCache.get(key);
-  if (cached?.length) return mergeCreatorPlatformOptions(bootstrap, cached);
+  if (cached?.length) return mergeCreatorPlatformOptions(cached, bootstrap);
 
   const inflight = inflightRequests.get(key);
-  if (inflight) return inflight.then((platforms) => mergeCreatorPlatformOptions(bootstrap, platforms));
+  if (inflight) return inflight.then((platforms) => mergeCreatorPlatformOptions(platforms, bootstrap));
 
   const request = getQuotationCreatorPlatformOptions({
     unified_id: item.unified_id,
@@ -59,7 +59,7 @@ export async function loadCreatorPlatformOptions(
     .then((res) => {
       const fetched =
         res.ok && res.data?.platforms?.length ? res.data.platforms : [];
-      const platforms = mergeCreatorPlatformOptions(bootstrap, fetched);
+      const platforms = mergeCreatorPlatformOptions(fetched, bootstrap);
       if (platforms.length > 0) {
         platformOptionsCache.set(key, platforms);
       }

@@ -548,7 +548,7 @@ export async function getQuotationCreatorPlatformOptions(input: {
   const platforms = creator.platforms.map((p) => ({
     platform: canonicalPlatformKey(p.platform),
     handle: p.handle,
-    followers: p.follower_count ?? creator.metrics.followers.value,
+    followers: p.follower_count ?? null,
     engagement_rate: p.engagement_rate ?? creator.metrics.engagement_rate.value,
   }));
 

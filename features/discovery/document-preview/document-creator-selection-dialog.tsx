@@ -19,6 +19,7 @@ import {
 import { canonicalPlatformKey } from "@/lib/campaigns/deliverable-taxonomy";
 import { sortPlatformsStable } from "@/lib/creators/creator-centric";
 import { PlatformIcon } from "@/lib/performance/platform-icon";
+import { formatCreatorCount } from "@/features/discovery/components/creator-search/creator-search-utils";
 import type { DocumentSelectionSummary } from "./document-selection-summary";
 import { QuotationConvertedTotal, type QuotationTotalSource } from "./quotation-converted-total";
 
@@ -34,6 +35,7 @@ export type DocumentCreatorOption = {
   meta?: string | null;
   /** Linked / deliverable platforms for this creator (export filter chips). */
   platforms?: string[];
+  platformFollowers?: Array<{platform: string; followers: number | null}>;
 };
 
 type Props = {
@@ -378,7 +380,6 @@ export function DocumentCreatorSelectionDialog({
             const expanded = expandedCreators.has(creator.creatorKey);
             const selectedOptions = options.filter(option => option.itemIds.every(id => selectedIds.has(id))).length;
             const metrics = creatorSummaries.get(creator.creatorKey)?.metrics ?? [];
-            const followers = metrics.find(metric => metric.label === "Followers" || metric.label === "Audience")?.value ?? "—";
             const rowMetrics = metrics.filter(metric => (!rateCardActive && metric.label === "Client cost") || metric.label === "Est. reach");
             return <li key={creator.creatorKey}><div className={styles.creatorChoiceHeader}><label className={`${styles.selectionRow} ${checked || partial ? styles.selectedRow : ""}`}>
               <input type="checkbox" checked={checked} ref={element => { if (element) element.indeterminate = partial; }} onChange={() => toggleCreator(creator)} aria-label={`Include ${creator.name}`} />
@@ -388,7 +389,10 @@ export function DocumentCreatorSelectionDialog({
                 <span className={styles.rowPlatforms}>{(creator.platforms ?? []).map(platform => <span key={platform} data-included={selectedPlatforms.has(canonicalPlatformKey(platform))}>{platformLabel(platform)}</span>)}{!creator.platforms?.length && creator.meta ? creator.meta : null}</span>
                 {expandable && <small className={styles.optionSelectionCount}>{rateCardActive ? "All options included when selected" : `${selectedOptions} of ${options.length} options selected`}</small>}
               </span>
-              <span className={`${styles.rowFigure} ${styles.rowFollowers}`}><small>Followers</small><b>{followers}</b></span>
+              <span className={styles.rowFollowers} aria-label="Followers by platform">{(creator.platforms ?? []).map(platform => {
+                const count = creator.platformFollowers?.find(account => canonicalPlatformKey(account.platform) === canonicalPlatformKey(platform))?.followers;
+                return <span key={platform} className={styles.platformFollowers} title={`${platformLabel(platform)} followers`}><PlatformIcon platform={platform} size="xs" variant="logo" /><span>{formatCreatorCount(count)}</span></span>;
+              })}</span>
               {rowMetrics.map(metric => <span key={metric.label} className={styles.rowFigure}><small>{metric.label}</small><b>{figure(metric.value)}</b></span>)}
             </label>{expandable && <button type="button" className={styles.expandOptions} aria-label={`${expanded ? "Hide" : "Show"} options for ${creator.name}`} aria-expanded={expanded} onClick={() => setExpandedCreators(current => { const next = new Set(current); if (next.has(creator.creatorKey)) next.delete(creator.creatorKey); else next.add(creator.creatorKey); return next; })}><ChevronDownIcon size={16} aria-hidden="true" /><span>{expanded ? "Hide options" : rateCardActive ? "View options" : "Choose options"}</span></button>}</div>
               {expandable && expanded && <ul className={styles.lineOptions} aria-label={`Options for ${creator.name}`}>{options.map(option => {

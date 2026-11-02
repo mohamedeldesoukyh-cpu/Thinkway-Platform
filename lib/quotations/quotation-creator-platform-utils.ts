@@ -57,7 +57,7 @@ export function bootstrapPlatformOptionsFromItem(
     return linked.map((platform) => ({
       platform: canonicalPlatformKey(platform),
       handle: source?.handle ?? item.handle ?? "",
-      followers: item.followers,
+      followers: source?.platformAccounts?.find(account => canonicalPlatformKey(account.platform) === canonicalPlatformKey(platform))?.followers ?? (canonicalPlatformKey(source?.platform ?? item.platform ?? "") === canonicalPlatformKey(platform) ? item.followers : null),
       engagement_rate: item.engagement_rate,
     }));
   }

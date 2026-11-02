@@ -151,3 +151,14 @@ function mockItem(overrides?: Partial<QuotationItemRow>): QuotationItemRow {
 }
 
 console.log("quotation-creator-platform-options.test.ts — all tests passed");
+
+// Each platform keeps its own followers; an unknown account never borrows another count.
+{
+  const platforms = bootstrapPlatformOptionsFromItem(mockItem({
+    platform: "instagram",
+    creator_profile_source: { displayName: "Creator", platform: "instagram", linkedPlatforms: ["instagram", "tiktok", "facebook"], platformAccounts: [{platform:"instagram",followers:100000},{platform:"tiktok",followers:42000}] },
+  }));
+  assert.equal(platforms.find(account=>account.platform==="instagram")?.followers,100000);
+  assert.equal(platforms.find(account=>account.platform==="tiktok")?.followers,42000);
+  assert.equal(platforms.find(account=>account.platform==="facebook")?.followers,null);
+}

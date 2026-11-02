@@ -7,6 +7,7 @@ import type { QuotationItemRow } from "@/features/quotations/types";
 import { quotationCreatorDuplicateKey } from "@/features/quotations/export/quotation-export-utils";
 import {
   loadCreatorPlatformOptions,
+  bootstrapPlatformOptionsFromItem,
   unionQuotationCreatorGroupPlatforms,
 } from "@/lib/quotations/quotation-creator-platform-options";
 import type { DocumentCreatorOption } from "./document-creator-selection-dialog";
@@ -48,6 +49,7 @@ export function buildShortlistCreatorOptions(
       name: source?.displayName?.trim() || handle,
       handle,
       avatarUrl: source?.avatarUrl?.trim() || null,
+      platformFollowers: (item.creator?.platforms ?? []).map(account => ({platform: canonicalPlatformKey(account.platform), followers: account.follower_count ?? null})),
       platforms,
       meta: platformMeta(platforms),
     };
@@ -86,6 +88,7 @@ export function buildQuotationCreatorOptions(
       name: item.creator_name?.trim() || handle,
       handle,
       avatarUrl: item.profile_image_url ?? null,
+      platformFollowers: groupItems.flatMap(bootstrapPlatformOptionsFromItem),
       platforms,
       meta: platformMeta(platforms),
     });
@@ -115,14 +118,9 @@ export async function enrichQuotationCreatorOptionsWithLinkedPlatforms(
         groupItems,
         fetched.map((entry) => entry.platform)
       );
-      if (
-        platforms.length === (option.platforms?.length ?? 0) &&
-        platforms.every((platform) => option.platforms?.includes(platform))
-      ) {
-        return option;
-      }
       return {
         ...option,
+        platformFollowers: fetched,
         platforms,
         meta: platformMeta(platforms),
       };
