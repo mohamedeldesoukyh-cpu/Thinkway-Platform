@@ -1823,19 +1823,19 @@ console.log("quotation-document.test.ts passed");
   assert.ok(pages[1].includes("Option 1"));
   assert.ok(!pages[1].includes("Option 2"));
   assert.ok(!pages[1].includes("Rate Alpha"));
-  const ratePages = pages.filter(page=>page.includes('<span class="ph__kind">Rate card</span>'));
+  const ratePages = pages.filter(page=>page.includes('<span class="ph__kind proposal-rate-heading">Rate card</span>'));
   assert.ok(ratePages.length > 0);
   assert.ok(ratePages.some(page=>page.includes("1,200") && page.includes("3,400")));
   assert.ok(ratePages.every(page=>!page.includes("Proposal Beta")));
-  assert.ok(pages.at(-2)!.includes('<span class="ph__kind">Rate card</span>'));
-  assert.ok(!pages.at(-1)!.includes('<span class="ph__kind">Rate card</span>'));
+  assert.ok(pages.at(-2)!.includes('<span class="ph__kind proposal-rate-heading">Rate card</span>'));
+  assert.ok(!pages.at(-1)!.includes('<span class="ph__kind proposal-rate-heading">Rate card</span>'));
   const standalone=buildQuotationHtml(buildQuotationDocument(detail,{template:"creator-list",proposalOptions:[{kind:"rate_card",itemIds:["rc-a1"],recommended:false}]}));
-  assert.ok(standalone.includes('<span class="ph__kind">Rate card</span>'));
+  assert.ok(standalone.includes('<span class="ph__kind proposal-rate-heading">Rate card</span>'));
   assert.ok(!standalone.includes("Compare your options"));
 }
 // Comparison continuation includes every creator and only selected deliverables.
 {
-  const items = Array.from({length:19},(_,i)=>mockItem({id:`roster-${i}`,unified_id:`roster-${i}`,creator_name:`Roster Creator ${i}`,handle:`roster${i}`,deliverables:[{platform:"instagram",type:"IG Reel",quantity:1}]}));
+  const items = Array.from({length:19},(_,i)=>mockItem({id:`roster-${i}`,unified_id:`roster-${i}`,creator_name:`Roster Creator ${i}`,handle:`roster${i}`,deliverables:[{platform:"instagram",type:"instagram_reel",quantity:1}]}));
   const detail=mockDetail({items});
   const doc=buildQuotationDocument(detail,{template:"creator-list-package",proposalOptions:[{itemIds:items.map(item=>item.id),recommended:true}]});
   const html=buildQuotationHtml(doc);
@@ -1868,7 +1868,7 @@ void (async () => {
 })().catch(error=>{console.error(error);process.exitCode=1;});
 // Compact comparisons put four options together; hiding deliverables removes only that column.
 {
-  const detail=mockDetail({items:[mockItem({id:"compact-a",unified_id:"compact",creator_name:"Compact Creator",handle:"compact",deliverables:[{platform:"instagram",type:"IG Reel",quantity:1}]})]});
+  const detail=mockDetail({items:[mockItem({id:"compact-a",unified_id:"compact",creator_name:"Compact Creator",handle:"compact",deliverables:[{platform:"instagram",type:"instagram_reel",quantity:1}]})]});
   for (const count of [3,4]) {
     const proposalOptions=Array.from({length:count},()=>({itemIds:["compact-a"],recommended:false}));
     const html=buildQuotationHtml(buildQuotationDocument(detail,{template:"creator-list",proposalOptions}));
@@ -1882,5 +1882,25 @@ void (async () => {
     assert.ok(!comparison.includes("<th>Deliverables</th>"));
     assert.ok(!comparison.includes('class="proposal-deliverables"'));
     assert.ok(comparison.includes("Compact Creator"));
+  }
+}
+// Long comparisons reserve footer space, print totals once, and label section headers distinctly.
+{
+  const items=Array.from({length:24},(_,i)=>mockItem({id:`footer-${i}`,unified_id:`footer-${i}`,creator_name:`Creator ${i} with a longer display name`,handle:`creator${i}`,service_description:"1× IG Reel + 3× IG Story + 1× TT Video + Usage rights · 3 months",deliverables:[{platform:"instagram",type:"instagram_reel",quantity:1},{platform:"instagram",type:"instagram_story",quantity:3},{platform:"tiktok",type:"tiktok_video",quantity:1}],revenue:1000+i,revenue_egp:1000+i}));
+  const detail=mockDetail({items});
+  const proposalOptions=Array.from({length:4},(_,i)=>({itemIds:items.slice(0,24-i*3).map(item=>item.id),recommended:i===0}));
+  const html=buildQuotationHtml(buildQuotationDocument(detail,{template:"creator-list",proposalOptions:[...proposalOptions,{kind:"rate_card",itemIds:items.map(item=>item.id),recommended:false}]}));
+  const summaries=html.match(/<section class="page proposal-summary">[\s\S]*?<\/section>/g)!;
+  assert.ok(summaries.length>1);
+  assert.ok(summaries[0].includes("3× IG Story"));
+  assert.equal((summaries.join("").match(/class="proposal-price"/g)||[]).length,1);
+  assert.ok(summaries.at(-1)!.includes('class="proposal-price"'));
+  assert.ok(summaries.slice(0,-1).every(page=>!page.includes('class="proposal-price"')));
+  for(const item of items) assert.ok(summaries.join("").includes(item.creator_name!));
+  assert.ok(html.includes('class="ph proposal-section-header"><span class="ph__kind proposal-option-heading">Option 1'));
+  assert.ok(html.includes('class="ph proposal-section-header"><span class="ph__kind proposal-rate-heading">Rate card</span>'));
+  if(process.env.QUOTATION_LAYOUT_PROOF) {
+    const fs=require("node:fs");
+    fs.writeFileSync(process.env.QUOTATION_LAYOUT_PROOF,html);
   }
 }
