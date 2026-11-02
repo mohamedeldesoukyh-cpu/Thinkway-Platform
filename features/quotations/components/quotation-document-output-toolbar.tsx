@@ -1,4 +1,5 @@
 "use client";
+import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 
 import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
@@ -116,6 +117,7 @@ export function QuotationDocumentOutputToolbar({
   sendDisabled,
   linkPending,
 }: Props) {
+  const directRates = useQuotationDirectRates();
   const [selectionOpen, setSelectionOpen] = useState(false);
   const [pending, setPending] = useState<PendingAction | null>(null);
   const [platformsLoading, setPlatformsLoading] = useState(false);
@@ -150,8 +152,8 @@ export function QuotationDocumentOutputToolbar({
   }, [selectionOpen, items, baseCreatorOptions]);
 
   const summarizeSelection = useCallback(
-    (itemIds: string[]) => summarizeQuotationSelection(items, itemIds, currency ?? "EGP", { showOriginalCurrency, displayFxRateToEgp }),
-    [items, currency, showOriginalCurrency, displayFxRateToEgp]
+    (itemIds: string[]) => summarizeQuotationSelection(items, itemIds, currency ?? "EGP", { showOriginalCurrency, displayFxRateToEgp, directRates }),
+    [items, currency, showOriginalCurrency, displayFxRateToEgp, directRates]
   );
 
   function openSelection(action: PendingAction) {

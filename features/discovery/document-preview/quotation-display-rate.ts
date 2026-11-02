@@ -1,4 +1,5 @@
-export type QuotationDisplayRate = { currency: string; asOf: string | null; rate: number };
+import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
+export type QuotationDisplayRate = { currency: string; asOf: string | null; rate: number; directRates: Record<string, number> };
 
 /** Share short-lived rates and in-flight requests within this page session. */
 export function createQuotationRateLoader(fetchRate: typeof fetch = fetch, now = Date.now) {
@@ -7,7 +8,6 @@ export function createQuotationRateLoader(fetchRate: typeof fetch = fetch, now =
   return function load(currency: string, asOf?: string | null): Promise<QuotationDisplayRate> {
     const code = currency.toUpperCase();
     const date = asOf?.slice(0, 10) || null;
-    if (code === "EGP") return Promise.resolve({ currency: code, asOf: date, rate: 1 });
     const key = `${code}:${date ?? "current"}`;
     const hit = cached.get(key);
     if (hit && hit.expires > now()) return Promise.resolve(hit.value);
@@ -18,10 +18,10 @@ export function createQuotationRateLoader(fetchRate: typeof fetch = fetch, now =
     const request = (async () => {
       const response = await fetchRate(`/api/quotations/exchange-rate?${query}`, { cache: "no-store", signal: AbortSignal.timeout(15000) });
       const result = await response.json();
-      if (!response.ok || result.currency !== code || result.asOf !== date || !Number.isFinite(result.rate) || result.rate <= 0) {
+      if (!response.ok || result.currency !== code || result.asOf !== date || !Number.isFinite(result.rate) || result.rate <= 0 || COMMERCIAL_CURRENCIES.some(from => !Number.isFinite(result.directRates?.[from]) || result.directRates[from] <= 0)) {
         throw new Error(result.error || `Could not load the ${code} exchange rate.`);
       }
-      const value: QuotationDisplayRate = { currency: code, asOf: date, rate: result.rate };
+      const value: QuotationDisplayRate = { currency: code, asOf: date, rate: result.rate, directRates: result.directRates };
       cached.set(key, { value, expires: now() + 60000 });
       return value;
     })();

@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { useEffect, useMemo, useRef, useState, type ComponentProps } from "react";
 import { toast } from "sonner";
 import { creatorFxAmount } from "@/lib/commercial/creator-fx";
@@ -354,6 +355,7 @@ export function QuotationDeliverableCostDetails({
   triggerLabel = "+ Cost detail",
 }: Props) {
   const [open, setOpen] = useState(defaultOpen ?? false);
+  const directRates = useQuotationDirectRates();
   const didAutoOpenRef = useRef(false);
   const fieldsGridRef = useRef<HTMLDivElement>(null);
   const [localDeliverable, setLocalDeliverable] = useState(deliverable);
@@ -450,7 +452,7 @@ export function QuotationDeliverableCostDetails({
   const paymentCurrency = displayCurrency || "EGP";
   const paymentAmount = creatorFxAmount(computedTotalClientCost, {
     from: costCurrency, to: paymentCurrency, sourceRateToEgp: fxRate,
-    targetRateToEgp: displayFxRateToEgp ?? 1, override: draft?.revenueFxOverride,
+    targetRateToEgp: displayFxRateToEgp ?? 1, directRates, override: draft?.revenueFxOverride,
   });
   const formatAmount = (amount: number, currency: string) => amount.toLocaleString("en-US", { maximumFractionDigits: 2 }) + " " + currency;
   const paymentLabel = formatAmount(computedTotalClientCost, costCurrency) + (costCurrency === paymentCurrency ? "" : " / " + formatAmount(paymentAmount, paymentCurrency));

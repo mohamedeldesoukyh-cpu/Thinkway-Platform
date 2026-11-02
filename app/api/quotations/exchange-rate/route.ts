@@ -3,7 +3,7 @@ import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { QUOTATION_PERMISSIONS } from "@/features/quotations/constants";
 import { isCommercialCurrency } from "@/lib/commercial/fx-aggregation";
-import { resolveRateToEgp } from "@/lib/commercial/fx-server";
+import { resolveQuotationDisplayRates } from "@/lib/commercial/quotation-fx-server";
 
 export const dynamic = "force-dynamic";
 
@@ -18,8 +18,8 @@ export async function GET(request: Request) {
   const auth = await requireApiPermission(supabase, QUOTATION_PERMISSIONS.read);
   if ("response" in auth) return auth.response;
   try {
-    const rate = await resolveRateToEgp(supabase, currency, asOf);
-    return NextResponse.json({ currency, asOf, rate }, { headers: { "Cache-Control": "private, no-store" } });
+    const rates = await resolveQuotationDisplayRates(supabase, currency, asOf);
+    return NextResponse.json({ currency, asOf, ...rates }, { headers: { "Cache-Control": "private, no-store" } });
   } catch {
     return NextResponse.json({ error: `No exchange rate available for ${currency}${asOf ? ` on ${asOf}` : ""}.` }, { status: 422 });
   }

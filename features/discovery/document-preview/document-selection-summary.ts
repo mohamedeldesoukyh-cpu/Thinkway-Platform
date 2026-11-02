@@ -9,6 +9,7 @@ import {
 import type { ShortlistCreatorItem } from "@/features/discovery/shortlists/types";
 import type { QuotationItemRow } from "@/features/quotations/types";
 import { countUniqueQuotationCreators } from "@/lib/quotations/quotation-creator-options";
+import { computeQuotationDisplayTotals, draftFromQuotationItem } from "@/features/quotations/quotation-row-math";
 
 export type DocumentSelectionSummaryMetric = {
   label: string;
@@ -83,7 +84,7 @@ export function summarizeQuotationSelection(
   items: QuotationItemRow[],
   selectedItemIds: string[],
   currency = "EGP",
-  options: { showOriginalCurrency?: boolean; displayFxRateToEgp?: number } = {}
+  options: { showOriginalCurrency?: boolean; displayFxRateToEgp?: number; directRates?: Record<string, number> } = {}
 ): DocumentSelectionSummary {
   const totalCreatorCount = countUniqueQuotationCreators(items);
   const selectedSet = new Set(selectedItemIds);
@@ -102,7 +103,9 @@ export function summarizeQuotationSelection(
   const rate = requestedCurrency === "EGP" ? 1 : options.displayFxRateToEgp;
   // Never relabel EGP as another currency when its conversion rate is unavailable.
   const displayCurrency = rate && rate > 0 ? requestedCurrency : "EGP";
+  const projected = !native && options.directRates && rate ? computeQuotationDisplayTotals(selectedItems.map(draftFromQuotationItem), displayCurrency, rate, options.directRates) : null;
   const money = (egp: number, field: "revenue" | "af_value" | "cost" | "gp_value" | "total") => {
+    if (projected) return formatMoneyKpi(({ revenue: projected.revenue, af_value: projected.af, cost: projected.cost, gp_value: projected.margin, total: projected.clientCost })[field], displayCurrency);
     if (!native) return formatMoneyKpi(egp / (rate && rate > 0 ? rate : 1), displayCurrency);
     const grouped = new Map<string, number>();
     for (const item of selectedItems) {
@@ -144,7 +147,7 @@ export function summarizeQuotationSelection(
     },
   ];
   metrics.push({label: "Gross profit", value: money(gpEgp, "gp_value"), scope: "internal"},
-    {label: "Margin", value: `${(revenueEgp + afEgp > 0 ? gpEgp / (revenueEgp + afEgp) * 100 : 0).toFixed(1)}%`, scope: "internal"});
+    {label: "Margin", value: `${(projected ? projected.marginPct : revenueEgp + afEgp > 0 ? gpEgp / (revenueEgp + afEgp) * 100 : 0).toFixed(1)}%`, scope: "internal"});
   const er = formatEr(forecast.averageEngagementRate);
   if (er) metrics.push({ label: "Avg ER", value: er });
 

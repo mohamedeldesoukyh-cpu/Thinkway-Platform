@@ -14,10 +14,15 @@ export function readRevenueShare(metadata: Record<string, unknown> | null | unde
 }
 
 export function revenueShareAmount(share: RevenueShare | null, revenue: number, currency: string,
-  rates: ReadonlyMap<string, number>): number {
+  rates: ReadonlyMap<string, number>, directRates?: Record<string, number>): number {
   if (!share || share.value === 0) return 0;
   if (share.mode === "percent") return roundMoney(Math.max(0, revenue) * share.value / 100);
   if (share.currency === currency) return roundMoney(share.value);
+  if (directRates) {
+    const pair = directRates[share.currency];
+    if (!Number.isFinite(pair) || pair <= 0) throw new Error(`Missing FX rate for revenue share (${share.currency} to ${currency}).`);
+    return roundMoney(share.value * pair);
+  }
   const from = rates.get(share.currency);
   const to = rates.get(currency);
   if (!from || !to) throw new Error(`Missing FX rate for revenue share (${share.currency} to ${currency}).`);

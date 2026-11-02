@@ -1,5 +1,6 @@
 "use client";
 
+import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { useId } from "react";
 import { QuotationDecimalInput } from "./quotation-decimal-input";
 import { creatorFxAmount, creatorFxRate, makeCreatorFx, readCreatorFx } from "@/lib/commercial/creator-fx";
@@ -14,6 +15,7 @@ export function QuotationCreatorFxFields({ draft, displayCurrency = "EGP", displ
   onChange: (patch: Partial<QuotationRowDraft>) => void;
 }) {
   const id = useId();
+  const directRates = useQuotationDirectRates();
   const computed = computeQuotationRowComputed(draft);
   const from = draft.costCurrency.toUpperCase();
   const to = displayCurrency.toUpperCase();
@@ -25,7 +27,7 @@ export function QuotationCreatorFxFields({ draft, displayCurrency = "EGP", displ
       const key = side === "cost" ? "costFxOverride" : "revenueFxOverride";
       const original = side === "cost" ? draft.cost : computed.revenue;
       const custom = readCreatorFx(draft[key]);
-      const conversion = { from, to, sourceRateToEgp: draft.fxRateToEgp, targetRateToEgp: displayFxRateToEgp, override: draft[key] };
+      const conversion = { from, to, sourceRateToEgp: draft.fxRateToEgp, targetRateToEgp: displayFxRateToEgp, override: draft[key], directRates };
       const rate = creatorFxRate(conversion);
       const title = side === "cost" ? "Cost" : "Revenue";
       const changeRate = (next: number) => {

@@ -83,6 +83,7 @@ export function aggregateCampaignDisplayFinancials(input: {
   displayCurrency: string;
   /** Map of currency code → rate to EGP. Missing rates are errors. */
   rateToEgpByCurrency: ReadonlyMap<string, number>;
+  directRates?: Record<string, number>;
 }): CampaignDisplayFinancials {
   const displayCurrency =
     (input.displayCurrency || "EGP").trim().toUpperCase() || "EGP";
@@ -119,10 +120,10 @@ export function aggregateCampaignDisplayFinancials(input: {
     const revCcy = resolveLineRevenueCurrency(line, displayCurrency);
     const costCcy = resolveLineCostCurrency(line, displayCurrency);
     const costAmount = resolveLineCostAmount(line);
-    const revConversion = { from: revCcy, to: displayCurrency, sourceRateToEgp: requireReportingRate(input.rateToEgpByCurrency, revCcy), targetRateToEgp: displayRate, override: line.revenue_fx_override };
-    const costConversion = { from: costCcy, to: displayCurrency, sourceRateToEgp: requireReportingRate(input.rateToEgpByCurrency, costCcy), targetRateToEgp: displayRate, override: line.cost_fx_override };
-    const revRate = creatorFxRate({ ...revConversion, to: "EGP", targetRateToEgp: 1 });
-    const costRate = creatorFxRate({ ...costConversion, to: "EGP", targetRateToEgp: 1 });
+    const revConversion = { from: revCcy, to: displayCurrency, sourceRateToEgp: requireReportingRate(input.rateToEgpByCurrency, revCcy), targetRateToEgp: displayRate, directRates: input.directRates, override: line.revenue_fx_override };
+    const costConversion = { from: costCcy, to: displayCurrency, sourceRateToEgp: requireReportingRate(input.rateToEgpByCurrency, costCcy), targetRateToEgp: displayRate, directRates: input.directRates, override: line.cost_fx_override };
+    const revRate = creatorFxRate({ ...revConversion, to: "EGP", targetRateToEgp: 1, directRates: undefined });
+    const costRate = creatorFxRate({ ...costConversion, to: "EGP", targetRateToEgp: 1, directRates: undefined });
     displayRevenue += creatorFxAmount(commercial.billableBase, revConversion);
     displayAgencyFees += creatorFxAmount(commercial.billableBase - commercial.revenueBeforeVat - usageRightsAmount, revConversion);
     displayCost += creatorFxAmount(costAmount, costConversion);
@@ -131,12 +132,12 @@ export function aggregateCampaignDisplayFinancials(input: {
     revenueEgp += toEgp(commercial.billableBase, revRate);
     costEgp += toEgp(costAmount, costRate);
     // UR cost follows client commercial currency (same as revenue / AF).
-    urCostEgp += creatorFxAmount(usageRightsCost, { ...revConversion, to: "EGP", targetRateToEgp: 1, override: line.cost_fx_override });
+    urCostEgp += creatorFxAmount(usageRightsCost, { ...revConversion, to: "EGP", targetRateToEgp: 1, directRates: undefined, override: line.cost_fx_override });
     // FX is an informational breakdown of GP, already included in actual converted revenue minus cost.
     // For different entry currencies, freeze their system cross rate when setting custom FX.
     const crossRate = costCcy === revCcy ? 1 : (line.fx_cost_revenue_cross_rate ?? costConversion.sourceRateToEgp / revConversion.sourceRateToEgp);
     const baselineCost = costAmount * crossRate + usageRightsCost;
-    const actualCostEgp = toEgp(costAmount, costRate) + creatorFxAmount(usageRightsCost, { ...revConversion, to: "EGP", targetRateToEgp: 1, override: line.cost_fx_override });
+    const actualCostEgp = toEgp(costAmount, costRate) + creatorFxAmount(usageRightsCost, { ...revConversion, to: "EGP", targetRateToEgp: 1, directRates: undefined, override: line.cost_fx_override });
     fxGainEgp += toEgp(baselineCost, revRate) - actualCostEgp;
     fxGainDisplay += creatorFxAmount(baselineCost, revConversion) - creatorFxAmount(costAmount, costConversion) - creatorFxAmount(usageRightsCost, { ...revConversion, override: line.cost_fx_override });
     nativeBillable += commercial.billableBase;

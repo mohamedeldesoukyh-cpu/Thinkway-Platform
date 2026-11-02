@@ -1,4 +1,5 @@
 
+import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { QuotationCreatorFxFields } from "./quotation-creator-fx-fields";
 import { CreatorAvatarImage } from "@/components/creator/creator-avatar-image";
 import { InterestChips } from "@/features/discovery/components/discovery-interest-chips";
@@ -77,6 +78,7 @@ export function QuotationCommercialWorkspaceRowCard({
   displayCurrency = "EGP",
   displayFxRateToEgp = 1,
 }: Props) {
+  const directRates = useQuotationDirectRates();
   const band = resolveProfitabilityBand(row.gpPct);
   const computed = computeQuotationRowComputed(row.draft);
   const client = computeQuotationRowClientCommercials(row.draft);
@@ -95,7 +97,7 @@ export function QuotationCommercialWorkspaceRowCard({
   const categories = row.item.creator_categories ?? [];
   const costDual = resolveCreatorLineCostDualLabel(row.draft, {
     displayCurrency,
-    displayFxRateToEgp,
+    displayFxRateToEgp, directRates,
   });
 
   return (

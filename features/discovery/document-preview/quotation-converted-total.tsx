@@ -17,15 +17,14 @@ export type QuotationTotalSource = {
 
 export function QuotationConvertedTotal({ source, itemIds }: { source: QuotationTotalSource; itemIds: string[] }) {
   const [currency, setCurrency] = useState(() => (source.currency || "EGP").toUpperCase());
-  const [resolved, setResolved] = useState<{ currency: string; date?: string | null; rate?: number; error?: string } | null>(null);
+  const [resolved, setResolved] = useState<{ currency: string; date?: string | null; rate?: number; directRates?: Record<string, number>; error?: string } | null>(null);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
-    if (currency === "EGP") return;
     let cancelled = false;
     loadQuotationDisplayRate(currency, source.issueDate).then(result => {
       if (cancelled) return;
       const rate = result.rate;
-      setResolved({ currency, date: source.issueDate, ...(rate && Number.isFinite(rate) && rate > 0 ? {rate} : {error: `No exchange rate available for ${currency}.`}) });
+      setResolved({ currency, date: source.issueDate, ...(rate && Number.isFinite(rate) && rate > 0 ? {rate, directRates: result.directRates} : {error: `No exchange rate available for ${currency}.`}) });
     }).catch(() => {
       if (!cancelled) setResolved({ currency, date: source.issueDate, error: `Could not load the ${currency} exchange rate.` });
     });
@@ -33,11 +32,11 @@ export function QuotationConvertedTotal({ source, itemIds }: { source: Quotation
   }, [currency, source.issueDate, attempt]);
 
   const current = resolved?.currency === currency && resolved.date === source.issueDate ? resolved : null;
-  const rate = currency === "EGP" ? 1 : current?.rate;
+  const rate = current?.rate;
   const selectedIds = new Set(itemIds);
   const rows = source.items.filter(item => selectedIds.has(item.id)).map(draftFromQuotationItem);
-  const totals = rate ? computeQuotationDisplayTotals(rows, currency, rate) : null;
-  const appliedRates = rate ? quotationAppliedRates(rows, currency, rate) : [];
+  const totals = rate ? computeQuotationDisplayTotals(rows, currency, rate, current?.directRates) : null;
+  const appliedRates = rate ? quotationAppliedRates(rows, currency, rate, current?.directRates) : [];
   const metrics = totals ? [
     { label: "Client cost", value: formatMoneyKpi(totals.revenue, currency) },
     { label: "Agency fee", value: formatMoneyKpi(totals.af, currency) },

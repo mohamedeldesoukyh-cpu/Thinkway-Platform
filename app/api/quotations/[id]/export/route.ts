@@ -26,7 +26,7 @@ import {
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { getQuotationDetail } from "@/features/quotations/queries";
 import { QUOTATION_PERMISSIONS } from "@/features/quotations/constants";
-import { resolveRateToEgp } from "@/lib/commercial/fx-server";
+import { resolveQuotationDisplayRates } from "@/lib/commercial/quotation-fx-server";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { getClientIp, requireApiPermission } from "@/lib/auth/api-auth";
 import { logAuditEvent } from "@/lib/audit/log-audit-event";
@@ -105,14 +105,14 @@ export async function GET(request: Request, context: RouteContext) {
       isCreatorDeckTemplate(template) && format !== "excel"
         ? await loadQuotationCreatorPublicationShots(supabase, enriched.items)
         : undefined;
-    const displayFxRateToEgp = await resolveRateToEgp(supabase, enriched.currency || "EGP");
+    const { rate: displayFxRateToEgp, directRates } = await resolveQuotationDisplayRates(supabase, enriched.currency || "EGP", enriched.issue_date);
     let doc = buildQuotationDocument(enriched, {
       template,
       itemIds,
       proposalOptions: parseProposalOptions(searchParams.get("proposals")),
       platforms,
       publicationShotsByCreatorKey,
-      displayFxRateToEgp,
+      displayFxRateToEgp, directRates,
     });
     if (format !== "excel") {
       if (isQuotationListTemplate(template)) {
@@ -135,7 +135,7 @@ export async function GET(request: Request, context: RouteContext) {
     );
 
     if (format === "excel") {
-      const buffer = await buildQuotationExcel(enriched, { itemIds, platforms });
+      const buffer = await buildQuotationExcel(enriched, { itemIds, platforms, displayFxRateToEgp, directRates });
       return new NextResponse(buffer as unknown as BodyInit, {
         headers: withExportCacheHeaders({
           "Content-Type":

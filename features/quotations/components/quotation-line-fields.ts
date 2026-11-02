@@ -236,6 +236,9 @@ export function useQuotationLineFields(
   const lastDerivedCommercialsKeyRef = useRef<string | null>(null);
 
   useEffect(() => {
+    // Line Master owns saved commercials. Only user edits may roll deliverables
+    // back into it; mounting/remounting must not resurrect stale saved detail.
+    if (!localDraftDirtyRef.current) return;
     if (!derivedCommercials) {
       lastDerivedCommercialsKeyRef.current = null;
       return;

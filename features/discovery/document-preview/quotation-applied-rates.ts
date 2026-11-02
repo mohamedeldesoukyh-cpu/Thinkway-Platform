@@ -2,12 +2,12 @@ import { creatorFxRate } from "@/lib/commercial/creator-fx";
 import { computeQuotationRowComputed, type QuotationRowDraft } from "@/features/quotations/quotation-row-math";
 
 /** Describe the same revenue-side rates used by computeQuotationDisplayTotals. */
-export function quotationAppliedRates(rows: QuotationRowDraft[], currency: string, rateToEgp: number): string[] {
+export function quotationAppliedRates(rows: QuotationRowDraft[], currency: string, rateToEgp: number, directRates?: Record<string, number>): string[] {
   const grouped = new Map<string, number[]>();
   for (const row of rows) {
     const amounts = computeQuotationRowComputed(row);
     if (amounts.revenue === 0 && amounts.afValue === 0) continue;
-    const rate = creatorFxRate({ from: row.costCurrency, to: currency, sourceRateToEgp: row.fxRateToEgp, targetRateToEgp: rateToEgp, override: row.revenueFxOverride });
+    const rate = creatorFxRate({ from: row.costCurrency, to: currency, sourceRateToEgp: row.fxRateToEgp, targetRateToEgp: rateToEgp, override: row.revenueFxOverride, directRates });
     const rates = grouped.get(row.costCurrency) ?? [];
     rates.push(rate);
     grouped.set(row.costCurrency, rates);

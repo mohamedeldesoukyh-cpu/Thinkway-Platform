@@ -1,4 +1,5 @@
 "use client";
+import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -126,7 +127,7 @@ type WorkspaceRow = {
 function buildRows(
   items: QuotationItemRow[],
   drafts: Record<string, QuotationRowDraft | undefined>,
-  displayCurrency: string, displayFxRateToEgp: number
+  displayCurrency: string, displayFxRateToEgp: number, directRates?: Record<string, number>
 ): WorkspaceRow[] {
   const optionContext = buildQuotationItemOptionContext(items);
   return [...items]
@@ -138,7 +139,7 @@ function buildRows(
       const optionCtx = optionContext.get(item.id);
       const showOption = (optionCtx?.duplicateCount ?? 1) > 1;
       return {
-        displayTotals: computeQuotationDisplayTotals([draft], displayCurrency, displayFxRateToEgp),
+        displayTotals: computeQuotationDisplayTotals([draft], displayCurrency, displayFxRateToEgp, directRates),
         itemId: item.id,
         item,
         influencerName:
@@ -237,6 +238,7 @@ export function QuotationCommercialWorkspaceDialog({
   onOpenChange,
   showTrigger = true,
 }: QuotationCommercialWorkspaceDialogProps) {
+  const directRates = useQuotationDirectRates();
   const manualSave = useQuotationManualSave();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = openProp ?? internalOpen;
@@ -263,7 +265,7 @@ export function QuotationCommercialWorkspaceDialog({
     setHistory(createCommercialDraftHistory(drafts));
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps -- snapshot on open only
 
-  const rows = useMemo(() => buildRows(items, drafts, displayCurrency, displayFxRateToEgp), [items, drafts, displayCurrency, displayFxRateToEgp]);
+  const rows = useMemo(() => buildRows(items, drafts, displayCurrency, displayFxRateToEgp, directRates), [items, drafts, displayCurrency, displayFxRateToEgp, directRates]);
   const filtered = useMemo(
     () => filterCommercialWorkspaceRows(rows, quickFilter, search),
     [rows, quickFilter, search]

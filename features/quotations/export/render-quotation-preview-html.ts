@@ -19,7 +19,7 @@ import {
   type QuotationTemplateVariant,
 } from "@/features/quotations/export/quotation-template";
 import { getQuotationDetail } from "@/features/quotations/queries";
-import { resolveRateToEgp } from "@/lib/commercial/fx-server";
+import { resolveQuotationDisplayRates } from "@/lib/commercial/quotation-fx-server";
 import type { Database } from "@/types/database";
 
 type AppSupabase = SupabaseClient<Database>;
@@ -55,14 +55,14 @@ export async function renderQuotationPreviewHtml(
   const publicationShotsByCreatorKey = isCreatorDeckTemplate(template)
     ? await loadQuotationCreatorPublicationShots(supabase, enriched.items)
     : undefined;
-  const displayFxRateToEgp = await resolveRateToEgp(supabase, enriched.currency || "EGP");
+  const { rate: displayFxRateToEgp, directRates } = await resolveQuotationDisplayRates(supabase, enriched.currency || "EGP", enriched.issue_date);
   let doc = buildQuotationDocument(enriched, {
     template,
     itemIds: options?.itemIds,
     proposalOptions: options?.proposalOptions,
     platforms: options?.platforms,
     publicationShotsByCreatorKey,
-    displayFxRateToEgp,
+    displayFxRateToEgp, directRates,
   });
   if (isQuotationListTemplate(template)) {
     const identity = await loadCreatorListClientIdentity(supabase, enriched.client_id, template !== "client-list-by-name");

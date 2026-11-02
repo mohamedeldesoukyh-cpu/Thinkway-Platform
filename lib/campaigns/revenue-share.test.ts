@@ -11,6 +11,8 @@ test("percentage follows total FX-adjusted revenue; fixed amount retains saved c
   assert.equal(revenueShareAmount(fixed, 1000, "USD", rates), 100);
   assert.equal(revenueShareAmount(fixed, 99999, "EGP", rates), 5000);
   assert.equal(revenueShareAmount(fixed, 99999, "AED", rates), 357.14);
+  assert.equal(revenueShareAmount(fixed, 99999, "AED", rates, { USD: 3.6725 }), 367.25);
+  assert.throws(() => revenueShareAmount(fixed, 99999, "AED", rates, {}), /Missing FX/);
   assert.throws(() => revenueShareAmount(fixed, 1000, "AED", new Map()), /Missing FX/);
 });
 test("live allocation is proportional, reconciles cents, and never deducts planned revenue", () => {

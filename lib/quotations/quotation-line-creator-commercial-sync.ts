@@ -69,7 +69,8 @@ export function formatDualCurrencyAmountLabel(
   lineFxRateToEgp: number,
   quotationCurrency: string,
   quotationFxRateToEgp: number,
-  override?: string | null
+  override?: string | null,
+  directRates?: Record<string, number>
 ): DualCurrencyAmountLabel {
   const entry = (lineCurrency || "EGP").toUpperCase();
   const quote = (quotationCurrency || "EGP").toUpperCase();
@@ -79,7 +80,7 @@ export function formatDualCurrencyAmountLabel(
   }
   return {
     primary,
-    secondary: formatAmount(creatorFxAmount(amountInLineCurrency, { from: entry, to: quote, sourceRateToEgp: lineFxRateToEgp, targetRateToEgp: quotationFxRateToEgp, override }), quote),
+    secondary: formatAmount(creatorFxAmount(amountInLineCurrency, { from: entry, to: quote, sourceRateToEgp: lineFxRateToEgp, targetRateToEgp: quotationFxRateToEgp, override, directRates }), quote),
   };
 }
 
@@ -206,6 +207,7 @@ type CreatorLinePriceOptions = {
   /** Quotation currency (header CCY) for secondary equivalent. */
   displayCurrency?: string;
   displayFxRateToEgp?: number;
+  directRates?: Record<string, number>;
 };
 
 function resolveCreatorLineClientAmount(
@@ -295,7 +297,8 @@ export function resolveCreatorLinePriceDualLabel(
     resolved.lineFx,
     quotationCurrency,
     quotationFx,
-    draft?.revenueFxOverride
+    draft?.revenueFxOverride,
+    options?.directRates
   );
 }
 
@@ -320,6 +323,7 @@ export function resolveCreatorLineCostDualLabel(
     fxRateToEgp?: number;
     displayCurrency?: string;
     displayFxRateToEgp?: number;
+    directRates?: Record<string, number>;
   }
 ): DualCurrencyAmountLabel {
   const amount = Number(options?.cost ?? draft?.cost ?? 0);
@@ -341,6 +345,7 @@ export function resolveCreatorLineCostDualLabel(
     lineFx,
     quotationCurrency,
     quotationFx,
-    draft?.costFxOverride
+    draft?.costFxOverride,
+    options?.directRates
   );
 }

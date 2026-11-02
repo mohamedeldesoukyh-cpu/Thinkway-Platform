@@ -7,7 +7,7 @@ import {
 import { buildQuotationHtml } from "@/features/quotations/export/quotation-html";
 import { QUOTATION_PDF_OPTIONS } from "@/features/quotations/export/quotation-pdf";
 import { quotationExportFilenameRevision } from "@/features/quotations/export/quotation-template";
-import { resolveRateToEgp } from "@/lib/commercial/fx-server";
+import { resolveQuotationDisplayRates } from "@/lib/commercial/quotation-fx-server";
 import { pdfUnavailableMessage, renderHtmlToPdf } from "@/lib/io/vendor-io-pdf";
 import { resolveThinkwayReportLogoSrcsForExport } from "@/lib/reports/document/thinkway-report-logo-embed";
 import { getQuotationDetail } from "@/lib/services/quotations/quotation-document-service";
@@ -26,9 +26,9 @@ export async function renderExistingQuotationHtml(input: {
   const detail = await getQuotationDetail(input.supabase, input.quotationId);
   if (!detail) return { ok: false, message: "Quotation not found." };
   const enriched = await enrichQuotationDetailForExport(input.supabase, detail);
-  const displayFxRateToEgp = await resolveRateToEgp(input.supabase, enriched.currency || "EGP");
+  const { rate: displayFxRateToEgp, directRates } = await resolveQuotationDisplayRates(input.supabase, enriched.currency || "EGP", enriched.issue_date);
   const flags = await loadClientWorkspaceDisplayFlags(input.supabase, { quotationId: input.quotationId, shortlistId: detail.shortlist_id });
-  const doc = buildQuotationDocument({ ...enriched, hideCostAndFees: flags.hideCostAndFees }, { displayFxRateToEgp, showOriginalCurrency: flags.showOriginalCurrency });
+  const doc = buildQuotationDocument({ ...enriched, hideCostAndFees: flags.hideCostAndFees }, { displayFxRateToEgp, directRates, showOriginalCurrency: flags.showOriginalCurrency });
   const siteOrigin = resolveQuotationExportSiteOrigin(input.host, input.proto);
   const logoSrcs = resolveThinkwayReportLogoSrcsForExport();
   const html = buildQuotationHtml(doc, { siteOrigin, logoSrcs, forPdf: true });

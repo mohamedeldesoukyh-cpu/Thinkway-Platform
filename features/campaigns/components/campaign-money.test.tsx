@@ -9,6 +9,13 @@ import { OperationalAmountField } from "./assignment-hierarchy/operational-amoun
 
 const rates = { EGP: 1, USD: 52.2151, AED: 14, EUR: 56.75 };
 
+test("campaign displayed money uses the direct pair rather than the EGP ratio", () => {
+  const workspace = { currency_code: "USD", currency_rates: { EGP: 1, USD: 58, AED: 15.5 }, currency_pair_rates: { USD: 1, AED: 0.27229408, EGP: 1 / 58 }, lines: [] } as unknown as CampaignWorkspace;
+  const html = renderToStaticMarkup(<CampaignCurrencyProvider workspace={workspace}><CampaignMoney amount={26200} currency="AED" /></CampaignCurrencyProvider>);
+  assert.match(html, /USD 7,134\.10/);
+  assert.doesNotMatch(html, /7,001/);
+});
+
 test("Client IO rollup honors the custom rate without relabeling native amounts", () => {
   const total = createElement(CampaignMoneyTotal, { currency: "EGP", amounts: [
     { amount: 627, currency: "USD", override: makeCreatorFx("USD", "EGP", 55, 1) },

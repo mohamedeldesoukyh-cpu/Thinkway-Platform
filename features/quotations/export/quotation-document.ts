@@ -942,6 +942,7 @@ export function buildQuotationDocument(
     publicationShotsByCreatorKey?: Map<string, QuotationDocPublicationShot[]>;
     /** FX rate for `detail.currency` → EGP (used to format client-facing totals). */
     displayFxRateToEgp?: number;
+    directRates?: Record<string, number>;
     /** Workspace exports use its saved original-currency preference. */
     showOriginalCurrency?: boolean;
   }
@@ -983,8 +984,8 @@ export function buildQuotationDocument(
       : detail.items
   ) as QuotationExportItem[], detail.templateCreatorPhotos);
   const hasCustomFx = items.some(item => item.cost_fx_override || item.revenue_fx_override);
-  const projected = hasCustomFx ? items.reduce((sum, item) => {
-    const conversion = { from: item.cost_currency, to: displayCurrency, sourceRateToEgp: item.fx_rate_to_egp, targetRateToEgp: displayFxRateToEgp };
+  const projected = hasCustomFx || options?.directRates ? items.reduce((sum, item) => {
+    const conversion = { from: item.cost_currency, to: displayCurrency, sourceRateToEgp: item.fx_rate_to_egp, targetRateToEgp: displayFxRateToEgp, directRates: options?.directRates };
     sum.cost += creatorFxAmount(item.cost, { ...conversion, override: item.cost_fx_override });
     sum.revenue += creatorFxAmount(item.revenue, { ...conversion, override: item.revenue_fx_override });
     sum.af += creatorFxAmount(item.af_value, { ...conversion, override: item.revenue_fx_override });
@@ -1021,12 +1022,12 @@ export function buildQuotationDocument(
   });
 
   const originalCurrency = audience === "client" && (options?.showOriginalCurrency ?? detail.showOriginalCurrency) === true;
-  const clientMoney: ClientRowMoney | undefined = audience === "client" && (originalCurrency || options?.showOriginalCurrency !== undefined)
+  const clientMoney: ClientRowMoney | undefined = audience === "client" && (originalCurrency || options?.showOriginalCurrency !== undefined || options?.directRates)
     ? (item, field) => {
         const amount = item[field];
         if (originalCurrency) return `${num(amount)} ${item.cost_currency.toUpperCase()}`;
-        const converted = item.revenue_fx_override
-          ? creatorFxAmount(amount, { from: item.cost_currency, to: displayCurrency, sourceRateToEgp: item.fx_rate_to_egp, targetRateToEgp: displayFxRateToEgp, override: item.revenue_fx_override })
+        const converted = item.revenue_fx_override || options?.directRates
+          ? creatorFxAmount(amount, { from: item.cost_currency, to: displayCurrency, sourceRateToEgp: item.fx_rate_to_egp, targetRateToEgp: displayFxRateToEgp, override: item.revenue_fx_override, directRates: options?.directRates })
           : fromEgp(field === "revenue" ? item.revenue_egp : item.af_value_egp, displayCurrency, displayFxRateToEgp);
         const display = `${num(converted)} ${displayCurrency}`;
         return display;
@@ -1115,7 +1116,7 @@ export function buildQuotationDocument(
   };
   const totalClientCost = originalCurrency ? nativeTotal("revenue") : formatDisplayMoney(selectedRevenueEgp, projected?.revenue);
   const totalAf = originalCurrency ? nativeTotal("af_value") : formatDisplayMoney(selectedAfEgp, projected?.af);
-  const totalAgencyMargin = formatDisplayMoney(selectedAgencyMarginEgp);
+  const totalAgencyMargin = formatDisplayMoney(selectedAgencyMarginEgp, projected ? projected.revenue + projected.af - projected.cost : undefined);
   const grandTotal = originalCurrency ? nativeTotal("total") : formatDisplayMoney(selectedRevenueEgp + selectedAfEgp, projected ? projected.revenue + projected.af : undefined);
   const insightBullets = buildSummaryInsightBullets({
     creatorCount: uniqueCreatorCount,

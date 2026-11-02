@@ -1796,3 +1796,10 @@ console.log("quotation-document.test.ts passed");
   }
   assert.notEqual(doc.proposalOptions![0].document.summary.grandTotal,doc.proposalOptions![1].document.summary.grandTotal);
 }
+{
+  const item = mockItem({ commercial_input_mode: "cost_revenue", cost_currency: "AED", cost: 18800, revenue: 26200, af_pct: 0, af_value: 0, fx_rate_to_egp: 15.5, cost_egp: 291400, revenue_egp: 406100, af_value_egp: 0 });
+  const detail = mockDetail({ currency: "USD", items: [item], total_cost_egp: 291400, total_revenue_egp: 406100, total_af_egp: 0 });
+  const doc = buildQuotationDocument(detail, { showOriginalCurrency: false, displayFxRateToEgp: 58, directRates: { AED: 0.27229408, USD: 1, EGP: 1 / 58 } });
+  assert.equal(doc.summary.grandTotal, "7,134 USD");
+  assert.equal(doc.rows[0].clientCost, "7,134 USD");
+}

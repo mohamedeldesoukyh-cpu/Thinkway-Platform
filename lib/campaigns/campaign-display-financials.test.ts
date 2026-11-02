@@ -9,6 +9,17 @@ import {
 } from "./campaign-display-financials";
 
 describe("campaign-display-financials", () => {
+  it("uses direct pairs for campaign costs, revenue and profit", () => {
+    const result = aggregateCampaignDisplayFinancials({
+      displayCurrency: "USD", rateToEgpByCurrency: new Map([["USD", 58], ["AED", 15.5]]),
+      directRates: { USD: 1, AED: 0.27229408, EGP: 1 / 58 },
+      lines: [{ currency_code: "AED", revenue_before_vat: 26200, cost_received: 18800, cost_received_currency: "AED" }],
+    });
+    assert.equal(result.revenue, 7134.10);
+    assert.equal(result.cost, 5119.13);
+    assert.equal(result.gp, 2014.97);
+    assert.equal(result.revenue_egp, 406100);
+  });
   it("reconciles client cost and agency fees with investment under negotiated FX", () => {
     const result = aggregateCampaignDisplayFinancials({
       displayCurrency: "USD", rateToEgpByCurrency: new Map([["USD", 60], ["AED", 20]]),

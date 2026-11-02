@@ -15,7 +15,7 @@ import type { CampaignWorkspace } from "@/features/campaigns/types";
 import { updateCampaignDisplayCurrencyAction } from "@/features/campaigns/actions";
 import { CommercialCurrencySelect } from "@/features/commercial/components/commercial-currency-select";
 import { formatPercent } from "@/features/campaigns/utils";
-import { fromEgp } from "@/lib/commercial/fx-aggregation";
+
 import { cn } from "@/lib/utils";
 
 type CampaignKpiCardsProps = {
@@ -38,25 +38,12 @@ export function CampaignKpiCards({ workspace, className }: CampaignKpiCardsProps
   const router = useRouter();
   const { financials, lines } = workspace;
   const displayCurrency = (workspace.currency_code || "EGP").toUpperCase();
-  const displayFxRateToEgp = Number(workspace.financials.display_fx_rate_to_egp) || 1;
   const [currencyPending, startCurrencyTransition] = useTransition();
 
 
-  const revenue = fromEgp(
-    Number(financials.revenue_egp ?? financials.revenue ?? 0),
-    displayCurrency,
-    displayFxRateToEgp
-  );
-  const cost = fromEgp(
-    Number(financials.cost_egp ?? financials.cost ?? 0),
-    displayCurrency,
-    displayFxRateToEgp
-  );
-  const gp = fromEgp(
-    Number(financials.gp_egp ?? financials.gp ?? 0),
-    displayCurrency,
-    displayFxRateToEgp
-  );
+  const revenue = financials.revenue;
+  const cost = financials.cost;
+  const gp = financials.gp;
   const marginPercent =
     revenue > 0 ? Math.round((gp / revenue) * 10000) / 100 : financials.margin_percent;
   const marginHealthy = marginPercent >= 20;

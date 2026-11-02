@@ -38,6 +38,8 @@ import {
   enrichQuotationCreatorOptionsWithLinkedPlatforms,
 } from "@/features/discovery/document-preview/build-creator-options";
 import { loadQuotationDisplayRate } from "@/features/discovery/document-preview/quotation-display-rate";
+import type { QuotationDisplayRate } from "@/features/discovery/document-preview/quotation-display-rate";
+import { QuotationDirectRatesContext } from "./quotation-direct-rates-context";
 import { summarizeQuotationSelection } from "@/features/discovery/document-preview/document-selection-summary";
 import { AddCreatorsToQuotationButton } from "@/features/quotations/components/add-creators-to-quotation-modal";
 import { OtherServiceButton } from "@/features/other-services/other-service-button";
@@ -169,6 +171,10 @@ function QuotationWorkspaceContent({
   );
   const [foreignDisplay, setForeignDisplay] = useState(false);
   const [displayFxRateToEgp, setDisplayFxRateToEgp] = useState(1);
+  const [displayRates, setDisplayRates] = useState<QuotationDisplayRate | null>(null);
+  const [rateError, setRateError] = useState(false);
+  const [rateAttempt, setRateAttempt] = useState(0);
+  const directRates = displayRates?.currency === displayCurrency && displayRates.asOf === (detail.issue_date?.slice(0, 10) || null) ? displayRates.directRates : undefined;
   const [currencyPending, startCurrencyTransition] = useTransition();
   const [clientSelectionFilter, setClientSelectionFilter] =
     useState<QuotationClientSelectionFilter>("all");
@@ -195,11 +201,13 @@ function QuotationWorkspaceContent({
     void loadQuotationDisplayRate(displayCurrency, detail.issue_date).then((res) => {
       if (cancelled) return;
       setDisplayFxRateToEgp(res.rate);
-    }).catch(() => { /* The selector shows its own retryable rate error. */ });
+      setDisplayRates(res);
+      setRateError(false);
+    }).catch(() => { if (!cancelled) setRateError(true); });
     return () => {
       cancelled = true;
     };
-  }, [displayCurrency, detail.issue_date]);
+  }, [displayCurrency, detail.issue_date, rateAttempt]);
 
   useEffect(() => {
     setDrafts((prev) => {
@@ -707,8 +715,8 @@ function QuotationWorkspaceContent({
 
   const summarizePreviewSelection = useCallback(
     (itemIds: string[]) =>
-      summarizeQuotationSelection(detail.items, itemIds, displayCurrency, { showOriginalCurrency: foreignDisplay || Boolean(detail.showOriginalCurrency), displayFxRateToEgp }),
-    [detail.items, displayCurrency, foreignDisplay, detail.showOriginalCurrency, displayFxRateToEgp]
+      summarizeQuotationSelection(detail.items, itemIds, displayCurrency, { showOriginalCurrency: foreignDisplay || Boolean(detail.showOriginalCurrency), displayFxRateToEgp, directRates }),
+    [detail.items, displayCurrency, foreignDisplay, detail.showOriginalCurrency, displayFxRateToEgp, directRates]
   );
 
   const handlePreviewSelectionConfirm = useCallback(
@@ -747,13 +755,15 @@ function QuotationWorkspaceContent({
     onPreview: openPreview,
   });
 
+  if (!directRates) return <div role="status" className="p-6 text-sm">{rateError ? <>Could not load quotation exchange rates. <button onClick={() => { setRateError(false); setRateAttempt(value => value + 1); }}>Retry</button></> : "Loading quotation exchange rates…"}</div>;
+
   return (
-    <div data-discovery-workspace-scroll dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
+    <QuotationDirectRatesContext.Provider value={directRates}><div data-discovery-workspace-scroll dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <WorkspaceScrollSummary serial={detail.serial_number} name={detail.name} status={detail.status.replaceAll("_", " ")}
         metrics={[
           { label: "Creators", value: uniqueCreatorCount },
-          { label: "Total Revenue", value: foreignDisplay ? originalTotals.map(row => `${row.currency} ${row.totalClientCost.toLocaleString("en-US", { maximumFractionDigits: 2 })}`).join(" · ") : `${displayCurrency} ${computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp).clientCost.toLocaleString("en-US", { maximumFractionDigits: 0 })}` },
+          { label: "Total Revenue", value: foreignDisplay ? originalTotals.map(row => `${row.currency} ${row.totalClientCost.toLocaleString("en-US", { maximumFractionDigits: 2 })}`).join(" · ") : `${displayCurrency} ${computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp, directRates).clientCost.toLocaleString("en-US", { maximumFractionDigits: 0 })}` },
           { label: "GP %", value: `${totals.headerGpPct.toFixed(1)}%` },
         ]} />
       <div className="q-frozen-summary">
@@ -781,7 +791,8 @@ function QuotationWorkspaceContent({
         showGpConflict={hasQuotationGpConflict(totals)}
         metricsSlot={
           <QuotationCommercialMetricsBand
-            projected={computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp)}
+            projected={computeQuotationDisplayTotals(totalsDraftList, displayCurrency, displayFxRateToEgp, directRates)}
+            savedProjectedClientCost={computeQuotationDisplayTotals(Object.values(draftsFromItems(detail.items)), displayCurrency, displayFxRateToEgp, directRates).clientCost}
             embedded
             totalCostEgp={totals.totalCostEgp}
             totalRevenueEgp={totals.totalClientCostEgp}
@@ -1019,7 +1030,7 @@ function QuotationWorkspaceContent({
         itemIds={convertSelectedIds}
       />
       {appendCreatorIds.length > 0 && <AppendQuotationCreatorDialog quotationId={detail.id} itemIds={appendCreatorIds} linkedCampaignId={detail.campaign_header_id} onClose={() => setAppendCreatorIds([])} />}
-    </div>
+    </div></QuotationDirectRatesContext.Provider>
   );
 }
 

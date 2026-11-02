@@ -25,10 +25,12 @@ function breakdownRows(
 
 export async function buildQuotationExcel(
   detail: import("../types").QuotationDetail,
-  options?: { itemIds?: string[]; platforms?: string[] | null }
+  options?: { itemIds?: string[]; platforms?: string[] | null; displayFxRateToEgp?: number; directRates?: Record<string, number> }
 ): Promise<Buffer> {
   const doc = buildQuotationDocument(detail, {
     audience: "internal",
+    displayFxRateToEgp: options?.displayFxRateToEgp,
+    directRates: options?.directRates,
     itemIds: options?.itemIds,
     platforms: options?.platforms,
   });

@@ -11,6 +11,16 @@ import type { OperationalBillingRow } from "@/lib/billing/operational-billing-ro
 const draft: QuotationRowDraft = { id: "creator", mode: "cost_revenue", cost: 1000, revenue: 1500, costCurrency: "USD", gpPct: 0, gpValue: 500, afPct: 10, fxRateToEgp: 50 };
 const conversion = { from: "USD", to: "EGP", sourceRateToEgp: 50, targetRateToEgp: 1 };
 
+test("direct FX pairs win over inconsistent EGP reporting rates", () => {
+  const directRates = { AED: 0.27229408, USD: 1, EGP: 1 / 58 };
+  const input = { from: "AED", to: "USD", sourceRateToEgp: 15.5, targetRateToEgp: 58, directRates };
+  assert.equal(creatorFxAmount(26200, input), 7134.10);
+  assert.equal(creatorFxAmount(26200, { ...input, sourceRateToEgp: 99 }), 7134.10);
+  assert.equal(creatorFxRate({ ...input, override: makeCreatorFx("AED", "USD", 0.28, 58) }), 0.28);
+  assert.throws(() => creatorFxRate({ ...input, directRates: {} }), /Missing FX/);
+  assert.equal(creatorFxRate({ ...input, from: "USD" }), 1);
+});
+
 test("all six currencies preserve identity and reciprocal cross-currency conversions", () => {
   const rates = { EGP: 1, USD: 58, AED: 15.5, SAR: 15.46666667, EUR: 63.04347826, GBP: 73.41772152 };
   for (const [from, source] of Object.entries(rates)) {

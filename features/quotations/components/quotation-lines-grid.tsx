@@ -1,3 +1,4 @@
+import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { QuotationText } from "./quotation-design-locale";
 import { isOtherService } from "@/lib/commercial/other-service";
 
@@ -114,6 +115,7 @@ function QuotationPackLineRow({
   displayCurrency,
   displayFxRateToEgp,
 }: LineRowProps) {
+  const directRates = useQuotationDirectRates();
   const [pending, startTransition] = useTransition();
   const setExpanded = (open: boolean) => onActivate(open ? item.id : null);
   const confirmDelete = useConfirmDelete();
@@ -183,7 +185,7 @@ function QuotationPackLineRow({
   });
   const clientCommercials = computeQuotationRowClientCommercials(resolved);
   const rowCurrency = displayCurrency === "FOREIGN" ? resolved.costCurrency : displayCurrency || "EGP";
-  const projected = computeQuotationDisplayTotals([resolved], rowCurrency, displayFxRateToEgp ?? 1);
+  const projected = computeQuotationDisplayTotals([resolved], rowCurrency, displayFxRateToEgp ?? 1, directRates);
   const repeat = quotationPackageRepeat(lineFields.deliverableDrafts);
   const priceUnits = repeat ?? 1;
   const clientPrice = projected.clientCost / priceUnits;

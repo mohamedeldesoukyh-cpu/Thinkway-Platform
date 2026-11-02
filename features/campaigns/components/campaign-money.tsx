@@ -16,7 +16,7 @@ export function CampaignMoney({ amount, currency, override }: { amount: number; 
   const workspace = useCampaignCurrency();
   const target = workspace?.currency_code ?? currency;
   let converted: number;
-  try { converted = creatorFxAmount(amount, { from: currency, to: target, sourceRateToEgp: workspace?.currency_rates?.[currency] ?? 0, targetRateToEgp: workspace?.currency_rates?.[target] ?? 0, override }); }
+  try { converted = creatorFxAmount(amount, { from: currency, to: target, sourceRateToEgp: workspace?.currency_rates?.[currency] ?? 0, targetRateToEgp: workspace?.currency_rates?.[target] ?? 0, directRates: workspace?.currency_pair_rates, override }); }
   catch { return <span title={`No conversion rate available for ${currency} to ${target}`}>FX unavailable<small className="block text-[10px] font-normal text-muted-foreground">{formatMoney(amount, currency)}</small></span>; }
   return <span className="inline-flex flex-col tabular-nums">
     <span>{formatMoney(converted, target)}</span>
@@ -32,7 +32,7 @@ export function CampaignMoneyTotal({ amounts, currency, displayAmount }: { amoun
   const originals = new Map<string, number>();
   let total = 0;
   for (const entry of amounts) {
-    total += creatorFxAmount(entry.amount, { from: entry.currency, to: target, sourceRateToEgp: workspace?.currency_rates?.[entry.currency] ?? 0, targetRateToEgp: workspace?.currency_rates?.[target] ?? 0, override: entry.override });
+    total += creatorFxAmount(entry.amount, { from: entry.currency, to: target, sourceRateToEgp: workspace?.currency_rates?.[entry.currency] ?? 0, targetRateToEgp: workspace?.currency_rates?.[target] ?? 0, directRates: workspace?.currency_pair_rates, override: entry.override });
     originals.set(entry.currency, (originals.get(entry.currency) ?? 0) + entry.amount);
   }
   return <span className="inline-flex flex-col tabular-nums"><span>{formatMoney(displayAmount ?? total, target)}</span>
@@ -44,7 +44,7 @@ export function CampaignLineFinancial({ line, metric }: { line: CampaignWorkspac
   const workspace = useCampaignCurrency();
   const currency = workspace?.currency_code ?? line.currency_code;
   const financials = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: currency,
-    rateToEgpByCurrency: new Map(Object.entries(workspace?.currency_rates ?? { [currency]: 1 })) });
+    directRates: workspace?.currency_pair_rates, rateToEgpByCurrency: new Map(Object.entries(workspace?.currency_rates ?? { [currency]: 1 })) });
   if (metric === "fx_gain_loss") return <span className={financials.fx_gain_loss_egp < 0 ? "text-red-600" : financials.fx_gain_loss_egp > 0 ? "text-emerald-700" : "text-muted-foreground"}>{formatMoney(financials.fx_gain_loss_egp, "EGP")}</span>;
   if (metric === "margin_percent") return <span>{financials.margin_percent.toFixed(1)}%</span>;
   return <CampaignSummaryMoney amount={financials[metric]} currency={currency} metric={metric} lines={[line]} />;

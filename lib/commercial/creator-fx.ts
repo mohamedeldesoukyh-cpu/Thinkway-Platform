@@ -26,15 +26,26 @@ export function makeCreatorFx(from: string, to: string, rate: number, targetRate
 
 export function creatorFxRate(input: {
   from: string; to: string; sourceRateToEgp: number; targetRateToEgp: number; override?: string | null;
+  directRates?: Record<string, number>;
 }): number {
   if (input.from === input.to) return 1;
   const custom = readCreatorFx(input.override);
   if (custom?.from === input.from) {
     if (custom.to === input.to) return custom.rate;
+    if (input.directRates) {
+      const onward = input.directRates[custom.to];
+      if (!Number.isFinite(onward) || onward <= 0) throw new Error(`Missing FX rate: ${custom.to} to ${input.to}`);
+      return custom.rate * onward;
+    }
     // Keep the negotiated pair and its reporting snapshot; never rebase it on a new system rate.
     const target = input.to === "EGP" ? 1 : input.targetRateToEgp;
     if (!Number.isFinite(target) || target <= 0) throw new Error(`Missing FX rate: ${input.from} to ${input.to}`);
     return custom.rate * custom.targetRateToEgp / target;
+  }
+  if (input.directRates) {
+    const direct = input.directRates[input.from];
+    if (!Number.isFinite(direct) || direct <= 0) throw new Error(`Missing FX rate: ${input.from} to ${input.to}`);
+    return direct;
   }
   const source = input.from === "EGP" ? 1 : input.sourceRateToEgp;
   const target = input.to === "EGP" ? 1 : input.targetRateToEgp;

@@ -1,3 +1,4 @@
+import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { needsQuotationSystemFx } from "@/lib/commercial/quotation-system-fx";
 
 import { useCallback, useEffect, useMemo, useRef, useTransition } from "react";
@@ -138,6 +139,7 @@ export function QuotationCollapsePackagePricingRow({
   displayCurrency,
   displayFxRateToEgp,
 }: Props) {
+  const directRates = useQuotationDirectRates();
   const [pending, startTransition] = useTransition();
   const manualSave = useQuotationManualSave();
   const confirmDelete = useConfirmDelete();
@@ -559,7 +561,7 @@ export function QuotationCollapsePackagePricingRow({
                   allowLineMasterFallback: isFirst,
                   preferLineMaster: isFirst && displayRows.length === 1,
                   displayCurrency: quotationCurrency,
-                  displayFxRateToEgp: displayFxRateToEgp ?? 1,
+                  displayFxRateToEgp: displayFxRateToEgp ?? 1, directRates,
                 });
                 return (
                   <QuotationDeliverableCostDetails

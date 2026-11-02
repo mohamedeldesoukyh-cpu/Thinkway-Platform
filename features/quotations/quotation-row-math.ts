@@ -165,10 +165,10 @@ export function computeQuotationRowClientCommercials(draft: QuotationRowDraft) {
 }
 
 /** Display projections use each negotiated pair directly, including an EGP original shown in USD. */
-export function computeQuotationDisplayTotals(drafts: QuotationRowDraft[], currency: string, rateToEgp: number) {
+export function computeQuotationDisplayTotals(drafts: QuotationRowDraft[], currency: string, rateToEgp: number, directRates?: Record<string, number>) {
   const totals = drafts.reduce((sum, draft) => {
     const row = computeQuotationRowComputed(draft);
-    const conversion = { from: draft.costCurrency, to: currency, sourceRateToEgp: draft.fxRateToEgp, targetRateToEgp: rateToEgp };
+    const conversion = { from: draft.costCurrency, to: currency, sourceRateToEgp: draft.fxRateToEgp, targetRateToEgp: rateToEgp, directRates };
     sum.cost += creatorFxAmount(draft.cost, { ...conversion, override: draft.costFxOverride });
     sum.revenue += creatorFxAmount(row.revenue, { ...conversion, override: draft.revenueFxOverride });
     sum.af += creatorFxAmount(row.afValue, { ...conversion, override: draft.revenueFxOverride });

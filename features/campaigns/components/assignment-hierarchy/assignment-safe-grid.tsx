@@ -397,10 +397,10 @@ export function AssignmentSafeGrid({
       const target = currencyWorkspace?.currency_code ?? source;
       const convert = (amount: number) => creatorFxAmount(amount, { from: source, to: target,
         sourceRateToEgp: currencyWorkspace?.currency_rates?.[source] ?? 0,
-        targetRateToEgp: currencyWorkspace?.currency_rates?.[target] ?? 0,
+        targetRateToEgp: currencyWorkspace?.currency_rates?.[target] ?? 0, directRates: currencyWorkspace?.currency_pair_rates,
         override: line.revenue_fx_override });
       revenue += convert(billing.revenueBeforeVat);
-      const financials = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: target, rateToEgpByCurrency: new Map(Object.entries(currencyWorkspace?.currency_rates ?? { [source]: 1 })) });
+      const financials = aggregateCampaignDisplayFinancials({ lines: [line], displayCurrency: target, directRates: currencyWorkspace?.currency_pair_rates, rateToEgpByCurrency: new Map(Object.entries(currencyWorkspace?.currency_rates ?? { [source]: 1 })) });
       cost += financials.cost;
       gp += financials.gp;
       totalBilling += convert(billing.totalBilling);

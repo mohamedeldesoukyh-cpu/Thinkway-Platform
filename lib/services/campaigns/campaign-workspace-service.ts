@@ -1,6 +1,7 @@
 import { readRevenueShare, revenueShareAmount } from "@/lib/campaigns/revenue-share";
 import { loadVendorIoReopenEligibility } from "@/lib/io/vendor-io-query-helpers";
-import { fromEgp, toEgp } from "@/lib/commercial/fx-aggregation";
+import { creatorFxAmount } from "@/lib/commercial/creator-fx";
+import { resolveQuotationDisplayRates } from "@/lib/commercial/quotation-fx-server";
 import { getCampaignPoFxTotals, resolveFxPoSummary } from "@/lib/finance/po/fx-totals";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { buildCampaignApprovalRegister } from "@/lib/campaigns/campaign-approval-register";
@@ -474,10 +475,11 @@ export async function getCampaignWorkspace(
       rateToEgpByCurrency.set(code, await resolveRateToEgp(supabase, code));
     })
   );
+  const { directRates } = await resolveQuotationDisplayRates(supabase, workspaceCurrency);
   const displayFinancials = aggregateCampaignDisplayFinancials({
     lines,
     displayCurrency: workspaceCurrency,
-    rateToEgpByCurrency,
+    rateToEgpByCurrency, directRates,
   });
 
   const workspaceLines = lines.map((line) => {
@@ -624,13 +626,10 @@ export async function getCampaignWorkspace(
 
   const revenue = displayFinancials.revenue;
   const cost = displayFinancials.cost;
-  const revenueShareValue = revenueShareAmount(revenueShare, revenue, workspaceCurrency, rateToEgpByCurrency);
+  const revenueShareValue = revenueShareAmount(revenueShare, revenue, workspaceCurrency, rateToEgpByCurrency, directRates);
   const revenueShareEgp = revenueShareAmount(revenueShare, displayFinancials.revenue_egp, "EGP", rateToEgpByCurrency);
   const gp = Math.round((displayFinancials.gp - revenueShareValue) * 100) / 100;
-  const invoiceDisplayAmount = (amount: number, currency: string) => fromEgp(
-    toEgp(amount, rateToEgpByCurrency.get(currency.trim().toUpperCase())), workspaceCurrency,
-    displayFinancials.display_fx_rate_to_egp,
-  );
+  const invoiceDisplayAmount = (amount: number, currency: string) => creatorFxAmount(amount, { from: currency.trim().toUpperCase(), to: workspaceCurrency, sourceRateToEgp: 1, targetRateToEgp: 1, directRates });
   const billingOutstanding = invoices.reduce((s, i) => s + invoiceDisplayAmount(i.outstanding, i.currency), 0);
   const collected = invoices.reduce((s, i) => s + invoiceDisplayAmount(i.amount_paid, i.currency), 0);
 
@@ -830,6 +829,7 @@ export async function getCampaignWorkspace(
     brief: campaignIntelligence?.requirementsSummary ?? headerRow.brief,
     status: headerRow.status,
     currency_code: workspaceCurrency,
+    currency_pair_rates: directRates,
     currency_rates: Object.fromEntries([...rateToEgpByCurrency].sort(([a], [b]) => a.localeCompare(b))),
     start_date: headerRow.start_date,
     end_date: headerRow.end_date,

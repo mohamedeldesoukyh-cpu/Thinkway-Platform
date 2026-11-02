@@ -100,6 +100,7 @@ type Props = {
   hasDraftEdits?: boolean;
   /** Last-saved SSOT client cost (EGP) — shown beside staged when they disagree. */
   savedClientCostEgp?: number | null;
+  savedProjectedClientCost?: number;
   onOpenCommercialWorkspace?: () => void;
   /** When true, omit the outer discovery-suite wrapper (metrics live inside tw-mast). */
   embedded?: boolean;
@@ -127,6 +128,7 @@ export function QuotationCommercialMetricsBand({
   currencyDisabled,
   hasDraftEdits = false,
   savedClientCostEgp = null,
+  savedProjectedClientCost,
   onOpenCommercialWorkspace,
   embedded = false,
 }: Props) {
@@ -147,7 +149,7 @@ export function QuotationCommercialMetricsBand({
 
   const savedClient =
     savedClientCostEgp != null
-      ? moneyParts(savedClientCostEgp, displayCurrency, displayFxRateToEgp)
+      ? moneyParts(savedClientCostEgp, displayCurrency, displayFxRateToEgp, savedProjectedClientCost)
       : null;
   const stagedVsSavedDisagree =
     !foreignDisplay && hasDraftEdits &&
