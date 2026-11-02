@@ -50,10 +50,10 @@ export function creatorListDeliverableChips(description: string) {
     return `<span class="chip chip--${kind}">${e(label)}</span>`;
   }).join("");
 }
-function offersFor(group: QuotationDocCreatorGroup, additions: boolean): Offer[] {
+function offersFor(group: QuotationDocCreatorGroup, additions: boolean, includePending = false): Offer[] {
   const rows = group.rows.filter(row => {
     const description = (row.serviceDescription || row.deliverables || "").trim();
-    return row.isCollapsePackageFollower || !(!description || description === "—") || number(creatorListMoney(row.totalInvestment ?? row.clientCost, row.currency).amount) > 0;
+    return includePending || row.isCollapsePackageFollower || !(!description || description === "—") || number(creatorListMoney(row.totalInvestment ?? row.clientCost, row.currency).amount) > 0;
   });
   return rows.map((row: QuotationDocRow, index) => {
     const money = creatorListMoney(row.totalInvestment ?? row.clientCost, row.currency);
@@ -113,7 +113,7 @@ export function buildRedesignedQuotationCreatorList(doc: QuotationDocument): str
   const groups = orderedQuotationReportCreators(doc);
   const creators: Creator[] = groups.map((group,index) => {
     const included = new Set((doc.source === "shortlist" ? group.platformMetrics.map(metric => metric.platform) : group.rows.flatMap(row => row.quotedPlatforms ?? [])).map(canonicalPlatformKey));
-    return { group, index:index+1, tier:group.highestPlatformTier ?? group.rows[0]?.tier ?? "Mid", offers:offersFor(group, additions), metrics:group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform)) && [metric.followers,metric.engagement,metric.views].some(value => /\d/.test(value))) };
+    return { group, index:index+1, tier:group.highestPlatformTier ?? group.rows[0]?.tier ?? "Mid", offers:offersFor(group, additions, doc.isRateCard), metrics:group.platformMetrics.filter(metric => included.has(canonicalPlatformKey(metric.platform)) && [metric.followers,metric.engagement,metric.views].some(value => /\d/.test(value))) };
   });
   // Additional alternatives continue on another card; every card still has exactly two slots.
   const cards = creators.flatMap(creator => (creator.offers.length ? chunks(creator.offers,2) : [[]]).map(offers => ({creator,offers})));

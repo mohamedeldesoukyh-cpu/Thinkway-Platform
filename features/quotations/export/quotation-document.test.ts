@@ -1803,3 +1803,84 @@ console.log("quotation-document.test.ts passed");
   assert.equal(doc.summary.grandTotal, "7,134 USD");
   assert.equal(doc.rows[0].clientCost, "7,134 USD");
 }
+
+// Rate card remains separate from proposal totals and includes every offer for selected creators.
+{
+  const detail = mockDetail({items:[
+    mockItem({id:"rc-a1",unified_id:"alpha",creator_name:"Rate Alpha",handle:"alpha",option_number:1,revenue:1200,revenue_egp:1200}),
+    mockItem({id:"rc-a2",unified_id:"alpha",creator_name:"Rate Alpha",handle:"alpha",option_number:2,revenue:3400,revenue_egp:3400}),
+    mockItem({id:"rc-b",unified_id:"beta",creator_name:"Proposal Beta",handle:"beta"}),
+  ]});
+  const doc = buildQuotationDocument(detail,{template:"creator-list-package",proposalOptions:[
+    {itemIds:["rc-b"],recommended:true},
+    {kind:"rate_card",itemIds:["rc-a1"],recommended:false},
+  ]});
+  assert.equal(doc.proposalOptions![1].document.template,"creator-list");
+  assert.equal(doc.proposalOptions![1].document.rows.length,2);
+  assert.equal(doc.proposalOptions![0].document.rows.length,1);
+  const html = buildQuotationHtml(doc);
+  const pages=html.match(/<section class="page[^"]*">[\s\S]*?<\/section>/g)!;
+  assert.ok(pages[1].includes("Option 1"));
+  assert.ok(!pages[1].includes("Option 2"));
+  assert.ok(!pages[1].includes("Rate Alpha"));
+  const ratePages = pages.filter(page=>page.includes('<span class="ph__kind">Rate card</span>'));
+  assert.ok(ratePages.length > 0);
+  assert.ok(ratePages.some(page=>page.includes("1,200") && page.includes("3,400")));
+  assert.ok(ratePages.every(page=>!page.includes("Proposal Beta")));
+  assert.ok(pages.at(-2)!.includes('<span class="ph__kind">Rate card</span>'));
+  assert.ok(!pages.at(-1)!.includes('<span class="ph__kind">Rate card</span>'));
+  const standalone=buildQuotationHtml(buildQuotationDocument(detail,{template:"creator-list",proposalOptions:[{kind:"rate_card",itemIds:["rc-a1"],recommended:false}]}));
+  assert.ok(standalone.includes('<span class="ph__kind">Rate card</span>'));
+  assert.ok(!standalone.includes("Compare your options"));
+}
+// Comparison continuation includes every creator and only selected deliverables.
+{
+  const items = Array.from({length:19},(_,i)=>mockItem({id:`roster-${i}`,unified_id:`roster-${i}`,creator_name:`Roster Creator ${i}`,handle:`roster${i}`,deliverables:[{platform:"instagram",type:"IG Reel",quantity:1}]}));
+  const detail=mockDetail({items});
+  const doc=buildQuotationDocument(detail,{template:"creator-list-package",proposalOptions:[{itemIds:items.map(item=>item.id),recommended:true}]});
+  const html=buildQuotationHtml(doc);
+  const summaryPages=html.match(/<section class="page proposal-summary">[\s\S]*?<\/section>/g)!;
+  assert.ok(summaryPages.length >= 2);
+  const combined=summaryPages.join("");
+  for(let i=0;i<19;i++) assert.ok(combined.includes(`Roster Creator ${i}`));
+  assert.ok(combined.includes("<th>Deliverables</th>"));
+  assert.ok(!combined.includes("creators — see option pages"));
+}
+// Spreadsheet rate card has its own client-price sheet, with all creator options.
+void (async () => {
+  const {buildQuotationExcel} = await import("./quotation-excel");
+  const {default: ExcelJS} = await import("exceljs");
+  const detail=mockDetail({items:[
+    mockItem({id:"sheet-a1",unified_id:"sheet-a",creator_name:"Sheet Alpha",option_number:1}),
+    mockItem({id:"sheet-a2",unified_id:"sheet-a",creator_name:"Sheet Alpha",option_number:2}),
+    mockItem({id:"sheet-b",unified_id:"sheet-b",creator_name:"Sheet Beta"}),
+  ]});
+  const buffer=await buildQuotationExcel(detail,{proposalOptions:[{kind:"rate_card",itemIds:["sheet-a1"],recommended:false}]});
+  const workbook=new ExcelJS.Workbook();
+  await workbook.xlsx.load(buffer as never);
+  const sheet=workbook.getWorksheet("Rate card");
+  assert.ok(sheet);
+  const values=JSON.stringify(sheet.getSheetValues());
+  assert.ok(values.includes("Sheet Alpha"));
+  assert.ok(!values.includes("Sheet Beta"));
+  assert.ok(values.includes("Option 1") && values.includes("Option 2"));
+  assert.ok(!values.includes("Unit cost") && !values.includes("Gross profit"));
+})().catch(error=>{console.error(error);process.exitCode=1;});
+// Compact comparisons put four options together; hiding deliverables removes only that column.
+{
+  const detail=mockDetail({items:[mockItem({id:"compact-a",unified_id:"compact",creator_name:"Compact Creator",handle:"compact",deliverables:[{platform:"instagram",type:"IG Reel",quantity:1}]})]});
+  for (const count of [3,4]) {
+    const proposalOptions=Array.from({length:count},()=>({itemIds:["compact-a"],recommended:false}));
+    const html=buildQuotationHtml(buildQuotationDocument(detail,{template:"creator-list",proposalOptions}));
+    const pages=html.match(/<section class="page proposal-summary">[\s\S]*?<\/section>/g)!;
+    assert.equal(pages.length,1);
+    assert.ok(pages[0].includes(`Option ${count}`));
+    assert.ok(pages[0].includes("<th>Deliverables</th>"));
+    assert.ok(pages[0].includes('<ul class="proposal-deliverables"><li>'));
+    const hidden=buildQuotationHtml(buildQuotationDocument(detail,{template:"creator-list",proposalOptions:proposalOptions.map(option=>({...option,showDeliverables:false}))}));
+    const comparison=hidden.match(/<section class="page proposal-summary">[\s\S]*?<\/section>/g)![0];
+    assert.ok(!comparison.includes("<th>Deliverables</th>"));
+    assert.ok(!comparison.includes('class="proposal-deliverables"'));
+    assert.ok(comparison.includes("Compact Creator"));
+  }
+}

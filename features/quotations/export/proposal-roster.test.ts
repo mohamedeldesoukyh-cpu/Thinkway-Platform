@@ -1,0 +1,13 @@
+import assert from "node:assert/strict";
+import { proposalRosterEntries } from "./proposal-roster";
+import type { QuotationDocCreatorGroup } from "./quotation-document";
+const scope = "1× Instagram Reel + 2× TikTok Video + Usage Rights (UR) 3 months + " + "Extended usage on client channels ".repeat(8);
+const group = {rows:[{serviceDescription:scope,option:"Option 2"}]} as QuotationDocCreatorGroup;
+const entries=proposalRosterEntries([group]);
+assert.ok(entries.length>1);
+assert.ok(entries.every(entry=>entry.scope.length<=96));
+assert.equal(entries.map(entry=>entry.scope).join(" "),scope.replace(/Instagram/g,"IG").replace(/TikTok/g,"TT").replace("Usage Rights (UR)","Usage rights").replace("months","mos").trim());
+assert.equal(entries[0].continued,false);
+assert.ok(entries.slice(1).every(entry=>entry.continued));
+assert.equal(proposalRosterEntries([{rows:[{serviceDescription:"—"}]} as QuotationDocCreatorGroup])[0].scope,"Scope pending");
+console.log("proposal-roster tests passed");

@@ -20,6 +20,16 @@ async function run() {
   assert.deepEqual(db.patch.metadata.proposalOptions,options);
   assert.deepEqual(db.patch.metadata.creatorListOrder,["item-b"]);
   assert.deepEqual(db.patch.metadata.templateCreatorPhotos,{a:"photo"});
+  const rateCardDb=database();
+  const withRateCard=[...options,{kind:"rate_card",itemIds:["item-a","item-b"],recommended:false}];
+  assert.equal((await persistQuotationProposalOptions(rateCardDb.client,"quote",withRateCard,"original")).ok,true);
+  assert.deepEqual(rateCardDb.patch.metadata.proposalOptions,withRateCard);
+  const hiddenDb=database();
+  const hiddenOptions=options.map(option=>({...option,showDeliverables:false}));
+  assert.equal((await persistQuotationProposalOptions(hiddenDb.client,"quote",hiddenOptions,"original")).ok,true);
+  assert.deepEqual(hiddenDb.patch.metadata.proposalOptions,hiddenOptions);
+  assert.equal((await persistQuotationProposalOptions(database().client,"quote",[{...options[0],showDeliverables:"false"}],"original")).ok,false);
+  assert.equal((await persistQuotationProposalOptions(database().client,"quote",[withRateCard[2],withRateCard[2]],"original")).ok,false);
   assert.ok(db.filters.some(value=>JSON.stringify(value)===JSON.stringify(["updated_at","original"])));
   const clear=database();
   assert.equal((await persistQuotationProposalOptions(clear.client,"quote",[],"original")).ok,true);

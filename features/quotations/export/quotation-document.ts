@@ -258,7 +258,8 @@ export type QuotationDocumentFullTierBreakdown = {
 };
 
 export type QuotationDocument = {
-  proposalOptions?: { recommended: boolean; document: QuotationDocument }[];
+  isRateCard?: boolean;
+  proposalOptions?: { kind?: "rate_card"; showDeliverables?: boolean; recommended: boolean; document: QuotationDocument }[];
   shortlistCreatorListCost?: import("@/features/discovery/shortlists/creator-list-cost").CreatorListCost;
   creatorListOrder?: string[];
   clientLogo?: string | null;
@@ -947,13 +948,18 @@ export function buildQuotationDocument(
     showOriginalCurrency?: boolean;
   }
 ): QuotationDocument {
-  const proposals = options?.proposalOptions;
+  const proposals = options?.proposalOptions?.map(option => {
+    if (option.kind !== "rate_card") return option;
+    const selected = new Set(option.itemIds);
+    const keys = new Set(detail.items.filter(item => selected.has(item.id)).map(quotationCreatorDuplicateKey));
+    return {...option, itemIds: [...new Set([...option.itemIds, ...detail.items.filter(item => keys.has(quotationCreatorDuplicateKey(item))).map(item => item.id)])]};
+  });
   if (proposals?.length) {
     if (!supportsProposalOptions(options?.template ?? "detailed")) throw new Error("Proposal options require a Creator List template.");
     const allowed = new Set(detail.items.map(item => item.id));
     if (proposals.some(option => !option.itemIds.length || option.itemIds.some(id => !allowed.has(id)))) throw new Error("An option contains unavailable quotation lines. Reopen the creator selector to update it.");
     const base = buildQuotationDocument(detail, { ...options, proposalOptions: undefined, itemIds: [...new Set(proposals.flatMap(option => option.itemIds))] });
-    base.proposalOptions = proposals.map(option => ({ recommended: option.recommended, document: buildQuotationDocument(detail, { ...options, proposalOptions: undefined, itemIds: option.itemIds }) }));
+    base.proposalOptions = proposals.map(option => ({ kind: option.kind, showDeliverables: option.showDeliverables, recommended: option.recommended, document: {...buildQuotationDocument(detail, { ...options, template: option.kind === "rate_card" ? "creator-list" : options?.template, proposalOptions: undefined, itemIds: option.itemIds }), isRateCard: option.kind === "rate_card"} }));
     return base;
   }
   const audience = options?.audience ?? "client";

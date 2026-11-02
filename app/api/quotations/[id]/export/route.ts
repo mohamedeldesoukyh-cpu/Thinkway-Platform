@@ -135,7 +135,7 @@ export async function GET(request: Request, context: RouteContext) {
     );
 
     if (format === "excel") {
-      const buffer = await buildQuotationExcel(enriched, { itemIds, platforms, displayFxRateToEgp, directRates });
+      const buffer = await buildQuotationExcel(enriched, { itemIds, platforms, displayFxRateToEgp, directRates, proposalOptions: parseProposalOptions(searchParams.get("proposals")) });
       return new NextResponse(buffer as unknown as BodyInit, {
         headers: withExportCacheHeaders({
           "Content-Type":

@@ -25,7 +25,7 @@ function breakdownRows(
 
 export async function buildQuotationExcel(
   detail: import("../types").QuotationDetail,
-  options?: { itemIds?: string[]; platforms?: string[] | null; displayFxRateToEgp?: number; directRates?: Record<string, number> }
+  options?: { itemIds?: string[]; platforms?: string[] | null; displayFxRateToEgp?: number; directRates?: Record<string, number>; proposalOptions?: import("./proposal-options").ProposalOption[] }
 ): Promise<Buffer> {
   const doc = buildQuotationDocument(detail, {
     audience: "internal",
@@ -166,5 +166,22 @@ export async function buildQuotationExcel(
     columnFormats: ["text", "text", "text"],
   };
 
-  return buildStyledExcelBuffer([sheet, summarySheet]);
+  const rateCard = options?.proposalOptions?.find(option => option.kind === "rate_card");
+  const rateCardSheets: StyledSheetConfig[] = [];
+  if (rateCard) {
+    const rateDoc = buildQuotationDocument(detail, {...options, template: "creator-list", proposalOptions: [rateCard]}).proposalOptions![0].document;
+    rateCardSheets.push({
+      name: "Rate card",
+      header: {
+        title: `Thinkway — Rate card ${doc.serial}`,
+        entityLine: `${doc.clientName} · ${doc.brandName}`,
+        generatedAt: new Date(),
+        notes: ["All available options for the selected creators. Prices are alternatives, not a combined package."],
+      },
+      columnHeaders: [["Creator", "Option", "Platform", "Deliverables", "Client cost", "Agency fee", "Total incl. AF"]],
+      rows: rateDoc.rows.filter(row => !row.isCollapsePackageFollower).map(row => ({kind: "data", values: [row.creator, row.option, row.platform, row.serviceDescription, row.clientCost, row.af, row.totalInvestment ?? row.clientCost]})),
+      columnFormats: ["text", "text", "text", "text", "text", "text", "text"],
+    });
+  }
+  return buildStyledExcelBuffer([sheet, summarySheet, ...rateCardSheets]);
 }

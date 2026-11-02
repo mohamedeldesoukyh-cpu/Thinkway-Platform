@@ -133,7 +133,9 @@ export function DocumentCreatorSelectionDialog({
     let cancelled = false;
     function applyOptions(saved: ProposalOption[]) {
       const allowed = new Set(creators.flatMap(creator => creator.itemIds));
-      const available = saved.map(option => ({...option,itemIds:option.itemIds.filter(id=>allowed.has(id))})).filter(option=>option.itemIds.length);
+      const available = saved.map(option => ({...option,itemIds: option.kind === "rate_card"
+        ? creators.filter(creator => creator.itemIds.some(id => option.itemIds.includes(id))).flatMap(creator => creator.itemIds)
+        : option.itemIds.filter(id=>allowed.has(id))})).filter(option=>option.itemIds.length);
       setProposalOptions(available);
       setActiveOption(0);
       const nextIds = seedCreatorItemSelection(creators, available[0]?.itemIds ?? workspaceItemIds);
@@ -172,6 +174,16 @@ export function DocumentCreatorSelectionDialog({
   );
 
   const currentOptions = proposalOptions.map((option, index) => index === activeOption ? { ...option, itemIds: selectedItemIds } : option);
+  const showDeliverables = currentOptions.every(option => option.showDeliverables !== false);
+  const rateCardActive = currentOptions[activeOption]?.kind === "rate_card";
+  const optionLabel = (index: number) => currentOptions[index]?.kind === "rate_card" ? "Rate card" : `Option ${currentOptions.slice(0, index + 1).filter(option => option.kind !== "rate_card").length}`;
+  function addRateCard() {
+    const next: ProposalOption[] = [...currentOptions, {kind: "rate_card", itemIds: creators.flatMap(creator => creator.itemIds), recommended: false, ...(showDeliverables ? {} : {showDeliverables:false})}];
+    setProposalOptions(next);
+    setActiveOption(next.length - 1);
+    setSelectedIds(seedCreatorItemSelection(creators));
+    setQuery("");
+  }
   const invalidOptions = currentOptions.some(option => !option.itemIds.length);
   function switchOption(index: number) {
     setProposalOptions(currentOptions);
@@ -185,7 +197,7 @@ export function DocumentCreatorSelectionDialog({
       setProposalOptions([{ itemIds: selectedItemIds, recommended: false }]);
       setActiveOption(0);
     } else {
-      setProposalOptions([...currentOptions, { itemIds: [], recommended: false }]);
+      setProposalOptions([...currentOptions, { itemIds: [], recommended: false, ...(showDeliverables ? {} : {showDeliverables:false}) }]);
       setActiveOption(currentOptions.length);
       setSelectedIds(new Set());
     }
@@ -194,8 +206,9 @@ export function DocumentCreatorSelectionDialog({
   function removeOption(index: number) {
     const next = currentOptions.filter((_, i) => i !== index);
     setProposalOptions(next);
-    setActiveOption(0);
-    setSelectedIds(next.length ? normalizeCreatorItemSelection(creators, next[0]!.itemIds) : seedCreatorItemSelection(creators, workspaceItemIds));
+    const nextActive = index < activeOption ? activeOption - 1 : index === activeOption ? Math.min(index, next.length - 1) : activeOption;
+    setActiveOption(Math.max(0, nextActive));
+    setSelectedIds(next.length ? normalizeCreatorItemSelection(creators, next[nextActive]!.itemIds) : seedCreatorItemSelection(creators, workspaceItemIds));
   }
 
   const availablePlatforms = useMemo(
@@ -321,19 +334,21 @@ export function DocumentCreatorSelectionDialog({
       </header>
       <fieldset className={styles.selectionBody} disabled={optionsLoading || optionsSaving} style={{border:0,padding:0,margin:0,minWidth:0}}>
         {proposalStorageKey && <section className={styles.proposalOptions} aria-label="Proposal options">
-          <div className={styles.proposalHeading}><strong>Proposal options</strong><span className={styles.optionsHint}>Creators can appear in multiple options.</span><button type="button" className={styles.button} disabled={proposalOptions.length >= 12} onClick={addOption}>+ Add Options</button></div>
+          <div className={styles.proposalHeading}><strong>Proposal options</strong><span className={styles.optionsHint}>Creators can appear in multiple options.</span><button type="button" className={styles.button} disabled={proposalOptions.filter(option => option.kind !== "rate_card").length >= 12} onClick={addOption}>+ Add Options</button><button type="button" className={styles.button} disabled={proposalOptions.some(option => option.kind === "rate_card")} onClick={addRateCard}>+ Add rate card</button></div>
           {optionsLoading && <p role="status">Loading saved options…</p>}
           {optionsMessage && <p role="status">{optionsMessage}</p>}
           {proposalOptions.length > 0 && <>
-            <div className={styles.optionTabs} role="tablist" aria-label="Choose proposal option">{currentOptions.map((option, index) => <button type="button" role="tab" key={index} data-recommended={option.recommended || undefined} aria-selected={activeOption === index} className={`${styles.button} ${activeOption === index ? styles.primary : ""}`} onClick={() => switchOption(index)}>Option {index + 1}{option.recommended ? " ★" : ""}</button>)}</div>
-            <div className={styles.optionActions}><strong>{selectedCount} creators</strong><button type="button" className={styles.button} aria-pressed={currentOptions[activeOption]?.recommended ?? false} onClick={() => setProposalOptions(currentOptions.map((option, index) => index === activeOption ? { ...option, recommended: !option.recommended } : option))}>{currentOptions[activeOption]?.recommended ? "★ Recommended" : "☆ Mark recommended"}</button><button type="button" className={styles.button} onClick={() => removeOption(activeOption)}>Remove option</button></div>
+            <div className={styles.optionTabs} role="tablist" aria-label="Choose proposal option">{currentOptions.map((option, index) => <div className={styles.optionTabGroup} key={index} role="presentation"><button type="button" role="tab" data-recommended={option.recommended || undefined} aria-selected={activeOption === index} className={styles.button} onClick={() => switchOption(index)}>{optionLabel(index)}{option.recommended ? " ★" : ""}</button><button type="button" className={styles.removeTab} aria-label={`Remove ${optionLabel(index)}`} title={`Remove ${optionLabel(index)}`} onClick={() => removeOption(index)}><XIcon size={13} aria-hidden="true" /></button></div>)}</div>
+            <div className={styles.optionActions}><strong>{selectedCount} creators</strong>{!rateCardActive && <button type="button" className={styles.button} aria-pressed={currentOptions[activeOption]?.recommended ?? false} onClick={() => setProposalOptions(currentOptions.map((option, index) => index === activeOption ? { ...option, recommended: !option.recommended } : option))}>{currentOptions[activeOption]?.recommended ? "★ Recommended" : "☆ Mark recommended"}</button>}</div>
+            {rateCardActive && <p className={styles.optionsHint}>All options for selected creators appear in the Rate card before the ending page. Prices are alternatives, not a combined package.</p>}
             {invalidOptions && <p className={styles.selectionWarning}>Select at least one creator in every option before continuing.</p>}
 
+            <label className={styles.deliverablesToggle}><input type="checkbox" checked={showDeliverables} onChange={event => setProposalOptions(currentOptions.map(option => ({...option, showDeliverables:event.target.checked})))} />Show deliverables in comparison</label>
             <div className={styles.optionSaveActions}><button type="button" className={styles.button} disabled={invalidOptions || !optionsRevision.current} onClick={()=>void persistOptions(currentOptions)}>Save options</button><button type="button" className={styles.button} disabled={!optionsRevision.current} onClick={()=>void clearOptions()}>Clear options</button></div>
           </>}
         </section>}
         {selectionError && <p role="alert">{selectionError}</p>}
-        {clientMetrics.length || internalMetrics.length ? <div className={styles.zones}>
+        {!rateCardActive && (clientMetrics.length || internalMetrics.length) ? <div className={styles.zones}>
           {clientMetrics.length ? <section className={`${styles.zone} ${styles.clientZone}`} aria-label="Client-facing totals"><h3>Client-facing &middot; quotation prices</h3>{metricList(clientMetrics)}</section> : null}
           {internalMetrics.length ? <section className={`${styles.zone} ${styles.internalZone}`} aria-label="Internal totals"><h3><LockKeyholeIcon size={12} aria-hidden="true" />Internal &middot; never in client exports</h3>{metricList(internalMetrics)}</section> : null}
           {open && quotationTotalSource && <QuotationConvertedTotal key={quotationTotalSource.currency} source={quotationTotalSource} itemIds={selectedItemIds} />}
@@ -363,22 +378,22 @@ export function DocumentCreatorSelectionDialog({
             const expanded = expandedCreators.has(creator.creatorKey);
             const selectedOptions = options.filter(option => option.itemIds.every(id => selectedIds.has(id))).length;
             const metrics = creatorSummaries.get(creator.creatorKey)?.metrics ?? [];
-            const rowMetrics = metrics.filter(metric => metric.label === "Client cost" || metric.label === "Est. reach");
+            const rowMetrics = metrics.filter(metric => (!rateCardActive && metric.label === "Client cost") || metric.label === "Est. reach");
             return <li key={creator.creatorKey}><div className={styles.creatorChoiceHeader}><label className={`${styles.selectionRow} ${checked || partial ? styles.selectedRow : ""}`}>
               <input type="checkbox" checked={checked} ref={element => { if (element) element.indeterminate = partial; }} onChange={() => toggleCreator(creator)} aria-label={`Include ${creator.name}`} />
               <span className={styles.avatar}>{creator.avatarUrl && !failedAvatars.has(creator.avatarUrl) ? <img src={creator.avatarUrl} alt="" onError={() => setFailedAvatars(current => new Set(current).add(creator.avatarUrl!))} /> : initials(creator.name, creator.handle)}</span>
               <span className={styles.selectionIdentity}><strong dir="auto">{creator.name}</strong>
                 {creator.handle !== "—" && creator.name.replace(/^@/, "") !== creator.handle.replace(/^@/, "") ? <small>{creator.handle}</small> : null}
                 <span className={styles.rowPlatforms}>{(creator.platforms ?? []).map(platform => <span key={platform} data-included={selectedPlatforms.has(canonicalPlatformKey(platform))}>{platformLabel(platform)}</span>)}{!creator.platforms?.length && creator.meta ? creator.meta : null}</span>
-                {expandable && <small className={styles.optionSelectionCount}>{selectedOptions} of {options.length} options selected</small>}
+                {expandable && <small className={styles.optionSelectionCount}>{rateCardActive ? "All options included when selected" : `${selectedOptions} of ${options.length} options selected`}</small>}
               </span>
               {rowMetrics.map(metric => <span key={metric.label} className={styles.rowFigure}><small>{metric.label}</small><b>{figure(metric.value)}</b></span>)}
-            </label>{expandable && <button type="button" className={styles.expandOptions} aria-label={`${expanded ? "Hide" : "Show"} options for ${creator.name}`} aria-expanded={expanded} onClick={() => setExpandedCreators(current => { const next = new Set(current); if (next.has(creator.creatorKey)) next.delete(creator.creatorKey); else next.add(creator.creatorKey); return next; })}><ChevronDownIcon size={16} aria-hidden="true" /><span>{expanded ? "Hide options" : "Choose options"}</span></button>}</div>
+            </label>{expandable && <button type="button" className={styles.expandOptions} aria-label={`${expanded ? "Hide" : "Show"} options for ${creator.name}`} aria-expanded={expanded} onClick={() => setExpandedCreators(current => { const next = new Set(current); if (next.has(creator.creatorKey)) next.delete(creator.creatorKey); else next.add(creator.creatorKey); return next; })}><ChevronDownIcon size={16} aria-hidden="true" /><span>{expanded ? "Hide options" : rateCardActive ? "View options" : "Choose options"}</span></button>}</div>
               {expandable && expanded && <ul className={styles.lineOptions} aria-label={`Options for ${creator.name}`}>{options.map(option => {
                 const included = option.itemIds.every(id => selectedIds.has(id));
                 const price = summarizeSelection(option.itemIds).metrics.find(metric => metric.label === "Client cost");
                 return <li key={option.key}><label className={`${styles.lineOption} ${included ? styles.includedOption : ""}`}>
-                  <input type="checkbox" checked={included} onChange={() => toggleItems(option.itemIds)} aria-label={`Include ${option.label} for ${creator.name}`} />
+                  <input type="checkbox" checked={included} disabled={rateCardActive} onChange={() => toggleItems(option.itemIds)} aria-label={`Include ${option.label} for ${creator.name}`} />
                   <span><strong>{option.label}</strong><small>{option.description || "No deliverables specified"}</small>{option.packageLabel && <small>Package: {option.packageLabel} · selected together</small>}</span>
                   {price && <span className={styles.rowFigure}><small>Client cost</small><b>{figure(price.value)}</b></span>}
                 </label></li>;
