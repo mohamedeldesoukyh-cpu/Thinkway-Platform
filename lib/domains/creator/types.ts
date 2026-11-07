@@ -55,6 +55,8 @@ export type UnifiedCreatorPlatform = {
   /** Last metrics sync provider (e.g. apify, discovery_add). */
   sync_source?: string | null;
   sync_status?: string | null;
+  /** When this platform account's metrics were last synced. */
+  metrics_last_synced_at?: string | null;
   sync_error?: string | null;
   enrichment_status?: CreatorEnrichmentStatus | null;
   metadata?: Record<string, unknown> | null;

@@ -510,7 +510,7 @@ const BROWSE_PLATFORM_ACCOUNT_SELECT_CORE =
   "id, influencer_id, platform, handle, profile_url, follower_count, engagement_rate, avg_likes, avg_comments, avg_views, audience_country, is_verified, is_primary, profile_picture_url, profile_display_name";
 
 const BROWSE_PLATFORM_ACCOUNT_SELECT_TAIL =
-  "metrics_source, sync_status, sync_source, sync_error, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status";
+  "metrics_source, sync_status, sync_source, sync_error, metrics_last_synced_at, last_synced_at, metrics_is_manual_override, metadata, avatar_source, interest_categories, enrichment_status";
 
 function chunkValues<T>(values: T[], size: number): T[][] {
   if (values.length === 0) return [];
@@ -1892,6 +1892,8 @@ async function fetchInternalCreators(
         ),
         sync_source: (p as { sync_source?: string | null }).sync_source ?? null,
         sync_status: (p as { sync_status?: string | null }).sync_status ?? null,
+        metrics_last_synced_at:
+          (p as { metrics_last_synced_at?: string | null }).metrics_last_synced_at ?? null,
         sync_error: (p as { sync_error?: string | null }).sync_error ?? null,
         enrichment_status:
           (p as { enrichment_status?: UnifiedCreatorResult["enrichment_status"] }).enrichment_status ??

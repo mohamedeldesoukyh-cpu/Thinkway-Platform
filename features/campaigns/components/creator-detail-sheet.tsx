@@ -1838,8 +1838,8 @@ export function CreatorDetailSheet({
             flagCode={packFlagCodes[0] ?? null}
             metaLine={buildDiscoveryPackCreatorMetaLine({
               creator: identityCreator,
-              lastEnrichedAt: identityCreator.last_enriched_at,
-              updatedAt: identityCreator.updated_at,
+              platformName: selectedPlatform ? platformLabel(selectedPlatform.platform) : null,
+              metricsLastSyncedAt: selectedPlatform?.metrics_last_synced_at ?? null,
             })}
             investmentScore={investmentScore}
             investmentLabel={packInvestmentLabel}

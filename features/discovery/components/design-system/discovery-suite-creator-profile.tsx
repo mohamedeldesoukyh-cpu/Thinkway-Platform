@@ -473,16 +473,19 @@ export function DiscoverySuiteCreatorProfile({
   );
 }
 
-/** Build the left-rail meta line (country · collabs · updated). */
+/** Build the left-rail meta line (country · collabs · selected-platform metric sync). */
 export function buildDiscoveryPackCreatorMetaLine(input: {
   creator: Parameters<typeof formatCreatorCountryLabels>[0];
-  lastEnrichedAt?: string | null;
-  updatedAt?: string | null;
+  platformName?: string | null;
+  metricsLastSyncedAt?: string | null;
 }): string {
   const country = formatCreatorCountryLabels(input.creator);
   const countryPart = country !== "—" ? country : "Unknown";
-  const updated = formatDiscoveryPackRelativeAge(input.lastEnrichedAt, input.updatedAt);
-  return `${countryPart} · 0 collaborations · 0 with you · updated ${updated}`;
+  const platform = input.platformName?.trim() || "Platform";
+  const synced = input.metricsLastSyncedAt
+    ? formatDiscoveryPackRelativeAge(input.metricsLastSyncedAt)
+    : "not synced";
+  return `${countryPart} · 0 collaborations · 0 with you · ${platform} metrics synced ${synced}`;
 }
 
 export function formatDiscoveryPackQuoteReference(input: {
