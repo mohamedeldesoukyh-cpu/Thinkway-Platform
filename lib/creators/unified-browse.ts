@@ -1892,6 +1892,7 @@ async function fetchInternalCreators(
         ),
         sync_source: (p as { sync_source?: string | null }).sync_source ?? null,
         sync_status: (p as { sync_status?: string | null }).sync_status ?? null,
+        last_synced_at: (p as { last_synced_at?: string | null }).last_synced_at ?? null,
         metrics_last_synced_at:
           (p as { metrics_last_synced_at?: string | null }).metrics_last_synced_at ?? null,
         sync_error: (p as { sync_error?: string | null }).sync_error ?? null,

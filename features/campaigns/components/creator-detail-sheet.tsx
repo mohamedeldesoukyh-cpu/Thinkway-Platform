@@ -1839,7 +1839,8 @@ export function CreatorDetailSheet({
             metaLine={buildDiscoveryPackCreatorMetaLine({
               creator: identityCreator,
               platformName: selectedPlatform ? platformLabel(selectedPlatform.platform) : null,
-              metricsLastSyncedAt: selectedPlatform?.metrics_last_synced_at ?? null,
+              metricsLastSyncedAt:
+                selectedPlatform?.metrics_last_synced_at ?? selectedPlatform?.last_synced_at ?? null,
             })}
             investmentScore={investmentScore}
             investmentLabel={packInvestmentLabel}

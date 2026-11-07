@@ -113,6 +113,8 @@ type PlatformAccountRow = {
   profile_picture_url: string | null;
   avatar_source: string | null;
   metadata: Record<string, unknown> | null;
+  last_synced_at?: string | null;
+  metrics_last_synced_at?: string | null;
 };
 
 const APIFY: FieldSource = "apify";
@@ -464,7 +466,7 @@ export async function runCreatorEnrichment(
   const { data: accountsData, error: accountsError } = await supabase
     .from("influencer_platform_accounts")
     .select(
-      "id, platform, handle, username, profile_url, profile_display_name, profile_bio, following_count, posts_count, follower_count, engagement_rate, avg_views, avg_likes, avg_comments, is_verified, audience_country, hashtags, mentions, interest_categories, recent_publications, contact_email, contact_phone, contact_links, metrics_is_manual_override, field_sources, profile_picture_url, avatar_source, metadata"
+      "id, platform, handle, username, profile_url, profile_display_name, profile_bio, following_count, posts_count, follower_count, engagement_rate, avg_views, avg_likes, avg_comments, is_verified, audience_country, hashtags, mentions, interest_categories, recent_publications, contact_email, contact_phone, contact_links, metrics_is_manual_override, field_sources, profile_picture_url, avatar_source, metadata, last_synced_at, metrics_last_synced_at"
     )
     .eq("influencer_id", payload.influencerId);
 
@@ -865,6 +867,9 @@ export async function runCreatorEnrichment(
           sync_status: "synced",
           sync_source: "apify",
           last_synced_at: nowIso,
+          ...(scopeAllowsField(scope, "follower_count")
+            ? { metrics_last_synced_at: nowIso }
+            : {}),
           updated_at: nowIso,
         } as never)
         .eq("id", account.id);
@@ -879,6 +884,20 @@ export async function runCreatorEnrichment(
       }
     } else if (accountHasUsableBaselineData(account)) {
       anySuccess = true;
+      if (scopeAllowsField(scope, "follower_count")) {
+        const syncedAt = new Date().toISOString();
+        const { error: syncStampError } = await supabase
+          .from("influencer_platform_accounts")
+          .update({
+            sync_status: "synced",
+            sync_source: "apify",
+            last_synced_at: syncedAt,
+            metrics_last_synced_at: syncedAt,
+            updated_at: syncedAt,
+          } as never)
+          .eq("id", account.id);
+        if (syncStampError) errors.push(`${platformKey}: ${syncStampError.message}`);
+      }
     }
 
     if (!preferCachedSnapshot && !fetched.cacheHit && scopeAllowsField(scope, "categories") && data.categories.length > 0) freshProviderCategories.push(...data.categories);

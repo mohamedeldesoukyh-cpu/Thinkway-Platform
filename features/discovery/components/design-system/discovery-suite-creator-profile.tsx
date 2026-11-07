@@ -482,10 +482,11 @@ export function buildDiscoveryPackCreatorMetaLine(input: {
   const country = formatCreatorCountryLabels(input.creator);
   const countryPart = country !== "—" ? country : "Unknown";
   const platform = input.platformName?.trim() || "Platform";
-  const synced = input.metricsLastSyncedAt
-    ? formatDiscoveryPackRelativeAge(input.metricsLastSyncedAt)
-    : "not synced";
-  return `${countryPart} · 0 collaborations · 0 with you · ${platform} metrics synced ${synced}`;
+  const syncedAt = input.metricsLastSyncedAt;
+  const syncLabel = syncedAt
+    ? `${platform} last synced ${formatDiscoveryPackRelativeAge(syncedAt)}`
+    : `${platform} sync time unavailable`;
+  return `${countryPart} · 0 collaborations · 0 with you · ${syncLabel}`;
 }
 
 export function formatDiscoveryPackQuoteReference(input: {
