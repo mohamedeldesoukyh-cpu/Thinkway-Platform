@@ -209,14 +209,18 @@ function resolveDisplayEngagementRate(
 function resolveFeedPublications(
   creator: UnifiedCreatorResult
 ): CreatorRecentPublication[] {
-  const fromCreator = creator.recent_publications ?? [];
+  const usable = (publications: CreatorRecentPublication[]) =>
+    publications.filter((pub) => Boolean(creatorRecentPublicationDisplayUrl(pub)));
+
+  // Creator-level publications can be stale or incomplete while a platform
+  // account already has refreshed posts. Fall back based on renderable posts,
+  // not merely on whether the creator-level array is non-empty.
+  const fromCreator = usable(creator.recent_publications ?? []);
   const merged =
     fromCreator.length > 0
       ? fromCreator
-      : creator.platforms.flatMap((platform) => platform.recent_publications ?? []);
-  return merged
-    .filter((pub) => Boolean(creatorRecentPublicationDisplayUrl(pub)))
-    .slice(0, 3);
+      : usable(creator.platforms.flatMap((platform) => platform.recent_publications ?? []));
+  return merged.slice(0, 3);
 }
 
 /**
