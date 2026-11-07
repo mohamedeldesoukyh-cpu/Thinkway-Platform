@@ -9,7 +9,7 @@ export const EMBEDDABLE_DOCUMENT_FRAME_HEADERS = {
   // Full CSP kept compatible with document HTML; only framing is relaxed.
   "Content-Security-Policy": [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    "script-src 'self' 'unsafe-inline'",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: https://*.supabase.co",

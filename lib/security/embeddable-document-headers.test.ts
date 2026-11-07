@@ -9,6 +9,7 @@ test("platform defaults deny framing", () => {
   const api = buildApiSecurityHeaders();
   assert.equal(docs["X-Frame-Options"], "DENY");
   assert.match(docs["Content-Security-Policy"] ?? "", /frame-ancestors 'none'/);
+  assert.doesNotMatch(docs["Content-Security-Policy"] ?? "", /'unsafe-eval'/);
   assert.equal(api["X-Frame-Options"], "DENY");
 });
 
