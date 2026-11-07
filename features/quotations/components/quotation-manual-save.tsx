@@ -113,6 +113,7 @@ function QuotationManualSaveShortcuts() {
     keys: "ctrl+s",
     label: "Save quotation",
     group: "Quotation",
+    scopeSelector: '[data-shortcut-save-scope="quotation"]',
     handler: () => {
       const hadChanges = hasUnsavedRef.current;
       void saveAllRef.current().then((ok) => {
