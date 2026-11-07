@@ -19,7 +19,9 @@ function parseAllowedOrigins(): string[] {
     process.env.NEXT_PUBLIC_PRODUCTION_APP_URL?.trim() ||
     "https://app.thinkwaymedia.com";
   const origins = [...fromEnv];
-  for (const candidate of [appUrl, developmentAppUrl, productionAppUrl]) {
+  for (const candidate of [appUrl, developmentAppUrl, productionAppUrl,
+    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
+    process.env.VERCEL_BRANCH_URL ? `https://${process.env.VERCEL_BRANCH_URL}` : null]) {
     if (!candidate) continue;
     try {
       origins.push(new URL(candidate).origin);
@@ -30,42 +32,20 @@ function parseAllowedOrigins(): string[] {
   return [...new Set(origins)];
 }
 
-function isVercelAppHost(host: string): boolean {
-  const normalized = host.trim().toLowerCase();
-  return normalized === "vercel.app" || normalized.endsWith(".vercel.app");
-}
-
 function trustHostOrigin(allowed: Set<string>, proto: string, host: string) {
   allowed.add(`${proto}://${host}`);
-  allowed.add(`http://${host}`);
-  allowed.add(`https://${host}`);
 }
 
 /**
- * Allow Origin when it matches an allowlisted origin, the request host(s),
- * or a Vercel Preview alias pair (unique *.vercel.app ↔ *-git-*.vercel.app).
+ * Allow only exact configured origins, including the request's own origin.
  */
 export function isAllowedCsrfOrigin(
   origin: string,
-  hosts: string[],
+  _hosts: string[],
   allowedOrigins: Iterable<string>
 ): boolean {
   const allowed = new Set(allowedOrigins);
   if (allowed.has(origin)) return true;
-
-  let originHost: string;
-  try {
-    originHost = new URL(origin).host;
-  } catch {
-    return false;
-  }
-
-  for (const host of hosts) {
-    if (!host) continue;
-    if (originHost === host) return true;
-    // Preview deployments expose multiple vercel.app aliases; treat as one site.
-    if (isVercelAppHost(originHost) && isVercelAppHost(host)) return true;
-  }
 
   return false;
 }
@@ -113,9 +93,6 @@ export function assertCsrfRequest(request: {
     return { ok: false, reason: "missing_host" };
   }
 
-  const forwardedHost =
-    request.headers.get("x-forwarded-host")?.split(",")[0]?.trim() || null;
-
   const origin = request.headers.get("origin");
   const allowed = new Set(parseAllowedOrigins());
   const proto =
@@ -123,11 +100,7 @@ export function assertCsrfRequest(request: {
     (request.headers.get("x-forwarded-proto") ?? "https");
 
   trustHostOrigin(allowed, proto, host);
-  if (forwardedHost) {
-    trustHostOrigin(allowed, proto, forwardedHost);
-  }
-
-  const requestHosts = [host, forwardedHost].filter(Boolean) as string[];
+  const requestHosts = [host];
 
   if (origin) {
     if (isAllowedCsrfOrigin(origin, requestHosts, allowed)) {

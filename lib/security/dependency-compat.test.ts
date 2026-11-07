@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import test from "node:test";
 
-test("next is pinned to a patched 16.2.x release (>= 16.2.11)", () => {
+test("next is pinned to a patched 16.4.x release (>= 16.4.4)", () => {
   const pkg = JSON.parse(
     readFileSync(path.join(process.cwd(), "package.json"), "utf8")
   ) as { dependencies: Record<string, string> };
@@ -16,17 +16,17 @@ test("next is pinned to a patched 16.2.x release (>= 16.2.11)", () => {
   const minor = Number(match![2]);
   const patch = Number(match![3]);
   assert.ok(
-    major > 16 || (major === 16 && (minor > 2 || (minor === 2 && patch >= 11))),
-    `next ${next} is below patched 16.2.11`
+    major > 16 || (major === 16 && (minor > 4 || (minor === 4 && patch >= 4))),
+    `next ${next} is below patched 16.4.4`
   );
 });
 
-test("xlsx community package remains explicitly deferred", () => {
+test("xlsx uses the patched official SheetJS distribution", () => {
   const pkg = JSON.parse(
     readFileSync(path.join(process.cwd(), "package.json"), "utf8")
   ) as { dependencies: Record<string, string> };
-  assert.ok(pkg.dependencies.xlsx, "xlsx still present (deferred replacement)");
-  // Documented deferral: no secure community fix path; exceljs preferred for new writers.
+  assert.equal(pkg.dependencies.xlsx, "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz");
+  // The npm registry package is obsolete; use the vendor's patched distribution.
   assert.ok(pkg.dependencies.exceljs, "exceljs should remain available");
 });
 

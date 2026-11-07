@@ -59,3 +59,17 @@ test("applySecurityHeaders does not overwrite existing values", () => {
   assert.equal(headers.get("X-Frame-Options"), "SAMEORIGIN");
   assert.ok(headers.get("Content-Security-Policy"));
 });
+
+
+test("production CSP excludes eval while development supports hot reload", () => {
+  const previous = process.env.NODE_ENV;
+  try {
+    process.env.NODE_ENV = "production";
+    assert.ok(!buildDocumentSecurityHeaders()["Content-Security-Policy"].includes("'unsafe-eval'"));
+    process.env.NODE_ENV = "development";
+    assert.ok(buildDocumentSecurityHeaders()["Content-Security-Policy"].includes("'unsafe-eval'"));
+  } finally {
+    if (previous === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previous;
+  }
+});

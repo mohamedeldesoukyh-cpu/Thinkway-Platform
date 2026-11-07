@@ -4,10 +4,10 @@ import { describe, it } from "node:test";
 import { resolveServerActionAllowedOrigins } from "@/lib/security/server-action-origins";
 
 describe("resolveServerActionAllowedOrigins", () => {
-  it("always allows localhost and vercel.app wildcard", () => {
+  it("allows localhost without trusting unrelated Vercel projects", () => {
     const origins = resolveServerActionAllowedOrigins({});
     assert.ok(origins.includes("localhost:3000"));
-    assert.ok(origins.includes("*.vercel.app"));
+    assert.ok(!origins.includes("*.vercel.app"));
   });
 
   it("includes Thinkway app hosts and Vercel system URLs", () => {
@@ -21,6 +21,6 @@ describe("resolveServerActionAllowedOrigins", () => {
     assert.ok(origins.includes("app.thinkwaymedia.com"));
     assert.ok(origins.includes("thinkway-platform-abc123-team.vercel.app"));
     assert.ok(origins.includes("thinkway-platform-git-develop-team.vercel.app"));
-    assert.ok(origins.includes("*.vercel.app"));
+    assert.ok(!origins.includes("*.vercel.app"));
   });
 });

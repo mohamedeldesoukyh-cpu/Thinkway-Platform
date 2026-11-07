@@ -68,6 +68,13 @@ jobs:
       - name: Auth / appsec P1
         run: npm run test:auth-p1
 
+      - name: Application security and workspace boundaries
+        run: |
+          npm run test:appsec-p2
+          npm run test:appsec-p3
+          npm run test:appsec-p4
+          npx tsx --test lib/security/server-action-origins.test.ts
+
       - name: Typecheck
         run: npx tsc --noEmit -p tsconfig.json
 

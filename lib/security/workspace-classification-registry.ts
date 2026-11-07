@@ -122,6 +122,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/shortlists/[id]/export": "internal_workspace",
   "/api/invoices/[id]/document": "internal_workspace",
   "/api/client-ios/[id]/document": "internal_workspace",
+  "/api/client-ios/[id]/versions": "internal_workspace",
   "/api/vendor-ios/[id]/document": "internal_workspace",
 
   "/api/reports/client-profitability/document": "internal_workspace",
@@ -151,6 +152,7 @@ export const SERVER_ACTION_MODULE_CLASSIFICATIONS: Record<string, WorkspaceClass
   "features/planning": "internal_workspace",
   "features/rate-cards": "internal_workspace",
   "features/campaigns": "internal_workspace",
+  "features/other-services": "internal_workspace",
   "features/campaign-studio": "internal_workspace",
   "features/campaign-plan": "internal_workspace",
   "features/campaign-outputs": "internal_workspace",

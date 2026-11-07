@@ -127,6 +127,14 @@ const APIFY_METRIC_FIELDS = [
   "posts_count",
 ] as const;
 
+// An explicit refresh must be able to replace stale imported publication lists
+// just like it replaces imported follower and engagement metrics. Keep manual
+// values protected; mergeCreatorRecentPublications preserves historical posts.
+const APIFY_MANUAL_REFRESH_FIELDS = [
+  ...APIFY_METRIC_FIELDS,
+  "recent_publications",
+] as const;
+
 const SCOPE_FIELDS: Record<Exclude<EnrichmentScope, "all">, readonly string[]> = {
   avatar: ["profile_picture_url"],
   metrics: [
@@ -781,7 +789,8 @@ export async function runCreatorEnrichment(
     const merged = mergeSourcedFields(resolveAccountFieldSources(account), scopedIncoming, {
       existingValues: accountExistingValues(account),
       fillMissingOnly: payload.trigger !== "manual",
-      refreshImportedFields: payload.trigger === "manual" ? APIFY_METRIC_FIELDS : [],
+      refreshImportedFields:
+        payload.trigger === "manual" ? APIFY_MANUAL_REFRESH_FIELDS : [],
       metadata: account.metadata,
       forceInterestReplace,
       enableInterestMerge: true,

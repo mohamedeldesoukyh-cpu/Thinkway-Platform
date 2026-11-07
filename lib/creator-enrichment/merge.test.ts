@@ -30,6 +30,45 @@ import {
   ], { ...options, refreshImportedFields: ["follower_count"] }).updates.follower_count, undefined);
 }
 
+// Manual refresh can replace stale imported publication snapshots while
+// preserving manual overrides and leaving non-manual imports untouched.
+{
+  const existing = [{ url: "https://tiktok.com/@creator/video/old", caption: "Old" }];
+  const incoming = [{ url: "https://tiktok.com/@creator/video/new", caption: "New" }];
+  const fields: IncomingField[] = [
+    { field: "recent_publications", value: [...existing, ...incoming], source: "apify" },
+  ];
+  const refreshed = mergeSourcedFields(
+    { recent_publications: "imported" },
+    fields,
+    {
+      existingValues: { recent_publications: existing },
+      fillMissingOnly: false,
+      refreshImportedFields: ["recent_publications"],
+    }
+  );
+  assert.deepEqual(refreshed.updates.recent_publications, [...existing, ...incoming]);
+  assert.equal(refreshed.fieldSources.recent_publications, "apify");
+
+  const ordinaryImport = mergeSourcedFields(
+    { recent_publications: "imported" },
+    fields,
+    { existingValues: { recent_publications: existing }, fillMissingOnly: false }
+  );
+  assert.equal(ordinaryImport.updates.recent_publications, undefined);
+
+  const manual = mergeSourcedFields(
+    { recent_publications: "manual" },
+    fields,
+    {
+      existingValues: { recent_publications: existing },
+      fillMissingOnly: false,
+      refreshImportedFields: ["recent_publications"],
+    }
+  );
+  assert.equal(manual.updates.recent_publications, undefined);
+}
+
 // ---------------------------------------------------------------------------
 // Transparency: every written field records its source (spec §11)
 // ---------------------------------------------------------------------------

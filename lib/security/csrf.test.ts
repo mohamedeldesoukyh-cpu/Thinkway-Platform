@@ -78,7 +78,7 @@ test("assertCsrfRequest allows cron bearer", () => {
   }
 });
 
-test("assertCsrfRequest allows Vercel Preview unique URL vs git-branch alias", () => {
+test("assertCsrfRequest rejects unconfigured Vercel aliases", () => {
   const prev = process.env.NODE_ENV;
   process.env.NODE_ENV = "production";
   try {
@@ -89,7 +89,7 @@ test("assertCsrfRequest allows Vercel Preview unique URL vs git-branch alias", (
         host: "thinkway-platform-abc123-team.vercel.app",
       })
     );
-    assert.equal(result.ok, true);
+    assert.equal(result.ok, false);
   } finally {
     process.env.NODE_ENV = prev;
   }
@@ -108,5 +108,19 @@ test("assertCsrfRequest still rejects non-vercel cross-site Origin", () => {
     assert.equal(result.ok, false);
   } finally {
     process.env.NODE_ENV = prev;
+  }
+});
+
+
+test("explicit branch alias is allowed but unrelated deployments are rejected", () => {
+  const previous = process.env.VERCEL_BRANCH_URL;
+  process.env.VERCEL_BRANCH_URL = "thinkway-git-develop-team.vercel.app";
+  try {
+    assert.equal(assertCsrfRequest(req({ origin: "https://thinkway-git-develop-team.vercel.app", host: "thinkway-unique-team.vercel.app" })).ok, true);
+    assert.equal(assertCsrfRequest(req({ origin: "https://unrelated-project.vercel.app", host: "thinkway-unique-team.vercel.app" })).ok, false);
+    assert.equal(assertCsrfRequest(req({ origin: "http://thinkway-unique-team.vercel.app", host: "thinkway-unique-team.vercel.app" })).ok, false);
+  } finally {
+    if (previous === undefined) delete process.env.VERCEL_BRANCH_URL;
+    else process.env.VERCEL_BRANCH_URL = previous;
   }
 });

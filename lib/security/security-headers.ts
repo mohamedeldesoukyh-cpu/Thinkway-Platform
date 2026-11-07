@@ -18,7 +18,7 @@ function buildContentSecurityPolicy(): string {
   const directives = [
     "default-src 'self'",
     // Next.js + theme blocking script use inline; avoid breaking App Router.
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
+    `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: blob: https:",
     "media-src 'self' blob: https://*.supabase.co",

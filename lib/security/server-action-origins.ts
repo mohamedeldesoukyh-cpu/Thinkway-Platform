@@ -18,10 +18,10 @@ function hostFromUrlOrHost(value: string): string | null {
 
 /**
  * Build-time Server Action origin allowlist for `next.config.ts`.
- * Includes Thinkway hosts + Vercel Preview aliases (`*.vercel.app`).
+ * Includes explicitly configured Thinkway and Vercel deployment hosts.
  */
 export function resolveServerActionAllowedOrigins(env: NodeJS.ProcessEnv = process.env): string[] {
-  const hosts = new Set<string>(["localhost:3000", "127.0.0.1:3000"]);
+  const hosts = new Set<string>(env.NODE_ENV === "production" ? [] : ["localhost:3000", "127.0.0.1:3000"]);
 
   const appUrl = env.NEXT_PUBLIC_APP_URL?.trim();
   if (appUrl) {
@@ -48,9 +48,7 @@ export function resolveServerActionAllowedOrigins(env: NodeJS.ProcessEnv = proce
     if (host) hosts.add(host);
   }
 
-  // Preview / deployment URLs often disagree between Origin and x-forwarded-host
-  // (unique *.vercel.app vs *-git-*.vercel.app). Wildcard covers all project aliases.
-  hosts.add("*.vercel.app");
+  // Unrelated projects on the same hosting provider must never be trusted.
 
   return [...hosts];
 }
