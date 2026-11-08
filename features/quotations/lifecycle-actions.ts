@@ -124,6 +124,20 @@ async function requireMasterDataPromote(
   return { ok: true, userId: auth.userId };
 }
 
+export async function switchQuotationClientBrand(input: { quotationId: string; clientId: string; brandId: string }): Promise<ActionResult> {
+  const parsed = z.object({ quotationId: z.string().uuid(), clientId: z.string().uuid(), brandId: z.string().uuid() }).safeParse(input);
+  if (!parsed.success) return { ok: false, message: "Select a valid client and brand." };
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const { error } = await actor.supabase.rpc("switch_quotation_client_brand" as never, {
+    p_quotation_id: parsed.data.quotationId, p_client_id: parsed.data.clientId, p_brand_id: parsed.data.brandId,
+  } as never);
+  if (error) return { ok: false, message: error.message };
+  revalidatePath("/discovery/quotations", "layout");
+  revalidateQuotation(input.quotationId);
+  return { ok: true };
+}
+
 export async function updateQuotationClientBrand(input: {
   quotationId: string;
   client_id?: string | null;
