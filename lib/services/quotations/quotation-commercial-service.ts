@@ -68,6 +68,7 @@ export async function updateQuotationItemCommercials(
     af_pct?: number | null;
     deliverables?: QuotationDeliverable[];
     option_number?: number | null;
+  option_label?: string | null;
     service_description?: string | null;
     platform?: string | null;
     handle?: string | null;
@@ -216,6 +217,12 @@ export async function updateQuotationItemCommercials(
     if (cleared) patch.deliverables = cleared;
   }
 
+  if (input.option_label !== undefined) {
+    if (input.option_label !== null && input.option_label !== "Additional Service" && input.option_label !== "Deliverables") {
+      return { ok: false as const, message: "Invalid option label." };
+    }
+    patch.option_label = input.option_label;
+  }
   if (input.option_number !== undefined) {
     patch.option_number =
       input.option_number == null

@@ -80,7 +80,7 @@ import {
   sortQuotationCommercialSummaryRows,
   type QuotationCommercialSummarySortState,
 } from "@/lib/quotations/quotation-commercial-summary-sort";
-import { optionNumberLabel } from "@/lib/quotations/quotation-deliverable-types";
+import { quotationOptionLabel } from "@/lib/quotations/quotation-option-label";
 import { buildQuotationItemOptionContext } from "@/lib/quotations/quotation-creator-options";
 
 const CS = {
@@ -144,8 +144,8 @@ function buildRows(
         item,
         influencerName:
           item.creator_name?.trim() || item.handle?.trim() || "Unknown creator",
-        optionLabel: showOption
-          ? (optionNumberLabel(optionCtx?.optionNumber ?? item.option_number) ?? null)
+        optionLabel: (showOption || !!item.option_label)
+          ? (quotationOptionLabel(item, optionCtx?.optionNumber ?? item.option_number) ?? null)
           : null,
         revenueEgp: client.clientCostEgp,
         agencyFeeEgp: client.agencyFeeEgp,

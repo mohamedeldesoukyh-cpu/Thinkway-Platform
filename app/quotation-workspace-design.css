@@ -163,7 +163,7 @@
 
 .tq-redesign .q-row{display:grid;gap:10px;align-items:center;padding:10px 13px;
  border-bottom:1px solid var(--q-hair);background:var(--q-surf);
- grid-template-columns:20px minmax(190px,1.5fr) 72px minmax(220px,2fr) 64px 92px 112px 84px 92px}
+ grid-template-columns:20px minmax(190px,1.5fr) 72px minmax(220px,2fr) 64px 132px 112px 84px 92px}
 .tq-redesign .q-row:hover{background:#FCFDFF}
 .tq-redesign .q-row.is-sel{background:var(--q-lav)}
 .tq-redesign .q-row.is-head{background:var(--q-soft);border-bottom:1px solid var(--q-hair);

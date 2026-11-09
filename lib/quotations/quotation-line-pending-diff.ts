@@ -47,6 +47,7 @@ export function linePendingDiffersFromItem(
   item: QuotationItemRow,
   payload: QuotationLinePendingPayload
 ): boolean {
+  if (payload.option_label !== undefined && payload.option_label !== (item.option_label ?? null)) return true;
   if (payload.cost_fx_override !== undefined && payload.cost_fx_override !== (item.cost_fx_override ?? null)) return true;
   if (payload.revenue_fx_override !== undefined && payload.revenue_fx_override !== (item.revenue_fx_override ?? null)) return true;
   if (

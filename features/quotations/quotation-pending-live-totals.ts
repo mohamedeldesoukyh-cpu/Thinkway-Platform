@@ -22,6 +22,7 @@ export function applyPendingToQuotationItem(
 
   return {
     ...item,
+    ...(pending.option_label !== undefined ? { option_label: pending.option_label } : {}),
     ...(pending.cost_currency !== undefined ? { cost_currency: pending.cost_currency } : {}),
     ...(pending.cost_fx_override !== undefined ? { cost_fx_override: pending.cost_fx_override } : {}),
     ...(pending.revenue_fx_override !== undefined ? { revenue_fx_override: pending.revenue_fx_override } : {}),

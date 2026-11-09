@@ -60,6 +60,7 @@ export type QuotationLinePendingPayload = {
   followers?: number | null;
   engagement_rate?: number | null;
   option_number?: number | null;
+  option_label?: string | null;
 };
 
 export type QuotationMetaPendingPayload = {
@@ -226,7 +227,7 @@ export function QuotationManualSaveProvider({ quotationId, items, children }: Pr
 
       linePendingRef.current.set(itemId, merged);
       setPendingLineIds((current) => {
-        if (current.has(itemId)) return current;
+        // A repeated edit must refresh the displayed pending label.
         const next = new Set(current);
         next.add(itemId);
         return next;

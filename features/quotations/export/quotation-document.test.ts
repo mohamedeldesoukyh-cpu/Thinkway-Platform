@@ -1904,3 +1904,15 @@ void (async () => {
     fs.writeFileSync(process.env.QUOTATION_LAYOUT_PROOF,html);
   }
 }
+
+for (const label of ["Additional Service", "Deliverables", null]) {
+  const detail = mockDetail({items: [mockItem({option_number: 2, option_label: label})]});
+  for (const audience of ["internal", "client"] as const) {
+    const doc = buildQuotationDocument(detail, {audience});
+    assert.equal(doc.rows[0].option, label ?? "Option 2");
+    assert.equal(doc.creatorGroups[0].rows[0].option, label ?? "Option 2");
+    const standard = buildQuotationDocument(mockDetail({items: [mockItem({option_number: 2})]}), {audience});
+    assert.deepEqual(doc.summary, standard.summary, "Labels must not change totals");
+  }
+}
+console.log("quotation-document.test.ts passed");

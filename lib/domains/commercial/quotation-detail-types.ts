@@ -47,6 +47,7 @@ export type QuotationItemRow = {
   creator_categories_manual?: boolean;
   creator_categories?: string[] | null;
   option_number: number | null;
+  option_label?: string | null;
   service_description: string | null;
   commercial_input_mode: CommercialInputMode;
   cost: number;

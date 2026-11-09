@@ -1,3 +1,4 @@
+import { quotationOptionLabel } from "@/lib/quotations/quotation-option-label";
 import { isQuotationListTemplate as supportsProposalOptions } from "./quotation-template";
 import { applyQuotationTemplatePhotos } from "@/lib/quotations/quotation-template-photos";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
@@ -679,7 +680,7 @@ function buildDocRow(
   const row: QuotationDocRow = {
     quotedPlatforms: exportQuotedPlatforms(item),
     creator: item.creator_name ?? item.handle ?? "Creator",
-    option: optionNumberLabel(item.option_number),
+    option: quotationOptionLabel(item),
     platform: exportPlatformDisplayLabel(item, platformFields),
     platformIcons: platformFields.platformIcons,
     allPlatforms: platformFields.allPlatforms,
@@ -687,7 +688,7 @@ function buildDocRow(
     engagementRate: exportEngagementRateLabel(item.engagement_rate),
     country: item.country_code ?? "—",
     deliverables: deliverablesLabel(item),
-    serviceDescription: exportItemServiceDescription(item),
+    serviceDescription: item.option_label ? `${quotationOptionLabel(item)} · ${exportItemServiceDescription(item)}` : exportItemServiceDescription(item),
     tier: exportItemTierLabel(item),
     type: exportItemTypeLabel(item),
     isCollapsePackageFollower,

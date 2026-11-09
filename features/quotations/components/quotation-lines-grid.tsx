@@ -1,3 +1,4 @@
+import { quotationOptionLabel } from "@/lib/quotations/quotation-option-label";
 import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { QuotationText } from "./quotation-design-locale";
 import { isOtherService } from "@/lib/commercial/other-service";
@@ -51,7 +52,6 @@ import { F } from "@/lib/discovery/suite/helpers";
 import {
   deliverableTypeLines,
   formatTypeLinesSummary,
-  optionNumberLabel,
   platformsFromSelectedPostTypes,
   selectedTypesFromTypeLines,
   syncDeliverableFromTypeLines,
@@ -131,8 +131,9 @@ function QuotationPackLineRow({
     discoverySuiteHandleLabel(
       item.creator_profile_source?.handle ?? item.handle
     ) ?? null;
-  const optionLabel =
-    optionNumberLabel(item.option_number) ?? `Option ${item.option_number}`;
+  const pendingLabel = manualSave.getLinePendingPayload(item.id)?.option_label;
+  const selectedLabel = pendingLabel !== undefined ? pendingLabel : (item.option_label ?? null);
+  const optionLabel = quotationOptionLabel({...item, option_label: selectedLabel});
 
   const syncCommercialsFromDeliverables = useCallback(
     (roll: {
@@ -333,7 +334,8 @@ function QuotationPackLineRow({
               if (value !== repeat) lineFields.saveDeliverables(repeatQuotationPackage(lineFields.deliverableDrafts, value, { ...resolved, revenue: computeQuotationRowComputed(resolved).revenue }));
             }} onKeyDown={(event) => { if (event.key === "Enter") event.currentTarget.blur(); }} /></span>
         </div>
-        <div className="q-cell-option" role="cell">{optionCount > 1 && <span className="q-opt">{optionLabel}/{optionCount}</span>}</div>
+        <div className="q-cell-option" role="cell">{canManage ? <select className="q-opt max-w-full cursor-pointer bg-transparent" aria-label={`Option label for ${name}`} value={selectedLabel ?? "option"} onChange={(event) => manualSave.registerLinePending(item.id, {option_label: event.target.value === "option" ? null : event.target.value})}>
+<option value="option">Option {item.option_number ?? 1}/{optionCount}</option><option value="Additional Service">Additional Service</option><option value="Deliverables">Deliverables</option></select> : <span className="q-opt">{optionLabel}{!selectedLabel && optionCount > 1 ? `/${optionCount}` : ""}</span>}</div>
         <div className="q-cell-price q-price" role="cell"><span className="q-mobile-label"><QuotationText>Client price</QuotationText></span><b className={clientPrice === 0 ? "z" : undefined}>{F(clientPrice)} {rowCurrency}</b>{priceUnits > 1 && <span className="q-repeat-price">×{priceUnits} · Total {F(projected.clientCost)} {rowCurrency}</span>}{hideCostAndFees ? <u><QuotationText>AF included</QuotationText></u> : <u>{F(projected.revenue / priceUnits)} + {F(projected.af / priceUnits)} AF</u>}{originalPrice && <span className="orig">{originalPrice}</span>}{renderCostDetails(false)}{linePending && <span className="q-p q-p--wrn"><QuotationText>Unsaved</QuotationText></span>}</div>
         <div className="q-cell-status" role="cell"><span className="q-p"><QuotationText>Draft</QuotationText></span></div>
         <div className="q-cell-actions q-acts" role="cell">

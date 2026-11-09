@@ -69,3 +69,11 @@ test("deliverableSnapshot ignores noop commercial patch", () => {
   const deliverable = baseItem.deliverables[0]!;
   assert.equal(deliverableSnapshot(deliverable), deliverableSnapshot({ ...deliverable }));
 });
+
+test("option labels are saved, reset, and compared independently of numbering", () => {
+  assert.equal(linePendingDiffersFromItem(baseItem, {option_label: "Additional Service"}), true);
+  const labelled = {...baseItem, option_label: "Deliverables"};
+  assert.equal(linePendingDiffersFromItem(labelled, {option_label: "Deliverables"}), false);
+  assert.equal(linePendingDiffersFromItem(labelled, {option_label: null}), true);
+  assert.equal(linePendingDiffersFromItem(labelled, {}), false);
+});

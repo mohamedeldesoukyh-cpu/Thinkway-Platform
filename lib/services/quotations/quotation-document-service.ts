@@ -75,6 +75,7 @@ function mapItem(raw: Record<string, unknown>): QuotationItemRow {
     deliverables: Array.isArray(raw.deliverables)
       ? (raw.deliverables as QuotationDeliverable[])
       : [],
+    option_label: (raw.option_label as string | null) ?? null,
     option_number:
       raw.option_number == null || raw.option_number === ""
         ? null

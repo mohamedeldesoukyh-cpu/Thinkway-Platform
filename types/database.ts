@@ -3584,6 +3584,7 @@ export type Database = {
           af_value_egp: number;
           sort_order: number;
           option_number: number | null;
+          option_label?: string | null;
           service_description: string | null;
           profile_image_url: string | null;
           profile_url: string | null;
@@ -3631,6 +3632,7 @@ export type Database = {
           af_value_egp?: number;
           sort_order?: number;
           option_number?: number | null;
+          option_label?: string | null;
           service_description?: string | null;
           profile_image_url?: string | null;
           profile_url?: string | null;
