@@ -2,6 +2,7 @@
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 import { RenameQuotationDialog } from "./rename-quotation-dialog";
+import { ChangeQuotationClientDialog } from "./change-quotation-client-dialog";
 
 import { QuotationText, QuotationLanguageSwitcher } from "./quotation-design-locale";
 
@@ -308,6 +309,9 @@ export function QuotationWorkspaceHeader({
               <span role="status" className={`q-save ${savePending ? "is-saving" : saveStatus === "error" ? "is-failed" : hasUnsavedChanges ? "is-dirty" : "is-saved"}`}>
                 <s aria-hidden /><span><QuotationText>{savePending ? "Saving…" : saveStatus === "error" ? "Save failed — retry" : hasUnsavedChanges ? "Unsaved changes" : "All changes saved"}</QuotationText></span>
               </span>
+              {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && detail.status !== "cancelled" && !detail.is_archived ? (
+                <ChangeQuotationClientDialog detail={detail} options={promoteOptions} disabled={hasUnsavedChanges || savePending || pending} />
+              ) : null}
               <span className="q-actions__div" aria-hidden />
               <QuotationDocumentOutputToolbar
                 quotationId={detail.id}
