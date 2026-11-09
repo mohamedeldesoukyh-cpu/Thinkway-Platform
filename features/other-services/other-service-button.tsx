@@ -71,7 +71,7 @@ export function OtherServiceButton({ scope, documentId, currency, onAdded }: {
   const [error, setError] = useState("");
   const latch = useRef(false);
   return <>
-    <Button type="button" variant="outline" size="sm" onClick={() => { setError(""); setOpen(true); }}>+ Other service</Button>
+    <Button type="button" variant="outline" size="sm" className={scope === "quotation" ? "tw-b sm" : undefined} onClick={() => { setError(""); setOpen(true); }}>+ Other service</Button>
     <Dialog open={open} onOpenChange={next => { if (!busy) setOpen(next); }}>
       <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-xl">
         <DialogHeader><DialogTitle>Add other service</DialogTitle>

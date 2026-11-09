@@ -182,16 +182,16 @@ export function AddCreatorsToQuotationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent dir={language === "ar" ? "rtl" : "ltr"} className="discovery-suite tq-redesign q-live-dialog max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle><QuotationText>Add creators</QuotationText></DialogTitle>
+      <DialogContent dir={language === "ar" ? "rtl" : "ltr"} className="q-creator-import creator-picker-compact-dialog flex max-h-[90dvh] flex-col gap-0 overflow-hidden rounded-2xl bg-white p-0 sm:max-w-2xl">
+        <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-5 pe-14">
+          <DialogTitle className="text-base font-bold tracking-tight text-slate-900"><QuotationText>Add creators</QuotationText></DialogTitle>
           <DialogDescription>
-            Import creators from Discovery selection, a shortlist, a profile link, a campaign, or add a manual row.
+            Choose a source or paste a profile link to add creators to this quotation.
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="sources">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="sources" className="min-h-0 flex-1 overflow-y-auto bg-slate-50 px-6 py-4">
+          <TabsList className="grid h-10 w-full grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1">
             <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="link">Link</TabsTrigger>
           </TabsList>
@@ -429,7 +429,7 @@ export function AddCreatorsToQuotationModal({
           </TabsContent>
         </Tabs>
 
-        <DialogFooter>
+        <DialogFooter className="shrink-0 border-t border-slate-200 bg-white px-6 py-3">
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
             <QuotationText>Close</QuotationText></Button>
         </DialogFooter>
