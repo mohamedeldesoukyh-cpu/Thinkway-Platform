@@ -1,6 +1,10 @@
 "use server";
 
 import { duplicateQuotationDocument } from "@/lib/services/quotations/quotation-duplicate-service";
+import { resolveCreatorsByProfileUrls } from "@/lib/discovery/add-creator-by-profile-url";
+import { CREATOR_ENRICHMENT_PERMISSION } from "@/lib/creator-enrichment/constants";
+import { buildQuotationSeedFromCreator } from "@/lib/commercial-sync/shortlist-seeds";
+import { newProfileLinkSeeds } from "./profile-link-import";
 
 import { revalidatePath } from "next/cache";
 
@@ -195,6 +199,27 @@ export async function addItemsToQuotation(
   const result = await addItemsToQuotationService(actor.supabase, quotationId, creators);
   if (result.ok) revalidate(quotationId);
   return result;
+}
+
+export async function addQuotationCreatorsByProfileUrls(quotationId: string, raw: string) {
+  const actor = await getActor();
+  if (!actor.ok) return actor;
+  const permission = await requirePermission(actor.supabase, CREATOR_ENRICHMENT_PERMISSION);
+  if ("error" in permission) return { ok: false as const, message: permission.error };
+  const locked = await rejectIfApprovedQuotation(actor.supabase, quotationId);
+  if (locked) return locked;
+  const resolved = await resolveCreatorsByProfileUrls(actor.supabase, { raw, actorId: actor.userId });
+  const { data: existing, error } = await actor.supabase.from("quotation_items")
+    .select("influencer_id, profile_id, unified_id").eq("quotation_id", quotationId);
+  if (error) return { ok: false as const, message: error.message };
+  const seeds = newProfileLinkSeeds(resolved.resolved.map((creator) => buildQuotationSeedFromCreator(creator)), existing ?? []);
+  const result = seeds.length ? await addItemsToQuotationService(actor.supabase, quotationId, seeds)
+    : { ok: true as const, data: { added: 0, itemIds: [] as string[] } };
+  if (!result.ok) return result;
+  revalidate(quotationId);
+  revalidatePath("/discovery/search");
+  return { ok: true as const, message: `${result.data?.added ?? 0} creator(s) added. ${resolved.resolved.length - seeds.length} already on quotation.`,
+    failed: [...resolved.failed, ...resolved.invalid.map((raw) => ({ raw, message: "Unrecognized profile link." }))] };
 }
 
 export async function updateQuotationItemCommercials(

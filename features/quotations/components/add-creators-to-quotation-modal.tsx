@@ -3,6 +3,8 @@ import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-
 import { QuotationText, useQuotationDesignLocale } from "./quotation-design-locale";
 
 import { useEffect, useMemo, useState, useTransition } from "react";
+import { ShortlistPasteLinksPanel } from "@/features/discovery/shortlists/components/shortlist-paste-links-panel";
+import { parseProfileInputList } from "@/lib/social/parse-profile-url";
 import Link from "next/link";
 import { Loader2Icon, UserPlusIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -30,6 +32,7 @@ import { QuotationCreatorPicker } from "@/features/creators/picker/quotation-cre
 import { readDiscoverySelection } from "@/features/discovery/components/creator-search/discovery-selection-storage";
 import {
   addItemsToQuotation,
+  addQuotationCreatorsByProfileUrls,
   addManualQuotationItem,
   importCampaignAssignmentsToQuotation,
   importShortlistItemsToQuotation,
@@ -89,6 +92,8 @@ export function AddCreatorsToQuotationModal({
   const [selectedCampaignIds, setSelectedCampaignIds] = useState<Set<string>>(new Set());
   const [selectedDiscoveryIds, setSelectedDiscoveryIds] = useState<Set<string>>(new Set());
   const [manualName, setManualName] = useState("");
+  const [profileLinks, setProfileLinks] = useState("");
+  const [pasteError, setPasteError] = useState<string | null>(null);
   const [manualPlatform, setManualPlatform] = useState("Instagram");
   const [manualTier, setManualTier] = useState("Mid");
 
@@ -98,6 +103,8 @@ export function AddCreatorsToQuotationModal({
     if (!open) return;
     setSelectedDiscoveryIds(new Set(discoverySelection.map((c) => c.unified_id)));
     setManualName("");
+    setProfileLinks("");
+    setPasteError(null);
     setManualPlatform("Instagram");
     setManualTier("Mid");
   }, [open, discoverySelection]);
@@ -179,22 +186,50 @@ export function AddCreatorsToQuotationModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(next) => { if (!pending) onOpenChange(next); }}>
       <DialogContent dir={language === "ar" ? "rtl" : "ltr"} className="discovery-suite tq-redesign q-live-dialog max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle><QuotationText>Add creators</QuotationText></DialogTitle>
           <DialogDescription>
-            Import creators from Discovery selection, a shortlist, a campaign, or add a manual row.
+            Paste profile links, import from Discovery, a shortlist or campaign, or add a manual row.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="discovery">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="flex h-auto w-full flex-wrap">
+            <TabsTrigger value="paste">Paste links</TabsTrigger>
             <TabsTrigger value="discovery"><QuotationText>Discovery</QuotationText></TabsTrigger>
             <TabsTrigger value="shortlist"><QuotationText>Shortlist</QuotationText></TabsTrigger>
             <TabsTrigger value="campaign"><QuotationText>Campaign</QuotationText></TabsTrigger>
             <TabsTrigger value="manual"><QuotationText>Manual</QuotationText></TabsTrigger>
           </TabsList>
+
+          <TabsContent value="paste" className="space-y-3 pt-2">
+            <ShortlistPasteLinksPanel value={profileLinks} onChange={(value) => { setProfileLinks(value); setPasteError(null); }}
+              error={pasteError} pending={pending} destination="quotation" />
+            <Button type="button" disabled={pending || !parseProfileInputList(profileLinks).parsed.length}
+              onClick={() => startTransition(async () => {
+                setPasteError(null);
+                try {
+                  const result = await addQuotationCreatorsByProfileUrls(quotationId, profileLinks);
+                  if (!result.ok) { setPasteError(result.message); return; }
+                  toast.success(result.message);
+                  if (result.failed.length) {
+                    setProfileLinks(result.failed.map((item) => item.raw).join("\n"));
+                    setPasteError(result.failed.map((item) => `${item.raw}: ${item.message}`).join("\n"));
+                    onAdded();
+                  } else {
+                    onOpenChange(false);
+                    onAdded();
+                  }
+                } catch {
+                  setPasteError("Could not add creators. Your links are kept here; please retry.");
+                }
+              })}>
+              {pending ? <Loader2Icon className="mr-2 size-4 animate-spin" /> : null}
+              Add to quotation
+            </Button>
+          </TabsContent>
 
           <TabsContent value="discovery" className="space-y-3 pt-2">
             {discoverySelection.length === 0 ? (
