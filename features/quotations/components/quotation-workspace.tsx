@@ -758,7 +758,7 @@ function QuotationWorkspaceContent({
   if (!directRates) return <div role="status" className="p-6 text-sm">{rateError ? <>Could not load quotation exchange rates. <button onClick={() => { setRateError(false); setRateAttempt(value => value + 1); }}>Retry</button></> : "Loading quotation exchange rates…"}</div>;
 
   return (
-    <QuotationDirectRatesContext.Provider value={directRates}><div data-discovery-workspace-scroll dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
+    <QuotationDirectRatesContext.Provider value={directRates}><div data-discovery-workspace-scroll data-shortcut-save-scope="quotation" dir={language === "ar" ? "rtl" : "ltr"} lang={language} className="tq-redesign quotation-editor-rd4 discovery-suite flex h-full min-h-0 w-full min-w-0 flex-1 flex-col overflow-y-auto overscroll-y-contain bg-[var(--tw-bg,#fafbfc)] pb-16">
       <QuotationSetupWizard detail={detail} options={formOptions} />
       <WorkspaceScrollSummary serial={detail.serial_number} name={detail.name} status={detail.status.replaceAll("_", " ")}
         metrics={[

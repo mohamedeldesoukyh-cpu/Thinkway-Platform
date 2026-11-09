@@ -11,6 +11,8 @@ export type ShortcutAction = {
   label: string;
   group: string;
   handler: () => void;
+  /** Scope that owns the shortcut; lets Ctrl+S invoke its save routine directly. */
+  scopeSelector?: string;
   /** When true, only fires if no input/textarea is focused */
   global?: boolean;
 };
@@ -211,6 +213,22 @@ export function KeyboardShortcutsProvider({
       event.preventDefault();
       event.stopImmediatePropagation();
       if (event.repeat) return;
+      const activeElement = document.activeElement;
+      const scopedSave = [...actionsRef.current.values()].find((action) => {
+        if (!action.scopeSelector || !matchShortcut(event, action.keys)) return false;
+        if (activeElement instanceof Element && activeElement.closest(action.scopeSelector)) return true;
+        // Some parts of the quotation workspace (including the commercial
+        // drawer) do not keep focus on a control. If this shortcut's owner is
+        // currently visible, call its save routine instead of searching for a
+        // Save button that may be outside the active dialog subtree.
+        return Array.from(document.querySelectorAll(action.scopeSelector)).some((scope) =>
+          scope.getClientRects().length > 0 && getComputedStyle(scope).visibility !== "hidden"
+        );
+      });
+      if (scopedSave) {
+        scopedSave.handler();
+        return;
+      }
       const target = resolveSaveTarget();
       if (target.button) {
         if (!shortcutDisabled(target.button)) target.button.click();
