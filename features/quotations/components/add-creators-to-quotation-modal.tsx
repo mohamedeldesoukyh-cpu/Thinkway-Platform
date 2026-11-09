@@ -81,6 +81,7 @@ export function AddCreatorsToQuotationModal({
   const { language } = useQuotationDesignLocale();
   const [pending, startTransition] = useTransition();
   const [source, setSource] = useState("discovery");
+  const [linkPending, setLinkPending] = useState(false);
   const [shortlists, setShortlists] = useState<ShortlistOption[]>(initialShortlists ?? []);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>(initialCampaigns ?? []);
   const [shortlistId, setShortlistId] = useState("");
@@ -181,7 +182,7 @@ export function AddCreatorsToQuotationModal({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(next) => { if (!pending && !linkPending) onOpenChange(next); }}>
       <DialogContent dir={language === "ar" ? "rtl" : "ltr"} className="q-creator-import creator-picker-compact-dialog flex max-h-[90dvh] flex-col gap-0 overflow-hidden rounded-2xl bg-white p-0 sm:max-w-2xl">
         <DialogHeader className="shrink-0 border-b border-slate-200 px-6 py-5 pe-14">
           <DialogTitle className="text-base font-bold tracking-tight text-slate-900"><QuotationText>Add creators</QuotationText></DialogTitle>
@@ -192,8 +193,8 @@ export function AddCreatorsToQuotationModal({
 
         <Tabs defaultValue="sources" className="min-h-0 flex-1 overflow-y-auto bg-slate-50 px-6 py-4">
           <TabsList className="grid h-10 w-full grid-cols-2 rounded-lg border border-slate-200 bg-slate-100 p-1">
-            <TabsTrigger value="sources">Sources</TabsTrigger>
-            <TabsTrigger value="link">Link</TabsTrigger>
+            <TabsTrigger value="sources" disabled={pending || linkPending}>Sources</TabsTrigger>
+            <TabsTrigger value="link" disabled={pending || linkPending}>Link</TabsTrigger>
           </TabsList>
 
           <TabsContent value="sources" className="space-y-3 pt-2">
@@ -425,12 +426,12 @@ export function AddCreatorsToQuotationModal({
             </Tabs>
           </TabsContent>
           <TabsContent value="link" className="space-y-3 pt-2">
-            <QuotationCreatorLinkTab quotationId={quotationId} onAdded={(result) => { onOpenChange(false); onAdded(result); }} />
+            <QuotationCreatorLinkTab quotationId={quotationId} onPendingChange={setLinkPending} onAdded={(result) => { onOpenChange(false); onAdded(result); }} />
           </TabsContent>
         </Tabs>
 
         <DialogFooter className="shrink-0 border-t border-slate-200 bg-white px-6 py-3">
-          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={pending}>
+          <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={pending || linkPending}>
             <QuotationText>Close</QuotationText></Button>
         </DialogFooter>
       </DialogContent>
