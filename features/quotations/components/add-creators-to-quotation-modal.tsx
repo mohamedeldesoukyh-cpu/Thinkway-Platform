@@ -80,6 +80,7 @@ export function AddCreatorsToQuotationModal({
 }: Props) {
   const { language } = useQuotationDesignLocale();
   const [pending, startTransition] = useTransition();
+  const [source, setSource] = useState("discovery");
   const [shortlists, setShortlists] = useState<ShortlistOption[]>(initialShortlists ?? []);
   const [campaigns, setCampaigns] = useState<CampaignOption[]>(initialCampaigns ?? []);
   const [shortlistId, setShortlistId] = useState("");
@@ -189,14 +190,26 @@ export function AddCreatorsToQuotationModal({
           </DialogDescription>
         </DialogHeader>
 
-        <Tabs defaultValue="discovery">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="discovery"><QuotationText>Discovery</QuotationText></TabsTrigger>
-            <TabsTrigger value="shortlist"><QuotationText>Shortlist</QuotationText></TabsTrigger>
+        <Tabs defaultValue="sources">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="sources">Sources</TabsTrigger>
             <TabsTrigger value="link">Link</TabsTrigger>
-            <TabsTrigger value="campaign"><QuotationText>Campaign</QuotationText></TabsTrigger>
-            <TabsTrigger value="manual"><QuotationText>Manual</QuotationText></TabsTrigger>
           </TabsList>
+
+          <TabsContent value="sources" className="space-y-3 pt-2">
+            <div className="space-y-2">
+              <Label htmlFor="quotation-creator-source">Add creators from</Label>
+              <Select value={source} onValueChange={setSource} disabled={pending}>
+                <SelectTrigger id="quotation-creator-source"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="discovery"><QuotationText>Discovery</QuotationText></SelectItem>
+                  <SelectItem value="shortlist"><QuotationText>Shortlist</QuotationText></SelectItem>
+                  <SelectItem value="campaign"><QuotationText>Campaign</QuotationText></SelectItem>
+                  <SelectItem value="manual"><QuotationText>Manual</QuotationText></SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Tabs value={source}>
 
           <TabsContent value="discovery" className="space-y-3 pt-2">
             {discoverySelection.length === 0 ? (
@@ -291,10 +304,6 @@ export function AddCreatorsToQuotationModal({
                 Loading creators…
               </p>
             ) : null}
-          </TabsContent>
-
-          <TabsContent value="link" className="space-y-3 pt-2">
-            <QuotationCreatorLinkTab quotationId={quotationId} onAdded={(result) => { onOpenChange(false); onAdded(result); }} />
           </TabsContent>
 
           <TabsContent value="campaign" className="space-y-3 pt-2">
@@ -412,6 +421,11 @@ export function AddCreatorsToQuotationModal({
               }
             >
               <QuotationText>Add manual row</QuotationText></Button>
+          </TabsContent>
+            </Tabs>
+          </TabsContent>
+          <TabsContent value="link" className="space-y-3 pt-2">
+            <QuotationCreatorLinkTab quotationId={quotationId} onAdded={(result) => { onOpenChange(false); onAdded(result); }} />
           </TabsContent>
         </Tabs>
 
