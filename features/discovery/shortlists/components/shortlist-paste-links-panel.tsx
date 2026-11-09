@@ -19,6 +19,7 @@ type Props = {
   error?: string | null;
   pending?: boolean;
   disabled?: boolean;
+  destination?: "shortlist" | "quotation";
   discoveryPreview?: ShortlistPasteDiscoveryPreview | null;
 };
 
@@ -29,6 +30,7 @@ export function ShortlistPasteLinksPanel({
   pending,
   disabled,
   discoveryPreview,
+  destination = "shortlist",
 }: Props) {
   const parsed = parseProfileInputList(value);
   const preview = shortlistPastePreview(parsed.parsed.length, parsed.invalid.length);
@@ -37,6 +39,7 @@ export function ShortlistPasteLinksPanel({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto bg-[#f8fafc] px-4 py-4">
       <Textarea
+        aria-label="Creator profile links"
         value={value}
         onChange={(event) => onChange(event.target.value)}
         rows={12}
@@ -53,7 +56,7 @@ export function ShortlistPasteLinksPanel({
         <p className="text-xs text-destructive">{error}</p>
       ) : pending ? (
         <div role="status" aria-live="polite" className="text-xs text-muted-foreground">
-          <p>Adding creators… Enrichment progress will appear beside each creator in the shortlist.</p>
+          <p>{destination === "quotation" ? "Adding creators and queuing enrichment…" : "Adding creators… Enrichment progress will appear beside each creator in the shortlist."}</p>
           <ul className="mt-2 max-h-48 space-y-2 overflow-y-auto">
             {parsed.parsed.slice(0, preview.addableCount).map((profile) => (
               <li key={profile.normalized_profile_url} className="flex items-center gap-2">
@@ -78,7 +81,7 @@ export function ShortlistPasteLinksPanel({
             </div>
           ) : (
             <p className="mt-1 text-[11px] text-muted-foreground">
-              Checking Discovery before commit…
+              {destination === "quotation" ? "Existing profiles will be reused; missing creators will be created and enriched." : "Checking Discovery before commit…"}
             </p>
           )}
           {preview.invalidCount > 0 || preview.overflowCount > 0 ? (
