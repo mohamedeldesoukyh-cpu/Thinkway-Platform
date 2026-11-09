@@ -174,15 +174,20 @@ function QuotationPackLineRow({
   const primary = lineFields.deliverableDrafts[0];
   const favorites = useDeliverableFavorites();
   useEffect(() => favorites.register(item.id, (favorite) => {
-    if (!canManage || isOtherService(item)) return;
+    if (!canManage || isOtherService(item)) return false;
     const first = lineFields.deliverableDrafts[0];
-    if (!first) return;
+    if (!first) return false;
     const synced = syncDeliverableFromTypeLines(favorite.lines, lineFields.platformSelectOptions.map(p => p.platform), first.platform || item.platform || "");
+    if (synced.type_lines.some(line => !line.type)) {
+      toast.error(`Favorite includes deliverables unavailable for ${name}. Choose a compatible selection.`);
+      return false;
+    }
     // Keep this line's prices and any additional separately priced packages.
     lineFields.saveDeliverables(lineFields.deliverableDrafts.map((entry, index) => index === 0 ? { ...entry, ...synced, service_description: favorite.description } : entry));
     lineFields.setServiceDescription(favorite.description);
     manualSave.registerLinePending(item.id, { service_description: favorite.description });
-  }), [favorites.register, item, canManage, lineFields, manualSave]);
+    return true;
+  }), [favorites.register, item, name, canManage, lineFields, manualSave]);
   const allowedCreatorPlatforms = lineFields.platformSelectOptions.map((p) => p.platform);
   const selectedPlatforms = lineFields.deliverableDrafts.flatMap((deliverable) => {
     if (selectedTypesFromTypeLines(deliverableTypeLines(deliverable)).length === 0) return [];

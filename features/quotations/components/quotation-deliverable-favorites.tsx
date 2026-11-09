@@ -17,7 +17,7 @@ type FavoriteContext = {
   loading: boolean;
   error: string | null;
   save: (favorites: DeliverableFavorite[]) => Promise<boolean>;
-  register: (id: string, apply: (favorite: DeliverableFavorite) => void) => () => void;
+  register: (id: string, apply: (favorite: DeliverableFavorite) => boolean) => () => void;
   apply: (ids: string[], favorite: DeliverableFavorite) => void;
 };
 const Context = createContext<FavoriteContext | null>(null);
@@ -30,7 +30,7 @@ export function DeliverableFavoritesProvider({ children }: { children: ReactNode
   const [favorites, setFavorites] = useState<DeliverableFavorite[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const handlers = useRef(new Map<string, (favorite: DeliverableFavorite) => void>());
+  const handlers = useRef(new Map<string, (favorite: DeliverableFavorite) => boolean>());
   useEffect(() => {
     let active = true;
     void loadDeliverableFavorites().then(result => {
@@ -40,7 +40,7 @@ export function DeliverableFavoritesProvider({ children }: { children: ReactNode
     }).catch(() => { if (active) { setError("Could not load favorites."); setLoading(false); } });
     return () => { active = false; };
   }, []);
-  const register = useCallback((id: string, apply: (favorite: DeliverableFavorite) => void) => {
+  const register = useCallback((id: string, apply: (favorite: DeliverableFavorite) => boolean) => {
     handlers.current.set(id, apply);
     return () => { handlers.current.delete(id); };
   }, []);
@@ -51,7 +51,7 @@ export function DeliverableFavoritesProvider({ children }: { children: ReactNode
   }
   function apply(ids: string[], favorite: DeliverableFavorite) {
     let count = 0;
-    for (const id of ids) { const handler = handlers.current.get(id); if (handler) { handler(favorite); count++; } }
+    for (const id of ids) { const handler = handlers.current.get(id); if (handler?.(favorite)) count++; }
     if (count) toast.success(`Deliverables applied to ${count} line${count === 1 ? "" : "s"}. Click Save to keep quotation changes.`);
     else toast.error("Select visible creator lines to apply deliverables.");
   }
