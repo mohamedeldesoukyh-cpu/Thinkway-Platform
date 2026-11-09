@@ -1,4 +1,4 @@
-
+"use client";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { QuotationText, useQuotationDesignLocale } from "./quotation-design-locale";
 
@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { QuotationCreatorPicker } from "@/features/creators/picker/quotation-creator-picker";
+import { QuotationCreatorLinkTab } from "./quotation-creator-link-tab";
 import { readDiscoverySelection } from "@/features/discovery/components/creator-search/discovery-selection-storage";
 import {
   addItemsToQuotation,
@@ -184,14 +185,15 @@ export function AddCreatorsToQuotationModal({
         <DialogHeader>
           <DialogTitle><QuotationText>Add creators</QuotationText></DialogTitle>
           <DialogDescription>
-            Import creators from Discovery selection, a shortlist, a campaign, or add a manual row.
+            Import creators from Discovery selection, a shortlist, a profile link, a campaign, or add a manual row.
           </DialogDescription>
         </DialogHeader>
 
         <Tabs defaultValue="discovery">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="discovery"><QuotationText>Discovery</QuotationText></TabsTrigger>
             <TabsTrigger value="shortlist"><QuotationText>Shortlist</QuotationText></TabsTrigger>
+            <TabsTrigger value="link">Link</TabsTrigger>
             <TabsTrigger value="campaign"><QuotationText>Campaign</QuotationText></TabsTrigger>
             <TabsTrigger value="manual"><QuotationText>Manual</QuotationText></TabsTrigger>
           </TabsList>
@@ -289,6 +291,10 @@ export function AddCreatorsToQuotationModal({
                 Loading creators…
               </p>
             ) : null}
+          </TabsContent>
+
+          <TabsContent value="link" className="space-y-3 pt-2">
+            <QuotationCreatorLinkTab quotationId={quotationId} onAdded={(result) => { onOpenChange(false); onAdded(result); }} />
           </TabsContent>
 
           <TabsContent value="campaign" className="space-y-3 pt-2">
