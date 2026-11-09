@@ -1,3 +1,4 @@
+import { QuotationEnrichmentProgress } from "./quotation-enrichment-progress";
 import { quotationOptionLabel } from "@/lib/quotations/quotation-option-label";
 import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { QuotationText } from "./quotation-design-locale";
@@ -327,6 +328,7 @@ function QuotationPackLineRow({
             countryCodes={quotationCreatorCountryCodes(item)}
             onOpen={onOpenCreator ? () => onOpenCreator(item) : undefined}>
             <div className="q-conn" title="Connected accounts">
+              <QuotationEnrichmentProgress status={item.creator_profile_source?.enrichmentDisplayStatus} />
               <CreatorPlatformTiers accounts={quotationPlatformTierAccounts(item)} />
               {hasUgcCategory(item.creator_categories) ? (
                 <Badge variant="outline" className="h-5 whitespace-nowrap border-violet-200 bg-violet-50 px-2 text-[9px] font-semibold text-violet-700" title="User-generated content creator">UGC</Badge>

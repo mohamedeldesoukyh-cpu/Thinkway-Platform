@@ -1,4 +1,5 @@
 "use client";
+import { useLiveQuotationEnrichment } from "./use-live-quotation-enrichment";
 import { appendProposalOptions, type ProposalOption } from "@/features/quotations/export/proposal-options";
 import { isQuotationListTemplate } from "@/features/quotations/export/quotation-template";
 import { QuotationCreatorOrderDialog } from "./quotation-creator-order-dialog";
@@ -242,9 +243,10 @@ function QuotationWorkspaceContent({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [detail.items]);
 
+  const { liveItems, connectionDelayed } = useLiveQuotationEnrichment(detail.id, detail.items);
   const visibleItems = useMemo(
-    () => detail.items.filter((item) => !optimisticRemovedIds.has(item.id)),
-    [detail.items, optimisticRemovedIds]
+    () => liveItems.filter((item) => !optimisticRemovedIds.has(item.id)),
+    [liveItems, optimisticRemovedIds]
   );
 
   const draftList = useMemo(
@@ -920,6 +922,7 @@ function QuotationWorkspaceContent({
               </div>
             </div>
             <div className="creators-list">
+              {connectionDelayed ? <p role="status" className="px-4 py-2 text-xs text-muted-foreground">Enrichment updates delayed. Reconnecting…</p> : null}
               <PlatformErrorBoundary
                 surface="generic"
                 title="Creators grid failed to render"

@@ -57,7 +57,7 @@ function unwrap<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-function mapItem(raw: Record<string, unknown>): QuotationItemRow {
+export function mapItem(raw: Record<string, unknown>): QuotationItemRow {
   return {
     id: raw.id as string,
     influencer_id: (raw.influencer_id as string | null) ?? null,

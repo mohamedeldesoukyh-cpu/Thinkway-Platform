@@ -301,6 +301,7 @@ export function DiscoverySuiteCreatorProfileTabs({
   const rate = parseRateCard(identityCreator.rate_card);
   const hasRate = rate.base_rate != null && !Number.isNaN(rate.base_rate);
   const quoteCount = quotationPriceReference?.quote_count ?? 0;
+  const lastQuote = quotationPriceReference?.recent_quotes[0];
   const quoteAmount = quotationPriceReference?.avg_cost ?? rate.base_rate ?? null;
   const quoteCurrency =
     quotationPriceReference?.avg_cost_currency ??
@@ -382,6 +383,10 @@ export function DiscoverySuiteCreatorProfileTabs({
               value={quoteCount > 0 && quotationPriceReference ? `${quoteLabel} avg` : quoteLabel}
             />
             <OutRow label="Quotes behind it" value={String(quoteCount)} />
+            <OutRow label={lastQuote ? `Last price · ${new Date(lastQuote.quoted_at).toLocaleDateString("en-GB", { month: "short", year: "2-digit", timeZone: "Africa/Cairo" })}` : "Last price"} value={lastQuote ? formatDiscoveryPackQuoteReference({ amount: lastQuote.cost, currency: lastQuote.cost_currency }) : "not set"} missing={!lastQuote} />
+            {lastQuote ? <div className="tw-hint" style={{ marginTop: 3, marginBottom: 7 }}>
+              Latest quoted creator cost · {lastQuote.quotation_serial ?? lastQuote.quotation_name ?? "Quotation"}
+            </div> : null}
             <CreatorQuotationHistory key={identityCreator.influencer_id} influencerId={identityCreator.influencer_id} />
             <OutRow label="Studio reference" value={studioLabel} total />
           </div>
