@@ -3,7 +3,8 @@ import { useQuotationDirectRates } from "./quotation-direct-rates-context";
 import { QuotationText } from "./quotation-design-locale";
 import { isOtherService } from "@/lib/commercial/other-service";
 
-import { useCallback, useTransition, useState } from "react";
+import { useCallback, useEffect, useTransition, useState } from "react";
+import { QuotationFavoriteButtons, useDeliverableFavorites } from "./quotation-deliverable-favorites";
 import { CreatorLinkedPlatformIcons } from "@/components/creator/creator-linked-platform-icons";
 import {
   CopyIcon,
@@ -171,6 +172,17 @@ function QuotationPackLineRow({
   );
 
   const primary = lineFields.deliverableDrafts[0];
+  const favorites = useDeliverableFavorites();
+  useEffect(() => favorites.register(item.id, (favorite) => {
+    if (!canManage || isOtherService(item)) return;
+    const first = lineFields.deliverableDrafts[0];
+    if (!first) return;
+    const synced = syncDeliverableFromTypeLines(favorite.lines, lineFields.platformSelectOptions.map(p => p.platform), first.platform || item.platform || "");
+    // Keep this line's prices and any additional separately priced packages.
+    lineFields.saveDeliverables(lineFields.deliverableDrafts.map((entry, index) => index === 0 ? { ...entry, ...synced, service_description: favorite.description } : entry));
+    lineFields.setServiceDescription(favorite.description);
+    manualSave.registerLinePending(item.id, { service_description: favorite.description });
+  }), [favorites.register, item, canManage, lineFields, manualSave]);
   const allowedCreatorPlatforms = lineFields.platformSelectOptions.map((p) => p.platform);
   const selectedPlatforms = lineFields.deliverableDrafts.flatMap((deliverable) => {
     if (selectedTypesFromTypeLines(deliverableTypeLines(deliverable)).length === 0) return [];
@@ -317,6 +329,7 @@ function QuotationPackLineRow({
             </div>
           </DiscoverySuiteCreatorCell>}
           {canManage && showCreator && !otherService ? <button type="button" className="q-b q-b--sm mt-2" onClick={handleAddOption} disabled={pending} aria-label={`Add service line for ${name}`}>+ Add service</button> : null}
+          {canManage && !otherService ? <div className="mt-1"><QuotationFavoriteButtons itemIds={[item.id]} lines={primary ? deliverableTypeLines(primary) : []} description={lineFields.serviceDescription} disabled={pending} /></div> : null}
         </div>
         <div className="q-cell-platform" role="cell"><span className="q-mobile-label"><QuotationText>Quoted on</QuotationText></span><QuotationDeliverablePlatformIcons platforms={selectedPlatforms} allPlatforms={lineFields.deliverableDrafts.some(typeLinesIncludeAllPlatforms)} loading={lineFields.loadingPlatforms} /></div>
         <div className="q-cell-service" role="cell">
@@ -375,7 +388,7 @@ function QuotationPackLineRow({
       </div>
       {expanded && createPortal(<div className="tq-redesign" style={{ minHeight: 0 }}><section id={`quotation-line-${item.id}`} className="q-bottom-editor" data-shortcut-pane aria-label={`Edit service for ${name}`}>
         <header className="q-bottom-editor__header"><div className="q-bottom-editor__title"><b title={name}>{name}</b><span title={lineFields.serviceDescription || "New service"}> · {lineFields.serviceDescription || "New service"}</span></div><button type="button" className="q-b q-b--sm" data-shortcut-close onClick={() => setExpanded(false)}>Close</button></header><div className="q-exp">
-        {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Service description</b></div><textarea aria-label="Other service description" className="w-full rounded border p-2" rows={3} value={lineFields.serviceDescription} readOnly={!canManage} onChange={e => updateServiceDescription(e.target.value)} /><p className="q-help">Use Repeat on the row for multiple units.</p></section> : <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b></div>          {lineFields.deliverableDrafts.map((deliverable) => (
+        {otherService ? <section className="q-sec"><div className="q-sec__h"><b>Service description</b></div><textarea aria-label="Other service description" className="w-full rounded border p-2" rows={3} value={lineFields.serviceDescription} readOnly={!canManage} onChange={e => updateServiceDescription(e.target.value)} /><p className="q-help">Use Repeat on the row for multiple units.</p></section> : <section className="q-sec"><div className="q-sec__h"><b><QuotationText>Quantity &amp; Duration</QuotationText></b>{canManage && <QuotationFavoriteButtons itemIds={[item.id]} lines={primary ? deliverableTypeLines(primary) : []} description={lineFields.serviceDescription} />}</div>          {lineFields.deliverableDrafts.map((deliverable) => (
             <QuotationDeliverableTypeLinesEditor
               workspaceDetails
               key={deliverable.key}

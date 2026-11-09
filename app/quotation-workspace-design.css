@@ -563,3 +563,8 @@
 .q-creator-import .tw-empty a { padding:10px 16px; border-radius:8px; background:#2563eb; color:#fff; font-size:13px; font-weight:600; }
 .q-creator-import .tw-empty button:disabled { color:#94a3b8; font-size:12px; }
 .q-creator-import .tw-hint, .q-creator-import .tw-note { padding:12px; border:1px solid #e2e8f0; border-radius:8px; background:#fff; font-size:12px; line-height:1.6; color:#64748b; }
+.q-favorite-tools { display:inline-flex; align-items:center; flex-wrap:wrap; gap:4px; }
+.q-favorite-button { display:inline-flex; align-items:center; justify-content:center; gap:4px; min-height:26px; padding:3px 7px; border:1px solid #dbe3ef; border-radius:6px; background:#fff; color:#334155; font-size:11px; font-weight:500; line-height:18px; white-space:nowrap; }
+.q-favorite-button:hover { border-color:#93b4ff; background:#eff6ff; color:#1d4ed8; }
+.q-favorite-button:focus-visible { outline:2px solid #2563eb; outline-offset:2px; }
+.q-favorite-button:disabled { opacity:.5; cursor:not-allowed; }

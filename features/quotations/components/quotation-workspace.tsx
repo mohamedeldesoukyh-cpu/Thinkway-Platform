@@ -102,6 +102,7 @@ import {
 } from "@/lib/quotations/quotation-workspace-sort";
 import { shouldIncludeItemInLiveTotals } from "@/lib/quotations/quotation-collapse-package";
 import { QuotationCommercialEntry } from "@/features/quotations/components/quotation-commercial-entry";
+import { DeliverableFavoritesProvider, QuotationFavoriteButtons } from "./quotation-deliverable-favorites";
 import {
   deliverableTypeLines,
   formatTypeLinesSummary,
@@ -132,14 +133,14 @@ export function QuotationWorkspace({
 }) {
   return (
     <QuotationDesignLocaleProvider><QuotationManualSaveProvider quotationId={detail.id} items={detail.items}>
-      <QuotationRateCardTools detail={detail}>
+      <QuotationRateCardTools detail={detail}><DeliverableFavoritesProvider>
       <QuotationWorkspaceContent
         detail={detail}
         formOptions={formOptions}
         promoteOptions={promoteOptions}
         clientReview={clientReview}
       />
-      </QuotationRateCardTools>
+      </DeliverableFavoritesProvider></QuotationRateCardTools>
     </QuotationManualSaveProvider></QuotationDesignLocaleProvider>
   );
 }
@@ -891,6 +892,7 @@ function QuotationWorkspaceContent({
               {detail.canManage && detail.status !== "approved" && detail.status !== "archived" && !detail.is_archived && <OtherServiceButton scope="quotation" documentId={detail.id} currency={displayCurrency} onAdded={refreshQuotationLines} />}
               {detail.shortlist_id && <Link className="tw-b sm" href={`/discovery/shortlists/${detail.shortlist_id}`}><QuotationText>Open shortlist</QuotationText></Link>}
               <div className="q-lines__actions">
+                {detail.canManage && selectedIds.size > 0 && detail.status !== "approved" && !detail.is_archived ? <QuotationFavoriteButtons itemIds={sortedFilteredItems.filter(item => selectedIds.has(item.id) && !isOtherService(item)).map(item => item.id)} /> : null}
                 {detail.canManage ? (
                   <AddCreatorsToQuotationButton
                     quotationId={detail.id}
