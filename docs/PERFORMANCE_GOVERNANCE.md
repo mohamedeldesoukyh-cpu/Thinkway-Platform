@@ -40,6 +40,23 @@ Outstanding route-performance, browser and access validation stays in the
 existing handoffs as separate follow-up work; this approval does not mark
 that coverage passed or authorize deployment.
 
+### Owner-approved total CSS budget revision — 2026-11-09
+
+The owner approved increasing only `bundle.totalCssKb.hard` from 1,500 to
+1,550 KiB to accommodate the verified existing baseline of **1,545.957 KiB**,
+which is identical on `develop` and [PR #8](https://github.com/mohamedeldesoukyh-cpu/Thinkway-Platform/pull/8).
+The collector uses 1,024 bytes per KiB and reports this baseline rounded to
+1,546.0. The new hard limit leaves 4.043 KiB of headroom against the unrounded
+baseline; it does not represent a CSS reduction or performance improvement.
+
+The total CSS soft limit remains 700 KiB. Every other performance threshold,
+the collector, and `performance/baseline.json` remain unchanged. This policy
+adjustment is reviewed in a separate PR and does not modify PR #8 or application
+code. Remaining validation failures must be reported separately, not bypassed
+by changing additional thresholds. After this adjustment is approved and merged
+into `develop`, rerun PR #8 validation before Dev verification. Production merge
+and deployment require separate approval.
+
 ---
 
 ## 2. CI validation
