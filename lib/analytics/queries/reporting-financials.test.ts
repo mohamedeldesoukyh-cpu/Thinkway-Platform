@@ -35,6 +35,17 @@ test("approval, past schedule dates, and future live dates do not recognize reve
   assert.deepEqual(buildRecognitionEvents({ ...input, posts: posts.map(p => ({ ...p, status: "posted", live_date: "2027-01-01" })) }), []);
 });
 
+test("removing final publication reverses recognition after live-state reconciliation without changing contracted value", () => {
+  const before = { ...input, posts: posts.map(p => ({ ...p, status: "posted", live_date: "2026-09-10" })) };
+  const after = { ...input, lines: [{ ...line, metadata: {} }],
+    deliverables: [{ ...child, live_date: null, metadata: { workflow_status: "draft" } }],
+    posts: posts.map(p => ({ ...p, status: "draft", live_date: null })) };
+  assert.ok(buildRecognitionEvents(before).reduce((sum, event) => sum + event.revenue, 0) > 0);
+  assert.deepEqual(buildRecognitionEvents(after), []);
+  assert.deepEqual(aggregateCampaignDisplayFinancials({ lines: after.lines, displayCurrency: "EGP", rateToEgpByCurrency: rates }),
+    aggregateCampaignDisplayFinancials({ lines: before.lines, displayCurrency: "EGP", rateToEgpByCurrency: rates }));
+});
+
 test("a synchronized package recognizes every ad once using its assignment live date", () => {
   const publication = { assignment_deliverable_id: "d", assignment_post_schedule_id: "p2", status: "published", publication_date: "2026-10-01" };
   const events = buildRecognitionEvents({ ...input, posts: posts.map(p => ({...p,status:"posted",live_date:"2026-10-01"})), publications: [publication, publication] });

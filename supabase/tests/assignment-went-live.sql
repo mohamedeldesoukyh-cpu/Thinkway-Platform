@@ -7,6 +7,7 @@ DO $$ DECLARE l uuid; c uuid; p uuid; d uuid; pub uuid; before_money jsonb; afte
  SELECT id,assignment_deliverable_id INTO p,d FROM assignment_post_schedule WHERE campaign_line_id=l ORDER BY sequence_number,id LIMIT 1;
  SELECT jsonb_agg(to_jsonb(s)-ARRAY['live_date','status','metadata','updated_at']) INTO before_money FROM assignment_post_schedule s WHERE campaign_line_id=l;
  PERFORM set_config('app.assignment_live_sync','on',true);
+ UPDATE campaign_lines SET metadata=coalesce(metadata,'{}')-'manual_went_live_date' WHERE id=l;
  DELETE FROM campaign_publications cp WHERE publication_assignment_line(cp)=l;
  UPDATE assignment_post_schedule SET live_date=NULL,status='draft',metadata='{}' WHERE campaign_line_id=l;
  UPDATE assignment_deliverables SET live_date=NULL,metadata='{}' WHERE campaign_line_id=l;
@@ -25,6 +26,7 @@ DO $$ DECLARE l uuid; c uuid; p uuid; d uuid; pub uuid; before_money jsonb; afte
  IF before_money IS DISTINCT FROM after_money THEN RAISE EXCEPTION 'Commercial fields changed'; END IF;
  -- Publication-only entry must also mark the whole package live, irrespective of Draft status or metrics.
  PERFORM set_config('app.assignment_live_sync','on',true);
+ UPDATE campaign_lines SET metadata=coalesce(metadata,'{}')-'manual_went_live_date' WHERE id=l;
  UPDATE assignment_post_schedule SET live_date=NULL,status='draft',metadata='{}' WHERE campaign_line_id=l;
  UPDATE assignment_deliverables SET live_date=NULL,metadata='{}' WHERE campaign_line_id=l;
  PERFORM set_config('app.assignment_live_sync','',true);
