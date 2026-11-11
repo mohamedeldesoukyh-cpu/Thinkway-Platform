@@ -81,3 +81,21 @@ verification; fixture-based document tests cover those cases instead.
   update effect still triggers `react-hooks/set-state-in-effect` when that file is
   included. No unrelated form-state refactor was made.
 - Production deployment and the four existing-record corrections are not applied.
+
+## Authorized release follow-up
+
+User explicitly requested committing, pushing to dev and releasing production.
+The fixes were integrated with the newer remote code without reverting its
+payment locks, cancellation controls, creator metrics or other-service handling.
+Commit `65394cf4` passed the regression suite and deployed successfully to
+`dev.thinkwaymedia.com` as `dpl_APgE1LrHc9K8t6ejABddekkxX2yD`; build-info
+confirmed the exact commit and development database alignment.
+
+The scoped SQL repair is in `scripts/manual/vendor-io-quantities-20261111-live.sql`.
+It defaults to ROLLBACK; an approved application requires `-v apply=true`.
+Both a development rehearsal on temporary snapshot copies and a production
+rollback-only rehearsal passed. Assertions preserve all line/deliverable/IO
+financial totals, IO custom terms and workflow statuses, original post IDs and
+evidence, and aggregate post amounts. Ten missing draft posts are added; their
+commercial allocations preserve the original totals exactly to the cent.
+Generated document references are invalidated so stale quantities cannot be served.
