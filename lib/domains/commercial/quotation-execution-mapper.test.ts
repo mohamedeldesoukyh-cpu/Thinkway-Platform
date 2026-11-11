@@ -1,3 +1,4 @@
+import { packagePlatformsToCommercialRows } from "@/lib/assignments/sync-package-deliverables";
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
@@ -55,6 +56,34 @@ function creatorWithPlatforms(
 }
 
 describe("quotationDeliverablesToPlatforms", () => {
+  for (const typeLines of [
+    [{ type: "ugc", quantity: 3 }],
+    [{ type: "instagram_reel", quantity: 4 }, { type: "instagram_story", quantity: 4 }],
+    [{ type: "ugc", quantity: 2 }],
+  ]) {
+    it(`preserves contracted quantities and package fees for ${JSON.stringify(typeLines)}`, () => {
+      const creator = creatorWithPlatforms([{ platform: "instagram", handle: "creator" }]);
+      const item: QuotationItemExecutionRow = {
+        id: "quantity-regression", influencer_id: creator.influencer_id,
+        unified_id: creator.unified_id, creator_name: "Creator",
+        platform: "instagram", handle: "creator", option_number: 1,
+        cost: 2250, revenue: 3000, cost_currency: "AED",
+        deliverables: [{ platform: "instagram", quantity: 1, type_lines: typeLines }],
+      };
+      const [seed] = mapQuotationItemsToExecutionLineSeeds({
+        items: [item], creators: [creator], influencerIdByCreatorId: new Map(),
+        defaultCurrency: "AED",
+      });
+      const rows = packagePlatformsToCommercialRows(seed.platforms, {
+        totalRevenueBeforeVat: seed.revenue, totalCostBeforeVat: seed.cost, dueDate: null,
+      });
+      assert.deepEqual(rows.map(row => ({ type: row.deliverable_type, quantity: row.quantity })), typeLines);
+      assert.equal(rows.reduce((sum, row) => sum + row.quantity * row.unit_cost, 0), 2250);
+      assert.equal(rows.reduce((sum, row) => sum + row.quantity * row.revenue_before_vat, 0), 3000);
+    });
+  }
+
+
   it("retains canonical platform accounts and current metrics over stale quotation identity", () => {
     const creator = creatorWithPlatforms([
       { platform: "instagram", handle: "current_ig" },

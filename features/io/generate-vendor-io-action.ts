@@ -214,7 +214,7 @@ export async function generateVendorIosFromLinesAction(
       assignmentId = (insertedCi as { id: string }).id;
     }
 
-    const [{ data: influencerDefaults }, { data: campaignHeader }] = await Promise.all([
+    const [{ data: influencerDefaults }, { data: campaignHeader }, scopeResult] = await Promise.all([
       supabase
         .from("influencers")
         .select("vendor_io_terms_text")
@@ -225,7 +225,11 @@ export async function generateVendorIosFromLinesAction(
         .select("client_id, brand_id")
         .eq("id", campaignId)
         .maybeSingle(),
+      supabase.from("assignment_deliverables").select("deliverable_type")
+        .in("campaign_line_id", group.lines.map(line => line.id)),
     ]);
+
+    if (scopeResult.error) return { ok: false, message: scopeResult.error.message };
 
     const vendorDefaultTerms =
       typeof (influencerDefaults as { vendor_io_terms_text?: string | null } | null)
@@ -244,6 +248,7 @@ export async function generateVendorIosFromLinesAction(
           clientId,
           brandId,
           preferSavedTemplate: true,
+          deliverableTypes: (scopeResult.data ?? []).map(row => row.deliverable_type),
         });
         if (composed.termsText.trim()) {
           composedTerms = composed.termsText.trim();

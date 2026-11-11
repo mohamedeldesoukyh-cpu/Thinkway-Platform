@@ -24,6 +24,7 @@ const VENDOR_IO_LIST_SELECT = `
   sent_at, approved_at,
   approved_by_name, rejection_reason, created_by, created_at, updated_at,
   campaign:campaign_headers!vendor_ios_campaign_header_id_fkey(document_number, name),
+  scope_lines:vendor_io_lines(line:campaign_line_id(deliverables:assignment_deliverables(deliverable_type))),
   influencer:influencers!vendor_ios_influencer_id_fkey(display_name, email, payment_terms, vendor_io_terms_text, country_code),
   assignment:campaign_influencers!vendor_ios_assignment_id_fkey(
     line:campaign_lines!campaign_influencers_campaign_line_id_fkey(document_number)

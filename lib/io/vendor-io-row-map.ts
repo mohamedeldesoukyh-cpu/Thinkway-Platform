@@ -18,6 +18,7 @@ function usableInfluencerDisplayName(value: string | null | undefined): string |
 }
 
 type VendorIoQueryRow = {
+  scope_lines?: Array<{ line: { deliverables: Array<{ deliverable_type: string }> } | Array<{ deliverables: Array<{ deliverable_type: string }> }> | null }>;
   id: string;
   document_number: string | null;
   assignment_id: string;
@@ -121,6 +122,9 @@ export function mapVendorIoQueryRow(row: VendorIoQueryRow): VendorIoRow {
     influencer_email: influencer?.email?.trim() || null,
     creator_avatar_url: null,
     vendor_io_terms_text: influencer?.vendor_io_terms_text ?? null,
+    deliverable_types: (row.scope_lines ?? []).flatMap(link =>
+      (unwrap(link.line)?.deliverables ?? []).map(deliverable => deliverable.deliverable_type)
+    ),
     amount: Number(row.amount),
     currency_code: row.currency_code,
     status: row.status,

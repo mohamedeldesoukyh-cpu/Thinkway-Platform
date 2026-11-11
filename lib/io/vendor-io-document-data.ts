@@ -96,12 +96,6 @@ export async function loadVendorIoDocumentData(
     city: string | null;
   };
 
-  const terms = resolveEffectiveVendorIoTerms(
-    typedInfluencer.vendor_io_terms_text,
-    typedVio.terms_text,
-    { override: typedVio.compliance_country_code, creatorCountry: typedInfluencer.country_code }
-  );
-
   const typedCampaignRaw = campaign as {
     id: string;
     document_number: string;
@@ -276,7 +270,15 @@ export async function loadVendorIoDocumentData(
     amount: Number(typedVio.amount),
     usageRights: typedVio.usage_rights,
     exclusivity: typedVio.exclusivity,
-    terms,
+    terms: resolveEffectiveVendorIoTerms(
+      typedInfluencer.vendor_io_terms_text,
+      typedVio.terms_text,
+      {
+        override: typedVio.compliance_country_code,
+        creatorCountry: typedInfluencer.country_code,
+        deliverableTypes: deliverableRows.map(row => row.deliverableType),
+      }
+    ),
     influencer: {
       id: typedInfluencer.id,
       displayName: typedInfluencer.display_name,

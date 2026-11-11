@@ -44,15 +44,15 @@ type Props = {
 export function VendorIoForm({ row }: Props) {
   const vendorDefaultTerms = useMemo(
     () => resolveEffectiveVendorIoTerms(row.vendor_io_terms_text, null, {
-      override: row.compliance_country_code, creatorCountry: row.creator_country_code,
+      override: row.compliance_country_code, creatorCountry: row.creator_country_code, deliverableTypes: row.deliverable_types,
     }),
-    [row.vendor_io_terms_text, row.compliance_country_code, row.creator_country_code]
+    [row.vendor_io_terms_text, row.compliance_country_code, row.creator_country_code, row.deliverable_types]
   );
 
   const ioParsedTerms = useMemo(() => parseTermsText(row.terms_text)
     ? resolveEffectiveVendorIoTerms(row.vendor_io_terms_text, row.terms_text, {
-        override: row.compliance_country_code, creatorCountry: row.creator_country_code,
-      }) : null, [row.terms_text, row.vendor_io_terms_text, row.compliance_country_code, row.creator_country_code]);
+        override: row.compliance_country_code, creatorCountry: row.creator_country_code, deliverableTypes: row.deliverable_types,
+      }) : null, [row.terms_text, row.vendor_io_terms_text, row.compliance_country_code, row.creator_country_code, row.deliverable_types]);
 
   const [terms, setTerms] = useState<ClientIoTerm[]>(
     () => ioParsedTerms ?? vendorDefaultTerms
@@ -105,7 +105,7 @@ export function VendorIoForm({ row }: Props) {
 
   function handleRestorePlatformDefault() {
     setTerms(resolveEffectiveVendorIoTerms(null, null, {
-      override: row.compliance_country_code, creatorCountry: row.creator_country_code,
+      override: row.compliance_country_code, creatorCountry: row.creator_country_code, deliverableTypes: row.deliverable_types,
     }));
     // Inherit when vendor has no defaults; otherwise persist platform copy as IO override.
     setUseInheritedTerms(!parseTermsText(row.vendor_io_terms_text));

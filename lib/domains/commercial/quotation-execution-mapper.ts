@@ -141,7 +141,8 @@ export function quotationDeliverablesToPlatforms(
 
     if (!account?.id || !account.handle) continue;
 
-    const uniqueTypes = [...new Set(types.length ? types : ["other"])];
+    // Repeated types represent contracted units; package rows group them into quantities.
+    const contractedTypes = types.length ? types : ["other"];
 
     selections.push({
       account_id: account.id,
@@ -151,7 +152,7 @@ export function quotationDeliverablesToPlatforms(
       follower_count: account.follower_count ?? 0,
       engagement_rate: account.engagement_rate ?? null,
       audience_country: account.audience_country ?? null,
-      deliverables: uniqueTypes,
+      deliverables: contractedTypes,
     });
   }
 

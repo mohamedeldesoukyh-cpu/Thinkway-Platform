@@ -17,7 +17,7 @@ export function VendorIoConditionsEditor({ row, effective }: { row: VendorIoRow;
   const [message, setMessage] = useState("");
   const [pending, startTransition] = useTransition();
   const [inherit, setInherit] = useState(false);
-  const country = { override: row.compliance_country_code, creatorCountry: row.creator_country_code };
+  const country = { override: row.compliance_country_code, creatorCountry: row.creator_country_code, deliverableTypes: row.deliverable_types };
   const displayed = saved ?? effective;
 
   if (!editing) return <div className="space-y-3">

@@ -5,8 +5,7 @@
 
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { serializeTermsText } from "@/lib/io/client-io-terms";
-import { VENDOR_IO_DEFAULT_TERMS } from "@/lib/io/vendor-io-default-terms";
+import { resolveEffectiveVendorIoTerms, serializeTermsText } from "@/lib/io/client-io-terms";
 import type { Database } from "@/types/database";
 
 type Supabase = SupabaseClient<Database>;
@@ -44,6 +43,7 @@ export async function composeCreatorAgreementTerms(
     clientId: string;
     brandId?: string | null;
     preferSavedTemplate?: boolean;
+    deliverableTypes?: string[];
   }
 ): Promise<ComposedAgreement> {
   const brandId = input.brandId ?? null;
@@ -90,7 +90,9 @@ export async function composeCreatorAgreementTerms(
       : Promise.resolve({ data: null }),
   ]);
 
-  let terms = serializeTermsText(VENDOR_IO_DEFAULT_TERMS).trim();
+  let terms = serializeTermsText(resolveEffectiveVendorIoTerms(null, null, {
+    deliverableTypes: input.deliverableTypes,
+  })).trim();
   const client = clientReq;
   const brand = brandReq;
 

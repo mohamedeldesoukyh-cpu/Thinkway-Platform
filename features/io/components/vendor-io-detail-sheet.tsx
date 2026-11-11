@@ -139,7 +139,7 @@ function VendorIoTermsTab({ row }: { row: VendorIoRow }) {
   const effective = resolveEffectiveVendorIoTerms(
     row.vendor_io_terms_text,
     row.terms_text,
-    { override: row.compliance_country_code, creatorCountry: row.creator_country_code }
+    { override: row.compliance_country_code, creatorCountry: row.creator_country_code, deliverableTypes: row.deliverable_types }
   );
   const source = resolveIoTermsSource(vendorTerms, ioTerms);
 

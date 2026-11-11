@@ -105,6 +105,8 @@ export type VendorIoRow = {
   creator_avatar_url: string | null;
   /** Influencer default Vendor IO terms JSON (null = platform default). */
   vendor_io_terms_text: string | null;
+  /** Structured types across all assignment lines covered by this IO. */
+  deliverable_types?: string[];
   amount: number;
   currency_code: string;
   status: VendorIoStatus;

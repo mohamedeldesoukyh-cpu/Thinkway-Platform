@@ -1,5 +1,6 @@
 import { CLIENT_IO_DEFAULT_TERMS } from "@/lib/io/client-io-default-terms";
 import { VENDOR_IO_DEFAULT_TERMS } from "@/lib/io/vendor-io-default-terms";
+import { VENDOR_IO_UGC_DEFAULT_TERMS } from "./vendor-io-ugc-default-terms";
 import { applyVendorIoComplianceCountry, resolveVendorIoCountry } from "./vendor-io-country";
 
 export type ClientIoTerm = {
@@ -80,14 +81,21 @@ export function resolveDefaultTermsForVendor(
   );
 }
 
-/** Full Vendor IO hierarchy: IO → vendor → platform. */
+/** Empty/unknown and mixed scopes retain the standard posting terms. */
+export function isUgcOnlyVendorIo(deliverableTypes?: readonly string[]): boolean {
+  return !!deliverableTypes?.length && deliverableTypes.every(type =>
+    ["ugc", "ugc_video"].includes(type.trim().toLowerCase())
+  );
+}
+
+/** Full Vendor IO hierarchy: IO → vendor → scope-specific platform default. */
 export function resolveEffectiveVendorIoTerms(
   vendorTermsText: string | null | undefined,
   ioTermsText: string | null | undefined,
-  country?: { override?: string | null; creatorCountry?: string | null }
+  country?: { override?: string | null; creatorCountry?: string | null; deliverableTypes?: readonly string[] }
 ): ClientIoTerm[] {
   const terms = resolveEffectiveTerms(
-    VENDOR_IO_DEFAULT_TERMS,
+    isUgcOnlyVendorIo(country?.deliverableTypes) ? VENDOR_IO_UGC_DEFAULT_TERMS : VENDOR_IO_DEFAULT_TERMS,
     parseTermsText(vendorTermsText),
     parseTermsText(ioTermsText)
   );
