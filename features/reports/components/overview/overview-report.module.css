@@ -1,0 +1,327 @@
+/*
+ * Overview Report table styles. CSS Module: every class is hashed by the
+ * bundler, so nothing here can leak into other reports or the app shell.
+ * Colors come from the shared Thinkway tokens (light + .dark overrides);
+ * tints are mixed with --card so sticky cells stay opaque in both themes.
+ */
+
+/* `.tokens` repeats the variables on portalled surfaces (column settings popover). */
+.root,
+.tokens {
+  --ov-accrued: var(--amber, #f59e0b);
+  --ov-total: var(--blue, #0057ff);
+  --ov-share: var(--purple, #a855f7);
+  --ov-accrued-cell: color-mix(in srgb, var(--ov-accrued) 7%, var(--card));
+  --ov-accrued-head: color-mix(in srgb, var(--ov-accrued) 14%, var(--card));
+  --ov-total-cell: color-mix(in srgb, var(--ov-total) 6%, var(--card));
+  --ov-total-head: color-mix(in srgb, var(--ov-total) 12%, var(--card));
+  --ov-share-cell: color-mix(in srgb, var(--ov-share) 6%, var(--card));
+  --ov-share-head: color-mix(in srgb, var(--ov-share) 12%, var(--card));
+  --ov-head: color-mix(in srgb, var(--muted-foreground) 6%, var(--card));
+  --ov-foot: color-mix(in srgb, var(--muted-foreground) 9%, var(--card));
+  --ov-line: var(--border);
+  --ov-line-strong: color-mix(in srgb, var(--muted-foreground) 38%, transparent);
+  --ov-group-row: 1.875rem;
+}
+
+/* Scroll container. `isolation` keeps sticky cells in their own stacking
+   context, so they can never paint over popovers (z-110) or the app shell. */
+.scroller {
+  position: relative;
+  isolation: isolate;
+  overflow: auto;
+  overscroll-behavior-x: contain;
+  border-top: 1px solid var(--ov-line);
+  border-bottom: 1px solid var(--ov-line);
+  scrollbar-gutter: stable;
+}
+.scroller:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+@media (min-width: 768px) {
+  /* Vertical scrolling stays inside the card so the header and totals remain visible. */
+  .scroller {
+    max-height: max(22rem, calc(100dvh - 16rem));
+  }
+}
+
+.table {
+  width: 100%;
+  min-width: max-content;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8125rem;
+  line-height: 1.25rem;
+  color: var(--foreground);
+}
+
+.table th,
+.table td {
+  padding: 0.5rem 0.875rem;
+  border-bottom: 1px solid var(--ov-line);
+  background: var(--card);
+  vertical-align: middle;
+  text-align: left;
+}
+
+/* ---------- Header ---------- */
+.table thead th {
+  position: sticky;
+  z-index: 2;
+  background: var(--ov-head);
+  color: var(--muted-foreground);
+  font-weight: 600;
+}
+.groupCell {
+  top: 0;
+  height: var(--ov-group-row);
+  padding-block: 0.25rem !important;
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.groupCell span {
+  position: sticky;
+  left: 0.875rem;
+}
+.columnCell {
+  top: var(--ov-group-row);
+  font-size: 0.75rem;
+  white-space: nowrap;
+  border-bottom-color: var(--ov-line-strong) !important;
+}
+.columnCell[data-numeric="true"] {
+  text-align: right !important;
+}
+.headLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  cursor: help;
+}
+.columnCell[data-numeric="true"] .headLabel {
+  flex-direction: row-reverse;
+}
+.kindMark {
+  width: 0.5rem;
+  height: 0.5rem;
+  flex: none;
+  border-radius: 999px;
+  background: var(--ov-mark, transparent);
+  box-shadow: inset 0 0 0 1px var(--ov-mark-ring, var(--ov-line-strong));
+}
+
+/* ---------- Body cells ---------- */
+/* Row headers (first column) reset the global uppercase table-heading treatment. */
+.table tbody th,
+.table tfoot th {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: inherit;
+  color: var(--foreground);
+}
+.table tbody th {
+  font-weight: 500;
+}
+.textCell {
+  min-width: 8.5rem;
+  max-width: 16rem;
+  font-weight: 400;
+}
+.clamp {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.numCell {
+  text-align: right !important;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+.table tbody tr:hover > * {
+  background-image: linear-gradient(color-mix(in srgb, var(--foreground) 3.5%, transparent), color-mix(in srgb, var(--foreground) 3.5%, transparent));
+}
+
+.negative {
+  color: var(--red-text, #991b1b);
+}
+.zero {
+  color: var(--muted-foreground);
+}
+
+/* Category tints. Actual figures stay on the plain surface. */
+.root [data-kind="accrued"],
+.tokens [data-kind="accrued"] {
+  --ov-mark: var(--ov-accrued);
+  --ov-mark-ring: transparent;
+}
+.root [data-kind="total"],
+.root [data-kind="afterShare"],
+.tokens [data-kind="total"],
+.tokens [data-kind="afterShare"] {
+  --ov-mark: var(--ov-total);
+  --ov-mark-ring: transparent;
+}
+.root [data-kind="share"],
+.tokens [data-kind="share"] {
+  --ov-mark: var(--ov-share);
+  --ov-mark-ring: transparent;
+}
+.table td[data-kind="accrued"] {
+  background-color: var(--ov-accrued-cell);
+  color: var(--amber-text, #92400e);
+}
+.table thead th[data-kind="accrued"] {
+  background-color: var(--ov-accrued-head);
+  color: var(--amber-text, #92400e);
+}
+.table td[data-kind="total"],
+.table td[data-kind="afterShare"] {
+  background-color: var(--ov-total-cell);
+  font-weight: 600;
+}
+.table thead th[data-kind="total"],
+.table thead th[data-kind="afterShare"] {
+  background-color: var(--ov-total-head);
+  color: var(--blue-text, #0048dd);
+}
+.table td[data-kind="share"] {
+  background-color: var(--ov-share-cell);
+}
+.table thead th[data-kind="share"] {
+  background-color: var(--ov-share-head);
+  color: var(--purple-text, #6b21a8);
+}
+.table td[data-kind="afterShare"] {
+  font-weight: 700;
+}
+.table td[data-kind="accrued"].negative,
+.table td[data-kind="total"].negative,
+.table td[data-kind="afterShare"].negative {
+  color: var(--red-text, #991b1b);
+}
+
+/* Vertical rule where a new column family (Revenue, Cost, GP, Revenue share) starts. */
+.familyStart {
+  border-left: 1px solid var(--ov-line-strong);
+}
+
+/* ---------- Pinned first column ---------- */
+.pinned {
+  position: sticky !important;
+  left: 0;
+  z-index: 1;
+  box-shadow: inset -1px 0 0 var(--ov-line-strong);
+}
+.table thead th.pinned {
+  z-index: 3;
+}
+@media (max-width: 639px) {
+  .pinned.textCell {
+    min-width: 7.5rem;
+    max-width: 9.5rem;
+  }
+}
+
+/* ---------- Totals ---------- */
+.table tfoot th,
+.table tfoot td {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  border-top: 2px solid var(--ov-line-strong);
+  border-bottom: 0;
+  background-color: var(--ov-foot);
+  font-weight: 700;
+  padding-block: 0.625rem;
+}
+.table tfoot td[data-kind="accrued"] {
+  background-color: color-mix(in srgb, var(--ov-accrued) 12%, var(--card));
+}
+.table tfoot td[data-kind="total"],
+.table tfoot td[data-kind="afterShare"] {
+  background-color: color-mix(in srgb, var(--ov-total) 11%, var(--card));
+}
+.table tfoot td[data-kind="share"] {
+  background-color: color-mix(in srgb, var(--ov-share) 11%, var(--card));
+}
+.table tfoot .pinned {
+  z-index: 3;
+}
+.totalsLabel {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.375rem;
+  white-space: nowrap;
+}
+.totalsSplit {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.totalsTag {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+.empty {
+  padding: 3rem 1rem !important;
+  text-align: center !important;
+  color: var(--muted-foreground);
+}
+
+.pending {
+  opacity: 0.55;
+  transition: opacity 120ms ease;
+}
+
+/* Legend swatches (also used in column settings). */
+.swatch {
+  display: inline-block;
+  width: 0.625rem;
+  height: 0.625rem;
+  flex: none;
+  border-radius: 0.1875rem;
+  background: var(--card);
+  box-shadow: inset 0 0 0 1px var(--ov-line-strong);
+}
+.swatch[data-kind="accrued"] {
+  background: var(--ov-accrued-head);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ov-accrued) 55%, transparent);
+}
+.swatch[data-kind="total"],
+.swatch[data-kind="afterShare"] {
+  background: var(--ov-total-head);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ov-total) 45%, transparent);
+}
+.swatch[data-kind="share"] {
+  background: var(--ov-share-head);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ov-share) 45%, transparent);
+}
+.swatch[data-kind="text"] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px var(--ov-line);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pending {
+    transition: none;
+  }
+}
+
+@media print {
+  .scroller {
+    max-height: none;
+    overflow: visible;
+  }
+}

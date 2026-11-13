@@ -12,7 +12,7 @@ export default async function OverviewReportPage({ searchParams }: { searchParam
   const preferences = normalizeOverviewColumnPreferences(user?.user_metadata?.[OVERVIEW_PREFERENCE_KEY]);
   const selectedColumns = preferences.order.filter(key => preferences.columns.includes(key));
   const report = await getOverviewReport({ ...params, columns: params.columns ?? selectedColumns.join(",") }, supabase);
-  return <FinanceSuiteShell title="Overview Report" description="Campaign revenue, cost and gross profit — actual and accrued." backFallbackHref="/reports" backLabel="Reports">
+  return <FinanceSuiteShell title="Overview Report" description="Campaign revenue, cost and gross profit — actual and accrued." backFallbackHref="/reports" backLabel="Reports" hideDefaultActions>
     <OverviewReportView report={report} savedPreferences={preferences} />
   </FinanceSuiteShell>;
 }

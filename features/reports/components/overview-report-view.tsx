@@ -1,27 +1,50 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useId, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { OperationalTableColumnSettingsList } from "@/components/tables/operational-table-column-settings-list";
-import { operationalTableChrome, OperationalTableIcons, OperationalTableToolbarButton } from "@/components/tables/operational-table-chrome";
-import { reorderTableColumns } from "@/lib/tables/operational-table-column-settings";
-import { OperationalTableSection } from "@/components/ui/operational-table-section";
+
 import { ReportExportActions } from "@/features/reports/components/report-export-actions";
-import { OVERVIEW_COLUMNS, orderOverviewColumns, type OverviewFilters, type OverviewReport, type OverviewRow } from "@/lib/reports/overview/overview-report";
 import { saveOverviewColumns } from "@/features/reports/save-overview-columns-action";
 import { normalizeOverviewColumnPreferences, type OverviewColumnPreferences } from "@/lib/reports/overview/overview-column-preferences";
+import { orderOverviewColumns, type OverviewColumn, type OverviewFilters, type OverviewReport } from "@/lib/reports/overview/overview-report";
 import { cn } from "@/lib/utils";
 
-const amount = (v: number) => new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
-const selectClass = "h-9 w-full min-w-0 rounded-md border border-input bg-background px-2 text-xs";
+import { OverviewColumnSettings, type OverviewSaveStatus } from "./overview/overview-column-settings";
+import { OverviewFilterPanel } from "./overview/overview-filter-panel";
+import styles from "./overview/overview-report.module.css";
+import { OverviewReportTable } from "./overview/overview-report-table";
+import {
+  formatOverviewDate,
+  overviewFilterSearchParams,
+  withFilterChange,
+  type OverviewColumnKind,
+} from "./overview/overview-report-ui";
+
 export function OverviewReportView({ report, savedPreferences }: { report: OverviewReport; savedPreferences: OverviewColumnPreferences }) {
   // The key resets the draft after back/forward navigation or an applied filter.
-  return <OverviewReportContent key={JSON.stringify(report.filters)} report={report} savedPreferences={savedPreferences} />;
+  return (
+    <OverviewReportContent
+      key={JSON.stringify(report.filters)}
+      report={report}
+      savedPreferences={savedPreferences}
+    />
+  );
 }
-function OverviewReportContent({ report, savedPreferences }: { report: OverviewReport; savedPreferences: OverviewColumnPreferences }) {
+
+const LEGEND: { kind: OverviewColumnKind; label: string; detail: string }[] = [
+  { kind: "actual", label: "Actual", detail: "went-live activity" },
+  { kind: "accrued", label: "Acc.", detail: "accrued, not yet live" },
+  { kind: "total", label: "Total", detail: "actual + accrued" },
+  { kind: "share", label: "Rev. Share", detail: "campaign revenue share" },
+];
+
+function OverviewReportContent({
+  report,
+  savedPreferences,
+}: {
+  report: OverviewReport;
+  savedPreferences: OverviewColumnPreferences;
+}) {
   const router = useRouter(), pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState(report.filters);
@@ -33,13 +56,17 @@ function OverviewReportContent({ report, savedPreferences }: { report: OverviewR
       : orderOverviewColumns([...report.filters.columns, ...savedPreferences.order.filter(key => !report.filters.columns.includes(key))]);
   });
   const [saving, setSaving] = useState(false);
-  const [saveMessage, setSaveMessage] = useState("");
+  const [saveStatus, setSaveStatus] = useState<OverviewSaveStatus>(null);
   const [saved, setSaved] = useState(savedPreferences);
-  const selectionChanged = JSON.stringify({ columns: columnOrder.filter(key => columns.includes(key)), order: columnOrder }) !==
+  const headingId = useId();
+
+  const visible: OverviewColumn[] = columnOrder.filter(key => columns.includes(key));
+  const selectionChanged = JSON.stringify({ columns: visible, order: columnOrder }) !==
     JSON.stringify({ columns: saved.order.filter(key => saved.columns.includes(key)), order: saved.order });
+
   const persistSelection = async (reset = false) => {
     setSaving(true);
-    setSaveMessage("");
+    setSaveStatus(null);
     const next = reset ? normalizeOverviewColumnPreferences(null) : { columns, order: columnOrder };
     try {
       const result = await saveOverviewColumns(next);
@@ -50,89 +77,113 @@ function OverviewReportContent({ report, savedPreferences }: { report: OverviewR
       const url = new URL(window.location.href);
       url.searchParams.set("columns", next.order.filter(key => next.columns.includes(key)).join(","));
       window.history.replaceState(null, "", url.toString());
-      setSaveMessage(reset ? "Default columns restored for your account." : "Selection saved to your account.");
+      setSaveStatus({ tone: "success", text: reset ? "Default columns restored for your account." : "Selection saved to your account." });
     } catch {
-      setSaveMessage("Could not save your selection. Please try again.");
+      setSaveStatus({ tone: "error", text: "Could not save your selection. Please try again." });
     } finally { setSaving(false); }
   };
-  const update = (key: keyof OverviewFilters, value: string) => setDraft(old => ({ ...old, [key]: value,
-    ...(key === "groupId" ? { clientId: "", brandId: "", campaignId: "" } : key === "clientId" ? { brandId: "", campaignId: "" } : key === "brandId" ? { campaignId: "" } : {}) }));
-  const apply = () => {
-    const params = new URLSearchParams();
-    Object.entries(draft).forEach(([key, value]) => { if (key !== "columns" && value) params.set(key, String(value)); });
-    params.set("columns", columnOrder.filter(key => columns.includes(key)).join(","));
+
+  const update = (key: Exclude<keyof OverviewFilters, "columns">, value: string) => setDraft(old => withFilterChange(old, key, value));
+  const navigate = (filters: OverviewFilters) => {
+    const params = overviewFilterSearchParams(filters, visible);
     startTransition(() => router.push(`${pathname}?${params}`));
   };
-  const orderedColumns = columnOrder.map(key => OVERVIEW_COLUMNS.find(c => c.key === key)!);
-  const visible = orderedColumns.filter(c => columns.includes(c.key));
-  const cell = (row: OverviewRow, total = false) => visible.map((c, i) => <td key={c.key} className={cn("px-3 py-2.5", c.numeric ? "text-right tabular-nums whitespace-nowrap" : "min-w-32 max-w-64 break-words", c.total && "bg-sky-50 text-sky-950 font-semibold dark:bg-sky-950/40 dark:text-sky-100", c.accrued && "bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100")}>
-    {c.numeric ? amount(row[c.key]) : total ? i === visible.findIndex(v => !v.numeric) ? "Totals" : "" : row[c.key]}
-  </td>);
-  const selects = [["groupId", "Group"], ["clientId", "Client"], ["brandId", "Brand"], ["campaignId", "Campaign"], ["status", "Campaign status"], ["currency", "Display currency"]] as const;
-  return <div className="space-y-4" aria-busy={pending}>
-    <form onSubmit={e => { e.preventDefault(); apply(); }} className="rounded-xl border border-border/70 bg-card p-4 shadow-sm space-y-3">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-        {selects.map(([key, label]) => <label key={key} className="grid gap-1 text-xs text-muted-foreground">{label}
-          <select className={selectClass} value={draft[key]} onChange={e => update(key, e.target.value)}>
-            {key !== "currency" && <option value="">All</option>}
-            {report.options[key].map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-          </select>
-        </label>)}
-        <label className="grid gap-1 text-xs text-muted-foreground">Client type<select className={selectClass} value={draft.clientType} onChange={e => update("clientType", e.target.value)}><option value="">All</option><option value="agency">Agency</option><option value="direct">Direct</option></select></label>
-        <label className="grid gap-1 text-xs text-muted-foreground">Activity<select className={selectClass} value={draft.activity} onChange={e => update("activity", e.target.value)}><option value="">All</option><option value="actual">Has went-live activity</option><option value="accrued">Has accrual amounts</option><option value="both">Actual and accrued</option></select></label>
-        {([["from", "Campaign start from"], ["to", "Campaign start to"], ["asOf", "Went live as of"]] as const).map(([key,label]) => <label key={key} className="grid gap-1 text-xs text-muted-foreground">{label}<Input type="date" className="h-9 text-xs" value={draft[key]} onChange={e => update(key, e.target.value)} /></label>)}
-        <label className="grid gap-1 text-xs text-muted-foreground">Search<Input className="h-9 text-xs" value={draft.q} placeholder="Group, client, brand, campaign" onChange={e => update("q", e.target.value)} /></label>
-      </div>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-2"><Button type="submit" size="sm" disabled={pending}>{pending ? "Applying…" : "Apply filters"}</Button><Button type="button" size="sm" variant="ghost" onClick={() => startTransition(() => router.push(pathname))}>Reset</Button></div>
-        <ReportExportActions apiPath="/api/reports/overview/document" fixedParams={{ columns: visible.map(c => c.key).join(",") }} disabled={pending} />
-      </div>
-      <div className="flex justify-end">
-        <Popover>
-          <PopoverTrigger asChild><OperationalTableToolbarButton icon={OperationalTableIcons.settings} label="Settings" /></PopoverTrigger>
-          <PopoverContent align="end" className={cn(operationalTableChrome.panelShell, "w-[min(20rem,calc(100vw-2rem))] overflow-hidden p-0")}>
-            <div className="border-b border-border/50 px-4 py-3.5">
-              <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Overview Report</p>
-              <h3 className="text-sm font-semibold tracking-tight text-foreground">Table settings</h3>
-            </div>
-            <div className="px-4 py-3">
-              <OperationalTableColumnSettingsList
-                orderedColumns={orderedColumns.map(c => ({ id: c.key, label: c.label }))}
-                state={{ order: columnOrder, visible: Object.fromEntries(OVERVIEW_COLUMNS.map(c => [c.key, columns.includes(c.key)])) }}
-                toggleColumnVisibility={(id, shown) => {
-                  const key = OVERVIEW_COLUMNS.find(c => c.key === id)?.key;
-                  if (saving || !key || (!shown && columns.length === 1)) return;
-                  setColumns(old => shown ? [...old, key] : old.filter(k => k !== key));
-                }}
-                moveColumn={(from, to) => !saving && setColumnOrder(old => orderOverviewColumns(reorderTableColumns(old, from, to) as typeof old))}
-                resetToDefault={() => { if (!saving) void persistSelection(true); }}
-              />
-            </div>
-            <div className="space-y-2 border-t border-border/50 px-4 py-3">
-              <p className="text-xs text-muted-foreground">Save columns and order for your account, across devices.</p>
-              <div className="flex justify-end gap-2">
-                <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => void persistSelection(true)}>Reset columns</Button>
-                <Button type="button" size="sm" disabled={saving || !selectionChanged} onClick={() => void persistSelection()}>{saving ? "Saving…" : "Save selection"}</Button>
-              </div>
-              <p role="status" className="text-xs text-muted-foreground">{saveMessage || (selectionChanged ? "Unsaved column changes" : "Your saved selection")}</p>
-            </div>
-          </PopoverContent>
-        </Popover>
-      </div>
-    </form>
-    <OperationalTableSection wide tableOnly cardSurface>
-      <div className="space-y-3 p-4 md:p-6">
-        <div className="space-y-1"><h2 className="text-sm font-semibold">Overview Report · {report.filters.currency}</h2>
-          <p className="text-xs text-muted-foreground">{report.rows.length} campaigns · Went live as of {report.filters.asOf} · Amounts before VAT.</p>
-          <p className="text-xs text-muted-foreground">Actual: went-live activity. <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">Acc.: not yet live</span>. <span className="rounded bg-sky-50 px-1.5 py-0.5 text-sky-950 dark:bg-sky-950/40 dark:text-sky-100">Total = actual + accrued</span>. GP = revenue − cost. Rev. Share = campaign revenue share. GP after RS = Total GP − Rev. Share.</p>
-          <p className="text-xs text-muted-foreground">Dates filter campaign start dates. The as-of date splits current campaign values by publication date; it is not a historical accounting snapshot.</p>
-        </div>
-        <div className="overflow-x-auto rounded-lg border border-border/70"><table className="w-full border-collapse text-xs"><caption className="sr-only">Overview Report in {report.filters.currency}. Totals cover all filtered campaigns.</caption>
-          <thead><tr className="border-b border-border/70 bg-muted/25 text-[11px] uppercase tracking-wide text-muted-foreground">{visible.map(c => <th key={c.key} scope="col" className={cn("px-3 py-2 font-semibold", c.numeric ? "text-right whitespace-nowrap" : "text-left", c.total && "bg-sky-100 text-sky-950 dark:bg-sky-900/50 dark:text-sky-100", c.accrued && "bg-amber-100 text-amber-950 dark:bg-amber-900/50 dark:text-amber-100")}>{c.label}</th>)}</tr></thead>
-          <tbody>{report.rows.length ? report.rows.map(row => <tr key={row.id} className="border-b border-border/50">{cell(row)}</tr>) : <tr><td colSpan={visible.length} className="py-10 text-center text-muted-foreground">No campaigns match these filters.</td></tr>}</tbody>
-          <tfoot><tr aria-label="Totals for all filtered campaigns" className="border-t-2 border-border/70 bg-muted/20 font-semibold">{cell(report.totals, true)}</tr></tfoot>
-        </table></div>
-      </div>
-    </OperationalTableSection>
-  </div>;
+  const apply = () => navigate(draft);
+  const discardDraft = () => setDraft(report.filters);
+  const resetFilters = () => startTransition(() => router.push(pathname));
+
+  const toggleColumn = (key: OverviewColumn, shown: boolean) => {
+    if (saving || (!shown && columns.length === 1)) return;
+    setSaveStatus(null);
+    setColumns(old => shown ? (old.includes(key) ? old : [...old, key]) : old.filter(k => k !== key));
+  };
+  const changeOrder = (next: OverviewColumn[]) => {
+    if (saving) return;
+    setSaveStatus(null);
+    setColumnOrder(next);
+  };
+
+  const applied = report.filters;
+  const count = report.rows.length;
+  const asOf = formatOverviewDate(applied.asOf) || applied.asOf;
+
+  return (
+    <div data-overview-redesign className={cn(styles.root, "space-y-4")} aria-busy={pending}>
+      <OverviewFilterPanel
+        draft={draft}
+        applied={applied}
+        options={report.options}
+        pending={pending}
+        onChange={update}
+        onApply={apply}
+        onReset={resetFilters}
+        onDiscard={discardDraft}
+      />
+
+      <section aria-labelledby={headingId} className="overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm">
+        <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-3 px-4 pb-3 pt-4 md:px-5">
+          <div className="min-w-0 space-y-1">
+            <h2 id={headingId} className="text-base font-semibold tracking-tight text-foreground">Campaign financials</h2>
+            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {count} {count === 1 ? "campaign" : "campaigns"}
+              </span>
+              <span aria-hidden>·</span>
+              <span>
+                Amounts in <span className="rounded-md bg-[var(--blue-light)] px-1.5 py-0.5 font-semibold text-[var(--blue-text)]">{applied.currency}</span>, before VAT
+              </span>
+              <span aria-hidden>·</span>
+              <span>Went live as of <span className="font-medium text-foreground">{asOf}</span></span>
+              {pending && (
+                <>
+                  <span aria-hidden>·</span>
+                  <span role="status" className="font-medium text-[var(--blue-text)]">Updating…</span>
+                </>
+              )}
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <OverviewColumnSettings
+              order={columnOrder}
+              visible={visible}
+              saving={saving}
+              dirty={selectionChanged}
+              status={saveStatus}
+              onToggle={toggleColumn}
+              onOrderChange={changeOrder}
+              onSave={() => void persistSelection()}
+              onReset={() => { if (!saving) void persistSelection(true); }}
+            />
+            <ReportExportActions apiPath="/api/reports/overview/document" fixedParams={{ columns: visible.join(",") }} disabled={pending} />
+          </div>
+        </header>
+
+        <ul aria-label="Column key" className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 pb-3 text-xs text-muted-foreground md:px-5">
+          {LEGEND.map(item => (
+            <li key={item.kind} className="inline-flex items-center gap-1.5">
+              <span className={styles.swatch} data-kind={item.kind} aria-hidden />
+              <span><span className="font-medium text-foreground">{item.label}</span> {item.detail}</span>
+            </li>
+          ))}
+        </ul>
+
+        <OverviewReportTable
+          rows={report.rows}
+          totals={report.totals}
+          columns={visible}
+          currency={applied.currency}
+          pending={pending}
+          labelledBy={headingId}
+        />
+
+        <footer className="space-y-1 px-4 py-3 text-xs leading-relaxed text-muted-foreground md:px-5">
+          <p>
+            Actual: went-live activity. Acc.: not yet live. Total = actual + accrued. GP = revenue − cost. Rev. Share = campaign revenue share.
+            GP after RS = Total GP − Rev. Share. Totals cover all filtered campaigns.
+          </p>
+          <p>Dates filter campaign start dates. The as-of date splits current campaign values by publication date; it is not a historical accounting snapshot.</p>
+        </footer>
+      </section>
+    </div>
+  );
 }
