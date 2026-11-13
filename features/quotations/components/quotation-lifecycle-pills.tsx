@@ -1,5 +1,3 @@
-"use client";
-
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 
 import type { ReactNode } from "react";
