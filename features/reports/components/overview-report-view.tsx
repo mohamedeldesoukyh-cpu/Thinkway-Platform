@@ -10,7 +10,7 @@ import { operationalTableChrome, OperationalTableIcons, OperationalTableToolbarB
 import { reorderTableColumns } from "@/lib/tables/operational-table-column-settings";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { ReportExportActions } from "@/features/reports/components/report-export-actions";
-import { DEFAULT_OVERVIEW_COLUMNS, OVERVIEW_COLUMNS, type OverviewFilters, type OverviewReport, type OverviewRow } from "@/lib/reports/overview/overview-report";
+import { DEFAULT_OVERVIEW_COLUMNS, OVERVIEW_COLUMNS, orderOverviewColumns, type OverviewFilters, type OverviewReport, type OverviewRow } from "@/lib/reports/overview/overview-report";
 import { cn } from "@/lib/utils";
 
 const amount = (v: number) => new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
@@ -24,7 +24,7 @@ function OverviewReportContent({ report }: { report: OverviewReport }) {
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState(report.filters);
   const [columns, setColumns] = useState(report.filters.columns);
-  const [columnOrder, setColumnOrder] = useState([...report.filters.columns, ...OVERVIEW_COLUMNS.map(c => c.key).filter(key => !report.filters.columns.includes(key))]);
+  const [columnOrder, setColumnOrder] = useState(orderOverviewColumns([...report.filters.columns, ...OVERVIEW_COLUMNS.map(c => c.key).filter(key => !report.filters.columns.includes(key))]));
   const update = (key: keyof OverviewFilters, value: string) => setDraft(old => ({ ...old, [key]: value,
     ...(key === "groupId" ? { clientId: "", brandId: "", campaignId: "" } : key === "clientId" ? { brandId: "", campaignId: "" } : key === "brandId" ? { campaignId: "" } : {}) }));
   const apply = () => {
@@ -35,7 +35,7 @@ function OverviewReportContent({ report }: { report: OverviewReport }) {
   };
   const orderedColumns = columnOrder.map(key => OVERVIEW_COLUMNS.find(c => c.key === key)!);
   const visible = orderedColumns.filter(c => columns.includes(c.key));
-  const cell = (row: OverviewRow, total = false) => visible.map((c, i) => <td key={c.key} className={cn("px-3 py-2.5", c.numeric ? "text-right tabular-nums whitespace-nowrap" : "min-w-32 max-w-64 break-words", c.accrued && "bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100")}>
+  const cell = (row: OverviewRow, total = false) => visible.map((c, i) => <td key={c.key} className={cn("px-3 py-2.5", c.numeric ? "text-right tabular-nums whitespace-nowrap" : "min-w-32 max-w-64 break-words", c.total && "bg-sky-50 text-sky-950 font-semibold dark:bg-sky-950/40 dark:text-sky-100", c.accrued && "bg-amber-50 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100")}>
     {c.numeric ? amount(row[c.key]) : total ? i === visible.findIndex(v => !v.numeric) ? "Totals" : "" : row[c.key]}
   </td>);
   const selects = [["groupId", "Group"], ["clientId", "Client"], ["brandId", "Brand"], ["campaignId", "Campaign"], ["status", "Campaign status"], ["currency", "Display currency"]] as const;
@@ -74,7 +74,7 @@ function OverviewReportContent({ report }: { report: OverviewReport }) {
                   if (!key || (!shown && columns.length === 1)) return;
                   setColumns(old => shown ? [...old, key] : old.filter(k => k !== key));
                 }}
-                moveColumn={(from, to) => setColumnOrder(old => reorderTableColumns(old, from, to) as typeof old)}
+                moveColumn={(from, to) => setColumnOrder(old => orderOverviewColumns(reorderTableColumns(old, from, to) as typeof old))}
                 resetToDefault={() => { setColumns([...DEFAULT_OVERVIEW_COLUMNS]); setColumnOrder(OVERVIEW_COLUMNS.map(c => c.key)); }}
               />
             </div>
@@ -86,11 +86,11 @@ function OverviewReportContent({ report }: { report: OverviewReport }) {
       <div className="space-y-3 p-4 md:p-6">
         <div className="space-y-1"><h2 className="text-sm font-semibold">Overview Report · {report.filters.currency}</h2>
           <p className="text-xs text-muted-foreground">{report.rows.length} campaigns · Went live as of {report.filters.asOf} · Amounts before VAT.</p>
-          <p className="text-xs text-muted-foreground">Actual: went-live activity. <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">Acc.: not yet live</span>. Total = actual + accrued. GP = revenue − cost.</p>
+          <p className="text-xs text-muted-foreground">Actual: went-live activity. <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">Acc.: not yet live</span>. <span className="rounded bg-sky-50 px-1.5 py-0.5 text-sky-950 dark:bg-sky-950/40 dark:text-sky-100">Total = actual + accrued</span>. GP = revenue − cost.</p>
           <p className="text-xs text-muted-foreground">Dates filter campaign start dates. The as-of date splits current campaign values by publication date; it is not a historical accounting snapshot.</p>
         </div>
         <div className="overflow-x-auto rounded-lg border border-border/70"><table className="w-full border-collapse text-xs"><caption className="sr-only">Overview Report in {report.filters.currency}. Totals cover all filtered campaigns.</caption>
-          <thead><tr className="border-b border-border/70 bg-muted/25 text-[11px] uppercase tracking-wide text-muted-foreground">{visible.map(c => <th key={c.key} scope="col" className={cn("px-3 py-2 font-semibold", c.numeric ? "text-right whitespace-nowrap" : "text-left", c.accrued && "bg-amber-100 text-amber-950 dark:bg-amber-900/50 dark:text-amber-100")}>{c.label}</th>)}</tr></thead>
+          <thead><tr className="border-b border-border/70 bg-muted/25 text-[11px] uppercase tracking-wide text-muted-foreground">{visible.map(c => <th key={c.key} scope="col" className={cn("px-3 py-2 font-semibold", c.numeric ? "text-right whitespace-nowrap" : "text-left", c.total && "bg-sky-100 text-sky-950 dark:bg-sky-900/50 dark:text-sky-100", c.accrued && "bg-amber-100 text-amber-950 dark:bg-amber-900/50 dark:text-amber-100")}>{c.label}</th>)}</tr></thead>
           <tbody>{report.rows.length ? report.rows.map(row => <tr key={row.id} className="border-b border-border/50">{cell(row)}</tr>) : <tr><td colSpan={visible.length} className="py-10 text-center text-muted-foreground">No campaigns match these filters.</td></tr>}</tbody>
           <tfoot><tr aria-label="Totals for all filtered campaigns" className="border-t-2 border-border/70 bg-muted/20 font-semibold">{cell(report.totals, true)}</tr></tfoot>
         </table></div>
