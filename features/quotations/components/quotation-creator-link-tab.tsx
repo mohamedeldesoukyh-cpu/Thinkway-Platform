@@ -1,4 +1,4 @@
-"use client";
+// Inherits the client boundary from add-creators-to-quotation-modal.tsx.
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";

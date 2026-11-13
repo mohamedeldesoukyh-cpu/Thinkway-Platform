@@ -1,4 +1,4 @@
-"use client";
+// Inherits the client boundary from quotation-workspace.tsx.
 import { useEffect, useMemo, useState } from "react";
 import type { QuotationItemRow } from "../types";
 import { getQuotationEnrichmentUpdates } from "../enrichment-live-action";
