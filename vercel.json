@@ -2,7 +2,8 @@
   "git": {
     "deploymentEnabled": {
       "main": true,
-      "codex/creator-signing-production-review": false
+      "codex/creator-signing-production-review": false,
+      "codex/quotation-export-ci-review": false
     }
   },
   "github": {
