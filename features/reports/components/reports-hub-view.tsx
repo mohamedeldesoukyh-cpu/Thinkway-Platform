@@ -1,5 +1,6 @@
 "use client";
 
+import { SavedCustomReports } from "./saved-custom-reports";
 import { useMemo, useState } from "react";
 import {
   GripVerticalIcon,
@@ -146,6 +147,8 @@ export function ReportsHubView() {
   }
 
   return (
+    <>
+    <SavedCustomReports favoritesOnly={viewMode === "favorites"} />
     <FinanceSuiteCard
       title="Performance reports"
       subtitle={`Drag to reorder · star to favourite · ${visibleOrder.length} reports`}
@@ -204,5 +207,6 @@ export function ReportsHubView() {
         )}
       </div>
     </FinanceSuiteCard>
+    </>
   );
 }

@@ -3,6 +3,8 @@
 import { useEffect, useState, useTransition, type DragEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, GripVertical, Plus, X } from "lucide-react";
+import { SavedCustomReports } from "./saved-custom-reports";
+import { savedCustomReportUrl } from "@/lib/reports/custom/saved-custom-reports";
 import { ReportExportActions } from "@/features/reports/components/report-export-actions";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -25,8 +27,8 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
     startTransition(() => router.replace(pathname + "?" + next));
   };
   const [pending, startTransition] = useTransition();
-  const [selected, setSelected] = useState<CustomColumn[]>(["campaignNumber"]);
-  const [includeVat, setIncludeVat] = useState(false);
+  const [selected, setSelected] = useState<CustomColumn[]>(() => { const saved = params.get("columns")?.split(",").filter((key): key is CustomColumn => key !== "vat" && CUSTOM_COLUMNS.some(c => c.key === key)); return saved?.length ? [...new Set(saved)] : ["campaignNumber"]; });
+  const [includeVat, setIncludeVat] = useState(params.get("includeVat") === "1");
   const [search, setSearch] = useState("");
   const [dragging, setDragging] = useState<CustomColumn | null>(null);
   const columns = [...selected, ...(includeVat ? ["vat" as const] : [])].map(key => CUSTOM_COLUMNS.find(c => c.key === key)!);
@@ -47,6 +49,7 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
   };
   const control = "min-h-11 rounded-lg border border-input bg-background px-3 text-sm";
   return <div className="space-y-5" aria-busy={pending}>
+    <SavedCustomReports selection={{ columns: selected, currency: report.currency, includeVat, filters: Object.fromEntries(["clientId", "brandId", "campaignId", "creatorId", "recordCurrency"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])) }} onLoad={saved => { setSelected(saved.columns as CustomColumn[]); setIncludeVat(saved.includeVat); startTransition(() => router.replace(savedCustomReportUrl(saved))); }} />
     <div className="flex flex-wrap items-end gap-6 rounded-xl border bg-card p-5">
       {(["clientId", "brandId", "campaignId", "creatorId"] as const).map(key => <div key={key} className="grid min-w-44 flex-1 gap-2 text-sm font-medium">
         <span id={key + "-label"}>{key === "clientId" ? "Client" : key === "brandId" ? "Brand" : key === "creatorId" ? "Vendor / Creator" : "Campaign"}</span>
