@@ -1,5 +1,7 @@
 # Creator electronic signing — Dev release-readiness report
 
+> Historical connected-Dev validation snapshot. The quotation assertion correction is now reviewed in PR #13 and the narrowly scoped performance correction in stacked PR #14. Both focused commits have been applied to PR #12 for a fresh full CI run; signing implementation and migration files are unchanged. Refer to PR #12's current checks and `creator-electronic-signing-production-release-plan.md` for the release decision and approval sequence. The earlier blockers below are retained as evidence, not current CI status.
+
 13 November 2026 — PR #12 remains **draft / not ready to merge**. Connected Dev signing validation passed. The signing-specific CI job passed. The existing required `validate` job fails in an unchanged quotation-export test, so the condition for marking the PR ready has not been met.
 
 ## Business outcome
