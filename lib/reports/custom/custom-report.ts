@@ -33,7 +33,7 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
   const originalCurrency = (line: typeof input.lines[number]) => resolveLineRevenueCurrency(line, input.headers.find(h => h.id === line.campaign_header_id)?.currency_code || "EGP");
   const options = { ...buildOverviewReport({ ...input, filters: { ...input.filters, currency: foreign ? "EGP" : currency } }).options,
     creatorId: [...new Map(input.lines.flatMap(l => l.creators ?? []).map(c => [c.value, c])).values()].sort((a, b) => a.label.localeCompare(b.label)) };
-  options.currency = [...new Set(input.lines.map(originalCurrency))].sort().map(value => ({ value, label: value }));
+  options.currency = [...new Set(["EGP", "USD", "AED", "SAR", ...input.lines.map(originalCurrency)])].sort().map(value => ({ value, label: value }));
   if (recordCurrency || creatorId) {
     const lines = input.lines.filter(line => (!recordCurrency || originalCurrency(line) === recordCurrency) && (!creatorId || line.creators?.some(c => c.value === creatorId)));
     const ids = new Set(lines.map(line => line.campaign_header_id));
