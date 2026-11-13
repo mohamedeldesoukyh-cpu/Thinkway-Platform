@@ -6,7 +6,8 @@
       "codex/creator-signing-production-review": false,
       "codex/quotation-export-ci-review": false,
       "codex/performance-signing-release": false,
-      "codex/performance-report-integration-followup": false
+      "codex/performance-report-integration-followup": false,
+      "codex/sync-signing-release-develop": false
     }
   },
   "github": {
@@ -15,13 +16,19 @@
   "ignoreCommand": "node scripts/vercel-ignored-build-step.mjs",
   "functions": {
     "app/**/review/**/share/route.ts": {
-      "regions": ["fra1"]
+      "regions": [
+        "fra1"
+      ]
     },
     "app/**/review/**/share/**/route.ts": {
-      "regions": ["fra1"]
+      "regions": [
+        "fra1"
+      ]
     },
     "app/api/review/share-image/route.tsx": {
-      "regions": ["fra1"]
+      "regions": [
+        "fra1"
+      ]
     },
     "app/api/cron/publication-metrics/route.ts": {
       "maxDuration": 300
