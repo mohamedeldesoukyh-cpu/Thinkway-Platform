@@ -246,7 +246,8 @@ describe("On-behalf comments, publication, versioning, and exclusions", () => {
 
   it("does not accept IO or legal consent on behalf of the creator", () => {
     assert.doesNotMatch(onBehalfActions, /vendor_io|io-approval|acceptVendor|legal consent/i);
-    assert.match(vendorIoPage, /completeVendorIoApprovalByToken/);
+    assert.match(vendorIoPage, /VendorIoSigningForm/);
+    assert.doesNotMatch(vendorIoPage, /completeVendorIoApprovalByToken/);
     assert.doesNotMatch(onBehalfActions, /io-approval\/vendor/);
   });
 

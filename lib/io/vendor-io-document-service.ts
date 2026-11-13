@@ -44,6 +44,14 @@ export async function generateVendorIoDocument(
   vendorIoId: string,
   actorId?: string
 ): Promise<VendorIoDocumentResult> {
+  const { data: signed, error: signatureError } = await supabase.from("vendor_io_signatures")
+    .select("signed_html,signed_pdf_path,signed_at").eq("vendor_io_id",vendorIoId).maybeSingle();
+  if (signatureError) throw new Error("Could not verify the signed IO document.");
+  if (signed) {
+    const { data: io } = await supabase.from("vendor_ios").select("document_number").eq("id",vendorIoId).single();
+    return { vendorIoId, documentNumber: io?.document_number ?? vendorIoId, html: signed.signed_html,
+      htmlUrl: null, pdfUrl: signed.signed_pdf_path, generatedAt: signed.signed_at };
+  }
   const data = await loadVendorIoDocumentData(supabase, vendorIoId);
   const html = renderVendorIoHtml(data);
   const generatedAt = new Date().toISOString();
