@@ -85,11 +85,22 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
     return `/api/reports/custom/document?${next}`;
   };
   const disabled = !columns.length || pending;
+  const previewHref = exportUrl("html");
+  useEffect(() => {
+    const preview = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "p") {
+        event.preventDefault();
+        if (!disabled && !document.querySelector('[role="dialog"]')) window.open(previewHref, "_blank", "noopener,noreferrer");
+      }
+    };
+    window.addEventListener("keydown", preview);
+    return () => window.removeEventListener("keydown", preview);
+  }, [disabled, previewHref]);
   const exportLink = (format: "html" | "pdf" | "xlsx", mobile = false) => {
     const title = format === "html" ? "Preview report" : format === "pdf" ? "Download PDF" : "Excel";
     const icon = format === "html" ? <ExternalLink /> : format === "pdf" ? <FileText /> : <FileSpreadsheet />;
     const cls = `cr-button ${format === "html" ? "primary" : ""} ${mobile ? "" : format !== "html" ? "cr-desktop-export" : ""}`;
-    return disabled ? <button className={cls} disabled title={pending ? "Updating report options…" : "Choose at least one column."}>{icon}{title}</button> : <a className={cls} href={exportUrl(format)} target="_blank" rel="noopener noreferrer" onClick={() => { if (downloadMenu.current) downloadMenu.current.open = false; }}>{icon}{title}</a>;
+    return disabled ? <button className={cls} disabled title={pending ? "Updating report options…" : "Choose at least one column."}>{icon}{title}</button> : <a className={cls} title={format === "html" ? "Preview report (Ctrl+P)" : title} aria-keyshortcuts={format === "html" ? "Control+P Meta+P" : undefined} href={exportUrl(format)} target="_blank" rel="noopener noreferrer" onClick={() => { if (downloadMenu.current) downloadMenu.current.open = false; }}>{icon}{title}</a>;
   };
   const hasFilters = [...filterKeys, "recordCurrency"].some(key => params.get(key));
   return <div className="cr-builder" aria-busy={pending} style={{ "--cr-scale": viewZoom / 100 } as CSSProperties}>
