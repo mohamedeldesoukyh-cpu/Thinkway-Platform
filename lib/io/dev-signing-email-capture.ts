@@ -22,9 +22,11 @@ export function createDevSigningEmailCapture(
       attachments: input.attachments?.map(a => ({ filename: a.filename, mimeType: a.mimeType,
         sha256: createHash("sha256").update(a.content).digest("hex"), contentBase64: a.content.toString("base64") })),
     };
+    // Use the bucket's existing HTML/PDF allowlist; never widen storage policy for tests.
+    const html = `<!doctype html><html><body><h1>Dev test mail capture — not sent</h1><script type="application/json" id="mail-evidence">${JSON.stringify(evidence).replace(/</g, "\\u003c")}</script></body></html>`;
     const { error } = await db.storage.from("vendor-io-documents").upload(
-      `${io.id}/signing-test-mail/${id}.json`, Buffer.from(JSON.stringify(evidence)),
-      { contentType: "application/json", upsert: false },
+      `${io.id}/signing-test-mail/${id}.html`, Buffer.from(html),
+      { contentType: "text/html", upsert: false },
     );
     return error ? { ok: false, error: "Could not retain Dev mail evidence." } : { ok: true, messageId: `dev-capture:${id}` };
   };

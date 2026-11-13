@@ -7,7 +7,7 @@ test('Dev capture is opt-in, refuses Production/non-synthetic mail, and retains 
   const prior = { ...process.env };
   const uploads: { path: string; evidence: { attachments: { contentBase64: string }[]; testOnly: boolean } }[] = [];
   const db = { storage: { from: () => ({ upload: async (path: string, bytes: Buffer) => {
-    uploads.push({ path, evidence: JSON.parse(bytes.toString()) }); return { error: null };
+    uploads.push({ path, evidence: JSON.parse(bytes.toString().match(/id="mail-evidence">(.*?)<\/script>/s)![1]) }); return { error: null };
   } }) } } as unknown as SupabaseClient;
   const io = { id: 'synthetic', document_number: 'VIO-SIGNING-QA-test' };
   const mail = { to: [{ email: 'traffic@thinkwaymedia.com' }], subject: 'test', html: '<p>test</p>', attachments: [{ filename: 'signed.pdf', mimeType: 'application/pdf', content: Buffer.from('%PDF-test') }] };
