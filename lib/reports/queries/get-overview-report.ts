@@ -16,13 +16,17 @@ async function readRows<T>(query: { range: (from: number, to: number) => Promise
   }
 }
 export async function getOverviewReport(params: Record<string, string | string[] | undefined>, client?: SupabaseClient) {
+  return buildOverviewReport(await loadOverviewReportInput(params, client));
+}
+
+export async function loadOverviewReportInput(params: Record<string, string | string[] | undefined>, client?: SupabaseClient) {
   const supabase = client ?? await createSupabaseServerClient();
   const auth = await requirePermission(supabase, "analytics.read");
   if ("error" in auth) throw new Error(auth.error);
   const filters = parseOverviewFilters(params);
   const [headers, allLines, deliverables, posts, publications] = await Promise.all([
     readRows(supabase.from("campaign_headers").select("id, name, status, start_date, currency_code, metadata, client_id, brand_id, client:clients(name, group_id, agency_or_direct, group:groups(name)), brand:brands(name)").order("id")) as unknown as Promise<OverviewHeader[]>,
-    readRows(supabase.from("campaign_lines").select("id, campaign_header_id, status, metadata, revenue, cost, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, currency_code, cost_received, cost_received_currency, cost_fx_override, revenue_fx_override").order("id")) as Promise<(RecognitionLine & { status: string })[]>,
+    readRows(supabase.from("campaign_lines").select("id, campaign_header_id, status, metadata, revenue, cost, revenue_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_percent, agency_fee_amount, cost_before_vat, currency_code, cost_received, cost_received_currency, cost_fx_override, revenue_fx_override, revenue_vat_amount").order("id")) as Promise<(RecognitionLine & { status: string; revenue_vat_amount: number | null })[]>,
     readRows(supabase.from("assignment_deliverables").select("id, campaign_line_id, quantity, live_date, revenue_before_vat, cost_before_vat, usage_rights_amount, usage_rights_cost, agency_fee_amount, metadata").order("id")) as Promise<RecognitionDeliverable[]>,
     readRows(supabase.from("assignment_post_schedule").select("id, assignment_deliverable_id, live_date, status, revenue_before_vat, cost_before_vat").order("id")) as Promise<RecognitionPost[]>,
     readRows(supabase.from("campaign_publications").select("id, assignment_deliverable_id, assignment_post_schedule_id, publication_date, status").order("id")) as Promise<RecognitionPublication[]>,
@@ -34,6 +38,6 @@ export async function getOverviewReport(params: Record<string, string | string[]
   headers.forEach(h => { const share = readRevenueShare(h.metadata); if (share) currencies.add(share.currency); });
   lines.forEach(l => { currencies.add(code(l.currency_code)); currencies.add(code(l.cost_received_currency || l.currency_code)); });
   const rates = new Map(await Promise.all([...currencies].map(async c => [c, await resolveRateToEgp(supabase, c, filters.asOf)] as const)));
-  return buildOverviewReport({ headers, lines, deliverables, posts, publications, rates, filters });
+  return { headers, lines, deliverables, posts, publications, rates, filters };
 }
 
