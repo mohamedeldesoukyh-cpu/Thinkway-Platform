@@ -1,4 +1,5 @@
 "use server";
+import { paymentEntryIdSchema } from "./payment-entry-id";
 import { resolveRateToEgp } from "@/lib/commercial/fx-server";
 import { COMMERCIAL_CURRENCIES } from "@/lib/commercial/fx-aggregation";
 import { readFile } from "node:fs/promises";
@@ -199,7 +200,7 @@ export async function downloadCreatorPaymentBatch(id: string) {
 export async function reviseCreatorPayment(input: {id:string; revision:number; amount:number; date:string; clear:boolean; reason:string}) {
     try {
         const db=await access(true);
-        const item=z.object({id:z.string().uuid(),revision:z.number().int().nonnegative(),amount:z.number().finite().nonnegative(),date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),clear:z.boolean(),reason:z.string().trim().min(1).max(250)}).parse(input);
+        const item=z.object({id:paymentEntryIdSchema,revision:z.number().int().nonnegative(),amount:z.number().finite().nonnegative(),date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/),clear:z.boolean(),reason:z.string().trim().min(1).max(250)}).parse(input);
         const {error}=await db.rpc('revise_creator_payment',{p_entry:item.id,p_revision:item.revision,p_amount:item.amount,p_date:item.date,p_clear:item.clear || item.amount === 0,p_reason:item.reason});
         if(error) throw new Error(error.message);
         revalidatePath('/campaigns','layout'); revalidatePath('/vendors','layout'); revalidatePath('/billing');
@@ -224,7 +225,7 @@ export async function recordCreatorPaymentSeries(assignmentId:string,input:{requ
 export async function confirmCreatorPayment(id: string, status: 'paid' | 'failed', reference: string) {
     try {
         const db = await access(true);
-        const r = await db.rpc('confirm_creator_payment', { p_entry: z.string().uuid().parse(id), p_status: z.enum(['paid', 'failed']).parse(status), p_reference: z.string().trim().min(1).max(250).parse(reference) });
+        const r = await db.rpc('confirm_creator_payment', { p_entry: paymentEntryIdSchema.parse(id), p_status: z.enum(['paid', 'failed']).parse(status), p_reference: z.string().trim().min(1).max(250).parse(reference) });
         if (r.error)
             throw new Error(r.error.message);
         revalidatePath('/campaigns', 'layout');
