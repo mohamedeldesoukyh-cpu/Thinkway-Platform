@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition, type DragEvent } from "react";
+import { useEffect, useRef, useState, useTransition, type DragEvent, type CSSProperties } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, Check, Download, ExternalLink, FileSpreadsheet, FileText, GripVertical, Plus, Search, SlidersHorizontal, Users, X } from "lucide-react";
 import { SavedCustomReports } from "./saved-custom-reports";
@@ -32,6 +32,7 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
   });
   const [includeVat, setIncludeVat] = useState(params.get("includeVat") === "1");
   const [search, setSearch] = useState("");
+  const [viewZoom, setViewZoom] = useState(85);
   const [dragging, setDragging] = useState<CustomColumn | null>(null), [dropTarget, setDropTarget] = useState<CustomColumn | null>(null);
   const [notice, setNotice] = useState("");
   const [undo, setUndo] = useState<{ selected: CustomColumn[]; vat: boolean } | null>(null);
@@ -90,8 +91,8 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
     return disabled ? <button className={cls} disabled title={pending ? "Updating report options…" : "Choose at least one column."}>{icon}{title}</button> : <a className={cls} href={exportUrl(format)} target="_blank" rel="noopener noreferrer" onClick={() => { if (downloadMenu.current) downloadMenu.current.open = false; }}>{icon}{title}</a>;
   };
   const hasFilters = [...filterKeys, "recordCurrency"].some(key => params.get(key));
-  return <div className="cr-builder" aria-busy={pending}>
-    <SavedCustomReports compact pending={pending} selection={{ columns: selected, currency: report.currency, includeVat, filters: Object.fromEntries([...filterKeys, "recordCurrency"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])) }} onLoad={saved => { setSelected(saved.columns as CustomColumn[]); setIncludeVat(saved.includeVat); setSearch(""); startTransition(() => router.replace(savedCustomReportUrl(saved), { scroll: false })); }} renderActions={saveButton => <footer className="cr-actionbar" aria-label="Report actions">
+  return <div className="cr-builder" aria-busy={pending} style={{ "--cr-scale": viewZoom / 100 } as CSSProperties}>
+    <SavedCustomReports compact viewControls={<label className="cr-view-zoom">View <select aria-label="Builder zoom" value={viewZoom} onChange={e => setViewZoom(Number(e.target.value))}>{[75, 85, 100].map(value => <option key={value} value={value}>{value}%</option>)}</select></label>} pending={pending} selection={{ columns: selected, currency: report.currency, includeVat, filters: Object.fromEntries([...filterKeys, "recordCurrency"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])) }} onLoad={saved => { setSelected(saved.columns as CustomColumn[]); setIncludeVat(saved.includeVat); setSearch(""); startTransition(() => router.replace(savedCustomReportUrl(saved), { scroll: false })); }} renderActions={saveButton => <footer className="cr-actionbar" aria-label="Report actions">
       <div className="cr-action-summary"><strong>Your formatted report</strong><span>{pending ? "Updating options…" : columns.length ? `${columns.length} ${columns.length === 1 ? "column" : "columns"} · ${report.currency} · VAT ${includeVat ? "included" : "off"} · ${report.filterLabels.join(" · ") || "All records"}` : "Add at least one column to preview or export."}</span></div>
       <div className="cr-actions">{saveButton}{exportLink("xlsx")}{exportLink("pdf")}<details ref={downloadMenu} className="cr-mobile-download" onKeyDown={e => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}><summary aria-label="Download report"><Download /><ArrowDown /></summary><div>{exportLink("pdf", true)}{exportLink("xlsx", true)}</div></details>{exportLink("html")}</div>
     </footer>} />

@@ -8,7 +8,7 @@ import { loadSavedCustomReports, saveCustomReport } from "../saved-custom-report
 import { savedCustomReportUrl, type SavedCustomReport } from "@/lib/reports/custom/saved-custom-reports";
 
 type Selection = Omit<SavedCustomReport, "id" | "name" | "favorite">;
-export function SavedCustomReports({ selection, favoritesOnly = false, onLoad, compact = false, pending = false, renderActions }: { selection?: Selection; favoritesOnly?: boolean; onLoad?: (report: SavedCustomReport) => void; compact?: boolean; pending?: boolean; renderActions?: (saveButton: ReactNode) => ReactNode }) {
+export function SavedCustomReports({ selection, favoritesOnly = false, onLoad, compact = false, pending = false, renderActions, viewControls }: { selection?: Selection; favoritesOnly?: boolean; onLoad?: (report: SavedCustomReport) => void; compact?: boolean; pending?: boolean; viewControls?: ReactNode; renderActions?: (saveButton: ReactNode) => ReactNode }) {
   const [reports, setReports] = useState<SavedCustomReport[]>([]);
   const [loaded, setLoaded] = useState(false), [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -48,7 +48,7 @@ export function SavedCustomReports({ selection, favoritesOnly = false, onLoad, c
   </li>;
   return <>{compact ? <section className="cr-saved-strip" aria-label="Saved custom reports"><div className="cr-saved-heading"><Star /><strong>Saved reports</strong><span>{reports.length}/30</span></div>
     {!loaded ? <p role="status">Loading saved reports…</p> : loadError ? <p role="alert">Could not load saved reports. <button className="cr-text-button" onClick={() => void load()}>Retry loading</button></p> : !visible.length ? <p>No saved reports yet. Build a report, then choose Save report below.</p> : <ul className="cr-saved-chips">{visible.map(report => compactItem(report))}</ul>}
-    <button ref={manageTrigger} className="cr-text-button" disabled={!loaded || loadError} onClick={() => { setSearch(""); setManage(true); }}><List />Manage</button>
+    {viewControls}<button ref={manageTrigger} className="cr-text-button" disabled={!loaded || loadError} onClick={() => { setSearch(""); setManage(true); }}><List />Manage</button>
   </section> : <section className="space-y-3 rounded-xl border bg-card p-5" aria-label="Saved custom reports">
     <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">{favoritesOnly ? "Favorite custom reports" : "Saved custom reports"}</h2><p className="text-sm text-muted-foreground">Click a name to open its report with current data. Star reports to show them in Favorites.</p></div>
       {selection && <Button variant="outline" disabled={saveDisabled} onClick={openNew}>Save current selection</Button>}
