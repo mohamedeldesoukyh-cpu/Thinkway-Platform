@@ -98,3 +98,16 @@ test("date fields distinguish planned activity from actual creator live dates", 
   assert.equal(rows[1].cells.wentLiveDate, "—");
   assert.equal(rows[1].cells.plannedDate, "20 Jan 2026");
 });
+
+test("multiple campaign and creator selections form unions within each filter", () => {
+  const report = buildCustomReport({ ...input, headers: [header, { ...header, id: "c2" }, { ...header, id: "c3" }],
+    lines: [
+      { ...input.lines[0], creators: [{ value: "a", label: "Alice" }] },
+      { ...input.lines[0], id: "l2", campaign_header_id: "c2", creators: [{ value: "b", label: "Bob" }] },
+      { ...input.lines[0], id: "l3", campaign_header_id: "c3", creators: [{ value: "c", label: "Carol" }] },
+    ], filters: { ...input.filters, campaignId: "c,c2" } }, "EGP", "", "a,b", true);
+  assert.equal(report.rows.length, 2);
+  assert.equal(report.campaignCount, 2);
+  assert.deepEqual(report.totals.cells.totalRevenue, { EGP: 10000 });
+  assert.deepEqual(report.rows.flatMap(r => r.creatorIdentities?.map(c => c.name)), ["Alice", "Bob"]);
+});

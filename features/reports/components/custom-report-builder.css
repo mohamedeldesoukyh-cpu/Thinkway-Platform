@@ -202,3 +202,5 @@
 .cr-picker>input{flex:1;min-width:0;width:100%;border:0;background:transparent;padding:7px 10px;font:inherit;color:var(--cr-ink);outline-offset:-2px}
 .cr-picker>input::placeholder{color:var(--cr-muted);opacity:1}
 .cr-picker>button[data-record-browser]{display:flex;align-items:center;justify-content:center;flex-shrink:0;width:36px;min-height:36px;padding:6px;color:var(--cr-muted)}
+
+.cr-option-check{width:16px;height:16px;border:1px solid #cbd5e1;border-radius:3px;display:flex;align-items:center;justify-content:center}.cr-option-check svg{width:14px;height:14px}.cr-selection-count{margin-right:auto;color:var(--cr-muted);font-size:12px}

@@ -34,6 +34,8 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
   const realIds = new Set(headers.map(h => h.id));
   input = { ...input, headers, lines: input.lines.filter(l => realIds.has(l.campaign_header_id)) };
   const unfiltered = input;
+  const requestedFilters = input.filters;
+  const includes = (selection: string, id: string | null) => !selection || selection.split(",").includes(id || "");
   const originalCurrency = (line: typeof input.lines[number]) => resolveLineRevenueCurrency(line, input.headers.find(h => h.id === line.campaign_header_id)?.currency_code || "EGP");
   const options = { ...buildOverviewReport({ ...input, filters: { ...input.filters, currency: foreign ? "EGP" : currency } }).options,
     creatorId: [...new Map(input.lines.flatMap(l => l.creators ?? []).map(c => [c.value, c])).values()].sort((a, b) => a.label.localeCompare(b.label)) };
@@ -44,8 +46,11 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
     });
   }
   options.currency = [...new Set(["EGP", "USD", "AED", "SAR", ...input.lines.map(originalCurrency)])].sort().map(value => ({ value, label: value }));
+  const scopedHeaders = input.headers.filter(h => includes(requestedFilters.clientId, h.client_id) && includes(requestedFilters.brandId, h.brand_id) && includes(requestedFilters.campaignId, h.id));
+  const scopedIds = new Set(scopedHeaders.map(h => h.id));
+  input = { ...input, headers: scopedHeaders, lines: input.lines.filter(l => scopedIds.has(l.campaign_header_id)), filters: { ...input.filters, clientId: "", brandId: "", campaignId: "" } };
   if (recordCurrency || creatorId) {
-    const lines = input.lines.filter(line => (!recordCurrency || originalCurrency(line) === recordCurrency) && (!creatorId || line.creators?.some(c => c.value === creatorId)));
+    const lines = input.lines.filter(line => (!recordCurrency || originalCurrency(line) === recordCurrency) && (!creatorId || line.creators?.some(c => includes(creatorId, c.value))));
     const ids = new Set(lines.map(line => line.campaign_header_id));
     input = { ...input, lines, headers: input.headers.filter(h => ids.has(h.id)) };
   }
@@ -140,8 +145,8 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
     else if (totals.cells[c.key] !== null && typeof cell === "object") for (const [code, value] of Object.entries(cell)) add(totals, c.key, code, value);
   }
   return { rows, totals, currency, asOf: input.filters.asOf, options, recordCurrency, campaignCount: base.rows.length, creatorDetail, filterLabels: [
-    ...(["clientId", "brandId", "campaignId"] as const).flatMap(key => input.filters[key] ? [options[key].find(o => o.value === input.filters[key])?.label ?? input.filters[key]] : []),
-    ...(creatorId ? ["Vendor / Creator: " + (options.creatorId.find(o => o.value === creatorId)?.label ?? creatorId)] : []),
+    ...(["clientId", "brandId", "campaignId"] as const).flatMap(key => requestedFilters[key] ? [options[key].filter(o => includes(requestedFilters[key], o.value)).map(o => o.label).join(", ")] : []),
+    ...(creatorId ? ["Vendor / Creator: " + options.creatorId.filter(o => includes(creatorId, o.value)).map(o => o.label).join(", ")] : []),
     ...(recordCurrency ? ["Original billing currency: " + recordCurrency] : []),
   ] };
 }
