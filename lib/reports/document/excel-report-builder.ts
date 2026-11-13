@@ -55,6 +55,8 @@ export type StyledSheetConfig = {
   columnFormats: ColumnFormat[];
   /** Zero-based columns shaded to distinguish accrual amounts. */
   accruedColumns?: number[];
+  /** Zero-based combined-total columns, distinct from accruals. */
+  totalColumns?: number[];
 };
 
 function formatGeneratedAt(date: Date): string {
@@ -261,6 +263,10 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
           ? ""
           : neutralizeSpreadsheetFormula(value);
       applyColumnHeaderStyle(cell);
+      if (sheet.totalColumns?.includes(colIndex)) {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0F2FE" } };
+        cell.font = { ...cell.font, bold: true, color: { argb: "FF082F49" } };
+      }
       if (sheet.accruedColumns?.includes(colIndex)) {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFDE68A" } };
         cell.font = { ...cell.font, color: { argb: "FF451A03" } };
@@ -304,6 +310,10 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
       }
 
       applyDataCellStyle(cell, format, kind);
+      if (sheet.totalColumns?.includes(colIndex)) {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F9FF" } };
+        cell.font = { ...cell.font, bold: true, color: { argb: "FF082F49" } };
+      }
       if (sheet.accruedColumns?.includes(colIndex)) {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFBEB" } };
       }

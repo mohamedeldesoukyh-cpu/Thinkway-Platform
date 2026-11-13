@@ -3,22 +3,37 @@ import { buildRecognitionEvents } from "@/lib/analytics/queries/reporting-financ
 import { roundMoney } from "@/lib/analytics/aggregations/round";
 
 export const OVERVIEW_COLUMNS = [
-  { key: "group", label: "Group Name", numeric: false, accrued: false },
-  { key: "client", label: "Client Name", numeric: false, accrued: false },
-  { key: "brand", label: "Brand", numeric: false, accrued: false },
-  { key: "campaign", label: "Campaign Name", numeric: false, accrued: false },
-  { key: "revenue", label: "Rev.", numeric: true, accrued: false },
-  { key: "accruedRevenue", label: "Acc. Rev.", numeric: true, accrued: true },
-  { key: "cost", label: "Cost", numeric: true, accrued: false },
-  { key: "accruedCost", label: "Acc. Cost", numeric: true, accrued: true },
-  { key: "gp", label: "GP", numeric: true, accrued: false },
-  { key: "accruedGp", label: "Acc. GP", numeric: true, accrued: true },
-  { key: "totalRevenue", label: "Total Rev.", numeric: true, accrued: false },
-  { key: "totalCost", label: "Total Cost", numeric: true, accrued: false },
-  { key: "totalGp", label: "Total GP", numeric: true, accrued: false },
+  { key: "group", label: "Group Name", numeric: false, accrued: false, total: false },
+  { key: "client", label: "Client Name", numeric: false, accrued: false, total: false },
+  { key: "brand", label: "Brand", numeric: false, accrued: false, total: false },
+  { key: "campaign", label: "Campaign Name", numeric: false, accrued: false, total: false },
+  { key: "revenue", label: "Rev.", numeric: true, accrued: false, total: false },
+  { key: "accruedRevenue", label: "Acc. Rev.", numeric: true, accrued: true, total: false },
+  { key: "totalRevenue", label: "Total Rev.", numeric: true, accrued: false, total: true },
+  { key: "cost", label: "Cost", numeric: true, accrued: false, total: false },
+  { key: "accruedCost", label: "Acc. Cost", numeric: true, accrued: true, total: false },
+  { key: "totalCost", label: "Total Cost", numeric: true, accrued: false, total: true },
+  { key: "gp", label: "GP", numeric: true, accrued: false, total: false },
+  { key: "accruedGp", label: "Acc. GP", numeric: true, accrued: true, total: false },
+  { key: "totalGp", label: "Total GP", numeric: true, accrued: false, total: true },
 ] as const;
 export type OverviewColumn = typeof OVERVIEW_COLUMNS[number]["key"];
-export const DEFAULT_OVERVIEW_COLUMNS = OVERVIEW_COLUMNS.slice(0, 10).map(c => c.key);
+export const DEFAULT_OVERVIEW_COLUMNS = OVERVIEW_COLUMNS.filter(c => !c.total).map(c => c.key);
+/** Keep totals beside their related amounts, including links saved with the old order. */
+export function orderOverviewColumns(columns: OverviewColumn[]): OverviewColumn[] {
+  const result = [...columns];
+  for (const [total, actual, accrued] of [
+    ["totalRevenue", "revenue", "accruedRevenue"],
+    ["totalCost", "cost", "accruedCost"],
+    ["totalGp", "gp", "accruedGp"],
+  ] as const) {
+    if (!result.includes(total) || (!result.includes(actual) && !result.includes(accrued))) continue;
+    result.splice(result.indexOf(total), 1);
+    const index = Math.max(result.indexOf(actual), result.indexOf(accrued));
+    result.splice(index + 1, 0, total);
+  }
+  return result;
+}
 export type OverviewFilters = {
   q: string; groupId: string; clientId: string; brandId: string; campaignId: string;
   status: string; from: string; to: string; asOf: string; currency: string;
@@ -52,7 +67,7 @@ export function parseOverviewFilters(params: Record<string, string | string[] | 
     currency: /^[A-Z]{3}$/.test(read("currency").toUpperCase()) ? read("currency").toUpperCase() : "EGP",
     activity: ["actual", "accrued", "both"].includes(read("activity")) ? read("activity") : "",
     clientType: ["agency", "direct"].includes(read("clientType")) ? read("clientType") : "",
-    columns: columns.length ? columns : [...DEFAULT_OVERVIEW_COLUMNS] };
+    columns: columns.length ? orderOverviewColumns(columns) : [...DEFAULT_OVERVIEW_COLUMNS] };
 }
 export function emptyOverviewTotals(): OverviewRow {
   return { id: "total", group: "", client: "", brand: "", campaign: "", revenue: 0, accruedRevenue: 0, cost: 0, accruedCost: 0, gp: 0, accruedGp: 0, totalRevenue: 0, totalCost: 0, totalGp: 0 };
