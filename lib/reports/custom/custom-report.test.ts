@@ -31,3 +31,52 @@ test("Foreign totals retain separate currency buckets", () => {
   const source = { ...input, headers: [header, { ...header, id: "other" }], lines: [input.lines[0], { ...input.lines[0], id: "other", campaign_header_id: "other", currency_code: "SAR" }] };
   assert.deepEqual(buildCustomReport(source, "Foreign").totals.cells.totalRevenue, { USD: 100, SAR: 100 });
 });
+
+test("original currency and creator filters change records before totals", () => {
+  const source = { ...input, lines: [
+    { ...input.lines[0], creators: [{value: "alice", label: "Alice"}], creatorNames: ["Alice"] },
+    { ...input.lines[0], id: "l2", currency_code: "EGP", revenue_before_vat: 200, creators: [{value: "bob", label: "Bob"}], creatorNames: ["Bob"] },
+  ] };
+  assert.deepEqual(buildCustomReport(source, "EGP", "USD").totals.cells.totalRevenue, { EGP: 5000 });
+  assert.deepEqual(buildCustomReport(source, "EGP", "", "bob").totals.cells.totalRevenue, { EGP: 200 });
+  assert.equal(buildCustomReport(source, "EGP", "USD", "bob").rows.length, 0);
+  assert.equal(buildCustomReport(source, "EGP").options.creatorId.length, 2);
+});
+
+test("creator detail repeats campaign labels but never duplicates amounts or fixed share", () => {
+  const source = { ...input, headers: [{...header, metadata: {revenue_share: {mode: "amount", value: 30, currency: "USD"}}}], lines: [
+    { ...input.lines[0], creators: [{value: "alice", label: "Alice"}], creatorNames: ["Alice"] },
+    { ...input.lines[0], id: "l2", revenue_before_vat: 200, creators: [{value: "bob", label: "Bob"}], creatorNames: ["Bob"] },
+  ] };
+  const detail = buildCustomReport(source, "USD", "", "", true);
+  const summary = buildCustomReport(source, "USD");
+  assert.equal(detail.rows.length, 2);
+  assert.equal(detail.campaignCount, 1);
+  assert.deepEqual(detail.rows.map(r => r.cells.creator), ["Alice", "Bob"]);
+  assert.deepEqual(detail.rows.map(r => r.cells.client), ["Client", "Client"]);
+  assert.deepEqual(detail.rows.map(r => r.cells.revenueShare), [{USD: 10}, {USD: 20}]);
+  assert.deepEqual(detail.totals.cells, summary.totals.cells);
+  const filtered = buildCustomReport(source, "USD", "", "bob", true);
+  assert.deepEqual(filtered.totals.cells.revenueShare, {USD: 20});
+});
+
+test("Foreign fixed revenue share appears once per campaign and detail preserves currency buckets", () => {
+  const source = { ...input, headers: [{...header, metadata: {revenue_share: {mode: "amount", value: 30, currency: "USD"}}}], lines: [
+    {...input.lines[0], creatorNames: ["Alice"]}, {...input.lines[0], id: "l2", creatorNames: ["Bob"]},
+  ] };
+  assert.deepEqual(buildCustomReport(source, "Foreign", "", "", true).totals.cells.revenueShare, {USD: 30});
+});
+
+test("marked signing fixtures are excluded from report and browse options", () => {
+  const report = buildCustomReport({...input, headers: [{...header, metadata: {signing_test: "PROD-FWD-QA-test"}}]}, "EGP");
+  assert.equal(report.rows.length, 0);
+  assert.equal(report.options.clientId.length, 0);
+  assert.equal(report.options.campaignId.length, 0);
+});
+
+test("deliverables and platforms are scoped to creator rows", () => {
+  const source = {...input, deliverables: [{id: "d", campaign_line_id: "l", platform: "instagram", deliverable_type: "instagram_reel", quantity: 2, live_date: null, revenue_before_vat: 100, cost_before_vat: 50, usage_rights_amount: 0, usage_rights_cost: 0, agency_fee_amount: 0}]};
+  const row = buildCustomReport(source, "EGP", "", "", true).rows[0];
+  assert.equal(row.cells.platform, "Instagram");
+  assert.equal(row.cells.deliverables, "2 × Instagram reel");
+});

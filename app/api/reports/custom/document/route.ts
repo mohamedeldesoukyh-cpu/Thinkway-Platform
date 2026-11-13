@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { loadOverviewReportInput } from "@/lib/reports/queries/get-overview-report";
-import { buildCustomReport, CUSTOM_CURRENCIES } from "@/lib/reports/custom/custom-report";
+import { getCustomReport } from "@/lib/reports/queries/get-custom-report";
+import { CUSTOM_CURRENCIES } from "@/lib/reports/custom/custom-report";
 import { buildCustomReportHtml, buildCustomReportExcelBuffer, parseCustomDocumentColumns } from "@/lib/reports/document/custom-report-document";
 import { createHtmlDocumentResponse, createPdfFromHtmlResponse, createXlsxDocumentResponse, THINKWAY_REPORT_PDF_OPTIONS } from "@/lib/reports/document/report-document-response";
 
@@ -18,8 +18,7 @@ export async function GET(request: Request) {
   if ("response" in auth) return auth.response;
   try {
     const currency = CUSTOM_CURRENCIES.find(c => c === params.get("currency")) ?? "EGP";
-    const input = await loadOverviewReportInput({ ...Object.fromEntries(params), currency: currency === "Foreign" ? "EGP" : currency }, supabase);
-    const report = buildCustomReport(input, currency);
+    const report = await getCustomReport(Object.fromEntries(params), currency, supabase);
     const name = `TW-Custom-Report-${report.asOf}-${currency}`;
     const download = params.get("download") === "1";
     if (format === "xlsx") return createXlsxDocumentResponse(await buildCustomReportExcelBuffer(report, keys), name, true);

@@ -1,14 +1,29 @@
 "use client";
 
-import { useState, useTransition, type DragEvent } from "react";
+import { useEffect, useState, useTransition, type DragEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, GripVertical, Plus, X } from "lucide-react";
 import { ReportExportActions } from "@/features/reports/components/report-export-actions";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { CUSTOM_COLUMNS, CUSTOM_CURRENCIES, type CustomColumn, type CustomReport } from "@/lib/reports/custom/custom-report";
 
 export function CustomReportBuilder({ report }: { report: CustomReport }) {
   const router = useRouter(), pathname = usePathname(), params = useSearchParams();
+  const [browse, setBrowse] = useState<"clientId" | "brandId" | "campaignId" | "creatorId" | null>(null);
+  const [browseSearch, setBrowseSearch] = useState("");
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => { if (event.key === "F2") { event.preventDefault(); setBrowseSearch(""); setBrowse("clientId"); } };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+  const setFilter = (key: string, value: string) => {
+    const next = new URLSearchParams(params.toString());
+    if (value) next.set(key, value); else next.delete(key);
+    if (key === "clientId") { next.delete("brandId"); next.delete("campaignId"); }
+    if (key === "brandId") next.delete("campaignId");
+    startTransition(() => router.replace(pathname + "?" + next));
+  };
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<CustomColumn[]>([]);
   const [includeVat, setIncludeVat] = useState(false);
@@ -33,6 +48,26 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
   const control = "min-h-11 rounded-lg border border-input bg-background px-3 text-sm";
   return <div className="space-y-5" aria-busy={pending}>
     <div className="flex flex-wrap items-end gap-6 rounded-xl border bg-card p-5">
+      {(["clientId", "brandId", "campaignId", "creatorId"] as const).map(key => <div key={key} className="grid min-w-44 flex-1 gap-2 text-sm font-medium">
+        <span id={key + "-label"}>{key === "clientId" ? "Client" : key === "brandId" ? "Brand" : key === "creatorId" ? "Vendor / Creator" : "Campaign"}</span>
+        <Dialog open={browse === key} onOpenChange={open => { setBrowse(open ? key : null); setBrowseSearch(""); }}>
+          <DialogTrigger asChild><Button variant="outline" className="h-auto min-h-11 justify-between whitespace-normal text-left" aria-labelledby={key + "-label"}>
+            <span>{report.options[key].find(o => o.value === params.get(key))?.label ?? "All"}</span><span className="ml-3 text-xs text-muted-foreground">{key === "clientId" ? "Browse · F2" : "Browse"}</span>
+          </Button></DialogTrigger>
+          <DialogContent><DialogHeader><DialogTitle>Browse {key === "clientId" ? "clients" : key === "brandId" ? "brands" : key === "creatorId" ? "vendors / creators" : "campaigns"}</DialogTitle><DialogDescription>Select a record or choose All.</DialogDescription></DialogHeader>
+            <input autoFocus aria-label="Search records" placeholder="Type to search…" className={control} value={browseSearch} onChange={e => setBrowseSearch(e.target.value)} />
+            <div className="max-h-80 space-y-1 overflow-y-auto">
+              <Button variant="ghost" className="min-h-11 w-full justify-start" onClick={() => { setFilter(key, ""); setBrowse(null); }}>All</Button>
+              {report.options[key].filter(o => o.label.toLowerCase().includes(browseSearch.toLowerCase())).map(o => <Button key={o.value} variant="ghost" className="h-auto min-h-11 w-full justify-start whitespace-normal text-left" onClick={() => { setFilter(key, o.value); setBrowse(null); }}>{o.label}</Button>)}
+              {!report.options[key].some(o => o.label.toLowerCase().includes(browseSearch.toLowerCase())) && <p className="p-3 text-sm text-muted-foreground">No matching records.</p>}
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>)}
+      <label className="grid gap-2 text-sm font-medium">Record currency
+        <select className={control} value={report.recordCurrency} disabled={pending} onChange={e => setFilter("recordCurrency", e.target.value)}><option value="">All</option>{report.options.currency.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}</select>
+      </label>
+      <p className="w-full text-sm text-muted-foreground">Record currency filters original billing records. Report currency below controls how their amounts are displayed.</p>
       <label className="grid gap-2 text-sm font-medium">Report currency
         <select className={control} value={report.currency} disabled={pending} onChange={e => {
           const next = new URLSearchParams(params.toString()); next.set("currency", e.target.value);
