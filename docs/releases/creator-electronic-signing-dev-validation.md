@@ -10,7 +10,7 @@ No test messages were delivered to creators, clients or Traffic. Confirmation me
 
 ## Deployment and database
 
-- Final Dev: `dev.thinkwaymedia.com`, Preview deployment `dpl_FYUgcy8orwaGeb1UoYX2yh599bHJ`, source `bd8fedd525a98e786d5d38bec7ba60538d6cca65`. Later report-only commits do not change that application code.
+- Final Dev: `dev.thinkwaymedia.com`, Preview deployment `dpl_FYUgcy8orwaGeb1UoYX2yh599bHJ`, source `bd8fedd525a98e786d5d38bec7ba60538d6cca65`. Later validation/report-only commits do not change that application code.
 - Connected test deployment: `dpl_HEoxm5pF7KiANFfYVxojBSG98zyH`, source `a32e97d7`, with capture enabled and real mail transports disabled. The final deployment restores inherited project mail settings and explicitly disables capture; a final signed-page smoke check passed.
 - All five existing signing/legacy-approval function bodies matched the reviewed original signing migration before changes. Its migration-history entry was absent, so verification used actual function definitions rather than assuming history was complete.
 - Applied **only** `20261113010000_vendor_io_signed_evidence_protection.sql` to Dev, transactionally, and recorded that migration. No original signing migration replay, unrelated migration, backfill or Production migration was executed.
@@ -42,6 +42,7 @@ The revision service and document generator were invoked as the synthetic staff 
 - Required general CI: `validate` failed at `features/quotations/export/quotation-document.test.ts:1511`. Reproduction on the unchanged Production checkout fails at the same assertion. No quotation code or test was modified and no check was skipped or weakened.
 - Prior release-candidate checks: full Next.js 16.4.4 build, TypeScript and scoped lint passed; 197/198 related regressions passed. The separate campaign navigation assertion also reproduces on Production and remains outside signing.
 - The added capture test and scoped lint passed. Both Dev deployments built successfully. The capture transport rejects non-Dev, Production and non-synthetic requests when enabled, and is inactive by default.
+- A later CI run exposed a disposable-PostgreSQL readiness race: the initialization server briefly accepts Unix-socket connections before restarting. The harness now waits for the final server over container-local TCP with a bounded timeout. This changes test startup only; no shared database or application behavior is changed.
 
 ## Retained evidence and resolved test setup failures
 
