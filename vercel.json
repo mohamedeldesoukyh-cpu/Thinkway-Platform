@@ -2,6 +2,8 @@
   "git": {
     "deploymentEnabled": {
       "main": true,
+      "codex/signed-pdf-download-fix": false,
+      "codex/creator-signing-production-review": false,
       "codex/quotation-export-ci-review": false,
       "codex/performance-signing-release": false,
       "codex/performance-report-integration-followup": false
