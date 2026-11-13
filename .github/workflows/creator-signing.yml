@@ -12,6 +12,7 @@ on:
       - 'lib/email/**'
       - 'supabase/migrations/*vendor_io*sign*.sql'
       - 'scripts/*vendor-io-signing*'
+      - 'scripts/test-vendor-io-signed-download.cjs'
       - 'scripts/tests/vendor-io-signing*'
       - '.github/workflows/creator-signing.yml'
 
@@ -32,3 +33,5 @@ jobs:
         run: npx tsx --test lib/io/vendor-io-signature.test.ts lib/io/dev-signing-email-capture.test.ts lib/io/vendor-io-email-attachment.test.ts lib/io/client-io-email-attachment.test.ts lib/email/io-approval-email.test.ts lib/email/io-approval-delivery.test.ts
       - name: Actual signing migrations in disposable PostgreSQL
         run: node scripts/test-vendor-io-signing-local.cjs
+      - name: Signed PDF authorization and private storage boundary
+        run: node scripts/test-vendor-io-signed-download.cjs
