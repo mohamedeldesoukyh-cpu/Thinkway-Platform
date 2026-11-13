@@ -124,7 +124,7 @@ function OverviewReportContent({ report, savedPreferences }: { report: OverviewR
       <div className="space-y-3 p-4 md:p-6">
         <div className="space-y-1"><h2 className="text-sm font-semibold">Overview Report · {report.filters.currency}</h2>
           <p className="text-xs text-muted-foreground">{report.rows.length} campaigns · Went live as of {report.filters.asOf} · Amounts before VAT.</p>
-          <p className="text-xs text-muted-foreground">Actual: went-live activity. <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">Acc.: not yet live</span>. <span className="rounded bg-sky-50 px-1.5 py-0.5 text-sky-950 dark:bg-sky-950/40 dark:text-sky-100">Total = actual + accrued</span>. GP = revenue − cost.</p>
+          <p className="text-xs text-muted-foreground">Actual: went-live activity. <span className="rounded bg-amber-50 px-1.5 py-0.5 text-amber-950 dark:bg-amber-950/40 dark:text-amber-100">Acc.: not yet live</span>. <span className="rounded bg-sky-50 px-1.5 py-0.5 text-sky-950 dark:bg-sky-950/40 dark:text-sky-100">Total = actual + accrued</span>. GP = revenue − cost. Rev. Share = campaign revenue share. GP after RS = Total GP − Rev. Share.</p>
           <p className="text-xs text-muted-foreground">Dates filter campaign start dates. The as-of date splits current campaign values by publication date; it is not a historical accounting snapshot.</p>
         </div>
         <div className="overflow-x-auto rounded-lg border border-border/70"><table className="w-full border-collapse text-xs"><caption className="sr-only">Overview Report in {report.filters.currency}. Totals cover all filtered campaigns.</caption>
