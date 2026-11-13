@@ -19,7 +19,7 @@ const notes = (report: CustomReport, keys: CustomColumn[]) => [
 export function buildCustomReportHtml(report: CustomReport, keys: CustomColumn[], params: URLSearchParams): string {
   const columns = keys.map(key => CUSTOM_COLUMNS.find(c => c.key === key)!);
   const dense = columns.length > 10;
-  const weight = (numeric: boolean) => numeric ? 1 : dense ? 1.25 : 1.5;
+  const weight = (numeric: boolean) => columns.length > 14 ? (numeric ? 1.2 : 1) : numeric ? 1 : dense ? 1.25 : 1.5;
   const totalWeight = columns.reduce((sum, c) => sum + weight(c.numeric), 0);
   const colgroup = '<colgroup>' + columns.map(c => '<col style="width:' + (weight(c.numeric) / totalWeight * 100).toFixed(3) + '%">').join('') + '</colgroup>';
   const display = (value: CustomRow['cells'][CustomColumn]) => report.currency !== "Foreign" && value && typeof value === "object"
