@@ -1,5 +1,7 @@
 # Creator electronic signing — release review
 
+This initial review is retained as history. See [the completed Dev validation report](creator-electronic-signing-dev-validation.md) for the current deployment, connected-test evidence and outstanding CI blocker.
+
 Review date: 13 November 2026. This is a draft release candidate, not approval to merge or deploy.
 
 ## Business behavior
