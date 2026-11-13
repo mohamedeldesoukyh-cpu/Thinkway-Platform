@@ -3,7 +3,8 @@
     "deploymentEnabled": {
       "main": true,
       "codex/creator-signing-production-review": false,
-      "codex/quotation-export-ci-review": false
+      "codex/quotation-export-ci-review": false,
+      "codex/performance-signing-release": false
     }
   },
   "github": {

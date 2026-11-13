@@ -653,10 +653,12 @@
   .discovery-suite .tw-frozen.mini .tw-jump{display:none}
   .discovery-suite .tw-mh h1,.discovery-suite .tw-mh .id,.discovery-suite .tw-mh .sub,.discovery-suite .tw-mh .st{position:relative;z-index:1}
 
+/* Shared search, dialog, drop-zone and filter rules are supplied by discovery.css.
+ * Keep local overrides and animation declarations here: their cascade order matters. */
+
 /* search field â€” the icon must be sized and stroked, never left to default */
-  .discovery-suite .tw-search{position:relative;display:inline-block}
-  .discovery-suite .tw-search input{width:100%;padding-left:31px}
-  .discovery-suite .tw-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);
+
+.discovery-suite .tw-search svg{position:absolute;left:10px;top:50%;transform:translateY(-50%);
  width:14px;height:14px;stroke:var(--tw-mut);stroke-width:1.8;
  stroke-linecap:round}
 
@@ -666,11 +668,7 @@
  flex:0 0 auto;cursor:pointer;border:0;padding:0;transition:background .18s var(--tw-ez)}
   .discovery-suite .tw-sw::after{position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;
  background:#fff;transition:transform .18s var(--tw-ez);box-shadow:0 1px 3px rgba(11,15,26,.28)}
-  .discovery-suite .tw-sw:hover{background:#CBD5E3}
-  .discovery-suite .tw-sw.on{background:var(--tw-blue)}
-  .discovery-suite .tw-sw.on:hover{background:var(--tw-bdk)}
-  .discovery-suite .tw-sw.on::after{transform:translateX(14px)}
-  .discovery-suite .tw-sw:focus-visible{outline:2px solid var(--tw-blue);outline-offset:2px}
+
 @media(prefers-reduced-motion:reduce){.tw-sw,.discovery-suite .tw-sw::after{transition:none}}
 
 /* live indicator beside the client-link switch */
@@ -698,17 +696,6 @@
   .discovery-suite .tw-pchip.on{background:#fff;color:var(--tw-bi);border-color:#fff}
   .discovery-suite .tw-pchip em{font-style:normal;font-family:var(--font-geist-mono), 'Geist Mono',monospace;font-size:9.5px;opacity:.7}
   .discovery-suite .tw-pchip.add{border-style:dashed;background:none}
-  .discovery-suite .tw-dlg__w{width:min(520px,100%);background:#fff;border-radius:15px;overflow:hidden;
- box-shadow:0 24px 64px -18px rgba(11,15,26,.5);animation:tw-pop .2s var(--tw-ez)}
-  .discovery-suite .tw-dlg__h{padding:15px 18px;background:linear-gradient(107deg,#EAF1FF,#F5F9FF);
- border-bottom:1px solid #DDE7FA;position:relative}
-  .discovery-suite .tw-dlg__h i{font-style:normal;font-size:8.5px;font-weight:700;letter-spacing:.75px;text-transform:uppercase;
- color:var(--tw-bi)}
-  .discovery-suite .tw-dlg__h b{display:block;margin-top:4px;font-size:15px;font-weight:600;color:var(--tw-navy)}
-  .discovery-suite .tw-dlg__h p{font-size:11.5px;color:var(--tw-mut);margin-top:4px;line-height:1.55;max-width:400px}
-  .discovery-suite .tw-dlg__b{padding:16px 18px}
-  .discovery-suite .tw-dlg__f{display:flex;align-items:center;gap:8px;padding:12px 18px;border-top:1px solid var(--tw-line);
- background:var(--tw-soft)}
 
 /* add-creators drawer: candidate cards */
   .discovery-suite .tw-paste{width:100%;height:150px;padding:11px;font:500 12px var(--font-geist-mono), 'Geist Mono',monospace;
@@ -744,12 +731,6 @@
   .discovery-suite .tw-fchip.on em{background:#fff;color:var(--tw-bi)}
 
 /* import drop zone */
-  .discovery-suite .tw-drop{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
- padding:26px 20px;border:2px dashed #CFDDF7;border-radius:13px;background:var(--tw-lav);text-align:center}
-  .discovery-suite .tw-drop .ic{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:#fff;
- color:var(--tw-bi);font-size:16px;font-weight:700}
-  .discovery-suite .tw-drop b{font-size:13.5px;font-weight:600}
-  .discovery-suite .tw-drop p{font-size:11px;color:var(--tw-mut);line-height:1.55;max-width:420px}
 
 /* intelligence loading state on the profile score */
   .discovery-suite .tw-spin{width:52px;height:52px;flex:0 0 auto;border-radius:50%;
@@ -758,26 +739,13 @@
 @media(prefers-reduced-motion:reduce){.tw-spin{animation-duration:2.4s}}
 
 /* filter panel */
-  .discovery-suite .tw-fsec{border-bottom:1px solid var(--tw-hair)}
-  .discovery-suite .tw-fsec__h{display:flex;align-items:center;gap:9px;width:100%;padding:12px 16px;border:0;background:none;
- cursor:pointer;text-align:left}
-  .discovery-suite .tw-fsec__h:hover{background:var(--tw-soft)}
-  .discovery-suite .tw-fsec__h b{font-size:9px;font-weight:700;letter-spacing:.75px;text-transform:uppercase;color:var(--tw-bi)}
-  .discovery-suite .tw-fsec__h .ar{margin-left:auto;font-size:9px;color:var(--tw-mut)}
-  .discovery-suite .tw-fsec__b{padding:0 16px 14px}
-  .discovery-suite .tw-frow{margin-bottom:14px}
-  .discovery-suite .tw-frow:last-child{margin-bottom:0}
-  .discovery-suite .tw-fchips{display:flex;flex-wrap:wrap;gap:6px}
-  .discovery-suite .tw-fc{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;
+
+.discovery-suite .tw-fc{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:8px;
  border:1px solid var(--tw-hair);background:#fff;cursor:pointer;font:500 11.5px var(--font-sans), var(--font-sans), Geist, sans-serif;
  color:var(--tw-ink2)}
-  .discovery-suite .tw-fc:hover{border-color:rgba(0,87,255,.34)}
-  .discovery-suite .tw-fc.on{background:var(--tw-lav);border-color:#CDDCFF;color:var(--tw-bi);font-weight:600}
-  .discovery-suite .tw-fc em{font-style:normal;font-size:10px;color:var(--tw-mut)}
-  .discovery-suite .tw-fc.on em{color:var(--tw-bi)}
-  .discovery-suite .tw-more{margin-top:7px;border:0;background:none;padding:0;cursor:pointer;
+
+.discovery-suite .tw-more{margin-top:7px;border:0;background:none;padding:0;cursor:pointer;
  font:600 11px var(--font-sans), var(--font-sans), Geist, sans-serif;color:var(--tw-bi)}
-  .discovery-suite .tw-more:hover{text-decoration:underline}
 
 /* A static quotation header must keep Save available on short screens. */
 .quotation-editor-rd4.discovery-suite .tw-frozen--static .tw-mr{display:flex}
