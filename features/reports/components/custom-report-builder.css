@@ -7,6 +7,10 @@
 .cr-builder button:disabled,.cr-dialog button:disabled{opacity:.42;cursor:not-allowed}
 .cr-builder :is(button,a,input,select,summary):focus-visible,.cr-dialog :is(button,a,input,select):focus-visible{outline:2px solid var(--cr-blue);outline-offset:3px}
 .cr-builder small,.cr-dialog small{display:block;color:var(--cr-muted);font-size:12px;font-weight:400;line-height:1.4}
+.cr-builder label{font-size:12px;font-weight:600;text-transform:none;letter-spacing:normal}
+.cr-builder .cr-currencies label{min-width:48px}
+.cr-builder .cr-currencies span{white-space:nowrap;text-transform:none;letter-spacing:normal;font-size:12px}
+.cr-builder .cr-filter small{font-size:12px;text-transform:none;letter-spacing:normal}
 .cr-button,.cr-icon,.cr-text-button,.cr-customize{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;border-radius:9px;font-weight:600;cursor:pointer;text-decoration:none}
 .cr-button{border:1px solid var(--cr-line);padding:8px 13px;background:white;white-space:nowrap}
 .cr-button:hover:not(:disabled),.cr-icon:hover:not(:disabled),.cr-text-button:hover:not(:disabled){background:var(--cr-soft)}
