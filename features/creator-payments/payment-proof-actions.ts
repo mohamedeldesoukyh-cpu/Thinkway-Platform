@@ -1,4 +1,5 @@
 "use server";
+import { paymentEntryIdSchema } from "./payment-entry-id";
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -6,7 +7,7 @@ import { requireRequestUser } from '@/lib/supabase/server';
 import { PAYMENT_PROOF_BUCKET, validatePaymentProof, type PaymentProof } from './payment-proof-model';
 
 async function paymentAccess(paymentId: string, write = false) {
-  z.string().uuid().parse(paymentId);
+  paymentEntryIdSchema.parse(paymentId);
   const { supabase } = await requireRequestUser();
   const db = supabase as SupabaseClient;
   const { data: payment, error } = await db.from('creator_payment_entries').select('id,campaign_id,status').eq('id', paymentId).single();
@@ -15,7 +16,7 @@ async function paymentAccess(paymentId: string, write = false) {
   if (permission.error || !permission.data) throw new Error('Finance access is required.');
   return { db, payment };
 }
-const failure = (e: unknown) => ({ ok: false as const, message: e instanceof Error ? e.message : 'Could not update payment proof.' });
+const failure = (e: unknown) => ({ ok: false as const, message: e instanceof z.ZodError ? 'The payment or attachment reference is invalid. Refresh payment history and try again.' : e instanceof Error ? e.message : 'Could not update payment proof.' });
 export async function listPaymentProofs(paymentId: string) {
   try {
     const { db } = await paymentAccess(paymentId);
