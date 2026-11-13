@@ -8,7 +8,7 @@ export default async function CustomReportPage({ searchParams }: { searchParams:
   const requested = params.currency;
   const currency: CustomCurrency = CUSTOM_CURRENCIES.find(c => c === requested) ?? "EGP";
   const report = await getCustomReport(params, currency);
-  return <FinanceSuiteShell title="Custom report" description="Choose your columns, arrange them and preview your report." backFallbackHref="/reports" backLabel="Reports">
+  return <FinanceSuiteShell hideDefaultActions title="Custom report" description="Choose your columns, arrange them and preview your report." backFallbackHref="/reports" backLabel="Reports">
     <CustomReportBuilder report={report} />
   </FinanceSuiteShell>;
 }
