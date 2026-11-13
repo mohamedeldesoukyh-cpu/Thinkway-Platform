@@ -97,9 +97,9 @@ export function OverviewColumnSettings({
         aria-labelledby={titleId}
         aria-describedby={helpId}
         collisionPadding={12}
-        className={cn(styles.tokens, "flex max-h-[min(36rem,calc(100dvh-6rem))] w-[min(25rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border-border/55 shadow-xl")}
+        className={cn(styles.tokens, "flex max-h-[min(36rem,var(--radix-popover-content-available-height),calc(100dvh-1.5rem))] w-[min(25rem,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-2xl border-border/55 shadow-xl")}
       >
-        <div className="border-b border-border/50 px-4 pb-3 pt-3.5">
+        <div className="shrink-0 border-b border-border/50 px-4 pb-3 pt-3.5">
           <div className="flex items-baseline justify-between gap-3">
             <h3 id={titleId} className="text-sm font-semibold tracking-tight text-foreground">Table columns</h3>
             <span className="text-xs tabular-nums text-muted-foreground">{visible.length} of {order.length} shown</span>
@@ -204,7 +204,7 @@ export function OverviewColumnSettings({
         </ol>
         <p className="sr-only" aria-live="polite">{announcement}</p>
 
-        <div className="space-y-2.5 border-t border-border/50 bg-muted/30 px-4 py-3">
+        <div className="shrink-0 space-y-2.5 border-t border-border/50 bg-muted/30 px-4 py-3">
           <p
             role="status"
             className={cn(
