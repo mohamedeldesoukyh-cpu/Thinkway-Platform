@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 export const REPORT_HUB_LINK_IDS = [
+  "overview",
   "pnl",
   "vr",
   "client-profitability",
@@ -45,6 +46,14 @@ export type ReportHubLink = {
 };
 
 export const REPORT_HUB_LINKS: readonly ReportHubLink[] = [
+  {
+    id: "overview",
+    href: "/reports/overview",
+    title: "Overview Report",
+    description: "Campaign actuals and accruals for revenue, cost and GP, with filters, selectable columns and totals.",
+    icon: TablePropertiesIcon,
+    tint: "text-brand-blue",
+  },
   {
     id: "pnl",
     href: "/reports/pnl",
@@ -204,6 +213,7 @@ export const REPORT_HUB_SUITE_GROUPS = [
 export type ReportHubSuiteGroup = (typeof REPORT_HUB_SUITE_GROUPS)[number];
 
 export const REPORT_HUB_SUITE_GROUP: Record<ReportHubLinkId, ReportHubSuiteGroup> = {
+  overview: "Finance",
   pnl: "Finance",
   vr: "Finance",
   "client-profitability": "Finance",
