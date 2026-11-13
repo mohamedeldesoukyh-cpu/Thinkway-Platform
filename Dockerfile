@@ -15,14 +15,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY package.json package-lock.json ./
-COPY services/discovery-worker/package.json ./services/discovery-worker/
+COPY services/discovery-worker/package.json services/discovery-worker/package-lock.json ./services/discovery-worker/
 
-RUN npm install --omit=dev \
-  && cd services/discovery-worker && npm install --omit=dev
+RUN npm ci --omit=dev \
+  && cd services/discovery-worker && npm ci --omit=dev
 
 COPY . .
 
-RUN cd services/discovery-worker && npx playwright install chromium
+# Install the OS dependencies for the exact locked Playwright version.
+# Launch it during the build so an unusable fallback cannot be deployed.
+RUN cd services/discovery-worker && npx playwright install --with-deps chromium \
+  && node browser-smoke.mjs
 
 ENV NODE_ENV=production
 CMD ["npm", "run", "discovery:worker"]
