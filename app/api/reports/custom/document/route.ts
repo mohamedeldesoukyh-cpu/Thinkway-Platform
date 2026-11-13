@@ -21,7 +21,7 @@ export async function GET(request: Request) {
     const report = await getCustomReport(Object.fromEntries(params), currency, supabase);
     const name = `TW-Custom-Report-${report.asOf}-${currency}`;
     const download = params.get("download") === "1";
-    if (format === "xlsx") return createXlsxDocumentResponse(await buildCustomReportExcelBuffer(report, keys), name, true);
+    if (format === "xlsx") return createXlsxDocumentResponse(await buildCustomReportExcelBuffer(report, keys, params.get("reportName") ?? "Custom Report"), name, true);
     const html = buildCustomReportHtml(report, keys, params);
     if (format === "html") return createHtmlDocumentResponse(html, name, download);
     return await createPdfFromHtmlResponse(html, name, download, { ...THINKWAY_REPORT_PDF_OPTIONS, width: "297mm", height: "210mm", viewport: { width: 1123, height: 794, deviceScaleFactor: 1 }, waitForDocumentAttribute: { name: "data-custom-report-ready", value: "true" } });

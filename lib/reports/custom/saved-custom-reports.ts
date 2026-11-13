@@ -15,7 +15,7 @@ export function readSavedCustomReports(value: unknown): SavedCustomReport[] {
   return value.flatMap(item => { const parsed = savedCustomReportSchema.safeParse(item); return parsed.success ? [parsed.data] : []; }).slice(0, 30);
 }
 export function savedCustomReportParams(report: SavedCustomReport) {
-  const params = new URLSearchParams({ columns: report.columns.join(","), currency: report.currency, includeVat: report.includeVat ? "1" : "0" });
+  const params = new URLSearchParams({ reportName: report.name, columns: report.columns.join(","), currency: report.currency, includeVat: report.includeVat ? "1" : "0" });
   for (const key of filterKeys) if (report.filters[key]) params.set(key, report.filters[key]!);
   return params;
 }
