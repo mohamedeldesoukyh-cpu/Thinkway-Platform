@@ -1,5 +1,6 @@
 import { aggregateCampaignDisplayFinancials, requireReportingRate } from "@/lib/campaigns/campaign-display-financials";
 import { buildRecognitionEvents } from "@/lib/analytics/queries/reporting-financials";
+import { readRevenueShare, revenueShareAmount } from "@/lib/campaigns/revenue-share";
 import { roundMoney } from "@/lib/analytics/aggregations/round";
 
 export const OVERVIEW_COLUMNS = [
@@ -16,9 +17,11 @@ export const OVERVIEW_COLUMNS = [
   { key: "gp", label: "GP", numeric: true, accrued: false, total: false },
   { key: "accruedGp", label: "Acc. GP", numeric: true, accrued: true, total: false },
   { key: "totalGp", label: "Total GP", numeric: true, accrued: false, total: true },
+  { key: "revenueShare", label: "Rev. Share", numeric: true, accrued: false, total: false },
+  { key: "gpAfterShare", label: "GP after RS", numeric: true, accrued: false, total: true },
 ] as const;
 export type OverviewColumn = typeof OVERVIEW_COLUMNS[number]["key"];
-export const DEFAULT_OVERVIEW_COLUMNS = OVERVIEW_COLUMNS.filter(c => !c.total).map(c => c.key);
+export const DEFAULT_OVERVIEW_COLUMNS = OVERVIEW_COLUMNS.filter(c => !c.total || c.key === "gpAfterShare").map(c => c.key);
 /** Keep totals beside their related amounts, including links saved with the old order. */
 export function orderOverviewColumns(columns: OverviewColumn[]): OverviewColumn[] {
   const result = [...columns];
@@ -32,6 +35,13 @@ export function orderOverviewColumns(columns: OverviewColumn[]): OverviewColumn[
     const index = Math.max(result.indexOf(actual), result.indexOf(accrued));
     result.splice(index + 1, 0, total);
   }
+  for (const key of ["revenueShare", "gpAfterShare"] as const) {
+    const anchors = key === "revenueShare" ? ["gp", "accruedGp", "totalGp"] : ["gp", "accruedGp", "totalGp", "revenueShare"];
+    if (!result.includes(key) || !anchors.some(anchor => result.includes(anchor as OverviewColumn))) continue;
+    result.splice(result.indexOf(key), 1);
+    const index = Math.max(...anchors.map(anchor => result.indexOf(anchor as OverviewColumn)));
+    result.splice(index + 1, 0, key);
+  }
   return result;
 }
 export type OverviewFilters = {
@@ -41,6 +51,7 @@ export type OverviewFilters = {
 };
 export type OverviewHeader = {
   id: string; name: string; status: string; start_date: string | null; currency_code: string | null;
+  metadata?: Record<string, unknown> | null;
   client_id: string | null; brand_id: string | null;
   client: { name: string; group_id: string | null; agency_or_direct: string | null; group: { name: string } | null } | null;
   brand: { name: string } | null;
@@ -70,7 +81,7 @@ export function parseOverviewFilters(params: Record<string, string | string[] | 
     columns: columns.length ? orderOverviewColumns(columns) : [...DEFAULT_OVERVIEW_COLUMNS] };
 }
 export function emptyOverviewTotals(): OverviewRow {
-  return { id: "total", group: "", client: "", brand: "", campaign: "", revenue: 0, accruedRevenue: 0, cost: 0, accruedCost: 0, gp: 0, accruedGp: 0, totalRevenue: 0, totalCost: 0, totalGp: 0 };
+  return { id: "total", group: "", client: "", brand: "", campaign: "", revenue: 0, accruedRevenue: 0, cost: 0, accruedCost: 0, gp: 0, accruedGp: 0, totalRevenue: 0, totalCost: 0, totalGp: 0, revenueShare: 0, gpAfterShare: 0 };
 }
 type RecognitionInput = Parameters<typeof buildRecognitionEvents>[0];
 export function buildOverviewReport(input: Omit<RecognitionInput, "today" | "campaignCurrencies"> & {
@@ -109,7 +120,9 @@ export function buildOverviewReport(input: Omit<RecognitionInput, "today" | "cam
     const accruedRevenue = roundMoney(totalRevenue - revenue), accruedCost = roundMoney(totalCost - cost);
     const hasActual = actual.length > 0, hasAccrued = accruedRevenue !== 0 || accruedCost !== 0;
     if (filters.activity === "actual" && !hasActual || filters.activity === "accrued" && !hasAccrued || filters.activity === "both" && !(hasActual && hasAccrued)) continue;
-    rows.push({ id: header.id, ...labels, revenue, cost, accruedRevenue, accruedCost, gp: roundMoney(revenue - cost), accruedGp: roundMoney(accruedRevenue - accruedCost), totalRevenue, totalCost, totalGp: roundMoney(totalRevenue - totalCost) });
+    const totalGp = roundMoney(totalRevenue - totalCost);
+    const revenueShare = revenueShareAmount(readRevenueShare(header.metadata), totalRevenue, filters.currency, input.rates);
+    rows.push({ id: header.id, ...labels, revenue, cost, accruedRevenue, accruedCost, gp: roundMoney(revenue - cost), accruedGp: roundMoney(accruedRevenue - accruedCost), totalRevenue, totalCost, totalGp, revenueShare, gpAfterShare: roundMoney(totalGp - revenueShare) });
   }
   rows.sort((a,b) => a.group.localeCompare(b.group) || a.client.localeCompare(b.client) || a.brand.localeCompare(b.brand) || a.campaign.localeCompare(b.campaign));
   const totals = emptyOverviewTotals();

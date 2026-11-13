@@ -3,7 +3,7 @@ import { buildStyledExcelBuffer } from "./thinkway-report-excel";
 import { formatReportAmountAlways, renderThinkwayReportHtml } from "./thinkway-report-html";
 
 const escape = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-const notes = ["Actual = went-live activity; highlighted Acc. columns = activity not yet live. Blue Total columns = actual + accrued.", "GP = revenue − cost. Amounts exclude VAT. Campaign dates filter start dates. As-of uses current commercial values, not a historical accounting snapshot."];
+const notes = ["Actual = went-live activity; highlighted Acc. columns = activity not yet live. Blue Total columns = actual + accrued.", "GP = revenue − cost. Rev. Share = campaign revenue share; GP after RS = Total GP − Rev. Share. Amounts exclude VAT. Campaign dates filter start dates. As-of uses current commercial values, not a historical accounting snapshot."];
 function metadata(report: OverviewReport) {
   const f = report.filters;
   const result = [{ label: "Currency", value: f.currency }, { label: "Went live as of", value: f.asOf }, { label: "Campaigns", value: String(report.rows.length) }];
