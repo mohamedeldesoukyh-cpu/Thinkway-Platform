@@ -53,6 +53,8 @@ export type StyledSheetConfig = {
   headerMerges?: HeaderMerge[];
   rows: StyledDataRow[];
   columnFormats: ColumnFormat[];
+  /** Zero-based columns shaded to distinguish accrual amounts. */
+  accruedColumns?: number[];
 };
 
 function formatGeneratedAt(date: Date): string {
@@ -259,6 +261,10 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
           ? ""
           : neutralizeSpreadsheetFormula(value);
       applyColumnHeaderStyle(cell);
+      if (sheet.accruedColumns?.includes(colIndex)) {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFDE68A" } };
+        cell.font = { ...cell.font, color: { argb: "FF451A03" } };
+      }
     }
 
     excelRow.height = 22;
@@ -298,6 +304,9 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
       }
 
       applyDataCellStyle(cell, format, kind);
+      if (sheet.accruedColumns?.includes(colIndex)) {
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFFFFBEB" } };
+      }
     }
 
     excelRow.height = kind === "emphasis" ? 20 : 18;
