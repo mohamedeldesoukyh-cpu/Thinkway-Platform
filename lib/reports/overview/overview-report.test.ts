@@ -57,3 +57,17 @@ test("exports follow selected columns, escape labels and shade accrual header/da
   assert.equal(sheet.getCell(headerRow + 2, 3).value, 570);
   for (const i of [headerRow, headerRow + 1, headerRow + 2]) assert.equal(sheet.getCell(i, 2).fill.type, "pattern");
 });
+
+test("revenue share is deducted once from combined GP with percentage and foreign fixed amounts", () => {
+  const percent = buildOverviewReport({ ...input, headers: [{ ...header, metadata: { revenue_share: {mode:"percent",value:10,currency:"EGP"} } }] });
+  assert.equal(percent.rows[0].revenueShare, 121);
+  assert.equal(percent.rows[0].gpAfterShare, 449);
+  assert.equal(percent.totals.gpAfterShare, 449);
+  const fixed = buildOverviewReport({ ...input, headers: [{ ...header, metadata: { revenue_share: {mode:"amount",value:20,currency:"USD"} } }] });
+  assert.equal(fixed.rows[0].revenueShare, 1000);
+  assert.equal(fixed.rows[0].gpAfterShare, -430);
+  const usd = buildOverviewReport({ ...input, headers: [{ ...header, metadata: { revenue_share: {mode:"amount",value:100,currency:"EGP"} } }], filters: {...input.filters,currency:"USD"} });
+  assert.equal(usd.rows[0].revenueShare, 2);
+  assert.equal(usd.rows[0].gpAfterShare, 9.4);
+  assert.equal(buildOverviewReport(input).rows[0].gpAfterShare, 570);
+});
