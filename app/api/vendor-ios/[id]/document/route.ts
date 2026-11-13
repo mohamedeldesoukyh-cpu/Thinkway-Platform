@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 
 import { createPdfDocumentResponse } from "@/lib/documents/pdf-response";
 import { renderLiveVendorIoHtml } from "@/lib/io/render-live-vendor-io-html";
+import { downloadIoDocumentBuffer } from "@/lib/io/io-document-storage";
 import {
   INSERTION_ORDER_PDF_OPTIONS,
   pdfUnavailableMessage,
@@ -47,6 +48,14 @@ export async function GET(request: Request, context: RouteContext) {
     const baseName = typed.document_number ? formatDocumentNumberForDisplay(typed.document_number) : id;
 
     if (format === "pdf") {
+      const { data: signed, error: signatureError } = await supabase.from("vendor_io_signatures")
+        .select("signed_pdf_path").eq("vendor_io_id",id).maybeSingle();
+      if (signatureError) throw new Error("Could not verify the signed IO document.");
+      if (signed) {
+        const buffer = await downloadIoDocumentBuffer(supabase,"vendor-io-documents",(signed as { signed_pdf_path: string }).signed_pdf_path);
+        if (!buffer) throw new Error("The signed PDF is temporarily unavailable. Please try again.");
+        return createPdfDocumentResponse(buffer,`${baseName}-Signed`,download);
+      }
       // Both inline and download reflect campaign overrides and platform clause updates.
       const html = await renderLiveVendorIoHtml(supabase, id);
       const pdfResult = await renderHtmlToPdf(html, INSERTION_ORDER_PDF_OPTIONS);
