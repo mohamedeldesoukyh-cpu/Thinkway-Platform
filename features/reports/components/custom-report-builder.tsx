@@ -3,20 +3,20 @@
 import { useState, useTransition, type DragEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowDown, ArrowUp, GripVertical, Plus, X } from "lucide-react";
+import { ReportExportActions } from "@/features/reports/components/report-export-actions";
 import { Button } from "@/components/ui/button";
-import { CUSTOM_COLUMNS, CUSTOM_CURRENCIES, formatCustomCell, type CustomColumn, type CustomReport } from "@/lib/reports/custom/custom-report";
+import { CUSTOM_COLUMNS, CUSTOM_CURRENCIES, type CustomColumn, type CustomReport } from "@/lib/reports/custom/custom-report";
 
 export function CustomReportBuilder({ report }: { report: CustomReport }) {
   const router = useRouter(), pathname = usePathname(), params = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [selected, setSelected] = useState<CustomColumn[]>([]);
   const [includeVat, setIncludeVat] = useState(false);
-  const [preview, setPreview] = useState(false);
   const [search, setSearch] = useState("");
   const [dragging, setDragging] = useState<CustomColumn | null>(null);
   const columns = [...selected, ...(includeVat ? ["vat" as const] : [])].map(key => CUSTOM_COLUMNS.find(c => c.key === key)!);
   const available = CUSTOM_COLUMNS.filter(c => c.key !== "vat" && !selected.includes(c.key) && c.label.toLowerCase().includes(search.toLowerCase()));
-  const change = (next: CustomColumn[]) => { setSelected(next); setPreview(false); };
+  const change = (next: CustomColumn[]) => { setSelected(next); };
   const move = (key: CustomColumn, target?: CustomColumn) => {
     const next = selected.filter(c => c !== key);
     const index = target ? next.indexOf(target) : next.length;
@@ -30,22 +30,16 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
     }
     setDragging(null);
   };
-  const download = () => {
-    const quote = (value: string) => `"${(/^[=+\-@\t\r]/.test(value) ? "'" : "") + value.replaceAll('"', '""')}"`;
-    const data = [columns.map(c => c.label), ...report.rows.map(row => columns.map(c => formatCustomCell(row.cells[c.key]))), columns.map((c, i) => c.numeric ? formatCustomCell(report.totals.cells[c.key]) : i === columns.findIndex(col => !col.numeric) ? "Totals" : "")];
-    const url = URL.createObjectURL(new Blob(["\uFEFF", data.map(row => row.map(quote).join(",")).join("\r\n")], { type: "text/csv;charset=utf-8" }));
-    const link = document.createElement("a"); link.href = url; link.download = `custom-report-${report.currency}-${report.asOf}.csv`; link.click(); URL.revokeObjectURL(url);
-  };
   const control = "min-h-11 rounded-lg border border-input bg-background px-3 text-sm";
   return <div className="space-y-5" aria-busy={pending}>
     <div className="flex flex-wrap items-end gap-6 rounded-xl border bg-card p-5">
       <label className="grid gap-2 text-sm font-medium">Report currency
         <select className={control} value={report.currency} disabled={pending} onChange={e => {
-          const next = new URLSearchParams(params.toString()); next.set("currency", e.target.value); setPreview(false);
+          const next = new URLSearchParams(params.toString()); next.set("currency", e.target.value);
           startTransition(() => router.replace(`${pathname}?${next}`));
         }}>{CUSTOM_CURRENCIES.map(c => <option key={c} value={c}>{c === "Foreign" ? "Foreign (original currencies)" : c}</option>)}</select>
       </label>
-      <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium"><input type="checkbox" className="size-5 accent-primary" checked={includeVat} onChange={e => { setIncludeVat(e.target.checked); setPreview(false); }} />Include VAT</label>
+      <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium"><input type="checkbox" className="size-5 accent-primary" checked={includeVat} onChange={e => { setIncludeVat(e.target.checked); }} />Include VAT</label>
       <p className="max-w-xl text-sm text-muted-foreground">Amounts exclude VAT. Include VAT adds a separate column showing total client VAT, including accrued activity.</p>
     </div>
     <div className="grid min-w-0 gap-5 lg:grid-cols-2">
@@ -73,14 +67,9 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
         {includeVat && <div className="mt-2 rounded-lg border bg-muted/30 p-3 text-sm">{columns.length}. VAT <span className="text-muted-foreground">· Included by checkbox</span></div>}
       </section>
     </div>
-    <div className="flex flex-wrap items-center gap-3"><Button className="min-h-11" disabled={!columns.length || pending} onClick={() => setPreview(true)}>{pending ? "Loading amounts…" : "Preview report"}</Button><span role="status" className="text-sm text-muted-foreground">{columns.length ? `${columns.length} columns selected` : "Choose at least one column to preview."}</span></div>
-    {preview && !pending && <section className="min-w-0 space-y-4 rounded-xl border bg-card p-5" aria-label="Report preview">
-      <div className="flex flex-wrap items-center justify-between gap-3"><div><h2 className="font-semibold">Report preview · {report.currency}</h2><p className="text-sm text-muted-foreground">{report.rows.length} campaigns · Went live as of {report.asOf}</p></div><Button variant="outline" className="min-h-11" onClick={download}>Download CSV</Button></div>
-      <p className="text-sm text-muted-foreground">Revenue and cost are actual went-live amounts. Acc. means not yet live. GP = revenue − cost. {report.currency === "Foreign" && "Original currencies are shown separately. GP is unavailable where revenue and cost use different currencies; choose a single report currency to calculate it."}</p>
-      <div className="overflow-x-auto"><table className="w-full border-collapse text-sm"><caption className="sr-only">Custom report with selected columns in order</caption><thead><tr>{columns.map(c => <th key={c.key} scope="col" className={`whitespace-nowrap border-b bg-muted/40 p-3 ${c.numeric ? "text-right" : "text-left"}`}>{c.label}</th>)}</tr></thead>
-        <tbody>{report.rows.map(row => <tr key={row.id}>{columns.map(c => <td key={c.key} className={`border-b p-3 ${c.numeric ? "text-right tabular-nums whitespace-nowrap" : "min-w-40"} ${c.accrued ? "bg-muted/20" : ""}`}>{formatCustomCell(row.cells[c.key])}</td>)}</tr>)}{!report.rows.length && <tr><td colSpan={columns.length} className="p-8 text-center text-muted-foreground">No campaigns match this report.</td></tr>}</tbody>
-        <tfoot><tr aria-label="Report totals">{columns.map((c, i) => <td key={c.key} className={`border-t-2 p-3 font-semibold ${c.numeric ? "text-right whitespace-nowrap tabular-nums" : "text-left"}`}>{c.numeric ? formatCustomCell(report.totals.cells[c.key]) : i === columns.findIndex(col => !col.numeric) ? "Totals" : ""}</td>)}</tr></tfoot>
-      </table></div>
-    </section>}
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border bg-card p-5">
+      <div><p className="text-sm font-medium">Your formatted report</p><p role="status" className="text-sm text-muted-foreground">{columns.length ? `${columns.length} columns selected · Preview opens in a new tab` : "Choose at least one column to preview or export."}</p></div>
+      <ReportExportActions apiPath="/api/reports/custom/document" statementActions disabled={!columns.length || pending} fixedParams={{ columns: columns.map(c => c.key).join(","), currency: report.currency, asOf: report.asOf, includeVat: includeVat ? "1" : "0" }} />
+    </div>
   </div>;
 }
