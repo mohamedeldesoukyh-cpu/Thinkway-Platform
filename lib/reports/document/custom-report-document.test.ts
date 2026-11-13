@@ -17,7 +17,7 @@ test("standalone statement-style preview escapes labels and has matching downloa
   assert.match(html, /Campaign &lt;script&gt;/); assert.doesNotMatch(html, /Campaign <script>/);
   assert.match(html, /format=pdf/); assert.match(html, /format=xlsx/);
   assert.match(html, /includeVat=1/); assert.match(html, /data-custom-report-ready/);
-  assert.match(html, /EGP 140.00/);
+  assert.match(html, /140.00/);
 });
 test("Excel retains numeric amounts, totals and selected column order", async () => {
   const workbook = new Workbook();

@@ -25,7 +25,7 @@ export async function GET(request: Request) {
     if (format === "xlsx") return createXlsxDocumentResponse(await buildCustomReportExcelBuffer(report, keys), name, true);
     const html = buildCustomReportHtml(report, keys, params);
     if (format === "html") return createHtmlDocumentResponse(html, name, download);
-    return await createPdfFromHtmlResponse(html, name, download, { ...THINKWAY_REPORT_PDF_OPTIONS, ...(keys.length > 5 ? { width: "297mm", height: "210mm", viewport: { width: 1123, height: 794, deviceScaleFactor: 1 } } : {}), waitForDocumentAttribute: { name: "data-custom-report-ready", value: "true" } });
+    return await createPdfFromHtmlResponse(html, name, download, { ...THINKWAY_REPORT_PDF_OPTIONS, width: "297mm", height: "210mm", viewport: { width: 1123, height: 794, deviceScaleFactor: 1 }, waitForDocumentAttribute: { name: "data-custom-report-ready", value: "true" } });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Failed to export custom report" }, { status: 500 });
   }
