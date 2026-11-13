@@ -31,7 +31,7 @@ export function buildCustomReportHtml(report: CustomReport, keys: CustomColumn[]
   <script>(async()=>{await document.fonts.ready; const original=document.querySelector('.page');let current=original;const rows=[...original.querySelectorAll('tbody tr')];rows.forEach(row=>row.remove());
   function next(){const page=original.cloneNode(true);page.querySelector('.intro')?.remove();page.querySelector('.band').classList.add('band--compact');page.querySelector('.sh h3').textContent='Campaign details, continued';page.querySelector('tbody').innerHTML='';current.after(page);current=page;}
   const fits=()=>current.querySelector('.body').getBoundingClientRect().bottom<=current.querySelector('.foot').getBoundingClientRect().top-18;
-  for(const row of rows){current.querySelector('tbody').append(row);if(!fits()){row.remove();next();current.querySelector('tbody').append(row);}}
+  for(const row of rows){current.querySelector('tbody').append(row);if(!fits()){row.remove();const previous=row.classList.contains('totals')?current.querySelector('tbody tr:last-child'):null;if(previous)previous.remove();next();if(previous)current.querySelector('tbody').append(previous);current.querySelector('tbody').append(row);}}
   const pages=[...document.querySelectorAll('.page')];pages.forEach((page,i)=>page.querySelector('.page-number').textContent='Page '+(i+1)+' of '+pages.length);document.documentElement.setAttribute('data-custom-report-ready','true');})();</script></body></html>`;
 }
 
