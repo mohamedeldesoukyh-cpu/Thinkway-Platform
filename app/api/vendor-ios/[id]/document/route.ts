@@ -11,6 +11,7 @@ import {
 } from "@/lib/io/vendor-io-pdf";
 import { requireApiPermission } from "@/lib/auth/api-auth";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 export const maxDuration = 60;
 export const dynamic = "force-dynamic";
@@ -52,9 +53,25 @@ export async function GET(request: Request, context: RouteContext) {
         .select("signed_pdf_path").eq("vendor_io_id",id).maybeSingle();
       if (signatureError) throw new Error("Could not verify the signed IO document.");
       if (signed) {
-        const buffer = await downloadIoDocumentBuffer(supabase,"vendor-io-documents",(signed as { signed_pdf_path: string }).signed_pdf_path);
-        if (!buffer) throw new Error("The signed PDF is temporarily unavailable. Please try again.");
-        return createPdfDocumentResponse(buffer,`${baseName}-Signed`,download);
+        // Both IO and signature were authorized through the caller's RLS client.
+        // Only the private object read uses server credentials; never accept a
+        // request-supplied path or return a storage URL.
+        const path = (signed as { signed_pdf_path: string }).signed_pdf_path;
+        const unavailable = () => NextResponse.json(
+          { error: "The signed PDF is temporarily unavailable. Please try again." },
+          { status: 500 },
+        );
+        if (!path.startsWith(`${id}/signed/`) ||
+            !/^[0-9a-f-]{36}\/signed\/[0-9a-f-]{36}\.pdf$/i.test(path)) return unavailable();
+        try {
+          const buffer = await downloadIoDocumentBuffer(createSupabaseAdminClient(), "vendor-io-documents", path);
+          if (!buffer) return unavailable();
+          const response = createPdfDocumentResponse(buffer, `${baseName}-Signed`, download);
+          response.headers.set("Cache-Control", "private, no-store");
+          return response;
+        } catch {
+          return unavailable();
+        }
       }
       // Both inline and download reflect campaign overrides and platform clause updates.
       const html = await renderLiveVendorIoHtml(supabase, id);

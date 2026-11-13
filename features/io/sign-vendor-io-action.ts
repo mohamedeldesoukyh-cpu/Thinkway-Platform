@@ -10,6 +10,7 @@ import { createIoDocumentSignedUrl } from "@/lib/io/io-document-storage";
 import { sendIoApprovalConfirmationEmails } from "@/lib/email/io-approval-emails";
 import { syncCampaignHeaderStatus } from "@/lib/campaigns/sync-campaign-header-status";
 import { consumeRateLimit } from "@/lib/security/rate-limit";
+import { createDevSigningEmailCapture } from "@/lib/io/dev-signing-email-capture";
 
 export async function signVendorIoAction(input: unknown): Promise<{
   ok: boolean; message: string; downloadUrl?: string | null;
@@ -64,7 +65,8 @@ export async function signVendorIoAction(input: unknown): Promise<{
       const result = await sendIoApprovalConfirmationEmails({ supabase: db, kind: "vendor", ioId: io.id,
         documentNumber: io.document_number, campaignName: campaign?.name ?? null, approvedAt: signedAt,
         approvedByName: parsed.data.name, approvedByEmail: recipient ?? null,
-        pdfAttachment: { filename: `${(io.document_number ?? "Creator-IO").replace(/[^\w-]/g,"-")}-Signed.pdf`, mimeType: "application/pdf", content: pdf.buffer } });
+        pdfAttachment: { filename: `${(io.document_number ?? "Creator-IO").replace(/[^\w-]/g,"-")}-Signed.pdf`, mimeType: "application/pdf", content: pdf.buffer } },
+        createDevSigningEmailCapture(db, io, recipient));
       emailed = result.approverSent;
     } catch { /* The durable signature remains approved if email delivery needs retry. */ }
     try { await syncCampaignHeaderStatus(db, io.campaign_header_id); } catch { /* Non-blocking. */ }
