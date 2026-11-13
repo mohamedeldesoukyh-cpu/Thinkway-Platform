@@ -25,3 +25,11 @@ docs
 *.md
 !services/discovery-worker/README.md
 !docs/infrastructure/WORKER_OPERATIONS.md
+# Never bake nested local credentials or unrelated release/worktree copies into images.
+**/.env
+**/.env.*
+!**/.env.example
+.worktrees
+artifacts
+outputs
+tmp-preview
