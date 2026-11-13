@@ -61,12 +61,12 @@ export function buildVendorIoEmailPlainText(input: {
   return appendThinkwayEmailPlainTextFooter([
     `Hello ${input.io.influencer_name},`,
     "",
-    "Please find attached your Creator Insertion Order for your review and approval.",
+    "Please review your Creator Insertion Order, then add your name and signature to approve it. No login is needed.",
     "The attached PDF is the official document.",
     "",
     ...rows.map((row) => `${row.label}: ${row.value}`),
     "",
-    input.approvalUrl ? `Approve Creator IO: ${input.approvalUrl}` : null,
+    input.approvalUrl ? `Review & Sign: ${input.approvalUrl}` : null,
   ]);
 }
 
@@ -85,7 +85,7 @@ export function buildVendorIoEmailHtml(input: {
     ${renderEmailSummaryTable(summaryRows(input.io))}
     ${
       input.approvalUrl
-        ? renderEmailApprovalCta(input.approvalUrl, "Approve Creator IO")
+        ? renderEmailApprovalCta(input.approvalUrl, "Review & Sign", "Open the IO, enter your name, draw your signature, then select Sign & Approve. No login is needed. Your signed PDF will be emailed to you.")
         : ""
     }
   `;

@@ -48,7 +48,7 @@ ${body}
 }
 
 /** Prominent blue approval CTA + legal notice (platform IO emails). */
-export function renderEmailApprovalCta(url: string, label: string): string {
+export function renderEmailApprovalCta(url: string, label: string, notice?: string): string {
   const safeUrl = escapeEmailHtml(url);
   const safeLabel = escapeEmailHtml(label);
   // Table + bulletproof button pattern — Outlook/Gmail keep the link clickable.
@@ -69,7 +69,7 @@ export function renderEmailApprovalCta(url: string, label: string): string {
   <a href="${safeUrl}" target="_blank" rel="noopener noreferrer" style="color:#0057FF;word-break:break-all;">${safeUrl}</a>
 </p>
 <p style="margin:0 0 24px;font-size:12px;line-height:1.55;color:#6B7280;text-align:left;">
-  By selecting Approve, you confirm that you have reviewed the attached document and agree to its contents, terms and conditions. Your electronic approval will be securely recorded for audit purposes.
+  ${notice ? escapeEmailHtml(notice) : "By selecting Approve, you confirm that you have reviewed the attached document and agree to its contents, terms and conditions. Your electronic approval will be securely recorded for audit purposes."}
 </p>`;
 }
 

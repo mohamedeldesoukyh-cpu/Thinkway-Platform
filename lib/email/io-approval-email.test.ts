@@ -165,7 +165,7 @@ describe("io approval email experience", () => {
       hasPdfAttachment: true,
     });
 
-    assert.match(html, /Approve Creator IO/);
+    assert.match(html, /Review &amp; Sign/);
     assert.match(html, /Brand Name/);
     assert.doesNotMatch(html, /Issue date/);
     assert.doesNotMatch(html, /Currency/);
