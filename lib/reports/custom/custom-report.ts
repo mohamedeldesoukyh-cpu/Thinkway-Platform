@@ -1,3 +1,5 @@
+import { plannedPostingDate, formatPlannedPostingDates } from "@/lib/campaigns/planned-posting-date";
+import { buildRecognitionEvents } from "@/lib/analytics/queries/reporting-financials";
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { readRevenueShare } from "@/lib/campaigns/revenue-share";
 import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
@@ -8,8 +10,9 @@ import { roundMoney } from "@/lib/analytics/aggregations/round";
 
 const keys = ["group", "client", "brand", "campaign", "revenue", "accruedRevenue", "cost", "accruedCost", "gp", "accruedGp", "totalRevenue", "totalCost", "totalGp", "revenueShare"] as const;
 const CUSTOM_BASE_COLUMNS = OVERVIEW_COLUMNS.filter((c): c is Extract<typeof OVERVIEW_COLUMNS[number], { key: typeof keys[number] }> => (keys as readonly string[]).includes(c.key));
-export const CUSTOM_COLUMNS = [{ key: "campaignNumber", label: "Campaign Number", numeric: false, accrued: false }, ...CUSTOM_BASE_COLUMNS, ...(["creator", "deliverables", "platform"] as const).map(key => ({ key, label: { creator: "Vendor / Creator Name", deliverables: "Deliverables", platform: "Platform" }[key], numeric: false as const, accrued: false })), { key: "vat", label: "VAT", numeric: true, accrued: false }] as const;
-export type CustomColumn = typeof keys[number] | "vat" | "creator" | "deliverables" | "platform" | "campaignNumber";
+const DATE_COLUMNS = [{ key: "plannedDate", label: "Planned Date", numeric: false, accrued: false }, { key: "date", label: "Date", numeric: false, accrued: false }, { key: "wentLive", label: "Went live", numeric: false, accrued: false }, { key: "wentLiveDate", label: "Went live date", numeric: false, accrued: false }] as const;
+export const CUSTOM_COLUMNS = [...DATE_COLUMNS, { key: "campaignNumber", label: "Campaign Number", numeric: false, accrued: false }, ...CUSTOM_BASE_COLUMNS, ...(["creator", "deliverables", "platform"] as const).map(key => ({ key, label: { creator: "Vendor / Creator Name", deliverables: "Deliverables", platform: "Platform" }[key], numeric: false as const, accrued: false })), { key: "vat", label: "VAT", numeric: true, accrued: false }] as const;
+export type CustomColumn = typeof keys[number] | "vat" | "creator" | "deliverables" | "platform" | "campaignNumber" | "date" | "wentLive" | "wentLiveDate" | "plannedDate";
 export const CUSTOM_CURRENCIES = ["EGP", "USD", "AED", "SAR", "Foreign"] as const;
 export type CustomCurrency = typeof CUSTOM_CURRENCIES[number];
 export type Money = Record<string, number>;
@@ -47,6 +50,7 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
     input = { ...input, lines, headers: input.headers.filter(h => ids.has(h.id)) };
   }
   const base = buildOverviewReport({ ...input, filters: { ...input.filters, currency: foreign ? "EGP" : currency } });
+  const liveEvents = buildRecognitionEvents({ ...input, campaignCurrencies: new Map(input.headers.map(h => [h.id, h.currency_code || "EGP"])), today: input.filters.asOf });
   let rows = base.rows.map(source => {
     const row = emptyRow(source.id);
     for (const c of CUSTOM_BASE_COLUMNS) {
@@ -57,7 +61,12 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
     row.cells.campaignNumber = formatDocumentNumberForDisplay(header.document_number) || "—";
     const lines = input.lines.filter(l => l.campaign_header_id === source.id);
     const lineIds = new Set(lines.map(line => line.id));
+    const liveDates = liveEvents.filter(event => event.campaign_header_id === source.id && (!event.campaign_line_id || lineIds.has(event.campaign_line_id))).map(event => event.date).sort();
+    row.cells.date = header.start_date?.slice(0, 10) || "—";
+    row.cells.wentLive = liveDates.length ? "Yes" : "No";
+    row.cells.wentLiveDate = liveDates[0] || "—";
     const deliverables = input.deliverables.filter(d => lineIds.has(d.campaign_line_id));
+    row.cells.plannedDate = formatPlannedPostingDates(deliverables.map(d => plannedPostingDate(d.metadata)));
     const unique = (values: string[]) => [...new Set(values.filter(Boolean))].join("; ") || "—";
     row.creatorIdentities = [...new Map(lines.flatMap(line => line.creators ?? []).map(c => [c.value, { name: c.label, username: c.username || "" }])).values()];
     row.cells.creator = unique(lines.flatMap(line => line.creatorNames ?? []));

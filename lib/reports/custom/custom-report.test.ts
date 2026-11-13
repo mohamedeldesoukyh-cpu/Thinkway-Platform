@@ -80,3 +80,21 @@ test("deliverables and platforms are scoped to creator rows", () => {
   assert.equal(row.cells.platform, "Instagram");
   assert.equal(row.cells.deliverables, "2 × Instagram reel");
 });
+
+test("date fields distinguish planned activity from actual creator live dates", () => {
+  const dated = { ...input, headers: [{ ...header, document_number: "TW-2026-0012", start_date: "2026-01-01" }], filters: { ...input.filters, asOf: "2026-02-01" },
+    lines: [{ ...input.lines[0], creators: [{ value: "a", label: "Alice" }] }, { ...input.lines[0], id: "l2", creators: [{ value: "b", label: "Bob" }] }],
+    deliverables: [
+      { id: "d1", campaign_line_id: "l", quantity: 1, live_date: "2026-01-10", revenue_before_vat: 100, cost_before_vat: 50, usage_rights_amount: 0, usage_rights_cost: 0, agency_fee_amount: 0, metadata: { workflow_status: "posted", planned_posting_date: "2026-01-08" } },
+      { id: "d2", campaign_line_id: "l2", quantity: 1, live_date: "2026-01-20", revenue_before_vat: 100, cost_before_vat: 50, usage_rights_amount: 0, usage_rights_cost: 0, agency_fee_amount: 0, metadata: { workflow_status: "draft", planned_posting_date: "2026-01-20" } },
+    ] };
+  const rows = buildCustomReport(dated, "EGP", "", "", true).rows;
+  assert.equal(rows[0].cells.campaignNumber, "Camp#26-12");
+  assert.equal(rows[0].cells.date, "2026-01-01");
+  assert.equal(rows[0].cells.wentLive, "Yes");
+  assert.equal(rows[0].cells.wentLiveDate, "2026-01-10");
+  assert.equal(rows[0].cells.plannedDate, "08 Jan 2026");
+  assert.equal(rows[1].cells.wentLive, "No");
+  assert.equal(rows[1].cells.wentLiveDate, "—");
+  assert.equal(rows[1].cells.plannedDate, "20 Jan 2026");
+});

@@ -5,7 +5,7 @@ export const CUSTOM_REPORTS_PREFERENCE_KEY = "saved_custom_reports_v1";
 const filterKeys = ["clientId", "brandId", "campaignId", "creatorId", "recordCurrency"] as const;
 export const savedCustomReportSchema = z.object({
   id: z.string().uuid(), name: z.string().trim().min(1).max(80), favorite: z.boolean(),
-  columns: z.array(z.string().refine(key => CUSTOM_COLUMNS.some(c => c.key === key) && key !== "vat")).min(1).max(18).transform(keys => [...new Set(keys)]),
+  columns: z.array(z.string().refine(key => CUSTOM_COLUMNS.some(c => c.key === key) && key !== "vat")).min(1).max(CUSTOM_COLUMNS.length - 1).transform(keys => [...new Set(keys)]),
   currency: z.enum(CUSTOM_CURRENCIES), includeVat: z.boolean(),
   filters: z.object({ clientId: z.string().uuid().optional(), brandId: z.string().uuid().optional(), campaignId: z.string().uuid().optional(), creatorId: z.string().uuid().optional(), recordCurrency: z.string().regex(/^[A-Z]{3}$/).optional() }),
 });

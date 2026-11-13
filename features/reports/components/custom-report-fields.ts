@@ -1,7 +1,7 @@
 import type { CustomColumn } from "@/lib/reports/custom/custom-report";
 
 export const FIELD_GROUPS: { label: string; keys: CustomColumn[] }[] = [
-  { label: "Campaign details", keys: ["campaignNumber", "group", "client", "brand", "campaign"] },
+  { label: "Campaign details", keys: ["campaignNumber", "group", "client", "brand", "campaign", "date", "plannedDate", "wentLive", "wentLiveDate"] },
   { label: "Revenue", keys: ["revenue", "accruedRevenue", "totalRevenue"] },
   { label: "Cost", keys: ["cost", "accruedCost", "totalCost"] },
   { label: "Gross profit", keys: ["gp", "accruedGp", "totalGp"] },
@@ -9,6 +9,8 @@ export const FIELD_GROUPS: { label: string; keys: CustomColumn[] }[] = [
   { label: "Creator details", keys: ["creator", "deliverables", "platform"] },
 ];
 export const FIELD_DESCRIPTIONS: Record<CustomColumn, string> = {
+  plannedDate: "Planned posting date or date range for this row",
+  date: "Campaign start date", wentLive: "Yes when recorded activity has gone live", wentLiveDate: "First recorded live date for this row",
   campaignNumber: "Campaign document number", group: "Client holding group", client: "Billing client", brand: "Campaign brand", campaign: "Campaign title",
   revenue: "Revenue · went live", accruedRevenue: "Accrued revenue · not yet live", totalRevenue: "Revenue + accrued revenue",
   cost: "Cost · went live", accruedCost: "Accrued cost · not yet live", totalCost: "Cost + accrued cost",
