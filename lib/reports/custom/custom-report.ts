@@ -13,7 +13,7 @@ export const CUSTOM_CURRENCIES = ["EGP", "USD", "AED", "SAR", "Foreign"] as cons
 export type CustomCurrency = typeof CUSTOM_CURRENCIES[number];
 export type Money = Record<string, number>;
 export type CustomRow = { id: string; cells: Record<CustomColumn, string | Money | null> };
-export type CustomReport = { rows: CustomRow[]; totals: CustomRow; currency: CustomCurrency; asOf: string; options: ReturnType<typeof buildOverviewReport>["options"] & { creatorId: { value: string; label: string }[] }; recordCurrency: string; filterLabels: string[]; campaignCount: number; creatorDetail: boolean };
+export type CustomReport = { rows: CustomRow[]; totals: CustomRow; currency: CustomCurrency; asOf: string; options: Record<keyof ReturnType<typeof buildOverviewReport>["options"] | "creatorId", { value: string; label: string; code?: string | null }[]>; recordCurrency: string; filterLabels: string[]; campaignCount: number; creatorDetail: boolean };
 type Input = Parameters<typeof buildOverviewReport>[0];
 const profitKeys = new Set<CustomColumn>(["gp", "accruedGp", "totalGp"]);
 const costKeys = new Set<CustomColumn>(["cost", "accruedCost", "totalCost"]);
@@ -24,7 +24,7 @@ function add(row: CustomRow, key: CustomColumn, currency: string, value: number)
   const cell = row.cells[key] as Money;
   cell[currency] = roundMoney((cell[currency] ?? 0) + value);
 }
-export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input["lines"][number] & { revenue_vat_amount?: number | null; creatorNames?: string[]; creators?: { value: string; label: string }[] })[] }, currency: CustomCurrency, recordCurrency = "", creatorId = "", creatorDetail = false): CustomReport {
+export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input["lines"][number] & { revenue_vat_amount?: number | null; creatorNames?: string[]; creators?: { value: string; label: string; code?: string | null }[] })[] }, currency: CustomCurrency, recordCurrency = "", creatorId = "", creatorDetail = false): CustomReport {
   const foreign = currency === "Foreign";
   const headers = input.headers.filter(h => !h.metadata?.signing_test);
   const realIds = new Set(headers.map(h => h.id));
@@ -33,6 +33,12 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
   const originalCurrency = (line: typeof input.lines[number]) => resolveLineRevenueCurrency(line, input.headers.find(h => h.id === line.campaign_header_id)?.currency_code || "EGP");
   const options = { ...buildOverviewReport({ ...input, filters: { ...input.filters, currency: foreign ? "EGP" : currency } }).options,
     creatorId: [...new Map(input.lines.flatMap(l => l.creators ?? []).map(c => [c.value, c])).values()].sort((a, b) => a.label.localeCompare(b.label)) };
+  for (const key of ["clientId", "brandId", "campaignId"] as const) {
+    options[key] = options[key].map(option => {
+      const h = headers.find(h => (key === "clientId" ? h.client_id : key === "brandId" ? h.brand_id : h.id) === option.value);
+      return { ...option, code: key === "clientId" ? h?.client?.document_number : key === "brandId" ? h?.brand?.document_number : h?.document_number };
+    });
+  }
   options.currency = [...new Set(["EGP", "USD", "AED", "SAR", ...input.lines.map(originalCurrency)])].sort().map(value => ({ value, label: value }));
   if (recordCurrency || creatorId) {
     const lines = input.lines.filter(line => (!recordCurrency || originalCurrency(line) === recordCurrency) && (!creatorId || line.creators?.some(c => c.value === creatorId)));

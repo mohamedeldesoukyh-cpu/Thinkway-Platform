@@ -53,8 +53,8 @@ export type OverviewHeader = {
   id: string; document_number?: string | null; name: string; status: string; start_date: string | null; currency_code: string | null;
   metadata?: Record<string, unknown> | null;
   client_id: string | null; brand_id: string | null;
-  client: { name: string; group_id: string | null; agency_or_direct: string | null; group: { name: string } | null } | null;
-  brand: { name: string } | null;
+  client: { document_number?: string | null; name: string; group_id: string | null; agency_or_direct: string | null; group: { name: string } | null } | null;
+  brand: { document_number?: string | null; name: string } | null;
 };
 export type OverviewRow = { id: string } & Record<"group" | "client" | "brand" | "campaign", string> &
   Record<Exclude<OverviewColumn, "group" | "client" | "brand" | "campaign">, number>;

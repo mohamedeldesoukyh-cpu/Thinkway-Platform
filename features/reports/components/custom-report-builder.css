@@ -185,3 +185,16 @@
   .cr-feedback{min-height:24px}
 }
 @media(pointer:coarse){.cr-builder :is(.cr-icon,.cr-button,.cr-customize){min-height:44px}}
+
+/* Compact aligned code/name record browser. */
+.cr-browse-dialog{width:560px!important;gap:10px!important;padding:18px!important;font-size:12px}
+.cr-browse-dialog h2{font-size:16px}
+.cr-browse-dialog .cr-search input{min-height:36px;padding:6px}
+.cr-browse-heading,.cr-browse-dialog .cr-options>[role=option]{display:grid;grid-template-columns:125px minmax(0,1fr) 16px;gap:10px;padding:7px 10px}
+.cr-browse-heading{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--cr-muted);background:var(--cr-soft);border-bottom:1px solid var(--cr-line)}
+.cr-browse-dialog .cr-options{max-height:min(300px,45dvh)}
+.cr-browse-dialog .cr-options>[role=option]{min-height:34px;border-radius:0;border-bottom:1px solid #f1f5f9}
+.cr-record-code{font-variant-numeric:tabular-nums;overflow-wrap:anywhere;color:var(--cr-muted)}
+.cr-browse-dialog .cr-dialog-footer{padding-top:8px;margin-top:0}
+.cr-browse-dialog .cr-dialog-footer button{min-height:32px;padding:5px 10px}
+@media(max-width:480px){.cr-browse-heading,.cr-browse-dialog .cr-options>[role=option]{grid-template-columns:90px minmax(0,1fr) 16px}}
