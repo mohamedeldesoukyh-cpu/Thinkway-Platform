@@ -151,6 +151,7 @@ export const SERVER_ACTION_MODULE_CLASSIFICATIONS: Record<string, WorkspaceClass
   "features/operations": "internal_workspace",
   "features/operations-center": "internal_workspace",
   "features/planning": "internal_workspace",
+  "features/reports": "internal_workspace",
   "features/rate-cards": "internal_workspace",
   "features/campaigns": "internal_workspace",
   "features/other-services": "internal_workspace",

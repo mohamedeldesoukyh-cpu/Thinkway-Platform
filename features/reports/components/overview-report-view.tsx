@@ -10,21 +10,51 @@ import { operationalTableChrome, OperationalTableIcons, OperationalTableToolbarB
 import { reorderTableColumns } from "@/lib/tables/operational-table-column-settings";
 import { OperationalTableSection } from "@/components/ui/operational-table-section";
 import { ReportExportActions } from "@/features/reports/components/report-export-actions";
-import { DEFAULT_OVERVIEW_COLUMNS, OVERVIEW_COLUMNS, orderOverviewColumns, type OverviewFilters, type OverviewReport, type OverviewRow } from "@/lib/reports/overview/overview-report";
+import { OVERVIEW_COLUMNS, orderOverviewColumns, type OverviewFilters, type OverviewReport, type OverviewRow } from "@/lib/reports/overview/overview-report";
+import { saveOverviewColumns } from "@/features/reports/save-overview-columns-action";
+import { normalizeOverviewColumnPreferences, type OverviewColumnPreferences } from "@/lib/reports/overview/overview-column-preferences";
 import { cn } from "@/lib/utils";
 
 const amount = (v: number) => new Intl.NumberFormat("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(v);
 const selectClass = "h-9 w-full min-w-0 rounded-md border border-input bg-background px-2 text-xs";
-export function OverviewReportView({ report }: { report: OverviewReport }) {
+export function OverviewReportView({ report, savedPreferences }: { report: OverviewReport; savedPreferences: OverviewColumnPreferences }) {
   // The key resets the draft after back/forward navigation or an applied filter.
-  return <OverviewReportContent key={JSON.stringify(report.filters)} report={report} />;
+  return <OverviewReportContent key={JSON.stringify(report.filters)} report={report} savedPreferences={savedPreferences} />;
 }
-function OverviewReportContent({ report }: { report: OverviewReport }) {
+function OverviewReportContent({ report, savedPreferences }: { report: OverviewReport; savedPreferences: OverviewColumnPreferences }) {
   const router = useRouter(), pathname = usePathname();
   const [pending, startTransition] = useTransition();
   const [draft, setDraft] = useState(report.filters);
   const [columns, setColumns] = useState(report.filters.columns);
-  const [columnOrder, setColumnOrder] = useState(orderOverviewColumns([...report.filters.columns, ...OVERVIEW_COLUMNS.map(c => c.key).filter(key => !report.filters.columns.includes(key))]));
+  const [columnOrder, setColumnOrder] = useState(() => {
+    const savedVisible = savedPreferences.order.filter(key => savedPreferences.columns.includes(key));
+    return JSON.stringify(savedVisible) === JSON.stringify(report.filters.columns)
+      ? savedPreferences.order
+      : orderOverviewColumns([...report.filters.columns, ...savedPreferences.order.filter(key => !report.filters.columns.includes(key))]);
+  });
+  const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState("");
+  const [saved, setSaved] = useState(savedPreferences);
+  const selectionChanged = JSON.stringify({ columns: columnOrder.filter(key => columns.includes(key)), order: columnOrder }) !==
+    JSON.stringify({ columns: saved.order.filter(key => saved.columns.includes(key)), order: saved.order });
+  const persistSelection = async (reset = false) => {
+    setSaving(true);
+    setSaveMessage("");
+    const next = reset ? normalizeOverviewColumnPreferences(null) : { columns, order: columnOrder };
+    try {
+      const result = await saveOverviewColumns(next);
+      if ("error" in result) throw new Error(result.error);
+      setSaved(next);
+      if (reset) { setColumns(next.columns); setColumnOrder(next.order); }
+      // Keep reloads on the same filtered URL consistent with the saved selection.
+      const url = new URL(window.location.href);
+      url.searchParams.set("columns", next.order.filter(key => next.columns.includes(key)).join(","));
+      window.history.replaceState(null, "", url.toString());
+      setSaveMessage(reset ? "Default columns restored for your account." : "Selection saved to your account.");
+    } catch {
+      setSaveMessage("Could not save your selection. Please try again.");
+    } finally { setSaving(false); }
+  };
   const update = (key: keyof OverviewFilters, value: string) => setDraft(old => ({ ...old, [key]: value,
     ...(key === "groupId" ? { clientId: "", brandId: "", campaignId: "" } : key === "clientId" ? { brandId: "", campaignId: "" } : key === "brandId" ? { campaignId: "" } : {}) }));
   const apply = () => {
@@ -71,12 +101,20 @@ function OverviewReportContent({ report }: { report: OverviewReport }) {
                 state={{ order: columnOrder, visible: Object.fromEntries(OVERVIEW_COLUMNS.map(c => [c.key, columns.includes(c.key)])) }}
                 toggleColumnVisibility={(id, shown) => {
                   const key = OVERVIEW_COLUMNS.find(c => c.key === id)?.key;
-                  if (!key || (!shown && columns.length === 1)) return;
+                  if (saving || !key || (!shown && columns.length === 1)) return;
                   setColumns(old => shown ? [...old, key] : old.filter(k => k !== key));
                 }}
-                moveColumn={(from, to) => setColumnOrder(old => orderOverviewColumns(reorderTableColumns(old, from, to) as typeof old))}
-                resetToDefault={() => { setColumns([...DEFAULT_OVERVIEW_COLUMNS]); setColumnOrder(OVERVIEW_COLUMNS.map(c => c.key)); }}
+                moveColumn={(from, to) => !saving && setColumnOrder(old => orderOverviewColumns(reorderTableColumns(old, from, to) as typeof old))}
+                resetToDefault={() => { if (!saving) void persistSelection(true); }}
               />
+            </div>
+            <div className="space-y-2 border-t border-border/50 px-4 py-3">
+              <p className="text-xs text-muted-foreground">Save columns and order for your account, across devices.</p>
+              <div className="flex justify-end gap-2">
+                <Button type="button" size="sm" variant="ghost" disabled={saving} onClick={() => void persistSelection(true)}>Reset columns</Button>
+                <Button type="button" size="sm" disabled={saving || !selectionChanged} onClick={() => void persistSelection()}>{saving ? "Saving…" : "Save selection"}</Button>
+              </div>
+              <p role="status" className="text-xs text-muted-foreground">{saveMessage || (selectionChanged ? "Unsaved column changes" : "Your saved selection")}</p>
             </div>
           </PopoverContent>
         </Popover>
