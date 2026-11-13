@@ -25,7 +25,7 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
     startTransition(() => router.replace(pathname + "?" + next));
   };
   const [pending, startTransition] = useTransition();
-  const [selected, setSelected] = useState<CustomColumn[]>([]);
+  const [selected, setSelected] = useState<CustomColumn[]>(["campaignNumber"]);
   const [includeVat, setIncludeVat] = useState(false);
   const [search, setSearch] = useState("");
   const [dragging, setDragging] = useState<CustomColumn | null>(null);

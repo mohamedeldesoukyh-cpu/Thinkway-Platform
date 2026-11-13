@@ -7,8 +7,8 @@ import { roundMoney } from "@/lib/analytics/aggregations/round";
 
 const keys = ["group", "client", "brand", "campaign", "revenue", "accruedRevenue", "cost", "accruedCost", "gp", "accruedGp", "totalRevenue", "totalCost", "totalGp", "revenueShare"] as const;
 const CUSTOM_BASE_COLUMNS = OVERVIEW_COLUMNS.filter((c): c is Extract<typeof OVERVIEW_COLUMNS[number], { key: typeof keys[number] }> => (keys as readonly string[]).includes(c.key));
-export const CUSTOM_COLUMNS = [...CUSTOM_BASE_COLUMNS, ...(["creator", "deliverables", "platform"] as const).map(key => ({ key, label: { creator: "Vendor / Creator Name", deliverables: "Deliverables", platform: "Platform" }[key], numeric: false as const, accrued: false })), { key: "vat", label: "VAT", numeric: true, accrued: false }] as const;
-export type CustomColumn = typeof keys[number] | "vat" | "creator" | "deliverables" | "platform";
+export const CUSTOM_COLUMNS = [{ key: "campaignNumber", label: "Campaign Number", numeric: false, accrued: false }, ...CUSTOM_BASE_COLUMNS, ...(["creator", "deliverables", "platform"] as const).map(key => ({ key, label: { creator: "Vendor / Creator Name", deliverables: "Deliverables", platform: "Platform" }[key], numeric: false as const, accrued: false })), { key: "vat", label: "VAT", numeric: true, accrued: false }] as const;
+export type CustomColumn = typeof keys[number] | "vat" | "creator" | "deliverables" | "platform" | "campaignNumber";
 export const CUSTOM_CURRENCIES = ["EGP", "USD", "AED", "SAR", "Foreign"] as const;
 export type CustomCurrency = typeof CUSTOM_CURRENCIES[number];
 export type Money = Record<string, number>;
@@ -47,6 +47,7 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
       else if (!foreign) add(row, c.key, currency, source[c.key]);
     }
     const header = input.headers.find(h => h.id === source.id)!;
+    row.cells.campaignNumber = header.document_number || "—";
     const lines = input.lines.filter(l => l.campaign_header_id === source.id);
     const lineIds = new Set(lines.map(line => line.id));
     const deliverables = input.deliverables.filter(d => lineIds.has(d.campaign_line_id));
