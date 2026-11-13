@@ -31,11 +31,22 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
   const [filterDrafts, setFilterDrafts] = useState<Partial<Record<FilterKey, string>>>({});
   const [selected, setSelected] = useState<CustomColumn[]>(() => {
     const saved = params.get("columns")?.split(",").filter((key): key is CustomColumn => key !== "vat" && CUSTOM_COLUMNS.some(c => c.key === key));
-    return saved?.length ? [...new Set(saved)] : ["campaignNumber"];
+    return params.has("columns") ? [...new Set(saved ?? [])] : ["campaignNumber"];
   });
   const [includeVat, setIncludeVat] = useState(params.get("includeVat") === "1");
   const [search, setSearch] = useState("");
-  const [viewZoom, setViewZoom] = useState(85);
+  const [viewZoom, setViewZoom] = useState(() => [75, 85, 100].includes(Number(params.get("viewZoom"))) ? Number(params.get("viewZoom")) : 85);
+  // Keep this open report in its URL, so refresh restores it without a permanent preset.
+  useEffect(() => {
+    if (pending || window.location.pathname !== pathname) return;
+    const next = new URLSearchParams(window.location.search);
+    next.set("columns", selected.join(","));
+    next.set("includeVat", includeVat ? "1" : "0");
+    next.set("viewZoom", String(viewZoom));
+    if (next.toString() !== window.location.search.slice(1)) {
+      window.history.replaceState(null, "", `${pathname}?${next}${window.location.hash}`);
+    }
+  }, [selected, includeVat, viewZoom, pending, pathname]);
   const [dragging, setDragging] = useState<CustomColumn | null>(null), [dropTarget, setDropTarget] = useState<CustomColumn | null>(null);
   const [notice, setNotice] = useState("");
   const [undo, setUndo] = useState<{ selected: CustomColumn[]; vat: boolean } | null>(null);
