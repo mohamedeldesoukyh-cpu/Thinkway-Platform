@@ -132,6 +132,7 @@ export const API_ROUTE_CLASSIFICATIONS: Record<string, WorkspaceClass> = {
   "/api/reports/spending-by-category/document": "internal_workspace",
   "/api/reports/statements/document": "internal_workspace",
   "/api/reports/overview/document": "internal_workspace",
+  "/api/reports/custom/document": "internal_workspace",
   "/api/reports/top-clients/document": "internal_workspace",
   "/api/reports/top-influencers/document": "internal_workspace",
   "/api/reports/unsettled/document": "internal_workspace",
