@@ -108,7 +108,7 @@ function OverviewReportContent({
   const asOf = formatOverviewDate(applied.asOf) || applied.asOf;
 
   return (
-    <div className={cn(styles.root, "space-y-4")} aria-busy={pending}>
+    <div data-overview-redesign className={cn(styles.root, "space-y-4")} aria-busy={pending}>
       <OverviewFilterPanel
         draft={draft}
         applied={applied}
