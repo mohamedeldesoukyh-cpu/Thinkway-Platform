@@ -36,3 +36,12 @@ test("Foreign workbook preserves currency labels instead of adding different cur
   await workbook.xlsx.load(await buildCustomReportExcelBuffer({ ...report, currency: "Foreign" }, ["campaign", "totalRevenue"]));
   assert.ok(workbook.worksheets[0].getSheetValues().flat().includes("EGP 1,000.00"));
 });
+
+test("creator names and handles are escaped separately and internal explanations are omitted", () => {
+  const detailed = { ...report, creatorDetail: true, filterLabels: ["Private filter"], rows: [{ ...report.rows[0], creatorIdentities: [{ name: "Name <b>", username: "@handle" }] }] };
+  const html = buildCustomReportHtml(detailed, ["creator"], new URLSearchParams("reportName=My+Report"));
+  assert.match(html, /Name &lt;b&gt;/);
+  assert.match(html, /<small dir="ltr">@handle<\/small>/);
+  assert.match(html, /<h1>My Report<\/h1>/);
+  assert.doesNotMatch(html, /Actual &amp; accrued|Filters:|One row per creator|Actual = went-live/);
+});
