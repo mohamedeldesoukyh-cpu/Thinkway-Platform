@@ -1505,13 +1505,18 @@ console.log("quotation-document.test.ts passed");
       assert.ok(html.includes("Client List by Name"));
       assert.ok(!html.includes("Reel package"));
       assert.ok(!html.includes(doc.rows[0].clientCost));
-      assert.ok(!html.includes("Agency fees (AF)"));
+      assert.ok(!html.includes('class="offer-fee-row"'), "Name-only reports must not expose fee rows");
     } else {
       assert.ok(html.includes("Reel package"));
-      assert.ok(html.includes("Agency fees (AF)"));
+      // The November 9 pricing redesign presents Base fee + AF before the total.
+      // Verify actual visible amounts, not the removed breakdown aria-label.
+      assert.match(html, /<span>Base fee<\/span><b>1,333 <small>EGP<\/small>/);
+      assert.match(html, /<span>AF 10%<\/span><b>133 <small>EGP<\/small>/);
+      assert.match(html, /<span class="offer-price-label">Total incl\. AF<\/span><span class="offer-total">1,467<small>EGP<\/small>/);
       const hidden = buildQuotationHtml({...doc, hideCostAndFees:true});
       assert.ok(hidden.includes(Number(doc.rows[0].totalInvestment!.replace(/[^\d.-]/g, "")).toLocaleString("en-US", {maximumFractionDigits:0})));
-      assert.ok(!hidden.includes("Agency fees (AF)"));
+      assert.ok(!hidden.includes('class="offer-fee-row"'), "Hidden fees must remove both the base and AF breakdown");
+      assert.match(hidden, /<span class="offer-price-label">Total<\/span><span class="offer-total">1,467<small>EGP<\/small>/, "Hiding fees must retain the same inclusive total");
     }
     const selected = buildQuotationDocument(mockDetail({items:[mockItem(), mockItem({id:"item-2",creator_name:"Excluded Creator",handle:"@other"})]}), {template,itemIds:["item-1"]});
     assert.ok(!buildQuotationHtml(selected).includes("Excluded Creator"));
@@ -1526,11 +1531,11 @@ console.log("quotation-document.test.ts passed");
   doc.creatorGroups[0].platformMetrics = ["instagram","tiktok","facebook"].map(platform => ({platform,followers:"10K",engagement:"2%",views:"5K",profileUrl:null,avatarUrl:null}));
   const html = buildQuotationHtml(doc);
   assert.ok(html.includes('class="chips"'));
-  assert.ok(html.includes('incl. agency fee'));
-  assert.ok(html.includes('Agency fees (AF)'));
+  assert.ok(html.includes('Total incl. AF'));
+  assert.match(html, /<span>AF 10%<\/span><b>133 <small>EGP<\/small>/);
   assert.ok(!html.includes('>facebook<small>'));
   assert.ok(html.includes('alt="tiktok"'));
-  assert.ok(!buildQuotationHtml({...doc,hideCostAndFees:true}).includes('Agency fees (AF)'));
+  assert.ok(!buildQuotationHtml({...doc,hideCostAndFees:true}).includes('class="offer-fee-row"'));
 }
 
 {
@@ -1771,9 +1776,11 @@ console.log("quotation-document.test.ts passed");
   assert.equal(doc.summary.packageVatAmount, "560 AED · 1,001 USD");
   assert.equal(doc.summary.packageTotalAfterVat, "4,560 AED · 8,151 USD");
   const html = buildQuotationHtml(doc);
-  assert.ok(html.includes("6,500<small>USD</small>"));
+  assert.match(html, /<span>Base fee<\/span><b>6,500 <small>USD<\/small>/);
+  assert.match(html, /<span>AF 10%<\/span><b>650 <small>USD<\/small>/);
+  assert.ok(html.includes("7,150<small>USD</small>"), "Original-currency total includes the unchanged agency fee");
   assert.ok(html.includes("4,000<small>AED</small>"));
-  assert.ok(!html.includes("325,000<small>EGP</small>"));
+  assert.doesNotMatch(html, /325,000\s*<small>EGP<\/small>/);
   const off = buildQuotationDocument(detail, { showOriginalCurrency: false });
   assert.equal(off.rows[0].clientCost, "325,000 EGP");
 }

@@ -1,5 +1,13 @@
 [
   {
+    "file": "features/quotations/components/use-live-quotation-enrichment.ts",
+    "parents": ["features/quotations/components/quotation-workspace.tsx"]
+  },
+  {
+    "file": "features/quotations/components/quotation-creator-link-tab.tsx",
+    "parents": ["features/quotations/components/add-creators-to-quotation-modal.tsx"]
+  },
+  {
     "file": "features/campaigns/components/assignment-commercial-workspace-dialog.tsx",
     "parents": [
       "features/campaigns/components/tabs/campaign-lines-tab-inner.tsx"

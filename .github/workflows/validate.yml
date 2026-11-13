@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, master, develop]
   pull_request:
-    branches: [main, master, develop]
+    branches: [main, master, develop, codex/quotation-export-ci-review]
 
 jobs:
   validate:
@@ -27,6 +27,9 @@ jobs:
 
       - name: Inherited client boundaries
         run: node scripts/check-inherited-client-boundaries.mjs
+
+      - name: Shared Discovery control styles
+        run: node scripts/check-discovery-shared-controls.mjs
 
       - name: Service layer tests
         run: npm run test:services

@@ -1,0 +1,34 @@
+name: Creator signing validation
+
+on:
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'features/io/**'
+      - 'features/portals/components/creator-approve-vendor-io-form.tsx'
+      - 'app/io-approval/vendor/**'
+      - 'app/api/vendor-ios/**'
+      - 'lib/io/**'
+      - 'lib/email/**'
+      - 'supabase/migrations/*vendor_io*sign*.sql'
+      - 'scripts/*vendor-io-signing*'
+      - 'scripts/tests/vendor-io-signing*'
+      - '.github/workflows/creator-signing.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  creator-signing:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.17.0'
+          cache: npm
+      - run: npm ci
+      - name: Signature, Dev capture, document and confirmation regression
+        run: npx tsx --test lib/io/vendor-io-signature.test.ts lib/io/dev-signing-email-capture.test.ts lib/io/vendor-io-email-attachment.test.ts lib/io/client-io-email-attachment.test.ts lib/email/io-approval-email.test.ts lib/email/io-approval-delivery.test.ts
+      - name: Actual signing migrations in disposable PostgreSQL
+        run: node scripts/test-vendor-io-signing-local.cjs
