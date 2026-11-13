@@ -22,7 +22,7 @@ function add(row: CustomRow, key: CustomColumn, currency: string, value: number)
   const cell = row.cells[key] as Money;
   cell[currency] = roundMoney((cell[currency] ?? 0) + value);
 }
-export function buildCustomReport(input: Input & { lines: (Input["lines"][number] & { revenue_vat_amount?: number | null })[] }, currency: CustomCurrency): CustomReport {
+export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input["lines"][number] & { revenue_vat_amount?: number | null })[] }, currency: CustomCurrency): CustomReport {
   const foreign = currency === "Foreign";
   const base = buildOverviewReport({ ...input, filters: { ...input.filters, currency: foreign ? "EGP" : currency } });
   const rows = base.rows.map(source => {
