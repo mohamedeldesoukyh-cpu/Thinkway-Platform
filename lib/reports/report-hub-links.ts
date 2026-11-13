@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 export const REPORT_HUB_LINK_IDS = [
+  "custom",
   "overview",
   "pnl",
   "vr",
@@ -46,6 +47,7 @@ export type ReportHubLink = {
 };
 
 export const REPORT_HUB_LINKS: readonly ReportHubLink[] = [
+  { id: "custom", href: "/reports/custom", title: "Custom report", description: "Build your own report with drag-and-drop columns, currency choices, VAT and preview.", icon: TablePropertiesIcon, tint: "text-brand-blue" },
   {
     id: "overview",
     href: "/reports/overview",
@@ -213,6 +215,7 @@ export const REPORT_HUB_SUITE_GROUPS = [
 export type ReportHubSuiteGroup = (typeof REPORT_HUB_SUITE_GROUPS)[number];
 
 export const REPORT_HUB_SUITE_GROUP: Record<ReportHubLinkId, ReportHubSuiteGroup> = {
+  custom: "Finance",
   overview: "Finance",
   pnl: "Finance",
   vr: "Finance",
