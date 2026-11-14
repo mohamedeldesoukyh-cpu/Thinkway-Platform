@@ -267,6 +267,7 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
           ? ""
           : neutralizeSpreadsheetFormula(value);
       applyColumnHeaderStyle(cell);
+      if (sheet.reportLayout) cell.border = Object.fromEntries(["top", "bottom", "left", "right"].map(side => [side, { style: "thin", color: { argb: "FFD1D5DB" } }]));
       if (sheet.totalColumns?.includes(colIndex)) {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE0F2FE" } };
         cell.font = { ...cell.font, bold: true, color: { argb: "FF082F49" } };
@@ -315,7 +316,7 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
 
       applyDataCellStyle(cell, format, kind);
       if (sheet.reportLayout) {
-        cell.border = kind === "total" ? { top: { style: "thin", color: { argb: COLORS.navy } } } : {};
+        cell.border = Object.fromEntries(["top", "bottom", "left", "right"].map(side => [side, { style: "thin", color: { argb: "FFD1D5DB" } }]));
         cell.alignment = { ...cell.alignment, vertical: "top" };
       }
       if (dataRow.richText?.[colIndex]) cell.value = { richText: dataRow.richText[colIndex].map(run => ({ text: run.text, font: { name: "Calibri", size: run.secondary ? 9 : 10, color: { argb: run.secondary ? COLORS.muted : COLORS.ink } } })) };

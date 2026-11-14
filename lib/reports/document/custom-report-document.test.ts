@@ -61,5 +61,5 @@ test("Excel report hides gridlines, fits multiline identities and keeps compact 
   const rich = sheet.getCell(rowIndex, 2).value as { richText: {font: {size: number}; text: string}[] };
   assert.equal(rich.richText[1].font.size, 9);
   assert.equal(sheet.getCell(rowIndex, 3).value, 1000);
-  assert.ok(!sheet.getCell(rowIndex, 2).border?.bottom);
+  assert.equal(sheet.getCell(rowIndex, 2).border?.bottom?.color?.argb, "FFD1D5DB");
 });
