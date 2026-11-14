@@ -278,7 +278,7 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
       }
     }
 
-    excelRow.height = sheet.reportLayout ? 32 : 22;
+    excelRow.height = sheet.reportLayout ? 26 : 22;
   }
 
   if (sheet.headerMerges) {
@@ -358,10 +358,10 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
     sheet.rows.forEach((row, index) => {
       const lines = Math.max(1, ...row.values.map((value, col) => {
         if (typeof value !== "string") return 1;
-        const capacity = Math.max(4, (worksheet.getColumn(col + 1).width ?? 12) - 3);
-        return value.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(Array.from(line).length * 1.15 / capacity)), 0);
+        const capacity = Math.max(4, (worksheet.getColumn(col + 1).width ?? 12) - 1);
+        return value.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(Array.from(line).length * 0.9 / capacity)), 0);
       }));
-      worksheet.getRow(dataStartRow + index + 1).height = Math.min(409, Math.max(24, lines * 15 + 9));
+      worksheet.getRow(dataStartRow + index + 1).height = Math.min(409, Math.max(17, lines * 12.5 + 2));
     });
     worksheet.pageSetup = { orientation: "landscape", paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0, showGridLines: false, margins: { left: .25, right: .25, top: .35, bottom: .35, header: .15, footer: .15 } };
     worksheet.pageSetup.printArea = `A1:${worksheet.getColumn(totalCols).letter}${worksheet.rowCount}`;

@@ -57,7 +57,7 @@ test("Excel report hides gridlines, fits multiline identities and keeps compact 
   assert.equal(sheet.getColumn(1).width, 16);
   let rowIndex = 0;
   sheet.eachRow((row, index) => { if (row.getCell(2).text.includes("@creator_username")) rowIndex = index; });
-  assert.ok(sheet.getRow(rowIndex).height >= 54);
+  assert.equal(sheet.getRow(rowIndex).height, 39.5);
   const rich = sheet.getCell(rowIndex, 2).value as { richText: {font: {size: number}; text: string}[] };
   assert.equal(rich.richText[1].font.size, 9);
   assert.equal(sheet.getCell(rowIndex, 3).value, 1000);
