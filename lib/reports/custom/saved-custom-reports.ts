@@ -2,13 +2,14 @@ import { z } from "zod";
 import { CUSTOM_COLUMNS, CUSTOM_CURRENCIES } from "./custom-report";
 
 export const CUSTOM_REPORTS_PREFERENCE_KEY = "saved_custom_reports_v1";
-const filterKeys = ["clientId", "brandId", "campaignId", "creatorId", "recordCurrency"] as const;
+const filterKeys = ["clientId", "brandId", "campaignId", "creatorId", "recordCurrency", "from", "to", "dateBasis"] as const;
+const reportDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(value => !Number.isNaN(Date.parse(value)) && new Date(value).toISOString().slice(0,10) === value);
 const recordSelection = z.string().max(12000).refine(value => value.split(",").every(id => z.string().uuid().safeParse(id).success));
 export const savedCustomReportSchema = z.object({
   id: z.string().uuid(), name: z.string().trim().min(1).max(80), favorite: z.boolean(),
   columns: z.array(z.string().refine(key => CUSTOM_COLUMNS.some(c => c.key === key) && key !== "vat")).min(1).max(CUSTOM_COLUMNS.length - 1).transform(keys => [...new Set(keys)]),
   currency: z.enum(CUSTOM_CURRENCIES), includeVat: z.boolean(),
-  filters: z.object({ clientId: recordSelection.optional(), brandId: recordSelection.optional(), campaignId: recordSelection.optional(), creatorId: recordSelection.optional(), recordCurrency: z.string().regex(/^[A-Z]{3}$/).optional() }),
+  filters: z.object({ dateBasis: z.enum(["date", "plannedDate", "wentLiveDate", "enteredDate"]).optional(), from: reportDate.optional(), to: reportDate.optional(), clientId: recordSelection.optional(), brandId: recordSelection.optional(), campaignId: recordSelection.optional(), creatorId: recordSelection.optional(), recordCurrency: z.string().regex(/^[A-Z]{3}$/).optional() }),
 });
 export const reportVisibilitySchema = z.enum(["private", "all", "users"]);
 export type SavedCustomReport = z.infer<typeof savedCustomReportSchema> & {

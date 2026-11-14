@@ -3,7 +3,7 @@ import { buildRecognitionEvents } from "@/lib/analytics/queries/reporting-financ
 import { formatDocumentNumberForDisplay } from "@/lib/documents/format-document-number";
 import { readRevenueShare } from "@/lib/campaigns/revenue-share";
 import { deliverableTypeLabel } from "@/lib/campaigns/deliverable-taxonomy";
-import { buildOverviewReport, OVERVIEW_COLUMNS } from "@/lib/reports/overview/overview-report";
+import { buildOverviewReport, OVERVIEW_COLUMNS, cairoToday } from "@/lib/reports/overview/overview-report";
 import { creatorFxAmount } from "@/lib/commercial/creator-fx";
 import { resolveLineCostCurrency, resolveLineRevenueCurrency, requireReportingRate } from "@/lib/campaigns/campaign-display-financials";
 import { roundMoney } from "@/lib/analytics/aggregations/round";
@@ -16,8 +16,9 @@ export type CustomColumn = typeof keys[number] | "vat" | "creator" | "deliverabl
 export const CUSTOM_CURRENCIES = ["EGP", "USD", "AED", "SAR", "Foreign"] as const;
 export type CustomCurrency = typeof CUSTOM_CURRENCIES[number];
 export type Money = Record<string, number>;
-export type CustomRow = { id: string; creatorIdentities?: { name: string; username: string }[]; cells: Record<CustomColumn, string | Money | null> };
-export type CustomReport = { rows: CustomRow[]; totals: CustomRow; currency: CustomCurrency; asOf: string; options: Record<keyof ReturnType<typeof buildOverviewReport>["options"] | "creatorId", { value: string; label: string; code?: string | null; username?: string }[]>; recordCurrency: string; filterLabels: string[]; campaignCount: number; creatorDetail: boolean };
+export type CustomDateBasis = "date" | "plannedDate" | "wentLiveDate" | "enteredDate";
+export type CustomRow = { id: string; dateValues?: Record<CustomDateBasis, string[]>; creatorIdentities?: { name: string; username: string }[]; cells: Record<CustomColumn, string | Money | null> };
+export type CustomReport = { period?: { from: string; to: string; basis?: CustomDateBasis }; rows: CustomRow[]; totals: CustomRow; currency: CustomCurrency; asOf: string; options: Record<keyof ReturnType<typeof buildOverviewReport>["options"] | "creatorId", { value: string; label: string; code?: string | null; username?: string }[]>; recordCurrency: string; filterLabels: string[]; campaignCount: number; creatorDetail: boolean };
 type Input = Parameters<typeof buildOverviewReport>[0];
 const profitKeys = new Set<CustomColumn>(["gp", "accruedGp", "totalGp"]);
 const costKeys = new Set<CustomColumn>(["cost", "accruedCost", "totalCost"]);
@@ -28,11 +29,14 @@ function add(row: CustomRow, key: CustomColumn, currency: string, value: number)
   const cell = row.cells[key] as Money;
   cell[currency] = roundMoney((cell[currency] ?? 0) + value);
 }
-export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input["lines"][number] & { revenue_vat_amount?: number | null; creatorNames?: string[]; creators?: { value: string; label: string; code?: string | null; username?: string }[] })[] }, currency: CustomCurrency, recordCurrency = "", creatorId = "", creatorDetail = false): CustomReport {
+export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input["lines"][number] & { revenue_vat_amount?: number | null; creatorNames?: string[]; creators?: { value: string; label: string; code?: string | null; username?: string }[] })[] }, currency: CustomCurrency, recordCurrency = "", creatorId = "", creatorDetail = false, dateBasis: CustomDateBasis = "date"): CustomReport {
   const foreign = currency === "Foreign";
   const headers = input.headers.filter(h => !h.metadata?.signing_test);
   const realIds = new Set(headers.map(h => h.id));
   input = { ...input, headers, lines: input.lines.filter(l => realIds.has(l.campaign_header_id)) };
+  const period = { from: input.filters.from, to: input.filters.to || (input.filters.from ? cairoToday() : ""), basis: dateBasis };
+  // Filter rows after creator expansion; period selection must not distort financial allocation.
+  input = { ...input, filters: { ...input.filters, from: "", to: "" } };
   const unfiltered = input;
   const requestedFilters = input.filters;
   const includes = (selection: string, id: string | null) => !selection || selection.split(",").includes(id || "");
@@ -71,7 +75,9 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
     row.cells.wentLive = liveDates.length ? "Yes" : "No";
     row.cells.wentLiveDate = liveDates[0] || "—";
     const deliverables = input.deliverables.filter(d => lineIds.has(d.campaign_line_id));
-    row.cells.plannedDate = formatPlannedPostingDates(deliverables.map(d => plannedPostingDate(d.metadata)));
+    const plannedDates = deliverables.map(d => plannedPostingDate(d.metadata)).filter((date): date is string => Boolean(date));
+    row.cells.plannedDate = formatPlannedPostingDates(plannedDates);
+    row.dateValues = { enteredDate: header.created_at ? [new Intl.DateTimeFormat("en-CA", { timeZone: "Africa/Cairo", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(header.created_at))] : [], date: header.start_date ? [header.start_date.slice(0,10)] : [], plannedDate: plannedDates, wentLiveDate: liveDates };
     const unique = (values: string[]) => [...new Set(values.filter(Boolean))].join("; ") || "—";
     row.creatorIdentities = [...new Map(lines.flatMap(line => line.creators ?? []).map(c => [c.value, { name: c.label, username: c.username || "" }])).values()];
     row.cells.creator = unique(lines.flatMap(line => line.creatorNames ?? []));
@@ -138,13 +144,14 @@ export function buildCustomReport(input: Omit<Input, "lines"> & { lines: (Input[
     }
     return detailRows;
   });
+  if (period.from || period.to) rows = rows.filter(row => row.dateValues?.[dateBasis].some(date => (!period.from || date >= period.from) && (!period.to || date <= period.to)));
   const totals = emptyRow("totals");
   for (const row of rows) for (const c of CUSTOM_COLUMNS) if (c.numeric) {
     const cell = row.cells[c.key];
     if (cell === null) totals.cells[c.key] = null;
     else if (totals.cells[c.key] !== null && typeof cell === "object") for (const [code, value] of Object.entries(cell)) add(totals, c.key, code, value);
   }
-  return { rows, totals, currency, asOf: input.filters.asOf, options, recordCurrency, campaignCount: base.rows.length, creatorDetail, filterLabels: [
+  return { rows, totals, currency, period, asOf: input.filters.asOf, options, recordCurrency, campaignCount: new Set(rows.map(row => row.id.split(":")[0])).size, creatorDetail, filterLabels: [
     ...(["clientId", "brandId", "campaignId"] as const).flatMap(key => requestedFilters[key] ? [options[key].filter(o => includes(requestedFilters[key], o.value)).map(o => o.label).join(", ")] : []),
     ...(creatorId ? ["Vendor / Creator: " + options.creatorId.filter(o => includes(creatorId, o.value)).map(o => o.label).join(", ")] : []),
     ...(recordCurrency ? ["Original billing currency: " + recordCurrency] : []),

@@ -50,7 +50,7 @@ export type OverviewFilters = {
   activity: string; clientType: string; columns: OverviewColumn[];
 };
 export type OverviewHeader = {
-  id: string; document_number?: string | null; name: string; status: string; start_date: string | null; currency_code: string | null;
+  id: string; created_at?: string | null; document_number?: string | null; name: string; status: string; start_date: string | null; currency_code: string | null;
   metadata?: Record<string, unknown> | null;
   client_id: string | null; brand_id: string | null;
   client: { document_number?: string | null; name: string; group_id: string | null; agency_or_direct: string | null; group: { name: string } | null } | null;

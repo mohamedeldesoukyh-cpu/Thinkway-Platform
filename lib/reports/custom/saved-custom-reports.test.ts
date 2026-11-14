@@ -23,3 +23,10 @@ test("invalid saved selections cannot introduce arbitrary fields or filters", ()
   assert.deepEqual(parsed.columns, ["creator"]);
   assert.equal("userId" in parsed.filters, false);
 });
+
+test("saved reports retain period basis and a dynamic Till date", () => {
+  const report = savedCustomReportSchema.parse({...saved, filters: {...saved.filters, from:"2026-01-01", dateBasis:"wentLiveDate"}});
+  const params = new URL(savedCustomReportUrl(report), "https://example.test").searchParams;
+  assert.equal(params.get("from"),"2026-01-01"); assert.equal(params.get("to"),null); assert.equal(params.get("dateBasis"),"wentLiveDate");
+  assert.equal(savedCustomReportSchema.safeParse({...saved, filters:{from:"2026-02-30"}}).success,false);
+});

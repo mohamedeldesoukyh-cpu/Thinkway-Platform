@@ -63,3 +63,8 @@ test("Excel report hides gridlines, fits multiline identities and keeps compact 
   assert.equal(sheet.getCell(rowIndex, 3).value, 1000);
   assert.equal(sheet.getCell(rowIndex, 2).border?.bottom?.color?.argb, "FFD1D5DB");
 });
+
+test("preview header shows the selected report period and date basis", () => {
+  const html = buildCustomReportHtml({...report, period: {from:"2026-01-01",to:"2026-11-14",basis:"enteredDate"}}, ["campaign"], new URLSearchParams());
+  assert.match(html, /Report period/); assert.match(html, /2026-01-01 to 2026-11-14/); assert.match(html,/Entered Date/);
+});

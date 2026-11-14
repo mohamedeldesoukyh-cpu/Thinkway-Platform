@@ -82,7 +82,7 @@ test("deliverables and platforms are scoped to creator rows", () => {
 });
 
 test("date fields distinguish planned activity from actual creator live dates", () => {
-  const dated = { ...input, headers: [{ ...header, document_number: "TW-2026-0012", start_date: "2026-01-01" }], filters: { ...input.filters, asOf: "2026-02-01" },
+  const dated = { ...input, headers: [{ ...header, created_at: "2026-01-07T22:30:00Z", document_number: "TW-2026-0012", start_date: "2026-01-01" }], filters: { ...input.filters, asOf: "2026-02-01" },
     lines: [{ ...input.lines[0], creators: [{ value: "a", label: "Alice" }] }, { ...input.lines[0], id: "l2", creators: [{ value: "b", label: "Bob" }] }],
     deliverables: [
       { id: "d1", campaign_line_id: "l", quantity: 1, live_date: "2026-01-10", revenue_before_vat: 100, cost_before_vat: 50, usage_rights_amount: 0, usage_rights_cost: 0, agency_fee_amount: 0, metadata: { workflow_status: "posted", planned_posting_date: "2026-01-08" } },
@@ -97,6 +97,19 @@ test("date fields distinguish planned activity from actual creator live dates", 
   assert.equal(rows[1].cells.wentLive, "No");
   assert.equal(rows[1].cells.wentLiveDate, "—");
   assert.equal(rows[1].cells.plannedDate, "20 Jan 2026");
+  const periodInput = { ...dated, filters: { ...dated.filters, from: "2026-01-08", to: "2026-01-10" } };
+  assert.equal(buildCustomReport(periodInput, "EGP", "", "", true, "date").rows.length, 0);
+  const planned = buildCustomReport(periodInput, "EGP", "", "", true, "plannedDate");
+  const live = buildCustomReport(periodInput, "EGP", "", "", true, "wentLiveDate");
+  assert.equal(planned.rows.length, 1); assert.equal(live.rows.length, 1);
+  assert.equal(planned.rows[0].creatorIdentities?.[0].name, "Alice");
+  assert.deepEqual(planned.totals.cells.totalRevenue, planned.rows[0].cells.totalRevenue);
+  assert.equal(planned.campaignCount, 1);
+  assert.equal(planned.period?.basis, "plannedDate");
+  assert.equal(buildCustomReport(periodInput, "EGP", "", "", true, "enteredDate").rows.length, 2);
+  const throughToday = buildCustomReport({ ...dated, filters: { ...dated.filters, from: "2026-01-01", to: "" } }, "EGP");
+  assert.match(throughToday.period?.to || "", /^\d{4}-\d{2}-\d{2}$/);
+  assert.ok((throughToday.period?.to || "") >= "2026-01-01");
 });
 
 test("multiple campaign and creator selections form unions within each filter", () => {
