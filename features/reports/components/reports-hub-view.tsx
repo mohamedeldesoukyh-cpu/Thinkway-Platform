@@ -1,5 +1,6 @@
 "use client";
 
+import type { BuiltinReportSettings } from "@/lib/reports/builtin-report-settings";
 import { SavedCustomReports } from "./saved-custom-reports";
 import { useMemo, useState } from "react";
 import {
@@ -23,7 +24,7 @@ import {
 import { getReportsHubDisplayOrder } from "@/lib/reports/reports-hub-preferences";
 import { cn } from "@/lib/utils";
 
-export function ReportsHubView() {
+export function ReportsHubView({settings = [], hiddenIds = []}: {settings?: BuiltinReportSettings[]; hiddenIds?: string[]}) {
   const {
     order,
     favoriteSet,
@@ -38,8 +39,8 @@ export function ReportsHubView() {
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   const displayOrder = useMemo(
-    () => getReportsHubDisplayOrder(order, favoriteSet),
-    [order, favoriteSet]
+    () => getReportsHubDisplayOrder(order, favoriteSet).filter(id => !hiddenIds.includes(id)),
+    [order, favoriteSet, hiddenIds]
   );
 
   const visibleOrder = useMemo(
@@ -80,7 +81,9 @@ export function ReportsHubView() {
   };
 
   function renderTile(reportId: (typeof visibleOrder)[number], index: number) {
-    const report = REPORT_HUB_LINKS_BY_ID[reportId];
+    const base = REPORT_HUB_LINKS_BY_ID[reportId];
+    const config = settings.find(r => r.id === reportId);
+    const report = config ? {...base, title: config.name, description: config.description, href: `${base.href}?currency=${config.currency}`} : base;
     if (!report) return null;
 
     const isFavorite = favoriteSet.has(reportId);

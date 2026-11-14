@@ -1,3 +1,4 @@
+import { getBuiltinReportPresentation } from "@/lib/reports/builtin-report-presentation";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { VrReportView } from "@/features/reports/components/vr-report-view";
@@ -15,10 +16,11 @@ export default async function VrReportPage({ searchParams }: Props) {
   const query = parseVrReportSearchParams(params);
   const report = await getVrReport(query);
 
+  const presentation = await getBuiltinReportPresentation("vr");
   return (
     <FinanceSuiteShell
-      title="VR report"
-      description="Vendor rebate amounts by legal entity with monthly breakdown."
+      title={presentation?.name ?? "VR report"}
+      description={presentation?.description ?? "Vendor rebate amounts by legal entity with monthly breakdown."}
       backFallbackHref="/reports"
       backLabel="Reports"
     >

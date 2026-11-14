@@ -1,3 +1,4 @@
+import { getBuiltinReportPresentation } from "@/lib/reports/builtin-report-presentation";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { ClientProfitabilityView } from "@/features/reports/components/client-profitability-view";
@@ -15,10 +16,11 @@ export default async function ClientProfitabilityReportPage({ searchParams }: Pr
   const query = parseClientProfitabilitySearchParams(params);
   const report = await getClientProfitabilityReport(query);
 
+  const presentation = await getBuiltinReportPresentation("client-profitability");
   return (
     <FinanceSuiteShell
-      title="Profitability by client"
-      description="Gross profit and margin by legal entity. Compare up to three clients."
+      title={presentation?.name ?? "Profitability by client"}
+      description={presentation?.description ?? "Gross profit and margin by legal entity. Compare up to three clients."}
       backFallbackHref="/reports"
       backLabel="Reports"
     >

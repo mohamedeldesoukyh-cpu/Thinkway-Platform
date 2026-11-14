@@ -992,6 +992,24 @@ export type ClientRow = {
 export type Database = {
   public: {
     Tables: {
+      saved_report_templates: {
+        Row: { id: string; owner_id: string; name: string; configuration: Json; visibility: string; shared_with: string[]; created_at: string; updated_at: string };
+        Insert: { id: string; owner_id: string; name: string; configuration: Json; visibility?: string; shared_with?: string[]; created_at?: string; updated_at?: string };
+        Update: { name?: string; configuration?: Json; visibility?: string; shared_with?: string[]; updated_at?: string };
+        Relationships: [];
+      };
+      saved_report_favorites: {
+        Row: { user_id: string; report_id: string; favorite: boolean };
+        Insert: { user_id: string; report_id: string; favorite: boolean };
+        Update: { favorite?: boolean };
+        Relationships: [];
+      };
+      builtin_report_settings: {
+        Row: { id: string; name: string; description: string; currency: string; visibility: string; shared_with: string[]; updated_at: string };
+        Insert: { id: string; name: string; description: string; currency: string; visibility: string; shared_with: string[]; updated_at?: string };
+        Update: { name?: string; description?: string; currency?: string; visibility?: string; shared_with?: string[]; updated_at?: string };
+        Relationships: [];
+      };
       clients: {
         Row: ClientRow;
         Insert: {
@@ -3788,6 +3806,7 @@ export type Database = {
     };
     Views: Record<string, never>;
     Functions: {
+      is_admin: { Args: Record<string, never>; Returns: boolean };
       update_assignment_reporting_fx: {
         Args: { p_campaign_id: string; p_line_id: string; p_cost_override: string | null; p_revenue_override: string | null; p_expected_cost_override: string | null; p_expected_revenue_override: string | null; p_expected_currency: string; p_expected_cost_currency: string };
         Returns: number;

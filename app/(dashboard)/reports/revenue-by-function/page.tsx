@@ -1,3 +1,4 @@
+import { getBuiltinReportPresentation } from "@/lib/reports/builtin-report-presentation";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { RevenueByFunctionView } from "@/features/reports/components/revenue-by-function-view";
@@ -15,10 +16,11 @@ export default async function RevenueByFunctionReportPage({ searchParams }: Prop
   const query = parseRevenueByFunctionSearchParams(params);
   const report = await getRevenueByFunctionReport(query);
 
+  const presentation = await getBuiltinReportPresentation("revenue-by-function");
   return (
     <FinanceSuiteShell
-      title="Revenue by function"
-      description="Revenue and GP attributed to OPS and Sales teams by account manager."
+      title={presentation?.name ?? "Revenue by function"}
+      description={presentation?.description ?? "Revenue and GP attributed to OPS and Sales teams by account manager."}
       backFallbackHref="/reports"
       backLabel="Reports"
     >

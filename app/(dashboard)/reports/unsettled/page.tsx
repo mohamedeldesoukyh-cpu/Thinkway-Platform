@@ -1,3 +1,4 @@
+import { getBuiltinReportPresentation } from "@/lib/reports/builtin-report-presentation";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { UnsettledIndexView } from "@/features/reports/components/unsettled-index-view";
@@ -11,10 +12,11 @@ export default async function UnsettledReportPage({ searchParams }: Props) {
   const params = await searchParams;
   const data = await getUnsettledIndex(params);
 
+  const presentation = await getBuiltinReportPresentation("unsettled");
   return (
     <FinanceSuiteShell
-      title="Statement of Unsettled"
-      description="Browse legal entities with open AR invoices, or search to filter the list."
+      title={presentation?.name ?? "Statement of Unsettled"}
+      description={presentation?.description ?? "Browse legal entities with open AR invoices, or search to filter the list."}
       backFallbackHref="/reports"
       backLabel="Reports"
     >

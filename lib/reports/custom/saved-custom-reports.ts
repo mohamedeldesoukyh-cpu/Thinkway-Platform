@@ -10,7 +10,14 @@ export const savedCustomReportSchema = z.object({
   currency: z.enum(CUSTOM_CURRENCIES), includeVat: z.boolean(),
   filters: z.object({ clientId: recordSelection.optional(), brandId: recordSelection.optional(), campaignId: recordSelection.optional(), creatorId: recordSelection.optional(), recordCurrency: z.string().regex(/^[A-Z]{3}$/).optional() }),
 });
-export type SavedCustomReport = z.infer<typeof savedCustomReportSchema>;
+export const reportVisibilitySchema = z.enum(["private", "all", "users"]);
+export type SavedCustomReport = z.infer<typeof savedCustomReportSchema> & {
+  visibility?: z.infer<typeof reportVisibilitySchema>;
+  sharedWith?: string[];
+  ownerId?: string;
+  canEdit?: boolean;
+};
+export type CustomReportSelection = Pick<SavedCustomReport, "columns" | "currency" | "includeVat" | "filters">;
 export function readSavedCustomReports(value: unknown): SavedCustomReport[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap(item => { const parsed = savedCustomReportSchema.safeParse(item); return parsed.success ? [parsed.data] : []; }).slice(0, 30);

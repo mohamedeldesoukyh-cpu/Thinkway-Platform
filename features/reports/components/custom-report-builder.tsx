@@ -35,6 +35,7 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
   });
   const [includeVat, setIncludeVat] = useState(params.get("includeVat") === "1");
   const [search, setSearch] = useState("");
+  const [previewRequest, setPreviewRequest] = useState(0), [activeFavorite, setActiveFavorite] = useState(false);
   const [viewZoom, setViewZoom] = useState(() => [75, 85, 100].includes(Number(params.get("viewZoom"))) ? Number(params.get("viewZoom")) : 85);
   // Keep this open report in its URL, so refresh restores it without a permanent preset.
   useEffect(() => {
@@ -103,25 +104,25 @@ export function CustomReportBuilder({ report }: { report: CustomReport }) {
     const preview = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "p") {
         event.preventDefault();
-        if (!disabled && !document.querySelector('[role="dialog"]')) window.open(previewHref, "_blank", "noopener,noreferrer");
+        if (!pending && !document.querySelector('[role="dialog"]')) { if (activeFavorite && !disabled) window.open(previewHref, "_blank", "noopener,noreferrer"); else setPreviewRequest(n => n + 1); }
       }
     };
     window.addEventListener("keydown", preview);
     return () => window.removeEventListener("keydown", preview);
-  }, [disabled, previewHref]);
+  }, [disabled, pending, previewHref, activeFavorite]);
   const exportLink = (format: "html" | "pdf" | "xlsx", mobile = false) => {
     const title = format === "html" ? "Preview report" : format === "pdf" ? "Download PDF" : "Excel";
     const icon = format === "html" ? <ExternalLink /> : format === "pdf" ? <FileText /> : <FileSpreadsheet />;
     const cls = `cr-button ${format === "html" ? "primary" : ""} ${mobile ? "" : format !== "html" ? "cr-desktop-export" : ""}`;
-    return disabled ? <button className={cls} disabled title={pending ? "Updating report options…" : "Choose at least one column."}>{icon}{title}</button> : <a className={cls} title={format === "html" ? "Preview report (Ctrl+P)" : title} aria-keyshortcuts={format === "html" ? "Control+P Meta+P" : undefined} href={exportUrl(format)} target="_blank" rel="noopener noreferrer" onClick={() => { if (downloadMenu.current) downloadMenu.current.open = false; }}>{icon}{title}</a>;
+    return (format === "html" ? pending : disabled) ? <button className={cls} disabled title={pending ? "Updating report options…" : "Choose at least one column."}>{icon}{title}</button> : <a className={cls} title={format === "html" ? "Preview report (Ctrl+P)" : title} aria-keyshortcuts={format === "html" ? "Control+P Meta+P" : undefined} href={exportUrl(format)} target="_blank" rel="noopener noreferrer" onClick={event => { if (format === "html" && !activeFavorite) { event.preventDefault(); setPreviewRequest(n => n + 1); } if (downloadMenu.current) downloadMenu.current.open = false; }}>{icon}{title}</a>;
   };
   const hasFilters = [...filterKeys, "recordCurrency"].some(key => params.get(key));
   return <div className="cr-builder" aria-busy={pending} style={{ "--cr-scale": viewZoom / 100 } as CSSProperties}>
-    <SavedCustomReports compact viewControls={<label className="cr-view-zoom">View <select aria-label="Builder zoom" value={viewZoom} onChange={e => setViewZoom(Number(e.target.value))}>{[75, 85, 100].map(value => <option key={value} value={value}>{value}%</option>)}</select></label>} pending={pending} selection={{ columns: selected, currency: report.currency, includeVat, filters: Object.fromEntries([...filterKeys, "recordCurrency"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])) }} onLoad={saved => { setSelected(saved.columns as CustomColumn[]); setIncludeVat(saved.includeVat); setSearch(""); startTransition(() => router.replace(savedCustomReportUrl(saved), { scroll: false })); }} renderActions={saveButton => <footer className="cr-actionbar" aria-label="Report actions">
+    <SavedCustomReports compact activeId={params.get("savedReport")} previewRequest={previewRequest} previewHref={previewHref} onActiveFavoriteChange={setActiveFavorite} onSaved={saved => { startTransition(() => router.replace(savedCustomReportUrl(saved), { scroll: false })); }} viewControls={<label className="cr-view-zoom">View <select aria-label="Builder zoom" value={viewZoom} onChange={e => setViewZoom(Number(e.target.value))}>{[75, 85, 100].map(value => <option key={value} value={value}>{value}%</option>)}</select></label>} pending={pending} selection={{ columns: selected, currency: report.currency, includeVat, filters: Object.fromEntries([...filterKeys, "recordCurrency"].flatMap(key => params.get(key) ? [[key, params.get(key)!]] : [])) }} onLoad={saved => { setSelected(saved.columns as CustomColumn[]); setIncludeVat(saved.includeVat); setSearch(""); startTransition(() => router.replace(savedCustomReportUrl(saved), { scroll: false })); }} renderActions={saveButton => <footer className="cr-actionbar" aria-label="Report actions">
       <div className="cr-action-summary"><strong>Your formatted report</strong><span>{pending ? "Updating options…" : columns.length ? `${columns.length} ${columns.length === 1 ? "column" : "columns"} · ${report.currency} · VAT ${includeVat ? "included" : "off"} · ${report.filterLabels.join(" · ") || "All records"}` : "Add at least one column to preview or export."}</span></div>
       <div className="cr-actions">{saveButton}{exportLink("xlsx")}{exportLink("pdf")}<details ref={downloadMenu} className="cr-mobile-download" onKeyDown={e => { if (e.key === "Escape") { e.currentTarget.open = false; e.currentTarget.querySelector("summary")?.focus(); } }}><summary aria-label="Download report"><Download /><ArrowDown /></summary><div>{exportLink("pdf", true)}{exportLink("xlsx", true)}</div></details>{exportLink("html")}</div>
     </footer>} />
-    {params.get("savedReport") && <div className="cr-customizing"><SlidersHorizontal /><span>Customizing <strong>{params.get("reportName") || "saved report"}</strong> · changes apply to this session. Save creates a new report.</span><button className="cr-button" onClick={() => { const next = new URLSearchParams(params.toString()); next.delete("savedReport"); next.delete("reportName"); navigate(next); }}>Start new report</button></div>}
+    {params.get("savedReport") && <div className="cr-customizing"><SlidersHorizontal /><span>Customizing <strong>{params.get("reportName") || "saved report"}</strong> · use Save changes to update this report, or Save a copy to keep another version.</span><button className="cr-button" onClick={() => { const next = new URLSearchParams(params.toString()); next.delete("savedReport"); next.delete("reportName"); navigate(next); }}>Start new report</button></div>}
     <section className="cr-scope" aria-label="Report filters and display"><div className="cr-filters"><div className="cr-section-heading"><h2>Filter records</h2><span>{pending ? "Updating options…" : "All default to All"}</span>{hasFilters && <button className="cr-text-button" disabled={pending} onClick={clearFilters}>Clear filters</button>}</div>
       <div className="cr-filter-grid">{filterKeys.map(key => {
         const value = params.get(key) || "", valueLabel = report.options[key].filter(o => value.split(",").includes(o.value)).map(o => o.label).join(", ") || "All";

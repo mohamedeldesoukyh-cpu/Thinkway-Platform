@@ -1,3 +1,4 @@
+import { builtinReportIdForPath, canSeeBuiltinReport, type BuiltinReportSettings } from "@/lib/reports/builtin-report-settings";
 import { createServerClient } from "@supabase/ssr";
 import { type NextRequest, NextResponse } from "next/server";
 
@@ -192,5 +193,21 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
+  const reportId = builtinReportIdForPath(pathname);
+  if (user && reportId) {
+    const [settings, role] = await Promise.all([
+      supabase.from("builtin_report_settings").select("*").eq("id", reportId).maybeSingle(),
+      supabase.rpc("is_admin"),
+    ]);
+    if (settings.error || role.error || (settings.data && !canSeeBuiltinReport(settings.data as BuiltinReportSettings, user.id, role.data === true))) {
+      const denied = NextResponse.json({ error: "This report is not available to your account." }, { status: 403 });
+      copyResponseCookies(supabaseResponse, denied);
+      return denied;
+    }
+    if (settings.data && !isApiPath(pathname) && !serverAction && !request.nextUrl.searchParams.has("currency")) {
+      const target = request.nextUrl.clone(); target.searchParams.set("currency", settings.data.currency);
+      const redirect = NextResponse.redirect(target); copyResponseCookies(supabaseResponse, redirect); return redirect;
+    }
+  }
   return supabaseResponse;
 }

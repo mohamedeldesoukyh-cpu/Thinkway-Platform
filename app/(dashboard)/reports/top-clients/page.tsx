@@ -1,3 +1,4 @@
+import { getBuiltinReportPresentation } from "@/lib/reports/builtin-report-presentation";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { TopClientsView } from "@/features/reports/components/top-clients-view";
@@ -15,10 +16,11 @@ export default async function TopClientsReportPage({ searchParams }: Props) {
   const query = parseTopClientsSearchParams(params);
   const report = await getTopClientsReport(query);
 
+  const presentation = await getBuiltinReportPresentation("top-clients");
   return (
     <FinanceSuiteShell
-      title="Top clients"
-      description="Rank legal entities by revenue or gross profit for a period."
+      title={presentation?.name ?? "Top clients"}
+      description={presentation?.description ?? "Rank legal entities by revenue or gross profit for a period."}
       backFallbackHref="/reports"
       backLabel="Reports"
     >

@@ -1,3 +1,4 @@
+import { getBuiltinReportPresentation } from "@/lib/reports/builtin-report-presentation";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { DailyReportView } from "@/features/reports/components/daily-report-view";
@@ -15,10 +16,11 @@ export default async function DailyReportPage({ searchParams }: Props) {
   const query = parseDailyReportSearchParams(params);
   const report = await getDailyReport(query);
 
+  const presentation = await getBuiltinReportPresentation("daily");
   return (
     <FinanceSuiteShell
-      title="Daily report"
-      description="Day-by-day revenue and gross profit with monthly summaries."
+      title={presentation?.name ?? "Daily report"}
+      description={presentation?.description ?? "Day-by-day revenue and gross profit with monthly summaries."}
       backFallbackHref="/reports"
       backLabel="Reports"
     >

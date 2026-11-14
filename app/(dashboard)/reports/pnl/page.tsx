@@ -1,3 +1,4 @@
+import { getBuiltinReportPresentation } from "@/lib/reports/builtin-report-presentation";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { PnlReportView } from "@/features/reports/components/pnl-report-view";
@@ -15,10 +16,11 @@ export default async function PnlReportPage({ searchParams }: Props) {
   const query = parsePnLReportSearchParams(params);
   const report = await getPnLReport(query);
 
+  const presentation = await getBuiltinReportPresentation("pnl");
   return (
     <FinanceSuiteShell
-      title="P&L report"
-      description="Year-over-year revenue, COGS, and gross profit with client drill-down."
+      title={presentation?.name ?? "P&L report"}
+      description={presentation?.description ?? "Year-over-year revenue, COGS, and gross profit with client drill-down."}
       backFallbackHref="/reports"
       backLabel="Reports"
     >

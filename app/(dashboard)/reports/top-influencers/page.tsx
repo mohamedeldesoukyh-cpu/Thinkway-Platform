@@ -1,3 +1,4 @@
+import { getBuiltinReportPresentation } from "@/lib/reports/builtin-report-presentation";
 import { FinanceSuiteShell } from "@/components/finance/suite/finance-suite-shell";
 import { PlatformErrorBoundary } from "@/components/platform/error-boundary";
 import { TopInfluencersView } from "@/features/reports/components/top-influencers-view";
@@ -15,10 +16,11 @@ export default async function TopInfluencersReportPage({ searchParams }: Props) 
   const query = parseTopInfluencersSearchParams(params);
   const report = await getTopInfluencersReport(query);
 
+  const presentation = await getBuiltinReportPresentation("top-influencers");
   return (
     <FinanceSuiteShell
-      title="Top influencers"
-      description="Rank vendors by spending, revenue, or gross profit for a period."
+      title={presentation?.name ?? "Top influencers"}
+      description={presentation?.description ?? "Rank vendors by spending, revenue, or gross profit for a period."}
       backFallbackHref="/reports"
       backLabel="Reports"
     >
