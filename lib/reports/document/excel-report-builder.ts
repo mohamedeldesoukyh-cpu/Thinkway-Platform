@@ -36,6 +36,7 @@ export type DataRowKind = "data" | "emphasis" | "total";
 export type StyledDataRow = {
   values: (string | number | null)[];
   kind?: DataRowKind;
+  richText?: Record<number, { text: string; secondary?: boolean }[]>;
 };
 
 /** Merge region relative to the column-header section (0-based). */
@@ -48,6 +49,8 @@ export type HeaderMerge = {
 
 export type StyledSheetConfig = {
   name: string;
+  reportLayout?: boolean;
+  columnWidths?: number[];
   header: ReportHeaderBlock;
   columnHeaders: (string | number | null)[][];
   headerMerges?: HeaderMerge[];
@@ -66,6 +69,7 @@ function formatGeneratedAt(date: Date): string {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+    timeZone: "Africa/Cairo",
   })}`;
 }
 
@@ -273,7 +277,7 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
       }
     }
 
-    excelRow.height = 22;
+    excelRow.height = sheet.reportLayout ? 32 : 22;
   }
 
   if (sheet.headerMerges) {
@@ -310,6 +314,11 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
       }
 
       applyDataCellStyle(cell, format, kind);
+      if (sheet.reportLayout) {
+        cell.border = kind === "total" ? { top: { style: "thin", color: { argb: COLORS.navy } } } : {};
+        cell.alignment = { ...cell.alignment, vertical: "top" };
+      }
+      if (dataRow.richText?.[colIndex]) cell.value = { richText: dataRow.richText[colIndex].map(run => ({ text: run.text, font: { name: "Calibri", size: run.secondary ? 9 : 10, color: { argb: run.secondary ? COLORS.muted : COLORS.ink } } })) };
       if (sheet.totalColumns?.includes(colIndex)) {
         cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF0F9FF" } };
         cell.font = { ...cell.font, bold: true, color: { argb: "FF082F49" } };
@@ -325,7 +334,7 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
   const colWidths: number[] = Array.from({ length: totalCols }, () => 10);
 
   const scanRows = [
-    ...titleRows.map((value) => [value]),
+    ...(sheet.reportLayout ? [] : titleRows.map((value) => [value])),
     ...sheet.columnHeaders,
     ...sheet.rows.map((row) => row.values),
   ];
@@ -341,16 +350,30 @@ function populateSheet(worksheet: Worksheet, sheet: StyledSheetConfig): void {
   }
 
   for (let colIndex = 0; colIndex < totalCols; colIndex += 1) {
-    worksheet.getColumn(colIndex + 1).width = colWidths[colIndex];
+    worksheet.getColumn(colIndex + 1).width = sheet.columnWidths?.[colIndex] ?? colWidths[colIndex];
   }
 
+  if (sheet.reportLayout) {
+    sheet.rows.forEach((row, index) => {
+      const lines = Math.max(1, ...row.values.map((value, col) => {
+        if (typeof value !== "string") return 1;
+        const capacity = Math.max(4, (worksheet.getColumn(col + 1).width ?? 12) - 3);
+        return value.split(/\r?\n/).reduce((sum, line) => sum + Math.max(1, Math.ceil(Array.from(line).length * 1.15 / capacity)), 0);
+      }));
+      worksheet.getRow(dataStartRow + index + 1).height = Math.min(409, Math.max(24, lines * 15 + 9));
+    });
+    worksheet.pageSetup = { orientation: "landscape", paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0, showGridLines: false, margins: { left: .25, right: .25, top: .35, bottom: .35, header: .15, footer: .15 } };
+    worksheet.pageSetup.printArea = `A1:${worksheet.getColumn(totalCols).letter}${worksheet.rowCount}`;
+    worksheet.pageSetup.printTitlesRow = `${headerStartRow + 1}:${dataStartRow}`;
+  }
   const freezeRow = dataStartRow;
   worksheet.views = [
     {
       state: "frozen",
       ySplit: freezeRow,
       activeCell: `A${freezeRow + 1}`,
-      showGridLines: true,
+      showGridLines: !sheet.reportLayout,
+      zoomScale: sheet.reportLayout ? 85 : 100,
     },
   ];
 }

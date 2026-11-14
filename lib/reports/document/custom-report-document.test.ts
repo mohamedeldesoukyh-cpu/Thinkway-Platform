@@ -45,3 +45,21 @@ test("creator names and handles are escaped separately and internal explanations
   assert.match(html, /<h1>My Report<\/h1>/);
   assert.doesNotMatch(html, /Actual &amp; accrued|Filters:|One row per creator|Actual = went-live/);
 });
+
+test("Excel report hides gridlines, fits multiline identities and keeps compact reference widths", async () => {
+  const sample = { ...report, rows: [{ ...report.rows[0], creatorIdentities: [{ name: "A long creator display name that should wrap inside its column", username: "@creator_username" }] }] };
+  const book = new Workbook();
+  await book.xlsx.load(await buildCustomReportExcelBuffer(sample, ["campaignNumber", "creator", "totalRevenue"]));
+  const sheet = book.worksheets[0];
+  assert.equal(sheet.views[0].showGridLines, false);
+  assert.notEqual(sheet.pageSetup.showGridLines, true);
+  assert.equal(sheet.pageSetup.orientation, "landscape");
+  assert.equal(sheet.getColumn(1).width, 16);
+  let rowIndex = 0;
+  sheet.eachRow((row, index) => { if (row.getCell(2).text.includes("@creator_username")) rowIndex = index; });
+  assert.ok(sheet.getRow(rowIndex).height >= 54);
+  const rich = sheet.getCell(rowIndex, 2).value as { richText: {font: {size: number}; text: string}[] };
+  assert.equal(rich.richText[1].font.size, 9);
+  assert.equal(sheet.getCell(rowIndex, 3).value, 1000);
+  assert.ok(!sheet.getCell(rowIndex, 2).border?.bottom);
+});

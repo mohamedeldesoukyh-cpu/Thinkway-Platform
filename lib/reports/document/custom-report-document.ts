@@ -1,3 +1,4 @@
+import { reportCreatorName } from "./report-creator-name";
 import { CUSTOM_COLUMNS, formatCustomCell, type CustomColumn, type CustomReport, type CustomRow } from "../custom/custom-report";
 import { statementCss, statementLogo } from "./statement-assets";
 import { buildStyledExcelBuffer } from "./thinkway-report-excel";
@@ -50,10 +51,12 @@ export async function buildCustomReportExcelBuffer(report: CustomReport, keys: C
   const firstText = columns.findIndex(c => !c.numeric);
   const values = (row: CustomRow, total = false) => columns.map((c, i) => {
     const value = row.cells[c.key];
-    if (!total && c.key === "creator" && row.creatorIdentities?.length) return row.creatorIdentities.map(c => [c.name, c.username].filter(Boolean).join("\n")).join("\n");
+    if (!total && c.key === "creator" && row.creatorIdentities?.length) return row.creatorIdentities.map(c => [reportCreatorName(c.name, c.username), c.username].filter(Boolean).join("\n")).join("\n");
     if (!c.numeric) return total ? i === firstText ? "Totals" : "" : String(value ?? "");
     if (report.currency !== "Foreign" && value && typeof value === "object") return value[report.currency] ?? null;
     return formatCustomCell(value);
   });
-  return buildStyledExcelBuffer([{ name: "Custom report", header: { title: "Thinkway — " + reportName, generatedAt: new Date(), meta: [{ label: "Currency", value: report.currency }, { label: "Went live as of", value: report.asOf }, { label: "Campaigns", value: String(report.campaignCount) }], notes: notes(report, keys) }, columnHeaders: [columns.map(c => c.label)], columnFormats: columns.map(c => c.numeric && report.currency !== "Foreign" ? "money" : "text"), accruedColumns: columns.flatMap((c, i) => c.accrued ? [i] : []), rows: [...report.rows.map(row => ({ values: values(row) })), { kind: "total", values: values(report.totals, true) }] }]);
+  const creatorIndex = columns.findIndex(c => c.key === "creator");
+  const widths = columns.map(c => c.numeric ? 18 : c.key === "creator" ? 34 : ["campaign", "deliverables", "client"].includes(c.key) ? 28 : c.key === "campaignNumber" ? 16 : 18);
+  return buildStyledExcelBuffer([{ name: "Custom report", reportLayout: true, columnWidths: widths, header: { title: "Thinkway — " + reportName, generatedAt: new Date(), meta: [{ label: "Currency", value: report.currency }, { label: "Went live as of", value: report.asOf }, { label: "Campaigns", value: String(report.campaignCount) }], notes: notes(report, keys) }, columnHeaders: [columns.map(c => c.label)], columnFormats: columns.map(c => c.numeric && report.currency !== "Foreign" ? "money" : "text"), accruedColumns: columns.flatMap((c, i) => c.accrued ? [i] : []), rows: [...report.rows.map(row => ({ values: values(row), richText: creatorIndex >= 0 && row.creatorIdentities?.length ? { [creatorIndex]: row.creatorIdentities.flatMap((creator, index) => [{ text: (index ? "\n" : "") + reportCreatorName(creator.name, creator.username) }, ...(creator.username ? [{ text: "\n" + creator.username, secondary: true }] : [])]) } : undefined })), { kind: "total", values: values(report.totals, true) }] }]);
 }
