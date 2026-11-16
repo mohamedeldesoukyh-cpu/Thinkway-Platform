@@ -2,7 +2,8 @@
 
 import { paymentCurrencyRate } from "./payment-plan";
 import { Fragment, useState, type ReactNode } from 'react';
-import { Pencil } from 'lucide-react';
+import { Pencil, Layers3, Clock3, CircleCheck, ArrowUpRight } from 'lucide-react';
+import { VendorIoLink } from './vendor-io-link';
 import { COMMERCIAL_CURRENCIES } from '@/lib/commercial/fx-aggregation';
 import { defaultPaymentDraft as initialDraft, changedPaymentPlans } from './payment-plan';
 import { paymentAllocation, matchesPaymentFilter } from './allocations';
@@ -41,7 +42,7 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
   return <section className="cp-panel" aria-label="Creator payment register">
     <div className="cp-panel-head">
       <h2>Creator payments</h2><span>{new Set(visible.map(row => row.creatorId)).size} creators{!['advance','paid'].includes(filter)&&<> · {ready.length} ready to export</>}</span>
-      <div className="cp-head-actions"><div className="cp-segments" aria-label="Payment status filter">{[['all','All'],['unpaid','Unpaid'],['paid','Paid'],['advance','Advance']].map(([value,label]) => <button key={value} aria-pressed={filter === value} onClick={() => onFilterChange(value)}>{label}</button>)}</div>
+      <div className="cp-head-actions"><div className="cp-segments cp-status-filters" role="group" aria-label="Payment status filter">{[{value:'all',label:'All',icon:Layers3},{value:'unpaid',label:'Unpaid',icon:Clock3},{value:'paid',label:'Paid',icon:CircleCheck},{value:'advance',label:'Advance',icon:ArrowUpRight}].map(({value,label,icon:Icon}) => <button key={value} aria-pressed={filter === value} onClick={() => onFilterChange(value)}><Icon size={14} aria-hidden="true"/>{label}</button>)}</div>
         {!['advance','paid'].includes(filter)&&<><button className="cp-button" onClick={onExport}>Export</button><button className="cp-button primary" disabled={!canReview} onClick={onReview}>Review selected</button></>}</div>
     </div>
     <div className="cp-register-filters">{filters}</div>
@@ -64,7 +65,7 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
             <tr className={`${missing ? 'bank-warning' : ''} ${selected.has(row.assignmentId) ? 'selected' : ''}`}>
               <td><input type="checkbox" aria-label={`Select ${row.creator}`} disabled={!canWrite || row.payable === false} checked={selected.has(row.assignmentId)} onChange={e => onSelect(row.assignmentId, e.target.checked)}/></td>
               <td><div className="cp-creator"><span className="cp-avatar" aria-hidden>{row.creator.replace(/^@/,'').split(/\s+/).slice(0,2).map(word => word[0]).join('').toUpperCase()}</span><div><strong>{row.creator}</strong>{row.username && <small>@{row.username.replace(/^@/,'')}</small>}{showCampaign && <small>{row.campaign}</small>}</div></div><button type="button" aria-haspopup="dialog" title={`Edit bank details for ${row.creator}`} className={`cp-bank ${missing ? 'warning' : 'ready'}`} onClick={() => onBank(row)}><Pencil size={13} aria-hidden="true"/>{missing ? 'Complete bank details' : row.bank.registered ? 'Bank details complete ✓' : 'Confirm bank registration'}</button></td>
-              <td className="cp-code">{row.ioNumber}<small>Creator Inv# {row.creatorInvoice?.number||'Not added'}</small></td>
+              <td className="cp-code"><VendorIoLink id={row.ioId} number={row.ioNumber}/><small>Creator Inv# {row.creatorInvoice?.number||'Not added'}</small></td>
               <td><div className="cp-status"><span className={`cp-pill ${badge.className}`}>{badge.label}</span><span className={`cp-pill ${status.className}`}>{status.label}</span></div><button className="cp-detail-toggle" aria-expanded={open} aria-controls={`payment-details-${row.assignmentId}`} onClick={() => setExpanded(current => { const next = new Set(current); if (open) next.delete(row.assignmentId); else next.add(row.assignmentId); return next; })}>{open ? 'Hide details' : 'Balance details'}</button></td>
               <td className="numeric" title="Agreed fee from the campaign agreement — read-only"><b>{number(row.fee)}</b><small>{row.currency} · agreed</small></td>
               <td><span className="numeric" title="Cost VAT from Assignments">{row.vat}%</span><small className="numeric">{amount(calculation.vatAmount,row.currency)}</small></td>

@@ -413,3 +413,62 @@
   .cp-workflow-tab strong { font-size:11px; }
   .cp-workflow-tab small { display:none; }
 }
+
+/* Consistent, readable payment tables with aligned financial figures. */
+.thinkway-creator-payments .cp-table,
+.thinkway-creator-payments .cp-table td,
+.thinkway-creator-payments .cp-table td.numeric,
+.thinkway-creator-payments .cp-table .cp-code,
+.thinkway-creator-payments .cp-mini-table td {
+  font-family:var(--font-geist-sans), "Segoe UI", Arial, sans-serif;
+  font-style:normal;
+  font-variant-numeric:tabular-nums;
+}
+.thinkway-creator-payments .cp-table td { font-size:13px; line-height:1.5; }
+.thinkway-creator-payments .cp-table th { font-size:10px; letter-spacing:.35px; line-height:1.4; }
+.thinkway-creator-payments .cp-table td.numeric { font-size:13px; font-weight:500; }
+.thinkway-creator-payments .cp-ledger-table .cp-code { font-size:13px; }
+.thinkway-creator-payments .cp-ledger-table td { height:50px; padding:10px 14px; }
+.thinkway-creator-payments .cp-creator strong { font-size:13px; font-weight:600; line-height:1.5; }
+.cp-vendor-io-link { display:inline-flex; align-items:center; gap:5px; color:#0057ff; font-family:inherit; font-weight:500; text-decoration:none; overflow-wrap:anywhere; }
+.cp-vendor-io-link svg { flex-shrink:0; }
+.cp-vendor-io-link:hover { text-decoration:underline; }
+.cp-vendor-io-link:focus-visible { outline:2px solid #0057ff; outline-offset:3px; border-radius:3px; }
+.thinkway-creator-payments .cp-segments.cp-status-filters { gap:3px; padding:3px; border-radius:9px; flex-wrap:wrap; }
+.thinkway-creator-payments .cp-status-filters button { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:30px; padding:5px 9px; font-size:11px; border-radius:6px; }
+.thinkway-creator-payments .cp-status-filters button[aria-pressed="true"] { background:#0057ff; color:#fff; box-shadow:0 1px 3px rgb(0 87 255 / 16%); }
+.thinkway-creator-payments .cp-status-filters button:focus-visible { outline:2px solid #0057ff; outline-offset:2px; }
+
+/* Payment record drawer: identity, amount, linked document, then details. */
+body .cp-payment-detail-drawer.cp-payment-record-drawer {
+  width:min(560px,100vw)!important;
+  max-width:560px!important;
+  padding:24px;
+  gap:20px;
+  background:#f8fafc;
+  color:#172033;
+  font-family:var(--font-geist-sans),"Segoe UI",Arial,sans-serif;
+}
+.cp-record-heading { display:flex; align-items:center; gap:12px; padding-right:26px; }
+.cp-record-icon { display:grid; place-items:center; width:42px; height:42px; border-radius:12px; background:#eaf1ff; color:#0057ff; flex-shrink:0; }
+.cp-record-heading p { margin:0 0 2px; color:#64748b; font-size:11px; }
+.cp-record-heading h2 { padding:0; margin:0; font-size:19px; font-weight:650; }
+.cp-record-amount { display:grid; grid-template-columns:1fr auto; gap:8px; padding:20px; border-radius:14px; background:#07134d; color:white; }
+.cp-record-amount > span:first-child { grid-column:1/-1; font-size:11px; color:#c4d3f5; }
+.cp-record-amount > strong { font-size:25px; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere; }
+.cp-record-status { align-self:center; padding:4px 9px; border-radius:20px; background:#eaf1ff; color:#254276; font-size:11px; font-weight:600; }
+.cp-record-status.is-paid { background:#dcfce7; color:#166534; }
+.cp-record-creator,.cp-record-facts { border:1px solid #e2e8f0; background:#fff; border-radius:12px; padding:16px; }
+.cp-record-creator h3,.cp-record-facts h3 { margin:0 0 12px; padding:0; border:0; font-size:11px; font-weight:600; color:#64748b; }
+.cp-record-creator > strong { display:block; text-align:start; font-size:15px; line-height:1.5; }
+.cp-record-creator > small { display:block; color:#64748b; margin-top:3px; }
+.cp-record-creator > div { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:16px; padding-top:12px; border-top:1px solid #eef2f7; font-size:12px; }
+.cp-record-creator > div > span { color:#64748b; }
+.cp-record-facts dl > div { grid-template-columns:minmax(100px,1fr) minmax(0,1.4fr); padding:12px 0; }
+.cp-record-facts dl > div:last-child { border-bottom:0; padding-bottom:0; }
+.cp-record-facts dd { font-size:13px; font-variant-numeric:tabular-nums; }
+.cp-payment-record-drawer .cp-drawer-actions { position:sticky; bottom:-24px; margin-top:auto; padding:16px 0; background:#f8fafc; }
+@media(max-width:480px) {
+  body .cp-payment-detail-drawer.cp-payment-record-drawer { padding:18px; }
+  .cp-record-amount > strong { font-size:21px; }
+}

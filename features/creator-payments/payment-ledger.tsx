@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from 'react';
-import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { ReceiptText } from 'lucide-react';
+import { VendorIoLink } from './vendor-io-link';
 import { PaymentRecordEditor } from './payment-record-editor';
 import type { PaymentBatch, PaymentEntry, PaymentRow } from './model';
 
@@ -40,7 +42,7 @@ export function PaymentLedger({ rows, batches, canWrite, onSaved, onExport }: {
             <thead><tr>{['Payment #','Against Vendor IO','Creator','Amount','Status','Paid date'].map(label => <th key={label}>{label}</th>)}</tr></thead>
             <tbody>{[...entries.values()].map(({ row, entry }) => <tr key={entry.id}>
                 <td className="cp-code"><button className="cp-ledger-open" aria-label={`Open ${paymentNumber(entry)} for ${row.creator}`} onClick={() => setDetail({ row, entry })}>{paymentNumber(entry)}</button></td>
-                <td className="cp-code">{row.ioNumber}</td>
+                <td className="cp-code"><VendorIoLink id={row.ioId} number={row.ioNumber}/></td>
                 <td><div className="cp-creator"><span className="cp-avatar" aria-hidden>{row.creator.split(/\s+/).slice(0,2).map(word => word[0]).join('').toUpperCase()}</span><div><strong>{row.creator}</strong></div></div></td>
                 <td className="numeric">{amount(entry)}</td>
                 <td><span className={`cp-pill ${!entry.cleared_at && entry.status === 'paid' ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600'}`}>{status(entry)}</span></td>
@@ -48,9 +50,12 @@ export function PaymentLedger({ rows, batches, canWrite, onSaved, onExport }: {
             </tr>)}{!entries.size && <tr><td colSpan={6} className="cp-empty">No payment records yet. Use Record payment for payments already made, or Payment planning to prepare a bank export.</td></tr>}</tbody>
         </table></div>
         <p className="cp-note">Recorded payments and bank export results. Pending exports remain pending until you confirm the bank result. Clearing a record does not reverse a bank transfer.</p>
-        <Dialog open={!!detail} onOpenChange={open => { if (!open) setDetail(null); }}><DialogContent className="cp-payment-detail-drawer left-auto right-0 top-0 translate-x-0 translate-y-0"><DialogTitle>Creator payment · {detail ? paymentNumber(detail.entry) : ''}</DialogTitle>
-            {detail && <><p className="cp-drawer-sub">{detail.row.creator} · {status(detail.entry)}</p><section className="cp-payment-detail-section"><h3>Payment</h3><dl>{[
-                ['Payment number',paymentNumber(detail.entry)],['Against Vendor IO',detail.row.ioNumber],['Creator',detail.row.creator],['Amount',amount(detail.entry)],['Status',status(detail.entry)],['Paid date',paidDate(detail.entry)],['Reference',detail.entry.bank_reference || '—'],['Original amount',`${detail.entry.original_currency} ${Number(detail.entry.original_amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`]
+        <Dialog open={!!detail} onOpenChange={open => { if (!open) setDetail(null); }}><DialogContent className="cp-payment-detail-drawer cp-payment-record-drawer left-auto right-0 top-0 translate-x-0 translate-y-0">
+            <header className="cp-record-heading"><span className="cp-record-icon"><ReceiptText size={22} aria-hidden="true"/></span><div><DialogDescription>Creator payment</DialogDescription><DialogTitle>{detail ? paymentNumber(detail.entry) : 'Payment details'}</DialogTitle></div></header>
+            {detail && <><div className="cp-record-amount"><span>Payment amount</span><strong>{amount(detail.entry)}</strong><span className={`cp-record-status ${!detail.entry.cleared_at && detail.entry.status === 'paid' ? 'is-paid' : ''}`}>{status(detail.entry)}</span></div>
+            <section className="cp-record-creator"><h3>Creator</h3><strong dir="auto">{detail.row.creator}</strong>{detail.row.username&&<small>@{detail.row.username.replace(/^@/,'')}</small>}<div><span>Against Vendor IO</span><VendorIoLink id={detail.row.ioId} number={detail.row.ioNumber}/></div></section>
+            <section className="cp-payment-detail-section cp-record-facts"><h3>Payment details</h3><dl>{[
+                ['Paid date',paidDate(detail.entry)],['Reference',detail.entry.bank_reference || 'Not provided'],['Original amount',`${detail.entry.original_currency} ${Number(detail.entry.original_amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`]
             ].map(([label,value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section>
             <div className="cp-drawer-actions"><button className="cp-button" onClick={() => setDetail(null)}>Close</button>
                 {canWrite && !detail.entry.cleared_at && detail.entry.status === 'paid' && <><button className="cp-button" onClick={() => { setEditor({ row: detail.row, payment: detail.entry, clear: true }); setDetail(null); }}>Clear payment</button><button className="cp-button primary" onClick={() => { setEditor({ row: detail.row, payment: detail.entry }); setDetail(null); }}>Edit payment</button></>}
