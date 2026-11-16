@@ -20,7 +20,8 @@ export async function getVendorIoShareLink(id: string): Promise<{ url?: string; 
     .eq("event_type", "vendor_io_sent").eq("delivery_status", "sent")
     .order("sent_at", { ascending: false, nullsFirst: false }).limit(50);
   if (noticesError) return { message: "Could not load the sent link. Please try again." };
-  const token = currentVendorSigningToken(io, (notices ?? []).map(n => n.payload));
+  const rows = (notices ?? []) as Array<{ payload: unknown }>;
+  const token = currentVendorSigningToken(io, rows.map(n => n.payload));
   if (!token) return { message: "No active emailed signing link. Send or resend this IO first. Approved, expired or superseded links cannot be shared for signing." };
   // Use the same active credential as the email without exposing old deployment hosts.
   return { url: buildIoEmailLink("vendor", token) };
