@@ -12,9 +12,12 @@ export async function getVendorIoShareLink(id: string): Promise<{ url?: string; 
   const auth = await requirePermission(db, "vendor_ios.write");
   if ("error" in auth) return { message: auth.error };
   const { data: io, error } = await db.from("vendor_ios")
-    .select("status,is_superseded,approval_token_hash,approval_token_expires_at")
+    .select("status,is_superseded,approval_token_hash,approval_token_expires_at,terms_html")
     .eq("id", id).maybeSingle();
   if (error || !io) return { message: "This IO is not available." };
+  if (!(io as { terms_html: string | null }).terms_html?.trim()) {
+    return { message: "The signing document is missing, so this link cannot be shared. Ask your administrator to review the IO before resending. No payment changes are needed to copy a valid link." };
+  }
   const { data: notices, error: noticesError } = await db.from("io_notifications")
     .select("payload").eq("io_type", "vendor").eq("io_id", id)
     .eq("event_type", "vendor_io_sent").eq("delivery_status", "sent")

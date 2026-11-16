@@ -1014,6 +1014,18 @@ export async function sendVendorIoAction(
     .maybeSingle();
   const senderName = (profile as { full_name?: string | null } | null)?.full_name ?? null;
 
+  // Persist the exact document before creating a link or sending an email.
+  // Paid/signed IO guards may reject this update; never email an unusable link.
+  if (sendByEmail) {
+    const { data: savedDocument, error: documentError } = await supabase
+      .from("vendor_ios")
+      .update({ terms_html: sentDocumentHtml } as never)
+      .eq("id", id).select("id").maybeSingle();
+    if (documentError || !savedDocument) {
+      return { ok: false, message: "The signing document could not be saved. Nothing was sent. This IO may be locked by a recorded payment or signature; contact your administrator to review the document." };
+    }
+  }
+
   const { data, error: rpcError } = await (supabase as any).rpc("send_vendor_io", {
     p_vendor_io_id: id,
     p_actor_id: user.id,
@@ -1140,7 +1152,6 @@ export async function sendVendorIoAction(
   await supabase
     .from("vendor_ios")
     .update({
-      ...(emailResult.ok ? { terms_html: sentDocumentHtml } : {}),
       delivery_method: "email",
       delivery_status: vendorDeliveryStatus,
       delivery_error: emailResult.ok ? null : emailResult.error,
