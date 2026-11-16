@@ -329,7 +329,10 @@ export function buildIoEmailLink(
   options?: { email?: string | null }
 ): string {
   const base = resolveIoPublicAppOrigin();
-  const params = new URLSearchParams({ token });
+  // Vercel's first-visit authentication redirect also uses `token`.
+  // Keep the vendor signing credential separate from that redirect parameter.
+  const params = new URLSearchParams();
+  params.set(type === "vendor" ? "signing_token" : "token", token);
   const email = options?.email?.trim().toLowerCase();
   if (email) params.set("email", email);
   return `${base}/io-approval/${type}?${params.toString()}`;

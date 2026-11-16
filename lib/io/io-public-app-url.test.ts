@@ -4,6 +4,12 @@ import { describe, it } from "node:test";
 import { resolveIoPublicAppOrigin } from "@/lib/io/io-public-app-url";
 
 describe("resolveIoPublicAppOrigin", () => {
+  it("uses the stable dev domain rather than an immutable protected preview URL", () => {
+    assert.equal(resolveIoPublicAppOrigin({ VERCEL_ENV: "preview", VERCEL_URL: "old-build.vercel.app",
+      NEXT_PUBLIC_APP_URL: "https://app.thinkwaymedia.com" }), "https://dev.thinkwaymedia.com");
+    assert.equal(resolveIoPublicAppOrigin({ VERCEL_ENV: "preview", VERCEL_URL: "old-build.vercel.app",
+      NEXT_PUBLIC_DEVELOPMENT_APP_URL: "https://dev.example.test/" }), "https://dev.example.test");
+  });
   it("forces Production host when VERCEL_ENV=production even if APP_URL points at Dev", () => {
     assert.equal(
       resolveIoPublicAppOrigin({

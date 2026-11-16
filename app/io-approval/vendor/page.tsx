@@ -8,10 +8,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 export const metadata: Metadata = { title: "Review & Sign your IO | Thinkway", robots: { index: false, follow: false }, referrer: "no-referrer" };
 
-export default async function VendorIoApprovalPage({ searchParams }: { searchParams: Promise<{ token?: string; io?: string }> }) {
+export default async function VendorIoApprovalPage({ searchParams }: { searchParams: Promise<{ signing_token?: string; token?: string; io?: string }> }) {
   const params = await searchParams;
+  const token = params.signing_token ?? params.token;
   let session;
-  try { session = await loadVendorSigningSession({ token: params.token, ioId: params.token ? undefined : params.io }); }
+  try { session = await loadVendorSigningSession({ token, ioId: token ? undefined : params.io }); }
   catch (error) {
     const message=error instanceof Error ? error.message : "";
     const explanation=message.includes("SUPERSEDED") ? "A newer IO has been issued. Please use the latest email from Thinkway."

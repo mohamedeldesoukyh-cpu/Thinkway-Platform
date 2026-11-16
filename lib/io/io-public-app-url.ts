@@ -32,12 +32,9 @@ export function resolveIoPublicAppOrigin(
   }
 
   if (vercelEnv === "preview") {
-    const vercelUrl = env.VERCEL_URL?.trim();
-    if (vercelUrl) {
-      return strip(
-        vercelUrl.startsWith("http") ? vercelUrl : `https://${vercelUrl}`
-      );
-    }
+    // Email links must follow the current dev release, not a protected,
+    // immutable deployment URL that becomes stale after the next release.
+    return strip(developmentFallback);
   }
 
   if (configured) return strip(configured);
