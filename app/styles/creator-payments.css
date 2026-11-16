@@ -472,3 +472,34 @@ body .cp-payment-detail-drawer.cp-payment-record-drawer {
   body .cp-payment-detail-drawer.cp-payment-record-drawer { padding:18px; }
   .cp-record-amount > strong { font-size:21px; }
 }
+/* Compact, consistent finance navigation and persistent payment overview. */
+.workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs {
+  width:fit-content; max-width:100%; padding:3px; gap:3px; margin:4px 0 10px; border-radius:10px;
+}
+.workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab {
+  min-height:36px; padding:8px 16px; gap:8px; border-radius:7px;
+}
+.campaign-finance-tab strong {font-size:13px; line-height:1.3;}
+.campaign-finance-tab small, .cp-workflow-tab small {display:none;}
+.thinkway-creator-payments .campaign-finance-workspace > .cp-workflow-tabs {
+  width:fit-content; max-width:100%; padding:3px; gap:3px; border-radius:10px; margin-bottom:6px;
+}
+.thinkway-creator-payments .cp-workflow-tabs [role="tab"].cp-workflow-tab {
+  min-height:34px; padding:7px 12px; gap:7px; border-radius:7px;
+}
+.thinkway-creator-payments .cp-totals-panel .cp-panel-head {padding:10px 14px;}
+.thinkway-creator-payments .cp-totals-meta {display:block; font-size:11px; color:var(--tw-mut,#64748b); margin-top:2px;}
+.cp-totals-grid {display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:8px; padding:12px 14px 8px;}
+.cp-total-metric {min-width:0; border:1px solid var(--tw-line,#dbe3ef); border-radius:8px; padding:9px 10px; background:var(--tw-soft,#f6f8fc);}
+.cp-total-metric > span {display:block; font-size:11px; color:var(--tw-mut,#64748b); margin-bottom:5px;}
+.cp-total-value {font-family:var(--font-geist-sans),"Segoe UI",sans-serif; font-size:14px; font-weight:650; font-variant-numeric:tabular-nums; overflow-wrap:anywhere;}
+.cp-total-paid {background:#f0fdf4; border-color:#bbf7d0; color:#166534;}
+.cp-total-outstanding {background:#fff8eb; border-color:#f2d79f; color:#92400e;}
+.cp-total-total {background:#eff4ff; border-color:#cddcff; color:#1745a0;}
+.cp-totals-footnote {margin:0; padding:0 14px 10px; color:var(--tw-mut,#64748b); font-size:11px;}
+@media(max-width:1100px) {.cp-totals-grid {grid-template-columns:repeat(4,minmax(0,1fr));}}
+@media(max-width:640px) {
+ .cp-totals-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
+ .workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab,
+ .thinkway-creator-payments .cp-workflow-tabs [role="tab"].cp-workflow-tab {min-height:44px; padding:7px 9px;}
+}
