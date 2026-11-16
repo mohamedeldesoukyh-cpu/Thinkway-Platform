@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { loadVendorSigningSession } from "@/lib/io/vendor-io-signing-session";
 import { createIoDocumentSignedUrl } from "@/lib/io/io-document-storage";
 import { VendorIoSigningForm } from "@/features/io/components/vendor-io-signing-form";
+import { vendorIoSigningPreview } from "@/lib/io/vendor-io-signing-preview";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -29,9 +30,9 @@ export default async function VendorIoApprovalPage({ searchParams }: { searchPar
       <header><p className="text-sm font-bold tracking-wide text-blue-700">THINKWAY MEDIA</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">{session.alreadyApproved ? "Your approved IO" : "Review & sign your IO"}</h1>
         <p className="mt-2 text-slate-600">{io.document_number} · {campaign?.name ?? "Creator Insertion Order"}</p>
-        {!session.alreadyApproved && <p className="mt-2 text-sm text-slate-500">Review the document below, then add your name and signature.</p>}</header>
+        {!session.alreadyApproved && <p className="mt-2 text-sm text-slate-500">Review the document and its terms below, then draw your signature or type your name to sign.</p>}</header>
       <iframe title="Your Creator Insertion Order" sandbox="" referrerPolicy="no-referrer"
-        srcDoc={html.replace(/<\/head>/i,`${responsive}</head>`)} className="h-[65vh] min-h-[400px] w-full rounded-2xl border border-slate-200 bg-white" />
+        srcDoc={(session.alreadyApproved ? html : vendorIoSigningPreview(html)).replace(/<\/head>/i,`${responsive}</head>`)} className="h-[65vh] min-h-[400px] w-full rounded-2xl border border-slate-200 bg-white" />
       {session.alreadyApproved ? <section className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6">
         <h2 className="text-xl font-semibold">{signature ? "Signed & approved" : "Already approved"}</h2>
         <p className="mt-2">{signature ? `Thank you, ${signature.signer_name}. Your signature has been saved.` : "This IO was previously approved. No further action is needed."}</p>

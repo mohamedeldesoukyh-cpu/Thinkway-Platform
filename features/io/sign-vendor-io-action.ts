@@ -4,7 +4,7 @@ import { randomUUID } from "node:crypto";
 import { headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { loadVendorSigningSession } from "@/lib/io/vendor-io-signing-session";
-import { signingInputSchema, signatureSvg, signedVendorIoHtml } from "@/lib/io/vendor-io-signature";
+import { signingInputSchema, signatureSvg, typedSignatureSvg, signedVendorIoHtml } from "@/lib/io/vendor-io-signature";
 import { renderHtmlToPdf, INSERTION_ORDER_PDF_OPTIONS } from "@/lib/io/vendor-io-pdf";
 import { createIoDocumentSignedUrl } from "@/lib/io/io-document-storage";
 import { sendIoApprovalConfirmationEmails } from "@/lib/email/io-approval-emails";
@@ -27,8 +27,9 @@ export async function signVendorIoAction(input: unknown): Promise<{
     if (!consumeRateLimit({ category: "export", identity: `io-sign:${io.id}` }).allowed) return { ok: false, message: "Please wait a minute before trying again." };
     const h = await headers();
     const signedAt = new Date().toISOString();
+    const signature = parsed.data.method === "type" ? typedSignatureSvg(parsed.data.name) : signatureSvg(parsed.data.strokes!);
     const signedHtml = signedVendorIoHtml({ html: io.terms_html!, name: parsed.data.name, signedAt,
-      documentHash: session.documentHash!, signatureDataUrl: `data:image/svg+xml;base64,${Buffer.from(signatureSvg(parsed.data.strokes)).toString("base64")}` });
+      documentHash: session.documentHash!, signatureDataUrl: `data:image/svg+xml;base64,${Buffer.from(signature).toString("base64")}` });
     const pdf = await renderHtmlToPdf(signedHtml, INSERTION_ORDER_PDF_OPTIONS);
     if (!pdf.ok || !pdf.buffer.subarray(0, 5).equals(Buffer.from("%PDF-"))) return { ok: false, message: "We couldn’t prepare your signed PDF. Your IO has not been approved. Please try again." };
     const path = `${io.id}/signed/${randomUUID()}.pdf`;
@@ -36,7 +37,7 @@ export async function signVendorIoAction(input: unknown): Promise<{
     if (upload.error) return { ok: false, message: "We couldn’t save your signed PDF. Please try again." };
     const { data, error } = await db.rpc("sign_vendor_io", {
       p_io_id: io.id, p_token: session.token ?? null, p_actor_id: session.actorId,
-      p_name: parsed.data.name, p_strokes: parsed.data.strokes, p_document_hash: session.documentHash,
+      p_name: parsed.data.name, p_strokes: parsed.data.method === "type" ? { method: "type", text: parsed.data.name } : parsed.data.strokes, p_document_hash: session.documentHash,
       p_signed_html: signedHtml, p_pdf_path: path, p_signed_at: signedAt,
       p_ip: h.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null, p_user_agent: h.get("user-agent"),
     });

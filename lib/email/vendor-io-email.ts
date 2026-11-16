@@ -85,7 +85,7 @@ export function buildVendorIoEmailHtml(input: {
     ${renderEmailSummaryTable(summaryRows(input.io))}
     ${
       input.approvalUrl
-        ? renderEmailApprovalCta(input.approvalUrl, "Review & Sign", "Open the IO, enter your name, draw your signature, then select Sign & Approve. No login is needed. Your signed PDF will be emailed to you.")
+        ? renderEmailApprovalCta(input.approvalUrl, "Review & Sign", "Open the IO, review its terms, then draw your signature or type your name and select Sign & Approve. No login is needed. Your signed PDF will be emailed to you.")
         : ""
     }
   `;

@@ -1,11 +1,32 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { readFileSync } from "node:fs";
-import { signatureSchema, signingInputSchema, signatureSvg, signedVendorIoHtml } from "./vendor-io-signature";
+import { signatureSchema, signingInputSchema, signatureSvg, typedSignatureSvg, signedVendorIoHtml } from "./vendor-io-signature";
 import { renderLiveVendorIoHtml } from "./render-live-vendor-io-html";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { vendorIoSigningPreview } from "./vendor-io-signing-preview";
 
 const strokes: [number,number][][] = [[[.1,.2],[.4,.6],[.7,.2]]];
+test("terms disclosure preserves terms and keeps them visible on initial review", () => {
+  const html = '<section class="qsec section terms-section"><div class="qh"><h3>Terms</h3></div><ul><li>Original payment obligation</li></ul></section><p>After terms</p>';
+  const preview = vendorIoSigningPreview(html);
+  assert.match(preview, /<details open/);
+  assert.match(preview, /<ul><li>Original payment obligation<\/li><\/ul>/);
+  assert.match(preview, /<p>After terms<\/p>/);
+  assert.equal(vendorIoSigningPreview('<p>Legacy document</p>'), '<p>Legacy document</p>');
+});
+test("typed signatures require an explicit method and valid name; drawn signatures still require strokes", () => {
+  const base = { name: "Test Signer", documentHash: "a".repeat(64), token: "test" };
+  assert.equal(signingInputSchema.safeParse(base).success, false);
+  assert.equal(signingInputSchema.safeParse({ ...base, method: "type" }).success, true);
+  assert.equal(signingInputSchema.safeParse({ ...base, method: "type", name: " " }).success, false);
+  assert.equal(signingInputSchema.safeParse({ ...base, method: "unknown" }).success, false);
+  assert.equal(signingInputSchema.parse({ ...base, strokes }).method, "draw");
+  const svg = typedSignatureSvg('<script> & "Name"');
+  assert.doesNotMatch(svg, /<script>/);
+  assert.match(svg, /&lt;script&gt; &amp;/);
+  assert.match(typedSignatureSvg("محمد مصطفى"), /محمد مصطفى/);
+});
 test("blank, stationary, oversized and injected signatures are rejected", () => {
   for(const invalid of [[],[[[.2,.2]]],[[[.2,.2],[.2,.2]]],[[[-1,.2],[1,.2]]],[[["<svg>",0],[1,1]]],Array.from({length:31},()=>strokes[0])]) {
     assert.equal(signatureSchema.safeParse(invalid).success,false);

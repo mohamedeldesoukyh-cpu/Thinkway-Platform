@@ -12,8 +12,17 @@ export const signingInputSchema = z.object({
   ioId: z.string().uuid().optional(),
   documentHash: z.string().regex(/^[a-f0-9]{64}$/),
   name: z.string().trim().min(2, "Enter your full name.").max(160),
-  strokes: signatureSchema,
-}).refine(value => Boolean(value.token) !== Boolean(value.ioId), "Invalid signing link.");
+  method: z.enum(["draw", "type"]).default("draw"),
+  strokes: signatureSchema.optional(),
+}).refine(value => Boolean(value.token) !== Boolean(value.ioId), "Invalid signing link.")
+  .refine(value => value.method === "type" || Boolean(value.strokes), "Please draw your signature.");
+
+/** Typed signatures are generated from the validated signer name, never supplied markup. */
+export function typedSignatureSvg(name: string): string {
+  const text = z.string().trim().min(2).max(160).parse(name);
+  const size = Math.max(12, Math.min(58, 880 / text.length));
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" width="600" height="200"><text x="300" y="112" text-anchor="middle" fill="#14213d" font-family="Georgia, serif" font-style="italic" font-size="${size}"${text.length > 70 ? ' textLength="540" lengthAdjust="spacingAndGlyphs"' : ''}>${escape(text)}</text></svg>`;
+}
 
 function escape(value: string) {
   return value.replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]!));

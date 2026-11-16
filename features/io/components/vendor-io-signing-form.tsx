@@ -2,13 +2,14 @@
 
 import { useRef, useState, useTransition, type PointerEvent } from "react";
 import { signVendorIoAction } from "../sign-vendor-io-action";
-import { SIGNATURE_CONSENT, signatureSchema, type SignatureStrokes } from "@/lib/io/vendor-io-signature";
+import { SIGNATURE_CONSENT, signatureSchema, typedSignatureSvg, type SignatureStrokes } from "@/lib/io/vendor-io-signature";
 
 export function VendorIoSigningForm({ token, ioId, documentHash }: { token?: string; ioId?: string; documentHash: string }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const strokes = useRef<SignatureStrokes>([]);
   const active = useRef<number | null>(null);
   const [name, setName] = useState("");
+  const [method, setMethod] = useState<"draw" | "type">("draw");
   const [hasSignature, setHasSignature] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string; downloadUrl?: string | null } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -29,7 +30,7 @@ export function VendorIoSigningForm({ token, ioId, documentHash }: { token?: str
   return <form className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7" onSubmit={event => {
     event.preventDefault(); if (pending) return; setResult(null);
     startTransition(async () => {
-      try { setResult(await signVendorIoAction({ token, ioId, documentHash, name, strokes: strokes.current })); }
+      try { setResult(await signVendorIoAction({ token, ioId, documentHash, name, method, ...(method === "draw" ? { strokes: strokes.current } : {}) })); }
       catch { setResult({ ok: false, message: "Connection interrupted. Your signature is still here; please try again." }); }
     });
   }}>
@@ -37,7 +38,14 @@ export function VendorIoSigningForm({ token, ioId, documentHash }: { token?: str
     <div><label htmlFor="signer-name" className="mb-2 block text-sm font-medium text-slate-800">Full name</label>
       <input id="signer-name" name="name" autoComplete="name" required minLength={2} maxLength={160} value={name} onChange={e => setName(e.target.value)} disabled={pending}
         className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" placeholder="Enter your full name" /></div>
-    <div>
+    <div className="flex gap-2" role="group" aria-label="Signature method">
+      {(["draw", "type"] as const).map(option => <button key={option} type="button" aria-pressed={method === option} disabled={pending}
+        onClick={() => { setMethod(option); setResult(null); }}
+        className={`min-h-10 rounded-lg border px-4 text-sm font-medium ${method === option ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700"}`}>
+        {option === "draw" ? "Draw signature" : "Type signature"}
+      </button>)}
+    </div>
+    <div hidden={method !== "draw"}>
       <div className="mb-2 flex items-center justify-between"><label htmlFor="creator-signature" className="text-sm font-medium text-slate-800">Draw your signature</label>
         <button type="button" disabled={pending} className="min-h-10 px-2 text-sm font-medium text-blue-700 disabled:opacity-50" onClick={() => {
           canvas.current?.getContext("2d")?.clearRect(0,0,600,200); strokes.current=[]; active.current=null; setHasSignature(false);
@@ -59,9 +67,17 @@ export function VendorIoSigningForm({ token, ioId, documentHash }: { token?: str
         }} onPointerUp={finish} onPointerCancel={finish} />
       <p id="signature-help" className="mt-2 text-sm text-slate-500">Use your finger or mouse to sign inside the box.</p>
     </div>
+    {method === "type" && <div>
+      <p className="mb-2 text-sm font-medium text-slate-800">Your typed signature</p>
+      <div className="flex aspect-[3/1] items-center justify-center rounded-xl border border-slate-300 bg-slate-50" aria-live="polite">
+        {name.trim().length >= 2 ? <img alt={`Signature preview: ${name.trim()}`} className="h-full w-full" src={`data:image/svg+xml,${encodeURIComponent(typedSignatureSvg(name))}`} />
+          : <p className="px-4 text-center text-sm text-slate-500">Enter your full name above to create your signature.</p>}
+      </div>
+      <p className="mt-2 text-sm text-slate-500">Your name above becomes your signature. Review it before approving.</p>
+    </div>}
     <p className="text-sm leading-relaxed text-slate-600">{SIGNATURE_CONSENT}</p>
     {result && !result.ok && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{result.message}</p>}
-    <button type="submit" disabled={pending || name.trim().length<2 || !hasSignature}
+    <button type="submit" disabled={pending || name.trim().length<2 || (method === "draw" && !hasSignature)}
       className="flex min-h-14 w-full items-center justify-center rounded-xl bg-blue-600 px-5 text-base font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500">
       {pending ? "Saving your signed IO…" : "Sign & Approve"}
     </button><p className="text-center text-xs text-slate-500">A signed PDF will be emailed to you.</p>
