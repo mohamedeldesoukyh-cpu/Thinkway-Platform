@@ -10,6 +10,7 @@ export function VendorIoSigningForm({ token, ioId, documentHash }: { token?: str
   const active = useRef<number | null>(null);
   const [name, setName] = useState("");
   const [method, setMethod] = useState<"draw" | "type">("draw");
+  const [agreed, setAgreed] = useState(false);
   const [hasSignature, setHasSignature] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; message: string; downloadUrl?: string | null } | null>(null);
   const [pending, startTransition] = useTransition();
@@ -28,9 +29,9 @@ export function VendorIoSigningForm({ token, ioId, documentHash }: { token?: str
     {result.downloadUrl && <a className="mt-4 inline-flex min-h-12 items-center rounded-xl bg-emerald-800 px-5 font-semibold text-white" href={result.downloadUrl}>Download signed PDF</a>}
   </section>;
   return <form className="space-y-5 rounded-2xl border border-slate-200 bg-white p-5 sm:p-7" onSubmit={event => {
-    event.preventDefault(); if (pending) return; setResult(null);
+    event.preventDefault(); if (pending || !agreed) return; setResult(null);
     startTransition(async () => {
-      try { setResult(await signVendorIoAction({ token, ioId, documentHash, name, method, ...(method === "draw" ? { strokes: strokes.current } : {}) })); }
+      try { setResult(await signVendorIoAction({ token, ioId, documentHash, name, method, consent: agreed, ...(method === "draw" ? { strokes: strokes.current } : {}) })); }
       catch { setResult({ ok: false, message: "Connection interrupted. Your signature is still here; please try again." }); }
     });
   }}>
@@ -38,10 +39,10 @@ export function VendorIoSigningForm({ token, ioId, documentHash }: { token?: str
     <div><label htmlFor="signer-name" className="mb-2 block text-sm font-medium text-slate-800">Full name</label>
       <input id="signer-name" name="name" autoComplete="name" required minLength={2} maxLength={160} value={name} onChange={e => setName(e.target.value)} disabled={pending}
         className="min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 text-base text-slate-950 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100" placeholder="Enter your full name" /></div>
-    <div className="flex gap-2" role="group" aria-label="Signature method">
+    <div className="grid grid-cols-2 gap-2" role="group" aria-label="Signature method">
       {(["draw", "type"] as const).map(option => <button key={option} type="button" aria-pressed={method === option} disabled={pending}
         onClick={() => { setMethod(option); setResult(null); }}
-        className={`min-h-10 rounded-lg border px-4 text-sm font-medium ${method === option ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700"}`}>
+        className={`min-h-12 rounded-lg border px-3 text-sm font-medium ${method === option ? "border-blue-600 bg-blue-600 text-white" : "border-slate-300 text-slate-700"}`}>
         {option === "draw" ? "Draw signature" : "Type signature"}
       </button>)}
     </div>
@@ -75,9 +76,12 @@ export function VendorIoSigningForm({ token, ioId, documentHash }: { token?: str
       </div>
       <p className="mt-2 text-sm text-slate-500">Your name above becomes your signature. Review it before approving.</p>
     </div>}
-    <p className="text-sm leading-relaxed text-slate-600">{SIGNATURE_CONSENT}</p>
+    <label className="flex min-h-12 cursor-pointer items-start gap-3 rounded-xl border border-slate-200 p-3 text-sm leading-relaxed text-slate-700">
+      <input type="checkbox" required checked={agreed} onChange={e => setAgreed(e.target.checked)} disabled={pending} className="mt-1 size-5 shrink-0 accent-blue-600" />
+      <span>I have reviewed the IO and its Terms and conditions. {SIGNATURE_CONSENT}</span>
+    </label>
     {result && !result.ok && <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-800">{result.message}</p>}
-    <button type="submit" disabled={pending || name.trim().length<2 || (method === "draw" && !hasSignature)}
+    <button type="submit" disabled={pending || !agreed || name.trim().length<2 || (method === "draw" && !hasSignature)}
       className="flex min-h-14 w-full items-center justify-center rounded-xl bg-blue-600 px-5 text-base font-semibold text-white transition-colors hover:bg-blue-700 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500">
       {pending ? "Saving your signed IO…" : "Sign & Approve"}
     </button><p className="text-center text-xs text-slate-500">A signed PDF will be emailed to you.</p>

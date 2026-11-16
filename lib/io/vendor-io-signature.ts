@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SIGNATURE_FONT_CSS } from "./fonts/signature-font";
 
 export const SIGNATURE_CONSENT = "By signing, I agree to this IO and its terms.";
 const point = z.tuple([z.number().finite().min(0).max(1), z.number().finite().min(0).max(1)]);
@@ -12,6 +13,7 @@ export const signingInputSchema = z.object({
   ioId: z.string().uuid().optional(),
   documentHash: z.string().regex(/^[a-f0-9]{64}$/),
   name: z.string().trim().min(2, "Enter your full name.").max(160),
+  consent: z.literal(true, { error: "Please confirm that you have reviewed and agree to the IO and its terms." }),
   method: z.enum(["draw", "type"]).default("draw"),
   strokes: signatureSchema.optional(),
 }).refine(value => Boolean(value.token) !== Boolean(value.ioId), "Invalid signing link.")
@@ -20,8 +22,8 @@ export const signingInputSchema = z.object({
 /** Typed signatures are generated from the validated signer name, never supplied markup. */
 export function typedSignatureSvg(name: string): string {
   const text = z.string().trim().min(2).max(160).parse(name);
-  const size = Math.max(12, Math.min(58, 880 / text.length));
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" width="600" height="200"><text x="300" y="112" text-anchor="middle" fill="#14213d" font-family="Georgia, serif" font-style="italic" font-size="${size}"${text.length > 70 ? ' textLength="540" lengthAdjust="spacingAndGlyphs"' : ''}>${escape(text)}</text></svg>`;
+  const size = Math.max(18, Math.min(76, 1800 / text.length));
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 200" width="600" height="200"><style>${SIGNATURE_FONT_CSS}</style><text x="300" y="120" text-anchor="middle" fill="#14213d" font-family="ThinkwaySignature, cursive" font-size="${size}"${text.length > 55 ? ' textLength="520" lengthAdjust="spacingAndGlyphs"' : ''}>${escape(text)}</text></svg>`;
 }
 
 function escape(value: string) {

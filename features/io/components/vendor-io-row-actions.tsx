@@ -17,6 +17,7 @@ import {
   VendorIoManualApproveButton,
 } from "@/features/io/components/vendor-io-manual-approve-button";
 import { VendorIoSendButton } from "@/features/io/components/vendor-io-send-button";
+import { VendorIoShareLink } from "./vendor-io-share-link";
 import type { VendorIoRow } from "@/features/io/types";
 
 import { VendorIoCancelTrigger } from "./vendor-io-cancel-dialog";
@@ -53,7 +54,8 @@ export function VendorIoRowActions({ row, onViewDetail, compact = false }: Props
   }
 
   return (
-    <div className="flex min-w-0 items-center justify-end gap-1">
+    <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+      {row.status === "sent" && <VendorIoShareLink id={row.id} />}
       <VendorIoSendButton row={row} variant="default" size="sm" compact className="h-7 shrink-0 whitespace-nowrap px-2.5 text-[11px] font-semibold" />
       <DropdownMenu>
         <DropdownMenuTrigger asChild>

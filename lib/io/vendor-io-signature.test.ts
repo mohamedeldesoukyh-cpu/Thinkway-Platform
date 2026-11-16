@@ -7,16 +7,19 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { vendorIoSigningPreview } from "./vendor-io-signing-preview";
 
 const strokes: [number,number][][] = [[[.1,.2],[.4,.6],[.7,.2]]];
-test("terms disclosure preserves terms and keeps them visible on initial review", () => {
+test("terms disclosure preserves all terms behind a clearly labelled expandable heading", () => {
   const html = '<section class="qsec section terms-section"><div class="qh"><h3>Terms</h3></div><ul><li>Original payment obligation</li></ul></section><p>After terms</p>';
   const preview = vendorIoSigningPreview(html);
-  assert.match(preview, /<details open/);
+  assert.match(preview, /<details class=/);
+  assert.doesNotMatch(preview, /<details open/);
+  assert.match(preview, /Terms and conditions — tap to review/);
   assert.match(preview, /<ul><li>Original payment obligation<\/li><\/ul>/);
   assert.match(preview, /<p>After terms<\/p>/);
   assert.equal(vendorIoSigningPreview('<p>Legacy document</p>'), '<p>Legacy document</p>');
 });
 test("typed signatures require an explicit method and valid name; drawn signatures still require strokes", () => {
-  const base = { name: "Test Signer", documentHash: "a".repeat(64), token: "test" };
+  const base = { name: "Test Signer", documentHash: "a".repeat(64), token: "test", consent: true };
+  assert.equal(signingInputSchema.safeParse({ ...base, method: "type", consent: false }).success, false);
   assert.equal(signingInputSchema.safeParse(base).success, false);
   assert.equal(signingInputSchema.safeParse({ ...base, method: "type" }).success, true);
   assert.equal(signingInputSchema.safeParse({ ...base, method: "type", name: " " }).success, false);
@@ -26,6 +29,7 @@ test("typed signatures require an explicit method and valid name; drawn signatur
   assert.doesNotMatch(svg, /<script>/);
   assert.match(svg, /&lt;script&gt; &amp;/);
   assert.match(typedSignatureSvg("محمد مصطفى"), /محمد مصطفى/);
+  assert.match(typedSignatureSvg("Test Signer"), /font-family="ThinkwaySignature, cursive"/);
 });
 test("blank, stationary, oversized and injected signatures are rejected", () => {
   for(const invalid of [[],[[[.2,.2]]],[[[.2,.2],[.2,.2]]],[[[-1,.2],[1,.2]]],[[["<svg>",0],[1,1]]],Array.from({length:31},()=>strokes[0])]) {
