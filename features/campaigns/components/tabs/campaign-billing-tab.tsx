@@ -3,6 +3,7 @@
 import { CreatorPaymentsWorkspace } from '@/features/creator-payments/workspace';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { usePathname, useSearchParams } from 'next/navigation';
+import { ReceiptText, WalletCards } from 'lucide-react';
 
 import { campaignMoney, CampaignSummaryMoney, CampaignMoneyTotal } from "../campaign-money";
 import Link from "next/link";
@@ -360,8 +361,12 @@ export function CampaignBillingTab({
       className="campaign-finance-workspace"
     >
       <TabsList aria-label="Finance sections" className="campaign-finance-tabs">
-        <TabsTrigger value="billing" className="thinkway-campaign-btn">Billing</TabsTrigger>
-        <TabsTrigger value="creator-payments" className="thinkway-campaign-btn">Creator Payments</TabsTrigger>
+        <TabsTrigger value="billing" className="campaign-finance-tab">
+          <ReceiptText aria-hidden="true" size={22}/><span><strong>Billing</strong><small>Client invoices & collections</small></span>
+        </TabsTrigger>
+        <TabsTrigger value="creator-payments" className="campaign-finance-tab">
+          <WalletCards aria-hidden="true" size={22}/><span><strong>Creator Payments</strong><small>Creator balances & payments</small></span>
+        </TabsTrigger>
       </TabsList>
       <TabsContent value="billing" forceMount className="data-[state=inactive]:hidden">
       <CampaignWorkspaceFrame

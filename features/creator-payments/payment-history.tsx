@@ -1,7 +1,7 @@
 import { PaymentProofAttachments } from './payment-proof-attachments';
 import { CreatorPaymentSummary } from './creator-payment-summary';
 import {InvoiceVatEditor} from './invoice-vat-editor';
-import { paymentAllocation } from './allocations';
+import { ChevronDown, ListChecks } from 'lucide-react';
 import type { PaymentRow } from './model';
 import { useState } from 'react';
 import type { PaymentEntry } from './model';
@@ -14,11 +14,18 @@ function PaymentProofDisclosure({paymentId,canWrite}:{paymentId:string;canWrite:
 }
 export function PaymentHistory({row,canWrite,onSaved,allowAdd=true,compact=false}:{row:PaymentRow;canWrite:boolean;onSaved:(row?:PaymentRow)=>void | Promise<void>;allowAdd?:boolean;compact?:boolean}) {
     const [editor,setEditor]=useState<{payment?:PaymentEntry;clear?:boolean}|null>(null);
-    const allocation = paymentAllocation(row);
     return <div className="cp-payment-history">
         <InvoiceVatEditor row={row} canWrite={canWrite} onSaved={onSaved}/>
         {allowAdd&&canWrite&&row.payable!==false&&<button className="cp-button" onClick={()=>setEditor({})}>+ Add payments</button>}
         {editor&&<PaymentRecordEditor row={row} {...editor} onClose={()=>setEditor(null)} onSaved={onSaved}/>}
+        <details className="cp-payment-details">
+          <summary>
+            <ListChecks aria-hidden="true" size={18}/>
+            <span><strong className="cp-details-show">Show payment details</strong><strong className="cp-details-hide">Hide payment details</strong><small>{compact ? 'Payment ledger' : 'Payment balance · Advance amounts · Payment ledger'}</small></span>
+            <span className="cp-details-count">{row.history?.length ?? 0} payments</span>
+            <ChevronDown aria-hidden="true" size={18} className="cp-details-chevron"/>
+          </summary>
+          <div className="cp-payment-details-body">
         {!compact&&<CreatorPaymentSummary row={row}/>}
         <div className="cp-mini-card cp-payment-ledger-card">
           <div className="cp-ledger-heading">Payment ledger <span>{row.history?.length ?? 0} records</span></div>
@@ -35,9 +42,7 @@ export function PaymentHistory({row,canWrite,onSaved,allowAdd=true,compact=false
             </table>
           </div>
         </div>
-        <details><summary>Deliverable allocation · {allocation.live} of {allocation.count} live</summary>
-            <p>Equal value per deliverable, including VAT. Payments settle live deliverables first in assignment order; the remainder is advance against future deliverables in the same order.</p>
-            {!allocation.count ? <p>No deliverables available yet. Payments remain advance until live deliverables are recorded.</p> : <table><thead><tr><th>Deliverable</th><th>Live</th><th>Value</th><th>Allocated</th><th>Actual paid</th><th>Advance</th><th>Allocation</th></tr></thead><tbody>{allocation.units.map((unit,index)=><tr key={unit.id}><td>Deliverable {index+1} · {unit.label}</td><td>{unit.live?'Live':'Not live'}</td><td>{amount(unit.value,row.currency)}</td><td>{amount(unit.allocated,row.currency)}</td><td>{amount(unit.actual,row.currency)}</td><td>{amount(unit.advance,row.currency)}</td><td>{unit.live && unit.allocated>=unit.value?'Closed':unit.allocated>0?'Allocated':'Unallocated'}</td></tr>)}</tbody></table>}
+          </div>
         </details>
     </div>;
 }
