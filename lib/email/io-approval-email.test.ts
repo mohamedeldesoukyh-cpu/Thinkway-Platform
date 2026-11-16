@@ -22,6 +22,7 @@ import { renderEmailApprovalCta } from "@/lib/email/layout";
 import {
   buildVendorIoEmailHtml,
   buildVendorIoEmailPlainText,
+  buildVendorIoEmailSubject,
 } from "@/lib/email/vendor-io-email";
 
 describe("io approval email experience", () => {
@@ -170,6 +171,9 @@ describe("io approval email experience", () => {
     assert.doesNotMatch(html, /Issue date/);
     assert.doesNotMatch(html, /Currency/);
     assert.match(text, /Agreed Amount:/);
+    assert.doesNotMatch(html, /Summer Launch/);
+    assert.doesNotMatch(text, /Summer Launch/);
+    assert.equal(buildVendorIoEmailSubject(io), "Creator Insertion Order — VIO-2026-0001 — Acme");
   });
 
   it("builds confirmation subject and thanks the approver", () => {

@@ -27,8 +27,13 @@ export async function loadVendorSigningSession(access: SigningAccess) {
   });
   if (error || !data) throw new Error(error?.message ?? "APPROVAL_INVALID");
   const { io, signature } = data as SessionData;
-  if (io.status === "approved") return { db, io, signature, actorId, token, alreadyApproved: true as const, documentHash: null };
+  const { data: campaign, error: campaignError } = await db.from("campaign_headers")
+    .select("brands:brand_id(name)").eq("id", io.campaign_header_id).single();
+  if (campaignError) throw new Error("Could not load the brand for this IO.");
+  const brand = Array.isArray(campaign?.brands) ? campaign.brands[0] : campaign?.brands;
+  const brandName = brand?.name?.trim() || "Creator Insertion Order";
+  if (io.status === "approved") return { db, io, signature, actorId, token, brandName, alreadyApproved: true as const, documentHash: null };
   if (!io.terms_html?.trim()) throw new Error("The IO has changed. Please ask Thinkway to send you an updated signing link.");
-  return { db, io, signature, actorId, token, alreadyApproved: false as const,
+  return { db, io, signature, actorId, token, brandName, alreadyApproved: false as const,
     documentHash: createHash("sha256").update(io.terms_html).digest("hex") };
 }

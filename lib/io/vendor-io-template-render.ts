@@ -120,8 +120,8 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
 
   const duration = formatDuration(data.campaign.startDate, data.campaign.endDate);
   const hero = `<div class="hero"><div class="mkw"><span class="mk"></span><div class="logo-text">THINKWAY</div></div>
-  <div class="htype"><div class="lbl">Vendor Insertion Order · ${docNum}</div><h1>${display(data.campaign.name)}</h1>
-  <div class="hpills"><span class="hp">Brand · ${display(data.campaign.brandName)}</span><span class="hp">${display(data.campaign.clientName)}</span><span class="hp">${duration}</span><span class="hp">${display(data.campaign.channels)}</span></div></div></div>`;
+  <div class="htype"><div class="lbl">Vendor Insertion Order · ${docNum}</div><h1>${display(data.campaign.brandName)}</h1>
+  <div class="hpills"><span class="hp">Brand · ${display(data.campaign.brandName)}</span><span class="hp">${duration}</span><span class="hp">${display(data.campaign.channels)}</span></div></div></div>`;
 
   const parties = sec(
     "1",
@@ -154,9 +154,7 @@ export function renderVendorIoHtml(data: VendorIoDocumentData): string {
     `<div class="qgrid2">
    ${card(
      "Brief",
-     fld("Client", display(data.campaign.clientName)) +
-       fld("Brand", display(data.campaign.brandName)) +
-       fld("Campaign", display(data.campaign.name)) +
+     fld("Brand", display(data.campaign.brandName)) +
        fld("Duration", duration)
    )}
    ${card(

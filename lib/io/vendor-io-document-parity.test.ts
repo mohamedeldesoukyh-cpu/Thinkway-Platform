@@ -111,6 +111,8 @@ const SCENARIOS: Array<{ name: string; terms: ClientIoTerm[] }> = [
 
 async function assertHtmlPdfParity(name: string, terms: ClientIoTerm[]) {
   const html = renderVendorIoHtml(fixtureData(terms));
+  assert.doesNotMatch(html, /Parity Client|Parity Campaign/);
+  assert.match(html, /Parity Brand/);
   const fromHtml = extractTermsFromVendorIoHtml(html);
 
   assert.ok(fromHtml.length > 0, `${name}: HTML must contain terms-list`);

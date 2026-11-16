@@ -30,7 +30,6 @@ export type VendorIoEmailFields = {
 
 function summaryRows(io: VendorIoEmailFields) {
   return [
-    { label: "Campaign Name", value: io.campaign_name?.trim() || "—" },
     { label: "Brand Name", value: io.brand_name?.trim() || "—" },
     {
       label: "Campaign Duration",
@@ -44,10 +43,10 @@ function summaryRows(io: VendorIoEmailFields) {
 }
 
 export function buildVendorIoEmailSubject(
-  io: Pick<VendorIoEmailFields, "document_number" | "campaign_name">
+  io: Pick<VendorIoEmailFields, "document_number" | "campaign_name"> & Partial<Pick<VendorIoEmailFields, "brand_name">>
 ): string {
   const doc = io.document_number?.trim() || "VIO";
-  return `Creator Insertion Order — ${doc} — ${io.campaign_name}`;
+  return `Creator Insertion Order — ${doc} — ${io.brand_name?.trim() || "Brand campaign"}`;
 }
 
 export function buildVendorIoEmailPlainText(input: {

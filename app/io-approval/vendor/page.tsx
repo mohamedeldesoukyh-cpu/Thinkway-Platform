@@ -20,7 +20,6 @@ export default async function VendorIoApprovalPage({ searchParams }: { searchPar
     return <main className="mx-auto max-w-xl px-5 py-16"><h1 className="text-2xl font-semibold">Signing link unavailable</h1><p className="mt-3 text-muted-foreground">{explanation}</p></main>;
   }
   const { io, signature }=session;
-  const campaign=Array.isArray(io.campaign) ? io.campaign[0] : io.campaign;
   const downloadUrl=signature ? await createIoDocumentSignedUrl(session.db,"vendor-io-documents",signature.signed_pdf_path) : null;
   const html=signature?.signed_html ?? io.terms_html ?? "";
   // Presentation-only responsive styles; signing preserves the untouched document snapshot.
@@ -29,7 +28,7 @@ export default async function VendorIoApprovalPage({ searchParams }: { searchPar
     <div className="mx-auto max-w-4xl space-y-6">
       <header><p className="text-sm font-bold tracking-wide text-blue-700">THINKWAY MEDIA</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-tight">{session.alreadyApproved ? "Your approved IO" : "Review & sign your IO"}</h1>
-        <p className="mt-2 text-slate-600">{io.document_number} · {campaign?.name ?? "Creator Insertion Order"}</p>
+        <p className="mt-2 text-slate-600">{io.document_number} · {session.brandName}</p>
         {!session.alreadyApproved && <p className="mt-2 text-sm text-slate-500">Review the document and its terms below, then draw your signature or type your name to sign.</p>}</header>
       <iframe title="Your Creator Insertion Order" sandbox="" referrerPolicy="no-referrer"
         srcDoc={(session.alreadyApproved ? html : vendorIoSigningPreview(html)).replace(/<\/head>/i,`${responsive}</head>`)} className="h-[65vh] min-h-[400px] w-full rounded-2xl border border-slate-200 bg-white" />
