@@ -487,20 +487,20 @@ body .cp-payment-detail-drawer.cp-payment-record-drawer {
 .thinkway-creator-payments .cp-workflow-tabs [role="tab"].cp-workflow-tab {
   min-height:34px; padding:7px 12px; gap:7px; border-radius:7px;
 }
-.thinkway-creator-payments .cp-totals-panel {background:linear-gradient(110deg,#0046db,#176bff); color:#fff; border:0; border-radius:8px; overflow:hidden; box-shadow:none;}
-.thinkway-creator-payments .cp-totals-panel .cp-panel-head {padding:8px 10px; border-bottom:1px solid rgb(255 255 255 / 16%); background:rgb(0 0 0 / 14%);}
-.thinkway-creator-payments .cp-totals-panel .cp-panel-head h2 {color:#fff; font-size:12px;}
-.thinkway-creator-payments .cp-totals-meta {display:block; font-size:10px; color:rgb(255 255 255 / 78%); margin-top:2px;}
-.thinkway-creator-payments .cp-totals-panel .cp-head-actions button {min-height:28px; height:28px; padding:3px 10px; color:#fff; background:rgb(255 255 255 / 10%); border:1px solid rgb(255 255 255 / 35%); font-size:11px;}
-.thinkway-creator-payments .cp-totals-panel .cp-head-actions button:hover {background:rgb(255 255 255 / 22%);}
+.thinkway-creator-payments .cp-totals-panel {background:#fff; color:#172033; border:1px solid #dce1e8; border-radius:8px; overflow:hidden; box-shadow:none;}
+.thinkway-creator-payments .cp-totals-panel .cp-panel-head {padding:8px 10px; border-bottom:1px solid #dce1e8; background:#fff;}
+.thinkway-creator-payments .cp-totals-panel .cp-panel-head h2 {color:#172033; font-size:12px;}
+.thinkway-creator-payments .cp-totals-meta {display:block; font-size:10px; color:#64748b; margin-top:2px;}
+.thinkway-creator-payments .cp-totals-panel .cp-head-actions button {min-height:28px; height:28px; padding:3px 10px; color:#172033; background:#fff; border:1px solid #dce1e8; font-size:11px;}
+.thinkway-creator-payments .cp-totals-panel .cp-head-actions button:hover {background:#f3f5f8;}
 .cp-totals-grid {display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:0; padding:0;}
-.cp-total-metric {min-width:0; border-inline-end:1px solid rgb(255 255 255 / 14%); padding:8px 10px;}
+.cp-total-metric {min-width:0; border-inline-end:1px solid #dce1e8; padding:8px 10px;}
 .cp-total-metric:last-child {border-inline-end:0;}
-.cp-total-metric > span {display:block; font-size:9px; font-weight:700; letter-spacing:.4px; line-height:1.4; text-transform:uppercase; color:rgb(255 255 255 / 78%); margin-bottom:4px;}
-.cp-total-value {font:700 16px/1.3 var(--font-geist-mono),monospace; color:#fff; font-variant-numeric:tabular-nums; overflow-wrap:anywhere;}
-.cp-total-paid .cp-total-value {color:#8ff0cb;}
-.cp-total-outstanding .cp-total-value,.cp-total-advance .cp-total-value {color:#ffe2ae;}
-.cp-totals-footnote {margin:0; padding:5px 10px; border-top:1px solid rgb(255 255 255 / 14%); color:rgb(255 255 255 / 78%); font-size:10px; background:rgb(0 0 0 / 8%);}
+.cp-total-metric > span {display:block; font-size:9px; font-weight:700; letter-spacing:.4px; line-height:1.4; text-transform:uppercase; color:#64748b; margin-bottom:4px;}
+.cp-total-value {font:700 16px/1.3 var(--font-geist-mono),monospace; color:#172033; font-variant-numeric:tabular-nums; overflow-wrap:anywhere;}
+.cp-total-paid .cp-total-value {color:#168057;}
+.cp-total-outstanding .cp-total-value,.cp-total-advance .cp-total-value {color:#99600a;}
+.cp-totals-footnote {margin:0; padding:5px 10px; border-top:1px solid #dce1e8; color:#64748b; font-size:10px; background:#fafbfc;}
 @media(max-width:1100px) {.cp-totals-grid {grid-template-columns:repeat(4,minmax(0,1fr));}}
 @media(max-width:640px) {
  .cp-totals-grid {grid-template-columns:repeat(2,minmax(0,1fr));}
