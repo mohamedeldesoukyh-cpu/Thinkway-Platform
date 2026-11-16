@@ -54,6 +54,8 @@ describe("Vendor IO document lifecycle", () => {
     );
     assert.equal(resolved.lifecycleState, "delivered_manually");
     assert.ok(resolved.availableActions.includes("mark_accepted"));
+    assert.ok(resolved.availableActions.includes("resend"));
+    assert.equal(vendorIoBulkSkipReason(snap({status:"sent",deliveryMethod:"manual",deliveryStatus:"completed"}), "resend"), null);
   });
 
   it("Accepted hides completed actions and keeps View", () => {

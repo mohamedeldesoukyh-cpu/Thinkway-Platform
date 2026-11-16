@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { VendorIoInfluencerCell } from "./vendor-io-influencer-cell";
 import { useActionState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -50,14 +50,14 @@ export function VendorIoSendButton({
     return null;
   }
 
-  const idleLabel = canResend && !canSend ? "Resend" : "Send by Email";
+  const idleLabel = canResend && !canSend && row.delivery_method !== "manual" ? "Resend" : "Send by Email";
   const pendingLabel = "Sending…";
 
   return (
     <form action={action} className="inline-flex flex-wrap items-center gap-2">
       <input type="hidden" name="id" value={row.id} />
       <input type="hidden" name="campaign_header_id" value={row.campaign_header_id} />
-      {!canEmail && <Link href={`/vendors/${row.influencer_id}?tab=overview`} className="text-xs text-amber-700 underline">Email missing — add email</Link>}
+      {!canEmail && <VendorIoInfluencerCell creatorId={row.influencer_id} name={row.influencer_name} triggerLabel="Email missing — add email" />}
       {canEmail && <Button
         type="submit"
         size={size}

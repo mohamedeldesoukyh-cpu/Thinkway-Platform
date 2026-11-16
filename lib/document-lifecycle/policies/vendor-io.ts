@@ -91,6 +91,7 @@ const MATRIX: Record<DocumentLifecycleState, DocumentLifecycleAction[]> = {
   delivered_manually: [
     "view",
     "download",
+    "resend",
     "mark_accepted",
     "upload_signed",
     "change_payment_terms",

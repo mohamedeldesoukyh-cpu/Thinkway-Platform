@@ -39,6 +39,8 @@ import {
 } from "@/features/campaigns/components/aurora/campaign-workspace-frame";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
 import { cn } from "@/lib/utils";
+import { CREATOR_BANK_SAVED } from "@/features/creator-payments/bank-sync";
+import { useCampaignVendorIosRefresh } from "@/features/campaigns/hooks/campaign-operational-refresh";
 
 const SELECT_COLUMN_ID = "select";
 
@@ -141,6 +143,7 @@ function buildCampaignVendorIoColumns(
       cellClassName: "min-w-0",
       renderCell: (row) => (
         <VendorIoInfluencerCell
+          creatorId={row.influencer_id}
           name={row.influencer_name}
           avatarUrl={row.creator_avatar_url}
         />
@@ -373,6 +376,12 @@ function readStoredSelection(campaignId: string): Set<string> {
 }
 
 export function VendorIoTab({ campaignId, rows, initialSelectedId = null }: Props) {
+  const reloadVendorIos = useCampaignVendorIosRefresh();
+  useEffect(() => {
+    const refresh = () => { void reloadVendorIos?.().catch(() => {}); };
+    window.addEventListener(CREATOR_BANK_SAVED, refresh);
+    return () => window.removeEventListener(CREATOR_BANK_SAVED, refresh);
+  }, [reloadVendorIos]);
   const [referenceView, setReferenceView] = useState(true);
   const [detailIoId, setDetailIoId] = useState<string | null>(
     () => initialSelectedId
