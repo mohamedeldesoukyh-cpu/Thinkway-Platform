@@ -507,3 +507,5 @@ body .cp-payment-detail-drawer.cp-payment-record-drawer {
  .workspace-redesign .campaign-detail-suite .campaign-finance-workspace > .campaign-finance-primary-tabs [role="tab"].campaign-finance-tab,
  .thinkway-creator-payments .cp-workflow-tabs [role="tab"].cp-workflow-tab {min-height:44px; padding:7px 9px;}
 }
+
+.cp-unsaved-hint {font-size:11px; font-weight:400; opacity:.8; margin-left:8px;}
