@@ -360,7 +360,7 @@ export function CampaignBillingTab({
       onValueChange={handleFinanceSectionChange}
       className="campaign-finance-workspace"
     >
-      <TabsList aria-label="Finance sections" className="campaign-finance-tabs">
+      <TabsList aria-label="Finance sections" className="campaign-finance-tabs campaign-finance-primary-tabs">
         <TabsTrigger value="billing" className="campaign-finance-tab">
           <ReceiptText aria-hidden="true" size={22}/><span><strong>Billing</strong><small>Client invoices & collections</small></span>
         </TabsTrigger>
