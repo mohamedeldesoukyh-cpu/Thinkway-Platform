@@ -50,7 +50,7 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
     {incomplete.length > 0 && <p className="cp-note warning"><b>{incomplete.length} of {visible.length}</b> payment lines need bank details before export. You can prepare amounts now; open a creator’s bank details to complete the required fields.</p>}
     <div className="cp-table-scroll" tabIndex={0} role="region" aria-label="Creator payments table">
       <table className="cp-table"><colgroup>{[32,210,110,125,105,82,118,112,160,125,118].map((width,i) => <col key={i} style={{ width }}/>)}</colgroup>
-        <thead><tr><th><input type="checkbox" aria-label="Select all visible creators" disabled={!canWrite || !eligible.length} checked={eligible.length > 0 && eligible.every(row => selected.has(row.assignmentId))} onChange={e => onSelectAll(eligible.map(row => row.assignmentId), e.target.checked)}/></th>{['Creator','Vendor IO','Status','Cost','VAT','Total cost','Currency','Calculation','Pay now','Remaining after payment'].map((label,i) => <th key={label} className={[3,4,5,8,9].includes(i) ? 'numeric' : ''}>{label}</th>)}</tr></thead>
+        <thead><tr><th><input type="checkbox" aria-label="Select all visible creators" disabled={!canWrite || !eligible.length} checked={eligible.length > 0 && eligible.every(row => selected.has(row.assignmentId))} onChange={e => onSelectAll(eligible.map(row => row.assignmentId), e.target.checked)}/></th>{['Bank details','Vendor IO','Status','Cost','VAT','Total cost','Currency','Calculation','Pay now','Remaining after payment'].map((label,i) => <th key={label} className={[3,4,5,8,9].includes(i) ? 'numeric' : ''}>{label}</th>)}</tr></thead>
         <tbody>{visible.map(row => {
           const draft = drafts[row.assignmentId] ?? initialDraft(row);
           const calculation = calculatePayment(row, draft);
@@ -62,9 +62,22 @@ export function PaymentRegister({ rows, drafts, selected, canWrite, showCampaign
           const open = expanded.has(row.assignmentId);
           const errors = selected.has(row.assignmentId) && calculation.payNow > 0 ? calculation.errors : [];
           return <Fragment key={row.assignmentId}>
+            <tr className="cp-creator-heading-row"><td colSpan={11}>
+              <div className="cp-creator-heading">
+                <div className="cp-creator-heading-identity">
+                  <strong dir="auto">{row.creator}</strong>
+                  <span>{row.username && `@${row.username.replace(/^@/,'')}`}{showCampaign && <span dir="auto">{row.username ? ' · ' : ''}{row.campaign}</span>}</span>
+                </div>
+                <dl className="cp-creator-heading-amounts" aria-label={`Payment summary for ${row.creator}`}>
+                  <div className="cp-line-agreed"><dt>Agreed amount <span>incl. VAT</span></dt><dd><span>{row.currency}</span> {number(allocation.total)}</dd></div>
+                  <div className="cp-line-paid"><dt>Total paid</dt><dd><span>{row.currency}</span> {number(row.paid)}</dd></div>
+                  <div className={allocation.remaining > 0 ? 'cp-line-remaining' : 'cp-line-settled'}><dt>Remaining <span>{allocation.remaining === 0 ? 'Fully paid' : 'to pay'}</span></dt><dd><span>{row.currency}</span> {number(allocation.remaining)}</dd></div>
+                </dl>
+              </div>
+            </td></tr>
             <tr className={`${missing ? 'bank-warning' : ''} ${selected.has(row.assignmentId) ? 'selected' : ''}`}>
               <td><input type="checkbox" aria-label={`Select ${row.creator}`} disabled={!canWrite || row.payable === false} checked={selected.has(row.assignmentId)} onChange={e => onSelect(row.assignmentId, e.target.checked)}/></td>
-              <td><div className="cp-creator"><span className="cp-avatar" aria-hidden>{row.creator.replace(/^@/,'').split(/\s+/).slice(0,2).map(word => word[0]).join('').toUpperCase()}</span><div><strong>{row.creator}</strong>{row.username && <small>@{row.username.replace(/^@/,'')}</small>}{showCampaign && <small>{row.campaign}</small>}</div></div><button type="button" aria-haspopup="dialog" title={`Edit bank details for ${row.creator}`} className={`cp-bank ${missing ? 'warning' : 'ready'}`} onClick={() => onBank(row)}><Pencil size={13} aria-hidden="true"/>{missing ? 'Complete bank details' : row.bank.registered ? 'Bank details complete ✓' : 'Confirm bank registration'}</button></td>
+              <td><button type="button" aria-haspopup="dialog" title={`Edit bank details for ${row.creator}`} className={`cp-bank ${missing ? 'warning' : 'ready'}`} onClick={() => onBank(row)}><Pencil size={13} aria-hidden="true"/>{missing ? 'Complete bank details' : row.bank.registered ? 'Bank details complete ✓' : 'Confirm bank registration'}</button></td>
               <td className="cp-code"><VendorIoLink id={row.ioId} number={row.ioNumber}/><small>Creator Inv# {row.creatorInvoice?.number||'Not added'}</small></td>
               <td><div className="cp-status"><span className={`cp-pill ${badge.className}`}>{badge.label}</span><span className={`cp-pill ${status.className}`}>{status.label}</span></div><button className="cp-detail-toggle" aria-expanded={open} aria-controls={`payment-details-${row.assignmentId}`} onClick={() => setExpanded(current => { const next = new Set(current); if (open) next.delete(row.assignmentId); else next.add(row.assignmentId); return next; })}>{open ? 'Hide details' : 'Balance details'}</button></td>
               <td className="numeric" title="Agreed fee from the campaign agreement — read-only"><b>{number(row.fee)}</b><small>{row.currency} · agreed</small></td>
