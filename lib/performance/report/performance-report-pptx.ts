@@ -1,3 +1,4 @@
+import { publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
 import { videoMetricTotals, reportedTotal, metricCoverage } from './reported-metrics';
 import {
   formatCompactCount,
@@ -245,7 +246,7 @@ export async function buildPerformanceReportPptxBuffer(
     }
 
     const slide = pptx.addSlide();
-    slide.addText(pub.influencer_name ?? "Creator", {
+    slide.addText(publicationCollabLabel(pub.influencer_name, pub.notes), {
       x: 0.5,
       y: 0.3,
       w: 9,

@@ -36,6 +36,7 @@ import type { CampaignWorkspace } from "@/features/campaigns/types";
 import {
   duplicateNormalizedUrlSet,
   notesHaveDuplicateMarker,
+  notesHaveCollabMarker,
   normalizePublicationContentUrl,
 } from "@/lib/campaigns/publication-content-url";
 import { OPERATIONAL_TABLE_IDS } from "@/lib/tables/operational-table-ids";
@@ -69,9 +70,7 @@ function buildPublicationsColumns(
       label: "Type",
       renderCell: (row) => {
         const normalized = normalizePublicationContentUrl(row.content_url);
-        const showDuplicate =
-          notesHaveDuplicateMarker(row.notes) ||
-          (Boolean(normalized) && duplicateUrlKeys.has(normalized!));
+        const showDuplicate = !notesHaveCollabMarker(row.notes) && (notesHaveDuplicateMarker(row.notes) || (Boolean(normalized) && duplicateUrlKeys.has(normalized!)));
         return (
           <div className="space-y-0.5">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -81,7 +80,7 @@ function buildPublicationsColumns(
               >
                 {row.publication_type_label}
               </DetailClickableLabel>
-              {showDuplicate ? <PublicationDuplicateBadge /> : null}
+              {notesHaveCollabMarker(row.notes) ? <Badge>Collab</Badge> : showDuplicate ? <PublicationDuplicateBadge /> : null}
             </div>
             <p className="text-[11px] text-muted-foreground">{row.platform_label}</p>
           </div>
@@ -179,7 +178,7 @@ export function CampaignPublicationsTab({
   }, [rows, search, statusFilter]);
 
   const duplicateUrlKeys = useMemo(
-    () => duplicateNormalizedUrlSet(rows.map((row) => row.content_url)),
+    () => duplicateNormalizedUrlSet(rows.filter(row => !notesHaveCollabMarker(row.notes)).map((row) => row.content_url)),
     [rows]
   );
 
@@ -350,7 +349,7 @@ export function CampaignPublicationsTab({
       <CampaignPublicationSheet
         campaignId={workspace.id}
         assignmentLines={lines}
-        existingContentUrls={rows.map((row) => row.content_url)}
+        existingContentUrls={rows.filter(row => !notesHaveCollabMarker(row.notes)).map((row) => row.content_url)}
         open={sheetOpen}
         onOpenChange={setSheetOpen}
       />

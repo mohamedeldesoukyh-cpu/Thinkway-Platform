@@ -1,5 +1,8 @@
 "use client";
 
+import { toast } from "sonner";
+import { setPublicationCollabAction } from "@/features/campaigns/actions/performance-actions";
+import { useRefreshCampaignAfterPublicationMutation } from "@/features/campaigns/hooks/campaign-operational-refresh";
 import { format, isValid, parseISO } from "date-fns";
 import {
   ChevronLeftIcon,
@@ -35,6 +38,7 @@ import {
 import {
   duplicateNormalizedUrlSet,
   notesHaveDuplicateMarker,
+  notesHaveCollabMarker,
   normalizePublicationContentUrl,
 } from "@/lib/campaigns/publication-content-url";
 import {
@@ -208,12 +212,18 @@ export function CampaignPerformanceGrid({
   emptyDescription,
 }: Props) {
   const [page, setPage] = useState(1);
+  const [collabBusy, setCollabBusy] = useState<string | null>(null);
+  const refreshCollab = useRefreshCampaignAfterPublicationMutation();
+  async function toggleCollab(row: CampaignPublicationRow) {
+    if (collabBusy) return; setCollabBusy(row.id);
+    try { const result = await setPublicationCollabAction({ campaignId: row.campaign_header_id, publicationId: row.id, collab: !notesHaveCollabMarker(row.notes) }); if (!result.ok) { toast.error(result.message); return; } toast.success(result.message); await refreshCollab(); } catch { toast.error("Could not update Collab."); } finally { setCollabBusy(null); }
+  }
   const col = useOperationalColumnVisibleChecker();
   const { visibleOrderedColumnIds } = useOperationalTableColumnsContext();
 
   const duplicateUrlKeys = useMemo(
     () =>
-      duplicateNormalizedUrlSet((allRows ?? rows).map((row) => row.content_url)),
+      duplicateNormalizedUrlSet((allRows ?? rows).filter(row => !notesHaveCollabMarker(row.notes)).map((row) => row.content_url)),
     [allRows, rows]
   );
 
@@ -309,6 +319,7 @@ export function CampaignPerformanceGrid({
               influencerId={row.influencer_id}
               onOpenCreator={() => onOpenCreator(row)}
             />
+            {notesHaveCollabMarker(row.notes) && <span className="mt-1 inline-flex rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">Collab</span>}
           </div>
         );
       case "platform":
@@ -319,12 +330,10 @@ export function CampaignPerformanceGrid({
         );
       case "type": {
         const normalized = normalizePublicationContentUrl(row.content_url);
-        const showDuplicate =
-          notesHaveDuplicateMarker(row.notes) ||
-          (Boolean(normalized) && duplicateUrlKeys.has(normalized!));
+        const showDuplicate = !notesHaveCollabMarker(row.notes) && (notesHaveDuplicateMarker(row.notes) || (Boolean(normalized) && duplicateUrlKeys.has(normalized!)));
         return (
-          <div key={columnId} className="flex min-w-0 items-center gap-1 px-2">
-            <span className="truncate text-[12px] text-[var(--camp-text-3)]">
+          <div key={columnId} className="flex min-w-0 flex-col items-start gap-1 px-2">
+            <span className="whitespace-nowrap text-[12px] text-[var(--camp-text-3)]">
               {row.publication_type_label}
             </span>
             {showDuplicate ? <PublicationDuplicateBadge className="shrink-0" /> : null}
@@ -463,6 +472,7 @@ export function CampaignPerformanceGrid({
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="text-xs">
+                <DropdownMenuItem disabled={collabBusy !== null} onSelect={() => void toggleCollab(row)}>{notesHaveCollabMarker(row.notes) ? "Remove Collab" : "Mark as Collab"}</DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => onRefreshMetrics(row.id)}>
                   <RefreshCwIcon className="mr-1 inline size-3" />
                   Refresh metrics

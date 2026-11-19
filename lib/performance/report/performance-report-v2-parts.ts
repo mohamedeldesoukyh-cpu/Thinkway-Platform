@@ -1,3 +1,4 @@
+import { publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
 import { reportedValue, videoCounters } from './reported-metrics';
 import type { CampaignPublicationRow } from "@/lib/domains/campaign/types";
 import {
@@ -161,7 +162,7 @@ function captionExcerpt(caption: string | null, max = 320): string {
 }
 
 function renderCreatorAvatar(pub: CampaignPublicationRow): string {
-  const name = pub.influencer_name ?? "Creator";
+  const name = publicationCollabLabel(pub.influencer_name, pub.notes);
   const embedded = pub.creator_avatar_url?.trim() || "";
   const init = esc(initialsFromCreatorName(name));
   if (embedded.startsWith("data:")) {
@@ -232,7 +233,7 @@ export function renderPcard(pub: CampaignPublicationRow): string {
   return `<article class="pcard">
   ${mediaBlock}
   <div class="pcard__b">
-    <div class="pcard__hd">${renderCreatorAvatar(pub)}<span class="pcard__nm bidi">${esc(pub.influencer_name ?? "Creator")}</span></div>
+    <div class="pcard__hd">${renderCreatorAvatar(pub)}<span class="pcard__nm bidi">${esc(publicationCollabLabel(pub.influencer_name, pub.notes))}</span></div>
     <div class="pcard__mt">${esc(pub.platform_label)} · ${esc(formatShortDate(pub.publication_date))}</div>
     ${excerpt ? `<div class="pcard__copy"><span class="pcard__label">Caption</span><p class="pcard__cap bidi" dir="auto">${esc(excerpt)}</p></div>` : ""}
     ${tags ? `<div class="pcard__copy"><span class="pcard__label">Tags &amp; mentions</span><p class="pcard__tg bidi" dir="auto">${esc(tags)}</p></div>` : ""}

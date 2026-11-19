@@ -1,3 +1,4 @@
+import { publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
 import { videoMetricTotals, videoCounters, reportedTotal } from './reported-metrics';
 import {
   formatCompactCount,
@@ -73,7 +74,7 @@ export function buildPerformanceReportExcelBuffer(
   ): StyledDataRow[] =>
     publications.map((p) => {
     const baseValues = [
-      p.influencer_name ?? "",
+      publicationCollabLabel(p.influencer_name, p.notes),
       p.platform_label,
       p.publication_type_label,
       publicationValueScopeLabel(p.value_scope),

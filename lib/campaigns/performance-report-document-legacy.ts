@@ -1,3 +1,4 @@
+import { publicationCollabLabel } from "@/lib/campaigns/publication-content-url";
 import type { CampaignPerformanceBundle } from "@/lib/domains/campaign/types";
 import {
   buildStyledExcelBuffer,
@@ -57,7 +58,7 @@ export function renderCampaignPerformanceReportHtml(
   const pubRows = publications
     .map(
       (p) => `<tr>
-        <td>${esc(p.influencer_name ?? "—")}</td>
+        <td>${esc(publicationCollabLabel(p.influencer_name, p.notes))}</td>
         <td>${esc(p.platform_label)}</td>
         <td>${esc(p.publication_type_label)}</td>
         <td>${esc(p.publication_date ?? "—")}</td>
@@ -125,7 +126,7 @@ export function buildCampaignPerformanceExcelRows(
 
   return bundle.publications.map((p) => {
     const row: Record<string, string | number> = {
-      Creator: p.influencer_name ?? "",
+      Creator: publicationCollabLabel(p.influencer_name, p.notes),
       Platform: p.platform_label,
       Type: p.publication_type_label,
       URL: p.content_url ?? "",

@@ -2,6 +2,23 @@
 
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
+import { setPublicationCollab } from '@/lib/campaigns/publication-content-url';
+
+export async function setPublicationCollabAction(input: { campaignId: string; publicationId: string; collab: boolean }) {
+  const parsed = z.object({ campaignId: z.string().uuid(), publicationId: z.string().uuid(), collab: z.boolean() }).safeParse(input);
+  if (!parsed.success) return { ok: false, message: 'Invalid publication.' };
+  try {
+    const supabase = await requireAuth();
+    const { data: row, error } = await supabase.from('campaign_publications').select('notes').eq('id', input.publicationId).eq('campaign_header_id', input.campaignId).single();
+    if (error || !row) return { ok: false, message: 'Publication unavailable.' };
+    let update = supabase.from('campaign_publications').update({ notes: setPublicationCollab(row.notes, input.collab) }).eq('id', input.publicationId).eq('campaign_header_id', input.campaignId);
+    update = row.notes === null ? update.is('notes', null) : update.eq('notes', row.notes);
+    const result = await update.select('id').single();
+    if (result.error || !result.data) return { ok: false, message: 'Could not update collaboration. Refresh and check your access.' };
+    revalidatePath('/campaigns', 'layout');
+    return { ok: true, message: input.collab ? 'Marked as Collab.' : 'Collab removed.' };
+  } catch { return { ok: false, message: 'Could not update collaboration.' }; }
+}
 
 import type { FormActionState } from "@/features/campaigns/form-action-state";
 import type { PublicationMetricSyncLogRow } from "@/lib/domains/campaign/types";

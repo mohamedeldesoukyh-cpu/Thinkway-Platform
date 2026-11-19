@@ -7,6 +7,10 @@ import {
   findDuplicatePublicationUrls,
   normalizePublicationContentUrl,
   notesHaveDuplicateMarker,
+  notesHaveCollabMarker,
+  setPublicationCollab,
+  publicationCollabLabel,
+  isDuplicatePublicationUrl,
 } from "@/lib/campaigns/publication-content-url";
 
 assert.equal(
@@ -46,4 +50,15 @@ assert.equal(
   `keep me\n${PUBLICATION_DUPLICATE_NOTE_MARKER}`
 );
 
+const original = 'Keep creator notes\nDuplicate';
+const collab = setPublicationCollab(original, true);
+assert.equal(notesHaveCollabMarker(collab), true);
+assert.equal(notesHaveDuplicateMarker(collab), false);
+assert.equal(isDuplicatePublicationUrl('https://instagram.com/p/one', dupSet, {notes:collab}), false);
+assert.equal(setPublicationCollab(collab, true), collab);
+assert.equal(setPublicationCollab(collab, false), original);
+assert.equal(notesHaveDuplicateMarker(setPublicationCollab(collab, false)), true);
+assert.equal(notesHaveCollabMarker('Discuss collab with creator'), false);
+assert.equal(publicationCollabLabel('Creator A', collab), 'Creator A · Collab');
+assert.equal(publicationCollabLabel('Creator A', original), 'Creator A');
 console.log("publication-content-url — all tests passed");

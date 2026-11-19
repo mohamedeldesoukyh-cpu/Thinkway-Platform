@@ -1,5 +1,19 @@
 /** Persisted marker appended to notes when the user accepts a duplicate URL. */
 export const PUBLICATION_DUPLICATE_NOTE_MARKER = "Duplicate";
+export const PUBLICATION_COLLAB_NOTE_MARKER = "[Thinkway:Collab]";
+
+export function notesHaveCollabMarker(notes: string | null | undefined): boolean {
+  return (notes ?? '').split('\n').some(line => line.trim() === PUBLICATION_COLLAB_NOTE_MARKER);
+}
+
+export function setPublicationCollab(notes: string | null | undefined, collab: boolean): string {
+  const base = (notes ?? '').split('\n').filter(line => line.trim() !== PUBLICATION_COLLAB_NOTE_MARKER).join('\n').trim();
+  return collab ? [base, PUBLICATION_COLLAB_NOTE_MARKER].filter(Boolean).join('\n') : base;
+}
+
+export function publicationCollabLabel(name: string | null | undefined, notes: string | null | undefined): string {
+  return `${name || 'Creator'}${notesHaveCollabMarker(notes) ? ' · Collab' : ''}`;
+}
 
 /**
  * Normalize a publication content URL for duplicate comparison.
@@ -36,6 +50,7 @@ export function normalizePublicationContentUrl(
 }
 
 export function notesHaveDuplicateMarker(notes: string | null | undefined): boolean {
+  if (notesHaveCollabMarker(notes)) return false;
   if (!notes?.trim()) return false;
   return notes
     .split(/[\n,|]+/)
@@ -72,6 +87,7 @@ export function isDuplicatePublicationUrl(
   existingNormalizedUrls: ReadonlySet<string>,
   options?: { notes?: string | null }
 ): boolean {
+  if (notesHaveCollabMarker(options?.notes)) return false;
   if (notesHaveDuplicateMarker(options?.notes)) return true;
   const key = normalizePublicationContentUrl(contentUrl);
   if (!key) return false;

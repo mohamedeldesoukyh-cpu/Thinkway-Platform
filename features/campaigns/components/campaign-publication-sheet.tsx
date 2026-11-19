@@ -40,6 +40,7 @@ import {
 } from "@/lib/campaigns/deliverable-taxonomy";
 import {
   appendDuplicateNoteMarker,
+  setPublicationCollab,
   findDuplicatePublicationUrls,
   normalizePublicationContentUrl,
 } from "@/lib/campaigns/publication-content-url";
@@ -89,6 +90,7 @@ type PublicationRow = {
   publicationType: string;
   /** Creator was set by URL auto-match (user can still override). */
   autoMatched: boolean;
+  collab: boolean;
 };
 
 function newRow(partial?: Partial<PublicationRow>): PublicationRow {
@@ -99,6 +101,7 @@ function newRow(partial?: Partial<PublicationRow>): PublicationRow {
     platform: "instagram",
     publicationType: "instagram_post",
     autoMatched: false,
+    collab: false,
     ...partial,
   };
 }
@@ -188,7 +191,7 @@ function buildBatchItems(
         status: shared.status,
         caption: shared.caption,
         hashtags: shared.hashtags,
-        notes: isDuplicate ? appendDuplicateNoteMarker(shared.notes) : shared.notes,
+        notes: row.collab ? setPublicationCollab(shared.notes, true) : isDuplicate ? appendDuplicateNoteMarker(shared.notes) : shared.notes,
       };
     });
 }
@@ -348,13 +351,14 @@ export function CampaignPublicationSheet({
     void (async () => {
       try {
         const duplicateHits = findDuplicatePublicationUrls({
-          candidateUrls,
+          candidateUrls: rows.filter(row => !row.collab && row.lineId).map(row => row.contentUrl.trim()).filter(Boolean),
           existingUrls: existingContentUrls,
         });
         const duplicateNormalizedUrls = new Set(duplicateHits.map((hit) => hit.normalized));
 
-        if (duplicateHits.length > 0) {
-          const sample = duplicateHits
+        const unresolvedHits = duplicateHits.filter(hit => rows.some(row => !row.collab && normalizePublicationContentUrl(row.contentUrl) === hit.normalized));
+        if (unresolvedHits.length > 0) {
+          const sample = unresolvedHits
             .slice(0, 3)
             .map((hit) => hit.url)
             .join("\n");
@@ -480,7 +484,7 @@ export function CampaignPublicationSheet({
                     className={cn(
                       "rounded-[12px] border border-[#eaedf4] bg-white p-3 transition-colors",
                       row.contentUrl.trim() && "border-[rgba(0,87,255,0.22)] bg-[rgba(0,87,255,0.03)]",
-                      isDuplicateUrl && "border-amber-300 bg-amber-50/60"
+                      isDuplicateUrl && !row.collab && "border-amber-300 bg-amber-50/60"
                     )}
                   >
                     <div className="flex items-start gap-2">
@@ -511,10 +515,11 @@ export function CampaignPublicationSheet({
                         />
                         {isDuplicateUrl ? (
                           <p className="text-[10px] font-medium text-amber-700">
-                            Duplicate link — you can still add it; it will be labeled Duplicate.
+                            {row.collab ? "Collab — shared publication credited to this creator." : "Duplicate link — mark as Collab if this is a shared creator post."}
                           </p>
                         ) : null}
 
+                        <label className="flex items-center gap-2 text-xs"><input type="checkbox" checked={row.collab} disabled={isPending} onChange={event => updateRow(row.key, current => ({ ...current, collab: event.target.checked }))}/>Collab · shared creator publication</label>
                         <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
                           <div className="min-w-0">
                             <SearchableSelect

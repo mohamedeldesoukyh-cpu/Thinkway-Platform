@@ -12,7 +12,7 @@ const PERFORMANCE_GRID_COLUMN_WIDTHS: Record<PerformanceGridColumnId, string> = 
   contentPreview: "56px",
   creator: "minmax(165px, 1fr)",
   platform: "105px",
-  type: "70px",
+  type: "100px",
   published: "88px",
   lastUpdated: "108px",
   views: "70px",
