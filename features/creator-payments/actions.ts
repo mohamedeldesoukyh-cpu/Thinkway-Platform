@@ -71,12 +71,14 @@ async function loadRows(db: SupabaseClient, scope: Scope) {
         const fee = Number(a?.cost_before_vat ?? a?.agreed_fee ?? io.amount ?? 0);
         const vat = Number(a?.cost_vat_percent ?? term?.vat ?? 0);
         const paid = ledger.filter(e => e.status === 'paid').reduce((s, e) => s + Number(e.original_amount), 0);
+        const pendingPaid = ledger.filter(e => e.status === 'revision_pending').reduce((s,e)=>s+Number(e.original_amount),0);
         const saved = paymentDraftSchema.safeParse(plans.data?.find(p => p.assignment_id === io.assignment_id)?.draft);
         const invoice=supplierInvoices.data.find(i=>i.assignment_id===io.assignment_id&&i.from_payment_register)??supplierInvoices.data.find(i=>i.assignment_id===io.assignment_id);
-        return {creatorCountry:creator?.country_code??'',creatorInvoice:invoice?{number:invoice.invoice_number??'',date:invoice.invoice_date??'',country:invoice.country_code,revision:invoice.revision}:undefined, nextPaymentSequence: Math.max(0, ...ledger.map(e => Number(e.payment_sequence ?? 0))) + 1, history: ledger.filter(e=>e.status === 'paid' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
+        return {creatorCountry:creator?.country_code??'',creatorInvoice:invoice?{number:invoice.invoice_number??'',date:invoice.invoice_date??'',country:invoice.country_code,revision:invoice.revision}:undefined, nextPaymentSequence: Math.max(0, ...ledger.map(e => Number(e.payment_sequence ?? 0))) + 1, history: ledger.filter(e=>e.status === 'paid' || e.status === 'revision_pending' || e.cleared_at).sort((a,b)=>(a.payment_sequence ?? 0)-(b.payment_sequence ?? 0)) as PaymentEntry[], units: paymentUnits(deliverables.data.filter(d=>d.campaign_line_id === a?.campaign_line_id),posts.data,publications.data,links.data), savedDraft: saved.success ? saved.data : undefined, assignmentId: io.assignment_id, campaignId: io.campaign_header_id, creatorId: io.influencer_id,
             campaign: campaign?.name ?? campaign?.document_number ?? 'Campaign',
             creator: account?.profile_display_name || creator?.legal_name || creator?.display_name || 'Creator', username: account?.username || account?.handle || undefined, ioId: io.id, ioNumber: io.document_number ?? 'IO', ioStatus: io.is_superseded ? 'superseded' : io.status,
-            payable: !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
+            revisionPending: pendingPaid>0, pendingPaid: money(pendingPaid),
+            payable: pendingPaid<=0 && !io.is_superseded && !['cancelled','rejected','void','voided'].includes(io.status),
             currency: a?.currency ?? io.currency_code, fee, vat,
             costFxOverride: fxLines.data.find(line => line.id === a?.campaign_line_id)?.cost_fx_override ?? null, currencyRates,
             paid: money(paid || (!ledger.length && a?.vendor_payment_status === 'paid' ? fee + Math.round(fee * vat) / 100 : 0)),
@@ -95,6 +97,17 @@ export async function loadCreatorPayments(scope: Scope) {
     catch (e) {
         return fail(e);
     }
+}
+export async function setCreatorPaymentCostPending(assignmentIds:string[],pending:boolean) {
+    try {
+        const db=await access(true);
+        const ids=z.array(z.string().uuid()).min(1).max(200).parse(assignmentIds);
+        z.boolean().parse(pending);
+        const {error}=await db.rpc('set_creator_payment_cost_pending' as never,{p_assignments:ids,p_pending:pending} as never);
+        if(error) throw new Error(error.message);
+        revalidatePath('/campaigns','layout'); revalidatePath('/vendors','layout'); revalidatePath('/ios/vendor','layout');
+        return {ok:true as const};
+    } catch(error) {return fail(error);}
 }
 export async function saveCreatorPaymentPlans(input: { assignmentId: string; draft: PaymentDraft }[]) {
     try {

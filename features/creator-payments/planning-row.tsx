@@ -32,20 +32,20 @@ export function PlanningRow({row,draft,dirty,selected,canWrite,allowPreparation,
   const errors=dirty?calculation.errors:[];
   const editable=canWrite && row.payable!==false;
   const id=row.assignmentId;
-  return <article className={`grp ${open?'open':''} ${dirty?'dirty':''} ${missing?'blocked':''}`} aria-label={`Payments for ${row.creator}`}>
+  return <article className={`grp ${open?'open':''} ${dirty?'dirty':''} ${missing?'blocked':''} ${row.revisionPending?'cp-revision-pending':''}`} aria-label={`Payments for ${row.creator}`}>
     <div className="row">
-      <span><input type="checkbox" aria-label={`Select ${row.creator} for export`} checked={selected} disabled={!editable || !allowPreparation} onChange={e=>onSelect(id,e.target.checked)}/></span>
+      <span><input type="checkbox" aria-label={`Select ${row.creator} for payment actions`} checked={selected} disabled={!canWrite || busy} onChange={e=>onSelect(id,e.target.checked)}/></span>
       <div className="who"><VendorIoInfluencerCell creatorId={row.creatorId} name={row.creator} handle={row.username}/>{showCampaign&&<small>{row.campaign}</small>}</div>
       <div className="io"><VendorIoLink id={row.ioId} number={row.ioNumber}/><u>{row.creatorInvoice?.number?`Inv ${row.creatorInvoice.number}`:'No invoice'}</u><span className={`cp-io-state ${approved?'is-approved':''}`}>{badge.label}</span></div>
-      <div className="st">
+      <div className="st">{row.revisionPending&&<span className="chip chip--wrn">Pending cost revision</span>}
         {missing&&<button className="b b--sm b--wrn" onClick={()=>onBank(row)}><AlertTriangle size={13}/>Add bank details</button>}
-        <span className={`chip ${allocation.fullyPaid?'chip--ok':row.paid>0?'chip--vio':'chip--mut'}`}>{allocation.fullyPaid&&<Check size={12}/ >}{allocation.fullyPaid?'Fully paid':row.paid>0?'Part paid':'Unpaid'}</span>
+        {!row.revisionPending&&<span className={`chip ${allocation.fullyPaid?'chip--ok':row.paid>0?'chip--vio':'chip--mut'}`}>{allocation.fullyPaid&&<Check size={12}/ >}{allocation.fullyPaid?'Fully paid':row.paid>0?'Part paid':'Unpaid'}</span>}
         {row.reserved>0&&<span className="chip chip--cya">Pending export</span>}
         {allocation.advance>0&&<span className="chip chip--wrn">Advance</span>}
       </div>
       <div className="num" data-l="Agreed incl. VAT"><PaymentMoney value={allocation.total} currency={row.currency}/><small>{row.vat>0?`incl. ${row.vat}% VAT`:'No VAT'}</small></div>
-      <div className={`num ${row.paid>0?'num--paid':'num--zero'}`} data-l="Paid"><PaymentMoney value={row.paid} currency={row.currency}/></div>
-      <div className={`num num--bal ${allocation.remaining>0?'num--rem':'num--paid'}`} data-l="Remaining"><PaymentMoney value={allocation.remaining} currency={row.currency}/></div>
+      <div className={`num ${row.paid>0?'num--paid':'num--zero'}`} data-l="Paid"><PaymentMoney value={row.revisionPending?(row.pendingPaid??0):row.paid} currency={row.currency}/>{row.revisionPending&&<small>Retained · excluded from balance</small>}</div>
+      <div className={`num num--bal ${allocation.remaining>0?'num--rem':'num--paid'}`} data-l="Remaining"><PaymentMoney value={allocation.remaining} currency={row.currency}/>{allocation.remaining<0&&<small>Advance payment</small>}</div>
       <button className="disc" onClick={()=>setOpen(!open)} aria-expanded={open} aria-controls={`history-${id}`} aria-label={`${open?'Hide':'Show'} payment details for ${row.creator}`}><ChevronDown size={16}/></button>
     </div>
     {allowPreparation&&(entryOpen||dirty)&&<div className="entry" id={`entry-${id}`}>

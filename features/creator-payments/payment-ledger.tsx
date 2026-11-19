@@ -9,10 +9,10 @@ import { PaymentRecordEditor } from './payment-record-editor';
 import type { PaymentBatch, PaymentEntry, PaymentRow } from './model';
 
 const amount = (entry: PaymentEntry) => `${entry.payment_currency} ${Number(entry.payment_amount).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-const paidDate = (entry: PaymentEntry) => entry.status === 'paid' && !entry.cleared_at
+const paidDate = (entry: PaymentEntry) => ['paid','revision_pending'].includes(entry.status) && !entry.cleared_at
     ? entry.payment_date ? new Date(entry.payment_date + 'T12:00:00Z').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'UTC' }) : 'Date not recorded'
     : 'Not paid';
-const status = (entry: PaymentEntry) => entry.cleared_at ? 'Cleared' : entry.status === 'exported' ? 'Pending bank result' : entry.status === 'paid' ? 'Paid' : entry.status === 'failed' ? 'Failed' : entry.status;
+const status = (entry: PaymentEntry) => entry.cleared_at ? 'Cleared' : entry.status === 'revision_pending' ? 'Pending cost revision' : entry.status === 'exported' ? 'Pending bank result' : entry.status === 'paid' ? 'Paid' : entry.status === 'failed' ? 'Failed' : entry.status;
 // The application numbers payments within each assignment. Keep that real identity;
 // the reference's campaign-wide PAY serial is sample data, not an application field.
 const paymentNumber = (entry: PaymentEntry) => entry.payment_sequence ? `Payment ${entry.payment_sequence}` : 'Unnumbered payment';
@@ -42,7 +42,7 @@ export function PaymentLedger({ rows, batches, canWrite, onSaved, onExport }: {
         <div className="cp-table-scroll" tabIndex={0} role="region" aria-label="Creator payment records table"><table className="cp-table cp-ledger-table">
             <colgroup>{[138,144,undefined,128,104,118].map((width, i) => <col key={i} style={{ width }}/>)}</colgroup>
             <thead><tr>{['Payment #','Against Vendor IO','Creator','Amount','Status','Paid date'].map(label => <th key={label}>{label}</th>)}</tr></thead>
-            <tbody>{[...entries.values()].filter(({row})=>`${row.creator} ${row.username??''} ${row.ioNumber}`.toLowerCase().includes(search.toLowerCase())).map(({ row, entry }) => <tr key={entry.id}>
+            <tbody>{[...entries.values()].filter(({row})=>`${row.creator} ${row.username??''} ${row.ioNumber}`.toLowerCase().includes(search.toLowerCase())).map(({ row, entry }) => <tr key={entry.id} className={entry.status==='revision_pending'?'cp-held-payment':undefined}>
                 <td data-label="Payment" className="cp-code"><button className="cp-ledger-open" aria-label={`Open ${paymentNumber(entry)} for ${row.creator}`} onClick={() => setDetail({ row, entry })}>{paymentNumber(entry)}</button></td>
                 <td data-label="Vendor IO" className="cp-code"><VendorIoLink id={row.ioId} number={row.ioNumber}/></td>
                 <td data-label="Creator"><VendorIoInfluencerCell creatorId={row.creatorId} name={row.creator} handle={row.username}/></td>

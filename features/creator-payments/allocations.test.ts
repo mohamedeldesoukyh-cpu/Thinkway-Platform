@@ -2,6 +2,16 @@ import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {paymentAllocation,paymentUnits,matchesPaymentFilter} from './allocations';
 const units = [1,2,3].map(n=>({id:String(n),label:`Deliverable ${n}`,live:n<3}));
+test('restored payments above revised agreement retain a negative balance and advance',()=>{
+ const row={fee:150,vat:0,paid:200,units:[{id:'1',label:'Delivered',live:true}]};
+ const result=paymentAllocation(row);
+ assert.equal(result.remaining,-50);
+ assert.equal(result.advance,50);
+ assert.equal(result.actual,150);
+ assert.equal(matchesPaymentFilter(row,'advance'),true);
+ assert.equal(matchesPaymentFilter(row,'paid'),true);
+ assert.equal(paymentAllocation({...row,fee:400}).remaining,200);
+});
 test('Paid includes partial and advance payments independently of live deliverables',()=>{
  const row={fee:90000,vat:0,paid:75000,units};
  assert.equal(matchesPaymentFilter(row,'paid'),true);

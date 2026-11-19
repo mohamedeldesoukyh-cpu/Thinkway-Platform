@@ -18,6 +18,8 @@ export type BankDetails = {
     registered: boolean;
 };
 export type PaymentRow = {
+    revisionPending?: boolean;
+    pendingPaid?: number;
     creatorInvoice?: {number:string;date:string;country:string;revision:number};
     creatorCountry?: string;
     costFxOverride?: string | null;
@@ -94,6 +96,7 @@ export function calculatePayment(row: PaymentRow, draft: PaymentDraft) {
     const payNow = draft.mode === "manual" ? money(draft.amount) : money(requestedOriginal * rate);
     const originalPay = money(payNow / rate);
     const errors: string[] = [];
+    if (row.revisionPending) errors.push("Remove pending cost revision before recording or exporting payments.");
     if (!Number.isFinite(fee) || fee < 0)
         errors.push("Agreed fee must be zero or more.");
     if (!Number.isFinite(draft.vat) || draft.vat < 0 || draft.vat > 100)

@@ -33,12 +33,12 @@ export function PaymentHistory({row,canWrite,onSaved,allowAdd=true,compact=false
           <div className="cp-creator-ledger-scroll" role="region" aria-label={`Payment ledger for ${row.creator}`} tabIndex={0}>
             <table className="cp-mini-table cp-creator-ledger" aria-label={`Recorded payments for ${row.creator}`}>
               <thead><tr><th scope="col">Payment</th><th scope="col">Date</th><th scope="col">Amount paid</th><th scope="col">Status / reference</th><th scope="col">Actions</th></tr></thead>
-              <tbody>{row.history?.length ? row.history.map(payment=><tr key={payment.id} className={payment.cleared_at?'cp-cleared-payment':undefined}>
+              <tbody>{row.history?.length ? row.history.map(payment=><tr key={payment.id} className={payment.status==='revision_pending'?'cp-held-payment':payment.cleared_at?'cp-cleared-payment':undefined}>
                 <th scope="row">{payment.payment_sequence ? `Payment ${payment.payment_sequence}` : 'Unnumbered payment'}</th>
                 <td>{date(payment.payment_date)}</td>
                 <td className="cp-ledger-money">{amount(payment.payment_amount,payment.payment_currency)}{payment.payment_currency!==row.currency&&<small>{amount(payment.original_amount,payment.original_currency)} original</small>}</td>
-                <td><span className="cp-ledger-status">{payment.cleared_at?'Cleared · excluded from totals':payment.source==='manual'?'Recorded payment':'Confirmed bank payment'}{!payment.cleared_at&&!!payment.revision&&' · Revised'}</span>{payment.bank_reference&&<small>{payment.bank_reference}</small>}</td>
-                <td><div className="cp-ledger-actions">{canWrite&&!payment.cleared_at&&<><button className="cp-button" onClick={()=>setEditor({payment})}>Edit</button><button className="cp-button" onClick={()=>setEditor({payment,clear:true})}>Clear</button></>}<PaymentProofDisclosure paymentId={payment.id} canWrite={canWrite}/></div></td>
+                <td><span className="cp-ledger-status">{payment.cleared_at?'Cleared · excluded from totals':payment.status==='revision_pending'?'Pending cost revision · payment retained':payment.source==='manual'?'Recorded payment':'Confirmed bank payment'}{!payment.cleared_at&&!!payment.revision&&' · Revised'}</span>{payment.bank_reference&&<small>{payment.bank_reference}</small>}</td>
+                <td><div className="cp-ledger-actions">{canWrite&&!row.revisionPending&&!payment.cleared_at&&<><button className="cp-button" onClick={()=>setEditor({payment})}>Edit</button><button className="cp-button" onClick={()=>setEditor({payment,clear:true})}>Clear</button></>}<PaymentProofDisclosure paymentId={payment.id} canWrite={canWrite}/></div></td>
               </tr>) : <tr><td colSpan={5} className="cp-ledger-empty">{row.paid>0?'Paid through the previous workflow; individual payment dates were not recorded here.':'No payments recorded yet.'}</td></tr>}</tbody>
             </table>
           </div>

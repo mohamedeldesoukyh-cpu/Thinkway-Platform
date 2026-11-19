@@ -65,7 +65,7 @@ function Totals({ rows, drafts, selected = false, floating = false, tools }: {
         t.vat += c.vatAmount;
         t.total += c.total;
         t.paid += row.paid;
-        t.outstanding += c.outstanding;
+        t.outstanding += allocation.remaining;
         t.remaining += c.remaining;
         totals.set(row.currency, t);
         payments.set(draft.currency, (payments.get(draft.currency) ?? 0) + (Number.isFinite(c.payNow) ? c.payNow : 0));
@@ -206,7 +206,7 @@ export function CreatorPaymentsWorkspace({ campaignId, creatorId }: {
         finally { setBusy(false); }
     }
     const visibleRows = rows.filter(r => (!campaignFilter || r.campaignId === campaignFilter) && `${r.creator} ${r.username ?? ""}`.toLowerCase().includes(search.toLowerCase()));
-    const chosen = rows.filter(r => selected.has(r.assignmentId));
+    const chosen = rows.filter(r => selected.has(r.assignmentId) && r.payable !== false);
     const oneCampaign = new Set(chosen.map(r => r.campaignId)).size === 1;
     const purposeSource = chosen.some(r => r.bank.payment_type === 'I') ? purposes.international : purposes.domestic;
     const purposeOptions = purposeSource.filter(p => chosen.every(r => (r.bank.payment_type === 'I' ? purposes.international : purposes.domestic).some(code => code.value === p.value)));

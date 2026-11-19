@@ -45,6 +45,6 @@ export function paymentAllocation(row: Pick<PaymentRow,'fee'|'vat'|'paid'|'units
     }
     const earned = money(shares.filter(u=>u.live).reduce((sum,u)=>sum+u.value,0));
     const advance = money(Math.max(0,row.paid-earned));
-    return {total, earned, actual:money(Math.min(row.paid,earned)), advance, remaining:money(Math.max(0,total-row.paid)), units:shares,
+    return {total, earned, actual:money(Math.min(row.paid,earned)), advance, remaining:money(total-row.paid), units:shares,
         live:units.filter(u=>u.live).length, count:units.length, fullyPaid:units.length>0 && units.every(u=>u.live) && row.paid>=total};
 }

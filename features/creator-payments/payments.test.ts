@@ -17,6 +17,11 @@ test('large ledgers are paged without truncating paid balances or long ID filter
 const bank = { ...bankDetails(), payment_type: 'D', currency: 'EGP', nickname: 'Creator01', beneficiary_name: 'Example Creator', account_number: '00123456789', beneficiary_address: 'Cairo', country: 'EG', swift: 'CIBEEGCX', email: 'test@example.com', registered: true };
 const row: PaymentRow = { assignmentId: 'a', campaignId: 'c', creatorId: 'i', creator: 'Example', ioId: 'io', ioNumber: 'IO-1', ioStatus: 'generated', currency: 'USD', fee: 1000, vat: 14, paid: 0, reserved: 0, bank };
 const draft: PaymentDraft = { fee: 1000, vat: 14, currency: 'EGP', rate: 50, mode: 'percent', percent: 50, amount: 0 };
+test('cost revision holds block new payments without consuming retained amounts',()=>{
+ const result=calculatePayment({...row,revisionPending:true,pendingPaid:500},draft);
+ assert.ok(result.errors.some(error=>error.includes('pending cost revision')));
+ assert.equal(result.total,1140);
+});
 test('VAT is included in installments, original equivalent, and outstanding', () => {
     const c = calculatePayment(row, draft);
     assert.deepEqual([c.fee, c.vatAmount, c.total, c.originalPay, c.payNow, c.remaining], [1000, 140, 1140, 570, 28500, 570]);
