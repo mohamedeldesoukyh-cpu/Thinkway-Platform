@@ -612,3 +612,7 @@
   .cp-redesign .entry input,.cp-redesign .entry select{font-size:16px}
   .cp-balance-dialog{padding:18px}
 }
+.thinkway-creator-payments.cp-redesign .thinkway-campaign-cr-cell p,
+.cp-record-creator .thinkway-campaign-cr-cell p{font-family:var(--font-geist-sans,'Segoe UI'),'Segoe UI',Tahoma,Arial,sans-serif;font-style:normal;letter-spacing:0;line-height:1.45}
+.thinkway-creator-payments.cp-redesign .thinkway-campaign-cr-name,
+.cp-record-creator .thinkway-campaign-cr-name{font-size:13px;font-weight:600}
