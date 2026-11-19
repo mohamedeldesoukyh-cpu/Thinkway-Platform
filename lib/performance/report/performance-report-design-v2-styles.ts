@@ -403,6 +403,9 @@ strong{font-weight:600}
 
 .creator-highlights{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5mm}
 .creator-highlight{border:1px solid #E3E9F3;border-radius:12px;padding:5mm;min-width:0;break-inside:avoid}
+.creator-highlight__collab{border:1px solid;border-radius:8px;padding:9px;margin:8px 0;font-size:10px;line-height:1.5;overflow-wrap:anywhere;background:#ffffffb3}
+.creator-highlight__collab-label{display:flex;align-items:center;gap:6px;margin-bottom:4px}
+.creator-highlight__collab-dot{display:inline-block;width:9px;height:9px;border-radius:50%;flex:none}
 .creator-highlight h3{font-size:17px;margin:0;overflow-wrap:anywhere}
 .creator-highlight__badges{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;min-height:18px}
 .creator-highlight__badges span{background:#EDF3FF;color:#0057FF;font-size:8px;font-weight:700;padding:4px 6px;border-radius:5px}

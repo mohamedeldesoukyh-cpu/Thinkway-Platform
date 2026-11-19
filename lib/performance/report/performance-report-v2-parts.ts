@@ -155,11 +155,7 @@ function shortUrl(url: string | null | undefined): string {
   }
 }
 
-function captionExcerpt(caption: string | null, max = 320): string {
-  const text = caption?.trim();
-  if (!text) return "";
-  return text.length > max ? `${text.slice(0, max)}…` : text;
-}
+
 
 function renderCreatorAvatar(pub: CampaignPublicationRow): string {
   const name = publicationCollabLabel(pub.influencer_name, pub.notes);
@@ -204,7 +200,7 @@ export function renderPcard(pub: CampaignPublicationRow): string {
 
   const isAdded = resolvePublicationValueScope(pub) === "added_value";
   const addedBadge = isAdded ? `<span class="pcard__av">Added value</span>` : "";
-  const excerpt = captionExcerpt(pub.caption);
+  const excerpt = pub.caption?.trim() ?? "";
   const tags = [pub.hashtags?.trim(), pub.mentions?.trim()].filter(Boolean).join(" ");
   const postUrl = pub.content_url?.trim() || null;
   const urlLabel = shortUrl(postUrl);

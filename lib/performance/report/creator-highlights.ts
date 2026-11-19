@@ -1,3 +1,4 @@
+import { collabCellStyle, notesHaveCollabMarker, uniqueCollabPublications } from '@/lib/campaigns/publication-content-url';
 import { collabAnalysis } from './collab-analysis';
 import { videoCounters, videoMetricTotals } from './reported-metrics';
 import type { PerformanceReportDocumentData, InfluencerReportSection } from './performance-report-types';
@@ -38,12 +39,15 @@ export function renderCreatorHighlights(data: PerformanceReportDocumentData, cre
     const denominator = method === 'views' ? best?.views : method === 'reach' ? best?.reach : method === 'followers' ? best?.platform_follower_count : null;
     const basis = method === 'followers' ? 'followers (estimate)' : method;
     const context = best ? `${best.total_engagements.toLocaleString('en-US')} interactions${denominator != null ? ` / ${denominator.toLocaleString('en-US')} ${basis}` : (method === 'manual' ? ' · Manually entered rate' : '')}` : 'No engagement rate available';
-    return `<article class="creator-highlight">
+    const collabs = uniqueCollabPublications(c.publications).filter(p => notesHaveCollabMarker(p.notes));
+    const frame = collabs[0] ? collabCellStyle(collabs[0], pubs) : undefined;
+    const frameStyle = frame ? 'border-left:' + frame.borderLeft + ';background:' + frame.backgroundColor : '';
+    return `<article class="creator-highlight" style="${esc(frameStyle)}">
       <h3 class="bidi">${esc(c.name)}</h3>
       <div class="creator-highlight__badges">${badges.map(b => `<span>${b}</span>`).join('')}</div>
       <p class="note">${c.summary.agreedPublications} agreed · ${c.summary.addedValuePublications} added-value publications</p>
       <div class="creator-highlight__metrics">${videoMetricTotals(c.publications).map(metric=>`<div>${esc(metric.label)}<strong>${esc(metric.value)}</strong><small>${esc(metric.coverage)}</small>${platformMetricSources(c, metric.label)}</div>`).join("")}<div>Engagements<strong>${esc(formatCompactCount(c.summary.engagements))}</strong></div><div>Avg. ER<strong>${esc(formatPercent(c.summary.averageEr))}</strong></div></div>
-      ${collabAnalysis(c.publications).map(text => `<p class="note"><b>Collab</b> · ${esc(text)}</p>`).join('')}
+      ${collabs.map(pub => { const style = collabCellStyle(pub, pubs); const color = style?.borderLeft.split("solid ")[1] ?? "#0057FF"; return `<div class="creator-highlight__collab" style="border-color:${esc(color)}"><div class="creator-highlight__collab-label"><span class="creator-highlight__collab-dot" style="background:${esc(color)}" aria-hidden="true"></span><b>Collab</b></div><p>${esc(collabAnalysis([pub])[0] ?? "")}</p></div>`; }).join('')}
       <div class="creator-highlight__best"><b>Best post ER: ${esc(formatPercent(best?.engagement_rate ?? null, 1))}</b><div>${esc(best?.platform_label ?? '')}</div><div>${esc(context)}</div></div>
     </article>`;
   }).join('') || '<p>No creator performance is available yet.</p>'}</div>
