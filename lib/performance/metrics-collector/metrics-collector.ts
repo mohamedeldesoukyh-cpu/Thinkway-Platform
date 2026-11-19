@@ -424,6 +424,15 @@ export async function metricsCollector(
     }
 
     if (providerId === "apify") {
+      if (publication.platform === 'instagram' && attempt.responseSummary?.confirmedPublicationType === 'instagram_reel' && !publication.publication_type?.includes('story')) {
+        const { error: typeError } = await supabase.from('campaign_publications')
+          .update({publication_type:'instagram_reel'})
+          .eq('id', publication.id).eq('campaign_header_id', publication.campaign_header_id);
+        if (!typeError) {
+          publication.publication_type = 'instagram_reel';
+          engagementContext.publication_type = 'instagram_reel';
+        }
+      }
       const preview = attempt.responseSummary?.previewImageUrl;
       if (typeof preview === "string" && preview.startsWith("http")) {
         apifyPreviewImageUrl = preview;

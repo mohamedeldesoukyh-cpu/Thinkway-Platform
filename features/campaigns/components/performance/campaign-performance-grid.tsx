@@ -11,7 +11,7 @@ import {
   RefreshCwIcon,
   Trash2Icon,
 } from "lucide-react";
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { SearchableSelect } from "@/components/forms/searchable-select";
@@ -223,16 +223,28 @@ export function CampaignPerformanceGrid({
   const [collabRow, setCollabRow] = useState<CampaignPublicationRow | null>(null);
   const [collabChoices, setCollabChoices] = useState<{id:string;name:string}[]>([]);
   const [collabChoice, setCollabChoice] = useState('');
-  async function openCollab(row: CampaignPublicationRow) {
-    setCollabRow(row); setCollabChoice(publicationCollabCreator(row.notes)?.id ?? ''); setCollabChoices([]);
-    try { setCollabChoices((await loadCampaignCollabCreatorsAction(row.campaign_header_id)).filter(creator => creator.id !== row.campaign_line_id)); }
-    catch { toast.error('Could not load campaign creators.'); }
+  const campaignId = (allRows ?? rows)[0]?.campaign_header_id;
+  const [creatorList, setCreatorList] = useState<{campaignId:string; loading:boolean; error:boolean}>({campaignId:'',loading:true,error:false});
+  useEffect(() => {
+    if (!campaignId) return;
+    let active = true;
+    void loadCampaignCollabCreatorsAction(campaignId).then(choices => {
+      if (!active) return;
+      setCollabChoices(choices); setCreatorList({campaignId,loading:false,error:false});
+    }).catch(() => { if (active) setCreatorList({campaignId,loading:false,error:true}); });
+    return () => { active = false; };
+  }, [campaignId]);
+  const creatorsLoading = creatorList.campaignId !== campaignId || creatorList.loading;
+  const creatorOptions = (row: CampaignPublicationRow) => collabChoices.filter(creator => creator.id !== row.campaign_line_id).map(creator => ({value:creator.id,label:creator.name}));
+  const creatorsEmptyMessage = creatorsLoading ? 'Loading campaign creators…' : creatorList.error ? 'Could not load creators. Refresh and try again.' : 'No other campaign creators found.';
+  function openCollab(row: CampaignPublicationRow) {
+    setCollabRow(row); setCollabChoice(publicationCollabCreator(row.notes)?.id ?? '');
   }
-  async function saveCollab(row: CampaignPublicationRow, collab: boolean) {
+  async function saveCollab(row: CampaignPublicationRow, collab: boolean, creatorLineId = collabChoice) {
     if (collabBusy) return; setCollabBusy(row.id);
-    try { const result = await setPublicationCollabAction({ campaignId: row.campaign_header_id, publicationId: row.id, collab, creatorLineId: collab ? collabChoice : undefined }); if (!result.ok) { toast.error(result.message); return; } setCollabRow(null); toast.success(result.message); await refreshCollab(); } catch { toast.error("Could not update Collab."); } finally { setCollabBusy(null); }
-  }  const col = useOperationalColumnVisibleChecker();
-  const { visibleOrderedColumnIds } = useOperationalTableColumnsContext();
+    try { const result = await setPublicationCollabAction({ campaignId: row.campaign_header_id, publicationId: row.id, collab, creatorLineId: collab ? creatorLineId : undefined }); if (!result.ok) { toast.error(result.message); return; } setCollabRow(null); toast.success(result.message); await refreshCollab(); } catch { toast.error("Could not update Collab."); } finally { setCollabBusy(null); }
+  }
+  const col = useOperationalColumnVisibleChecker();  const { visibleOrderedColumnIds } = useOperationalTableColumnsContext();
 
   const duplicateUrlKeys = useMemo(
     () =>
@@ -332,7 +344,18 @@ export function CampaignPerformanceGrid({
               influencerId={row.influencer_id}
               onOpenCreator={() => onOpenCreator(row)}
             />
-            {notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes) && <span className="mt-1 inline-flex rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{publicationCollabLabel("", attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes).replace("Creator · ", "")}</span>}
+            <div className="mt-1 max-w-64" onClick={event => event.stopPropagation()} onPointerDown={event => event.stopPropagation()}>
+              <SearchableSelect
+                value={publicationCollabCreator(row.notes)?.id ?? ''}
+                options={creatorsLoading ? [] : [{value:'__none',label:'No collaboration'}, ...creatorOptions(row)]}
+                onValueChange={value => void saveCollab(row, value !== '__none', value)}
+                placeholder={creatorsLoading ? 'Loading creators…' : 'Choose Collab creator…'}
+                searchPlaceholder="Search campaign creators…"
+                emptyMessage={creatorsEmptyMessage}
+                disabled={Boolean(collabBusy)}
+                className="h-7 min-h-7 text-xs"
+              />
+            </div>            {notesHaveCollabMarker(attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes) && <span className="mt-1 inline-flex rounded bg-blue-50 px-2 py-0.5 text-xs font-medium text-blue-700">{publicationCollabLabel("", attributeCollabPublications(allRows ?? rows).find(item => item.id === row.id)?.notes).replace("Creator · ", "")}</span>}
           </div>
         );
       case "platform":
@@ -528,7 +551,7 @@ export function CampaignPerformanceGrid({
     <TooltipProvider delayDuration={200}>
       <Dialog open={Boolean(collabRow)} onOpenChange={open => { if (!open && !collabBusy) setCollabRow(null); }}>
         <DialogContent><DialogHeader><DialogTitle>Collaborating creator</DialogTitle><DialogDescription>Choose the other creator in this campaign who shares this publication.</DialogDescription></DialogHeader>
-          <SearchableSelect options={collabChoices.map(creator => ({value:creator.id,label:creator.name}))} value={collabChoice} onValueChange={setCollabChoice} placeholder="Choose campaign creator…" disabled={Boolean(collabBusy)} />
+          <SearchableSelect options={creatorsLoading || !collabRow ? [] : creatorOptions(collabRow)} value={collabChoice} onValueChange={setCollabChoice} placeholder={creatorsLoading ? "Loading campaign creators…" : "Choose campaign creator…"} searchPlaceholder="Search campaign creators…" emptyMessage={creatorsEmptyMessage} disabled={Boolean(collabBusy)} />
           <div className="flex justify-end gap-2">
             {collabRow && notesHaveCollabMarker(collabRow.notes) && <Button variant="outline" disabled={Boolean(collabBusy)} onClick={() => void saveCollab(collabRow, false)}>Remove Collab</Button>}
             <Button disabled={!collabChoice || Boolean(collabBusy)} onClick={() => collabRow && void saveCollab(collabRow, true)}>Save Collab</Button>
@@ -624,7 +647,3 @@ export function CampaignPerformanceGrid({
     </TooltipProvider>
   );
 }
-
-
-
-
